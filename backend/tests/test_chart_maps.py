@@ -685,7 +685,7 @@ def _tile(sym, theme=None, score=0.0, **metrics):
             "_m": {k: metrics.get(k) for k in
                    ("volume", "rvol", "turnover", "avg_turnover",
                     "conviction", "rs", "change", "dark", "retailimb",
-                    "retailpct", "velocity", "avg_shares")}}
+                    "retailpct", "velocity", "avg_shares", "explosive")}}
 
 
 def _order(tiles, sort, themes_first=True):
@@ -736,7 +736,7 @@ def test_metrics_survive_a_row_with_nothing_in_it():
     m = B.tile_metrics({})
     assert set(m) == {"volume", "rvol", "turnover", "avg_turnover",
                       "conviction", "rs", "change", "dark", "retailimb",
-                      "retailpct", "velocity", "avg_shares"}
+                      "retailpct", "velocity", "avg_shares", "explosive"}
     assert all(v is None for v in m.values())
     assert B.tile_metrics(None)["volume"] is None
 

@@ -8,11 +8,16 @@
  * Ranked by move × relative-volume, enriched (top names) with premarket H/L,
  * 10-day RelVol, and earnings-ahead. Reads /day/gappers. Educational, not advice.
  */
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGappers, type DayProfile } from '../hooks/useDayTrading';
 import { useSort } from '../lib/useSort';
 import { TickerName } from './TickerCell';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 
 const SESSION_META: Record<string, { title: string; badge: string; cls: string }> = {
   premarket:  { title: 'Premarket Movers · live',        badge: 'PREMARKET',     cls: 'og-sess--pm' },
@@ -49,6 +54,15 @@ export function OvernightGappers({ profile, onPick }: {
     relvol: (g) => g.rel_vol_10d ?? g.rel_vol,
     dvol: (g) => g.dollar_vol,
   }, 'move');
+  /* 🧨 One bounce-room POST for the movers on screen (the page's only one);
+   * the chip and the opt-in ordering read that single map. Hooks run before the
+   * early return below. */
+  const rowSymbols = useMemo(
+    () => (data?.gappers || []).map((g: { symbol: string }) => g.symbol).filter(Boolean),
+    [data]);
+  const room = useBounceRoom(rowSymbols);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const ordered = useExplosiveOrder<any>(sort.sorted, (g) => g?.symbol, room.map, explosiveFirst);
   if (!data) return null;
 
   const elevated = data.rel_vol_elevated;
@@ -73,6 +87,7 @@ export function OvernightGappers({ profile, onPick }: {
         <strong>RelVol ≥{elevated}×</strong> = elevated interest;{' '}
         <strong>&lt;1×</strong> = thin tape, slippage will hurt.
       </p>
+      <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
 
       {data.gappers.length === 0 ? (
         <div className="day-empty">No {data.gap_min_pct}%+ movers right now.</div>
@@ -95,7 +110,7 @@ export function OvernightGappers({ profile, onPick }: {
               </tr>
             </thead>
             <tbody>
-              {sort.sorted.map((g) => {
+              {ordered.map((g) => {
                 const rv = g.rel_vol_10d ?? g.rel_vol;
                 const rvCls = rv == null ? '' : rv >= elevated ? 'og__hot' : rv < 1 ? 'og__cold' : '';
                 const sgn = (n: number) => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
@@ -121,6 +136,8 @@ export function OvernightGappers({ profile, onPick }: {
                         <TickerName symbol={g.symbol} width={16} />
                       </Link>
                       <GrowthChip symbol={g.symbol} className="cm-badge" />
+                      <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
+                                     read={room.map.get(String(g.symbol).toUpperCase())?.explosive} />
                     </td>
                     <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>
                       {/* The chip follows the NUMBER: it marks the headline move as

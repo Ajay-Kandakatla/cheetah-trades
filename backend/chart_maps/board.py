@@ -700,6 +700,14 @@ def tile_metrics(row: dict) -> dict:
         # attach_velocity (needs a per-symbol reference lookup); None until
         # then, and a None column triggers the honest sort_unavailable note.
         "velocity": None,
+        # The 🧨 read's score. Filled by attach_explosive from
+        # `supply_demand.explosive.read()` — and ONLY in the branch where the
+        # study measured a separation. In the null branch there IS no score,
+        # so the column stays None and the ORDERING never reads it: it keys on
+        # `explosive.explosive_key`, which falls back to floor-held + room.
+        # A metric column that invented a number here would put a ranking on
+        # his screen this app has not earned.
+        "explosive": None,
         "conviction": _f((row.get("conviction") or {}).get("score")
                          if isinstance(row.get("conviction"), dict)
                          else row.get("conviction")),
@@ -748,6 +756,12 @@ SORTS: dict[str, str] = {
     "velocity": "🐆 % of shares traded/day",
     "conviction": "🏆 Conviction",
     "rs": "⚡ RS rank",
+    # The 🧨 read (2026-09-15). The internal key is `explosive` — the
+    # tabUsageKey and the ✨ NEW entry use the KEY, so renaming the label is a
+    # one-string change. "Burst" rather than "Explosive" on purpose: the
+    # 🚀 Explosive Growth tab already owns that word in Chart Maps, and two
+    # chips on one tile using one word for two things is a reading problem.
+    "explosive": "🧨 Burst first",
 }
 
 # Sorts that cannot be answered from a daily bar. Choosing one triggers the tape
@@ -851,6 +865,126 @@ def _velocity_decor(tiles: list) -> None:
         elif v <= VELOCITY_SLOW_PCT:
             t.setdefault("badges", []).append(
                 {"text": f"🐘 Heavy supply — {v:.2f}%/day of shares", "tone": "muted"})
+
+
+# ===========================================================================
+# 🧨 The explosive read (2026-09-15)
+# ===========================================================================
+# Ajay 2026-09-14: a per-stock read of how likely a name in / arriving at a
+# demand band is to travel >= 5% toward the first supply band, evaluated
+# BEFORE it ranks, and offered as an ordering on every tab.
+#
+# WHERE IT RUNS, AND WHY HERE. Server-side, in `_finish`, over EVERY tile —
+# not the `limit x TAPE_POOL_MULT` pool the tape and velocity sorts use. That
+# pool exists because those two need a per-symbol network lookup per name; this
+# read is one Mongo query for the whole board plus ~0.3ms of pure arithmetic
+# per tile, so ranking the survivors instead of the whole match set would be a
+# cap with no cost behind it — and "🧨 first" would silently mean "🧨 first
+# among the two dozen the default order happened to choose".
+#
+# The read is attached on EVERY request regardless of `sort`, because the chip
+# renders on every tab (`PatternChart` reads `tile.explosive`) and a second
+# request for it would be a second fan-out over the same store.
+#
+# NOTHING HERE GATES ANYTHING. It is an ordering and a chip; no alert, no lane,
+# no liquidity floor, no room floor. `test_SOURCE_GUARD_the_score_never_gates_
+# an_alert_or_a_lane` makes any future wiring a deliberate act.
+EXPLOSIVE_SORT_UNAVAILABLE = ("No demand-band read for these names — the board "
+                              "is showing its default order.")
+
+
+def _explosive_px(tile: dict):
+    """The print the read keys on. Tiles spell it two ways depending on which
+    producer built them (`last_price` on the scan-row tabs, `last_close` on the
+    ledger tabs); reading both here keeps the callers dumb, exactly as
+    `tile_metrics` does for liquidity."""
+    px = _f(tile.get("last_price"))
+    return px if px is not None else _f(tile.get("last_close"))
+
+
+def attach_explosive(tiles: list) -> int:
+    """Fill `tile['explosive']` (the whole read) and `_m['explosive']` (score).
+
+    ONE `zone_store.load_latest` over every symbol on the board, then a pure
+    per-tile read. Returns how many tiles came back with a read.
+
+    Fails OPEN and SILENT: a cold store, a legacy doc with no `feat` block, a
+    name with no demand band under the print — each leaves `tile['explosive']`
+    None, the chip hidden and the tile sorted LAST. It never drops a tile and
+    never raises: this is decoration plus an ordering, and a board that 500s
+    because a study module moved would be a far worse trade than a board with
+    no chips.
+
+    Idempotent by KEY PRESENCE (not truthiness — None is a real answer here),
+    so `board()` can call it again for the tabs that never reach `_finish`
+    without paying for a second Mongo query.
+    """
+    todo = [t for t in tiles if isinstance(t, dict) and t.get("symbol")
+            and "explosive" not in t]
+    if not todo:
+        return 0
+    try:
+        from supply_demand import explosive
+        from supply_demand import zone_store
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: explosive unavailable: %s", exc)
+        return 0
+
+    syms = [str(t["symbol"]).upper() for t in todo]
+    try:
+        _day, docs = zone_store.load_latest(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("chart-maps: zone_store read failed for explosive: %s", exc)
+        docs = {}
+
+    # The KC / AMD grades only get joined when the measurement actually
+    # selected one of them. Both read INVERTED against placebo on 2026-09-14,
+    # so in the expected (null) branch this second Mongo read never happens.
+    tb_rows: dict = {}
+    if any(str(k).startswith(("kc_", "amd_"))
+           for k in (getattr(explosive, "SELECTED", ()) or ())):
+        try:
+            from supply_demand import turning_bullish as TB
+            for r in (TB.stored() or {}).get("rows") or []:
+                if r.get("symbol"):
+                    tb_rows[str(r["symbol"]).upper()] = r
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: turning_bullish join unavailable: %s", exc)
+
+    done = 0
+    for t in todo:
+        sym = str(t["symbol"]).upper()
+        try:
+            read = explosive.read(doc=docs.get(sym), px=_explosive_px(t),
+                                  day_low=_f(t.get("day_low")),
+                                  tb_row=tb_rows.get(sym), symbol=sym)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: explosive read %s failed: %s", sym, exc)
+            read = None
+        t["explosive"] = read
+        m = t.get("_m")
+        if isinstance(m, dict):
+            m["explosive"] = (read or {}).get("score")
+        if read is not None:
+            done += 1
+    return done
+
+
+def _explosive_sort(tiles: list) -> Optional[str]:
+    """Order ALL tiles by the one ordering key. Returns the honest note when
+    not a single tile on the board has a read (a sort over an all-null column
+    returns the default order, which LOOKS like a working sort and is not one —
+    the same lesson the retail-imbalance sort taught)."""
+    try:
+        from supply_demand import explosive
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: explosive sort unavailable: %s", exc)
+        return EXPLOSIVE_SORT_UNAVAILABLE
+    tiles.sort(key=lambda t: explosive.explosive_key(t.get("explosive"),
+                                                     t.get("symbol") or ""))
+    if all(t.get("explosive") is None for t in tiles):
+        return EXPLOSIVE_SORT_UNAVAILABLE
+    return None
 
 
 DWELL_STAT_KEY = "On board"
@@ -1233,6 +1367,23 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
     dropped_thin = len(tiles) - len(kept)
     tiles = kept
 
+    # 1b — the 🧨 read, on EVERY request regardless of `sort`: the chip renders
+    # on every tab and a second request for it would be a second fan-out over
+    # the same store. After the floor, so the read is never computed for a tile
+    # that is about to be dropped.
+    #
+    # WHICH PRINT IT KEYS ON (accepted 2026-09-15, his call to change): the
+    # tile's `last_price` / `last_close` — the CLOSED scan print. `attach_live_now`
+    # runs later, in `board()`, and moves the tile's `now` line to the live
+    # (pre/post included) print; it does not re-run this read. So intraday the
+    # tile path can read one band state while the bounce-room ROW path — which
+    # keys on the live snapshot — reads another. Ranking on the live tape here
+    # would mean a second fan-out (`bulk_live_prices` before the floor) and an
+    # ordering that changes under him while he reads the board; the chip's
+    # tooltip says "closed-bar read" for exactly this reason.
+    # `test_the_tile_read_keys_on_the_SCAN_print_not_the_live_one` pins it.
+    attach_explosive(tiles)
+
     tiles.sort(key=lambda t: _sort_key(t, themes_first, sort))
 
     # 2 — the tape pull, for the three sorts a daily bar cannot answer.
@@ -1285,6 +1436,15 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
         if not any((t.get("_m") or {}).get("velocity") is not None for t in pool):
             sort_unavailable = ("Share counts unavailable right now — the board "
                                 "is showing its default order.")
+
+    # 2c — the 🧨 ordering, over ALL tiles, BEFORE the bar fetch. Deliberately
+    # not the TAPE_POOL_MULT pool the two sorts above use: they pay a network
+    # lookup per name and must cap; this one is already attached for free, so
+    # capping it would make "🧨 first" mean "🧨 first among the default top N"
+    # without saying so. `_spread` below cannot re-order it either — an
+    # explicit sort skips the per-theme cap by construction.
+    if sort == "explosive":
+        sort_unavailable = _explosive_sort(tiles) or sort_unavailable
 
     # 3 — the per-theme cap keeps the board a SPREAD, which is the right default
     # for a study surface. But it fights an explicit ranking: capping a volume
@@ -3231,7 +3391,8 @@ def _verdict_badges(kind: str, v: dict) -> list:
 def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
                           days: int = BARS_DEFAULT,
                           themes_first: bool = THEMES_FIRST_DEFAULT,
-                          min_tier: str = DEFAULT_MIN_TIER) -> dict:
+                          min_tier: str = DEFAULT_MIN_TIER,
+                          sort: str = DEFAULT_SORT) -> dict:
     """Two tabs — Keltner coils and AMD raids (Ajay 2026-09-13).
 
     *"I need two tabs in chart maps for me to look at where stocks are bullish
@@ -3316,6 +3477,12 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
             "verdict": v,
             "badges": _verdict_badges(kind, v),
             **tile_metrics(scan_by_sym.get(sym) or {}),
+            # The same numbers again under the private key `_finish` reads.
+            # The flat spread above is the tile's published shape and stays;
+            # `_m` is popped before the payload leaves, so this adds nothing
+            # to the wire and lets these two tabs use the ONE ranking engine
+            # instead of a second sort written here.
+            "_m": tile_metrics(scan_by_sym.get(sym) or {}),
         })
         if kind == "keltner":
             try:
@@ -3325,14 +3492,35 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
             except Exception as exc:                            # noqa: BLE001
                 log.debug("turning_bullish_tiles: curve %s failed: %s", sym, exc)
 
-    if themes_first:
-        tiles.sort(key=lambda t: _theme_rank(t.get("theme")))
+    # Both tabs ADVERTISED the sort dropdown and ignored it until 2026-09-15:
+    # `board()` handed every other tab's ordering to `_finish` and these two
+    # ranked by the stored row order alone. They go through the same engine now
+    # — which is also what gives them the 🧨 read and its ordering.
+    #
+    # `min_tier="any"` is not a new setting, it is THIS BOARD'S EXISTING RULE
+    # written in `_finish`'s vocabulary: the comment above the tile loop says a
+    # name the scan has not seen still gets a tile, "rather than being dropped
+    # from a board that is about chart structure, not liquidity". Handing
+    # `_finish` a real floor would have quietly deleted every name the SEPA
+    # scan has no row for, which is a different board than the one he asked
+    # for. The `min_tier` argument stays accepted and unused, as it was.
+    #
+    # ONE ORDERING SIDE EFFECT, accepted 2026-09-15 (his call to change): these
+    # two tabs used to apply `_theme_rank` alone, so `themes_first` only pulled
+    # theme names to the front. `_finish` also applies `_spread` (MAX_PER_THEME,
+    # default order only), so a 7th name of one theme now sits behind the other
+    # themes instead of in front of them. It DROPS nothing — `_spread` keeps the
+    # overflow as a tail — and it is the same spread every other tab already
+    # shows; an explicit sort skips it entirely.
+    # `test_turning_bullish_themes_first_SPREADS_but_drops_nothing` pins it.
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier="any")
 
     n_rows = b.get("n_rows") or 0
     n_all = b.get("n_all") or 0
     pct = round(100.0 * n_all / n_rows, 1) if n_rows else None
     return {
-        "tiles": tiles[:limit],
+        "tiles": out,
+        "sort_unavailable": meta.get("sort_unavailable"),
         "matched": n_all,
         "scanned": b.get("n_scanned"),
         "priced": n_rows,
@@ -4480,7 +4668,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                         bias=bias if isinstance(bias, str) else "all",
                         micro=micro if isinstance(micro, str) else "60m")
     elif t in ("keltner", "amd"):
-        out = turning_bullish_tiles(t, limit, days, themes_first, tier)
+        out = turning_bullish_tiles(t, limit, days, themes_first, tier,
+                                    sort=srt)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
@@ -4564,6 +4753,25 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # caution flag, not a study board, and the generic line would have
     # overwritten the sentence that says it is not a short signal.
     out["disclaimer"] = out.get("disclaimer") or DISCLAIMER
+    # The 🧨 chip on the three tabs that never reach `_finish` (winners,
+    # earnings, zero_dte read ledgers, not the scan). They keep `sorts: []` —
+    # there is no live volume to rank by there and the ordering is the return
+    # leg / the print date / the gamma — but the chip is a READ, not a
+    # ranking, so withholding it would be withholding information rather than
+    # avoiding a control that does nothing. A no-op (and no Mongo query) for
+    # every tab that already attached it.
+    attach_explosive(out.get("tiles") or [])
+    # The banner prose that goes with the chip, once per payload — the same
+    # dict `bounce_room.api_payload` puts on the non-tile boards, so the tile
+    # tabs' `CmBoard.study` slot leads with the measured verdict instead of
+    # rendering an empty banner. Every word and every number in it is built by
+    # the read's own module; none is typed here or in the TSX.
+    try:
+        from supply_demand import explosive as _explosive
+        out["explosive_study"] = _explosive.measured_verdict()
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: explosive verdict unavailable: %s", exc)
+        out["explosive_study"] = None
     # Extended hours on every tab (Ajay 2026-09-08, ORCL): the `now` line
     # moves to the live print and says which tape it came from.
     attach_live_now(out.get("tiles") or [], out)

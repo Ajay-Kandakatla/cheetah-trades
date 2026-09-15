@@ -17,6 +17,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import type { ExplosiveRead, ExplosiveStudy } from '../lib/bounceRoom';
 
 export type HpBand = { kind?: string; lo: number; hi: number; touches?: number | null; strength?: number | null };
 export type HpPlan = {
@@ -142,13 +147,14 @@ export function correctionLine(s: HpStudy | null | undefined): string {
   return CORRECTION_TEXT;
 }
 
-function Row({ r }: { r: HpRow }) {
+function Row({ r, explosive, study }: { r: HpRow; explosive?: ExplosiveRead | null; study?: ExplosiveStudy | null }) {
   const rev = r.reversal;
   return (
     <li className="hp-row" data-testid="hp-row">
       <div className="hp-row__head">
         <a className="hp-row__sym" href={`/chart-maps?tab=support&symbol=${encodeURIComponent(r.symbol)}`}>{r.symbol}</a>
         <GrowthChip symbol={r.symbol} className="cm-badge" />
+        <ExplosiveChip read={explosive} study={study} className="cm-badge" />
         <span className="hp-row__px">{money(r.close)}</span>
         <span className="hp-row__chg is-dn">{pct(r.change_pct)}</span>
         {r.date && <span className="hp-row__date">{r.date}</span>}
@@ -200,6 +206,12 @@ export function HotPullbackBoard() {
   }, [load]);
 
   const rows = useMemo(() => data?.rows || [], [data]);
+  /* 🧨 One POST for the whole list (the page's only bounce-room call) — the
+   * chip and the opt-in ordering both read this map, never a per-row fetch. */
+  const rowSymbols = useMemo(() => rows.map((r) => r.symbol).filter(Boolean), [rows]);
+  const room = useBounceRoom(rowSymbols);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const ordered = useExplosiveOrder(rows, (r) => r.symbol, room.map, explosiveFirst);
   const near = useMemo(() => data?.near_miss || [], [data]);
 
   return (
@@ -211,6 +223,9 @@ export function HotPullbackBoard() {
       <div className="hp__bar">
         <span className="hp__count">{headline(data)}</span>
         <span className="hp__spacer" />
+        {rows.length > 0 && (
+          <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
+        )}
         {scanNote(data) && <span className="hp__scannote">{scanNote(data)}</span>}
         <button type="button" className="hp__refresh" disabled={scanning}
                 aria-busy={scanning} onClick={() => load(true)}>
@@ -228,7 +243,14 @@ export function HotPullbackBoard() {
         <p className="hp__note" data-testid="hp-funnel">{funnelNote(data)}</p>
       )}
 
-      {rows.length > 0 && <ul className="hp__list">{rows.map((r) => <Row key={r.symbol} r={r} />)}</ul>}
+      {rows.length > 0 && (
+        <ul className="hp__list">
+          {ordered.map((r) => (
+            <Row key={r.symbol} r={r} study={room.payload?.explosive_study}
+                 explosive={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
+          ))}
+        </ul>
+      )}
 
       {near.length > 0 && (
         <div className="hp__near">

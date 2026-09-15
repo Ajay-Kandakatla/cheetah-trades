@@ -23,6 +23,8 @@ import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import type { ExplosiveStudy } from '../lib/bounceRoom';
 
 const W = 620;
 const PAD_Y = 10;
@@ -64,7 +66,12 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, tvTf }: { tile: CmTile; height?: number; tvTf?: string },
+  { tile, height = 190, tvTf, study }: {
+    tile: CmTile; height?: number; tvTf?: string;
+    /** 🧨 The board's served explosive verdict, for the chip's tooltip —
+     *  the number never lives in this file (board.explosive_study). */
+    study?: ExplosiveStudy | null;
+  },
 ) {
   const location = useLocation();
   const bars = tile.bars || [];
@@ -162,6 +169,13 @@ export const PatternChart = memo(function PatternChart(
                 Breaking, VCP and the rest. ⛔ tone when the trading engine will
                 refuse the name — good sales must not make it look clean. */}
             <GrowthChip symbol={tile.symbol} />
+            {/* 🧨 The explosive read (2026-09-15). PROP-FED off the tile —
+                chart_maps/board.attach_explosive puts it on every tile board
+                request whatever the sort, so the grid makes no extra call. It
+                renders nothing when the name has no demand-band read, and in
+                the study's null branch it is muted and says room + floor, never
+                a score. */}
+            <ExplosiveChip read={tile.explosive} study={study} />
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}

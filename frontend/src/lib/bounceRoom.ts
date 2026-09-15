@@ -113,6 +113,10 @@ export type BounceRoomRow = {
   fresh?: boolean;
   bounce?: BounceRead | null;
   room?: RoomRead | null;
+  /** 🧨 the explosive read (2026-09-15), additive — absent on older payloads
+   *  and on every row the server could not build a band for. See the block at
+   *  the bottom of this file for what it does and does not claim. */
+  explosive?: ExplosiveRead | null;
   error?: string;
 };
 
@@ -127,6 +131,10 @@ export type BounceRoomPayload = {
   pending: number;
   unavailable: number;
   disclaimer: string;
+  /** 🧨 the study's own verdict, served once per payload (2026-09-15) — the
+   *  banner and every chip tooltip render it, so no board ever types a
+   *  measured number into TSX. Absent on older payloads. */
+  explosive_study?: ExplosiveStudy | null;
 };
 
 /* ── symbol key ──────────────────────────────────────────────────────────── */
@@ -333,4 +341,181 @@ export function coverageNote(payload?: BounceRoomPayload | null): string {
   if (payload.unavailable > 0) parts.push(`${payload.unavailable} unavailable`);
   if (payload.store_date) parts.push(`bands ${payload.store_date}`);
   return parts.join(' · ');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🧨 EXPLOSIVE READ (2026-09-15) — the chip, the ordering, and the honesty
+ * ══════════════════════════════════════════════════════════════════════════
+ * Ajay 2026-09-14: a per-stock read of how likely a name in / arriving at a
+ * demand band is to make >= 5% toward the first supply band, ranked on every
+ * Chart Maps tab.
+ *
+ * The number is MEASURED or it is not shown. `read.measured.status` says
+ * which, and there are three states, two of which behave identically:
+ *   'separates' — the study found an out-of-sample lift; `score` is a live
+ *                 percentile rank against FROZEN edges (never re-fit here).
+ *   'no_signal' — the study came back null. There IS no score. The chip goes
+ *                 MUTED and says what it actually knows: room + whether the
+ *                 floor held. The ordering falls back to intact + room_rank.
+ *   'pending'   — the study has not run yet. Treated exactly like 'no_signal'
+ *                 everywhere, so nothing waits on a number that may never come.
+ *
+ * Every threshold behind this lives in backend/supply_demand/explosive.py and
+ * is imported there; this file computes NOTHING — it mirrors the ordering key
+ * (pinned against backend/tests/fixtures/explosive_order_mirror_2026_09_15.json
+ * by both suites) and renders what the server measured. */
+
+/** 'pending' behaves as 'no_signal' in every code path (2026-09-15). */
+export type ExplosiveStatus = 'separates' | 'no_signal' | 'pending';
+
+/** One ranked input behind the score / the descriptive tooltip. */
+export type ExplosiveComponent = {
+  key: string;
+  value?: number | null;
+  /** 0..1 percentile rank against the study's frozen edges. */
+  rank?: number | null;
+  label: string;
+};
+
+/** What the study says about itself, carried on every read so a chip can
+ *  never show a number without its status. */
+export type ExplosiveMeasured = {
+  status: ExplosiveStatus | string;
+  run_date?: string | null;
+  n_episodes?: number | null;
+  oos_d_hit5?: number | null;
+  oos_ci?: number[] | null;
+  /** Minimum detectable lift — a null reads "no lift larger than this". */
+  mdl?: number | null;
+  script?: string | null;
+};
+
+/** backend/supply_demand/explosive.py::read() — mirror. */
+export type ExplosiveRead = {
+  /** null in the no_signal / pending branch: there is no score to show. */
+  score?: number | null;
+  grade?: 'high' | 'mid' | 'low' | null;
+  components?: ExplosiveComponent[] | null;
+  /** alert_gates.sweep_read state == 'intact' — the ONE demand-side thing
+   *  that measured (+8.60pp). null = no read. */
+  intact?: boolean | null;
+  /** The raw sweep state when the server carries it: intact / swept / broken. */
+  state?: 'intact' | 'swept' | 'broken' | string | null;
+  /** false = today's low was NOT in the read (tile path, closed bars + print). */
+  session_low?: boolean;
+  room?: RoomRead | null;
+  band?: { lo: number; hi: number } | null;
+  /** 'N' = the read is valid at the NEXT OPEN, not at this print. */
+  convention?: 'P' | 'N' | null;
+  measured?: ExplosiveMeasured | null;
+};
+
+/** backend/supply_demand/explosive.py::measured_verdict() — the banner. */
+export type ExplosiveStudy = {
+  headline: string;
+  body?: string | null;
+  fallback_note?: string | null;
+  limits?: string | null;
+  status?: ExplosiveStatus | string | null;
+};
+
+/** A row the ordering can read: its symbol and its explosive read. */
+export type ExplosiveSortRow = { symbol: string; read?: ExplosiveRead | null };
+
+/** 'separates' only when the study says so. Anything else — no_signal,
+ *  pending, a missing dict, a status nobody has heard of — falls back. */
+export function explosiveSeparates(status?: ExplosiveStatus | string | null): boolean {
+  return status === 'separates';
+}
+
+/** The ONE ordering key, mirroring backend explosive_key(read, symbol):
+ *    separates → (0, -score, 0, symbol)        best score first
+ *    a separates read with NO score → (1, …)    scored rows first, then this
+ *    no_signal / pending → (intact ? 0 : 1, *roomRank, symbol)
+ *        i.e. floor held first, then CLEAR (unbounded room), then room_pct desc
+ *    no read at all → (2, 2, 0, symbol)         UNKNOWN IS ALWAYS LAST
+ *  `status` defaults to the read's own measured status, so a row that carries
+ *  the study's verdict needs no second argument. */
+export function explosiveOrderKey(
+  read: ExplosiveRead | null | undefined,
+  symbol: string,
+  status?: ExplosiveStatus | string | null,
+): [number, number, number, string] {
+  const sym = String(symbol ?? '');
+  if (!read) return [2, 2, 0, sym];
+  const st = status ?? read.measured?.status ?? 'pending';
+  if (explosiveSeparates(st)) {
+    const s = read.score;
+    if (typeof s === 'number' && Number.isFinite(s)) return [0, -s, 0, sym];
+    return [1, 0, 0, sym];                       // measured, but no score for this name
+  }
+  const rank = roomRank({ symbol: sym, coverage: 'store', room: read.room ?? null });
+  return [read.intact === true ? 0 : 1, rank[0], rank[1], sym];
+}
+
+/** Sort comparator over {symbol, read} pairs. Same key, same order as the
+ *  backend — both suites sort the shared fixture and must agree. */
+export function compareExplosive(
+  a?: ExplosiveSortRow | null,
+  b?: ExplosiveSortRow | null,
+  status?: ExplosiveStatus | string | null,
+): number {
+  const ka = explosiveOrderKey(a?.read, a?.symbol ?? '', status);
+  const kb = explosiveOrderKey(b?.read, b?.symbol ?? '', status);
+  if (ka[0] !== kb[0]) return ka[0] - kb[0];
+  if (ka[1] !== kb[1]) return ka[1] - kb[1];
+  if (ka[2] !== kb[2]) return ka[2] - kb[2];
+  return ka[3].localeCompare(kb[3]);
+}
+
+/** "held" / "swept" / "broken" / "not held" / "unknown" — what the 15 closed
+ *  bars + the print say about the band floor. Never a number. */
+function floorWord(read: ExplosiveRead): string {
+  if (read.intact === true) return 'held';
+  if (read.intact === false) {
+    if (read.state === 'swept' || read.state === 'broken') return read.state;
+    return 'not held';
+  }
+  return 'unknown';
+}
+
+/** The chip a surface prints, or null when there is nothing to say.
+ *    separates  → "🧨 0.82" (+ " · next-open" under convention N)
+ *    otherwise  → "🧨 room +30% · floor held" / "🧨 clear · floor held", MUTED
+ *  The tooltip always names the top two components, the study headline, and
+ *  the closed-bar caveat; it adds the session-low caveat when today's low was
+ *  not part of the read. No number is computed here — every one is served. */
+export function explosiveChipText(
+  read?: ExplosiveRead | null,
+  study?: ExplosiveStudy | null,
+): { text: string; title: string; tone: 'explosive' | 'muted' } | null {
+  if (!read) return null;
+  const st = read.measured?.status ?? study?.status ?? 'pending';
+  const separates = explosiveSeparates(st);
+  const floor = `floor ${floorWord(read)}`;
+
+  let text: string;
+  let tone: 'explosive' | 'muted';
+  if (separates && typeof read.score === 'number' && Number.isFinite(read.score)) {
+    text = `🧨 ${read.score.toFixed(2)}${read.convention === 'N' ? ' · next-open' : ''}`;
+    tone = 'explosive';
+  } else {
+    const room = read.room;
+    const p = effectiveRoomPct(room);
+    const roomPart = !room ? null
+      : room.state === 'CLEAR' ? 'clear'
+      : p != null ? `room ${pct(p)}`
+      : 'room n/a';
+    text = `🧨 ${roomPart ? `${roomPart} · ` : ''}${floor}`;
+    tone = 'muted';
+  }
+
+  const comps = (read.components || []).slice(0, 2)
+    .map((c) => c?.label).filter(Boolean) as string[];
+  const bits: string[] = [];
+  if (comps.length) bits.push(comps.join(' · '));
+  if (study?.headline) bits.push(study.headline);
+  bits.push('closed-bar read; live volume not included');
+  if (read.session_low === false) bits.push("today's low not in the read");
+  return { text, title: bits.join(' — '), tone };
 }

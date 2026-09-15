@@ -16,6 +16,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import type { BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import OverlayLegend from './OverlayLegend';
 import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import {
@@ -86,8 +91,14 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
 
   const rows = data?.rows || [];
   const tally = useMemo(() => biasTally(rows), [rows]);
-  const shown = useMemo(() => filterRows(rows, bias, atBandOnly, setupsOnly),
-                        [rows, bias, atBandOnly, setupsOnly]);
+  const filtered = useMemo(() => filterRows(rows, bias, atBandOnly, setupsOnly),
+                           [rows, bias, atBandOnly, setupsOnly]);
+  /* 🧨 One bounce-room POST for the names on the board; the chip on the
+   * no-data cards, the tiles' own chips and the opt-in ordering share it. */
+  const rowSymbols = useMemo(() => filtered.map((r) => r.symbol).filter(Boolean), [filtered]);
+  const room = useBounceRoom(rowSymbols);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const shown = useExplosiveOrder(filtered, (r) => r.symbol, room.map, explosiveFirst);
 
   // Three states, three banners. Before the payload arrives we know NOTHING
   // about the session, and the first build claimed "Market is closed" during
@@ -155,6 +166,7 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
                  onChange={(e) => setSetupsOnly(e.target.checked)} />
           {' '}Complete SMC setup
         </label>
+        <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
         <button type="button" className="sb-refresh" onClick={() => load()}>Refresh</button>
       </div>
 
@@ -182,8 +194,11 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
         hidden={hiddenOverlays} onToggle={toggleOverlay} />
       <div className="cm-grid">
         {shown.map((r) => r.tile
-          ? <PatternChart key={r.symbol} tile={filterTile(r.tile, hiddenOverlays)} tvTf="15m" />
-          : <NoDataCard key={r.symbol} row={r} onPick={onPick} />)}
+          ? <PatternChart key={r.symbol} tile={filterTile(r.tile, hiddenOverlays)} tvTf="15m"
+                          study={room.payload?.explosive_study} />
+          : <NoDataCard key={r.symbol} row={r} onPick={onPick}
+                        study={room.payload?.explosive_study}
+                        read={room.map.get(String(r.symbol).toUpperCase())} />)}
       </div>
 
       {!!data?.disclaimer && <p className="sb-disc">{data.disclaimer}</p>}
@@ -191,7 +206,10 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   );
 }
 
-function NoDataCard({ row, onPick }: { row: SessionRow; onPick?: (s: string) => void }) {
+function NoDataCard({ row, onPick, read, study }: {
+  row: SessionRow; onPick?: (s: string) => void;
+  read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
+}) {
   const meta = BIAS_META[row.bias] || BIAS_META.unknown;
   return (
     <div className="sb-nodata">
@@ -200,6 +218,7 @@ function NoDataCard({ row, onPick }: { row: SessionRow; onPick?: (s: string) => 
         {row.symbol}
       </button>
       <GrowthChip symbol={row.symbol} className="sb-chip" />
+      <ExplosiveChip read={read?.explosive} study={study} className="sb-chip" />
       <span className="sb-name">{row.name || ''}</span>
       <span className="sb-bias" style={{ color: toneColor(meta.tone) }}>
         {meta.dot} {meta.label}

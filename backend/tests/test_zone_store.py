@@ -102,7 +102,7 @@ def test_doc_shape_keeps_both_kinds_slimmed_to_kind_lo_hi_touches_strength():
         {"kind": "demand", "lo": 153.53, "hi": 158.99, "touches": 1, "strength": 15.0},
         {"kind": "supply", "lo": 161.78, "hi": 167.54, "touches": 1, "strength": 18.0}]
     assert set(doc) == {"_id", "symbol", "date", "geom", "bands", "atr14", "prev_close", "high_252",
-                        "recent", "computed_at"}
+                        "recent", "feat", "computed_at"}
 
 
 def test_build_doc_with_the_real_geometry_returns_only_the_two_kinds():
@@ -121,6 +121,69 @@ def test_build_doc_refuses_missing_or_short_frames_and_a_crashing_compute():
     def boom(frame):
         raise RuntimeError("no")
     assert ZS.build_doc("X", _frame(), TODAY, compute=boom) is None
+
+
+# ── feat block (2026-09-15, the explosive read's closed-bar features) ────────
+def test_feat_block_is_computed_on_the_closed_frame(monkeypatch):
+    """Same frame as the bands and `recent`: today already dropped. A feature
+    read off a partial today bar would be a different number every hour and
+    would not match what the study measured on closed bars."""
+    from supply_demand import explosive
+    seen = {}
+
+    def spy(frame):
+        seen["len"] = len(frame)
+        seen["last"] = pd.to_datetime(frame.index[-1]).date()
+        return {"spy": True}
+
+    monkeypatch.setattr(explosive, "feat_block", spy)
+    df = _frame(n=200)                                    # last row IS today
+    doc = ZS.build_doc("SYN", df, TODAY, compute=lambda f: {}, atr=lambda f: 1.0)
+    assert doc["feat"] == {"spy": True}, "build_doc stores exactly what feat_block returned"
+    assert seen["len"] == len(df) - 1 and seen["last"] < TODAY, \
+        "today's bar is dropped BEFORE the features are computed"
+    assert doc["recent"][-1]["date"] == seen["last"].isoformat(), \
+        "the feature frame is the frame `recent` and the bands came from"
+
+
+def test_feat_block_failure_never_drops_the_doc(monkeypatch):
+    """warm.one() lets build_doc's exceptions propagate and the loop then
+    writes NOTHING for that name — no bands, so no zone_edge / zone_bounce /
+    demand push. A board decoration must never be able to silence a name."""
+    from supply_demand import explosive
+
+    def fake_compute(frame):
+        return {"demand_zones": [{"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2,
+                                  "strength": 40.0}], "supply_zones": []}
+
+    def boom(frame):
+        raise RuntimeError("feature engine down")
+
+    kw = dict(compute=fake_compute, atr=lambda f: 1.0)
+    ok = ZS.build_doc("SYN", _frame(seed=2), TODAY, **kw)
+    monkeypatch.setattr(explosive, "feat_block", boom)
+    doc = ZS.build_doc("SYN", _frame(seed=2), TODAY, **kw)
+    assert doc is not None and doc["feat"] is None
+    assert doc["bands"] == ok["bands"] and doc["recent"] == ok["recent"]
+    assert set(doc) == set(ok), "the doc keeps its exact shape; only feat goes null"
+
+    coll = FakeColl()
+    out = ZS.warm(universe=["AAA"], caps={"AAA": 2e9}, loader=lambda s: _frame(seed=2),
+                  coll=coll, today=TODAY, **kw)
+    assert out["stored"] == 1 and out["failed"] == 0
+    assert coll.docs["AAA:2026-09-03"]["feat"] is None
+    assert coll.docs["AAA:2026-09-03"]["bands"], "the bands were written anyway"
+
+
+def test_NEGATIVE_a_short_frame_has_no_doc_and_therefore_no_feat(monkeypatch):
+    """The feat block does not rescue a frame that cannot support a doc, and
+    it is never computed for one (no wasted work on the warm's budget)."""
+    from supply_demand import explosive
+    calls = []
+    monkeypatch.setattr(explosive, "feat_block", lambda f: calls.append(len(f)) or {})
+    assert ZS.build_doc("X", _frame(n=ZS.MIN_BARS), TODAY) is None
+    assert ZS.build_doc("X", None, TODAY) is None
+    assert calls == []
 
 
 # ── universe filter ──────────────────────────────────────────────────────────

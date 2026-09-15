@@ -53,7 +53,10 @@ import { TickerLink } from './TickerLink';
 import { metricCells } from '../lib/boardMetrics';
 import { GrowthChip } from './GrowthChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
-import { compareDemandProximity, demandChipText, inOrNearDemand, type BounceRoomRow } from '../lib/bounceRoom';
+import { compareDemandProximity, demandChipText, inOrNearDemand, compareExplosive, type BounceRoomRow } from '../lib/bounceRoom';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
 
 export type BondePivot = {
   gap_pct?: number | null; vol_mult?: number | null;
@@ -168,6 +171,7 @@ export default function BondeBoard() {
   const [loading, setLoading] = useState(true);
   const [newOnly, setNewOnly] = useState(false);
   const [nearDemandOnly, setNearDemandOnly] = useState(false);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
 
   // Every row on the tab, once — the shared read is one POST per list.
   const rowSymbols = useMemo(() => {
@@ -214,9 +218,18 @@ export default function BondeBoard() {
             room.map.get(String(a.symbol).toUpperCase()),
             room.map.get(String(b.symbol).toUpperCase())));
       }
+      if (explosiveFirst) {
+        /* 🧨 opt-in, applied INSIDE each section so his sections survive —
+         * the same comparator the backend and every other board use. */
+        const status = explosiveStatusOf(room.map);
+        rows = rows.slice().sort((a, b) => compareExplosive(
+          { symbol: a.symbol, read: room.map.get(String(a.symbol).toUpperCase())?.explosive },
+          { symbol: b.symbol, read: room.map.get(String(b.symbol).toUpperCase())?.explosive },
+          status));
+      }
       return { ...s, rows, total: d.counts?.[s.key] ?? all.length, shown: all.length };
     });
-  }, [d, newOnly, nearDemandOnly, room.map]);
+  }, [d, newOnly, nearDemandOnly, explosiveFirst, room.map]);
 
   if (loading) return <div className="bd-note">reading his screen…</div>;
   if (err) return <div className="bd-note bd-err">⛔ {err}</div>;
@@ -275,6 +288,8 @@ export default function BondeBoard() {
                    onChange={(e) => setNearDemandOnly(e.target.checked)} />
             🎯 in / near a demand band only{nearPct != null ? ` (≤ ${nearPct}% above)` : ''} · nearest first
           </label>
+          <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst}
+                                className="bd-toggle" />
           {nearDemandOnly && (
             <span className="bd-dim bd-sub" title="How many of the tab’s names have a band read yet. Pending rows are being built and will appear on the next poll; a name with no demand band under its print never qualifies.">
               band read on {readCount} of {rowSymbols.length}
@@ -361,6 +376,8 @@ export default function BondeBoard() {
                           clears the 100/100 explosive-growth screen is the two
                           lists agreeing. */}
                       <GrowthChip symbol={r.symbol} className="bd-gchip" />
+                      <ExplosiveChip read={read?.explosive} className="bd-gchip"
+                                     study={room.payload?.explosive_study} />
                       {r.name && <div className="bd-coname">{r.name}</div>}
                     </div>
 

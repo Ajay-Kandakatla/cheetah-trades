@@ -475,6 +475,13 @@ export function ChartMaps() {
         </div>
       )}
 
+      {/* 🧨 The explosive read rides every tab, so its rules do too
+        * (backend rules_info._explosive_section, built from the enforcing
+        * constants). */}
+      <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
+        <RulesInfo section="explosive" />
+      </div>
+
       {/* Quick Bounce (Ajay 2026-09-06): the study's own numbers under the
         * blurb — the list is read against its base rate and its persistence,
         * never on its own. */}
@@ -938,6 +945,18 @@ export function ChartMaps() {
       {data?.sort_unavailable && (
         <p className="cm-note cm-note-warn">⚠️ {data.sort_unavailable}</p>
       )}
+      {/* 🧨 The study's verdict, SERVED (board.explosive_study). It leads
+        * with what was measured — including "no signal separates", which is the
+        * branch the prior expects — so the 🧨 ordering is never read as an
+        * explosiveness ranking it has not earned. No figure is typed here. */}
+      {data?.explosive_study?.headline && (
+        <div className="cm-note cm-explosive-study" data-testid="cm-explosive-study">
+          <strong>{data.explosive_study.headline}</strong>
+          {data.explosive_study.body ? <p>{data.explosive_study.body}</p> : null}
+          {data.explosive_study.fallback_note ? <p>{data.explosive_study.fallback_note}</p> : null}
+          {data.explosive_study.limits ? <p className="cm-dim">{data.explosive_study.limits}</p> : null}
+        </div>
+      )}
       {!!data?.dropped_thin && (
         <p className="cm-note">
           {data.dropped_thin} name{data.dropped_thin === 1 ? '' : 's'} hidden below the
@@ -997,7 +1016,9 @@ export function ChartMaps() {
                            locked={lockedOverlays}
                      onToggle={toggleOverlay} />
       <div className="cm-grid">
-        {tiles.map((t) => <PatternChart key={`${t.symbol}-${t.href}`} tile={t} />)}
+        {tiles.map((t) => (
+          <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study} />
+        ))}
       </div>
 
       {tiles.length ? (

@@ -31,10 +31,14 @@
  *
  * Nothing here gates a scan, an alert or a lane.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 
 export type GntPost = {
   id?: string; text?: string; created_at?: string | null;
@@ -142,11 +146,19 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
   }, [trader]);
   useEffect(() => { void load(); }, [load]);
 
+  /* Rows and the shared read are computed BEFORE the early returns — hooks
+   * cannot sit behind a conditional. 🧨 one bounce-room POST for his named
+   * tickers feeds the chip and the opt-in ordering. */
+  const all = useMemo(() => d?.tickers ?? [], [d]);
+  const filtered = useMemo(() => (freshOnly ? all.filter((t) => t.fresh) : all), [all, freshOnly]);
+  const rowSymbols = useMemo(() => filtered.map((t) => t.symbol).filter(Boolean), [filtered]);
+  const room = useBounceRoom(rowSymbols);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const rows = useExplosiveOrder(filtered, (t) => t.symbol, room.map, explosiveFirst);
+
   if (loading) return <div className="gnt-note">loading his posts…</div>;
   if (err) return <div className="gnt-note gnt-err">⛔ {err}</div>;
 
-  const all = d?.tickers ?? [];
-  const rows = freshOnly ? all.filter((t) => t.fresh) : all;
   const u = d?.usic;
 
   return (
@@ -178,6 +190,7 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
                  onChange={(e) => setFreshOnly(e.target.checked)} />
           last {d?.fresh_days ?? 14} days only ({d?.n_fresh ?? 0})
         </label>
+        <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
       </div>
 
       {/* The caveat rides on the board, not in a doc nobody opens. */}
@@ -209,6 +222,8 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
                         considerd in all chart maps." One name he likes that is
                         ALSO a 100/100 grower is the row worth reading twice. */}
                     <GrowthChip symbol={t.symbol} />
+                    <ExplosiveChip study={room.payload?.explosive_study}
+                                   read={room.map.get(String(t.symbol).toUpperCase())?.explosive} />
                     {t.mentions > 1 && (
                       <div className="gnt-dim">×{t.mentions} posts</div>
                     )}

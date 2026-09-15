@@ -20,6 +20,7 @@ What is stored (one doc per symbol per ET session date)
      bands: [{kind: "supply"|"demand", lo, hi, touches, strength}, ...],
      atr14, prev_close, high_252,
      recent: [{date, low, high, close}, ...]   # last RECENT_SESSIONS closed bars
+     feat: {...} | None                        # explosive.feat_block(frame), closed bars
      computed_at}
 
 * ``recent`` (2026-09-05, additive) — the tail of the CLOSED frame, oldest
@@ -29,6 +30,16 @@ What is stored (one doc per symbol per ET session date)
   bounce that started two days ago, not only today's (the phone alert's
   business). Consumers: supply_demand/bounce_room.py. zone_edge /
   zone_bounce_alerts never read it.
+
+* ``feat`` (2026-09-15, additive) — supply_demand/explosive.feat_block on the
+  same CLOSED frame the bands come from: the closed-bar features the
+  explosive read ranks on, plus the short bar tail its live floor read
+  (alert_gates.sweep_read) needs. A NEW key, never an extension of ``recent``
+  (RECENT_SESSIONS is an owner setting, 2026-09-05). Built inside a
+  try/except: a feature failure logs and stores ``feat: None``; it never
+  drops the doc, because a dropped doc means no bands and therefore no phone
+  alert for that name. Consumers: supply_demand/explosive.py through
+  bounce_room / chart_maps. No alert path reads it.
 
 * Bands come from price_zones.compute(df, max_zones=None, **zone_geom()) —
   the demand board's geometry (swing 5 / merge 4% / half-width 1.75%), so a
@@ -221,10 +232,26 @@ def build_doc(symbol: str, df, today: date, *, compute: Optional[Callable] = Non
             high_252 = None
     except Exception:
         high_252 = None
+    # `feat` (2026-09-15, additive) — the closed-bar feature block the
+    # explosive read needs (RSI / rvol / dvol / ATR% / CMF / Keltner + the
+    # 17-closed-bar tail alert_gates.sweep_read runs the live floor read on).
+    # Computed on the SAME `frame` the bands came from (today already
+    # dropped), so no extra I/O and no partial bar.
+    # FAIL-OPEN, and that is the whole point: warm.one() lets an exception
+    # propagate and then writes NOTHING for the name (no bands -> no
+    # zone_edge / zone_bounce / demand push). A feature block is a board
+    # decoration; it must never be able to silence a name.
+    try:
+        from supply_demand import explosive
+        feat = explosive.feat_block(frame)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("zone_store: feat_block failed for %s: %s", symbol, exc)
+        feat = None
     return {"_id": f"{symbol}:{today.isoformat()}", "symbol": symbol,
             "date": today.isoformat(), "geom": GEOM_TAG, "bands": bands,
             "atr14": a14, "prev_close": prev_close, "high_252": high_252,
             "recent": recent_sessions(frame),
+            "feat": feat,
             "computed_at": (now or datetime.now(ET)).isoformat()}
 
 

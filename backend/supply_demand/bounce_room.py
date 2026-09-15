@@ -649,9 +649,22 @@ def _coverage_of(doc: dict) -> str:
 
 
 def read_symbol(sym: str, doc: Optional[dict], snap: Optional[dict],
-                now: Optional[datetime] = None) -> dict:
+                now: Optional[datetime] = None, *, tb_row: Optional[dict] = None) -> dict:
     """One contract row. A tombstone doc ({"error": ...}) or a missing print
-    -> coverage 'unavailable'; no doc -> 'pending'."""
+    -> coverage 'unavailable'; no doc -> 'pending'.
+
+    `explosive` (2026-09-15, additive) — supply_demand/explosive.read on the
+    row this function just built: the same demand band (`demand_read`) and the
+    same room block (`room_read`) the row already carries, plus the doc's
+    closed-bar `feat` tail and the snapshot's day low for the live floor read.
+    None on a legacy doc (no `feat`) or with no demand band at/below the
+    print; a pending / unavailable row returns BEFORE this and carries no
+    `explosive` key at all. `tb_row` is the optional turning_bullish.stored()
+    row for the KC/AMD join — passed only when explosive.SELECTED needs a
+    KC/AMD component (it does not today), never fetched per symbol here.
+    The module is imported INSIDE the function: explosive imports bounce_room
+    inside read(), and zone_store imports explosive inside build_doc.
+    """
     sym = str(sym).upper()
     if not doc:
         return {"symbol": sym, "coverage": "pending"}
@@ -663,11 +676,14 @@ def read_symbol(sym: str, doc: Optional[dict], snap: Optional[dict],
         return {"symbol": sym, "coverage": "unavailable", "error": "no print in snapshot"}
     snap = snap or {}
     touches = touch_hits(doc, snap.get("low"), snap.get("date"), doc.get("date"), snapshot=snap)
-    return {"symbol": sym, "print": round(px, 4), "fresh": bool(fresh),
-            "coverage": _coverage_of(doc),
-            "bounce": bounce_read(px, doc, touches),
-            "room": room_read(px, doc),
-            "demand": demand_read(px, doc)}
+    row = {"symbol": sym, "print": round(px, 4), "fresh": bool(fresh),
+           "coverage": _coverage_of(doc),
+           "bounce": bounce_read(px, doc, touches),
+           "room": room_read(px, doc),
+           "demand": demand_read(px, doc)}
+    from supply_demand import explosive
+    row["explosive"] = explosive.read(row, doc=doc, day_low=_f(snap.get("low")), tb_row=tb_row)
+    return row
 
 
 # --------------------------------------------------------------------------
@@ -909,11 +925,17 @@ def build_payload(symbols: list, *, docs: dict, snapshot: Optional[dict], now: d
     covered = sum(1 for r in rows.values() if r["coverage"] in ("store", "ondemand"))
     n_pending = sum(1 for r in rows.values() if r["coverage"] == "pending")
     n_unavail = sum(1 for r in rows.values() if r["coverage"] == "unavailable")
+    from supply_demand import explosive
     return _json_clean({
         "as_of": now.astimezone(ET).isoformat() if snap_read else None,
         "in_session": in_session(now),
         "store_date": _iso_day(store_date),
         "params": dict(PARAMS),
+        # The measured verdict for the `explosive` row block, once per payload
+        # (2026-09-15): the banner prose every board renders. PARAMS is
+        # UNCHANGED — the read adds no owner setting, every number in it is
+        # imported or measured.
+        "explosive_study": explosive.measured_verdict(),
         "rows": rows,
         "requested": len(symbols), "covered": covered, "pending": n_pending,
         "unavailable": n_unavail,

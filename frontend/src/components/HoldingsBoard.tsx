@@ -14,6 +14,10 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import OverlayLegend from './OverlayLegend';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { filterTile, loadHidden, presentGroups, saveHidden, studiesWanted } from '../lib/chartOverlays';
 import { supportQuery } from '../lib/supportLevels';
 import {
@@ -107,6 +111,13 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
     })
     .filter(Boolean) as Array<{ h: HoldingLike; tile: CmTile }>, [ordered, reads, hiddenOverlays]);
 
+  /* 🧨 One bounce-room POST for the holdings on screen; the chip on the
+   * no-chart rows and the opt-in ordering read that one map. */
+  const rowSymbols = useMemo(() => ordered.map(({ h }) => h.symbol).filter(Boolean), [ordered]);
+  const room = useBounceRoom(rowSymbols);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const shownTiles = useExplosiveOrder(tiles, (t) => t.tile.symbol, room.map, explosiveFirst);
+
   const failed = ordered.filter(({ h }) => reads[h.symbol]?.error);
   const present = useMemo(() => presentGroups(tiles.map((t) => t.tile)), [tiles]);
 
@@ -136,13 +147,15 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
           {rows.length} holding{rows.length === 1 ? '' : 's'} · worst position first
           {loading ? ' · loading charts…' : ''}
         </span>
+        <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
       </div>
 
       <OverlayLegend present={present} hidden={hiddenOverlays} onToggle={toggleOverlay} />
 
       <div className="cm-grid">
-        {tiles.map(({ tile }) => (
-          <PatternChart key={`${tile.symbol}-${win}`} tile={tile} />
+        {shownTiles.map(({ tile }) => (
+          <PatternChart key={`${tile.symbol}-${win}`} tile={tile}
+                        study={room.payload?.explosive_study} />
         ))}
       </div>
 
@@ -152,7 +165,10 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
             // A name with no chart still says whether it is on the 🚀 growth
             // list (Ajay 2026-09-11: "ALL TABS IN CHART MAPS").
             <div key={h.symbol}>
-              <b>{h.symbol}</b> <GrowthChip symbol={h.symbol} /> {reads[h.symbol]?.error}
+              <b>{h.symbol}</b> <GrowthChip symbol={h.symbol} />
+              {' '}<ExplosiveChip study={room.payload?.explosive_study}
+                                  read={room.map.get(String(h.symbol).toUpperCase())?.explosive} />
+              {' '}{reads[h.symbol]?.error}
             </div>
           ))}
         </div>

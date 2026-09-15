@@ -1,0 +1,16 @@
+{
+  "_doc": "Shared ordering fixture for supply_demand.explosive.explosive_key (backend) and compareExplosive (frontend/src/lib/bounceRoom.ts). Both suites sort `rows` and must produce `expected_no_signal` when MEASURED.status == 'no_signal' (fallback: intact first, then bounce_room.room_rank = CLEAR first, then ROOM/NEAR/IN_BAND by room_pct desc, then no-read; unknown reads ALWAYS last; symbol tiebreak) and `expected_separates` when status == 'separates' (score desc, unknown last, symbol tiebreak). Room blocks mirror bounce_room.room_read output. 2026-09-15.",
+  "rows": [
+    {"symbol": "AAA", "read": {"score": 0.91, "grade": "high", "intact": true,  "room": {"state": "ROOM",    "room_pct": 30.0, "band": {"kind": "supply", "lo": 130.0, "hi": 132.0, "touches": 2}}}},
+    {"symbol": "BBB", "read": {"score": 0.40, "grade": "mid",  "intact": true,  "room": {"state": "CLEAR",   "room_pct": null, "band": null}}},
+    {"symbol": "CCC", "read": {"score": 0.75, "grade": "high", "intact": false, "room": {"state": "CLEAR",   "room_pct": null, "band": null}}},
+    {"symbol": "DDD", "read": {"score": 0.10, "grade": "low",  "intact": true,  "room": {"state": "NEAR",    "room_pct": 1.5,  "band": {"kind": "supply", "lo": 101.5, "hi": 103.0, "touches": 3}}}},
+    {"symbol": "EEE", "read": null},
+    {"symbol": "FFF", "read": {"score": 0.91, "grade": "high", "intact": true,  "room": {"state": "ROOM",    "room_pct": 12.0, "band": {"kind": "supply", "lo": 112.0, "hi": 114.0, "touches": 2}}}},
+    {"symbol": "GGG", "read": {"score": 0.55, "grade": "mid",  "intact": false, "room": {"state": "ROOM",    "room_pct": 8.0,  "band": {"kind": "supply", "lo": 108.0, "hi": 110.0, "touches": 4}}}},
+    {"symbol": "HHH", "read": {"score": null, "grade": null,   "intact": true,  "room": {"state": "IN_BAND", "room_pct": 0.0,  "band": {"kind": "supply", "lo": 99.0,  "hi": 101.0, "touches": 2}}}}
+  ],
+  "expected_separates": ["AAA", "FFF", "CCC", "GGG", "BBB", "DDD", "HHH", "EEE"],
+  "expected_no_signal": ["BBB", "AAA", "FFF", "DDD", "HHH", "CCC", "GGG", "EEE"],
+  "_notes": "separates: score desc (AAA/FFF tie 0.91 -> symbol), a null score counts as unknown-after-scored (HHH before the no-read EEE). no_signal: intact rows first — among them CLEAR (BBB) first, then room_pct desc (AAA 30 > FFF 12 > DDD 1.5 > HHH 0.0); then not-intact rows in the same room order (CCC CLEAR, GGG 8.0); no read (EEE) last."
+}

@@ -3,8 +3,11 @@ import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
 import { GrowthChip } from '../components/GrowthChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import { ExplosiveChip } from '../components/ExplosiveChip';
+import { ExplosiveFirstToggle } from '../components/ExplosiveFirstToggle';
 import { useMyFeatures } from '../hooks/useMyFeatures';
-import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BounceRoomRow } from '../lib/bounceRoom';
+import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { RussellWatch } from '../components/RussellWatch';
@@ -103,6 +106,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
    * room stat on each card; coverage is printed under the sort buttons. */
   const tickers = useMemo(() => (data?.candidates ?? []).map((c) => c.ticker), [data]);
   const { map: br, payload: brPayload, error: brError } = useBounceRoom(tickers);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
   const [drillTicker, setDrillTicker] = useState<string | null>(null);
   const [manualTicker, setManualTicker] = useState('');
   const [playbookOpen, setPlaybookOpen] = useState(false);
@@ -134,6 +138,11 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
     });
     return list;
   }, [data, quadrantFilter, sortKey, br]);
+
+  /* 🧨 Opt-in reordering over the SAME bounce-room map the room sort and
+   * the chips read — default OFF, so his tested "room to supply" order is what
+   * the board shows until he asks for the other one. */
+  const shownCandidates = useExplosiveOrder(sorted, (c) => c.ticker, br, explosiveFirst);
 
   return (
     <div className={embedded ? 'cat-page cat-page--embedded' : 'cm-page cat-page'}>
@@ -398,6 +407,8 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
                 {k === 'room' ? 'room to supply' : k.replace('_', ' ')}
               </button>
             ))}
+            {/* 🧨 opt-in: OFF keeps the tested room-first order he asked for. */}
+            <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
           </div>
           {quadrantFilter !== 'ALL' && (
             <button className="cat-controls__clear" onClick={() => setQuadrantFilter('ALL')}>
@@ -422,8 +433,9 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
 
       {/* Card grid */}
       <div className="cat-grid">
-        {sorted.map((c) => (
+        {shownCandidates.map((c) => (
           <CandidateCard key={c.ticker} c={c} br={br.get(c.ticker.toUpperCase())}
+                         study={brPayload?.explosive_study}
                          onClick={() => setDrillTicker(c.ticker)} />
         ))}
       </div>
@@ -493,7 +505,9 @@ export function CatalystsPage() {
 
 // ---- CandidateCard ----------------------------------------------------
 
-function CandidateCard({ c, br, onClick }: { c: Candidate; br?: BounceRoomRow; onClick: () => void }) {
+function CandidateCard({ c, br, study, onClick }: {
+  c: Candidate; br?: BounceRoomRow; study?: ExplosiveStudy | null; onClick: () => void;
+}) {
   const isUp = c.change_pct > 0;
   const cap = c.market_cap;
   const capStr = cap ? (cap >= 1e9 ? `$${(cap / 1e9).toFixed(1)}B` : `$${(cap / 1e6).toFixed(0)}M`) : '—';
@@ -513,6 +527,7 @@ function CandidateCard({ c, br, onClick }: { c: Candidate; br?: BounceRoomRow; o
             {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
+            <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
           </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>
@@ -862,6 +877,12 @@ function VolumeAlertToaster({ alerts, onClick }: { alerts: VolumeAlert[]; onClic
 
 function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }) {
   const { data, loading, refetch } = usePremarketScan();
+  /* 🧨 This view has its own list, so it makes its own single bounce-room
+   * POST — one per list, never one per card. */
+  const preTickers = useMemo(() => (data?.candidates ?? []).map((c) => c.ticker), [data]);
+  const { map: preBr, payload: prePayload } = useBounceRoom(preTickers);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const shownPre = useExplosiveOrder(data?.candidates ?? [], (c) => c.ticker, preBr, explosiveFirst);
 
   return (
     <div className="cat-premarket">
@@ -884,6 +905,7 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
           )}
         </div>
         <div className="cat-bar__right">
+          <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
           <button type="button" className="lifeboard-btn" onClick={refetch} disabled={loading}>
             {loading ? 'Scanning…' : '↻ Refresh'}
           </button>
@@ -894,7 +916,10 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
 
       {data && data.candidates.length > 0 && (
         <div className="cat-grid">
-          {data.candidates.map((c) => <PremarketCard key={c.ticker} c={c} onClick={() => onClickTicker(c.ticker)} />)}
+          {shownPre.map((c) => (
+            <PremarketCard key={c.ticker} c={c} onClick={() => onClickTicker(c.ticker)}
+                           br={preBr.get(c.ticker.toUpperCase())} study={prePayload?.explosive_study} />
+          ))}
         </div>
       )}
 
@@ -909,7 +934,10 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
   );
 }
 
-function PremarketCard({ c, onClick }: { c: PremarketCandidate; onClick: () => void }) {
+function PremarketCard({ c, onClick, br, study }: {
+  c: PremarketCandidate; onClick: () => void;
+  br?: BounceRoomRow; study?: ExplosiveStudy | null;
+}) {
   const isUp = c.change_pct > 0;
   const cap = c.market_cap;
   const capStr = cap ? (cap >= 1e9 ? `$${(cap / 1e9).toFixed(1)}B` : `$${(cap / 1e6).toFixed(0)}M`) : '—';
@@ -922,6 +950,7 @@ function PremarketCard({ c, onClick }: { c: PremarketCandidate; onClick: () => v
             {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
+            <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
           </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>

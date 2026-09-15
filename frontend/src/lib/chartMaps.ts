@@ -11,6 +11,7 @@
  */
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
+import type { ExplosiveRead, ExplosiveStudy } from './bounceRoom';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -326,6 +327,12 @@ export type CmTile = {
   badges?: CmBadge[];
   curves?: CmCurve[];
   pattern?: string | null;
+  /** 🧨 The explosive read for this name (chart_maps/board.attach_explosive,
+   *  2026-09-15) — served on every tile board request whatever the sort, so the
+   *  chip never costs a second fetch. null = no demand band under the print, a
+   *  legacy doc, or no read yet; the chip then renders nothing and the tile
+   *  sorts LAST under the explosive sort. */
+  explosive?: ExplosiveRead | null;
 };
 
 export type CmPatternRecord = {
@@ -427,6 +434,10 @@ export type CmBoard = {
   /** Set when the chosen sort's column came back empty for every row — the
    *  board is showing its default order and says so. */
   sort_unavailable?: string | null;
+  /** The explosive study's served verdict (2026-09-15), rendered in the
+   *  coverage strip. Numbers live in backend/supply_demand/explosive.py::MEASURED
+   *  and are never typed into a board. */
+  explosive_study?: ExplosiveStudy | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

@@ -19,7 +19,7 @@
  * Ticker search reuses `SymbolSearch` (the /symbol-search typeahead already
  * wired for the watch table) rather than growing a second one.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { SymbolSearch } from '../components/SymbolSearch';
@@ -34,6 +34,8 @@ import {
 } from '../lib/supportLevels';
 import { tvChartUrl } from '../lib/tvChart';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { useBounceRoom } from '../hooks/useBounceRoom';
 
 type Props = {
   symbol: string;
@@ -209,6 +211,15 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   const supports = data?.supports || [];
   const overhead = data?.overhead || [];
   const shortNote = shortHistoryNote(data);
+  /* 🧨 This tab is ONE name, so there is no ordering to offer — just the
+   * read, from the same bulk endpoint every other board uses (a one-symbol
+   * POST, cached 30 s server-side). */
+  const roomSymbols = useMemo(() => (sym ? [sym] : []), [sym]);
+  /* pollMs 0: this tab deliberately stops polling when the tape is closed
+   * (see the live-frame cadence above), and a background band poll would put
+   * that traffic straight back. The read is closed-bar; it re-fetches when the
+   * symbol changes, which is the only time it can change. */
+  const room = useBounceRoom(roomSymbols, { pollMs: 0 });
 
   return (
     <div className="sl-panel">
@@ -266,6 +277,8 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             <h2 className="sl-sym">
               {data.symbol}
               <GrowthChip symbol={data.symbol} className="cm-badge" />
+              <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
+                             read={room.map.get(String(data.symbol).toUpperCase())?.explosive} />
               {data.name ? <span className="sl-name">{data.name}</span> : null}
             </h2>
             <div className="sl-meta">
@@ -331,7 +344,8 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
           <OverlayLegend present={presentGroups([data.tile])}
                          hidden={hiddenOverlays} onToggle={toggleOverlay} />
           <div className="sl-chart">
-            <PatternChart tile={filterTile(data.tile, hiddenOverlays)} height={320} />
+            <PatternChart tile={filterTile(data.tile, hiddenOverlays)} height={320}
+                          study={room.payload?.explosive_study} />
           </div>
           <p className="cm-note">
             Chart shows <strong>{data.chart_span || data.window_label}</strong>

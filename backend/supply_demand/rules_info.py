@@ -50,7 +50,13 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # Same reason as turning_bullish: a study board whose own
                 # thesis measured inverted, and the reader must meet that
                 # before the rules rather than after them.
-                "bonde")
+                "bonde",
+                # 🧨 Explosive read (2026-09-15) — a per-name read that orders
+                # every Chart Maps tab. Its own section for the turning_bullish
+                # reason and one more: until the study lands the order shown
+                # under the 🧨 label is floor-held + room, and the panel is
+                # where that has to be said in words.
+                "explosive")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -633,7 +639,113 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: bonde section unavailable: %s", exc)
 
+    # ── 🧨 Explosive read ──────────────────────────────────
+    try:
+        out["explosive"] = _explosive_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: explosive section unavailable: %s", exc)
+
     return out
+
+
+def _explosive_section() -> dict:
+    """🧨 Explosive read — the per-name read of a demand-band arrival's
+    chance of making his move up toward the first supply band.
+
+    Built from `explosive.MEASURED` through `explosive.measured_verdict()` and
+    from the constants that enforce each gate. Nothing is typed here: a re-run
+    of the study moves this panel with it, and a constant change moves it too.
+    The verdict call is guarded on its own so a half-written MEASURED can never
+    take the whole section (and the rules built from constants) off the page."""
+    from . import explosive as EX
+    from . import amd as AMD
+    from . import mood as MD
+    from sepa.breakout_audit import VOL_AVG_BARS
+
+    try:
+        verdict = EX.measured_verdict() or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: explosive verdict unavailable: %s", exc)
+        verdict = {}
+
+    status = str((getattr(EX, "MEASURED", None) or {}).get("status") or "")
+    separates = status == EX.STATUS_SEPARATES
+
+    if separates:
+        order_line = (
+            "ORDER: the boards rank on the measured score — the percentile "
+            "rank of the features the study SELECTED, scored against the "
+            "quantile edges frozen at that run. The score never re-fits on "
+            "live data, and a name without a demand-band read sorts last "
+            "rather than in the middle."
+        )
+    else:
+        order_line = (
+            "ORDER: there is no measured score yet, so the 🧨 label "
+            "orders on FLOOR HELD first and then on headroom — CLEAR (nothing "
+            "proven overhead) ahead of the rest, then the most room to the "
+            "first proven band, then a name with no demand-band read last. "
+            "That is floor-held + room, and it is NOT an explosiveness "
+            "ranking; the chip says so on every surface that shows it."
+        )
+
+    alerts = []
+    for key in ("headline", "body", "fallback_note", "limits"):
+        val = verdict.get(key)
+        if isinstance(val, (list, tuple)):
+            val = " ".join(str(x) for x in val if x)
+        if val:
+            alerts.append(str(val))
+    if not alerts:
+        alerts.append("MEASURED: the study has not reported yet, so nothing "
+                      "on this board is a measured claim.")
+    alerts.append(
+        "NOTHING HERE PUSHES, GATES OR BUYS. The read gates no phone alert and "
+        "no paper lane; it orders boards and draws a chip. A name first under "
+        "the 🧨 label has not been bought, has not been pushed and has "
+        "not passed anything."
+    )
+
+    return {
+        "title": "Explosive read — from the demand band toward supply",
+        "emoji": "🧨",
+        "picks": [
+            "Who gets a read: a name with a demand band at or below the "
+            "print. That is the only condition — the read is not gated on "
+            "headroom and not gated on the stop, so a name sitting inside the "
+            "band with nothing above it and a name whose floor has already "
+            "broken both still carry the chip. What the row shows instead of "
+            "a gate is the headroom and the floor state themselves.",
+            "What the STUDY measured is narrower than what the board reads: "
+            "its cohort keeps only arrivals carrying at least %s of headroom "
+            "to the first PROVEN band overhead (CLEAR — nothing proven above "
+            "— counts as unbounded headroom) and still printing above the "
+            "plan stop, %s under the band floor. Those are the same two gates "
+            "the phone uses, so the measurement describes the arrivals he is "
+            "already shown, while the chip is drawn on the wider set."
+            % (_pct(AG.ALERT_MIN_ROOM_PCT), _pct(AG.STOP_BUFFER_PCT)),
+            "What it reads, all on CLOSED bars: RSI over %d sessions, traded "
+            "volume against its own %d-bar and %d-day averages, the Keltner "
+            "channel position, the AMD cycle grade and the median daily "
+            "dollar volume over that same %d-day window. Every one of them is "
+            "evaluated BEFORE the name is ranked, and none of them is "
+            "live-tape data — the session's own volume is not in the number."
+            % (MD.RSI_PERIOD, AMD.VOL_REF_BARS, VOL_AVG_BARS, VOL_AVG_BARS),
+            "The floor read is the phone's own: the last %d closed bars plus "
+            "today's print and low, and the band's floor must have HELD. Held "
+            "/ swept / broken is stated on the row rather than hidden, and a "
+            "reversal off a floor that broke is still listed."
+            % AG.SWEEP_WINDOW_BARS,
+            order_line,
+        ],
+        "stops": [
+            "No stop, no target and no size: this is a board ORDER and a chip. "
+            "The stop beside a demand band stays the trade plan's own, %s "
+            "under the band floor." % _pct(AG.STOP_BUFFER_PCT),
+        ],
+        "alerts": alerts,
+        "note": _DISCLAIMER,
+    }
 
 
 def BD_MIN_CONSEC() -> int:

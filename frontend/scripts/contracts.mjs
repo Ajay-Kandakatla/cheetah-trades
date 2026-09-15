@@ -1820,6 +1820,143 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'the \u{1F9E8} explosive chip reaches every renderer, PROP-FED, with no maths in the TSX (2026-09-15)',
+    file: 'src/lib/chartMaps.ts',
+    // Twin of the \u{1F680} growth-chip contract above, with three extra teeth the
+    // explosive read needs and growth does not:
+    //   * the batcher / per-chip hook from the rev-1 plan must NOT exist — one
+    //     page-level useBounceRoom per list is the whole serving design, and a
+    //     batcher would hide a 24-request fan-out behind a tidy import;
+    //   * the chip must not re-implement the score. The score is fit and frozen
+    //     in backend/supply_demand/explosive.py; a percentile recomputed in TSX
+    //     is a second, drifting engine;
+    //   * no measured figure may be typed into the banner JSX (the Bonde rule)
+    //     — the verdict is SERVED, so a re-run changes the board without a
+    //     frontend deploy, and a stale number can never sit on his screen.
+    // \u{1F680} Explosive Growth is IN this map, unlike the growth contract that
+    // skips it: it is the growth list, but it is not the explosive read.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+
+      const RENDERER = {
+        hot_pullback: 'src/components/HotPullbackBoard.tsx',
+        patterns: 'src/pages/PatternsPage.tsx',
+        session: 'src/components/SessionBoard.tsx',
+        signals: 'src/components/SignalLabBoard.tsx',
+        hot_sectors: 'src/components/HottestSectors.tsx',
+        catalysts: 'src/pages/Catalysts.tsx',
+        overnight: 'src/components/OvernightGappers.tsx',
+        support: 'src/components/SupportLevels.tsx',
+        gnt: 'src/components/GntBoard.tsx',
+        bonde: 'src/components/BondeBoard.tsx',
+        holdings: 'src/components/HoldingsBoard.tsx',
+        growth: 'src/components/ExplosiveGrowth.tsx',
+      };
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd)$/.test(t));
+      for (const t of nonBoard) {
+        const file = RENDERER[t];
+        if (!file) {
+          errs.push(`tab '${t}' has no renderer listed in the explosive contract — add it and give it an <ExplosiveChip>`);
+          continue;
+        }
+        const tsx = read(file);
+        if (!/<ExplosiveChip\s/.test(tsx)) {
+          errs.push(`${file} (tab '${t}') does not render <ExplosiveChip>`);
+        }
+        // The read must come from a list-level bounce-room map, never a fetch
+        // the chip makes for itself.
+        if (/<ExplosiveChip[^>]*read=\{[^}]*fetch/.test(tsx)) {
+          errs.push(`${file} feeds the chip from a fetch — the read rides on the page's one bounce-room map`);
+        }
+      }
+
+      /* The opt-in ordering checkbox rides on every list renderer EXCEPT two,
+       * and both exemptions are deliberate — so each one has to SAY SO in its
+       * own file. An absent toggle and a drifted toggle look identical from
+       * here; the written reason is the difference.
+       *   support — one symbol per tab, there is no list to order (spec §6.4);
+       *   hot_sectors — the payload keeps only `names_per_group` rows per group and
+       *             the column sorts are a SERVER round-trip for exactly that
+       *             reason; a browser reorder would rank the visible 25 and
+       *             never reach the 305th Technology name. Ranking these rows
+       *             by the explosive read belongs where the truncation happens
+       *             (a backend sort key) — HIS CALL, not a silent FE reorder.
+       */
+      const NO_TOGGLE = {
+        support: /no ordering to offer/,
+        hot_sectors: /NO \u{1F9E8} ordering toggle on this board, deliberately/u,
+      };
+      for (const t of nonBoard) {
+        const file = RENDERER[t];
+        if (!file) continue;
+        const tsx = read(file);
+        const why = NO_TOGGLE[t];
+        if (why) {
+          if (/<ExplosiveFirstToggle\s/.test(tsx)) {
+            errs.push(`${file} (tab '${t}') mounts <ExplosiveFirstToggle> but is listed as deliberately un-ordered — drop it from NO_TOGGLE in this contract if that is now intended`);
+          } else if (!why.test(tsx)) {
+            errs.push(`${file} (tab '${t}') has no \u{1F9E8} ordering toggle and no longer states why — an unexplained omission is indistinguishable from drift`);
+          }
+        } else if (!/<ExplosiveFirstToggle\s/.test(tsx)) {
+          errs.push(`${file} (tab '${t}') renders the chip but offers no <ExplosiveFirstToggle> — every list board gets the opt-in ordering`);
+        }
+      }
+
+      // Every board tab funnels through the one tile component, and its read
+      // rides on the tile (chart_maps/board.attach_explosive) — no request.
+      const tile = read('src/components/PatternChart.tsx');
+      if (!/<ExplosiveChip\s+read=\{tile\.explosive\}/.test(tile)) {
+        errs.push('PatternChart must render <ExplosiveChip read={tile.explosive}> — it is the one renderer behind every board tab');
+      }
+
+      // The rev-1 batcher / per-chip hook must not exist ANYWHERE.
+      for (const gone of ['src/lib/explosiveBatcher.ts', 'src/hooks/useExplosiveRead.ts']) {
+        let exists = true;
+        try { read(gone); } catch { exists = false; }
+        if (exists) errs.push(`${gone} must not exist — one page-level useBounceRoom per list is the serving design`);
+      }
+      const chip = read('src/components/ExplosiveChip.tsx');
+      if (/\bfetch\s*\(/.test(chip) || /useEffect/.test(chip)) {
+        errs.push('ExplosiveChip must be PROP-FED — it never fetches and holds no state');
+      }
+      if (/explosiveBatcher|useExplosiveRead/.test(chip)) {
+        errs.push('ExplosiveChip must not import a batcher or a per-chip read hook');
+      }
+      // No score maths in the TSX: the score is frozen in explosive.py.
+      if (/\b(rsi|rvol|quantile|percentile)\b/i.test(chip)) {
+        errs.push('ExplosiveChip must not re-implement the score — it renders what explosive.py measured');
+      }
+      const hook = read('src/hooks/useExplosiveOrder.ts');
+      if (/\bfetch\s*\(/.test(hook)) {
+        errs.push('useExplosiveOrder must not fetch — it reads the map the page already has');
+      }
+
+      // The verdict banner is SERVED. A typed figure goes stale in silence.
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/explosive_study\?\.headline/.test(page)) {
+        errs.push('ChartMaps must render the served explosive_study headline');
+      }
+      if (!/<RulesInfo section="explosive"/.test(page)) {
+        errs.push('the \u{1F9E8} rules section must be mounted where RulesInfo already sits');
+      }
+      const banner = /cm-explosive-study[\s\S]*?<\/div>\s*\)\}/.exec(page);
+      if (banner && (/\d\.\d\dpp/.test(banner[0]) || /\d+\.\d%/.test(banner[0]))) {
+        errs.push('the explosive banner must not hard-code a measured figure — it comes from explosive.py::MEASURED');
+      }
+
+      const css = read('src/styles.css');
+      for (const c of ['cm-badge-explosive', 'cm-badge-explosive-muted', 'hs-badge-explosive',
+                       'sb-chip-explosive', 'bd-gchip-explosive', 'eg-explosive', 'ex-toggle']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the chip would ship unstyled`);
+        }
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
