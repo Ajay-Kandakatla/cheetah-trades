@@ -3189,7 +3189,7 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     name's chart can never disagree about its state.
 
     Reads the cron's stored document — never scans on the request path. The
-    sweep is cheap (2,669 names in 11s, measured) but it still loads a 500-bar
+    sweep is cheap (2,669 names in 11s, measured 2026-09-13) but it still loads a 500-bar
     frame per symbol, and doing that while he waits is how a tab times out at
     the open.
 
@@ -3300,6 +3300,10 @@ def _turning_note(kind: str, n_all: int, n_rows: int, pct) -> str:
     page that changes what he does with it. Scripts:
     `backend/scripts/turning_bullish_keltner_study.py` and
     `..._amd_study.py`, both re-runnable verbatim.
+
+    Re-measured 2026-09-14 on the wide list (~3,700 names) with the AMD
+    detector that can fail a cycle; both still inverted. The body leads with
+    that run; 2026-09-13 values appear only as labelled comparisons.
     """
     where = ("%s of %s priced names (%s%%)"
              % (f"{n_all:,}", f"{n_rows:,}", pct if pct is not None else "?"))
@@ -3309,43 +3313,50 @@ def _turning_note(kind: str, n_all: int, n_rows: int, pct) -> str:
               % ("keltner" if kind == "keltner" else "amd"))
     if kind == "keltner":
         return (
-            "MEASURED 2026-09-13 AND THE CLAIM IS INVERTED. Over 2,660 names "
-            "and 1,200,755 closed daily bars (2024-09-12 → 2026-09-11) a "
-            "coiled bar returned LESS than every other bar of the same names: "
-            "21-day median lift −0.33pp (95% CI −0.57 to −0.12), 10d −0.23pp "
-            "(−0.33 to −0.10), 5d −0.20pp (−0.27 to −0.12); win rate 49.0% vs "
-            "50.9% at 5d. And a coiled name closes above its upper Keltner "
-            "band within 21 sessions 40.0% of the time (CI 39.0–41.1) against "
-            "55.0% (54.5–55.6) for a name in the SAME upper half with the "
-            "SAME rising 20-EMA and no squeeze — the squeeze makes that break "
-            "14.8pp LESS likely. Against that one-clause control the squeeze "
-            "adds nothing either way (21d +0.11pp, CI −0.17 to +0.41). The "
-            "one positive cell is a coil of 21+ bars, which beat the control "
-            "at all three horizons (21d +1.34pp, CI +0.39 to +2.33) — 1 of 4 "
-            "buckets, 471 names, and 4 names on today's board. Exploratory. "
-            "WHAT THE BOARD IS: the Bollinger band inside the Keltner channel "
-            "(compression), price in the upper half, the 20-day midline "
-            "rising. A squeeze is COMPRESSION, NOT A DIRECTION. Longest coil "
-            "first, which is also the only cell that measured anything. "
+            "RE-MEASURED 2026-09-14 ON 3,704 NAMES AND THE CLAIM IS STILL "
+            "INVERTED — harder than on 2026-09-13. Over 1,662,135 closed daily "
+            "bars a coiled bar returned LESS than every other bar of the same "
+            "names: 21-day median lift −0.55pp (95% CI −0.72 to −0.37), 10d "
+            "−0.30pp (−0.40 to −0.20), 5d −0.22pp (−0.27 to −0.17); win rate "
+            "48.3% vs 50.7% at 5d. And a coiled name closes above its upper "
+            "Keltner band within 21 sessions 38.6% of the time (CI 37.8–39.6) "
+            "against 55.4% (54.9–55.9) for a name in the SAME upper half with "
+            "the SAME rising 20-EMA and no squeeze — the squeeze makes that "
+            "break 16.2pp LESS likely. Against that one-clause control the "
+            "squeeze itself now subtracts (21d −0.25pp, CI −0.47 to −0.06). "
+            "The 2026-09-13 positive cell — a coil of 21+ bars, +1.34pp on "
+            "2,660 names — did not survive the wider list: +0.23pp (CI −0.44 "
+            "to +0.88) over 752 names, a null. WHAT THE BOARD IS: the "
+            "Bollinger band inside the Keltner channel (compression), price in "
+            "the upper half, the 20-day midline rising. A squeeze is "
+            "COMPRESSION, NOT A DIRECTION. Longest coil first as an ORDER, "
+            "not a measured ranking. "
             + where + "." + common)
     return (
-        "MEASURED 2026-09-13 AND THE CLAIM IS INVERTED. Over 2,666 names and "
-        "1,150,446 evaluated bars, forward returns are indistinguishable from "
-        "every other bar of the same names — 21d +1.77% vs +2.02%, lift "
-        "−0.25% (95% CI −1.30 to +0.72); 5d and 10d likewise span zero. And "
-        "the one thing this read claims is backwards: against a like-for-like "
-        "bar sitting INSIDE its own base at the same distance below the top, "
-        "a fresh raid makes a close above that top within 21 sessions LESS "
-        "likely — 42.7% vs 51.6%, −8.9pp (95% CI −11.4 to −5.9), negative in "
-        "all seven distance buckets and worse the further price sits below "
-        "the top. Raid recency separates nothing (0–3 bars vs 4–10: every CI "
-        "spans zero, and fresh leans worse), so the 3-session bound here is a "
+        "RE-MEASURED 2026-09-14 WITH THE FAILED PHASE, ON 3,712 NAMES, AND "
+        "THE CLAIM IS STILL INVERTED — smaller than on 2026-09-13, not gone. "
+        "The old detector never ended a cycle on a close through the raided "
+        "edge and so kept counting bars in an already-broken base as raids — "
+        "237,802 of them, as many as the real fires — which is where most of "
+        "the −8.9pp came from. On 1,592,057 evaluated bars the state now "
+        "fires on 15.1% of bars. Forward returns against every other bar of "
+        "the same names: 5d −0.36% (95% CI −0.77 to −0.06), 10d −0.48% (−1.07 "
+        "to −0.02), 21d −0.41% (−1.11 to +0.15). The one thing this read "
+        "claims — a fresh raid precedes a close above the base top within 21 "
+        "sessions — against a like-for-like bar sitting INSIDE its own live "
+        "base at the same distance below the top: 51.9% vs 56.1%, −4.2pp (CI "
+        "−6.9 to −1.9), negative in all seven distance buckets. This board's "
+        "own cut (raid 0–3 sessions ago) is worse: 48.9% vs 54.4%, −5.6pp (CI "
+        "−9.0 to −2.7). Raid recency separates nothing on returns (0–3 vs "
+        "4–10: every CI spans zero), so the 3-session bound here is a "
         "BOARD-SIZE cut and not an accuracy gain — at 10 sessions this state "
-        "carries 1,201 of 2,621 names. WHAT THE BOARD IS: the base low was "
+        "carries 759 of 3,634 names. WHAT THE BOARD IS: the base low was "
         "swept and price CLOSED back inside it, so the stops under the base "
         "are gone and the markup through the top has not happened. A close "
-        "BEYOND the edge would be a breakout and means the opposite thing. "
-        "Longest base first. " + where
+        "BEYOND the edge would be a breakout and means the opposite thing; a "
+        "close back THROUGH the raided edge ends the cycle as FAILED, and a "
+        "base that re-forms after a failure reads as basing. Longest base "
+        "first. " + where
         + ", so treat it as a description of the tape, not a screen." + common)
 
 

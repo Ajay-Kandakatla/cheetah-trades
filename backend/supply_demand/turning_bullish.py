@@ -31,29 +31,37 @@ is context and not a turn.
 WHAT THIS IS NOT — AND THIS PART IS MEASURED, NOT HEDGED
 ────────────────────────────────────────────────────────
 Neither study is cited in his library. Both were measured against a placebo on
-2026-09-13, and **BOTH CAME BACK INVERTED ON THEIR OWN CLAIM** — not null,
-inverted. Scripts in `backend/scripts/turning_bullish_keltner_study.py` and
-`..._amd_study.py`, re-runnable verbatim in the api container.
+2026-09-13 and **BOTH CAME BACK INVERTED ON THEIR OWN CLAIM**; both were
+RE-MEASURED on 2026-09-14 on the wide list (`full` ∪ `broad`, ~3,700 names,
+Ajay: "about 4k is what we discussed"). Keltner HARDENED. AMD, once the
+detector could FAIL a cycle, stayed inverted at a smaller size. Scripts in
+`backend/scripts/turning_bullish_keltner_study.py` and `..._amd_study.py`,
+re-runnable verbatim in the api container.
 
-  Keltner, 2,660 names / 1,200,755 closed daily bars: fires on 5.39% of bars.
+  Keltner, 3,704 names / 1,662,135 closed daily bars: fires on 5.50% of bars.
   Forward returns NEGATIVE at every horizon with every lift CI clear of zero
-  (21d median lift −0.33pp [−0.57, −0.12]). Against a control differing by ONE
-  clause — same upper half, same rising EMA, no squeeze — the squeeze adds
-  nothing (21d +0.11pp [−0.17, +0.41]) and makes the upper-band break 14.8pp
-  LESS likely (40.0% vs 55.0%). One positive cell: a coil of 21+ bars, which
-  is why LENGTH is the sort key; 1 of 4 buckets, 471 names, exploratory.
+  (21d median lift −0.55pp [−0.72, −0.37]). Against a control differing by ONE
+  clause — same upper half, same rising EMA, no squeeze — the squeeze now
+  SUBTRACTS (21d −0.25pp [−0.47, −0.06]) and makes the upper-band break 16.2pp
+  LESS likely (38.6% vs 55.4%). The 2026-09-13 positive cell (coil 21+ bars,
+  +1.34pp) is a null on the wide list (+0.23pp [−0.44, +0.88], 752 names);
+  LENGTH stays the sort key as an order, not a ranking.
 
-  AMD, 2,666 names / 1,150,446 bars: fires on 30.3% of ALL bars. Forward
-  returns a null leaning negative (21d lift −0.25% [−1.30, +0.72]). The claim
-  is backwards: against a like-for-like bar inside its own base at the same
-  distance below the top, a fresh raid makes the close above that top LESS
-  likely — 42.7% vs 51.6%, −8.9pp [−11.42, −5.91], negative in all seven
-  distance buckets.
+  AMD, RE-MEASURED 2026-09-14 on 3,712 names / 1,592,057 bars after the
+  detector learned to FAIL a cycle and to let a base formed after a failure
+  be the live read (the 2026-09-13 −8.9pp was mostly bars in an already-
+  broken base still counted as raids — 237,802 of them, as many as the real
+  fires). Fires on 15.1% of bars. Forward returns against every other bar:
+  5d −0.36% [−0.77, −0.06], 10d −0.48% [−1.07, −0.02], 21d −0.41% [−1.11,
+  +0.15]. The claim, like-for-like (a bar inside its own live base at the
+  same distance below the top): 51.9% vs 56.1%, −4.2pp [−6.92, −1.89] —
+  STILL INVERTED, negative in all seven distance buckets. The board's own
+  0-3 cut is worse: −5.6pp [−8.97, −2.69].
 
 The nearest relative the app measured before this, the ICT tab, came back at
 +0.03R over 6,004 signals — flat. These two are worse than flat. Nothing in
-this module gates a scan, an alert or a paper lane, and after this measurement
-nothing ever should without a new study saying otherwise.
+this module gates a scan, an alert or a paper lane, and after these
+measurements nothing ever should without a new study saying otherwise.
 """
 from __future__ import annotations
 
@@ -81,21 +89,23 @@ MID_SLOPE_BARS = 20
 # because his standing rule is that tightening a gate must never be SOLD as
 # making a signal more accurate when it does not.
 #
-# At 10 sessions the state fired on 1,212 of 2,669 names — 45% of the market,
-# which is a description of the market and not a selection. The cause is
-# visible in the base lengths: the MEDIAN qualifying base is 10 bars, barely
-# over `amd.MIN_BASE_BARS` of 8, so most "bases" are an ordinary fortnight and
-# most "raids" an ordinary poke. Three sessions is his word "turning" taken
-# literally and cuts the board to ~606 (23%) — still wide, and the board says
-# so out loud.
+# At 10 sessions the state fired on 759 of 3,634 names (2026-09-14, the wide
+# list, the detector as shipped) — 21% of the market, a description of the
+# market and not a selection. The cause is visible in the base lengths (the
+# 2026-09-13 walk): the MEDIAN qualifying base is 10 bars, barely over
+# `amd.MIN_BASE_BARS` of 8, so
+# most "bases" are an ordinary fortnight and most "raids" an ordinary poke.
+# Three sessions is his word "turning" taken literally and cuts the board to
+# 589 (16%) — still wide, and the board says so out loud.
 #
-# WHAT THE MEASUREMENT SAYS ABOUT THE BOUND ITSELF (2026-09-13, the full walk):
-# recency separates NOTHING. Fresh (0-3 bars) vs stale (4-10): 5d −0.05%
-# [−0.54, +0.35], 10d −0.27% [−0.80, +0.30], 21d −0.36% [−1.16, +0.41] — every
-# interval spans zero and fresh leans WORSE. On the reach claim both buckets
-# are underwater against the matched placebo (fresh −7.28pp, stale −10.45pp).
-# So this constant makes the list shorter and no better, and anyone reading it
-# as a quality filter is reading it wrong.
+# WHAT THE MEASUREMENT SAYS ABOUT THE BOUND ITSELF (2026-09-14, the full walk
+# with the failed phase; 2026-09-13 said the same): recency separates
+# NOTHING. Fresh (0-3 bars) vs stale (4-10): 5d −0.17% [−0.64, +0.27], 10d
+# −0.20% [−0.72, +0.28], 21d −0.05% [−0.65, +0.64] — every interval spans
+# zero. On the reach claim the fresh cut is the one MORE underwater against
+# the like-for-like placebo (−5.6pp [−8.97, −2.69]) while stale is −1.3pp
+# [−3.12, +0.30]. So this constant makes the list shorter and no better, and
+# anyone reading it as a quality filter is reading it wrong.
 MAX_RAID_BARS_AGO = 3
 
 # 2026-09-14: the lower states are NAMED. Before this, "lower half", "below

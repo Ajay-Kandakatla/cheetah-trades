@@ -1,30 +1,34 @@
-"""Keltner "coiled, leaning up" — measured against a placebo (2026-09-13).
+"""Keltner "coiled, leaning up" — measured against a placebo.
 
-THE RESULT IS INVERTED. Ajay asked for a board of names "very close to bullish
-in keltners"; this script is what says whether that claim holds, and it does
-not. Kept in the repo, runnable verbatim, because every number printed under
-the 🌀 KC Coiled tab comes from here and his standing rule is that a measured
-number on a board he trades ships with its script and its CI.
+2026-09-13: INVERTED on 2,660 names. 2026-09-14: RE-MEASURED on the wide list
+(`full` ∪ `broad`, 3,704 names) and the result HARDENED. Ajay asked for a
+board of names "very close to bullish in keltners"; this script is what says
+whether that claim holds, and it does not. Kept in the repo, runnable verbatim,
+because every number printed under the 🌀 KC Coiled tab comes from here and
+his standing rule is that a measured number on a board he trades ships with
+its script and its CI.
 
-RUN IT:
+RUN IT (from /app so `sepa` imports — the script is piped, not copied):
     cd /Users/ajay/clinet-test/cheetah-market-app
-    docker compose exec -T api python - < backend/scripts/turning_bullish_keltner_study.py
+    docker compose exec -T -w /app api python - < backend/scripts/turning_bullish_keltner_study.py
 
 Inside the api container ONLY — that is the one place the Massive key lives,
 and a throwaway container falls back to Yahoo and prints false negatives.
-Takes ~55s. Read-only: touches nothing in the repo or in Mongo.
+Takes ~70s. Read-only: touches nothing in the repo or in Mongo.
 
-WHAT IT FOUND, in one paragraph so nobody has to re-run it to know:
-2,660 names, 1,200,755 closed daily bars, 2024-09-12 → 2026-09-11. The verdict
-fires on 5.39% of bars (144 names on the last close). Forward returns are
-NEGATIVE at every horizon with every lift CI clear of zero — 21d median lift
-−0.33pp [−0.57, −0.12] against the placebo. Against a control differing by
-exactly ONE clause (same upper half, same rising EMA, no squeeze) the squeeze
-contributes nothing (21d +0.11pp [−0.17, +0.41]) and makes the upper-band
-break 14.8pp LESS likely (40.0% vs 55.0%). The one positive cell in the whole
-study is coil length 21+ bars (n=2,538, 471 names), which beats the matched
-control at all three horizons — one bucket of four, disagreeing with the other
-three, and four names on today's board. Exploratory, not a rule.
+WHAT IT FOUND (2026-09-14, 3,704 names, 1,662,135 eligible closed daily bars,
+two years to 2026-09-14), in one paragraph so nobody has to re-run it to know:
+the verdict fires on 5.50% of bars (240 names on the last close at the wide
+list; 154 of the 2,686 the board draws from, on the 2026-09-14 nightly sweep). Forward returns are NEGATIVE at
+every horizon with every lift CI clear of zero — 21d median lift −0.55pp
+[−0.72, −0.37] against the placebo (5d −0.22pp, 10d −0.30pp; win rate 48.3%
+vs 50.7% at 5d). Against a control differing by exactly ONE clause (same upper
+half, same rising EMA, no squeeze) the squeeze now SUBTRACTS — 21d −0.25pp
+[−0.47, −0.06] — and makes the upper-band break 16.2pp LESS likely (38.6% vs
+55.4%, CI −17.15 to −15.27). The one positive cell of 2026-09-13 (coil length
+21+ bars, +1.34pp on 2,660 names) did not survive the wider list: +0.23pp
+[−0.44, +0.88] over 752 names, a null. Longest-coil-first stays as an ORDER,
+not a measured ranking.
 """
 
 import json
@@ -50,6 +54,22 @@ rng = np.random.default_rng(SEED)
 
 
 # ---------------------------------------------------------------- per symbol
+
+# The list both 🌀 studies walk (2026-09-14, Ajay: "there should be more names,
+# about 4k is what we discussed"): the scan's `full` alias (Russell 3000 ∪
+# S&P 1500 ∪ curated ∪ themes ∪ traders) UNION the 16:30 cron's `broad` list
+# (R3000 ∪ microcap ∪ ETF) — 3,729 names in the container that day. The 🌀
+# boards themselves draw from `full` (2,686), a subset.
+UNIVERSE_MODES = ("full", "broad")
+
+
+def study_universe():
+    from sepa import universe as U
+    syms = []
+    for mode in UNIVERSE_MODES:
+        syms.extend(U.load_universe(mode))
+    return list(dict.fromkeys(syms))
+
 def series_for(df):
     """Every keltner.py quantity, as a per-bar array. None when unusable."""
     if df is None or len(df) < MIN_BARS_SYMBOL:
@@ -220,7 +240,7 @@ def pct(d, mult=100.0):
 # ----------------------------------------------------------------------- main
 def main():
     t0 = time.time()
-    syms = U.load_universe()
+    syms = study_universe()
     order = list(syms)
     rng2 = np.random.default_rng(SEED)
     rng2.shuffle(order)

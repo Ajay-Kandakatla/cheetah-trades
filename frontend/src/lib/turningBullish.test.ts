@@ -24,18 +24,29 @@ describe('the two tabs are registered', () => {
   it('LEADS with the inverted measurement, not with the mechanics', () => {
     // The one thing on either page that changes what he does with it. Both
     // reads were measured against a placebo on 2026-09-13 and both came back
-    // INVERTED on their own claim; a blurb that opened with the setup and
+    // INVERTED on their own claim; both were RE-MEASURED on 2026-09-14 on the
+    // wide list (~3,700 names) with the AMD detector that can fail a cycle,
+    // and both are still inverted. A blurb that opened with the setup and
     // mentioned the study at the end would be burying it.
-    expect(TAB_META.keltner.blurb).toMatch(/^MEASURED 2026-09-13 AND THE CLAIM IS INVERTED/);
-    expect(TAB_META.amd.blurb).toMatch(/^MEASURED 2026-09-13 AND THE CLAIM IS INVERTED/);
+    expect(TAB_META.keltner.blurb).toMatch(/^RE-MEASURED 2026-09-14 ON 3,704 NAMES AND THE CLAIM IS STILL INVERTED/);
+    expect(TAB_META.amd.blurb).toMatch(/^RE-MEASURED 2026-09-14 WITH THE FAILED PHASE, ON 3,712 NAMES, AND THE CLAIM IS STILL INVERTED/);
   });
 
   it('every rate is quoted next to its placebo and a CI — his standing rule', () => {
-    expect(TAB_META.keltner.blurb).toMatch(/40\.0% of the time/);
-    expect(TAB_META.keltner.blurb).toMatch(/against 55\.0%/);
+    expect(TAB_META.keltner.blurb).toMatch(/38\.6% of the time/);
+    expect(TAB_META.keltner.blurb).toMatch(/against 55\.4%/);
     expect(TAB_META.keltner.blurb).toMatch(/95% CI/);
-    expect(TAB_META.amd.blurb).toMatch(/42\.7% vs 51\.6%/);
+    expect(TAB_META.amd.blurb).toMatch(/51\.9% vs 56\.1%/);
     expect(TAB_META.amd.blurb).toMatch(/95% CI/);
+  });
+
+  it('NEGATIVE — no 2026-09-13 number is presented as current', () => {
+    // 42.7% vs 51.6% / −8.9pp were measured on a detector that could not
+    // fail a cycle; 40.0% vs 55.0% on 2,660 names. They may appear only as the
+    // labelled old value, never as the headline.
+    expect(TAB_META.amd.blurb).not.toMatch(/42\.7% vs 51\.6%/);
+    expect(TAB_META.keltner.blurb).not.toMatch(/40\.0% of the time/);
+    expect(TAB_META.keltner.blurb).not.toMatch(/adds nothing/);
   });
 
   it('names the re-runnable script under each board', () => {

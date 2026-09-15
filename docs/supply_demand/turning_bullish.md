@@ -1,7 +1,6 @@
 # Turning Bullish — KC Coiled and AMD Raided
 
-**Both boards were measured against a placebo on 2026-09-13 and BOTH CAME BACK
-INVERTED on their own claim.** Not null — inverted. Read §3 before §2.
+**Both boards were measured against a placebo on 2026-09-13 and BOTH CAME BACK INVERTED on their own claim — and re-measured on 2026-09-14 on the wide list (~3,700 names) with the AMD detector that can fail a cycle: Keltner harder (−16.2pp on its break claim), AMD −4.2pp instead of −8.9pp, still inverted.** Not null — inverted. Read §3 before §2.
 
 Ajay 2026-09-13: *"I want you to build a page for something that is very close
 to bullish in keltners and AMD"*, *"AMD is accumulation manipulation indicator
@@ -66,118 +65,156 @@ Grades: `marked_up` (distribution) · **`raided`** · `basing` · `none`.
 
 ### Keltner (`turning_bullish_keltner_study.py`)
 
-2,660 names, **1,200,755 closed daily bars**, 2024-09-12 → 2026-09-11. Walked
-bar by bar from index 41; every series recomputed vectorised and proved
-prefix-stable against the real `keltner.channel()/squeeze()` at 12 checkpoints
-(0 mismatches). CIs are **symbol-clustered** bootstraps — bars inside one name
-are autocorrelated and 21-day windows overlap, so an iid bar bootstrap would
-print intervals several times too tight.
+**Re-measured 2026-09-14** on the wide list (`full` ∪ `broad`, 3,704 names,
+Ajay: "about 4k is what we discussed"), **1,662,135 eligible closed daily
+bars**, two years to 2026-09-14. Walked bar by bar from index 41; every series
+recomputed vectorised and proved prefix-stable against the real
+`keltner.channel()/squeeze()` at 12 checkpoints (0 mismatches). CIs are
+**symbol-clustered** bootstraps — bars inside one name are autocorrelated and
+21-day windows overlap, so an iid bar bootstrap would print intervals several
+times too tight. The 2026-09-13 run (2,660 names) is kept in the table for
+comparison; the wider list made every number **worse**, not better.
 
-Fire rate **5.39% of bars** (144 names on the last close, 142 after two stale
-frames). 98% of names fire at least once in two years: recurring, not rare.
+Fire rate **5.50% of bars** (240 names on the last close of the wide list; 154
+of the 2,686 the board draws from, on the 2026-09-14 nightly sweep). 97% of names fire at least once in two
+years: recurring, not rare.
 
 Forward close-to-close, coiled minus placebo (every non-firing bar of the same
 names in the same window):
 
-| Horizon | Coiled median | Placebo median | Lift | 95% CI |
-|---|---|---|---|---|
-| 5d | −0.08% | +0.12% | **−0.20pp** | −0.27 … −0.12 |
-| 10d | +0.04% | +0.27% | **−0.23pp** | −0.33 … −0.10 |
-| 21d | +0.14% | +0.47% | **−0.33pp** | −0.57 … −0.12 |
+| Horizon | Coiled median | Placebo median | Lift | 95% CI | 2026-09-13 lift |
+|---|---|---|---|---|---|
+| 5d | −0.14% | +0.08% | **−0.22pp** | −0.27 … −0.17 | −0.20pp |
+| 10d | −0.11% | +0.20% | **−0.30pp** | −0.40 … −0.20 | −0.23pp |
+| 21d | −0.17% | +0.37% | **−0.55pp** | −0.72 … −0.37 | −0.33pp |
 
-Win rate 49.0% vs 50.9% at 5d. **Every horizon negative, every CI clear of
+Win rate 48.3% vs 50.7% at 5d. **Every horizon negative, every CI clear of
 zero.**
 
 The **matched control** — same `position ≥ 0.5`, same rising EMA-20, squeeze
-**off** (n = 376,498) — is what separates "the squeeze does something" from
-"buying the upper half does something":
+**off** (n = 510,721 at 21d) — is what separates "the squeeze does something"
+from "buying the upper half does something":
 
-* coiled − matched: 5d −0.05pp [−0.12, +0.03] · 10d −0.00pp [−0.13, +0.15] ·
-  21d +0.11pp [−0.17, +0.41]. **The squeeze contributes nothing.**
-* The negative lift is entirely the "upper half + rising EMA" selection, which
-  by itself underperforms (matched 21d median +0.02% vs placebo +0.47%).
+* coiled − matched: 5d −0.14pp [−0.18, −0.06] · 10d −0.16pp [−0.25, −0.03] ·
+  21d −0.25pp [−0.47, −0.06]. On 2026-09-13 this read "the squeeze contributes
+  nothing" (+0.11pp, CI spanning zero); on the wide list **the squeeze itself
+  subtracts**, every CI clear of zero.
+* The rest of the negative lift is the "upper half + rising EMA" selection,
+  which by itself underperforms (matched 21d median +0.07% vs placebo +0.37%).
 
 **The claim itself, inverted.** Does a coiled bar precede a close above the
 upper band within 21 sessions?
 
 | Pool | Rate | 95% CI |
 |---|---|---|
-| Coiled | 40.04% | 38.95 … 41.14 |
-| Non-coiled, all bars | 36.75% | 36.29 … 37.25 |
-| **Matched control** | **55.04%** | 54.47 … 55.61 |
+| Coiled | 38.63% | 37.77 … 39.55 |
+| Non-coiled, all bars | 36.74% | 36.28 … 37.17 |
+| **Matched control** | **55.42%** | 54.87 … 55.94 |
 
-Against a random bar it looks like +3.41pp [+2.40, +4.49] — and that entire
+Against a random bar it looks like +2.38pp [+1.42, +3.27] — and that entire
 gain is the `position ≥ 0.5` term. Against the honest control the coiled bar is
-**14.83pp LESS likely** [−15.87, −13.72] to break its upper band. The module's
-own sentence, measured: compression is compression, and it persists.
+**16.20pp LESS likely** [−17.15, −15.27] to break its upper band (2026-09-13:
+−14.83pp). The module's own sentence, measured: compression is compression,
+and it persists.
 
-**The one positive cell.** Pre-registered split on coil length:
+**The one positive cell did not survive.** Pre-registered split on coil
+length, 21d median vs the matched control:
 
-| Coil bars | n | 21d vs matched | 95% CI |
-|---|---|---|---|
-| 1–5 | 35,826 | −0.02pp | −0.25 … +0.28 |
-| 6–10 | 14,266 | −0.02pp | −0.34 … +0.30 |
-| 11–20 | 8,895 | +0.42pp | −0.07 … +0.81 |
-| **21+** | **2,538** | **+1.34pp** | **+0.39 … +2.33** |
+| Coil bars | n | names | 21d vs matched | 95% CI | 2026-09-13 |
+|---|---|---|---|---|---|
+| 1–5 | 48,954 | 3,553 | −0.31pp | −0.50 … −0.13 | −0.02pp |
+| 6–10 | 19,879 | 2,961 | −0.38pp | −0.61 … −0.13 | −0.02pp |
+| 11–20 | 13,263 | 2,060 | −0.07pp | −0.40 … +0.32 | +0.42pp |
+| 21+ | 4,754 | 752 | **+0.23pp** | **−0.44 … +0.88** | **+1.34pp [+0.39, +2.33]** |
 
-21+ bars beats the matched control at all three horizons with CIs clear of
-zero. **This is why the board sorts longest-coil-first.** It is also 1 of 4
-buckets, 471 names, disagreeing with the other three, and **four names** on
-today's board (BCAL, BUR, MD, PIPR). Exploratory, not a rule.
+On 2,660 names the 21+ cell beat the control at all three horizons with CIs
+clear of zero and was the stated reason the board sorts longest-coil-first. On
+3,704 names it is a null at every horizon (5d +0.07pp [−0.10, +0.24], 10d
++0.15pp [−0.08, +0.63]). **The sort stays as an order — a longer coil is a
+tighter, longer-watched level — and is no longer described as measured.**
+13 names on the wide list's last close carry a 21+ bar coil.
 
 ### AMD (`turning_bullish_amd_study.py`)
 
-2,666 names, **1,150,446 evaluated bars**, 441 sessions each after a 60-bar
-warm-up. The real `amd.find_cycle` called on `df.iloc[:t+1]` at **every** bar —
-no reimplementation, no sampling, no lookahead. CIs are the **wider** of
-symbol-clustered and date-block-clustered bootstraps.
+**Re-measured 2026-09-14, twice.** The 2026-09-13 run (2,666 names, `full`)
+walked a detector that could not FAIL a cycle: after a raid it only looked for
+a close above the top, so every bar within 10 sessions of a raid whose base
+had already broken still counted as "raided" — **237,802 bars, as many as the
+real fires (240,461)**. Both fixes from §6 (the failed phase; a base formed
+after a failure is the live read) are in the detector this run walked, on the
+wide list (`full` ∪ `broad`, 3,712 names). 1,592,057 evaluated bars, 441
+sessions each after a 60-bar warm-up, 2024-12-09 → 2026-09-14. The real
+`amd.find_cycle` called on `df.iloc[:t+1]` at **every** bar — no
+reimplementation, no sampling, no lookahead (the failure scan runs to the end
+of the slice, never past `t`). CIs are the **wider** of symbol-clustered and
+date-block-clustered bootstraps.
 
-Fire rate **30.3% of all bars**; 1,201 of 2,621 names (45.8%) on the last close
-at `bars_ago ≤ 10`. The cause is visible in the phase mix over 1.15M bars:
-manipulation 60.1%, distribution 39.1%, accumulation 0.8%. The module almost
-never says "accumulation", so the recency bound is the only thing cutting it.
+Fire rate **15.1% of all bars** (30.3% on 2026-09-13 with the old detector);
+759 of 3,634 names (20.9%) on the
+last close at `bars_ago ≤ 10`, 589 (16.2%) at the board's 3. Phase mix over
+1.59M bars: accumulation 33.8%, distribution 24.5%, failed 24.5%,
+manipulation 16.8%.
 
-Forward returns: **null leaning negative** — 5d lift −0.43% [−0.98, +0.05],
-10d −0.53% [−1.53, +0.26], 21d −0.25% [−1.30, +0.72]. Every interval spans
-zero; every mean lift is negative. Weaker than the ICT tab's +0.03R null: that
-one was flat, this one leans down.
+Forward returns against every other bar of the same names: 5d −0.36%
+[−0.77, −0.06], 10d −0.48% [−1.07, −0.02], 21d −0.41% [−1.11, +0.15];
+medians span zero; win rate 49.2% vs 50.7% at 5d. Against the like-for-like
+bar below: 5d −0.34% [−0.63, −0.09], 10d −0.42% [−0.81, −0.07], 21d −0.47%
+[−1.39, +0.28].
 
-**The claim itself, inverted.** Does a fresh raid precede a close above that
-bar's own base top within 21 sessions?
+**The claim itself, still inverted.** Does a fresh raid precede a close above
+that bar's own base top within 21 sessions?
 
-| Placebo | Signal | Placebo | Lift | 95% CI |
-|---|---|---|---|---|
-| Literal (all non-firing) | 42.7% | 63.97% | −21.2pp | −26.5 … −15.5 |
-| "Edge still above price" | 42.7% | 35.4% | +7.3pp | +4.2 … +10.9 |
-| **Like-for-like** (bar also inside its own base, distance-matched) | **42.7%** | **51.6%** | **−8.92pp** | **−11.42 … −5.91** |
+| Placebo | Signal | Placebo | Lift | 95% CI | 2026-09-13 |
+|---|---|---|---|---|---|
+| Literal (all non-firing) | 51.96% | 64.13% | −12.2pp | −15.3 … −9.2 | −21.2pp |
+| "Edge still above price", gap-matched | 51.9% | 49.5% | +2.4pp | +0.2 … +4.2 | +7.3pp |
+| **Like-for-like** (bar inside its own LIVE base, distance-matched) | **51.9%** | **56.1%** | **−4.20pp** | **−6.92 … −1.89** | −8.92pp |
 
-The +7.3pp is **the number that would have shipped, and it is an artifact**:
-that pool is stuffed with names that collapsed far below their base and never
-climb back. By distance the signal *loses* in every near bucket (0–1% −1.1pp,
-1–2% −1.1pp, 2–3.5% −2.8pp, 3.5–5% −4.2pp) and only "wins" at 8–15% (+6.8pp)
-and >15% (+11.8pp) — entirely off broken placebo names.
+The +2.4pp is the same artifact as last time, smaller: that pool is names
+sitting far below a base and never climbing back. By distance the signal
+**loses in all four near buckets** (0–1% −1.2pp, 1–2% −1.0pp, 2–3.5% −4.0pp,
+3.5–5% −4.5pp) and only "wins" from 5% out (+1.2, +8.8, +16.1pp) — entirely
+off broken placebo names.
 
-The honest control is negative in **all seven** distance buckets and gets
-monotonically worse: 0–1% −1.3pp → >15% −15.0pp. Three narrower placebo pools
-(never distributed, stale raid, already distributing) are all still negative.
-The module's own phase agrees: it reads "distribution" within 21 bars on 48.1%
-of firing bars vs 65.7% of non-firing ones.
+The honest control is negative in **all seven** distance buckets: −2.0, −2.3,
+−5.0, −6.8, −5.1, −3.2, −1.5pp. Four narrower placebo pools agree — never
+distributed −4.1pp [−6.47, −1.44], stale raid −2.9pp [−4.86, −0.66], already
+distributing −5.3pp [−8.05, −2.60], **live base only −5.3pp [−7.72, −2.71]**
+(the pool added 2026-09-14 so the placebo is asked the same question the
+signal's own definition asks).
 
-**Recency rescues nothing.** Fresh (0–3) vs stale (4–10): 5d −0.05%
-[−0.54, +0.35], 10d −0.27% [−0.80, +0.30], 21d −0.36% [−1.16, +0.41]; fresh
-leans *worse*. Against the matched placebo both are underwater (fresh −7.28pp,
-stale −10.45pp). So `MAX_RAID_BARS_AGO = 3` is a **board-size cut, never an
-accuracy gain**, and the source says so.
+**Why the first re-run that day printed a null.** Run with the failed phase
+but *without* the age-out, 57% of all bars sat in a dead base and the
+like-for-like placebo was two-thirds dead-base bars (315,627 vs 513,007 now);
+it measured −2.1pp [−4.27, +0.08]. That run is superseded; nothing quotes it.
 
-**Overlap.** On the same bar Keltner fires 146, AMD 1,210, both 51 — *below*
-the 66.2 expected under independence. The two verdicts are not measuring the
-same thing, and neither confirms the other.
+**Recency rescues nothing.** Fresh (0–3) vs stale (4–10) on returns: 5d
+−0.17% [−0.64, +0.27], 10d −0.20% [−0.72, +0.28], 21d −0.05% [−0.65, +0.64].
+Against the like-for-like placebo the **fresh cut is the one further under
+water** (−5.58pp [−8.97, −2.69]) while stale is −1.29pp [−3.12, +0.30]. So
+`MAX_RAID_BARS_AGO = 3` is a **board-size cut, never an accuracy gain**, and
+the source says so.
+
+The module's own-phase secondary ("reads distribution within 21 bars") is no
+longer like-for-like — a failed base cannot read distribution without a whole
+new cycle — and is not quoted.
+
+**Overlap, by the two boards' own grades** (`coiled_up` and `raided ≤ 3`) on
+the last close of the wide list: KC Coiled 235, AMD Raided 593, both 32 —
+*below* the 37.5 expected under independence (the verdict grades differ by a
+few names from the studies' own vectorised last-bar counts, 240 and 589; the
+overlap is deliberately the boards' predicate). The two verdicts are not
+measuring the same thing, and neither confirms the other.
 
 ### What the pages are allowed to say
 
 Not allowed anywhere: "coiled to run", "markup next", "accumulation complete",
 any bare reach rate without its placebo, any framing where a raid or a coil is
-a reason to buy, and the +7.3pp "edge-still-above-price" number.
+a reason to buy, the "edge-still-above-price" number (+7.3pp on 2026-09-13,
++2.4pp on 2026-09-14 — an artifact both times), the 21+-bar coil cell as a
+measured edge (it did not survive the wide list), and any 2026-09-13 AMD number
+as a CURRENT value (it was measured on a detector that could not fail a cycle;
+as a dated comparison beside the 2026-09-14 number it is fine).
 
 ---
 
@@ -229,7 +266,7 @@ backend/supply_demand/rules_info.py           "turning_bullish" section
 backend/crontab                               20 17 * * 1-5
 backend/scripts/turning_bullish_keltner_study.py
 backend/scripts/turning_bullish_amd_study.py
-backend/tests/test_turning_bullish.py         24 tests
+backend/tests/test_turning_bullish.py         25 tests
 frontend/src/lib/chartMaps.ts                 CmCurve, curveLabels, CM_TABS, TAB_META
 frontend/src/lib/chartOverlays.ts             tabFamily, hiddenForTab, curve+badge gating
 frontend/src/components/PatternChart.tsx      polyline rendering with gaps
@@ -305,8 +342,32 @@ badges are now de-duplicated on the way in.
   Bollinger band sits inside the channel — rides with the curve; the badge
   says how tight (`squeeze 6b · 0.71× wide`).
 
-Neither read was re-measured. The 2026-09-13 numbers were computed on the
-old detector; the claim they measured (raid → close above the top) is
-unchanged by the failure phase except that bars after a breakdown no longer
-fire "manipulation". Re-run `turning_bullish_amd_study.py` before quoting a
-new number.
+### Second pass the same evening: the age-out, the wide list, the re-measure
+
+Adding the failed phase with **no bar limit** created its own defect, caught by
+a read-only review of the study against the detector: `find_cycle` walks back
+from the latest bar and returns the first base that has a raid, so a base that
+raided and then failed months ago kept winning over a fresher base that had
+not raided yet. Measured on the 2,673 `full` names: **699 read "base failed ·
+Nd ago" over a live base**, 330 of them 31–90 sessions old (probe:
+`backend/scripts/amd_failed_age_probe.py`, run before and after). Fix: a base that
+forms *entirely after* the failure bar is the read and the failed cycle is
+history (a base that spans the breakdown does not count; a completed markup
+still wins over a bare base, as on 2026-09-13). After it: 686 read `basing`,
+885 stay `failed`, all but a dozen with no fresher base to show.
+
+Ajay: *"there should be more names, about 4k is what we discussed."* Both
+studies now walk `full` ∪ `broad` (3,729 names in the container that day) via
+one `study_universe()` helper; the 🌀 boards still draw from `full` (2,686), a
+subset, and the tab blurbs say so. Both were re-run on the shipped detector;
+§3 carries the numbers. Keltner hardened (−16.2pp on its break claim, the 21+
+coil cell gone); AMD stayed inverted at −4.2pp instead of −8.9pp — the
+difference is the 237,802 dead-base bars the old detector counted as raids.
+
+Study hygiene from the same review: the AMD walk's phase table is exhaustive
+against `amd.PHASES` (a test pins it — an unknown phase used to fold into "no
+cycle" and land in every placebo); the walk also records the failure's age;
+the subsets stage has a *live-base* placebo; the overlap stage uses the two
+boards' own verdict grades instead of a hand re-implementation; and the study
+constant `BARS_AGO_MAX = 10` is labelled as the study's bound, not the board's
+(`MAX_RAID_BARS_AGO = 3` — the fresh 0–3 cells are the board).

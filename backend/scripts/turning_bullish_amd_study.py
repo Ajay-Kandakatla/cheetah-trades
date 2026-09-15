@@ -1,8 +1,13 @@
-"""AMD "raided, not yet marked up" — measured against a placebo (2026-09-13).
+"""AMD "raided, not yet marked up" — measured against a placebo.
 
-THE RESULT IS INVERTED, and more clearly than the Keltner one. Kept in the
-repo, runnable verbatim, because every number printed under the 🌀 AMD Raided
-tab comes from here.
+2026-09-13: INVERTED (−8.9pp) on 2,666 names with the old detector.
+2026-09-14: RE-MEASURED after the detector learned to FAIL a cycle, on the wide
+list (`full` ∪ `broad`, 3,712 names). Most of the inversion was the old
+detector: it never ended a cycle on a close through the raided edge, so every
+bar within 10 sessions of a raid whose base had ALREADY broken still counted
+as "raided" — 237,802 such bars, as many as the real fires (240,461). Kept in
+the repo, runnable verbatim, because every number printed under the 🌀 AMD
+Raided tab comes from here.
 
 RUN IT (staged — `walk` first, it writes the observation matrix the rest read):
     cd /Users/ajay/clinet-test/cheetah-market-app
@@ -13,29 +18,50 @@ RUN IT (staged — `walk` first, it writes the observation matrix the rest read)
     docker compose exec -T api python /tmp/amd.py subsets
     docker compose exec -T api python /tmp/amd.py overlap
 
-Inside the api container ONLY. The walk is ~79s: it calls the REAL
-`supply_demand.amd.find_cycle` on `df.iloc[:t+1]` at EVERY bar — nothing
-reimplemented, no every-Nth-bar sampling, no lookahead.
+Inside the api container ONLY. The walk is ~200s on 3,712 names: it calls the
+REAL `supply_demand.amd.find_cycle` on `df.iloc[:t+1]` at EVERY bar — nothing
+reimplemented, no every-Nth-bar sampling, no lookahead (the failure scan runs
+to the end of the SLICE, never past t).
 
-WHAT IT FOUND:
-2,666 names, 1,150,446 evaluated bars. The state fires on 30.3% of ALL bars
-and carries 1,201 of 2,621 names on the last close — a description of the
-tape, not a selection. Forward returns are a null leaning negative (21d lift
-−0.25%, CI −1.30 to +0.72; every horizon spans zero). And the page's ONE claim
-is backwards: against a like-for-like bar sitting inside its own base at the
-same distance below the top, a fresh raid makes a close above that top within
-21 sessions LESS likely — 42.7% vs 51.6%, −8.9pp [−11.42, −5.91], negative in
-all seven distance buckets and monotonically worse with distance.
+WHAT IT FOUND (2026-09-14, 3,712 names, 1,592,057 evaluated bars,
+2024-12-09 → 2026-09-14, the detector as shipped — failed phase AND the
+age-out that lets a base formed after a failure be the live read):
+The state fires on 15.1% of all bars (30.3% on 2026-09-13 with the old
+detector) and carries 759 of 3,634
+names on the last close at the 10-session bound, 589 at the board's 3. Forward
+returns against every other bar of the same names: 5d −0.36% [−0.77, −0.06],
+10d −0.48% [−1.07, −0.02], 21d −0.41% [−1.11, +0.15]; medians span zero; win
+rate 49.2% vs 50.7% at 5d. The page's ONE claim — a fresh raid precedes a
+close above the base top within 21 sessions — against a like-for-like bar
+sitting inside its own LIVE base at the same distance below the top: 51.9%
+vs 56.1%, −4.2pp, 95% CI −6.92 to −1.89 (the wider of symbol- and date-block-
+clustered), NEGATIVE IN ALL SEVEN distance buckets (−1.5 to −6.8pp). STILL
+INVERTED, smaller than the −8.9pp of 2026-09-13. The board's own cut (raid
+0-3 bars ago) is worse: 48.9% vs 54.4%, −5.6pp [−8.97, −2.69]; stale 4-10 is
+−1.3pp [−3.12, +0.30]. Forward returns against the same like-for-like bar:
+5d −0.34% [−0.63, −0.09], 10d −0.42% [−0.81, −0.07], 21d −0.47% [−1.39,
++0.28]. Narrower placebo pools all agree: never-distributed −4.1pp [−6.47,
+−1.44], stale raid −2.9pp [−4.86, −0.66], already distributing −5.3pp
+[−8.05, −2.60], live base only −5.3pp [−7.72, −2.71].
 
-Raid recency does NOT rescue it: 0-3 bars vs 4-10 separates nothing, and fresh
-leans worse. So `turning_bullish.MAX_RAID_BARS_AGO = 3` is a BOARD-SIZE cut and
-must never be described as an accuracy improvement.
+WHY THE FIRST RE-RUN THAT DAY SAID "NULL": with the failed phase but WITHOUT
+the age-out, 57% of all bars sat in a dead base and the like-for-like placebo
+was two-thirds dead-base bars (315,627 vs 513,007 now) — it measured −2.1pp
+[−4.27, +0.08]. The numbers quoted anywhere are from the shipped detector.
+
+Raid recency still separates nothing on returns: fresh (0-3) minus stale
+(4-10) is −0.17% / −0.20% / −0.05% at 5/10/21d, every CI spanning zero. So
+`turning_bullish.MAX_RAID_BARS_AGO = 3` is a BOARD-SIZE cut and must never be
+described as an accuracy improvement.
 
 THE TRAP THIS SCRIPT EXISTS TO DOCUMENT: with the obvious "edge still above
-price" placebo the read measures +7.3pp and would have shipped as a win. That
-pool is stuffed with names that collapsed far below their base and never climb
-back — the signal LOSES in every near-distance bucket and only "wins" at 8-15%
-and >15%, i.e. entirely off broken placebo names.
+price" placebo the read measures +2.4pp [+0.19, +4.22] and could ship as a
+small win. That pool is stuffed with names sitting far below a base and never
+climbing back — the signal LOSES in all four near-distance buckets (0-5%:
+−1.2, −1.0, −4.0, −4.5pp) and only "wins" from 5% out, i.e. entirely off
+broken placebo names. The "module's own phase reads distribution within 21
+bars" secondary is not like-for-like (a failed base cannot read distribution
+without a whole new cycle) and is not quoted anywhere.
 """
 
 from __future__ import annotations
@@ -46,12 +72,28 @@ if "/app" not in sys.path:
     sys.path.insert(0, "/app")   # container package root
 
 WARMUP = 60          # bars of history before the first evaluated bar
-BARS_AGO_MAX = 10    # the verdict's own recency gate
+BARS_AGO_MAX = 10    # the STUDY's bound. The 🌀 board cuts at turning_bullish.MAX_RAID_BARS_AGO = 3:
+                     # the fresh(0-3) cells below ARE the board; the headline is the wider state.
 HORIZONS = (5, 10, 21)
 REACH_H = 21         # window for "reaches a close above the base's top"
 OUT = "/tmp/amd_obs.npz"
 
-PHASE_CODE = {"accumulation": 0, "manipulation": 1, "distribution": 2}
+PHASE_CODE = {"accumulation": 0, "manipulation": 1, "distribution": 2, "failed": 3}
+
+# The list both 🌀 studies walk (2026-09-14, Ajay: "there should be more names,
+# about 4k is what we discussed"): the scan's `full` alias (Russell 3000 ∪
+# S&P 1500 ∪ curated ∪ themes ∪ traders) UNION the 16:30 cron's `broad` list
+# (R3000 ∪ microcap ∪ ETF) — 3,729 names in the container that day. The 🌀
+# boards themselves draw from `full` (2,686), a subset.
+UNIVERSE_MODES = ("full", "broad")
+
+
+def study_universe():
+    from sepa import universe as U
+    syms = []
+    for mode in UNIVERSE_MODES:
+        syms.extend(U.load_universe(mode))
+    return list(dict.fromkeys(syms))
 
 
 def walk_symbol(sym):
@@ -76,13 +118,17 @@ def walk_symbol(sym):
     for t in range(WARMUP, n):
         cyc = find_cycle(df.iloc[:t + 1], direction="bullish")
         if not cyc:
-            rows.append((t, dates[t], -1, -1, np.nan, np.nan, close[t]))
+            rows.append((t, dates[t], -1, -1, np.nan, np.nan, close[t], -1))
             continue
         acc = cyc["accumulation"]
         man = cyc["manipulation"]
-        rows.append((t, dates[t], PHASE_CODE.get(cyc["phase"], -1),
+        fail = cyc.get("failure")
+        # Strict lookup: a phase string this table does not know must raise,
+        # never fold into "no cycle" (that would put its bars in every placebo).
+        rows.append((t, dates[t], PHASE_CODE[cyc["phase"]],
                      int(man["bars_ago"]) if man else -1,
-                     float(acc["hi"]), float(acc["lo"]), close[t]))
+                     float(acc["hi"]), float(acc["lo"]), close[t],
+                     int(fail["bars_ago"]) if fail else -1))
 
     t_idx = np.array([r[0] for r in rows], dtype=np.int32)
     d_ord = np.array([r[1] for r in rows], dtype=np.int32)
@@ -91,6 +137,7 @@ def walk_symbol(sym):
     b_hi = np.array([r[4] for r in rows], dtype=np.float64)
     b_lo = np.array([r[5] for r in rows], dtype=np.float64)
     c_t = np.array([r[6] for r in rows], dtype=np.float64)
+    fago = np.array([r[7] for r in rows], dtype=np.int16)
 
     fwd = {}
     for h in HORIZONS:
@@ -116,6 +163,7 @@ def walk_symbol(sym):
 
     fired = (phase == 1) & (bago >= 0) & (bago <= BARS_AGO_MAX)
     return sym, None, dict(t=t_idx, date=d_ord, phase=phase, bars_ago=bago,
+                           fail_ago=fago,
                            base_hi=b_hi, base_lo=b_lo, close=c_t,
                            f5=fwd[5], f10=fwd[10], f21=fwd[21],
                            reach=reach, reach_mod=reach_mod,
@@ -130,10 +178,8 @@ def _init():
 
 def stage_walk():
     import multiprocessing as mp
-    from sepa import universe as U
-    syms = U.load_universe("full")
-    syms = [s for s in dict.fromkeys(syms)]
-    print("universe full: %d names" % len(syms), flush=True)
+    syms = study_universe()
+    print("universe %s: %d names" % (" ∪ ".join(UNIVERSE_MODES), len(syms)), flush=True)
     t0 = time.time()
     keep, skipped = {}, {}
     with mp.Pool(16, initializer=_init) as pool:
@@ -232,18 +278,21 @@ def stage_stats():
 
     print("=" * 78)
     print("SAMPLE")
-    print("  names walked          %d   (universe 'full' = 2680; %d skipped)" % (len(names), len(skipped)))
+    print("  names walked          %d   (universe %s; %d skipped)" % (len(names), " ∪ ".join(UNIVERSE_MODES), len(skipped)))
     print("  evaluated bars        %d" % N)
     print("  date span             %s .. %s  (%d sessions)" % (udates[0], udates[-1], len(udates)))
     print("  bars/name             median %d" % int(np.median(np.bincount(sid))))
 
     print("\nPHASE MIX over all evaluated bars")
-    for code, nm in ((-1, "no cycle"), (0, "accumulation"), (1, "manipulation"), (2, "distribution")):
+    for code, nm in ((-1, "no cycle"), (0, "accumulation"), (1, "manipulation"), (2, "distribution"), (3, "failed")):
         k = (phase == code).sum()
         print("  %-14s %9d  %5.1f%%" % (nm, k, 100 * k / N))
 
-    print("\n1) FIRE RATE  (verdict: phase==manipulation AND bars_ago<=%d)" % BARS_AGO_MAX)
+    print("\n1) FIRE RATE  (study state: phase==manipulation AND bars_ago<=%d; the board cuts at 3)" % BARS_AGO_MAX)
     print("  fires on              %d / %d bars = %.1f%% of all evaluated bars" % (fired.sum(), N, 100 * fired.mean()))
+    dead = (phase == 3) & (bago >= 0) & (bago <= BARS_AGO_MAX)
+    print("  base FAILED within %d bars of its raid: %d bars (%.1f%%) — the 2026-09-13 detector counted these as fired"
+          % (BARS_AGO_MAX, dead.sum(), 100 * dead.mean()))
     nf = np.bincount(sid[fired], minlength=len(names))
     print("  names that ever fire  %d / %d (%.0f%%)" % ((nf > 0).sum(), len(names), 100 * (nf > 0).mean()))
     comp = phase == 2
@@ -334,17 +383,16 @@ def stage_stats():
 
 
 def stage_overlap():
-    """Latest-bar overlap with the Keltner near-bullish verdict."""
-    from sepa import universe as U
+    """Latest-bar overlap of the two boards, by their own verdict grades."""
     import multiprocessing as mp
-    syms = U.load_universe("full")
+    syms = study_universe()
 
     with mp.Pool(16, initializer=_init) as pool:
         out = pool.map(_last_bar, syms, chunksize=8)
     amd = {s for s, a, k in out if a}
     kel = {s for s, a, k in out if k}
     both = amd & kel
-    print("latest-bar sets: AMD near-bullish %d, Keltner near-bullish %d, BOTH %d"
+    print("latest-bar BOARDS: 🌀 AMD Raided %d, 🌀 KC Coiled %d, BOTH %d"
           % (len(amd), len(kel), len(both)))
     print("  AMD∩Kel / AMD = %.1f%%   AMD∩Kel / Kel = %.1f%%"
           % (100 * len(both) / max(len(amd), 1), 100 * len(both) / max(len(kel), 1)))
@@ -355,23 +403,19 @@ def stage_overlap():
 
 
 def _last_bar(sym):
+    """The two BOARDS' own predicates on the last closed bar (2026-09-14;
+    before this the Keltner arm was re-implemented by hand with no upper-band
+    exclusion and the AMD arm used the study's 10-bar bound, so the printed
+    overlap was of two sets neither tab shows)."""
     from sepa import prices
-    from supply_demand.amd import find_cycle
-    from supply_demand import keltner as K
+    from supply_demand import turning_bullish as TB
     try:
         df = prices.load_prices(sym)
         if df is None or len(df) < 80:
             return sym, None, None
-        cyc = find_cycle(df, direction="bullish")
-        a = bool(cyc and cyc["phase"] == "manipulation"
-                 and cyc["manipulation"] and cyc["manipulation"]["bars_ago"] <= BARS_AGO_MAX)
-        ch = K.channel(df); sq = K.squeeze(df)
-        mid = df["close"].ewm(span=20, adjust=False).mean().to_numpy()
-        rising = len(mid) > 21 and mid[-1] > mid[-21]
-        k = bool((sq.get("on") or sq.get("released"))
-                 and ch and ch.get("position") is not None
-                 and ch["position"] >= 0.5 and rising)
-        return sym, a, k
+        a = (TB.amd_verdict(df) or {}).get("grade") == TB.AMD_TURNING
+        k = (TB.keltner_verdict(df) or {}).get("grade") == TB.KELTNER_TURNING
+        return sym, bool(a), bool(k)
     except Exception:                                          # noqa: BLE001
         return sym, None, None
 
@@ -507,8 +551,11 @@ def stage_claim():
 def stage_subsets():
     """Is the inversion just the placebo containing already-proven names?
 
-    Re-runs the gap-matched reach comparison against three narrower placebo
-    pools. All three stay negative, so it is not."""
+    Re-runs the gap-matched reach comparison against narrower placebo pools.
+    The fourth pool (2026-09-14) is the like-for-like placebo restricted to a
+    LIVE base — a bar whose own base has not failed — because the signal's
+    definition excludes dead bases and the placebo should be asked the same
+    question. Read the print; the conclusion is not hard-coded here."""
     z = np.load(OUT, allow_pickle=True)
     sid = z["sid"]; date = z["date"]; close = z["close"]
     b_hi = z["base_hi"]; b_lo = z["base_lo"]; phase = z["phase"]; bago = z["bars_ago"]
@@ -528,6 +575,7 @@ def stage_subsets():
         "inside base, NEVER distributed": (~fired) & r_ok & inside & (bucket >= 0) & (phase != 2),
         "inside base, stale raid (bars_ago>10)": (~fired) & r_ok & inside & (bucket >= 0) & (phase == 1) & (bago > 10),
         "inside base, phase==distribution": (~fired) & r_ok & inside & (bucket >= 0) & (phase == 2),
+        "inside a LIVE base (phase != failed)": (~fired) & r_ok & inside & (bucket >= 0) & (phase != 3),
     }
     for nm, fb in cases.items():
         rs = _boot_weighted(rv, fa, fb, bucket, sid, w, B=400)
