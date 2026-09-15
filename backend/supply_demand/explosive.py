@@ -4797,7 +4797,7 @@ def measured_verdict() -> dict:
               "a gap, no costs. This is a board ordering and a chip — it gates "
               "no alert and enters no lane."
               % (m.get("window") or "window pending",
-                 ("Survivorship on the cached dead: %spp. " % _sgn(d_surv))
+                 ("Survivorship: the full cached universe, dead names included, runs %spp vs the live universe. " % _sgn(d_surv))
                  if d_surv is not None else "",
                  STOP_BUFFER_PCT))
 
