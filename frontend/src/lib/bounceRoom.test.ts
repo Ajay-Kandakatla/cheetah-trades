@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ROOM_MIN_PCT, bounceLabel, compareBounceRoom, coverageNote, intoSupply, isBouncing,
   normalizeSymbols, roomGroup, roomLabel, roomOk, roomRank,
+  compareExplosive, explosiveOrderKey, explosiveChipText, type ExplosiveRead,
   type BounceRoomPayload, type BounceRoomRow, demandDistancePct, inOrNearDemand, compareDemandProximity, demandChipText } from './bounceRoom';
 
 const clear = (symbol: string, at_highs = true): BounceRoomRow => ({
@@ -396,5 +397,142 @@ describe('ordering mirror — the shared backend fixture (2026-09-14 review)', (
     expect(compareBounceRoom(by.TRUU, by.AVGO)).toBeGreaterThan(0);   // vs open sky
     expect(compareBounceRoom(by.TRUU, by.UNDR)).toBeLessThan(0);      // but above the under-floor rest
     expect(compareBounceRoom(by.TRUU, by.PEND)).toBeLessThan(0);
+  });
+});
+
+/* ── 🧨 explosive read (2026-09-15) ────────────────────────────────────────
+ * The ordering is pinned against the SAME file the backend test reads —
+ * backend/tests/fixtures/explosive_order_mirror_2026_09_15.json — in BOTH
+ * study branches, because the two branches key on completely different things
+ * (a measured score vs. floor-held + room) and only one of them will ever be
+ * live. Edit the fixture, both suites fail.
+ *
+ * The negatives carry the weight, as everywhere else in this file: a row with
+ * no read must sort LAST and print NOTHING, a `pending` study must behave
+ * exactly like `no_signal`, and the null branch must never wear the good tone. */
+describe('explosive ordering mirror — the shared backend fixture (2026-09-15)', () => {
+  type Ex = { symbol: string; read: ExplosiveRead | null };
+  type Fx = { rows: Ex[]; expected_separates: string[]; expected_no_signal: string[] };
+  async function load(): Promise<Fx> {
+    const { default: raw } = await import('../../../backend/tests/fixtures/explosive_order_mirror_2026_09_15.json?raw');
+    return JSON.parse(raw) as Fx;
+  }
+
+  it('reproduces the fixture order in the no_signal branch, from either starting order', async () => {
+    const fx = await load();
+    const sort = (rows: Ex[]) =>
+      [...rows].sort((a, b) => compareExplosive(a, b, 'no_signal')).map((r) => r.symbol);
+    expect(sort(fx.rows)).toEqual(fx.expected_no_signal);
+    expect(sort([...fx.rows].reverse())).toEqual(fx.expected_no_signal);
+  });
+
+  it('reproduces the fixture order in the separates branch, from either starting order', async () => {
+    const fx = await load();
+    const sort = (rows: Ex[]) =>
+      [...rows].sort((a, b) => compareExplosive(a, b, 'separates')).map((r) => r.symbol);
+    expect(sort(fx.rows)).toEqual(fx.expected_separates);
+    expect(sort([...fx.rows].reverse())).toEqual(fx.expected_separates);
+  });
+
+  it('NEGATIVE: `pending` orders exactly like `no_signal` — nothing waits on a number that may never land', async () => {
+    const fx = await load();
+    const pending = [...fx.rows].sort((a, b) => compareExplosive(a, b, 'pending')).map((r) => r.symbol);
+    expect(pending).toEqual(fx.expected_no_signal);
+  });
+
+  it('NEGATIVE: the row with no read sorts LAST in every branch', async () => {
+    const fx = await load();
+    for (const st of ['separates', 'no_signal', 'pending', 'nonsense-status'] as const) {
+      const order = [...fx.rows].sort((a, b) => compareExplosive(a, b, st)).map((r) => r.symbol);
+      expect(order[order.length - 1]).toBe('EEE');
+    }
+  });
+
+  it('CLEAR leads the fallback: open sky beats 30% of room, and a held floor beats a broken one', async () => {
+    const fx = await load();
+    const by = Object.fromEntries(fx.rows.map((r) => [r.symbol, r]));
+    expect(compareExplosive(by.BBB, by.AAA, 'no_signal')).toBeLessThan(0);   // CLEAR over 30% room
+    expect(compareExplosive(by.AAA, by.FFF, 'no_signal')).toBeLessThan(0);   // 30% over 12%
+    expect(compareExplosive(by.HHH, by.CCC, 'no_signal')).toBeLessThan(0);   // intact IN_BAND over a swept CLEAR
+  });
+
+  it('a separates read with no score of its own sorts after every scored row, before the no-read row', async () => {
+    const fx = await load();
+    const order = [...fx.rows].sort((a, b) => compareExplosive(a, b, 'separates')).map((r) => r.symbol);
+    expect(order.indexOf('HHH')).toBe(order.length - 2);
+    expect(order.indexOf('EEE')).toBe(order.length - 1);
+  });
+});
+
+describe('explosiveOrderKey', () => {
+  const read = (over: Partial<ExplosiveRead> = {}): ExplosiveRead => ({
+    score: 0.5, grade: 'mid', intact: true, session_low: true,
+    room: { state: 'ROOM', room_pct: 9, atr_days: 2, band: null, at_highs: false },
+    measured: { status: 'separates' }, ...over,
+  });
+  it('defaults to the status the read itself carries', () => {
+    expect(explosiveOrderKey(read(), 'AAA')[1]).toBe(-0.5);
+    expect(explosiveOrderKey(read({ measured: { status: 'no_signal' } }), 'AAA')[1]).toBe(1);
+  });
+  it('NEGATIVE: an unknown read is last, and a NaN score never sorts first', () => {
+    expect(explosiveOrderKey(null, 'ZZZ')[0]).toBe(2);
+    expect(explosiveOrderKey(undefined, 'ZZZ')[0]).toBe(2);
+    expect(explosiveOrderKey(read({ score: NaN }), 'AAA')[0]).toBe(1);
+  });
+});
+
+describe('explosiveChipText', () => {
+  const base: ExplosiveRead = {
+    score: null, grade: null, intact: true, session_low: true,
+    components: [{ key: 'room_pct', label: 'room 30%' }, { key: 'intact', label: 'floor held' },
+                 { key: 'rvol20', label: 'never shown' }],
+    room: { state: 'ROOM', room_pct: 30, atr_days: 3, band: null, at_highs: false },
+    measured: { status: 'no_signal', mdl: 5.1 },
+  };
+  const study = { headline: 'MEASURED 2026-09-15: NO SIGNAL SEPARATES', body: 'b' };
+
+  it('renders nothing without a read (negative)', () => {
+    expect(explosiveChipText(null)).toBeNull();
+    expect(explosiveChipText(undefined)).toBeNull();
+  });
+  it('null branch: room + floor, MUTED, never a score', () => {
+    const c = explosiveChipText(base, study)!;
+    expect(c.text).toBe('🧨 room +30% · floor held');
+    expect(c.tone).toBe('muted');
+    expect(c.text).not.toMatch(/\d\.\d\d$/);
+  });
+  it('null branch, CLEAR: says clear, not a fabricated room number', () => {
+    const c = explosiveChipText({ ...base, room: { state: 'CLEAR', room_pct: null, atr_days: null, band: null, at_highs: true } }, study)!;
+    expect(c.text).toBe('🧨 clear · floor held');
+  });
+  it('NEGATIVE: a swept / broken floor says so rather than "held"', () => {
+    expect(explosiveChipText({ ...base, intact: false, state: 'broken' })!.text).toContain('floor broken');
+    expect(explosiveChipText({ ...base, intact: false, state: 'swept' })!.text).toContain('floor swept');
+    expect(explosiveChipText({ ...base, intact: false })!.text).toContain('floor not held');
+    expect(explosiveChipText({ ...base, intact: null })!.text).toContain('floor unknown');
+  });
+  it('separates: the served score, and the next-open suffix ONLY under convention N', () => {
+    const sep: ExplosiveRead = { ...base, score: 0.82, measured: { status: 'separates' } };
+    expect(explosiveChipText(sep, study)!.text).toBe('🧨 0.82');
+    expect(explosiveChipText(sep, study)!.tone).toBe('explosive');
+    expect(explosiveChipText({ ...sep, convention: 'N' }, study)!.text).toBe('🧨 0.82 · next-open');
+    expect(explosiveChipText({ ...sep, convention: 'P' }, study)!.text).not.toContain('next-open');
+  });
+  it('NEGATIVE: a separates status with no score falls back to the muted room/floor text', () => {
+    const c = explosiveChipText({ ...base, score: null, measured: { status: 'separates' } }, study)!;
+    expect(c.tone).toBe('muted');
+    expect(c.text).toContain('floor held');
+  });
+  it('the tooltip carries the top TWO components, the study headline and the closed-bar note', () => {
+    const t = explosiveChipText(base, study)!.title;
+    expect(t).toContain('room 30% · floor held');
+    expect(t).not.toContain('never shown');
+    expect(t).toContain(study.headline);
+    expect(t).toContain('closed-bar read; live volume not included');
+    expect(t).not.toContain("today's low not in the read");
+  });
+  it('says so when today’s low was not part of the read (tile path)', () => {
+    expect(explosiveChipText({ ...base, session_low: false }, study)!.title)
+      .toContain("today's low not in the read");
   });
 });

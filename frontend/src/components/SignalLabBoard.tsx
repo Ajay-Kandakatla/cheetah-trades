@@ -22,6 +22,10 @@ import { API } from '../lib/apiBase';
 import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { SymbolSearch } from './SymbolSearch';
 import { PremarketEntry } from './PremarketEntry';
 import type { CmTile } from '../lib/chartMaps';
@@ -50,6 +54,12 @@ export function SignalLabBoard() {
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  /* 🧨 One bounce-room POST for the board's 12 names; the chip and the
+   * opt-in ordering both read it. */
+  const rowSymbols = useMemo(() => (data?.rows || []).map((r) => r.symbol).filter(Boolean), [data]);
+  const room = useBounceRoom(rowSymbols);
+  const rows = useExplosiveOrder(data?.rows || [], (r) => r.symbol, room.map, explosiveFirst);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
 
@@ -116,6 +126,9 @@ export function SignalLabBoard() {
       {data ? (
         <>
           <div className="slab-meta">
+            {/* 🧨 opt-in ordering over the board's own bounce-room read —
+                default OFF, so the watchlist order he typed is what he sees. */}
+            <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
             <span className={`slab-state slab-state--${data.session_state}`}>
               {data.session_state === 'regular' ? 'LIVE — refreshing every 45s'
                 : data.session_state === 'closed' ? 'MARKET CLOSED — last session shown'
@@ -123,9 +136,9 @@ export function SignalLabBoard() {
             </span>
           </div>
           <div className="cm-grid">
-            {data.rows.map((r) => r.tile ? (
+            {rows.map((r) => r.tile ? (
               <div key={r.symbol} className="slab-cell">
-                <PatternChart tile={r.tile} tvTf="daily" />
+                <PatternChart tile={r.tile} tvTf="daily" study={room.payload?.explosive_study} />
                 {r.latest ? (
                   <div className={`slab-latest slab-latest--${r.latest.kind}`}>
                     <b>{r.latest.label}</b> {r.latest.t} @ ${r.latest.price?.toFixed(2)}
@@ -152,6 +165,8 @@ export function SignalLabBoard() {
                     this from PatternChart; the no-data rows are the only place
                     a Signals name renders without one. */}
                 <GrowthChip symbol={r.symbol} className="cm-badge" />
+                <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
+                               read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                 : {r.error || 'no data'}
               </div>
             ))}

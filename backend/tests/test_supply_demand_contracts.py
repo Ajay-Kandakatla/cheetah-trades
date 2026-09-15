@@ -352,6 +352,31 @@ def test_bounce_room_owner_settings_locked():
                          "stale_print_sec": 180, "new_high_tol": 0.98}
 
 
+def test_explosive_adds_no_owner_setting():
+    """2026-09-15 — the explosive read rides on the bounce-room row
+    (`row["explosive"]`) and on the payload (`explosive_study`), and it adds
+    NOTHING to PARAMS: every threshold it uses is imported from the module
+    that enforces it, or comes out of the measured dict. A knob appearing in
+    PARAMS would be a new owner setting and needs his sign-off, so the pin
+    above is asserted here explicitly, from the enforcing dict."""
+    from supply_demand import bounce_room as BR
+    from supply_demand import explosive
+    from supply_demand import zone_store as ZS
+    locked = {"touch_tol_pct", "wick_pct", "bounce_min_pct", "strong_pct", "lookback_sessions",
+              "near_pct", "demand_near_pct", "stale_print_sec", "new_high_tol"}
+    assert set(BR.PARAMS) == locked, "the explosive read added no param"
+    assert not any("explosive" in k or "burst" in k or "feat" in k for k in BR.PARAMS)
+    assert ZS.RECENT_SESSIONS == 5, \
+        "`feat` is a NEW doc key — never an extension of `recent`, which is an owner setting"
+    # The payload carries the measurement's prose, never a threshold to tune.
+    assert set(explosive.measured_verdict()) == {"headline", "body", "fallback_note", "limits"}
+    # The row block is built from the row's own band and room read — one band
+    # selection for the row, the chip and the tile.
+    src = inspect.getsource(BR.read_symbol)
+    assert "explosive.read(row, doc=doc, day_low=" in src
+    assert "from supply_demand import explosive" in src, "lazy import: the cycle is real"
+
+
 def test_bounce_room_ordering_puts_CLEAR_first_and_room_group_before_room():
     """CLEAR = no supply overhead in the 1y frame = unbounded room, not zero.
     Ajay treats names clearing their last supply as the ones 'likely to go

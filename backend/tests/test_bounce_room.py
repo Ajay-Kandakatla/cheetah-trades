@@ -449,10 +449,102 @@ def test_read_symbol_rows_for_pending_tombstone_no_print_and_ondemand_coverage()
     assert nop["coverage"] == "unavailable" and "print" in nop["error"]
     od = BR.read_symbol("XYZ", _doc([DEM], origin="ondemand"), _snap(91.0, 99.0), NOW)
     assert od["coverage"] == "ondemand" and od["fresh"] is True and od["print"] == 99.0
-    assert set(od) == {"symbol", "print", "fresh", "coverage", "bounce", "room", "demand"}
+    assert set(od) == {"symbol", "print", "fresh", "coverage", "bounce", "room", "demand",
+                       "explosive"}
     st = BR.read_symbol("XYZ", _doc([DEM]), _snap(91.0, 99.0), NOW)
     assert st["coverage"] == "store" and st["bounce"]["sessions_ago"] == 0
     assert st["room"]["state"] == "CLEAR"
+
+
+# ── explosive (2026-09-15, additive row block) ───────────────────────────────
+def _feat_frame(n=300, end="2026-09-03", seed=11):
+    """A closed OHLCV frame the way zone_store hands one to feat_block."""
+    import pandas as pd
+    rng = np.random.default_rng(seed)
+    idx = pd.bdate_range(end=pd.Timestamp(end), periods=n)
+    close = 95 + np.cumsum(rng.normal(0.0, 0.8, n))
+    df = pd.DataFrame({"open": close, "high": close + rng.uniform(0.5, 2.0, n),
+                       "low": close - rng.uniform(0.5, 2.0, n), "close": close,
+                       "volume": rng.integers(1_000_000, 5_000_000, n).astype(float)}, index=idx)
+    df.index.name = "date"
+    return df
+
+
+def test_row_explosive_is_None_safe_on_legacy_docs():
+    """Every doc written before 2026-09-15 — and every on-demand doc built by
+    an older container — has no `feat`. The row still serializes and the key
+    is present and null; absent/None is 'unknown', never 'not explosive'."""
+    row = BR.read_symbol("XYZ", _doc([DEM, SUP_OVER]), _snap(91.0, 99.0), NOW)
+    assert "feat" not in _doc([DEM]), "the fixture doc is the legacy shape on purpose"
+    assert row["explosive"] is None
+    assert json.dumps(row)
+    empty = BR.read_symbol("XYZ", _doc([DEM, SUP_OVER], feat=None), _snap(91.0, 99.0), NOW)
+    assert empty["explosive"] is None, "feat present but null reads the same as absent"
+
+
+def test_row_explosive_keys_on_the_rows_own_band_and_room_block():
+    """One band selection per name: the read is handed the row it belongs to,
+    so the chip can never name a different demand band than the row shows."""
+    from supply_demand import explosive
+    feat = explosive.feat_block(_feat_frame())
+    doc = _doc([DEM, DEM2, SUP_OVER], feat=feat)
+    row = BR.read_symbol("XYZ", doc, _snap(91.0, 99.0), NOW)
+    read = row["explosive"]
+    if read is None:                         # no demand band at/below the print
+        pytest.skip("explosive.read found no band for the fixture doc")
+    assert read["band"] == {"lo": DEM["lo"], "hi": DEM["hi"]}, \
+        "the row's demand_read band (nearest at/below the print), not DEM2 underneath it"
+    assert read["room"] == row["room"]
+    assert read["session_low"] is True, "the snapshot's low went into the floor read"
+    assert json.dumps(row)
+
+
+def test_NEGATIVE_a_pending_or_unavailable_row_carries_no_explosive_key():
+    """The read needs a band, a print and a doc. A row that has none of them
+    must not carry a null score that a board could read as 'measured, low'."""
+    pending = BR.read_symbol("abc", None, None, NOW)
+    tomb = {"_id": "ABC:2026-09-04", "symbol": "ABC", "date": STORE_DAY, "error": BR.NO_DATA_ERROR}
+    unavail = BR.read_symbol("ABC", tomb, _snap(91.0, 99.0), NOW)
+    noprint = BR.read_symbol("XYZ", _doc([DEM]), None, NOW)
+    for row in (pending, unavail, noprint):
+        assert "explosive" not in row
+    assert pending == {"symbol": "ABC", "coverage": "pending"}
+
+
+def test_NEGATIVE_no_demand_band_at_or_below_the_print_reads_None():
+    """A name that fell THROUGH its demand band (the reclaim-from-below class,
+    66% stop-hit in his autopsy) has no band at/below the print — demand_read
+    returns None and so does the explosive read."""
+    from supply_demand import explosive
+    feat = explosive.feat_block(_feat_frame())
+    above = {"kind": "demand", "lo": 150.0, "hi": 155.0, "touches": 2, "strength": 50.0}
+    row = BR.read_symbol("XYZ", _doc([above], feat=feat), _snap(91.0, 99.0), NOW)
+    assert row["demand"] is None and row["explosive"] is None
+
+
+def test_default_builder_ondemand_doc_carries_the_same_feat_key(monkeypatch):
+    """The on-demand path is zone_store.build_doc on the shared price cache,
+    so an on-demand name gets the same `feat` the 9:20 warm writes — one doc
+    shape, never a second-class row on the Catalysts / GnT boards."""
+    from sepa import prices
+    monkeypatch.setattr(prices, "load_prices", lambda sym, period=None, **kw: _feat_frame())
+    doc = BR.default_builder("XYZ", NOW.date())
+    assert doc is not None and "feat" in doc and doc["feat"] is not None
+    assert doc["date"] == STORE_DAY
+
+
+def test_payload_carries_the_measured_verdict_once_not_per_row(monkeypatch):
+    """The banner prose is one payload key, so no number is ever typed into
+    the page and every board shows the same verdict."""
+    _inline_thread(monkeypatch)
+    from supply_demand import explosive
+    store, cache = _stores()
+    out = BR.api_payload(["A"], now=NOW, store_coll=store, ondemand_coll=cache,
+                         snapshot_fn=lambda names: {"A": _snap(98.0, 99.0)})
+    assert out["explosive_study"] == explosive.measured_verdict()
+    assert isinstance(out["explosive_study"], dict) and out["explosive_study"]
+    assert json.dumps(out)
+    assert not any("explosive_study" in r for r in out["rows"].values())
 
 
 # ── load_docs / on-demand ────────────────────────────────────────────────────
@@ -579,8 +671,8 @@ def test_api_payload_returns_the_exact_contract_with_counts_and_prices_only_cove
     out = BR.api_payload(["a", "B", "c", "d", "A"], now=NOW, store_coll=store, ondemand_coll=cache,
                          snapshot_fn=snapshot_fn,
                          builder=lambda s, d: built.append(s) or _doc([DEM], symbol=s))
-    assert set(out) == {"as_of", "in_session", "store_date", "params", "rows", "requested",
-                        "covered", "pending", "unavailable", "disclaimer"}
+    assert set(out) == {"as_of", "in_session", "store_date", "params", "explosive_study", "rows",
+                        "requested", "covered", "pending", "unavailable", "disclaimer"}
     assert out["requested"] == 4 and out["covered"] == 2 and out["pending"] == 1 and out["unavailable"] == 1
     assert out["store_date"] == STORE_DAY and out["in_session"] is True
     assert out["as_of"].startswith("2026-09-04T11:00:00") and out["as_of"].endswith("-04:00")

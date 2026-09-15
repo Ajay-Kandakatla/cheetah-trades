@@ -24,6 +24,10 @@ import {
 } from '../lib/growthSort';
 import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
+import { ExplosiveChip } from './ExplosiveChip';
+import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { metricCells } from '../lib/boardMetrics';
 
 export type GrowthZone = {
@@ -213,6 +217,7 @@ export function ExplosiveGrowth() {
   const [busy, setBusy] = useState(false);
   const [onlyBuyable, setOnlyBuyable] = useState(false);
   const [onlyDemand, setOnlyDemand] = useState(false);
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
   // Ajay 2026-09-14: "I do not want them to have any debt." Defaulted ON
   // at the widest tier that is still honestly debt-light, because a
   // literal debt===0 filter returns ZERO of 29 rows — see balanceRead.ts.
@@ -251,7 +256,7 @@ export function ExplosiveGrowth() {
 
   useEffect(() => { void load(false); }, [load]);
 
-  const rows = useMemo(() => {
+  const sortedRows = useMemo(() => {
     let r = data?.rows ?? [];
     if (onlyBuyable) r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
     if (onlyDemand) r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
@@ -262,6 +267,14 @@ export function ExplosiveGrowth() {
     // complete ordering and needs no round-trip.
     return sortRows(r, sortKey, sortDir);
   }, [data, onlyBuyable, onlyDemand, sector, debtTier, sortKey, sortDir]);
+
+  /* 🧨 This board renders its own table and was skipped by the 🚀 growth
+   * contract on purpose (it IS the growth list) — the explosive read is a
+   * different question, so the chip and the opt-in ordering mount here like
+   * anywhere else. ONE bounce-room POST for the rows on screen. */
+  const rowSymbols = useMemo(() => sortedRows.map((r) => r.symbol).filter(Boolean), [sortedRows]);
+  const room = useBounceRoom(rowSymbols);
+  const rows = useExplosiveOrder(sortedRows, (r) => r.symbol, room.map, explosiveFirst);
 
   const groups = data?.groups ?? [];
   const blockedN = (data?.rows ?? []).filter(
@@ -312,6 +325,7 @@ export function ExplosiveGrowth() {
               <option value="all">show everything ({(data?.rows ?? []).length})</option>
             </select>
           </label>
+          <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
           <button className="eg-btn" disabled={busy} onClick={() => void load(true)}>
             {busy ? 'rebuilding…' : 'Rebuild now'}
           </button>
@@ -520,6 +534,8 @@ export function ExplosiveGrowth() {
                 <tr key={r.symbol}>
                   <td>
                     <TickerLink ticker={r.symbol} fromLabel="Explosive Growth" />
+                    <ExplosiveChip className="eg" study={room.payload?.explosive_study}
+                                   read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                     {r.name && <div className="eg-coname">{r.name}</div>}
                   </td>
                   <td className="eg-num eg-good" title={per.title}>

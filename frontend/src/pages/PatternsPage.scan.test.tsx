@@ -49,7 +49,11 @@ function stubFetch() {
       Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response);
     if (init?.method === 'POST') {
       const body = JSON.parse(String(init.body)) as Record<string, unknown>;
-      POSTS.push({ url: u, body });
+      // Only the PATTERN scans belong in this ledger. Since 2026-09-15 the page
+      // also makes ONE page-level bounce-room POST for the 🧨 explosive read on
+      // its rows; counting it here would make every scope assertion below read
+      // POSTS[1] and would say nothing about which scan the button runs.
+      if (u.includes('/patterns/')) POSTS.push({ url: u, body });
       return reply({ running: true, scope: body.scope, done: 0, total: 0 });
     }
     if (u.includes('/patterns/scan/status')) return reply({ running: false, done: 0, total: 0 });

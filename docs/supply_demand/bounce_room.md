@@ -25,13 +25,14 @@ three things within a week. So: pure reads here, one route, one ordering key the
 store day — `docs/supply_demand/zone_bounce_alerts.md` §1) — the same bands the phone's
 `zone_bounce_alert` and `zone_edge` passes read. Nothing here draws a new band.
 
-## The doc it reads (zone_store, + one additive field)
+## The doc it reads (zone_store, + two additive fields)
 
 ```
 {_id: "SYM:2026-09-04", symbol, date, geom: "board",
  bands: [{kind: "supply"|"demand", lo, hi, touches, strength}, ...],
  atr14, prev_close, high_252,
  recent: [{date, low, high, close}, ...],     # NEW 2026-09-05: last RECENT_SESSIONS=5 CLOSED bars, oldest first
+ feat: {...} | null,                          # NEW 2026-09-15: explosive.feat_block on the same CLOSED frame
  computed_at}
 ```
 
@@ -40,6 +41,18 @@ from today's own low would be instantly "touched"). Rows with a missing/NaN low 
 on any failure. `zone_edge` / `zone_bounce_alerts` never read it (source-guarded) and keep
 `load(None, today)`. Docs stored before 2026-09-05 have no `recent` → only today's touch is visible
 for them until the next 9:20 warm.
+
+**`feat` (2026-09-15).** `supply_demand.explosive.feat_block(frame)` on the **same closed frame**
+the bands come from (today already dropped, no extra I/O): the closed-bar features the explosive
+read ranks on plus the short bar tail its live floor read (`alert_gates.sweep_read`) runs on. It is
+a **new key**, never an extension of `recent` — `RECENT_SESSIONS = 5` is an owner setting
+(2026-09-05) and does not move. `build_doc` computes it inside a `try/except`: a failure is logged
+and stored as `feat: null`, and the doc — bands included — is written anyway. That is deliberate:
+`warm.one()` lets an exception propagate and then writes **nothing** for the name, which would mean
+no bands and therefore no `zone_edge` / `zone_bounce` / `demand` push. A board decoration must never
+be able to silence a name (`test_zone_store.py::test_feat_block_failure_never_drops_the_doc`). Docs
+stored before 2026-09-15 — and every on-demand doc built by an older container — have no `feat`;
+their rows read `explosive: null` and sort last.
 
 ## The two reads (pure)
 
@@ -157,13 +170,21 @@ Every label must be honest about coverage: `pending` = "room pending", `unavaila
   "params": {"touch_tol_pct": 1.0, "wick_pct": 1.5, "bounce_min_pct": 3.0, "strong_pct": 5.0,
              "lookback_sessions": 5, "near_pct": 2.0, "demand_near_pct": 2.0,
              "stale_print_sec": 180, "new_high_tol": 0.98},
+  "explosive_study": {"headline", "body", "fallback_note", "limits"},   NEW 2026-09-15: explosive.measured_verdict()
   "rows": {
     "AVGO": {"symbol", "print", "fresh", "coverage": "store"|"ondemand",
              "bounce": null | {"band": {kind, lo, hi, touches, strength}, "role": "demand"|"broken_supply",
                                "touch_low", "touch_date", "sessions_ago", "bounce_pct", "floor_pct", "strong", "atr_x"},
              "room": {"state": "CLEAR"|"IN_BAND"|"NEAR"|"ROOM", "room_pct": 17.0|0.0|null, "atr_days": 3.1|null,
                       "band": {"kind": "supply"|"broken_support", lo, hi, touches} | null, "at_highs": bool},
-             "demand": null | {"lo", "hi", "touches", "in_band": bool, "distance_pct": 0.0|1.48, "near": bool}},
+             "demand": null | {"lo", "hi", "touches", "in_band": bool, "distance_pct": 0.0|1.48, "near": bool},
+             "explosive": null | {"score": 0.82|null, "grade": "high"|"mid"|"low"|null,     NEW 2026-09-15
+                                  "components": [{"key", "value", "rank", "label"}],
+                                  "intact": bool|null, "session_low": bool,
+                                  "room": <the row's own room block>, "band": {"lo", "hi"},
+                                  "convention": "P"|"N"|null,
+                                  "measured": {"status", "run_date", "n_episodes", "oos_d_hit5",
+                                               "oos_ci", "mdl", "script"}}},
     "XYZ":  {"symbol": "XYZ", "coverage": "pending"},
     "ABC":  {"symbol": "ABC", "coverage": "unavailable", "error": "no / insufficient price data"}
   },
@@ -171,6 +192,27 @@ Every label must be honest about coverage: `pending` = "room pending", `unavaila
   "disclaimer": "Configured price-structure heuristic ... not advice."
 }
 ```
+
+### `explosive` (row) and `explosive_study` (payload) — 2026-09-15
+
+`read_symbol` calls `supply_demand.explosive.read(row, doc=doc, day_low=<the snapshot's low>)` on
+the row it has just built, so the explosive read keys on **the same demand band** (`demand_read`)
+and **the same room block** (`room_read`) the row already shows — one band selection for the row,
+the chip and the tile. `null` when the doc has no `feat` (legacy / older on-demand doc) or when no
+demand band sits at or below the print. A `pending` or `unavailable` row returns **before** this and
+carries **no `explosive` key at all** — absent is not "not explosive", and the ordering key sends
+unknown reads last either way. The read is pure and runs per request (one `sweep_read`, ~0.3 ms), so
+the floor read uses the live print and today's low; the ranked features are closed-bar.
+
+`explosive_study` is `explosive.measured_verdict()` — the measurement's own banner prose (headline,
+body, fallback note, limits), once per payload, built from `explosive.MEASURED`. No number is typed
+into the page. While the study has not landed the status is `pending`, which every code path treats
+exactly like `no_signal`: no score, a muted chip, and the fallback ordering (floor held, then
+`room_rank`).
+
+**`PARAMS` is unchanged.** The explosive read adds **no owner setting** — every threshold in it is
+imported from the module that enforces it, or comes out of the measured dict
+(`test_supply_demand_contracts.py::test_explosive_adds_no_owner_setting`).
 
 Rows are keyed by symbol in request order; **the page sorts** with the mirrored key. Body:
 `{"symbols": [...]}`, upper-cased + de-duplicated (first occurrence wins), capped at `MAX_SYMBOLS =

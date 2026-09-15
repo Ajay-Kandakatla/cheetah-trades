@@ -12661,3 +12661,46 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .ol-approval-done { margin-top: 0.3rem; font-size: 12px; color: var(--cm-slate); }
 .ol-notes { margin-top: 0.3rem; }
 .ol-note { font-size: 11.5px; color: var(--cm-slate); }
+
+/* 🧨 ExplosiveChip (2026-09-15) — the per-name explosive read on every Chart
+   Maps surface. TWO tones on purpose:
+     `-explosive`        the study SEPARATES and this is its measured score;
+     `-explosive-muted`  the null / pending branch — room + whether the band
+                         floor held, dimmed so a fallback ordering can never
+                         be mistaken for a signal. It is never the `good`
+                         green: that colour belongs to things that measured.
+   One family per surface, mirroring the 🚀 growth chip's classes so the two
+   chips sit side by side at the same weight. */
+.cm-badge-explosive   { color: #f59e0b; background: rgba(245,158,11,0.14); }
+.cm-badge-explosive-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.hs-badge-explosive   { color: #f59e0b; background: rgba(245,158,11,0.14); }
+.hs-badge-explosive-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.sb-chip-explosive {
+  display: inline-block; font-size: 0.66rem; padding: 1px 6px;
+  border-radius: 999px; white-space: nowrap; margin-left: 5px;
+  color: #f59e0b; background: rgba(245,158,11,0.14);
+}
+.sb-chip-explosive-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.bd-gchip-explosive {
+  font-size: 0.58rem; font-weight: 700; white-space: nowrap; margin-left: 5px;
+  border-radius: 5px; padding: 0 4px; cursor: help;
+  color: #f59e0b; background: rgba(245,158,11,0.12);
+}
+.bd-gchip-explosive-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.eg-explosive {
+  font-size: 0.6rem; font-weight: 700; white-space: nowrap; margin-left: 5px;
+  border-radius: 5px; padding: 0 4px; cursor: help;
+  color: #f59e0b; background: rgba(245,158,11,0.12);
+}
+.eg-explosive-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+/* The opt-in ordering checkbox (default OFF on every board — each tab's served
+   order was chosen for it). Same shape as the Bonde 🎯 toggle. */
+.ex-toggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.78rem; cursor: pointer; color: var(--ink-muted);
+}
+.ex-toggle input { accent-color: #f59e0b; cursor: pointer; }
+/* The served study verdict under a board. Quiet by design: in the expected
+   null branch it is a limits statement, not a headline act. */
+.cm-explosive-study { border-left: 3px solid rgba(245,158,11,0.5); padding-left: 0.6rem; }
+.cm-explosive-study p { margin: 0.25rem 0 0; }

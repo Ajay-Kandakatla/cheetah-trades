@@ -22,6 +22,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
+import { ExplosiveChip } from './ExplosiveChip';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import type { BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import { SignalWatchButton } from './SignalWatchButton';
 import { InfoButton } from './InfoButton';
 
@@ -180,7 +183,9 @@ function GroupFundCells({ r }: { r: HsFundMedians }) {
   );
 }
 
-function NameRow({ r }: { r: HsName }) {
+function NameRow({ r, read, study }: {
+  r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
+}) {
   return (
     <tr className="hs-name">
       <td className="hs-sym">
@@ -188,6 +193,7 @@ function NameRow({ r }: { r: HsName }) {
         {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11:
             "ALL TABS IN CHART MAPS"). */}
         <GrowthChip symbol={r.symbol} className="hs-badge" />
+        <ExplosiveChip read={read?.explosive} study={study} className="hs-badge" />
         {/* Ajay 2026-09-11: "add to signals button in that table I wanna pick a
             few stocks from this". NOT compact — compact prints a bare "+" which
             sits next to TickerLink's ☆ and reads as decoration rather than a
@@ -240,6 +246,34 @@ export function HottestSectors() {
   const sectors = useMemo(() => data?.sectors || [], [data]);
   const themes = useMemo(() => data?.themes || [], [data]);
   const toggle = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+  /* 🧨 ONE bounce-room POST for every name row this table can show (sector,
+   * industry and roster groups alike) — the chip and the opt-in ordering read
+   * that single map; a per-row fetch on a table this wide is out of the
+   * question. */
+  const rowSymbols = useMemo(() => {
+    const out: string[] = [];
+    const eat = (g: { names?: HsName[] }[]) => {
+      for (const grp of g || []) for (const n of grp.names || []) if (n.symbol) out.push(n.symbol);
+    };
+    eat(sectors as { names?: HsName[] }[]);
+    eat(themes as { names?: HsName[] }[]);
+    for (const s2 of (sectors || []) as { industries?: { names?: HsName[] }[] }[]) {
+      eat((s2.industries || []) as { names?: HsName[] }[]);
+    }
+    return out;
+  }, [sectors, themes]);
+  const room = useBounceRoom(rowSymbols);
+  const readOf = (sym: string) => room.map.get(String(sym).toUpperCase());
+  /* NO 🧨 ordering toggle on this board, deliberately. Every other tab gets
+   * one; here the payload keeps only `names_per_group` rows per group and the
+   * column sorts are a SERVER round-trip for exactly that reason — a
+   * browser-side reorder would rank the visible 25 and never reach the 305th
+   * Technology name. Ranking these rows by the explosive read has to happen
+   * where the truncation happens — i.e. a new `explosive` key in the backend's
+   * `/rotation/hottest?sort=` set, which is HIS CALL (a tenth column-sort on a
+   * board he already called wide), not a silent browser reorder. The chip
+   * still rides on every name, and the omission is pinned by the explosive
+   * contract's NO_TOGGLE list in frontend/scripts/contracts.mjs. */
   /** Click a new column → sort it DESC (the interesting end of every column
    *  except Next ER). Click the active column again → flip direction. */
   const clickSort = (k: string) => {
@@ -368,7 +402,7 @@ export function HottestSectors() {
                     <LegCells r={t} />
                     <GroupFundCells r={t} />
                   </tr>
-                  {isOpen ? t.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} />) : null}
+                  {isOpen ? t.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {t.names.length} of {t.names_total}
@@ -423,7 +457,7 @@ export function HottestSectors() {
                           <LegCells r={ind} />
                           <GroupFundCells r={ind} />
                         </tr>
-                        {iOpen ? ind.names.map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} />) : null}
+                        {iOpen ? ind.names.map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (
                           <tr key={`${ik}|more`}><td colSpan={10} className="hs-more">
                             showing {ind.names.length} of {ind.names_total}
@@ -432,7 +466,7 @@ export function HottestSectors() {
                       </>
                     );
                   }) : null}
-                  {isOpen && !byIndustry ? s.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} />) : null}
+                  {isOpen && !byIndustry ? s.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
                   {isOpen && !byIndustry && s.names_total > s.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {s.names.length} of {s.names_total}

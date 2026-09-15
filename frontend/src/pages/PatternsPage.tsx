@@ -4,12 +4,17 @@
  * SEPA context, plus OUR universe's measured +21-bar outcomes per pattern
  * (self-validation) beside the practitioner base rates. A pattern without its
  * confirmation close is a shape, not a signal. Educational, not advice. */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { GrowthChip } from '../components/GrowthChip';
+import { ExplosiveChip } from '../components/ExplosiveChip';
+import { ExplosiveFirstToggle } from '../components/ExplosiveFirstToggle';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
+import { compareExplosive, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
 import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
 import { PatternMatchCards } from '../components/PatternMatchCards';
@@ -205,6 +210,19 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
     }
   };
 
+  /* 🧨 ONE bounce-room POST for every name this page lists — the pattern
+   * cards and the qualifier verdicts alike. The chip and the opt-in ordering
+   * read that single map; nothing here fetches per row. */
+  const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const rowSymbols = useMemo(() => {
+    const out: string[] = [];
+    for (const p of latest?.results || []) if (p.symbol) out.push(p.symbol);
+    for (const v of quals?.verdicts || []) if (v.symbol) out.push(v.symbol);
+    return out;
+  }, [latest, quals]);
+  const room = useBounceRoom(rowSymbols);
+  const explosiveCtx: ExplosiveCtx = { room: room.map, study: room.payload?.explosive_study, on: explosiveFirst };
+
   const confirmed = (latest?.results || []).filter((p) => p.status === 'confirmed');
   const forming = (latest?.results || []).filter((p) => p.status === 'forming');
   const val = latest?.validation || {};
@@ -349,7 +367,7 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
 
       {/* Qualifier verdicts — every qualifier answered: match or no-match */}
       {quals && quals.verdicts && quals.verdicts.length > 0 && (
-        <QualifierVerdicts q={quals} navigate={navigate} />
+        <QualifierVerdicts q={quals} navigate={navigate} ex={explosiveCtx} />
       )}
       {quals && (!quals.verdicts || quals.verdicts.length === 0) && user?.is_admin && (
         <div style={{ padding: '0.55rem 0.8rem', borderRadius: 10, marginBottom: 12, fontSize: '0.76rem',
@@ -368,8 +386,9 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
         </div>
       ) : (
         <>
-          {confirmed.length > 0 && <Section title={`Confirmed today / yesterday — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} />}
-          {forming.length > 0 && <Section title={`Forming — NOT a signal: unconfirmed Ws continue lower 48% of the time (${forming.length})`} rows={forming} navigate={navigate} />}
+          <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
+          {confirmed.length > 0 && <Section title={`Confirmed today / yesterday — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} ex={explosiveCtx} />}
+          {forming.length > 0 && <Section title={`Forming — NOT a signal: unconfirmed Ws continue lower 48% of the time (${forming.length})`} rows={forming} navigate={navigate} ex={explosiveCtx} />}
           {latest.generated_at > 0 && (
             <p style={{ fontSize: '0.68rem', color: C.sub }}>
               Scanned {latest.symbols_scanned} charts · {new Date(latest.generated_at * 1000).toLocaleString()}
@@ -383,9 +402,30 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
   );
 }
 
-function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: string) => void }) {
+/** The page's one bounce-room read, handed down instead of re-fetched. */
+type ExplosiveCtx = {
+  room: Map<string, BounceRoomRow>;
+  study?: ExplosiveStudy | null;
+  on: boolean;
+};
+
+/** Same comparator the backend and every other board use; a plain function
+ *  because these lists are built inside child components. */
+function orderByExplosive<T>(rows: T[], symbolOf: (r: T) => string, ex?: ExplosiveCtx): T[] {
+  if (!ex?.on) return rows;
+  const status = explosiveStatusOf(ex.room);
+  return [...rows].sort((a, b) => compareExplosive(
+    { symbol: symbolOf(a), read: ex.room.get(String(symbolOf(a)).toUpperCase())?.explosive },
+    { symbol: symbolOf(b), read: ex.room.get(String(symbolOf(b)).toUpperCase())?.explosive },
+    status));
+}
+
+function QualifierVerdicts({ q, navigate, ex }: {
+  q: QualLatest; navigate: (p: string) => void; ex?: ExplosiveCtx;
+}) {
   const matched = q.verdicts.filter((v) => v.matches.length > 0);
-  const candleOnly = q.verdicts.filter((v) => v.matches.length === 0 && !v.no_match);
+  const candleOnly = orderByExplosive(
+    q.verdicts.filter((v) => v.matches.length === 0 && !v.no_match), (v) => v.symbol, ex);
   const noMatch = q.verdicts.filter((v) => v.no_match);
   return (
     <div style={{ marginBottom: 18, padding: '0.7rem 0.85rem', borderRadius: 12,
@@ -411,7 +451,7 @@ function QualifierVerdicts({ q, navigate }: { q: QualLatest; navigate: (p: strin
           <div style={{ fontSize: '0.7rem', color: C.sub, textTransform: 'uppercase', margin: '10px 0 4px' }}>
             No chart pattern — candle reads only ({candleOnly.length})
           </div>
-          {candleOnly.map((v) => <VerdictRow key={v.symbol} v={v} navigate={navigate} />)}
+          {candleOnly.map((v) => <VerdictRow key={v.symbol} v={v} navigate={navigate} ex={ex} />)}
         </>
       )}
 
@@ -451,7 +491,9 @@ const SOURCE_META: Record<string, { icon: string; label: string; to: string } | 
   at_pivot: { icon: '🎯', label: 'At pivot', to: '/leaderboard' },
 };
 
-function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void }) {
+function VerdictRow({ v, navigate, ex }: {
+  v: Verdict; navigate: (p: string) => void; ex?: ExplosiveCtx;
+}) {
   const s = v.sepa || {};
   const formations = v.candles?.formations || [];
   const sources = (v.sources || []).map((k) => SOURCE_META[k]).filter(Boolean) as
@@ -462,6 +504,8 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <TickerCell symbol={v.symbol} size="0.88rem" />
         <GrowthChip symbol={v.symbol} className="cm-badge" />
+        <ExplosiveChip className="cm-badge" study={ex?.study}
+                       read={ex?.room.get(String(v.symbol).toUpperCase())?.explosive} />
         {s.is_buyable && <span style={{ fontSize: '0.72rem', color: C.green }}>✅ buyable</span>}
         {sources.map((m) => (
           <button key={m.label} onClick={() => navigate(m.to)}
@@ -503,11 +547,14 @@ function VerdictRow({ v, navigate }: { v: Verdict; navigate: (p: string) => void
   );
 }
 
-function Section({ title, rows, navigate }: { title: string; rows: Pattern[]; navigate: (p: string) => void }) {
+function Section({ title, rows, navigate, ex }: {
+  title: string; rows: Pattern[]; navigate: (p: string) => void; ex?: ExplosiveCtx;
+}) {
+  const shown = orderByExplosive(rows, (p) => p.symbol, ex);
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ fontSize: '0.72rem', color: C.sub, textTransform: 'uppercase', margin: '10px 0 6px' }}>{title}</div>
-      {rows.map((p, i) => <Card key={`${p.symbol}-${p.pattern}-${i}`} p={p} navigate={navigate} />)}
+      {shown.map((p, i) => <Card key={`${p.symbol}-${p.pattern}-${i}`} p={p} navigate={navigate} ex={ex} />)}
     </div>
   );
 }
@@ -523,7 +570,9 @@ export function winnersHref(pattern?: string | null): string {
 }
 
 
-function Card({ p, navigate }: { p: Pattern; navigate?: (path: string) => void }) {
+function Card({ p, navigate, ex }: {
+  p: Pattern; navigate?: (path: string) => void; ex?: ExplosiveCtx;
+}) {
   const s = p.sepa || {};
   const conf = p.status === 'confirmed';
   const ext = p.ext_past_confirm_pct;
@@ -535,6 +584,8 @@ function Card({ p, navigate }: { p: Pattern; navigate?: (path: string) => void }
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <TickerCell symbol={p.symbol} size="0.95rem" />
         <GrowthChip symbol={p.symbol} className="cm-badge" />
+        <ExplosiveChip className="cm-badge" study={ex?.study}
+                       read={ex?.room.get(String(p.symbol).toUpperCase())?.explosive} />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{PATTERN_LABEL[p.pattern] || p.pattern}</span>
         <button type="button"
                 onClick={() => (navigate ? navigate(winnersHref(p.pattern))
