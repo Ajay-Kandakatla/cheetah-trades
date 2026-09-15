@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
-import { marketPosture, MarketPostureBanner } from './MarketPostureBanner';
+import { marketPosture, MarketPostureBanner, POSTURE_BOTTOM_HIDDEN_PREFIXES } from './MarketPostureBanner';
 
 /* Hooks + router are mocked (mutable, so each test can pick a regime) so we can
    render the pill standalone. The render tests below lock Bug-2's fix
@@ -12,12 +12,14 @@ let gaugeRet: unknown = { state: 'caution', score: 59 };
 let regimeRet: unknown = { data: { label: 'market_in_correction' } };
 vi.mock('../hooks/useMarketGauge', () => ({ useMarketGauge: () => gaugeRet }));
 vi.mock('../hooks/useMarketRegime', () => ({ useMarketRegime: () => regimeRet }));
-vi.mock('react-router-dom', () => ({ useNavigate: () => () => {} }));
+let pathnameRet = '/';
+vi.mock('react-router-dom', () => ({ useNavigate: () => () => {}, useLocation: () => ({ pathname: pathnameRet }) }));
 
 afterEach(() => {
   vi.clearAllMocks();
   gaugeRet = { state: 'caution', score: 59 };
   regimeRet = { data: { label: 'market_in_correction' } };
+  pathnameRet = '/';
 });
 
 describe('marketPosture — regime-led top banner', () => {
@@ -94,5 +96,36 @@ describe('MarketPostureBanner — in-flow nav pill (no overlap)', () => {
     gaugeRet = { state: 'caution', score: 55 };
     const { container } = render(<MarketPostureBanner />);
     expect(container.querySelector('.cm-posture-pill')).toBeNull();
+  });
+});
+
+describe('MarketPostureBanner — bottom pill hidden on composer pages (Ajay 2026-09-14)', () => {
+  it('hides the BOTTOM pill on /ollama so it cannot sit on top of the chat composer', () => {
+    pathnameRet = '/ollama';
+    const { container } = render(<MarketPostureBanner placement="bottom" />);
+    expect(container.querySelector('.cm-posture-pill--bottom')).toBeNull();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('also hides on an /ollama child route (prefix match)', () => {
+    pathnameRet = '/ollama/anything';
+    const { container } = render(<MarketPostureBanner placement="bottom" />);
+    expect(container.querySelector('.cm-posture-pill--bottom')).toBeNull();
+  });
+
+  it('still shows the BOTTOM pill on other pages (e.g. /chart-maps)', () => {
+    pathnameRet = '/chart-maps';
+    const { container } = render(<MarketPostureBanner placement="bottom" />);
+    expect(container.querySelector('.cm-posture-pill--bottom')).not.toBeNull();
+  });
+
+  it('does NOT hide the INLINE (desktop) pill on /ollama — only the bottom float overlaps', () => {
+    pathnameRet = '/ollama';
+    const { container } = render(<MarketPostureBanner />);
+    expect(container.querySelector('.cm-posture-pill')).not.toBeNull();
+  });
+
+  it('the hidden-prefix list contains /ollama', () => {
+    expect(POSTURE_BOTTOM_HIDDEN_PREFIXES).toContain('/ollama');
   });
 });

@@ -7,12 +7,20 @@
  * in correction") — the red glow border (MarketDayBorder) carries the signal,
  * and bull / pressure markets stay clean. The pure marketPosture() helper still
  * returns all tones (amber/green) for tests; the component gates to red. */
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useMarketGauge, type GaugeState } from '../hooks/useMarketGauge';
 import { useMarketRegime, type RegimeLabel } from '../hooks/useMarketRegime';
 
 export type PostureTone = 'red' | 'amber' | 'green';
 export type Posture = { label: string; tone: PostureTone };
+
+/* Routes whose own UI owns the bottom of the screen — a full-height chat
+ * composer sits sticky at the bottom, and the fixed posture pill (placement
+ * 'bottom', mobile) lands right on top of it. Ajay 2026-09-14, on the phone:
+ * "The UI ... looks congested at the bottom, Hide the market correction thingy
+ * when Ollama is opened." Prefix match, so /ollama and any child route. The
+ * red glow border (MarketDayBorder) still carries the regime signal here. */
+export const POSTURE_BOTTOM_HIDDEN_PREFIXES = ['/ollama'];
 
 const TONE_FG: Record<PostureTone, string> = {
   red: '#ef4444', amber: '#f59e0b', green: '#10b981',
@@ -45,6 +53,14 @@ export function MarketPostureBanner({ placement = 'inline' }: {
   const gauge = useMarketGauge();
   const { data: regime } = useMarketRegime();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  // The bottom (mobile) pill is position:fixed and would sit on top of a
+  // page that owns the bottom edge (the Ollama chat composer). Hide it there.
+  if (placement === 'bottom'
+      && POSTURE_BOTTOM_HIDDEN_PREFIXES.some((r) => pathname.startsWith(r))) {
+    return null;
+  }
 
   const p = marketPosture(regime?.label, gauge?.state);
   if (!p) return null;

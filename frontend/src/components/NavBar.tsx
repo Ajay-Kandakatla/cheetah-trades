@@ -193,8 +193,10 @@ export function NavBar() {
         <div className="cm-nav__mobile-actions">
           {hasGauge && <MarketGaugeBadge compact />}
           {hasGauge && <IvBadge compact />}
-          {/* 🦙 private local-model chat — renders only for the primary admin. */}
-          <OllamaIcon compact />
+          {/* 🦙 Ollama lives on the DESKTOP nav only. On a phone the top row is
+              at capacity — adding it here pushed search + the menu off the right
+              edge (Ajay 2026-09-14). /ollama stays one tap away in the drawer
+              menu (access/store _ADMIN_MENU_ITEMS). */}
           <ScanHealthChip compact />
           <GlobalSearch compact subgroupOf={toolsSubgroupOf} />
           {hasPortfolio && (
