@@ -395,9 +395,13 @@
   align-items: baseline;
   gap: 6px;
   flex: 1;
-  min-width: 0;
+  /* Keep the "Pounce" wordmark on screen when the row is tight — the shrink
+     should come out of the info-chips strip, not the logo (Ajay 2026-09-14).
+     The current-tab label after it still truncates via .cm-nav__current. */
+  min-width: 4.5rem;
   overflow: hidden;
 }
+.cm-nav--mobile .cm-nav__wordmark { flex: 0 0 auto; }
 .cm-nav--mobile .cm-nav__wordmark {
   font-size: 18px;
 }
