@@ -228,3 +228,34 @@ last pass HH:MM".
   `lo`/`hi` (both come from `price_zones.compute`, rounded to 2 dp). The board's frame may
   include today's partial bar and the store's never does, so a band that shifts by a cent
   between the two is two keys — each module could then fire once for it. Accepted.
+
+## 2026-09-14 review fixes
+
+Verified on live data 2026-09-14 (review of the alert logic), all in `zone_edge.py` +
+`demand_alerts.py`, tests in `tests/test_alerts_review_fixes_2026_09_14.py`:
+
+* **One 🧲 delivered twice.** This pass (1-min) and `demand_alerts` (5-min) share the demand
+  state key and both did *read → send → write*; a 5-min tick landing between the read and the
+  write let both ring the same band inside a minute. The key is now **claimed atomically
+  before the send** (`demand_alerts.claim_key`: a `$setOnInsert` upsert — exactly one writer
+  sees the insert, the other sees "claimed" and stays quiet, counted `claimed_elsewhere`) and
+  **released** (`release_key`) when the send does not terminate, so a transport failure still
+  retries next minute and "nobody targeted" is still terminal. Digests claim per name and drop
+  the names another pass took. The break side (`supply_break_state`) uses the same claim, so an
+  overlapping slow pass cannot double-ring a 🚀 either. Each claim carries `source`
+  (`zone_edge` / `demand_alerts` / `growth_alerts`) — the autopsy can now say which pass rang.
+* **One level, two stops.** A broken-supply shelf sitting over a demand band (e.g. 91.5–93 over
+  90–92) rang as "demand" under one key at 09:41 and the band under it rang under another key
+  at 09:42, each push quoting a different stop. The demand side now reads today's state **by
+  symbol** in one `$in` (`demand_alerts.recorded_today`, the day read off the key itself) and
+  skips a candidate whose `[lo, hi]` **overlaps** any band already rung for the name today
+  (`overlapping_key`; closed interval — touching counts). Counted `skipped_overlap` in the run
+  result, the stored `zone_edge_latest.counts` and therefore `/alerts/status`; the board still
+  lists the row. A second band that does *not* overlap (a lower shelf) rings normally.
+* **The floor read sees the session.** `AG.sweep_read` / `floor_held_gate` now take the
+  snapshot's `low` and the print (`day_low=`, `last=`, `day=`); see
+  [stop_hunt.md](stop_hunt.md) "2026-09-14 review fixes". This pass hands them in from the
+  same snapshot it prices from — no extra call.
+* Nothing else moved: `EDGE_PCT`, the room / proximity / direction / knife / mood gates, the
+  cap floor and the push window are untouched, and no new threshold was introduced.
+

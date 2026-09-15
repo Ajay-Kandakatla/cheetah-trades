@@ -102,3 +102,38 @@ vs cold 23.2% (−0.57pp, 95% −1.87…+0.71), and the backwards 5-session read
 (COLD 30.8% vs 28.3%). **Those results do not describe what ships now.** The
 ℹ️ Rules panel says so in place of quoting the old number, and re-running the
 study on `HEAT_KEY` is outstanding work, not a settled question.
+
+## 2026-09-14 review fixes
+
+Four corrections to the 🔄 what-changed line and the build behind the strip.
+None changes a band constant or a grain; `TOP_N` stays one number for every
+grain (his call). Tests: `tests/test_growth_rotation_review_fixes_2026_09_14.py`
+and `RotationChanges.test.tsx`.
+
+- **H1 — streaks counted today twice.** The scan stores today's snapshot
+  (`context_refresh → history.store`) BEFORE `/rotation/changes` reads the
+  history, so today's own `_id` was in the list and `streaks()` counted it
+  behind today's payload as if it were yesterday — "Communication Services
+  #1 · 2d" on the day it took #1. `changes()` now hands `streaks()` only the
+  sessions strictly before `as_of`.
+- **H2 — "＋ entered" must be money in.** Crossing into the top band on a red
+  day is not inflow: Real Estate at −0.23 printed as a green chip. `entered`
+  now requires the ranking leg (`rank_key`, `rel_5d`) to be `> 0`; a missing
+  leg never enters. `left` is deliberately unfiltered — the cold end is always
+  information. The band is NOT scaled per grain.
+- **H3 — every mover chip names its grain.** "Consumer Defensive 7→4" is a
+  rank among 11 sectors and "Software - Application 73→9" a rank among ~73
+  industries; without the tag they read as the same move. Chips now end in
+  `· sector` / `· industry` / `· theme` / `· cohort`. Sectors are tagged, not
+  excluded — his call.
+- **H5 — the build reads CLOSED bars only.** `tracker._bars_for` called
+  `chart_maps.board.bars_for`, which overlays today's live bar for the tiles
+  (right there, wrong here): from ~12:31 ET a Chart Maps visit that missed the
+  30-minute cache rebuilt the strip on four closed sessions plus a partial
+  one. It now reads `sepa.prices.load_prices` and splits today's in-progress
+  row off with `supply_demand.demand_reentry.split_today_partial` — the app's
+  one session test, not a third one. After 16:00 ET the bar is whole and
+  stays.
+
+Skipped on his call / host-tree crontab: sample-vs-full membership (H4), the
+17:10 warm persistence (H6).

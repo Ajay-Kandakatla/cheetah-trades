@@ -149,7 +149,18 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
             # bar already overlaid by _frame_for; the shared 2y frame cannot
             # hold them. Event-centred windows (winners) never need it.
             from chart_maps import support as _support
-            raw, _have, _as_of = _support._frame_for(symbol.upper(), days)
+            _res = _support._frame_for(symbol.upper(), days, with_closed=True)
+            raw, _have, _as_of = _res[0], _res[1], _res[2]
+            _closed = _res[3] if len(_res) > 3 else None    # a 3-tuple stub = no info
+            # support._frame_for overlays today's bar but does not hand the
+            # overlay info back, so the 2y/3y/5y windows dropped the
+            # after-hours flag on the last bar (review 2026-09-14, D8).
+            # Re-run the overlay on the CLOSED frame it returns to recover the
+            # info — one snapshot read; the frame drawn stays _frame_for's.
+            # Only a live verdict (appended / adjusted) is kept: a failed or
+            # empty second read leaves info None, so _tag_live_bar's
+            # zero-volume fallback still applies.
+            _info = _overlay_info(prices, _closed, symbol.upper())
         else:
             raw = prices.load_prices(symbol.upper())
             # Today's live bar on the tile too (Ajay 2026-09-03, CHPT) — the same
@@ -178,6 +189,23 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
             hi = min(len(df), i + max(0, int(pad_after)) + 1)
             return _tag_live_bar(_frame_to_bars(df.iloc[lo:hi]), _info)
     return _tag_live_bar(_frame_to_bars(df.tail(days)), _info)
+
+
+def _overlay_info(prices_mod, closed_frame, sym: str) -> Optional[dict]:
+    """The prices.with_today_bar info for `sym` read off `closed_frame`, or
+    None when the overlay is unavailable, failed, or had nothing live to say
+    (info["appended"] / ["adjusted"] both False). PURE apart from the
+    snapshot read inside with_today_bar."""
+    fn = getattr(prices_mod, "with_today_bar", None)
+    if fn is None or closed_frame is None:
+        return None
+    try:
+        _df, info = fn(closed_frame, sym)
+    except Exception as exc:                                    # pragma: no cover
+        log.debug("chart-maps: deep today-bar overlay %s failed: %s", sym, exc)
+        return None
+    info = info or {}
+    return info if (info.get("appended") or info.get("adjusted")) else None
 
 
 def _tag_live_bar(bars: list, info: Optional[dict]) -> list:
@@ -294,7 +322,9 @@ def drop_low_room(rows: list, live: Optional[dict], min_room: Optional[float]) -
         sym = (r.get("symbol") or "").upper()
         live_px = (live or {}).get(sym)
         px = live_px if live_px is not None else _num(r.get("last_price"))
-        room = RF.room_block(px, RF.row_bands(r), RF.row_entry_band(r),
+        # RAW bands (review 2026-09-14, D1): room_block measures the room on
+        # the proven set as before and names the unproven lid it skipped.
+        room = RF.room_block(px, RF.row_bands(r, proven=False), RF.row_entry_band(r),
                              _room_prev_close(r, live_px),
                              "live" if live_px is not None else "scan")
         rooms[sym] = room
@@ -2984,7 +3014,19 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         top, second = d.get("top_band") or {}, d.get("second_band") or {}
         bands = []
         t_lo, t_hi = _num(top.get("lo")), _num(top.get("hi"))
+        top_lo0, top_hi0 = t_lo, t_hi                # the band as the scan drew it
         s_lo, s_hi = _num(second.get("lo")), _num(second.get("hi"))
+        px_live = _live_px(r, live)
+        # Which way it got here TODAY (2026-09-08): falling into / bouncing off
+        # the SECOND band — the entry this board is about. Read first (review
+        # 2026-09-14, D5) because a RECLAIM from below changes the band label
+        # and the chip: 'approaching from the top' must not dress a name that
+        # closed under the band yesterday. deep_demand.read carries the same
+        # flag off the scan's prev_close; the live read wins when it exists.
+        ap_badge = _approach_badge(
+            sym, {"lo": s_lo, "hi": s_hi} if s_lo is not None else None, live_rows, live)
+        reclaiming = bool(d.get("reclaiming")) or (
+            ap_badge is not None and ap_badge.get("_dir") == "reclaiming")
         if t_lo is not None and t_hi is not None:
             # A 1-touch first band is a single swing low widened ±1.75% into a
             # box (price_zones._make_zone), and on 4/100 tiles that box
@@ -3001,9 +3043,18 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                         if one_touch else "1st demand · broken")})
         if s_lo is not None:
             bands.append({"kind": "demand", "lo": s_lo, "hi": s_hi,
-                          "label": ("2nd demand · approaching"
+                          "label": ("2nd demand · reclaiming" if reclaiming
+                                    else "2nd demand · approaching"
                                     if phase == "approaching"
                                     else "2nd demand · entering")})
+        # The lids price meets FIRST overhead, as the zones tiles draw them
+        # (review 2026-09-14, D2): the TARGET line used to land on a band the
+        # deep tile never drew. Deduped against the broken first band.
+        for lid in _lids_above(r.get("supply_zones") or [], px_live):
+            if (top_lo0 is not None and top_hi0 is not None
+                    and abs(lid["lo"] - top_lo0) < 0.011 and abs(lid["hi"] - top_hi0) < 0.011):
+                continue
+            bands.append({"kind": "supply", "lo": lid["lo"], "hi": lid["hi"], "label": "supply"})
 
         lines = []
         plan = r.get("plan") or {}
@@ -3027,21 +3078,24 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
         g = _f((sales or {}).get("growth_yoy_pct"))
         below = _f(d.get("below_top_pct"))
-        arriving = ("inside the 2nd band" if d.get("state") == "in"
-                    else f"{d.get('dist_pct'):.1f}% above the 2nd band")
+        # The distance the RANK, room and gate used — the live print when
+        # the tape has one, else the scan's (review 2026-09-14, D3). The why
+        # line and the chip used to quote the scan's state while the rank
+        # ran on the live print, so a name ranked 'in' read 'x% above'.
+        dist = _disp_dist(r, live, d, "second_band")
+        in_now = _num(dist) is not None and _num(dist) <= 0
+        arriving = _dist_text(dist, "the 2nd band", "the 2nd band")
+        if reclaiming:
+            arriving = f"{arriving} (reclaimed from below)"
         why = (f"broke its 1st demand band ({below:.0f}% below it), now "
                f"{arriving} — sales {'+' if (g or 0) >= 0 else ''}{g:.0f}% YoY "
                f"say the business didn't break with the price"
                if below is not None and g is not None else
                "second-level demand arrival with Bonde-intact sales")
 
-        badges = [{"text": ("🩹 In 2nd demand band" if d.get("state") == "in"
+        badges = [{"text": ("🩹 Reclaiming 2nd band" if reclaiming
+                             else "🩹 In 2nd demand band" if in_now
                              else "🩹 Entering 2nd band"), "tone": "warn"}]
-        # Which way it got here TODAY (2026-09-08): falling into / bouncing off
-        # the SECOND band — the entry this board is about.
-        ap_badge = _approach_badge(
-            sym, {"lo": _num(second.get("lo")), "hi": _num(second.get("hi"))}
-            if _num(second.get("lo")) is not None else None, live_rows, live)
         if ap_badge:
             badges.insert(0, {"text": ap_badge["text"], "tone": ap_badge["tone"]})
             why = f"{why} — {ap_badge['_text']}"
@@ -3858,19 +3912,28 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             without_level += 1
             continue
         state, best_label, best_dist = None, None, None
+        best_lo, best_hi = None, None
         for b in read_bands:
             lo, hi = _f(b.get("lo")), _f(b.get("hi"))
             if lo is None or hi is None:
                 continue
             if lo <= last <= hi:
                 state, best_label, best_dist = "in", b.get("label"), 0.0
+                best_lo, best_hi = lo, hi
                 break
             edge = lo if last < lo else hi
             dist = abs(last - edge) / last * 100.0
             if best_dist is None or dist < best_dist:
                 best_label, best_dist = b.get("label"), dist
+                best_lo, best_hi = lo, hi
         if best_dist is None:
             continue
+        # Which side of the NEAREST band the print sits (review 2026-09-14,
+        # G2/G4): 'past' used to be judged against the HIGHEST band, so a
+        # name between two bands (ISRG/CRWD/CLX) read as a broken level, and
+        # a name that had closed THROUGH its band (NFLX, six closes under)
+        # wore a touch chip with no 'below' in it.
+        side = "above" if last > best_hi else "below" if last < best_lo else "in"
         if state != "in":
             state = "near" if best_dist <= NEAR_PCT else "away"
 
@@ -3928,13 +3991,11 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                   "label": f"Gabbar · {b.get('label') or 'band'}"}
                  for b in payload["bands"]]
 
-        above = last > max(float(b["hi"]) for b in read_bands)
         if state == "in":
             why = f"inside Gabbar's {best_label} band right now"
         elif state == "near":
-            why = f"{best_dist:.1f}% from Gabbar's {best_label} band"
+            why = f"{best_dist:.1f}% {side} Gabbar's {best_label} band"
         else:
-            side = "above" if above else "past"
             why = f"{best_dist:.0f}% {side} the nearest Gabbar band ({best_label})"
 
         badges = []
@@ -3943,8 +4004,15 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             badges.append({"text": f"{icon} In Gabbar band ({best_label})",
                            "tone": "good"})
         elif state == "near":
-            badges.append({"text": f"{icon} {best_dist:.1f}% from {best_label}",
+            badges.append({"text": f"{icon} {best_dist:.1f}% {side} {best_label}",
                            "tone": "warn"})
+        # G1 (review 2026-09-14): a table row scaled for a verified split
+        # says so on the tile — the author drew the level on the old shares.
+        split = _f(payload.get("split_adjusted"))
+        if split and split != 1:
+            badges.append({"text": (f"✂️ Levels ÷{split:g} for the "
+                                     f"{payload.get('split_date') or 'stock'} split"),
+                           "tone": "muted"})
         if gate == "pass" and sales:
             badges.append(_sales_badge(sales))
         elif gate == "fail" and sales:

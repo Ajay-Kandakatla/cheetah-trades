@@ -106,8 +106,28 @@ at all → the row is `unavailable` ("no print in snapshot").
 room_rank(row)       (0, 0.0)          CLEAR
                      (1, -room_pct)    ROOM / NEAR / IN_BAND — biggest room first (IN_BAND = 0 last of these)
                      (2, 0.0)          no room read: pending / unavailable / null
-bounce_room_key(row) (0 if bouncing else 1,  *room_rank(row),  -bounce_pct,  symbol)
+room_group(row)      0                 bouncing AND room ok (CLEAR, or pct ≥ ALERT_MIN_ROOM_PCT = 5.0)
+                     1                 room ok, not bouncing
+                     2                 bouncing but INTO supply (a MEASURED read under the floor) — ⛔
+                     3                 the rest: under-floor non-bouncers, IN_BAND, a bounce with no room read, pending, unavailable
+bounce_room_key(row) (room_group(row),  *room_rank(row),  -bounce_pct,  symbol)
 ```
+
+`room_ok` (CLEAR, or the raw pct when the block carries `room_pct_raw` else `room_pct`, ≥ the floor;
+NEAR is the server's own under-floor verdict and never passes; IN_BAND / pending / unavailable /
+null / malformed are false — an unknown room is not room) and `into_supply` (a MEASURED read under
+the floor, never CLEAR, at-floor or absent) mirror `roomOk` / `intoSupply` in `bounceRoom.ts`. The
+floor is `alert_gates.ALERT_MIN_ROOM_PCT`, imported, never retyped.
+
+**2026-09-14 review fix — one rule, not two.** Since 2026-09-05 the page (`roomGroup` /
+`compareBounceRoom`) and the ℹ️ Rules panel sorted by the four groups above, but `bounce_room_key`
+still led with "bouncing at all" — so a reversal INTO supply (TRU, 0.3% under its lid) topped any
+list sorted server-side while the page said it sorts third. The backend key is now the page's rule.
+Pinned by ONE fixture both suites sort — `backend/tests/fixtures/bounce_room_order_mirror_2026_09_14.json`
+(19 rows: every group, every coverage state, the at-floor 5.0 and the 4.995-rounds-to-5.0
+boundaries, raw-vs-display, ties by symbol) — in `test_demand_board_review_fixes_2026_09_14.py`
+and `bounceRoom.test.ts`; `test_supply_demand_contracts.py` pins the key's shape. Not a rule
+change: nothing qualifies or alerts differently, only the order a list is served in.
 
 **Why CLEAR sorts first.** No supply band overhead in the 1y frame means the name is at/near its
 highs — its room is *unbounded*, not zero. Ajay treats names clearing their last supply as the
@@ -120,7 +140,7 @@ a `%` is unknown (group 2), never promoted.
 | surface | what it asks | what it does with the row |
 |---|---|---|
 | **SEPA scanner** (`frontend/src/components/SepaFilterBar.tsx`) | POST the visible scan's symbols (≤ 2500; the full universe is ~1,750) — **only while the 🪃 chip is on** (`Sepa.tsx` hands the hook an empty list otherwise: nothing else on the page reads the map, and the default page must not fan out a snapshot + on-demand builds every minute for zero output) | new filter chip "Bouncing off demand": keep rows whose `bounce` is non-null; chip shows the touched level, `+bounce_pct%`, `sessions_ago`, `role`; `fresh false` renders a stale tag. Never a buy signal — the SEPA verdict is untouched. |
-| **Back in Demand** (`frontend/src/components/DemandReentryPanel.tsx`, "N in demand") | POST the board's symbols | sort by `bounce_room_key`: bouncing first, then CLEAR, then biggest room to the first supply band; the room column shows `room_pct` / `atr_days` / the band, `pending` rows keep their old position at the end with a "room pending" tag. |
+| **Back in Demand** (`frontend/src/components/DemandReentryPanel.tsx`, "N in demand") | POST the board's symbols | sort by `bounce_room_key`: reversal off demand WITH room first, then room-ok names, then reversals INTO supply (⛔), then the rest; inside a group CLEAR, then biggest room to the first supply band (2026-09-14: the backend key now matches this, see § Ordering); the room column shows `room_pct` / `atr_days` / the band, `pending` rows keep their old position at the end with a "room pending" tag. |
 | **Catalysts** (`frontend/src/pages/Catalysts.tsx`, a Chart Maps tab since 2026-09-05; `catalysts` and `chart-maps` are separate access grants, so `/catalysts` redirects only for users who hold `chart-maps` and the tab is offered only to users who hold `catalysts`) | POST the board's symbols (mostly *not* in the $1B+ store → `ondemand`) | same key — "bigger gaps in to supply" = `room_pct` desc under CLEAR; first poll shows most rows `pending`, the 30 s poll after the worker finishes fills them. |
 | **Bonde** (`frontend/src/components/BondeBoard.tsx`, 2026-09-14) | POST every row on the tab, once | checkbox "🎯 in / near a demand band only · nearest first": keep rows whose `demand.in_band` or `demand.near`, sort by `compareDemandProximity`; each qualifying row wears a 🎯 chip (band, touches, `store_date` in the tooltip); the near distance prints from `params.demand_near_pct`. Off = the served order. |
 

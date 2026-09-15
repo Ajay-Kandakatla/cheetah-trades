@@ -123,3 +123,21 @@ target that was never far away teaches nothing about a re-entry.
 
 Historical behaviour of a rule on past bars. Not a forecast, not a
 recommendation, and explicitly not a reason to take the next zone signal.
+
+## 2026-09-14 review fix — `benchmark_return` refuses a window it cannot cover
+
+`benchmark_return(bench_df, start_date, bars_held)` clamped `end` to the frame's
+last bar, so a benchmark frame shorter than the holding window scored SPY over
+fewer bars than the trade and the caller reported the difference as excess. It
+now returns `None` when `start + bars_held` runs past the frame. `summarize()`
+already skips a `None` `bench_pct`
+(`test_excess_is_raw_minus_benchmark_and_only_where_both_exist`), so an uncovered
+window drops out of `excess_vs_spy_pct` / `beat_spy_pct` rather than pulling
+them toward zero. Same-bar trades and windows ending exactly on the last bar are
+unchanged.
+
+Found on the live track record (`demand_history.resolve_open`, whose 17:40 ET
+run read a SPY frame one session stale — see `demand_track_record.md`); the
+backtest loads every frame from the same cache in one pass, so its own windows
+were covered. Guard: `test_benchmark_return_refuses_a_window_that_runs_past_the_frame`
+in `backend/tests/test_demand_board_review_fixes_2026_09_14.py`.

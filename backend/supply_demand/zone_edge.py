@@ -76,8 +76,14 @@ unchanged.
 
 Per side: strongest MAX_SINGLES_PER_PASS get their own push, the rest ONE
 digest (trade_flash discipline). Digest names are recorded too — nothing
-repeats. State is written only on a terminal send (delivered, or nobody
-targeted); a transport failure retries next minute.
+repeats. Since 2026-09-14 the state key is CLAIMED atomically before the send
+(demand_alerts.claim_key, a `$setOnInsert` upsert — the 5-min demand_alerts
+pass reads the same key, and read-then-send-then-write let both ring the
+same 🧲 inside a minute) and RELEASED when the send does not terminate, so a
+transport failure still retries next minute and "nobody targeted" is still
+terminal. Same day, a demand level whose band OVERLAPS one already rung for
+the symbol (a broken-supply shelf over a demand band — one level, two keys,
+two stops) is skipped and counted (`skipped_overlap`).
 
 Tracking ("min on min")
 -----------------------
@@ -456,7 +462,9 @@ def _existing_keys(coll, keys: list) -> set:
     """The subset of `keys` already recorded in `coll` — ONE $in read per
     pass, never a find_one per candidate (this runs every minute against
     hundreds of listed rows). A read failure returns the empty set: push
-    again rather than never, the same choice demand_alerts._already makes."""
+    again rather than never, the same choice demand_alerts.recorded_today
+    makes. Used for the break side; the demand side reads by SYMBOL through
+    demand_alerts.recorded_today so overlapping bands are visible too."""
     if coll is None or not keys:
         return set()
     try:
@@ -486,17 +494,17 @@ def _names_for(symbols: list) -> dict:
     return out
 
 
-def _record_break(coll, item: dict, now: datetime) -> None:
-    if coll is None:
-        return
-    try:
-        coll.update_one({"_id": item["key"]}, {"$set": {
-            "symbol": item["symbol"], "tier": item["tier"],
-            "band": {"lo": item["band"]["lo"], "hi": item["band"]["hi"]},
-            "last": item["last"], "dist_pct": item["dist_pct"], "new_highs": item["new_highs"],
-            "cap": item.get("cap"), "sent_at": now.isoformat()}}, upsert=True)
-    except Exception as exc:
-        log.warning("zone_edge: dedupe write failed: %s", exc)
+SOURCE = "zone_edge"               # stamped on every dedupe claim this pass makes
+
+
+def _claim_break(coll, item: dict, now: datetime) -> bool:
+    """Atomically claim a 🚀 key before its send (demand_alerts.claim_key;
+    2026-09-14). True = ours to send; False = a concurrent pass already has it."""
+    return DA.claim_key(coll, item["key"], {
+        "symbol": item["symbol"], "tier": item["tier"],
+        "band": {"lo": item["band"]["lo"], "hi": item["band"]["hi"]},
+        "last": item["last"], "dist_pct": item["dist_pct"], "new_highs": item["new_highs"],
+        "cap": item.get("cap"), "sent_at": now.isoformat(), "source": SOURCE})
 
 
 def _terminal(res: Optional[dict]) -> bool:
@@ -694,7 +702,7 @@ def empty_payload(reason: str = "no pass yet") -> dict:
             "counts": {"breaking": 0, "near_demand": 0, "candidates": 0, "priced": 0,
                        "stale_print": 0, "skipped_room": 0, "skipped_direction": 0,
                        "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
-                       "skipped_cap": 0,
+                       "skipped_overlap": 0, "skipped_cap": 0,
                        "unknown_cap": 0, "pushed": 0},
             "breaking": [], "near_demand": [], "track": {}, "reason": reason,
             "disclaimer": DISCLAIMER}
@@ -815,7 +823,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
         return {"ran": True, "reason": reason, "latest_written": written, "candidates": 0,
                 "priced": 0, "stale_print": 0, "breaking": [], "near_demand": [],
                 "pushed": 0, "skipped_room": 0, "skipped_cap": 0, "unknown_cap": 0,
-                "seconds": round(time.time() - t0, 2)}
+                "skipped_overlap": 0, "seconds": round(time.time() - t0, 2)}
     syms = sorted(store)
     if snapshot is None:
         try:
@@ -861,7 +869,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     breaking, near_demand = [], []
     break_cands, demand_cands = [], []
     unknown_cap = skipped_cap = unknown_prev = skipped_room = skipped_direction = 0
-    skipped_knife = skipped_mood = skipped_floor = 0
+    skipped_knife = skipped_mood = skipped_floor = skipped_overlap = 0
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -921,11 +929,17 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                     frame = AG.daily_frame(sym)
                     kr = AG.knife_read(sym, frame=frame)
                     rm = AG.reversal_mood_read(sym, frame=frame)
+                    # The session's own low and print ride into the floor read
+                    # (2026-09-14): the cached frame ends yesterday, so without
+                    # them a floor swept THIS morning read intact.
+                    day_low = _f(snap.get("low"))
+                    sw = AG.sweep_read(rd["band"], sym, frame=frame, day_low=day_low,
+                                       last=px, day=day)
                     if not AG.knife_gate(sym, read=kr):
                         # Swing lows stepping down under a falling 50-day. The
                         # BOARD still lists it, wearing the 🔪 badge.
                         skipped_knife += 1
-                    elif not AG.floor_held_gate(rd["band"], sym, frame=frame):
+                    elif not AG.floor_held_gate(rd["band"], sym, frame=frame, read=sw):
                         # The band floor must have HELD — intact 30.7% win vs
                         # swept 22.7% / broken 21.5% over 31,861 events.
                         skipped_floor += 1
@@ -941,7 +955,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                         demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
                                              "mood": AG.mood_read(sym, frame=frame),
                                              "knife": kr, "reversal_mood": rm,
-                                             "sweep": AG.sweep_read(rd["band"], sym, frame=frame),
+                                             "sweep": sw,
                                              "last": float(px), "cap": _f(cap), "name": None,
                                              "key": DA.state_key(sym, rd["band"], day_iso, "at"),
                                              "tier": rd["tier"], "dist_pct": rd["dist_pct"],
@@ -953,61 +967,94 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     for r in breaking + near_demand:
         r["name"] = names.get(r["symbol"])
     seen_break = _existing_keys(coll_break, [it["key"] for it in break_cands])
-    seen_demand = _existing_keys(coll_demand, [it["key"] for it in demand_cands])
+    # Demand side: ONE read by SYMBOL (demand_alerts.recorded_today) — the
+    # exact keys rung today AND their bands, so a level overlapping one already
+    # rung for the name (broken-supply shelf over a demand band, finding 2 of
+    # the 2026-09-14 review) is skipped instead of ringing twice with two stops.
+    recorded = DA.recorded_today(coll_demand, [it["symbol"] for it in demand_cands], day_iso)
     break_items = [it for it in break_cands if it["key"] not in seen_break]
-    demand_items = [it for it in demand_cands if it["key"] not in seen_demand]
+    demand_items = []
+    for it in demand_cands:
+        if any(r["key"] == it["key"] for r in recorded.get(it["symbol"], [])):
+            continue                                              # rung today under this very key
+        if DA.overlapping_key(it["symbol"], it["band"], recorded):
+            skipped_overlap += 1
+            continue
+        demand_items.append(it)
     for it in break_items + demand_items:
         it["name"] = names.get(it["symbol"])
 
     # ── pushes ──────────────────────────────────────────────────────────────
+    # CLAIM the key, then send, then RELEASE on a transport failure
+    # (2026-09-14): the 5-min demand_alerts pass reads the same demand key,
+    # and read-then-send-then-write let both ring one 🧲 inside a minute.
     break_items.sort(key=_break_rank)
     b_singles, b_digest = break_items[:MAX_SINGLES_PER_PASS], break_items[MAX_SINGLES_PER_PASS:]
     demand_items.sort(key=lambda it: float(it["hit"]["dist_pct"]))
     d_singles, d_digest = demand_items[:MAX_SINGLES_PER_PASS], demand_items[MAX_SINGLES_PER_PASS:]
     pushed = 0
+    claimed_elsewhere = 0
     if push and (break_items or demand_items):
         from push import sender
         if owner is None:
             from portfolio.alerts import _resolve_owner
             owner = _resolve_owner()
         for it in b_singles:
+            if not _claim_break(coll_break, it, now):
+                claimed_elsewhere += 1
+                continue
             try:
                 res = sender.send_to_user(owner, _tag_msg(break_single_message(it), sess), kind=KIND_BREAK)
             except Exception as exc:
                 log.warning("zone_edge: break push for %s failed: %s", it["symbol"], exc)
+                DA.release_key(coll_break, it["key"])
                 continue
             if _terminal(res):
-                _record_break(coll_break, it, now)
                 pushed += 1
+            else:
+                DA.release_key(coll_break, it["key"])
         if b_digest:
-            try:
-                res = sender.send_to_user(owner, _tag_msg(break_digest_message(b_digest), sess), kind=KIND_BREAK)
-            except Exception as exc:
-                log.warning("zone_edge: break digest push failed: %s", exc)
-                res = None
-            if _terminal(res):
-                for it in b_digest:
-                    _record_break(coll_break, it, now)
-                pushed += 1
+            ours = [it for it in b_digest if _claim_break(coll_break, it, now)]
+            claimed_elsewhere += len(b_digest) - len(ours)
+            if ours:
+                try:
+                    res = sender.send_to_user(owner, _tag_msg(break_digest_message(ours), sess), kind=KIND_BREAK)
+                except Exception as exc:
+                    log.warning("zone_edge: break digest push failed: %s", exc)
+                    res = None
+                if _terminal(res):
+                    pushed += 1
+                else:
+                    for it in ours:
+                        DA.release_key(coll_break, it["key"])
         for it in d_singles:
+            if not DA.claim(coll_demand, it["key"], it, now, source=SOURCE):
+                claimed_elsewhere += 1
+                continue
             try:
                 res = sender.send_to_user(owner, _tag_msg(DA.at_message(it), sess), kind=DA.KIND)
             except Exception as exc:
                 log.warning("zone_edge: demand push for %s failed: %s", it["symbol"], exc)
+                DA.release_key(coll_demand, it["key"])
                 continue
             if _terminal(res):
-                DA._record(coll_demand, it["key"], it, now)
                 pushed += 1
+            else:
+                DA.release_key(coll_demand, it["key"])
         if d_digest:
-            try:
-                res = sender.send_to_user(owner, _tag_msg(DA.digest_message(d_digest), sess), kind=DA.KIND)
-            except Exception as exc:
-                log.warning("zone_edge: demand digest push failed: %s", exc)
-                res = None
-            if _terminal(res):
-                for it in d_digest:
-                    DA._record(coll_demand, it["key"], it, now)
-                pushed += 1
+            ours = [it for it in d_digest if DA.claim(coll_demand, it["key"], it, now, source=SOURCE)]
+            claimed_elsewhere += len(d_digest) - len(ours)
+            if ours:
+                try:
+                    res = sender.send_to_user(owner, _tag_msg(DA.digest_message(ours), sess), kind=DA.KIND)
+                except Exception as exc:
+                    log.warning("zone_edge: demand digest push failed: %s", exc)
+                    res = None
+                if _terminal(res):
+                    pushed += 1
+                else:
+                    for it in ours:
+                        DA.release_key(coll_demand, it["key"])
 
     # ── tracking (min on min) ───────────────────────────────────────────────
     breaking, near_demand = sort_rows(breaking, near_demand)
@@ -1034,7 +1081,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     counts = {"candidates": len(syms), "priced": len(prints), "stale_print": stale_print,
               "skipped_room": skipped_room, "skipped_direction": skipped_direction,
               "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
-              "skipped_floor": skipped_floor,
+              "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap,
               "skipped_cap": skipped_cap,
               "unknown_cap": unknown_cap, "pushed": pushed}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
@@ -1047,12 +1094,13 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "breaking": payload["breaking"], "near_demand": payload["near_demand"],
             "singles_break": len(b_singles), "digest_break": len(b_digest),
             "singles_demand": len(d_singles), "digest_demand": len(d_digest),
-            "pushed": pushed, "tracked": tracked, "purged": purged,
+            "pushed": pushed, "claimed_elsewhere": claimed_elsewhere,
+            "tracked": tracked, "purged": purged,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
             "skipped_direction": skipped_direction,
             "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
-            "skipped_floor": skipped_floor,
+            "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap,
             "seconds": round(time.time() - t0, 2), "payload": payload}
 
 

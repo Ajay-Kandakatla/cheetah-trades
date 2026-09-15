@@ -306,11 +306,21 @@ def resolve_open(limit: int = 2000, max_hold: int = MAX_HOLD_BARS) -> dict:
     from . import zone_backtest as ZB
 
     eps = db[EPISODES_COLL]
+    # ONE benchmark load per run, REFETCHED (2026-09-14 review): this runs at
+    # 17:40 ET and SPY's cached frame was a session stale, so the excess column
+    # compared a trade against a benchmark window that ended a day early
+    # (benchmark_return now refuses a window past the frame instead of
+    # clamping it). The cached frame is the fallback when the refetch fails.
     bench = None
     try:
-        bench = prices.load_prices(ZB.BENCHMARK)
+        bench = prices.load_prices(ZB.BENCHMARK, force=True)
     except Exception as exc:
-        log.debug("demand history: benchmark load failed: %s", exc)
+        log.debug("demand history: benchmark refetch failed: %s", exc)
+    if bench is None:
+        try:
+            bench = prices.load_prices(ZB.BENCHMARK)
+        except Exception as exc:
+            log.debug("demand history: benchmark load failed: %s", exc)
 
     n_checked = n_resolved = n_incomplete = 0
     frames: dict = {}
@@ -344,7 +354,12 @@ def resolve_open(limit: int = 2000, max_hold: int = MAX_HOLD_BARS) -> dict:
             continue                              # still racing — grade it tomorrow
 
         bars = int(res.get("bars") or 0)
-        spy = ZB.benchmark_return(bench, str(ep.get("first_seen") or "")[:10], bars)
+        entry_date = str(df.index[idx])[:10]
+        # SPY over the SAME window the trade was held: from the ENTRY open (the
+        # session after the observation), not the observation day — the
+        # window zone_backtest scores (`_date_at(df, i + 1)`). Until 2026-09-14
+        # this started on `first_seen`, one session early.
+        spy = ZB.benchmark_return(bench, entry_date, bars)
         net = _num(res.get("net_pct"))
         eps.update_one({"_id": ep["_id"]}, {"$set": {
             "resolved": True,
@@ -352,7 +367,7 @@ def resolve_open(limit: int = 2000, max_hold: int = MAX_HOLD_BARS) -> dict:
             "outcome": res.get("outcome"),
             "bars_to_outcome": bars,
             "entry_open": _num(df["open"].iloc[idx]),
-            "entry_date": str(df.index[idx])[:10],
+            "entry_date": entry_date,
             "exit": _num(res.get("exit")),
             "net_pct": net,
             "max_gain_pct": _num(res.get("max_gain_pct")),

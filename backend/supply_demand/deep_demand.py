@@ -73,9 +73,18 @@ def read(rec: dict) -> Optional[dict]:
       * price is BELOW the floor of the highest band — the first level is
         broken or abandoned, which is what "penalized" looks like on a chart
       * price is INSIDE the second band, or approaching it from above within
-        price_zones.NEAR_PCT — "entering from the top", not already through it
+        price_zones.NEAR_PCT — not already through it
       * the second band is real by the scan's own bar: MIN_TOUCHES touches
         and MIN_ZONE_STRENGTH strength (imported, one scale)
+
+    "Entering from the top" is NOT enforced (review 2026-09-14, D5): a name
+    whose prior close was UNDER the second band and is back inside it today
+    still qualifies — it reached the band from below, a reclaim, not an
+    arrival from above. The read says so instead (`reclaiming`, off the
+    scan's `prev_close`; None/absent prev_close = unknown = False) and the
+    board labels the band '2nd demand · reclaiming'. Requiring
+    prev_close >= s_lo here would change who qualifies — Ajay's call, not
+    made.
 
     Deliberately does NOT require trend_ok / is_reentry — failing the trend
     gate is the point of this screen. The board says so on every tile.
@@ -109,9 +118,16 @@ def read(rec: dict) -> Optional[dict]:
         return None
 
     tb = rec.get("top_band_read") or {}
+    try:
+        pc = float(rec.get("prev_close"))
+    except (TypeError, ValueError):
+        pc = None
     return {
         "state": state,                          # "in" | "near"
         "dist_pct": round(dist_pct, 2),
+        # Yesterday closed UNDER the second band: today's position in it is
+        # a reclaim from below, not an arrival from the top (D5, wording).
+        "reclaiming": bool(pc is not None and pc > 0 and pc < s_lo),
         # Both bands carry their touch count and their AGE fields (2026-09-14):
         # the tile sizes its window to `oldest_touch_bars`, and without it every
         # deep tile was 130 bars with the band's swings off-screen (56/100).

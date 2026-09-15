@@ -8,7 +8,7 @@ or something?"
 
 The honest answer to the first question is NO: the Demand board is a
 closed-bar scan over the full universe with an R:R floor; the phone gets a live,
-$1B+, gated subset (alert_gates: >= 5% room to the first band overhead, print
+cap-floored (demand_alerts.MIN_CAP_USD, $700M since 2026-09-10), gated subset (alert_gates: >= 5% room to the first band overhead, print
 <= 1% above the demand band). A quiet phone is therefore normal, and a page
 that only lists what pushed cannot tell "nothing qualified" from "the pass
 never ran". This module keeps the last pass's counters per kind:
@@ -63,11 +63,15 @@ PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert")
 # crontab -> change this; the source guard in test_alert_status pins both.
 CADENCE_SEC = {ZONE_EDGE_KIND: 60, "zone_bounce_alert": 300, "demand_alert": 300}
 
-DISCLAIMER = ("Phone pushes are a gated, live, $1B+ subset of the boards (alert_gates: >= 5% "
-              "room to the first band overhead, print <= 1% above the demand band); the "
-              "Demand board is a closed-bar scan with an R:R floor. Counts are the last pass "
-              "of each cron, not a full-universe truth. Configured heuristic, not a book "
-              "method. Decision support, not a buy signal, not advice.")
+# The cap floor is READ from demand_alerts.MIN_CAP_USD at request time, never
+# retyped (review 2026-09-14, finding 6: this said "$1B+" for four days after
+# Ajay moved the floor to $700M on 2026-09-10). demand_alerts imports this
+# module at module level, so the import is lazy — see `disclaimer()`.
+DISCLAIMER_TEMPLATE = ("Phone pushes are a gated, live, {cap}+ subset of the boards (alert_gates: >= 5% "
+                       "room to the first band overhead, print <= 1% above the demand band); the "
+                       "Demand board is a closed-bar scan with an R:R floor. Counts are the last pass "
+                       "of each cron, not a full-universe truth. Configured heuristic, not a book "
+                       "method. Decision support, not a buy signal, not advice.")
 
 
 def _coll():
@@ -147,6 +151,23 @@ def record_pass(kind: str, counts: dict, now: Optional[datetime] = None, coll=No
     except Exception as exc:
         log.warning("alert_status: record_pass(%s) failed: %s", kind, exc)
         return False
+
+
+def cap_floor_txt(usd) -> str:
+    """A cap floor in words: 700_000_000 -> '$700M', 1e9 -> '$1B', 1.5e9 -> '$1.5B'."""
+    v = float(usd)
+    if v >= 1e9:
+        b = v / 1e9
+        return "$%dB" % int(b) if abs(b - round(b)) < 1e-9 else "$%.1fB" % b
+    m = v / 1e6
+    return "$%dM" % int(m) if abs(m - round(m)) < 1e-9 else "$%.1fM" % m
+
+
+def disclaimer() -> str:
+    """DISCLAIMER_TEMPLATE with the live cap floor (demand_alerts.MIN_CAP_USD,
+    pinned equal to every other S/D floor by test_cap_floor_agrees)."""
+    from . import demand_alerts as DA        # lazy: demand_alerts imports alert_status
+    return DISCLAIMER_TEMPLATE.format(cap=cap_floor_txt(DA.MIN_CAP_USD))
 
 
 def _empty_pass() -> dict:
@@ -229,10 +250,10 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
             "zone_bounce_alert": _with_cadence("zone_bounce_alert", read_pass("zone_bounce_alert", pass_coll)),
             "demand_alert":      _with_cadence("demand_alert", read_pass("demand_alert", pass_coll)),
         },
-        "disclaimer": DISCLAIMER,
+        "disclaimer": disclaimer(),
     }
 
 
 __all__ = ["PASS_COLL", "PASS_KINDS", "CADENCE_SEC", "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge",
-           "status_payload", "clean_counts", "DISCLAIMER"]
+           "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

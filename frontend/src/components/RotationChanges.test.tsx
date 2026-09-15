@@ -91,8 +91,39 @@ describe('moverLines', () => {
   it('encodes direction, not just movement: rank 7→3 is a CLIMB', () => {
     const { lines } = moverLines(MOVED);
     const util = lines.find((l) => l.text.includes('Utilities'))!;
-    expect(util.text).toBe('▲ Utilities 7→3');
+    expect(util.text).toBe('▲ Utilities 7→3 · sector');
     expect(util.kind).toBe('up');
+  });
+
+  // 2026-09-14 review fix H3: "Consumer Defensive 7→4" is a rank among 11
+  // sectors, "Software - Application 73→9" a rank among ~73 industries. A
+  // chip without the grain prints both as the same kind of move.
+  it('every chip names its GRAIN — a rank of 11 sectors is not a rank of 73 industries', () => {
+    const { lines } = moverLines({ grains: {
+      sectors: { entered: [{ group: 'Consumer Defensive', rank: 4, prev_rank: 7 }],
+                 left: [], moved: [] },
+      industries: { entered: [], left: [],
+                    moved: [{ group: 'Software - Application', rank: 9, prev_rank: 73, delta: 64 }] },
+    } });
+    expect(lines.map((l) => l.text)).toEqual([
+      '＋ Consumer Defensive 7→4 · sector',
+      '▲ Software - Application 73→9 · industry',
+    ]);
+  });
+
+  it('NEGATIVE: the sectors grain is tagged, never dropped — his call', () => {
+    const { lines } = moverLines({ grains: {
+      sectors: { entered: [], left: [{ group: 'Energy', rank: 8, prev_rank: 2 }], moved: [] },
+    } });
+    expect(lines.length).toBe(1);
+    expect(lines[0].text).toBe('－ Energy 2→8 · sector');
+  });
+
+  it('NEGATIVE: a group that dropped out with no rank still carries its grain', () => {
+    const { lines } = moverLines({ grains: {
+      themes: { entered: [], left: [{ group: 'quantum', rank: null, prev_rank: 5 }], moved: [] },
+    } });
+    expect(lines[0].text).toBe('－ quantum dropped out · theme');
   });
 
   it('NEGATIVE: what does not fit is COUNTED, never silently dropped', () => {
@@ -128,9 +159,9 @@ describe('RotationChanges', () => {
   it('leads with the delta when something DID move', async () => {
     stub(MOVED);
     render(<RotationChanges />);
-    expect(await screen.findByText('＋ robotics 9→2')).toBeInTheDocument();
-    expect(screen.getByText('－ quantum 5→11')).toBeInTheDocument();
-    expect(screen.getByText('▲ Utilities 7→3')).toBeInTheDocument();
+    expect(await screen.findByText('＋ robotics 9→2 · theme')).toBeInTheDocument();
+    expect(screen.getByText('－ quantum 5→11 · theme')).toBeInTheDocument();
+    expect(screen.getByText('▲ Utilities 7→3 · sector')).toBeInTheDocument();
     // the steady leader survives a busy day — it is the continuity he reads for
     expect(screen.getByText(/steady: Energy #1 · 8d/)).toBeInTheDocument();
     expect(screen.queryByText(/no rank change/)).not.toBeInTheDocument();

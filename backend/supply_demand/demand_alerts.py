@@ -76,8 +76,16 @@ from market_hours.reminder import is_market_day
 from . import alert_gates as AG
 from . import bullish_context as BC
 from . import alert_status as AS
+# The 5-min siblings' freshness rule (review 2026-09-14, finding 5): this pass
+# used to push on bulk_live_prices()['price'] — the day AGGREGATE's close, with
+# no stamp — while zone_edge and zone_bounce refuse a print older than their
+# stale window. Same snapshot, same reader, same 10-minute window as the other
+# 5-minute pass. zone_bounce_alerts imports demand_alerts lazily only, so this
+# module-level import is cycle-free.
+from .zone_bounce_alerts import print_from_snapshot, STALE_PRINT_SEC as SNAPSHOT_STALE_SEC
 
 log = logging.getLogger(__name__)
+SOURCE = "demand_alerts"           # stamped on every dedupe claim this pass makes
 
 ET = ZoneInfo("America/New_York")
 AT_PCT = 1.0                       # inside, or this close above the top → push
@@ -341,22 +349,104 @@ def _state_coll():
         return None
 
 
-def _already(coll, key: str) -> bool:
+# --------------------------------------------------------------------------
+# Dedupe state — ONE claim per (symbol, band, ET day), shared with zone_edge
+# (review 2026-09-14, findings 1 + 2)
+# --------------------------------------------------------------------------
+# Until 2026-09-14 both passes did read-then-send-then-write: zone_edge (every
+# minute) and this pass (every 5) each read "not seen", each sent, each wrote —
+# and the same 🧲 reached the phone twice inside a minute. The state key is
+# now CLAIMED atomically BEFORE the send (`$setOnInsert` upsert: exactly one
+# writer sees the insert), and a claim whose send fails in transport is
+# RELEASED so the next pass retries — the per-day semantics are unchanged:
+# one push per key per day, a transport failure retries, "nobody targeted" is
+# terminal. What changed is only that the claim comes first.
+def claim_key(coll, key: str, doc: dict) -> bool:
+    """Atomically record `key` with `doc`. True when THIS caller inserted it,
+    False when it already existed (another pass rang it). No coll, or a write
+    error, reads True — push again rather than never, the same side the
+    `$in` dedupe read fails on."""
     if coll is None:
-        return False
+        return True
     try:
-        return coll.find_one({"_id": key}) is not None
+        res = coll.update_one({"_id": key}, {"$setOnInsert": dict(doc, _id=key)}, upsert=True)
     except Exception as exc:
-        log.warning("demand_alerts: dedupe read failed: %s", exc)
+        log.warning("demand_alerts: dedupe claim failed for %s: %s", key, exc)
+        return True
+    if getattr(res, "upserted_id", None) is not None:
+        return True
+    if getattr(res, "matched_count", 0):
         return False
+    return True                                       # a driver that reports neither: ours
 
 
-def _record(coll, key: str, item: dict, now: datetime) -> None:
+def release_key(coll, key: str) -> None:
+    """Drop a claim whose send did not terminate (transport failure) so the
+    next pass — either module — can try again. Best-effort."""
     if coll is None:
         return
     try:
-        coll.update_one({"_id": key}, {"$set": {
-            "symbol": item["symbol"], "tier": item["hit"]["tier"],
+        coll.delete_one({"_id": key})
+    except Exception as exc:
+        log.warning("demand_alerts: dedupe release failed for %s: %s", key, exc)
+
+
+def recorded_today(coll, symbols, day: str) -> dict:
+    """{SYM: [{"key", "lo", "hi"}]} — every state key already claimed for these
+    symbols on `day`, in ONE `$in` read on `symbol` (never a find_one per
+    candidate). The day is read off the key itself (`SYM:lo-hi:DAY:tier`), so
+    a doc from another day never counts. A read failure is the empty map:
+    push again rather than never."""
+    out: dict = {}
+    syms = sorted({str(s).upper() for s in (symbols or []) if s})
+    if coll is None or not syms:
+        return out
+    tag = f":{day}:"
+    try:
+        cur = coll.find({"symbol": {"$in": syms}}, {"_id": 1, "symbol": 1, "band": 1})
+        for d in cur:
+            key = str(d.get("_id") or "")
+            if tag not in key:
+                continue
+            band = d.get("band") or {}
+            lo, hi = AG._f(band.get("lo")), AG._f(band.get("hi"))
+            sym = str(d.get("symbol") or key.split(":", 1)[0]).upper()
+            out.setdefault(sym, []).append({"key": key, "lo": lo, "hi": hi})
+    except Exception as exc:
+        log.warning("demand_alerts: dedupe read failed: %s", exc)
+        return {}
+    return out
+
+
+def bands_overlap(a: dict, b: dict) -> bool:
+    """[lo, hi] intervals share at least a point. Garbage never overlaps."""
+    try:
+        alo, ahi = float(a["lo"]), float(a["hi"])
+        blo, bhi = float(b["lo"]), float(b["hi"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    if any(v != v for v in (alo, ahi, blo, bhi)):
+        return False
+    return alo <= bhi and blo <= ahi
+
+
+def overlapping_key(symbol: str, band: dict, recorded: dict) -> Optional[str]:
+    """The key already claimed today for `symbol` whose band overlaps `band`,
+    or None. Finding 2 (2026-09-14): a broken-supply shelf and a demand band
+    covering the same prices are ONE level — rung once, with one stop, not
+    twice under two keys with two stops."""
+    for r in (recorded or {}).get(str(symbol).upper(), []):
+        if r.get("lo") is None or r.get("hi") is None:
+            continue
+        if bands_overlap(band, r):
+            return r["key"]
+    return None
+
+
+def claim_doc(item: dict, now: datetime, source: str = SOURCE) -> dict:
+    """The state doc for one 🧲 push — the same fields the pre-2026-09-14
+    `_record` wrote, plus which pass claimed it."""
+    return {"symbol": item["symbol"], "tier": item["hit"]["tier"],
             "band": {"lo": item["band"]["lo"], "hi": item["band"]["hi"]},
             "last": item["last"], "dist_pct": item["hit"]["dist_pct"],
             "cap": item.get("cap"), "sent_at": now.isoformat(),
@@ -364,9 +454,34 @@ def _record(coll, key: str, item: dict, now: datetime) -> None:
             # bounce faster off demand?" can be answered from his own tape
             # later (Ajay 2026-09-08) instead of assumed.
             "mood": item.get("mood"),
-            "approach": (item.get("approach") or {}).get("dir")}}, upsert=True)
-    except Exception as exc:
-        log.warning("demand_alerts: dedupe write failed: %s", exc)
+            "approach": (item.get("approach") or {}).get("dir"),
+            "source": source}
+
+
+def claim(coll, key: str, item: dict, now: datetime, source: str = SOURCE) -> bool:
+    """claim_key with the 🧲 doc shape. True = ours to send."""
+    return claim_key(coll, key, claim_doc(item, now, source))
+
+
+def live_from_snapshot(snapshot: dict, now_ts: float, stale_sec: float = SNAPSHOT_STALE_SEC) -> tuple:
+    """({SYM: {price, change_pct, prev_day_close, low}}, stale_print) from a
+    `prices.bulk_snapshot` map: the print is the last TRADE, kept only while
+    its stamp is within `stale_sec` of now (zone_bounce_alerts.print_from_
+    snapshot); a stale or missing trade drops the name and is counted. This
+    replaced bulk_live_prices()['price'] — the day aggregate's close, which
+    lagged ~3h on 2026-09-03 and carried no stamp to notice it by."""
+    live: dict = {}
+    stale = 0
+    for sym, snap in (snapshot or {}).items():
+        if not snap:
+            continue
+        px, is_stale = print_from_snapshot(snap, now_ts, stale_sec)
+        if is_stale:
+            stale += 1
+            continue
+        live[sym] = {"price": px, "change_pct": snap.get("change_pct"),
+                     "prev_day_close": snap.get("prev_day_close"), "low": snap.get("low")}
+    return live, stale
 
 
 def _terminal(res: Optional[dict]) -> bool:
@@ -379,26 +494,30 @@ def _terminal(res: Optional[dict]) -> bool:
 def check_once(*, push: bool = True, force: bool = False, board: Optional[dict] = None,
                live: Optional[dict] = None, caps: Optional[dict] = None, coll=None,
                owner: Optional[str] = None, now: Optional[datetime] = None,
-               store: Optional[dict] = None, pass_coll=None) -> dict:
+               store: Optional[dict] = None, pass_coll=None,
+               snapshot: Optional[dict] = None) -> dict:
     """One pass. Every input is injectable for tests; the cron passes none.
     `force` skips the session gate for in-container smoke tests only. `store`
     = zone_store docs {SYM: doc} for the room gate (loaded for the candidate
-    names when None). Every pass that ran the read records its counters to
-    `alert_pass_latest` (`pass_coll`; alert_status.record_result, best-effort)
-    so the /alerts page can explain a quiet phone — Ajay 2026-09-05: "Do we
-    have the same logic in back end demand for the ones that I get alerts"."""
+    names when None). `live` = an already-priced map (tests); when None the
+    print comes from `snapshot` (or `prices.bulk_snapshot`) through the
+    freshness rule (`live_from_snapshot`, 2026-09-14). Every pass that ran the
+    read records its counters to `alert_pass_latest` (`pass_coll`;
+    alert_status.record_result, best-effort) so the /alerts page can explain a
+    quiet phone — Ajay 2026-09-05: "Do we have the same logic in back end
+    demand for the ones that I get alerts"."""
     now = now or _now_et()
     if not force and not in_session(now):
         return {"ran": False, "reason": "outside RTH"}
     out = _check_once(push=push, board=board, live=live, caps=caps, coll=coll, owner=owner,
-                      now=now, store=store)
+                      now=now, store=store, snapshot=snapshot)
     AS.record_result(KIND, out, now, coll=pass_coll)
     return out
 
 
 def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
                 caps: Optional[dict], coll, owner: Optional[str], now: datetime,
-                store: Optional[dict]) -> dict:
+                store: Optional[dict], snapshot: Optional[dict] = None) -> dict:
     """The pass proper (session gate + pass record live in check_once)."""
     board = board if board is not None else fetch_board()
     cands = candidates(board)
@@ -406,14 +525,18 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         return {"ran": True, "reason": "board empty or warming", "candidates": 0,
                 "hits": [], "at": 0, "near": 0, "pushed": 0}
     syms = sorted(cands)
+    stale_print = 0
     if live is None:
-        try:
-            from sepa import prices
-            live = prices.bulk_live_prices(syms) or {}
-        except Exception as exc:
-            log.warning("demand_alerts: live prices failed: %s", exc)
-            return {"ran": False, "reason": f"live prices failed: {exc}"}
+        if snapshot is None:
+            try:
+                from sepa import prices
+                snapshot = prices.bulk_snapshot(syms) or {}
+            except Exception as exc:
+                log.warning("demand_alerts: snapshot failed: %s", exc)
+                return {"ran": False, "reason": f"snapshot failed: {exc}"}
+        live, stale_print = live_from_snapshot(snapshot, now.timestamp())
     last_px = {s: (live.get(s) or {}).get("price") for s in syms}
+    priced = sum(1 for s in syms if last_px.get(s))
     if caps is None:
         try:
             from catalysts.promo_circuit import market_caps_for
@@ -432,12 +555,18 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         except Exception as exc:
             log.warning("demand_alerts: zone store read failed: %s", exc)
             store = {}
+    # Dedupe state in ONE read for every candidate name (2026-09-14): the exact
+    # keys already rung today AND the bands under them, so a level that
+    # overlaps one already rung (a broken-supply shelf over a demand band —
+    # finding 2) is skipped instead of ringing twice with two stops.
+    recorded = recorded_today(coll, syms, day)
     hits, at_items, near_items = [], [], []
     skipped_cap = unknown_cap = unknown_prev = skipped_room = skipped_proximity = unknown_room = 0
     skipped_direction = 0
     skipped_knife = 0
     skipped_mood = 0
     skipped_floor = 0
+    skipped_overlap = 0
     for sym in syms:
         last = last_px.get(sym)
         if not last:
@@ -448,12 +577,14 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         if not prev:
             unknown_prev += 1
             continue
+        seen_keys = {r["key"] for r in recorded.get(sym, [])}
         for band in cands[sym]["bands"]:
             hit = read(last, band, chg, prev)
             if not hit:
                 continue
             item = {"symbol": sym, "last": float(last), "band": band, "hit": hit,
                     "cap": cap, "name": cands[sym]["name"], "prev_close": prev,
+                    "day_low": (live.get(sym) or {}).get("low"),
                     "approach": AG.approach_read(last, band, prev, (live.get(sym) or {}).get("low"))}
             hits.append(item)
             if not passes_cap(cap):
@@ -463,7 +594,10 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
                     skipped_cap += 1
                 continue
             key = state_key(sym, band, day, hit["tier"])
-            if _already(coll, key):
+            if key in seen_keys:
+                continue
+            if overlapping_key(sym, band, recorded):
+                skipped_overlap += 1                  # one level, already rung under another key
                 continue
             item["key"] = key
             (at_items if hit["tier"] == "at" else near_items).append(item)
@@ -506,8 +640,11 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         rm = AG.reversal_mood_read(it["symbol"], frame=frame)
         it["reversal_mood"] = rm
         # Which kind of dip this was — swept the stops and reclaimed, or broke
-        # and stayed under. Same frame, no extra load.
-        sw = AG.sweep_read(it["band"], it["symbol"], frame=frame)
+        # and stayed under. Same frame, no extra load. The session's own low
+        # and print ride in (2026-09-14): the cached frame ends yesterday, so
+        # without them a floor swept THIS morning read intact.
+        sw = AG.sweep_read(it["band"], it["symbol"], frame=frame,
+                           day_low=it.get("day_low"), last=it["last"], day=day_et)
         it["sweep"] = sw
         # The band floor must have HELD. The only gate measured to separate:
         # intact 30.7% win vs swept 22.7% and broken 21.5% (n=31,861, 192 dates,
@@ -541,39 +678,57 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     singles, spill = at_ok[:MAX_SINGLES_PER_PASS], at_ok[MAX_SINGLES_PER_PASS:]
     digest = spill + near_ok
     pushed = 0
+    claimed_elsewhere = 0
     if push and (singles or digest):
         from push import sender
         if owner is None:
             from portfolio.alerts import _resolve_owner
             owner = _resolve_owner()
+        # CLAIM, then send, then release on a transport failure (2026-09-14).
+        # zone_edge reads the same key every minute; whichever pass inserts
+        # the key owns the push, the other sees "claimed" and stays quiet.
         for it in singles:
+            if not claim(coll, it["key"], it, now):
+                claimed_elsewhere += 1
+                continue
             try:
                 res = sender.send_to_user(owner, at_message(it), kind=KIND)
             except Exception as exc:
                 log.warning("demand_alerts: push for %s failed: %s", it["symbol"], exc)
+                release_key(coll, it["key"])
                 continue
             if _terminal(res):
-                _record(coll, it["key"], it, now)
                 pushed += 1
+            else:
+                release_key(coll, it["key"])
         if digest:
-            try:
-                res = sender.send_to_user(owner, digest_message(digest), kind=KIND)
-            except Exception as exc:
-                log.warning("demand_alerts: digest push failed: %s", exc)
-                res = None
-            if _terminal(res):
-                for it in digest:
-                    _record(coll, it["key"], it, now)
-                pushed += 1
-    return {"ran": True, "date": day, "candidates": len(syms), "hits": hits,
+            ours = []
+            for it in digest:
+                if claim(coll, it["key"], it, now):
+                    ours.append(it)
+                else:
+                    claimed_elsewhere += 1
+            if ours:
+                try:
+                    res = sender.send_to_user(owner, digest_message(ours), kind=KIND)
+                except Exception as exc:
+                    log.warning("demand_alerts: digest push failed: %s", exc)
+                    res = None
+                if _terminal(res):
+                    pushed += 1
+                else:
+                    for it in ours:
+                        release_key(coll, it["key"])
+    return {"ran": True, "date": day, "candidates": len(syms), "priced": priced,
+            "stale_print": stale_print, "hits": hits,
             "at": len(at_items), "at_singles": len(singles), "near": len(near_items),
-            "pushed": pushed,
+            "pushed": pushed, "claimed_elsewhere": claimed_elsewhere,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,
             "skipped_proximity": skipped_proximity, "unknown_room": unknown_room,
             "skipped_direction": skipped_direction,
             "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
-            "skipped_floor": skipped_floor}
+            "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap}
 
 
 if __name__ == "__main__":

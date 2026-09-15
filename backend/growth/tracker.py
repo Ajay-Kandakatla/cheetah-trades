@@ -44,8 +44,10 @@ forward. It is a discovery list.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Optional
+
+from observability import period_freshness as PF
 
 log = logging.getLogger("growth.tracker")
 
@@ -90,12 +92,100 @@ def _db():
 # --------------------------------------------------------------------------
 # The screen
 # --------------------------------------------------------------------------
-def qualifies(fundamentals: Optional[dict]) -> tuple[bool, dict]:
+# WHICH QUARTERS THE LEGS COMPARE (2026-09-14 review fixes E1 / E4 / E6).
+#
+# The research cache stores every quarterly series newest-first with a PARALLEL
+# list of fiscal-quarter indices (`fiscal_year*4 + quarter-1`,
+# sepa/canslim._period_index). The two headline legs are computed at list
+# POSITIONS 0 vs 4 (sepa/sales._yoy, canslim._compute_q_eps_growth) and the
+# prior leg at 1 vs 5. Massive OMITS a quarter it does not have, so a position
+# pair is not always a year apart — ECHO's "YoY" compared FY2026 Q2 against
+# FY2020 Q4 and cleared the screen on it (7 of 29 live rows, 2026-09-14).
+#
+# This board therefore checks the PERIOD KEYS before it trusts the number. It
+# does not recompute anything: sepa/sales.py and sepa/canslim.py are book-cited
+# and untouched; a pair that is not a year apart is REFUSED here, on this board
+# only, and the row says why.
+HEADLINE_PAIR = (0, 4)      # latest quarter vs the same quarter a year earlier
+PRIOR_PAIR = (1, 5)         # the quarter before vs ITS year-ago
+YOY_GAP = 4                 # fiscal quarters between a quarter and its year-ago self
+
+
+def _adjacent(periods, i: int, j: int, gap: int) -> bool:
+    """Are slots i and j exactly `gap` quarters apart? ONE definition in the
+    app — sepa.qoq._adjacent — which ACCEPTS an unverifiable pair (no period
+    keys on file, an older cached document) by design, so a legacy row is not
+    blanked for lacking keys it never had."""
+    from sepa.qoq import _adjacent as adj
+    return bool(adj(periods, i, j, gap=gap))
+
+
+def period_label(idx, source: Optional[str] = None) -> Optional[str]:
+    """'FY2026 Q2' from a fiscal index. The yfinance path stores CALENDAR
+    quarters (canslim._q_periods_yf), so those read 'Q2 2026'. None when the
+    slot carries no key — never a guess."""
+    try:
+        i = int(idx)
+    except (TypeError, ValueError):
+        return None
+    y, q = i // 4, i % 4 + 1
+    return f"Q{q} {y}" if source == "yfinance" else f"FY{y} Q{q}"
+
+
+def period_end(idx, source: Optional[str] = None) -> Optional[date]:
+    """The quarter's END DATE — only when it is actually on file.
+
+    The yfinance path's indices are calendar quarters, so the end date is
+    exact (period_freshness.quarter_end). The Massive path stores FISCAL
+    indices and no end date: NVDA's FY2027 Q2 ended 2026-07-26, and reading
+    that index as a calendar quarter would say 2027-06-30 — a year off. So a
+    fiscal period returns None, and None stays None downstream (no age, no
+    stale flag) rather than becoming a wrong number."""
+    if source != "yfinance":
+        return None
+    try:
+        i = int(idx)
+        return PF.quarter_end(i // 4, i % 4 + 1)
+    except (TypeError, ValueError, KeyError):
+        return None
+
+
+def period_stale(qe: Optional[date], today: Optional[date] = None) -> Optional[bool]:
+    """Is the latest reported quarter ONE CADENCE PAST DUE?
+
+    Reuses observability/period_freshness.expected_13f_quarter verbatim — the
+    most recent quarter end whose filing deadline (FILING_LAG_DAYS) plus
+    GRACE_DAYS has passed is the quarter the data SHOULD be showing, and a
+    period older than that is stale. No day-count is typed here. That rule is
+    13F's 45 days; 10-Q deadlines are 40-45 days, so this errs lenient by up to
+    five days and is never strict. None when the end date is unknown."""
+    if qe is None:
+        return None
+    today = today or date.today()
+    return bool(qe < PF.expected_13f_quarter(today))
+
+
+def qualifies(fundamentals: Optional[dict],
+              today: Optional[date] = None) -> tuple[bool, dict]:
     """(passes, legs). `legs` always carries every number the row displays,
-    pass or fail, so a near-miss is explainable without a second read."""
+    pass or fail, so a near-miss is explainable without a second read.
+
+    Three data-correctness checks ride on the cached series (2026-09-14):
+      * `period_mismatch` — a headline or prior pair whose period keys are not
+        four quarters apart. The row does NOT qualify.
+      * `base_negative` — the year-ago revenue base is <= 0, so the cached
+        percentage is arithmetic, not growth (DBRG printed +15,961.5% off a
+        -$3.2M base and sat #1). The leg is blanked (None) and the row does
+        NOT qualify. sepa/sales.py keeps its own number; this board refuses it.
+      * `period` / `period_age_days` / `period_stale` — the fiscal quarter the
+        legs are measured on, so cadence can be checked from the surface.
+    """
     f = fundamentals or {}
     sales = f.get("sales") or {}
     eq = ((f.get("earnings_quality") or {}).get("components")) or {}
+    periods = f.get("q_period_series") if isinstance(f.get("q_period_series"), list) else None
+    revs = f.get("rev_q_series") if isinstance(f.get("rev_q_series"), list) else None
+    source = f.get("_source")
 
     legs = {
         "sales_growth_pct": _f(sales.get("growth_yoy_pct")),
@@ -109,11 +199,53 @@ def qualifies(fundamentals: Optional[dict]) -> tuple[bool, dict]:
         "npm_expanding": bool(eq.get("npm_expanding")),
         "inst_ownership_pct": _f(f.get("inst_ownership_pct")),
     }
+
+    # E1 — the pairs must really be a year apart.
+    i, j = HEADLINE_PAIR
+    k, m = PRIOR_PAIR
+    mismatch = not (_adjacent(periods, i, j, YOY_GAP)
+                    and _adjacent(periods, k, m, YOY_GAP))
+    legs["period_mismatch"] = mismatch
+
+    # E4 — a non-positive year-ago base is not a growth number. Checked on
+    # the same slots the cached percentages were computed from; an absent
+    # series or slot is unknown, not negative, and changes nothing.
+    base = _f(revs[j]) if (revs is not None and len(revs) > j) else None
+    prior_base = _f(revs[m]) if (revs is not None and len(revs) > m) else None
+    base_neg = base is not None and base <= 0
+    prior_neg = prior_base is not None and prior_base <= 0
+    legs["base_negative"] = bool(base_neg or prior_neg)
+    if base_neg:
+        legs["sales_growth_pct"] = None
+    if prior_neg:
+        legs["sales_prior_pct"] = None
+
+    # E6 — the period the legs are measured on, and how old it is.
+    idx0 = periods[0] if periods else None
+    qe = period_end(idx0, source)
+    legs["period"] = period_label(idx0, source)
+    legs["period_end"] = qe.isoformat() if qe else None
+    legs["period_age_days"] = ((today or date.today()) - qe).days if qe else None
+    legs["period_stale"] = period_stale(qe, today)
+
     s, e, p = legs["sales_growth_pct"], legs["q_eps_growth_pct"], legs["sales_prior_pct"]
     ok = (s is not None and s >= MIN_SALES_GROWTH_PCT
           and e is not None and e >= MIN_EPS_GROWTH_PCT
-          and p is not None and p > MIN_PRIOR_SALES_PCT)
+          and p is not None and p > MIN_PRIOR_SALES_PCT
+          and not mismatch)
     return ok, legs
+
+
+def period_warning(legs: dict) -> Optional[str]:
+    """The ⚠️ line for a row whose latest reported quarter is one cadence past
+    due. None when fresh or when the age is unknown — unknown is never
+    printed as either fresh or stale."""
+    if not (legs or {}).get("period_stale"):
+        return None
+    age = legs.get("period_age_days")
+    when = f" is {int(age)} days old" if isinstance(age, (int, float)) else " is old"
+    return (f"⚠️ latest reported quarter {legs.get('period') or '?'}{when} — a "
+            f"newer report is past due, so these growth legs may be stale")
 
 
 def row_warnings(price, cap, dollar_vol, promo_tagged: bool,
@@ -244,6 +376,13 @@ def screen(limit: int = MAX_ROWS) -> list[dict]:
         px = prices.get(sym) or ((dv / sh) if (dv and sh) else None)
         cap = caps.get(sym)
         zone = _zone_read(sym)
+        warnings = row_warnings(px, cap, dv, sym in promo,
+                                zone.get("missing", False))
+        # E6 (2026-09-14): a period one cadence past due is said on the row,
+        # in the same list the Flags column already prints.
+        pw = period_warning(legs)
+        if pw:
+            warnings.append(pw)
         rows.append({
             "symbol": sym,
             "name": d.get("name"),
@@ -256,8 +395,7 @@ def screen(limit: int = MAX_ROWS) -> list[dict]:
             "promo_tagged": sym in promo,
             "as_of": d.get("last_bar_date") or d.get("cached_at"),
             "zone": zone,
-            "warnings": row_warnings(px, cap, dv, sym in promo,
-                                     zone.get("missing", False)),
+            "warnings": warnings,
             **legs,
         })
     rows.sort(key=lambda r: (-(r.get("sales_growth_pct") or 0.0), r["symbol"]))

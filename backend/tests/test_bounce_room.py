@@ -395,7 +395,10 @@ def test_room_rank_puts_CLEAR_first_then_room_desc_then_unknown_last():
     assert BR.room_rank({})[0] == 2 and BR.room_rank(None)[0] == 2
 
 
-def test_bounce_room_key_bouncing_first_then_room_then_bounce_then_symbol():
+def test_bounce_room_key_room_group_first_then_room_then_bounce_then_symbol():
+    """Pin changed 2026-09-14 (review): the first key is the page's room_group
+    — a bounce INTO supply (B_INB, IN_BAND) sorts THIRD, under every room-ok
+    name, not first. Until then the first key was 'bouncing at all'."""
     b = lambda pct: {"bounce_pct": pct}                                     # noqa: E731
     rows = [_row("PEND", coverage="pending"),
             _row("NB_R30", _room("ROOM", 30.0)),
@@ -408,13 +411,14 @@ def test_bounce_room_key_bouncing_first_then_room_then_bounce_then_symbol():
             _row("UNAV", coverage="unavailable"),
             _row("B_INB", _room("IN_BAND", 0.0), b(12.0))]
     order = [r["symbol"] for r in sorted(rows, key=BR.bounce_room_key)]
-    assert order[:6] == ["B_CLR", "B_R15", "B_R5_B", "B_R5_C", "B_R5_A", "B_INB"], \
-        "bouncing: CLEAR, then room desc, then bounce desc, then symbol"
-    assert order[6:8] == ["NB_CLR", "NB_R30"]
+    assert order[:5] == ["B_CLR", "B_R15", "B_R5_B", "B_R5_C", "B_R5_A"], \
+        "bouncing WITH room: CLEAR, then room desc, then bounce desc, then symbol"
+    assert order[5:7] == ["NB_CLR", "NB_R30"], "room ok, not bouncing"
+    assert order[7] == "B_INB", "a bounce INTO supply sorts third — never above a room-ok name"
     assert set(order[8:]) == {"PEND", "UNAV"}
     k = BR.bounce_room_key(rows[2])
     assert k == (0, 1, -5.0, -4.0, "B_R5_A") and len(k) == 5
-    assert BR.bounce_room_key(_row("PEND", coverage="pending")) == (1, 2, 0.0, 0.0, "PEND")
+    assert BR.bounce_room_key(_row("PEND", coverage="pending")) == (3, 2, 0.0, 0.0, "PEND")
 
 
 # ── print_of ─────────────────────────────────────────────────────────────────

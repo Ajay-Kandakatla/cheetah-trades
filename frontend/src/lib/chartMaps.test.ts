@@ -1455,13 +1455,26 @@ describe('the Gabbar Levels tab', () => {
 
   it('attributes the levels, admits they are judgment, and names the gate', () => {
     // These are a person's hand-drawn bands from a dated snapshot. The copy
-    // must say whose, that it is not a computation, and that the same Bonde
-    // gate hides declining-sales names.
+    // must say whose, that it is not a computation, and that the Bonde read
+    // still runs on declining-sales names.
     const b = TAB_META.gabbar.blurb;
     expect(b).toMatch(/veerenj/);
     expect(b).toMatch(/not a computation/i);
     expect(b).toMatch(/Bonde/);
     expect(b).toMatch(/snapshot date/i);
+  });
+
+  it('says weak-sales names are FLAGGED, not hidden (review 2026-09-14, G5)', () => {
+    // The board has shown declining-revenue names with a 📉 chip, ranked
+    // last, since 2026-08-27 ("dont suppress show with a chip"); the blurb
+    // kept saying they were hidden. The copy must match the board.
+    const b = TAB_META.gabbar.blurb;
+    expect(b).toMatch(/📉 chip/);
+    expect(b).toMatch(/ranks last/);
+    expect(b).toMatch(/flagged, not hidden/);
+    // NEGATIVE: the old claim is gone for good.
+    expect(b).not.toMatch(/is hidden/);
+    expect(b).not.toMatch(/sales gate applies/);
   });
 });
 

@@ -352,3 +352,49 @@ describe('demand proximity (2026-09-14 — the Bonde tab filter)', () => {
     expect(demandChipText(none)).toBeNull();
   });
 });
+
+/* ── 2026-09-14 review fix — ONE ordering rule, pinned against the backend ──
+ * The backend's bounce_room_key put a reversal INTO supply first while this
+ * file (and the ℹ️ Rules panel) put it third. Both now sort the SAME fixture
+ * — backend/tests/fixtures/bounce_room_order_mirror_2026_09_14.json, read by
+ * backend/tests/test_demand_board_review_fixes_2026_09_14.py too — to the
+ * same order and give every row the same group. Edit the fixture, both fail. */
+describe('ordering mirror — the shared backend fixture (2026-09-14 review)', () => {
+  type Fx = { expected_order: string[]; rows: { group: 0 | 1 | 2 | 3; why: string; row: BounceRoomRow }[] };
+  /* Vite's `?raw` import (typed by src/test/vite-raw.d.ts): the file is read
+   * off disk at transform time, so a jsdom `import.meta.url` and the absent
+   * @types/node are both beside the point. */
+  async function load(): Promise<Fx> {
+    const { default: raw } = await import('../../../backend/tests/fixtures/bounce_room_order_mirror_2026_09_14.json?raw');
+    return JSON.parse(raw) as Fx;
+  }
+
+  it('sorts the fixture rows to exactly the order the backend key produces, from either starting order', async () => {
+    const fx = await load();
+    const rows = fx.rows.map((r) => r.row);
+    expect(rows.length).toBe(fx.expected_order.length);
+    expect([...rows].sort(compareBounceRoom).map((r) => r.symbol)).toEqual(fx.expected_order);
+    expect([...rows].reverse().sort(compareBounceRoom).map((r) => r.symbol)).toEqual(fx.expected_order);
+  });
+
+  it('gives every fixture row the group the backend gives it', async () => {
+    const fx = await load();
+    for (const r of fx.rows) {
+      expect({ symbol: r.row.symbol, group: roomGroup(r.row), why: r.why })
+        .toEqual({ symbol: r.row.symbol, group: r.group, why: r.why });
+    }
+    // the fixture exercises every tier and every coverage state
+    expect(new Set(fx.rows.map((r) => r.group))).toEqual(new Set([0, 1, 2, 3]));
+    expect(new Set(fx.rows.map((r) => r.row.coverage))).toEqual(new Set(['store', 'ondemand', 'pending', 'unavailable']));
+  });
+
+  it('NEGATIVE: a reversal INTO supply never leads a room-ok name, whatever its bounce size', async () => {
+    const fx = await load();
+    const by = Object.fromEntries(fx.rows.map((r) => [r.row.symbol, r.row]));
+    expect(roomGroup(by.TRUU)).toBe(2);
+    expect(compareBounceRoom(by.TRUU, by.TJXX)).toBeGreaterThan(0);   // 9% reversal into supply vs a plain at-floor room
+    expect(compareBounceRoom(by.TRUU, by.AVGO)).toBeGreaterThan(0);   // vs open sky
+    expect(compareBounceRoom(by.TRUU, by.UNDR)).toBeLessThan(0);      // but above the under-floor rest
+    expect(compareBounceRoom(by.TRUU, by.PEND)).toBeLessThan(0);
+  });
+});

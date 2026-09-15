@@ -70,14 +70,20 @@ def _same_band(a: dict, b: Optional[dict]) -> bool:
         ahi is None or bhi is None or round(ahi, 2) == round(bhi, 2))
 
 
-def plan_bands(cands, entry_band: Optional[dict] = None) -> list:
+def plan_bands(cands, entry_band: Optional[dict] = None, *, proven: bool = True) -> list:
     """Normalise the bands a plan / room read may target: drop Nones and
     garbage, drop the entry band itself, dedupe, and give every band the
     shape alert_gates reads. A band without `kind` is a resistance candidate
     (trade_plan's legacy `{"lo": ...}` call) — supply; one without `hi` is a
     level, hi = lo. A band that fails alert_gates.is_proven_band (touches < 2
     or strength < 40) is dropped — the KLAC lesson (2026-09-06): a 1-touch
-    lid is not a target. `strength` rides along (None when unknown)."""
+    lid is not a target. `strength` rides along (None when unknown).
+
+    `proven=False` (review 2026-09-14, D1) keeps the unproven lids too — for
+    the WORDING only: `room_block` measures room on the proven set exactly as
+    before and reads `first_weak_lid` off this raw set, so the stat can name
+    the 1-touch lid it skipped instead of printing 'open sky' under a lid the
+    tile draws in red. Nothing about which lid is the target changes."""
     out, seen = [], set()
     for z in cands or []:
         if not isinstance(z, dict):
@@ -91,7 +97,7 @@ def plan_bands(cands, entry_band: Optional[dict] = None) -> list:
             continue
         if entry_band and _same_band(z, entry_band):
             continue
-        if not _gates.is_proven_band(z):
+        if proven and not _gates.is_proven_band(z):
             continue                          # unproven lid = noise (KLAC 2026-09-06)
         kind = str(z.get("kind") or "supply").lower()
         key = (kind, round(lo, 2), round(hi, 2))
@@ -114,9 +120,17 @@ def room_block(px, bands, entry_band: Optional[dict] = None, prev_close=None,
     first = _gates.first_overhead(plan_bands(bands, entry_band), p, prev_close)
     base = {"px": round(p, 2), "basis": basis if basis in ("live", "scan") else "scan",
             "prev_close": _f(prev_close)}
+    # The first unproven lid the room rule skipped, read off the RAW bands
+    # (review 2026-09-14, D1). Until today `weak` was read off the same
+    # proven set the target came from — so it was always None — and only on
+    # rows that had a target: a 1-touch first band overhead printed 'open
+    # sky' while the tile drew it in red. Callers that still hand in the
+    # proven set get None here exactly as before.
+    raw_bands = plan_bands(bands, entry_band, proven=False)
     if first is None:
         return {**base, "state": "CLEAR", "room_pct": None,
-                "target_lo": None, "target_hi": None, "target_kind": None}
+                "target_lo": None, "target_hi": None, "target_kind": None,
+                "weak": _gates.first_weak_lid(raw_bands, p, None)}
     lo, hi = float(first["lo"]), float(first["hi"])
     if lo <= p <= hi:
         state, raw = "IN_BAND", 0.0
@@ -131,7 +145,7 @@ def room_block(px, bands, entry_band: Optional[dict] = None, prev_close=None,
             "target_lo": round(lo, 2), "target_hi": round(hi, 2),
             "target_kind": first.get("kind"),
             # the first unproven lid under the target, for the card (2026-09-08)
-            "weak": _gates.first_weak_lid(bands, p, lo)}
+            "weak": _gates.first_weak_lid(raw_bands, p, lo)}
 
 
 def meets_room_floor(room: Optional[dict], min_room: Optional[float]) -> bool:
@@ -166,6 +180,13 @@ def room_stat(room: Optional[dict]) -> str:
     if not isinstance(room, dict):
         return "—"
     if room.get("state") == "CLEAR":
+        # 'open sky' never under a lid the tile draws (review 2026-09-14, D1):
+        # name the unproven lid the rule skipped, with its touch count.
+        weak = room.get("weak")
+        if isinstance(weak, dict) and _f(weak.get("lo")) is not None:
+            n = int(_f(weak.get("touches")) or 0)
+            what = "1-touch lid" if n == 1 else "weak lid"
+            return f"open sky · {what} {float(weak['lo']):.2f} skipped"
         return "open sky"
     if room.get("state") == "IN_BAND":
         return "in band"
@@ -190,13 +211,14 @@ def row_entry_band(row: dict) -> Optional[dict]:
     return ez if isinstance(ez, dict) else None
 
 
-def row_bands(row: dict) -> list:
+def row_bands(row: dict, *, proven: bool = True) -> list:
     """Every band a scan row can measure room against. `nearest_resistance`
     FIRST (price_zones computes it over every band while the zone lists keep
     the strongest four per side — the KLAC lesson in decide_from_frame), then
     both lists, then a deep row's broken top band as demand-kind (it IS in
     demand_zones for a live row; a cached row may carry only the deep dict).
-    Deduped; the entry band is NOT removed here (room_block does that)."""
+    Deduped; the entry band is NOT removed here (room_block does that).
+    `proven=False` keeps the unproven lids for room_block's wording (D1)."""
     row = row or {}
     deep = row.get("deep_demand") or {}
     top = deep.get("top_band")
@@ -204,4 +226,4 @@ def row_bands(row: dict) -> list:
     return plan_bands([row.get("nearest_resistance")]
                       + list(row.get("supply_zones") or [])
                       + list(row.get("demand_zones") or [])
-                      + extra)
+                      + extra, proven=proven)

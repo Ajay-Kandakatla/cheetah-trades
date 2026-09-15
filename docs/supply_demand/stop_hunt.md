@@ -177,3 +177,26 @@ Both knives are gone.
   measure flat (Δwin −0.08pp and +0.30pp). They are kept because he asked for
   them, not because they earn their place. Stacking all three leaves ~6 names a
   day; that is the trade being made.
+
+## 2026-09-14 review fixes — the session bar
+
+`sweep_read` / `floor_held_gate` read the cached daily frame, which the 16:30 fast-scan
+refreshes — so during the session its last row was **yesterday**, and a floor swept and
+reclaimed *this morning* read `intact` (the exact state the gate exists to refuse). Both now
+take `day_low=`, `last=`, `day=`; `alert_gates.with_session_bar` merges the snapshot's day low
+and the print in as the event bar — **appended** when the frame ends before today, **merged**
+into the last row (low = min, close = print) when the hourly `vcp-watch` patch already put
+today's in-progress bar in the shared cache. The result is a copy; the cached frame is never
+written.
+
+The forming bar's **volume is NaN** on purpose: `find_sweep` calls a sweep bar with < 1.3× the
+30-bar average volume a "quiet dip" (not a sweep), and a session's partial volume at 09:40
+would always read quiet — the pierce would fall through to `intact` again. NaN fails no
+comparison, so today's pierce classifies on price alone: **swept** if the print is back above
+the floor, **broken** if not; `vol_x` reports None. Either fails `FLOOR_HELD_STATES`.
+
+Wired from `zone_edge`, `demand_alerts` and `growth.alerts`, each from the snapshot it already
+prices from (no extra call). An unknown day low leaves the frame exactly as it was — the
+pre-fix read, nothing loosened. Tests: `tests/test_alerts_review_fixes_2026_09_14.py`
+(`test_a_floor_swept_and_reclaimed_THIS_MORNING_is_no_longer_intact` and the negatives).
+

@@ -55,6 +55,19 @@ export type GrowthRow = {
   balance_meaningful?: boolean | null;
   zone?: GrowthZone; warnings?: string[];
   as_of?: string | null;
+  // The PERIOD the growth legs are measured on (2026-09-14 review fixes).
+  // `period` is the fiscal quarter at slot 0 of the cached series ("FY2026
+  // Q2"); the age and the stale verdict exist only when the backend could
+  // date the quarter end, and are null otherwise — never guessed.
+  period?: string | null;
+  period_end?: string | null;
+  period_age_days?: number | null;
+  period_stale?: boolean | null;
+  // Set on the legs themselves: the pair of quarters is not a year apart, or
+  // the year-ago revenue base was <= 0. Neither row qualifies for the board;
+  // if one is ever rendered it must not look clean.
+  period_mismatch?: boolean;
+  base_negative?: boolean;
 };
 export type GrowthIndustry = {
   group: string; n: number;
@@ -94,6 +107,41 @@ export type GrowthPayload = {
  *  a flat quarter are different facts and must not look alike. */
 function pct(v?: number | null, digits = 0): string {
   return v == null || Number.isNaN(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(digits)}%`;
+}
+
+/** The fiscal quarter both growth legs are measured on, printed under Sales
+ *  YoY so period-vs-cadence can be checked from the surface (2026-09-14).
+ *  Blank is an em-dash. The age prints only when the backend could date the
+ *  quarter end; ⚠️ means a newer report is past due by the backend's own
+ *  period_freshness rule — no day-count is typed here. */
+export function periodCell(r: GrowthRow): { text: string; tone: string; title: string } {
+  if (!r.period) {
+    return { text: '—', tone: 'eg-dim',
+             title: 'No fiscal period on file for these growth legs.' };
+  }
+  const age = typeof r.period_age_days === 'number' && !Number.isNaN(r.period_age_days)
+    ? ` · ${Math.round(r.period_age_days)}d` : '';
+  if (r.period_stale) {
+    return { text: `⚠️ ${r.period}${age}`, tone: 'eg-warn',
+             title: `Sales YoY and Q EPS are measured on ${r.period}, and a newer report is past due — these legs may be stale.` };
+  }
+  return { text: `${r.period}${age}`, tone: 'eg-dim',
+           title: `Sales YoY and Q EPS are measured on ${r.period} against the same quarter a year earlier.` };
+}
+
+/** Flags the backend sets on the legs themselves (2026-09-14): a year-ago
+ *  revenue base at or below zero, and a pair of quarters that are not a year
+ *  apart. Such a row does not qualify, so these only appear if one is ever
+ *  rendered — and then it must never look clean. */
+export function legFlags(r: GrowthRow): string[] {
+  const out: string[] = [];
+  if (r.base_negative) {
+    out.push('⚠️ year-ago revenue base was ≤ 0 — the sales growth % is arithmetic, not growth');
+  }
+  if (r.period_mismatch) {
+    out.push('⚠️ growth legs compare quarters that are not a year apart');
+  }
+  return out;
 }
 /** A row's tickers as clickable links, richest sales growth first.
  *
@@ -466,18 +514,23 @@ export function ExplosiveGrowth() {
           <tbody>
             {rows.map((r) => {
               const d = demandCell(r.zone);
-              const warns = r.warnings ?? [];
+              const warns = [...(r.warnings ?? []), ...legFlags(r)];
+              const per = periodCell(r);
               return (
                 <tr key={r.symbol}>
                   <td>
                     <TickerLink ticker={r.symbol} fromLabel="Explosive Growth" />
                     {r.name && <div className="eg-coname">{r.name}</div>}
                   </td>
-                  <td className="eg-num eg-good">{pct(r.sales_growth_pct, 1)}</td>
+                  <td className="eg-num eg-good" title={per.title}>
+                    {pct(r.sales_growth_pct, 1)}
+                    {/* the quarter BOTH legs are measured on (2026-09-14) */}
+                    <div className={`eg-period ${per.tone}`}>{per.text}</div>
+                  </td>
                   <td className={`eg-num ${(r.sales_prior_pct ?? 0) > 0 ? 'eg-good' : 'eg-dim'}`}>
                     {pct(r.sales_prior_pct, 1)}
                   </td>
-                  <td className="eg-num eg-good">{pct(r.q_eps_growth_pct, 1)}</td>
+                  <td className="eg-num eg-good" title={per.title}>{pct(r.q_eps_growth_pct, 1)}</td>
                   <td className={`eg-num ${r.npm_expanding ? 'eg-good' : ''}`}>
                     {pct(r.npm_latest_pct, 1)}{r.npm_expanding ? ' ↑' : ''}
                   </td>

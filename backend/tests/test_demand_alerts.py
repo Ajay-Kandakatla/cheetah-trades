@@ -8,6 +8,7 @@ import sys
 import pytest
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -20,15 +21,39 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class FakeColl:
+    """pymongo shape (2026-09-14): `$setOnInsert` lands only on an insert and
+    update_one's result says whether THIS call inserted — the atomic dedupe
+    claim (claim_key) reads exactly that; `find` by symbol is recorded_today's
+    one read; delete_one is the release after a failed send."""
+
     def __init__(self):
         self.docs = {}
 
     def find_one(self, q):
         return self.docs.get(q["_id"])
 
+    def find(self, q, projection=None):
+        if "_id" in q:
+            for k in q["_id"]["$in"]:
+                if k in self.docs:
+                    yield dict(self.docs[k])
+            return
+        for d in list(self.docs.values()):
+            if d.get("symbol") in q["symbol"]["$in"]:
+                yield dict(d)
+
     def update_one(self, q, u, upsert=False):
+        existed = q["_id"] in self.docs
         d = self.docs.setdefault(q["_id"], {"_id": q["_id"]})
+        if not existed:
+            d.update(u.get("$setOnInsert", {}))
         d.update(u.get("$set", {}))
+        return SimpleNamespace(matched_count=1 if existed else 0,
+                               upserted_id=None if existed else q["_id"])
+
+    def delete_one(self, q):
+        gone = self.docs.pop(q["_id"], None)
+        return SimpleNamespace(deleted_count=0 if gone is None else 1)
 
 
 def _band(lo, hi, touches=3, strength=50.0):
@@ -59,7 +84,7 @@ def _no_mood_by_default(monkeypatch):
     monkeypatch.setattr(DA.AG, "knife_read",
                         lambda sym, frame=None: {"knife": False, "trend": "rising"})
     monkeypatch.setattr(DA.AG, "sweep_read",
-                        lambda band, symbol=None, frame=None, window=None:
+                        lambda band, symbol=None, frame=None, window=None, **kw:
                             {"state": "intact", "pierce_pct": None,
                              "reclaim_bars": None, "vol_x": None})
     monkeypatch.setattr(DA.AG, "reversal_mood_read",
@@ -588,7 +613,10 @@ def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeyp
     c = doc["counts"]
     assert c == {"candidates": 5, "hits": 5, "at": 1, "at_singles": 1, "near": 2, "pushed": 1,
                  "skipped_cap": 1, "unknown_cap": 1, "unknown_prev": 0, "skipped_room": 0,
-                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0}
+                 "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
+                 # 2026-09-14 review: the live-print read (priced / stale_print), the
+                 # overlap skip and the claim race are counted like everything else
+                 "priced": 5, "stale_print": 0, "skipped_overlap": 0, "claimed_elsewhere": 0}
     assert all(type(v) is int for v in c.values()) and "reason" not in doc
     # a warming board is a recorded, explained quiet pass — and the doc is REPLACED, not appended
     out2 = DA.check_once(board={"warming": True}, now=IN_SESSION, force=True, pass_coll=pc)

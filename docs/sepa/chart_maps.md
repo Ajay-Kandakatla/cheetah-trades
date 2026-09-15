@@ -204,7 +204,7 @@ alerts and asks land:
 | 5 | Signals | his own tickers, 1-min tags |
 | 6 | Catalysts | moved into Chart Maps 2026-09-05 (CLYB, EOSE came from it) |
 | 7 | Overnight | Catalysts' movers twin |
-| 8 | Gabbar Levels | backtested levels with their own alerts |
+| 8 | Gabbar Levels | hand-drawn levels with their own alerts |
 | 9–10 | Strong VCP, S3 Topping | SEPA-scan slices; that scan is read on the SEPA page |
 | 11 | ICT | study board — no edge vs placebo (2026-09-04) |
 | 12–16 | Under Value, Support Levels, 0DTE, Earnings Flow, Past Winners | occasional |
@@ -293,6 +293,79 @@ Ajay: "make support default to 1 year on all the tabs? I think its safer and
 more accurate." `support.DEFAULT_WINDOW = "1y"` (was 3m); the ticker page's
 Supply / Demand chart follows (was 6m). See
 `docs/supply_demand/support_levels_tab.md` §Default zoom.
+
+## Deep Demand + Gabbar Levels — 2026-09-14 review fixes
+
+Verified on the live boards earlier the same day; drawing, wording and
+price-basis fixes only. No gate, threshold or level moved (the two rule
+findings — a 1-touch first band qualifying, proven-lid strength — are Ajay's
+call and were skipped). Tests: `backend/tests/test_deep_gabbar_review_fixes_2026_09_14.py`.
+
+**Deep Demand**
+
+- **D1 — the room stat names the 1-touch lid it skipped.** `drop_low_room` now
+  hands `room_floor.room_block` the RAW row bands (`row_bands(r, proven=False)`);
+  the room is still measured on the proven set (`plan_bands` inside
+  `room_block`, unchanged target, unchanged floor) and `weak` is read off the
+  raw set on EVERY row, CLEAR included. The stat reads `open sky · 1-touch lid
+  144.46 skipped` instead of `open sky` under a lid the tile draws in red; with
+  a proven target the 2026-09-08 `· weak X first` wording is unchanged.
+  See `docs/supply_demand/room_weak_lids.md`.
+- **D2 — the deep tile draws the lids overhead.** After the two deep bands the
+  tile appends `_lids_above(supply_zones, live print)` as `supply` bands —
+  exactly what the zones tiles draw — deduped against the broken first band.
+  The TARGET line no longer lands on a band the tile does not show.
+- **D3 — one price for the whole tile.** The why-line distance and the
+  In / Entering chip now come from `_disp_dist(r, live, d, "second_band")`
+  and `_dist_text(...)` — the live print the rank, room, gate and approach chip
+  already used; the scan's price is the fallback when the tape is unreachable.
+  `now in the 2nd band` / `1.96% above the 2nd band`.
+- **D5 (wording half) — a reclaim is not an arrival from the top.**
+  `deep_demand.read` carries `reclaiming` (the scan's `prev_close` under the
+  second band's floor); the tile also takes the live `approach_read`
+  "reclaiming" direction. Band label `2nd demand · reclaiming`, chip
+  `🩹 Reclaiming 2nd band`, why-line `(reclaimed from below)`. The read still
+  QUALIFIES such a name — requiring `prev_close >= s_lo` would change who is
+  on the board and is his call.
+- **D8 — the after-hours flag on 2y / 3y / 5y windows.** `bars_for`'s deep
+  path asks `support._frame_for(..., with_closed=True)` and re-runs
+  `prices.with_today_bar` on the CLOSED frame to recover the overlay info
+  `_frame_for` does not hand back, so `_tag_live_bar` tags `s: "ah"` /
+  `"pre"` on the last bar as the short windows do. One extra snapshot read
+  per deep-window tile; the frame drawn is still `_frame_for`'s. (The cleaner
+  fix — `_frame_for(with_info=True)` — lives in `support.py`, which this
+  review did not own.)
+
+**Gabbar Levels**
+
+- **G1 — BKNG levels are split-adjusted, from data.** Verified in the api
+  container: Massive `/v3/reference/splits` → 2026-04-06, 1→25; unadjusted /
+  adjusted close on 2026-04-01 = 4184.56 / 167.3824 = 25.0 exactly; the
+  table's aggressive 3700–3900 ÷ 25 = 148–156 brackets the adjusted 154.13
+  close on the 2026-05-17 snapshot date. `gabbar_levels.SPLITS = {"BKNG":
+  {ratio 25, date 2026-04-06}}`; `get_bands` divides lo/hi and the payload
+  carries `split_adjusted` + `split_date`; the tile wears `✂️ Levels ÷25 for
+  the 2026-04-06 split`. The table row itself is untouched (the author's
+  numbers), and no other level was added, moved or deleted.
+- **G2 / G4 — side against the NEAREST band.** The nearest-band loop tracks
+  `best_lo` / `best_hi`; the why-line and the chip say `x% above` / `x% below`
+  that band (`past` is gone, and it was judged against the HIGHEST band, so a
+  name between two bands read as a broken level). `gabbar_watch` builds the
+  push body the same way — `below` when the print is under the band's floor.
+- **G3 — no devices, no pass.** `check_once` returns
+  `{"ran": False, "reason": "no devices subscribed"}` when no device's prefs
+  allow `pivot_alert` (quiet hours ignored — the sender applies them), before
+  the live-price read, the send and the `push_history` row. `pivot_alert`
+  stays out of the keep-set — his call. `push=False` still runs the pass.
+  See `docs/supply_demand/demand_alerts.md`.
+- **G5 — the tab blurb matches the board:** weak-sales names wear the 📉 chip
+  and rank last; they are flagged, not hidden (the board has done that since
+  2026-08-27).
+- **G6 — the tab-order row says "hand-drawn levels", not "backtested".** The
+  2026-08-31 Gabbar levels study (OOS 72% recovered / aggressive 81% /
+  conservative-1 50%) has no script in the repo; those numbers live in the
+  session memory only until the script is committed and are not quoted on
+  this page.
 
 ---
 

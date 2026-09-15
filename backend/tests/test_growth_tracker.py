@@ -14,6 +14,8 @@ from __future__ import annotations
 import ast
 import io
 import os
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -129,8 +131,20 @@ def test_micro_cap_warns_louder_than_small_cap():
 
 
 # ------------------------------------------------------------------- alerts
+# Since 2026-09-14 (review finding 3) the trigger is the LIVE print: the board
+# row supplies the GROWTH NUMBERS only, the print comes from one bulk_snapshot
+# through zone_bounce_alerts.print_from_snapshot (stale = skipped), the
+# arrival rule is demand_alerts.read and the floor gate is re-read on the
+# session's own low. Until then it rang on Friday's stored close from a
+# Sunday-built board — HHH re-fired daily while it sat BELOW its band.
+ET = ZoneInfo("America/New_York")
+NOW = datetime(2026, 9, 14, 11, 0, tzinfo=ET)
+
+
 def row(symbol="HHH", price=61.55, intact=True, in_band=True, band=None,
         warnings=None):
+    """A board row as growth/tracker.build stores it. `price` / `zone` are
+    Friday's state and gate NOTHING since 2026-09-14 — `snap` does."""
     band = band if band is not None else {"lo": 60.0, "hi": 62.0, "touches": 3}
     return {"symbol": symbol, "price": price,
             "sales_growth_pct": 330.2, "q_eps_growth_pct": 1318.2,
@@ -139,71 +153,140 @@ def row(symbol="HHH", price=61.55, intact=True, in_band=True, band=None,
                      "band": band if in_band else None, "order_block": False}}
 
 
-def test_alert_fires_for_an_intact_band(monkeypatch):
+def snap(px, prev=66.0, low=None, age_sec=30, chg=None, now=NOW):
+    """One bulk_snapshot entry: last trade `px` stamped `age_sec` ago,
+    yesterday's close `prev` (default OUTSIDE the 60-62 ring, so today is an
+    arrival), day low just under the print (never through the 60 floor)."""
+    ts_ns = int((now - timedelta(seconds=age_sec)).timestamp() * 1e9)
+    lo = low if low is not None else round(px * 0.995, 4)
+    return {"open": px, "high": px, "low": lo, "close": px, "volume": 1e6,
+            "change_pct": chg if chg is not None else (round((px / prev - 1) * 100, 2) if prev else None),
+            "last_trade_price": px, "last_trade_ts_ms": ts_ns, "prev_day_close": prev}
+
+
+def cands(rows, snapshot, now=NOW):
+    return A.candidates(rows, snapshot=snapshot, now=now)
+
+
+@pytest.fixture
+def live(monkeypatch):
+    """The live floor read loads daily bars; the default here is "intact" so
+    a test about room / proximity / wording tests THAT. The floor tests below
+    stub their own. Also pins that the pass never fetches a snapshot itself
+    when one is injected."""
+    monkeypatch.setattr(A.AG, "sweep_read",
+                        lambda *a, **k: {"state": "intact", "pierce_pct": None,
+                                         "reclaim_bars": None, "vol_x": None})
+    monkeypatch.setattr(A, "_snapshot_for",
+                        lambda syms: (_ for _ in ()).throw(AssertionError("network snapshot in a unit test")))
+
+
+def _bands(monkeypatch, supply=(80.0, 82.0)):
     monkeypatch.setattr(A, "_bands_for", lambda s: [
-        {"kind": "demand", "lo": 60.0, "hi": 62.0},
-        {"kind": "supply", "lo": 80.0, "hi": 82.0}])      # +30% room
-    assert [i["row"]["symbol"] for i in A.candidates([row()])] == ["HHH"]
+        {"kind": "demand", "lo": 60.0, "hi": 62.0, "touches": 3},
+        {"kind": "supply", "lo": supply[0], "hi": supply[1], "touches": 2}])
 
 
-def test_alert_is_silent_when_the_floor_was_pierced(monkeypatch):
-    """NEGATIVE for the ONE gate that measured (+8.6pp, n=31,861). Loosening
-    this to "in band" would be exactly the kind of accuracy-for-volume trade he
-    told me never to make."""
-    monkeypatch.setattr(A, "_bands_for", lambda s: [
-        {"kind": "demand", "lo": 60.0, "hi": 62.0},
-        {"kind": "supply", "lo": 80.0, "hi": 82.0}])
-    assert A.candidates([row(intact=False)]) == []
-    assert A.candidates([row(intact=None)]) == []
+def test_alert_fires_for_an_arrival_at_an_intact_band(monkeypatch, live):
+    _bands(monkeypatch)                                       # +30% room
+    items = cands([row()], {"HHH": snap(61.55)})
+    assert [i["row"]["symbol"] for i in items] == ["HHH"]
+    assert items[0]["row"]["price"] == 61.55 and items[0]["row"]["price_source"] == "live"
+    assert items[0]["hit"]["tier"] == "at" and items[0]["last"] == 61.55
 
 
-def test_alert_is_silent_without_room_overhead(monkeypatch):
+def test_the_stored_row_gates_nothing_only_the_live_print_does(monkeypatch, live):
+    """The board row is Friday's close and Friday's in_band/intact flags. A
+    live arrival on a row whose stored flags say "not in band, not intact"
+    still rings; the stored price never reaches the push."""
+    _bands(monkeypatch)
+    items = cands([row(price=999.0, in_band=False, intact=False)], {"HHH": snap(61.55)})
+    assert len(items) == 1
+    msg = A.message(items[0]["row"], items[0]["band"], items[0]["room"], hit=items[0]["hit"])
+    assert msg["body"].startswith("$61.55 · in demand $60–62")
+    assert "999" not in msg["body"]
+
+
+def test_alert_is_silent_when_the_floor_was_pierced(monkeypatch, live):
+    """NEGATIVE for the ONE gate that measured (+8.6pp, n=31,861), now read
+    LIVE. Loosening this to "in band" would be exactly the kind of
+    accuracy-for-volume trade he told me never to make — and the stored
+    intact=True on the row must not rescue it."""
+    _bands(monkeypatch)
+    for state in ("swept", "broken"):
+        monkeypatch.setattr(A.AG, "sweep_read", lambda *a, _s=state, **k: {"state": _s})
+        assert cands([row(intact=True)], {"HHH": snap(61.55)}) == [], state
+    monkeypatch.setattr(A.AG, "sweep_read", lambda *a, **k: None)
+    assert cands([row(intact=True)], {"HHH": snap(61.55)}) == [], "unreadable floor fails closed"
+
+
+def test_the_live_floor_read_carries_the_sessions_low_and_print(monkeypatch, live):
+    """The whole point of re-reading live: the snapshot's day low and the
+    print reach sweep_read (alert_gates.with_session_bar merges them in)."""
+    _bands(monkeypatch)
+    seen = {}
+
+    def fake_sweep(band, symbol=None, frame=None, window=None, **kw):
+        seen.update(kw, symbol=symbol)
+        return {"state": "intact"}
+    monkeypatch.setattr(A.AG, "sweep_read", fake_sweep)
+    cands([row()], {"HHH": snap(61.55, low=60.4)})
+    assert seen["symbol"] == "HHH" and seen["day_low"] == 60.4 and seen["last"] == 61.55
+    assert seen["day"] == NOW.date()
+
+
+def test_alert_is_silent_without_room_overhead(monkeypatch, live):
     """NEGATIVE for his 2026-09-05 standing gate. A 100% sales grower with 2%
     of room to the first supply band is still a bad entry — growth does not
     buy an exemption from the phone gates."""
-    monkeypatch.setattr(A, "_bands_for", lambda s: [
-        {"kind": "demand", "lo": 60.0, "hi": 62.0},
-        {"kind": "supply", "lo": 62.5, "hi": 63.0}])      # ~1.5% overhead
-    assert A.candidates([row()]) == []
+    _bands(monkeypatch, supply=(62.5, 63.0))                  # ~1.5% overhead
+    assert cands([row()], {"HHH": snap(61.55)}) == []
 
 
-def test_alert_is_silent_when_the_print_left_the_band(monkeypatch):
-    """NEGATIVE that ISOLATES demand_proximity_gate.
-
-    The first version of this test used a price UNDER the band floor and passed
-    even with the proximity gate deleted — the room gate was catching it, since
-    a band under your feet is overhead once you fall through it. So it proved
-    nothing about proximity. This case has plenty of room overhead and fails on
-    proximity alone.
-
-    The situation is real, not contrived: `zone.in_band` is computed from the
-    zone doc's prev_close while `price` is the fresher last close, so a row can
-    carry in_band=True while the print has already run above the band top. He
-    does not want a push 5% above the level he was going to buy at."""
-    monkeypatch.setattr(A, "_bands_for", lambda s: [
-        {"kind": "demand", "lo": 60.0, "hi": 62.0},
-        {"kind": "supply", "lo": 80.0, "hi": 82.0}])          # +23% room at $65
-    assert A.candidates([row(price=65.0)]) == []              # 4.8% above the top
-    assert A.candidates([row(price=62.5)]) != []              # 0.8% above — still at the level
+def test_alert_is_silent_when_the_print_left_the_band(monkeypatch, live):
+    """NEGATIVE that ISOLATES demand_proximity_gate: plenty of room overhead,
+    the print 4.8% above the top. He does not want a push 5% above the level
+    he was going to buy at."""
+    _bands(monkeypatch)                                       # +23% room at $65
+    assert cands([row()], {"HHH": snap(65.0)}) == []          # 4.8% above the top
+    assert cands([row()], {"HHH": snap(62.5)}) != []          # 0.8% above — still at the level
 
 
-def test_alert_is_silent_when_price_fell_through_the_floor(monkeypatch):
-    """A breakdown is not an arrival. (Either gate may be the one that drops
-    it — see the isolating test above for the proximity-only proof.)"""
-    monkeypatch.setattr(A, "_bands_for", lambda s: [
-        {"kind": "demand", "lo": 60.0, "hi": 62.0},
-        {"kind": "supply", "lo": 80.0, "hi": 82.0}])
-    assert A.candidates([row(price=58.0)]) == []
+def test_alert_is_silent_when_price_fell_through_the_floor(monkeypatch, live):
+    """A breakdown is not an arrival — HHH on 2026-09-14 sat BELOW its band
+    and rang anyway on Friday's stored close. demand_alerts.read says None
+    under the floor, so nothing reaches the gates."""
+    _bands(monkeypatch)
+    assert cands([row()], {"HHH": snap(58.0, prev=61.5)}) == []
 
 
-def test_a_refused_name_still_alerts_but_says_so(monkeypatch):
+def test_NEGATIVE_a_stale_print_never_rings(live):
+    """The 5-minute siblings' freshness rule: a last trade older than
+    zone_bounce_alerts.STALE_PRINT_SEC is an old price, not "now"."""
+    from supply_demand import zone_bounce_alerts as ZB
+    items, counts = A._scan([row()], {"HHH": snap(61.55, age_sec=ZB.STALE_PRINT_SEC + 60)}, NOW)
+    assert items == [] and counts["stale_print"] == 1
+    assert A._scan([row()], {"HHH": snap(61.55, age_sec=ZB.STALE_PRINT_SEC - 60)}, NOW)[1]["stale_print"] == 0
+
+
+def test_NEGATIVE_residence_and_an_unknown_prior_close_are_not_arrivals(monkeypatch, live):
+    """Yesterday closed INSIDE the band = residence (the board's business);
+    no prior close = cannot tell, silent. The identical rule the 🧲 pass uses."""
+    _bands(monkeypatch)
+    items, counts = A._scan([row()], {"HHH": snap(61.55, prev=61.0)}, NOW)
+    assert items == [] and counts["no_arrival"] == 1
+    items, counts = A._scan([row()], {"HHH": snap(61.55, prev=None)}, NOW)
+    assert items == [] and counts["unknown_prev"] == 1
+    items, counts = A._scan([row()], {}, NOW)
+    assert items == [] and counts["unpriced"] == 1
+
+
+def test_a_refused_name_still_alerts_but_says_so(monkeypatch, live):
     """The board has no cap floor, so the push must reach him for a name the
     engine will not buy — LABELLED, never silently dropped."""
-    monkeypatch.setattr(A, "_bands_for", lambda s: [
-        {"kind": "demand", "lo": 60.0, "hi": 62.0},
-        {"kind": "supply", "lo": 80.0, "hi": 82.0}])
+    _bands(monkeypatch)
     warn = "⛔ $218M cap is under the $700M floor every other board uses — the engine will REFUSE to buy it"
-    items = A.candidates([row(warnings=[warn])])
+    items = cands([row(warnings=[warn])], {"HHH": snap(61.55)})
     assert len(items) == 1
     msg = A.message(items[0]["row"], items[0]["band"], items[0]["room"])
     assert "REFUSE" in msg["body"]
@@ -230,18 +313,31 @@ def _tree(*parts):
 
 
 def test_the_alert_path_calls_all_three_gates():
-    """SOURCE GUARD, by AST. `candidates` must consult room_gate,
-    demand_proximity_gate and the intact flag. Dropping one is exactly the
-    "loosen a gate to get more alerts" move he ruled out."""
+    """SOURCE GUARD, by AST. The selecting function (`_scan` since
+    2026-09-14; `candidates` only wraps it) must consult room_gate,
+    demand_proximity_gate, the LIVE floor gate (floor_held_gate — the intact
+    read, no longer a stored flag) and the arrival rule (demand_alerts.read)
+    on a print that went through print_from_snapshot. Dropping one is exactly
+    the "loosen a gate to get more alerts" move he ruled out."""
     tree = _tree("growth", "alerts.py")
     fn = next(n for n in ast.walk(tree)
-              if isinstance(n, ast.FunctionDef) and n.name == "candidates")
+              if isinstance(n, ast.FunctionDef) and n.name == "_scan")
     called = {n.func.attr for n in ast.walk(fn)
               if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)}
+    plain = {n.func.id for n in ast.walk(fn)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
     assert "room_gate" in called, "the >=5% room gate is gone"
     assert "demand_proximity_gate" in called, "the <=1%-above gate is gone"
+    assert "floor_held_gate" in called, "the measured intact gate is gone (or no longer live)"
+    assert "read" in called, "the arrival rule (demand_alerts.read) is gone"
+    assert "print_from_snapshot" in plain, "the print no longer goes through the freshness rule"
+    wrapper = next(n for n in ast.walk(tree)
+                   if isinstance(n, ast.FunctionDef) and n.name == "candidates")
+    assert "_scan" in {n.func.id for n in ast.walk(wrapper)
+                       if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
     src = ast.dump(fn)
-    assert "'intact'" in src or '"intact"' in src, "the measured intact gate is gone"
+    assert "'in_band'" not in src and "'intact'" not in src, \
+        "the stored Friday flags must not gate a live push"
 
 
 def test_the_tracker_declares_no_cap_floor_as_a_constant():
@@ -256,7 +352,8 @@ def test_the_tracker_declares_no_cap_floor_as_a_constant():
 
 
 SELECTING_FUNCS = {("tracker.py", "qualifies"), ("tracker.py", "screen"),
-                   ("tracker.py", "row_warnings"), ("alerts.py", "candidates")}
+                   ("tracker.py", "row_warnings"), ("alerts.py", "candidates"),
+                   ("alerts.py", "_scan")}
 
 
 def test_the_order_block_never_gates_anything():
@@ -467,7 +564,13 @@ def test_NEGATIVE_the_alert_gate_itself_is_untouched_and_still_fails_closed():
     assert AG.floor_held_gate(_band(), None, read={"state": "intact"}) is True
 
 
-def test_NEGATIVE_an_unknown_floor_still_fails_the_growth_alert(monkeypatch):
-    """Restoring the tri-state must not let an unknown through to a push."""
+def test_NEGATIVE_an_unknown_floor_still_fails_the_growth_alert(monkeypatch, live):
+    """Restoring the tri-state must not let an unknown through to a push —
+    and since 2026-09-14 the alert reads the floor LIVE, so "unknown" is a
+    sweep_read that returns None on a live arrival."""
     from growth import alerts as A
-    assert not A.candidates([{"symbol": "X", "zone": {"in_band": True, "intact": None}}])
+    from supply_demand import alert_gates as AG
+    monkeypatch.setattr(A, "_bands_for", lambda s: [{"kind": "demand", "lo": 60.0, "hi": 62.0},
+                                                    {"kind": "supply", "lo": 80.0, "hi": 82.0}])
+    monkeypatch.setattr(AG, "sweep_read", lambda *a, **k: None)
+    assert not A.candidates([row()], snapshot={"HHH": snap(61.55)}, now=NOW)

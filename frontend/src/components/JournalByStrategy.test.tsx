@@ -154,3 +154,18 @@ describe('JournalByStrategy — options lane (2026-09-06)', () => {
     expect(screen.getByTestId('strategy-chip')).toHaveTextContent('🎛️ Options');
   });
 });
+
+describe('JournalByStrategy — wording he reads (2026-09-14)', () => {
+  it('no lane blurb or label says "bounce" — he asked for "reversal" (2026-09-09)', () => {
+    for (const key of STRATEGY_ORDER) {
+      const m = strategyMeta(key);
+      expect(`${m.label} ${m.blurb}`).not.toMatch(/bounc/i);
+    }
+    expect(strategyMeta('demand_zone').blurb).toMatch(/reversals off a demand band/);
+  });
+  it('NEGATIVE: an unknown lane tag is echoed as-is, never relabelled into a known lane', () => {
+    const m = strategyMeta('bounce_lane');
+    expect(m.label).toBe('bounce lane');
+    expect(m.blurb).toMatch(/not one the page knows/);
+  });
+});

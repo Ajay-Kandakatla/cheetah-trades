@@ -47,7 +47,7 @@ export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
   },
   demand_zone: {
     glyph: '🧲', label: 'demand zone',
-    blurb: 'Zone-edge demand arrivals and bounces off a demand band, with ≥ 5% room to the first band overhead — owner rules (the alert gates), not the book.',
+    blurb: 'Zone-edge demand arrivals and reversals off a demand band, with ≥ 5% room to the first band overhead — owner rules (the alert gates), not the book.',
   },
   breakout: {
     glyph: '🚀', label: 'breakout',

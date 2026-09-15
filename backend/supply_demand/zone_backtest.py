@@ -181,7 +181,15 @@ def benchmark_return(bench_df, start_date: str, bars_held: int) -> Optional[floa
             break
     if idx is None or idx >= len(bench_df):
         return None
-    end = min(len(bench_df) - 1, idx + max(0, int(bars_held)))
+    end = idx + max(0, int(bars_held))
+    # The whole window must EXIST in the benchmark frame. Until 2026-09-14 the
+    # end was clamped to the frame's last bar, so a SPY frame that lagged the
+    # resolve (the 17:40 grade read a frame one session stale) silently scored
+    # SPY over a SHORTER window than the trade — and "excess" against a
+    # truncated benchmark is not excess. None → excess None → skipped by
+    # summarize() and demand_history.accuracy(), never counted as 0%.
+    if end > len(bench_df) - 1:
+        return None
     a = float(bench_df["open"].iloc[idx])
     b = float(bench_df["close"].iloc[end])
     if a <= 0:
