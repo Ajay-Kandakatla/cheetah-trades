@@ -269,16 +269,54 @@ def test_NEGATIVE_a_stale_print_never_rings(live):
     assert A._scan([row()], {"HHH": snap(61.55, age_sec=ZB.STALE_PRINT_SEC - 60)}, NOW)[1]["stale_print"] == 0
 
 
-def test_NEGATIVE_residence_and_an_unknown_prior_close_are_not_arrivals(monkeypatch, live):
-    """Yesterday closed INSIDE the band = residence (the board's business);
-    no prior close = cannot tell, silent. The identical rule the 🧲 pass uses."""
+def test_residence_and_an_unknown_prior_close_still_ring_once_per_band_per_day(monkeypatch, live):
+    """Ajay 2026-09-11: "I wanna know when ever these are in demand". The
+    review commit of 2026-09-14 made this kind ARRIVAL-ONLY (yesterday's close
+    had to be outside the band) — a change to WHICH pushes fire that he never
+    asked for. Reverted (F6): the read is geometry — in the band or <= 1%
+    above its top — and the once-per-(symbol, band, day) claim in run() is the
+    repeat guard. A name that closed inside its band yesterday and still sits
+    there rings; an unknown prior close silences nothing. Arrival-only for
+    this kind is the owner's call to make."""
     _bands(monkeypatch)
-    items, counts = A._scan([row()], {"HHH": snap(61.55, prev=61.0)}, NOW)
-    assert items == [] and counts["no_arrival"] == 1
-    items, counts = A._scan([row()], {"HHH": snap(61.55, prev=None)}, NOW)
-    assert items == [] and counts["unknown_prev"] == 1
+    items, counts = A._scan([row()], {"HHH": snap(61.55, prev=61.0)}, NOW)     # yesterday closed IN the band
+    assert len(items) == 1 and items[0]["hit"]["tier"] == "at" and counts["not_in_band"] == 0
+    items, counts = A._scan([row()], {"HHH": snap(61.55, prev=None)}, NOW)     # no prior close at all
+    assert len(items) == 1 and items[0]["prev_close"] is None
+    assert "unknown_prev" not in counts and "no_arrival" not in counts
     items, counts = A._scan([row()], {}, NOW)
     assert items == [] and counts["unpriced"] == 1
+    # the repeat guard is the claim, not the read: two passes, one push
+    from supply_demand import demand_alerts as DA
+
+    class Coll:
+        def __init__(self):
+            self.docs = {}
+
+        def find(self, q, projection=None):
+            for k in q["_id"]["$in"]:
+                if k in self.docs:
+                    yield {"_id": k}
+
+        def update_one(self, q, u, upsert=False):
+            from types import SimpleNamespace
+            existed = q["_id"] in self.docs
+            self.docs.setdefault(q["_id"], dict(u.get("$setOnInsert", {})))
+            return SimpleNamespace(matched_count=1 if existed else 0, upserted_id=None if existed else q["_id"])
+
+        def delete_one(self, q):
+            self.docs.pop(q["_id"], None)
+    from push import sender
+    sent = []
+    monkeypatch.setattr(sender, "send_to_user", lambda o, p, kind=None: sent.append(p) or
+                        {"sent": 1, "failed": 0, "total_targets": 1})
+    coll = Coll()
+    later = NOW + timedelta(minutes=15)                    # a FRESH print 15 min on, still resident
+    first = A.run(now=NOW, rows=[row()], snapshot={"HHH": snap(61.55, prev=61.0)}, coll=coll)
+    second = A.run(now=later, rows=[row()], snapshot={"HHH": snap(61.55, prev=61.0, now=later)}, coll=coll)
+    assert first["individual"] == 1 and len(sent) == 1
+    assert second["candidates"] == 1 and second["fresh"] == 0 and second["individual"] == 0 and len(sent) == 1
+    assert DA.read(61.55, {"lo": 60.0, "hi": 62.0}, -0.9, 61.0) is None, "the 🧲 pass keeps its arrival rule"
 
 
 def test_a_refused_name_still_alerts_but_says_so(monkeypatch, live):

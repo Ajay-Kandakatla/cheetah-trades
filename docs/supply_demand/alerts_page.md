@@ -181,3 +181,15 @@ not run (holiday, container down); a push row with `total = 0` = muted pref or n
   won the atomic dedupe claim for that key — the phone got it once, from the other cron).
 * Everything above the counters — what pushed, when, why quiet — is unchanged.
 
+
+### 2026-09-14 follow-up (adversarial review of 792cfe1: F5)
+
+`Alerts.tsx` had "the phone gets $1B+ names that pass" typed one line above the disclaimer that
+had just been corrected to $700M (and repeated it in the file's header comment). The page now
+renders **`gate.min_cap_txt`** — `GET /alerts/status` → `gate` carries `min_cap_usd`
+(`demand_alerts.MIN_CAP_USD`) and `min_cap_txt` (`alert_status.cap_floor_txt` of it, the ONE
+formatter; `alert_status.gate_payload`) beside `min_room_pct` / `max_above_demand_pct` — through
+`capFloorPhrase`: "$700M+" when served, "cap-floored" when the status endpoint is down or an older
+API omits it, never a figure typed in the FE. Source guards: `test_the_alerts_page_never_retypes_the_cap_floor`
+(`tests/test_alert_status.py`) pins that `$1B` / `$700M` never reappear in `Alerts.tsx`;
+`Alerts.test.tsx` pins the rendering and both fallbacks.

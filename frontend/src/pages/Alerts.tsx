@@ -8,9 +8,13 @@
  * The honest answer to the first question is NO, and this page is built to
  * make that visible rather than paper over it:
  *   - the Demand board is a closed-bar scan over the full universe with an
- *     R:R floor; the phone gets LIVE $1B+ names, once per band per day,
- *     through alert_gates.py (room ≥ 5% to the first band overhead, print
- *     ≤ 1% above the demand band). Different lists by design.
+ *     R:R floor; the phone gets LIVE names at or above the cap floor, once
+ *     per band per day, through alert_gates.py (room ≥ 5% to the first band
+ *     overhead, print ≤ 1% above the demand band). Different lists by design.
+ *     The cap floor is SERVED (`gate.min_cap_txt`, from demand_alerts.
+ *     MIN_CAP_USD through the backend's one formatter) and never typed here —
+ *     review 2026-09-14 F5: this page still printed the OLD floor four days
+ *     after it moved; a figure typed in the FE drifts from the constant.
  *   - the status strip says, per pass, when it last ran, what it found
  *     (`reason`: store empty / board warming / snapshot failed) and how many
  *     names it SKIPPED at the gate — so a quiet phone reads "14 skipped:
@@ -59,13 +63,29 @@ export type PassStatus = {
    *  older API omits it → the PASSES fallback below. */
   cadence_sec?: number | null;
 };
+export type AlertsGate = {
+  min_room_pct: number;
+  max_above_demand_pct: number;
+  /** The cap floor (demand_alerts.MIN_CAP_USD) as a number and as the words
+   *  the backend's cap_floor_txt makes of it. An older API omits both → the
+   *  phrase falls back to "cap-floored" and never types a figure. */
+  min_cap_usd?: number | null;
+  min_cap_txt?: string | null;
+};
 export type AlertsStatus = {
   in_session: boolean;
   now_et: string;
-  gate: { min_room_pct: number; max_above_demand_pct: number };
+  gate: AlertsGate;
   passes: Record<string, PassStatus | undefined>;
   disclaimer?: string;
 };
+
+/** The served cap-floor words plus "+", else "cap-floored" — the FE never
+ *  types the figure (review 2026-09-14 F5). */
+export function capFloorPhrase(gate: Partial<AlertsGate> | null | undefined): string {
+  const txt = typeof gate?.min_cap_txt === 'string' ? gate.min_cap_txt.trim() : '';
+  return txt ? `${txt}+` : 'cap-floored';
+}
 
 /* Order + wording of the three passes that page the phone. The cadence
  * fallbacks mirror backend/crontab (zone_edge every minute in session; the
@@ -175,7 +195,8 @@ const HEADLINE: { key: string; label: string; title?: string }[] = [
 ];
 const HEADLINE_KEYS = HEADLINE.map((h) => h.key);
 
-const GATE_FALLBACK = { min_room_pct: 5.0, max_above_demand_pct: 1.0 };
+/* No cap floor in the fallback on purpose: the figure is served, never typed. */
+const GATE_FALLBACK: AlertsGate = { min_room_pct: 5.0, max_above_demand_pct: 1.0 };
 
 function useAlertsStatus(nonce: number) {
   const [status, setStatus] = useState<AlertsStatus | null>(null);
@@ -514,7 +535,7 @@ export function AlertsPage() {
                 ? <span data-testid="session-line" style={{ color: status.in_session && sessionLine(status, today).includes('⚠') ? AMBER : MUTED }}>{sessionLine(status, today)}</span>
                 : statusErr ? `status unavailable — ${statusErr}` : 'loading status…'}
               {' '}Gate: room ≥ {gate.min_room_pct}% to the first band overhead · print ≤ {gate.max_above_demand_pct}% above the demand band.
-              {' '}The boards list every name; the phone gets $1B+ names that pass, once per band per day.
+              {' '}The boards list every name; the phone gets {capFloorPhrase(gate)} names that pass, once per band per day.
             </div>
           </div>
           <button type="button" onClick={() => { reload(); setReloadNonce((n) => n + 1); }} title="Reload"

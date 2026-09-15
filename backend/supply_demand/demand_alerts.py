@@ -361,15 +361,50 @@ def _state_coll():
 # RELEASED so the next pass retries — the per-day semantics are unchanged:
 # one push per key per day, a transport failure retries, "nobody targeted" is
 # terminal. What changed is only that the claim comes first.
-def claim_key(coll, key: str, doc: dict) -> bool:
+#
+# Same day, ONE LEVEL rings once (findings F4a/F4b, 2026-09-14): within a pass
+# a name is read on ONE band (the containing one, else the nearest — see
+# _check_once), and after the claims land each pass re-reads the day's state
+# once more (`settle_claims`) so two same-minute claims on OVERLAPPING bands
+# under two keys — this pass's board cut and zone_edge's zone_store cut of the
+# same level — resolve to the earlier claim BY ITS WRITE STAMP (`claimed_at`,
+# set here at the upsert, never the pass's `now`); the later one is released
+# and counted `skipped_overlap`. A send that RAISES stands in `transport_failed`
+# (F1): never "nobody targeted", so a raised digest releases like a single.
+def write_clock() -> datetime:
+    """The moment a claim is WRITTEN (ET). Every `claimed_at` stamp comes from
+    here — module-level so a test can freeze or tick it — never from the
+    pass's `now`, which is taken at pass START before the snapshot and the
+    gate loop."""
+    return datetime.now(ET)
+
+
+def _iso(ts) -> str:
+    return ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+
+
+def claim_key(coll, key: str, doc: dict, claimed_at: Optional[datetime] = None) -> bool:
     """Atomically record `key` with `doc`. True when THIS caller inserted it,
     False when it already existed (another pass rang it). No coll, or a write
     error, reads True — push again rather than never, the same side the
-    `$in` dedupe read fails on."""
+    `$in` dedupe read fails on.
+
+    The doc is stamped `claimed_at` at the moment of the upsert (`write_clock`,
+    or `claimed_at` when injected by a test) — the stamp `settle_claims` orders
+    two same-minute claims by. F4b residual (2026-09-14): `sent_at` / `at` are
+    the pass-START clock, so ordering by them ordered the passes by when they
+    STARTED, not by when each claim LANDED; cron aligns the 1-min and 5-min
+    passes to the same wall-clock minute, so when the earlier-started pass
+    claimed SECOND its re-read saw a LATER stamp and kept — one level, two
+    rings. Both containers share the host clock, so the later WRITER always
+    sees the earlier one at its re-read and yields. `sent_at` / `at` stay the
+    pass time, for display only."""
     if coll is None:
         return True
+    stamp = _iso(claimed_at or write_clock())            # taken right before the upsert
     try:
-        res = coll.update_one({"_id": key}, {"$setOnInsert": dict(doc, _id=key)}, upsert=True)
+        res = coll.update_one({"_id": key}, {"$setOnInsert": dict(doc, _id=key, claimed_at=stamp)},
+                              upsert=True)
     except Exception as exc:
         log.warning("demand_alerts: dedupe claim failed for %s: %s", key, exc)
         return True
@@ -403,7 +438,8 @@ def recorded_today(coll, symbols, day: str) -> dict:
         return out
     tag = f":{day}:"
     try:
-        cur = coll.find({"symbol": {"$in": syms}}, {"_id": 1, "symbol": 1, "band": 1})
+        cur = coll.find({"symbol": {"$in": syms}},
+                        {"_id": 1, "symbol": 1, "band": 1, "claimed_at": 1, "sent_at": 1, "at": 1})
         for d in cur:
             key = str(d.get("_id") or "")
             if tag not in key:
@@ -411,7 +447,11 @@ def recorded_today(coll, symbols, day: str) -> dict:
             band = d.get("band") or {}
             lo, hi = AG._f(band.get("lo")), AG._f(band.get("hi"))
             sym = str(d.get("symbol") or key.split(":", 1)[0]).upper()
-            out.setdefault(sym, []).append({"key": key, "lo": lo, "hi": hi})
+            # the claim's WRITE stamp (`claimed_at`, set by claim_key at the
+            # upsert) — settle_claims orders two same-minute claims by it;
+            # `sent_at` / `at` (the pass clock) only for docs that predate it
+            out.setdefault(sym, []).append({"key": key, "lo": lo, "hi": hi,
+                                            "at": d.get("claimed_at") or d.get("sent_at") or d.get("at")})
     except Exception as exc:
         log.warning("demand_alerts: dedupe read failed: %s", exc)
         return {}
@@ -458,9 +498,94 @@ def claim_doc(item: dict, now: datetime, source: str = SOURCE) -> dict:
             "source": source}
 
 
-def claim(coll, key: str, item: dict, now: datetime, source: str = SOURCE) -> bool:
-    """claim_key with the 🧲 doc shape. True = ours to send."""
-    return claim_key(coll, key, claim_doc(item, now, source))
+def claim(coll, key: str, item: dict, now: datetime, source: str = SOURCE,
+          claimed_at: Optional[datetime] = None) -> bool:
+    """claim_key with the 🧲 doc shape. True = ours to send. `now` is the pass
+    clock (`sent_at`, display); the ordering stamp is `claimed_at` (the write
+    clock unless injected)."""
+    return claim_key(coll, key, claim_doc(item, now, source), claimed_at=claimed_at)
+
+
+def _stamp(s):
+    """An ISO claim stamp as a datetime for ordering; None when unparseable."""
+    try:
+        return datetime.fromisoformat(str(s))
+    except (TypeError, ValueError):
+        return None
+
+
+def claim_precedes(other_at, other_key: str, our_at, our_key: str) -> bool:
+    """True when the OTHER claim came first: an earlier stamp, or the same
+    stamp and the smaller key (a deterministic tie, so two passes that see
+    each other never BOTH yield and leave the level silent). An unstamped
+    other doc is older by construction — it was there before ours landed.
+    Two stamps that cannot both be parsed compare as strings."""
+    if other_key == our_key:
+        return False
+    if other_at is None:
+        return True
+    if our_at is None:
+        return False
+    a, b = _stamp(other_at), _stamp(our_at)
+    if a is not None and b is not None:
+        if a != b:
+            return a < b
+    elif str(other_at) != str(our_at):
+        return str(other_at) < str(our_at)
+    return str(other_key) < str(our_key)
+
+
+def settle_claims(coll, items: list, now: datetime, day: str, source: str = SOURCE,
+                  claimed_at: Optional[datetime] = None) -> tuple:
+    """Claim every item's key (`claim`, the 🧲 doc), then re-read today's
+    state ONCE for the claimed symbols (`recorded_today` — one `$in`) and
+    RELEASE any claim whose band overlaps a key another pass claimed EARLIER.
+
+    Finding F4b (2026-09-14): `recorded` is read at the top of a pass and the
+    claims land seconds later. Inside that window the sibling pass can claim an
+    OVERLAPPING band under a DIFFERENT key (its zone_store cut of the level vs
+    this pass's board cut), and both atomic claims succeed — one level, two 🧲,
+    two stops. So after claiming, each pass looks once more and the LATER claim
+    yields (`claim_precedes`: stamp, then key as the tie). The yielded claim
+    is released so it never mutes the name; the winner rings. A re-read that
+    fails keeps every claim (push again rather than never).
+
+    "Later" is each claim's OWN write stamp (`claimed_at`, taken by `claim_key`
+    right before its upsert — `write_clock`, or `claimed_at` when injected),
+    NEVER the pass `now`: that is the pass-START clock, and ordering by it let
+    the earlier-started pass that claimed SECOND keep its claim (its re-read
+    saw a later stamp) — one level ringing twice inside one minute (the
+    verifier's residual on F4b). With one host clock the later writer always
+    sees the earlier writer at its re-read.
+
+    Returns (ours, claimed_elsewhere, lost_overlap). Order is preserved."""
+    ours, elsewhere, stamps = [], 0, {}
+    for it in items:
+        stamp = claimed_at or write_clock()               # this claim's write moment
+        stamps[it["key"]] = _iso(stamp)
+        if claim(coll, it["key"], it, now, source, claimed_at=stamp):
+            ours.append(it)
+        else:
+            elsewhere += 1
+    if not ours or coll is None:
+        return ours, elsewhere, 0
+    rec = recorded_today(coll, [it["symbol"] for it in ours], day)
+    kept, lost = [], 0
+    for it in ours:
+        yielded = False
+        for r in rec.get(it["symbol"], []):
+            if r.get("lo") is None or r.get("hi") is None or not bands_overlap(it["band"], r):
+                continue
+            if claim_precedes(r.get("at"), r["key"], stamps[it["key"]], it["key"]):
+                yielded = True
+                break
+        if yielded:
+            log.info("demand_alerts: %s %s yields to an earlier overlapping claim", source, it["key"])
+            release_key(coll, it["key"])
+            lost += 1
+        else:
+            kept.append(it)
+    return kept, elsewhere, lost
 
 
 def live_from_snapshot(snapshot: dict, now_ts: float, stale_sec: float = SNAPSHOT_STALE_SEC) -> tuple:
@@ -484,10 +609,24 @@ def live_from_snapshot(snapshot: dict, now_ts: float, stale_sec: float = SNAPSHO
     return live, stale
 
 
+def transport_failed(exc=None) -> dict:
+    """The result a send that RAISED stands for: 0 of 1 target reached, 1
+    failed — the shape `_terminal` reads as 'retry next pass'. Finding F1
+    (2026-09-14): the digest except-branches set `res = None`, and
+    `_terminal(None)` read `total_targets 0 == 0` as "nobody targeted" —
+    TERMINAL — so a digest whose send raised kept every claim and muted its
+    names for the day, while the singles path released. Every digest
+    except-branch (here, zone_edge ×2, growth.alerts) now stands in this."""
+    return {"sent": 0, "failed": 1, "total_targets": 1, "error": str(exc or "transport")}
+
+
 def _terminal(res: Optional[dict]) -> bool:
     """Delivered, or nobody targeted (muted pref / no device) — both mean
-    'do not retry today'. A transport failure is retried next pass."""
-    res = res or {}
+    'do not retry today'. A transport failure is retried next pass. NO result
+    at all (None / not a dict — the sender raised) is NOT terminal: "nobody
+    targeted" is a fact the sender reports, never one an exception implies."""
+    if not isinstance(res, dict):
+        return False
     return (res.get("sent") or 0) > 0 or (res.get("total_targets") or 0) == 0
 
 
@@ -567,6 +706,7 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     skipped_mood = 0
     skipped_floor = 0
     skipped_overlap = 0
+    accepted: dict = {}                               # {SYM: [band]} taken THIS pass
     for sym in syms:
         last = last_px.get(sym)
         if not last:
@@ -578,29 +718,44 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             unknown_prev += 1
             continue
         seen_keys = {r["key"] for r in recorded.get(sym, [])}
-        for band in cands[sym]["bands"]:
-            hit = read(last, band, chg, prev)
-            if not hit:
-                continue
-            item = {"symbol": sym, "last": float(last), "band": band, "hit": hit,
-                    "cap": cap, "name": cands[sym]["name"], "prev_close": prev,
-                    "day_low": (live.get(sym) or {}).get("low"),
-                    "approach": AG.approach_read(last, band, prev, (live.get(sym) or {}).get("low"))}
-            hits.append(item)
-            if not passes_cap(cap):
-                if cap is None:
-                    unknown_cap += 1
-                else:
-                    skipped_cap += 1
-                continue
-            key = state_key(sym, band, day, hit["tier"])
-            if key in seen_keys:
-                continue
-            if overlapping_key(sym, band, recorded):
-                skipped_overlap += 1                  # one level, already rung under another key
-                continue
-            item["key"] = key
-            (at_items if hit["tier"] == "at" else near_items).append(item)
+        # ONE level per name per pass (finding F4a, 2026-09-14). The board can
+        # carry a name on both lists with two overlapping cuts of the same
+        # level (a reentry band and an approaching band a few cents apart —
+        # `candidates` dedupes only an exact lo/hi pair), and reading every
+        # band rang the level twice with two stops inside ONE pass: the
+        # overlap skip below only knows about EARLIER passes. The band
+        # containing the print wins, else the nearest above it, ties to the
+        # higher top — growth._scan and zone_edge.read_near_demand pick the
+        # same way. `hits` lists that one band per name.
+        band_hits = [(band, hit) for band in cands[sym]["bands"]
+                     for hit in [read(last, band, chg, prev)] if hit]
+        if not band_hits:
+            continue
+        band, hit = min(band_hits, key=lambda bh: (0 if bh[1]["state"] == "in" else 1,
+                                                    bh[1]["dist_pct"], -float(bh[0]["hi"])))
+        item = {"symbol": sym, "last": float(last), "band": band, "hit": hit,
+                "cap": cap, "name": cands[sym]["name"], "prev_close": prev,
+                "day_low": (live.get(sym) or {}).get("low"),
+                "approach": AG.approach_read(last, band, prev, (live.get(sym) or {}).get("low"))}
+        hits.append(item)
+        if not passes_cap(cap):
+            if cap is None:
+                unknown_cap += 1
+            else:
+                skipped_cap += 1
+            continue
+        key = state_key(sym, band, day, hit["tier"])
+        if key in seen_keys:
+            continue
+        if overlapping_key(sym, band, recorded):
+            skipped_overlap += 1                  # one level, already rung under another key
+            continue
+        if any(bands_overlap(band, b) for b in accepted.get(sym, [])):
+            skipped_overlap += 1                  # one level, already taken THIS pass
+            continue
+        accepted.setdefault(sym, []).append(band)
+        item["key"] = key
+        (at_items if hit["tier"] == "at" else near_items).append(item)
     # Phone gate (Ajay 2026-09-05): within 1% above the band (NEAR never is), and
     # >= 5% to the first unbroken supply band in the name's zone_store doc.
     pushable = []
@@ -677,6 +832,7 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     at_ok.sort(key=lambda it: (AG.mood_rank(it.get("mood")), it["hit"]["dist_pct"]))
     singles, spill = at_ok[:MAX_SINGLES_PER_PASS], at_ok[MAX_SINGLES_PER_PASS:]
     digest = spill + near_ok
+    n_singles = len(singles)
     pushed = 0
     claimed_elsewhere = 0
     if push and (singles or digest):
@@ -687,10 +843,14 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         # CLAIM, then send, then release on a transport failure (2026-09-14).
         # zone_edge reads the same key every minute; whichever pass inserts
         # the key owns the push, the other sees "claimed" and stays quiet.
+        # Singles and digest are claimed together so the post-claim overlap
+        # re-read (settle_claims, F4b) is ONE `$in`, never one per lane.
+        single_keys = {it["key"] for it in singles}
+        ours, claimed_elsewhere, lost = settle_claims(coll, singles + digest, now, day)
+        skipped_overlap += lost                   # the sibling pass claimed the level first
+        singles = [it for it in ours if it["key"] in single_keys]
+        ours = [it for it in ours if it["key"] not in single_keys]
         for it in singles:
-            if not claim(coll, it["key"], it, now):
-                claimed_elsewhere += 1
-                continue
             try:
                 res = sender.send_to_user(owner, at_message(it), kind=KIND)
             except Exception as exc:
@@ -701,27 +861,20 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
                 pushed += 1
             else:
                 release_key(coll, it["key"])
-        if digest:
-            ours = []
-            for it in digest:
-                if claim(coll, it["key"], it, now):
-                    ours.append(it)
-                else:
-                    claimed_elsewhere += 1
-            if ours:
-                try:
-                    res = sender.send_to_user(owner, digest_message(ours), kind=KIND)
-                except Exception as exc:
-                    log.warning("demand_alerts: digest push failed: %s", exc)
-                    res = None
-                if _terminal(res):
-                    pushed += 1
-                else:
-                    for it in ours:
-                        release_key(coll, it["key"])
+        if ours:
+            try:
+                res = sender.send_to_user(owner, digest_message(ours), kind=KIND)
+            except Exception as exc:
+                log.warning("demand_alerts: digest push failed: %s", exc)
+                res = transport_failed(exc)       # F1: a raise is NOT "nobody targeted"
+            if _terminal(res):
+                pushed += 1
+            else:
+                for it in ours:
+                    release_key(coll, it["key"])
     return {"ran": True, "date": day, "candidates": len(syms), "priced": priced,
             "stale_print": stale_print, "hits": hits,
-            "at": len(at_items), "at_singles": len(singles), "near": len(near_items),
+            "at": len(at_items), "at_singles": n_singles, "near": len(near_items),
             "pushed": pushed, "claimed_elsewhere": claimed_elsewhere,
             "skipped_cap": skipped_cap, "unknown_cap": unknown_cap,
             "unknown_prev": unknown_prev, "skipped_room": skipped_room,

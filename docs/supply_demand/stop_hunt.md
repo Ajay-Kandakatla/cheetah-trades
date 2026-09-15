@@ -200,3 +200,14 @@ prices from (no extra call). An unknown day low leaves the frame exactly as it w
 pre-fix read, nothing loosened. Tests: `tests/test_alerts_review_fixes_2026_09_14.py`
 (`test_a_floor_swept_and_reclaimed_THIS_MORNING_is_no_longer_intact` and the negatives).
 
+
+### 2026-09-14 follow-up (adversarial review of 792cfe1: F3)
+
+`sweep_read` sliced `df.iloc[-window:]` AFTER `with_session_bar` had appended today, so on the
+append path (the cached frame ends yesterday — before the ~10:00 ET hourly patch) the window was
+**14 closed bars + today** and a floor swept exactly `SWEEP_WINDOW_BARS` closed bars back fell out
+of it: `intact`, gate True, where the pre-session-bar read said `swept`, gate False — a loosening.
+The closed window is now cut first and today is merged into IT: append path → `window + 1` rows,
+merge path → `window` rows (what the frame already yielded after 10:00). Nothing widened: a sweep
+one bar older than the window is still not "now" on either path, and today's own pierce still
+counts on top. Pinned by `test_F3_*` in `tests/test_alerts_review_fixes_2026_09_14.py`.

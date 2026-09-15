@@ -83,7 +83,14 @@ same 🧲 inside a minute) and RELEASED when the send does not terminate, so a
 transport failure still retries next minute and "nobody targeted" is still
 terminal. Same day, a demand level whose band OVERLAPS one already rung for
 the symbol (a broken-supply shelf over a demand band — one level, two keys,
-two stops) is skipped and counted (`skipped_overlap`).
+two stops) is skipped and counted (`skipped_overlap`) — and, since the claims
+land seconds after that read, each pass re-reads the day's state ONCE after
+claiming (demand_alerts.settle_claims) and yields a claim the 5-min pass
+made first on an overlapping band (F4b) — "first" by the claim's WRITE
+stamp (`claimed_at`, set by claim_key at the upsert), never by the pass
+`now`, which is taken at pass start and ordered the passes by when they
+STARTED. A digest send that RAISES releases
+its claims exactly like a single (F1: `None` is no longer "nobody targeted").
 
 Tracking ("min on min")
 -----------------------
@@ -497,21 +504,25 @@ def _names_for(symbols: list) -> dict:
 SOURCE = "zone_edge"               # stamped on every dedupe claim this pass makes
 
 
-def _claim_break(coll, item: dict, now: datetime) -> bool:
+def _claim_break(coll, item: dict, now: datetime, claimed_at: Optional[datetime] = None) -> bool:
     """Atomically claim a 🚀 key before its send (demand_alerts.claim_key;
-    2026-09-14). True = ours to send; False = a concurrent pass already has it."""
+    2026-09-14). True = ours to send; False = a concurrent pass already has it.
+    `sent_at` is the pass clock (display); claim_key stamps `claimed_at` at
+    the upsert (the write clock unless injected) — the ordering stamp."""
     return DA.claim_key(coll, item["key"], {
         "symbol": item["symbol"], "tier": item["tier"],
         "band": {"lo": item["band"]["lo"], "hi": item["band"]["hi"]},
         "last": item["last"], "dist_pct": item["dist_pct"], "new_highs": item["new_highs"],
-        "cap": item.get("cap"), "sent_at": now.isoformat(), "source": SOURCE})
+        "cap": item.get("cap"), "sent_at": now.isoformat(), "source": SOURCE}, claimed_at=claimed_at)
 
 
 def _terminal(res: Optional[dict]) -> bool:
     """Delivered, or nobody targeted (muted pref / no device) — both mean
-    'do not retry today'. A transport failure is retried next pass."""
-    res = res or {}
-    return (res.get("sent") or 0) > 0 or (res.get("total_targets") or 0) == 0
+    'do not retry today'. A transport failure is retried next pass. No result
+    at all (the sender raised) is NOT terminal — demand_alerts._terminal, the
+    same rule (finding F1, 2026-09-14: `None` read as "nobody targeted" and a
+    raised digest kept every claim)."""
+    return DA._terminal(res)
 
 
 def _hhmm(ts) -> Optional[str]:
@@ -974,12 +985,19 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     recorded = DA.recorded_today(coll_demand, [it["symbol"] for it in demand_cands], day_iso)
     break_items = [it for it in break_cands if it["key"] not in seen_break]
     demand_items = []
+    accepted: dict = {}                                           # {SYM: [band]} taken THIS pass
     for it in demand_cands:
         if any(r["key"] == it["key"] for r in recorded.get(it["symbol"], [])):
             continue                                              # rung today under this very key
         if DA.overlapping_key(it["symbol"], it["band"], recorded):
             skipped_overlap += 1
             continue
+        # One level per name per pass (F4a): read_near_demand already yields
+        # ONE band per name, so this guard is the invariant, not a new rule.
+        if any(DA.bands_overlap(it["band"], b) for b in accepted.get(it["symbol"], [])):
+            skipped_overlap += 1
+            continue
+        accepted.setdefault(it["symbol"], []).append(it["band"])
         demand_items.append(it)
     for it in break_items + demand_items:
         it["name"] = names.get(it["symbol"])
@@ -1021,16 +1039,23 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                     res = sender.send_to_user(owner, _tag_msg(break_digest_message(ours), sess), kind=KIND_BREAK)
                 except Exception as exc:
                     log.warning("zone_edge: break digest push failed: %s", exc)
-                    res = None
+                    res = DA.transport_failed(exc)            # F1: a raise is NOT "nobody targeted"
                 if _terminal(res):
                     pushed += 1
                 else:
                     for it in ours:
                         DA.release_key(coll_break, it["key"])
-        for it in d_singles:
-            if not DA.claim(coll_demand, it["key"], it, now, source=SOURCE):
-                claimed_elsewhere += 1
-                continue
+        # Demand side: singles and digest are claimed TOGETHER, then ONE
+        # post-claim re-read (DA.settle_claims, F4b) releases a claim whose
+        # band the 5-min pass claimed first under its own key inside the
+        # window between `recorded` above and these claims — one level, one
+        # 🧲. Two bulk reads on the demand coll per pass, never one per name.
+        d_single_keys = {it["key"] for it in d_singles}
+        d_ours, d_elsewhere, d_lost = DA.settle_claims(coll_demand, d_singles + d_digest, now, day_iso,
+                                                       source=SOURCE)
+        claimed_elsewhere += d_elsewhere
+        skipped_overlap += d_lost
+        for it in [it for it in d_ours if it["key"] in d_single_keys]:
             try:
                 res = sender.send_to_user(owner, _tag_msg(DA.at_message(it), sess), kind=DA.KIND)
             except Exception as exc:
@@ -1041,20 +1066,18 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 pushed += 1
             else:
                 DA.release_key(coll_demand, it["key"])
-        if d_digest:
-            ours = [it for it in d_digest if DA.claim(coll_demand, it["key"], it, now, source=SOURCE)]
-            claimed_elsewhere += len(d_digest) - len(ours)
-            if ours:
-                try:
-                    res = sender.send_to_user(owner, _tag_msg(DA.digest_message(ours), sess), kind=DA.KIND)
-                except Exception as exc:
-                    log.warning("zone_edge: demand digest push failed: %s", exc)
-                    res = None
-                if _terminal(res):
-                    pushed += 1
-                else:
-                    for it in ours:
-                        DA.release_key(coll_demand, it["key"])
+        ours = [it for it in d_ours if it["key"] not in d_single_keys]
+        if ours:
+            try:
+                res = sender.send_to_user(owner, _tag_msg(DA.digest_message(ours), sess), kind=DA.KIND)
+            except Exception as exc:
+                log.warning("zone_edge: demand digest push failed: %s", exc)
+                res = DA.transport_failed(exc)                # F1: a raise is NOT "nobody targeted"
+            if _terminal(res):
+                pushed += 1
+            else:
+                for it in ours:
+                    DA.release_key(coll_demand, it["key"])
 
     # ── tracking (min on min) ───────────────────────────────────────────────
     breaking, near_demand = sort_rows(breaking, near_demand)

@@ -26,8 +26,8 @@ cron pass, and delivery is what matters. A missing doc reads as as_of null and
 counts {} (the page shows "no pass recorded", never zeros it did not measure).
 
 GET /alerts/status (supply_demand/api.py) -> ``status_payload``:
-  {in_session, now_et, gate: {min_room_pct, max_above_demand_pct},
-   passes: {zone_edge, zone_bounce_alert, demand_alert}, disclaimer}
+  {in_session, now_et, gate: {min_room_pct, max_above_demand_pct, min_cap_usd,
+   min_cap_txt}, passes: {zone_edge, zone_bounce_alert, demand_alert}, disclaimer}
   each pass: {as_of, date, counts, cadence_sec[, reason]}
 Times are ET ISO strings; ``in_session`` is zone_edge's clock (04:00-20:00 ET pass window since 2026-09-08, pushes RTH 9:31-16:00
 on NYSE trading days), evaluated at request time. ``in_session`` is the CLOCK,
@@ -170,6 +170,20 @@ def disclaimer() -> str:
     return DISCLAIMER_TEMPLATE.format(cap=cap_floor_txt(DA.MIN_CAP_USD))
 
 
+def gate_payload() -> dict:
+    """The phone gate's numbers for the page, every one read from its
+    constant: the room / proximity floors (alert_gates) and the cap floor
+    (demand_alerts.MIN_CAP_USD) both as a number and as the words
+    `cap_floor_txt` makes of it (finding F5, 2026-09-14: Alerts.tsx had the
+    OLD floor typed next to the corrected disclaimer — the page renders
+    `min_cap_txt` now and types no figure; one formatter, here)."""
+    from . import demand_alerts as DA        # lazy: demand_alerts imports alert_status
+    return {"min_room_pct": float(AG.ALERT_MIN_ROOM_PCT),
+            "max_above_demand_pct": float(AG.ALERT_MAX_ABOVE_DEMAND_PCT),
+            "min_cap_usd": float(DA.MIN_CAP_USD),
+            "min_cap_txt": cap_floor_txt(DA.MIN_CAP_USD)}
+
+
 def _empty_pass() -> dict:
     return {"as_of": None, "date": None, "counts": {}}
 
@@ -243,8 +257,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     return {
         "in_session": live,
         "now_et": et.isoformat(),
-        "gate": {"min_room_pct": float(AG.ALERT_MIN_ROOM_PCT),
-                 "max_above_demand_pct": float(AG.ALERT_MAX_ABOVE_DEMAND_PCT)},
+        "gate": gate_payload(),
         "passes": {
             ZONE_EDGE_KIND:      _with_cadence(ZONE_EDGE_KIND, read_zone_edge(latest_coll)),
             "zone_bounce_alert": _with_cadence("zone_bounce_alert", read_pass("zone_bounce_alert", pass_coll)),
@@ -255,5 +268,5 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
 
 
 __all__ = ["PASS_COLL", "PASS_KINDS", "CADENCE_SEC", "record_pass", "record_result", "counts_from_result",
-           "read_pass", "read_zone_edge",
+           "read_pass", "read_zone_edge", "gate_payload",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

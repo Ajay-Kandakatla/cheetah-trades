@@ -998,8 +998,12 @@ def test_pass_never_goes_to_mongo_per_symbol_one_bulk_read_each(monkeypatch):
     assert sent[0]["body"].endswith("· Name 39"), "pushes carry the bulk-read name"
     assert sent[3]["kind"] == "supply_break_alert" and sent[3]["body"].endswith("+31 more"), \
         "37 digest items: 6 spelled out, the rest counted"
+    # break side: one $in read. Demand side: one $in read BEFORE the claims and
+    # ONE more after them (demand_alerts.settle_claims, F4b 2026-09-14 — the
+    # same-minute overlap race) — bulk reads both, never one per name.
+    assert colls["coll_break"].calls["find_one"] == 0 and colls["coll_break"].calls["find"] == 1
+    assert colls["coll_demand"].calls["find_one"] == 0 and colls["coll_demand"].calls["find"] == 2
     for c in ("coll_break", "coll_demand"):
-        assert colls[c].calls["find_one"] == 0 and colls[c].calls["find"] == 1, c
         assert colls[c].calls["update_one"] == 40, "digest names recorded too"
     assert colls["latest_coll"].calls["find_one"] == 1 and colls["latest_coll"].calls["replace_one"] == 2
     assert colls["track_coll"].calls == {"create_index": 1, "insert_many": 1, "delete_many": 1}
@@ -1011,8 +1015,9 @@ def test_pass_never_goes_to_mongo_per_symbol_one_bulk_read_each(monkeypatch):
              for s, v in snap.items()}
     out2, _ = _run(store, snap2, caps, colls=colls, names=None, now=later)
     assert out2["pushed"] == 0 and len(sent) == 8
-    for c in ("coll_break", "coll_demand"):
-        assert colls[c].calls["find_one"] == 0 and colls[c].calls["find"] == 2, c
+    # nothing claimed on the second minute → no post-claim re-read on the demand side
+    assert colls["coll_break"].calls["find_one"] == 0 and colls["coll_break"].calls["find"] == 2
+    assert colls["coll_demand"].calls["find_one"] == 0 and colls["coll_demand"].calls["find"] == 3
     assert colls["track_coll"].calls["create_index"] == 2, "idempotent, once per pass"
     assert fake_names.calls == 2
 

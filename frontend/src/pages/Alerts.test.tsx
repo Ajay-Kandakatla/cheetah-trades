@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, passHealth, staleAfterSec } from './Alerts';
+import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, staleAfterSec } from './Alerts';
 import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 import { startOfEtDay } from '../lib/alertKinds';
 
@@ -36,7 +36,8 @@ const ROWS = [
  * purpose (an older API) — the fallback must fill it. */
 const STATUS_LIVE = {
   in_session: true, now_et: '2026-09-05T11:00:00-04:00',
-  gate: { min_room_pct: 5.0, max_above_demand_pct: 1.0 },
+  /* the cap floor is SERVED (backend gate_payload: min_cap_usd + the words) */
+  gate: { min_room_pct: 5.0, max_above_demand_pct: 1.0, min_cap_usd: 700_000_000, min_cap_txt: '$700M' },
   passes: {
     zone_edge: { as_of: '2026-09-05T10:59:07-04:00', date: '2026-09-05', cadence_sec: 60,
       counts: { candidates: 812, priced: 800, stale_print: 4, breaking: 3, near_demand: 5, skipped_room: 14, skipped_cap: 2, unknown_cap: 1, pushed: 2 } },
@@ -378,6 +379,23 @@ describe('Alerts page — the status strip', () => {
     // All three fresh → the header may say so.
     expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all three passes reported within cadence.');
     expect(screen.getByText(/Gate: room ≥ 5% to the first band overhead · print ≤ 1% above the demand band/)).toBeInTheDocument();
+    // The cap floor comes from the payload (review 2026-09-14 F5): "$700M+", never a figure typed in the page.
+    expect(screen.getByText(/the phone gets \$700M\+ names that pass, once per band per day/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\$1B/);
+  });
+
+  it('F5: the cap floor follows the payload — a changed floor changes the words, an older API types no figure', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, gate: { ...STATUS_LIVE.gate, min_cap_usd: 1.5e9, min_cap_txt: '$1.5B' } });
+    draw();
+    expect(await screen.findByText(/the phone gets \$1\.5B\+ names that pass/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\$700M/);
+  });
+
+  it('F5 NEGATIVE: with no min_cap_txt served (older API) the page says "cap-floored" and never invents a figure', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, gate: { min_room_pct: 5.0, max_above_demand_pct: 1.0 } });
+    draw();
+    expect(await screen.findByText(/the phone gets cap-floored names that pass/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\$\d+(\.\d+)?[MB]\+/);
   });
 
   it('a pass with as_of null says "no pass yet today" and the header stops short of "within cadence"', async () => {
@@ -445,6 +463,21 @@ describe('Alerts page — the status strip', () => {
     expect(await screen.findAllByTestId('alert-row')).toHaveLength(3);
     // The gate numbers still print from the fallback constants.
     expect(screen.getByText(/Gate: room ≥ 5%/)).toBeInTheDocument();
+    // NEGATIVE (F5): the fallback carries NO cap figure — nothing typed in the FE can go stale.
+    expect(screen.getByText(/the phone gets cap-floored names that pass/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\$1B|\$700M/);
+  });
+});
+
+describe('capFloorPhrase (F5 — the served words, never a typed figure)', () => {
+  it('is the served text plus "+", else "cap-floored"', () => {
+    expect(capFloorPhrase({ min_cap_txt: '$700M' })).toBe('$700M+');
+    expect(capFloorPhrase({ min_cap_txt: ' $1.5B ' })).toBe('$1.5B+');
+    expect(capFloorPhrase({ min_cap_txt: '' })).toBe('cap-floored');
+    expect(capFloorPhrase({ min_cap_txt: null })).toBe('cap-floored');
+    expect(capFloorPhrase({ min_room_pct: 5, max_above_demand_pct: 1 })).toBe('cap-floored');
+    expect(capFloorPhrase(null)).toBe('cap-floored');
+    expect(capFloorPhrase(undefined)).toBe('cap-floored');
   });
 });
 

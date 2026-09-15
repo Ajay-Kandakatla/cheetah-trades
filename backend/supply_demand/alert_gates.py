@@ -745,11 +745,17 @@ def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS,
     df = daily_frame(symbol, frame)
     if df is None or len(df) < window + 2:
         return None
-    df = with_session_bar(df, day_low, last, day)
+    # The CLOSED window first, then the session bar (finding F3, 2026-09-14).
+    # Slicing AFTER the append made the window 14 closed bars + today, so a
+    # floor swept exactly `window` closed bars back fell out of it and read
+    # `intact` (gate True) where it read `swept` before — a loosening on the
+    # append path (before the ~10:00 ET hourly cache patch). Now: append path
+    # -> window + 1 rows, merge path -> window rows — today is IN ADDITION to
+    # the closed window the pre-2026-09-14 read used, never in place of a bar.
     try:
         from . import sd_liquidity as liq
         lo, hi = float(band["lo"]), float(band["hi"])
-        w = df.iloc[-window:]
+        w = with_session_bar(df.iloc[-window:], day_low, last, day)
         sw = liq.find_sweep(w, lo, hi)
         state = sw.get("state") or "intact"
         if not sw.get("found") and float(w["low"].min()) < lo:
