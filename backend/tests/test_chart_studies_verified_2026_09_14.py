@@ -556,3 +556,91 @@ def test_the_support_endpoint_passes_the_bars_it_actually_used():
     src = inspect.getsource(A.chart_maps_support)
     assert "bars_used" in src
     assert 'res.get("timeframe") not in (None, "daily")' in src
+
+
+# ------------------------------------------------ AMD failed: the age-out
+# 2026-09-14, second pass. Adding the failed phase with no bar limit made a
+# base that died months ago keep winning over a fresher base that had not
+# raided yet: 699 of 2,673 names read "base failed · Nd ago" over a live
+# base (330 of them 31-90 sessions old). A base that forms ENTIRELY after
+# the failure bar is the live read; the dead one is history.
+
+def _tight(level: float, n: int):
+    return [level + (i % 3) * 0.2 for i in range(n)]
+
+
+def test_a_base_that_forms_AFTER_the_failure_is_the_live_read():
+    """Raid, failure, then a gap down and ten tight bars well below the dead
+    base. The verdict must read the NEW base as basing, not the old one as
+    failed."""
+    df = base_and_raid([100.2, 98.0] + _tight(93.0, 10))
+    cyc = A.find_cycle(df)
+    assert cyc["phase"] == "accumulation"
+    assert cyc["manipulation"] is None and cyc["failure"] is None
+    assert cyc["accumulation"]["start"] > 22        # 22 = the failure bar
+    assert cyc["accumulation"]["lo"] < 95            # the new base, not 99.5
+    v = TB.amd_verdict(df)
+    assert v["grade"] == "basing" and v["turning"] is False
+
+
+def test_NEGATIVE_a_base_that_SPANS_the_breakdown_does_not_bury_the_failure():
+    """The tight bars sit right under the failure close, so the widest tight
+    window ending today starts ON the failure bar. That is not a base that
+    formed after the failure — the failure stays the read."""
+    df = base_and_raid([100.2, 98.0] + _tight(97.4, 9))
+    cyc = A.find_cycle(df)
+    assert cyc["phase"] == "failed"
+    assert cyc["failure"]["close"] == 98.0
+
+
+def test_NEGATIVE_a_COMPLETED_cycle_still_wins_over_a_bare_base():
+    """Unchanged from 2026-09-13: a markup followed by a fresh base on top is
+    still the completed cycle. Only a FAILED cycle yields."""
+    df = base_and_raid([101.8, 103.0, 106.0, 109.0] + _tight(112.0, 10))
+    cyc = A.find_cycle(df)
+    assert cyc["phase"] == "distribution"
+
+
+def test_NEGATIVE_a_fresh_failure_with_no_base_after_it_is_still_failed():
+    df = base_and_raid([100.2, 98.0, 97.0, 96.5])
+    assert A.find_cycle(df)["phase"] == "failed"
+
+
+# ------------------------------------------------ the studies' contracts
+# Parsed as TEXT, never imported: the Keltner script runs its whole study at
+# import (it is written to be piped into `python -`), and the AMD one puts
+# /app on sys.path. A test that imports either walks 3,700 names.
+def _study_src(name: str) -> str:
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return open(os.path.join(here, "scripts", name)).read()
+
+
+def _top_level_literal(src: str, name: str):
+    import ast
+    for node in ast.parse(src).body:
+        if isinstance(node, ast.Assign) and any(
+                getattr(t, "id", None) == name for t in node.targets):
+            return ast.literal_eval(node.value)
+    raise AssertionError("no top-level %s" % name)
+
+
+def test_the_AMD_study_codes_EVERY_phase_the_detector_can_return():
+    """A phase the walk's table does not know would fold into 'no cycle' and
+    put its bars into every placebo — which is exactly how the 2026-09-13
+    numbers would have gone stale silently once `failed` existed."""
+    codes = _top_level_literal(_study_src("turning_bullish_amd_study.py"), "PHASE_CODE")
+    assert set(codes) == set(A.PHASES)
+    assert len(set(codes.values())) == len(A.PHASES)
+    assert -1 not in codes.values()                   # -1 is 'no cycle'
+
+
+def test_BOTH_studies_walk_the_SAME_universe_and_it_is_the_wide_one():
+    """Ajay 2026-09-14: 'there should be more names, about 4k is what we
+    discussed' — the scan's `full` alias unioned with the cron's `broad`."""
+    for name in ("turning_bullish_amd_study.py", "turning_bullish_keltner_study.py"):
+        src = _study_src(name)
+        assert _top_level_literal(src, "UNIVERSE_MODES") == ("full", "broad"), name
+        assert "def study_universe" in src, name
+        assert "syms = study_universe()" in src, name
+        assert 'load_universe("full")' not in src and "load_universe()" not in src, name

@@ -44,6 +44,13 @@ raid was a close ABOVE the top. GLW and ALAB read the same way. Worse, a base
 that fails the day after its raid stayed "raided · 1d ago" on the Raided board.
 A close below the edge now ends the cycle in `phase == "failed"`, with no bar
 limit — a dead base must never be drawn as a live one.
+
+And a dead base must not bury a live one either (2026-09-14, second pass): a
+base that forms ENTIRELY after the failure bar is the read, and the failed
+cycle is history. Before that clause 699 of 2,673 names read "base failed ·
+Nd ago" over a fresh base; after it 686 read "basing" and 885 stay failed, all
+but a dozen with no fresher base to show. A completed cycle (markup) still
+wins over a bare base, as on 2026-09-13.
 """
 from __future__ import annotations
 
@@ -221,7 +228,8 @@ def find_cycle(df, *, direction: str = "bullish", **kw) -> Optional[dict]:
 
     # Search ends walking back, so a completed cycle earlier in the window is
     # still found after a fresher base formed on top of it. A completed cycle
-    # always wins over a bare base, whatever their ages.
+    # always wins over a bare base, whatever their ages. A FAILED cycle does
+    # not: a base that formed after the failure bar is the live read.
     acc_only = None
     for end_at in range(n - 1, MIN_BASE_BARS, -1):
         base = find_base(df, end=end_at, **kw)
@@ -289,6 +297,16 @@ def find_cycle(df, *, direction: str = "bullish", **kw) -> Optional[dict]:
         base["date"] = _date_at(df, base["start"])
         base["end_date"] = _date_at(df, base["end"])
         phase = ("distribution" if dist else "failed" if fail else "manipulation")
+        if (phase == "failed" and acc_only is not None
+                and acc_only["accumulation"]["start"] > fail["idx"]):
+            # The base died and a NEW base has formed entirely after the
+            # failure bar: that base is the live read and the dead one is
+            # history. Measured 2026-09-14 before this clause: 699 of 2,673
+            # names read "base failed · Nd ago" over a fresh base (330 of
+            # them 31-90 sessions old). A base that SPANS the breakdown is
+            # not a base and does not count; a COMPLETED cycle (markup) still
+            # wins over a bare base, exactly as on 2026-09-13.
+            return acc_only
         return {"direction": "bullish" if bull else "bearish",
                 "phase": phase,
                 "accumulation": base, "manipulation": raid,

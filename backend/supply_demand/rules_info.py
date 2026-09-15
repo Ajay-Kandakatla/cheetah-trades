@@ -505,9 +505,11 @@ def sections() -> dict:
             "Both boards print their own FIRE RATE — what share of the scanned "
             "universe the state describes — under the tab. A state that fires "
             "on half the market is a description of the market, and the number "
-            "is there so you can see that for yourself. Keltner fires on 5.4%% "
-            "of names; AMD on 22.7%% at the %d-session bound and 45.8%% at ten "
-            "sessions." % TB.MAX_RAID_BARS_AGO,
+            "is there so you can see that for yourself. Re-measured 2026-09-14 "
+            "on the wide list: Keltner fires on 5.5%% of bars (240 of 3,704 "
+            "names on the last close); AMD fires on 15.1%% of bars — 589 of "
+            "3,634 names (16.2%%) at the %d-session bound and 759 (20.9%%) at "
+            "ten sessions." % TB.MAX_RAID_BARS_AGO,
         ],
         "stops": [
             "No stop, no target and no size: neither board proposes a trade. "
@@ -515,21 +517,27 @@ def sections() -> dict:
             "are where the chart's own structure is, not an entry plan.",
         ],
         "alerts": [
-            "MEASURED 2026-09-13 AND BOTH CLAIMS CAME BACK INVERTED — not "
-            "null, inverted. Keltner, 2,660 names / 1,200,755 closed daily "
-            "bars: coiled bars returned LESS than every other bar of the same "
-            "names (21d median lift −0.33pp, 95% CI −0.57 to −0.12), and a "
-            "coiled name closes above its upper band within 21 sessions 40.0% "
-            "of the time against 55.0% for a name in the same upper half with "
-            "the same rising EMA and no squeeze — the squeeze makes that "
-            "break 14.8pp LESS likely. AMD, 2,666 names / 1,150,446 bars: "
-            "forward returns span zero leaning negative (21d lift −0.25%, CI "
-            "−1.30 to +0.72), and against a like-for-like bar inside its own "
-            "base at the same distance below the top a fresh raid makes the "
-            "close above that top LESS likely — 42.7% vs 51.6%, −8.9pp (CI "
-            "−11.4 to −5.9), negative in all seven distance buckets. Scripts: "
-            "backend/scripts/turning_bullish_keltner_study.py and "
-            "..._amd_study.py.",
+            "MEASURED 2026-09-13 AND BOTH CLAIMS CAME BACK INVERTED; "
+            "RE-MEASURED 2026-09-14 on the wide list (~3,700 names). Keltner "
+            "HARDENED: 3,704 names / 1,662,135 closed daily bars, coiled bars "
+            "returned LESS than every other bar of the same names (21d median "
+            "lift −0.55pp, 95% CI −0.72 to −0.37), a coiled name closes above "
+            "its upper band within 21 sessions 38.6% of the time against "
+            "55.4% for a name in the same upper half with the same rising EMA "
+            "and no squeeze — the squeeze makes that break 16.2pp LESS likely "
+            "and by itself subtracts (21d −0.25pp, CI −0.47 to −0.06); the "
+            "21+-bar coil cell is a null (+0.23pp, CI −0.44 to +0.88). AMD, "
+            "3,712 names / 1,592,057 bars, once the detector could FAIL a "
+            "cycle (the 2026-09-13 −8.9pp was mostly broken bases still "
+            "counted as raids, 237,802 bars of them): STILL INVERTED, smaller "
+            "— forward returns −0.36% at 5d and −0.48% at 10d against every "
+            "other bar (CIs clear of zero), and against a like-for-like bar "
+            "inside its own live base at the same distance below the top a "
+            "fresh raid reaches a close above that top 51.9% vs 56.1% — "
+            "−4.2pp (CI −6.9 to −1.9), negative in all seven distance "
+            "buckets; the board's own 0–3 session cut is −5.6pp (CI −9.0 to "
+            "−2.7). Scripts: backend/scripts/turning_bullish_keltner_study.py "
+            "and ..._amd_study.py.",
             "NOTHING HERE PUSHES, GATES OR BUYS, and after that measurement "
             "nothing should without a new study saying otherwise. "
             "`keltner.CITED` and `amd.CITED` are both False. The app measured "

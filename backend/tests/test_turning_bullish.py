@@ -138,12 +138,14 @@ def test_NEGATIVE_a_CLOSE_beyond_the_base_low_is_a_breakdown_not_a_raid():
 
 
 def test_the_recency_bound_is_3_and_the_reason_is_in_the_source():
-    """SOURCE GUARD. 3 is not a taste call: at 10 the state fired on 1,212 of
-    2,669 live names (45%). Anyone widening it re-creates a board that
-    describes the market instead of selecting from it."""
+    """SOURCE GUARD. 3 is not a taste call: at 10 the state fired on 759 of
+    3,634 live names (21%; 45% on 2026-09-13 before the detector could FAIL a
+    cycle). Anyone widening it re-creates a board that describes the market
+    instead of selecting from it."""
     assert TB.MAX_RAID_BARS_AGO == 3
     src = open(TB.__file__).read()
-    assert "1,212" in src and "45%" in src
+    assert "759 of 3,634" in src and "21%" in src
+    assert "758 of 3,633" not in src            # the superseded first re-run
     assert TB.WINDOW_SESSIONS == 126
 
 
@@ -266,15 +268,19 @@ def test_the_INVERTED_measurement_is_carried_in_the_source_not_just_the_page():
     """SOURCE GUARD, and the most important one in this file.
 
     Both reads were measured against a placebo on 2026-09-13 and BOTH CAME
-    BACK INVERTED ON THEIR OWN CLAIM. A future edit that softens these modules
-    into something that reads like a signal has to delete these numbers first,
-    and this test makes that a deliberate act rather than a drift.
+    BACK INVERTED ON THEIR OWN CLAIM. AMD was re-measured on 2026-09-14 once
+    the detector could FAIL a cycle: still inverted, smaller (51.9% vs 56.1%,
+    −4.2pp), with the board's own 0-3 cut worse at −5.6pp.
+    A future edit that softens these modules into something that reads like a
+    signal has to delete these numbers first, and this test makes that a
+    deliberate act rather than a drift.
     """
     src = open(TB.__file__).read()
     assert "INVERTED" in src
-    assert "-0.33pp" in src or "\u22120.33pp" in src or "−0.33pp" in src
-    assert "42.7% vs 51.6%" in src
-    assert "14.8pp" in src
+    assert "-0.55pp" in src or "\u22120.55pp" in src or "−0.55pp" in src
+    assert "51.9% vs 56.1%" in src and "RE-MEASURED 2026-09-14" in src
+    assert "42.7% vs 51.6%" not in src          # the old-detector number is gone
+    assert "16.2pp" in src
 
 
 def test_both_measurement_scripts_are_IN_THE_REPO_and_runnable():
@@ -295,9 +301,10 @@ def test_the_board_note_LEADS_with_the_measurement():
     """A note that explained the setup first and mentioned the study last
     would bury the only thing on the page that changes what he does."""
     from chart_maps import board as B
-    for kind in ("keltner", "amd"):
+    for kind, verdict in (("keltner", "STILL INVERTED"), ("amd", "STILL INVERTED")):
         note = B._turning_note(kind, 100, 2000, 5.0)
-        assert note.startswith("MEASURED 2026-09-13 AND THE CLAIM IS INVERTED")
+        assert note.startswith("RE-MEASURED 2026-09-14")
+        assert verdict in note[:120]                   # the verdict is in the first breath
         assert "95% CI" in note
         assert "backend/scripts/turning_bullish_" in note
         # the fire rate, always, next to any rate — his standing rule
