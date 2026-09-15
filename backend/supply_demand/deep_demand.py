@@ -112,10 +112,18 @@ def read(rec: dict) -> Optional[dict]:
     return {
         "state": state,                          # "in" | "near"
         "dist_pct": round(dist_pct, 2),
-        "top_band": {"lo": top.get("lo"), "hi": top.get("hi")},
+        # Both bands carry their touch count and their AGE fields (2026-09-14):
+        # the tile sizes its window to `oldest_touch_bars`, and without it every
+        # deep tile was 130 bars with the band's swings off-screen (56/100).
+        "top_band": {"lo": top.get("lo"), "hi": top.get("hi"),
+                     "touches": top.get("touches"),
+                     "bars_since_test": top.get("bars_since_test"),
+                     "oldest_touch_bars": top.get("oldest_touch_bars")},
         "second_band": {"lo": s_lo, "hi": s_hi,
                         "touches": second.get("touches"),
-                        "strength": second.get("strength")},
+                        "strength": second.get("strength"),
+                        "bars_since_test": second.get("bars_since_test"),
+                        "oldest_touch_bars": second.get("oldest_touch_bars")},
         # How far below the broken first level price sits.
         "below_top_pct": round((t_lo - last) / t_lo * 100.0, 2),
         # Break evidence for the FIRST band — demand_reentry.band_break_read,

@@ -1291,6 +1291,7 @@ const CONTRACTS = [
         support: 'src/components/SupportLevels.tsx',
         gnt: 'src/components/GntBoard.tsx',
         bonde: 'src/components/BondeBoard.tsx',
+        holdings: 'src/components/HoldingsBoard.tsx',
       };
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd)$/.test(t));
       for (const t of nonBoard) {

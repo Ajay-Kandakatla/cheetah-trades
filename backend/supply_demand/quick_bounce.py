@@ -588,6 +588,22 @@ def nearest_demand(px: float, bands: list) -> Optional[dict]:
     return best
 
 
+def closed_under(doc: dict, band: dict) -> int:
+    """Count of `doc["recent"]` sessions (the store's last five CLOSED bars)
+    whose close sits under the band's floor. 0 when the doc carries no recent
+    rows — absence is "unknown", never "clean"."""
+    try:
+        lo = float(band["lo"])
+    except (KeyError, TypeError, ValueError):
+        return 0
+    n = 0
+    for s in (doc or {}).get("recent") or []:
+        c = _f((s or {}).get("close"))
+        if c is not None and c < lo:
+            n += 1
+    return n
+
+
 def live_row(symbol: str, stats: dict, doc: dict, px: Optional[float],
              min_room: Optional[float] = ROOM_MIN_PCT) -> Optional[dict]:
     """One board row or None (no print / no band nearby / not enough room)."""
@@ -607,6 +623,12 @@ def live_row(symbol: str, stats: dict, doc: dict, px: Optional[float],
     stop = round(float(band["lo"]) * (1.0 - STOP_BUFFER_PCT / 100.0), 2)
     return {"symbol": symbol, "print": px, "band": band, "dist_pct": near["dist_pct"],
             "state": near["state"], "room": room, "room_ok": ok,
+            # How many of the last closed sessions CLOSED under this floor
+            # (2026-09-14). A reclaim from below is the band the zones board
+            # refuses as broken and the 2026-09-08 autopsy measured at 66%
+            # stop-hit; 9 of 43 live rows carried one. Reported, not gated —
+            # the list is his, the warning is the app's.
+            "closed_under_recent": closed_under(doc, band),
             "stop": stop, "risk_pct": round((px - stop) / px * 100.0, 2),
             "target": (room or {}).get("target"),
             "rr": (round((room["target"] - px) / (px - stop), 1)

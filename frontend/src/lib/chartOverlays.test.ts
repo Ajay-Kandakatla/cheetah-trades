@@ -1,6 +1,6 @@
 import { toneColor } from './chartMaps';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { OVERLAY_GROUPS, filterTile, loadHidden, presentGroups, saveHidden, STUDY_KEYS, defaultHidden, studiesWanted, filterForGrid } from './chartOverlays';
+import { OVERLAY_GROUPS, DEFAULT_ON, filterTile, loadHidden, presentGroups, saveHidden, STUDY_KEYS, defaultHidden, studiesWanted, filterForGrid } from './chartOverlays';
 
 const tile = (): any => ({
   symbol: 'X', href: '/x', bars: [], markers: [], stats: [], why: '',
@@ -139,9 +139,11 @@ describe('presentGroups', () => {
 describe('the 2026-09-12 default (supply/demand + order blocks only)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('defaultHidden hides everything except the three he named', () => {
+  it('defaultHidden hides everything except the three he named — plus his own position (2026-09-14)', () => {
+    // `position` is his cost and his typed stop, not a read; it is not one of
+    // the uncited overlays the 2026-09-12 default exists to keep off.
     const shown = OVERLAY_GROUPS.map((g) => g.key).filter((k) => !defaultHidden().has(k));
-    expect(shown).toEqual(['demand', 'supply', 'order_block']);
+    expect(shown).toEqual(['demand', 'supply', 'position', 'order_block']);
   });
 
   it('a browser that has never saved anything gets that default', () => {
@@ -244,5 +246,74 @@ describe('persistence', () => {
   it('NEGATIVE: a stored NON-array is the default, not a crash', () => {
     vi.stubGlobal('localStorage', { getItem: () => '{"a":1}', setItem: () => {} });
     expect([...loadHidden()].sort()).toEqual([...defaultHidden()].sort());
+  });
+});
+
+/* 2026-09-14 — dated markers belong to families, his position is its own
+ * family, and a stale flat Keltner line yields to the curve. */
+import { markerGroup } from './chartOverlays';
+
+describe('marker families (2026-09-14)', () => {
+  const tile: any = {
+    bands: [], lines: [], curves: [],
+    markers: [
+      { date: '2026-09-01', kind: 'touch_d' }, { date: '2026-09-02', kind: 'touch_s' },
+      { date: '2026-09-03', kind: 'amd_m', label: 'M' }, { date: '2026-09-04', kind: 'kc_sq' },
+      { date: '2026-09-05', kind: 'buy', label: 'BUY' }, { date: '2026-09-06', kind: 'mystery' },
+    ],
+  };
+  it('routes each study glyph to its checkbox', () => {
+    expect(markerGroup({ kind: 'touch_d' })).toBe('demand');
+    expect(markerGroup({ kind: 'touch_s' })).toBe('supply');
+    expect(markerGroup({ kind: 'amd_x' })).toBe('amd');
+    expect(markerGroup({ kind: 'kc_sq' })).toBe('keltner');
+    expect(markerGroup({ kind: 'buy' })).toBeUndefined();
+  });
+  it('unticking a family drops ITS markers and nothing else', () => {
+    const out = filterTile(tile, new Set(['amd', 'supply']));
+    expect(out.markers.map((m: any) => m.kind)).toEqual(['touch_d', 'kc_sq', 'buy', 'mystery']);
+  });
+  it('NEGATIVE — an unknown marker kind is always kept', () => {
+    const out = filterTile(tile, new Set(['demand', 'supply', 'amd', 'keltner']));
+    expect(out.markers.map((m: any) => m.kind)).toEqual(['buy', 'mystery']);
+  });
+  it('a family whose only content is markers still gets its checkbox', () => {
+    const groups = presentGroups([{ bands: [], lines: [], markers: [{ date: 'x', kind: 'touch_d' }] } as any]);
+    expect(groups.map((g) => g.key)).toContain('demand');
+  });
+});
+
+describe('your position (2026-09-14)', () => {
+  it('is ON by default and owns the cost / ownstop tones by prefix', () => {
+    expect(DEFAULT_ON).toContain('position');
+    expect(defaultHidden().has('position')).toBe(false);
+    const tile: any = { bands: [], markers: [], lines: [
+      { price: 1, label: 'your cost 167.65', tone: 'cost' },
+      { price: 2, label: 'your stop 140.00', tone: 'ownstop' },
+      { price: 3, label: 'STOP', tone: 'stop' },
+    ] };
+    expect(filterTile(tile, new Set(['position'])).lines.map((l: any) => l.label)).toEqual(['STOP']);
+    // the engine's trade lines can go while his numbers stay
+    expect(filterTile(tile, new Set(['trade'])).lines.map((l: any) => l.label))
+      .toEqual(['your cost 167.65', 'your stop 140.00']);
+  });
+});
+
+describe('stale flat Keltner lines (2026-09-14)', () => {
+  it('drops the three flat KC lines when the tile carries the KC curve, even with nothing hidden', () => {
+    const tile: any = {
+      bands: [], markers: [],
+      lines: [{ price: 223.51, label: 'KC upper 223.51', tone: 'keltner' },
+              { price: 151.3, label: 'now', tone: 'now' }],
+      curves: [{ tone: 'keltner', label: 'KC upper', values: [1, 2, 3] }],
+    };
+    const out = filterTile(tile, new Set());
+    expect(out.lines.map((l: any) => l.label)).toEqual(['now']);
+    expect(out.curves.length).toBe(1);
+  });
+  it('NEGATIVE — keeps the flat lines when there is no curve to replace them', () => {
+    const tile: any = { bands: [], markers: [], curves: [],
+      lines: [{ price: 223.51, label: 'KC upper 223.51', tone: 'keltner' }] };
+    expect(filterTile(tile, new Set()).lines.length).toBe(1);
   });
 });

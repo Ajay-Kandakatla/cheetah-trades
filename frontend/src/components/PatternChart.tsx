@@ -247,6 +247,52 @@ export const PatternChart = memo(function PatternChart(
                 </text>
               );
             }
+            {/* 2026-09-14 — the studies mark WHERE they happened. */}
+            if (m.kind === 'kc_sq') {
+              // TTM squeeze dot row: one dot under each bar the Bollinger band
+              // sits inside the Keltner channel. Bottom of the plot, never on
+              // the candles.
+              return (
+                <circle key={`mk-${m.date}-${mi}`} className="pc-kc-sq"
+                        cx={x} cy={H - PAD_Y - 2} r={1.6}
+                        fill="var(--cm-amberlt, #f59e0b)" opacity={0.9} />
+              );
+            }
+            if (m.kind === 'touch_d' || m.kind === 'touch_s') {
+              // The swing that made a band: ▲ under a swing low, ▼ over a
+              // swing high, in the band's own colour.
+              const low = m.kind === 'touch_d';
+              const y = low ? yFor(bar.l, domain, H, PAD_Y) + 3
+                            : yFor(bar.h, domain, H, PAD_Y) - 3;
+              const pts = low
+                ? `${x - 2.6},${y + 4.5} ${x + 2.6},${y + 4.5} ${x},${y}`
+                : `${x - 2.6},${y - 4.5} ${x + 2.6},${y - 4.5} ${x},${y}`;
+              return (
+                <polygon key={`mk-${m.date}-${mi}`}
+                         className={low ? 'pc-touch-d' : 'pc-touch-s'}
+                         points={pts}
+                         fill={low ? 'var(--positive, #22c55e)' : 'var(--negative, #ef4444)'}
+                         opacity={0.85} />
+              );
+            }
+            if (m.kind === 'amd_a' || m.kind === 'amd_m' || m.kind === 'amd_d'
+                || m.kind === 'amd_x') {
+              // A on the base's first bar, M on the raid bar, ✗ on the bar
+              // that closed through the raided edge — all under the low; D on
+              // the markup bar, over the high. Violet, like the family.
+              const above = m.kind === 'amd_d';
+              const y = above ? yFor(bar.h, domain, H, PAD_Y) - 8
+                              : yFor(bar.l, domain, H, PAD_Y) + 8;
+              const fill = m.kind === 'amd_x' ? 'var(--negative, #ef4444)'
+                                              : 'var(--cm-violet, #8b5cf6)';
+              return (
+                <g key={`mk-${m.date}-${mi}`} className={`pc-amd pc-${m.kind}`}>
+                  <circle cx={x} cy={y} r={4.6} fill={fill} opacity={0.92} />
+                  <text x={x} y={y + 2.4} fontSize="6.5" fontWeight="700"
+                        textAnchor="middle" fill="#0b0e14">{m.label || ''}</text>
+                </g>
+              );
+            }
             return (
               <g key={`mk-${m.date}-${mi}`}>
                 <line x1={x} y1={PAD_Y} x2={x} y2={H - PAD_Y}
@@ -262,13 +308,17 @@ export const PatternChart = memo(function PatternChart(
           {/* plan levels */}
           {(tile.lines || [])
             .filter((l) => l.price >= domain.lo && l.price <= domain.hi)
-            .map((l) => {
+            .map((l, li) => {
               const y = yFor(l.price, domain, H, PAD_Y);
               return (
-                <line key={`ln-${l.label}-${l.price}`}
+                // Keyed by index too: two lines can legitimately share a
+                // label and a price (2026-09-14), and duplicate React keys in
+                // a subtree that re-renders on every mousemove drop children.
+                <line key={`ln-${li}-${l.label}-${l.price}`}
                       x1={0} y1={y} x2={plotW} y2={y}
-                      stroke={toneColor(l.tone)} strokeWidth={1.1}
-                      strokeDasharray={l.tone === 'buy' ? undefined : '5,4'}
+                      stroke={toneColor(l.tone)} strokeWidth={l.tone === 'cost' ? 1.4 : 1.1}
+                      strokeDasharray={l.tone === 'buy' ? undefined
+                                       : l.tone === 'ownstop' ? '2,3' : '5,4'}
                       opacity={0.9} />
               );
             })}
@@ -278,7 +328,7 @@ export const PatternChart = memo(function PatternChart(
             * split on nulls: the EMA/ATR warm-up leaves the left edge empty
             * on a long frame, and joining across that gap would draw a
             * straight segment through a channel that did not exist yet. */}
-          {(tile.curves || []).map((c) => {
+          {(tile.curves || []).map((c, ci) => {
             const segs: string[] = [];
             let cur: string[] = [];
             (c.values || []).forEach((v, i) => {
@@ -291,9 +341,9 @@ export const PatternChart = memo(function PatternChart(
             });
             if (cur.length > 1) segs.push(cur.join(' '));
             return segs.map((pts, si) => (
-              <polyline key={`cv-${c.label}-${si}`} points={pts} fill="none"
+              <polyline key={`cv-${ci}-${c.label}-${si}`} points={pts} fill="none"
                         stroke={toneColor(c.tone)} strokeWidth={1.1}
-                        strokeDasharray={c.label.includes('mid') ? '5,4' : undefined}
+                        strokeDasharray={(c.label || '').includes('mid') ? '5,4' : undefined}
                         opacity={0.85} />
             ));
           })}
@@ -332,15 +382,15 @@ export const PatternChart = memo(function PatternChart(
             * (Ajay 2026-09-08: "These overlap, can you use some pointers") */}
           {labels
             .filter((l) => l.y0 != null && Math.abs(l.y - l.y0) >= 2)
-            .map((l) => (
-              <path key={`ld-${l.text}`} className="pc-leader"
+            .map((l, li) => (
+              <path key={`ld-${li}-${l.text}`} className="pc-leader"
                     d={`M${plotW},${l.y0} L${plotW + 3},${l.y}`}
                     stroke={l.color} strokeWidth={0.8} opacity={0.6} fill="none" />
             ))}
 
           {/* right-edge price labels, de-collided */}
-          {labels.map((l) => (
-            <text key={`lb-${l.text}`} x={plotW + 4} y={l.y + 3}
+          {labels.map((l, li) => (
+            <text key={`lb-${li}-${l.text}`} x={plotW + 4} y={l.y + 3}
                   fontSize={LABEL_FS} fill={l.color}
                   fontWeight={l.bold ? 700 : 400}>{l.text}</text>
           ))}

@@ -554,7 +554,19 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     change nothing.
     """
     info = {"appended": False, "adjusted": False, "date": None, "last_price": None,
-            "source": "frame", "as_of_epoch": None, "reason": None, "session": None}
+            "source": "frame", "as_of_epoch": None, "reason": None, "session": None,
+            # `partial` (2026-09-14): the LAST ROW of the returned frame is a
+            # session still in progress — a structure reader must drop it.
+            # True for an appended RTH / pre-market bar AND for the case the
+            # 2026-09-05 closed-bars rule missed: the hourly `vcp-watch` cron
+            # patches today's in-progress bar INTO the shared cache from
+            # ~10:00 ET (`patch_latest_closes`), so from then until the 16:30
+            # fast-scan the cache's last row IS today, `snap_date <= last_date`
+            # held, this returned the frame untouched, and every "closed"
+            # read — swings, ATR, gaps, the verdict price — used a partial bar
+            # that was also up to an hour stale (NVDA repro: verdict at 210.96
+            # 'into supply +1.4%' while the tape printed 216.50 inside it).
+            "partial": False}
     if df is None or len(df) == 0:
         return df, info
     sym = (symbol or "").upper().strip()
@@ -601,7 +613,8 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
                               lt["price"], 0.0)
             if out is not None:
                 info.update(appended=True, date=lt["date"], last_price=lt["price"],
-                            source="premarket", session="premarket", as_of_epoch=lt["epoch"])
+                            source="premarket", session="premarket", as_of_epoch=lt["epoch"],
+                            partial=True)
                 return out, info
         return df, info
     if snap_date <= last_date:
@@ -614,6 +627,24 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
             _extend_last_row(out, lt["price"])
             info.update(adjusted=True, last_price=lt["price"], source="afterhours",
                         session="afterhours", as_of_epoch=lt["epoch"])
+            return out, info
+        # Regular hours on a day the frame already holds (2026-09-14): the
+        # hourly cache patch put today's IN-PROGRESS bar there. Refresh that
+        # row from the snapshot in the RETURNED copy (the cache stays as it
+        # is) and say the row is partial, so the reader prices off the live
+        # print and reads structure off the bars before it.
+        if lt and lt["session"] == "rth" and lt["date"] == last_date == snap_date:
+            out = df.copy()
+            try:
+                for k, val in (("open", o), ("high", h), ("low", l),
+                               ("close", c), ("volume", v)):
+                    if k in out.columns:
+                        out.iloc[-1, out.columns.get_loc(k)] = val
+            except Exception as exc:                            # pragma: no cover
+                log.debug("with_today_bar: rth refresh failed for %s: %s", sym, exc)
+                out = df
+            info.update(adjusted=True, partial=True, last_price=c,
+                        source="rth_refresh", session="rth", as_of_epoch=lt["epoch"])
             return out, info
         return df, info
     try:
@@ -637,8 +668,11 @@ def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
             # the tape has moved on — carry the after-hours print as the close.
             _extend_last_row(out, lt["price"])
             source, last_price = "afterhours", lt["price"]
+    # An appended bar is a session in progress unless the print says the day
+    # is over (after-hours): the day bar is then complete and may be read.
     info.update(appended=True, date=snap_date, last_price=last_price, source=source,
-                session=session, as_of_epoch=as_of)
+                session=session, as_of_epoch=as_of,
+                partial=(session != "afterhours"))
     return out, info
 
 

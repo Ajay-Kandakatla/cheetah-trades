@@ -414,3 +414,57 @@ describe('PatternChart — + Signals button', () => {
     expect(screen.queryByRole('button', { name: /IONQ (to|from) Signals/ })).toBeNull();
   });
 });
+
+/* 2026-09-14 — the studies mark WHERE they happened, and the renderer never
+ * throws on a label-less curve or duplicate labels. */
+describe('PatternChart dated study markers (2026-09-14)', () => {
+  const b = bars(40);
+  const d0 = b[10].t;
+  it('draws AMD stage glyphs on their bars, the failure in red', () => {
+    draw({ ...TILE, markers: [
+      { date: b[5].t, kind: 'amd_a', label: 'A' },
+      { date: d0, kind: 'amd_m', label: 'M' },
+      { date: b[20].t, kind: 'amd_x', label: '✗' },
+    ] });
+    expect(document.querySelectorAll('.pc-amd').length).toBe(3);
+    expect(screen.getByText('M')).toBeInTheDocument();
+    expect(document.querySelector('.pc-amd_x circle')!.getAttribute('fill')).toContain('negative');
+    expect(document.querySelector('.pc-amd_m circle')!.getAttribute('fill')).toContain('violet');
+  });
+  it('draws a squeeze dot per squeezed bar and a touch triangle per swing', () => {
+    draw({ ...TILE, markers: [
+      { date: b[1].t, kind: 'kc_sq' }, { date: b[2].t, kind: 'kc_sq' },
+      { date: b[3].t, kind: 'touch_d' }, { date: b[4].t, kind: 'touch_s' },
+    ] });
+    expect(document.querySelectorAll('.pc-kc-sq').length).toBe(2);
+    expect(document.querySelectorAll('.pc-touch-d').length).toBe(1);
+    expect(document.querySelectorAll('.pc-touch-s').length).toBe(1);
+  });
+  it('NEGATIVE — a marker dated outside the window draws nothing', () => {
+    draw({ ...TILE, markers: [{ date: '2019-01-01', kind: 'amd_m', label: 'M' }] });
+    expect(document.querySelectorAll('.pc-amd').length).toBe(0);
+  });
+  it('NEGATIVE — a curve without a label does not blank the tile', () => {
+    expect(() => draw({ ...TILE, curves: [{ tone: 'keltner', label: undefined as any,
+                                            values: b.map((x) => x.c + 1) }] })).not.toThrow();
+    expect(document.querySelectorAll('polyline').length).toBe(1);
+  });
+  it('NEGATIVE — two lines with the same label and price both render', () => {
+    draw({ ...TILE, lines: [
+      { price: 11.1, label: 'KC mid 11.10', tone: 'keltner' },
+      { price: 11.1, label: 'KC mid 11.10', tone: 'keltner' },
+    ] });
+    expect(document.querySelectorAll('line[stroke="var(--cm-amberlt, #f59e0b)"]').length).toBe(2);
+  });
+  it('his cost line is drawn heavier and his stop dotted', () => {
+    draw({ ...TILE, lines: [
+      { price: 11.0, label: 'your cost 11.00', tone: 'cost' },
+      { price: 10.5, label: 'your stop 10.50', tone: 'ownstop' },
+    ] });
+    const cost = document.querySelector('line[stroke="var(--cm-pink, #ec4899)"]')!;
+    const stop = document.querySelector('line[stroke="var(--info, #38bdf8)"]')!;
+    expect(cost.getAttribute('stroke-width')).toBe('1.4');
+    expect(stop.getAttribute('stroke-dasharray')).toBe('2,3');
+    expect(screen.getByText('your cost 11.00')).toBeInTheDocument();
+  });
+});

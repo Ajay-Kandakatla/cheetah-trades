@@ -41,6 +41,7 @@ import GntBoard from '../components/GntBoard';
 import BondeBoard from '../components/BondeBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
+import HoldingsBoard from '../components/HoldingsBoard';
 import HotSectors from '../components/HotSectors';
 import OverlayLegend from '../components/OverlayLegend';
 import { filterForGrid, filterTile, hiddenForTab, loadHidden, presentGroups,
@@ -591,6 +592,12 @@ export function ChartMaps() {
           next.set('symbol', sym);
           setParams(next, { replace: true });
         }} />
+      ) : tab === 'holdings' ? (
+        /* 📁 My holdings (Ajay 2026-09-14: "about the new portfolio stocks I
+         * want to run these against them"). One Support-tab tile per name he
+         * owns, his cost and typed stop drawn on each — its own fetcher, no
+         * universe pass, so the board controls and the grid are skipped. */
+        <HoldingsBoard days={days ?? null} />
       ) : tab === 'hot_pullback' ? (
         /* 🔥 Hot Pullback (Ajay 2026-09-09: "a new tab for hot pull back like
          * 21 day moving average drops but have a reversal from demand zones …

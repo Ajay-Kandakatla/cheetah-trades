@@ -475,16 +475,60 @@ ZONE_BARS_MAX = 252
 ZONE_BARS_PAD = 15
 
 
-def _zone_window(zone: Optional[dict]) -> int:
+def _zone_window(zone: Optional[dict], days: Optional[int] = None) -> int:
     """Bars needed to show the structure that defines this band. PURE.
 
     Falls back to the board default when a zone carries no `oldest_touch_bars`
     — an older cached payload, or a band built before the field existed.
+
+    `days` (2026-09-14) is the Window dropdown. It used to be silently
+    ignored on the zones / supply / deep-demand tabs because this value
+    REPLACED it; a 5-year pick drew 130–252 bars. The window now only ever
+    reaches further back than the dropdown, never less.
     """
     oldest = _num((zone or {}).get("oldest_touch_bars"))
+    want = int(days) if isinstance(days, (int, float)) and days else 0
     if oldest is None:
-        return BARS_DEFAULT
-    return int(min(ZONE_BARS_MAX, max(ZONE_BARS_MIN, int(oldest) + ZONE_BARS_PAD)))
+        return max(BARS_DEFAULT, want)
+    fit = int(min(ZONE_BARS_MAX, max(ZONE_BARS_MIN, int(oldest) + ZONE_BARS_PAD)))
+    return max(fit, want)
+
+
+def _lids_above(supply_zones: list, px, n: int = 2) -> list:
+    """The `n` supply bands NEAREST ABOVE the print, nearest first. PURE.
+
+    A band the print is inside counts (its top is the lid); a band entirely
+    under the print is a broken lid and is never drawn as supply on a demand
+    tile. With no usable print the list is returned as given (high→low), so
+    an old payload degrades to the pre-2026-09-14 drawing rather than to
+    nothing.
+    """
+    out = []
+    for z in supply_zones or []:
+        lo, hi = _num((z or {}).get("lo")), _num((z or {}).get("hi"))
+        if lo is None or hi is None:
+            continue
+        out.append({**z, "lo": lo, "hi": hi})
+    p = _num(px)
+    if p is None or p <= 0:
+        return out[:n]
+    above = [z for z in out if z["hi"] >= p]
+    above.sort(key=lambda z: (0.0 if z["lo"] <= p <= z["hi"] else z["lo"] - p))
+    return above[:n]
+
+
+def _stored_band(doc: Optional[dict], band: Optional[dict]) -> dict:
+    """The store's full copy of a slimmed band (same lo/hi), so a tab that
+    only holds {lo, hi, touches} can still size its window to the band's
+    oldest touch. Falls back to the slim band itself."""
+    lo, hi = _num((band or {}).get("lo")), _num((band or {}).get("hi"))
+    if lo is None or hi is None:
+        return band or {}
+    for z in (doc or {}).get("bands") or []:
+        if (abs((_num(z.get("lo")) or -1) - lo) < 0.005
+                and abs((_num(z.get("hi")) or -1) - hi) < 0.005):
+            return {**band, **z}
+    return band or {}
 
 
 # ---------------------------------------------------------------------------
@@ -1597,7 +1641,7 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # inventory — there is no plan tab answer to send him to.
             "href": _href(sym, "supply"),
             "bars": [],
-            "_bars": {"days": _zone_window(ceiling)},
+            "_bars": {"days": _zone_window(ceiling, days)},
             "bands": bands,
             "lines": lines,
             "markers": [],
@@ -1615,6 +1659,7 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         })
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
     gex_as_of = _gex_decor(out, "supply")
+    _supply_live_decor(out)
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             "matched": len(rows),
@@ -1628,6 +1673,40 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "note": (None if rows else
                      "Nothing is sitting under a tested ceiling right now."),
             "disclaimer": _supply_disclaimer()}
+
+
+ABOVE_LID_TEXT = "↑ live print ABOVE the lid"
+
+
+def _supply_live_decor(tiles: list) -> int:
+    """Re-read 'At the lid' against the LIVE print (2026-09-14).
+
+    The Into Supply tab keeps the scan-time state while `attach_live_now`
+    moves the `now` line to the live trade, so a tile could show `now` above
+    the red ceiling with an 'At the lid' chip under it (ALDX, SPT after the
+    close). The zones and deep tabs re-state on the live print; this tab was
+    left out. The chip is swapped, nothing is re-ranked or dropped.
+    """
+    if not tiles:
+        return 0
+    try:
+        live = _live_last([t.get("symbol") for t in tiles if t.get("symbol")])
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: supply live decor failed: %s", exc)
+        return 0
+    n = 0
+    for t in tiles:
+        px = _num((live or {}).get(t.get("symbol")))
+        ceiling = next((b for b in (t.get("bands") or [])
+                        if (b or {}).get("kind") == "supply"), None)
+        hi = _num((ceiling or {}).get("hi"))
+        if px is None or hi is None or px <= hi:
+            continue
+        badges = [b for b in (t.get("badges") or []) if (b or {}).get("text") != "At the lid"]
+        badges.insert(0, {"text": ABOVE_LID_TEXT, "tone": "warn"})
+        t["badges"] = badges
+        n += 1
+    return n
 
 
 def zero_dte_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
@@ -1881,10 +1960,16 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 # block is a footprint, not the same kind of evidence.
                 bands.append({"kind": "order_block", "lo": b_lo, "hi": b_hi,
                               "label": "order block"})
-        for s in (r.get("supply_zones") or [])[:2]:
-            s_lo, s_hi = _num(s.get("lo")), _num(s.get("hi"))
-            if s_lo is not None and s_hi is not None:
-                bands.append({"kind": "supply", "lo": s_lo, "hi": s_hi, "label": "supply"})
+        # THE TWO LIDS PRICE MEETS FIRST, not the two highest (2026-09-14).
+        # `supply_zones` is the four NEAREST bands sorted high→low, so `[:2]`
+        # was the two highest of those four: the first lid overhead — the one
+        # the TARGET line points at — was usually not drawn while lids 30–50%
+        # away were, and when fewer than two of the four sat above price a
+        # BROKEN lid under the print painted red under the green demand band
+        # (measured on the live board: 36/116 reached rows missing their
+        # first overhead, HL/CSX with a supply box drawn below the price).
+        for s in _lids_above(r.get("supply_zones") or [], _live_px(r, live)):
+            bands.append({"kind": "supply", "lo": s["lo"], "hi": s["hi"], "label": "supply"})
 
         lines = []
         if _ob and (_ob.get("trade") or {}).get("entry") is not None:
@@ -1970,7 +2055,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # non-Retina legibility limit) and 252 the ceiling (the Retina one,
             # measured at 255). Median lands ~156 rather than a flat 252, which
             # is why this costs ~52KB instead of ~248KB on a 24-tile board.
-            "_bars": {"days": _zone_window(zone)},
+            "_bars": {"days": _zone_window(zone, days)},
             "bands": bands,
             "lines": lines,
             "markers": [],
@@ -2145,6 +2230,15 @@ def quick_bounce_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                    else {"text": f"{r['dist_pct']:.1f}% above the band", "tone": "muted"}),
                   {"text": f"🪃 same-day {int(st.get('same_day') or 0)} · gap-up {int(st.get('gap_up') or 0)}",
                    "tone": "good" if q else "muted"}]
+        # A reclaim from BELOW (2026-09-14): the name closed under this
+        # floor inside the last five sessions and popped back. The zones
+        # board refuses that band as broken; his 2026-09-08 autopsy measured
+        # reclaims at 66% stop-hit. Said on the tile, not hidden — the list
+        # is unchanged, the reader is warned.
+        under = int(r.get("closed_under_recent") or 0)
+        if under:
+            badges.insert(1, {"text": f"🔪 closed under the floor {under}× in 5d",
+                              "tone": "warn"})
         if edge is not None:
             badges.append({"text": f"{edge:+.0f} pts vs its own base rate",
                            "tone": "good" if edge >= 10 else "muted"})
@@ -2155,7 +2249,10 @@ def quick_bounce_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "title": f"{sym} — quick bounce {rate:.0f}% ({q}/{n})" if rate is not None else sym,
             "why": r.get("plan") or "",
             "href": _href(sym, "supply"),
-            "bars": [], "_bars": {"days": days},
+            "bars": [],
+            # The band was read over 252 bars; 130 left 16/43 tiles with every
+            # defining swing off-screen (2026-09-14). Size to the store's copy.
+            "_bars": {"days": _zone_window(_stored_band(docs.get(sym), band), days)},
             "bands": bands, "lines": lines, "markers": [],
             "stats": stats_rows, "badges": badges, "theme": _theme(sym),
             "_score": float(len(rows) - rank),
@@ -2306,7 +2403,10 @@ def breaking_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "symbol": sym, "name": r.get("name") or _name_for(sym),
             "title": f"{sym} — 🚀 {'broke' if broke else 'breaking'} ${lo:g}–{hi:g}",
             "why": why, "href": _href(sym, "supply"),
-            "bars": [], "_bars": {"days": days},
+            "bars": [],
+            # Same window rule as the demand tabs (2026-09-14): 11/23 lids
+            # were drawn with their oldest touch beyond a 130-bar tile.
+            "_bars": {"days": _zone_window(_stored_band(doc, band), days)},
             "bands": bands, "lines": lines, "markers": [],
             "stats": stats_rows, "badges": badges, "theme": _theme(sym),
             "_score": float(len(rows) - rank),
@@ -2883,25 +2983,47 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
         top, second = d.get("top_band") or {}, d.get("second_band") or {}
         bands = []
-        if _num(top.get("lo")) is not None:
-            bands.append({"kind": "supply", "lo": _num(top.get("lo")),
-                          "hi": _num(top.get("hi")),
-                          "label": "1st demand · broken"})
-        if _num(second.get("lo")) is not None:
-            bands.append({"kind": "demand", "lo": _num(second.get("lo")),
-                          "hi": _num(second.get("hi")),
+        t_lo, t_hi = _num(top.get("lo")), _num(top.get("hi"))
+        s_lo, s_hi = _num(second.get("lo")), _num(second.get("hi"))
+        if t_lo is not None and t_hi is not None:
+            # A 1-touch first band is a single swing low widened ±1.75% into a
+            # box (price_zones._make_zone), and on 4/100 tiles that box
+            # straddled the real second band — red painted over the green
+            # entry band (2026-09-14, TRU/PLD/EME/KHC). Say what it is, and
+            # never let it cover the band this tile is about.
+            t_touch = _num(top.get("touches"))
+            one_touch = t_touch is not None and t_touch < 2     # unknown ≠ 1-touch
+            if s_hi is not None and t_lo <= s_hi:
+                t_lo = round(s_hi + 0.01, 2)
+            if t_hi > t_lo:
+                bands.append({"kind": "supply", "lo": t_lo, "hi": t_hi,
+                              "label": ("1st demand · broken (1-touch swing)"
+                                        if one_touch else "1st demand · broken")})
+        if s_lo is not None:
+            bands.append({"kind": "demand", "lo": s_lo, "hi": s_hi,
                           "label": ("2nd demand · approaching"
                                     if phase == "approaching"
                                     else "2nd demand · entering")})
 
         lines = []
         plan = r.get("plan") or {}
-        for key, label, tone in (("entry_ref", "BUY", "buy"),
-                                 ("stop", "STOP", "stop"),
-                                 ("target", "TARGET", "target")):
-            pv = _num(plan.get(key))
-            if pv is not None:
-                lines.append({"price": pv, "label": label, "tone": tone})
+        # The plan must belong to the band this tile draws. `_pick_entry_zone`
+        # admits a band up to 1.5% ABOVE price, so on a 'near' row it can
+        # build BUY/STOP/TARGET on the BROKEN first band — BUY drawn inside
+        # the red box, STOP under it, and on TXNM a TARGET below the STOP
+        # (2026-09-14, 4/100 rows). Draw the plan only when it is the second
+        # band's plan and its geometry is a trade.
+        p_lo = _num(plan.get("entry_low"))
+        p_stop, p_tgt = _num(plan.get("stop")), _num(plan.get("target"))
+        plan_is_ours = (p_lo is None or s_lo is None or abs(p_lo - s_lo) < 0.011)
+        plan_is_sane = (p_stop is None or p_tgt is None or p_tgt > p_stop)
+        if plan_is_ours and plan_is_sane:
+            for key, label, tone in (("entry_ref", "BUY", "buy"),
+                                     ("stop", "STOP", "stop"),
+                                     ("target", "TARGET", "target")):
+                pv = _num(plan.get(key))
+                if pv is not None:
+                    lines.append({"price": pv, "label": label, "tone": tone})
 
         g = _f((sales or {}).get("growth_yoy_pct"))
         below = _f(d.get("below_top_pct"))
@@ -2968,7 +3090,12 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "name": r.get("name") or _name_for(sym),
             "href": _href(sym, "supply"),
             "bars": [],
-            "_bars": {"days": _zone_window(second) if second else days},
+            # Sized to the OLDER of the two bands' defining swings. The slim
+            # dict used to drop `oldest_touch_bars`, so every deep tile was
+            # 130 bars and 56/100 drew a band whose touches were all
+            # off-screen (2026-09-14).
+            "_bars": {"days": max(_zone_window(second, days), _zone_window(top, days))
+                      if second else _zone_window(None, days)},
             "bands": bands,
             "lines": lines,
             "markers": [],
@@ -3094,7 +3221,7 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
         if not bars:
             continue
         v = r.get(kind) or {}
-        bands, lines = [], []
+        bands, lines, markers = [], [], []
         if kind == "keltner":
             # NO FLAT LINES HERE (Ajay 2026-09-13, MU): the channel is an EMA
             # plus an ATR multiple, so it bends every bar. Three scalars drawn
@@ -3109,13 +3236,26 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
                               "label": "A — base (%s bars)" % (v.get("base_bars") or "?")})
             raid = _num(v.get("raid_price"))
             if raid is not None:
+                from supply_demand import amd as _amd
                 lines.append({"price": raid, "tone": "amd",
-                              "label": "AMD M — raid %.2f" % raid})
+                              "label": _amd.raid_label(
+                                  {"price": raid,
+                                   "depth_pct": _num(v.get("raid_depth_pct")),
+                                   "vol_ratio": _num(v.get("raid_vol_ratio"))})})
+            # WHERE it happened (2026-09-14): the stored verdict carries the
+            # bar dates, so the board marks the base start and the raid bar
+            # without a second frame read. Same kinds as amd.chart_overlay.
+            for key, mk, lab in (("base_date", "amd_a", "A"),
+                                 ("raid_date", "amd_m", "M"),
+                                 ("markup_date", "amd_d", "D"),
+                                 ("failed_date", "amd_x", "✗")):
+                if v.get(key):
+                    markers.append({"date": str(v[key]), "kind": mk, "label": lab})
         tiles.append({
             "symbol": sym, "name": _name_for(sym), "theme": _theme(sym),
             "href": _href(sym), "bars": bars,
             "last_close": _num(r.get("last_close")),
-            "bands": bands, "lines": lines,
+            "bands": bands, "lines": lines, "markers": markers,
             # The verdict rides ON the tile so the board and the chart say the
             # same sentence about one name — literally the same helper, so the
             # tab's badge and the chart's badge are one string built once.
@@ -3970,14 +4110,24 @@ def ict_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 STUDY_MAX_TILES = 60          # a bound, so a wide board cannot turn into a scan
 
 
-def _study_overlays(df, days: int) -> dict:
-    """{"bands": [...], "lines": [...]} for one frame. Never raises."""
-    bands, lines = [], []
+def _study_overlays(df, days: int, *, keltner_lines: bool = True) -> dict:
+    """{"bands": [...], "lines": [...], "markers": [...]} for one frame. Never
+    raises.
+
+    `keltner_lines=False` (2026-09-14) drops the three FLAT channel lines when
+    the tile already carries the channel as CURVES. Both were being sent: the
+    curve fix of 2026-09-13 added the bending channel but left these behind,
+    so a tile with the Keltner box ticked drew the curve AND three horizontal
+    lines at the last bar's values, with two "KC upper 223.51" labels fighting
+    for the same pixels — half of the exact MU complaint, still on screen.
+    """
+    bands, lines, markers = [], [], []
     try:
         from supply_demand import amd as _amd
         o = _amd.chart_overlay(df)
         bands.extend(o.get("bands") or [])
         lines.extend(o.get("lines") or [])
+        markers.extend(o.get("markers") or [])
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: amd overlay failed: %s", exc)
     try:
@@ -3990,12 +4140,35 @@ def _study_overlays(df, days: int) -> dict:
         lines.extend(_mr.chart_lines(df))
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: meanrev overlay failed: %s", exc)
+    if keltner_lines:
+        try:
+            from supply_demand import keltner as _kc
+            lines.extend(_kc.chart_lines(df))
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: keltner overlay failed: %s", exc)
+    return {"bands": bands, "lines": lines, "markers": markers}
+
+
+SQUEEZE_MARKER_KIND = "kc_sq"
+
+
+def _squeeze_markers(bars: list, df) -> list:
+    """One dated marker per bar the TTM squeeze is ON, for the bars this tile
+    draws. The dot row is what the construction actually looks like on a
+    chart; without it "squeeze 6b" is a claim the eye cannot check."""
+    if not bars:
+        return []
     try:
-        from supply_demand import keltner as _kc
-        lines.extend(_kc.chart_lines(df))
+        from supply_demand import keltner as KC
+        ser = KC.squeeze_series(df)
     except Exception as exc:                                    # noqa: BLE001
-        log.debug("chart-maps: keltner overlay failed: %s", exc)
-    return {"bands": bands, "lines": lines}
+        log.debug("chart-maps: squeeze series failed: %s", exc)
+        return []
+    if not ser:
+        return []
+    on = {d for d, v in zip(ser["dates"], ser["on"]) if v}
+    return [{"date": str(b.get("t")), "kind": SQUEEZE_MARKER_KIND}
+            for b in bars if str(b.get("t")) in on]
 
 
 def _keltner_curves(tile: dict, df) -> None:
@@ -4017,6 +4190,8 @@ def _keltner_curves(tile: dict, df) -> None:
     bars = tile.get("bars") or []
     if not bars:
         return
+    if any((c or {}).get("tone") == "keltner" for c in (tile.get("curves") or [])):
+        return          # the channel is already on this tile (the 🌀 KC tab)
     try:
         from supply_demand import keltner as KC
         ser = KC.channel_series(df)
@@ -4036,6 +4211,11 @@ def _keltner_curves(tile: dict, df) -> None:
         curves.append({"tone": "keltner", "label": label, "values": vals})
     if curves:
         tile["curves"] = list(tile.get("curves") or []) + curves
+        # The squeeze as a DOT ROW (2026-09-14), aligned by date like the
+        # curves. It rides with the channel so one checkbox governs both.
+        dots = _squeeze_markers(bars, df)
+        if dots:
+            tile["markers"] = list(tile.get("markers") or []) + dots
 
 
 def _attach_verdicts(tile: dict, df) -> None:
@@ -4061,9 +4241,15 @@ def _attach_verdicts(tile: dict, df) -> None:
     if not v:
         return
     badges = list(tile.get("badges") or [])
+    present = {(b or {}).get("group") for b in badges}
     for group in ("keltner", "amd"):
         r = v.get(group)
         if not r:
+            continue
+        # A 🌀 tile already carries its own family's verdict; ticking another
+        # study box must not print it twice (2026-09-14, 'AMD raided · 1d ago'
+        # ×2 on the Raided tab).
+        if group in present:
             continue
         text, tone = TB.verdict_text(group, r)
         if not text:
@@ -4074,6 +4260,40 @@ def _attach_verdicts(tile: dict, df) -> None:
     # The full reads ride along so a caller (and the tests) can assert on the
     # grade itself rather than parsing an English sentence.
     tile["verdict"] = {**(tile.get("verdict") or {}), **v}
+
+
+def _dedupe_bands(bands: list) -> list:
+    out, seen = [], set()
+    for b in bands:
+        key = ((b or {}).get("kind"), round(_num((b or {}).get("lo")) or 0, 4),
+               round(_num((b or {}).get("hi")) or 0, 4))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(b)
+    return out
+
+
+def _dedupe_lines(lines: list) -> list:
+    out, seen = [], set()
+    for l in lines:
+        key = ((l or {}).get("tone"), round(_num((l or {}).get("price")) or 0, 4))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(l)
+    return out
+
+
+def _dedupe_markers(markers: list) -> list:
+    out, seen = [], set()
+    for m in markers:
+        key = ((m or {}).get("kind"), str((m or {}).get("date")))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(m)
+    return out
 
 
 def _attach_studies(out: dict, days: int) -> None:
@@ -4110,13 +4330,21 @@ def _attach_studies(out: dict, days: int) -> None:
             # whatever bars the tile actually carries — so the zoom changes how
             # much of the channel is visible, never what the channel was.
             _keltner_curves(t, df)
+            has_curve = any((c or {}).get("tone") == "keltner"
+                            for c in (t.get("curves") or []))
             if days and len(df) > days:
                 df = df.iloc[-int(days):]
-            o = _study_overlays(df, days)
+            o = _study_overlays(df, days, keltner_lines=not has_curve)
+            # Never twice (2026-09-14): a 🌀 AMD tile already carries its
+            # base band and raid line from the stored row, and ticking any
+            # other study box re-ran this on it — two rects at double
+            # opacity, two raid lines, two labels.
             if o["bands"]:
-                t["bands"] = list(t.get("bands") or []) + o["bands"]
+                t["bands"] = _dedupe_bands(list(t.get("bands") or []) + o["bands"])
             if o["lines"]:
-                t["lines"] = list(t.get("lines") or []) + o["lines"]
+                t["lines"] = _dedupe_lines(list(t.get("lines") or []) + o["lines"])
+            if o.get("markers"):
+                t["markers"] = _dedupe_markers(list(t.get("markers") or []) + o["markers"])
         except Exception as exc:                                # noqa: BLE001
             log.debug("chart-maps: studies for %s failed: %s", sym, exc)
 

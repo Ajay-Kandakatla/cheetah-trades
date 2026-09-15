@@ -179,11 +179,28 @@ async def chart_maps_support(
             #
             # Same helper the board tabs use, so the two surfaces cannot draw a
             # different Fibonacci for one name. Soft-fails per tile.
-            if studies is True:
+            # DAILY ONLY (2026-09-14). The studies are computed from the daily
+            # frame; on tf=60m/15m they were painted across an hourly chart
+            # at daily prices (CRDO: KC upper 223.51 daily vs 165.0 hourly),
+            # and the curves silently vanished because intraday bars carry a
+            # time in `t`. Until they are computed on the analysed frame, an
+            # intraday tile says so instead of drawing the wrong numbers.
+            if studies is True and res.get("timeframe") not in (None, "daily"):
+                res["studies_note"] = ("AMD / Fibonacci / mean reversion / Keltner "
+                                       "are daily-frame studies — not drawn on the "
+                                       f"{res.get('timeframe_label') or res.get('timeframe')} chart.")
+            elif studies is True:
                 try:
+                    # `bars_used` is the key the support payload actually
+                    # carries. This read `bars`/`days`, which do not exist, so
+                    # the zoom cut never ran: the "mean of the visible window"
+                    # was a 2-year regression drawn over a 1-month chart, and
+                    # every study line was identical at 1m/6m/1y (CRDO,
+                    # 2026-09-14). The verdict still reads the full frame.
                     board_mod._attach_studies(
                         {"tiles": [tile]},
-                        int((res.get("bars") or res.get("days") or 0) or 0))
+                        int((res.get("bars_used") or res.get("bars")
+                             or res.get("days") or 0) or 0))
                 except Exception as exc:                    # pragma: no cover
                     log.debug("chart-maps/support: studies failed: %s", exc)
         return res

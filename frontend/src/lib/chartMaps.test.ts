@@ -663,6 +663,9 @@ describe('the Earnings Flow tab', () => {
        // at the front. The order is meant to be measured and a new tab has no
        // usage yet; `tabUsageKey` counts them from the first open.
        'keltner', 'amd',
+       // 📁 My holdings 2026-09-14 — his own names, beside the two study tabs
+       // it runs on them; mid-pack for the same no-usage-yet reason.
+       'holdings',
        // 📈 Bonde 2026-09-13 — beside the growth boards it belongs with.
        'bonde',
        'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
@@ -689,7 +692,10 @@ describe('the prior-close reference line', () => {
   it('renders in the muted tone, not as a plan level', () => {
     // It is context for the gap, not a price to act on. Giving it buy/stop
     // colouring would put a fourth "level" on a chart that has three.
-    expect(toneColor('neutral')).toBe(toneColor('now'));
+    // 2026-09-14: `now` moved to the ink its legend swatch shows, so the
+    // comparison is against the muted grey itself.
+    expect(toneColor('neutral')).toBe('var(--text-muted, #94a3b8)');
+    expect(toneColor('neutral')).not.toBe(toneColor('now'));
     expect(toneColor('neutral')).not.toBe(toneColor('buy'));
   });
 
@@ -733,7 +739,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly ten tabs not driven by a board fetch', () => {
+  it('is one of exactly eleven tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -760,7 +766,9 @@ describe('the Support Levels tab', () => {
     // neither the tile grid nor the sort/tier controls apply to it.
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t));
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'support']);
+    // 2026-09-14: `holdings` is the eleventh — one /chart-maps/support call
+    // per name he owns, decorated client-side; no universe pass behind it.
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1590,7 +1598,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(25);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13
+    expect(CM_TABS).toHaveLength(26);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -1742,5 +1750,48 @@ describe('the Chart Patterns tab (2026-09-09)', () => {
   it('a typo still lands on a real board (negative)', () => {
     expect(parseTab('patterms')).toBe(CM_TABS[0]);
     expect(parseTab('')).toBe(CM_TABS[0]);
+  });
+});
+
+/* 2026-09-14 — the holdings tab, the now-line colour, the AH readout, quiet lines. */
+
+describe('2026-09-14 verification fixes', () => {
+  it('📁 My holdings is a per-ticker tab, not a board tab', () => {
+    expect(CM_TABS).toContain('holdings');
+    expect(isBoardTab('holdings')).toBe(false);
+    expect(parseTab('holdings')).toBe('holdings');
+    expect(TAB_META.holdings.label).toMatch(/My holdings/);
+    // it says the stop is never invented, and that the reads measured inverted
+    expect(TAB_META.holdings.blurb).toMatch(/never invents one/);
+    expect(TAB_META.holdings.blurb).toMatch(/MEASURED INVERTED/);
+  });
+  it('the now line draws in the ink its legend swatch shows', () => {
+    expect(toneColor('now')).toBe('var(--ink, #e7e7e7)');
+  });
+  it('his cost and stop have their own colours, distinct from the plan tones', () => {
+    expect(toneColor('cost')).not.toBe(toneColor('buy'));
+    expect(toneColor('ownstop')).not.toBe(toneColor('stop'));
+    expect(toneColor('cost')).not.toBe(toneColor('neutral'));
+  });
+  it('the hover readout names the tape on an extended-hours bar', () => {
+    expect(hoverLines({ t: '2026-09-14', o: 1, h: 2, l: 0.5, c: 1.5, v: 1, s: 'ah' } as any)[0])
+      .toBe('2026-09-14 · AH');
+    expect(hoverLines({ t: '2026-09-14', o: 1, h: 2, l: 0.5, c: 1.5, v: 1, s: 'pre' } as any)[0])
+      .toBe('2026-09-14 · pre');
+    expect(hoverLines({ t: '2026-09-14', o: 1, h: 2, l: 0.5, c: 1.5, v: 1 } as any)[0])
+      .toBe('2026-09-14');
+  });
+  it('a quiet line keeps its line but its label yields to the plan labels', () => {
+    const d = { lo: 100, hi: 120 };
+    // eight plan labels crammed into a short chart: the quiet BOS must be the one dropped
+    const lines: any[] = [
+      { price: 110, label: 'BOS 110.00', tone: 'stop', quiet: true },
+      { price: 110.2, label: 'STOP', tone: 'stop' },
+      { price: 110.4, label: 'BUY', tone: 'buy' },
+      { price: 110.6, label: 'TARGET', tone: 'target' },
+    ];
+    const out = lineLabels(lines, d, 40, 4, 9.5);
+    expect(out.map((l) => l.text)).not.toContain('BOS 110.00');
+    expect(out.map((l) => l.text)).toEqual(expect.arrayContaining(['STOP', 'BUY', 'TARGET']));
   });
 });

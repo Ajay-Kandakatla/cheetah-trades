@@ -119,7 +119,11 @@ def test_NEGATIVE_a_STALE_raid_is_not_turning():
     and grading it 'raided' is how a board about a turn fills with old news."""
     v = TB.amd_verdict(amd_raid_frame(TB.MAX_RAID_BARS_AGO + 4))
     assert v["phase"] == "manipulation"
-    assert v["grade"] == "none" and v["turning"] is False
+    # 2026-09-14: the stale raid is NAMED rather than graded `none` — it used
+    # to print "AMD no cycle · 7d ago", a sentence at war with itself.
+    assert v["grade"] == "stale" and v["turning"] is False
+    text, tone = TB.verdict_text("amd", v)
+    assert text.startswith("AMD raid stale") and "d ago" in text and tone == "muted"
 
 
 def test_NEGATIVE_a_CLOSE_beyond_the_base_low_is_a_breakdown_not_a_raid():

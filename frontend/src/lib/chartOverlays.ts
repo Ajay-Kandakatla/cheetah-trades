@@ -25,6 +25,10 @@ export type OverlayGroup = {
   always?: boolean;
   bandKinds?: string[];
   lineTones?: string[];
+  /** Dated marker kinds this family owns (2026-09-14): the swings that make a
+   *  band (`touch_d` / `touch_s`), the AMD stage glyphs (`amd_a` … `amd_x`),
+   *  the Keltner squeeze dots (`kc_sq`). Hidden with the family. */
+  markerKinds?: string[];
   /** Case-insensitive LABEL prefixes ("swept 71.80", "support 68.43", ...).
    *  A prefix match beats a tone match: the support tab draws its support
    *  label with tone "buy", and without precedence the Trade-lines checkbox
@@ -35,11 +39,18 @@ export type OverlayGroup = {
 
 export const OVERLAY_GROUPS: OverlayGroup[] = [
   { key: 'demand', label: 'Support / demand', swatch: 'var(--positive, #22c55e)',
-    hint: 'tested demand bands and pattern bases',
-    bandKinds: ['demand', 'base'], linePrefixes: ['support'] },
+    hint: 'tested demand bands and pattern bases — ▲ marks the swing lows that made a band',
+    bandKinds: ['demand', 'base'], linePrefixes: ['support'], markerKinds: ['touch_d'] },
   { key: 'supply', label: 'Overhead / supply', swatch: 'var(--negative, #ef4444)',
-    hint: 'bands of overhead supply',
-    bandKinds: ['supply'], linePrefixes: ['overhead'] },
+    hint: 'bands of overhead supply — ▼ marks the swing highs that made a band',
+    bandKinds: ['supply'], linePrefixes: ['overhead'], markerKinds: ['touch_s'] },
+  // 📁 My holdings (2026-09-14): his cost and the stop he typed, on any tile
+  // of a name he owns. ON by default and its own family, so the `trade`
+  // checkbox (the engine's BUY / STOP / TARGET) never takes his own numbers
+  // off the chart with it.
+  { key: 'position', label: 'Your position', swatch: 'var(--cm-pink, #ec4899)',
+    hint: 'your cost (pink) and the stop you typed on the Portfolio page (blue)',
+    lineTones: ['cost', 'ownstop'], linePrefixes: ['your '] },
   { key: 'order_block', label: 'Order blocks', swatch: 'var(--accent, #a78bfa)',
     hint: 'last opposing candle before an institutional-sized impulse (SMC, uncited)',
     bandKinds: ['order_block'], linePrefixes: ['order block'] },
@@ -64,8 +75,9 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   // being folded into `trade` or `demand`. An unmeasured read must never share
   // a checkbox with the levels he actually trades.
   { key: 'amd', always: true, label: 'AMD phases', swatch: 'var(--cm-violet, #8b5cf6)',
-    hint: 'accumulation base, the raid that swept it, the markup after (ICT convention, uncited, unmeasured)',
-    bandKinds: ['amd_accumulation'], lineTones: ['amd'], linePrefixes: ['amd'] },
+    hint: 'accumulation base, the raid that swept it, the markup after — A / M / D on the bars it happened, ✗ where the base failed (ICT convention, uncited; MEASURED INVERTED 2026-09-13)',
+    bandKinds: ['amd_accumulation'], lineTones: ['amd'], linePrefixes: ['amd'],
+    markerKinds: ['amd_a', 'amd_m', 'amd_d', 'amd_x'] },
   { key: 'fib', always: true, label: 'Fibonacci', swatch: 'var(--cm-teal, #14b8a6)',
     hint: 'retracements 0.382/0.5/0.618/0.786 + extensions 1.272/1.618 off the last major swing (convention, uncited)',
     lineTones: ['fib'], linePrefixes: ['fib'] },
@@ -77,8 +89,8 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   // want to." Same deal as the other three — uncited, unmeasured, gates
   // nothing, off by default.
   { key: 'keltner', always: true, label: 'Keltner channel', swatch: 'var(--cm-amberlt, #f59e0b)',
-    hint: 'EMA20 ± 2×ATR10 with the TTM squeeze on the mid label — a squeeze is compression, NOT a direction (convention, uncited)',
-    lineTones: ['keltner'], linePrefixes: ['kc '] },
+    hint: 'EMA20 ± 2×ATR10 as a curve, with a dot under every bar the TTM squeeze is on — a squeeze is compression, NOT a direction (convention, uncited; MEASURED INVERTED 2026-09-13)',
+    lineTones: ['keltner'], linePrefixes: ['kc '], markerKinds: ['kc_sq'] },
 ];
 
 /** The families that are ON when he has never touched a checkbox.
@@ -86,8 +98,10 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
  *  Ajay 2026-09-12: "Default toggle on only supple demand and order block for
  *  me." Everything else starts hidden — including the three overlays added
  *  that same day, which is the point: a new uncited read must not arrive
- *  switched on over the levels he trades. */
-export const DEFAULT_ON = ['demand', 'supply', 'order_block'];
+ *  switched on over the levels he trades. `position` (2026-09-14) is his own
+ *  cost and stop, not a read, and it is on: a saved v2 hidden-set from before
+ *  it existed simply does not list it, so it shows for everyone. */
+export const DEFAULT_ON = ['demand', 'supply', 'order_block', 'position'];
 
 export function defaultHidden(): Set<string> {
   return new Set(OVERLAY_GROUPS.map((g) => g.key).filter((k) => !DEFAULT_ON.includes(k)));
@@ -96,10 +110,29 @@ export function defaultHidden(): Set<string> {
 const BY_BAND: Record<string, string> = {};
 const BY_TONE: Record<string, string> = {};
 const BY_PREFIX: Array<[string, string]> = [];
+const BY_MARKER: Record<string, string> = {};
 for (const g of OVERLAY_GROUPS) {
   for (const k of g.bandKinds || []) BY_BAND[k] = g.key;
   for (const t of g.lineTones || []) BY_TONE[t] = g.key;
   for (const p of g.linePrefixes || []) BY_PREFIX.push([p, g.key]);
+  for (const m of g.markerKinds || []) BY_MARKER[m] = g.key;
+}
+
+/** The family a dated marker belongs to, or undefined for an unowned kind
+ *  (buy / sell / sweep / bos — the board's own markers, never filtered). */
+export function markerGroup(m: { kind?: string } | null | undefined): string | undefined {
+  return BY_MARKER[(m && m.kind) || ''];
+}
+
+/** A flat Keltner line on a tile that already carries the Keltner CURVE
+ *  (2026-09-14). The backend stopped sending both, but a board doc cached
+ *  before that, or a tile assembled from two payloads, can still arrive with
+ *  the curve AND three horizontal lines at the last bar's values — three
+ *  straight lines drawn across a bending channel, plus a duplicate label for
+ *  each. The line is dropped; the curve is the channel. */
+function isStaleFlatKeltner(l: { tone?: string }, curves: any[] | undefined): boolean {
+  return (l.tone || '') === 'keltner'
+    && Boolean(curves && curves.some((c) => (c && c.tone) === 'keltner'));
 }
 
 /** The overlay family a TAB is about, when it is about one.
@@ -154,21 +187,31 @@ export function presentGroups(tiles: Array<Partial<CmTile>>): OverlayGroup[] {
       const g = lineGroup(c as any);
       if (g) seen.add(g);
     }
+    for (const m of t.markers || []) {
+      const g = markerGroup(m as any);
+      if (g) seen.add(g);
+    }
   }
   return OVERLAY_GROUPS.filter((g) => g.always || seen.has(g.key));
 }
 
-/** The tile with hidden families removed. Identity when nothing is hidden.
- *  Unknown kinds/tones are always KEPT — a new overlay must appear by default,
- *  never vanish because the legend has not heard of it yet. */
+/** The tile with hidden families removed. Identity when nothing is hidden
+ *  and nothing is stale. Unknown kinds/tones are always KEPT — a new overlay
+ *  must appear by default, never vanish because the legend has not heard of
+ *  it yet. */
 export function filterTile<T extends Partial<CmTile>>(tile: T, hidden: Set<string>): T {
-  if (!hidden.size || !tile) return tile;
+  if (!tile) return tile;
+  const curves = (tile as any).curves as any[] | undefined;
+  const stale = (tile.lines || []).some((l) => isStaleFlatKeltner(l as any, curves));
+  if (!hidden.size && !stale) return tile;
   return {
     ...tile,
     bands: (tile.bands || []).filter((b) => !hidden.has(BY_BAND[b.kind as string] || '')),
-    lines: (tile.lines || []).filter((l) => !hidden.has(lineGroup(l as any) || '')),
-    curves: ((tile as any).curves || [])
+    lines: (tile.lines || []).filter((l) => !hidden.has(lineGroup(l as any) || '')
+                                            && !isStaleFlatKeltner(l as any, curves)),
+    curves: (curves || [])
       .filter((c: any) => !hidden.has(lineGroup(c) || '')),
+    markers: (tile.markers || []).filter((m) => !hidden.has(markerGroup(m as any) || '')),
     // The VERDICT SENTENCE is gated with its own drawing (2026-09-13). A badge
     // with no `group` is a board badge (Setup ready, Vol drying) and is never
     // touched — only a study verdict carries one.

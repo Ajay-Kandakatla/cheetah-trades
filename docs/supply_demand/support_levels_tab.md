@@ -239,3 +239,45 @@ choices. Pinned in `backend/tests/test_chart_maps_support.py`
 (`test_the_default_zoom_is_one_year_on_every_surface`),
 `frontend/src/lib/supportLevels.test.ts` ("default zoom — 1 year on every
 surface") and the contract "Chart Maps time frames carry 2 / 3 / 5 years".
+
+## 2026-09-14 — the partial bar the closed-bars rule missed, and more
+
+Found by a review of every chart surface (Ajay: *"verify the supply demand
+logic on all charts"*). Tests in
+`backend/tests/test_chart_studies_verified_2026_09_14.py`.
+
+1. **The hourly cache patch defeated "closed bars only".** `sepa.cli
+   vcp-watch` runs hourly 09–16 ET and `patch_latest_closes` writes today's
+   in-progress bar INTO the shared frame from ~10:00. `with_today_bar` then
+   saw `snap_date <= last_date`, returned the frame untouched, and
+   `_frame_for` took the whole frame as closed: swings, ATR, gaps and the
+   verdict price all read a partial bar that was also up to an hour stale,
+   while the `now` line moved to the live print (NVDA: verdict "into supply
+   +1.4%" at 210.96 with the tape at 216.50 inside that band). Now
+   `with_today_bar` refreshes that row from the snapshot in the returned
+   copy and reports `partial=True`; `_frame_for` (and
+   `price_zones.for_symbol`) drop a partial last row from the structure
+   frame. After-hours stays as it was: the day bar is complete.
+2. **A supply band you stand IN was painted green** ("here"). The box now
+   takes its colour from its origin — `here · in supply` in red when the
+   verdict says resistance right here (63 of 388 ticker-windows).
+3. **SMC order blocks, BOS/CHoCH, sweeps and the pattern scan read the LIVE
+   frame** while the zones read the closed one; a live bar could mint a BOS
+   that vanished at the close (ESI: "BOS 33.49" only with the live bar).
+   All read `closed.tail(budget)` now.
+4. **`window=all` read the live-overlaid frame** for its swings. Now closed
+   bars priced at the live print, like every other window.
+5. **The 2y/3y/5y deep frame was never phantom-scrubbed.** `_drop_phantom_tail`
+   runs on it now.
+6. **studies=true ignored the zoom** — the endpoint passed `res["bars"]`
+   (does not exist) so `days` was 0 and the mean-reversion channel was a
+   2-year fit drawn over a 1-month chart. It passes `bars_used`. On an
+   intraday timeframe the daily-frame studies are no longer painted over
+   hourly bars; `studies_note` says why.
+7. **Intraday tiles said "6 months"** in the stats and the why-line. They
+   say `330 x 1 hour bars`.
+8. **Touch markers.** Every band drawn on the tile marks the swings that
+   made it — ▲ under swing lows, ▼ over swing highs (by the band's ORIGIN,
+   so a broken lid now acting as support still shows its swing highs) —
+   and a tested band says `3× tested`. `price_zones` carries
+   `touch_dates` on every band (additive; `None` on a frame without dates).

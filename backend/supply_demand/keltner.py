@@ -115,11 +115,44 @@ def channel(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
 def squeeze(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
             squeeze_mult: float = SQUEEZE_MULT, bb_len: int = BB_LEN,
             bb_std: float = BB_STD) -> Optional[dict]:
-    """{"on","bars","released"} — is the Bollinger band inside the Keltner one?
+    """{"on","bars","released","ratio"} — is the Bollinger band inside the
+    Keltner one?
 
     `bars` counts how many consecutive bars the squeeze has been on (0 when
     off). `released` is True on the FIRST bar after a squeeze of any length
-    ends, which is the only moment the construction actually marks.
+    ends, which is the only moment the construction actually marks. `ratio`
+    (2026-09-14) is the Bollinger width over the squeeze-channel width at the
+    last bar — under 1.0 is inside, and the smaller it is the tighter the
+    coil. A number beside "squeeze", not a threshold on top of one.
+    """
+    ser = squeeze_series(df, ema_len=ema_len, atr_len=atr_len,
+                         squeeze_mult=squeeze_mult, bb_len=bb_len, bb_std=bb_std)
+    if not ser:
+        return None
+    on = ser["on"]
+    now = bool(on[-1])
+    bars = 0
+    if now:
+        for v in reversed(on):
+            if not v:
+                break
+            bars += 1
+    return {"on": now, "bars": bars,
+            "released": bool(len(on) >= 2 and on[-2] and not on[-1]),
+            "ratio": ser["ratio"][-1]}
+
+
+def squeeze_series(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
+                   squeeze_mult: float = SQUEEZE_MULT, bb_len: int = BB_LEN,
+                   bb_std: float = BB_STD) -> Optional[dict]:
+    """The squeeze bar by bar: {"dates": [...], "on": [bool...], "ratio": [...]}.
+
+    This is what the TTM construction actually draws — a dot under every bar
+    the Bollinger band sits inside the channel — and it is the only honest way
+    to show a COIL on a chart: the scalar `squeeze()` says "on for 6 bars" and
+    the eye cannot find those six bars without this. Same arithmetic as
+    `squeeze()`, which is built on top of it so the two cannot disagree.
+    `ratio` is None where either width is not yet defined (warm-up).
     """
     if df is None or len(df) < max(MIN_BARS, bb_len, atr_len) + 2:
         return None
@@ -131,22 +164,19 @@ def squeeze(df, *, ema_len: int = EMA_LEN, atr_len: int = ATR_LEN,
         bb_mid = close.rolling(bb_len).mean()
         bb_sd = close.rolling(bb_len).std(ddof=0)
         b_up, b_dn = bb_mid + bb_std * bb_sd, bb_mid - bb_std * bb_sd
-        on = (b_up < k_up) & (b_dn > k_dn)
-        on = on.fillna(False).tolist()
+        on = ((b_up < k_up) & (b_dn > k_dn)).fillna(False).tolist()
+        kw = (k_up - k_dn)
+        ratio = [(round(float(b) / float(k), 3)
+                  if _f(b) is not None and _f(k) is not None and float(k) > 0
+                  else None)
+                 for b, k in zip((b_up - b_dn).tolist(), kw.tolist())]
+        dates = [str(getattr(d, "date", lambda: d)())[:10] for d in df.index]
     except Exception as exc:                                   # noqa: BLE001
-        log.debug("keltner: squeeze failed: %s", exc)
+        log.debug("keltner: squeeze series failed: %s", exc)
         return None
     if not on:
         return None
-    now = bool(on[-1])
-    bars = 0
-    if now:
-        for v in reversed(on):
-            if not v:
-                break
-            bars += 1
-    return {"on": now, "bars": bars,
-            "released": bool(len(on) >= 2 and on[-2] and not on[-1])}
+    return {"dates": dates, "on": [bool(v) for v in on], "ratio": ratio}
 
 
 def reading(df, **kw) -> Optional[dict]:
@@ -155,7 +185,7 @@ def reading(df, **kw) -> Optional[dict]:
                         if k in ("ema_len", "atr_len", "mult")})
     if not ch:
         return None
-    sq = squeeze(df) or {"on": False, "bars": 0, "released": False}
+    sq = squeeze(df) or {"on": False, "bars": 0, "released": False, "ratio": None}
     pos = ch["position"]
     # "unknown" is a real branch, not a tidy-up. `position` is None whenever the
     # channel has no span (ATR collapsed to zero on a halted or one-price
@@ -168,7 +198,8 @@ def reading(df, **kw) -> Optional[dict]:
              "below the lower band" if pos < 0 else
              "upper half" if pos >= 0.5 else "lower half")
     return {**ch, "squeeze": sq["on"], "squeeze_bars": sq["bars"],
-            "squeeze_released": sq["released"], "where": where,
+            "squeeze_released": sq["released"],
+            "squeeze_ratio": sq.get("ratio"), "where": where,
             # said every time, because a squeeze reads like a signal and is not
             "note": "a squeeze is compression, not a direction"}
 

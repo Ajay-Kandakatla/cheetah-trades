@@ -285,10 +285,15 @@ def test_negative_stale_or_off_session_prints_change_nothing():
     other = {**SNAP, "last_trade_price": 9.40, "last_trade_ts_ms": _stamp(2026, 9, 2, 17, 0)}
     out, info = P.with_today_bar(df, "CHPT", snap=other)
     assert out.iloc[-1]["close"] == 9.1069 and info["source"] == "snapshot"
-    # the frame already holds today and the print is RTH → plain no-op
+    # the frame already holds today and the print is RTH (2026-09-14): that row
+    # is the hourly cache patch's IN-PROGRESS bar — refreshed in the returned
+    # copy, flagged partial, the cache's own frame untouched. It used to be a
+    # plain no-op, which read the partial bar as closed structure all session.
     held = _frame(last="2026-09-03")
     out, info = P.with_today_bar(held, "CHPT", snap=rth)
-    assert out is held and info["appended"] is False and info["adjusted"] is False
+    assert out is not held and info["appended"] is False
+    assert info["adjusted"] is True and info["partial"] is True and info["session"] == "rth"
+    assert out.iloc[-1]["close"] == 9.1069 and held.iloc[-1]["close"] != 9.1069
 
 
 def test_trade_session_clock_and_extended_print():
@@ -319,8 +324,9 @@ def test_support_overlay_treats_an_adjusted_afterhours_frame_as_live():
         def with_today_bar(frame, sym):
             return P.with_today_bar(frame, sym, snap=snap)
 
-    out, as_of, live = S._overlay_today(_P, df, "CHPT")
+    out, as_of, live, partial = S._overlay_today(_P, df, "CHPT")
     assert live is True and abs(as_of - snap["last_trade_ts_ms"] / 1e9) < 1e-3
+    assert partial is False, "after the close the day bar is complete"
     assert out.iloc[-1]["close"] == 9.40 and df.iloc[-1]["close"] != 9.40
     # zones read: the adjusted print prices the verdict
     from supply_demand import price_zones as PZ

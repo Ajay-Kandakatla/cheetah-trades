@@ -70,8 +70,27 @@ def _local_extrema(df: pd.DataFrame, swing_window: Optional[int] = None):
     return highs, lows
 
 
+def _index_dates(df: pd.DataFrame) -> Optional[list]:
+    """The frame's dates as YYYY-MM-DD strings, or None when the index carries
+    no dates (a RangeIndex in tests). Read BEFORE `compute` resets the index."""
+    try:
+        out = []
+        for ts in df.index:
+            if hasattr(ts, "strftime"):
+                out.append(ts.strftime("%Y-%m-%d"))
+            else:
+                s = str(ts)
+                if len(s) < 10 or s[4] != "-":
+                    return None
+                out.append(s[:10])
+        return out
+    except Exception:                                          # noqa: BLE001
+        return None
+
+
 def _make_zone(df: pd.DataFrame, cluster, kind: str,
-               half_width_pct: Optional[float] = None) -> dict:
+               half_width_pct: Optional[float] = None,
+               dates: Optional[list] = None) -> dict:
     prices = [p for p, _ in cluster]
     idxs = [i for _, i in cluster]
     lo, hi = min(prices), max(prices)
@@ -107,23 +126,31 @@ def _make_zone(df: pd.DataFrame, cluster, kind: str,
         "volume": int(vol),
         "bars_since_test": bars_since,
         "oldest_touch_bars": oldest,
+        # The dates of the swings that MAKE this band (2026-09-14), oldest
+        # first, so a chart can mark the touches on the bars they happened —
+        # a band with its reasons on screen instead of a box with no visible
+        # cause. Additive; nothing gates on it. None when the frame has no
+        # dates.
+        "touch_dates": ([dates[i] for i in sorted(idxs) if 0 <= i < len(dates)]
+                        if dates else None),
     }
 
 
 def _cluster(df: pd.DataFrame, idxs, price_col: str, kind: str,
              merge_pct: Optional[float] = None,
-             half_width_pct: Optional[float] = None):
+             half_width_pct: Optional[float] = None,
+             dates: Optional[list] = None):
     """Greedy price-clustering of swing points into bands."""
     mp = ZONE_MERGE_PCT if merge_pct is None else float(merge_pct)
     pts = sorted((float(df[price_col].iloc[i]), i) for i in idxs)
     zones, cur = [], []
     for price, i in pts:
         if cur and (price - cur[0][0]) / cur[0][0] * 100.0 > mp:
-            zones.append(_make_zone(df, cur, kind, half_width_pct))
+            zones.append(_make_zone(df, cur, kind, half_width_pct, dates))
             cur = []
         cur.append((price, i))
     if cur:
-        zones.append(_make_zone(df, cur, kind, half_width_pct))
+        zones.append(_make_zone(df, cur, kind, half_width_pct, dates))
     return zones
 
 
@@ -219,15 +246,17 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
     w = SWING_WINDOW if swing_window is None else int(swing_window)
     lb = LOOKBACK_BARS if lookback_bars is None else max(1, int(lookback_bars))
     need = MIN_BARS if lookback_bars is None else max(MIN_BARS_ABS, 2 * w + 3)
-    df = df.iloc[-lb:].reset_index(drop=True)
+    sliced = df.iloc[-lb:]
+    dates = _index_dates(sliced)
+    df = sliced.reset_index(drop=True)
     if len(df) < need:
         return None
     if last_price is None:
         last_price = float(df["close"].iloc[-1])
 
     highs, lows = _local_extrema(df, swing_window)
-    supply = _cluster(df, highs, "high", "supply", merge_pct, half_width_pct)
-    demand = _cluster(df, lows, "low", "demand", merge_pct, half_width_pct)
+    supply = _cluster(df, highs, "high", "supply", merge_pct, half_width_pct, dates)
+    demand = _cluster(df, lows, "low", "demand", merge_pct, half_width_pct, dates)
     allz = supply + demand
     if not allz:
         return None
@@ -349,6 +378,13 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
                 last_price = float(live_bar.get("last_price"))
             except (TypeError, ValueError):
                 last_price = None
+        # The cached frame itself can end on today's IN-PROGRESS bar (the
+        # hourly cache patch, 2026-09-14) — `partial` without `appended`
+        # says so, and that row is not structure. (An APPENDED live bar was
+        # never in `closed` to begin with.)
+        if (live_bar and live_bar.get("partial") and not live_bar.get("appended")
+                and len(closed) > 1):
+            closed = closed.iloc[:-1]
     else:
         df, tf_meta = tf_mod.frame_for(sym, tf_key)
         if df is None or len(df) < 30:

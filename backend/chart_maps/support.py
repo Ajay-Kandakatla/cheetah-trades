@@ -184,15 +184,28 @@ def _overlay_today(prices_mod, df, sym: str):
     closed one."""
     fn = getattr(prices_mod, "with_today_bar", None)
     if fn is None or df is None:
-        return df, None, False
+        return df, None, False, False
     try:
         out, info = fn(df, sym)
     except Exception as exc:                                   # pragma: no cover
         log.debug("support: today-bar overlay failed for %s: %s", sym, exc)
-        return df, None, False
+        return df, None, False, False
     info = info or {}
     live = bool(info.get("appended") or info.get("adjusted"))
-    return out, (info.get("as_of_epoch") if live else None), live
+    # `partial` (2026-09-14): the returned frame's LAST ROW is a session in
+    # progress. Until today `appended` alone decided what was closed, and
+    # from ~10:00 ET the hourly cache patch had already put today's partial
+    # bar in the frame, so nothing was appended and the partial bar was read
+    # as closed structure — with the verdict priced off a print up to an
+    # hour stale while the `now` line moved to the live tape.
+    return out, (info.get("as_of_epoch") if live else None), live, bool(info.get("partial"))
+
+
+def _closed_of(df, partial: bool):
+    """The structure frame: everything but an in-progress last row."""
+    if df is None or not partial or len(df) < 2:
+        return df
+    return df.iloc[:-1]
 
 
 def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
@@ -220,9 +233,8 @@ def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
     # Today's live bar on top of the closed frame (Ajay 2026-09-03, CHPT: the
     # tab said "1.4% below support" off yesterday's 5.19 while the tape was
     # 9.14). as_of becomes the snapshot's last-trade time when it appended.
-    df, live_as_of, appended = _overlay_today(prices, closed, sym)
-    if not appended:
-        closed = df
+    df, live_as_of, _live, partial = _overlay_today(prices, closed, sym)
+    closed = _closed_of(df, partial)
     have = len(df) if df is not None else 0
     if need_bars <= have:
         return _ret(df, have, (live_as_of or _shared_frame_as_of(sym)), closed)
@@ -237,14 +249,21 @@ def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
             deep = prices._fetch_massive(key, "5y")
         except Exception:
             deep = None
+        # The deep frame bypasses load_prices, so the pre-session phantom echo
+        # scrub that every other frame gets never ran on it (2026-09-14).
+        scrub = getattr(prices, "_drop_phantom_tail", None)
+        if deep is not None and len(deep) and scrub is not None:
+            try:
+                healed = scrub(deep)
+                deep = healed if healed is not None else deep
+            except Exception as exc:                            # pragma: no cover
+                log.debug("support: phantom scrub on deep %s failed: %s", sym, exc)
         if deep is not None and len(deep):
             deep_as_of = _t.time()
             _deep_cache[key] = (deep_as_of, deep)
     if deep is not None and len(deep) > have:
-        deep_closed = deep
-        deep, deep_live_as_of, deep_appended = _overlay_today(prices, deep, sym)
-        if not deep_appended:
-            deep_closed = deep
+        deep, deep_live_as_of, _dl, deep_partial = _overlay_today(prices, deep, sym)
+        deep_closed = _closed_of(deep, deep_partial)
         return _ret(deep, len(deep), (deep_live_as_of or deep_as_of), deep_closed)
     return _ret(df, have, _shared_frame_as_of(sym), closed)
 
@@ -320,6 +339,9 @@ def _level(z: dict, last_price: float, *, above: bool) -> dict:
         # Price turned here more than once vs. a single swing low. See
         # MIN_TOUCHES_TESTED — this is the difference between a floor and a bar.
         "tested": bool((z.get("touches") or 0) >= MIN_TOUCHES_TESTED),
+        # The bars that MADE the band (2026-09-14) — drawn as touch markers
+        # so the box carries its reasons.
+        "touch_dates": z.get("touch_dates"),
         "distance_pct": (_pct_above(last_price, float(z["lo"])) if above
                          else _pct_below(last_price, float(z["hi"]))),
     }
@@ -415,17 +437,29 @@ def overlay_for_symbol(sym: str, base: dict) -> dict:
     cap already exists to prevent, and agreement is the point of the view."""
     from sepa import prices
 
-    df, have, as_of = _frame_for(sym, max(w["bars"] for w in SUPPORT_WINDOWS))
+    df, have, as_of, closed = _frame_for(sym, max(w["bars"] for w in SUPPORT_WINDOWS),
+                                         with_closed=True)
     if df is None or not len(df):
         return {**base, "error": f"No price data for {sym}."}
     base = {**base, "as_of": as_of, "data_through": _last_bar_date(df)}
+    # Structure off CLOSED bars, priced at the live print — the same rule the
+    # single-window path adopted 2026-09-05. This path read the live-overlaid
+    # frame, so an unclosed bar could confirm or veto the newest pivot and
+    # the overlay tab disagreed with the 1y tab about the same swing
+    # (2026-09-14: band sets differed on 76 of 108 names).
+    try:
+        live_px = float(df["close"].iloc[-1])
+    except Exception:                                          # pragma: no cover
+        live_px = None
+    struct = closed if closed is not None and len(closed) else df
 
     tagged: list[dict] = []
     per_window: list[dict] = []
     last_price = None
     for w in SUPPORT_WINDOWS:
-        z = pz.compute(df, swing_window=w["swing_window"], lookback_bars=w["bars"],
-                   max_zones=None)   # every cluster: this tab caps by NEAREST below
+        z = pz.compute(struct, last_price=live_px, swing_window=w["swing_window"],
+                       lookback_bars=w["bars"],
+                       max_zones=None)   # every cluster: this tab caps by NEAREST below
         if z is None:
             per_window.append({"key": w["key"], "bands": 0})
             continue
@@ -554,12 +588,69 @@ def _bands(levels: dict) -> list[dict]:
     out: list[dict] = []
     inside = levels.get("standing_in")
     if inside:
-        out.append({"kind": "demand", "lo": inside["lo"], "hi": inside["hi"],
-                    "label": "here"})
+        t = _touch_label(inside)
+        # The box price stands IN takes its colour from its ORIGIN
+        # (2026-09-14). It was always green: AAPL sat in a 2-touch
+        # overhead-supply cluster, the verdict said "resistance right here",
+        # and the chart drew a green support box under the cursor — 63 of 388
+        # ticker-windows read that way.
+        in_supply = (inside.get("origin") == "supply")
+        out.append({"kind": "supply" if in_supply else "demand",
+                    "lo": inside["lo"], "hi": inside["hi"],
+                    "label": ("here · in supply" if in_supply else "here")
+                             + (f" · {t}" if t else "")})
     for lv in (levels.get("supports") or [])[:3]:
-        out.append({"kind": "demand", "lo": lv["lo"], "hi": lv["hi"]})
+        out.append({"kind": "demand", "lo": lv["lo"], "hi": lv["hi"],
+                    **({"label": _touch_label(lv)} if _touch_label(lv) else {})})
     for lv in (levels.get("overhead") or [])[:3]:
-        out.append({"kind": "supply", "lo": lv["lo"], "hi": lv["hi"]})
+        out.append({"kind": "supply", "lo": lv["lo"], "hi": lv["hi"],
+                    **({"label": _touch_label(lv)} if _touch_label(lv) else {})})
+    return out
+
+
+def _touch_label(lv: dict) -> Optional[str]:
+    """"3× tested" on a band price turned at more than once; nothing on a
+    single swing, whose box already says what it is. The count is the one
+    number that separates a floor from a bar (MIN_TOUCHES_TESTED)."""
+    t = lv.get("touches")
+    if isinstance(t, int) and t >= MIN_TOUCHES_TESTED:
+        return f"{t}× tested"
+    return None
+
+
+# Marker kinds for the swings that make a band: a swing LOW (`touch_d`, drawn
+# under the bar) or a swing HIGH (`touch_s`, drawn over it). Chosen by the
+# band's ORIGIN, not the side it is drawn on — a broken lid now acting as
+# support was made by swing highs, and the glyph has to sit where they are.
+TOUCH_LOW_KIND = "touch_d"
+TOUCH_HIGH_KIND = "touch_s"
+MAX_TOUCH_MARKERS = 40
+
+
+def _touch_markers(levels: dict) -> list[dict]:
+    """Dated markers for every touch of every band the tile draws (2026-09-14).
+
+    Ajay studies these charts to learn the pattern, and a band whose defining
+    swings are not marked is a box with no visible cause. The tile only draws
+    a marker whose date is inside its bar window, so a touch from a wider
+    lookback than the zoom simply does not render.
+    """
+    inside = levels.get("standing_in")
+    drawn = ([inside] if inside else []) \
+        + list((levels.get("supports") or [])[:3]) \
+        + list((levels.get("overhead") or [])[:3])
+    out, seen = [], set()
+    for lv in drawn:
+        kind = (TOUCH_HIGH_KIND if (lv or {}).get("origin") == "supply"
+                else TOUCH_LOW_KIND)
+        for d in (lv or {}).get("touch_dates") or []:
+            key = (str(d), kind)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append({"date": str(d), "kind": kind})
+            if len(out) >= MAX_TOUCH_MARKERS:
+                return out
     return out
 
 
@@ -999,6 +1090,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     budget = tf_spec_["bars"] if own_bars else spec["bars"]
     swing = tf_spec_["swing_window"] if own_bars else spec["swing_window"]
     bars_used = min(len(df), budget)
+    # What the stats row and the why-sentence call the window. On an intraday
+    # timeframe the structure came from the timeframe's OWN bars, and the
+    # daily zoom label ("6 months" under an hourly chart) was a lie the header
+    # chip stopped telling on 2026-08-29 but the tile kept (2026-09-14).
+    scope_spec = (spec if not own_bars
+                  else {**spec, "label": f"{bars_used} x {tf_spec_['label']} bars"})
     short = bars_used < budget
     if closed is None or not len(closed):
         closed = df                                   # nothing live on top: read whole
@@ -1084,12 +1181,16 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # the mitigation entry (Ajay 2026-08-29, Brad Goh's five-step model).
     try:
         from supply_demand import smc as smc_mod
-        smc_setups = smc_mod.find_setups(df.tail(budget), last_price=last_price)
+        # CLOSED bars (2026-09-14). These read the live-overlaid frame while
+        # the zones/ATR/gaps read `closed`, so an unclosed bar's high or low
+        # could mint a BOS, a sweep or an order block that vanished at the
+        # close — ESI drew "BOS 33.49" that only existed with the live bar.
+        smc_setups = smc_mod.find_setups(closed.tail(budget), last_price=last_price)
         smc_read = {
             "setups": smc_setups,
-            "sweeps": smc_mod.liquidity_sweeps(df.tail(budget))[:4],
-            "breaks": smc_mod.structure_breaks(df.tail(budget))[:4],
-            "order_blocks": smc_mod.order_blocks(df.tail(budget))[:4],
+            "sweeps": smc_mod.liquidity_sweeps(closed.tail(budget))[:4],
+            "breaks": smc_mod.structure_breaks(closed.tail(budget))[:4],
+            "order_blocks": smc_mod.order_blocks(closed.tail(budget))[:4],
             "cited": smc_mod.CITED,
             "note": smc_mod.SOURCE_NOTE,
         }
@@ -1102,7 +1203,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # Same window the bands were read from — a pattern found in bars the
         # zoom excludes would contradict the levels drawn beside it.
         bullish = pat_tf.scan(sym, "daily" if ext_frame else tf_key,
-                              df=df.tail(budget))
+                              df=closed.tail(budget))
     except Exception as exc:                                # pragma: no cover
         log.warning("support: pattern scan for %s failed: %s", sym, exc)
         bullish = None
@@ -1121,9 +1222,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                  else board_mod.bars_for(sym, days=bars_used)),
         "bands": _bands(levels),
         "lines": _lines(levels, last_price),
-        "markers": [],
-        "stats": _stats(levels, zones, spec),
-        "why": _why(levels, zones, spec),
+        "markers": _touch_markers(levels),
+        "stats": _stats(levels, zones, scope_spec),
+        "why": _why(levels, zones, scope_spec),
         "theme": board_mod._theme(sym),
         "badges": [],
     }

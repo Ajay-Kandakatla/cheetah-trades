@@ -12,7 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -56,6 +56,11 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // new tab has no usage yet. `tabUsageKey` counts them from the first
   // open, so the next re-cut moves them on evidence.
   'keltner', 'amd',
+  // 📁 My holdings (Ajay 2026-09-14: "about the new portfolio stocks I want
+  // to run these against them" — the AMD / KC / supply-demand reads on the
+  // names he actually owns, with his cost on every chart). Beside the two
+  // study tabs it runs; no usage yet, so mid-pack like them.
+  'holdings',
   // Bonde (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see his
   // stocks"). Beside the growth boards it belongs with, not at the front —
   // same measured-order rule as the two above.
@@ -85,6 +90,9 @@ export function isBoardTab(t: CmTab): boolean {
   return t !== 'support' && t !== 'session' && t !== 'overnight' && t !== 'signals'
     && t !== 'catalysts' && t !== 'hot_pullback' && t !== 'patterns'
     && t !== 'hot_sectors'
+    // `holdings` (2026-09-14) is one /chart-maps/support call per name he
+    // owns — his portfolio is not a universe pass.
+    && t !== 'holdings'
     // Bonde is a sectioned table off /bonde/board, not a tile grid.
     && t !== 'bonde'
     && t !== 'growth'
@@ -117,6 +125,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // where they are turning bullish"). Both read the SAME modules the chart
   // overlays draw from, through supply_demand/turning_bullish.py, so a name on
   // the board and that name's chart can never disagree about its state.
+  holdings: {
+    label: '\u{1F4C1} My holdings',
+    blurb: 'Every name on your Portfolio page, drawn the way the Support tab draws it: the tested demand and supply bands at the zoom you pick, the swings that MADE each band marked on the bars, the SMC order blocks, and — when you tick them — the AMD phases (A on the base, M on the raid bar, D on the markup, ✗ where the base failed), the Keltner channel with its squeeze dots, Fibonacci and mean reversion. Ajay 2026-09-14: "about the new portfolio stocks I want to run these against them." YOUR COST is the pink line on each chart; YOUR STOP appears in blue only when you have typed a stop on the Portfolio page — the app never invents one. Worst position first. Both study reads MEASURED INVERTED on 2026-09-13 (see the two \u{1F300} tabs): they describe the tape, they do not predict it, and nothing here gates, alerts or trades. Not advice.',
+  },
   bonde: {
     label: '\ud83d\udcc8 Bonde',
     blurb: 'MEASURED 2026-09-13 AND THIS BOARD\u2019S OWN THESIS IS INVERTED \u2014 read this before the rules. The tab shipped on the idea that Bonde\u2019s SALES screen is the universe and the EPISODIC PIVOT is the entry, so the intersection is the selection. Two passes measured it \u2014 the second an independent audit with its own code, its own fetch and roughly twice the panel \u2014 and that intersection is the WORST cell either pass found. On 780 Episodic Pivots reconstructed from CLOSED bars (2024-09-13 \u2192 2026-09-11, the rule validated 62/63 against the stored setup docs, 0 of 780 using a quarter filed after its bar), the 376 that ALSO passed his sales gate ran a 21-day median \u22123.22% with a 39.8% win rate, against \u22120.11% and 49.6% for date-matched non-Pivot names \u2014 a lift of \u22123.11pp, 95% CI \u22125.28 to \u22121.16 symbol-clustered and \u22125.19 to \u22121.13 date-clustered. It holds under a $1M liquidity cut, under entry at the next open (worse, \u22124.76pp) and in all four point-in-time fundamentals variants. His sales gate ON ITS OWN separated nothing at any horizon (\u22120.40pp, CI \u22121.40 to +0.61): it passes 48.2% of Pivot events and 46.0% of matched non-Pivot draws, so it carries no information about the pivot. Expectancy on the setup\u2019s own bracket is \u22120.92% and the sales gate moves it by \u22120.06pp \u2014 and the 58% target-before-stop rate is bracket geometry, not a win rate (target 6.00% away, stop a median 13.71% away). THIS IS NOT A LICENCE TO SHORT: that cohort\u2019s 21-day MEAN is \u22122.18% with a CI including zero. The finding is \u201cthese bleed at the median and win less than half the time\u201d. THE TIERS DO NOT SEPARATE EITHER: over 45,425 symbol-bars in 24 monthly cross-sections the \u2265100% and \u226525% tiers beat the scored universe by a MEDIAN of +0.45pp and +0.37pp at 21 days, both CIs including zero, win rates level with the market; the average lift is the right tail and falls to +0.26pp once the top 5% of returns are dropped. So the board never sorts on the 0-100 sales score, and no tier number prints without its median, its win rate and its placebo. THE ONE FINDING THAT SURVIVED EVERY ATTACK is about the cohort his gate THROWS AWAY: among names clearing his 5% floor, the character clause (accelerating OR \u22652 consecutive growth quarters) measures BACKWARDS \u2014 the rejected names won 56.8% of the next 21 sessions against 51.2% for the ones the gate accepts (+5.64pp, CI +3.91 to +7.52), and clause by clause it is the CONSISTENCY half (\u22652 consecutive quarters costs 3.31pp of win rate, CI \u22124.68 to \u22121.83; accelerating is a null, not a negative). His gate is NOT edited \u2014 it is his, and this tab exists to show his screen \u2014 so the discarded cohort is shown beside it in the \ud83d\udd0e section, labelled as not on his screen. WHAT WAS STRUCK on re-measurement and is said nowhere: that Pivot+PASS also loses to Pivot+FAIL (\u22122.42pp, CI \u22124.88 to +0.30), that BOTH character clauses are inverted, and the first pass\u2019s \u201ccoverage is 46%\u201d limitation \u2014 that was its own no-retry fetcher losing half its requests. \u2728 NEW still marks names that ARRIVED on his screen, which was your ask; the ledger refuses to badge the first cohort it ever sees, and it never lights on a \ud83d\udd0e row. WHOSE NUMBERS ARE WHOSE: the 5% floor / 25% preferred / 100% explosive tiers are Bonde\u2019s own (docs/sepa/sales_confidence_methodology.md, which also lists the figures widely attributed to him that FAILED source verification); the Pivot\u2019s 8% gap on 5\u00d7 volume are THIS APP\u2019S owner settings, stricter than its PEG cousin because it has no earnings-calendar filter \u2014 he never published them. A ranking guard of this app\u2019s own: a percentage measured off a NEGATIVE or sub-$1M year-ago quarter is a sign flip or a ratio, not growth (DBRG reads +15,961% off MINUS $3.2M, QUBT +9,000% off $61,000), so those names still show with their dollars but never outrank a real base. LIMITS: delisting survivorship is unmeasured, the tier panel is 24 cross-sections inside ONE bull regime, 24.3% of quarterly rows carry no filing date and are assumed available at quarter-end + 90 days, 24.6% of pivots are unclassifiable and the dropout is structural (recent IPOs and de-SPACs), and all returns are gross of commissions, slippage and borrow. Scripts, re-runnable verbatim: backend/scripts/bonde_audit/. Nothing on this tab gates a scan, fires an alert, or buys in any lane. Not advice.',
@@ -266,8 +278,17 @@ export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral'; lo: numbe
 // this union, so `toneColor` and `TONE_PRIORITY` had no case for them and
 // every study line rendered grid-grey with a droppable label.
 export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
-  | 'amd' | 'fib' | 'meanrev' | 'keltner';
-export type CmLine = { price: number; label: string; tone: CmLineTone };
+  | 'amd' | 'fib' | 'meanrev' | 'keltner'
+  // 2026-09-14: the two lines the 📁 My holdings tab adds on a name he owns —
+  // his cost, and the stop he typed on the Portfolio page. Their own tones
+  // so the `trade` checkbox (BUY / STOP / TARGET of a plan) never hides them.
+  | 'cost' | 'ownstop';
+/** `quiet` (2026-09-14): the backend flags BOS / swept / ORB lines it wants
+ *  drawn but not fought over — the label yields to the plan labels under
+ *  pressure (priority 0) while the line itself still draws. The flag was sent
+ *  for weeks with no consumer; "BOS 211.50" carried a STOP tone at priority 3
+ *  and could push the real support label off the gutter. */
+export type CmLine = { price: number; label: string; tone: CmLineTone; quiet?: boolean };
 export type CmTapeSession = 'premarket' | 'rth' | 'afterhours' | 'closed';
 export type CmMarker = { date: string; label?: string; kind?: string; price?: number };
 export type CmStat = { k: string; v: string };
@@ -892,6 +913,8 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
   // BUY / STOP / TARGET plan off the chart. The coloured line still draws;
   // only its right-edge text yields.
   amd: 1, fib: 1, meanrev: 1, keltner: 1,
+  // His own numbers on his own chart are never dropped for a study label.
+  cost: 3, ownstop: 3,
 };
 
 /** Right-edge labels for the plan lines, de-collided. Reuses zonePlan's
@@ -936,8 +959,8 @@ export function lineLabels(
       y: yFor(l.price, d, height, padY),
       text: l.tone === 'now' ? nowLabelText(l.label, l.price) : l.label,
       color: toneColor(l.tone),
-      bold: l.tone === 'buy',
-      priority: TONE_PRIORITY[l.tone] ?? 2,
+      bold: l.tone === 'buy' || l.tone === 'cost',
+      priority: l.quiet ? 0 : (TONE_PRIORITY[l.tone] ?? 2),
     }));
   // The gap follows the type size: a 10-unit gap under 9.5-unit text let two
   // labels touch, and a plan label that could not fit within maxShift used to
@@ -1180,8 +1203,12 @@ export function tooltipPos(
 export function hoverLines(bar: CmBar | null | undefined): string[] {
   if (!bar) return [];
   const f = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : '—');
+  // The extended-hours bar carries the AH / pre-market print as its close and
+  // widened high/low (prices.with_today_bar); say so, or the readout claims an
+  // official close the session never printed (2026-09-14).
+  const tape = bar.s === 'ah' ? ' · AH' : bar.s === 'pre' ? ' · pre' : '';
   return [
-    bar.t,
+    `${bar.t}${tape}`,
     `O ${f(bar.o)}   H ${f(bar.h)}`,
     `L ${f(bar.l)}   C ${f(bar.c)}`,
     `Vol ${shortVol(bar.v)}`,
@@ -1201,6 +1228,14 @@ export function toneColor(tone: CmLineTone): string {
   if (tone === 'fib') return 'var(--cm-teal, #14b8a6)';
   if (tone === 'meanrev') return 'var(--cm-slate, #64748b)';
   if (tone === 'keltner') return 'var(--cm-amberlt, #f59e0b)';
+  // The now line draws in the ink its legend swatch shows (it fell to the
+  // grid grey below, so the swatch and the line disagreed — 2026-09-14).
+  if (tone === 'now') return 'var(--ink, #e7e7e7)';
+  // 📁 My holdings: his cost in the position pink, his typed stop in the
+  // info blue — neither borrows a plan tone, so a "STOP" the engine drew and
+  // the stop HE set can never look like the same line.
+  if (tone === 'cost') return 'var(--cm-pink, #ec4899)';
+  if (tone === 'ownstop') return 'var(--info, #38bdf8)';
   return 'var(--text-muted, #94a3b8)';
 }
 

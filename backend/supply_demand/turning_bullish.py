@@ -98,8 +98,18 @@ MID_SLOPE_BARS = 20
 # as a quality filter is reading it wrong.
 MAX_RAID_BARS_AGO = 3
 
-KELTNER_GRADES = ("breaking_up", "coiled_up", "upper_half", "none")
-AMD_GRADES = ("marked_up", "raided", "basing", "none")
+# 2026-09-14: the lower states are NAMED. Before this, "lower half", "below
+# the lower band" and "cannot compute" all graded `none` and all rendered as
+# "KC no read" — CRDO at position −0.24 (a real, computed, BEARISH read) wore
+# the same badge as a halted name. `none` now means only "no channel".
+KELTNER_GRADES = ("breaking_up", "coiled_up", "upper_half", "lower_half",
+                  "below_band", "none")
+# Same day, same reason on the AMD side: a raid older than the bound graded
+# `none` and printed "AMD no cycle · 16d ago" — a sentence that contradicts
+# itself. `stale` is a real raid that has had its chance; `failed` is the
+# module's new phase — price CLOSED through the raided edge, the base is dead
+# (see amd.py). `none` means only "no cycle in the window".
+AMD_GRADES = ("marked_up", "raided", "stale", "failed", "basing", "none")
 
 # The states each tab lists. Named once so the board, the chart verdict and the
 # tests cannot drift apart.
@@ -175,8 +185,10 @@ def keltner_verdict(df) -> Optional[dict]:
         grade = "coiled_up"
     elif pos >= COILED_MIN_POSITION:
         grade = "upper_half"
+    elif pos < 0.0:
+        grade = "below_band"
     else:
-        grade = "none"
+        grade = "lower_half"
 
     return {
         "grade": grade,
@@ -185,6 +197,7 @@ def keltner_verdict(df) -> Optional[dict]:
         "squeeze": bool(r.get("squeeze")),
         "squeeze_bars": r.get("squeeze_bars"),
         "squeeze_released": bool(r.get("squeeze_released")),
+        "squeeze_ratio": r.get("squeeze_ratio"),
         "mid_rising": rising,
         "mid": r.get("mid"), "upper": r.get("upper"), "lower": r.get("lower"),
         "width_pct": r.get("width_pct"),
@@ -223,27 +236,48 @@ def amd_verdict(df, *, window: int = WINDOW_SESSIONS) -> Optional[dict]:
     phase = cyc.get("phase")
     raid = cyc.get("manipulation") or {}
     dist = cyc.get("distribution") or {}
+    fail = cyc.get("failure") or {}
     acc = cyc.get("accumulation") or {}
 
     raid_age = raid.get("bars_ago")
     dist_age = dist.get("bars_ago")
+    fail_age = fail.get("bars_ago")
     # The age that decides whether this cycle is "recent": the furthest stage
     # reached is the one that dates it.
-    age = dist_age if dist_age is not None else raid_age
+    age = (dist_age if dist_age is not None
+           else fail_age if fail_age is not None else raid_age)
     in_window = age is not None and age <= window
 
     if phase == "distribution":
         grade = "marked_up"
+    elif phase == "failed":
+        # Price CLOSED through the raided edge before any markup. The stops
+        # under the base were taken and then the base itself gave way — the
+        # opposite of the turn this board is about, and until 2026-09-14 it
+        # read as "manipulation" for as long as the base stayed in the window.
+        grade = "failed"
     elif (phase == "manipulation" and raid_age is not None
           and raid_age <= MAX_RAID_BARS_AGO):
         grade = "raided"
+    elif phase == "manipulation":
+        # A raid that is real but STALE. Not "raided" — he asked for turning,
+        # and a sweep from three months ago has had its chance.
+        grade = "stale"
     elif phase == "accumulation":
         grade = "basing"
     else:
-        # A raid that is real but STALE. Not "raided" — he asked for turning,
-        # and a sweep from three months ago has had its chance.
         grade = "none"
 
+    notes = {
+        "raided": ("the raid means the stops under the base are gone and price "
+                   "closed back inside; the markup has not happened yet"),
+        "stale": ("the raid is older than %d sessions — context, not a turn"
+                  % MAX_RAID_BARS_AGO),
+        "failed": ("price closed THROUGH the raided edge before any markup; "
+                   "the base is broken and this is not a turn"),
+        "marked_up": "the cycle completed — price closed above the base top",
+        "basing": "a qualifying base with no raid on it yet",
+    }
     return {
         "grade": grade,
         "turning": grade == AMD_TURNING,
@@ -253,11 +287,20 @@ def amd_verdict(df, *, window: int = WINDOW_SESSIONS) -> Optional[dict]:
         "raid_bars_ago": raid_age,
         "raid_price": raid.get("price"),
         "raid_level": raid.get("level"),
+        "raid_date": raid.get("date"),
+        # 2026-09-14: how deep the wick went and on what volume — DATA beside
+        # the raid, never a threshold.
+        "raid_depth_pct": raid.get("depth_pct"),
+        "raid_vol_ratio": raid.get("vol_ratio"),
         "markup_level": dist.get("level"),
+        "markup_date": dist.get("date"),
+        "failed_bars_ago": fail_age,
+        "failed_close": fail.get("close"),
+        "failed_date": fail.get("date"),
         "base_lo": acc.get("lo"), "base_hi": acc.get("hi"),
         "base_bars": acc.get("bars"),
-        "note": ("the raid means the stops under the base are gone and price "
-                 "closed back inside; the markup has not happened yet"),
+        "base_date": acc.get("date"),
+        "note": notes.get(grade, "no AMD cycle in the window"),
     }
 
 
@@ -278,11 +321,18 @@ KELTNER_TEXT = {
     "breaking_up": ("KC breaking up", "good"),
     "coiled_up": ("KC coiled up", "good"),
     "upper_half": ("KC upper half", "muted"),
+    # The two lower states get their own words (2026-09-14). "below the band"
+    # is the channel's own definition of a downside expansion — the mirror of
+    # `breaking_up` — and it is a warning, not a "no read".
+    "lower_half": ("KC lower half", "muted"),
+    "below_band": ("KC below the band", "warn"),
     "none": ("KC no read", "muted"),
 }
 AMD_TEXT = {
     "marked_up": ("AMD marked up", "muted"),
     "raided": ("AMD raided", "good"),
+    "stale": ("AMD raid stale", "muted"),
+    "failed": ("AMD base failed", "warn"),
     "basing": ("AMD basing", "muted"),
     "none": ("AMD no cycle", "muted"),
 }
@@ -302,13 +352,24 @@ def verdict_text(kind: str, v: Optional[dict]) -> tuple:
     if kind == "keltner":
         bars = v.get("squeeze_bars")
         # The squeeze length is the one number a reader wants next to "coiled",
-        # and it is only meaningful while the squeeze is actually on.
+        # and it is only meaningful while the squeeze is actually on. The
+        # width ratio (2026-09-14) says HOW tight: 0.6× is a coil, 0.98× is
+        # barely inside.
         if v.get("squeeze") and isinstance(bars, int) and bars > 0:
-            return ("%s · squeeze %db" % (base, bars), tone)
+            ratio = v.get("squeeze_ratio")
+            tight = (" · %.2f× wide" % ratio
+                     if isinstance(ratio, (int, float)) and ratio == ratio else "")
+            return ("%s · squeeze %db%s" % (base, bars, tight), tone)
         if v.get("squeeze_released"):
             return ("%s · squeeze just released" % base, tone)
         return (base, tone)
-    age = v.get("raid_bars_ago") if grade == "raided" else v.get("bars_ago")
+    # Which age belongs beside which word: the raid dates a raid (fresh or
+    # stale), the failure bar dates a failure, the markup dates a markup. A
+    # bare base and "no cycle" carry no age — the old code printed "no cycle ·
+    # 16d ago", a sentence at war with itself.
+    age = (v.get("raid_bars_ago") if grade in ("raided", "stale")
+           else v.get("failed_bars_ago") if grade == "failed"
+           else v.get("bars_ago") if grade == "marked_up" else None)
     if isinstance(age, int):
         return ("%s · %s" % (base, "today" if age == 0 else "%dd ago" % age), tone)
     return (base, tone)

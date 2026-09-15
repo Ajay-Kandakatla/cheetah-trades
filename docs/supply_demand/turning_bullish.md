@@ -236,3 +236,77 @@ frontend/src/components/PatternChart.tsx      polyline rendering with gaps
 frontend/src/components/OverlayLegend.tsx     locked family
 frontend/src/lib/turningBullish.test.ts
 ```
+
+---
+
+## 6. Verification 2026-09-14 — what his own holdings exposed
+
+Ajay: *"I would [like] the AMD, KC logic and also supply demand logic on all
+charts of Chart Maps to be verified. Also make it a lil more sophisticated."*
+Reproduced on the seven names on his Portfolio page before anything was
+changed. Tests: `backend/tests/test_chart_studies_verified_2026_09_14.py`.
+
+### The AMD cycle never failed
+
+`find_cycle` scanned the bars after a raid for ONE thing: a close above the
+top of the base (the markup). A close **below the raided edge** was invisible.
+
+| Name | Base | Raid | Closed under the base | Read on 09-14 |
+|---|---|---|---|---|
+| CRDO | 229.18–286.24 (9 bars) | 08-20 at 226.58 | 08-24 (222.61) | "manipulation", price 150 (−35%) |
+| GLW | 149.25–176.94 (13) | 08-21 at 148.05 | 08-24 (145.55) | "manipulation" |
+| ALAB | 285.68–367.85 (8) | 08-19 at 278.18 | 08-21 (284.97) | "manipulation" |
+
+Three of his seven holdings drew a dead base and a raid line as a live read.
+Worse for the board: GLW on 08-24 had `raid_bars_ago == 1`, so it was
+**"AMD raided · 1d ago"** on the Raided tab the day after its base gave way.
+
+**Now:** a close through the raided edge before any markup ends the cycle in
+`phase == "failed"` (no bar limit — a base that broke three months ago is not
+a live read), the verdict grades it `failed` ("AMD base failed · Nd ago",
+warn tone), the band label says `base FAILED`, and a red ✗ marks the bar. A
+collapse *after* a completed markup is the next story and leaves
+`distribution` alone.
+
+### Words that contradicted the picture
+
+* `KC no read` for CRDO at position −0.24. "Below the lower band" is the
+  channel's own definition of a downside expansion; it now has a name
+  (`below_band`, warn) and so does `lower_half`. `none` means only "no
+  channel".
+* `AMD no cycle · 16d ago` — a stale raid graded `none` with the raid's age
+  appended. Now `stale` → "AMD raid stale · 16d ago"; `none` carries no age.
+
+### Both the curve AND the flat lines
+
+The 2026-09-13 curve fix added the bending channel but `_study_overlays`
+kept emitting the three flat `KC upper/mid/lower` lines, so any tile with
+the Keltner box ticked drew both, with duplicate right-edge labels. The flat
+lines are dropped whenever the tile carries the curve (backend), and
+`filterTile` drops them client-side too for cached docs.
+
+### Ticking any study box on the 🌀 tabs drew everything twice
+
+`_attach_studies` re-attached the tab's own family on tiles that already
+carried it from the stored row: two base rects at double opacity, two raid
+lines, six curves, "AMD raided · 1d ago" ×2. Bands, lines, markers and
+badges are now de-duplicated on the way in.
+
+### Sophistication (description, never a gate)
+
+* The raid carries `depth_pct` (how far through the edge the wick went) and
+  `vol_ratio` (the raid bar against the 20 bars before it); the label reads
+  `AMD M — raid 226.58 (−1.1%, 1.8× vol)`.
+* Every stage carries its bar `date`, and the drawing marks **A** on the
+  base's first bar, **M** on the raid bar, **D** on the markup bar, **✗** on
+  the failure bar. The stored nightly row carries the same dates, so the
+  Raided board marks its bars without a second frame read.
+* `keltner.squeeze_series` — the TTM dot row, one dot under every bar the
+  Bollinger band sits inside the channel — rides with the curve; the badge
+  says how tight (`squeeze 6b · 0.71× wide`).
+
+Neither read was re-measured. The 2026-09-13 numbers were computed on the
+old detector; the claim they measured (raid → close above the top) is
+unchanged by the failure phase except that bars after a breakdown no longer
+fire "manipulation". Re-run `turning_bullish_amd_study.py` before quoting a
+new number.

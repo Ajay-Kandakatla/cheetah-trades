@@ -154,9 +154,21 @@ def drop_today(df, today: date):
 
 def _slim(z: dict, kind: str) -> Optional[dict]:
     try:
-        return {"kind": kind, "lo": float(z["lo"]), "hi": float(z["hi"]),
-                "touches": int(z.get("touches") or 0),
-                "strength": float(z.get("strength") or 0.0)}
+        out = {"kind": kind, "lo": float(z["lo"]), "hi": float(z["hi"]),
+               "touches": int(z.get("touches") or 0),
+               "strength": float(z.get("strength") or 0.0)}
+        # The band's AGE (2026-09-14), so the Breaking and Quick Bounce tiles
+        # can reach back to the swings that made it instead of drawing a
+        # 252-bar band on a 130-bar chart. Additive: absent on docs written
+        # before this shipped, and every reader treats absence as "unknown".
+        for k in ("oldest_touch_bars", "bars_since_test"):
+            v = z.get(k)
+            if v is not None:
+                try:
+                    out[k] = int(v)
+                except (TypeError, ValueError):
+                    pass
+        return out
     except (KeyError, TypeError, ValueError):
         return None
 
