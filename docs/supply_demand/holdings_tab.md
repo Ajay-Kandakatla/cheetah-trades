@@ -30,3 +30,9 @@ Files: `frontend/src/components/HoldingsBoard.tsx`,
 
 Nothing here computes a level, gates a scan, or trades. Both study reads
 measured INVERTED on 2026-09-13 (`turning_bullish.md`).
+
+**2026-09-14 (evening).** Each tile now carries the demand BOARD's band as a
+dashed outline — the band Back in Demand, Deep Demand, the alert gate and the
+paper lanes use — beside the Support tab's finer levels. See
+`support_levels_tab.md` § 2026-09-14 for the measurement that forced it (the two
+resolutions agreed on the nearest demand band 6 times in 46).

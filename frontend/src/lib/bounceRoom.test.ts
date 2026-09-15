@@ -8,8 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ROOM_MIN_PCT, bounceLabel, compareBounceRoom, coverageNote, intoSupply, isBouncing,
   normalizeSymbols, roomGroup, roomLabel, roomOk, roomRank,
-  type BounceRoomPayload, type BounceRoomRow,
-} from './bounceRoom';
+  type BounceRoomPayload, type BounceRoomRow, demandDistancePct, inOrNearDemand, compareDemandProximity, demandChipText } from './bounceRoom';
 
 const clear = (symbol: string, at_highs = true): BounceRoomRow => ({
   symbol, coverage: 'store', print: 100, fresh: true, bounce: null,
@@ -314,5 +313,42 @@ describe('coverageNote', () => {
   it('is empty with no payload (negative)', () => {
     expect(coverageNote(undefined)).toBe('');
     expect(coverageNote(null)).toBe('');
+  });
+});
+
+describe('demand proximity (2026-09-14 — the Bonde tab filter)', () => {
+  const row = (symbol: string, demand: BounceRoomRow['demand']): BounceRoomRow =>
+    ({ symbol, coverage: 'store', print: 100, demand });
+  const inBand = row('A', { lo: 98, hi: 101, touches: 2, in_band: true, distance_pct: 0, near: true });
+  const near = row('B', { lo: 90, hi: 98.5, touches: 1, in_band: false, distance_pct: 1.5, near: true });
+  const far = row('C', { lo: 80, hi: 92, touches: 3, in_band: false, distance_pct: 8.7, near: false });
+  const none = row('D', null);
+
+  it('reads the distance and the near flag straight off the server row', () => {
+    expect(demandDistancePct(inBand)).toBe(0);
+    expect(demandDistancePct(far)).toBe(8.7);
+    expect(demandDistancePct(none)).toBeNull();
+    expect(inOrNearDemand(inBand)).toBe(true);
+    expect(inOrNearDemand(near)).toBe(true);
+    expect(inOrNearDemand(far)).toBe(false);
+  });
+
+  it('NEGATIVE — an unknown read is never near (pending / unavailable / no band below)', () => {
+    expect(inOrNearDemand(none)).toBe(false);
+    expect(inOrNearDemand(undefined)).toBe(false);
+    expect(inOrNearDemand({ symbol: 'E', coverage: 'pending' })).toBe(false);
+  });
+
+  it('sorts nearest first, unknown last, ties by symbol', () => {
+    const order = [none, far, near, inBand].sort(compareDemandProximity).map((r) => r.symbol);
+    expect(order).toEqual(['A', 'B', 'C', 'D']);
+    const tie = [row('Z', near.demand), row('Y', near.demand)].sort(compareDemandProximity).map((r) => r.symbol);
+    expect(tie).toEqual(['Y', 'Z']);
+  });
+
+  it('chip text says in-band or the distance above the band', () => {
+    expect(demandChipText(inBand)).toBe('in demand band');
+    expect(demandChipText(near)).toBe('1.5% above demand');
+    expect(demandChipText(none)).toBeNull();
   });
 });

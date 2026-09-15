@@ -45,12 +45,22 @@ const BAND_FILL: Record<string, string> = {
   // The AMD accumulation base (2026-09-12). Without it the band fell to
   // the muted grey default and read as a 0DTE range.
   amd_accumulation: 'var(--cm-violet, #8b5cf6)',
+  // The demand BOARD's own band on the per-ticker views (2026-09-14): the
+  // same green/red as the swing bands because it IS support/overhead — but
+  // drawn as a dashed OUTLINE (see isOutline) so it reads as "the band the
+  // alert would name" laid over the finer levels, not as one more fill.
+  board_demand: 'var(--positive, #22c55e)',
+  board_supply: 'var(--negative, #ef4444)',
 };
+
+/** Board bands are outlines, never fills — one look, one meaning. */
+const isOutline = (kind: string) => kind === 'board_demand' || kind === 'board_supply';
 
 const BAND_NAME: Record<string, string> = {
   base: 'Base', demand: 'Support', supply: 'Overhead', neutral: 'Range',
   fvg_demand: 'Fair value gap', fvg_supply: 'Fair value gap',
   order_block: 'Order block',
+  board_demand: 'Board demand', board_supply: 'Board overhead',
 };
 
 export const PatternChart = memo(function PatternChart(
@@ -189,22 +199,31 @@ export const PatternChart = memo(function PatternChart(
             const yTop = yFor(b.hi, domain, H, PAD_Y);
             const yBot = yFor(b.lo, domain, H, PAD_Y);
             const on = hBand === b;
+            const outline = isOutline(String(b.kind));
+            const colour = BAND_FILL[b.kind] || 'var(--text-muted, #94a3b8)';
             return (
-              <g key={`band-${i}`}>
+              <g key={`band-${i}`} data-band-kind={b.kind}>
                 <rect x={0} y={yTop} width={plotW} height={Math.max(yBot - yTop, 1)}
-                      fill={BAND_FILL[b.kind] || 'var(--text-muted, #94a3b8)'}
-                      opacity={on ? 0.26 : 0.13}>
+                      fill={outline ? 'none' : colour}
+                      stroke={outline ? colour : 'none'}
+                      strokeWidth={outline ? (on ? 1.6 : 1.2) : 0}
+                      strokeDasharray={outline ? '5,3' : undefined}
+                      opacity={outline ? (on ? 1 : 0.85) : (on ? 0.26 : 0.13)}>
                   <title>
                     {`${b.label || BAND_NAME[b.kind] || b.kind} `
                      + `${b.lo.toFixed(2)}–${b.hi.toFixed(2)}`}
                   </title>
                 </rect>
-                <line x1={0} y1={yTop} x2={plotW} y2={yTop}
-                      stroke={BAND_FILL[b.kind]} strokeWidth={on ? 1.2 : 0.8}
-                      opacity={on ? 0.9 : 0.45} />
-                <line x1={0} y1={yBot} x2={plotW} y2={yBot}
-                      stroke={BAND_FILL[b.kind]} strokeWidth={on ? 1.2 : 0.8}
-                      opacity={on ? 0.9 : 0.45} />
+                {!outline && (
+                  <line x1={0} y1={yTop} x2={plotW} y2={yTop}
+                        stroke={colour} strokeWidth={on ? 1.2 : 0.8}
+                        opacity={on ? 0.9 : 0.45} />
+                )}
+                {!outline && (
+                  <line x1={0} y1={yBot} x2={plotW} y2={yBot}
+                        stroke={colour} strokeWidth={on ? 1.2 : 0.8}
+                        opacity={on ? 0.9 : 0.45} />
+                )}
               </g>
             );
           })}

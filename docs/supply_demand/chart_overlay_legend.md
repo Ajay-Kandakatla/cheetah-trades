@@ -87,3 +87,11 @@ the tile navigation before opening the tab (locked in
   the Window dropdown asks for; the Breaking / Quick Bounce / Deep Demand
   tiles size to the band's oldest touch (`zone_store` and `deep_demand.read`
   now carry `oldest_touch_bars`).
+
+### 2026-09-14 (evening) — Board band · alerts
+
+New family `board` (kinds `board_demand`, `board_supply`, line prefix `board `),
+ON by default. It is the demand board's own band for the name — swing 5, merge
+4%, 252 closed bars, priced off the live print — drawn as a dashed outline so
+it reads as "the band an alert would name" over the Support tab's finer fills.
+Hiding it leaves the finer levels; hiding the finer levels leaves it.

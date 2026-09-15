@@ -671,6 +671,128 @@ def _lines(levels: dict, last_price: float) -> list[dict]:
     return out
 
 
+# ── The BOARD's band on the per-ticker views (2026-09-14) ─────────────────────
+# Ajay: "make sure the overhead supply and demand zone logic is accurate across
+# board." Measured that evening on 46 live board tickers: every board, alert
+# gate and paper lane shares ONE engine at ONE geometry (demand_reentry.
+# zone_geom — swing 5, merge 4%, 252 bars) and they agree with each other;
+# this tab and the holdings tab read the same engine at the FINER geometry
+# the zoom table documents (merge 1.75%) and agreed with the boards on the
+# nearest demand band 6 times in 46 and on the nearest overhead 9 in 46. The
+# doc's own promise — "a tab that could not reproduce their answer would look
+# like it disagreed with them" — no longer held. So every daily view now ALSO
+# carries the board's band, computed by the board's own decision function on
+# the same closed frame, drawn dashed and labelled. The finer levels stay.
+BOARD_NOTE = ("The dashed band is the demand BOARD's band — what Back in Demand, "
+              "Deep Demand, the alert gate and the paper lanes use (swing 5 · "
+              "merge 4% · 252 bars). The solid bands are this tab's finer levels "
+              "at the chosen zoom.")
+
+
+def board_read(closed, sym: str, last_price: float) -> Optional[dict]:
+    """The demand board's read of THIS closed frame, priced off `last_price`.
+
+    `decide_from_frame` is the one rule every S/D board, the alert gate and
+    the lanes run, so its entry band (else its nearest support, which may be
+    a lid turned floor) and the alert gate's first overhead ARE the bands an
+    alert would name. None when the frame is too short or the rule declines.
+    """
+    try:
+        from supply_demand import demand_reentry as DR
+        from supply_demand import alert_gates as _gates
+        from supply_demand.room_floor import plan_bands
+    except Exception:                                          # pragma: no cover
+        return None
+    try:
+        rec = DR.decide_from_frame(closed, sym, last_price=last_price)
+    except Exception as exc:                                   # pragma: no cover
+        log.debug("support: board read for %s failed: %s", sym, exc)
+        return None
+    if not rec:
+        return None
+    px = float(last_price)
+
+    def _dist(lo, hi):
+        if lo <= px <= hi:
+            return 0.0
+        return (round((lo - px) / px * 100.0, 2) if lo > px
+                else round((px - hi) / px * 100.0, 2))
+
+    entry = rec.get("entry_zone")
+    dem = entry or rec.get("nearest_support")
+    cands = ([rec.get("nearest_resistance")] + list(rec.get("supply_zones") or [])
+             + list(rec.get("demand_zones") or []))
+    try:
+        first = _gates.first_overhead(plan_bands(cands, entry), px, rec.get("prev_close"))
+    except Exception:                                          # pragma: no cover
+        first = None
+    verdict = rec.get("verdict")
+    out = {"demand": None, "supply": None,
+           "in_demand_band": bool(rec.get("in_demand_band")),
+           "verdict": (verdict.get("label") if isinstance(verdict, dict) else verdict),
+           "geom": DR.zone_geom(), "lookback_bars": pz.LOOKBACK_BARS,
+           "structure_through": rec.get("structure_through")}
+    if dem and dem.get("lo") is not None and dem.get("hi") is not None:
+        lo, hi = float(dem["lo"]), float(dem["hi"])
+        out["demand"] = {"lo": round(lo, 2), "hi": round(hi, 2),
+                         "touches": dem.get("touches"),
+                         "origin": dem.get("kind") or "demand",
+                         "is_entry_band": entry is not None and dem is entry,
+                         "distance_pct": _dist(lo, hi)}
+    if first and first.get("lo") is not None and first.get("hi") is not None:
+        lo, hi = float(first["lo"]), float(first["hi"])
+        out["supply"] = {"lo": round(lo, 2), "hi": round(hi, 2),
+                         "touches": first.get("touches"),
+                         "distance_pct": _dist(lo, hi)}
+    return out
+
+
+def _board_bands(board: Optional[dict]) -> list[dict]:
+    out: list[dict] = []
+    if not board:
+        return out
+    d, s = board.get("demand"), board.get("supply")
+    if d:
+        t = f" · {d['touches']}× tested" if d.get("touches") else ""
+        out.append({"kind": "board_demand", "lo": d["lo"], "hi": d["hi"],
+                    "label": f"board demand{t}"})
+    if s:
+        out.append({"kind": "board_supply", "lo": s["lo"], "hi": s["hi"],
+                    "label": "board overhead"})
+    return out
+
+
+def _board_pos(b: dict, *, above: bool) -> str:
+    if b["distance_pct"] == 0.0:
+        return "price inside"
+    return f"+{b['distance_pct']}%" if above else f"{b['distance_pct']}% below"
+
+
+def _board_stats(board: Optional[dict]) -> list[dict]:
+    if not board:
+        return []
+    d, s = board.get("demand"), board.get("supply")
+    return [
+        {"k": "board demand band",
+         "v": (f"${d['lo']}–${d['hi']}  ({_board_pos(d, above=False)})" if d
+               else "none — the board would not list it")},
+        {"k": "board overhead",
+         "v": (f"${s['lo']}–${s['hi']}  ({_board_pos(s, above=True)})" if s
+               else "clear — no band above the print")},
+    ]
+
+
+def _board_why(board: Optional[dict]) -> str:
+    if not board:
+        return ""
+    d, s = board.get("demand"), board.get("supply")
+    dem = (f"demand ${d['lo']}–${d['hi']} ({_board_pos(d, above=False)})" if d
+           else "no demand band")
+    sup = (f"overhead ${s['lo']}–${s['hi']} ({_board_pos(s, above=True)})" if s
+           else "overhead clear")
+    return f"BOARD (what alerts and lanes use): {dem} · {sup}. "
+
+
 def _stats(levels: dict, zones: dict, spec: dict) -> list[dict]:
     sup = (levels.get("supports") or [None])[0]
     ovh = (levels.get("overhead") or [None])[0]
@@ -1208,6 +1330,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         log.warning("support: pattern scan for %s failed: %s", sym, exc)
         bullish = None
 
+    # The board's band on every DAILY-structure view (an intraday timeframe
+    # reads its own bars; the board has no read of those).
+    board = board_read(closed, sym, last_price) if not own_bars else None
+
     tile = {
         "symbol": sym,
         "name": board_mod._name_for(sym),
@@ -1220,11 +1346,11 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "bars": (_frame_bars(chart_df.tail(tf_spec_["bars"]) if ext_frame
                              else df.tail(bars_used)) if intraday
                  else board_mod.bars_for(sym, days=bars_used)),
-        "bands": _bands(levels),
+        "bands": _bands(levels) + _board_bands(board),
         "lines": _lines(levels, last_price),
         "markers": _touch_markers(levels),
-        "stats": _stats(levels, zones, scope_spec),
-        "why": _why(levels, zones, scope_spec),
+        "stats": _stats(levels, zones, scope_spec) + _board_stats(board),
+        "why": _board_why(board) + _why(levels, zones, scope_spec),
         "theme": board_mod._theme(sym),
         "badges": [],
     }
@@ -1260,6 +1386,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "smc": smc_read,
         "trend_read": trend,
         "overlay": overlay,
+        "board": board,
         "chart_span": chart_span,
         "zoom_applies": not intraday,
         # Live chart (Ajay 2026-09-02): poll cadence + the overnight read.
@@ -1270,5 +1397,5 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                       if ext_frame else None),
         "note": ("Levels are read from this window only. A wider zoom finds the "
                  "structural floor; a tighter one finds the level this week's "
-                 "trade is standing on."),
+                 "trade is standing on. " + (BOARD_NOTE if board else "")).strip(),
     }

@@ -41,6 +41,13 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   { key: 'demand', label: 'Support / demand', swatch: 'var(--positive, #22c55e)',
     hint: 'tested demand bands and pattern bases — ▲ marks the swing lows that made a band',
     bandKinds: ['demand', 'base'], linePrefixes: ['support'], markerKinds: ['touch_d'] },
+  // The demand BOARD's own band on the per-ticker views (2026-09-14): what
+  // Back in Demand, Deep Demand, the alert gate and the lanes use. Its own
+  // family so it can be hidden without hiding the finer levels, and ON by
+  // default because it is the band an alert would name.
+  { key: 'board', label: 'Board band · alerts', swatch: 'var(--cm-amber, #d97706)',
+    hint: 'The demand board\u2019s band for this name — swing 5, merge 4%, 252 closed bars — the one every S/D board, the alert gate and the paper lanes read. Drawn dashed.',
+    bandKinds: ['board_demand', 'board_supply'], linePrefixes: ['board '] },
   { key: 'supply', label: 'Overhead / supply', swatch: 'var(--negative, #ef4444)',
     hint: 'bands of overhead supply — ▼ marks the swing highs that made a band',
     bandKinds: ['supply'], linePrefixes: ['overhead'], markerKinds: ['touch_s'] },
@@ -101,7 +108,7 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
  *  switched on over the levels he trades. `position` (2026-09-14) is his own
  *  cost and stop, not a read, and it is on: a saved v2 hidden-set from before
  *  it existed simply does not list it, so it shows for everyone. */
-export const DEFAULT_ON = ['demand', 'supply', 'order_block', 'position'];
+export const DEFAULT_ON = ['demand', 'supply', 'board', 'order_block', 'position'];
 
 export function defaultHidden(): Set<string> {
   return new Set(OVERLAY_GROUPS.map((g) => g.key).filter((k) => !DEFAULT_ON.includes(k)));

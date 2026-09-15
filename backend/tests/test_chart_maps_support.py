@@ -440,9 +440,16 @@ def test_this_module_never_scans_a_universe():
     pass. The 524 that took the demand board down on 2026-08-14 was exactly
     that mistake."""
     src = inspect.getsource(S)
-    for forbidden in ("cached_or_warm", "load_latest", "demand_reentry",
-                      "scanner"):
+    for forbidden in ("cached_or_warm", "load_latest", "scanner",
+                      "analyze_symbol"):
         assert forbidden not in src, f"support.py reaches for {forbidden}"
+    # 2026-09-14: the tab reads the demand BOARD's band through
+    # `decide_from_frame` — PURE per frame (no network, no clock, no cache,
+    # no universe). Nothing else from that module may be reached for.
+    import re
+    used = set(re.findall(r"\bDR\.(\w+)", src))
+    assert used <= {"decide_from_frame", "zone_geom"}, used
+    assert "decide_from_frame" in used
 
 
 def test_it_reuses_the_boards_tile_helpers_rather_than_reimplementing_them():

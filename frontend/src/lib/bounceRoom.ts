@@ -90,10 +90,24 @@ export type RoomRead = {
  *  'unavailable' = no / insufficient price data (a tombstone for the day). */
 export type BounceRoomCoverage = 'store' | 'ondemand' | 'pending' | 'unavailable';
 
+/** The nearest DEMAND band at or below the print (2026-09-14). A band whose
+ *  floor sits above the print is overhead (a reclaim), never "near demand". */
+export type DemandRead = {
+  lo: number;
+  hi: number;
+  touches: number;
+  in_band: boolean;
+  /** % from the band's top up to the print; 0.0 inside the band. */
+  distance_pct: number;
+  /** in_band, or distance_pct <= the server's demand_near_pct (PARAMS). */
+  near: boolean;
+};
+
 export type BounceRoomRow = {
   symbol: string;
   coverage: BounceRoomCoverage;
   print?: number | null;
+  demand?: DemandRead | null;
   /** lastTrade stamp within STALE_PRINT_SEC of now. A stale print still shows
    *  (a filter wants the last known price) but is flagged, never dropped. */
   fresh?: boolean;
@@ -133,6 +147,41 @@ export function normalizeSymbols(symbols: readonly (string | null | undefined)[]
 /** A row with a bounce read. Coverage pending/unavailable never has one. */
 export function isBouncing(row?: BounceRoomRow | null): boolean {
   return Boolean(row && row.bounce);
+}
+
+/* ── demand proximity (2026-09-14, the Bonde tab's filter) ───────────────── */
+
+/** % above the nearest demand band's top; 0 inside it; null with no read. */
+export function demandDistancePct(row?: BounceRoomRow | null): number | null {
+  const d = row?.demand;
+  if (!d || typeof d.distance_pct !== 'number' || !Number.isFinite(d.distance_pct)) return null;
+  return d.distance_pct;
+}
+
+/** In the band, or within the server's near distance above it. An unknown
+ *  read (pending / unavailable / no demand band below) is NOT near. */
+export function inOrNearDemand(row?: BounceRoomRow | null): boolean {
+  const d = row?.demand;
+  return Boolean(d && (d.in_band || d.near));
+}
+
+/** Nearest to demand first: inside a band, then ascending distance, then
+ *  rows with no read, then the symbol so the order is stable. */
+export function compareDemandProximity(a?: BounceRoomRow | null, b?: BounceRoomRow | null): number {
+  const da = demandDistancePct(a), db = demandDistancePct(b);
+  if (da == null && db == null) return (a?.symbol ?? '').localeCompare(b?.symbol ?? '');
+  if (da == null) return 1;
+  if (db == null) return -1;
+  if (da !== db) return da - db;
+  return (a?.symbol ?? '').localeCompare(b?.symbol ?? '');
+}
+
+/** The chip text a row can wear: "in demand band" / "1.2% above demand". */
+export function demandChipText(row?: BounceRoomRow | null): string | null {
+  const d = row?.demand;
+  if (!d) return null;
+  if (d.in_band) return 'in demand band';
+  return `${d.distance_pct.toFixed(1)}% above demand`;
 }
 
 /** Frontend mirror of ALERT_MIN_ROOM_PCT (backend/supply_demand/alert_gates.py,

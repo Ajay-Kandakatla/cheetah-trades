@@ -445,7 +445,7 @@ def test_read_symbol_rows_for_pending_tombstone_no_print_and_ondemand_coverage()
     assert nop["coverage"] == "unavailable" and "print" in nop["error"]
     od = BR.read_symbol("XYZ", _doc([DEM], origin="ondemand"), _snap(91.0, 99.0), NOW)
     assert od["coverage"] == "ondemand" and od["fresh"] is True and od["print"] == 99.0
-    assert set(od) == {"symbol", "print", "fresh", "coverage", "bounce", "room"}
+    assert set(od) == {"symbol", "print", "fresh", "coverage", "bounce", "room", "demand"}
     st = BR.read_symbol("XYZ", _doc([DEM]), _snap(91.0, 99.0), NOW)
     assert st["coverage"] == "store" and st["bounce"]["sessions_ago"] == 0
     assert st["room"]["state"] == "CLEAR"
@@ -582,7 +582,8 @@ def test_api_payload_returns_the_exact_contract_with_counts_and_prices_only_cove
     assert out["as_of"].startswith("2026-09-04T11:00:00") and out["as_of"].endswith("-04:00")
     assert out["params"] == BR.PARAMS == {
         "touch_tol_pct": 1.0, "wick_pct": 1.5, "bounce_min_pct": 3.0, "strong_pct": 5.0,
-        "lookback_sessions": 5, "near_pct": 2.0, "stale_print_sec": 180, "new_high_tol": 0.98}
+        "lookback_sessions": 5, "near_pct": 2.0, "demand_near_pct": 2.0,
+        "stale_print_sec": 180, "new_high_tol": 0.98}
     assert "not advice" in out["disclaimer"]
     assert asked == [["A", "B"]], "only covered names are priced; pending/unavailable never hit the provider"
     rows = out["rows"]
@@ -861,3 +862,57 @@ def test_overhead_bands_skip_an_unproven_lid_and_supply_watch_agrees_standalone(
             ours = {(z["lo"], z["hi"]) for z in BR.overhead_bands(bands, live, pc)}
             assert ours == theirs, (live, pc)
     assert [z["lo"] for z in sw.overhead_bands(supply, demand, 99.0, None)] == [104.0, 110.0, 120.0, 130.0]
+
+
+# ── the DEMAND side of the read (2026-09-14) ─────────────────────────────────
+# Ajay on the Bonde tab: "sort this by the ones close to demand zone, or give
+# a check box to filter ones closer to demand zones or in the demand zone".
+def _doc_with_bands(*bands):
+    return {"bands": [{"kind": k, "lo": lo, "hi": hi, "touches": t} for k, lo, hi, t in bands]}
+
+
+def test_demand_read_names_the_band_the_print_sits_in():
+    doc = _doc_with_bands(("demand", 146.34, 151.55, 2), ("supply", 156.09, 156.89, 2))
+    d = BR.demand_read(150.09, doc)
+    assert d == {"lo": 146.34, "hi": 151.55, "touches": 2, "in_band": True,
+                 "distance_pct": 0.0, "near": True}
+
+
+def test_demand_read_measures_from_the_bands_TOP_and_flags_near_by_the_shared_distance():
+    doc = _doc_with_bands(("demand", 146.34, 151.55, 2))
+    near = BR.demand_read(151.55 * 1.015, doc)
+    far = BR.demand_read(151.55 * 1.08, doc)
+    assert near["in_band"] is False and near["near"] is True and near["distance_pct"] == 1.48
+    assert far["near"] is False and far["distance_pct"] == 7.41
+    assert BR.DEMAND_NEAR_PCT == BR.NEAR_PCT                 # one notion of near, both ways
+    assert BR.PARAMS["demand_near_pct"] == BR.DEMAND_NEAR_PCT
+
+
+def test_demand_read_picks_the_HIGHEST_band_at_or_below_the_print():
+    doc = _doc_with_bands(("demand", 120.0, 124.0, 3), ("demand", 140.0, 143.0, 1), ("demand", 100.0, 104.0, 4))
+    d = BR.demand_read(150.0, doc)
+    assert (d["lo"], d["hi"]) == (140.0, 143.0)
+
+
+def test_NEGATIVE_a_demand_band_ABOVE_the_print_is_a_reclaim_not_near_demand():
+    """Price fell through it. That is overhead (room_read counts it) and the
+    66%-stop-hit class — it must never light the 'near demand' filter."""
+    doc = _doc_with_bands(("demand", 155.0, 158.0, 2))
+    assert BR.demand_read(150.0, doc) is None
+
+
+def test_NEGATIVE_supply_bands_never_count_and_a_bad_print_reads_None():
+    doc = _doc_with_bands(("supply", 140.0, 143.0, 2))
+    assert BR.demand_read(150.0, doc) is None
+    assert BR.demand_read(None, _doc_with_bands(("demand", 1, 2, 1))) is None
+    assert BR.demand_read(0, _doc_with_bands(("demand", 1, 2, 1))) is None
+    assert BR.demand_read(150.0, {}) is None
+
+
+def test_every_contract_row_carries_the_demand_read():
+    row = BR.read_symbol("XYZ", _doc([DEM]), _snap(91.0, 99.0), NOW)
+    assert row["coverage"] == "store"
+    assert row["demand"] == BR.demand_read(99.0, _doc([DEM]))
+    assert set(row["demand"]) == {"lo", "hi", "touches", "in_band", "distance_pct", "near"}
+    far = BR.read_symbol("XYZ", _doc([DEM]), _snap(91.0, 99.0 * 1.5), NOW)
+    assert far["demand"]["near"] is False and far["demand"]["in_band"] is False

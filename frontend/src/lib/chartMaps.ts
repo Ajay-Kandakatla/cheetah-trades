@@ -127,7 +127,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // the board and that name's chart can never disagree about its state.
   holdings: {
     label: '\u{1F4C1} My holdings',
-    blurb: 'Every name on your Portfolio page, drawn the way the Support tab draws it: the tested demand and supply bands at the zoom you pick, the swings that MADE each band marked on the bars, the SMC order blocks, and — when you tick them — the AMD phases (A on the base, M on the raid bar, D on the markup, ✗ where the base failed), the Keltner channel with its squeeze dots, Fibonacci and mean reversion. Ajay 2026-09-14: "about the new portfolio stocks I want to run these against them." YOUR COST is the pink line on each chart; YOUR STOP appears in blue only when you have typed a stop on the Portfolio page — the app never invents one. Worst position first. Both study reads MEASURED INVERTED on 2026-09-13 and again on 2026-09-14 on ~3,700 names (see the two \u{1F300} tabs): they describe the tape, they do not predict it, and nothing here gates, alerts or trades. Not advice.',
+    blurb: 'Every name on your Portfolio page, drawn the way the Support tab draws it: the tested demand and supply bands at the zoom you pick, the swings that MADE each band marked on the bars, the SMC order blocks, and — when you tick them — the AMD phases (A on the base, M on the raid bar, D on the markup, ✗ where the base failed), the Keltner channel with its squeeze dots, Fibonacci and mean reversion. Ajay 2026-09-14: "about the new portfolio stocks I want to run these against them." YOUR COST is the pink line on each chart; YOUR STOP appears in blue only when you have typed a stop on the Portfolio page — the app never invents one. Worst position first. The DASHED band on each chart is the demand BOARD\u2019s own band \u2014 the one Back in Demand, Deep Demand, the alert gate and the paper lanes use (swing 5 \u00b7 merge 4% \u00b7 252 bars); the solid bands are the Support tab\u2019s finer levels at this zoom. Both study reads MEASURED INVERTED on 2026-09-13 and again on 2026-09-14 on ~3,700 names (see the two \u{1F300} tabs): they describe the tape, they do not predict it, and nothing here gates, alerts or trades. Not advice.',
   },
   bonde: {
     label: '\ud83d\udcc8 Bonde',
@@ -273,7 +273,7 @@ export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: 
 // `neutral` is a range that is neither a floor nor a lid — the 0DTE gamma
 // walls, which bracket where dealer hedging is expected to contain the tape.
 // Colouring it green or red would imply a direction it does not have.
-export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral'; lo: number; hi: number; label?: string };
+export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral' | 'board_demand' | 'board_supply'; lo: number; hi: number; label?: string };
 // The last four are the 2026-09-12 study overlays. They were missing from
 // this union, so `toneColor` and `TONE_PRIORITY` had no case for them and
 // every study line rendered grid-grey with a droppable label.

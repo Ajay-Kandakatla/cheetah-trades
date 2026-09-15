@@ -1345,6 +1345,44 @@ def _series_for_chart(df: pd.DataFrame, bars: int = SERIES_BARS_DEFAULT) -> list
     return out
 
 
+def _index_date(df, i: int) -> Optional[str]:
+    """YYYY-MM-DD of bar `i`, or None on a frame with no dates (tests)."""
+    try:
+        ts = df.index[i]
+    except Exception:                                          # noqa: BLE001
+        return None
+    if hasattr(ts, "strftime"):
+        try:
+            return ts.strftime("%Y-%m-%d")
+        except Exception:                                      # noqa: BLE001
+            return None
+    s = str(ts)
+    return s[:10] if len(s) >= 10 and s[4] == "-" else None
+
+
+def split_today_partial(df, now_et=None):
+    """(closed, today_row): today's bar split off while the session is open.
+
+    The shared price frame carries today's PARTIAL bar from ~10:00 ET (the
+    hourly vcp-watch cache patch). Structure must not read it as a closed
+    bar; the record may still be PRICED off it. After 16:00 ET the bar is
+    complete and stays. A frame ending on a prior day is returned whole.
+    """
+    if df is None or not len(df) or len(df) < 2:
+        return df, None
+    try:
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        now = now_et or datetime.now(ZoneInfo("America/New_York"))
+        last = df.index[-1]
+        last_day = last.date() if hasattr(last, "date") else None
+        if last_day == now.date() and _session_fraction(now) < 1.0:
+            return df.iloc[:-1], df.iloc[-1:]
+    except Exception:                                          # noqa: BLE001
+        pass
+    return df, None
+
+
 def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
     """Full zone + re-entry + trade-plan record for one ticker.
 
@@ -1356,7 +1394,10 @@ def analyze_symbol(symbol: str, with_series: bool = False) -> Optional[dict]:
     if not sym:
         return None
     df = prices.load_prices(sym, period="2y")
-    rec = decide_from_frame(df, sym)
+    # Structure on CLOSED bars; today's partial bar (when the session is
+    # open) only prices the record — see decide_from_frame (2026-09-14).
+    closed, today = split_today_partial(df)
+    rec = decide_from_frame(closed, sym, today_row=today)
     if rec is None:
         return None
 
@@ -1408,7 +1449,8 @@ def _verdict_after_break(verdict: Optional[dict], entry_zone: Optional[dict],
                         "level being fought over, not as support.")}
 
 
-def decide_from_frame(df, sym: str):
+def decide_from_frame(df, sym: str, *, today_row=None,
+                      last_price: Optional[float] = None):
     """The zone + re-entry + trade-plan decision for ONE price frame.
 
     Extracted from `analyze_symbol` 2026-08-16 so the walk-forward backtest
@@ -1420,11 +1462,42 @@ def decide_from_frame(df, sym: str):
     PURE with respect to the frame: reads `df` and nothing else. No network,
     no clock, no cache — which is what makes it safe to call once per historical
     decision day.
+
+    STRUCTURE reads `df` as CLOSED bars (2026-09-14). The price basis may
+    come from somewhere else:
+      * `today_row` — today's PARTIAL bar as a one-row frame. The hourly
+        vcp-watch cache patch writes it into the shared frame from ~10:00 ET,
+        and until now the scan read it as a closed bar: its low could mint a
+        swing, its close was the "last close" an hour stale, and
+        `bars_since_above` counted a session that had not ended. Now the
+        swings, the structure read, the re-entry closes and the band-break
+        evidence stop at the prior close; the partial bar prices the record
+        and feeds the liquidity read (which already knew it was partial).
+      * `last_price` — an explicit print (the Support tab hands the live one)
+        with no bar behind it.
+    With neither, the frame's last close is the price, as before, so the
+    backtest's call is unchanged.
     """
     if df is None or len(df) < MIN_BARS:
         return None
 
-    zones = price_zones.compute(df, **zone_geom())
+    full = df
+    basis = "frame"
+    if today_row is not None and len(today_row):
+        full = pd.concat([df, today_row])
+        try:
+            last_price = float(today_row["close"].iloc[-1])
+        except Exception:                                      # noqa: BLE001
+            last_price = None
+        basis = "today_partial"
+    elif last_price is not None:
+        basis = "given"
+    px_basis = (round(float(last_price), 2)
+                if last_price is not None and float(last_price) > 0 else None)
+    if px_basis is None:
+        basis = "frame"
+
+    zones = price_zones.compute(df, last_price=px_basis, **zone_geom())
     if not zones:
         return None
 
@@ -1487,7 +1560,10 @@ def decide_from_frame(df, sym: str):
     # The prior CLOSED bar's close, for the broken-supply rule (a supply band
     # yesterday closed above is support, alert_gates 2026-09-05). Same 2dp
     # basis as the rest of the record.
-    prev_close = closes[-2] if len(closes) > 1 else None
+    # When the price basis is NOT the frame's last close, the frame's last
+    # close IS the prior closed bar.
+    prev_close = (closes[-1] if basis != "frame"
+                  else (closes[-2] if len(closes) > 1 else None))
     plan = trade_plan(last_price, entry_zone,
                       [zones.get("nearest_resistance")]
                       + (zones.get("supply_zones") or [])
@@ -1499,6 +1575,11 @@ def decide_from_frame(df, sym: str):
         "symbol": sym,
         "name": company_names.name_for(sym) or sym,
         "last_price": last_price,
+        # What priced the record and which bar the structure stops at
+        # (2026-09-14): "frame" (the last close), "today_partial" (the
+        # session's unfinished bar) or "given" (a print handed in).
+        "price_basis": basis,
+        "structure_through": _index_date(df, -1),
         # Prior closed bar's close — the scan-basis prev_close for the room
         # read (room_floor). None only on rows cached before 2026-09-05.
         "prev_close": prev_close,
@@ -1536,7 +1617,7 @@ def decide_from_frame(df, sym: str):
         "zone_quality_ok": quality_ok,
         "entry_zone": entry_zone,
         "plan": plan,
-        "liquidity": _liquidity(df),
+        "liquidity": _liquidity(full),
         "breakeven_win_pct": (round(100.0 / (1.0 + plan["rr"]), 1)
                               if plan and plan.get("rr") and plan["rr"] > 0 else None),
         "params": zones.get("params"),

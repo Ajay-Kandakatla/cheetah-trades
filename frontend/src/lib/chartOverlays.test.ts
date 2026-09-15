@@ -1,5 +1,6 @@
 import { toneColor } from './chartMaps';
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import type { CmTile } from './chartMaps';
 import { OVERLAY_GROUPS, DEFAULT_ON, filterTile, loadHidden, presentGroups, saveHidden, STUDY_KEYS, defaultHidden, studiesWanted, filterForGrid } from './chartOverlays';
 
 const tile = (): any => ({
@@ -143,7 +144,7 @@ describe('the 2026-09-12 default (supply/demand + order blocks only)', () => {
     // `position` is his cost and his typed stop, not a read; it is not one of
     // the uncited overlays the 2026-09-12 default exists to keep off.
     const shown = OVERLAY_GROUPS.map((g) => g.key).filter((k) => !defaultHidden().has(k));
-    expect(shown).toEqual(['demand', 'supply', 'position', 'order_block']);
+    expect(shown).toEqual(['demand', 'board', 'supply', 'position', 'order_block']);
   });
 
   it('a browser that has never saved anything gets that default', () => {
@@ -315,5 +316,43 @@ describe('stale flat Keltner lines (2026-09-14)', () => {
     const tile: any = { bands: [], markers: [], curves: [],
       lines: [{ price: 223.51, label: 'KC upper 223.51', tone: 'keltner' }] };
     expect(filterTile(tile, new Set()).lines.length).toBe(1);
+  });
+});
+
+
+describe("the demand BOARD's band on the per-ticker views (2026-09-14)", () => {
+  // Ajay: "make sure the overhead supply and demand zone logic is accurate
+  // across board." The Support / holdings tabs draw finer levels than the
+  // boards; the board's own band now rides on them as its own dashed family.
+  const withBoard = (): CmTile => ({
+    symbol: 'CRDO', href: '/x', bars: [], lines: [], markers: [], stats: [], why: '', badges: [],
+    bands: [
+      { kind: 'demand', lo: 148.05, hi: 149.84 },
+      { kind: 'board_demand', lo: 146.34, hi: 151.55, label: 'board demand · 2× tested' },
+      { kind: 'board_supply', lo: 156.09, hi: 156.89, label: 'board overhead' },
+    ],
+  });
+
+  it('is its own family, ON by default, and its kinds map to it', () => {
+    const g = OVERLAY_GROUPS.find((x) => x.key === 'board');
+    expect(g).toBeTruthy();
+    expect(g!.bandKinds).toEqual(['board_demand', 'board_supply']);
+    expect(DEFAULT_ON).toContain('board');
+    expect(defaultHidden().has('board')).toBe(false);
+  });
+
+  it('hiding the family removes ONLY the board bands', () => {
+    const out = filterTile(withBoard(), new Set(['board']));
+    expect(out.bands.map((b) => b.kind)).toEqual(['demand']);
+  });
+
+  it('NEGATIVE — hiding the finer levels keeps the board band', () => {
+    const out = filterTile(withBoard(), new Set(['demand', 'supply']));
+    expect(out.bands.map((b) => b.kind)).toEqual(['board_demand', 'board_supply']);
+  });
+
+  it('shows up in the legend only when a tile carries it', () => {
+    expect(presentGroups([withBoard()]).map((g) => g.key)).toContain('board');
+    expect(presentGroups([{ ...withBoard(), bands: [{ kind: 'demand', lo: 1, hi: 2 }] }]).map((g) => g.key)).not.toContain('board');
   });
 });

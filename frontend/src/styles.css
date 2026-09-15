@@ -12342,10 +12342,28 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .bd-stats { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; font-size: 0.85rem; }
 .bd-new-count { color: var(--gold, #c9a227); }
+.bd-toggles { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem 0.9rem; }
 .bd-toggle {
   display: inline-flex; align-items: center; gap: 0.4rem;
   font-size: 0.78rem; cursor: pointer; color: var(--ink-muted);
 }
+/* 🎯 demand-proximity chip (2026-09-14): amber like the board-band swatch on
+   the charts, filled when the print is INSIDE the band. */
+.bd-dchip {
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap;
+  color: var(--cm-amber, #d97706); border: 1px solid rgba(217,119,6,0.45);
+  background: rgba(217,119,6,0.08); border-radius: 5px; padding: 0 4px; margin-left: 5px;
+  cursor: help;
+}
+.bd-dchip-in { background: rgba(217,119,6,0.22); }
+/* Column headers (2026-09-14, "add headers"): the same grid as a row, so each
+   head sits over its cell; hidden when the grid collapses on a phone. */
+.bd-row.bd-hdr {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-muted); padding: 0.15rem 0 0.25rem; align-items: end;
+}
+.bd-row.bd-hdr > div { cursor: help; }
+.bd-row.bd-hdr .bd-m { min-width: 52px; text-align: right; white-space: nowrap; }
 .bd-toggle input { accent-color: var(--gold, #c9a227); cursor: pointer; }
 /* The empty-⚡-Pivots explanation. Styled as a notice rather than an error:
    the scanners being off is his own rule working, not a fault. */
@@ -12424,6 +12442,7 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-err  { color: var(--bad, #f85149); }
 @media (max-width: 860px) {
   .bd-row { grid-template-columns: 1fr 1fr; row-gap: 0.3rem; }
+  .bd-row.bd-hdr { display: none; }
   .bd-metrics { justify-content: flex-start; }
 }
 
