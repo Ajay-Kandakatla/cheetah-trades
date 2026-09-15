@@ -121,6 +121,10 @@ def normalize_breakout(b: dict) -> dict:
         "failed":       0,
         "total":        0,
         "source":       "breakout",
+        # A breakout row is not a demand-zone push and carries no 🎯 verdict —
+        # the key is present and null so the feed row shape is one shape
+        # (2026-09-15).
+        "enterable":    None,
         "dismissed":    bool(b.get("dismissed_at")),
     }
 
@@ -171,6 +175,9 @@ def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
     pushes = list_recent(email, limit, **extra)
     for p in pushes:
         p["source"] = "push"
+        # Present on every row, null on the ones stored before 2026-09-15 and
+        # on the kinds that carry no read.
+        p.setdefault("enterable", None)
 
     breakout_rows: list = []
     bq = breakout_query(kind_list, since, tick)

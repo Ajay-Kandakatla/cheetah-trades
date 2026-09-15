@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from supply_demand import alert_status as AS   # noqa: E402
 from supply_demand import alert_gates as AG    # noqa: E402
+from supply_demand import enterable as EN      # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[2]
@@ -148,10 +149,14 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     # the cap floor rides along as a number AND as the words the page prints
     # (F5, 2026-09-14: Alerts.tsx typed "$1B+" — it renders min_cap_txt now)
     assert p["gate"] == {"min_room_pct": 5.0, "max_above_demand_pct": 1.0,
-                         "min_cap_usd": 700_000_000.0, "min_cap_txt": "$700M"}
+                         "min_cap_usd": 700_000_000.0, "min_cap_txt": "$700M",
+                         # whether the entry-timing study behind the 🎯 read has
+                         # reported (2026-09-15) — read from the module, never typed
+                         "enterable_status": EN.status()}
     from supply_demand import demand_alerts as DA
     assert p["gate"] == {"min_room_pct": AG.ALERT_MIN_ROOM_PCT, "max_above_demand_pct": AG.ALERT_MAX_ABOVE_DEMAND_PCT,
-                         "min_cap_usd": DA.MIN_CAP_USD, "min_cap_txt": AS.cap_floor_txt(DA.MIN_CAP_USD)}
+                         "min_cap_usd": DA.MIN_CAP_USD, "min_cap_txt": AS.cap_floor_txt(DA.MIN_CAP_USD),
+                         "enterable_status": EN.status()}
     assert p["gate"] == AS.gate_payload()
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert"}
     ze = p["passes"]["zone_edge"]

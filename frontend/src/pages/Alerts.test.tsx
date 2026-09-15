@@ -502,3 +502,71 @@ describe('passHealth / cadence helpers', () => {
     expect(passHealth(undefined, clock, today, 60).health).toBe('none');
   });
 });
+
+
+/* 🎯 ENTERABLE on the Alerts page (2026-09-15).
+ *
+ * The honest read for a PUSHED row is the verdict at PUSH TIME, on the band
+ * that alert actually named — so it is persisted with the row and rendered
+ * verbatim, never recomputed here from a later print. Rows written before that
+ * date carry none and must wear no chip.
+ *
+ * `skipped_not_enterable` is a DIVERGENCE GUARD, not a gate: every demand push
+ * has already passed the same room, proximity and floor reads the verdict is
+ * built from, so a non-zero count means the two engines disagree. The label
+ * says exactly that, because an unexplained counter is how a quiet phone gets
+ * blamed on the wrong thing.
+ */
+describe('Alerts page — the 🎯 push-time verdict', () => {
+  const READ = {
+    kind: 'demand', verdict: 'WATCH', reasons: ['weak_day'], reason_short: ['down day'],
+    reason_text: ['Down 4.4% today — a −3..−8% day finished up 22% of the time (n=286, 2026-09-08).'],
+    print: { px: 176.5, source: 'live' }, measured: { status: 'pending' },
+  };
+
+  it('renders the SERVED verdict on the row that carries one', async () => {
+    stubFetch({ rows: [{ ...ROWS[0], enterable: READ }] });
+    draw();
+    const chip = await screen.findByText('🎯 WATCH · down day');
+    expect(chip).toHaveClass('cm-badge-enterable-watch');
+    expect(chip.getAttribute('title')).toMatch(/a −3\.\.−8% day finished up 22% of the time/);
+    expect(chip.closest('[data-testid="alert-row"]')).not.toBeNull();
+  });
+
+  it('NEGATIVE: a legacy row with no verdict wears no chip at all', async () => {
+    stubFetch({ rows: ROWS });                 // none of the three carries `enterable`
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    expect(screen.queryByText(/🎯 (READY|WATCH)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^⛔/)).not.toBeInTheDocument();
+  });
+
+  it('labels skipped_not_enterable with its count AND says a non-zero count is a bug', async () => {
+    stubFetch({ rows: ROWS }, {
+      ...STATUS_LIVE,
+      passes: {
+        ...STATUS_LIVE.passes,
+        demand_alert: { as_of: '2026-09-05T10:58:11-04:00', date: '2026-09-05',
+          counts: { candidates: 40, hits: 2, skipped_not_enterable: 1, pushed: 0 } },
+      },
+    });
+    draw();
+    const chip = await screen.findByText(/skipped: not enterable/);
+    expect(chip.textContent).toMatch(/^1 skipped: not enterable/);
+    expect(chip.textContent).toMatch(/should be 0; a non-zero count is a bug to report/);
+  });
+
+  it('NEGATIVE: a zero count is not printed — the guard is silent when it agrees', async () => {
+    stubFetch({ rows: ROWS }, {
+      ...STATUS_LIVE,
+      passes: {
+        ...STATUS_LIVE.passes,
+        demand_alert: { as_of: '2026-09-05T10:58:11-04:00', date: '2026-09-05',
+          counts: { candidates: 40, hits: 2, skipped_not_enterable: 0, pushed: 0 } },
+      },
+    });
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    expect(screen.queryByText(/skipped: not enterable/)).not.toBeInTheDocument();
+  });
+});

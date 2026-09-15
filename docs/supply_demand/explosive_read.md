@@ -296,6 +296,12 @@ Tests: `backend/tests/test_explosive.py` (this module),
 `backend/tests/test_explosive_study.py` (the study's own),
 `frontend/src/lib/bounceRoom.test.ts` + `ExplosiveChip.test.tsx` (the mirror).
 
+The one thing this module lends to the 🎯 ENTERABLE read (2026-09-15) is
+`intact_read` — the floor adapter; ENTERABLE imports nothing else from here, its
+own source guard pins that, and the 🧨 tile read keeps its pinned closed-bar
+scan-print choice while ENTERABLE keys on the live print
+([`enterable.md`](enterable.md) §3.4).
+
 ---
 
 ## 7. MEASURED

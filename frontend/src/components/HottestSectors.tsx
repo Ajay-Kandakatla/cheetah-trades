@@ -23,6 +23,10 @@ import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
+import { isShown } from '../lib/enterable';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import type { BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import { SignalWatchButton } from './SignalWatchButton';
@@ -194,6 +198,7 @@ function NameRow({ r, read, study }: {
             "ALL TABS IN CHART MAPS"). */}
         <GrowthChip symbol={r.symbol} className="hs-badge" />
         <ExplosiveChip read={read?.explosive} study={study} className="hs-badge" />
+        <EnterableChip read={read?.enterable} className="hs-badge" />
         {/* Ajay 2026-09-11: "add to signals button in that table I wanna pick a
             few stocks from this". NOT compact — compact prints a bare "+" which
             sits next to TickerLink's ☆ and reads as decoration rather than a
@@ -264,6 +269,26 @@ export function HottestSectors() {
   }, [sectors, themes]);
   const room = useBounceRoom(rowSymbols);
   const readOf = (sym: string) => room.map.get(String(sym).toUpperCase());
+  /* 🎯 The enterable cut (2026-09-15) is CLIENT-SIDE over the names this
+   * payload carries, and the count line says exactly that: this payload is a
+   * SERVER-CUT list — `names_per_group` rows per group, ranked on the server —
+   * so hiding four of a group's 25 does not pull the 26th up. A server-side
+   * enterable cut is HIS CALL (spec §7.9).
+   *
+   * WHAT THE NUMBER COUNTS (m4, 2026-09-15): the UNIQUE names in the payload,
+   * across every group — themes, sectors and industries — including the groups
+   * he has collapsed. Every group on this board starts collapsed, so a line
+   * scoped to "rows on screen" would read "0 hidden" on arrival while the cut
+   * was already live inside each group; and a name that sits in both its sector
+   * and its industry is one name, counted once. The note below is worded to
+   * match, because a count line that describes a different set than the one it
+   * counted is the same lie as hiding rows quietly. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const uniqueSymbols = useMemo(
+    () => Array.from(new Set(rowSymbols.map((x) => String(x).toUpperCase()))), [rowSymbols]);
+  const part = useEnterablePartition(uniqueSymbols, (x) => x, room.map, enterableOnly);
+  const enterableCut = enterableOnly && kind !== 'n/a';
+  const showName = (sym: string) => !enterableCut || isShown(readOf(sym)?.enterable);
   /* NO 🧨 ordering toggle on this board, deliberately. Every other tab gets
    * one; here the payload keeps only `names_per_group` rows per group and the
    * column sorts are a SERVER round-trip for exactly that reason — a
@@ -349,6 +374,13 @@ export function HottestSectors() {
         {data?.stale ? <span className="hs-stale"> · build is stale</span> : null}
       </div>
 
+      {enterableCut ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     note="Counted across every group in this payload — themes, sectors and industries, the collapsed ones included — one count per unique name. This board is a server-cut list: the payload keeps only the top names per group, so this is what the cut removed from the names it carries, never from the full membership."
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
+
       <div className="hs-scroll">
         <table className="hs-table">
           <thead>
@@ -402,7 +434,7 @@ export function HottestSectors() {
                     <LegCells r={t} />
                     <GroupFundCells r={t} />
                   </tr>
-                  {isOpen ? t.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
+                  {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {t.names.length} of {t.names_total}
@@ -457,7 +489,7 @@ export function HottestSectors() {
                           <LegCells r={ind} />
                           <GroupFundCells r={ind} />
                         </tr>
-                        {iOpen ? ind.names.map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
+                        {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (
                           <tr key={`${ik}|more`}><td colSpan={10} className="hs-more">
                             showing {ind.names.length} of {ind.names_total}
@@ -466,7 +498,7 @@ export function HottestSectors() {
                       </>
                     );
                   }) : null}
-                  {isOpen && !byIndustry ? s.names.map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
+                  {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
                   {isOpen && !byIndustry && s.names_total > s.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {s.names.length} of {s.names_total}

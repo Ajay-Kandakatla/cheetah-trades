@@ -12704,3 +12704,71 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
    null branch it is a limits statement, not a headline act. */
 .cm-explosive-study { border-left: 3px solid rgba(245,158,11,0.5); padding-left: 0.6rem; }
 .cm-explosive-study p { margin: 0.25rem 0 0; }
+
+/* 🎯 ENTERABLE (2026-09-15) — the served entry read on every Chart Maps
+   surface, plus the filter's two controls.
+
+   Ajay: "I only wanna see the stocks that are enterable." FOUR tones, one per
+   served verdict, and only READY carries the green — WATCH is amber because a
+   measured drag is riding on it (reclaim-from-below 66% stop-hit, a −3..−8%
+   day 22% up), BLOCKED is quiet grey-red rather than an alarm, and `na` is
+   muted because those tabs simply have no demand read to give.
+
+   One family per surface, mirroring the 🧨 explosive chip's classes so the two
+   chips sit side by side at the same weight. */
+.cm-badge-enterable-ready   { color: #10b981; background: rgba(16,185,129,0.14); }
+.cm-badge-enterable-watch   { color: #f59e0b; background: rgba(245,158,11,0.14); }
+.cm-badge-enterable-blocked { color: #ef4444; background: rgba(239,68,68,0.12); }
+.cm-badge-enterable-na      { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.hs-badge-enterable-ready   { color: #10b981; background: rgba(16,185,129,0.14); }
+.hs-badge-enterable-watch   { color: #f59e0b; background: rgba(245,158,11,0.14); }
+.hs-badge-enterable-blocked { color: #ef4444; background: rgba(239,68,68,0.12); }
+.hs-badge-enterable-na      { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.sb-chip-enterable-ready,
+.sb-chip-enterable-watch,
+.sb-chip-enterable-blocked,
+.sb-chip-enterable-na {
+  display: inline-block; font-size: 0.66rem; padding: 1px 6px;
+  border-radius: 999px; white-space: nowrap; margin-left: 5px;
+}
+.sb-chip-enterable-ready   { color: #10b981; background: rgba(16,185,129,0.14); }
+.sb-chip-enterable-watch   { color: #f59e0b; background: rgba(245,158,11,0.14); }
+.sb-chip-enterable-blocked { color: #ef4444; background: rgba(239,68,68,0.12); }
+.sb-chip-enterable-na      { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.bd-gchip-enterable-ready,
+.bd-gchip-enterable-watch,
+.bd-gchip-enterable-blocked,
+.bd-gchip-enterable-na {
+  font-size: 0.58rem; font-weight: 700; white-space: nowrap; margin-left: 5px;
+  border-radius: 5px; padding: 0 4px; cursor: help;
+}
+.bd-gchip-enterable-ready   { color: #10b981; background: rgba(16,185,129,0.12); }
+.bd-gchip-enterable-watch   { color: #f59e0b; background: rgba(245,158,11,0.12); }
+.bd-gchip-enterable-blocked { color: #ef4444; background: rgba(239,68,68,0.10); }
+.bd-gchip-enterable-na      { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.eg-enterable-ready,
+.eg-enterable-watch,
+.eg-enterable-blocked,
+.eg-enterable-na {
+  font-size: 0.6rem; font-weight: 700; white-space: nowrap; margin-left: 5px;
+  border-radius: 5px; padding: 0 4px; cursor: help;
+}
+.eg-enterable-ready   { color: #10b981; background: rgba(16,185,129,0.12); }
+.eg-enterable-watch   { color: #f59e0b; background: rgba(245,158,11,0.12); }
+.eg-enterable-blocked { color: #ef4444; background: rgba(239,68,68,0.10); }
+.eg-enterable-na      { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+/* The filter checkbox. Default ON on Chart Maps (his ask), so it is styled at
+   the same weight as the sort controls beside it, not as an afterthought. */
+.en-toggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.78rem; cursor: pointer; color: var(--ink-muted);
+}
+.en-toggle input { accent-color: #10b981; cursor: pointer; }
+.en-toggle input:disabled { cursor: not-allowed; }
+/* What the filter removed — ALWAYS on the page while it is on, even at zero.
+   Quiet, and one click from the whole board. */
+.cm-hidden-count { font-size: 0.75rem; color: var(--ink-muted); margin: 0.25rem 0 0.4rem; }
+.cm-hidden-count-btn {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; color: var(--accent, #3b82f6); text-decoration: underline;
+}

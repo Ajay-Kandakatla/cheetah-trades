@@ -113,6 +113,9 @@ this runs every minute and must stay well under 60 s. Print freshness:
 STALE_PRINT_SEC = 180 (a 3-minute-old trade is not "now" on a one-minute
 cadence).
 
+ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
+here is a divergence, counted skipped_not_enterable.
+
 Configured price-structure heuristic, S/D scope, NOT a book method, no
 Minervini cites. Decision support, not a buy signal, not advice.
 """
@@ -128,6 +131,7 @@ from zoneinfo import ZoneInfo
 from market_hours.reminder import is_market_day
 from . import alert_gates as AG
 from . import demand_alerts as DA
+from . import enterable as EN
 from .zone_bounce_alerts import print_from_snapshot
 
 log = logging.getLogger(__name__)
@@ -267,6 +271,23 @@ def _clean(obj):
 # --------------------------------------------------------------------------
 # Pure reads
 # --------------------------------------------------------------------------
+def next_lids(bands: list, band: dict) -> list:
+    """Every band OVERHEAD of `band` — the one next-lid list in the repo.
+
+    The supply lane's phone gate wants ">= 5% from the print to the NEXT band
+    above the one being broken": every band whose top clears this one's, an
+    overlapping lid included (review 2026-09-05), the same set
+    `overhead_bands` counts. Extracted from the lane so the ENTERABLE
+    supply-break read runs the identical rule instead of a second copy of it.
+
+    An unusable `band` has nothing overhead of it: [].
+    """
+    if not isinstance(band, dict) or not _valid_band(band):
+        return []
+    hi = float(band["hi"])
+    return [b for b in (bands or []) if _valid_band(b) and float(b["hi"]) > hi]
+
+
 def read_breaking(px, bands: list, prev_close=None, high_252=None,
                   edge_pct: float = EDGE_PCT, broke_max_pct: float = BROKE_MAX_PCT) -> Optional[dict]:
     """Side A. None = not within 1% under its resistance and did not break a
@@ -402,7 +423,9 @@ def break_single_message(item: dict) -> dict:
         parts.append(str(item["name"]))
     url = _url(sym)
     return {"title": title, "body": " · ".join(parts), "url": url, "data": {"url": url}, "ticker": sym,
-            "kind": KIND_BREAK}
+            "kind": KIND_BREAK,
+            # The verdict AT PUSH TIME, persisted with the row (2026-09-15).
+            "enterable": EN.slim(item.get("enterable"))}
 
 
 def _break_rank(item: dict) -> tuple:
@@ -714,6 +737,7 @@ def empty_payload(reason: str = "no pass yet") -> dict:
                        "stale_print": 0, "skipped_room": 0, "skipped_direction": 0,
                        "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
                        "skipped_overlap": 0, "skipped_cap": 0,
+                       "skipped_not_enterable": 0,
                        "unknown_cap": 0, "pushed": 0},
             "breaking": [], "near_demand": [], "track": {}, "reason": reason,
             "disclaimer": DISCLAIMER}
@@ -881,6 +905,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     break_cands, demand_cands = [], []
     unknown_cap = skipped_cap = unknown_prev = skipped_room = skipped_direction = 0
     skipped_knife = skipped_mood = skipped_floor = skipped_overlap = 0
+    skipped_not_enterable = 0          # the 🎯 divergence guard (2026-09-15)
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -909,11 +934,17 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 # phone gate: >= 5% from the print to the NEXT band above the one being
                 # broken — every band whose top clears this one's (an overlapping lid
                 # included; review 2026-09-05), the same set `overhead_bands` counts
-                nxt = [b for b in bands if _valid_band(b) and float(b["hi"]) > rb["band"]["hi"]]
+                nxt = next_lids(bands, rb["band"])
                 ok, room = AG.room_gate(px, nxt, prev)
                 if ok:
+                    # 🎯 the supply-break read (2026-09-15): room to the NEXT
+                    # lid IS the whole rule on this kind (his call §7.6), and
+                    # that gate has just passed — so this is READY by
+                    # construction and is recorded, never re-decided.
+                    en = EN.assess(kind=EN.KIND_SUPPLY_BREAK, px=px, band=rb["band"],
+                                   bands=nxt, prev_close=prev, room_ok=True, room=room)
                     break_cands.append(dict(row, key=break_state_key(sym, rb["band"], day_iso, rb["tier"]),
-                                            room=room))
+                                            room=room, enterable=en))
                 else:
                     skipped_room += 1
         if rd is not None:
@@ -961,12 +992,25 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                         # bullish.
                         skipped_mood += 1
                     else:
+                        # 🎯 ENTERABLE (2026-09-15), LAST and tightening only.
+                        # Every gate it grades ran above on these very inputs,
+                        # so they are passed THROUGH and BLOCKED is unreachable
+                        # by construction — the counter is a divergence guard,
+                        # expected 0, never the reason for a quiet phone.
+                        en = EN.assess(kind=EN.KIND_DEMAND, px=px, band=rd["band"],
+                                       bands=bands, prev_close=prev, day_low=day_low,
+                                       change_pct=chg, floor_state=(sw or {}).get("state"),
+                                       approach=approach, room_ok=True, prox_ok=True,
+                                       room=room)
+                        if en.get("verdict") == EN.BLOCKED:
+                            skipped_not_enterable += 1
+                            continue
                         # Mood as CONTEXT only (Ajay 2026-09-08) — read after
                         # every S/D gate passed, never a reason to fire or skip.
                         demand_cands.append({"symbol": sym, "hit": rd["hit"], "band": rd["band"],
                                              "mood": AG.mood_read(sym, frame=frame),
                                              "knife": kr, "reversal_mood": rm,
-                                             "sweep": sw,
+                                             "sweep": sw, "enterable": en,
                                              "last": float(px), "cap": _f(cap), "name": None,
                                              "key": DA.state_key(sym, rd["band"], day_iso, "at"),
                                              "tier": rd["tier"], "dist_pct": rd["dist_pct"],
@@ -1105,7 +1149,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
               "skipped_room": skipped_room, "skipped_direction": skipped_direction,
               "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
               "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap,
-              "skipped_cap": skipped_cap,
+              "skipped_cap": skipped_cap, "skipped_not_enterable": skipped_not_enterable,
               "unknown_cap": unknown_cap, "pushed": pushed}
     payload = build_payload(breaking, near_demand, now=now, day=day_iso,
                             pass_sec=time.time() - t0, counts=counts)
@@ -1124,6 +1168,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "skipped_direction": skipped_direction,
             "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
             "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap,
+            "skipped_not_enterable": skipped_not_enterable,
             "seconds": round(time.time() - t0, 2), "payload": payload}
 
 

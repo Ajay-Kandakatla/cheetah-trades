@@ -17,6 +17,9 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
@@ -99,6 +102,13 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   const room = useBounceRoom(rowSymbols);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const shown = useExplosiveOrder(filtered, (r) => r.symbol, room.map, explosiveFirst);
+  /* 🎯 The enterable cut, applied AFTER the board's own order (Ajay
+   * 2026-09-15: "I do not want to see not enterable alerts or stocks in any of
+   * the chart maps"). The served BLOCKED verdict is the only thing it removes,
+   * a row with no read yet is kept and counted, and the count line below says
+   * both numbers out loud. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(shown, (r) => r.symbol, room.map, enterableOnly);
 
   // Three states, three banners. Before the payload arrives we know NOTHING
   // about the session, and the first build claimed "Market is closed" during
@@ -190,10 +200,15 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
         * still shows — as a text card naming the reason — because dropping it
         * would misreport coverage. */}
       <OverlayLegend
-        present={presentGroups(shown.map((r) => r.tile).filter(Boolean))}
+        present={presentGroups(part.rows.map((r) => r.tile).filter(Boolean))}
         hidden={hiddenOverlays} onToggle={toggleOverlay} />
+      {enterableOnly && kind !== 'n/a' ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
       <div className="cm-grid">
-        {shown.map((r) => r.tile
+        {part.rows.map((r) => r.tile
           ? <PatternChart key={r.symbol} tile={filterTile(r.tile, hiddenOverlays)} tvTf="15m"
                           study={room.payload?.explosive_study} />
           : <NoDataCard key={r.symbol} row={r} onPick={onPick}
@@ -219,6 +234,7 @@ function NoDataCard({ row, onPick, read, study }: {
       </button>
       <GrowthChip symbol={row.symbol} className="sb-chip" />
       <ExplosiveChip read={read?.explosive} study={study} className="sb-chip" />
+      <EnterableChip read={read?.enterable} className="sb-chip" />
       <span className="sb-name">{row.name || ''}</span>
       <span className="sb-bias" style={{ color: toneColor(meta.tone) }}>
         {meta.dot} {meta.label}

@@ -36,6 +36,9 @@ import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
@@ -155,6 +158,11 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
   const room = useBounceRoom(rowSymbols);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const rows = useExplosiveOrder(filtered, (t) => t.symbol, room.map, explosiveFirst);
+  /* 🎯 The enterable cut (2026-09-15). A row he posted about that the server
+   * has no read for STAYS — this board is a record of what someone said, and a
+   * missing band read is not a rejection of the idea. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(rows, (t) => t.symbol, room.map, enterableOnly);
 
   if (loading) return <div className="gnt-note">loading his posts…</div>;
   if (err) return <div className="gnt-note gnt-err">⛔ {err}</div>;
@@ -202,6 +210,12 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
 
       {u?.note && <div className="gnt-note gnt-dim">⚠️ {u.note}</div>}
 
+      {enterableOnly && kind !== 'n/a' ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
+
       <div className="gnt-scroll">
         <table className="gnt-table">
           <thead>
@@ -211,7 +225,7 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
             </tr>
           </thead>
           <tbody>
-            {rows.map((t) => {
+            {part.rows.map((t) => {
               const z = zoneText(t);
               const p = t.last_post || {};
               return (
@@ -224,6 +238,7 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
                     <GrowthChip symbol={t.symbol} />
                     <ExplosiveChip study={room.payload?.explosive_study}
                                    read={room.map.get(String(t.symbol).toUpperCase())?.explosive} />
+                    <EnterableChip read={room.map.get(String(t.symbol).toUpperCase())?.enterable} />
                     {t.mentions > 1 && (
                       <div className="gnt-dim">×{t.mentions} posts</div>
                     )}

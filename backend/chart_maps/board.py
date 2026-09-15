@@ -970,6 +970,129 @@ def attach_explosive(tiles: list) -> int:
     return done
 
 
+def _live_snapshot(tiles: list) -> dict:
+    """ONE `bulk_live_prices` fan-out for the tiles that are actually shown.
+
+    The 🎯 read and the extended-hours `now` line want the SAME snapshot row —
+    the print, the day's low, the day change and the previous close — so the
+    board makes the call once and feeds it to both overlays. `{}` on any
+    failure (never None, so `attach_live_now(live={})` does not quietly refetch
+    and a tape outage costs one honest fallback to the scan print, not two
+    network round trips)."""
+    return _live_rows([t.get("symbol") for t in tiles or []
+                       if isinstance(t, dict) and t.get("symbol")])
+
+
+def _session_day(now: Optional[datetime] = None):
+    """The SESSION date the live snapshot belongs to: today in ET when the
+    market trades today, otherwise the most recent day it did.
+
+    The push paths hand `sweep_read` the ET date of the pass
+    (`demand_alerts.py:812`) and never run on a closed day (the holiday gate),
+    so they are always on a session. A board is read any day, and without a
+    date `with_session_bar` defaults to the calendar today: on a Saturday it
+    appends Friday's snapshot AGAIN as a synthetic Saturday bar instead of
+    merging it into Friday's row (critique m7, 2026-09-15). The calendar is
+    the shipped one — `market_hours.reminder.is_market_day`, weekends and the
+    holiday list — never a second copy of it here.
+    """
+    et = (now or datetime.now(ET)).astimezone(ET)
+    try:
+        from market_hours.reminder import is_market_day
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: market calendar unavailable: %s", exc)
+        return et.date()
+    from datetime import timedelta
+    # A loop guard, not a rule: the longest closure on the shipped calendar is
+    # a long weekend. Out of guesses -> the calendar date, today's behaviour.
+    for back in range(0, 8):
+        d = et - timedelta(days=back)
+        if is_market_day(d):
+            return d.date()
+    return et.date()
+
+
+def attach_enterable(tiles: list, kind: str = "demand", *,
+                     live: Optional[dict] = None) -> int:
+    """Fill `tile['enterable']` (the whole read) and `_m['enterable']` (rank).
+
+    THE PRINT IT READS (spec 2026-09-15, B3). The 🧨 chip keys on the CLOSED
+    scan print by his own call; this read does NOT inherit that choice. An
+    "enterable" verdict on yesterday's close would call a name READY that swept
+    its floor this morning, so every input comes from the LIVE snapshot
+    `attach_live_now` already fetched — the print, the session low, the day
+    change and the previous close, the same four fields the phone gates on.
+    With no live row the read falls back to the scan print and SAYS SO
+    (`print.source == "scan"`), never silently.
+
+    THE DATE. The floor read is dated with `_session_day()` — the session the
+    snapshot print belongs to — so on a closed day the board merges that print
+    into the last real session instead of inventing a bar for it (m7).
+
+    ONE `zone_store.load_latest` for the shown tiles, then a pure per-tile
+    read. Idempotent by KEY PRESENCE (None is a real answer). Fails OPEN and
+    SILENT and NEVER FILTERS: this function only decorates — nothing here drops
+    a tile, and the hiding is the frontend's visible, reversible filter.
+    Returns how many tiles came back with a read.
+    """
+    todo = [t for t in tiles if isinstance(t, dict) and t.get("symbol")
+            and "enterable" not in t]
+    if not todo:
+        return 0
+    try:
+        from supply_demand import enterable as EN
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: enterable unavailable: %s", exc)
+        return 0
+
+    k = str(kind or EN.KIND_DEMAND)
+    # An n/a tab has no demand read to make: every tile gets the same honest
+    # "this tab is not demand reversals" answer and the store is never touched.
+    if k == EN.KIND_NA:
+        for t in todo:
+            t["enterable"] = EN.read(doc=None, px=_explosive_px(t), kind=EN.KIND_NA,
+                                     symbol=str(t["symbol"]).upper())
+            m = t.get("_m")
+            if isinstance(m, dict):
+                m["enterable"] = None
+        return 0
+
+    syms = [str(t["symbol"]).upper() for t in todo]
+    try:
+        from supply_demand import zone_store
+        _day, docs = zone_store.load_latest(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("chart-maps: zone_store read failed for enterable: %s", exc)
+        docs = {}
+
+    done = 0
+    session_day = _session_day()          # the date the snapshot's print belongs to
+    for t in todo:
+        sym = str(t["symbol"]).upper()
+        snap = (live or {}).get(sym) or {}
+        px, src = _snapshot_print(snap), "live"
+        if px is None:
+            px, src = _explosive_px(t), "scan"
+        doc = docs.get(sym) or {}
+        prev = _f(snap.get("prev_day_close"))
+        if prev is None:
+            prev = _f(doc.get("prev_close"))
+        try:
+            read = EN.read(doc=doc, px=px, day_low=_f(snap.get("low")),
+                           prev_close=prev, change_pct=_f(snap.get("change_pct")),
+                           kind=k, symbol=sym, print_source=src, day=session_day)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: enterable read %s failed: %s", sym, exc)
+            read = None
+        t["enterable"] = read
+        m = t.get("_m")
+        if isinstance(m, dict):
+            m["enterable"] = EN.VERDICT_RANK.get((read or {}).get("verdict"))
+        if read is not None:
+            done += 1
+    return done
+
+
 def _explosive_sort(tiles: list) -> Optional[str]:
     """Order ALL tiles by the one ordering key. Returns the honest note when
     not a single tile on the board has a read (a sort over an all-null column
@@ -4772,9 +4895,29 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: explosive verdict unavailable: %s", exc)
         out["explosive_study"] = None
+    # ONE live fan-out for the shown tiles, shared by the two overlays below
+    # (2026-09-15). Both want the same snapshot row, and two calls would be two
+    # prices for one name inside one payload.
+    _tiles = out.get("tiles") or []
+    _live = _live_snapshot(_tiles)
     # Extended hours on every tab (Ajay 2026-09-08, ORCL): the `now` line
     # moves to the live print and says which tape it came from.
-    attach_live_now(out.get("tiles") or [], out)
+    attach_live_now(_tiles, out, live=_live)
+    # 🎯 ENTERABLE (2026-09-15), AFTER the live overlay and on the same
+    # snapshot: the read keys on the LIVE print and the session low, not on
+    # yesterday's close. Not in `_finish` — that runs before the sort and
+    # before the limit cut, where no live print exists yet, so the read (and
+    # the count line the page prints) covers the tiles actually shown.
+    try:
+        from supply_demand import enterable as _enterable
+        _kind = _enterable.KIND_BY_TAB.get(t, _enterable.KIND_NA)
+        attach_enterable(_tiles, kind=_kind, live=_live)
+        out["enterable_kind"] = _kind
+        out["enterable_study"] = _enterable.measured_verdict()
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: enterable unavailable: %s", exc)
+        out["enterable_kind"] = None
+        out["enterable_study"] = None
     return out
 
 

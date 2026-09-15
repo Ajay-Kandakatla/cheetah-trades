@@ -104,6 +104,13 @@ def record(payload: dict, *, user_email: Optional[str] = None,
             "kind":       payload.get("kind"),
             "ticker":     payload.get("ticker"),
             "url":        payload.get("url"),
+            # The 🎯 verdict AT PUSH TIME (2026-09-15). The honest read for a
+            # pushed row is the one the phone graded, so it is STORED with the
+            # row rather than recomputed hours later on a different print.
+            # A non-dict (a legacy payload, a builder that carries none) is
+            # None, never a guess.
+            "enterable":  (payload.get("enterable")
+                           if isinstance(payload.get("enterable"), dict) else None),
             "user_email": user_email,   # None for broadcasts
             "sent":       int((result or {}).get("sent", 0)),
             "failed":     int((result or {}).get("failed", 0)),

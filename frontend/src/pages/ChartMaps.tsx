@@ -24,7 +24,7 @@ import { PatternChart } from '../components/PatternChart';
 import { PatternsBoard } from './PatternsPage';
 import { InfoButton } from '../components/InfoButton';
 import {
-  CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, TAB_META, THEMES_FIRST_DEFAULT,
+  CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, ENTERABLE_KIND, TAB_META, THEMES_FIRST_DEFAULT,
   quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText, sessionNoteText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
@@ -58,6 +58,10 @@ import { CatalystsBoard } from '../pages/Catalysts';
 import { HotPullbackBoard } from '../components/HotPullbackBoard';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
+import { EnterableOnlyToggle } from '../components/EnterableOnlyToggle';
+import { HiddenCount } from '../components/HiddenCount';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import { partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { trackFeature } from '../lib/usageTracker';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
@@ -190,6 +194,25 @@ export function ChartMaps() {
    * URL-backed like phase; only the OFF value is written (`room=any`) so the
    * plain tab URL keeps the floor. The floor itself is applied on the server
    * against the LIVE print — the page only asks for it and reports the count. */
+  /* 🎯 ENTERABLE (Ajay 2026-09-15: "I only wanna see the stocks that are
+   * enterable ... I do not want to see not enterable alerts or stocks in any of
+   * the chart maps"). ON by default, which is the ask — so the state that has
+   * to be visible is the OFF one, and it lives in the URL as `?show=all` and
+   * nowhere else. No localStorage: a filter he cannot see the state of is a
+   * filter that quietly eats a board tomorrow.
+   *
+   * The KIND is SERVED (`enterable_kind`) with the local map as the fallback
+   * before the first payload lands, so moving a tab between `demand` and `n/a`
+   * (his call, spec §7.16) is a backend change, not a deploy. */
+  const enterableOnly = params.get('show') !== 'all';
+  const setEnterableOnly = useCallback((v: boolean) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (v) next.delete('show'); else next.set('show', 'all');
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
   const ROOM_TAB = ROOM_TABS.includes(tab);
   const minRoom = parseMinRoom(params.get('room'));
   const setRoom = (v: 'floor' | 'any') => {
@@ -397,6 +420,12 @@ export function ChartMaps() {
     setParams(next, { replace: true });
   };
 
+  /* The SERVED kind wins; the local map is only the fallback before the first
+   * payload lands (and for the half second a previous tab's payload is still on
+   * screen, which is why `data.tab` is checked). */
+  const enterableKind = ((data?.tab ?? tab) === tab ? data?.enterable_kind : null)
+    ?? ENTERABLE_KIND[tab] ?? 'demand';
+
   const rawTiles = data?.tiles || [];
   /* The chart ledger (Ajay 2026-08-31: "Chart feel so clumsy can you give me
    * a ledger and some check boxes to toggle these off"). Hidden families are
@@ -420,6 +449,28 @@ export function ChartMaps() {
   const tiles = useMemo(
     () => rawTiles.map((t) => filterForGrid(filterTile(t, tabHidden), true)),
     [rawTiles, tabHidden]);
+  /* 🎯 The enterable cut over the tiles this page already ordered. It is a
+   * STABLE PARTITION, never a sort: shown tiles keep the board's own order and
+   * the tiles with no read yet follow in theirs, so nothing is silently lost
+   * and nothing is silently promoted.
+   *
+   * The read is attached per tile by chart_maps/board.attach_enterable on the
+   * SAME live snapshot the now-line uses, AFTER the limit cut — so this counts
+   * the tiles on screen, not the universe. The count line says so; raising
+   * `limit` is how you see further (spec §7.15, his call).
+   *
+   * 📁 holdings is exempt and never reaches here: that tab renders its own
+   * board, which never hides a position. */
+  const tileReads = useMemo(() => {
+    const m = new Map<string, EnterableRead | null | undefined>();
+    for (const t of tiles) if (t.symbol) m.set(String(t.symbol).toUpperCase(), t.enterable ?? null);
+    return m;
+  }, [tiles]);
+  const tilePart = useMemo(
+    () => partitionEnterable(tiles, (t) => t.symbol, tileReads,
+                             enterableOnly && enterableKind !== 'n/a' && tab !== 'holdings'),
+    [tiles, tileReads, enterableOnly, enterableKind, tab]);
+
   const ictParams = useMemo(() => ictParamRows(data?.params), [data?.params]);
   // The backend flags which values the video actually states (3-candle
   // fractal, "two or more" consolidations); they get their own line so the
@@ -480,6 +531,20 @@ export function ChartMaps() {
         * constants). */}
       <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
         <RulesInfo section="explosive" />
+      </div>
+
+      {/* 🎯 ENTERABLE — the filter he asked for, and the rules behind it.
+        * Every word of the verdict is built on the backend from the enforcing
+        * constants (the two standing push gates, the measured floor read, the
+        * two measured drags), so the section is served like the others. The
+        * checkbox is DISABLED rather than hidden on a tab whose rows are not
+        * demand reversals at all; a control that vanishes reads as a bug. */}
+      <div className="cm-rules cm-enterable-bar" style={{ margin: '0.2rem 0 0.6rem' }}>
+        <EnterableOnlyToggle checked={enterableOnly} onChange={setEnterableOnly}
+                             kind={enterableKind}
+                             naText={data?.enterable_study?.fallback_note
+                               || 'These rows are not demand reversals, so there is no enterable read to filter on.'} />
+        <RulesInfo section="enterable" />
       </div>
 
       {/* Quick Bounce (Ajay 2026-09-06): the study's own numbers under the
@@ -586,6 +651,13 @@ export function ChartMaps() {
         </div>
       )}
 
+      {/* 🎯 One filter state for the whole tab body: the twelve row boards
+        * mounted below read it from here rather than each growing its own
+        * checkbox and its own default. Standalone (/catalysts, /patterns,
+        * /signal-lab) nothing wraps them, the default context is OFF and those
+        * pages are unchanged — spec §7.8, his call. */}
+      <EnterableFilterProvider enterableOnly={enterableOnly} kind={enterableKind}
+                               setEnterableOnly={setEnterableOnly}>
       {/* The one tab that is not a board. Everything below — the sort/tier
         * controls, the scan progress, the tile grid, the footer counts —
         * describes a universe pass that this tab does not run. */}
@@ -957,6 +1029,18 @@ export function ChartMaps() {
           {data.explosive_study.limits ? <p className="cm-dim">{data.explosive_study.limits}</p> : null}
         </div>
       )}
+      {/* 🎯 The entry-trigger study's verdict, SERVED (board.enterable_study).
+        * The filter is ON by default, so what it is built on has to be on the
+        * page next to it — including "study running" / "no trigger separates",
+        * which are the branches the prior expects. No figure is typed here. */}
+      {data?.enterable_study?.headline && (
+        <div className="cm-note cm-enterable-study" data-testid="cm-enterable-study">
+          <strong>{data.enterable_study.headline}</strong>
+          {data.enterable_study.body ? <p>{data.enterable_study.body}</p> : null}
+          {data.enterable_study.fallback_note ? <p>{data.enterable_study.fallback_note}</p> : null}
+          {data.enterable_study.limits ? <p className="cm-dim">{data.enterable_study.limits}</p> : null}
+        </div>
+      )}
       {!!data?.dropped_thin && (
         <p className="cm-note">
           {data.dropped_thin} name{data.dropped_thin === 1 ? '' : 's'} hidden below the
@@ -1015,15 +1099,26 @@ export function ChartMaps() {
       <OverlayLegend present={overlayGroups} hidden={tabHidden}
                            locked={lockedOverlays}
                      onToggle={toggleOverlay} />
+      {/* What the 🎯 filter cost this grid — ALWAYS on the page while it is on,
+        * even at "0 hidden", with the reasons in the backend's own words and a
+        * one-click way back. A board that empties itself in silence is the one
+        * failure mode a default-ON filter has. */}
+      <HiddenCount hidden={tilePart.hidden} unread={tilePart.unread}
+                   hiddenByReason={tilePart.hiddenByReason}
+                   enabled={enterableOnly && enterableKind !== 'n/a'}
+                   kind={enterableKind}
+                   note={`Counted over the ${tiles.length} tile${tiles.length === 1 ? '' : 's'} on this page — raise the limit to read further down the scan.`}
+                   onShowAll={() => setEnterableOnly(false)}
+                   onEnterableOnly={() => setEnterableOnly(true)} />
       <div className="cm-grid">
-        {tiles.map((t) => (
+        {tilePart.rows.map((t) => (
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study} />
         ))}
       </div>
 
-      {tiles.length ? (
+      {tilePart.rows.length ? (
         <div className="cm-foot">
-          Showing {tiles.length}
+          Showing {tilePart.rows.length}
           {data?.matched ? ` of ${data.matched} matches` : ''}
           {data?.scanned ? ` · ${data.scanned} names scanned` : ''}
           {data?.disclaimer ? <div className="cm-disclaimer">{data.disclaimer}</div> : null}
@@ -1088,6 +1183,7 @@ export function ChartMaps() {
       ) : null}
       </>
       )}
+      </EnterableFilterProvider>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import BondeBoard, { type BondeBoardData } from './BondeBoard';
 import { CM_TABS, TAB_META, isBoardTab, parseTab } from '../lib/chartMaps';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 
 /* 📈 Bonde tab (Ajay 2026-09-13). The negatives matter most: this board shows
  * percentages off revenue bases that can be negative or immaterial, and an
@@ -400,5 +401,107 @@ describe('🎯 headers and the demand-band filter', () => {
     await screen.findByText('PTGX');
     fireEvent.click(screen.getByLabelText(/in \/ near a demand band only/i));
     await waitFor(() => expect(screen.getByText(/read failed: HTTP 503/)).toBeInTheDocument());
+  });
+});
+
+
+/* 🎯 ENTERABLE on a row board (2026-09-15). Ajay: "I do not want to see not
+ * enterable alerts or stocks in any of the chart maps."
+ *
+ * Bonde is the hardest case on purpose: it already has TWO row filters (✨ new
+ * arrivals, 🎯 in/near a demand band) and his own sections, so the pins here
+ * are that the enterable cut COMPOSES with them, never merges the sections, and
+ * reports only what IT removed — otherwise an empty section sends him looking
+ * at the wrong checkbox. Mounted standalone (this file's other tests) there is
+ * no provider and the board is unchanged, which is the §7.8 default.
+ */
+const enterable = (verdict: string | null, short: string[] = [], text: string[] = []) => ({
+  kind: 'demand', verdict, reasons: short, reason_short: short, reason_text: text,
+  measured: { status: 'pending' },
+});
+const ROOM_ENTERABLE = roomPayload({
+  PTGX: { symbol: 'PTGX', coverage: 'store', print: 100, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(80, 90, 100),
+          enterable: enterable('BLOCKED', ['not at band'], ['The print sits more than 1.0% above the band top.']) },
+  LQDA: { symbol: 'LQDA', coverage: 'store', print: 12, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(11.5, 12.4, 12),
+          enterable: enterable('WATCH', ['reclaim from below'], ['Reclaiming the band from below — 66% hit the floor stop.']) },
+  ONDS: { symbol: 'ONDS', coverage: 'store', print: 5.1, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(4.6, 5.02, 5.1), enterable: enterable('READY') },
+  UMAC: { symbol: 'UMAC', coverage: 'pending' },   // no read at all
+});
+
+const drawFiltered = (d: BondeBoardData, room: any, opts: { on?: boolean; kind?: string } = {}) => {
+  const spy = vi.fn(async (url: string) => {
+    const u = String(url);
+    if (u.includes('/supply-demand/bounce-room')) return { ok: true, status: 200, json: async () => room } as any;
+    return { ok: true, status: 200, json: async () => d } as any;
+  });
+  vi.stubGlobal('fetch', spy);
+  const set = vi.fn();
+  render(
+    <MemoryRouter>
+      <EnterableFilterProvider enterableOnly={opts.on ?? true} kind={opts.kind ?? 'demand'}
+                               setEnterableOnly={set}>
+        <BondeBoard />
+      </EnterableFilterProvider>
+    </MemoryRouter>);
+  return set;
+};
+
+describe('📈 Bonde — the 🎯 enterable cut', () => {
+  it('hides the BLOCKED row, keeps WATCH and READY, and names the served reason', async () => {
+    drawFiltered(payload(FOUR), ROOM_ENTERABLE);
+    await screen.findByText('ONDS');
+    await waitFor(() => expect(screen.queryByText('PTGX')).not.toBeInTheDocument());
+    expect(screen.getByText('LQDA')).toBeInTheDocument();
+    expect(screen.getByText('🎯 WATCH · reclaim from below')).toBeInTheDocument();
+    expect(screen.getByText('🎯 READY')).toBeInTheDocument();
+    const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
+    expect(line.textContent).toMatch(/1 hidden \(1 not at band\)/);
+  });
+
+  it('a row the server has no read for STAYS and is counted separately', async () => {
+    drawFiltered(payload(FOUR), ROOM_ENTERABLE);
+    expect(await screen.findByText('UMAC')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/without a read/).textContent)
+      .toMatch(/1 without a read \(shown last\)/));
+  });
+
+  it('composes with the 🎯 in/near-demand box — the count reports only the ENTERABLE cut', async () => {
+    drawFiltered(payload(FOUR), ROOM_ENTERABLE);
+    await screen.findByText('ONDS');
+    await waitFor(() => expect(screen.getByLabelText(/in \/ near a demand band only/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText(/in \/ near a demand band only/i));
+    // PTGX (10% above) is gone on the proximity box; LQDA and ONDS stay.
+    await waitFor(() => expect(screen.queryByText('UMAC')).not.toBeInTheDocument());
+    expect(screen.getByText('LQDA')).toBeInTheDocument();
+    // …and the enterable line now reports ZERO, because the proximity box had
+    // already taken the only BLOCKED row. The other box is what emptied it.
+    const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
+    expect(line.textContent).toMatch(/^0 hidden/);
+  });
+
+  it('NEGATIVE: the filter OFF changes nothing and prints no count line', async () => {
+    drawFiltered(payload(FOUR), ROOM_ENTERABLE, { on: false });
+    await screen.findByText('PTGX');
+    expect(screen.getByText('LQDA')).toBeInTheDocument();
+    expect(screen.getByText('UMAC')).toBeInTheDocument();
+    expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: kind n/a is inert — every row stays even with the box ticked', async () => {
+    drawFiltered(payload(FOUR), ROOM_ENTERABLE, { kind: 'n/a' });
+    await screen.findByText('PTGX');
+    expect(screen.getByText('LQDA')).toBeInTheDocument();
+    expect(screen.getByText('UMAC')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a legacy payload with no enterable key at all hides nothing', async () => {
+    drawFiltered(payload(FOUR), ROOM);
+    await screen.findByText('PTGX');
+    await waitFor(() => expect(screen.getByText(/without a read/).textContent)
+      .toMatch(/4 without a read/));
+    expect(screen.getByText(/hidden/).closest('.cm-hidden-count')!.textContent).toMatch(/^0 hidden/);
   });
 });

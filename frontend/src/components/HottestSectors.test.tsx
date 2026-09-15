@@ -6,6 +6,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HottestSectors, pct, tone, tierChip } from './HottestSectors';
 import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 /* Shaped exactly like the live payload, with ANDE's real numbers from
  * 2026-09-10: strong name, cold sector, thin industry, declining sales. */
@@ -261,5 +263,90 @@ describe('HottestSectors board', () => {
     stub({ sectors: [], reason: 'no persisted rotation build yet' });
     view();
     expect(await screen.findByText(/no persisted rotation build yet/)).toBeTruthy();
+  });
+});
+
+
+/* 🎯 ENTERABLE on 🔥 Hottest (2026-09-15). This board's payload is SERVER-CUT —
+ * only `names_per_group` rows per group, ranked on the server — so the cut here
+ * is client-side over the rows already on screen and the count line has to SAY
+ * SO. Hiding 4 of a group's 25 does not pull the 26th up; claiming otherwise
+ * would be the board lying about its own membership. A server-side enterable
+ * cut is his call (spec §7.9). */
+describe('🔥 Hottest — the 🎯 enterable cut says it is over a server-cut list', () => {
+  beforeEach(() => { _resetBounceRoomCache(); });
+  afterEach(() => { _resetBounceRoomCache(); });
+
+  const read = (verdict: string | null, short: string[] = []) => ({
+    kind: 'demand', verdict, reasons: short, reason_short: short, reason_text: short,
+    measured: { status: 'pending' },
+  });
+  const ROOM = {
+    as_of: '2026-09-15T11:00:00-04:00', in_session: true, params: {},
+    requested: 2, covered: 2, pending: 0, unavailable: 0,
+    rows: {
+      ANDE: { symbol: 'ANDE', coverage: 'store', print: 40, enterable: read('BLOCKED', ['no band']) },
+      ASML: { symbol: 'ASML', coverage: 'store', print: 800, enterable: read('READY') },
+    },
+  };
+  const filtered = (on = true) => {
+    vi.stubGlobal('fetch', vi.fn(async (url: any) => ({
+      ok: true, status: 200,
+      json: async () => (String(url).includes('/supply-demand/bounce-room') ? ROOM : PAYLOAD),
+    })));
+    return render(
+      <MemoryRouter>
+        <EnterableFilterProvider enterableOnly={on} kind="demand" setEnterableOnly={() => {}}>
+          <HottestSectors />
+        </EnterableFilterProvider>
+      </MemoryRouter>);
+  };
+
+  it('the count line is titled "server-cut" and names the served reason', async () => {
+    filtered();
+    await screen.findByRole('button', { name: /Consumer Defensive/ });
+    const line = await screen.findByText(/hidden/);
+    const box = line.closest('.cm-hidden-count') as HTMLElement;
+    expect(box.textContent).toMatch(/1 hidden \(1 no band\)/);
+    expect(box.getAttribute('title')).toMatch(/server-cut list/);
+  });
+
+  it('a BLOCKED name disappears from an opened group, a READY one stays', async () => {
+    filtered();
+    fireEvent.click(await screen.findByRole('button', { name: /Consumer Defensive/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Food Distribution/ }));
+    await waitFor(() => expect(screen.queryByText('ANDE')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /Technology/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Semiconductor Equipment/ }));
+    expect(await screen.findByText('ASML')).toBeInTheDocument();
+    expect(screen.getByText('🎯 READY')).toBeInTheDocument();
+  });
+
+  it('the count line says WHAT it counted — every group, collapsed ones included (m4)', async () => {
+    /* m4: the number is over the UNIQUE names in the payload, across themes,
+     * sectors and industries, including the groups he has not opened. Every
+     * group on this board starts collapsed, so on arrival ZERO name rows are
+     * on screen while the line already reads "1 hidden" — a line that claimed
+     * to count "rows on screen" would be describing a different set than the
+     * one it counted. ANDE sits in both its sector and its industry group and
+     * is counted ONCE. */
+    filtered();
+    const line = await screen.findByText(/hidden/);
+    const box = line.closest('.cm-hidden-count') as HTMLElement;
+    expect(screen.queryByText('ANDE')).not.toBeInTheDocument();
+    expect(box.textContent).toMatch(/1 hidden/);
+    const title = box.getAttribute('title') || '';
+    expect(title).toMatch(/every group in this payload/);
+    expect(title).toMatch(/collapsed ones included/);
+    expect(title).toMatch(/unique name/);
+    expect(title).not.toMatch(/rows on screen/);
+  });
+
+  it('NEGATIVE: with the filter off every name comes back and no line is printed', async () => {
+    filtered(false);
+    fireEvent.click(await screen.findByRole('button', { name: /Consumer Defensive/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Food Distribution/ }));
+    expect(await screen.findByText('ANDE')).toBeInTheDocument();
+    expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
   });
 });

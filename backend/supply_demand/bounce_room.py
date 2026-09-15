@@ -150,6 +150,9 @@ Never a network call per symbol on the request path: one zone_store read,
 one cache read, one chunked bulk_snapshot for the covered names. Only
 sepa.prices is imported from outside supply_demand, lazily.
 
+ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
+here is a divergence, counted skipped_not_enterable.
+
 S/D scope: a CONFIGURED price-structure heuristic, NOT a book method, no
 Minervini cites, no SEPA gates. Decision support, never a buy signal, not
 advice.
@@ -683,6 +686,21 @@ def read_symbol(sym: str, doc: Optional[dict], snap: Optional[dict],
            "demand": demand_read(px, doc)}
     from supply_demand import explosive
     row["explosive"] = explosive.read(row, doc=doc, day_low=_f(snap.get("low")), tb_row=tb_row)
+    # 🎯 ENTERABLE read (2026-09-15): the kind-aware verdict on the SAME print,
+    # session low and previous close this row already read — the two standing
+    # push gates, the measured floor and the two measured drags, graded by the
+    # shipped grader. A READ, never a filter here: the row carries it and the
+    # surface decides what to show. Imported INSIDE for the same circularity
+    # reason `explosive` is.
+    from supply_demand import enterable
+    # `print_of` already said whether this print is a FRESH trade or the stored
+    # close it fell back to; the read says the same thing rather than claiming
+    # "live" on a stale row (critique m5, 2026-09-15) — the chip title he reads
+    # is built from `print.source`.
+    row["enterable"] = enterable.read(doc=doc, px=px, day_low=_f(snap.get("low")),
+                                      prev_close=_f(snap.get("prev_day_close")),
+                                      change_pct=snap.get("change_pct"), symbol=sym,
+                                      print_source="live" if fresh else "scan")
     return row
 
 
@@ -926,6 +944,7 @@ def build_payload(symbols: list, *, docs: dict, snapshot: Optional[dict], now: d
     n_pending = sum(1 for r in rows.values() if r["coverage"] == "pending")
     n_unavail = sum(1 for r in rows.values() if r["coverage"] == "unavailable")
     from supply_demand import explosive
+    from supply_demand import enterable
     return _json_clean({
         "as_of": now.astimezone(ET).isoformat() if snap_read else None,
         "in_session": in_session(now),
@@ -936,6 +955,9 @@ def build_payload(symbols: list, *, docs: dict, snapshot: Optional[dict], now: d
         # UNCHANGED — the read adds no owner setting, every number in it is
         # imported or measured.
         "explosive_study": explosive.measured_verdict(),
+        # The same once-per-payload banner for the 🎯 read (2026-09-15). PARAMS
+        # is UNCHANGED here too — the read adds no owner setting.
+        "enterable_study": enterable.measured_verdict(),
         "rows": rows,
         "requested": len(symbols), "covered": covered, "pending": n_pending,
         "unavailable": n_unavail,

@@ -61,6 +61,9 @@ explicitly asked for, and separately mutable at /notifications if the
 universe half gets loud. Nothing is suppressed on quality here: the board
 already did that.
 
+ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
+here is a divergence, counted skipped_not_enterable.
+
 Configured price-structure method, NOT a book method. Decision support, not a
 buy signal, not advice.
 """
@@ -76,6 +79,7 @@ from market_hours.reminder import is_market_day
 from . import alert_gates as AG
 from . import bullish_context as BC
 from . import alert_status as AS
+from . import enterable as EN
 # The 5-min siblings' freshness rule (review 2026-09-14, finding 5): this pass
 # used to push on bulk_live_prices()['price'] — the day AGGREGATE's close, with
 # no stamp — while zone_edge and zone_bounce refuse a print older than their
@@ -280,7 +284,11 @@ def at_message(item: dict) -> dict:
     # without it every 🧲 push logged as kind=None (found 2026-09-03).
     return {"title": f"🧲 {sym} {where} {_band_txt(band)}", "body": body,
             "url": f"/sepa/{sym}?tab=supply", "data": {"url": f"/sepa/{sym}?tab=supply"}, "ticker": sym,
-            "kind": KIND}
+            "kind": KIND,
+            # The verdict AT PUSH TIME, persisted with the row by push.history
+            # so the /alerts page shows what the phone actually graded rather
+            # than a read recomputed hours later (2026-09-15).
+            "enterable": EN.slim(item.get("enterable"))}
 
 
 def digest_message(items: list) -> Optional[dict]:
@@ -706,6 +714,7 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
     skipped_mood = 0
     skipped_floor = 0
     skipped_overlap = 0
+    skipped_not_enterable = 0          # the 🎯 divergence guard (2026-09-15)
     accepted: dict = {}                               # {SYM: [band]} taken THIS pass
     for sym in syms:
         last = last_px.get(sym)
@@ -736,6 +745,7 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         item = {"symbol": sym, "last": float(last), "band": band, "hit": hit,
                 "cap": cap, "name": cands[sym]["name"], "prev_close": prev,
                 "day_low": (live.get(sym) or {}).get("low"),
+                "change_pct": chg,          # the 🎯 read's weak-day drag (2026-09-15)
                 "approach": AG.approach_read(last, band, prev, (live.get(sym) or {}).get("low"))}
         hits.append(item)
         if not passes_cap(cap):
@@ -811,6 +821,22 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         if not AG.reversal_mood_gate(it["symbol"], read=rm):
             skipped_mood += 1
             continue
+        # 🎯 ENTERABLE (2026-09-15), LAST and tightening only. Every gate it
+        # grades has already run on these very inputs — proximity, room,
+        # bouncing, floor intact — so they are passed THROUGH rather than
+        # recomputed and the recorded verdict is the verdict the phone applied.
+        # BLOCKED is therefore unreachable here BY CONSTRUCTION: the counter is
+        # a divergence guard, expected 0, and a quiet phone is never explained
+        # by it.
+        en = EN.assess(kind=EN.KIND_DEMAND, px=it["last"], band=it["band"],
+                       bands=zdoc.get("bands") or [], prev_close=it.get("prev_close"),
+                       day_low=it.get("day_low"), change_pct=it.get("change_pct"),
+                       floor_state=(sw or {}).get("state"), approach=it.get("approach"),
+                       room_ok=True, prox_ok=True, room=it.get("room"))
+        it["enterable"] = en
+        if en.get("verdict") == EN.BLOCKED:
+            skipped_not_enterable += 1
+            continue
         pushable.append(it)
     # Mood as CONTEXT (Ajay 2026-09-08: "do include mood in the overall
     # criteria of the stocks for alerts becuz mood determins if stock grows
@@ -881,7 +907,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
             "skipped_proximity": skipped_proximity, "unknown_room": unknown_room,
             "skipped_direction": skipped_direction,
             "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
-            "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap}
+            "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap,
+            "skipped_not_enterable": skipped_not_enterable}
 
 
 if __name__ == "__main__":

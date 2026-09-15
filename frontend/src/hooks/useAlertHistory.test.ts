@@ -175,3 +175,35 @@ describe('useAlertedToday', () => {
     expect(urlOf(fn)).toContain('kinds=position_alert');
   });
 });
+
+
+/* 🎯 The push-time enterable verdict rides on the row (2026-09-15). The hook
+ * must pass it through untouched — it is the backend's own object, taken on the
+ * print that pushed, and the page renders it verbatim. */
+describe('useAlertHistory — the 🎯 read on a pushed row', () => {
+  const READ = {
+    kind: 'demand', verdict: 'READY', reasons: [], reason_short: [], reason_text: ['At the band, floor intact.'],
+    print: { px: 176.5, source: 'live' }, measured: { status: 'pending' },
+  };
+
+  it('passes the served object straight through, key for key', async () => {
+    okFetch({ rows: [{ ...ROWS[0], enterable: READ }] });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(1));
+    expect(result.current.rows![0].enterable).toEqual(READ);
+  });
+
+  it('NEGATIVE: a row written before 2026-09-15 has no key, and none is invented', async () => {
+    okFetch();
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(3));
+    for (const r of result.current.rows!) expect(r.enterable).toBeUndefined();
+  });
+
+  it('NEGATIVE: an explicit null stays null — "no read" is not "not enterable"', async () => {
+    okFetch({ rows: [{ ...ROWS[0], enterable: null }] });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(1));
+    expect(result.current.rows![0].enterable).toBeNull();
+  });
+});

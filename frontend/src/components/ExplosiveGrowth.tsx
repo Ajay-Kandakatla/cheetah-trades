@@ -25,6 +25,9 @@ import {
 import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
@@ -275,6 +278,11 @@ export function ExplosiveGrowth() {
   const rowSymbols = useMemo(() => sortedRows.map((r) => r.symbol).filter(Boolean), [sortedRows]);
   const room = useBounceRoom(rowSymbols);
   const rows = useExplosiveOrder(sortedRows, (r) => r.symbol, room.map, explosiveFirst);
+  /* 🎯 The enterable cut (2026-09-15). A 100/100 grower sitting nowhere near a
+   * demand band is exactly the row he asked to stop seeing on an entry board —
+   * and the count line below says how many went, and why. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(rows, (r) => r.symbol, room.map, enterableOnly);
 
   const groups = data?.groups ?? [];
   const blockedN = (data?.rows ?? []).filter(
@@ -429,6 +437,12 @@ export function ExplosiveGrowth() {
         )}
       </div>
 
+      {enterableOnly && kind !== 'n/a' ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
+
       <div className="eg-scroll">
         <table className="eg-table">
           <thead>
@@ -526,7 +540,7 @@ export function ExplosiveGrowth() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {part.rows.map((r) => {
               const d = demandCell(r.zone);
               const warns = [...(r.warnings ?? []), ...legFlags(r)];
               const per = periodCell(r);
@@ -536,6 +550,8 @@ export function ExplosiveGrowth() {
                     <TickerLink ticker={r.symbol} fromLabel="Explosive Growth" />
                     <ExplosiveChip className="eg" study={room.payload?.explosive_study}
                                    read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
+                    <EnterableChip className="eg"
+                                   read={room.map.get(String(r.symbol).toUpperCase())?.enterable} />
                     {r.name && <div className="eg-coname">{r.name}</div>}
                   </td>
                   <td className="eg-num eg-good" title={per.title}>

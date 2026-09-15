@@ -1036,3 +1036,129 @@ describe('ChartMaps — the Quick Bounce tab (Ajay 2026-09-06)', () => {
     expect(await screen.findByTestId('hidden-low-room')).toBeInTheDocument();
   });
 });
+
+
+/* 🎯 ENTERABLE — the default-ON filter (Ajay 2026-09-15: "I only wanna see the
+ * stocks that are enterable. ... I do not want to see not enterable alerts or
+ * stocks in any of the chart maps").
+ *
+ * What is pinned here is not the verdict — that is built on the backend from
+ * the enforcing constants and this page never grades — but the two things a
+ * default-ON filter can get wrong and never say so: that a removed tile is
+ * COUNTED and reachable, and that a tile the backend has no read for is kept.
+ * Every reason word below arrives in the payload; none is typed by the page.
+ */
+describe('ChartMaps — the 🎯 enterable filter (2026-09-15)', () => {
+  const tile = (symbol: string, enterable: unknown) => ({
+    ...VCP_TILE, symbol, href: `/sepa/${symbol}?tab=setup`, enterable,
+  });
+  const READY = {
+    kind: 'demand', verdict: 'READY', reasons: [], reason_text: [], reason_short: [],
+    measured: { status: 'pending' },
+  };
+  const BLOCKED_PROX = {
+    kind: 'demand', verdict: 'BLOCKED', reasons: ['proximity'],
+    reason_text: ['The print sits more than 1.0% above the band top.'],
+    reason_short: ['not at band'], measured: { status: 'pending' },
+  };
+  const WATCH_RECLAIM = {
+    kind: 'demand', verdict: 'WATCH', reasons: ['reclaim'],
+    reason_text: ['Reclaiming the band from below — 66% of those hit the floor stop.'],
+    reason_short: ['reclaim from below'], measured: { status: 'pending' },
+  };
+  const DEMAND_BOARD = {
+    tab: 'vcp', count: 4, enterable_kind: 'demand',
+    tiles: [tile('AAA', READY), tile('BBB', BLOCKED_PROX), tile('CCC', WATCH_RECLAIM), tile('DDD', null)],
+  };
+
+  it('is ON by default: the BLOCKED tile is gone, counted by its SERVED reason, with a way back', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: DEMAND_BOARD }));
+    draw();
+    expect(await screen.findByText('AAA')).toBeInTheDocument();
+    expect(screen.getByText('CCC')).toBeInTheDocument();
+    expect(screen.queryByText('BBB')).not.toBeInTheDocument();
+    const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
+    expect(line.textContent).toMatch(/1 hidden \(1 not at band\)/);
+    expect(within(line).getByRole('button', { name: /show all/ })).toBeInTheDocument();
+    // The checkbox says the same thing the URL does.
+    expect(screen.getByLabelText(/Enterable only/)).toBeChecked();
+  });
+
+  it('a tile with NO read is never hidden — it is shown last and counted separately', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: DEMAND_BOARD }));
+    draw();
+    expect(await screen.findByText('DDD')).toBeInTheDocument();
+    expect(screen.getByText(/without a read/).textContent).toMatch(/1 without a read \(shown last\)/);
+    // Shown rows keep the served order, the unread one follows it.
+    const syms = screen.getAllByText(/^(AAA|BBB|CCC|DDD)$/).map((n) => n.textContent);
+    expect(syms).toEqual(['AAA', 'CCC', 'DDD']);
+  });
+
+  it('?show=all brings the BLOCKED tile back and the line offers the filter again', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: DEMAND_BOARD }));
+    draw('/chart-maps?tab=vcp&show=all');
+    expect(await screen.findByText('BBB')).toBeInTheDocument();
+    const line = screen.getByText(/showing all/).closest('.cm-hidden-count') as HTMLElement;
+    expect(within(line).getByRole('button', { name: /enterable only/ })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Enterable only/)).not.toBeChecked();
+    expect(screen.getByText(/Showing 4/)).toBeInTheDocument();
+  });
+
+  it('clicking "show all" restores the tile without a reload', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: DEMAND_BOARD }));
+    draw();
+    expect(await screen.findByText('AAA')).toBeInTheDocument();
+    const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
+    fireEvent.click(within(line).getByRole('button', { name: /show all/ }));
+    expect(await screen.findByText('BBB')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: an n/a tab hides nothing, disables the box and says why', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: { ...DEMAND_BOARD, enterable_kind: 'n/a' },
+    }));
+    draw();
+    // Every tile stays, BLOCKED read and all — the read does not apply here.
+    expect(await screen.findByText('BBB')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Enterable only/)).toBeDisabled();
+    expect(screen.getByText(/no demand read for this tab · filter off/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: the 📁 holdings tab never hides a position', async () => {
+    vi.stubGlobal('fetch', stubFetch({ holdings: { tab: 'holdings', count: 0, tiles: [] }, vcp: VCP_BOARD }));
+    draw('/chart-maps?tab=holdings');
+    // The holdings board owns its own fetch and renders no grid partition at
+    // all — the point is that the page does not cut it on the way in.
+    expect(await screen.findByRole('tab', { name: /My holdings/ })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByText(/hidden \(/)).not.toBeInTheDocument();
+  });
+
+  it('renders the SERVED study banner, and nothing at all when the payload has none', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: { ...DEMAND_BOARD, enterable_study: {
+        headline: 'Entry-trigger study running — no trigger gates anything yet',
+        body: 'The read is the two standing gates plus the measured floor.',
+        limits: 'One market, one universe.',
+      } },
+    }));
+    const { unmount } = draw();
+    const banner = await screen.findByTestId('cm-enterable-study');
+    expect(banner.textContent).toMatch(/Entry-trigger study running/);
+    expect(banner.textContent).toMatch(/One market, one universe/);
+    unmount();
+
+    vi.stubGlobal('fetch', stubFetch({ vcp: DEMAND_BOARD }));
+    draw();
+    await waitFor(() => expect(screen.getByText('AAA')).toBeInTheDocument());
+    expect(screen.queryByTestId('cm-enterable-study')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a board with no reads at all hides nothing and still prints the line', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: { ...DEMAND_BOARD, tiles: [tile('AVGO', null)] } }));
+    draw();
+    expect(await screen.findByText('AVGO')).toBeInTheDocument();
+    const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
+    expect(line.textContent).toMatch(/^0 hidden/);
+    expect(line.textContent).toMatch(/1 without a read/);
+  });
+});

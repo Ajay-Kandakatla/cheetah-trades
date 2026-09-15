@@ -23,6 +23,9 @@ import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
@@ -60,6 +63,11 @@ export function SignalLabBoard() {
   const rowSymbols = useMemo(() => (data?.rows || []).map((r) => r.symbol).filter(Boolean), [data]);
   const room = useBounceRoom(rowSymbols);
   const rows = useExplosiveOrder(data?.rows || [], (r) => r.symbol, room.map, explosiveFirst);
+  /* 🎯 The enterable cut over the watchlist order (2026-09-15). <PremarketEntry>
+   * above is deliberately NOT touched — it serves its own grades from
+   * supply_demand/premarket_entry and answers a different question. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(rows, (r) => r.symbol, room.map, enterableOnly);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
 
@@ -135,8 +143,13 @@ export function SignalLabBoard() {
                 : `${data.session_state.toUpperCase()} — refreshing every 45s`}
             </span>
           </div>
+          {enterableOnly && kind !== 'n/a' ? (
+            <HiddenCount hidden={part.hidden} unread={part.unread}
+                         hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                         onShowAll={() => setEnterableOnly(false)} />
+          ) : null}
           <div className="cm-grid">
-            {rows.map((r) => r.tile ? (
+            {part.rows.map((r) => r.tile ? (
               <div key={r.symbol} className="slab-cell">
                 <PatternChart tile={r.tile} tvTf="daily" study={room.payload?.explosive_study} />
                 {r.latest ? (
@@ -167,6 +180,8 @@ export function SignalLabBoard() {
                 <GrowthChip symbol={r.symbol} className="cm-badge" />
                 <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                                read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
+                <EnterableChip className="cm-badge"
+                               read={room.map.get(String(r.symbol).toUpperCase())?.enterable} />
                 : {r.error || 'no data'}
               </div>
             ))}

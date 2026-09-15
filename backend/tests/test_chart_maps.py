@@ -2223,7 +2223,13 @@ def test_zone_tiles_lead_with_which_way_it_got_here(prices, reentry_stub, monkey
                          "prev_day_close": hi * 1.12, "low": lo * 1.001}}
     monkeypatch.setattr(B, "_live_rows", rows_)
     out = B.board("zones", limit=10, min_tier="any", themes_first=False)
-    assert calls == [["BNCE", "FALL", "NOLIVE"]], "fetched once, shared with the bounce gate"
+    # TWO fetches, and only two (2026-09-15): the builder's own, shared with the
+    # bounce gate and the approach read, and ONE overlay fan-out at the end of
+    # board() shared by the extended-hours now-line and the 🎯 enterable read.
+    # The second is not new — `attach_live_now` always made it; it went through
+    # `bulk_live_prices` directly, where this spy could not see it.
+    assert calls == [["BNCE", "FALL", "NOLIVE"], ["BNCE", "FALL", "NOLIVE"]], \
+        "one fetch per builder, one for the overlays — never one per overlay"
     by = {t["symbol"]: t for t in out["tiles"]}
     assert by["FALL"]["badges"][0] == {"text": f"↓ Falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)", "tone": "warn"}
     assert by["FALL"]["why"].endswith(f"— ↓ falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)")
@@ -2802,4 +2808,6 @@ def test_attach_live_now_moves_and_tags_the_now_line_on_every_tab():
 def test_attach_live_now_runs_at_the_end_of_board_for_every_tab():
     src = (Path(__file__).resolve().parents[1] / "chart_maps" / "board.py").read_text()
     tail = src[src.index("def board("):src.index("def now_label(")]
-    assert "attach_live_now(out.get(\"tiles\") or [], out)" in tail, "the live now-line overlay must run for every tab"
+    assert "attach_live_now(_tiles, out, live=_live)" in tail, "the live now-line overlay must run for every tab"
+    # ONE fan-out feeds it and the 🎯 read (2026-09-15); the now-line still runs first.
+    assert tail.index("_live_snapshot(") < tail.index("attach_live_now(") < tail.index("attach_enterable(")

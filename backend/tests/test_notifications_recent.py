@@ -95,6 +95,9 @@ def test_default_read_is_unchanged_positional_list_recent_and_unfiltered_breakou
                       "title": "🚀 Volume breakout · AAPL", "body": "$231.50  ·  +4.2%\nvol 3.1x",
                       "kind": "volume_breakout", "ticker": "AAPL", "url": "/sepa/AAPL?from=alert",
                       "user_email": None, "sent": 0, "failed": 0, "total": 0, "source": "breakout",
+                      # a breakout is not a demand-zone push: the 🎯 key is
+                      # present and null on every feed row (2026-09-15)
+                      "enterable": None,
                       "dismissed": False}
 
 

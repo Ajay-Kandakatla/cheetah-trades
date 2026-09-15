@@ -173,3 +173,25 @@ next reader cannot repeat it. READY fell from 12 to 10 on that pass.
   as stable.
 - No placebo yet for the grade itself: we know reclaims are worse, not that
   READY beats a random name at a level.
+
+## This grader is also the ENTERABLE read (2026-09-15)
+
+`supply_demand/enterable.py` wraps **this** module — `grade_row`, `blockers`,
+`approach_drag`, `day_change_drag`, `GRADE_READY/WATCH/BLOCKED`, `GRADE_ORDER`
+— and adds two things it does not have: the **kind** of the row (a demand
+reversal, a 🚀 lid break, or a tab with no demand read at all) and the **floor
+state** from `alert_gates.sweep_read`, so a band whose floor was swept in the
+session reads BLOCKED instead of READY. That read is what every Chart Maps tab
+chips and filters on, what every demand push records on its row, and what the
+Alerts page shows. There is no second grader: `enterable.grade()` calls
+`grade_row()` and never re-implements the READY/WATCH/BLOCKED logic, and mood
+stays out of both signatures.
+
+**The one divergence, stated rather than hidden:** the ⚡ Signals "Ready to
+enter" section keeps its own grade and has **no floor input**, so it can say
+READY on a name ENTERABLE calls `floor_swept`. Routing this board's grade
+through `enterable.assess` is listed for him in
+[`enterable.md`](enterable.md) §9.13 — it is a change to what this page shows,
+so it waits for his answer. See [`enterable.md`](enterable.md) for the reason
+codes, the filter and the entry-trigger study behind the `survivor_<key>` WATCH
+reason.

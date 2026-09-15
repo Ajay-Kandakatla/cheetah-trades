@@ -55,6 +55,10 @@ import { GrowthChip } from './GrowthChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { compareDemandProximity, demandChipText, inOrNearDemand, compareExplosive, type BounceRoomRow } from '../lib/bounceRoom';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter } from '../hooks/useEnterableFilter';
+import { partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
 
@@ -203,6 +207,20 @@ export default function BondeBoard() {
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  /* 🎯 The enterable cut (2026-09-15), applied INSIDE each section — his
+   * sections are the board, so the filter must never merge them. It COMPOSES
+   * with the 🎯 in/near-demand box above and with ✨ new-arrivals: each one
+   * removes rows, and the count line below reports only what the ENTERABLE cut
+   * took, so "0 hidden" under an empty section correctly points at the other
+   * box rather than at this one. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const enterableOn = enterableOnly && kind !== 'n/a';
+  const enterableMap = useMemo(() => {
+    const m = new Map<string, EnterableRead | null | undefined>();
+    for (const [sym, r] of room.map.entries()) m.set(String(sym).toUpperCase(), r?.enterable ?? null);
+    return m;
+  }, [room.map]);
+
   const sections = useMemo(() => {
     if (!d) return [];
     return SECTIONS.map((s) => {
@@ -227,9 +245,23 @@ export default function BondeBoard() {
           { symbol: b.symbol, read: room.map.get(String(b.symbol).toUpperCase())?.explosive },
           status));
       }
-      return { ...s, rows, total: d.counts?.[s.key] ?? all.length, shown: all.length };
+      const part = partitionEnterable(rows, (r) => r.symbol, enterableMap, enterableOn);
+      return { ...s, rows: part.rows, part,
+               total: d.counts?.[s.key] ?? all.length, shown: all.length };
     });
-  }, [d, newOnly, nearDemandOnly, explosiveFirst, room.map]);
+  }, [d, newOnly, nearDemandOnly, explosiveFirst, room.map, enterableMap, enterableOn]);
+
+  /* One line for the whole tab: the sections are his, the count is the board's. */
+  const enterableTotals = useMemo(() => {
+    let hidden = 0; let unread = 0;
+    const byReason: Record<string, number> = {};
+    for (const s of sections) {
+      hidden += s.part.hidden;
+      unread += s.part.unread;
+      for (const [k2, n2] of Object.entries(s.part.hiddenByReason)) byReason[k2] = (byReason[k2] || 0) + n2;
+    }
+    return { hidden, unread, byReason };
+  }, [sections]);
 
   if (loading) return <div className="bd-note">reading his screen…</div>;
   if (err) return <div className="bd-note bd-err">⛔ {err}</div>;
@@ -299,6 +331,12 @@ export default function BondeBoard() {
           )}
         </div>
       </div>
+
+      {enterableOn ? (
+        <HiddenCount hidden={enterableTotals.hidden} unread={enterableTotals.unread}
+                     hiddenByReason={enterableTotals.byReason} enabled kind={kind}
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
 
       {/* An empty ⚡ Pivots section has a structural cause right now, and a board
           that does not say so reads as broken. */}
@@ -378,6 +416,7 @@ export default function BondeBoard() {
                       <GrowthChip symbol={r.symbol} className="bd-gchip" />
                       <ExplosiveChip read={read?.explosive} className="bd-gchip"
                                      study={room.payload?.explosive_study} />
+                      <EnterableChip read={read?.enterable} className="bd-gchip" />
                       {r.name && <div className="bd-coname">{r.name}</div>}
                     </div>
 

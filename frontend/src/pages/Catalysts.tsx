@@ -5,6 +5,9 @@ import { GrowthChip } from '../components/GrowthChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { ExplosiveChip } from '../components/ExplosiveChip';
+import { EnterableChip } from '../components/EnterableChip';
+import { HiddenCount } from '../components/HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from '../components/ExplosiveFirstToggle';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
@@ -143,6 +146,11 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
    * the chips read — default OFF, so his tested "room to supply" order is what
    * the board shows until he asks for the other one. */
   const shownCandidates = useExplosiveOrder(sorted, (c) => c.ticker, br, explosiveFirst);
+  /* 🎯 The enterable cut over the board's own order (2026-09-15). Mounted
+   * inside Chart Maps it follows the tab's filter; at /catalysts standalone the
+   * default context is OFF, so that page is unchanged (spec §7.8, his call). */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(shownCandidates, (c) => c.ticker, br, enterableOnly);
 
   return (
     <div className={embedded ? 'cat-page cat-page--embedded' : 'cm-page cat-page'}>
@@ -431,9 +439,15 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
 
       {loading && <div className="day-empty">Scanning Massive gainers/losers + Stocktwits + Reddit + SEC EDGAR…</div>}
 
+      {enterableOnly && kind !== 'n/a' ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
+
       {/* Card grid */}
       <div className="cat-grid">
-        {shownCandidates.map((c) => (
+        {part.rows.map((c) => (
           <CandidateCard key={c.ticker} c={c} br={br.get(c.ticker.toUpperCase())}
                          study={brPayload?.explosive_study}
                          onClick={() => setDrillTicker(c.ticker)} />
@@ -528,6 +542,7 @@ function CandidateCard({ c, br, study, onClick }: {
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
+            <EnterableChip read={br?.enterable} className="cm-badge" />
           </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>
@@ -883,6 +898,10 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
   const { map: preBr, payload: prePayload } = useBounceRoom(preTickers);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const shownPre = useExplosiveOrder(data?.candidates ?? [], (c) => c.ticker, preBr, explosiveFirst);
+  /* 🎯 Same cut on the pre-market list — its own bounce-room map, one POST. */
+  const { enterableOnly: preEnterableOnly, kind: preKind, setEnterableOnly: setPreEnterableOnly } =
+    useEnterableFilter();
+  const prePart = useEnterablePartition(shownPre, (c) => c.ticker, preBr, preEnterableOnly);
 
   return (
     <div className="cat-premarket">
@@ -914,9 +933,15 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
 
       {loading && <div className="day-empty">Pulling pre-market gappers…</div>}
 
+      {data && data.candidates.length > 0 && preEnterableOnly && preKind !== 'n/a' ? (
+        <HiddenCount hidden={prePart.hidden} unread={prePart.unread}
+                     hiddenByReason={prePart.hiddenByReason} enabled kind={preKind}
+                     onShowAll={() => setPreEnterableOnly(false)} />
+      ) : null}
+
       {data && data.candidates.length > 0 && (
         <div className="cat-grid">
-          {shownPre.map((c) => (
+          {prePart.rows.map((c) => (
             <PremarketCard key={c.ticker} c={c} onClick={() => onClickTicker(c.ticker)}
                            br={preBr.get(c.ticker.toUpperCase())} study={prePayload?.explosive_study} />
           ))}
@@ -951,6 +976,7 @@ function PremarketCard({ c, onClick, br, study }: {
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
+            <EnterableChip read={br?.enterable} className="cm-badge" />
           </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>

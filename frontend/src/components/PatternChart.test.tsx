@@ -501,3 +501,46 @@ describe("the demand BOARD's band is an outline (2026-09-14)", () => {
     expect(container.querySelectorAll('g[data-band-kind="demand"] line').length).toBe(2);
   });
 });
+
+
+/* 🎯 The enterable chip on the tile (2026-09-15). The tile is the surface every
+ * tile board renders through, so this ONE mount is what puts the read on Back
+ * in Demand, Deep Demand, Quick Reversal, Breaking, VCP and the rest. The tile
+ * decides nothing: the verdict, the reason word and the tooltip sentences are
+ * all served by supply_demand/enterable.py from the enforcing constants. */
+describe('PatternChart — the 🎯 enterable chip', () => {
+  const read = (over: Record<string, unknown> = {}) => ({
+    kind: 'demand', verdict: 'READY', reasons: [], reason_text: ['At the band, room overhead, floor intact.'],
+    reason_short: [], print: { px: 11.4, source: 'live' }, measured: { status: 'pending' }, ...over,
+  });
+
+  it('renders the SERVED verdict off the tile', () => {
+    draw({ ...TILE, enterable: read() } as CmTile);
+    const chip = screen.getByText('🎯 READY');
+    expect(chip).toHaveClass('cm-badge-enterable-ready');
+    expect(chip.getAttribute('title')).toMatch(/At the band, room overhead, floor intact\./);
+  });
+
+  it('a WATCH prints the served reason word, never one the tile invents', () => {
+    draw({ ...TILE, enterable: read({
+      verdict: 'WATCH', reasons: ['weak_day'], reason_short: ['down day'],
+      reason_text: ['Down 4.1% today — a −3..−8% day finished up 22% of the time.'],
+    }) } as CmTile);
+    expect(screen.getByText('🎯 WATCH · down day')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: no read on the tile → no chip at all (an unknown is not a rejection)', () => {
+    draw({ ...TILE, enterable: null } as CmTile);
+    expect(screen.queryByText(/🎯 (READY|WATCH)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^⛔/)).not.toBeInTheDocument();
+    // and with the key absent entirely (every payload written before 2026-09-15)
+    const { container } = render(<MemoryRouter><PatternChart tile={TILE} /></MemoryRouter>);
+    expect(container.querySelector('[class*="enterable"]')).toBeNull();
+  });
+
+  it('a closed-bar read says so in the tooltip rather than hiding the chip', () => {
+    draw({ ...TILE, enterable: read({ print: { px: 11.4, source: 'scan' } }) } as CmTile);
+    expect(screen.getByText('🎯 READY').getAttribute('title'))
+      .toMatch(/closed-bar read \(no live print\)/);
+  });
+});

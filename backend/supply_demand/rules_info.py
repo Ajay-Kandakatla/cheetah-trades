@@ -56,7 +56,14 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # reason and one more: until the study lands the order shown
                 # under the 🧨 label is floor-held + room, and the panel is
                 # where that has to be said in words.
-                "explosive")
+                "explosive",
+                # 🎯 ENTERABLE (2026-09-15) — the read behind the "Enterable
+                # only" filter and the chip on every tile, row and pushed
+                # alert. Its own section because the reader has to be told, in
+                # one place, WHICH constant blocks a row, which measurement
+                # makes it a WATCH, and that a BLOCKED verdict on a push path
+                # is a bug rather than a quiet phone.
+                "enterable")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -645,7 +652,103 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: explosive section unavailable: %s", exc)
 
+    # ── 🎯 Enterable read ──────────────────────────────────
+    try:
+        out["enterable"] = _enterable_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: enterable section unavailable: %s", exc)
+
     return out
+
+
+def _enterable_section() -> dict:
+    """🎯 ENTERABLE — who is enterable right now, and what makes a row WATCH or
+    BLOCKED.
+
+    Every line is built from the ENFORCING constant or from the module's own
+    measured verdict: `alert_gates` for the two standing gates and the floor
+    states, `premarket_entry` for the two measured drags and their rates,
+    `enterable` for the reason codes, the tab map and the study line. Nothing
+    is typed here — a constant change or a re-run moves this panel with it.
+    The verdict call is guarded on its own so a half-written MEASURED cannot
+    take the rules built from constants off the page.
+    """
+    from . import enterable as EN
+    from . import premarket_entry as PE
+
+    try:
+        verdict = EN.measured_verdict() or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: enterable verdict unavailable: %s", exc)
+        verdict = {}
+
+    na_tabs = sorted(k for k, v in EN.KIND_BY_TAB.items() if v == EN.KIND_NA)
+    held = ", ".join(str(s) for s in AG.FLOOR_HELD_STATES)
+    reversal = AG.direction_label(AG.PUSH_DIRECTIONS[0]) if AG.PUSH_DIRECTIONS else ""
+
+    alerts = []
+    for key in ("headline", "body", "fallback_note", "limits"):
+        val = verdict.get(key)
+        if isinstance(val, (list, tuple)):
+            val = " ".join(str(x) for x in val if x)
+        if val:
+            alerts.append(str(val))
+    if not alerts:
+        alerts.append("MEASURED: the entry-timing study has not reported yet, "
+                      "so nothing under this label is a measured claim.")
+    alerts.append(
+        "PUSHES: every demand push already passes these gates before the read "
+        "runs — proximity, room, %s and the floor — so the read is RECORDED on "
+        "the row rather than deciding it. A BLOCKED verdict on a push path "
+        "means a bug, counted `skipped_not_enterable`; it is never the reason "
+        "for a quiet phone." % (reversal or "direction"))
+
+    return {
+        "title": "Enterable — is this one worth an entry right now",
+        "emoji": "🎯",
+        "picks": [
+            "READY wants all four at once: a demand band at or below the print, "
+            "the print no more than %s above that band's top, at least %s of "
+            "headroom to the first PROVEN band overhead, and the band floor "
+            "%s. Those are the two standing phone gates and the one gate that "
+            "measured — no new threshold was invented for this read."
+            % (_pct(AG.ALERT_MAX_ABOVE_DEMAND_PCT), _pct(AG.ALERT_MIN_ROOM_PCT), held),
+            "WATCH is READY carrying a measured DRAG, from the 2026-09-08 "
+            "autopsy of his own 286 pushes: a reclaim from BELOW the band hit "
+            "the floor stop %s of the time against %s for an arrival from "
+            "above, and a day down between %s and %s closed above the alert "
+            "print only %s of the time against %s on a normal day. A row is "
+            "also WATCH when the floor cannot be read at all — unknown is not "
+            "a failure on a board, and it fails CLOSED on the phone as it "
+            "always has."
+            % (_pct(PE.RECLAIM_STOP_PCT), _pct(PE.ARRIVAL_STOP_PCT),
+               _pct(PE.WEAK_DAY_LO_PCT), _pct(PE.WEAK_DAY_HI_PCT),
+               _pct(PE.WEAK_DAY_UP_PCT), _pct(PE.NORMAL_DAY_UP_PCT)),
+            "BLOCKED says which gate failed, in one of these codes: %s. A floor "
+            "that is readable and is not %s blocks; the state word comes from "
+            "the sweep read itself, so a state nobody has measured can never "
+            "read READY by omission."
+            % (", ".join(EN.BLOCK_CODES), held),
+            "KIND-AWARE. 🚀 breaking rows are graded on headroom to the NEXT "
+            "lid alone — that is the existing gate on that kind and nothing "
+            "was added to it. These tabs carry NO demand read at all and are "
+            "never hidden by the filter, because their rows are pivots, highs, "
+            "lids, events, options and value rather than demand reversals: %s."
+            % (", ".join(na_tabs) or "none"),
+            "A row with NO read — a name the store has not warmed, a legacy "
+            "doc with no closed-bar tail — is SHOWN, placed last and counted "
+            "\"without a read\". Unknown is never \"not enterable\", and the "
+            "hidden count with its reasons is printed on the page so nothing "
+            "disappears silently.",
+        ],
+        "stops": [
+            "No stop, no target and no size: this is a READ and a FILTER. The "
+            "stop beside a demand band stays the trade plan's own, %s under "
+            "the band floor." % _pct(AG.STOP_BUFFER_PCT),
+        ],
+        "alerts": alerts,
+        "note": _DISCLAIMER,
+    }
 
 
 def _explosive_section() -> dict:

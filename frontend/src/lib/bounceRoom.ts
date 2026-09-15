@@ -33,6 +33,9 @@
  * groups by it before anything else — a bounce INTO supply is not a lead.
  */
 import { level, money } from './zonePlan';
+// Types only (2026-09-15): the 🎯 read rides on these rows, and every rule
+// behind it lives in lib/enterable.ts / supply_demand/enterable.py.
+import type { EnterableRead, EnterableStudy } from './enterable';
 
 export type BounceBand = {
   kind: 'demand' | 'supply';
@@ -117,6 +120,10 @@ export type BounceRoomRow = {
    *  and on every row the server could not build a band for. See the block at
    *  the bottom of this file for what it does and does not claim. */
   explosive?: ExplosiveRead | null;
+  /** 🎯 the enterable read (2026-09-15), additive — absent on older payloads
+   *  and on every row the server could not build a band for. A row WITHOUT it
+   *  is never hidden by the filter; it is counted "without a read". */
+  enterable?: EnterableRead | null;
   error?: string;
 };
 
@@ -135,6 +142,10 @@ export type BounceRoomPayload = {
    *  banner and every chip tooltip render it, so no board ever types a
    *  measured number into TSX. Absent on older payloads. */
   explosive_study?: ExplosiveStudy | null;
+  /** 🎯 the entry-trigger study's own verdict, served once per payload
+   *  (2026-09-15) — the banner and the chip tooltips render it, so no board
+   *  ever types a measured number into TSX. Absent on older payloads. */
+  enterable_study?: EnterableStudy | null;
 };
 
 /* ── symbol key ──────────────────────────────────────────────────────────── */

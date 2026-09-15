@@ -12,6 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 import type { ExplosiveRead, ExplosiveStudy } from './bounceRoom';
+import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -71,6 +72,37 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
 export const DEFAULT_TAB: CmTab = CM_TABS[0];
+
+/* 🎯 ENTERABLE_KIND — which read each tab's rows get (2026-09-15). CONFIG, not
+ * a rule: it mirrors backend/supply_demand/enterable.py::KIND_BY_TAB and is
+ * pinned against the same fixture both suites read
+ * (backend/tests/fixtures/enterable_mirror_2026_09_15.json). The SERVED
+ * `enterable_kind` wins wherever the payload carries it; this map is the
+ * fallback before the first response lands.
+ *
+ *   `demand`       — the rows are demand reversals, the read and the filter apply;
+ *   `supply_break` — 🚀 Breaking: room to the NEXT lid is the read;
+ *   `n/a`          — the rows are pivots / highs / lids / events / options /
+ *                    value, never demand reversals, so a demand read would blank
+ *                    the tab by construction. The filter is inert there and the
+ *                    chip says why. Which tabs sit in which bucket is HIS CALL
+ *                    (spec §7.16) — the hide rate per tab is measured on the
+ *                    live payload and handed to him.
+ *
+ * `supply` (the legacy tab replaced by `ict` on 2026-09-03, still in CmTab for
+ * old bookmarks but never returned by parseTab and not in CM_TABS) is absent
+ * here on purpose: the map is the backend's map, key for key. */
+export const ENTERABLE_KIND = {
+  zones: 'demand', deep_demand: 'demand', quick_bounce: 'demand', hot_pullback: 'demand',
+  session: 'demand', signals: 'demand', overnight: 'demand', patterns: 'demand',
+  bonde: 'demand', growth: 'demand', gnt: 'demand', catalysts: 'demand', hot_sectors: 'demand',
+  keltner: 'demand', amd: 'demand', gabbar: 'demand', ict: 'demand',
+  breaking: 'supply_break',
+  // chip only — the FE never hides these (contract: a position is never hidden,
+  // and the Support tab answers one symbol).
+  holdings: 'demand', support: 'demand',
+  vcp: 'n/a', winners: 'n/a', topping: 'n/a', earnings: 'n/a', zero_dte: 'n/a', undervalue: 'n/a',
+} as Record<CmTab, EnterableKind>;
 
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
@@ -333,6 +365,12 @@ export type CmTile = {
    *  legacy doc, or no read yet; the chip then renders nothing and the tile
    *  sorts LAST under the explosive sort. */
   explosive?: ExplosiveRead | null;
+  /** 🎯 The enterable read for this name (chart_maps/board.attach_enterable,
+   *  2026-09-15) — taken on the SAME live snapshot the now-line uses, so the
+   *  tile chip and the phone read the same print. null = no read (a legacy
+   *  doc, a dead store, a tile the fan-out missed); the chip then renders
+   *  nothing and the filter NEVER hides it. */
+  enterable?: EnterableRead | null;
 };
 
 export type CmPatternRecord = {
@@ -438,6 +476,15 @@ export type CmBoard = {
    *  coverage strip. Numbers live in backend/supply_demand/explosive.py::MEASURED
    *  and are never typed into a board. */
   explosive_study?: ExplosiveStudy | null;
+  /** 🎯 Which read this tab's rows get (chart_maps/board, 2026-09-15) — the
+   *  SERVED mirror of enterable.KIND_BY_TAB. The page prefers it over the
+   *  local ENTERABLE_KIND map so moving a tab between `demand` and `n/a` is a
+   *  backend change, not a frontend deploy. */
+  enterable_kind?: EnterableKind | string | null;
+  /** 🎯 The entry-trigger study's served verdict (2026-09-15), rendered in the
+   *  coverage strip. Every number lives in
+   *  backend/supply_demand/enterable.py::MEASURED and is never typed here. */
+  enterable_study?: EnterableStudy | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

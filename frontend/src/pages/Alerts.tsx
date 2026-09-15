@@ -48,6 +48,7 @@ import {
   ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay, todayEtKey,
 } from '../lib/alertKinds';
 import { RulesInfo } from '../components/RulesInfo';
+import { EnterableChip } from '../components/EnterableChip';
 
 /* ── status (GET /alerts/status) ─────────────────────────────────────────── */
 
@@ -179,12 +180,19 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
     case 'skipped_knife':     return `${n} skipped: falling knife`;
     case 'skipped_mood':      return `${n} skipped: turn not bullish`;
     case 'skipped_floor':     return `${n} skipped: band floor was pierced`;
+    /* 🎯 2026-09-15. A divergence guard, not a gate: every demand push has
+     * already passed the same room, proximity and floor reads the ENTERABLE
+     * verdict is built from, so a BLOCKED read at this point means the two
+     * engines disagree. The label says so, because a counter nobody can
+     * interpret is how a quiet phone gets blamed on the wrong thing. */
+    case 'skipped_not_enterable':
+      return `${n} skipped: not enterable (BLOCKED read — should be 0; a non-zero count is a bug to report)`;
     default: return null;
   }
 }
 const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'skipped_knife',
-                   'skipped_mood', 'skipped_floor', 'skipped_cap', 'unknown_cap', 'stale_print', 'unknown_prev',
-                   'unknown_room'];
+                   'skipped_mood', 'skipped_floor', 'skipped_not_enterable', 'skipped_cap', 'unknown_cap',
+                   'stale_print', 'unknown_prev', 'unknown_room'];
 /* `pushed` on the backend counts send CALLS that terminated — delivered, or
  * nobody targeted (a muted kind still counts, demand_alerts._terminal). So the
  * chip says "push calls", and each row's delivery line says what landed. */
@@ -317,6 +325,9 @@ function AlertRowCard({ row }: { row: AlertRow }) {
           {etFromTs(row.ts)}
         </span>
         <span style={{ ...EYEBROW, letterSpacing: '0.06em', color: MUTED }}>{kindLabel(row.kind)}</span>
+        {/* 🎯 The verdict AT PUSH TIME, persisted with the row — not a re-read.
+            Legacy rows carry none and wear no chip. */}
+        <EnterableChip read={row.enterable} className="cm-badge" />
         {row.ticker ? (
           <TickerLink ticker={row.ticker} tab="supply" fromLabel="Alerts" fromKey="alerts" />
         ) : null}

@@ -35,6 +35,7 @@ import {
 import { tvChartUrl } from '../lib/tvChart';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 
 type Props = {
@@ -279,6 +280,11 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               <GrowthChip symbol={data.symbol} className="cm-badge" />
               <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                              read={room.map.get(String(data.symbol).toUpperCase())?.explosive} />
+              {/* 🎯 chip only, no filter: this tab answers one symbol — the one
+                  he typed. There is no list to cut, and hiding the one symbol
+                  he asked for would leave a blank page with no way back. */}
+              <EnterableChip className="cm-badge"
+                             read={room.map.get(String(data.symbol).toUpperCase())?.enterable} />
               {data.name ? <span className="sl-name">{data.name}</span> : null}
             </h2>
             <div className="sl-meta">

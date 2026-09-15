@@ -38,8 +38,20 @@ function rank(v: PatternVerdict): number {
   return 5;
 }
 
-export function PatternMatchCards({ title = '📐 Pattern matches', limit, filterSources, allLink = true }: {
-  title?: string; limit?: number; filterSources?: string[]; allLink?: boolean;
+/** `only` — the 🎯 enterable cut reaching the card grid (2026-09-15).
+ *
+ *  This component reads the shared verdict cache itself, so the page's
+ *  partition could never reach it and the grid kept drawing every ⛔ name under
+ *  a list the filter had just emptied ("I do not want to see not enterable ...
+ *  stocks in any of the chart maps").
+ *
+ *  It grades NOTHING and it fetches NOTHING: the caller passes the symbols that
+ *  survived the partition IT already computed for its own list, so the grid and
+ *  the list can never disagree. `only` undefined — every other mount of this
+ *  component, and the page with the filter OFF or on an `n/a` tab — is the
+ *  identity it has always been. */
+export function PatternMatchCards({ title = '📐 Pattern matches', limit, filterSources, only, allLink = true }: {
+  title?: string; limit?: number; filterSources?: string[]; only?: Set<string>; allLink?: boolean;
 }) {
   const navigate = useNavigate();
   const { verdicts, generatedAt } = usePatternVerdicts();
@@ -50,10 +62,11 @@ export function PatternMatchCards({ title = '📐 Pattern matches', limit, filte
     if (filterSources?.length) {
       list = list.filter((v) => (v.sources || []).some((s) => filterSources.includes(s)));
     }
+    if (only) list = list.filter((v) => only.has(String(v.symbol || '').toUpperCase()));
     list.sort((a, b) => rank(a) - rank(b)
       || ((b.sepa?.rs_rank ?? 0) - (a.sepa?.rs_rank ?? 0)));
     return list;
-  }, [verdicts, filterSources]);
+  }, [verdicts, filterSources, only]);
 
   if (!rows.length) return null;   // no scan yet, or nothing matched — fail quiet
   const shown = limit ? rows.slice(0, limit) : rows;

@@ -56,6 +56,9 @@ labelled rather than silently.
 
 ONE PUSH PER SYMBOL PER BAND PER DAY.
 
+ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
+here is a divergence, counted skipped_not_enterable.
+
 NOTHING HERE IS BACKTESTED. The 100/100 screen has never been measured forward.
 """
 from __future__ import annotations
@@ -67,6 +70,7 @@ from zoneinfo import ZoneInfo
 
 from supply_demand import alert_gates as AG
 from supply_demand import demand_alerts as DA
+from supply_demand import enterable as EN
 from supply_demand.zone_bounce_alerts import print_from_snapshot
 
 log = logging.getLogger("growth.alerts")
@@ -141,7 +145,8 @@ def _hit_txt(hit: Optional[dict]) -> str:
     return "in demand"
 
 
-def message(row: dict, band: dict, room: Optional[dict], hit: Optional[dict] = None) -> dict:
+def message(row: dict, band: dict, room: Optional[dict], hit: Optional[dict] = None,
+            enterable: Optional[dict] = None) -> dict:
     """The push body. Leads with the growth, then the level, then the warnings —
     a name the engine will refuse to buy says so in the body, never silently.
     `row["price"]` is the LIVE print the pass read (2026-09-14), never the
@@ -169,7 +174,9 @@ def message(row: dict, band: dict, room: Optional[dict], hit: Optional[dict] = N
     title = "🚀 %s — sales %+.0f%%, qEPS %+.0f%% — at demand" % (
         sym, sales or 0.0, eps or 0.0)
     return {"title": title, "body": " · ".join(parts), "ticker": sym,
-            "url": "/chart-maps?tab=growth&symbol=%s" % sym, "kind": KIND}
+            "url": "/chart-maps?tab=growth&symbol=%s" % sym, "kind": KIND,
+            # The verdict AT PUSH TIME, persisted with the row (2026-09-15).
+            "enterable": EN.slim(enterable)}
 
 
 def digest_message(items: list) -> dict:
@@ -185,7 +192,8 @@ def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:
     day = now.astimezone(ET).date()
     counts = {"rows": len(rows), "unpriced": 0, "stale_print": 0,
               "no_bands": 0, "not_in_band": 0, "skipped_room": 0, "skipped_proximity": 0,
-              "skipped_floor": 0}
+              "skipped_floor": 0,
+              "skipped_not_enterable": 0}        # the 🎯 divergence guard (2026-09-15)
     out = []
     for row in rows:
         sym = str(row.get("symbol") or "").upper()
@@ -234,12 +242,29 @@ def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:
         # are merged into the daily frame so a floor swept this morning is
         # not "intact" (alert_gates.with_session_bar, 2026-09-14). Fails closed.
         day_low = _f(snap.get("low"))
-        if not AG.floor_held_gate(band, sym, day_low=day_low, last=px, day=day):
+        # ONE frame load, ONE sweep read — the read is KEPT (2026-09-15) so the
+        # 🎯 verdict grades the identical floor state this gate just enforced
+        # instead of reading the frame a second time.
+        sw = AG.sweep_read(band, sym, frame=AG.daily_frame(sym), day_low=day_low,
+                           last=px, day=day)
+        if not AG.floor_held_gate(band, read=sw):
             counts["skipped_floor"] += 1
+            continue
+        # 🎯 ENTERABLE (2026-09-15), LAST and tightening only: every gate it
+        # grades already ran on these inputs and is passed THROUGH, so BLOCKED
+        # is unreachable by construction — a divergence guard, expected 0.
+        en = EN.assess(kind=EN.KIND_DEMAND, px=px, band=band, bands=bands,
+                       prev_close=prev, day_low=day_low,
+                       change_pct=snap.get("change_pct"),
+                       floor_state=(sw or {}).get("state"), room_ok=True,
+                       prox_ok=True, room=room)
+        if en.get("verdict") == EN.BLOCKED:
+            counts["skipped_not_enterable"] += 1
             continue
         out.append({"row": dict(row, price=float(px), price_source="live"),
                     "band": band, "room": room, "hit": hit, "last": float(px),
-                    "day_low": day_low, "prev_close": prev})
+                    "day_low": day_low, "prev_close": prev,
+                    "sweep": sw, "enterable": en})
     out.sort(key=lambda i: -(i["row"].get("sales_growth_pct") or 0.0))
     return out, counts
 
@@ -330,7 +355,8 @@ def run(dry_run: bool = False, *, force: bool = False, now: Optional[datetime] =
                 continue
             try:
                 res = sender.send_to_user(OWNER, message(it["row"], it["band"], it["room"],
-                                                         hit=it.get("hit")), kind=KIND)
+                                                         hit=it.get("hit"),
+                                                         enterable=it.get("enterable")), kind=KIND)
             except Exception as exc:                           # noqa: BLE001
                 log.warning("growth.alerts: push failed for %s: %s", it["row"]["symbol"], exc)
                 DA.release_key(coll, it["key"])

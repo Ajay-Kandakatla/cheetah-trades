@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { ZONE_KINDS, startOfEtDay } from '../lib/alertKinds';
+import type { EnterableRead } from '../lib/enterable';
 
 export type AlertRow = {
   _id:        string;
@@ -33,6 +34,13 @@ export type AlertRow = {
   failed:     number;
   total:      number;
   dismissed?: boolean;
+  /** 🎯 The ENTERABLE verdict AT PUSH TIME (2026-09-15), persisted with the
+   *  row by push/history — never recomputed on the page. A push's honest read
+   *  is the one taken on the print that pushed it, on the band the alert
+   *  actually named; a later re-read would answer a different question.
+   *  Absent on every row written before that date, and on kinds that carry no
+   *  demand read at all — the chip then renders nothing. */
+  enterable?: EnterableRead | null;
 };
 
 export type AlertQuery = {

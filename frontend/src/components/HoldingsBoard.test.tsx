@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import HoldingsBoard from './HoldingsBoard';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 /* 📁 My holdings (2026-09-14). One Support tile per name he owns, his cost
  * on each, worst first — and a name whose chart fails must not take the
@@ -96,5 +98,69 @@ describe('HoldingsBoard', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({}) })));
     render(<MemoryRouter><HoldingsBoard /></MemoryRouter>);
     await waitFor(() => expect(screen.getByText(/Could not read your holdings/)).toBeInTheDocument());
+  });
+});
+
+
+/* 🎯 ENTERABLE on 📁 My holdings (2026-09-15). The ONE board the filter must
+ * never cut. He owns these; "not enterable" is a fact about a NEW entry, and
+ * hiding a position he is already carrying is how a board stops answering
+ * "what do I do about what I hold". The chip tells him; the row stays. */
+describe('HoldingsBoard — the 🎯 read never hides a position', () => {
+  beforeEach(() => { vi.stubGlobal('localStorage', mem()); _resetBounceRoomCache(); });
+  afterEach(() => { vi.unstubAllGlobals(); _resetBounceRoomCache(); });
+
+  const blocked = (short: string) => ({
+    kind: 'demand', verdict: 'BLOCKED', reasons: [short], reason_short: [short],
+    reason_text: [`served: ${short}`], measured: { status: 'pending' },
+  });
+  const withRoom = (holdings: any = HOLDINGS) => {
+    const spy = vi.fn(async (url: string) => {
+      const u = String(url);
+      if (u.includes('/supply-demand/bounce-room')) {
+        return { ok: true, json: async () => ({
+          as_of: '2026-09-15T11:00:00-04:00', in_session: true, params: {},
+          requested: 3, covered: 3, pending: 0, unavailable: 0,
+          rows: {
+            CRDO: { symbol: 'CRDO', coverage: 'store', print: 150.09, enterable: blocked('room < 5%') },
+            GLW: { symbol: 'GLW', coverage: 'store', print: 143.6, enterable: blocked('not at band') },
+            BROKEN: { symbol: 'BROKEN', coverage: 'store', print: 9, enterable: blocked('no band') },
+          },
+        }) };
+      }
+      if (u.includes('/portfolio/holdings')) return { ok: true, json: async () => holdings };
+      const m = /symbol=([A-Z]+)/.exec(u);
+      const sym = m ? m[1] : '';
+      if (sym === 'BROKEN') return { ok: true, json: async () => ({ error: 'No price data for BROKEN.' }) };
+      return { ok: true, json: async () => ({ tile: tile(sym), last_price: 100 }) };
+    });
+    vi.stubGlobal('fetch', spy);
+    return spy;
+  };
+
+  it('every position is still drawn when every single read is BLOCKED', async () => {
+    withRoom();
+    render(
+      <MemoryRouter>
+        <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}>
+          <HoldingsBoard />
+        </EnterableFilterProvider>
+      </MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('tile-CRDO')).toBeInTheDocument());
+    expect(screen.getByTestId('tile-GLW')).toBeInTheDocument();
+    // …and no count line: nothing was cut, so there is nothing to report.
+    expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
+  });
+
+  it('the no-chart row still wears the served chip so he knows why it is not an entry', async () => {
+    withRoom();
+    render(
+      <MemoryRouter>
+        <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}>
+          <HoldingsBoard />
+        </EnterableFilterProvider>
+      </MemoryRouter>);
+    await waitFor(() => expect(screen.getByText('BROKEN')).toBeInTheDocument());
+    expect(await screen.findByText('⛔ no band')).toBeInTheDocument();
   });
 });

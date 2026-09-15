@@ -24,6 +24,7 @@ import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
 
 const W = 620;
@@ -176,6 +177,13 @@ export const PatternChart = memo(function PatternChart(
                 the study's null branch it is muted and says room + floor, never
                 a score. */}
             <ExplosiveChip read={tile.explosive} study={study} />
+            {/* 🎯 The ENTERABLE read (2026-09-15). Ajay: "I only wanna see the
+                stocks that are enterable." Prop-fed off the tile, exactly like
+                the 🧨 chip — chart_maps/board.attach_enterable puts it on every
+                tile board, keyed on the SAME live snapshot the now-line uses,
+                so the tile and the phone read one print. Renders nothing when
+                the name has no read, and nothing here decides the verdict. */}
+            <EnterableChip read={tile.enterable} />
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}

@@ -141,6 +141,8 @@ total, dismissed?}`.
 | `unknown_cap` | all | cap **unknown** (shares cache never saw it) — not a known-big name, skipped |
 | `unknown_prev` | bounce, demand_alert | no previous close in the live read — cannot judge an arrival, skipped |
 | `unknown_room` | demand_alert | no zone_store doc for the name — nobody measured its supply, silent |
+| `skipped_floor` | growth, **🪃 bounce (new 2026-09-15)** | listed, gates passed, but the band floor did not hold in the session (`alert_gates.sweep_read` state ∉ `FLOOR_HELD_STATES`) — the ONE measured separator (+8.3pp hit, −9.2pp stop-outs). **Fails CLOSED: an unreadable floor is skipped, never pushed.** New on the 🪃 kind, which had no floor gate before (his call — `enterable.md` §9.5); `demand_alert` and the zone-edge demand lane have had it since 2026-09-09 |
+| `skipped_not_enterable` | demand kinds | the 🎯 ENTERABLE read graded a candidate `BLOCKED` **after** every gate above already passed. **This is a divergence guard and should always be 0** — every input the read grades has already been gated on the same values, so a non-zero count means the read and the gates disagree, i.e. a bug to report. It is never the reason the phone was quiet |
 | `pushed` | all | **send calls that terminated** — delivered, **or nobody targeted** (muted kind / dead subscription: `_terminal` treats `total_targets = 0` as done, so a muted `demand_alert` still counts here). Singles + digests; a digest of 6 names counts 1. The page labels it **"push calls"** and each row's delivery line says what actually reached a device |
 
 Rules of thumb: `pushed = 0` with big `skipped_room` = the gate did its job (everything near
@@ -193,3 +195,33 @@ formatter; `alert_status.gate_payload`) beside `min_room_pct` / `max_above_deman
 API omits it, never a figure typed in the FE. Source guards: `test_the_alerts_page_never_retypes_the_cap_floor`
 (`tests/test_alert_status.py`) pins that `$1B` / `$700M` never reappear in `Alerts.tsx`;
 `Alerts.test.tsx` pins the rendering and both fallbacks.
+
+## 8. 🎯 ENTERABLE on the page (2026-09-15)
+
+**Per-row chip.** Every push now carries the slim ENTERABLE read
+(`kind`, `verdict`, `reasons`, `reason_text`, `reason_short`) in its payload;
+`push/history.record` persists it and `/notifications/recent` passes it through,
+so `AlertRowCard` renders a 🎯 chip beside the kind label showing the verdict the
+row had **at push time**, on the band the alert actually fired on. A row pushed
+before this shipped has no `enterable` key and shows no chip — absent is not
+BLOCKED. The full reason lines ride the chip's title.
+
+Why the chip is worth having even though the verdict is always READY or WATCH on
+a push: it tells you *which* read let the name through (floor intact, no drag) or
+*which* drag it carried (a reclaim from below, a −3..−8% day), without opening
+the board.
+
+**Two new counters** (§4): `skipped_floor` — new on the 🪃 `zone_bounce_alert`
+kind, the identical `sweep_read` + `floor_held_gate` call the other three demand
+kinds already make, failing closed; and `skipped_not_enterable`, a divergence
+guard whose label on the page says in full *"skipped: not enterable (BLOCKED read
+— should be 0; a non-zero count is a bug to report)"*. Neither loosens a gate;
+`skipped_floor` tightens the 🪃 kind (his call), and the standing room and
+proximity gates are untouched.
+
+**Status.** `GET /alerts/status` → `gate.enterable_status` carries the study's
+status (`pending` / `no_signal` / `separates`) so the page never has to guess
+whether a trigger is wired. The counters flow through the generic "extra" list
+like `skipped_overlap` did — no bespoke plumbing.
+
+Full read: [`enterable.md`](enterable.md).

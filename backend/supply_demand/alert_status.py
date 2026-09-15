@@ -178,10 +178,16 @@ def gate_payload() -> dict:
     OLD floor typed next to the corrected disclaimer — the page renders
     `min_cap_txt` now and types no figure; one formatter, here)."""
     from . import demand_alerts as DA        # lazy: demand_alerts imports alert_status
+    from . import enterable as EN
     return {"min_room_pct": float(AG.ALERT_MIN_ROOM_PCT),
             "max_above_demand_pct": float(AG.ALERT_MAX_ABOVE_DEMAND_PCT),
             "min_cap_usd": float(DA.MIN_CAP_USD),
-            "min_cap_txt": cap_floor_txt(DA.MIN_CAP_USD)}
+            "min_cap_txt": cap_floor_txt(DA.MIN_CAP_USD),
+            # Whether the entry-timing study behind the 🎯 read has reported
+            # (2026-09-15). The page says so instead of implying a measurement
+            # that has not landed. `skipped_not_enterable` rides in the per-kind
+            # counters automatically — `counts_from_result` keeps numeric keys.
+            "enterable_status": EN.status()}
 
 
 def _empty_pass() -> dict:

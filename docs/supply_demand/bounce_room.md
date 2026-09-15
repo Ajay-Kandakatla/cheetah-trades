@@ -171,6 +171,7 @@ Every label must be honest about coverage: `pending` = "room pending", `unavaila
              "lookback_sessions": 5, "near_pct": 2.0, "demand_near_pct": 2.0,
              "stale_print_sec": 180, "new_high_tol": 0.98},
   "explosive_study": {"headline", "body", "fallback_note", "limits"},   NEW 2026-09-15: explosive.measured_verdict()
+  "enterable_study": {"headline", "body", "fallback_note", "limits"},   NEW 2026-09-15: enterable.measured_verdict()
   "rows": {
     "AVGO": {"symbol", "print", "fresh", "coverage": "store"|"ondemand",
              "bounce": null | {"band": {kind, lo, hi, touches, strength}, "role": "demand"|"broken_supply",
@@ -184,7 +185,19 @@ Every label must be honest about coverage: `pending` = "room pending", `unavaila
                                   "room": <the row's own room block>, "band": {"lo", "hi"},
                                   "convention": "P"|"N"|null,
                                   "measured": {"status", "run_date", "n_episodes", "oos_d_hit5",
-                                               "oos_ci", "mdl", "script"}}},
+                                               "oos_ci", "mdl", "script"}},
+             "enterable": null | {"kind": "demand"|"supply_break"|"n/a",          NEW 2026-09-15
+                                  "verdict": "READY"|"WATCH"|"BLOCKED"|null,
+                                  "reasons": ["reclaim", "weak_day", ...],
+                                  "reason_text": [".."], "reason_short": [".."],
+                                  "gates": {"room_ok", "prox_ok", "floor_state", "session_low"},
+                                  "print": {"px": 12.34, "source": "live"|"scan"},
+                                  "drags": [{"key", "text", ...}],
+                                  "band": {"lo", "hi"} | null,
+                                  "room": <the row's own room block> | {"state": "CLEAR", ...} | null,
+                                  "survivor": null | {"key", "ok", "text"},
+                                  "measured": {"status", "run_date", "n_episodes",
+                                               "survivor_key", "mdl", "script"}}},
     "XYZ":  {"symbol": "XYZ", "coverage": "pending"},
     "ABC":  {"symbol": "ABC", "coverage": "unavailable", "error": "no / insufficient price data"}
   },
@@ -217,6 +230,34 @@ imported from the module that enforces it, or comes out of the measured dict
 Rows are keyed by symbol in request order; **the page sorts** with the mirrored key. Body:
 `{"symbols": [...]}`, upper-cased + de-duplicated (first occurrence wins), capped at `MAX_SYMBOLS =
 2500`, **422** when empty after cleaning (or when `symbols` is missing / not a list).
+
+### `enterable` (row) and `enterable_study` (payload) — 2026-09-15
+
+`read_symbol` calls `supply_demand.enterable.read(doc=doc, px=<the row's print>,
+day_low=<the snapshot's low>, prev_close=<the snapshot's previous close>,
+change_pct=<the snapshot's day change>)` right after the explosive line, so the
+🎯 read grades **the same demand band** (`demand_read`) and **the same room
+block** (`room_read`) the row already shows — one band selection for the row, the
+chip, the tile and the filter. The verdict is `READY` / `WATCH` / `BLOCKED` from
+`premarket_entry.grade_row` plus the floor state from `alert_gates.sweep_read`;
+every reason code and the constant enforcing it is in
+[`enterable.md`](enterable.md) §3.
+
+`null` only when the print is unusable. A `pending` or `unavailable` row returns
+**before** this and carries **no `enterable` key at all** — absent is not "not
+enterable", and the frontend never hides a row without a read (it places it last
+and counts it separately). Rows whose kind has no demand read at all (the `n/a`
+tabs) carry `verdict: null` with `reasons: ["na"]`, which is shown, never hidden.
+
+`enterable_study` is `enterable.measured_verdict()` — the entry-trigger study's
+own banner prose, once per payload, built from `enterable.MEASURED`. No number is
+typed into the page. While that study has not landed the status is `pending`,
+which every code path treats exactly like `no_signal`: no survivor, no trigger
+wired, and the read stands on the gates and drags that were already measured.
+
+**`PARAMS` is unchanged.** The 🎯 read adds **no owner setting** — every
+threshold in it is imported from the module that enforces it (`alert_gates`,
+`premarket_entry`) or comes out of the measured dict.
 
 ## Coverage story
 

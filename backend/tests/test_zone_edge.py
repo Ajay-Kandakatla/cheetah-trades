@@ -758,7 +758,7 @@ def test_api_payload_shape_ordering_and_json_safety(monkeypatch):
     # D1 arrives FALLING, so since 2026-09-09 it lists but never pushes.
     assert payload["counts"] == {"breaking": 3, "near_demand": 2, "candidates": 5, "priced": 5,
                                  "stale_print": 0, "skipped_room": 0, "skipped_direction": 1, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0, "skipped_overlap": 0,
-                                 "skipped_cap": 0,
+                                 "skipped_cap": 0, "skipped_not_enterable": 0,
                                  "unknown_cap": 0, "pushed": 2}
     # broke first; then near with new_highs first (N1 clear, N0 has OVER above), then dist
     assert [r["symbol"] for r in payload["breaking"]] == ["B0", "N1", "N0"]
@@ -808,7 +808,7 @@ def test_stored_counts_explain_a_quiet_phone_skip_buckets_and_pushed(monkeypatch
     stored = colls["latest_coll"].docs["latest"]
     assert stored["counts"] == {"candidates": 5, "priced": 4, "stale_print": 1, "breaking": 3,
                                 "near_demand": 0, "skipped_room": 1, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0, "skipped_overlap": 0,
-                                "skipped_cap": 1,
+                                "skipped_cap": 1, "skipped_not_enterable": 0,
                                 "unknown_cap": 1, "pushed": 1}
     assert stored["counts"] == out["payload"]["counts"]
     for k in ("skipped_room", "skipped_cap", "unknown_cap", "pushed"):

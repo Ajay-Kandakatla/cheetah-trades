@@ -10,6 +10,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import GntBoard, { ageText, zoneText } from './GntBoard';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 import type { GntTicker } from './GntBoard';
 
 const FRESH: GntTicker = {
@@ -192,5 +194,66 @@ describe('GntBoard — the trader switcher', () => {
     mount();
     expect(await screen.findByText(/Read the sentence, not the ticker/)).toBeInTheDocument();
     expect(screen.getByText(/NOT advice and NOT a portfolio/)).toBeInTheDocument();
+  });
+});
+
+
+/* 🎯 ENTERABLE on the GnT board (2026-09-15). This board is a RECORD of what
+ * someone said, so the pin that matters is the negative one: a name with no
+ * band read must stay. Dropping his idea because our store has no doc for it
+ * would be the app editing his feed. */
+describe('📌 GnT — the 🎯 enterable cut', () => {
+  const read = (verdict: string | null, short: string[] = []) => ({
+    kind: 'demand', verdict, reasons: short, reason_short: short, reason_text: short,
+    measured: { status: 'pending' },
+  });
+  const ROOM = {
+    as_of: '2026-09-15T11:00:00-04:00', in_session: true, store_date: '2026-09-14',
+    params: {}, requested: 3, covered: 2, pending: 1, unavailable: 0,
+    rows: {
+      SPCX: { symbol: 'SPCX', coverage: 'store', print: 150, enterable: read('BLOCKED', ['room < 5%']) },
+      BBY:  { symbol: 'BBY',  coverage: 'store', print: 70,  enterable: read('READY') },
+      QQQX: { symbol: 'QQQX', coverage: 'pending' },
+    },
+  };
+  const mountFiltered = (on = true, kind = 'demand') => {
+    _resetBounceRoomCache();
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+      ok: true, status: 200,
+      json: async () => (String(url).includes('/supply-demand/bounce-room') ? ROOM : PAYLOAD),
+    }) as unknown as Response));
+    return render(
+      <MemoryRouter>
+        <EnterableFilterProvider enterableOnly={on} kind={kind} setEnterableOnly={() => {}}>
+          <GntBoard />
+        </EnterableFilterProvider>
+      </MemoryRouter>);
+  };
+  afterEach(() => _resetBounceRoomCache());
+
+  it('drops the BLOCKED name, counts it by the served reason, keeps the rest', async () => {
+    mountFiltered();
+    await screen.findByText('BBY');
+    await waitFor(() => expect(screen.queryByText('SPCX')).not.toBeInTheDocument());
+    const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
+    expect(line.textContent).toMatch(/1 hidden \(1 room < 5%\)/);
+    expect(screen.getByText('🎯 READY')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a name with no band read is kept — his post is not ours to drop', async () => {
+    mountFiltered();
+    await screen.findByText('BBY');
+    // QQQX is a year-old puts recap, so the board's own "fresh only" box hides
+    // it first; turn that off and the enterable cut must still keep it.
+    fireEvent.click(screen.getByLabelText(/days only/i));
+    expect(await screen.findByText('QQQX')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/without a read/).textContent)
+      .toMatch(/1 without a read/));
+  });
+
+  it('NEGATIVE: with the filter off the board is exactly what it was', async () => {
+    mountFiltered(false);
+    expect(await screen.findByText('SPCX')).toBeInTheDocument();
+    expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
   });
 });

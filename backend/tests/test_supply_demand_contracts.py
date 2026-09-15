@@ -604,8 +604,12 @@ def test_live_alert_fixes_2026_09_05_phone_gate_constants_and_every_push_path_ca
     assert DA.AT_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT, "AT already pushed at <=1%; only NEAR pushes stopped"
     ze = inspect.getsource(ZE.check_once)
     assert ze.count("AG.room_gate(") == 2, "breaking AND near-demand candidacy"
-    # integrator 2026-09-05: `lo > band.hi` missed an OVERLAPPING lid; the set is every band whose top clears this one's
-    assert 'float(b["hi"]) > rb["band"]["hi"]' in ze, "🚀 room is measured to the NEXT band above the one breaking"
+    # integrator 2026-09-05: `lo > band.hi` missed an OVERLAPPING lid; the set is every band whose top clears this one's.
+    # Extracted to ZE.next_lids on 2026-09-15 so the 🎯 supply-break read runs
+    # the IDENTICAL list instead of a second copy — the lane calls it, and the
+    # expression itself is pinned on the function.
+    assert 'next_lids(bands, rb["band"])' in ze, "🚀 room is measured to the NEXT band above the one breaking"
+    assert 'float(b["hi"]) > hi' in inspect.getsource(ZE.next_lids), "one next-lid rule, one place"
     # /alerts page 2026-09-05: check_once became a thin wrapper (session gate +
     # alert_pass_latest record) around _check_once, the pass proper — the gate
     # calls live in the inner function, and the wrapper must reach it
@@ -683,7 +687,9 @@ def test_integrator_fixes_2026_09_05_overlapping_lid_and_transient_store_read():
     assert 'overhead = sum(1 for b in supply if float(b["hi"]) > hi)' in rb
     assert 'float(b["lo"]) > hi' not in rb
     ze = inspect.getsource(ZE.check_once)
-    assert 'float(b["hi"]) > rb["band"]["hi"]' in ze, "the 🚀 room read uses the same set"
+    assert 'next_lids(bands, rb["band"])' in ze, "the 🚀 room read uses the same set"
+    assert 'float(b["hi"]) > hi' in inspect.getsource(ZE.next_lids)
+    assert 'float(b["lo"]) > hi' not in inspect.getsource(ZE.next_lids)
     # a transient {} from zone_store.load never blanks a board a live pass wrote today
     assert "_latest_is_todays_pass(latest_coll, day_iso)" in ze
     assert '"latest_written": written' in ze

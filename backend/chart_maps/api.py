@@ -161,10 +161,26 @@ async def chart_maps_support(
         # board tab gets at the end of board().
         tile = res.get("tile") if isinstance(res, dict) else None
         if isinstance(tile, dict):
+            # ONE live fan-out for the one tile, shared by the now-line and
+            # the 🎯 read (2026-09-15) exactly as board() shares it.
             try:
-                board_mod.attach_live_now([tile], res)
+                live = board_mod._live_snapshot([tile])
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/support: live snapshot failed: %s", exc)
+                live = {}
+            try:
+                board_mod.attach_live_now([tile], res, live=live)
             except Exception as exc:                        # pragma: no cover
                 log.debug("chart-maps/support: live now-line failed: %s", exc)
+            # 🎯 ENTERABLE on the Support tab: one symbol, so the page shows the
+            # chip and never hides the row (the filter is a Chart Maps grid
+            # control). Same read, same live print, after the now-line.
+            try:
+                from supply_demand import enterable as EN
+                board_mod.attach_enterable([tile], kind=EN.KIND_DEMAND, live=live)
+                res["enterable_kind"] = EN.KIND_DEMAND
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/support: enterable failed: %s", exc)
             # THE BUG AJAY HIT THREE TIMES (2026-09-12): "Still not seeing, AMD
             # or keltners indicators. Whts going on?"
             #

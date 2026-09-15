@@ -15,6 +15,7 @@ import { PatternChart } from './PatternChart';
 import OverlayLegend from './OverlayLegend';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
@@ -168,6 +169,11 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
               <b>{h.symbol}</b> <GrowthChip symbol={h.symbol} />
               {' '}<ExplosiveChip study={room.payload?.explosive_study}
                                   read={room.map.get(String(h.symbol).toUpperCase())?.explosive} />
+              {/* 🎯 chip only. This board never hides a position: the enterable
+                  filter answers "can I enter this now", and a name he already
+                  owns is a name he has to keep looking at whatever the read
+                  says. The chip tells him it is not an entry; the row stays. */}
+              {' '}<EnterableChip read={room.map.get(String(h.symbol).toUpperCase())?.enterable} />
               {' '}{reads[h.symbol]?.error}
             </div>
           ))}

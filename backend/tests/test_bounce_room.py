@@ -450,7 +450,7 @@ def test_read_symbol_rows_for_pending_tombstone_no_print_and_ondemand_coverage()
     od = BR.read_symbol("XYZ", _doc([DEM], origin="ondemand"), _snap(91.0, 99.0), NOW)
     assert od["coverage"] == "ondemand" and od["fresh"] is True and od["print"] == 99.0
     assert set(od) == {"symbol", "print", "fresh", "coverage", "bounce", "room", "demand",
-                       "explosive"}
+                       "explosive", "enterable"}
     st = BR.read_symbol("XYZ", _doc([DEM]), _snap(91.0, 99.0), NOW)
     assert st["coverage"] == "store" and st["bounce"]["sessions_ago"] == 0
     assert st["room"]["state"] == "CLEAR"
@@ -671,7 +671,8 @@ def test_api_payload_returns_the_exact_contract_with_counts_and_prices_only_cove
     out = BR.api_payload(["a", "B", "c", "d", "A"], now=NOW, store_coll=store, ondemand_coll=cache,
                          snapshot_fn=snapshot_fn,
                          builder=lambda s, d: built.append(s) or _doc([DEM], symbol=s))
-    assert set(out) == {"as_of", "in_session", "store_date", "params", "explosive_study", "rows",
+    assert set(out) == {"as_of", "in_session", "store_date", "params", "explosive_study",
+                        "enterable_study", "rows",
                         "requested", "covered", "pending", "unavailable", "disclaimer"}
     assert out["requested"] == 4 and out["covered"] == 2 and out["pending"] == 1 and out["unavailable"] == 1
     assert out["store_date"] == STORE_DAY and out["in_session"] is True

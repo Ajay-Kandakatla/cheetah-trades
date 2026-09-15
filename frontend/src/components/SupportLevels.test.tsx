@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SupportLevels } from './SupportLevels';
 import type { SupportLevel, SupportPayload } from '../lib/supportLevels';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 // PatternChart draws to a canvas via lightweight-charts, which jsdom has no
 // business running. The tab's job is the CONTROLS and the TABLES; the chart is
@@ -616,5 +618,51 @@ describe('SupportLevels — the study overlays are actually requested', () => {
     fireEvent.click(await screen.findByRole('checkbox', { name: /Fibonacci/i }));
     await new Promise((r) => setTimeout(r, 20));
     expect(seen.length).toBe(afterFirst);
+  });
+});
+
+
+/* 🎯 ENTERABLE on the Support tab (2026-09-15). The tab answers ONE symbol —
+ * the one he typed — so it wears the chip and filters nothing. Hiding the
+ * single name he asked about would leave a blank page with no way back. */
+describe('SupportLevels — the 🎯 chip on one symbol', () => {
+  beforeEach(() => { _resetBounceRoomCache(); });
+  afterEach(() => { _resetBounceRoomCache(); });
+
+  const withRoom = (enterable: unknown) => {
+    const spy = vi.fn(async (url: string) => {
+      if (String(url).includes('/supply-demand/bounce-room')) {
+        return { ok: true, status: 200, json: async () => ({
+          as_of: '2026-09-15T11:00:00-04:00', in_session: true, params: {},
+          requested: 1, covered: 1, pending: 0, unavailable: 0,
+          rows: { DHI: { symbol: 'DHI', coverage: 'store', print: 156.4, enterable } },
+        }) };
+      }
+      return { ok: true, status: 200, json: async () => PAYLOAD };
+    });
+    vi.stubGlobal('fetch', spy);
+    render(
+      <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}>
+        <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop2} />
+      </EnterableFilterProvider>);
+    return spy;
+  };
+
+  it('shows the SERVED verdict beside the ticker, and still draws the chart', async () => {
+    withRoom({ kind: 'demand', verdict: 'BLOCKED', reasons: ['room'], reason_short: ['room < 5%'],
+               reason_text: ['Only 3.8% of room to the first lid overhead.'],
+               measured: { status: 'pending' } });
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(await screen.findByText('⛔ room < 5%')).toBeTruthy();
+    // NEVER hidden: one symbol, and it is the one he asked for.
+    expect(screen.getAllByText('DHI').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/hidden/)).toBeNull();
+  });
+
+  it('NEGATIVE: no read on the row → no chip, and nothing else changes', async () => {
+    withRoom(null);
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(screen.queryByText(/🎯 (READY|WATCH)/)).toBeNull();
+    expect(screen.queryByText(/^⛔/)).toBeNull();
   });
 });

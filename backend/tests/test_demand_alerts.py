@@ -614,6 +614,9 @@ def test_every_pass_records_its_counters_so_a_quiet_phone_is_explainable(monkeyp
     assert c == {"candidates": 5, "hits": 5, "at": 1, "at_singles": 1, "near": 2, "pushed": 1,
                  "skipped_cap": 1, "unknown_cap": 1, "unknown_prev": 0, "skipped_room": 0,
                  "skipped_proximity": 2, "unknown_room": 0, "skipped_direction": 0, "skipped_knife": 0, "skipped_mood": 0, "skipped_floor": 0,
+                     # the 🎯 divergence guard (2026-09-15): the read runs after
+                     # every gate above, so BLOCKED here would be a bug
+                     "skipped_not_enterable": 0,
                  # 2026-09-14 review: the live-print read (priced / stale_print), the
                  # overlap skip and the claim race are counted like everything else
                  "priced": 5, "stale_print": 0, "skipped_overlap": 0, "claimed_elsewhere": 0}

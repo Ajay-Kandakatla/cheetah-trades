@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from supply_demand import zone_bounce_alerts as ZB  # noqa: E402
@@ -51,6 +53,23 @@ def _snap(low, last, prev=None, *, now=NOW, age_sec=30):
     return {"open": low + 1, "high": last, "low": low, "close": last, "volume": 1e6,
             "change_pct": 0.0, "last_trade_price": last, "last_trade_ts_ms": ts_ns,
             "prev_day_close": prev}
+
+
+@pytest.fixture(autouse=True)
+def _floor_intact(monkeypatch):
+    """The STANDING floor gate arrived on this kind on 2026-09-15 (spec §7.5):
+    the identical `AG.sweep_read` + `floor_held_gate` call the other three
+    demand kinds have run since 2026-09-09. It FAILS CLOSED and these fixtures
+    carry no price frame, so without a stub every test below would go quiet for
+    a reason that is not its subject. Stubbed exactly as the sibling suites stub
+    it; the gate itself (swept -> silence, unreadable -> silence, the call
+    shape) is pinned in test_enterable_wiring.py.
+    """
+    monkeypatch.setattr(ZB.AG, "daily_frame", lambda sym, frame=None: frame)
+    monkeypatch.setattr(ZB.AG, "sweep_read",
+                        lambda band, symbol=None, frame=None, window=None, **kw:
+                            {"state": ZB.AG.FLOOR_HELD_STATES[0], "pierce_pct": None,
+                             "reclaim_bars": None, "vol_x": None})
 
 
 def _capture(monkeypatch, result=None):

@@ -18,9 +18,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { EnterableChip } from './EnterableChip';
+import { HiddenCount } from './HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import type { EnterableRead } from '../lib/enterable';
 import type { ExplosiveRead, ExplosiveStudy } from '../lib/bounceRoom';
 
 export type HpBand = { kind?: string; lo: number; hi: number; touches?: number | null; strength?: number | null };
@@ -147,7 +151,10 @@ export function correctionLine(s: HpStudy | null | undefined): string {
   return CORRECTION_TEXT;
 }
 
-function Row({ r, explosive, study }: { r: HpRow; explosive?: ExplosiveRead | null; study?: ExplosiveStudy | null }) {
+function Row({ r, explosive, enterable, study }: {
+  r: HpRow; explosive?: ExplosiveRead | null; enterable?: EnterableRead | null;
+  study?: ExplosiveStudy | null;
+}) {
   const rev = r.reversal;
   return (
     <li className="hp-row" data-testid="hp-row">
@@ -155,6 +162,7 @@ function Row({ r, explosive, study }: { r: HpRow; explosive?: ExplosiveRead | nu
         <a className="hp-row__sym" href={`/chart-maps?tab=support&symbol=${encodeURIComponent(r.symbol)}`}>{r.symbol}</a>
         <GrowthChip symbol={r.symbol} className="cm-badge" />
         <ExplosiveChip read={explosive} study={study} className="cm-badge" />
+        <EnterableChip read={enterable} className="cm-badge" />
         <span className="hp-row__px">{money(r.close)}</span>
         <span className="hp-row__chg is-dn">{pct(r.change_pct)}</span>
         {r.date && <span className="hp-row__date">{r.date}</span>}
@@ -212,6 +220,10 @@ export function HotPullbackBoard() {
   const room = useBounceRoom(rowSymbols);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const ordered = useExplosiveOrder(rows, (r) => r.symbol, room.map, explosiveFirst);
+  /* 🎯 The enterable cut over the board's own order (2026-09-15). BLOCKED rows
+   * only; a row the server has no read for is kept and counted separately. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(ordered, (r) => r.symbol, room.map, enterableOnly);
   const near = useMemo(() => data?.near_miss || [], [data]);
 
   return (
@@ -243,11 +255,18 @@ export function HotPullbackBoard() {
         <p className="hp__note" data-testid="hp-funnel">{funnelNote(data)}</p>
       )}
 
+      {rows.length > 0 && enterableOnly && kind !== 'n/a' ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
+
       {rows.length > 0 && (
         <ul className="hp__list">
-          {ordered.map((r) => (
+          {part.rows.map((r) => (
             <Row key={r.symbol} r={r} study={room.payload?.explosive_study}
-                 explosive={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
+                 explosive={room.map.get(String(r.symbol).toUpperCase())?.explosive}
+                 enterable={room.map.get(String(r.symbol).toUpperCase())?.enterable} />
           ))}
         </ul>
       )}

@@ -9,7 +9,7 @@
  * Add a new entry to CONTRACTS below whenever you ship a frontend behaviour
  * that would be expensive to lose silently.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -1954,6 +1954,165 @@ const CONTRACTS = [
           errs.push(`.${c} has no CSS rule — the chip would ship unstyled`);
         }
       }
+      return errs;
+    },
+  },
+  {
+    name: 'the \u{1F3AF} enterable read reaches every renderer, hides nothing silently (2026-09-15)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-15: "I only wanna see the stocks that are enterable ... I do
+    // not want to see not enterable alerts or stocks in any of the chart maps."
+    //
+    // A filter that is ON by default is the one kind of feature that can lose
+    // him a name without ever showing an error, so the teeth here are about
+    // absence rather than correctness:
+    //   * a renderer that shows the \u{1F9E8} chip but not the \u{1F3AF} one is a tab where
+    //     the read silently stops — the two ride the same list;
+    //   * the count line and the escape hatch must exist on the page, because
+    //     "30 hidden" with no way back is indistinguishable from an empty board;
+    //   * the three exemptions (a position, a one-symbol tab, a server-cut
+    //     list) must SAY SO in their own file — an absent partition and a
+    //     dropped one look identical from here;
+    //   * no verdict maths in the library or the chip: READY / WATCH / BLOCKED
+    //     and every reason word are built in supply_demand/enterable.py from
+    //     the enforcing constants (ALERT_MIN_ROOM_PCT, ALERT_MAX_ABOVE_DEMAND_PCT,
+    //     FLOOR_HELD_STATES, premarket_entry's measured drags). A second copy in
+    //     TSX drifts the first time one of them moves;
+    //   * ENTERABLE_KIND must equal the backend's KIND_BY_TAB key for key — the
+    //     same fixture both suites read. A tab that silently changes kind on one
+    //     side only is a tab that hides rows for a reason nobody served.
+    checks: (src) => {
+      const errs = [];
+
+      /* 1. Every file that mounts the 🧨 chip mounts the 🎯 chip. */
+      const dirs = ['src/components', 'src/pages'];
+      const mounts = [];
+      for (const dir of dirs) {
+        let names = [];
+        try {
+          names = readdirSync(join(FRONTEND_ROOT, dir));
+        } catch {
+          errs.push(`${dir} is unreadable`);
+          continue;
+        }
+        for (const n of names) {
+          if (!n.endsWith('.tsx') || n.endsWith('.test.tsx')) continue;
+          const rel = `${dir}/${n}`;
+          const tsx = read(rel);
+          if (/<ExplosiveChip\s/.test(tsx)) mounts.push([rel, tsx]);
+        }
+      }
+      if (!mounts.length) errs.push('no renderer mounts <ExplosiveChip> — did the chip get renamed?');
+      for (const [rel, tsx] of mounts) {
+        if (!/<EnterableChip\s/.test(tsx)) {
+          errs.push(`${rel} shows the \u{1F9E8} chip but not <EnterableChip> — the \u{1F3AF} read stops on that surface`);
+        }
+      }
+
+      /* 2. The chip renders, it does not decide. */
+      const chip = read('src/components/EnterableChip.tsx');
+      if (/\bfetch\s*\(/.test(chip) || /useEffect/.test(chip)) {
+        errs.push('EnterableChip must be PROP-FED — it never fetches and holds no state');
+      }
+      if (/room_pct|ALERT_MIN|\d+(\.\d+)?\s*(?:<=|>=|<|>)|(?:<=|>=|<|>)\s*\d/.test(chip)) {
+        errs.push('EnterableChip must not compare a number — the verdict is served by enterable.py');
+      }
+
+      /* 3. The library mirrors; it never grades. The regex is ANCHORED to an
+       *    assignment so the `type EnterableVerdict = 'READY'|…` line passes. */
+      const lib = read('src/lib/enterable.ts');
+      if (/verdict\s*[:=]\s*'(READY|WATCH)'/.test(lib)) {
+        errs.push('lib/enterable.ts assigns a verdict — READY/WATCH/BLOCKED come from the backend, always');
+      }
+      const libTest = read('src/lib/enterable.test.ts');
+      if (!/\.\.\/\.\.\/\.\.\/backend\/tests\/fixtures\/enterable_mirror_2026_09_15\.json/.test(libTest)) {
+        errs.push('lib/enterable.test.ts must pin the partition against the SHARED backend fixture');
+      }
+
+      /* 4. ENTERABLE_KIND == the backend's KIND_BY_TAB, key for key. */
+      const m = /export const ENTERABLE_KIND\s*=\s*\{([\s\S]*?)\}\s*as\s/.exec(src);
+      if (!m) {
+        errs.push('ENTERABLE_KIND declaration not found in lib/chartMaps.ts');
+      } else {
+        const fe = {};
+        for (const pair of m[1].replace(/\/\/[^\n]*/g, '').matchAll(/([A-Za-z_][\w]*)\s*:\s*'([^']+)'/g)) {
+          fe[pair[1]] = pair[2];
+        }
+        let fx = null;
+        try {
+          fx = JSON.parse(read('../backend/tests/fixtures/enterable_mirror_2026_09_15.json'));
+        } catch {
+          errs.push('backend/tests/fixtures/enterable_mirror_2026_09_15.json is unreadable — the mirror is the contract');
+        }
+        const be = fx && fx.kind_by_tab;
+        if (be) {
+          const keys = new Set([...Object.keys(fe), ...Object.keys(be)]);
+          const bad = [...keys].filter((k) => fe[k] !== be[k]).sort();
+          if (bad.length) {
+            errs.push(`ENTERABLE_KIND disagrees with the backend KIND_BY_TAB on: ${bad.join(', ')}`);
+          }
+        }
+      }
+
+      /* 5. The page: the toggle, the count line, the rules section, the served
+       *    banner — and no measured figure typed into it. */
+      const page = read('src/pages/ChartMaps.tsx');
+      for (const [re, msg] of [
+        [/<EnterableOnlyToggle\s/, 'ChartMaps must mount <EnterableOnlyToggle> — the filter is ON by default and he must be able to turn it off'],
+        [/<HiddenCount\s/, 'ChartMaps must mount <HiddenCount> — a hidden row is never allowed to be silent'],
+        [/<RulesInfo section="enterable"/, 'the \u{1F3AF} rules section must be mounted where RulesInfo already sits'],
+        [/enterable_study\?\.headline/, 'ChartMaps must render the SERVED enterable_study headline'],
+      ]) {
+        if (!re.test(page)) errs.push(msg);
+      }
+      const banner = /cm-enterable-study[\s\S]*?<\/div>\s*\)\}/.exec(page);
+      if (banner && (/\d\.\d\dpp/.test(banner[0]) || /\d+\.\d%/.test(banner[0]))) {
+        errs.push('the \u{1F3AF} banner must not hard-code a measured figure — it comes from enterable.py::MEASURED');
+      }
+
+      /* 6. The three exemptions say so in their own file. */
+      for (const [rel, phrase] of [
+        ['src/components/HoldingsBoard.tsx', 'never hides a position'],
+        ['src/components/SupportLevels.tsx', 'one symbol'],
+        ['src/components/HottestSectors.tsx', 'server-cut'],
+      ]) {
+        if (!read(rel).includes(phrase)) {
+          errs.push(`${rel} must say "${phrase}" — an exemption without a written reason is indistinguishable from a drop`);
+        }
+      }
+
+      /* 7. The Alerts page carries the push-time verdict and names the counter. */
+      const alerts = read('src/pages/Alerts.tsx');
+      if (!/<EnterableChip\s+read=\{row\.enterable\}/.test(alerts)) {
+        errs.push('the Alerts page must show the PUSH-TIME verdict from row.enterable');
+      }
+      if (!alerts.includes('skipped_not_enterable')) {
+        errs.push('the Alerts page must label skipped_not_enterable — it is a divergence guard and must read as one');
+      }
+
+      /* 8. The count line says both halves of what it offers. */
+      const count = read('src/components/HiddenCount.tsx');
+      if (!/hidden/.test(count) || !/show all/.test(count)) {
+        errs.push('HiddenCount must print both the hidden count and the "show all" way back');
+      }
+
+      /* 9. Every class ships a rule. */
+      const css = read('src/styles.css');
+      for (const c of ['cm-badge-enterable-ready', 'cm-badge-enterable-watch',
+                       'cm-badge-enterable-blocked', 'cm-badge-enterable-na',
+                       'hs-badge-enterable-ready', 'sb-chip-enterable-ready',
+                       'bd-gchip-enterable-ready', 'eg-enterable-ready',
+                       'en-toggle', 'cm-hidden-count']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the chip would ship unstyled`);
+        }
+      }
+
+      /* 10. The ✨ entry. */
+      if (!read('src/lib/newFeatures.ts').includes('enterable-read-2026-09-15')) {
+        errs.push('newFeatures.ts is missing the ✨ entry for the enterable read');
+      }
+
       return errs;
     },
   },

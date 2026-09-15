@@ -11,6 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { GrowthChip } from '../components/GrowthChip';
 import { ExplosiveChip } from '../components/ExplosiveChip';
+import { EnterableChip } from '../components/EnterableChip';
+import { HiddenCount } from '../components/HiddenCount';
+import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from '../components/ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
@@ -223,8 +226,15 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
   const room = useBounceRoom(rowSymbols);
   const explosiveCtx: ExplosiveCtx = { room: room.map, study: room.payload?.explosive_study, on: explosiveFirst };
 
-  const confirmed = (latest?.results || []).filter((p) => p.status === 'confirmed');
-  const forming = (latest?.results || []).filter((p) => p.status === 'forming');
+  /* 🎯 The enterable cut over the pattern list (2026-09-15). A confirmed shape
+   * that is nowhere near a demand band is still a shape — it just is not an
+   * entry — so the row goes and the count line says which reason took it.
+   * Mounted standalone at /patterns the default context is OFF (spec §7.8). */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const patternPart = useEnterablePartition(
+    latest?.results || [], (p) => p.symbol, room.map, enterableOnly);
+  const confirmed = patternPart.rows.filter((p) => p.status === 'confirmed');
+  const forming = patternPart.rows.filter((p) => p.status === 'forming');
   const val = latest?.validation || {};
 
   return (
@@ -387,6 +397,11 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
       ) : (
         <>
           <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
+          {enterableOnly && kind !== 'n/a' ? (
+            <HiddenCount hidden={patternPart.hidden} unread={patternPart.unread}
+                         hiddenByReason={patternPart.hiddenByReason} enabled kind={kind}
+                         onShowAll={() => setEnterableOnly(false)} />
+          ) : null}
           {confirmed.length > 0 && <Section title={`Confirmed today / yesterday — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} ex={explosiveCtx} />}
           {forming.length > 0 && <Section title={`Forming — NOT a signal: unconfirmed Ws continue lower 48% of the time (${forming.length})`} rows={forming} navigate={navigate} ex={explosiveCtx} />}
           {latest.generated_at > 0 && (
@@ -423,17 +438,46 @@ function orderByExplosive<T>(rows: T[], symbolOf: (r: T) => string, ex?: Explosi
 function QualifierVerdicts({ q, navigate, ex }: {
   q: QualLatest; navigate: (p: string) => void; ex?: ExplosiveCtx;
 }) {
-  const matched = q.verdicts.filter((v) => v.matches.length > 0);
+  /* 🎯 The enterable cut over the VERDICT block too (M3, 2026-09-15). These
+   * rows wore the chip from day one but were never partitioned, so with the
+   * filter ON the board above went quiet while this block kept listing ⛔
+   * names underneath it — the reverse of silent hiding, and just as confusing.
+   * ONE partition over `q.verdicts`, the same hook every other list uses, and
+   * its own count line so nothing leaves without a number beside it. BLOCKED
+   * goes, WATCH stays with its served reason, a name with no read stays and is
+   * counted apart; `?show=all` brings everything back.
+   *
+   * The 📐 pattern-matched CARD GRID below reads the shared verdict cache
+   * itself, so it could not be cut by filtering a row list — it took an `only`
+   * prop instead, fed from THIS SAME partition (2026-09-15). The grid and the
+   * list therefore hide exactly the same names, and the heading keeps printing
+   * the sweep's full matched count with the enterable count beside it so the
+   * number that left is never silent. */
+  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const part = useEnterablePartition(q.verdicts, (v) => v.symbol, ex?.room, enterableOnly);
+  const cut = enterableOnly && kind !== 'n/a';
+  const matchedAll = q.verdicts.filter((v) => v.matches.length > 0);
+  const matched = part.rows.filter((v) => v.matches.length > 0);
+  /* The symbols the card grid is allowed to draw — the survivors of the one
+     partition above, never a second read of the verdict. `undefined` with the
+     filter off or on an `n/a` tab, which is the grid's identity behaviour. */
+  const onlyMatched = useMemo(
+    () => (cut ? new Set(matched.map((v) => String(v.symbol || '').toUpperCase())) : undefined),
+    [cut, matched]);
   const candleOnly = orderByExplosive(
-    q.verdicts.filter((v) => v.matches.length === 0 && !v.no_match), (v) => v.symbol, ex);
-  const noMatch = q.verdicts.filter((v) => v.no_match);
+    part.rows.filter((v) => v.matches.length === 0 && !v.no_match), (v) => v.symbol, ex);
+  const noMatch = part.rows.filter((v) => v.no_match);
   return (
     <div style={{ marginBottom: 18, padding: '0.7rem 0.85rem', borderRadius: 12,
                   border: `1px solid ${C.gold}44`, background: 'var(--bg-raised,#16181d)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>🎯 Verdict for every name</div>
         <span style={{ fontSize: '0.72rem', color: C.muted }}>
-          {q.n_symbols.toLocaleString()} names swept{q.n_qualifiers ? ` (${q.n_qualifiers} of them SEPA qualifiers)` : ''} · {matched.length} match a pattern · {candleOnly.length} candle reads only · {noMatch.length} no pattern
+          {/* The sweep's own numbers — what was LOOKED AT, never what survived
+              the 🎯 filter. The count line below says what the filter took out;
+              two different questions, two different numbers, neither pretending
+              to be the other. */}
+          {q.n_symbols.toLocaleString()} names swept{q.n_qualifiers ? ` (${q.n_qualifiers} of them SEPA qualifiers)` : ''} · {matchedAll.length} match a pattern · {q.verdicts.filter((v) => v.matches.length === 0 && !v.no_match).length} candle reads only · {q.verdicts.filter((v) => v.no_match).length} no pattern
         </span>
         {q.generated_at > 0 && (
           <span style={{ marginLeft: 'auto', fontSize: '0.66rem', color: C.sub }}>
@@ -442,9 +486,20 @@ function QualifierVerdicts({ q, navigate, ex }: {
         )}
       </div>
 
+      {cut ? (
+        <HiddenCount hidden={part.hidden} unread={part.unread}
+                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     note="Counted over every name in this verdict sweep. Everything below is cut by the same partition — the 📐 pattern-matched card grid (its heading prints the full matched count with the enterable count beside it), the candle-read rows and the no-pattern chips."
+                     onShowAll={() => setEnterableOnly(false)} />
+      ) : null}
+
       {/* Tiny-card grid (Ajay 2026-06-09): minimal SEPA-style cards, ranked so
           ⭐ confirmed-pattern + full-Minervini-buy-gate confluence leads. */}
-      {matched.length > 0 && <PatternMatchCards title={`Pattern matched (${matched.length})`} allLink={false} />}
+      {matchedAll.length > 0 && (
+        <PatternMatchCards
+          title={`Pattern matched (${matchedAll.length}${cut ? ` · ${matched.length} enterable` : ''})`}
+          only={onlyMatched} allLink={false} />
+      )}
 
       {candleOnly.length > 0 && (
         <>
@@ -506,6 +561,8 @@ function VerdictRow({ v, navigate, ex }: {
         <GrowthChip symbol={v.symbol} className="cm-badge" />
         <ExplosiveChip className="cm-badge" study={ex?.study}
                        read={ex?.room.get(String(v.symbol).toUpperCase())?.explosive} />
+        <EnterableChip className="cm-badge"
+                       read={ex?.room.get(String(v.symbol).toUpperCase())?.enterable} />
         {s.is_buyable && <span style={{ fontSize: '0.72rem', color: C.green }}>✅ buyable</span>}
         {sources.map((m) => (
           <button key={m.label} onClick={() => navigate(m.to)}
@@ -586,6 +643,8 @@ function Card({ p, navigate, ex }: {
         <GrowthChip symbol={p.symbol} className="cm-badge" />
         <ExplosiveChip className="cm-badge" study={ex?.study}
                        read={ex?.room.get(String(p.symbol).toUpperCase())?.explosive} />
+        <EnterableChip className="cm-badge"
+                       read={ex?.room.get(String(p.symbol).toUpperCase())?.enterable} />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{PATTERN_LABEL[p.pattern] || p.pattern}</span>
         <button type="button"
                 onClick={() => (navigate ? navigate(winnersHref(p.pattern))

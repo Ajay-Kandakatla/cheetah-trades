@@ -63,6 +63,11 @@ day); state written only on a terminal send (delivered, or nobody
 targeted). Kind = ``zone_bounce_alert`` (Ajay asked for these explicitly,
 2026-09-03; separately mutable at /notifications).
 
+ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
+here is a divergence, counted skipped_not_enterable. The standing floor gate
+(`alert_gates.floor_held_gate`, fails closed) arrived with it on this kind —
+counted skipped_floor, like the other three demand kinds.
+
 Configured price-structure heuristic, S/D scope, NOT a book method, no
 Minervini cites. Decision support, not a buy signal, not advice.
 """
@@ -77,6 +82,7 @@ from zoneinfo import ZoneInfo
 from market_hours.reminder import is_market_day
 from . import alert_gates as AG
 from . import alert_status as AS
+from . import enterable as EN
 
 log = logging.getLogger(__name__)
 
@@ -304,7 +310,9 @@ def single_message(item: dict) -> dict:
         parts.append(str(item["name"]))
     url = f"/sepa/{sym}?tab=supply"
     return {"title": title, "body": " · ".join(parts), "url": url,
-            "data": {"url": url}, "kind": KIND, "ticker": sym}
+            "data": {"url": url}, "kind": KIND, "ticker": sym,
+            # The verdict AT PUSH TIME, persisted with the row (2026-09-15).
+            "enterable": EN.slim(item.get("enterable"))}
 
 
 def digest_message(items: list) -> dict:
@@ -465,6 +473,8 @@ def _check_once(*, push: bool, store: Optional[dict], snapshot: Optional[dict],
     day_iso = day.isoformat()
     hits, items = [], []
     unknown_prev = unknown_cap = skipped_cap = skipped_room = skipped_proximity = 0
+    skipped_floor = 0                  # the standing floor gate, new on 🪃 (2026-09-15)
+    skipped_not_enterable = 0          # the 🎯 divergence guard (2026-09-15)
     for sym in syms:
         px = prints.get(sym)
         if px is None:
@@ -506,10 +516,34 @@ def _check_once(*, push: bool, store: Optional[dict], snapshot: Optional[dict],
         if not AG.demand_proximity_gate(px, item["band"]):
             skipped_proximity += 1
             continue
-        room_ok, _ = AG.room_gate(px, bands, prev)
+        room_ok, room_read = AG.room_gate(px, bands, prev)
         if not room_ok:
             skipped_room += 1
             continue
+        # The band floor must have HELD — the ONE gate measured to separate
+        # (intact 30.7% win vs swept 22.7% / broken 21.5%, n=31,861). The other
+        # three demand kinds have run it since 2026-09-09; this one did not,
+        # and it is the IDENTICAL call: the cached daily frame plus the
+        # session's own low and print, so a floor swept THIS morning cannot
+        # read intact. FAILS CLOSED — an unreadable floor is silence, never a
+        # push (2026-09-15, his call §7.5).
+        frame = AG.daily_frame(sym)
+        sw = AG.sweep_read(item["band"], sym, frame=frame, day_low=low, last=px, day=day)
+        item["sweep"] = sw
+        if not AG.floor_held_gate(item["band"], read=sw):
+            skipped_floor += 1
+            continue
+        # 🎯 ENTERABLE (2026-09-15), LAST and tightening only: every gate it
+        # grades has already run on these inputs, so they are passed THROUGH
+        # and BLOCKED is unreachable by construction — a divergence guard.
+        en = EN.assess(kind=EN.KIND_DEMAND, px=px, band=item["band"], bands=bands,
+                       prev_close=prev, day_low=low, change_pct=snap.get("change_pct"),
+                       floor_state=(sw or {}).get("state"), room_ok=True, prox_ok=True,
+                       room=room_read)
+        if en.get("verdict") == EN.BLOCKED:
+            skipped_not_enterable += 1
+            continue
+        item["enterable"] = en
         fresh, upgrades = [], []
         for b, h in touched:
             doc_state = _state(coll, state_key(sym, b, day_iso))
@@ -572,7 +606,9 @@ def _check_once(*, push: bool, store: Optional[dict], snapshot: Optional[dict],
             "stale_print": stale_print, "hits": hits, "singles": len(singles),
             "digest": len(digest), "pushed": pushed, "skipped_cap": skipped_cap,
             "unknown_cap": unknown_cap, "unknown_prev": unknown_prev,
-            "skipped_room": skipped_room, "skipped_proximity": skipped_proximity}
+            "skipped_room": skipped_room, "skipped_proximity": skipped_proximity,
+            "skipped_floor": skipped_floor,
+            "skipped_not_enterable": skipped_not_enterable}
 
 
 if __name__ == "__main__":
