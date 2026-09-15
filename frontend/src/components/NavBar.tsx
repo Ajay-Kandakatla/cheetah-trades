@@ -191,13 +191,17 @@ export function NavBar() {
         </div>
 
         <div className="cm-nav__mobile-actions">
-          {hasGauge && <MarketGaugeBadge compact />}
-          {hasGauge && <IvBadge compact />}
-          {/* 🦙 Ollama lives on the DESKTOP nav only. On a phone the top row is
-              at capacity — adding it here pushed search + the menu off the right
-              edge (Ajay 2026-09-14). /ollama stays one tap away in the drawer
-              menu (access/store _ADMIN_MENU_ITEMS). */}
-          <ScanHealthChip compact />
+          {/* Glanceable info chips — shrink into a horizontal scroll strip so
+              they can NEVER shove the actions (search / rails / menu) off the
+              right edge of a phone. The row used to overflow to ~600px on a
+              375px screen and clip the hamburger + search entirely (Ajay
+              2026-09-14: "the menu on the top right is hidden and the search
+              icon is hidden"). 🦙 Ollama stays desktop-only + in the drawer. */}
+          <div className="cm-nav__mobile-chips">
+            {hasGauge && <MarketGaugeBadge compact />}
+            {hasGauge && <IvBadge compact />}
+            <ScanHealthChip compact />
+          </div>
           <GlobalSearch compact subgroupOf={toolsSubgroupOf} />
           {hasPortfolio && (
             <button

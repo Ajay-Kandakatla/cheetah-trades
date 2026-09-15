@@ -2290,7 +2290,22 @@ tr:last-child td { border-bottom: none; }
 .pb-band--deep  { background: var(--negative-bg, rgba(190, 40, 40, 0.14)); color: var(--negative); }
 
 /* ── Market Gauge — nav badge (top-right, every page) + dedicated page ─────── */
-.cm-nav__mobile-actions { display: flex; align-items: center; gap: 0.6rem; }
+.cm-nav__mobile-actions { display: flex; align-items: center; gap: 0.6rem; min-width: 0; flex: 1 1 auto; justify-content: flex-end; }
+/* The actions row overflowed to ~600px on a 375px phone and clipped the
+   hamburger + search off the right edge (Ajay 2026-09-14). Fix: the glanceable
+   info chips (gauge / IV / scan-health) live in a shrinkable scroll strip, and
+   the ACTIONS the user must reach (search, portfolio/watchlist rails, menu)
+   are pinned so they can never be the ones pushed off. */
+.cm-nav__mobile-chips {
+  display: flex; align-items: center; gap: 0.6rem;
+  min-width: 0; flex: 0 1 auto; overflow-x: auto;
+  -ms-overflow-style: none; scrollbar-width: none;
+}
+.cm-nav__mobile-chips::-webkit-scrollbar { display: none; }
+.cm-nav__mobile-chips > * { flex: 0 0 auto; }
+/* Pin the essentials — never shrink or clip them. */
+.cm-nav__mobile-actions > .cm-nav__rail-btn,
+.cm-nav__mobile-actions > .cm-nav__hamburger { flex-shrink: 0; }
 
 /* Mobile-only buttons that open the floating Portfolio / Watchlist rails
    (Ajay 2026-06-16). The rails' fixed edge tabs are hidden on phones because
