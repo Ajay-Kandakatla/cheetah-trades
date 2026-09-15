@@ -259,3 +259,24 @@ Verified on live data 2026-09-14 (review of the alert logic), all in `zone_edge.
 * Nothing else moved: `EDGE_PCT`, the room / proximity / direction / knife / mood gates, the
   cap floor and the push window are untouched, and no new threshold was introduced.
 
+
+### 2026-09-14 follow-up (adversarial review of 792cfe1: F1, F4)
+
+* **F1.** Both digest except-branches (break and demand) set `res = None`, which `_terminal` read
+  as *nobody targeted* — a raised digest kept every claim and muted its names for the day. `None`
+  is no longer terminal (`_terminal` delegates to `demand_alerts._terminal`) and both branches
+  stand in `demand_alerts.transport_failed(exc)`; a raised digest releases like a single and
+  retries next minute.
+* **F4.** `read_near_demand` already yields ONE band per name per pass (the within-pass guard in
+  `check_once` is that invariant, counted `skipped_overlap` if it ever trips). Across the
+  same-minute race with the 5-min pass the demand side now claims singles + digest together and
+  re-reads today's state ONCE after claiming (`demand_alerts.settle_claims`); a claim whose band
+  the other pass claimed EARLIER under its own key — earlier by the claim's WRITE stamp
+  `claimed_at` (set by `claim_key` at the upsert), never by the pass `now`, which is the pass-start
+  clock and ordered the passes by when they started — is released and counted `skipped_overlap`
+  (in the run result, `zone_edge_latest.counts` and `/alerts/status`). Cost: a second bulk `$in`
+  on `demand_alert_state` per pass — only when something was claimed, never per name
+  (`test_pass_never_goes_to_mongo_per_symbol_one_bulk_read_each` pins 2 reads on a claiming pass,
+  1 otherwise). Break-side claims are unchanged (exact key only).
+
+Tests: `tests/test_alerts_review_fixes_2026_09_14.py` section 8.

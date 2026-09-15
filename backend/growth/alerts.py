@@ -6,14 +6,23 @@ trackers. I wanna keep adding during instituional orderblocks are present for
 these... this is outside of regular supply and demand"*.
 
 WHAT FIRES: a name on the 100/100 growth board (growth/tracker.py) whose LIVE
-print ARRIVES at a tested demand band today, whose band FLOOR HAS NEVER BEEN
-PIERCED (read on the session in progress), and that passes the same two
-standing phone gates every other zone push passes:
+print IS AT a tested demand band, whose band FLOOR HAS NEVER BEEN PIERCED
+(read on the session in progress), and that passes the same two standing
+phone gates every other zone push passes:
 
-  0. arrival              — demand_alerts.read(print, band, chg, prev_close)
-                            is not None: the print is in / <= 1% above the
-                            band and YESTERDAY closed outside that ring (the
-                            identical rule the 🧲 pushes use)
+  0. in the band          — demand_alerts.read(print, band, chg, prev_close=None)
+                            is not None: pure GEOMETRY, the print is in the
+                            band or <= 1% above its top (the same in-band
+                            read the 🧲 pushes use). NOT arrival-only: his
+                            spec for this kind is "I wanna know when ever
+                            these are in demand", so a name that closed
+                            yesterday inside its band and still sits there
+                            today rings — ONCE per (symbol, band, day), the
+                            claim below being the repeat guard. An unknown
+                            prior close changes nothing here. (The 2026-09-14
+                            review commit briefly made this arrival-only —
+                            reverted the same day; arrival-only for this kind
+                            is the owner's call, not a reviewer's.)
   1. room_gate            — the first band overhead is >= 5% above the print
   2. demand_proximity_gate— the print sits between the band floor and 1% above
                             its top (not fallen through it)
@@ -22,13 +31,13 @@ standing phone gates every other zone push passes:
 
 THE PRINT IS LIVE (review 2026-09-14, finding 3). Until then this pass rang on
 the board row's stored `price` and `zone.in_band` — Friday's close on a
-Sunday-built board — with no freshness check, no arrival rule and no session
+Sunday-built board — with no freshness check, no live geometry and no session
 window: HHH re-fired every day on Friday's price while it sat BELOW its band.
 Now: one `prices.bulk_snapshot` per pass, the print through
 zone_bounce_alerts.print_from_snapshot (its STALE_PRINT_SEC window — the
-5-minute siblings' rule; a stale trade is skipped and counted), the arrival
-rule above, and the floor gate on the live low. The stored row is kept for the
-GROWTH NUMBERS only (sales / qEPS / warnings). Session window =
+5-minute siblings' rule; a stale trade is skipped and counted), the in-band
+read above on that live print, and the floor gate on the live low. The stored
+row is kept for the GROWTH NUMBERS only (sales / qEPS / warnings). Session window =
 demand_alerts.in_session (RTH 9:32-16:00 ET on trading days), the 🧲 pass this
 one mirrors; the 09:00 and 09:15 cron ticks now say "outside RTH".
 
@@ -170,12 +179,12 @@ def digest_message(items: list) -> dict:
 
 
 def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:
-    """(items, counts): every board row whose LIVE print arrives at a demand
+    """(items, counts): every board row whose LIVE print sits at a demand
     band and clears every gate, richest sales first. No push, no state write."""
     now_ts = now.timestamp()
     day = now.astimezone(ET).date()
-    counts = {"rows": len(rows), "unpriced": 0, "stale_print": 0, "unknown_prev": 0,
-              "no_bands": 0, "no_arrival": 0, "skipped_room": 0, "skipped_proximity": 0,
+    counts = {"rows": len(rows), "unpriced": 0, "stale_print": 0,
+              "no_bands": 0, "not_in_band": 0, "skipped_room": 0, "skipped_proximity": 0,
               "skipped_floor": 0}
     out = []
     for row in rows:
@@ -190,26 +199,27 @@ def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:
         if stale:
             counts["stale_print"] += 1
             continue
-        prev = _f(snap.get("prev_day_close"))
-        if not prev or prev <= 0:
-            counts["unknown_prev"] += 1                         # cannot tell arrival from residence
-            continue
+        prev = _f(snap.get("prev_day_close"))                  # carried on the item; gates nothing
+        prev = prev if prev and prev > 0 else None
         bands = _bands_for(sym)
         demand = [b for b in bands if str(b.get("kind") or "demand").lower() == "demand"
                   and _f(b.get("lo")) and _f(b.get("hi"))]
         if not demand:
             counts["no_bands"] += 1
             continue
-        # The arrival rule the 🧲 pushes use (demand_alerts.read): in / <= 1%
-        # above the band, yesterday closed outside that ring. The containing
-        # band wins over one the print sits above; then the nearest.
+        # The in-band geometry the 🧲 pushes use (demand_alerts.read with NO
+        # prior close): in the band, or <= 1% above its top; under the floor
+        # is a breakdown, not a level. Residence is NOT excluded — "when ever
+        # these are in demand" (module docstring, gate 0); the once-per-band-
+        # per-day claim in run() is the repeat guard. The containing band wins
+        # over one the print sits above; then the nearest.
         hits = []
         for b in demand:
-            h = DA.read(px, b, snap.get("change_pct"), prev)
+            h = DA.read(px, b, snap.get("change_pct"), prev_close=None)
             if h:
                 hits.append((0 if h.get("state") == "in" else 1, float(h.get("dist_pct") or 0.0), b, h))
         if not hits:
-            counts["no_arrival"] += 1
+            counts["not_in_band"] += 1
             continue
         hits.sort(key=lambda t: (t[0], t[1]))
         _, _, band, hit = hits[0]
@@ -236,7 +246,7 @@ def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:
 
 def candidates(rows: Optional[list] = None, *, snapshot: Optional[dict] = None,
                now: Optional[datetime] = None) -> list:
-    """Every board row whose LIVE print arrives at a demand band and clears
+    """Every board row whose LIVE print sits at a demand band and clears
     every gate, richest sales first. `snapshot` = a `prices.bulk_snapshot`
     map (fetched ONCE here when None). No push, no state write. This is what
     the tests call."""
@@ -263,9 +273,9 @@ def _bands_for(symbol: str) -> list:
 
 def _terminal(res: Optional[dict]) -> bool:
     """Delivered, or nobody targeted — 'do not retry today'; a transport
-    failure releases the claim (demand_alerts._terminal, same rule)."""
-    res = res or {}
-    return (res.get("sent") or 0) > 0 or (res.get("total_targets") or 0) == 0
+    failure releases the claim (demand_alerts._terminal, same rule: no result
+    at all is NOT terminal — F1, 2026-09-14)."""
+    return DA._terminal(res)
 
 
 def run(dry_run: bool = False, *, force: bool = False, now: Optional[datetime] = None,
@@ -278,7 +288,17 @@ def run(dry_run: bool = False, *, force: bool = False, now: Optional[datetime] =
     skips it for in-container smoke tests only. Dedupe is claim-then-send
     (demand_alerts.claim_key); a send that fails in transport releases the
     key so the next pass retries — until 2026-09-14 the key was remembered
-    even when the push raised."""
+    even when the push raised.
+
+    Each claim doc carries `at` (the pass clock, display) and — stamped by
+    `demand_alerts.claim_key` at the upsert — `claimed_at`, the write clock
+    the sibling passes order same-minute overlapping claims by (F4b).
+
+    `dry_run` skips only the WRITES (claim / send / release): the state READ
+    is unconditional, so `python -m growth alerts --dry-run` reports a key
+    already rung today as seen, never as fresh (F2b, 2026-09-14). `digest` in
+    the summary counts names whose digest send TERMINATED (delivered or nobody
+    targeted) — not names merely claimed (F2a)."""
     now = now or _now()
     if not force and not DA.in_session(now):
         return {"kind": KIND, "ran": False, "dry_run": dry_run,
@@ -291,14 +311,14 @@ def run(dry_run: bool = False, *, force: bool = False, now: Optional[datetime] =
     if snapshot is None:
         snapshot = _snapshot_for([r.get("symbol") for r in rows if r.get("symbol")])
     items, counts = _scan(rows, snapshot, now)
-    if coll is None and not dry_run:
-        coll = _state_coll()
+    if coll is None:
+        coll = _state_coll()                                   # dry runs READ the state too
     for it in items:
         it["key"] = _state_key(it["row"]["symbol"], it["band"], day)
-    seen = _seen(coll, [it["key"] for it in items]) if not dry_run else set()
+    seen = _seen(coll, [it["key"] for it in items])
     fresh = [it for it in items if it["key"] not in seen]
 
-    sent, digest, claimed_elsewhere = 0, [], 0
+    sent, digest_sent, claimed_elsewhere = 0, 0, 0
     singles, spill = fresh[:MAX_INDIVIDUAL], fresh[MAX_INDIVIDUAL:]
     if not dry_run:
         from push import sender
@@ -319,6 +339,7 @@ def run(dry_run: bool = False, *, force: bool = False, now: Optional[datetime] =
                 sent += 1
             else:
                 DA.release_key(coll, it["key"])
+        digest = []
         for it in spill:
             doc = {"symbol": it["row"]["symbol"], "band": {"lo": it["band"]["lo"], "hi": it["band"]["hi"]},
                    "last": it["last"], "at": now.isoformat(), "source": SOURCE, "digest": True}
@@ -331,13 +352,15 @@ def run(dry_run: bool = False, *, force: bool = False, now: Optional[datetime] =
                 res = sender.send_to_user(OWNER, digest_message(digest), kind=KIND)
             except Exception as exc:                           # noqa: BLE001
                 log.warning("growth.alerts: digest push failed: %s", exc)
-                res = None
-            if not _terminal(res):
+                res = DA.transport_failed(exc)                 # F1: a raise is NOT "nobody targeted"
+            if _terminal(res):
+                digest_sent = len(digest)                      # F2a: counted on a TERMINAL send only
+            else:
                 for it in digest:
                     DA.release_key(coll, it["key"])
     else:
-        sent, digest = len(singles), spill
+        sent, digest_sent = len(singles), len(spill)           # what a wet pass WOULD send
 
     return {"kind": KIND, "ran": True, "date": day, "candidates": len(items), "fresh": len(fresh),
-            "individual": sent, "digest": len(digest), "claimed_elsewhere": claimed_elsewhere,
+            "individual": sent, "digest": digest_sent, "claimed_elsewhere": claimed_elsewhere,
             "dry_run": dry_run, **counts}

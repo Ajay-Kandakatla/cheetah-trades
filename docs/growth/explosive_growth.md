@@ -299,10 +299,15 @@ window — and re-fired daily while HHH sat **below** its band. `growth/alerts.p
 * prices the whole board with **one** `prices.bulk_snapshot`; the print is the last trade through
   `zone_bounce_alerts.print_from_snapshot` (its `STALE_PRINT_SEC` = 600 s — the 5-minute
   siblings' window; stale = skipped, counted `stale_print`);
-* requires an **arrival** — `demand_alerts.read(print, band, change_pct, prev_close)` not None,
-  the identical rule the 🧲 pushes use (in / ≤ 1% above the band, yesterday closed outside that
-  ring; under the floor is a breakdown, residence is the board's business); no prior close =
-  silent (`unknown_prev`);
+* requires the print to be **at the band** — `demand_alerts.read(print, band, change_pct,
+  prev_close=None)` not None: pure geometry, the same in-band read the 🧲 pushes use —
+  in the band or ≤ 1% above its top; under the floor is a breakdown (`not_in_band`). **Not arrival-only**: his spec
+  for this kind is *"I wanna know when ever these are in demand"*, so a name that closed yesterday
+  inside its band and still sits there rings — once per (symbol, band, day), the claim being the
+  repeat guard; an unknown prior close silences nothing. (The review commit of 2026-09-14 had briefly
+  made this arrival-only by handing `read` the snapshot's prior close — a change to WHICH pushes fire
+  that he never asked for; reverted the same day, F6 of the follow-up review. Arrival-only for this
+  kind is the owner's call.)
 * re-runs `floor_held_gate` **live** with the session's low (`with_session_bar`,
   [stop_hunt.md](../supply_demand/stop_hunt.md)) instead of trusting the row's Sunday `intact`;
 * keeps the stored row for the **growth numbers only** (sales / qEPS / warnings) — the push body
@@ -310,7 +315,10 @@ window — and re-fired daily while HHH sat **below** its band. `growth/alerts.p
 * runs only inside `demand_alerts.in_session` (RTH 9:32–16:00 ET on trading days, the 🧲 window
   this pass mirrors); the 09:00 / 09:15 cron ticks now return `outside RTH`;
 * dedupes with the shared atomic claim (`demand_alerts.claim_key`) — a send that fails in
-  transport releases the key (it used to be remembered even when the push raised).
+  transport releases the key (it used to be remembered even when the push raised); since the
+  follow-up review a digest whose send RAISES releases too (F1 — `None` was read as "nobody
+  targeted"), `digest` in the run summary counts names whose digest send terminated (F2a), and
+  `--dry-run` reads the day's state so a key already rung is reported seen, not fresh (F2b).
 
 `room_gate` is called as before (`bands`, no `prev_close`) — deliberately not touched.
 Tests: `tests/test_growth_tracker.py` (alerts section, rewritten for the live path) and

@@ -232,3 +232,42 @@ Verified on live data 2026-09-14; tests in `tests/test_alerts_review_fixes_2026_
   snapshot's `low` and the print — [stop_hunt.md](stop_hunt.md).
 * Not changed: `AT_PCT` / `NEAR_PCT`, the cap floor, the arrival rule, every gate.
 
+### 2026-09-14 follow-up (adversarial review of 792cfe1: F1, F4, F6)
+
+* **F1 — a raised digest send released nothing.** The digest except-branches set `res = None`
+  and `_terminal(None)` read `total_targets 0 == 0` as *nobody targeted* — TERMINAL — so a
+  digest whose send raised (APNs down) kept every claim and muted those names for the day,
+  while a raised single released. Now `_terminal` treats *no result* as not terminal and every
+  digest except-branch (here, `zone_edge` ×2, `growth.alerts`) stands in `transport_failed(exc)`
+  (`sent 0 / failed 1 / total_targets 1`): a raised digest releases exactly like a single and the
+  next pass retries; `pushed` counts only a terminal result. The sender's own *nobody targeted*
+  (muted pref) is still terminal.
+* **F4 — one level rings once, within a pass and across the same-minute race.** (a) The board can
+  carry a name on both lists with two overlapping cuts of one level (`candidates` dedupes only an
+  exact lo/hi pair); every band was read and rang the level twice with two stops inside ONE pass
+  — the overlap skip only knew earlier passes. A name is now read on ONE band per pass: the band
+  containing the print, else the nearest above it, ties to the higher top (`growth._scan` and
+  `zone_edge.read_near_demand` pick the same way); `hits` lists that band. (b) `recorded` is read
+  at the top of the pass and the claims land seconds later; in that window `zone_edge` can claim
+  an overlapping band under its own key (the zone_store cut vs the board cut) and both atomic
+  claims succeed. `settle_claims` now claims singles + digest together and re-reads today's state
+  ONCE for the claimed symbols (`recorded_today`, which now carries the claim stamp); a claim
+  whose band overlaps one another pass claimed EARLIER (`claim_precedes`: stamp, then the smaller
+  key as a deterministic tie so two passes never both yield) is released and counted
+  **`skipped_overlap`** — the existing counter, because the reason is band overlap; `claimed_elsewhere`
+  stays the exact-key race. A failed re-read keeps the claim (push again rather than never). Two
+  bulk reads on the state coll per pass, never one per name. **The ordering stamp is the WRITE
+  clock**, `claimed_at`, set by `claim_key` at the moment of the upsert (`write_clock`) — never the
+  pass `now`. The verifier's residual: `sent_at` / `at` are the pass-START clock, taken before the
+  snapshot and the gate loop, so ordering by them ordered the passes by when they *started*; cron
+  aligns the 1-min and 5-min passes to the same wall-clock minute, and when the earlier-started
+  pass claimed *second* its re-read saw a later stamp and kept — one level, two rings. Both
+  containers share the M5 clock, so the later writer always sees the earlier one at its re-read
+  and yields; `sent_at` / `at` stay the pass time for display, and a pre-stamp doc orders by them.
+* **F6 (🚀 `growth_demand_alert` only — this pass is unchanged).** 792cfe1 had made the growth kind
+  arrival-only by handing `read` the snapshot's prior close; reverted the same day to the shipped
+  in-band geometry — see [growth/explosive_growth.md](../growth/explosive_growth.md). The 🧲 pass
+  here keeps its ARRIVALS-ONLY rule (`read(..., prev_close)`), untouched.
+
+Tests: `tests/test_alerts_review_fixes_2026_09_14.py` section 8 (`test_F1_*`, `test_F4a_*`,
+`test_F4b_*`, `test_F6_*`).

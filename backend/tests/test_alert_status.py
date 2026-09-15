@@ -145,8 +145,14 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     p = AS.status_payload(pass_coll=pc, latest_coll=lc, now=NOW)
     assert set(p) == {"in_session", "now_et", "gate", "passes", "disclaimer"}
     assert p["in_session"] is True and p["now_et"] == "2026-09-03T10:00:00-04:00"
-    assert p["gate"] == {"min_room_pct": 5.0, "max_above_demand_pct": 1.0}
-    assert p["gate"] == {"min_room_pct": AG.ALERT_MIN_ROOM_PCT, "max_above_demand_pct": AG.ALERT_MAX_ABOVE_DEMAND_PCT}
+    # the cap floor rides along as a number AND as the words the page prints
+    # (F5, 2026-09-14: Alerts.tsx typed "$1B+" — it renders min_cap_txt now)
+    assert p["gate"] == {"min_room_pct": 5.0, "max_above_demand_pct": 1.0,
+                         "min_cap_usd": 700_000_000.0, "min_cap_txt": "$700M"}
+    from supply_demand import demand_alerts as DA
+    assert p["gate"] == {"min_room_pct": AG.ALERT_MIN_ROOM_PCT, "max_above_demand_pct": AG.ALERT_MAX_ABOVE_DEMAND_PCT,
+                         "min_cap_usd": DA.MIN_CAP_USD, "min_cap_txt": AS.cap_floor_txt(DA.MIN_CAP_USD)}
+    assert p["gate"] == AS.gate_payload()
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert"}
     ze = p["passes"]["zone_edge"]
     assert ze["as_of"] == NOW.isoformat() and ze["date"] == "2026-09-03"
@@ -226,6 +232,27 @@ def test_alert_gates_stays_a_pure_leaf_and_alert_status_imports_no_sibling_at_mo
     for sib in ("zone_edge", "zone_bounce_alerts", "demand_alerts", "bounce_room"):
         assert f"from . import {sib}" not in head and f"from .{sib}" not in head, \
             f"{sib} imports alert_status: a module-level import back would be a cycle"
+
+
+def test_the_alerts_page_never_retypes_the_cap_floor():
+    """SOURCE GUARD (F5, 2026-09-14). Alerts.tsx had "the phone gets $1B+
+    names that pass" one line above the disclaimer that had just been
+    corrected to $700M. The page renders `gate.min_cap_txt` — served by
+    gate_payload from demand_alerts.MIN_CAP_USD through the ONE formatter
+    (cap_floor_txt) — and types no dollar figure of its own."""
+    tsx = ROOT / "frontend/src/pages/Alerts.tsx"
+    if not tsx.exists():
+        import pytest
+        pytest.skip("frontend tree absent (api container) — pinned by Alerts.test.tsx there")
+    src = tsx.read_text()
+    assert "$1B" not in src and "$700M" not in src and "1B+" not in src, "a typed cap floor drifts from the constant"
+    assert "min_cap_txt" in src, "the page must read the served words"
+    assert "capFloorPhrase(" in src
+    # the backend never types the figure either: one formatter, one constant
+    status = (ROOT / "backend/supply_demand/alert_status.py").read_text()
+    body = status[status.index("def gate_payload"):status.index("def _empty_pass")]
+    assert "$" not in body and "cap_floor_txt(DA.MIN_CAP_USD)" in body
+    assert AS.gate_payload()["min_cap_txt"] == AS.cap_floor_txt(AS.gate_payload()["min_cap_usd"])
 
 
 def test_cadence_sec_matches_the_crontab():
