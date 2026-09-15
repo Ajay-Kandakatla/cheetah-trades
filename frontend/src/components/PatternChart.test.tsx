@@ -468,3 +468,36 @@ describe('PatternChart dated study markers (2026-09-14)', () => {
     expect(screen.getByText('your cost 11.00')).toBeInTheDocument();
   });
 });
+
+
+describe("the demand BOARD's band is an outline (2026-09-14)", () => {
+  // The dashed rectangle is the band an alert would name; the solid fills
+  // are the Support tab's finer levels. One look, one meaning.
+  const bar = (t: string, c: number): CmBar => ({ t, o: c, h: c + 1, l: c - 1, c, v: 1000 });
+  const tile: CmTile = {
+    symbol: 'CRDO', href: '/x', why: '', stats: [], badges: [], lines: [], markers: [],
+    bars: [bar('2026-09-10', 150), bar('2026-09-11', 151), bar('2026-09-12', 150.5)],
+    bands: [
+      { kind: 'demand', lo: 148.05, hi: 149.84 },
+      { kind: 'board_demand', lo: 146.34, hi: 151.55, label: 'board demand · 2× tested' },
+    ],
+  };
+
+  it('draws the board band with no fill and a dashed stroke; the swing band keeps its fill', () => {
+    const { container } = render(<MemoryRouter><PatternChart tile={tile} /></MemoryRouter>);
+    const board = container.querySelector('g[data-band-kind="board_demand"] rect');
+    const fine = container.querySelector('g[data-band-kind="demand"] rect');
+    expect(board).toBeTruthy();
+    expect(board!.getAttribute('fill')).toBe('none');
+    expect(board!.getAttribute('stroke-dasharray')).toBe('5,3');
+    expect(fine).toBeTruthy();
+    expect(fine!.getAttribute('fill')).not.toBe('none');
+    expect(board!.querySelector('title')!.textContent).toContain('board demand · 2× tested');
+  });
+
+  it('NEGATIVE — a board band has no solid edge lines of its own', () => {
+    const { container } = render(<MemoryRouter><PatternChart tile={tile} /></MemoryRouter>);
+    expect(container.querySelectorAll('g[data-band-kind="board_demand"] line').length).toBe(0);
+    expect(container.querySelectorAll('g[data-band-kind="demand"] line').length).toBe(2);
+  });
+});

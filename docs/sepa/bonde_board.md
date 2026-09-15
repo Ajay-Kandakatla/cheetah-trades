@@ -312,3 +312,54 @@ frontend/src/lib/chartMaps.ts      CmTab, CM_TABS, TAB_META, isBoardTab
 frontend/src/pages/ChartMaps.tsx   tab mount
 frontend/src/styles.css            .bd-*
 ```
+
+---
+
+## 8. Headers and the 🎯 demand-band filter (2026-09-14)
+
+Ajay, with a screenshot of the rows: *"Can you add headers. also sort this by
+the ones close to demand zone. or give a check box to filter ones closer to
+demand zones or in the demand zone from Bonde's"*.
+
+**Headers.** Every section with rows carries a header row in the SAME grid as
+a row (`.bd-row.bd-hdr`), so each head sits over its cell: Ticker · Sales YoY ·
+base → latest · Character · Episodic pivot · Shares YoY · Cash − debt · EV /
+sales · FCF yield. The four metric heads mirror `metricCells` in order. Each
+head explains itself on hover. Hidden under 860px, where the grid collapses.
+
+**The checkbox** "🎯 in / near a demand band only (≤ N% above) · nearest first"
+does both halves of the ask: it keeps the rows whose live print is INSIDE the
+board's nearest demand band or within the served near distance above its top,
+and orders them in-band first, then ascending distance. Off = the served order
+(his screen's own). The near distance prints from `params.demand_near_pct`
+(`DEMAND_NEAR_PCT = NEAR_PCT = 2.0`, one notion of "near a band" both ways) —
+never typed in the component; with no params served, no number prints.
+
+**The read** is the shared bounce-room rule (`POST /supply-demand/bounce-room`,
+one POST for every row on the tab), field `demand` on each row —
+`supply_demand.bounce_room.demand_read`, documented in
+`docs/supply_demand/bounce_room.md` § DEMAND. It reads the zone_store doc, i.e.
+the BOARD's closed-bar geometry: the same band an alert would name. A demand
+band whose floor is ABOVE the print is one price fell through — overhead, not
+demand — and never qualifies (the reclaim-from-below class, 66% stop-hit in the
+2026-09-08 autopsy). Nothing is computed on this tab.
+
+**The chip.** A qualifying row wears 🎯 "in demand band" or "1.6% above demand"
+in the Ticker cell, filled when inside; the tooltip carries the band, its touch
+count, the print, a stale-print flag and the bands' `store_date`, and says "Not
+a buy signal". Rows farther than the near distance wear nothing (Rule #5).
+
+**Coverage is said, not hidden.** With the box on: "band read on K of N ·
+P pending · read failed: …". Pending rows (no store doc yet — most names under
+$1B) fill in on the next poll; a name with no demand band under its print never
+qualifies. A section emptied by the box says "🎯 none in or near a demand band
+right now" (or "still loading…") rather than looking broken.
+
+Tests: `frontend/src/components/BondeBoard.test.tsx` § 🎯,
+`frontend/src/lib/bounceRoom.test.ts` § demand proximity,
+`backend/tests/test_bounce_room.py` § DEMAND (negatives: a band above the
+print reads None; supply bands never count; a bad print reads None; an unknown
+read is never near; the near distance is never typed in the component).
+
+This is a filter on a study board whose own thesis measured inverted (§1).
+Nothing here gates a scan, fires an alert or buys in any lane.

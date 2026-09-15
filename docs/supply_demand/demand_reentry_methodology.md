@@ -670,3 +670,31 @@ reuses `price_zones`' 2dp rounding. Guards: `test_supply_demand_contracts.py`
 block "reentry fixes 2026-09-05".
 
 *Decision-support only. Not investment advice.*
+
+## 2026-09-14 — structure on closed bars, price off the partial bar
+
+The hourly vcp-watch cache patch writes today's PARTIAL bar into the shared
+price frame from ~10:00 ET. `decide_from_frame` read that frame whole, so
+during the session a partial low could mint a swing (a demand band that did
+not exist on closed bars), the "last close" was up to an hour stale, and
+`bars_since_above` counted a session that had not ended — while the liquidity
+read on the same record already knew the bar was partial and refused to print
+an RVOL off it.
+
+Now `analyze_symbol` splits the frame with `split_today_partial` (today's bar
+while `_session_fraction() < 1.0`, the pre-market echo bar included) and hands
+`decide_from_frame(closed, sym, today_row=today)`:
+
+* swings, the structure read, the re-entry closes, the band-break evidence and
+  `prev_close` come from the CLOSED frame;
+* `last_price` is the partial bar's close (the record is still priced today);
+* the liquidity read sees the partial bar (unchanged behaviour);
+* the record says so: `price_basis` ∈ {`frame`, `today_partial`, `given`} and
+  `structure_through` is the last closed bar's date.
+
+With no `today_row` the call is exactly what it was, so
+`test_backtest_and_live_agree_on_the_same_frame` still holds and the backtest
+scores the same rule. `last_price=` alone (the Support tab hands the live
+print) prices the record without a bar behind it.
+
+Tests: `tests/test_zone_consistency_2026_09_14.py` (§1–2).

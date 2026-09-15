@@ -281,3 +281,60 @@ logic on all charts"*). Tests in
    so a broken lid now acting as support still shows its swing highs) —
    and a tested band says `3× tested`. `price_zones` carries
    `touch_dates` on every band (additive; `None` on a frame without dates).
+
+## 2026-09-14 — the BOARD's band on every daily view
+
+Ajay: *"Basically I wanna make sure the overhead supply and demand zone logic
+is accurate across board."*
+
+**What was measured.** `scripts` in the session's scratch, re-runnable from the
+api container: for 46 tickers drawn from his holdings and the live Deep Demand,
+Zones, Breaking, Quick Reversal and Into Supply boards, the nearest demand band
+at or below the close and the nearest overhead above it were pulled from every
+source that draws a band:
+
+| Sources compared | Nearest demand agrees | Nearest overhead agrees |
+|---|---|---|
+| Board geometry fresh vs the nightly zone store | 42 / 46 | 40 / 46 |
+| Scan record vs board geometry fresh | 36 / 46 (the rest are lids turned floor — the scan's rule, not a different band) | 46 / 46 |
+| **This tab (fine geometry) vs the board geometry** | **6 / 46** | **9 / 46** |
+
+Every board, the alert gate and the paper lanes share ONE engine
+(`price_zones.compute`) at ONE geometry (`demand_reentry.zone_geom()`: swing 5,
+merge 4%, 252 bars) and agree with each other; the four misses against the
+store are names with no store doc (no market cap → no bands, the known gap)
+and one-day staleness (the store is built at 04:05 ET from the prior close).
+This tab reads the same engine at the finer geometry §2 documents (merge
+1.75%, swing by zoom) and agreed with the boards on the nearest demand band
+six times in 46: LQDA read "support 63.08–63.84, 2.25% below" here while the
+demand board had price *inside* 64.94–67.26; ESI read "in a demand zone
+31.99–32.38" here while the board's nearest demand was 28.94–29.98. §2's own
+promise — *"a tab that could not reproduce their answer would look like it
+disagreed with them rather than zoomed differently"* — no longer held, because
+the boards moved to the wider geometry after §2 was written.
+
+**What changed.** Every daily-structure view (every zoom, and the holdings tab,
+which is built from this tab) now ALSO carries the board's band:
+
+* `support.board_read(closed, sym, last_price)` calls
+  `demand_reentry.decide_from_frame` — the one rule the boards, the alert gate
+  and the lanes run — on the SAME closed frame, priced off the live print, and
+  takes its entry band (else its nearest support, which may be a lid turned
+  floor) and the alert gate's `first_overhead`. No second engine, no
+  reimplementation; a source guard pins that nothing else from that module is
+  reached for (it is pure per frame — no universe pass can start from a page
+  load).
+* Drawn as a **dashed outline** in the support / overhead colours, band kinds
+  `board_demand` / `board_supply`, its own overlay family **"Board band ·
+  alerts"**, ON by default and hideable without hiding the finer levels.
+* Two stats rows (`board demand band`, `board overhead`) and the why-sentence
+  now opens with *"BOARD (what alerts and lanes use): demand … · overhead …"*.
+* The finer levels are unchanged. Two resolutions remain, now both on screen
+  and both named; making the board's geometry the ONLY one is a methodology
+  call and is not taken here.
+
+An intraday timeframe reads its own bars and carries no board band (the board
+has no read of hourly structure).
+
+Tests: `tests/test_zone_consistency_2026_09_14.py`, `chartOverlays.test.ts`,
+`PatternChart.test.tsx`.

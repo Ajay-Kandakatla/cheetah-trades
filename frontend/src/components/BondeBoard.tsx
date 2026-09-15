@@ -33,6 +33,18 @@
  * "these are fresh finds". It never lights on a 🔎 row: that badge means
  * "arrived on his screen", and those names are precisely the ones that are not.
  *
+ * 🎯 DEMAND PROXIMITY (Ajay 2026-09-14, on this tab: "add headers. also sort
+ * this by the ones close to demand zone. or give a check box to filter ones
+ * closer to demand zones or in the demand zone"). One checkbox does both: it
+ * keeps the rows whose live print is INSIDE the board's nearest demand band or
+ * within the server's near distance ABOVE its top, and orders them nearest
+ * first. The read is the shared bounce-room rule (`demand` on each row) — the
+ * same closed-bar BOARD band an alert would name, never a band computed here.
+ * The near distance prints from `params.demand_near_pct`; it is not typed in
+ * this file. A band price has fallen THROUGH (its floor above the print) is
+ * overhead, not demand, and never lights the chip — that is the reclaim class
+ * his 2026-09-08 autopsy put at 66% stop-hit.
+ *
  * Nothing here gates a scan, fires an alert or buys in any lane.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,6 +52,8 @@ import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { metricCells } from '../lib/boardMetrics';
 import { GrowthChip } from './GrowthChip';
+import { useBounceRoom } from '../hooks/useBounceRoom';
+import { compareDemandProximity, demandChipText, inOrNearDemand, type BounceRoomRow } from '../lib/bounceRoom';
 
 export type BondePivot = {
   gap_pct?: number | null; vol_mult?: number | null;
@@ -133,11 +147,44 @@ const BASE_NOTE: Record<string, string> = {
     'Not enough quarterly revenue history to state the base.',
 };
 
+/** Column headers, one per grid track of `.bd-row`. The metric heads mirror
+ *  `metricCells` — same order, same four cells — so a head sits over its cell. */
+const HEADS = {
+  sym: { text: 'Ticker', title: 'Ticker · company. ✨ NEW = arrived on his screen recently; 🚀 = also clears the explosive-growth screen; 🎯 = live print in / near the board’s nearest demand band.' },
+  sales: { text: 'Sales YoY · base → latest', title: 'Latest quarterly revenue against the same quarter a year ago, with the two dollar figures under it. ⚠ marks a base that is negative or immaterial.' },
+  character: { text: 'Character', title: 'His character clause: accelerating (growth rate rising), a streak of consecutive growth quarters, sales-led (top line outpacing the bottom line).' },
+  pivot: { text: 'Episodic pivot', title: 'The gap on the pivot day, its volume multiple and how long ago. — = no pivot on this name.' },
+  metrics: [
+    { text: 'Shares YoY', title: 'Diluted share count, year over year. Down = buybacks; up = dilution.' },
+    { text: 'Cash − debt', title: 'Net cash (positive) or net debt (negative).' },
+    { text: 'EV / sales', title: 'Enterprise value over trailing revenue. Lower is cheaper for the same sales.' },
+    { text: 'FCF yield', title: 'Free cash flow as a share of market cap.' },
+  ],
+};
+
 export default function BondeBoard() {
   const [d, setD] = useState<BondeBoardData | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [newOnly, setNewOnly] = useState(false);
+  const [nearDemandOnly, setNearDemandOnly] = useState(false);
+
+  // Every row on the tab, once — the shared read is one POST per list.
+  const rowSymbols = useMemo(() => {
+    const out: string[] = [];
+    for (const s of SECTIONS) for (const r of d?.sections?.[s.key] || []) if (r.symbol) out.push(r.symbol);
+    return out;
+  }, [d]);
+  const room = useBounceRoom(rowSymbols);
+  const readOf = (sym: string): BounceRoomRow | undefined => room.map.get(String(sym).toUpperCase());
+  const nearPct = room.payload?.params?.demand_near_pct;
+  // Rows the server actually read bands for (a pending / unavailable row is
+  // in the map too, so the map's size would overstate coverage).
+  const readCount = useMemo(() => {
+    let k = 0;
+    for (const r of room.map.values()) if (r.coverage === 'store' || r.coverage === 'ondemand') k += 1;
+    return k;
+  }, [room.map]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -156,10 +203,20 @@ export default function BondeBoard() {
     if (!d) return [];
     return SECTIONS.map((s) => {
       const all = d.sections?.[s.key] || [];
-      return { ...s, rows: newOnly ? all.filter((r) => r.is_new) : all,
-               total: d.counts?.[s.key] ?? all.length, shown: all.length };
+      let rows = newOnly ? all.filter((r) => r.is_new) : all;
+      if (nearDemandOnly) {
+        // Filter AND sort: in the band first, then closest above it. The
+        // served order (his screen's own) is kept when the box is off.
+        rows = rows
+          .filter((r) => inOrNearDemand(room.map.get(String(r.symbol).toUpperCase())))
+          .slice()
+          .sort((a, b) => compareDemandProximity(
+            room.map.get(String(a.symbol).toUpperCase()),
+            room.map.get(String(b.symbol).toUpperCase())));
+      }
+      return { ...s, rows, total: d.counts?.[s.key] ?? all.length, shown: all.length };
     });
-  }, [d, newOnly]);
+  }, [d, newOnly, nearDemandOnly, room.map]);
 
   if (loading) return <div className="bd-note">reading his screen…</div>;
   if (err) return <div className="bd-note bd-err">⛔ {err}</div>;
@@ -206,11 +263,26 @@ export default function BondeBoard() {
             ✨ <strong>{d.n_new}</strong> new in {d.new_days}d
           </span>
         </div>
-        <label className="bd-toggle" title="Show only names that ARRIVED on his screen recently">
-          <input type="checkbox" checked={newOnly}
-                 onChange={(e) => setNewOnly(e.target.checked)} />
-          new arrivals only
-        </label>
+        <div className="bd-toggles">
+          <label className="bd-toggle" title="Show only names that ARRIVED on his screen recently">
+            <input type="checkbox" checked={newOnly}
+                   onChange={(e) => setNewOnly(e.target.checked)} />
+            new arrivals only
+          </label>
+          <label className="bd-toggle"
+                 title={`Keep only names whose live print is INSIDE the board’s nearest demand band or within ${nearPct != null ? `${nearPct}%` : 'the near distance'} above its top, nearest first. The band is the same closed-bar board band an alert would name. A band price has fallen through is overhead, not demand, and never counts. Not a buy signal.`}>
+            <input type="checkbox" checked={nearDemandOnly}
+                   onChange={(e) => setNearDemandOnly(e.target.checked)} />
+            🎯 in / near a demand band only{nearPct != null ? ` (≤ ${nearPct}% above)` : ''} · nearest first
+          </label>
+          {nearDemandOnly && (
+            <span className="bd-dim bd-sub" title="How many of the tab’s names have a band read yet. Pending rows are being built and will appear on the next poll; a name with no demand band under its print never qualifies.">
+              band read on {readCount} of {rowSymbols.length}
+              {room.pending > 0 ? ` · ${room.pending} pending` : ''}
+              {room.error ? ` · read failed: ${room.error}` : ''}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* An empty ⚡ Pivots section has a structural cause right now, and a board
@@ -238,7 +310,11 @@ export default function BondeBoard() {
           <p className="bd-blurb">{s.blurb}</p>
           {s.rows.length === 0 ? (
             <div className="bd-empty">
-              {newOnly ? (s.key === 'rejected'
+              {nearDemandOnly && (d.sections?.[s.key] || []).length > 0
+                  ? (readCount === 0 && !room.error
+                      ? '🎯 band read still loading…'
+                      : '🎯 none in or near a demand band right now.')
+                : newOnly ? (s.key === 'rejected'
                   ? '✨ NEW never lights here — these names are not on his screen.'
                   : 'no new arrivals in this tier.')
                 : s.key === 'pivot' && paused ? 'none — the scanners are paused (above).'
@@ -246,10 +322,21 @@ export default function BondeBoard() {
             </div>
           ) : (
             <div className="bd-rows">
+              <div className="bd-row bd-hdr" aria-hidden="false" role="row">
+                <div className="bd-sym" title={HEADS.sym.title}>{HEADS.sym.text}</div>
+                <div className="bd-sales" title={HEADS.sales.title}>{HEADS.sales.text}</div>
+                <div className="bd-chips" title={HEADS.character.title}>{HEADS.character.text}</div>
+                <div className="bd-pivot" title={HEADS.pivot.title}>{HEADS.pivot.text}</div>
+                <div className="bd-metrics">
+                  {HEADS.metrics.map((h) => <span key={h.text} className="bd-m" title={h.title}>{h.text}</span>)}
+                </div>
+              </div>
               {s.rows.map((r) => {
                 const cells = metricCells(r);
                 const baseNote = r.base_state && r.base_state !== 'ok'
                   ? BASE_NOTE[r.base_state] : null;
+                const read = readOf(r.symbol);
+                const dchip = demandChipText(read);
                 return (
                   <div key={`${s.key}-${r.symbol}`} className="bd-row">
                     <div className="bd-sym">
@@ -259,6 +346,14 @@ export default function BondeBoard() {
                               title={r.first_seen
                                 ? `First appeared on his screen ${String(r.first_seen).slice(0, 10)}`
                                 : 'Newly arrived on his screen'}>✨ NEW</span>
+                      )}
+                      {/* Only in / near rows wear the chip — "10% above demand"
+                          on every row is noise, not a read (Rule #5). */}
+                      {dchip && read?.demand && inOrNearDemand(read) && (
+                        <span className={`bd-dchip${read.demand.in_band ? ' bd-dchip-in' : ' bd-dchip-near'}`}
+                              title={`Board demand band ${read.demand.lo}–${read.demand.hi} (${read.demand.touches}× tested)${read.print != null ? ` · print ${read.print}` : ''}${read.fresh === false ? ' · stale print' : ''}${room.payload?.store_date ? ` · bands as of ${room.payload.store_date}` : ''}. Same band an alert would name. Not a buy signal.`}>
+                          🎯 {dchip}
+                        </span>
                       )}
                       {/* 🚀 reaches every Chart Maps tab (Ajay 2026-09-11:
                           "ALL TABS IN CHART MAPS"). Here it is the useful

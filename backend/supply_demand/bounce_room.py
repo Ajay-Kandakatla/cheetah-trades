@@ -161,6 +161,11 @@ ET = ZoneInfo("America/New_York")
 
 LOOKBACK_SESSIONS = RECENT_SESSIONS   # 5 — a touch older than the doc's `recent` cannot be seen
 NEAR_PCT = 2.0                        # <= this under the first overhead band -> NEAR
+# The DEMAND side of the same read (2026-09-14, Ajay on the Bonde tab: "sort
+# this by the ones close to demand zone, or give a check box to filter ones
+# closer to demand zones or in the demand zone"). The same distance as the
+# supply side's NEAR, deliberately: one notion of "near a band", both ways.
+DEMAND_NEAR_PCT = NEAR_PCT            # <= this ABOVE the nearest demand band's top -> near
 STALE_PRINT_SEC = 180                 # fresh flag only; the print is never dropped
 RESPONSE_TTL_SEC = 30                 # per sorted symbol set
 ONDEMAND_MAX_QUEUE = 400              # misses handed to ONE worker per request
@@ -176,6 +181,7 @@ PX_REL_TOL = 1e-6                     # "the same price" when comparing a snapsh
 
 PARAMS = {"touch_tol_pct": TOUCH_TOL_PCT, "wick_pct": WICK_PCT, "bounce_min_pct": BOUNCE_MIN_PCT,
           "strong_pct": STRONG_PCT, "lookback_sessions": LOOKBACK_SESSIONS, "near_pct": NEAR_PCT,
+          "demand_near_pct": DEMAND_NEAR_PCT,
           "stale_print_sec": STALE_PRINT_SEC, "new_high_tol": NEW_HIGH_TOL}
 
 DISCLAIMER = ("Configured price-structure heuristic (supply/demand bands from zone_store; "
@@ -480,6 +486,38 @@ def room_read(print_px, doc: dict, near_pct: float = NEAR_PCT) -> Optional[dict]
             "band": band, "at_highs": at_highs}
 
 
+def demand_read(print_px, doc: dict, near_pct: float = DEMAND_NEAR_PCT) -> Optional[dict]:
+    """The nearest DEMAND band at or below the print: {"lo", "hi", "touches",
+    "in_band", "distance_pct", "near"}. None when the print is unusable or no
+    demand band sits at/below it.
+
+    A demand band whose floor is ABOVE the print is a band price fell through
+    (the reclaim-from-below class, 66% stop-hit in his autopsy) and is NOT
+    "near demand" — it is overhead, and room_read already counts it there.
+    `distance_pct` is from the band's TOP up to the print; 0.0 inside.
+    Store bands are the BOARD's geometry on closed bars, so this is the same
+    band an alert would name.
+    """
+    px = _f(print_px)
+    if px is None or px <= 0:
+        return None
+    cands = []
+    for b in (doc or {}).get("bands") or []:
+        if _kind(b) != "demand":
+            continue
+        lo, hi = _f(b.get("lo")), _f(b.get("hi"))
+        if lo is None or hi is None or lo > px:
+            continue
+        cands.append((lo, hi, int(_f(b.get("touches")) or 0)))
+    if not cands:
+        return None
+    lo, hi, touches = max(cands, key=lambda t: t[1])
+    inside = lo <= px <= hi
+    dist = 0.0 if inside else round((px - hi) / px * 100.0, 2)
+    return {"lo": lo, "hi": hi, "touches": touches, "in_band": inside,
+            "distance_pct": dist, "near": bool(inside or dist <= near_pct)}
+
+
 def room_rank(row: dict) -> tuple:
     """(group, -room_pct): CLEAR first (group 0), then ROOM/NEAR/IN_BAND by
     room_pct DESC (group 1), then anything without a room read (pending /
@@ -547,7 +585,8 @@ def read_symbol(sym: str, doc: Optional[dict], snap: Optional[dict],
     return {"symbol": sym, "print": round(px, 4), "fresh": bool(fresh),
             "coverage": _coverage_of(doc),
             "bounce": bounce_read(px, doc, touches),
-            "room": room_read(px, doc)}
+            "room": room_read(px, doc),
+            "demand": demand_read(px, doc)}
 
 
 # --------------------------------------------------------------------------

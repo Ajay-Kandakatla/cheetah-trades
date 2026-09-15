@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import BondeBoard, { type BondeBoardData } from './BondeBoard';
 import { CM_TABS, TAB_META, isBoardTab, parseTab } from '../lib/chartMaps';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 /* 📈 Bonde tab (Ajay 2026-09-13). The negatives matter most: this board shows
  * percentages off revenue bases that can be negative or immaterial, and an
@@ -41,7 +42,7 @@ const draw = (d: BondeBoardData) => {
   return render(<MemoryRouter><BondeBoard /></MemoryRouter>);
 };
 
-beforeEach(() => vi.unstubAllGlobals());
+beforeEach(() => { vi.unstubAllGlobals(); _resetBounceRoomCache(); });
 
 describe('the tab is registered as a non-tile board', () => {
   it('is in CM_TABS with copy, and is not a tile board', () => {
@@ -273,5 +274,131 @@ describe('the tier blurbs carry their own measurement', () => {
     expect(pivot).toMatch(/measured INVERTED/);
     expect(pivot).not.toMatch(/only part of this board that is a selection/);
     expect(pivot).toMatch(/not because anything measured says to buy them/);
+  });
+});
+
+/* 🎯 headers + demand proximity (Ajay 2026-09-14: "Can you add headers. also
+ * sort this by the ones close to demand zone. or give a check box to filter
+ * ones closer to demand zones or in the demand zone"). The read is the shared
+ * bounce-room POST; the board never computes a band. */
+const demand = (lo: number, hi: number, print: number, touches = 2) => {
+  const inBand = lo <= print && print <= hi;
+  const distance_pct = inBand ? 0 : Math.round(((print - hi) / print) * 10000) / 100;
+  return { lo, hi, touches, in_band: inBand, distance_pct, near: inBand || distance_pct <= 2 };
+};
+const roomPayload = (rows: Record<string, any>, over: Partial<any> = {}) => ({
+  as_of: '2026-09-14T11:00:00-04:00', in_session: true, store_date: '2026-09-13',
+  params: { touch_tol_pct: 1, wick_pct: 1.5, bounce_min_pct: 3, strong_pct: 5, lookback_sessions: 5,
+            near_pct: 2, demand_near_pct: 2, stale_print_sec: 180, new_high_tol: 0.98 },
+  rows, requested: Object.keys(rows).length, covered: Object.keys(rows).length, pending: 0, unavailable: 0,
+  disclaimer: 'not advice', ...over,
+});
+const drawWithRoom = (d: BondeBoardData, room: any) => {
+  const spy = vi.fn(async (url: string, _init?: RequestInit) => {
+    const u = String(url);
+    if (u.includes('/supply-demand/bounce-room')) return { ok: true, status: 200, json: async () => room } as any;
+    return { ok: true, status: 200, json: async () => d } as any;
+  });
+  vi.stubGlobal('fetch', spy);
+  render(<MemoryRouter><BondeBoard /></MemoryRouter>);
+  return spy;
+};
+const FOUR = { sections: { pivot: [], strong: [], steady: [], rejected: [],
+  explosive: [row('PTGX'), row('LQDA'), row('ONDS'), row('UMAC')] } };
+const ROOM = roomPayload({
+  PTGX: { symbol: 'PTGX', coverage: 'store', print: 100, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(80, 90, 100) },                     // 10% above → not near
+  LQDA: { symbol: 'LQDA', coverage: 'store', print: 12, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(11.5, 12.4, 12) },                  // inside
+  ONDS: { symbol: 'ONDS', coverage: 'store', print: 5.1, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(4.6, 5.02, 5.1) },                  // 1.57% above → near
+  UMAC: { symbol: 'UMAC', coverage: 'pending' },             // no read
+});
+
+describe('🎯 headers and the demand-band filter', () => {
+  it('every section with rows carries a header row over the five columns', async () => {
+    drawWithRoom(payload(FOUR), ROOM);
+    await screen.findByText('PTGX');
+    for (const h of ['Ticker', 'Sales YoY · base → latest', 'Character', 'Episodic pivot',
+                     'Shares YoY', 'Cash − debt', 'EV / sales', 'FCF yield']) {
+      expect(screen.getByText(h)).toBeInTheDocument();
+    }
+    // the heads sit in the SAME grid as a row, so they align with the cells
+    expect(screen.getByText('Ticker').closest('.bd-row')).toHaveClass('bd-hdr');
+    expect(screen.getByText('Shares YoY').closest('.bd-metrics')).not.toBeNull();
+  });
+
+  it('asks the shared read for every row once, and prints the served near distance', async () => {
+    const spy = drawWithRoom(payload(FOUR), ROOM);
+    await screen.findByText('PTGX');
+    await waitFor(() => expect(screen.getByLabelText(/in \/ near a demand band only/i)).toBeInTheDocument());
+    const posts = spy.mock.calls.filter((c) => String(c[0]).includes('/supply-demand/bounce-room'));
+    expect(posts.length).toBe(1);
+    expect(JSON.parse(String((posts[0][1] as any).body)).symbols).toEqual(['LQDA', 'ONDS', 'PTGX', 'UMAC']);
+    await waitFor(() => expect(screen.getByText(/≤ 2% above/)).toBeInTheDocument());
+  });
+
+  it('the checkbox keeps in-band and near rows, NEAREST FIRST, and drops the rest', async () => {
+    drawWithRoom(payload(FOUR), ROOM);
+    await screen.findByText('PTGX');
+    await waitFor(() => expect(screen.getByText('🎯 in demand band')).toBeInTheDocument());
+    // served order first
+    const before = screen.getAllByText(/^(PTGX|LQDA|ONDS|UMAC)$/).map((el) => el.textContent);
+    expect(before).toEqual(['PTGX', 'LQDA', 'ONDS', 'UMAC']);
+    fireEvent.click(screen.getByLabelText(/in \/ near a demand band only/i));
+    await waitFor(() => expect(screen.queryByText('PTGX')).not.toBeInTheDocument());
+    expect(screen.queryByText('UMAC')).not.toBeInTheDocument();
+    const after = screen.getAllByText(/^(PTGX|LQDA|ONDS|UMAC)$/).map((el) => el.textContent);
+    expect(after).toEqual(['LQDA', 'ONDS']);
+    expect(screen.getByText(/band read on 3 of 4/)).toBeInTheDocument();
+  });
+
+  it('a qualifying row wears the 🎯 chip with the band, touches and store date in the tooltip', async () => {
+    drawWithRoom(payload(FOUR), ROOM);
+    const chip = await screen.findByText('🎯 in demand band');
+    expect(chip.getAttribute('title')).toMatch(/11\.5–12\.4/);
+    expect(chip.getAttribute('title')).toMatch(/2× tested/);
+    expect(chip.getAttribute('title')).toMatch(/2026-09-13/);
+    expect(chip.getAttribute('title')).toMatch(/Not a buy signal/);
+    expect(screen.getByText('🎯 1.6% above demand')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE — a name 10% above its band gets no chip, and a pending name gets none either', async () => {
+    drawWithRoom(payload(FOUR), ROOM);
+    await screen.findByText('🎯 in demand band');
+    expect(document.querySelectorAll('.bd-dchip').length).toBe(2);
+    // PTGX's row exists but wears no 🎯
+    expect(screen.getByText('PTGX').closest('.bd-row')!.textContent).not.toMatch(/🎯/);
+    expect(screen.getByText('UMAC').closest('.bd-row')!.textContent).not.toMatch(/🎯/);
+  });
+
+  it('NEGATIVE — with the box on and nothing qualifying, the section SAYS so rather than looking empty', async () => {
+    drawWithRoom(payload({ sections: { pivot: [], strong: [], steady: [], rejected: [], explosive: [row('PTGX')] } }),
+                 roomPayload({ PTGX: { symbol: 'PTGX', coverage: 'store', print: 100, fresh: true, bounce: null,
+                                       room: { state: 'CLEAR' }, demand: demand(80, 90, 100) } }));
+    await screen.findByText('PTGX');
+    fireEvent.click(screen.getByLabelText(/in \/ near a demand band only/i));
+    await waitFor(() => expect(screen.getByText(/none in or near a demand band right now/)).toBeInTheDocument());
+  });
+
+  it('NEGATIVE — the near distance is never typed in the component: no params, no number', async () => {
+    drawWithRoom(payload(FOUR), roomPayload({}, { params: {} }));
+    await screen.findByText('PTGX');
+    const label = screen.getByLabelText(/in \/ near a demand band only/i).closest('label')!;
+    expect(label.textContent).not.toMatch(/2%/);
+    expect(label.textContent).not.toMatch(/≤/);
+  });
+
+  it('NEGATIVE — a failed band read leaves the board drawn and says the read failed when the box is on', async () => {
+    const spy = vi.fn(async (url: string) => {
+      const u = String(url);
+      if (u.includes('/supply-demand/bounce-room')) return { ok: false, status: 503, json: async () => ({}) } as any;
+      return { ok: true, status: 200, json: async () => payload(FOUR) } as any;
+    });
+    vi.stubGlobal('fetch', spy);
+    render(<MemoryRouter><BondeBoard /></MemoryRouter>);
+    await screen.findByText('PTGX');
+    fireEvent.click(screen.getByLabelText(/in \/ near a demand band only/i));
+    await waitFor(() => expect(screen.getByText(/read failed: HTTP 503/)).toBeInTheDocument());
   });
 });

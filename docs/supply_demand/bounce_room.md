@@ -73,6 +73,25 @@ for them until the next 9:20 warm.
 | **ROOM** | otherwise; `atr_days = (lo−print)/atr14` (null when ATR unknown) | |
 | at_highs | `high_252` known and `print >= 0.98·high_252` — independent of the room state | `zone_edge.NEW_HIGH_TOL` (imported) |
 
+### DEMAND — `demand_read(print, doc)` (2026-09-14)
+
+Ajay on the Bonde tab: *"sort this by the ones close to demand zone. or give a
+check box to filter ones closer to demand zones or in the demand zone"*. The
+demand side of the same read, on the same store doc, served on every row as
+`demand` (null when nothing qualifies).
+
+| step | rule | constant |
+|---|---|---|
+| candidates | demand-origin bands with `lo <= print` — a demand band whose FLOOR is above the print is one price fell through: overhead (room_read already counts it as `broken_support`), never "near demand" (the reclaim-from-below class, 66% stop-hit in the 2026-09-08 autopsy) | |
+| nearest | the candidate with the highest `hi` (the band containing the print wins, since its `hi >= print`) | |
+| **in_band** | `lo <= print <= hi` → `distance_pct 0.0` | |
+| **distance_pct** | `(print − hi) / print · 100`, from the band's TOP up to the print | |
+| **near** | `in_band` or `distance_pct <= DEMAND_NEAR_PCT` | `DEMAND_NEAR_PCT = NEAR_PCT = 2.0` — one notion of "near a band", both ways; served as `params.demand_near_pct` |
+
+Frontend mirror: `frontend/src/lib/bounceRoom.ts` — `demandDistancePct`, `inOrNearDemand`
+(an unknown read is NOT near), `compareDemandProximity` (in-band, then ascending
+distance, then no-read, ties by symbol), `demandChipText`.
+
 ### Print — `print_of(snap, now_ts)` → `(px, fresh)`
 
 `last_trade_price` when its stamp (**ns** on Massive; ms/s normalised by
@@ -103,6 +122,7 @@ a `%` is unknown (group 2), never promoted.
 | **SEPA scanner** (`frontend/src/components/SepaFilterBar.tsx`) | POST the visible scan's symbols (≤ 2500; the full universe is ~1,750) — **only while the 🪃 chip is on** (`Sepa.tsx` hands the hook an empty list otherwise: nothing else on the page reads the map, and the default page must not fan out a snapshot + on-demand builds every minute for zero output) | new filter chip "Bouncing off demand": keep rows whose `bounce` is non-null; chip shows the touched level, `+bounce_pct%`, `sessions_ago`, `role`; `fresh false` renders a stale tag. Never a buy signal — the SEPA verdict is untouched. |
 | **Back in Demand** (`frontend/src/components/DemandReentryPanel.tsx`, "N in demand") | POST the board's symbols | sort by `bounce_room_key`: bouncing first, then CLEAR, then biggest room to the first supply band; the room column shows `room_pct` / `atr_days` / the band, `pending` rows keep their old position at the end with a "room pending" tag. |
 | **Catalysts** (`frontend/src/pages/Catalysts.tsx`, a Chart Maps tab since 2026-09-05; `catalysts` and `chart-maps` are separate access grants, so `/catalysts` redirects only for users who hold `chart-maps` and the tab is offered only to users who hold `catalysts`) | POST the board's symbols (mostly *not* in the $1B+ store → `ondemand`) | same key — "bigger gaps in to supply" = `room_pct` desc under CLEAR; first poll shows most rows `pending`, the 30 s poll after the worker finishes fills them. |
+| **Bonde** (`frontend/src/components/BondeBoard.tsx`, 2026-09-14) | POST every row on the tab, once | checkbox "🎯 in / near a demand band only · nearest first": keep rows whose `demand.in_band` or `demand.near`, sort by `compareDemandProximity`; each qualifying row wears a 🎯 chip (band, touches, `store_date` in the tooltip); the near distance prints from `params.demand_near_pct`. Off = the served order. |
 
 Every label must be honest about coverage: `pending` = "room pending", `unavailable` = the
 `error`, `fresh false` = stale print, `store_date` = the day the bands are from.
@@ -115,13 +135,15 @@ Every label must be honest about coverage: `pending` = "room pending", `unavaila
   "in_session": true|false,                         9:30-16:00 ET Mon-Fri evaluated at request time
   "store_date": "2026-09-04",                        the zone_store day the bands came from
   "params": {"touch_tol_pct": 1.0, "wick_pct": 1.5, "bounce_min_pct": 3.0, "strong_pct": 5.0,
-             "lookback_sessions": 5, "near_pct": 2.0, "stale_print_sec": 180, "new_high_tol": 0.98},
+             "lookback_sessions": 5, "near_pct": 2.0, "demand_near_pct": 2.0,
+             "stale_print_sec": 180, "new_high_tol": 0.98},
   "rows": {
     "AVGO": {"symbol", "print", "fresh", "coverage": "store"|"ondemand",
              "bounce": null | {"band": {kind, lo, hi, touches, strength}, "role": "demand"|"broken_supply",
                                "touch_low", "touch_date", "sessions_ago", "bounce_pct", "floor_pct", "strong", "atr_x"},
              "room": {"state": "CLEAR"|"IN_BAND"|"NEAR"|"ROOM", "room_pct": 17.0|0.0|null, "atr_days": 3.1|null,
-                      "band": {"kind": "supply"|"broken_support", lo, hi, touches} | null, "at_highs": bool}},
+                      "band": {"kind": "supply"|"broken_support", lo, hi, touches} | null, "at_highs": bool},
+             "demand": null | {"lo", "hi", "touches", "in_band": bool, "distance_pct": 0.0|1.48, "near": bool}},
     "XYZ":  {"symbol": "XYZ", "coverage": "pending"},
     "ABC":  {"symbol": "ABC", "coverage": "unavailable", "error": "no / insufficient price data"}
   },

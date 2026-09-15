@@ -339,6 +339,8 @@ def test_bounce_room_owner_settings_locked():
     assert BR.LOOKBACK_SESSIONS == 5 and BR.LOOKBACK_SESSIONS is ZS.RECENT_SESSIONS, \
         "a touch older than the doc's recent list cannot be seen — the two must be one number"
     assert BR.NEAR_PCT == 2.0
+    assert BR.DEMAND_NEAR_PCT == 2.0 and BR.DEMAND_NEAR_PCT is BR.NEAR_PCT, \
+        "one notion of 'near a band', both ways (2026-09-14, the Bonde 🎯 filter)"
     assert BR.STALE_PRINT_SEC == 180
     assert BR.RESPONSE_TTL_SEC == 30
     assert BR.ONDEMAND_MAX_QUEUE == 400 and BR.ONDEMAND_BUDGET_SEC == 240
@@ -346,6 +348,7 @@ def test_bounce_room_owner_settings_locked():
     assert BR.ONDEMAND_COLL == "bounce_room_zones"
     assert BR.PARAMS == {"touch_tol_pct": 1.0, "wick_pct": 1.5, "bounce_min_pct": 3.0,
                          "strong_pct": 5.0, "lookback_sessions": 5, "near_pct": 2.0,
+                         "demand_near_pct": 2.0,
                          "stale_print_sec": 180, "new_high_tol": 0.98}
 
 
