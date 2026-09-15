@@ -231,3 +231,88 @@ on screen today.
    NOT a growth-tracker bug; it is `big_cap_universe` treating "unknown" the
    same as "too small", on a cache that is warmed lazily and never swept.
    Measured but **not fixed here** — it is its own change.
+
+## 2026-09-14 review fixes
+
+Three data-correctness fixes, all in `growth/tracker.py::qualifies()` and all
+scoped to THIS board. `sepa/sales.py` and `sepa/canslim.py` are book-cited and
+untouched — `test_E4_the_book_cited_sales_module_is_UNTOUCHED` pins that the
+sales module still returns its own number for the very series the board now
+refuses. Tests: `tests/test_growth_rotation_review_fixes_2026_09_14.py`.
+
+- **E1 — the quarter pairs must really be a year apart.** The cached YoY legs
+  are computed at list POSITIONS 0 vs 4 and 1 vs 5, and Massive omits a
+  quarter it does not have, so a position pair is not always four quarters
+  apart. **7 of 29 live rows** cleared the screen on such a pair — ECHO's
+  "+374.1% YoY" compared FY2026 Q2 against FY2020 Q4. The tracker now checks
+  the period keys with the app's one adjacency rule (`sepa.qoq._adjacent`,
+  gap 4, both pairs) and REFUSES a mismatch; the legs carry
+  `period_mismatch: true` and the board prints a ⚠️ if such a row is ever
+  rendered. A legacy document with no period keys is accepted, as `_adjacent`
+  itself does — refusing it would blank the board, not fix it.
+
+  Re-run on the live cache (read-only probe, 2026-09-14): **SNDK, CDE, HNI,
+  KOPN, AXTI, PROP, ECHO drop** — 7 of 29, the reviewer's count. Six of them
+  are one omitted quarter (slot 4 is the quarter BEFORE the year-ago one);
+  ECHO's series jumps from FY2026 Q2 straight to FY2021 Q3. The alternative
+  fix — re-locating the slot whose period really is four quarters back and
+  recomputing — was measured before choosing refusal, and it rescues **none
+  of the seven**: SNDK and ECHO have no year-ago quarter on file at all; AXTI
+  (his own named example) has the FY2025 Q2 slot but its revenue and EPS
+  values are `None`; and on their TRUE year-ago numbers CDE (EPS +9.1%), HNI
+  (EPS −31.4%), PROP (sales +45.2%) and KOPN (prior quarter −20.9%) fail the
+  screen anyway. The cached numbers those rows carried were the mislabelled
+  ones. So the board shrinks to 21 and every one of the 21 is the same row it
+  was; nothing newly qualifies.
+- **E4 — a negative year-ago base is not growth.** DBRG sat #1 at
+  +15,961.5% and owned the Financial Services median off a −$3.2M base:
+  `sales.py` divides by `abs(base)`, which is right for its score and wrong
+  for a headline. The tracker reads `rev_q_series` at the same slots and when
+  the base is `<= 0` blanks the leg (`sales_growth_pct: None`, or
+  `sales_prior_pct` for the prior leg), sets `base_negative: true`, and the row
+  does not qualify. Unknown base (no series, a `None` slot) changes nothing.
+  Live: DBRG drops.
+- **E6 — the period is on the row.** Every row now carries `period` (the
+  fiscal quarter at slot 0, "FY2026 Q2"; the yfinance path stores calendar
+  quarters and reads "Q2 2026"), printed under Sales YoY and in the Q EPS
+  tooltip. `period_end`, `period_age_days` and `period_stale` exist only when
+  the quarter end is actually on file — the Massive path stores fiscal
+  indices and NO end date (NVDA's FY2027 Q2 ended 2026-07-26; a calendar read
+  of that index would say 2027-06-30), so those three are `null` on every
+  live row today rather than a guess. Where the date IS known, stale means
+  "one cadence past due" by `observability.period_freshness.expected_13f_quarter`
+  verbatim (45-day filing lag + 21-day grace; 10-Q deadlines are 40–45 days,
+  so this errs lenient) — no day-count is typed in the tracker, pinned by
+  `test_E6_no_day_count_is_typed_in_the_tracker`. A stale row gets a ⚠️ in
+  its `warnings` and on the period line. Blank stays an em-dash.
+
+Skipped on his call: Sunday build timing (E3), an EPS base floor (E5), a "no
+debt" tier (E7). `/growth/tags` is unchanged — the chip does not read the
+period.
+
+## 2026-09-14 review fixes — the alert reads the tape, not the board
+
+Found live: `growth_demand_alert` rang **HHH at 09:00 ET** on the Sunday-built board with
+**Friday's close** as the print — no live price, no freshness check, no arrival rule, no session
+window — and re-fired daily while HHH sat **below** its band. `growth/alerts.py` now:
+
+* prices the whole board with **one** `prices.bulk_snapshot`; the print is the last trade through
+  `zone_bounce_alerts.print_from_snapshot` (its `STALE_PRINT_SEC` = 600 s — the 5-minute
+  siblings' window; stale = skipped, counted `stale_print`);
+* requires an **arrival** — `demand_alerts.read(print, band, change_pct, prev_close)` not None,
+  the identical rule the 🧲 pushes use (in / ≤ 1% above the band, yesterday closed outside that
+  ring; under the floor is a breakdown, residence is the board's business); no prior close =
+  silent (`unknown_prev`);
+* re-runs `floor_held_gate` **live** with the session's low (`with_session_bar`,
+  [stop_hunt.md](../supply_demand/stop_hunt.md)) instead of trusting the row's Sunday `intact`;
+* keeps the stored row for the **growth numbers only** (sales / qEPS / warnings) — the push body
+  prints the live print and the band it arrived at ("in demand" / "0.4% above demand");
+* runs only inside `demand_alerts.in_session` (RTH 9:32–16:00 ET on trading days, the 🧲 window
+  this pass mirrors); the 09:00 / 09:15 cron ticks now return `outside RTH`;
+* dedupes with the shared atomic claim (`demand_alerts.claim_key`) — a send that fails in
+  transport releases the key (it used to be remembered even when the push raised).
+
+`room_gate` is called as before (`bands`, no `prev_close`) — deliberately not touched.
+Tests: `tests/test_growth_tracker.py` (alerts section, rewritten for the live path) and
+`tests/test_alerts_review_fixes_2026_09_14.py`.
+

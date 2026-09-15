@@ -12183,6 +12183,9 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .eg-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .eg-table thead th.eg-num { text-align: right; }
 .eg-coname { font-size: 0.66rem; color: var(--ink-muted); margin-top: 2px; }
+/* The fiscal quarter under Sales YoY (2026-09-14) — a sub-line, not a column,
+   so the period is readable without widening a table that is already wide. */
+.eg-period { font-size: 0.66rem; font-weight: 400; margin-top: 2px; white-space: nowrap; }
 .eg-flags { max-width: 340px; font-size: 0.7rem; line-height: 1.45; }
 .eg-good { color: var(--good, #3fb950); }
 .eg-warn { color: var(--warn, #d29922); }

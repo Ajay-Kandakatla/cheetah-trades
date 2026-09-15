@@ -40,3 +40,27 @@ afternoon ("ok push please") — see `docs/supply_demand/gap_day_rule.md`.** Kep
 233.0 (+8.9%, 2×) and the gate unchanged; a 1-touch lid is weak; NEGATIVE — nothing weak,
 weak above the target, weak below the print, garbage bands, and the pinned wording without a
 weak key all unchanged; the board block + stat.
+
+## 2026-09-14 review fixes (D1) — the CLEAR case, and the bands `weak` is read from
+
+Found on the live Deep Demand board: the room stat printed *"open sky"* / *"+9.4% -> 144.46"*
+under a 1-touch first band the tile drew in red. Two causes, both in the wiring, not the rule:
+
+1. `room_block` read `weak` off the SAME bands the target came from — and every caller handed
+   it `row_bands(row)`, which is `plan_bands(...)` = the PROVEN set. The unproven lid had
+   already been dropped, so `weak` was always None on the boards.
+2. `weak` was only computed when a target existed; a CLEAR row carried no `weak` key at all.
+
+Change (wording only — the target, the states and the 5% floor are byte-identical):
+
+- `plan_bands(..., proven=False)` / `row_bands(row, proven=False)` keep the unproven lids.
+- `room_block` measures room on `plan_bands(bands, entry_band)` exactly as before and reads
+  `weak = first_weak_lid(plan_bands(bands, entry_band, proven=False), px, target_lo)` on EVERY
+  row, CLEAR included. A caller that still hands in the proven set gets `weak` None as before.
+- `chart_maps.board.drop_low_room` hands in the raw set.
+- `room_stat`: CLEAR + weak → *"open sky · 1-touch lid 144.46 skipped"* (*"weak lid"* when the
+  touch count is not 1); ROOM/NEAR + weak keeps the pinned *"· weak X first"*.
+
+Tests: `backend/tests/test_deep_gabbar_review_fixes_2026_09_14.py` (`test_d1_*`) — the CLEAR
+case names the lid, the proven-set caller is unchanged, a proven lid is never "weak", a lid
+under the print is never named, and the board stat on a deep row.

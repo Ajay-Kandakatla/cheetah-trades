@@ -113,6 +113,77 @@ describe('ExplosiveGrowth board', () => {
     expect(within(r).getAllByText('—').length).toBeGreaterThanOrEqual(4);
   });
 
+  // 2026-09-14 review fixes — the PERIOD under Sales YoY (E6), and the two
+  // leg flags (E1 period_mismatch, E4 base_negative).
+  it('prints the fiscal PERIOD the growth legs are measured on, under Sales YoY', async () => {
+    stub([row({ period: 'FY2026 Q2', period_age_days: null, period_stale: null })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('AXTI')).toBeTruthy());
+    const r = screen.getByText('AXTI').closest('tr')!;
+    const per = within(r).getByText('FY2026 Q2');
+    expect(per.className).toContain('eg-period');
+    // it sits INSIDE the Sales YoY cell, not in a column of its own
+    expect(per.closest('td')!.textContent).toContain('+145.9%');
+    // no age is invented when the backend could not date the quarter end
+    expect(within(r).queryByText(/FY2026 Q2 · \d+d/)).toBeNull();
+    expect(within(r).queryByText(/⚠️ FY2026 Q2/)).toBeNull();
+  });
+
+  it('a period one report past due carries a ⚠️ and its age', async () => {
+    stub([row({ period: 'Q1 2026', period_age_days: 167, period_stale: true })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('AXTI')).toBeTruthy());
+    const r = screen.getByText('AXTI').closest('tr')!;
+    const per = within(r).getByText('⚠️ Q1 2026 · 167d');
+    expect(per.className).toContain('eg-warn');
+  });
+
+  it('NEGATIVE: a fresh dated period is NOT flagged', async () => {
+    stub([row({ period: 'Q2 2026', period_age_days: 76, period_stale: false })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('AXTI')).toBeTruthy());
+    const r = screen.getByText('AXTI').closest('tr')!;
+    expect(within(r).getByText('Q2 2026 · 76d').className).toContain('eg-dim');
+    expect(within(r).queryByText(/⚠️ Q2 2026/)).toBeNull();
+  });
+
+  it('NEGATIVE: no period on file prints an em-dash, never a made-up quarter', async () => {
+    stub([row({ period: null })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('AXTI')).toBeTruthy());
+    const r = screen.getByText('AXTI').closest('tr')!;
+    const sales = within(r).getByText('+145.9%').closest('td')!;
+    expect(within(sales).getByText('—').className).toContain('eg-period');
+    expect(within(r).queryByText(/FY\d{4} Q\d/)).toBeNull();
+  });
+
+  it('a negative year-ago base is a blank plus a ⚠️ — never printed as growth', async () => {
+    // DBRG-shaped: the backend blanks the leg and sets base_negative
+    stub([row({ symbol: 'DBRG', sales_growth_pct: null, base_negative: true })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('DBRG')).toBeTruthy());
+    const r = screen.getByText('DBRG').closest('tr')!;
+    expect(within(r).queryByText(/15,?961/)).toBeNull();
+    expect(within(r).getByText(/year-ago revenue base was ≤ 0/).className).toContain('eg-warn');
+  });
+
+  it('a pair of quarters that are not a year apart is said on the row', async () => {
+    stub([row({ symbol: 'ECHO', period_mismatch: true })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('ECHO')).toBeTruthy());
+    const r = screen.getByText('ECHO').closest('tr')!;
+    expect(within(r).getByText(/not a year apart/).className).toContain('eg-warn');
+  });
+
+  it('NEGATIVE: a clean row carries neither leg flag', async () => {
+    stub([row({ period: 'FY2026 Q2' })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('AXTI')).toBeTruthy());
+    const r = screen.getByText('AXTI').closest('tr')!;
+    expect(within(r).queryByText(/year-ago revenue base/)).toBeNull();
+    expect(within(r).queryByText(/not a year apart/)).toBeNull();
+  });
+
   it('groups by sector and shows the DENOMINATOR, not just the count', async () => {
     // "9 names" says nothing; "9 of 493" is the statement he asked for.
     stub([row()]);

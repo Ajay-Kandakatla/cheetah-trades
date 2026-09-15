@@ -180,6 +180,10 @@ def changes(current: dict, history: Optional[list] = None,
     rows = (snap.get("grains") or {}).get(grain) or []
     top = [r["group"] for r in rows[:top_n]]
     now = {r["group"]: r["rank"] for r in rows}
+    # The leg each rank was cut on, per group — so "entered" can require the
+    # group to actually be ABOVE the benchmark (2026-09-14, H2).
+    rank_key = snap.get("rank_key") or RANK_KEY
+    val = {r["group"]: _f(r.get(rank_key)) for r in rows}
 
     if prior is None:
         return {"baseline": None, "entered": [], "left": [], "moved": [],
@@ -188,8 +192,14 @@ def changes(current: dict, history: Optional[list] = None,
 
     was = _ranks(prior, grain)
     was_top = [g for g, r in sorted(was.items(), key=lambda kv: kv[1])[:top_n]]
+    # "＋ entered" is an INFLOW chip, so a group must be above the benchmark
+    # to earn it: on a red day the top band is the least-red, and Real Estate
+    # at -0.23 was printed as green money-in (2026-09-14). `left` stays
+    # unfiltered — dropping out of the band is information either way. The
+    # band itself (top_n) is NOT scaled per grain: his call.
     entered = [{"group": g, "rank": now[g], "prev_rank": was.get(g)}
-               for g in top if g not in was_top]
+               for g in top
+               if g not in was_top and val.get(g) is not None and val[g] > 0]
     left = [{"group": g, "rank": now.get(g), "prev_rank": was.get(g)}
             for g in was_top if g not in top]
     moved = []
@@ -202,7 +212,13 @@ def changes(current: dict, history: Optional[list] = None,
             moved.append({"group": g, "rank": r, "prev_rank": pr, "delta": d})
     moved.sort(key=lambda m: -abs(m["delta"]))
 
-    st = streaks([snap] + list(hist), grain)
+    # Streaks count today ONCE. `hist` comes from the same collection the scan
+    # writes today's snapshot into BEFORE this is read (context_refresh →
+    # history.store), so today's own `_id` is usually in it — and counting it
+    # behind `snap` printed "Communication Services #1 · 2d" on the very day
+    # it took #1 (2026-09-14, H1). Only sessions strictly BEFORE today count.
+    st = streaks([snap] + [h for h in hist if str(h.get("_id")) < snap["as_of"]],
+                 grain)
     return {"baseline": prior.get("as_of"), "entered": entered, "left": left,
             "moved": moved, "streaks": st, "top": top,
             "quiet": not (entered or left or moved)}

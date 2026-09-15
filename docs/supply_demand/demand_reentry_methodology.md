@@ -698,3 +698,39 @@ scores the same rule. `last_price=` alone (the Support tab hands the live
 print) prices the record without a bar behind it.
 
 Tests: `tests/test_zone_consistency_2026_09_14.py` (§1–2).
+
+---
+
+## 2026-09-14 review fixes — the Back in Demand page
+
+Four findings on the page itself, verified on the live board. Wording, windowing
+and truncation — none changes which names qualify (`is_reentry`, the R:R floor
+and the room floor are untouched).
+
+* **The page asked for `limit=60`, the route default, which truncates by R:R
+  BEFORE the page's default reversal-off-demand sort.** `rows.sort` is R:R-led on
+  the server (§ Order-dependent consumers) and `_apply_limit` cuts by position,
+  so the client-side sort only ever saw the sixty best-R:R rows. The page now
+  sends `limit=500` — the route's maximum (`Query(60, ge=1, le=500)`), never a
+  number of its own — on the read and the scan, so the client sort sees the
+  whole list. The server default is unchanged; other consumers
+  (`catalysts/signal_watch.py`) still read the R:R-led head. Guard:
+  `DemandReentryPanel.test.tsx` "asks for the route maximum limit=500".
+* **The help text said "S&P 500 names" while the payload said it scanned the
+  full universe.** The blurb and the empty state now print
+  `payload.universe_label` (falling back to the page's own universe label —
+  never a count).
+* **The row's price is the scan close; its room % is measured on the live
+  print.** A live-basis room read now ends "· now $px" (the `px` the server's
+  `room_block` measured on); a scan-basis read still says "· scan close"; the
+  header price carries a "scan close" tooltip.
+* **The row tooltip said "Bounce:" and the ℹ️ Rules panel said "Bouncing =";
+  he reads "reversal".** Both reworded; internal ids (`bounce_room`,
+  `zone_bounce_alert`, the route) keep their names. Guards: a Vitest sweep of
+  everything the board renders (text, tooltips, menu labels) for `\bbounc`, and
+  `test_no_push_title_or_chip_says_bounce_to_him` extended to the Rules panel's
+  served text.
+
+The ordering inconsistency found the same day (the backend key put a reversal
+INTO supply first; the page put it third) is written up in `bounce_room.md`
+§ Ordering; the track-record "vs SPY" window in `demand_track_record.md`.

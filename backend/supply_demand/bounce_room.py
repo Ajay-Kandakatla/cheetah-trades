@@ -78,10 +78,22 @@ ROOM    ``room_read``
 
 Ordering (pure, mirrored in frontend/src/lib/bounceRoom.ts)
 -----------------------------------------------------------
+  room_group(row)       0  bouncing AND room ok (CLEAR, or pct >= ALERT_MIN_ROOM_PCT)
+                        1  room ok, not bouncing
+                        2  bouncing but INTO supply (a MEASURED read under the floor)
+                        3  the rest: under-floor non-bouncers, IN_BAND, a bounce
+                           with no room read, pending, unavailable
   room_rank(row)        (0)       CLEAR first
                         (1, -room_pct)  ROOM / NEAR / IN_BAND, biggest room first
                         (2)       no room read (pending / unavailable) last
-  bounce_room_key(row)  (0 if bouncing else 1, *room_rank, -bounce_pct, symbol)
+  bounce_room_key(row)  (room_group, *room_rank, -bounce_pct, symbol)
+
+  Until 2026-09-14 the first key was "bouncing at all", which put a reversal
+  INTO supply (TRU, 0.3% under its lid) on top of the board while the page
+  and the ℹ️ Rules panel both said it sorts third. One rule now, mirrored by
+  frontend/src/lib/bounceRoom.ts roomGroup / compareBounceRoom and pinned by
+  a fixture both test suites read (tests/fixtures/bounce_room_order_mirror_
+  2026_09_14.json).
 
 Why CLEAR sorts FIRST: no supply band overhead in the 1y frame means the
 name is at/near its highs — its room is unbounded, not zero. Ajay treats
@@ -96,6 +108,8 @@ Constants (every one an owner setting; none is a book value)
   BOUNCE_MIN_PCT  3.0   zone_bounce_alerts (imported)
   STRONG_PCT      5.0   zone_bounce_alerts (imported)
   NEW_HIGH_TOL    0.98  zone_edge (imported)
+  ALERT_MIN_ROOM_PCT 5.0 alert_gates (imported) — the room floor the sort's
+                        first key groups by; the phone gate's own number
   LOOKBACK_SESSIONS 5   = zone_store.RECENT_SESSIONS (one truth)
   NEAR_PCT        2.0   supply_watch's NEAR line, re-stated (see ROOM)
   STALE_PRINT_SEC 180   a last trade older than 3 min is shown with
@@ -150,6 +164,7 @@ from typing import Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
 from . import zone_store
+from .alert_gates import ALERT_MIN_ROOM_PCT
 from .zone_bounce_alerts import (BOUNCE_MIN_PCT, STRONG_PCT, TOUCH_TOL_PCT, WICK_PCT,
                                  is_eligible, print_from_snapshot)
 from .zone_edge import NEW_HIGH_TOL, _clean as _json_clean
@@ -533,13 +548,79 @@ def room_rank(row: dict) -> tuple:
     return (2, 0.0)
 
 
+def _room_pct_to_compare(room: dict) -> Optional[float]:
+    """The pct the FLOOR compares: the server's unrounded `room_pct_raw` when
+    the block carries one (demand_reentry's room block, rounded to 1 dp for
+    display), else `room_pct`. Mirrors bounceRoom.ts effectiveRoomPct."""
+    raw = _f(room.get("room_pct_raw"))
+    return raw if raw is not None else _f(room.get("room_pct"))
+
+
+def room_ok(row: dict) -> bool:
+    """A MEASURED read that clears the phone floor: CLEAR (nothing overhead)
+    or pct >= ALERT_MIN_ROOM_PCT. NEAR is the server's own under-floor verdict
+    (reached on the raw pct, so 4.995% arriving as room_pct 5.0 + NEAR must
+    not pass); IN_BAND (0.0), pending, unavailable, None and malformed reads
+    are all False — an unknown room is not room. Mirrors bounceRoom.ts roomOk."""
+    room = (row or {}).get("room") or None
+    if not isinstance(room, dict):
+        return False
+    state = room.get("state")
+    if state == "CLEAR":
+        return True
+    if state == "NEAR":
+        return False
+    pct = _room_pct_to_compare(room)
+    return pct is not None and pct >= ALERT_MIN_ROOM_PCT
+
+
+def into_supply(row: dict) -> bool:
+    """A MEASURED read UNDER the floor (ROOM / NEAR < ALERT_MIN_ROOM_PCT,
+    IN_BAND). Never CLEAR, at-floor, or an absent read — the ⛔ must name a
+    band the print is heading into, not a missing read. Mirrors
+    bounceRoom.ts intoSupply."""
+    room = (row or {}).get("room") or None
+    if not isinstance(room, dict):
+        return False
+    state = room.get("state")
+    if state not in ("ROOM", "NEAR", "IN_BAND"):
+        return False
+    if state == "NEAR":
+        return True
+    pct = _room_pct_to_compare(room)
+    return pct is not None and pct < ALERT_MIN_ROOM_PCT
+
+
+def room_group(row: dict) -> int:
+    """The sort's FIRST key (Ajay 2026-09-05, TRU: "It already gapped up very
+    close to the resistance. Why is it still in in Demand page?"):
+        0 — bouncing AND room ok   (the phone-grade read: off demand, room to run)
+        1 — room ok, not bouncing
+        2 — bouncing but INTO supply (measured room under the floor) — flagged ⛔
+        3 — everything else: under-floor non-bouncers, IN_BAND, a bounce with
+            an unknown room, pending, unavailable, None
+    Mirrors bounceRoom.ts roomGroup exactly."""
+    ok = room_ok(row)
+    bouncing = bool((row or {}).get("bounce"))
+    if bouncing and ok:
+        return 0
+    if ok:
+        return 1
+    if bouncing and into_supply(row):
+        return 2
+    return 3
+
+
 def bounce_room_key(row: dict) -> tuple:
-    """Sort key shared by all three surfaces: bouncing names first, then
-    room_rank, then the bigger bounce, then the symbol (stable)."""
+    """THE one sort for all three surfaces (mirrors bounceRoom.ts
+    compareBounceRoom byte for byte): room_group, then room_rank, then the
+    bigger bounce, then the symbol (stable). Until 2026-09-14 the first key
+    was "bouncing at all", which put a reversal INTO supply above every
+    room-ok name while the page and the ℹ️ Rules panel said it sorts third."""
     bounce = (row or {}).get("bounce") or None
-    bouncing = 0 if bounce else 1
     bounce_pct = _f((bounce or {}).get("bounce_pct")) or 0.0
-    return (bouncing,) + tuple(room_rank(row)) + (-bounce_pct, str((row or {}).get("symbol") or ""))
+    return ((room_group(row),) + tuple(room_rank(row))
+            + (-bounce_pct, str((row or {}).get("symbol") or "")))
 
 
 def print_of(snap: Optional[dict], now_ts: float,

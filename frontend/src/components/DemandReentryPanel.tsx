@@ -1,4 +1,6 @@
-/* DemandReentryPanel — S&P 500 names entering BACK INTO a demand zone.
+/* DemandReentryPanel — names entering BACK INTO a demand zone. The universe
+ * is whatever the payload says it scanned (`universe_label`; the SEPA `full`
+ * alias since 2026-08-25) — the page never hard-codes it.
  *
  * Ajay 2026-08-13: "update my Supply and demand page with stocks that entering
  * back in to demand zones and give me a scan button … scan only S&P 500."
@@ -48,6 +50,9 @@ type ServerRoom = {
   target_kind: string | null;
   state: RoomState;
   basis: 'live' | 'scan';
+  /** the print the room was measured on (room_floor.room_block, 2 dp) — the
+   *  LIVE print when basis is 'live', which is not the row's scan close */
+  px?: number | null;
 };
 
 type ReentryRow = ZoneMapPayload & { room?: ServerRoom | null };
@@ -106,6 +111,15 @@ const STALE_DAYS_LOUD = 120;
  * bookmarked URLs still resolve to this same scan. */
 const UNIVERSE = 'full';
 const UNIVERSE_LABEL = 'Full universe (Russell 3000 ∪ S&P 1500 ∪ themes)';   // 2026-09-07: R3000, see sepa/universe.py
+
+/* The route's maximum page (`GET /supply-demand/demand-reentry`,
+ * `limit: int = Query(60, ge=1, le=500)` in backend/supply_demand/api.py).
+ * Review 2026-09-14: the server's default 60 truncates the list by R:R
+ * (`rows.sort` is R:R-led, `_apply_limit` cuts by position) BEFORE the page's
+ * default reversal-off-demand sort ever sees it, so the top of this board was
+ * "the best-R:R sixty, re-sorted", not the board. Ask for the maximum so the
+ * client sort sees the whole list. Not a number of ours — the route's cap. */
+const API_LIMIT_MAX = 500;
 
 /* Sort keys. 🪃 bounce · room leads (Ajay 2026-09-05: "for in demand Make sure
  * you sort stocks by bouncing off of demand zone and have big gap in to
@@ -196,7 +210,7 @@ export function DemandReentryPanel() {
     setErr(null);
     try {
       const u = `universe=${encodeURIComponent(universe)}&min_rr=${encodeURIComponent(minRr)}`
-        + `&min_room=${encodeURIComponent(minRoom)}`;
+        + `&min_room=${encodeURIComponent(minRoom)}&limit=${API_LIMIT_MAX}`;
       const r = force
         ? await fetch(`${API}/supply-demand/demand-reentry/scan?${u}`, {
             method: 'POST', credentials: 'include',
@@ -256,7 +270,7 @@ export function DemandReentryPanel() {
       <ZoneEdgeBoard mode="both" />
 
       <div className="sepa-tab-help">
-        <strong>🟢 Back in demand</strong> — S&P 500 names that ran up, then pulled
+        <strong>🟢 Back in demand</strong> — {data?.universe_label ?? UNIVERSE_LABEL} names that ran up, then pulled
         back <em>into</em> a demand band they had already left, while the structure
         still holds. Sorted <strong>🪃 reversal off demand WITH room first</strong>, then
         names with room, then reversals heading straight into a band (⛔), then the rest
@@ -382,7 +396,7 @@ export function DemandReentryPanel() {
       {data && data.rows.length === 0 && !busy && !data.warming && (
         <div style={{ color: 'var(--cm-slate)', padding: '1rem' }}>
           Nothing is pulling back into demand right now across {data.scanned}{' '}
-          {data.universe_label ?? 'S&P 500'} names. That is a real answer, not an empty list — press Scan after the close
+          {data.universe_label ?? UNIVERSE_LABEL} names. That is a real answer, not an empty list — press Scan after the close
           to re-check.
         </div>
       )}
@@ -425,7 +439,16 @@ export function DemandReentryPanel() {
              * live print says so — a 0.3% room on a stale print is a different
              * claim from 0.3% now. */
             const roomBase = brRow?.coverage === 'pending' && !r.room ? '' : roomLabel(brRow);
-            const room = roomBase && r.room?.basis === 'scan' ? `${roomBase} · scan close` : roomBase;
+            /* Review 2026-09-14: the header price is the SCAN close while a
+             * live-basis room % is measured on the LIVE print — two prices on
+             * one row with nothing saying so. A live read now names the print
+             * it was measured on (the server block's `px`). */
+            const livePx = r.room?.basis === 'live' && r.room.px != null && Number.isFinite(r.room.px)
+              ? r.room.px : null;
+            const room = !roomBase ? roomBase
+              : r.room?.basis === 'scan' ? `${roomBase} · scan close`
+              : livePx != null ? `${roomBase} · now ${money(livePx)}`
+              : roomBase;
             return (
               <div key={r.symbol} style={{
                 padding: '0.6rem 0.75rem', borderRadius: 10,
@@ -440,7 +463,10 @@ export function DemandReentryPanel() {
                           tab="supply" fromKey="supply-demand" />
                   <AlertedTodayChip symbol={r.symbol} hit={alerted.get(r.symbol.toUpperCase())} />
                   <span style={{ fontSize: '0.78rem', opacity: 0.8 }}>{r.name}</span>
-                  <span className="mono" style={{ fontSize: '0.74rem' }}>{money(r.last_price)}</span>
+                  <span className="mono" style={{ fontSize: '0.74rem' }}
+                        title="Scan close. A room read measured on the live print names that print on the room line (· now $…).">
+                    {money(r.last_price)}
+                  </span>
                   <span style={{
                     fontSize: '0.62rem', padding: '1px 7px', borderRadius: 999,
                     background: 'rgba(34,197,94,0.16)', color: '#22c55e', fontWeight: 600,
@@ -468,7 +494,7 @@ export function DemandReentryPanel() {
                   * the Portfolio sell side). Owner settings, not advice. */}
                 {(bounce || room || (brRow?.coverage === 'pending' && !r.room)) && (
                   <div className="mono" style={{ fontSize: '0.72rem', marginTop: '0.2rem', opacity: 0.85 }}
-                       title={`Bounce: the session low touched a demand band or broken-supply shelf within the last 5 sessions and price is now at least 3% / one ATR above it. Room: % from the print to the first unbroken band overhead (${r.room?.target_kind ? `here a ${r.room.target_kind} band, ` : ''}${r.room ? `measured on the ${r.room.basis === 'live' ? 'live print' : "scan's close"}` : 'bounce-room read'}); open sky = nothing overhead in the 1-year frame; ⛔ = under the ${ROOM_MIN_PCT}% floor the phone gate uses. Configured price-structure read (owner settings), not advice.`}>
+                       title={`Reversal: the session low touched a demand band or broken-supply shelf within the last 5 sessions and price is now at least 3% / one ATR above it. Room: % from the print to the first unbroken band overhead (${r.room?.target_kind ? `here a ${r.room.target_kind} band, ` : ''}${r.room ? `measured on the ${r.room.basis === 'live' ? 'live print' : "scan's close"}` : 'reversal-room read'}); open sky = nothing overhead in the 1-year frame; ⛔ = under the ${ROOM_MIN_PCT}% floor the phone gate uses. Configured price-structure read (owner settings), not advice.`}>
                     {bounce && <span style={{ color: '#22c55e', fontWeight: 600 }}>{bounce}</span>}
                     {bounce && (room || (brRow?.coverage === 'pending' && !r.room)) && ' · '}
                     {room.startsWith('⛔') ? <span style={{ color: '#ef4444', fontWeight: 600 }}>{room}</span> : room}

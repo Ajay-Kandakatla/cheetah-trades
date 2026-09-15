@@ -13,7 +13,7 @@ method** — decision support, not a buy signal, not advice.
 |---|---|
 | Names | every row of the demand board: `approaching_rows` (falling toward a tested band — `demand_reentry.approaching_read`) and `rows` (back inside one). The board already applied MIN_TOUCHES / MIN_ZONE_STRENGTH, the falling-knife guard, `trend_ok` and the 5-bar drift predicate ([demand_reentry_methodology.md](demand_reentry_methodology.md)). |
 | Source | the board **over HTTP** from the api container (`INTERNAL_API_BASE`, default `http://api:8000`, header `X-User-Email: cron@internal`) — its cache is process-local, see the 2026-08-15 crontab note. Warming or unreachable = "nothing to watch", never an error. Same pattern as `orderflow/trade_flash.py`. |
-| Live read | `sepa.prices.bulk_live_prices` (price + `change_pct`) against each band, every 5 min in RTH. |
+| Live read | `sepa.prices.bulk_snapshot` → the last **trade** through `zone_bounce_alerts.print_from_snapshot` (stale > `STALE_PRINT_SEC` = 600 s → skipped, counted `stale_print`) against each band, every 5 min in RTH. Until 2026-09-14 this was `bulk_live_prices()['price']` — the day aggregate's close, no stamp. |
 | Cap gate | `catalysts.promo_circuit.market_caps_for` (weekly shares cache × live print). **Unknown cap is skipped** — "big companies" means a *known* $1B+; an ETF or a name the shares cache never saw does not qualify. (The promo board keeps unknowns *visible* for the opposite reason.) |
 | Kind | `demand_alert` — new kind, default on (`push/subs.py`), separately mutable at /notifications; in the *Essentials* preset. |
 
@@ -29,13 +29,14 @@ method** — decision support, not a buy signal, not advice.
 **Arrivals only** — the first dry run (2026-09-03, after the close) found **58** names already
 inside a band (the reached board's whole population) and 18 nearing: 58 pushes at 9:33. A name that
 closed in the band yesterday is the board's business; the phone gets the day it *arrives*
-(`prev_day_close` from `bulk_live_prices`). A reclaim from under the floor counts as an arrival.
+(`prev_day_close` from the snapshot). A reclaim from under the floor counts as an arrival.
 
 Dedupe: Mongo `demand_alert_state`, `_id = SYM:lo-hi:YYYY-MM-DD:tier` (**fixed 2 dp since
 2026-09-05**, `NTAP:180.00-183.50:2026-09-05:at`; `:g` collapsed two bands on a $10,000+ name; the key
 is shared with `zone_edge`'s near-demand side, so both changed together — a weekend deploy, no
-same-day re-push). Written only on a *terminal* outcome (delivered, or nobody targeted — muted pref /
-no device); a transport failure retries next pass.
+same-day re-push). Since 2026-09-14 the key is **claimed before the send** (`claim_key`, atomic) and
+released on a transport failure, so a failed send still retries next pass and "nobody targeted"
+(muted pref / no device) is still terminal — see the review note at the end.
 
 Session gate: 9:32–16:00 ET on NYSE trading days — weekends AND the house holiday calendar
 (`market_hours.reminder.is_market_day`, fix 2026-09-05), module refuses outside. Cron:
@@ -163,6 +164,23 @@ kind `pivot_alert`, once per (ticker, band, day). Added 2026-09-03:
   arrival. Pre-09-03 docs have no `tier` and count as "at".
 * Still `pivot_alert` — the curated list gains no new kind (standing 2026-06-24 keep-set).
 
+### 2026-09-14 review fixes (G3, G4)
+
+* **G3 — no devices, no pass.** Since the 2026-09-09 keep-set no device's prefs allow
+  `pivot_alert`, yet the 10-minute cron kept reading live prices, calling the sender and
+  writing a `push_history` row `sent 0/0` on every hit. `check_once` now asks
+  `push.subs.list_subscriptions(filter_kind="pivot_alert", honor_quiet_hours=False)` first and
+  returns `{"ran": False, "reason": "no devices subscribed", "kind": "pivot_alert"}` before the
+  price read, the send and the ledger write. `push=False` (the smoke-test path) still runs the
+  pass and reports hits; a subscription-read failure counts as "subscribed" so a Mongo hiccup
+  never silences a pass that had devices. `pivot_alert` is NOT added to the keep-set — his call.
+* **G4 — the body says which side.** `{sym} $x 0.9% below Gabbar aggressive ($lo–$hi)` /
+  `0.9% above …` — the 1% ring used to print a sideless `0.9% from`, so a level price had
+  closed THROUGH (NFLX, six closes under its band) read like a touch. The `near` tier was
+  already "above". Same wording on the Chart Maps tile (`board.gabbar_tiles`).
+
+Tests: `backend/tests/test_deep_gabbar_review_fixes_2026_09_14.py` (`test_g3_*`, `test_g4_*`).
+
 ## Traps
 
 * **NTAP has no Gabbar level** (`gabbar_levels.get_bands("NTAP")` → None) and on 2026-09-03
@@ -187,3 +205,30 @@ o=m.check_once(push=False, force=True); print({k:v for k,v in o.items() if k!=\"
 ```
 
 Tests: `backend/tests/test_demand_alerts.py`, `backend/tests/test_gabbar_watch.py`.
+
+## 2026-09-14 review fixes
+
+Verified on live data 2026-09-14; tests in `tests/test_alerts_review_fixes_2026_09_14.py`.
+
+* **Fresh print.** The pass priced off `bulk_live_prices()['price']` — the day aggregate's
+  close, which lagged ~3 h on 2026-09-03 and carried no stamp to notice it by — while
+  `zone_edge` (180 s) and `zone_bounce_alerts` (600 s) refused stale trades. Now
+  `prices.bulk_snapshot` → `live_from_snapshot`: the last trade, kept only within
+  `zone_bounce_alerts.STALE_PRINT_SEC` (600 s, the other 5-minute pass's window — no new
+  number). Stale names are dropped and counted `stale_print`; `priced` is reported too, so
+  `/alerts/status` reads like the other two passes. `check_once(live=…)` still accepts an
+  already-priced map (tests); the cron path takes `snapshot=`.
+* **Atomic dedupe with `zone_edge`.** `claim_key` / `release_key` / `claim` (the 🧲 doc shape,
+  now stamped `source`) replace `_already` + `_record`: claim first, send, release if the send
+  does not terminate. Whichever pass inserts the key owns the push; the other counts
+  `claimed_elsewhere`. Per-day semantics unchanged.
+* **Overlapping level = one push.** `recorded_today(coll, symbols, day)` — one `$in` on
+  `symbol`, the day read off the key — feeds `overlapping_key`: a candidate band overlapping
+  any band already rung for the name today is skipped (`skipped_overlap`), still listed in
+  `hits`. This is what stops a broken-supply shelf and the demand band under it ringing twice
+  with two stops (finding 2 of the review; the shelf rings from `zone_edge`, the band from
+  here or there).
+* **The floor read sees the session**: `sweep_read(..., day_low=, last=, day=)` from the
+  snapshot's `low` and the print — [stop_hunt.md](stop_hunt.md).
+* Not changed: `AT_PCT` / `NEAR_PCT`, the cap floor, the arrival rule, every gate.
+

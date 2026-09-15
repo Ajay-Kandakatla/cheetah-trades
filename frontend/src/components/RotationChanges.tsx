@@ -101,22 +101,28 @@ export function moverLines(p: RcPayload, cap = MAX_MOVERS): { lines: RcLine[]; e
   };
   const crossings: RcLine[] = [];
   const shifts: RcLine[] = [];
+  // Every chip names its GRAIN (2026-09-14): "Consumer Defensive 7→4" is a
+  // rank among 11 sectors and "Software - Application 73→9" a rank among ~73
+  // industries, and without the tag the two read as the same kind of move.
+  // Sectors are kept, not excluded — his call.
   for (const g of Object.keys(grains)) {
     const c = grains[g] || {};
+    const tag = ` · ${grainTag(g)}`;
     for (const m of c.entered || [])
       push(crossings, g, m, 'in',
-           `＋ ${m.group} ${m.prev_rank ? `${m.prev_rank}→${m.rank}` : `#${m.rank}`}`);
+           `＋ ${m.group} ${m.prev_rank ? `${m.prev_rank}→${m.rank}` : `#${m.rank}`}${tag}`);
     for (const m of c.left || [])
       push(crossings, g, m, 'out',
-           `－ ${m.group} ${m.rank ? `${m.prev_rank}→${m.rank}` : 'dropped out'}`);
+           `－ ${m.group} ${m.rank ? `${m.prev_rank}→${m.rank}` : 'dropped out'}${tag}`);
   }
   for (const g of Object.keys(grains)) {
     const c = grains[g] || {};
+    const tag = ` · ${grainTag(g)}`;
     const ranked = [...(c.moved || [])].sort(
       (a, b) => Math.abs(b.delta ?? 0) - Math.abs(a.delta ?? 0));
     for (const m of ranked)
       push(shifts, g, m, (m.delta ?? 0) > 0 ? 'up' : 'dn',
-           `${(m.delta ?? 0) > 0 ? '▲' : '▼'} ${m.group} ${m.prev_rank ?? '—'}→${m.rank ?? '—'}`);
+           `${(m.delta ?? 0) > 0 ? '▲' : '▼'} ${m.group} ${m.prev_rank ?? '—'}→${m.rank ?? '—'}${tag}`);
   }
   const all = [...crossings, ...shifts];
   // Never silently truncate: what does not fit is COUNTED, so the line can

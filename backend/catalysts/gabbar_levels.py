@@ -47,6 +47,28 @@ TRACKED_NO_LEVELS = (
 )
 
 
+# Split adjustments (review 2026-09-14, G1). The Pine table is a snapshot of
+# the author's hand-drawn levels and does NOT re-base on a split, so a row
+# drawn on the OLD shares reads as a level tens of times above the tape
+# ("1442% past the nearest Gabbar band" on a $175 BKNG). This is the ONE
+# mechanical change a level may take — Ajay's rule: the levels are his
+# author's, never added, moved or deleted here except for a split verified
+# from DATA. `get_bands` divides lo/hi by `ratio` and reports it.
+#
+# BKNG — verified in the api container 2026-09-14, not from memory:
+#   * Massive /v3/reference/splits: execution_date 2026-04-06,
+#     split_from 1, split_to 25.
+#   * Massive daily aggs, unadjusted vs adjusted close 2026-04-01:
+#     4184.56 / 167.3824 = 25.0 exactly; from 2026-04-06 the ratio is 1.0.
+#   * The snapshot date (2026-05-17) is AFTER the split, but the adjusted
+#     close that day was 154.13 and the table's aggressive band 3700-3900
+#     divided by 25 is 148-156 — the band brackets the print exactly as the
+#     author's "closest to current action" framing says it should.
+SPLITS: dict[str, dict] = {
+    "BKNG": {"ratio": 25.0, "date": "2026-04-06"},
+}
+
+
 def _pair(*nums: float) -> list[tuple[float, float]]:
     """Group an even-length sequence of numbers into (lo, hi) pairs.
     Auto-normalizes order so the caller can paste numbers directly
@@ -85,7 +107,7 @@ BANDS: dict[str, list[tuple[float, float]]] = {
     "V":     _pair(295, 305, 265, 275, 250, 255),
     "JPM":   _pair(275, 280, 255, 260, 225, 230, 200, 210),
     "MA":    _pair(465, 475, 425, 435, 360, 370),
-    "BKNG":  _pair(3700, 3900, 3200, 3400, 2700, 2900),
+    "BKNG":  _pair(3700, 3900, 3200, 3400, 2700, 2900),   # pre-split; see SPLITS
     "HD":    _pair(270, 285, 243, 255),
     "GS":    _pair(690, 720, 440, 460),
     "PG":    _pair(135, 140, 120, 130),
@@ -167,6 +189,10 @@ def get_bands(symbol: str) -> Optional[dict]:
     Labels follow the script's own framing: the first (highest) band
     is the closest-to-current-action "aggressive" entry, deeper bands
     are progressively more conservative.
+
+    A symbol in SPLITS has every band divided by the verified ratio and
+    the payload carries ``split_adjusted`` (the ratio) and ``split_date``
+    so the tile can say the level was re-based, not redrawn.
     """
     if not symbol:
         return None
@@ -174,16 +200,25 @@ def get_bands(symbol: str) -> Optional[dict]:
     if key not in BANDS:
         return None
     pairs = BANDS[key]
+    split = SPLITS.get(key) or {}
+    ratio = float(split.get("ratio") or 1.0)
+    if ratio <= 0:
+        ratio = 1.0
     labels = ["aggressive"] + [f"conservative {i}" for i in range(1, len(pairs))]
     out_bands = [
-        {"lo": float(lo), "hi": float(hi), "label": labels[i]}
+        {"lo": round(float(lo) / ratio, 2), "hi": round(float(hi) / ratio, 2),
+         "label": labels[i]}
         for i, (lo, hi) in enumerate(pairs)
     ]
-    return {
+    out = {
         "symbol":      key,
         "bands":       out_bands,
         "attribution": BAND_ATTRIBUTION,
     }
+    if ratio != 1.0:
+        out["split_adjusted"] = ratio
+        out["split_date"] = split.get("date")
+    return out
 
 
 def list_covered_symbols() -> list[str]:

@@ -660,19 +660,92 @@ def reversal_mood_txt(read: Optional[dict]) -> str:
 SWEEP_WINDOW_BARS = 15       # how far back a sweep may live and still be "now"
 
 
-def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS) -> Optional[dict]:
+def with_session_bar(df, day_low, last=None, day=None):
+    """The daily frame plus TODAY's session as its last row, from the live
+    snapshot's day low and the print (review 2026-09-14, finding 4).
+
+    The cached daily frame is refreshed by the 16:30 fast-scan, so during the
+    session its last row is YESTERDAY — a floor swept and reclaimed this
+    morning was invisible to `sweep_read` and the band read `intact`. This
+    appends `{low: day_low, close: print}` as a synthetic row when the frame's
+    last index is before `day`, or MERGES it into the last row when the frame
+    already holds today (the hourly `vcp-watch` patch puts today's in-progress
+    bar into the shared cache from ~10:00 ET): low = min(row.low, day_low),
+    close = the print. Returns a COPY — the price cache hands out its own
+    frame object and nothing here may write into it.
+
+    The forming bar's volume is NaN on purpose. `sd_liquidity.find_sweep`
+    compares a sweep bar's volume with the 30-bar average and calls a quiet
+    dip "no absorption" (not a sweep) — a session's PARTIAL volume at 09:40
+    would always read quiet, and a floor pierced this morning would fall
+    through to `intact` again. NaN fails no comparison, so a pierce today
+    classifies on price alone (swept if the print is back above the floor,
+    broken if not); the volume multiple is simply unknown (`vol_x` None).
+
+    Unknown day low (None / garbage) = the frame unchanged, which is exactly
+    today's read — nothing is loosened and nothing new is assumed."""
+    dl = _f(day_low)
+    if df is None or len(df) == 0 or dl is None or dl <= 0:
+        return df
+    try:
+        import pandas as pd
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo as _ZI
+        day = day or _dt.now(_ZI("America/New_York")).date()
+        last_date = pd.Timestamp(df.index[-1]).date()
+        px = _f(last)
+        px = px if px is not None and px > 0 else None
+        close = px if px is not None else dl
+        if last_date < day:
+            cols = list(df.columns)
+            row = {k: float("nan") for k in cols}
+            for k, val in (("open", close), ("high", max(close, dl)), ("low", min(close, dl)),
+                           ("close", close), ("volume", float("nan"))):
+                if k in row:
+                    row[k] = val
+            ts = pd.Timestamp(f"{day.isoformat()} 04:00:00")     # the frame's convention
+            if getattr(df.index, "tz", None) is not None:
+                ts = ts.tz_localize(df.index.tz)
+            out = pd.concat([df, pd.DataFrame([row], index=[ts], columns=cols)])
+            out.index.name = df.index.name
+            return out
+        if last_date == day:
+            out = df.copy()
+            i = len(out) - 1
+            if "low" in out.columns:
+                cur = _f(out.iloc[i, out.columns.get_loc("low")])
+                out.iloc[i, out.columns.get_loc("low")] = dl if cur is None else min(cur, dl)
+            if px is not None and "close" in out.columns:
+                out.iloc[i, out.columns.get_loc("close")] = px
+                if "high" in out.columns:
+                    cur_h = _f(out.iloc[i, out.columns.get_loc("high")])
+                    out.iloc[i, out.columns.get_loc("high")] = px if cur_h is None else max(cur_h, px)
+            return out
+        return df                                     # a frame from the future: leave it
+    except Exception:                                # noqa: BLE001
+        return df
+
+
+def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS,
+               day_low=None, last=None, day=None) -> Optional[dict]:
     """{"state","pierce_pct","reclaim_bars","vol_x","sweep_low","stop_shelf"} or
     None when it cannot be computed.
 
     CLOSED BARS PLUS THE EVENT BAR: the day's low and close are both known at
     the moment a push is decided, so the forming bar is legitimate HERE (unlike
     the structure reads) — a stop run that happened this morning is the whole
-    point. Nothing after the decision bar is ever touched."""
+    point. Nothing after the decision bar is ever touched.
+
+    `day_low` / `last` (2026-09-14): the live session's low and print, merged
+    in as the event bar by `with_session_bar` — without them the cached frame
+    ends yesterday and this morning's sweep is invisible. Callers that have a
+    snapshot pass them; a caller without a day low gets the old read."""
     if not _valid_band(band):
         return None
     df = daily_frame(symbol, frame)
     if df is None or len(df) < window + 2:
         return None
+    df = with_session_bar(df, day_low, last, day)
     try:
         from . import sd_liquidity as liq
         lo, hi = float(band["lo"]), float(band["hi"])
@@ -684,7 +757,7 @@ def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS) -
         return {"state": state,
                 "pierce_pct": sw.get("pierce_pct"),
                 "reclaim_bars": sw.get("reclaim_bars"),
-                "vol_x": sw.get("sweep_volume_x"),
+                "vol_x": _f(sw.get("sweep_volume_x")),   # NaN (a forming bar's volume) -> None
                 "sweep_low": sw.get("sweep_low"),
                 "stop_shelf": sw.get("stop_shelf")}
     except Exception:                                # noqa: BLE001
@@ -760,11 +833,13 @@ FLOOR_HELD_STATES = ("intact",)
 
 
 def floor_held_gate(band, symbol=None, frame=None, read=None,
-                    allowed=FLOOR_HELD_STATES) -> bool:
+                    allowed=FLOOR_HELD_STATES, day_low=None, last=None, day=None) -> bool:
     """True when the demand band's floor has NOT been pierced in the sweep
     window. Unreadable = False (fails closed), same side every other phone gate
-    fails on."""
-    r = read if isinstance(read, dict) else sweep_read(band, symbol, frame)
+    fails on. `day_low` / `last` / `day` ride through to `sweep_read` so the
+    session in progress counts (2026-09-14); a `read` passed in wins."""
+    r = read if isinstance(read, dict) else sweep_read(band, symbol, frame,
+                                                       day_low=day_low, last=last, day=day)
     if not isinstance(r, dict):
         return False
     st = r.get("state")

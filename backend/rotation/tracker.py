@@ -266,9 +266,32 @@ HAVEN_PROXY = {
 }
 
 
-def _bars_for(symbol: str, days: int = BARS):
-    from chart_maps.board import bars_for
-    return bars_for(symbol, days=days)
+def _bars_for(symbol: str, days: int = BARS, now_et=None) -> list:
+    """CLOSED daily bars only, the shape chart_maps.board.bars_for emits.
+
+    Until 2026-09-14 this called `chart_maps.board.bars_for`, which overlays
+    TODAY's live bar (prices.with_today_bar) for the tiles — right for a chart,
+    wrong for a daily rotation read: from ~12:31 ET a Chart Maps visit that
+    missed the 30-minute cache rebuilt the strip on four closed sessions plus a
+    partial one, and every 1-day / 5-day leg moved with the tape (H5).
+
+    The frame is read straight from the shared price cache and today's
+    in-progress row is split off with `demand_reentry.split_today_partial` —
+    the ONE session test the app already has (last row dated today AND the
+    session not yet complete). After 16:00 ET the bar is whole and stays. A
+    frame ending on a prior day is returned untouched. `now_et` is for tests.
+    """
+    from chart_maps.board import _frame_to_bars, _norm_frame
+    from sepa import prices as P
+    from supply_demand.demand_reentry import split_today_partial
+
+    df = _norm_frame(P.load_prices(symbol.upper()))
+    if df is None:
+        return []
+    closed, _today = split_today_partial(df, now_et=now_et)
+    if closed is None or not len(closed):
+        return []
+    return _frame_to_bars(closed.tail(max(1, int(days or BARS))))
 
 
 def _load(symbols: Iterable[str]) -> dict:

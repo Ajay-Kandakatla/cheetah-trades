@@ -138,3 +138,35 @@ identical to a healthy one.
 | Empty means empty | `test_an_empty_ledger_answers_with_nulls_rather_than_a_fake_zero`, `never prints a win rate for a ledger with nothing graded` |
 | Mongo down ≠ page down | `test_no_mongo_is_reported_and_never_raises` |
 | Recording precedes limit and floor | `test_recording_happens_before_the_limit_and_before_the_rr_floor` |
+
+---
+
+## 2026-09-14 review fixes — the "vs SPY" window
+
+Two findings against `resolve_open`, both verified on live episodes. Neither changes
+what is graded or how; only how the benchmark column is measured.
+
+* **SPY started on the observation day; the trade starts at the next open.**
+  `benchmark_return` was handed `first_seen`, so every excess figure carried one
+  session of SPY the trade never held — the session the board was published on.
+  It is now handed the stored `entry_date`, the same `_date_at(df, i + 1)` window
+  `zone_backtest` scores. Guards:
+  `test_track_record_spy_window_starts_at_the_entry_open_not_the_observation_day`,
+  `test_resolve_open_passes_the_entry_date_it_stores_to_the_benchmark`.
+* **A stale SPY frame was clamped, not refused.** The resolve runs at 17:40 ET and
+  SPY's cached frame was a session stale; `zone_backtest.benchmark_return` clamped
+  the window to the frame's last bar, so SPY was scored over a *shorter* window than
+  the trade and the difference reported as excess. The benchmark is now refetched
+  once per run (`load_prices(BENCHMARK, force=True)`, the cached frame as the
+  fallback when the refetch fails), and a window that runs past the frame returns
+  `None` → `spy_pct` / `excess_pct` `None`, which `accuracy()` already skips — never
+  counted as 0. Guards:
+  `test_a_spy_frame_that_stops_short_of_the_exit_yields_no_excess_not_a_clamped_one`,
+  `test_resolve_refetches_spy_ONCE_per_run_not_per_episode`,
+  `test_resolve_falls_back_to_the_cached_spy_when_the_refetch_fails`,
+  `test_accuracy_skips_an_unmeasured_spy_window_never_counts_it_as_zero`.
+
+Episodes graded before 2026-09-14 still carry the old-window `spy_pct` / `excess_pct`.
+Re-grading them is a one-off data fix on the live ledger, not part of this change.
+
+All in `backend/tests/test_demand_board_review_fixes_2026_09_14.py`.

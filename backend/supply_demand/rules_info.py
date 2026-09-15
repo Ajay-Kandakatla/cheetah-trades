@@ -392,8 +392,8 @@ def sections() -> dict:
     }
 
     bounce = [
-        "Bouncing = a session low in the last %d sessions touched a demand band (or a supply "
-        "band already broken above) and the print is ≥ max(%s, 1 ATR) above it."
+        "Reversal off demand = a session low in the last %d sessions touched a demand band "
+        "(or a supply band already broken above) and the print is ≥ max(%s, 1 ATR) above it."
         % (BR.LOOKBACK_SESSIONS, _pct(BR.BOUNCE_MIN_PCT)),
         "Room = distance to the first unbroken PROVEN band overhead: CLEAR, ROOM, NEAR (≤ %s), or "
         "IN_BAND; at highs = print ≥ %d%% of the 252-bar high."

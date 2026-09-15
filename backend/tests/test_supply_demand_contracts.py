@@ -352,18 +352,24 @@ def test_bounce_room_owner_settings_locked():
                          "stale_print_sec": 180, "new_high_tol": 0.98}
 
 
-def test_bounce_room_ordering_puts_CLEAR_first_and_bouncing_before_room():
+def test_bounce_room_ordering_puts_CLEAR_first_and_room_group_before_room():
     """CLEAR = no supply overhead in the 1y frame = unbounded room, not zero.
     Ajay treats names clearing their last supply as the ones 'likely to go
-    much higher' (EOSE / CLYM in the ask). The frontend mirrors this key."""
+    much higher' (EOSE / CLYM in the ask). The frontend mirrors this key.
+
+    Pin changed 2026-09-14 (review): the first key is `room_group` — the
+    page's rule (bouncing+room, room, bouncing INTO supply, rest) — not
+    'bouncing at all', which put a reversal into supply on top of the board.
+    The two implementations are pinned against one fixture in
+    test_demand_board_review_fixes_2026_09_14.py / bounceRoom.test.ts."""
     from supply_demand import bounce_room as BR
     src = inspect.getsource(BR.room_rank)
     assert 'if state == "CLEAR":\n        return (0, 0.0)' in src
     assert 'if state in ("ROOM", "NEAR", "IN_BAND"):' in src and "return (1, -pct)" in src
     assert "return (2, 0.0)" in src, "no room read sorts last"
     key = inspect.getsource(BR.bounce_room_key)
-    assert "bouncing = 0 if bounce else 1" in key
-    assert "return (bouncing,) + tuple(room_rank(row)) + (-bounce_pct" in key
+    assert "bouncing = 0 if bounce else 1" not in key, "the pre-2026-09-14 first key"
+    assert "(room_group(row),) + tuple(room_rank(row))" in key and "(-bounce_pct" in key
 
 
 def test_bounce_room_has_no_arrival_gate_the_filter_counts_residence_bounces():
@@ -913,6 +919,36 @@ def test_no_push_title_or_chip_says_bounce_to_him():
             "bands": [{"kind": "demand", "lo": 161.78, "hi": 167.54, "touches": 2}]}
     assert "bounc" not in ZB.single_message(item)["title"].lower()
     assert "bounc" not in ZB.digest_message([item])["title"].lower()
+
+    # Trading ▸ Journal by strategy (review 2026-09-14, finding 7): the lane
+    # blurb said "bounces off a demand band" on his screen. Pin every lane's
+    # label + blurb in the source, the way the push titles are pinned above.
+    # The FE file is absent inside the api container; there the pin is the
+    # FE's own vitest (JournalByStrategy.test.tsx, "wording he reads").
+    import re
+    from pathlib import Path
+    tsx = Path(__file__).resolve().parents[2] / "frontend/src/components/JournalByStrategy.tsx"
+    if tsx.exists():
+        src = tsx.read_text()
+        meta = src[src.index("STRATEGY_META"):src.index("const UNKNOWN_GLYPH")]
+        for m in re.finditer(r"(label|blurb): '([^']*)'", meta):
+            assert "bounc" not in m.group(2).lower(), f"Journal {m.group(1)} says bounce: {m.group(2)!r}"
+        assert "reversals off a demand band" in meta
+
+    # 2026-09-14 review: the ℹ️ Rules panel's SERVED text is a surface he
+    # reads too — it said "Bouncing = ..." on the 🪃 sections. Internal ids
+    # (the push kind, the route, the paper lane) and his own verbatim quotes
+    # stay as they are; the prose must not say it. "replayed bounces" on the
+    # alerts line is the 2026-09-09 study's event unit, outside that fix's
+    # scope — carved out here and flagged in the review report, not blessed.
+    import re
+    from supply_demand import rules_info as RI
+    for key, sec in RI.payload()["sections"].items():
+        blob = " ".join([sec["title"]] + sec["picks"] + sec["stops"] + sec["alerts"] + [sec["note"]])
+        prose = re.sub(r'"[^"]*"', "", blob)
+        for ident in ("zone_bounce_alert", "bounce-room", "quick_bounce", "replayed bounces"):
+            prose = prose.replace(ident, "")
+        assert "bounc" not in prose.lower(), (key, blob)
 
 
 def test_the_rules_panel_renders_the_phone_rule_through_the_label_map():

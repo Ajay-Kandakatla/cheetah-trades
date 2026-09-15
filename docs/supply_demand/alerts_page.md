@@ -14,13 +14,13 @@ support, not a buy signal, not advice. S/D scope only.
 
 | | Demand board (`/supply-demand` Demand tab) | Phone pushes (🧲 🪃 🚀) |
 |---|---|---|
-| Bars | **closed** daily bars (`demand_reentry` scan; the board never uses the live print) | **live** last trade, every 1 / 5 min in RTH (`prices.bulk_snapshot` / `bulk_live_prices`) |
-| Universe | the full SEPA universe (~1,746 names), every cap | names in today's `zone_store` (warmed 9:20) or on the board — **known cap ≥ $1B only**; unknown cap is skipped and counted |
+| Bars | **closed** daily bars (`demand_reentry` scan; the board never uses the live print) | **live** last trade, every 1 / 5 min in RTH (`prices.bulk_snapshot` through `print_from_snapshot` — stale prints skipped and counted on every pass since 2026-09-14) |
+| Universe | the full SEPA universe (~1,746 names), every cap | names in today's `zone_store` (warmed 9:20) or on the board — **known cap ≥ $700M only** (`demand_alerts.MIN_CAP_USD`, $1B until 2026-09-10); unknown cap is skipped and counted |
 | Filter | MIN_TOUCHES / zone strength, falling-knife guard, `trend_ok`, the 5-bar drift predicate, and the **R:R floor** ([rr_floor.md](rr_floor.md)) | the **phone gate** ([alert_gates.py](../../backend/supply_demand/alert_gates.py)): **≥ 5% room** from the print to the first unbroken band overhead **and** print **≤ 1% above** the demand band's top (Ajay 2026-09-05: *"atleast 5% to Supply and also <1% bounce from demand zone"*) |
 | Dedupe | none — a row lists as long as it qualifies | **once per (symbol, band, day[, tier])**; a name that rang at 9:33 does not ring again |
 | Digest | n/a | first `MAX_SINGLES_PER_PASS` ring individually, the rest ride **one digest** push |
 
-So a name can sit on the board all day and never push (too close to a lid, under $1B, already
+So a name can sit on the board all day and never push (too close to a lid, under the cap floor, already
 rang, print 1.4% above the band), and a name can push that is not on the board (a zone-edge 🚀
 breaking supply toward new highs has nothing to do with the Demand tab). The overlap is real but
 partial — which is what the **🔔 alerted today** chip on the Demand board and the zone-edge board
@@ -137,7 +137,7 @@ total, dismissed?}`.
 | `at` / `near` | demand_alert | tier split of the hits (NEAR is never pushed since the gate; it is listed and counted) |
 | `skipped_room` | all | **listed but < 5% room** to the first unbroken band overhead (the gate's first half) |
 | `skipped_proximity` | bounce, demand_alert | **listed but > 1% above** the demand band's top (the gate's second half) |
-| `skipped_cap` | all | listed, cap known and **< $1B** |
+| `skipped_cap` | all | listed, cap known and **under the floor** (`MIN_CAP_USD`, $700M since 2026-09-10) |
 | `unknown_cap` | all | cap **unknown** (shares cache never saw it) — not a known-big name, skipped |
 | `unknown_prev` | bounce, demand_alert | no previous close in the live read — cannot judge an arrival, skipped |
 | `unknown_room` | demand_alert | no zone_store doc for the name — nobody measured its supply, silent |
@@ -165,3 +165,19 @@ not run (holiday, container down); a push row with `total = 0` = muted pref or n
 * `tests/test_zone_edge.py::test_stored_counts_explain_a_quiet_phone_skip_buckets_and_pushed`,
   `tests/test_zone_bounce_alerts.py` / `tests/test_demand_alerts.py` "every pass records its
   counters" + "best-effort, never outside RTH", `tests/test_access_menu.py` alerts feature.
+
+## 7. 2026-09-14 review fixes
+
+* **Disclaimer from the constant.** `GET /alerts/status` said "$1B+ subset" four days after the
+  floor moved to $700M. `alert_status.disclaimer()` now formats `DISCLAIMER_TEMPLATE` with
+  `cap_floor_txt(demand_alerts.MIN_CAP_USD)` at request time (lazy import — `demand_alerts`
+  imports `alert_status`, so a module-level import back would be a cycle; the leaf guard still
+  holds). Change the floor → the page follows; `test_NEGATIVE_the_disclaimer_never_retypes_a_dollar_figure`
+  pins that no dollar figure is typed in the module.
+* **New counters on the page** (rendered by the generic "extra" list, no FE change):
+  `skipped_overlap` (zone_edge + demand_alert — a level overlapping one already rung today, one
+  push not two), `stale_print` + `priced` on `demand_alert` (it now prices from the snapshot with
+  the 600 s freshness window like the other two passes), and `claimed_elsewhere` (the other pass
+  won the atomic dedupe claim for that key — the phone got it once, from the other cron).
+* Everything above the counters — what pushed, when, why quiet — is unchanged.
+

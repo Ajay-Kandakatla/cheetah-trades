@@ -441,3 +441,108 @@ describe('DemandReentryPanel — 5% room floor (Ajay 2026-09-05, TRU)', () => {
     expect(screen.queryByText(/hidden: room </)).not.toBeInTheDocument();
   });
 });
+
+/* ── 2026-09-14 review fixes ─────────────────────────────────────────────────
+ * Four findings verified on the live board — wording, a two-price row, and a
+ * truncation; none a rule change:
+ *   7. the API default limit=60 truncated the list by R:R BEFORE the page's
+ *      default reversal-off-demand sort saw it — the page now asks for the
+ *      route's maximum (500, `Query(60, ge=1, le=500)`) so the client sort
+ *      sees the whole list;
+ *   5. the help text said "S&P 500 names" while the payload said it scanned
+ *      the full universe — the label now comes from the payload;
+ *   6. the header price is the scan close but the room % is measured on the
+ *      live print — a live read now says "· now $px";
+ *   4. the row tooltip said "Bounce:" — he reads "reversal". A guard sweeps
+ *      everything the board renders for the word. */
+describe('DemandReentryPanel — 2026-09-14 review fixes', () => {
+  const FULL = 'Full universe (Russell 3000 ∪ S&P 1500 ∪ themes)';
+  /* The panel mounts ZoneEdgeBoard above itself, which has its own
+   * .sepa-tab-help — pick THIS board's blurb, not the first one in the DOM. */
+  const boardHelp = () => Array.from(document.querySelectorAll('.sepa-tab-help'))
+    .map((el) => el.textContent ?? '').find((t) => t.includes('Back in demand')) ?? '';
+
+  it('asks for the route maximum limit=500 on the read AND the scan, so the client sort sees the whole list (finding 7)', async () => {
+    const fn = mockFetch({ n: 1, rows: [row('TJX', 3.0)] });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /TJX/ }));
+    const gets = fn.mock.calls.map((c) => String(c[0])).filter((u) => u.includes('/supply-demand/demand-reentry?'));
+    expect(gets.length).toBeGreaterThan(0);
+    for (const u of gets) {
+      const lim = new URL(u, 'http://x').searchParams.get('limit');
+      expect(lim).toBe('500');
+      // NEGATIVE: never the server default that truncated the board, never past the route's cap.
+      expect(Number(lim)).not.toBe(60);
+      expect(Number(lim)).toBeLessThanOrEqual(500);
+    }
+    fireEvent.click(screen.getByRole('button', { name: /Scan/ }));
+    await waitFor(() => {
+      const calls = fn.mock.calls as unknown as [string, RequestInit?][];
+      const posts = calls.filter((c) => c[1]?.method === 'POST'
+        && c[0].includes('/supply-demand/demand-reentry/scan'));
+      expect(posts.length).toBe(1);
+      expect(new URL(posts[0][0], 'http://x').searchParams.get('limit')).toBe('500');
+    });
+  });
+
+  it('names the universe the payload scanned in the help text and the empty state, never a hard-coded S&P 500 (finding 5)', async () => {
+    mockFetch({ universe_label: FULL, scanned: 2650, universe: 2650 });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/2650 scanned/)).toBeInTheDocument());
+    const help = boardHelp();
+    expect(help).toContain(`${FULL} names that ran up`);
+    expect(help).not.toMatch(/S&P 500 names/);
+    expect(screen.getByText(/Nothing is pulling back into demand/).textContent)
+      .toContain(`across 2650 ${FULL} names`);
+  });
+
+  it('NEGATIVE: an older payload with no universe_label falls back to the page label — still never "S&P 500 names"', async () => {
+    const fn = routed(() => {
+      const p = payload() as Record<string, unknown>;
+      delete p.universe_label;
+      return p;
+    });
+    vi.stubGlobal('fetch', fn);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText(/503 scanned/)).toBeInTheDocument());
+    const help = boardHelp();
+    expect(help).toContain(`${FULL} names that ran up`);
+    expect(help).not.toMatch(/S&P 500 names/);
+    expect(help).not.toMatch(/undefined|null/);
+  });
+
+  it('a live-basis room read names the print it was measured on — "· now $px" — while the header stays the scan close (finding 6)', async () => {
+    const live = { ...CLYM_ROW, last_price: 15.2, room: { ...CLYM_ROW.room, basis: 'live', px: 15.57 } };
+    mockFetch({ n: 1, rows: [live], min_room: 5, dropped_low_room: 0 });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /CLYM/ }));
+    expect(screen.getByText(/\+17% room → \$18\.22 · now \$15\.57/)).toBeInTheDocument();
+    const header = screen.getByText('$15.20');
+    expect(header.getAttribute('title')).toMatch(/scan close/i);
+  });
+
+  it('NEGATIVE: a scan-close read says "scan close" and never "now"; a live read without a px prints no "now"', async () => {
+    const scan = { ...CLYM_ROW, room: { ...CLYM_ROW.room, basis: 'scan', px: 15.57 } };
+    const noPx = { ...row('EOSE', 1.2), last_price: 15.57, room: { ...CLYM_ROW.room, basis: 'live' } };
+    mockFetch({ n: 2, rows: [scan, noPx], min_room: 5, dropped_low_room: 0 });
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => screen.getByRole('link', { name: /EOSE/ }));
+    expect(screen.getByText(/\+17% room → \$18\.22 · scan close$/)).toBeInTheDocument();
+    expect(screen.queryByText(/· now \$/)).not.toBeInTheDocument();
+  });
+
+  it('nothing he reads on the board says "bounce" — text, tooltips, menu labels (finding 4)', async () => {
+    mockFetch({ n: 3, rows: [row('TJX', 3.0), row('EOSE', 1.2), row('PEND', 2.0)] }, () => BOUNCE_ROOM_THREE);
+    render(<MemoryRouter><DemandReentryPanel /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText('🪃 +4.2% off $14.94 · today')).toBeInTheDocument());
+    const seen: string[] = [document.body.textContent ?? ''];
+    document.querySelectorAll('[title]').forEach((el) => seen.push(el.getAttribute('title') ?? ''));
+    document.querySelectorAll('option').forEach((el) => seen.push(el.textContent ?? ''));
+    expect(seen.filter((s) => /\bbounc/i.test(s))).toEqual([]);
+    // POSITIVE: the row tooltip leads with the word he uses, and names the read.
+    const tips = Array.from(document.querySelectorAll('[title]')).map((el) => el.getAttribute('title') ?? '');
+    const tip = tips.find((t) => t.startsWith('Reversal: the session low touched'));
+    expect(tip).toBeDefined();
+    expect(tip).toContain('reversal-room read');
+  });
+});

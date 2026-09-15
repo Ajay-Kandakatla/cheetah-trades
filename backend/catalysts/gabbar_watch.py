@@ -109,6 +109,27 @@ def band_proximity(last: float, bands: list, change_pct=None) -> list:
     return out
 
 
+def where_text(hit: dict, last: float, tier: str = "at") -> str:
+    """'inside' | '0.9% below' | '0.9% above' — the print against the band
+    it hit. PURE. 'below' / 'above' from the print against the band's floor,
+    never a sideless 'from' (review 2026-09-14, G4): a level price has closed
+    THROUGH is a different fact from one it is falling into (NFLX, six
+    closes under its band, paged as a touch). The near tier is above by
+    construction."""
+    if hit.get("state") == "in":
+        return "inside"
+    dist = hit.get("dist_pct")
+    try:
+        lo = float(hit.get("lo"))
+    except (TypeError, ValueError):
+        lo = None
+    if tier == "near" or lo is None:
+        side = "above"
+    else:
+        side = "below" if float(last) < lo else "above"
+    return f"{dist:g}% {side}"
+
+
 def should_alert(hit: dict, sales: Optional[dict]) -> tuple:
     """(fire, note) for one band hit. NOTHING is suppressed (Ajay
     2026-08-27: "dont suppress show with a chip") — a Bonde-failing name
@@ -143,11 +164,30 @@ def _record_sent(db, ticker: str, band_idx: int, date_key: str, hit: dict,
         {"$set": {"hit": hit, "sent_at": _now_et().isoformat()}}, upsert=True)
 
 
+def _devices_subscribed(kind: str = "pivot_alert") -> bool:
+    """True when at least one device's prefs allow `kind` — quiet hours
+    ignored on purpose (the sender applies them). Unreadable prefs read as
+    subscribed so a Mongo hiccup never silences a pass that had devices."""
+    try:
+        from push import subs as _subs
+        return bool(_subs.list_subscriptions(filter_kind=kind, honor_quiet_hours=False))
+    except Exception as exc:                                    # pragma: no cover
+        log.debug("gabbar-watch: subscription read failed: %s", exc)
+        return True
+
+
 def check_once(*, push: bool = True, force: bool = False) -> dict:
     """One pass over every covered name. `force` skips the session gate for
     in-container smoke tests only — the cron never passes it."""
     if not force and not in_session():
         return {"ran": False, "reason": "outside RTH"}
+    # No device subscribed to `pivot_alert` (the 2026-09-09 keep-set dropped
+    # it) → nothing to send, so no live-price read, no send, no ledger row
+    # (review 2026-09-14, G3: the cron wrote 'sent 0/0' every 10 minutes).
+    # The kind stays pivot_alert and the keep-set is untouched — his call.
+    # `push=False` (the smoke-test path) still runs the pass and reports hits.
+    if push and not _devices_subscribed():
+        return {"ran": False, "reason": "no devices subscribed", "kind": "pivot_alert"}
 
     from catalysts import gabbar_levels as GL
     from portfolio.alerts import _resolve_owner
@@ -188,9 +228,7 @@ def check_once(*, push: bool = True, force: bool = False) -> dict:
             tier = "near" if hit["state"] == "near" else "at"
             if not push or _already_sent(db, sym, hit["idx"], date_key, tier):
                 continue
-            where = ("inside" if hit["state"] == "in"
-                     else f"{hit['dist_pct']:g}% above" if tier == "near"
-                     else f"{hit['dist_pct']:g}% from")
+            where = where_text(hit, float(last), tier)
             body = (f"{sym} ${float(last):g} {where}"
                     + f" Gabbar {hit['label']} (${hit['lo']:g}–{hit['hi']:g})"
                     + (f" · down {abs(float(chg)):g}% today" if tier == "near" else "")
