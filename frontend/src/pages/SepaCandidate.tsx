@@ -30,6 +30,12 @@ import { LivePriceTag } from '../components/LivePriceTag';
 import { SepaPoliticalChip } from '../components/SepaPoliticalChip';
 import { getPoliticalChipFlags } from '../lib/politicalDisclosures';
 import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
+// 🚀 "Can you add the explosive growth pill in to the individual tickers."
+// (Ajay 2026-09-16). The SAME component the 13 Chart Maps renderers use, on
+// the SAME whole-board read (`/growth/tags`, module-cached by useGrowthTags),
+// so the ticker page can never say something different about a name than the
+// boards do. Off the board it renders nothing at all.
+import { GrowthChip } from '../components/GrowthChip';
 import { SignalWatchButton } from '../components/SignalWatchButton';
 import type { SignalKind } from '../components/SignalDrillModal';
 const WhalesFlowModal = lazyWithReload(() =>
@@ -761,6 +767,11 @@ export function SepaCandidatePage() {
               </span>
               {/* Insider cluster-buy + valuation (under/fair/over) — self-fetch. */}
               <CardEnrichmentChips symbol={base.symbol} />
+              {/* 🚀 Also on the Explosive Growth board — a POINTER to that
+                  board, never a second copy of its screen. Renders nothing
+                  when the name is not on it, and wears the ⛔ tone when the
+                  trading engine would refuse the name. */}
+              <GrowthChip symbol={base.symbol} />
             </div>
           )}
           {/* Live price badge — pulls from the SSE bus (Finnhub WS feed)

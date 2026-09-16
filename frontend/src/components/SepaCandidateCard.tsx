@@ -43,6 +43,10 @@ import { SepaSignalChips } from './SepaSignalChips';
 // EDGAR / yfinance on first paint — cards fetch only when scrolled into
 // view, backend caches 24h.
 import { CardEnrichmentChips } from './CardEnrichmentChips';
+// 🚀 Same chip, same read as the ticker page and every Chart Maps tab — the
+// hook is a module-level singleton, so the whole /sepa grid costs ONE
+// /growth/tags request no matter how many cards are on screen.
+import { GrowthChip } from './GrowthChip';
 import { SoirModal } from './SoirModal';
 // Real-time tape (accumulation/distribution) + short-interest squeeze chips.
 // Lazy via IntersectionObserver; accumulation polls while the card is visible.
@@ -395,6 +399,11 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
             </Link>
             <LeveragedBadge symbol={row.symbol} name={row.name} compact />
             <WatchlistButton ticker={row.symbol} />
+            {/* 🚀 On the Explosive Growth board too. Sits on the always-visible
+                symbol line (the card's signal chips live behind the
+                "why-buy & signals" toggle), and renders nothing off the
+                board — a dense grid pays only for the names that qualify. */}
+            <GrowthChip symbol={row.symbol} />
             {owned && (
               <span className="sepa-owned"
                     style={{ color: (owned.pl_pct ?? 0) >= 0 ? '#10b981' : '#ef4444' }}

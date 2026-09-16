@@ -22,6 +22,8 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // "Can you add the explosive growth pill in to the individual tickers."
+  { id: 'growth-pill-ticker-2026-09-16', label: "\u{1F680} The Explosive Growth pill is on the individual tickers now — you asked for it on the single-name pages, so the ticker header's chip row (beside 🐋 whales, 📋 SEC, political and 🌍 macro) and the /sepa list card's symbol line both carry it. It is the SAME chip the Chart Maps tabs wear, reading the SAME whole-board list (/growth/tags) — not a second copy of the 100/100 screen — so a name can never read one way on a board and another way on its own page: same text, same tooltip, same tone, pinned by a test that compares the two renders character for character. It shows sales year over year with the quarterly EPS in the tooltip, turns ⛔ red when the trading engine would refuse the name (under $2 a share, or a known cap under $700M), and renders NOTHING at all for a name that is not on the growth board — no placeholder, no empty pill. If the growth board is down the page is unchanged and the pill simply does not appear; one request serves the whole page no matter how many cards are on screen. Nothing here gates, alerts or buys — it is a pointer to a list you already have.", addedAt: '2026-09-16', route: '/sepa' },
   // "We really need to figure out the entries, I only wanna see the stocks
   // that are enterable. ... I do not want to see not enterable alerts or
   // stocks in any of the chart maps. ... look for any good tested entry

@@ -159,6 +159,21 @@ board.
 `test_the_growth_chip_reaches_EVERY_Chart_Maps_tab` (frontend contract) fails if
 a new non-board tab is added whose renderer forgets the chip.
 
+**2026-09-16 — the pill on the single-name surfaces.** Ajay: *"Can you add the
+explosive growth pill in to the individual tickers."* The same `GrowthChip` on
+the same `/growth/tags` read now also renders in the ticker page header's chip
+row (`frontend/src/pages/SepaCandidate.tsx`, beside 🐋 whales / 📋 SEC /
+political / 🌍 macro / enrichment) and on the `/sepa` list card's always-visible
+symbol line (`frontend/src/components/SepaCandidateCard.tsx` — the card's other
+signal chips sit behind its *why-buy & signals* toggle). No new endpoint and no
+second fetch: `useGrowthTags` is a module-level singleton, so a whole card grid
+plus the ticker page still costs **one** `GET /growth/tags`. Neither surface is a
+Chart Maps tab, so the contract above does not enumerate them;
+`frontend/src/pages/SepaCandidate.growth.test.tsx` pins them instead, including
+that the ticker page's pill is character-for-character the board's pill for the
+same read, and that an off-board name and a failed `/growth/tags` both render
+nothing while the page stands.
+
 ## The sector tree
 
 Ajay 2026-09-11: *"I wanna see the secorts in the growth.. To show that only
