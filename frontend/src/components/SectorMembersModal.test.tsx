@@ -184,7 +184,9 @@ describe('Hot sectors chips open a member popover', () => {
     await draw();
     await openTech();
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.textContent).toMatch(/today \+0\.6%/);
+    // 2026-09-16: the panel is served from the post-close snapshot, so the
+    // label names that session rather than calling it today.
+    expect(dialog.textContent).toMatch(/last close 2026-09-09 \+0\.6%/);
     expect(dialog.textContent).toMatch(/201 of 342 up/);
   });
 

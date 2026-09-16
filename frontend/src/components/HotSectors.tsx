@@ -199,8 +199,20 @@ export function marketIsRed(d: Pick<HotPayload, 'market'>): boolean {
   return day != null && day < 0;
 }
 
+/** The day leg's label on the strip (Ajay 2026-09-16).
+ *
+ *  This strip reads the ROTATION SNAPSHOT and nothing else. That build runs
+ *  after the close (16:30+ ET scans), so its day leg is the LAST FINISHED
+ *  session — there is no live number here to serve and none is invented. What
+ *  changes is the word: he read a +8.3% from the previous session as the live
+ *  tape on the Hottest board the same morning, and "today" over a finished
+ *  session is how that happens. */
+export function dayLegLabel(asOf?: string | null): string {
+  return asOf ? `last close ${asOf}` : 'last close';
+}
+
 export function marketLine(d: Pick<HotPayload, 'market' | 'benchmark'>,
-                           noneHot = true): string | null {
+                           noneHot = true, asOf?: string | null): string | null {
   const m = d.market || {};
   const sym = m.benchmark || d.benchmark || 'RSP';
   const day = num(m.ret_1d);
@@ -216,9 +228,12 @@ export function marketLine(d: Pick<HotPayload, 'market' | 'benchmark'>,
     : day < 0 ? 'the whole tape is red'
       : day > 0 ? 'the whole tape is green'
         : 'the tape is flat';
+  // With a session date the sentence names the session it is describing; with
+  // none it is byte-identical to what it has always said.
   const lead = noneHot
-    ? 'nothing is hot today'
-    : 'read the chips against the tape';
+    ? (asOf ? `nothing was hot on the ${asOf} close` : 'nothing is hot today')
+    : (asOf ? `read the chips against that session's tape`
+      : 'read the chips against the tape');
   return `${lead}; ${tape}: ${parts.join(', ')}`;
 }
 
@@ -298,7 +313,7 @@ export default function HotSectors() {
   // chips are now ranked on the WEEK, so gating the line on an empty inflow
   // list would hide it on exactly the day he described: 2026-09-10 had 10 of
   // 11 sectors red and still had 5 cohorts green over the week.
-  const tape = noneHot || marketIsRed(data) ? marketLine(data, noneHot) : null;
+  const tape = noneHot || marketIsRed(data) ? marketLine(data, noneHot, data.as_of) : null;
   // Nothing measured and nothing to say: vanish, exactly as before.
   if (!hasRows && !tape) return null;
 
@@ -316,7 +331,7 @@ export default function HotSectors() {
       <span className="hs-head">
         🔥 Hot sectors
         <em className="hs-sub">
-          today first · ranked by {windowLabel(data.ranked_by)} vs {data.benchmark || 'RSP'}
+          {dayLegLabel(data.as_of)} first · ranked by {windowLabel(data.ranked_by)} vs {data.benchmark || 'RSP'}
           {' · median member'}
           {scanStamp(data) ? ` · scan ${scanStamp(data)} ET` : ''}
           {' · click a chip for its member stocks'}
@@ -328,7 +343,7 @@ export default function HotSectors() {
       {noneHot && (
         // Plain words first, so an empty inflow side can never be mistaken for
         // a broken scan or a missing payload.
-        <p className="hs-market">{tape || 'nothing is hot today'}</p>
+        <p className="hs-market">{tape || `nothing was hot on the ${data.as_of || 'last'} close`}</p>
       )}
       {/* THE FULL BOARD IS THE TABLE NOW (Ajay 2026-09-12: "Actually move this
           table in to ... Instead of hiding this is more organized").

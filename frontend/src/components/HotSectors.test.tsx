@@ -67,7 +67,9 @@ describe('HotSectors', () => {
     stub(PAYLOAD);
     draw();
     await waitFor(() => expect(screen.getByText(/ranked by the last 5 sessions/)).toBeTruthy());
-    expect(screen.getByText(/today first/)).toBeTruthy();
+    // 2026-09-16: the strip reads the post-close snapshot and has no live leg,
+    // so the day column names its session instead of calling it "today".
+    expect(screen.getByText(/last close 2026-09-10 first/)).toBeTruthy();
   });
 
   it('links to the full rotation page', async () => {
@@ -220,7 +222,7 @@ describe('the strip on a day nothing is hot', () => {
     render(<MemoryRouter><HotSectors /></MemoryRouter>);
     await openBoard();
     expect(await screen.findByText(
-      'nothing is hot today; the whole tape is red: RSP -0.7%, 23% of names up',
+      'nothing was hot on the 2026-09-10 close; the whole tape is red: RSP -0.7%, 23% of names up',
     )).toBeInTheDocument();
     // and the outflow side still renders — the strip is not blanked
     expect(screen.getByRole('button', { name: /Utilities · large caps/ })).toBeInTheDocument();

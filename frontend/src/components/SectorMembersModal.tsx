@@ -120,12 +120,17 @@ function MemberLine({ m, benchmark }: { m: MemberRow; benchmark: string }) {
  * whether one name is carrying the number. Raw, not rebased: "what is this
  * sector doing today" is a plain question and rebasing it against RSP would
  * answer a different one. */
+/* 2026-09-16: the word was "today" and the number never was. This panel is
+ * served entirely from the rotation snapshot, which is built after the close,
+ * so its day leg is the LAST FINISHED session. Nothing live is fetched here
+ * and nothing is invented — the label simply names the session it has. */
 function todayLine(p: MembersPayload): string {
   const m = p.median_1d_full;
   if (m == null || !Number.isFinite(m)) return '';
   const breadth = p.up_today != null && p.n_priced
     ? `, ${p.up_today} of ${p.n_priced} up` : '';
-  return ` · today ${m >= 0 ? '+' : ''}${m.toFixed(1)}%${breadth}`;
+  const day = p.as_of ? ` ${p.as_of}` : '';
+  return ` · last close${day} ${m >= 0 ? '+' : ''}${m.toFixed(1)}%${breadth}`;
 }
 
 function ColumnNote({ p }: { p: MembersPayload }) {
@@ -133,9 +138,11 @@ function ColumnNote({ p }: { p: MembersPayload }) {
     <p className="hsm-caption">
       Trailing returns restated vs {p.benchmark || 'RSP'}. “vs group” is this
       name’s <b>21-day</b> rel minus its group’s published 21-day median, in
-      points. Since 2026-09-10 the chip you clicked leads with <b>today</b> and
+      points. Since 2026-09-10 the chip you clicked leads with its <b>day</b> leg and
       is ranked on the <b>week</b>, so this column is a different window from
-      the chip and the two are not meant to line up.
+      the chip and the two are not meant to line up. Every number here is from the
+      {' '}<b>{p.as_of || 'last'}</b> close — the snapshot is built after the bell, so none
+      of it is the current session.
       {p.sampled && p.member_median_21d != null
         ? ` This table’s own full-membership 21-day median is ${fmtRel(p.member_median_21d)} — a different population again, and deliberately not the yardstick here.`
         : ''}
@@ -150,7 +157,10 @@ function Table({ p }: { p: MembersPayload }) {
       <thead>
         <tr>
           <th scope="col">Ticker</th>
-          <th scope="col" className="hsm-num" title="today: this name's last close against the one before it, restated vs the benchmark">today</th>
+          <th scope="col" className="hsm-num"
+              title={`the ${p.as_of || 'last'} close against the one before it, restated vs the benchmark`
+                     + ' — this panel is served from the rotation snapshot and carries no live price'}>
+            last close</th>
           <th scope="col" className="hsm-num">5d</th>
           <th scope="col" className="hsm-num">21d</th>
           <th scope="col" className="hsm-num">63d</th>

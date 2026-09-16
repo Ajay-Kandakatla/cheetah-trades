@@ -32,10 +32,35 @@ import type { BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import { SignalWatchButton } from './SignalWatchButton';
 import { InfoButton } from './InfoButton';
 
-export type HsName = {
+/** Which session the day column on THIS row came from. `live` = the name's own
+ *  move so far in the current session; `close` = the rotation snapshot's last
+ *  finished session. Backend-owned (rotation/hottest.py) — never inferred here
+ *  from whether a number happens to look fresh. */
+export type HsD1Source = 'live' | 'close';
+/** The day leg's basis for the whole board. Group rows are ALWAYS `close`:
+ *  a sector median is taken over every member it counts, and a median mixing
+ *  live members with last-close members describes no session at all. */
+export type HsD1 = {
+  basis?: HsD1Source; live?: boolean;
+  /** When the live read was taken (ISO), and which close the rest is from. */
+  as_of?: string | null; close_as_of?: string | null;
+  benchmark?: string | null; benchmark_move?: number | null;
+  symbols?: number | null; live_names?: number | null;
+  group_basis?: HsD1Source;
+  /** Plain-English why, when the board is NOT live. Must reach the screen. */
+  reason?: string | null; note?: string | null;
+};
+/** The two day-leg fields every row carries since 2026-09-16: the snapshot
+ *  value is kept whatever the live read did, and the row says which it shows. */
+export type HsDayLeg = {
+  rel_1d?: number | null; rel_1d_close?: number | null;
+  ret_1d_close?: number | null; d1_source?: HsD1Source;
+};
+
+export type HsName = HsDayLeg & {
   symbol: string; name?: string | null; industry?: string | null;
   last_close?: number | null;
-  rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
+  rel_5d?: number | null; rel_21d?: number | null;
   ret_1d?: number | null; ret_5d?: number | null; ret_21d?: number | null;
   traction?: number | null; vs_group_21?: number | null; at_demand?: boolean;
   sales_yoy?: number | null; sales_tier?: string | null;
@@ -55,24 +80,30 @@ export type HsFundMedians = {
   q_eps_yoy?: number | null; net_margin?: number | null;
   eq_score?: number | null; fund_basis?: string | null;
 };
-export type HsIndustry = HsFundMedians & {
+export type HsIndustry = HsFundMedians & HsDayLeg & {
   group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
-  rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
+  rel_5d?: number | null; rel_21d?: number | null;
   names: HsName[]; names_total: number;
 };
-export type HsSector = HsFundMedians & {
+export type HsSector = HsFundMedians & HsDayLeg & {
   group: string; n_full: number; sampled_of?: number | null; sampled_used?: number | null;
   basis: string; n_measured?: number | null;
-  rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
+  rel_5d?: number | null; rel_21d?: number | null;
   industries: HsIndustry[]; names: HsName[]; names_total: number;
 };
-export type HsTheme = HsFundMedians & {
+export type HsTheme = HsFundMedians & HsDayLeg & {
   group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
-  rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null;
+  rel_5d?: number | null; rel_21d?: number | null;
   names: HsName[]; names_total: number;
 };
 export type HsPayload = {
-  as_of?: string; benchmark?: string; sorted_by?: string; sorted_dir?: string;
+  as_of?: string; sorted_by?: string; sorted_dir?: string;
+  /** The endpoint answers with the tracker's benchmark OBJECT on some builds
+   *  and a bare symbol on others — `benchSymbol` resolves both, because a
+   *  header that prints "[object Object]" names no benchmark at all. */
+  benchmark?: string | { symbol?: string | null } | null;
+  /** What the day column is showing, and why (2026-09-16). */
+  d1?: HsD1 | null;
   sortable?: string[]; legs?: string[];
   sectors: HsSector[];
   /** Our own curated rosters — robotics, nuclear, quantum, the AI complex,
@@ -84,8 +115,6 @@ export type HsPayload = {
   coverage?: { priced?: number; with_fundamentals?: number; pct?: number | null };
   note?: string; reason?: string; built_at_iso?: string; stale?: boolean;
 };
-
-const SORTS = ['rel_1d', 'rel_5d', 'rel_21d'] as const;
 
 /** Readable names for the curated rosters. The payload ships the snake_case id
  *  (it is the key everything else in the app joins on); only the display
@@ -137,6 +166,78 @@ export function arrow(active: boolean, dir: HsDir): string {
   return active ? (dir === 'desc' ? ' ▼' : ' ▲') : '';
 }
 
+/* ── "Today" has to mean today (Ajay 2026-09-16) ─────────────────────────────
+ *
+ * He read TENB at +8.3% under a column headed "Today" while his own ticker page
+ * had it at −3.70%, live, the same minute. Both were right: the rotation
+ * snapshot is built after the close, so the column was printing the PREVIOUS
+ * session under today's word. The backend now serves the live move on the name
+ * rows; these helpers make sure the header, the as-of line and any row that
+ * missed the live read can never claim a number they do not have. */
+
+/** The benchmark's symbol, whichever shape the payload used. */
+export function benchSymbol(d?: Pick<HsPayload, 'benchmark'> | null): string {
+  const b = d?.benchmark;
+  if (typeof b === 'string' && b.trim()) return b;
+  const s = b && typeof b === 'object' ? b.symbol : null;
+  return typeof s === 'string' && s.trim() ? s : 'RSP';
+}
+
+/** The day column's header. "Today" ONLY when the number is today's; otherwise
+ *  the session it actually came from, so the header cannot lie on its own. */
+export function d1Label(d?: Pick<HsPayload, 'd1' | 'as_of'> | null): string {
+  if (d?.d1?.live) return 'Today';
+  const day = d?.d1?.close_as_of || d?.as_of;
+  return day ? `Last close ${day}` : 'Last close';
+}
+
+/** Any column's printed header. */
+export function colLabel(key: string, d?: Pick<HsPayload, 'd1' | 'as_of'> | null): string {
+  if (key === 'rel_1d') return d1Label(d);
+  return HS_COLS.find((c) => c.key === key)?.label || key;
+}
+
+/** A header's hover. The day column's says which session it is, in the
+ *  backend's own words, so the explanation cannot drift from the numbers. */
+export function colTitle(c: { key: string; title?: string },
+                         d?: Pick<HsPayload, 'd1' | 'as_of'> | null): string {
+  const own = c.key === 'rel_1d' ? (d?.d1?.note || '') : (c.title || '');
+  return own ? `${own} · click to sort` : 'click to sort';
+}
+
+/** One day cell, as text + whether it needs the visible "last close" mark.
+ *
+ *  A row is MARKED when the board is live but this row is not — its number is
+ *  the previous session's and would otherwise sit silently in a live column.
+ *  When the whole board is on the close the header already says so and 300
+ *  identical marks would be noise, so the rows stay clean. */
+export function dayCell(r: HsDayLeg, d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null,
+                        isGroup = false): { text: string; marked: boolean; title: string } {
+  const boardLive = !!d?.d1?.live;
+  const rowLive = r.d1_source === 'live';
+  const day = d?.d1?.close_as_of || d?.as_of || '';
+  const marked = boardLive && !rowLive;
+  const why = isGroup
+    ? `This row is the median over ALL of its members, taken on the ${day || 'last'} close`
+      + ' — a median mixing live names with last-close names would describe no session at all.'
+    : `No live price came back for this name, so this is its ${day || 'last'} close move`
+      + ' — not today.';
+  const live = `Today's move so far, measured against ${benchSymbol(d)} the same way the other columns are.`;
+  return { text: pct(r.rel_1d), marked, title: marked ? why : (rowLive ? live : '') };
+}
+
+/** The line under the controls. It must say which columns are live and which
+ *  are the snapshot's, because four of the nine never move intraday. */
+export function asOfLine(d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null): string {
+  const day = d?.d1?.close_as_of || d?.as_of || '—';
+  if (d?.d1?.live) {
+    return `Today is live, measured against ${benchSymbol(d)} · 5 days, 21 days,`
+      + ` Sales YoY and every sector, industry and roster row are from the ${day} close`;
+  }
+  const why = d?.d1?.reason ? ` (${d.d1.reason})` : '';
+  return `every column is from the ${day} close — the last finished session, not today's${why}`;
+}
+
 /** An em-dash, never a zero — a missing quarter is not flat growth. */
 export function pct(v: number | null | undefined, dp = 1): string {
   return typeof v === 'number' && Number.isFinite(v) ? `${v >= 0 ? '+' : ''}${v.toFixed(dp)}%` : '—';
@@ -158,10 +259,21 @@ export function tierChip(t?: string | null): string {
   return '';
 }
 
-function LegCells({ r }: { r: { rel_1d?: number | null; rel_5d?: number | null; rel_21d?: number | null } }) {
+function LegCells({ r, d1, isGroup }: {
+  r: HsDayLeg & { rel_5d?: number | null; rel_21d?: number | null };
+  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null; isGroup?: boolean;
+}) {
+  const day = dayCell(r, d1, !!isGroup);
   return (
     <>
-      {SORTS.map((k) => (
+      <td className={`mono hs-num ${tone(r.rel_1d)}${day.marked ? ' hs-d1-close' : ''}`}
+          title={day.title || undefined}>
+        {day.text}
+        {/* Never silent: a close value standing in a live column says so on
+            the row, not only in a tooltip. */}
+        {day.marked ? <span className="hs-d1-mark"> last close</span> : null}
+      </td>
+      {(['rel_5d', 'rel_21d'] as const).map((k) => (
         <td key={k} className={`mono hs-num ${tone(r[k])}`}>{pct(r[k])}</td>
       ))}
     </>
@@ -187,8 +299,9 @@ function GroupFundCells({ r }: { r: HsFundMedians }) {
   );
 }
 
-function NameRow({ r, read, study }: {
+function NameRow({ r, read, study, d1 }: {
   r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
+  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null;
 }) {
   return (
     <tr className="hs-name">
@@ -206,7 +319,7 @@ function NameRow({ r, read, study }: {
         <SignalWatchButton symbol={r.symbol} />
         <div className="hs-coname">{r.name || ''}</div>
       </td>
-      <LegCells r={r} />
+      <LegCells r={r} d1={d1} />
       <td className={`mono hs-num ${tone(r.sales_yoy)}`} title={
         r.sales_prior_yoy != null ? `prior quarter ${pct(r.sales_prior_yoy)}` : undefined}>
         {pct(r.sales_yoy)}{r.sales_accelerating ? ' ⚡' : ''}
@@ -319,7 +432,7 @@ export function HottestSectors() {
             arrow IS the state. */}
         <div className="hs-sorts">
           <span className="hs-sorted-by">
-            ranked on <b>{HS_COLS.find((c) => c.key === sort)?.label || sort}</b>
+            ranked on <b>{colLabel(sort, data)}</b>
             {dir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
             <span className="hs-dim"> · click any column header</span>
           </span>
@@ -330,10 +443,19 @@ export function HottestSectors() {
           Break into industries
         </label>
         <InfoButton inline title="🔥 Hottest — how to read this">
-          <p>Every sector ranked on <b>{HS_COLS.find((c) => c.key === sort)?.label || sort}</b>
-            against <b>{data?.benchmark || 'RSP'}</b>,
+          <p>Every sector ranked on <b>{colLabel(sort, data)}</b>
+            against <b>{benchSymbol(data)}</b>,
             the equal-weight benchmark — so a name is measured against the average stock, not the
             mega-caps. Open a sector for its industries, then its names.</p>
+          <p><b>What &ldquo;Today&rdquo; means here.</b> While the market is open, the day column on a
+            NAME row is that name&rsquo;s own move so far in this session, still measured against
+            {' '}<b>{benchSymbol(data)}</b> exactly like the other legs. Everything else — 5 days,
+            21 days, Sales YoY, and every sector, industry and roster row — comes from the last
+            close, because the rotation snapshot is built after the bell. A group row is the median
+            over <i>all</i> its members, so it can never be half live and half last-close; it stays
+            on the close and says so. When the tape is shut, or no live price comes back, the column
+            header itself changes to the session it is showing, and any single row that missed the
+            live read is marked <i>last close</i> where you can see it.</p>
           <p><b>All eleven sectors are listed, not just the hot ones.</b> A strong name often sits in
             a cold sector: ANDE is 2nd of Consumer Defensive&rsquo;s 76 over 21 days while the sector
             is 8th of 11. Listing only the hot end would hide exactly the names this board is for.</p>
@@ -367,7 +489,10 @@ export function HottestSectors() {
       </div>
 
       <div className="hs-meta">
-        <span>as of {data?.as_of || '—'}</span>
+        {/* Which columns are today's and which are the snapshot's, in words
+            (2026-09-16). He read a last-close number as the live tape because
+            this line only ever said "as of". */}
+        <span className={data?.d1?.live ? 'hs-live' : 'hs-stale'}>{asOfLine(data)}</span>
         {data?.coverage?.pct != null ? (
           <span> · sales on {data.coverage.pct}% of {data.coverage.priced} priced names</span>
         ) : null}
@@ -392,8 +517,8 @@ export function HottestSectors() {
                   <th key={c.key} className={`${c.num ? 'hs-num' : ''}${on ? ' is-sorted' : ''}`}
                       aria-sort={on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
                     <button type="button" className="hs-sort" onClick={() => clickSort(c.key)}
-                            title={c.title ? `${c.title} · click to sort` : 'click to sort'}>
-                      {c.label}{arrow(on, dir)}
+                            title={colTitle(c, data)}>
+                      {colLabel(c.key, data)}{arrow(on, dir)}
                     </button>
                   </th>
                 );
@@ -431,10 +556,10 @@ export function HottestSectors() {
                         {t.n_full}{t.thin ? ' · thin' : ''}
                       </span>
                     </td>
-                    <LegCells r={t} />
+                    <LegCells r={t} d1={data} isGroup />
                     <GroupFundCells r={t} />
                   </tr>
-                  {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
+                  {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} d1={data} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {t.names.length} of {t.names_total}
@@ -468,7 +593,7 @@ export function HottestSectors() {
                           ? ` · heat on ${s.sampled_used}` : ''}
                       </span>
                     </td>
-                    <LegCells r={s} />
+                    <LegCells r={s} d1={data} isGroup />
                     <GroupFundCells r={s} />
                   </tr>
                   {isOpen && byIndustry ? s.industries.map((ind) => {
@@ -486,10 +611,10 @@ export function HottestSectors() {
                               {ind.n_full}{ind.thin ? ' · thin' : ''}
                             </span>
                           </td>
-                          <LegCells r={ind} />
+                          <LegCells r={ind} d1={data} isGroup />
                           <GroupFundCells r={ind} />
                         </tr>
-                        {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
+                        {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} d1={data} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (
                           <tr key={`${ik}|more`}><td colSpan={10} className="hs-more">
                             showing {ind.names.length} of {ind.names_total}
@@ -498,7 +623,7 @@ export function HottestSectors() {
                       </>
                     );
                   }) : null}
-                  {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} />) : null}
+                  {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} d1={data} />) : null}
                   {isOpen && !byIndustry && s.names_total > s.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {s.names.length} of {s.names_total}

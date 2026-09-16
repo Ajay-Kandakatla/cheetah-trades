@@ -137,3 +137,30 @@ and `RotationChanges.test.tsx`.
 
 Skipped on his call / host-tree crontab: sample-vs-full membership (H4), the
 17:10 warm persistence (H6).
+
+---
+
+## 2026-09-16 — the strip and the pop-over name their session
+
+Fallout from the Hottest-board defect the same morning (full write-up in
+`hottest_sectors.md`): he read a **previous-session** move as the live tape
+because the word over it was "today".
+
+The strip (`HotSectors.tsx`) and the member pop-over (`SectorMembersModal.tsx`)
+are served **entirely** from the rotation snapshot, which is built after the
+close. Neither fetches a live price and neither now pretends to:
+
+- The strip's sub-line reads `last close <as-of> first · ranked by …`
+  (`dayLegLabel`) instead of `today first`.
+- `marketLine` takes the session date and leads with
+  `nothing was hot on the <as-of> close` / `read the chips against that
+  session's tape`. Called **without** a date it is byte-identical to what it
+  always said, so every pure test of it is unchanged.
+- The pop-over's day column header reads `last close` (tooltip: the session it
+  is against, and that this panel carries no live price), its headline reads
+  `· last close <as-of> +0.6%, 201 of 342 up`, and the column note states that
+  every number in the panel is from that close.
+
+No live read was added to either surface: the snapshot cadence is deliberate
+(a cold build is ~30 s), and a second fan-out for a strip of chips is not worth
+a provider call. Only the wording changed.

@@ -12113,6 +12113,16 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 /* A group row's fundamental cell is a MEDIAN of its membership, not a filed
  * number — dimmed so it never reads as a company's own figure. */
 .hs-med { opacity: 0.72; font-style: italic; }
+/* "Today" has to mean today (Ajay 2026-09-16). A day cell whose number is the
+ * last close while the column is live is dimmed AND carries the words — a
+ * tooltip is not a label, and he reads this column as the current tape. */
+.hs-d1-close { opacity: 0.75; }
+.hs-d1-mark {
+  font-size: 0.62rem; font-style: italic; color: var(--ink-muted);
+  white-space: nowrap; margin-left: 3px;
+}
+/* The as-of line when the day column really is the live session. */
+.hs-live { color: var(--ink-muted); }
 .hs-tier { white-space: nowrap; color: var(--ink-muted); }
 .hs-er { white-space: nowrap; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .hs-spacer { background: inherit; }

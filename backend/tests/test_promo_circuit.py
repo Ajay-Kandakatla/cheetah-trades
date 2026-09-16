@@ -526,9 +526,14 @@ def test_build_row_carries_the_five_tells_and_one_edgar_fetch_feeds_three(monkey
     calls = []
     monkeypatch.setattr(pc, "_fetch_sec_filings", None, raising=False)
     import catalysts.evidence as ev
+    # The owner-stake window is 14 days (promo_circuit._gather_edgar), so a
+    # HARDCODED filing date ages out and this test starts failing on a date
+    # nobody chose — it did, on 2026-09-16, for a "2026-09-01" filing. Date
+    # it relative to now so it tests the rule, not the calendar.
+    _recent = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%d")
     monkeypatch.setattr(ev, "_fetch_sec_filings", lambda t, days=7: calls.append((t, days)) or [
-        {"form": "8-K", "filing_date": "2026-09-01", "url": "u", "items": "8.01"},
-        {"form": "SC 13G", "filing_date": "2026-09-01", "url": "g"}])
+        {"form": "8-K", "filing_date": _recent, "url": "u", "items": "8.01"},
+        {"form": "SC 13G", "filing_date": _recent, "url": "g"}])
     b = pc._edgar_bundle("TINY")
     assert calls == [("TINY", 30)]                              # ONE fetch
     assert b["edgar"]["owner_stake"]["form"] == "SC 13G" and b["eightk"]["items"] == ["8.01"]

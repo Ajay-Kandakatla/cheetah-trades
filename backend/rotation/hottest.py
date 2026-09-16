@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Optional
 
 from . import tracker as T
@@ -227,32 +228,207 @@ def _median(vals: list) -> Optional[float]:
     return round(m, 2)
 
 
+# ── "Today" has to mean today (Ajay 2026-09-16) ─────────────────────────────
+# He read TENB at +8.3% under a column headed "Today" while his own ticker page
+# showed it at −3.70%, live, the same minute. Both numbers were correct: the
+# rotation snapshot is built AFTER the close (16:30+ ET scans; the 2026-09-15
+# build stamped 19:14 ET), so the column was printing YESTERDAY'S session under
+# today's word. TENB really did close +7.98% raw / +8.26% against RSP on
+# 2026-09-15 and really was −3.70% by 11:00 ET on 2026-09-16.
+#
+# THE SNAPSHOT CADENCE IS NOT THE BUG and is not touched: a cold rotation build
+# is ~30 s and no board may wait on one. What is fixed is the day leg — served
+# live for the NAME rows off one fan-out — and the LABELS, so a number from the
+# last close can never again be read as the current session.
+#
+# THE SEMANTIC THAT MUST NOT DRIFT: `rel_1d` on a name row is RELATIVE — it is
+# `ret_1d − benchmark.ret_1d` (tracker.traction_row), the name's move minus
+# RSP's own move that session. So the live number has to be relative too: the
+# live name move MINUS the live benchmark move, both out of the SAME snapshot
+# call. If the benchmark has no live print there is no live relative number to
+# serve, and the whole board stays on the close — a raw move dropped into a
+# relative column is a different measurement wearing the same header.
+D1_LIVE = "live"
+D1_CLOSE = "close"
+D1_KEY = "d1"
+# The group rows' basis, stated as a constant because the FE prints it: a
+# sector / industry / roster median is a median over ALL of its members, and
+# a median taken over live values for some members and last-close values for
+# the rest is true of neither set. See `_close_d1`.
+D1_GROUP_BASIS = D1_CLOSE
+
+
+def _live_move(snap) -> Optional[float]:
+    """The same-day percent move in ONE `bulk_live_prices` row, or None.
+
+    A NON-POSITIVE day-bar price is MISSING, never a price — the day aggregate
+    is 0 before the open (supply_demand.demand_reentry._snapshot_print, the
+    same rule, same reason). No extended-hours arithmetic is invented here:
+    before the day bar opens there is no same-day move to serve, and the row
+    says so rather than manufacturing one out of a pre-market print.
+    """
+    snap = snap or {}
+    px = _num(snap.get("price"))
+    if px is None or px <= 0:
+        return None
+    return _num(snap.get("change_pct"))
+
+
+def _closed_reason() -> Optional[str]:
+    """The ONE market calendar (market_hours.gate), never a second one here.
+
+    On a weekend or an NYSE holiday the provider snapshot still answers — with
+    the last session, which is exactly the snapshot's own session. Serving that
+    as "live" would relabel the same number, so the gate is asked first.
+    """
+    try:
+        from market_hours import gate
+        return gate.closed_reason()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: market calendar unavailable (%s)", exc)
+        return None
+
+
+def _bulk_live(syms: list) -> dict:
+    from sepa import prices
+    return prices.bulk_live_prices(syms) or {}
+
+
+def live_day_moves(symbols, bench_symbol, *, fetch=None) -> dict:
+    """ONE `prices.bulk_live_prices` fan-out for the whole board → the `d1`
+    block. Never raises; every failure path returns a CLOSE block with the
+    reason in plain English, because a board that renders on yesterday's
+    numbers with honest labels beats a board that renders nothing.
+
+    The benchmark rides in the SAME call as the names: the column is relative,
+    so one stale half would silently turn it into a mixed measure.
+    """
+    bench = str(bench_symbol or "").upper()
+    syms = sorted({str(s).upper() for s in (symbols or []) if s})
+    block = {"basis": D1_CLOSE, "live": False, "benchmark": bench or None,
+             "benchmark_move": None, "symbols": len(syms), "live_names": 0,
+             "moves": {}, "as_of": None, "reason": None}
+    closed = _closed_reason()
+    if closed:
+        block["reason"] = f"the market is closed ({closed})"
+        return block
+    if not syms or not bench:
+        block["reason"] = "no symbols to price"
+        return block
+    try:
+        snaps = (fetch or _bulk_live)(sorted(set(syms) | {bench})) or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: live day moves unavailable: %s", exc)
+        block["reason"] = f"the live price read failed ({type(exc).__name__})"
+        return block
+    if not isinstance(snaps, dict):
+        block["reason"] = "the live price read answered with nothing usable"
+        return block
+    bmove = _live_move(snaps.get(bench))
+    if bmove is None:
+        # The relative column stays relative or it stays on the close.
+        block["reason"] = f"no live price for {bench}, so today cannot be measured against it"
+        return block
+    moves: dict = {}
+    for s in syms:
+        m = _live_move(snaps.get(s))
+        if m is not None:
+            moves[s] = m
+    if not moves:
+        block["reason"] = "no live prices came back for the names on this board"
+        return block
+    block.update(basis=D1_LIVE, live=True, benchmark_move=round(bmove, 2),
+                 moves=moves, live_names=len(moves),
+                 as_of=datetime.now(timezone.utc).isoformat())
+    return block
+
+
+def _d1_block(live: Optional[dict], live_ok: bool, as_of, bench_symbol) -> dict:
+    """What the day column is showing, in the words the board prints.
+
+    `live_ok` is the EFFECTIVE state after `_build` re-checked the fan-out, not
+    the fetcher's own optimism: a block that came back `live` with no usable
+    benchmark move served no live row, and this must say close.
+    """
+    live = live or {}
+    day = str(as_of or "") or None
+    bench = live.get("benchmark") or bench_symbol or "RSP"
+    reason = live.get("reason") or (None if live else "this build made no live price read")
+    if live_ok:
+        note = (f"Today is each name's own move so far in this session, measured "
+                f"against {bench} the same way the other columns are. Everything "
+                f"else on the board — 5 days, 21 days, Sales YoY and every sector, "
+                f"industry and roster row — comes from the "
+                f"{day or 'last'} close.")
+    else:
+        note = (f"Every column on this board, today's included, comes from the "
+                f"{day or 'last'} close. That is the last finished session, not "
+                f"the current one"
+                + (f" — {reason}." if reason else "."))
+    return {
+        "basis": D1_LIVE if live_ok else D1_CLOSE,
+        "live": bool(live_ok),
+        "as_of": live.get("as_of"),
+        "close_as_of": day,
+        "benchmark": bench,
+        "benchmark_move": live.get("benchmark_move") if live_ok else None,
+        "symbols": live.get("symbols") or 0,
+        "live_names": (live.get("live_names") or 0) if live_ok else 0,
+        "group_basis": D1_GROUP_BASIS,
+        "reason": None if live_ok else reason,
+        "note": note,
+    }
+
+
+def _close_d1(legs: dict) -> dict:
+    """Mark a GROUP row's day leg for what it is: the snapshot's close.
+
+    A sector / industry / roster row is a MEDIAN over every member it counts,
+    not over the handful of names printed under it. Recomputing it live would
+    need a live print for every member counted — and for the sector and
+    industry rows the counted members are the rotation grid's own sample, whose
+    membership this payload does not even carry. So the group legs stay on the
+    snapshot, on ONE basis, and say so. Half-live is not a median of anything.
+    """
+    legs["rel_1d_close"] = legs.get("rel_1d")
+    legs["d1_source"] = D1_CLOSE
+    return legs
+
+
 def build(payload: dict, *, sort: str = DEFAULT_SORT,
           direction: str = DEFAULT_DIR,
           names_per_group: int = NAMES_PER_GROUP) -> dict:
     """Assemble the board from an already-built rotation payload. PURE — no
-    Mongo, no fetch — except the two bulk joins, which are injected by
-    `build_live`. Keeps the shape testable off a fixture."""
+    Mongo, no fetch — except the two bulk joins and the live day read, all
+    three injected by `build_live`. Keeps the shape testable off a fixture."""
     return _build(payload, sort=sort, direction=direction,
                   names_per_group=names_per_group,
-                  decisions={}, earnings={})
+                  decisions={}, earnings={}, live=None)
 
 
 def build_live(payload: dict, *, sort: str = DEFAULT_SORT,
           direction: str = DEFAULT_DIR,
                names_per_group: int = NAMES_PER_GROUP) -> dict:
-    """`build` plus the two bulk reads, done ONCE for the whole board rather
-    than per row."""
+    """`build` plus the three bulk reads, done ONCE for the whole board rather
+    than per row.
+
+    The live read fans out over EVERY priced name, not just the ~25 a group
+    prints: the day column is sortable, so the ranking that decides which 25
+    survive has to be made on the same numbers the table then shows. One call
+    (chunked inside `bulk_snapshot`), never one per row.
+    """
     table = (payload or {}).get(T.MEMBERS_KEY) or {}
     syms = list((table.get("by_symbol") or {}).keys())
+    bench = (table.get("benchmark") or {}).get("symbol") or T.BENCHMARK
     return _build(payload, sort=sort, direction=direction,
                   names_per_group=names_per_group,
-                  decisions=_decision_map(syms), earnings=_earnings_map(syms))
+                  decisions=_decision_map(syms), earnings=_earnings_map(syms),
+                  live=live_day_moves(syms, bench))
 
 
 def _build(payload: dict, *, sort: str, names_per_group: int,
            decisions: dict, earnings: dict,
-           direction: str = DEFAULT_DIR) -> dict:
+           direction: str = DEFAULT_DIR, live: Optional[dict] = None) -> dict:
     sort_key = sort if sort in SORT_KEYS else DEFAULT_SORT
     sort_dir = direction if direction in SORT_DIRS else DEFAULT_DIR
     _by = _sorter(sort_key, sort_dir)
@@ -279,6 +455,16 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
     shipped_themes = {r.get("group"): r for r in (payload.get("themes") or [])}
     sampled = payload.get("sampled") or {}
 
+    # The one live read for the whole board (2026-09-16). `live_ok` is all-or-
+    # nothing on purpose: without a live benchmark print there is no relative
+    # number to serve, so every row falls back to the close together rather
+    # than half the column changing meaning.
+    live = live or {}
+    live_ok = bool(live.get("live"))
+    live_bench = _num(live.get("benchmark_move"))
+    live_moves = (live.get("moves") or {}) if live_ok and live_bench is not None else {}
+    live_ok = live_ok and live_bench is not None and bool(live_moves)
+
     def _names(symbols: list, group_median) -> list:
         rows = []
         for s in symbols or []:
@@ -293,9 +479,38 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             # runs far too late to protect a sort.
             r = {k: (_num(v) if isinstance(v, float) else v) for k, v in r.items()}
             r.update(_fundamentals_row(s, decisions.get(s), earnings.get(s)))
+            # TODAY, live (2026-09-16). The snapshot's value is KEPT under
+            # `rel_1d_close` / `ret_1d_close` so nothing that already reads the
+            # close breaks, and every row says which one it is showing. The
+            # overlay is RELATIVE — the live name move minus the live benchmark
+            # move — because that is what `rel_1d` has always been.
+            r["rel_1d_close"] = r.get("rel_1d")
+            r["ret_1d_close"] = r.get("ret_1d")
+            mv = live_moves.get(s) if live_ok else None
+            if mv is None:
+                r["d1_source"] = D1_CLOSE
+            else:
+                r["ret_1d"] = round(mv, 2)
+                r["rel_1d"] = round(mv - live_bench, 2)
+                r["d1_source"] = D1_LIVE
             rows.append(r)
+        # Sorted AFTER the overlay: `rel_1d` is a sortable column, and ranking
+        # on yesterday before truncating to 25 would hide today's movers behind
+        # yesterday's.
         rows.sort(key=_by, reverse=True)
         return rows
+
+    def _computed_legs(rows: list) -> dict:
+        """A group row's legs when the rotation grid shipped none for it.
+
+        The day leg medians the members' CLOSE values (`rel_1d_close`) even
+        when the names above are live: a median over live values for the names
+        that priced and last-close values for the rest describes no session at
+        all. `_close_d1` then labels the row for what it is.
+        """
+        legs = {k: _median([_num(r.get(k)) for r in rows]) for k in LEGS}
+        legs["rel_1d"] = _median([_num(r.get("rel_1d_close")) for r in rows])
+        return legs
 
     out_sectors = []
     for name, grp in sector_groups.items():
@@ -317,8 +532,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             igrp = industry_groups.get(ind) or {}
             imed = igrp.get("median_21d")
             irows = _names(syms, imed)
-            legs = (_group_legs(ship) if ship else
-                    {k: _median([_num(r.get(k)) for r in irows]) for k in LEGS})
+            legs = _close_d1(_group_legs(ship) if ship else _computed_legs(irows))
             if not ship:
                 legs.update({"pct_positive_1d": None, "n_measured": len(syms), "dropped": None})
             inds.append({
@@ -345,7 +559,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             "industries": inds,
             "names": names[:names_per_group],
             "names_total": len(names),
-            **_group_legs(shipped),
+            **_close_d1(_group_legs(shipped)),
             **_fund_medians(names),
         })
     out_sectors.sort(key=_by, reverse=True)
@@ -367,8 +581,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         symbols = list(grp.get("symbols") or [])
         med21 = grp.get("median_21d")
         trows = _names(symbols, med21)
-        legs = (_group_legs(shipped) if shipped else
-                {k: _median([_num(r.get(k)) for r in trows]) for k in LEGS})
+        legs = _close_d1(_group_legs(shipped) if shipped else _computed_legs(trows))
         if not shipped:
             legs.update({"pct_positive_1d": None, "n_measured": len(symbols),
                          "dropped": None})
@@ -407,13 +620,21 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             "pct": round(100.0 * covered / len(by_symbol), 1) if by_symbol else None,
         },
         "traction": T.TRACTION_SPEC,
+        # What the day column is actually showing, so the header can say it
+        # (2026-09-16). `moves` is deliberately NOT served — it is one float
+        # per priced name and every row already carries its own.
+        D1_KEY: _d1_block(live, live_ok, payload.get("as_of"),
+                          (bench or {}).get("symbol") or "RSP"),
         "note": (
             "Sector heat is the rotation grid's sampled median (the same number the "
             "Hot-sectors strip prints). Name rows are the FULL membership, which is why "
             "a strong name in a cold sector is still reachable. Themes are our own "
             "curated rosters and cut ACROSS the provider's sectors, so they ride "
             "alongside rather than replacing them — they disagree, and the objective "
-            "label wins. Trailing returns only — a discovery list, not a measured signal."
+            "label wins. Trailing returns only — a discovery list, not a measured signal. "
+            "Today's column on the NAME rows is the live session when the tape is open; "
+            "the group rows and every other column stay on the last close, and each row "
+            "says which one it is showing."
         ),
         "built_at": int(time.time()),
     }

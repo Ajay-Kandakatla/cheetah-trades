@@ -207,3 +207,109 @@ Both were found by mutating, not by reading:
 2. **The `hsm-*` stylesheet guard used `css.includes('.' + cls)`** — satisfied by
    `.hsm-conameXX`, so renaming a rule passed. Both that guard and the new `hs-*` one now
    require a word boundary.
+
+---
+
+## 2026-09-16 — "Today" was the previous session's close
+
+Ajay, market open, ~11:00 ET, two screenshots taken the same minute: this board
+showing **TENB +8.3% under a column headed *Today***, and his own TENB ticker
+page showing **$36.68, −3.70%, Today · Live**.
+
+Both numbers were correct. This board is served from the rotation snapshot,
+which is built **after** the close — the 2026-09-15 build is stamped
+`2026-09-15T19:14:46-04:00` and the refreshing scans run 16:30+ ET. TENB really
+did close +7.98% raw / **+8.26% against RSP** on 2026-09-15, and really was
+−3.70% by 11:00 on 2026-09-16. The column was printing a finished session under
+today's word.
+
+### The semantic, stated once
+
+`rel_1d` on a **name** row is **RELATIVE**, not raw: `tracker.traction_row`
+computes `ret_1d − benchmark.ret_1d`, the benchmark being RSP (SPY only when
+RSP's frame is missing or stale). Group rows are relative too —
+`tracker._relativize` subtracts `bench.d1` from `median_1d`. Everything below
+preserves that exactly: the live number is the **live name move minus the live
+benchmark move**, both out of the same snapshot call. Without a live benchmark
+print there is no relative number to serve, so the whole board falls back to
+the close rather than letting a raw move sit in a relative column.
+
+### What now ships (`rotation/hottest.py`)
+
+- `live_day_moves(symbols, bench_symbol)` — **one** `prices.bulk_live_prices`
+  fan-out for the entire board, made in `build_live` beside the decision and
+  earnings joins, covering every priced name **plus the benchmark**. It covers
+  the whole member table rather than the 25 rows a group prints, because the
+  day leg is a sortable column: ranking on yesterday and then truncating would
+  hide today's movers behind yesterday's.
+- The move itself is the day bar's `change_pct`, and a **non-positive day-bar
+  price is MISSING, never a price** — the same rule (and the same reason) as
+  `supply_demand.demand_reentry._snapshot_print`. No extended-hours arithmetic
+  is invented: before the day bar opens there is no same-day move to serve.
+- `market_hours.gate.closed_reason()` is asked first. On a weekend or an NYSE
+  holiday the provider still answers — with the session the board already has —
+  so relabelling it "live" would be the same bug wearing a nicer word. One
+  calendar, never a second one here.
+- Every name row carries `d1_source: "live" | "close"` and keeps the snapshot
+  value under `rel_1d_close` / `ret_1d_close`, so nothing reading the old field
+  loses its number.
+- The payload carries a `d1` block: `basis`, `live`, `as_of`, `close_as_of`,
+  `benchmark`, `benchmark_move`, `live_names`, `group_basis`, `reason`, `note`.
+  The per-symbol `moves` map is deliberately **not** served.
+
+### Group rows stay on the close — and say so
+
+A sector / industry / roster row is the median over **all** of its members, not
+over the handful of names printed under it. Recomputing it live would need a
+live print for every member counted, and for the sector and industry rows the
+counted members are the rotation grid's own 25-name sample, whose membership
+this payload does not even carry. So **every group row keeps the snapshot
+value**, marked `d1_source: "close"`, on one basis across the whole tree
+(`_close_d1`). Where a group row has no shipped median and computes its own,
+`_computed_legs` medians the members' `rel_1d_close` even when the names above
+it are live — a median over live values for the names that priced and
+last-close values for the rest describes no session at all.
+
+### The labels, so this cannot recur silently
+
+- The **column header itself** reads `Today` only when the board is live;
+  otherwise `Last close <as-of>` (`d1Label` / `colLabel`).
+- The line under the controls says **which columns are live and which are not**
+  (`asOfLine`): live → "Today is live, measured against RSP · 5 days, 21 days,
+  Sales YoY and every sector, industry and roster row are from the 2026-09-15
+  close"; not live → "every column is from the 2026-09-15 close — the last
+  finished session, not today's (<reason>)".
+- A row whose live read is **missing while the board is live** prints the close
+  value with a visible `last close` mark beside it and a tooltip saying why
+  (`dayCell`). When the *whole* board is on the close the header already says
+  it, so the rows stay clean.
+- `benchSymbol` resolves the benchmark whether the endpoint sends the tracker's
+  benchmark **object** (it does on the persisted build) or a bare symbol — the
+  info panel used to be able to print `[object Object]` there.
+
+### The snapshot cadence is NOT touched
+
+A cold rotation build is ~30 s and no board may wait on one. Nothing about how
+or when the snapshot is built changed; only the day leg and the wording did.
+
+### Tests
+
+`backend/tests/test_hot_sectors_live_today_2026_09_16.py` (16) — the live row
+and its mark, the relative-not-raw pin, and the negatives: an unpriced name, a
+zero day bar, a raising fan-out, an empty fan-out, a missing benchmark print, a
+closed market (no call made at all), the pure `build()` path, the
+never-mixed group median, one fan-out per board, and the day column sorting on
+the live number. `frontend/src/components/HottestSectors.live.test.tsx` (14) —
+the header wording live and stale, the as-of line both ways, the per-row mark
+and its three negatives, and a payload with no `d1` block at all still
+rendering every row honestly.
+
+### Other rotation surfaces, checked
+
+- `/rotation` (`pages/Rotation.tsx`) prints only `rel_window` and `rel_21d` —
+  no day column, no today-ish label. **Already honest, unchanged.**
+- The Chart Maps sector-flow tile stat (`chart_maps/board.py`) prints
+  `rotation.heat.HEAT_KEY` under `"Sector flow (%s)" % HEAT_WINDOW` — its own
+  window, named. It never reads `rel_1d`. **Already honest, unchanged.**
+- The Hot-sectors strip and the member pop-over **were** labelling snapshot day
+  moves as "today"; both are fixed below and in `hot_sectors.md`.

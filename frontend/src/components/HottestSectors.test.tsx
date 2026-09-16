@@ -178,7 +178,9 @@ describe('HottestSectors board', () => {
     stub();
     view();
     await screen.findByText(/Technology/);
-    for (const label of ['Today', '5 days', '21 days', 'Sales YoY', 'Sales trend',
+    // 'Today' became 'Last close <date>' on 2026-09-16: this fixture carries no
+    // `d1` block, so the board is on the snapshot and the header must say so.
+    for (const label of ['Last close', '5 days', '21 days', 'Sales YoY', 'Sales trend',
                          'Q EPS', 'Margin', 'Quality', 'Next ER']) {
       expect(screen.getByRole('button', { name: new RegExp(label) })).toBeTruthy();
     }
