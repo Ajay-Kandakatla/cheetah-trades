@@ -9,7 +9,15 @@ import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 // business running. The tab's job is the CONTROLS and the TABLES; the chart is
 // the shared component and is covered by PatternChart.test.tsx.
 vi.mock('./PatternChart', () => ({
-  PatternChart: ({ tile }: any) => <div data-testid="chart">{tile.symbol}</div>,
+  // `data-band-study` and the band read are exposed so the 2026-09-16 tests can
+  // see what actually reached the one renderer that mounts BandStructureChip.
+  PatternChart: ({ tile, bandStudy }: any) => (
+    <div data-testid="chart" data-band-study={bandStudy?.headline ?? ''}>
+      {tile.symbol}
+      {tile.band_structure
+        ? <span data-testid="chart-band-read">{tile.band_structure.stat}</span> : null}
+    </div>
+  ),
 }));
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
@@ -664,5 +672,146 @@ describe('SupportLevels — the 🎯 chip on one symbol', () => {
     await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
     expect(screen.queryByText(/🎯 (READY|WATCH)/)).toBeNull();
     expect(screen.queryByText(/^⛔/)).toBeNull();
+  });
+});
+
+
+/* 🪜 BAND STRUCTURE on the Support tab (2026-09-16).
+ *
+ * `chart_maps/api.py::chart_maps_support` attaches the read to the tile AND
+ * serves `band_structure_study` beside it. The tab used to read neither, so the
+ * 🪜 chip rendered off the tile while the "MEASURED: pending" banner did
+ * not — the one surface where the disclaimer had to travel with the number was
+ * the one surface it did not. The negatives are the point: a board that
+ * INVENTS a banner when the server sent none is the same bug wearing the other
+ * face. */
+describe('SupportLevels — the \u{1FA9C} read and its pending banner', () => {
+  const READ = {
+    applicable: true, kind: 'demand', score: null,
+    stat: 'ceiling 3.4% wide, 20.1% up · floor 3.2% wide, 2nd band 5.2% under',
+    ceiling: { state: 'ROOM', height_pct: 3.4, distance_pct: 20.1, walls_above: 1 },
+    floor: { height_pct: 3.2, gap_pct: 5.2, bands_below: 5, in_band: true, distance_pct: 0 },
+    measured: { status: 'pending' },
+  };
+  const VERDICT = {
+    headline: 'MEASURED: pending — the replay has not reported',
+    body: 'Ordered by the ceiling, the floor breaking ties.',
+    fallback_note: 'a DESCRIPTIVE ordering of what the bands look like, not a prediction',
+    limits: 'closed-bar board geometry, read against the live print',
+    status: 'pending',
+  };
+  const payload = (over: Record<string, unknown> = {}) => ({
+    ...PAYLOAD,
+    tile: { ...(PAYLOAD.tile as any), band_structure: READ },
+    ...over,
+  });
+
+  beforeEach(() => { _resetBounceRoomCache(); });
+  afterEach(() => { _resetBounceRoomCache(); });
+
+  it('renders the SERVED pending banner and hands the same verdict to the chart', async () => {
+    mockFetch(payload({ band_structure_study: VERDICT, band_structure_kind: 'demand' }));
+    render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    const banner = await screen.findByTestId('sl-band-structure-study');
+    expect(banner.textContent).toContain('MEASURED: pending');
+    expect(banner.textContent).toContain('not a prediction');
+    // The chip and the banner must come off the same response: the tooltip the
+    // chip builds carries the verdict, so the verdict has to reach the renderer.
+    expect(screen.getByTestId('chart').getAttribute('data-band-study')).toBe(VERDICT.headline);
+    expect(screen.getByTestId('chart-band-read').textContent).toBe(READ.stat);
+  });
+
+  it('NEGATIVE: no verdict served — the chip still renders and NO banner is invented', async () => {
+    mockFetch(payload());          // tile has the read; the payload has no study
+    render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(screen.getByTestId('chart-band-read').textContent).toBe(READ.stat);
+    expect(screen.queryByTestId('sl-band-structure-study')).toBeNull();
+    expect(screen.queryByText(/MEASURED/)).toBeNull();
+    expect(screen.getByTestId('chart').getAttribute('data-band-study')).toBe('');
+  });
+
+  it('NEGATIVE: a verdict with no headline is not a banner — nothing renders', async () => {
+    mockFetch(payload({ band_structure_study: { headline: '', body: 'orphan body' } }));
+    render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(screen.queryByTestId('sl-band-structure-study')).toBeNull();
+    expect(screen.queryByText('orphan body')).toBeNull();
+  });
+
+  it('NEGATIVE: no read on the tile — no chip, and the banner is still the served one', async () => {
+    mockFetch({ ...PAYLOAD, band_structure_study: VERDICT });
+    render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(screen.queryByTestId('chart-band-read')).toBeNull();
+    expect(screen.getByTestId('sl-band-structure-study').textContent).toContain('MEASURED: pending');
+  });
+
+  /* 🪜 THE SILENT BLANK (critique J2, 2026-09-16). The chip renders
+   * NOTHING for a name with no bands, so a name the zone store does not carry
+   * drew a chart here with no Bands line and NO REASON — while the ten row
+   * boards, which build the doc on demand, served the read for that same name
+   * on the same day. Demonstrated on BTBT, one of his own positions. The
+   * sentence is SERVED (bounce_room.band_structure_no_read_note via
+   * chart_maps/board.band_structure_coverage) and never typed here — which is
+   * the whole point now that it has three shapes (still warming / under the
+   * store's cap floor and never coming / nobody can tell). This tab prints
+   * whichever one it was handed, verbatim, and can pick none of them. */
+  const BASE = 'No band read for these names \u2014 no ceiling or floor to show '
+    + 'on this board.';
+  const NO_READ = BASE + ' Names the store is still warming arrive on the next refresh.';
+  const BELOW_CAP = BASE + ' The store only draws bands for names at or above a '
+    + '$700M market cap and these are under it, so no refresh brings a read.';
+
+  it('BTBT: a name with NO read prints the SERVED reason, and no fabricated chip', async () => {
+    mockFetch({
+      ...PAYLOAD,
+      band_structure_study: VERDICT,
+      band_structure_coverage: { tiles_with_read: 0, tiles_without_read: 1, note: NO_READ },
+    });
+    render(<SupportLevels symbol="BTBT" window="3m" onSymbol={noop} onWindow={noop} />);
+    const line = await screen.findByTestId('sl-band-structure-no-read');
+    expect(line.textContent).toContain(NO_READ);
+    // the reason replaces nothing: no chip is invented beside it
+    expect(screen.queryByTestId('chart-band-read')).toBeNull();
+  });
+
+  it('BTBT under the cap floor: the tab prints THAT sentence, not a refresh promise',
+     async () => {
+    // The blocking bug (critique 5): BTBT is $562.6M against a $700M store
+    // floor, so "arrives on the next refresh" is a promise the store can never
+    // keep about a position he owns. Whatever the server decided, this tab
+    // prints it and nothing else.
+    mockFetch({
+      ...PAYLOAD,
+      band_structure_study: VERDICT,
+      band_structure_coverage: { tiles_with_read: 0, tiles_without_read: 1, note: BELOW_CAP },
+    });
+    render(<SupportLevels symbol="BTBT" window="3m" onSymbol={noop} onWindow={noop} />);
+    const line = await screen.findByTestId('sl-band-structure-no-read');
+    expect(line.textContent).toContain(BELOW_CAP);
+    expect(line.textContent).not.toContain('still warming');
+    expect(line.textContent).not.toContain('next refresh');
+    expect(screen.queryByTestId('chart-band-read')).toBeNull();
+  });
+
+  it('NEGATIVE: a name that DID read prints NO no-read line (nothing else changes)', async () => {
+    mockFetch(payload({
+      band_structure_study: VERDICT,
+      band_structure_coverage: { tiles_with_read: 1, tiles_without_read: 0, note: null },
+    }));
+    render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(screen.getByTestId('chart-band-read').textContent).toBe(READ.stat);
+    expect(screen.queryByTestId('sl-band-structure-no-read')).toBeNull();
+    expect(screen.getByTestId('sl-band-structure-study').textContent).toContain('MEASURED: pending');
+  });
+
+  it('NEGATIVE: no coverage block served at all — the tab INVENTS no reason', async () => {
+    mockFetch({ ...PAYLOAD, band_structure_study: VERDICT });
+    render(<SupportLevels symbol="BTBT" window="3m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByTestId('chart')).toBeTruthy());
+    expect(screen.queryByTestId('sl-band-structure-no-read')).toBeNull();
+    expect(screen.queryByText(/No band read/)).toBeNull();
   });
 });

@@ -56,6 +56,7 @@ import { useBounceRoom } from '../hooks/useBounceRoom';
 import { compareDemandProximity, demandChipText, inOrNearDemand, compareExplosive, type BounceRoomRow } from '../lib/bounceRoom';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter } from '../hooks/useEnterableFilter';
 import { partitionEnterable, type EnterableRead } from '../lib/enterable';
@@ -338,6 +339,16 @@ export default function BondeBoard() {
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
 
+      {/* 🪜 No row on this list came back with a band read — say so once,
+          the way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {room.payload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {room.payload.band_structure_coverage.note}
+        </div>
+      ) : null}
+
       {/* An empty ⚡ Pivots section has a structural cause right now, and a board
           that does not say so reads as broken. */}
       {paused && (
@@ -417,6 +428,12 @@ export default function BondeBoard() {
                       <ExplosiveChip read={read?.explosive} className="bd-gchip"
                                      study={room.payload?.explosive_study} />
                       <EnterableChip read={read?.enterable} className="bd-gchip" />
+                      {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's
+                          own served ceiling/floor read. `cm-badge` rather than
+                          `bd-gchip`: the shared pill is the class that ships
+                          with the -band / -band-muted tones. */}
+                      <BandStructureChip read={read?.band_structure} className="cm-badge"
+                                         study={room.payload?.band_structure_study} />
                       {r.name && <div className="bd-coname">{r.name}</div>}
                     </div>
 

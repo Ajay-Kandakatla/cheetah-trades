@@ -1,0 +1,2739 @@
+{
+ "base": {
+  "R20": 0.2882373270158341,
+  "R20_median": -1.0,
+  "R20_trim": 0.06760034252059896,
+  "clear_pct": 11.946867248139553,
+  "hit5_10": 32.607825878210775,
+  "hit5_20": 34.19620708970153,
+  "hit5_5": 28.47883492038089,
+  "hit5b_20": 31.927662639033365,
+  "hit_lid_20": 21.169574700109052,
+  "n_lid": 22008,
+  "risk_pct": 2.565534274172525,
+  "room_pct": 15.626034243038678,
+  "stop_20": 74.47787468992559,
+  "tgt_stop_clk": "19/74/7",
+  "win20": 24.865967832279747
+ },
+ "cap_note": "bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+ "clocks": [
+  5,
+  10,
+  20
+ ],
+ "cohort_note": "reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets \u22645%, 5\u201315%, >15%, which is the study that already found DISTANCE decides \u2014 and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null.",
+ "cohort_note_study": "reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17",
+ "control_N": [
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "sup1_height_pct",
+   "orientation": 1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served band field at the print",
+   "top": {
+    "ci": [
+     -4.588368629691791,
+     -2.169264248423374
+    ],
+    "ci_R": [
+     -0.2708005157117927,
+     0.13305165992857015
+    ],
+    "ci_rw": [
+     -2.064552521760846,
+     0.8382572705976419
+    ],
+    "ci_stop": [
+     2.6541733066769053,
+     4.82158289161214
+    ],
+    "conditions": {
+     "ci_excludes_0": false,
+     "one_per_date_symbol": false,
+     "outside_date_placebo": false,
+     "reweighted_sign": false,
+     "room_risk_kept": true,
+     "stop_not_raised": false
+    },
+    "d_R": -0.055992300700515946,
+    "d_hit5": -3.3769063180827894,
+    "d_hit5_reweighted": -0.6165025892823057,
+    "d_risk": -0.35258523736310865,
+    "d_stop": 3.7429193899782054,
+    "label": "Q5",
+    "n": 4590,
+    "one_per_date": -4.889732327328939,
+    "one_per_symbol": -3.0784394816652902,
+    "p_le0": 1.0,
+    "perm_p": 1.0,
+    "placebo_dates": [
+     32.15686274509804,
+     37.909586056644876
+    ],
+    "placebo_iid": [
+     34.030501089324616,
+     36.0566448801743
+    ],
+    "room_risk": 6.907781462934572,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "harmful"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "sup1_strength",
+   "orientation": -1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served band field at the print",
+   "top": {
+    "ci": [
+     -1.0272434425129218,
+     1.737335552145982
+    ],
+    "ci_R": [
+     -0.3014516426057008,
+     0.10567260077164657
+    ],
+    "ci_rw": [
+     -3.983179641943338,
+     -0.7189371709699973
+    ],
+    "ci_stop": [
+     -4.8272750337414845,
+     -2.0205480866055914
+    ],
+    "conditions": {
+     "ci_excludes_0": false,
+     "one_per_date_symbol": false,
+     "outside_date_placebo": false,
+     "reweighted_sign": false,
+     "room_risk_kept": false,
+     "stop_not_raised": true
+    },
+    "d_R": -0.08045799748380517,
+    "d_hit5": 0.3432253065455082,
+    "d_hit5_reweighted": -2.3572713575586475,
+    "d_risk": 0.3026680573884133,
+    "d_stop": -3.4596044217019672,
+    "label": "Q1",
+    "n": 5196,
+    "one_per_date": 0.0,
+    "one_per_symbol": 2.0946503353380166,
+    "p_le0": 0.3088,
+    "perm_p": 0.294,
+    "placebo_dates": [
+     32.25461893764434,
+     37.87528868360277
+    ],
+    "placebo_iid": [
+     34.08391070053888,
+     35.96997690531178
+    ],
+    "room_risk": 4.585934949393942,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "inert"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "sup1_touches",
+   "orientation": -1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served band field at the print",
+   "top": {
+    "ci": [
+     0.4079917051035405,
+     1.081693294044311
+    ],
+    "ci_R": [
+     -0.23805487971207479,
+     0.03657771431606133
+    ],
+    "ci_rw": [
+     -2.1579560546048,
+     2.4439490091482403
+    ],
+    "ci_stop": [
+     -0.21977216983724512,
+     0.4854910569921594
+    ],
+    "conditions": {
+     "ci_excludes_0": true,
+     "one_per_date_symbol": false,
+     "outside_date_placebo": false,
+     "reweighted_sign": true,
+     "room_risk_kept": true,
+     "stop_not_raised": true
+    },
+    "d_R": -0.06330304023580546,
+    "d_hit5": 0.7442904771991499,
+    "d_hit5_reweighted": 0.193734360412719,
+    "d_risk": 0.13593084086018026,
+    "d_stop": 0.13385836975415843,
+    "label": "Q1",
+    "n": 17989,
+    "one_per_date": -0.8287292817679537,
+    "one_per_symbol": 0.9926014267099548,
+    "p_le0": 0.0,
+    "perm_p": 0.0,
+    "placebo_dates": [
+     34.20951692701095,
+     35.76685752404247
+    ],
+    "placebo_iid": [
+     34.74345433320363,
+     35.28267274445495
+    ],
+    "room_risk": 5.582151487188398,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "selects wider stops"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "sup1_volume",
+   "orientation": -1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served band field at the print",
+   "top": {
+    "ci": [
+     -0.9434800196628648,
+     1.603767073452858
+    ],
+    "ci_R": [
+     -0.2768686820541978,
+     0.10986810202783677
+    ],
+    "ci_rw": [
+     -1.9006503809613888,
+     1.3023135789655946
+    ],
+    "ci_stop": [
+     -1.1029459535019384,
+     1.2288283410010794
+    ],
+    "conditions": {
+     "ci_excludes_0": false,
+     "one_per_date_symbol": false,
+     "outside_date_placebo": false,
+     "reweighted_sign": false,
+     "room_risk_kept": true,
+     "stop_not_raised": true
+    },
+    "d_R": -0.06274755220283026,
+    "d_hit5": 0.34858387799564516,
+    "d_hit5_reweighted": -0.2695065050880933,
+    "d_risk": 0.07384788911733908,
+    "d_stop": 0.039215686274507444,
+    "label": "Q1",
+    "n": 4590,
+    "one_per_date": -4.696132596685082,
+    "one_per_symbol": 2.3157894736842097,
+    "p_le0": 0.3002,
+    "perm_p": 0.295,
+    "placebo_dates": [
+     32.15686274509804,
+     37.909586056644876
+    ],
+    "placebo_iid": [
+     34.030501089324616,
+     36.0566448801743
+    ],
+    "room_risk": 5.817721108399902,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "inert"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "sup_gap_pct",
+   "orientation": 1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+   "top": {
+    "ci": [
+     -1.4832256805139516,
+     1.5524137618182083
+    ],
+    "ci_R": [
+     -0.4070038454849894,
+     0.004014878128632144
+    ],
+    "ci_rw": [
+     -2.5183915413978157,
+     0.8440555398018323
+    ],
+    "ci_stop": [
+     3.354144694097379,
+     6.131129775518898
+    ],
+    "conditions": {
+     "ci_excludes_0": false,
+     "one_per_date_symbol": false,
+     "outside_date_placebo": false,
+     "reweighted_sign": false,
+     "room_risk_kept": true,
+     "stop_not_raised": false
+    },
+    "d_R": -0.18341848295891305,
+    "d_hit5": 0.03831190142807861,
+    "d_hit5_reweighted": -0.8107441495718907,
+    "d_risk": 0.1948870713689379,
+    "d_stop": 4.757104524036881,
+    "label": "Q5",
+    "n": 3963,
+    "one_per_date": -2.8621853898097016,
+    "one_per_symbol": 3.965299056866567,
+    "p_le0": 0.48,
+    "perm_p": 0.491,
+    "placebo_dates": [
+     31.768861973252587,
+     38.22861468584406
+    ],
+    "placebo_iid": [
+     33.91370174110522,
+     36.18470855412566
+    ],
+    "room_risk": 6.305570940164708,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "inert"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "sup1_dist_pct",
+   "orientation": 1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served band field at the print",
+   "top": {
+    "ci": [
+     6.603643321241383,
+     9.44423781387384
+    ],
+    "ci_R": [
+     -0.4057217945351599,
+     -0.04003265603594287
+    ],
+    "ci_rw": [
+     -2.3703716308039318,
+     2.0174312105855856
+    ],
+    "ci_stop": [
+     -8.946345286768082,
+     -6.35284736318833
+    ],
+    "conditions": {
+     "ci_excludes_0": true,
+     "one_per_date_symbol": true,
+     "outside_date_placebo": true,
+     "reweighted_sign": false,
+     "room_risk_kept": false,
+     "stop_not_raised": true
+    },
+    "d_R": -0.19886177833944685,
+    "d_hit5": 8.017429193899783,
+    "d_hit5_reweighted": -0.16444898785344256,
+    "d_risk": 1.1494011818579875,
+    "d_stop": -7.6514161220043615,
+    "label": "Q5",
+    "n": 4590,
+    "one_per_date": 5.248618784530384,
+    "one_per_symbol": 9.129230769230768,
+    "p_le0": 0.0,
+    "perm_p": 0.0,
+    "placebo_dates": [
+     32.15686274509804,
+     37.909586056644876
+    ],
+    "placebo_iid": [
+     34.030501089324616,
+     36.0566448801743
+    ],
+    "room_risk": 4.197003363249623,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "selects smaller trades"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "depth_q25",
+   "orientation": 1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+   "top": {
+    "label": "Q1",
+    "n": 22950,
+    "verdict": "n<120 \u2014 not shown"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "depth_q50",
+   "orientation": 1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+   "top": {
+    "label": "Q1",
+    "n": 22950,
+    "verdict": "n<120 \u2014 not shown"
+   }
+  },
+  {
+   "convention": "N",
+   "kind": "num",
+   "name": "depth_q75",
+   "orientation": -1,
+   "ship_eligible": true,
+   "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+   "top": {
+    "ci": [
+     0.1613810296451687,
+     0.4685592967742859
+    ],
+    "ci_R": [
+     -0.010423194782955716,
+     0.020541629033409784
+    ],
+    "ci_rw": [
+     -3.077698640798906,
+     4.153838894652273
+    ],
+    "ci_stop": [
+     -0.05820519892183462,
+     0.27183940154100156
+    ],
+    "conditions": {
+     "ci_excludes_0": true,
+     "one_per_date_symbol": true,
+     "outside_date_placebo": false,
+     "reweighted_sign": true,
+     "room_risk_kept": true,
+     "stop_not_raised": true
+    },
+    "d_R": 0.004650348595046816,
+    "d_hit5": 0.3147171290376338,
+    "d_hit5_reweighted": 0.6170108957211652,
+    "d_risk": 0.04627451880248401,
+    "d_stop": 0.10794062192909237,
+    "label": "Q1",
+    "n": 21667,
+    "one_per_date": 0.8287292817679537,
+    "one_per_symbol": 0.31852654387865553,
+    "p_le0": 0.0002,
+    "perm_p": 0.0,
+    "placebo_dates": [
+     34.61485207919878,
+     35.3486869432778
+    ],
+    "placebo_iid": [
+     34.88254026861125,
+     35.140997830802604
+    ],
+    "room_risk": 5.225417159859804,
+    "room_risk_base": 5.158367874393536,
+    "verdict": "selects wider stops"
+   }
+  }
+ ],
+ "depth_cuts": {
+  "depth_q25": 1.6284824715421573,
+  "depth_q50": 4.081080693862966,
+  "depth_q75": 8.227848101265819
+ },
+ "derived_for_module": "ALIASES, not measurements. The run emitted its splits and its selected list per QUESTION (q1 ceiling / q2 floor); supply_demand/band_structure.py reads them at the top level, so: n_names = n_universe; selected = q1.selected + q2.selected (both empty); orientation/edges = {} because nothing was selected; splits[k].mdl = max(q1.splits[k].mdl, q2.splits[k].mdl), the weaker of the two resolutions, the same max() block_status already takes across splits; cohort_note = the study's own note (kept verbatim in cohort_note_study) plus the survivorship clause read from the survivorship block. Every q1/q2 block is untouched above.",
+ "dist_buckets": [
+  "\u22645%",
+  "5\u201315%",
+  ">15%"
+ ],
+ "edges": {},
+ "fallback": "descriptive ordering \u2014 Part B's call, never a gate",
+ "floor": 120,
+ "hold": 20,
+ "max_zones_read": 4,
+ "n_dates": 362,
+ "n_episodes": 24994,
+ "n_episodes_N": 22950,
+ "n_events_all": 158327,
+ "n_events_reversal": 93009,
+ "n_names": 3716,
+ "n_universe": 3716,
+ "not_quotable_reason": null,
+ "orientation": {},
+ "primary_outcome": "hit5",
+ "q1": {
+  "conditional": {
+   "lid_dist_pct": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      6.7582352509433745,
+      10.29203885532671
+     ],
+     "ci_stop_cond": [
+      -8.879722952177465,
+      -5.492739029354119
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 8.499806916433187,
+     "d_stop_cond": -7.177030479684768,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 459,
+      ">15%": 1828,
+      "\u22645%": 400
+     },
+     "mdl_cond": 1.5316862760269754,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": 7.259001575317267,
+     "one_per_symbol": 9.759265430663692,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 0.1708224786006699,
+      ">15%": 0.6803126163007072,
+      "\u22645%": 0.148864905098623
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      2.9081654908850227,
+      5.474402815580606
+     ],
+     "ci_stop_cond": [
+      -6.002612150807283,
+      -3.4853284052530222
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 4.21498999217259,
+     "d_stop_cond": -4.766527573996404,
+     "dropped": [
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 4401,
+      ">15%": 0,
+      "\u22645%": 1
+     },
+     "mdl_cond": 1.2147679448345037,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": 1.7136305575647492,
+     "one_per_symbol": 8.868509208158425,
+     "pooled": [
+      "5\u201315%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 1.0
+     }
+    }
+   },
+   "lid_height_pct": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      4.888863064806484,
+      8.12396075170075
+     ],
+     "ci_stop_cond": [
+      -1.0605716715212903,
+      1.9533256589452592
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 6.4603262834457444,
+     "d_stop_cond": 0.4759936977647084,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 285,
+      ">15%": 1840,
+      "\u22645%": 419
+     },
+     "mdl_cond": 1.6561915087888819,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": 5.761538439407408,
+     "one_per_symbol": 8.422226935311675,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 0.11202830188679246,
+      ">15%": 0.7232704402515723,
+      "\u22645%": 0.16470125786163523
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      4.892910684507842,
+      7.303974695660341
+     ],
+     "ci_stop_cond": [
+      -1.0995671858667673,
+      1.1629332564750126
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 6.095963026476571,
+     "d_stop_cond": 0.025273920491879077,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 3449,
+      ">15%": 953,
+      "\u22645%": 0
+     },
+     "mdl_cond": 1.1116637660018391,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": 3.983504773782735,
+     "one_per_symbol": 10.606335985537198,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 0.783507496592458,
+      ">15%": 0.21649250340754203
+     }
+    }
+   },
+   "lid_stack": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -3.9020986598342753,
+      -1.4217000271439488
+     ],
+     "ci_stop_cond": [
+      -2.0362095765227095,
+      0.288448832143569
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": -2.6383315739925637,
+     "d_stop_cond": -0.8992537908917186,
+     "dropped": [
+      "5\u201315%"
+     ],
+     "keep_n": {
+      "5\u201315%": 2,
+      ">15%": 3787,
+      "\u22645%": 0
+     },
+     "mdl_cond": 1.1178959807263191,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -2.608695652173915,
+     "one_per_symbol": -0.6246796716832037,
+     "pooled": [
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q5",
+     "verdict": "harmful",
+     "weights": {
+      ">15%": 1.0
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -1.4514045901768773,
+      1.8674968350528423
+     ],
+     "ci_stop_cond": [
+      -2.035291812790591,
+      1.3757900536429624
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.19549194010550922,
+     "d_stop_cond": -0.38964352935493857,
+     "dropped": [
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 3327,
+      ">15%": 1128,
+      "\u22645%": 1
+     },
+     "mdl_cond": 1.13910608275047,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -0.5549573607686993,
+     "one_per_symbol": 4.803651290054401,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q5",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.7468013468013468,
+      ">15%": 0.2531986531986532
+     }
+    }
+   },
+   "lid_strength": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -0.5354689794734141,
+      2.3473934638631224
+     ],
+     "ci_stop_cond": [
+      -0.812650319012497,
+      1.7959741476369115
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.8778140478735939,
+     "d_stop_cond": 0.49660397149687147,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 346,
+      ">15%": 2424,
+      "\u22645%": 443
+     },
+     "mdl_cond": 1.511378597335484,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -1.022433056572461,
+     "one_per_symbol": 2.8500598942677544,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.10768751945222534,
+      ">15%": 0.7544351073762838,
+      "\u22645%": 0.13787737317149082
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -0.027163095490061698,
+      2.7841692261706963
+     ],
+     "ci_stop_cond": [
+      -0.47823309083579213,
+      2.0289632945849276
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 1.35250469090471,
+     "d_stop_cond": 0.7479924290346163,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 3541,
+      ">15%": 1029,
+      "\u22645%": 0
+     },
+     "mdl_cond": 1.1151419255396002,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -3.3107138533080227,
+     "one_per_symbol": 4.002255568969318,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.774835886214442,
+      ">15%": 0.22516411378555798
+     }
+    }
+   },
+   "lid_touches": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      0.20399517049159996,
+      1.0929553077228018
+     ],
+     "ci_stop_cond": [
+      0.2773896282204097,
+      1.125792865335766
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.6524815919390214,
+     "d_stop_cond": 0.6888601354834174,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 1061,
+      ">15%": 7506,
+      "\u22645%": 1499
+     },
+     "mdl_cond": 0.422583918555068,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": 0.19030294431122488,
+     "one_per_symbol": 0.8739738343158152,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert (raises stop-outs)",
+     "weights": {
+      "5\u201315%": 0.10540433141267634,
+      ">15%": 0.7456785217564077,
+      "\u22645%": 0.14891714683091595
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      0.9283123382860005,
+      1.5801870222580239
+     ],
+     "ci_stop_cond": [
+      -0.04181572012532447,
+      0.5635275849229533
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 1.2497503879770862,
+     "d_stop_cond": 0.2570464010052397,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 12795,
+      ">15%": 4771,
+      "\u22645%": 0
+     },
+     "mdl_cond": 0.2871666943006078,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -0.12618550527355915,
+     "one_per_symbol": 1.3614270089274958,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "inert (one-per-date/symbol loses the sign)",
+     "weights": {
+      "5\u201315%": 0.728395764545144,
+      ">15%": 0.27160423545485596
+     }
+    }
+   }
+  },
+  "convention": "CLEAR",
+  "mdl": 2.7950260647449885,
+  "n": 24994,
+  "per_feature": [
+   {
+    "convention": "CLEAR",
+    "kind": "num",
+    "name": "lid_height_pct",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      5.398023639631685,
+      7.884231429440732
+     ],
+     "ci_R": [
+      -0.12938143364467386,
+      0.031395290958733425
+     ],
+     "ci_rw": [
+      6.2485110531470145,
+      9.2003734532642
+     ],
+     "ci_stop": [
+      -0.5899518866125943,
+      1.817080444985515
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": true,
+      "outside_date_placebo": true,
+      "reweighted_sign": true,
+      "room_risk_kept": false,
+      "stop_not_raised": true
+     },
+     "d_R": -0.0495867636805187,
+     "d_hit5": 6.6486004593596215,
+     "d_hit5_reweighted": 7.733461495071676,
+     "d_risk": -0.05711327080011763,
+     "d_stop": 0.6243515708649672,
+     "label": "Q1",
+     "n": 4402,
+     "one_per_date": 4.41988950276243,
+     "one_per_symbol": 16.6258488502694,
+     "p_le0": 0.0,
+     "perm_p": 0.0,
+     "placebo_dates": [
+      29.296480640639615,
+      35.192446683225164
+     ],
+     "placebo_iid": [
+      31.122217174011812,
+      33.144025442980464
+     ],
+     "room_risk": 5.355283979074976,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "selects smaller trades"
+    }
+   },
+   {
+    "convention": "CLEAR",
+    "kind": "num",
+    "name": "lid_strength",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      0.2829624869577197,
+      3.176558619795786
+     ],
+     "ci_R": [
+      -0.12504017479471966,
+      0.05129437390800534
+     ],
+     "ci_rw": [
+      -0.23646659017382549,
+      3.30422711081682
+     ],
+     "ci_stop": [
+      0.17274826562682896,
+      2.732694592454769
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": true,
+      "room_risk_kept": true,
+      "stop_not_raised": false
+     },
+     "d_R": -0.035195068713754496,
+     "d_hit5": 1.7211405918038936,
+     "d_hit5_reweighted": 1.5346469930824242,
+     "d_risk": -0.159177441449605,
+     "d_stop": 1.4302215901619397,
+     "label": "Q1",
+     "n": 4570,
+     "one_per_date": -3.314917127071826,
+     "one_per_symbol": 10.00408369165726,
+     "p_le0": 0.0112,
+     "perm_p": 0.0025,
+     "placebo_dates": [
+      29.257079606350977,
+      35.03247283700558
+     ],
+     "placebo_iid": [
+      31.137855579868706,
+      33.12910284463895
+     ],
+     "room_risk": 7.075841505394951,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "inert (CI>0 but fails: stop_not_raised,outside_date_placebo,one_per_date_symbol)"
+    }
+   },
+   {
+    "convention": "CLEAR",
+    "kind": "num",
+    "name": "lid_touches",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      0.3042915696361036,
+      0.9655444312632455
+     ],
+     "ci_R": [
+      -0.04416036001469397,
+      0.02383698180499095
+     ],
+     "ci_rw": [
+      5.081974157580665,
+      8.204210489903101
+     ],
+     "ci_stop": [
+      0.9127534949884507,
+      1.871668337226813
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": true,
+      "room_risk_kept": true,
+      "stop_not_raised": false
+     },
+     "d_R": -0.009575856258084825,
+     "d_hit5": 0.6329806767501722,
+     "d_hit5_reweighted": 6.62548528994301,
+     "d_risk": -0.054657108390643305,
+     "d_stop": 1.3845868835686725,
+     "label": "Q1",
+     "n": 17566,
+     "one_per_date": -1.1049723756906105,
+     "one_per_symbol": 1.978913156954329,
+     "p_le0": 0.0,
+     "perm_p": 0.0,
+     "placebo_dates": [
+      31.29008293740102,
+      33.043158629623086
+     ],
+     "placebo_iid": [
+      31.902538995787317,
+      32.40919959011727
+     ],
+     "room_risk": 6.774343424376337,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "inert (CI>0 but fails: stop_not_raised,outside_date_placebo,one_per_date_symbol)"
+    }
+   },
+   {
+    "convention": "CLEAR",
+    "kind": "num",
+    "name": "lid_stack",
+    "orientation": 1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      -1.6938225659166428,
+      1.674976619162498
+     ],
+     "ci_R": [
+      -0.16146439658636452,
+      0.0699197928375934
+     ],
+     "ci_rw": [
+      -1.7303898087854164,
+      2.4660681193386615
+     ],
+     "ci_stop": [
+      -1.1289007273198473,
+      2.291585486990681
+     ],
+     "conditions": {
+      "ci_excludes_0": false,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": true,
+      "room_risk_kept": true,
+      "stop_not_raised": true
+     },
+     "d_R": -0.04108014015317957,
+     "d_hit5": -0.03794115670032183,
+     "d_hit5_reweighted": 0.35569027717775203,
+     "d_risk": -0.07859946085277603,
+     "d_stop": 0.5445669617799798,
+     "label": "Q5",
+     "n": 4456,
+     "one_per_date": -0.3677694202223247,
+     "one_per_symbol": 11.520662022730843,
+     "p_le0": 0.5394,
+     "perm_p": 0.533,
+     "placebo_dates": [
+      29.087146496183703,
+      35.0689972419189
+     ],
+     "placebo_iid": [
+      31.12657091561939,
+      33.123877917414724
+     ],
+     "room_risk": 6.318617156143943,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "inert"
+    }
+   },
+   {
+    "convention": "CLEAR",
+    "kind": "num",
+    "name": "lid_dist_pct",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      7.966531194299391,
+      10.721557644423601
+     ],
+     "ci_R": [
+      -0.17475326080181844,
+      -0.0007159228339457802
+     ],
+     "ci_rw": [
+      null,
+      null
+     ],
+     "ci_stop": [
+      -7.651445991529769,
+      -4.821268908816255
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": true,
+      "outside_date_placebo": true,
+      "reweighted_sign": false,
+      "room_risk_kept": false,
+      "stop_not_raised": true
+     },
+     "d_R": -0.08661260308965954,
+     "d_hit5": 9.351917133598603,
+     "d_hit5_reweighted": null,
+     "d_risk": -0.39421930085526347,
+     "d_stop": -6.258883322365383,
+     "label": "Q1",
+     "n": 4402,
+     "one_per_date": 7.514735529940442,
+     "one_per_symbol": 19.12564844617056,
+     "p_le0": 0.0,
+     "perm_p": 0.0,
+     "placebo_dates": [
+      29.296480640639615,
+      35.192446683225164
+     ],
+     "placebo_iid": [
+      31.122217174011812,
+      33.144025442980464
+     ],
+     "room_risk": 2.4774794762737713,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "selects smaller trades"
+    }
+   }
+  ],
+  "question": "does a THIN first lid predict a close above lid.hi within 20 sessions, inside the 2026-09-07 distance buckets?",
+  "selected": [],
+  "splits": {
+   "s1": {
+    "edges": {},
+    "expected_false_selections": 0.5,
+    "mdl": 2.505728102315877,
+    "mdl_source": "random decile keep",
+    "n_fit": 12265,
+    "n_scored": 12729,
+    "n_tested": 5,
+    "name": "s1 date H2 (score H2)",
+    "orientation": {},
+    "selected": [],
+    "top_decile_n": 0,
+    "verdict": "no_signal"
+   },
+   "s2": {
+    "edges": {},
+    "expected_false_selections": 0.5,
+    "mdl": 2.486279958010351,
+    "mdl_source": "random decile keep",
+    "n_fit": 12729,
+    "n_scored": 12265,
+    "n_tested": 5,
+    "name": "s2 date H1 (score H1)",
+    "orientation": {},
+    "selected": [],
+    "top_decile_n": 0,
+    "verdict": "no_signal"
+   },
+   "s3": {
+    "edges": {},
+    "expected_false_selections": 0.5,
+    "mdl": 2.7950260647449885,
+    "mdl_source": "random decile keep",
+    "n_fit": 12805,
+    "n_scored": 12189,
+    "n_tested": 5,
+    "name": "s3 symbol parity 1",
+    "orientation": {},
+    "selected": [],
+    "top_decile_n": 0,
+    "verdict": "no_signal"
+   }
+  },
+  "status": "no_signal"
+ },
+ "q2": {
+  "capped_only": {
+   "eval": {
+    "ci": [
+     -0.8286531759839109,
+     0.07509203529642142
+    ],
+    "ci_stop": [
+     -0.42176237730220945,
+     0.3812725378928224
+    ],
+    "d_hit5": -0.369499073537638,
+    "d_stop": -0.025285647542350187,
+    "n": 21282,
+    "verdict": "inert"
+   },
+   "n": 21282,
+   "n_uncapped_only": 306,
+   "note": "bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields."
+  },
+  "conditional": {
+   "depth_q25": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      null,
+      null
+     ],
+     "ci_stop_cond": [
+      null,
+      null
+     ],
+     "contrast": "no stratum reached 120 rows on both sides \u2014 undefined",
+     "d_cond": null,
+     "d_stop_cond": null,
+     "dropped": [
+      "5\u201315%",
+      ">15%",
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "mdl_cond": null,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": null,
+     "one_per_symbol": null,
+     "pooled": [],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "n<120 \u2014 not shown",
+     "weights": {}
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      null,
+      null
+     ],
+     "ci_stop_cond": [
+      null,
+      null
+     ],
+     "contrast": "no stratum reached 120 rows on both sides \u2014 undefined",
+     "d_cond": null,
+     "d_stop_cond": null,
+     "dropped": [
+      "5\u201315%",
+      ">15%",
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "mdl_cond": null,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": null,
+     "one_per_symbol": null,
+     "pooled": [],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "n<120 \u2014 not shown",
+     "weights": {}
+    }
+   },
+   "depth_q50": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      null,
+      null
+     ],
+     "ci_stop_cond": [
+      null,
+      null
+     ],
+     "contrast": "no stratum reached 120 rows on both sides \u2014 undefined",
+     "d_cond": null,
+     "d_stop_cond": null,
+     "dropped": [
+      "5\u201315%",
+      ">15%",
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "mdl_cond": null,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": null,
+     "one_per_symbol": null,
+     "pooled": [],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "n<120 \u2014 not shown",
+     "weights": {}
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      null,
+      null
+     ],
+     "ci_stop_cond": [
+      null,
+      null
+     ],
+     "contrast": "no stratum reached 120 rows on both sides \u2014 undefined",
+     "d_cond": null,
+     "d_stop_cond": null,
+     "dropped": [
+      "5\u201315%",
+      ">15%",
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "mdl_cond": null,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": null,
+     "one_per_symbol": null,
+     "pooled": [],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "n<120 \u2014 not shown",
+     "weights": {}
+    }
+   },
+   "depth_q75": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      0.16849667680337188,
+      0.5937577561715507
+     ],
+     "ci_stop_cond": [
+      -0.2747956303191898,
+      0.15030849116675477
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.3779825479767131,
+     "d_stop_cond": -0.0607995051800424,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 1323,
+      ">15%": 8920,
+      "\u22645%": 1673
+     },
+     "mdl_cond": 0.20976981702354852,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -0.37473301421974015,
+     "one_per_symbol": 0.4353660295376595,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert (one-per-date/symbol loses the sign)",
+     "weights": {
+      "5\u201315%": 0.11102719033232629,
+      ">15%": 0.7485733467606579,
+      "\u22645%": 0.14039946290701577
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      0.14024368130486645,
+      0.5282104534134252
+     ],
+     "ci_stop_cond": [
+      -0.3543714143072438,
+      0.029592298267324617
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.3299340383703886,
+     "d_stop_cond": -0.16127365377034408,
+     "dropped": [
+      ">15%",
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 15438,
+      ">15%": 5264,
+      "\u22645%": 1
+     },
+     "mdl_cond": 0.1930226934949795,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": 1.3812154696132617,
+     "one_per_symbol": 0.3228361403669555,
+     "pooled": [
+      "5\u201315%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 1.0
+     }
+    }
+   },
+   "sup1_dist_pct": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      8.07199933820582,
+      12.090905820504297
+     ],
+     "ci_stop_cond": [
+      -9.544384860789926,
+      -6.340772504381421
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 10.026200612982317,
+     "d_stop_cond": -7.930795583528,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 279,
+      ">15%": 1586,
+      "\u22645%": 420
+     },
+     "mdl_cond": 1.5786742554261008,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": 6.193230119244461,
+     "one_per_symbol": 9.472018931560704,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q5",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 0.12210065645514223,
+      ">15%": 0.6940919037199125,
+      "\u22645%": 0.1838074398249453
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      7.948837001346981,
+      10.967607383023747
+     ],
+     "ci_stop_cond": [
+      -8.8988994491757,
+      -6.383459441751686
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 9.434520469750902,
+     "d_stop_cond": -7.619245086757448,
+     "dropped": [
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 2926,
+      ">15%": 1095,
+      "\u22645%": 1
+     },
+     "mdl_cond": 1.3228045629896654,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": 6.806193148355891,
+     "one_per_symbol": 9.55902394623645,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q5",
+     "verdict": "separates",
+     "weights": {
+      "5\u201315%": 0.7276796816712261,
+      ">15%": 0.27232031832877396
+     }
+    }
+   },
+   "sup1_height_pct": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -5.001326618608097,
+      -2.0128428931427766
+     ],
+     "ci_stop_cond": [
+      1.7242477852170475,
+      4.307368801528078
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": -3.4944381127823045,
+     "d_stop_cond": 2.9891433101451987,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 290,
+      ">15%": 2220,
+      "\u22645%": 275
+     },
+     "mdl_cond": 1.520333149468307,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -7.512440698912941,
+     "one_per_symbol": -4.528715681741156,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q5",
+     "verdict": "harmful",
+     "weights": {
+      "5\u201315%": 0.10412926391382406,
+      ">15%": 0.7971274685816876,
+      "\u22645%": 0.09874326750448834
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -4.977751057830396,
+      -2.600196768427626
+     ],
+     "ci_stop_cond": [
+      2.1018896697469676,
+      4.198873148033628
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": -3.7805169449741007,
+     "d_stop_cond": 3.1470706557980566,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 3475,
+      ">15%": 1242,
+      "\u22645%": 0
+     },
+     "mdl_cond": 1.186089885351927,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -8.508194952096577,
+     "one_per_symbol": -4.496133429258923,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q5",
+     "verdict": "harmful",
+     "weights": {
+      "5\u201315%": 0.7366970532117871,
+      ">15%": 0.26330294678821287
+     }
+    }
+   },
+   "sup1_strength": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -0.4231934828776434,
+      2.604250574391556
+     ],
+     "ci_stop_cond": [
+      -2.329275269339501,
+      0.41222256447259636
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 1.0840827738295056,
+     "d_stop_cond": -0.9405174838647075,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 356,
+      ">15%": 2122,
+      "\u22645%": 571
+     },
+     "mdl_cond": 1.3055388194817448,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -2.9412589168714725,
+     "one_per_symbol": 0.8145570455840986,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.11675959330928173,
+      ">15%": 0.6959658904558872,
+      "\u22645%": 0.1872745162348311
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -0.6066083842322941,
+      2.331081248869245
+     ],
+     "ci_stop_cond": [
+      -2.552908578367394,
+      0.0694623983786138
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.8561244578272117,
+     "d_stop_cond": -1.260656579897425,
+     "dropped": [
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 3327,
+      ">15%": 1038,
+      "\u22645%": 1
+     },
+     "mdl_cond": 1.339545012656236,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -2.319598436235844,
+     "one_per_symbol": 2.0065446694734117,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.7621993127147766,
+      ">15%": 0.23780068728522336
+     }
+    }
+   },
+   "sup1_touches": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -0.03053692460581551,
+      0.996473110870183
+     ],
+     "ci_stop_cond": [
+      -0.08044703515151537,
+      0.9002272532715038
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.4878242610054916,
+     "d_stop_cond": 0.4072309139891553,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 962,
+      ">15%": 7040,
+      "\u22645%": 1513
+     },
+     "mdl_cond": 0.49211622672779437,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -0.3535746699076593,
+     "one_per_symbol": 0.6058095120897462,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.10110352075669994,
+      ">15%": 0.7398843930635838,
+      "\u22645%": 0.15901208617971624
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      0.11456652527361204,
+      0.845624529808847
+     ],
+     "ci_stop_cond": [
+      -0.43904244625936634,
+      0.2508824170682566
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.4775031016051115,
+     "d_stop_cond": -0.09473789375812977,
+     "dropped": [
+      "\u22645%"
+     ],
+     "keep_n": {
+      "5\u201315%": 11853,
+      ">15%": 4842,
+      "\u22645%": 1
+     },
+     "mdl_cond": 0.33117366510191826,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -0.7845006031183432,
+     "one_per_symbol": 0.7509215372959499,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "inert (one-per-date/symbol loses the sign)",
+     "weights": {
+      "5\u201315%": 0.7099730458221024,
+      ">15%": 0.2900269541778976
+     }
+    }
+   },
+   "sup1_volume": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -2.906824647975722,
+      0.3749896331609497
+     ],
+     "ci_stop_cond": [
+      -0.03134009771954258,
+      3.0105201049395056
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": -1.2880515103349965,
+     "d_stop_cond": 1.4749008639141403,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 238,
+      ">15%": 1616,
+      "\u22645%": 375
+     },
+     "mdl_cond": 2.0970754568522834,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -6.251361886763775,
+     "one_per_symbol": -1.3146876925069784,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.10677433826828174,
+      ">15%": 0.7249887842081651,
+      "\u22645%": 0.16823687752355315
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -2.01630307978453,
+      0.44828470166888695
+     ],
+     "ci_stop_cond": [
+      -0.30548875266279796,
+      1.9360118852346855
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": -0.779690665775272,
+     "d_stop_cond": 0.8010410944846151,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 3261,
+      ">15%": 1124,
+      "\u22645%": 0
+     },
+     "mdl_cond": 1.1749162030574423,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -5.305488189606851,
+     "one_per_symbol": -0.8086709661057413,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.7436716077537058,
+      ">15%": 0.25632839224629417
+     }
+    }
+   },
+   "sup_gap_pct": {
+    "lid52_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -1.4850638408638162,
+      2.038957953330934
+     ],
+     "ci_stop_cond": [
+      -2.9897515902460263,
+      0.32897653680604755
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.2728828026226118,
+     "d_stop_cond": -1.321205523759811,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 369,
+      ">15%": 1699,
+      "\u22645%": 374
+     },
+     "mdl_cond": 1.7940821167557255,
+     "n_base": {
+      "5\u201315%": 1488,
+      ">15%": 9481,
+      "\u22645%": 1843
+     },
+     "one_per_date": -2.337901903361677,
+     "one_per_symbol": -0.7537630311492216,
+     "pooled": [
+      "\u22645%",
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid52_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.1511056511056511,
+      ">15%": 0.6957411957411958,
+      "\u22645%": 0.15315315315315314
+     }
+    },
+    "lid_bucket": {
+     "cells": {
+      "0": "\u22645%",
+      "1": "5\u201315%",
+      "2": ">15%"
+     },
+     "ci_cond": [
+      -0.6982942204395569,
+      2.19354896582278
+     ],
+     "ci_stop_cond": [
+      -2.458122988751907,
+      0.3702078104248646
+     ],
+     "contrast": "top bucket vs the rest of its own distance stratum",
+     "d_cond": 0.7532709904779776,
+     "d_stop_cond": -1.0587792279089556,
+     "dropped": [],
+     "keep_n": {
+      "5\u201315%": 3298,
+      ">15%": 545,
+      "\u22645%": 0
+     },
+     "mdl_cond": 1.385825486345107,
+     "n_base": {
+      "5\u201315%": 16671,
+      ">15%": 5336,
+      "\u22645%": 1
+     },
+     "one_per_date": -3.3850508055925856,
+     "one_per_symbol": 0.9430258133563783,
+     "pooled": [
+      "5\u201315%",
+      ">15%"
+     ],
+     "stratifier": "lid_bucket",
+     "top": "Q1",
+     "verdict": "inert",
+     "weights": {
+      "5\u201315%": 0.858183710642727,
+      ">15%": 0.14181628935727297
+     }
+    }
+   }
+  },
+  "convention": "P",
+  "gap_bins": [
+   {
+    "R20": 0.2969916617562393,
+    "R20_median": -1.0,
+    "bin": "Q1",
+    "hit5_20": 33.997220935618344,
+    "n": 4318,
+    "note": null,
+    "stop_20": 71.12088930060213,
+    "win20": 27.860120426123203
+   },
+   {
+    "R20": 0.2772895736843371,
+    "R20_median": -1.0,
+    "bin": "Q2",
+    "hit5_20": 34.05142460041696,
+    "n": 4317,
+    "note": null,
+    "stop_20": 72.36506833449154,
+    "win20": 26.963168867268937
+   },
+   {
+    "R20": 0.218032398163682,
+    "R20_median": -1.0,
+    "bin": "Q3",
+    "hit5_20": 33.3024548402038,
+    "n": 4318,
+    "note": null,
+    "stop_20": 74.29365446966189,
+    "win20": 24.942102825382122
+   },
+   {
+    "R20": 0.3197988991444423,
+    "R20_median": -1.0,
+    "bin": "Q4",
+    "hit5_20": 33.773453787352324,
+    "n": 4317,
+    "note": null,
+    "stop_20": 74.77414871438499,
+    "win20": 24.669909659485754
+   },
+   {
+    "R20": 0.1977617214794388,
+    "R20_median": -1.0,
+    "bin": "Q5",
+    "hit5_20": 33.974062065771186,
+    "n": 4318,
+    "note": null,
+    "stop_20": 79.71283001389531,
+    "win20": 19.893469198703105
+   },
+   {
+    "R20": 0.4547163271137639,
+    "R20_median": -1.0,
+    "bin": "NaN",
+    "hit5_20": 36.58250146799765,
+    "n": 3406,
+    "note": "no second band \u2014 gap UNDEFINED, not 0",
+    "stop_20": 74.63300058719906,
+    "win20": 24.867880211391665
+   }
+  ],
+  "held": {
+   "by_gap_bin": [
+    {
+     "bin": "Q1",
+     "held_pct": 34.44849287843657,
+     "n": 3019,
+     "n_answerable": 3019,
+     "note": null
+    },
+    {
+     "bin": "Q2",
+     "held_pct": 43.10679611650485,
+     "n": 3090,
+     "n_answerable": 3090,
+     "note": null
+    },
+    {
+     "bin": "Q3",
+     "held_pct": 52.26917057902973,
+     "n": 3195,
+     "n_answerable": 3195,
+     "note": null
+    },
+    {
+     "bin": "Q4",
+     "held_pct": 65.45978852931754,
+     "n": 3121,
+     "n_answerable": 3121,
+     "note": null
+    },
+    {
+     "bin": "Q5",
+     "held_pct": 81.13900796080833,
+     "n": 3266,
+     "n_answerable": 3266,
+     "note": null
+    },
+    {
+     "bin": "NaN",
+     "held_pct": null,
+     "n": 2444,
+     "n_answerable": 0,
+     "note": "no second band \u2014 'held' is UNDEFINED, never False"
+    }
+   ],
+   "n_under": 18135,
+   "note": "conditions on a forward event (price closed under band1) \u2014 descriptive only",
+   "ship_eligible": false
+  },
+  "mdl": 2.586329310380754,
+  "n": 24994,
+  "per_feature": [
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "sup1_height_pct",
+    "orientation": 1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      -5.201912192972298,
+      -2.8614755515782417
+     ],
+     "ci_R": [
+      0.004913716280248458,
+      0.27871936685306836
+     ],
+     "ci_rw": [
+      -1.84674459102018,
+      0.9964558131254831
+     ],
+     "ci_stop": [
+      3.3432248604426062,
+      5.284047100574398
+     ],
+     "conditions": {
+      "ci_excludes_0": false,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": false,
+      "room_risk_kept": true,
+      "stop_not_raised": false
+     },
+     "d_R": 0.1260891702390688,
+     "d_hit5": -4.01016988226004,
+     "d_hit5_reweighted": -0.41604603322694267,
+     "d_risk": -0.463329098709401,
+     "d_stop": 4.317884461904786,
+     "label": "Q5",
+     "n": 4999,
+     "one_per_date": -7.376685388959459,
+     "one_per_symbol": -1.0876852138268833,
+     "p_le0": 1.0,
+     "perm_p": 1.0,
+     "placebo_dates": [
+      30.88517703540708,
+      37.56751350270054
+     ],
+     "placebo_iid": [
+      33.1866373274655,
+      35.14702940588118
+     ],
+     "room_risk": 8.718909685282478,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "harmful"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "sup1_strength",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      -0.4531792564308017,
+      2.3551627170673632
+     ],
+     "ci_R": [
+      -0.16525915076990086,
+      0.007242201046208457
+     ],
+     "ci_rw": [
+      -3.6697604674046023,
+      -0.23089544060903472
+     ],
+     "ci_stop": [
+      -5.09958160997715,
+      -2.4423324130563135
+     ],
+     "conditions": {
+      "ci_excludes_0": false,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": false,
+      "room_risk_kept": false,
+      "stop_not_raised": true
+     },
+     "d_R": -0.07707024055719414,
+     "d_hit5": 0.9428322746899476,
+     "d_hit5_reweighted": -1.975005264225654,
+     "d_risk": 0.3368407692223987,
+     "d_stop": -3.8025406343098367,
+     "label": "Q1",
+     "n": 5538,
+     "one_per_date": -2.209944751381215,
+     "one_per_symbol": 4.926525579609081,
+     "p_le0": 0.0934,
+     "perm_p": 0.046,
+     "placebo_dates": [
+      31.003972553268326,
+      37.269772481040086
+     ],
+     "placebo_iid": [
+      33.22499097146984,
+      35.06681112314915
+     ],
+     "room_risk": 5.32030245477129,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "inert"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "sup1_touches",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      0.3550184013163771,
+      1.0236673036254176
+     ],
+     "ci_R": [
+      -0.029124099003043677,
+      0.015019212590245188
+     ],
+     "ci_rw": [
+      -2.6103512922774814,
+      2.1065555413770847
+     ],
+     "ci_stop": [
+      -0.21657422816157454,
+      0.4389652587946548
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": false,
+      "room_risk_kept": true,
+      "stop_not_raised": true
+     },
+     "d_R": -0.006944523038342532,
+     "d_hit5": 0.6894138253311477,
+     "d_hit5_reweighted": -0.21149436794980556,
+     "d_risk": 0.12604068196646256,
+     "d_stop": 0.11362857804827486,
+     "label": "Q1",
+     "n": 19584,
+     "one_per_date": -0.27624309392265123,
+     "one_per_symbol": 1.702370990237101,
+     "p_le0": 0.0,
+     "perm_p": 0.0,
+     "placebo_dates": [
+      33.287377450980394,
+      35.05923202614379
+     ],
+     "placebo_iid": [
+      33.951184640522875,
+      34.4515931372549
+     ],
+     "room_risk": 6.566097740806461,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "selects wider stops"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "sup1_volume",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      -1.7421996905922543,
+      0.6392298185530828
+     ],
+     "ci_R": [
+      -0.1697275399696914,
+      0.013078856721952794
+     ],
+     "ci_rw": [
+      -3.020961651558319,
+      -0.06639361129247674
+     ],
+     "ci_stop": [
+      -0.777958959989703,
+      1.3811566010630616
+     ],
+     "conditions": {
+      "ci_excludes_0": false,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": false,
+      "room_risk_kept": true,
+      "stop_not_raised": true
+     },
+     "d_R": -0.07826148422377727,
+     "d_hit5": -0.549477743832355,
+     "d_hit5_reweighted": -1.5640746754131456,
+     "d_risk": 0.09108352309798518,
+     "d_stop": 0.2970803010726164,
+     "label": "Q1",
+     "n": 4999,
+     "one_per_date": -7.182320441988948,
+     "one_per_symbol": 2.5128127573053716,
+     "p_le0": 0.8124,
+     "perm_p": 0.8395,
+     "placebo_dates": [
+      30.88517703540708,
+      37.56751350270054
+     ],
+     "placebo_iid": [
+      33.1866373274655,
+      35.14702940588118
+     ],
+     "room_risk": 6.76511556092822,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "inert"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "sup_gap_pct",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served as read \u2014 the bands are drawn UNCAPPED (price_zones.compute(max_zones=None), the call zone_store.build_doc / BQ.events makes) and the served read walks doc[\"bands\"] straight through: it applies NO price_zones.nearest_first(...)[:4] cut, so a second band that exists is always in front of the read and a null gap means there is nothing below, never that the read stopped looking. band2_within_cap is still recorded per row as a conservative check against price_zones.compute's DEFAULT MAX_ZONES_PER_SIDE, for any FUTURE read sourced from a capped caller; it gates nothing on today's served path. Wording corrected 2026-09-16 to match docs/supply_demand/band_structure.md section 3 \u2014 the emitting script's CAP_NOTE still carries the old sentence and will restore it on the next --emit-measured.",
+    "top": {
+     "ci": [
+      -1.6611103061729446,
+      1.2480089155746876
+     ],
+     "ci_R": [
+      -0.08692940994984624,
+      0.10274888132862608
+     ],
+     "ci_rw": [
+      -2.419390610649093,
+      0.9080959343496139
+     ],
+     "ci_stop": [
+      -4.6935522279678965,
+      -1.967220696143809
+     ],
+     "conditions": {
+      "ci_excludes_0": false,
+      "one_per_date_symbol": false,
+      "outside_date_placebo": false,
+      "reweighted_sign": false,
+      "room_risk_kept": false,
+      "stop_not_raised": true
+     },
+     "d_R": 0.008754334740405212,
+     "d_hit5": -0.1989861540831861,
+     "d_hit5_reweighted": -0.7498017313023364,
+     "d_risk": 0.04561920245960538,
+     "d_stop": -3.3569853893234525,
+     "label": "Q1",
+     "n": 4318,
+     "one_per_date": -3.31491712707182,
+     "one_per_symbol": 2.8911737464817175,
+     "p_le0": 0.6104,
+     "perm_p": 0.6315,
+     "placebo_dates": [
+      30.661185734136176,
+      37.91106993978694
+     ],
+     "placebo_iid": [
+      33.11602593793423,
+      35.224641037517365
+     ],
+     "room_risk": 4.445301019377008,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "inert"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "sup1_dist_pct",
+    "orientation": 1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served band field at the print",
+    "top": {
+     "ci": [
+      7.736898298242981,
+      10.547271029504131
+     ],
+     "ci_R": [
+      -0.23679642693311462,
+      -0.07584703986350551
+     ],
+     "ci_rw": [
+      -3.297752776990407,
+      1.234761247391496
+     ],
+     "ci_stop": [
+      -10.078307542920712,
+      -7.676551318171574
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": true,
+      "outside_date_placebo": true,
+      "reweighted_sign": false,
+      "room_risk_kept": false,
+      "stop_not_raised": true
+     },
+     "d_R": -0.15403963234157003,
+     "d_hit5": 9.132458643445101,
+     "d_hit5_reweighted": -1.008312451714932,
+     "d_risk": 1.361740954880657,
+     "d_stop": -8.864752065400683,
+     "label": "Q5",
+     "n": 4999,
+     "one_per_date": 4.41988950276243,
+     "one_per_symbol": 12.382279141787045,
+     "p_le0": 0.0,
+     "perm_p": 0.0,
+     "placebo_dates": [
+      30.88517703540708,
+      37.56751350270054
+     ],
+     "placebo_iid": [
+      33.1866373274655,
+      35.14702940588118
+     ],
+     "room_risk": 4.392658845463527,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "selects smaller trades"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "depth_q25",
+    "orientation": 1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+    "top": {
+     "label": "Q1",
+     "n": 24994,
+     "verdict": "n<120 \u2014 not shown"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "depth_q50",
+    "orientation": 1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+    "top": {
+     "label": "Q1",
+     "n": 24994,
+     "verdict": "n<120 \u2014 not shown"
+    }
+   },
+   {
+    "convention": "P",
+    "kind": "num",
+    "name": "depth_q75",
+    "orientation": -1,
+    "ship_eligible": true,
+    "ship_eligible_reason": "served only when band2_within_cap \u2014 bands drawn UNCAPPED (price_zones.compute(max_zones=None), the call BQ.events makes); the SERVED cut is price_zones.nearest_first(...)[:4] (MAX_ZONES_PER_SIDE) and is recorded per row as band2_within_cap. A second band that exists only OUTSIDE that cap is reported and is NOT ship-eligible from today's served fields.",
+    "top": {
+     "ci": [
+      0.2245103506678335,
+      0.520937105783034
+     ],
+     "ci_R": [
+      -0.01937800631194672,
+      0.0007520284617776312
+     ],
+     "ci_rw": [
+      -3.145712643154851,
+      4.865023431741959
+     ],
+     "ci_stop": [
+      -0.09335940071284216,
+      0.21475319350393574
+     ],
+     "conditions": {
+      "ci_excludes_0": true,
+      "one_per_date_symbol": true,
+      "outside_date_placebo": false,
+      "reweighted_sign": true,
+      "room_risk_kept": true,
+      "stop_not_raised": true
+     },
+     "d_R": -0.009053188744796048,
+     "d_hit5": 0.3706986523516864,
+     "d_hit5_reweighted": 0.8273900916552461,
+     "d_risk": 0.049327385946468905,
+     "d_stop": 0.06271861313429383,
+     "label": "Q1",
+     "n": 23563,
+     "one_per_date": 0.27624309392265123,
+     "one_per_symbol": 0.5701599913594368,
+     "p_le0": 0.0,
+     "perm_p": 0.0,
+     "placebo_dates": [
+      33.79450833934558,
+      34.57560582268811
+     ],
+     "placebo_iid": [
+      34.074608496371425,
+      34.320757119212324
+     ],
+     "room_risk": 6.154845152072381,
+     "room_risk_base": 6.0907524800379536,
+     "verdict": "selects wider stops"
+    }
+   }
+  ],
+  "question": "does LAYERED support predict surviving \u2014 fewer floor stop-outs and +5% before the floor?",
+  "selected": [],
+  "splits": {
+   "s1": {
+    "edges": {},
+    "expected_false_selections": 0.9,
+    "mdl": 2.3157571726044894,
+    "mdl_source": "random decile keep",
+    "n_fit": 12265,
+    "n_scored": 12729,
+    "n_tested": 9,
+    "name": "s1 date H2 (score H2)",
+    "orientation": {},
+    "selected": [],
+    "top_decile_n": 0,
+    "verdict": "no_signal"
+   },
+   "s2": {
+    "edges": {},
+    "expected_false_selections": 0.9,
+    "mdl": 2.4715659128424483,
+    "mdl_source": "random decile keep",
+    "n_fit": 12729,
+    "n_scored": 12265,
+    "n_tested": 9,
+    "name": "s2 date H1 (score H1)",
+    "orientation": {},
+    "selected": [],
+    "top_decile_n": 0,
+    "verdict": "no_signal"
+   },
+   "s3": {
+    "edges": {},
+    "expected_false_selections": 0.9,
+    "mdl": 2.586329310380754,
+    "mdl_source": "random decile keep",
+    "n_fit": 12805,
+    "n_scored": 12189,
+    "n_tested": 9,
+    "name": "s3 symbol parity 1",
+    "orientation": {},
+    "selected": [],
+    "top_decile_n": 0,
+    "verdict": "no_signal"
+   }
+  },
+  "status": "no_signal"
+ },
+ "quotable": true,
+ "run_date": "2026-09-16",
+ "script": "backend/scripts/band_structure_study.py",
+ "selected": [],
+ "splits": {
+  "s1": {
+   "ci": null,
+   "edges": {},
+   "lift": null,
+   "mdl": 2.505728102315877,
+   "mdl_of": {
+    "ceiling": 2.505728102315877,
+    "floor": 2.3157571726044894
+   },
+   "mdl_source": "random decile keep",
+   "n_fit": 12265,
+   "n_scored": 12729,
+   "name": "s1 date H2 (score H2)",
+   "orientation": {},
+   "selected": [],
+   "verdict": "no_signal"
+  },
+  "s2": {
+   "ci": null,
+   "edges": {},
+   "lift": null,
+   "mdl": 2.486279958010351,
+   "mdl_of": {
+    "ceiling": 2.486279958010351,
+    "floor": 2.4715659128424483
+   },
+   "mdl_source": "random decile keep",
+   "n_fit": 12729,
+   "n_scored": 12265,
+   "name": "s2 date H1 (score H1)",
+   "orientation": {},
+   "selected": [],
+   "verdict": "no_signal"
+  },
+  "s3": {
+   "ci": null,
+   "edges": {},
+   "lift": null,
+   "mdl": 2.7950260647449885,
+   "mdl_of": {
+    "ceiling": 2.7950260647449885,
+    "floor": 2.586329310380754
+   },
+   "mdl_source": "random decile keep",
+   "n_fit": 12805,
+   "n_scored": 12189,
+   "name": "s3 symbol parity 1",
+   "orientation": {},
+   "selected": [],
+   "verdict": "no_signal"
+  }
+ },
+ "status": "no_signal",
+ "survivorship": {
+  "cache_hit5_20": 32.731256345855826,
+  "cache_n_episodes": 37426,
+  "cache_n_names": 5284,
+  "cache_stop_20": 77.00261850050767,
+  "d_hit5_vs_broad": -1.464950743845705,
+  "run_date": "2026-09-16",
+  "source": "cache-csv:/tmp/band_events_cache.csv",
+  "written_to": "/tmp/band_events_cache.csv.survivorship.json"
+ },
+ "universe_mode": "broad",
+ "walltime_stats_s": 36.7,
+ "window": "2025-03-10 -> 2026-08-17"
+}

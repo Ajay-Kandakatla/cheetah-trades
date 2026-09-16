@@ -12,7 +12,8 @@
  * NOT advice, and NOT a book method — `price_zones` is a configured
  * price-structure read and says so in its own header.
  */
-import type { CmTile } from './chartMaps';
+import type { BandStructureCoverage, CmTile } from './chartMaps';
+import type { BandStructureStudy } from './bandStructure';
 
 export type SupportWindow = { key: string; label: string; bars: number };
 
@@ -117,6 +118,21 @@ export type SupportPayload = {
   as_of?: number | null;
   data_through?: string | null;
   tile?: CmTile;
+  /* 🪜 BAND STRUCTURE (2026-09-16). `chart_maps/api.py::chart_maps_support`
+   * attaches the read to `tile.band_structure` and serves its VERDICT beside
+   * it. Both have to be typed here or the tab renders the chip — a read of
+   * bands nobody has measured — with no banner saying so, which is how an
+   * unmeasured ordering starts looking validated. There is no `sort` on this
+   * tab: it answers one symbol, so there is nothing to order. */
+  band_structure_kind?: string | null;
+  band_structure_study?: BandStructureStudy | null;
+  /* 🪜 COVERAGE (2026-09-16, critique J2). Served beside the read: the counts
+   * and the one sentence to print when this name came back with NO read at
+   * all. A name the $1B zone store has not warmed (BTBT, one of his positions)
+   * drew a tile with no Bands line and NO REASON here, while the row boards —
+   * which build the doc on demand — served the read for it the same day. The
+   * sentence is the row boards' own, served, never typed in the component. */
+  band_structure_coverage?: BandStructureCoverage | null;
   supports?: SupportLevel[];
   overhead?: SupportLevel[];
   standing_in?: SupportLevel | null;

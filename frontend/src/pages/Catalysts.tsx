@@ -6,11 +6,12 @@ import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { ExplosiveChip } from '../components/ExplosiveChip';
 import { EnterableChip } from '../components/EnterableChip';
+import { BandStructureChip } from '../components/BandStructureChip';
 import { HiddenCount } from '../components/HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from '../components/ExplosiveFirstToggle';
 import { useMyFeatures } from '../hooks/useMyFeatures';
-import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
+import { bounceLabel, compareBounceRoom, coverageNote, roomLabel, type BandStructureStudy, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
 import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { RussellWatch } from '../components/RussellWatch';
@@ -444,12 +445,22 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {brPayload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {brPayload.band_structure_coverage.note}
+        </div>
+      ) : null}
 
       {/* Card grid */}
       <div className="cat-grid">
         {part.rows.map((c) => (
           <CandidateCard key={c.ticker} c={c} br={br.get(c.ticker.toUpperCase())}
                          study={brPayload?.explosive_study}
+                         bandStudy={brPayload?.band_structure_study}
                          onClick={() => setDrillTicker(c.ticker)} />
         ))}
       </div>
@@ -519,8 +530,9 @@ export function CatalystsPage() {
 
 // ---- CandidateCard ----------------------------------------------------
 
-function CandidateCard({ c, br, study, onClick }: {
-  c: Candidate; br?: BounceRoomRow; study?: ExplosiveStudy | null; onClick: () => void;
+function CandidateCard({ c, br, study, bandStudy, onClick }: {
+  c: Candidate; br?: BounceRoomRow; study?: ExplosiveStudy | null;
+  bandStudy?: BandStructureStudy | null; onClick: () => void;
 }) {
   const isUp = c.change_pct > 0;
   const cap = c.market_cap;
@@ -543,6 +555,9 @@ function CandidateCard({ c, br, study, onClick }: {
             <GrowthChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
             <EnterableChip read={br?.enterable} className="cm-badge" />
+            {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
+                ceiling/floor read, off the same bounce-room call. */}
+            <BandStructureChip read={br?.band_structure} study={bandStudy} className="cm-badge" />
           </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>
@@ -938,12 +953,22 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
                      hiddenByReason={prePart.hiddenByReason} enabled kind={preKind}
                      onShowAll={() => setPreEnterableOnly(false)} />
       ) : null}
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {prePayload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {prePayload.band_structure_coverage.note}
+        </div>
+      ) : null}
 
       {data && data.candidates.length > 0 && (
         <div className="cat-grid">
           {prePart.rows.map((c) => (
             <PremarketCard key={c.ticker} c={c} onClick={() => onClickTicker(c.ticker)}
-                           br={preBr.get(c.ticker.toUpperCase())} study={prePayload?.explosive_study} />
+                           br={preBr.get(c.ticker.toUpperCase())} study={prePayload?.explosive_study}
+                           bandStudy={prePayload?.band_structure_study} />
           ))}
         </div>
       )}
@@ -959,9 +984,10 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
   );
 }
 
-function PremarketCard({ c, onClick, br, study }: {
+function PremarketCard({ c, onClick, br, study, bandStudy }: {
   c: PremarketCandidate; onClick: () => void;
   br?: BounceRoomRow; study?: ExplosiveStudy | null;
+  bandStudy?: BandStructureStudy | null;
 }) {
   const isUp = c.change_pct > 0;
   const cap = c.market_cap;
@@ -977,6 +1003,9 @@ function PremarketCard({ c, onClick, br, study }: {
             <GrowthChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
             <EnterableChip read={br?.enterable} className="cm-badge" />
+            {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
+                ceiling/floor read, off the same bounce-room call. */}
+            <BandStructureChip read={br?.band_structure} study={bandStudy} className="cm-badge" />
           </h3>
           {c.company_name && <p className="cat-card__name">{c.company_name}</p>}
         </div>

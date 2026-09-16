@@ -24,6 +24,8 @@ import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
+import { BandStructureChip } from './BandStructureChip';
+import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
 
@@ -67,11 +69,14 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, tvTf, study }: {
+  { tile, height = 190, tvTf, study, bandStudy }: {
     tile: CmTile; height?: number; tvTf?: string;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
     study?: ExplosiveStudy | null;
+    /** 🪜 The board's served band-structure verdict, for the chip's tooltip —
+     *  the status never lives in this file (board.band_structure_study). */
+    bandStudy?: BandStructureStudy | null;
   },
 ) {
   const location = useLocation();
@@ -184,6 +189,18 @@ export const PatternChart = memo(function PatternChart(
                 so the tile and the phone read one print. Renders nothing when
                 the name has no read, and nothing here decides the verdict. */}
             <EnterableChip read={tile.enterable} />
+            {/* 🪜 The BAND STRUCTURE read (2026-09-16). Ajay: "prioritize stock
+                by the thinnest over head or Supply zone" and "the support bands
+                are bigger and atleast another one very close if its falls below
+                the first support level". Prop-fed off the tile exactly like the
+                two chips above — chart_maps/board.attach_band_structure puts it
+                on every tile board, on the SAME live snapshot the now-line
+                uses. It prints the server's own sentence, so this file derives
+                no percentage; it renders nothing when the name has no band read
+                and nothing when the tab has none, and while the study is
+                pending it is muted, because the ordering behind it is
+                descriptive and not a prediction. */}
+            <BandStructureChip read={tile.band_structure} study={bandStudy} />
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}

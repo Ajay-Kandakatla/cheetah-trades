@@ -62,6 +62,7 @@ import { EnterableOnlyToggle } from '../components/EnterableOnlyToggle';
 import { HiddenCount } from '../components/HiddenCount';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { partitionEnterable, type EnterableRead } from '../lib/enterable';
+import { BAND_STRUCTURE_KIND_NA, BAND_STRUCTURE_NA_TEXT } from '../lib/bandStructure';
 import { trackFeature } from '../lib/usageTracker';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
@@ -427,6 +428,46 @@ export function ChartMaps() {
     ?? ENTERABLE_KIND[tab] ?? 'demand';
 
   const rawTiles = data?.tiles || [];
+
+  /* 🪜 WHICH KIND OF ROWS THIS TAB HAS, served (board.band_structure_kind →
+   * band_structure.kind_for_tab → enterable.KIND_BY_TAB — one map, not a second
+   * one). Same served-wins / local-fallback rule as the 🎯 kind above, for the
+   * same reason: the banner must follow the tab the payload is FOR.
+   *
+   * The backend attaches `band_structure_study` on EVERY request, kind or no
+   * kind, so without this check the "ordered by ceiling thickness" banner and
+   * its three-group fallback note render over Strong VCP, Past Winners, S3
+   * Topping, Earnings Flow, 0DTE and Under Value — boards whose rows are not
+   * price bands, that carry no band read and are not ordered by one. */
+  const bandKind = ((data?.tab ?? tab) === tab ? data?.band_structure_kind : null)
+    ?? ENTERABLE_KIND[tab] ?? 'demand';
+  const bandNa = String(bandKind) === BAND_STRUCTURE_KIND_NA;
+  /* …and what those six tabs say INSTEAD — the 🎯 n/a precedent, which puts
+   * that sentence on the page (HiddenCount's "no demand read for this tab")
+   * rather than behind a sort dropdown they do not have.
+   *
+   * THE SENTENCE IS SERVED, in this order: the payload-level
+   * `band_structure_na_text`, then the first tile that carries one
+   * (band_structure.read → na_text). It used to be taken off the FIRST TILE
+   * only — so an n/a tab that came back with ZERO tiles (0DTE outside the
+   * session) rendered NEITHER the banner, suppressed on purpose, NOR this
+   * line: the page went silent about a tab it has nothing to rank on, which is
+   * the failure this surface has already been caught on twice.
+   *
+   * The KIND is served whether or not a tile is, so the kind decides the line
+   * and `BAND_STRUCTURE_NA_TEXT` — the mirror of band_structure.NA_TEXT,
+   * pinned to it character for character in bandStructure.test.ts — fills it
+   * when no payload carried a sentence. The page still assembles none of its
+   * own wording. */
+  const bandNaText = useMemo(() => {
+    const served = data?.band_structure_na_text;
+    if (typeof served === 'string' && served.trim()) return served.trim();
+    for (const t of rawTiles) {
+      const s = t.band_structure?.na_text;
+      if (typeof s === 'string' && s.trim()) return s.trim();
+    }
+    return BAND_STRUCTURE_NA_TEXT;
+  }, [data?.band_structure_na_text, rawTiles]);
   /* The chart ledger (Ajay 2026-08-31: "Chart feel so clumsy can you give me
    * a ledger and some check boxes to toggle these off"). Hidden families are
    * a per-browser convenience (localStorage), filtered client-side — except
@@ -1041,6 +1082,37 @@ export function ChartMaps() {
           {data.enterable_study.limits ? <p className="cm-dim">{data.enterable_study.limits}</p> : null}
         </div>
       )}
+      {/* 🪜 The band-structure study's verdict, SERVED (board.band_structure_study).
+        * Ajay asked for the thinnest ceiling first and a layered floor; the
+        * study measured both and NOTHING separated, so the ordering that ships
+        * is DESCRIPTIVE and the banner is where that is said, in his own words
+        * — "thinnest ceiling first" is never read as a prediction it did not
+        * earn. No figure is typed here; every one comes off the wire.
+        *
+        * GATED ON THE TAB'S KIND, the way the 🎯 read gates its own line: see
+        * `bandNa` above. A tab with no band read shows the served n/a sentence
+        * underneath instead, never this banner. */}
+      {!bandNa && data?.band_structure_study?.headline && (
+        <div className="cm-note cm-band-study" data-testid="cm-band-structure-study">
+          <strong>{data.band_structure_study.headline}</strong>
+          {data.band_structure_study.body ? <p>{data.band_structure_study.body}</p> : null}
+          {data.band_structure_study.fallback_note
+            ? <p>{data.band_structure_study.fallback_note}</p> : null}
+          {data.band_structure_study.limits
+            ? <p className="cm-dim">{data.band_structure_study.limits}</p> : null}
+          {/* What the ordering could actually reach — served only when the sort
+            * ran and worked, because it is applied after the board was cut to
+            * its page size. */}
+          {data.band_structure_scope
+            ? <p className="cm-dim" data-testid="cm-band-structure-scope">{data.band_structure_scope}</p> : null}
+        </div>
+      )}
+      {/* …and what a tab with NO band read says instead: the served sentence,
+        * on the page, where the 🎯 n/a line lives — not a banner about an
+        * ordering this board does not have. */}
+      {bandNa && bandNaText && (
+        <p className="cm-note cm-dim" data-testid="cm-band-structure-na">🪜 {bandNaText}</p>
+      )}
       {!!data?.dropped_thin && (
         <p className="cm-note">
           {data.dropped_thin} name{data.dropped_thin === 1 ? '' : 's'} hidden below the
@@ -1112,7 +1184,8 @@ export function ChartMaps() {
                    onEnterableOnly={() => setEnterableOnly(true)} />
       <div className="cm-grid">
         {tilePart.rows.map((t) => (
-          <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study} />
+          <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
+                        bandStudy={data?.band_structure_study} />
         ))}
       </div>
 

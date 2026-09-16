@@ -221,6 +221,19 @@ the live payload goes to him with §9.16, and he moves tabs between `demand` and
   already do, which tabs have no demand read, the study's own status, and
   "NOTHING HERE BUYS".
 
+### 4.5 The 🪜 band-structure ordering sits UNDER this filter
+
+The band-structure read ([`band_structure.md`](band_structure.md), 2026-09-16 —
+thinnest ceiling above, deepest layered floor below) is a **sort**; this is a
+**stable partition**. They compose in one fixed direction and only one: the
+board orders, then `partitionEnterable` runs on the order it produced,
+preserving it within the shown and hidden buckets. The ordering never un-hides a
+`BLOCKED` row, never hides one, and never re-ranks after the partition. It also
+reuses `KIND_BY_TAB` rather than defining a second applicability map, so the
+same six tabs that read `n/a` here — `vcp`, `winners`, `topping`, `earnings`,
+`zero_dte`, `undervalue` — carry no band ordering either and say so, instead of
+being ranked on a band read their rows do not have.
+
 ---
 
 ## 5. The study — `backend/scripts/entry_trigger_study.py`

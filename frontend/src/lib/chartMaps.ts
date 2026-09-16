@@ -12,6 +12,7 @@
 import { layoutLabels, type LabelItem } from './zonePlan';
 import type { DemandScanProgress } from './demandScanProgress';
 import type { ExplosiveRead, ExplosiveStudy } from './bounceRoom';
+import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
@@ -371,6 +372,29 @@ export type CmTile = {
    *  doc, a dead store, a tile the fan-out missed); the chip then renders
    *  nothing and the filter NEVER hides it. */
   enterable?: EnterableRead | null;
+  /** 🪜 The band-structure read for this name (chart_maps/board
+   *  .attach_band_structure, 2026-09-16) — the ceiling above the print and the
+   *  floor under it, served on every tile board request whatever the sort, and
+   *  keyed on the SAME live snapshot the now-line uses (a ceiling "0.5% up"
+   *  measured off yesterday's close is the wrong number for a name that has
+   *  already traded into the band this morning). null = no doc, no bands, or a
+   *  name the fan-out missed; the chip then renders nothing and the tile sorts
+   *  LAST under the band-structure sort. `applicable: false` = a tab whose rows
+   *  are not price-structure bands at all. */
+  band_structure?: BandStructureRead | null;
+};
+
+/** 🪜 The tile path's coverage block (chart_maps/board.py
+ *  ::band_structure_coverage, 2026-09-16). Counts, plus the one SERVED
+ *  sentence to print when not one shown tile came back with a read — the same
+ *  string the ten row boards already print
+ *  (`bounce_room.BAND_STRUCTURE_NO_READ`), so "no band read" is worded once for
+ *  the whole app. `note` is null whenever anything DID read, and on an n/a tab,
+ *  whose own n/a sentence is the right one there. */
+export type BandStructureCoverage = {
+  tiles_with_read?: number;
+  tiles_without_read?: number;
+  note?: string | null;
 };
 
 export type CmPatternRecord = {
@@ -485,6 +509,42 @@ export type CmBoard = {
    *  coverage strip. Every number lives in
    *  backend/supply_demand/enterable.py::MEASURED and is never typed here. */
   enterable_study?: EnterableStudy | null;
+  /** 🪜 Which read this tab's rows get (chart_maps/board, 2026-09-16) — the
+   *  SERVED mirror of enterable.KIND_BY_TAB via band_structure.kind_for_tab, so
+   *  moving a tab between `demand` and `n/a` is a backend change, not a
+   *  frontend deploy. */
+  band_structure_kind?: string | null;
+  /** 🪜 The n/a sentence at the PAYLOAD level, for a tab whose kind is `n/a`.
+   *  The per-tile `band_structure.na_text` is the usual carrier; this one is
+   *  what a board with ZERO tiles can still say (0DTE outside the session),
+   *  where taking the sentence off the first tile said nothing at all.
+   *  Optional: when it is absent the page falls back to the pinned mirror of
+   *  band_structure.NA_TEXT rather than going silent. */
+  band_structure_na_text?: string | null;
+  /** 🪜 The band-structure study's served verdict (2026-09-16), rendered in the
+   *  coverage strip. Every number lives in
+   *  backend/supply_demand/band_structure.py::MEASURED and is never typed here.
+   *  It reads `no_signal`: the study ran, nothing separated, so the ordering
+   *  ships DESCRIPTIVE and the banner says so. */
+  band_structure_study?: BandStructureStudy | null;
+  /** 🪜 Who came back with a read, and the SERVED sentence to print when NOT
+   *  ONE of the shown tiles did (chart_maps/board.py::band_structure_coverage,
+   *  2026-09-16). The tile path had no such note: a name the $1B zone store has
+   *  not warmed drew a tile with no Bands line and NO REASON, while the ten row
+   *  boards — which build the doc on demand — served the read for the same name
+   *  on the same day (BTBT, one of his own positions). The sentence is the row
+   *  boards' own (`bounce_room.BAND_STRUCTURE_NO_READ`), served rather than
+   *  typed here so the two surfaces cannot word one fact two ways; `note` is
+   *  null on an n/a tab, which carries `band_structure_na_text` instead. */
+  band_structure_coverage?: BandStructureCoverage | null;
+  /** 🪜 What the ordering could actually reach (band_structure.BOARD_SCOPE_NOTE)
+   *  — set ONLY when the band-structure sort ran and worked. The sort is applied
+   *  after the board was cut to `limit`, so it ranks the page rather than the
+   *  universe behind it, and the page says that out loud instead of letting
+   *  "thinnest ceiling first" quietly mean "first among the default top N".
+   *  null when the sort was not chosen, or when it could not run (the reason is
+   *  then in `sort_unavailable`). */
+  band_structure_scope?: string | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

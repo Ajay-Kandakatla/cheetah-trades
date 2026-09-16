@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { ChartMaps } from './ChartMaps';
 import { CM_TABS, TAB_META } from '../lib/chartMaps';
+import { BAND_STRUCTURE_NA_TEXT } from '../lib/bandStructure';
 
 /* ChartMaps — the /chart-maps study board.
  *
@@ -1160,5 +1161,200 @@ describe('ChartMaps — the 🎯 enterable filter (2026-09-15)', () => {
     const line = screen.getByText(/hidden/).closest('.cm-hidden-count') as HTMLElement;
     expect(line.textContent).toMatch(/^0 hidden/);
     expect(line.textContent).toMatch(/1 without a read/);
+  });
+});
+
+/* 🪜 BAND STRUCTURE — the ceiling above the print and the floor under it
+ * (Ajay 2026-09-16: "prioritize stock by the thinnest over head or Supply zone
+ * where ever is applicable" + "the support bands are bigger and atleast another
+ * one very close if its falls below the first support level. Something like
+ * CRDO had at 149. It has another one right below it").
+ *
+ * What is pinned here is not the ordering — that is the shared fixture, sorted
+ * by both suites — but the three things this PAGE can get wrong and never say
+ * so: that the banner is SERVED (no figure typed into the JSX), that a board
+ * with no band read keeps its served order AND shows the reason, and that a tab
+ * with no band read at all says so rather than being quietly ranked.
+ */
+describe('ChartMaps — the 🪜 band-structure read (2026-09-16)', () => {
+  const READ = {
+    symbol: 'CRDO', kind: 'demand', applicable: true, score: null,
+    stat: 'ceiling 3.4% wide, 0.5% up · floor 3.5% wide, 2nd band 6.4% under',
+    ceiling: { state: 'ROOM', height_pct: 3.4, distance_pct: 0.52, walls_above: 2 },
+    floor: { height_pct: 3.5, gap_pct: 6.37, second: { lo: 146.34, hi: 151.55 }, bands_below: 4 },
+    measured: { status: 'pending' },
+  };
+  const NO_SECOND = {
+    ...READ, symbol: 'AAA',
+    stat: 'ceiling 3.4% wide, 0.5% up · floor 3.5% wide, no 2nd band',
+    floor: { height_pct: 3.5, gap_pct: null, second: null, bands_below: 1 },
+  };
+  const NA_READ = {
+    symbol: 'AAA', kind: 'n/a', applicable: false, ceiling: null, floor: null, score: null,
+    na_text: 'no band read for this tab — its rows are not price-structure bands (pivot / highs / lid / event / options / value)',
+    measured: { status: 'pending' },
+  };
+  const STUDY = {
+    headline: 'MEASURED: pending — ordered by ceiling thickness, floor layering as the tiebreak, until the study lands',
+    body: 'The replay behind this read is still running.',
+    fallback_note: 'That is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling makes a name go up.',
+    limits: 'Bands are BOARD geometry on CLOSED bars.',
+    status: 'pending',
+  };
+  const board = (over: Record<string, unknown> = {}) => ({
+    tab: 'vcp', count: 1, band_structure_kind: 'demand', band_structure_study: STUDY,
+    tiles: [{ ...VCP_TILE, symbol: 'CRDO', band_structure: READ }],
+    ...over,
+  });
+
+  it('renders the SERVED verdict banner and the served scope note, and types no figure of its own', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({ band_structure_scope: 'Ordered on the tiles this page is showing.' }),
+    }));
+    draw();
+    const banner = await screen.findByTestId('cm-band-structure-study');
+    expect(banner.textContent).toMatch(/MEASURED: pending/);
+    expect(banner.textContent).toMatch(/DESCRIPTIVE ordering/);
+    expect(banner.textContent).toMatch(/CLOSED bars/);
+    expect(screen.getByTestId('cm-band-structure-scope').textContent)
+      .toMatch(/Ordered on the tiles this page is showing/);
+  });
+
+  it('NEGATIVE: no served study, no banner — the page invents no verdict of its own', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: board({ band_structure_study: null }) }));
+    draw();
+    await waitFor(() => expect(screen.getByText('CRDO')).toBeInTheDocument());
+    expect(screen.queryByTestId('cm-band-structure-study')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cm-band-structure-scope')).not.toBeInTheDocument();
+  });
+
+  it('puts BOTH halves on the tile, in his words, straight off the wire', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: board() }));
+    draw();
+    expect(await screen.findByText(/ceiling 3\.4% wide, 0\.5% up/)).toBeInTheDocument();
+    expect(screen.getByText(/floor 3\.5% wide, 2nd band 6\.4% under/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a name with no SECOND support band says so — it never renders a 0% gap', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({ tiles: [{ ...VCP_TILE, symbol: 'AAA', band_structure: NO_SECOND }] }),
+    }));
+    draw();
+    expect(await screen.findByText(/no 2nd band/)).toBeInTheDocument();
+    expect(screen.queryByText(/2nd band 0(\.\d+)?% under/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a board with no band read keeps its SERVED order and shows the reason', async () => {
+    const why = 'No band read for these names — the board is showing its default order.';
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({
+        sort_unavailable: why, band_structure_scope: null,
+        tiles: [{ ...VCP_TILE, symbol: 'ZZZ', band_structure: null },
+                { ...VCP_TILE, symbol: 'AAA', href: '/sepa/AAA', band_structure: null }],
+      }),
+    }));
+    draw();
+    expect(await screen.findByText(new RegExp(why.slice(0, 30)))).toBeInTheDocument();
+    // The order the server sent is the order on screen — nothing was re-ranked.
+    const shown = screen.getAllByText(/^(ZZZ|AAA)$/).map((el) => el.textContent);
+    expect(shown).toEqual(['ZZZ', 'AAA']);
+    expect(screen.queryByTestId('cm-band-structure-scope')).not.toBeInTheDocument();
+  });
+
+  /* THE BANNER IS GATED ON THE TAB'S KIND (2026-09-16). `board.py` attaches
+   * `band_structure_study` to EVERY response, kind or no kind, so an ungated
+   * render put "ordered by ceiling thickness, floor layering as the tiebreak"
+   * and the whole three-group fallback note over Strong VCP, Past Winners, S3
+   * Topping, Earnings Flow, 0DTE and Under Value — boards that carry no band
+   * read and are not ordered by one. The served n/a sentence goes there
+   * instead, on the page, exactly where the 🎯 n/a line lives. */
+  it('NEGATIVE: an n/a tab renders NO 🪜 banner and NO fallback note — it shows the served n/a line instead', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({
+        band_structure_kind: 'n/a', band_structure_scope: null,
+        tiles: [{ ...VCP_TILE, symbol: 'AAA', band_structure: NA_READ }],
+      }),
+    }));
+    draw();
+    await waitFor(() => expect(screen.getByText('AAA')).toBeInTheDocument());
+    expect(screen.queryByTestId('cm-band-structure-study')).not.toBeInTheDocument();
+    expect(screen.queryByText(/DESCRIPTIVE ordering/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/MEASURED:/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('cm-band-structure-na').textContent)
+      .toMatch(/no band read for this tab/);
+  });
+
+  it('an applicable tab still renders BOTH the banner and the fallback note, and no n/a line', async () => {
+    vi.stubGlobal('fetch', stubFetch({ vcp: board({ band_structure_kind: 'demand' }) }));
+    draw();
+    const banner = await screen.findByTestId('cm-band-structure-study');
+    expect(banner.textContent).toMatch(/MEASURED:/);
+    expect(banner.textContent).toMatch(/DESCRIPTIVE ordering/);
+    expect(screen.queryByTestId('cm-band-structure-na')).not.toBeInTheDocument();
+  });
+
+  it('an n/a tab whose tiles carry no served n/a text still SAYS so — the kind is served even when a sentence is not', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({
+        band_structure_kind: 'n/a', band_structure_scope: null,
+        tiles: [{ ...VCP_TILE, symbol: 'AAA', band_structure: { ...NA_READ, na_text: null } }],
+      }),
+    }));
+    draw();
+    await waitFor(() => expect(screen.getByText('AAA')).toBeInTheDocument());
+    expect(screen.getByTestId('cm-band-structure-na').textContent).toContain(BAND_STRUCTURE_NA_TEXT);
+    expect(screen.queryByTestId('cm-band-structure-study')).not.toBeInTheDocument();
+  });
+
+  /* THE ZERO-TILE n/a BOARD (2026-09-16). The sentence used to be taken off
+   * the FIRST TILE, so an n/a tab that came back empty — 0DTE outside the
+   * session — rendered NEITHER the banner (suppressed on purpose) NOR the n/a
+   * line, and the page went silent about a tab it cannot rank. */
+  it('NEGATIVE: an n/a tab with ZERO tiles still renders the n/a line and never the banner', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({ band_structure_kind: 'n/a', band_structure_scope: null, tiles: [] }),
+    }));
+    draw();
+    const line = await screen.findByTestId('cm-band-structure-na');
+    expect(line.textContent).toContain(BAND_STRUCTURE_NA_TEXT);
+    expect(screen.queryByTestId('cm-band-structure-study')).not.toBeInTheDocument();
+    expect(screen.queryByText(/DESCRIPTIVE ordering/)).not.toBeInTheDocument();
+  });
+
+  it('a payload-level n/a sentence WINS over the pinned fallback — the served words are the words', async () => {
+    const served = 'no band read for this tab — 0DTE rows are option chains, not price bands';
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({
+        band_structure_kind: 'n/a', band_structure_scope: null,
+        band_structure_na_text: served, tiles: [],
+      }),
+    }));
+    draw();
+    const line = await screen.findByTestId('cm-band-structure-na');
+    expect(line.textContent).toContain(served);
+    expect(line.textContent).not.toContain('(pivot / highs / lid / event / options / value)');
+  });
+
+  it('NEGATIVE: an APPLICABLE tab with zero tiles shows NO n/a line — the kind decides, not the emptiness', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({ band_structure_kind: 'demand', band_structure_scope: null, tiles: [] }),
+    }));
+    draw();
+    await screen.findByTestId('cm-band-structure-study');
+    expect(screen.queryByTestId('cm-band-structure-na')).not.toBeInTheDocument();
+  });
+
+  it("NEGATIVE: a tab with no band read at all shows no chip and says why, rather than being ranked", async () => {
+    const why = "This tab's rows are not price-structure bands (pivot / highs / lid / event / options / value), so there is no ceiling or floor to rank — the board is showing its default order.";
+    vi.stubGlobal('fetch', stubFetch({
+      vcp: board({
+        band_structure_kind: 'n/a', sort_unavailable: why, band_structure_scope: null,
+        tiles: [{ ...VCP_TILE, symbol: 'AAA', band_structure: NA_READ }],
+      }),
+    }));
+    draw();
+    expect(await screen.findByText(new RegExp(why.slice(0, 40).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeInTheDocument();
+    expect(screen.queryByText(/ceiling .* wide/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/floor .* wide/)).not.toBeInTheDocument();
   });
 });

@@ -24,11 +24,12 @@ import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { isShown } from '../lib/enterable';
 import { useBounceRoom } from '../hooks/useBounceRoom';
-import type { BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
+import type { BandStructureStudy, BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import { SignalWatchButton } from './SignalWatchButton';
 import { InfoButton } from './InfoButton';
 
@@ -299,8 +300,9 @@ function GroupFundCells({ r }: { r: HsFundMedians }) {
   );
 }
 
-function NameRow({ r, read, study, d1 }: {
+function NameRow({ r, read, study, bandStudy, d1 }: {
   r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
+  bandStudy?: BandStructureStudy | null;
   d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null;
 }) {
   return (
@@ -312,6 +314,9 @@ function NameRow({ r, read, study, d1 }: {
         <GrowthChip symbol={r.symbol} className="hs-badge" />
         <ExplosiveChip read={read?.explosive} study={study} className="hs-badge" />
         <EnterableChip read={read?.enterable} className="hs-badge" />
+        {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
+            ceiling/floor read. */}
+        <BandStructureChip read={read?.band_structure} study={bandStudy} className="hs-badge" />
         {/* Ajay 2026-09-11: "add to signals button in that table I wanna pick a
             few stocks from this". NOT compact — compact prints a bare "+" which
             sits next to TickerLink's ☆ and reads as decoration rather than a
@@ -505,6 +510,16 @@ export function HottestSectors() {
                      note="Counted across every group in this payload — themes, sectors and industries, the collapsed ones included — one count per unique name. This board is a server-cut list: the payload keeps only the top names per group, so this is what the cut removed from the names it carries, never from the full membership."
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ); this board
+          is a server-cut list, so it describes the names it carries. */}
+      {room.payload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {room.payload.band_structure_coverage.note}
+        </div>
+      ) : null}
 
       <div className="hs-scroll">
         <table className="hs-table">
@@ -559,7 +574,7 @@ export function HottestSectors() {
                     <LegCells r={t} d1={data} isGroup />
                     <GroupFundCells r={t} />
                   </tr>
-                  {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} d1={data} />) : null}
+                  {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {t.names.length} of {t.names_total}
@@ -614,7 +629,7 @@ export function HottestSectors() {
                           <LegCells r={ind} d1={data} isGroup />
                           <GroupFundCells r={ind} />
                         </tr>
-                        {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} d1={data} />) : null}
+                        {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (
                           <tr key={`${ik}|more`}><td colSpan={10} className="hs-more">
                             showing {ind.names.length} of {ind.names_total}
@@ -623,7 +638,7 @@ export function HottestSectors() {
                       </>
                     );
                   }) : null}
-                  {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} d1={data} />) : null}
+                  {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && !byIndustry && s.names_total > s.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
                       showing {s.names.length} of {s.names_total}

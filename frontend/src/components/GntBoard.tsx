@@ -37,6 +37,7 @@ import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -215,6 +216,15 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {room.payload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {room.payload.band_structure_coverage.note}
+        </div>
+      ) : null}
 
       <div className="gnt-scroll">
         <table className="gnt-table">
@@ -239,6 +249,11 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
                     <ExplosiveChip study={room.payload?.explosive_study}
                                    read={room.map.get(String(t.symbol).toUpperCase())?.explosive} />
                     <EnterableChip read={room.map.get(String(t.symbol).toUpperCase())?.enterable} />
+                    {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own
+                        served ceiling/floor read, off the same bounce-room row. */}
+                    <BandStructureChip className="cm-badge"
+                                       study={room.payload?.band_structure_study}
+                                       read={room.map.get(String(t.symbol).toUpperCase())?.band_structure} />
                     {t.mentions > 1 && (
                       <div className="gnt-dim">×{t.mentions} posts</div>
                     )}

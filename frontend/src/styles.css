@@ -12715,6 +12715,33 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .cm-explosive-study { border-left: 3px solid rgba(245,158,11,0.5); padding-left: 0.6rem; }
 .cm-explosive-study p { margin: 0.25rem 0 0; }
 
+/* 🪜 BAND STRUCTURE (2026-09-16) — the ceiling above the print and the floor
+   under it, as a chip on every surface that carries the read.
+
+   MUTED IS THE DEFAULT TONE, and today it is the only one: the study is
+   `pending`, so the ordering behind the chip is DESCRIPTIVE and the chip must
+   not look like a grade. The lit tone (slate-blue — a structural read, not the
+   amber of 🧨 momentum or the green of 🎯 readiness) is reserved for the
+   `separates` branch with a served score, so the two chips never compete for
+   the same meaning when they sit side by side.
+
+   One family per surface, mirroring the 🧨 classes so the chips line up at the
+   same weight wherever a board renders them. */
+.cm-badge-band   { color: #7c9cf5; background: rgba(124,156,245,0.14); }
+.cm-badge-band-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.hs-badge-band   { color: #7c9cf5; background: rgba(124,156,245,0.14); }
+.hs-badge-band-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+.sb-chip-band {
+  display: inline-block; font-size: 0.66rem; padding: 1px 6px;
+  border-radius: 999px; white-space: nowrap; margin-left: 5px;
+  color: #7c9cf5; background: rgba(124,156,245,0.14);
+}
+.sb-chip-band-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
+/* The served study verdict under a board — same quiet treatment as 🧨's,
+   because in the branch that is live today it is a limits statement. */
+.cm-band-study { border-left: 3px solid rgba(124,156,245,0.5); padding-left: 0.6rem; }
+.cm-band-study p { margin: 0.25rem 0 0; }
+
 /* 🎯 ENTERABLE (2026-09-15) — the served entry read on every Chart Maps
    surface, plus the filter's two controls.
 

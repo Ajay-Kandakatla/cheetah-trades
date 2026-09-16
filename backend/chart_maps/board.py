@@ -708,6 +708,18 @@ def tile_metrics(row: dict) -> dict:
         # A metric column that invented a number here would put a ranking on
         # his screen this app has not earned.
         "explosive": None,
+        # The 🪜 band-structure ordering has no metric COLUMN at all, and that
+        # is deliberate: the ceiling and the floor are two numbers, not one,
+        # and collapsing them into a single sortable float here would be the
+        # composite score this app has not measured. The key is declared so the
+        # dropdown key resolves and is ALWAYS None — but a None column is not
+        # what keeps `_finish`'s cut on the default order (it would only push
+        # every tile into the same "missing" bucket and drop the theme lead).
+        # `POST_CUT_SORTS` is what keeps it: `is_explicit_sort` excludes this
+        # key, so `_finish` ranks and cuts exactly as it does by default, and
+        # the real ordering runs in `board()` on
+        # `band_structure.band_structure_key` over the tiles it cut to.
+        "band_structure": None,
         "conviction": _f((row.get("conviction") or {}).get("score")
                          if isinstance(row.get("conviction"), dict)
                          else row.get("conviction")),
@@ -762,7 +774,40 @@ SORTS: dict[str, str] = {
     # 🚀 Explosive Growth tab already owns that word in Chart Maps, and two
     # chips on one tile using one word for two things is a reading problem.
     "explosive": "🧨 Burst first",
+    # The 🪜 band-structure ordering (Ajay 2026-09-16: "prioritize stock by the
+    # thinnest over head or Supply zone where ever is applicable" + "support
+    # bands are bigger and atleast another one very close"). One key, both
+    # asks. Unlike every other entry in this dict it is NOT applied inside
+    # `_finish`: the read keys on the LIVE print, which does not exist until
+    # `attach_live_now` has run — so the ordering happens in `board()` and says
+    # so (`band_structure.BOARD_SCOPE_NOTE`).
+    "band_structure": "🪜 Thin ceiling, layered floor",
 }
+
+# Sorts that are NOT applied inside `_finish`, because the read they order by
+# does not exist yet when `_finish` runs: the 🪜 band-structure key needs the
+# LIVE print, which `attach_live_now` only fetches in `board()` — after the
+# board has been cut to `limit`.
+#
+# THEY MUST NOT TAKE THE `explicit` BRANCH. An explicit sort deliberately
+# REPLACES the theme ranking and skips the per-theme spread, which is right
+# for a column `_finish` can actually order on; for a post-cut sort it would
+# silently change WHICH tiles reach the page (measured 2026-09-16: a board
+# that cut to ['RKLB','NVDA','ZZZZ'] by default cut to ['ZZZZ','RKLB','NVDA']
+# the moment the 🪜 sort was picked) while `_band_structure_sort`'s own note
+# tells him the board is "showing its default order". A post-cut sort orders
+# the page; it never selects it. The 🧨 sort is the other precedent and the
+# opposite case — it IS applied in `_finish`, over every tile, before the cut.
+POST_CUT_SORTS = ("band_structure",)
+
+
+def is_explicit_sort(sort: str) -> bool:
+    """True when `sort` is a metric ranking `_finish` itself applies — the one
+    thing that drops the theme lead and the per-theme cap. A post-cut sort is
+    NOT explicit: it reorders the page after the cut and must leave the cut
+    alone."""
+    return (sort != DEFAULT_SORT and sort in SORTS
+            and sort not in POST_CUT_SORTS)
 
 # Sorts that cannot be answered from a daily bar. Choosing one triggers the tape
 # pull; without it the column is null for every row and the "sort" is a no-op
@@ -1093,6 +1138,209 @@ def attach_enterable(tiles: list, kind: str = "demand", *,
     return done
 
 
+BAND_STRUCTURE_SORT_UNAVAILABLE = ("No band read for these names — the board "
+                                   "is showing its default order.")
+BAND_STRUCTURE_STAT_KEY = "Bands"
+
+
+def band_structure_sort_na() -> str:
+    """The n/a sentence for the sort dropdown, with the CATEGORY LIST built
+    from `band_structure.NA_CATEGORIES` rather than typed a second time.
+
+    It was prose in three places (the module, this file and the doc) and they
+    had already drifted — so the list has one home and this sentence quotes it.
+    Imported lazily for the same reason every other `band_structure` use in
+    this file is (the module reaches `zone_edge`, which reaches the scan side);
+    a module that will not import falls back to the sentence without the list
+    rather than raising inside a board render.
+    """
+    try:
+        from supply_demand import band_structure as BS
+        cats = str(BS.NA_CATEGORIES or "")
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: band structure categories unavailable: %s", exc)
+        cats = ""
+    return ("This tab's rows are not price-structure bands%s, so there is no "
+            "ceiling or floor to rank — the board is showing its default "
+            "order." % ((" (%s)" % cats) if cats else ""))
+
+
+def _caps_for_band_note(symbols) -> dict:
+    """{SYM: market cap or None} for the 🪜 no-read sentence, from the WEEKLY
+    shares cache ONLY.
+
+    IT LIVES HERE, not in `bounce_room`, and that is a boundary not a
+    preference: `test_bounce_room_stays_in_S_D_scope` forbids that module from
+    importing `catalysts` / `sepa.volume_movers`, and writing a second cap
+    reader inside it to get around that is the parallel implementation the
+    one-engine rule exists to stop. So the engine (`promo_circuit.
+    market_caps_for`, the same one the demand / zone-edge cap gates use) is
+    called from the tile path — the path that carries 📁 My holdings and
+    Support Levels, where the false "arrives on the next refresh" was served —
+    and the wording stays single and shared in `bounce_room`.
+
+    `cap=0` cuts off `market_caps_for`'s provider tail: this runs on a render,
+    and a render may never become one network call per symbol. No price map
+    either — the cached `market_cap` field is the whole answer here. Fails
+    open to {} (every name unknown -> the neutral sentence).
+    """
+    syms = [str(s).upper() for s in (symbols or []) if s]
+    if not syms:
+        return {}
+    try:
+        from catalysts.promo_circuit import market_caps_for
+        return market_caps_for(syms, {}, cap=0) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: cap read for the band note failed: %s", exc)
+        return {}
+
+
+def band_structure_coverage(tiles: list, kind: str = "demand") -> dict:
+    """The TILE-PATH twin of the row boards' `band_structure_coverage`.
+
+    THE SILENT BLANK (critique J2, 2026-09-16), caught on one of HIS OWN
+    POSITIONS. `attach_band_structure` sources its bands from
+    `zone_store.load_latest` and nothing else, so a name the store has not
+    warmed gets `band_structure: None`, the chip renders nothing — and the two
+    one-chart surfaces (Support Levels, 📁 My holdings) printed no reason at
+    all, because the served coverage note existed only on the row-board
+    payload. Demonstrated on BTBT, which he owns: the ten row boards served him
+    the read (`bounce_room` builds the doc on demand) and his own holdings tab
+    showed the same name, the same day, with nothing and no reason. A read that
+    is absent has to SAY it is absent.
+
+    THE SENTENCE IS THE ROW BOARDS' OWN — `bounce_room.band_structure_no_read_note`,
+    imported, never a second wording written for this path. Two sentences for
+    one fact is how the two surfaces drifted apart in the first place. It is
+    BUILT from the shown symbols' market caps against `zone_store.MIN_CAP_USD`
+    (critique 5, BLOCKING): on 📁 My holdings this line is about a position he
+    owns, and BTBT sits under that floor, so "arrives on the next refresh"
+    would be a promise the store can never keep. Unknown cap -> the neutral
+    sentence; nothing here decides the case from anything it cannot see.
+
+    Served on the SAME rule the row path uses (there are tiles and not one came
+    back with a read) and NEVER on an n/a tab, which already carries
+    `band_structure.NA_TEXT` — two contradicting sentences about one tab is the
+    same bug wearing the other face.
+
+    Fails OPEN and SILENT like every other decoration here: a counts-only dict
+    with `note: None` is a worse answer than a board that 500s is a trade.
+    """
+    shown = [t for t in (tiles or []) if isinstance(t, dict)]
+    n = sum(1 for t in shown
+            if (t.get("band_structure") or {}).get("applicable") is True)
+    note = None
+    try:
+        from supply_demand import bounce_room as BR
+        from supply_demand import enterable as EN
+        if shown and n == 0 and str(kind or "") != EN.KIND_NA:
+            syms = [t.get("symbol") for t in shown if t.get("symbol")]
+            note = BR.band_structure_no_read_note(
+                syms, caps=_caps_for_band_note(syms))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: band structure coverage note unavailable: %s", exc)
+    return {"tiles_with_read": n, "tiles_without_read": len(shown) - n,
+            "note": note}
+
+
+def attach_band_structure(tiles: list, kind: str = "demand", *,
+                          live: Optional[dict] = None) -> int:
+    """Fill `tile['band_structure']` (the whole read) and append the stat.
+
+    THE PRINT IT READS. The LIVE snapshot `attach_live_now` already fetched —
+    the same choice the 🎯 read made and the opposite of the 🧨 chip's. A
+    ceiling "0.5% up" measured off yesterday's close is the wrong number for a
+    name that has already traded into the band this morning, and the whole
+    point of this read is how far the print is from the two walls around it.
+    With no live row it falls back to the scan print, the same way.
+
+    ONE `zone_store.load_latest` for the shown tiles, then a pure per-tile
+    read. Idempotent by KEY PRESENCE (None is a real answer here). Fails OPEN
+    and SILENT and NEVER FILTERS: it decorates and it orders, and a board that
+    500s because a study module moved would be a far worse trade than a board
+    with no stat. Returns how many tiles came back with a read.
+    """
+    todo = [t for t in tiles if isinstance(t, dict) and t.get("symbol")
+            and "band_structure" not in t]
+    if not todo:
+        return 0
+    try:
+        from supply_demand import band_structure as BS
+        from supply_demand import enterable as EN
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: band structure unavailable: %s", exc)
+        return 0
+
+    k = str(kind or EN.KIND_DEMAND)
+    # An n/a tab has no band read to make: every tile gets the same honest
+    # answer and the store is never touched.
+    if k == EN.KIND_NA:
+        for t in todo:
+            t["band_structure"] = BS.read(doc=None, px=None, kind=EN.KIND_NA,
+                                          symbol=str(t["symbol"]).upper())
+        return 0
+
+    syms = [str(t["symbol"]).upper() for t in todo]
+    try:
+        from supply_demand import zone_store
+        _day, docs = zone_store.load_latest(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("chart-maps: zone_store read failed for band structure: %s", exc)
+        docs = {}
+
+    done = 0
+    for t in todo:
+        sym = str(t["symbol"]).upper()
+        snap = (live or {}).get(sym) or {}
+        # WHICH PRINT, said out loud — the same two words and the same
+        # fallback the 🎯 read above carries (`print_source=src`). Outside the
+        # session there is no live row and every distance in this read is
+        # measured off the stored close; a surface that says "live print" over
+        # that number is claiming something the board never had.
+        px, src = _snapshot_print(snap), "live"
+        if px is None:
+            px, src = _explosive_px(t), "scan"
+        try:
+            read = BS.read(doc=docs.get(sym), px=px, kind=k, symbol=sym,
+                           print_source=src)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: band structure read %s failed: %s", sym, exc)
+            read = None
+        t["band_structure"] = read
+        stat = (read or {}).get("stat")
+        if stat and read.get("applicable"):
+            stats = t.setdefault("stats", [])
+            if isinstance(stats, list) and not any(
+                    isinstance(s, dict) and s.get("k") == BAND_STRUCTURE_STAT_KEY
+                    for s in stats):
+                stats.append({"k": BAND_STRUCTURE_STAT_KEY, "v": stat})
+        if read is not None:
+            done += 1
+    return done
+
+
+def _band_structure_sort(tiles: list, kind: str = "demand") -> Optional[str]:
+    """Order the SHOWN tiles by the one band-structure key. Returns the honest
+    note when the tab has no band read at all (n/a: never a fake ordering, the
+    🎯 precedent) or when not one tile on the board came back with a read — a
+    sort over an all-null column returns the default order, which LOOKS like a
+    working sort and is not one."""
+    try:
+        from supply_demand import band_structure as BS
+        from supply_demand import enterable as EN
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: band structure sort unavailable: %s", exc)
+        return BAND_STRUCTURE_SORT_UNAVAILABLE
+    if str(kind or "") == EN.KIND_NA:
+        return band_structure_sort_na()
+    tiles.sort(key=lambda t: BS.band_structure_key(t.get("band_structure"),
+                                                   t.get("symbol") or ""))
+    if all((t.get("band_structure") or {}).get("applicable") is not True
+           for t in tiles):
+        return BAND_STRUCTURE_SORT_UNAVAILABLE
+    return None
+
+
 def _explosive_sort(tiles: list) -> Optional[str]:
     """Order ALL tiles by the one ordering key. Returns the honest note when
     not a single tile on the board has a read (a sort over an all-null column
@@ -1421,8 +1669,13 @@ def _sort_key(tile: dict, themes_first: bool, sort: str = DEFAULT_SORT):
     would not be a volume sort. A tile with no value for the chosen metric goes
     last, never first: missing data must not masquerade as a top result. The
     tab's own score breaks ties so the order stays stable.
+
+    A POST-CUT sort (`POST_CUT_SORTS`, the 🪜 band-structure key) is not an
+    explicit metric here: its read does not exist until after the cut, so this
+    function must leave the default ranking — and therefore WHICH tiles reach
+    the page — exactly as it found it.
     """
-    if sort != DEFAULT_SORT and sort in SORTS:
+    if is_explicit_sort(sort):
         v = (tile.get("_m") or {}).get(sort)
         return (0 if v is not None else 1, -(v or 0.0), -(tile.get("_score") or 0.0))
     rank = _theme_rank(tile.get("theme")) if themes_first else 1
@@ -1479,7 +1732,7 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
     cold price cache that is minutes, and minutes is a 524. Sorting first caps
     the work at `limit + BAR_BUFFER` frames regardless of how many matched.
     """
-    explicit = sort != DEFAULT_SORT and sort in SORTS
+    explicit = is_explicit_sort(sort)          # POST_CUT_SORTS are NOT explicit
 
     # 1 — the liquidity floor, before anything else. Ajay 2026-08-17: "we want
     # to make that average turn over is high for these". Dropping here rather
@@ -4918,6 +5171,64 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         log.debug("chart-maps: enterable unavailable: %s", exc)
         out["enterable_kind"] = None
         out["enterable_study"] = None
+    # 🪜 BAND STRUCTURE (2026-09-16), AFTER the live overlay and on the same
+    # snapshot, for the same reason the 🎯 read is: the ceiling distance and
+    # the floor distance are measured FROM the print, and yesterday's close is
+    # not the print. It is attached on every request (the stat renders on every
+    # tab) and it ORDERS only when the dropdown asked for it.
+    #
+    # ORDERING AFTER THE CUT, said out loud. `_finish` already sorted and cut
+    # the board to `limit` on the default order, so this ranks the tiles the
+    # page is showing rather than the universe behind it — `BOARD_SCOPE_NOTE`
+    # goes back with the payload instead of letting "thin ceiling first" quietly
+    # mean "thin ceiling first among the default top N".
+    #
+    # THE BANNER IS SET FIRST, and the attach only runs if it landed. Both
+    # statements used to sit in ONE try in the other order, so a raise from
+    # `measured_verdict()` left every tile carrying the read — the chip
+    # renders — and the payload with no verdict: a read nobody has a study for,
+    # wearing a validated face on an error path.
+    # THE CHIP MAY NEVER OUTLIVE ITS BANNER.
+    # `chart_maps/api.py` was reordered for exactly this on the Support tab
+    # (critique m3); the tile grid — the 8 tabs that actually carry the 🪜
+    # ordering — was not (critique M4, 2026-09-16).
+    try:
+        from supply_demand import band_structure as _bs
+        from supply_demand import enterable as _en
+        _bs_kind = _bs.kind_for_tab(t)
+        out["band_structure_study"] = _bs.measured_verdict()
+        out["band_structure_kind"] = _bs_kind
+        # DON'T OFFER A CONTROL THAT SAYS "not applicable" WHEN PICKED. The
+        # `sorts` list above is the whole `SORTS` dict for every non-ledger
+        # tab, so the 🪜 entry was offered on `vcp` / `topping` / `undervalue`
+        # — n/a tabs that carry no read at all and answer
+        # `band_structure_sort_na()` if it is chosen. Same rule the three
+        # ledger tabs are held to a few lines up (critique m1).
+        if _bs_kind == _en.KIND_NA:
+            out["sorts"] = [s for s in (out.get("sorts") or [])
+                            if s.get("key") != "band_structure"]
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: band structure verdict unavailable: %s", exc)
+        out["band_structure_kind"] = None
+        out["band_structure_study"] = None
+    else:
+        try:
+            attach_band_structure(_tiles, kind=_bs_kind, live=_live)
+            # 🪜 COVERAGE, said out loud on the tile path too (critique J2).
+            # The row boards have said "no band read for these names" since the
+            # read shipped; a tile grid where not one name came back with one
+            # said nothing at all unless the 🪜 sort happened to be picked.
+            out["band_structure_coverage"] = band_structure_coverage(
+                _tiles, kind=_bs_kind)
+            # `out["sort"]`, not the raw request: the three ledger tabs pin
+            # their own order (`_fixed` above) and offer no dropdown, so an
+            # explicit ?sort= on them must not silently reorder a fixed board.
+            if out.get("sort") == "band_structure":
+                note = _band_structure_sort(_tiles, kind=_bs_kind)
+                out["sort_unavailable"] = note or out.get("sort_unavailable")
+                out["band_structure_scope"] = None if note else _bs.BOARD_SCOPE_NOTE
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: band structure unavailable: %s", exc)
     return out
 
 

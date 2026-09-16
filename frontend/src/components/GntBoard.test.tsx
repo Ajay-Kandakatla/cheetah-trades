@@ -257,3 +257,82 @@ describe('📌 GnT — the 🎯 enterable cut', () => {
     expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
   });
 });
+
+
+/* 🪜 BAND STRUCTURE on the 📌 GnT board (2026-09-16).
+ *
+ * Ajay 2026-09-16: "Now in all chartmaps tabs, can you prioritize stock by the
+ * thinnest over head or Supply zone where ever is applicable". GnT is a RECORD
+ * of what someone said, so the negative is the one that matters: a name our
+ * store has no bands for keeps its row and simply carries no chip — the app
+ * must never edit his feed, and it must never invent a ceiling for a name it
+ * could not read.
+ */
+describe('📌 GnT — the served 🪜 band-structure read', () => {
+  const band = (stat: string) => ({
+    symbol: 'X', kind: 'demand', applicable: true, score: null, na_text: null, stat,
+    ceiling: { state: 'CLEAR', height_pct: null, distance_pct: null },
+    floor: { height_pct: 4.1, gap_pct: null, bands_below: 1 },
+    measured: { status: 'pending' },
+  });
+  const room = (rows: Record<string, any>, over: any = {}) => ({
+    as_of: '2026-09-16T11:00:00-04:00', in_session: true, store_date: '2026-09-16',
+    params: {}, rows, requested: 3, covered: 2, pending: 1, unavailable: 0,
+    band_structure_study: { headline: 'MEASURED: pending — ordered by ceiling thickness' },
+    ...over,
+  });
+  const mount = (roomBody: any) => {
+    _resetBounceRoomCache();
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+      ok: true, status: 200,
+      json: async () => (String(url).includes('/supply-demand/bounce-room') ? roomBody : PAYLOAD),
+    }) as unknown as Response));
+    return render(<MemoryRouter><GntBoard /></MemoryRouter>);
+  };
+  afterEach(() => { vi.unstubAllGlobals(); _resetBounceRoomCache(); });
+
+  it('a row WITH a served read shows the chip and prints the served sentence verbatim', async () => {
+    mount(room({
+      SPCX: { symbol: 'SPCX', coverage: 'store', print: 150,
+              band_structure: band('ceiling clear · floor 4.1% wide, no 2nd band') },
+      BBY: { symbol: 'BBY', coverage: 'store', print: 70, band_structure: null },
+      QQQX: { symbol: 'QQQX', coverage: 'pending' },
+    }, { band_structure_coverage: { rows_with_read: 1, rows_without_read: 2, note: null } }));
+    await screen.findByText('SPCX');
+    const chip = await screen.findByText(/🪜 ceiling clear · floor 4\.1% wide, no 2nd band/);
+    expect(chip).toBeInTheDocument();
+    expect(chip.getAttribute('title')).toMatch(/MEASURED: pending/);
+  });
+
+  it('NEGATIVE: a name with no read keeps its row, shows no chip, and nothing is invented', async () => {
+    mount(room({
+      SPCX: { symbol: 'SPCX', coverage: 'store', print: 150,
+              band_structure: band('ceiling clear · floor 4.1% wide, no 2nd band') },
+      BBY: { symbol: 'BBY', coverage: 'store', print: 70, band_structure: null },
+      QQQX: { symbol: 'QQQX', coverage: 'pending' },
+    }, { band_structure_coverage: { rows_with_read: 1, rows_without_read: 2, note: null } }));
+    expect(await screen.findByText('BBY')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(/🪜/)).toHaveLength(1));
+    expect(screen.queryByText(/no 2nd band.*no 2nd band/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: no row with a read anywhere → the SERVED reason, never silence', async () => {
+    mount(room({
+      SPCX: { symbol: 'SPCX', coverage: 'pending' },
+      BBY: { symbol: 'BBY', coverage: 'pending' },
+      QQQX: { symbol: 'QQQX', coverage: 'pending' },
+    }, { band_structure_coverage: { rows_with_read: 0, rows_without_read: 3,
+                                    note: 'No band read for these names — no ceiling or floor to show on this board.' } }));
+    const note = await screen.findByTestId('band-structure-note');
+    expect(note.textContent).toMatch(/No band read for these names/);
+    expect(screen.queryByText(/🪜 ceiling/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a legacy payload with no band fields at all does not crash the board', async () => {
+    mount(room({ SPCX: { symbol: 'SPCX', coverage: 'store', print: 150 } },
+               { band_structure_study: undefined }));
+    expect(await screen.findByText('SPCX')).toBeInTheDocument();
+    expect(screen.queryByTestId('band-structure-note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/🪜/)).not.toBeInTheDocument();
+  });
+});

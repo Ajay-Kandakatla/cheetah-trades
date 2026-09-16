@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 const render = (ui: React.ReactElement) =>
   rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 import SessionBoard from './SessionBoard';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 const tile = (symbol: string, over: any = {}) => ({
   symbol, name: symbol, href: `/chart-maps?tab=support&symbol=${symbol}`,
@@ -165,5 +166,85 @@ describe('SessionBoard', () => {
     const { container } = render(<SessionBoard />);
     await waitFor(() => expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0));
     expect(container.textContent).toContain('not investment advice');
+  });
+});
+
+
+/* 🪜 BAND STRUCTURE on the Session board (2026-09-16).
+ *
+ * Ajay 2026-09-16: "Now in all chartmaps tabs ... thinnest over head or Supply
+ * zone where ever is applicable". Session rows are TILES, and the session
+ * endpoint never runs chart_maps/board.attach_band_structure — so the served
+ * bounce-room row read is put on the tile the one renderer (PatternChart)
+ * already reads it from, rather than a second chip with its own rules.
+ *
+ * NEGATIVES are the point here: a tile whose symbol came back without a read
+ * must show NOTHING (no chip, no invented figure), and a board where nothing
+ * came back at all must say why instead of going quiet.
+ */
+describe('🪜 SessionBoard — the served band-structure read on the tile', () => {
+  const STAT = 'ceiling 3.4% wide, 18.9% up · floor 3.5% wide, 2nd band 6.4% under';
+  const bandRead = (stat: string) => ({
+    symbol: 'X', kind: 'demand', applicable: true, score: null, na_text: null, stat,
+    ceiling: { state: 'ROOM', height_pct: 3.4, distance_pct: 18.9 },
+    floor: { height_pct: 3.5, gap_pct: 6.4, bands_below: 2 },
+    measured: { status: 'pending' },
+  });
+  const room = (rows: Record<string, any>, over: any = {}) => ({
+    as_of: '2026-09-16T11:00:00-04:00', in_session: true, store_date: '2026-09-16',
+    params: {}, rows, requested: Object.keys(rows).length,
+    covered: Object.keys(rows).length, pending: 0, unavailable: 0,
+    disclaimer: 'not advice',
+    band_structure_study: { headline: 'MEASURED: pending — ordered by ceiling thickness' },
+    ...over,
+  });
+  const mount = (roomBody: any) => {
+    // The bounce-room cache is module-level and outlives a test's render.
+    _resetBounceRoomCache();
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+      ok: true, status: 200,
+      json: async () => (String(url).includes('/supply-demand/bounce-room') ? roomBody : payload()),
+    }) as any));
+    return render(<SessionBoard />);
+  };
+  afterEach(() => { vi.unstubAllGlobals(); _resetBounceRoomCache(); });
+
+  it('a tile whose row HAS a read shows the chip, printing the served sentence', async () => {
+    mount(room({
+      VRSK: { symbol: 'VRSK', coverage: 'store', print: 100, band_structure: bandRead(STAT) },
+      ACMR: { symbol: 'ACMR', coverage: 'store', print: 20, band_structure: null },
+    }, { band_structure_coverage: { rows_with_read: 1, rows_without_read: 1, note: null } }));
+    await waitFor(() => expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0));
+    const chip = await screen.findByText(new RegExp(`🪜 ${STAT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    expect(chip).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: the tile WITHOUT a read shows no chip and no figure is invented', async () => {
+    mount(room({
+      VRSK: { symbol: 'VRSK', coverage: 'store', print: 100, band_structure: bandRead(STAT) },
+      ACMR: { symbol: 'ACMR', coverage: 'pending' },
+    }, { band_structure_coverage: { rows_with_read: 1, rows_without_read: 1, note: null } }));
+    await waitFor(() => expect(screen.getAllByText('ACMR').length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText(/🪜/)).toHaveLength(1));
+    expect(screen.queryByTestId('band-structure-note')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: no row with a read anywhere → the SERVED reason, never silence', async () => {
+    mount(room({
+      VRSK: { symbol: 'VRSK', coverage: 'pending' },
+      ACMR: { symbol: 'ACMR', coverage: 'pending' },
+    }, { band_structure_coverage: { rows_with_read: 0, rows_without_read: 2,
+                                    note: 'No band read for these names — no ceiling or floor to show on this board.' } }));
+    const note = await screen.findByTestId('band-structure-note');
+    expect(note.textContent).toMatch(/No band read for these names/);
+    expect(screen.queryByText(/🪜 ceiling/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a legacy payload with no band fields does not crash the board', async () => {
+    mount(room({ VRSK: { symbol: 'VRSK', coverage: 'store', print: 100 } },
+               { band_structure_study: undefined }));
+    await waitFor(() => expect(screen.getAllByText('VRSK').length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('band-structure-note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/🪜/)).not.toBeInTheDocument();
   });
 });

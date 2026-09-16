@@ -18,12 +18,13 @@ import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
-import type { BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
+import type { BandStructureStudy, BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import OverlayLegend from './OverlayLegend';
 import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import {
@@ -207,12 +208,29 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {room.payload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {room.payload.band_structure_coverage.note}
+        </div>
+      ) : null}
       <div className="cm-grid">
+        {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs". These tiles come from the
+            session endpoint, which never runs chart_maps/board.attach_band_structure
+            — so the row's SERVED read is put on the tile the one renderer already
+            reads it from, rather than a second chip mount with its own rules. */}
         {part.rows.map((r) => r.tile
-          ? <PatternChart key={r.symbol} tile={filterTile(r.tile, hiddenOverlays)} tvTf="15m"
+          ? <PatternChart key={r.symbol} tvTf="15m"
+                          tile={{ ...filterTile(r.tile, hiddenOverlays),
+                                  band_structure: room.map.get(String(r.symbol).toUpperCase())?.band_structure ?? null }}
+                          bandStudy={room.payload?.band_structure_study}
                           study={room.payload?.explosive_study} />
           : <NoDataCard key={r.symbol} row={r} onPick={onPick}
                         study={room.payload?.explosive_study}
+                        bandStudy={room.payload?.band_structure_study}
                         read={room.map.get(String(r.symbol).toUpperCase())} />)}
       </div>
 
@@ -221,9 +239,10 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
   );
 }
 
-function NoDataCard({ row, onPick, read, study }: {
+function NoDataCard({ row, onPick, read, study, bandStudy }: {
   row: SessionRow; onPick?: (s: string) => void;
   read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
+  bandStudy?: BandStructureStudy | null;
 }) {
   const meta = BIAS_META[row.bias] || BIAS_META.unknown;
   return (
@@ -235,6 +254,9 @@ function NoDataCard({ row, onPick, read, study }: {
       <GrowthChip symbol={row.symbol} className="sb-chip" />
       <ExplosiveChip read={read?.explosive} study={study} className="sb-chip" />
       <EnterableChip read={read?.enterable} className="sb-chip" />
+      {/* 🪜 the row's own served ceiling/floor read — the tiles above get it
+          on the tile, the no-data cards get it here. */}
+      <BandStructureChip read={read?.band_structure} className="sb-chip" study={bandStudy} />
       <span className="sb-name">{row.name || ''}</span>
       <span className="sb-bias" style={{ color: toneColor(meta.tone) }}>
         {meta.dot} {meta.label}

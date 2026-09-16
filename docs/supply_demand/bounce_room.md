@@ -259,6 +259,32 @@ wired, and the read stands on the gates and drags that were already measured.
 threshold in it is imported from the module that enforces it (`alert_gates`,
 `premarket_entry`) or comes out of the measured dict.
 
+### 🪜 band structure — the ceiling and the floor (2026-09-16)
+
+The same `doc["bands"]` this module already filters answers two more of his
+questions — how thin the first supply band above the print is, and whether there
+is a second demand band close under the first one — so the band-structure read
+([`band_structure.md`](band_structure.md)) is computed from the row's existing
+band selection rather than from a second fetch or a second geometry. It matters
+here for one reason: **`doc["bands"]` is uncapped** (`zone_store.build_doc` calls
+`price_zones.compute(..., max_zones=None, **zone_geom())`), while
+`price_zones.compute`'s own `supply_zones` / `demand_zones` keep only
+`MAX_ZONES_PER_SIDE = 4` per side — so a second band under the first is visible
+from this payload and can be missing from a route that reads the capped lists.
+The read is an **ordering and a chip, never a gate**: it hides nothing, changes
+no `PARAMS`, and composes the same way 🧨 does — the board sorts first and
+`partitionEnterable` runs on top of the order it produced, unmodified.
+
+**This route serves the READ, not the order.** `read_symbol` writes
+`row["band_structure"]` and `build_payload` adds `band_structure_study` (the
+verdict banner) and `band_structure_coverage` (`rows_with_read` /
+`rows_without_read`, plus `BAND_STRUCTURE_NO_READ` when not one row on the list
+came back with one). The ten Chart Maps row boards fed from here render the chip
+and that note and **do not order by it** — ordering a row board is an open
+owner's call, and `frontend/scripts/contracts.mjs` fails any of the ten that
+imports `compareBandStructure`. The `?sort=band_structure` ordering lives only
+on the Chart Maps tile grid ([`band_structure.md`](band_structure.md) §5.0).
+
 ## Coverage story
 
 | coverage | meaning |

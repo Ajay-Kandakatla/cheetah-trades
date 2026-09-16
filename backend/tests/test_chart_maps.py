@@ -680,12 +680,25 @@ def test_gates_survive_the_null_shapes_the_scan_really_emits():
 # BAR_BUFFER` tiles. A client-side dropdown would reorder the tiles theme
 # priority already picked, so "highest volume" would mean "highest volume among
 # the ~24 the theme ranking happened to choose". Same label, different claim.
+# The metric keys are taken from `tile_metrics` itself so a column added to
+# production cannot be missed here — and a POST_CUT sort may NOT be handed a
+# value, because production never produces one. Feeding `_tile` a
+# `band_structure` float was how the offered-sort test came to pass on a
+# fiction (2026-09-16): `tile_metrics` hardcodes that column to None, so the
+# comparator the test exercised was a branch the real board never reaches.
+_METRIC_KEYS = tuple(B.tile_metrics({}))
+
+
 def _tile(sym, theme=None, score=0.0, **metrics):
+    faked = sorted(set(metrics) & set(B.POST_CUT_SORTS))
+    assert not faked, (
+        "%s is a POST_CUT sort: tile_metrics always returns None for it, so a "
+        "test that hands it a value is testing a column production never "
+        "emits" % ", ".join(faked))
+    unknown = sorted(set(metrics) - set(_METRIC_KEYS))
+    assert not unknown, "not a tile metric: %s" % ", ".join(unknown)
     return {"symbol": sym, "theme": theme, "_score": score,
-            "_m": {k: metrics.get(k) for k in
-                   ("volume", "rvol", "turnover", "avg_turnover",
-                    "conviction", "rs", "change", "dark", "retailimb",
-                    "retailpct", "velocity", "avg_shares", "explosive")}}
+            "_m": {k: metrics.get(k) for k in _METRIC_KEYS}}
 
 
 def _order(tiles, sort, themes_first=True):
@@ -736,7 +749,11 @@ def test_metrics_survive_a_row_with_nothing_in_it():
     m = B.tile_metrics({})
     assert set(m) == {"volume", "rvol", "turnover", "avg_turnover",
                       "conviction", "rs", "change", "dark", "retailimb",
-                      "retailpct", "velocity", "avg_shares", "explosive"}
+                      "retailpct", "velocity", "avg_shares", "explosive",
+                      # 2026-09-16 — declared so the dropdown key resolves;
+                      # always None, because the 🪜 ordering is two numbers
+                      # and never one sortable float (see tile_metrics).
+                      "band_structure"}
     assert all(v is None for v in m.values())
     assert B.tile_metrics(None)["volume"] is None
 
@@ -766,12 +783,60 @@ def test_the_default_leaves_the_board_exactly_as_it_was():
     assert _order(tiles, B.DEFAULT_SORT) == ["A", "B"]
 
 
-@pytest.mark.parametrize("key", [k for k in B.SORTS if k != B.DEFAULT_SORT])
+@pytest.mark.parametrize("key", [k for k in B.SORTS
+                                 if k != B.DEFAULT_SORT
+                                 and k not in B.POST_CUT_SORTS])
 def test_every_offered_sort_actually_orders(key):
     """Parametrised off SORTS itself: a key added to the dropdown without a
-    working comparator would otherwise ship untested."""
+    working comparator would otherwise ship untested.
+
+    POST_CUT_SORTS are excluded BY NAME and tested below instead: they are not
+    metric columns at all — `tile_metrics` returns None for them always, and
+    their ordering runs in `board()` after the cut. Parametrising them here
+    meant inventing a column value production never produces.
+    """
     tiles = [_tile("LO", **{key: 1.0}), _tile("HI", **{key: 100.0})]
     assert _order(tiles, key) == ["HI", "LO"]
+
+
+@pytest.mark.parametrize("key", list(B.POST_CUT_SORTS))
+def test_a_POST_CUT_sort_has_NO_metric_column_on_the_REAL_path(key):
+    """The real path, not a hand-built tile: `tile_metrics` is fed the richest
+    row either producer emits and the column still comes back None. That is
+    the sort's real availability rule — it cannot be ordered by `_sort_key` at
+    all, and `_band_structure_sort` in `board()` is what orders it."""
+    rich = B.tile_metrics({
+        "liquidity": {"avg_dollar_vol": 5.1e8, "today_vol": 4_690_419,
+                      "avg_vol_50": 3_000_000, "rvol": 1.56,
+                      "today_dollar_vol": 3.06e8},
+        "volume": {"last_vol": 75_324_819, "avg_vol_50": 137_007_562},
+        "rs_rank": 91, "day_change_pct": 2.4, "last_close": 162.76,
+        "conviction": {"score": 88.0},
+        "venues": {"dark_pct": 16.3},
+        "retail": {"imbalance_pct": 4.0, "retail_pct_of_volume": 2.3},
+        "band_structure": {"ceiling": {"height_pct": 1.0}},
+    })
+    assert key in rich, "%s is offered in the dropdown but never declared" % key
+    assert rich[key] is None, (
+        "%s produced a metric value: the 🪜 ordering is two numbers, and one "
+        "sortable float here would be the composite score nobody measured" % key)
+    assert B.is_explicit_sort(key) is False
+
+
+def test_a_POST_CUT_sort_does_NOT_reorder_or_RE_CUT_the_board():
+    """NEGATIVE, and the regression for 2026-09-16: `_sort_key` treated
+    `band_structure` as an explicit metric, so picking it dropped the theme
+    ranking BEFORE `_finish` cut to `limit` — a different set of names reached
+    the page while `_band_structure_sort` told him the board was "showing its
+    default order". A post-cut sort orders the page; it never selects it."""
+    def _tiles():
+        return [_tile("RKLB", theme="space", score=1),
+                _tile("NVDA", theme="ai_semis", score=4),
+                _tile("ZZZZ", theme=None, score=9)]
+    assert _order(_tiles(), "band_structure") == _order(_tiles(), B.DEFAULT_SORT)
+    # and the metric branch is what it is NOT doing: a real metric sort here
+    # would put the themeless top score first.
+    assert _order(_tiles(), "volume")[0] == "ZZZZ"
 
 
 def test_the_tabs_own_score_breaks_ties_so_the_order_is_stable():
@@ -805,6 +870,49 @@ def test_the_per_theme_cap_does_not_apply_to_an_explicit_sort():
     import inspect
     src = inspect.getsource(B._finish)
     assert "not explicit" in src
+
+
+def _finish_syms(monkeypatch, tiles, sort, limit=3, themes_first=True):
+    """`_finish` end to end with the three enrichers stubbed out (bars, the 🧨
+    read and the velocity lookup all reach the network or Mongo). What comes
+    back is the SET and the ORDER of tiles that would reach the page."""
+    monkeypatch.setattr(B, "attach_explosive", lambda ts: 0)
+    monkeypatch.setattr(B, "attach_velocity", lambda ts: 0)
+    monkeypatch.setattr(B, "_velocity_decor", lambda ts: None)
+    monkeypatch.setattr(B, "_attach_bars",
+                        lambda ts, days: [t.__setitem__("bars", [1]) for t in ts])
+    # `_finish` strips `_score` / `_m` off the tiles it returns, so every call
+    # gets its own tiles — reusing the dicts would compare a second run against
+    # a board the first run had already emptied.
+    out, _meta = B._finish([dict(t, _m=dict(t["_m"])) for t in tiles],
+                           limit, themes_first, 60, sort=sort, min_tier="any")
+    return [t["symbol"] for t in out]
+
+
+def test_a_POST_CUT_sort_does_not_change_WHICH_tiles_reach_the_page(monkeypatch):
+    """NEGATIVE — the 2026-09-16 regression, at the level it actually bit.
+
+    `_finish` ranks, applies MAX_PER_THEME and CUTS to `limit`; only then does
+    `board()` fetch the live print the 🪜 read needs. While `band_structure`
+    counted as an explicit metric here, choosing it dropped the theme ranking
+    before that cut, so a different top-N was selected — and the note the page
+    printed said the board was showing its default order. The page it orders
+    must be the page the default order chose.
+    """
+    tiles = ([_tile("SPACE%d" % i, theme="space", score=float(i))
+              for i in range(1, 8)]
+             + [_tile("PLAIN1", theme=None, score=90.0),
+                _tile("PLAIN2", theme=None, score=95.0)])
+    default = _finish_syms(monkeypatch, tiles, B.DEFAULT_SORT)
+    post_cut = _finish_syms(monkeypatch, tiles, "band_structure")
+    assert post_cut == default, "the 🪜 sort re-cut the board"
+    assert set(post_cut) == {"SPACE7", "SPACE6", "SPACE5"}
+    # the contrast: a REAL metric sort is allowed to re-cut, and does.
+    real = _finish_syms(monkeypatch,
+                        [_tile("SPACE1", theme="space", score=1.0, volume=1.0),
+                         _tile("PLAIN2", theme=None, score=95.0, volume=999.0)],
+                        "volume", limit=1)
+    assert real == ["PLAIN2"]
 
 
 def test_the_winners_tabs_offer_no_sort_because_they_have_no_volume():
@@ -2811,3 +2919,100 @@ def test_attach_live_now_runs_at_the_end_of_board_for_every_tab():
     assert "attach_live_now(_tiles, out, live=_live)" in tail, "the live now-line overlay must run for every tab"
     # ONE fan-out feeds it and the 🎯 read (2026-09-15); the now-line still runs first.
     assert tail.index("_live_snapshot(") < tail.index("attach_live_now(") < tail.index("attach_enterable(")
+
+
+# ---------------------------------------------------------------------------
+# 🪜 band structure on the TILE GRID — the banner, and the sort that is not
+# offered where there is no read (critique M4 + m1, 2026-09-16)
+# ---------------------------------------------------------------------------
+def _bs_mod():
+    from supply_demand import band_structure as BS
+    return BS
+
+
+def test_the_band_structure_CHIP_never_outlives_its_BANNER_on_the_tile_grid(
+        monkeypatch, prices, reentry_stub):
+    """NEGATIVE. `attach_band_structure` used to run BEFORE
+    `measured_verdict()` inside one try, so a raise from the verdict left every
+    tile carrying the read — the chip renders — and the payload with no banner:
+    an UNMEASURED read wearing a validated face. `chart_maps/api.py` was
+    reordered for exactly this on the Support tab; the 8 tile tabs that carry
+    the 🪜 ordering were not (critique M4).
+
+    If the banner cannot be built, no tile may carry the read either."""
+    prices["AAA"] = _frame(200)
+    reentry_stub["rows"] = [_reentry_row("AAA")]
+
+    def _boom():
+        raise RuntimeError("verdict module moved")
+
+    monkeypatch.setattr(_bs_mod(), "measured_verdict", _boom)
+    out = B.board("zones", limit=5, min_tier="any")
+    assert out["band_structure_study"] is None
+    assert out["band_structure_kind"] is None
+    assert out["tiles"], "the board itself still renders — the read fails OPEN"
+    for t in out["tiles"]:
+        assert "band_structure" not in t, "no chip without its banner"
+        assert not any(s.get("k") == B.BAND_STRUCTURE_STAT_KEY
+                       for s in (t.get("stats") or []))
+
+
+def test_the_band_structure_banner_and_read_BOTH_land_on_a_healthy_tile_board(
+        prices, reentry_stub):
+    """The positive half of the test above: with nothing patched the banner is
+    served AND every tile carries the key (None is a real answer — a name the
+    store has no bands for)."""
+    prices["AAA"] = _frame(200)
+    reentry_stub["rows"] = [_reentry_row("AAA")]
+    out = B.board("zones", limit=5, min_tier="any")
+    assert out["band_structure_study"] == _bs_mod().measured_verdict()
+    assert out["band_structure_kind"] == "demand"
+    assert all("band_structure" in t for t in out["tiles"])
+
+
+def test_the_band_structure_VERDICT_is_set_before_the_attach_in_the_source():
+    """The ordering is the fix; a future edit that swaps the two statements
+    back into one try would pass every payload assertion above only until the
+    verdict raises. Pin the shape, the way `api.py`'s own fix is pinned."""
+    src = (Path(__file__).resolve().parents[1] / "chart_maps" / "board.py").read_text()
+    tail = src[src.index("def board("):src.index("def now_label(")]
+    assert (tail.index('out["band_structure_study"] = _bs.measured_verdict()')
+            < tail.index("attach_band_structure(_tiles")), \
+        "the banner is set first; the chip may never outlive it"
+
+
+@pytest.mark.parametrize("tab", ["vcp", "winners", "topping", "earnings",
+                                 "zero_dte", "undervalue"])
+def test_the_BAND_SORT_is_not_OFFERED_on_the_six_tabs_that_have_no_band_read(
+        tab, monkeypatch, prices, scan_stub, reentry_stub):
+    """NEGATIVE. `out["sorts"]` was the whole `SORTS` dict for every non-ledger
+    tab, so the 🪜 entry was offered on vcp / topping / undervalue — tabs whose
+    rows are not price-structure bands and which answer
+    `band_structure_sort_na()` when it is picked. This file's own rule, stated
+    in `board()` for the ledger tabs: say so rather than offering a control
+    that silently does nothing (critique m1)."""
+    # The 💎 tab reaches `sepa.rev_ttm.bulk` -> Mongo on its way to an empty
+    # board; stubbed so this test stands alone rather than depending on an
+    # earlier test in the file having imported it.
+    class _Rev:
+        TTL_SEC = 1
+
+        @staticmethod
+        def bulk(symbols, fill_missing=True):
+            return {}
+
+    monkeypatch.setitem(sys.modules, "sepa.rev_ttm", _Rev())
+    out = B.board(tab, limit=5, min_tier="any")
+    assert out["band_structure_kind"] == "n/a"
+    assert "band_structure" not in {s["key"] for s in (out.get("sorts") or [])}
+
+
+def test_the_BAND_SORT_IS_offered_on_a_tab_that_has_a_band_read(prices, reentry_stub):
+    """The positive control. Dropping it everywhere would also pass the six
+    negatives above."""
+    prices["AAA"] = _frame(200)
+    reentry_stub["rows"] = [_reentry_row("AAA")]
+    out = B.board("zones", limit=5, min_tier="any")
+    keys = {s["key"] for s in out["sorts"]}
+    assert "band_structure" in keys
+    assert keys == set(B.SORTS), "no other sort was dropped on the way"

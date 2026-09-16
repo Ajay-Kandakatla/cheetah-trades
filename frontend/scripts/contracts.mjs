@@ -1958,6 +1958,155 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'the \u{1FA9C} band-structure read: one ordering key, PROP-FED chips, no maths in the TSX (2026-09-16)',
+    file: 'src/lib/bandStructure.ts',
+    // Ajay 2026-09-16, two messages one minute apart: "prioritize stock by the
+    // thinnest over head or Supply zone where ever is applicable" and "the
+    // support bands are bigger and atleast another one very close if its falls
+    // below the first support level. Something like CRDO had at 149."
+    //
+    // Same teeth as the \u{1F9E8} contract above, plus the two this read needs:
+    //   * the ordering key is MIRRORED, not re-derived — the fixture both
+    //     suites sort must exist and must be the one this file names;
+    //   * the chip prints the SERVED sentence. A percentage formatted in TSX
+    //     is a second engine, and a `gap_pct` of null rendered as 0 would turn
+    //     "no second catch" into "the second catch touches the first".
+    //
+    // SINCE 2026-09-16 the ROW boards are checked too (check 7). His ask was
+    // "in all chartmaps tabs", and ten of them are row boards fed by
+    // POST /supply-demand/bounce-room, which now serves `band_structure` on the
+    // row the way it serves `enterable`. They were the one gap the \u{1F3AF}
+    // contract's own "every \u{1F9E8} mount also mounts \u{1F3AF}" rule would not
+    // have caught, because the chip was simply never mounted there at all.
+    //
+    // WHAT IS STILL DELIBERATELY NOT CHECKED: a row-board ORDERING. Re-ranking
+    // a row board is HIS call; the chip is a read, and nothing on that path
+    // applies `compareBandStructure`.
+    checks: (src) => {
+      const errs = [];
+
+      // 1. The ordering key is a mirror of a file both suites read.
+      const FIXTURE = 'backend/tests/fixtures/band_structure_order_mirror_2026_09_16.json';
+      if (!src.includes(FIXTURE)) {
+        errs.push(`src/lib/bandStructure.ts must name ${FIXTURE} — the ordering is pinned against the file the backend suite sorts`);
+      }
+      let fx = null;
+      try {
+        fx = JSON.parse(readFileSync(join(FRONTEND_ROOT, '..', FIXTURE), 'utf8'));
+      } catch {
+        errs.push(`${FIXTURE} is missing — the frontend/backend ordering mirror has nothing to pin against`);
+      }
+      if (fx && !(Array.isArray(fx.expected_no_signal) && Array.isArray(fx.expected_separates))) {
+        errs.push(`${FIXTURE} must carry BOTH expected orders — only one branch will ever be live and both must be pinned`);
+      }
+      if (!/backend\/supply_demand\/band_structure\.py/.test(src)) {
+        errs.push('src/lib/bandStructure.ts must name the backend module it mirrors');
+      }
+
+      // 2. No maths. Every number is served inside `read.stat`; a threshold,
+      //    a quantile or a percentage assembled here is a second engine.
+      if (/\btoFixed\s*\(\s*[12]\s*\)\s*\+\s*'%'|`\$\{[^`]*\}%`/.test(src)) {
+        errs.push('src/lib/bandStructure.ts must not format a percentage — the stat sentence is served by band_structure.py::stat_line');
+      }
+      for (const banned of ['quantile', 'percentile', 'MIN_PCT', 'THRESHOLD']) {
+        if (new RegExp(`\\b${banned}\\b`).test(src)) {
+          errs.push(`src/lib/bandStructure.ts must not carry a ${banned} — no threshold is invented on this side`);
+        }
+      }
+
+      // 3. The chip is PROP-FED and renders nothing rather than guessing.
+      const chip = read('src/components/BandStructureChip.tsx');
+      if (/\bfetch\s*\(/.test(chip) || /useEffect|useState/.test(chip)) {
+        errs.push('BandStructureChip must be PROP-FED — it never fetches and holds no state');
+      }
+      if (/toFixed\s*\(|\*\s*100|\/\s*100/.test(chip)) {
+        errs.push('BandStructureChip must not compute a number — it prints the served stat');
+      }
+
+      // 4. The one tile renderer behind every board tab carries it, fed off
+      //    the tile (chart_maps/board.attach_band_structure) — no request.
+      const tile = read('src/components/PatternChart.tsx');
+      if (!/<BandStructureChip\s+read=\{tile\.band_structure\}/.test(tile)) {
+        errs.push('PatternChart must render <BandStructureChip read={tile.band_structure}> — it is the one renderer behind every board tab and the Support tab');
+      }
+
+      // 5. The verdict banner is SERVED, and so is the scope note. A typed
+      //    figure goes stale in silence (the Bonde rule).
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/band_structure_study\?\.headline/.test(page)) {
+        errs.push('ChartMaps must render the served band_structure_study headline');
+      }
+      if (!/band_structure_scope/.test(page)) {
+        errs.push('ChartMaps must render the served band_structure_scope — the sort runs after the board was cut to its page size and has to say so');
+      }
+      if (!/sort_unavailable/.test(page)) {
+        errs.push('ChartMaps must render sort_unavailable — a board with no band read keeps its served order and shows the reason');
+      }
+      const banner = /cm-band-study[\s\S]*?<\/div>\s*\)\}/.exec(page);
+      if (banner && (/\d\.\d\dpp/.test(banner[0]) || /\d+\.\d%/.test(banner[0]))) {
+        errs.push('the band-structure banner must not hard-code a measured figure — it comes from band_structure.py::MEASURED');
+      }
+
+      // 6. Styled, or it ships invisible.
+      const css = read('src/styles.css');
+      for (const c of ['cm-badge-band', 'cm-badge-band-muted', 'sb-chip-band',
+                       'sb-chip-band-muted', 'hs-badge-band', 'hs-badge-band-muted',
+                       'cm-band-study']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the chip would ship unstyled`);
+        }
+      }
+
+      // 7. THE TEN ROW BOARDS (2026-09-16). Ajay: "Now in all chartmaps tabs".
+      //    These tabs are not tiles — they are lists fed by the bounce-room
+      //    route — so the \u{1FA9C} read reaches them only if each renderer mounts
+      //    the chip off the served row AND prints the served no-read sentence
+      //    when nothing on the list came back with one. Silence on a tab is
+      //    exactly what this check exists to stop: the six `n/a` tabs say why,
+      //    and these ten used to say nothing at all.
+      //
+      //    NOT in this list, each for a written reason:
+      //      HoldingsBoard / SupportLevels — they render through PatternChart,
+      //        which check 4 already pins (tile.band_structure).
+      //      Alerts.tsx — a push-time verdict, not a live band read.
+      //      Sepa.tsx / DemandReentryPanel — bounce-room consumers that are not
+      //        Chart Maps tabs.
+      const ROW_BOARDS = [
+        'src/components/BondeBoard.tsx', 'src/components/GntBoard.tsx',
+        'src/components/SessionBoard.tsx', 'src/components/HotPullbackBoard.tsx',
+        'src/components/OvernightGappers.tsx', 'src/components/HottestSectors.tsx',
+        'src/components/SignalLabBoard.tsx', 'src/components/ExplosiveGrowth.tsx',
+        'src/pages/PatternsPage.tsx', 'src/pages/Catalysts.tsx',
+      ];
+      for (const rel of ROW_BOARDS) {
+        const tsx = read(rel);
+        if (!tsx) { errs.push(`${rel} is unreadable — the \u{1FA9C} row check cannot run`); continue; }
+        const mounts = /<BandStructureChip\s/.test(tsx);
+        // SessionBoard and SignalLabBoard put the served read on the TILE the
+        // one renderer (PatternChart) already reads it from, rather than a
+        // second chip mount with its own rules — either is the read reaching
+        // the tab, neither is a re-derivation.
+        const onTile = /band_structure:\s*room\.map\.get/.test(tsx);
+        if (!mounts && !onTile) {
+          errs.push(`${rel} never shows the \u{1FA9C} read — Ajay asked for it "in all chartmaps tabs" and this is one of the ten row boards`);
+        }
+        if (!/\?\.band_structure\b/.test(tsx)) {
+          errs.push(`${rel} must read the SERVED bounce-room row field \`band_structure\` — never a second derivation`);
+        }
+        if (!/band_structure_coverage\?\.note|ex\?\.bandNote/.test(tsx)) {
+          errs.push(`${rel} must render the served band_structure_coverage.note — a board with no read anywhere has to SAY so, the way the \u{1F3AF} n/a tabs do`);
+        }
+        if (!/data-testid="band-structure-note"/.test(tsx)) {
+          errs.push(`${rel} must tag the no-read line data-testid="band-structure-note" so its own suite can pin that it appears`);
+        }
+        if (/compareBandStructure|bandStructureOrderKey/.test(tsx)) {
+          errs.push(`${rel} applies a \u{1FA9C} ORDERING — ordering on row boards is HIS call and was not asked for`);
+        }
+      }
+      return errs;
+    },
+  },
+  {
     name: 'the \u{1F3AF} enterable read reaches every renderer, hides nothing silently (2026-09-15)',
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-09-15: "I only wanna see the stocks that are enterable ... I do

@@ -1,0 +1,364 @@
+{
+  "_doc": "Shared ordering fixture for supply_demand.band_structure.band_structure_key (backend) and compareBandStructure (frontend/src/lib/bounceRoom.ts). Both suites sort `rows` and must produce `expected_no_signal` when MEASURED.status is 'pending' or 'no_signal' (the DESCRIPTIVE fallback: the ceiling leg in THREE groups — nothing PROVEN overhead (UNTESTED, not thin; it leads today and where it belongs is his call), then a readable ceiling thinnest first, then a ceiling that cannot be read at all — and the floor as the tiebreak: a second band by smallest gap_pct, then the bigger first band by height_pct desc; a row that is not applicable or has no read sorts LAST; symbol breaks remaining ties) and `expected_separates` when status == 'separates' (score desc, applicable-but-unscored next, not-applicable/no-read last, symbol tiebreak). THE BACKEND IS CANONICAL: where the two sides could drift, band_structure_key defines the answer and the frontend follows — a string numeric is COERCED (_f), an `applicable` that is merely truthy counts as applicable, and symbols compare by CODEPOINT ('AB' < 'A_B' < 'aB'), not by a locale collation. The last three rows exist to FAIL on each of those, not to be satisfied by both sides by accident. 2026-09-16.",
+  "rows": [
+    {
+      "symbol": "CLR",
+      "read": {
+        "applicable": true,
+        "score": 0.2,
+        "ceiling": {
+          "state": "CLEAR",
+          "band": null,
+          "height_pct": null,
+          "distance_pct": null,
+          "walls_above": 0
+        },
+        "floor": {
+          "height_pct": 3.0,
+          "gap_pct": 5.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 4.0
+        }
+      }
+    },
+    {
+      "symbol": "THIN",
+      "read": {
+        "applicable": true,
+        "score": 0.9,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 112.0
+          },
+          "height_pct": 2.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 4.0,
+          "gap_pct": 3.0,
+          "bands_below": 2,
+          "in_band": true,
+          "distance_pct": 0.0
+        }
+      }
+    },
+    {
+      "symbol": "THICK",
+      "read": {
+        "applicable": true,
+        "score": 0.7,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 119.0
+          },
+          "height_pct": 9.0,
+          "distance_pct": 10.0,
+          "walls_above": 3
+        },
+        "floor": {
+          "height_pct": 2.0,
+          "gap_pct": 1.0,
+          "bands_below": 3,
+          "in_band": false,
+          "distance_pct": 2.0
+        }
+      }
+    },
+    {
+      "symbol": "TIE_A",
+      "read": {
+        "applicable": true,
+        "score": 0.5,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 115.0
+          },
+          "height_pct": 5.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 3.0,
+          "gap_pct": 2.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "TIE_B",
+      "read": {
+        "applicable": true,
+        "score": 0.5,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 115.0
+          },
+          "height_pct": 5.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 6.0,
+          "gap_pct": 2.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "NOSEC",
+      "read": {
+        "applicable": true,
+        "score": 0.1,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 115.0
+          },
+          "height_pct": 5.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 3.0,
+          "gap_pct": null,
+          "bands_below": 1,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "NOFLOOR",
+      "read": {
+        "applicable": true,
+        "score": null,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 115.0
+          },
+          "height_pct": 5.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": null
+      }
+    },
+    {
+      "symbol": "UNKC",
+      "read": {
+        "applicable": true,
+        "score": null,
+        "ceiling": null,
+        "floor": {
+          "height_pct": 3.0,
+          "gap_pct": 4.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "NA",
+      "read": {
+        "applicable": false,
+        "score": null,
+        "ceiling": null,
+        "floor": null,
+        "na_text": "no band read for this tab — its rows are not price-structure bands (pivot / highs / lid / event / options / value)"
+      }
+    },
+    {
+      "symbol": "NONE",
+      "read": null
+    },
+    {
+      "symbol": "STRH",
+      "read": {
+        "applicable": true,
+        "score": 0.4,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 115.0
+          },
+          "height_pct": "5.0",
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 3.0,
+          "gap_pct": 2.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "TRUTHY",
+      "read": {
+        "applicable": 1,
+        "score": 0.95,
+        "ceiling": {
+          "state": "CLEAR",
+          "band": null,
+          "height_pct": null,
+          "distance_pct": null,
+          "walls_above": 0
+        },
+        "floor": {
+          "height_pct": 4.0,
+          "gap_pct": 1.0,
+          "bands_below": 3,
+          "in_band": false,
+          "distance_pct": 2.0
+        }
+      }
+    },
+    {
+      "symbol": "aB",
+      "read": {
+        "applicable": true,
+        "score": 0.3,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 117.0
+          },
+          "height_pct": 7.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 1.0,
+          "gap_pct": 4.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "A_B",
+      "read": {
+        "applicable": true,
+        "score": 0.3,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 117.0
+          },
+          "height_pct": 7.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 1.0,
+          "gap_pct": 4.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    },
+    {
+      "symbol": "AB",
+      "read": {
+        "applicable": true,
+        "score": 0.3,
+        "ceiling": {
+          "state": "ROOM",
+          "band": {
+            "kind": "supply",
+            "lo": 110.0,
+            "hi": 117.0
+          },
+          "height_pct": 7.0,
+          "distance_pct": 10.0,
+          "walls_above": 1
+        },
+        "floor": {
+          "height_pct": 1.0,
+          "gap_pct": 4.0,
+          "bands_below": 2,
+          "in_band": false,
+          "distance_pct": 1.0
+        }
+      }
+    }
+  ],
+  "expected_no_signal": [
+    "TRUTHY",
+    "CLR",
+    "THIN",
+    "TIE_B",
+    "STRH",
+    "TIE_A",
+    "NOSEC",
+    "NOFLOOR",
+    "AB",
+    "A_B",
+    "aB",
+    "THICK",
+    "UNKC",
+    "NA",
+    "NONE"
+  ],
+  "expected_separates": [
+    "TRUTHY",
+    "THIN",
+    "THICK",
+    "TIE_A",
+    "TIE_B",
+    "STRH",
+    "AB",
+    "A_B",
+    "aB",
+    "CLR",
+    "NOSEC",
+    "NOFLOOR",
+    "UNKC",
+    "NA",
+    "NONE"
+  ],
+  "_notes": [
+    "CLR leads its group because nothing PROVEN overhead is UNTESTED — not thin, and not absent either; the group's position is HIS CALL (band_structure.CEILING_GROUP_UNTESTED) and the shipped default is kept.",
+    "TIE_B beats TIE_A on an identical ceiling and an identical gap because its first support band is the bigger one — the last tiebreak, and the only place ask #2's 'bands are bigger' can decide.",
+    "NOSEC has one support band and no second: its gap is UNKNOWN, never 0, so it sorts behind every row that has a second catch rather than ahead of them.",
+    "UNKC has a floor but no readable ceiling — it sorts behind every readable ceiling, because unknown is not thin.",
+    "NA is a tab with no band read and NONE has no read at all: both last, never first.",
+    "STRH carries height_pct as the STRING \"5.0\": the backend coerces it and ranks it beside TIE_A. A side that treats a string as unreadable drops it into the unknown-ceiling group instead — which is the divergence this row exists to catch.",
+    "TRUTHY carries applicable = 1, not true. The backend reads it as applicable and it LEADS the fallback board (a second catch 1% under). A side that tests `applicable !== true` sends it to the very last place — as far apart as two answers can be.",
+    "AB / A_B / aB have identical reads and differ only by symbol: the order is Python codepoint order, '_' (0x5F) after 'B' and uppercase before lowercase. A locale collation reorders all three."
+  ]
+}

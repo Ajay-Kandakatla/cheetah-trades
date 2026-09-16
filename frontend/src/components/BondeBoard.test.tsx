@@ -505,3 +505,74 @@ describe('📈 Bonde — the 🎯 enterable cut', () => {
     expect(screen.getByText(/hidden/).closest('.cm-hidden-count')!.textContent).toMatch(/^0 hidden/);
   });
 });
+
+
+/* 🪜 BAND STRUCTURE on a ROW board (2026-09-16).
+ *
+ * Ajay 2026-09-16: "Now in all chartmaps tabs, can you prioritize stock by the
+ * thinnest over head or Supply zone where ever is applicable" — Bonde is one of
+ * the ten row boards that carried NOTHING before this: no chip, and no line
+ * saying why, unlike the six `n/a` tabs which say so out loud.
+ *
+ * Everything the chip prints is SERVED (`row.band_structure.stat`). The board
+ * formats nothing, so the only things worth pinning are that the read arrives,
+ * that a row WITHOUT one shows nothing, and that a board where NOTHING came
+ * back says so instead of going quiet.
+ */
+const bandRead = (stat: string) => ({
+  symbol: 'X', kind: 'demand', applicable: true, score: null, na_text: null, stat,
+  ceiling: { state: 'ROOM', height_pct: 3.4, distance_pct: 18.9 },
+  floor: { height_pct: 3.5, gap_pct: 6.4, bands_below: 2 },
+  measured: { status: 'pending', run_date: null, n_episodes: null, oos_lift: null, oos_ci: null, mdl: null },
+});
+const BAND_STUDY = { headline: 'MEASURED: pending — ordered by ceiling thickness', body: null,
+                     fallback_note: 'descriptive ordering', limits: null };
+
+describe('🪜 Bonde — the served band-structure read', () => {
+  it('a row WITH a served read shows the chip, printing the served sentence verbatim', async () => {
+    drawWithRoom(payload(FOUR), roomPayload({
+      ...ROOM.rows,
+      PTGX: { ...ROOM.rows.PTGX,
+              band_structure: bandRead('ceiling 3.4% wide, 18.9% up · floor 3.5% wide, 2nd band 6.4% under') },
+    }, { band_structure_study: BAND_STUDY,
+         band_structure_coverage: { rows_with_read: 1, rows_without_read: 3, note: null } }));
+    await screen.findByText('PTGX');
+    const chip = await screen.findByText(
+      /🪜 ceiling 3\.4% wide, 18\.9% up · floor 3\.5% wide, 2nd band 6\.4% under/);
+    expect(chip).toBeInTheDocument();
+    // muted while the study is pending — it is descriptive, never a grade
+    expect(chip).toHaveClass('cm-badge-band-muted');
+    expect(chip.getAttribute('title')).toMatch(/MEASURED: pending/);
+  });
+
+  it('NEGATIVE: a row with NO read shows no chip, and no figure is invented for it', async () => {
+    drawWithRoom(payload(FOUR), roomPayload({
+      ...ROOM.rows,
+      PTGX: { ...ROOM.rows.PTGX, band_structure: bandRead('ceiling 3.4% wide, 18.9% up') },
+      LQDA: { ...ROOM.rows.LQDA, band_structure: null },
+    }, { band_structure_study: BAND_STUDY,
+         band_structure_coverage: { rows_with_read: 1, rows_without_read: 3, note: null } }));
+    await screen.findByText('LQDA');
+    await waitFor(() => expect(screen.getAllByText(/🪜/)).toHaveLength(1));
+    expect(screen.queryByTestId('band-structure-note')).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: when NO row has a read the board prints the SERVED reason, not silence', async () => {
+    drawWithRoom(payload(FOUR), roomPayload(ROOM.rows, {
+      band_structure_study: BAND_STUDY,
+      band_structure_coverage: { rows_with_read: 0, rows_without_read: 4,
+                                 note: 'No band read for these names — no ceiling or floor to show on this board.' },
+    }));
+    await screen.findByText('PTGX');
+    const note = await screen.findByTestId('band-structure-note');
+    expect(note.textContent).toMatch(/No band read for these names/);
+    expect(screen.queryByText(/🪜 ceiling/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a legacy payload with no band fields at all does not crash the board', async () => {
+    drawWithRoom(payload(FOUR), roomPayload(ROOM.rows));
+    expect(await screen.findByText('PTGX')).toBeInTheDocument();
+    expect(screen.queryByTestId('band-structure-note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/🪜/)).not.toBeInTheDocument();
+  });
+});

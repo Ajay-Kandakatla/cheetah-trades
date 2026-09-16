@@ -153,6 +153,16 @@ sepa.prices is imported from outside supply_demand, lazily.
 ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
 here is a divergence, counted skipped_not_enterable.
 
+BAND STRUCTURE read (2026-09-16): `row["band_structure"]` — the ceiling above
+the print and the floor under it, off the SAME doc and print. Additive and
+fail-open: a row with no bands carries None, never a fabricated clear ceiling.
+It is a READ, not a filter and not an ordering — the row boards that show it
+keep their own order (ordering on rows is HIS call). Payload-level twins:
+`band_structure_study` (the verdict banner — the 2026-09-16 replay landed and
+it reads `no_signal`: nothing is scored and nothing is gated) and
+`band_structure_coverage` (counts + BAND_STRUCTURE_NO_READ when no row on the
+list came back with one, so a board is never silently blank).
+
 S/D scope: a CONFIGURED price-structure heuristic, NOT a book method, no
 Minervini cites, no SEPA gates. Decision support, never a buy signal, not
 advice.
@@ -206,6 +216,43 @@ DISCLAIMER = ("Configured price-structure heuristic (supply/demand bands from zo
               "touch / bounce / room thresholds are owner settings), not a book method. "
               "Coverage is partial (pending / unavailable rows are not CLEAR). "
               "Decision support, not a buy signal, not advice.")
+
+# 🪜 The ROW-PATH twin of chart_maps/board.BAND_STRUCTURE_SORT_UNAVAILABLE.
+# A row board is a LIST, not a sorted tile grid — nothing is re-ordered here,
+# so the sentence says what is missing rather than what the order fell back
+# to. Served (never typed in TSX) for the same reason every other note is: a
+# board that shows no 🪜 chip anywhere has to say WHY, the way the 🎯 n/a tabs
+# do, instead of looking like a board where the read simply stopped.
+#
+# THE SENTENCE MAY NOT PROMISE A REFRESH IT CANNOT KEEP (critique 5, BLOCKING,
+# 2026-09-16). The first wording ended "Names the store is still warming arrive
+# on the next refresh." — said to him on 📁 My holdings about BTBT, a position
+# he owns whose market cap is $562.6M against `zone_store.MIN_CAP_USD`. It is
+# not warming: it is permanently outside the store's eligible set at the floor
+# he set on 2026-09-10, so that refresh never comes. So the BASE sentence
+# promises nothing, and exactly one of two clauses is appended when the CALLER
+# brought a cap it could actually see at render time:
+#   * every shown name under the floor -> say so, and say no refresh helps;
+#   * every shown name at or above it   -> the store really is still warming it.
+# Anything else (a cap the cache never saw, a mixed list) keeps the base
+# sentence alone. A neutral truth beats a confident one that may be false.
+# The floor is READ from zone_store.MIN_CAP_USD and worded by
+# alert_status.cap_floor_txt — never a figure typed here (the "$0B" precedent:
+# a hard-coded "$1B+" survived four days past his 2026-09-10 move).
+BAND_STRUCTURE_NO_READ = ("No band read for these names — no ceiling or floor "
+                          "to show on this board.")
+BAND_STRUCTURE_NO_READ_ONE = ("No band read for this name — no ceiling or floor "
+                              "to show here.")
+BAND_STRUCTURE_STILL_WARMING = ("Names the store is still warming arrive on "
+                                "the next refresh.")
+BAND_STRUCTURE_STILL_WARMING_ONE = ("The store is still warming this name; a read "
+                                    "arrives on the next refresh.")
+BAND_STRUCTURE_BELOW_CAP_FMT = ("The store only draws bands for names at or "
+                                "above a %s market cap and these are under it, "
+                                "so no refresh brings a read.")
+BAND_STRUCTURE_BELOW_CAP_ONE_FMT = ("The store only draws bands for names at or "
+                                    "above a %s market cap and this one is under "
+                                    "it, so no refresh brings a read.")
 
 ROOM_STATES = ("CLEAR", "IN_BAND", "NEAR", "ROOM")
 
@@ -701,6 +748,27 @@ def read_symbol(sym: str, doc: Optional[dict], snap: Optional[dict],
                                       prev_close=_f(snap.get("prev_day_close")),
                                       change_pct=snap.get("change_pct"), symbol=sym,
                                       print_source="live" if fresh else "scan")
+    # 🪜 BAND STRUCTURE read (2026-09-16): the ceiling above this print and the
+    # floor under it, off the SAME doc and the SAME print the row already read.
+    # Ajay asked for the read "in all chartmaps tabs"; ten of them are ROW
+    # boards built from this route, not from chart_maps tiles, so without this
+    # line the chip could only ever be null there. Served exactly the way 🎯 is
+    # — imported INSIDE the function (band_structure imports enterable, which
+    # imports this module), a READ never a filter, and NULL when the store has
+    # no bands for the name rather than a fabricated "clear ceiling". `kind` is
+    # left at the module default (KIND_DEMAND): a row list carries no tab, the
+    # same reason `enterable.read` above takes its own default.
+    #
+    # `print_source` is passed for the SAME reason the 🎯 read one line up
+    # passes it: `print_of` already said whether `px` is a FRESH trade or the
+    # stored scan close it fell back to, and every distance in this read —
+    # ceiling up, floor down, both heights — is measured FROM that price. Left
+    # unset the row served `{"source": None}` and the ten row boards could only
+    # ever print the generic "live when fresh, stored close when not" line over
+    # a closed-bar number (critique M3, 2026-09-16).
+    from supply_demand import band_structure
+    row["band_structure"] = band_structure.read(
+        doc=doc, px=px, symbol=sym, print_source="live" if fresh else "scan")
     return row
 
 
@@ -920,6 +988,67 @@ def queue_ondemand(missing: list, day, coll=None, *, builder: Optional[Callable]
     return len(syms)
 
 
+def band_structure_no_read_note(symbols=None, caps: Optional[dict] = None) -> str:
+    """THE ONE no-read sentence, for the row boards AND the tile path.
+
+    PURE, AND CAP-BLIND BY DESIGN. `caps` is {SYM: market cap or None} and the
+    CALLER brings it. `test_bounce_room_stays_in_S_D_scope` allows this module
+    exactly two imports from outside the package, and the weekly shares cache
+    (where a market cap lives) is neither — so the cap engine is called by
+    `chart_maps/board._caps_for_band_note`, the tile path that carries 📁 My
+    holdings and Support Levels, which is where the false promise was served.
+    A second cap reader written in here to dodge that boundary would be the
+    parallel implementation the one-engine rule exists to stop. With no caps
+    every name is UNKNOWN and the sentence stays NEUTRAL: on a path that
+    cannot see the cap, a line promising nothing beats one that may lie.
+
+    A cap that is missing, unreadable, zero or NaN is UNKNOWN, and ONE unknown
+    name keeps the whole note neutral: the refresh clause is served only when
+    every shown name is over `zone_store.MIN_CAP_USD`, the never-coming clause
+    only when every one of them is under it. Both read the constant.
+    """
+    syms = [str(s).upper() for s in (symbols or []) if s]
+    # One name is the common case on Support Levels and 📁 My holdings, where
+    # each tile is its own response; the plural reads wrong there.
+    one = len(syms) == 1
+    base = BAND_STRUCTURE_NO_READ_ONE if one else BAND_STRUCTURE_NO_READ
+    warming = (BAND_STRUCTURE_STILL_WARMING_ONE if one
+               else BAND_STRUCTURE_STILL_WARMING)
+    below_fmt = (BAND_STRUCTURE_BELOW_CAP_ONE_FMT if one
+                 else BAND_STRUCTURE_BELOW_CAP_FMT)
+    try:
+        from supply_demand import zone_store as ZS
+        floor = float(ZS.MIN_CAP_USD)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("bounce_room: cap floor unreadable for the band note: %s", exc)
+        return base
+    if floor != floor or not syms:
+        return base
+    vals = []
+    for s in syms:
+        v = (caps or {}).get(s)
+        try:
+            f = float(v) if v is not None else None
+        except (TypeError, ValueError):
+            f = None
+        if f is not None and (f != f or f <= 0):
+            f = None
+        if f is None:
+            return base                         # unknown cap -> promise nothing
+        vals.append(f)
+    if all(v < floor for v in vals):
+        try:
+            from supply_demand.alert_status import cap_floor_txt
+            txt = cap_floor_txt(floor)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("bounce_room: cap floor wording failed: %s", exc)
+            return base
+        return "%s %s" % (base, below_fmt % txt)
+    if all(v >= floor for v in vals):
+        return "%s %s" % (base, warming)
+    return base
+
+
 def build_payload(symbols: list, *, docs: dict, snapshot: Optional[dict], now: datetime,
                   store_date, pending: Optional[list] = None,
                   unavailable: Optional[dict] = None) -> dict:
@@ -945,6 +1074,14 @@ def build_payload(symbols: list, *, docs: dict, snapshot: Optional[dict], now: d
     n_unavail = sum(1 for r in rows.values() if r["coverage"] == "unavailable")
     from supply_demand import explosive
     from supply_demand import enterable
+    from supply_demand import band_structure
+    # 🪜 Coverage, said out loud. A row board shows the chip per row and NOTHING
+    # when a row has no read (the ExplosiveChip / EnterableChip rule) — but a
+    # board where NOT ONE row came back with a read would then be silently
+    # empty, which is the thing the 🎯 n/a tabs exist to avoid. So the note is
+    # served when the count is zero, and the boards render it verbatim.
+    n_band = sum(1 for r in rows.values()
+                 if (r.get("band_structure") or {}).get("applicable") is True)
     return _json_clean({
         "as_of": now.astimezone(ET).isoformat() if snap_read else None,
         "in_session": in_session(now),
@@ -958,6 +1095,21 @@ def build_payload(symbols: list, *, docs: dict, snapshot: Optional[dict], now: d
         # The same once-per-payload banner for the 🎯 read (2026-09-15). PARAMS
         # is UNCHANGED here too — the read adds no owner setting.
         "enterable_study": enterable.measured_verdict(),
+        # The same once-per-payload banner for the 🪜 read (2026-09-16). PARAMS
+        # is UNCHANGED here too — the read adds no owner setting; every number
+        # in it comes off bands the store already drew.
+        "band_structure_study": band_structure.measured_verdict(),
+        "band_structure_coverage": {
+            "rows_with_read": n_band,
+            "rows_without_read": len(rows) - n_band,
+            # The sentence is BUILT, not picked (critique 5). This path passes
+            # NO caps — the S/D scope contract keeps the shares cache out of
+            # this module — so a row board says the neutral line and promises
+            # nothing. The tile path, which is where his 📁 holdings and
+            # Support tabs read it, brings the caps and gets the reason.
+            "note": (band_structure_no_read_note(list(rows))
+                     if (rows and n_band == 0) else None),
+        },
         "rows": rows,
         "requested": len(symbols), "covered": covered, "pending": n_pending,
         "unavailable": n_unavail,

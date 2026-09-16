@@ -36,6 +36,7 @@ import { level, money } from './zonePlan';
 // Types only (2026-09-15): the 🎯 read rides on these rows, and every rule
 // behind it lives in lib/enterable.ts / supply_demand/enterable.py.
 import type { EnterableRead, EnterableStudy } from './enterable';
+import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 
 export type BounceBand = {
   kind: 'demand' | 'supply';
@@ -124,6 +125,11 @@ export type BounceRoomRow = {
    *  and on every row the server could not build a band for. A row WITHOUT it
    *  is never hidden by the filter; it is counted "without a read". */
   enterable?: EnterableRead | null;
+  /** 🪜 the band-structure read (2026-09-16), additive — absent on older
+   *  payloads and NULL on every row the store has no bands for. The ten row
+   *  boards read it off here; it carries no ordering (see the block at the
+   *  bottom of this file). */
+  band_structure?: BandStructureRead | null;
   error?: string;
 };
 
@@ -146,6 +152,18 @@ export type BounceRoomPayload = {
    *  (2026-09-15) — the banner and the chip tooltips render it, so no board
    *  ever types a measured number into TSX. Absent on older payloads. */
   enterable_study?: EnterableStudy | null;
+  /** 🪜 the band-structure study's own verdict, served once per payload
+   *  (2026-09-16) — every chip tooltip renders it, so no board ever types a
+   *  measured number into TSX. Absent on older payloads. */
+  band_structure_study?: BandStructureStudy | null;
+  /** 🪜 how many rows on THIS list came back with a read, and the served
+   *  sentence to print when none did (`bounce_room.BAND_STRUCTURE_NO_READ`).
+   *  `note` is null whenever at least one row has a read. */
+  band_structure_coverage?: {
+    rows_with_read: number;
+    rows_without_read: number;
+    note?: string | null;
+  } | null;
 };
 
 /* ── symbol key ──────────────────────────────────────────────────────────── */
@@ -530,3 +548,45 @@ export function explosiveChipText(
   if (read.session_low === false) bits.push("today's low not in the read");
   return { text, title: bits.join(' — '), tone };
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * 🪜 BAND STRUCTURE (2026-09-16) — re-exported, not re-implemented
+ * ══════════════════════════════════════════════════════════════════════════
+ * The ceiling/floor read lives in `./bandStructure`, because it is a whole
+ * ordering plus a chip and burying it here would make this file the place
+ * every band read goes to hide. It is re-exported from bounceRoom because
+ * that is where the shared fixture says `compareBandStructure` lives
+ * (backend/tests/fixtures/band_structure_order_mirror_2026_09_16.json) and
+ * because every surface that shows the chip is already importing this module
+ * for its bounce-room map — one import, two reads.
+ *
+ * SINCE 2026-09-16 the ROW carries the read too. Ajay's ask was "in all
+ * chartmaps tabs", and ten of them (session, hot_pullback, patterns, signals,
+ * overnight, hot_sectors, bonde, gnt, growth, catalysts) are row boards built
+ * from POST /supply-demand/bounce-room, not from Chart Maps tiles — so
+ * `bounce_room.read_symbol` now serves `band_structure` on the row exactly the
+ * way it serves `enterable`, and `BounceRoomRow.band_structure` mirrors it.
+ *
+ * NOTE what is still deliberately NOT here: a row-board ORDERING. The chip is
+ * a read; re-ranking a row board is HIS call, and until he makes it the boards
+ * keep the order their own endpoint served. `compareBandStructure` stays
+ * exported for the tile path and for whenever he asks.
+ */
+export {
+  bandStructureChipText,
+  bandStructureOrderKey,
+  bandStructureOrderUnavailable,
+  bandStructureSeparates,
+  compareBandStructure,
+} from './bandStructure';
+export type {
+  BandStructureBand,
+  BandStructureCeiling,
+  BandStructureFloor,
+  BandStructureMeasured,
+  BandStructureRead,
+  BandStructureSortRow,
+  BandStructureStatus,
+  BandStructureStudy,
+} from './bandStructure';
+export { BAND_STRUCTURE_KIND_NA, bandStructureSortNote } from './bandStructure';

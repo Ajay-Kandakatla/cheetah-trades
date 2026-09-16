@@ -24,6 +24,7 @@ import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -148,10 +149,26 @@ export function SignalLabBoard() {
                          hiddenByReason={part.hiddenByReason} enabled kind={kind}
                          onShowAll={() => setEnterableOnly(false)} />
           ) : null}
+          {/* 🪜 No row on this list came back with a band read — say so once, the
+              way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+              letting it read as a board where the read silently stopped. The
+              sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+          {room.payload?.band_structure_coverage?.note ? (
+            <div className="cm-hidden-count" data-testid="band-structure-note">
+              🪜 {room.payload.band_structure_coverage.note}
+            </div>
+          ) : null}
           <div className="cm-grid">
             {part.rows.map((r) => r.tile ? (
               <div key={r.symbol} className="slab-cell">
-                <PatternChart tile={r.tile} tvTf="daily" study={room.payload?.explosive_study} />
+                {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs". The Signal Lab
+                    endpoint never runs chart_maps/board.attach_band_structure, so
+                    the row's SERVED read is put on the tile the one renderer
+                    already reads it from. */}
+                <PatternChart tvTf="daily" study={room.payload?.explosive_study}
+                              bandStudy={room.payload?.band_structure_study}
+                              tile={{ ...r.tile,
+                                      band_structure: room.map.get(String(r.symbol).toUpperCase())?.band_structure ?? null }} />
                 {r.latest ? (
                   <div className={`slab-latest slab-latest--${r.latest.kind}`}>
                     <b>{r.latest.label}</b> {r.latest.t} @ ${r.latest.price?.toFixed(2)}
@@ -182,6 +199,8 @@ export function SignalLabBoard() {
                                read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                 <EnterableChip className="cm-badge"
                                read={room.map.get(String(r.symbol).toUpperCase())?.enterable} />
+                <BandStructureChip className="cm-badge" study={room.payload?.band_structure_study}
+                                   read={room.map.get(String(r.symbol).toUpperCase())?.band_structure} />
                 : {r.error || 'no data'}
               </div>
             ))}

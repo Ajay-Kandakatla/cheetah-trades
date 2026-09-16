@@ -19,13 +19,14 @@ import { API } from '../lib/apiBase';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import type { EnterableRead } from '../lib/enterable';
-import type { ExplosiveRead, ExplosiveStudy } from '../lib/bounceRoom';
+import type { BandStructureRead, BandStructureStudy, ExplosiveRead, ExplosiveStudy } from '../lib/bounceRoom';
 
 export type HpBand = { kind?: string; lo: number; hi: number; touches?: number | null; strength?: number | null };
 export type HpPlan = {
@@ -151,9 +152,11 @@ export function correctionLine(s: HpStudy | null | undefined): string {
   return CORRECTION_TEXT;
 }
 
-function Row({ r, explosive, enterable, study }: {
+function Row({ r, explosive, enterable, band, study, bandStudy }: {
   r: HpRow; explosive?: ExplosiveRead | null; enterable?: EnterableRead | null;
-  study?: ExplosiveStudy | null;
+  /** 🪜 the row's SERVED ceiling/floor read (bounce_room row.band_structure). */
+  band?: BandStructureRead | null;
+  study?: ExplosiveStudy | null; bandStudy?: BandStructureStudy | null;
 }) {
   const rev = r.reversal;
   return (
@@ -163,6 +166,7 @@ function Row({ r, explosive, enterable, study }: {
         <GrowthChip symbol={r.symbol} className="cm-badge" />
         <ExplosiveChip read={explosive} study={study} className="cm-badge" />
         <EnterableChip read={enterable} className="cm-badge" />
+        <BandStructureChip read={band} study={bandStudy} className="cm-badge" />
         <span className="hp-row__px">{money(r.close)}</span>
         <span className="hp-row__chg is-dn">{pct(r.change_pct)}</span>
         {r.date && <span className="hp-row__date">{r.date}</span>}
@@ -261,12 +265,24 @@ export function HotPullbackBoard() {
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
 
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {room.payload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {room.payload.band_structure_coverage.note}
+        </div>
+      ) : null}
+
       {rows.length > 0 && (
         <ul className="hp__list">
           {part.rows.map((r) => (
             <Row key={r.symbol} r={r} study={room.payload?.explosive_study}
                  explosive={room.map.get(String(r.symbol).toUpperCase())?.explosive}
-                 enterable={room.map.get(String(r.symbol).toUpperCase())?.enterable} />
+                 enterable={room.map.get(String(r.symbol).toUpperCase())?.enterable}
+                 bandStudy={room.payload?.band_structure_study}
+                 band={room.map.get(String(r.symbol).toUpperCase())?.band_structure} />
           ))}
         </ul>
       )}

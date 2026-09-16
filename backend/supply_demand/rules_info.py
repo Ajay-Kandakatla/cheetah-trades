@@ -63,7 +63,14 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # one place, WHICH constant blocks a row, which measurement
                 # makes it a WATCH, and that a BLOCKED verdict on a push path
                 # is a bug rather than a quiet phone.
-                "enterable")
+                "enterable",
+                # 🪜 BAND STRUCTURE (2026-09-16) — the ceiling/floor read
+                # behind "thinnest overhead first". Its own section for the
+                # explosive reason: until the study lands the order under the
+                # 🪜 label is a DESCRIPTIVE ordering of his two asks, and the
+                # panel is where that has to be said in words rather than
+                # implied by a dropdown label.
+                "band_structure")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -658,7 +665,122 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: enterable section unavailable: %s", exc)
 
+    # ── 🪜 Band structure ──────────────────────────────────
+    try:
+        out["band_structure"] = _band_structure_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: band structure section unavailable: %s", exc)
+
     return out
+
+
+def _band_structure_section() -> dict:
+    """🪜 Band structure — the ceiling above the print and the floor under it.
+
+    Every line is built from the ENFORCING constant or from the module's own
+    measured verdict: `alert_gates.LID_MIN_TOUCHES` for what counts as a wall,
+    `demand_reentry.zone_geom()` for the geometry the bands come from,
+    `enterable.KIND_BY_TAB` for which tabs have a band read at all, and
+    `band_structure.measured_verdict()` for the banner. Nothing is typed here.
+    The verdict call is guarded on its own so a half-written MEASURED can never
+    take the whole section off the page."""
+    from . import band_structure as BS
+    from . import enterable as EN
+
+    try:
+        verdict = BS.measured_verdict() or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: band structure verdict unavailable: %s", exc)
+        verdict = {}
+
+    status = str((getattr(BS, "MEASURED", None) or {}).get("status") or "")
+    separates = status == BS.STATUS_SEPARATES
+    geom = DR.zone_geom()
+    na_tabs = sorted(t for t, k in EN.KIND_BY_TAB.items() if k == EN.KIND_NA)
+
+    if separates:
+        order_line = (
+            "ORDER: the boards rank on the measured read — %s, scored against "
+            "the quantile edges frozen at that run. The score never re-fits on "
+            "live data, and a name without a band read sorts last rather than "
+            "in the middle." % (", ".join(BS.SELECTED) or "nothing"))
+    else:
+        order_line = (
+            "ORDER: there is no measured score yet, so the 🪜 label orders on "
+            "the CEILING first, in three groups — nothing PROVEN overhead "
+            "(UNTESTED, not thin) ahead of everything, then the names whose "
+            "first band overhead can be measured, thinnest first, then the "
+            "ones whose ceiling cannot be read at all — and uses the FLOOR as "
+            "the tiebreak, a second band closest under the first, then the "
+            "bigger first band. WHERE THE UNTESTED GROUP BELONGS IS STILL "
+            "OPEN: it leads because that is what shipped, and nothing measures "
+            "it either way. It is lexicographic, so the ceiling settles nearly "
+            "every pair and the floor only breaks ties. That is a DESCRIPTIVE "
+            "ordering of his two asks, NOT a claim that a thin ceiling or a "
+            "layered floor makes a name go up.")
+
+    alerts = []
+    for key in ("headline", "body", "fallback_note", "limits"):
+        val = verdict.get(key)
+        if isinstance(val, (list, tuple)):
+            val = " ".join(str(x) for x in val if x)
+        if val:
+            alerts.append(str(val))
+    if not alerts:
+        alerts.append("MEASURED: the study has not reported yet, so nothing "
+                      "on this board is a measured claim.")
+    alerts.append(
+        "NOTHING HERE PUSHES, GATES OR BUYS. The read gates no phone alert and "
+        "no paper lane; it orders a board and prints a stat. A name first "
+        "under the 🪜 label has not been bought, has not been pushed and has "
+        "not passed anything.")
+
+    return {
+        "title": "Band structure — the ceiling above and the floor below",
+        "emoji": "🪜",
+        "picks": [
+            "Who gets a read: any name the zone store has warmed, on a tab "
+            "whose rows are price-structure bands. The %d tabs whose rows are "
+            "not bands say n/a instead of being ranked: %s."
+            % (len(na_tabs), ", ".join(na_tabs) or "none"),
+            "THE CEILING is whatever price meets first going UP — unbroken "
+            "supply at or above the print plus any demand band price has "
+            "already fallen through (broken support is resistance). A band "
+            "with fewer than %d touches is NOT the ceiling, the same rule the "
+            "room gate and the phone use. It is not hidden either: nothing "
+            "PROVEN overhead is served as UNTESTED, never as clear, and the "
+            "stat names the nearest untested band and says when the print is "
+            "standing inside one."
+            % AG.LID_MIN_TOUCHES,
+            "THE FLOOR is the nearest demand band at or BELOW the print, plus "
+            "the next demand band whose top sits under that band's floor — "
+            "\"another one right below it\". The gap between them is served as "
+            "a % of the print; with no second band it is served as UNKNOWN, "
+            "never as zero. A band price has fallen through is not a floor: it "
+            "is counted overhead.",
+            "THE FLOOR APPLIES NO PROVEN-LID FILTER, unlike the ceiling above: "
+            "it is the demand read the room gate uses, so a band with fewer "
+            "than %d touches still counts as the floor under the print, while "
+            "the same band overhead would be served as UNTESTED rather than as "
+            "the ceiling. That is why ONE stat line can call the same price "
+            "range untested overhead and a floor N%% wide — two questions "
+            "about one band, not a contradiction."
+            % AG.LID_MIN_TOUCHES,
+            "The bands are BOARD geometry on CLOSED bars — swing %s, merge "
+            "%s, half-width %s — the same bands the demand boards and the "
+            "alerts name, never a second geometry computed for this panel."
+            % (geom.get("swing_window"), _pct(geom.get("merge_pct")),
+               _pct(geom.get("half_width_pct"))),
+            order_line,
+        ],
+        "stops": [
+            "No stop, no target and no size: this is an ORDERING and a STAT. "
+            "The stop beside a demand band stays the trade plan's own, %s "
+            "under the band floor." % _pct(AG.STOP_BUFFER_PCT),
+        ],
+        "alerts": alerts,
+        "note": _DISCLAIMER,
+    }
 
 
 def _enterable_section() -> dict:

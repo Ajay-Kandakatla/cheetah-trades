@@ -17,6 +17,7 @@ import {
   EMPTY_TEXT, WARMING_TEXT, NEAR_MISS_LABEL, SCAN_LABEL, SCANNING_LABEL, CORRECTION_TEXT,
 } from './HotPullbackBoard';
 import type { HpPayload, HpRow } from './HotPullbackBoard';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 const DYN: HpRow = {
   symbol: 'DYN', date: '2026-09-08', live: false,
@@ -70,7 +71,9 @@ function stub(payload: HpPayload | null, calls: string[]) {
   }));
 }
 
-beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
+/* The bounce-room module cache outlives a render, so a cached list would
+ * silently skip the POST and put the tests back on luck. Start cold. */
+beforeEach(() => { _resetBounceRoomCache(); vi.useFakeTimers({ shouldAdvanceTime: true }); });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe('pure helpers', () => {
@@ -224,16 +227,41 @@ describe('HotPullbackBoard', () => {
  * Ajay: "can you give me a scan button in hot pull back or just do a scan
  * please". The board had a Refresh that only re-read the 3-minute cache — it
  * could not rescan, so pressing it looked like nothing happened. Scan sends
- * force=true, which now blocks on the backend for a real universe walk. */
+ * force=true, which now blocks on the backend for a real universe walk.
+ *
+ * These two used to index `calls` positionally. The board makes a SECOND,
+ * unrelated call once its rows are up — the bulk POST /supply-demand/bounce-room
+ * that carries the 🧨 / 🎯 / 🪜 reads — and whether that lands before or after
+ * the click is a race (it also rides a module-level cache that outlives a
+ * test). So: start from a cold cache, wait for the rows so the POST has
+ * certainly fired, and assert on the hot-pullback calls by ENDPOINT. */
+const hpCalls = (calls: string[]) => calls.filter((u) => u.includes('/supply-demand/hot-pullback'));
+const roomCalls = (calls: string[]) => calls.filter((u) => u.includes('/supply-demand/bounce-room'));
+
 describe('the Scan button', () => {
   it('asks the backend to actually rescan, not just re-read the cache', async () => {
     const calls: string[] = [];
     stub(PAYLOAD, calls);
     render(<HotPullbackBoard />);
+    await screen.findByText('DYN');                   // rows up ⇒ the bounce-room POST has gone out
     const btn = await screen.findByRole('button', { name: SCAN_LABEL });
-    expect(calls[0]).not.toContain('force');          // first load rides the cache
+    expect(hpCalls(calls)).toHaveLength(1);
+    expect(hpCalls(calls)[0]).not.toContain('force'); // first load rides the cache
     fireEvent.click(btn);
-    expect(calls[1]).toContain('force=true');
+    expect(hpCalls(calls)).toHaveLength(2);
+    expect(hpCalls(calls)[1]).toContain('force=true');
+  });
+
+  it('a rescan forces the board only — never the shared bounce-room read (negative)', async () => {
+    const calls: string[] = [];
+    stub(PAYLOAD, calls);
+    render(<HotPullbackBoard />);
+    await screen.findByText('DYN');
+    expect(roomCalls(calls)).toHaveLength(1);
+    fireEvent.click(await screen.findByRole('button', { name: SCAN_LABEL }));
+    // Same symbol list back ⇒ no second POST, and force never rides that URL.
+    expect(roomCalls(calls)).toHaveLength(1);
+    expect(roomCalls(calls).some((u) => u.includes('force'))).toBe(false);
   });
 
   it('shows it is working and refuses a second click mid-scan (negative)', async () => {
@@ -245,13 +273,14 @@ describe('the Scan button', () => {
       return new Promise((res) => { release = () => res({ ok: true, json: async () => PAYLOAD }); });
     }));
     render(<HotPullbackBoard />);
+    await screen.findByText('DYN');
     const btn = await screen.findByRole('button', { name: SCAN_LABEL });
     fireEvent.click(btn);
     const busy = await screen.findByRole('button', { name: SCANNING_LABEL });
     expect(busy.getAttribute('aria-busy')).toBe('true');
     expect((busy as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(busy);
-    expect(calls).toHaveLength(2);                    // the second click did nothing
+    expect(hpCalls(calls)).toHaveLength(2);           // the second click did nothing
     release(null);
     await screen.findByRole('button', { name: SCAN_LABEL });
   });

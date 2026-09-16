@@ -181,6 +181,45 @@ async def chart_maps_support(
                 res["enterable_kind"] = EN.KIND_DEMAND
             except Exception as exc:                        # pragma: no cover
                 log.debug("chart-maps/support: enterable failed: %s", exc)
+            # 🪜 BAND STRUCTURE on the Support tab (2026-09-16): one symbol, so
+            # there is nothing to order — the page gets the ceiling/floor stat
+            # and the banner only. Same read, same live print, after the
+            # now-line, exactly as the 🎯 read above.
+            #
+            # THE BANNER IS SET FIRST, and the attach only runs if it landed
+            # (critique m3). Both statements used to sit in ONE try in the
+            # other order, so a raise from `measured_verdict()` left the tile
+            # carrying the read — the chip renders — and the payload with no
+            # verdict, i.e. an UNMEASURED read wearing a validated face on an
+            # error path. The chip may never outlive its banner; the banner
+            # without a chip is only a tile with no bands, which is a state
+            # this page already has.
+            try:
+                from supply_demand import band_structure as BS
+                _bs_kind = BS.kind_for_tab("support")
+                res["band_structure_study"] = BS.measured_verdict()
+                res["band_structure_kind"] = _bs_kind
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/support: band structure verdict failed: %s", exc)
+            else:
+                try:
+                    board_mod.attach_band_structure([tile], kind=_bs_kind, live=live)
+                    # 🪜 COVERAGE (critique J2, 2026-09-16). ONE tile here, so
+                    # the note fires exactly when THIS name has no read — the
+                    # BTBT case: a position of his the zone store does not
+                    # carry drew a tile with no Bands line and no reason, while
+                    # the ten row boards served him the read for the same name
+                    # on the same day. The sentence is the row boards' own
+                    # (`bounce_room.band_structure_no_read_note`, served, never
+                    # typed in the TSX) and it distinguishes a name that is
+                    # still warming from one under the store's cap floor
+                    # (`zone_store.MIN_CAP_USD` — BTBT is under it, so no
+                    # refresh can bring it a read). 📁 My holdings reads the
+                    # note off this same response, one per position.
+                    res["band_structure_coverage"] = board_mod.band_structure_coverage(
+                        [tile], kind=_bs_kind)
+                except Exception as exc:                    # pragma: no cover
+                    log.debug("chart-maps/support: band structure failed: %s", exc)
             # THE BUG AJAY HIT THREE TIMES (2026-09-12): "Still not seeing, AMD
             # or keltners indicators. Whts going on?"
             #

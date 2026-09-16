@@ -349,9 +349,48 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
 
           <OverlayLegend present={presentGroups([data.tile])}
                          hidden={hiddenOverlays} onToggle={toggleOverlay} />
+          {/* 🪜 The band-structure verdict, SERVED
+            * (chart_maps/api.py::chart_maps_support -> band_structure_study).
+            * The 🪜 chip rides on the tile below, so the banner has to ride
+            * with it: `MEASURED.status` is `pending`, and a chip showing the
+            * ceiling and the floor with no banner is how an unmeasured read
+            * starts looking validated. No figure is typed here, and nothing
+            * renders when the server sent no verdict — a banner this file
+            * invented would be worse than the missing one. There is no scope
+            * note and no sort_unavailable note on this tab: it draws ONE
+            * symbol, so nothing was cut and nothing was ordered. */}
+          {data.band_structure_study?.headline ? (
+            <div className="cm-note cm-band-study" data-testid="sl-band-structure-study">
+              <strong>{data.band_structure_study.headline}</strong>
+              {data.band_structure_study.body ? <p>{data.band_structure_study.body}</p> : null}
+              {data.band_structure_study.fallback_note
+                ? <p>{data.band_structure_study.fallback_note}</p> : null}
+              {data.band_structure_study.limits
+                ? <p className="cm-dim">{data.band_structure_study.limits}</p> : null}
+            </div>
+          ) : null}
+          {/* 🪜 NO READ, said out loud (critique J2, 2026-09-16). The chip
+            * rides on the tile and renders NOTHING when this name has no
+            * bands — so before this, a name the zone store has not warmed drew
+            * a chart with no Bands line and no reason, while the ten row
+            * boards served him the read for the same name on the same day
+            * (BTBT, which he owns). The sentence is SERVED
+            * (bounce_room.band_structure_no_read_note, via
+            * chart_maps/board.band_structure_coverage), the same one those
+            * boards print: one fact, one wording. It says whether this name is
+            * still warming or sits UNDER the store's cap floor and will never
+            * get a read (critique 5) — which is why nothing is typed here: a
+            * payload without the block stays silent rather than inventing a
+            * reason, and no surface can pick the wrong one of the two. */}
+          {data.band_structure_coverage?.note ? (
+            <p className="cm-note" data-testid="sl-band-structure-no-read">
+              🪜 {data.band_structure_coverage.note}
+            </p>
+          ) : null}
           <div className="sl-chart">
             <PatternChart tile={filterTile(data.tile, hiddenOverlays)} height={320}
-                          study={room.payload?.explosive_study} />
+                          study={room.payload?.explosive_study}
+                          bandStudy={data.band_structure_study} />
           </div>
           <p className="cm-note">
             Chart shows <strong>{data.chart_span || data.window_label}</strong>

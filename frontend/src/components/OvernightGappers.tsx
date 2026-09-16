@@ -16,6 +16,7 @@ import { TickerName } from './TickerCell';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -105,6 +106,15 @@ export function OvernightGappers({ profile, onPick }: {
                          hiddenByReason={part.hiddenByReason} enabled kind={kind}
                          onShowAll={() => setEnterableOnly(false)} />
           ) : null}
+          {/* 🪜 No row on this list came back with a band read — say so once, the
+              way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+              letting it read as a board where the read silently stopped. The
+              sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+          {room.payload?.band_structure_coverage?.note ? (
+            <div className="cm-hidden-count" data-testid="band-structure-note">
+              🪜 {room.payload.band_structure_coverage.note}
+            </div>
+          ) : null}
           <table className="og__table">
             <thead>
               <tr>
@@ -152,6 +162,10 @@ export function OvernightGappers({ profile, onPick }: {
                                      read={room.map.get(String(g.symbol).toUpperCase())?.explosive} />
                       <EnterableChip className="cm-badge"
                                      read={room.map.get(String(g.symbol).toUpperCase())?.enterable} />
+                      {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own
+                          served ceiling/floor read. */}
+                      <BandStructureChip className="cm-badge" study={room.payload?.band_structure_study}
+                                         read={room.map.get(String(g.symbol).toUpperCase())?.band_structure} />
                     </td>
                     <td className={`og__num ${g.direction === 'up' ? 'og__up' : 'og__dn'}`} title={moveTitle}>
                       {/* The chip follows the NUMBER: it marks the headline move as

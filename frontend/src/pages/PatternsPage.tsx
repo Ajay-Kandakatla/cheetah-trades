@@ -12,12 +12,13 @@ import { API } from '../lib/apiBase';
 import { GrowthChip } from '../components/GrowthChip';
 import { ExplosiveChip } from '../components/ExplosiveChip';
 import { EnterableChip } from '../components/EnterableChip';
+import { BandStructureChip } from '../components/BandStructureChip';
 import { HiddenCount } from '../components/HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from '../components/ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
-import { compareExplosive, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
+import { compareExplosive, type BandStructureStudy, type BounceRoomRow, type ExplosiveStudy } from '../lib/bounceRoom';
 import { useCurrentUser } from '../hooks/useUser';
 import { InfoButton } from '../components/InfoButton';
 import { PatternMatchCards } from '../components/PatternMatchCards';
@@ -224,7 +225,10 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
     return out;
   }, [latest, quals]);
   const room = useBounceRoom(rowSymbols);
-  const explosiveCtx: ExplosiveCtx = { room: room.map, study: room.payload?.explosive_study, on: explosiveFirst };
+  const explosiveCtx: ExplosiveCtx = { room: room.map, study: room.payload?.explosive_study,
+                                      bandStudy: room.payload?.band_structure_study,
+                                      bandNote: room.payload?.band_structure_coverage?.note ?? null,
+                                      on: explosiveFirst };
 
   /* 🎯 The enterable cut over the pattern list (2026-09-15). A confirmed shape
    * that is nowhere near a demand band is still a shape — it just is not an
@@ -402,6 +406,15 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
                          hiddenByReason={patternPart.hiddenByReason} enabled kind={kind}
                          onShowAll={() => setEnterableOnly(false)} />
           ) : null}
+          {/* 🪜 No row on this list came back with a band read — say so once,
+              the way the 🎯 n/a tabs do, instead of showing no chip anywhere
+              and letting it read as a board where the read silently stopped.
+              The sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+          {room.payload?.band_structure_coverage?.note ? (
+            <div className="cm-hidden-count" data-testid="band-structure-note">
+              🪜 {room.payload.band_structure_coverage.note}
+            </div>
+          ) : null}
           {confirmed.length > 0 && <Section title={`Confirmed today / yesterday — closed above the line (${confirmed.length})`} rows={confirmed} navigate={navigate} ex={explosiveCtx} />}
           {forming.length > 0 && <Section title={`Forming — NOT a signal: unconfirmed Ws continue lower 48% of the time (${forming.length})`} rows={forming} navigate={navigate} ex={explosiveCtx} />}
           {latest.generated_at > 0 && (
@@ -421,6 +434,12 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
 type ExplosiveCtx = {
   room: Map<string, BounceRoomRow>;
   study?: ExplosiveStudy | null;
+  /** 🪜 the band-structure study's served verdict — the chip tooltips carry
+   *  it so no card ever reads a stat without its status. */
+  bandStudy?: BandStructureStudy | null;
+  /** 🪜 the served "no row has a band read" sentence, or null when at least
+   *  one does (bounce_room.band_structure_coverage.note). */
+  bandNote?: string | null;
   on: boolean;
 };
 
@@ -493,6 +512,13 @@ function QualifierVerdicts({ q, navigate, ex }: {
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
 
+      {/* 🪜 The same served no-read sentence for the verdict sweep below. */}
+      {ex?.bandNote ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {ex.bandNote}
+        </div>
+      ) : null}
+
       {/* Tiny-card grid (Ajay 2026-06-09): minimal SEPA-style cards, ranked so
           ⭐ confirmed-pattern + full-Minervini-buy-gate confluence leads. */}
       {matchedAll.length > 0 && (
@@ -563,6 +589,10 @@ function VerdictRow({ v, navigate, ex }: {
                        read={ex?.room.get(String(v.symbol).toUpperCase())?.explosive} />
         <EnterableChip className="cm-badge"
                        read={ex?.room.get(String(v.symbol).toUpperCase())?.enterable} />
+        {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
+            ceiling/floor read, off the same one bounce-room call. */}
+        <BandStructureChip className="cm-badge" study={ex?.bandStudy}
+                           read={ex?.room.get(String(v.symbol).toUpperCase())?.band_structure} />
         {s.is_buyable && <span style={{ fontSize: '0.72rem', color: C.green }}>✅ buyable</span>}
         {sources.map((m) => (
           <button key={m.label} onClick={() => navigate(m.to)}
@@ -645,6 +675,10 @@ function Card({ p, navigate, ex }: {
                        read={ex?.room.get(String(p.symbol).toUpperCase())?.explosive} />
         <EnterableChip className="cm-badge"
                        read={ex?.room.get(String(p.symbol).toUpperCase())?.enterable} />
+        {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
+            ceiling/floor read, off the same one bounce-room call. */}
+        <BandStructureChip className="cm-badge" study={ex?.bandStudy}
+                           read={ex?.room.get(String(p.symbol).toUpperCase())?.band_structure} />
         <span style={{ fontSize: '0.74rem', color: C.muted }}>{PATTERN_LABEL[p.pattern] || p.pattern}</span>
         <button type="button"
                 onClick={() => (navigate ? navigate(winnersHref(p.pattern))

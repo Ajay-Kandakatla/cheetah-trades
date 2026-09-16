@@ -449,8 +449,10 @@ def test_read_symbol_rows_for_pending_tombstone_no_print_and_ondemand_coverage()
     assert nop["coverage"] == "unavailable" and "print" in nop["error"]
     od = BR.read_symbol("XYZ", _doc([DEM], origin="ondemand"), _snap(91.0, 99.0), NOW)
     assert od["coverage"] == "ondemand" and od["fresh"] is True and od["print"] == 99.0
+    # 🪜 `band_structure` joined the row 2026-09-16 (the ten row boards read it
+    # here — they are not chart_maps tiles).
     assert set(od) == {"symbol", "print", "fresh", "coverage", "bounce", "room", "demand",
-                       "explosive", "enterable"}
+                       "explosive", "enterable", "band_structure"}
     st = BR.read_symbol("XYZ", _doc([DEM]), _snap(91.0, 99.0), NOW)
     assert st["coverage"] == "store" and st["bounce"]["sessions_ago"] == 0
     assert st["room"]["state"] == "CLEAR"
@@ -672,7 +674,8 @@ def test_api_payload_returns_the_exact_contract_with_counts_and_prices_only_cove
                          snapshot_fn=snapshot_fn,
                          builder=lambda s, d: built.append(s) or _doc([DEM], symbol=s))
     assert set(out) == {"as_of", "in_session", "store_date", "params", "explosive_study",
-                        "enterable_study", "rows",
+                        "enterable_study", "band_structure_study",
+                        "band_structure_coverage", "rows",
                         "requested", "covered", "pending", "unavailable", "disclaimer"}
     assert out["requested"] == 4 and out["covered"] == 2 and out["pending"] == 1 and out["unavailable"] == 1
     assert out["store_date"] == STORE_DAY and out["in_session"] is True

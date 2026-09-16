@@ -25,8 +25,23 @@ import {
   HOLDINGS_WINDOWS, decorateHoldingTile, holdingsWindow, sortHoldings, type HoldingLike,
 } from '../lib/holdingsBoard';
 import type { CmTile } from '../lib/chartMaps';
+import type { BandStructureStudy } from '../lib/bandStructure';
 
-type TileRead = { tile: CmTile; last?: number | null; error?: string | null };
+type TileRead = {
+  tile: CmTile; last?: number | null; error?: string | null;
+  /* 🪜 The band-structure VERDICT as /chart-maps/support served it beside
+   * this name's tile. Carried per read rather than fetched once: every tile on
+   * this board comes from its own request, and the banner must come off the
+   * same responses the chips came off. */
+  bandStudy?: BandStructureStudy | null;
+  /* 🪜 The SERVED "no band read" sentence for THIS name, when the
+   * response came back with no ceiling and no floor at all
+   * (chart_maps/board.band_structure_coverage -> bounce_room
+   * .BAND_STRUCTURE_NO_READ). Per read, because each position is its own
+   * request: one name the store has not warmed must say so without silencing
+   * the six beside it that read fine. */
+  bandNote?: string | null;
+};
 
 export default function HoldingsBoard({ days }: { days?: number | null }) {
   const [rows, setRows] = useState<HoldingLike[] | null>(null);
@@ -87,7 +102,11 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
           out[h.symbol] = { tile: null as any, error: String(p?.error || 'no chart') };
           return;
         }
-        out[h.symbol] = { tile: p.tile as CmTile, last: p.last_price ?? null };
+        out[h.symbol] = {
+          tile: p.tile as CmTile, last: p.last_price ?? null,
+          bandStudy: (p.band_structure_study as BandStructureStudy | null) ?? null,
+          bandNote: (p.band_structure_coverage?.note as string | null) ?? null,
+        };
       } catch (e: any) {
         out[h.symbol] = { tile: null as any, error: String(e?.message ?? e) };
       }
@@ -118,6 +137,48 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
   const room = useBounceRoom(rowSymbols);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const shownTiles = useExplosiveOrder(tiles, (t) => t.tile.symbol, room.map, explosiveFirst);
+
+  /* 🪜 One banner for the board, off the reads that came back. Every response
+   * carries the same served verdict (band_structure.measured_verdict()), so the
+   * first one that has a headline is the board's; nothing is invented when not
+   * one response carried it. The 🪜 chip rides on each tile, and the banner
+   * saying `MEASURED.status` is `no_signal` has to ride with it. */
+  const bandStudy = useMemo(() => {
+    for (const { h } of ordered) {
+      const st = reads[h.symbol]?.bandStudy;
+      if (st?.headline) return st;
+    }
+    return null;
+  }, [ordered, reads]);
+
+  /* 🪜 THE SILENT BLANK, closed (critique J2, 2026-09-16). The chip
+   * renders nothing for a name with no bands, so a position the zone store
+   * does not carry drew a chart here with no Bands line and NO REASON — while
+   * the ten row boards, which build the doc on demand, served the read for that
+   * same name on the same day. Demonstrated on BTBT, which he owns. The names
+   * are listed and the SENTENCE IS THE SERVED ONE those boards print
+   * (bounce_room.band_structure_no_read_note): nothing is worded here, so this
+   * board can never say it differently from them, and a response that carried
+   * no note prints no line.
+   *
+   * ONE LINE PER SENTENCE (critique 5, BLOCKING). The note is no longer one
+   * fixed string: a name UNDER the store's cap floor is told no refresh brings
+   * it a read, a name the store is still warming is told to wait, and a name
+   * whose cap nobody can see is told the neutral truth. Holdings is the one
+   * board that can show all three at once, so the names are GROUPED BY THE
+   * SENTENCE THEY WERE SERVED — printing the first name's note over all of
+   * them is exactly the lie this fix removes (BTBT, $562.6M, was being told to
+   * wait for a refresh that cannot come). Insertion order = his row order. */
+  const bandGroups = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const { h } of ordered) {
+      const note = reads[h.symbol]?.bandNote;
+      if (!note) continue;
+      const at = m.get(note);
+      if (at) at.push(h.symbol); else m.set(note, [h.symbol]);
+    }
+    return [...m.entries()];
+  }, [ordered, reads]);
 
   const failed = ordered.filter(({ h }) => reads[h.symbol]?.error);
   const present = useMemo(() => presentGroups(tiles.map((t) => t.tile)), [tiles]);
@@ -153,10 +214,29 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
 
       <OverlayLegend present={present} hidden={hiddenOverlays} onToggle={toggleOverlay} />
 
+      {/* No scope note and no sort_unavailable note: this board is not ordered
+        * by the 🪜 key — it is worst position first, which is his ordering and
+        * stays his ordering. Only the read and its status are shown. */}
+      {bandStudy?.headline ? (
+        <div className="cm-note cm-band-study" data-testid="hb-band-structure-study">
+          <strong>{bandStudy.headline}</strong>
+          {bandStudy.body ? <p>{bandStudy.body}</p> : null}
+          {bandStudy.fallback_note ? <p>{bandStudy.fallback_note}</p> : null}
+          {bandStudy.limits ? <p className="cm-dim">{bandStudy.limits}</p> : null}
+        </div>
+      ) : null}
+
+      {bandGroups.map(([note, syms]) => (
+        <p className="cm-note" data-testid="hb-band-structure-no-read" key={note}>
+          🪜 {syms.join(', ')} — {note}
+        </p>
+      ))}
+
       <div className="cm-grid">
         {shownTiles.map(({ tile }) => (
           <PatternChart key={`${tile.symbol}-${win}`} tile={tile}
-                        study={room.payload?.explosive_study} />
+                        study={room.payload?.explosive_study}
+                        bandStudy={bandStudy} />
         ))}
       </div>
 

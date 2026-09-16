@@ -26,6 +26,7 @@ import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -442,6 +443,15 @@ export function ExplosiveGrowth() {
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* 🪜 No row on this list came back with a band read — say so once, the
+          way the 🎯 n/a tabs do, instead of showing no chip anywhere and
+          letting it read as a board where the read silently stopped. The
+          sentence is SERVED (bounce_room.BAND_STRUCTURE_NO_READ). */}
+      {room.payload?.band_structure_coverage?.note ? (
+        <div className="cm-hidden-count" data-testid="band-structure-note">
+          🪜 {room.payload.band_structure_coverage.note}
+        </div>
+      ) : null}
 
       <div className="eg-scroll">
         <table className="eg-table">
@@ -552,6 +562,11 @@ export function ExplosiveGrowth() {
                                    read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                     <EnterableChip className="eg"
                                    read={room.map.get(String(r.symbol).toUpperCase())?.enterable} />
+                    {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own
+                        served ceiling/floor read. `cm-badge` rather than `eg`: the
+                        shared pill is the class that ships with the -band tones. */}
+                    <BandStructureChip className="cm-badge" study={room.payload?.band_structure_study}
+                                       read={room.map.get(String(r.symbol).toUpperCase())?.band_structure} />
                     {r.name && <div className="eg-coname">{r.name}</div>}
                   </td>
                   <td className="eg-num eg-good" title={per.title}>
