@@ -379,12 +379,15 @@ def test_b8_negative_the_tile_builder_still_names_only_the_shared_rank_key():
 # ---------------------------------------------------------------------------
 # B9 — the note never claims an edge
 # ---------------------------------------------------------------------------
-def test_b9_the_note_says_depth_is_not_measured(
+def test_b9_the_note_says_depth_was_measured_and_separated_nothing(
         prices, reentry_stub, sales_stub, monkeypatch):
+    """LANDED 2026-09-16 — the sentence is served by deep_levels_measured.note(),
+    never typed here, so it moved on its own when the replay came back."""
+    from supply_demand import deep_levels_measured as DLM
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     out = _one([_deep3()], prices, reentry_stub, sales_stub)
-    assert out["note"].endswith(
-        "Depth is NOT measured yet — levels order nothing and gate nothing.")
+    assert out["note"].endswith(DLM.note())
+    assert "order nothing and gate nothing" in out["note"]
     assert f"up to the {DD.ordinal(DD.MAX_LEVELS_BROKEN + 1)}" in out["note"]
     assert "crossed one or more demand bands" in out["note"]
 
@@ -472,12 +475,20 @@ def test_r2_the_depth_note_delegates_and_never_prints_a_raw_status(
     from supply_demand import deep_levels_measured as DLM
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     for stub in ({"status": "pending"},
-                 {"status": "no_signal"},
+                 {"status": "no_signal"},                     # unquotable
                  {"status": "separates", "quotable": False}):
         monkeypatch.setattr(DLM, "MEASURED", stub, raising=False)
         out = _one([_deep3()], prices, reentry_stub, sales_stub)
         assert "Depth is measured:" not in out["note"]
         assert out["note"].endswith(DLM.NOT_MEASURED_NOTE)
+    # …and a QUOTABLE no_signal says it was measured and came back null — a
+    # different fact from nobody having looked.
+    monkeypatch.setattr(DLM, "MEASURED",
+                        {"status": "no_signal", "quotable": True,
+                         "run_date": "2026-09-16"}, raising=False)
+    out = _one([_deep3()], prices, reentry_stub, sales_stub)
+    assert out["note"].endswith(DLM.NO_SIGNAL_NOTE_FMT % "2026-09-16")
+    assert "NOT measured yet" not in out["note"]
 
 
 def test_r3_the_note_says_levels_are_counted_off_the_surfaced_window(
@@ -705,10 +716,10 @@ def test_l6_negative_an_all_board_says_nothing_about_a_selection(
         assert "level arrivals only" not in note, spec
         assert "hidden by the level filter" not in note, spec
     # and the depth disclaimer is still the LAST thing said, filtered or not
+    from supply_demand import deep_levels_measured as DLM
     for spec in ("all", "4"):
         note = _one(rows, prices, reentry_stub, sales_stub, levels=spec)["note"]
-        assert note.endswith("Depth is NOT measured yet — levels order "
-                             "nothing and gate nothing."), spec
+        assert note.endswith(DLM.note()), spec
 
 
 def test_l6_negative_the_note_ordinals_are_not_typed_strings():

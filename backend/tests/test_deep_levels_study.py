@@ -525,21 +525,38 @@ def test_wanted_columns_cover_every_read_the_stats_stage_makes():
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# 7 — the served read: MEASURED = None is PENDING, and nothing quotes it
+# 7 — the served read, now that the replay has LANDED (2026-09-16)
 # ═════════════════════════════════════════════════════════════════════════════
-def test_MEASURED_is_pending_and_nothing_is_quotable_from_it():
-    assert DLM.MEASURED is None
-    assert DLM.status() == DLM.STATUS_PENDING == "pending"
-    assert DLM.quotable() is False
+def test_MEASURED_landed_and_reads_no_signal():
+    """The replay ran on 2026-09-16: 24,993 reversal episodes, 3,716 names,
+    362 dates. NOTHING separated on either question, so the board keeps its
+    proximity-first order and nothing gates on depth."""
+    assert isinstance(DLM.MEASURED, dict)
+    assert DLM.status() == DLM.STATUS_NO_SIGNAL == "no_signal"
+    assert DLM.quotable() is True
     assert DLM.separates() is False
-    assert DLM.note() == DLM.NOT_MEASURED_NOTE
+    assert DLM.MEASURED["q1"]["status"] == "no_signal"
+    assert DLM.MEASURED["q2"]["status"] == "no_signal"
+    assert DLM.MEASURED["q1"]["selected"] == []
+    assert DLM.MEASURED["q2"]["selected"] == []
 
 
-def test_NEGATIVE_the_pending_note_never_claims_an_edge():
-    txt = DLM.note().lower()
-    for word in ("edge", "outperform", "better", "wins", "bounce"):
-        assert word not in txt
-    assert "not measured" in txt
+def test_the_note_says_it_WAS_measured_and_came_back_null():
+    """"Not measured yet" would now be a lie. A reader must be able to tell
+    "nobody has looked" from "we looked and there is nothing there"."""
+    txt = DLM.note()
+    assert txt == DLM.NO_SIGNAL_NOTE_FMT % DLM.MEASURED["run_date"]
+    assert "MEASURED" in txt and "nothing separates" in txt
+    assert "NOT measured yet" not in txt
+
+
+def test_NEGATIVE_no_served_sentence_ever_claims_an_edge():
+    for txt in (DLM.note(), DLM.NOT_MEASURED_NOTE,
+                DLM.NO_SIGNAL_NOTE_FMT % "2026-09-16"):
+        low = txt.lower()
+        for word in ("edge", "outperform", "better", "wins", "bounce"):
+            assert word not in low, (word, txt)
+        assert "order nothing and gate nothing" in low
 
 
 def test_NEGATIVE_a_malformed_or_unquotable_MEASURED_fails_closed(monkeypatch):
@@ -547,17 +564,51 @@ def test_NEGATIVE_a_malformed_or_unquotable_MEASURED_fails_closed(monkeypatch):
         monkeypatch.setattr(DLM, "MEASURED", bad)
         assert DLM.status() == DLM.STATUS_PENDING
         assert DLM.separates() is False
-    # a `separates` run that is NOT quotable still may not be ordered on
+        assert DLM.note() == DLM.NOT_MEASURED_NOTE
+    # a `separates` run that is NOT quotable still may not be ordered on, and
+    # still may not say it was measured
     monkeypatch.setattr(DLM, "MEASURED", {"status": "separates", "quotable": False})
     assert DLM.status() == "separates" and DLM.separates() is False
     assert DLM.note() == DLM.NOT_MEASURED_NOTE
-    # no_signal reads exactly like pending
-    monkeypatch.setattr(DLM, "MEASURED", {"status": "no_signal", "quotable": True})
+    # …and neither may an UNQUOTABLE no_signal — a smoke run is not a result
+    monkeypatch.setattr(DLM, "MEASURED", {"status": "no_signal", "quotable": False})
     assert DLM.note() == DLM.NOT_MEASURED_NOTE
 
 
-def test_the_measured_module_carries_no_number_of_its_own():
+def test_THE_GATE_that_hides_CRDO_measured_harmful():
+    """Ajay's own example. The joint band bar (>= MIN_TOUCHES touches AND >=
+    MIN_ZONE_STRENGTH strength on the ARRIVAL band) is the only thing hiding
+    CRDO, and passing it measured WORSE than failing it. Pinned here because
+    it is the number his call rests on, and it must not drift silently.
+
+    HONEST LIMIT, also pinned: the (room x risk)-reweighted delta SPANS ZERO,
+    so the raw gap is partly the gate selecting tighter, closer setups rather
+    than worse ones. The label is `harmful`; the reweight says "not protective",
+    which is the weaker and more defensible claim.
+    """
+    g = DLM.MEASURED["q2"]["gate"]
+    assert g["verdict"] == "harmful"
+    assert g["cells"]["pass"]["hit5_20"] < g["cells"]["fail"]["hit5_20"]
+    ev = g["eval"]
+    assert ev["d_hit5"] < 0 and ev["ci"][1] < 0          # CI excludes zero, negative
+    assert ev["d_stop"] > 0                              # and MORE stop-outs
+    lo, hi = ev["ci_rw"]
+    assert lo < 0 < hi, "the reweighted delta must still span zero"
+
+
+def test_the_measured_module_types_no_number_of_its_own():
+    """Every figure is pasted verbatim by --emit-measured. The module may hold
+    exactly ONE `MEASURED = {` assignment and no hand-written statistic."""
     src = open(DLM.__file__).read()
     body = src.split('"""', 2)[-1]
-    assert "MEASURED: Optional[dict] = None" in body
-    assert re.search(r"MEASURED\s*=\s*\{", body) is None
+    assert len(re.findall(r"^MEASURED = \{", body, re.M)) == 1
+    assert "MEASURED: Optional[dict] = None" not in body
+    assert DLM.MEASURED["script"] == "backend/scripts/deep_levels_study.py"
+
+
+def test_the_survivorship_replay_is_attached_and_negative():
+    """Not quotable without it. The cached universe (dead names included) runs
+    BELOW the live one, so no survivorship bias is carrying this null."""
+    sv = DLM.MEASURED["survivorship"]
+    assert sv["cache_n_names"] > DLM.MEASURED["n_universe"]
+    assert sv["d_hit5_vs_broad"] < 0

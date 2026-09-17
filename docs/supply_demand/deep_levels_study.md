@@ -197,3 +197,76 @@ Never hand-edit a number, never quote a point estimate without its CI.
 * It does not re-implement the walk or the gate. `arrival()` and `read()` are
   imported from the shipped module, pinned by a source test — if the shipped
   rule changes, the study changes with it.
+
+## RESULTS — 2026-09-16 (broad, floor 120, clocks [5,10,20], hold 20, primary hit5)
+
+Re-run verbatim: `backend/scripts/deep_levels_study.py` (recipe above). Every
+figure here is read from `backend/scripts/deep_levels_measured.json`, pasted by
+`--emit-measured`; none is typed.
+
+**BOTH QUESTIONS CAME BACK NULL.** 24,993 reversal episodes, 3,716 names, 362
+dates, 2025-03-10 -> 2026-08-17. Base: **34.2%** reach +5% before the band
+floor, **74.5%** stop out.
+
+| | selected on the 3 splits | resolution (MDL) |
+|---|---|---|
+| Q1 — levels crossed | **none** | 2.59pp |
+| Q2 — arrival-band quality | **none** | 2.63pp |
+
+### Q1 — depth does nothing
+
+Crossed 1 level 32.8% · 2 levels 33.1% · 3 levels 37.1% (widened-cap control,
+n=3,178) · no level crossed 35.9%. Nothing clears the 2.59pp bar and nothing was
+selected on any out-of-sample split. **Depth orders nothing and gates nothing.**
+
+### Q2 — and neither does the band's own quality
+
+Arrival band touched once 36.7% · twice 29.5% · 3+ times 31.4%. Strength under
+40: 35.1%; at or above: 32.1%. Nothing clears the 2.63pp bar.
+
+### THE GATE — it does not earn its keep
+
+`MIN_TOUCHES = 2` AND `MIN_ZONE_STRENGTH = 40` on the arrival band is the only
+thing hiding Ajay's own CRDO example. Measured over the 17,483 arrivals:
+
+* passes the gate — n=6,821, hit5 **30.83%**, stop 76.06%
+* **fails** the gate — n=10,662, hit5 **35.53%**, stop 75.37%
+* passing costs **-3.37pp** of hits, CI [-4.43, -2.32] (excludes zero), and adds
+  **+1.58pp** of stop-outs, CI [+0.63, +2.55]. Verdict: **harmful**.
+
+**THE HONEST LIMIT, which is why this is a proposal and not a change.** The
+(room x risk)-reweighted delta is **+0.45pp, CI [-0.96, +1.88] — it spans
+zero**, and the one-per-symbol reweight is -0.25. The gate-pass rows carry less
+room (11.05 vs 20.06) and tighter risk (2.07 vs 2.70), so the raw gap is partly
+the gate selecting *tighter, closer* setups rather than *worse* ones. The
+defensible claim is the weaker one: **the gate is not protective — it buys no
+measurable safety, and what movement there is runs against it.**
+
+### Distance, again
+
+`arr_dist_pct` Q2: **+9.44pp**, CI [+7.82, +11.07], outside the date-block
+placebo — but it "selects smaller trades" (room/risk 4.91 vs 6.09). This is the
+third study in a row (lid-break 2026-09-07, band-structure 2026-09-16) in which
+the only thing that moves is HOW FAR price is from the level, never what the
+level looks like.
+
+### Survivorship
+
+Cache universe 5,285 names / 37,426 episodes: 32.73% vs 34.20% broad =
+**-1.47pp**. Dead names included run BELOW the live universe, so no survivorship
+bias is carrying this null.
+
+### One limit on the run
+
+The replay ran while `deep_demand.MAX_LEVELS_BROKEN` was still 2, so the
+`levels_broken` column is capped at 2 and the literal records
+`max_levels_shipped: 2`. The cap moved to 3 the same day. Q1's conclusion does
+not depend on it — the widened-cap control carries the level-3-crossed cell
+explicitly and it was selected on none of the three splits.
+
+### HIS CALL
+
+Relax or drop `MIN_TOUCHES` / `MIN_ZONE_STRENGTH` on the Deep Demand arrival
+band? The measurement says the gate is not protective. Dropping it would show
+CRDO and the ~414 names like it. **Not done — Rule #10: an S&D gate never moves
+without his sign-off.**
