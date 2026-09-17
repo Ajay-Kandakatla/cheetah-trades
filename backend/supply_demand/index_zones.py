@@ -472,23 +472,62 @@ def with_live(read: dict, px) -> dict:
 # ---------------------------------------------------------------------------
 # staleness — SERVED, not inferred by the frontend
 # ---------------------------------------------------------------------------
-def _sessions_between(stored: date, today: date) -> int:
-    """Market days strictly after `stored` and on/before `today`. The holiday
-    calendar is market_hours.reminder's — never a second copy."""
+def _bar_closed(day: date, now: datetime) -> bool:
+    """Has `day`'s regular session produced a CLOSED bar as of `now`?
+
+    A past market day always has one. TODAY only has one once the session has
+    run its full length, and that is the whole point: the bands are drawn on
+    closed bars, so a session still in progress has not aged them. The test is
+    `demand_reentry._session_fraction() >= 1.0` — the SAME clock
+    `split_today_partial` uses to decide whether today's row is a real bar,
+    never a second copy of the cutoff. A clock is REQUIRED: there is no honest
+    answer about today without one.
+    """
+    now = now.astimezone(ET)
+    if day < now.date():
+        return True
+    if day > now.date():
+        return False
+    try:
+        from supply_demand.demand_reentry import _session_fraction
+        return _session_fraction(now) >= 1.0
+    except Exception:                                           # noqa: BLE001
+        return False
+
+
+def _sessions_between(stored: date, today: date,
+                      now: Optional[datetime] = None) -> int:
+    """Market days strictly after `stored` and on/before `today` whose session
+    has CLOSED. The holiday calendar is market_hours.reminder's — never a
+    second copy.
+
+    An OPEN day is not an elapsed session. Counting today the moment the clock
+    passed midnight made the strip say "1 session old" from 00:00 ET — every
+    day, in its freshest state, minutes after the 04:15 job stored it — which
+    trains him to ignore the one line that is supposed to mean the job broke.
+    Today starts counting when its own bar closes (2026-09-17).
+
+    `now` is that clock. When it is None the caller handed us a bare DATE and
+    no time of day (the date-only callers and their fixtures), and the only
+    reading of "up to and including this date" that does not invent a time is
+    the calendar one: every market day in the window counts.
+    """
     try:
         from market_hours.reminder import is_market_day
     except Exception:                                           # noqa: BLE001
         return max(0, (today - stored).days)
     n, d = 0, stored + timedelta(days=1)
     while d <= today:
-        if is_market_day(datetime(d.year, d.month, d.day)):
+        if is_market_day(datetime(d.year, d.month, d.day)) and (
+                now is None or _bar_closed(d, now)):
             n += 1
         d += timedelta(days=1)
     return n
 
 
 def staleness(basis_date: Optional[str], today: Optional[date] = None,
-              stored_date: Optional[str] = None) -> dict:
+              stored_date: Optional[str] = None,
+              now: Optional[datetime] = None) -> dict:
     """{stale_days, stale_sessions, note} measured on the BASIS date.
 
     `basis_date` is the session the BANDS are drawn from (`as_of`), NOT the day
@@ -499,15 +538,24 @@ def staleness(basis_date: Optional[str], today: Optional[date] = None,
     old. Staleness on the basis date makes that visible.
 
     `stale_days` is CALENDAR days, because that is what the contract serves;
-    `stale_sessions` is market days (B2) and is what the page prints, so the
-    word on screen and the number under it agree. The job runs weekdays and the
+    `stale_sessions` is market days whose session has CLOSED (B2) and is what
+    the page prints, so the word on screen and the number under it agree. The
+    two disagree on purpose between midnight and today's close: the calendar
+    has turned over, the structure has not aged. The job runs weekdays and the
     bands are closed-bar, so a Saturday read of Friday's structure is the last
     close, not a stale one — nothing here cries stale over a weekend.
 
     `stored_date` (the job day) is named in the note only when it differs from
     the basis, so a re-stored stale doc says both dates instead of one.
     """
-    today = today or _today_et()
+    # THE CLOCK. Production calls this with neither argument and gets the live
+    # one, so an open session never ages the bands. A caller that names a DATE
+    # and no time is asking a calendar question and gets the calendar answer —
+    # that is the contract the date-only fixtures pin, and reading the wall
+    # clock against someone else's date would answer about neither.
+    clock = now if now is not None else (None if today is not None
+                                         else datetime.now(ET))
+    today = today or _today_et(clock)
     if not basis_date:
         return {"stale_days": None, "stale_sessions": None,
                 "note": "No index structure stored yet — the overnight job has "
@@ -518,7 +566,7 @@ def staleness(basis_date: Optional[str], today: Optional[date] = None,
         return {"stale_days": None, "stale_sessions": None,
                 "note": "The stored index doc carries an unreadable date. " + DISCLAIMER}
     days = max(0, (today - d).days)
-    sessions = _sessions_between(d, today)
+    sessions = _sessions_between(d, today, clock)
     if sessions <= 0:
         note = f"Bands drawn on closed bars, as of the {d.isoformat()} session. "
     else:

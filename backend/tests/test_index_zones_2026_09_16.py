@@ -23,7 +23,8 @@ import ast
 import inspect
 import re
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import pytest
@@ -1085,3 +1086,103 @@ def test_V3_the_payload_names_the_resolution_the_page_opens_on():
     assert IZ.DEFAULT_RESOLUTION in (IZ.RESOLUTION_BOARD, IZ.RESOLUTION_FINE)
     out = IZ.empty_payload("nothing stored")
     assert out["default_resolution"] == IZ.DEFAULT_RESOLUTION
+
+
+# ── an OPEN day is not an elapsed session (2026-09-17) ───────────────────────
+#
+# Found on the live wire minutes after the first warm: at 00:26 ET on 09-17,
+# with bands drawn on the 09-16 close, the served note read "Bands are 1
+# session old". That is the FRESHEST the strip is ever going to be — the job
+# had just stored it — and the line that is supposed to mean "the overnight job
+# broke" was firing every single day. `stale_days` (calendar) is right to say
+# 1; `stale_sessions` is what the page prints, and today has not closed.
+
+_ET = ZoneInfo("America/New_York")
+
+
+def _at(y, m, d, hh, mm=0):
+    return datetime(y, m, d, hh, mm, tzinfo=_ET)
+
+
+def test_an_open_session_has_not_aged_the_bands():
+    """Midnight through the close on the day after the basis session: the
+    calendar turned over, the structure did not."""
+    for hh, mm in ((0, 26), (4, 15), (9, 31), (12, 0), (15, 59)):
+        out = IZ.staleness("2026-09-16", now=_at(2026, 9, 17, hh, mm))
+        assert out["stale_sessions"] == 0, (hh, mm, out)
+        assert "session old" not in out["note"], (hh, mm, out["note"])
+        assert "as of the 2026-09-16 session" in out["note"]
+        # the CALENDAR count still tells the truth about the date
+        assert out["stale_days"] == 1, out
+
+
+def test_after_todays_close_the_bands_are_one_session_old():
+    """The other half: once 09-17 prints its own closed bar, 09-16 structure IS
+    a session behind, and the note has to say so."""
+    out = IZ.staleness("2026-09-16", now=_at(2026, 9, 17, 16, 30))
+    assert out["stale_sessions"] == 1
+    assert "1 session old" in out["note"]
+
+
+def test_a_missed_overnight_job_still_reads_stale():
+    """NEGATIVE — the fix must not silence the real failure. Bands from Mon
+    09-14 seen on Thu 09-17 morning: Tuesday's and Wednesday's sessions have
+    both closed, so two sessions have elapsed however early in the day it
+    is."""
+    out = IZ.staleness("2026-09-14", now=_at(2026, 9, 17, 8, 0))
+    assert out["stale_sessions"] == 2
+    assert "2 sessions old" in out["note"]
+
+
+def test_a_weekend_read_of_fridays_structure_never_cries_stale():
+    """NEGATIVE — Sat/Sun are not sessions, so Friday's close is the last
+    close, not a stale one. Pinned here because the open-day fix touches the
+    same loop."""
+    for day, hh in ((19, 10), (20, 18)):        # Sat, Sun
+        out = IZ.staleness("2026-09-18", now=_at(2026, 9, day, hh))
+        assert out["stale_sessions"] == 0, (day, out)
+        assert "session old" not in out["note"]
+
+
+def test_the_open_day_test_is_the_engines_own_clock_not_a_second_1600():
+    """Rule #1 — no second copy of the 16:00 cutoff. `_bar_closed` has to reach
+    for demand_reentry._session_fraction, the same clock split_today_partial
+    uses to decide whether today's row is a real bar."""
+    src = inspect.getsource(IZ._bar_closed)
+    assert "_session_fraction" in src
+    # strip the RAW docstring (`__doc__`, not getdoc — getdoc dedents, so the
+    # replace silently misses and the scan reads the prose it just explained)
+    assert "16" not in src.replace(IZ._bar_closed.__doc__ or "", "")
+
+
+def test_a_broken_session_clock_never_invents_a_closed_bar():
+    """NEGATIVE — if the import blows up, `_bar_closed` must answer False for
+    today (do not age the bands on a guess), and never raise into the strip."""
+    import builtins
+    real = builtins.__import__
+
+    def boom(name, *a, **k):
+        if "demand_reentry" in name:
+            raise ImportError("boom")
+        return real(name, *a, **k)
+
+    builtins.__import__ = boom
+    try:
+        assert IZ._bar_closed(date(2026, 9, 17), _at(2026, 9, 17, 16, 30)) is False
+        assert IZ._bar_closed(date(2026, 9, 16), _at(2026, 9, 17, 16, 30)) is True
+        out = IZ.staleness("2026-09-16", now=_at(2026, 9, 17, 16, 30))
+        assert out["stale_sessions"] == 0
+    finally:
+        builtins.__import__ = real
+
+
+def test_the_production_read_uses_the_live_clock_not_a_calendar_date():
+    """`served()` passes `today=None`, so staleness resolves the live clock and
+    an open session cannot age the bands on the page he is looking at. Pinned
+    by equality with an explicit live clock rather than a hard number, because
+    the answer legitimately changes at today's close."""
+    now = datetime.now(_ET)
+    basis = (now.date() - timedelta(days=1)).isoformat()
+    assert IZ.staleness(basis) == IZ.staleness(basis, now=now)
+    src = inspect.getsource(IZ.served)
+    assert "staleness(basis, today=today" in src      # None in production

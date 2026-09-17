@@ -163,6 +163,25 @@ says *"drawn on closed bars, as of the 2026-09-18 session"* rather than crying
 stale: the job is weekdays-only and the bands are closed-bar, so a weekend read
 is the last close.
 
+**An open session is not an elapsed session.** A market day counts toward
+`stale_sessions` only once its own bar has CLOSED — tested with
+`demand_reentry._session_fraction() >= 1.0`, the same clock
+`split_today_partial` uses to decide whether today's row is a real bar, so
+there is no second copy of the cutoff. Found on the live wire at 00:26 ET on
+2026-09-17, minutes after the first warm: with bands drawn on the 09-16 close
+the note read *"Bands are 1 session old"* — the freshest the strip will ever
+be, and the one line that is supposed to mean *the overnight job broke* was
+firing every day. `stale_days` (calendar) still says 1 there, and the two
+disagree on purpose between midnight and today's close: the calendar has turned
+over, the structure has not.
+
+`staleness()` resolves its clock three ways. Production calls it with neither
+`today` nor `now` and gets the live one. A caller that passes `now` gets that.
+A caller that names a bare `today` DATE and no time of day is asking a calendar
+question and gets the calendar answer — every market day in the window counts —
+because reading the wall clock against somebody else's date would answer about
+neither.
+
 **The live vocabulary**, documented once in the module docstring and pinned as
 `index_zones.LIVE_SIDES`:
 
