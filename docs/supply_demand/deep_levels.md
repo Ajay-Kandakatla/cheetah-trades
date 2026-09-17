@@ -260,3 +260,16 @@ touched. Board-side details and the population table live in
   `LEVEL_CHOICES`
 * `backend/tests/test_deep_levels_2026_09_16.py` (`L1`, `L2`),
   `backend/tests/test_deep_levels_board_2026_09_16.py` (`L1`–`L8`)
+
+## 2026-09-17 — the tile's wording, not the qualifier
+
+Nothing in this file changed. The TILE's sentences did: every position number
+now names the print it was measured on, the arrival band is "its Nth demand
+level" (so "2nd band" can no longer mean two bands on one tile), and a name
+whose live print has left the band is no longer described as arriving at it.
+The qualifier, `below_top_pct`, `reclaiming`, the level count and the 7%
+`BOUNCE_DONE_PCT` drop tolerance are all untouched — Ajay's call on APLD:
+"Ok it should be ok to be there. but I know its not 5% band thats ok.."
+See `docs/chart_maps/deep_demand_levels.md` (2026-09-17) and
+`backend/supply_demand/deep_demand_wording.py`. Depth remains MEASURED
+`no_signal` (2026-09-16); nothing here claims otherwise.

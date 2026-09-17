@@ -119,10 +119,10 @@ def test_the_CRDO_stat_line_reads_in_HIS_words():
     r = BS.read(doc=crdo_doc(touches=2, strength=50.0), px=CRDO_PX,
                 kind=EN.KIND_DEMAND, symbol="CRDO")
     assert r["stat"] == ("ceiling 3.8% wide, 6.8% up · "
-                         "floor 3.5% wide, 2nd band 6.4% under")
+                         "floor 3.5% wide, next demand band 6.4% below it")
     clear = BS.read(doc=crdo_doc(), px=CRDO_PX, kind=EN.KIND_DEMAND, symbol="CRDO")
     assert clear["stat"] == ("ceiling untested — nearest untested band 6.8% up · "
-                             "floor 3.5% wide, 2nd band 6.4% under")
+                             "floor 3.5% wide, next demand band 6.4% below it")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -136,7 +136,9 @@ def test_no_second_band_is_UNKNOWN_and_never_ZERO():
     f = BS.floor_read(100.0, doc)
     assert f["gap_pct"] is None and f["second"] is None
     assert f["bands_below"] == 1
-    assert "no 2nd band" in BS.stat_line(
+    # The noun changed on 2026-09-17 ("2nd band" named a DIFFERENT band on
+    # the Deep Demand tile); the fact it refuses to say — a zero gap — did not.
+    assert "no band under it" in BS.stat_line(
         BS.read(doc=doc, px=100.0, kind=EN.KIND_DEMAND, symbol="X"))
 
 
@@ -657,7 +659,7 @@ def test_attach_fills_the_read_and_appends_the_stat_ONCE(monkeypatch):
     assert B.attach_band_structure(tiles, kind=EN.KIND_DEMAND, live={}) == 1
     assert tiles[0]["band_structure"]["floor"]["gap_pct"] == 6.37
     stats = [s for s in tiles[0]["stats"] if s["k"] == B.BAND_STRUCTURE_STAT_KEY]
-    assert len(stats) == 1 and "2nd band 6.4% under" in stats[0]["v"]
+    assert len(stats) == 1 and "next demand band 6.4% below it" in stats[0]["v"]
     # idempotent by KEY PRESENCE — a second pass must not double the stat
     assert B.attach_band_structure(tiles, kind=EN.KIND_DEMAND, live={}) == 0
     assert len([s for s in tiles[0]["stats"]
@@ -852,8 +854,8 @@ def test_the_SAME_RANGE_is_named_ONCE_on_his_own_CRDO_doc():
     assert (c["untested_band"]["lo"], c["untested_band"]["hi"]) == CRDO_SUPPLY_SHELF
     assert (f["band"]["lo"], f["band"]["hi"]) == CRDO_SUPPLY_SHELF, "one range"
     assert r["stat"] == ("ceiling 3.4% wide, 18.9% up (price inside its floor "
-                         "band, untested overhead) · floor 3.5% wide, 2nd band "
-                         "6.4% under")
+                         "band, untested overhead) · floor 3.5% wide, next "
+                         "demand band 6.4% below it")
     assert r["stat"].count("3.5% wide") == 1, "the width is quoted once"
 
 
@@ -862,7 +864,7 @@ def test_the_CLEAR_branch_says_the_same_thing_when_the_shelf_IS_the_floor():
     range that is both the untested shelf and the floor."""
     r = BS.read(doc=crdo_shelf_doc(), px=CRDO_PX, kind=EN.KIND_DEMAND, symbol="CRDO")
     assert r["stat"] == ("ceiling untested — price inside its floor band · "
-                         "floor 3.5% wide, 2nd band 6.4% under")
+                         "floor 3.5% wide, next demand band 6.4% below it")
     assert "an untested band 3.5% wide" not in r["stat"]
 
 

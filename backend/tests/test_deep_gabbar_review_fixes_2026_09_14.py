@@ -147,8 +147,13 @@ def test_d2_negative_no_supply_zones_draws_only_the_two_deep_bands_and_a_lid_equ
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
     by = {t["symbol"]: t for t in out["tiles"]}
-    assert [b["label"] for b in by["PLAIN"]["bands"]] == ["1st demand · broken", "2nd demand · entering"]
-    assert [b["label"] for b in by["DUP"]["bands"]] == ["1st demand · broken", "2nd demand · entering"]
+    # The arrival band's label says where the PRINT is since 2026-09-17; the
+    # DRAWING this test is about — two bands, the duplicate lid dropped — is
+    # unchanged.
+    assert [b["label"] for b in by["PLAIN"]["bands"]] == [
+        "1st demand · broken", "2nd demand level · price inside"]
+    assert [b["label"] for b in by["DUP"]["bands"]] == [
+        "1st demand · broken", "2nd demand level · price inside"]
 
 
 # ---------------------------------------------------------------------------
@@ -164,14 +169,17 @@ def test_d3_deep_tile_distance_and_chip_follow_the_live_print(
     # second band 80-85: 86.7 is 1.96% above its top
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"MOVED": 86.7})
     t = B.board("deep_demand", limit=5, min_tier="any", min_room=0, phase="approaching")["tiles"][0]
-    assert "now 1.96% above the 2nd band" in t["why"]
-    assert t["badges"][0]["text"] == "🩹 Entering 2nd band"
+    # 2026-09-17: the number keeps its basis, and a print ABOVE the band is
+    # no longer described as arriving at it.
+    assert "now 1.96% above its 2nd demand level on the live print" in t["why"]
+    assert t["badges"][0]["text"] == "🩹 Above its 2nd demand level"
     # ...and once the live print is INSIDE the band, the chip says so even
     # though the scan's state is still 'near'.
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"MOVED": 84.0})
     t = B.board("deep_demand", limit=5, min_tier="any", min_room=0, phase="approaching")["tiles"][0]
-    assert "now in the 2nd band" in t["why"] and "above the 2nd band" not in t["why"]
-    assert t["badges"][0]["text"] == "🩹 In 2nd demand band"
+    assert ("now in its 2nd demand level on the live print" in t["why"]
+            and "above its 2nd demand level" not in t["why"])
+    assert t["badges"][0]["text"] == "🩹 In its 2nd demand level"
 
 
 def test_d3_negative_no_tape_falls_back_to_the_scan_distance(
@@ -184,11 +192,13 @@ def test_d3_negative_no_tape_falls_back_to_the_scan_distance(
         sales_stub[s] = _sales("steady", 9.0)
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     near = B.board("deep_demand", limit=5, min_tier="any", min_room=0, phase="approaching")["tiles"][0]
-    assert "now 1.2% above the 2nd band" in near["why"]
-    assert near["badges"][0]["text"] == "🩹 Entering 2nd band"
+    # No tape: the scan's own distance, and the sentence SAYS it is the close.
+    assert "now 1.2% above its 2nd demand level on the close" in near["why"]
+    assert "on the live print" not in near["why"]
+    assert near["badges"][0]["text"] == "🩹 Above its 2nd demand level"
     inside = B.board("deep_demand", limit=5, min_tier="any", min_room=0)["tiles"][0]
-    assert "now in the 2nd band" in inside["why"]
-    assert inside["badges"][0]["text"] == "🩹 In 2nd demand band"
+    assert "now in its 2nd demand level on the close" in inside["why"]
+    assert inside["badges"][0]["text"] == "🩹 In its 2nd demand level"
 
 
 # ---------------------------------------------------------------------------
@@ -232,9 +242,13 @@ def test_d5_deep_tile_labels_a_reclaim_from_the_scan_flag_and_from_the_live_read
     by = {t["symbol"]: t for t in out["tiles"]}
     for sym in ("FLAG", "LIVE"):
         t = by[sym]
-        assert "2nd demand · reclaiming" in [b["label"] for b in t["bands"]]
-        assert any(b["text"] == "🩹 Reclaiming 2nd band" for b in t["badges"])
-        assert "(reclaimed from below)" in t["why"]
+        # 2026-09-17: the reclaim is still labelled — while the print is IN
+        # the band — and it is said as the prior-close fact it is.
+        assert ("2nd demand level · back in from below"
+                in [b["label"] for b in t["bands"]])
+        assert any(b["text"] == "🩹 Back in its 2nd demand level from below"
+                   for b in t["badges"])
+        assert "(yesterday closed under it)" in t["why"]
     assert by["LIVE"]["badges"][0]["text"].startswith("↑ Reclaiming"), "the approach chip still leads"
 
 
@@ -249,7 +263,8 @@ def test_d5_negative_an_arrival_from_above_keeps_the_entering_label(
         "TOP": {"price": 82.0, "last_trade_price": 82.0, "prev_day_close": 95.0, "low": 82.0}})
     t = B.board("deep_demand", limit=5, min_tier="any", min_room=0)["tiles"][0]
     labels = [b["label"] for b in t["bands"]]
-    assert "2nd demand · entering" in labels and "reclaiming" not in " ".join(labels)
+    assert ("2nd demand level · price inside" in labels
+            and "below" not in " ".join(labels))
     assert not any("Reclaiming" in b["text"] for b in t["badges"])
     assert "reclaimed" not in t["why"]
 

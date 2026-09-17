@@ -1554,7 +1554,10 @@ def test_deep_demand_keeps_bonde_intact_names_and_drops_the_knives(
 
     t = out["tiles"][0]
     labels = [b["label"] for b in t["bands"]]
-    assert "1st demand · broken" in labels and "2nd demand · entering" in labels
+    # 2026-09-17: the arrival band's label says where the PRINT is, on the
+    # same print the badge and the why line quote (deep_demand_wording).
+    assert "1st demand · broken" in labels
+    assert "2nd demand level · price inside" in labels
     badge_text = " ".join(b["text"] for b in t["badges"])
     assert "Sales steady" in badge_text and "accelerating" in badge_text
     assert "Trend gate failed" in badge_text  # honesty: the premise is stated
@@ -1580,7 +1583,13 @@ def test_deep_demand_default_is_reached_and_near_lives_behind_the_toggle(
     out2 = B.board("deep_demand", limit=5, min_tier="any", phase="approaching")
     assert [t["symbol"] for t in out2["tiles"]] == ["NEARBY"]
     labels = [b["label"] for b in out2["tiles"][0]["bands"]]
-    assert "2nd demand · approaching" in labels
+    # The toggle still splits near from in — that is the assertion above. The
+    # LABEL, since 2026-09-17, says where the print is rather than which
+    # cohort the row came from: this fixture's `near` row carries a scan
+    # `last_price` of 82.0, which is inside its own 80-85 band, and the tile
+    # used to read "approaching" beside a why line that said "now in the 2nd
+    # band". One print, one story.
+    assert "2nd demand level · price inside" in labels
 
 
 def test_deep_demand_warming_passthrough(prices, reentry_stub, sales_stub):
@@ -2369,12 +2378,13 @@ def test_deep_demand_tiles_read_the_direction_against_the_second_band(prices, re
     out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
     t = out["tiles"][0]
     assert t["badges"][0] == {"text": f"↑ Reversal off the band, +1.4% off the {lo2 * 1.001:g} low", "tone": "good"}
-    assert t["badges"][1]["text"] == "🩹 In 2nd demand band"
+    assert t["badges"][1]["text"] == "🩹 In its 2nd demand level"
     assert t["why"].endswith(f"— ↑ reversal off the band, +1.4% off the {lo2 * 1.001:g} low")
     # NEGATIVE: tape down → the old tile, first badge is the band chip
     monkeypatch.setattr(B, "_live_rows", lambda syms: {})
     t = B.board("deep_demand", limit=5, min_tier="any", min_room=0)["tiles"][0]
-    assert t["badges"][0]["text"] == "🩹 In 2nd demand band" and "bouncing" not in t["why"]
+    assert t["badges"][0]["text"] == "🩹 In its 2nd demand level"
+    assert "bouncing" not in t["why"]
 
 
 def test_bounce_gate_uses_scan_price_when_the_tape_is_unreachable(prices, reentry_stub, monkeypatch):

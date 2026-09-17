@@ -113,7 +113,9 @@ def test_the_row_read_reproduces_his_CRDO_layering_numbers():
     assert floor["second"]["lo"] == pytest.approx(146.34)
     assert floor["gap_pct"] == pytest.approx(6.37, abs=0.05)
     assert floor["bands_below"] == 2
-    assert "2nd band" in row["band_structure"]["stat"]
+    # 2026-09-17: the clause names the band it measures. "2nd band" left
+    # this sentence because the Deep Demand tile used it for another band.
+    assert "next demand band 6.4% below it" in row["band_structure"]["stat"]
 
 
 def test_the_row_read_reads_the_SAME_print_the_rest_of_the_row_read():

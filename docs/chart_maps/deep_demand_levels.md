@@ -195,3 +195,133 @@ matches; an unknown spec serves the full board; a non-string `levels` (the
 FastAPI `Query` object trap) is treated as "all"; the filter does not reorder;
 the note names the selection only when it is not "all"; the gabbar `level`
 param still works and the new keys do not leak onto its payload.
+
+---
+
+## 2026-09-17 — every number on the tile says which print it is on
+
+Ajay, on APLD:
+
+> "Some of these are not accurate. APLD is showing wrong in Deep demand"
+
+and, once the numbers were in front of him:
+
+> "Ok it should be ok to be there. but I know its not 5% band thats ok.."
+
+**HIS DECISION: the name STAYS on the board.** `BOUNCE_DONE_PCT = 7.0` is
+untouched, `drop_bounced` is untouched, no gate, threshold, cohort or ordering
+moved. **Only the words changed.**
+
+### The defect, on the wire that morning
+
+APLD: demand band **24.03–24.41**, scan close **24.39** (inside it), pre-market
+print **25.76** — **+5.24% above the band top**, and inside a supply band at
+25.16–26.06. The tile printed, adjacently and unlabelled:
+
+```
+why  = "broke its 1st demand band (10% below it), now 5.24% above the 2nd
+        band (reclaimed from below) — sales +877% YoY …"
+stat = "Bands: ceiling 3.1% wide, 11.2% up (price inside an untested band) ·
+        floor 1.5% wide, 2nd band 0.8% under"
+```
+
+Every number is right **on its own basis**. Together they are unreadable:
+
+| clause | measured on | against |
+|---|---|---|
+| `10% below it` | the **scan close** (24.39) | the FIRST CROSSED band's **floor** — `deep_demand.read`: `(t_lo - last) / t_lo * 100` |
+| `5.24% above` | the **live print** (25.76) | the ARRIVAL band's **top** (`_disp_dist` → `_live_px`) |
+| `0.8% under` | the print the band read used | **not a distance from price at all** — `band_structure.floor_read.gap_pct` is `(band1.lo − band2.hi) / print`, the fall THROUGH the first band before the next is in play |
+| `(reclaimed from below)` | **yesterday's close** | the arrival band's floor (`deep_demand.py:363`, `prev_close < s_lo`) |
+
+Two distinct lies came out of that:
+
+1. **Mixed basis inside one sentence.** The same band was described as 0.8%
+   UNDER and 5.24% ABOVE.
+2. **"2nd band" named two different bands on one tile.** In the why line and
+   the badge it was the deep board's **arrival level** (24.03–24.41); in the
+   `Bands` stat it was **the second demand band below the print** (22.93–23.83).
+
+And the badge claimed an arrival — "🩹 Reclaiming 2nd band" — for a print the
+tape had already carried out of the band. The tile's own `enterable` block said
+`BLOCKED / "not at band"` on the same payload.
+
+**This was the board's normal state, not one odd name.** Of the 19 deep tiles
+that morning, 10 carried a pre-market print and **8 of those had already left
+their band**: APLD +5.24%, STX +3.39%, WDC +2.52%, ESE +1.26%, then PODD /
+TNDM / DASH / HGV between +0.03% and +0.71%. Every one of them is under the 7%
+tolerance, so every one legitimately stays.
+
+### The rules now, in `supply_demand/deep_demand_wording.py`
+
+One pure module — numbers and flags in, strings out, no store, no clock, no
+live feed — builds every position sentence on the tile.
+
+1. **Every position number names its print.** `basis_word` is the only place
+   the phrases "on the close" and "on the live print" exist. An unrecognised
+   basis says nothing rather than guessing.
+2. **One noun per band role.** The arrival band is **"its Nth demand level"**.
+   The phrase "2nd band" left the tile entirely: `band_structure.stat_line`'s
+   floor clause now reads **"next demand band N% below it"** (and "no band
+   under it" when `gap_pct` is None). The number is unchanged.
+3. **No arrival verb above the band.** Not "entering", not "arriving", not
+   "reclaiming" — the tile says it is **above** its level, and the number says
+   by how far. The wording does not change shape at any distance: +0.03% and
+   +5.24% read identically apart from the number, because a threshold in the
+   prose would be an invented rule.
+4. **The reclaim is said as the prior-close fact it is** — "yesterday closed
+   under it" — and it is dropped entirely when no prior close stands behind it.
+   It shapes the badge and the band label only while the print is still IN the
+   band.
+5. **Reversal, never bounce**, on anything he reads.
+6. **Every interpolated clause is built inside the guard that proves its
+   inputs exist.** A missing `below_top_pct` drops that clause (never "(0%)");
+   a missing distance says "position unknown" (never 0, never "in the band").
+   The board takes a shorter honest sentence over an exception: on 2026-09-16
+   an f-string evaluated outside its guard took every OTHER tile down with it.
+
+### Before / after, from the real payload
+
+| | before | after |
+|---|---|---|
+| APLD why | broke its 1st demand band (10% below it), now 5.24% above the 2nd band (reclaimed from below) — sales +877% YoY … | broke its 1st demand level (10% under that level's floor **on the close**), now 5.24% above its 2nd demand level **on the live print** (yesterday closed under it) — sales +877% YoY … |
+| APLD badge | 🩹 Reclaiming 2nd band | 🩹 Above its 2nd demand level |
+| APLD band label | 2nd demand · reclaiming | 2nd demand level · price above it |
+| APLD `Bands` stat | … floor 1.5% wide, **2nd band 0.8% under** | … floor 1.5% wide, **next demand band 0.8% below it** |
+| WERN (still in band, no live print) why | broke its 1st demand band (7% below it), now in the 2nd band — sales +24% YoY … | broke its 1st demand level (7% under that level's floor **on the close**), now in its 2nd demand level **on the close** — sales +24% YoY … |
+| WERN badge | 🩹 In 2nd demand band | 🩹 In its 2nd demand level |
+
+### New payload keys (additive; nothing renamed, nothing removed)
+
+Per tile: `print_basis` (`"live"` | `"scan"`), `dist_pct`, `left_band`.
+On the payload: `position_basis = {"live": n, "scan": n, "note": …}`, and that
+note is appended to the board `note` between the level clause and the depth
+disclaimer.
+
+**All three are DESCRIPTIVE.** They order nothing, gate nothing and hide
+nothing — `left_band` in particular is not a membership read. A name can be on
+this board AND above its band at the same time; that is exactly what he
+decided. Membership is still `drop_bounced` at `BOUNCE_DONE_PCT = 7.0`.
+
+### Still on one print each, and NOT touched here
+
+* Whether a name **qualifies** (`levels_broken`, `below_top_pct`,
+  `reclaiming`, the arrival level itself) is computed on the **scan close** —
+  §7.1 of the spec asked whether to move the whole tile onto the live print;
+  that would change **who qualifies**, so it was not done.
+* The `Bands` stat carries its own `print.source` in the read but does not yet
+  say it in the stat line. The `room` stat is a live-print number and does not
+  say so either. Both are outside this change; flagged, not fixed.
+* The board `note`'s opening ("…are arriving at the next level down") is the
+  cohort's name, not a claim about any one tile's live print.
+
+### Tests
+
+`backend/tests/test_deep_demand_wording_2026_09_17.py` — `W1`–`W9`: the three
+position cases (in band / +0.03% / +5.24%); APLD and STX reproduced from the
+wire; NEGATIVE — no arrival verb at any distance under the tolerance, missing
+inputs render shorter and never raise, no live print says "on the close" and
+never "live", "2nd band" cannot mean two things on one tile, no "bounce", the
+module is pure and carries no numeric literal but 0/1; and the regression pin
+that `BOUNCE_DONE_PCT` is 7.0 and the qualifying set is still decided by
+`drop_bounced` (6.99% stays, 7.01% drops).

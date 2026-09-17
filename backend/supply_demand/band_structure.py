@@ -2229,7 +2229,8 @@ def _pct(v) -> str:
 
 
 def stat_line(read: Optional[dict]) -> Optional[str]:
-    """"ceiling 3.5% wide, 0.5% up · floor 3.2% wide, 2nd band 6.4% under".
+    """"ceiling 3.5% wide, 0.5% up · floor 3.2% wide, next demand band 6.4%
+    below it".
 
     Built from the SERVED numbers only, so no surface re-derives it. None when
     there is nothing to say; the n/a text when the tab has no band read.
@@ -2288,10 +2289,19 @@ def stat_line(read: Optional[dict]) -> Optional[str]:
     f = read.get("floor") or {}
     if f.get("height_pct") is not None:
         floor = "floor %s wide" % _pct(f["height_pct"])
+        # SAY WHICH BAND, AND WHAT THE NUMBER MEASURES (2026-09-17). This
+        # clause used to read "2nd band N% under", and on a Deep Demand tile
+        # "the 2nd band" ALSO named that board's arrival level — a different
+        # band entirely. APLD's tile therefore called one band both "0.8%
+        # under" and "5.24% above" in the same breath. The number is
+        # unchanged: `gap_pct` is band1.lo -> band2.hi (floor_read above), the
+        # fall THROUGH the first band before the next one is in play, not a
+        # distance from price. The word "2nd" leaves this sentence so that on
+        # a deep tile "2nd" can only ever mean the arrival level.
         if f.get("gap_pct") is not None:
-            floor += ", 2nd band %s under" % _pct(f["gap_pct"])
+            floor += ", next demand band %s below it" % _pct(f["gap_pct"])
         else:
-            floor += ", no 2nd band"
+            floor += ", no band under it"
         parts.append(floor)
     if not parts:
         return None

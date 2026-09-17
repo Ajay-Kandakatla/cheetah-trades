@@ -3586,6 +3586,9 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     """
     from supply_demand import demand_reentry as D
     from supply_demand import deep_demand as DD
+    # Every position sentence on this tile, with the basis of every number
+    # said out loud (2026-09-17). PURE — strings in, strings out.
+    from supply_demand import deep_demand_wording as DW
     from sepa import research
 
     data = D.cached_or_warm(universe, limit=LIMIT_MAX)
@@ -3727,12 +3730,16 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             label = f"{DD.ordinal(i + 1)} demand · broken"
             bands.append({"kind": "supply", "lo": dr["lo"], "hi": dr["hi"],
                           "label": f"{label} (1-touch swing)" if dr["one_touch"] else label})
+        # The distance the RANK, room and gate used — the live print when the
+        # tape has one, else the scan's (review 2026-09-14, D3). Read HERE,
+        # above the band label, because the label, the badge and the why line
+        # must all describe the SAME print: the band was labelled "reclaiming"
+        # off yesterday's close while the live print sat 5.24% clear of it
+        # (APLD, 2026-09-17).
+        dist = _disp_dist(r, live, d, "second_band")
         if s_lo is not None:
             bands.append({"kind": "demand", "lo": s_lo, "hi": s_hi,
-                          "label": f"{DD.ordinal(level)} demand · " + (
-                              "reclaiming" if reclaiming
-                              else "approaching" if phase == "approaching"
-                              else "entering")})
+                          "label": DW.band_label(level, dist, reclaiming, phase)})
         # The lids price meets FIRST overhead, as the zones tiles draw them
         # (review 2026-09-14, D2): the TARGET line used to land on a band the
         # deep tile never drew. Deduped against EVERY crossed band, on its
@@ -3766,40 +3773,35 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
         g = _f((sales or {}).get("growth_yoy_pct"))
         below = _f(d.get("below_top_pct"))
-        # The distance the RANK, room and gate used — the live print when
-        # the tape has one, else the scan's (review 2026-09-14, D3). The why
-        # line and the chip used to quote the scan's state while the rank
-        # ran on the live print, so a name ranked 'in' read 'x% above'.
-        dist = _disp_dist(r, live, d, "second_band")
-        in_now = _num(dist) is not None and _num(dist) <= 0
-        # `_now_dist_text`, not `_dist_text`: the sentence wants a leading
-        # "now" in both branches and prepending one read "now now in the 2nd
-        # band" once the print was inside (2026-09-16).
-        arriving = _now_dist_text(dist, f"the {DD.ordinal(level)} band",
-                                  f"the {DD.ordinal(level)} band")
-        if reclaiming:
-            arriving = f"{arriving} (reclaimed from below)"
-        # `crossed` is built INSIDE the guard: `below` is None on a row whose
-        # deep read carried no `below_top_pct`, and formatting it would raise
-        # — which in a board-wide loop takes every OTHER tile down with it,
-        # not just this one. The fallback sentence takes the arrival band's
-        # own ordinal (DD.ordinal(level)), never a hardcoded "second-level":
-        # `_bonde_gate` passes on score+tier alone, so `g` can be None on a
-        # 3rd-level tile whose bands and badge both say 3rd.
-        if below is not None and g is not None:
-            crossed = (f"broke its 1st demand band ({below:.0f}% below it)"
-                       if lv_broken == 1 else
-                       f"crossed {lv_broken} demand levels ({below:.0f}% below the first)")
-            why = (f"{crossed}, {arriving} — sales "
-                   f"{'+' if (g or 0) >= 0 else ''}{g:.0f}% YoY "
-                   f"say the business didn't break with the price")
-        else:
-            why = (f"{DD.ordinal(level)}-level demand arrival with "
-                   f"Bonde-intact sales")
+        # EVERY NUMBER NAMES ITS PRINT (2026-09-17). `dist` is measured on the
+        # LIVE print; `below` and `reclaiming` are measured on the SCAN close.
+        # Side by side and unlabelled they read as a contradiction: APLD's
+        # tile called one band "0.8% under" (closed print) and "5.24% above"
+        # (live print) in the same breath, and badged "Reclaiming" a band the
+        # tape had already left. His call, after seeing the numbers — "Ok it
+        # should be ok to be there. but I know its not 5% band thats ok.." —
+        # so the name STAYS: `BOUNCE_DONE_PCT` is untouched, nothing about who
+        # qualifies moves, and ONLY the words change. Every sentence is built
+        # in supply_demand/deep_demand_wording.py, which guards each clause on
+        # its own inputs — a missing field renders shorter, never raises.
+        # The LIVE map, not `_live_px` — that helper falls back to the scan's
+        # `last_price`, so asking it would call every tile "live" on a day the
+        # tape is unreachable, which is the lie in miniature.
+        dist_basis = (DW.LIVE_BASIS if (live or {}).get(sym) is not None
+                      else DW.SCAN_BASIS)
+        # `reclaiming` is a PRIOR-CLOSE fact either way it arrives: the scan
+        # flag needs `prev_close` (deep_demand.py:363) and the live approach
+        # read is computed off the prior bar. Without one of the two behind
+        # it the clause is dropped, never asserted.
+        prev_close_known = bool(d.get("reclaiming")) or ap_badge is not None
+        why = DW.why_sentence(levels_broken=lv_broken, level=level,
+                              below_top_pct=below, dist_pct=dist,
+                              reclaiming=reclaiming,
+                              prev_close_known=prev_close_known,
+                              dist_basis=dist_basis, sales_growth_pct=g)
 
-        badges = [{"text": (f"🩹 Reclaiming {DD.ordinal(level)} band" if reclaiming
-                             else f"🩹 In {DD.ordinal(level)} demand band" if in_now
-                             else f"🩹 Entering {DD.ordinal(level)} band"), "tone": "warn"}]
+        badges = [{"text": DW.badge_text(level, dist, reclaiming),
+                   "tone": "warn"}]
         if ap_badge:
             badges.insert(0, {"text": ap_badge["text"], "tone": ap_badge["tone"]})
             why = f"{why} — {ap_badge['_text']}"
@@ -3863,6 +3865,15 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             # Flat, so it reaches the FE. NOT a stats row: the board is dense
             # and the badge already says which level it is standing in.
             "levels_broken": lv_broken,
+            # WHICH PRINT the position sentence was measured on, and the
+            # number it quoted (2026-09-17). DESCRIPTIVE ONLY — these three
+            # order nothing, gate nothing and hide nothing; they exist so the
+            # FE and a test can check that the words match the state without
+            # re-deriving it. `left_band` is NOT a membership read: the drop
+            # tolerance is still `BOUNCE_DONE_PCT` (7.0) on `drop_bounced`.
+            "print_basis": dist_basis,
+            "dist_pct": _num(dist),
+            "left_band": _num(dist) is not None and _num(dist) > 0,
             "lines": lines,
             "markers": [],
             "stats": stats,
@@ -3919,7 +3930,18 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         _picked = " / ".join(DD.ordinal(n) for n in sorted(levels_sel))
         levels_note = (f" Showing {_picked} level arrivals only — "
                        f"{hidden_by_level} hidden by the level filter.")
+    # WHICH PRINT the position numbers on this page were taken on
+    # (2026-09-17). Counted over the tiles actually SERVED, so the sentence
+    # describes the page in front of him. Descriptive only — it orders
+    # nothing, gates nothing and drops nothing.
+    _live_n = sum(1 for t in out if t.get("print_basis") == DW.LIVE_BASIS)
+    position_basis = {"live": _live_n, "scan": len(out) - _live_n,
+                      "note": DW.basis_note(
+                          DW.LIVE_BASIS if _live_n else DW.SCAN_BASIS,
+                          _live_n, len(out))}
+    basis_note = f" {position_basis['note']}" if position_basis["note"] else ""
     return {"tiles": out, **meta,
+            "position_basis": position_basis,
             # The per-level filter (Ajay 2026-09-16). `levels` echoes the
             # NORMALISED selection, so a garbage spec comes back as "all" and
             # the chips render the state the board actually served.
@@ -3957,7 +3979,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"{_room_meta(min_room, 0)['min_room']:g}% of room to the first band "
                      f"overhead on the live print ({hidden_low_room} hidden). These fail the "
                      f"trend gate BY DESIGN — size and stop accordingly."
-                     f"{levels_note}{depth_note}"),
+                     f"{levels_note}{basis_note}{depth_note}"),
             "generated_at": data.get("as_of")}
 
 

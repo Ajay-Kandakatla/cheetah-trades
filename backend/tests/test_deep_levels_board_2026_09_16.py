@@ -96,7 +96,7 @@ def test_b1_a_third_level_arrival_draws_both_crossed_levels_and_the_one_it_is_in
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     t = _one([_deep3()], prices, reentry_stub, sales_stub)["tiles"][0]
     assert _labels(t) == ["1st demand · broken", "2nd demand · broken",
-                          "3rd demand · entering"]
+                          "3rd demand level · price inside"]
     assert [b["kind"] for b in t["bands"]] == ["supply", "supply", "demand"]
     # geometry untouched: the bands are drawn where the scan put them
     assert [(b["lo"], b["hi"]) for b in t["bands"]] == [
@@ -121,7 +121,7 @@ def test_b2_negative_a_single_crossed_level_draws_the_two_bands_it_always_did(
         prices, reentry_stub, sales_stub, monkeypatch):
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     t = _one([_deep_row("ONE")], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert _labels(t) == ["1st demand · broken", "2nd demand · entering"]
+    assert _labels(t) == ["1st demand · broken", "2nd demand level · price inside"]
     assert "3rd demand" not in " ".join(_labels(t))
 
 
@@ -130,11 +130,14 @@ def test_b2_negative_the_approaching_and_reclaiming_labels_are_unchanged_at_leve
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     near = _one([_deep_row("NEAR", state="near", dist=1.2)],
                 prices, reentry_stub, sales_stub, phase="approaching")["tiles"][0]
-    assert "2nd demand · approaching" in _labels(near)
+    # 2026-09-17: the label says where the PRINT is. This fixture's `near`
+    # row carries a scan print of 82.0, inside its own 80-85 band — the
+    # label used to say "approaching" beside a why line reading "now in".
+    assert "2nd demand level · price inside" in _labels(near)
     rec = _deep_row("RECL")
     rec["deep_demand"]["reclaiming"] = True
     t = _one([rec], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert "2nd demand · reclaiming" in _labels(t)
+    assert "2nd demand level · back in from below" in _labels(t)
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +157,7 @@ def test_b3_a_one_touch_middle_band_is_clamped_to_the_arrival_band_top(
     t = _one([row], prices, reentry_stub, sales_stub)["tiles"][0]
     assert _labels(t) == ["1st demand · broken",
                           "2nd demand · broken (1-touch swing)",
-                          "3rd demand · entering"]
+                          "3rd demand level · price inside"]
     mid = t["bands"][1]
     assert (mid["lo"], mid["hi"]) == (75.01, 85.0), "clamped to arrival.hi + 0.01"
     assert t["bands"][0]["lo"] == 90.0, "the band above clamps on the ORIGINAL 85.0, not 75.01"
@@ -169,7 +172,7 @@ def test_b3_negative_a_fully_swallowed_crossed_band_is_dropped_never_inverted(
     row["deep_demand"]["top_band"] = b1
     row["deep_demand"]["broken_bands"] = [b1, b2]
     t = _one([row], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert _labels(t) == ["1st demand · broken", "3rd demand · entering"]
+    assert _labels(t) == ["1st demand · broken", "3rd demand level · price inside"]
     for b in t["bands"]:
         assert b["hi"] > b["lo"], "no inverted band ever reaches the chart"
 
@@ -181,7 +184,7 @@ def test_b3_negative_a_crossed_band_with_no_geometry_is_skipped_not_drawn(
     b1 = _band(90.0, 95.0, oldest=150)
     row["deep_demand"]["broken_bands"] = [b1, {"lo": None, "hi": None, "touches": 3}]
     t = _one([row], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert _labels(t) == ["1st demand · broken", "3rd demand · entering"]
+    assert _labels(t) == ["1st demand · broken", "3rd demand level · price inside"]
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +211,7 @@ def test_b4_negative_the_first_crossed_band_dedupe_still_works_on_a_one_level_ro
     row["supply_zones"] = [{"kind": "supply", "lo": 90.0, "hi": 95.0,
                             "touches": 3, "strength": 50.0}]
     t = _one([row], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert _labels(t) == ["1st demand · broken", "2nd demand · entering"]
+    assert _labels(t) == ["1st demand · broken", "2nd demand level · price inside"]
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +272,7 @@ def test_b6_the_tile_carries_levels_broken_and_it_agrees_with_the_level_drawn(
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     t = _one([_deep3()], prices, reentry_stub, sales_stub)["tiles"][0]
     assert t["levels_broken"] == 2
-    assert "3rd demand · entering" in _labels(t), "level == levels_broken + 1"
+    assert "3rd demand level · price inside" in _labels(t), "level == levels_broken + 1"
 
 
 def test_b6_negative_a_row_cached_before_this_change_renders_as_one_crossed_level(
@@ -282,7 +285,7 @@ def test_b6_negative_a_row_cached_before_this_change_renders_as_one_crossed_leve
     assert "broken_bands" not in old["deep_demand"]
     t = _one([old], prices, reentry_stub, sales_stub)["tiles"][0]
     assert t["levels_broken"] == 1
-    assert _labels(t) == ["1st demand · broken", "2nd demand · entering"]
+    assert _labels(t) == ["1st demand · broken", "2nd demand level · price inside"]
 
 
 # ---------------------------------------------------------------------------
@@ -293,19 +296,23 @@ def test_b7_level_two_says_exactly_what_it_said_yesterday(
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"OK": 86.7})
     t = _one([_deep_row("OK", state="near", dist=1.2)], prices, reentry_stub,
              sales_stub, phase="approaching")["tiles"][0]
-    assert t["why"] == ("broke its 1st demand band (9% below it), now 1.96% above "
-                        "the 2nd band — sales +9% YoY say the business didn't "
+    # 2026-09-17: every number names the print it was measured on, and a
+    # print ABOVE the band is not described as arriving at it.
+    assert t["why"] == ("broke its 1st demand level (9% under that level's floor "
+                        "on the close), now 1.96% above its 2nd demand level on "
+                        "the live print — sales +9% YoY say the business didn't "
                         "break with the price")
-    assert t["badges"][0]["text"] == "🩹 Entering 2nd band"
+    assert t["badges"][0]["text"] == "🩹 Above its 2nd demand level"
 
 
 def test_b7_a_third_level_arrival_counts_the_levels_it_crossed(
         prices, reentry_stub, sales_stub, monkeypatch):
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     t = _one([_deep3()], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert t["why"].startswith("crossed 2 demand levels (20% below the first), "
-                               "now in the 3rd band — sales")
-    assert t["badges"][0]["text"] == "🩹 In 3rd demand band"
+    assert t["why"].startswith("crossed 2 demand levels (20% under the first "
+                               "level's floor on the close), now in its 3rd "
+                               "demand level on the close — sales")
+    assert t["badges"][0]["text"] == "🩹 In its 3rd demand level"
 
 
 def test_b7_the_served_sentence_never_says_now_now(
@@ -316,17 +323,19 @@ def test_b7_the_served_sentence_never_says_now_now(
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"IN2": 82.0})
     inside = _one([_deep_row("IN2")], prices, reentry_stub, sales_stub)["tiles"][0]
     assert "now now" not in inside["why"]
-    assert "now in the 2nd band" in inside["why"]
+    assert "now in its 2nd demand level on the live print" in inside["why"]
 
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     deep = _one([_deep3("IN3")], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert "now now" not in deep["why"] and "now in the 3rd band" in deep["why"]
+    assert ("now now" not in deep["why"]
+            and "now in its 3rd demand level on the close" in deep["why"])
 
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {"UP3": 76.5})
     above = _one([_deep3("UP3", state="near", dist=2.0)], prices, reentry_stub,
                  sales_stub, phase="approaching")["tiles"][0]
     assert "now now" not in above["why"]
-    assert "now 1.96% above the 3rd band" in above["why"]
+    assert ("now 1.96% above its 3rd demand level on the live print"
+            in above["why"])
 
 
 def test_b7_negative_the_shared_dist_text_is_untouched_for_every_other_board():
@@ -345,9 +354,11 @@ def test_b7_negative_a_reclaim_keeps_its_suffix_at_every_level(
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     row = _deep3("RC3", reclaiming=True)
     t = _one([row], prices, reentry_stub, sales_stub)["tiles"][0]
-    assert "now in the 3rd band (reclaimed from below)" in t["why"]
-    assert t["badges"][0]["text"] == "🩹 Reclaiming 3rd band"
-    assert "3rd demand · reclaiming" in _labels(t)
+    # The reclaim is a PRIOR-CLOSE fact and is now said as one (2026-09-17).
+    assert ("now in its 3rd demand level on the close (yesterday closed under it)"
+            in t["why"])
+    assert t["badges"][0]["text"] == "🩹 Back in its 3rd demand level from below"
+    assert "3rd demand level · back in from below" in _labels(t)
 
 
 # ---------------------------------------------------------------------------
@@ -449,7 +460,12 @@ def test_r1_a_row_with_no_below_top_pct_does_not_take_the_whole_board_down(
     syms = [t["symbol"] for t in out["tiles"]]
     assert "GOOD" in syms and "NOBELOW" in syms
     t = next(t for t in out["tiles"] if t["symbol"] == "NOBELOW")
-    assert t["why"] == "3rd-level demand arrival with Bonde-intact sales"
+    # 2026-09-17: the clause it cannot measure is DROPPED — the rest of the
+    # sentence, which it can, is still said. It is never rendered as "(0%)".
+    assert t["why"] == ("crossed 2 demand levels, now in its 3rd demand level "
+                        "on the close — sales +9% YoY say the business didn't "
+                        "break with the price")
+    assert "0%" not in t["why"]
 
 
 def test_r1_negative_the_fallback_sentence_is_never_hardcoded_second_level(
@@ -463,7 +479,7 @@ def test_r1_negative_the_fallback_sentence_is_never_hardcoded_second_level(
     out = _one([row], prices, reentry_stub, sales_stub)
     t = out["tiles"][0]
     if "with Bonde-intact sales" in t["why"]:
-        assert t["why"].startswith(f"{DD.ordinal(3)}-level")
+        assert f"its {DD.ordinal(3)} demand level" in t["why"]
     assert "second-level" not in t["why"]
 
 
@@ -566,10 +582,10 @@ def test_l1_a_fourth_level_arrival_draws_three_crossed_levels(
     monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
     t = _one([_deep4()], prices, reentry_stub, sales_stub)["tiles"][0]
     assert _labels(t) == ["1st demand · broken", "2nd demand · broken",
-                          "3rd demand · broken", "4th demand · entering"]
+                          "3rd demand · broken", "4th demand level · price inside"]
     assert t["levels_broken"] == 3
-    assert t["badges"][0]["text"] == "🩹 In 4th demand band"
-    assert "now in the 4th band" in t["why"]
+    assert t["badges"][0]["text"] == "🩹 In its 4th demand level"
+    assert "now in its 4th demand level on the close" in t["why"]
 
 
 # ── L2. the filter hides only what it should ───────────────────────────────
