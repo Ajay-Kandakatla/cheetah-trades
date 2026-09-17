@@ -236,7 +236,7 @@ floor alone**; room 0.3% (`NEAR`) → off it again on the room floor.
   block (`→ $80` target, band kind in the tooltip, "· scan close" when the
   basis is the scan) with `⛔ into supply` on every **measured** read under the
   floor. Exactly two states; a third number would be one Ajay did not give.
-* Chart Maps zones + deep_demand: a `Room ≥ 5%` / `Any room` control inside the
+* Chart Maps zones + deep_demand: a `Room ≥ 5%` / `any room` control inside the
   phase toggle (URL `room=any` only when off), "N hidden: room < 5%" note, and
   the tile stat `room: +12.4% -> 84.10` / `open sky` / `in band`.
 * The plan line names the target's band kind — `Target $80.12 (+0.3%, supply
@@ -261,3 +261,91 @@ floor alone**; room 0.3% (`NEAR`) → off it again on the room floor.
 | Deep rows measure to their broken first band | `test_attach_room_covers_deep_rows_against_their_SECOND_band` |
 | Legacy cache readers are untouched | `test_cached_or_warm_applies_the_room_floor_only_when_asked` |
 | The number is the alert number, imported | `test_room_floor_default_IS_the_alert_gate_number_imported_not_retyped` |
+
+---
+
+## 7. The room toggle is a VIEW filter — one list, two floors (2026-09-17)
+
+Ajay, the morning every board read BLOCKED for `room < 5%` and Deep Demand was
+quietly holding back 106 names:
+
+> "Can you give me a ROOM filter toggle in AMD please or any please so I can
+> look at stocks with Any room"
+
+### What it does, and what it deliberately does not
+
+The toggle changes **what he can look at**. It changes **no rule**. Nothing is
+gated on it: not a push, not an entry, not a lane, not a stop, not a threshold.
+The phone's gate stays `alert_gates.ALERT_MIN_ROOM_PCT = 5.0` whatever the
+board is showing, and `room_floor.MIN_ROOM_DEFAULT` stays the served default —
+so the board opens on exactly the list it opened on before, and only a
+deliberate click widens it.
+
+### Two floors, and why there is no third
+
+`lib/bounceRoom.ts` `ROOM_FLOORS` — **one array, now the only one in the
+repo** — holds exactly:
+
+| key | label | meaning |
+|---|---|---|
+| `String(ROOM_MIN_PCT)` (`5`) | `🧱 Room ≥ 5% (default)` | the alert gate's own floor, mirrored |
+| `'0'` | `🧱 any room` | floor off; under-floor names come back, flagged `⛔ into supply` |
+
+There is no 2%, no 10%, no slider. Every threshold on these surfaces has to come
+from an enforcing constant, and there is no constant for any other floor — a
+third entry would be a number nobody gave. The list used to be declared inside
+`DemandReentryPanel.tsx` while `ChartMaps.tsx` hard-coded the same two states as
+literal buttons; that is how the panel and the board drift into offering
+different floors, so both now render `ROOM_FLOORS.map(...)` and the hidden-count
+note names the off-entry by `ANY_ROOM_LABEL` rather than retyping its wording.
+
+### Which tabs honour it
+
+`min_room` reaches ONLY the four tabs whose builder applies a room floor —
+`board.board()` routes them to `zone_tiles` / `deep_demand_tiles` /
+`quick_bounce_tiles` / `breaking_tiles`, each of which calls `drop_low_room()`
+and answers `_room_meta()`:
+
+| tab | builder | honours `min_room` |
+|---|---|---|
+| `zones` (Back in Demand) | `zone_tiles` | yes |
+| `deep_demand` (🪜 Deep Demand) | `deep_demand_tiles` | yes |
+| `quick_bounce` (🪃 Quick reversal) | `quick_bounce_tiles` | yes |
+| `breaking` (🚀 Breaking) | `breaking_tiles` | yes |
+| `amd`, `keltner` (🌀 Turning Bullish) | `turning_bullish_tiles` | **no** |
+| `ict`, `vcp`, `supply`, `topping`, `gabbar`, `undervalue`, `earnings`, `winners` | their own | **no** |
+
+`amd` is the tab he named, and it has no room read at all. The control is
+therefore **hidden** there rather than shown inert: `ROOM_TABS` in
+`lib/chartMaps.ts` mirrors that routing, `boardQuery` drops the param on every
+other tab, and a control that looked like it worked and did nothing would be a
+worse answer than no control.
+
+### Saying what is hidden
+
+`_room_meta()` serves `{min_room, min_room_default, hidden_low_room}` on every
+room tab, and the page renders the count whenever it is non-zero:
+
+> **106 hidden: room < 5% to the first unbroken band overhead on the live print
+> (the phone's own gate) — pick _🧱 any room_ to see them.**
+
+The note is rendered from the payload, so it describes what the **server** hid
+on the print it actually read, and it shows even when the floor hid every tile —
+which is when it matters most. A payload with no `hidden_low_room` (an old
+cache) renders no note and does not take the control away.
+
+### Guards
+
+| Decision | Guard |
+|---|---|
+| Exactly one `ROOM_FLOORS` in the whole tree | contracts.mjs whole-tree scan; `ROOM_FLOORS must be declared exactly once` |
+| Exactly two floors, `ROOM_MIN_PCT` and 0, nothing invented | `carries no floor other than ROOM_MIN_PCT and 0 — a third is a number nobody gave` |
+| Both surfaces import the list; neither re-declares it | `NEGATIVE: ...`, contracts.mjs `DemandReentryPanel re-declares ROOM_FLOORS` |
+| "any room" sends `min_room=0` on every room tab | `POSITIVE: "any room" rides as min_room=0 on every room tab` |
+| The `amd` tab offers no control and sends no floor | `NEGATIVE: the amd tab — the one he named — has no room read` |
+| A tab with no room read never receives the param | `NEGATIVE: a tab with no room read never receives the param, at either floor` |
+| The hidden count reaches him, with the way out named | `says how many names the floor hid and names the way out of it` |
+| `hidden_low_room: 0` and a missing key both render nothing | `NEGATIVE: hidden_low_room 0 ...`, `NEGATIVE: a payload with NO hidden_low_room ...` |
+
+Tests: `frontend/src/pages/ChartMapsRoomFilter.test.tsx` (13), plus the
+2026-09-05 block in `frontend/src/pages/ChartMaps.test.tsx`.

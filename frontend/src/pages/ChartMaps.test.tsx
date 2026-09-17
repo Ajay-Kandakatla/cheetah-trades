@@ -627,7 +627,7 @@ describe('the room floor (Ajay 2026-09-05)', () => {
     const a = render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
     const ctl = await screen.findByRole('tablist', { name: 'Room floor' });
     expect(within(ctl).getByRole('tab', { name: /Room ≥ 5%/ })).toHaveAttribute('aria-selected', 'true');
-    expect(within(ctl).getByRole('tab', { name: /Any room/ })).toHaveAttribute('aria-selected', 'false');
+    expect(within(ctl).getByRole('tab', { name: /any room/i })).toHaveAttribute('aria-selected', 'false');
     a.unmount();
 
     const b = render(<MemoryRouter initialEntries={['/chart-maps?tab=deep_demand']}><ChartMaps /></MemoryRouter>);
@@ -650,7 +650,7 @@ describe('the room floor (Ajay 2026-09-05)', () => {
 
     const b = render(<MemoryRouter initialEntries={['/chart-maps?tab=deep_demand&room=any']}><ChartMaps /></MemoryRouter>);
     const ctl = await screen.findByRole('tablist', { name: 'Room floor' });
-    expect(within(ctl).getByRole('tab', { name: /Any room/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(ctl).getByRole('tab', { name: /any room/i })).toHaveAttribute('aria-selected', 'true');
     expect(urlsOf().some((u: string) => u.includes('tab=deep_demand') && u.includes('min_room=0'))).toBe(true);
     b.unmount();
   });
@@ -659,7 +659,7 @@ describe('the room floor (Ajay 2026-09-05)', () => {
     vi.stubGlobal('fetch', stubFetch({ zones: ROOM_BOARD }));
     render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
     const ctl = await screen.findByRole('tablist', { name: 'Room floor' });
-    fireEvent.click(within(ctl).getByRole('tab', { name: /Any room/ }));
+    fireEvent.click(within(ctl).getByRole('tab', { name: /any room/i }));
     await waitFor(() => expect(urlsOf().some((u: string) => u.includes('tab=zones') && u.includes('min_room=0'))).toBe(true));
     const before = urlsOf().length;
     fireEvent.click(within(ctl).getByRole('tab', { name: /Room ≥ 5%/ }));

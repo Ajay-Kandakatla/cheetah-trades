@@ -226,6 +226,37 @@ export function demandChipText(row?: BounceRoomRow | null): string | null {
  *  % from the print to the first unbroken band overhead. Not a book number. */
 export const ROOM_MIN_PCT = 5;
 
+/** The ONE room-floor list (moved here 2026-09-17, Ajay: "Can you give me a
+ *  ROOM filter toggle in AMD please or any please so I can look at stocks with
+ *  Any room"). It lived in DemandReentryPanel.tsx and Chart Maps rendered its
+ *  own copy of the same two states; a second copy is how the two surfaces drift
+ *  into offering different floors. Every surface that lets him move the floor
+ *  now renders THIS list.
+ *
+ *  EXACTLY TWO ENTRIES, and that is the whole design (Ajay 2026-09-05: "stocks
+ *  that have more room atleast >5%"): the alert gate's own floor
+ *  (ALERT_MIN_ROOM_PCT = 5.0, owner setting, mirrored as ROOM_MIN_PCT) or off.
+ *  There is no 2% and no 10% because there is no constant for one — a third
+ *  number would be a threshold nobody gave, and the phone and the board must
+ *  keep describing the same list.
+ *
+ *  It is a VIEW filter. It gates nothing: no alert, no entry, no lane, no
+ *  stop. Picking "any room" widens what he can LOOK at and changes no rule. */
+export const ROOM_FLOORS: { key: string; label: string }[] = [
+  { key: String(ROOM_MIN_PCT), label: `🧱 Room ≥ ${ROOM_MIN_PCT}% (default)` },
+  { key: '0', label: '🧱 any room' },
+];
+
+/** The label of the floor-OFF entry, read off the list rather than retyped, so
+ *  a readout that says "pick X to see them" can never name a control that does
+ *  not exist. Throws at module load if the list ever loses its `0` entry —
+ *  better than a hidden-count note quietly pointing at nothing. */
+export const ANY_ROOM_LABEL: string = (() => {
+  const off = ROOM_FLOORS.find((f) => Number(f.key) === 0);
+  if (!off) throw new Error('ROOM_FLOORS lost its "any room" (0) entry');
+  return off.label;
+})();
+
 /** True when a MEASURED room read clears the floor: CLEAR (nothing overhead)
  *  or room_pct >= ROOM_MIN_PCT. IN_BAND (0.0), NEAR / ROOM under the floor,
  *  pending, unavailable, unloaded and malformed reads are all false — an

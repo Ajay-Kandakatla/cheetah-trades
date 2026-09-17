@@ -613,6 +613,13 @@ export type CmBoard = {
    *  owner setting) and how many tiles it hid. Ajay: "stocks that have more
    *  room atleast >5%". 0 = floor off. */
   min_room?: number;
+  /** The HOUSE floor the server would have used had the board not asked for
+   *  one (`board._room_meta` → `room_floor.MIN_ROOM_DEFAULT`, 2026-09-17). It
+   *  is what "default" means in the toolbar, served rather than retyped, so a
+   *  change to the owner setting reaches the page without a frontend edit.
+   *  Absent on a cache written before this shipped; the page falls back to its
+   *  own mirror (DEFAULT_MIN_ROOM). */
+  min_room_default?: number;
   hidden_low_room?: number;
   /** 🩹 Deep Demand only (2026-09-16) — the arrival-level filter, echoed back.
    *  `"all"` (the default) or the normalised ascending comma list the server

@@ -681,6 +681,35 @@ const CONTRACTS = [
       const m = src.match(/export const ROOM_MIN_PCT\s*=\s*([\d.]+)\s*;/);
       if (!m) errs.push('bounceRoom.ts lost ROOM_MIN_PCT');
       else if (Number(m[1]) !== 5) errs.push(`ROOM_MIN_PCT is ${m[1]} — must mirror ALERT_MIN_ROOM_PCT = 5.0 (backend/supply_demand/alert_gates.py)`);
+      // ONE room-floor list, two entries, no invented floor (2026-09-17). Both
+      // the Chart Maps toolbar and the Back in Demand panel render THIS array;
+      // a second copy is how the two surfaces drift into different floors. A
+      // WHOLE-TREE scan, not a two-file check — the duplicate this guards
+      // against is the one someone adds in a file nobody thought to list.
+      const roomDecls = [];
+      const scanRoomFloors = (dir) => {
+        for (const name of readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true })) {
+          const rel = `${dir}/${name.name}`;
+          if (name.isDirectory()) scanRoomFloors(rel);
+          else if (/\.(ts|tsx|js|jsx)$/.test(name.name)
+                   && /^\s*(export\s+)?const ROOM_FLOORS\b/m.test(read(rel))) {
+            roomDecls.push(rel);
+          }
+        }
+      };
+      scanRoomFloors('src');
+      if (roomDecls.length !== 1 || roomDecls[0] !== 'src/lib/bounceRoom.ts') {
+        errs.push(`ROOM_FLOORS must be declared exactly once, in src/lib/bounceRoom.ts — found [${roomDecls.join(', ')}]`);
+      }
+      const floors = src.match(/export const ROOM_FLOORS[^=]*=\s*\[([\s\S]*?)\];/);
+      if (!floors) errs.push('bounceRoom.ts lost ROOM_FLOORS — the one shared room-floor list');
+      else {
+        const keys = [...floors[1].matchAll(/key:\s*(?:'([^']*)'|String\(ROOM_MIN_PCT\))/g)]
+          .map((k) => (k[1] === undefined ? 'ROOM_MIN_PCT' : k[1]));
+        if (keys.length !== 2 || keys[0] !== 'ROOM_MIN_PCT' || keys[1] !== '0') {
+          errs.push(`ROOM_FLOORS must be exactly [ROOM_MIN_PCT, '0'] — got [${keys.join(', ')}]. A third floor is a threshold nobody gave.`);
+        }
+      }
       if (!/export function roomGroup\(/.test(src) || !/export function roomOk\(/.test(src)) {
         errs.push('bounceRoom.ts lost roomOk / roomGroup — the sort no longer puts bounces INTO supply under room-ok rows');
       }
@@ -698,12 +727,49 @@ const CONTRACTS = [
         errs.push('DemandReentryPanel no longer sends min_room on the demand-reentry GET / POST');
       }
       if (!/aria-label="Room floor"/.test(panel)) errs.push('DemandReentryPanel lost the Room floor selector');
+      if (/^\s*const ROOM_FLOORS/m.test(panel)) {
+        errs.push('DemandReentryPanel re-declares ROOM_FLOORS — it must import the one list from lib/bounceRoom.ts');
+      }
+      if (!/\bROOM_FLOORS\b[^\n]*from '\.\.\/lib\/bounceRoom'|ROOM_FLOORS,/.test(panel)) {
+        errs.push('DemandReentryPanel no longer imports ROOM_FLOORS from lib/bounceRoom');
+      }
       if (!/dropped_low_room/.test(panel)) errs.push('DemandReentryPanel no longer reports dropped_low_room');
       const page = read('src/pages/ChartMaps.tsx');
       if (!/aria-label="Room floor"/.test(page)) errs.push('ChartMaps lost the Room floor control');
       const gate = page.slice(Math.max(0, page.indexOf('aria-label="Room floor"') - 260), page.indexOf('aria-label="Room floor"'));
       if (!/\{ROOM_TAB && \(/.test(gate)) errs.push('ChartMaps Room floor control is not gated on ROOM_TAB (zones / deep_demand only)');
+      // The toolbar carries the room control, built from the shared list, and
+      // the hidden count reaches HIM with a way out of it (2026-09-17). A
+      // filter that hides rows silently is the failure this pins against.
+      if (!/ROOM_FLOORS\.map\(/.test(page)) {
+        errs.push('ChartMaps Room floor control no longer renders from the shared ROOM_FLOORS list (lib/bounceRoom.ts)');
+      }
+      if (!/import \{ ROOM_FLOORS \} from '\.\.\/lib\/bounceRoom'/.test(page)) {
+        errs.push("ChartMaps no longer imports ROOM_FLOORS from '../lib/bounceRoom' — the two surfaces could drift to different floors");
+      }
       if (!/hidden_low_room/.test(page)) errs.push('ChartMaps no longer reports hidden_low_room');
+      if (!/data-testid="hidden-low-room"/.test(page)) {
+        errs.push('ChartMaps lost the hidden-low-room readout — the room floor would hide tiles silently');
+      }
+      // THE INVARIANT is that the readout names a control that EXISTS on this
+      // toolbar — not which module the string came from. The floors are shared
+      // so the panel and the tiles cannot offer different ones; the wording is
+      // this page's own (its buttons have read "Any room" since 2026-09-05).
+      // One labeller feeds both the buttons and the readout, so they cannot
+      // disagree; pinning bounceRoom's label here is what sent the readout
+      // pointing at a button that did not exist.
+      if (!/function cmRoomLabel\(/.test(page)) {
+        errs.push('ChartMaps lost cmRoomLabel — the buttons and the hidden-count readout could name the room control differently');
+      }
+      if (!/const CM_ANY_ROOM_LABEL = cmRoomLabel\(0\)/.test(page)) {
+        errs.push('ChartMaps no longer derives its "any room" wording from cmRoomLabel(0)');
+      }
+      if (!/<em>\{CM_ANY_ROOM_LABEL\}<\/em>/.test(page)) {
+        errs.push('ChartMaps hidden-low-room readout no longer names the "any room" control it actually renders');
+      }
+      if (!/\{cmRoomLabel\(floor\)\}/.test(page)) {
+        errs.push('ChartMaps room buttons no longer label themselves through cmRoomLabel');
+      }
       if (!/minRoom:\s*ROOM_TAB \? minRoom : undefined/.test(page)) errs.push('ChartMaps no longer passes minRoom into boardQuery for the two demand boards');
       const tr = read('src/pages/Trading.tsx');
       if (!/import\s*\{[^}]*\bJournalByStrategy\b[^}]*\}\s*from\s*'\.\.\/components\/JournalByStrategy'/.test(tr)) {

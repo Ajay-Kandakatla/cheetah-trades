@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TickerLink } from './TickerLink';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import {
-  ROOM_MIN_PCT, bounceLabel, compareBounceRoom, coverageNote, roomLabel,
+  ROOM_FLOORS, ROOM_MIN_PCT, bounceLabel, compareBounceRoom, coverageNote, roomLabel,
   type BounceRoomRow, type RoomRead, type RoomState,
 } from '../lib/bounceRoom';
 import { DemandTrackRecord } from './DemandTrackRecord';
@@ -157,13 +157,12 @@ const RR_FLOORS: { key: string; label: string }[] = [
 /* Room floor (Ajay 2026-09-05): "I need the same logic in Demand and deep
  * demand zone. So that there are stocks that have more room atleast >5%".
  * Two options only — the alert gate's floor (ALERT_MIN_ROOM_PCT = 5.0, owner
- * setting, mirrored as ROOM_MIN_PCT) or off. Not a tunable: the phone and the
- * board must describe the same list, and a third number would be one Ajay did
- * not give. Sent to the server as min_room on both the read and the scan. */
-const ROOM_FLOORS: { key: string; label: string }[] = [
-  { key: String(ROOM_MIN_PCT), label: `🧱 Room ≥ ${ROOM_MIN_PCT}% (default)` },
-  { key: '0', label: '🧱 any room' },
-];
+ * setting, mirrored as ROOM_MIN_PCT) or off. Sent to the server as min_room on
+ * both the read and the scan.
+ *
+ * The LIST itself moved to lib/bounceRoom.ts on 2026-09-17 so this panel and
+ * the Chart Maps toolbar offer the same two floors from the same array — see
+ * ROOM_FLOORS there for why there is no third entry. */
 
 /** The server's room block as the shared RoomRead so ONE label / ONE sort
  *  rule (lib/bounceRoom.ts) covers both the board's own read and the

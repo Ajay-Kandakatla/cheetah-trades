@@ -34,6 +34,22 @@ import {
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   type CmBoard, type CmTab,
 } from '../lib/chartMaps';
+// The room floor's TWO states come from the one shared list (2026-09-17) — the
+// same array the Back in Demand panel renders. See lib/bounceRoom.ts.
+import { ROOM_FLOORS } from '../lib/bounceRoom';
+
+/** This toolbar's label for a room floor. The FLOORS are shared (bounceRoom's
+ *  ROOM_FLOORS, so the panel and the tiles can never offer different ones); the
+ *  WORDING is local, because a dense tile toolbar labels tighter than a panel
+ *  select and these buttons have read this way since 2026-09-05.
+ *
+ *  ONE function, used by the buttons AND by the hidden-count readout that tells
+ *  him which button to press — naming a control with a string the control does
+ *  not carry is how a readout starts pointing at nothing. */
+export function cmRoomLabel(floor: number): string {
+  return floor === 0 ? 'Any room' : `🧱 Room ≥ ${floor}%`;
+}
+const CM_ANY_ROOM_LABEL = cmRoomLabel(0);
 import { SupportLevels } from '../components/SupportLevels';
 import { SignalLabBoard } from '../components/SignalLabBoard';
 import { HottestSectors } from '../components/HottestSectors';
@@ -694,24 +710,40 @@ export function ChartMaps() {
             * 3rd, per the crossed-level walk of 2026-09-16 — the tile draws
             * every level already crossed and says how many), and the lens tabs
             * measure to their own screens' bands. */}
-          {/* Room floor (Ajay 2026-09-05), the two demand boards only. Two
+          {/* Room floor (Ajay 2026-09-05), the room-gated boards only. Two
             * states, not a slider: the phone's gate (≥ 5% from the live print
             * to the first unbroken band overhead — ALERT_MIN_ROOM_PCT, owner
             * setting) or off. A tile at its lid is hidden by default and
-            * counted under the board; Any room shows it. */}
+            * counted under the board; "any room" shows it.
+            *
+            * The two entries come from lib/bounceRoom.ts ROOM_FLOORS — the SAME
+            * array the Back in Demand panel renders (2026-09-17) — so the two
+            * surfaces can never offer different floors. It is a VIEW filter and
+            * gates nothing: no alert, no entry, no stop moves when he changes
+            * it. Hidden entirely on a tab whose builder has no room read (the
+            * amd / keltner turning-bullish tabs, ict, vcp, gabbar …) rather
+            * than shown inert — ROOM_TABS mirrors board.board()'s routing. */}
           {ROOM_TAB && (
             <span className="cm-phase-sub" role="tablist" aria-label="Room floor"
-                  title={`Room = % from the LIVE print to the first unbroken band overhead (supply not broken under yesterday's close, plus demand bands above). The phone only pages names with ≥ ${DEFAULT_MIN_ROOM}%; this floor hides the rest here too. TRU 2026-09-05: 0.3% under a supply band — hidden.`}>
-              <button type="button" role="tab" aria-selected={minRoom !== 0}
-                      className={`cm-phase-btn${minRoom !== 0 ? ' cm-phase-on' : ''}`}
-                      onClick={() => setRoom('floor')}>
-                🧱 Room ≥ {DEFAULT_MIN_ROOM}%
-              </button>
-              <button type="button" role="tab" aria-selected={minRoom === 0}
-                      className={`cm-phase-btn${minRoom === 0 ? ' cm-phase-on' : ''}`}
-                      onClick={() => setRoom('any')}>
-                Any room
-              </button>
+                  title={`Room = % from the LIVE print to the first unbroken band overhead (supply not broken under yesterday's close, plus demand bands above). The phone only pages names with ≥ ${data?.min_room_default ?? DEFAULT_MIN_ROOM}%; this floor hides the rest here too. TRU 2026-09-05: 0.3% under a supply band — hidden. A view filter only — it changes nothing the alerts or the lanes do.`}>
+              {/* The FLOORS come from the shared list so the two surfaces can
+                * never offer different ones; the LABELS stay this toolbar's own.
+                * Rendering bounceRoom's label strings here renamed buttons Ajay
+                * has used since 2026-09-05 ("Any room" -> "any room (default)")
+                * for no ask — the value of sharing is the numbers, not the
+                * wording, and a dense tile toolbar labels tighter than a panel
+                * select does. */}
+              {ROOM_FLOORS.map((f) => {
+                const floor = Number(f.key);
+                const on = minRoom === floor;
+                return (
+                  <button key={f.key} type="button" role="tab" aria-selected={on}
+                          className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
+                          onClick={() => setRoom(floor === 0 ? 'any' : 'floor')}>
+                    {cmRoomLabel(floor)}
+                  </button>
+                );
+              })}
             </span>
           )}
           {/* 🩹 Arrival level (Ajay 2026-09-16: "can you do level 4 and give me
@@ -1205,10 +1237,12 @@ export function ChartMaps() {
         * what the SERVER hid on the print it actually read — and it shows even
         * when the floor hid every tile, which is when it matters most. */}
       {!!data?.hidden_low_room && (
-        <p className="cm-note" data-testid="hidden-low-room">
-          {data.hidden_low_room} hidden: room &lt; {data.min_room ?? DEFAULT_MIN_ROOM}% to the
+        <p className="cm-note" data-testid="hidden-low-room"
+           title={`Hidden by the room floor: fewer than ${data.min_room ?? data.min_room_default ?? DEFAULT_MIN_ROOM}% from the live print to the first unbroken band overhead. Pick "${CM_ANY_ROOM_LABEL}" to see them flagged ⛔. The floor is a view filter — nothing is gated on it.`}>
+          {data.hidden_low_room} hidden: room &lt;{' '}
+          {data.min_room ?? data.min_room_default ?? DEFAULT_MIN_ROOM}% to the
           first unbroken band overhead on the live print (the phone's own gate) — pick
-          {' '}<em>Any room</em> to see them.
+          {' '}<em>{CM_ANY_ROOM_LABEL}</em> to see them.
         </p>
       )}
       {/* 🩹 Arrival-level filter count (2026-09-16). Served, like the room
