@@ -44,6 +44,7 @@ import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HoldingsBoard from '../components/HoldingsBoard';
 import HotSectors from '../components/HotSectors';
+import IndexZones from '../components/IndexZones';
 import OverlayLegend from '../components/OverlayLegend';
 import { filterForGrid, filterTile, hiddenForTab, loadHidden, presentGroups,
          saveHidden, studiesWanted, tabFamily } from '../lib/chartOverlays';
@@ -579,6 +580,20 @@ export function ChartMaps() {
                 : [part])
           : TAB_META[tab].blurb}
       </p>
+
+      {/* 🧭 SPY · QQQ, PINNED to the Back in Demand tab (Ajay 2026-09-16:
+        * "Can you create a SPY demand and supply zone please for me? and also
+        * QQQ supply and demand zone and keep them always in the in demand zone
+        * page. I need everything calculation overnight.")
+        *
+        * Mounted HERE, above every branch below it, on purpose: "keep them
+        * always" means the strip renders while the scan is warming, while the
+        * board is erroring, when nothing matched and when his filters have cut
+        * the grid to zero. Everything under this line is the universe pass and
+        * its controls — these two tickers are not in it and must never be
+        * filtered, ordered or gated by it. An absent payload draws the strip's
+        * own placeholder; it never renders nothing. */}
+      {tab === 'zones' && <IndexZones data={data?.index_zones} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry

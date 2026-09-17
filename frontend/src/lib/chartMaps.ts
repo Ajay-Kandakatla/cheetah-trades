@@ -181,7 +181,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   zones: {
     label: 'Back in Demand',
-    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. Order (2026-09-03): the approaching boards rank closest to the level first; money flow (CMF) breaks ties within a 0.5% distance bucket; Back in Demand keeps reward:risk first. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. Order (2026-09-03): the approaching boards rank closest to the level first; money flow (CMF) breaks ties within a 0.5% distance bucket; Back in Demand keeps reward:risk first. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot. 🧭 SPY and QQQ are pinned above this board (2026-09-16) as a strip with a CHART each — every stored band drawn on it, at two resolutions you can flip between (Fine, the finer geometry; Board, the very set the demand engine and the tiles below are drawn with) — plus the full level ladder folded underneath. Computed overnight from closed daily bars, never filtered or ordered by the controls here, and context only: they gate nothing and claim nothing.',
   },
   earnings: {
     label: 'Earnings Flow',
@@ -452,6 +452,145 @@ export type CmLidBreak = {
   disclaimer?: string | null;
 };
 
+/* ── 🧭 SPY / QQQ index zones (2026-09-16) ───────────────────────────────────
+ *
+ * Ajay, verbatim: "Can you create a SPY demand and supply zone please for me?
+ * and also QQQ supply and demand zone and keep them always in the in demand
+ * zone page. I need everything calculation overnight."
+ *
+ * Served by backend/supply_demand/index_zones.py off the 04:05 ET zone_store
+ * warm and STORED — the page reads one doc a night and re-derives no band. The
+ * shape below is the contract both sides code against; the frontend adds
+ * nothing to it and computes no level of its own.
+ *
+ * TWO BASES, IN TWO SETS OF KEYS. `close` / `bands` / `ceiling` / `floor` /
+ * `room_pct` / `drop_pct` / `sentence` are all read off the CLOSED bars of
+ * `as_of`. The `live_*` keys are the live-print overlay applied at read time
+ * by index_zones.with_live(); they say where price is standing and never move
+ * a band. A read built at 04:20 and the same read at 15:00 carry identical
+ * stored keys — that is the whole point of the split.
+ */
+export type CmIndexZoneBand = {
+  kind: 'supply' | 'demand';
+  lo: number; hi: number; mid?: number;
+  touches?: number; strength?: number;
+  /** Where the CLOSED-bar close sits relative to this band. */
+  side?: 'above' | 'below' | 'in';
+  dist_pct?: number | null;
+};
+
+/** The nearest band above (`ceiling`) or below (`floor`) — ANY kind, because
+ *  broken support is resistance. Both null when the stored structure has none
+ *  on that side.
+ *
+ *  `kind` (2026-09-16) is the band's ORIGIN, and it is printed: Ajay's note
+ *  from Pankaj Kenjale says "when a demand zone is broken, it becomes a supply
+ *  zone and similarly when a supply zone is broken, it becomes a demand zone",
+ *  which is already how the engine picks these two — nearest on each side,
+ *  whatever it started as. A ceiling that reads "demand" is support price has
+ *  gone under, and that fact is invisible if only the colour carries it. */
+export type CmIndexZoneEdge = {
+  lo: number; hi: number; dist_pct?: number | null;
+  kind?: 'supply' | 'demand' | null;
+};
+
+/** ONE geometry's worth of a read. The backend serves two under
+ *  `CmIndexZoneRead.resolutions` (2026-09-16), on Ajay's "I wanna see charts
+ *  with multiple zones":
+ *    board — demand_reentry.zone_geom(), the geometry the demand engine and
+ *            every tile on the Chart Maps grid already draw with (7 bands on
+ *            each index, median band ~3% wide).
+ *    fine  — the price_zones module's own defaults (14 bands on SPY, 13 on
+ *            QQQ, median band ~1.1% wide).
+ *  Both are EXISTING settings; neither number was invented for this strip, and
+ *  neither was taken off a hand-drawn note (gabbar_backtest_2026_08_31: hand
+ *  levels are contaminated as a measurement). Same closed bars behind both. */
+export type CmIndexZoneResolution = {
+  bands?: CmIndexZoneBand[];
+  in_band?: CmIndexZoneBand | null;
+  ceiling?: CmIndexZoneEdge | null;
+  floor?: CmIndexZoneEdge | null;
+  room_pct?: number | null;
+  drop_pct?: number | null;
+  sentence?: string | null;
+  /* THE LIVE OVERLAY IS PER RESOLUTION (2026-09-16 review). `with_live`
+   * recurses into each set, because where the print sits depends on which
+   * bands you are looking at: a print that is INSIDE a ~3%-wide board band is
+   * routinely BETWEEN two ~1.1%-wide fine bands. The strip reads these off the
+   * set it is drawing (izLiveSource); reading the flat keys under a fine chart
+   * named a band that was on no visible surface. */
+  live_px?: number | null;
+  live_side?: 'above' | 'below' | 'in' | 'between' | null;
+  live_in_band?: CmIndexZoneBand | null;
+  live_dist_pct?: number | null;
+  live_chg_pct?: number | null;
+  price_basis?: string | null;
+};
+
+export type CmIndexZoneRead = {
+  symbol: string;
+  name?: string | null;
+  /** The CLOSED-bar date the bands were drawn from. Every stored number on the
+   *  read is on this session; the page prints it over them. */
+  as_of?: string | null;
+  close?: number | null;
+  atr14?: number | null;
+  high_252?: number | null;
+  /** High → low, the backend's order. Never re-sorted on the page. */
+  bands?: CmIndexZoneBand[];
+  in_band?: CmIndexZoneBand | null;
+  ceiling?: CmIndexZoneEdge | null;
+  floor?: CmIndexZoneEdge | null;
+  room_pct?: number | null;
+  drop_pct?: number | null;
+  /** ONE plain line naming where price sits, built by the backend from the
+   *  numbers. Never a verdict and never advice. */
+  sentence?: string | null;
+  source?: string | null;
+  /** The two geometries, keyed `board` / `fine` (2026-09-16). The flat keys
+   *  above stay populated for a doc written before this shipped, and the strip
+   *  falls back to them — a legacy doc renders a full card and no toggle. */
+  resolutions?: Record<string, CmIndexZoneResolution | null | undefined> | null;
+  /** Which resolution to open on. The backend sends 'fine'. */
+  default_resolution?: string | null;
+  /** CLOSED daily bars, windowed by the backend to hold every band in either
+   *  resolution — the chart the strip draws (Ajay 2026-09-16: "I wanna see
+   *  charts with multiple zones"). Never carries today's partial bar, and a
+   *  live print is never appended to it. */
+  bars?: CmBar[];
+  /* The live overlay — its own keys, applied at read time, never merged over
+   * the stored ones above. */
+  live_px?: number | null;
+  live_dist_pct?: number | null;
+  live_in_band?: CmIndexZoneBand | null;
+  /** Measured against the WHOLE stored structure: 'in' a band, 'above' every
+   *  band, 'below' every band, or 'between' two of them and inside none. The
+   *  last one is the open-air case, and it is emitted. */
+  live_side?: 'above' | 'below' | 'in' | 'between' | null;
+  /** The backend's own label for what the live number is. Printed verbatim. */
+  price_basis?: string | null;
+};
+
+export type CmIndexZones = {
+  /** The stored day. */
+  date?: string | null;
+  indexes?: Record<string, CmIndexZoneRead | null | undefined> | null;
+  /** CALENDAR days since the stored day — NOT sessions. A Friday doc read on
+   *  Monday is 3 calendar days and 1 session old, and printing the 3 beside the
+   *  word "session" is a different number wearing the wrong word. Printed, and
+   *  only ever as calendar days. */
+  stale_days?: number | null;
+  /** TRADING sessions since the stored day (2026-09-16). This is the one the
+   *  header prints as "N sessions old". Printed, never a gate. */
+  stale_sessions?: number | null;
+  /** Which resolution the strip opens on. The backend names it at the PAYLOAD
+   *  level, not per read — reading it off a read was always undefined on the
+   *  wire, and the page only opened on fine because a local fallback said so
+   *  (2026-09-16 review). */
+  default_resolution?: string | null;
+  note?: string | null;
+};
+
 export type CmBoard = {
   tab: CmTab;
   count: number;
@@ -579,6 +718,12 @@ export type CmBoard = {
    *  null when the sort was not chosen, or when it could not run (the reason is
    *  then in `sort_unavailable`). */
   band_structure_scope?: string | null;
+  /** 🧭 SPY / QQQ, pinned to the Back in Demand tab (2026-09-16). Computed
+   *  overnight and stored; the strip renders in EVERY state of the board and
+   *  is never filtered, ordered or gated by the controls above it. Absent on
+   *  every other tab, and absent here until the nightly job has run — the
+   *  strip draws its own placeholder rather than vanishing. */
+  index_zones?: CmIndexZones | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

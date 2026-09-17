@@ -28,6 +28,7 @@ from . import zone_edge as zone_edge_mod
 from . import bounce_room as bounce_room_mod
 from . import alert_status as alert_status_mod
 from . import rules_info as rules_info_mod
+from . import index_zones as index_zones_mod
 
 log = logging.getLogger("supply_demand.api")
 router = APIRouter(tags=["supply-demand"])
@@ -310,6 +311,47 @@ async def get_zone_edge():
     """
     import asyncio
     return await asyncio.to_thread(zone_edge_mod.api_payload)
+
+
+@router.get("/supply-demand/index-zones")
+async def get_index_zones():
+    """SPY and QQQ supply/demand structure — the pinned strip on the Back in
+    Demand tab (Ajay 2026-09-16: *"create a SPY demand and supply zone ... and
+    also QQQ ... and keep them always in the in demand zone page. I need
+    everything calculation overnight."*).
+
+    READ ONLY. The bands are drawn once overnight by
+    `python -m supply_demand.index_zones` off CLOSED bars and stored; this
+    route never computes them. A cold store returns the empty shape with the
+    reason in `note` — 200, never a 500, because a missing context strip must
+    say why rather than break the board that pins it.
+
+    `{date, as_of, indexes, stale_days, stale_sessions, default_resolution,
+    note}`. `date` is the day the overnight job ran; `as_of` is the SESSION the
+    bands are drawn from (zone_store drops today's bar, so it is the prior
+    one), and staleness is measured on `as_of`, never on the job day.
+
+    Each index entry carries the closed-bar BOARD read at the top level
+    (`as_of`, `close`, `bands`, `in_band`, `ceiling`, `floor`, `room_pct`,
+    `drop_pct`, `sentence`) plus:
+
+      `resolutions` — the same read at BOTH geometries: `board`
+        (`demand_reentry.zone_geom()`, ~7 bands) and `fine` (the `price_zones`
+        module defaults, ~14). `default_resolution` says which one the page
+        opens on.
+      `bars` / `bars_basis` — CLOSED daily candles ({t,o,h,l,c,v}) windowed to
+        show every band in both sets.
+
+    A live print lands in its OWN keys (`live_px`, `live_dist_pct` = distance
+    to the nearest band edge, `live_chg_pct` = the day move off the stored
+    close, `live_in_band`, `live_side`, `price_basis`) on the entry and on each
+    resolution. A snapshot never overwrites a stored number.
+
+    Configured price-structure context, NOT a book method. It gates nothing,
+    alerts nothing and claims no edge — see docs/supply_demand/index_zones.md.
+    """
+    import asyncio
+    return await asyncio.to_thread(index_zones_mod.api_payload)
 
 
 @router.get("/alerts/status")

@@ -178,6 +178,24 @@
 # the shared price cache; no provider call per symbol. Budget 240s.
 5      4     *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.zone_store
 #
+# ── SPY / QQQ index zones (Ajay 2026-09-16) ──────────────────────────────────
+# "Can you create a SPY demand and supply zone please for me? and also QQQ
+# supply and demand zone and keep them always in the in demand zone page. I
+# need everything calculation overnight." Plus, with a screenshot of a hand-
+# drawn SPX level ladder: "I wanna see charts with multiple zones".
+#
+# supply_demand/index_zones.py warms AFTER the 04:05 zone_store pass (240s
+# budget, so 04:15 clears it) and writes ONE Mongo `index_zones` doc for the
+# day holding, per symbol, BOTH geometries — board (swing 5 / merge 4 /
+# half-width 1.75, the set every tile and the demand engine use, ~7 bands) and
+# fine (the price_zones module defaults, ~14 bands, the set the strip opens on
+# because he asked for multiple zones) — plus the closed daily bars the chart
+# is drawn from. Everything is computed HERE; the page and the endpoint only
+# read, and a live print is overlaid at read time without moving a band.
+# The strip is pinned to Chart Maps -> Back in Demand and is never filtered by
+# that board's controls. It gates nothing, alerts nothing and enters no lane.
+15     4     *    *    1-5  /usr/local/bin/python -m market_hours.gate supply_demand.index_zones
+#
 # ── ICT Chart Maps tab (Ajay 2026-09-03 late) ────────────────────────────────
 # "create a new chart maps tab for ICT Strategy, replace supply tab with this
 # new tab." ict/engine.py: daily key levels (fractal swings + raw fair value

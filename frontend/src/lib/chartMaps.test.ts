@@ -1948,3 +1948,55 @@ describe('2026-09-14 verification fixes', () => {
     expect(out.map((l) => l.text)).toEqual(expect.arrayContaining(['STOP', 'BUY', 'TARGET']));
   });
 });
+
+/* 🧭 SPY · QQQ index zones (2026-09-16).
+ *
+ * Ajay, verbatim: "Can you create a SPY demand and supply zone please for me?
+ * and also QQQ supply and demand zone and keep them always in the in demand
+ * zone page. I need everything calculation overnight."
+ *
+ * The blurb is the only place the BOARD says what the pinned strip is. It has
+ * to carry the three facts that keep it from being misread: it is computed
+ * overnight, it is not part of this board's screen, and it claims nothing.
+ */
+describe('Back in Demand blurb names the pinned SPY/QQQ strip', () => {
+  it('says overnight, closed bars, and that the board controls do not touch it', () => {
+    const b = TAB_META.zones.blurb;
+    expect(b).toMatch(/SPY and QQQ are pinned above this board/);
+    expect(b).toMatch(/computed overnight from closed daily bars/i);
+    expect(b).toMatch(/never filtered or ordered by the controls here/);
+    expect(b).toMatch(/they gate nothing and claim nothing/);
+  });
+
+  /* 2026-09-16, the follow-up: "I wanna see charts with multiple zones" ·
+   * "For both QQQ and SPY". The blurb is the only place this board tells him
+   * the strip above it is a chart at all, and the one thing it MUST get right
+   * is that "Board" up there is the very geometry the tiles below are drawn
+   * with — reading a FINE band as a board band is the single mistake a second
+   * resolution makes possible. */
+  it('names the chart and the two resolutions, and which one the tiles use', () => {
+    const b = TAB_META.zones.blurb;
+    expect(b).toMatch(/a CHART each/);
+    expect(b).toMatch(/two resolutions/i);
+    expect(b).toMatch(/Board, the very set the demand engine and the tiles below are drawn with/);
+    expect(b).toMatch(/full level ladder folded underneath/);
+  });
+
+  it('negative: the strip is never described as a signal or a reversal call', () => {
+    const b = TAB_META.zones.blurb;
+    // The sentence added for the strip, isolated from the rest of the blurb.
+    const strip = b.slice(b.indexOf('\u{1F9ED}'));
+    expect(strip).not.toMatch(/bounce/i);
+    expect(strip).not.toMatch(/\bsignal\b/i);
+    expect(strip).not.toMatch(/\bbuy\b|\bsell\b/i);
+    expect(strip).not.toMatch(/\bedge\b/i);
+  });
+
+  // The board's existing order copy must survive the addition — the strip is
+  // pinned ABOVE the screen, it did not change how the screen ranks.
+  it('negative: the proximity-first order copy is untouched', () => {
+    const b = TAB_META.zones.blurb;
+    expect(b).toMatch(/closest to the level first/i);
+    expect(b).toMatch(/Back in Demand keeps reward:risk first/);
+  });
+});

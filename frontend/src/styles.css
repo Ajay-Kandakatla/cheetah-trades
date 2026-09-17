@@ -12860,3 +12860,139 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-verdict.cm-study > summary.cm-study-head > .cm-study-title,
 .bd-verdict .bd-vh { margin: 0; }
 .bd-verdict.cm-study > summary.cm-study-head { align-items: center; }
+
+/* ── 🧭 SPY · QQQ index zones, pinned to Back in Demand (2026-09-16) ──────
+   Ajay: "keep them always in the in demand zone page". Two compact cards side
+   by side, stacking on a narrow window. Supply and demand carry different
+   left-border colours AND different label text, so the two are distinguishable
+   without relying on colour alone; the band price is standing in is the only
+   one that gets a filled ground. Nothing here is a tone-as-verdict: the colours
+   say WHICH KIND OF BAND, never good or bad. */
+.iz {
+  border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem 0.6rem;
+  margin: 0.2rem 0 0.7rem;
+}
+.iz-strip-head { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.iz-strip-title { font-weight: 700; font-size: 0.86rem; }
+.iz-strip-sub { font-style: normal; font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
+.iz-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.45rem;
+}
+@media (max-width: 760px) { .iz-cards { grid-template-columns: minmax(0, 1fr); } }
+.iz-card {
+  border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem 0.5rem;
+  min-width: 0;
+}
+.iz-head { display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.iz-sym { font-size: 0.92rem; letter-spacing: 0.02em; }
+.iz-name { font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
+/* The two basis lines. They sit directly over the numbers they describe and
+   they are the reason this strip cannot repeat the hot-sectors mix-up. */
+.iz-basis { margin: 0.2rem 0 0; font-size: 0.7rem; color: var(--cm-slate, #94a3b8); }
+.iz-live {
+  margin: 0.15rem 0 0;
+  font-size: 0.7rem;
+  color: var(--warn, #fbbf24);
+}
+/* The resolution toggle (2026-09-16). Two arms, never one: a legacy doc with a
+   single geometry renders no toggle at all rather than a control that cannot
+   move. The note beside it names which set is on screen, because reading a
+   FINE band as the BOARD's band is the one mistake a second resolution makes
+   possible. */
+.iz-res {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin: 0.35rem 0 0;
+}
+.iz-res-btn {
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  padding: 0.14rem 0.4rem;
+  border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cm-slate, #94a3b8);
+  cursor: pointer;
+}
+.iz-res-btn:hover { color: var(--ink, #e7e7e7); }
+.iz-res-on {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--ink, #e7e7e7);
+  font-weight: 600;
+}
+.iz-res-note {
+  flex: 1 1 100%;
+  font-size: 0.66rem;
+  color: var(--cm-slate, #94a3b8);
+}
+/* The chart — his headline ask ("I wanna see charts with multiple zones").
+   Drawn by PatternChart, the same component every tile on this page uses, so
+   the strip's bands and the grid's bands cannot come to look like two
+   different things. The tile chrome is suppressed here: the strip is context
+   above a board, not a 25th tile competing with it. */
+.iz-chart { margin: 0.35rem 0 0; }
+.iz-chart .cm-tile {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}
+/* The card already prints the symbol and the fund name; the tile's own id
+   block would say it a second time an inch below. The badge row stays — the
+   TradingView and Signals buttons are the only interactive things on it. */
+.iz-chart .cm-tile-head { margin-bottom: 0.1rem; justify-content: flex-end; }
+.iz-chart .cm-tile-id { display: none; }
+.iz-chart .cm-tile-why, .iz-chart .cm-tile-stats { display: none; }
+.iz-note.cm-study { margin: 0.3rem 0 0; }
+.iz-note.cm-study > summary.cm-study-head > strong { font-weight: 600; font-size: 0.76rem; }
+.iz-edges { margin: 0.25rem 0 0; font-size: 0.72rem; }
+.iz-ladder {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+.iz-band {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.71rem;
+  padding: 0.12rem 0.3rem;
+  border-left: 3px solid transparent;
+  border-radius: 3px;
+}
+.iz-band-supply { border-left-color: var(--negative, #f87171); }
+.iz-band-demand { border-left-color: var(--positive, #22c55e); }
+.iz-band-in { background: rgba(148, 163, 184, 0.12); }
+.iz-band-kind {
+  flex: 0 0 auto;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.62rem;
+  opacity: 0.8;
+  min-width: 3.6rem;
+}
+.iz-band-supply .iz-band-kind { color: var(--negative, #f87171); }
+.iz-band-demand .iz-band-kind { color: var(--positive, #22c55e); }
+.iz-band-range { font-variant-numeric: tabular-nums; }
+.iz-band-meta { color: var(--cm-slate, #94a3b8); }
+.iz-band-where { color: var(--cm-slate, #94a3b8); margin-left: auto; }
+.iz-band-in .iz-band-where { color: inherit; font-weight: 600; }
+.iz-placeholder, .iz-dim {
+  margin: 0.25rem 0 0;
+  font-size: 0.7rem;
+  color: var(--cm-slate, #94a3b8);
+}

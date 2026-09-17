@@ -2336,7 +2336,14 @@ def test_zone_tiles_lead_with_which_way_it_got_here(prices, reentry_stub, monkey
     # board() shared by the extended-hours now-line and the 🎯 enterable read.
     # The second is not new — `attach_live_now` always made it; it went through
     # `bulk_live_prices` directly, where this spy could not see it.
-    assert calls == [["BNCE", "FALL", "NOLIVE"], ["BNCE", "FALL", "NOLIVE"]], \
+    #
+    # 2026-09-16: the builder's fetch now also carries the PINNED index strip's
+    # symbols (SPY / QQQ, supply_demand.index_zones.INDEXES). That is the
+    # point — the strip rides this call rather than opening a third one — so
+    # the count stays at two and only the first list grows.
+    from supply_demand import index_zones as _IZ
+    assert calls == [sorted(["BNCE", "FALL", "NOLIVE"] + list(_IZ.INDEXES)),
+                     ["BNCE", "FALL", "NOLIVE"]], \
         "one fetch per builder, one for the overlays — never one per overlay"
     by = {t["symbol"]: t for t in out["tiles"]}
     assert by["FALL"]["badges"][0] == {"text": f"↓ Falling into the band from {hi * 1.12:g} (-{(1 - lo * 1.002 / (hi * 1.12)) * 100:.1f}% today)", "tone": "warn"}
@@ -3016,3 +3023,22 @@ def test_the_BAND_SORT_IS_offered_on_a_tab_that_has_a_band_read(prices, reentry_
     keys = {s["key"] for s in out["sorts"]}
     assert "band_structure" in keys
     assert keys == set(B.SORTS), "no other sort was dropped on the way"
+
+
+def test_the_index_strip_degrades_to_the_index_zones_empty_shape(monkeypatch):
+    """2026-09-16 follow-up: the strip now carries two resolutions and chart
+    bars, so its failure shape has more keys than the four it shipped with.
+    ONE builder owns that shape (`index_zones.empty_payload`) — a degrade path
+    that invents its own keys is how the page starts branching on shape."""
+    from supply_demand import index_zones as IZ
+
+    def boom(**kw):
+        raise RuntimeError("index doc exploded")
+
+    monkeypatch.setattr(IZ, "served", boom)
+    out = B._index_strip({"SPY": None, "QQQ": None})
+    assert set(out) == set(IZ.PAYLOAD_KEYS)
+    assert out["indexes"] == {} and out["date"] is None and out["as_of"] is None
+    assert out["stale_days"] is None and out["stale_sessions"] is None
+    assert out["default_resolution"] == IZ.DEFAULT_RESOLUTION
+    assert out["note"], "a strip that fails still says why"

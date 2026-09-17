@@ -2312,6 +2312,139 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧭 the SPY/QQQ strip is pinned on the zones tab, says nothing about an edge, and never says "bounce" (2026-09-16)',
+    file: 'src/pages/ChartMaps.tsx',
+    // Ajay 2026-09-16, verbatim: "Can you create a SPY demand and supply zone
+    // please for me? and also QQQ supply and demand zone and keep them always
+    // in the in demand zone page. I need everything calculation overnight."
+    //
+    // "KEEP THEM ALWAYS" is a MOUNT-POINT fact, and a mount point is exactly
+    // the kind of thing a rebase moves silently: dropped one level down into
+    // the board branch, the strip would still render in every test that draws
+    // a populated board and would vanish on the warming / erroring / empty
+    // board — which is the only state he complained about. So the contract
+    // pins that it sits OUTSIDE the board-tab branch, gated on `zones` alone.
+    checks(src) {
+      const errs = [];
+      if (!/import IndexZones from '\.\.\/components\/IndexZones'/.test(src))
+        errs.push('ChartMaps no longer imports IndexZones');
+      const mount = /\{tab === 'zones' && <IndexZones data=\{data\?\.index_zones\} \/>\}/.exec(src);
+      if (!mount) {
+        errs.push("the pinned strip is not mounted as {tab === 'zones' && <IndexZones data={data?.index_zones} />}");
+      } else {
+        // It must come BEFORE the board-tab ternary — everything after that
+        // line is the universe pass and its warming / error / empty branches.
+        // Anchored on the JSX arm, not on the bare call: `!isBoardTab(tab)`
+        // also appears in the loader, hundreds of lines above the render.
+        const branch = src.indexOf(') : !isBoardTab(tab) ? (');
+        if (branch < 0)
+          errs.push('the board-tab ternary arm moved — re-anchor this contract');
+        else if (mount.index > branch)
+          errs.push('the strip is mounted INSIDE the board branch — it would vanish while the board is warming, erroring or empty');
+      }
+      let strip = '';
+      try {
+        strip = read('src/components/IndexZones.tsx');
+      } catch {
+        return [...errs, 'src/components/IndexZones.tsx is missing'];
+      }
+      // Every copy check runs on the source with its COMMENTS REMOVED and its
+      // whitespace flattened. Comments removed because this file's header
+      // explains the rules in the same words the copy uses — a contract a
+      // comment can satisfy protects nothing (caught by mutating the live
+      // sentence and watching the contract still pass). Whitespace flattened
+      // because JSX text wraps across lines, so a re-indent would otherwise
+      // disarm it in the other direction.
+      const flat = strip
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
+        .replace(/\s+/g, ' ');
+      if (/\bbounce\b/i.test(strip))
+        errs.push('house rule: the word is "reversal", never "bounce"');
+      for (const [re, why] of [
+        [/\b(an|the|its|our|measured|proven|real)\s+edge\b/i, 'the strip claims an edge'],
+        [/\boutperform/i, 'the strip claims outperformance'],
+        [/\b(buy|sell)\s+(signal|here|now|zone|the)\b/i, 'the strip reads as a buy/sell instruction'],
+        [/\b(will|should)\s+(bounce|reverse|rally|hold|break)\b/i, 'the strip forecasts'],
+      ]) {
+        if (re.test(strip)) errs.push(why);
+      }
+      // …and it must say plainly what it is not.
+      if (!/gates nothing, orders nothing, alerts nothing and enters nothing/.test(flat))
+        errs.push('the strip must say it gates, orders, alerts and enters nothing');
+      // The two bases have to stay separately labelled — this is the
+      // 2026-09-16 hot-sectors correction, and it is one careless edit away.
+      if (!/closed daily bars/.test(flat))
+        errs.push('the strip must label the bands as closed-bar structure');
+      if (!/it does not move a band/.test(flat))
+        errs.push('the live overlay must say it does not move a band');
+
+      /* ── 2026-09-16, the follow-up: "I wanna see charts with multiple
+       * zones" · "For both QQQ and SPY". The picture IS the ask, so a
+       * refactor that quietly leaves the text ladder alone on the card has
+       * undone the feature even though every copy check above still passes. */
+      if (!/import \{ PatternChart \} from '\.\/PatternChart'/.test(strip))
+        errs.push('the strip no longer imports PatternChart — the chart is his headline ask');
+      if (!/<PatternChart tile=\{tile\}/.test(strip))
+        errs.push('the chart is not mounted — the card must lead with the picture, not the ladder');
+      if (!/index-zone-chart-/.test(strip))
+        errs.push('the chart has no testId — it cannot be pinned');
+      // The chart is drawn from the SERVED closed bars, never from a live
+      // print: `bars` comes off the read and nothing appends to it.
+      if (!/Array\.isArray\(read\?\.bars\)/.test(strip))
+        errs.push('the chart must draw the SERVED closed bars');
+      if (/live_px[^\n]{0,80}bars|bars[^\n]{0,40}live_px/.test(strip))
+        errs.push('a live print must never reach the chart bars');
+
+      // The resolution toggle, and the labelling that keeps a FINE band from
+      // being read as the BOARD band the rest of the page is drawn with.
+      if (!/IZ_RES_KEYS/.test(strip) || !/'fine'/.test(strip) || !/'board'/.test(strip))
+        errs.push('the fine/board resolution keys are gone');
+      if (!/aria-pressed=\{value === k\}/.test(strip))
+        errs.push('the resolution toggle is not a pressed-state control');
+      if (!/index-zone-res-/.test(strip))
+        errs.push('the resolution toggle has no testId');
+      if (!/the set the demand engine and every tile under this strip are drawn with/.test(flat))
+        errs.push('the Board arm must say it is the set the rest of the page is drawn with');
+      if (!/Both are the same closed daily bars/.test(flat))
+        errs.push('the toggle must say both resolutions sit on the same closed bars');
+
+      // F1: the strip owns a FALLBACK request, because the board's load()
+      // only setData()s on success — a 500 there used to make this card
+      // announce an empty store about a doc that was sitting there fine.
+      if (!/\/supply-demand\/index-zones/.test(strip))
+        errs.push("the strip has no fallback fetch — a board 500 would blank it");
+      if (!/the overnight job has not written one/.test(flat))
+        errs.push('the empty-store placeholder copy is gone');
+      if (!/request failure, not an empty store/.test(flat))
+        errs.push('a failed request and an empty store must not share one sentence');
+
+      // F2: sessions are counted with the SESSIONS key. `stale_days` is
+      // calendar days and must never be printed beside the word "session".
+      if (!/stale_sessions/.test(strip))
+        errs.push('the header must print stale_sessions for the session count');
+      if (/stale_days[^;]{0,120}session\b/.test(strip))
+        errs.push('calendar days are being printed as sessions');
+
+      // F7: the edges print their KIND — that is his source note's
+      // broken-zone flip made visible on the page.
+      if (!/e\.kind === 'supply'/.test(strip))
+        errs.push('the ceiling/floor no longer print which kind of band they are');
+      if (!/broken through is overhead from/.test(flat))
+        errs.push('the card must explain that either nearest band can be either kind');
+
+      // …and none of the new copy may claim the strip is worth anything.
+      for (const [re, why] of [
+        [/\bwin rate\b/i, 'the strip quotes a win rate'],
+        [/\bbacktest(ed)?\b/i, 'the strip claims it was backtested'],
+        [/\bhigh[- ]probability\b/i, 'the strip claims a probability'],
+      ]) {
+        if (re.test(strip)) errs.push(why);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

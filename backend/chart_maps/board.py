@@ -370,6 +370,61 @@ def _live_last(symbols: list, rows: Optional[dict] = None) -> dict:
     return {k: _snapshot_print(v) for k, v in live.items()}
 
 
+# ---------------------------------------------------------------------------
+# The PINNED index strip on the Back in Demand tab (Ajay 2026-09-16: "create a
+# SPY demand and supply zone ... and also QQQ ... and keep them always in the
+# in demand zone page"). It is NOT a tile and NOT a row: it is never filtered,
+# ordered or gated by the board's controls (phase / room floor / liquidity /
+# limit), and it is served on the WARMING branch too — a pinned strip that
+# disappears while the board scans is not pinned.
+#
+# Structure is READ, never derived here: supply_demand.index_zones serves the
+# doc its overnight job stored off CLOSED bars. Context only — it gates
+# nothing, alerts nothing and claims no edge.
+# ---------------------------------------------------------------------------
+def _index_symbols() -> list:
+    """The strip's symbols, so they ride the board's EXISTING bulk live-price
+    fetch instead of adding a second provider call per request."""
+    try:
+        from supply_demand import index_zones as IZ
+        return list(IZ.INDEXES)
+    except Exception:                                          # noqa: BLE001
+        return []
+
+
+def _index_strip(live: Optional[dict] = None) -> dict:
+    """`index_zones.PAYLOAD_KEYS` for the pinned strip — the two index reads at
+    BOTH resolutions (board / fine) with their closed-bar chart bars.
+
+    `live` is the board's own {SYMBOL: print} map when it already fetched one
+    (the strip's symbols ride that fetch); passing it — even all-None after a
+    tape outage — stops index_zones going back to the provider. None (the
+    warming branch, which has no rows and therefore no fetch) lets it take one
+    bulk snapshot of two symbols.
+
+    NEVER raises: a failure to read the index doc must not take the board
+    down, so the empty shape with a reason is the worst case.
+    """
+    try:
+        from supply_demand import index_zones as IZ
+        prints = ({s: (live or {}).get(s) for s in IZ.INDEXES}
+                  if live is not None else None)
+        return IZ.served(live=prints)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("chart maps: index strip unavailable: %s", exc)
+        note = "Index structure is unavailable right now."
+        try:
+            # ONE empty shape, owned by the module that defines the contract —
+            # a degrade path that invents its own keys is how a page starts
+            # branching on shape.
+            from supply_demand import index_zones as IZ
+            return IZ.empty_payload(note)
+        except Exception:                                      # noqa: BLE001
+            return {"date": None, "as_of": None, "indexes": {},
+                    "stale_days": None, "stale_sessions": None,
+                    "default_resolution": None, "note": note}
+
+
 def _approach_badge(sym: str, band: Optional[dict], live_rows: dict, live: dict) -> Optional[dict]:
     """How the LIVE print reached the demand band, in writing (Ajay
     2026-09-08: "nearing demand zone from the top like falling or Bouncing
@@ -2481,6 +2536,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         return {"tiles": [], "warming": True,
                 "universe_key": data.get("universe_key") or universe,
                 "progress": data.get("progress"),
+                # Pinned: the strip is there WHILE the board is still scanning.
+                "index_zones": _index_strip(),
                 "note": "scanning for demand-zone pullbacks…"}
 
     # A 2x2 since 2026-08-31 ("hit the 'In the orderblock' to see all the
@@ -2497,7 +2554,10 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     else:
         rows = [r for r in (data.get("rows") or []) if r.get("is_reentry")]
     matched = len(rows)
-    live_rows = _live_rows([r.get("symbol") for r in rows])   # fetched ONCE, reused
+    # Fetched ONCE and reused — by the bounce gate, the room floor, the
+    # read-time re-rank AND the pinned index strip, which is why the strip's
+    # symbols ride along here instead of costing a second provider call.
+    live_rows = _live_rows([r.get("symbol") for r in rows] + _index_symbols())
     live = _live_last([r.get("symbol") for r in rows], live_rows)
     rows, dropped_bounced = drop_bounced(
         rows, lambda r: _bounce_ref_hi(r, phase, target), live)
@@ -2712,6 +2772,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     _heat_decor(out)
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
+            # Pinned, never filtered / ordered / gated by the controls above.
+            "index_zones": _index_strip(live),
             "phase": ("approaching" if phase == "approaching" else "reached"),
             "target": ("order_block" if target == "order_block" else "zone"),
             "matched": matched,
