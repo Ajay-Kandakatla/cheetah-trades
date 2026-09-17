@@ -54,6 +54,52 @@ def test_numbers_come_from_the_enforcing_modules():
     assert ("%d positions" % RR.MAX_POSITIONS) in p
 
 
+def test_the_deep_demand_prose_is_built_from_the_enforcing_constants():
+    """🕳️ Deep Demand, widened 2026-09-16 (Ajay: "the stocks that crosses the
+    first level of support and lying in second or third level of support").
+
+    The panel line must state the DEPTH CAP and the band bar, and every figure
+    in it has to come from the module that enforces it — `deep_demand`'s own
+    cap and ordinal, `demand_reentry`'s band bar, `price_zones`' near scale.
+    A retyped "2nd or 3rd" is exactly how this panel went stale before."""
+    from supply_demand import deep_demand as DD
+    from supply_demand import price_zones as PZ
+
+    t = _text(RI.sections()["deep_demand"])
+    assert DD.ordinal(DD.MAX_LEVELS_BROKEN + 1) in t              # "3rd"
+    assert ("(%d crossed)" % DD.MAX_LEVELS_BROKEN) in t
+    assert RI._pct(PZ.NEAR_PCT) in t
+    assert ("≥ %d touches" % DR.MIN_TOUCHES) in t
+    assert ("strength ≥ %d" % int(DR.MIN_ZONE_STRENGTH)) in t
+    assert "crossed one or more demand bands" in t and "next level down" in t
+    assert "band being ENTERED" in t
+    # the old fixed-pair wording must be gone
+    assert "SECOND band from the top" not in t
+    # house rule: the word on any surface he reads is "reversal", never "bounce"
+    assert "bounce" not in t.lower()
+
+
+def test_the_deep_demand_prose_types_no_number_of_its_own():
+    """NEGATIVE, the mutation guard: not one numeric literal may appear inside
+    a quoted string of the Deep Demand block — every number must arrive
+    through a %s/%d fed by a constant. If MAX_LEVELS_BROKEN, MIN_TOUCHES,
+    MIN_ZONE_STRENGTH or NEAR_PCT moves, the panel moves with it."""
+    import inspect
+    import re
+
+    src = inspect.getsource(RI.sections)
+    start = src.index('out["deep_demand"]')
+    end = src.index('out["alerts"]', start)
+    block = src[start:end]
+    literals = re.findall(r'"([^"\\]*)"', block)
+    joined = " ".join(literals)
+    assert "Deep Demand" in joined, "the block was not located"
+    offenders = [s for s in literals if any(ch.isdigit() for ch in s)]
+    assert offenders == [], f"Deep Demand prose types its own numbers: {offenders}"
+    for typed in ("40", "3%", "2nd", "3rd", "second or third"):
+        assert typed not in joined, typed
+
+
 def test_sd_sections_never_cite_the_book():
     """feedback_sepa_book_scope: S/D rules carry no Minervini cites; only the
     Auto-Pilot section names the book for its Minervini lane."""

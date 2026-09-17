@@ -96,9 +96,15 @@ describe('TAB_META ordering copy (2026-09-03, proximity-first)', () => {
     expect(b).toMatch(/Back in Demand keeps reward:risk first/);
   });
 
-  it('Deep Demand says in-band first, then nearest, CMF within a bucket', () => {
+  // 2026-09-16: the board walks the served bands instead of the fixed first
+  // pair, so the level it lists a name at is its ARRIVAL band (2nd or 3rd) and
+  // the copy has to say so. The ORDER did not change — proximity first, CMF
+  // inside a bucket — and the retuned pin below has to keep proving that, or a
+  // reader would think a deeper name now ranks higher.
+  it('Deep Demand says arrival-band first, then nearest, CMF within a bucket', () => {
     const b = TAB_META.deep_demand.blurb;
-    expect(b).toMatch(/inside the second band first, then the nearest approaching names/);
+    expect(b).toMatch(/inside their arrival band first, then the nearest approaching names/);
+    expect(b).toMatch(/Order \(2026-09-03, unchanged\)/);
     expect(b).toMatch(/within a distance bucket money flow \(CMF\) ranks/);
     expect(b).toMatch(/supersedes the 2026-08-26 CMF-first order/);
   });
@@ -1424,11 +1430,45 @@ describe('the Deep Demand tab', () => {
     // The copy must carry the gate's NAME and floor (it is Bonde's number,
     // not ours) and say these names fail the trend gate on purpose.
     const b = TAB_META.deep_demand.blurb;
-    expect(b).toMatch(/second/i);
+    // 2026-09-16: the screen is no longer "the first band broke, here is the
+    // second" — it is a WALK down the served bands, so the copy names the depth
+    // the constant allows (2nd or 3rd) instead of the word "second".
+    expect(b).toMatch(/crossed one or more demand bands and are arriving at the next level down/);
+    expect(b).toMatch(/2nd or the 3rd/);
     expect(b).toMatch(/Bonde/);
     expect(b).toMatch(/5% YoY floor/);
     expect(b).toMatch(/falling knife/i);
     expect(b).toMatch(/fail the trend gate by design/i);
+  });
+
+  it('says the chart draws EVERY crossed level, not just the first one', () => {
+    // Ajay 2026-09-16, with a screenshot of a tile: "there are two level of
+    // support in this chart and the price is at the second level of support."
+    // The picture is the ask, so the copy has to promise the picture.
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).toMatch(/Red bands are the levels already crossed, each labelled 1st \/ 2nd/);
+    expect(b).toMatch(/green is the level being entered/);
+    expect(b).toMatch(/the tile names the count once more than one was crossed/);
+  });
+
+  // NEGATIVE — the old single-broken-band claim is GONE, not merely joined by
+  // the new one, and the house word is "reversal": "bounce" must never appear
+  // on a surface Ajay reads.
+  it('NEGATIVE — no "bounce", and the old first-band-only sentence is gone', () => {
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).not.toMatch(/bounce/i);
+    expect(b).not.toMatch(/broke their FIRST demand band and are arriving at the second/);
+    expect(b).not.toMatch(/Red band is the broken first level/);
+  });
+
+  // NEGATIVE — depth is UNMEASURED (band_structure 2026-09-16 read no_signal on
+  // the adjacent claim, and a bigger first support band measured HARMFUL). The
+  // blurb must say that out loud and must never sell depth as an edge.
+  it('NEGATIVE — depth is named as unmeasured and never ranked', () => {
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).toMatch(/Depth is not a measured edge — a 3rd-level name is not ranked above a 2nd-level one/);
+    expect(b).not.toMatch(/deeper .{0,30}(better|stronger|outperform)/i);
+    expect(b).not.toMatch(/3rd-level names? (win|outperform|beat)/i);
   });
 
   it('teaches the inflow layer — what 💰 and 🔻 mean and how they rank', () => {

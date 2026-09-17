@@ -653,8 +653,10 @@ export function ChartMaps() {
           </span>
           {/* Which LEVEL the moment is measured to (Ajay 2026-08-31). Zones
             * tab only, BOTH phases — reached+order block = in the block on
-            * its first touch. Deep Demand's second band IS its level, and the
-            * lens tabs measure to their own screens' bands. */}
+            * its first touch. Deep Demand's ARRIVAL band IS its level (2nd or
+            * 3rd, per the crossed-level walk of 2026-09-16 — the tile draws
+            * every level already crossed and says how many), and the lens tabs
+            * measure to their own screens' bands. */}
           {/* Room floor (Ajay 2026-09-05), the two demand boards only. Two
             * states, not a slider: the phone's gate (≥ 5% from the live print
             * to the first unbroken band overhead — ALERT_MIN_ROOM_PCT, owner

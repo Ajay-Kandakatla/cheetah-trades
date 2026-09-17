@@ -32,9 +32,10 @@ the boards agree on one number:
   room fails a real floor (the R:R floor's rule), min_room <= 0 is OFF.
 
 ``row_entry_band(row)`` / ``row_bands(row)``
-  The band a scan row is trading (a deep row's SECOND band, else entry_zone)
-  and every band it can measure room against (nearest_resistance + both zone
-  lists + a deep row's broken top band), deduped.
+  The band a scan row is trading (a deep row's SECOND — i.e. ARRIVAL — band,
+  else entry_zone) and every band it can measure room against
+  (nearest_resistance + both zone lists + EVERY demand level a deep row
+  crossed, `deep_demand.broken_bands`), deduped.
 
 Pure, no I/O. A LEAF: imports alert_gates only — chart_maps reads it while
 tests stub demand_reentry, and demand_reentry re-exports it. Owner settings
@@ -215,14 +216,21 @@ def row_bands(row: dict, *, proven: bool = True) -> list:
     """Every band a scan row can measure room against. `nearest_resistance`
     FIRST (price_zones computes it over every band while the zone lists keep
     the strongest four per side — the KLAC lesson in decide_from_frame), then
-    both lists, then a deep row's broken top band as demand-kind (it IS in
-    demand_zones for a live row; a cached row may carry only the deep dict).
+    both lists, then EVERY demand level a deep row crossed, as demand-kind
+    (broken support is resistance — they ARE in demand_zones for a live row,
+    but a cached row may carry only the deep dict).
     Deduped; the entry band is NOT removed here (room_block does that).
     `proven=False` keeps the unproven lids for room_block's wording (D1)."""
     row = row or {}
     deep = row.get("deep_demand") or {}
     top = deep.get("top_band")
-    extra = ([{**top, "kind": "demand"}] if isinstance(top, dict) else [])
+    # 2026-09-16: a row can now be 2 levels deep, so every crossed band is a
+    # ceiling, not just the highest one. `broken_bands` is absent on rows
+    # cached before that date — fall back to the single top_band.
+    broken = deep.get("broken_bands")
+    if not isinstance(broken, list) or not broken:
+        broken = [top] if isinstance(top, dict) else []
+    extra = [{**b, "kind": "demand"} for b in broken if isinstance(b, dict)]
     return plan_bands([row.get("nearest_resistance")]
                       + list(row.get("supply_zones") or [])
                       + list(row.get("demand_zones") or [])

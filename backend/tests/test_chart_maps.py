@@ -1662,7 +1662,7 @@ def test_deep_demand_board_ranks_closest_first_then_cmf_inside_a_bucket(
 
     out = B.board("deep_demand", limit=5, min_tier="any", themes_first=False)
     assert [t["symbol"] for t in out["tiles"]] == ["HOTIN", "MILDIN", "SOLD"]
-    assert "inside the second band first" in out["note"]
+    assert "inside their arrival band first" in out["note"]
     assert "inflow names sort first" not in out["note"]
 
 
@@ -1696,7 +1696,7 @@ def test_deep_demand_in_band_leads_and_the_nearest_near_row_leads_its_phase(
     out2 = B.board("deep_demand", limit=5, min_tier="any", themes_first=False,
                    phase="approaching", min_room=0)
     assert [t["symbol"] for t in out2["tiles"]] == ["N035", "N12", "N29"]
-    assert "nearest the second band first" in out2["note"]
+    assert "nearest their arrival band first" in out2["note"]
     assert all("_score" not in t for t in out2["tiles"])
 
 

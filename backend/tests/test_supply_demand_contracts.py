@@ -21,6 +21,7 @@ docstring works hardest to keep.
 from __future__ import annotations
 
 import inspect
+import re
 import sys
 from pathlib import Path
 
@@ -1063,3 +1064,75 @@ def test_both_cap_writers_fill_a_row_through_the_same_helper():
     assert "from sepa.cap_warm import cap_fields" in vm_src, \
         "shares_for stopped deriving the cap — its next fetch will clobber cap_warm's row"
     assert "cap_fields(sym, fetched)" in vm_src
+
+
+_TRIPLE = re.compile(r"(\"\"\"|\'\'\')(?:.|\n)*?\1")
+
+
+def _code_only(src: str) -> str:
+    """`src` with its docstrings and its comments dropped, so a source scan
+    reads what the function DOES and never what its prose mentions. The
+    2026-09-16 trap: an assertion that the level walk never touches
+    "strength" matched the docstring sentence explaining that it never does.
+    """
+    src = _TRIPLE.sub("", src)
+    keep = []
+    for line in src.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        keep.append(line.split("  #")[0])
+    return "\n".join(keep)
+
+# ── the level walk (2026-09-16) ───────────────────────────────────────────────
+# Ajay 2026-09-16: "the stocks that crosses the first level of support and
+# lying in second or third level of support. Like CRDO dropped after the
+# earning it crossed multiple support level."
+def test_the_deep_level_cap_is_his_words_and_one_named_constant():
+    from supply_demand import deep_demand as DD
+    assert DD.MAX_LEVELS_BROKEN == 2          # arrival at the 2nd or the 3rd level
+    src = inspect.getsource(DD.arrival)
+    assert "MAX_LEVELS_BROKEN" in src, "the cap must be the constant, never a literal"
+    assert "dz[0]" not in src and "dz[1]" not in src, \
+        "the walk must not re-hardcode the pair it replaced"
+
+
+def test_the_level_walk_never_skips_a_band_for_quality():
+    """Promoting past a weak band would make the reported `level` lie AND
+    would silently relax the band gate Ajay has not agreed to move."""
+    from supply_demand import deep_demand as DD
+    from supply_demand import demand_reentry as DR
+    src = _code_only(inspect.getsource(DD.arrival))
+    for forbidden in ("MIN_TOUCHES", "MIN_ZONE_STRENGTH", "touches", "strength"):
+        assert forbidden not in src, f"arrival() judges quality via {forbidden}"
+    # and the gate itself is still imported, still on the ARRIVAL band
+    assert DD.MIN_TOUCHES is DR.MIN_TOUCHES
+    assert DD.MIN_ZONE_STRENGTH is DR.MIN_ZONE_STRENGTH
+    assert DR.MIN_TOUCHES == 2 and DR.MIN_ZONE_STRENGTH == 40.0
+
+
+def test_the_read_still_serves_the_names_every_consumer_keys_on():
+    """`second_band` is now the ARRIVAL band and `top_band` the HIGHEST band
+    crossed — the NAMES stay, because demand_order.deep_key, room_floor and
+    the board all key on the literals."""
+    from supply_demand import deep_demand as DD
+    band = {"lo": 90.0, "hi": 95.0, "touches": 4, "strength": 70.0}
+    arr = {"lo": 70.0, "hi": 75.0, "touches": 4, "strength": 70.0}
+    mid = {"lo": 80.0, "hi": 85.0, "touches": 4, "strength": 70.0}
+    r = DD.read({"symbol": "X", "last_price": 72.0, "prev_close": 72.0,
+                 "demand_zones": [band, mid, arr, {"lo": 50.0, "hi": 55.0,
+                                                   "touches": 2, "strength": 50.0}]})
+    assert r is not None
+    assert r["levels_broken"] == 2 and r["level"] == 3
+    assert r["second_band"]["lo"] == arr["lo"]        # arrival band
+    assert r["top_band"]["lo"] == band["lo"]          # highest crossed
+    assert [b["lo"] for b in r["broken_bands"]] == [band["lo"], mid["lo"]]
+
+
+def test_the_board_note_delegates_its_measured_verdict():
+    """A raw MEASURED["status"] read served "Depth is measured: pending." on
+    the board Ajay trades. deep_levels_measured.note() fails closed."""
+    from chart_maps import board
+    d = _code_only(inspect.getsource(board.deep_demand_tiles))
+    assert 'MEASURED' not in d, "the board must not read MEASURED itself"
+    assert '"note", None' in d, "it must delegate to deep_levels_measured.note()"

@@ -111,6 +111,21 @@ def test_below_top_pct_measures_the_penalty():
     assert r["below_top_pct"] == pytest.approx(8.89, abs=0.01)
 
 
+def test_a_two_band_row_still_reads_as_one_crossed_level():
+    """The 2026-09-16 walk (arrival at the 2nd OR 3rd level) must leave the
+    original two-band case byte-identical: one level crossed, standing at the
+    2nd, `top_band` and the single `broken_bands` entry the same band. The 3rd
+    level lives in test_deep_levels_2026_09_16.py."""
+    r = DD.read(_rec(82.0, [_band(90, 95), _band(80, 85)]))
+    assert r["levels_broken"] == 1 and r["level"] == 2
+    assert [(b["lo"], b["hi"]) for b in r["broken_bands"]] == [(90, 95)]
+    assert (r["top_band"]["lo"], r["top_band"]["hi"]) == (90, 95)
+    assert (r["second_band"]["lo"], r["second_band"]["hi"]) == (80, 85)
+    # NEGATIVE: the depth keys are never absent on a qualifying row — the FE
+    # and room_floor branch on them.
+    assert set(("levels_broken", "level", "broken_bands")) <= set(r)
+
+
 # ── ordering ────────────────────────────────────────────────────────────────
 def test_sort_key_puts_in_band_before_near_and_closer_before_farther():
     in_row = {"deep_demand": {"state": "in", "dist_pct": 0.0,

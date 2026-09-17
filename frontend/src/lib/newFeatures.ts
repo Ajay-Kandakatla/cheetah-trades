@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-16, verbatim: "For the deep demand stocks I need the logic to
+  // be, the stocks that crosses the first level of support and lying in second
+  // or third level of support. Like CRDO dropped after the earning it crossed
+  // multiple support level." And, sending a screenshot of a Deep Demand tile:
+  // "We are trying to catch the returning bounce touching the first level
+  // support. What I am expecting here is there are two level of support in this
+  // chart and the price is at the second level of support."
+  // DEPTH IS UNMEASURED. The 2026-09-16 band-structure study read `no_signal`
+  // on the adjacent claim (24,994 episodes) and the BIGGEST first support band
+  // measured HARMFUL, so nothing below claims an edge, the order is untouched,
+  // and the study of the depth itself (and of the band-quality gate that hides
+  // his own CRDO example) is still to run. Every threshold named here is an
+  // existing constant read by name — no new number was invented for this.
+  { id: 'deep-demand-levels', label: "\u{1FA79} Deep Demand now catches the 2nd AND the 3rd level of support — you said it straight: “the stocks that crosses the first level of support and lying in second or third level of support. Like CRDO dropped after the earning it crossed multiple support level.” The board only ever looked at the first two bands it was served, so a name that fell through TWO levels and steadied on the third was invisible. It now WALKS the served bands from the top down: the arrival band is the first one price is inside (or within the same 3% it has always used above), every band above it that price is strictly under is a crossed level, and the row qualifies at the 2nd or the 3rd level — your words, one named constant, so going deeper later is a one-line change. AND THE CHART SAYS SO, which is what your screenshot was about: the tile draws EVERY level already crossed in red, labelled 1st / 2nd, plus the green one being entered labelled 3rd — not just the single broken band it used to draw — the badge reads ‘In 3rd demand band’, the sentence says how many were crossed once there is more than one, and the drawn window now stretches back to hold the oldest crossed band (to the 252-bar ceiling it has always had) instead of leaving it off the top of the picture. Room to the first lid now counts EVERY crossed band as a ceiling overhead, not just the highest one. NOTHING ELSE MOVED, on purpose: same band geometry, same 3% near distance, same ≥2 touches and strength ≥ 40 on the band being entered, same Bonde sales floor, same proximity-first order — a 3rd-level name does NOT jump a closer 2nd-level one, because depth is not measured. AND ABOUT CRDO SPECIFICALLY, because it is your example: at 150.39 its geometry already qualified BEFORE this change — it is hidden by the band-QUALITY bar, not by the level count. The band it is standing in has been tested once (the board wants 2) and scores 31 (the board wants 40). I did not touch those two numbers to make your example appear; 278 names are blocked by the touch bar and 136 by the strength bar today, and whether that bar earns its keep is a measurement, and then your call. ONE HONEST LIMIT: the count is read off the four bands nearest the price, which is the same window every board has always drawn — CRDO has more bands above than that window shows, so ‘crossed 2 levels’ means 2 of the surfaced ones, never a claim about the whole stack. Depth gates nothing, alerts nothing and buys nothing.", addedAt: '2026-09-16', route: '/chart-maps' },
   // "Now in all chartmaps tabs, can you prioritize stock by the thinnest over
   // head or Supply zone where ever is applicable" + "Can you also make sure
   // find stocks with greater support like the support bands are bigger and

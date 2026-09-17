@@ -245,10 +245,11 @@ def sections() -> dict:
     out["deep_demand"] = {
         "title": "Deep Demand", "emoji": "🕳️",
         "picks": [
-            "Price fell through the top demand band and is arriving at the SECOND band from "
-            "the top: inside it, or ≤ %s above it and entering from above." % _pct(PZ.NEAR_PCT),
-            "Same band bar as Back in Demand: ≥ %d touches, strength ≥ %d."
-            % (DR.MIN_TOUCHES, int(DR.MIN_ZONE_STRENGTH)),
+            "Price crossed one or more demand bands and is arriving at the next level down "
+            "— up to the %s level (%d crossed): inside it, or ≤ %s above it."
+            % (DD.ordinal(DD.MAX_LEVELS_BROKEN + 1), DD.MAX_LEVELS_BROKEN, _pct(PZ.NEAR_PCT)),
+            "Same band bar as Back in Demand, on the band being ENTERED: ≥ %d touches, "
+            "strength ≥ %d." % (DR.MIN_TOUCHES, int(DR.MIN_ZONE_STRENGTH)),
             "Sales intact: the revenue snapshot is joined at board time (penalized names "
             "whose sales still grow).",
             "Closest-first order; the board keeps up to %d in-band and %d approaching names."

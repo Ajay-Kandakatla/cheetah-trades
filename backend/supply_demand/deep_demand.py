@@ -1,13 +1,20 @@
-"""Deep Demand — price entering the SECOND demand band from the top.
+"""Deep Demand — price arriving at the 2nd or 3rd demand level from the top.
 
 Ajay 2026-08-25: "some stocks are entering second level of demand zone from
 the top but sales are intact. this is for penalized stocks that actually have
 good revenue but market does not realize it."
 
+Ajay 2026-09-16, widening it: "For the deep demand stocks I need the logic to
+be, the stocks that crosses the first level of support and lying in second or
+third level of support. Like CRDO dropped after the earning it crossed
+multiple support level." Until then `read()` looked at the fixed pair
+`demand_zones[0]` / `demand_zones[1]`; it now WALKS the same served window and
+counts every level already crossed, capped by MAX_LEVELS_BROKEN.
+
 Two halves, deliberately split:
 
-* THIS module answers the price half — the geometry of "fell through the
-  highest demand band, now arriving at the second one" — inside the demand
+* THIS module answers the price half — the geometry of "fell through one or
+  more demand bands, now arriving at the next level down" — inside the demand
   scan, because the names doing this are usually falling knives that fail
   `trend_ok` and therefore never reach the cached `rows` a board could read.
 * The revenue half ("sales intact") is joined at BOARD time from the weekly
@@ -45,6 +52,126 @@ MAX_IN = 60
 MAX_NEAR = 40
 MAX_ROWS = MAX_IN + MAX_NEAR          # the payload ceiling, derived
 
+# How deep the screen goes (2026-09-16). Ajay's sentence read literally —
+# "lying in second or third level of support" — is levels_broken ∈ {1, 2},
+# i.e. an arrival at the 2nd or the 3rd level. ONE named constant so widening
+# to 3 (the deepest a four-band served window can even express) is a one-line
+# edit after the study, and so the board note and the ℹ️ Rules prose can be
+# built from it instead of retyping "2nd or 3rd" in three places.
+#
+# Depth is NOT a measured edge: the 2026-09-16 band-structure study measured
+# `no_signal` on the adjacent claim (docs/supply_demand/band_structure.md).
+# Nothing here orders or gates on the level count.
+MAX_LEVELS_BROKEN = 2
+
+
+def ordinal(n: int) -> str:
+    """1 -> '1st', 2 -> '2nd', 3 -> '3rd', 4 -> '4th', 11/12/13 -> 'th'.
+
+    PURE, no I/O. ONE wording source for the tile labels, the badges and the
+    ℹ️ Rules prose — chart_maps/board.py imports this rather than carrying its
+    own "2nd"/"3rd" strings, which is how the old copy went stale."""
+    n = int(n)
+    rem = abs(n) % 100
+    if 11 <= rem <= 13:
+        suf = "th"
+    else:
+        suf = {1: "st", 2: "nd", 3: "rd"}.get(abs(n) % 10, "th")
+    return "%d%s" % (n, suf)
+
+
+def _f(x) -> Optional[float]:
+    """A finite float or None — a scan record can carry a string or a NaN."""
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return v if v == v and v not in (float("inf"), float("-inf")) else None
+
+
+def _lo_hi(z):
+    """(lo, hi) as finite floats, or (None, None) for a malformed band."""
+    if not isinstance(z, dict):
+        return None, None
+    lo, hi = _f(z.get("lo")), _f(z.get("hi"))
+    if lo is None or hi is None or hi < lo:
+        return None, None
+    return lo, hi
+
+
+def arrival(dz: list, last) -> Optional[tuple]:
+    """Which demand level the print is standing at, and what it crossed to get
+    there. PURE — no I/O, no quality judgement.
+
+    `dz` is the SERVED demand window, high→low: `rec["demand_zones"]`, which
+    price_zones caps at MAX_ZONES_PER_SIDE bands NEAREST THE PRINT
+    (price_zones.nearest_first(...)[:cap]). It is a SLIDING WINDOW, not the
+    whole stack — a name that fell a long way may have older bands above the
+    window that are not counted here. Stated on the board and in
+    docs/supply_demand/deep_levels.md; reading the uncapped stack instead is
+    Ajay's call, not made.
+
+    Returns `(levels_broken, arrival_band, broken_bands)` or None:
+
+      * the ARRIVAL band is the first band (high→low) the print is INSIDE;
+        failing that, the first band whose top is under the print and within
+        price_zones.NEAR_PCT of it — approaching from above.
+      * a BROKEN level is a band above the arrival band with `last < lo`,
+        strictly below only: a band that still straddles the print was not
+        crossed, and must never be counted as a level.
+      * `levels_broken == 0` (the first level still holds) → None;
+        `levels_broken > MAX_LEVELS_BROKEN` → None (too deep for this screen).
+
+    THE WALK NEVER SKIPS A BAND FOR QUALITY. Touches/strength are read by
+    `read()` only after the band is chosen: a flimsy arrival band refuses the
+    row, it never promotes the next level down. Promoting would make the
+    reported `level` lie and would silently relax the band gate.
+    """
+    last = _f(last)
+    if last is None or last <= 0:
+        return None
+    if not isinstance(dz, (list, tuple)) or len(dz) < 2:
+        return None
+
+    idx = None
+    for i, z in enumerate(dz):                       # pass 1 — INSIDE wins
+        lo, hi = _lo_hi(z)
+        if lo is None:
+            continue
+        if lo <= last <= hi:
+            idx = i
+            break
+    if idx is None:                                  # pass 2 — NEAR from above
+        for i, z in enumerate(dz):
+            lo, hi = _lo_hi(z)
+            if lo is None:
+                continue
+            if hi < last:
+                if (last - hi) / last * 100.0 <= NEAR_PCT:
+                    idx = i
+                break        # lower bands are farther — never keep searching
+    if idx is None:
+        return None                                  # in the air, or under everything
+
+    arr = dz[idx]
+    a_lo, a_hi = _lo_hi(arr)
+    if a_lo is None:
+        return None
+
+    broken = []
+    for j in range(idx):
+        lo, hi = _lo_hi(dz[j])
+        if lo is None:
+            return None      # a malformed band overhead — fail closed, never guess
+        if last < lo:        # strictly below: a straddling band was not crossed
+            broken.append(dz[j])
+    levels_broken = len(broken)
+    if levels_broken == 0:
+        return None                                  # first level still holding
+    if levels_broken > MAX_LEVELS_BROKEN:
+        return None                                  # deeper than this screen goes
+    return levels_broken, arr, broken
+
 
 def cap(rows: list) -> list:
     """Trim an already-sorted deep list to MAX_IN in-band + MAX_NEAR near rows,
@@ -70,12 +197,20 @@ def read(rec: dict) -> Optional[dict]:
 
     Qualifies when ALL of:
       * at least two demand bands are surfaced (demand_zones is high→low)
-      * price is BELOW the floor of the highest band — the first level is
-        broken or abandoned, which is what "penalized" looks like on a chart
-      * price is INSIDE the second band, or approaching it from above within
-        price_zones.NEAR_PCT — not already through it
-      * the second band is real by the scan's own bar: MIN_TOUCHES touches
+      * price crossed 1..MAX_LEVELS_BROKEN of them — each one strictly above
+        the print — which is what "penalized" looks like on a chart
+      * price is INSIDE the next level down, or approaching it from above
+        within price_zones.NEAR_PCT — not already through it
+      * that ARRIVAL band is real by the scan's own bar: MIN_TOUCHES touches
         and MIN_ZONE_STRENGTH strength (imported, one scale)
+
+    The geometry is `arrival()`; this function adds the state, the quality
+    gate and the payload. `second_band` KEEPS ITS NAME — demand_order.deep_key,
+    room_floor.row_entry_band, chart_maps/board.py and the FE all key on the
+    literal — but its meaning widened from "demand_zones[1]" to "the band it
+    arrived at" (2026-09-16). `top_band` is likewise the HIGHEST band it
+    crossed, and `broken_bands` carries all of them so the tile can draw every
+    level the price went through.
 
     "Entering from the top" is NOT enforced (review 2026-09-14, D5): a name
     whose prior close was UNDER the second band and is back inside it today
@@ -90,57 +225,71 @@ def read(rec: dict) -> Optional[dict]:
     gate is the point of this screen. The board says so on every tile.
     """
     dz = rec.get("demand_zones") or []
-    last = rec.get("last_price")
-    if last is None or len(dz) < 2:
+    last = _f(rec.get("last_price"))
+    got = arrival(dz, last)
+    if got is None:
         return None
-    top, second = dz[0], dz[1]
-    t_lo = top.get("lo")
-    s_lo, s_hi = second.get("lo"), second.get("hi")
-    if t_lo is None or s_lo is None or s_hi is None:
-        return None
-    if last >= t_lo:
-        return None                      # first level still holding — not this screen
-    if last < s_lo:
-        return None                      # through the second band too — broken, not entering
+    levels_broken, second, broken = got
+    s_lo, s_hi = _lo_hi(second)
+    top = broken[0]                      # the HIGHEST level it crossed
+    t_lo, t_hi = _lo_hi(top)
 
     if s_lo <= last <= s_hi:
         state = "in"
         dist_pct = 0.0
-    else:                                # between the bands, coming down
-        dist_pct = (last - s_hi) / last * 100.0
-        if dist_pct > NEAR_PCT:
-            return None
+    else:                                # between the levels, coming down
+        dist_pct = (last - s_hi) / last * 100.0     # ≤ NEAR_PCT by construction
         state = "near"
 
+    # The band bar, on the ARRIVAL band only — unchanged thresholds, imported.
     if (second.get("touches") or 0) < MIN_TOUCHES:
         return None
     if (second.get("strength") or 0) < MIN_ZONE_STRENGTH:
         return None
 
     tb = rec.get("top_band_read") or {}
-    try:
-        pc = float(rec.get("prev_close"))
-    except (TypeError, ValueError):
-        pc = None
+    # `top_band_read` is computed for demand_zones[0] ONLY (demand_reentry
+    # decide_from_frame). When the highest level CROSSED is not that band —
+    # dz[0] still straddles the print — carrying its break history would
+    # attach another band's dates to this one.
+    d0_lo, d0_hi = _lo_hi(dz[0]) if dz else (None, None)
+    _same = (d0_lo is not None and abs(d0_lo - t_lo) < 1e-9
+             and abs(d0_hi - t_hi) < 1e-9)
+    pc = _f(rec.get("prev_close"))
     return {
         "state": state,                          # "in" | "near"
         "dist_pct": round(dist_pct, 2),
-        # Yesterday closed UNDER the second band: today's position in it is
+        # How many demand levels the print crossed, counted off the SURFACED
+        # window (see arrival()), and which level it is standing at.
+        "levels_broken": levels_broken,          # 1..MAX_LEVELS_BROKEN
+        "level": levels_broken + 1,              # 2 or 3 — never ordered on
+        # Yesterday closed UNDER the ARRIVAL band: today's position in it is
         # a reclaim from below, not an arrival from the top (D5, wording).
         "reclaiming": bool(pc is not None and pc > 0 and pc < s_lo),
-        # Both bands carry their touch count and their AGE fields (2026-09-14):
+        # Every band carries its touch count and its AGE fields (2026-09-14):
         # the tile sizes its window to `oldest_touch_bars`, and without it every
         # deep tile was 130 bars with the band's swings off-screen (56/100).
+        # `top_band` = the HIGHEST level crossed (shape unchanged).
         "top_band": {"lo": top.get("lo"), "hi": top.get("hi"),
                      "touches": top.get("touches"),
                      "bars_since_test": top.get("bars_since_test"),
                      "oldest_touch_bars": top.get("oldest_touch_bars")},
+        # `second_band` = the ARRIVAL band (shape unchanged, name unchanged —
+        # four modules and the FE key on the literal).
         "second_band": {"lo": s_lo, "hi": s_hi,
                         "touches": second.get("touches"),
                         "strength": second.get("strength"),
                         "bars_since_test": second.get("bars_since_test"),
                         "oldest_touch_bars": second.get("oldest_touch_bars")},
-        # How far below the broken first level price sits.
+        # EVERY crossed level, high→low, so the tile can draw them all and
+        # room_floor can measure past all of them. len == levels_broken.
+        "broken_bands": [{"lo": b.get("lo"), "hi": b.get("hi"),
+                          "touches": b.get("touches"),
+                          "strength": b.get("strength"),
+                          "bars_since_test": b.get("bars_since_test"),
+                          "oldest_touch_bars": b.get("oldest_touch_bars")}
+                         for b in broken],
+        # How far below the FIRST (highest) crossed level price sits.
         "below_top_pct": round((t_lo - last) / t_lo * 100.0, 2),
         # Break evidence for the FIRST band — demand_reentry.band_break_read,
         # computed in decide_from_frame where the closes series still exists.
@@ -151,8 +300,9 @@ def read(rec: dict) -> Optional[dict]:
         # None only on cached rows older than 2026-09-05 (before that date the
         # scan fed reentry_read, which is empty whenever price is outside the
         # band — i.e. always here — so the field was dead on every row).
-        "bars_since_top_break": tb.get("bars_since_first_break"),
-        "fell_from_pct": tb.get("fell_from_pct"),
+        # `_same` (2026-09-16): only when the highest CROSSED level IS dz[0].
+        "bars_since_top_break": tb.get("bars_since_first_break") if _same else None,
+        "fell_from_pct": tb.get("fell_from_pct") if _same else None,
     }
 
 

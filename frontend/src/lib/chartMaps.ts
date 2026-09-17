@@ -208,9 +208,19 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
     label: 'S3 Topping · Shorts',
     blurb: 'The short-side slice of the SEPA scan: Stage 3 topping or Stage 4 decline (TLSW pp.73-76) with at least two independent distribution reads — more down days on above-average volume (p.76), CMF outflow, the largest drop since the Stage 2 advance (p.90), a close below the 50-day on heavy volume, climax runs, churning and high-volume reversals (TTLAC §9). Below the 200-day is Minervini\'s own Stage 4 short trigger (TTLAC §6). Ranked by how aggressive the selling reads; declining Bonde sales shown as confirmation only, because fundamentals lag at tops. Nothing here is backtested and shorting risk is unlimited — this is a study list, not an inverted buy button.',
   },
+  // Ajay 2026-09-16, verbatim: "For the deep demand stocks I need the logic to
+  // be, the stocks that crosses the first level of support and lying in second
+  // or third level of support. Like CRDO dropped after the earning it crossed
+  // multiple support level." And, with a screenshot of a tile: "there are two
+  // level of support in this chart and the price is at the second level of
+  // support." So the read walks the served bands instead of the fixed first
+  // pair, and the tile DRAWS every level already crossed plus the one price is
+  // standing in. Depth is NOT an edge: the 2026-09-16 band-structure study
+  // measured no_signal on the adjacent claim and a BIGGER first support band
+  // measured harmful — so this copy describes the geometry and never ranks on it.
   deep_demand: {
     label: 'Deep Demand',
-    blurb: 'Penalized price, intact business. Names that broke their FIRST demand band and are arriving at the second — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red band is the broken first level, green the second one being entered. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03): names inside the second band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'Penalized price, intact business. Names that crossed one or more demand bands and are arriving at the next level down — the 2nd or the 3rd — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red bands are the levels already crossed, each labelled 1st / 2nd, green is the level being entered; the tile names the count once more than one was crossed. Depth is not a measured edge — a 3rd-level name is not ranked above a 2nd-level one. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03, unchanged): names inside their arrival band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   quick_bounce: {
     label: '\u{1FA83} Quick Reversal',
@@ -382,6 +392,16 @@ export type CmTile = {
    *  LAST under the band-structure sort. `applicable: false` = a tab whose rows
    *  are not price-structure bands at all. */
   band_structure?: BandStructureRead | null;
+  /** 🩹 Deep Demand only (chart_maps/board.deep_demand_tiles, 2026-09-16): how
+   *  many demand levels price has already crossed on its way to the band it is
+   *  standing in — 1 for a 2nd-level arrival, 2 for a 3rd. The arrival level
+   *  itself is `levels_broken + 1`, which is what the badge and the band labels
+   *  say, so the FE never computes an ordinal of its own. Absent on every other
+   *  tab and on a Deep Demand row served from a cache written before this
+   *  shipped; read it as 1 there, never as 0 — the board has always required at
+   *  least one crossed band. It orders NOTHING: depth is unmeasured (the
+   *  2026-09-16 band-structure study read no_signal on the adjacent claim). */
+  levels_broken?: number;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py

@@ -176,9 +176,11 @@ describe('ChartMaps', () => {
     // Ajay: "change the deep demand to be like In Demand with charts and
     // cards". Until then ZoneEdgeBoard mode="breaking" (~200 text rows) sat
     // above this tab's cards and fetched /supply-demand/zone-edge.
-    vi.stubGlobal('fetch', stubFetch({ deep_demand: { tab: 'deep_demand', count: 0, tiles: [], note: 'nothing arriving at a second band' } }));
+    // 2026-09-16: the served empty-state note is about ARRIVALS at the next
+    // level down (2nd or 3rd), not about "a second band".
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: { tab: 'deep_demand', count: 0, tiles: [], note: 'scanning for deeper demand-level arrivals' } }));
     draw('/chart-maps?tab=deep_demand');
-    expect(await screen.findByText(/nothing arriving at a second band/)).toBeInTheDocument();
+    expect(await screen.findByText(/scanning for deeper demand-level arrivals/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Zone edge')).not.toBeInTheDocument();
     expect(screen.queryByText(/Breaking resistance/)).not.toBeInTheDocument();
     const urls = (fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
@@ -576,7 +578,10 @@ describe('the approach-target switch', () => {
       u.includes('tab=undervalue') && !u.includes('phase='))).toBe(true);
   });
 
-  it('is absent on deep_demand even while approaching — its second band IS the level', async () => {
+  // 2026-09-16: the level a Deep Demand name is listed at is its ARRIVAL band
+  // (the 2nd or the 3rd, after the crossed-level walk), so there is still
+  // nothing for an "Order block" target to mean here.
+  it('is absent on deep_demand even while approaching — its ARRIVAL band IS the level', async () => {
     render(<MemoryRouter initialEntries={['/chart-maps?tab=deep_demand&phase=approaching']}>
       <ChartMaps /></MemoryRouter>);
     await screen.findAllByRole('tab', { name: /Approaching/ });

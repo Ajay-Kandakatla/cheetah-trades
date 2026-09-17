@@ -471,6 +471,22 @@ def _dist_text(dist, above: str, inside: str) -> str:
     return f"{dist}% above {above}"
 
 
+def _now_dist_text(dist, above: str, inside: str) -> str:
+    """`_dist_text` with a leading 'now' in BOTH branches. PURE.
+
+    `_dist_text` already says "now in the band" when the print is inside, and
+    says nothing when it is above. A caller that wants "now …" either way used
+    to prepend its own — and the deep tile then served
+    "broke its 1st demand band (7% below it), now now in the 2nd band"
+    (Ajay's screenshot, 2026-09-16). Fixed HERE, not in `_dist_text`: the
+    order-block and tested-band sentences (`:2587,2594`) read
+    "falling toward … — now in the block, down 4.1% in 6 sessions" and their
+    served strings must not move.
+    """
+    text = _dist_text(dist, above, inside)
+    return text if text.startswith("now ") else f"now {text}"
+
+
 def _dist_badge(dist, noun: str) -> dict:
     d = _num(dist)
     if d is not None and d <= 0:
@@ -3497,6 +3513,7 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     Both exclusion counts ride on the payload; a thin board explains itself.
     """
     from supply_demand import demand_reentry as D
+    from supply_demand import deep_demand as DD
     from sepa import research
 
     data = D.cached_or_warm(universe, limit=LIMIT_MAX)
@@ -3504,11 +3521,11 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         return {"tiles": [], "warming": True,
                 "universe_key": data.get("universe_key") or universe,
                 "progress": data.get("progress"),
-                "note": "scanning for second-level demand arrivals…"}
+                "note": "scanning for deeper demand-level arrivals…"}
 
     rows = data.get("deep_rows") or []
     # The toggle (Ajay 2026-08-31). deep_demand.read already classifies every
-    # row "in" (inside the second band) vs "near" (falling toward it within
+    # row "in" (inside its arrival band) vs "near" (falling toward it within
     # NEAR_PCT), and the old board mixed the two. The toggle splits along that
     # existing line: reached = in, approaching = near. A filter, not a new
     # predicate — nothing about what qualifies changed.
@@ -3548,9 +3565,18 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             continue
 
         top, second = d.get("top_band") or {}, d.get("second_band") or {}
+        # Every level this name has ALREADY CROSSED, high->low (Ajay
+        # 2026-09-16: "the stocks that crosses the first level of support and
+        # lying in second or third level of support"). `second_band` keeps its
+        # name across demand_order / room_floor / rules_info but now MEANS the
+        # band price arrived at — the 2nd or the 3rd.
+        # Back-compat: a row cached before this change carries only
+        # `top_band`, so it renders as the single broken level it always did.
+        broken = [b for b in (d.get("broken_bands")
+                              or ([top] if top else [])) if isinstance(b, dict)]
+        lv_broken = int(_num(d.get("levels_broken")) or len(broken) or 1)
+        level = int(_num(d.get("level")) or (lv_broken + 1))
         bands = []
-        t_lo, t_hi = _num(top.get("lo")), _num(top.get("hi"))
-        top_lo0, top_hi0 = t_lo, t_hi                # the band as the scan drew it
         s_lo, s_hi = _num(second.get("lo")), _num(second.get("hi"))
         px_live = _live_px(r, live)
         # Which way it got here TODAY (2026-09-08): falling into / bouncing off
@@ -3563,32 +3589,55 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             sym, {"lo": s_lo, "hi": s_hi} if s_lo is not None else None, live_rows, live)
         reclaiming = bool(d.get("reclaiming")) or (
             ap_badge is not None and ap_badge.get("_dir") == "reclaiming")
-        if t_lo is not None and t_hi is not None:
-            # A 1-touch first band is a single swing low widened ±1.75% into a
-            # box (price_zones._make_zone), and on 4/100 tiles that box
-            # straddled the real second band — red painted over the green
-            # entry band (2026-09-14, TRU/PLD/EME/KHC). Say what it is, and
-            # never let it cover the band this tile is about.
-            t_touch = _num(top.get("touches"))
-            one_touch = t_touch is not None and t_touch < 2     # unknown ≠ 1-touch
-            if s_hi is not None and t_lo <= s_hi:
-                t_lo = round(s_hi + 0.01, 2)
-            if t_hi > t_lo:
-                bands.append({"kind": "supply", "lo": t_lo, "hi": t_hi,
-                              "label": ("1st demand · broken (1-touch swing)"
-                                        if one_touch else "1st demand · broken")})
+        # Every crossed level is drawn (Ajay 2026-09-16, on a Deep Demand
+        # screenshot: "there are two level of support in this chart and the
+        # price is at the second level of support"). Walked LOW->HIGH so each
+        # band is clamped against the band UNDER it — the arrival band for the
+        # lowest crossed level, the next crossed level up after that — then
+        # emitted HIGH->LOW, the way the tile reads.
+        #
+        # A 1-touch band is a single swing low widened ±1.75% into a box
+        # (price_zones._make_zone), and on 4/100 tiles that box straddled the
+        # band below it — red painted over the green entry band (2026-09-14,
+        # TRU/PLD/EME/KHC). Say what it is, and never let it cover the band
+        # under it. Generalised from the single-band clamp on 2026-09-16: with
+        # N crossed levels a fully swallowed band is DROPPED, never inverted.
+        # `ref` always walks on the band's ORIGINAL top, never the clamped lo.
+        broken_geo = [(_num(b.get("lo")), _num(b.get("hi"))) for b in broken]
+        drawn: list = []
+        ref = s_hi
+        for b, (b_lo, b_hi) in zip(reversed(broken), reversed(broken_geo)):
+            if b_lo is None or b_hi is None:
+                drawn.append(None)
+                continue
+            lo_draw = b_lo
+            if ref is not None and lo_draw <= ref:
+                lo_draw = round(ref + 0.01, 2)
+            b_touch = _num(b.get("touches"))
+            one_touch = b_touch is not None and b_touch < 2     # unknown ≠ 1-touch
+            drawn.append({"lo": lo_draw, "hi": b_hi, "one_touch": one_touch}
+                         if b_hi > lo_draw else None)
+            ref = b_hi
+        for i, dr in enumerate(reversed(drawn)):                # back to high->low
+            if dr is None:
+                continue
+            label = f"{DD.ordinal(i + 1)} demand · broken"
+            bands.append({"kind": "supply", "lo": dr["lo"], "hi": dr["hi"],
+                          "label": f"{label} (1-touch swing)" if dr["one_touch"] else label})
         if s_lo is not None:
             bands.append({"kind": "demand", "lo": s_lo, "hi": s_hi,
-                          "label": ("2nd demand · reclaiming" if reclaiming
-                                    else "2nd demand · approaching"
-                                    if phase == "approaching"
-                                    else "2nd demand · entering")})
+                          "label": f"{DD.ordinal(level)} demand · " + (
+                              "reclaiming" if reclaiming
+                              else "approaching" if phase == "approaching"
+                              else "entering")})
         # The lids price meets FIRST overhead, as the zones tiles draw them
         # (review 2026-09-14, D2): the TARGET line used to land on a band the
-        # deep tile never drew. Deduped against the broken first band.
+        # deep tile never drew. Deduped against EVERY crossed band, on its
+        # ORIGINAL (pre-clamp) geometry — a clamped lo would miss the match.
         for lid in _lids_above(r.get("supply_zones") or [], px_live):
-            if (top_lo0 is not None and top_hi0 is not None
-                    and abs(lid["lo"] - top_lo0) < 0.011 and abs(lid["hi"] - top_hi0) < 0.011):
+            if any(b_lo is not None and b_hi is not None
+                   and abs(lid["lo"] - b_lo) < 0.011 and abs(lid["hi"] - b_hi) < 0.011
+                   for b_lo, b_hi in broken_geo):
                 continue
             bands.append({"kind": "supply", "lo": lid["lo"], "hi": lid["hi"], "label": "supply"})
 
@@ -3620,18 +3669,34 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         # ran on the live print, so a name ranked 'in' read 'x% above'.
         dist = _disp_dist(r, live, d, "second_band")
         in_now = _num(dist) is not None and _num(dist) <= 0
-        arriving = _dist_text(dist, "the 2nd band", "the 2nd band")
+        # `_now_dist_text`, not `_dist_text`: the sentence wants a leading
+        # "now" in both branches and prepending one read "now now in the 2nd
+        # band" once the print was inside (2026-09-16).
+        arriving = _now_dist_text(dist, f"the {DD.ordinal(level)} band",
+                                  f"the {DD.ordinal(level)} band")
         if reclaiming:
             arriving = f"{arriving} (reclaimed from below)"
-        why = (f"broke its 1st demand band ({below:.0f}% below it), now "
-               f"{arriving} — sales {'+' if (g or 0) >= 0 else ''}{g:.0f}% YoY "
-               f"say the business didn't break with the price"
-               if below is not None and g is not None else
-               "second-level demand arrival with Bonde-intact sales")
+        # `crossed` is built INSIDE the guard: `below` is None on a row whose
+        # deep read carried no `below_top_pct`, and formatting it would raise
+        # — which in a board-wide loop takes every OTHER tile down with it,
+        # not just this one. The fallback sentence takes the arrival band's
+        # own ordinal (DD.ordinal(level)), never a hardcoded "second-level":
+        # `_bonde_gate` passes on score+tier alone, so `g` can be None on a
+        # 3rd-level tile whose bands and badge both say 3rd.
+        if below is not None and g is not None:
+            crossed = (f"broke its 1st demand band ({below:.0f}% below it)"
+                       if lv_broken == 1 else
+                       f"crossed {lv_broken} demand levels ({below:.0f}% below the first)")
+            why = (f"{crossed}, {arriving} — sales "
+                   f"{'+' if (g or 0) >= 0 else ''}{g:.0f}% YoY "
+                   f"say the business didn't break with the price")
+        else:
+            why = (f"{DD.ordinal(level)}-level demand arrival with "
+                   f"Bonde-intact sales")
 
-        badges = [{"text": ("🩹 Reclaiming 2nd band" if reclaiming
-                             else "🩹 In 2nd demand band" if in_now
-                             else "🩹 Entering 2nd band"), "tone": "warn"}]
+        badges = [{"text": (f"🩹 Reclaiming {DD.ordinal(level)} band" if reclaiming
+                             else f"🩹 In {DD.ordinal(level)} demand band" if in_now
+                             else f"🩹 Entering {DD.ordinal(level)} band"), "tone": "warn"}]
         if ap_badge:
             badges.insert(0, {"text": ap_badge["text"], "tone": ap_badge["tone"]})
             why = f"{why} — {ap_badge['_text']}"
@@ -3680,13 +3745,21 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "name": r.get("name") or _name_for(sym),
             "href": _href(sym, "supply"),
             "bars": [],
-            # Sized to the OLDER of the two bands' defining swings. The slim
-            # dict used to drop `oldest_touch_bars`, so every deep tile was
-            # 130 bars and 56/100 drew a band whose touches were all
-            # off-screen (2026-09-14).
-            "_bars": {"days": max(_zone_window(second, days), _zone_window(top, days))
+            # Sized to the OLDEST defining swing on the screen — the arrival
+            # band OR any crossed level above it. The slim dict used to drop
+            # `oldest_touch_bars`, so every deep tile was 130 bars and 56/100
+            # drew a band whose touches were all off-screen (2026-09-14); with
+            # 2 crossed levels (2026-09-16) the 1st one can be 200 bars back,
+            # so the max runs over all of them. `_zone_window` still clamps at
+            # ZONE_BARS_MAX.
+            "_bars": {"days": max([_zone_window(second, days)]
+                                  + [_zone_window(b, days) for b in broken])
                       if second else _zone_window(None, days)},
             "bands": bands,
+            # How many demand levels this name has already crossed (2026-09-16).
+            # Flat, so it reaches the FE. NOT a stats row: the board is dense
+            # and the badge already says which level it is standing in.
+            "levels_broken": lv_broken,
             "lines": lines,
             "markers": [],
             "stats": stats,
@@ -3717,6 +3790,24 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             flow_counts["distribution"] += 1
         else:
             flow_counts["neutral"] += 1
+    # Depth is NOT an edge until a study says so. The adjacent claim (a second
+    # band under the print catches the name) measured `no_signal` on 24,994
+    # episodes — docs/supply_demand/band_structure.md, 2026-09-16 — so nothing
+    # here may read as one. `deep_levels_measured` is WP-D's output module; it
+    # is absent, or carries MEASURED = None, until the replay has run.
+    try:
+        from supply_demand import deep_levels_measured as DLM
+    except ImportError:
+        DLM = None
+    from supply_demand import price_zones as _pz
+    # DELEGATE — never read MEASURED["status"] here. `note()` fails closed:
+    # pending, no_signal and an unquotable `separates` all return the same
+    # honest sentence, and only a quotable separating run says otherwise. A
+    # raw status read put "Depth is measured: pending." on this board.
+    _note_fn = getattr(DLM, "note", None) if DLM is not None else None
+    depth_note = (f" {_note_fn()}" if callable(_note_fn)
+                  else " Depth is NOT measured yet — levels order nothing "
+                       "and gate nothing.")
     return {"tiles": out, **meta,
             "phase": ("approaching" if phase == "approaching" else "reached"),
             "matched": len(rows),
@@ -3731,21 +3822,24 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "universe_label": data.get("universe_label"),
             "universe_choices": data.get("universe_choices"),
             "scanned": data.get("scanned"),
-            "note": (f"Names that broke their highest demand band and are arriving at the "
-                     f"second — kept only when Bonde sales tiers (steady/strong/explosive, "
+            "note": (f"Names that crossed one or more demand bands and are arriving at the "
+                     f"next level down (up to the {DD.ordinal(DD.MAX_LEVELS_BROKEN + 1)}). "
+                     f"Levels are counted among the {_pz.MAX_ZONES_PER_SIDE} bands nearest "
+                     f"the print, not the whole stack — a name can have older bands above "
+                     f"those. Kept only when Bonde sales tiers (steady/strong/explosive, "
                      f"his 5% YoY floor) say the business is intact. This scan: "
                      f"{len(rows)} arrivals, {dropped_weak} dropped for weak/declining "
                      f"sales, {dropped_unknown} dropped for no sales data. Money flow "
                      f"(CMF-20 + up/down volume days, Minervini p.71-76 counts): "
                      f"{flow_counts['inflow']} flowing in · {flow_counts['neutral']} neutral · "
                      f"{flow_counts['distribution']} still distributing. Order: "
-                     f"{'nearest the second band first' if phase == 'approaching' else 'inside the second band first'}"
+                     f"{'nearest their arrival band first' if phase == 'approaching' else 'inside their arrival band first'}"
                      f" on the live print, money flow (CMF) ranking within a 0.5% "
                      f"distance bucket; names already {BOUNCE_DONE_PCT:.0f}% off the band "
                      f"are dropped, and so are names with under "
                      f"{_room_meta(min_room, 0)['min_room']:g}% of room to the first band "
                      f"overhead on the live print ({hidden_low_room} hidden). These fail the "
-                     f"trend gate BY DESIGN — size and stop accordingly."),
+                     f"trend gate BY DESIGN — size and stop accordingly.{depth_note}"),
             "generated_at": data.get("as_of")}
 
 
