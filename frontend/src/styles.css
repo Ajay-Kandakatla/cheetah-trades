@@ -12809,3 +12809,54 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   background: none; border: 0; padding: 0; cursor: pointer;
   font: inherit; color: var(--accent, #3b82f6); text-decoration: underline;
 }
+
+/* ── Measured-study banners, FOLDED (2026-09-16) ─────────────────────────────
+   Ajay, looking at a board carrying three of them at full height: "can you
+   collapse all of these please?" Four paragraphs each, stacked, pushed the
+   charts off the screen.
+
+   THE HEADLINE STAYS. These banners exist so an ordering that measured
+   `no_signal` is never read as a prediction it did not earn — folding the
+   verdict away would defeat them. Only the justification folds, and the
+   verdict IS the summary row. Each study keeps its own left-border colour
+   (.cm-explosive-study amber, .cm-band-study slate-blue, .cm-enterable-study
+   green), so the strip still reads as three distinct reads, not one block. */
+.cm-study > summary.cm-study-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+}
+.cm-study > summary.cm-study-head::-webkit-details-marker { display: none; }
+.cm-study > summary.cm-study-head::before {
+  content: '▸';
+  flex: 0 0 auto;
+  opacity: 0.55;
+  transition: transform 120ms ease;
+}
+.cm-study[open] > summary.cm-study-head::before { transform: rotate(90deg); }
+.cm-study > summary.cm-study-head > strong { flex: 1 1 auto; }
+.cm-study > summary.cm-study-head:hover > .cm-study-more { opacity: 0.9; }
+.cm-study .cm-study-more {
+  flex: 0 0 auto;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.45;
+}
+.cm-study > summary.cm-study-head:focus-visible {
+  outline: 2px solid rgba(124,156,245,0.75);
+  outline-offset: 2px;
+}
+.cm-study p { margin: 0.25rem 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .cm-study > summary.cm-study-head::before { transition: none; }
+}
+
+/* The Bonde verdict folds with the same control (2026-09-16). It opened on an
+   <h3> and keeps it — the heading level is what a screen reader navigates by,
+   and the fold must not cost that. */
+.bd-verdict.cm-study > summary.cm-study-head > .cm-study-title,
+.bd-verdict .bd-vh { margin: 0; }
+.bd-verdict.cm-study > summary.cm-study-head { align-items: center; }

@@ -58,6 +58,7 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
+import { StudyNote } from './StudyNote';
 import { useEnterableFilter } from '../hooks/useEnterableFilter';
 import { partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -277,9 +278,16 @@ export default function BondeBoard() {
           thesis that measured the wrong way round, and a reader who scrolls
           past the board to find that out has already read it as a buy list. */}
       {m?.headline && (
-        <div className="bd-verdict">
-          <h3 className="bd-vh">⛔ {m.headline}</h3>
-          {m.body && <p>{m.body}</p>}
+        /* FOLDED since 2026-09-16 (Ajay: "can you collapse all of these
+           please?") — seven paragraphs above a board he is trying to read.
+           The ⛔ VERDICT stays above the fold, which is the whole point of
+           this banner: the tab was built on a thesis that measured the wrong
+           way round, and a reader who has to expand something to find that
+           out has already read the board as a buy list. */
+        <StudyNote id="bonde-verdict" className="bd-verdict" testId="bd-verdict"
+                   glyph="⛔" headingAs="h3" headline={m.headline}
+                   body={m.body}>
+          {/* keeps .bd-vdim, the class this board's own pins select on */}
           {m.not_a_short && <p className="bd-vdim">{m.not_a_short}</p>}
           {m.tiers && <p>{m.tiers}</p>}
           {m.rejected && <p>{m.rejected}</p>}
@@ -291,7 +299,7 @@ export default function BondeBoard() {
               the run recipe, the struck claims and the limits.
             </p>
           )}
-        </div>
+        </StudyNote>
       )}
 
       <div className="bd-head">

@@ -64,6 +64,7 @@ import { HiddenCount } from '../components/HiddenCount';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { BAND_STRUCTURE_KIND_NA, BAND_STRUCTURE_NA_TEXT } from '../lib/bandStructure';
+import { StudyNote } from '../components/StudyNote';
 import { trackFeature } from '../lib/usageTracker';
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
@@ -1125,24 +1126,24 @@ export function ChartMaps() {
         * branch the prior expects — so the 🧨 ordering is never read as an
         * explosiveness ranking it has not earned. No figure is typed here. */}
       {data?.explosive_study?.headline && (
-        <div className="cm-note cm-explosive-study" data-testid="cm-explosive-study">
-          <strong>{data.explosive_study.headline}</strong>
-          {data.explosive_study.body ? <p>{data.explosive_study.body}</p> : null}
-          {data.explosive_study.fallback_note ? <p>{data.explosive_study.fallback_note}</p> : null}
-          {data.explosive_study.limits ? <p className="cm-dim">{data.explosive_study.limits}</p> : null}
-        </div>
+        <StudyNote id="explosive" className="cm-explosive-study"
+                   testId="cm-explosive-study"
+                   headline={data.explosive_study.headline}
+                   body={data.explosive_study.body}
+                   fallbackNote={data.explosive_study.fallback_note}
+                   limits={data.explosive_study.limits} />
       )}
       {/* 🎯 The entry-trigger study's verdict, SERVED (board.enterable_study).
         * The filter is ON by default, so what it is built on has to be on the
         * page next to it — including "study running" / "no trigger separates",
         * which are the branches the prior expects. No figure is typed here. */}
       {data?.enterable_study?.headline && (
-        <div className="cm-note cm-enterable-study" data-testid="cm-enterable-study">
-          <strong>{data.enterable_study.headline}</strong>
-          {data.enterable_study.body ? <p>{data.enterable_study.body}</p> : null}
-          {data.enterable_study.fallback_note ? <p>{data.enterable_study.fallback_note}</p> : null}
-          {data.enterable_study.limits ? <p className="cm-dim">{data.enterable_study.limits}</p> : null}
-        </div>
+        <StudyNote id="enterable" className="cm-enterable-study"
+                   testId="cm-enterable-study"
+                   headline={data.enterable_study.headline}
+                   body={data.enterable_study.body}
+                   fallbackNote={data.enterable_study.fallback_note}
+                   limits={data.enterable_study.limits} />
       )}
       {/* 🪜 The band-structure study's verdict, SERVED (board.band_structure_study).
         * Ajay asked for the thinnest ceiling first and a layered floor; the
@@ -1155,19 +1156,17 @@ export function ChartMaps() {
         * `bandNa` above. A tab with no band read shows the served n/a sentence
         * underneath instead, never this banner. */}
       {!bandNa && data?.band_structure_study?.headline && (
-        <div className="cm-note cm-band-study" data-testid="cm-band-structure-study">
-          <strong>{data.band_structure_study.headline}</strong>
-          {data.band_structure_study.body ? <p>{data.band_structure_study.body}</p> : null}
-          {data.band_structure_study.fallback_note
-            ? <p>{data.band_structure_study.fallback_note}</p> : null}
-          {data.band_structure_study.limits
-            ? <p className="cm-dim">{data.band_structure_study.limits}</p> : null}
-          {/* What the ordering could actually reach — served only when the sort
-            * ran and worked, because it is applied after the board was cut to
-            * its page size. */}
-          {data.band_structure_scope
-            ? <p className="cm-dim" data-testid="cm-band-structure-scope">{data.band_structure_scope}</p> : null}
-        </div>
+        <StudyNote id="band-structure" className="cm-band-study"
+                   testId="cm-band-structure-study"
+                   headline={data.band_structure_study.headline}
+                   body={data.band_structure_study.body}
+                   fallbackNote={data.band_structure_study.fallback_note}
+                   limits={data.band_structure_study.limits}
+                   /* What the ordering could actually reach — served only when
+                    * the sort ran and worked, because it is applied after the
+                    * board was cut to its page size. */
+                   extra={data.band_structure_scope}
+                   extraTestId="cm-band-structure-scope" />
       )}
       {/* …and what a tab with NO band read says instead: the served sentence,
         * on the page, where the 🎯 n/a line lives — not a banner about an
