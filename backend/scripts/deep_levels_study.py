@@ -201,7 +201,8 @@ MAX_ZONES = PZ.MAX_ZONES_PER_SIDE           # 4    — the SERVED cap
 NEAR_PCT = PZ.NEAR_PCT                      # 3.0  — "approaching from above"
 MIN_TOUCHES = DR.MIN_TOUCHES                # 2    — the arrival band's bar
 MIN_ZONE_STRENGTH = DR.MIN_ZONE_STRENGTH    # 40.0 — the arrival band's bar
-MAX_LEVELS = DD.MAX_LEVELS_BROKEN           # 2    — "second or third level"
+MAX_LEVELS = DD.MAX_LEVELS_BROKEN           # the shipped depth cap; 3 since
+                                            # 2026-09-16 ("can you do level 4")
 SUBSAMPLE_NOT_QUOTABLE = ETS.SUBSAMPLE_NOT_QUOTABLE
 SURVIVORSHIP_MISSING = ETS.SURVIVORSHIP_MISSING
 

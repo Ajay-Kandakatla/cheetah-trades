@@ -190,3 +190,62 @@ describe('the ✨ NEW entry for the deeper levels', () => {
     expect(label).not.toMatch(/\bbounce\b/i);
   });
 });
+
+/* ── level 4 + the per-level filter (Ajay 2026-09-16, the follow-up) ──────────
+ * "can you do level 4 and give me filters for that."
+ *
+ * The ✨ entry is the only place the feature gets described in his words, so it
+ * is held to the three things that could mislead him: that FOUR is a ceiling
+ * the served window imposes rather than a number I picked, that depth still
+ * orders nothing, and that the band-quality bar — the thing actually hiding his
+ * CRDO example — was NOT touched to make the feature look better.
+ */
+describe('the ✨ NEW entry for level 4 and the filter', () => {
+  const entry = () => NEW_FEATURES.find((x) => x.id === 'deep-demand-level-4-filter');
+
+  it('is registered once, dated the day he asked, and points at Chart Maps', () => {
+    expect(entry()).toBeDefined();
+    expect(entry()!.addedAt).toBe('2026-09-16');
+    expect(entry()!.route).toBe('/chart-maps');
+    expect(NEW_FEATURES.filter((x) => x.id === 'deep-demand-level-4-filter').length).toBe(1);
+    // It joins the level-2/3 entry rather than replacing it — that one is the
+    // record of what shipped earlier the same day.
+    expect(NEW_FEATURES.find((x) => x.id === 'deep-demand-levels')).toBeDefined();
+  });
+
+  it('quotes his ask verbatim and says four is the WINDOW, not a preference', () => {
+    const label = entry()!.label;
+    expect(label).toMatch(/can you do level 4 and give me filters for that/);
+    expect(label).toMatch(/FOUR IS THE CEILING/);
+    expect(label).toMatch(/four bands nearest the price/);
+    expect(label).toMatch(/at most three can sit above/);
+  });
+
+  it('carries the measured counts and NO other population number', () => {
+    const label = entry()!.label;
+    expect(label).toMatch(/2nd = 280/);
+    expect(label).toMatch(/3rd = 232/);
+    expect(label).toMatch(/4th = 56/);
+    // NEGATIVE: the pre-gate figures (490 / 395 / 97) are a different cohort and
+    // must not leak into copy that describes what the chips show.
+    for (const n of ['490', '395', '97']) expect(label).not.toContain(n);
+  });
+
+  it('NEGATIVE — claims no edge, no reordering, and no change to the quality bar', () => {
+    const label = entry()!.label;
+    expect(label).toMatch(/DEPTH STILL ORDERS NOTHING/);
+    expect(label).toMatch(/unmeasured/i);
+    expect(label).toMatch(/does NOT jump a closer 2nd-level one/);
+    expect(label).toMatch(/band-quality bar.*was NOT touched/i);
+    expect(label).toMatch(/CRDO/);
+    // House rule: the user-facing word is "reversal".
+    expect(label).not.toMatch(/\bbounce\b/i);
+  });
+
+  it('NEGATIVE — says an all-off / garbled selection is the WHOLE board', () => {
+    const label = entry()!.label;
+    expect(label).toMatch(/Turning every chip off means ALL of them, not none/);
+    expect(label).toMatch(/falls back to the whole board rather than an empty one/);
+  });
+});
+

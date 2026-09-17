@@ -1,4 +1,4 @@
-"""Deep Demand — price arriving at the 2nd or 3rd demand level from the top.
+"""Deep Demand — price arriving at the 2nd, 3rd or 4th demand level down.
 
 Ajay 2026-08-25: "some stocks are entering second level of demand zone from
 the top but sales are intact. this is for penalized stocks that actually have
@@ -10,6 +10,12 @@ third level of support. Like CRDO dropped after the earning it crossed
 multiple support level." Until then `read()` looked at the fixed pair
 `demand_zones[0]` / `demand_zones[1]`; it now WALKS the same served window and
 counts every level already crossed, capped by MAX_LEVELS_BROKEN.
+
+Ajay again the same day, going one deeper: "can you do level 4 and give me
+filters for that." MAX_LEVELS_BROKEN is 3 — arrival at the 2nd, 3rd or 4th
+level — and `parse_levels()` is the one parser for the per-level board filter.
+Four is the ceiling the served four-band window can express; the assert below
+says so.
 
 Two halves, deliberately split:
 
@@ -32,7 +38,7 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from .price_zones import NEAR_PCT
+from .price_zones import NEAR_PCT, MAX_ZONES_PER_SIDE
 from .demand_reentry import MIN_TOUCHES, MIN_ZONE_STRENGTH
 
 log = logging.getLogger("supply_demand.deep_demand")
@@ -50,19 +56,40 @@ log = logging.getLogger("supply_demand.deep_demand")
 # uncapped total so a capped day says so instead of looking complete.
 MAX_IN = 60
 MAX_NEAR = 40
-MAX_ROWS = MAX_IN + MAX_NEAR          # the payload ceiling, derived
+MAX_ROWS = MAX_IN + MAX_NEAR          # the ceiling PER LEVEL since 2026-09-16,
+                                      # derived; see cap()
 
-# How deep the screen goes (2026-09-16). Ajay's sentence read literally —
-# "lying in second or third level of support" — is levels_broken ∈ {1, 2},
-# i.e. an arrival at the 2nd or the 3rd level. ONE named constant so widening
-# to 3 (the deepest a four-band served window can even express) is a one-line
-# edit after the study, and so the board note and the ℹ️ Rules prose can be
+# How deep the screen goes. Ajay's first sentence read literally — "lying in
+# second or third level of support" — was levels_broken ∈ {1, 2}; on
+# 2026-09-16, same day, he asked for the 4th ("can you do level 4 and give me
+# filters for that"), so it is now {1, 2, 3} — an arrival at the 2nd, 3rd or
+# 4th level. ONE named constant, so the board note and the ℹ️ Rules prose are
 # built from it instead of retyping "2nd or 3rd" in three places.
+#
+# FOUR IS THE CEILING THE SERVED WINDOW CAN EXPRESS, and the assertion below
+# is what says so in code. `rec["demand_zones"]` is
+# `price_zones.nearest_first(...)[:MAX_ZONES_PER_SIDE]`, so with four bands
+# surfaced at most THREE can sit above the arrival band. The cap is not
+# derived from that number — it is Ajay's, and widening the window must never
+# silently deepen the screen — but it can never exceed it either, and this
+# assert is what catches a later `MAX_ZONES_PER_SIDE` change leaving a cap
+# behind that the window can no longer feed.
 #
 # Depth is NOT a measured edge: the 2026-09-16 band-structure study measured
 # `no_signal` on the adjacent claim (docs/supply_demand/band_structure.md).
 # Nothing here orders or gates on the level count.
-MAX_LEVELS_BROKEN = 2
+MAX_LEVELS_BROKEN = 3
+
+assert 1 <= MAX_LEVELS_BROKEN <= MAX_ZONES_PER_SIDE - 1, (
+    "MAX_LEVELS_BROKEN (%r) cannot exceed price_zones.MAX_ZONES_PER_SIDE - 1 "
+    "(%r): the served window cannot hold that many bands above an arrival "
+    "band, so the deeper levels would be unreachable by construction."
+    % (MAX_LEVELS_BROKEN, MAX_ZONES_PER_SIDE - 1))
+
+# The per-level filter (Ajay 2026-09-16: "can you do level 4 and give me
+# filters for that"). The ARRIVAL levels a board may be narrowed to — 2 ..
+# MAX_LEVELS_BROKEN + 1, derived, never typed.
+LEVEL_CHOICES = tuple(range(2, MAX_LEVELS_BROKEN + 2))
 
 
 def ordinal(n: int) -> str:
@@ -78,6 +105,54 @@ def ordinal(n: int) -> str:
     else:
         suf = {1: "st", 2: "nd", 3: "rd"}.get(abs(n) % 10, "th")
     return "%d%s" % (n, suf)
+
+
+def parse_levels(spec) -> Optional[frozenset]:
+    """The `levels` filter spec → the set of ARRIVAL levels to keep, or None
+    for "all". PURE, no I/O. ONE parser — the API hands the raw string
+    straight through and the board calls this; nothing else may split a comma.
+
+    Ajay 2026-09-16: "can you do level 4 and give me filters for that."
+
+      "all" / "" / None / garbage        -> None   (= every level)
+      "4"                                -> {4}
+      " 3 , 4 "                          -> {3, 4}
+      "2,junk,4"                         -> {2, 4} (the junk part is dropped)
+      "0" / "9" / "-1"                   -> None   (nothing in range)
+
+    FAILS OPEN, deliberately and in every branch: an unknown spec serves the
+    FULL board, never a silently empty one. A stale bookmark, a typo or a
+    frontend that gets ahead of a cap change must show him the board — an
+    empty Deep Demand tab reads as "nothing qualifies today", which is a lie
+    about the market. The in-range test is `LEVEL_CHOICES`, derived from
+    MAX_LEVELS_BROKEN, so the day the cap moves the parser moves with it.
+    """
+    if not isinstance(spec, str):
+        return None
+    s = spec.strip().lower()
+    if not s or s == "all":
+        return None
+    keep = set()
+    for part in s.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            n = int(part)
+        except (TypeError, ValueError):
+            continue                     # "junk" is dropped, never fatal
+        if n in LEVEL_CHOICES:
+            keep.add(n)
+    return frozenset(keep) if keep else None
+
+
+def levels_label(sel: Optional[frozenset]) -> str:
+    """The normalised echo of a `levels` selection: "all", or the sorted
+    comma list ("3,4"). PURE. The board echoes THIS, never the raw query
+    string, so a bookmark of "4,4, junk" comes back as "4"."""
+    if not sel:
+        return "all"
+    return ",".join(str(n) for n in sorted(sel))
 
 
 def _f(x) -> Optional[float]:
@@ -174,12 +249,31 @@ def arrival(dz: list, last) -> Optional[tuple]:
 
 
 def cap(rows: list) -> list:
-    """Trim an already-sorted deep list to MAX_IN in-band + MAX_NEAR near rows,
-    preserving order. Rows with any other state are kept (there are none by
-    construction; if one appears it should be seen, not silently dropped)."""
-    kept, n_in, n_near = [], 0, 0
+    """Trim an already-sorted deep list to MAX_IN in-band + MAX_NEAR near rows
+    PER ARRIVAL LEVEL, preserving order. Rows with any other state are kept
+    (there are none by construction; if one appears it should be seen, not
+    silently dropped).
+
+    PER LEVEL since 2026-09-16, for exactly the reason the cap went per STATE
+    on 2026-09-03. Ajay: "can you do level 4 and give me filters for that".
+    The list is sorted closest-first and is depth-blind, so a single pair of
+    counters fills with whichever level happens to be nearest its band that
+    day — and a level chip could then go EMPTY while hundreds of names sit at
+    that level in the store. A filter that cannot reach its own population is
+    a broken filter. Each level gets the same two budgets instead; the board
+    still shows at most `limit` tiles, and `deep_n` still reports the
+    uncapped total so a capped day says so instead of looking complete.
+
+    This widens the cached payload by at most a factor of len(LEVEL_CHOICES)
+    — the rows are the small per-symbol dicts the scan already builds, with
+    `series` popped (demand_reentry.scan).
+    """
+    kept, seen = [], {}
     for r in rows:
-        st = (r.get("deep_demand") or {}).get("state")
+        d = r.get("deep_demand") or {}
+        st = d.get("state")
+        lvl = d.get("level")
+        n_in, n_near = seen.get(lvl, (0, 0))
         if st == "in":
             if n_in >= MAX_IN:
                 continue
@@ -188,6 +282,7 @@ def cap(rows: list) -> list:
             if n_near >= MAX_NEAR:
                 continue
             n_near += 1
+        seen[lvl] = (n_in, n_near)
         kept.append(r)
     return kept
 
@@ -262,7 +357,7 @@ def read(rec: dict) -> Optional[dict]:
         # How many demand levels the print crossed, counted off the SURFACED
         # window (see arrival()), and which level it is standing at.
         "levels_broken": levels_broken,          # 1..MAX_LEVELS_BROKEN
-        "level": levels_broken + 1,              # 2 or 3 — never ordered on
+        "level": levels_broken + 1,              # 2..4 — never ordered on
         # Yesterday closed UNDER the ARRIVAL band: today's position in it is
         # a reclaim from below, not an arrival from the top (D5, wording).
         "reclaiming": bool(pc is not None and pc > 0 and pc < s_lo),

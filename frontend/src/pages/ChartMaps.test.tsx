@@ -1363,3 +1363,194 @@ describe('ChartMaps — the 🪜 band-structure read (2026-09-16)', () => {
     expect(screen.queryByText(/floor .* wide/)).not.toBeInTheDocument();
   });
 });
+
+/* ── 🩹 the arrival-level filter (Ajay 2026-09-16) ────────────────────────────
+ * "can you do level 4 and give me filters for that."
+ *
+ * Three chips, Deep Demand only, all on by default. What has to hold:
+ *   - they appear on deep_demand and NOWHERE else (a leaked chip on a board
+ *     with no arrival level is a control that means nothing);
+ *   - the counts are the SERVED `level_counts` — the board's own numbers with
+ *     the filter off — never recomputed from the tiles that survived it;
+ *   - a level with zero names still renders, dimmed, so empty reads as empty
+ *     rather than as a control that vanished;
+ *   - toggling writes `levels` and REFETCHES (the param is in the fetch deps);
+ *   - turning every chip off means ALL of them, never an empty board.
+ *
+ * Depth orders nothing (band_structure 2026-09-16: no_signal), so the copy is
+ * held to saying so — and to the house word: "reversal", never "bounce".
+ */
+const LEVEL_TILE = {
+  ...VCP_TILE,
+  symbol: 'CRDO', name: 'Credo Technology Group', href: '/sepa/CRDO?tab=supply',
+  bands: [{ kind: 'demand', lo: 132.76, hi: 138.0 }],
+  lines: [], badges: [],
+  stats: [{ k: 'Levels crossed', v: '2' }],
+  why: 'crossed 2 demand levels, now in the 3rd band',
+  levels_broken: 2,
+};
+const LEVEL_BOARD = {
+  tab: 'deep_demand', count: 1, matched: 3, tiles: [LEVEL_TILE],
+  min_room: 5, hidden_low_room: 0,
+  levels: 'all', level_counts: { '2': 280, '3': 232, '4': 56 },
+  hidden_by_level: 0, disclaimer: 'Study board.',
+};
+
+describe('the arrival-level filter (Ajay 2026-09-16)', () => {
+  const urlsOf = () => vi.mocked(fetch as any).mock.calls.map((c: any[]) => String(c[0]));
+  const deep = (entry = '/chart-maps?tab=deep_demand') =>
+    render(<MemoryRouter initialEntries={[entry]}><ChartMaps /></MemoryRouter>);
+
+  it('renders 2nd · 3rd · 4th with their SERVED counts, all on by default', async () => {
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: LEVEL_BOARD }));
+    deep();
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    const chips = within(ctl).getAllByRole('tab');
+    expect(chips.map((c) => c.textContent)).toEqual(['2nd · 280', '3rd · 232', '4th · 56']);
+    // All three ON is the default, and it is the same board as no filter: the
+    // param is written nowhere.
+    for (const c of chips) expect(c).toHaveAttribute('aria-selected', 'true');
+    expect(urlsOf().some((u: string) => u.includes('levels='))).toBe(false);
+  });
+
+  it('NEGATIVE: the chips exist on deep_demand and on no other tab', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      deep_demand: LEVEL_BOARD, vcp: VCP_BOARD,
+      zones: { ...LEVEL_BOARD, tab: 'zones' },
+      quick_bounce: { ...LEVEL_BOARD, tab: 'quick_bounce' },
+    }));
+    const a = deep();
+    expect(await screen.findByRole('tablist', { name: 'Arrival level' })).toBeInTheDocument();
+    a.unmount();
+
+    // zones carries the same phase/room block and even a level_counts payload —
+    // the chips must still be absent, because zones rows have no arrival level.
+    const b = render(<MemoryRouter initialEntries={['/chart-maps?tab=zones']}><ChartMaps /></MemoryRouter>);
+    await screen.findByRole('tablist', { name: 'Room floor' });
+    expect(screen.queryByRole('tablist', { name: 'Arrival level' })).toBeNull();
+    b.unmount();
+
+    // Quick Reversal is room-gated too but has no phase block at all — the
+    // chips must not appear there either, payload or no payload.
+    const c = render(<MemoryRouter initialEntries={['/chart-maps?tab=quick_bounce']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByText('CRDO')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Arrival level' })).toBeNull();
+    c.unmount();
+
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=vcp']}><ChartMaps /></MemoryRouter>);
+    expect(await screen.findByText('AVGO')).toBeInTheDocument();
+    expect(screen.queryByRole('tablist', { name: 'Arrival level' })).toBeNull();
+    expect(urlsOf().some((u: string) => !u.includes('tab=deep_demand') && u.includes('levels='))).toBe(false);
+  });
+
+  it('turning one off writes ?levels= and REFETCHES with it (the fetch deps carry it)', async () => {
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: LEVEL_BOARD }));
+    deep();
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    const before = urlsOf().length;
+    fireEvent.click(within(ctl).getByTestId('deep-level-2'));
+    await waitFor(() => expect(urlsOf().length).toBeGreaterThan(before));
+    expect(urlsOf()[urlsOf().length - 1]).toContain('levels=3%2C4');
+    expect(within(ctl).getByTestId('deep-level-2')).toHaveAttribute('aria-selected', 'false');
+    // And off again → back to the default, param CLEARED, board refetched.
+    const mid = urlsOf().length;
+    fireEvent.click(within(ctl).getByTestId('deep-level-2'));
+    await waitFor(() => expect(urlsOf().length).toBeGreaterThan(mid));
+    expect(urlsOf()[urlsOf().length - 1]).not.toContain('levels=');
+  });
+
+  it('reads the selection off the URL, so a shared link keeps it', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      deep_demand: { ...LEVEL_BOARD, levels: '4', hidden_by_level: 512 },
+    }));
+    deep('/chart-maps?tab=deep_demand&levels=4');
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    expect(within(ctl).getByTestId('deep-level-4')).toHaveAttribute('aria-selected', 'true');
+    expect(within(ctl).getByTestId('deep-level-2')).toHaveAttribute('aria-selected', 'false');
+    expect(within(ctl).getByTestId('deep-level-3')).toHaveAttribute('aria-selected', 'false');
+    expect(urlsOf().some((u: string) => u.includes('levels=4'))).toBe(true);
+    // The board says what the filter cost, from the SERVED count.
+    expect(await screen.findByTestId('hidden-by-level')).toHaveTextContent(/512 hidden/);
+    expect(screen.getByTestId('hidden-by-level')).toHaveTextContent(/showing 4/);
+  });
+
+  it('NEGATIVE: a garbage ?levels= is the WHOLE board, never an empty one', async () => {
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: LEVEL_BOARD }));
+    deep('/chart-maps?tab=deep_demand&levels=9,nope');
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    for (const c of within(ctl).getAllByRole('tab')) {
+      expect(c).toHaveAttribute('aria-selected', 'true');
+    }
+    expect(urlsOf().some((u: string) => u.includes('levels='))).toBe(false);
+  });
+
+  it('NEGATIVE: turning every chip off behaves as all on — the page never asks for nothing', async () => {
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: LEVEL_BOARD }));
+    deep();
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    fireEvent.click(within(ctl).getByTestId('deep-level-2'));
+    await waitFor(() => expect(urlsOf()[urlsOf().length - 1]).toContain('levels=3%2C4'));
+    fireEvent.click(within(ctl).getByTestId('deep-level-3'));
+    await waitFor(() => expect(urlsOf()[urlsOf().length - 1]).toContain('levels=4'));
+    fireEvent.click(within(ctl).getByTestId('deep-level-4'));
+    // Last one off = every level again: no param, every chip back on, and NOT
+    // a single request for an empty selection.
+    await waitFor(() => expect(urlsOf()[urlsOf().length - 1]).not.toContain('levels='));
+    for (const c of within(ctl).getAllByRole('tab')) {
+      expect(c).toHaveAttribute('aria-selected', 'true');
+    }
+    expect(urlsOf().some((u: string) => /levels=(&|$)/.test(u))).toBe(false);
+  });
+
+  it('a ZERO count still renders, dimmed — empty reads as empty, not as missing', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      deep_demand: { ...LEVEL_BOARD, level_counts: { '2': 280, '3': 232, '4': 0 } },
+    }));
+    deep();
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    const four = within(ctl).getByTestId('deep-level-4');
+    expect(four).toBeInTheDocument();
+    expect(four).toHaveTextContent('4th · 0');
+    expect(four).toHaveAttribute('aria-disabled', 'true');
+    // NEGATIVE: the populated ones are NOT dimmed.
+    expect(within(ctl).getByTestId('deep-level-2')).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('NEGATIVE: a MISSING level in level_counts is a zero, not a hidden chip', async () => {
+    vi.stubGlobal('fetch', stubFetch({
+      deep_demand: { ...LEVEL_BOARD, level_counts: { '2': 280 } },
+    }));
+    deep();
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    expect(within(ctl).getAllByRole('tab').length).toBe(3);
+    expect(within(ctl).getByTestId('deep-level-3')).toHaveTextContent('3rd · 0');
+    expect(within(ctl).getByTestId('deep-level-4')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('NEGATIVE: a legacy payload with NO level_counts renders bare, live chips', async () => {
+    const { level_counts: _lc, levels: _lv, hidden_by_level: _hb, ...legacy } = LEVEL_BOARD;
+    void _lc; void _lv; void _hb;
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: legacy }));
+    deep();
+    const ctl = await screen.findByRole('tablist', { name: 'Arrival level' });
+    const chips = within(ctl).getAllByRole('tab');
+    expect(chips.map((c) => c.textContent)).toEqual(['2nd', '3rd', '4th']);
+    // No count is NOT a zero — none of them may be dimmed, or a board served
+    // from an old cache would look like three empty levels.
+    for (const c of chips) expect(c).not.toHaveAttribute('aria-disabled');
+    expect(screen.queryByTestId('hidden-by-level')).toBeNull();
+  });
+
+  it('says what a level means and that depth orders nothing — and never says "bounce"', async () => {
+    vi.stubGlobal('fetch', stubFetch({ deep_demand: LEVEL_BOARD }));
+    deep();
+    const hint = await screen.findByTestId('deep-levels-hint');
+    expect(hint).toHaveTextContent(/2nd means one band already crossed/);
+    expect(hint).toHaveTextContent(/four is\s+the deepest the served four-band window can express/);
+    expect(hint).toHaveTextContent(/Depth is NOT a\s+measured edge/);
+    expect(hint).toHaveTextContent(/never outranks a closer 2nd-level one/);
+    // NEGATIVE (house rule): the user-facing word is "reversal".
+    expect(hint.textContent || '').not.toMatch(/bounce/i);
+    expect(TAB_META.deep_demand.blurb).not.toMatch(/bounce/i);
+  });
+});

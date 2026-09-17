@@ -2265,6 +2265,53 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // ── Deep Demand level filter (Ajay 2026-09-16: "can you do level 4 and
+  //    give me filters for that") ────────────────────────────────────────────
+  {
+    name: 'the level chips count the board, never overstate the page (2026-09-16)',
+    file: 'src/pages/ChartMaps.tsx',
+    checks(src) {
+      const errs = [];
+      if (/would show under the current/i.test(src))
+        errs.push('the chip tooltip still claims the count is what the level WOULD SHOW — it is counted before the 24-tile page cut');
+      if (!/how many names sit at each level/i.test(src))
+        errs.push('the chip tooltip must say the count is names AT that level on this board');
+      if (!/shows the first 24/i.test(src))
+        errs.push('the chip tooltip must say the page shows only the first 24 of them');
+      if (!/levels/.test(src))
+        errs.push('the deep_demand level filter is missing from ChartMaps');
+      return errs;
+    },
+  },
+  {
+    name: 'the level-4 ✨ card keeps the store population out of the chip claim (2026-09-16)',
+    file: 'src/lib/newFeatures.ts',
+    checks(src) {
+      const start = src.indexOf('deep-demand-level-4-filter');
+      if (start < 0) return ['the deep-demand-level-4-filter ✨ entry is missing'];
+      const next = src.indexOf("{ id: '", start);
+      const entry = src.slice(start, next > start ? next : undefined);
+      // Only the SERVED label — the comment above it quotes Ajay verbatim,
+      // and his own words ("the returning bounce") are never rewritten.
+      const lq = entry.indexOf('label:');
+      const aq = entry.indexOf(', addedAt', lq);
+      const card = lq < 0 ? entry : entry.slice(lq, aq > lq ? aq : undefined);
+      const errs = [];
+      if (/would show RIGHT NOW/i.test(card))
+        errs.push('the card still claims the chip shows the store population');
+      if (!/not of the whole store/i.test(card))
+        errs.push('the card must say the chip counts the BOARD, not the store');
+      if (!/2nd = 280, 3rd = 232, 4th = 56/.test(card))
+        errs.push('the card must quote the measured store population, labelled as such');
+      if (!/closest 60/.test(card))
+        errs.push('the card must say the board carries only the closest 60 in-band / 40 approaching per level');
+      if (/\bbounce\b/i.test(card))
+        errs.push('house rule: the word is "reversal", never "bounce"');
+      if (/CRDO[^.]{0,200}now (appears|shows)/i.test(card))
+        errs.push('CRDO does NOT appear — it is blocked by the band-quality bar');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

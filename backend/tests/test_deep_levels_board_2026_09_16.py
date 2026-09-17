@@ -518,3 +518,252 @@ def test_r5_negative_the_served_why_line_never_says_now_now(
                    phase=("approaching" if state == "near" else "reached"))
         for t in out["tiles"]:
             assert "now now" not in t["why"], t["why"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# The per-level filter (Ajay 2026-09-16: "can you do level 4 and give me
+# filters for that"). L1-L8 — the board half of the contract.
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _deep4(sym="DEEP4", state="in", dist=0.0, **over):
+    """A row that crossed THREE levels and is standing in the fourth — the
+    deepest the served four-band window can express."""
+    row = _deep_row(sym, state=state, dist=dist)
+    row["last_price"] = 62.0
+    b1 = _band(90.0, 95.0, oldest=150)
+    b2 = _band(80.0, 85.0, oldest=150)
+    b3 = _band(70.0, 75.0, oldest=150)
+    row["deep_demand"].update({
+        "levels_broken": 3, "level": 4,
+        "top_band": b1,
+        "second_band": _band(60.0, 65.0, oldest=150),
+        "broken_bands": [b1, b2, b3],
+        "below_top_pct": 31.1,
+    })
+    row["deep_demand"].update(over)
+    row["plan"] = {"entry_ref": 62.5, "stop": 59.0, "target": 74.0, "rr": 2.0}
+    return row
+
+
+def _syms(out):
+    return [t["symbol"] for t in out["tiles"]]
+
+
+# ── L1. a 4th-level row reaches the board and draws all three crossed levels
+def test_l1_a_fourth_level_arrival_draws_three_crossed_levels(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    t = _one([_deep4()], prices, reentry_stub, sales_stub)["tiles"][0]
+    assert _labels(t) == ["1st demand · broken", "2nd demand · broken",
+                          "3rd demand · broken", "4th demand · entering"]
+    assert t["levels_broken"] == 3
+    assert t["badges"][0]["text"] == "🩹 In 4th demand band"
+    assert "now in the 4th band" in t["why"]
+
+
+# ── L2. the filter hides only what it should ───────────────────────────────
+def test_l2_the_level_filter_keeps_only_the_selected_arrival_levels(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep3("THREE"), _deep4("FOUR")]
+    assert set(_syms(_one(rows, prices, reentry_stub, sales_stub))) == {
+        "TWO", "THREE", "FOUR"}
+    assert _syms(_one(rows, prices, reentry_stub, sales_stub, levels="4")) == ["FOUR"]
+    assert set(_syms(_one(rows, prices, reentry_stub, sales_stub,
+                          levels="3,4"))) == {"THREE", "FOUR"}
+    assert _syms(_one(rows, prices, reentry_stub, sales_stub, levels="2")) == ["TWO"]
+
+
+def test_l2_the_echoed_selection_is_normalised_not_the_raw_string(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep3("THREE"), _deep4("FOUR")]
+    assert _one(rows, prices, reentry_stub, sales_stub)["levels"] == "all"
+    assert _one(rows, prices, reentry_stub, sales_stub,
+                levels=" 4 , 3 ,4")["levels"] == "3,4"
+    assert _one(rows, prices, reentry_stub, sales_stub,
+                levels="junk")["levels"] == "all"
+
+
+# ── L3. level_counts is computed with the filter OFF ───────────────────────
+def test_l3_level_counts_are_computed_with_the_filter_off_and_survive_it_on(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """The chips display these. Counting them AFTER the filter would zero the
+    other chips the moment one is ticked — and they are the only way back."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep_row("TWO2"), _deep3("THREE"), _deep4("FOUR")]
+    want = {"2": 2, "3": 1, "4": 1}
+    for spec in ("all", "4", "3,4", "2", "junk"):
+        out = _one(rows, prices, reentry_stub, sales_stub, levels=spec)
+        assert out["level_counts"] == want, spec
+
+
+def test_l3_hidden_by_level_matches_what_the_filter_removed(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep_row("TWO2"), _deep3("THREE"), _deep4("FOUR")]
+    for spec, kept in (("all", 4), ("4", 1), ("3,4", 2), ("2", 2), ("junk", 4)):
+        out = _one(rows, prices, reentry_stub, sales_stub, levels=spec)
+        assert len(out["tiles"]) == kept, spec
+        assert out["hidden_by_level"] == len(rows) - kept, spec
+        assert sum(out["level_counts"].values()) == len(rows), spec
+
+
+def test_l3_the_count_keys_are_derived_from_the_cap(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    out = _one([_deep4()], prices, reentry_stub, sales_stub)
+    assert sorted(out["level_counts"]) == [str(n) for n in DD.LEVEL_CHOICES]
+    assert sorted(out["level_counts"]) == ["2", "3", "4"]
+
+
+# ── L4. NEGATIVE: an unknown spec serves the FULL board ────────────────────
+def test_l4_negative_an_unknown_levels_spec_never_serves_an_empty_board(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """Fail open. An empty Deep Demand tab reads as 'nothing qualifies today',
+    which is a lie about the market."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep3("THREE"), _deep4("FOUR")]
+    full = set(_syms(_one(rows, prices, reentry_stub, sales_stub)))
+    for junk in ("", "   ", "junk", "0", "9", "1", "5", "-1", ",", "2.5",
+                 "null", "undefined"):
+        out = _one(rows, prices, reentry_stub, sales_stub, levels=junk)
+        assert set(_syms(out)) == full, junk
+        assert out["levels"] == "all" and out["hidden_by_level"] == 0, junk
+
+
+def test_l4_negative_a_non_string_levels_value_is_treated_as_all(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """FastAPI resolves `Query(...)` defaults at REQUEST time, so a direct
+    container call hands `board()` the Query OBJECT — truthy, no `.lower()`.
+    That bug shipped twice on the demand board (board.py, 2026-08-14)."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep4("FOUR")]
+    for weird in (None, 4, 3.0, True, object(), ["3", "4"]):
+        out = _one(rows, prices, reentry_stub, sales_stub, levels=weird)
+        assert set(_syms(out)) == {"TWO", "FOUR"}, weird
+        assert out["levels"] == "all", weird
+
+
+# ── L5. NEGATIVE: the filter does NOT reorder ──────────────────────────────
+def test_l5_negative_the_level_filter_does_not_reorder_the_board(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """Depth is unmeasured (band_structure, `no_signal`), so a 4th-level name
+    must not jump a closer 2nd-level one — with the filter off OR on."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    far4 = _deep4("DEEPFAR", state="near", dist=2.5)
+    far4["deep_demand"]["dist_pct"] = 2.5
+    far4["last_price"] = 66.63                       # 2.5% over the 65.0 top
+    near2 = _deep_row("SHALLOWNEAR", state="near", dist=0.5)
+    near2["last_price"] = 85.43                      # 0.5% over the 85.0 top
+    rows = [far4, near2]
+    out = _one(rows, prices, reentry_stub, sales_stub, phase="approaching")
+    assert _syms(out) == ["SHALLOWNEAR", "DEEPFAR"]
+    # the same order survives a filter that keeps both
+    out24 = _one(rows, prices, reentry_stub, sales_stub, phase="approaching",
+                 levels="2,4")
+    assert _syms(out24) == ["SHALLOWNEAR", "DEEPFAR"]
+
+
+def test_l5_negative_the_surviving_rows_keep_their_relative_rank(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """Filtering must be a `continue`, never a re-sort: the kept tiles come
+    back in exactly the order the unfiltered board put them in."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep3("THREE"), _deep4("FOUR"), _deep_row("TWO2")]
+    full = _syms(_one(rows, prices, reentry_stub, sales_stub))
+    kept = _syms(_one(rows, prices, reentry_stub, sales_stub, levels="2,4"))
+    assert kept == [s for s in full if s in set(kept)]
+
+
+def test_l5_negative_the_tile_builder_still_names_only_the_shared_rank_key():
+    import inspect
+    src = inspect.getsource(B.deep_demand_tiles)
+    assert "rerank_live(rows, _order.deep_key, live)" in src
+    # the filter must run AFTER the rank, never before it
+    assert "levels_sel" in src.split("rerank_live")[1]
+    assert "sorted(rows" not in src
+
+
+# ── L6. the note names the selection only when it is not "all" ─────────────
+def test_l6_the_note_names_the_active_selection(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep3("THREE"), _deep4("FOUR")]
+    out = _one(rows, prices, reentry_stub, sales_stub, levels="3,4")
+    assert "Showing 3rd / 4th level arrivals only — 1 hidden" in out["note"]
+    one = _one(rows, prices, reentry_stub, sales_stub, levels="4")
+    assert "Showing 4th level arrivals only — 2 hidden" in one["note"]
+
+
+def test_l6_negative_an_all_board_says_nothing_about_a_selection(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    rows = [_deep_row("TWO"), _deep4("FOUR")]
+    for spec in ("all", "junk", ""):
+        note = _one(rows, prices, reentry_stub, sales_stub, levels=spec)["note"]
+        assert "level arrivals only" not in note, spec
+        assert "hidden by the level filter" not in note, spec
+    # and the depth disclaimer is still the LAST thing said, filtered or not
+    for spec in ("all", "4"):
+        note = _one(rows, prices, reentry_stub, sales_stub, levels=spec)["note"]
+        assert note.endswith("Depth is NOT measured yet — levels order "
+                             "nothing and gate nothing."), spec
+
+
+def test_l6_negative_the_note_ordinals_are_not_typed_strings():
+    import inspect
+    src = inspect.getsource(B.deep_demand_tiles)
+    assert "DD.ordinal(n) for n in sorted(levels_sel)" in src
+    for lit in ('"4th level', "'4th level", '"3rd / 4th'):
+        assert lit not in src, lit
+
+
+# ── L7. the filter runs AFTER the other drops ──────────────────────────────
+def test_l7_the_counts_describe_what_survives_the_bonde_gate_and_the_room_floor(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """`level_counts` is what a chip shows, so it must be counted where the
+    tiles are — after the sales gate, the reversed-already drop and the room
+    floor — not off the raw scan rows."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    good, weak = _deep4("GOOD4"), _deep4("WEAK4")
+    reentry_stub["deep_rows"] = [good, weak]
+    for r in (good, weak):
+        prices[r["symbol"]] = _frame(200)
+    sales_stub["GOOD4"] = _sales("steady", 9.0)
+    sales_stub["WEAK4"] = _sales("weak", 1.0)          # Bonde refuses it
+    out = B.board("deep_demand", limit=5, min_tier="any", min_room=0)
+    assert _syms(out) == ["GOOD4"]
+    assert out["level_counts"]["4"] == 1, "the Bonde-refused row is not counted"
+    assert out["dropped_weak_sales"] == 1
+    assert out["hidden_by_level"] == 0
+
+
+# ── L8. the gabbar `level` param is a different thing and still works ──────
+def test_l8_the_gabbar_level_param_is_untouched_by_the_new_levels_param():
+    """`level` (singular) is the gabbar tab's band TYPE; `levels` (plural) is
+    the deep tab's arrival-level filter. Two params, two tabs, no overlap."""
+    import inspect
+    from chart_maps import api as A
+    sig = inspect.signature(A.chart_maps)
+    assert "level" in sig.parameters and "levels" in sig.parameters
+    board_sig = inspect.signature(B.board)
+    assert board_sig.parameters["level"].default == "all"
+    assert board_sig.parameters["levels"].default == "all"
+    src = inspect.getsource(B.board)
+    # the gabbar branch still forwards `level`, the deep branch `levels`
+    gab = src.split('t == "gabbar"')[1]
+    assert "level=level" in gab and "levels=" not in gab
+    deep = src.split('t == "deep_demand"')[1].split("elif")[0]
+    assert "levels=levels" in deep and "level=level" not in deep
+
+
+def test_l8_the_gabbar_tab_still_takes_its_own_level_and_ignores_levels(
+        prices, reentry_stub, sales_stub, monkeypatch):
+    """NEGATIVE: the new param must not leak into another tab's payload."""
+    monkeypatch.setattr(B, "_live_last", lambda syms, rows=None: {})
+    out = B.board("gabbar", limit=5, min_tier="any", level="aggressive",
+                  levels="4")
+    assert out.get("level") == "aggressive"
+    for leaked in ("levels", "level_counts", "hidden_by_level"):
+        assert leaked not in out, leaked

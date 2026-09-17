@@ -3496,7 +3496,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                       sort: str = DEFAULT_SORT,
                       min_tier: str = DEFAULT_MIN_TIER,
                       phase: str = "reached",
-                      min_room: Optional[float] = None) -> dict:
+                      min_room: Optional[float] = None,
+                      levels: str = "all") -> dict:
     """Deep Demand: broke the FIRST demand band, entering the SECOND — and
     Bonde sales say the business didn't break with the price.
 
@@ -3511,6 +3512,15 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     excludes, and UNKNOWN sales also exclude — this board's whole claim is
     "the revenue is intact", which cannot be said about a name with no data.
     Both exclusion counts ride on the payload; a thin board explains itself.
+
+    `levels` (2026-09-16, Ajay: "can you do level 4 and give me filters for
+    that") narrows the board to one or more ARRIVAL levels — "all" (default)
+    or a comma list, "3,4". Parsed in ONE place, `deep_demand.parse_levels`,
+    which FAILS OPEN: a garbage spec serves the full board, never an empty
+    one. The filter runs AFTER the Bonde gate, the reversed-already drop and
+    the room floor, so `level_counts` — computed with the filter OFF — says
+    how many names sit at each level under the current phase/room/sales
+    settings. It is a filter, never a rank: the order stays proximity-first.
     """
     from supply_demand import demand_reentry as D
     from supply_demand import deep_demand as DD
@@ -3550,6 +3560,26 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     snaps = research.sales_snapshot([r.get("symbol") for r in rows if r.get("symbol")])
     flash_syms = _flash_symbols()
 
+    # The per-level filter (Ajay 2026-09-16). ONE parser, and it fails open —
+    # `parse_levels` returns None for "all", for an empty spec and for
+    # anything it cannot read, so a stale bookmark shows the whole board
+    # rather than an empty tab that reads as "nothing qualifies today".
+    levels_sel = DD.parse_levels(levels)
+    # How many names sit at each level with the level filter OFF — so the
+    # chips do not go to zero the moment one of them is ticked. Keys are
+    # derived from DD.LEVEL_CHOICES (2..MAX_LEVELS_BROKEN+1), never typed, so
+    # widening the cap adds a chip on its own.
+    #
+    # Counted inside the loop, after the Bonde gate, the room floor and the
+    # already-reversed drop, AND behind the same liquidity floor `_finish`
+    # applies — otherwise the chip counts thin names the board then drops and
+    # overstates its own page (2026-09-16 review). It does NOT subtract the
+    # `limit` cut: the number is "names at this level on this board", and the
+    # page shows the first `limit` of them. Every surface that prints it says
+    # exactly that.
+    level_counts = {str(n): 0 for n in DD.LEVEL_CHOICES}
+    hidden_by_level = 0
+
     tiles, dropped_weak, dropped_unknown = [], 0, 0
     for rank, r in enumerate(rows):
         sym = (r.get("symbol") or "").upper()
@@ -3569,13 +3599,24 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         # 2026-09-16: "the stocks that crosses the first level of support and
         # lying in second or third level of support"). `second_band` keeps its
         # name across demand_order / room_floor / rules_info but now MEANS the
-        # band price arrived at — the 2nd or the 3rd.
+        # band price arrived at — the 2nd, the 3rd or the 4th.
         # Back-compat: a row cached before this change carries only
         # `top_band`, so it renders as the single broken level it always did.
         broken = [b for b in (d.get("broken_bands")
                               or ([top] if top else [])) if isinstance(b, dict)]
         lv_broken = int(_num(d.get("levels_broken")) or len(broken) or 1)
         level = int(_num(d.get("level")) or (lv_broken + 1))
+        # Count FIRST, filter SECOND — the chip labels must not be computed
+        # off an already-filtered list, or ticking "4" would zero the "2" and
+        # "3" chips that are the only way back. A level outside LEVEL_CHOICES
+        # (a row cached under a wider cap) is counted nowhere but still
+        # filtered, so no chip ever claims it.
+        if str(level) in level_counts and passes_liquidity(
+                (tile_metrics(r) or {}).get("avg_turnover"), min_tier):
+            level_counts[str(level)] += 1
+        if levels_sel is not None and level not in levels_sel:
+            hidden_by_level += 1
+            continue
         bands = []
         s_lo, s_hi = _num(second.get("lo")), _num(second.get("hi"))
         px_live = _live_px(r, live)
@@ -3808,7 +3849,21 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     depth_note = (f" {_note_fn()}" if callable(_note_fn)
                   else " Depth is NOT measured yet — levels order nothing "
                        "and gate nothing.")
+    # One clause, and ONLY when he has narrowed it — an "all" board must read
+    # exactly as it did before the filter existed. Ordinals come from
+    # DD.ordinal, never a typed "4th".
+    levels_note = ""
+    if levels_sel is not None:
+        _picked = " / ".join(DD.ordinal(n) for n in sorted(levels_sel))
+        levels_note = (f" Showing {_picked} level arrivals only — "
+                       f"{hidden_by_level} hidden by the level filter.")
     return {"tiles": out, **meta,
+            # The per-level filter (Ajay 2026-09-16). `levels` echoes the
+            # NORMALISED selection, so a garbage spec comes back as "all" and
+            # the chips render the state the board actually served.
+            "levels": DD.levels_label(levels_sel),
+            "level_counts": level_counts,
+            "hidden_by_level": hidden_by_level,
             "phase": ("approaching" if phase == "approaching" else "reached"),
             "matched": len(rows),
             "gex_as_of": gex_as_of,
@@ -3839,7 +3894,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                      f"are dropped, and so are names with under "
                      f"{_room_meta(min_room, 0)['min_room']:g}% of room to the first band "
                      f"overhead on the live print ({hidden_low_room} hidden). These fail the "
-                     f"trend gate BY DESIGN — size and stop accordingly.{depth_note}"),
+                     f"trend gate BY DESIGN — size and stop accordingly."
+                     f"{levels_note}{depth_note}"),
             "generated_at": data.get("as_of")}
 
 
@@ -5094,12 +5150,19 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
           touching_only: bool = False, phase: str = "",
           target: str = "zone", bias: str = "all", micro: str = "60m",
-          min_room: Optional[float] = None, studies: bool = False) -> dict:
+          min_room: Optional[float] = None, studies: bool = False,
+          levels: str = "all") -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
     overlays. DEFAULT FALSE: they are uncited, unmeasured, off in the UI by
     default, and every tab's tile contract asserts the exact bands it builds.
+
+    `levels` (2026-09-16) reaches ONLY the deep_demand tab — the arrival
+    levels to keep, "all" or a comma list ("3,4"). Every other tab ignores it
+    and carries no level keys. NOT the gabbar tab's `level` (singular), which
+    is a band TYPE (aggressive / conservative 1 / conservative 2) and is
+    untouched by this.
 
     `min_room` (2026-09-05) reaches ONLY the room-gated tabs — zones,
     deep_demand, quick_bounce and (2026-09-06) breaking — the room floor on
@@ -5144,7 +5207,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
         out = deep_demand_tiles(limit, days, universe, themes_first, srt, tier,
-                                phase=(phase or "reached"), min_room=min_room)
+                                phase=(phase or "reached"), min_room=min_room,
+                                levels=levels if isinstance(levels, str) else "all")
     elif t == "quick_bounce":
         out = quick_bounce_tiles(limit, days, themes_first, srt, tier, min_room=min_room)
     elif t == "breaking":

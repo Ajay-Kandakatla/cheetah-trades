@@ -115,3 +115,83 @@ before this change. It is refused by the arrival band's quality, not by its
 depth — `touches 1 < MIN_TOUCHES 2`, `strength 31 < MIN_ZONE_STRENGTH 40`.
 Those two constants were not touched here; whether they earn their keep is
 WP-D's Q2 and Ajay's call.
+
+---
+
+## 2026-09-16 (later the same day) — level 4, and a per-level filter
+
+> "can you do level 4 and give me filters for that"
+> — Ajay, 2026-09-16
+
+Two changes, both on the board side of the deep tab.
+
+### The cap moved 2 → 3
+
+`deep_demand.MAX_LEVELS_BROKEN = 3` — the screen now takes an arrival at the
+**2nd, 3rd or 4th** level. The one-line edit the previous entry promised; every
+ordinal on the board, the note and the ℹ️ Rules panel still come from that one
+constant, so nothing else was retyped.
+
+**Four is the ceiling the served window can express**, and the module now says
+so in code: `rec["demand_zones"]` is
+`price_zones.nearest_first(...)[:MAX_ZONES_PER_SIDE]` with
+`MAX_ZONES_PER_SIDE = 4`, so at most three bands can ever sit above the arrival
+band. A module-level `assert 1 <= MAX_LEVELS_BROKEN <= MAX_ZONES_PER_SIDE - 1`
+catches a later window change that would leave the cap unreachable. The cap is
+**not derived** from the window — widening the window must never silently
+deepen the screen — it is just bounded by it.
+
+`MIN_TOUCHES` and `MIN_ZONE_STRENGTH` did not move. CRDO is still hidden for
+the same reason as before, on quality.
+
+### The filter — `levels`, multi-select
+
+| key | shape |
+|---|---|
+| query / board param | `levels` (**string**) — `"all"` (default) or a comma list of ARRIVAL levels, `"3,4"`, `"4"` |
+| parser | `deep_demand.parse_levels(spec) -> Optional[frozenset[int]]`, `None` = all |
+| payload `levels` | the normalised echo — `"all"` or `"3,4"` |
+| payload `level_counts` | `{"2": n, "3": n, "4": n}` — what each chip shows, computed with the filter **OFF** |
+| payload `hidden_by_level` | how many tiles the filter removed this call |
+
+Four things this contract exists to hold:
+
+1. **It is `levels`, not `level`.** `/chart-maps?level=` already belongs to the
+   **gabbar** tab (band type: aggressive / conservative 1 / conservative 2) and
+   was not renamed, reused or touched.
+2. **Parsing fails open.** Unknown, empty, out-of-range or non-string specs all
+   parse to `None` and serve the **full** board. An empty Deep Demand tab would
+   read as "nothing qualifies today", which is a lie about the market. Junk
+   parts inside a list are dropped (`"2,junk,4"` → `{2, 4}`); duplicates
+   collapse; the parser never returns an empty set.
+3. **`level_counts` is counted with the filter off**, inside the tile loop —
+   after the Bonde sales gate, the already-reversed drop and the room floor. So
+   a chip counts the names at that level on this board — the same phase / room /
+   sales settings, and ticking "4" does not zero the "2" and "3" chips that are
+   the only way back.
+4. **The filter does not reorder.** It is a `continue` inside the loop that
+   already ran `rerank_live(rows, _order.deep_key, live)`: proximity first. A
+   4th-level name does not outrank a closer 2nd-level one, with the filter on
+   or off. Depth is still unmeasured.
+
+The note gains **one** clause, and only when the selection is not "all":
+"Showing 3rd / 4th level arrivals only — N hidden by the level filter." The
+depth disclaimer stays the last sentence on the board either way.
+
+### Population, measured over the 2,229 `zone_store` docs (2026-09-16)
+
+| arrival level | after the band-quality gate | before it |
+|---|---|---|
+| 2 | 280 | 490 |
+| 3 | 232 | 395 |
+| 4 | **56** | 97 |
+
+### Tests
+
+`backend/tests/test_deep_levels_board_2026_09_16.py` — `L1`–`L8`: a 4th-level
+tile draws three crossed levels; the filter keeps only what it should; the
+counts are computed filter-off and survive the filter on; `hidden_by_level`
+matches; an unknown spec serves the full board; a non-string `levels` (the
+FastAPI `Query` object trap) is treated as "all"; the filter does not reorder;
+the note names the selection only when it is not "all"; the gabbar `level`
+param still works and the new keys do not leak onto its payload.

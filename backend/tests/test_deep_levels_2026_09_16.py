@@ -1,4 +1,4 @@
-"""Deep Demand — arrival at the 2nd or 3rd level of support (2026-09-16).
+"""Deep Demand — arrival at the 2nd, 3rd or 4th level of support (2026-09-16).
 
 Ajay, verbatim: "For the deep demand stocks I need the logic to be, the stocks
 that crosses the first level of support and lying in second or third level of
@@ -79,16 +79,21 @@ def test_third_level_arrival_also_qualifies_from_above_within_near_pct():
 
 
 # ── 2-5. NEGATIVES on the geometry ──────────────────────────────────────────
-def test_negative_a_fourth_level_arrival_is_refused_by_the_cap():
-    """His words were "second or third level" — MAX_LEVELS_BROKEN says so, and
-    the cap is the ONLY thing refusing this row (band quality is fine)."""
+def test_a_fourth_level_arrival_now_qualifies_at_the_widened_cap():
+    """2026-09-16, same day, one deeper: "can you do level 4 and give me
+    filters for that". This row was refused by the cap until MAX_LEVELS_BROKEN
+    moved 2 -> 3; nothing else about it changed."""
     dz = _stack()
-    assert DD.arrival(dz, 72.0) is None
-    assert DD.read(_rec(72.0, dz)) is None
-    # and it is the cap, not the geometry: relaxing the constant would pass it
-    assert DD.MAX_LEVELS_BROKEN == 2
-    broken_above = [z for z in dz if 72.0 < z["lo"]]
-    assert len(broken_above) == 3 > DD.MAX_LEVELS_BROKEN
+    got = DD.arrival(dz, 72.0)
+    assert got is not None
+    levels_broken, arr, broken = got
+    assert levels_broken == 3
+    assert (arr["lo"], arr["hi"]) == (70.0, 75.0)
+    assert [(b["lo"], b["hi"]) for b in broken] == [(100, 105), (90, 95), (80, 85)]
+    r = DD.read(_rec(72.0, dz))
+    assert r is not None and r["state"] == "in"
+    assert r["level"] == 4 and r["levels_broken"] == 3 and len(r["broken_bands"]) == 3
+    assert DD.MAX_LEVELS_BROKEN == 3
 
 
 def test_negative_first_level_still_holding_is_not_this_screen():
@@ -243,7 +248,7 @@ def test_level_is_always_levels_broken_plus_one_and_never_exceeds_the_cap():
 def test_the_enforcing_constants_are_imported_not_redeclared():
     """One scale for "a real band" across the app, and the depth cap is ONE
     named module constant (so widening it is a one-line edit)."""
-    assert DD.MAX_LEVELS_BROKEN == 2
+    assert DD.MAX_LEVELS_BROKEN == 3
     assert DD.MIN_TOUCHES is DR.MIN_TOUCHES and DR.MIN_TOUCHES == 2
     assert DD.MIN_ZONE_STRENGTH is DR.MIN_ZONE_STRENGTH
     assert DR.MIN_ZONE_STRENGTH == 40.0
@@ -260,7 +265,7 @@ def test_ordinal_table_including_the_teens():
         "21st", "22nd", "23rd", "111th", "112th"]
     assert DD.ordinal(0) == "0th"
     # the board label the constant produces
-    assert DD.ordinal(DD.MAX_LEVELS_BROKEN + 1) == "3rd"
+    assert DD.ordinal(DD.MAX_LEVELS_BROKEN + 1) == "4th"
 
 
 # ── 13. malformed input never crashes a scan ───────────────────────────────
@@ -339,8 +344,172 @@ def test_nothing_in_the_read_orders_or_gates_on_the_level_count():
     """band_structure measured `no_signal` (2026-09-16); depth is a DESCRIPTION
     on this board, never a rank and never a gate."""
     import inspect
-    src = inspect.getsource(DD.sort_key) + inspect.getsource(DD.cap)
+    src = inspect.getsource(DD.sort_key)
     for forbidden in ("levels_broken", "level\"", "'level'", "MAX_LEVELS_BROKEN"):
         assert forbidden not in src, f"the deep order reaches for {forbidden}"
     from supply_demand import demand_order as O
     assert "levels_broken" not in inspect.getsource(O)
+    # `cap()` DOES read the level — it budgets MAX_IN/MAX_NEAR per level so a
+    # level chip can reach its own population (2026-09-16, the same reason the
+    # cap went per STATE on 2026-09-03). Budgeting is not ordering: the list
+    # reaching cap() is already sorted, and cap() preserves that order.
+    # NB: strip the docstring before any source scan — an assertion that the
+    # code never mentions "sort" matched the docstring sentence explaining why
+    # the list arrives already sorted (the same trap cost a round earlier today
+    # on `arrival`; test_supply_demand_contracts._code_only exists for this).
+    cap_src = inspect.getsource(DD.cap).replace(DD.cap.__doc__ or "", "")
+    assert 'd.get("level")' in cap_src
+    assert "sort" not in cap_src and "key=" not in cap_src
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LEVEL 4 + the per-level filter (Ajay 2026-09-16, same day):
+# "can you do level 4 and give me filters for that"
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── L1. four is the ceiling the SERVED WINDOW can express ──────────────────
+def test_the_cap_is_exactly_what_the_served_window_can_feed():
+    """`rec["demand_zones"]` is `nearest_first(...)[:MAX_ZONES_PER_SIDE]`, so
+    with four bands surfaced at most THREE can sit above the arrival band.
+    The module asserts the relation at import; this pins it, so raising the
+    window later cannot silently leave the cap behind."""
+    assert PZ.MAX_ZONES_PER_SIDE == 4
+    assert DD.MAX_LEVELS_BROKEN == PZ.MAX_ZONES_PER_SIDE - 1 == 3
+    assert DD.LEVEL_CHOICES == (2, 3, 4)
+    assert DD.ordinal(DD.LEVEL_CHOICES[-1]) == "4th"
+
+
+def test_negative_a_window_longer_than_the_served_one_still_refuses_a_5th_level():
+    """A hand-built window of FIVE bands (longer than price_zones will ever
+    serve) must STILL be refused past the cap — the ceiling is the constant,
+    not an accident of how many bands happened to arrive."""
+    dz = [_band(110, 115), _band(100, 105), _band(90, 95),
+          _band(80, 85), _band(70, 75)]
+    assert DD.arrival(dz, 72.0) is None, "4 levels crossed > MAX_LEVELS_BROKEN"
+    assert DD.read(_rec(72.0, dz)) is None
+    broken_above = [z for z in dz if 72.0 < z["lo"]]
+    assert len(broken_above) == 4 > DD.MAX_LEVELS_BROKEN
+    # …and the row one level shallower on the same window IS served, at 4
+    r = DD.read(_rec(82.0, dz))
+    assert r is not None and r["level"] == 4 and r["levels_broken"] == 3
+
+
+def test_negative_the_module_assertion_ties_the_cap_to_the_window():
+    """The guard exists so a later MAX_ZONES_PER_SIDE change cannot leave the
+    cap unreachable. Re-run the module's own condition against a shrunk
+    window — it must fail."""
+    assert 1 <= DD.MAX_LEVELS_BROKEN <= PZ.MAX_ZONES_PER_SIDE - 1
+    shrunk = 2                                   # a 2-band window
+    assert not (DD.MAX_LEVELS_BROKEN <= shrunk - 1), \
+        "the assertion would have caught a shrunk window"
+    import inspect
+    src = inspect.getsource(DD)
+    assert "MAX_ZONES_PER_SIDE - 1" in src, "the cap guard names the window cap"
+
+
+# ── L2. parse_levels — the ONE parser, and it fails open ───────────────────
+def test_parse_levels_reads_all_and_a_comma_list():
+    assert DD.parse_levels("all") is None
+    assert DD.parse_levels("ALL") is None
+    assert DD.parse_levels("3,4") == frozenset({3, 4})
+    assert DD.parse_levels(" 4 ") == frozenset({4})
+    assert DD.parse_levels("2") == frozenset({2})
+    assert DD.parse_levels(" 3 , 4 ") == frozenset({3, 4})
+    assert DD.parse_levels("4,3,2") == frozenset({2, 3, 4})
+
+
+def test_parse_levels_collapses_duplicates_and_drops_the_junk_parts():
+    assert DD.parse_levels("4,4,4") == frozenset({4})
+    assert DD.parse_levels("2,junk,4") == frozenset({2, 4})
+    assert DD.parse_levels("3,,4,") == frozenset({3, 4})
+    assert DD.parse_levels("4,9") == frozenset({4}), "out-of-range parts drop"
+
+
+def test_negative_parse_levels_fails_open_on_everything_it_cannot_read():
+    """An unknown spec must serve the FULL board, never an empty one — an
+    empty Deep Demand tab reads as 'nothing qualifies today', which is a lie
+    about the market."""
+    for junk in ("", "   ", "junk", "0", "9", "-1", "1", "5", "2.5",
+                 ",", ",,,", "null", "undefined"):
+        assert DD.parse_levels(junk) is None, junk
+    # only the EXACT word is "all": inside a list it is just another junk part
+    assert DD.parse_levels("all,4") == frozenset({4})
+    for not_a_string in (None, 4, 3.0, True, ["3", "4"], {"3": 1}, object()):
+        assert DD.parse_levels(not_a_string) is None, not_a_string
+
+
+def test_negative_parse_levels_never_returns_an_empty_set():
+    """An empty frozenset would hide every tile. None (= all) is the only
+    'nothing selected' answer this parser may give."""
+    for spec in ("", "junk", "0", "9", "1", "5", None, 4):
+        got = DD.parse_levels(spec)
+        assert got is None and got != frozenset()
+
+
+def test_parse_levels_range_is_derived_from_the_cap_not_typed():
+    """Every level the cap allows parses; the one past it does not."""
+    for n in DD.LEVEL_CHOICES:
+        assert DD.parse_levels(str(n)) == frozenset({n})
+    assert DD.parse_levels(str(DD.MAX_LEVELS_BROKEN + 2)) is None
+    assert DD.parse_levels(str(DD.LEVEL_CHOICES[0] - 1)) is None
+
+
+def test_levels_label_normalises_the_echo():
+    assert DD.levels_label(None) == "all"
+    assert DD.levels_label(frozenset()) == "all"
+    assert DD.levels_label(frozenset({4})) == "4"
+    assert DD.levels_label(frozenset({4, 3})) == "3,4"
+    assert DD.levels_label(DD.parse_levels("4,4, junk ,3")) == "3,4"
+    assert DD.levels_label(DD.parse_levels("junk")) == "all"
+
+
+def test_the_filter_is_pure_and_orders_nothing():
+    """`parse_levels` is a SET — it cannot carry an order, which is the point:
+    depth is unmeasured and must never rank (band_structure, `no_signal`)."""
+    import inspect
+    src = inspect.getsource(DD.parse_levels) + inspect.getsource(DD.levels_label)
+    for forbidden in ("sort_key", "deep_key", "score", "rank"):
+        assert forbidden not in src, forbidden
+    assert isinstance(DD.parse_levels("3,4"), frozenset)
+
+
+def test_the_payload_cap_gives_every_level_its_own_budget():
+    """Ajay 2026-09-16: "can you do level 4 and give me filters for that".
+
+    The deep list is sorted closest-first and is DEPTH-BLIND, so one shared
+    pair of counters fills with whichever level happens to be nearest its
+    band that day — and a level chip could go EMPTY while hundreds of names
+    sit at that level. Same failure the per-STATE split fixed on 2026-09-03.
+    """
+    def row(sym, level, state):
+        return {"symbol": sym, "deep_demand": {"level": level, "state": state}}
+
+    rows = ([row(f"A{i}", 2, "in") for i in range(DD.MAX_IN + 5)]
+            + [row(f"B{i}", 4, "in") for i in range(3)]
+            + [row(f"C{i}", 4, "near") for i in range(2)])
+    kept = DD.cap(rows)
+    lv = {}
+    for r in kept:
+        d = r["deep_demand"]
+        lv.setdefault((d["level"], d["state"]), 0)
+        lv[(d["level"], d["state"])] += 1
+    assert lv[(2, "in")] == DD.MAX_IN          # level 2 still capped at its own budget
+    assert lv[(4, "in")] == 3                  # …and level 4 is NOT starved by it
+    assert lv[(4, "near")] == 2
+
+
+def test_negative_the_cap_never_lets_one_level_exceed_its_own_budget():
+    rows = [{"symbol": f"D{i}", "deep_demand": {"level": 3, "state": "near"}}
+            for i in range(DD.MAX_NEAR + 7)]
+    kept = DD.cap(rows)
+    assert len(kept) == DD.MAX_NEAR
+
+
+def test_negative_the_cap_preserves_order_and_keeps_an_unknown_level():
+    """It budgets, it does not rank — the list arrives already sorted. A row
+    with no level (a cache written before the walk shipped) is kept, never
+    silently dropped."""
+    rows = [{"symbol": "Z1", "deep_demand": {"level": 2, "state": "in"}},
+            {"symbol": "Z2", "deep_demand": {"state": "in"}},
+            {"symbol": "Z3", "deep_demand": {"level": 4, "state": "in"}}]
+    assert [r["symbol"] for r in DD.cap(rows)] == ["Z1", "Z2", "Z3"]

@@ -252,6 +252,9 @@ def sections() -> dict:
             "strength ≥ %d." % (DR.MIN_TOUCHES, int(DR.MIN_ZONE_STRENGTH)),
             "Sales intact: the revenue snapshot is joined at board time (penalized names "
             "whose sales still grow).",
+            "Per-level filter: narrow the board to any of %s level arrivals, or all. It "
+            "filters only — the order stays closest-first, because depth is unmeasured."
+            % " / ".join(DD.ordinal(n) for n in DD.LEVEL_CHOICES),
             "Closest-first order; the board keeps up to %d in-band and %d approaching names."
             % (DD.MAX_IN, DD.MAX_NEAR),
         ] + _room_lines(),

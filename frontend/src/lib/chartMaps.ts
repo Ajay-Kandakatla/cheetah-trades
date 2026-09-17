@@ -220,7 +220,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // measured harmful — so this copy describes the geometry and never ranks on it.
   deep_demand: {
     label: 'Deep Demand',
-    blurb: 'Penalized price, intact business. Names that crossed one or more demand bands and are arriving at the next level down — the 2nd or the 3rd — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red bands are the levels already crossed, each labelled 1st / 2nd, green is the level being entered; the tile names the count once more than one was crossed. Depth is not a measured edge — a 3rd-level name is not ranked above a 2nd-level one. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03, unchanged): names inside their arrival band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'Penalized price, intact business. Names that crossed one or more demand bands and are arriving at the next level down — the 2nd, the 3rd or the 4th — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red bands are the levels already crossed, each labelled 1st / 2nd / 3rd, green is the level being entered; the tile names the count once more than one was crossed. Four is as deep as this window goes: the board is served the four bands nearest the price, so three crossed levels is the arithmetic ceiling, not a preference. The 2nd \u00b7 3rd \u00b7 4th chips filter the board to the arrival levels you want \u2014 all three on is the whole board, and turning every one off means all of them rather than nothing; each chip carries how many names that level would show right now. Depth is not a measured edge \u2014 the filter narrows, it never ranks: a 4th- or 3rd-level name is not placed above a closer 2nd-level one. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03, unchanged): names inside their arrival band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
   },
   quick_bounce: {
     label: '\u{1FA83} Quick Reversal',
@@ -475,6 +475,20 @@ export type CmBoard = {
    *  room atleast >5%". 0 = floor off. */
   min_room?: number;
   hidden_low_room?: number;
+  /** 🩹 Deep Demand only (2026-09-16) — the arrival-level filter, echoed back.
+   *  `"all"` (the default) or the normalised ascending comma list the server
+   *  actually applied, e.g. `"3,4"`. Absent on every other tab and on a cache
+   *  written before this shipped; the page then reads it as "all". */
+  levels?: string;
+  /** 🩹 Deep Demand only (2026-09-16) — how many tiles EACH arrival level would
+   *  show under the CURRENT phase / room / sales settings but with the level
+   *  filter OFF, keyed by level ("2" | "3" | "4"). This is what the chips
+   *  display, so it is deliberately NOT computed after the filter: a chip whose
+   *  count changed because it is switched off would be a lie about the board. */
+  level_counts?: Record<string, number>;
+  /** 🩹 Deep Demand only (2026-09-16) — how many tiles the level filter hid on
+   *  THIS call. 0 / absent when every level is selected. */
+  hidden_by_level?: number;
   /** 🚀 Breaking (2026-09-06): the zone-edge pass the cards were drawn from. */
   pass_as_of?: string | null;
   pass_date?: string | null;
@@ -685,6 +699,52 @@ export function parseMinRoom(raw: string | null | undefined): 5 | 0 {
   return DEFAULT_MIN_ROOM;
 }
 
+/* ── 🩹 Deep Demand arrival level (Ajay 2026-09-16: "can you do level 4 and
+ *     give me filters for that") ──────────────────────────────────────────── */
+
+/** The arrival levels the SERVED window can express. Price is standing in the
+ *  2nd, 3rd or 4th demand band; anything deeper is not a policy choice, it is
+ *  arithmetic — the board is served `price_zones.nearest_first(...)[:4]`, so at
+ *  most three bands can sit above the arrival band (backend mirror:
+ *  deep_demand.MAX_LEVELS_BROKEN = PZ.MAX_ZONES_PER_SIDE - 1).
+ *
+ *  It is a FILTER, never an ordering: depth is unmeasured (the 2026-09-16
+ *  band-structure study read `no_signal` on the adjacent claim), so a 4th-level
+ *  name must never outrank a closer 2nd-level one. */
+export const DEEP_LEVELS: readonly number[] = [2, 3, 4];
+
+/** The ordinal the chips and the tile badges say. Read from here rather than
+ *  built with a suffix rule, so "1st/2nd/3rd" is worded once. */
+export const DEEP_LEVEL_LABEL: Record<number, string> = { 2: '2nd', 3: '3rd', 4: '4th' };
+
+/** `?levels=` → the selected arrival levels. FAILS OPEN exactly like the
+ *  backend's `deep_demand.parse_levels`: empty, `all`, garbage, a level outside
+ *  the window, or a spec that selects nothing all mean EVERY level. A filter
+ *  that can silently serve an empty board is a filter that eats the tab. */
+export function parseLevels(raw: string | null | undefined): Set<number> {
+  const all = new Set<number>(DEEP_LEVELS);
+  const v = (raw || '').trim().toLowerCase();
+  if (!v || v === 'all') return all;
+  const picked = new Set<number>();
+  for (const part of v.split(',')) {
+    const n = Number(part.trim());
+    if (Number.isInteger(n) && DEEP_LEVELS.includes(n)) picked.add(n);
+  }
+  return picked.size ? picked : all;
+}
+
+/** The selection as the wire/URL value, normalised ascending — `null` when it
+ *  is every level, which is the DEFAULT and therefore written nowhere (same
+ *  rule `phase` and `room` follow, so a plain tab URL stays clean). Selecting
+ *  none is meaningless and normalises to null too, so the page can never ask
+ *  for an empty board. */
+export function levelsParam(sel: Iterable<number>): string | null {
+  const want = new Set<number>(sel);
+  const picked = DEEP_LEVELS.filter((n) => want.has(n));
+  if (!picked.length || picked.length === DEEP_LEVELS.length) return null;
+  return picked.join(',');
+}
+
 export function parseBias(raw: string | null | undefined): IctBias {
   const v = (raw || '').trim().toLowerCase();
   return v === 'bullish' || v === 'bearish' ? v : DEFAULT_ICT_BIAS;
@@ -887,6 +947,7 @@ export function boardQuery(p: {
   phase?: string; target?: string;
   bias?: string; micro?: string;
   minRoom?: number;
+  levels?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -911,6 +972,13 @@ export function boardQuery(p: {
   // not decide (older call sites), leaving their query byte for byte.
   if (ROOM_TABS.includes(p.tab) && p.minRoom != null && Number.isFinite(p.minRoom)) {
     q.set('min_room', String(p.minRoom));
+  }
+  // 🩹 Arrival-level filter (Ajay 2026-09-16: "can you do level 4 and give me
+  // filters for that"). Deep Demand alone has an arrival level; `all` is the
+  // server default and rides nowhere. NOT the gabbar tab's `level` (singular),
+  // which is a band-TYPE lens on a different board — two params, two names.
+  if (p.tab === 'deep_demand' && p.levels && p.levels !== 'all') {
+    q.set('levels', p.levels);
   }
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));

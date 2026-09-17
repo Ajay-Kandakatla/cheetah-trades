@@ -1090,7 +1090,15 @@ def _code_only(src: str) -> str:
 # earning it crossed multiple support level."
 def test_the_deep_level_cap_is_his_words_and_one_named_constant():
     from supply_demand import deep_demand as DD
-    assert DD.MAX_LEVELS_BROKEN == 2          # arrival at the 2nd or the 3rd level
+    from supply_demand import price_zones as PZ
+    # 2026-09-16, same day, one deeper: "can you do level 4 and give me
+    # filters for that" -> arrival at the 2nd, 3rd or 4th level.
+    assert DD.MAX_LEVELS_BROKEN == 3
+    # …and FOUR is the ceiling the served window can express: with
+    # MAX_ZONES_PER_SIDE bands surfaced, at most that many minus one can sit
+    # above the arrival band. The module asserts it; this pins the relation.
+    assert DD.MAX_LEVELS_BROKEN == PZ.MAX_ZONES_PER_SIDE - 1
+    assert DD.LEVEL_CHOICES == (2, 3, 4)
     src = inspect.getsource(DD.arrival)
     assert "MAX_LEVELS_BROKEN" in src, "the cap must be the constant, never a literal"
     assert "dz[0]" not in src and "dz[1]" not in src, \

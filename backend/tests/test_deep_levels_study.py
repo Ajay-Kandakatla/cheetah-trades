@@ -160,13 +160,19 @@ def test_levels_cap_widens_the_READ_and_always_restores_the_shipped_constant():
 
 
 def test_a_deeper_arrival_than_the_shipped_cap_is_counted_but_not_kept():
-    """4 bands, price inside the LOWEST: 3 levels crossed. The shipped cap keeps
+    """MAX_LEVELS_BROKEN + 2 bands, price inside the LOWEST: one level more
+    than the cap allows, whatever the cap is — reachable ONLY with a widened
+    --max-zones, because at the shipped MAX_ZONES_PER_SIDE = 4 the window can
+    express at most 3 crossed levels, which IS the cap. The shipped cap keeps
     up to MAX_LEVELS_BROKEN, so `levels_broken` is None while
     `levels_broken_all` still says 3 and `arrival_within_cap` says why."""
-    dz = [_band(160, 164), _band(150, 154), _band(140, 144), _band(130, 134)]
-    r = DL.arrival_read(132.0, dz)
-    assert r["levels_broken_all"] == 3
-    assert r["arrival_within_cap"] is (3 <= DD.MAX_LEVELS_BROKEN)
+    over = DD.MAX_LEVELS_BROKEN + 1                         # genuinely over the cap
+    dz = [_band(200 - 10 * i, 204 - 10 * i) for i in range(over)]
+    dz.append(_band(200 - 10 * over, 204 - 10 * over))
+    px = dz[-1]["lo"] + 2.0
+    r = DL.arrival_read(px, dz, max_zones=len(dz))
+    assert r["levels_broken_all"] == over
+    assert r["arrival_within_cap"] is (over <= DD.MAX_LEVELS_BROKEN)
     assert r["levels_broken"] is None and r["level"] is None
     assert DD.MAX_LEVELS_BROKEN == DL.MAX_LEVELS            # untouched by the read
 
@@ -217,12 +223,13 @@ def test_CRDO_passes_the_moment_the_arrival_band_meets_the_IMPORTED_bar():
 
 
 def test_the_gate_column_is_read_itself_and_is_never_a_depth_refusal():
-    """A 3-level arrival is too deep for the shipped screen, but its BAND is
+    """An over-the-cap arrival is too deep for the shipped screen, but its BAND is
     perfectly good — `arr_gate_pass` must say so, or Q2 would read the depth cap
     as a quality failure."""
-    dz = [_band(160, 164), _band(150, 154), _band(140, 144),
-          _band(130, 134, touches=4, strength=90.0)]
-    r = DL.arrival_read(132.0, dz)
+    over = DD.MAX_LEVELS_BROKEN + 1                         # genuinely over the cap
+    dz = [_band(200 - 10 * i, 204 - 10 * i) for i in range(over)]
+    dz.append(_band(200 - 10 * over, 204 - 10 * over, touches=4, strength=90.0))
+    r = DL.arrival_read(dz[-1]["lo"] + 2.0, dz, max_zones=len(dz))
     assert r["levels_broken"] is None                       # refused on DEPTH
     assert r["arr_gate_pass"] is True                       # but the band is fine
 

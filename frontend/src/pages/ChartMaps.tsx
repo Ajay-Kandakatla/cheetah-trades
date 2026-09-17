@@ -27,6 +27,7 @@ import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, ENTERABLE_KIND, TAB_META, THEMES_FIRST_DEFAULT,
   quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText, sessionNoteText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
+  DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
@@ -221,6 +222,25 @@ export function ChartMaps() {
     if (v === 'any') next.set('room', 'any'); else next.delete('room');
     setParams(next, { replace: true });
   };
+  /* 🩹 Deep Demand arrival level (Ajay 2026-09-16: "can you do level 4 and give
+   * me filters for that"). Multi-select, all three ON by default — which is the
+   * same board as no filter at all, so only a NARROWING selection is written to
+   * the URL (`?levels=3,4`), exactly like phase and room. Turning every chip off
+   * is meaningless and normalises back to all: the page can never ask for an
+   * empty board, and neither can a hand-typed URL (the parser fails open, as
+   * does the server's). NOT `?level=` — that one is the gabbar tab's band-type
+   * lens and is untouched. */
+  const DEEP_TAB = tab === 'deep_demand';
+  const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
+  const levelsSpec = levelsParam(levelSel) ?? 'all';
+  const toggleLevel = (n: number) => {
+    const sel = new Set(levelSel);
+    if (sel.has(n)) sel.delete(n); else sel.add(n);
+    const spec = levelsParam(sel);
+    const next = new URLSearchParams(params);
+    if (spec) next.set('levels', spec); else next.delete('levels');
+    setParams(next, { replace: true });
+  };
   const [gabbarLevel, setGabbarLevel] = useState('all');
   const [gabbarTouchingOnly, setGabbarTouchingOnly] = useState(false);
   /* ICT (Ajay 2026-09-03): which side of the sweep, and which trigger clock.
@@ -293,7 +313,8 @@ export function ChartMaps() {
                            universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
                            gabbarTouchingOnly, phase, target, bias, micro,
-                           minRoom: ROOM_TAB ? minRoom : undefined });
+                           minRoom: ROOM_TAB ? minRoom : undefined,
+                           levels: levelsSpec });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
@@ -312,7 +333,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -675,6 +696,45 @@ export function ChartMaps() {
                       onClick={() => setRoom('any')}>
                 Any room
               </button>
+            </span>
+          )}
+          {/* 🩹 Arrival level (Ajay 2026-09-16: "can you do level 4 and give me
+            * filters for that"). Deep Demand only — it is the one board whose
+            * rows HAVE an arrival level. Multi-select, not segmented: these
+            * three are refinements of ONE list, unlike the phase tabs above
+            * which are a choice of which list. Each chip carries the count that
+            * level HOLDS with the filter OFF (served `level_counts`), so a
+            * level with nothing in it reads as empty rather than missing —
+            * dimmed, never hidden, and still clickable so a link that arrives
+            * on an empty level is never a dead end. */}
+          {DEEP_TAB && (
+            <span className="cm-phase-sub" role="tablist" aria-label="Arrival level"
+                  title="Arrival level = which demand band price is standing in after crossing the ones above it. 2nd = one band already crossed, 4th = three. Four is the deepest this window can express — the board is served the four bands nearest the price. Counts are how many names sit at each level on this board — same phase, room, sales and liquidity settings, with the level filter off. The page itself shows the first 24 of them.">
+              {DEEP_LEVELS.map((n) => {
+                const counts = data?.level_counts;
+                const c = counts ? Number(counts[String(n)] ?? 0) : null;
+                const on = levelSel.has(n);
+                const empty = c === 0;
+                return (
+                  <button key={n} type="button" role="tab" aria-selected={on}
+                          aria-disabled={empty || undefined}
+                          data-testid={`deep-level-${n}`}
+                          className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
+                          style={empty ? { opacity: 0.45 } : undefined}
+                          onClick={() => toggleLevel(n)}>
+                    {DEEP_LEVEL_LABEL[n]}{c == null ? '' : ` · ${c}`}
+                  </button>
+                );
+              })}
+            </span>
+          )}
+          {DEEP_TAB && (
+            <span className="cm-phase-hint" data-testid="deep-levels-hint">
+              Level = the demand band price arrived at after crossing the ones above
+              it — 2nd means one band already crossed, 4th means three, and four is
+              the deepest the served four-band window can express. Depth is NOT a
+              measured edge: these chips narrow the board and order nothing, so a
+              4th-level name never outranks a closer 2nd-level one.
             </span>
           )}
           {tab === 'zones' && (
@@ -1135,6 +1195,16 @@ export function ChartMaps() {
           {data.hidden_low_room} hidden: room &lt; {data.min_room ?? DEFAULT_MIN_ROOM}% to the
           first unbroken band overhead on the live print (the phone's own gate) — pick
           {' '}<em>Any room</em> to see them.
+        </p>
+      )}
+      {/* 🩹 Arrival-level filter count (2026-09-16). Served, like the room
+        * floor's — it says what the SERVER dropped on this call, so a board
+        * that shrank because of a chip is explained rather than just smaller. */}
+      {DEEP_TAB && !!data?.hidden_by_level && (
+        <p className="cm-note" data-testid="hidden-by-level">
+          {data.hidden_by_level} hidden: arriving at a level you have switched off
+          {data.levels && data.levels !== 'all' ? ` (showing ${data.levels})` : ''} — turn
+          the chips back on to see them.
         </p>
       )}
       {tab === 'quick_bounce' && !!(data?.no_band || data?.no_print) && (

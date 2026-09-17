@@ -22,6 +22,7 @@ import {
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_PARAM_LABELS, ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   ROOM_TABS, parseMinRoom,
+  DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -199,6 +200,86 @@ describe('room floor — parseMinRoom / boardQuery min_room', () => {
     expect(boardQuery({ tab: 'gabbar', minRoom: 5 })).toBe('tab=gabbar');
     // Unspecified → not sent (the existing zones query is unchanged byte for byte).
     expect(boardQuery({ tab: 'zones' })).toBe('tab=zones');
+  });
+});
+
+/* ── 🩹 the arrival-level filter (Ajay 2026-09-16) ────────────────────────────
+ * "can you do level 4 and give me filters for that". Three levels, because the
+ * board is served four bands and three is the most that can sit above the
+ * arrival band. The parser FAILS OPEN on purpose — mirror of the backend's
+ * deep_demand.parse_levels — so no typed URL, stale link or dropped payload can
+ * hand him a silently empty board. Depth orders nothing; this only narrows. */
+describe('arrival levels — parseLevels / levelsParam / boardQuery levels', () => {
+  it('DEEP_LEVELS is exactly the levels the four-band window can express', () => {
+    expect(DEEP_LEVELS).toEqual([2, 3, 4]);
+    expect(DEEP_LEVEL_LABEL[2]).toBe('2nd');
+    expect(DEEP_LEVEL_LABEL[3]).toBe('3rd');
+    expect(DEEP_LEVEL_LABEL[4]).toBe('4th');
+  });
+
+  it('parses a comma list, in any order and with spaces', () => {
+    expect([...parseLevels('3,4')].sort()).toEqual([3, 4]);
+    expect([...parseLevels('4')].sort()).toEqual([4]);
+    expect([...parseLevels(' 4 , 2 ')].sort()).toEqual([2, 4]);
+    // A repeat is a set, not a multiplier.
+    expect([...parseLevels('3,3,3')].sort()).toEqual([3]);
+  });
+
+  it('FAILS OPEN — every unusable spec means ALL levels, never none', () => {
+    const all = [2, 3, 4];
+    expect([...parseLevels(null)].sort()).toEqual(all);
+    expect([...parseLevels(undefined)].sort()).toEqual(all);
+    expect([...parseLevels('')].sort()).toEqual(all);
+    expect([...parseLevels('   ')].sort()).toEqual(all);
+    expect([...parseLevels('all')].sort()).toEqual(all);
+    expect([...parseLevels('ALL')].sort()).toEqual(all);
+    // NEGATIVE: garbage, out-of-range and the level that does not exist.
+    expect([...parseLevels('garbage')].sort()).toEqual(all);
+    expect([...parseLevels('1')].sort()).toEqual(all);
+    expect([...parseLevels('5')].sort()).toEqual(all);
+    expect([...parseLevels('0,9,-3')].sort()).toEqual(all);
+    expect([...parseLevels('3.5')].sort()).toEqual(all);
+    expect([...parseLevels(',,,')].sort()).toEqual(all);
+    // A spec that mixes one real level with junk keeps the real one.
+    expect([...parseLevels('4,nope')].sort()).toEqual([4]);
+  });
+
+  it('levelsParam writes only a NARROWING selection, normalised ascending', () => {
+    expect(levelsParam([2, 3, 4])).toBeNull();
+    expect(levelsParam([4, 3, 2])).toBeNull();
+    expect(levelsParam([4, 3])).toBe('3,4');
+    expect(levelsParam([4])).toBe('4');
+    expect(levelsParam([2])).toBe('2');
+    // NEGATIVE: none selected is meaningless — it normalises to the default
+    // (null → no param → the parser reads ALL), so the page cannot request an
+    // empty board.
+    expect(levelsParam([])).toBeNull();
+    // NEGATIVE: a level outside the window contributes nothing.
+    expect(levelsParam([9])).toBeNull();
+    expect(levelsParam([3, 9])).toBe('3');
+  });
+
+  it('round-trips: whatever levelsParam writes, parseLevels reads back', () => {
+    for (const sel of [[2], [3], [4], [2, 3], [3, 4], [2, 4], [2, 3, 4]]) {
+      const spec = levelsParam(sel);
+      expect([...parseLevels(spec)].sort()).toEqual([...sel].sort());
+    }
+  });
+
+  it('sends levels on deep_demand only, and only when it narrows', () => {
+    expect(boardQuery({ tab: 'deep_demand', levels: '3,4' }))
+      .toBe('tab=deep_demand&levels=3%2C4');
+    expect(boardQuery({ tab: 'deep_demand', levels: '4', minRoom: 5 }))
+      .toBe('tab=deep_demand&min_room=5&levels=4');
+    // NEGATIVE: 'all' is the server default and rides nowhere.
+    expect(boardQuery({ tab: 'deep_demand', levels: 'all' })).toBe('tab=deep_demand');
+    expect(boardQuery({ tab: 'deep_demand' })).toBe('tab=deep_demand');
+    // NEGATIVE: no other board has an arrival level — and the gabbar tab's own
+    // `level` (singular, band-TYPE lens) is a different param and untouched.
+    expect(boardQuery({ tab: 'zones', levels: '4' })).toBe('tab=zones');
+    expect(boardQuery({ tab: 'quick_bounce', levels: '3,4' })).toBe('tab=quick_bounce');
+    expect(boardQuery({ tab: 'gabbar', levels: '4', gabbarLevel: 'conservative 1' }))
+      .toBe('tab=gabbar&level=conservative+1');
   });
 });
 
@@ -1432,9 +1513,13 @@ describe('the Deep Demand tab', () => {
     const b = TAB_META.deep_demand.blurb;
     // 2026-09-16: the screen is no longer "the first band broke, here is the
     // second" — it is a WALK down the served bands, so the copy names the depth
-    // the constant allows (2nd or 3rd) instead of the word "second".
+    // the constant allows instead of the word "second". Retuned the same day for
+    // level 4 (Ajay: "can you do level 4 and give me filters for that"), which
+    // is the CEILING the four-band served window can express.
     expect(b).toMatch(/crossed one or more demand bands and are arriving at the next level down/);
-    expect(b).toMatch(/2nd or the 3rd/);
+    expect(b).toMatch(/2nd, the 3rd or the 4th/);
+    // NEGATIVE: the old 3-deep claim is gone, not merely joined by the new one.
+    expect(b).not.toMatch(/2nd or the 3rd/);
     expect(b).toMatch(/Bonde/);
     expect(b).toMatch(/5% YoY floor/);
     expect(b).toMatch(/falling knife/i);
@@ -1466,9 +1551,24 @@ describe('the Deep Demand tab', () => {
   // blurb must say that out loud and must never sell depth as an edge.
   it('NEGATIVE — depth is named as unmeasured and never ranked', () => {
     const b = TAB_META.deep_demand.blurb;
-    expect(b).toMatch(/Depth is not a measured edge — a 3rd-level name is not ranked above a 2nd-level one/);
+    // 2026-09-16 (level 4 + the chips): the filter NARROWS and must never be
+    // read as an ordering, so the sentence now says both halves.
+    expect(b).toMatch(/Depth is not a measured edge — the filter narrows, it never ranks: a 4th- or 3rd-level name is not placed above a closer 2nd-level one/);
     expect(b).not.toMatch(/deeper .{0,30}(better|stronger|outperform)/i);
-    expect(b).not.toMatch(/3rd-level names? (win|outperform|beat)/i);
+    expect(b).not.toMatch(/(3rd|4th)-level names? (win|outperform|beat)/i);
+  });
+
+  it('says four is the WINDOW’s ceiling and that the chips filter, with counts', () => {
+    // Ajay 2026-09-16: "can you do level 4 and give me filters for that". Four
+    // is arithmetic — the board is served the four bands nearest the price — so
+    // the copy must present it as a limit, never as a chosen depth.
+    const b = TAB_META.deep_demand.blurb;
+    expect(b).toMatch(/Four is as deep as this window goes/);
+    expect(b).toMatch(/four bands nearest the price/);
+    expect(b).toMatch(/arithmetic ceiling, not a preference/);
+    expect(b).toMatch(/chips filter the board to the arrival levels/);
+    expect(b).toMatch(/turning every one off means all of them rather than nothing/);
+    expect(b).toMatch(/how many names that level would show right now/);
   });
 
   it('teaches the inflow layer — what 💰 and 🔻 mean and how they rank', () => {

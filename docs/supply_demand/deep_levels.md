@@ -1,4 +1,4 @@
-# Deep Demand — arrival at the 2nd or 3rd level of support
+# Deep Demand — arrival at the 2nd, 3rd or 4th level of support
 
 **2026-09-16.** What `backend/supply_demand/deep_demand.py` qualifies, why, and what it
 deliberately does not claim.
@@ -37,7 +37,8 @@ could only ever draw one broken level.
 3. `levels_broken == 0` (the first level still holds) → refused; this is the ordinary Back in
    Demand case, not this screen.
 4. `levels_broken > deep_demand.MAX_LEVELS_BROKEN` → refused. `level = levels_broken + 1`, so the
-   screen shows arrivals at the 2nd and the 3rd level — his sentence read literally.
+   screen shows arrivals at the 2nd, the 3rd and the 4th level (see the 2026-09-16 level-4 entry
+   at the bottom — his first sentence stopped at the 3rd, he asked for the 4th the same day).
 5. **The walk never skips a band for quality.** Touches and strength are read by `read()` *after*
    the band has been chosen. A flimsy arrival band refuses the row; it never promotes the level
    below it. Promoting would make the reported `level` lie and would silently relax the band bar.
@@ -156,9 +157,9 @@ already crossed. It is not a signal.
 
 ## His call, not decided here
 
-1. `MIN_TOUCHES = 2` / `MIN_ZONE_STRENGTH = 40` on the arrival band — the only reason CRDO stays
+1. `MIN_TOUCHES = 2` / `MIN_ZONE_STRENGTH = 40` on the arrival band — still his call, still the only reason CRDO stays
    hidden; measured by the study's Q2 cell.
-2. `MAX_LEVELS_BROKEN = 2` — 3 is the deepest a four-band window can express. One line.
+2. ~~`MAX_LEVELS_BROKEN = 2`~~ — **decided 2026-09-16, it is 3.** See the level-4 entry below.
 3. Counting levels off the **uncapped** stack instead of the served window.
 4. Ordering: should a deeper arrival rank above a closer shallower one? Unmeasured, not done.
 5. Whether the Bonde sales gate and the room floor should apply unchanged to deeper arrivals.
@@ -171,3 +172,91 @@ already crossed. It is not a signal.
 * `backend/supply_demand/rules_info.py` — the ℹ️ Deep Demand prose
 * `backend/tests/test_deep_levels_2026_09_16.py`, `backend/tests/test_deep_demand.py`,
   `backend/tests/test_rules_info.py`
+
+---
+
+## 2026-09-16 (later the same day) — level 4, and the per-level filter
+
+> "can you do level 4 and give me filters for that"
+> — Ajay, 2026-09-16
+
+### `MAX_LEVELS_BROKEN = 3`
+
+Arrival at the **2nd, 3rd or 4th** level. One line, as promised; every ordinal
+on the board, in the note and in the ℹ️ Rules panel is built from that constant
+and moved with it. `LEVEL_CHOICES = tuple(range(2, MAX_LEVELS_BROKEN + 2))` —
+`(2, 3, 4)` — is derived from it too, and is the only in-range test the filter
+parser uses.
+
+**Four is the ceiling the served window can express.** `rec["demand_zones"]` is
+`price_zones.nearest_first(...)[:MAX_ZONES_PER_SIDE]` with
+`MAX_ZONES_PER_SIDE = 4`, so at most three bands can sit above the arrival
+band. A module-level assertion now ties the two:
+
+```python
+assert 1 <= MAX_LEVELS_BROKEN <= MAX_ZONES_PER_SIDE - 1
+```
+
+The cap is **not derived** from the window — widening the window later must
+never silently deepen the screen, that stays Ajay's call — but it can never
+exceed it either, and this is what catches a `MAX_ZONES_PER_SIDE` change that
+would leave the cap pointing at levels the window can no longer feed.
+Pinned by `test_the_cap_is_exactly_what_the_served_window_can_feed` and, with a
+hand-built five-band window,
+`test_negative_a_window_longer_than_the_served_one_still_refuses_a_5th_level`.
+
+**Nothing else moved.** `MIN_TOUCHES = 2` and `MIN_ZONE_STRENGTH = 40` are
+untouched (his call, still unmeasured), so CRDO is still hidden on band
+quality, exactly as documented above. Ordering is untouched. Nothing new
+pushes.
+
+### `parse_levels()` — one parser, fails open
+
+```python
+parse_levels(spec) -> Optional[frozenset[int]]     # None == "all"
+```
+
+| spec | result |
+|---|---|
+| `"all"` (any case) | `None` |
+| `"4"` | `{4}` |
+| `" 3 , 4 "` | `{3, 4}` |
+| `"2,junk,4"` | `{2, 4}` — junk parts drop, they are never fatal |
+| `"4,4,4"` | `{4}` — duplicates collapse |
+| `""`, `"junk"`, `"0"`, `"9"`, `"1"`, `"2.5"`, `","` | `None` |
+| `None`, `4`, `True`, a list, a FastAPI `Query` object | `None` |
+
+It **fails open in every branch** and never returns an empty set: an unknown
+spec serves the full board. An empty Deep Demand tab reads as "nothing
+qualifies today", which is a lie about the market, and the FastAPI `Query`
+default trap (a direct container call hands `board()` the Query *object* —
+truthy, no `.lower()`) has already shipped twice on the demand board.
+
+`levels_label(sel)` is the matching normaliser: `"all"`, or the sorted comma
+list. The board echoes **that**, never the raw query string, so a bookmark of
+`"4,4, junk ,3"` comes back as `"3,4"`.
+
+Both are pure and set-shaped on purpose — a set cannot carry an order, which is
+the point: depth is unmeasured and must never rank.
+
+### The board contract
+
+`chart_maps.board(tab="deep_demand", levels=...)` → three new payload keys:
+`levels` (normalised echo), `level_counts` (`{"2": n, "3": n, "4": n}`,
+computed with the filter **OFF**, after the Bonde gate / reversed-already drop
+/ room floor) and `hidden_by_level`. The API param is `levels` (plural) — the
+gabbar tab's existing `level` (singular, band type) was not renamed, reused or
+touched. Board-side details and the population table live in
+`docs/chart_maps/deep_demand_levels.md`.
+
+### Files
+
+* `backend/supply_demand/deep_demand.py` — `MAX_LEVELS_BROKEN`,
+  `LEVEL_CHOICES`, the window assertion, `parse_levels()`, `levels_label()`
+* `backend/chart_maps/board.py` — the filter, the three payload keys, the note
+  clause
+* `backend/chart_maps/api.py` — the `levels` query param
+* `backend/supply_demand/rules_info.py` — the ℹ️ filter line, built from
+  `LEVEL_CHOICES`
+* `backend/tests/test_deep_levels_2026_09_16.py` (`L1`, `L2`),
+  `backend/tests/test_deep_levels_board_2026_09_16.py` (`L1`–`L8`)

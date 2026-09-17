@@ -36,6 +36,18 @@ async def chart_maps(
                        description="gabbar tab only — measure against one band "
                                    "type: all (default) | aggressive | "
                                    "conservative 1 | conservative 2"),
+    levels: str = Query("all",
+                        description="deep_demand tab only — which ARRIVAL "
+                                    "levels to show: all (default) or a "
+                                    "comma list of levels, e.g. '3,4' or '4'. "
+                                    "Ajay 2026-09-16: 'can you do level 4 and "
+                                    "give me filters for that'. Parsed by "
+                                    "supply_demand.deep_demand.parse_levels, "
+                                    "which FAILS OPEN — an unknown or "
+                                    "out-of-range spec serves the full board, "
+                                    "never an empty one. Distinct from "
+                                    "`level` (singular) above, which is the "
+                                    "gabbar tab's band TYPE."),
     phase: str = Query("",
                        description="zones + deep_demand tabs — reached "
                                    "(default: price back inside the band) | "
@@ -112,6 +124,7 @@ async def chart_maps(
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
             min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
             level=level if isinstance(level, str) else "all",
+            levels=levels if isinstance(levels, str) else "all",
             touching_only=touching_only if isinstance(touching_only, bool) else False,
             phase=phase if isinstance(phase, str) else "",
             target=target if isinstance(target, str) else "zone",
