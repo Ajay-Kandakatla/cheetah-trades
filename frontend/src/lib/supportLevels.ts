@@ -211,6 +211,8 @@ export const FALLBACK_TIMEFRAMES: Timeframe[] = [
   { key: '15m', label: '15 min', span: '~10 sessions of 15-minute bars' },
   { key: '15m_open', label: '15 min · from the open',
     span: "today's session only, from 09:30 ET" },
+  { key: '5m_today', label: '5 min · today only · from 04:00 ET',
+    span: 'today only, from 04:00 ET — pre-market, regular and after-hours 5-minute bars' },
   { key: '5m_live', label: '5 min · live · pre/post market',
     span: 'last ~2.5 sessions of 5-minute bars incl. pre/post market' },
 ];
@@ -266,6 +268,15 @@ export const CHART_VIEWS: ChartView[] = [
   { key: '5m_live', label: '5 min · live · pre/post market', group: 'Intraday',
     window: '6m', tf: '5m_live',
     hint: 'last ~2.5 sessions incl. overnight against the 6-month daily levels; refreshes every 30s while the tape is open' },
+  // Ajay 2026-09-17: "For the live 5 min chart data, can you make sure its
+  // only showing from todays open only. it going till 6 months." He wanted
+  // the day, not the three sessions — starting at 04:00 ET so the pre-market
+  // candles he reads every morning are still there. ADDED beside the live
+  // view, not in place of it (his call), and it is not any default. Same
+  // deal on the levels: drawn from the 6-month DAILY window.
+  { key: '5m_today', label: '5 min · today only · from 04:00 ET',
+    group: 'Intraday', window: '6m', tf: '5m_today',
+    hint: "today only — 04:00 to 20:00 ET, pre-market and after-hours included — against the 6-month daily levels; refreshes every 30s while the tape is open" },
 ];
 
 export const DEFAULT_VIEW = 'daily:1y';   // follows DEFAULT_WINDOW (1 year since 2026-09-06)

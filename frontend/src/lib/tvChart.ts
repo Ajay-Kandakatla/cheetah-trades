@@ -13,6 +13,7 @@
 /** Session-view timeframes → TradingView interval codes. Daily otherwise. */
 const TV_INTERVAL: Record<string, string> = {
   '5m_live': '5',
+  '5m_today': '5',
   '15m': '15',
   '60m': '60',
   daily: 'D',

@@ -4,7 +4,8 @@ import { DEFAULT_WINDOW, FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLab
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
   priceAsOf,
-  CHART_VIEWS, DEFAULT_VIEW, viewFor, viewKeyFor, SEPA_SUPPLY_WINDOW } from './supportLevels';
+  CHART_VIEWS, DEFAULT_VIEW, DEFAULT_TF, FALLBACK_TIMEFRAMES, parseTf,
+  viewFor, viewKeyFor, SEPA_SUPPLY_WINDOW } from './supportLevels';
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
   return {
@@ -382,6 +383,51 @@ describe('CHART_VIEWS — the live frame', () => {
   it('is an Intraday view that round-trips from its tf', () => {
     expect(viewFor('5m_live').group).toBe('Intraday');
     expect(viewKeyFor('1m', '5m_live')).toBe('5m_live');
+  });
+});
+
+/* ── The today-only 5-minute frame (Ajay 2026-09-17) ───────────────────────
+ * "For the live 5 min chart data, can you make sure its only showing from
+ * todays open only. it going till 6 months." — "Today 04:00 ET — incl.
+ * pre-market", and "No — keep current default, just add it." */
+describe('CHART_VIEWS — 5 min · today only', () => {
+  it('is selectable as its own Intraday view and round-trips', () => {
+    const v = viewFor('5m_today');
+    expect(v.tf).toBe('5m_today');
+    expect(v.group).toBe('Intraday');
+    expect(v.window).toBe('6m');           // levels still from the daily window
+    expect(viewKeyFor('6m', '5m_today')).toBe('5m_today');
+    expect(parseTf('5m_today')).toBe('5m_today');
+  });
+
+  it('says on its face that it is today only, from 04:00 ET', () => {
+    const v = viewFor('5m_today');
+    expect(v.label).toMatch(/today only/i);
+    expect(v.label).toMatch(/04:00 ET/);
+    // and it cannot be confused with the 2.5-session live view at a glance
+    expect(v.label).not.toBe(viewFor('5m_live').label);
+    expect(FALLBACK_TIMEFRAMES.find((t) => t.key === '5m_today')?.span)
+      .toMatch(/today only/i);
+  });
+
+  it('NEGATIVE: it is not a default anywhere, and the live view is untouched', () => {
+    expect(DEFAULT_VIEW).not.toBe('5m_today');
+    expect(DEFAULT_TF).toBe('daily');
+    expect(viewFor(DEFAULT_VIEW).tf).toBe('daily');
+    // the 2.5-session overnight view he reads keeps its label AND its slot
+    const live = viewFor('5m_live');
+    expect(live.label).toBe('5 min · live · pre/post market');
+    expect(live.window).toBe('6m');
+    expect(viewKeyFor('1m', '5m_live')).toBe('5m_live');
+    // an untouched tab's URL still carries no tf at all
+    expect(supportQuery({ symbol: 'CRDO', window: DEFAULT_WINDOW }))
+      .toBe('symbol=CRDO');
+  });
+
+  it('NEGATIVE: junk still falls back to daily, not to the new frame', () => {
+    for (const junk of ['', '5m_tomorrow', 'weekly', null, undefined]) {
+      expect(parseTf(junk)).toBe('daily');
+    }
   });
 });
 

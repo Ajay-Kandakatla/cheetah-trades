@@ -11,6 +11,9 @@ describe('tvChartUrl', () => {
     expect(tvChartUrl('QBTS', '15m')).toContain('interval=15');
     expect(tvChartUrl('QBTS', '60m')).toContain('interval=60');
     expect(tvChartUrl('QBTS', 'daily')).toContain('interval=D');
+    // both 5-minute frames are 5-minute charts on TradingView (2026-09-17)
+    expect(tvChartUrl('CRDO', '5m_live')).toContain('interval=5');
+    expect(tvChartUrl('CRDO', '5m_today')).toContain('interval=5');
   });
 
   it('falls back to daily on a timeframe it has never heard of', () => {

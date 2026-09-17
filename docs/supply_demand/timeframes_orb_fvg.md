@@ -296,3 +296,53 @@ resistance"`. A supply band above price is still the short; below price it is
 broken supply trading as support (long); a demand band containing price is
 still the long-from-support read. Every consumer already handled a `None` plan
 (`mood.signal` blockers, `demand_reentry`, the Support-tab table filter).
+
+## 2026-09-17 — a second live 5-minute frame: `5m_today`
+
+Ajay, on a CRDO 5-minute chart that spanned Sep 15/16/17: *"For the live 5
+min chart data, can you make sure its only showing from todays open only. it
+going till 6 months."* Asked where the day starts and whether this should
+replace the existing view, he answered **"Today 04:00 ET — incl. pre-market"**
+and **"No — keep current default, just add it."**
+
+So it is an ADDITION. `5m_live` is untouched: its 3-day / 480-bar span is the
+overnight read he asked for on 2026-09-02 and pinning it is the point of
+`test_the_overnight_view_is_not_eaten_by_the_today_only_frame`.
+
+| Key | Label | Bars | Days | Span |
+|---|---|---|---|---|
+| `daily` | Daily | 252 | — | 1 year of daily bars |
+| `60m` | 1 hour | 330 | 70 | ~47 sessions of hourly bars |
+| `15m` | 15 min | 260 | 15 | ~10 sessions of 15-minute bars |
+| `15m_open` | 15 min · from the open | 26 | 1 | today's session only, from 09:30 ET |
+| `5m_today` | 5 min · today only · from 04:00 ET | 192 | 1 | today only, from 04:00 ET — pre-market, regular and after-hours 5-minute bars |
+| `5m_live` | 5 min · live · pre/post market | 480 | 3 | last ~2.5 sessions of 5-minute bars incl. pre/post market |
+
+**The 192 is derived, not chosen.** The extended session runs 04:00–20:00 ET
+= 16 hours = 960 minutes; at 5 minutes a bar that is 960 / 5 = **192 buckets**.
+Guessing lower would silently clip the morning he actually reads. The frame is
+clipped to today's ET date *before* the bar budget applies, so `tail(192)` is a
+no-op by construction rather than a cut.
+
+**One session clip, not two.** `frame_for` already sliced `15m_open` to the
+most recent ET calendar date; the condition now covers `5m_today` as well —
+same code, and the *result* differs only because of each frame's own session
+policy. `15m_open` is fetched RTH-only, so the date slice lands on
+09:30–16:00; `5m_today` carries `ext_hours: True`, so the same slice lands on
+04:00–20:00 ET, which is exactly what Ajay picked.
+
+**Still a chart frame, never a structure frame.** `5m_today` keeps
+`ext_hours: True`, so `frame_for` refuses it to any caller that does not pass
+`allow_ext=True`, it stays out of `tf_options()` (the zone dropdown), and the
+Support tab reads its LEVELS from the 6-month DAILY window as before. Nothing
+about what a level is made of changed here — only what the chart draws.
+
+**Aliases**: `5m_today`, `5today`, `today`, `5m_day`, `5m_open`, `5open`.
+Junk still falls back to daily. No default points at this key: `DEFAULT_TF` is
+still `daily`, and the FE's `DEFAULT_VIEW` is still `daily:1y`.
+
+Tests: `backend/tests/test_5m_today_frame_2026_09_17.py` (16) and
+`frontend/src/lib/supportLevels.test.ts`. The negatives carry the weight —
+`5m_live`'s days/bars/label are pinned so this frame can never silently eat the
+overnight view, the new frame is still refused when `allow_ext` is False, an
+empty latest date does not crash, and nothing made it a default.

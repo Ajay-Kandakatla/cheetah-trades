@@ -45,6 +45,7 @@ H1 = "60m"
 M15 = "15m"
 M15_OPEN = "15m_open"
 M5_LIVE = "5m_live"
+M5_TODAY = "5m_today"
 
 # `bars` is what the zone engine reads; `days` is the calendar fetch span.
 # swing_window shrinks intraday on purpose — a 3-bar swing on a 15m chart
@@ -71,11 +72,28 @@ TIMEFRAMES: tuple[dict, ...] = (
     {"key": M15_OPEN, "label": "15 min · from the open", "bars": 26,
      "days": 1, "swing_window": 2,
      "span": "today's session only, from 09:30 ET", "orb_minutes": 15},
+    # Ajay 2026-09-17: "For the live 5 min chart data, can you make sure its
+    # only showing from todays open only. it going till 6 months." Asked where
+    # the day starts, he said "Today 04:00 ET — incl. pre-market", and asked
+    # for this as an ADDITION, not a replacement — the 3-session `5m_live`
+    # frame below is the overnight view he reads and stays exactly as it is.
+    #
+    # Bar budget: the extended session runs 04:00-20:00 ET = 16 hours =
+    # 16 × 60 = 960 minutes; at 5 minutes a bar that is 960 / 5 = 192 buckets.
+    # 192 is therefore the whole day and never clips his morning — the frame
+    # is clipped to today's ET date first, so `tail(192)` is a no-op by
+    # construction rather than a cut.
+    {"key": M5_TODAY, "label": "5 min · today only · from 04:00 ET",
+     "bars": 192, "days": 1, "swing_window": 2, "rule": "5min",
+     "ext_hours": True,
+     "span": ("today only, from 04:00 ET — pre-market, regular and "
+              "after-hours 5-minute bars"),
+     "orb_minutes": 5},
     # Ajay 2026-09-02: "add live chart please, for supply demand? I wanna
-    # see where things bounced over night." The ONE frame that draws
-    # pre-market and after-hours bars (04:00-20:00 ET, the last ~2.5
-    # sessions of 5-minute candles), refreshed every 30s while any
-    # extended session is open. Levels come from the DAILY window (see
+    # see where things bounced over night." The frame that draws pre-market
+    # and after-hours bars (04:00-20:00 ET, the last ~2.5 sessions of
+    # 5-minute candles), refreshed every 30s while any extended session is
+    # open. Levels come from the DAILY window (see
     # chart_maps.support.for_symbol) — the session policy below is about
     # what a LEVEL is made of, not about what the chart is allowed to show.
     {"key": M5_LIVE, "label": "5 min · live · pre/post market", "bars": 480,
@@ -94,7 +112,9 @@ _ALIAS = {"1d": DAILY, "d": DAILY, "day": DAILY, "1day": DAILY,
           "open": M15_OPEN, "session": M15_OPEN, "15m_open": M15_OPEN,
           "15open": M15_OPEN,
           "5m": M5_LIVE, "5min": M5_LIVE, "live": M5_LIVE, "5m_live": M5_LIVE,
-          "5m_ext": M5_LIVE}
+          "5m_ext": M5_LIVE,
+          "5m_today": M5_TODAY, "5today": M5_TODAY, "today": M5_TODAY,
+          "5m_day": M5_TODAY, "5m_open": M5_TODAY, "5open": M5_TODAY}
 
 
 def parse_tf(raw) -> str:
@@ -244,9 +264,16 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
         meta["reason"] = "resample produced no bars"
         return None, meta
 
-    if key == M15_OPEN:
-        # Keep only the most recent SESSION. Before the first bell of a new
-        # day that is yesterday's session, which is the honest answer —
+    if key in (M15_OPEN, M5_TODAY):
+        # Keep only the most recent SESSION — ONE implementation for both
+        # today-only frames. The slice is by ET CALENDAR DATE, so what it
+        # yields follows the frame's own session policy: `15m_open` is
+        # fetched RTH-only and lands on 09:30-16:00, `5m_today` carries
+        # ext_hours and therefore lands on today 04:00-20:00 ET, which is
+        # the pre-market-included day Ajay asked for (2026-09-17).
+        #
+        # Before the first bar of a new day that is the previous day's
+        # session, which is the honest answer —
         # inventing an empty frame for a day that has not opened would be
         # worse than showing the one that just closed, and the label says
         # which day it is.
