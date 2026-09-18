@@ -12160,6 +12160,10 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .eg-btn:disabled { opacity: 0.55; cursor: default; }
 .eg-note { font-size: 0.72rem; color: var(--ink-muted); line-height: 1.5; }
+/* 📣 the board's OWN "just reported" line (2026-09-17). Dim by design and
+   conditionally rendered — it is a calendar fact, not a verdict banner, and it
+   must never carry more visual weight than the no-cap-floor deal above it. */
+.eg-ernote { margin-top: 0.35rem; }
 .eg-scroll {
   overflow: auto;
   max-height: calc(100vh - var(--sticky-top, 0px) - 2.5rem);
@@ -12727,6 +12731,10 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 
    One family per surface, mirroring the 🧨 classes so the chips line up at the
    same weight wherever a board renders them. */
+/* 📣 just-reported (2026-09-17) — a CALENDAR FACT, so deliberately NOT the
+   `good` tone any measured chip wears: neutral slate, same pill weight as its
+   neighbours in the symbol cell. */
+.cm-badge-earnings { color: #a3b3c9; background: rgba(148,163,184,0.16); }
 .cm-badge-band   { color: #7c9cf5; background: rgba(124,156,245,0.14); }
 .cm-badge-band-muted { color: var(--ink-muted); background: rgba(148,163,184,0.12); }
 .hs-badge-band   { color: #7c9cf5; background: rgba(124,156,245,0.14); }

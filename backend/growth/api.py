@@ -139,6 +139,16 @@ def _payload(doc: dict) -> dict:
         _bm.attach(rows)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("growth: board_metrics attach failed: %s", exc)
+    # "just reported" (Ajay 2026-09-17), attached at READ time for the same
+    # reason: the board rebuilds weekly, so a report date baked into build()
+    # would be up to seven days stale. A CALENDAR FACT — it orders nothing,
+    # filters nothing and gates nothing, and it is not measured.
+    ef = {}
+    try:
+        from growth import earnings_fresh as _ef
+        ef = _ef.attach(rows)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: earnings_fresh attach failed: %s", exc)
     # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
     # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
     # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks
@@ -152,6 +162,7 @@ def _payload(doc: dict) -> dict:
         "max_rows": T.MAX_ROWS,
         "capped": len(rows) >= T.MAX_ROWS,
         "groups": _group(rows),
+        "earnings_fresh_summary": ef or None,
         "built_at": (doc.get("built_at").isoformat()
                      if hasattr(doc.get("built_at"), "isoformat")
                      else doc.get("built_at")),

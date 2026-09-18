@@ -3,6 +3,7 @@
   python -m growth build     rebuild the 100/100 board  (weekly)
   python -m growth alerts    one demand-alert pass      (market days)
   python -m growth show      print the board, send nothing
+  python -m growth earnings  refresh THIS BOARD's earnings dates, send nothing
 """
 from __future__ import annotations
 
@@ -40,6 +41,23 @@ def main(argv=None) -> int:
         print(json.dumps({"n": (T.board() or {}).get("n"),
                           "rows": [r["symbol"] for r in
                                    ((T.board() or {}).get("rows") or [])]}))
+        return 0
+
+    if cmd == "earnings":
+        # Ajay 2026-09-17: "make a remindder ro scan explosive growth of new
+        # earnings stocks and high light them to me in explosive growth tab".
+        #
+        # THE REMINDER IS DATA, NOT A MESSAGE. This job re-fetches the earnings
+        # calendar for the board's own symbols so the "just reported" badge on
+        # the tab is fresh. IT SENDS NOTHING — no message of any kind leaves
+        # this branch, and his phone's keep-set is untouched.
+        #
+        # It does NOT rebuild the board (that stays Sunday 09:00 ET).
+        from growth import earnings_fresh as EFresh
+        from growth import tracker as T
+        res = EFresh.refresh_board_calendar()
+        summary = EFresh.attach((T.board() or {}).get("rows") or [])
+        print(json.dumps({"refresh": res, "summary": summary}))
         return 0
 
     print(__doc__)

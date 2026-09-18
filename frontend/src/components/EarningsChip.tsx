@@ -13,7 +13,11 @@ import { EARNINGS_WARN_DAYS, type EarningsInfo } from '../hooks/useEarningsMap';
 const RED = '#ef4444';
 const AMBER = '#f59e0b';
 
-function fmtDate(iso: string): string {
+/** ISO date -> "Sep 16". Splits the string BY HAND on purpose: `new Date(iso)`
+ *  parses a bare ISO date as UTC and renders the PREVIOUS day in ET
+ *  (`new Date('2026-09-16')` -> "Sep 15" under America/New_York). Exported so
+ *  the 📣 just-reported chip reuses this exact function rather than copying it. */
+export function fmtDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${names[(m || 1) - 1]} ${d}${y ? '' : ''}`;

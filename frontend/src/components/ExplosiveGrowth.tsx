@@ -27,6 +27,7 @@ import { SignalWatchButton } from './SignalWatchButton';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
+import { EarningsFreshChip, type EarningsFresh } from './EarningsFreshChip';
 import { HiddenCount } from './HiddenCount';
 import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterableFilter';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -62,6 +63,11 @@ export type GrowthRow = {
   ev_sales?: number | null; fcf_yield?: number | null;
   balance_meaningful?: boolean | null;
   zone?: GrowthZone; warnings?: string[];
+  /* "just reported" (Ajay 2026-09-17). A CALENDAR FACT attached at READ time by
+   * growth/earnings_fresh.py — it orders, filters and gates nothing. `known:
+   * false` means NO REPORT DATE ON FILE, which is not the same as "did not
+   * report": 16 of the 21 live rows were in that state the day this shipped. */
+  earnings_fresh?: EarningsFresh;
   as_of?: string | null;
   // The PERIOD the growth legs are measured on (2026-09-14 review fixes).
   // `period` is the fiscal quarter at slot 0 of the cached series ("FY2026
@@ -108,6 +114,13 @@ export type GrowthPayload = {
     min_prior_sales_pct?: number; cap_floor?: number | null;
     universe_mode?: string;
   };
+  /* The board's OWN just-reported read. Never another board's verdict banner. */
+  earnings_fresh_summary?: {
+    window_days?: number; n?: number; n_fresh?: number;
+    n_known?: number; n_unknown?: number; as_of?: string | null;
+    most_recent?: { symbol: string; reported_on: string; days_ago: number } | null;
+    source?: string;
+  } | null;
   disclaimer?: string;
 };
 
@@ -286,6 +299,7 @@ export function ExplosiveGrowth() {
   const part = useEnterablePartition(rows, (r) => r.symbol, room.map, enterableOnly);
 
   const groups = data?.groups ?? [];
+  const ernote = data?.earnings_fresh_summary ?? null;
   const blockedN = (data?.rows ?? []).filter(
     (x) => (x.warnings ?? []).some((w) => w.startsWith('⛔'))).length;
   const demandN = (data?.rows ?? []).filter((x) => x.zone?.in_band && x.zone?.intact).length;
@@ -347,6 +361,29 @@ export function ExplosiveGrowth() {
         the broker. {data?.disclaimer}
         {data?.built_at && <> Built {String(data.built_at).slice(0, 16).replace('T', ' ')} UTC.</>}
       </div>
+
+      {/* 📣 "Just reported" (Ajay 2026-09-17). THIS BOARD'S OWN honesty line —
+          it never borrows, and is never borrowed by, another board's measured
+          verdict banner. Rendered ONLY when something is fresh or something is
+          unknown: a permanent "0 of 21" strip on a tab this dense is clutter,
+          while 16 names with no date on file is the real finding. */}
+      {!!ernote && (ernote.n_fresh! > 0 || ernote.n_unknown! > 0) && (
+        <div className="eg-note eg-ernote">
+          📣 <b>Just reported — {ernote.n_fresh} of {ernote.n}</b> names on this board
+          {' '}reported within <b>{ernote.window_days} days</b>
+          {ernote.as_of ? ` (calendar read ${ernote.as_of})` : ''}.
+          {!!ernote.n_unknown && (
+            <> {ernote.n_unknown} names have <b>no report date on file</b> — that is
+              {' '}unknown, not "did not report".</>
+          )}
+          {!!ernote.most_recent && (
+            <> Most recent report on this board: <b>{ernote.most_recent.symbol},
+              {' '}{ernote.most_recent.reported_on}</b> ({ernote.most_recent.days_ago} days ago).</>
+          )}
+          {' '}A calendar fact only: it changes no order, no filter and no gate, and the
+          {' '}100%/100% screen itself has never been measured forward.
+        </div>
+      )}
 
       {/* Sectors (Ajay 2026-09-11: "I wanna see the secorts in the growth.. To
           show that only some are growing"). The denominator is the point: 9 of
@@ -569,6 +606,10 @@ export function ExplosiveGrowth() {
                         shared pill is the class that ships with the -band tones. */}
                     <BandStructureChip className="cm-badge" study={room.payload?.band_structure_study}
                                        read={room.map.get(String(r.symbol).toUpperCase())?.band_structure} />
+                    {/* 📣 Ajay 2026-09-17 — "just reported". A CALENDAR FACT:
+                        renders nothing unless the name reported inside the
+                        backend's own 7-day window, and changes no order. */}
+                    <EarningsFreshChip symbol={r.symbol} read={r.earnings_fresh} />
                     {r.name && <div className="eg-coname">{r.name}</div>}
                   </td>
                   <td className="eg-num eg-good" title={per.title}>

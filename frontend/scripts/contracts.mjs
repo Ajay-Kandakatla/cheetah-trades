@@ -1329,6 +1329,41 @@ const CONTRACTS = [
           errs.push(`.${c} is used in ExplosiveGrowth.tsx but has no CSS rule`);
         }
       }
+
+      // \u{1F4E3} "just reported" (Ajay 2026-09-17). A CALENDAR FACT bolted onto rows
+      // this board already serves. Three things must stay true or the badge starts
+      // implying an edge nobody measured:
+      //   1. it renders, and the board carries its own summary;
+      //   2. the chip says IN WORDS that it decides nothing;
+      //   3. it never formats a date with `new Date(iso)` — that parses a bare ISO
+      //      date as UTC and prints the PREVIOUS day in ET ('2026-09-16' -> Sep 15).
+      // The eg-* loop above covers .eg-ernote; .cm-badge-earnings is on the shared
+      // cm-badge family and needs its own check.
+      if (!/<EarningsFreshChip\s/.test(tsx)) {
+        errs.push('the growth row must render <EarningsFreshChip /> — he asked for just-reported names to be highlighted here');
+      }
+      if (!/earnings_fresh_summary/.test(tsx)) {
+        errs.push('ExplosiveGrowth must read earnings_fresh_summary — the board states its own just-reported coverage, never another board\'s verdict');
+      }
+      if (!/no report date on file/.test(tsx)) {
+        errs.push('the just-reported note must say "no report date on file" — an unknown calendar must never read as "did not report" (16 of 21 rows the day it shipped)');
+      }
+      if (!/changes no order/.test(tsx)) {
+        errs.push('the just-reported note must say it changes no order — this board sorts by sales growth and a report date is not a ranking reason');
+      }
+      if (!/\.cm-badge-earnings(?![\w-])/.test(css)) {
+        errs.push('.cm-badge-earnings has no CSS rule — the just-reported chip would ship unstyled (jsdom loads no stylesheets, so no render test can catch it)');
+      }
+      const efc = read('src/components/EarningsFreshChip.tsx');
+      if (!/CALENDAR FACT, NOT A SIGNAL/.test(efc)) {
+        errs.push('the just-reported chip tooltip must say CALENDAR FACT, NOT A SIGNAL — nothing on this board is measured');
+      }
+      if (!/does not change this row's order/.test(efc)) {
+        errs.push("the just-reported chip tooltip must say it does not change this row's order");
+      }
+      if (/new Date\(/.test(efc)) {
+        errs.push("EarningsFreshChip must not use new Date( — a bare ISO date parses as UTC and renders the previous day in ET; reuse EarningsChip.fmtDate");
+      }
       return errs;
     },
   },

@@ -426,3 +426,155 @@ describe('ExplosiveGrowth — the row cap', () => {
     expect(screen.queryByText(/screen cap/)).not.toBeInTheDocument();
   });
 });
+
+/* 📣 "Just reported" (Ajay 2026-09-17): "make a remindder ro scan explosive
+ * growth of new earnings stocks and high light them to me in explosive growth
+ * tab".
+ *
+ * A CALENDAR FACT. These tests hold the line that it decides NOTHING: it must
+ * not reorder a row, remove one, change a flag, or move a filter count. And the
+ * honesty line must stay conditional — on the day it shipped his board read
+ * 0 of 21 fresh with 16 of 21 carrying no report date at all, which is the real
+ * finding; a permanent "0 of 21" banner on a tab this dense is clutter.
+ */
+describe('ExplosiveGrowth — the just-reported highlight', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const SUMMARY = {
+    window_days: 7, n: 21, n_fresh: 0, n_known: 5, n_unknown: 16,
+    as_of: '2026-09-18',
+    most_recent: { symbol: 'CRDO', reported_on: '2026-09-01', days_ago: 17 },
+    source: 'yfinance (Yahoo Finance) via sepa.earnings_watch',
+  };
+  const FRESH = {
+    known: true, reported_on: '2026-09-16', when: 'AMC' as const,
+    days_ago: 2, fresh: true, surprise_pct: null, window_days: 7,
+  };
+  const UNKNOWN = {
+    known: false, reported_on: null, when: null, days_ago: null,
+    fresh: false, surprise_pct: null, window_days: 7,
+  };
+
+  const stubEr = (rows: GrowthRow[], extra: Record<string, unknown>) =>
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        rows, n: rows.length, groups: [], built_at: '2026-09-18T02:52:00',
+        screen: { min_sales_growth_pct: 100, min_eps_growth_pct: 100 },
+        disclaimer: 'Discovery list, NOT a signal.', ...extra,
+      }),
+    }) as unknown as Response));
+
+  const three = (withEr: boolean): GrowthRow[] => [
+    row({ symbol: 'PTGX', name: 'Protagonist', sales_growth_pct: 900.1,
+          ...(withEr ? { earnings_fresh: UNKNOWN } : {}) }),
+    row({ symbol: 'CRDO', name: 'Credo', sales_growth_pct: 300.2,
+          ...(withEr ? { earnings_fresh: { ...FRESH } } : {}) }),
+    row({ symbol: 'NVDA', name: 'NVIDIA', sales_growth_pct: 100.3,
+          ...(withEr ? { earnings_fresh: UNKNOWN } : {}) }),
+  ];
+
+  const tickers = () => Array.from(
+    document.querySelectorAll('tbody tr td:first-child a'),
+  ).map((a) => a.textContent);
+
+  it('renders the honesty line when n_unknown > 0 even at n_fresh === 0', async () => {
+    stubEr(three(true), { earnings_fresh_summary: SUMMARY });
+    mount();
+    expect(await screen.findByText(/Just reported — 0 of 21/)).toBeInTheDocument();
+    expect(screen.getByText(/no report date on file/)).toBeInTheDocument();
+    expect(screen.getByText(/that is/)).toBeInTheDocument();
+    expect(screen.getByText(/CRDO,/)).toBeInTheDocument();
+    expect(screen.getByText(/2026-09-01/)).toBeInTheDocument();
+    expect(screen.getByText(/changes no order, no filter and no gate/)).toBeInTheDocument();
+    // and the fresh row wears its chip
+    expect(screen.getByText('📣 reported Sep 16 · AMC')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE — THE CLUTTER PIN: no honesty line when n_fresh === 0 AND n_unknown === 0', async () => {
+    stubEr(three(true), {
+      earnings_fresh_summary: { ...SUMMARY, n: 3, n_fresh: 0, n_known: 3, n_unknown: 0 },
+    });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(screen.queryByText(/Just reported —/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: omits the unknown sentence at n_unknown 0, and the most-recent sentence at null', async () => {
+    stubEr(three(true), {
+      earnings_fresh_summary: { ...SUMMARY, n: 3, n_fresh: 1, n_known: 3,
+                                n_unknown: 0, most_recent: null },
+    });
+    mount();
+    expect(await screen.findByText(/Just reported — 1 of 3/)).toBeInTheDocument();
+    expect(screen.queryByText(/no report date on file/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Most recent report/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: renders unchanged when earnings_fresh_summary is absent (the pre-deploy payload)', async () => {
+    stubEr(three(false), {});
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(screen.queryByText(/Just reported/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/📣/)).not.toBeInTheDocument();
+    expect(tickers()).toEqual(['PTGX', 'CRDO', 'NVDA']);
+  });
+
+  it('NEGATIVE — THE ORDER PIN: the highlight never reorders or removes a row', async () => {
+    stubEr(three(false), {});
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    const without = tickers();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+
+    stubEr(three(true), { earnings_fresh_summary: SUMMARY });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    const withEr = tickers();
+    expect(withEr).toEqual(without);
+    expect(withEr.length).toBe(3);
+    // the FRESH name is not first, and does not become first
+    expect(withEr.indexOf('CRDO')).toBe(1);
+  });
+
+  it('NEGATIVE: the fresh chip does not change the Flags cell', async () => {
+    const rows = three(true);
+    rows[1].warnings = [];
+    rows[0].warnings = ['⛔ under the $700M cap the engine enforces'];
+    rows[0].earnings_fresh = { ...FRESH };
+    stubEr(rows, { earnings_fresh_summary: SUMMARY });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    const body = document.querySelectorAll('tbody tr');
+    const flagCell = (tr: Element) => tr.querySelectorAll('td')[14];
+    expect(flagCell(body[0]).textContent).toContain('⛔');
+    expect(flagCell(body[1]).textContent).toBe('—');
+  });
+
+  it('NEGATIVE: the fresh chip does not change any filter count', async () => {
+    const counts = () => [
+      screen.getByText(/at demand, floor intact/).textContent,
+      screen.getByText(/hide what the engine refuses/).textContent,
+      ...Array.from(document.querySelectorAll('option')).map((o) => o.textContent),
+    ];
+    stubEr(three(false), {});
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    const before = counts();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+
+    stubEr(three(true), { earnings_fresh_summary: SUMMARY });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(counts()).toEqual(before);
+  });
+
+  it('the empty-state row still spans 16 columns — no column was added', async () => {
+    stubEr([], { earnings_fresh_summary: { ...SUMMARY, n: 0, n_fresh: 0, n_known: 0, n_unknown: 0 } });
+    mount();
+    const cell = await screen.findByText(/nothing matches the current filters/);
+    expect(cell.getAttribute('colspan')).toBe('16');
+  });
+});

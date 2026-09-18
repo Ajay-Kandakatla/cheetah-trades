@@ -1062,6 +1062,21 @@
 # a closed day and the gate would skip it forever.
 0      9     *    *    0    /usr/local/bin/python -m growth build
 #
+# "just reported" refresh — Ajay 2026-09-17: "make a remindder ro scan explosive
+# growth of new earnings stocks and high light them to me in explosive growth
+# tab". The reminder is DATA, not a message: this re-fetches the earnings
+# calendar for the board's own symbols so the 📣 badge on the tab is current.
+#
+# THREE CHOICES, said out loud:
+#  1. 17:50 ET — after the 17:45 earnings-date sweep above (measured 2026-09-17:
+#     it ran in one second) and BEFORE sepa.earnings_picks at 17:55, which reads
+#     the same collection, so a healed report date is visible that same evening.
+#  2. Gated by market_hours.gate, like the growth-demand line below: no market
+#     day, no run.
+#  3. IT SENDS NOTHING. No message of any kind leaves this job, and his phone's
+#     keep-set is untouched.
+50     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate growth earnings
+#
 # ── 📌 GnT tracker — Tito Adhikary (@GnT_Trades) (Ajay 2026-09-12) ───────────
 # "create a tab for me. I wanna track his stocks for investing" + "do this
 # daily twice".

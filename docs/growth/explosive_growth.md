@@ -339,3 +339,31 @@ window — and re-fired daily while HHH sat **below** its band. `growth/alerts.p
 Tests: `tests/test_growth_tracker.py` (alerts section, rewritten for the live path) and
 `tests/test_alerts_review_fixes_2026_09_14.py`.
 
+
+---
+
+## 📣 "Just reported" — 2026-09-18
+
+Names on this board that have **just reported earnings** now carry a `📣 reported …`
+chip in the symbol cell, and the board prints a one-line honesty note when any name
+is fresh or has no report date on file. Full write-up:
+[earnings_highlight.md](earnings_highlight.md).
+
+The short version:
+
+* **A CALENDAR FACT, not a signal.** It changes no order, no filter, no gate and
+  nothing the trading engine does. There is no measurement that a just-reported
+  grower outperforms — the nearest prior (8-K event study, 2026-09-01) measured no
+  chase edge after a fresh print.
+* **The window is the repo's own** `sepa.earnings_picks.REPORT_WINDOW_DAYS` (7
+  calendar days, *"calendar days back a report still counts"*), imported by name —
+  the same window the Earnings report picks list uses. `chart_maps.earnings`'s
+  `LOOKBACK_DAYS = 2` is a bar-selection window and is blind to Friday-AMC
+  reporters on every market day, so it is not used here.
+* **Measured on his own board the day it shipped: 0 of 21 fresh, and 16 of 21 with
+  no `last_report` at all.** Unknown is never rendered as "did not report".
+* **A weekday 17:50 ET cron** (`market_hours.gate growth earnings`) re-fetches the
+  calendar for this board's own symbols with `force=True` and the new
+  `merge=True`. **It sends nothing** — no new notification kind, `OWNER_KEEP_SET`
+  untouched. A crontab change does **not** ship with a deploy: the cron container
+  must be recreated.

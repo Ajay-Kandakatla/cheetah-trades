@@ -142,10 +142,28 @@ def _universe() -> List[str]:
 
 
 def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4,
-            force: bool = False) -> dict:
+            force: bool = False, merge: bool = True) -> dict:
     """Fetch/update earnings dates for the decision universe. A doc is
     re-fetched when missing, stale (>3d), its date already passed, or it
-    predates the last_report schema (2026-06-11). force=True refetches all."""
+    predates the last_report schema (2026-06-11). force=True refetches all.
+
+    merge=True — A PAST FACT IS NEVER ERASED BY A FETCH THAT DID NOT SEE IT;
+    A FORWARD ESTIMATE IS. The write below is a full `replace_one`, so a fetch
+    that returns nothing (exception, no data) or falls through to the
+    `Ticker.calendar` branch — which by construction carries
+    `"last_report": None` (see `_fetch_next`) — NULLS a populated
+    `last_report`. Measured 2026-09-18: 16 of the 21 names on the 🚀 Explosive
+    Growth board already carry that scar, and a nulled `last_report` silently
+    drops a name from `sepa.earnings_picks` (Portfolio / SEPA / Leaderboard /
+    Scalping). With merge=True the previous `last_report` survives such a
+    miss. It protects `last_report` ONLY: `next_date`, `when` and
+    `eps_estimate` keep replace semantics, because nulling a stale FORWARD
+    estimate is the conservative read and it stops an aged `next_date` from
+    later reading as a report. `fetched_at` always advances, miss or hit.
+
+    merge=True is the DEFAULT as of 2026-09-18, on Ajay's call, after he was
+    shown the 16-of-21 measurement above. Pass merge=False only to reproduce the
+    pre-2026-09-18 destructive behaviour in a test."""
     coll = _coll()
     if coll is None:
         return {"ok": False, "reason": "no mongo"}
@@ -171,6 +189,10 @@ def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4,
         doc = {"_id": sym, "fetched_at": int(time.time()),
                **(res or {"next_date": None, "when": None,
                           "eps_estimate": None, "last_report": None})}
+        if merge:
+            prev = existing.get(sym) or {}
+            if doc.get("last_report") is None and prev.get("last_report") is not None:
+                doc["last_report"] = prev["last_report"]
         try:
             coll.replace_one({"_id": sym}, doc, upsert=True)
             fetched += 1
