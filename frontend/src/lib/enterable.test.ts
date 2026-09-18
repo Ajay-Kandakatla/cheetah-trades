@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
+  blockReasons,
   enterableChipText,
   isShown,
+  mergeReasonStats,
   partitionEnterable,
   measuredStatusWords,
   topHiddenReasons,
+  UNLABELLED_REASON,
   type EnterableRead,
 } from './enterable';
 import { ENTERABLE_KIND } from './chartMaps';
@@ -308,5 +311,248 @@ describe('enterableChipText — the study status reaches the tooltip in words (m
     expect(measuredStatusWords('  ')).toBe('');
     expect(measuredStatusWords('no_signal')).toBe('measured: no signal');
     expect(measuredStatusWords('pending')).toBe('measured: pending');
+  });
+});
+
+/* 🎯 UN-HIDE BY REASON (Ajay 2026-09-17: "Can you give me a toggle for the room
+ * too? I am not seeing all stocks on the selected filter due to this now").
+ *
+ * The ignore set decides what is DRAWN and NOTHING else — no verdict is
+ * computed, recomputed or overridden here. The negatives carry the weight, and
+ * every one of them is about a row coming back that should not have:
+ *   - a row blocked for TWO reasons stays hidden while only ONE is un-hidden,
+ *     or the count line lies about what he is looking at;
+ *   - a BLOCKED row the backend named nothing for, or labelled nothing for, can
+ *     never be un-hidden at all — un-hiding is explicit, never silent;
+ *   - a row with no read is never hidden and never un-hidden;
+ *   - the chip order never moves under his cursor, and at an empty ignore set
+ *     it is byte-for-byte today's line.
+ */
+describe('un-hide by reason (2026-09-17)', () => {
+  const blocked = (codes: string[], shorts: string[]): EnterableRead => ({
+    kind: 'demand', verdict: 'BLOCKED', reasons: codes,
+    reason_text: shorts.map((s) => `${s} sentence`), reason_short: shorts,
+  });
+  const ready = (): EnterableRead => ({
+    kind: 'demand', verdict: 'READY', reasons: [], reason_text: [], reason_short: [],
+  });
+  const ROOM = 'room < 5%';
+  const PROX = 'not at band';
+  const mk = (rows: [string, EnterableRead | null][]) => ({
+    rows: rows.map(([symbol]) => ({ symbol })),
+    map: new Map<string, EnterableRead | null>(rows),
+  });
+  const part = (
+    rows: [string, EnterableRead | null][],
+    ignore: Iterable<string> = [],
+  ) => {
+    const { rows: rs, map } = mk(rows);
+    return partitionEnterable(rs, symbolOf, map, true, new Set(ignore));
+  };
+
+  const BOARD: [string, EnterableRead | null][] = [
+    ['R1', blocked(['room'], [ROOM])],
+    ['R2', blocked(['room'], [ROOM])],
+    ['PR', blocked(['proximity', 'room'], [PROX, ROOM])],
+    ['NB', blocked(['no_band'], ['no band'])],
+    ['OK', ready()],
+    ['PEND', null],
+  ];
+
+  it('the shared backend fixture is untouched at the default empty ignore set', async () => {
+    const fx = await load();
+    const base = partitionEnterable(fx.rows, symbolOf, mapOf(fx), true);
+    const same = partitionEnterable(fx.rows, symbolOf, mapOf(fx), true, new Set());
+    expect(same.rows.map((r) => r.symbol)).toEqual(base.rows.map((r) => r.symbol));
+    expect(same.rows.map((r) => r.symbol)).toEqual(fx.expected_shown_enterable);
+    expect(same.hidden).toBe(fx.expected_hidden);
+    expect(same.unread).toBe(fx.expected_unread);
+    expect(same.hiddenByReason).toEqual(fx.expected_hidden_by_reason);
+    expect(same.unhidden).toBe(0);
+  });
+
+  it('blockReasons zips the SERVED code to the SERVED label by index', () => {
+    expect(blockReasons(blocked(['proximity', 'room'], [PROX, ROOM])))
+      .toEqual([{ code: 'proximity', label: PROX }, { code: 'room', label: ROOM }]);
+  });
+
+  it('NEGATIVE: blockReasons is empty for READY, WATCH, n/a, null and a non-array', () => {
+    expect(blockReasons(ready())).toEqual([]);
+    expect(blockReasons({ ...ready(), verdict: 'WATCH', reasons: ['weak_day'], reason_short: ['weak day'] })).toEqual([]);
+    expect(blockReasons({ ...ready(), kind: 'n/a', verdict: null })).toEqual([]);
+    expect(blockReasons(null)).toEqual([]);
+    expect(blockReasons(undefined)).toEqual([]);
+    expect(blockReasons({ ...blocked([], []), reasons: undefined as unknown as string[] })).toEqual([]);
+    expect(blockReasons(blocked([7 as unknown as string], [ROOM]))).toEqual([]);
+  });
+
+  it('un-hiding a single-reason code shows exactly those rows, in SERVED order', () => {
+    const p = part(BOARD, ['room']);
+    expect(p.rows.map((r) => r.symbol)).toEqual(['R1', 'R2', 'OK', 'PEND']);
+    expect(p.unhidden).toBe(2);
+    expect(p.hidden).toBe(2);
+  });
+
+  it('NEGATIVE: a row blocked for proximity AND room stays hidden on room alone', () => {
+    const p = part(BOARD, ['room']);
+    expect(p.rows.map((r) => r.symbol)).not.toContain('PR');
+    const prox = p.reasons.find((r) => r.code === 'proximity')!;
+    expect(prox.hidden).toBe(1);   // still attributed to `not at band`
+    expect(p.hiddenByReason[PROX]).toBe(1);
+    // …and both clicked brings it back.
+    expect(part(BOARD, ['room', 'proximity']).rows.map((r) => r.symbol)).toContain('PR');
+  });
+
+  it('NEGATIVE: a row with no read is never hidden and never un-hidden', () => {
+    const every = ['room', 'proximity', 'no_band', 'no_break', 'break_extended',
+                   'floor_swept', 'floor_broken', 'blocked'];
+    for (const ig of [[], ['room'], every]) {
+      const p = part(BOARD, ig);
+      expect(p.rows.map((r) => r.symbol)).toContain('PEND');
+      expect(p.unread).toBe(1);
+    }
+  });
+
+  it('NEGATIVE: a BLOCKED row with nothing named is never shown, under any ignore set', () => {
+    const rows: [string, EnterableRead | null][] = [['X', blocked([], [])]];
+    for (const ig of [[], ['room'], ['blocked']]) {
+      const p = part(rows, ig);
+      expect(p.rows).toHaveLength(0);
+      expect(p.hidden).toBe(1);
+      expect(p.hiddenByReason).toEqual({ blocked: 1 });
+      const syn = p.reasons.find((r) => r.code === UNLABELLED_REASON)!;
+      expect(syn.toggleable).toBe(false);
+      expect(syn.hidden).toBe(1);
+    }
+  });
+
+  it('NEGATIVE: a short reason_short array makes the row un-hideable, even with every code clicked', () => {
+    // enterable.py builds all three arrays from ONE code list, so this can only
+    // arrive from a stale or truncated cached read. It must fail CLOSED.
+    const rows: [string, EnterableRead | null][] = [
+      ['X', { kind: 'demand', verdict: 'BLOCKED', reasons: ['proximity', 'room'],
+              reason_text: [], reason_short: [PROX] }],
+    ];
+    for (const ig of [[], ['room'], ['proximity'], ['proximity', 'room']]) {
+      const p = part(rows, ig);
+      expect(p.rows).toHaveLength(0);
+      expect(p.hidden).toBe(1);
+    }
+    const room = part(rows).reasons.find((r) => r.code === 'room')!;
+    expect(room.toggleable).toBe(false);
+    expect(room.label).toBe('');
+  });
+
+  it('NEGATIVE: an empty / non-string reason_short entry is never un-hideable either', () => {
+    for (const shorts of [[''], [null as unknown as string], [3 as unknown as string]]) {
+      const rows: [string, EnterableRead | null][] = [
+        ['X', { kind: 'demand', verdict: 'BLOCKED', reasons: ['room'], reason_text: [], reason_short: shorts }],
+      ];
+      const p = part(rows, ['room']);
+      expect(p.rows).toHaveLength(0);
+      expect(p.hiddenByReason).toEqual({ blocked: 1 });
+      expect(p.hidden).toBe(p.reasons.reduce((n, r) => n + r.hidden, 0));
+    }
+  });
+
+  it('NEGATIVE: an unknown SERVED code gets its own chip; an unknown ignored code is inert', () => {
+    const rows: [string, EnterableRead | null][] = [['G', blocked(['gremlin'], ['gremlins'])]];
+    const p = part(rows);
+    expect(p.reasons.map((r) => r.code)).toEqual(['gremlin']);
+    expect(part(rows, ['gremlin']).rows.map((r) => r.symbol)).toEqual(['G']);
+    // A code nothing carries renders no chip and un-hides nothing.
+    const inert = part(BOARD, ['not_a_code']);
+    expect(inert.reasons.map((r) => r.code)).not.toContain('not_a_code');
+    expect(inert.rows.map((r) => r.symbol)).toEqual(part(BOARD).rows.map((r) => r.symbol));
+  });
+
+  it('ORDER: at an empty ignore set the chips ARE today’s line, number for number', async () => {
+    const fx = await load();
+    const p = partitionEnterable(fx.rows, symbolOf, mapOf(fx), true);
+    const today = topHiddenReasons(p.hiddenByReason, Infinity);
+    expect(p.reasons.filter((r) => r.hidden > 0).map((r) => [r.hidden, r.label || UNLABELLED_REASON]))
+      .toEqual(today.map((t) => [t.n, t.reason]));
+    for (const r of p.reasons) expect(r.baseline).toBe(r.hidden);
+  });
+
+  it('ORDER: sorts on BASELINE, not on the rows carrying the code', () => {
+    // 10 rows ["A","B"] + 1 row ["B"]: `total` would order B(11) before A(10),
+    // but the line prints A 10 and B 1 — so A comes first.
+    const rows: [string, EnterableRead | null][] = [
+      ...Array.from({ length: 10 }, (_, i) => [`AB${i}`, blocked(['a', 'b'], ['aaa', 'bbb'])] as [string, EnterableRead]),
+      ['B0', blocked(['b'], ['bbb'])],
+    ];
+    const p = part(rows);
+    expect(p.reasons.map((r) => r.code)).toEqual(['a', 'b']);
+    expect(p.reasons.map((r) => [r.code, r.total, r.baseline, r.hidden]))
+      .toEqual([['a', 10, 10, 10], ['b', 11, 1, 1]]);
+  });
+
+  it('ORDER: chip order never moves under his cursor — every ignore subset, same sequence', () => {
+    const rows: [string, EnterableRead | null][] = [
+      ['W', blocked(['w'], ['w label'])], ['W2', blocked(['w'], ['w label'])],
+      ['X', blocked(['x'], ['x label'])], ['X2', blocked(['x'], ['x label'])],
+      ['Y', blocked(['y'], ['y label'])], ['Z', blocked(['z'], ['z label'])],
+      ['XY', blocked(['x', 'y'], ['x label', 'y label'])],
+    ];
+    const codes = ['w', 'x', 'y', 'z'];
+    const expected = part(rows).reasons.map((r) => r.code);
+    for (let mask = 0; mask < 16; mask += 1) {
+      const ig = codes.filter((_, i) => mask & (1 << i));
+      expect(part(rows, ig).reasons.map((r) => r.code)).toEqual(expected);
+    }
+  });
+
+  it('SUM: the printed hidden numbers always add up to the partition’s hidden count', () => {
+    const rows: [string, EnterableRead | null][] = [
+      ...BOARD,
+      ['NOTHING', blocked([], [])],
+      ['FS', blocked(['floor_swept'], ['floor swept'])],
+      ['FB', blocked(['floor_broken'], ['floor broken'])],
+    ];
+    const codes = ['room', 'proximity', 'no_band', 'floor_swept', 'floor_broken'];
+    for (let mask = 0; mask < 32; mask += 1) {
+      const ig = codes.filter((_, i) => mask & (1 << i));
+      const p = part(rows, ig);
+      const drawn = p.reasons.filter((r) => r.hidden > 0 || r.ignored);
+      expect(drawn.reduce((n, r) => n + r.hidden, 0)).toBe(p.hidden);
+      expect(p.reasons.reduce((n, r) => n + r.hidden, 0)).toBe(p.hidden);
+      expect(p.unhidden + p.hidden).toBe(rows.filter(([, r]) => r?.verdict === 'BLOCKED').length);
+    }
+  });
+
+  it('NEGATIVE: the filter OFF returns the board untouched — no chips, even with a full ignore set', () => {
+    const { rows, map } = mk(BOARD);
+    const p = partitionEnterable(rows, symbolOf, map, false, new Set(['room', 'proximity', 'no_band']));
+    expect(p.rows.map((r) => r.symbol)).toEqual(BOARD.map(([s]) => s));
+    expect(p).toMatchObject({ hidden: 0, unread: 0, unhidden: 0, hiddenByReason: {}, reasons: [] });
+  });
+
+  it('isShown: mode "all" shows everything, ignore set or not', () => {
+    const b = blocked(['room'], [ROOM]);
+    expect(isShown(b, 'all')).toBe(true);
+    expect(isShown(b, 'all', new Set())).toBe(true);
+    expect(isShown(b, 'enterable')).toBe(false);
+    expect(isShown(b, 'enterable', new Set(['room']))).toBe(true);
+    expect(isShown(null, 'enterable', new Set(['room']))).toBe(true);
+  });
+
+  it('mergeReasonStats sums by code, ORs ignored, ANDs toggleable, and re-sorts', () => {
+    const a = part([['R1', blocked(['room'], [ROOM])], ['N1', blocked(['no_band'], ['no band'])]]);
+    const b = part([['R2', blocked(['room'], [ROOM])], ['R3', blocked(['room'], [ROOM])]]);
+    const merged = mergeReasonStats([a.reasons, b.reasons]);
+    expect(merged.map((r) => [r.code, r.baseline, r.hidden])).toEqual([['room', 3, 3], ['no_band', 1, 1]]);
+    expect(mergeReasonStats([a.reasons])).toEqual(a.reasons);
+    const on = part([['R1', blocked(['room'], [ROOM])]], ['room']);
+    expect(mergeReasonStats([a.reasons, on.reasons]).find((r) => r.code === 'room')!.ignored).toBe(true);
+    const nolabel = part([['X', blocked([], [])]]);
+    expect(mergeReasonStats([nolabel.reasons, nolabel.reasons])
+      .find((r) => r.code === UNLABELLED_REASON)!.toggleable).toBe(false);
+  });
+
+  it('the ignored chip survives at zero hidden — that is the ✓ state', () => {
+    const p = part(BOARD, ['room']);
+    const room = p.reasons.find((r) => r.code === 'room')!;
+    expect(room).toMatchObject({ ignored: true, hidden: 0, baseline: 2, total: 3, label: ROOM });
   });
 });

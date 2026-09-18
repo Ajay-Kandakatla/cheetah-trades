@@ -60,7 +60,7 @@ import { BandStructureChip } from './BandStructureChip';
 import { HiddenCount } from './HiddenCount';
 import { StudyNote } from './StudyNote';
 import { useEnterableFilter } from '../hooks/useEnterableFilter';
-import { partitionEnterable, type EnterableRead } from '../lib/enterable';
+import { mergeReasonStats, partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
 
@@ -215,7 +215,7 @@ export default function BondeBoard() {
    * removes rows, and the count line below reports only what the ENTERABLE cut
    * took, so "0 hidden" under an empty section correctly points at the other
    * box rather than at this one. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const enterableOn = enterableOnly && kind !== 'n/a';
   const enterableMap = useMemo(() => {
     const m = new Map<string, EnterableRead | null | undefined>();
@@ -247,22 +247,30 @@ export default function BondeBoard() {
           { symbol: b.symbol, read: room.map.get(String(b.symbol).toUpperCase())?.explosive },
           status));
       }
-      const part = partitionEnterable(rows, (r) => r.symbol, enterableMap, enterableOn);
+      const part = partitionEnterable(rows, (r) => r.symbol, enterableMap, enterableOn,
+                                      ignoreReasons);
       return { ...s, rows: part.rows, part,
                total: d.counts?.[s.key] ?? all.length, shown: all.length };
     });
-  }, [d, newOnly, nearDemandOnly, explosiveFirst, room.map, enterableMap, enterableOn]);
+    // `ignoreReasons` belongs here: this board calls the partition by hand
+    // rather than through the hook, so a missed dep means his chip lights up
+    // and the sections do not move.
+  }, [d, newOnly, nearDemandOnly, explosiveFirst, room.map, enterableMap, enterableOn, ignoreReasons]);
 
   /* One line for the whole tab: the sections are his, the count is the board's. */
   const enterableTotals = useMemo(() => {
-    let hidden = 0; let unread = 0;
+    let hidden = 0; let unread = 0; let unhidden = 0;
     const byReason: Record<string, number> = {};
     for (const s of sections) {
       hidden += s.part.hidden;
       unread += s.part.unread;
+      unhidden += s.part.unhidden;
       for (const [k2, n2] of Object.entries(s.part.hiddenByReason)) byReason[k2] = (byReason[k2] || 0) + n2;
     }
-    return { hidden, unread, byReason };
+    // One line for several partitions, so the chips are merged the same way the
+    // counts are — summed by CODE, never re-derived from the labels.
+    const reasons = mergeReasonStats(sections.map((s) => s.part.reasons));
+    return { hidden, unread, unhidden, byReason, reasons };
   }, [sections]);
 
   if (loading) return <div className="bd-note">reading his screen…</div>;
@@ -344,6 +352,8 @@ export default function BondeBoard() {
       {enterableOn ? (
         <HiddenCount hidden={enterableTotals.hidden} unread={enterableTotals.unread}
                      hiddenByReason={enterableTotals.byReason} enabled kind={kind}
+                     reasons={enterableTotals.reasons} unhidden={enterableTotals.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
 

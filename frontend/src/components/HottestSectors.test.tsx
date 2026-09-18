@@ -1,6 +1,7 @@
 /* 🔥 Hottest — the tab Ajay asked for on 2026-09-11. The cases that matter are
  * the ones his own example exposes: a STRONG name inside a COLD sector, and a
  * thin industry that has no ranked row of its own. */
+import { useCallback, useState } from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -350,5 +351,90 @@ describe('🔥 Hottest — the 🎯 enterable cut says it is over a server-cut l
     fireEvent.click(await screen.findByRole('button', { name: /Food Distribution/ }));
     expect(await screen.findByText('ANDE')).toBeInTheDocument();
     expect(screen.queryByText(/hidden/)).not.toBeInTheDocument();
+  });
+});
+
+/* 🎯 UN-HIDE BY REASON on Hottest (Ajay 2026-09-17).
+ *
+ * This board is the OTHER hand-rolled call site: the count line comes from
+ * `useEnterablePartition`, but each group's own rows are filtered by a plain
+ * `isShown` closure. Miss the ignore set on that closure and the line says a
+ * name came back while the group it lives in still refuses to draw it — which
+ * is the exact lie the feature exists to stop. Both sides are pinned here.
+ */
+describe('🔥 Hottest — un-hide by reason (2026-09-17)', () => {
+  beforeEach(() => { _resetBounceRoomCache(); });
+  afterEach(() => { _resetBounceRoomCache(); });
+
+  const read = (verdict: string | null, codes: string[] = [], short: string[] = []) => ({
+    kind: 'demand', verdict, reasons: codes, reason_short: short,
+    reason_text: short.map((s) => `${s}.`), measured: { status: 'pending' },
+  });
+  const ROOM2 = {
+    as_of: '2026-09-15T11:00:00-04:00', in_session: true, params: {},
+    requested: 2, covered: 2, pending: 0, unavailable: 0,
+    rows: {
+      ANDE: { symbol: 'ANDE', coverage: 'store', print: 40,
+              enterable: read('BLOCKED', ['room'], ['room < 5%']) },
+      ASML: { symbol: 'ASML', coverage: 'store', print: 800, enterable: read('READY') },
+    },
+  };
+
+  const draw = () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: any) => ({
+      ok: true, status: 200,
+      json: async () => (String(url).includes('/supply-demand/bounce-room') ? ROOM2 : PAYLOAD),
+    })));
+    const Page = () => {
+      const [ignore, setIgnore] = useState<ReadonlySet<string>>(new Set());
+      const toggle = useCallback((code: string) => setIgnore((prev) => {
+        const next = new Set(prev);
+        if (next.has(code)) next.delete(code); else next.add(code);
+        return next;
+      }), []);
+      return (
+        <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}
+                                 ignoreReasons={ignore} toggleReason={toggle}>
+          <HottestSectors />
+        </EnterableFilterProvider>
+      );
+    };
+    return render(<MemoryRouter><Page /></MemoryRouter>);
+  };
+  const hsChip = (code: string) => document.querySelector(`[data-reason="${code}"]`) as HTMLButtonElement;
+
+  it('the count line and the GROUP agree — un-hiding room draws the name again', async () => {
+    draw();
+    fireEvent.click(await screen.findByRole('button', { name: /Consumer Defensive/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Food Distribution/ }));
+    await waitFor(() => expect(hsChip('room')).toBeTruthy());
+    expect(screen.queryByText('ANDE')).not.toBeInTheDocument();
+    fireEvent.click(hsChip('room'));
+    await waitFor(() => expect(screen.getByText('ANDE')).toBeInTheDocument());
+    const box = screen.getByText(/0 hidden/).closest('.cm-hidden-count') as HTMLElement;
+    expect(box.textContent).toContain('✓ room < 5%');
+    expect(box.textContent).toContain('1 un-hidden');
+  });
+
+  it('SECOND TOGGLE: clicking it again hides the name and the count comes back', async () => {
+    draw();
+    fireEvent.click(await screen.findByRole('button', { name: /Consumer Defensive/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Food Distribution/ }));
+    await waitFor(() => expect(hsChip('room')).toBeTruthy());
+    fireEvent.click(hsChip('room'));
+    await waitFor(() => expect(screen.getByText('ANDE')).toBeInTheDocument());
+    fireEvent.click(hsChip('room'));
+    await waitFor(() => expect(screen.queryByText('ANDE')).not.toBeInTheDocument());
+    expect(screen.getByText(/1 hidden/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: an empty ignore set leaves the board exactly as it ships', async () => {
+    draw();
+    fireEvent.click(await screen.findByRole('button', { name: /Consumer Defensive/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Food Distribution/ }));
+    await waitFor(() => expect(hsChip('room')).toBeTruthy());
+    expect(screen.queryByText('ANDE')).not.toBeInTheDocument();
+    expect(hsChip('room').getAttribute('aria-pressed')).toBe('false');
+    expect(hsChip('room').textContent).toBe('1 room < 5%');
   });
 });

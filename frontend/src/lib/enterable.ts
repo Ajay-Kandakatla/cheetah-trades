@@ -17,6 +17,10 @@
  * backend/tests/fixtures/enterable_mirror_2026_09_15.json. Edit the fixture and
  * both suites fail.
  *
+ * The un-hide-by-reason ignore set (2026-09-17) does not change that sentence:
+ * it decides only what is DRAWN. No verdict is computed, recomputed or
+ * overridden here — an un-hidden row is still the served BLOCKED.
+ *
  * NOTHING IS EVER SILENTLY LOST. A row with no read (a pending bounce-room row,
  * a legacy doc, a name the store has no bands for) is NEVER hidden: it is kept,
  * placed last, and counted separately so the count line can say so.
@@ -116,11 +120,81 @@ export type EnterableStudy = {
  *  = nothing (the `?show=all` escape hatch). */
 export type EnterableMode = 'enterable' | 'all';
 
+/* ── 🎯 UN-HIDE BY REASON (Ajay 2026-09-17: "Can you give me a toggle for the
+ *    room too? I am not seeing all stocks on the selected filter due to this
+ *    now") ──────────────────────────────────────────────────────────────────
+ *
+ * THIS STILL COMPUTES NO VERDICT. The ignore set decides what is DRAWN; it
+ * never decides what is enterable. An un-hidden row is BLOCKED in the payload,
+ * BLOCKED on its tile chip, blocked on the phone and refused by every lane.
+ * There is no backend counterpart by design — a view preference must be unable
+ * to reach a gate. */
+
+/** Served reason CODES a view un-hides. Never a label, never a base code. */
+export type IgnoreSet = ReadonlySet<string>;
+export const NO_IGNORE: IgnoreSet = new Set<string>();
+
+/** One chip on the count line. `code` + `label` are SERVED, verbatim. */
+export type EnterableReasonStat = {
+  /** The served `reasons[i]`, or UNLABELLED_REASON for the synthesised stat. */
+  code: string;
+  /** The served `reason_short[i]`; '' when the backend sent none. */
+  label: string;
+  /** BLOCKED rows on this list CARRYING `code` — informational, never the sort key. */
+  total: number;
+  /** Rows attributed to `code` with an EMPTY ignore set — THE SORT KEY. */
+  baseline: number;
+  /** Rows STILL hidden and attributed to `code` — the number the chip prints. */
+  hidden: number;
+  /** In the ignore set. */
+  ignored: boolean;
+  /** false when `label` is empty — rendered as text, never as a button. */
+  toggleable: boolean;
+};
+
+/** The (code, label) pairs a BLOCKED row is blocked for, zipped BY INDEX —
+ *  `assess()` builds `reasons` / `reason_text` / `reason_short` from one code
+ *  list, so `reasons[i] ↔ reason_short[i]`.
+ *
+ *  `[]` for a non-BLOCKED row, a missing / non-array `reasons`, or a non-string
+ *  code anywhere in it — all of which FAIL CLOSED through `isShown` below. A
+ *  code whose index is missing from `reason_short` (short array, '', non-string)
+ *  yields label '' and makes the whole row un-hideable: un-hiding is always
+ *  explicit, never silent. */
+export function blockReasons(read?: EnterableRead | null): { code: string; label: string }[] {
+  if (!read || read.verdict !== 'BLOCKED') return [];
+  const codes = read.reasons;
+  if (!Array.isArray(codes) || !codes.length) return [];
+  const shorts = Array.isArray(read.reason_short) ? read.reason_short : [];
+  const out: { code: string; label: string }[] = [];
+  for (let i = 0; i < codes.length; i += 1) {
+    const code = codes[i];
+    if (typeof code !== 'string' || !code) return [];
+    const raw = shorts[i];
+    out.push({ code, label: typeof raw === 'string' ? raw : '' });
+  }
+  return out;
+}
+
 /** Is this row shown under `mode`? An unknown read (null, or a verdict the
- *  backend did not grade) is ALWAYS shown — never hidden on an absence. */
-export function isShown(read?: EnterableRead | null, mode: EnterableMode = 'enterable'): boolean {
+ *  backend did not grade) is ALWAYS shown — never hidden on an absence.
+ *
+ *  A BLOCKED row comes back ONLY when EVERY one of its block reasons has been
+ *  un-hidden. A row blocked for `proximity` AND `room` stays hidden while only
+ *  `room` is un-hidden — otherwise the count line lies about what he is looking
+ *  at. A BLOCKED row with nothing named, or with a block reason the backend
+ *  sent no label for, can never be un-hidden at all. */
+export function isShown(
+  read?: EnterableRead | null,
+  mode: EnterableMode = 'enterable',
+  ignore: IgnoreSet = NO_IGNORE,
+): boolean {
   if (mode === 'all') return true;
-  return read?.verdict !== 'BLOCKED';
+  if (read?.verdict !== 'BLOCKED') return true;
+  const rs = blockReasons(read);
+  if (!rs.length) return false;
+  if (rs.some((r) => !r.label)) return false;
+  return rs.every((r) => ignore.has(r.code));
 }
 
 /** How the study's own status reaches a TOOLTIP (m6, 2026-09-15).
@@ -187,8 +261,73 @@ export type EnterablePartition<T> = {
   rows: T[];
   hidden: number;
   unread: number;
+  /** UNCHANGED, keyed by the served LABEL — the shared-fixture pin reads this. */
   hiddenByReason: Record<string, number>;
+  /** Rows drawn ONLY because their every block reason is in the ignore set. */
+  unhidden: number;
+  /** The chips, ordered per the rule below. Empty when the filter is off. */
+  reasons: EnterableReasonStat[];
 };
+
+/** Which stat a hidden row is counted under: its FIRST block reason whose code
+ *  is not in the ignore set AND which the backend labelled. `null` → the
+ *  synthesised UNLABELLED_REASON stat.
+ *
+ *  Skipping the unlabelled ones is what keeps this identical to the line today
+ *  at an empty ignore set: `partitionEnterable` has always counted a hidden row
+ *  under the first NON-EMPTY `reason_short`, and `reason_short[i]` is the label
+ *  of `reasons[i]`. So `baseline` is, index for index, the number the shipped
+ *  board prints. */
+function attribute(
+  rs: readonly { code: string; label: string }[],
+  ignore: IgnoreSet,
+): { code: string; label: string } | null {
+  for (const r of rs) {
+    if (!r.label) continue;
+    if (ignore.has(r.code)) continue;
+    return r;
+  }
+  return null;
+}
+
+/** Chip order: `baseline` desc, then label asc, then code asc.
+ *
+ *  `baseline` — not the live `hidden`, and not `total` — because two properties
+ *  are both required: at an empty ignore set the printed number IS `baseline`,
+ *  so the line stays byte-identical to today's `topHiddenReasons` order; and
+ *  `baseline` never moves when he clicks, so chips never reshuffle under his
+ *  cursor. The synthesised stat has no label, so it sorts under its code, which
+ *  is the very key (`blocked`) the line already counts it by. */
+function sortStats(stats: EnterableReasonStat[]): EnterableReasonStat[] {
+  return stats.sort((a, b) => (b.baseline - a.baseline)
+    || (a.label || a.code).localeCompare(b.label || b.code)
+    || a.code.localeCompare(b.code));
+}
+
+/** Merge per-section chip lists into one line (BondeBoard renders one count for
+ *  several partitions). Sums by CODE, ORs `ignored`, ANDs `toggleable`, keeps
+ *  the first non-empty served label, and re-sorts by the same rule. */
+export function mergeReasonStats(
+  parts: readonly EnterableReasonStat[][],
+): EnterableReasonStat[] {
+  const by = new Map<string, EnterableReasonStat>();
+  for (const list of parts || []) {
+    for (const s of list || []) {
+      const cur = by.get(s.code);
+      if (!cur) {
+        by.set(s.code, { ...s });
+        continue;
+      }
+      cur.total += s.total;
+      cur.baseline += s.baseline;
+      cur.hidden += s.hidden;
+      cur.ignored = cur.ignored || s.ignored;
+      cur.toggleable = cur.toggleable && s.toggleable;
+      if (!cur.label && s.label) cur.label = s.label;
+    }
+  }
+  return sortStats(Array.from(by.values()));
+}
 
 /** A stable partition — NOT a sort. Shown rows keep the order the board chose
  *  for them, rows without a read follow in theirs, and the hidden ones are
@@ -200,14 +339,34 @@ export function partitionEnterable<T>(
   symbolOf: (row: T) => string | null | undefined,
   map?: Map<string, EnterableRead | null | undefined> | null,
   enabled = false,
+  ignore: IgnoreSet = NO_IGNORE,
 ): EnterablePartition<T> {
   const all = (rows || []) as readonly T[];
-  if (!enabled) return { rows: all.slice(), hidden: 0, unread: 0, hiddenByReason: {} };
+  if (!enabled) {
+    return { rows: all.slice(), hidden: 0, unread: 0, hiddenByReason: {}, unhidden: 0, reasons: [] };
+  }
 
   const shown: T[] = [];
   const unread: T[] = [];
   const hiddenByReason: Record<string, number> = {};
   let hidden = 0;
+  let unhidden = 0;
+
+  /* One walk, both attributions: `baseline` (ignore-independent, the order key)
+   * and `hidden` (what this chip is still holding back). */
+  const stats = new Map<string, EnterableReasonStat>();
+  const stat = (code: string, label: string): EnterableReasonStat => {
+    let s = stats.get(code);
+    if (!s) {
+      s = { code, label, total: 0, baseline: 0, hidden: 0,
+            ignored: ignore.has(code), toggleable: Boolean(label) };
+      stats.set(code, s);
+    } else if (!s.label && label) {
+      s.label = label;
+      s.toggleable = true;
+    }
+    return s;
+  };
 
   for (const row of all) {
     const symbol = String(symbolOf(row) ?? '').toUpperCase();
@@ -216,17 +375,39 @@ export function partitionEnterable<T>(
       unread.push(row);
       continue;
     }
-    if (isShown(read)) {
+    if (read.verdict !== 'BLOCKED') {
       shown.push(row);
       continue;
     }
+
+    const rs = blockReasons(read);
+    for (const r of rs) stat(r.code, r.label).total += 1;
+
+    const base = attribute(rs, NO_IGNORE);
+    (base ? stat(base.code, base.label) : stat(UNLABELLED_REASON, '')).baseline += 1;
+
+    if (isShown(read, 'enterable', ignore)) {
+      shown.push(row);
+      unhidden += 1;
+      continue;
+    }
+
     hidden += 1;
     const key = (read.reason_short || []).find((s) => typeof s === 'string' && s.length > 0)
       || UNLABELLED_REASON;
     hiddenByReason[key] = (hiddenByReason[key] || 0) + 1;
+    const live = attribute(rs, ignore);
+    (live ? stat(live.code, live.label) : stat(UNLABELLED_REASON, '')).hidden += 1;
   }
 
-  return { rows: [...shown, ...unread], hidden, unread: unread.length, hiddenByReason };
+  return {
+    rows: [...shown, ...unread],
+    hidden,
+    unread: unread.length,
+    hiddenByReason,
+    unhidden,
+    reasons: sortStats(Array.from(stats.values())),
+  };
 }
 
 /** The top reasons behind a hidden count, most first, ties by label so the

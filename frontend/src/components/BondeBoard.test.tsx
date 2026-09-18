@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useCallback, useState } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import BondeBoard, { type BondeBoardData } from './BondeBoard';
@@ -574,5 +575,109 @@ describe('🪜 Bonde — the served band-structure read', () => {
     expect(await screen.findByText('PTGX')).toBeInTheDocument();
     expect(screen.queryByTestId('band-structure-note')).not.toBeInTheDocument();
     expect(screen.queryByText(/🪜/)).not.toBeInTheDocument();
+  });
+});
+
+/* 🎯 UN-HIDE BY REASON on Bonde (Ajay 2026-09-17: "Can you give me a toggle for
+ * the room too? I am not seeing all stocks on the selected filter due to this
+ * now").
+ *
+ * Bonde calls `partitionEnterable` BY HAND, once per section, and merges the
+ * counts into ONE line. That is exactly where the rows and the line can start
+ * disagreeing about what is hidden — so the pins are (a) the rows a chip claims
+ * to have brought back are the rows actually drawn, (b) the merged chip order
+ * is the merged baseline order, and (c) the second toggle moves rows, i.e. the
+ * ignore set really is in the `sections` memo's dep array.
+ */
+const coded = (verdict: string | null, codes: string[] = [], short: string[] = []) => ({
+  kind: 'demand', verdict, reasons: codes, reason_short: short,
+  reason_text: short.map((s) => `${s}.`), measured: { status: 'pending' },
+});
+const ROOM_CODED = roomPayload({
+  PTGX: { symbol: 'PTGX', coverage: 'store', print: 100, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(80, 90, 100),
+          enterable: coded('BLOCKED', ['room'], ['room < 5%']) },
+  LQDA: { symbol: 'LQDA', coverage: 'store', print: 12, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(11.5, 12.4, 12),
+          enterable: coded('BLOCKED', ['proximity', 'room'], ['not at band', 'room < 5%']) },
+  ONDS: { symbol: 'ONDS', coverage: 'store', print: 5.1, fresh: true, bounce: null, room: { state: 'CLEAR' },
+          demand: demand(4.6, 5.02, 5.1), enterable: coded('READY') },
+  UMAC: { symbol: 'UMAC', coverage: 'pending' },
+});
+
+/** Bonde with a live, page-owned ignore set — the ChartMaps shape. */
+const drawUnhide = (d: BondeBoardData, room: any) => {
+  const spy = vi.fn(async (url: string) => {
+    const u = String(url);
+    if (u.includes('/supply-demand/bounce-room')) return { ok: true, status: 200, json: async () => room } as any;
+    return { ok: true, status: 200, json: async () => d } as any;
+  });
+  vi.stubGlobal('fetch', spy);
+  const Page = () => {
+    const [ignore, setIgnore] = useState<ReadonlySet<string>>(new Set());
+    const toggle = useCallback((code: string) => setIgnore((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    }), []);
+    return (
+      <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}
+                               ignoreReasons={ignore} toggleReason={toggle}>
+        <BondeBoard />
+      </EnterableFilterProvider>
+    );
+  };
+  render(<MemoryRouter><Page /></MemoryRouter>);
+  return spy;
+};
+const bondeLine = () => Array.from(document.querySelectorAll<HTMLElement>('.cm-hidden-count'))
+  .find((d) => /^\d[\d,]* hidden/.test(d.textContent || ''))!;
+const bondeChip = (code: string) => document.querySelector(`[data-reason="${code}"]`) as HTMLButtonElement;
+
+describe('📈 Bonde — un-hide by reason (2026-09-17)', () => {
+  it('the merged line carries a chip per SERVED code, in baseline order', async () => {
+    drawUnhide(payload(FOUR), ROOM_CODED);
+    await screen.findByText('ONDS');
+    await waitFor(() => expect(bondeChip('room')).toBeTruthy());
+    // room 1 (PTGX), proximity 1 (LQDA, first code) — tie, so label asc:
+    // "not at band" before "room < 5%".
+    expect(Array.from(document.querySelectorAll('[data-reason]')).map((b) => b.getAttribute('data-reason')))
+      .toEqual(['proximity', 'room']);
+    expect(bondeLine().textContent).toMatch(/2 hidden/);
+  });
+
+  it('un-hiding room brings back the room-only row AND the section actually draws it', async () => {
+    drawUnhide(payload(FOUR), ROOM_CODED);
+    await screen.findByText('ONDS');
+    await waitFor(() => expect(bondeChip('room')).toBeTruthy());
+    fireEvent.click(bondeChip('room'));
+    await waitFor(() => expect(screen.getByText('PTGX')).toBeInTheDocument());
+    const line = bondeLine().textContent || '';
+    expect(line).toContain('✓ room < 5%');
+    expect(line).toContain('1 un-hidden');
+    expect(line).toMatch(/1 hidden/);
+    // NEGATIVE: the two-reason row is NOT back — the line and the rows agree.
+    expect(screen.queryByText('LQDA')).not.toBeInTheDocument();
+  });
+
+  it('SECOND TOGGLE: the rows move again — the ignore set is in the sections memo', async () => {
+    drawUnhide(payload(FOUR), ROOM_CODED);
+    await screen.findByText('ONDS');
+    await waitFor(() => expect(bondeChip('room')).toBeTruthy());
+    fireEvent.click(bondeChip('room'));
+    await waitFor(() => expect(screen.getByText('PTGX')).toBeInTheDocument());
+    fireEvent.click(bondeChip('proximity'));
+    await waitFor(() => expect(screen.getByText('LQDA')).toBeInTheDocument());
+    expect(bondeLine().textContent).toMatch(/0 hidden/);
+  });
+
+  it('NEGATIVE: an empty ignore set is the board he has today', async () => {
+    drawUnhide(payload(FOUR), ROOM_CODED);
+    await screen.findByText('ONDS');
+    await waitFor(() => expect(bondeChip('room')).toBeTruthy());
+    expect(screen.queryByText('PTGX')).not.toBeInTheDocument();
+    expect(screen.queryByText('LQDA')).not.toBeInTheDocument();
+    expect(bondeLine().textContent).not.toContain('un-hidden');
+    expect(document.querySelector('[aria-pressed="true"]')).toBeNull();
   });
 });

@@ -17,7 +17,7 @@
  * that one answer.
  */
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { partitionEnterable, type EnterableKind, type EnterablePartition, type EnterableRead } from '../lib/enterable';
+import { NO_IGNORE, partitionEnterable, type EnterableKind, type EnterablePartition, type EnterableRead, type IgnoreSet } from '../lib/enterable';
 import type { BounceRoomRow } from '../lib/bounceRoom';
 
 export type EnterableFilterValue = {
@@ -26,28 +26,44 @@ export type EnterableFilterValue = {
   /** The SERVED kind for this tab; 'n/a' makes every partition inert. */
   kind: EnterableKind | string;
   setEnterableOnly: (v: boolean) => void;
+  /** SERVED reason codes this view un-hides (Ajay 2026-09-17). Empty = the
+   *  shipped board, byte for byte. It changes what is DRAWN and nothing else:
+   *  an un-hidden row is still BLOCKED, still not pushed, never entered. */
+  ignoreReasons: IgnoreSet;
+  /** Flip one served reason code in or out of the ignore set. */
+  toggleReason: (code: string) => void;
 };
 
 const EnterableFilterContext = createContext<EnterableFilterValue>({
   enterableOnly: false,
   kind: 'demand',
   setEnterableOnly: () => {},
+  ignoreReasons: NO_IGNORE,
+  toggleReason: () => {},
 });
+
+/** The unwrapped-mount default: /signal-lab and any other page with no
+ *  provider stays byte-identical to today. */
+const NOOP_TOGGLE = () => {};
 
 export function EnterableFilterProvider({
   enterableOnly,
   kind = 'demand',
   setEnterableOnly,
+  ignoreReasons = NO_IGNORE,
+  toggleReason = NOOP_TOGGLE,
   children,
 }: {
   enterableOnly: boolean;
   kind?: EnterableKind | string | null;
   setEnterableOnly: (v: boolean) => void;
+  ignoreReasons?: IgnoreSet;
+  toggleReason?: (code: string) => void;
   children: ReactNode;
 }) {
   const value = useMemo<EnterableFilterValue>(
-    () => ({ enterableOnly, kind: kind || 'demand', setEnterableOnly }),
-    [enterableOnly, kind, setEnterableOnly],
+    () => ({ enterableOnly, kind: kind || 'demand', setEnterableOnly, ignoreReasons, toggleReason }),
+    [enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason],
   );
   return (
     <EnterableFilterContext.Provider value={value}>{children}</EnterableFilterContext.Provider>
@@ -67,7 +83,7 @@ export function useEnterablePartition<T>(
   roomRows?: Map<string, BounceRoomRow> | null,
   enabled = false,
 ): EnterablePartition<T> {
-  const { kind } = useEnterableFilter();
+  const { kind, ignoreReasons } = useEnterableFilter();
   const on = enabled && kind !== 'n/a';
   return useMemo(() => {
     const map = new Map<string, EnterableRead | null | undefined>();
@@ -76,7 +92,9 @@ export function useEnterablePartition<T>(
         map.set(String(symbol).toUpperCase(), row?.enterable ?? null);
       }
     }
-    return partitionEnterable(rows, symbolOf, map, on);
+    return partitionEnterable(rows, symbolOf, map, on, ignoreReasons);
+    // `ignoreReasons` is a stable reference from the page (memoised on the URL
+    // params). Miss it here and the chip lights up while the rows sit still.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, roomRows, on, symbolOf]);
+  }, [rows, roomRows, on, symbolOf, ignoreReasons]);
 }

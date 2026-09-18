@@ -179,7 +179,8 @@ describe('🎯 Verdict for every name — the enterable cut (M3)', () => {
     const { container } = drawFiltered();
     await screen.findByText('WCH');
     await waitFor(() => expect(verdictLine(container)).toBeTruthy());
-    const line = verdictLine(container)!;
+    const line = [...container.querySelectorAll<HTMLElement>('.cm-hidden-count')]
+      .find((el) => (el.getAttribute('title') || '').includes('verdict sweep'))!;
     expect(line.textContent).toMatch(/2 hidden \(1 no band · 1 not at band\)/);
     expect(screen.queryByText('BLK')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'NOPAT' })).not.toBeInTheDocument();
@@ -265,5 +266,88 @@ describe('🎯 Verdict for every name — the enterable cut (M3)', () => {
       </MemoryRouter>);
     expect(await screen.findByText('BLK')).toBeInTheDocument();
     expect(verdictLine(container)).toBeUndefined();
+  });
+});
+
+/* 🎯 UN-HIDE BY REASON on the Patterns board (Ajay 2026-09-17).
+ *
+ * `/patterns` redirects into Chart Maps, so this board runs INSIDE the page's
+ * provider and silently inherits its ignore set. Rev-1 of the spec missed it:
+ * `?tab=amd` → click `room` → `?tab=patterns` would have shown un-hidden
+ * BLOCKED rows with a text-only line, no `✓`, and no way back. The pins are
+ * that the chips reach this board's own line, and that mounted WITHOUT a
+ * provider it is byte-identical to today.
+ */
+describe('📐 Patterns — un-hide by reason (2026-09-17)', () => {
+  const read = (verdict: string | null, codes: string[] = [], short: string[] = []) => ({
+    kind: 'demand', verdict, reasons: codes, reason_short: short,
+    reason_text: short.map((s) => `${s}.`),
+    print: { px: 10, source: 'live' }, measured: { status: 'no_signal' },
+  });
+  const verdict = (symbol: string, over: Record<string, unknown> = {}) => ({
+    symbol, sepa: { rs_rank: 70, stage: 2 }, matches: [], no_match: false,
+    candles: { formations: [] }, ...over,
+  });
+  const QUALS2 = {
+    generated_at: 1789000000, n_symbols: 3,
+    verdicts: [verdict('OKAY'), verdict('ROOMY'), verdict('BOTH')],
+  };
+  const ROOM2 = {
+    as_of: '2026-09-15T11:00:00-04:00', in_session: true, params: {},
+    requested: 3, covered: 3, pending: 0, unavailable: 0,
+    rows: {
+      OKAY: { symbol: 'OKAY', coverage: 'store', print: 10, enterable: read('READY') },
+      ROOMY: { symbol: 'ROOMY', coverage: 'store', print: 10,
+               enterable: read('BLOCKED', ['room'], ['room < 5%']) },
+      BOTH: { symbol: 'BOTH', coverage: 'store', print: 10,
+              enterable: read('BLOCKED', ['proximity', 'room'], ['not at band', 'room < 5%']) },
+    },
+  };
+
+  function draw(ignore: ReadonlySet<string> | null) {
+    vi.stubGlobal('fetch', vi.fn((url: any) => {
+      const u = String(url);
+      const body = u.includes('/supply-demand/bounce-room') ? ROOM2
+        : u.includes('/patterns/qualifiers') ? QUALS2
+        : u.includes('/patterns/latest') ? LATEST
+        : u.includes('/patterns/accuracy') ? { ok: true, patterns: {}, candles: {}, pending: 0 }
+        : { ok: true };
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) } as Response);
+    }));
+    const inner = <PatternsBoard />;
+    return render(
+      <MemoryRouter>
+        {ignore
+          ? (
+            <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}
+                                     ignoreReasons={ignore} toggleReason={() => {}}>
+              {inner}
+            </EnterableFilterProvider>
+          )
+          : inner}
+      </MemoryRouter>);
+  }
+
+  beforeEach(() => { _resetBounceRoomCache(); });
+  afterEach(() => { _resetBounceRoomCache(); });
+
+  it('inherits the page ignore set: the room row is back and its own line wears the ✓ chip', async () => {
+    const { container } = draw(new Set(['room']));
+    await waitFor(() => expect(screen.getAllByText('ROOMY').length).toBeGreaterThan(0));
+    const line = [...container.querySelectorAll<HTMLElement>('.cm-hidden-count')]
+      .find((el) => (el.getAttribute('title') || '').includes('verdict sweep'))!;
+    expect(line.textContent).toContain('✓ room < 5%');
+    expect(line.textContent).toContain('1 un-hidden');
+    // NEGATIVE: the two-reason row needs `proximity` too.
+    expect(screen.queryByText('BOTH')).toBeNull();
+  });
+
+  it('NEGATIVE: no provider — the default context is empty and the board is today’s', async () => {
+    const { container } = draw(null);
+    await waitFor(() => expect(screen.getAllByText('OKAY').length).toBeGreaterThan(0));
+    // The filter itself is OFF outside a provider (spec §7.8), so nothing is
+    // hidden and no chip exists.
+    expect(screen.getAllByText('ROOMY').length).toBeGreaterThan(0);
+    expect(container.querySelector('[data-reason]')).toBeNull();
   });
 });

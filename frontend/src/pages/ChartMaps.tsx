@@ -30,6 +30,7 @@ import {
   parseGrades, gradesParam,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam, AMD_GRADE_LABEL,
   AMD_FLIGHT_LABEL, parseFlight, flightParam,
+  UNHIDE_PARAM, parseUnhide, unhideParam,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
@@ -231,6 +232,34 @@ export function ChartMaps() {
     setParams((prev) => {
       const next = new URLSearchParams(prev);
       if (v) next.delete('show'); else next.set('show', 'all');
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  /* 🎯 UN-HIDE BY REASON (Ajay 2026-09-17: "Can you give me a toggle for the
+   * room too? I am not seeing all stocks on the selected filter due to this
+   * now"). Every reason the count line already prints becomes a button; the
+   * set of un-hidden CODES lives in the URL as `?unhide=room,proximity` and
+   * nowhere else — same rule as `?show=all`, and for the same reason.
+   *
+   * It changes WHAT IS DRAWN and nothing else. An un-hidden row is the served
+   * BLOCKED: it keeps its ⛔ chip, the phone still will not page it, and no
+   * lane will enter it. Nothing here reaches the server — the reason list is
+   * already on every row.
+   *
+   * ONE stable reference for the page (memoised on `params`), handed to the
+   * provider and to the grid's own partition, so a chip can never light up
+   * while the rows sit still. */
+  const unhide = useMemo(() => parseUnhide(params.get(UNHIDE_PARAM)), [params]);
+  const toggleReason = useCallback((code: string) => {
+    setParams((prev) => {
+      // Read the CURRENT param, never a captured copy: clicking `room` and then
+      // `not at band` must write both, not replace the first.
+      const sel = parseUnhide(prev.get(UNHIDE_PARAM));
+      if (sel.has(code)) sel.delete(code); else sel.add(code);
+      const spec = unhideParam(sel);
+      const next = new URLSearchParams(prev);
+      if (spec) next.set(UNHIDE_PARAM, spec); else next.delete(UNHIDE_PARAM);
       return next;
     }, { replace: true });
   }, [setParams]);
@@ -594,8 +623,20 @@ export function ChartMaps() {
   }, [tiles]);
   const tilePart = useMemo(
     () => partitionEnterable(tiles, (t) => t.symbol, tileReads,
-                             enterableOnly && enterableKind !== 'n/a' && tab !== 'holdings'),
-    [tiles, tileReads, enterableOnly, enterableKind, tab]);
+                             enterableOnly && enterableKind !== 'n/a' && tab !== 'holdings',
+                             unhide),
+    [tiles, tileReads, enterableOnly, enterableKind, tab, unhide]);
+
+  /* The TWO controls both called "room" (spec §2.4). The `?room=` floor runs on
+   * the SERVER against the live print and decides which tiles come back at all;
+   * the `room` chip below runs in the browser over rows already served. They
+   * compose in one direction only — the browser cannot un-hide a tile it never
+   * received — so on a ROOM_TABS tab the chip says so, or he clicks it, sees
+   * nothing, and reasonably concludes it is broken. The percentage is the
+   * SERVED default, never a typed 5. */
+  const roomChipTitle = useMemo(() => (ROOM_TAB ? {
+    room: `This tab also has the server-side room floor above: names under ${data?.min_room_default ?? DEFAULT_MIN_ROOM}% room are never sent here. To see every one of them, set "any room" as well.`,
+  } : null), [ROOM_TAB, data?.min_room_default]);
 
   const ictParams = useMemo(() => ictParamRows(data?.params), [data?.params]);
   // The backend flags which values the video actually states (3-candle
@@ -681,7 +722,7 @@ export function ChartMaps() {
         * demand reversals at all; a control that vanishes reads as a bug. */}
       <div className="cm-rules cm-enterable-bar" style={{ margin: '0.2rem 0 0.6rem' }}>
         <EnterableOnlyToggle checked={enterableOnly} onChange={setEnterableOnly}
-                             kind={enterableKind}
+                             kind={enterableKind} unhideCount={unhide.size}
                              naText={data?.enterable_study?.fallback_note
                                || 'These rows are not demand reversals, so there is no enterable read to filter on.'} />
         <RulesInfo section="enterable" />
@@ -909,7 +950,8 @@ export function ChartMaps() {
         * /signal-lab) nothing wraps them, the default context is OFF and those
         * pages are unchanged — spec §7.8, his call. */}
       <EnterableFilterProvider enterableOnly={enterableOnly} kind={enterableKind}
-                               setEnterableOnly={setEnterableOnly}>
+                               setEnterableOnly={setEnterableOnly}
+                               ignoreReasons={unhide} toggleReason={toggleReason}>
       {/* The one tab that is not a board. Everything below — the sort/tier
         * controls, the scan progress, the tile grid, the footer counts —
         * describes a universe pass that this tab does not run. */}
@@ -1401,6 +1443,9 @@ export function ChartMaps() {
                    enabled={enterableOnly && enterableKind !== 'n/a'}
                    kind={enterableKind}
                    note={`Counted over the ${tiles.length} tile${tiles.length === 1 ? '' : 's'} on this page — raise the limit to read further down the scan.`}
+                   reasons={tilePart.reasons} unhidden={tilePart.unhidden}
+                   onToggleReason={toggleReason} unhideCount={unhide.size}
+                   reasonTitle={roomChipTitle}
                    onShowAll={() => setEnterableOnly(false)}
                    onEnterableOnly={() => setEnterableOnly(true)} />
       <div className="cm-grid">

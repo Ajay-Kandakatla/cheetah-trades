@@ -50,12 +50,25 @@ const H = vi.hoisted(() => {
                     band: { kind: 'supply', lo: 18.22, hi: 18.44, touches: 3 }, at_highs: false } },
     PEND: { symbol: 'PEND', coverage: 'pending' },
   };
+  /* 🎯 The SERVED enterable read with its reason CODES (2026-09-17), on a
+   * SECOND map. Opt-in per test (`H.en = true`) so every case above keeps the
+   * payload — and the card headings — it was written against. */
+  const en = (verdict: string | null, codes: string[] = [], short: string[] = []) => ({
+    kind: 'demand', verdict, reasons: codes, reason_short: short,
+    reason_text: short.map((x) => `${x}.`), measured: { status: 'no_signal' },
+  });
+  const enterableRows = {
+    ...rows,
+    EOSE: { ...rows.EOSE, enterable: en('READY') },
+    CLYM: { ...rows.CLYM, enterable: en('BLOCKED', ['room'], ['room < 5%']) },
+  };
   const payload = {
     as_of: '2026-09-05T13:02:11-04:00', in_session: true, store_date: '2026-09-04', params: {},
     rows, requested: 3, covered: 2, pending: 1, unavailable: 0, disclaimer: 'Not advice.',
   };
   const map = new Map(Object.entries(rows));
-  return { SCAN, map, payload };
+  const enterableMap = new Map(Object.entries(enterableRows));
+  return { SCAN, map, enterableMap, payload, en: false };
 });
 
 vi.mock('../hooks/useCatalysts', () => ({
@@ -73,7 +86,8 @@ vi.mock('../hooks/useCatalysts', () => ({
 }));
 
 vi.mock('../hooks/useBounceRoom', () => ({
-  useBounceRoom: () => ({ map: H.map, payload: H.payload, loading: false, error: null, pending: 1 }),
+  useBounceRoom: () => ({ map: H.en ? H.enterableMap : H.map,
+                          payload: H.payload, loading: false, error: null, pending: 1 }),
 }));
 
 vi.mock('../components/MarketGaugeBanner', () => ({
@@ -89,11 +103,13 @@ vi.mock('../hooks/useMyFeatures', () => ({
 }));
 
 import { CatalystsBoard, CatalystsPage } from './Catalysts';
+import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 503, json: async () => ({}) })));
   FEATS.loaded = true;
   FEATS.set = new Set(['catalysts', 'chart-maps']);
+  H.en = false;
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
@@ -196,5 +212,53 @@ describe('CatalystsPage — the old route redirects to Chart Maps', () => {
     expect(screen.queryByTestId('loc')).not.toBeInTheDocument();
     expect(screen.getByText('Loading…')).toBeInTheDocument();
     expect(screen.queryByText('Tiny Stocks in Motion')).not.toBeInTheDocument();
+  });
+});
+
+/* 🎯 UN-HIDE BY REASON on the Catalysts board (Ajay 2026-09-17).
+ *
+ * `/catalysts` redirects into Chart Maps, so this board runs INSIDE the page's
+ * provider and inherits its ignore set — rev-1 of the spec missed it, which
+ * would have put un-hidden BLOCKED cards on this list with a text-only count
+ * line and no way back. Pinned here: the chips reach THIS board's own line, and
+ * mounted standalone (no provider) it is byte-identical to today.
+ */
+describe('CatalystsBoard — un-hide by reason (2026-09-17)', () => {
+  beforeEach(() => { H.en = true; });
+  const drawFiltered = (ignore: ReadonlySet<string>) => render(
+    <MemoryRouter initialEntries={['/chart-maps?tab=catalysts&sub=now']}>
+      <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={() => {}}
+                               ignoreReasons={ignore} toggleReason={() => {}}>
+        <CatalystsBoard embedded />
+      </EnterableFilterProvider>
+    </MemoryRouter>);
+  const catLine = () => Array.from(document.querySelectorAll<HTMLElement>('.cm-hidden-count'))
+    .find((d) => /^\d[\d,]* hidden/.test(d.textContent || ''))!;
+  /** The card headings carry the ⛔/🎯 chip; compare on the ticker alone. */
+  const syms = () => tickers().map((t) => (t || '').replace(/(🎯|⛔).*$/, ''));
+
+  it('hides the room-blocked card and names it as a CHIP, not as text', () => {
+    drawFiltered(new Set());
+    expect(syms()).not.toContain('CLYM');
+    const chip = document.querySelector('[data-reason="room"]') as HTMLButtonElement;
+    expect(chip).toBeTruthy();
+    expect(chip.textContent).toBe('1 room < 5%');
+    expect(chip.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('inherits the page ignore set — the card is back and the chip reads ✓', () => {
+    drawFiltered(new Set(['room']));
+    expect(syms()).toContain('CLYM');
+    const line = catLine();
+    expect(line.textContent).toContain('✓ room < 5%');
+    expect(line.textContent).toContain('1 un-hidden');
+    expect(line.textContent).toMatch(/^0 hidden/);
+  });
+
+  it('NEGATIVE: standalone — no provider, nothing hidden, no chips at all', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/catalysts?tab=now']}><CatalystsBoard /></MemoryRouter>);
+    expect(tickers().map((t) => (t || '').replace(/(🎯|⛔).*$/, ''))).toEqual(['EOSE', 'CLYM', 'PEND']);
+    expect(container.querySelector('[data-reason]')).toBeNull();
   });
 });

@@ -69,7 +69,7 @@ export function OvernightGappers({ profile, onPick }: {
   const ordered = useExplosiveOrder<any>(sort.sorted, (g) => g?.symbol, room.map, explosiveFirst);
   /* 🎯 The enterable cut over the movers' own sort (2026-09-15) — hooks run
    * before the early return below. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition<any>(ordered, (g) => g?.symbol, room.map, enterableOnly);
   if (!data) return null;
 
@@ -104,6 +104,8 @@ export function OvernightGappers({ profile, onPick }: {
           {enterableOnly && kind !== 'n/a' ? (
             <HiddenCount hidden={part.hidden} unread={part.unread}
                          hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                         reasons={part.reasons} unhidden={part.unhidden}
+                         onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                          onShowAll={() => setEnterableOnly(false)} />
           ) : null}
           {/* 🪜 No row on this list came back with a band read — say so once, the

@@ -162,7 +162,7 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
   /* 🎯 The enterable cut (2026-09-15). A row he posted about that the server
    * has no read for STAYS — this board is a record of what someone said, and a
    * missing band read is not a rejection of the idea. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(rows, (t) => t.symbol, room.map, enterableOnly);
 
   if (loading) return <div className="gnt-note">loading his posts…</div>;
@@ -214,6 +214,8 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
       {enterableOnly && kind !== 'n/a' ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
       {/* 🪜 No row on this list came back with a band read — say so once, the

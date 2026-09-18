@@ -282,7 +282,7 @@ export function ExplosiveGrowth() {
   /* 🎯 The enterable cut (2026-09-15). A 100/100 grower sitting nowhere near a
    * demand band is exactly the row he asked to stop seeing on an entry board —
    * and the count line below says how many went, and why. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(rows, (r) => r.symbol, room.map, enterableOnly);
 
   const groups = data?.groups ?? [];
@@ -441,6 +441,8 @@ export function ExplosiveGrowth() {
       {enterableOnly && kind !== 'n/a' ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
       {/* 🪜 No row on this list came back with a band read — say so once, the

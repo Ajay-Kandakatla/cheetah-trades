@@ -962,6 +962,46 @@ export function levelsParam(sel: Iterable<number>): string | null {
   return picked.join(',');
 }
 
+/* ── 🎯 Un-hide by reason (Ajay 2026-09-17: "Can you give me a toggle for the
+ *     room too? I am not seeing all stocks on the selected filter due to this
+ *     now") ──────────────────────────────────────────────────────────────────
+ *
+ * A VIEW filter over the SERVED verdict, and nothing else. The codes are the
+ * backend's own `enterable.reasons` entries; this file never holds a list of
+ * them, because a list here would be a second definition of a reason.
+ *
+ * It is NOT the `?room=` floor. That one runs on the SERVER (drop_low_room,
+ * ROOM_TABS) and decides which tiles are returned at all; this one decides
+ * which of the returned tiles are drawn. On a ROOM_TABS tab both have to be
+ * relaxed to see every room-blocked name. */
+export const UNHIDE_PARAM = 'unhide';
+
+/** `?unhide=` → the served reason codes this view un-hides.
+ *
+ *  FAILS CLOSED (empty) on empty or garbage input — the opposite of
+ *  `parseLevels`, deliberately: an un-hide ADDS BLOCKED rows to his view, so an
+ *  unreadable URL must land on the shipped filter, never on "show everything".
+ *  No allow-list: the codes come from the payload, and a token no row carries
+ *  is simply inert. Never throws. */
+export function parseUnhide(raw: string | null | undefined): Set<string> {
+  const out = new Set<string>();
+  for (const part of String(raw || '').split(',')) {
+    const k = part.trim().toLowerCase();
+    if (/^[a-z0-9_]{1,40}$/.test(k)) out.add(k);
+  }
+  return out;
+}
+
+/** The selection as the URL value, deduped and sorted ascending. `null` when
+ *  empty — that is the DEFAULT and is therefore written nowhere, the same rule
+ *  `phase`, `room` and `levels` follow. */
+export function unhideParam(sel: Iterable<string>): string | null {
+  const picked = Array.from(new Set(Array.from(sel, (c) => String(c).trim().toLowerCase())))
+    .filter((c) => /^[a-z0-9_]{1,40}$/.test(c))
+    .sort();
+  return picked.length ? picked.join(',') : null;
+}
+
 export function parseBias(raw: string | null | undefined): IctBias {
   const v = (raw || '').trim().toLowerCase();
   return v === 'bullish' || v === 'bearish' ? v : DEFAULT_ICT_BIAS;

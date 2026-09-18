@@ -401,12 +401,16 @@ export function HottestSectors() {
    * and its industry is one name, counted once. The note below is worded to
    * match, because a count line that describes a different set than the one it
    * counted is the same lie as hiding rows quietly. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const uniqueSymbols = useMemo(
     () => Array.from(new Set(rowSymbols.map((x) => String(x).toUpperCase()))), [rowSymbols]);
   const part = useEnterablePartition(uniqueSymbols, (x) => x, room.map, enterableOnly);
   const enterableCut = enterableOnly && kind !== 'n/a';
-  const showName = (sym: string) => !enterableCut || isShown(readOf(sym)?.enterable);
+  // A plain closure, re-created every render, so it reads the CURRENT ignore
+  // set with no dep array — but the set must be passed explicitly, or a name
+  // un-hidden in the count line stays missing from its group.
+  const showName = (sym: string) => !enterableCut
+    || isShown(readOf(sym)?.enterable, 'enterable', ignoreReasons);
   /* NO 🧨 ordering toggle on this board, deliberately. Every other tab gets
    * one; here the payload keeps only `names_per_group` rows per group and the
    * column sorts are a SERVER round-trip for exactly that reason — a
@@ -507,6 +511,8 @@ export function HottestSectors() {
       {enterableCut ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      note="Counted across every group in this payload — themes, sectors and industries, the collapsed ones included — one count per unique name. This board is a server-cut list: the payload keeps only the top names per group, so this is what the cut removed from the names it carries, never from the full membership."
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}

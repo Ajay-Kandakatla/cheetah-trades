@@ -226,7 +226,7 @@ export function HotPullbackBoard() {
   const ordered = useExplosiveOrder(rows, (r) => r.symbol, room.map, explosiveFirst);
   /* 🎯 The enterable cut over the board's own order (2026-09-15). BLOCKED rows
    * only; a row the server has no read for is kept and counted separately. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(ordered, (r) => r.symbol, room.map, enterableOnly);
   const near = useMemo(() => data?.near_miss || [], [data]);
 
@@ -262,6 +262,8 @@ export function HotPullbackBoard() {
       {rows.length > 0 && enterableOnly && kind !== 'n/a' ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
 

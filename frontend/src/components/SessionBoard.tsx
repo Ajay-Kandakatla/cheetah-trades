@@ -108,7 +108,7 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
    * the chart maps"). The served BLOCKED verdict is the only thing it removes,
    * a row with no read yet is kept and counted, and the count line below says
    * both numbers out loud. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(shown, (r) => r.symbol, room.map, enterableOnly);
 
   // Three states, three banners. Before the payload arrives we know NOTHING
@@ -206,6 +206,8 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
       {enterableOnly && kind !== 'n/a' ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
       {/* 🪜 No row on this list came back with a band read — say so once, the

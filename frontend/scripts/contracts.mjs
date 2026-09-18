@@ -2331,6 +2331,120 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // ── 🎯 Un-hide by reason (Ajay 2026-09-17: "Can you give me a toggle for the
+  //    room too? I am not seeing all stocks on the selected filter due to this
+  //    now") ──────────────────────────────────────────────────────────────────
+  {
+    name: 'every hidden-count line offers its reason chips, and the chips say only what was SERVED (2026-09-17)',
+    file: 'src/components/HiddenCount.tsx',
+    // The words the count line prints are now buttons. Two failure modes are
+    // worth a build break:
+    //   * a <HiddenCount> that is mounted without `reasons` / `onToggleReason`
+    //     inside the provider is a filter he can SEE but not reach — and a new
+    //     board added later would inherit the page ignore set silently, which is
+    //     exactly what the no-localStorage rule exists to prevent. So the list of
+    //     call sites is ENUMERATED, not shape-matched: a new one has to be added
+    //     here on purpose.
+    //   * a reason string typed into this component is a second definition of a
+    //     gate's wording. Every label comes from the served `reason_short`.
+    checks: () => {
+      const errs = [];
+
+      /* 1. No reason wording lives in the component. */
+      const count = read('src/components/HiddenCount.tsx');
+      for (const lit of ['room <', 'not at band', 'no band', 'no lid break',
+                         'floor swept', 'floor broken', 'break >']) {
+        if (count.includes(lit)) {
+          errs.push(`HiddenCount.tsx contains the literal reason string "${lit}" — every chip label is the SERVED reason_short, passed in as a prop`);
+        }
+      }
+
+      /* 2. Every one of the thirteen call sites is wired. */
+      const SITES = [
+        ['src/pages/ChartMaps.tsx', 1],
+        ['src/components/BondeBoard.tsx', 1],
+        ['src/components/HottestSectors.tsx', 1],
+        ['src/components/ExplosiveGrowth.tsx', 1],
+        ['src/components/SessionBoard.tsx', 1],
+        ['src/components/SignalLabBoard.tsx', 1],
+        ['src/components/OvernightGappers.tsx', 1],
+        ['src/components/HotPullbackBoard.tsx', 1],
+        ['src/components/GntBoard.tsx', 1],
+        ['src/pages/Catalysts.tsx', 2],
+        ['src/pages/PatternsPage.tsx', 2],
+      ];
+      const expected = new Map(SITES);
+      for (const [rel, want] of SITES) {
+        const tsx = read(rel);
+        const blocks = tsx.split(/<HiddenCount\s/).slice(1);
+        if (blocks.length !== want) {
+          errs.push(`${rel} has ${blocks.length} <HiddenCount> mounts, the contract lists ${want} — add the new one to this rule WITH its chips, or it inherits the page ignore set in silence`);
+        }
+        for (const b of blocks) {
+          const el = b.slice(0, b.indexOf('/>') + 2);
+          for (const prop of ['reasons=', 'onToggleReason=', 'unhidden=', 'unhideCount=']) {
+            if (!el.includes(prop)) {
+              errs.push(`${rel}: a <HiddenCount> is missing \`${prop}\` — a count line without its chips is a filter he cannot reach`);
+            }
+          }
+        }
+      }
+
+      /* 3. No <HiddenCount> anywhere the list does not know about. */
+      for (const dir of ['src/components', 'src/pages']) {
+        let names = [];
+        try {
+          names = readdirSync(join(FRONTEND_ROOT, dir));
+        } catch {
+          errs.push(`${dir} is unreadable`);
+          continue;
+        }
+        for (const n of names) {
+          if (!n.endsWith('.tsx') || n.endsWith('.test.tsx')) continue;
+          const rel = `${dir}/${n}`;
+          if (expected.has(rel)) continue;
+          if (/<HiddenCount\s/.test(read(rel))) {
+            errs.push(`${rel} mounts <HiddenCount> but is not in this rule's list — add it WITH reasons/onToggleReason`);
+          }
+        }
+      }
+
+      /* 4. The URL param is named once, as the exported constant. */
+      const lib = read('src/lib/chartMaps.ts');
+      const hits = (lib.match(/'unhide'/g) || []).length;
+      if (hits !== 1) {
+        errs.push(`lib/chartMaps.ts spells the 'unhide' param ${hits} times — it must appear exactly once, as UNHIDE_PARAM`);
+      }
+      if (!/export const UNHIDE_PARAM = 'unhide';/.test(lib)) {
+        errs.push('lib/chartMaps.ts must export UNHIDE_PARAM');
+      }
+      if (!/FAILS CLOSED/.test(lib)) {
+        errs.push('parseUnhide must document that it FAILS CLOSED — an unreadable URL lands on the shipped filter, never on "show everything"');
+      }
+
+      /* 5. The rule stays a VIEW filter: no verdict, no ignore set on the wire. */
+      const en = read('src/lib/enterable.ts');
+      if (/verdict\s*[:=]\s*'(READY|WATCH)'/.test(en)) {
+        errs.push('lib/enterable.ts assigns a verdict — the ignore set decides what is DRAWN, never what is enterable');
+      }
+      const page = read('src/pages/ChartMaps.tsx');
+      if (/min_room=\$\{[^}]*unhide|unhide=\$\{/.test(page) || /boardQuery\([^)]*unhide/.test(page)) {
+        errs.push('the un-hide selection must never reach the board query — it is a browser-side view filter');
+      }
+
+      /* 6. The classes ship a rule, and the ✨ entry exists. */
+      const css = read('src/styles.css');
+      for (const c of ['cm-hidden-reason', 'cm-hidden-reason-on']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the chips would ship unstyled`);
+        }
+      }
+      if (!read('src/lib/newFeatures.ts').includes('enterable-reason-unhide-2026-09-17')) {
+        errs.push('newFeatures.ts is missing the ✨ entry for the un-hide chips');
+      }
+      return errs;
+    },
+  },
   // ── Deep Demand level filter (Ajay 2026-09-16: "can you do level 4 and
   //    give me filters for that") ────────────────────────────────────────────
   {

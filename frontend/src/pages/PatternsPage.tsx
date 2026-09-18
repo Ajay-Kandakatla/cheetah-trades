@@ -234,7 +234,7 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
    * that is nowhere near a demand band is still a shape — it just is not an
    * entry — so the row goes and the count line says which reason took it.
    * Mounted standalone at /patterns the default context is OFF (spec §7.8). */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const patternPart = useEnterablePartition(
     latest?.results || [], (p) => p.symbol, room.map, enterableOnly);
   const confirmed = patternPart.rows.filter((p) => p.status === 'confirmed');
@@ -404,6 +404,8 @@ function PatternsBody({ embedded = false }: { embedded?: boolean }) {
           {enterableOnly && kind !== 'n/a' ? (
             <HiddenCount hidden={patternPart.hidden} unread={patternPart.unread}
                          hiddenByReason={patternPart.hiddenByReason} enabled kind={kind}
+                         reasons={patternPart.reasons} unhidden={patternPart.unhidden}
+                         onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                          onShowAll={() => setEnterableOnly(false)} />
           ) : null}
           {/* 🪜 No row on this list came back with a band read — say so once,
@@ -472,7 +474,7 @@ function QualifierVerdicts({ q, navigate, ex }: {
    * list therefore hide exactly the same names, and the heading keeps printing
    * the sweep's full matched count with the enterable count beside it so the
    * number that left is never silent. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(q.verdicts, (v) => v.symbol, ex?.room, enterableOnly);
   const cut = enterableOnly && kind !== 'n/a';
   const matchedAll = q.verdicts.filter((v) => v.matches.length > 0);
@@ -509,6 +511,8 @@ function QualifierVerdicts({ q, navigate, ex }: {
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
                      note="Counted over every name in this verdict sweep. Everything below is cut by the same partition — the 📐 pattern-matched card grid (its heading prints the full matched count with the enterable count beside it), the candle-read rows and the no-pattern chips."
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
 

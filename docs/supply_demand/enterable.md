@@ -234,6 +234,19 @@ same six tabs that read `n/a` here — `vcp`, `winners`, `topping`, `earnings`,
 `zero_dte`, `undervalue` — carry no band ordering either and say so, instead of
 being ranked on a band read their rows do not have.
 
+### 4.6 Un-hiding a reason (2026-09-17)
+
+Ajay, 2026-09-17: *"Can you give me a toggle for the room too? I am not seeing
+all stocks on the selected filter due to this now."* Every reason the count line
+prints is now a button: clicking one draws the rows blocked **only** for that
+reason, and a row blocked for two reasons needs both clicked. It is a VIEW
+filter over the SERVED verdict — nothing about the read, the grader, the
+thresholds or the push/entry gates moved, and an un-hidden row is still
+`BLOCKED`, still not pushed, never entered. The rule, the measured recovery
+counts on his own AMD payload, the two controls both called "room" and the
+source guard that keeps the concept out of the backend are in
+[`enterable_reason_unhide.md`](enterable_reason_unhide.md).
+
 ---
 
 ## 5. The study — `backend/scripts/entry_trigger_study.py`

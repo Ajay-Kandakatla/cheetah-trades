@@ -12809,6 +12809,20 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   background: none; border: 0; padding: 0; cursor: pointer;
   font: inherit; color: var(--accent, #3b82f6); text-decoration: underline;
 }
+/* 🎯 Un-hide by reason (Ajay 2026-09-17: "Can you give me a toggle for the room
+   too?"). The words the count line ALREADY printed become buttons — same muted
+   size, no new row, no new colour token. The ON state is the same accent as the
+   way-back link, filled faintly so `✓ room < 5%` reads as a state and not as a
+   second link. */
+.cm-hidden-reason {
+  background: none; border: 0; padding: 0 0.15rem; cursor: pointer;
+  font: inherit; color: inherit; text-decoration: underline dotted;
+}
+.cm-hidden-reason:hover { color: var(--accent, #3b82f6); }
+.cm-hidden-reason-on {
+  color: var(--accent, #3b82f6); text-decoration: underline;
+  background: rgba(59,130,246,0.10); border-radius: 3px;
+}
 
 /* ── Measured-study banners, FOLDED (2026-09-16) ─────────────────────────────
    Ajay, looking at a board carrying three of them at full height: "can you

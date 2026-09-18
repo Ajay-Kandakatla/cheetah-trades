@@ -67,7 +67,7 @@ export function SignalLabBoard() {
   /* 🎯 The enterable cut over the watchlist order (2026-09-15). <PremarketEntry>
    * above is deliberately NOT touched — it serves its own grades from
    * supply_demand/premarket_entry and answers a different question. */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(rows, (r) => r.symbol, room.map, enterableOnly);
   const seq = useRef(0);
   const timer = useRef<number | null>(null);
@@ -147,6 +147,8 @@ export function SignalLabBoard() {
           {enterableOnly && kind !== 'n/a' ? (
             <HiddenCount hidden={part.hidden} unread={part.unread}
                          hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                         reasons={part.reasons} unhidden={part.unhidden}
+                         onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                          onShowAll={() => setEnterableOnly(false)} />
           ) : null}
           {/* 🪜 No row on this list came back with a band read — say so once, the

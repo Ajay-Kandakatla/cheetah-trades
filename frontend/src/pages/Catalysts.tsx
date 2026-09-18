@@ -150,7 +150,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
   /* 🎯 The enterable cut over the board's own order (2026-09-15). Mounted
    * inside Chart Maps it follows the tab's filter; at /catalysts standalone the
    * default context is OFF, so that page is unchanged (spec §7.8, his call). */
-  const { enterableOnly, kind, setEnterableOnly } = useEnterableFilter();
+  const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(shownCandidates, (c) => c.ticker, br, enterableOnly);
 
   return (
@@ -443,6 +443,8 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
       {enterableOnly && kind !== 'n/a' ? (
         <HiddenCount hidden={part.hidden} unread={part.unread}
                      hiddenByReason={part.hiddenByReason} enabled kind={kind}
+                     reasons={part.reasons} unhidden={part.unhidden}
+                     onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
       {/* 🪜 No row on this list came back with a band read — say so once, the
@@ -914,8 +916,8 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const shownPre = useExplosiveOrder(data?.candidates ?? [], (c) => c.ticker, preBr, explosiveFirst);
   /* 🎯 Same cut on the pre-market list — its own bounce-room map, one POST. */
-  const { enterableOnly: preEnterableOnly, kind: preKind, setEnterableOnly: setPreEnterableOnly } =
-    useEnterableFilter();
+  const { enterableOnly: preEnterableOnly, kind: preKind, setEnterableOnly: setPreEnterableOnly,
+          ignoreReasons: preIgnore, toggleReason: preToggleReason } = useEnterableFilter();
   const prePart = useEnterablePartition(shownPre, (c) => c.ticker, preBr, preEnterableOnly);
 
   return (
@@ -951,6 +953,8 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
       {data && data.candidates.length > 0 && preEnterableOnly && preKind !== 'n/a' ? (
         <HiddenCount hidden={prePart.hidden} unread={prePart.unread}
                      hiddenByReason={prePart.hiddenByReason} enabled kind={preKind}
+                     reasons={prePart.reasons} unhidden={prePart.unhidden}
+                     onToggleReason={preToggleReason} unhideCount={preIgnore.size}
                      onShowAll={() => setPreEnterableOnly(false)} />
       ) : null}
       {/* 🪜 No row on this list came back with a band read — say so once, the
