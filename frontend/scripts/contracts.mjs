@@ -507,10 +507,10 @@ const CONTRACTS = [
       const errs = [];
       const fb = src.match(/export const FALLBACK_WINDOWS[^=]*=\s*\[([\s\S]*?)\];/);
       const keys = fb ? [...fb[1].matchAll(/key:\s*'([^']+)'/g)].map((m) => m[1]) : [];
-      if (keys.join(',') !== '1m,3m,6m,1y,2y,3y,5y,all') {
-        errs.push(`FALLBACK_WINDOWS is ${keys.join(',') || '(not found)'} — expected 1m,3m,6m,1y,2y,3y,5y,all`);
+      if (keys.join(',') !== '1w,2w,1m,3m,6m,1y,2y,3y,5y,all') {
+        errs.push(`FALLBACK_WINDOWS is ${keys.join(',') || '(not found)'} — expected 1w,2w,1m,3m,6m,1y,2y,3y,5y,all`);
       }
-      for (const k of ['daily:2y', 'daily:3y', 'daily:5y']) {
+      for (const k of ['daily:1w', 'daily:2w', 'daily:2y', 'daily:3y', 'daily:5y']) {
         if (!src.includes(`key: '${k}'`)) errs.push(`CHART_VIEWS lacks ${k}`);
       }
       const page = read('src/pages/ChartMaps.tsx');
@@ -525,6 +525,41 @@ const CONTRACTS = [
       if (!/export const SEPA_SUPPLY_WINDOW = '1y';/.test(src)) errs.push("SEPA_SUPPLY_WINDOW is not '1y' — the ticker page would open on another zoom");
       if (!/export const DEFAULT_VIEW = 'daily:1y';/.test(src)) errs.push("DEFAULT_VIEW is not 'daily:1y'");
       if (!/id: 'support-default-1y'/.test(feats)) errs.push("newFeatures.ts lost the 'support-default-1y' highlight");
+
+      // ── 1-week / 2-week zooms (Ajay 2026-09-18) ────────────────────────
+      // "Also a weekly chart for the past week and 2 week inthe charting time
+      // frames in all places" — short WINDOWS, not weekly candles. The server
+      // list is the source of truth and FALLBACK_WINDOWS is a mirror the
+      // server replaces at runtime; if they drift, a deep link silently
+      // degrades. The count is asserted BEFORE the comparison so a regex that
+      // finds nothing FAILS instead of passing vacuously.
+      const be = read('../backend/chart_maps/support.py');
+      const blk = be.match(/SUPPORT_WINDOWS: tuple\[dict, \.\.\.\] = \(([\s\S]*?)\n\)/);
+      const beKeys = blk ? [...blk[1].matchAll(/\{"key":\s*"([^"]+)"/g)].map((m) => m[1]) : [];
+      if (!blk) {
+        errs.push('support.py: SUPPORT_WINDOWS tuple not found — the cross-mirror check cannot run');
+      } else if (beKeys.length !== 9) {
+        errs.push(`support.py SUPPORT_WINDOWS parsed ${beKeys.length} keys, expected 9 — regex drifted`);
+      } else if (beKeys.join(',') !== keys.filter((k) => k !== 'all').join(',')) {
+        errs.push(`server list ${beKeys.join(',')} != FALLBACK_WINDOWS ${keys.filter((k) => k !== 'all').join(',')}`);
+      }
+      // The two short zooms are CHART-ONLY: their numbers are the 1-month read.
+      for (const k of ['1w', '2w']) {
+        if (!new RegExp(`CHART_ONLY_LEVELS_FROM[\\s\\S]*?"${k}":\\s*"1m"`).test(be)) {
+          errs.push(`support.py CHART_ONLY_LEVELS_FROM no longer maps ${k} -> 1m`);
+        }
+      }
+      // The S&D evidence floor a 5-bar frame is under. Never lowered for a zoom.
+      if (!/MIN_BARS_ABS\s*=\s*12\b/.test(read('../backend/supply_demand/price_zones.py'))) {
+        errs.push('price_zones.MIN_BARS_ABS is no longer 12 — a short zoom must not lower the swing floor');
+      }
+      // Every analytic read runs on read_budget, never on the chart budget: a
+      // 5-bar mood scores under MOOD_BUY and would print WAIT where 1m prints BUY.
+      if (!/read_budget/.test(be)) errs.push('support.py lost read_budget — the short zooms would compute off 5 bars');
+      if (/\.tail\(budget\)/.test(be)) {
+        errs.push('support.py still runs an analytic read on the chart budget — a 1w mood/signal would diverge from 1m');
+      }
+      if (!/id: 'chart-windows-1w-2w'/.test(feats)) errs.push("newFeatures.ts lost the 'chart-windows-1w-2w' highlight");
       return errs;
     },
   },

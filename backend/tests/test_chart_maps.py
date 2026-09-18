@@ -112,6 +112,23 @@ def test_bars_for_clamps_an_absurd_day_count(prices):
     assert len(B.bars_for("AAA", days=1)) >= 20
 
 
+# BE-5 (Ajay 2026-09-18, the 1-week / 2-week Support zooms)
+def test_bars_for_keeps_its_twenty_bar_floor_for_every_other_caller(prices):
+    """`min_bars` was named and exposed so ONE caller — the Support tab's
+    chart-only 1w/2w zooms — can draw exactly the 5 or 10 sessions its label
+    promises. Every other caller must still get the 20-bar floor it always
+    got: a default that drifted would shrink every board tile."""
+    prices["AAA"] = _frame(600)
+    assert B.BARS_FLOOR == 20
+    assert len(B.bars_for("AAA", days=1)) >= B.BARS_FLOOR
+    assert len(B.bars_for("AAA", days=5)) >= B.BARS_FLOOR
+    # opted out BY NAME, never by a caller retyping the number
+    assert len(B.bars_for("AAA", days=5, min_bars=5)) == 5
+    assert len(B.bars_for("AAA", days=10, min_bars=10)) == 10
+    # NEGATIVE: min_bars cannot be used to blow past the ceiling.
+    assert len(B.bars_for("AAA", days=99_999, min_bars=99_999)) <= B.BARS_MAX
+
+
 # ---------------------------------------------------------------------------
 # the strong-VCP predicate
 # ---------------------------------------------------------------------------

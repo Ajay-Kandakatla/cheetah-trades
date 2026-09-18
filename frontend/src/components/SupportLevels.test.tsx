@@ -815,3 +815,63 @@ describe('SupportLevels — the \u{1FA9C} read and its pending banner', () => {
     expect(screen.queryByText(/No band read/)).toBeNull();
   });
 });
+
+/* ── 1-week / 2-week zooms (Ajay 2026-09-18) ─────────────────────────────────
+ * The fixtures below are REAL payloads captured from this branch's own
+ * `chart_maps.support.for_symbol("NVDA", …)` against the live price cache —
+ * not hand-written shapes. His surface, his data. */
+import nvda1w from './__fixtures__/nvda_1w.json';
+import nvda1m from './__fixtures__/nvda_1m.json';
+import thin1w from './__fixtures__/thin_1w.json';
+
+describe('SupportLevels · the 1-week / 2-week zooms (Ajay 2026-09-18)', () => {
+  /* FE-8 */
+  it('says the chart is 5 sessions and every number is the 1-month read', async () => {
+    mockFetch(nvda1w);
+    render(<SupportLevels symbol="NVDA" window="1w" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(screen.getByTestId('sl-levels-window')).toBeTruthy());
+    expect(screen.getByText('last 5 sessions · every read from 1 month of daily bars'))
+      .toBeTruthy();
+    expect(screen.getByTestId('sl-levels-window').textContent)
+      .toContain('Every number on this tab is the 1 month read.');
+    const first = document.querySelectorAll('optgroup[label="Daily"] option')[0];
+    expect(first?.textContent).toBe('1 week');
+    // NEGATIVE: the old sentence is false at this zoom and must not be served.
+    expect(screen.queryByText(/Levels are read from this window only\./)).toBeNull();
+    // "reversal", never "bounce", on anything he reads.
+    expect(document.body.textContent?.toLowerCase()).not.toContain('bounce');
+  });
+
+  /* FE-9 NEGATIVE — underflow */
+  it('a 3-bar symbol shows the served error and draws no chart or levels', async () => {
+    mockFetch(thin1w);
+    render(<SupportLevels symbol="THIN" window="1w" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(
+      screen.getByText(/only 3 bars of history — too few to read a 1 month window/i),
+    ).toBeTruthy());
+    expect(screen.queryByTestId('chart')).toBeNull();
+    expect(screen.queryByText('Support below')).toBeNull();
+    // the dropdown still renders so his next move is available
+    expect(document.querySelectorAll('optgroup[label="Daily"] option').length)
+      .toBeGreaterThan(0);
+  });
+
+  /* FE-10 — the assertion that would have caught "BUY at 1m, WAIT at 1w" */
+  it('renders the SAME mood and signal at 1w as at 1m for the same symbol', async () => {
+    mockFetch(nvda1w);
+    const a = render(<SupportLevels symbol="NVDA" window="1w" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(document.querySelector('.sl-mood')).toBeTruthy());
+    const moodAt1w = document.querySelector('.sl-mood')?.textContent;
+    const actionAt1w = document.querySelector('.sl-action')?.textContent;
+    a.unmount();
+    vi.unstubAllGlobals();
+
+    mockFetch(nvda1m);
+    render(<SupportLevels symbol="NVDA" window="1m" onSymbol={noop} onWindow={noop} />);
+    await waitFor(() => expect(document.querySelector('.sl-mood')).toBeTruthy());
+    expect(document.querySelector('.sl-mood')?.textContent).toBe(moodAt1w);
+    expect(document.querySelector('.sl-action')?.textContent).toBe(actionAt1w);
+    // and the 1-month read carries no chart-only sentence
+    expect(screen.queryByTestId('sl-levels-window')).toBeNull();
+  });
+});

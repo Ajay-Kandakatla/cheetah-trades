@@ -60,6 +60,12 @@ BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows o
 # one in-process cache) rather than a second price-cache period key that no
 # cron refreshes (memory: a cached short period handed back a weeks-old frame).
 DEEP_BARS_FROM = 480
+
+# The smallest daily chart a tile will draw. Named 2026-09-18 so the Support
+# tab's chart-only zooms (1w/2w, chart_maps.support.CHART_ONLY_LEVELS_FROM)
+# can opt OUT of it by name instead of a caller retyping the number; every
+# other caller keeps it as the default and draws exactly what it drew before.
+BARS_FLOOR = 20
 LIMIT_DEFAULT = 24
 # 80 since 2026-08-27 (was 60): the gabbar tab shows ALL 66 covered names
 # ("can you just show me all of them there") and 60 silently cut the ladder.
@@ -129,7 +135,8 @@ def _frame_to_bars(df) -> list[dict]:
 
 
 def bars_for(symbol: str, days: int = BARS_DEFAULT,
-             around: Optional[str] = None, pad_after: int = 25) -> list[dict]:
+             around: Optional[str] = None, pad_after: int = 25,
+             min_bars: int = BARS_FLOOR) -> list[dict]:
     """Daily candles for `symbol`.
 
     `around` centres the window on a dated event (a pattern confirmation),
@@ -139,9 +146,14 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     A date not in the frame falls back to the tail rather than returning empty
     — a missing session (holiday, halt, a ledger date recorded off-calendar)
     should degrade to a usable chart, not a blank tile.
+
+    `min_bars` is the floor `days` is raised to. It defaults to BARS_FLOOR (20)
+    — a 5-bar tile is unreadable — and is lowered ONLY by the Support tab's
+    chart-only zooms, which ask for exactly the 5 or 10 sessions their label
+    promises. Every other caller leaves it alone.
     """
     from sepa import prices
-    days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
+    days = max(int(min_bars), min(int(days or BARS_DEFAULT), BARS_MAX))
     _info = None
     try:
         if days > DEEP_BARS_FROM and not around:
@@ -5448,7 +5460,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     """
     t = tab if tab in TABS else TABS[0]
     limit = max(1, min(int(limit or LIMIT_DEFAULT), LIMIT_MAX))
-    days = max(20, min(int(days or BARS_DEFAULT), BARS_MAX))
+    days = max(BARS_FLOOR, min(int(days or BARS_DEFAULT), BARS_MAX))
     src = source if source in ("pattern", "zone") else "pattern"
     # An unknown sort falls back to the default rather than erroring: a stale
     # bookmark should show the board, not a 422.

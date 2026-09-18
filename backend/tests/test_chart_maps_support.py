@@ -795,7 +795,8 @@ def test_two_and_three_year_windows_sit_between_one_and_five_years():
     """Ajay 2026-09-06: "add 2 years to the time frame ... I do seem sometime
     we have bounces off the 2 years as well; also add 3 years and then keep 5
     years." Order is the zoom order; 5y stays the deepest."""
-    assert S.window_keys() == ["1m", "3m", "6m", "1y", "2y", "3y", "5y", S.OVERLAY_KEY]
+    assert S.window_keys() == ["1w", "2w", "1m", "3m", "6m", "1y", "2y", "3y",
+                              "5y", S.OVERLAY_KEY]
     by_key = {w["key"]: w for w in S.SUPPORT_WINDOWS}
     assert by_key["2y"]["bars"] == 504 and by_key["3y"]["bars"] == 756 and by_key["5y"]["bars"] == 1260
     assert by_key["2y"]["swing_window"] == by_key["3y"]["swing_window"] == by_key["5y"]["swing_window"]
@@ -821,7 +822,9 @@ def test_a_two_or_three_year_zoom_hands_price_zones_that_many_bars(loaded, monke
     out = S.for_symbol("TEST", "2y")
     assert out["window"] == "2y" and 504 in seen
     # The dropdown the response carries lists both, in zoom order.
-    assert [w["key"] for w in out["windows"]] == ["1m", "3m", "6m", "1y", "2y", "3y", "5y", S.OVERLAY_KEY]
+    assert [w["key"] for w in out["windows"]] == ["1w", "2w", "1m", "3m", "6m",
+                                                  "1y", "2y", "3y", "5y",
+                                                  S.OVERLAY_KEY]
 
 
 # ── default zoom = 1 year (Ajay 2026-09-06) ───────────────────────────────────
@@ -835,3 +838,323 @@ def test_the_default_zoom_is_one_year_on_every_surface(loaded):
     assert out["window"] == "1y" and out["window_label"] == "1 year"
     # NEGATIVE: the old default still exists as a zoom, it is just not opened on.
     assert S.parse_window("3m") == "3m" and S.for_symbol("TEST", "3m")["window"] == "3m"
+
+
+# ── 1-week / 2-week zooms (Ajay 2026-09-18) ──────────────────────────────────
+# "Also a weekly chart for the past week and 2 week inthe charting time frames
+# in all places". He chose SHORT WINDOWS, not weekly candles: the candles stay
+# daily, the zoom shows the last 5 / 10 sessions, and because a frame that
+# short is under price_zones.MIN_BARS_ABS (and under the len(df) > 5 the
+# no-repaint drop in supply_demand/mood.py needs) EVERY read — levels, mood,
+# signal, SMC, patterns, trend — is the 1-month read. These tests pin that the
+# picture is the only thing that got shorter.
+from chart_maps import board as B_                     # noqa: E402
+from supply_demand import mood as mood_mod             # noqa: E402
+
+
+def _ramp_frame(n: int, *, spike: bool = False) -> pd.DataFrame:
+    """`n` bars with real swing structure (a 5-bar saw), optionally with the
+    last bar spiked — the still-forming bar a no-repaint read must drop."""
+    seq = _saw(100.0, 108.0, 5, (n // 10) + 2)[:n]
+    c = pd.Series(seq, dtype=float)
+    if spike and n:
+        c.iloc[-1] = float(c.iloc[-1]) * 1.09
+    idx = pd.date_range("2026-01-02", periods=len(c), freq="B")
+    return pd.DataFrame(
+        {"open": c.values, "high": c.values * 1.004, "low": c.values * 0.996,
+         "close": c.values, "volume": np.ones(len(c)) * 1_000_000},
+        index=idx,
+    )
+
+
+@pytest.fixture
+def frame_of(monkeypatch):
+    """Point every price read (shared AND deep) at a frame of exactly N bars."""
+    from sepa import prices
+
+    def _use(n: int, *, spike: bool = False):
+        f = _ramp_frame(n, spike=spike)
+        monkeypatch.setattr(prices, "load_prices", lambda s, *a, **k: f.copy())
+        monkeypatch.setattr(prices, "_fetch_massive", lambda *a, **k: None,
+                            raising=False)
+        S._deep_cache.clear()
+        return f
+    yield _use
+    S._deep_cache.clear()
+
+
+def _spy_compute(monkeypatch):
+    """Record every (lookback_bars, swing_window) price_zones.compute saw."""
+    seen: list[tuple] = []
+    real = pz.compute
+
+    def spy(df, *a, **kw):
+        seen.append((kw.get("lookback_bars"), kw.get("swing_window")))
+        return real(df, *a, **kw)
+    monkeypatch.setattr(pz, "compute", spy)
+    return seen
+
+
+# BE-1
+def test_the_two_short_zooms_are_offered_first():
+    assert S.window_keys() == ["1w", "2w", "1m", "3m", "6m", "1y", "2y", "3y",
+                               "5y", S.OVERLAY_KEY]
+    assert S.parse_window(" 1W ") == "1w" and S.parse_window("2w") == "2w"
+
+
+# BE-2
+def test_a_week_is_five_sessions_and_two_weeks_is_ten():
+    """Bars are TRADING days on this list's own convention (21/mo = 4.2
+    trading weeks) — 5 sessions to the week, never 7 or 14 calendar days."""
+    by_key = {w["key"]: w for w in S.SUPPORT_WINDOWS}
+    assert by_key["1w"]["bars"] == 5 and by_key["1w"]["label"] == "1 week"
+    assert by_key["2w"]["bars"] == 10 and by_key["2w"]["label"] == "2 weeks"
+    # NEGATIVE: nobody counted calendar days.
+    assert not any(w["bars"] in (7, 14) for w in S.SUPPORT_WINDOWS)
+
+
+# BE-3
+def test_a_chart_only_zoom_reads_its_levels_from_the_one_month_window(
+        loaded, monkeypatch):
+    by_key = {w["key"]: w for w in S.SUPPORT_WINDOWS}
+    for key in ("1w", "2w"):
+        seen = _spy_compute(monkeypatch)
+        out = S.for_symbol("TEST", key)
+        assert "error" not in out, out
+        assert seen and all(lb == by_key["1m"]["bars"] for lb, _ in seen), seen
+        assert all(sw == by_key["1m"]["swing_window"] for _, sw in seen), seen
+        # NEGATIVE: the chart budget never reaches price_zones.
+        assert not any(lb in (5, 10) for lb, _ in seen), seen
+        assert out["levels_window"] == "1m"
+        assert out["levels_window_label"] == "1 month"
+
+
+# BE-4
+def test_a_chart_only_zoom_draws_only_its_own_sessions(loaded):
+    for key, want in (("1w", 5), ("2w", 10)):
+        out = S.for_symbol("TEST", key)
+        assert "error" not in out, out
+        assert len(out["tile"]["bars"]) == want
+        # NEGATIVE: bars_for's 20-bar floor did not silently widen the picture.
+        assert len(out["tile"]["bars"]) != B_.BARS_FLOOR
+
+
+# BE-6 UNDERFLOW
+def test_a_one_week_zoom_on_a_three_bar_symbol_says_so_and_draws_nothing(frame_of):
+    frame_of(3)
+    out = S.for_symbol("TEST", "1w")
+    assert "only 3 bars of history" in out["error"], out["error"]
+    assert "1 month" in out["error"], out["error"]
+    assert out["bars_used"] == 3
+    for k in ("supports", "verdict", "levels_capped", "tile"):
+        assert k not in out, f"a 3-bar frame still shipped {k}"
+
+
+# BE-7 BOUNDARY
+def test_at_exactly_the_swing_floor_a_short_zoom_answers(frame_of):
+    frame_of(pz.MIN_BARS_ABS)
+    ok = S.for_symbol("TEST", "1w")
+    assert "error" not in ok, ok
+    assert ok["levels_window"] == "1m"
+    frame_of(pz.MIN_BARS_ABS - 1)
+    miss = S.for_symbol("TEST", "1w")
+    assert f"only {pz.MIN_BARS_ABS - 1} bars of history" in miss["error"], miss
+
+
+# BE-8 BOUNDARY
+def test_a_five_bar_frame_reports_thin_history_not_missing_structure(frame_of):
+    frame_of(5)
+    out = S.for_symbol("TEST", "1w")
+    assert out["error"] == ("TEST has only 5 bars of history — "
+                            "too few to read a 1 month window.")
+    # NEGATIVE: the "change the zoom" message would be useless here.
+    assert "No swing structure" not in out["error"]
+
+
+# BE-9
+def test_the_overlay_skips_the_chart_only_zooms(loaded):
+    out = S.for_symbol("TEST", S.OVERLAY_KEY)
+    keys = [r["key"] for r in (out.get("per_window") or [])]
+    assert "1w" not in keys and "2w" not in keys, keys
+    assert keys == ["1m", "3m", "6m", "1y", "2y", "3y", "5y"], keys
+
+
+# BE-10 DEFAULT UNMOVED
+def test_adding_the_short_zooms_moved_no_default(loaded):
+    assert S.DEFAULT_WINDOW == "1y"
+    for junk in (None, "", "  ", "zzz", 7):
+        assert S.parse_window(junk) == "1y"
+    assert S.window_spec("zzz")["key"] == "1y"
+    assert S.window_spec("zzz")["label"] == "1 year"
+    assert S.for_symbol("TEST")["window"] == "1y"
+
+
+# BE-11
+def test_the_short_zooms_touch_no_price_zones_constant(loaded):
+    before = (pz.MIN_BARS, pz.MIN_BARS_ABS, pz.ZONE_MERGE_PCT,
+              pz.ZONE_HALF_WIDTH_PCT, pz.SWING_WINDOW)
+    S.for_symbol("TEST", "1w")
+    S.for_symbol("TEST", "2w")
+    assert (pz.MIN_BARS, pz.MIN_BARS_ABS, pz.ZONE_MERGE_PCT,
+            pz.ZONE_HALF_WIDTH_PCT, pz.SWING_WINDOW) == before
+
+
+# BE-12
+def test_the_long_zooms_are_byte_identical_after_the_change(loaded, monkeypatch):
+    by_key = {w["key"]: w for w in S.SUPPORT_WINDOWS}
+    for key in ("1m", "3m", "6m", "1y", "2y", "3y", "5y"):
+        seen = _spy_compute(monkeypatch)
+        out = S.for_symbol("TEST", key)
+        assert seen, key
+        assert all(lb == by_key[key]["bars"] for lb, _ in seen), (key, seen)
+        assert all(sw == by_key[key]["swing_window"] for _, sw in seen), (key, seen)
+        assert out.get("levels_window") is None, key
+        assert out.get("levels_window_label") is None, key
+
+
+# BE-13
+def test_the_note_on_a_chart_only_zoom_names_the_floor_and_the_read_window(loaded):
+    note = S.for_symbol("TEST", "1w")["note"]
+    assert str(pz.MIN_BARS_ABS) in note, note
+    assert "1 month" in note, note
+    # NEGATIVE: the old sentence is FALSE here and must not be printed.
+    assert "Levels are read from this window only." not in note
+    assert "bounce" not in note.lower()
+
+
+# BE-14
+def test_a_chart_only_window_swing_value_is_never_used(loaded, monkeypatch):
+    bumped = tuple({**w, "swing_window": 9} if w["key"] in ("1w", "2w") else w
+                   for w in S.SUPPORT_WINDOWS)
+    monkeypatch.setattr(S, "SUPPORT_WINDOWS", bumped)
+    seen = _spy_compute(monkeypatch)
+    S.for_symbol("TEST", "1w")
+    assert seen and all(sw == 2 for _, sw in seen), seen
+
+
+# BE-15
+def test_chart_span_on_a_short_zoom_states_both_spans(loaded):
+    span = S.for_symbol("TEST", "1w")["chart_span"]
+    assert "last 5 sessions" in span, span
+    assert "from 1 month of daily bars" in span, span
+    assert S.for_symbol("TEST", "1y")["chart_span"] == "1 year"
+
+
+# BE-15b NEGATIVE — the intraday collision, found by the critic before ship.
+# `chart_only` keys off `not own_bars`, and an EXT-HOURS frame (5m_live) also
+# has own_bars False, so the chart-only arm used to win and announce
+# "last 300 sessions" over a 300-bar FIVE-MINUTE chart. `window` and `tf` are
+# independent URL params and the API advertises 1w/2w, so it is reachable by
+# bookmark even though the dropdown always writes the pair together.
+@pytest.mark.parametrize("tf", ["5m_live", "60m", "15m"])
+def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
+        loaded, monkeypatch, tf):
+    # The intraday frame never loads in tests (no MASSIVE key, no mongo), so
+    # stub the ONE call support.py makes for it and let everything else run for
+    # real. 300 bars is what the live 5-min view actually serves.
+    from supply_demand import timeframes as tf_mod
+    intra = FRAME.tail(300).copy()
+    monkeypatch.setattr(tf_mod, "frame_for",
+                        lambda sym, key, **k: (intra, {"tf": key}))
+    try:
+        out = S.for_symbol("TEST", "1w", tf=tf)
+    except TypeError:
+        pytest.skip("for_symbol takes no tf in this build")
+    if "chart_span" not in out:
+        pytest.skip("intraday frame unavailable in this environment: %s"
+                    % out.get("error"))
+    span, note = out["chart_span"], out["note"]
+    # it must NOT describe a daily span it is not drawing
+    assert "sessions" not in span, span
+    assert "the last 5 sessions" not in note, note
+    # On EVERY intraday frame the daily zoom is inert, and the payload says so.
+    assert out["zoom_applies"] is False
+    if tf == "5m_live":
+        # ext-hours: own_bars is False, so the window would have driven the
+        # LEVELS — the redirect still applies and the span must name it.
+        assert out["levels_window"] == "1m", out["levels_window"]
+        assert "1 month" in span, span
+    else:
+        # 60m / 15m carry their OWN bars: the window never reached the levels,
+        # so there is no redirect to report and none is claimed.
+        assert out["levels_window"] is None, out["levels_window"]
+        # and it must not name a daily window it did not read
+        assert "daily bars" not in span, span
+
+
+def test_the_short_zoom_still_states_its_daily_span_on_a_DAILY_frame(loaded):
+    out = S.for_symbol("TEST", "1w")
+    assert "last 5 sessions" in out["chart_span"]
+    assert "the last 5 sessions" in out["note"]
+
+
+# BE-16 NEGATIVE — he declined weekly CANDLES
+def test_no_bar_interval_was_introduced():
+    src = inspect.getsource(S)
+    assert "resample" not in src
+    assert "closed=left" not in src
+
+
+# BE-17 [C1] the equality that makes the note true
+def test_every_read_on_a_short_zoom_equals_the_one_month_read(frame_of):
+    df = frame_of(80, spike=True)
+    one_m = S.for_symbol("TEST", "1m")
+    assert "error" not in one_m, one_m
+    for key in ("1w", "2w"):
+        out = S.for_symbol("TEST", key)
+        assert "error" not in out, out
+        assert out["mood"] == one_m["mood"], key
+        assert out["signal"]["action"] == one_m["signal"]["action"], key
+        assert out["trend_read"] == one_m["trend_read"], key
+        assert out["bullish_patterns"] == one_m["bullish_patterns"], key
+        assert out["smc"] == one_m["smc"], key
+        assert out["supports"] == one_m["supports"], key
+        assert out["overhead"] == one_m["overhead"], key
+        assert out["verdict"] == one_m["verdict"], key
+    # NEGATIVE — the regression this pins: a mood read off the CHART budget is
+    # a different number entirely (5 bars scores far under MOOD_BUY).
+    short_mood = mood_mod.mood(df.tail(5))
+    assert short_mood["score"] != one_m["mood"]["score"], short_mood
+
+
+# BE-18 [C2] no_repaint must not sit over a repainting frame
+def test_a_short_zoom_never_ships_a_repainting_no_repaint_flag(frame_of):
+    df = frame_of(80, spike=True)
+    out = S.for_symbol("TEST", "1w")
+    assert out["mood"]["closed_only"] is True
+    assert out["mood"]["bars"] == 20            # 21 asked, the forming bar dropped
+    assert out["mood"]["bars"] != 5
+    assert out["signal"]["no_repaint"] is True
+    # The hole this change ROUTES AROUND rather than closing: mood.py drops the
+    # still-forming bar only when len(df) > 5, strictly — so a caller handing
+    # it exactly 5 bars gets a repainting read. Documented here, not "fixed":
+    # that guard is the shared no-repaint rule for every timeframe. HIS CALL.
+    assert mood_mod.mood(df.tail(5))["bars"] == 5
+
+
+# BE-19 [C3] the evidence warning must not go quiet at the short zoom
+def test_a_thin_symbol_still_warns_at_the_short_zoom(frame_of):
+    frame_of(13)
+    out = S.for_symbol("TEST", "1w")
+    assert "error" not in out, out
+    assert out["short_history"] == {"have": 13, "asked": 21}
+    assert out["supports"] is not None
+    assert S.for_symbol("TEST", "1m")["short_history"] == {"have": 13, "asked": 21}
+    # NEGATIVE: a full frame says nothing.
+    frame_of(300)
+    assert S.for_symbol("TEST", "1w")["short_history"] is None
+
+
+# BE-20 [C4] the miss payload must agree with its own sentence
+def test_the_miss_payload_agrees_with_its_own_error_string(frame_of, monkeypatch):
+    frame_of(11)
+    out = S.for_symbol("TEST", "1w")
+    assert out["bars_used"] == 11
+    assert "only 11 bars" in out["error"], out["error"]
+    # NEGATIVE, no regression into the no-structure branch: a 300-bar frame at
+    # 1m that finds no structure still reports the 21 bars it READ, not 300.
+    frame_of(300)
+    monkeypatch.setattr(pz, "compute", lambda *a, **k: None)
+    miss = S.for_symbol("TEST", "1m")
+    assert miss["bars_used"] == 21
+    assert "No swing structure" in miss["error"], miss["error"]

@@ -13,6 +13,15 @@ holding, in parallel — then decorated in the browser:
 | **your stop** (blue dotted, `tone: ownstop`) | the stop HE typed on the Portfolio page — **never invented** |
 | `−10.5% vs your cost` / `stop 2.1% below` / `⚠ UNDER your stop` | `lib/holdingsBoard.ts` |
 
+Its Window dropdown now opens at **1 week** (2026-09-18, Ajay: *"a weekly
+chart for the past week and 2 week inthe charting time frames in all places"*)
+— `HOLDINGS_WINDOWS` carries `1w` (5 sessions) and `2w` (10) in front of
+1 month. The DEFAULT is unchanged: the tab still opens on **6 months**
+(`HOLDINGS_DEFAULT_WINDOW`, and `holdingsWindow(130)` still returns `6m`). At
+those two zooms every number on the underlying Support read stays the 1-month
+read — see `docs/supply_demand/support_levels_tab.md` §The two short zooms set
+the chart, not the numbers.
+
 Worst position first. Its own zoom (the Support windows), the same overlay
 ledger and localStorage key as every other tile surface; the study families
 fetch only when ticked. A name whose chart fails is listed under the grid

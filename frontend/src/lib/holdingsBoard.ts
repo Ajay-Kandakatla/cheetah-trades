@@ -29,6 +29,11 @@ export type HoldingLike = {
  *  speaks in window keys. Rounds UP to the window that shows at least that
  *  many bars, so 9 months becomes a year rather than a truncated half. */
 export const HOLDINGS_WINDOWS: Array<{ key: string; label: string; bars: number }> = [
+  // Ajay 2026-09-18: "a weekly chart for the past week and 2 week inthe
+  // charting time frames in all places" — trading days, so 5 and 10 sessions.
+  // Chart-only on the Support tab: every number stays the 1-month read.
+  { key: '1w', label: '1 week', bars: 5 },
+  { key: '2w', label: '2 weeks', bars: 10 },
   { key: '1m', label: '1 month', bars: 21 },
   { key: '3m', label: '3 months', bars: 63 },
   { key: '6m', label: '6 months', bars: 126 },

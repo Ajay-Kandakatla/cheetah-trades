@@ -406,6 +406,15 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               ? ' · nearest two of each kind only — more exist than are drawn'
               : null}
           </p>
+          {/* The chart-only zooms (Ajay 2026-09-18, 1w/2w). Served-driven: the
+            * component composes no claim of its own — `levels_window_label` is
+            * set by the backend only on those two windows, and the served
+            * `note` below carries the reason. */}
+          {data.levels_window_label ? (
+            <p className="cm-note" data-testid="sl-levels-window">
+              Every number on this tab is the {data.levels_window_label} read.
+            </p>
+          ) : null}
 
           {data.overnight ? (
             <p className="sl-overnight" title={data.overnight.note || ''}>

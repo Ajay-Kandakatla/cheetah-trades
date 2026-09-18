@@ -64,6 +64,16 @@ log = logging.getLogger("chart_maps.support")
 # `bars` are TRADING days: 21/mo. `swing_window` scales to hold swing density
 # roughly constant — see the module header for why it is not left at 4.
 SUPPORT_WINDOWS: tuple[dict, ...] = (
+    # Ajay 2026-09-18: "Also a weekly chart for the past week and 2 week inthe
+    # charting time frames in all places". He chose SHORT WINDOWS, not weekly
+    # candles: "Add '1 week' and '2 weeks' to the zoom list ... Same
+    # daily/intraday candles you have now, just zoomed into the last 5 or 10
+    # sessions." Bars are TRADING days on this list's own convention (21/mo =
+    # 4.2 trading weeks), so a week is 5 sessions and two weeks is 10 — never
+    # 7 or 14. PREPENDED: `overlay_for_symbol` and the deep fetch both read
+    # max(bars) / SUPPORT_WINDOWS[-1], which must stay 5y / 1260.
+    {"key": "1w", "label": "1 week",   "bars": 5,   "swing_window": 2},
+    {"key": "2w", "label": "2 weeks",  "bars": 10,  "swing_window": 2},
     {"key": "1m", "label": "1 month",  "bars": 21,  "swing_window": 2},
     {"key": "3m", "label": "3 months", "bars": 63,  "swing_window": 3},
     {"key": "6m", "label": "6 months", "bars": 126, "swing_window": 4},
@@ -79,6 +89,20 @@ SUPPORT_WINDOWS: tuple[dict, ...] = (
     # a 2-bar swing five years ago is noise, not a level.
     {"key": "5y", "label": "5 years",  "bars": 1260, "swing_window": 5},
 )
+
+# Ajay 2026-09-18: "Also a weekly chart for the past week and 2 week inthe
+# charting time frames in all places" — the SHORT-WINDOW option he chose, not
+# weekly candles (declined). These two zooms are CHART-ONLY. Two floors make a
+# 5/10-bar frame unreadable, not merely thin: price_zones.compute refuses any
+# custom frame under price_zones.MIN_BARS_ABS (a swing needs 2*w+3 bars), and
+# mood() only drops the still-forming bar when len(df) > 5
+# (supply_demand/mood.py:136) — so a 5-bar mood would repaint while signal()
+# still stamps no_repaint=True. The candles are the last 5 / 10 sessions;
+# EVERY READ (levels, mood, signal, SMC, patterns, trend) is the 1-month read
+# — the same chart-at-one-scale / levels-from-another split the 5-minute live
+# views already use — and the payload says which window the numbers came from.
+# A shorter zoom is a VIEW. Nothing about it is measured.
+CHART_ONLY_LEVELS_FROM: dict[str, str] = {"1w": "1m", "2w": "1m"}
 
 # 1 year since 2026-09-06 (Ajay: "make support default to 1 year on all the
 # tabs? I think its safer and more accurate"). Until then 3 months — the middle
@@ -284,7 +308,10 @@ def window_spec(key: str) -> dict:
     for w in SUPPORT_WINDOWS:
         if w["key"] == k:
             return w
-    return SUPPORT_WINDOWS[1]                       # unreachable; keeps mypy calm
+    # Unreachable (parse_window already coerced); keeps mypy calm. By KEY, not
+    # by index — index 1 is "2w" since 2026-09-18, and the fallback must be the
+    # default window, never whatever happens to sit second in the tuple.
+    return next(w for w in SUPPORT_WINDOWS if w["key"] == DEFAULT_WINDOW)
 
 
 def _last_bar_date(df, intraday: bool = False) -> Optional[str]:
@@ -457,6 +484,11 @@ def overlay_for_symbol(sym: str, base: dict) -> dict:
     per_window: list[dict] = []
     last_price = None
     for w in SUPPORT_WINDOWS:
+        # The chart-only zooms (1w/2w) have no bands of their own — their
+        # numbers ARE the 1m numbers — so a row here would duplicate 1m and
+        # inflate the "N windows agree" denominator this view is built on.
+        if w["key"] in CHART_ONLY_LEVELS_FROM:
+            continue
         z = pz.compute(struct, last_price=live_px, swing_window=w["swing_window"],
                        lookback_bars=w["bars"],
                        max_zones=None)   # every cluster: this tab caps by NEAREST below
@@ -1209,16 +1241,34 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # The live frame analyses DAILY bars at the window, so it budgets like
     # the daily views; the other intraday frames budget from their own spec.
     own_bars = intraday and not ext_frame
+    # The chart-only zooms (Ajay 2026-09-18). `budget` is the CHART bar count —
+    # the 5 or 10 sessions his label promises. `read_budget` is what every
+    # ANALYTIC read runs on, and at 1w/2w that is the 1-month window's 21 bars:
+    # price_zones.compute refuses a frame under MIN_BARS_ABS outright, and a
+    # 5-bar mood scores 10 where the 1-month read scores 49.6 against
+    # MOOD_BUY = 25.0 — i.e. WAIT vs BUY on identical bands. For every other
+    # window and every intraday view level_spec is spec and read_budget ==
+    # budget, so nothing else changes by a byte.
+    chart_only = (not own_bars) and spec["key"] in CHART_ONLY_LEVELS_FROM
+    level_spec = (window_spec(CHART_ONLY_LEVELS_FROM[spec["key"]])
+                  if chart_only else spec)
     budget = tf_spec_["bars"] if own_bars else spec["bars"]
-    swing = tf_spec_["swing_window"] if own_bars else spec["swing_window"]
+    read_budget = tf_spec_["bars"] if own_bars else level_spec["bars"]
+    swing = tf_spec_["swing_window"] if own_bars else level_spec["swing_window"]
     bars_used = min(len(df), budget)
     # What the stats row and the why-sentence call the window. On an intraday
     # timeframe the structure came from the timeframe's OWN bars, and the
     # daily zoom label ("6 months" under an hourly chart) was a lie the header
     # chip stopped telling on 2026-08-29 but the tile kept (2026-09-14).
-    scope_spec = (spec if not own_bars
+    scope_spec = (level_spec if not own_bars
                   else {**spec, "label": f"{bars_used} x {tf_spec_['label']} bars"})
+    # Three different things: `short` is CHART truncation (fewer bars than the
+    # picture asked for), `level_short` is an EVIDENCE shortfall behind the
+    # reads (fewer bars than the 21 the numbers ask for), `chart_only` is which
+    # window asked. A 13-bar symbol at 1w met the 5-bar chart budget and is not
+    # `short`, but its levels still came off 13 bars against a 21-bar ask.
     short = bars_used < budget
+    level_short = len(df) < read_budget
     if closed is None or not len(closed):
         closed = df                                   # nothing live on top: read whole
     try:
@@ -1229,14 +1279,20 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         live_last = None
 
     zones = pz.compute(closed, last_price=live_last, swing_window=swing,
-                       lookback_bars=budget, max_zones=None)
+                       lookback_bars=read_budget, max_zones=None)
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
-        scope = tf_spec_["label"] if own_bars else spec["label"]
-        if short:
-            return {**base, "bars_used": bars_used,
-                    "error": f"{sym} has only {bars_used} bars of history — "
+        scope = tf_spec_["label"] if own_bars else level_spec["label"]
+        # `len(df)`, not `bars_used`: on this branch they are the same number
+        # for every non-chart-only window (short ⟺ len(df) < budget ⟺
+        # bars_used == len(df)), and on a chart-only zoom bars_used is the
+        # 5-bar CHART budget while the sentence is about the history the READ
+        # did not have. The no-structure branch below keeps bars_used — a
+        # 300-bar frame at 1m must report 21 there, not 300.
+        if short or level_short:
+            return {**base, "bars_used": len(df),
+                    "error": f"{sym} has only {len(df)} bars of history — "
                              f"too few to read a {scope} window."}
         return {**base, "bars_used": bars_used,
                 "error": f"No swing structure for {sym} over {scope} "
@@ -1288,8 +1344,11 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # a signal that can change after he acts on it is worse than none.
     try:
         from supply_demand import mood as mood_mod
-        mood_read = mood_mod.mood(df.tail(budget))
-        sig = mood_mod.signal(df.tail(budget), zone_bands + gaps, mood_read,
+        # read_budget, never budget: a 5-bar mood would print WAIT where the
+        # 1-month read prints BUY, and _record_signal below would then race the
+        # per-(symbol, timeframe, bar) dedupe with a contradicting action.
+        mood_read = mood_mod.mood(df.tail(read_budget))
+        sig = mood_mod.signal(df.tail(read_budget), zone_bands + gaps, mood_read,
                               last_price=last_price, atr_value=atr_value)
         # The live frame's signal IS the daily signal — recording it again
         # under a second key would double-count the ledger.
@@ -1307,12 +1366,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # the zones/ATR/gaps read `closed`, so an unclosed bar's high or low
         # could mint a BOS, a sweep or an order block that vanished at the
         # close — ESI drew "BOS 33.49" that only existed with the live bar.
-        smc_setups = smc_mod.find_setups(closed.tail(budget), last_price=last_price)
+        smc_setups = smc_mod.find_setups(closed.tail(read_budget), last_price=last_price)
         smc_read = {
             "setups": smc_setups,
-            "sweeps": smc_mod.liquidity_sweeps(closed.tail(budget))[:4],
-            "breaks": smc_mod.structure_breaks(closed.tail(budget))[:4],
-            "order_blocks": smc_mod.order_blocks(closed.tail(budget))[:4],
+            "sweeps": smc_mod.liquidity_sweeps(closed.tail(read_budget))[:4],
+            "breaks": smc_mod.structure_breaks(closed.tail(read_budget))[:4],
+            "order_blocks": smc_mod.order_blocks(closed.tail(read_budget))[:4],
             "cited": smc_mod.CITED,
             "note": smc_mod.SOURCE_NOTE,
         }
@@ -1325,7 +1384,7 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # Same window the bands were read from — a pattern found in bars the
         # zoom excludes would contradict the levels drawn beside it.
         bullish = pat_tf.scan(sym, "daily" if ext_frame else tf_key,
-                              df=closed.tail(budget))
+                              df=closed.tail(read_budget))
     except Exception as exc:                                # pragma: no cover
         log.warning("support: pattern scan for %s failed: %s", sym, exc)
         bullish = None
@@ -1343,9 +1402,15 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # ALWAYS loads DAILY candles, so an intraday timeframe computed its
         # levels on 15m/60m bars and then painted them over a year of daily
         # ones — the picture and the numbers were two different charts.
+        # A chart-only zoom opts out of bars_for's 20-bar floor by name — it
+        # draws exactly the 5 or 10 sessions its label promises. Every other
+        # caller keeps BARS_FLOOR.
         "bars": (_frame_bars(chart_df.tail(tf_spec_["bars"]) if ext_frame
                              else df.tail(bars_used)) if intraday
-                 else board_mod.bars_for(sym, days=bars_used)),
+                 else board_mod.bars_for(
+                     sym, days=bars_used,
+                     min_bars=(bars_used if chart_only
+                               else board_mod.BARS_FLOOR))),
         "bands": _bands(levels) + _board_bands(board),
         "lines": _lines(levels, last_price),
         "markers": _touch_markers(levels),
@@ -1355,22 +1420,45 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "badges": [],
     }
     overlay = _draw_overlay(tile, gaps, smc_read, orb, last_price)
-    trend = trend_read(df.tail(budget), mood_read)
+    trend = trend_read(df.tail(read_budget), mood_read)
     # On an intraday timeframe the Zoom dropdown's DAILY bar-counts do not
     # apply, and leaving "1 month" sitting over a 15-minute chart is what
     # made the tab look wrong. State the real span instead.
+    # THE INTRADAY ARMS GO FIRST (fixed before ship, 2026-09-18). `chart_only`
+    # keys off `not own_bars`, and an EXT-HOURS frame (5m_live) also has
+    # own_bars False — so with the chart-only arm first, `?window=1w&tf=5m_live`
+    # announced "last 300 sessions" over a 300-bar FIVE-MINUTE chart. Both
+    # params are independent in the URL and the API advertises 1w/2w, so it is
+    # reachable by bookmark even though the dropdown always writes the pair.
+    # When an intraday frame is drawn, the window's DAILY bar count does not
+    # describe the chart at all; it only says where the levels were read. So the
+    # intraday arms name `level_spec` — the window the numbers actually came
+    # from — and the chart-only arm is left for daily frames, where it is true.
     chart_span = (f"{len(tile['bars'])} x 5-min bars incl. pre/post market · "
-                  f"levels from {spec['label']} of daily bars"
+                  f"levels from {level_spec['label']} of daily bars"
                   if ext_frame else
+                  # NO levels clause here: an own-bars frame (60m/15m) reads
+                  # its levels from its OWN bars, so naming a daily window
+                  # would be a fresh lie. `zoom_applies: false` already says
+                  # the daily zoom is inert on this frame.
                   f"{len(tile['bars'])} x {tf_spec_['label']} bars"
-                  if intraday else spec["label"])
+                  if intraday else
+                  f"last {len(tile['bars'])} sessions · every read from "
+                  f"{level_spec['label']} of daily bars"
+                  if chart_only else spec["label"])
 
     return {
         **base,
         "name": tile["name"],
         "last_price": last_price,
         "bars_used": bars_used,
-        "short_history": ({"have": bars_used, "asked": budget}
+        # The chart-only arm FIRST: both can be true on a 3-bar symbol, and
+        # the shortfall behind the NUMBERS is the larger claim. Without it a
+        # 13-bar symbol warned at window=1m and went silent at window=1w,
+        # which is backwards.
+        "short_history": ({"have": len(df), "asked": read_budget}
+                          if (chart_only and level_short)
+                          else {"have": bars_used, "asked": budget}
                           if short else None),
         "tile": tile,
         **levels,
@@ -1388,6 +1476,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "overlay": overlay,
         "board": board,
         "chart_span": chart_span,
+        # Which window the NUMBERS came from. None on every ordinary window,
+        # so an FE that predates 2026-09-18 simply ignores both keys.
+        "levels_window": level_spec["key"] if chart_only else None,
+        "levels_window_label": level_spec["label"] if chart_only else None,
         "zoom_applies": not intraday,
         # Live chart (Ajay 2026-09-02): poll cadence + the overnight read.
         # Both None off the live frame so nothing else on the tab changes.
@@ -1395,7 +1487,20 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "overnight": (overnight_read(chart_df, levels.get("supports") or [],
                                      levels.get("overhead") or [])
                       if ext_frame else None),
-        "note": ("Levels are read from this window only. A wider zoom finds the "
-                 "structural floor; a tighter one finds the level this week's "
-                 "trade is standing on. " + (BOARD_NOTE if board else "")).strip(),
+        # Same fix: the sentence describes a DAILY frame of spec['bars']
+        # sessions, which an intraday frame is not.
+        "note": ((f"This zoom sets the CHART only — the last {spec['bars']} "
+                  f"sessions. A frame that short is under the "
+                  f"{pz.MIN_BARS_ABS}-bar floor a swing needs, so every number "
+                  f"here — levels, mood, signal, trend, patterns — is the "
+                  f"{level_spec['label']} read, the same numbers the "
+                  f"{level_spec['label']} zoom shows. "
+                  if (chart_only and not intraday) else
+                  f"The chart is the {tf_spec_['label']} frame; the short zoom "
+                  f"sets no daily span here. Every number is the "
+                  f"{level_spec['label']} read. "
+                  if chart_only else
+                  "Levels are read from this window only. A wider zoom finds the "
+                  "structural floor; a tighter one finds the level this week's "
+                  "trade is standing on. ") + (BOARD_NOTE if board else "")).strip(),
     }

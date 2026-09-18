@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-18, verbatim: "Also a weekly chart for the past week and 2
+  // week inthe charting time frames in all places". He chose SHORT WINDOWS
+  // over weekly CANDLES. Chart-only: bars are trading days (5 / 10 sessions),
+  // and every read stays the 1-month read because price_zones.MIN_BARS_ABS
+  // (12) and mood.py's len(df) > 5 no-repaint drop both refuse a 5-bar frame.
+  // No default, rule, gate, band or S&D constant moved. NULL PRIOR — no
+  // measurement of any zoom length exists and none is claimed.
+  { id: 'chart-windows-1w-2w', label: "\u{1F50D} 1-week and 2-week zooms \u2014 Support Levels, the ticker page\u2019s Supply / Demand chart and the \u{1F4C1} My holdings tab now open on the last 5 or 10 sessions as well as 1 month \u2192 5 years. You said: \u201cAlso a weekly chart for the past week and 2 week inthe charting time frames in all places.\u201d Same daily candles, just closer in \u2014 not a new weekly bar interval, which you declined. A week is 5 SESSIONS and two weeks is 10, the same trading-day convention the rest of that list already uses; nobody counted calendar days. AT THESE TWO ZOOMS EVERY NUMBER \u2014 levels, mood, signal, trend, patterns, SMC \u2014 STAYS THE 1-MONTH READ, and the tab says so on its face. That is not a shortcut: a 5-bar frame sits under the 12-bar floor a swing needs before a band means anything, and it is also too short for the still-forming bar to be dropped, so a number computed off a week of bars would be both evidence-free and able to change after you acted on it. Nothing is ever computed off a week of bars. It is the same split the 5-minute live chart already uses \u2014 the tape is intraday, the levels are daily \u2014 and the chart line now names the window the numbers came from. A thin name still warns: a symbol with 13 sessions of history says so at this zoom, against the 21 the read asks for, instead of going quiet. No default moved \u2014 Support still opens on 1 year, My holdings still on 6 months \u2014 and no rule, gate, band or threshold changed. The Chart Maps BOARD dropdown deliberately does NOT carry these two: its tiles floor at 20 and 130 bars, so a \u20181 week\u2019 option there would draw a month under a week\u2019s label. A SHORTER ZOOM IS A VIEW. Nothing about it is measured, and no edge is claimed.", addedAt: '2026-09-18', route: '/chart-maps?tab=support&window=1w' },
   // Ajay 2026-09-17, verbatim: "make a remindder ro scan explosive growth of
   // new earnings stocks and high light them to me in explosive growth tab".
   // A read-time JOIN onto rows the board already serves. No window, threshold

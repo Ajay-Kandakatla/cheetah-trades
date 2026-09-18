@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  HOLDINGS_DEFAULT_WINDOW, avgCost, decorateHoldingTile, holdingBadges, holdingLines,
+  HOLDINGS_DEFAULT_WINDOW, HOLDINGS_WINDOWS, avgCost, decorateHoldingTile, holdingBadges, holdingLines,
   holdingsWindow, plPct, sortHoldings,
 } from './holdingsBoard';
 import type { CmTile } from './chartMaps';
@@ -110,5 +110,40 @@ describe('sortHoldings', () => {
       { h: { symbol: 'ALAB', avg_cost: 260.166 }, last: 257.04 },
     ]);
     expect(rows.map((r) => r.h.symbol)).toEqual(['CRDO', 'ALAB', 'GLW', 'ZZZ']);
+  });
+});
+
+/* ── 1-week / 2-week zooms (Ajay 2026-09-18) ─────────────────────────────── */
+describe('the short zooms on 📁 My holdings (Ajay 2026-09-18)', () => {
+  /* HB-1 */
+  it('offers 1 week and 2 weeks first, in trading-day bars', () => {
+    expect(HOLDINGS_WINDOWS.map((w) => w.key))
+      .toEqual(['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y']);
+    expect(HOLDINGS_WINDOWS[0]).toEqual({ key: '1w', label: '1 week', bars: 5 });
+    expect(HOLDINGS_WINDOWS[1]).toEqual({ key: '2w', label: '2 weeks', bars: 10 });
+    // NEGATIVE: sessions, not calendar days.
+    expect(HOLDINGS_WINDOWS.some((w) => w.bars === 7 || w.bars === 14)).toBe(false);
+  });
+
+  /* HB-2 — no default moved */
+  it('moves no default: the tab still opens on 6 months', () => {
+    expect(HOLDINGS_DEFAULT_WINDOW).toBe('6m');
+    expect(holdingsWindow(undefined)).toBe('6m');
+    expect(holdingsWindow(null)).toBe('6m');
+    expect(holdingsWindow(0)).toBe('6m');
+    expect(holdingsWindow(-5)).toBe('6m');
+    expect(holdingsWindow(130)).toBe('6m');
+  });
+
+  /* HB-3 — the round-up loop with two shorter buckets in front of it.
+   * Board `days` is clamped to >= BARS_FLOOR (20) server-side, so nothing in
+   * the UI can reach these two buckets; they are pinned so a future caller
+   * that passes a real bar count lands where the label says. */
+  it('maps a short bar count onto the short window', () => {
+    expect(holdingsWindow(5)).toBe('1w');
+    expect(holdingsWindow(1)).toBe('1w');
+    expect(holdingsWindow(10)).toBe('2w');
+    expect(holdingsWindow(21)).toBe('1m');
+    expect(holdingsWindow(63)).toBe('3m');
   });
 });

@@ -287,6 +287,38 @@ are still the scan's; only the picture gets longer. The Support Levels zoom
 gained the same 2y / 3y reads with the demand-zone clustering run on that many
 bars — see `docs/supply_demand/support_levels_tab.md`.
 
+## The board Window dropdown does NOT carry 1 week / 2 weeks (2026-09-18)
+
+Ajay 2026-09-18: *"Also a weekly chart for the past week and 2 week inthe
+charting time frames in all places."* The **per-ticker** window lists got them
+(Support Levels, the ticker page's Supply / Demand chart, 📁 My holdings). The
+**board tabs'** Window select did not, deliberately: `ChartMaps.tsx` posts
+`days` to `board.py`, where `bars_for` floors at `BARS_FLOOR` (20) and the
+zone / supply / deep-demand tiles floor at `ZONE_BARS_MIN` (130) — *"the window
+now only ever reaches further back than the dropdown, never less"*. A "1 week"
+option there would draw 20 or 130 bars under a one-week label; honouring it
+means moving two floors, which is a threshold change and a separate branch on
+his word. The dropdown's shortest entry stays 6 months. Pinned unchanged in
+`frontend/src/pages/ChartMaps.test.tsx` and `backend/tests/test_chart_maps.py`.
+
+`bars_for` gained a named `min_bars` kwarg (default `BARS_FLOOR` = 20) so the
+Support tab's chart-only zooms can ask for exactly the 5 or 10 sessions their
+label promises. Every other caller is untouched.
+
+**Deploy order is part of the change.** `ChartMaps.tsx` validates `?window=`
+against the FRONTEND's own `FALLBACK_WINDOWS` (`parseWindow`'s default
+`offered` argument), not against the served list — so an api-first deploy
+would accept `1w` server-side while the page silently rewrote it to `1y`,
+including the ✨ deep link. **`api` and `frontend` ship in ONE deploy:**
+
+```bash
+./deploy-cheetah-main.sh api frontend
+```
+
+The reverse half-ship (frontend first) offers `1w` in the dropdown while the
+server coerces it to the default. `supportLevels.test.ts` pins the degrade so
+nobody "fixes" it by loosening `parseWindow`.
+
 ## Support Levels opens on 1 year (2026-09-06)
 
 Ajay: "make support default to 1 year on all the tabs? I think its safer and

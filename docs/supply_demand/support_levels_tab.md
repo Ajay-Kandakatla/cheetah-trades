@@ -200,6 +200,8 @@ map calculations and dropdown time frames."
 
 | zoom | bars | swing window | frame |
 |---|---|---|---|
+| **1 week** | **5** | — (every read from 1m) | shared 2y frame |
+| **2 weeks** | **10** | — (every read from 1m) | shared 2y frame |
 | 1 month | 21 | 2 | shared 2y frame |
 | 3 months | 63 | 3 | shared 2y frame |
 | 6 months | 126 | 4 | shared 2y frame |
@@ -214,15 +216,113 @@ one. The swing window matches 5y: past a year only structural pivots are
 levels. The overlay view now clusters seven windows, so its "N windows agree"
 counts can rise by up to two for old structure.
 
-Same lists everywhere: `chart_maps/support.SUPPORT_WINDOWS` (server, wins),
-`frontend/src/lib/supportLevels.ts` `FALLBACK_WINDOWS` + `CHART_VIEWS`
-(`daily:2y`, `daily:3y`), the ticker page's Supply / Demand chart (same
-control), and the board tabs' Window dropdown on Chart Maps (2 / 3 / 5 years
-of bars per card — `board.BARS_MAX` 1260, bars past `DEEP_BARS_FROM` 480 come
-from the same deep fetch). Pinned in `backend/tests/test_chart_maps_support.py`,
+Same lists everywhere — FIVE of them since 2026-09-18:
+`chart_maps/support.SUPPORT_WINDOWS` (server, wins), `FALLBACK_WINDOWS` and
+`CHART_VIEWS` in `frontend/src/lib/supportLevels.ts` (the ticker page's Supply
+/ Demand chart uses the same control), and `HOLDINGS_WINDOWS` in
+`frontend/src/lib/holdingsBoard.ts` (📁 My holdings). The FIFTH list, the board
+tabs' Window dropdown on `ChartMaps.tsx`, carries 2 / 3 / 5 years but
+**deliberately does NOT carry 1 week or 2 weeks** — its tiles floor at
+`board.BARS_FLOOR` (20) and `ZONE_BARS_MIN` (130), so a "1 week" option there
+would draw 20 or 130 bars under a one-week label; honouring it would mean
+moving two floors, which is a threshold change (`docs/sepa/chart_maps.md`).
+Board bars past `DEEP_BARS_FROM` (480) come from the same deep fetch;
+`board.BARS_MAX` is 1260. Pinned in `backend/tests/test_chart_maps_support.py`,
 `backend/tests/test_chart_maps.py`, `frontend/src/lib/supportLevels.test.ts`,
-`frontend/src/pages/ChartMaps.test.tsx` and the contract "Chart Maps time frames
-carry 2 / 3 / 5 years".
+`frontend/src/lib/holdingsBoard.test.ts`, `frontend/src/pages/ChartMaps.test.tsx`
+and the contract "Chart Maps time frames carry 2 / 3 / 5 years".
+
+## The two short zooms set the chart, not the numbers (2026-09-18)
+
+Ajay 2026-09-18, verbatim: *"Also a weekly chart for the past week and 2 week
+inthe charting time frames in all places."*
+
+Asked which he meant, he chose **short WINDOWS**: *"Add '1 week' and '2 weeks'
+to the zoom list, which today starts at 1 month. Same daily/intraday candles
+you have now, just zoomed into the last 5 or 10 sessions."* He **declined**
+weekly CANDLES — there is no new bar interval, no resample, no `closed=left`
+anywhere in this change (pinned: `test_no_bar_interval_was_introduced`).
+
+**Bars are SESSIONS.** The list's own convention (`support.py`: *"`bars` are
+TRADING days: 21/mo"*) makes a trading month 4.2 trading weeks, so a week is
+**5** sessions and two weeks is **10**. Never 7 or 14 — pinned as a negative in
+`test_a_week_is_five_sessions_and_two_weeks_is_ten` and its FE twin.
+
+### Why every NUMBER stays the 1-month read
+
+`CHART_ONLY_LEVELS_FROM = {"1w": "1m", "2w": "1m"}` (`chart_maps/support.py`).
+At these two zooms the candles are the last 5 / 10 daily sessions and **every
+analytic read — levels, mood, signal, SMC, patterns, trend — runs on the
+1-month window's 21 bars.** Two floors force it:
+
+- `price_zones.MIN_BARS_ABS` (**12**) is the hard floor for a custom lookback:
+  `_local_extrema` scans `range(w, n-w)`, so `2*w+3` is the smallest frame that
+  can hold a swing at all. `pz.compute(lookback_bars=5)` returns `None`
+  unconditionally. The floor is an S&D evidence threshold and was **not**
+  lowered — a 5-bar frame would otherwise mint a band from one swing with
+  synthetic width painted around it.
+- `supply_demand/mood.py` drops the still-forming bar only when
+  `len(df) > 5`, **strictly**. A caller handing it exactly 5 bars gets a
+  repainting read while `signal()` stamps `no_repaint: True` regardless. This
+  change **routes around** that hole (1w reads 21 bars) rather than changing a
+  guard every timeframe shares; `test_a_short_zoom_never_ships_a_repainting_no_repaint_flag`
+  documents the hole with an assertion. Closing it is a separate branch and
+  HIS call.
+
+Measured on a synthetic ramp: `mood(tail(21))` scores **49.6**, `mood(tail(5))`
+scores **10.0**, against `MOOD_BUY = 25.0` — i.e. a 5-bar read would print
+**WAIT where the 1-month read prints BUY** on identical bands. `_record_signal`
+writes every BUY/SELL under `mood_signal:daily` deduped per (symbol, timeframe,
+bar), so a contradicting 1w action would also have raced the forward ledger.
+
+This is the same split the **5-minute live views** already use (`5m_live` /
+`5m_today` draw an intraday tape against the 6-month DAILY levels) — one
+existing engine for "chart at one scale, levels from another", not a second
+mechanism.
+
+### What the tab says on its face
+
+- `chart_span` → `last 5 sessions · every read from 1 month of daily bars`
+- a served line under the chart → `Every number on this tab is the 1 month read.`
+- the `note` names the floor by value read from `pz.MIN_BARS_ABS`: *"This zoom
+  sets the CHART only — the last 5 sessions. A frame that short is under the
+  12-bar floor a swing needs, so every number here — levels, mood, signal,
+  trend, patterns — is the 1 month read, the same numbers the 1 month zoom
+  shows."* The old sentence ("Levels are read from this window only") is FALSE
+  here and is not printed.
+- new payload keys `levels_window` / `levels_window_label`, both `None` on
+  every other window, so a response served before this change renders exactly
+  as it did.
+
+Verified on real NVDA payloads from this branch: `supports`, `overhead`,
+`verdict`, `mood`, `signal.action`, `trend_read`, `bullish_patterns` and `smc`
+are **identical** across `1w`, `2w` and `1m`; only `tile.bars` (5 / 10 / 21)
+and `chart_span` differ. `mood.bars` is 20 at 1w, not 5.
+
+### Thin symbols
+
+Three different things: `short` is CHART truncation, `level_short` is an
+evidence shortfall behind the READS, `chart_only` is which window asked. A
+13-bar symbol MEETS the 5-bar chart budget at `1w`, so `short_history` checks
+the chart-only arm first and reports `{"have": 13, "asked": 21}` — the same
+object `window=1m` gives. Without it the same name warned at 1m and went
+silent at 1w, which is backwards.
+
+Under the floor, the tab refuses rather than drawing a confident empty chart:
+an 11-bar frame at `1w` returns `bars_used: 11` and *"TEST has only 11 bars of
+history — too few to read a 1 month window."* with no chart, no levels and no
+verdict. The "No swing structure — try a longer window" message is reserved
+for a frame that HAD the history and found nothing.
+
+**No default moved.** `DEFAULT_WINDOW` is still `1y`, `DEFAULT_VIEW` still
+`daily:1y`, `SEPA_SUPPLY_WINDOW` still `1y`, `HOLDINGS_DEFAULT_WINDOW` still
+`6m`. No rule, gate, band, threshold or S&D constant changed. The overlay view
+skips both keys — their bands ARE the 1m bands, and a duplicate row would
+inflate the "N windows agree" denominator.
+
+**A shorter zoom is a VIEW. Nothing about it is measured**, and no edge is
+claimed. The one prior measurement in this area (`sd_zone_timeframe_studies`,
+2026-08-24) found no lookback has an edge.
 
 ## Default zoom: 1 year (2026-09-06)
 

@@ -137,6 +137,12 @@ export type SupportPayload = {
   overhead?: SupportLevel[];
   standing_in?: SupportLevel | null;
   levels_capped?: boolean;
+  /* The CHART-ONLY zooms (Ajay 2026-09-18, 1w/2w). Set only on those two
+   * windows; the key names the window every NUMBER on the tab came from.
+   * Absent/null on every other window and on any payload served before
+   * 2026-09-18, so a stale response simply renders as it always did. */
+  levels_window?: string | null;
+  levels_window_label?: string | null;
   verdict?: { state?: string; entry_read?: string; label?: string } | null;
   params?: Record<string, number> | null;
   note?: string;
@@ -148,6 +154,12 @@ export type SupportPayload = {
  *  Mirrors backend SUPPORT_WINDOWS; the server's own list replaces it as soon
  *  as one arrives, so a change there does not need a frontend deploy. */
 export const FALLBACK_WINDOWS: SupportWindow[] = [
+  // Ajay 2026-09-18: "Also a weekly chart for the past week and 2 week inthe
+  // charting time frames in all places" — short WINDOWS, not weekly candles
+  // (declined). Bars are trading days, so a week is 5 sessions and two weeks
+  // is 10; never 7 or 14. Chart-only: every number stays the 1-month read.
+  { key: '1w', label: '1 week', bars: 5 },
+  { key: '2w', label: '2 weeks', bars: 10 },
   { key: '1m', label: '1 month', bars: 21 },
   { key: '3m', label: '3 months', bars: 63 },
   { key: '6m', label: '6 months', bars: 126 },
@@ -238,6 +250,14 @@ export type ChartView = {
 };
 
 export const CHART_VIEWS: ChartView[] = [
+  // Ajay 2026-09-18, the two short zooms. The candles are the same daily
+  // candles; only the picture is closer in. Every NUMBER stays the 1-month
+  // read — a 5-bar frame is under the swing floor price_zones needs and too
+  // short for the no-repaint drop — and the served note says so on the tab.
+  { key: 'daily:1w', label: '1 week', group: 'Daily', window: '1w', tf: 'daily',
+    hint: 'the last 5 sessions — chart only; every number stays the 1-month read' },
+  { key: 'daily:2w', label: '2 weeks', group: 'Daily', window: '2w', tf: 'daily',
+    hint: 'the last 10 sessions — chart only; every number stays the 1-month read' },
   { key: 'daily:1m', label: '1 month', group: 'Daily', window: '1m', tf: 'daily',
     hint: 'the level this week\'s trade is standing on' },
   { key: 'daily:3m', label: '3 months', group: 'Daily', window: '3m', tf: 'daily' },
@@ -522,8 +542,13 @@ export function recentCount(levels: SupportLevel[] | null | undefined): number {
 export function shortHistoryNote(p: SupportPayload | null | undefined): string {
   const s = p?.short_history;
   if (!s || !s.have || !s.asked) return '';
+  // On a chart-only zoom (1w/2w) the shortfall is against the window the
+  // NUMBERS were read from, not the 5-session picture — so the sentence names
+  // it. Unset everywhere else, and the original wording is unchanged there.
+  const w = p?.levels_window_label;
   return `Only ${s.have} sessions of history — less than the ${s.asked} `
-    + `this window asks for. Levels are read from what exists.`;
+    + (w ? `the ${w} read asks for. ` : `this window asks for. `)
+    + `Levels are read from what exists.`;
 }
 
 /** How many of the listed supports price turned at more than once.

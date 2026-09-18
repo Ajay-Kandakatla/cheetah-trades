@@ -455,7 +455,7 @@ describe('default zoom — 1 year on every surface (Ajay 2026-09-06)', () => {
 /* ── 2 / 3-year zooms (Ajay 2026-09-06) ──────────────────────────────────── */
 describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
   it('the fallback window list runs 1m → 3m → 6m → 1y → 2y → 3y → 5y → overlay', () => {
-    expect(FALLBACK_WINDOWS.map((w) => w.key)).toEqual(['1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']);
+    expect(FALLBACK_WINDOWS.map((w) => w.key)).toEqual(['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']);
     const bars = FALLBACK_WINDOWS.filter((w) => w.key !== 'all').map((w) => w.bars);
     expect(bars).toEqual([...bars].sort((a, b) => a - b));
     expect(FALLBACK_WINDOWS.find((w) => w.key === '2y')).toEqual({ key: '2y', label: '2 years', bars: 504 });
@@ -464,7 +464,7 @@ describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
 
   it('the chart control offers both as daily views between 1 year and 5 years', () => {
     const daily = CHART_VIEWS.filter((v) => v.group === 'Daily').map((v) => v.key);
-    expect(daily).toEqual(['daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']);
+    expect(daily).toEqual(['daily:1w', 'daily:2w', 'daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']);
     expect(viewKeyFor('2y', 'daily')).toBe('daily:2y');
     expect(viewKeyFor('3y', 'daily')).toBe('daily:3y');
     expect(viewFor('daily:3y')).toMatchObject({ window: '3y', tf: 'daily' });
@@ -475,5 +475,92 @@ describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
     for (const v of CHART_VIEWS.filter((x) => x.group === 'Intraday')) {
       expect(['2y', '3y', '5y']).not.toContain(v.window);
     }
+  });
+});
+
+/* ── 1-week / 2-week zooms (Ajay 2026-09-18) ─────────────────────────────────
+ * "Also a weekly chart for the past week and 2 week inthe charting time frames
+ * in all places". Short WINDOWS, not weekly candles — the candles stay daily
+ * and every NUMBER stays the 1-month read. */
+describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
+  /* FE-1 */
+  it('offers both short zooms first, in trading-day bars', () => {
+    expect(FALLBACK_WINDOWS.map((w) => w.key))
+      .toEqual(['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']);
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '1w'))
+      .toEqual({ key: '1w', label: '1 week', bars: 5 });
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '2w'))
+      .toEqual({ key: '2w', label: '2 weeks', bars: 10 });
+    const bars = FALLBACK_WINDOWS.filter((w) => w.key !== 'all').map((w) => w.bars);
+    expect(bars).toEqual([...bars].sort((a, b) => a - b));
+    // NEGATIVE: bars are SESSIONS. Nobody counted calendar days.
+    expect(FALLBACK_WINDOWS.some((w) => w.bars === 7 || w.bars === 14)).toBe(false);
+  });
+
+  /* FE-2 */
+  it('offers both as daily views and resolves their keys', () => {
+    const daily = CHART_VIEWS.filter((v) => v.group === 'Daily').map((v) => v.key);
+    expect(daily.slice(0, 2)).toEqual(['daily:1w', 'daily:2w']);
+    expect(viewKeyFor('1w', 'daily')).toBe('daily:1w');
+    expect(viewKeyFor('2w', 'daily')).toBe('daily:2w');
+    expect(viewFor('daily:2w')).toMatchObject({ window: '2w', tf: 'daily' });
+    expect(parseWindow(' 1W ')).toBe('1w');
+    expect(parseWindow('2w')).toBe('2w');
+  });
+
+  /* FE-3 NEGATIVE */
+  it('no intraday view borrowed a short zoom', () => {
+    for (const v of CHART_VIEWS.filter((x) => x.group === 'Intraday')) {
+      expect(['1w', '2w']).not.toContain(v.window);
+    }
+  });
+
+  /* FE-4 — no default moved */
+  it('moves no default', () => {
+    expect(DEFAULT_WINDOW).toBe('1y');
+    expect(DEFAULT_VIEW).toBe('daily:1y');
+    expect(SEPA_SUPPLY_WINDOW).toBe('1y');
+    expect(viewKeyFor('zzz', 'daily')).toBe('daily:1y');
+    expect(parseWindow('')).toBe('1y');
+    expect(parseWindow(null)).toBe('1y');
+  });
+
+  /* FE-5 NEGATIVE — the api-only-deploy degrade, pinned on purpose.
+   * ChartMaps.tsx validates `?window=` against the FRONTEND's own list, so a
+   * deploy that ships api before frontend rewrites ?window=1w to 1y. That is
+   * the documented half-ship failure mode (ship `api frontend` together) —
+   * do NOT "fix" it by loosening parseWindow. */
+  it('a payload served before the change still renders, and an old offered list degrades 1w', () => {
+    const oldOffered = FALLBACK_WINDOWS.filter((w) => w.key !== '1w' && w.key !== '2w');
+    expect(parseWindow('1w', oldOffered)).toBe(DEFAULT_WINDOW);
+    const stale: SupportPayload = {
+      symbol: 'NVDA', window: '1m', window_label: '1 month',
+      windows: oldOffered, supports: [], overhead: [],
+    } as unknown as SupportPayload;
+    expect(() => shortHistoryNote(stale)).not.toThrow();
+    expect(shortHistoryNote(stale)).toBe('');
+    expect(stale.levels_window ?? null).toBeNull();
+  });
+
+  /* FE-6 */
+  it('every fallback window except the overlay has a matching daily view', () => {
+    for (const w of FALLBACK_WINDOWS) {
+      expect(CHART_VIEWS.some((v) => v.key === `daily:${w.key}`)).toBe(true);
+    }
+  });
+
+  /* FE-7 */
+  it('the thin-history note names the window the NUMBERS came from', () => {
+    expect(shortHistoryNote({ short_history: { have: 3, asked: 5 } } as SupportPayload))
+      .toBe('Only 3 sessions of history — less than the 5 this window asks for. '
+            + 'Levels are read from what exists.');
+    expect(shortHistoryNote({
+      short_history: { have: 13, asked: 21 }, levels_window_label: '1 month',
+    } as SupportPayload))
+      .toBe('Only 13 sessions of history — less than the 21 the 1 month read asks for. '
+            + 'Levels are read from what exists.');
+    // NEGATIVE: the read wording never appears without a served label.
+    expect(shortHistoryNote({ short_history: { have: 13, asked: 21 } } as SupportPayload))
+      .not.toContain('read asks for');
   });
 });

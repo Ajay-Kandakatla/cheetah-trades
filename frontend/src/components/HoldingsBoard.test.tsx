@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import HoldingsBoard from './HoldingsBoard';
@@ -375,5 +375,52 @@ describe('HoldingsBoard — the \u{1FA9C} read and its pending banner', () => {
     expect(screen.queryByTestId('band-CRDO')).toBeNull();
     expect(screen.queryByTestId('hb-band-structure-no-read')).toBeNull();
     expect(screen.queryByText(/No band read/)).toBeNull();
+  });
+});
+
+/* ── 1-week / 2-week zooms on 📁 My holdings (Ajay 2026-09-18) ────────────── */
+describe('HoldingsBoard · the short zooms', () => {
+  beforeEach(() => { vi.stubGlobal('localStorage', mem()); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  /* HB-4 */
+  it('offers 1 week first but still OPENS on 6 months, and asks for window=1w when picked', async () => {
+    const spy = stubFetch();
+    render(<MemoryRouter><HoldingsBoard days={130} /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('tile-CRDO')).toBeInTheDocument());
+    const sel = screen.getByLabelText('Holdings window') as HTMLSelectElement;
+    expect(sel.options[0].textContent).toBe('1 week');
+    expect(sel.options[1].textContent).toBe('2 weeks');
+    // the DEFAULT did not move
+    expect(sel.value).toBe('6m');
+
+    fireEvent.change(sel, { target: { value: '1w' } });
+    await waitFor(() => expect(
+      spy.mock.calls.map((c) => String(c[0]))
+        .some((u) => u.includes('/chart-maps/support') && u.includes('window=1w')),
+    ).toBe(true));
+  });
+
+  /* HB-5 NEGATIVE */
+  it('a holding whose short-zoom read underflows shows the served error and no band', async () => {
+    const spy = vi.fn(async (url: string) => {
+      const u = String(url);
+      if (u.includes('/portfolio/holdings')) return { ok: true, json: async () => HOLDINGS };
+      const m = /symbol=([A-Z]+)/.exec(u);
+      const sym = m ? m[1] : '';
+      if (sym === 'BROKEN') {
+        return { ok: true, json: async () => ({
+          bars_used: 3,
+          error: 'BROKEN has only 3 bars of history — too few to read a 1 month window.',
+        }) };
+      }
+      return { ok: true, json: async () => ({ tile: tile(sym), last_price: 143.6 }) };
+    });
+    vi.stubGlobal('fetch', spy);
+    render(<MemoryRouter><HoldingsBoard days={130} /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByTestId('tile-CRDO')).toBeInTheDocument());
+    expect(screen.getByText(/only 3 bars of history — too few to read a 1 month window/))
+      .toBeInTheDocument();
+    expect(screen.queryByTestId('tile-BROKEN')).toBeNull();
   });
 });
