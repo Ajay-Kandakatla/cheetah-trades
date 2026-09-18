@@ -1064,11 +1064,24 @@ def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
         pytest.skip("intraday frame unavailable in this environment: %s"
                     % out.get("error"))
     span, note = out["chart_span"], out["note"]
-    # it must NOT describe a daily span it is not drawing
-    assert "sessions" not in span, span
+    # UPDATED 2026-09-18 (second ship): a short window now TRIMS the intraday
+    # chart, so naming sessions here is no longer a lie — it is the point. What
+    # must still never happen is claiming a DAILY span, or claiming more
+    # sessions than the drawn frame actually holds.
+    assert "daily bars" not in span or "levels from" in span, span
     assert "the last 5 sessions" not in note, note
-    # On EVERY intraday frame the daily zoom is inert, and the payload says so.
-    assert out["zoom_applies"] is False
+    held = out.get("chart_sessions")
+    if "session" in span:
+        assert held, "span names sessions but chart_sessions is %r" % held
+        assert str(held) in span, (span, held)
+        # never more than the frame contains
+        dates = {str(b["t"])[:10] for b in (out["tile"]["bars"] or [])}
+        assert held <= max(len(dates), 1), (held, len(dates))
+    # UNTIL 2026-09-18 the daily zoom was inert on EVERY intraday frame. The
+    # second ship makes a SHORT window reach the intraday chart — he asked for
+    # "1 week of HOURLY bars" — so zoom_applies is now True exactly when the
+    # slice actually trimmed something, and False when it could not.
+    assert out["zoom_applies"] is (out.get("chart_sessions") is not None)
     if tf == "5m_live":
         # ext-hours: own_bars is False, so the window would have driven the
         # LEVELS — the redirect still applies and the span must name it.
@@ -1078,8 +1091,8 @@ def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
         # 60m / 15m carry their OWN bars: the window never reached the levels,
         # so there is no redirect to report and none is claimed.
         assert out["levels_window"] is None, out["levels_window"]
-        # and it must not name a daily window it did not read
-        assert "daily bars" not in span, span
+        # an own-bars frame read no daily window, so it must not name one
+        assert "levels from" not in span, span
 
 
 def test_the_short_zoom_still_states_its_daily_span_on_a_DAILY_frame(loaded):

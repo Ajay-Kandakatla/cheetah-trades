@@ -860,6 +860,51 @@ def _why(levels: dict, zones: dict, spec: dict) -> str:
     return head or f"No band below price in the last {spec['label']}."
 
 
+def _last_sessions(df, n: int):
+    """The bars of `df` belonging to its last `n` ET SESSION dates.
+
+    Ajay 2026-09-18: "Can you increase the bars on the weekly chart please? I am
+    trying to read more on the weekly chart" — on a 1W zoom serving its honest 5
+    daily bars. Asked, he chose "1 week of HOURLY bars": keep the span, raise the
+    resolution. So a short window now trims the intraday CHART instead of being
+    inert on it.
+
+    BY SESSION DATE, NEVER BY BAR COUNT. A count (5 x 6.5) would need a
+    bars-per-session number this repo does not have, and it bleeds into the prior
+    session on a half-day and clips on a full one. Counting dates needs neither.
+
+    THE INDEX IS UTC AND NAIVE. Verified on the live frame 2026-09-18 12:23 ET /
+    16:23 UTC: MU's last 60m bar stamps 16:30 and 2026-09-17 runs 17:00 -> 20:00,
+    i.e. 13:00 -> 16:00 ET, the RTH afternoon into the close. So `.date()` taken
+    raw is a UTC date. For an RTH frame that happens to agree with the ET
+    session, but the extended session runs to 20:00 ET = 00:00 UTC THE NEXT DAY —
+    so on `5m_live` a raw date would file the last after-hours hour under
+    tomorrow and drop it from today. Convert first. This is the container-UTC vs
+    provider-ET trap the repo already carries elsewhere.
+
+    Returns (frame, n_sessions_present). Fewer sessions than asked is NOT an
+    error — it is what a shallow intraday cache looks like, and the caller says
+    so rather than claiming a span the frame does not hold.
+    """
+    if df is None or not len(df) or n <= 0:
+        return df, 0
+    idx = df.index
+    try:
+        et = (idx.tz_localize("UTC") if getattr(idx, "tz", None) is None
+              else idx).tz_convert("America/New_York")
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("support: session slice could not localise the index: %s", exc)
+        return df, 0
+    dates = et.normalize()
+    uniq = sorted(set(dates))
+    if not uniq:
+        return df, 0
+    keep = set(uniq[-n:])
+    mask = dates.isin(keep)
+    out = df[mask]
+    return (out if len(out) else df), len(keep)
+
+
 def _frame_bars(df) -> list:
     """Candles straight from the analysed intraday frame.
 
@@ -1256,6 +1301,22 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     read_budget = tf_spec_["bars"] if own_bars else level_spec["bars"]
     swing = tf_spec_["swing_window"] if own_bars else level_spec["swing_window"]
     bars_used = min(len(df), budget)
+    # A SHORT WINDOW NOW REACHES THE INTRADAY CHART (Ajay 2026-09-18).
+    # 1W/2W used to be inert on every intraday frame — `zoom_applies: false` —
+    # so 1w+60m drew the frame's whole 330-bar budget, ~47 sessions, under a
+    # label that said one week. It now draws that window's OWN sessions at the
+    # timeframe's resolution: ~33 hourly bars for a week instead of 5 daily ones.
+    #
+    # ONLY the chart is trimmed. `df` — what every level, mood, trend and pattern
+    # read runs on — is untouched, so the numbers beside the chart are exactly
+    # the ones the un-trimmed frame produced. That separation already existed
+    # (chart_df vs df above); this leans on it rather than widening it.
+    short_intraday, short_sessions = None, 0
+    if intraday and spec["key"] in CHART_ONLY_LEVELS_FROM:
+        src = chart_df if ext_frame else df
+        short_intraday, short_sessions = _last_sessions(src, spec["bars"])
+        if short_sessions == 0:                    # could not read a session date
+            short_intraday = None
     # What the stats row and the why-sentence call the window. On an intraday
     # timeframe the structure came from the timeframe's OWN bars, and the
     # daily zoom label ("6 months" under an hourly chart) was a lie the header
@@ -1405,8 +1466,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # A chart-only zoom opts out of bars_for's 20-bar floor by name — it
         # draws exactly the 5 or 10 sessions its label promises. Every other
         # caller keeps BARS_FLOOR.
-        "bars": (_frame_bars(chart_df.tail(tf_spec_["bars"]) if ext_frame
-                             else df.tail(bars_used)) if intraday
+        "bars": (_frame_bars(short_intraday if short_intraday is not None
+                             else (chart_df.tail(tf_spec_["bars"]) if ext_frame
+                                   else df.tail(bars_used))) if intraday
                  else board_mod.bars_for(
                      sym, days=bars_used,
                      min_bars=(bars_used if chart_only
@@ -1434,7 +1496,11 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # describe the chart at all; it only says where the levels were read. So the
     # intraday arms name `level_spec` — the window the numbers actually came
     # from — and the chart-only arm is left for daily frames, where it is true.
-    chart_span = (f"{len(tile['bars'])} x 5-min bars incl. pre/post market · "
+    chart_span = (f"{len(tile['bars'])} x {tf_spec_['label']} bars over "
+                  f"{short_sessions} session{'' if short_sessions == 1 else 's'}"
+                  f"{' · levels from ' + level_spec['label'] + ' of daily bars' if chart_only else ''}"
+                  if short_intraday is not None else
+                  f"{len(tile['bars'])} x 5-min bars incl. pre/post market · "
                   f"levels from {level_spec['label']} of daily bars"
                   if ext_frame else
                   # NO levels clause here: an own-bars frame (60m/15m) reads
@@ -1480,7 +1546,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # so an FE that predates 2026-09-18 simply ignores both keys.
         "levels_window": level_spec["key"] if chart_only else None,
         "levels_window_label": level_spec["label"] if chart_only else None,
-        "zoom_applies": not intraday,
+        # True when the daily zoom actually reached the chart. Since
+        # 2026-09-18 that includes an intraday frame trimmed by a short window.
+        "zoom_applies": (not intraday) or short_intraday is not None,
+        # How many ET sessions the drawn intraday frame actually holds — null
+        # when the window did not trim it. Never more than the frame contains.
+        "chart_sessions": short_sessions or None,
         # Live chart (Ajay 2026-09-02): poll cadence + the overnight read.
         # Both None off the live frame so nothing else on the tab changes.
         "live": tf_mod.live_state() if ext_frame else None,

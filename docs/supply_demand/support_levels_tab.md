@@ -438,3 +438,45 @@ has no read of hourly structure).
 
 Tests: `tests/test_zone_consistency_2026_09_14.py`, `chartOverlays.test.ts`,
 `PatternChart.test.tsx`.
+
+## 1W / 2W on an intraday frame (2026-09-18, second ship)
+
+Ajay, on a 1W chart showing its honest 5 daily bars: *"Can you increase the bars
+on the weekly chart please? I am trying to read more on the weekly chart"*.
+Offered three readings he chose **"1 week of HOURLY bars"** — keep the span,
+raise the resolution. He **declined weekly candles**, so nothing resamples.
+
+Before, a short window was inert on every intraday frame: `1w + 60m` drew the
+frame's whole 330-bar budget (~47 sessions) under a label that said one week.
+
+| view | before | after |
+|---|---|---|
+| `1w` daily | 5 bars | 5 bars (unchanged) |
+| `1w` + 60m | 330 | **32 over 5 sessions** |
+| `2w` + 60m | 330 | 67 over 10 sessions |
+| `1w` + 15m | 260 | 116 over 5 sessions |
+| `1y` / `6m` + 60m | 330 | 330, `zoom_applies: false` (unchanged) |
+
+Measured on MU, 2026-09-18.
+
+**Sliced by ET session date, never by bar count.** A count (`5 × 6.5`) needs a
+bars-per-session number this repo does not have, and it bleeds into the prior
+session on a half-day and clips on a full one. Counting dates needs neither.
+
+**The index is UTC and naive.** Verified live at 12:23 ET / 16:23 UTC: MU's last
+60m bar stamped `16:30`, and 2026-09-17 ran `17:00 → 20:00` — 13:00 → 16:00 ET,
+the RTH afternoon into the close. For an RTH frame a raw `.date()` happens to
+agree with the ET session, but the extended session runs to 20:00 ET = **00:00
+UTC the next day**, so on `5m_live` a raw date files the last after-hours hour
+under tomorrow and drops it from today. `_last_sessions` converts to
+`America/New_York` first. This is the container-UTC vs provider-ET trap the repo
+already carries elsewhere.
+
+**Only the drawn frame is trimmed.** `chart_df` and `df` were already separate;
+the slice touches only what is drawn, so every level, mood, trend and pattern
+read still runs on the untrimmed frame. Verified: `1w + 60m` and `6m + 60m`
+return identical supports, overhead, verdict and `bars_used` (330).
+
+`chart_sessions` carries how many ET sessions the drawn frame actually holds —
+never more — and is `null` when the window did not trim it. A shallow intraday
+cache returning fewer sessions than asked is normal, not an error.
