@@ -643,6 +643,12 @@ export type CmBoard = {
   grades?: string[];
   grades_all?: string[];
   grade_counts?: Record<string, number>;
+  /** 🔻 AMD in flight (2026-09-17): which live states this payload is filtered
+   *  to, every state there is, and how many names sit in each RIGHT NOW. The
+   *  counts are read live and are unconfirmed until the close. */
+  flight?: string[];
+  flight_states?: string[];
+  flight_counts?: Record<string, number>;
   /** 🚀 Breaking (2026-09-06): the zone-edge pass the cards were drawn from. */
   pass_as_of?: string | null;
   pass_date?: string | null;
@@ -896,6 +902,37 @@ export const AMD_GRADE_LABEL: Record<string, string> = {
   upper_half: '\u25B2 Upper half',
   lower_half: '\u25BC Lower half',
 };
+
+/** The AMD cycle IN FLIGHT (2026-09-17) — where a name is against its base
+ *  edge RIGHT NOW, before tonight's close confirms anything.
+ *
+ *  Ajay: "Today its not granular we do not show potentially or in the flight
+ *  mani pulation i wanna see those". The stored detector only fires on a
+ *  COMPLETE raid, so a sweep in progress is invisible until the sweep re-runs.
+ *  Keys are the backend's `AMD_FLIGHT_STATES`; only the wording is ours. */
+export const AMD_FLIGHT_LABEL: Record<string, string> = {
+  sweeping: '\u{1F53B} Sweeping now',
+  reclaimed: '\u{1F504} Reclaimed today',
+  holding: '\u{1F6E1}\uFE0F Holding the edge',
+};
+
+/** The flight states a URL asks for. Same fail-open rule as the grades. */
+export function parseFlight(raw: string | null | undefined): Set<string> {
+  const out = new Set<string>();
+  for (const part of String(raw || '').split(',')) {
+    const k = part.trim().toLowerCase();
+    if (k) out.add(k);
+  }
+  return out;
+}
+
+/** The `flight=` value for a selection, or null when every state is on (which
+ *  is the same board as no filter, so it must not ride). */
+export function flightParam(sel: Set<string>, all?: string[]): string | null {
+  if (!sel.size) return null;
+  if (all && all.length && all.every((g) => sel.has(g))) return null;
+  return Array.from(sel).sort().join(',');
+}
 
 /** `?levels=` → the selected arrival levels. FAILS OPEN exactly like the
  *  backend's `deep_demand.parse_levels`: empty, `all`, garbage, a level outside
@@ -1151,6 +1188,7 @@ export function boardQuery(p: {
   minRoom?: number;
   levels?: string;
   grades?: string;
+  flight?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -1190,6 +1228,8 @@ export function boardQuery(p: {
   if ((p.tab === 'amd' || p.tab === 'keltner') && p.grades) {
     q.set('grades', p.grades);
   }
+  // 🔻 The live state filter — AMD only, and only when it NARROWS.
+  if (p.tab === 'amd' && p.flight) q.set('flight', p.flight);
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe

@@ -152,3 +152,70 @@ describe('the chips', () => {
     fireEvent.click(chip);   // must not throw
   });
 });
+
+/* ── 🔻 the cycle IN FLIGHT ──────────────────────────────────────────────────
+ * "Today its not granular we do not show potentially or in the flight mani
+ * pulation i wanna see those." Live states, unconfirmed until the close. */
+const FLIGHT_STATES = ['sweeping', 'reclaimed', 'holding'];
+const FLIGHT_COUNTS = { sweeping: 172, reclaimed: 156, holding: 880 };
+const FBOARD = (over: Record<string, unknown> = {}) =>
+  BOARD({ flight: [], flight_states: FLIGHT_STATES, flight_counts: FLIGHT_COUNTS, ...over });
+
+describe('the in-flight chips', () => {
+  it('renders every live state with its live count', async () => {
+    vi.stubGlobal('fetch', stub(FBOARD()));
+    page('/chart-maps?tab=amd');
+    const ctl = await screen.findByRole('tablist', { name: 'In flight' });
+    for (const k of FLIGHT_STATES) {
+      expect(within(ctl).getByTestId(`amd-flight-${k}`))
+        .toHaveTextContent(String(FLIGHT_COUNTS[k as keyof typeof FLIGHT_COUNTS]));
+    }
+  });
+
+  it('picking "Reclaimed today" asks the server for it', async () => {
+    vi.stubGlobal('fetch', stub(FBOARD()));
+    page('/chart-maps?tab=amd');
+    const ctl = await screen.findByRole('tablist', { name: 'In flight' });
+    fireEvent.click(within(ctl).getByTestId('amd-flight-reclaimed'));
+    await waitFor(() =>
+      expect(urls.some((u) => u.includes('flight=reclaimed'))).toBe(true));
+  });
+
+  it('says out loud that nothing in flight is confirmed', async () => {
+    vi.stubGlobal('fetch', stub(FBOARD()));
+    page('/chart-maps?tab=amd');
+    const ctl = await screen.findByRole('tablist', { name: 'In flight' });
+    const title = ctl.getAttribute('title') || '';
+    expect(title).toMatch(/not closed|unconfirmed|forming/i);
+  });
+
+  it('NEGATIVE: selecting every state rides NO param — same board as no filter', async () => {
+    vi.stubGlobal('fetch', stub(FBOARD()));
+    page(`/chart-maps?tab=amd&flight=${FLIGHT_STATES.slice(0, 2).join(',')}`);
+    const ctl = await screen.findByRole('tablist', { name: 'In flight' });
+    urls.length = 0;
+    fireEvent.click(within(ctl).getByTestId('amd-flight-holding'));
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
+    expect(urls.every((u) => !u.includes('flight='))).toBe(true);
+  });
+
+  it('NEGATIVE: the control is absent on tabs with no flight read', async () => {
+    vi.stubGlobal('fetch', stub(FBOARD()));
+    page('/chart-maps?tab=keltner');
+    await screen.findByText('ZZZA');
+    expect(screen.queryByRole('tablist', { name: 'In flight' })).toBeNull();
+  });
+
+  it('NEGATIVE: no flight_states from the server renders no control', async () => {
+    vi.stubGlobal('fetch', stub(BOARD({ flight_states: [] })));
+    page('/chart-maps?tab=amd');
+    await screen.findByText('ZZZA');
+    expect(screen.queryByRole('tablist', { name: 'In flight' })).toBeNull();
+  });
+
+  it('boardQuery sends flight only on the amd tab', () => {
+    expect(boardQuery({ tab: 'amd', flight: 'sweeping' })).toContain('flight=sweeping');
+    expect(boardQuery({ tab: 'keltner', flight: 'sweeping' })).not.toContain('flight');
+    expect(boardQuery({ tab: 'zones', flight: 'sweeping' })).not.toContain('flight');
+  });
+});

@@ -29,6 +29,7 @@ import {
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   parseGrades, gradesParam,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam, AMD_GRADE_LABEL,
+  AMD_FLIGHT_LABEL, parseFlight, flightParam,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
@@ -272,6 +273,25 @@ export function ChartMaps() {
     setParams(next, { replace: true });
   };
 
+  /* 🔻 The AMD cycle IN FLIGHT (Ajay 2026-09-17: "Today its not granular we do
+   * not show potentially or in the flight mani pulation i wanna see those").
+   * Live states, read against the base edge on today's own low — unconfirmed
+   * until the close, and the control says so. AMD only. */
+  const FLIGHT_TAB = tab === 'amd';
+  const flightSel = useMemo(() => parseFlight(params.get('flight')), [params]);
+  const flightSpec = FLIGHT_TAB ? (flightParam(flightSel) ?? undefined) : undefined;
+  const toggleFlight = (k: string) => {
+    const sel = new Set(flightSel);
+    if (sel.has(k)) sel.delete(k); else sel.add(k);
+    // Passing the universe here (a closure, so `data` exists by now) lets an
+    // ALL-selected set collapse to no param — every state on is the same board
+    // as no filter, and a URL that says so would send a pointless narrowing.
+    const spec = flightParam(sel, data?.flight_states);
+    const next = new URLSearchParams(params);
+    if (spec) next.set('flight', spec); else next.delete('flight');
+    setParams(next, { replace: true });
+  };
+
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
   const levelsSpec = levelsParam(levelSel) ?? 'all';
@@ -357,6 +377,7 @@ export function ChartMaps() {
                            gabbarTouchingOnly, phase, target, bias, micro,
                            minRoom: ROOM_TAB ? minRoom : undefined,
                            grades: gradesSpec,
+                           flight: flightSpec,
                            levels: levelsSpec });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
@@ -376,7 +397,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -769,6 +790,31 @@ export function ChartMaps() {
                           className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
                           onClick={() => setRoom(floor === 0 ? 'any' : 'floor')}>
                     {cmRoomLabel(floor)}
+                  </button>
+                );
+              })}
+            </span>
+          )}
+          {/* 🔻 In flight (Ajay 2026-09-17). WHERE PRICE IS AGAINST THE BASE
+            * EDGE RIGHT NOW — the half the stored detector cannot show,
+            * because it only fires once a raid has CLOSED back inside. Counts
+            * are live and every one of them is unconfirmed until the close: a
+            * "Reclaimed today" name is a raid FORMING, not a raid. */}
+          {FLIGHT_TAB && !!(data?.flight_states || []).length && (
+            <span className="cm-phase-sub" role="tablist" aria-label="In flight"
+                  title="Where price is against its base edge RIGHT NOW, from today's own low and the live print — no threshold, just the facts. Sweeping = below the edge, unresolved. Reclaimed today = the low pierced the edge and price is back inside, which is a raid FORMING: the bar has not closed and nothing here is confirmed. Holding = today's low never reached the edge. Counts are live.">
+              {(data?.flight_states || []).map((k) => {
+                const c = data?.flight_counts ? Number(data.flight_counts[k] ?? 0) : null;
+                const on = flightSel.has(k);
+                const empty = c === 0;
+                return (
+                  <button key={k} type="button" role="tab" aria-selected={on}
+                          aria-disabled={empty || undefined}
+                          data-testid={`amd-flight-${k}`}
+                          className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
+                          style={empty ? { opacity: 0.45 } : undefined}
+                          onClick={() => toggleFlight(k)}>
+                    {AMD_FLIGHT_LABEL[k] || k}{c == null ? '' : ` · ${c}`}
                   </button>
                 );
               })}
