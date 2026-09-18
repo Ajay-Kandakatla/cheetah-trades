@@ -74,6 +74,9 @@ async def chart_maps(
     source: str = Query("pattern", description="winners tab only — pattern | zone"),
     minervini_only: bool = Query(False,
                                  description="winners tab only — SEPA qualifiers at the time"),
+    grades: str = Query("", description="amd / keltner tabs — comma list of "
+                                       "grades to show, or 'all'. Empty = the "
+                                       "turning grade only, as before."),
     min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
                           description="liquidity floor by 50-day avg $ volume: "
                                       "deep (>=$50M) | ok (>=$10M, default) | "
@@ -130,6 +133,7 @@ async def chart_maps(
             target=target if isinstance(target, str) else "zone",
             bias=bias if isinstance(bias, str) else "all",
             micro=micro if isinstance(micro, str) else "60m",
+            grades=(grades if isinstance(grades, str) and grades.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

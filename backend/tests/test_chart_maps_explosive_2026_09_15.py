@@ -277,7 +277,7 @@ def turning_rows(monkeypatch):
     from sepa import scanner
     rows = [{"symbol": "LO", "last_close": 10.0, "amd": {}, "amd_grade": "raided"},
             {"symbol": "HI", "last_close": 20.0, "amd": {}, "amd_grade": "raided"}]
-    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None: {
+    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None, grades=None: {
         "kind": "amd", "rows": rows, "n": 2, "n_all": 2, "capped": False,
         "n_scanned": 2, "n_rows": 2, "counts": {}, "built_at": None, "params": {}})
     monkeypatch.setattr(scanner, "load_latest", lambda *a, **k: {"all_results": [
@@ -459,7 +459,7 @@ def test_turning_bullish_themes_first_SPREADS_but_drops_nothing(no_io, monkeypat
     from sepa import scanner
     n_theme = B.MAX_PER_THEME + 2                       # 8 names in one theme
     syms = ["AI%d" % i for i in range(n_theme)] + ["SOLO"]
-    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None: {
+    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None, grades=None: {
         "kind": "amd", "rows": [{"symbol": s, "last_close": 10.0, "amd": {},
                                  "amd_grade": "raided"} for s in syms],
         "n": len(syms), "n_all": len(syms), "capped": False, "n_scanned": len(syms),
@@ -486,7 +486,7 @@ def test_NEGATIVE_an_explicit_sort_on_those_tabs_skips_the_theme_cap(
     from supply_demand import turning_bullish as TBm
     from sepa import scanner
     syms = ["AI%d" % i for i in range(B.MAX_PER_THEME + 2)] + ["SOLO"]
-    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None: {
+    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None, grades=None: {
         "kind": "amd", "rows": [{"symbol": s, "last_close": 10.0, "amd": {},
                                  "amd_grade": "raided"} for s in syms],
         "n": len(syms), "n_all": len(syms), "capped": False, "n_scanned": len(syms),

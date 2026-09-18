@@ -3998,11 +3998,62 @@ def _verdict_badges(kind: str, v: dict) -> list:
     return [{"text": text, "tone": tone, "group": kind}] if text else []
 
 
+def _amd_read(v: dict, px) -> Optional[dict]:
+    """The AMD cycle as the four numbers Ajay reads: where the manipulation
+    bottomed, how far price is off it, and how far it is from turning into
+    distribution.
+
+    TWO BOTTOMS, kept apart on purpose. `raid_price` is the LOW that actually
+    printed during the raid — the bottom of the manipulation leg. `raid_level`
+    is the base edge that was swept to get there. They are different prices
+    (on 2026-09-17 one stored row read raid_price 902.60 against raid_level
+    918.88, a 1.8% difference), and collapsing them would put an entry level
+    1.8% away from where he meant it.
+
+    `distribution_level` is the base top: the cycle turns to distribution when
+    a close clears it (supply_demand/amd.py's `opp` edge), so the distance to
+    it is literally "how close is this to being distributed".
+
+    Distances are from the tile's CLOSED scan print, the same print every other
+    read on these tiles keys on (board.py's 2026-09-15 note). None wherever an
+    input is missing — never a zero standing in for an unknown.
+    """
+    if not isinstance(v, dict):
+        return None
+    low = _num(v.get("raid_price"))
+    edge = _num(v.get("raid_level"))
+    top = _num(v.get("base_hi"))
+    px = _num(px)
+    def _pct(frm, to):
+        if frm is None or to is None or not frm:
+            return None
+        return round((to - frm) / frm * 100.0, 2)
+    return {
+        "grade": v.get("grade"),
+        "phase": v.get("phase"),
+        "raid_low": low,                       # the bottom of the manipulation
+        "raid_level": edge,                    # the base edge that was swept
+        "raid_depth_pct": _num(v.get("raid_depth_pct")),
+        "raid_vol_ratio": _num(v.get("raid_vol_ratio")),
+        "raid_bars_ago": v.get("raid_bars_ago"),
+        "raid_date": v.get("raid_date"),
+        "distribution_level": top,             # a close above this = distribution
+        "base_lo": _num(v.get("base_lo")),
+        "base_bars": v.get("base_bars"),
+        # Signed: positive = price is ABOVE the manipulation bottom.
+        "above_raid_low_pct": _pct(low, px) if (low and px) else None,
+        # Positive = distribution is still overhead; negative = price is
+        # already through it and the cycle has resolved.
+        "to_distribution_pct": _pct(px, top) if (px and top) else None,
+    }
+
+
 def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
                           days: int = BARS_DEFAULT,
                           themes_first: bool = THEMES_FIRST_DEFAULT,
                           min_tier: str = DEFAULT_MIN_TIER,
-                          sort: str = DEFAULT_SORT) -> dict:
+                          sort: str = DEFAULT_SORT,
+                          grades=None) -> dict:
     """Two tabs — Keltner coils and AMD raids (Ajay 2026-09-13).
 
     *"I need two tabs in chart maps for me to look at where stocks are bullish
@@ -4025,7 +4076,7 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     """
     from supply_demand import turning_bullish as TB
 
-    b = TB.board(kind, limit=limit)
+    b = TB.board(kind, limit=limit, grades=grades)
     rows = b.get("rows") or []
     # Sortable tile numbers come from the SEPA scan row, same as every other
     # tab — `tile_metrics` takes a ROW, never a symbol. A name the scan has not
@@ -4086,6 +4137,14 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
             # tab's badge and the chart's badge are one string built once.
             "verdict": v,
             "badges": _verdict_badges(kind, v),
+            # The numbers he actually trades this board on (Ajay 2026-09-17:
+            # "I am rely on manipulation.. I wanna use that as an entry the
+            # bottom of manipulation.. Feel free to bring stocks that are
+            # getting distributed too"). Every one is a STORED field or a
+            # distance from the tile's own scan print to one — nothing new is
+            # computed and no threshold is invented here.
+            "amd_read": (_amd_read(v, _num(r.get("last_close")))
+                         if kind == "amd" else None),
             **tile_metrics(scan_by_sym.get(sym) or {}),
             # The same numbers again under the private key `_finish` reads.
             # The flat spread above is the tile's published shape and stays;
@@ -4136,6 +4195,13 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
         "priced": n_rows,
         "fire_pct": pct,
         "counts": b.get("counts") or {},
+        # WHICH grades this payload is, every grade it COULD be, and how many
+        # names sit at each — so the filter's choices come from the enforcing
+        # tuple and the page can never present a filtered board as the whole
+        # one (Ajay 2026-09-17: "I wanna see all AMD and also filterable AMD").
+        "grades": b.get("grades") or [],
+        "grades_all": b.get("grades_all") or [],
+        "grade_counts": b.get("grade_counts") or {},
         "params": b.get("params") or {},
         "built_at": b.get("built_at"),
         "note": _turning_note(kind, n_all, n_rows, pct),
@@ -5235,7 +5301,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           touching_only: bool = False, phase: str = "",
           target: str = "zone", bias: str = "all", micro: str = "60m",
           min_room: Optional[float] = None, studies: bool = False,
-          levels: str = "all") -> dict:
+          levels: str = "all", grades: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -5286,7 +5352,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                         micro=micro if isinstance(micro, str) else "60m")
     elif t in ("keltner", "amd"):
         out = turning_bullish_tiles(t, limit, days, themes_first, tier,
-                                    sort=srt)
+                                    sort=srt, grades=grades)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":

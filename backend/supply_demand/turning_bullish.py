@@ -527,18 +527,58 @@ def stored(db=None) -> dict:
         return {}
 
 
-def board(kind: str = "keltner", limit: int = 120, db=None) -> dict:
+def parse_grades(spec, kind: str = "amd") -> Optional[frozenset]:
+    """A `grades=` spec -> the set of grades to keep, or None for "the turning
+    one only" (what this board has always shown).
+
+    Ajay 2026-09-17: *"I wanna see all AMD and also filterable AMD ... I wanna
+    know any new stocks are are are getting manipulated and about to be
+    Distrubuted too ... Feel free to bring stocks that are getting distributed
+    too but I need to see it as a filter"*.
+
+    The sweep already stores every name at every grade — 2,678 rows on
+    2026-09-17, of which the board showed the 391 `raided` ones and dropped the
+    rest. Nothing new is computed here; the filter just stops throwing 86% of
+    the document away.
+
+    FAILS OPEN, like every other spec parser on these boards: junk, an empty
+    string or a grade this kind does not have returns None and the caller gets
+    the old turning-only board rather than an empty page or a 422.
+    """
+    grades = AMD_GRADES if kind == "amd" else KELTNER_GRADES
+    if spec is None:
+        return None
+    if isinstance(spec, str):
+        raw = [p.strip().lower() for p in spec.replace("+", ",").split(",")]
+    else:
+        try:
+            raw = [str(p).strip().lower() for p in spec]
+        except TypeError:
+            return None
+    if any(p == "all" for p in raw):
+        return frozenset(g for g in grades if g != "none")
+    keep = frozenset(p for p in raw if p in grades)
+    return keep or None
+
+
+def board(kind: str = "keltner", limit: int = 120, db=None,
+          grades=None) -> dict:
     """The rows for one tab, ranked, plus what the scan rejected.
 
     `kind` is "keltner" or "amd". An unknown kind falls back to keltner rather
     than erroring: a stale bookmark should show a board, not a 422.
+
+    `grades` (2026-09-17) selects which grades to serve. None keeps the
+    historical behaviour — the turning grade alone. See `parse_grades`.
     """
     k = kind if kind in ("keltner", "amd") else "keltner"
     doc = stored(db)
     rows = list(doc.get("rows") or [])
     want = KELTNER_TURNING if k == "keltner" else AMD_TURNING
     key = "keltner_grade" if k == "keltner" else "amd_grade"
-    hits = [r for r in rows if r.get(key) == want]
+    keep = parse_grades(grades, k)
+    hits = ([r for r in rows if r.get(key) in keep] if keep
+            else [r for r in rows if r.get(key) == want])
 
     if k == "keltner":
         # Tightest coil first: a longer squeeze is the more compressed one, and
@@ -574,6 +614,16 @@ def board(kind: str = "keltner", limit: int = 120, db=None) -> dict:
         "n_scanned": doc.get("n_scanned"),
         "n_rows": doc.get("n_rows"),
         "counts": (doc.get("counts") or {}).get(k) or {},
+        # WHICH grades this payload is, so the page can never label a filtered
+        # board as the whole one. `grades_all` is every grade the sweep stores,
+        # so the filter's choices come from the enforcing tuple and cannot
+        # drift from what a row can actually carry.
+        "grades": sorted(keep) if keep else [want],
+        "grades_all": [g for g in (AMD_GRADES if k == "amd" else KELTNER_GRADES)
+                       if g != "none"],
+        "grade_counts": {g: sum(1 for r in rows if r.get(key) == g)
+                         for g in (AMD_GRADES if k == "amd" else KELTNER_GRADES)
+                         if g != "none"},
         "built_at": _iso(doc.get("built_at")),
         "params": doc.get("params") or {},
     }

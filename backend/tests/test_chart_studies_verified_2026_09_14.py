@@ -332,7 +332,7 @@ def test_the_AMD_board_marks_the_bars_from_the_STORED_dates(monkeypatch):
     df = base_and_raid([100.2])
     v = TBm.amd_verdict(df)
     row = {"symbol": "XYZ", "last_close": 100.2, "amd": v, "amd_grade": v["grade"]}
-    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None: {
+    monkeypatch.setattr(TBm, "board", lambda kind, limit=120, db=None, grades=None: {
         "kind": "amd", "rows": [row], "n": 1, "n_all": 1, "capped": False,
         "n_scanned": 1, "n_rows": 1, "counts": {}, "built_at": None, "params": {}})
     monkeypatch.setattr(B, "bars_for", lambda sym, days=130, **k: B._frame_to_bars(df))
