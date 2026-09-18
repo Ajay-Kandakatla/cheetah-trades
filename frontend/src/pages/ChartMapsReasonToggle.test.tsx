@@ -289,3 +289,33 @@ describe('parseUnhide / unhideParam', () => {
     expect(unhideParam(['gremlin', 'ROOM'])).toBe('gremlin,room');
   });
 });
+
+/* ── the board limit ─────────────────────────────────────────────────────────
+ * Ajay 2026-09-18: "Only seeing 24 stocks" — on an AMD board whose own footer
+ * read "Showing 24 of 587 matches · 2689 names scanned". The page asked for 24;
+ * the server's ceiling (chart_maps.board.LIMIT_MAX) is 80. */
+describe('every board asks the server for its ceiling, not 24', () => {
+  it('asks for limit=80 on the amd tab — the tab he was looking at', async () => {
+    stub();
+    page('/chart-maps?tab=amd');
+    await line();
+    const asked = boardUrls().map((u) => new URL(u, 'http://x').searchParams.get('limit')).filter(Boolean);
+    expect(asked.length).toBeGreaterThan(0);
+    for (const n of asked) expect(n).toBe('80');
+  });
+
+  it('NEGATIVE: never 24 again, and never past the ceiling (a 422)', async () => {
+    for (const tab of ['amd', 'zones', 'deep_demand', 'gabbar', 'keltner']) {
+      cleanup();
+      stub();
+      page(`/chart-maps?tab=${tab}`);
+      await line();
+      const asked = boardUrls().map((u) => new URL(u, 'http://x').searchParams.get('limit')).filter(Boolean);
+      expect(asked.length).toBeGreaterThan(0);
+      for (const n of asked) {
+        expect(n).not.toBe('24');
+        expect(Number(n)).toBeLessThanOrEqual(80);
+      }
+    }
+  });
+});

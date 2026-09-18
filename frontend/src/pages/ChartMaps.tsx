@@ -288,7 +288,11 @@ export function ChartMaps() {
    * the turning one and dropped 86% of its own document. Multi-select, and
    * NOTHING selected normalises back to the server default (the turning grade)
    * rather than asking for an empty board — same rule as the level chips. */
-  const GRADE_TAB = tab === 'amd' || tab === 'keltner';
+  /** The server's own ceiling (chart_maps.board.LIMIT_MAX). Asking for less is
+ *  how "Showing 24 of 587" happened. */
+const BOARD_LIMIT = 80;
+
+const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const gradeSel = useMemo(() => parseGrades(params.get('grades')), [params]);
   // No `grades_all` collapse here: this runs before `data` exists, and the
   // explicit list says the same thing to the server as "all" does.
@@ -400,7 +404,21 @@ export function ChartMaps() {
     // 404, so fetching it for the Support tab would quietly draw the wrong
     // charts under the right heading.
     if (!isBoardTab(tab)) { setData(null); setLoading(false); return; }
-    const q = boardQuery({ tab, limit: tab === 'gabbar' ? 80 : 24, days,
+    /* BOARD_LIMIT — Ajay 2026-09-18: "Only seeing 24 stocks", on an AMD board
+     * whose own footer read "Showing 24 of 587 matches". The page had always
+     * asked for 24 (gabbar alone asked for 80); the server's ceiling is
+     * board.LIMIT_MAX = 80. So every tab now asks for the ceiling.
+     *
+     * This is NOT the whole fix and the footer still says so: 80 of 587 is
+     * still a cut. Reaching all 587 needs paging, which needs LIMIT_MAX to move
+     * and a "next" control — a separate build.
+     *
+     * Safe because the AMD board sorts BEFORE it cuts (turning_bullish.board:
+     * `hits.sort(key=_key)` then `hits[:limit]`), so a bigger page is more of
+     * the same ranking, not a different one. Where a sort runs AFTER the cut —
+     * the 🪜 band-structure ordering — the board already says out loud that it
+     * ranks the page, and that stays true at 80. */
+    const q = boardQuery({ tab, limit: BOARD_LIMIT, days,
                            universe, themesFirst, pattern,
                            source, minerviniOnly, sort, minTier, gabbarLevel,
                            gabbarTouchingOnly, phase, target, bias, micro,

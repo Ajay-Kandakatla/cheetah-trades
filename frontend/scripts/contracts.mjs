@@ -2660,6 +2660,44 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'the ⌘K ticker ✨ card claims no edge and never says "bounce" (2026-09-18)',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-09-18, verbatim: "can you make global search help find ickers
+    // also directly in the same field". The palette merges pages and tickers;
+    // the ranking is a UX choice, so the card must not dress it as a study.
+    checks(src) {
+      const start = src.indexOf('global-search-tickers');
+      if (start < 0) return ['the global-search-tickers ✨ entry is missing'];
+      const next = src.indexOf("{ id: '", start);
+      const entry = src.slice(start, next > start ? next : undefined);
+      const lq = entry.indexOf('label:');
+      const aq = entry.indexOf(', addedAt', lq);
+      const card = lq < 0 ? entry : entry.slice(lq, aq > lq ? aq : undefined);
+      const errs = [];
+      if (!/same field/i.test(card))
+        errs.push('the card must say the tickers are in the SAME field');
+      if (!/no mode switch/i.test(card))
+        errs.push('the card must say there is no mode switch');
+      if (!/UNLESS one of your pages is named that word/.test(card))
+        errs.push('the card must state the pin block — an exact symbol loses to a page named that word');
+      if (!/never wait|instantly/i.test(card))
+        errs.push('the card must say the pages never wait on the ticker lookup');
+      if (/\bbounce\b/i.test(card))
+        errs.push('house rule: the word is "reversal", never "bounce"');
+      for (const [re, why] of [
+        [/\bbacktest(ed)?\b/i, 'the card claims it was backtested'],
+        [/\bwin rate\b/i, 'the card quotes a win rate'],
+        [/\bhigh[- ]probability\b/i, 'the card claims a probability'],
+        [/\bedge\b(?![^.]{0,30}(is claimed|no edge))/i, 'the card claims an edge'],
+      ]) {
+        if (re.test(card)) errs.push(why);
+      }
+      if (!/no edge is claimed and nothing here is measured/i.test(card))
+        errs.push('the card must say out loud that no edge is claimed and nothing is measured');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
