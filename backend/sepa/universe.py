@@ -146,7 +146,30 @@ UNIVERSE: list[str] = [
     # Small/mid momentum movers (edit freely)
     "RKLB", "ACHR", "JOBY", "SERV", "OKLO", "LUNR", "ASTS", "AEHR", "IONQ",
     "RGTI", "QBTS", "BBAI", "SOUN", "TEM", "HIMS", "DUOL", "RBLX", "DKNG",
-    "SPOT", "RDDT", "APP", "APPN", "PATH", "BILL", "DOCN",
+    # RXT added 2026-09-18 on Ajay's approval ("yes go"). DOCN's closest direct
+    # hosting peer — Rackspace sells the same thing one rung down the stack —
+    # and it was reaching NO index layer: `broad` only, which is not a scanning
+    # universe. Measured that day against production data before it went in:
+    #   companies doc  Rackspace Technology, Inc. / Software - Infrastructure / NMS
+    #   bars           502, first 2024-09-17, last 2026-09-17 (validated by the
+    #                  LAST BAR DATE, never by bar count — the SDIG trap)
+    #   liquidity      $41.06M/day on a 50-bar average
+    #   market cap     $1,876,645,504 (shares_cache) — clears
+    #                  supply_demand.zone_store.MIN_CAP_USD $700M, and 502 bars
+    #                  clear MIN_BARS 120, so it finally gets zone bands. It had
+    #                  ZERO zone_store docs, so it could never alert.
+    #   price          $3.92 — which clears trading.safety_floor.MIN_SHARE_PRICE
+    #                  $2.00 and safety_floor.MIN_CAP_USD $700M. SAY THIS OUT
+    #                  LOUD: adding it here does not just make it visible, it
+    #                  makes it push- and paper-entry eligible through the
+    #                  UNCHANGED gates. No gate is loosened by this line; the
+    #                  population those gates run over grows by one.
+    # It sits with the small/mid movers, not in the `# Software / cloud` group
+    # above — that group is the mega/large-cap software block and this is a
+    # $1.9B, $3.92 name. It is ALSO a `cloud_infra` theme member below, the same
+    # way the crypto names are carried in both places, so a later roster edit
+    # can never silently drop it back out of `full`.
+    "SPOT", "RDDT", "APP", "APPN", "PATH", "BILL", "DOCN", "RXT",
     # Anchor / benchmarks (not traded but used for RS math)
     *RS_ANCHORS,
 ]
@@ -343,6 +366,119 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # data centres are a minority of revenue) and the civil names above.
     "datacenter_build": ["EME", "FIX", "IESC", "STRL", "MTZ", "MYRG", "PRIM",
                          "APG", "FLR", "LGN"],
+    # Cloud infrastructure — the rented capacity, added 2026-09-18 on Ajay's
+    # approval ("yes go") to "create a cloud / SaaS theme so that class can
+    # reach the 🔥 Hot Sectors strip". Before this, NONE of the 16 themes was
+    # cloud/SaaS/devtools and `infosec` was the only software roster at all.
+    #
+    # NAMING GUARD — READ THIS BEFORE EDITING EITHER ROSTER. `ai_infra` below is
+    # the PHYSICAL BOX: racks, cooling, power distribution, transmission gear.
+    # `cloud_infra` is the RENTED CAPACITY that runs on top of it. Two different
+    # businesses on two different cycles; they will be confused within a month
+    # if this paragraph is deleted.
+    #
+    # THE CUT RULE. Re-runnable, so the roster can be argued with instead of
+    # taken on trust. STEPS 1-4 ARE MECHANICAL AND REPRODUCIBLE.
+    # STEP 5 IS JUDGMENT — IT IS MINE, NOT A RULE, AND IT IS LABELLED AS SUCH.
+    #
+    #   1. SOURCE   Mongo `companies` where industry == "Software - Infrastructure"
+    #               — the PROVIDER'S OWN TAG, not my taste and not a list off the
+    #               internet. 106 docs on 2026-09-17.
+    #               db.companies.find({industry:"Software - Infrastructure"},
+    #                                 {symbol:1,_id:0})
+    #   2. PARTITION  drop any ticker already in another THEME_UNIVERSE roster
+    #               (20 names). THEMES ARE A STRICT PARTITION —
+    #               _assert_themes_disjoint() raises at import.
+    #   3. LIVENESS   last cached bar must be the freshest session (2026-09-17).
+    #               VALIDATED BY DATE, NEVER BY BAR COUNT (the SDIG trap — a dead
+    #               ticker keeps its history). Drops 6.
+    #   4. LIQUIDITY  50-bar average dollar volume >= 20_000_000 — reused BY NAME
+    #               from rotation.tracker.build(min_dollar_vol=20_000_000.0),
+    #               the floor the very board this row renders on already applies
+    #               to every sector row. NO price floor is invented here: 26 of
+    #               the 235 existing theme members trade under $10.
+    #               -> 52 names survive steps 1-4.
+    #   5. THESIS (JUDGMENT — 52 -> 18, drops 34). The test, stated so it can be
+    #               argued with: "Is the PRODUCT ITSELF hosted capacity that
+    #               someone else's software or data runs on / is stored in —
+    #               compute, storage, edge/CDN, DNS, database, developer
+    #               platform, application delivery, communications transport?"
+    #               IN by that test even though they are sold as SaaS:
+    #                 DBX, BOX  the product IS the hosted storage tier; the
+    #                           customer's DATA lives in it and is served from
+    #                           it. Who owns the metal underneath is not the test.
+    #                 TDC       a data platform others run workloads on.
+    #                           On-prem-heavy today, which is a DELIVERY-MODEL
+    #                           objection, not a product objection.
+    #                 TWLO,BAND communications transport; the product is the pipe.
+    #               OUT by the same test, and the line that separates them:
+    #                 AVPT      governance/backup TOOLING that manages data
+    #                           living in Microsoft 365. The capacity is
+    #                           Microsoft's; AVPT sells the management layer on
+    #                           top. Compare DBX: the bytes are IN Dropbox. THAT
+    #                           IS THE DISCRIMINATOR.
+    #                 FIVN, APPN, AI, RZLV, ZETA, RAMP, YEXT — applications. The
+    #                           product is the app.
+    #                 payments, telematics, lidar, EDA, IT services, travel GDS
+    #                           — not software capacity.
+    #               Same line `infosec` drew at "pure-play security only" below.
+    #
+    # EXCLUSIONS, recorded so the roster is auditable:
+    #   20 PARTITION HOLDS (they stay where they are, nothing is restructured):
+    #     PANW CRWD ZS S OKTA FTNT TENB QLYS VRNS RPD SAIL NTSK RBRK GEN OSPN
+    #     (infosec) · ARQQ (quantum) · BKKT (crypto) · CORZ CRWV (ai_power) ·
+    #     PATH (robotics).
+    #   MSFT ($13.25B/day), ORCL ($4.50B/day), PLTR ($5.76B/day) — conglomerates
+    #     and application platforms where cloud is a SEGMENT. Same call `space`
+    #     made on LMT/NOC/RTX/BA above. HIS CALL, flagged in the wrap-up.
+    #   SNOW, DDOG, DT, ESTC — the obvious cloud-data/observability names,
+    #     excluded ONLY because the provider files them under
+    #     "Software - Application", which step 1 does not read. HIS CALL.
+    #   PAYMENTS filed under Software-Infrastructure by the provider:
+    #     XYZ TOST FOUR CPAY WEX RELY STNE PAGS PAYO PGY EEFT ACIW FLYW MQ EVTC
+    #     IIIV IMXI PAYS PRTH RPAY PSFE — a fintech index wearing a cloud label.
+    #   NOT HOSTED CAPACITY (step-5 test): AVPT (see the discriminator above) ·
+    #     SNPS (EDA, provider mis-tag) · IOT (telematics) · CALX (broadband
+    #     hardware) · AEVA (lidar) · NN (PNT) · BB (IoT/QNX) · GCT (B2B
+    #     marketplace) · ZETA RAMP (martech) · FIVN (contact-centre SaaS) ·
+    #     APPN (low-code apps) · DOX (telecom BSS) · NTCT (network monitoring) ·
+    #     AI RZLV (AI applications) · BLSH (crypto exchange) · PRGS (mixed
+    #     infrastructure-software portfolio) · SABR (travel GDS) · TCX YEXT
+    #     AIOT CCSI.
+    #   STALE — VALIDATED BY DATE, NOT BAR COUNT: INFQ (last bar 2026-09-11, and
+    #     it carries 144 bars — bar count would have let it in) · XNDU
+    #     (2026-08-25, 104 bars) · LIDR (2026-09-15) · OLB (2026-09-16) · KPLT
+    #     (2026-09-14) · SQ (2026-09-14, superseded by RENAMES["SQ"] -> XYZ).
+    #   BELOW THE $20M/day FLOOR: GRRR 15.0M · MQ 15.4M · EVTC 12.1M · IIIV 8.3M
+    #     · PAYS 8.4M · IMXI 7.5M · CCSI 5.8M · TCX 1.1M · VHC 0.7M, and every
+    #     sub-$1M name (REKR USIO AISP AUID CSAI FATN AIFA AIFC XBP). If the
+    #     floor ever moves, GRRR and MQ come in FIRST — said here so a later
+    #     session does not "discover" them.
+    #   DELISTED, NEVER RE-ADD: CFLT (last bar 2026-03-16) and SMAR
+    #     (2025-01-21) are in sepa.symbols.DELISTED; GREE and SDIG likewise.
+    #     No companies doc at all: WIX FROG PSTG INFA MNDY.
+    #   THE SEVEN HANDED NAMES THAT FAILED THE THESIS TEST: PDYN (robotics) ·
+    #     LIDR (lidar, stale) · ZENA (drones) · OLB (payments, stale) · TLS
+    #     (security — it would belong in infosec) · VERI (AI applications) ·
+    #     GRRR (mixed, and under the floor). BLZE was the one of the eight that
+    #     passed, and it is in.
+    #
+    # NET-NEW TO `full`: RXT and BLZE only — measured 2689 -> 2691 in the api
+    # container. Everything else already reaches `full` via sp1500/russell3000/
+    # curated, which is normal: a theme roster is a MEASUREMENT COHORT for the
+    # rotation board's median, not a coverage mechanism (infosec: 15 of 15
+    # already reach `full`; biotech 31 of 32).
+    #
+    # NO EDGE IS CLAIMED. Sector/industry heat measured NULL for demand
+    # outcomes on 2026-09-09 (-0.57pp, CI spans zero; cold beat hot at 5
+    # sessions). This row is context. It gates nothing and it must never borrow
+    # infosec's +8.00pp morning.
+    #
+    # 18 names leaves 10 of headroom over rotation.tracker.MIN_COHORT_N (8)
+    # before the row prints `· thin`.
+    "cloud_infra": ["NET", "MDB", "NTAP", "TWLO", "AKAM", "DOCN", "FFIV",
+                    "VRSN", "GTLB", "GDDY", "NTNX", "DBX", "BOX", "TDC",
+                    "BAND", "BLZE", "RXT", "ATEN"],
     # Racks, cooling, transmission hardware.
     "ai_infra":  ["VRT", "MOD", "SMCI", "ANET", "ETN", "PWR", "GEV", "NVT",
                   "HUBB", "POWL", "AAON", "CLS", "FLEX",
@@ -441,21 +577,28 @@ THEME_PRIORITY: dict[str, int] = {
     "ai_infra":  9,
     # Right behind the hardware it houses — same build-out, different half.
     "datacenter_build": 10,
-    "defense":   11,
-    "rare_earth": 12,
+    # 2026-09-18 — directly behind datacenter_build because it is the layer the
+    # build-out SELLS: the datacenters get poured and wired, the racks go in,
+    # and this is the capacity rented off them. THE RANK IS MINE, NOT HIS — he
+    # asked for a cloud theme, he did not ask for this placement, exactly as
+    # with semi_materials and datacenter_build. Everything below shifts one
+    # rank; relative order is unchanged.
+    "cloud_infra": 11,
+    "defense":   12,
+    "rare_earth": 13,
     # 2026-09-14 — ahead of crypto, behind the AI build-out. It is an
     # AI-ecosystem story (agent and model security is the new attack surface)
     # but an indirect one, so it does not outrank the hardware.
-    "infosec":   13,
+    "infosec":   14,
     # Last on purpose: it is the only roster here with no AI-ecosystem thesis,
     # and his standing rule puts AI-ecosystem winners on top of every list.
-    "crypto":    14,
+    "crypto":    15,
     # 2026-09-14 — ranked BELOW every AI theme and below crypto, deliberately.
     # It is the one theme here that is not an AI story at all, and his standing
     # rule is that AI-ecosystem winners lead any list. This tag decides which
     # label a name carries when it sits in two themes; it does not decide where
     # a theme ranks on a board — the rotation grain ranks on measured return.
-    "biotech":   15,
+    "biotech":   16,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of
@@ -665,7 +808,7 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     # so there is no lower bound — only an upper one to catch a bad parse.
     "microcap": (0, 2500),        # measured 1278
     "etf": (150, 600),            # measured 373
-    "themes": (20, 300),          # measured 82, hand-curated
+    "themes": (20, 300),          # measured 253 (2026-09-18), hand-curated
     # ZERO IS LEGITIMATE here and nowhere else in this table: on day one nothing
     # has been curated in from the tracked traders, and the default band starts
     # at 1 — which would fail an empty list and log it as a broken parse. The

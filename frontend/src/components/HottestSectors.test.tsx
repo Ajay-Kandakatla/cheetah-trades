@@ -438,3 +438,84 @@ describe('🔥 Hottest — un-hide by reason (2026-09-17)', () => {
     expect(hsChip('room').textContent).toBe('1 room < 5%');
   });
 });
+
+/* ------------------------------------------------------------------------ *
+ * cloud_infra — the 17th theme, 2026-09-18. Ajay: "yes go".                  *
+ * ------------------------------------------------------------------------ */
+const THEME_PAYLOAD = {
+  ...PAYLOAD,
+  themes: [
+    {
+      group: 'cloud_infra', n_full: 18, ranked: true, thin: false,
+      basis: 'full membership',
+      rel_1d: 0.41, rel_5d: 2.2, rel_21d: 3.6,
+      names: [NOFUND], names_total: 18,
+    },
+  ],
+};
+
+describe('HottestSectors — the cloud_infra row', () => {
+  afterEach(() => { vi.unstubAllGlobals(); _resetSignalWatchlist(); });
+
+  it('renders the cloud_infra row with its readable label', async () => {
+    stub(THEME_PAYLOAD);
+    view();
+    /* THEME_LABELS falls back to the RAW key, underscore and all — so a theme
+     * with no entry prints "cloud_infra" on a board he reads. */
+    expect(await screen.findByRole('button', { name: /Cloud infra/ })).toBeTruthy();
+    expect(screen.queryByText('cloud_infra')).toBeNull();
+  });
+
+  it('NEGATIVE: an 18-name roster is not flagged thin', async () => {
+    stub(THEME_PAYLOAD);
+    view();
+    const btn = await screen.findByRole('button', { name: /Cloud infra/ });
+    const row = btn.closest('tr') as HTMLElement;
+    expect(within(row).getByText('18')).toBeTruthy();
+    expect(row.textContent).not.toMatch(/· thin/);
+  });
+
+  it('NEGATIVE: a roster that IS thin still says so — the MIN_COHORT_N boundary', async () => {
+    stub({
+      ...PAYLOAD,
+      themes: [{ ...THEME_PAYLOAD.themes[0], n_full: 7, thin: true, names_total: 7 }],
+    });
+    view();
+    const btn = await screen.findByRole('button', { name: /Cloud infra/ });
+    const row = btn.closest('tr') as HTMLElement;
+    expect(row.textContent).toMatch(/· thin/);
+  });
+
+  it('NEGATIVE: an unlabelled theme still renders rather than vanishing', async () => {
+    stub({
+      ...PAYLOAD,
+      themes: [{ ...THEME_PAYLOAD.themes[0], group: 'some_new_theme' }],
+    });
+    view();
+    /* The `|| t.group` fallback is what stops a future theme being invisible
+     * on this board. It prints the raw key; that is ugly, not broken. */
+    expect(await screen.findByRole('button', { name: /some_new_theme/ })).toBeTruthy();
+  });
+});
+
+describe('the ✨ highlight copy for cloud_infra', () => {
+  it('NEGATIVE: does not claim the two new names are inert', async () => {
+    const { NEW_FEATURES } = await import('../lib/newFeatures');
+    const e = NEW_FEATURES.find((f) => f.id === 'cloud-infra-theme-2026-09-18');
+    expect(e).toBeTruthy();
+    const body = e!.label;
+    /* The two net-new names ARE push- and paper-entry eligible. An earlier
+     * draft said the whole change "enters no lane", which was false about
+     * them — that claim is true of the ROW only. */
+    expect(body).toMatch(/RXT/);
+    expect(body).toMatch(/BLZE/);
+    expect(body).not.toMatch(/enters no lane[^.]*RXT|RXT[^.]*enters no lane/);
+    expect(body).toMatch(/no gate was loosened/i);
+    expect(body).toMatch(/never been measured/i);
+    /* "reversal", never "bounce", on a surface he reads. */
+    expect(body).not.toMatch(/bounce/i);
+    expect(e!.addedAt).toBe('2026-09-18');
+    expect(Number.isNaN(Date.parse(e!.addedAt))).toBe(false);
+    expect(NEW_FEATURES.filter((f) => f.id === e!.id).length).toBe(1);
+  });
+});

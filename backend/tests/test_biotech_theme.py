@@ -67,7 +67,12 @@ def test_NEGATIVE_a_name_too_thin_to_move_a_median_stays_out():
 def test_priority_ranks_biotech_below_every_ai_theme():
     """His standing rule: AI-ecosystem winners lead any list. Biotech is the
     one theme here with no AI story at all, so it must not outrank them."""
-    assert THEME_PRIORITY["biotech"] == 15
+    # The INTENT is "biotech ranks LAST", not "biotech is rank 15". This was a
+    # hardcoded `== 15` until 2026-09-18, when inserting `cloud_infra` at rank
+    # 11 shifted biotech to 16 and reddened this test for no behavioural
+    # reason. Asserting the intent means the NEXT theme insert cannot re-break
+    # it — and it still fails loudly if something is ever ranked below biotech.
+    assert THEME_PRIORITY["biotech"] == max(THEME_PRIORITY.values())
     for ai in ("ai_semis", "ai_power", "ai_infra", "semi_materials",
                "optical", "datacenter_build", "nuclear", "infosec"):
         assert THEME_PRIORITY[ai] < THEME_PRIORITY["biotech"], (

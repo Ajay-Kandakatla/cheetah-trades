@@ -133,7 +133,17 @@ def test_priority_is_the_order_ajay_asked_for():
     assert order == ["space", "quantum", "ai_semis", "semi_materials",
                      "ai_power", "nuclear",
                      "energy", "optical", "robotics", "ai_infra",
-                     "datacenter_build", "defense", "rare_earth",
+                     "datacenter_build",
+                     # cloud_infra inserted 2026-09-18, directly BEHIND
+                     # datacenter_build. He asked for a cloud theme; he did NOT
+                     # ask for this rank — the placement is mine, same as
+                     # semi_materials and datacenter_build. It goes after
+                     # because it is the layer the build-out sells: the sites
+                     # get poured and wired, the racks go in, and this is the
+                     # capacity rented off them. Everything below shifted one
+                     # rank; relative order is unchanged.
+                     "cloud_infra",
+                     "defense", "rare_earth",
                      # 2026-09-14 — an AI-ecosystem story (agent and model
                      # security is the new attack surface) but an indirect one,
                      # so it sits behind the hardware and ahead of crypto.

@@ -77,6 +77,49 @@ A theme with no priority entry sorts at `UNKNOWN_THEME_RANK` (50) — behind eve
 ranked theme, still ahead of every untagged name. Adding a roster and forgetting
 the priority entry degrades; it does not hide the names.
 
+## `cloud_infra` — the 17th roster (2026-09-18)
+
+> Ajay, approving with *"yes go"*: *"Create a cloud / SaaS theme so that class
+> can reach the 🔥 Hot Sectors strip."*
+
+Until this, **none** of the 16 rosters was cloud, SaaS or devtools — `infosec`
+was the only software roster at all, so a cloud rotation could only show up
+diluted inside the 305-name `Technology` sector row.
+
+**Rank 11, directly behind `datacenter_build` (10).** It is the layer the
+build-out *sells*: the sites get poured and wired, the racks go in, and this is
+the capacity rented off them. **The rank is mine, not his** — the same situation
+as `semi_materials` and `datacenter_build`. Everything below shifts one rank and
+relative order is unchanged: `defense 12, rare_earth 13, infosec 14, crypto 15,
+biotech 16`.
+
+The current full ordering lives in `THEME_PRIORITY` and is pinned by
+`backend/tests/test_theme_priority.py::test_priority_is_the_order_ajay_asked_for`
+— read it there, not from the 2026-08 snapshot table above, which predates
+`semi_materials`, `datacenter_build`, `defense`, `rare_earth`, `infosec`,
+`crypto`, `biotech` and this roster.
+
+**`ai_infra` vs `cloud_infra`, so the two are never confused:** `ai_infra` is the
+PHYSICAL BOX — racks, cooling, power distribution, transmission gear.
+`cloud_infra` is the RENTED CAPACITY running on top of it. Different businesses,
+different cycles.
+
+**Roster (18):** NET · MDB · NTAP · TWLO · AKAM · DOCN · FFIV · VRSN · GTLB ·
+GDDY · NTNX · DBX · BOX · TDC · BAND · BLZE · RXT · ATEN.
+
+Derivation, exclusions and the measured numbers: **`docs/sepa/universe_cloud_infra.md`**.
+Tests: `backend/tests/test_cloud_infra_theme.py`.
+
+Frontend label: `HottestSectors.tsx THEME_LABELS.cloud_infra = 'Cloud infra'`.
+The 🔥 Hot Sectors strip (`HotSectors.tsx`) has **no** label map and prints the
+raw key — `cloud_infra` shows there with the underscore, exactly as `infosec`,
+`crypto` and `biotech` do today. That is precedent, not a regression, and
+labelling that surface is a separate call (it would re-label 12 existing chips).
+
+**No edge is claimed.** Sector/industry heat measured **null** against demand
+outcomes on 2026-09-09 (−0.57pp, CI spans zero; the cold cohort won at 5
+sessions). The row is context.
+
 ## Roster construction
 
 Every ticker was probed against our own price feed (260 daily bars + 50-day

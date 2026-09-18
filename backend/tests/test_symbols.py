@@ -335,6 +335,86 @@ def test_the_iac_case_resolves_to_ppli():
     assert S.former_names("PPLI") == ["IAC"]
 
 
+# ---------------------------------------------------------------------------
+# 2026-09-18 — ZI -> GTM (ZoomInfo). The FIRST entry whose boundary-bar check
+# could not be run, and the first that is pure prophylaxis: ZI is in no
+# universe component, has no companies doc and no bars at either provider.
+# ---------------------------------------------------------------------------
+def test_the_zi_case_resolves_to_gtm():
+    assert S.resolve("ZI") == "GTM"
+    assert S.former_names("GTM") == ["ZI"]
+    assert S.resolve("ZI") == S.resolve(S.resolve("ZI")), "resolve must be idempotent"
+    assert S.resolve("  zi  ") == "GTM", "whitespace and case must resolve too"
+    assert S.rename_of("ZI")["to"] == "GTM"
+
+
+def test_NEGATIVE_the_zi_rename_creates_no_duplicate_when_GTM_is_already_present():
+    """GTM is ALREADY in russell3000/sp1500/sp600, so this entry is a healing
+    map, not coverage. _resolve_fates dedupes via `seen` — the IAC/PPLI case
+    its docstring cites. Order-stable in both directions, neighbours untouched."""
+    from sepa import universe as U
+    assert U._resolve_fates(["GTM", "ZI", "NVDA"]) == ["GTM", "NVDA"]
+    assert U._resolve_fates(["ZI", "GTM", "NVDA"]) == ["GTM", "NVDA"]
+
+
+def test_NEGATIVE_ZI_is_not_delisted_and_GTM_is_not_delisted():
+    """A rename is not a delisting. Flagging either would make a live company
+    read 'delisted or acquired' on the detail page — the original SATS bug."""
+    assert not S.is_delisted("ZI")
+    assert not S.is_delisted("GTM")
+
+
+def test_the_zi_effective_date_is_the_first_GTM_print_not_a_listing_date():
+    """NEGATIVE, and the test the regex check below CANNOT be.
+
+    `effective` is defined at the top of symbols.py as the first session that
+    PRINTS under the new symbol. Measured 2026-09-18 in the api container, same
+    collection, same day:
+
+        GTM   339 bars   first 2025-05-13
+        RXT   502 bars   first 2024-09-17
+        BLZE  503 bars   first 2024-09-16
+        NET / ECHO / XYZ / PPLI   503 bars   first 2024-09-16
+
+    The cache window reaches 2024-09-16 for every comparison name, so GTM's
+    series starting 2025-05-13 is EIGHT MONTHS INSIDE the window with nothing
+    before it — that is a first print, not a window edge.
+
+    A provider `list_date` for a renamed security is the ORIGINAL listing date
+    (the Massive reference returns 2020-06-04 for GTM, ZoomInfo's IPO) and must
+    NEVER be written here: main.py renders this string to Ajay verbatim as
+    "ZI now trades as GTM (since ...)", and the regex check only proves it is
+    shaped like a date."""
+    new, effective, _why = S.RENAMES["ZI"]
+    assert new == "GTM"
+    assert effective == "2025-05-13"
+    assert effective > "2024-09-16", "that is the cache window start, not a changeover"
+    assert effective != "2020-06-04", "that is the reference list_date — the IPO"
+    assert effective < "2026-09-17", "a changeover cannot be in the future"
+
+
+def test_the_zi_entry_declares_its_price_fetch_cost():
+    """SOURCE GUARD + behaviour. former_names('GTM') == ['ZI'] makes
+    prices._fetch spend one dead Massive miss plus one dead yfinance call per
+    UNCACHED GTM load (CACHE_TTL_SEC is 20h, so ~1/day, plus the three
+    force=True callers). Nothing crashes — splice_history returns the new frame
+    on an empty old — but nobody may later call this entry free."""
+    why = S.RENAMES["ZI"][2]
+    assert "prices.py" in why
+    assert "yfinance" in why
+    assert S.former_names("GTM") == ["ZI"], "the extra fetch is real and known"
+
+
+def test_the_zi_entry_says_out_loud_that_it_is_prophylactic():
+    """SOURCE GUARD. Half the file's evidence convention could not be run, so
+    the entry has to say which half and why it was accepted anyway."""
+    why = S.RENAMES["ZI"][2]
+    assert "NOT_FOUND" in why
+    assert "PARTIAL EVIDENCE" in why
+    assert "no ZI series" in why
+    assert "Prophylactic" in why
+
+
 def test_every_rename_entry_carries_evidence():
     """A RENAMES entry without evidence is a guess, and a wrong guess splices
     another company's history into a chart real money is sized against."""

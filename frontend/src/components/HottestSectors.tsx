@@ -127,6 +127,7 @@ export const THEME_LABELS: Record<string, string> = {
   ai_power: 'AI power',
   ai_infra: 'AI infra',
   datacenter_build: 'Datacenter build',
+  cloud_infra: 'Cloud infra',
   optical: 'Optical',
   robotics: 'Robotics',
   nuclear: 'Nuclear',

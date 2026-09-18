@@ -67,6 +67,30 @@ RENAMES: dict[str, tuple[str, str, str]] = {
             "+1.1% overnight, no split. Massive reference 2026-08-25: PPLI "
             "active on XNAS as 'People Incorporated Common Stock'; IAC "
             "NOT_FOUND."),
+    # The FIRST entry in this file whose boundary-bar check could not be run.
+    # Read the PARTIAL EVIDENCE sentence before copying this shape.
+    "ZI": ("GTM", "2025-05-13",
+           "ZoomInfo Technologies. EFFECTIVE DATE SOURCE: our own price_cache, "
+           "NOT a provider list_date. The 2y window reaches 2024-09-16 for "
+           "every comparison name (NET/ECHO/XYZ/PPLI all 503 bars from "
+           "2024-09-16) and GTM's series starts 2025-05-13 with nothing before "
+           "it — eight months INSIDE the window, so that is the first session "
+           "printing under GTM, not a window edge. Massive reference "
+           "2026-09-18: GTM active on XNAS as 'ZoomInfo Technologies Inc "
+           "Common Stock'; ZI NOT_FOUND. Its list_date 2020-06-04 is "
+           "ZoomInfo's ORIGINAL IPO and was deliberately NOT written here — a "
+           "reference list_date for a renamed security is the old listing, and "
+           "main.py renders `effective` to Ajay verbatim. PARTIAL EVIDENCE: "
+           "the usual boundary check (last ZI bar, consecutive session, "
+           "continuous price) COULD NOT BE RUN — there is no ZI series at "
+           "either provider and no ZI companies doc. Prophylactic: ZI is in no "
+           "universe component today, so this heals nothing yet. COST: "
+           "former_names('GTM') now returns ['ZI'], so prices._fetch spends "
+           "one dead Massive miss plus one dead yfinance call per UNCACHED GTM "
+           "load — see sepa/prices.py _fetch and _fetch_one. CACHE_TTL_SEC is "
+           "20h, so that is roughly one wasted pair per day, not per scan, "
+           "plus the three force=True callers. splice_history returns the new "
+           "frame on an empty old, so nothing crashes and nothing corrupts."),
 }
 
 # Reverse index, built once. A current symbol can have more than one former name

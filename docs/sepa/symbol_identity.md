@@ -87,6 +87,43 @@ not symmetric.
 
 Every entry carries the boundary bars that were checked.
 
+#### The one entry whose boundary bars could NOT be checked — `ZI → GTM` (2026-09-18)
+
+| From | To | `effective` | Boundary bars |
+|---|---|---|---|
+| `ZI` | `GTM` (ZoomInfo Technologies) | `2025-05-13` | **not producible** |
+
+`ZI` has no series at either provider, no `companies` doc and is in no universe
+component — so the usual check (last old bar, consecutive session, continuous
+price) has nothing to run against. The entry ships anyway, as prophylaxis, with
+**`PARTIAL EVIDENCE` written into the evidence string** so no later reader
+mistakes it for a fully-verified entry. It is the only one of its kind in the
+file; treat it as the exception, not the new shape.
+
+**Where the date came from, since it could not come from a boundary.** Our own
+`price_cache`, same collection, same day: the 2-year window reaches
+**2024-09-16** for every comparison name (`NET` / `ECHO` / `XYZ` / `PPLI` all
+503 bars from 2024-09-16), and `GTM`'s series starts **2025-05-13** with nothing
+before it — eight months *inside* the window, so that is a first print rather
+than a window edge.
+
+**A provider `list_date` must NEVER be written into `effective`.** The Massive
+reference returns `list_date 2020-06-04` for `GTM` — ZoomInfo's **original IPO**,
+not the changeover. `effective` is rendered to Ajay verbatim ("ZI now trades as
+GTM (since …)"), and `test_every_rename_entry_carries_evidence` only checks the
+string is shaped like a date, so a wrong one would pass green.
+`test_the_zi_effective_date_is_the_first_GTM_print_not_a_listing_date` is the
+test that regex cannot be.
+
+**It costs something.** `former_names("GTM") == ["ZI"]` makes `prices._fetch`
+spend one dead Massive miss plus one dead yfinance call per **uncached** GTM
+load — `CACHE_TTL_SEC` is 20h, so ~1/day, plus the three `force=True` callers.
+Nothing crashes (`splice_history` returns the new frame on an empty old); it is
+pure waste, and the evidence string says so.
+
+Reference lookup, 2026-09-18: `ZI` → HTTP 404 `NOT_FOUND`; `GTM` → HTTP 200,
+active on XNAS as "ZoomInfo Technologies Inc Common Stock".
+
 ### The splice, and when it refuses
 
 Massive only carries ~37 bars under `ECHO`. A 200-day moving average needs 200,
