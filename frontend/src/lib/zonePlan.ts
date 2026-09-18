@@ -442,19 +442,48 @@ export function layoutLabels(
     y < top || y > bottom || placed.some((p) => Math.abs(p.y - y) < minGap);
 
   const reach = Number.isFinite(bottom) ? Math.max(maxShift, bottom - top) : maxShift * 20;
+
+  /** Which way to step a displaced label FIRST.
+   *
+   *  Always stepping down (+shift) inverted the price order whenever two
+   *  levels were close enough to collide. SOFI 2026-09-17: support 16.72 and
+   *  the live print 16.74 are two cents apart, so they clash; support placed
+   *  first, `now` searched downward first, and the chart printed
+   *  `support 16.72` ABOVE `now 16.74` — the higher price rendered lower, and
+   *  Ajay read the gutter as inverted ("I have over head below the support").
+   *  The levels were right; the column lied about their order.
+   *
+   *  So step AWAY from the neighbour we clash with: a label whose true spot is
+   *  above its neighbour moves further up, one below moves further down. The
+   *  gutter then keeps price order even after de-collision. */
+  const upFirst = (yTrue: number): boolean => {
+    let nearest: LabelItem | null = null;
+    let best = Infinity;
+    for (const p of placed) {
+      const d = Math.abs(p.y - yTrue);
+      if (d < best) { best = d; nearest = p; }
+    }
+    return nearest != null && yTrue <= nearest.y;
+  };
+
   for (const item of ordered) {
     let y: number | null = null;
+    const up = upFirst(item.y);
     for (let shift = 0; shift <= maxShift; shift += 1) {
-      if (!clashes(item.y + shift)) { y = item.y + shift; break; }
-      if (shift && !clashes(item.y - shift)) { y = item.y - shift; break; }
+      const first = up ? item.y - shift : item.y + shift;
+      const second = up ? item.y + shift : item.y - shift;
+      if (!clashes(first)) { y = first; break; }
+      if (shift && !clashes(second)) { y = second; break; }
     }
     if (y == null && item.priority >= 2) {
       // The plan is never dropped — and since 2026-09-08 never printed on top
       // of another label either: keep looking, as far as the drawing bounds
       // allow, and let the pointer (y0 → y) say where the level really is.
       for (let shift = maxShift + 1; shift <= reach; shift += 1) {
-        if (!clashes(item.y + shift)) { y = item.y + shift; break; }
-        if (!clashes(item.y - shift)) { y = item.y - shift; break; }
+        const first = up ? item.y - shift : item.y + shift;
+        const second = up ? item.y + shift : item.y - shift;
+        if (!clashes(first)) { y = first; break; }
+        if (!clashes(second)) { y = second; break; }
       }
     }
     if (y == null) {

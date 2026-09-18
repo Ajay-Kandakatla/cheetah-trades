@@ -509,3 +509,87 @@ describe('oneRCeiling + thin-band plan line', () => {
     expect(planLine(qbts, true)).not.toContain('Buy');
   });
 });
+
+/* ── the gutter must keep PRICE order (SOFI, 2026-09-17) ────────────────────
+ *
+ * Ajay: "How is this possible with SOFI I have over head below the support.
+ * Anything wrong with our calculation?" — the levels were right (support band
+ * 16.48-16.72, overhead band 16.80-17.08, live print 16.74 in the 8c gap). The
+ * COLUMN was wrong: support and the now-line are two cents apart, so they
+ * collided, and layoutLabels always stepped a displaced label DOWN, printing
+ * `support 16.72` above `now 16.74`.
+ */
+describe('layoutLabels keeps price order when labels collide', () => {
+  // y grows DOWNWARD, so a higher price is a SMALLER y.
+  const yOf = (price: number) => (17.2 - price) * 200;   // ~2c => 4px apart
+
+  it('SOFI: now 16.74 stays above support 16.72 after de-collision', () => {
+    const out = layoutLabels([
+      { y: yOf(16.80), text: 'overhead 16.8', color: '#a', priority: 2 },
+      { y: yOf(16.72), text: 'support 16.72', color: '#b', priority: 2 },
+      { y: yOf(16.74), text: 'now 16.74', color: '#c', priority: 3 },
+    ], { minGap: 11, top: 6, bottom: 400, maxShift: 22 });
+
+    const at = (t: string) => out.find((l) => l.text.startsWith(t))!;
+    expect(at('overhead').y).toBeLessThan(at('now').y);
+    expect(at('now').y).toBeLessThan(at('support').y);
+    // and nothing overlaps
+    const ys = out.map((l) => l.y).sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(11);
+  });
+
+  it('holds the order whichever label the priorities place first', () => {
+    // The same three levels with the now-line as the LOSER, and enough room
+    // for all three (bands 0.08 apart => 16px, which cannot hold three labels
+    // at an 11px gap; at 0.20 apart it can, and then order must survive).
+    const wide = (price: number) => (17.6 - price) * 200;
+    const out = layoutLabels([
+      { y: wide(17.00), text: 'overhead', color: '#a', priority: 3 },
+      { y: wide(16.60), text: 'support', color: '#b', priority: 3 },
+      { y: wide(16.80), text: 'now', color: '#c', priority: 1 },
+    ], { minGap: 11, top: 6, bottom: 400, maxShift: 22 });
+    const at = (t: string) => out.find((l) => l.text === t)!;
+    expect(at('overhead').y).toBeLessThan(at('now').y);
+    expect(at('now').y).toBeLessThan(at('support').y);
+  });
+
+  it('when three labels cannot fit, it never overlaps them (order may give)', () => {
+    // The honest limit: 16px of room, an 11px minimum gap, three labels. One
+    // must travel outside the pair. Overlap is the thing that must never
+    // happen — pinning a label on top of another is the 2026-09-08 bug.
+    const out = layoutLabels([
+      { y: yOf(16.80), text: 'overhead', color: '#a', priority: 3 },
+      { y: yOf(16.72), text: 'support', color: '#b', priority: 3 },
+      { y: yOf(16.74), text: 'now', color: '#c', priority: 1 },
+    ], { minGap: 11, top: 6, bottom: 400, maxShift: 22 });
+    const ys = out.map((l) => l.y).sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(11);
+  });
+
+  it('NEGATIVE: a lone label is never moved', () => {
+    const out = layoutLabels([{ y: 120, text: 'only', color: '#a', priority: 2 }],
+                             { minGap: 11, top: 6, bottom: 400, maxShift: 22 });
+    expect(out[0].y).toBe(120);
+  });
+
+  it('NEGATIVE: three prices far apart keep their exact positions', () => {
+    // all inside the drawing bounds — yOf(18.0) would be negative and the
+    // top clamp, not the collision logic, would move it
+    const items = [
+      { y: yOf(17.0), text: 'a', color: '#a', priority: 2 },
+      { y: yOf(16.5), text: 'b', color: '#b', priority: 2 },
+      { y: yOf(16.0), text: 'c', color: '#c', priority: 2 },
+    ];
+    const out = layoutLabels(items, { minGap: 11, top: 6, bottom: 400, maxShift: 22 });
+    for (const it of items) expect(out.find((l) => l.text === it.text)!.y).toBe(it.y);
+  });
+
+  it('NEGATIVE: a dense cluster still emits no overlapping pair', () => {
+    const items = Array.from({ length: 8 }, (_, i) => ({
+      y: yOf(16.70 + i * 0.01), text: `L${i}`, color: '#a', priority: 2,
+    }));
+    const out = layoutLabels(items, { minGap: 11, top: 6, bottom: 400, maxShift: 22 });
+    const ys = out.map((l) => l.y).sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(11);
+  });
+});
