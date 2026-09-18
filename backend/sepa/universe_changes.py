@@ -42,7 +42,11 @@ log = logging.getLogger("sepa.universe_changes")
 
 # Indices we track membership for. Keyed by the same names universe.py caches
 # under, so `last_source()` and the count gates line up.
-TRACKED = ("sp500", "sp400", "sp600", "nasdaq100", "russell1000", "russell3000")
+# russell2000 is LAST deliberately: it is DERIVED from russell1000 and
+# russell3000 (FTSE's own definition), so both parents must have been refreshed
+# in this run before it is asked for. Ajay 2026-09-18: "Yes add it."
+TRACKED = ("sp500", "sp400", "sp600", "nasdaq100", "russell1000", "russell3000",
+           "russell2000")
 
 # A diff bigger than this share of the list means the SOURCE changed shape
 # (a renamed column, a truncated parse), not that the index reconstituted.
@@ -67,6 +71,7 @@ def _fetchers() -> dict:
         "nasdaq100": U.fetch_nasdaq100,
         "russell1000": U.fetch_russell1000,
         "russell3000": U.fetch_russell3000,
+        "russell2000": U.fetch_russell2000,
     }
 
 
@@ -128,6 +133,39 @@ def _latest_snapshot(db, name: str) -> Optional[dict]:
         return None
 
 
+def _construction(source) -> str:
+    """How the list was BUILT, not which mirror served it.
+
+    Two sources in the same class describe the same membership, so a diff
+    between them is a real corporate event. A class change means the list
+    itself was rebuilt on a different basis, and the delta is an artefact of
+    that rebuild — the case the re-baseline exists for.
+
+      published — the interchangeable mirrors of one published list
+                  (wikipedia / datahub / the cache holding either)
+      src:<x>   — every other source stands alone, because a flip into or out
+                  of it changes the list's VINTAGE or its BASIS, not just who
+                  served it
+    """
+    src = str(source or "")
+    # The ONLY sources that are interchangeable views of the SAME published
+    # membership. Wikipedia and datahub both carry the full S&P/Nasdaq lists,
+    # and `cache` is whichever of them last answered — so a flip among these is
+    # a mirror change and any diff across it is a REAL corporate event.
+    #
+    # Everything else is its own class on purpose:
+    #   ishares-local vs ishares-network — the same product at different
+    #     VINTAGES. The local russell3000 xls resolves 2,559 names; a fresh
+    #     network pull would be ~3,000, so that flip alone would publish ~440
+    #     additions that never happened.
+    #   derived-r3000-minus-r1000 vs ishares-local — a subtraction becoming a
+    #     real list the day an IWM export lands. A file copy, not 410 events.
+    #   curated / empty — the wrong universe, or none. Never a membership claim.
+    if src in ("wikipedia", "datahub", "cache", "stale-cache"):
+        return "published"
+    return "src:" + src
+
+
 def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
     """Refetch one index, diff it against the last snapshot, persist both."""
     fetchers = _fetchers()
@@ -164,13 +202,62 @@ def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
     d = diff_lists((prev or {}).get("symbols") or [], syms)
     sane = is_sane_churn(d)
 
+    # THE SOURCE-FLIP RE-BASELINE.
+    # The day Ajay drops an iShares IWM export on disk, russell2000 stops being
+    # a 1,560-name derivation and becomes a ~1,970-name real list. That churn
+    # is well inside the sane window (max(8, 1560*0.35) = 546), so without this
+    # guard the change log would publish "410 additions to the Russell 2000" —
+    # a fabricated corporate event produced by a file copy. Same for a fresh
+    # IWV lifting russell3000. The previous snapshot already stores `source`,
+    # so the guard needs no new field and no new number: when the SOURCE
+    # changes, the new list is the new BASELINE, not a membership change.
+    # NARROWED 2026-09-18, before ship. The guard above is right about a
+    # DERIVATION becoming a real export. It was wrong to fire on every source
+    # string change, because most flips are the same index arriving from a
+    # different MIRROR, not a different list: sp500's ladder is
+    # wikipedia -> datahub and the module already documents Wikipedia 403-ing
+    # for weeks at a time. On any week the winning loader changed, a genuine
+    # S&P addition was zeroed out of the log Ajay reads for corporate events.
+    #
+    # So re-baseline on a change of CONSTRUCTION, not of mirror. Same class in,
+    # same class out -> the diff is real and gets published.
+    prev_source = (prev or {}).get("source")
+    rebaselined = bool(prev is not None
+                       and _construction(prev_source) != _construction(source))
+
+    # A DERIVED list's diff cannot name the parent that moved. `CBC`/`FRMI`
+    # prove the two iShares exports are already out of step, so an attribution
+    # built on them would be confidently wrong some of the time. We say so on
+    # the row instead of guessing.
+    cov = None
+    if name == "russell2000":                      # ONE call, never per-branch
+        try:
+            cov = U.russell2000_coverage()
+        except Exception as exc:                   # noqa: BLE001
+            log.warning("universe-changes: russell2000 coverage failed: %s", exc)
+    attributable = True if cov is None else bool(cov.get("attributable"))
+
     out = {
         "index": name, "ok": True, "source": source,
         "provenance_known": provenance_known,
         "n": len(syms), "first_snapshot": prev is None,
         "sane": sane, **d,
         "previous_taken_at": (prev or {}).get("taken_at"),
+        "complete": True if cov is None else bool(cov.get("complete")),
+        "attributable": attributable,
+        "coverage": cov,
     }
+    if rebaselined:
+        # The raw diff is reported under a key whose NAME says it was not
+        # published, so nobody downstream reads it as a change.
+        out["rebaselined"] = True
+        out["raw_diff_not_published"] = {"added": len(d["added"]),
+                                         "removed": len(d["removed"])}
+        out["added"], out["removed"] = [], []
+        out["reason"] = (f"source changed ({prev_source} -> {source}) — "
+                         f"re-baselined, no membership change published")
+    else:
+        out["rebaselined"] = False
 
     if db is None:
         return out
@@ -191,15 +278,43 @@ def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
         # parse would otherwise be published as "488 companies left the S&P
         # 500" — the change log is the thing Ajay actually reads, so a bad
         # parse must not reach it either.
-        if sane and (d["added"] or d["removed"]) and not out["first_snapshot"]:
-            db.universe_changes.insert_one({
+        if (sane and (d["added"] or d["removed"]) and not out["first_snapshot"]
+                and not rebaselined):
+            row = {
                 "index": name, "detected_at": now, "date": date.today().isoformat(),
                 "added": d["added"], "removed": d["removed"],
                 "n_before": d["n_before"], "n_after": d["n_after"],
                 "sane": sane, "source": src.get("source"),
-            })
+                "attributable": attributable,
+            }
+            if not attributable:
+                row["attribution_note"] = (
+                    "Derived list (russell3000 minus russell1000). A name "
+                    "leaving may have entered the Russell 1000 or may only "
+                    "have moved in one parent export; this diff cannot tell "
+                    "which.")
+                row["derived_from"] = (cov or {}).get("derived_from")
+            db.universe_changes.insert_one(row)
     except Exception as exc:
         log.warning("universe-changes: persist failed for %s: %s", name, exc)
+    return out
+
+
+def tracked_coverage() -> dict:
+    """``{index: coverage-dict}`` for every tracked index that has to qualify
+    its own list. Only ``russell2000`` does today — it is DERIVED and short of
+    the real index, and a reader quoting it needs both facts.
+
+    Never raises: a broken universe module returns ``{}`` so ``/universe/changes``
+    still answers.
+    """
+    out: dict = {}
+    try:
+        from sepa import universe as U
+        out["russell2000"] = U.russell2000_coverage()
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("universe-changes: tracked_coverage failed: %s", exc)
+        return {}
     return out
 
 

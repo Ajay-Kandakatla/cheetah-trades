@@ -972,18 +972,25 @@ async def health() -> dict:
 async def universe_changes(days: int = Query(90, ge=1, le=730),
                            limit: int = Query(50, ge=1, le=200)) -> dict:
     """Recent index membership changes — who joined or left the S&P 500 / 400 /
-    600, the Nasdaq-100, and the Russell 1000 / 3000.
+    600, the Nasdaq-100, and the Russell 1000 / 2000 / 3000.
 
     Ajay 2026-08-16: "Latest tickers as they change like getting added to SP 500
     or Russel 3000 and Nasdaq." Written by the Sunday `sepa.universe_changes`
     cron; this only reads. An index add is a liquidity event (forced index-fund
-    buying), NOT a setup — see docs/sepa/universe_changes.md."""
+    buying), NOT a setup — see docs/sepa/universe_changes.md.
+
+    russell2000 is DERIVED (Russell 3000 minus Russell 1000), is short of the
+    full index, and its diffs cannot be attributed to a parent — read
+    `coverage.russell2000` before quoting it."""
     from sepa import universe_changes as uc
     d = days if isinstance(days, int) else 90
     n = limit if isinstance(limit, int) else 50
     rows = await asyncio.to_thread(uc.recent, d, n)
+    cov = await asyncio.to_thread(uc.tracked_coverage)
     return {"days": d, "n": len(rows), "changes": rows,
-            "tracked": list(uc.TRACKED)}
+            "tracked": list(uc.TRACKED),
+            "tracked_labels": {k: (v or {}).get("label") for k, v in cov.items()},
+            "coverage": cov}
 
 
 @app.get("/health/engine")

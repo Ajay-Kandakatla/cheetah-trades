@@ -18,7 +18,7 @@
  * heat or traction — two definitions on two surfaces is how the strip and this
  * board would start disagreeing.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
@@ -50,6 +50,17 @@ export type HsD1 = {
   group_basis?: HsD1Source;
   /** Plain-English why, when the board is NOT live. Must reach the screen. */
   reason?: string | null; note?: string | null;
+  /** WHY a re-scan cannot help: the market calendar's own reason (weekend /
+   *  holiday YYYY-MM-DD), or null on a trading day. Backend-owned, so nothing
+   *  here ever string-matches prose to decide the tape is shut. */
+  market_closed?: string | null;
+  /** Is the REGULAR session open (supply_demand.bounce_room.in_session)?
+   *  `null` when the clock could not be asked — the button then behaves as it
+   *  did before this existed rather than guessing. */
+  in_session?: boolean | null;
+  /** "9:30-16:00 ET", rendered from the constants that enforce it — never a
+   *  clock retyped on this surface. */
+  session_window?: string | null;
 };
 /** The two day-leg fields every row carries since 2026-09-16: the snapshot
  *  value is kept whatever the live read did, and the row says which it shows. */
@@ -240,6 +251,47 @@ export function asOfLine(d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | nul
   return `every column is from the ${day} close — the last finished session, not today's${why}`;
 }
 
+/** Why a ↻ Re-scan cannot help right now, or null when it can.
+ *
+ *  The calendar's reason is the BACKEND's own sentence, never composed here —
+ *  two surfaces wording the same fact differently is how a board starts
+ *  disagreeing with itself. */
+export function rescanBlockedReason(d?: Pick<HsPayload, 'd1'> | null): string | null {
+  const c = d?.d1?.market_closed;
+  return typeof c === 'string' && c.trim() ? `the market is closed (${c.trim()})` : null;
+}
+
+/** Open tape, but outside the regular session: a re-scan spends the same
+ *  provider reads and comes back with the same numbers, because the day bar is
+ *  0 before the open and finished after the close.
+ *
+ *  WARNED, not blocked. He reads extended-hours prints on the Chart Maps tiles
+ *  (04:00-20:00, his call), so removing the read outside 9:30-16:00 would take
+ *  away a surface he asked for. Making it a block is HIS CALL. */
+export function rescanQuietReason(d?: Pick<HsPayload, 'd1'> | null): string | null {
+  const s = d?.d1;
+  if (!s || s.in_session !== false) return null;
+  const w = (s.session_window || '').trim();
+  return w ? `the session is shut (${w}) — the day column will not move`
+           : 'the session is shut — the day column will not move';
+}
+
+/** Does this payload have anything to DRAW? A 200 carrying only `reason` has
+ *  not — and replacing a good board with that line is how a failed re-scan
+ *  used to blank the whole page. */
+export function hasRows(d?: HsPayload | null): boolean {
+  return Boolean(d && (((d.sectors || []).length) || ((d.themes || []).length)));
+}
+
+/** What one click costs, in the same sentence everywhere it appears. MEASURED
+ *  2026-09-18 on the live payload: 7 board chunks (1,721 names / 250), plus 6
+ *  bounce-room chunks (1,468 unique name rows / 250) only when the re-rank
+ *  changes which names each group shows — both cache keys are sorted sets, so
+ *  a pure re-order is free. Never quoted as a bare 7. */
+export const RESCAN_COST_SENTENCE =
+  'One click is the same provider read as reloading the page — 7 snapshot calls, '
+  + 'or 13 when the re-rank changes which names each group shows.';
+
 /** An em-dash, never a zero — a missing quarter is not flat growth. */
 export function pct(v: number | null | undefined, dp = 1): string {
   return typeof v === 'number' && Number.isFinite(v) ? `${v >= 0 ? '+' : ''}${v.toFixed(dp)}%` : '—';
@@ -357,15 +409,41 @@ export function HottestSectors() {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [byIndustry, setByIndustry] = useState(true);
 
+  /* ↻ Re-scan (2026-09-18). Three things this `load` has to get right that the
+   * old one did not:
+   *  1. LATEST WINS. A sort change fired while a re-scan is in flight must
+   *     still go out, and the late first response must be discarded — or the
+   *     header reads "ranked on X" over rows that came back ranked on Y.
+   *  2. A FAILURE KEEPS THE BOARD. `.catch` no longer drops `data`, and a 200
+   *     that came back with no rows is reported without replacing a good board.
+   *  3. The in-flight guard stops the BUTTON only (two clicks in one React
+   *     tick would both fire before `disabled` re-rendered), never the effect. */
+  const seq = useRef(0);
+  const inFlight = useRef(false);
+  const dataRef = useRef<HsPayload | null>(null);
+
   const load = useCallback(() => {
+    const id = ++seq.current;
+    inFlight.current = true;
     setLoading(true);
     fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}&dir=${dir}`,
           { credentials: 'include', cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then((j: HsPayload) => { setData(j); setErr(null); setLoading(false); })
-      .catch((e) => { setErr(String(e?.message ?? e)); setLoading(false); });
+      .then((j: HsPayload) => {
+        if (id !== seq.current) return;                  // a newer sort won
+        if (!hasRows(j) && hasRows(dataRef.current)) {
+          setErr(j?.reason || 'the re-scan came back with no rows');
+          return;                                        // keep the good board
+        }
+        dataRef.current = j; setData(j); setErr(null);
+      })
+      .catch((e) => { if (id === seq.current) setErr(String(e?.message ?? e)); })
+      .finally(() => {
+        if (id === seq.current) { inFlight.current = false; setLoading(false); }
+      });
   }, [sort, dir]);
   useEffect(() => { load(); }, [load]);
+  const onRescan = () => { if (inFlight.current) return; load(); };
 
   const sectors = useMemo(() => data?.sectors || [], [data]);
   const themes = useMemo(() => data?.themes || [], [data]);
@@ -429,9 +507,19 @@ export function HottestSectors() {
     else { setSort(k); setDir(k === 'next_earnings' ? 'asc' : 'desc'); }
   };
 
-  if (err) return <div className="cm-note cm-note-warn">Hottest sectors unavailable: {err}</div>;
+  /* A COLD failure still shows the failure. What changed on 2026-09-18 is that
+   * a failure arriving on top of a board that already rendered no longer blanks
+   * it: the previous read stays on screen and the meta line says what failed. */
+  if (err && !hasRows(data)) {
+    return <div className="cm-note cm-note-warn">Hottest sectors unavailable: {err}</div>;
+  }
   if (!data && loading) return <div className="cm-note">Reading the rotation table…</div>;
-  if (data?.reason) return <div className="cm-note cm-note-warn">{data.reason}</div>;
+  if (data?.reason && !hasRows(data)) {
+    return <div className="cm-note cm-note-warn">{data.reason}</div>;
+  }
+
+  const rescanBlocked = rescanBlockedReason(data);
+  const rescanQuiet = rescanQuietReason(data);
 
   return (
     <div className="hs">
@@ -452,6 +540,23 @@ export function HottestSectors() {
                  onChange={(e) => setByIndustry(e.target.checked)} />
           Break into industries
         </label>
+        {/* ↻ Re-scan (Ajay 2026-09-18: "can you give me rebuild or rescan
+            button in hot sectors"). Same class, label and disabled shape as the
+            Chart Maps re-scan, so the two read as one control. It re-runs the
+            live NAME leg; the sector ranking does NOT move — see the tooltip
+            and the InfoButton. */}
+        <button type="button" className="cm-rescan" data-testid="hottest-rescan"
+                disabled={loading || rescanBlocked !== null}
+                title={rescanBlocked
+                  ? `Re-scan is off because ${rescanBlocked}. Every column here is already`
+                    + ' the last finished session.'
+                  : (rescanQuiet ? `${rescanQuiet}. ${RESCAN_COST_SENTENCE} ` : '')
+                    + "Re-reads today's live price for every name on this board and re-ranks it. "
+                    + 'Sector, industry and roster rows, 5 days, 21 days and Sales YoY stay on'
+                    + ' the last close.'}
+                onClick={onRescan}>
+          {loading ? 'Scanning…' : '↻ Re-scan'}
+        </button>
         <InfoButton inline title="🔥 Hottest — how to read this">
           <p>Every sector ranked on <b>{colLabel(sort, data)}</b>
             against <b>{benchSymbol(data)}</b>,
@@ -466,6 +571,15 @@ export function HottestSectors() {
             on the close and says so. When the tape is shut, or no live price comes back, the column
             header itself changes to the session it is showing, and any single row that missed the
             live read is marked <i>last close</i> where you can see it.</p>
+          <p><b>The ↻ Re-scan button.</b> It re-reads today&rsquo;s live price for every name on
+            this board and re-ranks the table on it. What it can <i>not</i> do is move a sector,
+            industry or roster row: those are medians over their full membership taken on the last
+            close, and a median mixing live names with last-close names describes no session at all.
+            The line above the table always says which basis you are looking at. When the tape is
+            shut the button is off and says why, in the market calendar&rsquo;s own words; outside
+            {' '}{data?.d1?.session_window || '9:30–16:00 ET'} it still works but warns you the day
+            column will not move. {RESCAN_COST_SENTENCE} It is not free, and it is not new — the
+            board already re-fetches the chip read about once a minute while it is open.</p>
           <p><b>All eleven sectors are listed, not just the hot ones.</b> A strong name often sits in
             a cold sector: ANDE is 2nd of Consumer Defensive&rsquo;s 76 over 21 days while the sector
             is 8th of 11. Listing only the hot end would hide exactly the names this board is for.</p>
@@ -503,6 +617,11 @@ export function HottestSectors() {
             (2026-09-16). He read a last-close number as the live tape because
             this line only ever said "as of". */}
         <span className={data?.d1?.live ? 'hs-live' : 'hs-stale'}>{asOfLine(data)}</span>
+        {err && hasRows(data) ? (
+          <span className="hs-stale" data-testid="hottest-rescan-failed">
+            {' '}· re-scan failed ({err}) — this is the previous read, not a new one
+          </span>
+        ) : null}
         {data?.coverage?.pct != null ? (
           <span> · sales on {data.coverage.pct}% of {data.coverage.priced} priced names</span>
         ) : null}

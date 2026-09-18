@@ -289,6 +289,40 @@ def _closed_reason() -> Optional[str]:
         return None
 
 
+def _in_session() -> Optional[bool]:
+    """Is the REGULAR session open right now? The ONE RTH engine
+    (`supply_demand.bounce_room.in_session`), never a second clock here.
+
+    None when it cannot be asked — the board then behaves exactly as it does
+    today rather than guessing at a session it could not check. `rotation/`
+    already imports `supply_demand.bounce_room` (rotation/tracker.py), so this
+    is an established path, not a new coupling.
+
+    This is DISPLAY state, not a gate: the live fan-out still fires outside
+    9:30-16:00 ET, because extended-hours prints are a surface Ajay asked for
+    elsewhere (Chart Maps, 04:00-20:00). What this adds is the ability to SAY
+    the session is shut instead of silently returning the same numbers.
+    """
+    try:
+        from supply_demand import bounce_room as BR
+        return bool(BR.in_session())
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: session clock unavailable (%s)", exc)
+        return None
+
+
+def _session_window() -> Optional[str]:
+    """`"9:30-16:00 ET"`, rendered FROM the constants that enforce it, so no
+    clock is retyped on a second surface."""
+    try:
+        from supply_demand.bounce_room import SESSION_CLOSE, SESSION_OPEN
+        return "%d:%02d-%d:%02d ET" % (SESSION_OPEN.hour, SESSION_OPEN.minute,
+                                       SESSION_CLOSE.hour, SESSION_CLOSE.minute)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: session window unavailable (%s)", exc)
+        return None
+
+
 def _bulk_live(syms: list) -> dict:
     from sepa import prices
     return prices.bulk_live_prices(syms) or {}
@@ -307,9 +341,15 @@ def live_day_moves(symbols, bench_symbol, *, fetch=None) -> dict:
     syms = sorted({str(s).upper() for s in (symbols or []) if s})
     block = {"basis": D1_CLOSE, "live": False, "benchmark": bench or None,
              "benchmark_move": None, "symbols": len(syms), "live_names": 0,
-             "moves": {}, "as_of": None, "reason": None}
+             "moves": {}, "as_of": None, "reason": None,
+             # The calendar's own reason, verbatim, so the FE never
+             # string-matches prose to decide whether the tape is shut.
+             "market_closed": None,
+             # RTH state and the window that defines it, for the same reason.
+             "in_session": _in_session(), "session_window": _session_window()}
     closed = _closed_reason()
     if closed:
+        block["market_closed"] = closed
         block["reason"] = f"the market is closed ({closed})"
         return block
     if not syms or not bench:
@@ -368,6 +408,12 @@ def _d1_block(live: Optional[dict], live_ok: bool, as_of, bench_symbol) -> dict:
     return {
         "basis": D1_LIVE if live_ok else D1_CLOSE,
         "live": bool(live_ok),
+        # Why a re-scan cannot help (the calendar's own words), whether the
+        # regular session is open, and the window that defines it. Additive
+        # since 2026-09-18; the button reads these instead of guessing.
+        "market_closed": live.get("market_closed"),
+        "in_session": live.get("in_session"),
+        "session_window": live.get("session_window"),
         "as_of": live.get("as_of"),
         "close_as_of": day,
         "benchmark": bench,

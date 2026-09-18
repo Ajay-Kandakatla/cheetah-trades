@@ -313,3 +313,146 @@ rendering every row honestly.
   window, named. It never reads `rel_1d`. **Already honest, unchanged.**
 - The Hot-sectors strip and the member pop-over **were** labelling snapshot day
   moves as "today"; both are fixed below and in `hot_sectors.md`.
+
+---
+
+## 2026-09-18 — the ↻ Re-scan button
+
+Ajay 2026-09-18: *"Yes add it and also can you give me rebuild or rescan button
+in hot sectors please"* — a re-ask of *"Can you give me scan button this for to
+rescan this for latest it says precious close but during market hours I want it
+to re calculate in the moment."*
+
+### The first thing to know: `D1_GROUP_BASIS` did not move
+
+**The sector ranking does not change when you click the button.** A sector,
+industry or roster row is a median over its **full** membership, and a median
+taken over live values for some members and last-close values for the rest is
+true of neither set — so those rows stay on the last close, exactly as
+`D1_GROUP_BASIS = D1_CLOSE` and `_close_d1` already said. Making them live is a
+HIS CALL item, not a planner's decision; it would need a live print for every
+member, and for the sector and industry rows the counted members are the
+rotation grid's own **sample** while the name rows are full membership.
+
+This is also the class of bug that made a Deep Demand tile say "0.8% under" and
+"5.24% above" about the same band, so the limitation is stated in four places:
+the button's tooltip, the InfoButton, the ✨ NEW entry, and the first line of the
+answer he was given.
+
+### What a click actually recomputes
+
+The button calls the component's own `load()`, which re-runs
+`GET /rotation/hottest`. That endpoint already calls `build_live` on every
+request, so a click re-runs the **live NAME leg** — one
+`prices.bulk_live_prices` fan-out over every priced name — and re-ranks the
+name rows on it. No new endpoint was added: a second entry point for work the
+GET already does is a parallel implementation.
+
+### What it costs, measured
+
+| Leg | Path | Chunks |
+|---|---|---|
+| The board itself | `d1.symbols` → `ceil(n / _SNAP_CHUNK)` | **7** |
+| The bounce-room chip / order read | unique name rows → `ceil(n / 250)` | **6** |
+
+**MEASURED 2026-09-18 11:02 ET** on the live payload: `d1.symbols = 1711`,
+`live_names = 1710`, 1,467 unique name rows → `ceil(1711/250) = 7` and
+`ceil(1467/250) = 6`.
+
+The second leg is **not** paid on every click. Both cache keys are **sorted
+sets** — the FE's `normalizeSymbols` ends `return [...seen].sort()`
+(`frontend/src/lib/bounceRoom.ts`) and the server's key is `tuple(sorted(syms))`
+(`supply_demand/bounce_room.py`) — so a re-scan that returns the same name set in
+a different order changes no key and costs **0 extra calls**. It costs the extra
+6 only when the re-rank changes which names a group shows (the server ranks then
+cuts `NAMES_PER_GROUP` per group, so a price move can swap the 25th for the
+26th), because a new sorted set also misses the 30 s server cache.
+
+So the sentence, everywhere: **7 provider calls, or 13 when the re-rank changes
+which names each group shows — the same as reloading the page.** Never a bare 7.
+
+Independently of the button, the mounted `useBounceRoom` hook already re-POSTs
+every `DEFAULT_POLL_MS = 60_000` with `force=true`, so the 6-call room leg is
+already paid about once a minute while the tab is open.
+
+### Closed tape → zero provider calls
+
+`live_day_moves` asks `market_hours.gate.closed_reason()` **before** the
+fan-out and returns early on a weekend or an NYSE holiday, so a weekend click
+spends nothing. Three additive `d1` keys carry that state to the screen:
+
+| Key | Source | What it is for |
+|---|---|---|
+| `market_closed` | `market_hours.gate.closed_reason()`, verbatim | the button is **disabled** and the tooltip quotes it |
+| `in_session` | `supply_demand.bounce_room.in_session()` | outside the session the button **warns** |
+| `session_window` | rendered from `SESSION_OPEN` / `SESSION_CLOSE` | so no clock is retyped on a second surface |
+
+`in_session` is `null` when the clock cannot be asked, and the button then
+behaves exactly as it did before this existed. Nothing here string-matches
+prose to decide the tape is shut.
+
+### Outside 9:30–16:00 ET the fan-out still fires — deliberately
+
+`gate.closed_reason` is weekend/holiday only; it has no RTH window. On a weekday
+at 03:00 or 18:00 the live read still goes out, spends its 7 calls and returns
+the same numbers (`_live_move` reads a 0 day bar before the open). That was left
+alone on purpose: short-circuiting it would silently remove the extended-hours
+read Ajay asked for elsewhere (Chart Maps tiles, 04:00–20:00, his call). So the
+button is **enabled and warned**, not blocked, and
+`test_the_fan_out_still_fires_outside_rth` pins the non-change — if that test
+ever has to be edited, a default moved and that is a stop.
+
+Whether to block instead, and whether `gate` should grow a real RTH window so an
+18:00 board stops labelling itself `live`, are HIS CALL.
+
+### Two blank-board bugs fixed on the way
+
+Both would have turned a failed re-scan into an empty page:
+
+* `if (err) return …unavailable…` blanked the whole board on **any** error.
+* `if (data?.reason) return …` blanked it on a good HTTP 200 carrying a reason
+  (`/rotation/hottest` answers 200 + `{"sectors": [], "reason": …}` when the
+  persisted member table is unreadable or absent).
+
+Both guards now also require `!hasRows(data)`, so they fire only on a **cold**
+first load. A failure landing on a board that already rendered keeps the
+previous read on screen and reports the server's own sentence on the meta line
+(`data-testid="hottest-rescan-failed"`). Two tests guard the over-correction, so a
+cold failure is still shown rather than swallowed.
+
+`load()` also became latest-wins (`seq` ref): a sort change fired while a
+re-scan is in flight still goes out, and the late first response is discarded —
+otherwise the header would read *ranked on X* over rows ranked on Y. The
+in-flight guard stops the **button** only, so a double-click issues one request.
+
+### The decoy button on the same tab
+
+`frontend/src/pages/ChartMaps.tsx` renders its own `<button className="cm-rescan">
+↻ Re-scan</button>` on every tab except `winners`, including `hot_sectors` — and
+it drives `useSepaScanStream`, the unrelated SEPA tile scan. Two identically
+worded buttons doing different things on one screen is worse than one, but
+hiding it is a change to a shared page file and is **HIS CALL**. This work does
+not edit `ChartMaps.tsx`.
+
+### No edge. This is a view.
+
+Nothing measured says intraday rotation predicts anything. Sector heat measured
+2026-09-09 does **not** predict demand outcomes (−0.57pp, CI spans zero), and
+"cold sector sits there" measured **inverted** (cold wins 5d by +2.55pp). The
+rotation backtest read top-3 sector rotation at 158.22% against RSP's 155.42% —
+no edge. This button gates nothing, alerts nothing and enters nothing, and no
+S&D rule, gate, threshold or default was touched.
+
+### Tests
+
+* `backend/tests/test_hot_sectors_rescan_2026_09_18.py` (18) — the three keys,
+  the window rendered from the constants, the group-basis pin, and the
+  negatives: pre-open flagged not silently live, a broken session clock, the
+  fan-out still firing outside RTH, a partial snapshot (the normal case), no
+  live prints at all, no benchmark print, a raising fetch, and the pure build.
+* `frontend/src/components/HottestSectors.rescan.test.tsx` (21) — the helpers
+  and their negatives, the button, the double-click, the sort-during-rescan
+  header match, both failure-keeps-the-board cases, both cold-failure guards,
+  disabled-on-closed, enabled-and-warned outside the session.
+* `backend/tests/test_hot_sectors_live_today_2026_09_16.py` and
+  `frontend/src/components/HottestSectors.live.test.tsx` pass **unchanged**.

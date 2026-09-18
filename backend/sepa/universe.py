@@ -687,6 +687,18 @@ def _read_cached_stale(name: str) -> list[str] | None:
     return syms or None
 
 
+def _file_age_days(path: Path) -> float | None:
+    """Age of a file on disk in days, or None when it is not there. Used to
+    stamp provenance for the manually-downloaded iShares exports, whose
+    freshness is a human's refresh cadence, not a TTL."""
+    try:
+        if not path.exists():
+            return None
+        return (time.time() - path.stat().st_mtime) / 86400.0
+    except Exception:
+        return None
+
+
 def _cache_age_days(name: str) -> float | None:
     path = _cache_path(name)
     if not path.exists():
@@ -1353,6 +1365,19 @@ _LOCAL_IWV_PATH = _DATA_DIR / "iShares-Russell-3000-ETF_fund.xls"
 # format. Optional — if the file isn't present, the micro-cap layer is just
 # skipped (the broad mode still returns R3000 ∪ ETFs).
 _LOCAL_IWC_PATH = _DATA_DIR / "iShares-Micro-Cap-ETF_fund.xls"
+# The Russell 2000 (IWM). Ajay 2026-09-18: "Yes add it." ABSENT today — until
+# he drops the "Download Holdings" export here, `fetch_russell2000` derives the
+# list from FTSE's own definition (Russell 3000 minus Russell 1000) and says
+# so on every surface. See `russell2000_coverage`.
+_LOCAL_IWM_PATH = _DATA_DIR / "iShares-Russell-2000-ETF_fund.xls"
+
+# Provenance labels for the iShares ladder, so `last_source()` can tell a real
+# export from a derivation. Named constants, never retyped strings — the
+# change-log's source-flip re-baseline (sepa/universe_changes.refresh_one)
+# compares them.
+SRC_ISHARES_LOCAL = "ishares-local"
+SRC_ISHARES_NETWORK = "ishares-network"
+SRC_DERIVED_R2000 = "derived-r3000-minus-r1000"
 
 # SpreadsheetML 2003 namespace — iShares' Holdings.xls export uses this.
 _SS_NS = "{urn:schemas-microsoft-com:office:spreadsheet}"
@@ -1512,14 +1537,16 @@ def fetch_russell1000() -> list[str]:
     """
     cached = _read_cached("russell1000")
     if cached:
-        return cached
+        return _record("russell1000", "cache", cached,
+                       age_days=_cache_age_days("russell1000"))
 
     # --- (1) local SpreadsheetML file --------------------------------
     try:
         out = _load_ishares_local_xls(_LOCAL_IWB_PATH, source_label="russell1000")
         if out:
             _write_cached("russell1000", out)
-            return out
+            return _record("russell1000", SRC_ISHARES_LOCAL, out,
+                           age_days=_file_age_days(_LOCAL_IWB_PATH))
     except FileNotFoundError:
         log.info("universe: russell1000 local xls absent — trying network")
     except Exception as exc:
@@ -1583,7 +1610,7 @@ def fetch_russell1000() -> list[str]:
             len(out), n_remapped_class, n_dropped_non_equity, n_dropped_shape,
         )
         _write_cached("russell1000", out)
-        return out
+        return _record("russell1000", SRC_ISHARES_NETWORK, out)
     except Exception as exc:
         log.warning(
             "universe: russell1000 network fetch failed (%s) — "
@@ -1604,10 +1631,10 @@ def fetch_russell1000() -> list[str]:
                 "universe: russell1000 via curated+sp500+sp400 = %d names",
                 len(merged),
             )
-            return merged
+            return _record("russell1000", "curated", merged)
         except Exception as exc2:
             log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
-            return fetch_sp500()
+            return _record("russell1000", "curated", fetch_sp500())
 
 
 def fetch_russell3000() -> list[str]:
@@ -1622,14 +1649,16 @@ def fetch_russell3000() -> list[str]:
     """
     cached = _read_cached("russell3000")
     if cached:
-        return cached
+        return _record("russell3000", "cache", cached,
+                       age_days=_cache_age_days("russell3000"))
 
     # --- (1) local SpreadsheetML file --------------------------------
     try:
         out = _load_ishares_local_xls(_LOCAL_IWV_PATH, source_label="russell3000")
         if out:
             _write_cached("russell3000", out)
-            return out
+            return _record("russell3000", SRC_ISHARES_LOCAL, out,
+                           age_days=_file_age_days(_LOCAL_IWV_PATH))
     except FileNotFoundError:
         log.info("universe: russell3000 local xls absent — trying network")
     except Exception as exc:
@@ -1684,7 +1713,7 @@ def fetch_russell3000() -> list[str]:
             len(out), n_remapped_class, n_dropped_non_equity, n_dropped_shape,
         )
         _write_cached("russell3000", out)
-        return out
+        return _record("russell3000", SRC_ISHARES_NETWORK, out)
     except Exception as exc:
         log.warning(
             "universe: russell3000 network fetch failed (%s) — "
@@ -1703,10 +1732,193 @@ def fetch_russell3000() -> list[str]:
                 "universe: russell3000 via curated+sp500+sp400 = %d names",
                 len(merged),
             )
-            return merged
+            return _record("russell3000", "curated", merged)
         except Exception as exc2:
             log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
-            return fetch_sp500()
+            return _record("russell3000", "curated", fetch_sp500())
+
+
+def fetch_russell2000() -> list[str]:
+    """Russell 2000 by FTSE's own definition: Russell 3000 minus Russell 1000.
+
+    Ajay 2026-09-18: "Yes add it" — he asked for the Russell 2000 alongside the
+    1000 and 3000 in the membership tracker.
+
+    Source priority:
+      1. ``backend/sepa/data/iShares-Russell-2000-ETF_fund.xls`` (IWM) — the
+         REAL list, the same manually-downloaded SpreadsheetML export the IWB
+         and IWV paths read. Absent today. -> source ``ishares-local``.
+      2. DERIVED: ``set(fetch_russell3000()) - set(fetch_russell1000())``,
+         order preserved from the Russell 3000 list so the result is
+         deterministic. -> source ``derived-r3000-minus-r1000``.
+      3. ``[]`` -> source ``empty``.
+
+    There is deliberately NO curated fallback. The curated list is large-cap
+    leaders — the exact opposite population of a small-cap index — and serving
+    it under this name would invent membership.
+
+    THE DERIVED LIST INHERITS ITS PARENTS' SHORTFALL. Measured 2026-09-18: the
+    IWV export on disk lists 2,559 tradeable holdings and the IWB export 1,001,
+    so the derivation is 1,560 names, not ~2,000. Never present it as a
+    complete Russell 2000 — call `russell2000_coverage()` and serve what it
+    says.
+    """
+    # The DERIVED branch below writes no disk cache, deliberately: the only
+    # thing that can have written this file is the local-xls branch, so a cache
+    # hit here is unambiguous provenance rather than an inference. A derivation
+    # re-runs from the parents' own caches and is two set operations.
+    cached = _read_cached("russell2000")
+    if cached:
+        return _record("russell2000", SRC_ISHARES_LOCAL, cached,
+                       age_days=_cache_age_days("russell2000"))
+
+    # --- (1) the real thing, if Ajay has dropped an IWM export in ----
+    try:
+        out = _load_ishares_local_xls(_LOCAL_IWM_PATH, source_label="russell2000")
+        if out:
+            _write_cached("russell2000", out)
+            return _record("russell2000", SRC_ISHARES_LOCAL, out,
+                           age_days=_file_age_days(_LOCAL_IWM_PATH))
+    except FileNotFoundError:
+        log.info("universe: russell2000 local xls absent — deriving from "
+                 "russell3000 minus russell1000")
+    except Exception as exc:
+        log.warning("universe: russell2000 local-xls parse failed (%s) — "
+                    "deriving from russell3000 minus russell1000", exc)
+
+    # --- (2) the derivation ------------------------------------------
+    # No network path exists for IWM: the iShares CSV endpoints serve a
+    # Cloudflare interstitial (see the module comment above _DATA_DIR), so a
+    # network branch here would be an untestable stub. The derivation IS the
+    # index's own definition, which is why it is second and not a fallback.
+    try:
+        big = fetch_russell1000()
+    except Exception as exc:
+        log.warning("universe: russell2000 — russell1000 parent failed (%s)", exc)
+        big = []
+    try:
+        broad = fetch_russell3000()
+    except Exception as exc:
+        log.warning("universe: russell2000 — russell3000 parent failed (%s)", exc)
+        broad = []
+    # THE PARENTS MUST BOTH BE REAL (added 2026-09-18, before ship).
+    # A derived list is only as honest as what it is derived FROM. If either
+    # parent fell back to `curated` — the WRONG universe, a last resort — the
+    # subtraction still produces a plausible-looking list, and because both runs
+    # report the same source string ("derived-…") the change tracker sees no
+    # source flip and publishes the delta as REAL index events.
+    #
+    # Measured on live data the day this was written: r1000=1001 r3000=2559
+    # derive to 1,560. With russell1000 fallen back to curated (903) the
+    # derivation gives 1,669 — a diff of 204 additions and 95 removals, churn
+    # 299 against a sane-window of 546, so `is_sane_churn` waves it through.
+    # The weekly cron would have said "russell1000 could not be refreshed
+    # (curated)" and "204 additions to the Russell 2000" in the SAME run.
+    # Ajay reads that log for real corporate events. Fail empty instead.
+    _BAD_PARENT = ("curated", "empty", "stale-cache")
+    for _parent in ("russell1000", "russell3000"):
+        _src = (last_source(_parent) or {}).get("source")
+        if _src in _BAD_PARENT:
+            log.warning("universe: russell2000 NOT derived — parent %s resolved "
+                        "from %s, which is not that index; a subtraction off it "
+                        "would publish corporate events that did not happen",
+                        _parent, _src)
+            return _record("russell2000", "empty", [])
+
+    big_set = {str(s).strip().upper() for s in (big or []) if str(s).strip()}
+    seen, out = set(), []
+    for s in (broad or []):
+        u = str(s).strip().upper()
+        if not u or u in big_set or u in seen:
+            continue
+        seen.add(u)
+        out.append(u)
+    if out:
+        log.info("universe: russell2000 derived — %d names "
+                 "(russell3000 %d - russell1000 %d)",
+                 len(out), len(broad or []), len(big or []))
+        # NOT cached: see the note on the cache read above.
+        return _record("russell2000", SRC_DERIVED_R2000, out)
+
+    log.warning("universe: russell2000 could not be derived — both parents "
+                "resolved empty; serving nothing rather than a wrong universe")
+    return _record("russell2000", "empty", [])
+
+
+def russell2000_coverage() -> dict:
+    """What the russell2000 list we serve actually IS. Every number measured.
+
+    A derived list is definitionally correct and materially incomplete, and the
+    two facts have to travel together or the surface reading it will quote a
+    partial index as the index. Nothing in here is a literal: the counts are
+    read off the parents at call time, including the label.
+
+    Keys:
+      ``n``                    names in the list we would serve
+      ``source``               ``ishares-local`` | ``derived-r3000-minus-r1000``
+                               | ``empty``
+      ``complete``             True ONLY when an IWM export supplied the list
+      ``attributable``         False for a derived list — a name leaving it may
+                               have entered the Russell 1000 or may simply have
+                               moved in one parent export and not the other
+      ``derived_from``         the two parent counts
+      ``parents_not_contained``names in the Russell 1000 that are NOT in the
+                               Russell 3000. FTSE guarantees containment, so any
+                               name here is proof the two exports are out of step
+      ``label``                a one-line qualifier built from those counts
+      ``note``                 the plain-English version, including the exact
+                               file drop that upgrades it
+    """
+    syms = fetch_russell2000()
+    src = (last_source("russell2000") or {}).get("source")
+    complete = src == SRC_ISHARES_LOCAL
+    n = len(syms or [])
+    out: dict = {
+        "index": "russell2000",
+        "n": n,
+        "source": src,
+        "complete": bool(complete),
+        "attributable": bool(complete),
+    }
+    if complete:
+        out["derived_from"] = None
+        out["parents_not_contained"] = []
+        out["label"] = "russell2000 (iShares IWM export, %d names)" % n
+        out["note"] = (
+            "Read from the iShares Russell 2000 (IWM) holdings export on disk "
+            "at %s. This is the real membership list, not a derivation."
+            % _LOCAL_IWM_PATH
+        )
+        return out
+
+    try:
+        big = fetch_russell1000() or []
+    except Exception:
+        big = []
+    try:
+        broad = fetch_russell3000() or []
+    except Exception:
+        broad = []
+    n_big, n_broad = len(set(big)), len(set(broad))
+    not_contained = sorted({str(s).upper() for s in big} - {str(s).upper() for s in broad})
+    out["derived_from"] = {"russell3000": n_broad, "russell1000": n_big}
+    out["parents_not_contained"] = not_contained
+    out["label"] = ("russell2000 (derived: russell3000 %d - russell1000 %d = %d)"
+                    % (n_broad, n_big, n))
+    out["note"] = (
+        "Derived as Russell 3000 minus Russell 1000, which is FTSE's own "
+        "definition of the Russell 2000. It holds {n} names; the index is "
+        "named for about two thousand. The shortfall is inherited: the iShares "
+        "Russell 3000 export on disk lists {r3000} tradeable holdings and the "
+        "Russell 1000 export lists {r1000}. The names it is missing are small "
+        "caps — exactly this list's population. Treat it as part of the "
+        "Russell 2000, not as the Russell 2000. A change on this list cannot "
+        "be attributed to a parent: a name leaving here may have entered the "
+        "Russell 1000 or may only have moved in one export and not the other. "
+        "Drop an iShares IWM holdings export at {path} and this becomes the "
+        "real list with no code change."
+    ).format(n=n, r3000=n_broad, r1000=n_big, path=_LOCAL_IWM_PATH)
+    return out
 
 
 def fetch_microcap() -> list[str]:

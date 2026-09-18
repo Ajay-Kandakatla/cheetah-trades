@@ -135,7 +135,12 @@ def test_refresh_records_the_first_snapshot_without_claiming_changes(stub):
 
 
 def test_refresh_detects_a_real_add_and_drop(stub):
-    db = _DB(latest={"symbols": ["A", "B", "X"], "taken_at": "t0"})
+    # The previous snapshot has to carry the SAME source for this to be a
+    # membership change at all (2026-09-18): a diff across two different
+    # sources is a re-baseline, not an add and a drop. See
+    # test_a_sane_diff_reaches_the_change_log_UNLESS_the_source_flipped.
+    db = _DB(latest={"symbols": ["A", "B", "X"], "source": "wikipedia",
+                     "taken_at": "t0"})
     stub["symbols"] = ["A", "B", "C"]
     r = uc.refresh_one("sp500", db=db)
     assert r["added"] == ["C"] and r["removed"] == ["X"]
@@ -178,12 +183,67 @@ def test_a_stale_cache_resolve_is_refused(stub):
 
 
 def test_missing_provenance_is_flagged_not_assumed(stub):
-    """The Russell lists read local iShares files and record no provenance, so
-    we cannot verify freshness. Report that rather than implying we checked."""
+    """An index whose fetcher records nothing cannot be verified for freshness.
+    Report that rather than implying we checked.
+
+    NARROWED 2026-09-18: this used to be about the Russell lists, which read
+    local iShares files and recorded nothing. They now record on every branch
+    (universe.fetch_russell1000 / 3000 / 2000), so the case is exercised with a
+    genuinely unrecorded fetcher instead of deleted — the flag still has to work
+    for the next source that forgets.
+    """
     stub["source"] = None
     r = uc.refresh_one("sp500", db=_DB())
     assert r["ok"] is True
     assert r["provenance_known"] is False
+
+
+def test_the_russell_lists_now_record_their_provenance():
+    """The hole universe_changes.py itself documented, closed 2026-09-18: every
+    branch of the Russell ladder calls `_record`, so a fresh read is now
+    distinguishable from a stale one."""
+    import inspect
+    from sepa import universe as U
+    for fn in (U.fetch_russell1000, U.fetch_russell3000, U.fetch_russell2000):
+        src = inspect.getsource(fn)
+        assert "_record(" in src, f"{fn.__name__} records no provenance"
+
+
+def test_a_sane_diff_reaches_the_change_log_UNLESS_the_CONSTRUCTION_flipped(stub):
+    """THE ONE EXCEPTION, narrowed 2026-09-18 after the critic found it too wide.
+
+    A sane diff is published — except when the list was REBUILT on a different
+    basis between the two snapshots. Swapping a derived list for a real iShares
+    export moves hundreds of names inside the sane window, and publishing that
+    would report a file copy as a corporate event.
+
+    But it must NOT fire on a mirror change. sp500's ladder is
+    wikipedia -> datahub, and universe.py documents Wikipedia 403-ing for weeks
+    at a time; the original rule keyed on the source STRING, so on any week the
+    winning loader changed, a genuine S&P addition was zeroed out of the log
+    Ajay reads for corporate events. Both halves are pinned here.
+    """
+    # same mirror: published
+    same = _DB(latest={"symbols": ["A", "B", "X"], "source": "wikipedia",
+                       "taken_at": "t0"})
+    stub["symbols"] = ["A", "B", "C"]
+    uc.refresh_one("sp500", db=same)
+    assert len(same.universe_changes.inserted) == 1
+
+    # DIFFERENT mirror of the SAME published list: still a real event.
+    mirrored = _DB(latest={"symbols": ["A", "B", "X"], "source": "datahub",
+                           "taken_at": "t0"})
+    uc.refresh_one("sp500", db=mirrored)
+    assert len(mirrored.universe_changes.inserted) == 1, \
+        "a wikipedia<->datahub flip is a mirror change, not a re-baseline"
+    assert len(mirrored.universe_snapshots.inserted) == 1
+
+    # A CONSTRUCTION flip: re-baselined, nothing published.
+    rebuilt = _DB(latest={"symbols": ["A", "B", "X"], "source": "curated",
+                          "taken_at": "t0"})
+    uc.refresh_one("sp500", db=rebuilt)
+    assert rebuilt.universe_changes.inserted == []
+    assert len(rebuilt.universe_snapshots.inserted) == 1
 
 
 def test_a_failing_fetch_does_not_raise(monkeypatch):
@@ -208,6 +268,13 @@ def test_nasdaq_is_tracked():
     """Ajay named Nasdaq explicitly and it was in no fetcher before 2026-08-16."""
     assert "nasdaq100" in uc.TRACKED
     assert {"sp500", "russell1000", "russell3000"} <= set(uc.TRACKED)
+
+
+def test_russell2000_is_tracked():
+    """Ajay 2026-09-18: "Yes add it." It is DERIVED and short of the real
+    index — see tests/test_russell2000_derived_2026_09_18.py."""
+    assert "russell2000" in uc.TRACKED
+    assert len(uc.TRACKED) == 7
 
 
 def test_every_tracked_index_has_a_fetcher():
