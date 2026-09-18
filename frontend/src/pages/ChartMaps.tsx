@@ -27,7 +27,8 @@ import {
   CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, ENTERABLE_KIND, TAB_META, THEMES_FIRST_DEFAULT,
   quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText, sessionNoteText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
-  DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
+  parseGrades, gradesParam,
+  DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam, AMD_GRADE_LABEL,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
@@ -248,6 +249,29 @@ export function ChartMaps() {
    * empty board, and neither can a hand-typed URL (the parser fails open, as
    * does the server's). NOT `?level=` — that one is the gabbar tab's band-type
    * lens and is untouched. */
+  /* 🌀 AMD grade filter (Ajay 2026-09-17: "I wanna see all AMD and also
+   * filterable AMD ... I wanna know any new stocks are are are getting
+   * manipulated and about to be Distrubuted too ... Feel free to bring stocks
+   * that are getting distributed too but I need to see it as a filter").
+   *
+   * The nightly sweep stores every name at every grade; this tab served only
+   * the turning one and dropped 86% of its own document. Multi-select, and
+   * NOTHING selected normalises back to the server default (the turning grade)
+   * rather than asking for an empty board — same rule as the level chips. */
+  const GRADE_TAB = tab === 'amd' || tab === 'keltner';
+  const gradeSel = useMemo(() => parseGrades(params.get('grades')), [params]);
+  // No `grades_all` collapse here: this runs before `data` exists, and the
+  // explicit list says the same thing to the server as "all" does.
+  const gradesSpec = GRADE_TAB ? (gradesParam(gradeSel) ?? undefined) : undefined;
+  const toggleGrade = (g: string) => {
+    const sel = new Set(gradeSel);
+    if (sel.has(g)) sel.delete(g); else sel.add(g);
+    const spec = gradesParam(sel);
+    const next = new URLSearchParams(params);
+    if (spec) next.set('grades', spec); else next.delete('grades');
+    setParams(next, { replace: true });
+  };
+
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
   const levelsSpec = levelsParam(levelSel) ?? 'all';
@@ -332,6 +356,7 @@ export function ChartMaps() {
                            source, minerviniOnly, sort, minTier, gabbarLevel,
                            gabbarTouchingOnly, phase, target, bias, micro,
                            minRoom: ROOM_TAB ? minRoom : undefined,
+                           grades: gradesSpec,
                            levels: levelsSpec });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
@@ -351,7 +376,7 @@ export function ChartMaps() {
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -676,7 +701,10 @@ export function ChartMaps() {
       {/* Reaching vs already reached — only the two demand boards have the two
         * moments. Segmented, not a checkbox: the two states are a choice of
         * WHICH list, not an on/off refinement of one list. */}
-      {(tab === 'zones' || tab === 'deep_demand' || LENS_TABS) && (
+      {/* GRADE_TAB joins this row for the 🌀 AMD / Keltner grade chips
+        * (2026-09-17). Every child below is gated on its own tab, so widening
+        * the container shows nothing new on the tabs that were already here. */}
+      {(tab === 'zones' || tab === 'deep_demand' || LENS_TABS || GRADE_TAB) && (
         <div className="cm-phase" role="tablist" aria-label="Zone phase">
           {LENS_TABS && (
             <button type="button" role="tab" aria-selected={phase === 'all'}
@@ -741,6 +769,33 @@ export function ChartMaps() {
                           className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
                           onClick={() => setRoom(floor === 0 ? 'any' : 'floor')}>
                     {cmRoomLabel(floor)}
+                  </button>
+                );
+              })}
+            </span>
+          )}
+          {/* 🌀 AMD / Keltner grade (Ajay 2026-09-17). Multi-select over the
+            * grades the SWEEP stores, rendered from the server's own
+            * `grades_all` so the choices can never drift from what a row can
+            * carry. Each chip shows how many names hold that grade across the
+            * whole sweep — with the filter OFF, so a count never moves because
+            * a chip is unselected. Nothing selected = the board this tab has
+            * always opened on (the turning grade), never an empty page. */}
+          {GRADE_TAB && !!(data?.grades_all || []).length && (
+            <span className="cm-phase-sub" role="tablist" aria-label="AMD grade"
+                  title="Which part of the cycle each name is in, from the nightly sweep. Counts are the whole sweep at that grade, not this page. Nothing selected shows the turning grade alone — the board this tab has always opened on. This read measured INVERTED against a placebo (see the note under the board): it describes the tape, it does not predict it, and it gates nothing.">
+              {(data?.grades_all || []).map((g) => {
+                const c = data?.grade_counts ? Number(data.grade_counts[g] ?? 0) : null;
+                const on = gradeSel.has(g);
+                const empty = c === 0;
+                return (
+                  <button key={g} type="button" role="tab" aria-selected={on}
+                          aria-disabled={empty || undefined}
+                          data-testid={`amd-grade-${g}`}
+                          className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
+                          style={empty ? { opacity: 0.45 } : undefined}
+                          onClick={() => toggleGrade(g)}>
+                    {AMD_GRADE_LABEL[g] || g}{c == null ? '' : ` · ${c}`}
                   </button>
                 );
               })}

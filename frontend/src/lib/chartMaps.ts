@@ -635,6 +635,14 @@ export type CmBoard = {
   /** 🩹 Deep Demand only (2026-09-16) — how many tiles the level filter hid on
    *  THIS call. 0 / absent when every level is selected. */
   hidden_by_level?: number;
+  /** 🌀 AMD / Keltner (2026-09-17): which grades this payload IS, every grade
+   *  it could be, and how many names sit at each in the whole sweep. The chips
+   *  render from `grades_all` so the choices come from the backend's enforcing
+   *  tuple, and the counts are taken with the filter OFF — a count that moved
+   *  because a chip is unselected would be a lie about the board. */
+  grades?: string[];
+  grades_all?: string[];
+  grade_counts?: Record<string, number>;
   /** 🚀 Breaking (2026-09-06): the zone-edge pass the cards were drawn from. */
   pass_as_of?: string | null;
   pass_date?: string | null;
@@ -869,6 +877,26 @@ export const DEEP_LEVELS: readonly number[] = [2, 3, 4];
  *  built with a suffix rule, so "1st/2nd/3rd" is worded once. */
 export const DEEP_LEVEL_LABEL: Record<number, string> = { 2: '2nd', 3: '3rd', 4: '4th' };
 
+/** The AMD / Keltner grades in Ajay's vocabulary (2026-09-17).
+ *
+ *  The KEYS stay the backend's (`turning_bullish.AMD_GRADES` /
+ *  `KELTNER_GRADES`) so a label can never become a second definition of a
+ *  grade; only the wording is ours. A grade the server adds that this map has
+ *  not caught up with renders as its own key rather than vanishing from the
+ *  filter — a missing chip would hide names, which is the one thing a filter
+ *  must never do quietly. */
+export const AMD_GRADE_LABEL: Record<string, string> = {
+  raided: '\u{1F300} Manipulated',
+  basing: '\u{1F7E6} Accumulating',
+  marked_up: '\u{1F4C8} Distributed',
+  failed: '\u2717 Base failed',
+  stale: '\u23F3 Stale raid',
+  breaking_up: '\u2197 Breaking up',
+  coiled_up: '\u{1FA22} Coiled',
+  upper_half: '\u25B2 Upper half',
+  lower_half: '\u25BC Lower half',
+};
+
 /** `?levels=` → the selected arrival levels. FAILS OPEN exactly like the
  *  backend's `deep_demand.parse_levels`: empty, `all`, garbage, a level outside
  *  the window, or a spec that selects nothing all mean EVERY level. A filter
@@ -1091,6 +1119,28 @@ export function parseSort(raw: string | null | undefined,
   return v;
 }
 
+/** The AMD/Keltner grade chips a URL asks for. Empty / junk -> an empty set,
+ *  which the caller normalises to "the server default" (the turning grade
+ *  alone) rather than to an empty board. Order is not preserved; the chips
+ *  render in the backend's own `grades_all` order. */
+export function parseGrades(raw: string | null | undefined): Set<string> {
+  const out = new Set<string>();
+  for (const part of String(raw || '').split(',')) {
+    const k = part.trim().toLowerCase();
+    if (k) out.add(k);
+  }
+  return out;
+}
+
+/** The `grades=` value for a selection, or null when it should not ride:
+ *  nothing selected (normalise to the default) or everything selected but the
+ *  caller passed no universe to compare against. */
+export function gradesParam(sel: Set<string>, all?: string[]): string | null {
+  if (!sel.size) return null;
+  if (all && all.length && all.every((g) => sel.has(g))) return 'all';
+  return Array.from(sel).sort().join(',');
+}
+
 export function boardQuery(p: {
   tab: CmTab; limit?: number; days?: number;
   universe?: string; themesFirst?: boolean; pattern?: string | null;
@@ -1100,6 +1150,7 @@ export function boardQuery(p: {
   bias?: string; micro?: string;
   minRoom?: number;
   levels?: string;
+  grades?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -1131,6 +1182,13 @@ export function boardQuery(p: {
   // which is a band-TYPE lens on a different board — two params, two names.
   if (p.tab === 'deep_demand' && p.levels && p.levels !== 'all') {
     q.set('levels', p.levels);
+  }
+  // 🌀 AMD / Keltner grade filter (Ajay 2026-09-17: "I wanna see all AMD and
+  // also filterable AMD"). Only a selection that DIFFERS from the server's
+  // default rides — an empty param means "the turning grade only", which is
+  // the board this tab has always opened on.
+  if ((p.tab === 'amd' || p.tab === 'keltner') && p.grades) {
+    q.set('grades', p.grades);
   }
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
