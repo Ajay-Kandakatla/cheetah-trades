@@ -74,6 +74,9 @@ async def chart_maps(
     source: str = Query("pattern", description="winners tab only — pattern | zone"),
     minervini_only: bool = Query(False,
                                  description="winners tab only — SEPA qualifiers at the time"),
+    flight: str = Query("", description="amd tab — live state filter: "
+                                       "sweeping | reclaimed | holding, comma "
+                                       "list. Empty = every state."),
     grades: str = Query("", description="amd / keltner tabs — comma list of "
                                        "grades to show, or 'all'. Empty = the "
                                        "turning grade only, as before."),
@@ -134,6 +137,7 @@ async def chart_maps(
             bias=bias if isinstance(bias, str) else "all",
             micro=micro if isinstance(micro, str) else "60m",
             grades=(grades if isinstance(grades, str) and grades.strip() else None),
+            flight=(flight if isinstance(flight, str) and flight.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

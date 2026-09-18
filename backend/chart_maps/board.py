@@ -4048,12 +4048,100 @@ def _amd_read(v: dict, px) -> Optional[dict]:
     }
 
 
+# The AMD cycle IN FLIGHT (Ajay 2026-09-17: "Today its not granular we do not
+# show potentially or in the flight mani pulation i wanna see those").
+#
+# The stored detector only fires on a COMPLETE raid: price traded through the
+# base low AND closed back inside. Until that close a sweep happening right now
+# is invisible — measured 2026-09-17 at 15:2x ET, 156 names had already swept
+# their base low and traded back inside with the bar still open, and 172 were
+# below the edge unresolved. APH read `basing` on the board while its day low
+# (77.08) sat under its base floor (77.70) and price was back at 78.01.
+#
+# NOT ONE THRESHOLD IS PICKED HERE. Each state is a fact about today's own low
+# and the live print against the stored base edge:
+#   sweeping   the live print is BELOW the edge — the sweep is happening
+#   reclaimed  today's low pierced the edge and price is back inside
+#   holding    today's low never reached the edge
+# "How close is close" is NOT bucketed: `to_edge_pct` is served as a number so
+# he sorts and filters it himself rather than inheriting a distance nobody gave.
+AMD_FLIGHT_STATES = ("sweeping", "reclaimed", "holding")
+
+# How deep into the sorted document the live state filter searches. The whole
+# sweep is ~2,700 names and one bulk quote call covers them, so this is a
+# ceiling against a runaway document rather than a sample.
+TB_FLIGHT_SCAN_LIMIT = 4000
+
+
+def _amd_flight(v: dict, snap: dict) -> Optional[dict]:
+    """The live, UNCONFIRMED half of the AMD cycle for one name.
+
+    `v` is the stored verdict (for `base_lo`), `snap` a `bulk_live_prices` row.
+    None when either side is missing — an unknown state, never a guessed one.
+
+    Everything here is provisional by construction: the bar has not closed, so
+    a `reclaimed` name is a raid FORMING, not a raid. The served `confirmed`
+    flag is always False for exactly that reason, and the surface says so.
+    """
+    if not isinstance(v, dict) or not isinstance(snap, dict):
+        return None
+    lo = _f(v.get("base_lo"))
+    px = _f(snap.get("last_trade_price"))
+    if px is None:
+        px = _f(snap.get("price"))
+    day_low = _f(snap.get("low"))
+    if lo is None or px is None or day_low is None or lo <= 0 or px <= 0:
+        return None
+    if px < lo:
+        state = "sweeping"
+    elif day_low < lo:
+        state = "reclaimed"
+    else:
+        state = "holding"
+    return {
+        "state": state,
+        "confirmed": False,          # the bar has not closed. Never True here.
+        "base_lo": lo,
+        "day_low": day_low,
+        "price": px,
+        # Signed distance from the live print to the base edge. Positive =
+        # above it. A NUMBER, not a bucket: he picks what "close" means.
+        "to_edge_pct": round((px - lo) / px * 100.0, 2),
+        # How far under the edge today's low actually went, when it did.
+        "pierce_pct": (round((lo - day_low) / lo * 100.0, 2)
+                       if day_low < lo else None),
+        "swept_today": day_low < lo,
+    }
+
+
+def parse_flight(spec) -> Optional[frozenset]:
+    """A `flight=` spec -> which live states to keep, or None for all.
+
+    Fails OPEN like every other spec parser on these boards: junk or an unknown
+    state returns None and the caller gets the unfiltered board rather than an
+    empty page.
+    """
+    if spec is None:
+        return None
+    if isinstance(spec, str):
+        raw = [p.strip().lower() for p in spec.replace("+", ",").split(",")]
+    else:
+        try:
+            raw = [str(p).strip().lower() for p in spec]
+        except TypeError:
+            return None
+    if any(p == "all" for p in raw):
+        return None
+    keep = frozenset(p for p in raw if p in AMD_FLIGHT_STATES)
+    return keep or None
+
+
 def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
                           days: int = BARS_DEFAULT,
                           themes_first: bool = THEMES_FIRST_DEFAULT,
                           min_tier: str = DEFAULT_MIN_TIER,
                           sort: str = DEFAULT_SORT,
-                          grades=None) -> dict:
+                          grades=None, flight=None) -> dict:
     """Two tabs — Keltner coils and AMD raids (Ajay 2026-09-13).
 
     *"I need two tabs in chart maps for me to look at where stocks are bullish
@@ -4076,8 +4164,35 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     """
     from supply_demand import turning_bullish as TB
 
-    b = TB.board(kind, limit=limit, grades=grades)
+    # THE LIVE FILTER RUNS BEFORE THE LIMIT. Asking TB.board for `limit` rows
+    # and then filtering would search only the first 80 of 2,678 for names that
+    # are sweeping right now — the cohort he is looking for is spread across
+    # the whole document, not clustered at the top of its ordering.
+    want_flight = parse_flight(flight) if kind == "amd" else None
+    b = TB.board(kind, limit=(TB_FLIGHT_SCAN_LIMIT if want_flight else limit),
+                 grades=grades)
     rows = b.get("rows") or []
+    flight_by_sym: dict = {}
+    if kind == "amd":
+        try:
+            live = _live_rows([r.get("symbol") for r in rows])
+            for r in rows:
+                fr = _amd_flight(r.get("amd") or {},
+                                 live.get((r.get("symbol") or "").upper()) or {})
+                if fr is not None:
+                    flight_by_sym[r["symbol"]] = fr
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("turning_bullish_tiles: live flight read failed: %s", exc)
+    flight_counts = {st: sum(1 for f in flight_by_sym.values()
+                             if f.get("state") == st)
+                     for st in AMD_FLIGHT_STATES}
+    if want_flight:
+        # A name with NO live read is UNKNOWN, not "holding" — it is dropped
+        # from a state-filtered board rather than filed under a state it was
+        # never measured to be in.
+        rows = [r for r in rows
+                if (flight_by_sym.get(r.get("symbol")) or {}).get("state") in want_flight]
+        rows = rows[:max(1, int(limit))]
     # Sortable tile numbers come from the SEPA scan row, same as every other
     # tab — `tile_metrics` takes a ROW, never a symbol. A name the scan has not
     # seen still gets a tile: it simply carries no metrics, rather than being
@@ -4145,6 +4260,9 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
             # computed and no threshold is invented here.
             "amd_read": (_amd_read(v, _num(r.get("last_close")))
                          if kind == "amd" else None),
+            # The live, unconfirmed half — where this name is against its base
+            # edge RIGHT NOW. None when no live print came back.
+            "amd_flight": flight_by_sym.get(sym),
             **tile_metrics(scan_by_sym.get(sym) or {}),
             # The same numbers again under the private key `_finish` reads.
             # The flat spread above is the tile's published shape and stays;
@@ -4199,6 +4317,9 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
         # names sit at each — so the filter's choices come from the enforcing
         # tuple and the page can never present a filtered board as the whole
         # one (Ajay 2026-09-17: "I wanna see all AMD and also filterable AMD").
+        "flight_counts": flight_counts,
+        "flight": sorted(want_flight) if want_flight else [],
+        "flight_states": list(AMD_FLIGHT_STATES),
         "grades": b.get("grades") or [],
         "grades_all": b.get("grades_all") or [],
         "grade_counts": b.get("grade_counts") or {},
@@ -5301,7 +5422,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           touching_only: bool = False, phase: str = "",
           target: str = "zone", bias: str = "all", micro: str = "60m",
           min_room: Optional[float] = None, studies: bool = False,
-          levels: str = "all", grades: Optional[str] = None) -> dict:
+          levels: str = "all", grades: Optional[str] = None,
+          flight: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -5352,7 +5474,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                         micro=micro if isinstance(micro, str) else "60m")
     elif t in ("keltner", "amd"):
         out = turning_bullish_tiles(t, limit, days, themes_first, tier,
-                                    sort=srt, grades=grades)
+                                    sort=srt, grades=grades, flight=flight)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":

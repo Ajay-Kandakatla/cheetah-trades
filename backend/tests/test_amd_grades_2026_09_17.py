@@ -129,3 +129,91 @@ def test_the_default_board_is_unchanged_turning_only():
     src = inspect.getsource(TB.board)
     assert "keep = parse_grades(grades, k)" in src
     assert "else [r for r in rows if r.get(key) == want]" in src
+
+
+# ── the cycle IN FLIGHT (2026-09-17) ────────────────────────────────────────
+#
+# Ajay: "Today its not granular we do not show potentially or in the flight
+# mani pulation i wanna see those". The stored detector only fires on a
+# COMPLETE raid — swept AND closed back inside — so a sweep happening now is
+# invisible until tonight. Measured on the live stack that afternoon: of 1,228
+# names with a live base, 156 had already swept and reclaimed with the bar
+# open, and 172 were below the edge unresolved. APH read `basing` while its day
+# low (77.08) sat under its base floor (77.70) and price was back at 78.01.
+_BASE = {"base_lo": 100.0, "base_hi": 120.0, "grade": "basing"}
+
+
+def _snap(price, low):
+    return {"last_trade_price": price, "price": price, "low": low}
+
+
+def test_sweeping_is_below_the_edge_right_now():
+    f = B._amd_flight(_BASE, _snap(97.0, 96.0))
+    assert f["state"] == "sweeping"
+    assert f["to_edge_pct"] < 0
+    assert f["swept_today"] is True
+    assert f["pierce_pct"] == pytest.approx((100.0 - 96.0) / 100.0 * 100, abs=0.01)
+
+
+def test_reclaimed_is_swept_today_and_back_inside():
+    """APH's shape: the day low pierced the floor, price is back above it, the
+    bar has not closed. This is the raid FORMING."""
+    f = B._amd_flight(_BASE, _snap(101.0, 98.0))
+    assert f["state"] == "reclaimed"
+    assert f["swept_today"] is True
+    assert f["to_edge_pct"] > 0
+
+
+def test_holding_never_reached_the_edge_today():
+    f = B._amd_flight(_BASE, _snap(110.0, 105.0))
+    assert f["state"] == "holding"
+    assert f["swept_today"] is False
+    assert f["pierce_pct"] is None
+
+
+def test_NOTHING_in_flight_is_ever_reported_as_confirmed():
+    """The bar has not closed. A reclaimed name is a raid forming, not a raid —
+    if this ever serves True, the board is calling an unclosed bar a fact."""
+    for snap in (_snap(97.0, 96.0), _snap(101.0, 98.0), _snap(110.0, 105.0)):
+        assert B._amd_flight(_BASE, snap)["confirmed"] is False
+
+
+def test_the_distance_to_the_edge_is_a_NUMBER_not_a_bucket():
+    """No threshold is picked for "close to the edge" — he sorts the number
+    himself. A bucketed field here would be a distance nobody gave."""
+    import inspect
+    src = inspect.getsource(B._amd_flight)
+    for invented in ("0.5", "1.0", "2.0", "3.0", "5.0"):
+        assert invented not in src, invented
+    f = B._amd_flight(_BASE, _snap(100.5, 100.2))
+    assert isinstance(f["to_edge_pct"], float)
+
+
+@pytest.mark.parametrize("v,snap", [
+    ({}, _snap(100.0, 99.0)),                       # no base
+    (_BASE, {}),                                    # no live row
+    (_BASE, {"last_trade_price": None, "low": 99}),  # no print
+    (_BASE, {"last_trade_price": 100.0}),           # no day low
+    ({"base_lo": 0}, _snap(100.0, 99.0)),           # zero edge
+    (_BASE, _snap(0, 0)),                           # zero price
+    (None, None),
+])
+def test_NEGATIVE_a_missing_input_is_UNKNOWN_never_a_state(v, snap):
+    assert B._amd_flight(v, snap) is None
+
+
+@pytest.mark.parametrize("spec,expect", [
+    (None, None), ("", None), ("junk", None), (7, None), ("all", None),
+    ("sweeping", {"sweeping"}),
+    ("sweeping,reclaimed", {"sweeping", "reclaimed"}),
+    ("SWEEPING + holding", {"sweeping", "holding"}),
+])
+def test_parse_flight_fails_open(spec, expect):
+    got = B.parse_flight(spec)
+    assert (set(got) if got else None) == expect
+
+
+def test_the_flight_states_are_the_enforcing_tuple():
+    assert set(B.AMD_FLIGHT_STATES) == {"sweeping", "reclaimed", "holding"}
+    for st in B.AMD_FLIGHT_STATES:
+        assert B.parse_flight(st) == frozenset({st})
