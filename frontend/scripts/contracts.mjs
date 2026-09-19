@@ -557,17 +557,58 @@ const CONTRACTS = [
       for (const k of ['60m:1w', '60m:2w']) {
         if (!src.includes(`key: '${k}'`)) errs.push(`CHART_VIEWS lacks ${k} — the hourly short zoom is unreachable from the picker`);
       }
-      // ORDER IS LOAD-BEARING: viewKeyFor falls back to a tf-only match for a
-      // link written before these entries existed, and that fallback takes the
-      // FIRST '60m' it finds. If the pairs move ahead of the bare entry, every
-      // legacy ?tf=60m link silently opens a 1-week chart instead.
-      const iBare = src.indexOf("key: '60m',");
-      const i1w = src.indexOf("key: '60m:1w'");
-      const i2w = src.indexOf("key: '60m:2w'");
-      if (iBare < 0 || i1w < 0 || i2w < 0) {
-        errs.push('CHART_VIEWS: could not locate the three 60m entries to order-check');
-      } else if (!(iBare < i1w && iBare < i2w)) {
-        errs.push("CHART_VIEWS lists a 60m PAIR before the bare '60m' entry — every legacy ?tf=60m link would resolve to the short zoom");
+      // A tf with MORE THAN ONE entry must name exactly one `primary`, which
+      // is what a bare `?tf=60m` link resolves to. This replaced an
+      // order-dependent check on 2026-09-18: making array position the
+      // fallback meant the list could not be ordered for a reader without
+      // changing behaviour, and the hourly week had to sit two groups below
+      // the entry he was actually on — which is why he reported it missing
+      // twice. Order is now free; `primary` carries the contract.
+      {
+        const views = src.match(/export const CHART_VIEWS[\s\S]*?\n\];/);
+        const body = views ? views[0] : '';
+        if (!body) errs.push('contracts: CHART_VIEWS block not found');
+        const entries = [...body.matchAll(/\{\s*key: '([^']+)'[\s\S]*?tf: '([^']+)'([\s\S]*?)\},/g)]
+          .map((m) => ({ key: m[1], tf: m[2], primary: /primary:\s*true/.test(m[3]) }));
+        if (entries.length < 10) errs.push(`contracts: parsed only ${entries.length} CHART_VIEWS entries — regex drifted`);
+        const byTf = {};
+        for (const e of entries) (byTf[e.tf] ||= []).push(e);
+        for (const [tf, list] of Object.entries(byTf)) {
+          // 'daily' is exempt: viewKeyFor's daily branch matches on WINDOW and
+          // never reaches the tf fallback, so a primary there would be dead
+          // weight. The contract is only about intraday tf-only links.
+          if (tf === 'daily') continue;
+          const prim = list.filter((e) => e.primary);
+          if (list.length > 1 && prim.length !== 1) {
+            errs.push(`CHART_VIEWS: tf '${tf}' has ${list.length} entries and ${prim.length} primary — a bare ?tf=${tf} link needs exactly one`);
+          }
+          if (list.length === 1 && prim.length) {
+            errs.push(`CHART_VIEWS: tf '${tf}' has one entry and does not need primary`);
+          }
+        }
+      }
+      // viewKeyFor must consult `primary` before any positional match.
+      if (!/v\.tf === t && v\.primary/.test(src)) {
+        errs.push('viewKeyFor no longer falls back to the primary entry — the tf fallback is order-dependent again');
+      }
+      // The SPAN LADDER leads with the hourly week (Ajay 2026-09-18, third
+      // round: "I still see the same charts"). If 1w/2w go back to daily here,
+      // picking "1 week" draws five candles again.
+      for (const k of ['60m:1w', '60m:2w']) {
+        const m = src.match(new RegExp(`key: '${k}'[^}]*?group: '([^']+)'`));
+        if (!m) errs.push(`CHART_VIEWS ${k} lost its group`);
+        else if (m[1] !== 'Zoom') errs.push(`CHART_VIEWS ${k} is in group '${m[1]}' — the hourly short zooms must lead the span ladder`);
+      }
+      // The component must DERIVE its optgroups, never retype them: a
+      // hard-coded list silently dropped a whole group once already.
+      {
+        const comp = read('src/components/SupportLevels.tsx');
+        if (/\[\s*'Daily'\s*,\s*'Intraday'\s*\]\s*as const/.test(comp)) {
+          errs.push('SupportLevels.tsx hard-codes its optgroup list again — a new group would render no options');
+        }
+        if (!/new Set\(CHART_VIEWS\.map\(\(v\) => v\.group\)\)/.test(comp)) {
+          errs.push('SupportLevels.tsx no longer derives its optgroups from CHART_VIEWS');
+        }
       }
       // viewKeyFor must match the PAIR before falling back to the tf, or the
       // control names a view the chart is not drawing and cannot be re-picked.

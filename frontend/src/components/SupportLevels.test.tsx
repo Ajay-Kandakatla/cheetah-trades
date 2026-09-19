@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SupportLevels } from './SupportLevels';
-import type { SupportLevel, SupportPayload } from '../lib/supportLevels';
+import { CHART_VIEWS, type SupportLevel, type SupportPayload } from '../lib/supportLevels';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
@@ -195,7 +195,11 @@ describe('SupportLevels', () => {
     expect(container.querySelectorAll('select').length).toBe(1);
     const groups = Array.from(container.querySelectorAll('optgroup'))
       .map((g) => g.getAttribute('label'));
-    expect(groups).toEqual(['Daily', 'Intraday']);
+    // The groups are DERIVED from CHART_VIEWS since 2026-09-18 — a hard-coded
+    // pair here silently dropped every entry in any group nobody remembered to
+    // add, which is exactly how the hourly week shipped invisible.
+    expect(groups).toEqual([...new Set(CHART_VIEWS.map((v) => v.group))]);
+    expect(groups).toContain('Zoom');
     const opts = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
     expect(opts).toContain('1 month');
     expect(opts).toContain('15 min · today from the open');
@@ -834,8 +838,13 @@ describe('SupportLevels · the 1-week / 2-week zooms (Ajay 2026-09-18)', () => {
       .toBeTruthy();
     expect(screen.getByTestId('sl-levels-window').textContent)
       .toContain('Every number on this tab is the 1 month read.');
-    const first = document.querySelectorAll('optgroup[label="Daily"] option')[0];
-    expect(first?.textContent).toBe('1 week');
+    // The daily five-candle week lives in its own group now and says so on the
+    // option itself, so it can never again be mistaken for the readable week.
+    const dailyShort = document.querySelectorAll('optgroup[label="Daily candles"] option')[0];
+    expect(dailyShort?.textContent).toBe('1 week · daily candles');
+    // …and the SPAN ladder opens with the hourly week he asked for.
+    const ladderFirst = document.querySelectorAll('optgroup[label="Zoom"] option')[0];
+    expect(ladderFirst?.textContent).toBe('1 week');
     // NEGATIVE: the old sentence is false at this zoom and must not be served.
     expect(screen.queryByText(/Levels are read from this window only\./)).toBeNull();
     // "reversal", never "bounce", on anything he reads.
@@ -852,7 +861,7 @@ describe('SupportLevels · the 1-week / 2-week zooms (Ajay 2026-09-18)', () => {
     expect(screen.queryByTestId('chart')).toBeNull();
     expect(screen.queryByText('Support below')).toBeNull();
     // the dropdown still renders so his next move is available
-    expect(document.querySelectorAll('optgroup[label="Daily"] option').length)
+    expect(document.querySelectorAll('optgroup option').length)
       .toBeGreaterThan(0);
   });
 

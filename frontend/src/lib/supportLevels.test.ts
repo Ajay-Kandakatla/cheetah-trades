@@ -317,8 +317,12 @@ describe('CHART_VIEWS — the merged chart control', () => {
       expect(v.window).toBeTruthy();
       expect(v.tf).toBeTruthy();
       // an intraday view must not advertise a daily zoom in its label
-      if (v.tf !== 'daily') expect(v.group).toBe('Intraday');
-      else expect(v.group).toBe('Daily');
+      // The GROUP is a display bucket, not a contract on the tf. Since
+      // 2026-09-18 the span ladder ('Zoom') deliberately mixes a daily 1-month
+      // view with an hourly 1-week one, because he picks a SPAN there and the
+      // list picks the resolution. What must hold is that a group exists and
+      // is one of the declared ones.
+      expect(['Zoom', 'Daily candles', 'Intraday']).toContain(v.group);
     }
   });
 
@@ -463,8 +467,13 @@ describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
   });
 
   it('the chart control offers both as daily views between 1 year and 5 years', () => {
-    const daily = CHART_VIEWS.filter((v) => v.group === 'Daily').map((v) => v.key);
-    expect(daily).toEqual(['daily:1w', 'daily:2w', 'daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']);
+    const daily = CHART_VIEWS.filter((v) => v.tf === 'daily').map((v) => v.key);
+    // Set, not sequence: 2026-09-18 moved the daily 1w/2w into their own group
+    // below the span ladder, so their POSITION changed while their membership
+    // and resolution did not. 2y/3y sitting between 1y and 5y is the claim.
+    expect(new Set(daily)).toEqual(new Set(['daily:1w', 'daily:2w', 'daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']));
+    const ladder = daily.filter((k) => !['daily:1w', 'daily:2w'].includes(k));
+    expect(ladder).toEqual(['daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']);
     expect(viewKeyFor('2y', 'daily')).toBe('daily:2y');
     expect(viewKeyFor('3y', 'daily')).toBe('daily:3y');
     expect(viewFor('daily:3y')).toMatchObject({ window: '3y', tf: 'daily' });
@@ -472,7 +481,7 @@ describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
     expect(parseWindow(' 3Y ')).toBe('3y');
     // NEGATIVE: no intraday view borrowed a long zoom — intraday tapes are
     // sessions, not years.
-    for (const v of CHART_VIEWS.filter((x) => x.group === 'Intraday')) {
+    for (const v of CHART_VIEWS.filter((x) => x.tf !== 'daily')) {
       expect(['2y', '3y', '5y']).not.toContain(v.window);
     }
   });
@@ -499,8 +508,13 @@ describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
 
   /* FE-2 */
   it('offers both as daily views and resolves their keys', () => {
-    const daily = CHART_VIEWS.filter((v) => v.group === 'Daily').map((v) => v.key);
-    expect(daily.slice(0, 2)).toEqual(['daily:1w', 'daily:2w']);
+    const daily = CHART_VIEWS.filter((v) => v.tf === 'daily').map((v) => v.key);
+    // They are still OFFERED as daily views and still resolve — but they no
+    // longer lead the list. Since 2026-09-18 the span ladder opens with the
+    // HOURLY 1w/2w (he asked for readable weeks); the daily candles sit in
+    // their own group for when he wants the five bars everyone quotes.
+    expect(daily).toContain('daily:1w');
+    expect(daily).toContain('daily:2w');
     expect(viewKeyFor('1w', 'daily')).toBe('daily:1w');
     expect(viewKeyFor('2w', 'daily')).toBe('daily:2w');
     expect(viewFor('daily:2w')).toMatchObject({ window: '2w', tf: 'daily' });
@@ -521,7 +535,7 @@ describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
    * — their levels are the 60m frame's own ~47-session budget — so borrowing
    * that sentence would be the exact lie this test exists to catch. */
   it('only the 60m pairs may borrow a short zoom, and no other intraday view may', () => {
-    for (const v of CHART_VIEWS.filter((x) => x.group === 'Intraday')) {
+    for (const v of CHART_VIEWS.filter((x) => x.tf !== 'daily')) {
       if (['1w', '2w'].includes(v.window)) {
         expect(v.tf).toBe('60m');
       }
@@ -539,7 +553,7 @@ describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
   /* FE-3b — the provenance hazard itself, stated directly. */
   it('NEGATIVE: no intraday short zoom claims a DAILY read in its hint', () => {
     const hourlyShorts = CHART_VIEWS.filter(
-      (v) => v.group === 'Intraday' && ['1w', '2w'].includes(v.window));
+      (v) => v.tf !== 'daily' && ['1w', '2w'].includes(v.window));
     expect(hourlyShorts.length).toBeGreaterThan(0);   // guard against a vacuous pass
     for (const v of hourlyShorts) {
       const hint = v.hint || '';

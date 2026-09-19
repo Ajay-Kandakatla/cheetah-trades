@@ -242,7 +242,12 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
                     if (onView) onView(v.window, v.tf);
                     else onWindow(v.window);
                   }}>
-            {(['Daily', 'Intraday'] as const).map((g) => (
+            {/* Ajay 2026-09-18: the group list is derived from CHART_VIEWS, not
+              * retyped. A hard-coded pair silently DROPPED every entry in a
+              * group nobody remembered to add here — which is how a view can
+              * exist, be reachable by URL, and still be invisible in the one
+              * control he actually uses. */}
+            {([...new Set(CHART_VIEWS.map((v) => v.group))]).map((g) => (
               <optgroup key={g} label={g}>
                 {CHART_VIEWS.filter((v) => v.group === g).map((v) => (
                   <option key={v.key} value={v.key}>{v.label}</option>

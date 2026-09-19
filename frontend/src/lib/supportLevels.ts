@@ -249,61 +249,69 @@ export const DEFAULT_TF = 'daily';
  * The wire format keeps `window` and `tf` separate — the backend contract
  * does not change, only the way the choice is offered. */
 export type ChartView = {
-  key: string; label: string; group: 'Daily' | 'Intraday';
+  key: string; label: string; group: 'Zoom' | 'Daily candles' | 'Intraday';
   window: string; tf: string; hint?: string;
+  /** The canonical entry for its TIMEFRAME, used when a link names a tf whose
+   *  (window, tf) pair matches no entry — e.g. a `?tf=60m` bookmark written
+   *  before the hourly short zooms existed. Exactly one entry per tf may carry
+   *  it. Without this the fallback was "whichever sits earliest in the array",
+   *  which silently made the LIST ORDER a behavioural contract and stopped the
+   *  list being ordered for a reader. */
+  primary?: boolean;
 };
 
 export const CHART_VIEWS: ChartView[] = [
-  // Ajay 2026-09-18, the two short zooms. The candles are the same daily
-  // candles; only the picture is closer in. Every NUMBER stays the 1-month
-  // read — a 5-bar frame is under the swing floor price_zones needs and too
-  // short for the no-repaint drop — and the served note says so on the tab.
-  { key: 'daily:1w', label: '1 week', group: 'Daily', window: '1w', tf: 'daily',
-    hint: 'the last 5 sessions — chart only; every number stays the 1-month read' },
-  { key: 'daily:2w', label: '2 weeks', group: 'Daily', window: '2w', tf: 'daily',
-    hint: 'the last 10 sessions — chart only; every number stays the 1-month read' },
-  { key: 'daily:1m', label: '1 month', group: 'Daily', window: '1m', tf: 'daily',
+  /* THE SPAN LADDER. Ajay picks a span here; resolution is this list's problem,
+   * not his. 2026-09-18, third round on one request: he asked to "increase the
+   * bars on the weekly chart", chose "1 week of HOURLY bars", and then twice
+   * reported seeing the same 5 candles — because the hourly week had shipped as
+   * a SEPARATE entry two groups below the one he was on. A span he has to pair
+   * with a resolution before it is readable is a chore, so 1 WEEK AND 2 WEEKS
+   * ARE THE HOURLY ONES. The 5- and 10-candle daily versions keep their keys
+   * and their honest wording, one group down, for when he wants them.
+   *
+   * ORDER IS NOT A CONTRACT any more — `primary` carries the tf fallback — so
+   * this list can finally be ordered the way it is read. */
+  { key: '60m:1w', label: '1 week', group: 'Zoom', window: '1w', tf: '60m',
+    hint: 'the last 5 sessions as hourly bars (~34) — the CHART only; every '
+        + "number stays the 1-hour frame's own ~47-session read" },
+  { key: '60m:2w', label: '2 weeks', group: 'Zoom', window: '2w', tf: '60m',
+    hint: 'the last 10 sessions as hourly bars (~67) — the CHART only; every '
+        + "number stays the 1-hour frame's own ~47-session read" },
+  { key: 'daily:1m', label: '1 month', group: 'Zoom', window: '1m', tf: 'daily',
     hint: 'the level this week\'s trade is standing on' },
-  { key: 'daily:3m', label: '3 months', group: 'Daily', window: '3m', tf: 'daily' },
-  { key: 'daily:6m', label: '6 months', group: 'Daily', window: '6m', tf: 'daily' },
-  { key: 'daily:1y', label: '1 year', group: 'Daily', window: '1y', tf: 'daily' },
+  { key: 'daily:3m', label: '3 months', group: 'Zoom', window: '3m', tf: 'daily' },
+  { key: 'daily:6m', label: '6 months', group: 'Zoom', window: '6m', tf: 'daily' },
+  { key: 'daily:1y', label: '1 year', group: 'Zoom', window: '1y', tf: 'daily' },
   // Ajay 2026-09-06: the bounces that come off two- and three-year-old
   // structure — the zoom is the demand-zone lookback, so these are new reads,
   // not longer pictures of the 1-year one.
-  { key: 'daily:2y', label: '2 years', group: 'Daily', window: '2y', tf: 'daily',
+  { key: 'daily:2y', label: '2 years', group: 'Zoom', window: '2y', tf: 'daily',
     hint: 'the structure a two-year-old base bounces from' },
-  { key: 'daily:3y', label: '3 years', group: 'Daily', window: '3y', tf: 'daily' },
-  { key: 'daily:5y', label: '5 years', group: 'Daily', window: '5y', tf: 'daily',
+  { key: 'daily:3y', label: '3 years', group: 'Zoom', window: '3y', tf: 'daily' },
+  { key: 'daily:5y', label: '5 years', group: 'Zoom', window: '5y', tf: 'daily',
     hint: 'the structural floor' },
-  { key: 'daily:all', label: 'All windows · overlay', group: 'Daily',
+  { key: 'daily:all', label: 'All windows · overlay', group: 'Zoom',
     window: 'all', tf: 'daily' },
+  /* THE DAILY-CANDLE SHORT ZOOMS. Same keys, same honest wording, kept
+   * because they are a different question — "show me this week as the five
+   * daily bars everyone else quotes" — and because a shared `?window=1w` link
+   * with no tf still lands here. THEIR HINT IS NOT THE HOURLY ONE:
+   * CHART_ONLY_LEVELS_FROM redirects a short DAILY window to 1m of daily bars,
+   * so for these two the 1-month claim is TRUE. On the hourly pair above it
+   * would be a lie — the levels there are the 60m frame's own budget
+   * (measured: 1w+60m and 6m+60m return identical supports, overhead and
+   * verdict at bars_used 330). */
+  { key: 'daily:1w', label: '1 week · daily candles', group: 'Daily candles',
+    window: '1w', tf: 'daily',
+    hint: 'the last 5 sessions — chart only; every number stays the 1-month read' },
+  { key: 'daily:2w', label: '2 weeks · daily candles', group: 'Daily candles',
+    window: '2w', tf: 'daily',
+    hint: 'the last 10 sessions — chart only; every number stays the 1-month read' },
+  // PRIMARY for tf '60m': the view a bare `?tf=60m` link resolves to, however
+  // its window reads. Must stay exactly one per tf — contract-pinned.
   { key: '60m', label: '1 hour · ~47 sessions', group: 'Intraday',
-    window: '3m', tf: '60m' },
-  /* Ajay 2026-09-18, on a 1-week chart drawing its honest 5 daily candles:
-   * "Can you increase the bars on the weekly chart please? I am trying to read
-   * more on the weekly chart." He picked one week of HOURLY bars — keep the
-   * span, raise the resolution. He DECLINED weekly candles, so nothing here
-   * resamples.
-   *
-   * These two MUST stay after the bare '60m' entry: viewKeyFor falls back to a
-   * tf-only match for links written before they existed, and that fallback
-   * takes the first '60m' it finds.
-   *
-   * THE HINT IS NOT THE DAILY ONE. daily:1w and daily:2w truthfully say every
-   * number stays the 1-month read, because CHART_ONLY_LEVELS_FROM redirects a
-   * short DAILY window to 1m of daily bars. On an hourly frame the levels come
-   * from the hourly frame's own ~47-session budget instead — measured: 1w+60m
-   * and 6m+60m return identical supports, overhead and verdict at bars_used
-   * 330. Copying the daily wording here would claim a provenance the payload
-   * does not have. */
-  { key: '60m:1w', label: '1 hour · 1 week', group: 'Intraday',
-    window: '1w', tf: '60m',
-    hint: 'the last 5 sessions as hourly bars (~34) — the CHART only; every '
-        + "number stays the 1-hour frame's own ~47-session read" },
-  { key: '60m:2w', label: '1 hour · 2 weeks', group: 'Intraday',
-    window: '2w', tf: '60m',
-    hint: 'the last 10 sessions as hourly bars (~67) — the CHART only; every '
-        + "number stays the 1-hour frame's own ~47-session read" },
+    window: '3m', tf: '60m', primary: true },
   { key: '15m', label: '15 min · ~10 sessions', group: 'Intraday',
     window: '1m', tf: '15m' },
   { key: '15m_open', label: '15 min · today from the open', group: 'Intraday',
@@ -347,6 +355,7 @@ export function viewKeyFor(window: string, tf: string): string {
      * resolve to the 3-month hourly view rather than blanking to the default.
      * That is why the new pairs are listed AFTER the bare '60m' entry. */
     return (CHART_VIEWS.find((v) => v.tf === t && v.window === window)
+         || CHART_VIEWS.find((v) => v.tf === t && v.primary)
          || CHART_VIEWS.find((v) => v.tf === t))?.key || DEFAULT_VIEW;
   }
   return CHART_VIEWS.find((v) => v.tf === 'daily' && v.window === window)?.key
