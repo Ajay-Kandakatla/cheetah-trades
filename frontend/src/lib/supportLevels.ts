@@ -99,6 +99,10 @@ export type SupportPayload = {
    *  counts and does not apply on an intraday timeframe. */
   chart_span?: string;
   zoom_applies?: boolean;
+  /** How many ET SESSIONS the drawn intraday frame covers, served only when a
+   *  short window actually trimmed it. Null on a daily frame and on an
+   *  untrimmed intraday one. Counted by session DATE, never by bar count. */
+  chart_sessions?: number | null;
   bullish_patterns?: {
     patterns?: BullishPattern[];
     stats_transfer?: boolean;
@@ -275,6 +279,31 @@ export const CHART_VIEWS: ChartView[] = [
     window: 'all', tf: 'daily' },
   { key: '60m', label: '1 hour · ~47 sessions', group: 'Intraday',
     window: '3m', tf: '60m' },
+  /* Ajay 2026-09-18, on a 1-week chart drawing its honest 5 daily candles:
+   * "Can you increase the bars on the weekly chart please? I am trying to read
+   * more on the weekly chart." He picked one week of HOURLY bars — keep the
+   * span, raise the resolution. He DECLINED weekly candles, so nothing here
+   * resamples.
+   *
+   * These two MUST stay after the bare '60m' entry: viewKeyFor falls back to a
+   * tf-only match for links written before they existed, and that fallback
+   * takes the first '60m' it finds.
+   *
+   * THE HINT IS NOT THE DAILY ONE. daily:1w and daily:2w truthfully say every
+   * number stays the 1-month read, because CHART_ONLY_LEVELS_FROM redirects a
+   * short DAILY window to 1m of daily bars. On an hourly frame the levels come
+   * from the hourly frame's own ~47-session budget instead — measured: 1w+60m
+   * and 6m+60m return identical supports, overhead and verdict at bars_used
+   * 330. Copying the daily wording here would claim a provenance the payload
+   * does not have. */
+  { key: '60m:1w', label: '1 hour · 1 week', group: 'Intraday',
+    window: '1w', tf: '60m',
+    hint: 'the last 5 sessions as hourly bars (~34) — the CHART only; every '
+        + "number stays the 1-hour frame's own ~47-session read" },
+  { key: '60m:2w', label: '1 hour · 2 weeks', group: 'Intraday',
+    window: '2w', tf: '60m',
+    hint: 'the last 10 sessions as hourly bars (~67) — the CHART only; every '
+        + "number stays the 1-hour frame's own ~47-session read" },
   { key: '15m', label: '15 min · ~10 sessions', group: 'Intraday',
     window: '1m', tf: '15m' },
   { key: '15m_open', label: '15 min · today from the open', group: 'Intraday',
@@ -306,7 +335,19 @@ export const DEFAULT_VIEW = 'daily:1y';   // follows DEFAULT_WINDOW (1 year sinc
 export function viewKeyFor(window: string, tf: string): string {
   const t = parseTf(tf);
   if (t !== 'daily') {
-    return CHART_VIEWS.find((v) => v.tf === t)?.key || DEFAULT_VIEW;
+    /* THE PAIR FIRST, THE TIMEFRAME ONLY AS A FALLBACK (Ajay 2026-09-18).
+     * Until the hourly short zooms existed exactly one entry carried each
+     * intraday tf, so matching on tf alone was correct by accident. Three
+     * entries now carry '60m' and a tf-only match would hand back whichever
+     * sits earliest in the array — the control would name a view the chart is
+     * not drawing, and the entry it wrongly named could never be re-picked
+     * (selecting the value already shown fires no change event).
+     * The fallback is NOT optional: a link written before these entries
+     * existed carries `?tf=60m` with any window at all, and it must still
+     * resolve to the 3-month hourly view rather than blanking to the default.
+     * That is why the new pairs are listed AFTER the bare '60m' entry. */
+    return (CHART_VIEWS.find((v) => v.tf === t && v.window === window)
+         || CHART_VIEWS.find((v) => v.tf === t))?.key || DEFAULT_VIEW;
   }
   return CHART_VIEWS.find((v) => v.tf === 'daily' && v.window === window)?.key
     || DEFAULT_VIEW;

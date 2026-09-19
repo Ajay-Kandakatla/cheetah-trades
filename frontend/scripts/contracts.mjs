@@ -549,6 +549,51 @@ const CONTRACTS = [
           errs.push(`support.py CHART_ONLY_LEVELS_FROM no longer maps ${k} -> 1m`);
         }
       }
+      // ── the HOURLY short zooms (Ajay 2026-09-18, second ship) ──────────
+      // "Can you increase the bars on the weekly chart please?" -> 1 week of
+      // HOURLY bars. The backend shipped first and the picker could not
+      // express the pair, so the feature never reached him. These pin the two
+      // halves together so that cannot recur.
+      for (const k of ['60m:1w', '60m:2w']) {
+        if (!src.includes(`key: '${k}'`)) errs.push(`CHART_VIEWS lacks ${k} — the hourly short zoom is unreachable from the picker`);
+      }
+      // ORDER IS LOAD-BEARING: viewKeyFor falls back to a tf-only match for a
+      // link written before these entries existed, and that fallback takes the
+      // FIRST '60m' it finds. If the pairs move ahead of the bare entry, every
+      // legacy ?tf=60m link silently opens a 1-week chart instead.
+      const iBare = src.indexOf("key: '60m',");
+      const i1w = src.indexOf("key: '60m:1w'");
+      const i2w = src.indexOf("key: '60m:2w'");
+      if (iBare < 0 || i1w < 0 || i2w < 0) {
+        errs.push('CHART_VIEWS: could not locate the three 60m entries to order-check');
+      } else if (!(iBare < i1w && iBare < i2w)) {
+        errs.push("CHART_VIEWS lists a 60m PAIR before the bare '60m' entry — every legacy ?tf=60m link would resolve to the short zoom");
+      }
+      // viewKeyFor must match the PAIR before falling back to the tf, or the
+      // control names a view the chart is not drawing and cannot be re-picked.
+      if (!/v\.tf === t && v\.window === window/.test(src)) {
+        errs.push('viewKeyFor no longer matches (tf, window) before falling back to tf — the three 60m views collapse to one key');
+      }
+      // The hourly pairs must NOT be redirected to a daily read, and must not
+      // claim to be. CHART_ONLY_LEVELS_FROM is keyed by WINDOW, so the guard is
+      // that support.py gates the redirect on `not own_bars`.
+      if (!/chart_only = \(not own_bars\) and spec\["key"\] in CHART_ONLY_LEVELS_FROM/.test(be)) {
+        errs.push('support.py: chart_only is no longer gated on `not own_bars` — an hourly 1w/2w would claim a 1-month provenance it does not have');
+      }
+      // The hint on an hourly pair must never borrow the daily wording.
+      {
+        const views = src.match(/export const CHART_VIEWS[\s\S]*?\n\];/);
+        const body = views ? views[0] : '';
+        for (const k of ['60m:1w', '60m:2w']) {
+          const entry = body.split(`key: '${k}'`)[1] || '';
+          const hint = entry.split('},')[0] || '';
+          if (/1-month read|month of daily/i.test(hint)) {
+            errs.push(`CHART_VIEWS ${k} claims a 1-month read — on an hourly frame the levels are the 1-hour frame's own ~47-session read`);
+          }
+        }
+      }
+      const feats2 = read('src/lib/newFeatures.ts');
+      if (!/id: 'chart-windows-1w-2w-hourly'/.test(feats2)) errs.push("newFeatures.ts lost the 'chart-windows-1w-2w-hourly' highlight");
       // The S&D evidence floor a 5-bar frame is under. Never lowered for a zoom.
       if (!/MIN_BARS_ABS\s*=\s*12\b/.test(read('../backend/supply_demand/price_zones.py'))) {
         errs.push('price_zones.MIN_BARS_ABS is no longer 12 — a short zoom must not lower the swing floor');

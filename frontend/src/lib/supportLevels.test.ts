@@ -508,11 +508,87 @@ describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
     expect(parseWindow('2w')).toBe('2w');
   });
 
-  /* FE-3 NEGATIVE */
-  it('no intraday view borrowed a short zoom', () => {
+  /* FE-3 — REPLACED, not deleted (Ajay 2026-09-18, second ship).
+   *
+   * This used to assert that NO intraday view may carry a 1w/2w window, which
+   * was the true invariant while a short window was inert on an intraday
+   * frame. support.py now trims an intraday chart BY ET SESSION, so the
+   * assertion has to move to the hazard it was actually guarding: not the
+   * window key, but a DAILY-PROVENANCE CLAIM printed over hourly candles.
+   *
+   * daily:1w/daily:2w truthfully say every number is the 1-month read, because
+   * CHART_ONLY_LEVELS_FROM redirects them. The hourly pairs are NOT redirected
+   * — their levels are the 60m frame's own ~47-session budget — so borrowing
+   * that sentence would be the exact lie this test exists to catch. */
+  it('only the 60m pairs may borrow a short zoom, and no other intraday view may', () => {
     for (const v of CHART_VIEWS.filter((x) => x.group === 'Intraday')) {
-      expect(['1w', '2w']).not.toContain(v.window);
+      if (['1w', '2w'].includes(v.window)) {
+        expect(v.tf).toBe('60m');
+      }
     }
+    // NEGATIVE: the frames that hold ONE session, or whose levels come off a
+    // daily window, must never be paired with a short zoom. 5m_live/5m_today
+    // read levels from 6m of DAILY bars; trimming them would silently narrow
+    // the levels without the note saying so.
+    for (const tf of ['15m_open', '5m_live', '5m_today']) {
+      const shorts = CHART_VIEWS.filter((v) => v.tf === tf && ['1w', '2w'].includes(v.window));
+      expect(shorts).toHaveLength(0);
+    }
+  });
+
+  /* FE-3b — the provenance hazard itself, stated directly. */
+  it('NEGATIVE: no intraday short zoom claims a DAILY read in its hint', () => {
+    const hourlyShorts = CHART_VIEWS.filter(
+      (v) => v.group === 'Intraday' && ['1w', '2w'].includes(v.window));
+    expect(hourlyShorts.length).toBeGreaterThan(0);   // guard against a vacuous pass
+    for (const v of hourlyShorts) {
+      const hint = v.hint || '';
+      expect(hint).not.toMatch(/1-month read|month of daily|daily read/i);
+      // and it must positively name the frame the numbers DO come from
+      expect(hint).toMatch(/1-hour frame|1 hour frame|hourly/i);
+    }
+  });
+
+  /* FE-3c — the three 60m entries must stay individually addressable.
+   * viewKeyFor matched intraday views by tf ALONE until this ship, which was
+   * correct only while one entry carried each tf. */
+  it('each 60m view round-trips to its OWN key, and a legacy tf-only link still resolves', () => {
+    expect(viewKeyFor('1w', '60m')).toBe('60m:1w');
+    expect(viewKeyFor('2w', '60m')).toBe('60m:2w');
+    expect(viewKeyFor('3m', '60m')).toBe('60m');
+    const keys = ['1w', '2w', '3m'].map((w) => viewKeyFor(w, '60m'));
+    expect(new Set(keys).size).toBe(3);
+    // LEGACY: a link written before these entries existed carries any window
+    // with ?tf=60m. It must fall back to the 3-month hourly view, NOT blank to
+    // the default and NOT land on a 1-week chart.
+    for (const w of ['1m', '6m', '1y', '5y', '99y']) {
+      expect(viewKeyFor(w, '60m')).toBe('60m');
+    }
+  });
+
+  /* FE-3d — key shape. The intraday keys are bare tf strings by history; the
+   * new ones cannot be, or they would collide with FALLBACK_TIMEFRAMES and
+   * risk reaching the wire as ?tf=60m:1w. */
+  it('every view key is a known tf, or "<tf>:<window>" whose halves both resolve', () => {
+    const tfKeys = new Set(FALLBACK_TIMEFRAMES.map((t) => t.key));
+    const winKeys = new Set(FALLBACK_WINDOWS.map((w) => w.key));
+    for (const v of CHART_VIEWS) {
+      if (tfKeys.has(v.key)) { expect(v.tf).toBe(v.key); continue; }
+      const [a, b] = v.key.split(':');
+      expect(b, `key ${v.key} is neither a tf nor a pair`).toBeTruthy();
+      if (a === 'daily') { expect(v.tf).toBe('daily'); expect(winKeys.has(b)).toBe(true); }
+      else { expect(tfKeys.has(a)).toBe(true); expect(v.tf).toBe(a); expect(v.window).toBe(b); }
+    }
+  });
+
+  /* FE-3e — the wire never carries a composite key. */
+  it('NEGATIVE: supportQuery sends the bare tf, never the picker key', () => {
+    const v = viewFor('60m:1w');
+    const q = supportQuery({ symbol: 'MU', window: v.window, tf: v.tf });
+    expect(q).toContain('tf=60m');
+    expect(q).not.toContain('60m%3A1w');
+    expect(q).not.toContain('60m:1w');
+    expect(q).toContain('window=1w');
   });
 
   /* FE-4 — no default moved */

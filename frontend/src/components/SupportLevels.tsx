@@ -290,9 +290,16 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             <div className="sl-meta">
               {/* The chip must name the chart on screen. It read "6 months" over a
     15-minute chart before the controls merged (Ajay 2026-08-29). */}
+            {/* Ajay 2026-09-18: `zoom_applies` alone stopped being enough to
+              * pick the wording. It is TRUE on 1W x 60m — the zoom really did
+              * trim the frame — so the chip fell to `window_label` and printed
+              * "1 week" over 34 hourly candles, naming a span of daily bars
+              * that are not on screen. An intraday frame is named by what it
+              * DREW, which is exactly what chart_span says ("34 x 1 hour bars
+              * over 5 sessions"); only a daily frame is named by its zoom. */}
             <span className="sl-zoom">
-              {data.zoom_applies === false
-                ? (data.timeframe_label || data.chart_span)
+              {data.zoom_applies === false || data.chart_sessions
+                ? (data.chart_span || data.timeframe_label)
                 : data.window_label}
             </span>
               {data.live ? (<>

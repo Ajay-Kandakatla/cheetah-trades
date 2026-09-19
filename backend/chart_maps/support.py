@@ -1544,8 +1544,27 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "chart_span": chart_span,
         # Which window the NUMBERS came from. None on every ordinary window,
         # so an FE that predates 2026-09-18 simply ignores both keys.
+        # Set whenever the DRAWN frame and the READ frame are not the same
+        # thing, so the tab can say so out loud. That was only ever the daily
+        # chart-only zooms; 1W/2W on an intraday frame is the same divergence
+        # (34 bars drawn, 330 read) and went SILENT on it — the one view where
+        # naming the provenance matters most. Points at the TIMEFRAME here, not
+        # at a daily window: these levels were never redirected to 1 month.
+        # `levels_window` keeps its ORIGINAL narrow meaning — which DAILY
+        # window the levels were REDIRECTED to — and stays None on an own-bars
+        # frame, where no redirect happened. Overloading it with a timeframe
+        # key would break every reader that treats it as a window key.
         "levels_window": level_spec["key"] if chart_only else None,
-        "levels_window_label": level_spec["label"] if chart_only else None,
+        # The LABEL is wider on purpose: it answers "where did these numbers
+        # come from", which the tab prints verbatim, and that question has an
+        # answer on an own-bars short zoom too (34 bars drawn, 330 read). It
+        # names the TIMEFRAME there, never a daily window — these levels were
+        # not redirected to 1 month and must not claim to be. The asymmetry is
+        # deliberate: the FE gates the sentence on the label, not the key.
+        "levels_window_label": (
+            level_spec["label"] if chart_only else
+            f"{tf_spec_['label']} · {tf_spec_['span']}"
+            if (own_bars and short_intraday is not None) else None),
         # True when the daily zoom actually reached the chart. Since
         # 2026-09-18 that includes an intraday frame trimmed by a short window.
         "zoom_applies": (not intraday) or short_intraday is not None,
@@ -1560,7 +1579,24 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                       if ext_frame else None),
         # Same fix: the sentence describes a DAILY frame of spec['bars']
         # sessions, which an intraday frame is not.
-        "note": ((f"This zoom sets the CHART only — the last {spec['bars']} "
+        "note": (# THE OWN-BARS SHORT ZOOM (Ajay 2026-09-18, second ship).
+                 # 1W/2W on an intraday frame takes NEITHER of the two arms
+                 # below: own_bars makes chart_only False, so the generic arm
+                 # fired and said "Levels are read from this window only" under
+                 # a chart labelled one week. That was false in the direction
+                 # that matters — the levels are the timeframe's own ~47-session
+                 # budget (measured: 1w+60m and 6m+60m return identical
+                 # supports, overhead and verdict at bars_used 330), not a week
+                 # of anything. It must not borrow the daily arm's wording
+                 # either: nothing here is redirected to a 1-month daily read.
+                 (f"The chart is the last {short_sessions} "
+                 f"session{'' if short_sessions == 1 else 's'} of "
+                 f"{tf_spec_['label']} bars. Every number beside it — levels, "
+                 f"mood, signal, trend, patterns — is the {tf_spec_['label']} "
+                 f"frame's own {read_budget}-bar read, the same numbers every "
+                 f"other {tf_spec_['label']} zoom shows. "
+                 if (own_bars and short_intraday is not None) else
+                 f"This zoom sets the CHART only — the last {spec['bars']} "
                   f"sessions. A frame that short is under the "
                   f"{pz.MIN_BARS_ABS}-bar floor a swing needs, so every number "
                   f"here — levels, mood, signal, trend, patterns — is the "

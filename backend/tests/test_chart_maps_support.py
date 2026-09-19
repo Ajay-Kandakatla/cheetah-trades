@@ -13,6 +13,7 @@ contract test at the bottom pins that this module never mutates its globals.
 from __future__ import annotations
 
 import inspect
+import re
 
 import numpy as np
 import pandas as pd
@@ -1069,7 +1070,20 @@ def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
     # must still never happen is claiming a DAILY span, or claiming more
     # sessions than the drawn frame actually holds.
     assert "daily bars" not in span or "levels from" in span, span
-    assert "the last 5 sessions" not in note, note
+    # RETARGETED 2026-09-18 (picker ship). This used to forbid the substring
+    # "the last 5 sessions" outright, because the only sentence that could
+    # produce it was the DAILY arm ("This zoom sets the CHART only — the last 5
+    # sessions.") firing on an intraday frame, which was a daily claim over
+    # intraday bars. The own-bars arm now says "the last 5 sessions of 1 hour
+    # bars", which is the true statement this whole ship exists to make.
+    # The hazard was never the session count — it was an UNQUALIFIED one. So
+    # pin that instead: if the note counts sessions, it must say what KIND of
+    # bar they are made of, and it must not claim the numbers came from a
+    # daily window.
+    if "session" in note:
+        assert re.search(r"session[s]? of [^.]*bar", note), (
+            "the note counts sessions without naming the bar kind — that is "
+            "the daily-claim-over-intraday-bars regression: %r" % note)
     held = out.get("chart_sessions")
     if "session" in span:
         assert held, "span names sessions but chart_sessions is %r" % held
@@ -1093,6 +1107,17 @@ def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
         assert out["levels_window"] is None, out["levels_window"]
         # an own-bars frame read no daily window, so it must not name one
         assert "levels from" not in span, span
+        # …but it MUST still answer "where did these numbers come from"
+        # (Ajay 2026-09-18, picker ship). 1w+60m draws 34 bars and analyses
+        # 330; going silent on that divergence is how the tab ends up looking
+        # like the levels belong to the week on screen. The label names the
+        # TIMEFRAME — never a daily window, because nothing was redirected.
+        lab = out.get("levels_window_label")
+        if out.get("chart_sessions"):
+            assert lab, "own-bars short zoom named no provenance at all"
+            assert "month" not in lab.lower(), lab
+        else:
+            assert lab is None, lab
 
 
 def test_the_short_zoom_still_states_its_daily_span_on_a_DAILY_frame(loaded):

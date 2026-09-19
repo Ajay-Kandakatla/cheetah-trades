@@ -165,3 +165,120 @@ def test_the_ANALYSED_frame_is_never_the_trimmed_one():
         assert reader in src, reader
     # and the slice IS consumed by the drawn bars
     assert "_frame_bars(short_intraday if short_intraday is not None" in src
+
+
+# ── the PICKER ship (Ajay 2026-09-18, same day, second round) ───────────────
+# The morning's backend landed and he still saw 5 daily candles: CHART_VIEWS
+# pinned 1w/2w to tf 'daily' and 60m to window '3m', so the pair he had chosen
+# could not be expressed by the control at all. Fixing the picker forced two
+# payload fields to become honest, and these pin them.
+#
+# The intraday frame never loads under test (no MASSIVE key, no mongo), so the
+# ONE call support.py makes for it is stubbed and everything else runs for real
+# — the same idiom test_chart_maps_support.py already uses.
+
+import numpy as _np
+import pandas as _pd
+import pytest as _pytest
+
+
+def _intraday_frame(sessions: int = 40, per_session: int = 7) -> "_pd.DataFrame":
+    """An hourly RTH frame spanning `sessions` ET business days."""
+    days = _pd.bdate_range("2026-06-01", periods=sessions)
+    stamps = [d + _pd.Timedelta(hours=h) for d in days
+              for h in range(14, 14 + per_session)]          # 14:00 UTC = 10:00 ET
+    n = len(stamps)
+    c = _pd.Series(100 + _np.sin(_np.arange(n) / 5.0) * 4, dtype=float)
+    return _pd.DataFrame(
+        {"open": c.values, "high": c.values + 0.4, "low": c.values - 0.4,
+         "close": c.values, "volume": _np.ones(n) * 500_000},
+        index=_pd.DatetimeIndex(stamps),
+    )
+
+
+@_pytest.fixture
+def hourly(monkeypatch):
+    from chart_maps import support as S
+    from sepa import prices
+    from supply_demand import timeframes as tf_mod
+    daily = _pd.DataFrame(
+        {"open": [100.0] * 300, "high": [104.0] * 300, "low": [96.0] * 300,
+         "close": [100.0] * 300, "volume": [1e6] * 300},
+        index=_pd.bdate_range("2025-06-02", periods=300))
+    monkeypatch.setattr(prices, "load_prices", lambda sym, *a, **k: daily.copy())
+    monkeypatch.setattr(tf_mod, "frame_for",
+                        lambda sym, key, **k: (_intraday_frame(), {"tf": key}))
+    return S
+
+
+def test_the_own_bars_short_zoom_NAMES_THE_TIMEFRAME_not_a_daily_window(hourly):
+    """levels_window_label must point at the 1-hour frame, never at '1 month'.
+
+    CHART_ONLY_LEVELS_FROM redirects a short DAILY window to 1m of daily bars.
+    An hourly frame is NOT redirected — `chart_only` is gated on `not own_bars`
+    — so its numbers are the 60m frame's own budget. Handing this field
+    '1 month' would print a provenance the payload does not have, on the one
+    view where the drawn frame and the read frame diverge most.
+    """
+    out = hourly.for_symbol("TEST", "1w", tf="60m")
+    if "chart_span" not in out:
+        _pytest.skip("intraday frame unavailable: %s" % out.get("error"))
+    lab = out.get("levels_window_label")
+    assert lab, "the provenance line went silent on the view that needs it most"
+    assert "month" not in lab.lower(), f"claimed a daily-month provenance: {lab!r}"
+    assert "hour" in lab.lower(), f"did not name the hourly frame: {lab!r}"
+    note = out.get("note") or ""
+    assert "Levels are read from this window only" not in note, (
+        "the generic arm fired — it claims the levels came from the 1-week "
+        "window, which is exactly the lie this ship removed")
+    assert "own" in note and "hour" in note.lower(), note
+
+
+def test_NEGATIVE_an_untrimmed_intraday_frame_claims_no_session_provenance(hourly):
+    """6m+60m draws the whole budget, so nothing diverged and nothing is named."""
+    out = hourly.for_symbol("TEST", "6m", tf="60m")
+    if "chart_span" not in out:
+        _pytest.skip("intraday frame unavailable")
+    assert out.get("chart_sessions") is None
+    assert out.get("levels_window_label") is None
+    assert "Levels are read from this window only" in (out.get("note") or "")
+
+
+def test_the_levels_are_IDENTICAL_across_the_two_hourly_zooms(hourly):
+    """The claim the note makes, checked rather than asserted.
+
+    The note tells him every number is 'the same numbers every other 1 hour
+    zoom shows'. If these ever diverge that sentence becomes false and the
+    whole ship is wrong — the trim would have reached the analysed frame.
+    """
+    short = hourly.for_symbol("TEST", "1w", tf="60m")
+    long_ = hourly.for_symbol("TEST", "6m", tf="60m")
+    if "chart_span" not in short or "chart_span" not in long_:
+        _pytest.skip("intraday frame unavailable")
+    for key in ("supports", "overhead", "bars_used"):
+        assert short.get(key) == long_.get(key), (
+            f"{key} moved between 1w+60m and 6m+60m — the chart trim reached "
+            f"the analysed frame, which it must never do")
+    assert len(short["tile"]["bars"]) < len(long_["tile"]["bars"]), (
+        "the CHART did not trim — the whole point of the ship")
+
+
+def test_NEGATIVE_a_DAILY_short_zoom_is_untouched_and_still_says_one_month(loaded_daily):
+    """The daily arm keeps its own wording: 1w on daily IS redirected to 1m."""
+    from chart_maps import support as S
+    out = S.for_symbol("TEST", "1w")
+    lab = (out.get("levels_window_label") or "").lower()
+    assert "month" in lab, f"the daily 1w zoom lost its 1-month provenance: {lab!r}"
+    assert out.get("chart_sessions") is None, "a daily frame counts no intraday sessions"
+
+
+@_pytest.fixture
+def loaded_daily(monkeypatch):
+    from sepa import prices
+    c = _pd.Series(100 + _np.sin(_np.arange(300) / 7.0) * 6, dtype=float)
+    df = _pd.DataFrame(
+        {"open": c.values, "high": c.values + 1, "low": c.values - 1,
+         "close": c.values, "volume": _np.ones(300) * 1e6},
+        index=_pd.bdate_range("2025-06-02", periods=300))
+    monkeypatch.setattr(prices, "load_prices", lambda sym, *a, **k: df.copy())
+    return df
