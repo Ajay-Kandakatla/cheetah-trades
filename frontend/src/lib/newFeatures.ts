@@ -22,6 +22,23 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-19, verbatim: "Also for the hot sectors if you see any
+  // postive news I would like you to see a bullish and bearish case result for
+  // a stocks and add it to the sector as a tag for that day", then "automate
+  // this daily morning and over the weekend". Cron 06:20 local, EVERY day —
+  // no market_hours gate, because he asked for the weekend and this reads
+  // headlines rather than the tape. LLM writes PROSE ONLY; every number on
+  // the tile comes from the board. Gates nothing, pushes nothing.
+  { id: 'sector-day-tags-2026-09-19',
+    label: '\u{1F4F0} Sector day-tags on \u{1F525} Hottest \u2014 a bull case AND a bear case for one name per sector, written off that day\u2019s news. You said: \u201cif you see any postive news I would like you to see a bullish and bearish case result for a stocks and add it to the sector as a tag for that day.\u201d '
+      + 'A \u{1F4F0} chip appears beside a sector when the day produced a tag; click it and the sector opens a row with the headline that triggered it, then the two cases side by side. '
+      + 'BOTH SIDES, ALWAYS. A tag shipped with only a bull case would be a recommendation wearing a summary\u2019s clothes, so a half-written tag is suppressed rather than shown \u2014 and the two cases get the same width, the same type and the same room on purpose. The bear case on good news is the half worth reading. '
+      + 'THE NAME IS PICKED BY WHETHER IT HAS NEWS, never by how far it moved. Ranking the tag by return would make it a momentum read wearing a news label, and you can already sort this board by return. Two headlines minimum \u2014 one loose story is not a story. '
+      + 'WHO WROTE WHAT: the app owns every NUMBER (the sector\u2019s move against RSP, the name\u2019s own legs, sales and EPS growth, the zone state, the next earnings date) and the model owns only PROSE \u2014 the same split the \u{1F4CB} Desk report already uses. The model is instructed it may not state a number that was not handed to it, and may not recommend, rate or target. Every tag names who read it. '
+      + 'THERE IS NO SENTIMENT SCORE, deliberately. We do not have a measured one, and a fitted lexicon would look like evidence and be worth nothing. \u201cReads positive\u201d is the model\u2019s read of the headlines and the tile says so in those words. '
+      + 'Runs 06:20 every morning INCLUDING WEEKENDS, which you asked for. A Saturday pass builds off Friday\u2019s board and the last 36 hours of news; each tag carries its own date so a weekend read is never mistaken for a fresh one. '
+      + 'NOT MEASURED, NOT A SIGNAL. \u{1F525} Hottest is a discovery surface with no measured edge and a tag on top of it inherits exactly that. It gates no alert, sizes no position, enters no lane and moves no rule or threshold. Not advice.',
+    addedAt: '2026-09-19', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-19, verbatim: "Show me POTUS tickers there are some new ones
   // like Green Land eneregy or something" then "High light them in the page".
   // His name was GLND. Chasing it surfaced that the curated list stopped at

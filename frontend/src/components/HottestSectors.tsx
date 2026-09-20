@@ -97,11 +97,39 @@ export type HsIndustry = HsFundMedians & HsDayLeg & {
   rel_5d?: number | null; rel_21d?: number | null;
   names: HsName[]; names_total: number;
 };
+/** 📰 The day's two-sided news tag for a sector (Ajay 2026-09-19: "if you
+ *  see any postive news I would like you to see a bullish and bearish case
+ *  result for a stocks and add it to the sector as a tag for that day").
+ *
+ *  Written by the cron in backend/rotation/sector_news_tags.py, served as a
+ *  pure read. `measured` is ALWAYS false and `read_by` names who wrote the
+ *  prose — the surface must never present this as a measurement, and there
+ *  is no sentiment score here because we do not have a measured one. */
+export type HsDayTag = {
+  date: string;
+  sector: string;
+  symbol: string;
+  company?: string | null;
+  positive: boolean;
+  why_positive?: string | null;
+  bull: string;
+  bear: string;
+  headline_count?: number | null;
+  trigger?: { title?: string | null; url?: string | null;
+              source?: string | null; published?: number | null } | null;
+  facts?: Record<string, unknown> | null;
+  read_by?: string | null;
+  measured?: boolean;
+};
+
 export type HsSector = HsFundMedians & HsDayLeg & {
   group: string; n_full: number; sampled_of?: number | null; sampled_used?: number | null;
   basis: string; n_measured?: number | null;
   rel_5d?: number | null; rel_21d?: number | null;
   industries: HsIndustry[]; names: HsName[]; names_total: number;
+  /** null when today produced no tag for this sector — the board then
+   *  renders exactly as it did before any of this existed. */
+  day_tag?: HsDayTag | null;
 };
 export type HsTheme = HsFundMedians & HsDayLeg & {
   group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
@@ -311,6 +339,85 @@ export function tierChip(t?: string | null): string {
   if (k === 'weak') return '🐌';
   if (k === 'declining') return '🔻';
   return '';
+}
+
+/** The 📰 chip that sits beside a sector's name when the day produced a tag.
+ *
+ *  Says only WHO it is about and that there is a read to open — the argument
+ *  itself lives in the expanded row, because a sector row is already eleven
+ *  columns wide and two paragraphs of prose in it would push the returns off
+ *  screen on his laptop. */
+export function dayTagChipLabel(t: HsDayTag): string {
+  return `📰 ${t.symbol}`;
+}
+
+/** The tooltip. Deliberately leads with what this is NOT. */
+export function dayTagTitle(t: HsDayTag): string {
+  return (
+    `${t.symbol}${t.company ? ` — ${t.company}` : ''} · ${t.date}\n` +
+    `${t.headline_count || 0} headline${t.headline_count === 1 ? '' : 's'} read` +
+    `${t.read_by ? ` by ${t.read_by}` : ''}\n` +
+    (t.why_positive ? `Why it reads positive: ${t.why_positive}\n` : '') +
+    `\nA bull case AND a bear case, written from those headlines and the ` +
+    `numbers already on this board. NOT measured, not a signal, not advice. ` +
+    `Click to read both.`
+  );
+}
+
+function DayTagRow({ tag, span }: { tag: HsDayTag; span: number }) {
+  const when = tag.trigger?.published
+    ? new Date(tag.trigger.published * 1000).toLocaleString()
+    : null;
+  return (
+    <tr className="hs-daytag">
+      <td colSpan={span}>
+        <div className="hs-daytag__head">
+          <strong>{tag.symbol}</strong>
+          {tag.company ? <span className="hs-daytag__co">{tag.company}</span> : null}
+          <span className={'hs-daytag__read' + (tag.positive ? ' is-pos' : '')}>
+            {tag.positive ? 'reads positive' : 'reads neutral / mixed'}
+          </span>
+          <span className="hs-daytag__meta">
+            {tag.date}
+            {tag.headline_count ? ` · ${tag.headline_count} headlines` : ''}
+            {tag.read_by ? ` · read by ${tag.read_by}` : ''}
+          </span>
+        </div>
+
+        {tag.trigger?.title ? (
+          <div className="hs-daytag__trigger">
+            {tag.trigger.url
+              ? <a href={tag.trigger.url} target="_blank" rel="noreferrer">{tag.trigger.title}</a>
+              : tag.trigger.title}
+            <span className="hs-daytag__src">
+              {tag.trigger.source || ''}{when ? ` · ${when}` : ''}
+            </span>
+          </div>
+        ) : null}
+
+        <div className="hs-daytag__cases">
+          <div className="hs-daytag__case hs-daytag__case--bull">
+            <span className="hs-daytag__caselbl">Bull case</span>
+            <p>{tag.bull}</p>
+          </div>
+          <div className="hs-daytag__case hs-daytag__case--bear">
+            <span className="hs-daytag__caselbl">Bear case</span>
+            <p>{tag.bear}</p>
+          </div>
+        </div>
+
+        {/* Both sides are always shown, which is the whole reason this is a
+            briefing and not a recommendation. The line below is not boilerplate:
+            this board has no measured edge, and a paragraph of fluent prose is
+            exactly the kind of thing that starts reading like one. */}
+        <div className="hs-daytag__foot">
+          Written from the headlines above and the numbers already on this row.
+          Nothing here is measured, no edge is claimed, and this gates no alert
+          and enters no lane.
+        </div>
+      </td>
+    </tr>
+  );
 }
 
 function LegCells({ r, d1, isGroup }: {
@@ -725,6 +832,20 @@ export function HottestSectors() {
                               onClick={() => toggle(k)}>
                         {isOpen ? '▾' : '▸'} {s.group}
                       </button>
+                      {/* 📰 The day's two-sided news tag. Sits beside the name
+                          and opens its own row — see DayTagRow. A sector with
+                          no tag renders exactly as it always did. */}
+                      {s.day_tag ? (
+                        <button
+                          type="button"
+                          className={'hs-daytag__chip' + (s.day_tag.positive ? ' is-pos' : '')}
+                          aria-expanded={!!open[`${k}|tag`]}
+                          title={dayTagTitle(s.day_tag)}
+                          onClick={(ev) => { ev.stopPropagation(); toggle(`${k}|tag`); }}
+                        >
+                          {dayTagChipLabel(s.day_tag)}
+                        </button>
+                      ) : null}
                       <span className="hs-n" title={
                         s.sampled_used && s.sampled_of && s.sampled_used < s.sampled_of
                           ? `heat measured on ${s.sampled_used} of ${s.sampled_of} names (the rotation grid's sample); the ${s.n_full} name rows below are the full membership`
@@ -737,6 +858,9 @@ export function HottestSectors() {
                     <LegCells r={s} d1={data} isGroup />
                     <GroupFundCells r={s} />
                   </tr>
+                  {s.day_tag && open[`${k}|tag`]
+                    ? <DayTagRow key={`${k}|tagrow`} tag={s.day_tag} span={10} />
+                    : null}
                   {isOpen && byIndustry ? s.industries.map((ind) => {
                     const ik = `${k}|i:${ind.group}`;
                     const iOpen = !!open[ik];

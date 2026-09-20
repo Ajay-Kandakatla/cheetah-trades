@@ -1169,3 +1169,27 @@
 # warm at 17:45 that picks these names up.
 40     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.bonde show
 45     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.board_metrics warm
+
+# ── 📰 Sector day-tags: one name's bull AND bear case, off the day's news ────
+# Ajay 2026-09-19: "Also for the hot sectors if you see any postive news I
+# would like you to see a bullish and bearish case result for a stocks and add
+# it to the sector as a tag for that day", and, on automating it: "automate
+# this daily morning and over the weekend".
+#
+# NO market_hours.gate, DELIBERATELY. Every other job in this file is gated to
+# trading days because it measures the tape. This one reads HEADLINES, and he
+# asked for the weekend in those words. A Saturday pass builds off Friday's
+# persisted board with the last 36 hours of news; the tag carries its own date
+# and the board says which day it is from, so a weekend read is never mistaken
+# for a fresh one.
+#
+# `python -m`, not curl. rotation.api._members_table falls back to the
+# PERSISTED scan_context doc when its in-process cache is cold, which is
+# exactly the cron container's situation — the same reason rotation.history
+# snapshot is an import and the 17:10 rotation warm is not.
+#
+# 06:20 local, every day. Ahead of the 06:43 Claude-side brief and well before
+# the open, so the tag is already on the board when he first looks. Cost is
+# bounded by SECTORS_PER_RUN: at most six model calls a day, local model first
+# and the hosted one only if local is down.
+20     6     *    *    *    /usr/local/bin/python -m rotation.sector_news_tags

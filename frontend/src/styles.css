@@ -12111,6 +12111,59 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-disc:hover { color: var(--gold); }
 .hs-disc--ind { padding-left: 1.1rem; font-weight: 500; }
 .hs-n { margin-left: 6px; font-size: 0.7rem; color: var(--ink-muted); font-weight: 400; }
+
+/* ── 📰 Sector day-tag (Ajay 2026-09-19) ──────────────────────────────────
+   "if you see any postive news I would like you to see a bullish and bearish
+   case result for a stocks and add it to the sector as a tag for that day".
+   The chip is quiet by design: this board is a DISCOVERY surface with no
+   measured edge, and a loud tag on it would read as a call. The two cases
+   are given equal weight on purpose — same width, same type, one border
+   colour apart — because the moment the bull case looks like the headline
+   and the bear case looks like a footnote, this stops being a briefing. */
+.hs-daytag__chip {
+  margin-left: 8px; padding: 1px 7px; border-radius: 3px;
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em;
+  background: transparent; color: var(--ink-muted);
+  border: 1px solid var(--hairline-strong); cursor: pointer;
+  white-space: nowrap;
+}
+.hs-daytag__chip:hover { color: var(--ink); border-color: var(--ink-muted); }
+.hs-daytag__chip.is-pos { color: var(--cm-greenlt, #4ade80); border-color: rgba(74, 222, 128, 0.4); }
+.hs-daytag__chip[aria-expanded="true"] { background: var(--bg-raised); color: var(--ink); }
+
+.hs-daytag > td { background: var(--bg-raised); padding: 10px 14px 12px; }
+.hs-daytag__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.hs-daytag__co { color: var(--ink-muted); font-size: 0.78rem; }
+.hs-daytag__read {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-muted); border: 1px solid var(--hairline-strong);
+  border-radius: 3px; padding: 0 5px;
+}
+.hs-daytag__read.is-pos { color: var(--cm-greenlt, #4ade80); border-color: rgba(74, 222, 128, 0.4); }
+.hs-daytag__meta { margin-left: auto; font-size: 0.68rem; color: var(--ink-muted); }
+.hs-daytag__trigger { margin-top: 6px; font-size: 0.8rem; }
+.hs-daytag__trigger a { color: var(--accent, #d4a85f); }
+.hs-daytag__src { margin-left: 8px; font-size: 0.68rem; color: var(--ink-muted); }
+
+.hs-daytag__cases {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.hs-daytag__case {
+  border-left: 2px solid var(--hairline-strong);
+  padding: 4px 0 4px 10px;
+}
+.hs-daytag__case--bull { border-left-color: rgba(74, 222, 128, 0.55); }
+.hs-daytag__case--bear { border-left-color: rgba(248, 113, 113, 0.55); }
+.hs-daytag__caselbl {
+  display: block; font-size: 0.64rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 3px;
+}
+.hs-daytag__case p { margin: 0; font-size: 0.82rem; line-height: 1.45; }
+.hs-daytag__foot {
+  margin-top: 10px; font-size: 0.68rem; color: var(--ink-muted);
+  border-top: 1px solid var(--hairline); padding-top: 6px;
+}
 .hs-name > td.hs-sym { padding-left: 2.2rem; }
 .hs-coname { font-size: 0.68rem; color: var(--ink-muted); margin-top: 1px; }
 .hs-sym { min-width: 190px; }

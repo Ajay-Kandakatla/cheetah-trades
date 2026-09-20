@@ -551,6 +551,20 @@ async def rotation_hottest(
                         direction=_coerce_str(dir, H.DEFAULT_DIR),
                         names_per_group=_coerce_int(names, H.NAMES_PER_GROUP))
     body.update({k: v for k, v in meta.items() if k in ("source", "built_at_iso", "age_sec", "stale")})
+    # 📰 The day's bull/bear tag per sector (Ajay 2026-09-19). A pure READ of
+    # what the cron already wrote — it never builds, never calls the model and
+    # never reorders the board, so a sector with no tag costs nothing and the
+    # endpoint's timing is unchanged. `latest_within` covers the weekend: a
+    # Sunday board falls back to the newest day that produced tags, and every
+    # tag carries its own date so the surface says which day it is from.
+    try:
+        from . import sector_news_tags as SNT
+        SNT.attach(body, SNT.latest_within())
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("rotation/hottest: day tags unavailable: %s", exc)
+        for s in body.get("sectors") or []:
+            if isinstance(s, dict):
+                s.setdefault("day_tag", None)
     return JSONResponse(_scrub(body))
 
 
