@@ -18,6 +18,7 @@ import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 
 import httpx
 
@@ -29,6 +30,51 @@ MAX_ITEMS = 12
 
 _cache: dict[str, tuple[float, list[dict]]] = {}
 _lock = asyncio.Lock()
+
+
+# ---------------------------------------------------------------------------
+# RSS dates
+# ---------------------------------------------------------------------------
+def _parse_rss_date(raw: str):
+    """Epoch seconds from an RSS pubDate, or None when the feed did not say.
+
+    MEASURED BUG, 2026-09-19. This used to be a single strptime against
+    "%a, %d %b %Y %H:%M:%S %z" with `except: ts = int(time.time())`.
+
+    `%z` does not accept a NAMED zone, and Google News RSS emits exactly that
+    — "Fri, 18 Sep 2026 20:13:00 GMT". So the parse raised on EVERY Google
+    item and every one of them was stamped with the current time. Verified
+    against the live feed: `fetch_news("NVDA")` returned 12 Google items, all
+    12 reporting an age of 0.00 hours, one of which was genuinely dated
+    "Wed, 26 Aug 2026" — twenty-four days old, served as brand new.
+
+    Anything downstream that filters on recency was therefore filtering on a
+    constant. `rotation.sector_news_tags` has a 36-hour window that could not
+    reject anything from this source, and its "newest first" sort was a tie
+    across the whole Google leg, so the tag's trigger headline was effectively
+    arbitrary.
+
+    `email.utils.parsedate_to_datetime` is the stdlib RFC-2822 parser and
+    handles named zones, offsets and the obsolete forms. A date it cannot read
+    now returns None — "we do not know" — instead of a lie that reads as
+    "seconds ago". Callers that need a window drop None; callers that never
+    had one are unaffected, because they never looked at this field.
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        dt = parsedate_to_datetime(raw)
+    except Exception:
+        return None
+    if dt is None:
+        return None
+    try:
+        if dt.tzinfo is None:                      # naive == UTC per RFC 2822
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -83,13 +129,7 @@ def _parse_rss(xml_text: str, provider: str) -> list[dict]:
         src = _SRC_RE.search(item)
         if not (title and link):
             continue
-        try:
-            ts = int(datetime.strptime(
-                (date.group(1) if date else "").strip(),
-                "%a, %d %b %Y %H:%M:%S %z",
-            ).timestamp())
-        except Exception:
-            ts = int(time.time())
+        ts = _parse_rss_date(date.group(1) if date else "")
         raw_desc = html.unescape(desc.group(1)).strip() if desc else ""
         clean_desc = re.sub(r"<[^>]+>", " ", raw_desc)[:320].strip()
         out.append(

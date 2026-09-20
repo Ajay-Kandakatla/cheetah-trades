@@ -165,10 +165,27 @@ def _facts(sector_row: dict, name_row: dict) -> dict:
 def _fresh(items: list, now: Optional[float] = None) -> list:
     """Headlines inside NEWS_WINDOW_HOURS, newest first.
 
-    An item with no timestamp is DROPPED rather than assumed fresh. The feeds
-    mix three providers and Google's RSS is the one that most often omits it;
-    letting those through would quietly turn a 36-hour window into "whatever
-    the cache holds".
+    An item with no timestamp is DROPPED rather than assumed fresh.
+
+    CORRECTION 2026-09-19, same day this shipped. The original note here said
+    the drop existed because "Google's RSS is the one that most often omits
+    the stamp". That was wrong, and in a way that made this window inert:
+    `news.py` was not passing those items through undated, it was stamping
+    them with the CURRENT TIME. Its parse used "%z", which cannot read a named
+    zone, and Google News emits exactly that ("Fri, 18 Sep 2026 20:13:00
+    GMT"), so every Google item raised and fell into `ts = int(time.time())`.
+
+    Measured against the live feed: `fetch_news("NVDA")` returned 12 Google
+    items, all 12 reporting an age of 0.00 hours, one genuinely dated
+    "Wed, 26 Aug 2026" — twenty-four days stale, indistinguishable from
+    breaking news. This filter could not reject anything from that source, and
+    because every item tied at `now`, the "newest first" sort below was
+    arbitrary — which made the TRIGGER headline on every tag arbitrary too.
+
+    Fixed in `news._parse_rss_date` (RFC-2822 via email.utils, unknown -> None,
+    tests in tests/test_news_rss_dates_2026_09_19.py). The drop below is now
+    load-bearing rather than decorative, and it fires on genuinely undated
+    items from any leg.
     """
     now = time.time() if now is None else now
     floor = now - NEWS_WINDOW_HOURS * 3600
