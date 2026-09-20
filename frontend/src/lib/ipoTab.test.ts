@@ -125,6 +125,43 @@ describe('ipoCorroborationLine', () => {
   it('says the state is unknown rather than implying it was fine', () => {
     expect(ipoCorroborationLine(null)).toContain('unknown');
   });
+
+  /* 2026-09-20 — Ajay answered the owner's-call: "Yes for #1 and #2 and #3
+   * and #4 and #5", #3 being "DROP the IPO tab's uncorroborated rows". The
+   * drop must never be silent, so the count rides on the basis line he is
+   * already reading. The live board held 22 of them. */
+  it('names how many uncorroborated listings the board dropped', () => {
+    const line = ipoCorroborationLine({ available: true, forward_to: '2026-10-20' },
+                                      { dropped_uncorroborated: 22 });
+    expect(line.endsWith(
+      '22 uncorroborated dropped — spin-offs and re-listings the calendar does not carry',
+    )).toBe(true);
+    expect(line).toContain('2026-10-20');
+  });
+
+  it('says nothing at all when nothing was dropped', () => {
+    expect(ipoCorroborationLine({ available: true }, { dropped_uncorroborated: 0 }))
+      .not.toContain('dropped');
+    expect(ipoCorroborationLine({ available: true }, {})).not.toContain('dropped');
+    expect(ipoCorroborationLine({ available: true }, null)).not.toContain('dropped');
+    expect(ipoCorroborationLine({ available: true })).not.toContain('dropped');
+  });
+
+  it('NEVER claims a drop on an outage build — nothing is dropped there', () => {
+    const line = ipoCorroborationLine({ available: false, reason: 'rate limit' },
+                                      { dropped_uncorroborated: 22 });
+    expect(line).not.toContain('dropped');
+    expect(line).not.toContain('22');
+    expect(line).toContain('could not be read');
+  });
+
+  it('refuses a junk count instead of printing NaN at him', () => {
+    for (const bad of [null, undefined, Number.NaN, -3, '22' as any]) {
+      expect(ipoCorroborationLine({ available: true },
+                                  { dropped_uncorroborated: bad as any }))
+        .not.toContain('dropped');
+    }
+  });
 });
 
 describe('the empty sentence', () => {

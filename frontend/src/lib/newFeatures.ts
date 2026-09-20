@@ -22,17 +22,87 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-20, verbatim: "Default on for any change of todays features
+  // Bondes or Potus or explosive growth or Earnings I wanna see all of them."
+  // OWNER_KEEP_SET went from four kinds to eight. What moved is which KINDS
+  // reach him, never what a kind requires to fire.
+  { id: 'keepset-widened-2026-09-20',
+    label: '\u{1F514} Your phone now carries eight kinds, not four. You said: “Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them.” '
+      + 'THE FOUR THAT WERE ALREADY THERE stay exactly as they were: \u{1F525} hot pullback, \u{1F4D0} chart patterns, \u{1F9F2} same-day arrivals at a tested demand band, \u{1F534} stops on stocks you own. '
+      + 'THE FOUR THAT JOINED THEM: \u{1F3DB}\uFE0F federal stake reported, \u{1F680} explosive-growth name at demand, \u{1F4E3} earnings beat with institutions buying, \u2728 a new name on \u{1F4C8} Bonde or \u{1F680} Explosive Growth. '
+      + '\u{1F680} WAS ALREADY DELIVERING — six pushes across eighteen device deliveries since 2026-09-11. It is listed in the keep-set now so that re-registering a device cannot quietly mute it again, which is how a kind goes silent here. '
+      + 'NO GATE WAS LOOSENED. Every kind still has to clear its own conditions before it sends; this only says which kinds are allowed to reach you at all. The toggles at /notifications still mute any of them, and your existing phones were flipped by a script that prints every change it makes. '
+      + 'NOTHING IN THIS LIST IS A RECOMMENDATION and none of it is measured as an entry.',
+    addedAt: '2026-09-20', route: '/notifications' },
+  // Ajay 2026-09-20: same sentence. The ✨ kind that rings when a name is
+  // PLACED on 📈 Bonde or 🚀 Explosive Growth. First pass records a baseline
+  // and sends nothing; one push per (board, symbol), ever.
+  { id: 'board-arrival-push-2026-09-20',
+    label: '\u2728 A ping the first time a name lands on \u{1F4C8} Bonde or \u{1F680} Explosive Growth. You said: “Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them.” '
+      + 'WHAT FIRES: the \u{1F4C8} Bonde pass at 17:42 ET on a trading day, right after the 17:40 build that stamps the arrival; the \u{1F680} Explosive Growth pass at 08:08 ET — that board rebuilds on Sunday, a closed day, so its arrivals ring on the next trading morning instead. Four names ring one by one; past that they arrive as one digest. '
+      + 'THE FIRST PASS SENDS NOTHING, ON PURPOSE. It writes down what is already on each board and treats that as the baseline. A first cohort is not an arrival — the same rule the \u2728 NEW badges on the boards already use — so the first real ping is the pass after that. '
+      + 'ONE PUSH PER NAME PER BOARD, EVER. A name that drops off a board and comes back months later is not rung again. If you want a genuine return to ring, that is a window with a number in it, and the number is yours to name. '
+      + 'THIS IS AN ARRIVAL ON A LIST, NOT AN ENTRY, and the push says so in its own body. \u{1F4C8} Bonde’s own rule measured INVERTED — \u22123.11pp against a date-matched placebo — and the 100/100 screen behind \u{1F680} Explosive Growth has never been measured forward at all. The push carries the board’s served verdict line rather than a retyped one. '
+      + 'It gates no alert, sizes no position and enters no lane. Not a recommendation.',
+    addedAt: '2026-09-20', route: '/alerts' },
+  // Ajay 2026-09-20, verbatim: "Remove volleyball and learning of stocks I do
+  // dont wanna see them they are spamming too much". Crons deleted, toggles
+  // gone, kinds hard-stopped at the delivery chokepoint. Labels kept.
+  { id: 'learning-volleyball-removed-2026-09-20',
+    label: '\u{1F507} Flash cards and the volleyball pings are gone. You said: “Remove volleyball and learning of stocks I do dont wanna see them they are spamming too much.” '
+      + 'REMOVED IN FOUR PLACES, not one: the hourly \u{1F0CF} Minervini card cron, the 08:40 chart-quiz cron and the three daily \u{1F3D0} volleyball crons are deleted; their toggles are off the /notifications page; the kinds are hard-stopped at the delivery chokepoint, so even a stale cron container that has not re-read the schedule sends nothing; and the three retired modules exit quietly instead of building a card nobody will see. '
+      + 'YOUR OLD PUSHES STILL READ PROPERLY. Roughly 1,900 of these already sit in your history under a 90-day expiry, so the LABELS were deliberately kept — dropping them would have turned those rows into raw ids in the \u{1F514} bell. '
+      + 'The pages and the modules are still in the tree. Deleting them outright is a separate call, and yours.',
+    addedAt: '2026-09-20', route: '/notifications' },
+  // Ajay 2026-09-20, verbatim: "I need the stock tickers to be clickables in
+  // alerts individually if there are multiple in one alert by command click".
+  { id: 'alert-ticker-links-2026-09-20',
+    label: '\u{1F517} Every name in an alert is its own link now. You said: “I need the stock tickers to be clickables in alerts individually if there are multiple in one alert by command click.” '
+      + 'A digest that names six stocks used to be ONE link to one page. Each name is now its own real anchor, on /alerts, in the \u{1F514} bell and in the notifications panel — so \u2318-click, Ctrl-click and middle-click each open that name in a new tab, exactly like every other ticker on the site. '
+      + 'THE CARD STOPPED BEING ONE BIG LINK to make that work: a link inside a link is pulled apart by the browser, so the card is a plain box and the title carries the link instead. Clicking the title still does what it always did. '
+      + 'YOUR OLD ALERTS GOT IT TOO. Rows already in history carry no list of names, so the names are read back out of the body — only for the digest kinds, only from the leading position of each listed item, and only when the token is a symbol that actually exists in the universe. Prose is never scanned: “ET” in a sentence stays a word, not Energy Transfer. '
+      + 'Nothing about what fires, or when, changed.',
+    addedAt: '2026-09-20', route: '/alerts' },
+  // Ajay 2026-09-20, verbatim: "Also don't forget to alert me on earnings
+  // surprises I think stock witz also has it. I wanna make sure we are
+  // catching those in alerts as well." Ships ON (keep-set, same day).
+  { id: 'earnings-reaction-alert-2026-09-20',
+    label: '\u{1F4E3} Earnings beat, and the tape says institutions bought it. You said: “Also don’t forget to alert me on earnings surprises … I wanna make sure we are catching those in alerts as well.” '
+      + 'WHAT FIRES: a name on the \u{1F4C8} Earnings Flow tab that has ALREADY REPORTED, whose surprise for the quarter is above zero, and whose reaction bar reads as institutional buying — at least 1.5\u00d7 its 60-day median volume, a close in the top 40% of the bar’s range, at least $50M traded, and up on the day. The engine that decides this is the same one the tab draws; nothing was retyped for the push. '
+      + 'A MISS NEVER PUSHES, however hard the stock runs. Neither does a pre-report run-up. Once per report, and only once. '
+      + 'TWO PASSES, BOTH OUTSIDE THE SESSION: 17:35 ET catches names that reported after yesterday’s close, 08:25 ET catches names that reported before the open, whose surprise only publishes once the report date is in the past. Closed days run nothing. '
+      + 'ON BY DEFAULT for you, and mutable at /notifications. Room to the first supply band is shown as context beside the alert and does not gate this kind. '
+      + 'NOT MEASURED. Beat plus institutional buying has no forward record in this app — a replay counts how often it would have fired, which is a volume, not an edge. StockTwits carries no earnings-surprise feed, so this reads the calendar we already keep. Not a recommendation.',
+    addedAt: '2026-09-20', route: '/notifications' },
+  // Ajay 2026-09-20, answering the his-call list: "Yes for #1 and #2 and #3
+  // and #4 and #5" — #3 was dropping the IPO tab's uncorroborated rows.
+  { id: 'ipo-uncorroborated-dropped-2026-09-20',
+    label: '\u{1F195} The IPO tab drops the listings the calendar cannot confirm. You said “Yes” to dropping them. '
+      + 'The listing dates come from a profile feed that is corrupt on about a fifth of this universe, checked against the IPO calendar. A row whose date the calendar does not carry at all used to sit on the tab wearing a flag; it is now dropped, and the strip prints how many went — mostly spin-offs and re-listings, which the calendar does not cover. '
+      + 'A DROP YOU CANNOT SEE IS JUST A SHORTER LIST, so the count is on the page in words rather than in a tooltip. '
+      + 'A CALENDAR OUTAGE NEVER MASS-DROPS. When the calendar cannot be reached, nothing is dropped at all — every row is shown flagged instead, and the strip says the check did not run. '
+      + 'If you want the spin-offs back as their own list, that needs a second source and is a build, not a setting.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=ipo' },
+  // Ajay 2026-09-20, on carrying the ⚠ pair mark onto 🔥 Hottest: "#6 what
+  // ever". Same three states, same wording, one shared helper.
+  { id: 'hottest-pair-mark-2026-09-20',
+    label: '\u26A0 \u{1F525} Hottest marks a growth number whose year-over-year pair does not line up. Carried over from \u{1F4C8} Bonde on your nod. '
+      + 'THREE STATES, NOT TWO. \u26A0 pair means the two quarters being compared are NOT four fiscal quarters apart, so the year-over-year number is comparing the wrong pair. “unverified” means there were no period keys on file and the pair could not be checked at all — which is not the same as fine. No mark means it was checked and it lines up. '
+      + 'The mark sits beside the tier on the name row; sector group rows are untouched. It is the same helper \u{1F4C8} Bonde renders, so the two boards cannot drift into different wordings. '
+      + 'IT HIDES NOTHING. The row still shows, with its number and the mark beside it.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-20, verbatim: "I would like it to be in individual tickers but
   // also in to the potus page in chart maps" and "Anytime POTUS does new
   // investments show me those". The curated list moved to ONE source
   // (backend/political/disclosures.json; the TS is generated), and a daily
-  // 06:35 cron classifies headlines into candidates. The push kind ships OFF.
+  // 06:35 cron classifies headlines into candidates. The push kind shipped OFF
+  // that morning and he flipped it ON the same day (keepset-widened-2026-09-20).
   { id: 'potus-tab-2026-09-20',
     label: '\u{1F3DB}️ POTUS / federal — its own tab on Chart Maps. You said: “I would like it to be in individual tickers but also in to the potus page in chart maps” and “Anytime POTUS does new investments show me those.” '
       + 'TWO SECTIONS, AND THEY ARE NOT THE SAME KIND OF THING. The top half is THE LIST — the curated disclosures, grouped in a fixed editorial order: \u{1F1FA}\u{1F1F8} U.S. government equity stake, then \u{1F6E0}️ government contractor, then \u{1F3DB}️ POTUS family disclosed, then \u{1F50D} inferred. A row is in the list because a filing or a named report put it there, and nothing automatic ever adds one. The order is the curator’s, not a ranking, and the \u{1F50D} inferred rows carry their own notes saying what they are NOT — no government agreement on Green Land, Critical Metals or Uranium Energy. '
       + 'The bottom half is \u{1F50E} WATCH CANDIDATES, and it is A REGEX OVER HEADLINES. Not a filing, not a signal, not a measurement — a classifier that says “this headline looks like a federal stake story” and puts it in front of you. Every candidate row shows the pattern that matched, the agency, the size, the source and how the ticker was resolved (cashtag / company name / unnamed), so you can throw it out in one look. The heuristic sentence above the table is printed verbatim from the server, so what you read is the gate that actually ran. '
       + 'A HEADLINE THAT NAMES NO TICKER IS STILL SHOWN, as “unnamed — needs a ticker” with no link. Measured on his own watch queries, only about 1 in 90 of these headlines carries a cashtag at all — the Commerce-stake and CHIPS-award reporting names the company in prose. Dropping the unnamed rows would hide exactly the stories the ask is about. '
-      + 'THE PUSH SHIPS OFF. The \u{1F3DB}️ kind is registered everywhere a kind has to be registered, and it is OFF until you turn it on at /notifications — a heuristic does not get to ring your phone on the day it lands. When you do flip it, only a headline with BOTH a named agency AND a size is pushable; a contract award never is, however large. '
+      + 'THE PUSH IS ON since 2026-09-20 — you said: “Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them.” Only a headline with BOTH a named agency AND a size is pushable; a contract award never is, however large. '
       + 'Every tile carries its political chip, the growth / explosive / enterable chips and a + Signals button, off the same Support payload the Support tab draws — so the bands cannot differ between the two surfaces. '
       + 'NOTHING HERE IS MEASURED AND NOTHING IS SORTED BY RETURN. It gates no alert, sizes no position and enters no lane.',
     addedAt: '2026-09-20', route: '/chart-maps?tab=potus' },

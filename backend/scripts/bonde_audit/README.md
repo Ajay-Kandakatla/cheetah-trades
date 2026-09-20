@@ -21,6 +21,8 @@ Two passes exist. The **audit** is the authority.
 | `lane2.py` | the sales-tier panel, 24 cross-sections |
 | `attack.py` | date clustering, per-date sign test, tail trim |
 | `sens.py` | four fundamentals variants, both lanes |
+| `ep_rules.py` | **pure** — the three EP entry rules (Bonde's published `c/c1>1.04`, our shipped 8%-gap detector read from `setups/episodic_pivot.py`, the "4% gap" paraphrase as a named sensitivity). No Mongo, no panel: `backend/tests/test_bonde_ep_published_rule.py` loads it by path |
+| `lane1_published.py` | **the 2026-09-20 re-measure** (his #5) — those three rules on the SAME cached panel, placebo and bootstrap; reproduction-gated on lane1's 780 / 376 / −3.11pp |
 | `parent_ep.py`, `parent_tiers.py` | **first pass, superseded** — kept so the struck claims are visible |
 
 ## The headline
@@ -71,6 +73,16 @@ docker compose exec -T api python - < backend/scripts/bonde_audit/lane2.py
 docker compose exec -T api python - < backend/scripts/bonde_audit/attack.py
 docker compose exec -T api python - < backend/scripts/bonde_audit/sens.py
 ```
+
+The 2026-09-20 EP re-measure (his #5) needs one extra copy — `ep_rules.py` is
+loaded by path inside the container — and runs outside RTH:
+
+```
+docker compose cp backend/scripts/bonde_audit/ep_rules.py api:/root/.cheetah/aud/ep_rules.py
+docker compose exec -T api python - < backend/scripts/bonde_audit/lane1_published.py
+```
+
+Its table goes into `docs/sepa/bonde_ep_remeasure_2026_09_20.md`.
 
 Heredoc/stdin, never `python /tmp/x.py` — that puts `/tmp` on `sys.path`
 instead of `/app`.

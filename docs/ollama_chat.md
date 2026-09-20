@@ -45,6 +45,24 @@ pins the two equal. The address never reaches the JS bundle —
 `test_admin_email_never_reaches_the_frontend_sources` and the page's own
 source-guard test check.
 
+**2026-09-20 — one leak survived that pin, in `AdminTodos.tsx`.** The
+backend pin above names four files (`pages/OllamaChat.tsx`, `App.tsx`,
+`hooks/useUser.ts`, `lib/newFeatures.ts`); `pages/AdminTodos.tsx:52` was
+outside it and still decided admin-ness with
+`(user?.email || '').toLowerCase() === '<the owner's address>'`, so the
+address shipped in the bundle. The 📣 earnings-reaction contract in
+`frontend/scripts/contracts.mjs` now walks **every** `.ts/.tsx/.js/.jsx`
+under `frontend/src` (tests included) and fails on any occurrence, which
+is what caught it. The fix reads the server flag: `isAdmin = !!user?.is_admin`,
+i.e. `auth.is_admin_email` — the SAME function that stealth-404s
+`/admin/todos` and `/admin/todos/recipients` in `main.py` (:3823, :3847).
+`is_primary_admin` was NOT used here: it is one address, strictly narrower
+than that endpoint's own gate, and would 404 a house co-owner the backend
+lets through — the Ollama page is the case where the narrow flag is right,
+this one is not. Pinned by `frontend/src/pages/AdminTodos.gate.test.tsx`
+(9 tests; negatives = flag false, flag absent, owner-looking address with
+the flag false, and a backend 404 beating an optimistic client flag).
+
 ## Endpoints
 
 | Route | Purpose |

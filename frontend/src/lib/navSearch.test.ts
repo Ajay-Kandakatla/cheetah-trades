@@ -223,3 +223,32 @@ describe('helpers', () => {
     expect(isExternal('')).toBe(false);
   });
 });
+
+/* The learning + volleyball pages left the catalog 2026-09-20 — Ajay: "Remove
+   volleyball and learning of stocks I do dont wanna see them they are spamming
+   too much". The palette is built from the SERVER menu, so the entries vanish
+   with the catalog; what had to go from this file is the synonym rows that
+   would otherwise have kept pointing at them. */
+describe('retired 2026-09-20 · learning + volleyball', () => {
+  it('has no synonym row for learn or learning', () => {
+    expect(NAV_SYNONYMS.learn).toBeUndefined();
+    expect(NAV_SYNONYMS.learning).toBeUndefined();
+    // chart-school stays — it is the chart quiz, not the flash-card feed
+    expect(NAV_SYNONYMS['chart-school']).toEqual(['lessons', 'charts']);
+  });
+
+  it('NEGATIVE: searching "volleyball" or "learning" returns no page', () => {
+    const index = buildIndex(MENU, (f) => SUBGROUP[f ?? '']);
+    expect(searchNav(index, 'volleyball')).toEqual([]);
+    expect(searchNav(index, 'learning')).toEqual([]);
+    // control: the palette still finds a page that IS in the menu
+    expect(searchNav(index, 'notification').length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: a stale menu row for a retired page brings no synonyms with it', () => {
+    const stale = { ...MENU, profile: [...MENU.profile!, { to: '/learn', label: 'Learning', feature: 'learn' }] };
+    const index = buildIndex(stale as any, (f) => SUBGROUP[f ?? '']);
+    const row = index.find((e) => e.to === '/learn')!;
+    expect(row.keywords).not.toContain('lessons');
+  });
+});

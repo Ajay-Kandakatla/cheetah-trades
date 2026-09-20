@@ -186,8 +186,115 @@ rows sit outside the scan's `full` universe, and the remaining Bonde-explosive
 names fail the growth board's EPS ≥100% / prior > 0 legs. The **13** in §1 were
 the real disagreement, and they are gone.
 
+## 9. The REPAIR — 2026-09-20, later the same day
+
+Ajay, on the his-call list above: **"#2"** — repair the 164 mismatched pairs to
+the true year-ago quarter rather than keep holding those rows out.
+
+### The rule: label by densify, at the ONE place the rows become series
+
+Massive omits a quarter it does not have, so list POSITION was never quarter
+adjacency. `sepa/qoq.align_reports` now puts **one slot per fiscal index** from
+the newest key down to the oldest — `None` where a filing is absent — and
+`sepa/canslim._fetch_massive_financials` calls it **before** the five series
+comprehensions, so `rev_q_series`, `eps_q_series`, `ni_q_series`,
+`inv_q_series` and `q_period_series` all land on the same quarter. IOVA's
+`[8105,8104,8102,8101,8100,8098]` becomes
+`[8105,8104,null,8102,8101,8100,null,8098]` and slot 4 is FY2025 Q2 — the real
+year-ago quarter of FY2026 Q2 — instead of FY2025 Q1.
+
+Within one fiscal period the **first row in source order wins**: Massive lists
+filings newest-FILING-first, so the first row for a restated quarter is the
+restatement (NU files FY2024 Q2 twice, 1,892,600,000 then 1,892,590,000). The
+count of ignored duplicate rows and whether the source arrived out of order are
+both reported — `duplicate_periods` and `reordered` — never silently absorbed.
+
+Nothing was recomputed and **no threshold moved**: `sepa/sales.py` is guarded
+byte-for-byte against `HEAD` in `backend/tests/test_sales.py` and its
+5 / 25 / 100 tiers are pinned beside it.
+
+### The heal, for documents cached before the alignment shipped
+
+```bash
+docker exec -i -w /app cheetah-market-app-api-1 python -m sepa.qoq realign --dry-run
+docker exec -i -w /app cheetah-market-app-api-1 python -m sepa.qoq realign
+```
+
+`--dry-run` computes and prints the identical counts without a write — **that
+dry run is the re-tier measurement**.
+
+### Two holes, counted apart on purpose
+
+After the alignment, a missing quarter is a **hole at its own slot**, and the
+two holes are not the same answer (`sepa/qoq.period_ok`):
+
+| hole | `period_ok` | what it costs | where the row lands |
+| --- | --- | --- | --- |
+| **headline** — the year-ago quarter is absent (`headline_hole`) | `False` | the whole growth claim: `sales.score` is `None` | **pending** → off the board exactly like every pending row, marked ⚠ on 🔥 Hottest and ⚡ Pivots |
+| **prior** — only slot 1 or 5 is absent (`prior_hole`) | `True` | `prior_yoy_pct` and the acceleration read only | **released** — the headline number is correct; the character clause reads an unknown prior as no character, so a floor-clearer lands in 🔎 `rejected` and a non-clearer is below the floor |
+
+Collapsing those into one "year-ago hole" number would hide which rows the
+repair actually releases, so `realign` and the audit always print them apart.
+**The repair promotes nothing** — it puts each row where today's rules already
+say it belongs. Whether an unknown prior should be character-NEUTRAL instead is
+a rule change and stays on the his-call list.
+
+### `retier_after` — run `scripts.data_spine_audit` and fill this in
+
+`repair_outcome(docs)` in `backend/scripts/data_spine_audit.py` re-tiers every
+keyed document through the real `sales.compute` and places it through the real
+`buyable_verdict._bonde_pillar`, then emits the result under `"repair"`.
+
+| count | value |
+| --- | --- |
+| `mismatched_before` | _(fill from the live run)_ |
+| `retier_after.explosive` / `.strong` / `.steady` / `.weak` / `.declining` / `.unknown` | _(fill)_ |
+| `headline_hole` / `prior_hole` | _(fill)_ |
+| `placement_after.tiered` / `.rejected_character` / `.out_pending` / `.out_floor` | _(fill)_ |
+| `duplicate_periods` / `reordered` / `dropped_unlabelled` (documents) | _(fill)_ |
+| `still_held_out` | **expected 0** — a headline hole is pending, not held out |
+
+The **0-diff check of §6 is repeated after the heal**: the scan copy and the
+research copy of the series must still agree on the latest quarter, the growth
+number and the tier (`overlap.period_differs / growth_differs / tier_differs`).
+A non-zero there means the two copies were realigned at different times, not
+that the alignment is wrong — re-run the audit after the next scan.
+
+### What `realign` does NOT do
+
+- It **never touches `cached_at`.** Bumping it would extend the life of stale
+  fundamentals, which is the opposite of the point.
+- It **does not recompute `earnings_quality`.** That score needs the inventory
+  and receivables series, and `inv_q_series` is not stored on the cache
+  document at all (`canslim.py` copies only period/rev/eps/ni). It is realigned
+  through `canslim` by the **Sunday** research refresh, not here.
+- It does not touch `recv_q_series`: that comes from yfinance, is
+  calendar-quartered and positional by construction, and is never aligned.
+
+### The `_adjacent` note
+
+`period_ok` still calls the **module-global** `sepa.qoq._adjacent` rather than a
+captured reference, so the 🚀 growth board's E1 monkeypatch keeps biting
+through `yoy_pairs_ok`. There is still exactly one adjacency definition in the
+app; the repair added the hole semantics around it, not a second copy.
+
 ---
 
-*Scripts: `backend/scripts/data_spine_audit.py`. Tests:
-`backend/tests/test_data_spine_2026_09_20.py`. Nothing on either board gates a
+*Scripts: `backend/scripts/data_spine_audit.py`, `python -m sepa.qoq realign`.
+Tests: `backend/tests/test_data_spine_2026_09_20.py`,
+`backend/tests/test_yoy_repair_2026_09_20.py`. Nothing on either board gates a
 scan, fires an alert or buys in any lane.*
+
+### 9.1 Trailing blanks are not a hole (2026-09-20, main session)
+
+The repair's literal rule — "a None at slot 4 refuses the row" — reversed the
+2026-09-14 growth-board pin that a legacy row with only a headline key
+(`[8105, None, None, None, None, None]`) is ACCEPTED, not blanked. The two are
+reconciled by reading a slot-4 None as a KNOWN hole only when a filed quarter
+exists beyond it — the shape `align_reports` produces, whose last slot is always
+the oldest key. Trailing blanks with nothing after are missing DATA, not a
+missing QUARTER, and the row stays `unverified` (None). `_densify` can never
+emit the trailing shape, so every aligned list keeps the repair's answer;
+pinned by `test_a_TRAILING_run_of_Nones_is_UNVERIFIABLE_not_a_known_hole` and
+the two negatives beside it. His call to reverse, not a threshold.
+

@@ -7,6 +7,9 @@ revenue series; no network.
 """
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
+
 from sepa import sales
 
 
@@ -74,3 +77,17 @@ def test_thresholds_locked():
     assert sales.SALES_FLOOR_PCT == 5.0
     assert sales.SALES_PREFERRED_PCT == 25.0
     assert sales.SALES_EXPLOSIVE_PCT == 100.0
+
+
+def test_SOURCE_GUARD_this_file_is_BYTE_IDENTICAL_to_HEAD():
+    """The 2026-09-20 YoY repair relabels which quarter sits in which slot. It
+    does NOT touch Bonde's arithmetic or his 5 / 25 / 100 tiers, and this guard
+    is what says so out loud (Rule #4) rather than asking a reader to trust it.
+
+    Read-only git. Skipped — never silently passed — outside a checkout.
+    """
+    root = Path(__file__).resolve().parents[2]
+    head = subprocess.run(["git", "show", "HEAD:backend/sepa/sales.py"],
+                          cwd=str(root), capture_output=True)
+    assert head.returncode == 0, head.stderr.decode()[:400]
+    assert (root / "backend" / "sepa" / "sales.py").read_bytes() == head.stdout

@@ -158,7 +158,12 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
                          "min_cap_usd": DA.MIN_CAP_USD, "min_cap_txt": AS.cap_floor_txt(DA.MIN_CAP_USD),
                          "enterable_status": EN.status()}
     assert p["gate"] == AS.gate_payload()
-    assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert"}
+    # SIX passes since 2026-09-20: the three RTH crons plus the three DAILY
+    # ones (📣 earnings_reaction, ✨ board_arrival on each board).
+    assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
+                                "earnings_reaction", "board_arrival:bonde",
+                                "board_arrival:growth"}
+    assert set(p["passes"]) == set(AS.PASS_KINDS)
     ze = p["passes"]["zone_edge"]
     assert ze["as_of"] == NOW.isoformat() and ze["date"] == "2026-09-03"
     assert set(ze["counts"]) == {"candidates", "priced", "stale_print", "breaking", "near_demand",
@@ -282,4 +287,71 @@ def test_cadence_sec_matches_the_crontab():
     assert AS.CADENCE_SEC == {"zone_edge": seconds(minute_field("supply_demand.zone_edge")),
                               "zone_bounce_alert": seconds(minute_field("supply_demand.zone_bounce_alerts")),
                               "demand_alert": seconds(minute_field("supply_demand.demand_alerts"))}
+    assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300}
+
+
+# ── the three DAILY passes (2026-09-20) ─────────────────────────────────────
+def test_a_daily_pass_carries_a_SCHEDULE_instead_of_a_cadence():
+    """A once-a-day pass is not stale five minutes after its slot, so
+    `cadence_sec` is None and the page prints WHEN it runs instead. Every
+    minute is read from the module that owns the pass — `SLOTS_ET` in
+    chart_maps.earnings_alerts and sepa.board_arrival — so the page types no
+    schedule of its own."""
+    from chart_maps import earnings_alerts as EA
+    from sepa import board_arrival as BA
+
+    p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=NOW)
+    for k in AS.DAILY_PASS_KINDS:
+        assert p["passes"][k]["cadence_sec"] is None, k
+        assert k not in AS.CADENCE_SEC, "a daily pass has no RTH cadence"
+    assert p["passes"]["earnings_reaction"]["schedule"] == "08:25 + 17:35 ET, trading days"
+    assert p["passes"]["board_arrival:bonde"]["schedule"] == "17:42 ET, trading days"
+    assert p["passes"]["board_arrival:growth"]["schedule"] == "08:08 ET, trading days"
+    # built from the constants, not typed here
+    assert p["passes"]["earnings_reaction"]["schedule"] == \
+        "%s ET, trading days" % " + ".join(EA.SLOTS_ET)
+    assert p["passes"]["board_arrival:bonde"]["schedule"] == \
+        "%s ET, trading days" % BA.SLOTS_ET["bonde"]
+
+
+def test_moving_a_slot_moves_the_schedule_the_page_prints(monkeypatch):
+    """MUTATION GUARD: a retyped minute would keep telling him the old slot."""
+    from chart_maps import earnings_alerts as EA
+    from sepa import board_arrival as BA
+    monkeypatch.setattr(EA, "SLOTS_ET", ("07:05", "18:40"))
+    monkeypatch.setattr(BA, "SLOTS_ET", {"bonde": "19:01", "growth": "06:02"})
+    sched = AS.schedule_map()
+    assert sched["earnings_reaction"] == "07:05 + 18:40 ET, trading days"
+    assert sched["board_arrival:bonde"] == "19:01 ET, trading days"
+    assert sched["board_arrival:growth"] == "06:02 ET, trading days"
+
+
+def test_a_daily_pass_with_nothing_recorded_reads_as_no_pass_not_as_zeros():
+    p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=NOW)
+    for k in AS.DAILY_PASS_KINDS:
+        assert p["passes"][k]["as_of"] is None and p["passes"][k]["counts"] == {}, k
+    import json
+    json.dumps(p, allow_nan=False)
+
+
+def test_a_recorded_daily_pass_serves_its_counters_and_its_reason():
+    pc = FakeColl()
+    AS.record_result("earnings_reaction",
+                     {"ran": True, "candidates": 2, "skipped_not_a_beat": 3,
+                      "fetch_failed": 9, "reason": "yfinance fallback on 9 of 12 REACTED "
+                                                   "names — surprises unread"},
+                     now=NOW, coll=pc)
+    p = AS.status_payload(pass_coll=pc, latest_coll=FakeColl(), now=NOW)
+    row = p["passes"]["earnings_reaction"]
+    assert row["as_of"] == NOW.isoformat() and row["date"] == "2026-09-03"
+    assert row["counts"] == {"candidates": 2, "skipped_not_a_beat": 3, "fetch_failed": 9}
+    assert "surprises unread" in row["reason"]
+    assert row["cadence_sec"] is None and row["schedule"]
+
+
+def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
+    """NEGATIVE: `CADENCE_SEC` is what the page measures RTH staleness against.
+    A daily pass must never appear in it (test_cadence_sec_matches_the_crontab
+    compares it to the crontab's minute fields)."""
+    assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert"}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300}

@@ -65,6 +65,11 @@ export type IpoCounts = {
   recycled?: number | null;
   uncorroborated?: number | null;
   dropped_bogus?: number | null;
+  /** Listings Finnhub's calendar does not carry. SHOWN flagged until
+   *  2026-09-20; dropped since (Ajay: "Yes … #3") and counted here so the
+   *  drop is never silent. Zero on a calendar-outage build — with no calendar
+   *  to be silent, nothing is dropped and every row is shown flagged. */
+  dropped_uncorroborated?: number | null;
   upcoming?: number | null;
 };
 
@@ -147,8 +152,19 @@ export function ipoText(v: unknown): string {
  *  he is reading the calendar's rows. */
 export function ipoCorroborationLine(
   c: IpoCorroboration | null | undefined,
+  counts?: IpoCounts | null,
 ): string {
+  // How many listings the calendar did not carry and the board therefore
+  // dropped (2026-09-20). Only ever appended to a line describing a pass that
+  // RAN: on an outage nothing is dropped, so the suffix would be a lie.
+  const n = counts && typeof counts === 'object' ? counts.dropped_uncorroborated : null;
+  const dropped = typeof n === 'number' && Number.isFinite(n) && n > 0
+    ? ` · ${n} uncorroborated dropped — spin-offs and re-listings the calendar does not carry`
+    : '';
   if (!c || typeof c !== 'object') {
+    // No corroboration block at all: the state is unknown, so the line does
+    // not claim a completed pass — and a drop count without a pass behind it
+    // would be exactly that claim.
     return 'Finnhub IPO calendar · corroboration state unknown on this build.';
   }
   if (c.available === false) {
@@ -158,5 +174,5 @@ export function ipoCorroborationLine(
       + 'are whatever arrived before it failed.';
   }
   const to = c.forward_to ? ` through ${String(c.forward_to)}` : '';
-  return `Finnhub IPO calendar${to} · expected deals only, printed exactly as the feed serves them.`;
+  return `Finnhub IPO calendar${to} · expected deals only, printed exactly as the feed serves them.${dropped}`;
 }

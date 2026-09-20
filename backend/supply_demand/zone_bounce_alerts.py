@@ -326,6 +326,9 @@ def digest_message(items: list) -> dict:
     if len(items) > 1:
         title += f" +{len(items) - 1} more"
     lines = []
+    # `tickers` (2026-09-20) — the names the body lists, strongest first, so
+    # each one is its own link on the alert surfaces.
+    tickers = [str(it["symbol"]).upper() for it in items[:DIGEST_MAX]]
     for it in items[:DIGEST_MAX]:
         role = "broken supply" if str(it["band"].get("kind") or "").lower() == "supply" else "demand"
         when = f" (low {it['low_time']})" if it.get("low_time") else ""
@@ -336,7 +339,7 @@ def digest_message(items: list) -> dict:
         lines.append(f"+{len(items) - DIGEST_MAX} more")
     url = "/chart-maps?tab=zones"
     return {"title": title, "body": "\n".join(lines), "url": url,
-            "data": {"url": url}, "kind": KIND}
+            "data": {"url": url}, "kind": KIND, "ticker": None, "tickers": tickers}
 
 
 # --------------------------------------------------------------------------

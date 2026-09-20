@@ -83,6 +83,21 @@ placebo beside the mean, and the board does NOT sort on `sales.compute`'s
 0-100 score — whatever ranking value it has sits inside a tail the audit could
 not separate from noise.
 
+THE YoY PAIR REPAIR, 2026-09-20 (Ajay: *"#2 Yes"*)
+──────────────────────────────────────────────────
+The audit found 164 of 1,051 passers (13 explosive · 56 strong · 95 steady)
+whose YoY legs were measured on quarters that are NOT a year apart, because
+Massive omits a quarter it does not have and every reader took list POSITION
+for quarter adjacency. Those rows were being HELD OUT of the tiers. They are
+now REPAIRED instead: `sepa/canslim.py` densifies the filings by fiscal period
+before anything reads a slot, and `python -m sepa.qoq realign` heals the cache
+written before that. What remains is named, not hidden — a row whose year-ago
+quarter is genuinely absent has no growth base and is pending (off the board,
+as every pending row is); a row missing only the PRIOR quarter keeps its
+correct headline number and is judged by his own character clause, which reads
+an unknown prior as no character. See `_pair_mismatch` below. Nothing was
+promoted and no threshold moved.
+
 WHAT THE THRESHOLDS ARE AND ARE NOT
 ───────────────────────────────────
 The sales numbers (5 / 25 / 100) are Bonde's own, documented in his writing and
@@ -333,6 +348,28 @@ def _pair_mismatch(scan_row: dict) -> bool:
 
     Nothing is recomputed and no threshold moves — `sepa/sales.py` keeps its
     number and its 5 / 25 / 100 tiers. This board declines to TIER the row.
+
+    REPAIRED 2026-09-20 (Ajay: *"#2 Yes"*). `canslim` now densifies Massive's
+    filings by fiscal period before any slot is read (`qoq.align_reports`) and
+    `python -m sepa.qoq realign` heals every document cached before that, so a
+    missing quarter is a HOLE at its own slot instead of a shift that drags a
+    different season into slot 4. What is left after the heal splits two ways
+    and this guard answers them differently (`qoq.period_ok`):
+
+      * the year-ago quarter is genuinely ABSENT (`headline_hole`) — there is
+        no base, so `sales.compute` returns `score None`, the row is PENDING
+        and it is out of the tiers at :492-495, before this function is ever
+        asked. Counted by the audit, marked ⚠ on 🔥 Hottest and ⚡ Pivots.
+      * only the PRIOR pair has a hole (`prior_hole`, served on every row) —
+        the headline number is correct and the row is NO LONGER held out. Its
+        acceleration read is empty by construction (`accelerating False`,
+        `consecutive_growth_q 1`), so a floor-clearer lands in 🔎 rejected
+        under the EXISTING character clause. Whether an unknown prior should
+        be character-NEUTRAL is a rule change, and it is HIS call, not this
+        function's.
+
+    The repair therefore PROMOTES NOTHING. It puts each row in the place
+    today's rules already say it belongs.
     """
     from sepa import qoq as Q
     return not Q.yoy_pairs_ok(_periods(scan_row))
@@ -399,6 +436,11 @@ def _row(scan_row: dict, pillar: dict, pivot: Optional[dict]) -> dict:
                                  fundamentals.get("_source")
                                  if isinstance(fundamentals, dict) else None),
         "period_ok": Q.period_ok(periods),
+        # WHY the character clause may read empty: a hole in the PRIOR pair
+        # (slot 1 or 5) costs `prior_yoy_pct` and the acceleration flag and
+        # nothing else, and it does NOT hold the row out (2026-09-20). Served
+        # on every row; no surface reads it yet.
+        "prior_hole": Q.prior_hole(periods),
         "pivot": None,
     }
     out.update(_rev_base(scan_row))

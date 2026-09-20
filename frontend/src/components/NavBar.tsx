@@ -70,7 +70,9 @@ const TOOLS_SUBGROUP: Record<string, string> = {
   // /alerts (2026-09-05) is the phone's log — what the zone passes pushed and
   // what the gate skipped. It reads a signal surface, so it sits with them.
   alerts: 'Signals',
-  food: 'Life', kids: 'Life', volleyball: 'Life', house: 'Life',
+  // `volleyball` left the catalog 2026-09-20 ("Remove volleyball and learning
+  // of stocks..."), so it can no longer reach this map.
+  food: 'Life', kids: 'Life', house: 'Life',
 };
 const SUBGROUP_ORDER = ['Trade', 'Screeners', 'Zones', 'Tape', 'Signals', 'Life', 'More'];
 // The ⌘K palette (GlobalSearch) names its group chips from the same map, so

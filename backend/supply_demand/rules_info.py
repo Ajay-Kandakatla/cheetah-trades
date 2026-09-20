@@ -200,6 +200,42 @@ def _closed_day_line() -> str:
             % (nxt[0] if nxt else "none loaded", len(gate.PERSONAL_KINDS)))
 
 
+def _non_zone_push_lines() -> list:
+    """The two kinds registered 2026-09-20 that push off a board rather than a
+    zone. They sit in the 🔔 panel's "Alerts" list, not in "Stock picks",
+    because neither is a pick rule: one reports a print, the other reports a
+    list event.
+
+    Every number is read from the module that enforces it. `sepa.board_arrival`
+    is imported LAZILY and `sepa.bonde` is never imported at all — the S&D
+    rules page stays out of the SEPA board stack (feedback_sepa_book_scope),
+    and a module-level SEPA import here would drag it in.
+    """
+    from chart_maps import earnings as E
+    lines = [
+        "📣 earnings_reaction (ON by default): a name on the Earnings Flow REACTED half — "
+        "today's closed reaction bar on ≥ %.1f× its 60-day median volume, close in the top "
+        "%d%% of the bar's range, ≥ %s traded, up on the day — whose THIS-QUARTER EPS "
+        "surprise is > 0. A miss, an in-line print, a null surprise, or a pre-report run-up "
+        "never pushes. Once per report. Owner settings, not measured."
+        % (E.MIN_VOL_RATIO, round((1 - E.MIN_CLOSE_LOC) * 100), _b(E.MIN_DOLLAR_VOL)),
+    ]
+    try:
+        from sepa import board_arrival as BA          # lazy: never load the SEPA boards here
+        slots = BA.SLOTS_ET
+    except Exception as exc:                          # pragma: no cover - import shim
+        log.warning("rules_info: board_arrival slots unavailable: %s", exc)
+        return lines
+    lines.append(
+        "✨ board_arrival (ON by default): one push the first time a name is PLACED on 📈 Bonde "
+        "or the 🚀 Explosive Growth board — never the first cohort a ledger sees, once per name "
+        "per board, ever; %d ring individually then one digest; passes %s ET (Bonde) and %s ET "
+        "(growth) on trading days. Each board carries its own measured record on its tab; an "
+        "arrival is a list event, not an entry."
+        % (GA.MAX_INDIVIDUAL, slots["bonde"], slots["growth"]))
+    return lines
+
+
 def sections() -> dict:
     gate_room, gate_prox = _pct(AG.ALERT_MIN_ROOM_PCT), _pct(AG.ALERT_MAX_ABOVE_DEMAND_PCT)
     out = {}
@@ -304,7 +340,7 @@ def sections() -> dict:
             "Positions: 🎯 position_alert fires once per band per day when a holding nears "
             "the first supply band overhead, and on every Auto-Pilot stop / exit.",
         ],
-        "alerts": [],
+        "alerts": _non_zone_push_lines(),
         "note": _DISCLAIMER + " Zone bands come from zone_store (cap ≥ %s, ≥ %d bars)."
                 % (_b(ZS.MIN_CAP_USD), ZS.MIN_BARS),
     }

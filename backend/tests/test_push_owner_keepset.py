@@ -17,20 +17,33 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from push import subs   # noqa: E402
 
 
-def test_keep_set_is_the_2026_09_09_four():
-    """REPLACED 2026-09-09. Ajay: "Can you give me hot pull back alerts and
-    chart pattern Alerts and also Sameday deman alerts please... Kill all
-    other.. I just wanna these alerts.. Default turn these on from tomorrow."
+def test_keep_set_is_the_2026_09_20_eight():
+    """WIDENED 2026-09-20. Ajay: "Default on for any change of todays features
+    Bondes or Potus or explosive growth or Earnings I wanna see all of them."
 
-    Asked whether the stop alerts on stocks he OWNS counted as "other", he kept
-    those and dropped the todo reminders. What left: zone_bounce_alert,
-    supply_break_alert, todo_reminder."""
+    The 2026-09-09 four stay ("Can you give me hot pull back alerts and chart
+    pattern Alerts and also Sameday deman alerts please... Kill all other..");
+    four more join them — 🏛️ potus_investment, 🚀 growth_demand_alert,
+    📣 earnings_reaction, ✨ board_arrival. What left on 2026-09-09 stays out:
+    zone_bounce_alert, supply_break_alert, todo_reminder."""
     assert subs.OWNER_KEEP_SET == frozenset({
-        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert"})
+        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
+        "potus_investment", "growth_demand_alert", "earnings_reaction",
+        "board_arrival"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices
     assert set(subs.OWNER_KEEP_SET) <= set(subs.default_prefs())
+
+
+def test_the_four_widened_kinds_are_on_for_the_owner_not_just_registered():
+    """`prefs_for` hands a re-registering owner device `owner_prefs()` — a kind
+    that is registered but outside the keep-set comes back muted. These four
+    must be True there, not merely present."""
+    p = subs.owner_prefs()
+    for k in ("potus_investment", "growth_demand_alert", "earnings_reaction",
+              "board_arrival"):
+        assert p[k] is True, k
 
 def test_owner_prefs_mute_everything_outside_the_keep_set():
     p = subs.owner_prefs()
@@ -41,10 +54,14 @@ def test_owner_prefs_mute_everything_outside_the_keep_set():
     # non-boolean settings ride through untouched (quiet-hours window)
     assert p["quiet_hours_start"] == d["quiet_hours_start"]
     assert p["quiet_hours_enabled"] is False
-    # every kind that fired at him last week and is not S/D is off
-    for k in ("promo_alert", "pivot_alert", "minervini_flashcards", "trade_flash",
-              "market_hours_reminder", "vb_education", "house_scrape_failed"):
+    # every kind that fired at him last week and is not in the keep-set is off.
+    # The learning / volleyball kinds left default_prefs entirely on 2026-09-20
+    # (push.subs.RETIRED_2026_09_20), so they are asserted ABSENT, not False.
+    for k in ("promo_alert", "pivot_alert", "trade_flash",
+              "market_hours_reminder", "house_scrape_failed"):
         assert p[k] is False, k
+    for gone in subs.RETIRED_2026_09_20:
+        assert gone not in p, gone
 
 
 def test_a_new_owner_device_starts_tight_and_everyone_else_does_not(monkeypatch):

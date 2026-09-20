@@ -326,6 +326,10 @@ def test_digest_sorts_by_distance_and_caps_the_body():
     assert lines[0].startswith("S7 $107 · 1.6% above $90–97 · $2.0B")
     assert m["url"] == "/chart-maps?tab=zones&phase=approaching"
     assert m["kind"] == "demand_alert", "push/history.py records payload['kind']"
+    # 2026-09-20 — one clickable chip per name; the list is the body's names,
+    # in the body's order, and the "+N more" tail is not one of them.
+    assert m["tickers"] == [ln.split(" ")[0] for ln in lines[:DA.DIGEST_MAX]]
+    assert m["ticker"] is None, "a digest names nobody in particular"
 
 
 # ── check_once end to end ────────────────────────────────────────────────────

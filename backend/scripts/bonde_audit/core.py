@@ -149,6 +149,18 @@ def boot(cells, stats, nsym, B=1000, seed=7):
                 out[b,ci,si]=f(x)
     return out
 
+def boot_dates(cells, stats, ndate, B=1000, seed=11):
+    """DATE-clustered resample — the same machinery as boot(), with the cluster
+    ids being DATE ids instead of symbol ids.
+
+    attack.py builds this inline (`celldate(...)` + `boot(..., ND, ...)`) and is
+    left UNCHANGED; lifted here 2026-09-20 by lane1_published.py so both scripts
+    share one resampler and a later cleanup has one place to point at. The date
+    cluster is the binding one on this panel (attack.py: 3.67x wider than iid),
+    so every published-rule lift is reported with BOTH CIs.
+    """
+    return boot(cells, stats, ndate, B=B, seed=seed)
+
 def ci(arr):
     a=arr[~np.isnan(arr)]
     if len(a)==0: return (float('nan'),float('nan'))

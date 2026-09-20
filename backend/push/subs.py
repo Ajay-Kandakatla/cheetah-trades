@@ -17,12 +17,24 @@ log = logging.getLogger("push.subs")
 # path (mac_stream) filter through list_subscriptions / list_mac_device_ids.
 # NOTE: ``price_alert`` is PAUSED, not gone — remove it from this set when the
 # user re-adds custom price alerts.
-DISABLED_ALERT_KINDS: frozenset[str] = frozenset({
+_RETIRED_2026_06_13: frozenset[str] = frozenset({
     "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "stage_breakdown",
     "watchlist_stage_breakdown", "morning_brief", "product_launch",
     "scalp_tape", "price_alert",
 })
+
+# Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont wanna
+# see them they are spamming too much". Crons deleted, toggles gone,
+# PERSONAL_KINDS entry gone, stored prefs flipped False by
+# scripts/owner_prefs_apply.py. Labels stay in frontend/src/lib/alertKinds.ts
+# so the 1,712 flashcard + 215 volleyball rows still in push_history (90-day
+# TTL) render a name.
+RETIRED_2026_09_20: frozenset = frozenset({
+    "minervini_flashcards", "vb_workout", "vb_supplement", "vb_education",
+})
+
+DISABLED_ALERT_KINDS: frozenset[str] = _RETIRED_2026_06_13 | RETIRED_2026_09_20
 
 _db = None
 
@@ -322,11 +334,24 @@ def _backfill(db):
 # against a 50% placebo, same-day demand arrivals 52%. He was shown those
 # numbers and asked for them anyway, as a watchlist. Each push carries its own
 # record so the screen never implies more than the measurement supports.
+#
+# WIDENED 2026-09-20. Ajay: "Default on for any change of todays features
+# Bondes or Potus or explosive growth or Earnings I wanna see all of them."
+# → 🏛️ potus_investment (his #1 Yes), 🚀 growth_demand_alert (already
+# delivering: 6 pushes / 18 device deliveries since 2026-09-11 — listed here so
+# a re-registration cannot mute it), 📣 earnings_reaction
+# (chart_maps/earnings_alerts.py), ✨ board_arrival (sepa/board_arrival.py).
+# The four 2026-09-09 kinds stay. "Never loosen a GATE" still stands: this
+# widens which KINDS reach him, not what any kind requires to fire.
 OWNER_KEEP_SET: frozenset = frozenset({
     "hot_pullback_alert",  # 🔥 the flush-and-turn board
     "pattern_alert",       # 📐 named bullish reversal patterns
     "demand_alert",        # 🧲 SAME-DAY arrivals at a tested demand band only
     "position_alert",      # 🔴 stop / supply reached on stocks he actually owns
+    "potus_investment",    # 🏛️ federal stake reported (2026-09-20, his #1 Yes)
+    "growth_demand_alert", # 🚀 explosive-growth board name at demand
+    "earnings_reaction",   # 📣 earnings beat + institutional buying
+    "board_arrival",       # ✨ a new name on 📈 Bonde / 🚀 Explosive Growth
 })
 
 
@@ -430,20 +455,36 @@ def default_prefs() -> dict:
         # 🏛️ Federal stake reported (political/watch.py, Ajay 2026-09-20:
         # "Anytime POTUS does new investments show me those").
         #
-        # THE FIRST `False` IN THIS DICT, and it is deliberate. The STANDING
-        # keep-set is FOUR phone kinds (memory cheetah_push_silent_drops:
-        # hot_pullback + pattern + demand + position); this would be a fifth.
-        # So it ships REGISTERED (a kind missing from this dict silently drops
-        # for every device — the 2026-06-24 chokepoint) but NOT TARGETED:
-        # list_subscriptions() filters on `prefs.{kind} == True`, so nothing
-        # reaches a phone until he flips the 🏛️ toggle at /notifications. No
-        # deploy, no code change — his switch. The board shows every candidate
-        # regardless of this flag.
+        # FLIPPED ON 2026-09-20, same day, on his follow-up: "Default on for
+        # any change of todays features Bondes or Potus or explosive growth or
+        # Earnings I wanna see all of them" — and "Yes for #1", the his-call
+        # item that asked exactly this. It is in OWNER_KEEP_SET too, so a
+        # re-registered device cannot quietly mute it again.
         #
-        # HEURISTIC, and the push says so: a regex over headlines with no
-        # measured record. The gate is an equity stake + a NAMED agency + a
-        # STATED size + a resolved ticker in one headline.
-        "potus_investment": False,
+        # STILL A HEURISTIC, and the push says so: a regex over headlines with
+        # no measured record. The gate is unchanged and stays the tightest
+        # class — an equity stake + a NAMED agency + a STATED size + a
+        # resolved ticker in one headline. Turning the kind on does not loosen
+        # what it takes to fire.
+        "potus_investment": True,
+        # 📣 Earnings beat with institutional buying (chart_maps/earnings_alerts.py,
+        # Ajay 2026-09-20: "Also don't forget to alert me on earnings surprises
+        # I think stock witz also has it. I wanna make sure we are catching
+        # those in alerts as well.").
+        # Fires on the REACTED half of the Earnings Flow tab: a beat whose
+        # reaction bar carries institutional-sized volume.
+        # A MARKET kind (market_hours.gate) — it reads a closed reaction bar.
+        # NOT MEASURED: no forward study stands behind it; the push says so.
+        "earnings_reaction": True,
+        # ✨ New name on 📈 Bonde / 🚀 Explosive Growth (sepa/board_arrival.py,
+        # Ajay 2026-09-20: "Default on for any change of todays features
+        # Bondes or Potus or explosive growth or Earnings I wanna see all of
+        # them.").
+        # Fires once per (board, symbol) when a name ARRIVES on a board.
+        # A MARKET kind — both boards are built from closed bars.
+        # NOT MEASURED as an entry: Bonde's rule measured INVERTED (−3.11pp)
+        # and the 100/100 growth screen has never been measured forward.
+        "board_arrival": True,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay
@@ -482,22 +523,15 @@ def default_prefs() -> dict:
         "house_stagnant":       True, # 📉 N+ days with no view movement — consider price drop
         "user_signin": True,          # admin-only: ping when a NEW user signs in
                                       # for the first time (fires once per email)
-        # ── Minervini flash cards — 3 bite-sized lessons/day (9 ET morning,
-        # 12:30 ET midday, 16:00 ET close). Education, not signals.
-        # Broadcast (everyone gets the same card). User toggles off here
-        # if they find the cadence noisy. See backend/flashcards/.
-        "minervini_flashcards": True,
+        # ── `minervini_flashcards` removed 2026-09-20 — see RETIRED_2026_09_20
+        # at the top of this file ("they are spamming too much").
         # ── Market open / close reminders — pings 15 min before each bell
         # (9:15 ET + 3:45 ET Mon-Fri, skips US holidays). Broadcast.
         # Mute via this toggle if the user finds it noisy. See
         # backend/market_hours/reminder.py.
         "market_hours_reminder": True,
-        # ── Volleyball fitness module — three daily kinds, separate
-        # toggles so non-VB users can mute each independently. See
-        # backend/volleyball/reminders.py.
-        "vb_workout":     True,    # 7 AM morning workout brief
-        "vb_supplement":  True,    # 9 PM magnesium reminder
-        "vb_education":   True,    # 6 PM daily volleyball/health card
+        # ── `vb_workout` / `vb_supplement` / `vb_education` removed
+        # 2026-09-20 — see RETIRED_2026_09_20 at the top of this file.
         # ── Pivot / entry alerts (sepa.pivot_alerts cron). BUG FIX 2026-06-09:
         # this kind was never added here, and list_subscriptions(filter_kind=k)
         # only matches devices whose prefs.<k>==True — so pivot pushes were

@@ -42,6 +42,7 @@ from typing import Optional
 
 from sepa import sales
 from sepa import earnings_quality
+from sepa import qoq
 from . import symbols
 
 log = logging.getLogger("sepa.canslim")
@@ -247,6 +248,19 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
     q_results = (rq.json() or {}).get("results") or []
     a_results = (ra.json() or {}).get("results") or []
 
+    # ALIGN BY FISCAL PERIOD BEFORE ANYTHING READS A SLOT (2026-09-20, his
+    # *"#2 Yes"*). Massive OMITS a quarter it does not have and does NOT
+    # guarantee an order (8 of the live documents come back out of filing
+    # order), so "slot 4" was whatever filing happened to sit fourth — IOVA's
+    # keys [8105,8104,8102,8101,8100,8098] put FY2025 Q1 where the year-ago
+    # quarter of FY2026 Q2 belongs, and the board printed that as growth for
+    # months. `qoq.align_reports` gives one slot per fiscal index with None at
+    # a hole, so EVERY comprehension below — including `inv_q_series`, which
+    # `earnings_quality.compute` reads positionally — lands on the right
+    # quarter. Nothing is recomputed and no threshold moves.
+    q_results, _unlabelled_dropped, _align_stats = qoq.align_reports(
+        q_results, _period_index)
+
     return {
         "q_eps_growth_pct": _compute_q_eps_growth(q_results),
         "y_eps_growth_pct": _compute_y_eps_growth(a_results),
@@ -268,11 +282,15 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         # quarters apart (ASO's compares 2027Q2 against 2025Q4). One monotonic
         # integer per report, `fiscal_year * 4 + (quarter - 1)`, lets `sepa.qoq`
         # REFUSE a pair instead of silently mislabelling it.
-        "q_period_series": [_period_index(q) for q in q_results],
+        "q_period_series": [_period_index(q) if q else None for q in q_results],
         "rev_q_series": [_income_value(q, "revenues") for q in q_results],
         "eps_q_series": [_income_value(q, "diluted_earnings_per_share") for q in q_results],
         "ni_q_series":  [_income_value(q, "net_income_loss") for q in q_results],
         "inv_q_series": [_balance_value(q, "inventory") for q in q_results],
+        # What the alignment above had to do, so the audit can count it.
+        "unlabelled_dropped": _unlabelled_dropped,
+        "duplicate_periods": _align_stats["duplicate_periods"],
+        "reordered": _align_stats["reordered"],
     }
 
 
@@ -282,7 +300,12 @@ def _period_index(report: dict) -> Optional[int]:
     None when the report does not name its period — and None must stay None
     rather than becoming a guess, because a wrong index is worse than an
     unknown one: it turns a refusal into a confident mislabelling.
+
+    A `None` report (a HOLE left by `qoq.align_reports`, 2026-09-20) is a
+    non-report and answers None, never an exception.
     """
+    if not isinstance(report, dict):
+        return None
     try:
         fy = int(report.get("fiscal_year"))
         fp = str(report.get("fiscal_period") or "").upper().strip()
@@ -300,7 +323,12 @@ def _income_value(report: dict, key: str) -> Optional[float]:
     """Pull an income-statement value from a Massive financials report safely.
 
     Massive structure: {'financials': {'income_statement': {'<key>': {'value': X, 'unit': 'USD'}}}}
+
+    A non-dict report (the `None` a densified hole leaves, 2026-09-20) is not a
+    zero and not a crash — it is None, which every consumer already handles.
     """
+    if not isinstance(report, dict):
+        return None
     try:
         v = ((report.get("financials") or {})
                   .get("income_statement") or {}).get(key, {}).get("value")
@@ -318,7 +346,11 @@ def _balance_value(report: dict, key: str) -> Optional[float]:
     no finished-goods/WIP/raw split, and no 'accounts_receivable' (verified
     2026-06-08). Receivables come from a yfinance supplement; the finished-goods
     breakdown (Minervini Fig 8.9) is unavailable from any provider.
+
+    A non-dict report (a densified hole) answers None — see `_income_value`.
     """
+    if not isinstance(report, dict):
+        return None
     try:
         v = ((report.get("financials") or {})
                   .get("balance_sheet") or {}).get(key, {}).get("value")
@@ -328,17 +360,16 @@ def _balance_value(report: dict, key: str) -> Optional[float]:
 
 
 def _compute_q_eps_growth(quarterly: list[dict]) -> Optional[float]:
-    """Q EPS growth YoY: latest Q vs same Q prior year (index 0 vs index 4).
+    """Q EPS growth YoY: latest Q vs the SAME Q a year earlier.
 
-    Massive returns newest first when ordered by filing date, same as yfinance.
+    Slot 0 vs slot 4 of a list `qoq.align_reports` has densified by fiscal
+    period (2026-09-20) — before that alignment, slot 4 was whatever filing sat
+    fourth, which on IOVA was FY2025 Q1. The arithmetic itself moved to
+    `qoq.yoy_pct`, unchanged: `(a − b) / |b| × 100`, 2 dp, None on a missing
+    slot or a zero base. One formula, one home.
     """
-    if len(quarterly) < 5:
-        return None
-    latest = _income_value(quarterly[0], "diluted_earnings_per_share")
-    prior_yr = _income_value(quarterly[4], "diluted_earnings_per_share")
-    if latest is None or prior_yr is None or prior_yr == 0:
-        return None
-    return round((latest - prior_yr) / abs(prior_yr) * 100, 2)
+    return qoq.yoy_pct([_income_value(q, "diluted_earnings_per_share")
+                        for q in quarterly])
 
 
 def _compute_y_eps_growth(annual: list[dict]) -> Optional[float]:
@@ -357,14 +388,9 @@ def _compute_y_eps_growth(annual: list[dict]) -> Optional[float]:
 
 
 def _compute_q_rev_growth(quarterly: list[dict]) -> Optional[float]:
-    """Q revenue growth YoY — bonus metric, not gated."""
-    if len(quarterly) < 5:
-        return None
-    latest = _income_value(quarterly[0], "revenues")
-    prior_yr = _income_value(quarterly[4], "revenues")
-    if latest is None or prior_yr is None or prior_yr == 0:
-        return None
-    return round((latest - prior_yr) / abs(prior_yr) * 100, 2)
+    """Q revenue growth YoY — bonus metric, not gated. Same slots, same
+    arithmetic (`qoq.yoy_pct`), on the period-aligned list."""
+    return qoq.yoy_pct([_income_value(q, "revenues") for q in quarterly])
 
 
 def _from_massive(symbol: str, strict: bool = True) -> dict:

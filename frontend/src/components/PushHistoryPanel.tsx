@@ -12,14 +12,20 @@
  *  smaller cap. The default 25 matches the user's stated requirement
  *  ("see the last 25 atleast").
  *
- *  Tap a row to open the push's URL (the same destination tapping the
+ *  Tap the TITLE to open the push's URL (the same destination tapping the
  *  notification on your phone would've taken you to). Internal app
  *  routes navigate via react-router; external URLs open in a new tab.
+ *
+ *  2026-09-20: the row's names became per-ticker chips (TickerChips). The
+ *  card therefore stopped being one big <Link> — an <a> inside an <a> is
+ *  invalid HTML and the browser un-nests it, which broke ⌘-click on the chip.
+ *  The link moved to the title. See TickerChips' header for the trap.
  */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { kindLabel } from '../lib/alertKinds';
+import { TickerChips } from './TickerChips';
 
 type HistoryRow = {
   _id:        string;
@@ -29,6 +35,9 @@ type HistoryRow = {
   body:       string;
   kind:       string | null;
   ticker:     string | null;
+  /** Every name the push listed, in body order (2026-09-20, push/recent
+   *  derive_tickers). A digest used to show one ticker at most. */
+  tickers?:   string[] | null;
   url:        string | null;
   user_email: string | null;
   sent:       number;
@@ -65,7 +74,19 @@ function fmtClock(ts: number): string {
 }
 
 
-/** A single row in the history list — title, time, full body, tap action. */
+const CARD_STYLE: React.CSSProperties = {
+  padding: '0.55rem 0.7rem',
+  background: 'rgba(20,20,22,0.55)',
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 6,
+  marginBottom: '0.4rem',
+  color: 'inherit',
+};
+const TITLE_STYLE: React.CSSProperties = {
+  fontSize: '0.88rem', fontWeight: 600, lineHeight: 1.35, marginBottom: 3, color: '#e6e6e6',
+};
+
+/** A single row in the history list — title (the link), time, chips, full body. */
 function HistoryRowCard({ row }: { row: HistoryRow }) {
   // Decide whether to render as an in-app link (react-router) or an
   // external anchor. Internal routes start with "/" and are not
@@ -89,31 +110,26 @@ function HistoryRowCard({ row }: { row: HistoryRow }) {
           }}>
             {kindLabel(row.kind)}
           </span>
-          {row.ticker && (
-            <span className="mono" style={{
-              marginLeft: 6,
-              fontSize: '0.66rem',
-              color: '#d4af37',
-              fontWeight: 700,
-            }}>
-              {row.ticker}
-            </span>
-          )}
         </div>
         <div style={{ fontSize: '0.66rem', color: '#6a6a72', whiteSpace: 'nowrap' }}>
           {fmtAgo(row.ts)} · <span title={fmtClock(row.ts)}>{fmtClock(row.ts)}</span>
         </div>
       </div>
 
-      <div style={{
-        fontSize: '0.88rem',
-        fontWeight: 600,
-        lineHeight: 1.35,
-        marginBottom: 3,
-        color: '#e6e6e6',
-      }}>
-        {row.title}
+      {/* The TITLE carries the row's link now — the whole card used to be one
+          <Link>, and an <a> inside an <a> is invalid HTML (see TickerChips:
+          the browser un-nests it and the chip loses its href). */}
+      <div style={TITLE_STYLE}>
+        {isInternal
+          ? <Link to={row.url!} style={{ color: 'inherit', textDecoration: 'none' }}>{row.title}</Link>
+          : isExternal
+            ? <a href={row.url!} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{row.title}</a>
+            : row.title}
       </div>
+
+      {/* Every name in the push, each a real <a href> — ⌘-click opens a tab. */}
+      <TickerChips tickers={row.tickers} ticker={row.ticker} tab="supply"
+                   fromLabel="Notifications" fromKey="notifications" testIdPrefix="ph-tk" />
 
       {/* FULL body — no truncation. This is the whole point of the panel. */}
       {row.body && (
@@ -160,24 +176,9 @@ function HistoryRowCard({ row }: { row: HistoryRow }) {
     </>
   );
 
-  const cardStyle: React.CSSProperties = {
-    padding: '0.55rem 0.7rem',
-    background: 'rgba(20,20,22,0.55)',
-    border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: 6,
-    marginBottom: '0.4rem',
-    color: 'inherit',
-    textDecoration: 'none',
-    display: 'block',
-  };
-
-  if (isInternal) {
-    return <Link to={row.url!} style={cardStyle}>{content}</Link>;
-  }
-  if (isExternal) {
-    return <a href={row.url!} target="_blank" rel="noreferrer" style={cardStyle}>{content}</a>;
-  }
-  return <div style={cardStyle}>{content}</div>;
+  // The card is a <div>, never a <Link>: it now CONTAINS anchors (the ticker
+  // chips), and nesting them inside the card's own anchor is invalid HTML.
+  return <div style={CARD_STYLE} data-testid="ph-row">{content}</div>;
 }
 
 
@@ -222,7 +223,8 @@ export function PushHistoryPanel({ limit = 25 }: { limit?: number }) {
           </div>
           <div style={{ fontSize: '0.72rem', color: '#9a9aa3', marginTop: 1 }}>
             Last {limit} alerts — pushes + volume breakouts unified, full body
-            (lock-screen truncates at ~180 chars). Tap a row to open its target page.
+            (lock-screen truncates at ~180 chars). Tap the title to open its target page,
+            or a ticker chip to open that name.
             {' '}
             {/* Ajay 2026-09-05: "can I go to a dedicated page to see the list
               * of alerts? May be add it to recent alerts or something?" — the

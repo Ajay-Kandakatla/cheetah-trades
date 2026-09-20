@@ -45,15 +45,28 @@ status                  meaning                                      shown?
                         listing — the ticker carries another          with every
                         company's history (conclusive even when       price stat blanked
                         the frame is truncated at its fetch cap)
-``uncorroborated``      calendar is silent; bars agree or cannot say  yes, flagged
+``uncorroborated``      calendar is silent; bars agree or cannot say  NO — dropped,
+                                                                     counted; the
+                                                                     calendar-outage
+                                                                     build still
+                                                                     shows it flagged
 ``bogus``               calendar is silent AND bars pre-date the      NO — dropped
                         claimed listing (conclusive even at the cap)
 ======================  ===========================================  ==========
 
-`uncorroborated` is SHOWN with a warning badge rather than dropped: Finnhub's
-calendar does not reach back over the whole trailing window for every venue,
-and silently hiding a real listing is the worse error. Dropping it instead is
-on the owner's-call list (spec §7.5).
+`uncorroborated` USED to be shown with a warning badge rather than dropped,
+because Finnhub's calendar does not reach back over the whole trailing window
+for every venue and silently hiding a real listing is the worse error. Ajay
+answered that owner's-call on 2026-09-20 — *"Yes for #1 and #2 and #3 and #4
+and #5"*, #3 being "DROP the IPO tab's uncorroborated rows". They are now
+dropped and COUNTED in ``counts.dropped_uncorroborated``, which the strip's
+basis line prints, so the drop is never silent. The live board on 2026-09-20
+held 22 of them and they were mostly spin-offs and re-listings (HONA, FDXF,
+VSNT, GLIBA/GLIBK, RAL, MRP, ECG, CURB, AMTM, Q, PSKY, SNDK, BULL, CEP …).
+
+The CALENDAR-OUTAGE build is the exception and stays as it was: with no
+calendar to be silent, "uncorroborated" says nothing about the listing, so
+every candidate is still SHOWN flagged and nothing is dropped.
 
 BARS THAT CANNOT SAY
 --------------------
@@ -138,7 +151,8 @@ NOTE = (
     "Recency is TLSW Ch.11 (≤2 years, sepa/ipo_age). Nothing here is "
     "measured or claims an edge. Listing dates come from Finnhub profile2 "
     "(21.4% corrupt on this universe) corroborated against Finnhub "
-    "/calendar/ipo."
+    "/calendar/ipo. Listings the calendar does not carry are dropped "
+    "(2026-09-20)."
 )
 
 
@@ -594,15 +608,25 @@ def upcoming(cal_rows, today=None) -> list[dict]:
 # the board's data
 # ---------------------------------------------------------------------------
 def _evaluate(row: dict, index: dict, cal_ok: bool = True,
-              cal_reason: Optional[str] = None) -> Optional[dict]:
-    """One candidate → one row, or None when it is dropped as bogus.
+              cal_reason: Optional[str] = None) -> tuple[Optional[dict], Optional[str]]:
+    """One candidate → ``(row, dropped_as)``.
 
-    ``cal_ok=False`` is the calendar-outage path: NOTHING can be corroborated,
-    so every row comes back `uncorroborated` and nothing is dropped — a board
-    that silently became a different board (one that had quietly deleted the
-    names the calendar would have confirmed) is the failure this avoids. The
-    bar evidence is still read, because `recycled` blanks the price stats and
-    another company's day-1 move must never print whatever the calendar says.
+    ``dropped_as`` is None when the row is kept, and otherwise names WHY it was
+    dropped — `BOGUS` or `UNCORROBORATED`. The caller counts the tuples; it
+    never subtracts ``len(rows)`` from ``len(cands)``, because two different
+    drops now share that difference and a count that cannot say which is which
+    is a count he cannot read.
+
+    With the calendar up, a listing it does not carry is dropped
+    (2026-09-20, Ajay: *"Yes … #3"*).
+
+    ``cal_ok=False`` is the calendar-outage path and is UNCHANGED: NOTHING can
+    be corroborated, so every row comes back `uncorroborated`, is SHOWN
+    flagged, and nothing is dropped — a board that silently became a different
+    board (one that had quietly deleted the names the calendar would have
+    confirmed) is the failure this avoids. The bar evidence is still read,
+    because `recycled` blanks the price stats and another company's day-1 move
+    must never print whatever the calendar says.
     """
     from sepa import ipo_age as IA
     from sepa.prices import load_prices
@@ -636,7 +660,11 @@ def _evaluate(row: dict, index: dict, cal_ok: bool = True,
                   "ticker looks recycled and every price-derived figure is "
                   "blanked" if corr["bars"] == "before" else ""))
     elif status == BOGUS:
-        return None
+        return None, BOGUS
+    elif status == UNCORROBORATED:
+        # The calendar WAS read and is silent on this symbol: dropped, and
+        # counted by the caller so the strip can say how many went.
+        return None, UNCORROBORATED
 
     claimed_d = _as_date(claimed)
     days_since = (_today() - claimed_d).days if claimed_d else None
@@ -661,7 +689,7 @@ def _evaluate(row: dict, index: dict, cal_ok: bool = True,
         "day1_pct": moves["day1_pct"],
         "week1_pct": moves["week1_pct"],
         "day1_date": moves["day1_date"],
-    }
+    }, None
 
 
 def build(limit: int = 24, days: int = 130, universe: str = "full") -> dict:
@@ -683,13 +711,16 @@ def build(limit: int = 24, days: int = 130, universe: str = "full") -> dict:
     cal_ok = bool(cal.get("ok"))
     cal_reason = cal.get("reason")
     rows: list[dict] = []
+    n_dropped = {BOGUS: 0, UNCORROBORATED: 0}
     if cands:
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=8) as pool:
-            for r in pool.map(lambda c: _evaluate(c, index, cal_ok, cal_reason),
-                              cands):
+            for r, dropped_as in pool.map(
+                    lambda c: _evaluate(c, index, cal_ok, cal_reason), cands):
                 if r is not None:
                     rows.append(r)
+                elif dropped_as in n_dropped:
+                    n_dropped[dropped_as] += 1
     rows.sort(key=lambda r: (r["claimed"], r["symbol"]), reverse=True)
 
     ups = upcoming(cal_rows, today)
@@ -697,8 +728,12 @@ def build(limit: int = 24, days: int = 130, universe: str = "full") -> dict:
         "candidates": len(cands),
         "confirmed": sum(1 for r in rows if r["status"] == CONFIRMED),
         "recycled": sum(1 for r in rows if r["status"] == RECYCLED),
+        # Zero while the calendar is up — an uncorroborated row is dropped
+        # now. On the outage path every SHOWN row is uncorroborated, and this
+        # is that count.
         "uncorroborated": sum(1 for r in rows if r["status"] == UNCORROBORATED),
-        "dropped_bogus": len(cands) - len(rows),
+        "dropped_bogus": n_dropped[BOGUS],
+        "dropped_uncorroborated": n_dropped[UNCORROBORATED],
         "upcoming": len(ups),
     }
     return {

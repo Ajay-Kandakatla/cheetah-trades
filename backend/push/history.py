@@ -16,6 +16,10 @@ Schema (push_history collection)
       body:       str,             # full untruncated body
       kind:       str | None,      # 'volume_breakout', 'minervini_flashcards', etc.
       ticker:     str | None,
+      tickers:    list[str] | None, # every name the body lists, in body order
+                                    # (2026-09-20 — the per-ticker links). None
+                                    # on a single / a legacy row; the feed falls
+                                    # back to [ticker] there.
       url:        str | None,      # tap-route
       user_email: str | None,      # None = broadcast
       sent:       int,             # devices reached
@@ -83,6 +87,23 @@ def _get_coll():
         return None
 
 
+MAX_TICKERS = 25     # a digest body never names more; the cap is the storage guard
+
+
+def _tickers(raw) -> Optional[list]:
+    """``payload['tickers']`` -> the stored list, or None.
+
+    A list of strings only: upper-cased, capped at ``MAX_TICKERS``, order
+    preserved. Anything else (absent, a string, a list with a non-string in
+    it) is None so the serve-time fallback takes over.
+    """
+    if not isinstance(raw, list) or not raw:
+        return None
+    if not all(isinstance(t, str) for t in raw):
+        return None
+    return [t.upper() for t in raw][:MAX_TICKERS]
+
+
 def record(payload: dict, *, user_email: Optional[str] = None,
            result: Optional[dict] = None) -> None:
     """Insert one history row. Best-effort — failures are swallowed.
@@ -103,6 +124,13 @@ def record(payload: dict, *, user_email: Optional[str] = None,
             "body":       payload.get("body"),
             "kind":       payload.get("kind"),
             "ticker":     payload.get("ticker"),
+            # Every name a DIGEST body lists, in body order (2026-09-20, Ajay:
+            # "I need the stock tickers to be clickables in alerts
+            # individually if there are multiple in one alert by command
+            # click"). Stored at push time so the feed never has to re-parse
+            # prose for a row the builder already knew. A non-list, or a list
+            # carrying a non-string, is None — never a guess.
+            "tickers":    _tickers(payload.get("tickers")),
             "url":        payload.get("url"),
             # The 🎯 verdict AT PUSH TIME (2026-09-15). The honest read for a
             # pushed row is the one the phone graded, so it is STORED with the
@@ -182,4 +210,4 @@ def list_recent(user_email: Optional[str] = None, limit: int = 25,
         return []
 
 
-__all__ = ["record", "list_recent", "MAX_LIMIT"]
+__all__ = ["record", "list_recent", "MAX_LIMIT", "MAX_TICKERS"]

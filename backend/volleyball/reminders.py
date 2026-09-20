@@ -22,6 +22,12 @@ import logging
 
 log = logging.getLogger("volleyball.reminders")
 
+# The three kinds this module sends, named once. RETIRED TOGETHER 2026-09-20
+# (Ajay: "Remove volleyball and learning of stocks I do dont wanna see them
+# they are spamming too much") — they are in push.subs.RETIRED_2026_09_20, so
+# main() exits 0 without sending and without writing a push_history row.
+KINDS = ("vb_workout", "vb_supplement", "vb_education")
+
 
 def fire_morning_brief() -> dict:
     """07:00 ET. Today's workout focus + AM supplement reminder."""
@@ -40,11 +46,11 @@ def fire_morning_brief() -> dict:
         "body":  body[:300],
         "tag":   f"vb-morning-{today['date_et']}",
         "url":   "/volleyball?from=alert",
-        "kind":  "vb_workout",
+        "kind":  KINDS[0],
     }
     try:
         from push import sender
-        result = sender.send_to_all(payload, kind="vb_workout")
+        result = sender.send_to_all(payload, kind=KINDS[0])
         log.info("vb morning brief fired sent=%d failed=%d",
                  result.get("sent", 0), result.get("failed", 0))
         return {"ok": True, **result}
@@ -62,11 +68,11 @@ def fire_magnesium() -> dict:
                   "Sleep is your recovery."),
         "tag":   "vb-magnesium",  # daily slot; replaces previous evening's ping
         "url":   "/volleyball?from=alert&topic=supplements",
-        "kind":  "vb_supplement",
+        "kind":  KINDS[1],
     }
     try:
         from push import sender
-        result = sender.send_to_all(payload, kind="vb_supplement")
+        result = sender.send_to_all(payload, kind=KINDS[1])
         log.info("vb magnesium fired sent=%d failed=%d",
                  result.get("sent", 0), result.get("failed", 0))
         return {"ok": True, **result}
@@ -87,11 +93,11 @@ def fire_education_card() -> dict:
         "body":  body[:300],
         "tag":   f"vb-edu-{card.get('topic', 'general')}",
         "url":   f"/volleyball?from=alert&topic={card.get('topic', 'shoulder')}",
-        "kind":  "vb_education",
+        "kind":  KINDS[2],
     }
     try:
         from push import sender
-        result = sender.send_to_all(payload, kind="vb_education")
+        result = sender.send_to_all(payload, kind=KINDS[2])
         log.info("vb education fired sent=%d failed=%d topic=%s",
                  result.get("sent", 0), result.get("failed", 0),
                  card.get("topic"))
@@ -101,13 +107,22 @@ def fire_education_card() -> dict:
         return {"ok": False, "reason": str(exc)}
 
 
-if __name__ == "__main__":
-    # CLI for cron + manual testing:
-    #   python -m volleyball.reminders morning
-    #   python -m volleyball.reminders magnesium
-    #   python -m volleyball.reminders education
-    import sys
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "morning"
+def main(argv=None) -> int:
+    """CLI for cron + manual testing:
+
+      python -m volleyball.reminders morning
+      python -m volleyball.reminders magnesium
+      python -m volleyball.reminders education
+
+    RETIRED 2026-09-20. The guard runs FIRST — before a plan is loaded or a
+    sender imported — and it fires when ANY of the three kinds is disabled:
+    they were retired together and come back together."""
+    from push import subs
+    if any(k in subs.DISABLED_ALERT_KINDS for k in KINDS):
+        print("volleyball reminders retired 2026-09-20 — nothing sent")
+        return 0
+    argv = list(argv if argv is not None else [])
+    cmd = argv[0] if argv else "morning"
     if cmd == "morning":
         print(fire_morning_brief())
     elif cmd == "magnesium":
@@ -116,4 +131,10 @@ if __name__ == "__main__":
         print(fire_education_card())
     else:
         print(f"unknown: {cmd}")
-        sys.exit(2)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main(sys.argv[1:]))

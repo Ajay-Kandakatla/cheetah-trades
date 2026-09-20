@@ -49,7 +49,14 @@ function dtLocalToEpoch(s: string): number | null {
 
 export default function AdminTodosPage() {
   const { user } = useCurrentUser();
-  const isAdmin = (user?.email || '').toLowerCase() === 'ajaykandakatla@gmail.com';
+  // Server flag, never a literal. `is_admin` on /auth/me is `auth.is_admin_email`
+  // — the SAME function that gates /admin/todos and /admin/todos/recipients in
+  // main.py (:3823, :3847), so the stealth 404 here matches the real gate
+  // exactly. `is_primary_admin` would be narrower than the backend and would
+  // 404 a co-owner the server lets through. Comparing against a hardcoded
+  // address leaked the owner's Gmail into the JS bundle (contracts.mjs scans
+  // src/ for it) — that is why this reads a flag.
+  const isAdmin = !!user?.is_admin;
 
   const [recipients,  setRecipients]  = useState<string[]>([]);
   const [recipient,   setRecipient]   = useState<string>('');

@@ -180,9 +180,15 @@ def message(row: dict, band: dict, room: Optional[dict], hit: Optional[dict] = N
 
 
 def digest_message(items: list) -> dict:
-    syms = ", ".join(i["row"]["symbol"] for i in items)
+    # `tickers` (2026-09-20, Ajay: "I need the stock tickers to be clickables in
+    # alerts individually if there are multiple in one alert by command click")
+    # — the names in the order the BODY lists them, so the /alerts, bell and
+    # history chips render one link per name without re-parsing prose.
+    syms_list = [i["row"]["symbol"] for i in items]
+    syms = ", ".join(syms_list)
     return {"title": "🚀 %d growth names at demand" % len(items),
-            "body": syms, "url": "/chart-maps?tab=growth", "kind": KIND}
+            "body": syms, "url": "/chart-maps?tab=growth", "kind": KIND,
+            "ticker": None, "tickers": syms_list}
 
 
 def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:

@@ -23,6 +23,12 @@ from typing import Optional
 
 log = logging.getLogger("flashcards.chart_quiz")
 
+# The one place this module names its push kind — it shares the learning pref
+# with the flash cards. RETIRED 2026-09-20 (Ajay: "Remove volleyball and
+# learning of stocks I do dont wanna see them they are spamming too much"):
+# it is in push.subs.RETIRED_2026_09_20 and main() exits 0 without sending.
+KIND = "minervini_flashcards"
+
 N_ITEMS = 2
 BARS_BEFORE = 65            # minimum context bars shown before the confirmation bar
 CANDIDATE_POOL = 60        # symbols sampled per generation attempt
@@ -214,16 +220,30 @@ def fire_daily() -> dict:
             body=(f"{n} real chart{'s' if n > 1 else ''} from your universe, cut at the "
                   "moment of truth. Name the pattern, then see the why and what "
                   "happened next."),
-            url="/chart-school", kind="minervini_flashcards", ticker=None)
+            url="/chart-school", kind=KIND, ticker=None)
     except Exception as exc:
         log.warning("chart_quiz push failed: %s", exc)
         ok = False
     return {"ok": bool(ok), "n": n, "et_date": quiz["et_date"]}
 
 
+def main(argv=None) -> int:
+    """``python -m flashcards.chart_quiz``.
+
+    RETIRED 2026-09-20. The guard runs FIRST — before ``fire_daily`` builds a
+    quiz or touches the sender — so a surviving cron line exits 0 in silence
+    (note the retired path returns 0 even though a live empty quiz would have
+    exited 1; nothing ran, so nothing failed)."""
+    from push import subs
+    if KIND in subs.DISABLED_ALERT_KINDS:
+        print(f"{KIND} retired 2026-09-20 — nothing sent")
+        return 0
+    r = fire_daily()
+    log.info("CHART-QUIZ: %s", r)
+    return 0 if r.get("ok") or r.get("n") else 1
+
+
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    r = fire_daily()
-    log.info("CHART-QUIZ: %s", r)
-    sys.exit(0 if r.get("ok") or r.get("n") else 1)
+    sys.exit(main(sys.argv[1:]))

@@ -15,12 +15,20 @@
  *  Opening the dropdown marks everything currently visible as seen.
  *  Survives page reloads + nav changes.
  *
- *  Tap routing: each row's `url` opens via react-router. The dropdown
- *  closes on selection so the user lands cleanly on the destination.
+ *  Tap routing: each row's TITLE carries the `url` and opens via
+ *  react-router. The dropdown closes on selection so the user lands cleanly
+ *  on the destination.
+ *
+ *  2026-09-20: rows grew per-ticker chips (TickerChips), so the row stopped
+ *  being one big <Link> — an <a> inside an <a> is invalid HTML and the browser
+ *  un-nests it, which broke ⌘-click on the chip. The link is the title now.
+ *  The chips pass NO fromKey: the bell renders on every page, so TickerLink
+ *  derives the back-source from the page it is ON, which is the honest answer.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { TickerChips } from './TickerChips';
 
 type FeedRow = {
   _id:        string;
@@ -30,6 +38,9 @@ type FeedRow = {
   body:       string;
   kind:       string | null;
   ticker:     string | null;
+  /** Every name the push listed, in body order (2026-09-20, push/recent
+   *  derive_tickers). A digest used to link none of them. */
+  tickers?:   string[] | null;
   url:        string | null;
   source:     'push' | 'breakout';
   sent?:      number;
@@ -271,6 +282,19 @@ export function NotificationBell() {
                 color: 'inherit',
                 textDecoration: 'none',
               };
+              const titleText = (
+                <>
+                  {isUnread && (
+                    <span style={{
+                      display: 'inline-block', width: 6, height: 6,
+                      borderRadius: 3, background: '#d4af37',
+                      marginRight: 6, verticalAlign: 'middle',
+                    }} />
+                  )}
+                  {r.title}
+                </>
+              );
+              const isInternal = !!r.url && r.url.startsWith('/');
               const inner = (
                 <>
                   <div style={{
@@ -284,14 +308,13 @@ export function NotificationBell() {
                       whiteSpace: 'nowrap',
                       flex: 1, minWidth: 0,
                     }}>
-                      {isUnread && (
-                        <span style={{
-                          display: 'inline-block', width: 6, height: 6,
-                          borderRadius: 3, background: '#d4af37',
-                          marginRight: 6, verticalAlign: 'middle',
-                        }} />
-                      )}
-                      {r.title}
+                      {/* The TITLE is the link (the row used to be one) — see
+                          the header note on nested anchors. Closing the
+                          dropdown on click is unchanged. */}
+                      {isInternal
+                        ? <Link to={r.url!} onClick={() => setOpen(false)}
+                                style={{ color: 'inherit', textDecoration: 'none' }}>{titleText}</Link>
+                        : titleText}
                     </div>
                     <div style={{ fontSize: '0.66rem', color: '#6a6a72', whiteSpace: 'nowrap' }}>
                       {fmtAgo(r.ts || 0)}
@@ -312,6 +335,10 @@ export function NotificationBell() {
                       {r.body}
                     </div>
                   )}
+                  {/* Every name in the push, each a real <a href>. No
+                      fromKey — the bell is on every page. */}
+                  <TickerChips tickers={r.tickers} ticker={r.ticker} tab="supply"
+                               fromLabel="Notifications" testIdPrefix="bell-tk" />
                   <div style={{ fontSize: '0.6rem', color: '#6a6a72', marginTop: 2 }}>
                     {r.source === 'breakout'
                       ? (r.dismissed ? 'breakout · dismissed' : 'breakout · active')
@@ -319,15 +346,8 @@ export function NotificationBell() {
                   </div>
                 </>
               );
-              // In-app link if URL is relative, otherwise plain div.
-              if (r.url && r.url.startsWith('/')) {
-                return (
-                  <Link key={r._id} to={r.url} onClick={() => setOpen(false)} style={rowStyle}>
-                    {inner}
-                  </Link>
-                );
-              }
-              return <div key={r._id} style={rowStyle}>{inner}</div>;
+              // The row is a <div>, never a <Link>: it CONTAINS anchors now.
+              return <div key={r._id} style={rowStyle} data-testid="bell-row">{inner}</div>;
             })}
           </div>
         </div>

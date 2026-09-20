@@ -271,56 +271,127 @@ PRIOR_PAIR = (1, 5)         # the quarter before vs ITS year-ago
 YOY_PAIRS = (HEADLINE_PAIR, PRIOR_PAIR)
 
 
-def yoy_pairs_ok(periods, pairs=YOY_PAIRS) -> bool:
-    """Is EVERY yoy pair exactly four fiscal quarters apart?
+def period_ok(periods, pairs=YOY_PAIRS):
+    """THE tri-state a surface serves: True / False / None.
 
+    None means UNVERIFIABLE — no keys on file, an unkeyed slot 0, too few
+    quarters to reach the headline pair at all, or a year-ago slot that is None
+    with NO filed quarter beyond it (trailing blanks are missing data, not a
+    missing quarter). Never "fine". True means the
+    headline pair was checked and is four quarters apart. False means it was
+    checked and is not, or its year-ago slot is a KNOWN HOLE.
+
+    2026-09-20 — HEADLINE HOLE vs PRIOR HOLE, and why they are not the same
+    answer. Once `align_reports` has densified the filings by fiscal period
+    (below), a None in a YoY slot stops meaning "no key on file" and starts
+    meaning "that quarter is absent from the filings". Those two holes have
+    different consequences and this function refuses on ONE of them:
+
+      * HEADLINE pair (0, 4) — a hole at slot 4 means the year-ago quarter of
+        the latest filed quarter is simply not there, so `growth_yoy_pct` has
+        no base. `sales.compute` already yields `score None` on it, so the row
+        is PENDING and out of the Bonde board either way; the surfaces mark it.
+        → **False**.
+      * PRIOR pair (1, 5) — a hole there costs the ACCELERATION read and
+        nothing else: `sales.compute` returns `prior_yoy_pct None` and
+        `accelerating False` (sales.py:49-53, :69) without ever reading a
+        neighbouring quarter. Refusing the whole row for it held out ~105
+        names whose headline number is correct. → does NOT refuse.
+
+    The first pair in `pairs` is the headline pair; the rest are prior pairs.
     Calls the module-global `_adjacent`, so a test that monkeypatches
     `sepa.qoq._adjacent` bites through here too (growth board E1 does).
-
-    INHERITS `_adjacent`'s accept-by-default: no periods, a None slot or a
-    non-int answers True, because refusing every legacy row would blank the
-    board rather than improve it. That is why this is NOT the tri-state a
-    surface should print — use `period_ok`.
     """
-    return all(_adjacent(periods, i, j, gap=YOY_GAP) for i, j in pairs)
-
-
-def yoy_pairs_verifiable(periods, pairs=YOY_PAIRS) -> bool:
-    """Could the pairs be CHECKED at all — is every slot present and int-able?
-
-    The exact inverse of `_adjacent`'s accept-by-default branch. 352 of 2,078
-    live scan rows and 682 of 3,754 research documents carry no
-    `q_period_series` at all (measured 2026-09-20), and on those rows
-    `yoy_pairs_ok` is True because nothing could be checked, not because the
-    quarters line up. A board that prints a tick for those is lying by omission.
-    """
-    if not periods:
-        return False
+    pairs = tuple(pairs)
+    if not periods or not pairs:
+        return None
     p = list(periods)
-    for pair in pairs:
-        for idx in pair:
-            if len(p) <= idx:
+    head_j = pairs[0][1]
+    if len(p) <= head_j:
+        return None                     # insufficient history — never "fine"
+    try:
+        int(p[0])
+    except (TypeError, ValueError):
+        return None                     # unkeyed row (legacy / yfinance)
+
+    for n, (i, j) in enumerate(pairs):
+        hole = len(p) <= j or p[i] is None or p[j] is None
+        if n == 0:
+            if hole:
+                # A hole is KNOWN only when a filed quarter exists beyond it —
+                # that is what densifying produces (the last slot is always
+                # the oldest key). A run of trailing Nones with nothing after
+                # is absence of data, not an absent quarter: the legacy shape
+                # [8105, None, None, None, None, None] that the growth board
+                # ACCEPTED on 2026-09-14 (E1) must stay unverifiable, never a
+                # refusal. `_densify` can never emit that shape, so on every
+                # aligned list this branch is unchanged (probed 2026-09-20).
+                if any(x is not None for x in p[j + 1:]):
+                    return False        # the year-ago quarter is ABSENT
+                return None             # nothing filed beyond → unverifiable
+            if not _adjacent(p, i, j, gap=YOY_GAP):
                 return False
-            v = p[idx]
-            if v is None:
-                return False
-            try:
-                int(v)
-            except (TypeError, ValueError):
+        else:
+            if hole:
+                continue                # prior hole → sales.py already blanks it
+            if not _adjacent(p, i, j, gap=YOY_GAP):
                 return False
     return True
 
 
-def period_ok(periods, pairs=YOY_PAIRS):
-    """THE tri-state a surface serves: True / False / None.
+def headline_hole(periods, pairs=YOY_PAIRS) -> bool:
+    """Is the HEADLINE pair's year-ago quarter absent from the filings?
 
-    None means UNVERIFIABLE (no keys on file), never "fine". True means the
-    pairs were checked and are four quarters apart. False means they were
-    checked and are not — the row's YoY legs compare two different seasons.
+    Only meaningful once the list is densified — on a raw Massive list a
+    missing quarter is a SHIFT, not a hole, and `period_ok` catches it as a
+    wrong gap instead. False on an unverifiable row (nothing was checked).
     """
-    if not yoy_pairs_verifiable(periods, pairs):
-        return None
-    return yoy_pairs_ok(periods, pairs)
+    pairs = tuple(pairs)
+    if period_ok(periods, pairs) is None:
+        return False
+    p = list(periods)
+    j = pairs[0][1]
+    return len(p) <= j or p[pairs[0][0]] is None or p[j] is None
+
+
+def prior_hole(periods, pairs=YOY_PAIRS) -> bool:
+    """Is a PRIOR pair's slot absent? Costs the acceleration read, nothing
+    more — `sales.compute` yields `prior_yoy_pct None`, `accelerating False`
+    and `consecutive_growth_q 1` on it. Served so a surface can say WHY the
+    character clause came up empty. False on an unverifiable row."""
+    pairs = tuple(pairs)
+    if period_ok(periods, pairs) is None:
+        return False
+    p = list(periods)
+    for i, j in pairs[1:]:
+        if len(p) <= j or p[i] is None or p[j] is None:
+            return True
+    return False
+
+
+def yoy_pairs_ok(periods, pairs=YOY_PAIRS) -> bool:
+    """Is the headline pair a year apart (and no checkable prior pair wrong)?
+
+    ACCEPT-BY-DEFAULT is kept: an unverifiable row answers True, because
+    refusing every legacy row would blank the board rather than improve it.
+    That is why this is NOT the tri-state a surface should print — use
+    `period_ok`.
+    """
+    return period_ok(periods, pairs) is not False
+
+
+def yoy_pairs_verifiable(periods, pairs=YOY_PAIRS) -> bool:
+    """Could the headline pair be CHECKED at all?
+
+    352 of 2,078 live scan rows and 682 of 3,754 research documents carry no
+    `q_period_series` at all (measured 2026-09-20), and on those rows
+    `yoy_pairs_ok` is True because nothing could be checked, not because the
+    quarters line up. A board that prints a tick for those is lying by omission.
+
+    2026-09-20: a PRIOR-pair hole no longer makes a row unverifiable — the
+    headline pair is still checkable, and `prior_hole` says the rest.
+    """
+    return period_ok(periods, pairs) is not None
 
 
 def period_label(idx, source=None):
@@ -337,6 +408,149 @@ def period_label(idx, source=None):
         return None
     y, q = i // 4, i % 4 + 1
     return f"Q{q} {y}" if source == "yfinance" else f"FY{y} Q{q}"
+
+
+# ── DENSIFY BY FISCAL PERIOD — the repair, 2026-09-20 ───────────────────────
+# Ajay 2026-09-20, on the 164 mismatched pairs the audit found: *"#2 Yes"* —
+# repair them to the true year-ago quarter rather than keep holding the rows
+# out.
+#
+# THE DEFECT. Massive OMITS a quarter it does not have rather than leaving a
+# placeholder, so every consumer that reads "slot 4" gets whatever filing
+# happens to sit fourth in the list. IOVA's keys are
+# [8105,8104,8102,8101,8100,8098] — FY Q4 is absent in BOTH years, so slot 4
+# is FY2025 Q1 standing in for the year-ago quarter of FY2026 Q2, and the
+# board printed the resulting number as growth for months.
+#
+# THE REPAIR, at the ONE place Massive's rows become series: put one slot per
+# fiscal index from the newest key down to the oldest, leave `None` where a
+# quarter is missing, and let every positional reader downstream land on the
+# right quarter. Nothing is recomputed and no threshold moves — `sepa/sales.py`
+# keeps its 5 / 25 / 100 tiers and its arithmetic. A slot that is now None
+# yields None, which sales.py, earnings_quality.py and this module already
+# handle without ever reading a neighbour.
+#
+# MEASURED on the live cache 2026-09-20 before this shipped: 0 of the keyed
+# documents carried a PARTIAL list (a key sequence with an internal gap AND
+# fewer rows than its span) that densify could not place — every gap is a
+# plain omission.
+def _densify(keys):
+    """(slot_periods, {period: source_index}, stats) from a list of raw keys.
+
+    One slot per fiscal index from `max(int keys)` down to `min(int keys)`, so
+    the returned list has a slot for every quarter in the span and `None` where
+    the filing is absent.
+
+    Walking the SOURCE order, the FIRST occurrence of a period wins and later
+    duplicates are ignored. Massive lists filings newest-FILING-first, so the
+    first row for a restated quarter is the restatement — NU files two rows for
+    FY2024 Q2 (revenue 1,892,600,000 then 1,892,590,000) and the restated one
+    is the one the board should read.
+
+    A key that cannot be int-ed (None, a string) has no slot and its row is
+    DROPPED; the caller counts those.
+    """
+    ints = []
+    for k in list(keys or []):
+        try:
+            ints.append(None if k is None else int(k))
+        except (TypeError, ValueError):
+            ints.append(None)
+    got = [v for v in ints if v is not None]
+    stats = {"duplicate_periods": 0, "reordered": False}
+    if not got:
+        return [], {}, stats
+    stats["reordered"] = bool(got != sorted(got, reverse=True))
+    index_of: dict = {}
+    for src, v in enumerate(ints):
+        if v is None:
+            continue
+        if v in index_of:
+            stats["duplicate_periods"] += 1      # a later row for the same Q
+            continue
+        index_of[v] = src
+    slot_periods = [p if p in index_of else None
+                    for p in range(max(got), min(got) - 1, -1)]
+    return slot_periods, index_of, stats
+
+
+def align_reports(reports, key_fn):
+    """(aligned_reports, dropped_unlabelled, stats) — reports by fiscal period.
+
+    `None` sits at every hole. A list with NO int-able key at all is returned
+    UNCHANGED (the legacy / yfinance path stores calendar quarters positionally
+    and must not be disturbed).
+    """
+    rows = list(reports or [])
+    keys = []
+    for r in rows:
+        try:
+            keys.append(key_fn(r))
+        except Exception:                                   # noqa: BLE001
+            keys.append(None)
+    slot_periods, index_of, stats = _densify(keys)
+    if not index_of:
+        return rows, 0, {"duplicate_periods": 0, "reordered": False}
+    dropped = sum(1 for k in keys if _int_or_none(k) is None)
+    aligned = [rows[index_of[p]] if p is not None else None for p in slot_periods]
+    return aligned, dropped, stats
+
+
+def _int_or_none(v):
+    try:
+        return None if v is None else int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def align_series(periods, **series):
+    """Align the parallel period keys and value series onto dense slots.
+
+    Returns `{"q_period_series": [...], "<name>": [...], "dropped_unlabelled",
+    "duplicate_periods", "reordered"}`. With no int-able key the inputs come
+    back UNCHANGED — a legacy document is never rearranged on a guess.
+    """
+    keys = list(periods or [])
+    slot_periods, index_of, stats = _densify(keys)
+    if not index_of:
+        out = {"q_period_series": keys}
+        out.update({k: list(v or []) for k, v in series.items()})
+        out.update({"dropped_unlabelled": 0, "duplicate_periods": 0,
+                    "reordered": False})
+        return out
+    out = {"q_period_series": list(slot_periods)}
+    for name, vals in series.items():
+        v = list(vals or [])
+        out[name] = [(v[index_of[p]] if (p is not None and index_of[p] < len(v))
+                      else None) for p in slot_periods]
+    out["dropped_unlabelled"] = sum(1 for k in keys if _int_or_none(k) is None)
+    out["duplicate_periods"] = stats["duplicate_periods"]
+    out["reordered"] = stats["reordered"]
+    return out
+
+
+def yoy_pct(series, i: int = 0, gap: int = YOY_GAP):
+    """THE year-over-year arithmetic, in one place: slot `i` vs slot `i+gap`.
+
+    `(a − b) / |b| × 100`, 2 dp. None when either slot is absent or the base is
+    zero. `|b|` (not `b`) matches what `canslim._compute_q_eps_growth` and
+    `sales._yoy` have always done — a name going −0.50 → −0.05 must not print
+    a confident sign flip.
+    """
+    s = list(series or [])
+    j = i + gap
+    if len(s) <= j or i < 0:
+        return None
+    a, b = s[i], s[j]
+    if a is None or b is None:
+        return None
+    try:
+        a, b = float(a), float(b)
+    except (TypeError, ValueError):
+        return None
+    if b == 0:
+        return None
+    return round((a - b) / abs(b) * 100.0, 2)
 
 
 def compute(rev_series=None, eps_series=None, ni_series=None,
@@ -595,6 +809,111 @@ def backfill(symbols: Optional[list] = None, *, limit: int = 0,
             "filled": filled, "failed": failed}
 
 
+# --------------------------------------------------------------------------
+# Realign — the HEAL for documents cached before densify shipped
+# --------------------------------------------------------------------------
+# `align_reports` fixes every document written from now on. This walks the
+# cache and fixes the ones already there, so the 164 mismatched rows land in
+# the RIGHT place under today's rules instead of waiting for Sunday's refresh.
+#
+# WHAT IT WILL NOT DO. It never touches `cached_at` (bumping it would extend
+# the life of stale fundamentals) and it never recomputes `earnings_quality`:
+# that score needs the inventory and receivables series, and `inv_q_series` is
+# not stored on the cache document at all (canslim.py copies only
+# period/rev/eps/ni). The Sunday refresh realigns it through canslim.
+#
+# This PROMOTES NOTHING. A row whose year-ago quarter is genuinely absent
+# becomes `headline_hole` → `sales.score None` → pending → still off the board.
+def realign(symbols: Optional[list] = None, *, limit: int = 0,
+            dry_run: bool = False) -> dict:
+    """Re-align the stored quarterly series of every keyed cached document.
+
+    `--dry-run` computes and reports the identical counts without a write —
+    that dry run IS the re-tier measurement.
+    """
+    import time as _time
+
+    from sepa import canslim, research, sales as _sales
+
+    coll = research._get_cache()
+    if coll is None:
+        return {"ok": False, "reason": "no cache"}
+
+    q = {}
+    if symbols:
+        q = {"symbol": {"$in": [str(s).upper() for s in symbols]}}
+    proj = {"symbol": 1, "fundamentals.q_period_series": 1,
+            "fundamentals.rev_q_series": 1, "fundamentals.eps_q_series": 1,
+            "fundamentals.ni_q_series": 1, "fundamentals.sales": 1}
+    docs = list(coll.find(q, proj))
+    considered = len(docs)
+    if limit:
+        docs = docs[:limit]
+
+    out = {"ok": True, "considered": considered, "keyed": 0, "realigned": 0,
+           "unchanged": 0, "retier": {}, "headline_hole": 0, "prior_hole": 0,
+           "duplicate_periods": 0, "reordered": 0, "dropped_unlabelled": 0,
+           "dry_run": bool(dry_run)}
+
+    for d in docs:
+        f = (d.get("fundamentals") or {}) if isinstance(d, dict) else {}
+        periods = f.get("q_period_series")
+        if not (isinstance(periods, list) and any(
+                _int_or_none(v) is not None for v in periods)):
+            continue
+        out["keyed"] += 1
+        a = align_series(periods,
+                         rev_q_series=f.get("rev_q_series"),
+                         eps_q_series=f.get("eps_q_series"),
+                         ni_q_series=f.get("ni_q_series"))
+        if a["duplicate_periods"]:
+            out["duplicate_periods"] += 1
+        if a["reordered"]:
+            out["reordered"] += 1
+        if a["dropped_unlabelled"]:
+            out["dropped_unlabelled"] += 1
+
+        new_periods = a["q_period_series"]
+        q_eps = yoy_pct(a["eps_q_series"])
+        rev_g = yoy_pct(a["rev_q_series"])
+        sales_new = _sales.compute(canslim._head8(a["rev_q_series"]), q_eps)
+        hh = headline_hole(new_periods)
+        ph = prior_hole(new_periods)
+        out["headline_hole"] += 1 if hh else 0
+        out["prior_hole"] += 1 if ph else 0
+
+        old_tier = str(((f.get("sales") or {}) if isinstance(f.get("sales"), dict)
+                        else {}).get("tier") or "unknown")
+        new_tier = str(sales_new.get("tier") or "unknown")
+        if new_periods == list(periods):
+            out["unchanged"] += 1
+            continue
+        out["realigned"] += 1
+        key = f"{old_tier}→{new_tier}"
+        out["retier"][key] = out["retier"].get(key, 0) + 1
+        if dry_run:
+            continue
+        sets = {
+            "fundamentals.q_period_series": new_periods,
+            "fundamentals.rev_q_series": a["rev_q_series"],
+            "fundamentals.eps_q_series": a["eps_q_series"],
+            "fundamentals.ni_q_series": a["ni_q_series"],
+            "fundamentals.q_eps_growth_pct": q_eps,
+            "fundamentals.rev_growth_q_pct": rev_g,
+            "fundamentals.sales": sales_new,
+            "fundamentals.headline_hole": hh,
+            "fundamentals.prior_hole": ph,
+            "fundamentals.realigned_at": _time.time(),
+        }
+        try:
+            # `cached_at` is NOT in `sets` and never will be.
+            coll.update_one({"symbol": d.get("symbol")}, {"$set": sets})
+        except Exception as exc:                            # noqa: BLE001
+            log.debug("qoq.realign(%s) write failed: %s", d.get("symbol"), exc)
+            out["realigned"] -= 1
+    return out
+
+
 def snapshot(symbols: list) -> dict:
     """Sequential QoQ per symbol off the research cache — ONE projected read.
 
@@ -634,6 +953,14 @@ def _main(argv=None) -> int:
 
     c = sub.add_parser("coverage", help="how many cached names carry a series")
 
+    r = sub.add_parser("realign",
+                       help="densify the cached quarterly series by fiscal period")
+    r.add_argument("--limit", type=int, default=0, help="cap the number of names")
+    r.add_argument("--symbols", default="", help="comma-separated subset")
+    r.add_argument("--dry-run", action="store_true",
+                   help="compute and print the counts without writing")
+    r.add_argument("--json", action="store_true", help="JSON only (default)")
+
     # A CLI process has no app startup, so the root redaction filter would not
     # be installed — and this command is the one that hammers a keyed endpoint.
     try:
@@ -646,6 +973,10 @@ def _main(argv=None) -> int:
     if a.cmd == "backfill":
         syms = [s.strip().upper() for s in a.symbols.split(",") if s.strip()] or None
         print(_json.dumps(backfill(syms, limit=a.limit, only_missing=not a.all)))
+        return 0
+    if a.cmd == "realign":
+        syms = [s.strip().upper() for s in a.symbols.split(",") if s.strip()] or None
+        print(_json.dumps(realign(syms, limit=a.limit, dry_run=a.dry_run)))
         return 0
     if a.cmd == "coverage":
         from sepa import research

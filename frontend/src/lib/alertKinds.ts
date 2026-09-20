@@ -55,10 +55,17 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },
   // 🏛️ political/watch.py (2026-09-20) — a HEADLINE classifier, not a
-  // signal. Ships OFF in the backend default prefs; Ajay flips it on at
-  // /notifications. Registered here so a candidate that did page him
-  // renders with a label instead of the raw id.
+  // signal. Ships ON since 2026-09-20 (his #1 Yes: "Default on for any change
+  // of todays features Bondes or Potus or explosive growth or Earnings I wanna
+  // see all of them."). Registered here so a candidate that paged him renders
+  // with a label instead of the raw id.
   potus_investment:    { emoji: '🏛️', label: 'Federal stake reported', group: 'trading' },
+  // 📣 chart_maps/earnings_alerts.py (2026-09-20) — a beat whose reaction bar
+  // carried institutional-sized volume. Ships ON; NOT measured.
+  earnings_reaction:   { emoji: '📣', label: 'Earnings beat, institutions bought', group: 'trading' },
+  // ✨ sepa/board_arrival.py (2026-09-20) — a name ARRIVED on 📈 Bonde or
+  // 🚀 Explosive Growth. Ships ON; an arrival on a list, not an entry.
+  board_arrival:       { emoji: '✨', label: 'New on a board',          group: 'trading' },
 
   // ── breakouts (also arrive as source='breakout' rows) ─────────────────────
   volume_breakout:     { emoji: '🚀', label: 'Volume breakout',         group: 'breakout' },
@@ -90,12 +97,17 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   setup_wedge_pop:     { emoji: '📐', label: 'Wedge pop setup',         group: 'setup' },
 
   // ── learning ──────────────────────────────────────────────────────────────
+  // history only — crons, toggles and the PERSONAL_KINDS entry were removed
+  // 2026-09-20 ("spamming too much"); the label stays so an old push_history
+  // row renders a name, not a raw id.
   minervini_flashcards:{ emoji: '🃏', label: 'Flash card',              group: 'learning' },
   vb_education:        { emoji: '📖', label: 'Volleyball card',         group: 'learning' },
 
   // ── household ─────────────────────────────────────────────────────────────
   todo_reminder:       { emoji: '📌', label: 'Todo reminder',           group: 'household' },
   todo_daily_digest:   { emoji: '📋', label: 'Todo digest',             group: 'household' },
+  // history only — retired 2026-09-20 with the rest of the volleyball kinds;
+  // the labels stay so an old push_history row renders a name.
   vb_workout:          { emoji: '🏐', label: 'Volleyball workout',      group: 'household' },
   vb_supplement:       { emoji: '💊', label: 'Volleyball supplements',  group: 'household' },
   house_daily:         { emoji: '🏡', label: 'House daily',             group: 'household' },

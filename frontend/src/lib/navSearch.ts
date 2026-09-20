@@ -58,9 +58,10 @@ export const NAV_SYNONYMS: Record<string, string[]> = {
   track:           ['tracker'],
   todos:           ['tasks', 'reminders'],
   glossary:        ['terms', 'definitions'],
-  learn:           ['learning', 'lessons'],
+  // `learn` and `learning` left the catalog 2026-09-20 — Ajay: "Remove
+  // volleyball and learning of stocks I do dont wanna see them they are
+  // spamming too much". Chart School stays.
   'chart-school':  ['lessons', 'charts'],
-  learning:        ['study', 'path'],
   usage:           ['heatmap', 'analytics'],
   chatter:         ['stocktwits', 'social'],
   'chatter-india': ['stocktwits', 'social', 'india'],

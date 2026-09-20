@@ -302,6 +302,10 @@ def digest_message(items: list) -> Optional[dict]:
     head = "🧲 Demand zone — " if has_at else "🧲 Nearing demand — "
     title = head + lead + (f" +{len(items) - 1} more" if len(items) > 1 else "")
     lines = []
+    # `tickers` (2026-09-20) — one clickable chip per name on every alert
+    # surface, in the order the BODY lists them (dist_pct asc, capped at
+    # DIGEST_MAX). The "+N more on the board" tail names nobody.
+    tickers = [str(it["symbol"]).upper() for it in items[:DIGEST_MAX]]
     for it in items[:DIGEST_MAX]:
         where = ("in demand" if it["hit"].get("state") == "in"
                  else f"{it['hit']['dist_pct']:g}% above")
@@ -317,7 +321,7 @@ def digest_message(items: list) -> Optional[dict]:
         lines.append(f"+{len(items) - DIGEST_MAX} more on the board")
     url = "/chart-maps?tab=zones&phase=approaching"
     return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url},
-            "kind": KIND}
+            "kind": KIND, "ticker": None, "tickers": tickers}
 
 
 # --------------------------------------------------------------------------

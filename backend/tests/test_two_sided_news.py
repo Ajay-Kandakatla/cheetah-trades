@@ -382,12 +382,34 @@ class TestFacts:
         assert f["sales_accelerating"] is True
         assert f["yoy_pair_comparable"] is True
 
-    def test_a_none_slot_inside_a_pair_is_unverifiable_not_a_mismatch(self, monkeypatch):
+    def test_a_none_slot_in_the_PRIOR_pair_is_comparable_not_a_mismatch(self, monkeypatch):
+        """PIN MOVED DELIBERATELY 2026-09-20 (the YoY repair): the same shape
+        moved at test_data_spine_2026_09_20.py:60-67. The hole is at slot 1 —
+        a PRIOR hole. The headline pair (8106 vs 8102) is four fiscal quarters
+        apart and checkable, so the growth claim stands and `period_ok` is
+        True; only the acceleration read is lost."""
         holed = [8106, None, 8104, 8103, 8102, 8101]
         from sepa import qoq
-        assert qoq.period_ok(holed) is None
+        assert qoq.period_ok(holed) is True
+        assert qoq.prior_hole(holed) is True
+        assert qoq.headline_hole(holed) is False
         _stub_sources(monkeypatch, periods=holed, row={"symbol": "NVDA"})
         assert TS.facts_for("NVDA")["yoy_pair_comparable"] is True
+
+    def test_NEGATIVE_a_hole_at_the_YEAR_AGO_slot_is_not_comparable(self, monkeypatch):
+        """The mirror of the pin above: the hole moves into the HEADLINE pair
+        (slot 4 absent) and the block must refuse the growth figures rather
+        than read the 8101 neighbour as the year-ago quarter."""
+        holed = [8106, 8105, 8104, 8103, None, 8101]
+        from sepa import qoq
+        assert qoq.period_ok(holed) is False
+        assert qoq.headline_hole(holed) is True
+        _stub_sources(monkeypatch, periods=holed, row={"symbol": "NVDA"})
+        f = TS.facts_for("NVDA")
+        assert f["yoy_pair_comparable"] is False
+        assert "sales_growth_yoy_pct" not in f
+        assert "sales_prior_yoy_pct" not in f
+        assert "sales_tier" not in f
 
     def test_the_guard_is_the_apps_one_adjacency_engine(self, monkeypatch):
         """No parallel implementation: patching `sepa.qoq._adjacent` moves it.

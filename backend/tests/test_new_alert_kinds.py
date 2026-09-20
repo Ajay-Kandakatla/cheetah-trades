@@ -52,8 +52,12 @@ def _capture(monkeypatch, result=None):
 
 # ── the keep-set itself ────────────────────────────────────────────────────
 def test_the_keep_set_is_exactly_what_he_asked_for():
+    # WIDENED 2026-09-20: "Default on for any change of todays features Bondes
+    # or Potus or explosive growth or Earnings I wanna see all of them."
     assert subs.OWNER_KEEP_SET == frozenset({
-        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert"})
+        "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
+        "potus_investment", "growth_demand_alert", "earnings_reaction",
+        "board_arrival"})
 
 
 def test_the_killed_kinds_are_really_gone_from_the_keep_set():
@@ -80,6 +84,11 @@ def test_both_new_kinds_are_market_kinds_so_closed_days_stay_quiet():
     from market_hours import gate
     assert "hot_pullback_alert" in gate.MARKET_ALERT_KINDS
     assert "pattern_alert" in gate.MARKET_ALERT_KINDS
+    # 2026-09-20: both new keep-set kinds read CLOSED bars, so neither may be
+    # a personal kind — a holiday must not push a stale reaction or arrival.
+    for k in ("earnings_reaction", "board_arrival"):
+        assert k in gate.MARKET_ALERT_KINDS, k
+        assert k not in gate.PERSONAL_KINDS, k
 
 
 # ── 🔥 hot pullback ────────────────────────────────────────────────────────

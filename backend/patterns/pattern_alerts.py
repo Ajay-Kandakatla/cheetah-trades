@@ -221,11 +221,15 @@ def digest_message(rows: list, day: str) -> Optional[dict]:
                        " · in demand" if (r.get("demand_anchor") or {}).get("state") == "in_zone"
                        else " · reversal" if r.get("demand_anchor") else "")
         for r in rows[:10])
+    # `tickers` (2026-09-20) — the first 10 the body names, in body order; the
+    # body spells each one as "SYM (pattern)", so the chips are the only place
+    # a per-name link can live.
+    tickers = [str(r.get("symbol")).upper() for r in rows[:10]]
     return {"title": "\U0001F4D0 %d more patterns confirmed" % len(rows),
             "body": names + " · placebo %d%% up — none of these beats chance"
                     % BC.PATTERN_PLACEBO[1],
             "icon": "/icon.svg", "tag": "pat-digest-%s" % day,
-            "url": PUSH_URL, "kind": KIND, "ticker": None,
+            "url": PUSH_URL, "kind": KIND, "ticker": None, "tickers": tickers,
             "data": {"url": PUSH_URL, "source": "patterns"}}
 
 

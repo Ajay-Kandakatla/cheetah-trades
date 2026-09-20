@@ -24,8 +24,14 @@ fix 2026-09-05). Every other alert scan, the SEPA CLI and the paper-lane warms d
 - **Push (`push/sender.py`):** `send_to_all` / `send_to_user` drop every kind outside
   `gate.PERSONAL_KINDS` on a closed day *before* any device is touched and *before* a
   `push_history` row is written. Default is DROP: a new setup/pattern kind is
-  market-driven until it is added to the personal pass-list (todos, flashcards,
-  volleyball, household, sign-ins, health). Result: `{"sent": 0, "failed": 0,
+  market-driven until it is added to the personal pass-list (todos, market open/close
+  reminders, household, sign-ins, product launches, health, and 🏛️ `potus_investment`
+  — a headline, not a price). The flash-card and volleyball kinds left that list on
+  2026-09-20 when they were retired outright ("Remove volleyball and learning of
+  stocks I do dont wanna see them they are spamming too much") — see
+  `docs/notifications/owner_keepset_2026_09_20.md`. The 2026-09-20 keep-set additions
+  📣 `earnings_reaction` and ✨ `board_arrival` both read CLOSED bars and are therefore
+  MARKET kinds, silent on weekends and holidays. Result: `{"sent": 0, "failed": 0,
   "total_targets": 0, "skipped": "holiday 2026-09-07"}` and one app-log line.
 - **Jobs:**
   - `sepa.cli` commands in `MARKET_DAY_CMDS` (scan, fast-scan, alerts, breakout-audit,

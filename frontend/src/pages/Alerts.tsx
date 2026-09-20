@@ -41,7 +41,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { TickerLink } from '../components/TickerLink';
+import { TickerChips } from '../components/TickerChips';
 import { API } from '../lib/apiBase';
 import { useAlertHistory, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
 import {
@@ -63,6 +63,10 @@ export type PassStatus = {
   /** The cron's schedule in seconds (backend alert_status.CADENCE_SEC). An
    *  older API omits it → the PASSES fallback below. */
   cadence_sec?: number | null;
+  /** Words, not seconds: a once-a-day pass has no cadence (the backend sends
+   *  `cadence_sec: null` and a `schedule` string like "17:42 ET, trading
+   *  days"). An older API omits it → 'once a trading day'. */
+  schedule?: string | null;
 };
 export type AlertsGate = {
   min_room_pct: number;
@@ -96,6 +100,19 @@ const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'zone_bounce_alert', label: '🪃 Intraday demand turn',   fallbackCadenceSec: 300 },
   { key: 'demand_alert',      label: '🧲 Reversal at demand',      fallbackCadenceSec: 300 },
 ];
+
+/* The once-a-day passes (2026-09-20). They are NOT part of the three-pass
+ * cadence health read above — `sessionLine` still speaks for the intraday
+ * gate only, and a daily pass that has not run at 10:00 is not late. They get
+ * their own strip so a silent morning still has a stamp and a reason. */
+const DAILY_PASSES: { key: string; label: string }[] = [
+  { key: 'earnings_reaction',    label: '📣 Earnings beat, institutions bought' },
+  { key: 'board_arrival:bonde',  label: '✨ New on 📈 Bonde' },
+  { key: 'board_arrival:growth', label: '✨ New on 🚀 Explosive Growth' },
+];
+/* An older API sends no `schedule`; the page says how often, never WHEN — a
+ * slot typed here would drift from the crontab the way the cap floor did. */
+const DAILY_SCHEDULE_FALLBACK = 'once a trading day';
 
 export function cadenceOf(pass: PassStatus | undefined, meta: (typeof PASSES)[number]): number {
   const n = Number(pass?.cadence_sec);
@@ -187,12 +204,32 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
      * interpret is how a quiet phone gets blamed on the wrong thing. */
     case 'skipped_not_enterable':
       return `${n} skipped: not enterable (BLOCKED read — should be 0; a non-zero count is a bug to report)`;
+    /* ── the once-a-day passes (2026-09-20) ──────────────────────────────
+     * These counters explain a silent daily pass the way the zone counters
+     * explain a quiet phone. `first_pass` is a flag, not a count: the very
+     * first run of a board ledger records the cohort it finds as the
+     * baseline and pushes nothing — otherwise the first pass would ring for
+     * every name already on the board. */
+    case 'first_pass':        return 'first pass — baseline recorded, nothing pushed';
+    case 'since_tracking':    return `${n} arrived since tracking began`;
+    /* `fresh` is counted BEFORE the sends (board_arrival.run: the candidates
+     * whose (board, symbol) key is not in the ledger yet). On a WET pass those
+     * are the names the pass then rang — so "not yet pushed" read backwards,
+     * naming the pushed set as the un-pushed one. "new this pass" is true of
+     * both runs: a dry run reports what it would ring, a wet run what it did. */
+    case 'fresh':             return `${n} new this pass`;
+    case 'claimed_elsewhere': return `${n} claimed by another pass`;
+    case 'skipped_timing_unknown': return `${n} skipped: report timing unknown`;
+    case 'fetch_failed':      return `${n} surprise fetches failed`;
+    case 'dropped_not_last_bar': return `${n} reacted on an older bar`;
     default: return null;
   }
 }
 const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'skipped_knife',
                    'skipped_mood', 'skipped_floor', 'skipped_not_enterable', 'skipped_cap', 'unknown_cap',
-                   'stale_print', 'unknown_prev', 'unknown_room'];
+                   'stale_print', 'unknown_prev', 'unknown_room',
+                   'first_pass', 'since_tracking', 'fresh', 'claimed_elsewhere',
+                   'skipped_timing_unknown', 'fetch_failed', 'dropped_not_last_bar'];
 /* `pushed` on the backend counts send CALLS that terminated — delivered, or
  * nobody targeted (a muted kind still counts, demand_alerts._terminal). So the
  * chip says "push calls", and each row's delivery line says what landed. */
@@ -315,7 +352,14 @@ function deliveryText(row: AlertRow): { text: string; tone: string } {
   return { text: `delivered to ${sent}/${total} device${total === 1 ? '' : 's'}`, tone: DIM };
 }
 
-function AlertRowCard({ row }: { row: AlertRow }) {
+/* 2026-09-20: a digest push carries every name it listed (push/recent
+ * derive_tickers), so the row can link them all. Declared here rather than on
+ * `AlertRow` because the field is additive and optional — the hook's type is
+ * shared with callers that never render chips, and an older API sends
+ * neither key. */
+type AlertRowT = AlertRow & { tickers?: string[] | null };
+
+function AlertRowCard({ row }: { row: AlertRowT }) {
   const isInternal = !!row.url && row.url.startsWith('/') && !row.url.startsWith('//');
   const delivery = deliveryText(row);
   return (
@@ -328,9 +372,10 @@ function AlertRowCard({ row }: { row: AlertRow }) {
         {/* 🎯 The verdict AT PUSH TIME, persisted with the row — not a re-read.
             Legacy rows carry none and wear no chip. */}
         <EnterableChip read={row.enterable} className="cm-badge" />
-        {row.ticker ? (
-          <TickerLink ticker={row.ticker} tab="supply" fromLabel="Alerts" fromKey="alerts" />
-        ) : null}
+        {/* Every name in the push, each its own real <a href> — a digest used
+            to link at most one of them (2026-09-20). ⌘-click opens a tab. */}
+        <TickerChips tickers={row.tickers} ticker={row.ticker} tab="supply"
+                     fromLabel="Alerts" fromKey="alerts" testIdPrefix="alert-tk" />
         <span style={{ fontSize: '0.86rem', fontWeight: 600, lineHeight: 1.35, flex: '1 1 12rem' }}>{row.title}</span>
       </div>
       {/* FULL body — the lock screen shows ~180 chars; this is the rest. */}
@@ -404,6 +449,46 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {/* A reason belongs to the pass that wrote it: yesterday's "store empty"
           under today's "no pass yet" would read as today's fact. */}
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
+      {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
+      {skips.map(([k, n]) => (
+        <span key={k} className="mono" style={SKIP_CHIP}>{skipChipText(k, n, gate) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+      ))}
+    </div>
+  );
+}
+
+/* A once-a-day pass. No cadence health: a daily pass has one slot, so
+ * "stale" is meaningless before that slot and the only honest reads are
+ * "ran, here is when and what it found" or "no pass recorded". */
+function DailyPassStrip({ pass, meta, gate, today }: {
+  pass: PassStatus | undefined; meta: (typeof DAILY_PASSES)[number];
+  gate: AlertsStatus['gate']; today: string;
+}) {
+  const counts = pass?.counts ?? {};
+  const stamp = etFromIso(pass?.as_of);
+  const day = passDay(pass);
+  const schedule = (typeof pass?.schedule === 'string' && pass.schedule.trim())
+    ? pass.schedule.trim() : DAILY_SCHEDULE_FALLBACK;
+  const when = !pass?.as_of
+    ? 'no pass recorded'
+    : day && day !== today ? `last pass ${day} ${stamp}` : `last pass ${stamp}`;
+  const headline = HEADLINE
+    .filter((h) => counts[h.key] != null)
+    .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
+  const skips = SKIP_KEYS
+    .map((k) => [k, Number(counts[k]) || 0] as const)
+    .filter(([, n]) => n > 0);
+  const extra = Object.entries(counts)
+    .filter(([k, v]) => v != null && !HEADLINE_KEYS.includes(k) && !SKIP_KEYS.includes(k))
+    .map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`)
+    .join(' · ');
+  return (
+    <div data-testid={`pass-${meta.key}`} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', padding: '0.3rem 0' }}
+         title={extra ? `Also counted: ${extra}` : undefined}>
+      <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: '11rem' }}>{meta.label}</span>
+      <span className="mono" style={{ fontSize: '0.7rem', color: pass?.as_of ? MUTED : AMBER }}>{when}</span>
+      <span className="mono" style={{ fontSize: '0.66rem', color: DIM }}>· {schedule}</span>
+      {pass?.reason ? <span className="mono" style={REASON_CHIP} data-testid={`daily-reason-${meta.key}`}>⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
       {skips.map(([k, n]) => (
         <span key={k} className="mono" style={SKIP_CHIP}>{skipChipText(k, n, gate) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
@@ -557,6 +642,11 @@ export function AlertsPage() {
         </div>
         {PASSES.map((meta) => (
           <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+        ))}
+        {/* ── the once-a-day passes ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }}>🗓️ Daily passes</div>
+        {DAILY_PASSES.map((meta) => (
+          <DailyPassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} gate={gate} today={today} />
         ))}
         {status?.disclaimer ? <div style={{ fontSize: '0.64rem', color: DIM, marginTop: '0.3rem' }}>{status.disclaimer}</div> : null}
       </section>

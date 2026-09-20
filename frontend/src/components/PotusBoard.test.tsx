@@ -200,9 +200,18 @@ describe('PotusBoard', () => {
   it('a name whose chart fails does not take the board down', async () => {
     stubFetch();
     render(<MemoryRouter><PotusBoard /></MemoryRouter>);
+    // The tile shell renders as soon as /political/board lands — the chart
+    // reads arrive LATER, in one batch. Asserting the served error
+    // synchronously off the shell is a race (it read 'loading chart…' on a
+    // slow run); wait for the error text itself.
     const tileEl = await screen.findByTestId('pb-tile-govt_contractor-LMT');
-    expect(within(tileEl).getByText(/No price data for LMT/)).toBeInTheDocument();
-    expect(screen.getByTestId('tile-MP')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(tileEl).getByText(/No price data for LMT/)).toBeInTheDocument());
+    // NEGATIVE: the failed name draws no chart at all, and never a blank one.
+    expect(within(tileEl).queryByTestId('tile-LMT')).toBeNull();
+    expect(within(tileEl).queryByText(/loading chart/i)).toBeNull();
+    // and the healthy names in the other groups still drew theirs
+    expect(await screen.findByTestId('tile-MP')).toBeInTheDocument();
   });
 
   it('a /political/board that fails renders a reason, not a crash', async () => {

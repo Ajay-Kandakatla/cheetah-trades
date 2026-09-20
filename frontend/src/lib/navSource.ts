@@ -36,6 +36,11 @@ export const NAV_SOURCES: Record<string, NavSource> = {
   // Every row on /alerts links its ticker to the Supply / Demand tab; the back
   // button has to return to the alert he was reading, not to /sepa.
   alerts: { path: '/alerts', label: 'Alerts' },
+  // 2026-09-20: /notifications (and the 🔔 bell that renders on every page)
+  // grew per-ticker chips. A chip opened from there has to come BACK there —
+  // without a key of its own the back button hard-falls to /sepa, the same bug
+  // this module was built for.
+  notifications: { path: '/notifications', label: 'Notifications' },
 };
 
 /** The registry, read backwards: which source key does a pathname belong to?

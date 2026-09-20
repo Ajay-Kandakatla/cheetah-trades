@@ -70,6 +70,29 @@ describe('IpoUpcomingStrip', () => {
     expect(screen.getByTestId('ipo-upcoming-basis').textContent).toContain('rate limit');
   });
 
+  it('prints the dropped-uncorroborated count through counts', () => {
+    render(<IpoUpcomingStrip data={FORWARD}
+                             corroboration={{ available: true, forward_to: '2026-10-20' }}
+                             counts={{ dropped_uncorroborated: 22 }} />);
+    expect(screen.getByTestId('ipo-upcoming-basis').textContent)
+      .toContain('22 uncorroborated dropped');
+  });
+
+  it('prints no drop sentence on an outage, where nothing is dropped', () => {
+    render(<IpoUpcomingStrip data={FORWARD}
+                             corroboration={{ available: false, reason: 'rate limit' }}
+                             counts={{ dropped_uncorroborated: 22 }} />);
+    const basis = screen.getByTestId('ipo-upcoming-basis').textContent || '';
+    expect(basis).toContain('rate limit');
+    expect(basis).not.toContain('dropped');
+  });
+
+  it('renders with no counts prop at all (board warming)', () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    expect(screen.getByTestId('ipo-upcoming-basis').textContent)
+      .not.toContain('dropped');
+  });
+
   it('says nothing here is measured', () => {
     render(<IpoUpcomingStrip data={FORWARD} />);
     expect(screen.getByTestId('ipo-upcoming-strip').textContent)

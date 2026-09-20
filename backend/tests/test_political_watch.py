@@ -407,16 +407,23 @@ def test_the_kind_is_personal_and_never_a_market_kind():
     assert gate.should_drop_kind(W.KIND) is None
 
 
-def test_the_kind_is_registered_but_ships_OFF():
+def test_the_kind_is_registered_and_ships_ON_since_2026_09_20():
     """Registered or it silently drops for every device (the 2026-06-24
-    chokepoint). OFF because the STANDING keep-set is four phone kinds and
-    this is a fifth — his flip at /notifications turns it on."""
+    chokepoint). It shipped OFF for a few hours on 2026-09-20 and he flipped it
+    the same day — "Yes for #1", and "Default on for any change of todays
+    features Bondes or Potus or explosive growth or Earnings I wanna see all of
+    them." It is in OWNER_KEEP_SET so a re-registration cannot mute it again.
+
+    NOTE what did NOT change: the headline gate below (equity stake + named
+    agency + stated size + resolved ticker) is untouched — this is which KINDS
+    reach him, not what this one requires to fire."""
     from push import subs
     prefs = subs.default_prefs()
     assert W.KIND in prefs
-    assert prefs[W.KIND] is False
+    assert prefs[W.KIND] is True
     assert W.KIND not in subs.DISABLED_ALERT_KINDS
-    assert subs.owner_prefs()[W.KIND] is False
+    assert W.KIND in subs.OWNER_KEEP_SET
+    assert subs.owner_prefs()[W.KIND] is True
 
 
 def test_a_subscription_is_targeted_only_once_the_pref_is_True(monkeypatch):

@@ -1,0 +1,17 @@
+{
+  "pending": true,
+  "as_of": null,
+  "sessions": [],
+  "live_anchoring": "last_report",
+  "anchorings": {},
+  "per_session": {},
+  "summary": {},
+  "floors": {},
+  "institutional_misses": {},
+  "coverage": {},
+  "caveats": [
+    "PLACEHOLDER — the replay has not been run yet. The main session runs backend/scripts/earnings_reaction_replay.py in the api container OUTSIDE RTH and replaces this file with its output.",
+    "A phone-load COUNT, not an edge claim: nothing in this replay measures what the pushed names did next.",
+    "Both anchorings (last_report.when and the calendar doc's when) are reported; live_anchoring names the one the cron uses."
+  ]
+}

@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, staleAfterSec } from './Alerts';
+import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, skipsToday, staleAfterSec } from './Alerts';
 import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 import { startOfEtDay } from '../lib/alertKinds';
 
@@ -568,5 +568,201 @@ describe('Alerts page — the 🎯 push-time verdict', () => {
     draw();
     await screen.findByText(/NVDA in demand/);
     expect(screen.queryByText(/skipped: not enterable/)).not.toBeInTheDocument();
+  });
+});
+
+/* ── 2026-09-20: digest rows link EVERY name; the three once-a-day passes ──
+ *
+ * Ajay: a digest push ("AAA, BBB, CCC") linked at most one of its names, so
+ * reading it meant typing symbols into the ticker box. And three new passes
+ * (📣 earnings reaction, ✨ Bonde / 🚀 growth arrivals) run once a trading day
+ * — they have no cadence, so they get their own strip rather than being
+ * judged "stale" against a minute clock they never had.
+ */
+
+const DIGEST_ROW = {
+  _id: 'g1', ts: T('2026-09-05T13:05:00Z'), ts_iso: '2026-09-05T13:05:00+00:00',
+  kind: 'growth_demand_alert', ticker: null, tickers: ['AAA', 'BBB', 'CCC'],
+  title: '🚀 3 growth names at demand', url: '/chart-maps?tab=growth', source: 'push',
+  sent: 1, failed: 0, total: 1, body: 'AAA, BBB, CCC · pushed 09:05 ET',
+};
+/* A pre-2026-09-20 row: no `tickers` key AND no ticker. */
+const NO_TICKER_ROW = {
+  _id: 'o1', ts: T('2026-09-05T12:05:00Z'), ts_iso: '2026-09-05T12:05:00+00:00',
+  kind: 'todo_reminder', ticker: null, title: '📝 Desk todo', url: null, source: 'push',
+  sent: 1, failed: 0, total: 1, body: 'Nothing to link here.',
+};
+
+/* The three daily passes as the backend serves them: cadence_sec null, a
+ * `schedule` in words, and counters no zone pass has. */
+const STATUS_DAILY = {
+  ...STATUS_LIVE,
+  passes: {
+    ...STATUS_LIVE.passes,
+    earnings_reaction: {
+      as_of: '2026-09-05T08:25:40-04:00', date: '2026-09-05', cadence_sec: null,
+      schedule: '08:25 + 17:35 ET, trading days',
+      counts: { candidates: 31, pushed: 2, skipped_timing_unknown: 4, fetch_failed: 1, dropped_not_last_bar: 3 },
+    },
+    'board_arrival:bonde': {
+      as_of: '2026-09-05T17:42:03-04:00', date: '2026-09-05', cadence_sec: null,
+      schedule: '17:42 ET, trading days',
+      counts: { candidates: 12, pushed: 1, fresh: 2, claimed_elsewhere: 1 },
+    },
+    'board_arrival:growth': {
+      as_of: '2026-09-05T08:08:02-04:00', date: '2026-09-05', cadence_sec: null,
+      schedule: '08:08 ET, trading days', reason: 'board empty or warming',
+      counts: { candidates: 0, pushed: 0, first_pass: true, since_tracking: 0 },
+    },
+  },
+};
+
+describe('Alerts page — every name in a digest is its own link', () => {
+  it('a 3-name digest renders 3 Supply/Demand anchors, each with from=alerts', async () => {
+    stubFetch({ rows: [DIGEST_ROW] });
+    const { container } = draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    const links = within(rows[0]).getAllByRole('link', { name: /^(AAA|BBB|CCC)$/ });
+    expect(links).toHaveLength(3);
+    for (const a of links) {
+      expect(a.getAttribute('href')).toMatch(/^\/sepa\/(AAA|BBB|CCC)\?/);
+      expect(a.getAttribute('href')).toMatch(/tab=supply/);
+      expect(a.getAttribute('href')).toMatch(/from=alerts/);
+    }
+    // NEGATIVE: an anchor inside an anchor is invalid HTML — the browser
+    // un-nests it and ⌘-click lands on the wrong URL.
+    expect(container.querySelectorAll('a a')).toHaveLength(0);
+  });
+
+  it('the single-ticker pin is unchanged — NVDA still links to Supply/Demand from alerts', async () => {
+    stubFetch();
+    draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    const link = within(rows[0]).getByRole('link', { name: /NVDA/ });
+    expect(link.getAttribute('href')).toMatch(/^\/sepa\/NVDA\?.*tab=supply/);
+    expect(link.getAttribute('href')).toMatch(/from=alerts/);
+  });
+
+  it('NEGATIVE: an old row with neither tickers nor ticker renders its body and no ticker anchor', async () => {
+    stubFetch({ rows: [NO_TICKER_ROW] });
+    draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    expect(within(rows[0]).getByText('Nothing to link here.')).toBeInTheDocument();
+    expect(within(rows[0]).queryAllByRole('link')).toHaveLength(0);
+  });
+});
+
+describe('Alerts page — the once-a-day passes', () => {
+  it('renders schedule, ET stamp and counter chips for all three', async () => {
+    stubFetch({ rows: ROWS }, STATUS_DAILY);
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    expect(screen.getByText('🗓️ Daily passes')).toBeInTheDocument();
+
+    const er = screen.getByTestId('pass-earnings_reaction');
+    expect(within(er).getByText('📣 Earnings beat, institutions bought')).toBeInTheDocument();
+    expect(within(er).getByText('· 08:25 + 17:35 ET, trading days')).toBeInTheDocument();
+    expect(within(er).getByText('last pass 08:25 ET')).toBeInTheDocument();
+    expect(within(er).getByText('4 skipped: report timing unknown')).toBeInTheDocument();
+    expect(within(er).getByText('1 surprise fetches failed')).toBeInTheDocument();
+    expect(within(er).getByText('3 reacted on an older bar')).toBeInTheDocument();
+
+    const bo = screen.getByTestId('pass-board_arrival:bonde');
+    expect(within(bo).getByText('✨ New on 📈 Bonde')).toBeInTheDocument();
+    expect(within(bo).getByText('· 17:42 ET, trading days')).toBeInTheDocument();
+    expect(within(bo).getByText('2 new this pass')).toBeInTheDocument();
+    expect(within(bo).getByText('1 claimed by another pass')).toBeInTheDocument();
+    // NEGATIVE: `fresh` is the PRE-send count, so on a wet pass those names
+    // were the ones rung. The chip must never call them un-pushed.
+    expect(within(bo).queryByText(/not yet pushed/)).not.toBeInTheDocument();
+
+    const gr = screen.getByTestId('pass-board_arrival:growth');
+    expect(within(gr).getByText('✨ New on 🚀 Explosive Growth')).toBeInTheDocument();
+    expect(within(gr).getByText('first pass — baseline recorded, nothing pushed')).toBeInTheDocument();
+    expect(within(gr).getByText('⚠ board empty or warming')).toBeInTheDocument();
+    // NEGATIVE: a zero counter never gets a chip.
+    expect(within(gr).queryByText(/arrived since tracking began/)).not.toBeInTheDocument();
+  });
+
+  it('a wet pass that rang every fresh name still reads right — "3 new this pass", never "not yet pushed"', async () => {
+    const wet = {
+      ...STATUS_DAILY,
+      passes: {
+        ...STATUS_DAILY.passes,
+        'board_arrival:bonde': {
+          ...STATUS_DAILY.passes['board_arrival:bonde'],
+          // fresh is counted before the sends; all three were then pushed.
+          counts: { candidates: 12, pushed: 3, fresh: 3, individual: 2, digest: 1 },
+        },
+      },
+    };
+    stubFetch({ rows: ROWS }, wet);
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    const bo = screen.getByTestId('pass-board_arrival:bonde');
+    expect(within(bo).getByText('3 new this pass')).toBeInTheDocument();
+    expect(within(bo).queryByText(/not yet pushed/)).not.toBeInTheDocument();
+    // NEGATIVE: the wording change touches no other counter's chip.
+    expect(within(bo).queryByText(/claimed by another pass/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a status without the new keys says "no pass recorded" three times, and :380 is unchanged', async () => {
+    stubFetch({ rows: ROWS }, STATUS_LIVE);
+    draw();
+    await screen.findByText(/NVDA in demand/);
+    for (const k of ['earnings_reaction', 'board_arrival:bonde', 'board_arrival:growth']) {
+      const strip = screen.getByTestId(`pass-${k}`);
+      expect(within(strip).getByText('no pass recorded')).toBeInTheDocument();
+      // No schedule served → the words, never an invented slot.
+      expect(within(strip).getByText('· once a trading day')).toBeInTheDocument();
+    }
+    expect(screen.getAllByText('no pass recorded')).toHaveLength(3);
+    // The three-pass sentence speaks for the INTRADAY gate only.
+    expect(screen.getByTestId('session-line'))
+      .toHaveTextContent('Session open — all three passes reported within cadence.');
+  });
+
+  it('NEGATIVE: would_skip_room is never folded into the room aggregate', async () => {
+    const status = {
+      ...STATUS_LIVE,
+      passes: {
+        ...STATUS_LIVE.passes,
+        earnings_reaction: { as_of: '2026-09-05T08:25:40-04:00', date: '2026-09-05', cadence_sec: null,
+          schedule: '08:25 + 17:35 ET, trading days', counts: { candidates: 5, would_skip_room: 3, pushed: 1 } },
+      },
+    };
+    stubFetch({ rows: [] }, status);
+    draw();
+    const empty = await screen.findByTestId('alerts-empty');
+    // zone_edge's 14 is the whole room aggregate; the earnings pass's
+    // would-have-skipped count is a study counter, not a gate.
+    expect(skipsToday(status as never, '2026-09-05').room).toBe(14);
+    expect(empty).toHaveTextContent('the gate skipped 14 (room) / 3 (proximity) today');
+    expect(empty.textContent).not.toMatch(/17 \(room\)/);
+  });
+
+  it('[C11] NEGATIVE: the three new passes leave skipsToday byte-identical', () => {
+    const today = '2026-09-05';
+    const base = STATUS_LIVE as never;
+    const withNew = {
+      ...STATUS_LIVE,
+      passes: {
+        ...STATUS_LIVE.passes,
+        earnings_reaction: { as_of: '2026-09-05T08:25:40-04:00', date: today, cadence_sec: null,
+          counts: { would_skip_room: 3, fresh: 2, fetch_failed: 1, since_tracking: 4 } },
+        'board_arrival:bonde': { as_of: '2026-09-05T17:42:03-04:00', date: today, cadence_sec: null,
+          counts: { would_skip_room: 3, fresh: 2, fetch_failed: 1, since_tracking: 4 } },
+        'board_arrival:growth': { as_of: '2026-09-05T08:08:02-04:00', date: today, cadence_sec: null,
+          counts: { would_skip_room: 3, fresh: 2, fetch_failed: 1, since_tracking: 4 } },
+      },
+    } as never;
+    expect(JSON.stringify(skipsToday(withNew, today)))
+      .toBe(JSON.stringify(skipsToday(base, today)));
+    // and every one of the six is unchanged by name, not just in aggregate.
+    const a = skipsToday(base, today);
+    const b = skipsToday(withNew, today);
+    for (const k of ['room', 'proximity', 'direction', 'knife', 'mood', 'floor'] as const) {
+      expect(b[k]).toBe(a[k]);
+    }
   });
 });

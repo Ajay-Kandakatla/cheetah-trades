@@ -397,8 +397,12 @@ def test_kind_has_a_default_pref_and_both_cron_lines():
 def test_notifications_page_and_prefs_type_know_the_kind():
     page = (ROOT / "frontend/src/pages/Notifications.tsx").read_text()
     assert "key: 'zone_bounce_alert'" in page
-    assert page.index("key: 'demand_alert'") < page.index("key: 'zone_bounce_alert'") < \
-        page.index("key: 'minervini_flashcards'"), "sits right after demand_alert"
+    # The third anchor was `minervini_flashcards` until 2026-09-20, when the
+    # learning / volleyball kinds left the page entirely ("they are spamming
+    # too much"). The ordering this test is really about — the 🪃 kind sits
+    # after 🧲 demand, not before it — is unchanged.
+    assert page.index("key: 'demand_alert'") < page.index("key: 'zone_bounce_alert'"), \
+        "sits after demand_alert"
     # 2026-09-09 ("Kill all other"): Essentials now MUTES this kind. What this
     # test is really for still holds — the page must LIST it, because a kind
     # the page cannot show is a kind he cannot turn back on.

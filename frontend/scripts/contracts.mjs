@@ -32,6 +32,35 @@ const parseCmTabs = (src) => {
   return body.split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
 };
 
+/** push/subs.OWNER_KEEP_SET as a real list of kind ids. Parsed out of the
+ *  frozenset block rather than grepped for, so a kind named only inside a
+ *  comment ("# potus_investment moved out") can never satisfy a keep-set
+ *  check. The keep-set is what prefs_for() hands a NEWLY registered device:
+ *  a kind missing from it is muted again the next time his phone re-subscribes
+ *  (memory: cheetah_push_silent_drops). */
+const keepSet = (subsSrc) => {
+  const m = /OWNER_KEEP_SET[^=]*=\s*frozenset\(\{([\s\S]*?)\}\)/.exec(subsSrc);
+  if (!m) return [];
+  const body = m[1].replace(/#[^\n]*/g, '');
+  return [...body.matchAll(/["']([a-z0-9_]+)["']/g)].map((x) => x[1]);
+};
+
+/** A python `NAME: ... = frozenset({...})` block as a real list of ids.
+ *  market_hours/gate.py's two sets are long and heavily commented; a windowed
+ *  [\s\S]{0,N} regex passes or fails on where in the block a kind happens to
+ *  sit, which is not an invariant. */
+const pyFrozenSet = (pySrc, name) => {
+  const m = new RegExp(`${name}[^=]*=\\s*frozenset\\(\\{([\\s\\S]*?)\\}\\)`).exec(pySrc);
+  if (!m) return null;
+  return [...m[1].replace(/#[^\n]*/g, '').matchAll(/["']([a-z0-9_]+)["']/g)].map((x) => x[1]);
+};
+
+/** The crontab's COMMAND lines only — every `#` line dropped first. The
+ *  retirement checks below ask what still RUNS; the retired block names the
+ *  deleted modules in prose and must not read as a live job. */
+const cronCommands = (cronSrc) =>
+  cronSrc.split('\n').filter((l) => l.trim() && !l.trim().startsWith('#'));
+
 const CONTRACTS = [
   {
     name: 'every styled class the member popover uses has a rule that ships (2026-09-10)',
@@ -234,8 +263,15 @@ const CONTRACTS = [
         if (!new RegExp(`key:\\s*'${k}'`).test(src)) errs.push(`CATEGORIES lacks ${k} — it cannot be muted from the page`);
       }
       const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
-      for (const on of ['hot_pullback_alert', 'pattern_alert', 'demand_alert', 'position_alert']) {
-        if (!new RegExp(`${on}:\\s*true`).test(ess)) errs.push(`Essentials preset drops ${on} — it is in the keep-set`);
+      // WIDENED 2026-09-20 — Ajay: "Default on for any change of todays features
+      // Bondes or Potus or explosive growth or Earnings I wanna see all of
+      // them." The preset is the page's copy of push/subs.OWNER_KEEP_SET, so
+      // the on-list is READ from the backend rather than retyped here: the two
+      // drifting apart is exactly the silent mute this contract exists for.
+      const keep = keepSet(read('../backend/push/subs.py'));
+      if (keep.length < 8) errs.push(`push/subs.OWNER_KEEP_SET parsed as ${keep.length} kinds — the 2026-09-20 keep-set is eight`);
+      for (const on of keep) {
+        if (!new RegExp(`${on}:\\s*true`).test(ess)) errs.push(`Essentials preset drops ${on} — it is in OWNER_KEEP_SET`);
       }
       for (const off of ['zone_bounce_alert', 'supply_break_alert', 'promo_alert', 'todo_reminder']) {
         if (!new RegExp(`${off}:\\s*false`).test(ess)) errs.push(`Essentials preset must mute ${off} — he killed it`);
@@ -1681,7 +1717,12 @@ const CONTRACTS = [
       for (const m of tsx.matchAll(/(?:className=\{?["'`])([^"'`]+)/g)) {
         for (const c of m[1].split(/[\s${}]+/)) if (/^hs-[a-z0-9-]+$/.test(c)) used.add(c);
       }
-      for (const m of tsx.matchAll(/hs-[a-z0-9-]+/g)) used.add(m[0]);
+      // data-testid values are NOT classes. The ⚠ pair mark (2026-09-20) ships
+      // `data-testid={`hs-pair-${r.symbol}`}` with a bd-* className, and the
+      // blanket sweep below harvested `hs-pair-` as a class that styles.css
+      // has no rule for — a styling failure reported for a test hook.
+      const tsxClasses = tsx.replace(/data-testid=\{?[`'"][^`'"]*[`'"]\}?/g, '');
+      for (const m of tsxClasses.matchAll(/hs-[a-z0-9-]+/g)) used.add(m[0]);
       if (!used.size) errs.push('no hs-* classes found — did the Hottest table get renamed?');
       for (const c of [...used].sort()) {
         // (?![\w-]) not (?![a-z0-9-]): the narrow class let `.hs-conameXX`
@@ -2848,6 +2889,16 @@ const CONTRACTS = [
       if (!/sepa\/ipo_age/.test(py) || !/TLSW Ch\.11/.test(py)) {
         errs.push('backend/chart_maps/ipo.py must cite where the ≤2y bound lives: sepa/ipo_age and TLSW Ch.11');
       }
+      // Ajay 2026-09-20, asked whether the uncorroborated rows should go:
+      // "Yes for #1 and #2 and #3". A DROP has to be visible or the tab just
+      // gets quietly shorter — the served note says it and the strip counts it.
+      if (!/Listings the calendar does not carry are ["\s]*dropped/.test(py)) {
+        errs.push('ipo.py NOTE must say the uncorroborated listings are dropped (2026-09-20, his "Yes #3")');
+      }
+      const tabLib = read('src/lib/ipoTab.ts');
+      if (!/dropped_uncorroborated/.test(tabLib)) {
+        errs.push('ipoTab.ts must carry counts.dropped_uncorroborated — a silent drop is a shorter list with no reason');
+      }
       const board = read('../backend/chart_maps/board.py');
       if (!/IPO\.NOTE/.test(board)) {
         errs.push('board.py::ipo_tiles must serve IPO.NOTE — the note is the tab\'s honesty line');
@@ -2862,18 +2913,25 @@ const CONTRACTS = [
     },
   },
   {
-    name: 'the \u{1F3DB}\uFE0F POTUS kind declares itself everywhere, and ships OFF (2026-09-20)',
+    name: 'the \u{1F3DB}\uFE0F POTUS kind declares itself everywhere, and ships ON (2026-09-20)',
     file: 'src/pages/Notifications.tsx',
     // Ajay 2026-09-20: "Anytime POTUS does new investments show me those."
-    // A regex over headlines does not get to ring his phone the day it lands:
-    // the kind is registered like every other kind and is OFF until he flips
-    // it. Same shape as the growth_demand_alert contract above.
+    // Then, the same day: "Default on for any change of todays features Bondes
+    // or Potus or explosive growth or Earnings I wanna see all of them." — so
+    // the kind that shipped registered-and-silent that morning ships ON. What
+    // moved is which KINDS reach him, NOT what the kind requires to fire: the
+    // headline gate (a named agency AND a stated size in the same headline) is
+    // untouched, and the page still has to call the watch a HEURISTIC.
     checks: (src) => {
       const errs = [];
       const m = src.match(/key: 'potus_investment'[\s\S]*?\},\n/);
       if (!m) return ['potus_investment must stay listed on the Notifications page'];
       const d = m[0];
-      if (!/OFF BY DEFAULT/.test(d)) errs.push('the Notifications entry must say it is OFF BY DEFAULT');
+      if (!/ON BY DEFAULT/.test(d)) errs.push('the Notifications entry must say it is ON BY DEFAULT since 2026-09-20');
+      if (/OFF BY DEFAULT/.test(d)) errs.push('the Notifications entry still says OFF BY DEFAULT \u2014 he flipped it ON 2026-09-20');
+      if (!/Default on for any change of todays features/.test(d)) {
+        errs.push('the Notifications entry must carry his 2026-09-20 sentence verbatim \u2014 it is the reason the kind is on');
+      }
       if (!/HEURISTIC/.test(d)) errs.push('the Notifications entry must call the watch a HEURISTIC');
       const kinds = read('src/lib/alertKinds.ts');
       if (!/potus_investment/.test(kinds)) errs.push('alertKinds.ts must register potus_investment');
@@ -2884,7 +2942,10 @@ const CONTRACTS = [
       const subs = read('../backend/push/subs.py');
       const dm = subs.match(/["']potus_investment["']\s*:\s*(True|False)/);
       if (!dm) errs.push('push/subs.py default_prefs must list potus_investment');
-      else if (dm[1] !== 'False') errs.push('potus_investment must ship OFF (False) in push/subs.py default_prefs — his flip, not ours');
+      else if (dm[1] !== 'True') errs.push('potus_investment must ship ON (True) in push/subs.py default_prefs — his 2026-09-20 "Yes for #1"');
+      if (!keepSet(subs).includes('potus_investment')) {
+        errs.push('potus_investment must sit in push/subs.OWNER_KEEP_SET — prefs_for() re-reads owner_prefs() on every re-registration and would mute it again');
+      }
       const board = read('src/components/PotusBoard.tsx');
       if (!/editorial order, not a ranking/.test(board)) {
         errs.push('PotusBoard.tsx must state that the list order is editorial, not a ranking');
@@ -2976,6 +3037,232 @@ const CONTRACTS = [
           errs.push(`styles.css has no rule for .${c} — the Bonde board would ship unstyled`);
         }
       }
+      return errs;
+    },
+  },
+  {
+    name: 'the \u{1F4E3} earnings-reaction kind declares itself everywhere, and ships ON (2026-09-20)',
+    file: 'src/pages/Notifications.tsx',
+    // Ajay 2026-09-20: "Also don't forget to alert me on earnings surprises I
+    // think stock witz also has it. I wanna make sure we are catching those in
+    // alerts as well." + "Default on for any change of todays features ... or
+    // Earnings I wanna see all of them." A kind missing from ANY of the five
+    // registries below sends to zero devices and says nothing while it does it.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/key: 'earnings_reaction'[\s\S]*?\},\n/);
+      if (!m) return ['earnings_reaction must be listed on the Notifications page — a kind the page cannot show cannot be muted'];
+      const d = m[0];
+      if (!/ON BY DEFAULT/.test(d)) errs.push('the Notifications entry must say it is ON BY DEFAULT');
+      if (!/alert me on earnings surprises/.test(d)) errs.push('the Notifications entry must carry the ask verbatim');
+      if (!/NOT MEASURED/.test(d)) errs.push('the Notifications entry must say NOT MEASURED — beat + institutional buying has no forward record here');
+      if (!/A miss never pushes/.test(d)) errs.push('the Notifications entry must say a miss never pushes — the kind is one-sided by design');
+      if (!/Not a recommendation/i.test(d)) errs.push('the Notifications entry must say it is not a recommendation');
+      const kinds = read('src/lib/alertKinds.ts');
+      if (!/earnings_reaction/.test(kinds)) errs.push('alertKinds.ts must register earnings_reaction or the bell renders a raw id');
+      const prefs = read('src/hooks/useNotificationPrefs.ts');
+      if (!/earnings_reaction\?: boolean/.test(prefs)) errs.push('NotificationPrefs must carry earnings_reaction or the toggle cannot be stored');
+      const subs = read('../backend/push/subs.py');
+      const dm = subs.match(/["']earnings_reaction["']\s*:\s*(True|False)/);
+      if (!dm) errs.push('push/subs.py default_prefs must list earnings_reaction');
+      else if (dm[1] !== 'True') errs.push('earnings_reaction must ship ON (True) in push/subs.py default_prefs');
+      if (!keepSet(subs).includes('earnings_reaction')) {
+        errs.push('earnings_reaction must sit in push/subs.OWNER_KEEP_SET — otherwise a re-registration mutes it');
+      }
+      const gate = read('../backend/market_hours/gate.py');
+      const market = pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || [];
+      if (!market.includes('earnings_reaction')) {
+        errs.push('market_hours/gate.py must treat earnings_reaction as a MARKET kind — it reads a closed reaction bar');
+      }
+      if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes('earnings_reaction')) {
+        errs.push('earnings_reaction must NOT be a PERSONAL kind — a closed day has no reaction bar');
+      }
+      const cron = cronCommands(read('../backend/crontab'))
+        .filter((l) => /chart_maps\.earnings_alerts/.test(l));
+      if (cron.length !== 2) errs.push(`backend/crontab must run chart_maps.earnings_alerts exactly twice (08:25 + 17:35 ET) — found ${cron.length}`);
+      for (const l of cron) {
+        if (!/market_hours\.gate/.test(l)) errs.push(`an earnings_alerts cron line bypasses market_hours.gate: ${l.trim().slice(0, 70)}`);
+      }
+      // The owner's address is a backend fact. It has leaked into the bundle
+      // before; every kind that ships ON for him gets re-checked here.
+      const scanEmail = (dir) => {
+        for (const name of readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true })) {
+          const rel = `${dir}/${name.name}`;
+          if (name.isDirectory()) scanEmail(rel);
+          else if (/\.(ts|tsx|js|jsx)$/.test(name.name) && /ajaykandakatla@/.test(read(rel))) {
+            errs.push(`${rel} carries the owner's email — it must never reach the JS bundle`);
+          }
+        }
+      };
+      scanEmail('src');
+      return errs;
+    },
+  },
+  {
+    name: 'the ✨ board_arrival kind declares itself everywhere, and ships ON (2026-09-20)',
+    file: 'src/pages/Notifications.tsx',
+    // Ajay 2026-09-20: "Default on for any change of todays features Bondes or
+    // Potus or explosive growth or Earnings I wanna see all of them."
+    //
+    // The honesty this contract exists for: an ARRIVAL is a list event. 📈
+    // Bonde's own rule measured INVERTED (-3.11pp vs placebo) and the 🚀
+    // 100/100 screen has never been measured forward — the page has to say
+    // both, beside a toggle that is on.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/key: 'board_arrival'[\s\S]*?\},\n/);
+      if (!m) return ['board_arrival must be listed on the Notifications page'];
+      const d = m[0];
+      if (!/ON BY DEFAULT/.test(d)) errs.push('the Notifications entry must say it is ON BY DEFAULT');
+      if (!/Default on for any change of todays features/.test(d)) {
+        errs.push('the Notifications entry must carry his 2026-09-20 sentence verbatim');
+      }
+      if (!/one push per name per board/i.test(d)) errs.push('the entry must say one push per name per board');
+      if (!/leaves a board and comes back is not rung again/i.test(d)) {
+        errs.push('the entry must say a name that leaves and returns is NOT rung again — the claim never expires (his call, §7.11)');
+      }
+      if (!/never the first cohort/i.test(d)) errs.push('the entry must say the first pass records a baseline and pushes nothing');
+      if (!/arrival on a list, not an entry/i.test(d)) errs.push('the entry must say an arrival is not an entry');
+      // Notifications.tsx spells non-ASCII as \uXXXX escapes, so the minus sign
+      // reaches this check as the six characters `\u2212`, never as −.
+      if (!/INVERTED/.test(d) || !/(?:\\u2212|[−-])\s?3\.11\s*pp/.test(d)) {
+        errs.push("the entry must carry Bonde's measured INVERTED record (-3.11pp) — the board's own number rides with its push");
+      }
+      if (!/100\/100 screen[\s\S]{0,60}?never been measured forward/.test(d)) {
+        errs.push('the entry must say the 100/100 growth screen has never been measured forward');
+      }
+      if (!/17:42/.test(d) || !/08:08/.test(d)) errs.push('the entry must name both passes: 17:42 ET (Bonde) and 08:08 ET (growth)');
+      if (!/Not a recommendation/i.test(d)) errs.push('the entry must say it is not a recommendation');
+      const kinds = read('src/lib/alertKinds.ts');
+      if (!/board_arrival/.test(kinds)) errs.push('alertKinds.ts must register board_arrival');
+      const prefs = read('src/hooks/useNotificationPrefs.ts');
+      if (!/board_arrival\?: boolean/.test(prefs)) errs.push('NotificationPrefs must carry board_arrival');
+      const subs = read('../backend/push/subs.py');
+      const dm = subs.match(/["']board_arrival["']\s*:\s*(True|False)/);
+      if (!dm) errs.push('push/subs.py default_prefs must list board_arrival');
+      else if (dm[1] !== 'True') errs.push('board_arrival must ship ON (True) in push/subs.py default_prefs');
+      if (!keepSet(subs).includes('board_arrival')) {
+        errs.push('board_arrival must sit in push/subs.OWNER_KEEP_SET');
+      }
+      const gate = read('../backend/market_hours/gate.py');
+      if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes('board_arrival')) {
+        errs.push('market_hours/gate.py must treat board_arrival as a MARKET kind — both boards are built from closed bars');
+      }
+      if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes('board_arrival')) {
+        errs.push('board_arrival must NOT be a PERSONAL kind — a board built on Sunday rings the next TRADING morning');
+      }
+      const cron = cronCommands(read('../backend/crontab'))
+        .filter((l) => /sepa\.board_arrival/.test(l));
+      if (cron.length !== 2) errs.push(`backend/crontab must run sepa.board_arrival exactly twice (bonde 17:42, growth 08:08) — found ${cron.length}`);
+      for (const b of ['bonde', 'growth']) {
+        if (!cron.some((l) => new RegExp(`sepa\\.board_arrival\\s+${b}\\b`).test(l))) {
+          errs.push(`backend/crontab has no sepa.board_arrival pass for the ${b} board`);
+        }
+      }
+      for (const l of cron) {
+        if (!/market_hours\.gate/.test(l)) errs.push(`a board_arrival cron line bypasses market_hours.gate: ${l.trim().slice(0, 70)}`);
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'retired kinds are gone from every toggle and cron (2026-09-20)',
+    file: 'src/pages/Notifications.tsx',
+    // Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont
+    // wanna see them they are spamming too much."
+    //
+    // Removed from where it FIRES and where it is OFFERED — not from where it
+    // is READ. The labels stay in alertKinds.ts on purpose: ~1,900 flashcard
+    // and volleyball rows sit in push_history under a 90-day TTL, and dropping
+    // the labels would render them in the bell as raw ids.
+    checks: (src) => {
+      const errs = [];
+      const retired = ['minervini_flashcards', 'vb_workout', 'vb_supplement', 'vb_education'];
+      const prefs = read('src/hooks/useNotificationPrefs.ts');
+      const kinds = read('src/lib/alertKinds.ts');
+      for (const k of retired) {
+        if (new RegExp(`key:\\s*'${k}'`).test(src)) errs.push(`Notifications.tsx still offers a toggle for ${k} — he asked for it gone`);
+        if (new RegExp(`${k}\\?:\\s*boolean`).test(prefs)) errs.push(`NotificationPrefs still declares ${k}`);
+        if (!new RegExp(`${k}`).test(kinds)) {
+          errs.push(`alertKinds.ts dropped the ${k} label — the push_history rows still on the 90-day TTL would render a raw id`);
+        }
+      }
+      for (const l of cronCommands(read('../backend/crontab'))) {
+        if (/\b(flashcards|volleyball)\b/.test(l)) errs.push(`backend/crontab still RUNS a retired job: ${l.trim().slice(0, 70)}`);
+      }
+      const subs = read('../backend/push/subs.py');
+      if (!/RETIRED_2026_09_20/.test(subs)) errs.push('push/subs.py must declare RETIRED_2026_09_20');
+      if (!/DISABLED_ALERT_KINDS[\s\S]{0,400}?RETIRED_2026_09_20/.test(subs)) {
+        errs.push('DISABLED_ALERT_KINDS must fold in RETIRED_2026_09_20 — the crontab is bind-mounted from the main tree and keeps firing until it is re-read');
+      }
+      for (const k of retired) {
+        if (!keepSet(subs).every((x) => x !== k)) errs.push(`${k} is in OWNER_KEEP_SET and retired at the same time`);
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'every alert surface renders per-ticker anchors (2026-09-20)',
+    file: 'src/pages/Alerts.tsx',
+    // Ajay 2026-09-20: "I need the stock tickers to be clickables in alerts
+    // individually if there are multiple in one alert by command click."
+    //
+    // ⌘-click only works on a real <a href>, and an <a> inside an <a> is
+    // hoisted out by the browser — so the card-wide <Link> on the panel and
+    // the bell had to become a <div> with the link on the TITLE. One shared
+    // component renders the chips on all three surfaces.
+    checks: (src) => {
+      const errs = [];
+      const surfaces = [
+        ['src/pages/Alerts.tsx', 'alert-tk'],
+        ['src/components/PushHistoryPanel.tsx', 'ph-tk'],
+        ['src/components/NotificationBell.tsx', 'bell-tk'],
+      ];
+      for (const [rel, prefix] of surfaces) {
+        const f = rel === 'src/pages/Alerts.tsx' ? src : read(rel);
+        if (!/import \{ TickerChips \}/.test(f)) errs.push(`${rel} must render names through the shared TickerChips`);
+        if (!new RegExp(`testIdPrefix="${prefix}"`).test(f)) errs.push(`${rel} must pass testIdPrefix="${prefix}" so the chips are addressable in a test`);
+      }
+      for (const rel of ['src/components/PushHistoryPanel.tsx', 'src/components/NotificationBell.tsx']) {
+        const f = read(rel);
+        if (/<Link\s+key=\{r\._id\}/.test(f)) {
+          errs.push(`${rel} still wraps the whole row in a <Link> — the ticker anchors inside it would be hoisted out and ⌘-click would open the card's page instead`);
+        }
+      }
+      const chips = read('src/components/TickerChips.tsx');
+      if (!/TickerLink/.test(chips)) errs.push('TickerChips must render TickerLink — a <span> with an onClick cannot be ⌘-clicked');
+      // Comments stripped first: the component's own header explains the
+      // nested-anchor trap it exists to avoid, and naming `<Link>` there is
+      // the documentation, not the defect.
+      const chipsCode = chips.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      if (/<Link[\s>/]/.test(chipsCode)) errs.push('TickerChips must not use react-router <Link> — TickerLink already emits the real href');
+      const recent = read('../backend/push/recent.py');
+      if (!/DIGEST_KINDS/.test(recent) || !/derive_tickers/.test(recent)) {
+        errs.push('push/recent.py must derive tickers for the digest kinds — the rows already in push_history carry no list');
+      }
+      const hist = read('../backend/push/history.py');
+      if (!/tickers/.test(hist)) errs.push('push/history.py::record must store the payload tickers, or every NEW row needs deriving too');
+      return errs;
+    },
+  },
+  {
+    name: 'HottestSectors renders periodMark (2026-09-20)',
+    file: 'src/components/HottestSectors.tsx',
+    // Ajay 2026-09-20, on the ⚠ pair mark reaching 🔥 Hottest too: "#6 what
+    // ever". Same three states as the Bonde tab: false = the year-over-year
+    // pair is not four fiscal quarters apart, null = no period keys on file
+    // and it could not be checked, true = checked. `!period_ok` would collapse
+    // null into false and claim a check that never ran.
+    checks: (src) => {
+      const errs = [];
+      if (!/periodMark\(/.test(src)) errs.push('HottestSectors must render period_ok through periodMark — three states, not two');
+      if (!/from '\.\.\/lib\/bondeLive'/.test(src)) errs.push('periodMark must be IMPORTED from lib/bondeLive — one mark, one wording, two boards');
+      if (/!r\.period_ok/.test(src) || /r\.period_ok\s*\?/.test(src)) {
+        errs.push('period_ok must never be read as a bool on Hottest — null means "could not be checked", not "fine"');
+      }
+      if (!/data-testid=\{`hs-pair-\$\{/.test(src)) errs.push('each marked name row needs a hs-pair-<SYM> testid');
+      const lib = read('src/lib/bondeLive.ts');
+      if (!/PAIR_WARN_TITLE/.test(lib)) errs.push('bondeLive.ts must export PAIR_WARN_TITLE — the mark explains itself on hover');
       return errs;
     },
   },

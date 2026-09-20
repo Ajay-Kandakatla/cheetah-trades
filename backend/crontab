@@ -681,50 +681,15 @@
 
 #
 # ============================================================================
-# Trading flash cards — hourly push notifications, broad curriculum
+# Retired 2026-09-20 — flash cards, chart quiz, volleyball reminders
 # ============================================================================
-# Bite-sized education that fires every hour 8 AM - 8 PM ET on weekdays.
-# Cards rotate through nine topic pools — each hour maps to ONE topic,
-# the specific card within a topic cycles by day-of-year. See the
-# HOURLY_TOPIC dict in backend/flashcards/flashcards.py for the full
-# hour-to-topic schedule.
-#
-# Topics covered (9 pools, ~80 cards total):
-#   * entry / risk / sell_rules / psychology / review (Minervini)
-#   * fundamentals — EPS, P/E vs PEG, FCF, ROIC, book value, equity types
-#                    (added 2026-05-21: user asked about "company equity
-#                    vs shareholder equity" gap)
-#   * market_structure — T+1, dark pools, LULD bands, NBBO, Greeks, halts
-#   * history — Livermore, LTCM, Archegos, GME squeeze, flash crash, etc.
-#                (the "fun facts traders get stoked by" pool)
-#   * edge_math — expectancy, Kelly, drawdown math, compounding, R-multiples
-#
-# Single cron entry — the script itself decides whether to fire based on
-# the current hour (no-op outside the populated window). Beats 13
-# separate cron lines and the schedule lives in one place (the Python).
-#
-# User can mute via /notifications → "Minervini flash cards" toggle.
-# Default ON for new subscriptions. NOTE: pref key kept as
-# "minervini_flashcards" for backward compat with existing subscriptions —
-# the label in the UI may be renamed but the key shouldn't move.
-#
-# Manual ad-hoc fires for testing:
-#   docker compose exec cron python -m flashcards.flashcards hourly
-#   docker compose exec cron python -m flashcards.flashcards history     # any topic
-#   docker compose exec cron python -m flashcards.flashcards fundamentals
-#
-# Every hour, EVERY day (weekends too — education isn't time-zone-locked).
-# The HOURLY_TOPIC map in flashcards.py covers 0-23 so every fire has a
-# valid topic. Quiet-hours pref (per-user, default 22:00-08:00 if enabled)
-# suppresses delivery during the user's chosen sleep window — see
-# push/subs.py _is_in_quiet_hours.
-0      *     *    *    *    /usr/local/bin/python -m flashcards.flashcards hourly
-#
-# Chart School daily quiz — 8:40 AM ET weekdays: generate today's 2 real-chart
-# pattern-identification exercises (historical confirmations from the scan
-# universe, cut at the confirmation bar) + one push under the learning pref.
-# Page: /chart-school. Generated on-demand too if this cron misses.
-40     8     *    *    1-5  /usr/local/bin/python -m flashcards.chart_quiz
+# Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont wanna
+# see them they are spamming too much". flashcards.flashcards hourly /
+# flashcards.chart_quiz / volleyball.reminders {morning,education,magnesium}
+# deleted; the kinds are kill-switched in push/subs.DISABLED_ALERT_KINDS.
+# The modules stay in the tree (their main() exits 0 on the kill-switch); the
+# labels stay in frontend/src/lib/alertKinds.ts so the push_history rows still
+# on the 90-day TTL render a name.
 #
 # Pattern verdicts — 5:05 PM ET weekdays, after the 4:30 fast-scan has today's
 # close in the price cache. Runs the universe pattern sweep + the per-name
@@ -798,6 +763,26 @@
 # just ~38 cheap submissions checks + a re-aggregation.
 35     17    *    *    1-5  /usr/local/bin/python -m giants.refresh
 #
+# ── 📣 Earnings reaction push (chart_maps/earnings_alerts.py, 2026-09-20) ────
+# Ajay: "alert me on earnings surprises ... make sure we are catching those in
+# alerts as well." The Earnings Flow tab's REACTED half + this quarter's beat.
+# ON for the owner (push/subs.OWNER_KEEP_SET, 2026-09-20: "…I wanna see all of
+# them"); the toggle at /notifications still mutes it.
+# TWO SLOTS, both OUTSIDE the session and both BEFORE 17:45:
+#  17:35 — after the 16:30 broad fast-scan has patched today's CLOSED bar
+#          (hot-pullback record at 17:05 trusts the same patch); catches names
+#          that reported AFTER the close yesterday (reaction bar = today).
+#          Must precede the 17:45 sepa.earnings_watch refresh: that refresh
+#          rolls next_date forward and chart_maps.earnings.phase_for then
+#          reads the name as UPCOMING.
+#  08:25 — before any bar for today exists in the cache; catches names that
+#          reported BEFORE the open yesterday (reaction bar = yesterday's
+#          close) — yfinance publishes the surprise only once the report date
+#          is in the past, so the evening pass cannot see it.
+# Once per (symbol, report_date). Closed days run nothing (gate).
+35     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.earnings_alerts
+25     8     *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.earnings_alerts
+#
 # Earnings-date watch — 5:45 PM ET weekdays. Refreshes next-earnings dates
 # (yfinance) for the decision universe (scan candidates + holdings +
 # watchlist) so the ⚠ ER chips, the "hide earnings <=7d" filter, breakout
@@ -828,25 +813,6 @@
 # Routes to /sepa for position management + tomorrow's buy-stop setup.
 45     15    *    *    1-5  /usr/local/bin/python -m market_hours.reminder close
 
-#
-# ============================================================================
-# Volleyball / personal fitness reminders — daily (all days)
-# ============================================================================
-# Workout module tuned to Ajay's right-shoulder rehab + right-finger
-# plantar-plate issue + supplement stack. Three daily pings:
-#
-# 07:00 ET — morning workout brief: today's session focus, duration,
-# tags + AM supplement reminder (D3/K2 + Moringa with breakfast).
-# Routes to /volleyball page.
-0      7     *    *    *    /usr/local/bin/python -m volleyball.reminders morning
-#
-# 18:00 ET — daily education card. ~30-card bank rotating across shoulder,
-# fingers, jumps, knees, recovery, supplements, technique, longevity.
-# Day-of-year cycle so each card surfaces ~once a month.
-0      18    *    *    *    /usr/local/bin/python -m volleyball.reminders education
-#
-# 21:30 ET — Magnesium Glycinate pre-sleep reminder (30-60 min before bed).
-30     21    *    *    *    /usr/local/bin/python -m volleyball.reminders magnesium
 #
 # Hourly 7am-8pm ET — refresh the Macro Risk read (regime + major-news events +
 # optional LLM). Cached 2h; feeds the per-name macro-risk badge on the
@@ -1169,6 +1135,19 @@
 # warm at 17:45 that picks these names up.
 40     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.bonde show
 45     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.board_metrics warm
+
+# ── ✨ Board arrivals push (sepa/board_arrival.py, 2026-09-20) ───────────────
+# Ajay 2026-09-20: "Default on for any change of todays features Bondes or
+# Potus or explosive growth or Earnings I wanna see all of them."
+# One push per (board, symbol), digest past 4. The pass keeps its own
+# tracking_since: its FIRST run records the baseline and sends nothing — the
+# same rule the ✨ NEW ledgers use (a first cohort is not an arrival).
+# 17:42 — right after the 17:40 `sepa.bonde show` that stamps first_seen.
+# 08:08 — the 🚀 board rebuilds Sunday 09:00 (closed day; market kinds do
+#         not push then), so its arrivals ring the next TRADING morning; the
+#         line runs every weekday and is a no-op when nothing arrived.
+42     17    *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.board_arrival bonde
+8      8     *    *    1-5  /usr/local/bin/python -m market_hours.gate sepa.board_arrival growth
 
 # ── 📰 Sector day-tags: one name's bull AND bear case, off the day's news ────
 # Ajay 2026-09-19: "Also for the hot sectors if you see any postive news I

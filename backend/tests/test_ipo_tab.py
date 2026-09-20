@@ -474,11 +474,56 @@ def test_build_confirms_flags_and_DROPS_across_the_four_buckets(monkeypatch):
     assert by["RECYC"]["status"] == IPO.RECYCLED              # bucket B: flagged
     assert by["RECYC"]["recycled"] is True
     assert by["RECYC"]["day1_pct"] is None and by["RECYC"]["week1_pct"] is None
-    assert by["SILENT"]["status"] == IPO.UNCORROBORATED
+    # bucket C, 2026-09-20 (Ajay, "Yes … #3"): the calendar was READ and is
+    # silent on SILENT, so it is dropped — not shown flagged — and counted.
+    assert "SILENT" not in by
     assert out["counts"] == {"candidates": 4, "confirmed": 1, "recycled": 1,
-                             "uncorroborated": 1, "dropped_bogus": 1, "upcoming": 0}
+                             "uncorroborated": 0, "dropped_bogus": 1,
+                             "dropped_uncorroborated": 1, "upcoming": 0}
+    # The two drops are counted from the tuples, never from the length gap:
+    # one difference, two causes.
+    assert (out["counts"]["dropped_bogus"] + out["counts"]["dropped_uncorroborated"]
+            == out["counts"]["candidates"] - len(out["rows"]))
     assert out["corroboration"]["available"] is True
     assert "not measured" in out["note"].lower() or "Nothing here is measured" in out["note"]
+    assert "dropped" in out["note"]
+
+
+def test_the_dropped_uncorroborated_count_is_NOT_the_length_gap(monkeypatch):
+    """Two calendar-silent names (SILENT, RECYC — the calendar carries
+    neither) and one bogus name: the gap is 3, and a count that
+    cannot say which is which is a count he cannot read. Each bucket is
+    counted off `_evaluate`'s own verdict."""
+    d = (IPO._today() - timedelta(days=40)).isoformat()
+    _install(monkeypatch,
+             [_cal("GOODCO", d, "priced")],
+             frames={"GOODCO": _frame(start=d), "SILENT": _frame(start=d),
+                     "RECYC": _frame(start=d), "FAKE": _frame(start="2019-03-04")},
+             docs=_docs({"GOODCO": d, "SILENT": d, "RECYC": d, "FAKE": d}))
+    out = IPO.build(limit=10)
+    assert [r["symbol"] for r in out["rows"]] == ["GOODCO"]
+    assert out["counts"]["dropped_uncorroborated"] == 2
+    assert out["counts"]["dropped_bogus"] == 1
+    assert out["counts"]["uncorroborated"] == 0
+
+
+def test_evaluate_NAMES_why_it_dropped_a_candidate(monkeypatch):
+    """The tuple, directly: a kept row carries None, and the two drops name
+    themselves rather than sharing one anonymous None."""
+    d = (IPO._today() - timedelta(days=40)).isoformat()
+    _install(monkeypatch,
+             [_cal("GOODCO", d, "priced")],
+             frames={"GOODCO": _frame(start=d), "SILENT": _frame(start=d),
+                     "FAKE": _frame(start="2019-03-04")},
+             docs=_docs({"GOODCO": d, "SILENT": d, "FAKE": d}))
+    index = IPO._priced_index([_cal("GOODCO", d, "priced")])
+    keep, why = IPO._evaluate({"symbol": "GOODCO", "claimed": d}, index)
+    assert keep is not None and why is None
+    assert IPO._evaluate({"symbol": "SILENT", "claimed": d}, index) == (None, IPO.UNCORROBORATED)
+    assert IPO._evaluate({"symbol": "FAKE", "claimed": d}, index) == (None, IPO.BOGUS)
+    # NEGATIVE: on the outage path the SAME silent name is KEPT and flagged.
+    row, why = IPO._evaluate({"symbol": "SILENT", "claimed": d}, {}, False, "rate limit")
+    assert why is None and row["status"] == IPO.UNCORROBORATED
 
 
 def test_a_CALENDAR_OUTAGE_still_builds_the_board_and_marks_every_row(monkeypatch):
@@ -488,8 +533,13 @@ def test_a_CALENDAR_OUTAGE_still_builds_the_board_and_marks_every_row(monkeypatc
              docs=_docs({"GOODCO": d, "FAKE": d}))
     out = IPO.build(limit=10)
     assert {r["status"] for r in out["rows"]} == {IPO.UNCORROBORATED}
+    assert {r["symbol"] for r in out["rows"]} == {"GOODCO", "FAKE"}
     # Nothing is dropped: the board did not quietly become a different board.
+    # With no calendar to be silent, "uncorroborated" says nothing about the
+    # listing, so the 2026-09-20 drop must NOT fire here.
     assert out["counts"]["dropped_bogus"] == 0
+    assert out["counts"]["dropped_uncorroborated"] == 0
+    assert out["counts"]["uncorroborated"] == 2
     assert out["corroboration"]["available"] is False
     assert out["corroboration"]["reason"]
     # …and the one whose bars pre-date its claim STILL prints no price stat.
@@ -601,6 +651,28 @@ def test_an_uncorroborated_tile_says_the_calendar_has_no_record(monkeypatch):
     t = B.ipo_tiles(limit=5, days=60)["tiles"][0]
     assert any(b["text"] == "calendar: no record" and b["tone"] == "warn"
                for b in t["badges"])
+
+
+def test_an_uncorroborated_name_NEVER_REACHES_the_tab(monkeypatch):
+    """The drop is the BOARD's, so it has to hold on the surface too: through
+    the real `ipo.build`, the silent name has no tile at all — and the count
+    that says so rides on the payload the strip reads."""
+    from chart_maps import board as B
+    d = (IPO._today() - timedelta(days=40)).isoformat()
+    _install(monkeypatch, [_cal("GOODCO", d, "priced")],
+             frames={"GOODCO": _frame(start=d), "SILENT": _frame(start=d)},
+             docs=_docs({"GOODCO": d, "SILENT": d}))
+    monkeypatch.setattr(B, "_attach_bars",
+                        lambda tiles, days: [t.update(bars=[{"c": 1}]) for t in tiles])
+    monkeypatch.setattr(B, "_name_for", lambda s: f"{s} Inc")
+    monkeypatch.setattr(B, "_theme", lambda s: "ai_software")
+    from sepa import research as R
+    monkeypatch.setattr(R, "sales_snapshot",
+                        lambda syms, **k: {"GOODCO": {"sales": {"tier": "explosive"}}})
+    out = B.ipo_tiles(limit=10, days=60)
+    assert [t["symbol"] for t in out["tiles"]] == ["GOODCO"]
+    assert not any(t.get("ipo_status") == IPO.UNCORROBORATED for t in out["tiles"])
+    assert out["counts"]["dropped_uncorroborated"] == 1
 
 
 def test_the_tab_serves_the_not_measured_note_the_upcoming_rows_and_the_counts(

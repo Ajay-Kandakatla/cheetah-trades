@@ -17,9 +17,13 @@ Query params (all optional; absent = the old feed):
   since    unix seconds → rows with ts >= since
   ticker   upper-cased symbol → rows whose ticker equals it
 
-Row shape (normalized across both sources, unchanged):
-    {_id, ts, ts_iso, title, body, kind, ticker, url,
+Row shape (normalized across both sources, unchanged apart from `tickers`):
+    {_id, ts, ts_iso, title, body, kind, ticker, tickers, url,
      source: 'push' | 'breakout', sent, failed, total, dismissed?}
+
+`tickers` (2026-09-20, Ajay: "I need the stock tickers to be clickables in
+alerts individually if there are multiple in one alert by command click") is
+ALWAYS a list on every row — see ``derive_tickers``.
 ``ts`` is a UTC epoch and ``ts_iso`` UTC — the page formats in
 America/New_York and says ET.
 """
@@ -27,6 +31,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -46,6 +52,106 @@ BREAKOUT_SOURCE_CAP = 200          # source-side cap on sepa_breakouts, as befor
 # list that names none of these excludes the breakout source entirely.
 BREAKOUT_KINDS = ("volume_breakout", "rising_momentum")
 BREAKOUT_KIND_PREFIX = "stage_breakdown_"
+
+# --------------------------------------------------------------------------
+# Per-ticker links (2026-09-20)
+# --------------------------------------------------------------------------
+# The kinds whose body is a LIST of names. A row stored before this date
+# carries no `tickers`, so the feed derives them from the body — but ONLY for
+# these kinds. A flashcard, a morning brief or a lesson body is prose and the
+# regex never runs over it ("NEW, AT, ET" would all read as tickers).
+DIGEST_KINDS = frozenset({
+    "growth_demand_alert", "demand_alert", "zone_bounce_alert",
+    "hot_pullback_alert", "pattern_alert", "board_arrival", "earnings_reaction",
+})
+
+# Upper-case only, 1-5 letters, with an optional single-letter class suffix —
+# load_universe("full") spells class shares with a HYPHEN (BRK-B, HEI-A, MOG-A,
+# UHAL-B, BF-B, LEN-B, GEF-B); the dot form is kept for a Massive-spelled body.
+# Lower case never matches, so "nvda" in prose is not a ticker.
+_TOKEN = re.compile(r"^[A-Z]{1,5}(?:[.-][A-Z])?$")
+
+KNOWN_TTL_SEC = 3600
+_known_cache: dict = {"at": 0.0, "set": None}
+
+
+def known_symbols(loader=None, renames=None, delisted=None) -> frozenset:
+    """Every symbol a derived token is allowed to be.
+
+    ``load_universe("full")`` ∪ the RENAMES keys (the OLD symbol, still spelled
+    in an old push body) ∪ each rename's NEW symbol (``value[0]`` — RENAMES is
+    {OLD: (NEW, effective, evidence)}) ∪ the DELISTED keys (a 90-day-old push
+    can name a symbol that died since). Cached for ``KNOWN_TTL_SEC``; the
+    loaders are injectable for tests.
+    """
+    now = time.time()
+    if (loader is None and renames is None and delisted is None
+            and _known_cache["set"] is not None
+            and now - _known_cache["at"] < KNOWN_TTL_SEC):
+        return _known_cache["set"]
+    if loader is None or renames is None or delisted is None:
+        from sepa import symbols as SY
+        from sepa import universe as UN
+        loader = loader or (lambda: UN.load_universe("full"))
+        renames = SY.RENAMES if renames is None else renames
+        delisted = SY.DELISTED if delisted is None else delisted
+    try:
+        base = {str(t).upper() for t in (loader() or [])}
+    except Exception as exc:                                  # pragma: no cover
+        log.warning("push.recent: universe load failed: %s", exc)
+        base = set()
+    base |= {str(k).upper() for k in (renames or {})}
+    base |= {str(v[0]).upper() for v in (renames or {}).values() if v}
+    base |= {str(k).upper() for k in (delisted or {})}
+    out = frozenset(base)
+    _known_cache["at"], _known_cache["set"] = now, out
+    return out
+
+
+def derive_tickers(row: dict, known: frozenset) -> list:
+    """The names one feed row links to, in body order.
+
+    1. a stored ``tickers`` list wins (the builder knew them at push time);
+    2. else a single push's ``ticker``;
+    3. else, and ONLY for a DIGEST kind, the LEADING token of each
+       comma/newline-separated item of the body, kept when it looks like a
+       ticker AND is in ``known``. "NVDA, AVGO · pushed 08:15 ET · NEW AT"
+       yields ["NVDA", "AVGO"] even when ET and AT are real symbols — they are
+       not in leading position. "+3 more on the board" yields nothing.
+    4. else [].
+
+    The derivation is a best-effort read of OLD rows only; every row stored
+    from 2026-09-20 carries the list.
+    """
+    stored = row.get("tickers")
+    if isinstance(stored, list) and stored:
+        out, seen = [], set()
+        for t in stored:
+            if not isinstance(t, str):
+                continue
+            u = t.upper()
+            if u and u not in seen:
+                seen.add(u)
+                out.append(u)
+        if out:
+            return out
+    tick = row.get("ticker")
+    if isinstance(tick, str) and tick.strip():
+        return [tick.strip().upper()]
+    if row.get("kind") not in DIGEST_KINDS:
+        return []
+    body = row.get("body")
+    if not isinstance(body, str) or not body:
+        return []
+    out, seen = [], set()
+    for line in body.split("\n"):
+        for item in line.split(", "):
+            tok = item.strip().split(" ")[0].split("(")[0].rstrip(",:;")
+            if _TOKEN.match(tok) and tok in known and tok not in seen:
+                seen.add(tok)
+                out.append(tok)
+    return out
+
 
 _EMOJI = {
     "volume_breakout":          "🚀",
@@ -115,6 +221,8 @@ def normalize_breakout(b: dict) -> dict:
         "body":         body,
         "kind":         kind,
         "ticker":       ticker,
+        # One shape for the feed: a breakout row names exactly its own symbol.
+        "tickers":      [ticker] if ticker else [],
         "url":          f"/sepa/{ticker}?from=alert" if ticker else None,
         "user_email":   None,
         "sent":         0,
@@ -173,11 +281,16 @@ def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
     if tick:
         extra["ticker"] = tick
     pushes = list_recent(email, limit, **extra)
+    known = known_symbols() if pushes else frozenset()
     for p in pushes:
         p["source"] = "push"
         # Present on every row, null on the ones stored before 2026-09-15 and
         # on the kinds that carry no read.
         p.setdefault("enterable", None)
+        # Always a list (2026-09-20): the stored one, the single's ticker, or
+        # what an old digest body names. Never None — the chips render nothing
+        # on [].
+        p["tickers"] = derive_tickers(p, known)
 
     breakout_rows: list = []
     bq = breakout_query(kind_list, since, tick)
@@ -225,4 +338,5 @@ async def notifications_recent(
 
 
 __all__ = ["router", "gather", "parse_kinds", "breakout_kinds", "breakout_query",
-           "normalize_breakout", "MAX_LIMIT"]
+           "normalize_breakout", "derive_tickers", "known_symbols",
+           "DIGEST_KINDS", "MAX_LIMIT", "KNOWN_TTL_SEC"]

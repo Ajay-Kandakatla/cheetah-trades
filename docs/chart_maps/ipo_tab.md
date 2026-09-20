@@ -31,13 +31,33 @@ a priced deal for the same symbol within `NEAR_DAYS` (30) in Finnhub
 |---|---|---|
 | `confirmed` | calendar prices it; bars agree or cannot say | yes |
 | `recycled` | calendar prices it, but bars pre-date the listing | yes, `✳︎ recycled ticker`, every price stat blanked |
-| `uncorroborated` | calendar silent; bars agree or cannot say | yes, `calendar: no record` |
+| `uncorroborated` | calendar silent; bars agree or cannot say | **no — dropped, counted in `counts.dropped_uncorroborated`** (2026-09-20, Ajay: *"Yes … #3"*); the calendar-outage build still shows it flagged |
 | `bogus` | calendar silent **and** bars pre-date the listing | no — dropped, counted in `counts.dropped_bogus` |
 
-`uncorroborated` is shown flagged rather than dropped: Finnhub's calendar does
-not reach back over the whole trailing window for every venue, and hiding a
-real listing is the worse error. Dropping it instead is on the owner's-call
-list (spec §7.5). Bars that start AT a provider fetch cap are truncation, not a
+**2026-09-20 — uncorroborated rows are DROPPED.** Until this date
+`uncorroborated` was shown flagged rather than dropped, on the reasoning that
+Finnhub's calendar does not reach back over the whole trailing window for every
+venue and hiding a real listing is the worse error; dropping it was on the
+owner's-call list. Ajay answered it: *"Yes for #1 and #2 and #3 and #4 and
+#5"*, where **#3 was "DROP the IPO tab's uncorroborated rows"**. They now come
+off the board and are counted in `counts.dropped_uncorroborated`, which the
+🗓️ Coming up strip's basis line prints — *"· 22 uncorroborated dropped —
+spin-offs and re-listings the calendar does not carry"* — so the drop is never
+silent. On the live board that day **22** of the 66 candidates were
+uncorroborated, and they were mostly spin-offs and re-listings the IPO calendar
+has no reason to carry: HONA, FDXF, VSNT, GLIBA/GLIBK, RAL, MRP, ECG, CURB,
+AMTM, Q, PSKY, SNDK, BULL, CEP. Expect the live counts to move to **42
+confirmed / 2 recycled / 0 uncorroborated / 8 dropped_bogus / 22
+dropped_uncorroborated**.
+
+Two rules hold this honest. `counts.dropped_bogus` and
+`counts.dropped_uncorroborated` are counted from `_evaluate`'s own verdict
+— it returns `(row, dropped_as)` — never from `len(cands) - len(rows)`, because
+one length gap with two causes is a number he cannot read. And the
+CALENDAR-OUTAGE path is untouched: with no calendar to be silent,
+"uncorroborated" says nothing about the listing, so every candidate is still
+shown flagged, `dropped_uncorroborated` is `0`, and `counts.uncorroborated` is
+the count of what is on screen. Bars that start AT a provider fetch cap are truncation, not a
 listing (SAIC, 2026-08-31) — `ipo_age._at_fetch_cap` makes that call and this
 module imports it rather than re-deriving it.
 
@@ -80,8 +100,10 @@ control that does nothing looking like one that did something.
 
 **Failure behaviour.** A calendar outage does not change what the board is: it
 still builds from `ipo_age` alone, every row becomes `uncorroborated`, nothing
-is dropped, and `corroboration.available` is `false` with the reason attached —
-which the strip prints. Bars that pre-date a claim still blank the price stats
+is dropped — including under the 2026-09-20 drop rule, which fires only when
+the calendar was actually read — and `corroboration.available` is `false` with
+the reason attached, which the strip prints (without any drop count: that
+sentence never rides on an outage line). Bars that pre-date a claim still blank the price stats
 on that path, because another company's day one must never print whatever the
 calendar says.
 

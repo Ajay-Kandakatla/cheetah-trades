@@ -17,6 +17,12 @@ JSON to stdout. Every counting function below is PURE over injected documents
 so the repo tests pin the arithmetic without a database
 (`backend/tests/test_data_spine_2026_09_20.py`).
 
+2026-09-20, after his *"#2"*: `repair_outcome` reports where every row LANDS
+once the series are densified by fiscal period (`sepa.qoq.align_series` +
+`python -m sepa.qoq realign`) — re-tiered through the real `sales.compute` and
+placed through the real `buyable_verdict._bonde_pillar`, with the headline and
+prior holes counted apart. It is emitted under `"repair"`.
+
 NOTHING HERE GATES, ALERTS OR BUYS, and nothing it reports is a measured
 signal — it is a data-quality reconciliation, not a study.
 """
@@ -114,6 +120,92 @@ def character_pairs_mismatch(docs) -> int:
     return n
 
 
+def _series(doc: dict, key: str):
+    f = (doc.get("fundamentals") or {}) if isinstance(doc, dict) else {}
+    v = f.get(key) if isinstance(f, dict) else None
+    return v if isinstance(v, list) else None
+
+
+def repair_outcome(docs) -> dict:
+    """WHERE EVERY MISMATCHED ROW LANDS AFTER THE 2026-09-20 REPAIR.
+
+    Ajay 2026-09-20: *"#2 Yes"* — repair the pairs rather than keep holding
+    the rows out. This counts the outcome of that repair on injected documents,
+    with no database and no write: it densifies each row's series by fiscal
+    period (`qoq.align_series`), recomputes the sales read through the REAL
+    modules (`sepa.sales.compute` on `qoq.yoy_pct`), and places the row through
+    the REAL clause (`buyable_verdict._bonde_pillar`) — never through a
+    re-derived copy of either.
+
+    `headline_hole` and `prior_hole` are reported SEPARATELY on purpose: the
+    first has no growth base and is pending (off the board either way), the
+    second keeps a correct headline number and is judged by the character
+    clause. Collapsing them into one "year-ago hole" number would hide which
+    ~105 names the repair actually releases.
+    """
+    from sepa import buyable_verdict as BV
+    from sepa import canslim as CS
+    from sepa import sales as SL
+    from sepa.bonde import _cleared_floor
+
+    out = {"mismatched_before": 0, "retier_after": {}, "headline_hole": 0,
+           "prior_hole": 0,
+           "placement_after": {"tiered": 0, "rejected_character": 0,
+                               "out_pending": 0, "out_floor": 0},
+           "still_held_out": 0, "unverifiable": 0, "duplicate_periods": 0,
+           "reordered": 0, "symbols_headline_hole": [],
+           "symbols_prior_hole": []}
+
+    for d in docs:
+        sym = str(d.get("symbol") or "").upper()
+        raw = _periods(d)
+        if not Q.yoy_pairs_verifiable(raw):
+            out["unverifiable"] += 1
+            continue
+        if not Q.yoy_pairs_ok(raw):
+            out["mismatched_before"] += 1
+
+        a = Q.align_series(raw,
+                           rev_q_series=_series(d, "rev_q_series"),
+                           eps_q_series=_series(d, "eps_q_series"))
+        if a["duplicate_periods"]:
+            out["duplicate_periods"] += 1
+        if a["reordered"]:
+            out["reordered"] += 1
+        periods = a["q_period_series"]
+
+        if Q.headline_hole(periods):
+            out["headline_hole"] += 1
+            out["symbols_headline_hole"].append(sym)
+        if Q.prior_hole(periods):
+            out["prior_hole"] += 1
+            out["symbols_prior_hole"].append(sym)
+
+        q_eps = Q.yoy_pct(a["eps_q_series"])
+        sales_new = SL.compute(CS._head8(a["rev_q_series"]), q_eps)
+        tier = str(sales_new.get("tier") or "unknown")
+        out["retier_after"][tier] = out["retier_after"].get(tier, 0) + 1
+
+        pillar = BV._bonde_pillar({"fundamentals": {"sales": sales_new}})
+        if pillar.get("pending"):
+            out["placement_after"]["out_pending"] += 1
+        elif pillar.get("passed"):
+            out["placement_after"]["tiered"] += 1
+        elif _cleared_floor(pillar):
+            out["placement_after"]["rejected_character"] += 1
+        else:
+            out["placement_after"]["out_floor"] += 1
+
+        # A row that is STILL refused after the repair and is not pending —
+        # expected 0: a headline hole is pending, not held out.
+        if Q.period_ok(periods) is False and not pillar.get("pending"):
+            out["still_held_out"] += 1
+
+    out["symbols_headline_hole"] = sorted(out["symbols_headline_hole"])
+    out["symbols_prior_hole"] = sorted(out["symbols_prior_hole"])
+    return out
+
+
 def cross_source_asymmetry(scan_docs, research_docs) -> dict:
     """THE RESIDUAL WAY THE TWO BOARDS CAN STILL DISAGREE.
 
@@ -199,8 +291,11 @@ def _research_docs():
     coll = research._get_cache()
     if coll is None:
         return []
+    # rev/eps series are needed by `repair_outcome` — it re-tiers each row
+    # through the real `sales.compute` rather than trusting the stored tier.
     proj = {"symbol": 1, "fundamentals.sales": 1,
-            "fundamentals.q_period_series": 1, "fundamentals._source": 1}
+            "fundamentals.q_period_series": 1, "fundamentals._source": 1,
+            "fundamentals.rev_q_series": 1, "fundamentals.eps_q_series": 1}
     return list(coll.find({}, proj))
 
 
@@ -284,6 +379,7 @@ def audit() -> dict:
         "pair_mismatch": mism,
         "mismatch_pct": round(100.0 * mism["total"] / len(passers), 1) if passers else None,
         "q4_shaped": q4_shaped_share(passers),
+        "repair": repair_outcome(research),
         "character_pairs_extra": character_pairs_mismatch(passers),
         "unverifiable": {"scan": unverifiable_count(scan),
                          "research": unverifiable_count(research)},

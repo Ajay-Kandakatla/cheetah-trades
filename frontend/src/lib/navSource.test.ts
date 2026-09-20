@@ -72,6 +72,21 @@ describe('resolveBack', () => {
     expect(resolveBack(null, 'sepa')).toBeNull();
   });
 
+  /* 2026-09-20: /notifications and the 🔔 bell grew per-ticker chips, so the
+   * page needs a key of its own — without one a chip's back button hard-falls
+   * to /sepa, which is the bug this module exists for. */
+  it('notifications is a registered source, and pages that link INTO it are not', () => {
+    expect(NAV_SOURCES.notifications).toEqual({ path: '/notifications', label: 'Notifications' });
+    expect(withSource('/sepa/AAA?tab=supply', 'notifications'))
+      .toBe('/sepa/AAA?tab=supply&from=notifications');
+    expect(sourceKeyFor('/notifications')).toBe('notifications');
+    // NEGATIVE: a lookalike route is not claimed by the new key.
+    expect(sourceKeyFor('/notifications-settings')).toBeNull();
+    // NEGATIVE: the bell renders everywhere — a page with no key stays null
+    // rather than borrowing /notifications.
+    expect(sourceKeyFor('/desk')).toBeNull();
+  });
+
   it('only resolves paths the app actually routes', () => {
     for (const [key, src] of Object.entries(NAV_SOURCES)) {
       expect(src.path.startsWith('/')).toBe(true);

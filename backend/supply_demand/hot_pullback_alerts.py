@@ -121,11 +121,14 @@ def message(row: dict) -> dict:
 def digest_message(rows: list, day: str) -> Optional[dict]:
     if not rows:
         return None
+    # `tickers` (2026-09-20) — the first 12 the body names, in body order.
+    tickers = [str(r.get("symbol")).upper() for r in rows[:12]]
     names = ", ".join(str(r.get("symbol")) for r in rows[:12])
     return {"title": "\U0001F525 %d more hot pullbacks" % len(rows),
             "body": names + " · " + study_line(), "icon": "/icon.svg",
             "tag": "hotpb-digest-%s" % day,
             "url": "/chart-maps?tab=hot_pullback", "kind": KIND, "ticker": None,
+            "tickers": tickers,
             "data": {"url": "/chart-maps?tab=hot_pullback", "source": "hot_pullback"}}
 
 

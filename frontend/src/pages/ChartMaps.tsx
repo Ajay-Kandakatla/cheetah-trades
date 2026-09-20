@@ -64,6 +64,7 @@ import SessionBoard from '../components/SessionBoard';
 import HoldingsBoard from '../components/HoldingsBoard';
 import PotusBoard from '../components/PotusBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
+import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
 import OverlayLegend from '../components/OverlayLegend';
@@ -722,7 +723,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * board warms, when it errors and when the calendar came back empty,
         * and nothing in the controls below filters it. Rows are printed
         * verbatim from Finnhub — a price RANGE is never rounded into a price. */}
-      {tab === 'ipo' && <IpoUpcomingStrip data={data?.upcoming ?? null} corroboration={data?.corroboration ?? null} />}
+      {/* `CmBoard.counts` is typed for the ICT tab's three keys; on the IPO
+        * tab the same key carries the bucket counts, so the strip's one read
+        * (`dropped_uncorroborated`) is narrowed here rather than widening a
+        * shared board type from this package. */}
+      {tab === 'ipo' && <IpoUpcomingStrip data={data?.upcoming ?? null} corroboration={data?.corroboration ?? null} counts={(data?.counts as IpoCounts | null | undefined) ?? null} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry

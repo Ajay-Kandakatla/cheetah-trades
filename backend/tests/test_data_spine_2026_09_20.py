@@ -48,23 +48,39 @@ def test_NEGATIVE_unverifiable_pairs_are_ACCEPTED_by_yoy_pairs_ok():
 
 
 def test_yoy_pairs_verifiable_is_the_INVERSE_of_that_accept_branch():
+    """PIN MOVED DELIBERATELY 2026-09-20 (the YoY repair): a hole in the PRIOR
+    pair no longer makes a row unverifiable. The HEADLINE pair is what the
+    growth claim rests on and it is checkable in both lists below — refusing
+    them re-held-out the ~105 names the repair exists to release."""
     assert Q.yoy_pairs_verifiable(ADJACENT) is True
     assert Q.yoy_pairs_verifiable(IOVA) is True          # checkable AND wrong
     assert Q.yoy_pairs_verifiable(None) is False
     assert Q.yoy_pairs_verifiable([]) is False
-    assert Q.yoy_pairs_verifiable([8105, None, 8103, 8102, 8101, 8100]) is False
-    assert Q.yoy_pairs_verifiable([8105, 8104, 8103, 8102, 8101]) is False  # no slot 5
+    assert Q.yoy_pairs_verifiable([8105, None, 8103, 8102, 8101, 8100]) is True
+    assert Q.yoy_pairs_verifiable([8105, 8104, 8103, 8102, 8101]) is True   # no slot 5
     assert Q.yoy_pairs_verifiable(["a", "b", "c", "d", "e", "f"]) is False
+    assert Q.yoy_pairs_verifiable([8105, 8104, 8103, 8102]) is False  # too short
 
 
 def test_period_ok_is_a_TRI_STATE_and_None_is_never_a_tick():
     """352 of 2,078 live scan rows have no period keys. A surface that renders
     `!period_ok` as a warning would flag every one of them, and a surface that
-    renders `period_ok` as a tick would claim a check nobody made."""
+    renders `period_ok` as a tick would claim a check nobody made.
+
+    PIN MOVED DELIBERATELY 2026-09-20: the slot-1 hole below is a PRIOR hole —
+    the headline pair 8105 vs 8101 is four apart, so the row reads True with
+    `prior_hole` True, not None."""
     assert Q.period_ok(ADJACENT) is True
     assert Q.period_ok(IOVA) is False
     assert Q.period_ok(None) is None
-    assert Q.period_ok([8105, None, 8103, 8102, 8101, 8100]) is None
+    assert Q.period_ok([8105, None, 8103, 8102, 8101, 8100]) is True
+    assert Q.prior_hole([8105, None, 8103, 8102, 8101, 8100]) is True
+    assert Q.headline_hole([8105, None, 8103, 8102, 8101, 8100]) is False
+    # NEW beside them — a HEADLINE hole is a refusal, and a short list is
+    # still unverifiable rather than either answer.
+    assert Q.period_ok([8105, 8104, 8103, 8102, None, 8100]) is False
+    assert Q.headline_hole([8105, 8104, 8103, 8102, None, 8100]) is True
+    assert Q.period_ok([8105, 8104, 8103, 8102]) is None
 
 
 def test_period_label_prints_FISCAL_for_massive_and_CALENDAR_for_yfinance():

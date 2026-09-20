@@ -88,9 +88,15 @@ class NoSendPathTest(unittest.TestCase):
                          "KIND", "alerts"):
                 self.assertNotIn(word, blob, "%s mentions %r" % (label, word))
         from push import subs
+        # WIDENED 2026-09-20 ("Default on for any change of todays features
+        # Bondes or Potus or explosive growth or Earnings I wanna see all of
+        # them") — still pinned here, because what this test is really for is
+        # that the growth EARNINGS path never touches the keep-set.
         self.assertEqual(set(subs.OWNER_KEEP_SET),
                          {"hot_pullback_alert", "pattern_alert",
-                          "demand_alert", "position_alert"})
+                          "demand_alert", "position_alert",
+                          "potus_investment", "growth_demand_alert",
+                          "earnings_reaction", "board_arrival"})
 
     def test_no_new_push_kind_exists(self):
         """NEGATIVE — the only KIND under growth/ is the one shipped 2026-09-11."""

@@ -33,34 +33,32 @@ export type NotificationPrefs = {
      floor, the push still carries the standing room/proximity gates. */
   growth_demand_alert?: boolean;
   /* 🏛️ Federal stake reported (political/watch.py, 2026-09-20: "Anytime
-     POTUS does new investments show me those"). Ships OFF — the backend
-     default is `false`, the only one in default_prefs() — because the
-     standing keep-set is four phone kinds and this is a fifth. The
-     toggle on /notifications is how it turns on; no deploy needed. */
+     POTUS does new investments show me those"). ON since 2026-09-20 — his
+     follow-up the same day ("Default on for any change of todays features
+     Bondes or Potus or explosive growth or Earnings I wanna see all of
+     them.") put it in the backend keep-set, so a re-registered device cannot
+     silently mute it. Still a heuristic; the gate did not move. */
   potus_investment?: boolean;
+  /* 📣 Earnings beat with institutional buying (chart_maps/earnings_alerts.py,
+     2026-09-20: "don't forget to alert me on earnings surprises"). ON. */
+  earnings_reaction?: boolean;
+  /* ✨ A new name arrived on 📈 Bonde or 🚀 Explosive Growth
+     (sepa/board_arrival.py, 2026-09-20, same words). ON. */
+  board_arrival?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;
   // macbook_deal removed 2026-05-15 — lifeboard Mac deal scraper deleted.
   product_launch?: boolean;
-  // Minervini flash cards — 3 push/weekday (9 ET / 12:30 ET / 16:00 ET).
-  // Bite-sized education from the SEPA author's books. Backed by
-  // backend/flashcards/flashcards.py — 36-card bank, deterministic
-  // day-of-year rotation so the user cycles through topics without
-  // immediate repetition. Default ON for new subscriptions.
-  minervini_flashcards?: boolean;
+  // `minervini_flashcards` removed 2026-09-20 — Ajay: "Remove volleyball and
+  // learning of stocks I do dont wanna see them they are spamming too much".
+  // The label survives in lib/alertKinds.ts so old history rows still read.
   // Market open / close reminders — pings 15 min before each bell
   // (9:15 ET + 3:45 ET Mon-Fri, skips US holidays). See
   // backend/market_hours/reminder.py. Default ON.
   market_hours_reminder?: boolean;
-  // Volleyball fitness — three independent kinds:
-  //   vb_workout    — 7 AM ET daily workout brief
-  //   vb_supplement — 9:30 PM ET magnesium reminder
-  //   vb_education  — 6 PM ET daily VB/health card
-  // See backend/volleyball/reminders.py.
-  vb_workout?:    boolean;
-  vb_supplement?: boolean;
-  vb_education?:  boolean;
+  // `vb_workout` / `vb_supplement` / `vb_education` removed 2026-09-20 with
+  // the flash cards, same sentence. Labels stay in lib/alertKinds.ts.
   // Pivot / entry alerts (sepa.pivot_alerts cron) — at-pivot / approaching.
   pivot_alert?: boolean;
   // SEPA-cross tape watch (scalping.sepa_watch) — 5-min candle reads at

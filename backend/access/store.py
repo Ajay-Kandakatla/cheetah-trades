@@ -222,10 +222,10 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "todos",         "label": "Todos",               "group": "account",   "default": True},
     {"id": "watchlist",     "label": "Watchlist",           "group": "account",   "default": False},
     {"id": "glossary",      "label": "Glossary",            "group": "account",   "default": True},
-    # Education — Minervini Learning module. Surfaces the flashcard bank
-    # by topic with deep-links from push notifications.
-    # Default ON for everyone — trading education isn't owner-only.
-    {"id": "learn",         "label": "Learning",            "group": "account",   "default": True},
+    # `learn` (Minervini Learning) removed from the nav 2026-09-20 — Ajay:
+    # "Remove volleyball and learning of stocks I do dont wanna see them they
+    # are spamming too much". Chart School stays: it is the chart-reading quiz,
+    # not the flash-card feed he muted.
     # Chart School (2026-06-09): the visual half of learning — daily real-chart
     # pattern-ID quiz (from the scan universe's historical confirmations),
     # Bulkowski pattern library with the supply/demand WHY, candle-read anatomy
@@ -234,16 +234,11 @@ FEATURE_CATALOG: list[dict] = [
     # Usage heatmap — personal analytics: which pages/features Ajay uses
     # heavily + a weekday×hour heatmap. Owner-on via added_in/VERSION.
     {"id": "usage",         "label": "Usage Heatmap",       "group": "account",   "default": False, "added_in": 6},
-    # Ajay's Learning Path (2026-06-23): a personal, curriculum-ordered study
-    # page — the DOM/order-flow → SMC → options-vol → synthesis reading list,
-    # with embedded videos + papers. OWNER-ONLY in the catalog, and further
-    # narrowed to ADMIN-ONLY in the nav (see build_menu) since it's Ajay's own
-    # study surface, not shared with co-owners. Owner-on via added_in/VERSION.
-    {"id": "learning",      "label": "📚 Learning Path",    "group": "account",   "default": False, "added_in": 17},
-    # Personal fitness — volleyball training module tuned to Ajay's
-    # injury profile. Default OFF for friends (it's personal); owners
-    # get it via the universal owner-feature bypass in store.py.
-    {"id": "volleyball",    "label": "Volleyball Fitness",  "group": "household", "default": False},
+    # `learning` (📚 Learning Path) and `volleyball` (Volleyball Fitness)
+    # removed from the nav 2026-09-20 — Ajay: "Remove volleyball and learning
+    # of stocks I do dont wanna see them they are spamming too much". The
+    # routes and modules are still in the tree; only the menu entries and the
+    # push kinds are gone.
 
     # Household — Ajay explicitly OK'd shared family content for friends
     # (per feedback 2026-05-15: "All my friends use similar food so that
@@ -465,13 +460,8 @@ def build_menu(email: str) -> dict:
         if fid not in features:
             continue
 
-        # Ajay's Learning Path is his personal study surface. Owner auto-grant
-        # gives the feature (and thus URL access) to both house owners, but the
-        # nav LINK is admin-only (Ajay) — co-owners don't get it cluttering their
-        # menu. Everything else stays purely feature-gated.
-        if fid == "learning" and not is_admin:
-            continue
-
+        # The `learning` admin-only special-case went with the catalog entry
+        # on 2026-09-20 ("Remove volleyball and learning of stocks…").
         group = entry["group"]
         # Household placement: Food/Kids go in the Misc dropdown for owners
         # (Ajay 2026-06-04 — "move kids and food under misc" to declutter the

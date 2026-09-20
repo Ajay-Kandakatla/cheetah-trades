@@ -113,6 +113,7 @@ def _db():
 from sepa.qoq import (                                          # noqa: E402
     HEADLINE_PAIR, PRIOR_PAIR, YOY_GAP, period_label,           # noqa: F401
     yoy_pairs_ok as _yoy_pairs_ok,
+    prior_hole as _prior_hole,
 )
 
 
@@ -164,8 +165,13 @@ def qualifies(fundamentals: Optional[dict],
     pass or fail, so a near-miss is explainable without a second read.
 
     Three data-correctness checks ride on the cached series (2026-09-14):
-      * `period_mismatch` — a headline or prior pair whose period keys are not
-        four quarters apart. The row does NOT qualify.
+      * `period_mismatch` — a headline pair whose period keys are not four
+        quarters apart, or whose year-ago quarter is absent from the filings.
+        The row does NOT qualify. (2026-09-20: a hole in the PRIOR pair alone
+        no longer refuses the row — `sepa/canslim.py` now aligns the series by
+        fiscal period, so that hole is a known-absent quarter rather than a
+        shifted one. Such a row still fails rule 3 below on `sales_prior_pct`
+        being None; `legs["prior_hole"]` says so.)
       * `base_negative` — the year-ago revenue base is <= 0, so the cached
         percentage is arithmetic, not growth (DBRG printed +15,961.5% off a
         -$3.2M base and sat #1). The leg is blanked (None) and the row does
@@ -199,6 +205,14 @@ def qualifies(fundamentals: Optional[dict],
     k, m = PRIOR_PAIR
     mismatch = not _yoy_pairs_ok(periods)
     legs["period_mismatch"] = mismatch
+    # 2026-09-20 — WHICH hole. Since `canslim` densifies Massive's filings by
+    # fiscal period, a missing quarter is a None at its own slot. A hole in the
+    # PRIOR pair does not refuse the row (the headline pair is still four
+    # quarters apart) but it does empty `sales_prior_pct`, and this screen's
+    # third rule reads that leg — so the row fails on the RULE, with the reason
+    # on the row, instead of on a silent mislabelling. Existing behaviour,
+    # named: `p is not None` below is unchanged.
+    legs["prior_hole"] = _prior_hole(periods)
 
     # E4 — a non-positive year-ago base is not a growth number. Checked on
     # the same slots the cached percentages were computed from; an absent

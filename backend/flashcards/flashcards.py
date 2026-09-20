@@ -54,6 +54,12 @@ from datetime import datetime, timezone, timedelta
 
 log = logging.getLogger("flashcards")
 
+# The one place this module names its push kind. RETIRED 2026-09-20 (Ajay:
+# "Remove volleyball and learning of stocks I do dont wanna see them they are
+# spamming too much") — it is in push.subs.RETIRED_2026_09_20, so main() exits
+# 0 without sending and without writing a push_history row.
+KIND = "minervini_flashcards"
+
 
 # ===========================================================================
 # CARD POOLS — by topic
@@ -577,11 +583,11 @@ def _fire(card: dict, tag_suffix: str) -> dict:
         "body":   body[:300],
         "tag":    f"flashcard-{tag_suffix}",
         "url":    card.get("url", default_url),
-        "kind":   "minervini_flashcards",
+        "kind":   KIND,
     }
     try:
         from push import sender
-        result = sender.send_to_all(payload, kind="minervini_flashcards")
+        result = sender.send_to_all(payload, kind=KIND)
     except Exception as exc:
         log.warning("flashcard fire failed: %s", exc)
         return {"ok": False, "reason": str(exc)}
@@ -629,11 +635,26 @@ def fire_flashcard(slot_or_topic: str) -> dict:
     return {"ok": False, "reason": f"unknown arg: {slot_or_topic}"}
 
 
+def main(argv=None) -> int:
+    """CLI for cron + manual testing:
+
+      python -m flashcards.flashcards hourly         # topic from current hour ET
+      python -m flashcards.flashcards fundamentals   # force a specific topic
+      python -m flashcards.flashcards morning        # legacy slot alias
+
+    RETIRED 2026-09-20. The guard comes FIRST, before any card is picked and
+    before any sender is imported, so a cron line that survives in the
+    host-mounted crontab exits 0 in silence — no push, no push_history row.
+    """
+    from push import subs
+    if KIND in subs.DISABLED_ALERT_KINDS:
+        print(f"{KIND} retired 2026-09-20 — nothing sent")
+        return 0
+    argv = list(argv if argv is not None else [])
+    print(fire_flashcard(argv[0] if argv else "hourly"))
+    return 0
+
+
 if __name__ == "__main__":
-    # CLI for cron + manual testing:
-    #   python -m flashcards.flashcards hourly         # picks topic from current hour ET
-    #   python -m flashcards.flashcards fundamentals   # force a specific topic
-    #   python -m flashcards.flashcards morning        # legacy slot alias
     import sys
-    arg = sys.argv[1] if len(sys.argv) > 1 else "hourly"
-    print(fire_flashcard(arg))
+    sys.exit(main(sys.argv[1:]))

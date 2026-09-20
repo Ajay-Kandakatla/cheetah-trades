@@ -5,6 +5,9 @@ three categories, and the live constants appear in the text."""
 from __future__ import annotations
 
 import pytest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
 
 from supply_demand import rules_info as RI
 from supply_demand import alert_gates as AG
@@ -172,3 +175,99 @@ def test_the_BONDE_section_leads_with_the_measurement_and_never_retypes_it():
     assert "not figures Bonde published" in blob
     # and the 8%/5x line must read as a percentage, not as a format artifact
     assert "8%%" not in blob
+
+
+# ── the two non-zone push kinds on the panel (2026-09-20) ───────────────────
+def test_the_alerts_section_states_the_earnings_push_from_its_constants():
+    """📣 earnings_reaction ships ON (Ajay 2026-09-20: "Default on for any
+    change of todays features Bondes or Potus or explosive growth or Earnings
+    I wanna see all of them"), so the panel has to say what fires and what
+    never does — and every figure in the line is read from
+    `chart_maps.earnings`, never typed here."""
+    from chart_maps import earnings as E
+
+    line = [l for l in RI.sections()["alerts"]["alerts"] if "earnings_reaction" in l]
+    assert len(line) == 1
+    t = line[0]
+    assert "(ON by default)" in t
+    assert ("%.1f×" % E.MIN_VOL_RATIO) in t
+    assert ("top %d%%" % round((1 - E.MIN_CLOSE_LOC) * 100)) in t
+    assert RI._b(E.MIN_DOLLAR_VOL) in t
+    assert "A miss, an in-line print, a null surprise, or a pre-report run-up never pushes" in t
+    assert "Once per report" in t and "not measured" in t
+
+
+def test_the_earnings_line_MOVES_when_the_gate_moves(monkeypatch):
+    """MUTATION GUARD: the whole point of the panel is that it cannot drift."""
+    from chart_maps import earnings as E
+    monkeypatch.setattr(E, "MIN_VOL_RATIO", 2.4)
+    t = [l for l in RI.sections()["alerts"]["alerts"] if "earnings_reaction" in l][0]
+    assert "2.4×" in t and "1.5×" not in t
+
+
+def test_the_board_arrival_line_quotes_the_slots_and_the_digest_split():
+    from growth import alerts as GA
+    from sepa import board_arrival as BA
+
+    t = [l for l in RI.sections()["alerts"]["alerts"] if "board_arrival" in l][0]
+    assert "(ON by default)" in t
+    assert ("%d ring individually" % GA.MAX_INDIVIDUAL) in t
+    assert ("%s ET (Bonde)" % BA.SLOTS_ET["bonde"]) in t
+    assert ("%s ET (growth)" % BA.SLOTS_ET["growth"]) in t
+    assert "never the first cohort a ledger sees" in t
+    assert "a list event, not an entry" in t
+
+
+def test_the_board_arrival_line_MOVES_when_a_slot_moves(monkeypatch):
+    from sepa import board_arrival as BA
+    monkeypatch.setattr(BA, "SLOTS_ET", {"bonde": "19:01", "growth": "06:02"})
+    t = [l for l in RI.sections()["alerts"]["alerts"] if "board_arrival" in l][0]
+    assert "19:01 ET (Bonde)" in t and "06:02 ET" in t and "17:42" not in t
+
+
+def test_the_alerts_panel_carries_no_INVERTED_verdict_of_another_board():
+    """NEGATIVE: the ✨ line names the boards but never repeats 📈 Bonde's
+    measured verdict — that sentence belongs on the push body, /alerts and the
+    Notifications detail, beside the thing it qualifies. The Bonde SECTION is
+    where the panel states it."""
+    t = " ".join(RI.sections()["alerts"]["alerts"])
+    assert "INVERTED" not in t
+    assert "carries its own measured record on its tab" in t
+
+
+def test_the_alerts_section_never_imports_the_SEPA_BOARD_stack(monkeypatch):
+    """SOURCE GUARD (C9, 2026-09-20). `rules_info` is the S&D rules page and it
+    must not drag the SEPA board modules in just to print two slot minutes
+    (feedback_sepa_book_scope). The ✨ line reads `sepa.board_arrival`, which
+    lazy-imports `sepa.bonde` inside its own row builders, so building the
+    alerts lines never loads it.
+
+    NOTE the deliberate limit of this guard: `rules_info.sections()` HAS built a
+    separate 📈 Bonde section from `sepa.bonde.MEASURED` since 2026-09-13, so
+    the whole payload does load that module. What this pins is that the ALERTS
+    lines do not.
+    """
+    import subprocess
+    import sys
+    code = ("import sys;"
+            "from supply_demand import rules_info as RI;"
+            "lines = RI._non_zone_push_lines();"
+            "assert len(lines) == 2, lines;"
+            "assert 'sepa.bonde' not in sys.modules, sorted(m for m in sys.modules "
+            "if m.startswith('sepa.'));"
+            "print('ok')")
+    out = subprocess.run([sys.executable, "-c", code], cwd=str(ROOT / "backend"),
+                         capture_output=True, text=True)
+    assert out.returncode == 0, out.stdout + out.stderr
+    assert "ok" in out.stdout
+
+
+def test_rules_info_never_imports_sepa_bonde_at_MODULE_level():
+    src = (ROOT / "backend/supply_demand/rules_info.py").read_text()
+    head = src.split("def _pct")[0]
+    for form in ("from sepa import bonde", "import sepa.bonde", "from sepa.bonde"):
+        assert form not in head, "a module-level SEPA board import on the S&D rules page"
+    assert "from sepa import" not in head, "no SEPA module loads when this page imports"
+    builder = src[src.index("def _non_zone_push_lines"):src.index("def sections")]
+    assert "from sepa import board_arrival as BA" in builder
+    assert "bonde as BD" not in builder and "import bonde" not in builder

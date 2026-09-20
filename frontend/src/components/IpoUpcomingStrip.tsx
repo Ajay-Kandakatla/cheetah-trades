@@ -24,7 +24,9 @@
 import {
   IPO_NO_UPCOMING, ipoCorroborationLine, ipoText, upcomingRows,
 } from '../lib/ipoTab';
-import type { IpoCorroboration, IpoPayloadLike, IpoUpcoming } from '../lib/ipoTab';
+import type {
+  IpoCorroboration, IpoCounts, IpoPayloadLike, IpoUpcoming,
+} from '../lib/ipoTab';
 
 function Row({ r }: { r: IpoUpcoming }) {
   const sym = String(r.symbol || '').toUpperCase();
@@ -43,9 +45,13 @@ function Row({ r }: { r: IpoUpcoming }) {
 }
 
 export default function IpoUpcomingStrip(
-  { data, corroboration }: {
+  { data, corroboration, counts }: {
     data?: IpoUpcoming[] | IpoPayloadLike | null;
     corroboration?: IpoCorroboration | null;
+    /** The board's bucket counts. The strip reads exactly one of them —
+     *  `dropped_uncorroborated` — so the drop the board now makes is stated
+     *  where he is reading the calendar's own rows (2026-09-20). */
+    counts?: IpoCounts | null;
   },
 ) {
   const rows = upcomingRows(data ?? null);
@@ -60,7 +66,7 @@ export default function IpoUpcomingStrip(
         </em>
       </div>
       <p className="ipo-up-basis" data-testid="ipo-upcoming-basis">
-        {ipoCorroborationLine(corroboration ?? null)}
+        {ipoCorroborationLine(corroboration ?? null, counts ?? null)}
       </p>
       {rows.length ? (
         <>

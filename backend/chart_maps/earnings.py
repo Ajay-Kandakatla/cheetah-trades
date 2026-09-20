@@ -57,7 +57,7 @@ from"*. Surveyed before writing a line of assembly:
 
 What that stack does NOT answer, measured on the live doc rather than assumed:
 
-  * it is a NIGHTLY doc (cron 19:10) and was 23 hours old when checked, so
+  * it is a nightly doc (cron 17:45) and was 23 hours old when checked, so
     names that reported this morning — TGT, EL — could not be in it at all;
   * it has no size floor: 12 of its 21 picks traded >= $50M on the reaction
     bar, the rest being CAMP at $2M, DERM at $5M, AURA at $8M;
@@ -130,6 +130,16 @@ MIN_BARS = 60
 # landed after yesterday's close has its reaction bar TODAY, and that bar is
 # exactly today's institutional action. Dropping it would hide every
 # after-close reporter, which is most of them.
+#
+# The unit is SESSIONS, not calendar days, since 2026-09-20 (critique F2). With
+# calendar arithmetic a Monday window opened on the Saturday, so every FRIDAY
+# reporter — 53 of the last 810 reports, 38 BMO and 13 AMC — was excluded here
+# before its phase was ever read, and so was a Thursday reporter ahead of a
+# Friday holiday. `_trading_days_back` counts only open days. The number below
+# is unchanged; its UNIT changed. Owner-visible: a Friday AMC reporter now
+# appears on the tab on Monday, which is the session its reaction bar is. The
+# `m["date"] == last_bar` guard in `scan` is untouched, so the board still
+# shows today's bar and only today's bar.
 LOOKBACK_DAYS = 2
 LOOKAHEAD_DAYS = 0
 
@@ -320,6 +330,63 @@ def read_bar(df, median_lookback: int = MIN_BARS) -> Optional[dict]:
         return None
 
 
+def _trading_days_back(day: str, sessions: int) -> str:
+    """The ISO date `sessions` OPEN days before `day`. PURE w.r.t. the clock.
+
+    Steps back one calendar day at a time and counts only days
+    `market_hours.gate.closed_reason` calls open, so a weekend or a holiday
+    costs nothing. `sessions <= 0` is `day` itself. The walk is capped at 30
+    calendar days: a run of closed days that long means the holiday table is
+    wrong, and silently widening a query window is worse than stopping.
+
+    `CHEETAH_IGNORE_HOLIDAY=1` (gate.override_active) makes `closed_reason`
+    answer None for EVERY day, weekends included. That is right for the gate —
+    it exists so a manual run can execute on a closed day — and wrong here: a
+    window is not a permission. Under the override an un-guarded walk back
+    from Monday would count Sunday and Saturday as sessions and open the
+    window at the Saturday, which is the exact calendar-arithmetic bug this
+    function was written to kill, and a manual `--dry-run --force` check on a
+    Monday would silently UNDER-report by dropping every Friday reporter. So
+    the weekend test is made here, before the gate is asked, and a Saturday or
+    a Sunday never counts whatever the env says. A HOLIDAY still counts as
+    open under the override (the gate owns that table and this module does not
+    keep a second copy); the cost is one session of window on the handful of
+    manual runs made across a holiday, never a weekend.
+    """
+    from datetime import date, timedelta
+    try:
+        y, m, d = (int(x) for x in str(day)[:10].split("-"))
+        cur = date(y, m, d)
+    except Exception:
+        return str(day)[:10]
+    n = int(sessions or 0)
+    if n <= 0:
+        return cur.isoformat()
+    try:
+        from market_hours.gate import closed_reason
+    except Exception:                                 # pragma: no cover - import shim
+        return (cur - timedelta(days=n)).isoformat()
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo("America/New_York")
+    except Exception:                                 # pragma: no cover
+        tz = None
+    left, steps = n, 0
+    while left > 0 and steps < 30:
+        cur = cur - timedelta(days=1)
+        steps += 1
+        if cur.weekday() >= 5:            # never a session, override or not
+            continue
+        noon = datetime(cur.year, cur.month, cur.day, 12, 0, tzinfo=tz)
+        try:
+            if closed_reason(noon) is None:
+                left -= 1
+        except Exception:                             # pragma: no cover
+            left -= 1
+    return cur.isoformat()
+
+
 def _calendar_rows(today: str) -> dict:
     """{SYMBOL: calendar doc} for names whose report is near `today`.
 
@@ -344,7 +411,9 @@ def _calendar_rows(today: str) -> dict:
     # A window either side: reports dated a few days back can still have their
     # reaction bar as the latest session, and the upcoming half needs the days
     # ahead. Kept small deliberately — this board is about NOW.
-    lo = (t0 - timedelta(days=LOOKBACK_DAYS)).isoformat()
+    # SESSIONS back (2026-09-20): calendar arithmetic dropped every Friday
+    # reporter on a Monday. Forward stays calendar — LOOKAHEAD_DAYS is 0.
+    lo = _trading_days_back(t0.isoformat(), LOOKBACK_DAYS)
     hi = (t0 + timedelta(days=LOOKAHEAD_DAYS)).isoformat()
     q = {"$or": [{"next_date": {"$gte": lo, "$lte": hi}},
                  {"last_report.date": {"$gte": lo, "$lte": hi}}]}
@@ -371,6 +440,13 @@ def scan(today: Optional[str] = None, min_vol_ratio: float = MIN_VOL_RATIO,
     d = str(today or _et_today())[:10]
     cal = _calendar_rows(d)
     reacted, upcoming, checked, skipped = [], [], 0, 0
+    # ADDITIVE counters (2026-09-20) for the 📣 push pass, which is a pure
+    # consumer of this list: a REACTED row that fails the institutional read is
+    # dropped silently here (`continue`), and a pass that reports "0 candidates"
+    # must be able to say whether nothing reported or nothing was bought.
+    # `dropped_not_last_bar` is the freshness tell (critique F5): a stale or
+    # partial price cache makes every reaction bar look like an old bar.
+    reacted_seen, reacted_not_institutional, dropped_not_last_bar = 0, 0, 0
 
     for sym, row in cal.items():
         try:
@@ -406,8 +482,11 @@ def scan(today: Optional[str] = None, min_vol_ratio: float = MIN_VOL_RATIO,
             # Today's bar only. A reaction from two sessions ago is history,
             # and history is what `earnings_picks` already lists elsewhere.
             if m["date"] != last_bar:
+                dropped_not_last_bar += 1
                 continue
+            reacted_seen += 1
             if not is_institutional_buy(m, min_vol_ratio, min_close_loc, min_dollar_vol):
+                reacted_not_institutional += 1
                 continue
             reacted.append({
                 "symbol": sym, "phase": REACTED, "report_date": rpt,
@@ -457,6 +536,10 @@ def scan(today: Optional[str] = None, min_vol_ratio: float = MIN_VOL_RATIO,
         "checked": checked,
         "skipped": skipped,
         "calendar_names": len(cal),
+        # Additive, for the push pass (2026-09-20). Never gates, never orders.
+        "reacted_seen": reacted_seen,
+        "reacted_not_institutional": reacted_not_institutional,
+        "dropped_not_last_bar": dropped_not_last_bar,
         "criteria": {
             "min_vol_ratio": min_vol_ratio,
             "min_close_loc": min_close_loc,

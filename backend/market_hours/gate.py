@@ -48,9 +48,13 @@ OVERRIDE_ENV = "CHEETAH_IGNORE_HOLIDAY"
 # on a closed day would be computed from STALE prices — so the default is DROP
 # and this is the pass-list. Add a new personal kind HERE, never a market kind.
 PERSONAL_KINDS: frozenset[str] = frozenset({
-    "todo_reminder", "todo_daily_digest", "minervini_flashcards",
+    "todo_reminder", "todo_daily_digest",
+    # `minervini_flashcards` and `vb_workout` / `vb_supplement` /
+    # `vb_education` were retired 2026-09-20 — Ajay: "Remove volleyball and
+    # learning of stocks I do dont wanna see them they are spamming too much".
+    # They are in push.subs.RETIRED_2026_09_20 (hard-stopped at the delivery
+    # chokepoint), so classifying them here would be dead weight.
     "market_hours_reminder",          # self-gated on the same calendar
-    "vb_workout", "vb_supplement", "vb_education",
     "user_signin", "product_launch", "health", "macbook",
     "house_daily", "house_stagnant", "house_scrape_failed",
     "generic",                        # notify.send_alert default
@@ -75,6 +79,14 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # 🚀 growth board at demand (2026-09-11) — reads closed daily bars and a
     # live print, so it is a MARKET kind: silent on weekends and NYSE holidays.
     "growth_demand_alert",
+    # 📣 earnings beat + institutional buying (2026-09-20) — it reads the
+    # CLOSED reaction bar, so it is a MARKET kind: silent on weekends and
+    # NYSE holidays.
+    "earnings_reaction",
+    # ✨ a new name on 📈 Bonde / 🚀 Explosive Growth (2026-09-20) — both
+    # boards are built from closed bars, so this is a MARKET kind and a
+    # Sunday growth build rings on the next trading morning.
+    "board_arrival",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

@@ -34,6 +34,7 @@ import { useBounceRoom } from '../hooks/useBounceRoom';
 import type { BandStructureStudy, BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import { SignalWatchButton } from './SignalWatchButton';
 import { InfoButton } from './InfoButton';
+import { periodMark } from '../lib/bondeLive';
 
 /** Which session the day column on THIS row came from. `live` = the name's own
  *  move so far in the current session; `close` = the rotation snapshot's last
@@ -84,6 +85,11 @@ export type HsName = HsDayLeg & {
   eq_score?: number | null; eq_tier?: string | null; code_33?: boolean | null;
   sales_backed?: boolean | null; inventory_flag?: boolean | null;
   next_earnings?: string | null; earnings_when?: string | null;
+  /** The year-over-year pair check, tri-state, served per name by
+   *  rotation/hottest.py::_fundamentals_row. `false` = the two quarters are
+   *  not four fiscal quarters apart; `null`/absent = there were no period
+   *  keys to check it with; `true` = checked and fine. */
+  period_ok?: boolean | null;
 };
 /** The fundamental columns a GROUP row carries: the median of its full
  *  membership, computed in rotation/hottest.py::_fund_medians. Before
@@ -520,6 +526,8 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
     openTickerWithModifier(e, nav, loc, r.symbol, 'Hottest sectors');
   };
 
+  const pm = periodMark(r.period_ok);
+
   return (
     <tr className="hs-name"
         onClick={openInNewTab}
@@ -557,6 +565,15 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
       </td>
       <td className="hs-tier" title={r.sales_tier || 'no filed quarterly series from our provider'}>
         {tierChip(r.sales_tier)} {r.sales_tier || '—'}
+        {/* The pair mark rides the tier it qualifies — same three states and
+            same words as 📈 Bonde (periodMark owns both). `false` = checked
+            and not four quarters apart; `null` = no period keys to check it
+            with. A tick is never printed for a row that checked out, and the
+            mark rides the em-dash too when the tier itself was withheld. */}
+        {pm && (
+          <span className={pm.cls} data-testid={`hs-pair-${r.symbol}`}
+                title={pm.title}>{pm.text}</span>
+        )}
       </td>
       <td className={`mono hs-num ${tone(r.q_eps_yoy)}`}>{pct(r.q_eps_yoy, 0)}</td>
       <td className={`mono hs-num ${tone(r.net_margin)}`}>

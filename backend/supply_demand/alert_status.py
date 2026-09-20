@@ -27,8 +27,12 @@ counts {} (the page shows "no pass recorded", never zeros it did not measure).
 
 GET /alerts/status (supply_demand/api.py) -> ``status_payload``:
   {in_session, now_et, gate: {min_room_pct, max_above_demand_pct, min_cap_usd,
-   min_cap_txt}, passes: {zone_edge, zone_bounce_alert, demand_alert}, disclaimer}
-  each pass: {as_of, date, counts, cadence_sec[, reason]}
+   min_cap_txt}, passes: {zone_edge, zone_bounce_alert, demand_alert,
+   earnings_reaction, board_arrival:bonde, board_arrival:growth}, disclaimer}
+  each RTH pass: {as_of, date, counts, cadence_sec[, reason]}
+  each DAILY pass (the three added 2026-09-20): {as_of, date, counts,
+  cadence_sec: None, schedule[, reason]} — `schedule` is the slot string built
+  from the owning module's SLOTS_ET, so the page types no minute of its own.
 Times are ET ISO strings; ``in_session`` is zone_edge's clock (04:00-20:00 ET pass window since 2026-09-08, pushes RTH 9:31-16:00
 on NYSE trading days), evaluated at request time. ``in_session`` is the CLOCK,
 not proof the crons are alive — the page compares each ``as_of`` with
@@ -52,7 +56,13 @@ log = logging.getLogger(__name__)
 ET = ZoneInfo("America/New_York")
 PASS_COLL = "alert_pass_latest"
 ZONE_EDGE_KIND = "zone_edge"
-PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert")
+# The passes that run ONCE (or twice) a trading day rather than on an RTH
+# cadence: 📣 earnings_reaction and the two ✨ board_arrival boards, all
+# registered 2026-09-20. They carry `cadence_sec: None` — a daily pass is not
+# stale five minutes after its slot — and a `schedule` string instead, so the
+# page can print WHEN it runs without typing a minute of its own.
+DAILY_PASS_KINDS = ("earnings_reaction", "board_arrival:bonde", "board_arrival:growth")
+PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert") + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -248,6 +258,37 @@ def _with_cadence(kind: str, pass_doc: dict) -> dict:
     return dict(pass_doc, cadence_sec=int(CADENCE_SEC[kind]))
 
 
+def schedule_map() -> dict:
+    """{daily kind: 'HH:MM ET, trading days'} — every minute READ from the
+    module that owns the pass (`SLOTS_ET` in each), never retyped here, so a
+    slot change moves the page with it. Both imports are LAZY: this module
+    must stay a module-level leaf (test_alert_status pins that), and
+    `chart_maps.earnings_alerts` imports THIS module at its top.
+
+    A module that is not on the path yet answers None rather than a guessed
+    string — the page then prints the pass with no schedule, which is honest.
+    """
+    out: dict = {k: None for k in DAILY_PASS_KINDS}
+    try:
+        from chart_maps import earnings_alerts as EA
+        slots = tuple(EA.SLOTS_ET)
+        out["earnings_reaction"] = "%s ET, trading days" % " + ".join(slots)
+    except Exception as exc:                      # pragma: no cover - import shim
+        log.warning("alert_status: earnings_alerts slots unavailable: %s", exc)
+    try:
+        from sepa import board_arrival as BA
+        for board in ("bonde", "growth"):
+            out["board_arrival:%s" % board] = "%s ET, trading days" % BA.SLOTS_ET[board]
+    except Exception as exc:                      # pragma: no cover - import shim
+        log.warning("alert_status: board_arrival slots unavailable: %s", exc)
+    return out
+
+
+def _daily(kind: str, pass_doc: dict, schedule: dict) -> dict:
+    """A once-a-day pass: no cadence to be stale against, a schedule instead."""
+    return dict(pass_doc, cadence_sec=None, schedule=schedule.get(kind))
+
+
 def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] = None) -> dict:
     """GET /alerts/status. Every input is injectable for tests; the route passes
     none. Never raises — a dead Mongo is three empty passes, not a 500."""
@@ -260,19 +301,24 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         live = False
     if pass_coll is None:
         pass_coll = _coll()
+    sched = schedule_map()
+    passes = {
+        ZONE_EDGE_KIND:      _with_cadence(ZONE_EDGE_KIND, read_zone_edge(latest_coll)),
+        "zone_bounce_alert": _with_cadence("zone_bounce_alert", read_pass("zone_bounce_alert", pass_coll)),
+        "demand_alert":      _with_cadence("demand_alert", read_pass("demand_alert", pass_coll)),
+    }
+    for kind in DAILY_PASS_KINDS:
+        passes[kind] = _daily(kind, read_pass(kind, pass_coll), sched)
     return {
         "in_session": live,
         "now_et": et.isoformat(),
         "gate": gate_payload(),
-        "passes": {
-            ZONE_EDGE_KIND:      _with_cadence(ZONE_EDGE_KIND, read_zone_edge(latest_coll)),
-            "zone_bounce_alert": _with_cadence("zone_bounce_alert", read_pass("zone_bounce_alert", pass_coll)),
-            "demand_alert":      _with_cadence("demand_alert", read_pass("demand_alert", pass_coll)),
-        },
+        "passes": passes,
         "disclaimer": disclaimer(),
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "CADENCE_SEC", "record_pass", "record_result", "counts_from_result",
+__all__ = ["PASS_COLL", "PASS_KINDS", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+           "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

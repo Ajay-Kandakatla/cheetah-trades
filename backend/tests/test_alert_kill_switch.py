@@ -23,11 +23,12 @@ def test_retired_kinds_short_circuit_before_db(monkeypatch):
 
 
 def test_kept_kinds_are_not_disabled():
-    # The five surviving surfaces (+ household) must NOT be in the denylist.
+    # The surviving surfaces (+ household) must NOT be in the denylist.
+    # minervini_flashcards and the three vb_* kinds LEFT this list on
+    # 2026-09-20 — see test_retired_kinds_2026_09_20.py.
     for k in (
-        "pivot_alert", "position_alert", "minervini_flashcards",
+        "pivot_alert", "position_alert",
         "market_hours_reminder",
-        "vb_workout", "vb_supplement", "vb_education",
         "todo_reminder", "todo_daily_digest", "house_daily",
     ):
         assert k not in subs.DISABLED_ALERT_KINDS, k
@@ -39,5 +40,8 @@ def test_retired_kinds_are_disabled():
         "watchlist_breakout", "juggernaut_watchlist", "stage_breakdown",
         "watchlist_stage_breakdown", "morning_brief", "product_launch",
         "scalp_tape", "price_alert",
+        # Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont
+        # wanna see them they are spamming too much."
+        "minervini_flashcards", "vb_workout", "vb_supplement", "vb_education",
     ):
         assert k in subs.DISABLED_ALERT_KINDS, k

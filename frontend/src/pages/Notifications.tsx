@@ -23,7 +23,7 @@ type CategoryDef = {
   emoji:  string;
 };
 
-const CATEGORIES: CategoryDef[] = [
+export const CATEGORIES: CategoryDef[] = [
   // Trading alerts pared to the essentials (Ajay 2026-06-13). The breakout /
   // momentum / new-candidate / stage-breakdown / product-launch / tape-watch /
   // morning-brief pushes were retired here AND hard-stopped server-side
@@ -39,7 +39,8 @@ const CATEGORIES: CategoryDef[] = [
   { key: 'demand_alert', label: 'Reversal at demand', emoji: '🧲', group: 'trading',
     detail: 'ONLY A REVERSAL REACHES YOU (since 2026-09-09): the day\'s low touched the band and price is already lifting off it. Falling into, settling into, reclaiming from below and resting inside all still LIST on the boards and send nothing. On top of that: not a falling knife, the turn\u2019s mood bullish, and the band floor never pierced. A $1B+ name from the demand board ARRIVES inside, or within 1% of, a tested demand band today (yesterday it closed outside) — one push per band per day — plus one digest per 5-min check of names newly 1–3% above a band and falling. Names that have been sitting in a band are the board\'s business, not a buzz. Gabbar-level names get the same "nearing" tier under Buyable alerts. Unknown market cap is skipped. Phone gate (Ajay 2026-09-05: \"Need only alerts on stocks that have atleast 5% to Supply and also <1% bounce from demand zone\"): the push fires only when the first band overhead is at least 5% above the print (nothing overhead passes) and the print sits between the band floor and 1% above its top; the boards still list every name.' },
   { key: 'growth_demand_alert', label: 'Explosive growth at demand', emoji: '\u{1F680}', group: 'trading',
-    detail: 'A name from the \u{1F680} Explosive Growth board \u2014 sales up 100%+ AND quarterly EPS up 100%+ year-over-year, with the quarter before it also growing \u2014 is INSIDE a tested demand band whose floor has never been pierced. You asked for this separately from regular supply and demand: \"I wanna know when ever these are in demand, separately just trackers.\" THE BOARD HAS NO MARKET-CAP FLOOR (your call, \"remove the 700M rule for this page\"), but the PUSH still passes your 2026-09-05 standing gates \u2014 at least 5% of room to the first band overhead, and the print between the band floor and 1% above its top \u2014 because a 100% sales grower with 2% of room is still a bad entry. The third gate is `intact`, the only one that ever measured (+8.6pp win rate over 31,861 events); an order block is carried in the body as a DISPLAY note and gates nothing, because the ICT study measured +0.03R over 6,004 signals. A name the trading engine will REFUSE to buy (under $2 a share, or a known cap under $700M) still reaches you \u2014 labelled \u26D4 in the push body rather than silently dropped. One push per symbol per band per day; 4 ring individually, the rest share a digest. NOTHING HERE IS BACKTESTED: the 100%/100% screen has never been measured forward. Treat it as a watchlist ping.' },
+    detail: 'ON BY DEFAULT for you since 2026-09-20 (same words: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them."). '
+      + 'A name from the \u{1F680} Explosive Growth board \u2014 sales up 100%+ AND quarterly EPS up 100%+ year-over-year, with the quarter before it also growing \u2014 is INSIDE a tested demand band whose floor has never been pierced. You asked for this separately from regular supply and demand: \"I wanna know when ever these are in demand, separately just trackers.\" THE BOARD HAS NO MARKET-CAP FLOOR (your call, \"remove the 700M rule for this page\"), but the PUSH still passes your 2026-09-05 standing gates \u2014 at least 5% of room to the first band overhead, and the print between the band floor and 1% above its top \u2014 because a 100% sales grower with 2% of room is still a bad entry. The third gate is `intact`, the only one that ever measured (+8.6pp win rate over 31,861 events); an order block is carried in the body as a DISPLAY note and gates nothing, because the ICT study measured +0.03R over 6,004 signals. A name the trading engine will REFUSE to buy (under $2 a share, or a known cap under $700M) still reaches you \u2014 labelled \u26D4 in the push body rather than silently dropped. One push per symbol per band per day; 4 ring individually, the rest share a digest. NOTHING HERE IS BACKTESTED: the 100%/100% screen has never been measured forward. Treat it as a watchlist ping.' },
   { key: 'hot_pullback_alert', label: 'Hot Pullback', emoji: '🔥', group: 'trading',
     detail: 'A name that had been HOT takes one hard flush into a tested demand band and turns the same day — pushed at 08:15 ET from the CLOSED session recorded the evening before, never a live re-scan (mid-day the board repaints). One push per name per signal day; 4 ring individually, the rest share a digest. HONEST RECORD, and the push repeats it: 51.8% win over 83 trades on 50 dates, expectancy +0.10R with a 95% interval of −0.19R to +0.41R that INCLUDES ZERO, and no gate inside the rule separates (the demand band itself measures p=0.198). You asked for this as a watchlist ping after seeing those numbers — treat it as one. The edge, such as it is, is gone by day 5.' },
   { key: 'pattern_alert', label: 'Chart patterns', emoji: '📐', group: 'trading',
@@ -49,23 +50,34 @@ const CATEGORIES: CategoryDef[] = [
   { key: 'supply_break_alert', label: 'Breaking resistance → new highs', emoji: '🚀', group: 'trading',
     detail: 'A $1B+ name within 1% under the ceiling of its LAST supply band — nothing overhead, or the band sits at the 52-week high — or that broke it today (up to 3% through). Once per band per day; the strongest 3 per minute get their own push, the rest share one digest. Bands tested 2+ times only (the board on SEPA → Supply / Demand and Chart Maps → Deep Demand lists every band with its touch count). The near-demand side of the same every-minute check reuses the 🧲 demand-zone approach kind above. Unknown market cap is skipped. Phone gate (Ajay 2026-09-05): pushes only when the NEXT band above the one being broken is at least 5% away (nothing overhead passes); the boards still list every name.' },
   { key: 'potus_investment', label: 'Federal stake reported', emoji: '\u{1F3DB}\uFE0F', group: 'trading',
-    detail: 'OFF BY DEFAULT \u2014 the only notification in this app that ships off, and this toggle is how it turns on (no deploy, your switch). '
-      + 'You asked for it 2026-09-20: "Anytime POTUS does new investments show me those." Your standing keep-set is FOUR phone kinds '
-      + '(hot pullback, chart patterns, reversal at demand, portfolio) and this would be a fifth, so it ships registered and silent until you say otherwise. '
+    detail: 'ON BY DEFAULT since 2026-09-20 \u2014 you said: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them." '
+      + 'You asked for the kind itself earlier the same day: "Anytime POTUS does new investments show me those." It is in the owner keep-set, so a re-registered device cannot quietly mute it. '
+      + 'Turning it on widened WHICH KINDS reach you; it did not loosen what this one needs to fire \u2014 the gate below is unchanged. '
       + 'THIS IS A HEURISTIC, not a signal: a daily cron runs seven keyword searches and matches a REGEX over the headline TITLES. It has no measured record and nothing behind it has been backtested. '
       + 'The push gate is deliberately the tightest class and nothing looser \u2014 an EQUITY STAKE (not an award, not a contract, not "the administration is weighing a stake"), a NAMED federal agency (Commerce, DoD/Pentagon, DOE, Treasury) and a STATED size (a dollar figure or a percentage) in the SAME headline, plus a ticker that actually resolves. '
       + 'Everything looser \u2014 a federal award, a stake with no agency named, a headline whose company we could not turn into a ticker \u2014 still LISTS on Chart Maps \u2192 \u{1F3DB}\uFE0F POTUS as a candidate you read, and sends nothing. '
       + 'The watch NEVER edits the curated list: promoting a candidate onto it is a human edit of backend/political/disclosures.json. One push per ticker per headline url.' },
-  { key: 'minervini_flashcards', label: 'Minervini learning', emoji: '🃏', group: 'trading',
-    detail: 'Hourly bite-sized lessons (24h schedule): entry rules, risk, sell rules, psychology, review, fundamentals, market structure, trader history, edge math. ~80 cards, ~2-3 week rotation. Quiet-hours pref below mutes overnight delivery.' },
+  { key: 'earnings_reaction', label: 'Earnings beat with institutional buying', emoji: '\u{1F4E3}', group: 'trading',
+    detail: 'ON BY DEFAULT \u2014 an owner setting, from 2026-09-20: "Also don\'t forget to alert me on earnings surprises I think stock witz also has it. I wanna make sure we are catching those in alerts as well." '
+      + 'WHAT FIRES: the REACTED half of the Chart Maps \u25B8 Earnings Flow tab. A beat \u2014 this quarter\'s surprise above zero \u2014 whose reaction bar traded at least 1.5\u00D7 its 60-day median volume, closed in the top 40% of the bar\'s range, turned over at least $50M and finished up on the day. '
+      + 'A miss never pushes, however violently the stock reacts, and neither does a pre-report run-up \u2014 the bar has to have printed. Once per report. Two slots: 08:25 and 17:35 ET. '
+      + 'StockTwits has no earnings-surprise feed, so this reads your own earnings calendar and the filed surprise, not social chatter. '
+      + 'The room to the first supply band is shown as context and does not gate this kind. '
+      + 'NOT MEASURED: no forward study stands behind "beat + institutions bought". Not a recommendation \u2014 a watchlist ping.' },
+  { key: 'board_arrival', label: 'New on \u{1F4C8} Bonde / \u{1F680} Explosive Growth', emoji: '\u2728', group: 'trading',
+    detail: 'ON BY DEFAULT \u2014 you said: "Default on for any change of todays features Bondes or Potus or explosive growth or Earnings I wanna see all of them." '
+      + 'WHAT FIRES: a name ARRIVES on one of the two boards \u2014 \u{1F4C8} Bonde at 17:42 ET on a trading day, \u{1F680} Explosive Growth at 08:08 ET after the Sunday rebuild. '
+      + 'It is one push per name per board, ever: a name that leaves a board and comes back is not rung again (the arrival ledger stamps a name once and keeps it). '
+      + 'It is never the first cohort \u2014 the first pass after this ships records the baseline and sends nothing, so you are told about what is NEW, not about the 1,054 names already there. '
+      + 'THIS IS AN ARRIVAL ON A LIST, NOT AN ENTRY. Bonde\'s own rule was measured INVERTED (\u22123.11pp against a matched placebo) and the 100/100 screen behind Explosive Growth has never been measured forward. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
-  { key: 'vb_workout', label: 'Volleyball · daily workout', emoji: '🏐', group: 'household',
-    detail: '7 AM ET daily brief — today\'s workout focus, duration, AM supplement reminder (D3/K2 + Moringa). Routes to /volleyball.' },
-  { key: 'vb_supplement', label: 'Volleyball · supplements', emoji: '💊', group: 'household',
-    detail: '9:30 PM ET Magnesium Glycinate before-bed reminder. The other supplements (D3/K2 + Moringa) are folded into the morning workout ping so this single toggle covers evening only.' },
-  { key: 'vb_education', label: 'Volleyball · daily card', emoji: '📖', group: 'household',
-    detail: '6 PM ET one card per day from the volleyball/health bank — shoulder durability, finger plantar plate, jump training, recovery, supplements, technique, longevity. ~30-card library, day-of-year rotation.' },
+  // The three volleyball kinds and Minervini learning were retired 2026-09-20
+  // — Ajay: "Remove volleyball and learning of stocks I do dont wanna see
+  // them they are spamming too much". The crons are gone, the kinds are in
+  // push.subs.RETIRED_2026_09_20 (hard-stopped at the delivery chokepoint), and
+  // a toggle for a kind that can never fire would be a lie. Old push_history
+  // rows still render, via lib/alertKinds.ts.
   { key: 'todo_reminder',          label: 'Todo reminders',         emoji: '📌', group: 'household',
     detail: 'Personal todo list reminders fired at the time you set per task.' },
   { key: 'todo_daily_digest',      label: 'Todo daily digest',      emoji: '📋', group: 'household',
@@ -365,7 +377,7 @@ function AlertThresholdsSection() {
 }
 
 /* Presets — one-tap configurations of the per-category toggles. */
-const PRESETS: { id: string; label: string; emoji: string; detail: string; pref: Partial<NotificationPrefs> }[] = [
+export const PRESETS: { id: string; label: string; emoji: string; detail: string; pref: Partial<NotificationPrefs> }[] = [
   {
     id: 'all_on', label: 'All on', emoji: '🟢',
     detail: 'Every trading + household notification enabled.',
@@ -383,13 +395,15 @@ const PRESETS: { id: string; label: string; emoji: string; detail: string; pref:
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-09 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals, and 💼 stops on stocks you own. Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals. Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
+      potus_investment: true, growth_demand_alert: true,
+      earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,
       zone_bounce_alert: false, supply_break_alert: false,
-      minervini_flashcards: false, market_hours_reminder: false,
+      market_hours_reminder: false,
       todo_reminder: false, todo_daily_digest: false,
     },
   },

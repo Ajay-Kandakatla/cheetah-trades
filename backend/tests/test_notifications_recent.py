@@ -91,9 +91,13 @@ def test_default_read_is_unchanged_positional_list_recent_and_unfiltered_breakou
     assert body["count"] == 2 and [x["_id"] for x in body["rows"]] == ["b1", "p1"], "ts desc merge"
     push_row, bk_row = body["rows"][1], body["rows"][0]
     assert push_row["source"] == "push" and push_row["kind"] == "demand_alert" and "dismissed" not in push_row
+    assert push_row["tickers"] == ["NTAP"], "a single push links its own ticker (2026-09-20)"
     assert bk_row == {"_id": "b1", "ts": 1_788_617_000, "ts_iso": "2026-09-05T14:03:20+00:00",
                       "title": "🚀 Volume breakout · AAPL", "body": "$231.50  ·  +4.2%\nvol 3.1x",
-                      "kind": "volume_breakout", "ticker": "AAPL", "url": "/sepa/AAPL?from=alert",
+                      "kind": "volume_breakout", "ticker": "AAPL",
+                      # 2026-09-20 — the ONLY key added to the pre-2026-09-05
+                      # read; a breakout row names exactly its own symbol.
+                      "tickers": ["AAPL"], "url": "/sepa/AAPL?from=alert",
                       "user_email": None, "sent": 0, "failed": 0, "total": 0, "source": "breakout",
                       # a breakout is not a demand-zone push: the 🎯 key is
                       # present and null on every feed row (2026-09-15)
