@@ -6,7 +6,7 @@
  *      └ on tap → dropdown with last 8 unified notifications
  *
  *  Data source: GET /notifications/recent (merges push_history +
- *  sepa_breakouts so volume breakouts and flashcards show up in one
+ *  sepa_breakouts so volume breakouts and morning briefs show up in one
  *  feed). Polls every 60s while mounted; the BreakoutAlertBanner's
  *  SSE bus would be nice to share but the data shape is different
  *  enough that a small poll is simpler.
@@ -266,7 +266,7 @@ export function NotificationBell() {
               color: '#9a9aa3',
               lineHeight: 1.5,
             }}>
-              No notifications yet. Pushes (flashcards, breakouts, morning brief)
+              No notifications yet. Pushes (breakouts, reversals, morning brief)
               and volume breakouts will appear here as they fire.
             </div>
           )}

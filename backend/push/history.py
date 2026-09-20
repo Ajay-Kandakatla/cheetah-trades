@@ -14,7 +14,7 @@ Schema (push_history collection)
       ts_iso:     UTC datetime,
       title:      str,
       body:       str,             # full untruncated body
-      kind:       str | None,      # 'volume_breakout', 'minervini_flashcards', etc.
+      kind:       str | None,      # 'volume_breakout', 'demand_alert', etc.
       ticker:     str | None,
       tickers:    list[str] | None, # every name the body lists, in body order
                                     # (2026-09-20 — the per-ticker links). None

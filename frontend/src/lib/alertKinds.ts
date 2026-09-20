@@ -100,6 +100,8 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // history only — crons, toggles and the PERSONAL_KINDS entry were removed
   // 2026-09-20 ("spamming too much"); the label stays so an old push_history
   // row renders a name, not a raw id.
+  // feature deleted 2026-09-20 ("Delete Flashcards please" — backend/flashcards/,
+  // /learn and /chart-school are out of the tree), label kept for history.
   minervini_flashcards:{ emoji: '🃏', label: 'Flash card',              group: 'learning' },
   vb_education:        { emoji: '📖', label: 'Volleyball card',         group: 'learning' },
 

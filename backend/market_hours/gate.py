@@ -22,7 +22,7 @@ Chokepoints:
 * push — ``push.sender.send_to_all`` / ``send_to_user`` drop every kind
   outside ``PERSONAL_KINDS`` on a closed day BEFORE touching a device or
   ``push_history`` (the row would only be noise). Personal kinds — todos,
-  flashcards, household, sign-ins, health — still deliver.
+  household, sign-ins, health — still deliver.
 * jobs — ``sepa.cli`` skips ``MARKET_DAY_CMDS``; the standalone crontab
   modules run through ``python -m market_hours.gate <module> [args]`` (or
   ``--call pkg.mod:func``), which exits 0 without importing the target when
@@ -53,7 +53,9 @@ PERSONAL_KINDS: frozenset[str] = frozenset({
     # `vb_education` were retired 2026-09-20 — Ajay: "Remove volleyball and
     # learning of stocks I do dont wanna see them they are spamming too much".
     # They are in push.subs.RETIRED_2026_09_20 (hard-stopped at the delivery
-    # chokepoint), so classifying them here would be dead weight.
+    # chokepoint), so classifying them here would be dead weight. The
+    # flashcards module itself was DELETED 2026-09-20 ("Delete Flashcards
+    # please"); volleyball stays in the tree, dark.
     "market_hours_reminder",          # self-gated on the same calendar
     "user_signin", "product_launch", "health", "macbook",
     "house_daily", "house_stagnant", "house_scrape_failed",

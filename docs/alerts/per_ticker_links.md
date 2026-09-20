@@ -74,8 +74,13 @@ A breakout row (`sepa_breakouts`) serves `[ticker]`, or `[]` when it has none.
 
 ## The limits — read these before trusting a derived row
 
-* **Digest kinds only.** The regex NEVER runs over a non-digest body. A
-  flashcard, a morning brief or a lesson is prose: "NEW: AT vs ET, the lesson…"
+<!-- 2026-09-20: the flash-card feature was DELETED from the tree ("Delete
+     Flashcards please"). The `minervini_flashcards` KIND survives only as a
+     label for old push_history rows, which push/recent.py hides at serve
+     time. The rule below is unchanged — it was never flashcard-specific. -->
+
+* **Digest kinds only.** The regex NEVER runs over a non-digest body. A morning
+  brief or a lesson is prose: "NEW: AT vs ET, the lesson…"
   would otherwise read as three tickers.
 * **Leading position only.** `"NVDA, AVGO · pushed 08:15 ET · NEW AT"` derives
   `["NVDA", "AVGO"]` even when ET, AT and NEW are all real symbols — they do not

@@ -911,19 +911,19 @@ from chat import router as chat_router  # noqa: E402
 app.include_router(chat_router)
 
 
-# Flashcards — Minervini + general-trading learning module. The
-# scheduler fires one card per hour as a push; this router exposes
-# the FULL card bank so the /learn page can browse all 90 cards by
-# topic. See backend/flashcards/__init__.py.
-from flashcards import router as flashcards_router  # noqa: E402
-app.include_router(flashcards_router)
+# `backend/flashcards/` was DELETED 2026-09-20 — Ajay: "Delete Flashcards
+# please". The router, the card bank, the chart quiz and the /learn +
+# /chart-school pages are gone from the tree; only the
+# `minervini_flashcards` LABEL survives (frontend/src/lib/alertKinds.ts) so
+# the push_history rows still under their 90-day TTL render a name.
 
 
 # Volleyball — personal fitness module. 7-day workout plan tuned to
 # Ajay's right-shoulder rehab + right-finger plantar plate + supplement
 # stack (Magnesium Glycinate, Moringa, D3/K2) + gear (Viktry insoles,
-# Jumplete knee braces). Education card bank similar to flashcards.
-# See backend/volleyball/__init__.py.
+# Jumplete knee braces). Education card bank of its own — it imports
+# nothing from the deleted flashcards module.
+# See backend/volleyball/__init__.py. Retired (dark) since 2026-09-20.
 from volleyball import router as volleyball_router  # noqa: E402
 app.include_router(volleyball_router)
 
@@ -4233,15 +4233,15 @@ async def push_history_get(
     limit: int = Query(25, ge=1, le=200,
                        description="Max rows to return; UI defaults to 25"),
     kind: Optional[str] = Query(None,
-                                description="Optional filter by push kind (e.g. 'minervini_flashcards')"),
+                                description="Optional filter by push kind (e.g. 'demand_alert')"),
     email: str = Depends(current_user_email),
 ):
     """Return the caller's recent push notifications.
 
     Visibility: pushes scoped to this user (private price alerts, todo
-    reminders, etc.) PLUS all broadcast pushes (flashcards, breakouts,
-    morning brief). The frontend renders this on /notifications so the
-    user can re-read alerts whose body got clipped on the lock-screen.
+    reminders, etc.) PLUS all broadcast pushes (breakouts, morning brief).
+    The frontend renders this on /notifications so the user can re-read
+    alerts whose body got clipped on the lock-screen.
 
     Pushes self-prune after 90 days via the push_history collection's
     TTL index — see backend/push/history.py.

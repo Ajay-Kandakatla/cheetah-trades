@@ -1,7 +1,8 @@
 """Volleyball + sports-health education cards.
 
-Same shape as backend/flashcards/flashcards.py — push delivers one
-card per day; the /volleyball Education tab shows the full bank
+Its own card bank — push delivers one card per day; the /volleyball
+Education tab shows the full bank. (It was modelled on the flashcards
+module, which was DELETED 2026-09-20; nothing here imports from it.)
 organized by topic.
 
 Topics tuned to Ajay's stated profile:

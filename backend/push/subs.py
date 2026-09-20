@@ -30,6 +30,10 @@ _RETIRED_2026_06_13: frozenset[str] = frozenset({
 # scripts/owner_prefs_apply.py. Labels stay in frontend/src/lib/alertKinds.ts
 # so the 1,712 flashcard + 215 volleyball rows still in push_history (90-day
 # TTL) render a name.
+# `minervini_flashcards` KEEPS its seat here even though `backend/flashcards/`
+# was DELETED later the same day ("Delete Flashcards please"): nothing can fire
+# the kind any more, but ~1,712 rows carrying it are still in push_history and
+# push.recent's serve-time filter keys on THIS set to hide them.
 RETIRED_2026_09_20: frozenset = frozenset({
     "minervini_flashcards", "vb_workout", "vb_supplement", "vb_education",
 })
@@ -126,7 +130,8 @@ def _is_in_quiet_hours(prefs: dict, now: Optional[datetime] = None) -> bool:
     ``"08:00"``). Overnight ranges (start > end) are handled by treating
     "after start OR before end" as in-window.
 
-    Added 2026-05-21 alongside extending the flashcards schedule to
+    Added 2026-05-21 alongside extending the (since-deleted) flashcards
+    schedule to
     24h — without this, the every-hour cron would ping users at 3 AM
     regardless of their pref. Quiet hours had been in the schema but
     never enforced anywhere in the delivery path.
@@ -524,7 +529,8 @@ def default_prefs() -> dict:
         "user_signin": True,          # admin-only: ping when a NEW user signs in
                                       # for the first time (fires once per email)
         # ── `minervini_flashcards` removed 2026-09-20 — see RETIRED_2026_09_20
-        # at the top of this file ("they are spamming too much").
+        # at the top of this file ("they are spamming too much"). The module
+        # behind it (`backend/flashcards/`) was deleted the same day.
         # ── Market open / close reminders — pings 15 min before each bell
         # (9:15 ET + 3:45 ET Mon-Fri, skips US holidays). Broadcast.
         # Mute via this toggle if the user finds it noisy. See

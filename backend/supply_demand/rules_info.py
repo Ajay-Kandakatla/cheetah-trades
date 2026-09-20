@@ -196,7 +196,7 @@ def _closed_day_line() -> str:
     today = gate._now_et().strftime("%Y-%m-%d")
     nxt = sorted(d for d in ALL_HOLIDAYS if d >= today)
     return ("Closed days push nothing market-driven and run no scan: weekends and NYSE holidays "
-            "(next: %s). Personal reminders (%d kinds: todos, flashcards, household) still deliver."
+            "(next: %s). Personal reminders (%d kinds: todos, household, sign-ins) still deliver."
             % (nxt[0] if nxt else "none loaded", len(gate.PERSONAL_KINDS)))
 
 

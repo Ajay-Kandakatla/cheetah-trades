@@ -7,7 +7,7 @@ Schedule (server local TZ = America/New_York, all weekdays + weekend):
   21:30 ET  magnesium        — 30-60 min before bed reminder
 
 Quiet-hours pref (per-user) still gates delivery — same plumbing as
-flashcards. Match-day Saturdays might want a different timing for the
+its own card bank. Match-day Saturdays might want a different timing for the
 morning brief; for now we send the same 7am ping every day. The body
 adapts by reading the day's session type.
 

@@ -1,7 +1,7 @@
 /* PushHistoryPanel — recent push notifications with FULL bodies.
  *
  *  Why this exists: iOS/Android lock-screen banners truncate the body
- *  field to ~180 chars. For flashcards or breakout alerts whose lesson
+ *  field to ~180 chars. For breakout or reversal alerts whose lesson
  *  ran to ~250 chars, the punchline got clipped and the user had no
  *  way to re-read it. This panel pulls /push/history (backed by
  *  push_history Mongo collection, 90-day TTL) and renders each row
@@ -44,7 +44,7 @@ type HistoryRow = {
   failed:     number;
   total:      number;
   /** Discriminator from the merged /notifications/recent endpoint:
-   *  'push' = row originated from push_history (flashcards, morning brief,
+   *  'push' = row originated from push_history (reversals, morning brief,
    *  todo reminders, etc.); 'breakout' = row originated from
    *  sepa_breakouts (volume breakouts, stage breakdowns). Breakouts
    *  carry a `dismissed` flag instead of delivery counts. */
@@ -284,7 +284,7 @@ export function PushHistoryPanel({ limit = 25 }: { limit?: number }) {
           lineHeight: 1.5,
         }}>
           No history yet. Pushes started being recorded on <strong>2026-05-21</strong>.
-          The next breakout / flashcard / morning-brief notification will show up here
+          The next breakout / reversal / morning-brief notification will show up here
           with its full untruncated body.
         </div>
       )}

@@ -60,10 +60,11 @@ door was left open:
 3. **The kinds enter `DISABLED_ALERT_KINDS`** — `list_subscriptions()` and
    `list_mac_device_ids()` return empty *before opening Mongo*, so a device
    whose stored pref is still `True` cannot be reached.
-4. **The modules guard themselves.** `flashcards.flashcards.main()`,
-   `flashcards.chart_quiz.main()` and `volleyball.reminders.main()` check
-   their own kind against `DISABLED_ALERT_KINDS` FIRST and return `0` in
-   silence. This matters because **the crontab is bind-mounted from the host
+4. **The modules guard themselves.** `volleyball.reminders.main()` checks
+   its own kinds against `DISABLED_ALERT_KINDS` FIRST and returns `0` in
+   silence. (`flashcards.flashcards.main()` and `flashcards.chart_quiz.main()`
+   did the same until the module was deleted later the same day — see the
+   2026-09-20 update below.) This matters because **the crontab is bind-mounted from the host
    tree — a deploy does not ship a crontab change.** Until the cron container
    re-reads it, those lines still fire; now they exit 0 and write no
    `push_history` row.
@@ -80,8 +81,47 @@ is on the his-call list below.
 
 The nav entries `learn`, `learning` and `volleyball` left
 `access/store.py FEATURE_CATALOG` (and the ⌘K synonym rows left
-`frontend/src/lib/navSearch.ts`). **`chart-school` stays** — it is the
-chart-reading quiz, not the flash-card feed he muted.
+`frontend/src/lib/navSearch.ts`). `chart-school` left with them on the DELETE
+later the same day — see the update below.
+
+## 2026-09-20 (update) — flashcards DELETED, not just retired
+
+> "Delete Flashcards please"
+
+Retiring the kind stopped the phone. He then asked for the feature itself gone,
+so it is out of the tree:
+
+**Deleted:** `backend/flashcards/` (`__init__.py`, `api.py`, `chart_quiz.py`,
+`flashcards.py`), `backend/tests/test_chart_quiz.py`,
+`frontend/src/pages/Learn.tsx` (the card bank UI, `GET /flashcards/all`) and
+`frontend/src/pages/ChartSchool.tsx` (its daily quiz, `GET
+/flashcards/chart-quiz`). The router include left `backend/main.py`; the
+`chart-school` entry left `FEATURE_CATALOG`; the `/learn` and `/chart-school`
+routes and their lazy imports left `frontend/src/App.tsx`; the `chart-school`
+synonym row left `navSearch.ts`.
+
+**Kept, deliberately:**
+
+* `minervini_flashcards` in `RETIRED_2026_09_20` / `DISABLED_ALERT_KINDS`.
+  Nothing can fire it any more, but ~1,712 rows carrying it are still in
+  `push_history` and `push/recent.py`'s serve-time filter keys on **this set**
+  to hide them. Removing the literal would put every one of them back in the
+  🔔 bell.
+* Its label in `frontend/src/lib/alertKinds.ts`, for the same rows.
+* **Volleyball**, retired and dark: crons deleted, toggles gone, kinds
+  hard-stopped, module unlinked from the nav — but still in the tree and still
+  importable. It never imported anything from `flashcards/` (only a docstring
+  pointed at it; that was reworded), and a test pins that independence.
+* `frontend/src/pages/LearningPath.tsx` (`/learning`, his study plan). A
+  different page that calls no flashcards API — not part of this delete.
+
+**Comments that listed a deleted kind were reworded**, not left to lie:
+`market_hours/gate.py`, `supply_demand/rules_info.py` (the closed-day line now
+reads "todos, household, sign-ins"), `push/subs.py`, `push/recent.py`,
+`push/history.py`, `volleyball/education.py`, `volleyball/reminders.py`,
+`main.py`, `NotificationBell.tsx`, `PushHistoryPanel.tsx`, and the
+`holiday-quiet` (2026-09-07) ✨ entry, which had listed flashcards among the
+kinds that still deliver on a closed day.
 
 ## The device state this was written against
 
@@ -133,19 +173,29 @@ for it — which is the cheapest way to confirm.
    pushes nothing — he is told about what is NEW, not about the 1,054 names
    already on Bonde. The alternative is one digest of every arrival since the
    ledgers began (bonde 2026-09-14, growth 2026-09-12).
-3. **Delete, not just retire.** Still in the tree: `backend/flashcards/`,
-   `backend/volleyball/`, their routers in `main.py`, and the `/learn`,
-   `/learning`, `/volleyball` pages and routes (`/chart-school` stays). And the
-   1,712 + ~215 old `push_history` rows keep showing in the bell and the
-   panel until their 90-day TTL expires — purging them is a data write.
+3. ~~**Delete, not just retire.**~~ **ANSWERED 2026-09-20: "Delete Flashcards
+   please".** `backend/flashcards/` and the `/learn` + `/chart-school` pages
+   are gone (see the update above). `backend/volleyball/`, its router and the
+   `/volleyball` and `/learning` pages **stay in the tree, dark** — he asked
+   for the pings, not the pages. Still open: the 1,712 + ~215 old
+   `push_history` rows, which `push/recent.py` now HIDES at serve time but
+   does not purge (purging is a data write, and his call).
 
 ## Tests
 
 - `backend/tests/test_retired_kinds_2026_09_20.py` — the registry, the
-  chokepoint, the crontab negative, the three module guards (each returns the
+  chokepoint, the crontab negative, the volleyball module guard (returns the
   int `0` with every sender monkeypatched to raise and `history.record` never
-  called), and the positive control that lifting the kill switch lets the send
-  path run again.
+  called), the positive control that lifting the kill switch lets the send path
+  run again, and — added 2026-09-20 with the DELETE — the absence tests:
+  `flashcards` has no import spec, no submodule imports, no source file is left
+  on disk, no module declares a `/flashcards` route, both pages are gone from
+  `App.tsx` while `/learning` still routes, `chart-school` is out of the
+  catalog, volleyball imports nothing from the deleted module, the kept label
+  still reads "Flash card", and no non-test frontend source links `/learn` or
+  `/chart-school`.
+- `frontend/scripts/contracts.mjs` — the same contract now asserts the
+  ABSENCE of the deleted files, routes and router include.
 - `backend/tests/test_owner_prefs_apply.py` — dry by default, owner-scoped,
   idempotent, refuses on an owner mismatch, no address literal in the source.
 - `backend/tests/test_push_owner_keepset.py`, `test_new_alert_kinds.py`,

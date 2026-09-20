@@ -9,12 +9,15 @@
  * Add a new entry to CONTRACTS below whenever you ship a frontend behaviour
  * that would be expensive to lose silently.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const FRONTEND_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(FRONTEND_ROOT, rel), 'utf8');
+/** Does a path (relative to frontend/) exist? Used by the ABSENCE contracts —
+ *  a deleted feature that comes back must fail loudly. */
+const exists = (rel) => existsSync(join(FRONTEND_ROOT, rel));
 
 /** CM_TABS as a real array. Every tab contract parses the declaration instead
  *  of grepping the file, so neither a reformat nor a comment can decide
@@ -3166,7 +3169,7 @@ const CONTRACTS = [
     },
   },
   {
-    name: 'retired kinds are gone from every toggle and cron (2026-09-20)',
+    name: 'retired kinds gone from every toggle and cron; flashcards deleted (2026-09-20)',
     file: 'src/pages/Notifications.tsx',
     // Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont
     // wanna see them they are spamming too much."
@@ -3190,6 +3193,30 @@ const CONTRACTS = [
       for (const l of cronCommands(read('../backend/crontab'))) {
         if (/\b(flashcards|volleyball)\b/.test(l)) errs.push(`backend/crontab still RUNS a retired job: ${l.trim().slice(0, 70)}`);
       }
+      // Ajay 2026-09-20, second ask: "Delete Flashcards please". The feature
+      // left the tree — assert the ABSENCE, so nothing quietly reintroduces it.
+      for (const gone of ['../backend/flashcards/flashcards.py', '../backend/flashcards/chart_quiz.py',
+        '../backend/flashcards/api.py', '../backend/flashcards/__init__.py',
+        'src/pages/Learn.tsx', 'src/pages/ChartSchool.tsx']) {
+        if (exists(gone)) errs.push(`${gone} is back — the flashcards feature was DELETED 2026-09-20`);
+      }
+      const app = read('src/App.tsx');
+      for (const dead of ['path="/learn"', 'path="/chart-school"']) {
+        if (app.includes(dead)) errs.push(`App.tsx still routes ${dead} — the page is deleted`);
+      }
+      // `pages/LearningPath` legitimately starts with `pages/Learn` — anchor on
+      // the closing quote so the study-plan import is not a false positive.
+      for (const dead of [/pages\/Learn['"]/, /pages\/ChartSchool['"]/]) {
+        if (dead.test(app)) errs.push(`App.tsx still imports ${dead} — the page is deleted`);
+      }
+      if (!app.includes('path="/learning"')) errs.push('App.tsx dropped /learning — Learning Path was NOT part of the delete');
+      const mainPy = read('../backend/main.py');
+      if (/from flashcards import|flashcards_router/.test(mainPy)) errs.push('main.py still includes the deleted flashcards router');
+      if (!/from volleyball import router as volleyball_router/.test(mainPy)) errs.push('main.py dropped the volleyball router — volleyball stays, dark');
+      const nav = read('src/lib/navSearch.ts');
+      if (/'chart-school'\s*:/.test(nav)) errs.push("navSearch.ts still carries a 'chart-school' synonym row — the route is gone");
+      if (!/feature deleted 2026-09-20/.test(kinds)) errs.push('alertKinds.ts must say why the minervini_flashcards label outlives the feature');
+
       const subs = read('../backend/push/subs.py');
       if (!/RETIRED_2026_09_20/.test(subs)) errs.push('push/subs.py must declare RETIRED_2026_09_20');
       if (!/DISABLED_ALERT_KINDS[\s\S]{0,400}?RETIRED_2026_09_20/.test(subs)) {

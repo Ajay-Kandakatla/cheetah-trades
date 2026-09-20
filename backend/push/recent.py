@@ -58,8 +58,8 @@ BREAKOUT_KIND_PREFIX = "stage_breakdown_"
 # --------------------------------------------------------------------------
 # The kinds whose body is a LIST of names. A row stored before this date
 # carries no `tickers`, so the feed derives them from the body — but ONLY for
-# these kinds. A flashcard, a morning brief or a lesson body is prose and the
-# regex never runs over it ("NEW, AT, ET" would all read as tickers).
+# these kinds. A morning brief or a lesson body is prose and the regex never
+# runs over it ("NEW, AT, ET" would all read as tickers).
 DIGEST_KINDS = frozenset({
     "growth_demand_alert", "demand_alert", "zone_bounce_alert",
     "hot_pullback_alert", "pattern_alert", "board_arrival", "earnings_reaction",
@@ -295,7 +295,8 @@ def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
     # RETIRED kinds never reach a surface he reads (Ajay 2026-09-20: "Remove
     # volleyball and learning of stocks I do dont wanna see them they are
     # spamming too much"). The spam was HERE, not on his phone: push_history
-    # held 1,710 hourly minervini_flashcards rows + ~215 vb_* rows, every one
+    # held 1,710 hourly minervini_flashcards rows (the module behind that kind
+    # was deleted 2026-09-20 — "Delete Flashcards please") + ~215 vb_* rows, every one
     # `sent=0` since the 2026-09-08 keep-set, and the bell / Alerts page drew
     # all of them. The rows stay in Mongo until the 90-day TTL (evidence,
     # reversible); this filter is what hides them. A serve-time filter, not a

@@ -58,10 +58,11 @@ export const NAV_SYNONYMS: Record<string, string[]> = {
   track:           ['tracker'],
   todos:           ['tasks', 'reminders'],
   glossary:        ['terms', 'definitions'],
-  // `learn` and `learning` left the catalog 2026-09-20 — Ajay: "Remove
-  // volleyball and learning of stocks I do dont wanna see them they are
-  // spamming too much". Chart School stays.
-  'chart-school':  ['lessons', 'charts'],
+  // `learn`, `learning` and `chart-school` left the catalog 2026-09-20 —
+  // Ajay: "Remove volleyball and learning of stocks I do dont wanna see them
+  // they are spamming too much", then "Delete Flashcards please". The
+  // flash-card bank and its chart quiz are out of the tree entirely, so a
+  // synonym row here would point the palette at a 404.
   usage:           ['heatmap', 'analytics'],
   chatter:         ['stocktwits', 'social'],
   'chatter-india': ['stocktwits', 'social', 'india'],

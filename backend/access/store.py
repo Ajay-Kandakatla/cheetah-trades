@@ -222,23 +222,21 @@ FEATURE_CATALOG: list[dict] = [
     {"id": "todos",         "label": "Todos",               "group": "account",   "default": True},
     {"id": "watchlist",     "label": "Watchlist",           "group": "account",   "default": False},
     {"id": "glossary",      "label": "Glossary",            "group": "account",   "default": True},
-    # `learn` (Minervini Learning) removed from the nav 2026-09-20 — Ajay:
-    # "Remove volleyball and learning of stocks I do dont wanna see them they
-    # are spamming too much". Chart School stays: it is the chart-reading quiz,
-    # not the flash-card feed he muted.
-    # Chart School (2026-06-09): the visual half of learning — daily real-chart
-    # pattern-ID quiz (from the scan universe's historical confirmations),
-    # Bulkowski pattern library with the supply/demand WHY, candle-read anatomy
-    # tied to the SEPA Watch alert states, and the 8-week curriculum. Default ON.
-    {"id": "chart-school",  "label": "Chart School",        "group": "account",   "default": True, "added_in": 13},
+    # `learn` (Minervini Learning) and `chart-school` (Chart School) are GONE
+    # 2026-09-20 — Ajay: "Remove volleyball and learning of stocks I do dont
+    # wanna see them they are spamming too much", then "Delete Flashcards
+    # please". Chart School was the flash-card bank's own chart quiz
+    # (GET /flashcards/chart-quiz, backend/flashcards/chart_quiz.py); the
+    # module was deleted with the rest of the feature, so the catalog entry
+    # would gate a page that no longer exists.
     # Usage heatmap — personal analytics: which pages/features Ajay uses
     # heavily + a weekday×hour heatmap. Owner-on via added_in/VERSION.
     {"id": "usage",         "label": "Usage Heatmap",       "group": "account",   "default": False, "added_in": 6},
     # `learning` (📚 Learning Path) and `volleyball` (Volleyball Fitness)
     # removed from the nav 2026-09-20 — Ajay: "Remove volleyball and learning
-    # of stocks I do dont wanna see them they are spamming too much". The
-    # routes and modules are still in the tree; only the menu entries and the
-    # push kinds are gone.
+    # of stocks I do dont wanna see them they are spamming too much". Those
+    # two routes and modules ARE still in the tree (unlinked, dark); only the
+    # flash-card feature was deleted outright.
 
     # Household — Ajay explicitly OK'd shared family content for friends
     # (per feedback 2026-05-15: "All my friends use similar food so that
