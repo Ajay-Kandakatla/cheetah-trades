@@ -77,6 +77,15 @@ NEWS_WINDOW_HOURS = 36     # a headline older than this is not "today's news";
 MIN_HEADLINES = 2          # one loose headline is not a story worth a tag
 MAX_HEADLINES_TO_MODEL = 6
 
+# Two paragraphs of prose plus the JSON scaffolding. MEASURED, not guessed:
+# at 700 the local 27B model truncated mid-string on the FIRST live test — the
+# call returned ok=True with an 847-character body that json.loads could not
+# parse, which is the worst kind of failure because it looks like a healthy
+# response. `_usable` caught it and wrote no tag, so nothing wrong ever
+# reached the board, but the feature produced nothing at all. 1200 leaves
+# headroom; the local model is free, so there is no reason to run this tight.
+MAX_TOKENS = 1200
+
 COLLECTION = "sector_day_tags"
 
 # The day stamp is the ET SESSION DATE, not UTC. He reads this board in the
@@ -237,14 +246,14 @@ def _ask_model(facts: dict, headlines: list) -> Optional[dict]:
         # actually wrote it, on every tag.
         prompt = json.dumps(payload, default=str)
         resp = llm.chat(prompt, system=_SYSTEM, provider="local",
-                        json_only=True, max_tokens=700, temperature=0.3,
-                        timeout=90)
+                        json_only=True, max_tokens=MAX_TOKENS, temperature=0.3,
+                        timeout=180)
         if not resp.get("ok") or not isinstance(resp.get("parsed"), dict):
             log.info("sector tags: local model unusable (%s) — trying hosted",
                      str(resp.get("error"))[:120])
             resp = llm.chat(prompt, system=_SYSTEM, provider="anthropic",
-                            json_only=True, max_tokens=700, temperature=0.3,
-                            timeout=90)
+                            json_only=True, max_tokens=MAX_TOKENS,
+                            temperature=0.3, timeout=180)
         if not resp.get("ok"):
             return None
         parsed = resp.get("parsed")
