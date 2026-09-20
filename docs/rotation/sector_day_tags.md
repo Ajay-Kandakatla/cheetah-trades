@@ -92,6 +92,60 @@ one that most often omits the timestamp. Letting those through would quietly
 turn a 36-hour window into "whatever the cache holds". Millisecond stamps are
 understood; far-future stamps are dropped.
 
+### The audit trail
+
+Every tag stores **every headline the model was shown** — title, source, url,
+timestamp — not just the trigger. The board shows them folded into a
+`<details>`.
+
+This exists because of a real miss on the first six live tags. Auditing whether
+any number in the prose was invented: five sectors clean, `ZS`'s "fiscal 2027"
+traced to an IBD headline — and `CAG`'s "$13.00" and "52-week lows"
+**untraceable**, because within hours its headlines had rolled out of the
+36-hour window and the news cache had turned over. No evidence of invention,
+and no way to show otherwise.
+
+"Grounded in the headlines" is this feature's load-bearing claim, and it was
+unverifiable within hours of being made. With the headlines stored, the check
+re-runs any day:
+
+    sector                   sym    heads  unsourced numbers
+    Healthcare               TEM        6  clean
+    Technology               ZS         6  clean
+    Consumer Defensive       CAG        6  clean
+    Communication Services   GOOGL      6  clean
+    Industrials              GNRC       6  clean
+    Financial Services       COIN       6  clean
+    TOTAL unsourced: 0
+
+`headline_count` reports the TRUE total, not the capped stored list.
+
+The price-target rule is split, for the same reason: quoting "Deutsche Bank
+raised its target to $13" is reporting the headline; naming a target of its own
+is advice. The prompt permits the first with attribution and forbids the second
+— otherwise the model has to either misreport the news or give advice.
+
+### Token budget — measured, not guessed
+
+Against the model actually installed (`huihui_ai/Qwen3.8-abliterated:27b` via
+Ollama) on real board prompts of ~1,900 characters:
+
+| max_tokens | result |
+|---|---|
+| 700 | truncated mid-string; `ok=True`, 847 chars, `json.loads` failed |
+| 1200 | **5 of 6 sectors returned EMPTY content** |
+| **2500** | 6 of 6 parse and are usable; ~145s each, ~1,000 chars out |
+
+The 1200 failure is the instructive one: `ok=True` with `textlen=0`. Qwen3
+reasons before it writes, Ollama returns the reasoning outside `content`, and a
+budget that runs out mid-thought yields a successful HTTP call carrying
+nothing. It looks like a failure nowhere except in the output.
+
+`/no_think` was tried and does **not** work through Ollama's OpenAI-compatible
+endpoint on this model — same empty result, measured. Budget is the lever.
+
+Six sectors at ~145s is ~15 minutes once a day on a free local model.
+
 ### Local model first, hosted second
 
 `provider="local"`, then `provider="anthropic"` if local is unusable — **not**
