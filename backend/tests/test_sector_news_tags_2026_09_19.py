@@ -368,6 +368,17 @@ class TestSourceGuards:
         assert SNT.SECTORS_PER_RUN > 0 and SNT.NAMES_PER_SECTOR > 0
         assert SNT.MIN_HEADLINES >= 2
 
+    def test_the_day_stamp_is_the_ET_SESSION_DATE_not_UTC(self):
+        # He reads this board in the evening in CT, when UTC has already
+        # rolled over. A UTC stamp files the 06:20 run under one date and
+        # looks it up under the next; `latest_within` would paper over it,
+        # but the tag PRINTS its date on the tile.
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        assert SNT.ET == ZoneInfo("America/New_York")
+        assert SNT.today_et() == datetime.now(SNT.ET).strftime("%Y-%m-%d")
+        assert "timezone.utc" not in SRC
+
     def test_the_window_survives_a_weekend_gap(self):
         # A Monday 06:00 run must still see Friday's close-of-day story.
         assert SNT.NEWS_WINDOW_HOURS >= 36

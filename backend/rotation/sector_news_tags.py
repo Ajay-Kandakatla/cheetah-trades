@@ -57,8 +57,9 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger("cheetah.rotation.sector_news_tags")
 
@@ -77,6 +78,17 @@ MIN_HEADLINES = 2          # one loose headline is not a story worth a tag
 MAX_HEADLINES_TO_MODEL = 6
 
 COLLECTION = "sector_day_tags"
+
+# The day stamp is the ET SESSION DATE, not UTC. He reads this board in the
+# evening in CT, when UTC has already rolled over: a UTC stamp would file the
+# 06:20 run under one date and then look it up under the next one. `latest_within`
+# would still find it by walking back a day, but only by papering over a wrong
+# stamp — and the tag prints its date on the tile, so a wrong one is visible.
+ET = ZoneInfo("America/New_York")
+
+
+def today_et() -> str:
+    return datetime.now(ET).strftime("%Y-%m-%d")
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +299,7 @@ def build(hottest_payload: dict, *, date: Optional[str] = None,
     Returns ``{"date", "tags": {sector: tag}, "counts": {...}}``. Never
     raises: a sector that fails for any reason is simply absent from `tags`.
     """
-    day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = date or today_et()
     sectors = (hottest_payload or {}).get("sectors") or []
     considered = [s for s in sectors if (s.get("names") or [])][:sectors_per_run]
 
@@ -394,7 +406,7 @@ def load(date: Optional[str] = None) -> dict:
     coll = _coll()
     if coll is None:
         return {}
-    day = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = date or today_et()
     try:
         out = {}
         for doc in coll.find({"date": day}):
@@ -415,7 +427,7 @@ def latest_within(days: int = 3) -> dict:
     Sunday, the board falls back to the newest day that produced tags and the
     tag carries its own `date` so the surface can say which day it is from.
     """
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(ET).date()
     for back in range(max(0, int(days)) + 1):
         day = (today - timedelta(days=back)).strftime("%Y-%m-%d")
         got = load(day)
