@@ -43,10 +43,11 @@ status                  meaning                                      shown?
 ``confirmed``           calendar agrees; bars agree or cannot say     yes
 ``recycled``            calendar agrees but bars pre-date the         yes, flagged,
                         listing — the ticker carries another          with every
-                        company's history                            price stat blanked
+                        company's history (conclusive even when       price stat blanked
+                        the frame is truncated at its fetch cap)
 ``uncorroborated``      calendar is silent; bars agree or cannot say  yes, flagged
 ``bogus``               calendar is silent AND bars pre-date the      NO — dropped
-                        claimed listing
+                        claimed listing (conclusive even at the cap)
 ======================  ===========================================  ==========
 
 `uncorroborated` is SHOWN with a warning badge rather than dropped: Finnhub's
@@ -61,6 +62,15 @@ by symbol only, so a first bar sitting AT a cap is history truncation, not a
 listing (SAIC, 2026-08-31). That guard is `ipo_age._at_fetch_cap` and it is
 imported, never re-derived — a first bar at the cap makes the bar evidence
 INCONCLUSIVE, and the calendar alone then decides confirmed vs uncorroborated.
+
+That guard covers ONE direction only (corrected 2026-09-20). A first bar at
+the cap cannot prove the claimed date is the listing day; it can still
+DISPROVE a claim that sits well after it, because bars between the cap and
+the claim are real sessions of this symbol. XOM's profile claimed a
+2026-07-02 listing over a frame that starts at the 2024-09-19 cap; the first
+cut read "at cap → inconclusive → uncorroborated" and put XOM at the top of
+the tab as an 80-day-old IPO. Bars before the claim are conclusive at the cap
+or off it: recycled when the calendar prices a deal, bogus when it is silent.
 
 CALENDAR OUTAGE
 ---------------
@@ -412,12 +422,25 @@ def corroborate(sym: str, claimed: str, cal_rows, first_bar: Optional[str],
         abs((d - claimed_d).days) <= NEAR_DAYS for d in dates)
 
     first_d = _as_date(first_bar)
-    if first_d is None or at_cap or claimed_d is None:
+    if first_d is None or claimed_d is None:
         bars = "inconclusive"
-    elif first_d >= claimed_d - timedelta(days=BAR_SLACK_DAYS):
-        bars = "agree"
-    else:
+    elif first_d < claimed_d - timedelta(days=BAR_SLACK_DAYS):
+        # Bars exist BEFORE the claimed listing. That is conclusive whether or
+        # not the frame is truncated at a fetch cap: truncation removes OLD
+        # bars, it never invents bars between the cap and the claim. XOM,
+        # 2026-09-20 — profile said "listed 2026-07-02", the 2y frame started
+        # at the cap (2024-09-19) with ~450 sessions before the claim, and the
+        # old rule filed it "inconclusive" → uncorroborated → shown as an
+        # 80-day-old IPO at the top of the tab. Same for MKSI, RNA, VNOM, TEM.
         bars = "before"
+    elif at_cap:
+        # The first bar sits at the cap and is NOT before the claim: the claim
+        # is at or near the cap, so a truncated frame cannot say whether that
+        # first bar is the listing day or just the oldest bar it kept (SAIC,
+        # 2026-08-31). The calendar alone decides.
+        bars = "inconclusive"
+    else:
+        bars = "agree"
 
     if bars == "before":
         status = RECYCLED if in_cal else BOGUS

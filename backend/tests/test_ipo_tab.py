@@ -88,12 +88,44 @@ def test_uncorroborated_when_the_calendar_is_silent_but_the_bars_agree():
 def test_a_first_bar_AT_THE_FETCH_CAP_is_truncation_so_the_bars_cannot_say():
     """SAIC, 2026-08-31: a frame that starts at the provider's cap is history
     truncation, not a listing. `ipo_age._at_fetch_cap` decides; this board
-    never re-derives it."""
-    r = IPO.corroborate("NEWCO", "2026-06-01", [_cal()], "2019-03-04", True)
+    never re-derives it. The cap covers ONE direction: a first bar AT the cap
+    and at/near the claim cannot confirm the claim, so the calendar decides."""
+    r = IPO.corroborate("NEWCO", "2026-06-01", [_cal()], "2026-06-01", True)
     assert r["bars"] == "inconclusive"
     assert r["status"] == IPO.CONFIRMED          # calendar alone decides
-    off = IPO.corroborate("NEWCO", "2026-06-01", [], "2019-03-04", True)
+    off = IPO.corroborate("NEWCO", "2026-06-01", [], "2026-06-01", True)
     assert off["status"] == IPO.UNCORROBORATED   # …and it is flagged when silent
+    # A first bar a few sessions INSIDE the slack is the same case.
+    near = IPO.corroborate("NEWCO", "2026-06-01", [], "2026-05-28", True)
+    assert near["bars"] == "inconclusive"
+
+
+def test_bars_BEFORE_the_claim_are_conclusive_EVEN_AT_THE_FETCH_CAP_the_XOM_case():
+    """REGRESSION 2026-09-20 (fails on the first cut). XOM's profile claimed a
+    2026-07-02 listing; the 2y frame starts at the cap, 2024-09-19, with
+    ~450 sessions BEFORE the claim. The first cut read "at cap → the bars
+    cannot say" and filed XOM uncorroborated — shown at the top of the tab as
+    an 80-day-old IPO. Truncation removes OLD bars; it never invents bars
+    between the cap and the claim, so bars before the claim disprove it
+    whether the frame is truncated or not."""
+    silent = IPO.corroborate("XOM", "2026-07-02", [], "2024-09-19", True)
+    assert silent["bars"] == "before"
+    assert silent["status"] == IPO.BOGUS          # dropped, never shown as an IPO
+    # …and when the calendar DOES price a deal, the ticker was recycled.
+    deal = IPO.corroborate("XOM", "2026-07-02", [_cal("XOM", "2026-07-02")],
+                           "2024-09-19", True)
+    assert deal["bars"] == "before"
+    assert deal["status"] == IPO.RECYCLED
+    assert "recycled" in deal["why"]
+
+
+def test_NEGATIVE_the_cap_rule_still_protects_a_claim_that_sits_AT_the_cap():
+    """A claim seven-plus years old with the first bar at the cap is the SAIC
+    shape — bars start at the cap, the claim is on/after it — and must stay
+    inconclusive: the corrected rule narrows the guard, it does not remove it."""
+    r = IPO.corroborate("SAIC", "2024-09-25", [], "2024-09-19", True)
+    assert r["bars"] == "inconclusive"
+    assert r["status"] == IPO.UNCORROBORATED
 
 
 def test_a_calendar_deal_beyond_NEAR_DAYS_is_a_DIFFERENT_deal():

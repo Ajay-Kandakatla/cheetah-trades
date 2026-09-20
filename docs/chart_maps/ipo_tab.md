@@ -41,6 +41,20 @@ list (spec §7.5). Bars that start AT a provider fetch cap are truncation, not a
 listing (SAIC, 2026-08-31) — `ipo_age._at_fetch_cap` makes that call and this
 module imports it rather than re-deriving it.
 
+**2026-09-20, same day, corrected: bars before the claim are conclusive at
+the fetch cap.** The first live board put **XOM** at the top of the tab —
+"Listed 2026-07-02 · 80 days · uncorroborated". Finnhub's profile date for XOM
+is garbage, the frame starts at the 2y cap (2024-09-19) with ~450 sessions
+before the claim, and the first cut read "first bar at the cap → the bars
+cannot say" and let the silent calendar decide. That guard was one-directional
+and had been written as two-directional: a first bar at the cap cannot prove a
+claim (SAIC), but bars that exist BEFORE a claim disprove it whether or not the
+frame is truncated — truncation removes old bars, it never invents bars between
+the cap and the claim. `corroborate` now checks "before" first and applies the
+cap only to the "agree" direction. MKSI, RNA, VNOM and TEM were the same shape.
+Regression: `test_bars_BEFORE_the_claim_are_conclusive_EVEN_AT_THE_FETCH_CAP_the_XOM_case`
+(fails on the first cut).
+
 **The two price stats say what they are.** `Day-1 open→close` is the first
 session's open-to-close, and `Week-1 vs day-1 open` is the fifth session's
 close against that same open. Neither is the pop off the **offer** price: this
