@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-19, verbatim: "Show me POTUS tickers there are some new ones
+  // like Green Land eneregy or something" then "High light them in the page".
+  // His name was GLND. Chasing it surfaced that the curated list stopped at
+  // 2026-05-28 and had missed the whole 2025-26 wave of federal EQUITY stakes.
+  // Eight rows added, deliberately split into five real deals and three
+  // headline movers. Informational chip only \u2014 no gate, no threshold, no lane.
+  { id: 'political-critical-minerals-2026-09-19',
+    label: '\u{1F1FA}\u{1F1F8} Eight political names added, and the new ones now glow \u{1F195} \u2014 the \u{1F3DB}\uFE0F / \u{1F1FA}\u{1F1F8} chips on every SEPA card, and both filter chips on the scan, now carry the 2025-26 critical-minerals wave. You asked: \u201cShow me POTUS tickers there are some new ones like Green Land eneregy or something\u201d, then \u201cHigh light them in the page.\u201d '
+      + 'YOUR NAME WAS GLND \u2014 Greenland Energy Company, ~2M acres of exploration rights in the Jameson Land Basin in eastern Greenland, drilling with Halliburton. It is on the list, and it is filed as INFERRED, because it has NO U.S. government agreement of any kind. It rallied on the Arctic policy headline. That is a different fact from being invested in, and the whole point of this chip is that it keeps meaning something. CRML (92.5% of Tanbreez \u2014 the administration was REPORTED in Oct 2025 to be weighing a stake, never signed) and UUUU are filed the same way. '
+      + 'THE FIVE REAL ONES now show the size on the chip itself: MP \u00b7 DoD 15% (largest shareholder), USAR \u00b7 Commerce 10% ($1.6B debt-and-equity, Jan 2026), LAC \u00b7 DOE 5% (Thacker Pass loan renegotiation), TMQ \u00b7 Federal 10% ($35.6M, Alaska). ALOY is a \u{1F1FA}\u{1F1F8} CONTRACTOR, not an owner \u2014 the U.S. Army picked it to build the first commercial critical-minerals processing plant on a military base (Euclid, Ohio) \u2014 so it carries no stake number. A row without a NAMED agency and a STATED percentage never gets to show one. '
+      + 'WHY THE LIST WENT STALE: the seed was compiled 2026-05-28 and carried exactly one federal stake (INTC). Public trackers count roughly 39 direct-ownership deals worth about $27.7B announced since January 2025, so a hand-curated file drifts by construction. '
+      + 'Anything added in the last 14 days wears a \u{1F195} ring on its chip and lifts out of the dimmed treatment, so a name you have never seen does not arrive pre-faded. After 14 days it settles into the normal chip on its own. '
+      + 'STILL INFORMATIONAL, EXACTLY AS BEFORE. A disclosed position or a federal stake predicts nothing, gates no alert, sizes no position and enters no lane. Not advice.',
+    addedAt: '2026-09-19', route: '/sepa' },
   // Ajay 2026-09-18, verbatim: "Also a weekly chart for the past week and 2
   // week inthe charting time frames in all places". He chose SHORT WINDOWS
   // over weekly CANDLES. Chart-only: bars are trading days (5 / 10 sessions),

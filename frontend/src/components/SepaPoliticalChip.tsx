@@ -44,6 +44,8 @@ export function SepaPoliticalChip({ symbol, onOpenDrill }: Props) {
     `Sector: ${e.sector}\n` +
     `Category: ${cats}\n` +
     (e.disclosureBand ? `Disclosed band: ${e.disclosureBand}\n` : '') +
+    (e.govtStake ? `Govt equity stake: ${e.govtStake}\n` : '') +
+    (flags.isNew ? `ADDED ${e.addedOn} — new to this list\n` : '') +
     (e.notes ? `Note: ${e.notes}\n` : '') +
     `\n` +
     `Informational only — NOT a buy or sell signal. Disclosed positions ` +
@@ -66,36 +68,43 @@ export function SepaPoliticalChip({ symbol, onOpenDrill }: Props) {
       {flags.hasPotusFamily && (
         <span
           role="button" tabIndex={0}
-          className="pol-chip pol-chip--potus"
+          className={'pol-chip pol-chip--potus' + (flags.isNew ? ' pol-chip--new' : '')}
           title={tooltipBase}
           onClick={handleClick}
           onKeyDown={handleKey}
           style={{ cursor: onOpenDrill ? 'pointer' : 'default' }}
         >
+          {flags.isNew ? '🆕 ' : ''}
           🏛️ POTUS Family{e.disclosureBand ? ` · ${e.disclosureBand}` : ''}
         </span>
       )}
       {(flags.hasGovtInvestment || flags.hasGovtContractor) && (
         <span
           role="button" tabIndex={0}
-          className="pol-chip pol-chip--govt"
+          className={'pol-chip pol-chip--govt' + (flags.isNew ? ' pol-chip--new' : '')}
           title={tooltipBase}
           onClick={handleClick}
           onKeyDown={handleKey}
           style={{ cursor: onOpenDrill ? 'pointer' : 'default' }}
         >
+          {flags.isNew ? '🆕 ' : ''}
           🇺🇸 {flags.hasGovtInvestment ? 'Govt Investment' : 'Govt Contractor'}
+          {/* The SIZE of the stake, when an agency and a percentage were both
+              actually named. A row that only has reported interest carries no
+              govtStake and therefore shows no number here. */}
+          {flags.hasGovtInvestment && e.govtStake ? ` · ${e.govtStake}` : ''}
         </span>
       )}
       {flags.isInferred && !flags.hasPotusFamily && !flags.hasGovtInvestment && !flags.hasGovtContractor && (
         <span
           role="button" tabIndex={0}
-          className="pol-chip pol-chip--inferred"
+          className={'pol-chip pol-chip--inferred' + (flags.isNew ? ' pol-chip--new' : '')}
           title={tooltipBase}
           onClick={handleClick}
           onKeyDown={handleKey}
           style={{ cursor: onOpenDrill ? 'pointer' : 'default' }}
         >
+          {flags.isNew ? '🆕 ' : ''}
           🔍 Inferred political signal
         </span>
       )}
