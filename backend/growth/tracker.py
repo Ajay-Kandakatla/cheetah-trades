@@ -106,9 +106,14 @@ def _db():
 # does not recompute anything: sepa/sales.py and sepa/canslim.py are book-cited
 # and untouched; a pair that is not a year apart is REFUSED here, on this board
 # only, and the row says why.
-HEADLINE_PAIR = (0, 4)      # latest quarter vs the same quarter a year earlier
-PRIOR_PAIR = (1, 5)         # the quarter before vs ITS year-ago
-YOY_GAP = 4                 # fiscal quarters between a quarter and its year-ago self
+#
+# 2026-09-20: the pairs, the gap and the guard MOVED to sepa/qoq.py — the one
+# home — so the 📈 Bonde board and the 🔥 Hottest row apply the identical test.
+# These are re-exports, not copies: `Q.HEADLINE_PAIR is HEADLINE_PAIR`.
+from sepa.qoq import (                                          # noqa: E402
+    HEADLINE_PAIR, PRIOR_PAIR, YOY_GAP, period_label,           # noqa: F401
+    yoy_pairs_ok as _yoy_pairs_ok,
+)
 
 
 def _adjacent(periods, i: int, j: int, gap: int) -> bool:
@@ -118,18 +123,6 @@ def _adjacent(periods, i: int, j: int, gap: int) -> bool:
     blanked for lacking keys it never had."""
     from sepa.qoq import _adjacent as adj
     return bool(adj(periods, i, j, gap=gap))
-
-
-def period_label(idx, source: Optional[str] = None) -> Optional[str]:
-    """'FY2026 Q2' from a fiscal index. The yfinance path stores CALENDAR
-    quarters (canslim._q_periods_yf), so those read 'Q2 2026'. None when the
-    slot carries no key — never a guess."""
-    try:
-        i = int(idx)
-    except (TypeError, ValueError):
-        return None
-    y, q = i // 4, i % 4 + 1
-    return f"Q{q} {y}" if source == "yfinance" else f"FY{y} Q{q}"
 
 
 def period_end(idx, source: Optional[str] = None) -> Optional[date]:
@@ -200,11 +193,11 @@ def qualifies(fundamentals: Optional[dict],
         "inst_ownership_pct": _f(f.get("inst_ownership_pct")),
     }
 
-    # E1 — the pairs must really be a year apart.
+    # E1 — the pairs must really be a year apart. `Q.yoy_pairs_ok` calls the
+    # module-global `sepa.qoq._adjacent`, so the E1 monkeypatch still bites.
     i, j = HEADLINE_PAIR
     k, m = PRIOR_PAIR
-    mismatch = not (_adjacent(periods, i, j, YOY_GAP)
-                    and _adjacent(periods, k, m, YOY_GAP))
+    mismatch = not _yoy_pairs_ok(periods)
     legs["period_mismatch"] = mismatch
 
     # E4 — a non-positive year-ago base is not a growth number. Checked on

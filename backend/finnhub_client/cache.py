@@ -42,11 +42,16 @@ log = logging.getLogger("finnhub_client.cache")
 #   recommendation — analyst recs shift weekly at most → 24h
 #   price-target — same cadence as recs → 24h
 #   search       — ticker search index is stable → 24h
+#   ipo_calendar — Finnhub restates a window as deals price/withdraw; the
+#                  trailing half of the window is immutable history and the
+#                  forward half moves at most once a day, so 6h matches the
+#                  earnings calendar's cadence and costs ~4 calls/day/chunk
 _TTL_BY_ENDPOINT: dict[str, int] = {
     "quote":          60,
     "profile":        24 * 3600,
     "news":           30 * 60,
     "earnings":       6 * 3600,
+    "ipo_calendar":   6 * 3600,
     "recommendation": 24 * 3600,
     "price_target":   24 * 3600,
     "search":         24 * 3600,

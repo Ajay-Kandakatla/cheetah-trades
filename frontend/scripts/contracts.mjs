@@ -1514,8 +1514,9 @@ const CONTRACTS = [
         gnt: 'src/components/GntBoard.tsx',
         bonde: 'src/components/BondeBoard.tsx',
         holdings: 'src/components/HoldingsBoard.tsx',
+        potus: 'src/components/PotusBoard.tsx',
       };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2075,9 +2076,10 @@ const CONTRACTS = [
         gnt: 'src/components/GntBoard.tsx',
         bonde: 'src/components/BondeBoard.tsx',
         holdings: 'src/components/HoldingsBoard.tsx',
+        potus: 'src/components/PotusBoard.tsx',
         growth: 'src/components/ExplosiveGrowth.tsx',
       };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -2110,6 +2112,11 @@ const CONTRACTS = [
       const NO_TOGGLE = {
         support: /no ordering to offer/,
         hot_sectors: /NO \u{1F9E8} ordering toggle on this board, deliberately/u,
+        //   potus — the list is drawn in a FIXED editorial order (stake →
+        //           contractor → family → inferred); an ordering toggle would
+        //           turn a curated disclosure list into a ranking, which is
+        //           the one thing the tab says on its face it is not.
+        potus: /editorial order, not a ranking/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -2816,6 +2823,159 @@ const CONTRACTS = [
       }
       if (!/no edge is claimed and nothing here is measured/i.test(card))
         errs.push('the card must say out loud that no edge is claimed and nothing is measured');
+      return errs;
+    },
+  },
+  {
+    name: 'the IPO tab says nothing is measured (2026-09-20)',
+    file: 'src/components/IpoUpcomingStrip.tsx',
+    // Ajay 2026-09-19: "IPO of hot sector theme of stocks and then add them
+    // as a tab in Chart maps." The only cited thing on the tab is the ≤2y
+    // recency bound (TLSW Ch.11 via sepa/ipo_age); everything else is a list.
+    // The served note and the strip's own sentence are what stop a newest-
+    // first list of listings from reading as a ranking.
+    checks: (src) => {
+      const errs = [];
+      if (!/Nothing here is measured and nothing here is a signal\./.test(src)) {
+        errs.push('IpoUpcomingStrip must say "Nothing here is measured and nothing here is a signal."');
+      }
+      const py = read('../backend/chart_maps/ipo.py');
+      // The served NOTE is built from adjacent string literals, so the sentence
+      // may straddle a quote + newline in the source; match it piecewise.
+      if (!/Nothing here is ["\s]*measured or claims an edge\./.test(py)) {
+        errs.push('backend/chart_maps/ipo.py must serve the note "Nothing here is measured or claims an edge."');
+      }
+      if (!/sepa\/ipo_age/.test(py) || !/TLSW Ch\.11/.test(py)) {
+        errs.push('backend/chart_maps/ipo.py must cite where the ≤2y bound lives: sepa/ipo_age and TLSW Ch.11');
+      }
+      const board = read('../backend/chart_maps/board.py');
+      if (!/IPO\.NOTE/.test(board)) {
+        errs.push('board.py::ipo_tiles must serve IPO.NOTE — the note is the tab\'s honesty line');
+      }
+      const tabs = parseCmTabs(read('src/lib/chartMaps.ts'));
+      if (!tabs || !tabs.includes('ipo')) errs.push("CM_TABS must carry 'ipo'");
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'ipo' && <IpoUpcomingStrip/.test(page)) {
+        errs.push('ChartMaps.tsx must pin <IpoUpcomingStrip> above the grid on the ipo tab');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the \u{1F3DB}\uFE0F POTUS kind declares itself everywhere, and ships OFF (2026-09-20)',
+    file: 'src/pages/Notifications.tsx',
+    // Ajay 2026-09-20: "Anytime POTUS does new investments show me those."
+    // A regex over headlines does not get to ring his phone the day it lands:
+    // the kind is registered like every other kind and is OFF until he flips
+    // it. Same shape as the growth_demand_alert contract above.
+    checks: (src) => {
+      const errs = [];
+      const m = src.match(/key: 'potus_investment'[\s\S]*?\},\n/);
+      if (!m) return ['potus_investment must stay listed on the Notifications page'];
+      const d = m[0];
+      if (!/OFF BY DEFAULT/.test(d)) errs.push('the Notifications entry must say it is OFF BY DEFAULT');
+      if (!/HEURISTIC/.test(d)) errs.push('the Notifications entry must call the watch a HEURISTIC');
+      const kinds = read('src/lib/alertKinds.ts');
+      if (!/potus_investment/.test(kinds)) errs.push('alertKinds.ts must register potus_investment');
+      const prefs = read('src/hooks/useNotificationPrefs.ts');
+      if (!/potus_investment\?: boolean/.test(prefs)) {
+        errs.push('NotificationPrefs must carry potus_investment or the toggle cannot be stored');
+      }
+      const subs = read('../backend/push/subs.py');
+      const dm = subs.match(/["']potus_investment["']\s*:\s*(True|False)/);
+      if (!dm) errs.push('push/subs.py default_prefs must list potus_investment');
+      else if (dm[1] !== 'False') errs.push('potus_investment must ship OFF (False) in push/subs.py default_prefs — his flip, not ours');
+      const board = read('src/components/PotusBoard.tsx');
+      if (!/editorial order, not a ranking/.test(board)) {
+        errs.push('PotusBoard.tsx must state that the list order is editorial, not a ranking');
+      }
+      if (!/unnamed/.test(board)) {
+        errs.push('PotusBoard.tsx must keep the "unnamed — needs a ticker" rows — dropping them hides the stories the ask is about');
+      }
+      return errs;
+    },
+  },
+  {
+    name: 'the Bonde tab carries + Signals and the live basis line (2026-09-20)',
+    file: 'src/components/BondeBoard.tsx',
+    // Ajay 2026-09-20: "can you improve Bondes page a lil bit more and add
+    // trackers and also make his page more live".
+    //
+    // jsdom loads no stylesheet, so no render test can catch a bd-* rule that
+    // never shipped — the class sweep at the bottom is the only guard there is.
+    checks: (src) => {
+      const errs = [];
+
+      // ── trackers ────────────────────────────────────────────────────────
+      if (!/<SignalWatchButton\s+symbol=\{r\.symbol\}/.test(src)) {
+        errs.push('every Bonde row must carry the + Signals button — he tracks names off this board');
+      }
+      if (/<SignalWatchButton[^>]*\bcompact\b/.test(src)) {
+        errs.push('the Bonde table must NOT use the compact Signals button — a bare "+" does not read as a control');
+      }
+      if (!/tracked only/.test(src)) {
+        errs.push('the 📡 tracked-only filter must stay on the tab');
+      }
+
+      // ── the live leg ────────────────────────────────────────────────────
+      if (!/data-testid="bonde-basis"/.test(src)) {
+        errs.push('the basis line must stay on the page — a Today column that does not say which session it is on is a different measurement wearing the same header');
+      }
+      if (!/data-testid="bonde-rescan"/.test(src)) errs.push('the ↻ Live prices button is gone');
+      if (!/↻ Live prices/.test(src)) {
+        errs.push('the button label must say what it does — this board never scans on the request path');
+      }
+      if (/↻ Re-scan/.test(src)) {
+        errs.push('the Bonde button must not say "Re-scan" — it re-reads the Today column only');
+      }
+      if (!/rescanBlockedReason/.test(src) || !/rescanQuietReason/.test(src)) {
+        errs.push('the disabled / warned reasons must be IMPORTED (the market calendar and the RTH clock own those sentences)');
+      }
+      if (/RESCAN_COST_SENTENCE/.test(src)) {
+        errs.push("Bonde must not import Hottest's cost sentence — that is 7/13 calls over 1,721 names; this board is 2 calls over 260");
+      }
+      if (!/BONDE_LIVE_COST_SENTENCE/.test(src)) {
+        errs.push('the ⓘ must state what one ↻ click costs, from BONDE_LIVE_COST_SENTENCE');
+      }
+      const lib = read('src/lib/bondeLive.ts');
+      if (!/2 Massive snapshot calls/.test(lib)) {
+        errs.push('BONDE_LIVE_COST_SENTENCE must name the call count — it is pinned by backend/tests/test_bonde_live.py');
+      }
+      if (/1,721/.test(lib)) errs.push("bondeLive.ts carries Hottest's name count");
+
+      // ── the held-out footnote and the tri-state ─────────────────────────
+      if (!/data-testid="bonde-heldout"/.test(src)) {
+        errs.push('the held-out list must stay — a board that refuses to tier a passer has to say which rows');
+      }
+      if (!/periodMark\(/.test(src)) {
+        errs.push('period_ok must render through periodMark — false, null and true are three states, not two');
+      }
+      if (/r\.period_ok\s*\?/.test(src) || /!r\.period_ok/.test(src)) {
+        errs.push('period_ok must never be read as a bool — null means "could not be checked", not "fine"');
+      }
+      if (!/tierText\(/.test(src)) {
+        errs.push('a withheld tier must print an em-dash through tierText, never an empty cell');
+      }
+
+      // ── "reversal", never "bounce", on a surface he reads ───────────────
+      for (const m of src.matchAll(/>[^<>{}]*\bbounce\b[^<>{}]*</gi)) {
+        errs.push(`the Bonde tab must not print "bounce": ${m[0].slice(0, 60)}`);
+      }
+
+      // ── every bd-* class the TSX uses must have a rule that SHIPS ───────
+      const css = read('src/styles.css');
+      const used = new Set();
+      for (const m of src.matchAll(/(?:className=\{?["'`])([^"'`]+)/g)) {
+        for (const c of m[1].split(/[\s${}]+/)) if (/^bd-[a-z0-9-]+$/.test(c)) used.add(c);
+      }
+      for (const c of ['bd-today', 'bd-basis', 'bd-tier', 'bd-pair-warn',
+                       'bd-unverified', 'bd-heldout', 'bd-heldout-row',
+                       'bd-heldout-rows']) used.add(c);
+      for (const c of [...used].sort()) {
+        if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) {
+          errs.push(`styles.css has no rule for .${c} — the Bonde board would ship unstyled`);
+        }
+      }
       return errs;
     },
   },

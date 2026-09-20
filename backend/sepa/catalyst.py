@@ -170,8 +170,22 @@ def _fetch_yfinance_extras(symbol: str) -> dict:
             earns = None
         if earns is not None and hasattr(earns, "empty") and not earns.empty:
             row = earns.iloc[-1]
-            if "surprisePercent" in earns.columns and row["surprisePercent"] is not None:
-                out["last_surprise_pct"] = float(row["surprisePercent"])
+            if "surprisePercent" in earns.columns:
+                # UNIT, measured on the live container 2026-09-20: yfinance's
+                # `earnings_history.surprisePercent` is a FRACTION (NVDA 0.0616,
+                # IOVA 0.1843) while the sibling path this app already ships —
+                # sepa/earnings_watch._fetch_next, off `get_earnings_dates`
+                # "Surprise(%)" — is a PERCENT (6.16, 18.43). Both reach the
+                # ticker page (AnalystPulseModal falls back one to the other),
+                # so the fraction printed "+0.1%" for a 6.2% beat. ×100 puts
+                # this path in the percent unit the rest of the app uses.
+                # Nothing GATES on it: cheetahVerdict.ts:172 null-checks
+                # `catalystSurprisePct` and carries no threshold, so the fix
+                # moves the printed number only.
+                v = row["surprisePercent"]
+                # NaN passes `is not None` and used to sail through as a float.
+                if v is not None and v == v:
+                    out["last_surprise_pct"] = round(float(v) * 100.0, 2)
 
         recs = None
         try:

@@ -24,6 +24,7 @@ import asyncio
 import logging
 import os
 import time
+import weakref
 from typing import Optional
 
 import httpx
@@ -89,14 +90,29 @@ class _TokenBucket:
 
 
 _bucket = _TokenBucket(_BUCKET_CAPACITY, _BUCKET_RATE_PER_SEC)
-_http: Optional[httpx.AsyncClient] = None
+
+# ONE client PER EVENT LOOP, not one per process.
+#
+# An httpx.AsyncClient binds its connection pool to the loop that first used
+# it. A single module-level client was fine while the only caller was the
+# FastAPI router (one app loop forever), but the IPO board calls these
+# endpoints from a worker thread running its own short-lived loop
+# (chart_maps/ipo.calendar) — and handing that thread the app loop's client is
+# the classic "Event loop is closed" / "attached to a different loop" failure,
+# in whichever direction the second caller arrives.
+#
+# Keyed WEAKLY on the loop: when a short-lived loop is collected its client
+# goes with it, so the map cannot grow with the number of board builds.
+_http_by_loop: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 
 
 async def _get_http() -> httpx.AsyncClient:
-    global _http
-    if _http is None:
-        _http = httpx.AsyncClient(timeout=10)
-    return _http
+    loop = asyncio.get_event_loop()
+    client = _http_by_loop.get(loop)
+    if client is None:
+        client = httpx.AsyncClient(timeout=10)
+        _http_by_loop[loop] = client
+    return client
 
 
 def is_configured() -> bool:
@@ -200,6 +216,41 @@ async def earnings_for(symbol: str) -> Optional[dict]:
         {"symbol": symbol.upper(), "from": today.isoformat(), "to": to},
         symbol,
     )
+
+
+async def ipo_calendar(from_d: str, to_d: str) -> Optional[list]:
+    """Finnhub's IPO calendar for a date window, or None on failure.
+
+    NOT a per-symbol endpoint: the cache layer is keyed by (endpoint, symbol),
+    so the window itself is the "symbol" — a synthetic ``__CAL__<from>_<to>``
+    key. Two callers asking for the same window share one cached response;
+    a different window is a different row rather than a silent overwrite of
+    somebody else's rows.
+
+    Finnhub wraps the rows in ``{"ipoCalendar": [...]}``. Unwrapped here so
+    every caller sees a plain list; the cache still round-trips the raw dict.
+    Rows are carried VERBATIM — `price` arrives as strings like "18.00-20.00"
+    and `symbol` is empty on withdrawn filings, so nothing here parses a
+    number out of them (that is the caller's business, and mostly it should
+    just print them).
+    """
+    data = await _cached_call(
+        "ipo_calendar",
+        "/calendar/ipo",
+        {"from": from_d, "to": to_d},
+        f"__CAL__{from_d}_{to_d}",
+    )
+    if isinstance(data, dict):
+        rows = data.get("ipoCalendar")
+        if isinstance(rows, list):
+            return rows
+        # `_cached_call` wraps a bare list as {"rows": ...}; unwrap that too.
+        if isinstance(data.get("rows"), list):
+            return data["rows"]
+        return None
+    if isinstance(data, list):
+        return data
+    return None
 
 
 async def recommendation(symbol: str) -> Optional[list]:

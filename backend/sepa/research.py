@@ -166,6 +166,12 @@ DECISION_FIELDS = (
     "fundamentals.rev_q_series",
     "fundamentals.eps_q_series",
     "fundamentals.ni_q_series",
+    # WHICH PROVIDER filled the series (2026-09-20). Massive stores FISCAL
+    # quarter indices, the yfinance fallback stores CALENDAR ones, so a served
+    # row that cannot tell them apart prints "FY2026 Q2" for a calendar Q2 —
+    # a year off on NVDA-class fiscal years. sepa/qoq.period_label takes this
+    # value; without it every consumer of this snapshot had to guess.
+    "fundamentals._source",
 )
 
 
@@ -200,6 +206,9 @@ def decision_snapshot(symbols: list[str],
                 "rev_q_series": f.get("rev_q_series"),
                 "eps_q_series": f.get("eps_q_series"),
                 "ni_q_series": f.get("ni_q_series"),
+                # "massive" | "yfinance" | None (a legacy document written
+                # before the key existed) — never defaulted to a provider.
+                "_source": f.get("_source"),
                 "cached_at": doc.get("cached_at"),
             }
         return out

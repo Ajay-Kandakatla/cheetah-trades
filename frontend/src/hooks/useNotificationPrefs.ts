@@ -32,6 +32,12 @@ export type NotificationPrefs = {
      because Ajay asked for it "separately just trackers" — the board has no cap
      floor, the push still carries the standing room/proximity gates. */
   growth_demand_alert?: boolean;
+  /* 🏛️ Federal stake reported (political/watch.py, 2026-09-20: "Anytime
+     POTUS does new investments show me those"). Ships OFF — the backend
+     default is `false`, the only one in default_prefs() — because the
+     standing keep-set is four phone kinds and this is a fifth. The
+     toggle on /notifications is how it turns on; no deploy needed. */
+  potus_investment?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

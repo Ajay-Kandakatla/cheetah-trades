@@ -216,8 +216,12 @@ def _full_scan(*,
 @router.get("/catalysts/news-read/{symbol}")
 async def get_news_read(symbol: str, force: bool = Query(False, description="bypass the 15-min cache")):
     """JIT news verdict — does recent news make this name MORE buyable, LESS
-    buyable, or a SELL? On-demand only (never preloaded): pulls the last 72h of
-    headlines, classifies the net read (LLM when available, else keyword tone).
+    buyable, or a SELL? On-demand only (never preloaded): pulls the ticker's
+    recent headlines (Google via sepa.catalyst._fetch_google_news, NO time
+    window; Massive 7-day fallback at evidence._fetch_massive_news(hours=168)),
+    classifies the net read (LLM when available, else keyword tone).
+    CORRECTED 2026-09-20: this said "the last 72h" and no code here has ever
+    passed 72 hours — the Google leg passes no window at all.
     Educational — a news-sentiment read, NOT advice."""
     import asyncio
     from .news_read import news_read

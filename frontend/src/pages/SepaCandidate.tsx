@@ -22,6 +22,7 @@ import { BuyVerdictPanel } from '../components/BuyVerdictPanel';
 import { CheetahVerdictPanel } from '../components/CheetahVerdictPanel';
 const BreakoutHistoryBody = lazyWithReload(() => import('../components/BreakoutHistoryModal').then(m => ({ default: m.BreakoutHistoryBody })));
 import { NewsReadButton } from '../components/NewsReadButton';
+import { TwoSidedNewsButton } from '../components/TwoSidedNewsButton';
 import type { ChartInterval } from '../components/LiveCandlesChart';
 const LiveCandlesChart = lazyWithReload(() => import('../components/LiveCandlesChart').then(m => ({ default: m.LiveCandlesChart })));
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
@@ -1561,6 +1562,13 @@ export function SepaCandidatePage() {
                     below it stayed — he asked for the AI catalyst digest the
                     very next day (2026-06-09), so both live here. */}
                 <NewsReadButton symbol={symbol} />
+
+                {/* ⚖️ The OTHER read of the same headlines (Ajay 2026-09-20:
+                    "I would like it to be in individual tickers"). 📰 above
+                    answers "more buyable / less / sell"; this one refuses that
+                    question and writes the bull case AND the bear case, off
+                    the same prompt the 🔥 sector tiles use. Also on demand. */}
+                <TwoSidedNewsButton symbol={symbol} />
 
                 {data.catalyst ? (
                   <>

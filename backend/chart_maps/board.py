@@ -51,7 +51,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -3446,6 +3446,117 @@ def earnings_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT) -> dict
     }
 
 
+def ipo_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+              themes_first: bool = False,
+              min_tier: str = DEFAULT_MIN_TIER) -> dict:
+    """🆕 IPOs ≤2y — the recent-listing population, newest first.
+
+    Ajay 2026-09-20: *"Can you build be an IPO tab of the hot sectors
+    please?"* / *"IPO of hot sector theme of stocks and then add them as a tab
+    in Chart maps"* / *"Also potential future IPOs coming up if stocktwitz has"*.
+
+    The read lives in `chart_maps/ipo.py` — the ≤2y bound is `sepa.ipo_age`'s
+    (TLSW p.260) imported, and every claimed listing date is corroborated
+    against Finnhub's IPO calendar and the price frame's first bar before it
+    becomes a tile. This function only turns rows into tiles.
+
+    FLAT, not grouped by sector (his call): ten of this app's seventeen themes
+    have no recent listing at all, so a grouped board would be mostly empty
+    headings. `themes_first` and `min_tier` are therefore accepted (the
+    dispatcher hands every tab the same controls) and NOT applied — the served
+    `criteria` says so out loud rather than letting a control that does
+    nothing look like one that did something.
+
+    Nothing here is measured and nothing here orders, gates or enters.
+    """
+    from . import ipo as IPO
+
+    try:
+        data = IPO.build(limit=limit + BAR_BUFFER, days=days)
+    except Exception as exc:
+        log.warning("chart-maps: ipo build failed: %s", exc)
+        return {"tiles": [], "upcoming": [], "counts": {}, "note": IPO.NOTE,
+                "corroboration": {"available": False,
+                                  "reason": f"IPO read failed: {exc}",
+                                  "trailing_from": None, "forward_to": None}}
+
+    rows = data.get("rows") or []
+    # ONE projected Mongo read for the whole board — the same snapshot the
+    # falling-knife gate reads, never a second sales computation.
+    sales: dict = {}
+    try:
+        from sepa import research as R
+        sales = R.sales_snapshot([r["symbol"] for r in rows]) or {}
+    except Exception as exc:
+        log.debug("chart-maps ipo: sales snapshot failed: %s", exc)
+
+    tiles = []
+    for rank, r in enumerate(rows):
+        sym = r["symbol"]
+        d1 = _num(r.get("day1_pct"))
+        w1 = _num(r.get("week1_pct"))
+        tier = ((sales.get(sym) or {}).get("sales") or {}).get("tier")
+
+        badges = [{"text": f"Recent IPO \u2264{IPO.RECENT_YEARS}y", "tone": "good"}]
+        if r.get("recycled"):
+            badges.append({"text": "\u2733\ufe0e recycled ticker", "tone": "warn"})
+        if r.get("status") == IPO.UNCORROBORATED:
+            badges.append({"text": "calendar: no record", "tone": "warn"})
+
+        tiles.append({
+            "symbol": sym,
+            "name": _name_for(sym),
+            "href": _href(sym, "supply"),
+            "bars": [],
+            "bands": [],
+            "lines": [],
+            "markers": ([{"date": r.get("day1_date") or r.get("claimed"),
+                          "label": "listed", "kind": "confirm"}]
+                        if (r.get("day1_date") or r.get("claimed")) else []),
+            "stats": [
+                {"k": "Listed", "v": r.get("claimed") or "\u2014"},
+                {"k": "Days since",
+                 "v": str(r["days_since"]) if r.get("days_since") is not None else "\u2014"},
+                {"k": "Theme", "v": _theme(sym) or "\u2014"},
+                # The labels state the BASIS. Neither number is the pop off the
+                # OFFER price — this app does not hold offer prices — and a
+                # stat called "Day 1" would have read as exactly that.
+                {"k": "Day-1 open\u2192close",
+                 "v": f"{d1:+.1f}%" if d1 is not None else "\u2014"},
+                {"k": "Week-1 vs day-1 open",
+                 "v": f"{w1:+.1f}%" if w1 is not None else "\u2014"},
+                {"k": "Sales tier", "v": tier or "\u2014"},
+            ],
+            "why": r.get("why") or "",
+            "theme": _theme(sym),
+            "badges": badges,
+            "phase": r.get("status"),
+            "recycled": bool(r.get("recycled")),
+            "ipo_status": r.get("status"),
+            "_score": float(1000 - rank),
+        })
+
+    short = tiles[:limit + BAR_BUFFER]
+    _attach_bars(short, days)
+    out = [t for t in short if t.get("bars")][:limit]
+    for t in out:
+        t.pop("_score", None)
+        t.pop("_bars", None)
+    return {
+        "tiles": out,
+        "upcoming": data.get("upcoming") or [],
+        "counts": data.get("counts") or {},
+        "corroboration": data.get("corroboration") or {},
+        "as_of": data.get("as_of"),
+        "criteria": (
+            f"Every in-universe name whose listing date is inside the last "
+            f"{IPO.TRAILING_DAYS} days, newest first. Flat \u2014 not grouped by "
+            "sector, and neither the theme spread nor the liquidity floor is "
+            "applied on this tab."),
+        "note": data.get("note") or IPO.NOTE,
+    }
+
+
 def _usd_short(v) -> str:
     """$1.5B / $281M. Whole units — a dollar-volume figure carrying cents is
     false precision on a number that moves by millions between prints."""
@@ -5469,6 +5580,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
 
     if t == "earnings":
         out = earnings_tiles(limit, days)
+    elif t == "ipo":
+        out = ipo_tiles(limit, days, themes_first, tier)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below

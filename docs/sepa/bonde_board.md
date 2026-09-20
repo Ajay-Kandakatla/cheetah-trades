@@ -240,10 +240,25 @@ uses a **strict `>`**. The first board therefore reports **zero** arrivals, whic
 is the honest answer — *"we have only just started looking"* must never render as
 *"these are fresh finds"*.
 
-Arrivals are recorded over **every name that passes**, not only those surviving
-the per-section cap: a name that arrives into a capped tier has still arrived, and
-recording only the visible ones would reset its clock each time the cap pushed it
-off and back on.
+Arrivals are recorded over **every name placed in a section**, not only those
+surviving the per-section cap: a name that arrives into a capped tier has still
+arrived, and recording only the visible ones would reset its clock each time the
+cap pushed it off and back on.
+
+**2026-09-20 — the ledger follows the pair guard.** It used to record every
+*passer*. Since §9 holds mismatched passers out of the tiers, that stamped names
+the board draws nowhere: their 30-day ✨ NEW clock ran while they were hidden, so
+on the day the guard let one through — the day it actually arrives on his screen
+— it would arrive silent, and `n_new` counted rows never rendered. A held-out row
+is now stamped on the day it is shown. A held-out row that **keeps** its ⚡ Pivots
+row is drawn, so it is recorded like any other arrival; a 🔎 rejected row is not
+on his screen and is not recorded at all. Pinned by
+`test_NEGATIVE_a_held_out_passer_is_NOT_stamped_into_the_arrival_ledger`,
+`test_a_held_out_row_that_KEEPS_its_pivot_IS_recorded` and
+`test_a_passer_pushed_off_by_the_SECTION_CAP_is_STILL_recorded`
+(`backend/tests/test_data_spine_2026_09_20.py`). Names already in `bonde_seen`
+from before today keep their old stamps — the ledger converges, it is not
+rewritten.
 
 `growth/tracker.py` has its own copy of this logic (written first, live on the
 Explosive Growth board). It is **not** refactored — that board works and the user
@@ -363,3 +378,81 @@ read is never near; the near distance is never typed in the component).
 
 This is a filter on a study board whose own thesis measured inverted (§1).
 Nothing here gates a scan, fires an alert or buys in any lane.
+
+## 9. The YoY pair guard — 164 passers held out of the tiers (2026-09-20)
+
+Ajay, 2026-09-20: *"Especially this in Bondes. I think bondes and explosive
+growth are hand in hand."*
+
+They were not, and this is where they came apart. **164 of 1,051 passers
+(15.6%) — 13 explosive, 56 strong, 95 steady — were tiered off a
+"year-over-year" pair that is not four fiscal quarters apart.** The 🚀 Explosive
+Growth board has REFUSED exactly those rows since 2026-09-14
+(`growth/tracker.qualifies`, `period_mismatch`), so thirteen names read
+**explosive** here and **refused** there off the same filed quarter.
+
+**Why it happens.** Massive OMITS a quarter it does not have rather than leaving
+a placeholder, so list POSITION is not quarter adjacency. IOVA's period keys are
+`[8105, 8104, 8102, 8101, 8100, 8098]`: 8103 (FY2025 Q4) and 8099 (FY2024 Q4)
+are absent, so slot 4 is **FY2025 Q1 standing in for the year-ago self of
+FY2026 Q2**. 98 of the 164 (59.8%) are missing a FY Q4 — the same hole this
+file's own header already named.
+
+**What the board does now.**
+
+* A passing row that fails the guard is **not placed in any tier**. It is
+  counted (`n_period_mismatch`), listed (`period_mismatch_symbols`: symbol, the
+  tier it *would* have had, and both quarter labels) and the served `note()`
+  says so. A board that hides must say what it hid.
+* `n_pass` is **unchanged** — it is his screen's fire rate and the note quotes
+  it. A new **`n_tiered`** (886 today) counts what is actually shown.
+* Every row in every section carries **`period`** (`"FY2026 Q2"`, or
+  `"Q2 2026"` on a yfinance-sourced row) and **`period_ok`**, a **tri-state**:
+  `true` checked and fine · `false` checked and wrong · `null` **nobody could
+  check** (370 of 2,078 live scan rows carry no period keys at all). A surface
+  that renders `!period_ok` as a warning would flag every legacy row; render the
+  tri-state as a tri-state.
+* The 🔎 **rejected** section is guarded the same way — a name cannot be
+  "rejected for character" off a pair that is not a year apart either. 17
+  floor-clearers move out of it (55 → 38).
+* An **Episodic Pivot survives**. The EP is a gap on volume, true whatever the
+  quarterly series says, so a mismatched pivot row **stays in ⚡ Pivots** with
+  `tier`, `growth_yoy_pct`, `prior_yoy_pct` and `accelerating` set to `null` and
+  `period_ok: false`. The event is shown; the growth **claim** is withheld.
+
+**Where the rule lives.** `sepa/qoq.py` — `YOY_GAP`, `HEADLINE_PAIR`,
+`PRIOR_PAIR`, `yoy_pairs_ok`, `yoy_pairs_verifiable`, `period_ok`,
+`period_label`. `growth/tracker.py` re-exports them (`T.HEADLINE_PAIR is
+Q.HEADLINE_PAIR`, pinned by test) and `rotation/hottest.py` applies the same
+test. **One guard, one home** — a pair typed twice is a pair that drifts, and
+this one decides what both boards refuse.
+
+**2026-09-20 (same day, refix) — the held-out sentence counts two cohorts.**
+The guard holds out two DIFFERENT things and the first cut called both
+"passers": a row that PASSES his sales screen is withheld from a **tier**,
+while a floor-clearer that failed the character clause never passed the screen
+at all and is withheld from **🔎**. Quoting the whole list as passers inflates
+the fire rate of his own screen with rows it rejected. Each held-out entry now
+carries `cohort` (`"passer"` | `"floor_clearer"`), the board serves
+`n_period_mismatch_pass` and `n_period_mismatch_rejected` beside the unchanged
+`n_period_mismatch` (which stays the LENGTH of `period_mismatch_symbols`, so
+the header and the table can never disagree — 164 passers + 17 floor-clearers
+= 181 rows on the run above), and `pair_guard_note` prints the split sentence
+whenever the two counts differ. When every held-out row is a passer the
+original one-cohort sentence is served **byte-identical** (pinned by test).
+
+**Nothing was recomputed and no threshold moved.** `sepa/sales.py` keeps its
+number and its 5 / 25 / 100 tiers; `canslim.py` and `buyable_verdict.py` are
+untouched. This board declines to TIER the row; it does not disagree with the
+arithmetic.
+
+**Not fixed, on purpose (his call).** Deriving FY Q4 from the annual fetch in
+`canslim` would repair the pair for ~15% of names and move `sales.score`
+app-wide; re-pairing by period key inside `sales._yoy` would move the book-cited
+module the falling-knife gate reads. The character clause's pairs (2,6)/(3,7)
+would hold out **266** more rows and are reported, not applied.
+
+Full report, with the before/after numbers and the re-run recipe:
+`docs/sepa/data_spine_audit_2026_09_20.md`. Script:
+`backend/scripts/data_spine_audit.py`. Tests:
+`backend/tests/test_data_spine_2026_09_20.py`.

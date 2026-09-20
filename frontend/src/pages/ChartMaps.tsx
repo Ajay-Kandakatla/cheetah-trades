@@ -62,6 +62,8 @@ import BondeBoard from '../components/BondeBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HoldingsBoard from '../components/HoldingsBoard';
+import PotusBoard from '../components/PotusBoard';
+import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
 import OverlayLegend from '../components/OverlayLegend';
@@ -715,6 +717,12 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * filtered, ordered or gated by it. An absent payload draws the strip's
         * own placeholder; it never renders nothing. */}
       {tab === 'zones' && <IndexZones data={data?.index_zones} />}
+      {/* 🗓️ Coming up — the IPO tab's forward calendar (2026-09-20), pinned
+        * above the grid the way the index strip is: it renders while the
+        * board warms, when it errors and when the calendar came back empty,
+        * and nothing in the controls below filters it. Rows are printed
+        * verbatim from Finnhub — a price RANGE is never rounded into a price. */}
+      {tab === 'ipo' && <IpoUpcomingStrip data={data?.upcoming ?? null} corroboration={data?.corroboration ?? null} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
@@ -1043,6 +1051,15 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            "I wanna track his stocks for investing"). Sentences, not a ticker
            list — he mixes live ideas with closed put trades. */
         <GntBoard />
+      ) : tab === 'potus' ? (
+        /* 🏛️ POTUS / federal (Ajay 2026-09-20: "I would like it to be in
+           individual tickers but also in to the potus page in chart maps";
+           earlier "Anytime POTUS does new investments show me those"). The
+           📁 My holdings pattern: one Support tile per curated name in a fixed
+           editorial order, then the watch's HEURISTIC candidates — its own
+           fetcher, no universe pass, so the board controls and the grid are
+           skipped. */
+        <PotusBoard />
       ) : tab === 'growth' ? (
         /* 🚀 Explosive Growth (Ajay 2026-09-11: 100%+ sales AND 100%+ quarterly
          * EPS, "I wanna know when ever these are in demand, separately just

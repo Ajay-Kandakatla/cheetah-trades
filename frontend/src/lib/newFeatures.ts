@@ -22,6 +22,66 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-20, verbatim: "I would like it to be in individual tickers but
+  // also in to the potus page in chart maps" and "Anytime POTUS does new
+  // investments show me those". The curated list moved to ONE source
+  // (backend/political/disclosures.json; the TS is generated), and a daily
+  // 06:35 cron classifies headlines into candidates. The push kind ships OFF.
+  { id: 'potus-tab-2026-09-20',
+    label: '\u{1F3DB}️ POTUS / federal — its own tab on Chart Maps. You said: “I would like it to be in individual tickers but also in to the potus page in chart maps” and “Anytime POTUS does new investments show me those.” '
+      + 'TWO SECTIONS, AND THEY ARE NOT THE SAME KIND OF THING. The top half is THE LIST — the curated disclosures, grouped in a fixed editorial order: \u{1F1FA}\u{1F1F8} U.S. government equity stake, then \u{1F6E0}️ government contractor, then \u{1F3DB}️ POTUS family disclosed, then \u{1F50D} inferred. A row is in the list because a filing or a named report put it there, and nothing automatic ever adds one. The order is the curator’s, not a ranking, and the \u{1F50D} inferred rows carry their own notes saying what they are NOT — no government agreement on Green Land, Critical Metals or Uranium Energy. '
+      + 'The bottom half is \u{1F50E} WATCH CANDIDATES, and it is A REGEX OVER HEADLINES. Not a filing, not a signal, not a measurement — a classifier that says “this headline looks like a federal stake story” and puts it in front of you. Every candidate row shows the pattern that matched, the agency, the size, the source and how the ticker was resolved (cashtag / company name / unnamed), so you can throw it out in one look. The heuristic sentence above the table is printed verbatim from the server, so what you read is the gate that actually ran. '
+      + 'A HEADLINE THAT NAMES NO TICKER IS STILL SHOWN, as “unnamed — needs a ticker” with no link. Measured on his own watch queries, only about 1 in 90 of these headlines carries a cashtag at all — the Commerce-stake and CHIPS-award reporting names the company in prose. Dropping the unnamed rows would hide exactly the stories the ask is about. '
+      + 'THE PUSH SHIPS OFF. The \u{1F3DB}️ kind is registered everywhere a kind has to be registered, and it is OFF until you turn it on at /notifications — a heuristic does not get to ring your phone on the day it lands. When you do flip it, only a headline with BOTH a named agency AND a size is pushable; a contract award never is, however large. '
+      + 'Every tile carries its political chip, the growth / explosive / enterable chips and a + Signals button, off the same Support payload the Support tab draws — so the bands cannot differ between the two surfaces. '
+      + 'NOTHING HERE IS MEASURED AND NOTHING IS SORTED BY RETURN. It gates no alert, sizes no position and enters no lane.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=potus' },
+  // Ajay 2026-09-20, verbatim: "I would like it to be in individual tickers but
+  // also in to the potus page in chart maps" — the two-sided read that already
+  // rides the 🔥 Hottest sector tags, pointed at the name whose page he is on.
+  // On demand only: the POST is the only call that may reach the model, once
+  // per ET date per name. LLM writes PROSE ONLY; every number comes from facts.
+  { id: 'ticker-two-sided-news-2026-09-20',
+    label: '⚖️ Bull / bear read on any ticker page — both cases, off the last 36 hours of that name’s news. You said: “I would like it to be in individual tickers.” It sits beside \u{1F4F0} “What’s the news say?” on the Catalyst tab: that button answers more buyable / less / sell, this one REFUSES to answer that and writes out both arguments instead. '
+      + 'BOTH COLUMNS OR NEITHER. A half-written read is suppressed rather than shown, and the two columns are the same class so neither side gets more room than the other — a bull case laid out wider than its bear case is a recommendation with extra steps. Two headlines minimum; one loose story is not a story, and when the window is that thin it says so and shows you the headlines it did find. '
+      + 'EVERY NUMBER COMES FROM THE APP, never from the model. The numeric block under the prose is built from the app’s own research cache, the last scan row and the earnings watch — sales growth and tier, quarterly EPS growth, margin, last close, next earnings date. The prose is rendered as prose and is never parsed for a number, and the model is told it may not state one that was not handed to it. Same split the \u{1F4CB} Desk report and the \u{1F4F0} sector day-tags already use. '
+      + 'A GROWTH LEG THAT CANNOT BE CHECKED IS BLANKED, not guessed. If the name’s year-ago quarter is not four fiscal quarters back — the same mismatch \u{1F4C8} Bonde and \u{1F680} Explosive Growth now hold out — the sales and EPS legs are left out of the facts block entirely rather than handed to the model as a fact. '
+      + 'ON DEMAND ONLY. Nothing fetches until you click. One read per name per session date is stored and served back instantly; ↻ re-read forces a fresh one. '
+      + 'NOT MEASURED, NOT A SIGNAL. Every successful read names the model that wrote it and says “not measured, not a signal” in the footer. It gates nothing, sizes nothing and enters nothing.',
+    addedAt: '2026-09-20' },
+  // Ajay, three lines: "Can you build be an IPO tab of the hot sectors
+  // please?" · "IPO of hot sector theme of stocks and then add them as a tab
+  // in Chart maps." · "Also potential future IPOs coming up if stocktwitz
+  // has" (StockTwits has no IPO feed — Finnhub's calendar is the source).
+  { id: 'ipo-tab-2026-09-20',
+    label: '\u{1F195} IPO tab \u2014 listings from the last 2 years, corroborated. Every in-universe name that listed inside the book\u2019s \u22642-year recency window (TLSW Ch.11, the same bound sepa/ipo_age already uses), newest first. '
+      + 'Finnhub\u2019s profile listing date is ~21.4% corrupt on this universe, so each date is checked against Finnhub\u2019s IPO calendar AND the price frame\u2019s first bar: a ticker whose bars pre-date its own listing is flagged \u201c\u2733\uFE0E recycled ticker\u201d and every price-derived figure on it is blanked, and a date nothing supports is dropped. '
+      + 'A pinned \u201c\uD83D\uDDD3\uFE0F Coming up\u201d strip lists expected listings in the next 30 days, printed exactly as the feed serves them. '
+      + 'Nothing on this tab is measured, and it gates, orders and enters nothing.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=ipo' },
+  // Item 4c of Ajay 2026-09-20 ("Maintaing a list of Earning surprise and
+  // explosive growth more accurate") — a data-quality fix, not a redesign.
+  // Full report: docs/sepa/data_spine_audit_2026_09_20.md
+  { id: 'data-spine-2026-09-20',
+    label: '\uD83D\uDCC8 Bonde and \uD83D\uDE80 Explosive Growth now read one data spine. Bonde was tiering 164 of its 1,051 passers off a \u201cyear-over-year\u201d pair that is not four fiscal quarters apart \u2014 13 of them read explosive here while the \uD83D\uDE80 growth board refused them off the same filed quarter. Massive omits a missing quarter (usually FY Q4), so slot 4 is not the same season. '
+      + 'Those rows are now HELD OUT of the tiers and listed under the board with both quarter labels; an Episodic Pivot on one keeps its gap-and-volume event with the growth claim blanked. Every row says which quarter it is measured on, and \u201cunverified\u201d when no period keys are on file. '
+      + 'The \uD83D\uDE80 board gained a \uD83D\uDCC8 Bonde tier chip on every row, and the ticker page\u2019s earnings surprise was printing \u201c+0.1%\u201d for NVDA\u2019s 6.2% beat \u2014 a unit bug, now fixed. '
+      + 'NOTHING HERE IS MEASURED. The Bonde thesis is still inverted (\u22123.11pp) and the 100/100 growth screen is still unbacktested. This is a data-quality fix: the two boards can no longer disagree about the same filed quarter. Full report: docs/sepa/data_spine_audit_2026_09_20.md',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=bonde' },
+  { id: 'bonde-live-rescan-2026-09-20',
+  label: '\u{1F4C8} Bonde has a live Today column and a ↻ Live prices button — you said: “make his page more live”. '
+    + 'Each row now shows its OWN move so far in the current session, beside his sales tiers. Everything else on the board — the tiers, the character chips, the Episodic Pivots and the CPA metrics — still comes from the last scan and does not move when you click. '
+    + 'THE COLUMN IS NEVER HALF LIVE. One snapshot prices the whole board; if the benchmark has no live print (before the open, a holiday, a provider miss) every row shows an em-dash instead of yesterday’s number under a “Today” header. The line above the sections says which session you are looking at, in the market calendar’s own words, and the button disables itself with that same sentence when the tape is shut. '
+    + 'One click is one snapshot read: 2 Massive calls for up to 260 board names plus the benchmark. Nothing is re-screened and no scan is triggered. '
+    + 'Nothing here is a measured signal — the verdict banner at the top of the tab is still this board’s own measurement, and it came back inverted.',
+  addedAt: '2026-09-20', route: '/chart-maps?tab=bonde' },
+  { id: 'bonde-trackers-2026-09-20',
+  label: '\u{1F4E1} Trackers on \u{1F4C8} Bonde — you said: “add trackers … the stocks that need to be tracked based on his strategy”. '
+    + 'Every row now carries the same “+ Signals” button the rest of Chart Maps uses, so a name off his screen goes onto your ⚡ Signals watchlist in one click — one watchlist, not a Bonde-only list that would drift from it. '
+    + 'A new “\u{1F4E1} tracked only” box filters the board down to what you are already tracking (and what you hold, which rides that list by default). It composes with “new arrivals only” and the \u{1F3AF} demand box rather than replacing them. '
+    + 'The ✨ NEW badge now carries the arrival DATE on the badge itself — “✨ NEW · 09-18” — because the badge alone could not be told from a 29-day-old arrival without hovering. '
+    + 'Nothing on this tab is a measured signal.',
+  addedAt: '2026-09-20', route: '/chart-maps?tab=bonde' },
   // Ajay 2026-09-19, verbatim: "can you give me control click in this page for
   // the stocks so I can open new tab on the stock. IN hottest sector page
   // please". The ticker was already an <a>; the probe showed it was the ONLY

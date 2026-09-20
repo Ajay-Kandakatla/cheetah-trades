@@ -54,6 +54,13 @@ PERSONAL_KINDS: frozenset[str] = frozenset({
     "user_signin", "product_launch", "health", "macbook",
     "house_daily", "house_stagnant", "house_scrape_failed",
     "generic",                        # notify.send_alert default
+    # 🏛️ federal-stake headline (political/watch.py, 2026-09-20). A PERSONAL
+    # kind on purpose: it is computed from a NEWS HEADLINE, not from a price,
+    # so a weekend or a holiday does not make it stale — the government
+    # announces on the days it announces. Ajay asked for it that way
+    # ("Anytime POTUS does new investments show me those"). It ships OFF in
+    # push.subs.default_prefs; he flips it on at /notifications.
+    "potus_investment",
 })
 
 # The market kinds his phone actually carries (push/subs.default_prefs keep-set

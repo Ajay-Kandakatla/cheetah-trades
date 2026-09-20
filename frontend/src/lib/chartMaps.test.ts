@@ -755,7 +755,10 @@ describe('the Earnings Flow tab', () => {
        'holdings',
        // 📈 Bonde 2026-09-13 — beside the growth boards it belongs with.
        'bonde',
-       'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+       // 🆕 IPOs ≤2y 2026-09-20 — after the growth board it was asked for
+       // beside; 🏛️ POTUS 2026-09-20 — after GnT, the other tracker board.
+       // Both slots are spec §7.6, his call.
+       'session', 'signals', 'hot_sectors', 'growth', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -855,7 +858,10 @@ describe('the Support Levels tab', () => {
     // 2026-09-06 most-used reorder: Catalysts now precedes Overnight.
     // 2026-09-14: `holdings` is the eleventh — one /chart-maps/support call
     // per name he owns, decorated client-side; no universe pass behind it.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'support']);
+    // 2026-09-20: `potus` is one /chart-maps/support call per curated name
+    // (the holdings pattern); `ipo` is NOT here — it is a tile board off the
+    // dispatcher and the grid draws it.
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1751,7 +1757,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(26);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14
+    expect(CM_TABS).toHaveLength(28);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });

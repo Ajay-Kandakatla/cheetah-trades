@@ -13094,3 +13094,156 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   font-size: 0.7rem;
   color: var(--cm-slate, #94a3b8);
 }
+
+/* ── 🏛️ POTUS tab + ⚖️ two-sided read (2026-09-20) ───────────────────────── */
+/* 🏛️ POTUS tab (2026-09-20) */
+.pb-group { margin: 18px 0 6px; }
+.pb-group__head { font-size: 0.92rem; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; }
+.pb-count { opacity: 0.6; font-weight: 400; }
+.pb-tile { display: flex; flex-direction: column; gap: 4px; }
+.pb-tile__head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.8rem; }
+.pb-tile__sym { font-weight: 600; }
+.pb-tile__co { opacity: 0.75; }
+.pb-new { color: var(--gold, #c9a227); font-size: 0.66rem; }
+.pb-tile__stake, .pb-tile__band { margin: 0; font-size: 0.7rem; opacity: 0.8; }
+.pb-tile__note { margin: 0; font-size: 0.72rem; line-height: 1.35; opacity: 0.85; }
+.pb-candidates { margin-top: 24px; }
+.pb-heuristic { font-size: 0.74rem; }
+.pb-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.pb-table th, .pb-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line, rgba(255,255,255,0.08)); vertical-align: top; }
+.pb-table th { opacity: 0.6; font-weight: 500; }
+.pb-unnamed { opacity: 0.7; font-style: italic; }
+.pb-cand__co { opacity: 0.7; }
+
+/* ⚖️ Two-sided ticker read (2026-09-20) */
+.tsn { margin: 10px 0; }
+.tsn__loading { opacity: 0.7; padding: 6px 0; }
+/* EQUAL WIDTH IS THE RULE, not a preference: a bull column wider than its
+   bear column reads as a recommendation. 1fr 1fr, never auto. */
+.tsn__cases { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .tsn__cases { grid-template-columns: 1fr; } }
+.tsn__case { border-left: 3px solid var(--line, rgba(255,255,255,0.12)); padding: 6px 10px; }
+.tsn__case-head { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6; }
+.tsn__case-body { margin: 4px 0 0; line-height: 1.45; }
+.tsn__why { margin: 8px 0 0; opacity: 0.75; font-size: 0.72rem; }
+.tsn__facts { margin-top: 10px; }
+.tsn__facts-head { font-size: 0.66rem; opacity: 0.6; }
+.tsn__facts-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 2px 14px; font-size: 0.72rem; }
+.tsn__fact-k { opacity: 0.65; }
+.tsn__news { margin: 10px 0 0; padding-left: 18px; font-size: 0.75rem; }
+.tsn__src { opacity: 0.6; }
+.tsn__foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.tsn__read-by, .tsn__cached { opacity: 0.65; font-size: 0.68rem; }
+.tsn__err { color: var(--bad, #d95f5f); font-size: 0.72rem; }
+.tsn__empty { opacity: 0.75; padding: 6px 0; }
+
+/* 🆕 IPO tab — the "Coming up" strip (frontend/src/components/IpoUpcomingStrip.tsx).
+   Pinned above the grid like .iz, and sized off the same tokens. */
+.ipo-up {
+  border: 1px solid var(--rule, #2a2f3a);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem 0.6rem;
+  margin: 0.2rem 0 0.7rem;
+}
+.ipo-up-head { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; }
+.ipo-up-title { font-weight: 700; font-size: 0.86rem; }
+.ipo-up-sub { font-style: normal; font-size: 0.72rem; color: var(--cm-slate, #94a3b8); }
+.ipo-up-basis { margin: 0.2rem 0 0; font-size: 0.7rem; color: var(--cm-slate, #94a3b8); }
+.ipo-up-list { list-style: none; margin: 0.45rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+.ipo-up-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 6rem 5rem 7rem 7rem 5rem;
+  gap: 0.4rem;
+  align-items: baseline;
+  font-size: 0.74rem;
+  min-width: 0;
+}
+@media (max-width: 860px) {
+  .ipo-up-row { grid-template-columns: 4.5rem minmax(0, 1fr) 6rem; }
+  .ipo-up-exch, .ipo-up-shares { display: none; }
+}
+.ipo-up-sym { font-weight: 700; letter-spacing: 0.02em; }
+.ipo-up-name { color: var(--cm-slate, #94a3b8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ipo-up-status { color: var(--warn, #fbbf24); }
+.ipo-up-empty, .ipo-up-dim {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  color: var(--cm-slate, #94a3b8);
+}
+
+/* 📈 Bonde — the live Today column, the trackers and the held-out footnote
+   (2026-09-20, P5). Appended AFTER the existing .bd-* block, so the .bd-row
+   re-declaration below wins on source order and the grid gains its new track.
+   jsdom loads no stylesheet, so nothing in a render test can catch a missing
+   rule here — the contract check is what guards it. */
+
+/* Six tracks now: Ticker · Today · Sales · Character · Pivot · metrics. */
+.bd-row {
+  grid-template-columns:
+    minmax(140px, 1.4fr) minmax(64px, 0.5fr) minmax(120px, 1fr)
+    minmax(150px, 1.2fr) minmax(110px, 0.9fr) minmax(190px, 1.3fr);
+}
+.bd-today {
+  font-size: 0.82rem; font-variant-numeric: tabular-nums;
+  text-align: right; white-space: nowrap; cursor: help;
+}
+.bd-row.bd-hdr .bd-today { text-align: right; }
+
+/* The one line that says which session the Today column is on. */
+.bd-basis {
+  font-size: 0.72rem; color: var(--ink-muted);
+  padding: 0.15rem 0 0.35rem; cursor: help;
+}
+
+/* The tier word on a ⚡ Pivot row (the section header does not state it). */
+.bd-tier {
+  font-size: 0.6rem; font-weight: 600; letter-spacing: 0.03em;
+  margin-left: 5px; white-space: nowrap; cursor: help;
+}
+
+/* ⚠ pair — the year-over-year pair is NOT four fiscal quarters apart. Amber,
+   the app's "this number is not what it looks like" tone (.bd-warn). */
+.bd-pair-warn {
+  font-size: 0.58rem; font-weight: 800; letter-spacing: 0.04em;
+  color: var(--warn, #d29922); border: 1px solid rgba(210,153,34,0.45);
+  background: rgba(210,153,34,0.10); border-radius: 5px;
+  padding: 0 4px; margin-left: 5px; white-space: nowrap; cursor: help;
+}
+/* 'unverified' — could not be CHECKED, which is not the same as wrong. Muted,
+   deliberately quieter than the amber above. */
+.bd-unverified {
+  font-size: 0.58rem; font-weight: 600; color: var(--ink-muted);
+  border: 1px solid var(--hairline, rgba(255,255,255,0.12));
+  border-radius: 5px; padding: 0 4px; margin-left: 5px;
+  white-space: nowrap; cursor: help;
+}
+
+/* 🧾 the held-out footnote under the sections. */
+.bd-heldout {
+  margin-top: 0.5rem; border: 1px solid var(--hairline, rgba(255,255,255,0.08));
+  border-radius: 8px; padding: 0.4rem 0.6rem;
+}
+.bd-heldout > summary {
+  cursor: pointer; font-size: 0.76rem; font-weight: 700;
+  color: var(--ink-muted); list-style: revert;
+}
+.bd-heldout p.bd-note { margin: 0.35rem 0 0.4rem; }
+.bd-heldout-rows { display: flex; flex-direction: column; }
+.bd-heldout-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.7fr) minmax(80px, 0.7fr)
+                         minmax(100px, 1fr) minmax(100px, 1fr);
+  gap: 0.6rem; font-size: 0.76rem; padding: 0.22rem 0;
+  border-bottom: 1px solid var(--hairline, rgba(255,255,255,0.05));
+}
+.bd-heldout-row.bd-hdr {
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--ink-muted);
+}
+
+/* Phones: the grid collapses, so the Today cell stops being right-aligned in a
+   column that no longer exists. */
+@media (max-width: 720px) {
+  .bd-today { text-align: left; }
+  .bd-heldout-row { grid-template-columns: 1fr 1fr; }
+}

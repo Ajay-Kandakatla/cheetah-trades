@@ -227,6 +227,40 @@ function demandCell(z?: GrowthZone): { text: string; tone: string; title: string
            title: 'Inside a demand band, but the floor-held check did not answer for this name — unknown, not pierced.' };
 }
 
+/* 📈 Bonde's sales tier, on a 🚀 growth row.
+ *
+ * Ajay 2026-09-20: "Especially this in Bondes. I think bondes and explosive
+ * growth are hand in hand." The 📈 Bonde board already renders a 🚀 GrowthChip
+ * on every row; this is the leg that was missing.
+ *
+ * DELIBERATELY NOT "the same number on the Bonde tab". It is the tier off the
+ * SAME quarterly series in the SAME research cache this board screens on — but
+ * the Bonde tab reads the latest SCAN, and the two populations differ for
+ * reasons that have nothing to do with the data: IPI / EVC / FF sit outside the
+ * scan's `full` universe (the growth board screens `broad`), and a name the
+ * scan has not enriched yet is tier-pending there while this board already has
+ * its number. Claiming identity would be a promise the boards cannot keep;
+ * claiming the same SOURCE is exactly true.
+ *
+ * Renders nothing outside Bonde's three published tiers (GrowthChip pattern) —
+ * "weak", "declining", "unknown" and null are silence, not a chip.
+ */
+const BONDE_TIERS = new Set(['explosive', 'strong', 'steady']);
+
+export function BondeTierChip({ tier, className = 'cm-badge' }:
+                              { tier?: string | null; className?: string }) {
+  const t = String(tier ?? '').toLowerCase();
+  if (!BONDE_TIERS.has(t)) return null;
+  return (
+    <span className={`${className} ${className}-growth`}
+          title={"Bonde's sales tier off the same quarterly series this board "
+                 + 'screens (research cache) — explosive ≥100% / strong ≥25% / '
+                 + 'steady ≥5% (docs/sepa/sales_confidence_methodology.md).'}>
+      {`📈 Bonde: ${t}`}
+    </span>
+  );
+}
+
 export function ExplosiveGrowth() {
   const [data, setData] = useState<GrowthPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -610,6 +644,11 @@ export function ExplosiveGrowth() {
                         renders nothing unless the name reported inside the
                         backend's own 7-day window, and changes no order. */}
                     <EarningsFreshChip symbol={r.symbol} read={r.earnings_fresh} />
+                    {/* 📈 the cross-link back to Bonde (Ajay 2026-09-20:
+                        "bondes and explosive growth are hand in hand"). Bonde
+                        already carries a 🚀 chip to this board; this is the
+                        return leg. */}
+                    <BondeTierChip tier={r.sales_tier} />
                     {r.name && <div className="eg-coname">{r.name}</div>}
                   </td>
                   <td className="eg-num eg-good" title={per.title}>

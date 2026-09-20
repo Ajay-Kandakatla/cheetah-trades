@@ -106,7 +106,9 @@ def _seed_universe() -> list[str]:
             except Exception as exc:
                 log.warning("seed gainers/%s failed: %s", direction, exc)
 
-    # 2) Overnight news mentions (last 12h)
+    # 2) Overnight news mentions (NO time window — the Massive firehose,
+    #    newest first, the 100 most recent articles). CORRECTED 2026-09-20:
+    #    this said "(last 12h)" and no hour bound is passed below.
     if key:
         try:
             r = requests.get(

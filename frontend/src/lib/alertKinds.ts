@@ -54,6 +54,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },
+  // 🏛️ political/watch.py (2026-09-20) — a HEADLINE classifier, not a
+  // signal. Ships OFF in the backend default prefs; Ajay flips it on at
+  // /notifications. Registered here so a candidate that did page him
+  // renders with a label instead of the raw id.
+  potus_investment:    { emoji: '🏛️', label: 'Federal stake reported', group: 'trading' },
 
   // ── breakouts (also arrive as source='breakout' rows) ─────────────────────
   volume_breakout:     { emoji: '🚀', label: 'Volume breakout',         group: 'breakout' },

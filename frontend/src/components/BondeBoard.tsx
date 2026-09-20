@@ -47,9 +47,20 @@
  *
  * Nothing here gates a scan, fires an alert or buys in any lane.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
+import { InfoButton } from './InfoButton';
+import { SignalWatchButton } from './SignalWatchButton';
+import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
+/* The ↻ button's two reasons are HOTTEST's, imported rather than re-derived:
+ * one of them is the market calendar's own sentence and the other is the RTH
+ * clock's, and a second copy of either is a second calendar. */
+import { rescanBlockedReason, rescanQuietReason } from './HottestSectors';
+import {
+  BONDE_LIVE_COST_SENTENCE, basisLine, heldOutSentence, periodMark, tierText,
+  todayCell, type BondeD1, type BondeHeldOut,
+} from '../lib/bondeLive';
 import { metricCells } from '../lib/boardMetrics';
 import { GrowthChip } from './GrowthChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -85,6 +96,13 @@ export type BondeRow = {
   ev_sales?: number | null; fcf_yield?: number | null;
   balance_meaningful?: boolean | null; sector?: string | null;
   shares_yoy_reason?: string | null;
+  /** The live day leg (`sepa/bonde_live.py`). `today_pct` is null on EVERY row
+   *  whenever `d1.basis` is 'close' — the board is never half live. */
+  today_pct?: number | null; today_basis?: string | null;
+  /** TRI-state, never a bool: false = the year-over-year pair is not four
+   *  fiscal quarters apart, null = there are no period keys to check it with,
+   *  true = checked and fine. */
+  period_ok?: boolean | null; period?: string | null;
 };
 
 export type BondeRegime = {
@@ -108,6 +126,13 @@ export type BondeBoardData = {
   n_new: number; new_days: number;
   regime?: BondeRegime; note?: string; scan_ts?: number | string | null;
   measured?: BondeMeasured;
+  /** Which session the Today column is on, and why. */
+  d1?: BondeD1 | null;
+  /** Passers the board refused to tier because their year-over-year pair is
+   *  not four fiscal quarters apart — the same rows the 🚀 growth board
+   *  refuses. Counted and LISTED: a board that hides must say so. */
+  n_tiered?: number; n_period_mismatch?: number;
+  period_mismatch_symbols?: BondeHeldOut[];
 };
 
 const SECTIONS: { key: string; label: string; blurb: string }[] = [
@@ -159,7 +184,8 @@ const BASE_NOTE: Record<string, string> = {
 /** Column headers, one per grid track of `.bd-row`. The metric heads mirror
  *  `metricCells` — same order, same four cells — so a head sits over its cell. */
 const HEADS = {
-  sym: { text: 'Ticker', title: 'Ticker · company. ✨ NEW = arrived on his screen recently; 🚀 = also clears the explosive-growth screen; 🎯 = live print in / near the board’s nearest demand band.' },
+  sym: { text: 'Ticker', title: 'Ticker · company. ✨ NEW = arrived on his screen recently; 🚀 = also clears the explosive-growth screen; 🎯 = live print in / near the board’s nearest demand band. “+ Signals” puts the name on your watchlist.' },
+  today: { text: 'Today', title: 'Each name’s own move so far in THIS session, when the board has a live read — not relative to the benchmark. The whole column shares one basis: when the read is on the last close, every row here is an em-dash rather than yesterday’s number under a “Today” header. The line above the sections says which it is.' },
   sales: { text: 'Sales YoY · base → latest', title: 'Latest quarterly revenue against the same quarter a year ago, with the two dollar figures under it. ⚠ marks a base that is negative or immaterial.' },
   character: { text: 'Character', title: 'His character clause: accelerating (growth rate rising), a streak of consecutive growth quarters, sales-led (top line outpacing the bottom line).' },
   pivot: { text: 'Episodic pivot', title: 'The gap on the pivot day, its volume multiple and how long ago. — = no pivot on this name.' },
@@ -178,6 +204,15 @@ export default function BondeBoard() {
   const [newOnly, setNewOnly] = useState(false);
   const [nearDemandOnly, setNearDemandOnly] = useState(false);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
+  const [trackedOnly, setTrackedOnly] = useState(false);
+  const [heldOutOpen, setHeldOutOpen] = useState(false);
+  /* 📡 the ⚡ Signals watchlist — the same store the "+ Signals" button on each
+   * row writes, so the box and the buttons can never disagree. "Tracked" is
+   * exactly what that button calls ON: on the list, or held in the portfolio
+   * (a held name rides Signals by default and leaves with the position). */
+  const wl = useSignalWatchlist();
+  const tracked = useCallback((sym: string) => wl.has(sym) || wl.isHeld(sym),
+                              [wl]);
 
   // Every row on the tab, once — the shared read is one POST per list.
   const rowSymbols = useMemo(() => {
@@ -196,18 +231,38 @@ export default function BondeBoard() {
     return k;
   }, [room.map]);
 
-  const load = useCallback(async () => {
+  /* ↻ Live prices (2026-09-20). The same three rules the 🔥 Hottest loader
+   * learned the hard way:
+   *  1. LATEST WINS — a late first response must be DISCARDED, or the basis
+   *     line reads "live as of 10:14" over rows from the previous answer.
+   *  2. A FAILURE KEEPS THE BOARD. A dead provider must not blank his screen.
+   *  3. The in-flight guard stops the BUTTON only, never the effect. */
+  const seq = useRef(0);
+  const inFlight = useRef(false);
+  const dataRef = useRef<BondeBoardData | null>(null);
+
+  const load = useCallback(() => {
+    const id = ++seq.current;
+    inFlight.current = true;
     setLoading(true);
-    try {
-      const r = await fetch(`${API}/bonde/board`, { credentials: 'include' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setD(await r.json());
-      setErr(null);
-    } catch (e) {
-      setErr(String((e as Error)?.message ?? e));
-    } finally { setLoading(false); }
+    fetch(`${API}/bonde/board`, { credentials: 'include', cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then((j: BondeBoardData) => {
+        if (id !== seq.current) return;                  // a newer read won
+        const rows = Object.values(j?.sections || {}).reduce((k, v) => k + (v?.length || 0), 0);
+        if (!rows && dataRef.current) {
+          setErr('the live read came back with no rows');
+          return;                                        // keep the good board
+        }
+        dataRef.current = j; setD(j); setErr(null);
+      })
+      .catch((e) => { if (id === seq.current) setErr(String((e as Error)?.message ?? e)); })
+      .finally(() => {
+        if (id === seq.current) { inFlight.current = false; setLoading(false); }
+      });
   }, []);
   useEffect(() => { void load(); }, [load]);
+  const onRescan = () => { if (inFlight.current) return; load(); };
 
   /* 🎯 The enterable cut (2026-09-15), applied INSIDE each section — his
    * sections are the board, so the filter must never merge them. It COMPOSES
@@ -228,6 +283,9 @@ export default function BondeBoard() {
     return SECTIONS.map((s) => {
       const all = d.sections?.[s.key] || [];
       let rows = newOnly ? all.filter((r) => r.is_new) : all;
+      // 📡 composes with ✨ new arrivals and 🎯 in/near demand — each box
+      // removes rows, none of them reorders his sections.
+      if (trackedOnly) rows = rows.filter((r) => tracked(r.symbol));
       if (nearDemandOnly) {
         // Filter AND sort: in the band first, then closest above it. The
         // served order (his screen's own) is kept when the box is off.
@@ -255,7 +313,8 @@ export default function BondeBoard() {
     // `ignoreReasons` belongs here: this board calls the partition by hand
     // rather than through the hook, so a missed dep means his chip lights up
     // and the sections do not move.
-  }, [d, newOnly, nearDemandOnly, explosiveFirst, room.map, enterableMap, enterableOn, ignoreReasons]);
+  }, [d, newOnly, nearDemandOnly, trackedOnly, tracked, explosiveFirst, room.map,
+      enterableMap, enterableOn, ignoreReasons]);
 
   /* One line for the whole tab: the sections are his, the count is the board's. */
   const enterableTotals = useMemo(() => {
@@ -273,12 +332,26 @@ export default function BondeBoard() {
     return { hidden, unread, unhidden, byReason, reasons };
   }, [sections]);
 
-  if (loading) return <div className="bd-note">reading his screen…</div>;
-  if (err) return <div className="bd-note bd-err">⛔ {err}</div>;
+  // A failed ↻ must never blank a board that is already drawn — the error is
+  // reported ABOVE the good rows instead (the Hottest rule, 2026-09-18).
+  if (loading && !d) return <div className="bd-note">reading his screen…</div>;
+  if (err && !d) return <div className="bd-note bd-err">⛔ {err}</div>;
   if (!d) return null;
 
   const paused = d.regime?.scanners_paused;
   const m = d.measured;
+  const d1 = d.d1 || null;
+  /* Only the three fields those two read, so the Bonde block never has to be
+     cast to Hottest's payload type. Both sentences stay THEIRS. */
+  const d1Pick = d1
+    ? { d1: { market_closed: d1.market_closed, in_session: d1.in_session,
+              session_window: d1.session_window } }
+    : null;
+  const rescanBlocked = rescanBlockedReason(d1Pick);
+  const rescanQuiet = rescanQuietReason(d1Pick);
+  const heldOut = d.period_mismatch_symbols || [];
+  const nHeldOut = d.n_period_mismatch ?? heldOut.length;
+  const heldOutNote = heldOutSentence(d.note);
 
   return (
     <div className="bd-wrap">
@@ -339,6 +412,49 @@ export default function BondeBoard() {
           </label>
           <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst}
                                 className="bd-toggle" />
+          {/* 📡 Ajay 2026-09-20: "add trackers … the stocks that need to be
+              tracked based on his strategy". The tracker list is the ⚡ Signals
+              watchlist he already uses everywhere else — one watchlist, not a
+              Bonde-only one that would drift from it. */}
+          <label className="bd-toggle"
+                 title="Keep only the names on your ⚡ Signals watchlist (and the ones you hold, which ride that list by default). Use the “+ Signals” button on a row to start tracking it.">
+            <input type="checkbox" checked={trackedOnly}
+                   onChange={(e) => setTrackedOnly(e.target.checked)} />
+            📡 tracked only
+          </label>
+          {/* ↻ Live prices — the label says what it does. This board NEVER
+              scans on the request path; the click re-reads the Today column
+              (one snapshot) and nothing else on the page moves. */}
+          <button type="button" className="cm-rescan" data-testid="bonde-rescan"
+                  disabled={loading || rescanBlocked !== null}
+                  title={rescanBlocked
+                    ? `Live prices are off because ${rescanBlocked}. Every column here is`
+                      + ' already the last finished session.'
+                    : (rescanQuiet ? `${rescanQuiet}. ` : '')
+                      + 'Re-reads today’s live price for every name on this board. '
+                      + 'His sales tiers, the character clause, the Episodic Pivots and '
+                      + 'the CPA metrics do NOT move — they come from the last scan. '
+                      + BONDE_LIVE_COST_SENTENCE}
+                  onClick={onRescan}>
+            {loading ? 'Reading…' : '↻ Live prices'}
+          </button>
+          <InfoButton inline title="📈 Bonde — what “live” means here">
+            <p><b>One column is live, the rest is the scan.</b> “Today” is each name’s
+              own move so far in this session. His sales tiers, the year-over-year
+              growth, the character chips, the Episodic Pivot and the CPA metrics all
+              come from the last scan and do not move when you click ↻.</p>
+            <p><b>Never half live.</b> The whole column shares one basis. If the
+              benchmark has no live print — before the open, on a holiday, or when the
+              provider misses it — every row shows an em-dash instead of yesterday’s
+              number under a “Today” header. The line above the sections says which
+              session you are looking at, in the market calendar’s own words.</p>
+            <p><b>What a click costs.</b> {BONDE_LIVE_COST_SENTENCE} The tiers are not
+              re-screened and no scan is triggered.</p>
+            <p><b>📡 tracked only</b> filters to your ⚡ Signals watchlist — the same
+              list the “+ Signals” button on each row writes to.</p>
+            <p>Nothing on this tab is a measured signal. The verdict banner at the top
+              is the board’s own measurement, and it came back inverted.</p>
+          </InfoButton>
           {nearDemandOnly && (
             <span className="bd-dim bd-sub" title="How many of the tab’s names have a band read yet. Pending rows are being built and will appear on the next poll; a name with no demand band under its print never qualifies.">
               band read on {readCount} of {rowSymbols.length}
@@ -348,6 +464,19 @@ export default function BondeBoard() {
           )}
         </div>
       </div>
+
+      {/* Which session the Today column is on — above the sections, not in a
+          tooltip. Served words where the backend has them (the calendar's
+          reason), never prose matched here. */}
+      <div className="bd-basis" data-testid="bonde-basis" title={d1?.note || undefined}>
+        {basisLine(d1)}
+        {d1?.live && typeof d1.live_names === 'number' && typeof d1.symbols === 'number' && (
+          <span className="bd-dim bd-sub"> · live print on {d1.live_names} of {d1.symbols}</span>
+        )}
+      </div>
+
+      {/* A failed ↻ reports itself here and LEAVES the board standing. */}
+      {err && <div className="bd-note bd-err" data-testid="bonde-err">⛔ {err}</div>}
 
       {enterableOn ? (
         <HiddenCount hidden={enterableTotals.hidden} unread={enterableTotals.unread}
@@ -406,6 +535,7 @@ export default function BondeBoard() {
             <div className="bd-rows">
               <div className="bd-row bd-hdr" aria-hidden="false" role="row">
                 <div className="bd-sym" title={HEADS.sym.title}>{HEADS.sym.text}</div>
+                <div className="bd-today" title={HEADS.today.title}>{HEADS.today.text}</div>
                 <div className="bd-sales" title={HEADS.sales.title}>{HEADS.sales.text}</div>
                 <div className="bd-chips" title={HEADS.character.title}>{HEADS.character.text}</div>
                 <div className="bd-pivot" title={HEADS.pivot.title}>{HEADS.pivot.text}</div>
@@ -419,15 +549,44 @@ export default function BondeBoard() {
                   ? BASE_NOTE[r.base_state] : null;
                 const read = readOf(r.symbol);
                 const dchip = demandChipText(read);
+                const today = todayCell(r, d1);
+                const pmark = periodMark(r.period_ok);
                 return (
                   <div key={`${s.key}-${r.symbol}`} className="bd-row">
                     <div className="bd-sym">
                       <TickerLink ticker={r.symbol} fromLabel="Bonde" />
+                      {/* One click puts the name on his ⚡ Signals watchlist —
+                          the "trackers" ask. Non-compact: a bare "+" beside the
+                          chips does not read as a control (the same contract
+                          the Hottest table carries). */}
+                      <SignalWatchButton symbol={r.symbol} />
                       {r.is_new && (
-                        <span className="bd-new"
+                        /* The DATE on the badge, not only in the title: "✨ NEW"
+                           alone cannot be told from a 29-day-old arrival. */
+                        <span className="bd-new" data-testid={`bd-new-${r.symbol}`}
                               title={r.first_seen
                                 ? `First appeared on his screen ${String(r.first_seen).slice(0, 10)}`
-                                : 'Newly arrived on his screen'}>✨ NEW</span>
+                                : 'Newly arrived on his screen'}>
+                          ✨ NEW{r.first_seen ? ` · ${String(r.first_seen).slice(5, 10)}` : ''}
+                        </span>
+                      )}
+                      {/* The year-over-year pair, tri-state. `false` = checked
+                          and not four quarters apart; `null` = no period keys
+                          to check it with. A tick is never printed for either. */}
+                      {pmark && (
+                        <span className={pmark.cls} data-testid={`bd-pair-${r.symbol}`}
+                              title={pmark.title}>{pmark.text}</span>
+                      )}
+                      {/* ⚡ rows carry every tier, so the section header does not
+                          state it. A row the board WITHHELD the tier from (its
+                          pair did not check out) prints an em-dash. */}
+                      {s.key === 'pivot' && (
+                        <span className="bd-tier bd-dim" data-testid={`bd-tier-${r.symbol}`}
+                              title={r.tier
+                                ? 'His sales tier for this name.'
+                                : 'The growth claim is withheld on this row — its year-over-year pair is not four fiscal quarters apart. The Episodic Pivot is a gap-and-volume event and stands on its own.'}>
+                          {tierText(r.tier)}
+                        </span>
                       )}
                       {/* Only in / near rows wear the chip — "10% above demand"
                           on every row is noise, not a read (Rule #5). */}
@@ -453,6 +612,11 @@ export default function BondeBoard() {
                       <BandStructureChip read={read?.band_structure} className="cm-badge"
                                          study={room.payload?.band_structure_study} />
                       {r.name && <div className="bd-coname">{r.name}</div>}
+                    </div>
+
+                    <div className={`bd-today ${today.tone}`} title={today.title}
+                         data-testid={`bd-today-${r.symbol}`}>
+                      {today.text}
                     </div>
 
                     <div className="bd-sales">
@@ -498,6 +662,34 @@ export default function BondeBoard() {
           )}
         </section>
       ))}
+
+      {/* 🧾 Held out — the passers the board refused to TIER because their
+          newest quarter and its "year-ago" slot are not four fiscal quarters
+          apart (Massive omits a missing quarter, usually FY Q4). The 🚀 growth
+          board refuses the same rows. A board that hides must say WHICH rows,
+          so they are listed rather than silently dropped. Collapsed, because
+          it is a data-quality footnote and not part of his screen. */}
+      {nHeldOut > 0 && (
+        <details className="bd-heldout" data-testid="bonde-heldout"
+                 open={heldOutOpen}
+                 onToggle={(e) => setHeldOutOpen((e.target as HTMLDetailsElement).open)}>
+          <summary>Held out — quarter not four apart ({nHeldOut})</summary>
+          {heldOutNote && <p className="bd-note">{heldOutNote}</p>}
+          <div className="bd-heldout-rows">
+            <div className="bd-heldout-row bd-hdr">
+              <span>Ticker</span><span>Tier</span><span>Latest</span><span>Year-ago</span>
+            </div>
+            {heldOut.map((h) => (
+              <div key={h.symbol} className="bd-heldout-row">
+                <span><TickerLink ticker={h.symbol} fromLabel="Bonde" /></span>
+                <span className="bd-dim">{tierText(h.tier)}</span>
+                <span className="bd-dim">{h.latest || '—'}</span>
+                <span className="bd-dim">{h.year_ago || '—'}</span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       <p className="bd-note bd-foot">{d.note}</p>
     </div>

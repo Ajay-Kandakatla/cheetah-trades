@@ -13,6 +13,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from . import bonde as B
+from . import bonde_live as BL
 
 log = logging.getLogger("sepa.bonde_api")
 router = APIRouter(tags=["bonde"])
@@ -48,6 +49,12 @@ async def bonde_board(
     direct call receives the Query OBJECT — which is not an int.
     """
     def _run():
-        return B.board(new_days=new_days if isinstance(new_days, int) else B.NEW_DAYS)
+        # The board is read off the last scan; the live day leg is ONE snapshot
+        # fan-out bolted on top of it (`bonde_live.attach`, the same engine the
+        # 🔥 Hottest board's day column uses). `attach` never raises and falls
+        # back to the close basis with the reason on the payload, so a price
+        # provider blinking can never take this board down.
+        return BL.attach(
+            B.board(new_days=new_days if isinstance(new_days, int) else B.NEW_DAYS))
 
     return JSONResponse(_scrub(await asyncio.to_thread(_run)))

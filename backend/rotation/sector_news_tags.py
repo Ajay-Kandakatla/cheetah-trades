@@ -61,6 +61,8 @@ from datetime import datetime, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from news_search import core as _news_core
+
 log = logging.getLogger("cheetah.rotation.sector_news_tags")
 
 # ── SCOPE KNOBS, NOT SIGNAL THRESHOLDS ─────────────────────────────────────
@@ -71,9 +73,15 @@ log = logging.getLogger("cheetah.rotation.sector_news_tags")
 # thresholds live and where nothing here may reach.
 SECTORS_PER_RUN = 6        # sectors tagged per pass, hottest first
 NAMES_PER_SECTOR = 5       # leading names whose news is read, per sector
-NEWS_WINDOW_HOURS = 36     # a headline older than this is not "today's news";
+NEWS_WINDOW_HOURS = _news_core.DEFAULT_WINDOW_HOURS
+                           # a headline older than this is not "today's news";
                            # 36 not 24 so a Monday run still sees Friday's
-                           # close-of-day story and a weekend run sees Friday
+                           # close-of-day story and a weekend run sees Friday.
+                           # 2026-09-20: the number moved to `news_search.core`
+                           # so the app has ONE window; this name is re-bound
+                           # to it rather than copied, and the tests that pin
+                           # `SNT.NEWS_WINDOW_HOURS` keep pinning the one
+                           # constant every caller now reads.
 MIN_HEADLINES = 2          # one loose headline is not a story worth a tag
 MAX_HEADLINES_TO_MODEL = 6
 
@@ -186,36 +194,32 @@ def _fresh(items: list, now: Optional[float] = None) -> list:
     tests in tests/test_news_rss_dates_2026_09_19.py). The drop below is now
     load-bearing rather than decorative, and it fires on genuinely undated
     items from any leg.
+
+    DELEGATED 2026-09-20 to `news_search.core.fresh`, which is this function's
+    body moved verbatim so every news caller in the app shares one window and
+    one undated policy. This name stays because the tests and the callers pin
+    it, and because the history above belongs next to the rule it explains.
     """
-    now = time.time() if now is None else now
-    floor = now - NEWS_WINDOW_HOURS * 3600
-    out = []
-    for it in items or []:
-        ts = it.get("published")
-        if not isinstance(ts, (int, float)) or ts != ts:
-            continue
-        # Feeds have shipped milliseconds before; a 13-digit stamp is not a
-        # headline from the year 45000.
-        if ts > 1e12:
-            ts = ts / 1000.0
-        if ts < floor or ts > now + 3600:
-            continue
-        out.append({**it, "published": ts})
-    out.sort(key=lambda x: x["published"], reverse=True)
-    return out
+    return _news_core.fresh(items, window_hours=NEWS_WINDOW_HOURS, now=now)
 
 
 async def _news_for(symbols: list) -> dict:
-    """{SYMBOL: [fresh headline, ...]} — failures come back as empty lists."""
-    try:
-        from news import fetch_news
-    except Exception as exc:                                   # noqa: BLE001
-        log.warning("sector tags: news module unavailable: %s", exc)
-        return {}
+    """{SYMBOL: [fresh headline, ...]} — failures come back as empty lists.
 
+    DELEGATED 2026-09-20 to `news_search.core.search`. Behaviour-preserving:
+    `relevance="none"` because these tags have never filtered a headline
+    against the company name, and turning the filter on would change WHICH
+    name gets the day's tag. That switch is his call (spec §7 item 8).
+    """
     async def one(sym):
         try:
-            return sym, _fresh(await fetch_news(sym))
+            res = await _news_core.search(
+                ticker=sym,
+                window_hours=NEWS_WINDOW_HOURS,
+                relevance="none",
+                audit=COLLECTION,
+            )
+            return sym, res["items"]
         except Exception as exc:                               # noqa: BLE001
             log.debug("sector tags: news %s failed: %s", sym, exc)
             return sym, []

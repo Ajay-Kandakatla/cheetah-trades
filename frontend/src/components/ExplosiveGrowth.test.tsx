@@ -571,6 +571,41 @@ describe('ExplosiveGrowth — the just-reported highlight', () => {
     expect(counts()).toEqual(before);
   });
 
+  /* 📈 the cross-link back to Bonde (Ajay 2026-09-20: "bondes and explosive
+   * growth are hand in hand"). Bonde already carries a 🚀 chip to this board;
+   * this is the return leg, and it must claim the SOURCE, never the number. */
+  it('renders the 📈 Bonde tier chip on a row that carries one', async () => {
+    stub([row({ sales_tier: 'explosive' })]);
+    mount();
+    const chip = await screen.findByText('📈 Bonde: explosive');
+    const title = chip.getAttribute('title') ?? '';
+    expect(title).toContain('research cache');
+    expect(title).toContain('same quarterly series');
+    // NOT a promise the two boards cannot keep: IPI/EVC/FF sit outside the
+    // scan's `full` universe and a scan-pending name is tier-less there.
+    expect(title).not.toContain('Same number');
+    expect(title).not.toContain('Bonde tab');
+  });
+
+  it('renders each of Bonde\'s three published tiers', async () => {
+    stub([row({ symbol: 'A', sales_tier: 'strong' }),
+          row({ symbol: 'B', sales_tier: 'steady' })]);
+    mount();
+    expect(await screen.findByText('📈 Bonde: strong')).toBeTruthy();
+    expect(screen.getByText('📈 Bonde: steady')).toBeTruthy();
+  });
+
+  it('NEGATIVE — no chip for a tier Bonde does not publish, or for none at all', async () => {
+    stub([row({ symbol: 'W', sales_tier: 'weak' }),
+          row({ symbol: 'D', sales_tier: 'declining' }),
+          row({ symbol: 'U', sales_tier: 'unknown' }),
+          row({ symbol: 'N', sales_tier: null }),
+          row({ symbol: 'M' })]);
+    mount();
+    await waitFor(() => expect(screen.getByText('W')).toBeTruthy());
+    expect(screen.queryByText(/📈 Bonde:/)).toBeNull();
+  });
+
   it('the empty-state row still spans 16 columns — no column was added', async () => {
     stubEr([], { earnings_fresh_summary: { ...SUMMARY, n: 0, n_fresh: 0, n_known: 0, n_unknown: 0 } });
     mount();

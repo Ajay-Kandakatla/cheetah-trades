@@ -1193,3 +1193,12 @@
 # bounded by SECTORS_PER_RUN: at most six model calls a day, local model first
 # and the hosted one only if local is down.
 20     6     *    *    *    /usr/local/bin/python -m rotation.sector_news_tags
+
+# ── 🏛️ POTUS / federal-stake headline watch (political/watch.py, 2026-09-20).
+# Ajay: "Anytime POTUS does new investments show me those." Seven keyword
+# searches, a regex over the TITLES, candidates stored for the 🏛️ POTUS tab.
+# HEURISTIC — no measured record. The push kind `potus_investment` ships OFF
+# in push.subs.default_prefs(); nothing reaches his phone until he flips the
+# toggle at /notifications. Every day, no closed-day gate: the government
+# announces on weekends too.
+35     6     *    *    *    /usr/local/bin/python -m political.watch

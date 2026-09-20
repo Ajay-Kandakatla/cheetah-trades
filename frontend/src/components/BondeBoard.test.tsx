@@ -157,10 +157,12 @@ describe('the board', () => {
     expect(screen.getAllByText(/no new arrivals in this tier/).length).toBeGreaterThan(0);
   });
 
-  it('badges an arrival and says WHEN in the tooltip', async () => {
+  it('badges an arrival and says WHEN on the badge and in the tooltip', async () => {
+    // 2026-09-20: the DATE moved onto the badge itself — "✨ NEW" alone could
+    // not be told from a 29-day-old arrival without hovering.
     draw(payload({ sections: { pivot: [], strong: [], steady: [],
       explosive: [row('CCC', { is_new: true, first_seen: '2026-09-10T12:00:00Z' })] } }));
-    const badge = await screen.findByText('✨ NEW');
+    const badge = await screen.findByText('✨ NEW · 09-10');
     expect(badge.getAttribute('title')).toMatch(/2026-09-10/);
   });
 

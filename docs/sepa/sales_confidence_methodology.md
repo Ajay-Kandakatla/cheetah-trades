@@ -116,3 +116,24 @@ PASS / PARTIAL / FAIL badge shown on every card. The Sales-confidence tab was
 merged into the **Analysis** tab (which moved up to 3rd) — the verdict leads, the
 sales detail grid follows. Full derivation:
 `docs/sepa/buyable_verdict_methodology.md`.
+
+---
+
+## The YoY pair guard is a BOARD rule — the tiers did not move (2026-09-20)
+
+The **5% floor / 25% preferred / 100% explosive** thresholds above are Bonde's
+own and are **unchanged**. `sepa/sales.py` — `_yoy`, its `abs(base)` divide,
+`compute`, `score` and the tier boundaries — is untouched: it is book-cited,
+locked by `test_sepa_contracts` and read by the falling-knife gate on several
+other boards, so moving its arithmetic would move every one of them.
+
+What shipped on 2026-09-20 sits **above** it. Massive omits a quarter it does
+not have, so the list POSITIONS the year-over-year legs are computed at (0 vs 4,
+and 1 vs 5 for the prior leg) are not always four fiscal quarters apart —
+measured on the live board, **164 of 1,051 Bonde passers, 15.6%**. The 📈 Bonde
+board and the 🔥 Hottest row now check the period keys before they TIER or
+PRINT the number, exactly as the 🚀 Explosive Growth board has refused those
+rows since 2026-09-14. The check lives in `sepa/qoq.py` (`yoy_pairs_ok`,
+`yoy_pairs_verifiable`, `period_ok`) and nobody recomputes a growth figure: a
+board declines to place the row, `sales.compute` still returns what it always
+returned. Report: `docs/sepa/data_spine_audit_2026_09_20.md`.

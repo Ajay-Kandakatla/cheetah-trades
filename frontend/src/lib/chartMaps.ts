@@ -14,8 +14,9 @@ import type { DemandScanProgress } from './demandScanProgress';
 import type { ExplosiveRead, ExplosiveStudy } from './bounceRoom';
 import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
+import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -68,7 +69,18 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // stocks"). Beside the growth boards it belongs with, not at the front —
   // same measured-order rule as the two above.
   'bonde',
-  'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+  'session', 'signals', 'hot_sectors', 'growth',
+  // 🆕 IPOs ≤2y (Ajay 2026-09-19: "IPO of hot sector theme of stocks and
+  // then add them as a tab in Chart maps"). A tile board off the chart-maps
+  // dispatcher, beside the growth board it was asked for next to; no usage
+  // yet, so it takes the slot rather than the front (spec §7.6 — his call).
+  'ipo',
+  'gnt',
+  // 🏛️ POTUS / federal (Ajay 2026-09-20: "also in to the potus page in
+  // chart maps"). Same pattern as 📁 My holdings — its own fetcher, one
+  // Support tile per curated name — beside the other tracker board (GnT).
+  'potus',
+  'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
 
 /** The tab a bare /chart-maps (and any unknown ?tab=) opens on — the FIRST,
  *  most-used tab, so the landing board follows the order itself. */
@@ -130,13 +142,25 @@ export function isBoardTab(t: CmTab): boolean {
     // Bonde is a sectioned table off /bonde/board, not a tile grid.
     && t !== 'bonde'
     && t !== 'growth'
-    && t !== 'gnt';
+    && t !== 'gnt'
+    // 🏛️ POTUS (2026-09-20) is one /chart-maps/support call per curated name
+    // plus the watch's candidate table — no universe pass, no tile grid.
+    // `ipo` is NOT here: it is a tile board off the dispatcher like the rest.
+    && t !== 'potus';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   gnt: {
     label: '\uD83D\uDCCC GnT',
     blurb: 'Tito Adhikary (@GnT_Trades) \u2014 what he is posting, with this app\u2019s own read beside it. Ajay 2026-09-12: "I wanna track his stocks for investing". HE WON THE 2025 US INVESTING CHAMPIONSHIP, $20k+ Enhanced Growth division, +2,115.1% \u2014 a CITED claim quoted from @USICOfficial on his own pinned post, not a number this app measured, and not a transferable track record: those divisions permit concentration and leverage this app\u2019s own risk rules forbid. THE BOARD SHOWS SENTENCES, NOT A TICKER LIST, and that is deliberate. He does not post a portfolio: his timeline mixes forward ideas ("$SPCX reclaiming 150 into the close. Definitely on watch next week") with past-tense recaps of CLOSED trades, several of them PUTS ("Great day on $QQQ puts, +$12K") and some from 2022 naming stocks that no longer exist. A bare cashtag list inverts him. So every row leads with his actual words and its age, and NO row claims a direction \u2014 one of his own posts reads "caught the upside on $FSLR and downside on $META $TSLA", one sentence carrying both, so the chips are WORDS FOUND IN THE POST rather than a reading of it. Index tickers are dropped from the roster because "$SPY $QQQ weak" is him describing the tape, not naming a stock. The overlay columns are ours: whether the name is even in the scan universe (his freshest idea, SPCX, is NOT \u2014 invisible to every board and alert here), the demand-band read, and the 100/100 growth screen. Fetched twice a day, 07:40 and 17:40 CT, weekends included because his weekend wrap is where the next week\u2019s watchlist shows up. His calls, NOT advice. Nothing here gates a scan, an alert or a lane.',
+  },
+  ipo: {
+    label: '\u{1F195} IPOs \u22642y',
+    blurb: 'Every in-universe name that listed inside the last two years, newest first, with the \u201c\uD83D\uDDD3\uFE0F Coming up\u201d strip of expected listings pinned above it. Ajay 2026-09-19: "IPO of hot sector theme of stocks and then add them as a tab in Chart maps" and "Also potential future IPOs coming up if stocktwitz has" \u2014 StockTwits has no IPO feed, so Finnhub\u2019s calendar is the source. THE ONLY CITED THING ON THIS TAB IS THE RECENCY BOUND: TLSW Ch.11 p.260 (winners tend to be IPOs of the prior eight years), which this app already encodes as sepa/ipo_age\u2019s \u22642-year read \u2014 the tab imports that bound rather than retyping it. EVERY LISTING DATE IS CORROBORATED, because Finnhub\u2019s profile date is ~21.4% corrupt on this universe and the corruption has a shape: a RECYCLED ticker \u2014 retired by one company, re-issued to a new listing \u2014 carries the new date while the price frame still holds the old company\u2019s history, so a naive tile would print somebody else\u2019s session as this IPO\u2019s day one. Each date is checked against a priced deal for the same symbol in Finnhub\u2019s IPO calendar AND the price frame\u2019s first bar: calendar prices it and bars agree \u2192 confirmed; calendar prices it but bars pre-date the listing \u2192 shown as \u201c\u2733\uFE0E recycled ticker\u201d with EVERY price-derived figure blanked; calendar silent but bars agree \u2192 shown flagged \u201ccalendar: no record\u201d (hiding a real listing is the worse error); calendar silent AND bars pre-date the claim \u2192 dropped and counted. The two price stats say what they are \u2014 \u201cDay-1 open\u2192close\u201d and \u201cWeek-1 vs day-1 open\u201d \u2014 and neither is the pop off the OFFER price, which this app does not hold. FLAT, NOT GROUPED BY SECTOR: ten of the seventeen themes have no recent listing at all, so a grouped board would be mostly empty headings; the theme rides on the tile as a chip, and the sort / tier controls apply to nothing here and the served criteria says so. A calendar outage does not change what the board is \u2014 it still builds from ipo_age alone, every row reads uncorroborated, nothing is dropped, and the strip prints the reason. NOTHING HERE IS MEASURED OR CLAIMS AN EDGE. A list, not a signal: it gates nothing, orders nothing, alerts nothing and enters no lane. Not advice.',
+  },
+  potus: {
+    label: '\u{1F3DB}\uFE0F POTUS',
+    blurb: 'Two sections, and they are not the same kind of thing. Ajay 2026-09-20: "I would like it to be in individual tickers but also in to the potus page in chart maps" and "Anytime POTUS does new investments show me those". THE TOP HALF IS THE LIST \u2014 the curated political disclosures (44 rows, one source: backend/political/disclosures.json, the chip file is generated from it), drawn one Support tile per name in a FIXED EDITORIAL ORDER: \uD83C\uDDFA\uD83C\uDDF8 U.S. government equity stake, then \uD83D\uDEE0\uFE0F government contractor, then \uD83C\uDFDB\uFE0F POTUS family disclosed, then \uD83D\uDD0D inferred. A row is in the list because a filing or a named report put it there and nothing automatic ever adds one; the order is the curator\u2019s, not a ranking, and the \uD83D\uDD0D inferred rows carry their own notes saying what they are NOT (no government agreement on Green Land, Critical Metals or Uranium Energy). A stake chip prints only on a row with a NAMED agency and a STATED percentage \u2014 "the administration is weighing a stake" is not a stake. THE BOTTOM HALF IS \uD83D\uDD0E WATCH CANDIDATES, AND IT IS A REGEX OVER HEADLINE TITLES: seven keyword searches a day through the shared news routine (24-hour window, no closed-day gate \u2014 the government announces on weekends too), each title classified first-match-wins as equity stake \u2192 federal award \u2192 POTUS family, the ticker resolved from a cashtag or the company name, anything already on the list dropped. Every candidate row shows the pattern that matched, the agency, the size, the source and how the ticker was resolved, so you can throw it out in one look; a headline that names no ticker is still shown as \u201cunnamed \u2014 needs a ticker\u201d, because on his own watch queries only about 1 in 90 such headlines carries a cashtag at all. Candidates never edit the list \u2014 you say yes. THE PUSH SHIPS OFF: the \uD83C\uDFDB\uFE0F kind is registered everywhere a kind has to be and stays off until you flip it at /notifications; when you do, only a headline with BOTH a named agency AND a size is pushable, and a contract award never is, however large. Every tile carries its political chip, the growth / explosive / enterable chips and + Signals, off the same Support payload the Support tab draws, so the bands cannot differ between the two surfaces. NOTHING HERE IS MEASURED AND NOTHING IS SORTED BY RETURN. A heuristic that fills a list a human reads: it gates no alert, sizes no position and enters no lane. Not advice.',
   },
   growth: {
     label: '\uD83D\uDE80 Explosive Growth',
@@ -745,6 +769,12 @@ export type CmBoard = {
    *  every other tab, and absent here until the nightly job has run — the
    *  strip draws its own placeholder rather than vanishing. */
   index_zones?: CmIndexZones | null;
+  /** 🆕 IPO tab only (2026-09-20): the forward calendar rows the "Coming up"
+   *  strip prints verbatim, and what the corroboration pass could and could
+   *  not read. Absent on every other tab. The bucket counts ride in the
+   *  served `note` / `criteria`; the strip never reads them. */
+  upcoming?: IpoUpcoming[] | null;
+  corroboration?: IpoCorroboration | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

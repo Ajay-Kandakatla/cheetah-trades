@@ -1,0 +1,577 @@
+[
+  {
+    "ticker": "NVDA",
+    "company": "Nvidia",
+    "sector": "Semiconductors",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "Est. $1.8M–$6.6M total; timing overlapped chip-deal news",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "MSFT",
+    "company": "Microsoft",
+    "sector": "Big Tech / Software",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "Est. $2.4M–$8.1M; also large sales same period",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "AVGO",
+    "company": "Broadcom",
+    "sector": "Semiconductors",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "New / added semiconductor position",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "AMZN",
+    "company": "Amazon",
+    "sector": "Big Tech / E-commerce",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "Est. $2.5M–$8.3M; also large sales same period",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "AAPL",
+    "company": "Apple",
+    "sector": "Big Tech / Hardware",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "ORCL",
+    "company": "Oracle",
+    "sector": "Software",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "Est. $2.2M–$10.6M total",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "DELL",
+    "company": "Dell Technologies",
+    "sector": "Hardware",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "New position preceded a public endorsement",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "ADBE",
+    "company": "Adobe",
+    "sector": "Software",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "TXN",
+    "company": "Texas Instruments",
+    "sector": "Semiconductors",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "MSI",
+    "company": "Motorola Solutions",
+    "sector": "Communications",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "NOW",
+    "company": "ServiceNow",
+    "sector": "Software",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1M–$5M",
+    "govtStake": null,
+    "notes": "Listed as SRVC in source; correct ticker is NOW",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "META",
+    "company": "Meta Platforms",
+    "sector": "Big Tech",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$1,001–$500K (buys)",
+    "govtStake": null,
+    "notes": "Net seller; small buys alongside large sales",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "AMD",
+    "company": "Advanced Micro Devices",
+    "sector": "Semiconductors",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": "Reportedly 100%+ profit on later marks",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "GS",
+    "company": "Goldman Sachs",
+    "sector": "Financials",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": "Overlaps deregulatory posture",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "GOOGL",
+    "company": "Alphabet",
+    "sector": "Big Tech",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "ABNB",
+    "company": "Airbnb",
+    "sector": "Consumer / Travel",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "DASH",
+    "company": "DoorDash",
+    "sector": "Consumer",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "MU",
+    "company": "Micron",
+    "sector": "Semiconductors",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "BE",
+    "company": "Bloom Energy",
+    "sector": "Clean Energy",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": "Reportedly 100%+ profit on later marks",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "BAC",
+    "company": "Bank of America",
+    "sector": "Financials",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Listed among purchases",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "PG",
+    "company": "Procter & Gamble",
+    "sector": "Consumer Staples",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Listed among purchases",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "BA",
+    "company": "Boeing",
+    "sector": "Industrials / Defense",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Listed among purchases",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "LLY",
+    "company": "Eli Lilly",
+    "sector": "Pharma / GLP-1",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Anti-obesity drug exposure",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "COIN",
+    "company": "Coinbase",
+    "sector": "Crypto",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Pro-crypto policy window",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "SOFI",
+    "company": "SoFi",
+    "sector": "Fintech",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "WMT",
+    "company": "Walmart",
+    "sector": "Consumer Staples",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "INTU",
+    "company": "Intuit",
+    "sector": "Software",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "WDAY",
+    "company": "Workday",
+    "sector": "Software",
+    "categories": [
+      "potus_family"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": null,
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "INTC",
+    "company": "Intel",
+    "sector": "Semiconductors",
+    "categories": [
+      "potus_family",
+      "govt_investment"
+    ],
+    "disclosureBand": "$500K–$1M",
+    "govtStake": null,
+    "notes": "Increased holdings followed U.S. govt investment (CHIPS Act)",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "PLTR",
+    "company": "Palantir",
+    "sector": "Software / Defense",
+    "categories": [
+      "potus_family",
+      "govt_contractor"
+    ],
+    "disclosureBand": "~$260K (Q1 cum.)",
+    "govtStake": null,
+    "notes": "Govt contractor",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "HOOD",
+    "company": "Robinhood",
+    "sector": "Fintech",
+    "categories": [
+      "potus_family",
+      "govt_contractor"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Initial trustee of 'Trump Accounts' program",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "QBTS",
+    "company": "D-Wave Quantum",
+    "sector": "Quantum / Speculative",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Scan-classified subset — not directly disclosed",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "RGTI",
+    "company": "Rigetti Computing",
+    "sector": "Quantum / Speculative",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Scan-classified subset — not directly disclosed",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "INFQ",
+    "company": "Infleqtion",
+    "sector": "Quantum / Speculative",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Scan-classified subset — not directly disclosed",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "NN",
+    "company": "NextNav",
+    "sector": "Communications",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Scan-classified subset — not directly disclosed",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "PLUG",
+    "company": "Plug Power",
+    "sector": "Clean Energy",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Scan-classified subset — not directly disclosed",
+    "asOf": null,
+    "addedOn": null
+  },
+  {
+    "ticker": "MP",
+    "company": "MP Materials",
+    "sector": "Rare Earths / Materials",
+    "categories": [
+      "govt_investment"
+    ],
+    "disclosureBand": null,
+    "govtStake": "DoD 15%",
+    "notes": "Department of Defense holds ~15% and is the largest shareholder — the deal that set the template for everything below it.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "USAR",
+    "company": "USA Rare Earth",
+    "sector": "Rare Earths / Materials",
+    "categories": [
+      "govt_investment"
+    ],
+    "disclosureBand": null,
+    "govtStake": "Commerce 10%",
+    "notes": "$1.6B debt-and-equity package from the Department of Commerce for ~10% (announced Jan 2026), funding a domestic mine and magnet facility.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "LAC",
+    "company": "Lithium Americas",
+    "sector": "Lithium / Materials",
+    "categories": [
+      "govt_investment"
+    ],
+    "disclosureBand": null,
+    "govtStake": "DOE 5%",
+    "notes": "Energy Department took ~5% while renegotiating the Biden-era $2.3B loan for the processing facility beside Thacker Pass, Nevada.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "TMQ",
+    "company": "Trilogy Metals",
+    "sector": "Copper / Materials",
+    "categories": [
+      "govt_investment"
+    ],
+    "disclosureBand": null,
+    "govtStake": "Federal 10%",
+    "notes": "$35.6M federal investment for ~10%, to secure access to critical-mineral projects in Alaska.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "ALOY",
+    "company": "REalloys",
+    "sector": "Rare Earths / Materials",
+    "categories": [
+      "govt_contractor"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "NOT an equity stake. The U.S. Army selected REalloys to build and operate the first commercial critical-minerals processing and metallization facility on a U.S. military base (Euclid, Ohio). Also holds an offtake for 15% of phase-one output from Critical Metals’ Tanbreez project.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "CRML",
+    "company": "Critical Metals Corp",
+    "sector": "Rare Earths / Materials",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Holds 92.5% of the Tanbreez rare-earth project in southern Greenland. The administration was REPORTED (Oct 2025) to be weighing an equity stake — reported interest, never a signed deal. Promote to govt_investment only once an agency AND a percentage are actually named.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "GLND",
+    "company": "Greenland Energy Company",
+    "sector": "Arctic Energy",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "Ajay’s \"Green Land energy\". Exclusive exploration rights to ~2M acres in the Jameson Land Basin, eastern Greenland, drilling with Halliburton. NO U.S. government agreement of any kind — it moves on the Arctic policy headline, which is a different thing from being invested in.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  },
+  {
+    "ticker": "UUUU",
+    "company": "Energy Fuels",
+    "sector": "Uranium / Rare Earths",
+    "categories": [
+      "inferred"
+    ],
+    "disclosureBand": null,
+    "govtStake": null,
+    "notes": "No Greenland asset and no stated government deal; grouped with the Greenland trade for expanding domestic rare-earth processing. Headline relevance only.",
+    "asOf": "2026-09-19",
+    "addedOn": "2026-09-19"
+  }
+]

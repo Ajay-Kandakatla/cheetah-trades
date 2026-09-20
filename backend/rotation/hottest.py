@@ -157,12 +157,48 @@ def _fundamentals_row(sym: str, fund: dict, earn: dict) -> dict:
     comp = eq.get("components") or {}
     flags = eq.get("red_flags") or {}
     e = earn or {}
-    return {
-        "sales_yoy": _num(f.get("rev_growth_q_pct")),
+    from sepa import qoq as Q
+
+    # WHICH NUMBER (2026-09-20). `sales.growth_yoy_pct` is the spine's own
+    # figure — the one the 📈 Bonde board tiers on and the 🚀 growth board
+    # screens on. `rev_growth_q_pct` is canslim's parallel 2-dp computation off
+    # the same slots, and it is ALL the yfinance path has (sales.compute([],
+    # eps) returns tier "unknown" with no growth_yoy_pct). So: prefer the
+    # spine, fall back rather than blank a yfinance or legacy row, and SAY
+    # WHICH on the row.
+    src = f.get("_source")
+    spine = _num(sales.get("growth_yoy_pct"))
+    if spine is not None:
+        sales_yoy, sales_yoy_source = spine, "sales"
+    else:
+        sales_yoy = _num(f.get("rev_growth_q_pct"))
+        sales_yoy_source = "yfinance" if src == "yfinance" else (
+            "legacy" if src is None else "sales")
+
+    # THE YoY PAIR GUARD, the same one growth/tracker.py has refused rows on
+    # since 2026-09-14 and the Bonde board now applies — sepa.qoq owns it.
+    # Tri-state: None = no period keys on file, so nothing could be checked
+    # (352 of 2,078 live scan rows). False = checked and NOT four quarters
+    # apart, so these legs compare two different seasons and are blanked here
+    # rather than handed to the sector day-tag model as facts.
+    periods = f.get("q_period_series")
+    if not isinstance(periods, list):
+        periods = None
+    period_ok = Q.period_ok(periods)
+    mismatch = period_ok is False
+
+    out = {
+        "sales_yoy": None if mismatch else sales_yoy,
+        "sales_yoy_source": None if mismatch else sales_yoy_source,
+        "fund_source": src,
+        "period": Q.period_label(periods[0], src) if periods else None,
+        "period_ok": period_ok,
+        "period_mismatch": mismatch,
         "sales_tier": sales.get("tier") or None,
-        "sales_prior_yoy": _num(sales.get("prior_yoy_pct")),
-        "sales_accelerating": bool(sales.get("accelerating")) if sales.get("accelerating") is not None else None,
-        "q_eps_yoy": _num(f.get("q_eps_growth_pct")),
+        "sales_prior_yoy": None if mismatch else _num(sales.get("prior_yoy_pct")),
+        "sales_accelerating": None if mismatch else (
+            bool(sales.get("accelerating")) if sales.get("accelerating") is not None else None),
+        "q_eps_yoy": None if mismatch else _num(f.get("q_eps_growth_pct")),
         "y_eps_growth": _num(f.get("y_eps_growth_pct")),
         "net_margin": _num(comp.get("npm_latest_pct")),
         "margin_expanding": bool(comp.get("npm_expanding")) if comp.get("npm_expanding") is not None else None,
@@ -175,6 +211,7 @@ def _fundamentals_row(sym: str, fund: dict, earn: dict) -> dict:
         "earnings_when": e.get("when") or None,
         "fundamentals_as_of": f.get("cached_at"),
     }
+    return out
 
 
 def _earnings_map(symbols: list[str]) -> dict:

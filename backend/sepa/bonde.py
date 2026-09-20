@@ -311,11 +311,72 @@ def _rev_base(scan_row: dict) -> dict:
                                              and base > 0) else None}
 
 
+def _periods(scan_row: dict):
+    """The parallel fiscal-quarter keys off a scan row, or None."""
+    f = scan_row.get("fundamentals") or {}
+    p = f.get("q_period_series") if isinstance(f, dict) else None
+    return p if isinstance(p, list) else None
+
+
+def _pair_mismatch(scan_row: dict) -> bool:
+    """Are this row's YoY legs measured on quarters that are NOT a year apart?
+
+    THE DISAGREEMENT THIS EXISTS TO END, measured on the live board 2026-09-20:
+    164 of 1,051 passers (15.6%) — 13 explosive, 56 strong, 95 steady — had a
+    headline or prior pair that is not four fiscal quarters apart. IOVA's keys
+    are [8105,8104,8102,8101,8100,8098]: 8103 and 8099 (FY Q4 in both years)
+    are simply absent from Massive's rows, so slot 4 is FY2025 Q1 standing in
+    for the year-ago quarter of FY2026 Q2. The 🚀 Explosive Growth board has
+    REFUSED exactly those rows since 2026-09-14 (`growth/tracker.qualifies`,
+    `period_mismatch`), so the same filed quarter read "explosive" here and
+    "refused" there. One guard, one home: `sepa.qoq.yoy_pairs_ok`.
+
+    Nothing is recomputed and no threshold moves — `sepa/sales.py` keeps its
+    number and its 5 / 25 / 100 tiers. This board declines to TIER the row.
+    """
+    from sepa import qoq as Q
+    return not Q.yoy_pairs_ok(_periods(scan_row))
+
+
+COHORT_PASSER = "passer"
+COHORT_FLOOR_CLEARER = "floor_clearer"
+
+
+def _note_mismatch(acc: list, scan_row: dict, pillar: dict,
+                   cohort: str = COHORT_PASSER) -> None:
+    """Record one held-out row for the list under the board.
+
+    A board that HIDES must say what it hid and why, so the row carries the
+    tier it WOULD have been placed in and both quarter labels — the reader can
+    see FY2026 Q2 sitting against FY2025 Q1 without opening a shell.
+
+    `cohort` says WHICH list the row was withheld from, and it is not
+    cosmetic: a floor-clearer that FAILED his character clause never passed
+    the screen, so counting it as a "passer" in the sentence under the board
+    would inflate the fire rate of his own screen with rows it rejected. The
+    two are counted apart and the sentence names both.
+    """
+    from sepa import qoq as Q
+    f = scan_row.get("fundamentals") or {}
+    src = f.get("_source") if isinstance(f, dict) else None
+    periods = _periods(scan_row) or []
+    i, j = Q.HEADLINE_PAIR
+    acc.append({
+        "symbol": str(scan_row.get("symbol") or "").upper(),
+        "tier": pillar.get("tier"),
+        "latest": Q.period_label(periods[i] if len(periods) > i else None, src),
+        "year_ago": Q.period_label(periods[j] if len(periods) > j else None, src),
+        "cohort": cohort,
+    })
+
+
 def _row(scan_row: dict, pillar: dict, pivot: Optional[dict]) -> dict:
     """One board row. Every number comes from a module that already owns it."""
+    from sepa import qoq as Q
     sym = str(scan_row.get("symbol") or "").upper()
     fundamentals = scan_row.get("fundamentals") or {}
     sales = (fundamentals.get("sales") or {}) if isinstance(fundamentals, dict) else {}
+    periods = _periods(scan_row)
     out = {
         "symbol": sym,
         "name": scan_row.get("name"),
@@ -329,6 +390,15 @@ def _row(scan_row: dict, pillar: dict, pivot: Optional[dict]) -> dict:
         "consecutive_growth_q": pillar.get("consecutive_growth_q"),
         "sales_led": pillar.get("sales_led"),
         "bonde_reason": pillar.get("reason"),
+        # THE QUARTER the YoY legs above are measured on, and whether the pair
+        # is really a year apart (sepa/qoq, 2026-09-20). A TRI-STATE on
+        # purpose: None means no period keys are on file, so nothing could be
+        # checked — 352 of 2,078 live scan rows — and a surface that renders
+        # that as a tick is claiming a check it never made.
+        "period": Q.period_label(periods[0] if periods else None,
+                                 fundamentals.get("_source")
+                                 if isinstance(fundamentals, dict) else None),
+        "period_ok": Q.period_ok(periods),
         "pivot": None,
     }
     out.update(_rev_base(scan_row))
@@ -407,7 +477,13 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
 
     sections: dict = {k: [] for k in SECTIONS}
     n_pass = 0
+    n_tiered = 0
     n_rejected = 0
+    held_out: list = []
+    # The arrival ledger's input: passers that were actually PLACED in a
+    # section, before the per-section cap. See the `arrivals` block below for
+    # why it is neither "every passer" nor "every visible row".
+    arrived: set = set()
     for r in rows:
         sym = str(r.get("symbol") or "").upper()
         if not sym:
@@ -427,17 +503,47 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
             # is never mixed into the tiers, and the section says plainly that
             # these are NOT on his screen.
             if passed is False and _cleared_floor(pillar):
+                # Guarded the same way as a passer: a floor-clearer cannot be
+                # "rejected for character" off a pair that is not a year apart.
+                if _pair_mismatch(r):
+                    # Counted as a FLOOR-CLEARER, never as a passer: it failed
+                    # his screen, so it is missing from 🔎 rather than from a
+                    # tier and the sentence under the board says so.
+                    _note_mismatch(held_out, r, pillar, COHORT_FLOOR_CLEARER)
+                    continue
                 n_rejected += 1
                 sections[SECTION_REJECTED].append(
                     _row(r, pillar, pivots.get(sym)))
             continue
         n_pass += 1
         row = _row(r, pillar, pivots.get(sym))
+        mismatch = _pair_mismatch(r)
+        if mismatch:
+            _note_mismatch(held_out, r, pillar, COHORT_PASSER)
+            # The GROWTH CLAIM is withheld, the EVENT is not. An Episodic Pivot
+            # is a gap on volume — it is true whatever the quarterly series
+            # says — so the row stays in ⚡ Pivots with its tier and its YoY
+            # numbers BLANKED and `period_ok: false` on it. Everything else is
+            # held out of the tiers entirely, exactly as the 🚀 growth board
+            # refuses the same rows. (Holding the pivot out too is the
+            # alternative; his call.)
+            if row["pivot"] is None:
+                continue
+            row["tier"] = None
+            row["growth_yoy_pct"] = None
+            row["prior_yoy_pct"] = None
+            row["accelerating"] = None
+            sections[SECTION_PIVOT].append(row)
+            arrived.add(sym)
+            continue
         if row["pivot"] is not None:
             sections[SECTION_PIVOT].append(row)
+            arrived.add(sym)
         tier = row.get("tier")
         if tier in (SECTION_EXPLOSIVE, SECTION_STRONG, SECTION_STEADY):
+            n_tiered += 1
             sections[tier].append(row)
+            arrived.add(sym)
 
     sections[SECTION_PIVOT].sort(key=_pivot_key)
     for k in (SECTION_EXPLOSIVE, SECTION_STRONG, SECTION_STEADY,
@@ -449,15 +555,21 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
         sections[k] = sections[k][:SECTION_CAP[k]]
 
     # ── arrivals: his explicit ask ─────────────────────────────────────────
-    # Recorded over every name that PASSES, not only the ones that survived the
-    # per-section cap: a name that arrives into a capped tier has still arrived,
-    # and recording only the visible ones would reset its "new" clock every time
-    # the cap pushed it off and back on.
+    # Recorded over every name PLACED in a section, not only the ones that
+    # survived the per-section cap: a name that arrives into a capped tier has
+    # still arrived, and recording only the visible ones would reset its "new"
+    # clock every time the cap pushed it off and back on.
+    #
+    # NOT over every passer, either (2026-09-20). A passer held out by the
+    # fiscal-pair guard renders nowhere — no tier, and no ⚡ Pivots row unless
+    # it carries a pivot — so stamping it here would run its ✨ NEW clock out
+    # while it is hidden, and `n_new` would count rows the board never drew.
+    # It is stamped on the day the guard lets it through, which is the day it
+    # arrives on his screen. A held-out row that KEEPS its pivot row is drawn,
+    # so it is recorded like any other arrival.
     shown = {r["symbol"] for v in sections.values() for r in v}
     try:
-        all_pass = {str(r.get("symbol") or "").upper() for r in rows
-                    if BV._bonde_pillar(r).get("passed") is True}
-        FS.record(SEEN_COLL, all_pass, db=db)
+        FS.record(SEEN_COLL, arrived, db=db)
         new = FS.newly_found(SEEN_COLL, days=new_days, db=db)
         seen_at = FS.first_seen_map(SEEN_COLL, sorted(shown), db=db)
     except Exception as exc:                                   # noqa: BLE001
@@ -477,6 +589,14 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("bonde: board_metrics attach failed: %s", exc)
 
+    held_out.sort(key=lambda d: d["symbol"])
+    # The two cohorts are counted apart. `n_period_mismatch` stays the size of
+    # the list printed under the board (passers AND floor-clearers, so the
+    # header and the table can never disagree); the sentence quotes the passer
+    # count on its own, because a floor-clearer never passed his screen.
+    n_mismatch_pass = sum(1 for d in held_out
+                          if d.get("cohort") == COHORT_PASSER)
+
     reg = regime_state()
     return {
         "sections": sections,
@@ -484,12 +604,23 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
         "regime": reg,
         "caps": dict(SECTION_CAP),
         "n_pass": n_pass,
+        # What is actually SHOWN in a tier. `n_pass` is unchanged — it is the
+        # fire rate of his screen and the note quotes it — but it is no longer
+        # the number of rows the tiers carry.
+        "n_tiered": n_tiered,
+        "n_period_mismatch": len(held_out),
+        # Split out so no surface has to infer it: passers held out of a TIER
+        # vs floor-clearers held out of 🔎.
+        "n_period_mismatch_pass": n_mismatch_pass,
+        "n_period_mismatch_rejected": len(held_out) - n_mismatch_pass,
+        "period_mismatch_symbols": held_out,
         "n_rejected": n_rejected,
         "n_scanned": len(rows),
         "n_new": len(new),
         "new_days": new_days,
         "scan_ts": scan.get("finished_at") or scan.get("started_at"),
-        "note": note(n_pass, len(rows), counts, reg),
+        "note": note(n_pass, len(rows), counts, reg, len(held_out),
+                     n_mismatch_pass),
         # The verdict banner. Served, not retyped in the component: the numbers
         # have exactly one home (MEASURED) and the FE renders whatever it is
         # handed, so a re-run that moves a figure moves every surface at once.
@@ -607,7 +738,8 @@ def measured_verdict() -> dict:
 
 
 def note(n_pass: int, n_scanned: int, counts: dict,
-         reg: Optional[dict] = None) -> str:
+         reg: Optional[dict] = None, n_mismatch: int = 0,
+         n_mismatch_pass: Optional[int] = None) -> str:
     """The sentence under the board.
 
     It leads with the measurement, not the rules. The fire rate is still here —
@@ -646,7 +778,46 @@ def note(n_pass: int, n_scanned: int, counts: dict,
            _sgn(m["sales_alone_lift"]), _sgn(m["sales_alone_ci"][0]),
            _sgn(m["sales_alone_ci"][1]), f"{n_pass:,}", f"{n_scanned:,}", pct,
            m["reject_win_21d"], m["pass_win_21d"], m["scripts"])
-    ) + pivot_pause_note(reg)
+    ) + pair_guard_note(n_mismatch, n_mismatch_pass) + pivot_pause_note(reg)
+
+
+def pair_guard_note(n_mismatch: int,
+                    n_passers: Optional[int] = None) -> str:
+    """What the board held out, and why — appended, never a replacement.
+
+    Silence here would be the bug: these rows PASS his screen and simply are
+    not shown in a tier.
+
+    Two cohorts are held out by the same guard and they are NOT the same
+    claim. A passer is withheld from a TIER. A floor-clearer that failed his
+    character clause never passed the screen at all — it is withheld from 🔎 —
+    so calling the whole list "passers" would quote his screen's fire rate as
+    larger than it is. `n_passers` None means "all of them are passers" (the
+    only case before 2026-09-20), which keeps the one-cohort sentence verbatim.
+    """
+    if not n_mismatch:
+        return ""
+    n_pass = n_mismatch if n_passers is None else int(n_passers)
+    if n_pass >= n_mismatch:
+        return (
+            " %s passers are held OUT of the tiers because their newest quarter "
+            "and its “year-ago” slot are not four fiscal quarters apart "
+            "(Massive omits a missing quarter — usually FY Q4 — so slot 4 "
+            "is not the same quarter); the 🚀 growth board refuses the same "
+            "rows, so the two boards now agree on every filed quarter. Listed under "
+            "the board." % f"{n_mismatch:,}"
+        )
+    return (
+        " %s rows are held OUT of the tiers because their newest quarter "
+        "and its “year-ago” slot are not four fiscal quarters apart "
+        "(Massive omits a missing quarter — usually FY Q4 — so slot 4 "
+        "is not the same quarter): %s that PASS his sales screen, and %s that "
+        "cleared his 5%% floor but failed the character clause and would "
+        "otherwise have shown in 🔎. The 🚀 growth board refuses the same "
+        "rows, so the two boards now agree on every filed quarter. Listed under "
+        "the board." % (f"{n_mismatch:,}", f"{n_pass:,}",
+                        f"{n_mismatch - n_pass:,}")
+    )
 
 
 def pivot_pause_note(reg: Optional[dict]) -> str:

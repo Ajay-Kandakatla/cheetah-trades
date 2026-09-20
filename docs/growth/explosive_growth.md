@@ -367,3 +367,34 @@ The short version:
   `merge=True`. **It sends nothing** — no new notification kind, `OWNER_KEEP_SET`
   untouched. A crontab change does **not** ship with a deploy: the cron container
   must be recreated.
+
+## 📈 The Bonde chip, and the guard both boards now share (2026-09-20)
+
+Ajay, 2026-09-20: *"Especially this in Bondes. I think bondes and explosive
+growth are hand in hand."*
+
+Every row now renders a **`📈 Bonde: <tier>`** chip when the name carries one of
+Bonde's three published tiers (explosive ≥100% / strong ≥25% / steady ≥5%).
+📈 Bonde already carried a 🚀 `GrowthChip` back to this board; this is the leg
+that was missing. Nothing renders for `weak`, `declining`, `unknown` or `null`.
+
+**The chip claims the SOURCE, not the number.** Its title says "off the same
+quarterly series this board screens (research cache)" and deliberately does
+**not** say "the same number on the Bonde tab" — the two boards read different
+populations for reasons that have nothing to do with the data. 📈 Bonde reads
+the latest **scan** (`full` universe); this board screens `broad`, so IPI, EVC
+and FF are here and not there. A name the scan has not enriched yet is
+tier-pending on Bonde while this board already has its figure (BLMN, RNA on
+2026-09-20). Claiming identity would be a promise neither board can keep.
+
+**The pair guard this board has enforced since 2026-09-14 is now the app's one
+guard.** `HEADLINE_PAIR`, `PRIOR_PAIR`, `YOY_GAP` and the check itself moved to
+`sepa/qoq.py`; `growth/tracker.py` re-exports them, so its behaviour is
+byte-identical (`T.HEADLINE_PAIR is Q.HEADLINE_PAIR`, pinned by test, and the
+E1 monkeypatch of `sepa.qoq._adjacent` still bites). What changed is that 📈
+Bonde and the 🔥 Hottest row now apply the **same** test: on 2026-09-20, 164 of
+1,051 Bonde passers failed it and **13 of them were reading "explosive" while
+this board refused them off the same filed quarter**. They are held out of
+Bonde's tiers and listed under it.
+
+Full reconciliation: `docs/sepa/data_spine_audit_2026_09_20.md`.

@@ -2,8 +2,15 @@
 
 For each curated edge in the dependency graph, we fetch recent news
 mentioning BOTH endpoints. This proves the relationship is currently
-relevant — if no news has co-mentioned NVDA + TSM in 30 days, that's
-either a gap in the news API or the relationship is dormant.
+relevant — if neither of the 30 most recent articles tagged NVDA also
+mentions TSM, that's either a gap in the news API or the relationship is
+dormant.
+
+CORRECTED 2026-09-20: this said "in 30 days". There is no time window here at
+all — `fetch_edge_news` passes `limit: 30, order: desc` to the Massive news
+endpoint and no date bound, so the 30 is a COUNT OF ARTICLES, not a number of
+days. On a quiet ticker those 30 can reach back months; on a busy one they
+can be a single session.
 
 Cached per (source, target) pair for 6h.
 """

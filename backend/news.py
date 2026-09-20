@@ -19,6 +19,7 @@ import re
 import time
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+from urllib.parse import quote
 
 import httpx
 
@@ -209,6 +210,52 @@ async def fetch_news(symbol: str) -> list[dict]:
         _cache[symbol] = (now, merged)
 
     return merged
+
+
+async def google_search(query: str, *, limit: int = MAX_ITEMS) -> list[dict]:
+    """Google News RSS for an ARBITRARY query (cached, same TTL as a ticker).
+
+    `_google_news` above builds its query as a raw f-string with `+`
+    separators and no escaping, which is fine for the ticker it is handed and
+    wrong for anything a caller types: a space, an `&`, a `?`, a `#` or a `+`
+    all mean something else in a URL. This one runs the query through
+    `quote()` so "AT&T stake?" searches for AT&T rather than truncating at the
+    ampersand. `quote()` encodes a space as %20, which Google accepts.
+
+    The legacy `_google_news` string is deliberately left alone — `fetch_news`
+    is pinned by tests and by three surfaces, and its ticker argument has no
+    character that needs escaping.
+    """
+    q = (query or "").strip()
+    if not q:
+        raise ValueError("query must not be empty")
+
+    now = time.time()
+    key = f"__Q__:{q}"
+    async with _lock:
+        cached = _cache.get(key)
+        if cached and now - cached[0] < CACHE_TTL_SEC:
+            return cached[1]
+
+    url = (
+        f"https://news.google.com/rss/search?q={quote(q)}"
+        f"&hl=en-US&gl=US&ceid=US:en"
+    )
+    items: list[dict] = []
+    try:
+        async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
+            r = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Cheetah-app)"})
+        if r.status_code == 200:
+            items = _parse_rss(r.text, "google")[:limit]
+    except Exception as e:
+        log.warning("google search %r: %s", q, e)
+        items = []
+
+    items.sort(key=lambda x: x.get("published") or 0, reverse=True)
+
+    async with _lock:
+        _cache[key] = (now, items)
+    return items
 
 
 async def market_news() -> list[dict]:

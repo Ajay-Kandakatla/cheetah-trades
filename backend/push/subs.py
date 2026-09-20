@@ -427,6 +427,23 @@ def default_prefs() -> dict:
         # `intact` gate. MUST be here — a kind missing from default_prefs
         # silently drops for every device.
         "growth_demand_alert": True,
+        # 🏛️ Federal stake reported (political/watch.py, Ajay 2026-09-20:
+        # "Anytime POTUS does new investments show me those").
+        #
+        # THE FIRST `False` IN THIS DICT, and it is deliberate. The STANDING
+        # keep-set is FOUR phone kinds (memory cheetah_push_silent_drops:
+        # hot_pullback + pattern + demand + position); this would be a fifth.
+        # So it ships REGISTERED (a kind missing from this dict silently drops
+        # for every device — the 2026-06-24 chokepoint) but NOT TARGETED:
+        # list_subscriptions() filters on `prefs.{kind} == True`, so nothing
+        # reaches a phone until he flips the 🏛️ toggle at /notifications. No
+        # deploy, no code change — his switch. The board shows every candidate
+        # regardless of this flag.
+        #
+        # HEURISTIC, and the push says so: a regex over headlines with no
+        # measured record. The gate is an equity stake + a NAMED agency + a
+        # STATED size + a resolved ticker in one headline.
+        "potus_investment": False,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

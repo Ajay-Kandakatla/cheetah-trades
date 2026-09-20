@@ -251,6 +251,94 @@ def _adjacent(periods, i: int, j: int, gap: int = 1) -> bool:
         return True
 
 
+# ── the YoY PAIR GUARD, in exactly one place ────────────────────────────────
+# The year-over-year legs every board prints (sales.growth_yoy_pct,
+# canslim.q_eps_growth_pct, sales.prior_yoy_pct) are computed at list POSITIONS
+# 0 vs 4 and 1 vs 5. Massive OMITS a quarter it does not have, so a position
+# pair is not always a year apart — IOVA's keys are
+# [8105,8104,8102,8101,8100,8098]: 8103 and 8099 (FY Q4 both years) are missing,
+# so slot 4 is FY2025 Q1 measured against FY2026 Q2.
+#
+# growth/tracker.py has refused exactly those rows since 2026-09-14. These
+# helpers are that rule, lifted out of the board so the 📈 Bonde board and the
+# 🔥 Hottest row apply the IDENTICAL test — "explosive on one board, refused on
+# the other off the same filed quarter" is a data-spine bug, not a screen
+# difference. Nothing here recomputes a growth number and no threshold moves:
+# sepa/sales.py and sepa/canslim.py are book-cited and untouched.
+YOY_GAP = 4                 # fiscal quarters between a quarter and its year-ago self
+HEADLINE_PAIR = (0, 4)      # latest quarter vs the same quarter a year earlier
+PRIOR_PAIR = (1, 5)         # the quarter before vs ITS year-ago
+YOY_PAIRS = (HEADLINE_PAIR, PRIOR_PAIR)
+
+
+def yoy_pairs_ok(periods, pairs=YOY_PAIRS) -> bool:
+    """Is EVERY yoy pair exactly four fiscal quarters apart?
+
+    Calls the module-global `_adjacent`, so a test that monkeypatches
+    `sepa.qoq._adjacent` bites through here too (growth board E1 does).
+
+    INHERITS `_adjacent`'s accept-by-default: no periods, a None slot or a
+    non-int answers True, because refusing every legacy row would blank the
+    board rather than improve it. That is why this is NOT the tri-state a
+    surface should print — use `period_ok`.
+    """
+    return all(_adjacent(periods, i, j, gap=YOY_GAP) for i, j in pairs)
+
+
+def yoy_pairs_verifiable(periods, pairs=YOY_PAIRS) -> bool:
+    """Could the pairs be CHECKED at all — is every slot present and int-able?
+
+    The exact inverse of `_adjacent`'s accept-by-default branch. 352 of 2,078
+    live scan rows and 682 of 3,754 research documents carry no
+    `q_period_series` at all (measured 2026-09-20), and on those rows
+    `yoy_pairs_ok` is True because nothing could be checked, not because the
+    quarters line up. A board that prints a tick for those is lying by omission.
+    """
+    if not periods:
+        return False
+    p = list(periods)
+    for pair in pairs:
+        for idx in pair:
+            if len(p) <= idx:
+                return False
+            v = p[idx]
+            if v is None:
+                return False
+            try:
+                int(v)
+            except (TypeError, ValueError):
+                return False
+    return True
+
+
+def period_ok(periods, pairs=YOY_PAIRS):
+    """THE tri-state a surface serves: True / False / None.
+
+    None means UNVERIFIABLE (no keys on file), never "fine". True means the
+    pairs were checked and are four quarters apart. False means they were
+    checked and are not — the row's YoY legs compare two different seasons.
+    """
+    if not yoy_pairs_verifiable(periods, pairs):
+        return None
+    return yoy_pairs_ok(periods, pairs)
+
+
+def period_label(idx, source=None):
+    """'FY2026 Q2' from a fiscal index. The yfinance path stores CALENDAR
+    quarters (canslim._q_periods_yf), so those read 'Q2 2026'. None when the
+    slot carries no key — never a guess.
+
+    Moved here verbatim from growth/tracker.py (2026-09-20) so every board
+    prints the same quarter the same way; the tracker re-exports it.
+    """
+    try:
+        i = int(idx)
+    except (TypeError, ValueError):
+        return None
+    y, q = i // 4, i % 4 + 1
+    return f"Q{q} {y}" if source == "yfinance" else f"FY{y} Q{q}"
+
+
 def compute(rev_series=None, eps_series=None, ni_series=None,
             periods=None) -> dict:
     """Sequential growth (revenue) and income (EPS, net income) for one name.

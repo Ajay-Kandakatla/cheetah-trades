@@ -4217,6 +4217,16 @@ app.include_router(ollama_router)
 from ollama_chat.hermes import router as hermes_router  # noqa: E402
 app.include_router(hermes_router)
 
+# 🏛️ POTUS / federal-stake list + watch candidates (2026-09-20). Read-only:
+# a JSON file plus one Mongo read of `political_candidates`; neither route
+# runs the watch (that is the 06:35 cron, political/watch.py).
+from political.api import router as political_router  # noqa: E402
+app.include_router(political_router)
+# ⚖️ Two-sided bull/bear read on one ticker (2026-09-20). POST may call the
+# model once per ET date per name; GET serves the stored read only.
+from news_search.api import router as news_search_router  # noqa: E402
+app.include_router(news_search_router)
+
 
 @app.get("/push/history")
 async def push_history_get(
