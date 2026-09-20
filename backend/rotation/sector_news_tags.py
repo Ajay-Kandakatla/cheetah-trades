@@ -77,14 +77,28 @@ NEWS_WINDOW_HOURS = 36     # a headline older than this is not "today's news";
 MIN_HEADLINES = 2          # one loose headline is not a story worth a tag
 MAX_HEADLINES_TO_MODEL = 6
 
-# Two paragraphs of prose plus the JSON scaffolding. MEASURED, not guessed:
-# at 700 the local 27B model truncated mid-string on the FIRST live test — the
-# call returned ok=True with an 847-character body that json.loads could not
-# parse, which is the worst kind of failure because it looks like a healthy
-# response. `_usable` caught it and wrote no tag, so nothing wrong ever
-# reached the board, but the feature produced nothing at all. 1200 leaves
-# headroom; the local model is free, so there is no reason to run this tight.
-MAX_TOKENS = 1200
+# Two paragraphs of prose plus the JSON scaffolding — and, on a REASONING
+# model, the reasoning that comes first. MEASURED against the model actually
+# installed here (huihui_ai/Qwen3.8-abliterated:27b via Ollama), on real board
+# prompts of ~1,900 characters:
+#
+#     700   -> truncated mid-string; ok=True, 847 chars, json.loads failed
+#     1200  -> 5 of 6 sectors returned EMPTY content (thinking ate the budget)
+#     2500  -> 6 of 6 parse and are usable; ~145s per sector, ~1,000 chars out
+#
+# The 1200 failure is the instructive one: `ok=True` with `textlen=0`. Qwen3
+# spends its budget reasoning before it writes anything, Ollama returns the
+# reasoning outside `content`, and a budget that runs out mid-thought yields a
+# successful HTTP call carrying nothing. It does not look like a failure
+# anywhere except in the output.
+#
+# `/no_think` was tried and does NOT work through Ollama's OpenAI-compatible
+# endpoint on this model — measured, same empty result. Budget is the lever.
+#
+# Six sectors at ~145s is about fifteen minutes once a day on a local model
+# that costs nothing, finishing long before the open. No reason to run tight.
+MAX_TOKENS = 2500
+MODEL_TIMEOUT_SEC = 300
 
 COLLECTION = "sector_day_tags"
 
@@ -247,13 +261,13 @@ def _ask_model(facts: dict, headlines: list) -> Optional[dict]:
         prompt = json.dumps(payload, default=str)
         resp = llm.chat(prompt, system=_SYSTEM, provider="local",
                         json_only=True, max_tokens=MAX_TOKENS, temperature=0.3,
-                        timeout=180)
+                        timeout=MODEL_TIMEOUT_SEC)
         if not resp.get("ok") or not isinstance(resp.get("parsed"), dict):
             log.info("sector tags: local model unusable (%s) — trying hosted",
                      str(resp.get("error"))[:120])
             resp = llm.chat(prompt, system=_SYSTEM, provider="anthropic",
                             json_only=True, max_tokens=MAX_TOKENS,
-                            temperature=0.3, timeout=180)
+                            temperature=0.3, timeout=MODEL_TIMEOUT_SEC)
         if not resp.get("ok"):
             return None
         parsed = resp.get("parsed")
