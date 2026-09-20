@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-19, verbatim: "can you give me control click in this page for
+  // the stocks so I can open new tab on the stock. IN hottest sector page
+  // please". The ticker was already an <a>; the probe showed it was the ONLY
+  // live target in an eleven-column row. Modifier/middle click only — a plain
+  // click on the row still does nothing, deliberately.
+  { id: 'hottest-rows-open-in-new-tab-2026-09-19',
+    label: '\u{1F5B1}\uFE0F \u2318/Ctrl-click any stock row on \u{1F525} Hottest to open it in a new tab \u2014 anywhere on the row, not just the ticker. Middle-click works too. You said: \u201ccan you give me control click in this page for the stocks so I can open new tab on the stock.\u201d '
+      + 'The ticker text was already a real link, so \u2318-click worked on those four characters. Measured against the rendered row, that was the only live target it had: the company name was plain text and all seven number columns carried no link at all. You were \u2318-clicking the row and hitting dead pixels. '
+      + 'The company name is now a link in its own right, and the whole row answers \u2318 / Ctrl / Shift / middle click. '
+      + 'A PLAIN CLICK ON THE ROW STILL DOES NOTHING, on purpose. This table gets sorted, scanned across and drag-selected, and a row that navigated on every stray click would be a worse table. The \u2605, the + Signals button and every chip keep their own behaviour \u2014 the row never steals a click that landed on one of them, so nothing opens twice. '
+      + 'The new tab carries ?from=, so its back button comes back to this board and this tab rather than dumping you on /sepa.',
+    addedAt: '2026-09-19', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-19, verbatim: "Also for the hot sectors if you see any
   // postive news I would like you to see a bullish and bearish case result for
   // a stocks and add it to the sector as a tag for that day", then "automate

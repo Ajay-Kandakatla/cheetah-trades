@@ -19,8 +19,10 @@
  * board would start disagreeing.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
-import { TickerLink } from './TickerLink';
+import { TickerLink, openTickerWithModifier } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
@@ -489,8 +491,40 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
   bandStudy?: BandStructureStudy | null;
   d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null;
 }) {
+  const nav = useNavigate();
+  const loc = useLocation();
+
+  /* Ajay 2026-09-19: "can you give me control click in this page for the
+   * stocks so I can open new tab on the stock."
+   *
+   * The ticker itself was already a real <a href>, so Cmd-click worked ON THE
+   * TICKER — but measured against the rendered row, that was the ONLY live
+   * target: the company name was a plain <div> and all seven number cells had
+   * no link at all. He was Cmd-clicking the row and hitting dead pixels.
+   *
+   * MODIFIER AND MIDDLE CLICK ONLY. A plain click on the row deliberately
+   * still does nothing: this table is sorted, scanned and read across, and
+   * making the whole row navigate would fire every time he reached for a
+   * number or dragged to select one. He asked for the new tab, not for a
+   * new way to leave the page by accident.
+   *
+   * Anything already interactive is left alone — the ticker link, the ★, the
+   * + Signals button, the chips all keep their own behaviour, and the row
+   * never steals a click that landed on one of them. */
+  const openInNewTab = (e: ReactMouseEvent<HTMLTableRowElement>) => {
+    if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1)) return;
+    if ((e.target as HTMLElement).closest?.('a,button,input,label,select,textarea')) return;
+    e.preventDefault();
+    // TickerLink's helper types its event as React's MouseEvent, so the
+    // synthetic event passes straight through — no cast, no DOM/React mixup.
+    openTickerWithModifier(e, nav, loc, r.symbol, 'Hottest sectors');
+  };
+
   return (
-    <tr className="hs-name">
+    <tr className="hs-name"
+        onClick={openInNewTab}
+        onAuxClick={openInNewTab}
+        title={`\u2318/Ctrl-click (or middle-click) anywhere on this row to open ${r.symbol} in a new tab`}>
       <td className="hs-sym">
         <TickerLink ticker={r.symbol} fromLabel="Hottest sectors" />
         {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11:
@@ -506,7 +540,15 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
             sits next to TickerLink's ☆ and reads as decoration rather than a
             control. The word is what makes it a button. */}
         <SignalWatchButton symbol={r.symbol} />
-        <div className="hs-coname">{r.name || ''}</div>
+        {/* The company name is the widest thing in this cell and was plain
+            text. As a link it gives a real Cmd-click target without the row
+            handler having to fire, and it matches how the ticker behaves. */}
+        <div className="hs-coname">
+          {r.name
+            ? <TickerLink ticker={r.symbol} fromLabel="Hottest sectors"
+                          showWatchlist={false}>{r.name}</TickerLink>
+            : ''}
+        </div>
       </td>
       <LegCells r={r} d1={d1} />
       <td className={`mono hs-num ${tone(r.sales_yoy)}`} title={
