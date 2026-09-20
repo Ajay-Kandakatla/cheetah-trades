@@ -71,10 +71,12 @@ def _sector_totals() -> dict:
         scanned = {(d.get("symbol") or "").upper()
                    for d in db.sepa_research_cache.find({}, {"symbol": 1})
                    if d.get("symbol")}
+        # Direct Mongo read — heals for itself, same as growth.tracker.
+        from companies.sector_overrides import apply as _fix_sector
         out = {}
         for d in db.companies.find({"symbol": {"$in": list(scanned)}},
                                    {"symbol": 1, "sector": 1}):
-            sec = d.get("sector")
+            sec = (_fix_sector(d) or d).get("sector")
             if sec:
                 out[sec] = out.get(sec, 0) + 1
         return out

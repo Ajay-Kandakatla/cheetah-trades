@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timezone
 from typing import Optional
 from sepa import symbols
+from . import sector_overrides
 
 log = logging.getLogger("companies.store")
 
@@ -102,13 +103,17 @@ def get(symbol: str, force: bool = False) -> dict:
                     {"$set": doc, "$setOnInsert": {"created_at": _now()}},
                     upsert=True,
                 )
-            return doc
+            # Heal AFTER the write, never before: the cache keeps the
+            # provider's own answer so a corrected label can always be
+            # re-derived, and a stale override never gets baked into Mongo.
+            return sector_overrides.apply(doc)
 
     if cached:
         cached["_id"] = str(cached["_id"])
-        return cached
+        return sector_overrides.apply(cached)
 
-    # Last resort — return a stub
+    # Last resort — return a stub. No sector to heal, and inventing one here
+    # would hand a caller a label with no company behind it.
     return {"symbol": symbol, "summary": None, "refreshed_at": None}
 
 
@@ -135,7 +140,11 @@ def get_many_cached(symbols: list[str]) -> dict:
     try:
         for doc in db.companies.find({"symbol": {"$in": syms}}):
             doc["_id"] = str(doc.get("_id"))
-            out[doc["symbol"]] = doc
+            # The BATCH path matters more than the single one: the rotation
+            # grid, the growth board and group-leadership all read sectors
+            # through here, so an override applied only in get() would heal
+            # the ticker page and leave every board on the wrong peer group.
+            out[doc["symbol"]] = sector_overrides.apply(doc)
     except Exception as exc:  # pragma: no cover - defensive
         log.warning("companies.store.get_many_cached failed: %s", exc)
         return {}

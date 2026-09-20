@@ -313,7 +313,11 @@ def _sectors(symbols) -> dict:
     if db is None:
         return {}
     try:
-        return {(d.get("symbol") or "").upper(): (d.get("sector"), d.get("industry"))
+        # Direct Mongo read — bypasses companies.store, so it heals for
+        # itself (Ajay 2026-09-19, the SIC 6199 cohort).
+        from companies.sector_overrides import apply as _fix_sector
+        return {(d.get("symbol") or "").upper():
+                ((_fix_sector(d) or d).get("sector"), (d or {}).get("industry"))
                 for d in db.companies.find(
                     {"symbol": {"$in": list(symbols)}},
                     {"symbol": 1, "sector": 1, "industry": 1})

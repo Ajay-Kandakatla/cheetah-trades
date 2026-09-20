@@ -511,9 +511,14 @@ def _sector_map(db=None) -> dict:
     db = db if db is not None else _db()
     if db is None:
         return {}
+    from companies.sector_overrides import apply as _fix_sector
     out = {}
     for c in db["companies"].find({}, {"symbol": 1, "sector": 1, "industry": 1}):
-        s = (c.get("sector") or "").strip()
+        # THIS READ BYPASSES companies.store, so it must heal for itself
+        # (Ajay 2026-09-19). It is also the read with the most damage: the
+        # peer POOL is built from it, so a miner filed under Capital Markets
+        # was scored against 406 banks and asset managers on ROCE, ROE and D/E.
+        s = ((_fix_sector(c) or c).get("sector") or "").strip()
         if s:
             out[str(c.get("symbol", "")).upper()] = s
     return out
