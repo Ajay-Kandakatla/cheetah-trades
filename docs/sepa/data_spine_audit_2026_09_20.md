@@ -247,12 +247,31 @@ keyed document through the real `sales.compute` and places it through the real
 
 | count | value |
 | --- | --- |
-| `mismatched_before` | _(fill from the live run)_ |
-| `retier_after.explosive` / `.strong` / `.steady` / `.weak` / `.declining` / `.unknown` | _(fill)_ |
-| `headline_hole` / `prior_hole` | _(fill)_ |
-| `placement_after.tiered` / `.rejected_character` / `.out_pending` / `.out_floor` | _(fill)_ |
-| `duplicate_periods` / `reordered` / `dropped_unlabelled` (documents) | _(fill)_ |
-| `still_held_out` | **expected 0** — a headline hole is pending, not held out |
+| `mismatched_before` | **60** (the headline holes — after `realign` the 164 slot-4 mismatches are gone; what is left is the 60 names whose year-ago quarter is not filed) |
+| `retier_after.explosive` / `.strong` / `.steady` / `.weak` / `.declining` / `.unknown` | **123 / 430 / 1,107 / 425 / 696 / 288** |
+| `headline_hole` / `prior_hole` | **60 / 145** |
+| `placement_after.tiered` / `.rejected_character` / `.out_pending` / `.out_floor` | **1,541 / 161 / 288 / 1,079** |
+| `duplicate_periods` / `reordered` / `dropped_unlabelled` (documents) | audit sample **0 / 0 / 0**; the full `realign` pass over 3,072 keyed docs: **18 / 31 / 0** |
+| `still_held_out` | **0** — as expected |
+
+Live run, 2026-09-20 15:10 ET, `python -m sepa.qoq realign --json` on the api
+container: considered 3,754 research docs · keyed 3,072 · **realigned 1,160** ·
+unchanged 1,912. Re-tier table (before → after, keyed docs only):
+explosive→explosive 37 · explosive→strong 7 · explosive→unknown 5 ·
+strong→strong 137 · strong→steady 48 · strong→explosive 2 · strong→unknown 8 ·
+steady→steady 358 · steady→strong 3 · steady→weak 25 · steady→declining 14 ·
+steady→unknown 19 · unknown→explosive 2 · unknown→strong 3 · unknown→steady 11 ·
+unknown→unknown 73 · the rest weak/declining moves. Read it as the boards
+disagreeing less, not as anyone's growth improving — a re-tier off the
+correct year-ago quarter is a data fix.
+
+The scan copy was refreshed by `POST /sepa/scan?fast=true` the same afternoon
+(971 s, 240 candidates) and the audit re-run: **`pair_mismatch.total` 0**
+(was 164), **`overlap.period_differs` 0 · `growth_differs` 0 · `tier_differs`
+2** on 1,799 overlapping names (was 7 / 243 / 149 between the realign and the
+scan — realigned at different times, exactly the case the paragraph below
+describes). Bonde passers 998 (was 1,051: the 60 headline-hole names are
+pending, not tiered). `shared_explosive` unchanged at 18 names.
 
 The **0-diff check of §6 is repeated after the heal**: the scan copy and the
 research copy of the series must still agree on the latest quarter, the growth

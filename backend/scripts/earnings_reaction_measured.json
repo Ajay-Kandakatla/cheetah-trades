@@ -1,17 +1,1758 @@
 {
-  "pending": true,
-  "as_of": null,
-  "sessions": [],
+  "as_of": "2026-09-20T15:00:40.095290-04:00",
+  "sessions": [
+    "2026-06-25",
+    "2026-06-26",
+    "2026-06-29",
+    "2026-06-30",
+    "2026-07-01",
+    "2026-07-02",
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+    "2026-07-13",
+    "2026-07-14",
+    "2026-07-15",
+    "2026-07-16",
+    "2026-07-17",
+    "2026-07-20",
+    "2026-07-21",
+    "2026-07-22",
+    "2026-07-23",
+    "2026-07-24",
+    "2026-07-27",
+    "2026-07-28",
+    "2026-07-29",
+    "2026-07-30",
+    "2026-07-31",
+    "2026-08-03",
+    "2026-08-04",
+    "2026-08-05",
+    "2026-08-06",
+    "2026-08-07",
+    "2026-08-10",
+    "2026-08-11",
+    "2026-08-12",
+    "2026-08-13",
+    "2026-08-14",
+    "2026-08-17",
+    "2026-08-18",
+    "2026-08-19",
+    "2026-08-20",
+    "2026-08-21",
+    "2026-08-24",
+    "2026-08-25",
+    "2026-08-26",
+    "2026-08-27",
+    "2026-08-28",
+    "2026-08-31",
+    "2026-09-01",
+    "2026-09-02",
+    "2026-09-03",
+    "2026-09-04",
+    "2026-09-08",
+    "2026-09-09",
+    "2026-09-10",
+    "2026-09-11",
+    "2026-09-14",
+    "2026-09-15",
+    "2026-09-16",
+    "2026-09-17",
+    "2026-09-18"
+  ],
   "live_anchoring": "last_report",
-  "anchorings": {},
-  "per_session": {},
-  "summary": {},
-  "floors": {},
-  "institutional_misses": {},
-  "coverage": {},
+  "anchorings": {
+    "last_report": {
+      "cells": {
+        "institutional_and_beat": 88,
+        "institutional_and_miss": 16,
+        "institutional_null_surprise": 0,
+        "beat_not_institutional": 465,
+        "neither": 239,
+        "reacted_total": 808
+      },
+      "per_session": {
+        "2026-06-25": {
+          "pushes": 3,
+          "names": [
+            "AYI",
+            "BB",
+            "CMC"
+          ],
+          "singles": 3,
+          "digest": 0
+        },
+        "2026-06-26": {
+          "pushes": 1,
+          "names": [
+            "APOG"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-06-29": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-06-30": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-01": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-02": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-06": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-07": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-08": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-09": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-10": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-13": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-14": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-15": {
+          "pushes": 1,
+          "names": [
+            "BNY"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-16": {
+          "pushes": 1,
+          "names": [
+            "CFG"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-17": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-20": {
+          "pushes": 1,
+          "names": [
+            "AMC"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-21": {
+          "pushes": 1,
+          "names": [
+            "AUB"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-22": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-23": {
+          "pushes": 2,
+          "names": [
+            "BX",
+            "CATY"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-07-24": {
+          "pushes": 2,
+          "names": [
+            "APPF",
+            "ATRC"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-07-27": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-28": {
+          "pushes": 4,
+          "names": [
+            "ABG",
+            "APLD",
+            "CORZ",
+            "CLS"
+          ],
+          "singles": 4,
+          "digest": 0
+        },
+        "2026-07-29": {
+          "pushes": 6,
+          "names": [
+            "ADP",
+            "AVTR",
+            "BLKB",
+            "BXP",
+            "CAKE",
+            "CBZ"
+          ],
+          "singles": 4,
+          "digest": 2
+        },
+        "2026-07-30": {
+          "pushes": 9,
+          "names": [
+            "BDC",
+            "BELFA",
+            "BFLY",
+            "BMY",
+            "BOOT",
+            "CLBK",
+            "CMG",
+            "CORT",
+            "FSS"
+          ],
+          "singles": 4,
+          "digest": 5
+        },
+        "2026-07-31": {
+          "pushes": 9,
+          "names": [
+            "AEE",
+            "AMZN",
+            "ARES",
+            "BCPC",
+            "BTE",
+            "CDNA",
+            "CRI",
+            "FND",
+            "AGM"
+          ],
+          "singles": 4,
+          "digest": 5
+        },
+        "2026-08-03": {
+          "pushes": 1,
+          "names": [
+            "ATKR"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-04": {
+          "pushes": 7,
+          "names": [
+            "ADEA",
+            "AEIS",
+            "ALSN",
+            "AME",
+            "BCC",
+            "BRSL",
+            "CLX"
+          ],
+          "singles": 4,
+          "digest": 3
+        },
+        "2026-08-05": {
+          "pushes": 9,
+          "names": [
+            "ACAD",
+            "AFG",
+            "AIZ",
+            "AMGN",
+            "AVT",
+            "BIO",
+            "CRBG",
+            "CRCL",
+            "FTK"
+          ],
+          "singles": 4,
+          "digest": 5
+        },
+        "2026-08-06": {
+          "pushes": 7,
+          "names": [
+            "ALNT",
+            "APA",
+            "APPN",
+            "AVNT",
+            "BDX",
+            "CACI",
+            "CNR"
+          ],
+          "singles": 4,
+          "digest": 3
+        },
+        "2026-08-07": {
+          "pushes": 5,
+          "names": [
+            "ABNB",
+            "AMN",
+            "CENX",
+            "CON",
+            "PSIX"
+          ],
+          "singles": 4,
+          "digest": 1
+        },
+        "2026-08-10": {
+          "pushes": 1,
+          "names": [
+            "BWMN"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-11": {
+          "pushes": 3,
+          "names": [
+            "ACHR",
+            "ARMK",
+            "STIM"
+          ],
+          "singles": 3,
+          "digest": 0
+        },
+        "2026-08-12": {
+          "pushes": 1,
+          "names": [
+            "ATRO"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-13": {
+          "pushes": 2,
+          "names": [
+            "AVAH",
+            "BLSH"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-08-14": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-17": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-18": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-19": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-20": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-21": {
+          "pushes": 1,
+          "names": [
+            "BJ"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-24": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-25": {
+          "pushes": 2,
+          "names": [
+            "BMO",
+            "BNS"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-08-26": {
+          "pushes": 2,
+          "names": [
+            "ANF",
+            "BBWI"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-08-27": {
+          "pushes": 1,
+          "names": [
+            "CRM"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-28": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-31": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-01": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-02": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-03": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-04": {
+          "pushes": 1,
+          "names": [
+            "AOUT"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-08": {
+          "pushes": 1,
+          "names": [
+            "ABM"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-09": {
+          "pushes": 1,
+          "names": [
+            "ASO"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-10": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-11": {
+          "pushes": 2,
+          "names": [
+            "ADBE",
+            "FEIM"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-09-14": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-15": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-16": {
+          "pushes": 1,
+          "names": [
+            "TCOM"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-17": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-18": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        }
+      },
+      "summary": {
+        "total": 88,
+        "sessions_with_any": 30,
+        "median": 0.5,
+        "p90": 5,
+        "max": 9,
+        "busiest": {
+          "date": "2026-07-30",
+          "n": 9,
+          "names": [
+            "BDC",
+            "BELFA",
+            "BFLY",
+            "BMY",
+            "BOOT",
+            "CLBK",
+            "CMG",
+            "CORT",
+            "FSS"
+          ]
+        }
+      },
+      "floors": {
+        "0": {
+          "total": 88,
+          "median": 0.5,
+          "max": 9,
+          "busiest_n": 9
+        },
+        "2": {
+          "total": 80,
+          "median": 0.5,
+          "max": 9,
+          "busiest_n": 9
+        },
+        "5": {
+          "total": 66,
+          "median": 0.0,
+          "max": 8,
+          "busiest_n": 8
+        },
+        "10": {
+          "total": 59,
+          "median": 0.0,
+          "max": 8,
+          "busiest_n": 8
+        },
+        "20": {
+          "total": 42,
+          "median": 0.0,
+          "max": 5,
+          "busiest_n": 5
+        },
+        "50": {
+          "total": 23,
+          "median": 0.0,
+          "max": 4,
+          "busiest_n": 4
+        }
+      },
+      "institutional_misses": {
+        "total": 16,
+        "sessions_with_any": 13,
+        "median": 0.0,
+        "p90": 1,
+        "max": 2
+      },
+      "coverage": {
+        "calendar_docs": 814,
+        "with_last_report_in_window": 814,
+        "no_reaction_bar": 1,
+        "short_frame": 0,
+        "when_none": 14,
+        "off_window": 5
+      }
+    },
+    "doc": {
+      "cells": {
+        "institutional_and_beat": 86,
+        "institutional_and_miss": 15,
+        "institutional_null_surprise": 0,
+        "beat_not_institutional": 467,
+        "neither": 241,
+        "reacted_total": 809
+      },
+      "per_session": {
+        "2026-06-25": {
+          "pushes": 3,
+          "names": [
+            "AYI",
+            "BB",
+            "CMC"
+          ],
+          "singles": 3,
+          "digest": 0
+        },
+        "2026-06-26": {
+          "pushes": 1,
+          "names": [
+            "APOG"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-06-29": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-06-30": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-01": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-02": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-06": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-07": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-08": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-09": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-10": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-13": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-14": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-15": {
+          "pushes": 1,
+          "names": [
+            "BNY"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-16": {
+          "pushes": 1,
+          "names": [
+            "CFG"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-17": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-20": {
+          "pushes": 1,
+          "names": [
+            "AMC"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-07-21": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-22": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-23": {
+          "pushes": 2,
+          "names": [
+            "BX",
+            "CATY"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-07-24": {
+          "pushes": 2,
+          "names": [
+            "APPF",
+            "ATRC"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-07-27": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-07-28": {
+          "pushes": 4,
+          "names": [
+            "ABG",
+            "APLD",
+            "CORZ",
+            "CLS"
+          ],
+          "singles": 4,
+          "digest": 0
+        },
+        "2026-07-29": {
+          "pushes": 5,
+          "names": [
+            "AVTR",
+            "BLKB",
+            "BXP",
+            "CAKE",
+            "CBZ"
+          ],
+          "singles": 4,
+          "digest": 1
+        },
+        "2026-07-30": {
+          "pushes": 9,
+          "names": [
+            "BDC",
+            "BELFA",
+            "BFLY",
+            "BMY",
+            "BOOT",
+            "CLBK",
+            "CMG",
+            "CORT",
+            "FSS"
+          ],
+          "singles": 4,
+          "digest": 5
+        },
+        "2026-07-31": {
+          "pushes": 9,
+          "names": [
+            "AEE",
+            "AMZN",
+            "ARES",
+            "BCPC",
+            "BTE",
+            "CDNA",
+            "CRI",
+            "FND",
+            "AGM"
+          ],
+          "singles": 4,
+          "digest": 5
+        },
+        "2026-08-03": {
+          "pushes": 1,
+          "names": [
+            "ATKR"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-04": {
+          "pushes": 8,
+          "names": [
+            "ADEA",
+            "AEIS",
+            "ALAB",
+            "ALSN",
+            "AME",
+            "BCC",
+            "BRSL",
+            "CLX"
+          ],
+          "singles": 4,
+          "digest": 4
+        },
+        "2026-08-05": {
+          "pushes": 9,
+          "names": [
+            "ACAD",
+            "AFG",
+            "AIZ",
+            "AMGN",
+            "AVT",
+            "BIO",
+            "CRBG",
+            "CRCL",
+            "FTK"
+          ],
+          "singles": 4,
+          "digest": 5
+        },
+        "2026-08-06": {
+          "pushes": 7,
+          "names": [
+            "ALNT",
+            "APA",
+            "APPN",
+            "AVNT",
+            "BDX",
+            "CACI",
+            "CNR"
+          ],
+          "singles": 4,
+          "digest": 3
+        },
+        "2026-08-07": {
+          "pushes": 5,
+          "names": [
+            "ABNB",
+            "AMN",
+            "CENX",
+            "CON",
+            "PSIX"
+          ],
+          "singles": 4,
+          "digest": 1
+        },
+        "2026-08-10": {
+          "pushes": 1,
+          "names": [
+            "BWMN"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-11": {
+          "pushes": 3,
+          "names": [
+            "ACHR",
+            "ARMK",
+            "STIM"
+          ],
+          "singles": 3,
+          "digest": 0
+        },
+        "2026-08-12": {
+          "pushes": 1,
+          "names": [
+            "ATRO"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-13": {
+          "pushes": 2,
+          "names": [
+            "AVAH",
+            "BLSH"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-08-14": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-17": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-18": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-19": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-20": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-21": {
+          "pushes": 1,
+          "names": [
+            "BJ"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-08-24": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-25": {
+          "pushes": 2,
+          "names": [
+            "BMO",
+            "BNS"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-08-26": {
+          "pushes": 2,
+          "names": [
+            "ANF",
+            "BBWI"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-08-27": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-28": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-08-31": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-01": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-02": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-03": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-04": {
+          "pushes": 1,
+          "names": [
+            "AOUT"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-08": {
+          "pushes": 1,
+          "names": [
+            "ABM"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-09": {
+          "pushes": 1,
+          "names": [
+            "ASO"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-10": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-11": {
+          "pushes": 2,
+          "names": [
+            "ADBE",
+            "FEIM"
+          ],
+          "singles": 2,
+          "digest": 0
+        },
+        "2026-09-14": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-15": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-16": {
+          "pushes": 1,
+          "names": [
+            "TCOM"
+          ],
+          "singles": 1,
+          "digest": 0
+        },
+        "2026-09-17": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        },
+        "2026-09-18": {
+          "pushes": 0,
+          "names": [],
+          "singles": 0,
+          "digest": 0
+        }
+      },
+      "summary": {
+        "total": 86,
+        "sessions_with_any": 28,
+        "median": 0.0,
+        "p90": 5,
+        "max": 9,
+        "busiest": {
+          "date": "2026-07-30",
+          "n": 9,
+          "names": [
+            "BDC",
+            "BELFA",
+            "BFLY",
+            "BMY",
+            "BOOT",
+            "CLBK",
+            "CMG",
+            "CORT",
+            "FSS"
+          ]
+        }
+      },
+      "floors": {
+        "0": {
+          "total": 86,
+          "median": 0.0,
+          "max": 9,
+          "busiest_n": 9
+        },
+        "2": {
+          "total": 79,
+          "median": 0.0,
+          "max": 9,
+          "busiest_n": 9
+        },
+        "5": {
+          "total": 66,
+          "median": 0.0,
+          "max": 8,
+          "busiest_n": 8
+        },
+        "10": {
+          "total": 59,
+          "median": 0.0,
+          "max": 8,
+          "busiest_n": 8
+        },
+        "20": {
+          "total": 41,
+          "median": 0.0,
+          "max": 5,
+          "busiest_n": 5
+        },
+        "50": {
+          "total": 22,
+          "median": 0.0,
+          "max": 4,
+          "busiest_n": 4
+        }
+      },
+      "institutional_misses": {
+        "total": 15,
+        "sessions_with_any": 12,
+        "median": 0.0,
+        "p90": 1,
+        "max": 2
+      },
+      "coverage": {
+        "calendar_docs": 814,
+        "with_last_report_in_window": 814,
+        "no_reaction_bar": 0,
+        "short_frame": 0,
+        "when_none": 42,
+        "off_window": 5
+      }
+    }
+  },
   "caveats": [
-    "PLACEHOLDER — the replay has not been run yet. The main session runs backend/scripts/earnings_reaction_replay.py in the api container OUTSIDE RTH and replaces this file with its output.",
-    "A phone-load COUNT, not an edge claim: nothing in this replay measures what the pushed names did next.",
-    "Both anchorings (last_report.when and the calendar doc's when) are reported; live_anchoring names the one the cron uses."
-  ]
+    "A phone-load COUNT, not an edge claim: nothing here measures what the pushed names did next.",
+    "A census over the calendar's decision universe (the same collection the Earnings Flow tab reads), not a sample \u2014 there is no CI because there is no estimate of a population quantity.",
+    "The calendar holds only the LAST report per name, so a name contributes at most one event in the window, and a doc refreshed after a newer report shows only that one.",
+    "Docs whose last_report was nulled by the 2026-09-18 fetch-pool fallback undercount the total.",
+    "A report whose `when` is None is anchored like BMO in the doc-anchoring pass; the LIVE pass skips such a name (skipped_timing_unknown) instead of guessing.",
+    "The >= 5% room gate cannot be replayed \u2014 zone_store keeps only the latest bands \u2014 so would_skip_room comes from live passes only.",
+    "The institutional read is an owner setting calibrated on two names (TGT, BULL) on the 2026-08-19 tape. NOT MEASURED."
+  ],
+  "per_session": {
+    "2026-06-25": {
+      "pushes": 3,
+      "names": [
+        "AYI",
+        "BB",
+        "CMC"
+      ],
+      "singles": 3,
+      "digest": 0
+    },
+    "2026-06-26": {
+      "pushes": 1,
+      "names": [
+        "APOG"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-06-29": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-06-30": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-01": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-02": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-06": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-07": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-08": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-09": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-10": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-13": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-14": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-15": {
+      "pushes": 1,
+      "names": [
+        "BNY"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-07-16": {
+      "pushes": 1,
+      "names": [
+        "CFG"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-07-17": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-20": {
+      "pushes": 1,
+      "names": [
+        "AMC"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-07-21": {
+      "pushes": 1,
+      "names": [
+        "AUB"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-07-22": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-23": {
+      "pushes": 2,
+      "names": [
+        "BX",
+        "CATY"
+      ],
+      "singles": 2,
+      "digest": 0
+    },
+    "2026-07-24": {
+      "pushes": 2,
+      "names": [
+        "APPF",
+        "ATRC"
+      ],
+      "singles": 2,
+      "digest": 0
+    },
+    "2026-07-27": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-07-28": {
+      "pushes": 4,
+      "names": [
+        "ABG",
+        "APLD",
+        "CORZ",
+        "CLS"
+      ],
+      "singles": 4,
+      "digest": 0
+    },
+    "2026-07-29": {
+      "pushes": 6,
+      "names": [
+        "ADP",
+        "AVTR",
+        "BLKB",
+        "BXP",
+        "CAKE",
+        "CBZ"
+      ],
+      "singles": 4,
+      "digest": 2
+    },
+    "2026-07-30": {
+      "pushes": 9,
+      "names": [
+        "BDC",
+        "BELFA",
+        "BFLY",
+        "BMY",
+        "BOOT",
+        "CLBK",
+        "CMG",
+        "CORT",
+        "FSS"
+      ],
+      "singles": 4,
+      "digest": 5
+    },
+    "2026-07-31": {
+      "pushes": 9,
+      "names": [
+        "AEE",
+        "AMZN",
+        "ARES",
+        "BCPC",
+        "BTE",
+        "CDNA",
+        "CRI",
+        "FND",
+        "AGM"
+      ],
+      "singles": 4,
+      "digest": 5
+    },
+    "2026-08-03": {
+      "pushes": 1,
+      "names": [
+        "ATKR"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-08-04": {
+      "pushes": 7,
+      "names": [
+        "ADEA",
+        "AEIS",
+        "ALSN",
+        "AME",
+        "BCC",
+        "BRSL",
+        "CLX"
+      ],
+      "singles": 4,
+      "digest": 3
+    },
+    "2026-08-05": {
+      "pushes": 9,
+      "names": [
+        "ACAD",
+        "AFG",
+        "AIZ",
+        "AMGN",
+        "AVT",
+        "BIO",
+        "CRBG",
+        "CRCL",
+        "FTK"
+      ],
+      "singles": 4,
+      "digest": 5
+    },
+    "2026-08-06": {
+      "pushes": 7,
+      "names": [
+        "ALNT",
+        "APA",
+        "APPN",
+        "AVNT",
+        "BDX",
+        "CACI",
+        "CNR"
+      ],
+      "singles": 4,
+      "digest": 3
+    },
+    "2026-08-07": {
+      "pushes": 5,
+      "names": [
+        "ABNB",
+        "AMN",
+        "CENX",
+        "CON",
+        "PSIX"
+      ],
+      "singles": 4,
+      "digest": 1
+    },
+    "2026-08-10": {
+      "pushes": 1,
+      "names": [
+        "BWMN"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-08-11": {
+      "pushes": 3,
+      "names": [
+        "ACHR",
+        "ARMK",
+        "STIM"
+      ],
+      "singles": 3,
+      "digest": 0
+    },
+    "2026-08-12": {
+      "pushes": 1,
+      "names": [
+        "ATRO"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-08-13": {
+      "pushes": 2,
+      "names": [
+        "AVAH",
+        "BLSH"
+      ],
+      "singles": 2,
+      "digest": 0
+    },
+    "2026-08-14": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-17": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-18": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-19": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-20": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-21": {
+      "pushes": 1,
+      "names": [
+        "BJ"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-08-24": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-25": {
+      "pushes": 2,
+      "names": [
+        "BMO",
+        "BNS"
+      ],
+      "singles": 2,
+      "digest": 0
+    },
+    "2026-08-26": {
+      "pushes": 2,
+      "names": [
+        "ANF",
+        "BBWI"
+      ],
+      "singles": 2,
+      "digest": 0
+    },
+    "2026-08-27": {
+      "pushes": 1,
+      "names": [
+        "CRM"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-08-28": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-08-31": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-01": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-02": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-03": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-04": {
+      "pushes": 1,
+      "names": [
+        "AOUT"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-09-08": {
+      "pushes": 1,
+      "names": [
+        "ABM"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-09-09": {
+      "pushes": 1,
+      "names": [
+        "ASO"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-09-10": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-11": {
+      "pushes": 2,
+      "names": [
+        "ADBE",
+        "FEIM"
+      ],
+      "singles": 2,
+      "digest": 0
+    },
+    "2026-09-14": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-15": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-16": {
+      "pushes": 1,
+      "names": [
+        "TCOM"
+      ],
+      "singles": 1,
+      "digest": 0
+    },
+    "2026-09-17": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    },
+    "2026-09-18": {
+      "pushes": 0,
+      "names": [],
+      "singles": 0,
+      "digest": 0
+    }
+  },
+  "summary": {
+    "total": 88,
+    "sessions_with_any": 30,
+    "median": 0.5,
+    "p90": 5,
+    "max": 9,
+    "busiest": {
+      "date": "2026-07-30",
+      "n": 9,
+      "names": [
+        "BDC",
+        "BELFA",
+        "BFLY",
+        "BMY",
+        "BOOT",
+        "CLBK",
+        "CMG",
+        "CORT",
+        "FSS"
+      ]
+    }
+  },
+  "floors": {
+    "0": {
+      "total": 88,
+      "median": 0.5,
+      "max": 9,
+      "busiest_n": 9
+    },
+    "2": {
+      "total": 80,
+      "median": 0.5,
+      "max": 9,
+      "busiest_n": 9
+    },
+    "5": {
+      "total": 66,
+      "median": 0.0,
+      "max": 8,
+      "busiest_n": 8
+    },
+    "10": {
+      "total": 59,
+      "median": 0.0,
+      "max": 8,
+      "busiest_n": 8
+    },
+    "20": {
+      "total": 42,
+      "median": 0.0,
+      "max": 5,
+      "busiest_n": 5
+    },
+    "50": {
+      "total": 23,
+      "median": 0.0,
+      "max": 4,
+      "busiest_n": 4
+    }
+  },
+  "institutional_misses": {
+    "total": 16,
+    "sessions_with_any": 13,
+    "median": 0.0,
+    "p90": 1,
+    "max": 2
+  },
+  "coverage": {
+    "calendar_docs": 814,
+    "with_last_report_in_window": 814,
+    "no_reaction_bar": 1,
+    "short_frame": 0,
+    "when_none": 14,
+    "off_window": 5
+  }
 }

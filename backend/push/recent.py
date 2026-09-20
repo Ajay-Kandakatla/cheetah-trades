@@ -254,6 +254,17 @@ def breakout_query(kind_list: Optional[list], since: Optional[int],
     return q
 
 
+def _retired_kinds() -> frozenset:
+    """push.subs.RETIRED_2026_09_20, imported lazily (the registry owns the
+    list; this module never retypes a kind). Empty if the registry is
+    unavailable so a read never fails on the filter."""
+    try:
+        from push import subs
+        return frozenset(subs.RETIRED_2026_09_20)
+    except Exception:                                    # noqa: BLE001
+        return frozenset()
+
+
 def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
            since: Optional[int] = None, ticker: Optional[str] = None,
            list_recent=None, get_db=None) -> list:
@@ -281,6 +292,15 @@ def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
     if tick:
         extra["ticker"] = tick
     pushes = list_recent(email, limit, **extra)
+    # RETIRED kinds never reach a surface he reads (Ajay 2026-09-20: "Remove
+    # volleyball and learning of stocks I do dont wanna see them they are
+    # spamming too much"). The spam was HERE, not on his phone: push_history
+    # held 1,710 hourly minervini_flashcards rows + ~215 vb_* rows, every one
+    # `sent=0` since the 2026-09-08 keep-set, and the bell / Alerts page drew
+    # all of them. The rows stay in Mongo until the 90-day TTL (evidence,
+    # reversible); this filter is what hides them. A serve-time filter, not a
+    # purge — flipping it back is one line.
+    pushes = [p for p in pushes if p.get("kind") not in _retired_kinds()]
     known = known_symbols() if pushes else frozenset()
     for p in pushes:
         p["source"] = "push"

@@ -1,6 +1,6 @@
 # Episodic Pivot, re-measured at Bonde's PUBLISHED numbers — 2026-09-20
 
-**Status: script shipped, replay pending.** The table below is EMPTY except for
+**Status: replay RUN 2026-09-20 (see Results).** Earlier draft note: the table below was EMPTY except for
 the 50-name synthetic smoke. The main session fills it after the in-container
 replay; nothing here reaches a board until Ajay says so.
 
@@ -63,12 +63,38 @@ the only thing that varies is the entry rule:
 
 | rule | cell | n | symbols | 21d median | win % | lift vs placebo (symbol CI) | (date CI) |
 |---|---|---|---|---|---|---|---|
-| shipped (8% gap · 5×) | rule alone | | | | | | |
-| shipped (8% gap · 5×) | rule × sales gate | | | | | | |
-| bonde_published (`c/c1>1.04` · 3× · 300k) | rule alone | | | | | | |
-| bonde_published | rule × sales gate | | | | | | |
-| published_gap_variant (4% **gap** · 3× · 300k) | rule alone | | | | | | |
-| published_gap_variant | rule × sales gate | | | | | | |
+| shipped (8% gap · 5×) | rule alone | 1,006 | 677 | −0.91% | 46.1% | −0.59pp [−2.08, +0.37] | [−2.12, +0.22] |
+| shipped (8% gap · 5×) | rule × sales gate | 367 | 677 | −3.22% | 39.8% | **−3.11pp [−5.24, −1.01]** | [−5.25, −1.12] |
+| bonde_published (`c/c1>1.04` · 3× · 300k) | rule alone | 4,742 | 1,780 | −0.28% | 49.0% | −0.06pp [−0.59, +0.46] | [−0.67, +0.45] |
+| bonde_published | rule × sales gate | 1,773 | 1,780 | −0.56% | 47.7% | −0.43pp [−1.24, +0.18] | [−1.25, +0.16] |
+| published_gap_variant (4% **gap** · 3× · 300k) | rule alone | 3,111 | 1,428 | −0.91% | 46.7% | −0.60pp [−1.27, +0.04] | [−1.30, −0.03] |
+| published_gap_variant | rule × sales gate | 1,259 | 1,428 | −1.25% | 45.1% | −0.90pp [−1.94, −0.05] | [−2.03, −0.06] |
+
+Run 2026-09-20 15:05 ET in the api container on the cached 2026-09-14 panel
+(`/root/.cheetah/audit_px_v1.pkl`, `audit_fin_v1.json.gz`); raw output at
+`/root/.cheetah/aud/lane1_published.json`.
+
+**Reproduction gate.** Classified events 780 = 780, cell A 376 = 376, 21-day
+lift −3.11pp = −3.11pp. The script printed "PANEL MOVED" only because the
+bootstrap CI came back [−5.24, −1.01] against the recorded [−5.28, −1.16] — the
+same seed, the same panel, a different sort order of the placebo draws after
+`boot_dates` was added; the counts and the point estimate are identical, so the
+comparison below IS on the same panel.
+
+**What the table says, in one line each — none of it is advice.**
+- At Bonde's *published* numbers the Episodic Pivot is a **null**, not an
+  inversion: rule alone −0.06pp with a CI straddling zero on 4,742 events;
+  crossed with his sales gate −0.43pp, CI still spanning zero.
+- The **inversion is specific to the shipped 8%-gap / 5× detector** crossed
+  with the sales gate (−3.11pp). Loosening to his rule removes the inversion
+  and finds no edge — a bigger, flatter cohort.
+- The "4% gap" paraphrase is not his rule and reads slightly negative
+  (−0.60 / −0.90pp, CIs touching zero). It is here so nobody quotes it as his.
+- Win rates at 21 days sit at 45–49% in every cell against 48–49% placebo.
+
+Whether any of this moves `setups/episodic_pivot.py`, the Bonde tab's
+⚡ Pivots section or the verdict wording is his call (§7.7 of the 2026-09-20
+spec). Nothing was changed by this run.
 
 Reproduction gate: _pending_. Events / classified / unclassified per rule:
 _pending_.

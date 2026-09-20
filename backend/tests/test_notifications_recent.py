@@ -199,3 +199,36 @@ def test_main_includes_the_router_and_the_inline_route_is_gone():
     assert "app.include_router(notifications_recent_router)" in src
     assert '@app.get("/notifications/recent")' not in src, "two handlers for one path"
     assert src.count("/notifications/recent") >= 1
+
+
+# ── retired kinds are hidden at serve time (2026-09-20) ──────────────────────
+def test_retired_kinds_never_reach_the_alert_surfaces(monkeypatch):
+    """Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont
+    wanna see them they are spamming too much". The spam was the bell / Alerts
+    page drawing 1,710 hourly flash-card rows (all sent=0), so the filter lives
+    where those surfaces read. The registry owns the list."""
+    from push import recent as R
+    from push import subs
+    rows = [
+        {"kind": "minervini_flashcards", "ts": 5, "title": "📐 card", "url": "/learn"},
+        {"kind": "vb_workout", "ts": 4, "title": "🏐 Sun", "url": "/volleyball"},
+        {"kind": "vb_supplement", "ts": 3, "title": "💊", "url": "/volleyball"},
+        {"kind": "vb_education", "ts": 2, "title": "🩹", "url": "/volleyball"},
+        {"kind": "demand_alert", "ts": 1, "title": "🧲 NVDA", "url": "/x", "ticker": "NVDA"},
+    ]
+    assert {r["kind"] for r in rows[:4]} == set(subs.RETIRED_2026_09_20)
+    out = R.gather("a@b.c", 50, list_recent=lambda *a, **k: [dict(r) for r in rows],
+                   get_db=lambda: None)
+    assert [r["kind"] for r in out] == ["demand_alert"]
+
+
+def test_NEGATIVE_a_registry_import_failure_hides_nothing(monkeypatch):
+    """The filter must never turn into a blank page: if the registry cannot be
+    read, every row is served (the old behaviour), not none."""
+    from push import recent as R
+    monkeypatch.setattr(R, "_retired_kinds", lambda: frozenset())
+    rows = [{"kind": "minervini_flashcards", "ts": 5, "title": "📐", "url": "/learn"}]
+    out = R.gather("a@b.c", 50, list_recent=lambda *a, **k: [dict(r) for r in rows],
+                   get_db=lambda: None)
+    assert [r["kind"] for r in out] == ["minervini_flashcards"]
+

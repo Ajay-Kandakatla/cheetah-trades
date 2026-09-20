@@ -280,7 +280,9 @@ def test_gather_serves_tickers_for_stored_single_derived_and_breakout(monkeypatc
         {"_id": "p2", "ts": 300, "kind": "demand_alert", "body": "x", "ticker": "ntap"},
         {"_id": "p3", "ts": 200, "kind": "growth_demand_alert",
          "body": "NVDA, CRDO"},                              # old digest, derived
-        {"_id": "p4", "ts": 100, "kind": "minervini_flashcards",
+        # A prose kind (NOT a retired one — retired kinds are filtered out of
+        # gather entirely since 2026-09-20, see test_notifications_recent).
+        {"_id": "p4", "ts": 100, "kind": "health",
          "body": "NEW, AT, ET"},                             # prose, nothing
     ]
     rows = R.gather("a@x", 10, list_recent=lambda e, l, **k: [dict(p) for p in pushes],

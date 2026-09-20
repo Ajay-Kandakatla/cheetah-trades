@@ -148,31 +148,41 @@ next.
     cp <scratch>/earnings_reaction_measured.json backend/scripts/
 
 Run it **outside RTH** — the cache's last bar is a partial bar in session.
-`backend/scripts/earnings_reaction_measured.json` currently holds an explicit
-`{"pending": true}` placeholder; the main session replaces it with the real
-output and fills the two tables below.
+`backend/scripts/earnings_reaction_measured.json` holds the 2026-09-20 run
+(60 sessions ending 2026-09-19; calendar docs 814, all with a
+last report in the window; when_none 14, off_window 5,
+no_reaction_bar 1; one Massive fetch failed — CVKD — and
+was skipped).
+
+**Read:** at the shipped gate (beat + institutional buying, no floor) the phone
+would have carried **88 pushes over 60 sessions — a median of 0.5 a day,
+nothing on 30 of the 60 days, 9 on the busiest (2026-07-30, mid earnings
+season)**. A 5% floor cuts that to 66, a 20% floor to 42, 50% to 23.
+Institutional buying on a MISS happened 16 times (excluded from the push).
+The floor stays HIS call; none ships.
 
 ### Would-be pushes per session (last 60 sessions)
 
 | | total | sessions with any | median | p90 | max | busiest day |
 |---|---|---|---|---|---|---|
-| (to be filled by the replay) | | | | | | |
+| 2026-09-20 run (as_of 2026-09-20T15:00 ET) | **88** | 30 of 60 | 0.5 | 5 | 9 | 2026-07-30 (9: BDC, BELFA, BFLY, BMY, BOOT, CLBK, CMG, CORT, FSS) |
 
 ### Surprise floors (REPORT ONLY — no floor ships)
 
 | floor | total | median/session | max | busiest |
 |---|---|---|---|---|
-| 0% | | | | |
-| 2% | | | | |
-| 5% | | | | |
-| 10% | | | | |
-| 20% | | | | |
-| 50% | | | | |
+| 0% | 88 | 0.5 | 9 | 9 |
+| 2% | 80 | 0.5 | 9 | 9 |
+| 5% | 66 | 0.0 | 8 | 8 |
+| 10% | 59 | 0.0 | 8 | 8 |
+| 20% | 42 | 0.0 | 5 | 5 |
+| 50% | 23 | 0.0 | 4 | 4 |
 
 ### Institutional buying on a MISS (excluded today)
 
 | total | median/session | max |
 |---|---|---|
+| 16 (in 13 sessions) | 0.0 | 2 |
 | | | |
 
 **Both anchorings.** The replay computes the reaction bar two ways —
