@@ -204,6 +204,29 @@ class TestBuild:
         assert tag["trigger"]["title"]
         assert tag["facts"]["sector"] == "Technology"
 
+    def test_the_tag_KEEPS_EVERY_HEADLINE_THE_MODEL_SAW(self, stub):
+        # The audit trail. The news cache rolls within hours, so without this
+        # a number in the prose that came from a real story is, a day later,
+        # indistinguishable from one the model invented.
+        tag = SNT.build(_board(), date="2026-09-19")["tags"]["Technology"]
+        assert len(tag["headlines"]) == 2
+        assert {h["title"] for h in tag["headlines"]} == {"NVDA beats", "NVDA expands"}
+        assert all(h["source"] and h["published"] for h in tag["headlines"])
+        # The trigger must be one of them, never a seventh mystery headline.
+        assert tag["trigger"]["title"] in {h["title"] for h in tag["headlines"]}
+
+    def test_the_stored_headlines_are_capped_at_what_the_model_was_shown(self, monkeypatch):
+        async def _many(symbols):
+            return {s: [_item(f"{s} story {i}", NOW - i * 60) for i in range(12)]
+                    for s in symbols}
+        monkeypatch.setattr(SNT, "_news_for", _many)
+        monkeypatch.setattr(SNT, "_ask_model", lambda f, i: {
+            "positive": True, "bull": "b" * 60, "bear": "r" * 60, "provider": "local"})
+        tag = SNT.build(_board(), date="2026-09-19")["tags"]["Technology"]
+        assert len(tag["headlines"]) == SNT.MAX_HEADLINES_TO_MODEL
+        # headline_count still reports the TRUE total, not the capped list.
+        assert tag["headline_count"] == 12
+
     def test_the_tag_says_it_is_NOT_MEASURED_and_names_who_read_it(self, stub):
         # Without these the surface has no way to stop itself presenting an
         # LLM's read of three headlines as a measurement.
@@ -335,7 +358,15 @@ class TestSourceGuards:
     def test_the_model_is_forbidden_from_recommending(self):
         low = SNT._SYSTEM.lower()
         assert "no recommendation" in low
-        assert "price target" in low
+        assert "no price target of" in low
+
+    def test_it_may_REPORT_an_analysts_target_but_never_adopt_one(self):
+        # Quoting "Deutsche Bank raised its target to $13" is reporting the
+        # headline; naming a target of its own is advice. The prompt has to
+        # separate those or it either lies about the news or gives advice.
+        low = SNT._SYSTEM.lower()
+        assert "may report" in low
+        assert "never adopt it as your own" in low
 
     def test_the_prompt_says_reversal_never_bounce(self):
         # Standing rule on every surface he reads.

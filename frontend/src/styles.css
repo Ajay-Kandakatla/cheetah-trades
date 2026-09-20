@@ -12145,6 +12145,13 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-daytag__trigger a { color: var(--accent, #d4a85f); }
 .hs-daytag__src { margin-left: 8px; font-size: 0.68rem; color: var(--ink-muted); }
 
+.hs-daytag__reads { margin-top: 8px; font-size: 0.74rem; }
+.hs-daytag__reads > summary { cursor: pointer; color: var(--ink-muted); }
+.hs-daytag__reads > summary:hover { color: var(--ink); }
+.hs-daytag__reads ul { margin: 6px 0 0; padding-left: 16px; }
+.hs-daytag__reads li { margin: 2px 0; }
+.hs-daytag__reads a { color: var(--ink); }
+
 .hs-daytag__cases {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 10px; margin-top: 10px;

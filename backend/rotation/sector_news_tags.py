@@ -220,8 +220,11 @@ HARD RULES, in order of importance:
    reads one-sided. The bear case on good news is the part that has value.
 3. Ground both cases in the supplied HEADLINES and FACTS. Do not import
    anything you happen to know about the company from elsewhere.
-4. No recommendation, no rating, no "buy"/"sell"/"hold", no price target, no
-   position sizing. You are describing an argument, not giving advice.
+4. No recommendation, no rating, no "buy"/"sell"/"hold", no price target of
+   your own, no position sizing. You are describing an argument, not giving
+   advice. You MAY report that a named analyst or outlet published a target or
+   a rating, because that is what the headline says — attribute it to them and
+   never adopt it as your own view.
 5. Say "reversal", never "bounce".
 6. Two to three sentences per case. Plain language. No preamble.
 
@@ -378,6 +381,16 @@ def build(hottest_payload: dict, *, date: Optional[str] = None,
             "trigger": {"title": top.get("title"), "url": top.get("url"),
                         "source": top.get("source"),
                         "published": top.get("published")},
+            # EVERY headline the model was shown, not just the trigger.
+            # Without this the claim "grounded in the headlines" cannot be
+            # checked after the fact: the news cache rolls within hours, so a
+            # number in the prose that came from a real story is, a day later,
+            # indistinguishable from one the model made up. Found the morning
+            # this shipped, auditing CAG's "$13.00 price target" — by then its
+            # headlines were gone and the number could not be traced either way.
+            "headlines": [{"title": h.get("title"), "source": h.get("source"),
+                           "url": h.get("url"), "published": h.get("published")}
+                          for h in items[:MAX_HEADLINES_TO_MODEL]],
             "facts": facts,
             # So no surface can ever present this as a measurement.
             "read_by": parsed.get("provider") or "llm",

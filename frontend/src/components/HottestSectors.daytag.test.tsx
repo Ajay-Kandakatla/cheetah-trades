@@ -27,6 +27,12 @@ const TAG: HsDayTag = {
   bear: 'The same agreement concentrates revenue in one counterparty, and the '
       + 'name is already extended against its own sector over twenty-one days.',
   headline_count: 4,
+  headlines: [
+    { title: 'Chipmaker signs multi-year supply agreement', source: 'Reuters',
+      url: 'https://example.test/story', published: 1_789_800_000 },
+    { title: 'Analysts raise estimates after the deal', source: 'Yahoo',
+      url: 'https://example.test/two', published: 1_789_790_000 },
+  ],
   trigger: {
     title: 'Chipmaker signs multi-year supply agreement',
     url: 'https://example.test/story',
@@ -158,10 +164,38 @@ describe('the expanded tag', () => {
 
   it('links the headline that triggered it, with its source', async () => {
     await open();
-    const a = screen.getByText('Chipmaker signs multi-year supply agreement');
+    // Scoped: the trigger title also appears in the "headlines read" list.
+    const trig = document.querySelector('.hs-daytag__trigger')!;
+    const a = within(trig as HTMLElement).getByText('Chipmaker signs multi-year supply agreement');
     expect(a.getAttribute('href')).toBe('https://example.test/story');
     expect(a.getAttribute('rel')).toBe('noreferrer');
     expect(document.querySelector('.hs-daytag__src')?.textContent).toMatch(/Reuters/);
+  });
+
+  it('SHOWS EVERY HEADLINE IT READ, so the grounding can be checked', async () => {
+    // "Grounded in the headlines" is only a claim if you cannot see them.
+    await open();
+    const reads = document.querySelector('.hs-daytag__reads');
+    expect(reads?.querySelector('summary')?.textContent).toMatch(/2 headlines read/);
+    expect(reads?.querySelectorAll('li').length).toBe(2);
+    expect(reads?.textContent).toMatch(/Analysts raise estimates after the deal/);
+  });
+
+  it('does not render an empty reads list when there is only the trigger', async () => {
+    stub(payload({ ...TAG, headlines: [TAG.headlines![0]] }));
+    view();
+    fireEvent.click(await screen.findByText('📰 NVDA'));
+    await waitFor(() => screen.getByText(/Bull case/i));
+    expect(document.querySelector('.hs-daytag__reads')).toBeNull();
+  });
+
+  it('survives a tag with no headlines array at all', async () => {
+    stub(payload({ ...TAG, headlines: null }));
+    view();
+    fireEvent.click(await screen.findByText('📰 NVDA'));
+    await waitFor(() => screen.getByText(/Bull case/i));
+    expect(document.querySelector('.hs-daytag__reads')).toBeNull();
+    expect(screen.getByText(/Bear case/i)).toBeTruthy();
   });
 
   it('carries its own DATE, so a weekend board says which day it is from', async () => {

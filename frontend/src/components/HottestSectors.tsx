@@ -117,6 +117,11 @@ export type HsDayTag = {
   headline_count?: number | null;
   trigger?: { title?: string | null; url?: string | null;
               source?: string | null; published?: number | null } | null;
+  /** EVERY headline the model was shown, not just the trigger — the audit
+   *  trail for "grounded in the headlines". The news cache rolls within
+   *  hours, so without these a number in the prose cannot be traced back. */
+  headlines?: { title?: string | null; source?: string | null;
+                url?: string | null; published?: number | null }[] | null;
   facts?: Record<string, unknown> | null;
   read_by?: string | null;
   measured?: boolean;
@@ -393,6 +398,25 @@ function DayTagRow({ tag, span }: { tag: HsDayTag; span: number }) {
               {tag.trigger.source || ''}{when ? ` · ${when}` : ''}
             </span>
           </div>
+        ) : null}
+
+        {/* What else it read. Folded into a <details> because six headlines
+            above two paragraphs would bury the argument — but present, because
+            "grounded in the headlines" is only a claim if you can't see them. */}
+        {(tag.headlines || []).length > 1 ? (
+          <details className="hs-daytag__reads">
+            <summary>{tag.headlines!.length} headlines read</summary>
+            <ul>
+              {tag.headlines!.map((h, i) => (
+                <li key={h.url || h.title || i}>
+                  {h.url
+                    ? <a href={h.url} target="_blank" rel="noreferrer">{h.title}</a>
+                    : h.title}
+                  {h.source ? <span className="hs-daytag__src">{h.source}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </details>
         ) : null}
 
         <div className="hs-daytag__cases">
