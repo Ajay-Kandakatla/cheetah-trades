@@ -41,7 +41,9 @@ export type WhyCode =
   | 'no_metrics_doc' | 'no_float_in_doc' | 'no_cap_in_doc'
   | 'not_warmed' | 'no_si_record'
   | 'no_analyst_doc' | 'no_estimate_read'
-  | 'no_listing_date' | 'future_listing_date';
+  | 'no_listing_date' | 'future_listing_date'
+  // theme lookup
+  | 'no_symbol';
 
 /** A pair leg (`eps_accel`, `rev_39_x2`) carries both halves, never a ratio. */
 export type BondeLegPair = { now?: number | null; prior?: number | null };
@@ -60,12 +62,44 @@ export type BondePickLeg = {
   tier?: string | null;
   value_note?: string | null;
   his_call?: string | null;
+  /** The app's freshness BOUND in days (a served constant), never the row's own
+   *  age: the stale hover prints this, so a 200-day report reads "older than
+   *  157 days" rather than "older than 200 days". */
+  stale_after?: number | null;
+  /** The revenue-growth counter stopped at its own cap — "4" means "4 or more". */
+  capped?: boolean | null;
+  /** The counter ran out of HISTORY before the growth ran out. */
+  history_ended?: boolean | null;
+  n_pairs_available?: number | null;
+  /** The theme lookup found this name on the app's own map. */
+  mapped?: boolean | null;
+  ids?: string[] | null;
+  /** The SEQUENTIAL flip (qoq's own read), carried beside a year-ago turnaround
+   *  and never confused with it. */
+  seq_turn?: string | null;
+  latest?: number | null;
+  year_ago?: number | null;
+  recorded?: string | null;
 };
 
 /** What the row carries. The backend also serves per-row tallies for its own
  *  documentation; they are deliberately not typed here, because no count,
  *  ratio or score derived from these legs is ever rendered. */
 export type BondePick = { legs: Record<string, BondePickLeg> };
+
+/** A SECOND sentence of his for a criterion that already has one — added,
+ *  never replacing the primary. A tape cite carries two dates: `date` is when
+ *  the episode was published and `recorded` is when he spoke, and the cite line
+ *  prints neither (the tape-source line in the legend does). */
+export type BondeCite = {
+  quote: string;
+  url: string;
+  date?: string | null;
+  recorded?: string | null;
+  source?: string | null;
+  ts?: string | null;
+  note?: string | null;
+};
 
 export type BondeCriterion = {
   key: string;
@@ -81,6 +115,14 @@ export type BondeCriterion = {
   not_computed_why?: string | null;
   /** The §7 item when the reading is still Ajay's to make. */
   his_call?: string | null;
+  /** Extra sentences of his for the same criterion, in served order. */
+  cites?: BondeCite[] | null;
+  /** A FACT criterion: his words give no line for it, so its leg is shown as a
+   *  value and a dash — never a tick and never a cross. */
+  fact?: boolean | null;
+  /** When the primary source is the tape: the second it starts. */
+  ts?: string | null;
+  recorded?: string | null;
 };
 
 export type BondePickLegend = {
@@ -90,13 +132,26 @@ export type BondePickLegend = {
   why_codes?: string[];
   not_a_source?: string;
   warm_note?: string;
+  /** A second header line, served: one sentence of his off the tape. */
+  tape_header?: BondeCite | null;
+  tape?: {
+    url?: string;
+    title?: string;
+    show?: string;
+    published?: string;
+    recorded?: string;
+    recorded_cite?: BondeCite | null;
+    received?: string;
+  } | null;
+  /** The keys whose legs are facts, served — never a list typed here. */
+  fact_keys?: string[] | null;
 };
 
 export type BondePickCoverage = Record<string, { known?: number | null; rows?: number | null }>;
 
 /* ── The six ────────────────────────────────────────────────────────────── */
 
-/** SIX chips, in this order (Rule #5 — the rest live behind "all 14").
+/** SIX chips, in this order (Rule #5 — the rest live behind the "all N" fold).
  *
  *  `sales_5` is deliberately NOT here: every row the board draws has already
  *  cleared his 5% floor by construction, so a ✓ on it is a fact of the section
@@ -129,7 +184,7 @@ export const WHY_TEXT: Record<WhyCode, string> = {
   no_sector:
     'No sector on the scan row.',
   no_threshold_in_his_writing:
-    'He names fund holding as something he looks at, but publishes no level — so this is shown as a fact, never as a pass or a fail.',
+    'He names this as something he looks at, but publishes no level — so it is shown as a fact, never as a pass or a fail.',
   seq_base_non_positive:
     'The prior quarter’s earnings base was not positive, so a sequential percentage would be a sign flip rather than growth.',
   seq_base_too_small:
@@ -160,6 +215,18 @@ export const WHY_TEXT: Record<WhyCode, string> = {
     'No listing date on file for this name.',
   future_listing_date:
     'The listing date on file is in the future, so the age could not be read.',
+  no_symbol:
+    'No symbol on the scan row, so the theme map could not be looked up.',
+};
+
+/** The four turnaround tokens the backend serves, in plain words. Only
+ *  `to_profit` is his own word; the other three are the same read's other
+ *  outcomes, carried so a row never reads as a blank. */
+export const TURN_TEXT: Record<string, string> = {
+  to_profit: 'loss → profit',
+  to_loss: 'profit → loss',
+  loss_both: 'loss both years',
+  profit_both: 'profit both years',
 };
 
 /* ── Formatting ─────────────────────────────────────────────────────────── */
@@ -197,16 +264,29 @@ const PCT_KEYS = new Set([
   'eps_yoy_100', 'eps_seq_100', 'sales_5', 'surprise', 'fund_holding',
 ]);
 
-/** One value, formatted the way his sentence for that criterion reads it. */
-export function fmtValue(key: string, value: unknown): string {
+/** One value, formatted the way his sentence for that criterion reads it.
+ *
+ *  `leg` is OPTIONAL so every existing two-argument call still compiles; only
+ *  the two callers that hold a leg pass it, and today it is read for one thing:
+ *  a revenue-growth streak sitting on the counter's own cap prints `4+ q`. */
+export function fmtValue(
+  key: string, value: unknown, leg?: Pick<BondePickLeg, 'capped'> | null,
+): string {
   if (isPair(value)) {
     const a = num(value.now); const b = num(value.prior);
     if (a == null && b == null) return '—';
     return `${a == null ? '—' : signed(a)}/${b == null ? '—' : signed(b)}`;
   }
+  // BEFORE the string early-return below: the turnaround value is a served
+  // TOKEN, not a sentence, so it is the one string this line translates.
+  if (key === 'turnaround' && typeof value === 'string') {
+    return TURN_TEXT[value] ?? value;
+  }
   if (typeof value === 'string') return value.trim() || '—';
   const x = num(value);
   if (x == null) return '—';
+  if (key === 'report_age') return `${Math.round(x)} d ago`;
+  if (key === 'growth_streak') return `${Math.round(x)}${leg?.capped === true ? '+' : ''} q`;
   if (key === 'eps_5c') return `$${x.toFixed(2)}`;
   if (key === 'float_25m') return shares(x);
   if (key === 'cap_10b') return dollars(x);
@@ -234,6 +314,10 @@ const CHIP_PREFIX: Record<string, string> = {
   ipo_10y: 'IPO',
   cap_10b: 'Cap',
   sector_3: 'Sector',
+  report_age: 'Reported',
+  turnaround: 'Turnaround',
+  growth_streak: 'Streak',
+  theme: 'Theme',
 };
 
 /** The unit word that belongs AFTER the number, where his sentence names one. */
@@ -251,15 +335,29 @@ function titleOf(key: string, leg: BondePickLeg, crit?: BondeCriterion | null): 
   const parts: string[] = [];
   if (crit?.label) parts.push(crit.label);
   if (crit?.quote) parts.push(`“${crit.quote}”`);
-  if (crit?.date || crit?.source) {
-    parts.push([crit.source, crit.date].filter(Boolean).join(' '));
+  if (crit?.date || crit?.source || crit?.ts) {
+    parts.push(
+      crit.source === 'tape' && crit.ts
+        ? `on tape [${crit.ts}]${crit.recorded ? `, recorded ${crit.recorded}` : ''}`
+        : [crit.source, crit.date].filter(Boolean).join(' '),
+    );
+  }
+  if (key === 'surprise') {
+    const age = num(leg.age_days);
+    if (age != null) parts.push(`reported ${Math.round(age)} d ago`);
   }
   if (leg.ok === null && leg.why) parts.push(WHY_TEXT[leg.why as WhyCode] || String(leg.why));
   if (leg.ok === true && leg.why === 'no_period_keys') parts.push(UNVERIFIED_TITLE);
   if (leg.stale === true) {
+    // The BOUND, never the row's own age: "older than 157 days" is the app's
+    // freshness constant; a 200-day report is not a 200-day bound. The age
+    // fallback survives only for legs that serve no bound.
+    const bound = num(leg.stale_after);
     const n = num(leg.age_days);
+    const said = bound != null ? `${Math.round(bound)} days`
+      : n != null ? `${Math.round(n)} days` : 'the app’s freshness bound';
     const what = key === 'short_dtc_5' ? 'settlement' : 'report';
-    parts.push(`Shown, labelled stale: the ${what} is older than ${n == null ? 'the app’s freshness bound' : `${Math.round(n)} days`}. A stale read never flips the tick.`);
+    parts.push(`Shown, labelled stale: the ${what} is older than ${said}. A stale read never flips the tick.`);
   }
   if (leg.as_of) parts.push(`as of ${leg.as_of}`);
   if (leg.value_note) parts.push(String(leg.value_note));
@@ -286,7 +384,10 @@ export function legChip(
 ): BondeChip | null {
   if (!leg) return null;
   const prefix = CHIP_PREFIX[key] || key;
-  if (leg.ok === null || leg.ok === undefined) {
+  // A FACT criterion never wears a tick or a cross, whatever arrives on the
+  // leg: his words give no line for it, so there is nothing to pass or fail.
+  // (The backend builds these legs with `ok: None`; this is the second belt.)
+  if (crit?.fact === true || leg.ok === null || leg.ok === undefined) {
     return {
       text: `${prefix} —`,
       tone: 'bd-dim',
@@ -305,6 +406,21 @@ export function legChip(
   return { text: `${body} ✓${marks}`, tone: 'bd-pick-ok', glyph: '✓', title: titleOf(key, leg, crit) };
 }
 
+/** One EXTRA sentence of his under a criterion: "— also, on tape [1:07:04]: …".
+ *  The word is "also" because a cite is added to a criterion, never replacing
+ *  the sentence it already had. Neither date is printed here. */
+export function citeLine(c: BondeCite): string {
+  if (c.source === 'tape') return `— also, on tape [${c.ts ?? '?'}]: “${c.quote}”`;
+  return `— also, ${[c.source, c.date].filter(Boolean).join(' ')}: “${c.quote}”`;
+}
+
+/** The link text for a criterion's PRIMARY source: a timestamp when he said it
+ *  on tape, the publisher and the date when he wrote it. */
+export function sourceLabel(c: BondeCriterion): string {
+  if (c.source === 'tape' && c.ts) return `on tape [${c.ts}]`;
+  return [c.source, c.date].filter(Boolean).join(' ');
+}
+
 /** The criterion behind a leg, by key. */
 export function criterionOf(
   legend: BondePickLegend | null | undefined, key: string,
@@ -312,8 +428,8 @@ export function criterionOf(
   return (legend?.criteria || []).find((c) => c && c.key === key) || null;
 }
 
-/** The criteria the board actually computes, in served order — the rows behind
- *  "all 14". A legend-only criterion (a sentence of his this app does not read
+/** The criteria the board actually computes, in served order — the rows behind the
+ *  "all N" fold. A legend-only criterion (a sentence of his this app does not read
  *  a number for) never becomes a chip. */
 export function computedCriteria(legend: BondePickLegend | null | undefined): BondeCriterion[] {
   return (legend?.criteria || []).filter((c) => c && c.computed);

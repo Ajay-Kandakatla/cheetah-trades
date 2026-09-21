@@ -22,6 +22,19 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-20: sent the interview link after the pick list shipped
+  // ("https://www.youtube.com/watch?v=fjox2hapu98"). Bonde himself on tape,
+  // so his sentences are cited at the second they start. Nothing measured,
+  // no number moved; entries stay his.
+  { id: 'bonde-video-cites-2026-09-20',
+    label: '\u{1F399}\uFE0F \u{1F4C8} Bonde: the interview you sent is now a cited source on the pick list. '
+      + 'WHAT IT ADDED: a second cite, on tape and linked at the second it starts, beside eight of his criteria (the three sectors [1:07:04] with his exclusion [1:07:17] and his rank [1:07:22]; the reason-to-go-up list [0:14:33]; what was in play when recorded [1:06:50], dated; what the market likes [1:04:32]; how EP began [0:49:55]; the newspaper list [0:49:23]; beaten-down names [0:27:04]; the USLB example [0:49:28]); '
+      + 'a second header line in the legend \u2014 \u201ca good chart itself is not a setup\u201d [0:14:17]; three legend-only sentences (the paragraph that started EP at 300\u2013500% [0:48:59] \u2014 the book he quoted, not his screen; valuation [0:12:54]; 9 million volume [1:05:52]); '
+      + 'and FOUR NEW FACT ROWS in the all-18 fold \u2014 days since the last report [0:49:23], turnaround loss \u2192 profit [0:11:22], revenue growth streak [0:13:00] (4+ means the counter\u2019s cap, and it says when the history ran out before the growth did), and the app\u2019s own theme map [0:14:33] (an S&P-heavy roster, so most of this board\u2019s small caps read not on the app\u2019s map \u2014 unmapped, not themeless). '
+      + 'Every fact row shows a value and a dash, never a tick or a cross: his words give no line for any of them. '
+      + 'WHAT STAYED OFF AND WHY: entries are yours \u2014 the 80%/20% scale-out, the five-share ladder, the pre-market-low entry (another trader\u2019s rule), the 60-new-highs scan, the 10/20-day stop and the small-cap short side are exits, sizing, entries or day trading, recorded in the doc with timestamps and not on the tab; the 9 million volume is legend-only because he names no unit or window and volume is dynamic. '
+      + 'NOTHING MEASURED, NO NUMBER MOVED: chip order, gates and thresholds are unchanged; whether a sector exclusion, a turnaround pass, a streak count, a valuation metric, a recency window or an unmapped theme reading as unknown ever becomes a line is your call.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=bonde' },
   // Ajay 2026-09-20, verbatim: "I need bonde for stock picks rather than
   // deciding to enter. I decide based on supply and demand and also based on
   // Momentum, but show me other things like EPS, Sales and other things add

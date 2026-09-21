@@ -447,9 +447,48 @@ describe.skipIf(!LIVE_BOARD)('📋 the REAL /bonde/board payload renders his pic
     }
   });
 
-  it('NEGATIVE — no row text is a tally out of 14', async () => {
+  it('NEGATIVE — no row text is a tally out of the criteria count', async () => {
+    // The fold says "all N" — the SERVED criteria count. "9 / 18" would be a
+    // rank this line has not earned, on either shape of payload.
     const { container } = draw(routedFetch(LIVE_BOARD as BondeBoardData));
     await waitFor(() => expect(container.querySelector('.bd-pick')).toBeTruthy());
-    expect(container.textContent || '').not.toMatch(/\/14\b/);
+    expect(container.textContent || '').not.toMatch(/\/(14|18)\b/);
+  });
+
+  it('NEGATIVE — every served FACT leg renders a dash, never ✓ or ✗', async () => {
+    // Tolerant of both payload shapes: the v4 board serves one fact key, the
+    // v5 board serves five. His words give no line for any of them.
+    const { container } = draw(routedFetch(LIVE_BOARD as BondeBoardData));
+    await waitFor(() => expect(container.querySelector('.bd-pick')).toBeTruthy());
+    const d = LIVE_BOARD as any;
+    const factKeys: string[] = d.pick_legend?.fact_keys || ['fund_holding'];
+    expect(factKeys.length).toBeGreaterThan(0);
+    let seen = 0;
+    for (const rows of Object.values(d.sections || {}) as any[]) {
+      for (const r of rows || []) {
+        for (const key of factKeys) {
+          if (!(r.pick?.legs || {})[key]) continue;
+          const row = screen.queryByTestId(`bd-pick-row-${r.symbol}-${key}`);
+          if (!row) continue;
+          seen += 1;
+          const glyph = row.querySelector('.bd-pick-glyph');
+          expect(glyph?.textContent, `${r.symbol}.${key}`).toBe('—');
+          expect(row.textContent, `${r.symbol}.${key}`).not.toContain('✓');
+          expect(row.textContent, `${r.symbol}.${key}`).not.toContain('✗');
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE — no expand-row value reads exactly "none"', async () => {
+    // A name the app's own theme map does not carry is a fact about the MAP,
+    // not a claim that the company has no theme.
+    const { container } = draw(routedFetch(LIVE_BOARD as BondeBoardData));
+    await waitFor(() => expect(container.querySelector('.bd-pick')).toBeTruthy());
+    const vals = [...container.querySelectorAll('.bd-pick-val')]
+      .map((v) => (v.textContent || '').trim().toLowerCase());
+    expect(vals.length).toBeGreaterThan(0);
+    for (const v of vals) expect(v).not.toBe('none');
   });
 });

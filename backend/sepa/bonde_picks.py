@@ -32,8 +32,11 @@ reads the scan row it is handed; `attach` makes five bulk Mongo reads over the
 distinct symbols of the board and nothing else. It never raises — a reader that
 is missing, empty or throwing leaves its legs UNKNOWN and the board is served.
 
-The YouTube summary Ajay shared is NOT a source and nothing here is cited to
-it. Full sourcing, per leg: docs/sepa/bonde_pick_list_2026_09_20.md.
+The third-party YouTube summary was never a source. The interview itself
+(received 2026-09-20) IS one: tape quotes are cited by timestamp from the
+caption track, and their frozen set is
+backend/tests/fixtures/bonde_video_captions_2026_09_20.json. Full sourcing, per
+leg: docs/sepa/bonde_pick_list_2026_09_20.md.
 """
 from __future__ import annotations
 
@@ -44,6 +47,7 @@ from typing import Optional
 from sepa.sales import SALES_FLOOR_PCT   # 2007 "Sales/revenue should be up 5% or more"
 from sepa import qoq as Q                # period guard + yoy_pct + compute (MIN_EPS_BASE) + BASE_* names
 from observability.period_freshness import FILING_LAG_DAYS, GRACE_DAYS   # Rule #7 constants by name
+from supply_demand.sectors import SECTORS, sectors_for_ticker   # the app's own theme map — typing-only module, no I/O
 
 log = logging.getLogger("sepa.bonde_picks")
 
@@ -62,6 +66,29 @@ DATE_2007 = "2007-03-30"
 DATE_2010 = "2010-02-12"
 DATE_2014 = "2014-07-30"
 DATE_2025 = "2025-09-01"
+
+# ── the interview, received 2026-09-20 ─────────────────────────────────────
+# His own voice on a caption track, cited by the second it starts. The host's
+# turns are never quoted here; the frozen caption set lives in
+# backend/tests/fixtures/bonde_video_captions_2026_09_20.json.
+TAPE_URL = "https://www.youtube.com/watch?v=fjox2hapu98"
+TAPE_TITLE = "Trading Legend: His Strategy Has Made the MOST Millionaire Traders - StockBee"
+TAPE_SHOW = "Words of Rizdom"
+TAPE_DATE = "2026-02-18"        # published (Apple Podcasts episode page, read 2026-09-20)
+TAPE_RECORDED = "~June 2025"    # his words at [1:05:11]: "the last month is over May"
+TAPE_RECEIVED = "2026-09-20"
+TAPE_SOURCE = "tape"
+
+# `sepa/sales.py` counts the revenue-growth streak with a literal loop bound of
+# four quarters. That file is book-cited and guarded, so the bound is NAMED
+# here and pinned equal to `sales.compute`'s own behaviour by a test — it is
+# never used to compute anything, only to SAY that four means "four or more".
+STREAK_CAP = 4
+
+# The app's theme map, derived at import from `supply_demand.sectors.SECTORS`
+# so the size printed on his board can never drift from the roster itself.
+THEME_MAP_TICKERS = frozenset(t for s in SECTORS for t in (s.get("sp_tickers") or []))
+THEME_UNMAPPED = "not on the app's map"
 
 # ── HIS numbers, each with its cite on the same line ───────────────────────
 EPS_MIN_USD = 0.05            # 2007 "the earnings should be at least 5 cents"
@@ -84,9 +111,12 @@ PICK_HEADER = ("A pick list of his STATIC criteria — entries are yours (S&D, m
                "is a signal, nothing on it is measured, and it gates, sorts and filters nothing.")
 
 NOT_A_SOURCE = (
-    "The YouTube summary is NOT a source: no criterion on this list is cited to "
-    "it. Every quote here is from a post on stockbee.blogspot.com or from his own "
-    "X account, with the date it was published."
+    "The third-party YouTube SUMMARY was never a source and nothing from it is "
+    "cited. The INTERVIEW itself (Words of Rizdom, published 2026-02-18, "
+    "recorded ~June 2025, received 2026-09-20) is cited by timestamp: every tape "
+    "quote is his own words from the caption track, linked at the second it "
+    "starts. Everything else is a post on stockbee.blogspot.com or his own X "
+    "account, with its date."
 )
 
 WARM_NOTE = (
@@ -111,6 +141,8 @@ WHY_CODES = frozenset({
     "not_warmed", "no_si_record",
     "no_analyst_doc", "no_estimate_read",
     "no_listing_date", "future_listing_date",
+    # the theme map needs a symbol to look up
+    "no_symbol",
 })
 
 # `sepa/qoq.py` owns the base states. They are mapped BY NAME here so a rename
@@ -180,6 +212,125 @@ def _q(*sentences) -> str:
     return _JOIN.join(sentences)
 
 
+# ── his sentences on tape, verbatim ───────────────────────────────────────
+# Straight apostrophes exactly as captioned; "written down" is the caption's
+# hearing of "beaten down" and stays. The " … " in T_CHART_NOT_SETUP is the one
+# permitted elision (the same convention as X2024_FLOAT). Every one of these is
+# checked against the frozen caption fixture by the test module.
+T_TURNAROUND = ("0:11:22",
+                "I have a specific setup of turnaround stocks where I know based on "
+                "their history that it can be held for a little longer than the growth "
+                "stock")
+T_VALUATION = ("0:12:54",
+               "But if I have to do longerterm trading, I will base lot of my "
+               "longerterm trading on a setup which is very very analysis based, which "
+               "is based on valuation, which is based on projecting how many quarters "
+               "in a row that stock is likely to have a growth.")
+T_STREAK = ("0:13:00",
+            "which is based on projecting how many quarters in a row that stock is "
+            "likely to have a growth")
+T_CHART_NOT_SETUP = ("0:14:17",
+                     "a good chart itself is not a setup … they don't go up just "
+                     "because there is a pretty good chart or support or resistance")
+T_REASON = ("0:14:33",
+            "that reason must be might be theme That might be sector that might be "
+            "whatever earnings catalyst story but the that particular stock should "
+            "have a reason to go up")
+T_BEATEN_DOWN = ("0:27:04",
+                 "Now I tended to believe this when I was new in the market right till "
+                 "I actually checked it out and when I checked it out I found that "
+                 "actually the stock which make the biggest move are the one which were "
+                 "written down the most right")
+T_ORIGIN_300 = ("0:48:59",
+                "the earnings is like phenomenally good 300 400 500%. Then those stocks "
+                "can double or triple.")
+T_NEWSPAPER = ("0:49:23",
+               "And I opened the newspaper. It used to have the list of stocks which "
+               "are released earnings last night.")
+T_USLB = ("0:49:28",
+          "And there was this small stock called USLB. At that time it was called US "
+          "laboratories. And that had come out with earnings and the sales growth was "
+          "some 900% and the profit was 2,600%.")
+T_EP_BORN = ("0:49:55",
+             "And that changed how that became the EP kind of an idea then.")
+T_MARKET_LIKES = ("1:04:32",
+                  "So take the first point right and which is you have to trade what is "
+                  "in the market likes right")
+T_LAST_MONTH = ("1:05:11", "the last month is over May")
+T_VOLUME_9M = ("1:05:52",
+               "that is why I use the 9 million volume because I know volume is a "
+               "object effective way to find where the crowd is")
+T_IN_PLAY = ("1:06:50",
+             "today if you have to make money what is in play AI uh robotics humanoid "
+             "robotics or like crypto wallets or things like that")
+T_SECTORS = ("1:07:04",
+             "I have seen that over any time period of last 24 years 25 years right "
+             "there are three sectors where the biggest money is in the market. "
+             "Technology, biotechnology or healthcare related stock and third is "
+             "consumer discretionary.")
+T_SECTORS_EXCL = ("1:07:17",
+                  "You can get rid of everything else if you really want to make money.")
+T_SECTORS_RANK = ("1:07:22",
+                  "once in a while you'll have gold stocks making money. once in a "
+                  "while you're a uranium stock making money but just trading technology "
+                  "stock is where the money is.")
+
+TAPE_SENTENCES = (T_TURNAROUND, T_VALUATION, T_STREAK, T_CHART_NOT_SETUP, T_REASON,
+                  T_BEATEN_DOWN, T_ORIGIN_300, T_NEWSPAPER, T_USLB, T_EP_BORN,
+                  T_MARKET_LIKES, T_LAST_MONTH, T_VOLUME_9M, T_IN_PLAY, T_SECTORS,
+                  T_SECTORS_EXCL, T_SECTORS_RANK)
+
+
+def _ts_seconds(ts: str) -> int:
+    """"h:mm:ss" (or "m:ss") -> seconds. Anything else is a ValueError.
+
+    A hand-typed deep link that lands a minute off quotes him from the wrong
+    sentence, so the seconds are never written by hand anywhere in this module.
+    """
+    parts = str(ts).split(":")
+    if len(parts) not in (2, 3) or not all(p.isdigit() for p in parts):
+        raise ValueError("not a timestamp: %r" % (ts,))
+    nums = [int(p) for p in parts]
+    if len(nums) == 2:
+        nums = [0] + nums
+    h, m, s = nums
+    if m > 59 or s > 59:
+        raise ValueError("not a timestamp: %r" % (ts,))
+    return h * 3600 + m * 60 + s
+
+
+def _tape(ts: str, quote: str, note: Optional[str] = None) -> dict:
+    """One cite on the interview. The ONLY place a deep link is built.
+
+    Two dates ride on every tape dict: `date` is when the episode was PUBLISHED
+    (the same semantic every other cite's `date` carries) and `recorded` is when
+    he spoke, by his own words at [1:05:11].
+    """
+    return {"quote": quote,
+            "url": "%s&t=%ds" % (TAPE_URL, _ts_seconds(ts)),
+            "date": TAPE_DATE,
+            "recorded": TAPE_RECORDED,
+            "source": TAPE_SOURCE,
+            "ts": ts,
+            "note": note}
+
+
+# Cite notes — what the extra sentence does and does NOT do to the leg it sits
+# beside. Every one of them is this app's own prose, never his.
+_EXCL_NOTE = ("the exclusion half — the X post says focus on; whether it is a filter "
+              "is Ajay's call, the leg's pass line does not change")
+_RANK_NOTE = ("technology ranked first; gold and uranium named as once in a while — "
+              "a rank on the row is Ajay's call")
+_IN_PLAY_NOTE = ("DATED — what was in play when this was recorded, ~June 2025 (at "
+                 "[1:05:11] he says 'the last month is over May'); printed with its "
+                 "date, never a standing rule")
+_BEATEN_NOTE = ("agrees in direction only; 'written down' is the caption's hearing of "
+                "beaten down; a different mechanism and still a price read — legend "
+                "only")
+_USLB_NOTE = ("a worked example — direction only, sales named first; it carries no "
+              "threshold and changes no number")
+
+
 # ── the criteria, one entry per line on his list ──────────────────────────
 # `computed` False means the criterion is his but this board does not compute
 # it; `not_computed_why` says why, and the legend prints it rather than
@@ -188,30 +339,40 @@ CRITERIA = [
     {"key": "eps_5c", "label": "EPS ≥ 5¢",
      "quote": S2007_EARNINGS, "url": URL_2007, "date": DATE_2007, "source": "stockbee",
      "data": "Latest quarterly EPS off the scan row's filings (sepa/qoq.compute).",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [],
+     "fact": False},
     {"key": "eps_yoy_100", "label": "EPS ≥ +100% y/y",
      "quote": S2010_YOY, "url": URL_2010, "date": DATE_2010, "source": "stockbee",
      "data": "Latest quarter against the SAME quarter a year earlier (sepa/qoq.yoy_pct), "
              "only when the year-ago quarter made money.",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [_tape(*T_USLB, note=_USLB_NOTE)],
+     "fact": False},
     {"key": "eps_seq_100", "label": "EPS ≥ +100% q/q",
      "quote": S2007_EARNINGS, "url": URL_2007, "date": DATE_2007, "source": "stockbee",
      "data": "Latest quarter against the quarter before it (sepa/qoq.compute), refused "
              "when the two filings are not consecutive quarters.",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [_tape(*T_USLB, note=_USLB_NOTE)],
+     "fact": False},
     {"key": "eps_accel", "label": "Earnings accelerating",
      "quote": _q(S2007_ACCEL, S2010_YOY), "url": URL_2007, "date": DATE_2007,
      "source": "stockbee",
      "data": "This quarter's y/y EPS growth against the previous quarter's y/y EPS "
              "growth. EARNINGS acceleration — the sales flags on this board are the "
              "app's own read.",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [],
+     "fact": False},
     {"key": "sales_5", "label": "Sales ≥ 5% y/y",
      "quote": S2007_SALES, "url": URL_2007, "date": DATE_2007, "source": "stockbee",
      "data": "The pillar's own rounded seam against SALES_FLOOR_PCT "
              "(sepa/buyable_verdict._bonde_pillar). ✓ on every row the board draws, by "
              "construction.",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [],
+     "fact": False},
     {"key": "surprise", "label": "Earnings surprise",
      "quote": _q(S2010_BEATS, S2007_SURPRISE), "url": URL_2010, "date": DATE_2010,
      "source": "stockbee",
@@ -221,20 +382,26 @@ CRITERIA = [
      "computed": True, "not_computed_why": None,
      "his_call": "A beat is any surprise above zero here. \"Earnings Beats by wide "
                  "margin\" carries no number, so whether a magnitude floor should "
-                 "apply is Ajay's call."},
+                 "apply is Ajay's call.",
+     "cites": [_tape(*T_NEWSPAPER, note="his origin universe was last night's reporters")],
+     "fact": False},
     {"key": "float_25m", "label": "Float < 25M",
      "quote": _q(S2010_FLOAT, X2024_FLOAT), "url": URL_2010, "date": DATE_2010,
      "source": "stockbee",
      "data": "yfinance `floatShares`, cached in `board_metrics`. Unknown until "
              "`python -m sepa.board_metrics warm --all` has refreshed the doc.",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [],
+     "fact": False},
     {"key": "short_dtc_5", "label": "Days to cover ≥ 5",
      "quote": X2024_FLOAT, "url": X_2024_06_13, "date": "2024-06-13", "source": "x",
      "data": "FINRA short interest via Massive, cached in `short_interest_latest`. "
              "Unknown on every row until the warm has run.",
      "computed": True, "not_computed_why": None,
      "his_call": "The warm cadence and its crontab line are Ajay's call; the crontab "
-                 "is host-mounted and a deploy does not ship it."},
+                 "is host-mounted and a deploy does not ship it.",
+     "cites": [],
+     "fact": False},
     {"key": "neglect_analysts", "label": "No analyst coverage",
      "quote": _q(S2007_NEGLECT, S2010_NEGLECT), "url": URL_2007, "date": DATE_2007,
      "source": "stockbee",
@@ -244,7 +411,9 @@ CRITERIA = [
      "computed": True, "not_computed_why": None,
      "his_call": "Reading an empty Yahoo estimate frame as his \"no analyst coverage\" "
                  "is a reading pending Ajay's nod, and whether a small count (say ≤2) "
-                 "should also read as neglected is his call — his words give no number."},
+                 "should also read as neglected is his call — his words give no number.",
+     "cites": [],
+     "fact": False},
     {"key": "fund_holding", "label": "Fund holding",
      "quote": _q(S2014_MARKETSMITH, S2025_LOW_FUND), "url": URL_2014, "date": DATE_2014,
      "source": "stockbee",
@@ -253,14 +422,18 @@ CRITERIA = [
      "computed": True,
      "not_computed_why": None,
      "his_call": "He names fund holding as something he looks at and gives no number, "
-                 "so this leg is always shown as a fact and never as a pass or a fail."},
+                 "so this leg is always shown as a fact and never as a pass or a fail.",
+     "cites": [],
+     "fact": True},
     {"key": "ipo_10y", "label": "IPO ≤ 10y",
      "quote": S2025_YOUNG, "url": URL_2025, "date": DATE_2025, "source": "stockbee",
      "data": "Listing date from the `ipo_dates` cache (Finnhub profile), uncorroborated.",
      "computed": True, "not_computed_why": None,
      "his_call": "It is the least-corroborated leg — 21.4% of profile dates on this "
                  "universe are recycled tickers, which reads as a falsely young ✓. "
-                 "Whether it stays among the chips is Ajay's call."},
+                 "Whether it stays among the chips is Ajay's call.",
+     "cites": [],
+     "fact": False},
     {"key": "cap_10b", "label": "Cap < $10B",
      "quote": _q(S2025_YOUNG, S2025_SCAN), "url": URL_2025, "date": DATE_2025,
      "source": "stockbee",
@@ -268,19 +441,78 @@ CRITERIA = [
      "computed": True, "not_computed_why": None,
      "his_call": "His prose says less than $10 billion and his scan line in the same "
                  "post says below 11 billion. This leg passes at the prose bound; "
-                 "which one to use is Ajay's call."},
+                 "which one to use is Ajay's call.",
+     "cites": [],
+     "fact": False},
     {"key": "rev_39_x2", "label": "Revenue ≥ 39% ×2",
      "quote": S2025_SCAN, "url": URL_2025, "date": DATE_2025, "source": "stockbee",
      "data": "This quarter's and the previous quarter's revenue growth, read here as "
              "year over year — his post does not say which base.",
      "computed": True, "not_computed_why": None,
      "his_call": "This figure is his. Whether it joins or replaces a sales TIER on this "
-                 "board is Ajay's call; nothing about the tiers moved."},
+                 "board is Ajay's call; nothing about the tiers moved.",
+     "cites": [_tape(*T_USLB, note=_USLB_NOTE)],
+     "fact": False},
     {"key": "sector_3", "label": "His three EP sectors",
      "quote": X2023_SECTORS, "url": X_2023_01_25, "date": "2023-01-25", "source": "x",
      "data": "The scan row's sector, in yfinance vocabulary — consumer discretionary is "
              "named \"Consumer Cyclical\" there. A FACT about the name, not a gate.",
-     "computed": True, "not_computed_why": None, "his_call": None},
+     "computed": True, "not_computed_why": None, "his_call": None,
+     "cites": [_tape(*T_SECTORS),
+               _tape(*T_SECTORS_EXCL, note=_EXCL_NOTE),
+               _tape(*T_SECTORS_RANK, note=_RANK_NOTE)],
+     "fact": False},
+
+    # ── the FACT legs: his sentence names the thing and no level for it ───
+    # Every one of these is `ok = None` by construction (`_fact`). A value and
+    # a dash, never a tick and never a cross: he publishes no line for any of
+    # them, and drawing one would be this app's judgement in his voice.
+    {"key": "report_age", "label": "Days since last report",
+     "quote": T_NEWSPAPER[1], "url": _tape(*T_NEWSPAPER)["url"], "date": TAPE_DATE,
+     "source": TAPE_SOURCE, "ts": T_NEWSPAPER[0], "recorded": TAPE_RECORDED,
+     "data": "Days from today to the `date` of the last reported quarter in the "
+             "`earnings_calendar` cache — the SAME doc the surprise leg reads, so it "
+             "costs no extra read. A FACT: his words name no window; the stale label "
+             "past %d days is this app's." % SURPRISE_STALE_DAYS,
+     "computed": True, "not_computed_why": None,
+     "his_call": "What recency reads as in play is Ajay's call; the %d-day label never "
+                 "flips anything." % SURPRISE_STALE_DAYS,
+     "cites": [], "fact": True},
+    {"key": "turnaround", "label": "Turnaround (loss → profit y/y)",
+     "quote": T_TURNAROUND[1], "url": _tape(*T_TURNAROUND)["url"], "date": TAPE_DATE,
+     "source": TAPE_SOURCE, "ts": T_TURNAROUND[0], "recorded": TAPE_RECORDED,
+     "data": "Year-ago quarter EPS ≤ 0 and latest quarter EPS > 0, on the same "
+             "fiscal-pair guard the y/y legs use (sepa/qoq). This is the cohort the "
+             "y/y EPS legs mark year_ago_loss; the sequential flip (qoq income_turn) "
+             "rides beside it.",
+     "computed": True, "not_computed_why": None,
+     "his_call": "Whether a turnaround reads as a pass or stays a fact is Ajay's call "
+                 "— his words give no rule.",
+     "cites": [], "fact": True},
+    {"key": "growth_streak", "label": "Revenue growth streak (trailing)",
+     "quote": T_STREAK[1], "url": _tape(*T_STREAK)["url"], "date": TAPE_DATE,
+     "source": TAPE_SOURCE, "ts": T_STREAK[0], "recorded": TAPE_RECORDED,
+     "data": "Trailing count of consecutive quarters of positive y/y revenue growth — "
+             "sales.compute's own consecutive_growth_q, never recomputed here; it "
+             "counts up to %d, so %d reads as %d or more, and it stops where the "
+             "revenue history stops, which the leg says when it happens. Only the "
+             "latest two year-ago pairs are period-checked. His sentence is a FORWARD "
+             "projection this app does not make." % (STREAK_CAP, STREAK_CAP, STREAK_CAP),
+     "computed": True, "not_computed_why": None,
+     "his_call": "What count reads as a pass is Ajay's call; his words give none.",
+     "cites": [], "fact": True},
+    {"key": "theme", "label": "Theme (the app's map)",
+     "quote": X2023_STORY, "url": X_2023_11_12, "date": "2023-11-12", "source": "x",
+     "data": "The app's own theme map (supply_demand/sectors.sectors_for_ticker), in "
+             "memory, no network — his word is theme, the map is ours. The map names "
+             "%d tickers across %d themes and is S&P-heavy: a miss reads %s — "
+             "UNMAPPED, never themeless — and most of this board's small caps miss it."
+             % (len(THEME_MAP_TICKERS), len(SECTORS), THEME_UNMAPPED),
+     "computed": True, "not_computed_why": None,
+     "his_call": "Whether the app's map is the right reading of his word theme, and "
+                 "whether a miss should read unknown instead of a fact about the map, "
+                 "is Ajay's call.",
+     "cites": [_tape(*T_REASON)], "fact": True},
 
     # ── his, and NOT computed here ────────────────────────────────────────
     {"key": "run_up_65d", "label": "Has not rallied into earnings",
@@ -289,7 +521,9 @@ CRITERIA = [
      "computed": False,
      "not_computed_why": "It is a PRICE read over 65 days, and the correction that "
                          "shaped this line asked for static information only.",
-     "his_call": "Whether a 65-day run-up number belongs on the row is Ajay's call."},
+     "his_call": "Whether a 65-day run-up number belongs on the row is Ajay's call.",
+     "cites": [_tape(*T_BEATEN_DOWN, note=_BEATEN_NOTE)],
+     "fact": False},
     {"key": "story_ep", "label": "Story / theme EP",
      "quote": X2023_STORY, "url": X_2023_11_12, "date": "2023-11-12", "source": "x",
      "data": "Not computed here.",
@@ -297,7 +531,9 @@ CRITERIA = [
      "not_computed_why": "There is no feed that decides whether a name is a story "
                          "stock, and inventing one would be this app's judgement "
                          "wearing his words.",
-     "his_call": None},
+     "his_call": None,
+     "cites": [_tape(*T_REASON), _tape(*T_IN_PLAY, note=_IN_PLAY_NOTE)],
+     "fact": False},
     {"key": "pead", "label": "Post-earnings drift",
      "quote": _q(S2007_PEAD, X2023_PEAD), "url": URL_2007, "date": DATE_2007,
      "source": "stockbee",
@@ -305,7 +541,9 @@ CRITERIA = [
      "computed": False,
      "not_computed_why": "It is the anomaly his whole method rests on, not a per-name "
                          "screen: there is nothing to tick on a row.",
-     "his_call": None},
+     "his_call": None,
+     "cites": [_tape(*T_EP_BORN, note="the origin: he systematised the search after one trade")],
+     "fact": False},
     {"key": "reactor_watchlist", "label": "Reacted well to earnings",
      "quote": X2021_REACTOR, "url": X_2021_08_13, "date": "2021-08-13", "source": "x",
      "data": "Not computed here.",
@@ -313,7 +551,9 @@ CRITERIA = [
      "not_computed_why": "It is a watchlist he keeps over weeks and months, and the "
                          "reaction is a price read — dynamic, so out of scope for this "
                          "line.",
-     "his_call": None},
+     "his_call": None,
+     "cites": [],
+     "fact": False},
     {"key": "top_sector", "label": "Top sector",
      "quote": _q(S2010_TOP_SECTOR_CAT, S2010_TOP_SECTOR), "url": URL_2010,
      "date": DATE_2010, "source": "stockbee",
@@ -321,7 +561,9 @@ CRITERIA = [
      "computed": False,
      "not_computed_why": "No sector RANK feed reaches this board, and the app's own "
                          "rotation read is a different concept with its own page.",
-     "his_call": None},
+     "his_call": None,
+     "cites": [_tape(*T_MARKET_LIKES)],
+     "fact": False},
     {"key": "earnings_40", "label": "Earnings 40% plus",
      "quote": S2010_EARNINGS_40, "url": URL_2010, "date": DATE_2010, "source": "stockbee",
      "data": "Not computed here.",
@@ -329,16 +571,59 @@ CRITERIA = [
      "not_computed_why": "It is one entry in his catalogue of EP catalyst CATEGORIES, "
                          "not a screen number he says he runs: he writes that he only "
                          "focuses on the 100%-plus names.",
-     "his_call": None},
+     "his_call": None,
+     "cites": [],
+     "fact": False},
+
+    # ── on tape, and NOT computed here ────────────────────────────────────
+    {"key": "ep_origin_300", "label": "The paragraph that started EP (300–500%)",
+     "quote": T_ORIGIN_300[1], "url": _tape(*T_ORIGIN_300)["url"], "date": TAPE_DATE,
+     "source": TAPE_SOURCE, "ts": T_ORIGIN_300[0], "recorded": TAPE_RECORDED,
+     "data": "Not computed here.",
+     "computed": False,
+     "not_computed_why": "The book paragraph that started EP, quoted by him — NOT his "
+                         "screen; his published screen is 100% (2007, 2010). Nothing "
+                         "here moves off his published number.",
+     "his_call": "A second, higher tier chip at the origin figure, or legend only — "
+                 "default legend only.",
+     "cites": [], "fact": False},
+    {"key": "valuation", "label": "Valuation",
+     "quote": T_VALUATION[1], "url": _tape(*T_VALUATION)["url"], "date": TAPE_DATE,
+     "source": TAPE_SOURCE, "ts": T_VALUATION[0], "recorded": TAPE_RECORDED,
+     "data": "Not computed here.",
+     "computed": False,
+     "not_computed_why": "He names valuation and no metric and no number; a chip would "
+                         "be this app choosing a ratio and wearing his word for it. "
+                         "The quarters-in-a-row half is the growth_streak fact.",
+     "his_call": "Which metric, if any — his words give none.",
+     "cites": [], "fact": False},
+    {"key": "volume_9m", "label": "9 million volume",
+     "quote": T_VOLUME_9M[1], "url": _tape(*T_VOLUME_9M)["url"], "date": TAPE_DATE,
+     "source": TAPE_SOURCE, "ts": T_VOLUME_9M[0], "recorded": TAPE_RECORDED,
+     "data": "Not computed here.",
+     "computed": False,
+     "not_computed_why": "Unit and window are unstated, and volume is dynamic — the "
+                         "class his correction removed from this line. His 2010 post's "
+                         "construct is RELATIVE (ten times average volume), not an "
+                         "absolute floor.",
+     "his_call": "Shares or dollars, which window, and whether a dynamic liquidity "
+                 "floor belongs on a static line at all.",
+     "cites": [], "fact": False},
 ]
 
 COMPUTED_KEYS = [c["key"] for c in CRITERIA if c["computed"]]
 LEGEND_ONLY_KEYS = [c["key"] for c in CRITERIA if not c["computed"]]
-# The eight legs that come off the scan row, and the six that come off a cache.
+# The eleven legs that come off the scan row, and the seven that come off a cache.
 SCAN_KEYS = ("eps_5c", "eps_yoy_100", "eps_seq_100", "eps_accel", "sales_5",
-             "rev_39_x2", "fund_holding", "sector_3")
+             "rev_39_x2", "fund_holding", "sector_3",
+             "turnaround", "growth_streak", "theme")
 CACHE_KEYS = ("surprise", "float_25m", "cap_10b", "short_dtc_5",
-              "neglect_analysts", "ipo_10y")
+              "neglect_analysts", "ipo_10y", "report_age")
+# The legs that have NO pass state at all: he names the thing and publishes no
+# level for it, so they carry a value and never an `ok`.
+FACT_KEYS = ("fund_holding", "report_age", "turnaround", "growth_streak", "theme")
+# The four states of the year-ago EPS pair the turnaround fact can be in.
+TURN_TOKENS = ("to_profit", "to_loss", "loss_both", "profit_both")
 
 _CRIT_BY_KEY = {c["key"]: c for c in CRITERIA}
 # The y/y legs: a fiscal pair that is NOT a year apart makes every one of them
@@ -368,6 +653,18 @@ def _leg(ok=None, value=None, why=None, **extra) -> dict:
     leg = {"ok": ok, "value": value, "why": why}
     leg.update(extra)
     return leg
+
+
+def _fact(value=None, why="no_threshold_in_his_writing", **extra) -> dict:
+    """A leg that has NO pass state, built so it cannot acquire one.
+
+    He names the thing and publishes no level for it. `ok` is not a parameter
+    here on purpose: a fact leg that could be handed `ok=True` is one edit away
+    from ticking a threshold this app invented and wearing his voice for it.
+    """
+    if "ok" in extra:
+        raise ValueError("a FACT leg has no pass state: `ok` cannot be set")
+    return _leg(ok=None, value=value, why=why, **extra)
 
 
 def _today() -> date:
@@ -414,7 +711,7 @@ def _positive_base_yoy(eps: list, i: int):
 # ── the scan-derived legs ─────────────────────────────────────────────────
 def legs_from_scan_row(scan_row: dict, pillar: dict, row: dict,
                        cleared_floor: Optional[bool]) -> dict:
-    """The eight legs that need nothing but the scan row. PURE.
+    """The eleven legs that need nothing but the scan row. PURE.
 
     `cleared_floor` is passed IN rather than imported, because `sepa/bonde.py`
     owns the rounded seam `_bonde_pillar` uses and this module must never import
@@ -533,9 +830,8 @@ def legs_from_scan_row(scan_row: dict, pillar: dict, row: dict,
     if inst is None:
         legs["fund_holding"] = _leg(why="no_inst_read")
     else:
-        legs["fund_holding"] = _leg(ok=None, value=inst,
-                                    why="no_threshold_in_his_writing",
-                                    source="13F level via yfinance (never a flow)")
+        legs["fund_holding"] = _fact(inst,
+                                     source="13F level via yfinance (never a flow)")
 
     # His three earnings-EP sectors.
     sector = scan_row.get("sector")
@@ -545,6 +841,74 @@ def legs_from_scan_row(scan_row: dict, pillar: dict, row: dict,
     else:
         legs["sector_3"] = _leg(ok=sector in EP_SECTORS, value=sector,
                                 value_note="a fact about the name, not a gate")
+
+    # Turnaround — the YEAR-AGO pair, on the same guard the y/y legs use. This
+    # is NOT `qoq.income_turn`: that one is the SEQUENTIAL flip (slot 0 vs 1).
+    # It rides along as `seq_turn` and is never redefined here.
+    if not has_eps:
+        legs["turnaround"] = _leg(why="no_eps_series")
+    elif pair_refused:
+        legs["turnaround"] = _leg(why="pair_not_a_year_apart")
+    else:
+        j = Q.YOY_GAP
+        base = _f(eps[j]) if len(eps) > j else None
+        cur = _f(eps[0]) if eps else None
+        if base is None or cur is None:
+            legs["turnaround"] = _leg(why="no_eps_series")
+        else:
+            token = ("to_profit" if base <= 0 < cur else
+                     "to_loss" if base > 0 >= cur else
+                     "loss_both" if base <= 0 else "profit_both")
+            legs["turnaround"] = _fact(
+                token, latest=cur, year_ago=base, seq_turn=q.get("income_turn"),
+                value_note=("unverified pair — no fiscal-period keys on file"
+                            if unverified else
+                            "year-ago quarter vs the latest; his words give no rule"),
+                source="scan row EPS series (sepa/qoq slot 0 vs slot %d)" % Q.YOY_GAP)
+
+    # Revenue growth streak — `sales.compute`'s OWN count, read off
+    # `fundamentals.sales`. Never off the pillar/row copy: `_bonde_pillar`
+    # coerces it `or 0`, which turns "no read" into a zero streak on his board.
+    sales = fundamentals.get("sales") if isinstance(fundamentals, dict) else None
+    # `legs_from_scan_row` runs OUTSIDE any try in `bonde.py::_row`, so every
+    # Mongo value goes through `_f` — a bare int() here is a board outage.
+    streak = _f(sales.get("consecutive_growth_q")) if isinstance(sales, dict) else None
+    if pair_refused:
+        legs["growth_streak"] = _leg(why="pair_not_a_year_apart")
+    elif (not isinstance(sales, dict) or sales.get("growth_yoy_pct") is None
+            or streak is None):
+        legs["growth_streak"] = _leg(why="no_sales_read")
+    else:
+        n = int(streak)
+        # a LENGTH, never a growth number — sales.py owns the arithmetic
+        n_pairs = max(0, len(_series(fundamentals, "rev_q_series")) - Q.YOY_GAP)
+        capped = n >= STREAK_CAP
+        history_ended = (n < STREAK_CAP and n_pairs <= n)
+        note = ("unverified pair — no fiscal-period keys on file" if unverified else
+                "trailing — the count ended where the revenue history ends, not where "
+                "growth did" if history_ended else
+                "trailing — his sentence projects forward; this app does not; pairs "
+                "beyond the prior are not period-checked")
+        legs["growth_streak"] = _fact(
+            n, capped=capped, history_ended=history_ended, n_pairs_available=n_pairs,
+            value_note=note,
+            source="sepa/sales.compute consecutive_growth_q (counts up to %d quarters)"
+                   % STREAK_CAP)
+
+    # Theme — the APP'S map, in memory, no network. A miss is a fact about the
+    # MAP, never about the company: the roster is S&P-heavy and most of this
+    # board's small caps are simply not on it.
+    sym = str(scan_row.get("symbol") or "").strip().upper()
+    if not sym:
+        legs["theme"] = _leg(why="no_symbol")
+    else:
+        secs = sectors_for_ticker(sym)
+        legs["theme"] = _fact(
+            " · ".join(s["label"] for s in secs) if secs else THEME_UNMAPPED,
+            mapped=bool(secs), ids=[s["id"] for s in secs],
+            source="the app's theme map (supply_demand/sectors.py, %d tickers across "
+                   "%d themes) — his word is theme, the map is ours; a miss is "
+                   "unmapped, not themeless" % (len(THEME_MAP_TICKERS), len(SECTORS)))
 
     return legs
 
@@ -571,7 +935,7 @@ def _read(module_path: str, func: str, *args, **kw):
 
 
 def attach(rows: list, db=None) -> list:
-    """Fill the six cache legs on every row, in place. NEVER raises.
+    """Fill the seven cache legs on every row, in place. NEVER raises.
 
     Five bulk Mongo reads over the DISTINCT symbols and no network at all: this
     runs inside `bonde.board()`, which crons call, and a board that costs a
@@ -601,6 +965,7 @@ def attach(rows: list, db=None) -> list:
         legs = pick.setdefault("legs", {})
         try:
             legs["surprise"] = _surprise_leg(reports.get(sym), today)
+            legs["report_age"] = _report_age_leg(reports.get(sym), today)
             legs["float_25m"] = _float_leg(metrics.get(sym))
             legs["cap_10b"] = _cap_leg(metrics.get(sym))
             legs["short_dtc_5"] = _si_leg(si.get(sym))
@@ -613,7 +978,8 @@ def attach(rows: list, db=None) -> list:
 
 
 def _count(row: dict) -> None:
-    """n_pass / n_fail / n_unknown over all 14 computed legs.
+    """n_pass / n_fail / n_unknown over all 18 computed legs; the five FACT legs
+    always land in n_unknown.
 
     SERVED for the doc and `coverage()` and rendered NOWHERE: a count over legs
     that were never measured together is a synthesized rank, and the pick line
@@ -633,20 +999,48 @@ def _count(row: dict) -> None:
     pick["n_pass"], pick["n_fail"], pick["n_unknown"] = n_pass, n_fail, n_unknown
 
 
+def _report_age(rep: Optional[dict], today: date):
+    """(report date, age in days) off ONE calendar row.
+
+    The arithmetic both age-bearing legs share, in one place, so the surprise
+    chip's age and the report_age fact can never drift apart.
+    """
+    d = _parse_date((rep or {}).get("date"))
+    age = (today - d).days if d else None
+    return d, age
+
+
 def _surprise_leg(rep: Optional[dict], today: date) -> dict:
     if not rep:
         return _leg(why="not_on_calendar")
     sp = _f(rep.get("surprise_pct"))
     if sp is None:
         return _leg(why="no_surprise_in_report", as_of=rep.get("date"))
-    d = _parse_date(rep.get("date"))
-    age = (today - d).days if d else None
+    d, age = _report_age(rep, today)
     # A LABEL, never a verdict: Rule #7 is about the reported PERIOD, and a
-    # beat two quarters ago is still the last thing he had to react to.
+    # beat two quarters ago is still the last thing he had to react to. The
+    # BOUND is served beside the age so a hover prints the app's constant
+    # rather than the row's own age.
     stale = (age > SURPRISE_STALE_DAYS) if age is not None else None
     return _leg(ok=sp > 0, value=sp, as_of=(d.isoformat() if d else None),
-                age_days=age, stale=stale,
+                age_days=age, stale=stale, stale_after=SURPRISE_STALE_DAYS,
                 source="earnings_calendar (sepa/earnings_watch)")
+
+
+def _report_age_leg(rep: Optional[dict], today: date) -> dict:
+    """How long ago the last quarter was reported. A FACT — his words name no
+    window, and the stale label (`SURPRISE_STALE_DAYS`) is this app's own."""
+    if not rep:
+        return _leg(why="not_on_calendar")
+    d, age = _report_age(rep, today)
+    if d is None or age is None or age < 0:
+        return _leg(why="not_on_calendar",
+                    value_note="calendar row carries no readable past date")
+    return _fact(age, as_of=d.isoformat(), age_days=age,
+                 stale=(age > SURPRISE_STALE_DAYS),
+                 stale_after=SURPRISE_STALE_DAYS,
+                 source="earnings_calendar (sepa/earnings_watch) — the same doc as "
+                        "the surprise leg")
 
 
 def _float_leg(m: Optional[dict]) -> dict:
@@ -735,6 +1129,12 @@ def legend() -> dict:
         "why_codes": sorted(WHY_CODES),
         "not_a_source": NOT_A_SOURCE,
         "warm_note": WARM_NOTE,
+        # the second header line, in his own voice, on tape
+        "tape_header": _tape(*T_CHART_NOT_SETUP),
+        "tape": {"url": TAPE_URL, "title": TAPE_TITLE, "show": TAPE_SHOW,
+                 "published": TAPE_DATE, "recorded": TAPE_RECORDED,
+                 "recorded_cite": _tape(*T_LAST_MONTH), "received": TAPE_RECEIVED},
+        "fact_keys": list(FACT_KEYS),
     }
 
 
@@ -743,6 +1143,10 @@ def coverage(rows: list) -> dict:
 
     A board of em-dashes with no explanation reads as broken; a board that says
     "float known on 169 of 199" reads as honest.
+
+    A FACT leg has no `ok` by construction, so for those five keys KNOWN means
+    a value was read (§7.10). Without that rule `fund_holding` would report 0
+    of N on a board where it is filled on nearly every row.
     """
     rows = rows or []
     out = {k: {"known": 0, "rows": 0} for k in COMPUTED_KEYS}
@@ -750,6 +1154,8 @@ def coverage(rows: list) -> dict:
         legs = ((r.get("pick") or {}).get("legs") or {})
         for k in COMPUTED_KEYS:
             out[k]["rows"] += 1
-            if (legs.get(k) or {}).get("ok") is not None:
+            leg = legs.get(k) or {}
+            if leg.get("ok") is not None or (k in FACT_KEYS
+                                             and leg.get("value") is not None):
                 out[k]["known"] += 1
     return out

@@ -26,9 +26,12 @@ Engine: `backend/sepa/bonde_picks.py`. Wired in `backend/sepa/bonde.py`
   the board draws or in what order. No count, ratio or score over the legs is
   rendered anywhere — `n_pass` / `n_fail` / `n_unknown` are served for this doc
   and for `coverage()` only.
-- **Not sourced from the YouTube summary.** Every quote comes from a post on
-  `stockbee.blogspot.com` or from his own X account. The summary Ajay shared is
-  not cited anywhere in the module.
+- **Not sourced from the YouTube summary.** The third-party summary was never a
+  source and nothing from it is cited. The INTERVIEW itself now IS one — Words
+  of Rizdom, published 2026-02-18, recorded ~June 2025, received 2026-09-20 —
+  and it is quoted by timestamp, each link opening at the second the sentence
+  starts (§ The interview). Every other quote comes from a post on
+  `stockbee.blogspot.com` or from his own X account, with its date.
 - **Not an entry decision.** He decides entries; so does Ajay.
 
 ## Tri-state, always
@@ -44,7 +47,12 @@ the cache age) and they never flip `ok`.
 
 ---
 
-## The 14 computed criteria
+## The 18 computed criteria
+
+Four of them are FACTS (`report_age`, `turnaround`, `growth_streak`, `theme`),
+joining `fund_holding`: his words name the thing and publish no level, so the
+leg carries a value and `ok` stays `null` — never a ✓, never a ✗. They are built
+through one `_fact()` helper that cannot be handed an `ok`.
 
 | leg | his sentence (verbatim, abridged here — the served quote is complete) | post | data on this board |
 |-----|------------------------------------------------------------------------|------|--------------------|
@@ -62,6 +70,10 @@ the cache age) and they never flip `ok`.
 | `cap_10b` | "a capitalization of less than $ 10 billion" | 2025-09-01 | yfinance `marketCap` via `board_metrics` |
 | `rev_39_x2` | "two quarters of revenue growth of 39% plus" | 2025-09-01 | this quarter's and last quarter's revenue growth, read y/y |
 | `sector_3` | "focus on three sectors: technology, healthcare, and consumer discretionary" | X 2023-01-25 | the scan row's sector, in yfinance vocabulary |
+| `report_age` **FACT** | "And I opened the newspaper. It used to have the list of stocks which are released earnings last night." | tape [0:49:23] | days from today to the `date` of the last reported quarter in the `earnings_calendar` cache — the SAME doc the `surprise` leg reads, so it costs no extra read. His words name no window; the `stale` label past 157 days is this app's |
+| `turnaround` **FACT** | "I have a specific setup of turnaround stocks where I know based on their history that it can be held for a little longer than the growth stock" | tape [0:11:22] | year-ago quarter EPS ≤ 0 and latest quarter EPS > 0, on the same fiscal-pair guard the y/y legs use (`sepa/qoq`, slot 0 vs slot `Q.YOY_GAP`). This is the cohort the y/y EPS legs mark `year_ago_loss`; the SEQUENTIAL flip (`qoq.income_turn`) rides beside it as `seq_turn` and is never confused with it |
+| `growth_streak` **FACT** | "which is based on projecting how many quarters in a row that stock is likely to have a growth" | tape [0:13:00] | `sales.compute`'s own `consecutive_growth_q`, read off `fundamentals.sales` and never recomputed here. Three things it does not say on its face, all carried on the leg: the counter stops at **4**, so a 4 means *four or more* (`capped`); the count can end because the revenue HISTORY ran out rather than because growth did (`history_ended`, with `n_pairs_available`); and only the latest two year-ago pairs are period-checked. His sentence is a FORWARD projection this app does not make |
+| `theme` **FACT** | "there is 100 times more money on story stocks EP … Understanding what theme is working and finding story EP in them is now my major focus" | X 2023-11-12 (+ tape [0:14:33]) | the app's OWN theme map (`supply_demand/sectors.sectors_for_ticker`), in memory, no network. His word is *theme*; the map is ours. It names 167 tickers across 26 themes and is S&P-heavy, so a miss reads `not on the app's map` — **unmapped, never themeless** — and about 84% of this board misses it |
 
 ### The cite mapping that matters
 
@@ -84,7 +96,7 @@ more"); this app reads sales year over year, for parity with `canslim`.
 - **The two-quarter revenue figure is read as y/y.** His post does not say which
   base. The leg says so on the row.
 
-## The 6 criteria that are his and are NOT computed here
+## The 9 criteria that are his and are NOT computed here
 
 | leg | why not |
 |-----|---------|
@@ -94,6 +106,9 @@ more"); this app reads sales year over year, for parity with `canslim`.
 | `reactor_watchlist` | a watchlist kept over weeks, and the reaction is a price read |
 | `top_sector` | no sector RANK feed reaches this board |
 | `earnings_40` | one entry in his catalogue of EP catalyst CATEGORIES — he writes that he only focuses on the 100%-plus names |
+| `ep_origin_300` (tape [0:48:59]) | the book paragraph that STARTED EP, quoted by him — not his screen. His published screen is 100% (2007, 2010) and nothing here moves off it |
+| `valuation` (tape [0:12:54]) | he names valuation and no metric and no number; a chip would be this app choosing a ratio and wearing his word for it. The quarters-in-a-row half of that sentence is the `growth_streak` fact |
+| `volume_9m` (tape [1:05:52]) | unit and window are unstated, and volume is DYNAMIC — the class his own correction removed from this line. His 2010 construct is relative ("ten times or more compared to average volume"), not an absolute floor |
 
 They are printed in the legend anyway, with the reason, so the list on screen is
 never shorter than his list.
@@ -102,7 +117,7 @@ never shorter than his list.
 
 ## `WHY_CODES` — the ONE vocabulary
 
-Every served `why` is a member of `bonde_picks.WHY_CODES` (24 codes). The
+Every served `why` is a member of `bonde_picks.WHY_CODES` (25 codes). The
 frontend's `WHY_TEXT` keys are pinned equal to it by the contract sweep, so a
 code with no sentence beside it cannot reach the page.
 
@@ -116,6 +131,7 @@ code with no sentence beside it cannot reach the page.
 | `no_sales_read` | no revenue growth on the row |
 | `no_inst_read` | no institutional-ownership figure on the scan row |
 | `no_sector` | the scan row carries no sector |
+| `no_symbol` | the scan row carries no symbol, so the theme map cannot be asked about it |
 | `no_threshold_in_his_writing` | he names the criterion and publishes no number — the leg is a FACT and never a pass or a fail |
 | `seq_base_non_positive` | the previous quarter lost money (from `qoq.BASE_NON_POSITIVE`) |
 | `seq_base_too_small` | the previous quarter is positive but too near zero to carry a ratio (`qoq.BASE_TOO_SMALL`, `MIN_EPS_BASE`) |
@@ -211,10 +227,160 @@ is **his call** — his words give no number.
 
 ---
 
+## § The interview (2026-09-20)
+
+Ajay sent the video after the pick list had shipped, with his standing
+instruction for this tab: *"look for thing she said from a stock pic pov …
+momentum does not need to be a criteria for his pics … I am looking fro static
+info"*. So the tape is a SECOND cite beside his posts. It replaces nothing: the
+primary quote, URL, date and source of every criterion that existed before today
+are unchanged.
+
+**Source.** <https://www.youtube.com/watch?v=fjox2hapu98> — *"Trading Legend:
+His Strategy Has Made the MOST Millionaire Traders - StockBee"*, Words of
+Rizdom, with Riz and Pradeep Bonde. Published 2026-02-18; recorded ~June 2025,
+by his own sentence at [1:05:11] (*"the last month is over May"*); received
+2026-09-20. Frozen extract:
+`backend/tests/fixtures/bonde_video_captions_2026_09_20.json`.
+
+Manual en-GB captions, no speaker labels; the host's turns are never cited.
+
+Every tape link opens at the second the sentence starts. The `&t=` suffix is
+written in exactly one place in the module (`_tape`), so a hand-typed second
+cannot reach the page.
+
+### Covered — the tape agreeing with something already on the line
+
+Each row below adds a CITE and nothing else: no leg, no threshold, no chip and
+no ordering moved.
+
+| leg | ts | his words on tape, verbatim | it agrees with | what changed |
+|---|---|---|---|---|
+| `sector_3` | [1:07:04] | "I have seen that over any time period of last 24 years 25 years right there are three sectors where the biggest money is in the market. Technology, biotechnology or healthcare related stock and third is consumer discretionary." | his X post of 2023-01-25 naming the same three | cite only |
+| `sector_3` | [1:07:17] | "You can get rid of everything else if you really want to make money." | the same post, which says *focus on* | cite only — see Contradictions |
+| `sector_3` | [1:07:22] | "once in a while you'll have gold stocks making money. once in a while you're a uranium stock making money but just trading technology stock is where the money is." | the same post, which ranks nothing | cite only — see Contradictions |
+| `story_ep` | [0:14:33] | "that reason must be might be theme That might be sector that might be whatever earnings catalyst story but the that particular stock should have a reason to go up" | his X post of 2023-11-12 on story EP | cite only |
+| `story_ep` | [1:06:50] | "today if you have to make money what is in play AI uh robotics humanoid robotics or like crypto wallets or things like that" | the same post | cite only, and printed as DATED — what was in play when this was recorded, never a standing rule |
+| `top_sector` | [1:04:32] | "So take the first point right and which is you have to trade what is in the market likes right" | the existing legend-only reason | cite only |
+| `pead` | [0:49:55] | "And that changed how that became the EP kind of an idea then." | his X post on post-earnings drift | cite only — the origin: he systematised the search after one trade |
+| `surprise` | [0:49:23] | "And I opened the newspaper. It used to have the list of stocks which are released earnings last night." | his 2010 surprise sentence | cite only — his origin universe was last night's reporters |
+| `run_up_65d` | [0:27:04] | "Now I tended to believe this when I was new in the market right till I actually checked it out and when I checked it out I found that actually the stock which make the biggest move are the one which were written down the most right" | the existing legend-only reason | cite only — it agrees in DIRECTION only and is still a price read, so it stays off the line |
+| `eps_yoy_100` | [0:49:28] | "And there was this small stock called USLB. At that time it was called US laboratories. And that had come out with earnings and the sales growth was some 900% and the profit was 2,600%." | his 2010 earnings sentence | cite only — a worked example, direction only, carrying no threshold |
+| `eps_seq_100` | [0:49:28] | the same USLB sentence | his 2007 sequential sentence | cite only — no threshold, no number moved |
+| `rev_39_x2` | [0:49:28] | the same USLB sentence, in which sales is named FIRST | his 2025 scan line, "two quarters of revenue growth of 39% plus" | cite only; the leg keeps his published number |
+
+One phrase in that table is a mishearing on the caption track: where he says
+*beaten down*, the captions have *written down*. Every quote is carried exactly
+as captioned, mishearings included, and the frozen extract pins it that way.
+
+### New facts — four legs, plus the one that already existed
+
+All five carry `ok: null` **by construction**: they are built by `_fact()`, which
+cannot be handed an `ok`. A FACT shows a value and a dash, never a tick and
+never a cross, because his words give no line for any of them.
+
+| leg | built from | reads UNKNOWN when | his call |
+|---|---|---|---|
+| `report_age` | `earnings_calendar`, through `sepa/earnings_watch.last_report_map` — the same bulk read the `surprise` leg already makes, so the board still makes five | there is no calendar doc, no past reported row, or the row carries no readable past date (`not_on_calendar`) | what recency reads as *in play*; the 157-day label stays this app's and flips nothing |
+| `turnaround` | the scan row's EPS series through `sepa/qoq` — the year-ago slot vs the latest, the same guard the y/y legs use; `qoq.income_turn` (the SEQUENTIAL flip) rides beside it as `seq_turn` | there is no EPS series (`no_eps_series`) or the fiscal pair was checked and is not a year apart (`pair_not_a_year_apart`) | whether a turnaround reads as a pass or stays a fact |
+| `growth_streak` | `sepa/sales.compute`'s `consecutive_growth_q`, read off `fundamentals.sales` — never off the pillar copy, whose `or 0` would turn *no read* into a zero streak | the pair was refused (`pair_not_a_year_apart`) or there is no sales read (`no_sales_read`) | what count reads as a pass; his words give none |
+| `theme` | the app's own map, `supply_demand/sectors.sectors_for_ticker` — in memory, no network, no I/O | the scan row carries no symbol (`no_symbol`) | whether the app's map is the right reading of his word *theme*, and whether a miss should read UNKNOWN instead of a fact about the map |
+| `fund_holding` (already shipped) | institutional ownership off the scan row — a 13F LEVEL, never a flow. Unchanged; it is now built by the same `_fact()` helper, with byte-identical output | there is no ownership figure on the row (`no_inst_read`) | he names fund holding and publishes no level |
+
+Where the fiscal pair could not be checked at all, the `turnaround` and
+`growth_streak` legs say **unverified** on the row — the number is computed and
+the pair is simply not on file.
+
+**On the theme map.** It names 167 tickers across 26 themes and is an S&P-heavy
+roster, not a small-cap theme map. On the 2026-09-20 board, 167 of the 199 rows
+— about 84% — are not on it. A miss therefore reads `not on the app's map` with
+`mapped: false`: **unmapped, not themeless.** Reading it as "none" would be a
+claim about the company off an absent roster row, which Rule 2 of the module
+forbids.
+
+### Legend-only — his words on tape, printed and not computed
+
+| what | ts | why it is legend only |
+|---|---|---|
+| the second header line, *"a good chart itself is not a setup … they don't go up just because there is a pretty good chart or support or resistance"* | [0:14:17] | it frames the whole list; it is not a per-name criterion and it is served beside the header, never inside it |
+| `ep_origin_300` — *"the earnings is like phenomenally good 300 400 500%. Then those stocks can double or triple."* | [0:48:59] | the paragraph that started EP, quoted by him from a book — not his screen |
+| `valuation` — *"I will base lot of my longerterm trading on a setup which is very very analysis based, which is based on valuation, which is based on projecting how many quarters in a row that stock is likely to have a growth."* | [0:12:54] | he names valuation and no metric and no number |
+| `volume_9m` — *"that is why I use the 9 million volume because I know volume is a object effective way to find where the crowd is"* | [1:05:52] | unit and window are unstated, and volume is dynamic |
+
+### Contradictions — both sides stay exactly as published
+
+| on tape | in a post | how it is handled here |
+|---|---|---|
+| "300 400 500%" as the earnings figure, [0:48:59] | 100% in 2007 and in 2010 | the tape figure is the origin PARAGRAPH he quotes; the post figure is his screen. The legs keep the post number and the tape sentence is legend only |
+| "the 9 million volume", an ABSOLUTE figure, [1:05:52] | his 2010 construct is RELATIVE: "will have huge volume surge, typically of 10 times or more compared to average volume" | neither becomes a leg; both are printed, and which one is meant is his call |
+| "You can get rid of everything else", [1:07:17] | the X post says *focus on* three sectors | exclusion versus focus. The `sector_3` pass line does not change; a filter would be a real decision and is his |
+| technology ranked first, gold and uranium named "once in a while", [1:07:22] | the X post names the three equally, with no rank | no rank goes on the row; legend note only |
+| his tenure, given as 24 and 25 years at [1:07:04], 25 and 26 at [0:52:00], 26 at [0:21:56] | — | the numbers stay as he said them; nothing on the board reads tenure |
+
+### Out of scope — said on tape, and nowhere near the pick line
+
+Entries are Ajay's, and the correction that shaped this tab asked for static
+information only. Every line below is recorded so it is on the record, and none
+of it touches the module.
+
+| what he says | ts | why it is off the line |
+|---|---|---|
+| a move of 10 to 20% in two or three days, then sell 80% of the position and keep 20% | [0:30:36]–[0:30:42] | an EXIT rule |
+| start with five or 10 shares, "then go to 40 shares 100 shares 300 shares" | [0:37:25]–[0:37:40] | position SIZING |
+| wait for the stock to revisit the pre-market low, then buy near it | [0:28:49]–[0:29:08] | an ENTRY rule — and see the note under this table |
+| a scan for a stock making 60 new highs in less than 3 minutes | [1:06:07]–[1:06:12] | a live intraday scan: dynamic, and dynamic is what the correction removed |
+| a stop at the 10-day or the 20-day moving average | [0:13:13]–[0:13:19] | an exit and a price read |
+| shorting small caps as the edge in day trading | [0:27:50]–[0:27:55] | day trading, and the short side is not this line |
+| "less than like 6 weeks I made more money than I had ever imagined in my life in one trade" | [0:49:47] | a performance claim — never printed here as measured |
+| "$1 million to over $100 million" | [0:00:00] | a performance claim in the opening — never printed here as measured |
+
+**Whose voice.** Two of the lines in that table are not in his own voice: the
+opening claim belongs to the show's introduction, and the rule about revisiting
+the pre-market low is one he is repeating back from a trader he had been talking
+to. Neither is ever presented as his. The show's own turns are never cited
+anywhere in this doc or in the module, and the only citable voice on this tape
+is his.
+
+Their timestamps: [0:00:00], [0:07:34], [0:13:30]–[0:14:11],
+[1:03:45]–[1:04:27]; and the repeated entry rule at [0:28:49]–[0:29:08].
+
+### His call — nothing here was decided
+
+The default is what ships if he says nothing.
+
+| # | question | default |
+|---|---|---|
+| 1 | the origin figure at [0:48:59] — a second, higher tier, or legend only | legend only; it is the book paragraph, not his screen |
+| 2 | the sector EXCLUSION at [1:07:17] — the pick line's first FILTER, or a fact only | fact only. The board's own thesis measured INVERTED, and a gate off an unmeasured sentence is a real decision |
+| 3 | technology ranked first at [1:07:22] — print a rank inside the three, or a legend note | legend note |
+| 4 | the volume figure at [1:05:52] — shares or dollars, which window, and whether a dynamic liquidity floor belongs on a static line at all | legend only, no leg |
+| 5 | `turnaround` at [0:11:22] — a pass or a fact | fact |
+| 6 | `growth_streak` at [0:13:00] — what count reads as a pass | fact, no pass |
+| 7 | `valuation` at [0:12:54] — which metric, if any | legend only |
+| 8 | the recency window at [0:49:23] — how fresh the last report must be to be *in play* | fact, no window; 157 d stays this app's LABEL |
+| 9 | the exit, sizing, entry and scan sentences | doc only; entries stay his |
+| 10 | the theme map as the reading of his word *theme* | ship the fact, labelled *the map is ours*; a miss reads unmapped, not themeless. The alternative is an UNKNOWN leg, so a miss prints no value at all |
+| 11 | the turnaround tokens beyond loss → profit | serve all four; only loss → profit is his word |
+| 12 | the streak display, *4+ q* | ship it as a display truth. LIFTING the counter's cap is a change to `sepa/sales.py`, which is book-cited and is not touched here |
+| 13 | the stale hover on the `surprise` chip now printing the bound rather than the row's own age | ship the correction; the label semantics and the tick are untouched |
+| 14 | `coverage()` counting a FACT leg as *known* — a value that was served, or a pass/fail verdict as today, where `fund_holding` reads 0 of N | a served value counts as known; it is a served-count semantic and no surface reads it for these keys |
+| 15 | a theme lookup with no symbol — a new why code `no_symbol`, or reuse `no_sector` | add `no_symbol`, on both sides |
+| 16 | the old ✨ entry's sentence *the video itself was never received* | leave it as history; it is contract-pinned and the new entry supersedes it. The alternative is amending one clause |
+| 17 | the tape cite's `date` — every other cite's `date` is when he wrote it, while the tape's is the show's publish date for words spoken about a year earlier | keep `date` = publish and carry `recorded` beside it. The alternative is making `date` the recording estimate |
+
+---
+
 ## Tests
 
 `backend/tests/test_bonde_picks.py` — the quotes are frozen verbatim
 (`ALLOWED_QUOTES`), every branch of every leg has a negative, a stubbed board is
 walked end to end asserting every served `why` is in `WHY_CODES`, `requests` is
 monkeypatched to raise to pin the zero-network rule, and
-`n_pass + n_fail + n_unknown == 14` on every row.
+`n_pass + n_fail + n_unknown == 18` on every row (the five FACT legs always land
+in `n_unknown`).
+
+Every tape sentence is pinned against a frozen extract of the caption track,
+`backend/tests/fixtures/bonde_video_captions_2026_09_20.json`, so a quote that
+drifts by one word stops the suite. `STREAK_CAP` is pinned equal to
+`sales.compute`'s own behaviour rather than read out of `sepa/sales.py`, which
+is book-cited, contract-pinned and untouched here.

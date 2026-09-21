@@ -12594,6 +12594,11 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-pick-src:hover { text-decoration: underline; }
 .bd-pick-quote { color: var(--ink, #e7e7e7); }
 .bd-pick-crit { margin: 0; font-size: 0.74rem; line-height: 1.45; }
+/* An EXTRA cite sits on its own line, indented under the criterion it belongs
+   to, so "also, on tape" reads as an addition rather than a replacement. */
+.bd-pick-cite { display: block; padding-left: 1.1rem; color: var(--ink-muted); }
+/* The second header line: one sentence of his off the tape, above the list. */
+.bd-pick-tape { margin: 0 0 0.3rem; font-size: 0.74rem; line-height: 1.45; }
 /* The legend borrows .bd-paused's amber frame, never the verdict red: it is a
    sourcing note, not a finding. */
 .bd-pick-legend {

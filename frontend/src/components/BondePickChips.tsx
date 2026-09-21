@@ -2,10 +2,10 @@
  *
  * Six chips, then a closed fold with every computed criterion and its link.
  * Rule #5: six is the line's whole budget — the rest is one click away, and
- * the summary says "all 14" rather than a score, because no count, ratio or
- * rank derived from these legs is ever rendered. A row with nine ticks is not
- * a better name than a row with three; it is a row this app happens to know
- * more about.
+ * the summary says "all N" (N = the SERVED criteria count) rather than a
+ * score, because no count, ratio or rank derived from these legs is ever
+ * rendered. A row with nine ticks is not a better name than a row with three;
+ * it is a row this app happens to know more about.
  *
  * Every sentence shown here is SERVED. The component types no quote of his.
  */
@@ -42,9 +42,9 @@ export function BondePickChips({ pick, legend, symbol }: BondePickChipsProps) {
 
       {rows.length > 0 && (
         <details className="bd-pick-more">
-          {/* The literal words, never a tally: "9 of 14" would be a rank this
-              line has not earned and nothing has measured. */}
-          <summary>all 14</summary>
+          {/* The SERVED criteria count, never a tick tally: "9 of 18" would
+              be a rank this line has not earned and nothing has measured. */}
+          <summary>all {rows.length}</summary>
           {rows.map((c) => {
             const leg = legs[c.key];
             const chip = legChip(c.key, leg, c);
@@ -55,7 +55,7 @@ export function BondePickChips({ pick, legend, symbol }: BondePickChipsProps) {
                 </span>
                 <span className="bd-pick-label" title={c.quote}>{c.label}</span>
                 <span className="bd-pick-val">
-                  {leg ? fmtValue(c.key, leg.value) : '—'}
+                  {leg ? fmtValue(c.key, leg.value, leg) : '—'}
                 </span>
                 <span className="bd-pick-src">
                   {[leg?.as_of ? `as of ${leg.as_of}` : null, leg?.source || c.data]
@@ -63,7 +63,7 @@ export function BondePickChips({ pick, legend, symbol }: BondePickChipsProps) {
                 </span>
                 <a className="bd-pick-src" href={c.url} target="_blank" rel="noreferrer"
                    title={c.quote}>
-                  {c.date}
+                  {c.source === 'tape' && c.ts ? `[${c.ts}]` : c.date}
                 </a>
               </div>
             );

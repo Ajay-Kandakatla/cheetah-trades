@@ -1290,6 +1290,11 @@ _GUARDED_FILES = (
     "backend/supply_demand/rules_info.py",
     "docs/sepa/sales_confidence_methodology.md",
     "docs/sepa/bonde_board.md",
+    # 2026-09-20, the interview: the pick module, its caption fixture and the
+    # pick-list doc carry his sentences too — same sweep, same two rules.
+    "backend/sepa/bonde_picks.py",
+    "docs/sepa/bonde_pick_list_2026_09_20.md",
+    "backend/tests/fixtures/bonde_video_captions_2026_09_20.json",
 )
 
 # Must be PRESENT, verbatim, in sales.py AND the methodology doc.
@@ -1325,7 +1330,13 @@ def test_SOURCE_GUARD_bonde_attribution_2026_09_20():
     R2 — his 2025 two-quarter figure never shares a line with a failed-word.
     PRESENT — his real sentences and their URLs are carried verbatim.
     And the methodology doc must say the character clause is THIS APP'S.
+
+    Needs the REPO tree: the api image carries backend/ only (no docs/), and
+    the pre-commit hook runs this file inside that container — there the sweep
+    has nothing to read, so it skips and says so. The worktree run enforces it.
     """
+    if not (_REPO_ROOT / "docs").is_dir():
+        pytest.skip("repo tree not present — the image carries backend/ only")
     for rel in _GUARDED_FILES:
         path = _REPO_ROOT / rel
         assert path.exists(), rel

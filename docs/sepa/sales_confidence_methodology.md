@@ -34,6 +34,10 @@ Sources: `stockbee.blogspot.com/2007/03/how-to-trade-earnings.html`,
 `/2010/02/what-are-episodic-pivots-and-how-to.html`,
 `/2014/07/my-process-flow-for-episodic-pivots-ep.html`,
 `/2025/09/find-young-episodic-pivots.html`.
+Interview (tape): https://www.youtube.com/watch?v=fjox2hapu98 — Words of Rizdom,
+published 2026-02-18, received 2026-09-20; cited by timestamp on the 📈 Bonde
+pick list only (`docs/sepa/bonde_pick_list_2026_09_20.md` § The interview). It
+revises no sales number here.
 
 ### Honesty notes (from the verified research)
 - Bonde's EP **entry** is a **price/volume** gate (`c/c1>1.04 and v>3*avgv50.1 and v>=300000`), NOT a sales %. Sales is the **fundamental confirmation** examined *after* a move — so this score is a **conviction/confirmation layer**, not a trigger.
@@ -150,7 +154,7 @@ DESCRIBES the drift; no retracted phrase is reproduced anywhere below.
 
 | # | What the app said | What it says now |
 |---|---|---|
-| D1 | his 2025 two-quarter revenue figure was listed among the figures that failed verification | it is his (2025-09-01, quoted in §1) — now a pick leg on the 📈 Bonde tab |
+| D1 | his 2025 two-quarter revenue figure was listed among the figures marked unverified | it is his (2025-09-01, quoted in §1) — now a pick leg on the 📈 Bonde tab |
 | D2 | a fabricated first-person sentence putting 25% in his mouth was served as his (sales.py, bonde.py, buyable_verdict.py reason + cite, rules_info, BondeBoard, SalesPanel, SepaCandidateCard, chartMaps, docs) | 25% relabelled THIS APP'S mid-tier; the value is unchanged |
 | D3 | the character clause was called his | it is this app's (2026-06-16); the gate is unchanged (Rule #10) |
 | D4 | "Sales Acceleration" was named as his EP catalyst | earnings acceleration is his (2007, 2010); sales acceleration is this app's read |

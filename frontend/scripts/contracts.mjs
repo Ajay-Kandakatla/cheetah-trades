@@ -2991,7 +2991,9 @@ const CONTRACTS = [
       // highlights are history (a Keltner claim that FAILED next to a −0.39pp
       // lift is not about his figure) and are never rewritten after the fact.
       const nfAll = read('src/lib/newFeatures.ts');
-      const nfEntry = (/\{ id: 'bonde-pick-list-2026-09-20'[\s\S]*?route: '\/chart-maps\?tab=bonde' \}/.exec(nfAll) || [''])[0];
+      const nfEntry = ['bonde-pick-list-2026-09-20', 'bonde-video-cites-2026-09-20']
+        .map((id) => (new RegExp(`\\{ id: '${id}'[\\s\\S]*?route: '\\/chart-maps\\?tab=bonde' \\}`).exec(nfAll) || [''])[0])
+        .join('\n');
       for (const f of FILES) {
         const t = read(f);
         for (const ph of retracted) {
@@ -3016,7 +3018,7 @@ const CONTRACTS = [
         if (/\b(n_fail|n_unknown|pickCounts|legsPassed|passCount)\b/.test(t)) {
           errs.push(`${f} derives a count from the legs — the pick line is facts with cites, not a rank`);
         }
-        if (/\/14\b/.test(t)) errs.push(`${f} prints an x/14 tally`);
+        if (/\/14\b/.test(t) || /\/18\b/.test(t)) errs.push(`${f} prints an x/N tally of the legs`);
       }
       const lib = read('src/lib/bondePicks.ts');
       if (/\b(today_pct|rs_rank|rel_[a-z]|persistence|momentum)\b/.test(lib)) {
@@ -3072,6 +3074,34 @@ const CONTRACTS = [
           [/not warmed/, 'the short-interest warm caveat'],
           [/uncorroborated/, 'the listing-date caveat'],
         ]) if (!re.test(d)) errs.push(`the ✨ entry must carry ${msg}`);
+      }
+      // ── the interview (2026-09-20): cites on tape, four FACT rows ───────
+      // Ajay sent the video link after the list shipped; Bonde himself on
+      // tape, so every sentence is linked at the second it starts.
+      if (!/export type BondeCite\b/.test(lib)) errs.push('bondePicks.ts must export the BondeCite type');
+      if (!/cites\?:\s*BondeCite\[\]/.test(lib)) errs.push('BondeCriterion must carry the optional extra cites');
+      const legendSrc = read('src/components/BondeCriteriaLegend.tsx');
+      if (!/data-testid="bonde-tape-header"/.test(legendSrc)) errs.push('the legend must render the tape header line');
+      if (!/bd-pick-cite/.test(legendSrc)) errs.push('the legend must render the extra cites with their own class');
+      if (!/TAPE_URL = "https:\/\/www\.youtube\.com\/watch\?v=fjox2hapu98"/.test(py)) {
+        errs.push('bonde_picks.py must pin TAPE_URL to the interview');
+      }
+      const deepLinks = (py.match(/&t=/g) || []).length;
+      if (deepLinks !== 1) errs.push(`the &t= deep link must be built in exactly one place — found ${deepLinks}`);
+      const v = /id: 'bonde-video-cites-2026-09-20'[\s\S]*?addedAt: '2026-09-20', route: '\/chart-maps\?tab=bonde' \}/.exec(nf);
+      if (!v) errs.push('newFeatures.ts needs the bonde-video-cites-2026-09-20 entry routed to the Bonde tab');
+      else for (const [re, msg] of [
+        [/\[1:07:04\]/, 'the three-sectors timestamp'],
+        [/never a tick or a cross/, 'the fact-row rule'],
+        [/NOTHING MEASURED/, 'the not-measured line'],
+        [/your call/, 'the his-call closer'],
+      ]) if (!re.test(v[0])) errs.push(`the interview ✨ entry must carry ${msg}`);
+      const whyLine = /no_threshold_in_his_writing:\s*\n?\s*'([^']*)'/.exec(lib);
+      if (whyLine && /fund holding/i.test(whyLine[1])) {
+        errs.push('the no_threshold_in_his_writing hover is shared by five fact legs — it must not name fund holding');
+      }
+      for (const f of ['src/lib/bondePicks.ts', 'src/components/BondePickChips.tsx', 'src/components/BondeCriteriaLegend.tsx']) {
+        if (/theme[^\n]*['"]none['"]/.test(read(f))) errs.push(`${f} prints a theme of "none" — a miss on the app's map is unmapped, not themeless`);
       }
       return errs;
     },
