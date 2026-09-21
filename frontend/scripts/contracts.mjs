@@ -3579,6 +3579,132 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '\u{1F300} AMD chips: a served pre-market state and a stale-grid signal (2026-09-21)',
+    file: 'src/pages/ChartMaps.tsx',
+    // Ajay 2026-09-21: "These chips are not working" — a pre-market screenshot
+    // where two of the three in-flight chips carried counts built from a day
+    // aggregate that had not started, and where a chip click looked dead for
+    // ~60 s because nothing on screen changed.
+    //
+    // Two rules, both the SERVER's: which states are unreadable this request
+    // (`flight_scope.unknowable`) and the sentence that says why, counts
+    // already in it (`reason_line`). The page prints them. It never coerces a
+    // count (a `Number(` turns an absent key into a `0` chip, which is a claim
+    // that the state is empty), never composes the reason, and never decides
+    // any of it from this browser's clock.
+    checks: (tsx) => {
+      const errs = [];
+      const lib = read('src/lib/chartMaps.ts');
+      const css = read('src/styles.css');
+      // The body of `export function <name>(...) { ... }` by brace count.
+      const bodyOf = (src, name) => {
+        const i = src.indexOf(`export function ${name}(`);
+        if (i < 0) return null;
+        const open = src.indexOf('{\n', src.indexOf(')', i));
+        let depth = 0;
+        for (let j = open; j < src.length; j++) {
+          if (src[j] === '{') depth++;
+          else if (src[j] === '}' && --depth === 0) return src.slice(open, j + 1);
+        }
+        return null;
+      };
+
+      /* ── the stale grid ─────────────────────────────────────────────────── */
+      const grid = tsx.slice(tsx.indexOf('className={`cm-grid'), tsx.indexOf('className={`cm-grid') + 200);
+      if (!/cm-grid-stale/.test(grid)) {
+        errs.push('the tile grid must carry cm-grid-stale while a board is in the air — a click that changes nothing reads as broken');
+      }
+      if (!/aria-busy=\{stale/.test(grid)) {
+        errs.push('the tile grid must say aria-busy while it is stale — the dim is a colour, not an announcement');
+      }
+      if (!/const stale = loading && tiles\.length > 0/.test(tsx)) {
+        errs.push('stale must mean "a board is in the air AND there are old tiles" — the first load is the "Loading charts…" note, not a dim');
+      }
+      if (!/data-testid="cm-fetching"/.test(tsx)) errs.push('the receipt line needs data-testid="cm-fetching"');
+      if ((tsx.match(/data-testid="cm-fetching"/g) || []).length !== 2) {
+        errs.push('exactly two cm-fetching slots may exist in the source (control row / note), gated so only ONE renders');
+      }
+      if (!/stale && !PHASE_ROW/.test(tsx)) {
+        errs.push('the note-slot receipt must be gated on !PHASE_ROW — two receipts on screen is two answers to one click');
+      }
+      if (!/fetchingLabel\(gradeSel, flightSel\)/.test(tsx)) {
+        errs.push('the receipt must name the SELECTED chips through fetchingLabel, never a hand-built string');
+      }
+
+      /* ── the in-flight chips ────────────────────────────────────────────── */
+      const a = tsx.indexOf('aria-label="In flight"');
+      const b = tsx.indexOf('aria-label="AMD grade"');
+      const chips = a < 0 || b < 0 ? '' : tsx.slice(a, b);
+      if (!chips) errs.push('cannot find the In flight chip row — did the aria-label change?');
+      if (!/flightChip\(/.test(chips)) {
+        errs.push('the in-flight chips must read through flightChip() — one place decides what a chip says');
+      }
+      if (/Number\(data\.flight_counts/.test(tsx)) {
+        errs.push('no Number( on flight_counts — an absent count would render as "· 0", which claims the state is empty');
+      }
+      if (!/unknowable \? ' · —'/.test(chips)) {
+        errs.push('a state the server could not read must render · —, never a number');
+      }
+      if (!/title=\{title \?\? undefined\}/.test(chips)) {
+        errs.push('the — chip must hover the SERVED line — that sentence is where the count reaches him');
+      }
+      if (!/aria-disabled=\{dim \|\| undefined\}/.test(chips) || /(?<!aria-)disabled=\{/.test(chips)) {
+        errs.push('an unreadable chip stays CLICKABLE — dimmed and aria-disabled, never a dead control (spec §7.7)');
+      }
+      if (!/flight_scope\?\.note/.test(chips)) {
+        errs.push('the flight tablist title must append the served cost note — the FE never retypes what the counts cost');
+      }
+      if (!/not closed|unconfirmed|forming/i.test(chips)) {
+        errs.push('the flight tooltip must keep saying nothing here is confirmed until the close');
+      }
+
+      /* ── nothing textual is composed on the page ────────────────────────── */
+      for (const [name, src] of [['ChartMaps.tsx', tsx], ['lib/chartMaps.ts', lib]]) {
+        if (/no session low/.test(src)) {
+          errs.push(`${name} holds a literal of the served reason — that sentence has ONE home, chart_maps/board.py`);
+        }
+        if (/ of \$\{[^}]*\} priced names| of .{0,40} priced names/.test(src)) {
+          errs.push(`${name} composes a count line — the server serves reason_line already counted`);
+        }
+      }
+      for (const fn of ['flightChip', 'fetchingLabel']) {
+        const body = bodyOf(lib, fn);
+        if (!body) { errs.push(`export function ${fn} is missing from lib/chartMaps.ts`); continue; }
+        if (/new Date\(|Date\.now\(|tape_session/.test(body)) {
+          errs.push(`${fn} must not decide from a clock or the tape — the server says which states it could read`);
+        }
+        if (/Number\(/.test(body)) errs.push(`${fn} must not coerce — an absent count is null, not 0`);
+      }
+      const chip = bodyOf(lib, 'flightChip') || '';
+      for (const k of ['flight_scope', 'unknowable', 'reason_line']) {
+        if (!chip.includes(k)) errs.push(`flightChip must read ${k} — it is the server's own answer`);
+      }
+      if (!/reason_line \?\? b\.flight_scope\?\.reason \?\? null/.test(chip)) {
+        errs.push('flightChip must fall back reason_line → reason → null, never to a string of its own');
+      }
+
+      /* ── the two new classes exist and are styled ───────────────────────── */
+      // data-testid values are NOT classes (the Hottest sweep learned this).
+      const tsxClasses = tsx.replace(/data-testid=\{?[`'"][^`'"]*[`'"]\}?/g, '');
+      for (const c of ['cm-grid-stale', 'cm-phase-fetching']) {
+        if (!new RegExp(`\\b${c}(?![\\w-])`).test(tsxClasses)) {
+          errs.push(`ChartMaps.tsx no longer uses .${c} — the stale board would ship unmarked`);
+        }
+        if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) {
+          errs.push(`styles.css has no rule for .${c} — the signal would ship invisible`);
+        }
+      }
+      if (!/\.cm-grid-stale\s*\{[^}]*opacity/.test(css)) {
+        errs.push('.cm-grid-stale must dim the grid');
+      }
+      if (/\.cm-grid-stale\s*\{[^}]*pointer-events/.test(css)) {
+        errs.push('.cm-grid-stale must NOT make the tiles inert — he clicks through a refetch');
+      }
+      if (!/id: 'amd-chips-fixed-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) errs.push('the chip fix needs its ✨ entry');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

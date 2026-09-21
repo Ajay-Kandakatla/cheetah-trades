@@ -673,6 +673,11 @@ export type CmBoard = {
   flight?: string[];
   flight_states?: string[];
   flight_counts?: Record<string, number>;
+  /** 🔻 AMD in flight (2026-09-21) — WHY a live state may be unreadable right
+   *  now, in the server's own words. Every sentence on this block is built
+   *  server-side and printed verbatim: the page never composes a reason and
+   *  never decides from a browser clock which states are readable. */
+  flight_scope?: CmFlightScope | null;
   /** 🚀 Breaking (2026-09-06): the zone-edge pass the cards were drawn from. */
   pass_as_of?: string | null;
   pass_date?: string | null;
@@ -962,6 +967,70 @@ export function flightParam(sel: Set<string>, all?: string[]): string | null {
   if (!sel.size) return null;
   if (all && all.length && all.every((g) => sel.has(g))) return null;
   return Array.from(sel).sort().join(',');
+}
+
+/** What the live read COVERED and what it could not read (2026-09-21, Ajay:
+ *  "These chips are not working" — a pre-market screenshot where two chips
+ *  carried numbers built from an aggregate that had not started yet).
+ *
+ *  Every textual field is the server's: `reason` / `reason_line` / `note` are
+ *  printed as they arrive. `unknowable` is the server's list of the states it
+ *  could NOT read this request, so the page dims those chips without owning a
+ *  rule about when that happens. Absent block = nothing changed: the counts
+ *  render exactly as they always have. */
+export type CmFlightScope = {
+  /** Pool rows the live read covered (the whole grade set, not this page). */
+  counted?: number;
+  /** Pool rows that got a served state — the sum of `flight_counts`. */
+  priced?: number;
+  /** counted - priced: no live row, no print, or no base. */
+  no_print?: number;
+  /** Priced rows the server could not place against their base edge. */
+  no_session_low?: number;
+  /** ISO date the day low belongs to, or null when no priced row had one. */
+  low_session?: string | null;
+  /** The states this request could not read — chips to dim, from the server. */
+  unknowable?: string[];
+  /** The server's sentence for WHY, or null when there is nothing to say. */
+  reason?: string | null;
+  /** The same sentence carrying the counts — already composed server-side, so
+   *  the page never builds a count line of its own. Null = fall back to
+   *  `reason`; both null = dim the chip and say nothing. */
+  reason_line?: string | null;
+  grades?: string[];
+  /** What the live counts cost, from the backend's measured constant. */
+  note?: string | null;
+};
+
+/** One in-flight chip's read: the served count, whether the server says this
+ *  state is unreadable right now, and the served line to hover.
+ *
+ *  NO coercion (a `Number(` here would turn an absent key into 0 — a chip
+ *  reading `· 0` is a claim that nothing is in that state, which is the exact
+ *  lie Ajay reported) and NO composition: an unreadable chip's title is the
+ *  server's `reason_line`, or its `reason`, or nothing at all. */
+export function flightChip(
+  b: Pick<CmBoard, 'flight_counts' | 'flight_scope'>,
+  k: string,
+): { count: number | null; unknowable: boolean; title: string | null } {
+  const count = b.flight_counts?.[k] ?? null;
+  const unknowable = (b.flight_scope?.unknowable ?? []).includes(k);
+  const title = unknowable
+    ? (b.flight_scope?.reason_line ?? b.flight_scope?.reason ?? null)
+    : null;
+  return { count, unknowable, title };
+}
+
+/** The line under a chip click while the board it asked for is still coming
+ *  (Ajay 2026-09-21: a chip click looked dead for ~60 s). It names what was
+ *  ASKED for, from the same label maps the chips render — never a count, which
+ *  only the answer can carry. Nothing selected is still a request: the board. */
+export function fetchingLabel(gradeSel: Set<string>, flightSel: Set<string>): string {
+  const parts = [
+    ...Array.from(gradeSel).sort().map((g) => AMD_GRADE_LABEL[g] ?? g),
+    ...Array.from(flightSel).sort().map((k) => AMD_FLIGHT_LABEL[k] ?? k),
+  ];
+  return `Fetching ${parts.join(' · ') || 'the board'}…`;
 }
 
 /** `?levels=` → the selected arrival levels. FAILS OPEN exactly like the

@@ -11025,6 +11025,10 @@ a.tk-link:hover   { color: inherit; }
   grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
 }
 @media (max-width: 640px) { .cm-grid { grid-template-columns: 1fr; } }
+/* A board is in the air and these tiles are the PREVIOUS answer (2026-09-21).
+ * Dimmed, never removed and never inert: the grid keeps its place so the page
+ * does not jump, and the tiles stay clickable — no pointer-events change. */
+.cm-grid-stale { opacity: 0.45; transition: opacity 0.15s ease; }
 
 .cm-tile {
   border: 1px solid var(--rule, #2a2f3a); border-radius: 12px;
@@ -11667,6 +11671,12 @@ a.tk-link:hover   { color: inherit; }
 }
 .cm-phase-sub .cm-phase-btn { font-size: 0.74rem; padding: 0.2rem 0.65rem; }
 .cm-phase-sub .cm-phase-on { border-color: var(--accent, #a78bfa); }
+
+/* The chip click's receipt, at the end of the control row (2026-09-21). */
+.cm-phase-fetching {
+  font-size: 0.74rem; color: var(--cm-slate, #8595ad);
+  margin-left: 0.6rem; align-self: center;
+}
 
 /* Chart overlay ledger (Ajay 2026-08-31) — legend entries that are switches. */
 .olg {

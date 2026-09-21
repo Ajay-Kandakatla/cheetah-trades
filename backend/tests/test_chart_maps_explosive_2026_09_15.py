@@ -75,7 +75,7 @@ def _tile(sym, score=0.0, explosive=..., **metrics):
 @pytest.fixture
 def no_io(monkeypatch):
     """Everything `_finish` reaches for that is not the subject here."""
-    def _bars(tiles, days):
+    def _bars(tiles, days, **k):        # **k: _finish hands a prefetching builder's snaps= through (2026-09-21)
         for t in tiles:
             t["bars"] = [{"t": "2026-09-15", "o": 1, "h": 1, "l": 1, "c": 1, "v": 1}]
     monkeypatch.setattr(B, "_attach_bars", _bars)

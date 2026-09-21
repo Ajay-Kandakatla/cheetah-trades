@@ -224,9 +224,9 @@ def _spy_days(monkeypatch) -> dict:
     seen: dict = {}
     real = B.bars_for
 
-    def _spy(symbol, days=None, around=None, pad_after=25):
+    def _spy(symbol, days=None, around=None, pad_after=25, **k):
         seen[symbol] = days
-        return real(symbol, days=days, around=around, pad_after=pad_after)
+        return real(symbol, days=days, around=around, pad_after=pad_after, **k)
 
     monkeypatch.setattr(B, "bars_for", _spy)
     return seen

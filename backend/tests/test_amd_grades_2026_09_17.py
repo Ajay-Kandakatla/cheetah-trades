@@ -193,7 +193,7 @@ def test_the_distance_to_the_edge_is_a_NUMBER_not_a_bucket():
     ({}, _snap(100.0, 99.0)),                       # no base
     (_BASE, {}),                                    # no live row
     (_BASE, {"last_trade_price": None, "low": 99}),  # no print
-    (_BASE, {"last_trade_price": 100.0}),           # no day low
+    (_BASE, {"low": 99.0}),                         # no print (no-day-low re-pinned 2026-09-21: unknown)
     ({"base_lo": 0}, _snap(100.0, 99.0)),           # zero edge
     (_BASE, _snap(0, 0)),                           # zero price
     (None, None),

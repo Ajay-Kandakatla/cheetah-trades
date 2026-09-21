@@ -267,6 +267,9 @@ backend/crontab                               20 17 * * 1-5
 backend/scripts/turning_bullish_keltner_study.py
 backend/scripts/turning_bullish_amd_study.py
 backend/tests/test_turning_bullish.py         25 tests
+backend/tests/test_amd_chips_2026_09_21.py    the in-flight read before the open (30)
+backend/tests/test_board_snapshot_2026_09_21.py  one live-quote call per request (29)
+backend/scripts/snapshot_cost_probe.py        what the whole-sweep count costs (re-runnable)
 frontend/src/lib/chartMaps.ts                 CmCurve, curveLabels, CM_TABS, TAB_META
 frontend/src/lib/chartOverlays.ts             tabFamily, hiddenForTab, curve+badge gating
 frontend/src/components/PatternChart.tsx      polyline rendering with gaps
@@ -371,3 +374,150 @@ the subsets stage has a *live-base* placebo; the overlap stage uses the two
 boards' own verdict grades instead of a hand re-implementation; and the study
 constant `BARS_AGO_MAX = 10` is labelled as the study's bound, not the board's
 (`MAX_RAID_BARS_AGO = 3` — the fresh 0–3 cells are the board).
+
+---
+
+## 7. The in-flight read before the open (2026-09-21)
+
+Ajay, 09:05 ET, a screenshot of the 🌀 AMD Raided tab:
+
+> These chips are not working
+
+`🔄 Reclaimed today · 43`, `🛡️ Holding the edge · 0`. Three separate defects,
+all visible in that one row of chips.
+
+### D2 — a zero is not a low
+
+Before the first regular-session print the Massive day aggregate is all zeros.
+The row measured in-container that morning, ANAB at **09:30:09 ET**:
+
+```
+{"open": 0, "high": 0, "low": 0, "close": 0, "volume": 0, "vwap": 0,
+ "date": "2026-09-21", "change_pct": 1.449,
+ "last_trade_price": 56, "last_trade_ts_ms": 1789997401449470877,
+ "prev_day_close": 55.2}
+```
+
+`_f(0)` is `0.0`, not `None`, so `day_low < base_lo` was true for every name
+that had a base: ANAB (base floor 53.41, print 55.35) read **reclaimed**, and
+so did 42 others. `holding` read 0 for the same reason — nothing can be above
+a floor of zero. Note the clock on that row: 09:30:09 is inside regular hours.
+**The zero outlives the bell**, so nothing in this read may key on the time of
+day.
+
+### The other pre-session shape — the phantom echo
+
+`prices._drop_phantom_tail` documents it (caught 2026-09-14 09:22 ET, when
+every Hot Sectors member printed +0.1%): the feed echoes the **previous
+session's completed aggregate** into a row stamped with today's date. That row
+has a positive, real `low` — Friday's — and a value-only guard reads it as
+today's and serves `reclaimed` / `holding` with full confidence.
+
+### The rule that separates them
+
+A **session low** exists only when the aggregate holds a positive low AND the
+row's own print stamp says that low belongs to the session being read.
+`prices.extended_print(snap)` is the only field that says which session a row
+is from: the ET date and session of the **last trade**. Not `snap["date"]` —
+that falls back to today-ET whenever `day.t` is absent, so on a Saturday it
+stamps Friday's aggregate Saturday — and not the wall clock.
+
+`_amd_flight(v, snap, *, low_session=...)`, with `low_session` from
+`board._session_day()` (the shipped `market_hours.reminder` calendar, never a
+second copy of it):
+
+| the row | `extended_print` session / date | session low? |
+|---|---|---|
+| RTH, real low, print today | rth / today | yes |
+| ANAB 09:30:09, low 0 | rth / today | **no** — the value |
+| Monday 08:00, Friday's echo, pre-market print | premarket / today | **no** — the stamp |
+| Monday 08:00, Friday's echo, no pre-market print yet | afterhours / Friday ≠ Monday | **no** — the date |
+| Saturday, Friday's final aggregate | closed or afterhours / Friday == `low_session` Friday | yes — Friday's low, labelled Friday |
+| Holiday Monday, Friday's aggregate | rth or afterhours / Friday == `low_session` Friday | yes |
+| After-hours today, real low | afterhours / today | yes |
+| a row with no stamped trade (the 09-17 fixtures) | `None` | by value only — unchanged |
+
+Without a session low the state is **`unknown`** (`board.AMD_FLIGHT_UNKNOWN`)
+and the block carries `reason = board.NO_SESSION_LOW_REASON`, `day_low: null`,
+`pierce_pct: null`, `swept_today: null`, `low_session: null`, plus
+`print_session` / `print_date` so the row can be read back. `above_edge` and
+`to_edge_pct` are still served — the live print against the stored edge is a
+fact that needs no low.
+
+**`sweeping` never needed one.** The print is under the edge right now; it is
+read from the print alone and it survives both the zero and the echo. That is
+why 🔻 Sweeping stayed truthful on his screenshot while the other two lied.
+
+`"unknown"` is deliberately **NOT** a member of `AMD_FLIGHT_STATES`: the chip
+row and `parse_flight` both iterate that tuple, so it is never a chip and
+never a selectable filter. `parse_flight("unknown")` is `None` (fails open).
+
+### D3 — the count and the click are now the same population
+
+The counts were built over the page (80 names) while a chip click searched the
+whole sweep at `TB_FLIGHT_SCAN_LIMIT` — so the number changed the moment he
+clicked it (43 → 14 tiles, chips → `{sweeping 14, reclaimed 207}`).
+`TB.board` sorts and *then* slices, so asking for the sweep and cutting to
+`limit` is byte-identically the page it always served. Every AMD request now
+takes the whole grade set, counts over it, and cuts. One rule for the counts:
+
+> each key counts the pool rows whose **served** `amd_flight.state` equals it;
+> a row with no served block at all (no print, no base) is in **no** key.
+
+so `sum(flight_counts.values()) == flight_scope.priced`, always. The served
+`flight_scope` block says the rest:
+
+```
+counted        pool rows the live read covered (the grade set)
+priced         rows that got a served block  (== the sum of flight_counts)
+no_print       counted - priced
+no_session_low rows served "unknown"          (== flight_counts.unknown)
+low_session    the ISO session date the lows belong to, or null
+unknowable     ["reclaimed","holding"] when no priced row has a session low
+reason         NO_SESSION_LOW_REASON | "no live quotes came back" | null
+reason_line    "44 of 46 priced names have …"  — built here, never in TSX
+note           FLIGHT_COST_NOTE (the measured cost, below)
+```
+
+On his surface the two unknowable chips read `· —` and carry `reason_line` as
+their hover line. They stay **clickable and dimmed**, the same rule a
+zero-count grade chip already follows.
+
+`low_session` is what makes a weekend read honest: on Saturday 2026-09-19 the
+board serves `low_session: "2026-09-18"` and every tile's low is labelled
+Friday, not "today".
+
+### What the count costs — MEASURED, re-runnable
+
+`backend/scripts/snapshot_cost_probe.py` (read-only; prints the dict that fills
+`board.FLIGHT_COST_MEASURED`). Run in-container 2026-09-21 ~10:05 ET, tape
+`rth`, with the keep-alive session of §D1:
+
+| set | names | chunks | median of 3 |
+|---|---|---|---|
+| default grades | 422 | 2 | **0.651 s** |
+| `grades=all` | 2,681 | 11 | **3.879 s** |
+
+On the bare `requests.get` the same two were 1.715 s and 9.764 s. Re-run the
+probe before quoting either number (memory `feedback_ship_the_backtest`).
+
+### What did NOT change
+
+The AMD detector, `find_cycle`, the grades and every threshold are untouched,
+and the read is still **MEASURED INVERTED** against its placebo (−4.2pp,
+2026-09-14, 3,712 names). Nothing here gates, alerts or enters. When a real
+session low exists, all three states mean exactly what they meant on
+2026-09-17.
+
+### Open — HIS CALL
+
+1. `matched` while a flight filter is on is still the grade-set size (422)
+   while the board shows 14. Option: make it the filtered count so the footer
+   reads "Showing 14 of 14".
+2. A real pre-market low from 1-min aggregates (one call per name, 422–2,681
+   per request) — **not built**; it is a new data path and a new semantic.
+3. The ✅ Already reached / 🎯 Approaching buttons render on the AMD tab and do
+   nothing (`board()` never passes `phase` to this builder). Out of scope here.
+4. The unknown count reaches him through the `· —` chips' hover line. The
+   alternative is a fourth non-clickable `❔ Unknown · 44` label on an already
+   dense row (Rule #5).

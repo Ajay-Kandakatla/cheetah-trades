@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 import os
 from massive_keys import stocks_key
+import threading
 import time
 from pathlib import Path
 from datetime import datetime
@@ -514,6 +515,28 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
 
 _SNAP_CHUNK = 250  # Massive allows up to 250 tickers per snapshot call
 
+# Keep-alive HTTP (2026-09-21). A bare `requests.get` opens a fresh TLS
+# connection per call. Measured in-container on 2026-09-21 (see
+# backend/scripts/snapshot_cost_probe.py): a one-symbol bulk_snapshot took
+# ~0.65 s on bare requests vs ~0.22 s on a reused Session — the handshake is
+# most of a per-tile call. The Session is thread-local because bulk_snapshot
+# runs inside ThreadPoolExecutor workers (chart_maps.board._attach_bars) and
+# requests' Session is not documented as thread-safe.
+_HTTP = threading.local()
+
+
+def _http():
+    """The calling thread's keep-alive `requests.Session` (created lazily)."""
+    import requests as _req
+    from requests.adapters import HTTPAdapter
+
+    sess = getattr(_HTTP, "session", None)
+    if sess is None:
+        sess = _req.Session()
+        sess.mount("https://", HTTPAdapter(pool_connections=4, pool_maxsize=16))
+        _HTTP.session = sess
+    return sess
+
 
 def with_today_bar(df, symbol: str, snap: Optional[dict] = None):
     """(frame, info): the daily frame with TODAY's live bar appended when the
@@ -788,7 +811,7 @@ def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
     chunks = [wire[i : i + _SNAP_CHUNK] for i in range(0, len(wire), _SNAP_CHUNK)]
     for chunk in chunks:
         try:
-            r = _req.get(
+            r = _http().get(
                 "https://api.massive.com/v2/snapshot/locale/us/markets/stocks/tickers",
                 params={"tickers": ",".join(chunk), "apiKey": key},
                 timeout=15,
@@ -1092,7 +1115,7 @@ def purge_weekend_bars() -> dict:
     return {"symbols_scanned": scanned, "symbols_fixed": fixed, "bars_removed": removed}
 
 
-def bulk_live_prices(syms: list[str]) -> dict[str, dict]:
+def bulk_live_prices(syms: list[str], snaps: Optional[dict] = None) -> dict[str, dict]:
     """Real-time last prices for the given symbols.
 
     Returns {SYMBOL: {price, change_pct, volume, last_trade_price,
@@ -1103,8 +1126,12 @@ def bulk_live_prices(syms: list[str]) -> dict[str, dict]:
     prev_day_close) are surfaced so the frontend can render pre-market
     and after-hours prints with a session badge. Display-only — SEPA
     scoring still uses the regular-session close.
+
+    `snaps` = a raw `bulk_snapshot` map already fetched for these symbols —
+    the reshape without the fetch; the caller restricts it to the symbols it
+    wants. `None` (the default) fetches as before.
     """
-    snaps = bulk_snapshot(syms)
+    snaps = bulk_snapshot(syms) if snaps is None else snaps
     return {
         sym: {
             "price":            bar.get("close"),

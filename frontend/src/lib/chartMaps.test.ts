@@ -2036,3 +2036,96 @@ describe('splitBlurb — the tab blurb folds to its first sentence (2026-09-20)'
     expect(splitBlurb('Where is the money? In three sectors.').head).toBe('Where is the money?');
   });
 });
+
+/* ── 🔻 the in-flight chips read the SERVER, never a browser rule ───────────
+ *
+ * Ajay 2026-09-21, a pre-market screenshot of the 🌀 AMD tab: "These chips are
+ * not working". Two of the three chips carried numbers built from a day
+ * aggregate that had not started — and a chip click looked dead for ~60 s.
+ *
+ * The two helpers below are the whole of the page's decision-making here, and
+ * neither owns a rule: `flightChip` dims what the SERVER listed as unreadable
+ * and hovers the SERVER's sentence; `fetchingLabel` names what was asked for
+ * and never a count. The negatives are the point — an absent count must stay
+ * absent (a `Number(` here is the bug), and a missing scope block must leave
+ * the chips exactly as they shipped on 2026-09-17. */
+import { AMD_FLIGHT_LABEL, AMD_GRADE_LABEL, fetchingLabel, flightChip } from './chartMaps';
+
+describe('flightChip — the served count and the served reason (2026-09-21)', () => {
+  const SCOPE = {
+    counted: 422, priced: 46, no_print: 376, no_session_low: 44,
+    low_session: null, unknowable: ['reclaimed', 'holding'],
+    reason: 'SERVED-REASON-TEXT', reason_line: 'SERVED-LINE-TEXT',
+  };
+
+  it('a readable state hands back its count and nothing to hover', () => {
+    const b = { flight_counts: { sweeping: 2, reclaimed: 0 }, flight_scope: SCOPE };
+    expect(flightChip(b, 'sweeping')).toEqual({ count: 2, unknowable: false, title: null });
+  });
+
+  it('a REAL zero stays a zero — dimmed by the caller, never "unknowable"', () => {
+    const b = { flight_counts: { sweeping: 0 }, flight_scope: { ...SCOPE, unknowable: [] } };
+    expect(flightChip(b, 'sweeping')).toEqual({ count: 0, unknowable: false, title: null });
+  });
+
+  it('an unreadable state hovers the served LINE (it carries the counts)', () => {
+    const b = { flight_counts: { reclaimed: 0 }, flight_scope: SCOPE };
+    expect(flightChip(b, 'reclaimed'))
+      .toEqual({ count: 0, unknowable: true, title: 'SERVED-LINE-TEXT' });
+  });
+
+  it('NEGATIVE: no reason_line falls back to the bare served reason', () => {
+    const b = { flight_scope: { ...SCOPE, reason_line: null } };
+    expect(flightChip(b, 'holding').title).toBe('SERVED-REASON-TEXT');
+  });
+
+  it('NEGATIVE: both texts null → unknowable with NOTHING to hover, not a composed line', () => {
+    const b = { flight_scope: { ...SCOPE, reason: null, reason_line: null } };
+    expect(flightChip(b, 'holding')).toEqual({ count: null, unknowable: true, title: null });
+  });
+
+  it('NEGATIVE: an absent count is null, never 0 — a 0 would claim the state is empty', () => {
+    expect(flightChip({ flight_counts: { sweeping: 2 } }, 'holding').count).toBeNull();
+    expect(flightChip({}, 'sweeping').count).toBeNull();
+  });
+
+  it('NEGATIVE: no flight_scope at all → the 2026-09-17 behaviour, untouched', () => {
+    const b = { flight_counts: { sweeping: 172, reclaimed: 156, holding: 880 } };
+    for (const k of ['sweeping', 'reclaimed', 'holding']) {
+      expect(flightChip(b, k)).toEqual({
+        count: b.flight_counts[k as keyof typeof b.flight_counts],
+        unknowable: false, title: null,
+      });
+    }
+  });
+
+  it('NEGATIVE: a state the server did not list as unreadable never hovers a reason', () => {
+    const b = { flight_counts: { sweeping: 2 }, flight_scope: SCOPE };
+    expect(flightChip(b, 'sweeping').title).toBeNull();
+  });
+});
+
+describe('fetchingLabel — the click says what it ASKED for (2026-09-21)', () => {
+  it('nothing selected is still a request: the board', () => {
+    expect(fetchingLabel(new Set(), new Set())).toBe('Fetching the board…');
+  });
+
+  it('a grade and a state print their chip labels, joined by the chip separator', () => {
+    const s = fetchingLabel(new Set(['marked_up']), new Set(['sweeping']));
+    expect(s).toBe(`Fetching ${AMD_GRADE_LABEL.marked_up} · ${AMD_FLIGHT_LABEL.sweeping}…`);
+  });
+
+  it('several grades are stable in order, not in click order', () => {
+    expect(fetchingLabel(new Set(['raided', 'basing']), new Set()))
+      .toBe(fetchingLabel(new Set(['basing', 'raided']), new Set()));
+  });
+
+  it('NEGATIVE: a key the label maps have never seen prints the key, never blank', () => {
+    expect(fetchingLabel(new Set(['brand_new']), new Set())).toBe('Fetching brand_new…');
+    expect(fetchingLabel(new Set(), new Set(['warping']))).toBe('Fetching warping…');
+  });
+
+  it('NEGATIVE: it never prints a count — only the answer can carry one', () => {
+    expect(fetchingLabel(new Set(['raided']), new Set(['holding']))).not.toMatch(/\d/);
+  });
+});

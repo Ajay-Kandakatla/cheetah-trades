@@ -134,9 +134,42 @@ def _frame_to_bars(df) -> list[dict]:
     return bars
 
 
+def _snap_for(snaps: Optional[dict], sym: str) -> Optional[dict]:
+    """The prefetched raw snapshot row for `sym`.
+
+    `None` in means nobody prefetched — the caller keeps the legacy per-call
+    behaviour (and a 2-arg `with_today_bar` stub keeps working). Otherwise a
+    dict always comes back: `{}` for a symbol the bulk call did not answer,
+    which reads as "fetched, absent" — no overlay, and NO second fetch.
+    """
+    if snaps is None:
+        return None
+    return snaps.get((sym or "").upper()) or {}
+
+
+def _bulk_snaps(symbols) -> dict:
+    """One `prices.bulk_snapshot` for the whole tile pool, or `{}`.
+
+    The single place the board fetches live rows for the CHART paths. `{}` on
+    an empty list or any failure: the closed bars still stand, every tile just
+    loses its live overlay — the same failure mode `_live_snapshot` already
+    has, now one chunk at a time instead of one symbol at a time.
+    """
+    syms = sorted({(s or "").strip().upper() for s in (symbols or []) if s})
+    if not syms:
+        return {}
+    try:
+        from sepa import prices
+        return prices.bulk_snapshot(syms) or {}
+    except Exception as exc:                                    # pragma: no cover
+        log.debug("chart-maps: bulk snapshot for %d symbols failed: %s", len(syms), exc)
+        return {}
+
+
 def bars_for(symbol: str, days: int = BARS_DEFAULT,
              around: Optional[str] = None, pad_after: int = 25,
-             min_bars: int = BARS_FLOOR) -> list[dict]:
+             min_bars: int = BARS_FLOOR,
+             snap: Optional[dict] = None) -> list[dict]:
     """Daily candles for `symbol`.
 
     `around` centres the window on a dated event (a pattern confirmation),
@@ -151,6 +184,13 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     — a 5-bar tile is unreadable — and is lowered ONLY by the Support tab's
     chart-only zooms, which ask for exactly the 5 or 10 sessions their label
     promises. Every other caller leaves it alone.
+
+    `snap` (2026-09-21) is a raw `prices.bulk_snapshot` row the caller already
+    fetched for this symbol. `None` = "fetch it yourself" (the legacy shape a
+    2-arg `with_today_bar` stub expects); `{}` = "fetched, absent" — no fetch,
+    no overlay. Every board loop now prefetches one bulk call per request, so
+    the worker threads never open a connection: 80 tiles used to cost 80 TLS
+    handshakes (and up to 3 per deep-window tile).
     """
     from sepa import prices
     days = max(int(min_bars), min(int(days or BARS_DEFAULT), BARS_MAX))
@@ -161,7 +201,8 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
             # bar already overlaid by _frame_for; the shared 2y frame cannot
             # hold them. Event-centred windows (winners) never need it.
             from chart_maps import support as _support
-            _res = _support._frame_for(symbol.upper(), days, with_closed=True)
+            _res = _support._frame_for(symbol.upper(), days, with_closed=True,
+                                       snap=snap)
             raw, _have, _as_of = _res[0], _res[1], _res[2]
             _closed = _res[3] if len(_res) > 3 else None    # a 3-tuple stub = no info
             # support._frame_for overlays today's bar but does not hand the
@@ -172,7 +213,7 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
             # Only a live verdict (appended / adjusted) is kept: a failed or
             # empty second read leaves info None, so _tag_live_bar's
             # zero-volume fallback still applies.
-            _info = _overlay_info(prices, _closed, symbol.upper())
+            _info = _overlay_info(prices, _closed, symbol.upper(), snap=snap)
         else:
             raw = prices.load_prices(symbol.upper())
             # Today's live bar on the tile too (Ajay 2026-09-03, CHPT) — the same
@@ -180,7 +221,10 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
             fn = getattr(prices, "with_today_bar", None)
             if fn is not None and raw is not None:
                 try:
-                    raw, _info = fn(raw, symbol.upper())
+                    if snap is None:
+                        raw, _info = fn(raw, symbol.upper())
+                    else:
+                        raw, _info = fn(raw, symbol.upper(), snap=snap)
                 except Exception as exc:                        # pragma: no cover
                     log.debug("chart-maps: today-bar overlay %s failed: %s", symbol, exc)
         df = _norm_frame(raw)
@@ -203,16 +247,18 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     return _tag_live_bar(_frame_to_bars(df.tail(days)), _info)
 
 
-def _overlay_info(prices_mod, closed_frame, sym: str) -> Optional[dict]:
+def _overlay_info(prices_mod, closed_frame, sym: str,
+                  snap: Optional[dict] = None) -> Optional[dict]:
     """The prices.with_today_bar info for `sym` read off `closed_frame`, or
     None when the overlay is unavailable, failed, or had nothing live to say
     (info["appended"] / ["adjusted"] both False). PURE apart from the
-    snapshot read inside with_today_bar."""
+    snapshot read inside with_today_bar — and not even that when `snap` is
+    given (same None / {} rule as bars_for)."""
     fn = getattr(prices_mod, "with_today_bar", None)
     if fn is None or closed_frame is None:
         return None
     try:
-        _df, info = fn(closed_frame, sym)
+        _df, info = fn(closed_frame, sym) if snap is None else fn(closed_frame, sym, snap=snap)
     except Exception as exc:                                    # pragma: no cover
         log.debug("chart-maps: deep today-bar overlay %s failed: %s", sym, exc)
         return None
@@ -1098,6 +1144,26 @@ def attach_explosive(tiles: list) -> int:
     return done
 
 
+def _live_from_snaps(tiles: list, raw: dict) -> dict:
+    """`_live_snapshot`'s answer built from an ALREADY-fetched raw map.
+
+    Same symbol set, same reshape (`prices.bulk_live_prices`), zero network.
+    A symbol the raw map does not hold is simply absent, exactly as it would be
+    from a fetch that did not answer for it. `{}` on any failure.
+    """
+    syms = sorted({(t.get("symbol") or "").upper() for t in tiles or []
+                   if isinstance(t, dict) and t.get("symbol")})
+    if not syms:
+        return {}
+    try:
+        from sepa import prices as _p
+        return _p.bulk_live_prices(
+            syms, snaps={s: raw[s] for s in syms if s in (raw or {})}) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart maps: live reshape from the prefetched map failed: %s", exc)
+        return {}
+
+
 def _live_snapshot(tiles: list) -> dict:
     """ONE `bulk_live_prices` fan-out for the tiles that are actually shown.
 
@@ -1807,13 +1873,21 @@ def _spread(tiles: list[dict], limit: int) -> list[dict]:
 
 def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
             sort: str = DEFAULT_SORT,
-            min_tier: str = DEFAULT_MIN_TIER) -> tuple[list[dict], dict]:
+            min_tier: str = DEFAULT_MIN_TIER,
+            snaps: Optional[dict] = None) -> tuple[list[dict], dict]:
     """Rank on metadata, THEN load bars for only the tiles that will be shown.
 
     Ordering matters for latency, not just tidiness. Ranking after fetching
     meant loading price frames for every match — 265 names to display 24. On a
     cold price cache that is minutes, and minutes is a 524. Sorting first caps
     the work at `limit + BAR_BUFFER` frames regardless of how many matched.
+
+    `snaps` (2026-09-21): a raw `prices.bulk_snapshot` map the BUILDER already
+    fetched for its pool. `None` — the shape 13 of the 14 call sites use —
+    leaves the bar attach to make its own single bulk call. That is why the
+    two branches below are written out rather than collapsed into one call
+    with a kwarg: the two-argument shape stays literally in this source, which
+    is what the ordering pin and three long-standing 2-arg stubs read.
     """
     explicit = is_explicit_sort(sort)          # POST_CUT_SORTS are NOT explicit
 
@@ -1913,7 +1987,10 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
         tiles = _spread(tiles, limit)
 
     short = tiles[:limit + BAR_BUFFER]
-    _attach_bars(short, days)
+    if snaps is None:
+        _attach_bars(short, days)
+    else:
+        _attach_bars(short, days, snaps=snaps)
     out = [t for t in short if t.get("bars")][:limit]
     # Velocity stat + 🐆/🐘 badge on every SHOWN tile that has the inputs —
     # the "can it actually run" read (Ajay 2026-08-25, AVGO). Only ~24 cached
@@ -1935,16 +2012,27 @@ def _finish(tiles: list[dict], limit: int, themes_first: bool, days: int,
                  "sort_unavailable": sort_unavailable}
 
 
-def _attach_bars(tiles: list[dict], days: int) -> None:
+def _attach_bars(tiles: list[dict], days: int,
+                 snaps: Optional[dict] = None) -> None:
     """Fill `bars` on each tile, concurrently. Mutates in place.
 
     Time-boxed by the pool rather than per-task: every miss simply leaves
     `bars` empty and the tile is dropped, so a slow or delisted name costs one
     empty slot instead of the whole board.
+
+    ONE live-quote call per request (2026-09-21). Every worker used to run its
+    own `prices.bulk_snapshot([sym])` inside `with_today_bar` — 80 TLS
+    handshakes across 8 threads, invisible to cProfile because they run off
+    the profiled thread. `snaps` is the builder's already-fetched map; without
+    one this fetches it here, once, for the tiles it is about to load. Either
+    way the workers get a dict (possibly `{}`) and never open a connection.
     """
     if not tiles:
         return
     from concurrent.futures import ThreadPoolExecutor
+
+    if snaps is None:
+        snaps = _bulk_snaps([t.get("symbol") for t in tiles])
 
     def _one(t: dict):
         spec = t.get("_bars") or {}
@@ -1952,7 +2040,8 @@ def _attach_bars(tiles: list[dict], days: int) -> None:
             t["bars"] = bars_for(t["symbol"],
                                  days=spec.get("days") or days,
                                  around=spec.get("around"),
-                                 pad_after=spec.get("pad_after", 25))
+                                 pad_after=spec.get("pad_after", 25),
+                                 snap=_snap_for(snaps, t["symbol"]))
         except Exception as exc:
             log.debug("chart-maps: bars %s failed: %s", t.get("symbol"), exc)
             t["bars"] = []
@@ -4196,16 +4285,67 @@ AMD_FLIGHT_STATES = ("sweeping", "reclaimed", "holding")
 # ceiling against a runaway document rather than a sample.
 TB_FLIGHT_SCAN_LIMIT = 4000
 
+# The FOURTH served value of `state` (2026-09-21) — deliberately NOT a member of
+# AMD_FLIGHT_STATES: the chip row and `parse_flight` iterate that tuple, so
+# "unknown" is never a chip and never a selectable filter. It is what the read
+# says when the inputs for `reclaimed` vs `holding` do not exist yet.
+AMD_FLIGHT_UNKNOWN = "unknown"
 
-def _amd_flight(v: dict, snap: dict) -> Optional[dict]:
+# WHY a name can be priced and still have no state (Ajay 2026-09-21, the AMD tab
+# in pre-market: "These chips are not working" — 43 names read `reclaimed` and 0
+# read `holding`). Before the first regular-session print the day aggregate is
+# all zeros (ANAB 09:30:09 ET: low 0, close 0, last trade 56.00) and `0 < base_lo`
+# is true for every name, so every one of them read "today's low pierced the
+# edge". The other pre-session shape is the phantom echo `prices._drop_phantom_tail`
+# documents: the previous session's completed aggregate re-stamped with today's
+# date, whose low is a REAL number — belonging to a session that is over.
+#
+# The sentence is built ONCE, here, and served; the frontend prints it and
+# composes nothing. It says neither "bounce" nor "reversal", and it makes no
+# claim about the clock — the zero aggregate outlives 09:30 by seconds.
+NO_SESSION_LOW_REASON = (
+    "no session low yet — the day aggregate is zero, or still echoes the prior "
+    "session, until the first regular-session prints (pre-market, and the first "
+    "seconds after 09:30 ET); reclaimed vs holding needs a low that does not "
+    "exist. Sweeping is read from the live print alone."
+)
+
+# What the whole-grade-set count costs, MEASURED — never estimated.
+# Re-runnable: backend/scripts/snapshot_cost_probe.py (print the dict, paste it
+# here, and state the environment in the doc). Re-run before quoting it.
+FLIGHT_COST_MEASURED = {
+    "date": "2026-09-21",
+    "n_default": 422,
+    "s_default": 0.651,
+    "n_all": 2681,
+    "s_all": 3.879,
+}
+
+FLIGHT_COST_NOTE = (
+    "Counts are over every name at the selected grades — the same set a chip "
+    "click searches — from one live quote call per request (measured "
+    "{date}: {n_default} names \u2248 {s_default:g} s, the full {n_all}-name "
+    "sweep \u2248 {s_all:g} s)."
+).format(**FLIGHT_COST_MEASURED)
+
+
+def _amd_flight(v: dict, snap: dict, *,
+                low_session: Optional[str] = None) -> Optional[dict]:
     """The live, UNCONFIRMED half of the AMD cycle for one name.
 
-    `v` is the stored verdict (for `base_lo`), `snap` a `bulk_live_prices` row.
-    None when either side is missing — an unknown state, never a guessed one.
+    `v` is the stored verdict (for `base_lo`), `snap` a RAW `bulk_snapshot` row
+    (a `bulk_live_prices` row also works — it keeps every field read here).
+    None when nothing at all is known: no base edge, or no usable print.
 
     Everything here is provisional by construction: the bar has not closed, so
     a `reclaimed` name is a raid FORMING, not a raid. The served `confirmed`
     flag is always False for exactly that reason, and the surface says so.
+
+    A SESSION low exists only when the aggregate holds a positive low AND the
+    row's own print stamp says that low belongs to this session. Without one the
+    state is `AMD_FLIGHT_UNKNOWN` with `reason` set — never a state guessed off
+    a zero or off the prior session's echo. `low_session` is the session date
+    the board is reading (`_session_day`), passed in so this stays pure.
     """
     if not isinstance(v, dict) or not isinstance(snap, dict):
         return None
@@ -4213,12 +4353,27 @@ def _amd_flight(v: dict, snap: dict) -> Optional[dict]:
     px = _f(snap.get("last_trade_price"))
     if px is None:
         px = _f(snap.get("price"))
-    day_low = _f(snap.get("low"))
-    if lo is None or px is None or day_low is None or lo <= 0 or px <= 0:
+    if px is None:
+        px = _f(snap.get("close"))
+    if lo is None or px is None or lo <= 0 or px <= 0:
         return None
+    raw_low = _f(snap.get("low"))
+    from sepa import prices as _p
+    # None on a row with no stamped, priced trade (the test fixtures and any
+    # feed row without lastTrade); {price, epoch, date, session} on a live one.
+    ep = _p.extended_print(snap)
+    has_low = raw_low is not None and raw_low > 0
+    if has_low and ep is not None:
+        # A pre-market print, or a print dated off the session being read, is
+        # the echo shape: the low on the row is the PRIOR session's.
+        if (ep.get("session") == "premarket"
+                or (low_session is not None and ep.get("date") != low_session)):
+            has_low = False
     if px < lo:
         state = "sweeping"
-    elif day_low < lo:
+    elif not has_low:
+        state = AMD_FLIGHT_UNKNOWN
+    elif raw_low < lo:
         state = "reclaimed"
     else:
         state = "holding"
@@ -4226,15 +4381,62 @@ def _amd_flight(v: dict, snap: dict) -> Optional[dict]:
         "state": state,
         "confirmed": False,          # the bar has not closed. Never True here.
         "base_lo": lo,
-        "day_low": day_low,
+        "day_low": raw_low if has_low else None,
         "price": px,
         # Signed distance from the live print to the base edge. Positive =
         # above it. A NUMBER, not a bucket: he picks what "close" means.
         "to_edge_pct": round((px - lo) / px * 100.0, 2),
         # How far under the edge today's low actually went, when it did.
-        "pierce_pct": (round((lo - day_low) / lo * 100.0, 2)
-                       if day_low < lo else None),
-        "swept_today": day_low < lo,
+        "pierce_pct": (round((lo - raw_low) / lo * 100.0, 2)
+                       if has_low and raw_low < lo else None),
+        "swept_today": (True if state == "sweeping"
+                        else ((raw_low < lo) if has_low else None)),
+        "above_edge": px >= lo,
+        "low_session": low_session if has_low else None,
+        "print_session": ep.get("session") if ep else None,
+        "print_date": ep.get("date") if ep else None,
+        "reason": (None if (has_low or state == "sweeping")
+                   else NO_SESSION_LOW_REASON),
+    }
+
+
+def _flight_scope(counted: int, flight_by_sym: dict, flight_counts: dict,
+                  grades: list) -> dict:
+    """WHAT the live flight read covered and what it could not answer.
+
+    Ajay 2026-09-21: the chips read "43 / Reclaimed · 0 / Holding" in pre-market
+    and there was nothing on the surface saying the numbers were unknowable
+    rather than measured. Every sentence the page prints about that is built
+    here, from the counts themselves — the frontend composes none of it.
+    """
+    blocks = list(flight_by_sym.values())
+    priced = len(blocks)
+    no_session_low = int(flight_counts.get(AMD_FLIGHT_UNKNOWN) or 0)
+    sessions = [f.get("low_session") for f in blocks if f.get("low_session")]
+    any_low = bool(sessions)
+    unknowable = ([st for st in AMD_FLIGHT_STATES if st != "sweeping"]
+                  if priced and not any_low else [])
+    if priced == 0 and counted > 0:
+        reason = "no live quotes came back"
+    elif no_session_low > 0:
+        reason = NO_SESSION_LOW_REASON
+    else:
+        reason = None
+    reason_line = (
+        "%d of %d priced names have %s" % (no_session_low, priced,
+                                           NO_SESSION_LOW_REASON)
+        if no_session_low > 0 else None)
+    return {
+        "counted": counted,
+        "priced": priced,
+        "no_print": max(0, counted - priced),
+        "no_session_low": no_session_low,
+        "low_session": sessions[0] if any_low else None,
+        "unknowable": unknowable,
+        "reason": reason,
+        "reason_line": reason_line,
+        "grades": list(grades or []),
+        "note": FLIGHT_COST_NOTE,
     }
 
 
@@ -4265,7 +4467,8 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
                           themes_first: bool = THEMES_FIRST_DEFAULT,
                           min_tier: str = DEFAULT_MIN_TIER,
                           sort: str = DEFAULT_SORT,
-                          grades=None, flight=None) -> dict:
+                          grades=None, flight=None, *,
+                          ctx: Optional[dict] = None) -> dict:
     """Two tabs — Keltner coils and AMD raids (Ajay 2026-09-13).
 
     *"I need two tabs in chart maps for me to look at where stocks are bullish
@@ -4285,6 +4488,12 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     `amd.CITED` are both False; the app measured AMD's nearest relative, the
     ICT tab, at +0.03R over 6,004 signals against placebo. Both boards print
     their own fire rate under them for the same reason.
+
+    `ctx` (2026-09-21) is an out-of-band slot the CALLER owns: when given, this
+    writes exactly one key, `ctx["snaps"]` — the raw `bulk_snapshot` map it
+    already fetched — so `board()` can reuse it for the live now-line instead of
+    fanning out a second time. It is NOT a payload key: raw rows carry pandas
+    Timestamps and the payload must stay `json.dumps`-able without `default=`.
     """
     from supply_demand import turning_bullish as TB
 
@@ -4293,30 +4502,55 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     # are sweeping right now — the cohort he is looking for is spread across
     # the whole document, not clustered at the top of its ordering.
     want_flight = parse_flight(flight) if kind == "amd" else None
-    b = TB.board(kind, limit=(TB_FLIGHT_SCAN_LIMIT if want_flight else limit),
+    # ALWAYS the whole sweep on the AMD tab (2026-09-21), not only when a filter
+    # is on: the chips promise "Counts are live" over the grade set, and counting
+    # the page instead meant the number changed the moment he clicked it.
+    # TB.board sorts THEN slices, so the unfiltered page is still pool[:limit] —
+    # the same rows in the same order as asking for `limit` directly.
+    b = TB.board(kind, limit=(TB_FLIGHT_SCAN_LIMIT if kind == "amd" else limit),
                  grades=grades)
-    rows = b.get("rows") or []
+    pool = b.get("rows") or []
+    # ONE bulk snapshot per request. It feeds the flight read, every tile's
+    # today-bar overlay (through `snap=` / `snaps=`), and — via `ctx` —
+    # `board()`'s live now-line. RAW rows: `bulk_live_prices` drops `high` and
+    # `date`, which `with_today_bar` needs.
+    raw = _bulk_snaps([r.get("symbol") for r in pool])
+    if ctx is not None:
+        ctx["snaps"] = raw
+    rows = pool
     flight_by_sym: dict = {}
+    low_session = None
+    counted = len(pool)
     if kind == "amd":
         try:
-            live = _live_rows([r.get("symbol") for r in rows])
-            for r in rows:
-                fr = _amd_flight(r.get("amd") or {},
-                                 live.get((r.get("symbol") or "").upper()) or {})
+            low_session = _session_day().isoformat()
+            for r in pool:
+                sym = (r.get("symbol") or "").upper()
+                fr = _amd_flight(r.get("amd") or {}, raw.get(sym) or {},
+                                 low_session=low_session)
                 if fr is not None:
                     flight_by_sym[r["symbol"]] = fr
         except Exception as exc:                                # noqa: BLE001
             log.debug("turning_bullish_tiles: live flight read failed: %s", exc)
+    # ONE counting rule: a key counts the pool rows whose SERVED state equals it.
+    # A row with no served block at all (no print, no base) is in no key — it
+    # lives in `flight_scope.no_print` — so the keys always sum to `priced`.
     flight_counts = {st: sum(1 for f in flight_by_sym.values()
                              if f.get("state") == st)
                      for st in AMD_FLIGHT_STATES}
+    flight_counts[AMD_FLIGHT_UNKNOWN] = sum(
+        1 for f in flight_by_sym.values()
+        if f.get("state") == AMD_FLIGHT_UNKNOWN)
+    flight_scope = (_flight_scope(counted, flight_by_sym, flight_counts,
+                                  b.get("grades") or [])
+                    if kind == "amd" else None)
     if want_flight:
         # A name with NO live read is UNKNOWN, not "holding" — it is dropped
         # from a state-filtered board rather than filed under a state it was
         # never measured to be in.
-        rows = [r for r in rows
+        rows = [r for r in pool
                 if (flight_by_sym.get(r.get("symbol")) or {}).get("state") in want_flight]
-        rows = rows[:max(1, int(limit))]
+    rows = rows[:max(1, int(limit))]
     # Sortable tile numbers come from the SEPA scan row, same as every other
     # tab — `tile_metrics` takes a ROW, never a symbol. A name the scan has not
     # seen still gets a tile: it simply carries no metrics, rather than being
@@ -4332,7 +4566,7 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     tiles = []
     for r in rows:
         sym = r["symbol"]
-        bars = bars_for(sym, days)
+        bars = bars_for(sym, days, snap=_snap_for(raw, sym))
         if not bars:
             continue
         v = r.get(kind) or {}
@@ -4424,7 +4658,8 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     # overflow as a tail — and it is the same spread every other tab already
     # shows; an explicit sort skips it entirely.
     # `test_turning_bullish_themes_first_SPREADS_but_drops_nothing` pins it.
-    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier="any")
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier="any",
+                        snaps=raw)
 
     n_rows = b.get("n_rows") or 0
     n_all = b.get("n_all") or 0
@@ -4442,6 +4677,9 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
         # tuple and the page can never present a filtered board as the whole
         # one (Ajay 2026-09-17: "I wanna see all AMD and also filterable AMD").
         "flight_counts": flight_counts,
+        # WHAT the counts covered, which states are unknowable right now and
+        # why — server-built text, so the page composes no sentence of its own.
+        "flight_scope": flight_scope,
         "flight": sorted(want_flight) if want_flight else [],
         "flight_states": list(AMD_FLIGHT_STATES),
         "grades": b.get("grades") or [],
@@ -4985,6 +5223,10 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
     covered = GL.list_covered_symbols()
     snaps = research.sales_snapshot(covered)
+    # ONE live-quote call for the whole covered list (2026-09-21). The loop
+    # below loaded 60-day bars per name and `_finish` then re-attaches the
+    # request's own `days` — two per-symbol snapshot fetches each, 66 names.
+    _psnaps = _bulk_snaps(covered)
     flash_syms = _flash_symbols()
     tiles, dropped_weak, without_level = [], 0, 0
     away_hidden = 0
@@ -5001,7 +5243,7 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         gate, sales = _bonde_gate(snaps.get(sym))
         if gate == "fail":
             dropped_weak += 1
-        bars = bars_for(sym, days=60)
+        bars = bars_for(sym, days=60, snap=_snap_for(_psnaps, sym))
         if not bars:
             continue
         last = _f(bars[-1].get("c"))
@@ -5174,7 +5416,8 @@ def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                    "last_close": last})},
         })
 
-    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier,
+                        snaps=_psnaps)
     touching = sum(1 for t in tiles
                    if any((b.get("text") or "").startswith(("🎯", "🛡️"))
                           for b in t.get("badges") or []))
@@ -5579,6 +5822,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     srt = sort if sort in SORTS else DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
+    # Out-of-band slot for a builder that already fetched the raw live rows for
+    # its pool. A dict THIS call owns — never a module slot: board() runs in
+    # asyncio.to_thread and two concurrent requests would clobber it.
+    _ctx: dict = {}
+
     if t == "earnings":
         out = earnings_tiles(limit, days)
     elif t == "ipo":
@@ -5600,7 +5848,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                         micro=micro if isinstance(micro, str) else "60m")
     elif t in ("keltner", "amd"):
         out = turning_bullish_tiles(t, limit, days, themes_first, tier,
-                                    sort=srt, grades=grades, flight=flight)
+                                    sort=srt, grades=grades, flight=flight,
+                                    ctx=_ctx)
     elif t == "topping":
         out = topping_tiles(limit, days, themes_first, srt, tier)
     elif t == "deep_demand":
@@ -5708,7 +5957,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # (2026-09-15). Both want the same snapshot row, and two calls would be two
     # prices for one name inside one payload.
     _tiles = out.get("tiles") or []
-    _live = _live_snapshot(_tiles)
+    # The turning-bullish builders already fetched the raw snapshot for their
+    # whole pool; reshaping those rows is the same answer without a second
+    # fan-out (and without two prices for one name inside one payload).
+    _raw = _ctx.get("snaps")
+    _live = _live_from_snaps(_tiles, _raw) if _raw is not None else _live_snapshot(_tiles)
     # Extended hours on every tab (Ajay 2026-09-08, ORCL): the `now` line
     # moves to the live print and says which tape it came from.
     attach_live_now(_tiles, out, live=_live)

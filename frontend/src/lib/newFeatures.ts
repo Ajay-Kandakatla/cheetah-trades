@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21, with a pre-market screenshot of the AMD tab: "These chips
+  // are not working". Four defects, all reproduced in the api container; the
+  // detector, the grades and every threshold are untouched.
+  { id: 'amd-chips-fixed-2026-09-21',
+    label: '\u{1F300} AMD chips answer in seconds, and the pre-market ones stop guessing. You said: \u201cThese chips are not working.\u201d '
+      + 'WHAT WAS WRONG: (1) every chip click took 20\u201365 seconds because the board fetched today\u2019s bar one name at a time, with a new connection each \u2014 80 tiles, 80 calls, and nothing on screen changed while it waited; (2) before 9:30 ET the data feed\u2019s day low is a zero, and the in-flight read took that zero as a real low, so every name that had printed read \u201cReclaimed today\u201d and \u201cHolding\u201d could never happen \u2014 your Reclaimed \u00b7 43 / Holding \u00b7 0 was that, not the tape; (3) the in-flight counts were over the 80 tiles on the page while a click searched the whole grade, so Sweeping \u00b7 2 became 14 tiles; (4) a click gave no sign it was working. '
+      + 'WHAT CHANGED: one live-quote call per board request feeds every tile (measured in the container: 65 s \u2192 3.9 s for the 80-tile AMD board; the same fix reaches every Chart Maps tab); before the open Reclaimed and Holding read \u00b7 \u2014 with the served reason and the count on hover (\u201cN of M priced names have no session low yet \u2026\u201d) while Sweeping stays live off the print alone; the counts are now over every name at the selected grades, the same set a click searches, so a chip\u2019s number is what the click shows; the grid dims and a line says what is being fetched while a request is in the air. '
+      + 'NOT CHANGED: the AMD detector, the grades, what sweeping / reclaimed / holding mean when a real session low exists, every threshold. Nothing here is measured as an edge \u2014 the tab\u2019s INVERTED verdict stands. '
+      + 'YOUR CALL: a real pre-market low from 1-minute bars (one call per name, hundreds per request \u2014 not built); whether the \u2705 / \u{1F3AF} phase buttons, which the AMD board ignores, should hide on this tab; whether the footer\u2019s \u201cof N\u201d should count the in-flight filter; whether the unknowable chips should be truly disabled instead of dimmed.',
+    addedAt: '2026-09-21', route: '/chart-maps?tab=amd' },
   // Ajay 2026-09-21: "In the hot sector table can I get a pre market scan
   // please". He reads these boards at 7-8 am ET. A read of the tape before
   // the open; nothing measured, no gate, no push. The cron line that would

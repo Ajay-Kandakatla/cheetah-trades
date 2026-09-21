@@ -29,7 +29,7 @@ import {
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   parseGrades, gradesParam,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam, AMD_GRADE_LABEL,
-  AMD_FLIGHT_LABEL, parseFlight, flightParam,
+  AMD_FLIGHT_LABEL, parseFlight, flightParam, flightChip, fetchingLabel,
   UNHIDE_PARAM, parseUnhide, unhideParam,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
   recordLine, scanStamp,
@@ -626,6 +626,18 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const tiles = useMemo(
     () => rawTiles.map((t) => filterForGrid(filterTile(t, tabHidden), true)),
     [rawTiles, tabHidden]);
+  /* A chip click refetches the WHOLE board and the old tiles keep rendering
+   * while it flies (Ajay 2026-09-21: "These chips are not working" — the click
+   * did land, the answer took ~60 s and nothing on screen said so). STALE is
+   * that gap: a board is in the air and there is already something to look at.
+   * The grid dims and says aria-busy, and one line names what was asked for.
+   * On the FIRST load there is nothing to dim — that is the "Loading charts…"
+   * note below, unchanged. */
+  const stale = loading && tiles.length > 0;
+  /* The control row's own gate, lifted to a const so the "Fetching …" line can
+   * render inside that row when it exists and in the note slot when it does
+   * not — exactly one of the two, never both. */
+  const PHASE_ROW = tab === 'zones' || tab === 'deep_demand' || LENS_TABS || GRADE_TAB;
   /* 🎯 The enterable cut over the tiles this page already ordered. It is a
    * STABLE PARTITION, never a sort: shown tiles keep the board's own order and
    * the tiles with no read yet follow in theirs, so nothing is silently lost
@@ -812,7 +824,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {/* GRADE_TAB joins this row for the 🌀 AMD / Keltner grade chips
         * (2026-09-17). Every child below is gated on its own tab, so widening
         * the container shows nothing new on the tabs that were already here. */}
-      {(tab === 'zones' || tab === 'deep_demand' || LENS_TABS || GRADE_TAB) && (
+      {PHASE_ROW && (
         <div className="cm-phase" role="tablist" aria-label="Zone phase">
           {LENS_TABS && (
             <button type="button" role="tab" aria-selected={phase === 'all'}
@@ -889,19 +901,28 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             * "Reclaimed today" name is a raid FORMING, not a raid. */}
           {FLIGHT_TAB && !!(data?.flight_states || []).length && (
             <span className="cm-phase-sub" role="tablist" aria-label="In flight"
-                  title="Where price is against its base edge RIGHT NOW, from today's own low and the live print — no threshold, just the facts. Sweeping = below the edge, unresolved. Reclaimed today = the low pierced the edge and price is back inside, which is a raid FORMING: the bar has not closed and nothing here is confirmed. Holding = today's low never reached the edge. Counts are live.">
+                  title={`Where price is against its base edge RIGHT NOW, from today's own low and the live print — no threshold, just the facts. Sweeping = below the edge, unresolved. Reclaimed today = the low pierced the edge and price is back inside, which is a raid FORMING: the bar has not closed and nothing here is confirmed. Holding = today's low never reached the edge. Counts are live.${data?.flight_scope?.note ? ` ${data.flight_scope.note}` : ''}`}>
+              {/* A state the SERVER says it could not read this request wears
+                * `· —`, not a number: before the first regular-session prints
+                * there is no day low to measure two of these three against, and
+                * a `· 0` there would be a claim that nothing is in that state
+                * (Ajay 2026-09-21: "These chips are not working"). The reason,
+                * with its own counts, is the server's sentence on hover. The
+                * chip stays CLICKABLE — same rule as a zero-count grade chip:
+                * a dead end is worse than an empty board. */}
               {(data?.flight_states || []).map((k) => {
-                const c = data?.flight_counts ? Number(data.flight_counts[k] ?? 0) : null;
+                const { count: c, unknowable, title } = flightChip(data ?? {}, k);
                 const on = flightSel.has(k);
-                const empty = c === 0;
+                const dim = unknowable || c === 0;
                 return (
                   <button key={k} type="button" role="tab" aria-selected={on}
-                          aria-disabled={empty || undefined}
+                          aria-disabled={dim || undefined}
+                          title={title ?? undefined}
                           data-testid={`amd-flight-${k}`}
                           className={`cm-phase-btn${on ? ' cm-phase-on' : ''}`}
-                          style={empty ? { opacity: 0.45 } : undefined}
+                          style={dim ? { opacity: 0.45 } : undefined}
                           onClick={() => toggleFlight(k)}>
-                    {AMD_FLIGHT_LABEL[k] || k}{c == null ? '' : ` · ${c}`}
+                    {AMD_FLIGHT_LABEL[k] || k}{unknowable ? ' · —' : c == null ? '' : ` · ${c}`}
                   </button>
                 );
               })}
@@ -985,6 +1006,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                       onClick={() => setTarget('order_block')}>
                 Order block
               </button>
+            </span>
+          )}
+          {/* The click's own receipt. It names the chips that were ASKED for —
+            * a count belongs to the answer, never to the question — and it
+            * lives at the END of the control row so it sits beside the chip
+            * that was just clicked, not in a second place on the page. */}
+          {stale && (
+            <span className="cm-phase-fetching" role="status" aria-live="polite"
+                  data-testid="cm-fetching">
+              {fetchingLabel(gradeSel, flightSel)}
             </span>
           )}
         </div>
@@ -1478,7 +1509,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         </div>
       )}
 
-      {loading && !tiles.length ? <div className="cm-note">Loading charts…</div> : null}
+      {/* First load = nothing to dim, so the note carries it. On a tab with no
+        * control row the receipt lands here instead — exactly one `cm-fetching`
+        * on screen either way. */}
+      {loading && !tiles.length
+        ? <div className="cm-note">Loading charts…</div>
+        : stale && !PHASE_ROW
+        ? <div className="cm-note" role="status" aria-live="polite" data-testid="cm-fetching">
+            {fetchingLabel(gradeSel, flightSel)}
+          </div>
+        : null}
 
       {!loading && !tiles.length && !data?.warming && !err ? (
         <div className="cm-note">
@@ -1503,7 +1543,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                    reasonTitle={roomChipTitle}
                    onShowAll={() => setEnterableOnly(false)}
                    onEnterableOnly={() => setEnterableOnly(true)} />
-      <div className="cm-grid">
+      <div className={`cm-grid${stale ? ' cm-grid-stale' : ''}`} aria-busy={stale || undefined}>
         {tilePart.rows.map((t) => (
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
                         bandStudy={data?.band_structure_study} />

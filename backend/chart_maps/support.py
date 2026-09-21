@@ -198,19 +198,24 @@ def _shared_frame_as_of(sym: str) -> Optional[float]:
         return None
 
 
-def _overlay_today(prices_mod, df, sym: str):
+def _overlay_today(prices_mod, df, sym: str, snap: Optional[dict] = None):
     """(frame, as_of_epoch or None, live) via prices.with_today_bar —
     tolerant of stubs without it and of any failure; the closed frame always
     stands. `live` says whether the last row carries today's live print:
     appended (the day bar / a pre-market print) or, since 2026-09-08,
     ADJUSTED — an after-hours print carried into the last bar the frame
     already holds. Either way the caller keeps the frame it passed in as the
-    closed one."""
+    closed one.
+
+    `snap` (2026-09-21) is a raw `bulk_snapshot` row the caller already
+    fetched: `None` means "fetch it yourself" (the legacy per-call shape, and
+    what the 2-arg `with_today_bar` stubs expect), `{}` means "fetched, and
+    this symbol was absent" — no fetch, no overlay."""
     fn = getattr(prices_mod, "with_today_bar", None)
     if fn is None or df is None:
         return df, None, False, False
     try:
-        out, info = fn(df, sym)
+        out, info = fn(df, sym) if snap is None else fn(df, sym, snap=snap)
     except Exception as exc:                                   # pragma: no cover
         log.debug("support: today-bar overlay failed for %s: %s", sym, exc)
         return df, None, False, False
@@ -232,7 +237,8 @@ def _closed_of(df, partial: bool):
     return df.iloc[:-1]
 
 
-def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
+def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False,
+               snap: Optional[dict] = None):
     """(df, bars_available, as_of_epoch[, closed]) — the shared 2y frame, or a
     deep 5y fetch when the window needs more than the shared frame holds.
     Degrades to the shared frame on a failed deep fetch — the caller reports
@@ -243,7 +249,11 @@ def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
     `with_closed=True` (integrator 2026-09-05) also returns the frame WITHOUT
     today's live bar (== df when nothing was appended): structure — swings,
     gaps, ATR — is read off closed bars only and the live bar prices the read,
-    the rule price_zones.for_symbol adopted the same day."""
+    the rule price_zones.for_symbol adopted the same day.
+
+    `snap` (2026-09-21): a prefetched `bulk_snapshot` row handed to BOTH
+    overlays (shared frame and deep frame) so a deep-window tile costs zero
+    HTTPS calls instead of three. Same `None` / `{}` rule as `_overlay_today`."""
     import time as _t
     from sepa import prices
 
@@ -257,7 +267,11 @@ def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
     # Today's live bar on top of the closed frame (Ajay 2026-09-03, CHPT: the
     # tab said "1.4% below support" off yesterday's 5.19 while the tape was
     # 9.14). as_of becomes the snapshot's last-trade time when it appended.
-    df, live_as_of, _live, partial = _overlay_today(prices, closed, sym)
+    # NEVER add `snap=` to a call nobody prefetched for: `_overlay_today` is
+    # itself stubbed 3-positional in places (test_zone_consistency:155).
+    df, live_as_of, _live, partial = (
+        _overlay_today(prices, closed, sym) if snap is None
+        else _overlay_today(prices, closed, sym, snap=snap))
     closed = _closed_of(df, partial)
     have = len(df) if df is not None else 0
     if need_bars <= have:
@@ -286,7 +300,9 @@ def _frame_for(sym: str, need_bars: int, *, with_closed: bool = False):
             deep_as_of = _t.time()
             _deep_cache[key] = (deep_as_of, deep)
     if deep is not None and len(deep) > have:
-        deep, deep_live_as_of, _dl, deep_partial = _overlay_today(prices, deep, sym)
+        deep, deep_live_as_of, _dl, deep_partial = (
+            _overlay_today(prices, deep, sym) if snap is None
+            else _overlay_today(prices, deep, sym, snap=snap))
         deep_closed = _closed_of(deep, deep_partial)
         return _ret(deep, len(deep), (deep_live_as_of or deep_as_of), deep_closed)
     return _ret(df, have, _shared_frame_as_of(sym), closed)
