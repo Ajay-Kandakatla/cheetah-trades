@@ -878,6 +878,41 @@ describe('ChartMaps — the ICT tab (2026-09-03)', () => {
     expect(foot).toHaveTextContent(/Not advice/);
   });
 
+  it('the tab blurb FOLDS to its first sentence, the rest behind the ▸ (2026-09-20)', () => {
+    // Ajay, on the Bonde tab: "Collapse all of this info". The verdict sentence
+    // stays in view; the 5,000 characters after it open on click.
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => { /* never resolves */ })));
+    render(<MemoryRouter initialEntries={['/chart-maps?tab=bonde']}><ChartMaps /></MemoryRouter>);
+    const fold = screen.getByTestId('cm-blurb');
+    expect(fold.tagName).toBe('DETAILS');
+    expect(fold).not.toHaveAttribute('open');
+    const head = fold.querySelector('summary');
+    expect(head).toHaveTextContent(/THIS BOARD\u2019S OWN THESIS IS INVERTED \u2014 read this before the rules\./);
+    expect(head).not.toHaveTextContent(/SINCE 2026-09-20 THIS TAB IS A PICK LIST/);
+    expect(head).toHaveTextContent(/why/);
+    // The rest is still in the page (findable, screen-readable), just folded.
+    expect(fold.querySelector('.cm-blurb-rest')).toHaveTextContent(/SINCE 2026-09-20 THIS TAB IS A PICK LIST/);
+    fireEvent.click(head as HTMLElement);
+    expect(fold).toHaveAttribute('open');
+  });
+
+  it('NEGATIVE — a one-sentence blurb renders plain, with no empty fold', () => {
+    // No live tab has a one-sentence blurb (every one carries its caveats), so
+    // the case is set up on the support tab and restored after.
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => { /* never resolves */ })));
+    const saved = TAB_META.support.blurb;
+    (TAB_META.support as { blurb: string }).blurb = 'Any ticker, on demand.';
+    try {
+      render(<MemoryRouter initialEntries={['/chart-maps?tab=support']}><ChartMaps /></MemoryRouter>);
+      const el = screen.getByTestId('cm-blurb');
+      expect(el.tagName).not.toBe('DETAILS');
+      expect(el).toHaveTextContent(/Any ticker, on demand\./);
+      expect(el.querySelector('summary')).toBeNull();
+    } finally {
+      (TAB_META.support as { blurb: string }).blurb = saved;
+    }
+  });
+
   it('the blurb links the source name even before the board lands', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => { /* never resolves */ })));
     render(<MemoryRouter initialEntries={['/chart-maps?tab=ict']}><ChartMaps /></MemoryRouter>);

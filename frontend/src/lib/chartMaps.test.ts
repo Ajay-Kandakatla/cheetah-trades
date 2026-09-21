@@ -1,3 +1,4 @@
+import { splitBlurb } from './chartMaps';
 /* chartMaps — geometry + formatting for the Chart Maps study board.
  *
  * Negatives carry the weight here: empty bar arrays, non-finite prices, bands
@@ -2004,5 +2005,34 @@ describe('Back in Demand blurb names the pinned SPY/QQQ strip', () => {
     const b = TAB_META.zones.blurb;
     expect(b).toMatch(/closest to the level first/i);
     expect(b).toMatch(/Back in Demand keeps reward:risk first/);
+  });
+});
+
+describe('splitBlurb — the tab blurb folds to its first sentence (2026-09-20)', () => {
+  // Ajay, on the Bonde tab's wall of text: "Collapse all of this info".
+  it('the Bonde blurb keeps its verdict sentence as the head and folds the rest', () => {
+    const { head, rest } = splitBlurb(TAB_META.bonde.blurb);
+    expect(head).toMatch(/^MEASURED 2026-09-13 AND THIS BOARD\u2019S OWN THESIS IS INVERTED/);
+    expect(head).toMatch(/read this before the rules\.$/);
+    expect(rest).toMatch(/^SINCE 2026-09-20 THIS TAB IS A PICK LIST/);
+    expect(head.length + rest.length + 1).toBe(TAB_META.bonde.blurb.trim().length);
+  });
+  it('every tab has a head, and the head is never the whole 1,000-character blurb', () => {
+    for (const t of CM_TABS) {
+      const { head, rest } = splitBlurb(TAB_META[t].blurb);
+      expect(head.length, t).toBeGreaterThan(0);
+      if (TAB_META[t].blurb.length > 600) expect(rest.length, `${t} should fold`).toBeGreaterThan(0);
+    }
+  });
+  it('NEGATIVE — a one-sentence blurb has nothing to fold', () => {
+    expect(splitBlurb('Any ticker, on demand.')).toEqual({ head: 'Any ticker, on demand.', rest: '' });
+    expect(splitBlurb('')).toEqual({ head: '', rest: '' });
+  });
+  it('NEGATIVE — an abbreviation is not a sentence end', () => {
+    const { head } = splitBlurb('Ranked vs. RSP, e.g. the median member, i.e. not the ETF. Then more.');
+    expect(head).toBe('Ranked vs. RSP, e.g. the median member, i.e. not the ETF.');
+  });
+  it('a question or an exclamation ends the head too', () => {
+    expect(splitBlurb('Where is the money? In three sectors.').head).toBe('Where is the money?');
   });
 });

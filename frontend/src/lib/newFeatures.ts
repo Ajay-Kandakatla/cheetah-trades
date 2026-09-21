@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-20, with a screenshot of the Bonde tab's blurb filling the
+  // screen: "Collapse all of this info." Every tab, same fold.
+  { id: 'blurbs-folded-2026-09-20',
+    label: '\u25B8 The tab blurbs on Chart Maps now fold to their first sentence. You said: \u201cCollapse all of this info.\u201d '
+      + 'The verdict line stays in view (\u201cMEASURED \u2026 INVERTED \u2014 read this before the rules.\u201d); the rest opens on click, the same \u25B8 fold every study verdict already uses, and it remembers which tabs you opened. '
+      + 'Nothing in the text changed \u2014 every number, cite and caveat is still there one click down.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=bonde' },
   // Ajay 2026-09-20: sent the interview link after the pick list shipped
   // ("https://www.youtube.com/watch?v=fjox2hapu98"). Bonde himself on tape,
   // so his sentences are cited at the second they start. Nothing measured,

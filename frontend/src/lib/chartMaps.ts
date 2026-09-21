@@ -1997,3 +1997,25 @@ export function sessionNoteText(session: CmTapeSession | null | undefined): stri
   if (session === 'afterhours') return '\u{1F319} after-hours prints: every now line sits on the last after-hours trade (now \u00b7 AH) \u2014 thin tape; phone pushes stay on until 20:00 ET';
   return '';
 }
+
+/** The tab blurbs fold. Ajay 2026-09-20, on the Bonde tab's 5,000-character
+ *  blurb: "Collapse all of this info". The FIRST sentence stays visible as the
+ *  headline — it is written to carry the verdict ("MEASURED … INVERTED — read
+ *  this before the rules.") — and the rest sits behind the same ▸ fold every
+ *  study verdict already uses. The split is on the first sentence end that is
+ *  not an abbreviation; a one-sentence blurb has no fold at all. The TEXT in
+ *  TAB_META is untouched, so every blurb pin keeps reading the same string. */
+const BLURB_ABBREV = /(?:\b(?:e\.g|i\.e|vs|approx|No|St|Inc|Corp|U\.S))$/;
+export function splitBlurb(blurb: string): { head: string; rest: string } {
+  const text = (blurb || '').trim();
+  const re = /[.!?](?=\s+\S)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const before = text.slice(0, m.index);
+    if (BLURB_ABBREV.test(before)) continue;
+    const head = text.slice(0, m.index + 1).trim();
+    const rest = text.slice(m.index + 1).trim();
+    return { head, rest };
+  }
+  return { head: text, rest: '' };
+}

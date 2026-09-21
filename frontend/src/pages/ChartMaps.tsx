@@ -36,6 +36,7 @@ import {
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   type CmBoard, type CmTab,
+  splitBlurb,
 } from '../lib/chartMaps';
 // The room floor's TWO states come from the one shared list (2026-09-17) — the
 // same array the Back in Demand panel renders. See lib/bounceRoom.ts.
@@ -692,18 +693,32 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         ))}
       </div>
 
-      {/* The ICT blurb names its source; the name is the link (Ajay: purely
-        * price action from his spec + Jesse Rogers' walkthrough). Split on the
-        * name so the copy stays one testable string in TAB_META. */}
-      <p className="cm-blurb">
-        {tab === 'ict'
-          ? TAB_META.ict.blurb.split(ICT_SOURCE.label).flatMap((part, i, arr) =>
+      {/* The blurb FOLDS to its first sentence (Ajay 2026-09-20, on the Bonde
+        * tab's wall of text: "Collapse all of this info"). Same ▸ fold as every
+        * study verdict, remembered per tab. The ICT blurb names its source; the
+        * name is the link (Ajay: purely price action from his spec + Jesse
+        * Rogers' walkthrough) — split on the name so the copy stays one
+        * testable string in TAB_META. */}
+      {(() => {
+        const { head, rest } = splitBlurb(TAB_META[tab].blurb);
+        const linkify = (s: string) => tab === 'ict'
+          ? s.split(ICT_SOURCE.label).flatMap((part, i, arr) =>
               i < arr.length - 1
                 ? [part, <a key={`src-${i}`} href={ICT_SOURCE.url} target="_blank"
                             rel="noreferrer noopener">{ICT_SOURCE.label}</a>]
                 : [part])
-          : TAB_META[tab].blurb}
-      </p>
+          : s;
+        // A source name inside the headline could not be a link there — keep
+        // that one blurb whole rather than lose the link.
+        if (tab === 'ict' && head.includes(ICT_SOURCE.label)) {
+          return <p className="cm-blurb" data-testid="cm-blurb">{linkify(TAB_META.ict.blurb)}</p>;
+        }
+        return (
+          <StudyNote id={`blurb-${tab}`} className="cm-blurb" testId="cm-blurb" headline={head}>
+            {rest ? <p className="cm-blurb-rest">{linkify(rest)}</p> : null}
+          </StudyNote>
+        );
+      })()}
 
       {/* 🧭 SPY · QQQ, PINNED to the Back in Demand tab (Ajay 2026-09-16:
         * "Can you create a SPY demand and supply zone please for me? and also

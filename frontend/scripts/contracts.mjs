@@ -3107,6 +3107,24 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'every tab blurb folds to its first sentence (2026-09-20)',
+    file: 'src/pages/ChartMaps.tsx',
+    // Ajay 2026-09-20, on the Bonde tab's 5,000-character blurb: "Collapse all
+    // of this info". The first sentence carries the verdict and stays in view;
+    // the rest sits behind the same ▸ fold every study verdict uses. The TEXT
+    // in TAB_META is untouched, so every blurb pin above keeps its meaning.
+    checks: (src) => {
+      const errs = [];
+      if (/<p className="cm-blurb">\s*\{tab === 'ict'/.test(src)) errs.push('the blurb is drawn whole again — it must fold');
+      if (!/splitBlurb\(TAB_META\[tab\]\.blurb\)/.test(src)) errs.push('the blurb must split through splitBlurb');
+      if (!/<StudyNote id=\{`blurb-\$\{tab\}`\}[^>]*headline=\{head\}/.test(src)) errs.push('the blurb must render as a StudyNote fold keyed per tab, headline = the first sentence');
+      if (!/export function splitBlurb/.test(read('src/lib/chartMaps.ts'))) errs.push('chartMaps.ts must export splitBlurb');
+      const nf = read('src/lib/newFeatures.ts');
+      if (!/id: 'blurbs-folded-2026-09-20'/.test(nf)) errs.push('the fold needs its ✨ entry');
+      return errs;
+    },
+  },
+  {
     name: 'the Bonde tab carries + Signals and the live basis line (2026-09-20)',
     file: 'src/components/BondeBoard.tsx',
     // Ajay 2026-09-20: "can you improve Bondes page a lil bit more and add
