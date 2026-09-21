@@ -12189,6 +12189,13 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 /* A group row's fundamental cell is a MEDIAN of its membership, not a filed
  * number — dimmed so it never reads as a company's own figure. */
 .hs-med { opacity: 0.72; font-style: italic; }
+/* ☀️ A group's Pre-mkt median taken over TOO FEW printed members (the
+ * board's own thin rule, applied to the printed subset) — dimmed the same way
+ * a full-membership median is, because at 7 am it is the thinner object. */
+.hs-pre-thin { opacity: 0.72; font-style: italic; }
+/* How many of the membership actually printed. Small, beside the number, so
+ * "+0.8%" is never read as a 40-name median when 12 names printed. */
+.hs-pre-n { font-size: 0.7rem; color: var(--ink-muted); font-weight: 400; }
 /* "Today" has to mean today (Ajay 2026-09-16). A day cell whose number is the
  * last close while the column is live is dimmed AND carries the words — a
  * tooltip is not a label, and he reads this column as the current tape. */

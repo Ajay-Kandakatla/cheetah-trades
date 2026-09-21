@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21: "In the hot sector table can I get a pre market scan
+  // please". He reads these boards at 7-8 am ET. A read of the tape before
+  // the open; nothing measured, no gate, no push. The cron line that would
+  // keep a stored read warm is host-mounted and NOT installed by a deploy.
+  { id: 'hottest-premarket-scan-2026-09-21',
+    label: '\u2600\uFE0F \u{1F525} Hottest: a Pre-market scan. You said: \u201cIn the hot sector table can I get a pre market scan please.\u201d '
+      + 'WHAT IT IS: a \u2600\uFE0F button beside \u21BB Re-scan, live 4:00\u20139:30 ET on a trading day, that reads every name\u2019s own pre-market print against RSP\u2019s own (RSP prints less often \u2014 its print time is in the line) from ONE snapshot, the same provider read as a \u21BB Re-scan, and adds a Pre-mkt column first among the legs; sector, industry and roster rows show the median of the members that printed, with the count (12/40), and read thin under the board\u2019s own thin rule. '
+      + 'WHAT IT IS NOT: nothing relative is shown until RSP itself has printed (the line says so and the board ranks on 5 days meanwhile); the Today column is untouched; the column hides once the day column goes live after 9:30; a stored read up to 15 minutes old is served instantly, its time printed; NOT measured, NOT a signal, no push, no gate. '
+      + 'NOT INSTALLED: the cron line that would keep a stored read warm every 10 minutes lives in a host-mounted crontab that a deploy does not ship \u2014 until it is added by hand the \u2600\uFE0F click is the read. '
+      + 'YOUR CALL: raw moves when RSP has not printed, a staleness cut on RSP\u2019s print, the 15-minute label, the cron cadence, a pre-market push, what shows after 9:30, whether thin groups rank below full ones, and whether the Hot-sectors strip gets the column too.',
+    addedAt: '2026-09-21', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-20, with a screenshot of the 🗓️ Coming up strip (AMRO, BMB,
   // PTT): "Can you gather similar info about these please like the ticket and
   // make them clicable the onesin IPO tab that are future". A fact sheet from

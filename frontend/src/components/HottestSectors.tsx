@@ -72,7 +72,49 @@ export type HsDayLeg = {
   ret_1d_close?: number | null; d1_source?: HsD1Source;
 };
 
-export type HsName = HsDayLeg & {
+/* ☀️ Pre-market scan (Ajay 2026-09-21: "In the hot sector table can I get a
+ * pre market scan please").
+ *
+ * A THIRD basis, served as a SIBLING block `pre` beside `d1` — the day column
+ * and every row's day-leg key are byte-identical whether or not the scan ran,
+ * which is why `HsD1Source` is NOT widened to a third member: `d1Label`,
+ * `dayCell` and `asOfLine` all switch on that union, and a third value would
+ * quietly change what the Today column claims.
+ *
+ * NOTHING here is measured. Pre-market moves as a signal have never been
+ * studied on this app; this is a read of the tape before the open. */
+export type HsSession = 'premarket' | 'rth' | 'afterhours' | 'closed';
+export type HsPre = {
+  basis?: 'premarket'; live?: boolean; ran?: boolean; stored?: boolean; ended?: boolean;
+  /** Backend-owned. `show` = draw the Pre-mkt column; `open` = the ☀️ button is usable.
+   *  Never derived from a browser clock; on a stored read the server re-derives both
+   *  from ITS clock, so a doc stored at 07:20 cannot leave the button live at 10:05. */
+  show?: boolean; open?: boolean | null; session?: HsSession | null;
+  pre_window?: string | null; market_closed?: string | null; date?: string | null;
+  /** The yardstick's OWN pre-market print — and its TIME, because an ETF
+   *  prints far less often than a name (07:27 ET probe: RSP 5:00, NVDA 7:27). */
+  benchmark?: string | null; benchmark_pre_move?: number | null;
+  benchmark_pre_print?: number | null; benchmark_pre_at?: string | null;
+  benchmark_pre_at_et?: string | null;
+  symbols?: number | null; pre_names?: number | null;
+  /** SERVED pre-formatted ("7:42 ET") — this surface never composes a clock. */
+  as_of?: string | null; as_of_et?: string | null;
+  group_basis?: string | null; reason?: string | null; note?: string | null;
+};
+/** A name row's pre-market leg. Every key is null when it did not print — an
+ *  absent print is never a zero move. */
+export type HsPreLeg = {
+  pre_1d?: number | null; pre_raw?: number | null; pre_print?: number | null;
+  pre_at?: string | null; pre_at_et?: string | null;
+};
+/** A group row's: the median over the members that PRINTED, with that count.
+ *  `pre_thin` is the board's own THIN_N rule applied to the printed subset —
+ *  the existing `thin` key already means something else (the full membership). */
+export type HsPreGroup = HsPreLeg & {
+  pre_n?: number | null; pre_thin?: boolean | null; pre_basis?: string | null;
+};
+
+export type HsName = HsDayLeg & HsPreLeg & {
   symbol: string; name?: string | null; industry?: string | null;
   last_close?: number | null;
   rel_5d?: number | null; rel_21d?: number | null;
@@ -100,7 +142,7 @@ export type HsFundMedians = {
   q_eps_yoy?: number | null; net_margin?: number | null;
   eq_score?: number | null; fund_basis?: string | null;
 };
-export type HsIndustry = HsFundMedians & HsDayLeg & {
+export type HsIndustry = HsFundMedians & HsDayLeg & HsPreGroup & {
   group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
   rel_5d?: number | null; rel_21d?: number | null;
   names: HsName[]; names_total: number;
@@ -135,7 +177,7 @@ export type HsDayTag = {
   measured?: boolean;
 };
 
-export type HsSector = HsFundMedians & HsDayLeg & {
+export type HsSector = HsFundMedians & HsDayLeg & HsPreGroup & {
   group: string; n_full: number; sampled_of?: number | null; sampled_used?: number | null;
   basis: string; n_measured?: number | null;
   rel_5d?: number | null; rel_21d?: number | null;
@@ -144,7 +186,7 @@ export type HsSector = HsFundMedians & HsDayLeg & {
    *  renders exactly as it did before any of this existed. */
   day_tag?: HsDayTag | null;
 };
-export type HsTheme = HsFundMedians & HsDayLeg & {
+export type HsTheme = HsFundMedians & HsDayLeg & HsPreGroup & {
   group: string; n_full: number; ranked: boolean; thin: boolean; basis: string;
   rel_5d?: number | null; rel_21d?: number | null;
   names: HsName[]; names_total: number;
@@ -157,6 +199,9 @@ export type HsPayload = {
   benchmark?: string | { symbol?: string | null } | null;
   /** What the day column is showing, and why (2026-09-16). */
   d1?: HsD1 | null;
+  /** ☀️ The pre-market scan's own block (2026-09-21) — a SIBLING of `d1`,
+   *  never nested inside it, so the day column cannot be changed by it. */
+  pre?: HsPre | null;
   sortable?: string[]; legs?: string[];
   sectors: HsSector[];
   /** Our own curated rosters — robotics, nuclear, quantum, the AI complex,
@@ -214,6 +259,32 @@ export const HS_COLS: { key: string; label: string; num: boolean; title?: string
     title: 'ascending = who reports soonest' },
 ];
 
+/** ☀️ The Pre-mkt column. NOT a member of HS_COLS: it is conditional on the
+ *  served `pre.show`, because an always-present column full of em-dashes is
+ *  furniture on a board he already called wide. */
+export const PRE_COL: { key: string; label: string; num: boolean; title?: string } = {
+  key: 'pre_1d', label: 'Pre-mkt', num: true,
+  title: "Each name's own pre-market print against RSP's own pre-market print"
+    + ' (its time is in the line above); group rows are the median of the'
+    + ' members that printed, with the count',
+};
+
+/** Draw the Pre-mkt column? The SERVER decides — never a browser clock. */
+export function showPreCol(d?: Pick<HsPayload, 'pre'> | null): boolean {
+  return !!d?.pre?.show;
+}
+/** The columns actually printed, in print order. Pre-mkt sits FIRST, the way
+ *  the legs already run newest-to-oldest (Today | 5 days | 21 days). */
+export function visibleCols(d?: Pick<HsPayload, 'pre'> | null) {
+  return showPreCol(d) ? [PRE_COL, ...HS_COLS] : HS_COLS;
+}
+/** The full-width colSpan for every grain / "showing N of M" / news row: the
+ *  symbol column plus whatever columns are printed. Hard-coded 10s are how a
+ *  new column leaves five rows one cell short. */
+export function colSpanOf(d?: Pick<HsPayload, 'pre'> | null): number {
+  return 1 + visibleCols(d).length;
+}
+
 /** The arrow a header shows. Inactive columns show nothing — an idle ⇅ on
  *  nine headers is nine pieces of furniture. */
 export function arrow(active: boolean, dir: HsDir): string {
@@ -248,7 +319,29 @@ export function d1Label(d?: Pick<HsPayload, 'd1' | 'as_of'> | null): string {
 /** Any column's printed header. */
 export function colLabel(key: string, d?: Pick<HsPayload, 'd1' | 'as_of'> | null): string {
   if (key === 'rel_1d') return d1Label(d);
+  /* The Pre-mkt column is not in HS_COLS, and the lookup below falls through
+   * to the RAW KEY — so without this line the header would print `pre_1d`. */
+  if (key === PRE_COL.key) return PRE_COL.label;
   return HS_COLS.find((c) => c.key === key)?.label || key;
+}
+
+/** Which header the `is-sorted` mark sits on.
+ *
+ *  STATE wins for every key except `pre_1d`. The server DEMOTES a `pre_1d`
+ *  request to the default whenever the pre leg has nothing to rank on (RSP has
+ *  not printed, nobody printed, the session ended) and says so in `sorted_by`;
+ *  the mark then follows the served key, so the arrow never sits on a column
+ *  the rows are not ordered by.
+ *
+ *  PURE on purpose: no setState, no refetch, no clock. `sort` is a `load`
+ *  dependency, so "fixing" the state here would fire a SECOND fan-out on the
+ *  very click whose tooltip promises one. Keeping the `pre_1d` intent in state
+ *  also means the next ↻ ranks on it the moment RSP prints. */
+export function shownSortKey(sort: string,
+                             d?: Pick<HsPayload, 'sorted_by' | 'pre'> | null): string {
+  const served = d?.sorted_by;
+  if (sort === PRE_COL.key && served && served !== PRE_COL.key) return served;
+  return sort;
 }
 
 /** A header's hover. The day column's says which session it is, in the
@@ -282,14 +375,27 @@ export function dayCell(r: HsDayLeg, d?: Pick<HsPayload, 'd1' | 'as_of' | 'bench
 
 /** The line under the controls. It must say which columns are live and which
  *  are the snapshot's, because four of the nine never move intraday. */
-export function asOfLine(d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null): string {
+export function asOfLine(d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre'> | null): string {
   const day = d?.d1?.close_as_of || d?.as_of || '—';
-  if (d?.d1?.live) {
-    return `Today is live, measured against ${benchSymbol(d)} · 5 days, 21 days,`
-      + ` Sales YoY and every sector, industry and roster row are from the ${day} close`;
+  const base = d?.d1?.live
+    ? `Today is live, measured against ${benchSymbol(d)} · 5 days, 21 days,`
+      + ` Sales YoY and every sector, industry and roster row are from the ${day} close`
+    : `every column is from the ${day} close — the last finished session, not today's`
+      + (d?.d1?.reason ? ` (${d.d1.reason})` : '');
+  /* ☀️ The pre-market prefix, in the SERVER's own words. Three states, in this
+   * order: a live scan, a scan whose session has ended, and a scan that RAN
+   * and came back with nothing — the last one is why a click can change the
+   * board not at all and he still sees the reason. An idle block adds nothing,
+   * so every line above stays byte-identical to what it printed before this. */
+  const p = d?.pre;
+  if (p?.live) {
+    return `Pre-market is the ${p.as_of_et} read on ${p.pre_names} of ${p.symbols} names,`
+      + ` measured against ${p.benchmark || benchSymbol(d)}'s ${p.benchmark_pre_at_et}`
+      + ` pre-market print (${pct(p.benchmark_pre_move, 2)}) · ${base}`;
   }
-  const why = d?.d1?.reason ? ` (${d.d1.reason})` : '';
-  return `every column is from the ${day} close — the last finished session, not today's${why}`;
+  if (p?.ended && p?.show) return `Pre-market: ${p.reason} · ${base}`;
+  if (p?.ran && !p?.live && p?.reason) return `Pre-market: ${p.reason} · ${base}`;
+  return base;
 }
 
 /** Why a ↻ Re-scan cannot help right now, or null when it can.
@@ -344,6 +450,58 @@ export function tone(v: number | null | undefined): string {
   if (typeof v !== 'number' || !Number.isFinite(v)) return 'hs-flat';
   return v > 0 ? 'hs-up' : v < 0 ? 'hs-dn' : 'hs-flat';
 }
+/** ☀️ Is the Pre-market scan button usable, and what does its hover say?
+ *
+ *  ENABLED IFF THE SERVER SAYS SO. `pre.open` is the backend's own clock —
+ *  there is no browser clock anywhere in this function on purpose, and the
+ *  contract pins that: a browser clock would hand a laptop in London a board
+ *  that thinks the New York pre-market is open. On a STORED read the server
+ *  re-derives `open` from its CURRENT clock, so a doc written at 07:20 cannot
+ *  leave this button live at 10:05. */
+export function premarketState(d?: Pick<HsPayload, 'pre' | 'benchmark'> | null):
+  { enabled: boolean; title: string } {
+  const p = d?.pre;
+  if (p?.open !== true) {
+    return { enabled: false,
+             title: `Pre-market scan is off because ${p?.reason || 'the session could not be read'}.` };
+  }
+  return {
+    enabled: true,
+    title: `Reads every name's pre-market print (${p.pre_window}) against `
+      + `${benchSymbol(d)}'s own, one read for the whole board. ${RESCAN_COST_SENTENCE}`
+      + ' Group rows become the median of the members that printed, with the count.'
+      + ' Not measured, not a signal.',
+  };
+}
+
+/** One Pre-mkt cell: the text, whether it reads thin, and its hover.
+ *
+ *  A group row prints `+0.8% · 12/40` — the median AND how many of the
+ *  membership actually printed, because at 07:00 most names have not (the
+ *  extended-hours passes see ~80% stale prints) and a median over 12 of 40 is
+ *  not the same object as the full-membership medians beside it. A name that
+ *  did not print is an em-dash, never a zero. */
+export function preCell(r: HsPreGroup & { n_full?: number },
+                        d?: Pick<HsPayload, 'pre' | 'benchmark'> | null,
+                        isGroup = false): { text: string; thin: boolean; title: string } {
+  const p = d?.pre;
+  const text = pct(r.pre_1d) + (isGroup && r.pre_n != null ? ` · ${r.pre_n}/${r.n_full}` : '');
+  const thin = isGroup && r.pre_thin === true;
+  if (isGroup) {
+    const basis = r.pre_basis || p?.group_basis || 'median of the members that printed';
+    return { text, thin,
+             title: `${basis}: ${r.pre_n ?? 0} of ${r.n_full ?? 0} printed`
+               + (thin ? ' — too few printed to read this like a full-membership median' : '') };
+  }
+  if (r.pre_at_et == null || r.pre_1d == null) {
+    return { text, thin: false, title: 'no pre-market print for this name yet' };
+  }
+  return { text, thin: false,
+           title: `printed ${r.pre_at_et} at ${r.pre_print} · own move ${pct(r.pre_raw, 2)}`
+             + ` · ${p?.benchmark || benchSymbol(d)} ${pct(p?.benchmark_pre_move, 2)}`
+             + ` at ${p?.benchmark_pre_at_et}` };
+}
+
 export function tierChip(t?: string | null): string {
   const k = (t || '').toLowerCase();
   if (k === 'explosive') return '🚀';
@@ -453,12 +611,25 @@ function DayTagRow({ tag, span }: { tag: HsDayTag; span: number }) {
 }
 
 function LegCells({ r, d1, isGroup }: {
-  r: HsDayLeg & { rel_5d?: number | null; rel_21d?: number | null };
-  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null; isGroup?: boolean;
+  r: HsDayLeg & HsPreGroup & { rel_5d?: number | null; rel_21d?: number | null;
+                               n_full?: number };
+  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre'> | null; isGroup?: boolean;
 }) {
   const day = dayCell(r, d1, !!isGroup);
+  const pre = preCell(r, d1, !!isGroup);
   return (
     <>
+      {/* ☀️ Pre-mkt sits BEFORE the day cell — the legs already read
+          newest-first, and the pre-market print is older than nothing and
+          newer than today's open. Drawn only when the server says to. */}
+      {showPreCol(d1) ? (
+        <td className={`mono hs-num ${tone(r.pre_1d)}${pre.thin ? ' hs-pre-thin' : ''}`}
+            title={pre.title}>
+          {pct(r.pre_1d)}
+          {isGroup && r.pre_n != null
+            ? <span className="hs-pre-n"> · {r.pre_n}/{r.n_full}</span> : null}
+        </td>
+      ) : null}
       <td className={`mono hs-num ${tone(r.rel_1d)}${day.marked ? ' hs-d1-close' : ''}`}
           title={day.title || undefined}>
         {day.text}
@@ -495,7 +666,7 @@ function GroupFundCells({ r }: { r: HsFundMedians }) {
 function NameRow({ r, read, study, bandStudy, d1 }: {
   r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
   bandStudy?: BandStructureStudy | null;
-  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null;
+  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre'> | null;
 }) {
   const nav = useNavigate();
   const loc = useLocation();
@@ -598,6 +769,12 @@ export function HottestSectors() {
   const [dir, setDir] = useState<HsDir>('desc');
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [byIndustry, setByIndustry] = useState(true);
+  /* ☀️ Which basis the next read asks for, and a tick that makes a SECOND
+   * click re-fetch: after the first ☀️ click `basis`, `sort` and `dir` are
+   * already at their target values, so without the tick the deps would not
+   * change and the button would go dead. */
+  const [basis, setBasis] = useState<'close' | 'premarket'>('close');
+  const [scanTick, setScanTick] = useState(0);
 
   /* ↻ Re-scan (2026-09-18). Three things this `load` has to get right that the
    * old one did not:
@@ -616,7 +793,8 @@ export function HottestSectors() {
     const id = ++seq.current;
     inFlight.current = true;
     setLoading(true);
-    fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}&dir=${dir}`,
+    fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}&dir=${dir}`
+          + (basis === 'premarket' ? '&basis=premarket' : ''),
           { credentials: 'include', cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((j: HsPayload) => {
@@ -631,9 +809,18 @@ export function HottestSectors() {
       .finally(() => {
         if (id === seq.current) { inFlight.current = false; setLoading(false); }
       });
-  }, [sort, dir]);
+  }, [sort, dir, basis, scanTick]);
   useEffect(() => { load(); }, [load]);
   const onRescan = () => { if (inFlight.current) return; load(); };
+  /* ☀️ One click = one read on the pre-market basis, ranked on the new column.
+   * `sort` is a `load` dep, so setting all three here is still ONE fetch. */
+  const onPremarket = () => {
+    if (inFlight.current) return;
+    setBasis('premarket');
+    setSort(PRE_COL.key);
+    setDir('desc');
+    setScanTick((t) => t + 1);
+  };
 
   const sectors = useMemo(() => data?.sectors || [], [data]);
   const themes = useMemo(() => data?.themes || [], [data]);
@@ -710,6 +897,12 @@ export function HottestSectors() {
 
   const rescanBlocked = rescanBlockedReason(data);
   const rescanQuiet = rescanQuietReason(data);
+  const preState = premarketState(data);
+  const cols = visibleCols(data);
+  const span = colSpanOf(data);
+  /* The header mark follows the SERVED order when the server demoted a
+   * pre_1d request — the intent stays in `sort` for the next read. */
+  const shownSort = shownSortKey(sort, data);
 
   return (
     <div className="hs">
@@ -720,7 +913,7 @@ export function HottestSectors() {
             arrow IS the state. */}
         <div className="hs-sorts">
           <span className="hs-sorted-by">
-            ranked on <b>{colLabel(sort, data)}</b>
+            ranked on <b>{colLabel(shownSort, data)}</b>
             {dir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
             <span className="hs-dim"> · click any column header</span>
           </span>
@@ -747,8 +940,18 @@ export function HottestSectors() {
                 onClick={onRescan}>
           {loading ? 'Scanning…' : '↻ Re-scan'}
         </button>
+        {/* ☀️ Pre-market scan (Ajay 2026-09-21: "In the hot sector table can I
+            get a pre market scan please"). He reads these boards at 7-8 am ET.
+            Gated ONLY by the served `pre.open` — the backend's clock, never
+            this browser's. */}
+        <button type="button" className="cm-rescan" data-testid="hs-premarket"
+                disabled={loading || !preState.enabled}
+                title={preState.title}
+                onClick={onPremarket}>
+          {loading && basis === 'premarket' ? 'Scanning…' : '☀️ Pre-market scan'}
+        </button>
         <InfoButton inline title="🔥 Hottest — how to read this">
-          <p>Every sector ranked on <b>{colLabel(sort, data)}</b>
+          <p>Every sector ranked on <b>{colLabel(shownSort, data)}</b>
             against <b>{benchSymbol(data)}</b>,
             the equal-weight benchmark — so a name is measured against the average stock, not the
             mega-caps. Open a sector for its industries, then its names.</p>
@@ -770,6 +973,23 @@ export function HottestSectors() {
             {' '}{data?.d1?.session_window || '9:30–16:00 ET'} it still works but warns you the day
             column will not move. {RESCAN_COST_SENTENCE} It is not free, and it is not new — the
             board already re-fetches the chip read about once a minute while it is open.</p>
+          <p><b>The ☀️ Pre-market scan button.</b> Live between {data?.pre?.pre_window
+            || '4:00-9:30 ET'} on a trading day, it reads every name&rsquo;s own
+            pre-market print in ONE snapshot for the whole board — the same provider read
+            the ↻ button costs — and adds a <b>Pre-mkt</b> column. The yardstick is
+            {' '}<b>{benchSymbol(data)}</b>&rsquo;s own pre-market print, and its TIME is
+            printed in the line above, because an ETF prints far less often than a name:
+            on 2026-09-21 at 07:27 the benchmark&rsquo;s last print was hours older than
+            NVDA&rsquo;s. Until the benchmark itself has printed, nothing relative is
+            shown at all and the board ranks on 5 days instead — the line says so rather
+            than showing a raw move under a relative header. Sector, industry and roster
+            rows become the <b>median of the members that printed</b>, with that count
+            beside it (12/40) and flagged thin under the board&rsquo;s own thin rule: at
+            7 am most names have not printed, and that is the truth, not a fault. The
+            column disappears once the day column goes live after the open, and the Today
+            column is never touched by any of it. <b>Nothing here is measured</b> — no
+            study of pre-market moves exists on this app. It is a read of the tape before
+            the bell, not a signal, and it pushes nothing.</p>
           <p><b>All eleven sectors are listed, not just the hot ones.</b> A strong name often sits in
             a cold sector: ANDE is 2nd of Consumer Defensive&rsquo;s 76 over 21 days while the sector
             is 8th of 11. Listing only the hot end would hide exactly the names this board is for.</p>
@@ -806,7 +1026,9 @@ export function HottestSectors() {
         {/* Which columns are today's and which are the snapshot's, in words
             (2026-09-16). He read a last-close number as the live tape because
             this line only ever said "as of". */}
-        <span className={data?.d1?.live ? 'hs-live' : 'hs-stale'}>{asOfLine(data)}</span>
+        <span className={data?.d1?.live || data?.pre?.live ? 'hs-live' : 'hs-stale'}>
+          {asOfLine(data)}
+        </span>
         {err && hasRows(data) ? (
           <span className="hs-stale" data-testid="hottest-rescan-failed">
             {' '}· re-scan failed ({err}) — this is the previous read, not a new one
@@ -842,8 +1064,8 @@ export function HottestSectors() {
           <thead>
             <tr>
               <th className="hs-sym">Sector / Name</th>
-              {HS_COLS.map((c) => {
-                const on = sort === c.key;
+              {cols.map((c) => {
+                const on = shownSort === c.key;
                 return (
                   <th key={c.key} className={`${c.num ? 'hs-num' : ''}${on ? ' is-sorted' : ''}`}
                       aria-sort={on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
@@ -865,7 +1087,7 @@ export function HottestSectors() {
                 Above the sectors because they are the rosters he curated; the
                 provider's eleven follow underneath, unchanged. */}
             {themes.length ? (
-              <tr className="hs-grain"><td colSpan={10}>
+              <tr className="hs-grain"><td colSpan={span}>
                 our rosters · cut across the sectors below
               </td></tr>
             ) : null}
@@ -892,7 +1114,7 @@ export function HottestSectors() {
                   </tr>
                   {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
-                    <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
+                    <tr key={`${k}|more`}><td colSpan={span} className="hs-more">
                       showing {t.names.length} of {t.names_total}
                     </td></tr>
                   ) : null}
@@ -900,7 +1122,7 @@ export function HottestSectors() {
               );
             })}
             {themes.length ? (
-              <tr className="hs-grain"><td colSpan={10}>
+              <tr className="hs-grain"><td colSpan={span}>
                 the provider&rsquo;s sectors
               </td></tr>
             ) : null}
@@ -942,7 +1164,7 @@ export function HottestSectors() {
                     <GroupFundCells r={s} />
                   </tr>
                   {s.day_tag && open[`${k}|tag`]
-                    ? <DayTagRow key={`${k}|tagrow`} tag={s.day_tag} span={10} />
+                    ? <DayTagRow key={`${k}|tagrow`} tag={s.day_tag} span={span} />
                     : null}
                   {isOpen && byIndustry ? s.industries.map((ind) => {
                     const ik = `${k}|i:${ind.group}`;
@@ -964,7 +1186,7 @@ export function HottestSectors() {
                         </tr>
                         {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (
-                          <tr key={`${ik}|more`}><td colSpan={10} className="hs-more">
+                          <tr key={`${ik}|more`}><td colSpan={span} className="hs-more">
                             showing {ind.names.length} of {ind.names_total}
                           </td></tr>
                         ) : null}
@@ -973,7 +1195,7 @@ export function HottestSectors() {
                   }) : null}
                   {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && !byIndustry && s.names_total > s.names.length ? (
-                    <tr key={`${k}|more`}><td colSpan={10} className="hs-more">
+                    <tr key={`${k}|more`}><td colSpan={span} className="hs-more">
                       showing {s.names.length} of {s.names_total}
                     </td></tr>
                   ) : null}

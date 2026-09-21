@@ -522,6 +522,10 @@ async def rotation_hottest(
     dir: str = Query(H.DEFAULT_DIR, description="desc | asc"),
     names: int = Query(H.NAMES_PER_GROUP, ge=1, le=200,
                        description="names returned per sector/industry"),
+    basis: str = Query(H.D1_CLOSE,
+                       description="close (default) | premarket — the ☀️ "
+                                   "Pre-market scan: one extra column, the day "
+                                   "column untouched"),
 ):
     """The 🔥 Hottest tab: every sector ranked, each opening into its
     industries and then its names, with the sales block on every row.
@@ -540,6 +544,21 @@ async def rotation_hottest(
     Group heat is the SHIPPED sampled median, reused verbatim so this can never
     disagree with the Hot-sectors strip. Name rows are the FULL membership.
     Both bases ride in the payload (`basis`) rather than being blended.
+
+    ☀️ `basis=premarket` (Ajay 2026-09-21: "In the hot sector table can I get a
+    pre market scan please") adds ONE extra column and one extra block, `pre`,
+    beside `d1`: each name's own pre-market print measured against RSP's OWN
+    pre-market print — RSP is an ETF and prints far less often, so its print
+    time rides in the block and is shown on the board. The `d1` block and every
+    row's day-leg keys are byte-identical whether or not this is asked for; a
+    second measurement gets a second column, never a relabelled one. Both legs
+    share ONE memoized fan-out, so the scan costs the same 7 snapshot chunks a
+    re-scan costs, and a stored read under `PRE_STORED_FRESH_SEC` old is served
+    without any fan-out at all. When the pre leg has nothing to rank on (RSP
+    has not printed, nobody has printed, the session ended, or it was never
+    requested) a `sort=pre_1d` request is DEMOTED to the default leg and
+    `sorted_by` says so, rather than ranking on a column of nothing. An
+    unknown `basis` falls back to `close` — never a 4xx on a board.
     """
     table, meta = _members_table()
     if table is None:
@@ -547,9 +566,13 @@ async def rotation_hottest(
                              "sorted_by": sort, "sorted_dir": dir, **meta}, status_code=200)
     payload = dict(_members_payload() or {})
     payload[T.MEMBERS_KEY] = table
+    b = _coerce_str(basis, H.D1_CLOSE)
+    if b not in (H.D1_CLOSE, H.D1_PREMARKET):
+        b = H.D1_CLOSE
     body = H.build_live(payload, sort=_coerce_str(sort, H.DEFAULT_SORT),
                         direction=_coerce_str(dir, H.DEFAULT_DIR),
-                        names_per_group=_coerce_int(names, H.NAMES_PER_GROUP))
+                        names_per_group=_coerce_int(names, H.NAMES_PER_GROUP),
+                        basis=b)
     body.update({k: v for k, v in meta.items() if k in ("source", "built_at_iso", "age_sec", "stale")})
     # 📰 The day's bull/bear tag per sector (Ajay 2026-09-19). A pure READ of
     # what the cron already wrote — it never builds, never calls the model and

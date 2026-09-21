@@ -3507,6 +3507,78 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🔥 Hottest carries the ☀️ Pre-market scan (2026-09-21)',
+    file: 'src/components/HottestSectors.tsx',
+    // Ajay 2026-09-21: "In the hot sector table can I get a pre market scan
+    // please". The button is enabled by the SERVED `pre.open` — the backend's
+    // clock — never this browser's: a browser clock would hand a laptop in
+    // London a board that thinks the New York pre-market is open. The served
+    // sort is what the "ranked on" line and the header mark print; the FE
+    // never composes a clock string, never coerces a number, never sorts.
+    checks: (tsx) => {
+      const errs = [];
+      // The body of `export function <name>(...) { ... }` by brace count.
+      const bodyOf = (name) => {
+        const i = tsx.indexOf(`export function ${name}(`);
+        if (i < 0) return null;
+        // The body brace is the one that opens a line — a `{ a: b }` return type sits inline.
+        const open = tsx.indexOf('{\n', tsx.indexOf(')', i));
+        let depth = 0;
+        for (let j = open; j < tsx.length; j++) {
+          if (tsx[j] === '{') depth++;
+          else if (tsx[j] === '}' && --depth === 0) return tsx.slice(open, j + 1);
+        }
+        return null;
+      };
+      if (!/data-testid="hs-premarket"/.test(tsx)) errs.push('the ☀️ button needs data-testid="hs-premarket"');
+      if (!/data-testid="hs-premarket"\s+disabled=\{loading \|\| !preState\.enabled\}/.test(tsx)) {
+        errs.push('the ☀️ button must be disabled by preState.enabled — the served pre.open, nothing else');
+      }
+      for (const fn of ['premarketState', 'showPreCol', 'visibleCols', 'preCell', 'shownSortKey']) {
+        const body = bodyOf(fn);
+        if (!body) { errs.push(`export function ${fn} is missing`); continue; }
+        if (/new Date\(|Date\.now\(/.test(body)) errs.push(`${fn} must not read the browser clock — the server says whether pre-market is open`);
+      }
+      const shown = bodyOf('shownSortKey') || '';
+      if (/\bset[A-Z]\w*\(/.test(shown)) errs.push('shownSortKey must be pure — a set* call there is a second fan-out');
+      if (!/\bp\?\.open !== true\b|\bpre\?\.open\b|\.open === true/.test(bodyOf('premarketState') || '')) {
+        errs.push('premarketState must gate on the served pre.open');
+      }
+      if (!/PRE_COL\.label/.test(bodyOf('colLabel') || '')) errs.push('colLabel must print PRE_COL.label ("Pre-mkt"), never the raw key');
+      const preCol = tsx.slice(tsx.indexOf('export const PRE_COL'), tsx.indexOf('};', tsx.indexOf('export const PRE_COL')));
+      if (!/members that printed/.test(preCol)) errs.push('the Pre-mkt column title must say the group cell is the median of the members that printed');
+      if (!/shownSort === c\.key/.test(tsx)) errs.push('the header mark must follow the SERVED sort (shownSortKey), not the requested one');
+      if (!/ranked on <b>\{colLabel\(shownSort, data\)\}/.test(tsx)) errs.push('the "ranked on" line must print the served sort — under a demotion the rows are on 5 days');
+      if (/colLabel\(sort, data\)/.test(tsx)) errs.push('no surface line may print the REQUESTED sort while the rows are ranked on the served one');
+      if (!/'&basis=premarket'/.test(tsx)) errs.push('the ☀️ read must add &basis=premarket to the one fetch');
+      if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir\}/.test(tsx)) errs.push('the fetch must still carry sort and dir — the pre-market read is the same server-sorted read');
+      if (!tsx.includes("'One click is the same provider read as reloading the page — 7 snapshot calls, '")) {
+        errs.push('RESCAN_COST_SENTENCE changed — the ☀️ tooltip quotes it; re-measure the call count before rewording');
+      }
+      if (/Number\(/.test(tsx)) errs.push('no Number( coercion on the Hottest table — the server serves numbers or null, never strings');
+      if (/colSpan=\{10\}/.test(tsx)) errs.push('colSpan must come from colSpanOf(data) — the Pre-mkt column changes the width');
+      if (/'0\d:\d\d ET'|"0\d:\d\d ET"/.test(tsx)) errs.push('the FE never composes a clock string — it prints the server\'s "7:42 ET"');
+      const lib = read('src/lib/chartMaps.ts');
+      const tab = lib.indexOf('\n  hot_sectors: {');
+      const bAt = tab < 0 ? -1 : lib.indexOf("blurb: '", tab);
+      const blurb = bAt < 0 ? '' : lib.slice(bAt, lib.indexOf('\n', bAt));
+      if (!/Pre-market/.test(blurb)) errs.push('the hot_sectors blurb must mention the Pre-market scan');
+      if (!/NOT measured/.test(blurb)) errs.push('the hot_sectors blurb must say the pre-market read is NOT measured');
+      const css = read('src/styles.css');
+      for (const c of ['hs-pre-thin', 'hs-pre-n']) {
+        if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) errs.push(`styles.css has no rule for .${c}`);
+      }
+      if (!/id: 'hottest-premarket-scan-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) errs.push('the scan needs its ✨ entry');
+      const py = read('../backend/rotation/hottest.py');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+      if (!/PRE_PRIVATE_KEYS\s*=\s*\(/.test(pyCode)) errs.push('hottest.py must strip PRE_PRIVATE_KEYS from the wire');
+      if (!/def _served\(/.test(pyCode)) errs.push('hottest.py must re-clock a stored read through _served — a 07:20 doc must not leave the button live at 10:05');
+      const api = read('../backend/rotation/api.py');
+      if (!/basis: str = Query\(/.test(api)) errs.push('GET /rotation/hottest must take basis as a Query param');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

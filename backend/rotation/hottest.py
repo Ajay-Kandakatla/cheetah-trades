@@ -74,8 +74,8 @@ NAMES_PER_GROUP = 25          # per sector/industry in the payload; the UI pages
 FUND_SORTS = ("sales_yoy", "q_eps_yoy", "net_margin", "eq_score")
 # Ordinal, not numeric — a tier string has to become a rank before it sorts.
 TIER_RANK = {"explosive": 5, "strong": 4, "steady": 3, "weak": 2, "declining": 1}
-SORT_KEYS = (LEGS + ("traction", "ret_1d", "ret_5d", "ret_21d") + FUND_SORTS
-             + ("sales_tier", "next_earnings"))
+# SORT_KEYS is assembled beside the pre-market constants (`PRE_SORT`), further
+# down, so the one column the ☀️ pre-market leg adds is never retyped here.
 SORT_DIRS = ("desc", "asc")
 DEFAULT_DIR = "desc"
 
@@ -294,6 +294,42 @@ D1_KEY = "d1"
 # the rest is true of neither set. See `_close_d1`.
 D1_GROUP_BASIS = D1_CLOSE
 
+# ── ☀️ Pre-market scan (Ajay 2026-09-21) ────────────────────────────────────
+# "In the hot sector table can I get a pre market scan please".
+#
+# It is a THIRD BASIS, served as a SIBLING block (`pre`) beside `d1`, never a
+# mutation of it: the day column's every key is byte-identical whether or not
+# the pre-market basis was requested. `_live_move` above refuses to invent a
+# same-day move out of a pre-market print, and that stays true — this leg is a
+# DIFFERENT measurement in a DIFFERENT column, with its own header, its own
+# yardstick print and its own count.
+#
+# The yardstick is RSP's OWN pre-market print, exactly as `rel_1d` is relative
+# to RSP's own session move. An ETF prints far less often than a name (probe
+# 2026-09-21 07:27 ET: RSP last printed 05:00 ET while NVDA printed 07:27 ET),
+# so RSP's print TIME rides in the block and is printed on the board. No
+# staleness cut is applied to it here — that would be a gate on what he sees.
+D1_PREMARKET = "premarket"
+PRE_KEY = "pre"                       # sibling of D1_KEY; `d1` is never touched
+PRE_SORT = "pre_1d"                   # the one column this leg adds
+PRE_COLL = "hottest_premarket"        # Mongo: one doc per ET date, _id = "YYYY-MM-DD"
+# An APP LABEL for "fresh enough to serve without a fan-out", not a measured
+# number. Ajay's call to move it (docs/rotation/hottest_premarket_2026_09_21.md).
+PRE_STORED_FRESH_SEC = 15 * 60
+# Never served. `moves` for the same reason `d1`'s is not (one float per priced
+# name, and every row already carries its own); `_id` / `stored_at` are Mongo's
+# bookkeeping and have no business on a board.
+PRE_PRIVATE_KEYS = ("moves", "_id", "stored_at")
+PRE_GROUP_BASIS = ("median of the members that printed pre-market — "
+                   "not the full membership")
+
+# Every column the table prints is rankable (Ajay 2026-09-12). `pre_1d` joins
+# by NAME so the sortable set and the column can never drift apart; a missing
+# pre-market value is `(0, 0.0)` in `_sort_value` and sorts LAST in both
+# directions for free.
+SORT_KEYS = (LEGS + (PRE_SORT, "traction", "ret_1d", "ret_5d", "ret_21d")
+             + FUND_SORTS + ("sales_tier", "next_earnings"))
+
 
 def _live_move(snap) -> Optional[float]:
     """The same-day percent move in ONE `bulk_live_prices` row, or None.
@@ -311,16 +347,22 @@ def _live_move(snap) -> Optional[float]:
     return _num(snap.get("change_pct"))
 
 
-def _closed_reason() -> Optional[str]:
+def _closed_reason(now=None) -> Optional[str]:
     """The ONE market calendar (market_hours.gate), never a second one here.
 
     On a weekend or an NYSE holiday the provider snapshot still answers — with
     the last session, which is exactly the snapshot's own session. Serving that
     as "live" would relabel the same number, so the gate is asked first.
+
+    `now` is OPTIONAL and passed straight through to `gate.closed_reason(now)`
+    (which has always accepted it). Existing callers pass nothing and behave
+    exactly as before; the pre-market block passes the SAME `now` it gives the
+    session clock and the date, so one block can never be built from two
+    different instants (the "weekend calendar, weekday session" bug).
     """
     try:
         from market_hours import gate
-        return gate.closed_reason()
+        return gate.closed_reason(now)
     except Exception as exc:                                   # noqa: BLE001
         log.debug("hottest: market calendar unavailable (%s)", exc)
         return None
@@ -348,6 +390,98 @@ def _in_session() -> Optional[bool]:
         return None
 
 
+def _hhmm(t) -> str:
+    """ONE clock renderer for every string this module serves: `"9:30 ET"`.
+
+    `%d:%02d` is the house format `_session_window` has always used ("9:30-16:00
+    ET"), so the board can never print "09:30 ET" beside "9:30-16:00 ET" and
+    read like two different clocks. Accepts a `time` OR a `datetime`.
+    """
+    return "%d:%02d ET" % (t.hour, t.minute)
+
+
+def _et_zone():
+    """The ONE Eastern zone (`supply_demand.zone_edge.ET`, a real ZoneInfo).
+
+    `market_hours.reminder` / `gate` carry fixed −5 h / −4 h offsets for their
+    own cron purposes; a date or a wall-clock stamp printed on a board has to
+    come off the real zone or it slips an hour across a DST boundary.
+    """
+    try:
+        from supply_demand.zone_edge import ET
+        return ET
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: zone_edge ET unavailable (%s)", exc)
+        from zoneinfo import ZoneInfo
+        return ZoneInfo("America/New_York")
+
+
+def _et_stamp(dt) -> tuple:
+    """`(ISO with the ET offset, "7:42 ET")` for one instant."""
+    et = dt.astimezone(_et_zone())
+    return et.isoformat(), _hhmm(et)
+
+
+def _now_et(now=None):
+    """The injected instant in ET, or the real clock. One entry point so a
+    block can be built entirely from a test's own `now`."""
+    if now is None:
+        return datetime.now(_et_zone())
+    if now.tzinfo is None:
+        # A naive injected clock is an ET wall clock by contract: stamping the
+        # zone on it keeps `_stored_age_sec` (aware `as_of` minus this) and
+        # `_et_stamp` (which would otherwise read a naive instant as the host's
+        # local time) from ever raising or slipping.
+        return now.replace(tzinfo=_et_zone())
+    return now.astimezone(_et_zone())
+
+
+def _today_et(now=None) -> str:
+    """Today's ET date, `"YYYY-MM-DD"` — the key the stored read is filed under
+    and the date a pre-market print has to carry to count as today's."""
+    return _now_et(now).date().isoformat()
+
+
+def _session_state(now=None) -> Optional[str]:
+    """'premarket' | 'rth' | 'afterhours' | 'closed' from the ONE extended-hours
+    clock (`supply_demand.zone_edge.session_state`), never a second one here.
+
+    None when it cannot be asked — the pre-market block then says so rather
+    than guessing at a session it could not check.
+    """
+    try:
+        from supply_demand import zone_edge as ZE
+        return str(ZE.session_state(now))
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: session state unavailable (%s)", exc)
+        return None
+
+
+def _pre_window() -> Optional[str]:
+    """`"4:00-9:30 ET"`, rendered FROM the two constants that enforce it —
+    `zone_edge.SESSION_OPEN` (04:00, the extended-hours pass window Ajay asked
+    for on 2026-09-08) and `bounce_room.SESSION_OPEN` (09:30, the RTH engine).
+    No third clock is typed here."""
+    try:
+        from supply_demand.bounce_room import SESSION_OPEN as RTH_OPEN
+        from supply_demand.zone_edge import SESSION_OPEN as PRE_OPEN
+        return "%d:%02d-%d:%02d ET" % (PRE_OPEN.hour, PRE_OPEN.minute,
+                                       RTH_OPEN.hour, RTH_OPEN.minute)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: pre-market window unavailable (%s)", exc)
+        return None
+
+
+def _rth_open_hhmm() -> Optional[str]:
+    """`"9:30 ET"` — where the pre-market session ends, from the RTH engine."""
+    try:
+        from supply_demand.bounce_room import SESSION_OPEN
+        return _hhmm(SESSION_OPEN)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: RTH open unavailable (%s)", exc)
+        return None
+
+
 def _session_window() -> Optional[str]:
     """`"9:30-16:00 ET"`, rendered FROM the constants that enforce it, so no
     clock is retyped on a second surface."""
@@ -363,6 +497,29 @@ def _session_window() -> Optional[str]:
 def _bulk_live(syms: list) -> dict:
     from sepa import prices
     return prices.bulk_live_prices(syms) or {}
+
+
+def _memo_fetch(fetch=None):
+    """One-entry memo around the snapshot fetcher.
+
+    The day leg and the pre-market leg ask the provider the SAME question —
+    `sorted(set(syms) | {bench})` — so the second of the two must be free or a
+    ☀️ scan costs 14 chunk calls where a ↻ re-scan costs 7, and the button's
+    own title ("the same provider read as reloading the page") stops being
+    true. One entry, not a dict of them: both legs use the identical list, and
+    a growing cache inside a request is a leak waiting to happen.
+    """
+    inner = fetch or _bulk_live
+    state = {"key": None, "val": None}
+
+    def _f(syms):
+        key = tuple(syms or [])
+        if state["key"] == key:
+            return state["val"]
+        out = inner(syms)
+        state["key"], state["val"] = key, out
+        return out
+    return _f
 
 
 def live_day_moves(symbols, bench_symbol, *, fetch=None) -> dict:
@@ -463,6 +620,298 @@ def _d1_block(live: Optional[dict], live_ok: bool, as_of, bench_symbol) -> dict:
     }
 
 
+# ── ☀️ The pre-market leg ───────────────────────────────────────────────────
+def _pre_print(snap, today: str) -> Optional[dict]:
+    """One snapshot row → its PRE-MARKET print against the previous close, or
+    None. Never a zero for a missing print.
+
+    Three ways a print does not count, all of them real:
+
+      * it is not from the pre-market session — a 09:31 print is the open, not
+        the pre-market;
+      * it is not from TODAY — on Monday morning the snapshot still carries
+        Friday's 17:30 after-hours print, and calling that "this morning's
+        pre-market" would be a two-day-old number under a live header;
+      * there is no usable previous close to measure it against.
+
+    `prices.extended_print` is the ONE extractor (it already handles Massive's
+    ns and ms stamps); `prev_day_close` rides in the same `bulk_live_prices`
+    row, so nothing here costs a second call.
+    """
+    try:
+        from sepa import prices
+        p = prices.extended_print(snap)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("hottest: pre-market print unreadable (%s)", exc)
+        return None
+    if not p or p.get("session") != D1_PREMARKET or p.get("date") != today:
+        return None
+    prev = _num((snap or {}).get("prev_day_close"))
+    px = _num(p.get("price"))
+    if prev is None or prev <= 0 or px is None or px <= 0:
+        return None
+    try:
+        at, at_et = _et_stamp(datetime.fromtimestamp(p["epoch"], tz=_et_zone()))
+    except (OverflowError, OSError, ValueError, TypeError, KeyError):
+        return None
+    return {"raw": round(100.0 * (px / prev - 1.0), 2), "print": px,
+            "at": at, "at_et": at_et}
+
+
+def _idle_pre(now=None) -> dict:
+    """The `pre` block every payload carries even when no scan ran.
+
+    Cheap by construction — three clock reads, no fetch — so the FE can gate
+    the ☀️ button on SERVED state instead of a browser clock, on every request,
+    including the ones that never asked for a pre-market scan.
+
+    ALL THREE reads take the SAME `now`. `_closed_reason` used to take none at
+    all, which meant an injected instant could produce a block whose calendar
+    came from the real clock and whose session came from the test's — a block
+    describing no moment that ever existed.
+    """
+    # Called with NO argument when there is no injected instant, so every
+    # existing seam that replaces `_closed_reason` with a zero-argument stub
+    # keeps working — with `now=None` all three reads hit the real clock
+    # anyway, which is the same-instant guarantee this block is about.
+    closed = _closed_reason(now) if now is not None else _closed_reason()
+    session = _session_state(now)
+    window = _pre_window()
+    is_open = bool(session == D1_PREMARKET and not closed)
+    if closed:
+        reason = f"the market is closed ({closed})"
+    elif session != D1_PREMARKET:
+        reason = ("the pre-market session is not open"
+                  + (f" ({window})" if window else ""))
+    else:
+        reason = "not requested — click ☀️ Pre-market scan"
+    return {
+        "basis": D1_PREMARKET, "live": False, "ran": False, "stored": False,
+        "ended": False, "show": False, "open": is_open, "session": session,
+        "pre_window": window, "market_closed": closed, "date": _today_et(now),
+        "benchmark": None, "benchmark_pre_move": None,
+        "benchmark_pre_print": None, "benchmark_pre_at": None,
+        "benchmark_pre_at_et": None,
+        "symbols": 0, "pre_names": 0, "moves": {},
+        "as_of": None, "as_of_et": None, "group_basis": PRE_GROUP_BASIS,
+        "reason": reason, "note": None,
+    }
+
+
+def _pre_note(block: dict, day=None) -> Optional[str]:
+    """The sentence the board prints under a live pre-market read.
+
+    It says the yardstick's OWN print time out loud. The snapshot is one read;
+    the PRINTS inside it are not simultaneous — RSP printed 05:00 ET while NVDA
+    printed 07:27 ET on the morning this shipped — so "both from the same read"
+    would be a claim about the prints that is simply false.
+    """
+    block = block or {}
+    if not block.get("live"):
+        return None
+    bmove = _num(block.get("benchmark_pre_move"))
+    if bmove is None:
+        return None
+    return (
+        f"Pre-market is each name's own pre-market print against "
+        f"{block.get('benchmark')}'s {block.get('benchmark_pre_at_et')} print "
+        f"({bmove:+.2f}%), all from one {block.get('as_of_et')} snapshot; "
+        f"{block.get('pre_names')} of {block.get('symbols')} names had printed. "
+        f"Group rows are the median of the members that printed, with the count "
+        f"— not the full membership. Everything else on the board is from the "
+        f"{day or 'last'} close. Not measured, not a signal.")
+
+
+def premarket_moves(symbols, bench_symbol, *, fetch=None, now=None) -> dict:
+    """ONE `prices.bulk_live_prices` fan-out → the `pre` block. Never raises.
+
+    The benchmark rides in the SAME call as the names, for the same reason the
+    day leg does it: the column is relative. Without RSP's own pre-market print
+    NOTHING relative is served — a raw pre-market move dropped into a relative
+    column is a different measurement wearing the same header — and the block
+    says exactly why.
+    """
+    block = _idle_pre(now)
+    if block["market_closed"] or not block["open"]:
+        return block                                   # zero provider calls
+    bench = str(bench_symbol or "").upper()
+    syms = sorted({str(s).upper() for s in (symbols or []) if s})
+    if not syms or not bench:
+        block["reason"] = "no symbols to price"
+        return block
+    # `ran` is True on EVERY path that reaches the fetcher, failures included:
+    # the board prints `reason` when a scan ran and produced nothing, so he
+    # sees WHY the click changed nothing instead of a silently identical table.
+    block["ran"] = True
+    try:
+        snaps = (fetch or _bulk_live)(sorted(set(syms) | {bench})) or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: pre-market read unavailable: %s", exc)
+        block["reason"] = f"the pre-market read failed ({type(exc).__name__})"
+        return block
+    if not isinstance(snaps, dict):
+        block["reason"] = "the pre-market read answered with nothing usable"
+        return block
+    today = block["date"]
+    bp = _pre_print(snaps.get(bench), today)
+    if bp is None:
+        block["reason"] = (f"no pre-market print for {bench} yet, so nothing "
+                           f"can be measured against it")
+        return block
+    moves: dict = {}
+    for s in syms:
+        pp = _pre_print(snaps.get(s), today)
+        if pp is None:
+            continue
+        moves[s] = {"pre_raw": pp["raw"],
+                    "pre_1d": round(pp["raw"] - bp["raw"], 2),
+                    "pre_print": pp["print"], "pre_at": pp["at"],
+                    "pre_at_et": pp["at_et"]}
+    if not moves:
+        block["reason"] = "no name on this board has printed pre-market yet"
+        return block
+    as_of, as_of_et = _et_stamp(_now_et(now))
+    block.update(live=True, show=True, benchmark=bench,
+                 benchmark_pre_move=bp["raw"], benchmark_pre_print=bp["print"],
+                 benchmark_pre_at=bp["at"], benchmark_pre_at_et=bp["at_et"],
+                 symbols=len(syms), pre_names=len(moves), moves=moves,
+                 as_of=as_of, as_of_et=as_of_et, reason=None)
+    block["note"] = _pre_note(block)
+    return block
+
+
+# ── the stored read ─────────────────────────────────────────────────────────
+# Its own collection and its own freshness rule. `scan_context` carries a 20 h
+# rule (`PERSIST_FRESH_SEC`) that is right for a rotation build and absurd for a
+# pre-market tape read, and widening one to fit the other is how two surfaces
+# start disagreeing about what "fresh" means.
+def _pre_coll():
+    try:
+        import os
+
+        from pymongo import MongoClient
+        c = MongoClient(os.environ.get("MONGO_URL", "mongodb://mongo:27017"),
+                        serverSelectionTimeoutMS=2000)
+        return c.get_database(os.environ.get("MONGO_DB", "cheetah"))[PRE_COLL]
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: no mongo for the pre-market read: %s", exc)
+        return None
+
+
+def store_premarket(block: dict, coll=None) -> Optional[str]:
+    """Upsert today's pre-market read, keyed on the ET date. Returns the `_id`.
+
+    A block that is not `live` is REFUSED — never written. A stored "no print
+    yet" would be served back for the next 15 minutes as though it were an
+    answer, and the whole point of the stored read is to skip a fan-out only
+    when there is something to skip it for.
+    """
+    block = block or {}
+    if not block.get("live") or not block.get("date"):
+        return None
+    coll = coll if coll is not None else _pre_coll()
+    if coll is None:
+        return None
+    doc = dict(block)
+    doc["_id"] = str(block["date"])
+    doc["stored_at"] = time.time()
+    try:
+        coll.update_one({"_id": doc["_id"]}, {"$set": doc}, upsert=True)
+        return doc["_id"]
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: pre-market store failed: %s", exc)
+        return None
+
+
+def load_premarket(today: str, coll=None) -> Optional[dict]:
+    """Today's stored pre-market read, or None."""
+    coll = coll if coll is not None else _pre_coll()
+    if coll is None:
+        return None
+    try:
+        return coll.find_one({"_id": str(today)})
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: pre-market load failed: %s", exc)
+        return None
+
+
+def _stored_age_sec(doc: dict, now=None) -> Optional[float]:
+    """How old the stored read is, in seconds; None when it cannot be told
+    (and an untellable age is treated as too old by every caller)."""
+    try:
+        stamped = datetime.fromisoformat(str((doc or {}).get("as_of") or ""))
+    except (TypeError, ValueError):
+        return None
+    if stamped.tzinfo is None:
+        return None
+    return (_now_et(now) - stamped).total_seconds()
+
+
+def _served(doc: dict, base: dict, **over) -> dict:
+    """A stored doc, re-clocked.
+
+    The CURRENT clock's `open` / `session` / `market_closed` ALWAYS win over
+    the stored ones. A doc written at 07:20 was stored with `open: True` and
+    `session: "premarket"`; served unchanged at 10:05 it would re-enable the
+    ☀️ button in the middle of the regular session. The private keys are
+    stripped later, in the ONE place the block is serialised (`_build`).
+    """
+    return {**(doc or {}), "open": base.get("open"),
+            "session": base.get("session"),
+            "market_closed": base.get("market_closed"),
+            "pre_window": base.get("pre_window"),
+            "stored": True, **over}
+
+
+def premarket_block(symbols, bench_symbol, *, fetch=None, now=None, coll=None,
+                    fresh_sec: float = PRE_STORED_FRESH_SEC) -> dict:
+    """The orchestration the endpoint calls: stored read, fresh scan, or the
+    honest idle/ended block. Never raises, never 4xx, always serves a block."""
+    base = _idle_pre(now)
+    if base["market_closed"]:
+        return base
+    session = base["session"]
+    if session == D1_PREMARKET:
+        doc = load_premarket(base["date"], coll)
+        if doc and doc.get("live"):
+            age = _stored_age_sec(doc, now)
+            if age is not None and 0 <= age <= fresh_sec:
+                return _served(doc, base, show=True, reason=None)
+        block = premarket_moves(symbols, bench_symbol, fetch=fetch, now=now)
+        if block.get("live"):
+            store_premarket(block, coll)
+        return block
+    if session == "rth":
+        ended_at = _rth_open_hhmm()
+        tail = f" at {ended_at}" if ended_at else ""
+        doc = load_premarket(base["date"], coll)
+        if doc and doc.get("live"):
+            return _served(doc, base, live=False, ended=True, show=True,
+                           reason=(f"the pre-market session ended{tail} — "
+                                   f"last read {doc.get('as_of_et')}"))
+        return {**base, "ended": True, "show": False,
+                "reason": (f"the pre-market session ended{tail} and no read "
+                           f"was stored today")}
+    return base
+
+
+def _pre_pure_block() -> dict:
+    """The `pre` block of a PURE build — no clock is read on this path, so
+    `open` and `session` are unknown rather than guessed (mirrors `_d1_block`'s
+    "this build made no live price read")."""
+    return {
+        "basis": D1_PREMARKET, "live": False, "ran": False, "stored": False,
+        "ended": False, "show": False, "open": None, "session": None,
+        "pre_window": _pre_window(), "market_closed": None, "date": None,
+        "benchmark": None, "benchmark_pre_move": None,
+        "benchmark_pre_print": None, "benchmark_pre_at": None,
+        "benchmark_pre_at_et": None,
+        "symbols": 0, "pre_names": 0, "moves": {},
+        "as_of": None, "as_of_et": None, "group_basis": PRE_GROUP_BASIS,
+        "reason": "this build made no pre-market read", "note": None,
+    }
+
+
 def _close_d1(legs: dict) -> dict:
     """Mark a GROUP row's day leg for what it is: the snapshot's close.
 
@@ -491,7 +940,8 @@ def build(payload: dict, *, sort: str = DEFAULT_SORT,
 
 def build_live(payload: dict, *, sort: str = DEFAULT_SORT,
           direction: str = DEFAULT_DIR,
-               names_per_group: int = NAMES_PER_GROUP) -> dict:
+               names_per_group: int = NAMES_PER_GROUP,
+               basis: str = D1_CLOSE) -> dict:
     """`build` plus the three bulk reads, done ONCE for the whole board rather
     than per row.
 
@@ -499,22 +949,40 @@ def build_live(payload: dict, *, sort: str = DEFAULT_SORT,
     prints: the day column is sortable, so the ranking that decides which 25
     survive has to be made on the same numbers the table then shows. One call
     (chunked inside `bulk_snapshot`), never one per row.
+
+    `basis="premarket"` (the ☀️ Pre-market scan) adds the `pre` leg. Both legs
+    then go through ONE memoized fetcher and ask for the identical symbol list,
+    so the scan costs the SAME 7 chunk calls a re-scan costs — never 14. The
+    pre leg runs FIRST: if it fans out, the day leg's identical call is free,
+    and if it serves a stored read the day leg simply spends its own 7 as it
+    always has.
     """
     table = (payload or {}).get(T.MEMBERS_KEY) or {}
     syms = list((table.get("by_symbol") or {}).keys())
     bench = (table.get("benchmark") or {}).get("symbol") or T.BENCHMARK
+    if basis == D1_PREMARKET:
+        fetch = _memo_fetch()
+        pre = premarket_block(syms, bench, fetch=fetch)
+        live = live_day_moves(syms, bench, fetch=fetch)
+    else:
+        live = live_day_moves(syms, bench)
+        pre = _idle_pre()
     return _build(payload, sort=sort, direction=direction,
                   names_per_group=names_per_group,
                   decisions=_decision_map(syms), earnings=_earnings_map(syms),
-                  live=live_day_moves(syms, bench))
+                  live=live, pre=pre)
 
 
 def _build(payload: dict, *, sort: str, names_per_group: int,
            decisions: dict, earnings: dict,
-           direction: str = DEFAULT_DIR, live: Optional[dict] = None) -> dict:
+           direction: str = DEFAULT_DIR, live: Optional[dict] = None,
+           pre: Optional[dict] = None) -> dict:
     sort_key = sort if sort in SORT_KEYS else DEFAULT_SORT
     sort_dir = direction if direction in SORT_DIRS else DEFAULT_DIR
-    _by = _sorter(sort_key, sort_dir)
+    # `_by` is deliberately NOT built here: `sort=pre_1d` may still be demoted
+    # once the pre-market leg's state is known, a few lines below. Building the
+    # sorter before that would rank the board on a column of nothing while
+    # `sorted_by` still claimed the column.
     payload = payload or {}
     table = payload.get(T.MEMBERS_KEY) or {}
     by_symbol = table.get("by_symbol") or {}
@@ -548,6 +1016,34 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
     live_moves = (live.get("moves") or {}) if live_ok and live_bench is not None else {}
     live_ok = live_ok and live_bench is not None and bool(live_moves)
 
+    # ── ☀️ the pre-market leg, on the same all-or-nothing rule ─────────────
+    pre = pre if pre is not None else _pre_pure_block()
+    pre_moves = pre.get("moves") or {}
+    pre_ok = (bool(pre.get("live"))
+              and _num(pre.get("benchmark_pre_move")) is not None
+              and bool(pre_moves))
+    # An `ended` block is `live: False`, so after 9:30 no pre-market number is
+    # overlaid on a row — the day column is the truth then, and the block's own
+    # line says when the last read was.
+    if sort_key == PRE_SORT and not pre_ok:
+        # The column he asked to rank on has nothing in it. Rank on the board's
+        # default and SAY SO (`sorted_by`), rather than ranking on a total tie
+        # under a header that claims otherwise.
+        sort_key = DEFAULT_SORT
+    _by = _sorter(sort_key, sort_dir)
+
+    def _pre_group(rows: list) -> dict:
+        """A group row's pre-market leg: the median over the members that
+        PRINTED, with the count, never a median over the full membership with
+        the silent ones treated as zeros. `pre_thin` reuses the board's own
+        `THIN_N`; the existing `thin` (membership) is never touched."""
+        vals = [v for v in (_num(r.get(PRE_SORT)) for r in rows or [])
+                if v is not None]
+        return {PRE_SORT: _median(vals) if pre_ok else None,
+                "pre_n": len(vals) if pre_ok else 0,
+                "pre_thin": (len(vals) < THIN_N) if pre_ok else None,
+                "pre_basis": PRE_GROUP_BASIS}
+
     def _names(symbols: list, group_median) -> list:
         rows = []
         for s in symbols or []:
@@ -576,6 +1072,12 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
                 r["ret_1d"] = round(mv, 2)
                 r["rel_1d"] = round(mv - live_bench, 2)
                 r["d1_source"] = D1_LIVE
+            # ☀️ the pre-market leg, in its OWN keys. The day column above is
+            # byte-identical whether or not this ran — a second measurement
+            # gets a second column, never a relabelled one.
+            pm = pre_moves.get(s) if pre_ok else None
+            for k in (PRE_SORT, "pre_raw", "pre_print", "pre_at", "pre_at_et"):
+                r[k] = (pm or {}).get(k)
             rows.append(r)
         # Sorted AFTER the overlay: `rel_1d` is a sortable column, and ranking
         # on yesterday before truncating to 25 would hide today's movers behind
@@ -628,6 +1130,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
                 "names": irows[:names_per_group],
                 "names_total": len(irows),
                 **legs,
+                **_pre_group(irows),
                 **_fund_medians(irows),
             })
         inds.sort(key=_by, reverse=True)
@@ -643,6 +1146,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             "names": names[:names_per_group],
             "names_total": len(names),
             **_close_d1(_group_legs(shipped)),
+            **_pre_group(names),
             **_fund_medians(names),
         })
     out_sectors.sort(key=_by, reverse=True)
@@ -681,6 +1185,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             "names": trows[:names_per_group],
             "names_total": len(trows),
             **legs,
+            **_pre_group(trows),
             **_fund_medians(trows),
         })
     out_themes.sort(key=_by, reverse=True)
@@ -708,6 +1213,19 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         # per priced name and every row already carries its own.
         D1_KEY: _d1_block(live, live_ok, payload.get("as_of"),
                           (bench or {}).get("symbol") or "RSP"),
+        # ☀️ What the Pre-mkt column is showing, and — just as often — why it
+        # is showing nothing. `live` is the EFFECTIVE state after this build
+        # re-checked the read, the same all-or-nothing rule the day leg gets.
+        # `show` drops the column the moment the day column goes live, so the
+        # board never carries two "now" columns after 9:30.
+        PRE_KEY: {
+            **{k: v for k, v in pre.items() if k not in PRE_PRIVATE_KEYS},
+            "live": pre_ok,
+            "show": bool(pre.get("show")) and not (bool(pre.get("ended")) and live_ok),
+            "pre_names": len(pre_moves) if pre_ok else 0,
+            "group_basis": PRE_GROUP_BASIS,
+            "note": _pre_note({**pre, "live": pre_ok}, payload.get("as_of")),
+        },
         "note": (
             "Sector heat is the rotation grid's sampled median (the same number the "
             "Hot-sectors strip prints). Name rows are the FULL membership, which is why "
@@ -721,3 +1239,58 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         ),
         "built_at": int(time.time()),
     }
+
+
+def premarket_persisted(coll=None) -> dict:
+    """Run the ☀️ scan against the LAST PERSISTED rotation build and store it.
+
+    It deliberately does NOT rebuild, for the same reason `rotation.history`
+    does not: `tracker.build` is a multi-minute full refetch whose cache is
+    in-process, so a cron-container rebuild burns the provider quota to warm a
+    cache the API server never sees. Reads the same `scan_context` rotation
+    doc the endpoint reads, prices the same symbols, stores the block.
+    """
+    try:
+        from sepa import context_refresh as MC
+        payload = (MC.load_doc(MC.ROTATION_ID) or {}).get("payload") or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: no persisted rotation doc: %s", exc)
+        payload = {}
+    table = payload.get(T.MEMBERS_KEY) or {}
+    syms = list((table.get("by_symbol") or {}).keys())
+    bench = (table.get("benchmark") or {}).get("symbol") or T.BENCHMARK
+    if not syms:
+        return {"live": False, "ran": False, "stored": False,
+                "reason": "the persisted rotation doc has no member table"}
+    block = premarket_moves(syms, bench)
+    stored = store_premarket(block, coll) if block.get("live") else None
+    block = dict(block)
+    block["stored"] = bool(stored)
+    return block
+
+
+if __name__ == "__main__":                                     # pragma: no cover
+    import sys
+
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "premarket"
+    if cmd == "premarket":
+        b = premarket_persisted()
+        if b.get("stored"):
+            print(f"hottest premarket: {b.get('as_of_et')} stored "
+                  f"{b.get('pre_names')}/{b.get('symbols')} printed, "
+                  f"{b.get('benchmark')} {b.get('benchmark_pre_move'):+.2f}% "
+                  f"({b.get('benchmark_pre_at_et')} print)")
+        else:
+            print(f"hottest premarket: not stored — {b.get('reason')}")
+    elif cmd == "show":
+        d = load_premarket(_today_et()) or {}
+        if not d:
+            print(f"hottest premarket: no stored read for {_today_et()}")
+        else:
+            print(f"{d.get('date')} as_of {d.get('as_of_et')} "
+                  f"{d.get('pre_names')}/{d.get('symbols')} printed "
+                  f"{d.get('benchmark')} {d.get('benchmark_pre_move')} "
+                  f"({d.get('benchmark_pre_at_et')} print)")
+    else:
+        print(__doc__)
+        raise SystemExit(2)

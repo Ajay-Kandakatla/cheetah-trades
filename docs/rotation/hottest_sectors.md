@@ -456,3 +456,13 @@ S&D rule, gate, threshold or default was touched.
   disabled-on-closed, enabled-and-warned outside the session.
 * `backend/tests/test_hot_sectors_live_today_2026_09_16.py` and
   `frontend/src/components/HottestSectors.live.test.tsx` pass **unchanged**.
+
+---
+
+## 2026-09-21 — ☀️ Pre-market scan
+
+Ajay 2026-09-21: *"In the hot sector table can I get a pre market scan please"* —
+a third basis (`basis=premarket`) adds a `Pre-mkt` column from each name's own
+pre-market print against RSP's own, one snapshot for the whole board, with the
+day column byte-identical and nothing measured. Full write-up:
+[`hottest_premarket_2026_09_21.md`](hottest_premarket_2026_09_21.md).
