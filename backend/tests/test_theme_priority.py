@@ -144,6 +144,15 @@ def test_priority_is_the_order_ajay_asked_for():
                      # rank; relative order is unchanged.
                      "cloud_infra",
                      "defense", "rare_earth",
+                     # 2026-09-21 — critical_minerals, inserted directly BEHIND
+                     # rare_earth because it is the same story one layer wider:
+                     # the reactors, batteries and grid all bottleneck on these
+                     # inputs. Ajay asked "Do we have critical minerals in our
+                     # list?" and for the Greenland names; he did NOT ask for
+                     # this rank — the placement is mine, same as semi_materials,
+                     # datacenter_build and cloud_infra. Everything below shifted
+                     # one rank; relative order is unchanged.
+                     "critical_minerals",
                      # 2026-09-14 — an AI-ecosystem story (agent and model
                      # security is the new attack surface) but an indirect one,
                      # so it sits behind the hardware and ahead of crypto.

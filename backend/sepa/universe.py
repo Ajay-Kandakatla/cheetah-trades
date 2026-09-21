@@ -333,7 +333,24 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     "nuclear":   ["OKLO", "SMR", "NNE", "LEU", "BWXT", "TLN", "VST", "CEG",
                   # MIR 2026-08-28: radiation detection — picks-and-shovels on
                   # every SMR/restart, net income +145%
-                  "MIR"],
+                  "MIR",
+                  # 2026-09-21, Ajay: "can you add x energy and then other
+                  # small energy companies in to our list please". XE is
+                  # X-Energy Inc — the SMR/TRISO-fuel name that listed
+                  # 2026-04-24, so it carries only ~103 daily bars and every
+                  # window longer than that reads as unknown, not as flat.
+                  # The rest is the FUEL CYCLE behind the reactors he already
+                  # tracks: CCJ is the largest Western producer and was in
+                  # supply_demand/sectors.py's uranium roster but never in this
+                  # one, so it could not be tagged. Each name validated
+                  # 2026-09-21 in the api container: resolves, a bar on
+                  # 2026-09-19 or later, and a 50-day median dollar volume
+                  # printed in docs/sepa/energy_universe_2026_09_21.md.
+                  "XE", "CCJ", "UEC", "DNN", "NXE", "URG", "EU",
+                  # Sub-$500M nuclear-fuel technology, thinner than the rest
+                  # ($5.0M and $13.7M/day) but above the boards' own tradeable
+                  # floor: LTBR (metallic fuel), ASPI (isotope enrichment).
+                  "LTBR", "ASPI"],
     # Traditional energy. Added 2026-08-16 because the rotation measurement put
     # it first on base formation (45.5% VCP rate, 2.0x the market) and refiners
     # at +39.6% median since June. Excluded as DEAD tickers whose last bar
@@ -345,7 +362,21 @@ THEME_UNIVERSE: dict[str, list[str]] = {
                   "BKR", "PR",
                   # MTRX 2026-08-28 (more-like-LPTH sweep): LNG/ammonia tank
                   # EPC, backlog ~2x the cap, inflecting losses -> profit
-                  "MTRX"],
+                  "MTRX",
+                  # 2026-09-21, Ajay: "other small energy companies". Every
+                  # name above this line is a mega-cap major, refiner or
+                  # midstream — the roster had no small end at all, so a
+                  # small-cap energy move could never tag as energy. These are
+                  # E&P / offshore names from $362M to $8.4B, each validated
+                  # 2026-09-21 the same way as the nuclear additions.
+                  # EXCLUDED and why (the MRO/HES/CTRA rule above): VTLE (last
+                  # bar 2025-12-12), CIVI (2026-01-29) and BRY (2025-12-17) are
+                  # dead in the price cache and would read as a flat 0%;
+                  # AMPY ($2.6M/day), KGEI ($0.7M/day) and NPWR ($1.1M/day) are
+                  # below the tradeable floor; SRUUF is a physical trust, not an
+                  # operating company.
+                  "SM", "MGY", "CRGY", "GPOR", "NOG", "TALO", "REPX",
+                  "VTS", "EGY", "WTI", "REI"],
     # The people who BUILD the data centre, as opposed to the people who make
     # what goes inside it (Ajay 2026-09-09: "robotics, energy and optic fiber,
     # constructipn like for data centers add these").
@@ -546,6 +577,40 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # of history: APLS (last bar 2026-05-13), CRNX (08-31), FOLD (04-24),
     # SAVA (03-10), DVAX (02-09), BPMC (2025-07-17), SWTX (2025-06-30),
     # ITCI (2025-04-01), BGNE (2024-12-31).
+    # 2026-09-21, Ajay: "Do we have critical minerals in our list?" and "Also
+    # greenland minerals or greenland related mineral companies". The answer
+    # before this line existed was: barely. `rare_earth` carried four names and
+    # nothing covered lithium, copper, titanium or antimony, so a critical-
+    # minerals move could not tag at all. supply_demand/sectors.py has lithium
+    # / copper / rare_earths NARRATIVES, but their sp_tickers (TSLA, F, GM,
+    # ALB, FCX) are a dependency read, not a roster — none of them was tagged.
+    #
+    # rare_earth is left exactly as it is: MP / USAR / UUUU / METC really are
+    # rare earths. This roster is the wider complex around it.
+    #
+    # GREENLAND, measured rather than assumed: CRML (Critical Metals Corp,
+    # $1.3B, $38M/day) is the Tanbreez rare-earth project and is the ONLY
+    # liquid US-listed Greenland name. Amaroq (AMRQ/AMQ), Bluejay (BLUJ),
+    # Eclipse (EGDFF) and TANB return no US bars at all — they list in London
+    # or Toronto and this app cannot price them. GLND is named "Greenland
+    # Energy Co" but is a $52M shell at $1.0M/day, under the tradeable floor,
+    # and is deliberately NOT here. UUUU stays in rare_earth; it is the third
+    # name in the Greenland headline cohort on the POTUS tab, and a ticker
+    # lives in exactly one roster.
+    #
+    # Every name validated 2026-09-21 in the api container: resolves, not
+    # delisted, a bar on 2026-09-19 or later, 50-day median dollar volume
+    # recorded in docs/sepa/energy_universe_2026_09_21.md. EXCLUDED and why —
+    # dead price history: TMRC (last bar 2026-08-10), PLL (2025-08-29), LITM
+    # (2026-03-13), ARMN (2026-02-18); under the floor: KRO ($2.7M/day), USAU
+    # ($2.9M), WWR ($0.4M), GPHOF ($0.1M), GLND ($1.0M).
+    #
+    # NAK is a permitting story with no production (Pebble). It is here because
+    # this roster is a MEASUREMENT COHORT and the tag is a category, not an
+    # endorsement — the same rule the FRMI line in ai_power states.
+    "critical_minerals": ["CRML", "ALB", "SQM", "LAC", "SGML", "ABAT",
+                          "FCX", "SCCO", "TECK", "HBM", "ERO", "IE", "NAK",
+                          "PPTA", "UAMY", "TROX", "IPX", "NB", "IDR"],
     "biotech":   ["AMGN", "GILD", "VRTX", "REGN", "BIIB", "MRNA", "BNTX",
                   "ALNY", "NBIX", "SRPT", "BMRN", "INCY", "EXEL", "HALO",
                   "AXSM", "PTGX", "LQDA", "VERA", "DYN", "RYTM", "KRYS",
@@ -586,19 +651,26 @@ THEME_PRIORITY: dict[str, int] = {
     "cloud_infra": 11,
     "defense":   12,
     "rare_earth": 13,
+    # 2026-09-21 — directly behind rare_earth because it is the SAME story one
+    # layer wider: the reactors, batteries and grid above all bottleneck on
+    # these inputs. THE RANK IS MINE, NOT HIS — he asked for the names, not for
+    # the placement, exactly as with semi_materials, datacenter_build and
+    # cloud_infra. Everything below shifts one rank; relative order is
+    # unchanged.
+    "critical_minerals": 14,
     # 2026-09-14 — ahead of crypto, behind the AI build-out. It is an
     # AI-ecosystem story (agent and model security is the new attack surface)
     # but an indirect one, so it does not outrank the hardware.
-    "infosec":   14,
+    "infosec":   15,
     # Last on purpose: it is the only roster here with no AI-ecosystem thesis,
     # and his standing rule puts AI-ecosystem winners on top of every list.
-    "crypto":    15,
+    "crypto":    16,
     # 2026-09-14 — ranked BELOW every AI theme and below crypto, deliberately.
     # It is the one theme here that is not an AI story at all, and his standing
     # rule is that AI-ecosystem winners lead any list. This tag decides which
     # label a name carries when it sits in two themes; it does not decide where
     # a theme ranks on a board — the rotation grain ranks on measured return.
-    "biotech":   16,
+    "biotech":   17,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of
@@ -820,7 +892,7 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     # so there is no lower bound — only an upper one to catch a bad parse.
     "microcap": (0, 2500),        # measured 1278
     "etf": (150, 600),            # measured 373
-    "themes": (20, 300),          # measured 253 (2026-09-18), hand-curated
+    "themes": (20, 300),          # measured 292 (2026-09-21), hand-curated
     # ZERO IS LEGITIMATE here and nowhere else in this table: on day one nothing
     # has been curated in from the tracked traders, and the default band starts
     # at 1 — which would fail an empty list and log it as a broken parse. The

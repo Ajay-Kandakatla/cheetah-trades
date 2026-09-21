@@ -61,7 +61,10 @@ def test_the_rosters_stay_disjoint():
             assert t not in seen, "%s in both %s and %s" % (t, seen[t], theme)
             seen[t] = theme
     U._assert_themes_disjoint()
-    assert len(U.THEME_UNIVERSE) == 17, "16 themes before this change, 17 after"
+    # 18 since 2026-09-21: critical_minerals (Ajay: "Do we have critical
+    # minerals in our list?"). The roster count is the only thing that moved;
+    # cloud_infra and its rank are untouched.
+    assert len(U.THEME_UNIVERSE) == 18, "16 before cloud_infra, 17 after, 18 with critical_minerals"
 
 
 def test_NEGATIVE_it_does_not_steal_from_the_five_themes_that_hold_this_industry():
