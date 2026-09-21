@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  IPO_NO_UPCOMING, blankIfRecycled, ipoCorroborationLine, ipoText, isRecycled,
-  upcomingRows,
+  IPO_DRILL_NO_HEADLINES, IPO_HEADLINE_EPOCH_S_MAX, IPO_NO_UPCOMING, blankIfRecycled,
+  ipoCorroborationLine, ipoDrillUrl, ipoHeadlineDate, ipoText, ipoUnderwriters,
+  isRecycled, upcomingRows,
 } from './ipoTab';
 
 /* 🆕 IPO tab reading rules (2026-09-20).
@@ -168,5 +169,92 @@ describe('the empty sentence', () => {
   it('names the FEED, so "none" cannot be read as a claim about the market', () => {
     expect(IPO_NO_UPCOMING).toContain('Finnhub calendar');
     expect(IPO_NO_UPCOMING).toContain('30 days');
+  });
+});
+
+/* 🗓️ drill-in reading rules (2026-09-20).
+ *
+ * Ajay: "Can you gather similar info about these please like the ticket and
+ * make them clicable the onesin IPO tab that are future". The fact sheet
+ * prints strings the backend read off a registration filing. The defects
+ * guarded here: a banks list turning into "undefined", and a millisecond
+ * stamp printing a date in the year 57,000 as if it were news. */
+
+describe('ipoUnderwriters', () => {
+  it('joins the banks the cover named', () => {
+    expect(ipoUnderwriters({ underwriters: ['Stifel', 'Baird', 'Lake Street'] }))
+      .toBe('Stifel · Baird · Lake Street');
+  });
+
+  it('is an em dash on an EMPTY list — the cover said nothing, that is not a fact', () => {
+    expect(ipoUnderwriters({ underwriters: [] })).toBe('—');
+  });
+
+  it('is an em dash on null, undefined, a missing key and a junk value', () => {
+    expect(ipoUnderwriters(null)).toBe('—');
+    expect(ipoUnderwriters(undefined)).toBe('—');
+    expect(ipoUnderwriters({})).toBe('—');
+    expect(ipoUnderwriters({ underwriters: 'Stifel' as any })).toBe('—');
+    expect(ipoUnderwriters({ underwriters: null })).toBe('—');
+  });
+
+  it('drops non-string entries instead of stringifying them', () => {
+    expect(ipoUnderwriters({ underwriters: ['Stifel', 7 as any, null as any, '  ', 'Baird'] }))
+      .toBe('Stifel · Baird');
+    expect(ipoUnderwriters({ underwriters: [7 as any, null as any] })).toBe('—');
+  });
+});
+
+describe('ipoHeadlineDate', () => {
+  it('prints an epoch-SECONDS stamp as a UTC date', () => {
+    expect(ipoHeadlineDate(Date.UTC(2026, 8, 18) / 1000)).toBe('2026-09-18');
+  });
+
+  it('is an em dash on null, undefined, NaN, zero and a negative stamp', () => {
+    for (const bad of [null, undefined, Number.NaN, 0, -1, Infinity, '1758000000' as any]) {
+      expect(ipoHeadlineDate(bad as any)).toBe('—');
+    }
+  });
+
+  it('NEGATIVE: a MILLISECOND stamp is a blank, never a date in the year 57,000', () => {
+    expect(ipoHeadlineDate(Date.now())).toBe('—');
+    expect(ipoHeadlineDate(1_758_000_000_000)).toBe('—');
+  });
+
+  it('names the cut instead of hiding a 1e11 literal', () => {
+    expect(IPO_HEADLINE_EPOCH_S_MAX).toBe(Date.UTC(2100, 0, 1) / 1000);
+    expect(ipoHeadlineDate(IPO_HEADLINE_EPOCH_S_MAX)).toBe('—');
+    expect(ipoHeadlineDate(IPO_HEADLINE_EPOCH_S_MAX - 86_400)).toBe('2099-12-31');
+  });
+});
+
+describe('ipoDrillUrl', () => {
+  it('upper-cases and encodes the symbol', () => {
+    expect(ipoDrillUrl('amro')).toContain('/chart-maps/ipo/upcoming/AMRO');
+    expect(ipoDrillUrl(' bmb ')).toContain('/chart-maps/ipo/upcoming/BMB');
+    expect(ipoDrillUrl('BRK/A')).toContain('/chart-maps/ipo/upcoming/BRK%2FA');
+  });
+
+  it('does not throw on junk', () => {
+    expect(ipoDrillUrl('' as any)).toContain('/chart-maps/ipo/upcoming/');
+    expect(ipoDrillUrl(null as any)).toContain('/chart-maps/ipo/upcoming/');
+  });
+});
+
+describe('the drill-in empty-headlines sentence', () => {
+  it('names the window it was actually served', () => {
+    expect(IPO_DRILL_NO_HEADLINES(7)).toBe('No headlines in the last 7 days');
+  });
+
+  it('prints an em dash rather than "undefined days" on a missing window', () => {
+    expect(IPO_DRILL_NO_HEADLINES(null)).toBe('No headlines in the last — days');
+    expect(IPO_DRILL_NO_HEADLINES(undefined)).toBe('No headlines in the last — days');
+  });
+});
+
+describe('the verbatim rule holds inside the drill-in', () => {
+  it('NEGATIVE: a share count is printed unformatted, exactly as the feed gave it', () => {
+    expect(ipoText(7456500)).toBe('7456500');
+    expect(ipoText('18.00-20.00')).toBe('18.00-20.00');
   });
 });

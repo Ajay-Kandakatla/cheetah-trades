@@ -2916,6 +2916,55 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'the IPO drill-in is a fact sheet, not a read (2026-09-20)',
+    file: 'src/components/IpoUpcomingModal.tsx',
+    // Ajay 2026-09-20: "gather similar info about these … make them clicable
+    // the onesin IPO tab that are future". A fact sheet from the registration
+    // filing: served note, no parsed number, no chip, no verdict, no model.
+    checks: (src) => {
+      const errs = [];
+      const strip = read('src/components/IpoUpcomingStrip.tsx');
+      if (!/data-testid=\{`ipo-upcoming-open-/.test(strip)) errs.push('the strip symbols must be the open buttons');
+      if (!/lazyWithReload\(/.test(strip) || !/IpoUpcomingModal/.test(strip)) errs.push('the modal must be lazy-loaded from the strip');
+      if (/\blazy\(/.test(strip)) errs.push('the strip must not use a raw lazy() — lazyWithReload survives a redeploy');
+      if (/Nothing here is measured/.test(src)) errs.push('the not-measured note is SERVED — never typed into the modal');
+      if (!/\.note\b/.test(src)) errs.push('the modal must render the served note');
+      const py = read('../backend/chart_maps/ipo_upcoming.py');
+      if (!/Nothing here is ["\s]*measured, nothing here is a signal/.test(py)) errs.push('the backend must serve the not-measured note');
+      if (!/dates move ["\s]*and deals are withdrawn/.test(py)) errs.push('the note must say an expected deal is a plan');
+      for (const bad of ['className="chip', 'READY', 'WATCH', 'BLOCKED', 'verdict', 'score', 'signal_', 'Number(', 'parseFloat(', 'toFixed(']) {
+        if (src.includes(bad)) errs.push(`the modal must not carry "${bad}" — a fact sheet has no read and parses no number`);
+      }
+      const lib = read('src/lib/ipoTab.ts');
+      if (!/IPO_HEADLINE_EPOCH_S_MAX/.test(lib)) errs.push('ipoTab.ts must name the epoch bound');
+      const libCode = lib.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+      if (/\b1e1[12]\b/.test(libCode)) errs.push('the epoch bound must be named, not a bare 1e11/1e12');
+      if (!/revenue_units_line/.test(src) || !/net_loss_units_line/.test(src)) errs.push('each quoted table carries its own units line');
+      const css = read('src/styles.css');
+      for (const f of ['src/components/IpoUpcomingModal.tsx', 'src/components/IpoUpcomingStrip.tsx']) {
+        const t = read(f);
+        const used = new Set();
+        for (const m of t.matchAll(/className=\{?["'`]([^"'`]+)/g)) {
+          for (const c of m[1].split(/[\s${}]+/)) if (/^ipo-(?:drill|up)-[a-z0-9-]+$|^ipo-drill$/.test(c)) used.add(c);
+        }
+        for (const c of [...used].sort()) {
+          if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) errs.push(`styles.css has no rule for .${c} (${f})`);
+        }
+      }
+      for (const f of ['../backend/chart_maps/ipo.py', '../backend/chart_maps/board.py']) {
+        if (/ipo_upcoming/.test(read(f))) errs.push(`${f} must never touch the drill-in — it is on-demand, never on the board build`);
+      }
+      if (!/from sepa\.insider import _edgar_get/.test(py)) errs.push('the drill-in must reuse the one EDGAR getter (UA + pacing)');
+      if (!/"html\.parser"/.test(py)) errs.push('the drill-in must parse with html.parser (lxml is not in the image)');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+      for (const bad of ['requests.get(', 'httpx.', 'import lxml', '"lxml"', "'lxml'", 'ollama', 'anthropic', 'two_sided', 'import llm', 'from llm']) {
+        if (pyCode.includes(bad)) errs.push(`ipo_upcoming.py must not carry "${bad}"`);
+      }
+      if (!/id: 'ipo-upcoming-drill-2026-09-20'/.test(read('src/lib/newFeatures.ts'))) errs.push('the drill-in needs its ✨ entry');
+      return errs;
+    },
+  },
+  {
     name: 'the \u{1F3DB}\uFE0F POTUS kind declares itself everywhere, and ships ON (2026-09-20)',
     file: 'src/pages/Notifications.tsx',
     // Ajay 2026-09-20: "Anytime POTUS does new investments show me those."

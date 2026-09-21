@@ -13309,3 +13309,62 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   .bd-today { text-align: left; }
   .bd-heldout-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* 🗓️ IPO drill-in (2026-09-20). Ajay: "gather similar info about these please
+   like the ticket and make them clicable the onesin IPO tab that are future".
+   A fact sheet from the registration filing: served text, quoted lines, links.
+   Same backdrop geometry as .modal-backdrop; the sheet reads like a page. */
+.ipo-up-date, .ipo-up-price { font-variant-numeric: tabular-nums; }
+.ipo-up-link {
+  background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit;
+  cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.ipo-up-link:hover, .ipo-up-link:focus-visible { color: var(--gold, #d4a72c); outline: none; }
+.ipo-drill-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 5vh 1rem; z-index: 100;
+}
+.ipo-drill {
+  position: relative; background: var(--paper, var(--bg-surface));
+  border: 1px solid var(--rule, var(--hairline, #222)); width: min(860px, 100%);
+  max-height: 90vh; overflow: auto; padding: 1.1rem 1.35rem 1.25rem;
+  font-size: 0.84rem; line-height: 1.5;
+}
+.ipo-drill-close {
+  position: absolute; top: 0.55rem; right: 0.7rem; background: none; border: 0;
+  color: var(--cm-slate, #94a3b8); font-size: 1.1rem; cursor: pointer; line-height: 1;
+}
+.ipo-drill-close:hover { color: var(--gold, #d4a72c); }
+.ipo-drill-head { margin-bottom: 0.7rem; padding-right: 2rem; }
+.ipo-drill-title { margin: 0; font-size: 1.15rem; font-weight: 700; }
+.ipo-drill-facts { margin: 0.25rem 0 0; color: var(--cm-slate, #94a3b8); font-variant-numeric: tabular-nums; }
+.ipo-drill-loading, .ipo-drill-err { margin: 0.6rem 0; }
+.ipo-drill-err { color: var(--warn, #fbbf24); }
+.ipo-drill-section {
+  border-top: 1px solid var(--rule, var(--hairline, #222)); padding: 0.7rem 0 0.4rem;
+}
+.ipo-drill-eyebrow {
+  font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--cm-slate, #94a3b8); margin-bottom: 0.35rem;
+}
+.ipo-drill-quote-group { margin: 0.35rem 0 0.55rem; }
+.ipo-drill-quote {
+  margin: 0.2rem 0 0.4rem; padding: 0.45rem 0.7rem; border-left: 3px solid var(--gold, #d4a72c);
+  background: var(--bg-raised, rgba(255,255,255,0.03)); white-space: pre-wrap; font-style: normal;
+}
+.ipo-drill-line { display: flex; gap: 0.6rem; margin: 0.15rem 0; align-items: baseline; flex-wrap: wrap; }
+.ipo-drill-k { flex: 0 0 11.5rem; color: var(--cm-slate, #94a3b8); }
+.ipo-drill-v { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ipo-drill-list { list-style: none; margin: 0; padding: 0; }
+.ipo-drill-list .ipo-drill-line { display: block; }
+.ipo-drill-list a, .ipo-drill-v a { color: inherit; }
+.ipo-drill-dim { color: var(--cm-slate, #94a3b8); font-size: 0.76rem; margin: 0.3rem 0; }
+.ipo-drill-note {
+  margin: 0.8rem 0 0; padding-top: 0.6rem; border-top: 1px solid var(--rule, var(--hairline, #222));
+  color: var(--cm-slate, #94a3b8); font-size: 0.76rem;
+}
+@media (max-width: 640px) {
+  .ipo-drill { padding: 0.9rem 0.9rem 1rem; }
+  .ipo-drill-k { flex-basis: 100%; }
+}

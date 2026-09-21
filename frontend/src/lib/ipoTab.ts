@@ -18,6 +18,8 @@
  * Nothing on this tab is measured and nothing on it orders, gates or enters.
  */
 
+import { API } from './apiBase';
+
 /** What the backend's `ipo_status` field can be. `bogus` never reaches the
  *  frontend — those rows are dropped server-side — but it is named so the
  *  union matches `chart_maps/ipo.py` exactly. */
@@ -176,3 +178,128 @@ export function ipoCorroborationLine(
   const to = c.forward_to ? ` through ${String(c.forward_to)}` : '';
   return `Finnhub IPO calendar${to} · expected deals only, printed exactly as the feed serves them.${dropped}`;
 }
+
+/* ── 🗓️ "Coming up" drill-in (2026-09-20) ─────────────────────────────────
+ *
+ * Ajay: "Can you gather similar info about these please like the ticket and
+ * make them clicable the onesin IPO tab that are future".
+ *
+ * An expected listing has no price history, so its drill-in is a FACT SHEET
+ * read off the registration filing on EDGAR: what the company does, the deal
+ * terms, the underwriters, and the revenue / net-loss lines AS PRINTED in the
+ * prospectus. Nothing below parses a figure out of a filing: the backend
+ * serves sentences, `ipoText` prints them, and that is the whole pipeline.
+ * No `Number(...)`, no `parseFloat`, no `toFixed` anywhere on this path — a
+ * thousands-for-millions slip on a sheet he reads before a listing is exactly
+ * the invented number the ask forbids.
+ */
+
+/** The filing block, as served. EVERY scalar is a string the backend read out
+ *  of the document (or null when it could not find it) — never a number.
+ *  Revenue and net loss carry the units and the period header of THEIR OWN
+ *  table, because the two quotes routinely come from two different tables
+ *  with different column orders (measured on Amaero's S-1/A: the MD&A revenue
+ *  table and the summary net-loss table). */
+export type IpoDrillFiling = {
+  form?: string | null;
+  filed?: string | null;
+  accession?: string | null;
+  primary_document?: string | null;
+  url?: string | null;
+  overview?: string | null;
+  proposed_symbol_line?: string | null;
+  symbol_in_filing?: string | null;
+  shares_offered_line?: string | null;
+  price_line?: string | null;
+  underwriters?: string[] | null;
+  revenue_line?: string | null;
+  revenue_units_line?: string | null;
+  revenue_period_line?: string | null;
+  net_loss_line?: string | null;
+  net_loss_units_line?: string | null;
+  net_loss_period_line?: string | null;
+  extracted_at?: string | null;
+  parse_note?: string | null;
+};
+
+/** One headline from the ONE news engine (`news_search.core.search`).
+ *  `published` is an epoch stamp in SECONDS. */
+export type IpoDrillHeadline = {
+  title?: string | null;
+  url?: string | null;
+  source?: string | null;
+  published?: number | null;
+};
+
+export type IpoDrillCompany = {
+  name?: string | null;
+  cik?: string | null;
+  sic?: string | null;
+  sic_description?: string | null;
+  state?: string | null;
+  fiscal_year_end?: string | null;
+};
+
+export type IpoDrillSources = {
+  edgar_search_url?: string | null;
+  submissions_url?: string | null;
+  filing_url?: string | null;
+};
+
+/** `GET /chart-maps/ipo/upcoming/{symbol}`. */
+export type IpoDrillPayload = {
+  ok?: boolean;
+  symbol?: string;
+  calendar_row?: IpoUpcoming | null;
+  company?: IpoDrillCompany | null;
+  filing?: IpoDrillFiling | null;
+  headlines?: IpoDrillHeadline[] | null;
+  headlines_window_days?: number | null;
+  headlines_at?: string | null;
+  resolution?: {
+    method?: string | null; query?: string | null; hits?: number | null; reason?: string | null;
+  } | null;
+  error?: string | null;
+  cached?: boolean | null;
+  resolved_at?: string | null;
+  sources?: IpoDrillSources | null;
+  note?: string | null;
+};
+
+/** The drill-in endpoint for one expected listing. */
+export function ipoDrillUrl(sym: string): string {
+  const s = String(sym ?? '').trim().toUpperCase();
+  return `${API}/chart-maps/ipo/upcoming/${encodeURIComponent(s)}`;
+}
+
+/** The underwriters, joined for one line. An empty or absent list is an em
+ *  dash: "no banks listed" is a thing the cover did not say, not a fact about
+ *  the deal. Non-string entries are dropped rather than stringified. */
+export function ipoUnderwriters(f: IpoDrillFiling | null | undefined): string {
+  const src = f && typeof f === 'object' ? f.underwriters : null;
+  if (!Array.isArray(src)) return '—';
+  const names = src.filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+    .map((u) => u.trim());
+  return names.length ? names.join(' · ') : '—';
+}
+
+/** The news engine stamps `published` in epoch SECONDS. Anything at or past
+ *  this instant (2100-01-01T00:00:00Z) is not a seconds stamp (a millisecond
+ *  stamp lands around the year 57,000) and prints as a blank rather than a
+ *  wrong date. Named, rather than a bare `1e11` nobody can check. */
+export const IPO_HEADLINE_EPOCH_S_MAX = Date.UTC(2100, 0, 1) / 1000;
+
+/** A headline's date, YYYY-MM-DD in UTC — or an em dash when the stamp is not
+ *  a plausible epoch-seconds value. Never a guess at the unit. */
+export function ipoHeadlineDate(published: number | null | undefined): string {
+  if (typeof published !== 'number' || !Number.isFinite(published)) return '—';
+  if (published <= 0 || published >= IPO_HEADLINE_EPOCH_S_MAX) return '—';
+  const d = new Date(published * 1000);
+  const iso = d.toISOString();
+  return iso.slice(0, 10) || '—';
+}
+
+/** The headlines section's empty sentence. The window is whatever the backend
+ *  served, printed through the one printer — never retyped as a literal. */
+export const IPO_DRILL_NO_HEADLINES = (days: unknown): string =>
+  `No headlines in the last ${ipoText(days)} days`;

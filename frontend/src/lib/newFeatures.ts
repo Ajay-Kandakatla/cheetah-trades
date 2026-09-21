@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-20, with a screenshot of the 🗓️ Coming up strip (AMRO, BMB,
+  // PTT): "Can you gather similar info about these please like the ticket and
+  // make them clicable the onesin IPO tab that are future". A fact sheet from
+  // the company's own registration filing on EDGAR; nothing measured.
+  { id: 'ipo-upcoming-drill-2026-09-20',
+    label: '\u{1F5D3}\uFE0F The expected listings on the IPO tab are clickable now. You said: \u201cCan you gather similar info about these please like the ticket and make them clicable the onesin IPO tab that are future.\u201d '
+      + 'WHAT OPENS: a fact sheet built from the company\u2019s own registration filing on EDGAR (the S-1 or F-1, newest amendment first) \u2014 what they do, the deal terms as the filing states them, the underwriters named on the cover, the revenue and net-loss lines AS PRINTED, each with the units and periods of its own table and a link to the page, the industry code, and the last seven days of headlines on the company name. '
+      + 'WHAT IS NEVER DONE: no number is parsed out of the filing into anything this app computes; nothing is measured, there is no chip, no signal, no ranking and no model. The calendar row itself is printed exactly as Finnhub serves it \u2014 a range is a range, not a price. '
+      + 'WHEN IT CANNOT: EDGAR down \u2192 the sheet still opens with the calendar row and a sentence, and the next click asks EDGAR again; a name EDGAR cannot confirm \u2192 it says so, never a guess. '
+      + 'ON THE DAY: once Finnhub marks a deal priced the row leaves the \u{1F5D3}\uFE0F strip and moves to the tiles, which have no drill-in yet \u2014 your call whether they get the same sheet. Also yours: the seven-day headline window, and whether a \u2696\uFE0F two-sided read on the company name belongs in the sheet (a model call, off by default).',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=ipo' },
   // Ajay 2026-09-20, with a screenshot of the Bonde tab's blurb filling the
   // screen: "Collapse all of this info." Every tab, same fold.
   { id: 'blurbs-folded-2026-09-20',

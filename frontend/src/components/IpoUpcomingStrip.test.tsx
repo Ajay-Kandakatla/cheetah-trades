@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import IpoUpcomingStrip from './IpoUpcomingStrip';
 import { blankIfRecycled, isRecycled } from '../lib/ipoTab';
 
@@ -10,6 +10,15 @@ import { blankIfRecycled, isRecycled } from '../lib/ipoTab';
  * BMB 09-23), so a shape change that would have emptied his strip fails by
  * name. Pinned means pinned: it renders while the board is warming, while the
  * board has failed, and when the calendar came back with nothing. */
+
+/* The fact sheet itself is exercised in IpoUpcomingModal.test.tsx; here it is
+ * stubbed so these tests pin the WIRING — that a click opens the sheet for
+ * THAT row, and that nothing opens (and nothing is fetched) before one. */
+vi.mock('./IpoUpcomingModal', () => ({
+  IpoUpcomingModal: ({ row, onClose }: any) => (
+    <div data-testid="ipo-drill-mock" onClick={onClose}>{row.symbol}</div>
+  ),
+}));
 
 const FORWARD = [
   { symbol: 'AMRO', name: 'Amaroq Minerals', date: '2026-09-23',
@@ -114,5 +123,51 @@ describe('a recycled tile prints no price-derived stat', () => {
   it('leaves a confirmed tile alone', () => {
     expect(isRecycled(confirmed)).toBe(false);
     expect(blankIfRecycled(confirmed, '+20.0%')).toBe('+20.0%');
+  });
+});
+
+describe('the symbol opens its fact sheet (2026-09-20)', () => {
+  it('clicking the symbol opens the sheet for THAT row', async () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    fireEvent.click(screen.getByTestId('ipo-upcoming-open-AMRO'));
+    const sheet = await screen.findByTestId('ipo-drill-mock');
+    expect(sheet.textContent).toBe('AMRO');
+  });
+
+  it('opens the sheet of the row clicked, not the first row', async () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    fireEvent.click(screen.getByTestId('ipo-upcoming-open-PTT'));
+    const sheet = await screen.findByTestId('ipo-drill-mock');
+    expect(sheet.textContent).toBe('PTT');
+  });
+
+  it('NEGATIVE: no sheet is mounted before a click — nothing is fetched on the board build', () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    expect(screen.queryByTestId('ipo-drill-mock')).toBeNull();
+  });
+
+  it('closes again, leaving the strip intact', async () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    fireEvent.click(screen.getByTestId('ipo-upcoming-open-BMB'));
+    fireEvent.click(await screen.findByTestId('ipo-drill-mock'));
+    expect(screen.queryByTestId('ipo-drill-mock')).toBeNull();
+    expect(screen.getByTestId('ipo-upcoming-list').children.length).toBe(3);
+  });
+
+  it('every row carries a named, labelled button', () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    for (const sym of ['AMRO', 'BMB', 'PTT']) {
+      const b = screen.getByTestId(`ipo-upcoming-open-${sym}`);
+      expect(b.tagName).toBe('BUTTON');
+      expect(b.getAttribute('aria-label')).toBe(`Open ${sym} fact sheet`);
+      expect(b.className).toContain('ipo-up-link');
+      expect(b.textContent).toBe(sym);
+    }
+  });
+
+  it('says the symbols are clickable', () => {
+    render(<IpoUpcomingStrip data={FORWARD} corroboration={{ available: true }} />);
+    expect(screen.getByTestId('ipo-upcoming-strip').textContent)
+      .toContain('click a symbol for its fact sheet');
   });
 });

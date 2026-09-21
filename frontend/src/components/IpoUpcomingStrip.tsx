@@ -20,19 +20,39 @@
  * It is a LIST. Nothing here is measured, it gates nothing, orders nothing,
  * alerts nothing and enters nothing — and an expected deal is a plan, not an
  * event: dates move and deals are withdrawn.
+ *
+ * CLICKABLE since 2026-09-20 (Ajay: "Can you gather similar info about these
+ * please like the ticket and make them clicable the onesin IPO tab that are
+ * future"). The symbol is a button; it opens IpoUpcomingModal, a fact sheet
+ * read off the registration filing on EDGAR. Fetched on the click only —
+ * never on the board build, which would cost several EDGAR round trips and a
+ * multi-megabyte prospectus download per expected row on every page load.
  */
+import { Suspense, useState } from 'react';
 import {
   IPO_NO_UPCOMING, ipoCorroborationLine, ipoText, upcomingRows,
 } from '../lib/ipoTab';
 import type {
   IpoCorroboration, IpoCounts, IpoPayloadLike, IpoUpcoming,
 } from '../lib/ipoTab';
+import { lazyWithReload } from '../lib/lazyWithReload';
 
-function Row({ r }: { r: IpoUpcoming }) {
+// Lazy: the fact sheet is a click away, not in the board's critical bundle.
+// HOUSE RULE — lazyWithReload, never raw React.lazy (stale-chunk self-heal).
+const IpoUpcomingModal = lazyWithReload(() =>
+  import('./IpoUpcomingModal').then((m) => ({ default: m.IpoUpcomingModal })),
+);
+
+function Row({ r, onOpen }: { r: IpoUpcoming; onOpen: (r: IpoUpcoming) => void }) {
   const sym = String(r.symbol || '').toUpperCase();
   return (
     <li className="ipo-up-row" data-testid={`ipo-upcoming-${sym}`}>
-      <span className="ipo-up-sym">{sym}</span>
+      <button type="button" className="ipo-up-sym ipo-up-link"
+              data-testid={`ipo-upcoming-open-${sym}`}
+              aria-label={`Open ${sym} fact sheet`}
+              onClick={(e) => { e.stopPropagation(); onOpen(r); }}>
+        {sym}
+      </button>
       <span className="ipo-up-name">{ipoText(r.name)}</span>
       <span className="ipo-up-date">{ipoText(r.date)}</span>
       <span className="ipo-up-exch">{ipoText(r.exchange)}</span>
@@ -55,14 +75,16 @@ export default function IpoUpcomingStrip(
   },
 ) {
   const rows = upcomingRows(data ?? null);
+  const [open, setOpen] = useState<IpoUpcoming | null>(null);
   return (
+    <>
     <section className="ipo-up" role="complementary" aria-label="Upcoming IPOs"
              data-testid="ipo-upcoming-strip">
       <div className="ipo-up-head">
         <span className="ipo-up-title">🗓️ Coming up</span>
         <em className="ipo-up-sub">
           expected listings from Finnhub&apos;s IPO calendar · pinned here, never filtered
-          by the board controls below
+          by the board controls below · click a symbol for its fact sheet
         </em>
       </div>
       <p className="ipo-up-basis" data-testid="ipo-upcoming-basis">
@@ -72,7 +94,7 @@ export default function IpoUpcomingStrip(
         <>
           <ol className="ipo-up-list" data-testid="ipo-upcoming-list">
             {rows.map((r, i) => (
-              <Row key={`${String(r.symbol)}-${String(r.date ?? i)}`} r={r} />
+              <Row key={`${String(r.symbol)}-${String(r.date ?? i)}`} r={r} onOpen={setOpen} />
             ))}
           </ol>
           <p className="ipo-up-dim">
@@ -87,6 +109,12 @@ export default function IpoUpcomingStrip(
         </p>
       )}
     </section>
+    {open && (
+      <Suspense fallback={null}>
+        <IpoUpcomingModal row={open} onClose={() => setOpen(null)} />
+      </Suspense>
+    )}
+    </>
   );
 }
 

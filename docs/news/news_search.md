@@ -129,6 +129,15 @@ Three comments in the codebase stated a time window the code has never passed:
 **ET session date**, so what a surface was shown on a given day is readable
 after the fact. A Mongo failure is logged and never reaches the caller.
 
+Callers: `ipo_upcoming` — the 🗓️ "Coming up" drill-in
+(`backend/chart_maps/ipo_upcoming.py`, 2026-09-20). Selector is a **keyword**:
+the quoted short company name (e.g. `"Amaero"`), `window_hours=168`. Because
+`search()` applies `relevance_filter` only to a `ticker` selector, that caller
+runs `core.relevance_filter(items, ticker=SYM, company=short_name)` itself
+after the search — a keyword result is otherwise unfiltered. Known weakness,
+documented and not patched here: a company whose first word is generic
+("Bamboo") keeps unrelated headlines that contain it.
+
 ## Tests
 
 `backend/tests/test_news_search_2026_09_20.py` — 71 tests, no network, every

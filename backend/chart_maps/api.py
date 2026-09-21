@@ -283,3 +283,44 @@ async def chart_maps_support(
         return res
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.get("/chart-maps/ipo/upcoming/{symbol}")
+async def chart_maps_ipo_upcoming(symbol: str):
+    """🗓️ "Coming up" drill-in — the fact sheet for ONE expected listing.
+
+    Ajay 2026-09-20: *"Can you gather similar info about these please like the
+    ticket and make them clicable the onesin IPO tab that are future"*.
+
+    Fetched on a CLICK and nowhere else: `board()` never calls this, because a
+    cold open costs three to four rate-paced EDGAR GETs and a multi-megabyte
+    download, which is not something a board load may pay per row.
+
+    Nothing here is measured, nothing here is an LLM summary, and no number
+    ever leaves the registration filing — the revenue and net-loss lines are
+    sentences the prospectus printed, with their own units and period headers
+    beside them.
+
+    503 — Finnhub's calendar could not be read, so the symbol cannot be looked
+    up at all. 404 — the calendar was read and this symbol is not an expected
+    listing inside the forward window; a deal Finnhub flips to `priced` leaves
+    the strip and answers 404 here.
+    """
+    from . import ipo as IPO
+    from . import ipo_upcoming as IU
+
+    sym = (symbol if isinstance(symbol, str) else "").strip().upper()
+    row, cal_ok, reason = await asyncio.to_thread(IU.calendar_row, sym)
+    if row is None:
+        if not cal_ok:
+            return JSONResponse(
+                status_code=503,
+                content={"detail": f"Finnhub's IPO calendar could not be read "
+                                   f"({reason}), so {sym} cannot be looked up "
+                                   f"right now."})
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"{sym} is not an expected listing in the next "
+                               f"{IPO.FORWARD_DAYS} days on Finnhub's IPO "
+                               f"calendar."})
+    return JSONResponse(await IU.lookup(sym, row))
