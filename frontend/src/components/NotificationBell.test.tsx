@@ -106,3 +106,56 @@ describe('NotificationBell — per-ticker chips', () => {
     expect(within(screen.getByTestId('bell-tk-NVDA')).getByRole('link')).toBeInTheDocument();
   });
 });
+
+/* ── 2026-09-21: the served fold line ──────────────────────────────────────
+ *
+ * push/recent folds a run of identical adjacent rows into the newest one and
+ * hands over a `repeat` block. The bell prints `line` and nothing else: no
+ * arithmetic on `count`, no stamp of its own. **[C7]** the badge still counts
+ * ROWS — a folded block is one unread — and that is pinned, not incidental.
+ */
+const FOLD_LINE = 'served: three more of these';
+
+describe('NotificationBell — the fold line', () => {
+  let restoreStorage: (() => void) | null = null;
+  afterEach(() => { restoreStorage?.(); restoreStorage = null; });
+
+  it('prints repeat.line verbatim under the row that carries it', async () => {
+    stubFetch([{ ...ROWS[0], repeat: { line: FOLD_LINE } }, ROWS[1], ROWS[2]]);
+    draw();
+    await openBell();
+    const rows = screen.getAllByTestId('bell-row');
+    expect(within(rows[0]).getByTestId('bell-repeat').textContent).toBe(FOLD_LINE);
+  });
+
+  it('NEGATIVE: rows without a block (and with repeat: null) print no fold line, and nothing is derived from count', async () => {
+    stubFetch([{ ...ROWS[0], repeat: { count: 4, line: FOLD_LINE } }, { ...ROWS[1], repeat: null }, ROWS[2]]);
+    draw();
+    await openBell();
+    expect(screen.getAllByTestId('bell-repeat')).toHaveLength(1);
+    const page = document.body.textContent ?? '';
+    expect(page).not.toMatch(/more like this/);
+    expect(page).not.toMatch(/3 more/);
+    expect(page).not.toMatch(/4 /);
+  });
+
+  it('[C7] NEGATIVE: the badge counts ROWS, not fires — a folded block is one unread', async () => {
+    // jsdom here has no localStorage (the component's own reads are try/catch'd),
+    // so the "already seen" stamp is injected directly.
+    const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: { getItem: () => String(TS - 120), setItem: () => {}, clear: () => {} },
+    });
+    restoreStorage = () => {
+      if (original) Object.defineProperty(window, 'localStorage', original);
+      else delete (window as unknown as Record<string, unknown>).localStorage;
+    };
+    stubFetch([{ ...ROWS[0], repeat: { count: 4, line: FOLD_LINE } }, ROWS[1], ROWS[2]]);
+    draw();
+    // two rows are newer than lastSeen; one of them stands for four fires
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Notifications (2 new)' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /5 new/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /6 new/ })).not.toBeInTheDocument();
+  });
+});

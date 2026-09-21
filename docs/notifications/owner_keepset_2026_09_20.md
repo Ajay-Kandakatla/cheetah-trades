@@ -123,6 +123,23 @@ reads "todos, household, sign-ins"), `push/subs.py`, `push/recent.py`,
 `holiday-quiet` (2026-09-07) ✨ entry, which had listed flashcards among the
 kinds that still deliver on a closed day.
 
+## 2026-09-21 (update) — 🔔 `price_alert` joins the keep-set
+
+Asked *"Price alerts are retired in the push switch and off in your
+Notifications, so even a real crossing will not reach your phone. Turn them
+back on?"*, Ajay said **"Yes to all.."**. The set is now **nine**: the eight
+below plus `price_alert`, the one kind that is not a scan — it is a line HE
+drew on a ticker page. It also left `push.subs._RETIRED_2026_06_13` the same
+day, so the code kill switch no longer swallows it; what it fires on (the
+latch, `ALERT_COOLDOWN_SEC`, `_threshold`) is untouched. Full write-up:
+`docs/alerts/price_alerts.md` → "The two silent-drop chokepoints — OPENED
+2026-09-21". **The apply-script instructions below are unchanged** — the script
+reads `OWNER_KEEP_SET`, so the same dry-then-`--apply` run now flips
+`price_alert False→True` on his three devices and nothing else. Pinned in
+`backend/tests/test_price_alert_unpause_2026_09_21.py`, which also guards the
+`contracts.mjs` parser trap: never name the set in a comment above its
+definition in `subs.py`.
+
 ## The device state this was written against
 
 Read off the live container 2026-09-20 (read-only probe):

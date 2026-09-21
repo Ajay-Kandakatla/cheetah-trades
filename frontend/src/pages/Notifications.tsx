@@ -28,12 +28,19 @@ export const CATEGORIES: CategoryDef[] = [
   // momentum / new-candidate / stage-breakdown / product-launch / tape-watch /
   // morning-brief pushes were retired here AND hard-stopped server-side
   // (backend/push/subs.py DISABLED_ALERT_KINDS — they can't fire even for a
-  // device that still has an old toggle on). price_alert is PAUSED — it returns
-  // when custom price alerts come back.
+  // device that still has an old toggle on).
+  // price_alert was PAUSED here 2026-06-13 and returned 2026-09-21 ("Yes to all..") — see its entry.
   { key: 'pivot_alert', label: 'Buyable / Enter-zone alerts', emoji: '🎯', group: 'trading',
     detail: 'At-the-pivot (buyable names only) and approaching-pivot buy-stop alerts from the 5-min market-hours cron. Once per name per kind per day.' },
   { key: 'position_alert', label: 'Portfolio alerts', emoji: '💼', group: 'trading',
     detail: 'Stop / target hit on the positions you hold — the up/down moves on your portfolio that need action.' },
+  { key: 'price_alert', label: 'Price alerts', emoji: '🔔', group: 'trading',
+    detail: 'ON BY DEFAULT for you since 2026-09-21 — asked "Price alerts are retired in the push switch and off in your Notifications, so even a real crossing will not reach your phone. Turn them back on?", you said "Yes to all..". '
+      + 'WHAT FIRES: a rule YOU set on a ticker page — a level (above / below a price) or a percent move — when the live print crosses its line. '
+      + 'It fires ONCE per crossing and re-arms only when price crosses back over the line (shipped 2026-09-21); a price that just sits past the line never rings again. '
+      + 'The percent kinds measure from the price on the day you set the alert, and the message says so ("vs $… when you set it", with that date). '
+      + 'Paused 2026-06-13 with the retired market-scan kinds; turned back on 2026-09-21 at your ask. It is in the owner keep-set, so a re-registered device cannot quietly mute it. '
+      + 'Turning it on widened WHICH KINDS reach you — it did not loosen what a rule needs to fire. Not a signal: a line you drew.' },
   { key: 'promo_alert', label: 'Promo-circuit movers', emoji: '🎪', group: 'trading',
     detail: 'A name tagged by the caught pump accounts moves ±8% vs the prior close — pre-market, regular and after-hours. Once per direction per day. The tag is the promotion: a do-not-chase radar.' },
   { key: 'demand_alert', label: 'Reversal at demand', emoji: '🧲', group: 'trading',
@@ -395,10 +402,11 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals. Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, and 🔔 the price alerts you set (2026-09-21). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
+      price_alert: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

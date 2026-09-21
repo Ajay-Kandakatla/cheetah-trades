@@ -92,11 +92,14 @@ class NoSendPathTest(unittest.TestCase):
         # Bondes or Potus or explosive growth or Earnings I wanna see all of
         # them") — still pinned here, because what this test is really for is
         # that the growth EARNINGS path never touches the keep-set.
+        # WIDENED AGAIN 2026-09-21 — 🔔 price_alert ("Yes to all.."), which
+        # this path also never touches.
         self.assertEqual(set(subs.OWNER_KEEP_SET),
                          {"hot_pullback_alert", "pattern_alert",
                           "demand_alert", "position_alert",
                           "potus_investment", "growth_demand_alert",
-                          "earnings_reaction", "board_arrival"})
+                          "earnings_reaction", "board_arrival",
+                          "price_alert"})
 
     def test_no_new_push_kind_exists(self):
         """NEGATIVE — the only KIND under growth/ is the one shipped 2026-09-11."""

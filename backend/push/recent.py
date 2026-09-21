@@ -9,17 +9,33 @@ so the route had no test. Same path, same row shape, same default behaviour
 byte-for-byte when the new query params are absent; now behind TestClient.
 
 Query params (all optional; absent = the old feed):
-  limit    1..500 (was 100) — merged rows returned
+  limit    1..500 (was 100) — merged rows returned (COLLAPSED rows, see below)
   kinds    comma list, e.g. ``demand_alert,zone_bounce_alert,supply_break_alert``
            → push rows filtered to those kinds; breakout rows ride along
            ONLY when the list names ``volume_breakout`` / ``rising_momentum`` /
            ``stage_breakdown_*`` (otherwise the breakout source is excluded)
   since    unix seconds → rows with ts >= since
   ticker   upper-cased symbol → rows whose ticker equals it
+  collapse 2026-09-21, default TRUE — fold ADJACENT rows of the merged ts-desc
+           list that share ``(source, kind, ticker, title, tuple(tickers))``
+           into the newest one, which then carries a ``repeat`` block. The
+           BODY is deliberately NOT part of that identity (two of his presets
+           firing on one print differ only in their Note and must read as one
+           line); ``tickers`` IS, so two count-only digests naming different
+           names never merge. ``collapse=false`` returns the flat
+           pre-2026-09-21 list. See docs/notifications/alerts_feed_collapse.md.
 
 Row shape (normalized across both sources, unchanged apart from `tickers`):
     {_id, ts, ts_iso, title, body, kind, ticker, tickers, url,
-     source: 'push' | 'breakout', sent, failed, total, dismissed?}
+     source: 'push' | 'breakout', sent, failed, total, dismissed?, repeat?}
+`repeat` is present ONLY on a survivor of a fold:
+    {count, first_ts, first_ts_iso, last_ts, truncated, line}
+`line` is the whole sentence — every reader prints it verbatim and none of
+them recomposes it, reads a clock or formats a date for this row.
+
+Payload: {"rows", "count", "collapse", "raw_truncated"} — ``raw_truncated`` is
+measured on the RAW push fetch (it hit its cap), never on the served length,
+so the page's "newest 500 only" warning survives the collapse.
 
 `tickers` (2026-09-20, Ajay: "I need the stock tickers to be clickables in
 alerts individually if there are multiple in one alert by command click") is
@@ -47,6 +63,11 @@ router = APIRouter(tags=["notifications"])
 
 MAX_LIMIT = 500
 BREAKOUT_SOURCE_CAP = 200          # source-side cap on sepa_breakouts, as before
+# 2026-09-21. `limit` counts COLLAPSED rows, so the raw push fetch over-reads
+# by this factor (bounded by MAX_LIMIT) to still fill a page after folding.
+# An engineering bound, not a trading number: the worst measured fold on his
+# own feed was -12% (bell, raw 50). A bigger factor only costs bell traffic.
+COLLAPSE_OVERFETCH = 2
 
 # The kinds that live in sepa_breakouts rather than push_history. A `kinds`
 # list that names none of these excludes the breakout source entirely.
@@ -265,12 +286,200 @@ def _retired_kinds() -> frozenset:
         return frozenset()
 
 
+# --------------------------------------------------------------------------
+# Repeat collapse (2026-09-21)
+# --------------------------------------------------------------------------
+# Ajay, asked "Collapse the 2,022 old rows on the Alerts page?": "Yes to all..".
+# He is NOT asking to delete or hide history — the rows stay readable, they
+# stop filling the page one identical line at a time. His screenshot showed the
+# same ARM line twice and the same ON line twice inside one 15:00 ET block.
+# Presentation only: nothing here gates, ranks or hides a KIND.
+
+
+def _et_dt(ts) -> datetime:
+    """The market-time datetime for a unix stamp. Raises on garbage — every
+    caller wraps it, because a clock must never blank the feed."""
+    from zoneinfo import ZoneInfo
+    return datetime.fromtimestamp(int(ts), ZoneInfo("America/New_York"))
+
+
+def _et_clock(ts) -> Optional[str]:
+    """"15:00" in market time — the page's own ``etFromTs`` style (24h,
+    zero-padded), so the served sentence reads as one voice with the row."""
+    try:
+        return _et_dt(ts).strftime("%H:%M")
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+def _et_day(ts) -> Optional[str]:
+    """"Jun 5" in market time, from the ONE engine that already writes those
+    words in his price-alert messages (``sepa.price_alerts._et_day_label``).
+    That import pulls notify/prices/massive_keys, so it is lazy AND wrapped:
+    if it fails we fall back to YYYY-MM-DD off the same zoneinfo datetime
+    rather than growing a second "Mon D" formatter."""
+    try:
+        from sepa.price_alerts import _et_day_label
+        label = _et_day_label(ts)
+        if label:
+            return label
+    except Exception:                                        # noqa: BLE001
+        pass
+    try:
+        return _et_dt(ts).strftime("%Y-%m-%d")
+    except Exception:                                        # noqa: BLE001
+        return None
+
+
+def repeat_key(row: dict) -> tuple:
+    """(source, kind, ticker, title, tickers). Exact strings — no normalisation
+    beyond ticker upper/None; the BODY is NOT part of the identity (see the
+    doc: two presets on one print differ only by their Note and must fold).
+    ``tickers`` (the served list, always present after gather's tagging) keeps
+    two count-only digests with different names apart — "🚀 3 growth names at
+    demand" carries a count and no name, so without it two such rows with the
+    same count would swallow each other."""
+    t = row.get("ticker")
+    t = t.strip().upper() if isinstance(t, str) and t.strip() else None
+    tk = row.get("tickers")
+    tk = tuple(x for x in tk if isinstance(x, str)) if isinstance(tk, list) else ()
+    return (row.get("source") or "push", row.get("kind"), t, row.get("title"), tk)
+
+
+def repeat_line(count: int, first_ts, last_ts, *, truncated: bool = False) -> str:
+    """The whole sentence the surfaces print verbatim.
+
+    "1 more like this · first 15:00 ET, last 15:00 ET"   (same ET day)
+    "12 more like this · first Jun 5 ET, last Sep 21 ET" (across days)
+    "40+ more like this · first Aug 31 ET, last Sep 21 ET" (the raw fetch cut it)
+
+    ``count`` is the GROUP size, so the number shown is count - 1 — the
+    survivor is already on screen. "first" means the oldest row IN THIS READ
+    (the ``since`` window and the raw fetch cap), never "first ever".
+    """
+    try:
+        n = int(count) - 1
+    except Exception:                                        # noqa: BLE001
+        n = 0
+    head = f"{n}{'+' if truncated else ''} more like this"
+    try:
+        first = int(first_ts or 0)
+        last = int(last_ts or 0)
+    except Exception:                                        # noqa: BLE001
+        return head
+    if first <= 0 or last <= 0:
+        return head
+    try:
+        same_day = _et_dt(first).date() == _et_dt(last).date()
+    except Exception:                                        # noqa: BLE001
+        return head
+    fmt = _et_clock if same_day else _et_day
+    a, b = fmt(first), fmt(last)
+    if not a or not b:
+        return head
+    return f"{head} · first {a} ET, last {b} ET"
+
+
+def repeat_block(group: list, *, truncated: bool = False) -> dict:
+    """The served block for a folded group (always >= 2 members). ``count``
+    includes the survivor; ``last_ts`` is the survivor's own stamp."""
+    stamps = []
+    for r in group:
+        try:
+            stamps.append(int(r.get("ts") or 0))
+        except Exception:                                    # noqa: BLE001
+            stamps.append(0)
+    first_ts = min(stamps) if stamps else 0
+    last_ts = stamps[0] if stamps else 0
+    return {
+        "count":        len(group),
+        "first_ts":     first_ts,
+        "first_ts_iso": (datetime.fromtimestamp(first_ts, tz=timezone.utc).isoformat()
+                         if first_ts > 0 else None),
+        "last_ts":      last_ts,
+        "truncated":    bool(truncated),
+        "line":         repeat_line(len(group), first_ts, last_ts, truncated=truncated),
+    }
+
+
+def collapse_repeats(rows: list, *, tail_truncated: bool = False) -> list:
+    """Fold maximal runs of ADJACENT rows sharing ``repeat_key`` into the
+    newest member of each run.
+
+    "Adjacent" is literal: adjacent in the served ts-desc list AFTER the
+    retired filter and the merge. An interleaved different alert splits a run
+    on purpose — [ARM, ON, ARM] is three events, not two.
+
+    A run of 1 is passed through as the SAME dict object, untouched and with
+    no ``repeat`` key (the pre-2026-09-21 row, byte-identical). A run of >= 2
+    yields a shallow COPY of the newest row plus ``repeat``; the input list and
+    its dicts are never mutated.
+
+    ``tail_truncated`` (the raw push fetch hit its cap) stamps ``truncated`` on
+    the LAST PUSH run — whatever its size — and only when that run has >= 2
+    members. The cut is on the push fetch, and a breakout run can sit older
+    than every push in the merged list, so the marker never lands there. A
+    singleton push tail closes every run above it (no row of those runs can
+    exist past the cut), so it carries nothing and nothing else is marked
+    either; the payload's top-level ``raw_truncated`` is what covers that case.
+    """
+    groups: list = []
+    i, n = 0, len(rows)
+    while i < n:
+        key = repeat_key(rows[i])
+        j = i
+        while j + 1 < n and repeat_key(rows[j + 1]) == key:
+            j += 1
+        groups.append(rows[i:j + 1])
+        i = j + 1
+    mark = -1
+    if tail_truncated:
+        for idx, g in enumerate(groups):
+            if (g[0].get("source") or "push") == "push":
+                mark = idx
+        # the LAST push run owns the cut; a singleton one closes every run
+        # above it, so nothing at all is marked in that case.
+        if mark >= 0 and len(groups[mark]) < 2:
+            mark = -1
+    out: list = []
+    for idx, g in enumerate(groups):
+        if len(g) < 2:
+            out.append(g[0])
+            continue
+        row = dict(g[0])
+        row["repeat"] = repeat_block(g, truncated=(idx == mark))
+        out.append(row)
+    return out
+
+
 def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
            since: Optional[int] = None, ticker: Optional[str] = None,
-           list_recent=None, get_db=None) -> list:
+           list_recent=None, get_db=None, collapse: bool = True) -> list:
     """Merge push_history + sepa_breakouts, ts desc, capped at `limit`.
-    `list_recent` / `get_db` are injectable for tests (default: the real
-    push.history.list_recent and sepa.breakouts._get_db)."""
+
+    Still returns a LIST — every existing caller reads a list. The payload
+    flags ride on ``gather_payload`` instead.
+    """
+    rows, _ = _gather(email, limit, kinds=kinds, since=since, ticker=ticker,
+                      list_recent=list_recent, get_db=get_db, collapse=collapse)
+    return rows
+
+
+def gather_payload(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
+                   since: Optional[int] = None, ticker: Optional[str] = None,
+                   list_recent=None, get_db=None, collapse: bool = True) -> dict:
+    """What the route serves: ``{rows, count, collapse, raw_truncated}``."""
+    rows, raw_truncated = _gather(email, limit, kinds=kinds, since=since, ticker=ticker,
+                                  list_recent=list_recent, get_db=get_db, collapse=collapse)
+    return {"rows": rows, "count": len(rows), "collapse": bool(collapse),
+            "raw_truncated": bool(raw_truncated)}
+
+
+def _gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
+            since: Optional[int] = None, ticker: Optional[str] = None,
+            list_recent=None, get_db=None, collapse: bool = True) -> tuple:
+    """(rows, raw_truncated). `list_recent` / `get_db` are injectable for tests
+    (default: the real push.history.list_recent and sepa.breakouts._get_db)."""
     if list_recent is None:
         from push import history
         list_recent = history.list_recent
@@ -291,7 +500,14 @@ def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
         extra["since_ts"] = int(since)
     if tick:
         extra["ticker"] = tick
-    pushes = list_recent(email, limit, **extra)
+    # `limit` counts COLLAPSED rows, so the raw push fetch over-reads (bounded
+    # by MAX_LIMIT) — the default read is 50 raw, not 25. `raw_truncated` is
+    # measured HERE, on the raw fetch, never on the served length: after a fold
+    # the served list is shorter than the cap and the page's "newest 500 only"
+    # warning would otherwise vanish exactly when it matters.
+    raw_limit = min(limit * COLLAPSE_OVERFETCH, MAX_LIMIT) if collapse else limit
+    pushes = list_recent(email, raw_limit, **extra)
+    raw_truncated = bool(collapse) and len(pushes) >= raw_limit
     # RETIRED kinds never reach a surface he reads (Ajay 2026-09-20: "Remove
     # volleyball and learning of stocks I do dont wanna see them they are
     # spamming too much"). The spam was HERE, not on his phone: push_history
@@ -329,8 +545,14 @@ def gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
                 pass
 
     merged = pushes + breakout_rows
+    # Stable sort, no tie-break key: within equal ts the push rows keep their
+    # Mongo index order and stay ahead of the breakouts. Adding a tie-break
+    # here would reorder the default read AND reshuffle which rows are
+    # adjacent, which is what the collapse groups on.
     merged.sort(key=lambda r: r.get("ts") or 0, reverse=True)
-    return merged[:limit]
+    if collapse:
+        merged = collapse_repeats(merged, tail_truncated=raw_truncated)
+    return merged[:limit], raw_truncated
 
 
 @router.get("/notifications/recent")
@@ -341,6 +563,9 @@ async def notifications_recent(
                                                    "only when a breakout kind is named"),
     since: Optional[int] = Query(None, ge=0, description="Unix seconds; rows with ts >= since"),
     ticker: Optional[str] = Query(None, max_length=16, description="One symbol (upper-cased)"),
+    collapse: bool = Query(True, description="Fold adjacent rows with the same "
+                                             "source+kind+ticker+title(+tickers) into the newest "
+                                             "one, with a served `repeat` block; false = the flat list"),
     email: str = Depends(current_user_email),
 ):
     """Unified recent-notifications feed: push_history + sepa_breakouts.
@@ -353,11 +578,17 @@ async def notifications_recent(
     Sorted by ts desc, capped at ``limit``. Breakouts are pulled with a
     200-row hard cap on the source side so a wildly long banner stack doesn't
     bloat the merge. See the module docstring for the filter params.
+
+    2026-09-21: adjacent identical rows arrive folded into one survivor
+    carrying ``repeat`` (``collapse=false`` = the old flat list), and the
+    payload carries ``collapse`` + ``raw_truncated``.
     """
-    rows = await asyncio.to_thread(gather, email, limit, kinds=kinds, since=since, ticker=ticker)
-    return JSONResponse({"rows": rows, "count": len(rows)})
+    payload = await asyncio.to_thread(gather_payload, email, limit, kinds=kinds,
+                                      since=since, ticker=ticker, collapse=collapse)
+    return JSONResponse(payload)
 
 
-__all__ = ["router", "gather", "parse_kinds", "breakout_kinds", "breakout_query",
-           "normalize_breakout", "derive_tickers", "known_symbols",
-           "DIGEST_KINDS", "MAX_LIMIT", "KNOWN_TTL_SEC"]
+__all__ = ["router", "gather", "gather_payload", "parse_kinds", "breakout_kinds",
+           "breakout_query", "normalize_breakout", "derive_tickers", "known_symbols",
+           "collapse_repeats", "repeat_key", "repeat_block", "repeat_line",
+           "DIGEST_KINDS", "MAX_LIMIT", "KNOWN_TTL_SEC", "COLLAPSE_OVERFETCH"]

@@ -43,6 +43,10 @@ type FeedRow = {
   tickers?:   string[] | null;
   url:        string | null;
   source:     'push' | 'breakout';
+  /** 🔁 The fold block (2026-09-21, push/recent collapse_repeats). Only `line`
+   *  is read: the bell prints the served sentence verbatim and composes
+   *  nothing from `count`. */
+  repeat?:    { line: string } | null;
   sent?:      number;
   total?:     number;
   dismissed?: boolean;
@@ -123,6 +127,11 @@ export function NotificationBell() {
   // user taps a row and the page navigates.
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
+  // **[C7]** The badge counts ROWS, unchanged by the 2026-09-21 fold: a folded
+  // block is ONE unread here, however many fires it stands for — the dropdown
+  // shows one line per row, so a badge of 2 over 2 lines is the honest read.
+  // The alternative (count fires: Σ repeat.count) is a one-line change and is
+  // on his list (§7.9) — do not switch it silently.
   const unreadCount = rows.filter((r) => (r.ts || 0) > lastSeen).length;
   const visible = rows.slice(0, DROPDOWN_LIMIT);
 
@@ -335,6 +344,13 @@ export function NotificationBell() {
                       {r.body}
                     </div>
                   )}
+                  {/* 🔁 The served fold line, printed verbatim (see FeedRow). */}
+                  {r.repeat?.line ? (
+                    <div data-testid="bell-repeat"
+                         style={{ fontSize: '0.66rem', color: '#6a6a72', marginTop: 2 }}>
+                      {r.repeat.line}
+                    </div>
+                  ) : null}
                   {/* Every name in the push, each a real <a href>. No
                       fromKey — the bell is on every page. */}
                   <TickerChips tickers={r.tickers} ticker={r.ticker} tab="supply"

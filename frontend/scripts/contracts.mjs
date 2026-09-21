@@ -42,7 +42,11 @@ const parseCmTabs = (src) => {
  *  a kind missing from it is muted again the next time his phone re-subscribes
  *  (memory: cheetah_push_silent_drops). */
 const keepSet = (subsSrc) => {
-  const m = /OWNER_KEEP_SET[^=]*=\s*frozenset\(\{([\s\S]*?)\}\)/.exec(subsSrc);
+  // Anchored at COLUMN 0 (2026-09-21): the definition is the only line that
+  // starts with the name. A comment paragraph above it that mentions
+  // OWNER_KEEP_SET used to be a valid start for this match, so a prose
+  // sentence could have steered which set the contracts read.
+  const m = /^OWNER_KEEP_SET[^=]*=\s*frozenset\(\{([\s\S]*?)\}\)/m.exec(subsSrc);
   if (!m) return [];
   const body = m[1].replace(/#[^\n]*/g, '');
   return [...body.matchAll(/["']([a-z0-9_]+)["']/g)].map((x) => x[1]);
@@ -3729,6 +3733,46 @@ const CONTRACTS = [
       if (!/"armed"/.test(pyCode)) errs.push('price_alerts.py must carry the armed latch');
       if (!/ALERT_COOLDOWN_SEC = 6 \* 3600/.test(pyCode)) errs.push('ALERT_COOLDOWN_SEC moved — a threshold change is his call');
       if (!/id: 'price-alerts-once-per-crossing-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) errs.push('the latch needs its ✨ entry');
+      return errs;
+    },
+  },
+  {
+    name: '🔔 price alerts reach the phone again; repeated rows fold (2026-09-21)',
+    file: 'src/pages/Notifications.tsx',
+    // Ajay 2026-09-21, "Yes to all..": (1) turn price alerts back on — he asked,
+    // and a notification pref is never flipped without him; (2) collapse the
+    // repeated rows on the Alerts page. The fold is SERVER-side: push/recent
+    // builds the whole "N more like this · first … , last …" sentence and the
+    // three surfaces print it. None of them recomposes it.
+    checks: (src) => {
+      const errs = [];
+      const subs = read('../backend/push/subs.py');
+      if (!keepSet(subs).includes('price_alert')) {
+        errs.push('price_alert left OWNER_KEEP_SET — a re-registered device would mute it again');
+      }
+      for (const retired of ['_RETIRED_2026_06_13', 'RETIRED_2026_09_20']) {
+        const set = pyFrozenSet(subs, retired) || [];
+        if (set.includes('price_alert')) errs.push(`price_alert is back in ${retired} — he asked for it ON (2026-09-21)`);
+      }
+      if (!/key: 'price_alert'/.test(src)) errs.push('Notifications.tsx must offer the 🔔 Price alerts toggle');
+      if (/price_alert is PAUSED/.test(src)) errs.push('the PAUSED note is stale — price alerts came back 2026-09-21');
+      const ess = src.slice(src.indexOf("id: 'essentials'"), src.indexOf("id: 'trading_only'"));
+      if (!/price_alert:\s*true/.test(ess)) errs.push('Essentials preset must keep price_alert on — it is in OWNER_KEEP_SET');
+      const py = read('../backend/push/recent.py');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+      if (!/def collapse_repeats\(/.test(pyCode)) errs.push('push/recent.py must build the fold server-side');
+      if (!/def repeat_line\(/.test(pyCode)) errs.push('push/recent.py must build the repeat SENTENCE — the page never composes it');
+      if (!/collapse: bool = True/.test(pyCode)) errs.push('the fold must default ON and stay defeatable with collapse=false');
+      for (const f of ['src/pages/Alerts.tsx', 'src/components/NotificationBell.tsx',
+                       'src/components/PushHistoryPanel.tsx']) {
+        const tsx = read(f);
+        if (!/repeat\?\.line/.test(tsx)) errs.push(`${f} must print the served repeat.line`);
+        if (/more like this/.test(tsx)) errs.push(`${f} types the served fold sentence — it is the SERVER's wording`);
+        if (/first .*ET, last/.test(tsx)) errs.push(`${f} composes the fold stamps — the server already did`);
+      }
+      if (!/id: 'price-alerts-on-and-feed-fold-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the un-pause + fold needs its ✨ entry');
+      }
       return errs;
     },
   },

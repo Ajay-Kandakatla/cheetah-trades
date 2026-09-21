@@ -85,13 +85,19 @@ def test_default_read_is_unchanged_positional_list_recent_and_unfiltered_breakou
     c, calls = _harness(monkeypatch, pushes=[PUSH], breakouts=[BK])
     r = c.get("/notifications/recent")
     assert r.status_code == 200
-    assert calls["list_recent"] == [("a@x", 25, {})], "no kwargs when no filter was asked for"
+    # 2026-09-21: the default read over-fetches COLLAPSE_OVERFETCH× for the collapse
+    assert calls["list_recent"] == [("a@x", 50, {})], "no kwargs when no filter was asked for"
     assert calls["queries"] == [{}] and calls["sort"] == ("ts", -1) and calls["limit"] == 200
     body = r.json()
     assert body["count"] == 2 and [x["_id"] for x in body["rows"]] == ["b1", "p1"], "ts desc merge"
     push_row, bk_row = body["rows"][1], body["rows"][0]
     assert push_row["source"] == "push" and push_row["kind"] == "demand_alert" and "dismissed" not in push_row
     assert push_row["tickers"] == ["NTAP"], "a single push links its own ticker (2026-09-20)"
+    # 2026-09-21 — the collapse is on by default and changes NOTHING when
+    # nothing repeats: no row carries `repeat`, and the two new payload keys
+    # are honest (the raw fetch of 1 row did not hit its 50-row cap).
+    assert body["collapse"] is True and body["raw_truncated"] is False
+    assert all("repeat" not in x for x in body["rows"])
     assert bk_row == {"_id": "b1", "ts": 1_788_617_000, "ts_iso": "2026-09-05T14:03:20+00:00",
                       "title": "🚀 Volume breakout · AAPL", "body": "$231.50  ·  +4.2%\nvol 3.1x",
                       "kind": "volume_breakout", "ticker": "AAPL",
@@ -105,12 +111,31 @@ def test_default_read_is_unchanged_positional_list_recent_and_unfiltered_breakou
                       "dismissed": False}
 
 
+def test_collapse_false_is_the_pre_2026_09_21_read(monkeypatch):
+    """One flag away from the old feed: no over-fetch, no `repeat`, and the two
+    new payload keys both False."""
+    c, calls = _harness(monkeypatch, pushes=[PUSH], breakouts=[BK])
+    body = c.get("/notifications/recent", params={"collapse": "false"}).json()
+    assert calls["list_recent"] == [("a@x", 25, {})], "no over-fetch in flat mode"
+    assert body["collapse"] is False and body["raw_truncated"] is False
+    assert body["count"] == 2 and all("repeat" not in x for x in body["rows"])
+
+
 def test_limit_caps_the_merge_and_accepts_up_to_500(monkeypatch):
     pushes = [dict(PUSH, _id=f"p{i}", ts=100 + i) for i in range(5)]
     c, calls = _harness(monkeypatch, pushes=pushes, breakouts=[dict(BK, ts=103)])
     r = c.get("/notifications/recent", params={"limit": 3})
-    assert [x["ts"] for x in r.json()["rows"]] == [104, 103, 103] and r.json()["count"] == 3
-    assert calls["list_recent"][-1] == ("a@x", 3, {})
+    # 2026-09-21 — the five fixture pushes share (kind, ticker, title), so the
+    # collapse folds the runs either side of the breakout: ts 104+103 fold,
+    # then b1, then 102+101+100 fold. The cap still counts SERVED rows.
+    assert [x["ts"] for x in r.json()["rows"]] == [104, 103, 102] and r.json()["count"] == 3
+    assert [x["repeat"]["count"] if x.get("repeat") else 1 for x in r.json()["rows"]] == [2, 1, 3]
+    # 2026-09-21: the default read over-fetches COLLAPSE_OVERFETCH× for the collapse
+    assert calls["list_recent"][-1] == ("a@x", 6, {})
+    # the tie order itself is unchanged — push before breakout within equal ts
+    flat = c.get("/notifications/recent", params={"limit": 3, "collapse": "false"}).json()
+    assert [x["ts"] for x in flat["rows"]] == [104, 103, 103] and flat["count"] == 3
+    assert calls["list_recent"][-1] == ("a@x", 3, {}), "flat mode never over-fetches"
     assert c.get("/notifications/recent", params={"limit": 500}).status_code == 200
     assert calls["list_recent"][-1][1] == 500
     assert c.get("/notifications/recent", params={"limit": 501}).status_code == 422
@@ -138,7 +163,8 @@ def test_sd_kinds_filter_the_pushes_and_exclude_the_breakout_source(monkeypatch)
     r = c.get("/notifications/recent", params={"kinds": "demand_alert,zone_bounce_alert, supply_break_alert,,",
                                                "limit": 200})
     assert r.status_code == 200
-    assert calls["list_recent"] == [("a@x", 200, {"kinds": ["demand_alert", "zone_bounce_alert",
+    # 2026-09-21: the default read over-fetches COLLAPSE_OVERFETCH× for the collapse
+    assert calls["list_recent"] == [("a@x", 400, {"kinds": ["demand_alert", "zone_bounce_alert",
                                                             "supply_break_alert"]})]
     assert calls["queries"] == [], "no breakout kind named -> sepa_breakouts is never read"
     assert [x["_id"] for x in r.json()["rows"]] == ["p1"]
@@ -158,10 +184,12 @@ def test_since_and_ticker_reach_both_sources_ticker_upper_cased(monkeypatch):
     c, calls = _harness(monkeypatch, pushes=[PUSH], breakouts=[BK])
     r = c.get("/notifications/recent", params={"since": 1_757_000_000, "ticker": "aapl"})
     assert r.status_code == 200
-    assert calls["list_recent"][-1] == ("a@x", 25, {"since_ts": 1_757_000_000, "ticker": "AAPL"})
+    # 2026-09-21: the default read over-fetches COLLAPSE_OVERFETCH× for the collapse
+    assert calls["list_recent"][-1] == ("a@x", 50, {"since_ts": 1_757_000_000, "ticker": "AAPL"})
     assert calls["queries"] == [{"ts": {"$gte": 1_757_000_000}, "ticker": "AAPL"}]
     c.get("/notifications/recent", params={"ticker": "  "})
-    assert calls["list_recent"][-1] == ("a@x", 25, {}) and calls["queries"][-1] == {}, "blank ticker = absent"
+    # 2026-09-21: the default read over-fetches COLLAPSE_OVERFETCH× for the collapse
+    assert calls["list_recent"][-1] == ("a@x", 50, {}) and calls["queries"][-1] == {}, "blank ticker = absent"
     assert c.get("/notifications/recent", params={"since": -1}).status_code == 422
     assert c.get("/notifications/recent", params={"since": "yesterday"}).status_code == 422
 
@@ -169,7 +197,8 @@ def test_since_and_ticker_reach_both_sources_ticker_upper_cased(monkeypatch):
 def test_blank_kinds_is_no_filter(monkeypatch):
     c, calls = _harness(monkeypatch, pushes=[PUSH], breakouts=[BK])
     c.get("/notifications/recent", params={"kinds": " , "})
-    assert calls["list_recent"][-1] == ("a@x", 25, {}) and calls["queries"] == [{}]
+    # 2026-09-21: the default read over-fetches COLLAPSE_OVERFETCH× for the collapse
+    assert calls["list_recent"][-1] == ("a@x", 50, {}) and calls["queries"] == [{}]
 
 
 # ── the pure helpers ─────────────────────────────────────────────────────────

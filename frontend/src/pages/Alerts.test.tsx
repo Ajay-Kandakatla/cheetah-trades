@@ -766,3 +766,141 @@ describe('Alerts page — the once-a-day passes', () => {
     }
   });
 });
+
+/* ── 2026-09-21: the feed folds repeated rows ──────────────────────────────
+ *
+ * push/recent collapses a run of adjacent rows with the same
+ * source+kind+ticker+title(+tickers) into the newest one and hands the page a
+ * `repeat` block whose `line` is the whole sentence. The page's job is small
+ * and pinned here with its negatives: PRINT the line, never compose one; count
+ * the pair over what is ON SCREEN; and show the truncation warning on the
+ * SERVER's `raw_truncated`, because a folded answer serves fewer rows than it
+ * read and `rows.length >= 500` went quiet exactly when the page was least
+ * complete.
+ */
+const LINE = 'served: two more of these';
+const REPEAT = {
+  count: 3,
+  first_ts: T('2026-09-05T11:07:00Z'),          // 07:07 ET — a stamp the page must NOT print
+  first_ts_iso: '2026-09-05T11:07:00+00:00',
+  last_ts: T('2026-09-05T14:42:00Z'),
+  truncated: false,
+  line: LINE,
+};
+const manyRows = (n: number, extra: Record<string, unknown> = {}) =>
+  Array.from({ length: n }, (_, i) => ({
+    ...ROWS[0], _id: `m${i}`, ts: T('2026-09-05T14:42:00Z') - i * 60, ...extra,
+  }));
+
+describe('Alerts page — the fold line is printed, never composed', () => {
+  it('prints row.repeat.line VERBATIM inside the row, beside the delivery line and the link', async () => {
+    stubFetch({ rows: [{ ...ROWS[0], repeat: REPEAT }, ROWS[1], ROWS[2]] });
+    draw('/alerts?days=5');
+    const rows = await screen.findAllByTestId('alert-row');
+    const line = within(rows[0]).getByTestId('alert-repeat');
+    expect(line.textContent).toBe(LINE);
+    expect(within(rows[0]).getByText(LINE)).toBe(line);
+    // the meta line is one flex row — the delivery read and the link stay put
+    expect(within(rows[0]).getByText('delivered to 2/2 devices')).toBeInTheDocument();
+    expect(within(rows[0]).getByRole('link', { name: "open the push's page →" })).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a row with no block, and one with repeat: null, render no fold line', async () => {
+    stubFetch({ rows: [ROWS[0], { ...ROWS[1], repeat: null }] });
+    draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    expect(rows).toHaveLength(2);
+    expect(screen.queryAllByTestId('alert-repeat')).toHaveLength(0);
+  });
+
+  it('NEGATIVE: the page composes NOTHING from count or the stamps', async () => {
+    stubFetch({ rows: [{ ...ROWS[0], repeat: REPEAT }] });
+    draw();
+    await screen.findAllByTestId('alert-row');
+    const page = document.body.textContent ?? '';
+    // not the server's own wording, re-derived
+    expect(page).not.toMatch(/more like this/);
+    expect(page).not.toMatch(/2 more/);
+    expect(page).not.toMatch(/3 more/);
+    // not an ET stamp derived from first_ts / last_ts (07:07 ET, 10:42 ET)
+    expect(page).not.toMatch(/07:07/);
+    expect(page).not.toMatch(/first 07:07/);
+    expect(page).not.toMatch(/last 10:42/);
+    expect(page).not.toMatch(/ ET, last /);
+    // exactly one fold line, and it is the served string
+    expect(screen.getAllByTestId('alert-repeat')).toHaveLength(1);
+    expect(screen.getByTestId('alert-repeat').textContent).toBe(LINE);
+  });
+
+  it('NEGATIVE: no browser clock — 24h later the line is byte-identical', async () => {
+    stubFetch({ rows: [{ ...ROWS[0], repeat: REPEAT }] });
+    const { rerender } = draw();
+    await screen.findAllByTestId('alert-row');
+    const before = screen.getByTestId('alert-repeat').textContent;
+    _resetAlertHistoryCache();
+    act(() => { vi.setSystemTime(new Date(NOW + 86_400_000)); });
+    rerender(<MemoryRouter initialEntries={['/alerts']}><AlertsPage /></MemoryRouter>);
+    await screen.findAllByTestId('alert-row');
+    expect(screen.getByTestId('alert-repeat').textContent).toBe(before);
+    expect(screen.getByTestId('alert-repeat').textContent).toBe(LINE);
+  });
+});
+
+describe('Alerts page — the header counts rows AND alerts', () => {
+  it('prints the honest pair when something folded', async () => {
+    stubFetch({ rows: [
+      { ...ROWS[0], repeat: { ...REPEAT, count: 3 } },
+      ROWS[1],
+      { ...ROWS[2], repeat: { ...REPEAT, count: 2 } },
+    ] });
+    draw('/alerts?days=5');
+    await screen.findAllByTestId('alert-row');
+    // 3 on screen; 2 + 0 + 1 folded away under them
+    expect(screen.getByText(/^3 rows · 6 alerts ·/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: nothing folded → the old "N alerts" string, byte-identical', async () => {
+    stubFetch();
+    draw('/alerts?days=5');
+    await screen.findAllByTestId('alert-row');
+    expect(screen.getByText(/^3 alerts · times in ET/)).toBeInTheDocument();
+    expect(screen.queryByText(/rows ·/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: the Yesterday view counts only what is visible — a filtered-out fold never inflates it', async () => {
+    stubFetch({ rows: [
+      { ...ROWS[0], repeat: { ...REPEAT, count: 4 } },   // today — cut client-side
+      ROWS[1],                                            // today — cut client-side
+      { ...ROWS[2], repeat: { ...REPEAT, count: 2 } },    // yesterday — the only row
+    ] });
+    draw('/alerts?days=2');
+    const rows = await screen.findAllByTestId('alert-row');
+    expect(rows).toHaveLength(1);
+    expect(screen.getByText(/^1 rows · 2 alerts ·/)).toBeInTheDocument();
+    expect(screen.queryByText(/ 5 alerts/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ 6 alerts/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Alerts page — the truncation warning keys on the SERVER cut', () => {
+  it('raw_truncated: true warns although only 10 rows were served', async () => {
+    stubFetch({ rows: manyRows(10), raw_truncated: true });
+    draw();
+    await screen.findAllByTestId('alert-row');
+    expect(screen.getByText(/newest 500 only — narrow the window/)).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: raw_truncated: false on a short answer warns about nothing', async () => {
+    stubFetch({ rows: manyRows(10), raw_truncated: false });
+    draw();
+    await screen.findAllByTestId('alert-row');
+    expect(screen.queryByText(/newest 500 only/)).not.toBeInTheDocument();
+  });
+
+  it('a full page with NO raw_truncated key still warns (the old predicate holds)', async () => {
+    stubFetch({ rows: manyRows(500) });
+    draw();
+    await screen.findAllByTestId('alert-row');
+    expect(screen.getByText(/newest 500 only — narrow the window/)).toBeInTheDocument();
+  });
+});

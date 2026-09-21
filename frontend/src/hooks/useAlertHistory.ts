@@ -41,7 +41,40 @@ export type AlertRow = {
    *  Absent on every row written before that date, and on kinds that carry no
    *  demand read at all — the chip then renders nothing. */
   enterable?: EnterableRead | null;
+  /** 🔁 The fold block (2026-09-21, push/recent collapse_repeats): this row is
+   *  the NEWEST of a run of adjacent rows with the same source+kind+ticker+
+   *  title(+tickers), and `count` is the size of that run (survivor included,
+   *  always ≥ 2). `line` is the whole sentence, composed on the server from
+   *  the same ET day labeller his price-alert message uses.
+   *
+   *  The FE prints `line` VERBATIM and never recomposes the sentence, never
+   *  derives a date or reads a clock for it — a second wording engine here
+   *  would drift from the served one. The ONLY arithmetic allowed on `count`
+   *  is the /alerts header's total (foldedCount below).
+   *
+   *  Absent on an unfolded row and on every answer from an older API. */
+  repeat?: RepeatBlock | null;
 };
+
+/** The served fold block. `line` is the only field any surface prints. */
+export type RepeatBlock = {
+  count: number;
+  first_ts: number | null;
+  first_ts_iso: string | null;
+  last_ts: number | null;
+  truncated: boolean;
+  line: string;
+};
+
+/** How many rows the server FOLDED AWAY out of the given list: Σ max(0, count-1).
+ *  `visible.length + foldedCount(visible)` is the honest alert total behind the
+ *  page's rows, exact under any client-side filter (the page counts what is on
+ *  screen, not a server-wide total). A row with no block counts 0. */
+export function foldedCount(rows: readonly Pick<AlertRow, 'repeat'>[]): number {
+  let n = 0;
+  for (const r of rows) n += Math.max(0, (Number(r?.repeat?.count) || 1) - 1);
+  return n;
+}
 
 export type AlertQuery = {
   /** Kind filter. Empty / undefined = the endpoint's default (every kind). */
@@ -87,9 +120,15 @@ export function buildRecentQuery(q: AlertQuery): string {
   return p.toString();
 }
 
-type Entry = { ts: number; rows: AlertRow[] };
+/** A cached answer. **[C2]** `rawTruncated` is the server's own top-level
+ *  `raw_truncated`: the RAW push fetch hit its boundary, so rows older than
+ *  the newest page exist even when the SERVED list is shorter than the cap
+ *  (a collapsed answer serves fewer rows than it read). The page's warning
+ *  keys on it — `rows.length >= MAX_LIMIT` alone stopped being the whole
+ *  truth the day the feed started folding. */
+type Entry = { ts: number; rows: AlertRow[]; rawTruncated: boolean };
 const _cache = new Map<string, Entry>();
-const _inflight = new Map<string, Promise<AlertRow[]>>();
+const _inflight = new Map<string, Promise<Entry>>();
 
 /** Tests only — the module cache outlives a test's render. */
 export function _resetAlertHistoryCache(): void {
@@ -97,7 +136,7 @@ export function _resetAlertHistoryCache(): void {
   _inflight.clear();
 }
 
-async function fetchRecent(qs: string): Promise<AlertRow[]> {
+async function fetchRecent(qs: string): Promise<Entry> {
   const hit = _inflight.get(qs);
   if (hit) return hit;
   const p = (async () => {
@@ -107,8 +146,12 @@ async function fetchRecent(qs: string): Promise<AlertRow[]> {
     // A foreign body (older API, a test stub answering every URL alike) must
     // land as "no rows", not a crash in the board that mounted this.
     const rows = Array.isArray(j?.rows) ? (j.rows as AlertRow[]) : [];
-    _cache.set(qs, { ts: Date.now(), rows });
-    return rows;
+    // Strict `=== true`: an API that never learned the key claims nothing, so
+    // the page falls back to its own rows.length test.
+    const rawTruncated = j?.raw_truncated === true;
+    const entry: Entry = { ts: Date.now(), rows, rawTruncated };
+    _cache.set(qs, entry);
+    return entry;
   })();
   _inflight.set(qs, p);
   try {
@@ -120,6 +163,9 @@ async function fetchRecent(qs: string): Promise<AlertRow[]> {
 
 export type AlertHistoryState = {
   rows: AlertRow[] | null;
+  /** **[C2]** The server cut the raw push fetch — older rows exist beyond this
+   *  answer whatever `rows.length` says. `false` until the first answer. */
+  rawTruncated: boolean;
   loading: boolean;
   error: string | null;
   reload: () => void;
@@ -129,6 +175,7 @@ export function useAlertHistory(q: AlertQuery, opts?: { ttlMs?: number }): Alert
   const ttl = opts?.ttlMs ?? HISTORY_TTL_MS;
   const qs = buildRecentQuery(q);
   const [rows, setRows] = useState<AlertRow[] | null>(() => _cache.get(qs)?.rows ?? null);
+  const [rawTruncated, setRawTruncated] = useState<boolean>(() => _cache.get(qs)?.rawTruncated ?? false);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
@@ -140,22 +187,24 @@ export function useAlertHistory(q: AlertQuery, opts?: { ttlMs?: number }): Alert
     // goes to the server — that is what the button is for.
     if (nonce === 0 && hit && Date.now() - hit.ts < ttl) {
       setRows(hit.rows);
+      setRawTruncated(hit.rawTruncated);
       setError(null);
       setLoading(false);
       return undefined;
     }
     setRows(hit?.rows ?? null);
+    setRawTruncated(hit?.rawTruncated ?? false);
     setLoading(true);
     setError(null);
     fetchRecent(qs)
-      .then((r) => { if (alive) { setRows(r); setError(null); } })
+      .then((e) => { if (alive) { setRows(e.rows); setRawTruncated(e.rawTruncated); setError(null); } })
       .catch((e) => { if (alive) setError(String((e as Error).message || e)); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [qs, nonce, ttl]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
-  return { rows, loading, error, reload };
+  return { rows, rawTruncated, loading, error, reload };
 }
 
 export type AlertedHit = { ts: number; kind: string | null };
@@ -187,8 +236,8 @@ export function useAlertedToday(kinds: readonly string[] = ZONE_KINDS, opts?: { 
         return;
       }
       try {
-        const r = await fetchRecent(qs);
-        if (alive) setRows(r);
+        const e = await fetchRecent(qs);
+        if (alive) setRows(e.rows);
       } catch {
         // keep whatever was on screen; the chip is not a critical path
       }

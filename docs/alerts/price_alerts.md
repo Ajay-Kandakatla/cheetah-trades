@@ -178,26 +178,66 @@ WDC duplicates) — cross, re-arm, re-cross, fire, cooldown. WDC's 30-day fires 
 09:45/10:00/10:10/10:50/11:35/14:45 are that chatter, not the cooldown bucket. This is stated,
 not gated → §HIS CALL 8.
 
-## The two silent-drop chokepoints (UNCHANGED)
+## The two silent-drop chokepoints — OPENED 2026-09-21
 
-The phone was quiet while the page was loud, and it still will be:
+The phone was quiet while the page was loud. Asked *"Price alerts are retired in the push switch
+and off in your Notifications, so even a real crossing will not reach your phone. Turn them back
+on?"*, Ajay said **"Yes to all.."**. Both chokepoints open — one in code, one in data.
 
-1. `backend/push/subs.py:24-28` `_RETIRED_2026_06_13` contains `"price_alert"` →
-   `DISABLED_ALERT_KINDS` → `list_subscriptions` returns `[]` before the prefs query.
-   A global kill-switch, his 2026-06-24 call.
-2. His `push_subscriptions.prefs.price_alert = False` on both devices.
+1. **Code (shipped 2026-09-21).** `backend/push/subs.py:22` `_RETIRED_2026_06_13` no longer holds
+   `"price_alert"`, so `DISABLED_ALERT_KINDS` (`:43`) no longer does either and
+   `list_subscriptions` (`:187`) / `list_mac_device_ids` (`:268`) reach the prefs query instead of
+   returning `[]` / `set()`. The other ten 2026-06-13 kinds and the four 2026-09-20 kinds are
+   byte-identical and still die before Mongo.
+   The kind also **joined `OWNER_KEEP_SET`** (`subs.py:361`, now nine) with the dated quote, so a
+   re-registering owner device cannot quietly mute it again — `prefs_for()` → `owner_prefs()`
+   starts it True.
+2. **Data (main session, by hand, AFTER the deploy).** His three `push_subscriptions` documents
+   still carry `prefs.price_alert = False`. The writer is the existing script, which reads
+   `OWNER_KEEP_SET` and never retypes a kind:
 
-`push/history.py:107-150` writes a `push_history` row on **every** send attempt, `sent=0 total=0`
-when zero devices — that is what `/alerts` renders. So each re-fire was one page row.
-**This change makes the page honest and the rules latch; it does not make the phone ring.**
-Un-retiring the kind and flipping the pref is §HIS CALL 1 — never flipped here.
+   ```bash
+   docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply
+   docker exec -i -w /app cheetah-market-app-api-1 python -m scripts.owner_prefs_apply --apply
+   ```
+
+   Dry first. The expected diff is exactly `price_alert False→True` on **3** devices and
+   **nothing else** — anything more means the keep-set moved by accident. No package in this
+   build writes a Mongo document.
+
+**Who receives what** (unchanged, `backend/sepa/price_alerts.py:56-70` `_target_email`): the rule's
+creator, else `auth.HOUSE_OWNER_EMAIL` = the **first** of `HOUSE_OWNER_EMAILS` = him. The co-owner
+is on `HOUSE_OWNER_EMAILS` but is **never** a fallback recipient. The 25 ownerless rules therefore
+deliver to him. The one rule owned by another household address (CORZ drop 5%) resolves to that
+address, which has **0** push subscriptions today — it will record `total 0` rows under that email
+and ring nobody. Dead rule, §HIS CALL 3.
+
+**What did NOT change:** the latch, `ALERT_COOLDOWN_SEC`, `_threshold`, `KINDS`, `_target_email`,
+`notify.PRIVATE_KINDS` (a private kind with no `user_email` is still refused), and the serve-time
+filter in `push/recent.py` (it keys on `RETIRED_2026_09_20` only, so this kind was never hidden
+from `/alerts`). This widened WHICH KINDS reach him, not what any kind requires to fire.
+
+**The trap (C1).** `frontend/scripts/contracts.mjs:44-49` `keepSet()` parses `subs.py` with
+`/OWNER_KEEP_SET[^=]*=\s*frozenset\(\{([\s\S]*?)\}\)/` — it anchors on the **first** occurrence of
+that literal anywhere in the file, and its body ends at the first `})`. So: never name the set in
+a comment above its definition (the parser would return the retired ten and the Essentials preset
+contract would demand `volume_breakout: true` while never checking `price_alert`), and never write
+`})` inside a comment in the set body. Pinned in
+`backend/tests/test_price_alert_unpause_2026_09_21.py` — including a NEGATIVE that poisons a copy
+of the source and shows the parser returning the ten.
+
+`push/history.py:107-150` still writes a `push_history` row on **every** send attempt, `sent=0
+total=0` when zero devices — that is what `/alerts` renders.
 
 ## What is NOT changed
 
 - `ALERT_COOLDOWN_SEC` (6 h), `KINDS`, `_target_email`, `delete`, `recent_fires`.
 - The `price_alert_fires` row shape and the SSE `alert.fired` payload.
 - `GET /sepa/alerts/price` / `GET /sepa/alerts/recent` handlers (`main.py`), `cli.py`.
-- The `/alerts` page and its 2,022 historic rows — history is not hidden (§HIS CALL 2).
+- The `/alerts` page hides nothing: not one historic `price_alert` row is deleted, filtered
+  or scoped away. Repeats now FOLD into a single row carrying a served "N more like this"
+  line (2026-09-21, §HIS CALL 2 ANSWERED) — a display change only, specified in
+  `docs/notifications/alerts_feed_collapse.md`; `?collapse=false` serves the old flat read.
 - `notify.send_alert(..., user_email=_target_email(a))` stays **lexically inside**
   `check_alerts`: `test_price_alert_delivery.py:41-49` pins that source, because moving the send
   into a helper is how the 2026-06-02 silent-drop bug got in.
@@ -220,13 +260,17 @@ Un-retiring the kind and flipping the pref is §HIS CALL 1 — never flipped her
 
 ## HIS CALL — not decided, not built
 
-1. **Un-retire `price_alert`** from `push/subs.DISABLED_ALERT_KINDS` and flip his device pref ON,
-   so a real crossing reaches the phone. Both chokepoints drop it today; "supposed to be
-   realtime" may mean he expects it on the phone. A pref is never flipped without him.
-2. **Collapse the 2,022 historic `price_alert` rows on `/alerts`** (one row per alert per day, or
-   hide `sent 0` re-fires older than today). Page untouched now.
+1. ~~**Un-retire `price_alert`** from `push/subs.DISABLED_ALERT_KINDS` and flip his device pref
+   ON.~~ **ANSWERED 2026-09-21: "Yes to all..".** The code chokepoint is open and the kind is in
+   the keep-set (see the chokepoints section above); the pref flip is the one
+   `scripts/owner_prefs_apply --apply` run, main session, after the deploy.
+2. ~~**Collapse the 2,022 historic `price_alert` rows on `/alerts`**.~~ **ANSWERED 2026-09-21:
+   "Yes to all..".** Built as an adjacent-row fold in `push/recent.py` — nothing is deleted or
+   hidden, repeats collapse into one row carrying a served "N more like this" line. See
+   `docs/notifications/alerts_feed_collapse.md`.
 3. **Dedupe / prune the 52 docs** — WDC ×4 duplicates, MU ×6 at three set prices, 25 ownerless,
-   one Karthik's.
+   one owned by another household address. **Main session, data work** — no package in this build
+   touches a `price_alerts` document.
 4. **Legacy `triggered_price`** is `None` by design. Alternative: backfill from the last
    `price_alert_fires.price` per `alert_id` (≤20 one-time reads) so the line shows the number he
    saw at 15:00. Also whether `triggered_at` should be the ORIGINAL crossing (`min fired_at`).

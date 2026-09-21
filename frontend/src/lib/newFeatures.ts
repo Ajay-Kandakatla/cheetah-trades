@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21, answering the four questions after the latch shipped:
+  // "Yes to all..". Turning the kind back on is HIS call, never mine.
+  { id: 'price-alerts-on-and-feed-fold-2026-09-21',
+    label: '\u{1F514} Price alerts reach your phone again, and repeated rows fold. You said: \u201cYes to all..\u201d '
+      + 'BACK ON: price alerts were paused in the push switch on 2026-06-13 and muted on your devices, so even a real crossing reached nothing. The kind is live again and there is a \u{1F514} Price alerts toggle on the Notifications page, yours to flip. Nothing about WHEN an alert fires was loosened \u2014 this widens which kind reaches you, not what any kind requires. '
+      + 'WHAT YOU WILL ACTUALLY GET: only genuine new crossings. The rules that had been repeating since June are latched and silent until price crosses back over their line. '
+      + 'THE PAGE FOLDS: identical rows next to each other on the Alerts page, the bell and the push history now collapse into the newest one, with a line underneath saying how many more there are and the first and last time they fired. Nothing is deleted, nothing is hidden \u2014 the fold is the server\u2019s and every row is still there behind it. '
+      + 'CLEANED UP THE SAME DAY: nine rules removed at your word \u2014 six that sat on top of their line and flickered, three exact duplicates of rules you already had. '
+      + 'YOUR CALL: two presets on one stock fold into one line showing the newer note; the fold only joins rows that are next to each other, so the same name split by another alert stays two lines; the bell\u2019s unread count counts folded blocks, not individual fires; and 24 of your 43 remaining rules sit more than 30% from their line and can never fire.',
+    addedAt: '2026-09-21', route: '/alerts' },
   // Ajay 2026-09-21, with a screenshot of the Alerts page: "these are wrong
   // alerts check the numbers please" then "Yes please stop them why I am
   // getting such older alerts these are supposed to be realtime". The prices

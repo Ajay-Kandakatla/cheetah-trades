@@ -106,3 +106,32 @@ describe('PushHistoryPanel — per-ticker chips', () => {
     expect(screen.getAllByText('NVDA')).toHaveLength(1);
   });
 });
+
+/* ── 2026-09-21: the served fold line ──────────────────────────────────────
+ *
+ * Same contract as the bell and /alerts: print `repeat.line` verbatim, compose
+ * nothing from `count`, format no stamp here.
+ */
+const FOLD_LINE = 'served: three more of these';
+
+describe('PushHistoryPanel — the fold line', () => {
+  it('prints repeat.line verbatim under the row that carries it', async () => {
+    stubFetch([{ ...ROWS[0], repeat: { line: FOLD_LINE } }, ROWS[1], ROWS[2]]);
+    draw();
+    await waitFor(() => expect(screen.getAllByTestId('ph-row')).toHaveLength(3));
+    const rows = screen.getAllByTestId('ph-row');
+    expect(within(rows[0]).getByTestId('history-repeat').textContent).toBe(FOLD_LINE);
+    // the delivery line still sits under it
+    expect(within(rows[0]).getByText('delivered to 1/1 device')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: rows without a block (and with repeat: null) print no fold line, and nothing is derived from count', async () => {
+    stubFetch([{ ...ROWS[0], repeat: { count: 4, line: FOLD_LINE } }, { ...ROWS[1], repeat: null }, ROWS[2]]);
+    draw();
+    await waitFor(() => expect(screen.getAllByTestId('ph-row')).toHaveLength(3));
+    expect(screen.getAllByTestId('history-repeat')).toHaveLength(1);
+    const page = document.body.textContent ?? '';
+    expect(page).not.toMatch(/more like this/);
+    expect(page).not.toMatch(/3 more/);
+  });
+});

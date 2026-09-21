@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import {
   buildRecentQuery, useAlertHistory, useAlertedToday, _resetAlertHistoryCache, MAX_LIMIT,
-  ALERTED_TODAY_POLL_MS, ALERTED_TODAY_TTL_MS, wasDelivered,
+  ALERTED_TODAY_POLL_MS, ALERTED_TODAY_TTL_MS, wasDelivered, foldedCount,
 } from './useAlertHistory';
 import { ZONE_KINDS, startOfEtDay } from '../lib/alertKinds';
 
@@ -205,5 +205,88 @@ describe('useAlertHistory — the 🎯 read on a pushed row', () => {
     const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
     await waitFor(() => expect(result.current.rows?.length).toBe(1));
     expect(result.current.rows![0].enterable).toBeNull();
+  });
+});
+
+
+/* 🔁 The fold, 2026-09-21 (push/recent collapse_repeats).
+ *
+ * Two things ride on the hook: the server's top-level `raw_truncated` — which
+ * the page's "newest 500 only" warning now keys on, because a COLLAPSED answer
+ * serves fewer rows than it read — and `foldedCount`, the single piece of
+ * arithmetic anyone is allowed to do on `repeat.count`.
+ */
+describe('useAlertHistory — raw_truncated', () => {
+  it('a body with raw_truncated: true surfaces as rawTruncated', async () => {
+    okFetch({ rows: ROWS, raw_truncated: true });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(3));
+    expect(result.current.rawTruncated).toBe(true);
+  });
+
+  it('NEGATIVE: a body WITHOUT the key claims nothing — false, never undefined', async () => {
+    okFetch({ rows: ROWS });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(3));
+    expect(result.current.rawTruncated).toBe(false);
+  });
+
+  it('NEGATIVE: a truthy-but-not-true value is not a cut (strict ===)', async () => {
+    okFetch({ rows: ROWS, raw_truncated: 'yes' });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(3));
+    expect(result.current.rawTruncated).toBe(false);
+  });
+
+  it('a cache hit hands back the stored flag, without a second request', async () => {
+    const fn = okFetch({ rows: ROWS, raw_truncated: true });
+    const a = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(a.result.current.rawTruncated).toBe(true));
+    a.unmount();
+    const b = renderHook(() => useAlertHistory({ limit: 10 }));
+    expect(b.result.current.rawTruncated).toBe(true);       // synchronously, from the cache
+    await new Promise((r) => setTimeout(r, 10));
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('is false before the first answer', async () => {
+    okFetch({ rows: ROWS, raw_truncated: true });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    expect(result.current.rows).toBeNull();
+    expect(result.current.rawTruncated).toBe(false);
+    await waitFor(() => expect(result.current.rawTruncated).toBe(true));
+  });
+
+  it('the repeat block passes straight through, key for key', async () => {
+    const block = { count: 3, first_ts: 1_788_610_000, first_ts_iso: '2026-09-05T12:06:40+00:00',
+                    last_ts: 1_788_619_320, truncated: false, line: '2 more like this · first 08:06 ET, last 10:42 ET' };
+    okFetch({ rows: [{ ...ROWS[0], repeat: block }] });
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(1));
+    expect(result.current.rows![0].repeat).toEqual(block);
+  });
+
+  it('NEGATIVE: an unfolded row carries no repeat key, and none is invented', async () => {
+    okFetch();
+    const { result } = renderHook(() => useAlertHistory({ limit: 10 }));
+    await waitFor(() => expect(result.current.rows?.length).toBe(3));
+    for (const r of result.current.rows!) expect(r.repeat).toBeUndefined();
+  });
+});
+
+describe('foldedCount', () => {
+  it('sums count - 1 over the rows that carry a block', () => {
+    expect(foldedCount([])).toBe(0);
+    expect(foldedCount([{ repeat: { count: 3 } }, {}, { repeat: null }] as never)).toBe(2);
+    expect(foldedCount([{ repeat: { count: 3 } }, {}, { repeat: { count: 2 } }] as never)).toBe(3);
+  });
+
+  it('NEGATIVE: never negative, and a missing / bad count never subtracts', () => {
+    expect(foldedCount([{ repeat: { count: 0 } }] as never)).toBe(0);
+    expect(foldedCount([{ repeat: { count: 1 } }] as never)).toBe(0);
+    expect(foldedCount([{ repeat: { count: -5 } }] as never)).toBe(0);
+    expect(foldedCount([{ repeat: {} }] as never)).toBe(0);
+    expect(foldedCount([{ repeat: { count: 'many' } }] as never)).toBe(0);
+    expect(foldedCount([{}, {}, {}] as never)).toBe(0);
   });
 });

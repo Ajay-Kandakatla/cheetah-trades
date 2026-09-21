@@ -43,7 +43,7 @@ import type { CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TickerChips } from '../components/TickerChips';
 import { API } from '../lib/apiBase';
-import { useAlertHistory, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
+import { useAlertHistory, foldedCount, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
 import {
   ZONE_KINDS, etDayHeading, etDayKey, etFromIso, etFromTs, kindLabel, kindText, startOfEtDay, todayEtKey,
 } from '../lib/alertKinds';
@@ -393,6 +393,14 @@ function AlertRowCard({ row }: { row: AlertRowT }) {
             {row.failed > 0 ? <span style={{ color: '#fca5a5' }}>{row.failed} failed</span> : null}
           </>
         )}
+        {/* 🔁 The fold line, 2026-09-21 — printed EXACTLY as the server composed
+            it (push/recent repeat_line). The page never recomposes the
+            sentence, never formats a stamp from first_ts / last_ts and never
+            reads a clock for it: one wording engine, on the side that owns the
+            ET day labeller. */}
+        {row.repeat?.line ? (
+          <span data-testid="alert-repeat" style={{ color: DIM }}>{row.repeat.line}</span>
+        ) : null}
         {isInternal ? (
           <Link to={row.url!} style={{ color: '#9aa8c8', textDecoration: 'none' }}>open the push's page →</Link>
         ) : null}
@@ -516,7 +524,7 @@ export function AlertsPage() {
   const untilTs = choice.untilOffset != null ? startOfEtDay(choice.untilOffset) : null;
   const today = todayEtKey();
 
-  const { rows, loading, error, reload } = useAlertHistory({ kinds: kindList, sinceTs, ticker, limit: MAX_LIMIT });
+  const { rows, rawTruncated, loading, error, reload } = useAlertHistory({ kinds: kindList, sinceTs, ticker, limit: MAX_LIMIT });
   const { status, error: statusErr } = useAlertsStatus(reloadNonce);
   const gate = status?.gate ?? GATE_FALLBACK;
 
@@ -582,6 +590,14 @@ export function AlertsPage() {
     }
     return [...m.entries()];
   }, [visible]);
+
+  /* **[C2]** How many rows the server folded away UNDER what is on screen.
+   * The header used to print "N alerts" over N rows; once the feed folds, N
+   * rows can stand for more alerts than that, and a server-wide total would
+   * not match this view (the Yesterday cut is client-side, just above). So the
+   * pair is computed over `visible` — exact under any filter. The only
+   * arithmetic anyone does on `repeat.count`. */
+  const folded = useMemo(() => foldedCount(visible ?? []), [visible]);
 
   const windowText = choice.window;
   const kindsText = allMode
@@ -704,8 +720,16 @@ export function AlertsPage() {
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
           <div style={EYEBROW}>🗂️ Pushed {windowText}{ticker ? ` · ${ticker}` : ''}</div>
           <div className="mono" style={{ fontSize: '0.66rem', color: DIM }}>
-            {visible ? `${visible.length} alert${visible.length === 1 ? '' : 's'}` : ''}
-            {rows && rows.length >= MAX_LIMIT ? ` · newest ${MAX_LIMIT} only — narrow the window` : ''}
+            {visible
+              ? (folded > 0
+                  ? `${visible.length} rows · ${visible.length + folded} alerts`
+                  : `${visible.length} alert${visible.length === 1 ? '' : 's'}`)
+              : ''}
+            {/* **[C2]** `rawTruncated` is the SERVER's cut on the raw push fetch:
+                a folded answer serves fewer rows than it read, so the old
+                rows.length test went quiet exactly when the page was least
+                complete. The length test stays for a flat / older answer. */}
+            {rawTruncated || (rows && rows.length >= MAX_LIMIT) ? ` · newest ${MAX_LIMIT} only — narrow the window` : ''}
             {' '}· times in ET · history keeps 90 days (recorded since 2026-05-21)
           </div>
         </div>

@@ -50,6 +50,10 @@ type HistoryRow = {
    *  carry a `dismissed` flag instead of delivery counts. */
   source?:    'push' | 'breakout';
   dismissed?: boolean;
+  /** 🔁 The fold block (2026-09-21, push/recent collapse_repeats). Only `line`
+   *  is read: the panel prints the served sentence verbatim and composes
+   *  nothing from `count`. */
+  repeat?:    { line: string } | null;
 };
 
 /* Kind labels come from the shared registry (lib/alertKinds.ts, 2026-09-05).
@@ -143,6 +147,14 @@ function HistoryRowCard({ row }: { row: HistoryRow }) {
           {row.body}
         </div>
       )}
+
+      {/* 🔁 The served fold line, printed verbatim (see HistoryRow). */}
+      {row.repeat?.line ? (
+        <div data-testid="history-repeat"
+             style={{ fontSize: '0.66rem', color: '#6a6a72', marginTop: 3 }}>
+          {row.repeat.line}
+        </div>
+      ) : null}
 
       <div style={{
         marginTop: 5,

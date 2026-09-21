@@ -18,7 +18,6 @@ def test_retired_kinds_short_circuit_before_db(monkeypatch):
         raise AssertionError("_get_db must not be reached for a disabled kind")
     monkeypatch.setattr(subs, "_get_db", boom)
     assert subs.list_subscriptions(filter_kind="volume_breakout") == []
-    assert subs.list_subscriptions(filter_kind="price_alert") == []
     assert subs.list_mac_device_ids("a@b.com", filter_kind="scalp_tape") == set()
 
 
@@ -26,8 +25,13 @@ def test_kept_kinds_are_not_disabled():
     # The surviving surfaces (+ household) must NOT be in the denylist.
     # minervini_flashcards and the three vb_* kinds LEFT this list on
     # 2026-09-20 — see test_retired_kinds_2026_09_20.py.
+    # `price_alert` LEFT it on 2026-09-21 — Ajay, asked "Price alerts are
+    # retired in the push switch and off in your Notifications, so even a real
+    # crossing will not reach your phone. Turn them back on?": "Yes to all..".
+    # It is no longer short-circuited before the DB; see
+    # test_price_alert_unpause_2026_09_21.py.
     for k in (
-        "pivot_alert", "position_alert",
+        "pivot_alert", "position_alert", "price_alert",
         "market_hours_reminder",
         "todo_reminder", "todo_daily_digest", "house_daily",
     ):
@@ -39,7 +43,7 @@ def test_retired_kinds_are_disabled():
         "sepa_new_candidate", "volume_breakout", "rising_momentum",
         "watchlist_breakout", "juggernaut_watchlist", "stage_breakdown",
         "watchlist_stage_breakdown", "morning_brief", "product_launch",
-        "scalp_tape", "price_alert",
+        "scalp_tape",
         # Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont
         # wanna see them they are spamming too much."
         "minervini_flashcards", "vb_workout", "vb_supplement", "vb_education",

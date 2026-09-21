@@ -15,13 +15,15 @@ log = logging.getLogger("push.subs")
 # fire for anyone — even a device that hasn't re-toggled. This is the single
 # chokepoint: both the Web Push path (sender.send_to_user/all) and the Mac SSE
 # path (mac_stream) filter through list_subscriptions / list_mac_device_ids.
-# NOTE: ``price_alert`` is PAUSED, not gone — remove it from this set when the
-# user re-adds custom price alerts.
+# ``price_alert`` LEFT this set 2026-09-21 — Ajay, asked "Price alerts are
+# retired in the push switch and off in your Notifications, so even a real
+# crossing will not reach your phone. Turn them back on?": "Yes to all..".
+# It now sits in the owner keep-set at the bottom of this file.
 _RETIRED_2026_06_13: frozenset[str] = frozenset({
     "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "stage_breakdown",
     "watchlist_stage_breakdown", "morning_brief", "product_launch",
-    "scalp_tape", "price_alert",
+    "scalp_tape",
 })
 
 # Ajay 2026-09-20: "Remove volleyball and learning of stocks I do dont wanna
@@ -348,6 +350,14 @@ def _backfill(db):
 # (chart_maps/earnings_alerts.py), ✨ board_arrival (sepa/board_arrival.py).
 # The four 2026-09-09 kinds stay. "Never loosen a GATE" still stands: this
 # widens which KINDS reach him, not what any kind requires to fire.
+#
+# WIDENED 2026-09-21. Ajay, asked whether to turn price alerts back on now that
+# they fire once per crossing (the latch, 37cd469): "Yes to all..".
+# `price_alert` was PAUSED 2026-06-13 (`_RETIRED_2026_06_13`) and his stored
+# prefs carry it False; both chokepoints open here — this set for the code,
+# scripts/owner_prefs_apply.py for the data. "Never loosen a GATE" still
+# stands: this widens which KINDS reach him, not what any kind requires to
+# fire — the latch, ALERT_COOLDOWN_SEC and _threshold are untouched.
 OWNER_KEEP_SET: frozenset = frozenset({
     "hot_pullback_alert",  # 🔥 the flush-and-turn board
     "pattern_alert",       # 📐 named bullish reversal patterns
@@ -357,6 +367,7 @@ OWNER_KEEP_SET: frozenset = frozenset({
     "growth_demand_alert", # 🚀 explosive-growth board name at demand
     "earnings_reaction",   # 📣 earnings beat + institutional buying
     "board_arrival",       # ✨ a new name on 📈 Bonde / 🚀 Explosive Growth
+    "price_alert",         # 🔔 a line HE drew on a ticker page (2026-09-21, "Yes to all..")
 })
 
 
@@ -397,7 +408,7 @@ def default_prefs() -> dict:
         # is the entire reason this exists).
         "stage_breakdown": True,           # any ticker rolls 2→3, 2→4, 3→4
         "watchlist_stage_breakdown": True, # same but only for watchlist names
-        "price_alert": True,          # user-set price alerts
+        "price_alert": True,          # user-set price alerts (paused 2026-06-13, back 2026-09-21)
         "position_alert": True,       # stop / target hit on Lifeboard positions
         # Promo-circuit mover (catalysts/promo_live.py): a roster-tagged
         # name moves >= 8% vs the prior close, pre/regular/after hours.

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from push import subs   # noqa: E402
 
 
-def test_keep_set_is_the_2026_09_20_eight():
+def test_keep_set_is_the_2026_09_21_nine():
     """WIDENED 2026-09-20. Ajay: "Default on for any change of todays features
     Bondes or Potus or explosive growth or Earnings I wanna see all of them."
 
@@ -25,11 +25,17 @@ def test_keep_set_is_the_2026_09_20_eight():
     pattern Alerts and also Sameday deman alerts please... Kill all other..");
     four more join them — 🏛️ potus_investment, 🚀 growth_demand_alert,
     📣 earnings_reaction, ✨ board_arrival. What left on 2026-09-09 stays out:
-    zone_bounce_alert, supply_break_alert, todo_reminder."""
+    zone_bounce_alert, supply_break_alert, todo_reminder.
+
+    WIDENED AGAIN 2026-09-21 — 🔔 `price_alert`. Ajay, asked "Price alerts are
+    retired in the push switch and off in your Notifications, so even a real
+    crossing will not reach your phone. Turn them back on?": "Yes to all..".
+    It left `_RETIRED_2026_06_13` the same day; the stored prefs are flipped
+    separately by scripts/owner_prefs_apply.py."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival"})
+        "board_arrival", "price_alert"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices
