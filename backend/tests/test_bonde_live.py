@@ -78,7 +78,8 @@ def test_live_snapshot_fills_today_on_every_listed_row():
 
 
 def test_the_rejected_section_gets_the_live_column_too():
-    """🔎 rows are not on his screen, but they are on the PAGE — a column that
+    """🔎 rows are not on his screen as this app drew it, but they are on the
+    PAGE — a column that
     silently stops at the last section reads as "no move today"."""
     b = BL.attach(board(), fetch=fetch_all({"RSP": 0.4, "HPQ": 2.5}))
     assert b["sections"]["rejected"][0]["today_pct"] == 2.5

@@ -141,6 +141,46 @@ def _universe() -> List[str]:
     return sorted(syms)
 
 
+def last_report_map(symbols: Optional[List[str]] = None) -> dict:
+    """{SYM: last_report} for a list of names — ONE cached read, no network.
+
+    The board path's reader. Returns the stored fields RAW:
+    `date`, `when`, `eps_actual`, `eps_estimate`, `surprise_pct`. The
+    surprise is a PERCENT as Yahoo hands it over (AAL 2026-07-23 reads
+    227.58, not 2.2758) — nothing here rescales it.
+
+    `last_report` is the most recent PAST row that carried a Reported EPS, so
+    it can be a quarter or two old. That is a freshness LABEL for the caller to
+    compute in one place, not a reason to drop the row, so docs are omitted
+    only when `last_report` is None (never fetched, or a report the provider
+    never reported).
+    """
+    syms = []
+    for s in symbols or []:
+        s = str(s or "").strip().upper()
+        if s and s not in syms:
+            syms.append(s)
+    coll = _coll()
+    if coll is None or not syms:
+        return {}
+    out: Dict[str, dict] = {}
+    try:
+        for d in coll.find({"_id": {"$in": syms}}, {"last_report": 1}):
+            lr = d.get("last_report")
+            if not lr:
+                continue
+            sym = str(d.get("_id") or "").upper()
+            if not sym:
+                continue
+            out[sym] = {k: lr.get(k) for k in
+                        ("date", "when", "eps_actual", "eps_estimate",
+                         "surprise_pct")}
+    except Exception as exc:
+        log.debug("earnings last_report_map read failed: %s", exc)
+        return {}
+    return out
+
+
 def refresh(symbols: Optional[List[str]] = None, max_workers: int = 4,
             force: bool = False, merge: bool = True) -> dict:
     """Fetch/update earnings dates for the decision universe. A doc is

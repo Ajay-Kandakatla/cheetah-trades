@@ -12554,6 +12554,63 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   background: rgba(248,81,73,0.10);
 }
 
+/* ── 📋 Bonde pick line (2026-09-20) ────────────────────────────────────────
+   Ajay: "I need bonde for stock picks rather than deciding to enter … I am
+   looking fro static info". Six chips under the name, then a closed fold with
+   the rest. The tones are deliberately quiet: a ✓ here is a FACT about the
+   name against one of his sentences, not a buy, and nothing on this line is
+   measured. A failed leg wears a muted red, never the alert red the verdict
+   banner owns — a name that is simply large-float is not an error. */
+.bd-pick { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.15rem; }
+.bd-pick-chip {
+  font-size: 0.6rem; font-weight: 600; white-space: nowrap;
+  border-radius: 5px; padding: 0 4px; cursor: help;
+  color: var(--ink-muted); border: 1px solid var(--hairline, rgba(255,255,255,0.10));
+  background: rgba(255,255,255,0.03);
+}
+.bd-pick-ok {
+  color: var(--positive, #10b981); border-color: rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.08);
+}
+.bd-pick-no {
+  color: var(--cm-slate, #94a3b8); border-color: rgba(148,163,184,0.35);
+  background: rgba(148,163,184,0.07);
+}
+.bd-pick-more { flex-basis: 100%; margin-top: 0.15rem; }
+.bd-pick-more > summary {
+  font-size: 0.62rem; color: var(--ink-muted); cursor: pointer;
+  list-style: revert; width: fit-content;
+}
+.bd-pick-row {
+  display: grid;
+  grid-template-columns: 14px minmax(120px, 1.3fr) minmax(70px, 0.6fr) minmax(120px, 1.4fr) 84px;
+  gap: 0.4rem; align-items: baseline;
+  font-size: 0.66rem; padding: 0.1rem 0; color: var(--ink, #e7e7e7);
+}
+.bd-pick-glyph { text-align: center; }
+.bd-pick-label { color: var(--ink, #e7e7e7); cursor: help; }
+.bd-pick-val { font-variant-numeric: tabular-nums; }
+.bd-pick-src { color: var(--ink-muted); text-decoration: none; }
+.bd-pick-src:hover { text-decoration: underline; }
+.bd-pick-quote { color: var(--ink, #e7e7e7); }
+.bd-pick-crit { margin: 0; font-size: 0.74rem; line-height: 1.45; }
+/* The legend borrows .bd-paused's amber frame, never the verdict red: it is a
+   sourcing note, not a finding. */
+.bd-pick-legend {
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  background: rgba(210, 153, 34, 0.06);
+  border-radius: 8px; padding: 0.6rem 0.75rem;
+  display: flex; flex-direction: column; gap: 0.4rem;
+}
+.bd-pick-frame {
+  flex-basis: 100%; font-size: 0.78rem; line-height: 1.45;
+  color: var(--gold, #c9a227);
+}
+.bd-pick-coverage { font-size: 0.7rem; line-height: 1.4; cursor: help; }
+@media (max-width: 860px) {
+  .bd-pick-row { grid-template-columns: 14px 1fr; row-gap: 0.15rem; }
+}
+
 /* ── Long-term fundamentals (ticker ▸ Fundamentals tab, 2026-09-14) ──────────
    Ajay: "Move them to fundamentals tab in the individual ticker and give a
    score on the fundamentals ranking for longterm."

@@ -40,7 +40,10 @@ balance sheet is useless here: measured `cash` at 1.2-3.4% and `long_term_debt`
 at 27.6-39.6%, so it cannot produce net debt at any usable rate.
 
 **yfinance `.info`** → `totalCash`, `totalDebt`, `enterpriseToRevenue`,
-`freeCashflow`, `marketCap`, `sector`. 98-100% on board-sized lists.
+`freeCashflow`, `marketCap`, `sector`, and (added 2026-09-20 for the Bonde
+pick line) `floatShares` / `sharesOutstanding`. 98-100% on board-sized lists;
+`floatShares` is thinner — ADRs and thin names can omit it, and the reader
+must treat the absence as unknown, not as a small float.
 
 THE DERIVED-Q4 TRAP, AND WHY THE GUARD IS NOT A MAGNITUDE THRESHOLD
 ───────────────────────────────────────────────────────────────────
@@ -303,6 +306,7 @@ def balance_metrics(symbol: str) -> dict:
     """
     out = {"cash": None, "debt": None, "cash_minus_debt": None,
            "ev_sales": None, "fcf_yield": None, "market_cap": None,
+           "float_shares": None, "shares_outstanding": None,
            "sector": None, "balance_meaningful": True}
     try:
         from sepa import symbols as S
@@ -320,6 +324,13 @@ def balance_metrics(symbol: str) -> dict:
     out["cash"], out["debt"], out["market_cap"] = cash, debt, cap
     if cash is not None and debt is not None:
         out["cash_minus_debt"] = round(cash - debt, 2)
+    # Float and share count ride the SAME `.info` read that already happens
+    # here (2026-09-20, for the Bonde float leg) — a second provider for the
+    # same fact would be a second engine. Docs cached before this date carry
+    # neither key until `warm --all` or the 36h TTL rolls; the reader reads
+    # that absence as unknown, never as zero.
+    out["float_shares"] = _f(info.get("floatShares"))
+    out["shares_outstanding"] = _f(info.get("sharesOutstanding"))
     out["ev_sales"] = _f(info.get("enterpriseToRevenue"))
     if fcf is not None and cap and cap > 0:
         out["fcf_yield"] = round(100.0 * fcf / cap, 2)
@@ -445,6 +456,7 @@ def attach(rows: list, db=None) -> list:
         r["shares_yoy_reason"] = dil.get("reason")
         r["shares_yoy_period"] = dil.get("period")
         for k in ("cash", "debt", "cash_minus_debt", "ev_sales", "fcf_yield",
+                  "market_cap", "float_shares", "shares_outstanding",
                   "sector", "balance_meaningful"):
             r[k] = m.get(k)
     return rows

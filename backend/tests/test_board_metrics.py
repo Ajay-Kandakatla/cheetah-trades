@@ -142,3 +142,67 @@ def test_the_module_says_WHY_it_is_board_scoped_not_universe_scoped():
     src = open(BM.__file__).read()
     assert "39.6%" in src and "98.8%" in src
     assert "a column blank for a third of the board is worse than no column" in src
+
+
+# ───────────────────────────────────────────── float / cap (2026-09-20)
+class _Info:
+    """A yfinance ticker double — `.info` only, which is all this path reads."""
+
+    def __init__(self, info):
+        self.info = info
+
+
+def _patch_info(monkeypatch, info):
+    from sepa import symbols as S
+    monkeypatch.setattr(S, "yf_ticker", lambda sym: _Info(info))
+
+
+def test_balance_metrics_stores_float_and_cap_as_PLAIN_floats(monkeypatch):
+    """The Bonde float leg reads these, and `bonde_api._scrub` has to hand the
+    frontend JSON — a numpy scalar out of yfinance serialises as garbage."""
+    _patch_info(monkeypatch, {"floatShares": 1.8e7, "sharesOutstanding": 2.1e7,
+                              "marketCap": 4e9, "sector": "Technology"})
+    out = BM.balance_metrics("FOO")
+    assert out["float_shares"] == 1.8e7 and type(out["float_shares"]) is float
+    assert out["shares_outstanding"] == 2.1e7
+    assert out["market_cap"] == 4e9 and type(out["market_cap"]) is float
+
+
+def test_NEGATIVE_a_missing_floatShares_is_None_not_a_small_float(monkeypatch):
+    """ADRs and thin names omit `floatShares`. Reading the absence as 0 — or
+    falling back to shares outstanding — would mint a false "tiny float ✓"."""
+    _patch_info(monkeypatch, {"sharesOutstanding": 2.1e7, "marketCap": 4e9})
+    out = BM.balance_metrics("ADR")
+    assert out["float_shares"] is None
+    assert out["shares_outstanding"] == 2.1e7
+
+
+def test_NEGATIVE_a_NaN_float_share_count_is_None(monkeypatch):
+    _patch_info(monkeypatch, {"floatShares": float("nan"), "marketCap": float("inf")})
+    out = BM.balance_metrics("NAN")
+    assert out["float_shares"] is None and out["market_cap"] is None
+
+
+def test_attach_flattens_market_cap_and_float(monkeypatch):
+    rows = [{"symbol": "AAA"}]
+    monkeypatch.setattr(BM, "snapshot", lambda syms, db=None, max_age_sec=None: {
+        "AAA": {"market_cap": 4e9, "float_shares": 1.8e7,
+                "shares_outstanding": 2.1e7, "sector": "Technology"}})
+    out = BM.attach(rows)
+    assert out[0]["market_cap"] == 4e9
+    assert out[0]["float_shares"] == 1.8e7
+    assert out[0]["shares_outstanding"] == 2.1e7
+
+
+def test_NEGATIVE_a_PRE_2026_09_20_doc_shape_flattens_to_None_not_a_KeyError(monkeypatch):
+    """419 docs were written before `float_shares` existed and stay that way
+    until `warm --all` or the 36h TTL rolls. The board must render an unknown,
+    not throw on a missing key."""
+    rows = [{"symbol": "AAA"}]
+    monkeypatch.setattr(BM, "snapshot", lambda syms, db=None, max_age_sec=None: {
+        "AAA": {"cash": 10.0, "debt": 4.0, "sector": "Technology",
+                "balance_meaningful": True}})
+    out = BM.attach(rows)
+    assert out[0]["float_shares"] is None
+    assert out[0]["market_cap"] is None
+    assert out[0]["cash"] == 10.0

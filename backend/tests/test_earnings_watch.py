@@ -117,3 +117,67 @@ class TestEarningsWatch(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LastReportMapTests(unittest.TestCase):
+    """The BOARD reader (2026-09-20) — ONE cached read, raw stored fields.
+
+    THE UNIT TRAP pinned here: `earnings_calendar.last_report.surprise_pct` is
+    a PERCENT (AAL 2026-07-23 reads 227.58 for a $0.15 print against a $0.05
+    estimate). `sepa/catalyst.py` carried a FRACTION on a different path until
+    2026-09-20; a reader that "normalised" one to the other would render a
+    +12% beat as +1,200% or +0.12%.
+    """
+
+    def _coll(self, docs):
+        c = FakeColl(docs)
+        ew._coll = lambda: c
+        return c
+
+    def test_the_percent_is_returned_EXACTLY_as_stored(self):
+        self._coll([{"_id": "AAL", "last_report": {
+            "date": "2026-07-23", "when": "BMO", "eps_actual": 0.15,
+            "eps_estimate": 0.05, "surprise_pct": 227.58}}])
+        m = ew.last_report_map(["aal"])
+        self.assertEqual(m["AAL"]["surprise_pct"], 227.58)
+        self.assertEqual(m["AAL"]["eps_actual"], 0.15)
+        self.assertEqual(m["AAL"]["when"], "BMO")
+        self.assertEqual(m["AAL"]["date"], "2026-07-23")
+
+    def test_NEGATIVE_a_None_last_report_is_OMITTED_not_a_blank_block(self):
+        """A nulled `last_report` is the 2026-09-18 merge scar, not a report
+        with no surprise. It must read as unknown, never as a zero beat."""
+        self._coll([{"_id": "AAA", "last_report": None},
+                    {"_id": "BBB", "last_report": {"date": "2026-08-01",
+                                                   "surprise_pct": 12.0}}])
+        m = ew.last_report_map(["AAA", "BBB"])
+        self.assertNotIn("AAA", m)
+        self.assertEqual(m["BBB"]["surprise_pct"], 12.0)
+
+    def test_NEGATIVE_a_report_with_no_surprise_keeps_the_key_as_None(self):
+        """The caller distinguishes "no report" from "a report Yahoo gave no
+        surprise for" — so the key must exist and be None, not be missing."""
+        self._coll([{"_id": "AAA", "last_report": {"date": "2026-08-01",
+                                                   "eps_actual": 0.30}}])
+        m = ew.last_report_map(["AAA"])
+        self.assertIn("surprise_pct", m["AAA"])
+        self.assertIsNone(m["AAA"]["surprise_pct"])
+        self.assertIsNone(m["AAA"]["eps_estimate"])
+
+    def test_an_unknown_symbol_is_absent(self):
+        self._coll([])
+        self.assertEqual(ew.last_report_map(["AAA"]), {})
+
+    def test_no_mongo_and_no_symbols_are_empty_maps(self):
+        ew._coll = lambda: None
+        self.assertEqual(ew.last_report_map(["AAA"]), {})
+        self._coll([{"_id": "AAA", "last_report": {"date": "2026-08-01"}}])
+        self.assertEqual(ew.last_report_map([]), {})
+
+    def test_NEGATIVE_a_read_failure_is_an_empty_map_not_an_exception(self):
+        class Boom:
+            def find(self, *a, **k):
+                raise RuntimeError("mongo down")
+
+        ew._coll = lambda: Boom()
+        self.assertEqual(ew.last_report_map(["AAA"]), {})

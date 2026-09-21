@@ -387,3 +387,69 @@ describe('the word "bounce" never reaches the rendered page', () => {
     expect(container.textContent?.toLowerCase()).not.toContain('bounce');
   });
 });
+
+/* 📋 HIS SURFACE, the real payload (2026-09-20).
+ *
+ * Rule: verify on the surface he reads, not the one convenient to test. The
+ * api container runs origin/main, so the branch API is served on :8001 and its
+ * `/bonde/board` answer is written to the scratchpad; this renders THAT JSON
+ * through the real component. It SKIPS when the file is absent, so the suite
+ * still runs on a machine that never curled the branch — and says so, rather
+ * than passing green on a fixture nobody produced. */
+const LIVE_BOARD_JSON: string =
+  (globalThis as any).process?.env?.BONDE_BOARD_LIVE_JSON
+  || '/private/tmp/claude-501/-Users-ajay-clinet-test/'
+     + '2ced0bf8-920d-4009-be24-082dc21c5651/scratchpad/bonde-picks-v4/board_live.json';
+
+async function readLiveBoard(): Promise<BondeBoardData | null> {
+  try {
+    // Non-literal specifier on purpose: the project carries no node types, and
+    // the browser build must never try to resolve this.
+    const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+    const fs: any = mod?.default || mod;
+    if (!fs?.existsSync?.(LIVE_BOARD_JSON)) return null;
+    return JSON.parse(fs.readFileSync(LIVE_BOARD_JSON, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+const LIVE_BOARD = await readLiveBoard();
+
+describe.skipIf(!LIVE_BOARD)('📋 the REAL /bonde/board payload renders his pick line', () => {
+  it('the legend appears exactly once', async () => {
+    draw(routedFetch(LIVE_BOARD as BondeBoardData));
+    await waitFor(() => expect(screen.getAllByTestId('bonde-criteria').length).toBe(1));
+  });
+
+  it('every drawn row has a chip line', async () => {
+    const { container } = draw(routedFetch(LIVE_BOARD as BondeBoardData));
+    await waitFor(() => expect(container.querySelector('.bd-rows')).toBeTruthy());
+    const rows = [...container.querySelectorAll('.bd-row:not(.bd-hdr)')];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r.querySelector('.bd-pick')).toBeTruthy();
+  });
+
+  it('NEGATIVE — no chip reads ✓ where the served leg is unknown', async () => {
+    const { container } = draw(routedFetch(LIVE_BOARD as BondeBoardData));
+    await waitFor(() => expect(container.querySelector('.bd-pick')).toBeTruthy());
+    const d = LIVE_BOARD as any;
+    for (const rows of Object.values(d.sections || {}) as any[]) {
+      for (const r of rows || []) {
+        for (const [key, leg] of Object.entries((r.pick?.legs || {}) as any)) {
+          if ((leg as any).ok !== null && (leg as any).ok !== undefined) continue;
+          const chip = screen.queryByTestId(`bd-pick-${r.symbol}-${key}`);
+          if (!chip) continue;
+          expect(chip.textContent, `${r.symbol}.${key}`).not.toContain('✓');
+          expect(chip.textContent, `${r.symbol}.${key}`).not.toContain('✗');
+        }
+      }
+    }
+  });
+
+  it('NEGATIVE — no row text is a tally out of 14', async () => {
+    const { container } = draw(routedFetch(LIVE_BOARD as BondeBoardData));
+    await waitFor(() => expect(container.querySelector('.bd-pick')).toBeTruthy());
+    expect(container.textContent || '').not.toMatch(/\/14\b/);
+  });
+});

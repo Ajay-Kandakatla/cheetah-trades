@@ -20,12 +20,20 @@
  * for these figures, and `backend/scripts/bonde_audit/` is the re-runnable
  * source.
  *
- * 🔎 THE LAST SECTION IS NOT ON HIS SCREEN, deliberately. His character clause
- * (accelerating OR ≥2 consecutive growth quarters) is the one thing that
- * survived every attack — measuring NEGATIVE. The floor-clearing names it
- * rejects won 56.8% of the next 21 sessions against 51.2% for the ones it
- * accepts. The gate is not edited, because it is his and this board exists to
- * show his screen; the discarded cohort is shown beside it instead, labelled.
+ * 🔎 THE LAST SECTION IS NOT ON HIS SCREEN as this app drew it, deliberately.
+ * The character clause (accelerating OR ≥2 consecutive growth quarters) is
+ * THIS APP'S (2026-06-16), mis-attributed to Bonde until 2026-09-20; it is the
+ * one thing that survived every attack — measuring NEGATIVE. The floor-clearing
+ * names it rejects won 56.8% of the next 21 sessions against 51.2% for the ones
+ * it accepts. The gate is not edited, because a rule change is Ajay's call
+ * (Rule #10); the discarded cohort is shown beside it instead, labelled.
+ *
+ * 📋 SINCE 2026-09-20 THIS TAB IS A PICK LIST (Ajay: "I need bonde for stock
+ * picks rather than deciding to enter … I am looking fro static info"). Every
+ * row carries a chip line of his STATIC criteria, each chip one sentence he
+ * published with its link. No price-, session- or persistence-derived leg is
+ * on that line, by his correction. Nothing on it is measured, nothing on it is
+ * a signal, and it gates, sorts and filters nothing.
  *
  * ✨ NEW is his explicit ask — names that ARRIVED on the screen, not names that
  * happen to be there. The backend ledger refuses to badge the first cohort it
@@ -74,6 +82,11 @@ import { useEnterableFilter } from '../hooks/useEnterableFilter';
 import { mergeReasonStats, partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { explosiveStatusOf } from '../hooks/useExplosiveOrder';
+/* 📋 the pick line — his STATIC criteria, each one served with its own quote
+ * and link. The formatting is pure and lives in one module. */
+import { BondePickChips } from './BondePickChips';
+import { BondeCriteriaLegend } from './BondeCriteriaLegend';
+import { coverageSentence, type BondePick, type BondePickCoverage, type BondePickLegend } from '../lib/bondePicks';
 
 export type BondePivot = {
   gap_pct?: number | null; vol_mult?: number | null;
@@ -103,6 +116,9 @@ export type BondeRow = {
    *  fiscal quarters apart, null = there are no period keys to check it with,
    *  true = checked and fine. */
   period_ok?: boolean | null; period?: string | null;
+  /** 📋 His STATIC criteria for this name, served with their cites. Every leg
+   *  is tri-state: `ok: null` is UNKNOWN and never renders as a fail. */
+  pick?: BondePick | null;
 };
 
 export type BondeRegime = {
@@ -133,19 +149,24 @@ export type BondeBoardData = {
    *  refuses. Counted and LISTED: a board that hides must say so. */
   n_tiered?: number; n_period_mismatch?: number;
   period_mismatch_symbols?: BondeHeldOut[];
+  /** 📋 The criterion legend, served whole and rendered ONCE. */
+  pick_legend?: BondePickLegend | null;
+  /** How many rows each pick leg actually knows — a board that shows dashes
+   *  without saying why reads as broken. */
+  pick_coverage?: BondePickCoverage | null;
 };
 
 const SECTIONS: { key: string; label: string; blurb: string }[] = [
   { key: 'pivot', label: '⚡ Episodic Pivots',
     blurb: 'His entry: a stock gapping hard on huge volume, on any catalyst, that also passed his sales gate. This is the board’s original thesis and it is the cell that measured INVERTED — 21-day median −3.22% against −0.11% for date-matched non-Pivot names. Shown because you asked to see his stocks, not because anything measured says to buy them.' },
   { key: 'explosive', label: 'Explosive · sales +100%',
-    blurb: 'His own "Sales 100% plus" Episodic-Pivot category (2010). Measured median lift over the scored universe: +0.45pp at 21 days, CI −0.31 to +1.36 — it includes zero.' },
+    blurb: 'The 100% boundary of his 2010 "Sales 100% plus but no earnings" Episodic-Pivot CATEGORY — a catalyst category, not a sales gate — used as a tier by this app. Measured median lift over the scored universe: +0.45pp at 21 days, CI −0.31 to +1.36 — it includes zero.' },
   { key: 'strong', label: 'Strong · sales +25%',
-    blurb: 'His stated preferred level — "you can use 25% plus". Measured median lift +0.37pp at 21 days, CI −0.16 to +0.78 — it includes zero, and the mean lift that does show up falls to +0.26pp once the top 5% of returns are dropped.' },
+    blurb: 'THIS APP’S 25% mid-tier — not a number he published (the first-person quote this board carried until 2026-09-20 was fabricated; it exists in none of his posts). Measured median lift +0.37pp at 21 days, CI −0.16 to +0.78 — it includes zero, and the mean lift that does show up falls to +0.26pp once the top 5% of returns are dropped.' },
   { key: 'steady', label: 'Steady · sales +5%',
-    blurb: 'His floor — "I take 5%". Measured flat against the scored universe (−0.01pp at 21 days). Capped here: it is 677 names on the live scan, which is a scroll, not a read.' },
-  { key: 'rejected', label: '🔎 Cleared his floor, rejected for character',
-    blurb: 'NOT ON HIS SCREEN. These names cleared Bonde’s 5% sales floor and were thrown out by the character clause — not accelerating, and under 2 consecutive growth quarters. That clause is the one thing in this whole board that survived every attack, and it measures BACKWARDS: this cohort won 56.8% of the next 21 sessions against 51.2% for the names the gate accepts (+5.64pp, CI +3.91 to +7.52). His gate is not edited — it is his — so the cohort it discards is shown here instead. It does not survive date clustering at 21 days (it does at 63).' },
+    blurb: 'His floor — "Sales/revenue should be up 5% or more." (Stockbee, 2007). Measured flat against the scored universe (−0.01pp at 21 days). Capped here: it is 677 names on the live scan, which is a scroll, not a read.' },
+  { key: 'rejected', label: '🔎 Cleared his 5% floor, rejected by THIS APP’S character clause',
+    blurb: 'NOT ON HIS SCREEN as this app drew it, and the clause that threw them out is THIS APP’S, not his (mis-attributed until 2026-09-20): accelerating OR ≥2 consecutive growth quarters. It is the one thing in this board that survived every attack, and it measures BACKWARDS: this cohort won 56.8% of the next 21 sessions against 51.2% for the names the gate accepts (+5.64pp, CI +3.91 to +7.52). It does not survive date clustering at 21 days (it does at 63). The gate is not edited because a rule change is Ajay’s call; the cohort it discards is shown here instead.' },
 ];
 
 
@@ -184,7 +205,7 @@ const BASE_NOTE: Record<string, string> = {
 /** Column headers, one per grid track of `.bd-row`. The metric heads mirror
  *  `metricCells` — same order, same four cells — so a head sits over its cell. */
 const HEADS = {
-  sym: { text: 'Ticker', title: 'Ticker · company. ✨ NEW = arrived on his screen recently; 🚀 = also clears the explosive-growth screen; 🎯 = live print in / near the board’s nearest demand band. “+ Signals” puts the name on your watchlist.' },
+  sym: { text: 'Ticker', title: 'Ticker · company. ✨ NEW = arrived on his screen recently; 🚀 = also clears the explosive-growth screen; 🎯 = live print in / near the board’s nearest demand band. “+ Signals” puts the name on your watchlist. 📋 chips = his static criteria (legend above) — each one his own sentence, with its link; an em-dash means this app does not know yet, never that the name failed.' },
   today: { text: 'Today', title: 'Each name’s own move so far in THIS session, when the board has a live read — not relative to the benchmark. The whole column shares one basis: when the read is on the last close, every row here is an em-dash rather than yesterday’s number under a “Today” header. The line above the sections says which it is.' },
   sales: { text: 'Sales YoY · base → latest', title: 'Latest quarterly revenue against the same quarter a year ago, with the two dollar figures under it. ⚠ marks a base that is negative or immaterial.' },
   character: { text: 'Character', title: 'His character clause: accelerating (growth rate rising), a streak of consecutive growth quarters, sales-led (top line outpacing the bottom line).' },
@@ -352,6 +373,7 @@ export default function BondeBoard() {
   const heldOut = d.period_mismatch_symbols || [];
   const nHeldOut = d.n_period_mismatch ?? heldOut.length;
   const heldOutNote = heldOutSentence(d.note);
+  const pickCoverage = coverageSentence(d.pick_coverage);
 
   return (
     <div className="bd-wrap">
@@ -382,6 +404,11 @@ export default function BondeBoard() {
           )}
         </StudyNote>
       )}
+
+      {/* 📋 ONE fold, above the board: every criterion on the pick line, his
+          sentence, his link, his date. Rendered once for the whole tab — a
+          legend per row would be the wall Rule #5 exists to prevent. */}
+      <BondeCriteriaLegend legend={d.pick_legend} />
 
       <div className="bd-head">
         <div className="bd-stats">
@@ -463,6 +490,13 @@ export default function BondeBoard() {
             </span>
           )}
         </div>
+        {/* What this tab IS, in the backend's own words — a pick list, not an
+            entry list. Served (`pick_legend.header`), never typed here. */}
+        {d.pick_legend?.header && (
+          <div className="bd-pick-frame" data-testid="bonde-pick-frame">
+            📋 {d.pick_legend.header}
+          </div>
+        )}
       </div>
 
       {/* Which session the Today column is on — above the sections, not in a
@@ -474,6 +508,16 @@ export default function BondeBoard() {
           <span className="bd-dim bd-sub"> · live print on {d1.live_names} of {d1.symbols}</span>
         )}
       </div>
+
+      {/* 📋 What the chip line KNOWS. Six em-dashes with no explanation read as
+          a broken board; "short interest 0 of 199 (not warmed)" reads as the
+          truth, which is that nobody has looked yet. */}
+      {pickCoverage && (
+        <div className="bd-pick-coverage bd-dim" data-testid="bonde-pick-coverage"
+             title="Coverage of the six chips under each name. An em-dash on a chip means this app has no read for that criterion on that name — never that the name failed it.">
+          {pickCoverage}
+        </div>
+      )}
 
       {/* A failed ↻ reports itself here and LEAVES the board standing. */}
       {err && <div className="bd-note bd-err" data-testid="bonde-err">⛔ {err}</div>}
@@ -612,6 +656,11 @@ export default function BondeBoard() {
                       <BandStructureChip read={read?.band_structure} className="cm-badge"
                                          study={room.payload?.band_structure_study} />
                       {r.name && <div className="bd-coname">{r.name}</div>}
+                      {/* 📋 His static criteria, on EVERY row including 🔎 —
+                          the cohort the app's clause rejects is exactly the
+                          one a reader most needs the facts for. */}
+                      <BondePickChips pick={r.pick} legend={d.pick_legend}
+                                      symbol={r.symbol} />
                     </div>
 
                     <div className={`bd-today ${today.tone}`} title={today.title}

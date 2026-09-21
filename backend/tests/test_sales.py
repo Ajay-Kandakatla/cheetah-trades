@@ -1,13 +1,15 @@
 """Behavioral contracts for the Sales Confidence score (backend/sepa/sales.py).
 
-Anchored to Pradeep Bonde's ("Stockbee") DOCUMENTED sales thresholds — 5% floor,
-25% preferred, 100% "explosive" — not the third-party 30/39% figures that failed
-source verification (see docs/sepa/sales_confidence_methodology.md). Synthetic
-revenue series; no network.
+Whose number is whose: the 5% floor is his (Stockbee 2007); 25% is THIS APP'S
+mid-tier; 100% is the boundary of his 2010 "Sales 100% plus" category.
+Figures that failed source verification and are not used: 30% and "MAGNA 53+".
+His own 2025 two-quarter revenue figure is his and ships as a pick leg.
+See docs/sepa/sales_confidence_methodology.md. Synthetic series; no network.
 """
 from __future__ import annotations
 
-import subprocess
+import ast
+import hashlib
 from pathlib import Path
 
 from sepa import sales
@@ -79,15 +81,63 @@ def test_thresholds_locked():
     assert sales.SALES_EXPLOSIVE_PCT == 100.0
 
 
-def test_SOURCE_GUARD_this_file_is_BYTE_IDENTICAL_to_HEAD():
-    """The 2026-09-20 YoY repair relabels which quarter sits in which slot. It
-    does NOT touch Bonde's arithmetic or his 5 / 25 / 100 tiers, and this guard
-    is what says so out loud (Rule #4) rather than asking a reader to trust it.
+# The frozen AST pin — recompute ONLY with Ajay's nod (see the guard docstring).
+SALES_AST_SHA256 = "e923e1a753f912c8370a40430dfcd4f853deaf7bba68f8c78408abafcffe27d3"
 
-    Read-only git. Skipped — never silently passed — outside a checkout.
+SALES_PY = Path(__file__).resolve().parents[1] / "sepa" / "sales.py"
+
+
+def _strip_docstrings(tree: ast.AST) -> ast.AST:
+    """Drop every module/class/function docstring node, in place."""
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef,
+                                 ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body:
+            continue
+        first = body[0]
+        if (isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)):
+            node.body = body[1:] or [ast.Pass()]
+    return tree
+
+
+def _ast_hash(source: str) -> str:
+    tree = _strip_docstrings(ast.parse(source))
+    dumped = ast.dump(tree, annotate_fields=True, include_attributes=False)
+    return hashlib.sha256(dumped.encode("utf-8")).hexdigest()
+
+
+def test_SOURCE_GUARD_sales_arithmetic_frozen_hash():
+    """sepa/sales.py's ARITHMETIC is frozen to a literal hash pinned here.
+
+    Comments and docstrings may change freely — comments never enter the AST and
+    every docstring is stripped before hashing, so a reword or a reflow that
+    changes no node is free. Any change to a CONSTANT, a SIGNATURE or a BODY
+    moves the hash: re-set the pin only in a commit whose message names the
+    arithmetic change and Ajay's nod (Rule #10). A venv Python upgrade can also
+    move `ast.dump` output — re-pin with that reason stated.
+
+    This replaces a HEAD-byte comparison, which was vacuous the moment the
+    change it guarded was committed. No git call, no skip: it bites every run.
     """
-    root = Path(__file__).resolve().parents[2]
-    head = subprocess.run(["git", "show", "HEAD:backend/sepa/sales.py"],
-                          cwd=str(root), capture_output=True)
-    assert head.returncode == 0, head.stderr.decode()[:400]
-    assert (root / "backend" / "sepa" / "sales.py").read_bytes() == head.stdout
+    assert _ast_hash(SALES_PY.read_text()) == SALES_AST_SHA256
+
+
+def test_NEGATIVE_sales_frozen_hash_bites_on_a_constant_change():
+    """Mutating a tier constant MUST move the hash — proves the pin is real."""
+    mutated = SALES_PY.read_text().replace("SALES_PREFERRED_PCT = 25.0",
+                                           "SALES_PREFERRED_PCT = 26.0", 1)
+    assert "SALES_PREFERRED_PCT = 26.0" in mutated       # the mutation applied
+    assert _ast_hash(mutated) != SALES_AST_SHA256
+
+
+def test_NEGATIVE_sales_frozen_hash_ignores_docstrings():
+    """Rewording the module docstring must NOT move the hash."""
+    src = SALES_PY.read_text()
+    head, sep, tail = src.partition('"""')
+    body, sep2, rest = tail.partition('"""')
+    mutated = head + sep + body + "\nA sentence added by the test.\n" + sep2 + rest
+    assert mutated != src
+    assert _ast_hash(mutated) == SALES_AST_SHA256

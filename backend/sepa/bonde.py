@@ -7,11 +7,12 @@ added in this tab … but I wanna see his stocks."*
 NOTHING HERE RE-DERIVES BONDE. Every rule is called from the module that
 already implements it and is already cited:
 
-  `sepa/sales.py`              his 5% / 25% / 100% sales tiers
+  `sepa/sales.py`  his 5% floor · the app's 25% mid-tier · the 100% boundary of his "Sales 100% plus" category
   `sepa/buyable_verdict.py`    `_bonde_pillar` — the PASS rule
   `setups/episodic_pivot.py`   the Episodic Pivot, his signature setup
-  docs/sepa/sales_confidence_methodology.md — the sourcing, including which
-  widely-attributed figures FAILED verification and are deliberately not used.
+  `sepa/bonde_picks.py`        📋 the PICK LINE — his STATIC criteria, cited
+  docs/sepa/sales_confidence_methodology.md — the sourcing, including the figures that FAILED verification (30%, MAGNA 53+),
+  and his own 2025 two-quarter revenue figure, which did not (a pick leg since 2026-09-20).
 
 MEASURED 2026-09-13, AND THE BOARD'S OWN THESIS IS INVERTED
 ──────────────────────────────────────────────────────────
@@ -49,19 +50,22 @@ It also claimed both character clauses measure backwards; only the consistency
 clause does. And its "coverage is 46%" limitation was its own no-retry fetcher
 losing half its requests, not a data limit.
 
-THE ONE THING THAT SURVIVED EVERY ATTACK, AND WHY THERE IS A 🔎 SECTION
-──────────────────────────────────────────────────────────────────────
-Among names that clear his 5% floor, the character clause — `accelerating` OR
-≥2 consecutive growth quarters — is what turns a floor-clearer into a PASS.
+THE ONE THING THAT SURVIVED EVERY ATTACK — AND THE CLAUSE IS THIS APP'S, NOT HIS
+────────────────────────────────────────────────────────────────────────────────
+The character clause — `accelerating` OR ≥2 consecutive growth quarters — is
+THIS APP'S (2026-06-16), mis-attributed to Bonde until 2026-09-20. His
+'acceleration' is EARNINGS acceleration (2007/2010) and his only two-quarter
+rule is revenue growth twice over, from his 2025 scan line. Among names that
+clear his 5% floor, the clause is what turns a floor-clearer into a PASS.
 Requiring it measures NEGATIVE: the floor-clearing names the gate REJECTS won
 56.8% of the next 21 sessions against 51.2% for the names it accepts (PASS
 minus REJECT −5.64pp, CI −7.52 … −3.91; −7.66pp at 63 days). Clause by clause
 it is the CONSISTENCY half: ≥2 consecutive quarters costs 3.3pp of win rate at
 21d (CI −4.7 … −1.8). `accelerating` is a NULL, not a negative.
 
-So the gate is not edited — it is Bonde's, and this board exists to show HIS
-screen — but the cohort it throws away is shown beside it, labelled, because a
-board that hides its best-measured cell is not a study board.
+The gate is not edited here because a rule change is Ajay's call (Rule #10),
+not because it is his; the cohort it throws away is shown beside it, labelled,
+because a board that hides its best-measured cell is not a study board.
 
 Caveat that belongs next to that number: the rejected-cell result does not
 survive date clustering at 21 days (it does at 63), and the variant that feeds
@@ -100,11 +104,22 @@ promoted and no threshold moved.
 
 WHAT THE THRESHOLDS ARE AND ARE NOT
 ───────────────────────────────────
-The sales numbers (5 / 25 / 100) are Bonde's own, documented in his writing and
-cited in the methodology doc. The EP's numbers are NOT his: 8% gap on 5x volume
-are this app's OWNER settings, chosen in `setups/episodic_pivot.py` to be
-stricter than its PEG cousin because it has no earnings-calendar filter. The
-board says so rather than implying he published them.
+The 5% floor is his (2007); 25% is this app's mid-tier; 100% is the boundary of
+his 2010 category; his 2025 two-quarter revenue figure (39%) is his and is a
+pick-line leg, not a tier. The EP's 8%/5× are this app's owner settings, chosen
+in `setups/episodic_pivot.py` to be stricter than its PEG cousin because it has
+no earnings-calendar filter; his published EP scan is 4%/3×/300k (2014) and
+re-measured NULL 2026-09-20. The board says so rather than implying he
+published the app's numbers.
+
+THE PICK LINE, 2026-09-20 (Ajay: *"I need bonde for stock picks rather than
+deciding to enter … I am looking fro static info"*)
+──────────────────────────────────────────────────────────────────────────
+Every row carries `pick.legs` — his STATIC criteria, each one a sentence he
+published with its URL and date (`sepa/bonde_picks.py`). Entries stay his: no
+momentum, no relative strength, no return, no persistence leg is on that line,
+by his own correction. Every leg is tri-state and an UNKNOWN is never a fail.
+Nothing on it is measured, and it gates, sorts and filters nothing.
 
 Scripts, re-runnable verbatim: `backend/scripts/bonde_audit/` (README.md there
 carries the run recipe, the struck claims and the limits — survivorship,
@@ -444,6 +459,14 @@ def _row(scan_row: dict, pillar: dict, pivot: Optional[dict]) -> dict:
         "pivot": None,
     }
     out.update(_rev_base(scan_row))
+    # 📋 the PICK LINE — his STATIC criteria, each one a cited sentence. The
+    # scan-derived half is computed here so `python -m sepa.bonde show`, the
+    # crons and the API all see the same legs; the cache-derived half is
+    # filled once per board in `attach` below. `_cleared_floor` is passed IN
+    # because `bonde_picks` must never import this module.
+    from sepa import bonde_picks as BP
+    out["pick"] = {"legs": BP.legs_from_scan_row(scan_row, pillar, out,
+                                                 _cleared_floor(pillar))}
     if pivot:
         meta = pivot.get("meta") or {}
         gen = _f(pivot.get("generated_at"))
@@ -625,11 +648,23 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
 
     # The CPA columns, same cache the other two boards read. A cold entry
     # leaves the row untouched and the cell renders an em-dash.
+    all_rows = [r for v in sections.values() for r in v]
     try:
         from sepa import board_metrics as BM
-        BM.attach([r for v in sections.values() for r in v], db=db)
+        BM.attach(all_rows, db=db)
     except Exception as exc:                                   # noqa: BLE001
         log.debug("bonde: board_metrics attach failed: %s", exc)
+
+    # 📋 the cache half of the pick line: five bulk Mongo reads, zero network.
+    # Its own try/except on purpose — a cold cache or a reader that has not
+    # shipped yet must leave the legs UNKNOWN and serve the board, never take
+    # the tab down. `attach` already swallows its own failures; this is the
+    # second belt, because `board()` runs inside crons.
+    try:
+        from sepa import bonde_picks as BP
+        BP.attach(all_rows, db=db)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("bonde: pick legs unavailable: %s", exc)
 
     held_out.sort(key=lambda d: d["symbol"])
     # The two cohorts are counted apart. `n_period_mismatch` stays the size of
@@ -667,7 +702,33 @@ def board(db=None, new_days: int = NEW_DAYS) -> dict:
         # have exactly one home (MEASURED) and the FE renders whatever it is
         # handed, so a re-run that moves a figure moves every surface at once.
         "measured": measured_verdict(),
+        # 📋 the pick line's legend, served ONCE — his sentences and their links
+        # live in `bonde_picks.CRITERIA` and are never typed into a component —
+        # and the per-leg coverage, so the page can say what is UNKNOWN and why
+        # instead of drawing a wall of em-dashes nobody can read.
+        "pick_legend": _pick_legend(),
+        "pick_coverage": _pick_coverage(all_rows),
     }
+
+
+def _pick_legend() -> dict:
+    """The served legend, or an empty one — the board is never lost to it."""
+    try:
+        from sepa import bonde_picks as BP
+        return BP.legend()
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("bonde: pick legend unavailable: %s", exc)
+        return {}
+
+
+def _pick_coverage(rows: list) -> dict:
+    """What is KNOWN per leg, so the page can name the gap instead of hiding it."""
+    try:
+        from sepa import bonde_picks as BP
+        return BP.coverage(rows)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("bonde: pick coverage unavailable: %s", exc)
+        return {}
 
 
 def _sgn(v, d: int = 2) -> str:
@@ -746,8 +807,10 @@ def measured_verdict() -> dict:
             "gate accepts (+%.2fpp, CI +%.2f to +%.2f). Clause by clause it is "
             "the CONSISTENCY half — ≥2 consecutive growth quarters costs "
             "%spp of win rate (CI %s to %s); `accelerating` is a null, "
-            "not a negative. The gate is not edited, because it is his; the "
-            "cohort is shown instead, in 🔎 below. Caveat: this one does not "
+            "not a negative. The gate is not edited, because changing a rule "
+            "is Ajay's call, and the clause is this app's — mis-attributed to "
+            "him until 2026-09-20; the cohort is shown instead, in 🔎 below. "
+            "Caveat: this one does not "
             "survive date clustering at 21 days (it does at 63), and the "
             "variant matching production's raw list position shrinks it to "
             "1,030 bars with CIs spanning zero."
@@ -802,15 +865,19 @@ def note(n_pass: int, n_scanned: int, counts: dict,
         "passes %s of %s names on this scan (%s%%) — half the market is a "
         "description, not a selection. Everything here is a STUDY BOARD: ⚡ "
         "Pivots are shown because you asked to see his stocks, not because "
-        "anything measured says to buy them, and the tiers are his documented "
-        "5%% floor / 25%% preferred / 100%% explosive hierarchy ordered by "
-        "top-line growth — never by the 0-100 score, which the audit could not "
-        "separate from the return tail. 🔎 at the bottom is the cohort his "
-        "character clause REJECTS, which is the only cell that beat the market "
-        "on win rate (%.1f%% vs %.1f%%). The 5/25/100 numbers are Bonde's own "
-        "(docs/sepa/sales_confidence_methodology.md, which also lists the "
-        "figures widely attributed to him that failed verification); the "
-        "Pivot's 8%% gap on 5x volume are THIS APP'S owner settings, not "
+        "anything measured says to buy them, and the tiers are his 5%% floor "
+        "(2007) / this app's 25%% mid-tier / the 100%% boundary of his "
+        "“Sales 100%% plus” category (2010), ordered by top-line "
+        "growth — never by the 0-100 score, which the audit could not "
+        "separate from the return tail. 🔎 at the bottom is the cohort THIS "
+        "APP'S character clause rejects (called his until 2026-09-20), which "
+        "is the only cell that beat the market on win rate (%.1f%% vs "
+        "%.1f%%). The 5%% and 100%% are his; 25%% is this app's "
+        "(docs/sepa/sales_confidence_methodology.md lists the figures that "
+        "failed verification: 30%% and MAGNA 53+). "
+        "His 2025 two-quarter revenue figure is his and is shown as a pick "
+        "leg in the 📋 legend above, not as a tier. "
+        "The Pivot's 8%% gap on 5x volume are THIS APP'S owner settings, not "
         "numbers he published. Scripts: %s. Nothing on this tab gates a scan, "
         "fires an alert or buys in any lane."
         % (m["run_date"], m["ep_events"], m["window"], m["cell_a_n"],

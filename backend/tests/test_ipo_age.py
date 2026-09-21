@@ -156,3 +156,94 @@ def test_book_thresholds_unchanged():
     src = inspect.getsource(ipo_age)
     assert "years <= 8" in src, "is_young threshold drifted from TLSW's 8 years"
     assert "years <= 2" in src, "is_recent_ipo threshold drifted from 2 years"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# listing_dates_map (2026-09-20) — the BOARD reader.
+#
+# `age()` loads price history and `listing_date()` can fall through to Finnhub
+# on a miss. Neither may run per-symbol on a page render, so the board path is
+# ONE cached Mongo read and the negatives below pin that it stays one.
+# ─────────────────────────────────────────────────────────────────────────────
+class _FakeIpoColl:
+    def __init__(self, docs):
+        self.docs = docs
+        self.queries = []
+
+    def find(self, q, proj=None):
+        self.queries.append(q)
+        ids = (q.get("_id") or {}).get("$in", [])
+        for d in self.docs:
+            if d["_id"] not in ids:
+                continue
+            if "ipo" in q and q["ipo"] == {"$ne": None} and d.get("ipo") is None:
+                continue
+            yield dict(d)
+
+
+@pytest.fixture
+def no_network_no_prices(monkeypatch):
+    """Both escape hatches out of the cache become exceptions."""
+    import requests
+
+    def boom_http(*a, **k):
+        raise AssertionError("the board path called Finnhub")
+
+    def boom_prices(*a, **k):
+        raise AssertionError("the board path loaded price history")
+
+    monkeypatch.setattr(requests, "get", boom_http)
+    monkeypatch.setattr(ipo_age, "load_prices", boom_prices)
+
+
+def test_listing_dates_map_is_ONE_cached_read_with_no_network(
+        monkeypatch, no_network_no_prices):
+    coll = _FakeIpoColl([{"_id": "AAA", "ipo": "2021-03-10"},
+                         {"_id": "BBB", "ipo": "2011-06-01"}])
+    monkeypatch.setattr(ipo_age, "_ipo_coll", lambda: coll)
+    m = ipo_age.listing_dates_map(["aaa", "BBB"])
+    assert m == {"AAA": "2021-03-10", "BBB": "2011-06-01"}
+    assert len(coll.queries) == 1
+
+
+def test_NEGATIVE_a_cached_MISS_is_OMITTED_not_returned_as_None(
+        monkeypatch, no_network_no_prices):
+    """`ipo_dates` carries 3,795 docs and only 3,400 with a date. A None must
+    read as unknown (absent), never as "not a young company"."""
+    coll = _FakeIpoColl([{"_id": "AAA", "ipo": None, "cached_at": 1},
+                         {"_id": "BBB", "ipo": "2011-06-01"}])
+    monkeypatch.setattr(ipo_age, "_ipo_coll", lambda: coll)
+    assert ipo_age.listing_dates_map(["AAA", "BBB"]) == {"BBB": "2011-06-01"}
+
+
+def test_a_RENAMED_symbol_resolves_the_way_the_profile_path_does(
+        monkeypatch, no_network_no_prices):
+    """`_profile_ipo_date` keys the cache on `symbols.resolve`, so the bulk
+    reader has to ask the same question or every renamed name reads unknown.
+    The answer comes back under BOTH spellings."""
+    from sepa import symbols as S
+    renamed = next((k for k, v in S.RENAMES.items() if v and v[0]), None)
+    assert renamed, "the rename table is the fixture"
+    resolved = S.resolve(renamed)
+    coll = _FakeIpoColl([{"_id": resolved, "ipo": "2016-05-02"}])
+    monkeypatch.setattr(ipo_age, "_ipo_coll", lambda: coll)
+    m = ipo_age.listing_dates_map([renamed])
+    assert m[renamed] == "2016-05-02"
+    assert m[resolved] == "2016-05-02"
+    assert coll.queries[0]["_id"]["$in"] == [resolved]
+
+
+def test_no_mongo_is_an_empty_map_not_a_crash(monkeypatch, no_network_no_prices):
+    monkeypatch.setattr(ipo_age, "_ipo_coll", lambda: None)
+    assert ipo_age.listing_dates_map(["AAA"]) == {}
+    assert ipo_age.listing_dates_map([]) == {}
+
+
+def test_NEGATIVE_a_read_failure_is_an_empty_map_not_an_exception(
+        monkeypatch, no_network_no_prices):
+    class Boom:
+        def find(self, *a, **k):
+            raise RuntimeError("mongo down")
+
+    monkeypatch.setattr(ipo_age, "_ipo_coll", lambda: Boom())
+    assert ipo_age.listing_dates_map(["AAA"]) == {}

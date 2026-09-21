@@ -22,6 +22,23 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-20, verbatim: "I need bonde for stock picks rather than
+  // deciding to enter. I decide based on supply and demand and also based on
+  // Momentum, but show me other things like EPS, Sales and other things add
+  // them and He looks at earnings surprise too show me those please" — then
+  // the correction: "look for thing she said from a stock pic pov … momentum
+  // does not need to be a criteria for his pics … I am looking fro static
+  // info" — then "check it out. and validate it". The validation found the
+  // sales module quoting sentences he never wrote; fixed in wording only.
+  { id: 'bonde-pick-list-2026-09-20',
+    label: '\u{1F4CB} \u{1F4C8} Bonde is now a PICK LIST of his own STATIC criteria, each with his sentence and its link. You said: “I need bonde for stock picks rather than deciding to enter … show me other things like EPS, Sales and other things … He looks at earnings surprise too show me those please” and then “momentum does not need to be a criteria for his pics … I am looking fro static info.” '
+      + 'WHAT IS ON EACH ROW: up to six chips under the name — EPS ≥5¢ and earnings ≥100% (2007), two quarters of revenue ≥39% (2025), earnings surprise, float <25M (2010), IPO ≤10y (2025), short interest ≥5 days to cover (his X post, 2024) — and a click-open list of all fourteen legs: sales ≥5%, earnings acceleration, cap <$10B, no analyst coverage, fund holding, his three earnings-EP sectors, and the year-over-year and sequential earnings legs shown separately because he names both. A tick means the number clears his line; a cross means it does not; an em-dash means this app has no read for that name, never that the name fell short. '
+      + 'THE LEGEND AT THE TOP, ONE FOLD: every criterion with his verbatim sentence, the post it comes from and its date — the four Stockbee posts and his own X posts. Nothing from the video summary you pasted is on the tab; the video itself was never received, so nothing in it can be cited. '
+      + 'NO MOMENTUM ON THE PICK LINE, BY YOUR CORRECTION: no relative strength, no return, no persistence. His 65-day “not rallied in anticipation” check is price-derived, so it sits in the legend as his words and computes nothing until you say otherwise. Entries are yours — S&D and momentum, read elsewhere. '
+      + 'WHAT THE VALIDATION FOUND AND FIXED, IN WORDING ONLY: the 25% tier was carrying a first-person sentence he never wrote — it is now labelled THIS APP’S mid-tier; the 5% floor now carries his real sentence; the character clause (accelerating OR two consecutive growth quarters) is this app’s, not his, and the 🔎 section says so; and his own 2025 two-quarter revenue figure, which the code had filed among third-party numbers, is now its own leg with his quote. No tier value, gate or threshold moved — those are your call and are listed in the report. '
+      + 'DATA HONESTY: short interest reads from a cache that a warm fills after hours — until it runs the chip reads em-dash and the coverage line under the header says “not warmed”; listing dates are Finnhub profile dates, 21.4% of which belong to a recycled ticker, so that chip is labelled uncorroborated; a surprise or a settlement older than the app’s freshness bound prints “stale” and never flips a tick. '
+      + 'THE PICK LINE IS A LIST OF FACTS WITH CITES. It is not measured, it is not a signal, it ranks nothing, and no count of ticks is printed anywhere — the board’s own INVERTED verdict banner is unchanged above it.',
+    addedAt: '2026-09-20', route: '/chart-maps?tab=bonde' },
   // Ajay 2026-09-20, verbatim: "Default on for any change of todays features
   // Bondes or Potus or explosive growth or Earnings I wanna see all of them."
   // OWNER_KEEP_SET went from four kinds to eight. What moved is which KINDS

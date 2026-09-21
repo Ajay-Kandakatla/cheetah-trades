@@ -316,11 +316,13 @@ def _pillar(passed, growth, **kw):
 def test_the_cohort_his_gate_REJECTS_is_shown_because_it_MEASURED_BETTER():
     """THE ONE FINDING THAT SURVIVED EVERY ATTACK.
 
-    Among names clearing his 5% floor, requiring 'character' (accelerating OR
-    >=2 consecutive growth quarters) measures NEGATIVE: the rejected cohort won
-    56.8% of the next 21 sessions against 51.2% for the cohort the gate accepts
-    (+5.64pp, CI +3.91 to +7.52). His gate is not edited — it is his — so the
-    discarded names get their own labelled section instead.
+    Among names clearing his 5% floor, requiring THIS APP'S 'character' clause
+    (accelerating OR >=2 consecutive growth quarters — the app's own, 2026-06-16,
+    mis-attributed to him until 2026-09-20) measures NEGATIVE: the rejected
+    cohort won 56.8% of the next 21 sessions against 51.2% for the cohort the
+    gate accepts (+5.64pp, CI +3.91 to +7.52). The gate is not edited — a rule
+    change is Ajay's call (Rule #10) — so the discarded names get their own
+    labelled section instead.
     """
     assert BD.SECTION_REJECTED in BD.SECTIONS
     assert BD.SECTIONS[-1] == BD.SECTION_REJECTED      # last, never leading

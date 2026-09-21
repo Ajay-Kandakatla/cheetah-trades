@@ -179,12 +179,17 @@ is visible.
 
 ## 2. Whose numbers are whose
 
-- **Bonde's own**, documented in his writing: the 5% floor (*"I take 5%"*), 25%
-  preferred (*"you can use 25% plus"*), 100% explosive (his *"Sales 100% plus"*
-  EP category, 2010). The methodology doc also lists the figures **widely
-  attributed to him that failed source verification** (30% / 39% two-quarter /
-  "MAGNA 53+" — they come from Deepvue / TradeZella / TraderLion, not Stockbee)
-  and are deliberately not used.
+- **Bonde's own**, documented in his writing: the 5% floor
+  (*"Sales/revenue should be up 5% or more."*, 2007) and the 100% boundary of
+  his *"Sales 100% plus but no earnings"* EP catalyst category (2010).
+- **This app's, mis-attributed to him until 2026-09-20**: the 25% mid-tier
+  (the first-person sentence this board carried until then was fabricated — it
+  exists in none of his posts) and the character clause (accelerating OR ≥2
+  consecutive growth quarters). The values are unchanged; only the labels are.
+- **His own 2025 figure**: *"two quarters of revenue growth of 39% plus"*
+  (2025-09-01) is his, and ships as its own pick leg on this tab.
+  The methodology doc lists what is **not** his and failed source verification:
+  30% and "MAGNA 53+" (Deepvue / TradeZella / TraderLion, not Stockbee).
 - **This app's owner settings**, and the board says so: the Pivot's **8% gap on
   5× volume** (stricter than its PEG cousin because it has no earnings-calendar
   filter), and the **$1M base materiality floor** below.

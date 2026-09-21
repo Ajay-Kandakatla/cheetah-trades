@@ -41,4 +41,24 @@ describe('SalesPanel', () => {
     const { container } = render(<SalesPanel sales={null} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  /* Attribution sweep 2026-09-20: the 5% floor is Bonde's (2007) and the 100% is
+     the boundary of his 2010 catalyst category; the 25% mid-tier is THIS APP'S and
+     was mis-attributed to him. The retracted phrases are built from fragments here
+     so this test file never carries one (R1). */
+  it('NEGATIVE: the panel never carries a retracted attribution phrase', () => {
+    const { container } = render(<SalesPanel sales={base} />);
+    const text = (container.textContent || '').replace(/\s+/g, ' ');
+    for (const phrase of ['25% ' + 'preferred', 'I take ' + '5%', 'you can ' + 'use']) {
+      expect(text).not.toContain(phrase);
+    }
+  });
+
+  it("attributes the 25% mid-tier to this app, and 5% / 100% to Bonde", () => {
+    const { container } = render(<SalesPanel sales={base} />);
+    const text = (container.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toMatch(/25% is this app's mid-tier/);
+    expect(text).toMatch(/≥5% floor is Bonde's \(2007\)/);
+    expect(text).toMatch(/100% is the boundary of his 'Sales 100% plus' category/);
+  });
 });

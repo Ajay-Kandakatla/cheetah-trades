@@ -11,14 +11,14 @@ FY Q4 is absent in BOTH years, so slot 4 was FY2025 Q1 standing in for the
 year-ago quarter of FY2026 Q2, and the board printed the result as growth.
 
 Every negative here fails on the pre-repair code. NOTHING below moves a
-threshold: `sepa/sales.py` is source-guarded byte-for-byte at the bottom of
-this file, and its 5 / 25 / 100 tiers are pinned beside it.
+threshold: `sepa/sales.py`'s 5 / 25 / 100 tiers are pinned at the bottom of
+this file, and its arithmetic is frozen by the AST-hash guard in
+`tests/test_sales.py` (`test_SOURCE_GUARD_sales_arithmetic_frozen_hash`),
+which — unlike a HEAD byte comparison — stays non-vacuous after the commit.
 """
 from __future__ import annotations
 
-import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -431,16 +431,6 @@ def test_the_E1_monkeypatch_of__adjacent_STILL_bites_through_yoy_pairs_ok(monkey
     monkeypatch.setattr(Q, "_adjacent", lambda *a, **k: False)
     assert Q.yoy_pairs_ok(ADJACENT) is False
     assert Q.period_ok(ADJACENT) is False
-
-
-def test_SOURCE_GUARD_sepa_sales_py_is_BYTE_IDENTICAL_to_HEAD():
-    """The repair relabels quarters. It does not touch Bonde's numbers, and
-    this is the guard that says so out loud (Rule #4)."""
-    root = Path(__file__).resolve().parents[2]
-    head = subprocess.run(["git", "show", "HEAD:backend/sepa/sales.py"],
-                          cwd=str(root), capture_output=True)
-    assert head.returncode == 0, head.stderr.decode()[:400]
-    assert (root / "backend" / "sepa" / "sales.py").read_bytes() == head.stdout
 
 
 def test_SOURCE_GUARD_the_bonde_thresholds_are_unmoved():

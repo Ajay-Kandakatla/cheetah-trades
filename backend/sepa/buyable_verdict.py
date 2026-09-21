@@ -22,9 +22,10 @@ this module only *combines* them, it invents no new thresholds:
 
   2. **Bonde — "is the sales growth there?"** (Pradeep Bonde / Stockbee,
      sales-driven). Reads the already-computed ``fundamentals.sales`` block
-     (``sepa/sales.py``): his documented 5% floor / 25% preferred / 100%
-     "explosive" tiers, plus his two NAMED catalysts — acceleration and
-     consecutive-quarter consistency. Full sourcing + the QoQ-vs-YoY caveat live
+     (``sepa/sales.py``): his documented 5% floor; 25% is this app's mid-tier;
+     100% is his category boundary — plus the acceleration / consecutive-quarter
+     character clause, which is THIS APP'S (mis-attributed to him until
+     2026-09-20). Full sourcing + the QoQ-vs-YoY caveat live
      in ``docs/sepa/sales_confidence_methodology.md``.
      The Bonde pillar **passes** when growth clears his 5% floor AND shows his
      character (accelerating OR ≥ 2 consecutive growth quarters). Sales data only
@@ -116,7 +117,7 @@ def _bonde_pillar(row: dict) -> dict:
     cleared_floor = bool(g is not None and g >= SALES_FLOOR_PCT)
     has_character = accel or consec >= BONDE_MIN_CONSEC_Q
     passed = bool(cleared_floor and has_character)
-    strong = bool(g is not None and g >= SALES_PREFERRED_PCT)  # his "preferred" 25%+
+    strong = bool(g is not None and g >= SALES_PREFERRED_PCT)  # this app's 25% mid-tier (not his)
 
     if not cleared_floor:
         reason = f"sales below Bonde's {SALES_FLOOR_PCT:.0f}% floor ({_pct(g)} YoY)"
@@ -124,7 +125,7 @@ def _bonde_pillar(row: dict) -> dict:
         reason = (f"growing ({_pct(g)} YoY) but not accelerating and < "
                   f"{BONDE_MIN_CONSEC_Q} consecutive growth quarters")
     elif strong:
-        reason = f"sales {_pct(g)} YoY ≥ Bonde's 25% preferred, with {'acceleration' if accel else f'{consec}q consistency'}"
+        reason = f"sales {_pct(g)} YoY ≥ the app's 25% mid-tier, with {'acceleration' if accel else f'{consec}q consistency'}"
     else:
         reason = f"sales {_pct(g)} YoY clears the 5% floor, with {'acceleration' if accel else f'{consec}q consistency'}"
 
@@ -139,7 +140,7 @@ def _bonde_pillar(row: dict) -> dict:
         "consecutive_growth_q": consec,
         "sales_led": sales.get("sales_led"),
         "reason": reason,
-        "cite": "Pradeep Bonde / Stockbee — 5% floor / 25% preferred / 100% explosive (docs/sepa/sales_confidence_methodology.md)",
+        "cite": "Pradeep Bonde / Stockbee — 5% floor is his (2007); 25% mid-tier is this app's; character clause is this app's (docs/sepa/sales_confidence_methodology.md)",
     }
 
 

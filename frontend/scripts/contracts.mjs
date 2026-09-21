@@ -2960,6 +2960,123 @@ const CONTRACTS = [
     },
   },
   {
+    name: 'the Bonde tab is a PICK LIST of HIS cited static criteria, and the retracted quotes never come back (2026-09-20)',
+    file: 'src/components/BondeBoard.tsx',
+    // Ajay 2026-09-20: "I need bonde for stock picks rather than deciding to
+    // enter … show me other things like EPS, Sales and other things … He
+    // looks at earnings surprise too" — then "momentum does not need to be a
+    // criteria for his pics … I am looking fro static info" — then "check it
+    // out. and validate it". The validation (four Stockbee posts read
+    // verbatim) found the sales module quoting sentences he never wrote.
+    // Two sweep rules mirror backend/tests/test_sepa_contracts.py:
+    //   R1 — the retracted first-person phrases are never quoted, not even
+    //        to say they were wrong (they are built from fragments here so
+    //        this file cannot trip its own sweep);
+    //   R2 — the token 39 and a failed-word never share one source line.
+    checks: (src) => {
+      const errs = [];
+      const FILES = [
+        'src/components/BondeBoard.tsx', 'src/components/BondePickChips.tsx',
+        'src/components/BondeCriteriaLegend.tsx', 'src/lib/bondePicks.ts',
+        'src/lib/chartMaps.ts', 'src/lib/newFeatures.ts',
+        'src/components/SalesPanel.tsx', 'src/components/SepaCandidateCard.tsx',
+      ];
+      const retracted = [
+        ['you can use ', '25% plus'], ['I take ', '5%'], ['25% ', 'preferred'],
+        ['his ', 'preferred'], ['revenue growth that ', 'investors focus on'],
+        ['Sales ', 'Acceleration'],
+      ].map((f) => f.join(''));
+      const failedWord = /\b(failed|FAILED|forgery|not verified)\b/;
+      // R2 is scoped to the Bonde entry inside newFeatures.ts — the older
+      // highlights are history (a Keltner claim that FAILED next to a −0.39pp
+      // lift is not about his figure) and are never rewritten after the fact.
+      const nfAll = read('src/lib/newFeatures.ts');
+      const nfEntry = (/\{ id: 'bonde-pick-list-2026-09-20'[\s\S]*?route: '\/chart-maps\?tab=bonde' \}/.exec(nfAll) || [''])[0];
+      for (const f of FILES) {
+        const t = read(f);
+        for (const ph of retracted) {
+          if (t.includes(ph)) errs.push(`${f} quotes a retracted phrase: "${ph}"`);
+        }
+        const scope = f === 'src/lib/newFeatures.ts' ? nfEntry : t;
+        scope.split('\n').forEach((line, i) => {
+          if (/\b39\b/.test(line) && failedWord.test(line)) {
+            errs.push(`${f}${scope === t ? `:${i + 1}` : ' (✨ entry)'} puts the token 39 on a line with a failed-word — his 2025 figure is HIS`);
+          }
+        });
+      }
+      // The legend renders ONCE for the tab (Rule #5), never per row.
+      const legendUses = (src.match(/<BondeCriteriaLegend\b/g) || []).length;
+      if (legendUses !== 1) errs.push(`the criteria legend must render exactly once on the tab — found ${legendUses}`);
+      if (!/<BondePickChips\b/.test(src)) errs.push('every row must carry the pick chips');
+      // A list of facts with cites, never a rank: no count of ticks, no
+      // momentum leg, anywhere in the pick surface.
+      for (const f of ['src/components/BondeBoard.tsx', 'src/components/BondePickChips.tsx',
+                       'src/components/BondeCriteriaLegend.tsx', 'src/lib/bondePicks.ts']) {
+        const t = read(f);
+        if (/\b(n_fail|n_unknown|pickCounts|legsPassed|passCount)\b/.test(t)) {
+          errs.push(`${f} derives a count from the legs — the pick line is facts with cites, not a rank`);
+        }
+        if (/\/14\b/.test(t)) errs.push(`${f} prints an x/14 tally`);
+      }
+      const lib = read('src/lib/bondePicks.ts');
+      if (/\b(today_pct|rs_rank|rel_[a-z]|persistence|momentum)\b/.test(lib)) {
+        errs.push('bondePicks.ts carries a momentum leg — his correction: static info only');
+      }
+      // WHY_TEXT keys == the backend's WHY_CODES literal — ONE vocabulary.
+      const py = read('../backend/sepa/bonde_picks.py');
+      const m = /WHY_CODES = frozenset\(\{([\s\S]*?)\}\)/.exec(py);
+      if (!m) errs.push('backend/sepa/bonde_picks.py must define WHY_CODES as a frozenset literal');
+      else {
+        const be = new Set([...m[1].matchAll(/"([a-z0-9_]+)"/g)].map((x) => x[1]));
+        const fe = new Set([...(/WHY_TEXT: Record<WhyCode, string> = \{([\s\S]*?)\n\};/.exec(lib) || ['', ''])[1]
+          .matchAll(/^\s{2}([a-z0-9_]+):/gm)].map((x) => x[1]));
+        for (const k of be) if (!fe.has(k)) errs.push(`WHY_TEXT lacks the backend why-code "${k}"`);
+        for (const k of fe) if (!be.has(k)) errs.push(`WHY_TEXT carries "${k}", which the backend never serves`);
+        if (be.size === 0) errs.push('WHY_CODES parsed as empty');
+      }
+      // Every bd-pick-* class the two new components use has a rule that ships.
+      const css = read('src/styles.css');
+      for (const f of ['src/components/BondePickChips.tsx', 'src/components/BondeCriteriaLegend.tsx']) {
+        const t = read(f);
+        const used = new Set();
+        for (const mm of t.matchAll(/(?:className=\{?["'`])([^"'`]+)/g)) {
+          for (const c of mm[1].split(/[\s${}]+/)) if (/^bd-[a-z0-9-]+$/.test(c)) used.add(c);
+        }
+        for (const c of [...used].sort()) {
+          if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) errs.push(`styles.css has no rule for .${c} (${f})`);
+        }
+      }
+      // The tab blurb says what the tab became, and whose numbers are whose.
+      const cm = read('src/lib/chartMaps.ts');
+      const meta = /bonde:\s*\{[\s\S]*?blurb:\s*'([\s\S]*?)',\n\s*\},/.exec(cm);
+      const b = meta ? meta[1].replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))) : '';
+      if (!/SINCE 2026-09-20 THIS TAB IS A PICK LIST of his STATIC criteria/.test(b)) errs.push('the Bonde blurb must say the tab is a pick list of his static criteria');
+      if (!/entries are yours \(S&D, momentum\)/.test(b)) errs.push('the blurb must say entries are his (S&D, momentum)');
+      if (!/the 25% mid-tier and the character clause[\s\S]*are THIS APP’S, mis-attributed to him until 2026-09-20/.test(b)) {
+        errs.push('the blurb must state that the 25% mid-tier and the character clause are this app’s, not his');
+      }
+      if (!/a rule change is Ajay’s call/.test(b)) errs.push('the blurb must say the gate is unchanged because a rule change is his call');
+      if (!/Nothing on the pick line is measured or a signal/.test(b)) errs.push('the blurb must say the pick line is not measured and not a signal');
+      // The ✨ entry rides with the feature and carries his words.
+      const nf = read('src/lib/newFeatures.ts');
+      const e = /id: 'bonde-pick-list-2026-09-20'[\s\S]*?addedAt: '2026-09-20', route: '\/chart-maps\?tab=bonde' \}/.exec(nf);
+      if (!e) errs.push('newFeatures.ts needs the bonde-pick-list-2026-09-20 entry routed to the Bonde tab');
+      else {
+        const d = e[0];
+        for (const [re, msg] of [
+          [/I need bonde for stock picks rather than deciding to enter/, 'his ask, verbatim'],
+          [/I am looking fro static info/, 'his correction, verbatim'],
+          [/NO MOMENTUM ON THE PICK LINE/, 'the no-momentum rule'],
+          [/It is not measured, it is not a signal/, 'the not-measured line'],
+          [/IN WORDING ONLY/, 'the validation fix must be described as wording-only'],
+          [/not warmed/, 'the short-interest warm caveat'],
+          [/uncorroborated/, 'the listing-date caveat'],
+        ]) if (!re.test(d)) errs.push(`the ✨ entry must carry ${msg}`);
+      }
+      return errs;
+    },
+  },
+  {
     name: 'the Bonde tab carries + Signals and the live basis line (2026-09-20)',
     file: 'src/components/BondeBoard.tsx',
     // Ajay 2026-09-20: "can you improve Bondes page a lil bit more and add

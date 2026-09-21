@@ -15,7 +15,8 @@ const VERDICT: BuyVerdict = {
                reason: 'qualifier + breakout', cite: 'Minervini p.79; pp.198-203' },
   bonde: { passed: true, pending: false, strong: true, tier: 'strong', score: 82,
            growth_yoy_pct: 33, accelerating: true, consecutive_growth_q: 4, sales_led: true,
-           reason: 'sales +33% YoY ≥ 25% preferred', cite: 'Pradeep Bonde / Stockbee' },
+           reason: "sales +33% YoY ≥ the app's 25% mid-tier, with acceleration",
+           cite: 'Pradeep Bonde / Stockbee' },
 };
 
 describe('BuyVerdictPanel', () => {

@@ -767,7 +767,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
           <div style={{ padding: '0.35rem 0.2rem 0' }}>
             <span
               className="sepa-chip"
-              title={`Sales Confidence ${s.score}/100 (${s.tier}). Revenue ${s.growth_yoy_pct}% YoY${s.accelerating ? ', accelerating ⚡' : ''}${s.consecutive_growth_q ? `, ${s.consecutive_growth_q}q growth` : ''}${s.sales_led ? ', sales-led' : ''}. Pradeep Bonde / Stockbee: 5% floor · 25% preferred · 100% explosive.`}
+              title={`Sales Confidence ${s.score}/100 (${s.tier}). Revenue ${s.growth_yoy_pct}% YoY${s.accelerating ? ', accelerating ⚡' : ''}${s.consecutive_growth_q ? `, ${s.consecutive_growth_q}q growth` : ''}${s.sales_led ? ', sales-led' : ''}. Pradeep Bonde / Stockbee: 5% floor is his · 25% mid-tier is this app's · 100% is his category boundary.`}
               style={{ color: tone, borderColor: tone, cursor: 'help', fontSize: '0.72rem' }}
             >
               📈 Sales {s.score} · {s.growth_yoy_pct != null ? `${s.growth_yoy_pct > 0 ? '+' : ''}${s.growth_yoy_pct}% YoY` : '—'}

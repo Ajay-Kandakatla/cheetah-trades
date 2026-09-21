@@ -623,11 +623,12 @@ def sections() -> dict:
             "title": "Bonde — his sales screen × the Episodic Pivot",
             "emoji": "📈",
             "picks": [
-                "His SALES gate (`sepa/buyable_verdict.py::_bonde_pillar`): "
-                "revenue growth year over year at or above his %s floor AND "
-                "'character' — accelerating, or at least %d consecutive growth "
-                "quarters. Tiers above that floor are his own %s preferred and "
-                "100%% explosive levels."
+                "His SALES floor (`sepa/buyable_verdict.py::_bonde_pillar`): "
+                "revenue growth year over year at or above his %s floor, AND "
+                "THIS APP'S 'character' clause — accelerating, or at least %d "
+                "consecutive growth quarters (mis-attributed to him until "
+                "2026-09-20). Tiers above the floor are this app's %s mid-tier "
+                "and the 100%% boundary of his 'Sales 100%% plus' category."
                 % (_pct(SALES_FLOOR_PCT), BD_MIN_CONSEC(),
                    _pct(SALES_PREFERRED_PCT)),
                 "The ⚡ Episodic Pivot (`setups/episodic_pivot.py`): a gap of "

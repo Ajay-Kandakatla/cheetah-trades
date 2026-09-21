@@ -20,6 +20,9 @@ have downstream consequences in the frontend (e.g. `score: float`,
 from __future__ import annotations
 
 import os
+import re
+from pathlib import Path
+
 import pytest
 
 # --- Locked constants from docs/SEPA_CONTRACTS.md ------------------------
@@ -369,11 +372,15 @@ def test_buyable_rejects_extended_past_pivot():
 
 
 def test_sales_confidence_thresholds_locked():
-    """Sales Confidence (sepa/sales.py) anchors to Pradeep Bonde's DOCUMENTED
-    sales numbers (Stockbee 2007 'How to trade earnings' / 2010 EP taxonomy):
-    5% floor · 25% preferred · 100% 'explosive'. It must NOT drift to the
-    third-party 30%/39% figures that FAILED source verification (Deepvue /
-    TradeZella / TraderLion). See docs/sepa/sales_confidence_methodology.md."""
+    """The three sales tier values are LOCKED at 5 / 25 / 100.
+
+    Whose number is whose (relabelled 2026-09-20, values unchanged): 5% is HIS
+    floor (Stockbee 2007 'How to trade earnings'); 25% is THIS APP'S mid-tier;
+    100% is the boundary of his 2010 'Sales 100% plus but no earnings' EP
+    catalyst category. Figures that FAILED source verification and are not used:
+    30% and 'MAGNA 53+' (Deepvue / TradeZella / TraderLion).
+    His own 2025 two-quarter revenue figure is HIS and is a pick leg, not a
+    tier. See docs/sepa/sales_confidence_methodology.md."""
     from sepa import sales
     assert sales.SALES_FLOOR_PCT == 5.0
     assert sales.SALES_PREFERRED_PCT == 25.0
@@ -1258,3 +1265,110 @@ def test_chart_maps_vcp_gates_are_documented():
     text = doc.read_text()
     for cite in ("p.34", "p.66", "p.79", "p.81", "p.71-72", "p.106"):
         assert cite in text, f"methodology doc does not cite {cite}"
+
+
+# ── Attribution source guard (2026-09-20) ────────────────────────────────────
+# R1: the retracted phrases are never quoted anywhere, not even to say they were
+#     wrong. They are built here from JOINED FRAGMENTS so this test file does not
+#     itself carry one as a literal and trip its own sweep.
+# R2: the number and a failed-word never share a SOURCE LINE — which is why
+#     the R2 fixture below is joined from fragments too.
+_R1_RETRACTED = (
+    "you can use " + "25% plus",
+    "I take " + "5%",
+    "his " + "preferred",
+    "25% " + "preferred",
+    "revenue growth that " + "investors focus on",
+)
+_R2_FAILED_WORDS = ("failed", "FAILED", "forgery", "not verified")
+_R2_NUMBER = re.compile(r"\b39\b")
+
+_GUARDED_FILES = (
+    "backend/sepa/sales.py",
+    "backend/sepa/bonde.py",
+    "backend/sepa/buyable_verdict.py",
+    "backend/supply_demand/rules_info.py",
+    "docs/sepa/sales_confidence_methodology.md",
+    "docs/sepa/bonde_board.md",
+)
+
+# Must be PRESENT, verbatim, in sales.py AND the methodology doc.
+_REQUIRED_VERBATIM = (
+    "Sales/revenue should be up 5% or more.",
+    "Sales 100% plus but no earnings",
+    "Their real moves start when they start growing revenue aggressively.",
+    "two quarters of revenue growth of 39% plus",
+    "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+    "https://stockbee.blogspot.com/2025/09/find-young-episodic-pivots.html",
+)
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _attribution_violations(text: str, label: str = "<text>") -> list:
+    """Every R1 / R2 violation in ``text``. Empty list == clean."""
+    bad = []
+    for phrase in _R1_RETRACTED:
+        if phrase in text:
+            bad.append("%s: R1 retracted phrase re-introduced" % label)
+    for i, line in enumerate(text.splitlines(), 1):
+        if _R2_NUMBER.search(line) and any(w in line for w in _R2_FAILED_WORDS):
+            bad.append("%s:%d: R2 — the figure shares a line with a failed-word"
+                       % (label, i))
+    return bad
+
+
+def test_SOURCE_GUARD_bonde_attribution_2026_09_20():
+    """The nine attribution drifts (D1-D9) stay fixed, in wording only.
+
+    R1 — no retracted phrase is quoted anywhere, not even to disown it.
+    R2 — his 2025 two-quarter figure never shares a line with a failed-word.
+    PRESENT — his real sentences and their URLs are carried verbatim.
+    And the methodology doc must say the character clause is THIS APP'S.
+    """
+    for rel in _GUARDED_FILES:
+        path = _REPO_ROOT / rel
+        assert path.exists(), rel
+        text = path.read_text(encoding="utf-8")
+        bad = _attribution_violations(text, rel)
+        assert not bad, "\n".join(bad)
+
+    for rel in ("backend/sepa/sales.py",
+                "docs/sepa/sales_confidence_methodology.md"):
+        text = (_REPO_ROOT / rel).read_text(encoding="utf-8")
+        for needed in _REQUIRED_VERBATIM:
+            assert needed in text, "%s is missing %r" % (rel, needed)
+
+    doc = (_REPO_ROOT / "docs/sepa/sales_confidence_methodology.md"
+           ).read_text(encoding="utf-8").lower()
+    i = doc.find("character clause")
+    assert i >= 0, "the doc never names the character clause"
+    window = doc[max(0, i - 200):i + 200]
+    assert "this app's" in window, "the doc must say the character clause is the app's"
+
+
+def test_NEGATIVE_attribution_guard_catches_a_reintroduced_phrase():
+    """The checker is not vacuous: it fires on a re-introduced R1 phrase and on
+    an R2 line that pairs the figure with a failed-word."""
+    r1 = "the tier is " + "his " + "preferred" + " level\n"
+    assert _attribution_violations(r1, "t")
+
+    r2 = ("his 39% two-quarter revenue figure "
+          + "fail" + "ed source verification\n")
+    assert _attribution_violations(r2, "t")
+
+    clean = ("Sales/revenue should be up 5% or more.\n"
+             "two quarters of revenue growth of 39% plus\n"
+             "30% and MAGNA 53+ failed source verification\n")
+    assert _attribution_violations(clean, "t") == []
+
+
+def test_SOURCE_GUARD_the_attribution_guard_sweeps_its_own_file():
+    """§6: R1/R2 bind EVERY file this build touched, tests included.
+
+    The guard's own fixtures must therefore be built from fragments — this is
+    the negative that catches a fixture written as one literal.
+    """
+    text = Path(__file__).read_text(encoding="utf-8")
+    bad = _attribution_violations(text, "backend/tests/test_sepa_contracts.py")
+    assert not bad, "\n".join(bad)

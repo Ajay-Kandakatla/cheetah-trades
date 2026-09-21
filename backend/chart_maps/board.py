@@ -3573,7 +3573,8 @@ def _usd_short(v) -> str:
 # Gabbar boards (Ajay 2026-08-25: "both need pradeep bonde's sales and revenus
 # quarter logic ... so we are not catching falling knives"). The tier names and
 # the 5% floor behind "steady" are sepa/sales.py's — Bonde's own documented
-# floor ("I take 5%"), contract-locked there. This tuple only SELECTS tiers;
+# floor ("Sales/revenue should be up 5% or more.", 2007), contract-locked there.
+# This tuple only SELECTS tiers;
 # it must never redefine a threshold.
 from sepa.sales import BONDE_PASS_TIERS  # one definition — sepa/sales.py
 

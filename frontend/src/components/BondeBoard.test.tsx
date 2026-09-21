@@ -224,7 +224,7 @@ describe('🔎 the cohort his gate rejects', () => {
     const { container } = draw(payload({
       sections: { pivot: [], explosive: [row('PTGX')], strong: [], steady: [], rejected: [rej] },
     }));
-    await screen.findByText(/Cleared his floor, rejected for character/);
+    await screen.findByText(/Cleared his 5% floor, rejected by THIS APP’S character clause/);
     expect(screen.getByText(/NOT ON HIS SCREEN/)).toBeTruthy();
     // the measured reason it is shown at all, with its placebo
     const blurb = [...container.querySelectorAll('.bd-blurb')]
@@ -234,9 +234,14 @@ describe('🔎 the cohort his gate rejects', () => {
     expect(blurb).toMatch(/\+5\.64pp, CI \+3\.91 to \+7\.52/);
     // ...and its caveat travels with it
     expect(blurb).toMatch(/does not survive date clustering at 21 days/);
+    // 2026-09-20: the clause is THIS APP'S. It was called his for three months
+    // and it is not in anything he published.
+    expect(blurb).toMatch(/THIS APP’S, not his/);
+    expect(blurb).toMatch(/mis-attributed until 2026-09-20/);
+    expect(blurb).toMatch(/a rule change is Ajay’s call/);
 
     const heads = [...container.querySelectorAll('.bd-h')].map((h) => h.textContent || '');
-    expect(heads[heads.length - 1]).toMatch(/Cleared his floor/);
+    expect(heads[heads.length - 1]).toMatch(/Cleared his 5% floor/);
   });
 
   it('counts the rejected cohort beside the pass count', async () => {
@@ -251,7 +256,7 @@ describe('🔎 the cohort his gate rejects', () => {
     draw(payload({
       sections: { pivot: [], explosive: [row('PTGX')], strong: [], steady: [], rejected: [rej] },
     }));
-    await screen.findByText(/Cleared his floor/);
+    await screen.findByText(/Cleared his 5% floor/);
     fireEvent.click(screen.getByLabelText(/new arrivals only/i));
     await waitFor(() =>
       expect(screen.getByText(/never lights here — these names are not on his screen/)).toBeTruthy());
@@ -681,5 +686,157 @@ describe('📈 Bonde — un-hide by reason (2026-09-17)', () => {
     expect(screen.queryByText('LQDA')).not.toBeInTheDocument();
     expect(bondeLine().textContent).not.toContain('un-hidden');
     expect(document.querySelector('[aria-pressed="true"]')).toBeNull();
+  });
+});
+
+/* 📋 The pick line (2026-09-20). Ajay: "I need bonde for stock picks rather
+ * than deciding to enter … I am looking fro static info".
+ *
+ * The negatives carry the build: the retracted first-person sentences must be
+ * GONE from the tier blurbs, the legend must appear exactly once however many
+ * rows are drawn, and no row may render a tally of its own legs. */
+const CRIT = (key: string, over: Partial<any> = {}) => ({
+  key, label: `${key} label`, quote: `his sentence for ${key}`,
+  url: `https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html#${key}`,
+  date: '2010-02-12', source: 'stockbee', data: `where ${key} comes from`,
+  computed: true, not_computed_why: null, his_call: null, ...over,
+});
+
+const PICK_LEGEND = {
+  header: 'A pick list of his STATIC criteria — entries are yours (S&D, and how you '
+        + 'time them). Each chip is one sentence he published, with its link.',
+  criteria: ['eps_5c', 'eps_yoy_100', 'eps_seq_100', 'eps_accel', 'sales_5', 'surprise',
+             'float_25m', 'short_dtc_5', 'neglect_analysts', 'fund_holding', 'ipo_10y',
+             'cap_10b', 'rev_39_x2', 'sector_3'].map((k) => CRIT(k)),
+  computed_keys: [], why_codes: [],
+  not_a_source: 'The YouTube summary is NOT a source.',
+  warm_note: 'Short interest reads unknown until the warm has run.',
+};
+
+const PICK = {
+  legs: {
+    eps_5c: { ok: true, value: 0.31 },
+    eps_yoy_100: { ok: true, value: 140 },
+    eps_seq_100: { ok: true, value: 120 },
+    eps_accel: { ok: true, value: { now: 140, prior: 80 } },
+    sales_5: { ok: true, value: 48 },
+    surprise: { ok: true, value: 12, as_of: '2026-08-20' },
+    float_25m: { ok: true, value: 1.8e7 },
+    short_dtc_5: { ok: null, value: null, why: 'not_warmed' },
+    neglect_analysts: { ok: false, value: 3 },
+    fund_holding: { ok: null, value: 22.4, why: 'no_threshold_in_his_writing' },
+    ipo_10y: { ok: true, value: 3.2, as_of: '2023-07-11' },
+    cap_10b: { ok: true, value: 4e9 },
+    rev_39_x2: { ok: true, value: { now: 45, prior: 52 } },
+    sector_3: { ok: true, value: 'Technology' },
+  },
+};
+
+const pickPayload = (over: Partial<BondeBoardData> = {}): BondeBoardData => payload({
+  sections: {
+    pivot: [],
+    explosive: [row('PTGX', { pick: PICK })],
+    strong: [row('MU', { tier: 'strong', pick: PICK })],
+    steady: [],
+    rejected: [row('AAON', { tier: 'steady', accelerating: false,
+                             consecutive_growth_q: 1, pick: PICK })],
+  },
+  pick_legend: PICK_LEGEND as any,
+  pick_coverage: {
+    eps_yoy_100: { known: 190, rows: 199 }, rev_39_x2: { known: 188, rows: 199 },
+    surprise: { known: 53, rows: 199 }, float_25m: { known: 169, rows: 199 },
+    ipo_10y: { known: 199, rows: 199 }, short_dtc_5: { known: 0, rows: 199 },
+  },
+  ...over,
+});
+
+describe('📋 the pick line', () => {
+  it('mounts the criterion legend exactly ONCE for a multi-row board', async () => {
+    draw(pickPayload());
+    await screen.findByText('PTGX');
+    expect(screen.getAllByTestId('bonde-criteria').length).toBe(1);
+  });
+
+  it('the frame line prints the SERVED header, not a typed one', async () => {
+    draw(pickPayload());
+    const frame = await screen.findByTestId('bonde-pick-frame');
+    expect(frame.textContent).toContain('A pick list of his STATIC criteria');
+    expect(frame.textContent).toContain('entries are yours');
+  });
+
+  it('every row carries the chip line, including the 🔎 cohort', async () => {
+    draw(pickPayload());
+    await screen.findByText('PTGX');
+    for (const sym of ['PTGX', 'MU', 'AAON']) {
+      expect(screen.getByTestId(`bd-pick-${sym}`)).toBeTruthy();
+    }
+    expect(screen.getByTestId('bd-pick-PTGX-float_25m').textContent).toBe('Float 18M ✓');
+  });
+
+  it('says what the chip line actually knows', async () => {
+    draw(pickPayload());
+    const cov = await screen.findByTestId('bonde-pick-coverage');
+    expect(cov.textContent).toContain('float 169 of 199');
+    expect(cov.textContent).toContain('short interest 0 of 199 (not warmed)');
+  });
+
+  it('NEGATIVE — a row with no pick block draws no chip line and does not crash', async () => {
+    draw(pickPayload({
+      sections: { pivot: [], explosive: [row('PTGX')], strong: [], steady: [], rejected: [] },
+    } as any));
+    await screen.findByText('PTGX');
+    expect(screen.queryByTestId('bd-pick-PTGX')).toBeNull();
+    expect(screen.getByTestId('bonde-pick-frame')).toBeTruthy();
+  });
+
+  it('NEGATIVE — no legend served, no legend and no frame rendered', async () => {
+    draw(payload());
+    await screen.findByText('PTGX');
+    expect(screen.queryByTestId('bonde-criteria')).toBeNull();
+    expect(screen.queryByTestId('bonde-pick-frame')).toBeNull();
+    expect(screen.queryByTestId('bonde-pick-coverage')).toBeNull();
+  });
+
+  it('NEGATIVE — no row prints a tally of its own legs', async () => {
+    const { container } = draw(pickPayload());
+    await screen.findByText('PTGX');
+    const txt = container.textContent || '';
+    expect(txt).not.toMatch(/\/14\b/);
+    expect(txt).not.toMatch(/\b\d+\s+of\s+14\b/);
+  });
+
+  it('NEGATIVE — an unknown leg never renders as a pass', async () => {
+    draw(pickPayload());
+    await screen.findByText('PTGX');
+    const dtc = screen.getByTestId('bd-pick-PTGX-short_dtc_5');
+    expect(dtc.textContent).toBe('DTC —');
+    expect(dtc.textContent).not.toContain('✓');
+  });
+});
+
+describe('📋 NEGATIVE — the fabricated first-person sentences are gone', () => {
+  // Built from fragments so this test file does not itself carry the retracted
+  // phrases as literals — the source sweep would then catch its own guard.
+  const RETRACTED = new RegExp(
+    [['you can use ', '25% plus'].join(''),
+     ['I take ', '5%'].join(''),
+     ['his stated ', 'preferred level'].join(''),
+     ['25% ', 'preferred'].join('')].join('|'));
+
+  it('no tier blurb quotes a sentence he never wrote', async () => {
+    const { container } = draw(pickPayload());
+    await screen.findByText('PTGX');
+    const blurbs = [...container.querySelectorAll('.bd-blurb')].map((p) => p.textContent || '');
+    for (const b of blurbs) expect(RETRACTED.test(b), b.slice(0, 60)).toBe(false);
+    expect(screen.queryByText(RETRACTED)).toBeNull();
+  });
+
+  it('the 25% tier is labelled as THIS APP’S, and 5% quotes his real sentence', async () => {
+    const { container } = draw(pickPayload());
+    await screen.findByText('PTGX');
+    const blurbs = [...container.querySelectorAll('.bd-blurb')].map((p) => p.textContent || '');
+    expect(blurbs.some((b) => /THIS APP’S 25% mid-tier — not a number he published/.test(b))).toBe(true);
+    expect(blurbs.some((b) => /"Sales\/revenue should be up 5% or more\." \(Stockbee, 2007\)/.test(b))).toBe(true);
+    expect(blurbs.some((b) => /"Sales 100% plus but no earnings" Episodic-Pivot CATEGORY/.test(b))).toBe(true);
   });
 });

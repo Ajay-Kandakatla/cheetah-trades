@@ -270,5 +270,155 @@ class TestImpliedUpsideNoneSafety(unittest.TestCase):
         self.assertIsNone(r["implied_upside_pct"])
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Analyst COUNT (2026-09-20) — the Bonde "no analyst coverage" leg.
+#
+# PROBED live (yfinance 1.2.0): AAPL `earnings_estimate.numberOfAnalysts`
+# [27,21,39,40]; SLNH [1,1,1,1]; BTCS (no coverage) → an EMPTY frame, no
+# column, no exception. Yahoo NEVER prints 0. So an empty frame is the only
+# evidence of no coverage, and it is labelled `empty_frame` rather than stored
+# as a bare 0 that a reader would mistake for a measurement.
+# ─────────────────────────────────────────────────────────────────────────────
+import pandas as pd
+
+
+class FakeTicker:
+    """yfinance double — `earnings_estimate` only; every other property this
+    path reads throws, exactly as a thin-coverage name does."""
+
+    def __init__(self, estimate=None, raises=False):
+        self._estimate = estimate
+        self._raises = raises
+
+    @property
+    def earnings_estimate(self):
+        if self._raises:
+            raise RuntimeError("no data")
+        return self._estimate
+
+    def _boom(self):
+        raise RuntimeError("no data")
+
+    analyst_price_targets = property(_boom)
+    eps_trend = property(_boom)
+    eps_revisions = property(_boom)
+    upgrades_downgrades = property(_boom)
+
+
+def _fetch(ticker):
+    from sepa import symbols as S
+    old = S.yf_ticker
+    S.yf_ticker = lambda sym: ticker
+    try:
+        return ap.fetch_one("FOO")
+    finally:
+        S.yf_ticker = old
+
+
+class AnalystCountTests(unittest.TestCase):
+
+    def test_a_0q_row_reads_the_count(self):
+        df = pd.DataFrame({"numberOfAnalysts": [7, 8]}, index=["0q", "+1q"])
+        doc = _fetch(FakeTicker(df))
+        self.assertEqual(doc["n_analysts"], 7)
+        self.assertEqual(doc["n_analysts_source"], "0q_row")
+
+    def test_an_EMPTY_frame_is_the_only_no_coverage_evidence(self):
+        doc = _fetch(FakeTicker(pd.DataFrame()))
+        self.assertEqual(doc["n_analysts"], 0)
+        self.assertEqual(doc["n_analysts_source"], "empty_frame")
+
+    def test_NEGATIVE_a_frame_with_rows_but_no_count_column_is_UNKNOWN_not_zero(self):
+        """A schema change at Yahoo must read as "we do not know", never as
+        "nobody covers it" — the leg's PASS answer is no-coverage."""
+        df = pd.DataFrame({"avg": [1.0]}, index=["0q"])
+        doc = _fetch(FakeTicker(df))
+        self.assertIsNone(doc["n_analysts"])
+        self.assertIsNone(doc["n_analysts_source"])
+
+    def test_NEGATIVE_a_frame_with_no_0q_row_is_UNKNOWN_not_zero(self):
+        df = pd.DataFrame({"numberOfAnalysts": [9]}, index=["+1y"])
+        doc = _fetch(FakeTicker(df))
+        self.assertIsNone(doc["n_analysts"])
+        self.assertIsNone(doc["n_analysts_source"])
+
+    def test_NEGATIVE_a_None_frame_is_UNKNOWN(self):
+        doc = _fetch(FakeTicker(None))
+        self.assertIsNone(doc["n_analysts"])
+        self.assertIsNone(doc["n_analysts_source"])
+
+    def test_NEGATIVE_a_RAISING_property_leaves_the_doc_shipping(self):
+        """Thin names throw per property. The refresh must never crash and the
+        other fields must still be written."""
+        doc = _fetch(FakeTicker(raises=True))
+        self.assertIsNone(doc["n_analysts"])
+        self.assertIsNone(doc["n_analysts_source"])
+        self.assertEqual(doc["symbol"], "FOO")
+        self.assertIn("n_analysts", doc)
+
+
+class CoverageMapTests(unittest.TestCase):
+    """The BOARD reader. `get_map()` makes a bulk LIVE price call; the Bonde
+    board renders off the last scan and must make no network call at all."""
+
+    class FakeColl:
+        def __init__(self, docs):
+            self.docs = docs
+
+        def find(self, q, proj=None):
+            ids = (q.get("_id") or {}).get("$in", [])
+            for d in self.docs:
+                if d["_id"] in ids:
+                    yield dict(d)
+
+    def _patch(self, docs):
+        ap._coll = lambda: CoverageMapTests.FakeColl(docs)
+
+    def test_coverage_map_never_calls_bulk_live(self):
+        def boom(_syms):
+            raise AssertionError("the board path made a live price call")
+
+        old_coll, old_live = ap._coll, ap._bulk_live
+        ap._bulk_live = boom
+        try:
+            self._patch([{"_id": "FOO", "n_analysts": 0,
+                          "n_analysts_source": "empty_frame", "fetched_at": 42}])
+            m = ap.coverage_map(["foo"])
+        finally:
+            ap._coll, ap._bulk_live = old_coll, old_live
+        self.assertEqual(m["FOO"]["n_analysts"], 0)
+        self.assertEqual(m["FOO"]["n_analysts_source"], "empty_frame")
+        self.assertEqual(m["FOO"]["fetched_at"], 42)
+
+    def test_NEGATIVE_a_PRE_2026_09_20_doc_reads_None_not_zero(self):
+        """1,365 docs predate the field. Absent must read as unknown — a 0
+        there would mint a false "no analyst coverage ✓" on every one."""
+        old = ap._coll
+        try:
+            self._patch([{"_id": "FOO", "fetched_at": 1}])
+            m = ap.coverage_map(["FOO"])
+        finally:
+            ap._coll = old
+        self.assertIsNone(m["FOO"]["n_analysts"])
+        self.assertIsNone(m["FOO"]["n_analysts_source"])
+
+    def test_NEGATIVE_an_unknown_symbol_is_ABSENT_not_a_zero_entry(self):
+        old = ap._coll
+        try:
+            self._patch([])
+            m = ap.coverage_map(["FOO"])
+        finally:
+            ap._coll = old
+        self.assertEqual(m, {})
+
+    def test_no_mongo_returns_an_empty_map(self):
+        old = ap._coll
+        try:
+            ap._coll = lambda: None
+            self.assertEqual(ap.coverage_map(["FOO"]), {})
+        finally:
+            ap._coll = old
+
+
 if __name__ == "__main__":
     unittest.main()

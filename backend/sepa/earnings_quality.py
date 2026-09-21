@@ -10,7 +10,8 @@ Massive (EPS, revenue, net income, inventory) — no extra API call.
 
 What it encodes (every rule page-cited):
   * EPS acceleration ............... growth RATE rising across quarters (p.140,158)
-  * Sales acceleration ............. reuses sepa/sales.py (Bonde)        (p.140,158)
+  * Sales acceleration ............. this app's read via sepa/sales.py
+                                     (not a Bonde catalyst)              (p.140,158)
   * Margin expansion ............... net-profit-margin trend             (p.145-147)
   * The Code 33 .................... EPS + sales + margins all accelerating
                                      3 consecutive quarters (the headline) (p.158-159)

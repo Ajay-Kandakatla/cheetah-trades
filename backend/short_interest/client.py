@@ -17,11 +17,32 @@ The fetch loop pulls the last 30 days of data per request — enough for
 the 20-day moving average we use to spot short-spike vs steady-state
 short positioning. If a symbol is queried on a market day and we already
 have today's record cached, we skip the HTTP call.
+
+TWO SERIES, TWO CACHES — DO NOT CROSS THEM
+──────────────────────────────────────────
+This module owns two *different* short measurements, and reading one as
+the other is a silent, plausible, wrong number:
+
+  * SHORT VOLUME (daily) — what fraction of a single session's tape printed
+    on the short side. Massive `/stocks/v1/short-volume`. Caches:
+    `short_volume_cache` (time-series, one row per symbol+date) and
+    `short_volume_latest` (newest snapshot per symbol).
+  * SHORT INTEREST (bi-monthly) — total shares sold short and still open at
+    a FINRA settlement, plus days-to-cover and % of shares outstanding.
+    Massive `/stocks/v1/short-interest`, via `short_interest_for()`.
+    Cache: `short_interest_latest` (SI_COLL), warmed by
+    `python -m short_interest.client warm-si`, read in bulk by
+    `short_interest_map()`.
+
+`short_interest_map()` reads SI_COLL and nothing else — never the short
+VOLUME caches. A days-to-cover leg on a board that read the volume ratio
+would render a confident number of the wrong series.
 """
 from __future__ import annotations
 
 import logging
 import os
+import time
 from massive_keys import stocks_key
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
@@ -365,3 +386,250 @@ def short_interest_for(symbol: str) -> Optional[dict]:
         "si_change_pct": round(chg, 1) if chg is not None else None,
         "squeeze": _squeeze_signal(pct, dtc),
     }
+
+
+# ---------- Short-INTEREST bulk cache (bi-monthly FINRA settlements) -----------
+#
+# The board path (sepa/bonde_picks.attach) needs a days-to-cover number for up
+# to ~260 names in one page render. `short_interest_for()` is TWO Massive calls
+# per symbol, so it can never run on a request path: a cron warms this cache and
+# the board does ONE `$in` read against it.
+
+SI_COLL = "short_interest_latest"
+
+# APP freshness LABEL, not one of his numbers and never a gate (§7.15, Rule #7:
+# check the reported PERIOD against the source's cadence, not the cache age).
+# FINRA settles mid-month and end-of-month and publishes ~9 business days later,
+# so a settlement older than 45 days means two missed settlements plus the
+# publication lag — i.e. the cache, not the market, is behind. A stale label is
+# rendered beside the value; it never flips a pass/fail.
+SI_STALE_DAYS = 45
+
+# How long a warm result is considered fresh enough to skip a re-fetch. The
+# underlying series only moves twice a month; a day keeps the warm cheap and
+# still picks up a new settlement the day after it publishes.
+SI_WARM_TTL_SEC = 24 * 3600
+
+
+def _si_coll(db=None):
+    """The short-INTEREST collection (never the short-VOLUME ones)."""
+    d = db if db is not None else _get_db()
+    if d is None:
+        return None
+    try:
+        return d[SI_COLL]
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest: %s unavailable: %s", SI_COLL, exc)
+        return None
+
+
+def _age_days(settlement_date) -> Optional[int]:
+    """Calendar days between a settlement date and today, or None.
+
+    ONE CLOCK ON THE PICK LINE: `today` here is the LOCAL date, the same
+    `date.today()` the surprise and IPO legs read through
+    `sepa.bonde_picks._today()`. A UTC `today` runs a calendar day ahead of
+    the local one every evening after 19:00 CT, which would move this stale
+    label — and only this one — a day out of step with the surprise leg's on
+    the same row. The label is an app freshness bound, never a gate (§7.15),
+    so the cheap fix is to read the same clock everywhere.
+    """
+    if not settlement_date:
+        return None
+    try:
+        d = datetime.strptime(str(settlement_date)[:10], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+    return (date.today() - d).days
+
+
+def short_interest_map(symbols, db=None) -> dict:
+    """{SYM: doc + stale + age_days} for a list of names — ONE Mongo read.
+
+    Reads `SI_COLL` only. `stale` and `age_days` are both None when the stored
+    doc carries no `settlement_date` (a remembered miss, or a provider with no
+    record for the name); otherwise `age_days` is calendar days since the
+    settlement and `stale` is `age_days > SI_STALE_DAYS`.
+
+    Never fetches: a symbol with no doc is simply absent from the map, and the
+    caller renders it as unknown rather than as a zero.
+    """
+    syms = []
+    for s in symbols or []:
+        s = str(s or "").strip().upper()
+        if s and s not in syms:
+            syms.append(s)
+    coll = _si_coll(db)
+    if coll is None or not syms:
+        return {}
+    out: dict = {}
+    try:
+        for doc in coll.find({"_id": {"$in": syms}}):
+            sym = doc.get("_id")
+            if not sym:
+                continue
+            rec = dict(doc)
+            rec.pop("_id", None)
+            age = _age_days(rec.get("settlement_date"))
+            rec["age_days"] = age
+            rec["stale"] = None if age is None else bool(age > SI_STALE_DAYS)
+            out[str(sym).upper()] = rec
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest: map read failed: %s", exc)
+        return {}
+    return out
+
+
+def warm_short_interest(symbols, db=None, sleep_sec: float = 0.25,
+                        force: bool = False) -> dict:
+    """Fetch + store short interest for `symbols`. Network, cron-only.
+
+    TWO Massive calls per name, so it sleeps between names and skips anything
+    fetched within `SI_WARM_TTL_SEC` unless `force`. A `None` answer is WRITTEN
+    as a remembered miss (`settlement_date: None`) so the next warm does not
+    re-pay for a name the provider has no record for, and the board can tell
+    "never warmed" from "warmed, no record". Never raises.
+    """
+    syms = []
+    for s in symbols or []:
+        s = str(s or "").strip().upper()
+        if s and s not in syms:
+            syms.append(s)
+    res = {"n": len(syms), "fetched": 0, "written": 0, "skipped": 0, "failed": 0}
+    coll = _si_coll(db)
+    if coll is None or not syms:
+        return res
+
+    fresh = set()
+    if not force:
+        cutoff = time.time() - SI_WARM_TTL_SEC
+        try:
+            fresh = {d["_id"] for d in coll.find(
+                {"_id": {"$in": syms}, "fetched_at": {"$gte": cutoff}}, {"_id": 1})}
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest: warm freshness read failed: %s", exc)
+            fresh = set()
+
+    todo = [s for s in syms if s not in fresh]
+    res["skipped"] = len(syms) - len(todo)
+
+    for i, sym in enumerate(todo):
+        try:
+            d = short_interest_for(sym)
+            res["fetched"] += 1
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest: warm %s failed: %s", sym, exc)
+            res["failed"] += 1
+            d = None
+            if i < len(todo) - 1 and sleep_sec:
+                time.sleep(sleep_sec)
+            continue
+
+        if d:
+            doc = {
+                "_id": sym,
+                "symbol": sym,
+                "settlement_date": d.get("settlement_date"),
+                "short_interest": d.get("short_interest"),
+                "avg_daily_volume": d.get("avg_daily_volume"),
+                "days_to_cover": d.get("days_to_cover"),
+                "shares_outstanding": d.get("shares_outstanding"),
+                "pct_of_shares": d.get("pct_of_shares"),
+                "prev_settlement_date": d.get("prev_settlement_date"),
+                "si_change_pct": d.get("si_change_pct"),
+                "squeeze": d.get("squeeze"),
+                "fetched_at": time.time(),
+            }
+        else:
+            # A remembered miss — reads as `no_si_record`, not as "not warmed".
+            doc = {"_id": sym, "symbol": sym, "settlement_date": None,
+                   "fetched_at": time.time()}
+        try:
+            coll.replace_one({"_id": sym}, doc, upsert=True)
+            res["written"] += 1
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest: warm upsert %s failed: %s", sym, exc)
+            res["failed"] += 1
+        if i < len(todo) - 1 and sleep_sec:
+            time.sleep(sleep_sec)
+    return res
+
+
+def _main(argv=None) -> int:
+    """`python -m short_interest.client warm-si [--all-passers] [--force]
+    [--symbols A,B,C] [--sleep 0.25] | show-si`.
+
+    Default scope is the Bonde board's shown names (≤260). `--all-passers`
+    widens to every Bonde-pillar passer off the latest scan (~1,051 names, so
+    ~35 min at the default sleep — run it detached, off-RTH).
+
+    `from sepa import bonde` lives INSIDE this function on purpose: the board
+    path is sepa.bonde → sepa.bonde_picks → (inside attach) short_interest.client,
+    so a module-level import here would close the cycle.
+    """
+    import sys
+    args = list(sys.argv[1:] if argv is None else argv)
+    cmd = (args[0] if args else "warm-si").lower()
+    db = _get_db()
+
+    if cmd == "show-si":
+        coll = _si_coll(db)
+        if coll is None:
+            print("short_interest: no db")
+            return 1
+        docs = list(coll.find({}))
+        n = len(docs)
+        fresh = stale = miss = 0
+        for d in docs:
+            age = _age_days(d.get("settlement_date"))
+            if age is None:
+                miss += 1
+            elif age > SI_STALE_DAYS:
+                stale += 1
+            else:
+                fresh += 1
+        print("short_interest(%s): %d docs, %d fresh (<=%dd), %d stale, %d no-record"
+              % (SI_COLL, n, fresh, SI_STALE_DAYS, stale, miss))
+        return 0
+
+    if cmd != "warm-si":
+        print("usage: python -m short_interest.client warm-si|show-si")
+        return 2
+
+    sleep_sec = 0.25
+    if "--sleep" in args:
+        try:
+            sleep_sec = float(args[args.index("--sleep") + 1])
+        except (IndexError, ValueError):
+            sleep_sec = 0.25
+
+    syms: list = []
+    if "--symbols" in args:
+        try:
+            syms = [s.strip().upper()
+                    for s in args[args.index("--symbols") + 1].split(",") if s.strip()]
+        except IndexError:
+            syms = []
+    if not syms:
+        if "--all-passers" in args:
+            # Every passer off the latest scan, by the SAME rule the board uses
+            # (buyable_verdict._bonde_pillar) — never a second pass rule here.
+            from sepa import scanner, buyable_verdict as BV
+            scan = scanner.load_latest() or {}
+            syms = sorted({str(r.get("symbol") or "").upper()
+                           for r in (scan.get("all_results") or [])
+                           if r.get("symbol")
+                           and BV._bonde_pillar(r).get("passed") is True})
+        else:
+            from sepa import bonde          # function-local: see the docstring
+            syms = bonde.symbols(db=db)
+
+    res = warm_short_interest(syms, db=db, sleep_sec=sleep_sec,
+                              force="--force" in args)
+    print("short_interest: %d symbols, %d fetched, %d written, %d skipped, %d failed"
+          % (res["n"], res["fetched"], res["written"], res["skipped"], res["failed"]))
+    return 0
+
+
+if __name__ == "__main__":                                  # pragma: no cover
+    raise SystemExit(_main())

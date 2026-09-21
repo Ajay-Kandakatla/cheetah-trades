@@ -118,7 +118,8 @@ export function SalesPanel({ sales }: { sales?: Sales | null }) {
       </div>
 
       <div style={{ fontSize: '0.66rem', color: 'var(--cm-slate, #94a3b8)', marginTop: '0.6rem', lineHeight: 1.5 }}>
-        Bonde thresholds: ≥5% floor, 25% preferred, 100%+ "explosive". Acceleration and
+        Thresholds: ≥5% floor is Bonde's (2007); 25% is this app's mid-tier; 100% is the
+        boundary of his 'Sales 100% plus' category. Acceleration and
         consistency add to the score. Display-only on this tab — see
         <code> docs/sepa/sales_confidence_methodology.md</code>.
       </div>

@@ -15,21 +15,20 @@ score we built**, NOT a verbatim reproduction of a Bonde formula — he never
 publishes a 0-100 sales score. (Per Ajay's Rule #1, this distinction is explicit
 so we never present our weighting as "Bonde's rule.")
 
-**Crucially**, it is anchored ONLY to the sales numbers Bonde documents in **his
-own writing**, and it deliberately **avoids** the tighter figures widely
-attributed to him (30% / 39% two-quarter / "MAGNA 53+" / triple-digit-as-primary)
-— a fact-checked research pass found those come from third-party platforms
-(Deepvue, TradeZella, TraderLion) and **failed adversarial verification**.
+Failed source verification (not used): 30% (Deepvue / TradeZella / TraderLion) and "MAGNA 53+".
+His, verified 2026-09-20: "two quarters of revenue growth of 39% plus" (2025-09-01, https://stockbee.blogspot.com/2025/09/find-young-episodic-pivots.html).
+That 2025 figure was listed in the paragraph above by mistake until 2026-09-20; it is now its own pick leg on the 📈 Bonde tab.
 
-## 2. Bonde's documented sales numbers (what we anchor to)
+## 2. Whose sales number is whose
 
 | Threshold | Meaning | Source |
 |---|---|---|
-| sales **≥ 5%** | his floor — *"I take 5%"* | Stockbee, *How to Trade Earnings* (2007) |
-| **25%+** | his preferred/ideal — *"you can use 25% plus"* | Stockbee (2007) |
-| **100%+** | his *"Sales 100% plus"* Episodic-Pivot category (high sales even with no earnings) | Stockbee, *What are Episodic Pivots* (2010) |
-| **Sales Acceleration** | a named EP catalyst (growth rate rising) — no number attached | Stockbee EP process-flow (2014) |
-| *"revenue growth that investors focus on"* | sales weighted alongside/over profitability | Stockbee (Sept 2025) |
+| sales **≥ 5%** | HIS floor — *"Sales/revenue should be up 5% or more."* | Stockbee, *How to Trade Earnings* (2007), https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html |
+| **25%+** | **this app's mid-tier — NOT his**; the first-person quote attributed to him here was fabricated (removed 2026-09-20) | this app, 2026-06-02 |
+| **100%+** | boundary of his *"Sales 100% plus but no earnings"* EP category | Stockbee, *What are Episodic Pivots* (2010) |
+| **Earnings acceleration** | his: *"Now what one is looking for is earnings acceleration."* (2007); *"a significant earnings acceleration compared to last year same quarter as well as quarter over quarter"* (2010) | Stockbee (2007, 2010) |
+| **2025 revenue** | *"Their real moves start when they start growing revenue aggressively."* | Stockbee (2025-09-01) |
+| **2025 scan** | *"two quarters of revenue growth of 39% plus"* | Stockbee (2025-09-01) |
 
 Sources: `stockbee.blogspot.com/2007/03/how-to-trade-earnings.html`,
 `/2010/02/what-are-episodic-pivots-and-how-to.html`,
@@ -40,7 +39,7 @@ Sources: `stockbee.blogspot.com/2007/03/how-to-trade-earnings.html`,
 - Bonde's EP **entry** is a **price/volume** gate (`c/c1>1.04 and v>3*avgv50.1 and v>=300000`), NOT a sales %. Sales is the **fundamental confirmation** examined *after* a move — so this score is a **conviction/confirmation layer**, not a trigger.
 - In his **2007/2010** core posts, **earnings** is the primary gate (100%+ QoQ doubling) and sales is confirming. In **2025** he leans sales-first. Both are his genuine words → we treat sales as a **standalone signal**, not "the one rule."
 - The **"sales is harder to manipulate than earnings"** rationale was **NOT** found in any verified Bonde source (it's general sales-investing folklore) — so the code/doc does not attribute it to him.
-- **QoQ vs YoY:** Bonde's *"up 100% quarter over quarter"* / *"sales up 5%"* phrasing is ambiguous (a commenter on his post raised this; he never resolved it). We compute **YoY** (latest quarter vs the same quarter a year earlier) to match the app's existing `canslim` metrics and the more common reading. Documented here so it can't be mistaken for a settled Bonde rule.
+- **QoQ vs YoY:** for EARNINGS he names BOTH legs (2010 — *"compared to last year same quarter as well as quarter over quarter"*); for sales he wrote *"up 5% or more"* without a base — this app reads y/y (latest quarter vs the same quarter a year earlier) to match the app's existing `canslim` metrics. Documented here so it can't be mistaken for a settled Bonde rule.
 
 ## 3. Algorithm (`sales.compute(rev_q_series, eps_growth_q)`)
 
@@ -92,7 +91,10 @@ accel bonus, correctly) · MKSI 70 (15% steady, accelerating, sales-led).
 `test_sales.py` (explosive / strong / below-floor-stays-weak / declining /
 acceleration / consistency / sales-led / insufficient-history / thresholds) via
 `make contracts-sales`; `test_sales_confidence_thresholds_locked` guards the
-5/25/100 anchors against drift to the unverified 30/39% figures.
+5/25/100 anchors. `test_SOURCE_GUARD_sales_arithmetic_frozen_hash` (in
+`test_sales.py`) pins the module's docstring-stripped AST;
+`test_SOURCE_GUARD_bonde_attribution_2026_09_20` (in `test_sepa_contracts.py`)
+pins the attribution wording across the code and these docs.
 
 ## 8. The Sales tab (SEPA detail page) — added 2026-06-16
 
@@ -110,8 +112,9 @@ offers the same "re-scan with +catalyst" action as the Fundamentals tab. Tests:
 
 The sales score is now also the **Bonde pillar** of the combined buy verdict
 (`backend/sepa/buyable_verdict.py`). A name **passes** the Bonde pillar when its
-YoY growth clears the 5% floor AND it shows acceleration or ≥2 consecutive growth
-quarters; that pillar is paired with Minervini's buyable-stock gate into one
+YoY growth clears the 5% floor AND this app's character clause (acceleration or
+≥2 consecutive growth quarters — the app's, mis-attributed to him until
+2026-09-20); that pillar is paired with Minervini's buyable-stock gate into one
 PASS / PARTIAL / FAIL badge shown on every card. The Sales-confidence tab was
 merged into the **Analysis** tab (which moved up to 3rd) — the verdict leads, the
 sales detail grid follows. Full derivation:
@@ -121,8 +124,8 @@ sales detail grid follows. Full derivation:
 
 ## The YoY pair guard is a BOARD rule — the tiers did not move (2026-09-20)
 
-The **5% floor / 25% preferred / 100% explosive** thresholds above are Bonde's
-own and are **unchanged**. `sepa/sales.py` — `_yoy`, its `abs(base)` divide,
+The 5% floor is his; 25% is this app's; 100% is his category boundary. The three
+threshold values above are **unchanged**. `sepa/sales.py` — `_yoy`, its `abs(base)` divide,
 `compute`, `score` and the tier boundaries — is untouched: it is book-cited,
 locked by `test_sepa_contracts` and read by the falling-knife gate on several
 other boards, so moving its arithmetic would move every one of them.
@@ -137,3 +140,26 @@ rows since 2026-09-14. The check lives in `sepa/qoq.py` (`yoy_pairs_ok`,
 `yoy_pairs_verifiable`, `period_ok`) and nobody recomputes a growth figure: a
 board declines to place the row, `sales.compute` still returns what it always
 returned. Report: `docs/sepa/data_spine_audit_2026_09_20.md`.
+
+---
+
+## 2026-09-20 — nine attribution drifts corrected (D1-D9)
+
+Wording only. No gate, threshold, constant or executable line moved. Each row
+DESCRIBES the drift; no retracted phrase is reproduced anywhere below.
+
+| # | What the app said | What it says now |
+|---|---|---|
+| D1 | his 2025 two-quarter revenue figure was listed among the figures that failed verification | it is his (2025-09-01, quoted in §1) — now a pick leg on the 📈 Bonde tab |
+| D2 | a fabricated first-person sentence putting 25% in his mouth was served as his (sales.py, bonde.py, buyable_verdict.py reason + cite, rules_info, BondeBoard, SalesPanel, SepaCandidateCard, chartMaps, docs) | 25% relabelled THIS APP'S mid-tier; the value is unchanged |
+| D3 | the character clause was called his | it is this app's (2026-06-16); the gate is unchanged (Rule #10) |
+| D4 | "Sales Acceleration" was named as his EP catalyst | earnings acceleration is his (2007, 2010); sales acceleration is this app's read |
+| D5 | a 2025 sentence he did not write was quoted | replaced by the two verbatim 2025 sentences |
+| D6 | a fabricated first-person 5% sentence was quoted | his real sentence: "Sales/revenue should be up 5% or more." (2007) |
+| D7 | 100% was framed as his sales tier | it is the boundary of his 2010 "Sales 100% plus but no earnings" CATEGORY |
+| D8 | sales_led was framed as his | it is this app's read |
+| D9 | "he never resolved QoQ vs YoY" | for EARNINGS he names both (2010); for sales he wrote no base; this app reads y/y |
+
+Source guards: `test_SOURCE_GUARD_bonde_attribution_2026_09_20`
+(`backend/tests/test_sepa_contracts.py`) and
+`test_SOURCE_GUARD_sales_arithmetic_frozen_hash` (`backend/tests/test_sales.py`).

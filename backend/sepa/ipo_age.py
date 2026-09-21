@@ -140,6 +140,48 @@ def _block(first_trade_date: str, years: float, source: str) -> dict:
     }
 
 
+def listing_dates_map(symbols) -> dict:
+    """{SYM: "YYYY-MM-DD"} for a list of names — ONE cached Mongo read.
+
+    The board path's reader. `listing_date()` can fall through to Finnhub on a
+    miss and `age()` loads price history; neither may run per-symbol on a page
+    render, so this reads `ipo_dates` and nothing else. Symbols are resolved
+    through `symbols.resolve` exactly as `_profile_ipo_date` does, and the map
+    is keyed by BOTH the caller's spelling and the resolved one so a renamed
+    ticker answers either way. A doc with `ipo` None (a cached miss) is
+    omitted — absent means unknown, never "not young".
+
+    The dates are Finnhub PROFILE dates and are uncorroborated: 21.4% of them
+    on this universe belong to a recycled ticker (see chart_maps/ipo.py:20-27),
+    which reads as a RECENT date for an OLD company. Any caller rendering this
+    must label it.
+    """
+    from . import symbols as S      # the module — `symbols` is the parameter
+    wanted: dict = {}
+    for s in symbols or []:
+        s = str(s or "").strip().upper()
+        if not s:
+            continue
+        wanted.setdefault(S.resolve(s), set()).add(s)
+    coll = _ipo_coll()
+    if coll is None or not wanted:
+        return {}
+    out: dict = {}
+    try:
+        for doc in coll.find({"_id": {"$in": sorted(wanted)},
+                              "ipo": {"$ne": None}}):
+            ipo = doc.get("ipo")
+            if not ipo:
+                continue
+            rid = str(doc.get("_id") or "").upper()
+            for alias in wanted.get(rid, set()) | {rid}:
+                out[alias] = ipo
+    except Exception as exc:
+        log.debug("listing_dates_map read failed: %s", exc)
+        return {}
+    return out
+
+
 def listing_date(symbol: str) -> Optional[str]:
     """The real listing date (YYYY-MM-DD) from the profile provider, or None —
     the cheap, cached half of `age()` for callers that only need the date

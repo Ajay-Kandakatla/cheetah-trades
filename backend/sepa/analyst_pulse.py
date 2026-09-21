@@ -142,7 +142,8 @@ def fetch_one(symbol: str) -> dict:
     sym = (symbol or "").strip().upper()
     doc: dict = {"symbol": sym, "fetched_at": int(time.time()),
                  "targets": None, "eps_trend": None, "rev_counts": None,
-                 "actions": [], "error": None}
+                 "actions": [], "n_analysts": None,
+                 "n_analysts_source": None, "error": None}
     errors: List[str] = []
     try:
         import yfinance as yf
@@ -194,6 +195,26 @@ def fetch_one(symbol: str) -> dict:
             doc["rev_counts"] = out or None
     except Exception as exc:
         errors.append("rev_counts: %s" % exc)
+
+    # Analyst COUNT — how many analysts carry a current-quarter estimate.
+    # Yahoo never prints 0: a name with no coverage comes back as an EMPTY
+    # frame (no column, no exception), so `empty_frame` is the ONLY evidence
+    # of no coverage and it is labelled as such rather than stored as a bare
+    # 0. A frame with rows but no `0q` row, or no `numberOfAnalysts` column,
+    # is UNKNOWN — never zero.
+    try:
+        df = t.earnings_estimate
+        if df is None:
+            n, src_lbl = None, None
+        elif len(df) == 0:
+            n, src_lbl = 0, "empty_frame"
+        elif "0q" in df.index and "numberOfAnalysts" in df.columns:
+            n, src_lbl = _i(df.loc["0q"]["numberOfAnalysts"]), "0q_row"
+        else:
+            n, src_lbl = None, None
+    except Exception:
+        n, src_lbl = None, None
+    doc["n_analysts"], doc["n_analysts_source"] = n, src_lbl
 
     # Broker actions, last ACTIONS_WINDOW_DAYS only, newest-first (p.89 raw
     # material — the trap/bullish call happens in read(), with stage context).
@@ -431,6 +452,40 @@ def _live_px(q: dict) -> Optional[float]:
               or q.get("prev_day_close"))
 
 
+def coverage_map(symbols: List[str]) -> dict:
+    """{SYM: {n_analysts, n_analysts_source, fetched_at}} — ONE cached read.
+
+    The board path's reader. `get_map()` makes a bulk LIVE price call to build
+    its verdict; the Bonde board renders a static page off the last scan and
+    must make no network call at all, so it uses this instead. Cached docs
+    only: a symbol with no doc is absent from the map (unknown), and a doc
+    written before 2026-09-20 has no `n_analysts` key → None, never 0.
+    """
+    syms = []
+    for s in symbols or []:
+        s = (s or "").strip().upper()
+        if s and s not in syms:
+            syms.append(s)
+    coll = _coll()
+    if coll is None or not syms:
+        return {}
+    out: Dict[str, dict] = {}
+    try:
+        for d in coll.find({"_id": {"$in": syms}},
+                           {"n_analysts": 1, "n_analysts_source": 1,
+                            "fetched_at": 1}):
+            sym = str(d.get("_id") or "").upper()
+            if not sym:
+                continue
+            out[sym] = {"n_analysts": d.get("n_analysts"),
+                        "n_analysts_source": d.get("n_analysts_source"),
+                        "fetched_at": d.get("fetched_at")}
+    except Exception as exc:
+        log.warning("analyst coverage map read failed: %s", exc)
+        return {}
+    return out
+
+
 def get_map(symbols: List[str]) -> dict:
     """Slim per-symbol read for the cards — CACHED docs only (no fetch).
     read() runs at request time against ONE bulk live-price call + the
@@ -462,6 +517,7 @@ def get_map(symbols: List[str]) -> dict:
                     "red_flag": r["red_flag"],
                     "p89_trap": r["p89_trap"],
                     "n_actions": len(doc.get("actions") or []),
+                    "n_analysts": doc.get("n_analysts"),
                     "mean_target": (doc.get("targets") or {}).get("mean")}
     return {"ok": True, "map": out, "n": len(out),
             "source": "yfinance (Yahoo Finance) analyst data, cached <=18h",

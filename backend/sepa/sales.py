@@ -1,43 +1,47 @@
 """Sales Confidence Score — sales/revenue-driven stock conviction.
 
-Inspired by Pradeep Bonde ("Stockbee"), who emphasises company SALES growth and
-ACCELERATION as a driver of explosive moves: his Episodic-Pivot catalyst list
-names "Sales Acceleration", and he writes (Stockbee, Sept 2025) "...it is
-revenue growth that investors focus on", with a standalone "Sales 100% plus but
-no earnings" EP category (2010).
+Inspired by Pradeep Bonde ("Stockbee"). What he DOCUMENTS about sales, verbatim:
+  2007 'How to trade earnings' — "Sales/revenue should be up 5% or more."
+       https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html
+  2010 EP catalogue — a catalyst CATEGORY named "Sales 100% plus but no earnings"
+       https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html
+  2025 — "Their real moves start when they start growing revenue aggressively."
+       and a scan for "two quarters of revenue growth of 39% plus"
+       https://stockbee.blogspot.com/2025/09/find-young-episodic-pivots.html
 
-This is a PRINCIPLED score anchored to the only sales numbers Bonde documents in
-HIS OWN writing — it is NOT a verbatim Bonde formula (he never publishes a 0-100
-score), and it deliberately does NOT use the tighter third-party figures
-(30% / 39% two-quarter / "MAGNA 53+") that are widely attributed to him but
-FAILED source verification (they come from Deepvue / TradeZella / TraderLion, not
-Stockbee). Full sourcing + the QoQ-vs-YoY caveat live in
+This is a PRINCIPLED score this app built — NOT a Bonde formula (he publishes
+no 0-100 score). Tiers:
+  >= 5%   HIS floor (2007).
+  >= 25%  THIS APP'S mid-tier, chosen 2026-06-02. Until 2026-09-20 it was
+          mis-attributed to him through a fabricated first-person quote;
+          no such sentence exists in any of his posts.
+  >= 100% the boundary of his 2010 "Sales 100% plus" catalyst category,
+          used here as a tier by this app.
+His two-quarter revenue figure from 2025-09-01 is HIS and is shown on the
+📈 Bonde tab as its own pick leg; whether it joins or replaces a tier is
+Ajay's call.
+Figures that FAILED source verification and are not used: 30% and
+"MAGNA 53+" (Deepvue / TradeZella / TraderLion, not Stockbee).
+The app's acceleration / consistency / sales-led flags are this app's
+reads: his 'acceleration' is EARNINGS acceleration (2007, 2010) and his
+only two-quarter rule is the 2025 revenue scan above. Growth is YoY here
+(canslim parity); for EARNINGS he names BOTH legs — "compared to last year
+same quarter as well as quarter over quarter" (2010). Full sourcing:
 docs/sepa/sales_confidence_methodology.md.
-
-Bonde-documented sales thresholds (Stockbee 2007 "How to trade earnings"; 2010
-EP taxonomy):
-    >= 5%   — his floor          ("I take 5%")
-    25%+    — his preferred/ideal ("you can use 25% plus")
-    100%+   — his "Sales 100% plus" Episodic-Pivot category
-Acceleration (growth rate rising) and consistency (consecutive growth quarters)
-are his NAMED qualitative catalysts; the numeric weighting of them here is ours.
-
-Growth is YoY (latest quarter vs the same quarter a year earlier) to match the
-app's existing canslim metrics and the more common reading of Bonde's ambiguous
-"quarter over quarter" phrasing (see the methodology doc).
 """
 from __future__ import annotations
 
 from typing import List, Optional
 
-# Bonde-documented sales thresholds — LOCKED (see test_sepa_contracts.py).
-SALES_FLOOR_PCT = 5.0       # his floor
-SALES_PREFERRED_PCT = 25.0  # his preferred
-SALES_EXPLOSIVE_PCT = 100.0  # his "Sales 100% plus" category
+# Sales tiers — LOCKED (see test_sepa_contracts.py). Whose number is whose:
+# see the module docstring above.
+SALES_FLOOR_PCT = 5.0       # his floor (2007)
+SALES_PREFERRED_PCT = 25.0  # THIS APP'S mid-tier (not his; see docstring)
+SALES_EXPLOSIVE_PCT = 100.0  # boundary of his 2010 "Sales 100% plus" category
 
 
 # The falling-knife gate's pass set (Deep Demand / Gabbar boards, and the
-# portfolio knife watch): only tiers with a growing top line pass. Bonde's
+# portfolio knife watch): only tiers with a growing top line pass. The
 # 5 / 25 / 100 percent tier anchors are computed below in `compute`.
 BONDE_PASS_TIERS = ("steady", "strong", "explosive")
 
@@ -83,11 +87,11 @@ def compute(rev_q_series: List[Optional[float]],
         else:
             break
 
-    # Sales-led — top line outpacing the bottom line (organic growth, not
-    # buybacks/financial engineering); Bonde's "revenue growth investors focus on".
+    # Sales-led — top line outpacing the bottom line. THIS APP'S read; Bonde's
+    # 2007 gate is earnings-first and he names no such concept.
     sales_led = bool(eps_growth_q is not None and g > eps_growth_q)
 
-    # Growth-level base, anchored to Bonde's 5 / 25 / 100 tiers.
+    # Growth-level base, anchored to the 5 / 25 / 100 tiers above.
     if g < 0:
         base = max(0.0, 20.0 + g * 0.5)                                   # declining
     elif g < SALES_FLOOR_PCT:

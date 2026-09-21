@@ -61,17 +61,18 @@ minervini.buyable_now = bool(is_buyable)                     # pp.198-203
 
 Source: Pradeep Bonde / Stockbee, sales-driven. Reads the already-computed
 `fundamentals.sales` block — see `docs/sepa/sales_confidence_methodology.md` for
-the full sourcing of his documented **5% floor / 25% preferred / 100% explosive**
-thresholds and the QoQ-vs-YoY caveat. His two NAMED catalysts are **acceleration**
-(growth rate rising) and **consistency** (consecutive growth quarters).
+the full sourcing. The **5% floor** is his (2007); **25%** is this app's mid-tier;
+**100%** is the boundary of his 2010 category. The character clause —
+**acceleration** (growth rate rising) OR **consistency** (consecutive growth
+quarters) — is THIS APP'S, mis-attributed to him until 2026-09-20.
 
 **Pass gate:**
 
 ```
 cleared_floor = growth_yoy_pct >= SALES_FLOOR_PCT            # 5%  (his floor)
-has_character = accelerating OR consecutive_growth_q >= 2     # his named catalysts
+has_character = accelerating OR consecutive_growth_q >= 2     # THIS APP'S clause
 bonde.passed  = cleared_floor AND has_character
-bonde.strong  = growth_yoy_pct >= SALES_PREFERRED_PCT         # 25% (his "preferred")
+bonde.strong  = growth_yoy_pct >= SALES_PREFERRED_PCT         # 25% (the app's mid-tier)
 ```
 
 - `SALES_FLOOR_PCT` and `SALES_PREFERRED_PCT` are **re-exported from `sales.py`**
