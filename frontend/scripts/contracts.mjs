@@ -3705,6 +3705,33 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🔔 price-alert state line is SERVED, never composed (2026-09-21)',
+    file: 'src/components/TickerAlertPresets.tsx',
+    // Ajay 2026-09-21: "Yes please stop them". An alert now fires once per
+    // crossing and re-arms when price crosses back; the backend builds the
+    // whole "triggered <day> at $x — re-arms when…" sentence. The page prints
+    // it verbatim: no date math, no composed wording, no browser clock.
+    checks: (tsx) => {
+      const errs = [];
+      if (!/a\.state_line/.test(tsx)) errs.push('the active-alert row must print the served state_line');
+      if (!/pa-state-line/.test(tsx)) errs.push('the state line needs its pa-state-line hook');
+      if (/new Date\(|Date\.now\(/.test(tsx)) errs.push('TickerAlertPresets must not read the browser clock — the day label is served');
+      if (/re-arms/.test(tsx)) errs.push('the "re-arms when…" sentence is the SERVER\'s — never typed into the component');
+      if (/triggered /.test(tsx)) errs.push('the "triggered <day>" wording is the SERVER\'s — never typed into the component');
+      const hook = read('src/hooks/usePriceAlerts.ts');
+      for (const k of ['armed', 'triggered_at', 'state_line']) {
+        if (!new RegExp(`\\b${k}\\??:`).test(hook)) errs.push(`usePriceAlerts.ts must type the served ${k} field`);
+      }
+      const py = read('../backend/sepa/price_alerts.py');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+      if (!/def _state_line\(/.test(pyCode)) errs.push('price_alerts.py must build the state line server-side');
+      if (!/"armed"/.test(pyCode)) errs.push('price_alerts.py must carry the armed latch');
+      if (!/ALERT_COOLDOWN_SEC = 6 \* 3600/.test(pyCode)) errs.push('ALERT_COOLDOWN_SEC moved — a threshold change is his call');
+      if (!/id: 'price-alerts-once-per-crossing-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) errs.push('the latch needs its ✨ entry');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -14,6 +14,17 @@ export type PriceAlert = {
   last_fired_at: number;
   channels: string[];
   note?: string | null;
+  /* Latch state — served by the backend (sepa/price_alerts._state_line),
+     never composed here. `armed === false` means the alert already fired
+     for this crossing and is waiting for price to cross back over the line.
+     Absent/null on any doc the backend has not evaluated yet. */
+  armed?: boolean | null;
+  triggered_at?: number | null;
+  triggered_price?: number | null;
+  triggered_ref?: number | null;
+  rearmed_at?: number | null;
+  /** The whole sentence, already worded and formatted by the backend. */
+  state_line?: string | null;
 };
 
 export type AlertFire = {

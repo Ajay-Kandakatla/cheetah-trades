@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21, with a screenshot of the Alerts page: "these are wrong
+  // alerts check the numbers please" then "Yes please stop them why I am
+  // getting such older alerts these are supposed to be realtime". The prices
+  // were right; the rules were stale and re-fired every 6 hours forever.
+  { id: 'price-alerts-once-per-crossing-2026-09-21',
+    label: '\u{1F514} Price alerts fire ONCE per crossing and say when you set them. You said: \u201cthese are wrong alerts check the numbers please \u2026 Yes please stop them.\u201d '
+      + 'WHAT WAS WRONG: a preset compares today\u2019s price to the price on the day you set it, and once true it stayed true \u2014 so ARM \u201cdropped \u221218.5% (from 394.17)\u201d twice a day since June 1, on a day it was up 17%. The check itself was always a 5-minute check in session; 2,022 of these re-fires piled onto the Alerts page and none reached your phone (price alerts are off in Notifications and retired in the push switch, both your calls). '
+      + 'WHAT CHANGED: an alert fires once when its line is crossed, then stays quiet until price crosses back over the line, when it re-arms by itself; the line now reads \u201cARM \u221218.5% vs $394.17 when you set it (Jun 1) \u00b7 today +16.7% \u00b7 now $321.30\u201d with the numbers from the app; your existing rules are kept, not deleted \u2014 the stale ones went quiet on the first check after this shipped, and each active alert shows \u201ctriggered <day> \u2014 re-arms when price crosses back\u201d in its list. One quote call per check instead of one per name. '
+      + 'NOT CHANGED: the 6-hour spam guard, the 5-minute cadence, the phone switch, the Alerts page history. '
+      + 'YOUR CALL: turn price alerts back on for the phone; collapse the 2,022 old rows on the Alerts page; prune duplicate rules (WDC has four identical, MU six); a few rules sit within about 1% of their line and will still print up to twice a day as price flickers across it \u2014 a dead band would be a new number, so it is not built.',
+    addedAt: '2026-09-21', route: '/alerts' },
   // Ajay 2026-09-21, with a pre-market screenshot of the AMD tab: "These chips
   // are not working". Four defects, all reproduced in the api container; the
   // detector, the grades and every threshold are untouched.

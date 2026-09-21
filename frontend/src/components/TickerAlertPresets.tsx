@@ -173,13 +173,22 @@ export function TickerAlertPresets({ symbol, currentPrice, onClose, onCustomLeve
             <div className="eyebrow" style={{ fontSize: '0.66rem', marginBottom: '0.3rem' }}>Active alerts ({alerts.length})</div>
             <div style={{ display: 'grid', gap: '0.3rem' }}>
               {alerts.map(a => (
-                <div key={a._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+                <div key={a._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', opacity: a.armed === false ? 0.7 : 1 }}>
                   <span className="mono">
                     {a.kind === 'drop_pct' ? `📉 −${a.level}%` :
                      a.kind === 'rise_pct' ? `📈 +${a.level}%` :
                      a.kind === 'below'    ? `↓ $${a.level}` :
                                               `↑ $${a.level}`}
                     {a.note && <span style={{ color: 'var(--cm-slate)', marginLeft: '0.4rem' }}>· {a.note}</span>}
+                    {/* Latch state — the backend serves the whole sentence
+                        (day label, price, direction). We print it verbatim:
+                        no date math, no composed wording here. */}
+                    {typeof a.state_line === 'string' && a.state_line && (
+                      <span
+                        className="mono pa-state-line"
+                        style={{ display: 'block', color: 'var(--cm-slate)', fontSize: '0.68rem' }}
+                      >{a.state_line}</span>
+                    )}
                   </span>
                   <button
                     onClick={() => removeOne(a)}
@@ -320,7 +329,7 @@ export function TickerAlertPresets({ symbol, currentPrice, onClose, onCustomLeve
         )}
 
         <p style={{ fontSize: '0.66rem', color: 'var(--cm-slate)', marginTop: '0.7rem', lineHeight: 1.5 }}>
-          Percent alerts fire when price moves the specified % from the moment the alert was created. They survive across sessions and fire once per move. To change the global -12% emergency threshold, edit it in Notifications → Alert thresholds.
+          Percent alerts fire when price moves the specified % from the moment the alert was created. They survive across sessions, fire once per crossing, and re-arm when price crosses back over the line. To change the global -12% emergency threshold, edit it in Notifications → Alert thresholds.
         </p>
       </div>
     </div>,
