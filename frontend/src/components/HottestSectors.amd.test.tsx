@@ -9,7 +9,19 @@
  * 1. The header renders, and it is NOT a sort button. The read is measured
  *    INVERTED against its own placebo; ranking the board on it would order
  *    names by something measured to go the wrong way, and a header that looks
- *    like the other nine and does nothing is worse than one that never offered.
+ *    like the others and does nothing is worse than one that never offered.
+ * 1b. POSITION (Ajay 2026-09-22: *"last column is hidded"*). The column ships
+ *    immediately after Sector / Name — it is a state ABOUT the name, and that
+ *    cell already carries the row's other state chips — and the ranked numeric
+ *    legs (Pre-mkt | Today | 5 days | 21 days) stay CONTIGUOUS and in order.
+ *    `visibleCols` feeds only the <thead>; every <tbody> cell is a JSX literal
+ *    in fixed order, so the header and five render sites must move in lockstep
+ *    or the whole board reads one column off. Group rows are the sneaky half:
+ *    their Next-ER stand-in is an empty `hs-spacer` <td>, so a mis-ordered
+ *    group row still has the right CELL COUNT and no colSpan check catches it.
+ *    That is why the pins below are on the CLASS of the second <td>, per row
+ *    kind, and not on a count.
+ * 1c. The cell prints the served SHORT; the hover keeps the served LONG.
  * 2. A name in the sweep prints its served words; a name absent from it prints
  *    an em-dash whose hover says WHY — never a zero, never "clean".
  * 3. NO COLOUR anywhere, for a fixture that carries both a `raided` (served
@@ -26,7 +38,8 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HottestSectors, colSpanOf, visibleCols } from './HottestSectors';
+import { HS_COLS, HottestSectors, PRE_COL, colSpanOf, visibleCols } from './HottestSectors';
+import { AMD_COL } from '../lib/hottestAmd';
 import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
@@ -56,6 +69,12 @@ const AMD_SUMMARY = {
   blank_reasons: { not_in_store: 2 },
   grades: { raided: 1, failed: 1, basing: 2 },
   grade_order: ['marked_up', 'raided', 'stale', 'failed', 'basing', 'none'],
+  /* SERVED, so the group-row negative below can name every grade without any
+   * of those words being typed on this surface. */
+  grade_labels: {
+    marked_up: 'marked up', raided: 'raided', stale: 'raid stale',
+    failed: 'base failed', basing: 'basing', none: 'no cycle',
+  },
   built_at: '2026-09-21T21:20:16.344000+00:00',
   built_at_et: '2026-09-21T17:20:16.344000-04:00', built_at_date: '2026-09-21',
   last_session: '2026-09-19', due_session: '2026-09-19',
@@ -66,13 +85,18 @@ const AMD_SUMMARY = {
   coverage_note: COVERAGE, unavailable_note: null, label: '🌀 AMD',
 };
 
-const amdCellOf = (grade: string, text: string, tone: string, sym: string, ago: number) => ({
-  known: true, grade, phase: grade, text, tone,
+/* `short` is the BOARD cell's served wording, `text` the HOVER's. Both come
+ * back from the one backend table; this fixture carries both because the wire
+ * does. `short: null` stands in for a payload from a build before 2026-09-22. */
+const amdCellOf = (grade: string, text: string, tone: string, sym: string, ago: number,
+                   short: string | null = null) => ({
+  known: true, grade, phase: grade, text, short, tone,
   title: `${sym}: ${text}. ${HONESTY}`, bars_ago: ago, base_bars: 34,
   reason: null, reason_text: null,
 });
 const BLANK = {
-  known: false, grade: null, phase: null, text: null, tone: null, title: null,
+  known: false, grade: null, phase: null, text: null, short: null,
+  tone: null, title: null,
   bars_ago: null, base_bars: null, reason: 'not_in_store',
   reason_text: 'Not read: this name is not in the nightly AMD sweep, so this app has no AMD '
     + 'cycle for it. Blank is NOT “no cycle” and NOT “clean” — it is unknown.',
@@ -88,10 +112,15 @@ const name = (symbol: string, over: Record<string, unknown> = {}) => ({
 
 /* His own screenshot's names. KRMN is in the sweep and RAIDED — the state the
  * 🌀 tab paints green and the study measured −4.2pp. BBAI is not in it. */
-const KRMN = name('KRMN', { amd: amdCellOf('raided', 'AMD raided · 2d ago', 'good', 'KRMN', 2) });
+const KRMN = name('KRMN', {
+  amd: amdCellOf('raided', 'AMD raided · 2d ago', 'good', 'KRMN', 2, 'raided · 2d ago') });
 const RCAT = name('RCAT', {
-  amd: amdCellOf('failed', 'AMD base failed · 9d ago', 'warn', 'RCAT', 9) });
+  amd: amdCellOf('failed', 'AMD base failed · 9d ago', 'warn', 'RCAT', 9,
+                 'base failed · 9d ago') });
 const BBAI = name('BBAI', { amd: BLANK });
+/* DELIBERATELY WITHOUT a `short`: the older-payload negative. It must print
+ * the served LONG string, whole, rather than a blank or a locally shortened
+ * one. See "the served short is not derived here" below. */
 const NVDA = name('NVDA', {
   industry: 'Semiconductors',
   amd: amdCellOf('basing', 'AMD basing', 'muted', 'NVDA', 0) });
@@ -162,19 +191,58 @@ afterEach(() => { vi.unstubAllGlobals(); });
 // 1 · the column draws, and its header does not sort
 // ---------------------------------------------------------------------------
 describe('the 🌀 header', () => {
-  it('renders LAST, and is not a sort button', async () => {
+  it('renders FIRST after Sector / Name, and is not a sort button', async () => {
     const { urls } = stub(payload());
-    view();
+    const { container } = view();
     const head = await screen.findByTitle(/Which AMD cycle phase/);
     expect(head.textContent).toContain('🌀 AMD');
     expect(head.tagName).toBe('SPAN');
     expect(head.className).toBe('hs-head');
     expect(head.closest('button')).toBe(null);
     expect(head.closest('th')?.getAttribute('aria-sort')).toBe(null);
-    // and the column really is last
+
+    /* POSITION, pinned positively: 🌀 leads, and the ranked legs that follow
+     * are contiguous and in their existing order. Asserting only "amd moved"
+     * would pass on an order that scrambled everything else. */
     const cols = visibleCols(payload());
-    expect(cols[cols.length - 1].key).toBe('amd');
+    expect(cols[0].key).toBe('amd');
+    expect(cols.slice(1).map((c) => c.key)).toEqual(HS_COLS.map((c) => c.key));
+
+    // and the RENDERED header agrees — the second <th>, right after the name
+    const heads = [...container.querySelectorAll('thead th')].map((th) => th.textContent || '');
+    expect(heads[0]).toContain('Sector / Name');
+    expect(heads[1]).toContain('🌀 AMD');
     expect(urls.length).toBe(1);
+  });
+
+  it('with the ☀️ column too: 🌀 leads, then Pre-mkt leads the RANKED legs', () => {
+    const cols = visibleCols({ pre: { show: true } as never, amd_summary: AMD_SUMMARY });
+    expect(cols[0]).toBe(AMD_COL);
+    expect(cols[1]).toBe(PRE_COL);
+    expect(cols.slice(2).map((c) => c.key)).toEqual(HS_COLS.map((c) => c.key));
+    // the ranked legs are one unbroken run, newest to oldest
+    expect(cols.slice(1, 5).map((c) => c.key))
+      .toEqual(['pre_1d', 'rel_1d', 'rel_5d', 'rel_21d']);
+  });
+
+  it('NEGATIVE: no amd_summary → the first column is a ranked leg and "amd" is nowhere', () => {
+    const cols = visibleCols(null);
+    expect(cols[0].key).toBe('rel_1d');
+    expect(cols.map((c) => c.key)).not.toContain('amd');
+    const withPre = visibleCols({ pre: { show: true } as never });
+    expect(withPre[0].key).toBe('pre_1d');
+    expect(withPre.map((c) => c.key)).not.toContain('amd');
+  });
+
+  it('colSpanOf is a COUNT — unchanged by the move, and 1 + the columns printed', () => {
+    const without = payload();
+    delete (without as Record<string, unknown>).amd_summary;
+    expect(colSpanOf(without)).toBe(10);
+    expect(colSpanOf(payload())).toBe(11);
+    for (const d of [null, without, payload(),
+                     { pre: { show: true } as never, amd_summary: AMD_SUMMARY }]) {
+      expect(colSpanOf(d)).toBe(1 + visibleCols(d).length);
+    }
   });
 
   it('NEGATIVE: clicking the header fires no second fetch and changes no order', async () => {
@@ -192,12 +260,16 @@ describe('the 🌀 header', () => {
 // 2 · the served read, on his own names
 // ---------------------------------------------------------------------------
 describe('the name rows', () => {
-  it('KRMN prints its served words; BBAI prints an em-dash with the served reason', async () => {
+  it('KRMN prints the served SHORT; the hover keeps the whole served sentence', async () => {
     stub(payload());
     view();
     await openAll();
     const krmn = (await screen.findByText('KRMN')).closest('tr')!;
-    const cell = within(krmn).getByText('AMD raided · 2d ago');
+    const cell = within(krmn).getByText('raided · 2d ago');
+    // the cell no longer repeats the word its own header prints two rows up
+    expect(cell.textContent).toBe('raided · 2d ago');
+    expect(cell.textContent).not.toContain('AMD ');
+    // …and the LONG sentence is still there, in full, on the hover
     expect(cell.getAttribute('title')).toContain('KRMN: AMD raided · 2d ago.');
     expect(cell.getAttribute('title')).toContain(NO_COLOUR);
 
@@ -208,11 +280,59 @@ describe('the name rows', () => {
     expect(blank.getAttribute('title')).toContain('NOT “clean”');
   });
 
+  it('NEGATIVE: a row with no served short prints the served LONG text, whole', async () => {
+    stub(payload());
+    view();
+    await openAll();
+    /* NVDA's fixture carries `short: null` — an older payload. The board must
+     * print what came back, prefix and all, rather than a blank or a string
+     * this surface shortened for itself. */
+    const nvda = (await screen.findByText('NVDA')).closest('tr')!;
+    const cell = nvda.querySelector('td.hs-amd')!;
+    expect(cell.textContent).toBe('AMD basing');
+    expect(cell.textContent).not.toBe('basing');
+    expect(cell.textContent).not.toBe('—');
+  });
+
+  it('the 🌀 cell is the SECOND <td> on every row kind — name, roster, sector, industry',
+     async () => {
+    const { container } = (stub(payload()), view());
+    await openAll();
+    await screen.findByText('KRMN');
+    /* The pin that actually catches the move going wrong. A group row's Next-ER
+     * stand-in is an empty `hs-spacer` <td>, so a row left in the old order
+     * still has the RIGHT CELL COUNT — only the class of the second cell tells
+     * the truth. */
+    for (const sel of ['tr.hs-name', 'tr.hs-theme', 'tr.hs-sector:not(.hs-theme)',
+                       'tr.hs-industry']) {
+      const rows = [...container.querySelectorAll(sel)] as HTMLElement[];
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        const tds = row.querySelectorAll('td');
+        expect(tds[0].className).toContain('hs-sym');
+        expect(tds[1].className).toContain('hs-amd');
+      }
+    }
+  });
+
+  it('every full-width row spans the RENDERED header count, before and after the move',
+     async () => {
+    const { container } = (stub(payload()), view());
+    await openAll();
+    await screen.findByText('KRMN');
+    const ths = container.querySelectorAll('thead th').length;
+    const wide = [...container.querySelectorAll('tr.hs-grain td, td.hs-more')];
+    expect(wide.length).toBeGreaterThan(0);
+    for (const td of wide) {
+      expect((td as HTMLTableCellElement).colSpan).toBe(ths);
+    }
+  });
+
   it('NEGATIVE: NOTHING on this board renders hs-amd-good or hs-amd-warn', async () => {
     const { container } = (stub(payload()), view());
     await openAll();
-    await screen.findByText('AMD raided · 2d ago');
-    expect(screen.getByText('AMD base failed · 9d ago')).toBeInTheDocument();
+    await screen.findByText('raided · 2d ago');
+    expect(screen.getByText('base failed · 9d ago')).toBeInTheDocument();
     expect(container.querySelectorAll('.hs-amd-good').length).toBe(0);
     expect(container.querySelectorAll('.hs-amd-warn').length).toBe(0);
     expect(container.querySelectorAll('.hs-amd-dim').length).toBeGreaterThan(0);
@@ -222,13 +342,47 @@ describe('the name rows', () => {
     stub(payload());
     view();
     await openAll();
+    /* The grade words come off the WIRE (`amd_summary.grade_labels`), not out
+     * of this file: a new grade shipped by the backend is then covered by this
+     * negative the day it appears, without anyone remembering to type it. */
+    const words = Object.values(AMD_SUMMARY.grade_labels);
+    expect(words.length).toBe(AMD_SUMMARY.grade_order.length);
     for (const label of ['Defense', 'Technology', 'Semiconductors']) {
       const row = (await screen.findByText(new RegExp(`${label}$`))).closest('tr')!;
       const cell = within(row).getByTitle(GROUP_NOTE);
       expect(cell.textContent).toBe('—');
+      for (const w of words) expect(cell.textContent).not.toContain(w);
       expect(row.textContent).not.toContain('AMD raided');
       expect(row.textContent).not.toContain('AMD basing');
     }
+  });
+
+  it('NEGATIVE: the component composes NO verdict — every printed word came off the wire',
+     async () => {
+    /* Serve sentinels nothing on this surface could have invented. If the TSX
+     * or hottestAmd.ts built any part of the cell — a prefix, a fallback, a
+     * stripped copy of `text` — one of these would not survive the round
+     * trip. */
+    const SENT_SHORT = 'ZZSHORTZZ';
+    const SENT_LONG = 'ZZLONGZZ';
+    const row = name('ZZZZ', {
+      amd: { ...amdCellOf('raided', SENT_LONG, 'good', 'ZZZZ', 2, SENT_SHORT),
+             title: `ZZZZ: ${SENT_LONG}.` },
+    });
+    const body = payload();
+    (body.themes[0] as Record<string, unknown>).names = [row];
+    stub(body);
+    const { container } = view();
+    await openAll();
+    await screen.findByText('ZZZZ');
+    const cell = container.querySelector('tr.hs-name td.hs-amd')!;
+    expect(cell.textContent).toBe(SENT_SHORT);
+    expect(cell.getAttribute('title')).toContain(SENT_LONG);
+    // nothing of the real vocabulary leaked in around the served words
+    for (const w of Object.values(AMD_SUMMARY.grade_labels)) {
+      expect(cell.textContent).not.toContain(w);
+    }
+    expect(cell.textContent).not.toContain('AMD');
   });
 });
 
@@ -257,7 +411,18 @@ describe('the column is the server’s to draw', () => {
     expect(screen.queryByText('🌀 AMD')).toBe(null);
     expect(screen.queryByTestId('hs-amd-note')).toBe(null);
     expect(screen.queryByTitle(GROUP_NOTE)).toBe(null);
-    expect(colSpanOf(body)).toBe(colSpanOf(body));
+    /* Was `toBe(colSpanOf(body))` — the same expression compared to itself,
+     * which can never fail. The real numbers, and the rendered table agreeing
+     * with them. */
+    expect(colSpanOf(body)).toBe(10);
+    expect(colSpanOf(body)).toBe(1 + visibleCols(body).length);
+    const ths = document.querySelectorAll('thead th').length;
+    expect(ths).toBe(10);
+    const grain = document.querySelector('tr.hs-grain td') as HTMLTableCellElement;
+    expect(grain.colSpan).toBe(ths);
+    // and the second cell of a name row is a ranked leg, not a 🌀 cell
+    const first = document.querySelector('tr.hs-name')!;
+    expect(first.querySelectorAll('td')[1].className).not.toContain('hs-amd');
   });
 
   it('the stale sentence reaches the screen when the DUE sweep is missing', async () => {

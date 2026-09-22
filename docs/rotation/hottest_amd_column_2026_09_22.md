@@ -190,12 +190,130 @@ symbol first, then its resolved form. The alias never overwrites a direct hit.
 Without this a renamed ticker is indistinguishable from a legitimate miss —
 which is why the coverage figures above were re-probed only after the fix.
 
+## The short form (2026-09-22)
+
+> *"last column is hidded"* — Ajay, 2026-09-22, with a screenshot of the 🔥
+> Hottest board scrolled to the Crypto-equities roster: the header read
+> **🌀 A** and the cells read **AM**.
+
+He is right, and part of the reason was ours. Measured on the live
+`GET /rotation/hottest` payload the same morning (1,476 distinct symbols,
+1,930 rendered name rows, 1,922 of them carrying a visible read):
+
+* **every single visible cell opened with the literal `"AMD "`** — zero
+  exceptions in 1,922 — while the column header already says **🌀 AMD**. Four
+  characters of pure duplication, ~1,900 times.
+* longest cell **26 chars** (`AMD base failed · 367d ago`), median 23, **124
+  distinct strings**.
+* strip the prefix and the longest becomes **22**, median 19, shortest 6
+  (`basing`) — and still **124 distinct strings**, because the prefix carries
+  no information at all.
+
+So the cell now prints `short` and the hover keeps `text`. Per grade, from
+`TB.AMD_GRADES`:
+
+| grade | long (`text`, the hover) | short (`short`, the cell) |
+|---|---|---|
+| `marked_up` | `AMD marked up · 124d ago` | `marked up · 124d ago` |
+| `raided` | `AMD raided · 2d ago` | `raided · 2d ago` |
+| `stale` | `AMD raid stale · 19d ago` | `raid stale · 19d ago` |
+| `failed` | `AMD base failed · 367d ago` | `base failed · 367d ago` |
+| `basing` | `AMD basing` | `basing` |
+| `none` | `AMD no cycle` | `no cycle` |
+
+**One table, one age rule.** The short is not a second wording engine and it
+is not the frontend cutting four characters off a served sentence. The
+derivation moved *into* the engine: `turning_bullish.grade_label(kind, grade)`
+takes the base word out of the one table minus `VERDICT_PREFIX[kind]`, and
+`verdict_short` assembles `grade_label + _suffix` — where `_suffix` is the
+**same function** `verdict_text` now calls for the age. Which age belongs
+beside which word was decided on 2026-09-14 and is untouched: the raid dates a
+raid (fresh or stale), the failure bar dates a failure, the markup dates a
+markup, and a bare base or "no cycle" carries none. `rotation/hottest_amd.py`'s
+own `_grade_label` is now a one-line delegate to `grade_label`, so the coverage
+histogram and the cell beside it cannot drift apart.
+
+**The long form is byte-for-byte what it was.** `verdict_text` was refactored
+to share `_suffix`, so every AMD and Keltner sentence it can build is pinned
+explicitly in `tests/test_turning_bullish.py` (`AMD_SENTENCES`, `KC_SENTENCES`)
+— typed out, not derived, because a derived expectation only proves the code
+agrees with itself. The 🌀 AMD tab in Chart Maps and this column's hover read
+`text` and see no change.
+
+**The age suffix was NOT shortened.** `19d ago` → `19d` would save three more
+characters, but it is built in `turning_bullish._suffix`, which the 🌀 AMD tab
+shares, and `today` has no `d ago` to strip — so it is not one table-driven
+edit and it changes a surface he reads. Left verbatim. His call if he wants it.
+
+**What this does not do: it does not make the table fit.** Four characters off
+the widest cell in one of twelve columns shortens the sideways scroll; it does
+not end it. **No estimated px figure is quoted for how much.** The draft
+written with the change carried an arithmetic width model — a before and after
+width for this column, and a share of the overflow it recovered — built from
+measured character counts and *assumed* per-character advances, with no browser
+ever opened, and Rule #1 does not take a model for a measurement. Those figures
+are gone, and none is repeated here for a skimmer to pick up. What is measured
+stands above: 26 characters to 22, on every one of 1,922 cells. The other half
+of the fix is the move, below.
+
+### The other half: the column moved out of last place
+
+Shipped the same day. `visibleCols()` now reads
+`[🌀 AMD?] + [☀️ Pre-mkt?] + HS_COLS`, so the column sits **immediately after
+Sector / Name**.
+
+**Why there.** 🌀 AMD is a **state about the name**, and the Sector / Name cell
+already carries this row's other per-name state chips (floor-held, at-band,
+🚀, 🎪). A state belongs beside the thing it describes. It also keeps the
+ranked numeric legs — Pre-mkt | Today | 5 days | 21 days — contiguous and in
+order, which they are not when a state column is wedged in after them. Pre-mkt
+still leads the ranked legs; `HS_COLS` is untouched.
+
+**Be plain about what the move buys.** It costs nothing in width and it does
+**not** make the table fit. What it changes is the **scroll position**: the
+state is now the first thing right of the name, where he reads it without
+moving anything. The table still runs off the right edge of a narrow window —
+`.hs-table` floors at `min-width: 900px` (760px under the 720px media block)
+across up to twelve columns — and it did before 🌀 shipped too.
+
+**Which column gives way is HIS call and it is open.** An earlier draft of this
+page nominated Next ER as the expendable one. That was a reviewer deciding
+one of his columns for him; the sentence is gone, and the
+question is item 8 of § His call in
+`docs/rotation/hottest_expand_all_2026_09_22.md`. Read it with one source fact
+in hand: the day column is at its **widest** exactly when he reads this board
+before the open, because `d1Label()` prints `Last close YYYY-MM-DD` whenever
+`d1.live` is false and `rotation/hottest.py` sets that on every closed-session
+path — including the ☀️ `basis=premarket` board.
+
+**On a phone** the move pushes every ranked leg one column further right, since
+🌀 now sits between the name and them. Nothing here picks a phone layout; the
+options are item 9 of the same list.
+
+`visibleCols()` feeds only the `<thead>`; every `<tbody>` cell is a JSX literal
+in fixed order, so the header and five render sites moved in lockstep. The full
+placement argument, the render-site list and the group-row trap (`hs-spacer`
+keeps the cell count right even when the order is wrong) live in
+`docs/rotation/hottest_expand_all_2026_09_22.md`, which also closes §7.2.
+
+**Nothing else moved.** The column still sorts nothing (`amd` is still absent
+from `rotation.hottest.SORT_KEYS`), is still colourless, group rows still
+carry an em-dash and the served `group_note`, a blank is still UNKNOWN and
+still names its refusal, and the board still costs one cached Mongo read.
+
 ## Payload shape
 
-Per NAME row, `amd`, always all ten keys:
+Per NAME row, `amd`, always all eleven keys:
 
-    known · grade · phase · text · tone · title · bars_ago · base_bars ·
-    reason · reason_text
+    known · grade · phase · text · short · tone · title · bars_ago ·
+    base_bars · reason · reason_text
+
+`short` is the **board cell's** wording and `text` is the **hover's**. Both
+come out of the one table `TB.AMD_TEXT` through `TB.grade_label`, and both
+date a read through the one `TB._suffix`, so the two forms cannot name or date
+the same row differently. A blank carries `short: None` — a refusal has no
+wording of its own to shorten — and still prints the em-dash with its served
+reason. See *The short form* below.
 
 `known` is `bool(text) and grade in TB.AMD_GRADES`. That membership gate
 matters: `verdict_text` does `table.get(grade) or table["none"]`, so an
@@ -212,11 +330,21 @@ passes every `<=` comparison and the endpoint scrub runs far too late to
 protect anything that sorts.
 
 Board block `amd_summary`: `available · n · n_known · n_blank ·
-blank_reasons · grades · grade_order · built_at · built_at_et ·
-built_at_date · last_session · due_session · stale · stale_note · n_scanned ·
-n_rows · source · cron · measured · honesty · head_title · group_note ·
-no_sort_reason · sortable · no_colour_reason · coloured · coverage_note ·
-unavailable_note · label`.
+blank_reasons · grades · grade_order · grade_labels · built_at ·
+built_at_utc · built_at_et · built_at_date · last_session · due_session ·
+stale · stale_note · n_scanned · n_rows · source · cron · measured · honesty ·
+head_title · group_note · no_sort_reason · sortable · no_colour_reason ·
+coloured · coverage_note · unavailable_note · label`.
+
+(`built_at_utc` was served from the start and was missing from this list —
+corrected 2026-09-22. It is the marker that rides *with* the raw stamp so a
+consumer reading `built_at` and not `built_at_et` cannot take it as local.)
+
+`grade_labels` is `{grade: short word}` over `grade_order`, served so that
+nothing downstream types the six words a second time — the same words the
+cell's `short` opens with and the same words the coverage histogram counts
+("raided 198 · base failed 651"). It is present on the `unavailable()` block
+too, so a consumer never meets a missing key on the failure path.
 
 `built_at` and `built_at_et` are always **ISO strings** via `TB._iso` — a BSON
 `datetime` in a JSON payload is a 500, not a missing field (caught in-container
@@ -224,7 +352,7 @@ unavailable_note · label`.
 
 ## Tests
 
-`backend/tests/test_hottest_amd.py` — 56 tests, all green. The negatives are
+`backend/tests/test_hottest_amd.py` — 95 tests, all green. The negatives are
 the point: a name the sweep never saw; a verdict with no grade and one graded
 `"wat"`; an empty document; a `stored()` that raises; `HA = None` and a
 throwing `attach` on the live handler; NaN and inf; the six frozen staleness

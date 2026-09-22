@@ -15,6 +15,12 @@
  * 4. A blank is never a zero, never an empty cell, and never wears the words of
  *    a real read ("AMD no cycle" is `turning_bullish.py:361`'s fallback for an
  *    UNGRADEABLE row — the backend refuses to lend it, and so does this).
+ * 6. TWO SERVED WORDINGS, AND NO SURGERY BETWEEN THEM (2026-09-22, *"last
+ *    column is hidded"*). The CELL prints the served `short`, the HOVER keeps
+ *    the served long `text`. A payload with no `short` prints the long string
+ *    UNCHANGED — the negative below feeds `text: 'AMD raided · 2d ago'` with no
+ *    `short` and pins that the cell prints all of it, prefix included, which is
+ *    the proof that this file slices nothing.
  * 5. The expand-all depth rule, which is load-bearing rather than cosmetic: in
  *    the DEFAULT view a sector's names hang off the INDUSTRY caret, so ⊞ has to
  *    reach the industries — but never the 📰 news-briefing rows.
@@ -52,6 +58,12 @@ const summary = (over: Partial<HsAmdSummary> = {}): HsAmdSummary => ({
   available: true, n: 518, n_known: 412, n_blank: 106,
   blank_reasons: { not_in_store: 106 }, grades: { raided: 61, failed: 150, basing: 201 },
   grade_order: ['marked_up', 'raided', 'stale', 'failed', 'basing', 'none'],
+  /* Served (`_summary`'s `grade_labels`), so a consumer that needs to name a
+   * grade reads the word off the wire instead of typing it a second time. */
+  grade_labels: {
+    marked_up: 'marked up', raided: 'raided', stale: 'raid stale',
+    failed: 'base failed', basing: 'basing', none: 'no cycle',
+  },
   built_at: '2026-09-21T21:20:16.344000+00:00', built_at_et: '2026-09-21T17:20:16.344000-04:00',
   built_at_date: '2026-09-21', last_session: '2026-09-19', due_session: '2026-09-19',
   stale: false, stale_note: STALE_NOTE, n_scanned: 2693, n_rows: 2682,
@@ -66,16 +78,21 @@ const summary = (over: Partial<HsAmdSummary> = {}): HsAmdSummary => ({
  *  own tone, carried for fidelity — this column must not paint with it. */
 const raided: HsAmd = {
   known: true, grade: 'raided', phase: 'raid', text: 'AMD raided · 2d ago',
+  short: 'raided · 2d ago',
   tone: 'good', title: 'KRMN: AMD raided · 2d ago. ' + HONESTY,
   bars_ago: 2, base_bars: 34, reason: null, reason_text: null,
 };
 const failed: HsAmd = {
   known: true, grade: 'failed', phase: 'failed', text: 'AMD base failed · 9d ago',
+  short: 'base failed · 9d ago',
   tone: 'warn', title: 'RCAT: AMD base failed · 9d ago. ' + HONESTY,
   bars_ago: 9, base_bars: 41, reason: null, reason_text: null,
 };
 const notInStore: HsAmd = {
   known: false, grade: null, phase: null, text: null, tone: null, title: null,
+  /* A refusal has no wording of its own to shorten — `blank()` serves
+   * `short: None` for exactly the reason it serves `text: None`. */
+  short: null,
   bars_ago: null, base_bars: null, reason: 'not_in_store',
   /* VERBATIM `rotation.hottest_amd.REASON_TEXT['not_in_store']`. A backend
    * test reads this file and pins the two against each other, so the fixture
@@ -86,11 +103,42 @@ const notInStore: HsAmd = {
 };
 
 describe('amdCell — the served read, printed', () => {
-  it('a known cell prints the SERVED text and the SERVED title', () => {
+  it('the CELL prints the served SHORT and the HOVER keeps the served LONG', () => {
     const c = amdCell(raided, summary());
-    expect(c.text).toBe('AMD raided · 2d ago');
+    expect(c.text).toBe('raided · 2d ago');
+    // the long sentence is still readable — on the hover, in full
     expect(c.title).toContain('KRMN: AMD raided · 2d ago.');
     expect(c.title).toContain(HONESTY);
+    // and the cell no longer repeats the word its own header already prints
+    expect(c.text).not.toContain('AMD ');
+    expect(c.text.length).toBeLessThan(String(raided.text).length);
+  });
+
+  it('the second grade too — the short is the SERVED one, not a rule applied here', () => {
+    const c = amdCell(failed, summary());
+    expect(c.text).toBe('base failed · 9d ago');
+    expect(c.title).toContain('RCAT: AMD base failed · 9d ago.');
+  });
+
+  it('NEGATIVE: this file does NO string surgery — an arbitrary short is printed verbatim', () => {
+    /* If the cell were derived here (text.slice(4), a regex, anything) this
+     * would print "raided · 2d ago" instead of the string the server sent.
+     * The two wordings are BOTH served; this file only chooses between them. */
+    const c = amdCell({ ...raided, short: 'ZZ-SERVED-SHORT' }, summary());
+    expect(c.text).toBe('ZZ-SERVED-SHORT');
+    expect(c.text).not.toBe('raided · 2d ago');
+    expect(c.title).toContain('AMD raided · 2d ago');
+  });
+
+  it('NEGATIVE: no served short (an older build) → the served LONG text, unchanged', () => {
+    for (const s of [undefined, null, '', '   ']) {
+      const c = amdCell({ ...raided, short: s as string | null }, summary());
+      // the whole served sentence, prefix included — never a locally composed
+      // "raided · 2d ago" stripped out of it
+      expect(c.text).toBe('AMD raided · 2d ago');
+      expect(c.text).not.toBe('raided · 2d ago');
+      expect(c.tone).toBe('dim');
+    }
   });
 
   it('NEGATIVE: a `good` tone still renders dim — green on the inverted state is a ranking', () => {
@@ -134,6 +182,16 @@ describe('amdCell — the served read, printed', () => {
     expect(c.title.toLowerCase()).not.toContain('clean');
     expect(c.title.toUpperCase()).toContain('UNKNOWN');
     expect(c.title.toLowerCase()).toContain('un-manipulated');
+    /* THE SHORT FORM DOES NOT OPEN A SECOND DOOR. `_grade_label('none')`
+     * legitimately returns "no cycle" for a REAL read, so the rule that must
+     * stay pinned is the narrow one: a REFUSAL wears none of the grade words,
+     * in the cell or on the hover. Read them off the wire, do not type them. */
+    const words = Object.values(summary().grade_labels || {});
+    expect(words).toContain('no cycle');
+    for (const w of words) {
+      expect(c.text.toLowerCase()).not.toContain(w);
+      expect(c.title.toLowerCase()).not.toContain(w);
+    }
   });
 
   it('NEGATIVE: a blank with NO served sentence still says what a blank means', () => {
@@ -147,6 +205,10 @@ describe('amdCell — the served read, printed', () => {
     const c = amdCell({ ...raided, text: '' }, summary());
     expect(c.text).toBe('—');
     expect(c.title.startsWith('Not read:')).toBe(true);
+    /* AND A SHORT CANNOT RESURRECT IT. The long form is the one every other
+     * consumer reads (the hover, the 🌀 tab, the coverage histogram); a row
+     * carrying a short and no long is a broken row, not a printable one. */
+    expect(c.text).not.toContain('raided');
   });
 
   it('NEGATIVE: a missing cell → em-dash, not a crash and not an empty string', () => {

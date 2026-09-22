@@ -12239,6 +12239,11 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 @media (max-width: 720px) {
   .hs-table { min-width: 760px; font-size: 0.72rem; }
   .hs-sym { min-width: 150px; }
+  /* 🌀 The AMD cell sets its own size, so it did NOT shrink with the table
+   * here: at 0.74rem against the table's 0.72rem it rendered as the LARGEST
+   * text in the table on the narrowest screen — the widest column, shouting.
+   * Track the table down one notch instead. Presentation only. */
+  .hs-amd { font-size: 0.70rem; }
 }
 
 /* ── 🚀 Explosive Growth board (2026-09-11) ─────────────────────────────────

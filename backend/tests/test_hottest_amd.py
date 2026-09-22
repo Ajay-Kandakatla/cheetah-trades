@@ -746,6 +746,10 @@ def test_the_endpoint_attaches_the_amd_block(monkeypatch):
     assert s["n_known"] + s["n_blank"] == s["n"]
     named = {r["symbol"]: r for sec in body["sectors"] for r in sec["names"]}
     assert named["KRMN"]["amd"]["text"].startswith("AMD raided")
+    # what the BOARD cell prints, off the real endpoint: the same sentence
+    # without the "AMD " the column header already says (Ajay 2026-09-22)
+    assert named["KRMN"]["amd"]["short"] == "raided · 2d ago"
+    assert s["grade_labels"]["raided"] == "raided"
     assert "NaN" not in json.dumps(body, ensure_ascii=False)
 
 
@@ -870,3 +874,273 @@ def test_NEGATIVE_no_refusal_sentence_wears_the_words_of_a_REAL_read(reason):
     text = HA.REASON_TEXT[reason].lower()
     assert "no cycle" not in text, reason
     assert "clean" not in text, reason
+
+
+# ---------------------------------------------------------------------------
+# 23 — the SHORT form the board cell prints (Ajay 2026-09-22)
+# ---------------------------------------------------------------------------
+# *"last column is hidded"* — he photographed the 🌀 AMD column clipped off the
+# right edge of the 🔥 board, header reading "🌀 A" and cells reading "AM".
+# Measured on that payload: 1,922 visible cells, EVERY ONE opening with the
+# literal "AMD " that the column header already says, longest 26 characters.
+# The cell now prints `short` and the hover keeps `text`. These tests exist to
+# prove the short is the SAME sentence out of the SAME table — not a second
+# wording engine, and not the frontend stripping a prefix.
+def test_every_known_cell_serves_BOTH_forms_and_the_short_is_the_engines():
+    body = _board()
+    HA.attach(body, doc=_doc(), now=TUE_AM)
+    known = {s: c for s, c in _cells(body).items() if c["known"]}
+    assert known
+    for sym, cell in known.items():
+        assert set(cell) == set(HA._ROW_KEYS)
+        assert cell["short"] == TB.verdict_short("amd", GRADED[sym])[0]
+        assert cell["text"] == TB.verdict_text("amd", GRADED[sym])[0]
+        # the LONG form is untouched: the hover and the 🌀 tab read it
+        assert cell["title"].startswith("%s: %s." % (sym, cell["text"]))
+
+
+def test_the_short_is_the_long_one_minus_the_word_the_header_already_prints():
+    body = _board()
+    HA.attach(body, doc=_doc(), now=TUE_AM)
+    for cell in _cells(body).values():
+        if not cell["known"]:
+            continue
+        assert cell["text"] == "AMD " + cell["short"]
+        assert "AMD " not in cell["short"]
+        assert len(cell["short"]) < len(cell["text"])
+
+
+def test_EVERY_grade_produces_a_short_and_none_of_them_invents_a_word():
+    """The guard: a grade added to `TB.AMD_GRADES` with no row in `AMD_TEXT`
+    reaches the board wearing the fallback's words, so it must fail here."""
+    for g in TB.AMD_GRADES:
+        cell = HA.read_one("ZZZ", _verdict(g))
+        assert cell["known"] is True and cell["grade"] == g
+        short, text = cell["short"], cell["text"]
+        assert short, g
+        assert "AMD " not in short, g
+        assert text == "AMD " + short, g
+        # no vocabulary the long form does not already use
+        for word in short.split():
+            assert word in text.split(), (g, word)
+        # and it is the ONE table's own word, not a second copy
+        assert short.split(" · ")[0] == TB.AMD_TEXT[g][0][len("AMD "):], g
+
+
+def test_the_short_carries_the_SAME_age_as_the_long_form_never_a_different_one():
+    body = _board()
+    HA.attach(body, doc=_doc(), now=TUE_AM)
+    cells = _cells(body)
+    assert cells["KRMN"]["short"] == "raided · 2d ago"
+    assert cells["QLYS"]["short"] == "raided · today"
+    assert cells["LASR"]["short"] == "raid stale · 7d ago"
+    assert cells["KTOS"]["short"] == "base failed · 3d ago"
+    assert cells["RCAT"]["short"] == "marked up · 5d ago"
+    # a bare base and "no cycle" carry NO age in either form
+    assert cells["ONDS"]["short"] == "basing"
+    assert cells["TENB"]["short"] == "no cycle"
+
+
+@pytest.mark.parametrize("reason", HA.REASONS)
+def test_NEGATIVE_a_blank_cell_has_NO_short_and_still_serves_its_refusal(reason):
+    """A refusal has no wording of its own to shorten. `short` is None, the
+    board prints the em-dash, and the served reason is what he reads."""
+    cell = HA.blank(reason)
+    assert set(cell) == set(HA._ROW_KEYS)
+    assert cell["short"] is None and cell["text"] is None
+    assert cell["reason"] == reason
+    assert cell["reason_text"] == HA.REASON_TEXT[reason]
+
+
+def test_NEGATIVE_the_blanks_on_a_real_board_carry_no_short_either():
+    body = _board()
+    HA.attach(body, doc=_doc(), now=TUE_AM)
+    blanks = [c for c in _cells(body).values() if not c["known"]]
+    assert blanks, "this board must contain a name the sweep never saw"
+    for cell in blanks:
+        assert cell["short"] is None
+        low = json.dumps(cell, ensure_ascii=False).lower()
+        assert "no cycle" not in low and "clean" not in low
+
+
+def test_NEGATIVE_an_ungradeable_verdict_has_no_short_to_borrow():
+    """`TB.verdict_short` falls back to the table's "none" row exactly as
+    `verdict_text` does — so "no cycle" is a real read's word, and the gate in
+    `read_one` is what keeps it off an ungradeable row. Prove both halves."""
+    assert TB.verdict_short("amd", {"grade": "wat"})[0] == "no cycle"
+    for bad in ({"grade": "wat"}, {"grade": None}, {}, {"base_bars": 3}):
+        cell = HA.read_one("BBAI", bad)
+        assert cell["known"] is False and cell["short"] is None
+        assert "no cycle" not in json.dumps(cell, ensure_ascii=False)
+
+
+def test_an_empty_document_blanks_the_short_on_every_row():
+    body = _board()
+    HA.attach(body, doc={}, now=TUE_AM)
+    for cell in _cells(body).values():
+        assert cell["short"] is None and cell["known"] is False
+        assert cell["reason"] == "store_unavailable"
+
+
+def test_the_summary_SERVES_the_short_wording_so_nobody_types_it_twice():
+    s = HA.attach(_board(), doc=_doc(), now=TUE_AM)
+    labels = s["grade_labels"]
+    assert list(labels) == list(TB.AMD_GRADES)
+    assert labels == {"marked_up": "marked up", "raided": "raided",
+                      "stale": "raid stale", "failed": "base failed",
+                      "basing": "basing", "none": "no cycle"}
+    for g, label in labels.items():
+        # the same word the cell prints, and the same word the histogram counts
+        assert HA.read_one("ZZZ", _verdict(g))["short"].startswith(label)
+        if s["grades"].get(g):
+            assert "%s %d" % (label, s["grades"][g]) in s["coverage_note"]
+
+
+def test_the_unavailable_block_still_carries_the_wording_table():
+    """`unavailable()` runs when everything else already failed. A consumer
+    reading `grade_labels` must not meet a missing key there."""
+    s = HA.unavailable()
+    assert s["available"] is False
+    assert s["grade_labels"] == {g: HA._grade_label(g) for g in TB.AMD_GRADES}
+
+
+# ---------------------------------------------------------------------------
+# 24 — the WIDTH story: no estimated number, and no column of his is written
+#      off by an agent (review findings 2/3/4, 2026-09-22)
+# ---------------------------------------------------------------------------
+# The change that moved this column out of last place shipped with an
+# arithmetic width model — a table "floor", an overflow, a saving, a per-column
+# width for Next ER — computed from measured CHARACTER counts and ASSUMED
+# per-character advances, with no browser ever opened. Rule #1 does not take a
+# model for a measurement. Worse, the same paragraph used those numbers to
+# decide that Next ER was the column he could afford to lose; which of HIS
+# columns gives way on a narrow window is a board decision, not a reviewer's.
+#
+# These guards pin the correction so it cannot quietly come back: no estimated
+# px figure on either page or in the component, no doc deciding one of his
+# columns is expendable, the two real questions OPEN on the his-call list, and
+# the phone layout left un-picked in the CSS.
+
+_ROOT = Path(__file__).resolve().parents[2]
+_DOC_FE = _ROOT / "docs" / "rotation" / "hottest_expand_all_2026_09_22.md"
+_DOC_BE = _ROOT / "docs" / "rotation" / "hottest_amd_column_2026_09_22.md"
+_TSX = _ROOT / "frontend" / "src" / "components" / "HottestSectors.tsx"
+_CSS = _ROOT / "frontend" / "src" / "styles.css"
+
+# Every figure the arithmetic model produced. None was measured; none may be
+# printed, not even inside a sentence that disowns it — a skimmer reads the
+# number, not the disclaimer.
+_MODELLED_FIGURES = ("1,074px", "1074px", "943px", "131px", "107px",
+                     "176px", "151px", "~25px", "19% of the deficit")
+
+# Sentences that hand one of HIS columns to the bin.
+_VERDICTS_ON_HIS_COLUMNS = ("right one to sacrifice", "one to sacrifice",
+                            "look up on the ticker page", "second-widest",
+                            "takes the clip")
+
+
+def _media_720_block() -> str:
+    """The `@media (max-width: 720px)` block that owns the 🔥 table."""
+    css = _CSS.read_text(encoding="utf-8")
+    anchor = css.index(".hs-table { min-width: 760px")
+    start = css.rindex("@media (max-width: 720px) {", 0, anchor)
+    depth, i = 0, start
+    while i < len(css):
+        if css[i] == "{":
+            depth += 1
+        elif css[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return css[start:i + 1]
+        i += 1
+    raise AssertionError("the 720px media block is unterminated")
+
+
+@pytest.mark.parametrize("path", [_DOC_FE, _DOC_BE, _TSX])
+def test_SOURCE_GUARD_no_MODELLED_px_figure_survives_on_any_surface(path):
+    """Rule #1: a number nobody measured does not get to be printed with a
+    tilde in front of it. The character counts stay — those came off the live
+    payload — but every px figure in the width model is gone."""
+    text = path.read_text(encoding="utf-8")
+    for fig in _MODELLED_FIGURES:
+        assert fig not in text, "%s still quotes the modelled %s" % (
+            path.name, fig)
+
+
+@pytest.mark.parametrize("path", [_DOC_FE, _DOC_BE, _TSX])
+def test_SOURCE_GUARD_nothing_here_decides_which_of_HIS_columns_is_expendable(
+        path):
+    text = path.read_text(encoding="utf-8").lower()
+    for phrase in _VERDICTS_ON_HIS_COLUMNS:
+        assert phrase not in text, "%s still writes off a column: %r" % (
+            path.name, phrase)
+
+
+def test_the_width_question_is_OPEN_on_the_his_call_list_as_a_board_decision():
+    doc = _DOC_FE.read_text(encoding="utf-8")
+    # one line, so a wrapped sentence still reads as the sentence it is
+    block = " ".join(doc.split("## 4. His call, in one list", 1)[1].split())
+    assert "Which column gives way" in block
+    assert "OPEN" in block and "board decision" in block
+    # named as candidates for HIM to pick from, never as a decision taken
+    assert "Next ER" in block
+    # and the move is described for what it changed: the position, not the fit
+    assert "scroll POSITION" in block or "**scroll position**" in doc
+    assert "does not make the table fit" in doc
+
+
+def test_the_docs_name_the_PRE_OPEN_day_header_as_the_WIDEST_state():
+    """The model that was here never accounted for the day column's non-live
+    header, which is the state this board is in every time he opens it before
+    the open — `d1.live` false on every closed-session path, the ☀️
+    `basis=premarket` board included. Both pages have to say so, or the next
+    person measures the narrow case and calls it the answer."""
+    for path in (_DOC_FE, _DOC_BE):
+        doc = path.read_text(encoding="utf-8")
+        assert "Last close YYYY-MM-DD" in doc, path.name
+        assert "d1.live" in doc, path.name
+        assert "premarket" in doc, path.name
+
+
+def test_the_PRE_OPEN_header_claim_is_TRUE_of_the_code_it_cites():
+    """A doc sentence about `d1Label` is worth nothing if `d1Label` changed.
+    Pin the two halves the sentence rests on."""
+    tsx = _TSX.read_text(encoding="utf-8")
+    assert "Last close ${day}" in tsx and "'Last close'" in tsx
+    assert "if (d?.d1?.live) return 'Today';" in tsx
+    hot = (_ROOT / "backend" / "rotation" / "hottest.py").read_text(
+        encoding="utf-8")
+    assert '"live": False' in hot or "'live': False" in hot
+
+
+def test_the_PHONE_question_is_OPEN_and_names_BOTH_options():
+    block = " ".join(_DOC_FE.read_text(encoding="utf-8").split(
+        "## 4. His call, in one list", 1)[1].split())
+    assert "What a phone shows" in block and "OPEN" in block
+    # (a) wrap it there, (b) do not draw it there — both named, neither taken
+    assert "white-space: normal" in block
+    assert "do not draw the column on a phone" in block
+    assert "Shipped as neither" in block
+
+
+def test_NEGATIVE_the_phone_layout_was_NOT_picked_silently_in_the_CSS():
+    """The 🌀 column sits between the name and the ranked legs now, so on a
+    phone every leg is one column further right. Which columns a phone shows is
+    HIS call (item 9) — so the 720px block may adjust the cell's SIZE and
+    nothing else. A `display: none` or a `white-space: normal` landing here
+    without item 9 being answered is the silent pick this guard exists to
+    catch."""
+    block = _media_720_block()
+    assert ".hs-amd { font-size: 0.70rem; }" in block
+    amd_rules = re.findall(r"\.hs-amd[^{]*\{([^}]*)\}", block)
+    assert amd_rules, "the 720px block no longer carries a .hs-amd rule"
+    for body in amd_rules:
+        low = body.lower()
+        assert "display" not in low, body
+        assert "white-space" not in low, body
+        assert "visibility" not in low, body
+
+
+def test_NEGATIVE_the_720px_block_hides_no_column_of_the_HOTTEST_table():
+    block = _media_720_block()
+    assert "display: none" not in block and "display:none" not in block

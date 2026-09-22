@@ -19,6 +19,15 @@ needs a 500-bar frame per name and "loading 2,800 of those while he waits is
 how a tab times out at the open". ONE engine, one wording table
 (`TB.verdict_text`), so the column and the 🌀 tab can never disagree.
 
+The cell carries TWO forms of the same sentence, both out of that one table:
+`text` is the full one ("AMD raided · 2d ago") and is what the hover reads;
+`short` is the board cell's ("raided · 2d ago"), the same sentence without the
+"AMD " the column header itself already prints. He photographed the column
+clipped off the right edge on 2026-09-22 — "last column is hidded" — and every
+one of the 1,922 visible cells was spending four characters repeating the
+header. `short` comes from `TB.verdict_short`, never from stripping a prefix
+off a served sentence here or in the frontend.
+
 IT IS MEASURED INVERTED ON ITS OWN CLAIM
 ────────────────────────────────────────
 Re-measured 2026-09-14 on 3,712 names / 1,592,057 bars: it fires on 15.1% of
@@ -35,7 +44,7 @@ and gates nothing**. `"amd"` is never added to `rotation.hottest.SORT_KEYS`. No
 count is placed on a sector / industry / roster row, because those rows' other
 cells are medians over the FULL membership while this payload carries 25 names
 per group — two populations. The board-level counts ride in ONE served sentence
-under the table, built from the counts THIS request actually made.
+above the table, built from the counts THIS request actually made.
 
 FAILURE IS QUIET AND TOTAL
 ──────────────────────────
@@ -139,7 +148,7 @@ HEAD_TITLE = ("Which AMD cycle phase this name is in, from the nightly sweep. "
 GROUP_NOTE = (
     "No AMD state on a sector, industry or roster row. A cycle phase has no median, and "
     "a count over the names printed here would describe a different population from the "
-    "medians beside it (those are the full membership). The board-level line under the "
+    "medians beside it (those are the full membership). The board-level line above the "
     "table carries the counts.")
 
 NO_SORT_REASON = (
@@ -160,7 +169,7 @@ UNAVAILABLE_NOTE = (
 
 LABEL = "🌀 AMD"
 
-_ROW_KEYS = ("known", "grade", "phase", "text", "tone", "title",
+_ROW_KEYS = ("known", "grade", "phase", "text", "short", "tone", "title",
              "bars_ago", "base_bars", "reason", "reason_text")
 
 _MISS = object()          # "this symbol is not in the sweep at all"
@@ -322,7 +331,11 @@ def blank(reason: str = "not_in_store") -> dict:
     """The fully-shaped unknown cell. Every key, always — the frontend reads
     ONE shape everywhere instead of testing for presence."""
     r = reason if reason in REASONS else "not_in_store"
+    # `short` is None here for the same reason `text` is: a refusal has no
+    # wording of its own to shorten. The board prints the em-dash and the
+    # served reason; it never borrows a real read's words (see REASON_TEXT).
     return {"known": False, "grade": None, "phase": None, "text": None,
+            "short": None,
             "tone": None, "title": REASON_TEXT[r], "bars_ago": None,
             "base_bars": None, "reason": r, "reason_text": REASON_TEXT[r]}
 
@@ -343,12 +356,18 @@ def read_one(sym: str, verdict: Optional[dict]) -> dict:
         text, tone = TB.verdict_text("amd", verdict)
         if not text or grade not in TB.AMD_GRADES:
             return blank("no_verdict")
+        # The BOARD cell's wording. Same engine, same table, same age rule as
+        # `text` — `verdict_short` is `verdict_text` without the "AMD " the
+        # column header already prints, and nothing here does string surgery
+        # on a served sentence. `text` stays exactly as it was: the hover
+        # reads it, and so does anything else already on the wire.
+        short, _ = TB.verdict_short("amd", verdict)
         age = (verdict.get("raid_bars_ago") if grade in ("raided", "stale")
                else verdict.get("failed_bars_ago") if grade == "failed"
                else verdict.get("bars_ago") if grade == "marked_up" else None)
         return {"known": True, "grade": grade,
                 "phase": verdict.get("phase"),
-                "text": text, "tone": tone,
+                "text": text, "short": short or None, "tone": tone,
                 "title": "%s: %s. %s" % (str(sym or "").upper(), text, HONESTY),
                 "bars_ago": _num(age), "base_bars": _num(verdict.get("base_bars")),
                 "reason": None, "reason_text": None}
@@ -429,9 +448,15 @@ def by_symbol(doc: Optional[dict] = None, *, now=None) -> tuple:
 # ---------------------------------------------------------------------------
 def _grade_label(grade: str) -> str:
     """"raided" -> "raided", "marked_up" -> "marked up" — from `TB.AMD_TEXT`,
-    never a second wording table here."""
-    base = (TB.AMD_TEXT.get(grade) or ("",))[0]
-    return base[4:] if base.startswith("AMD ") else (base or grade)
+    never a second wording table here.
+
+    It is `TB.grade_label` now, which is the same derivation moved into the
+    engine (2026-09-22) so that the histogram in the coverage sentence and the
+    `short` on every row cell are the SAME words out of the SAME table. An
+    unknown grade keeps its own name rather than borrowing "no cycle" — this
+    sentence is a census, and a census must not rename what it counted.
+    """
+    return TB.grade_label("amd", grade) or str(grade)
 
 
 # Why a name is blank, in the words the sentence uses. Keyed by `REASONS` so a
@@ -493,6 +518,11 @@ def _summary(*, available: bool, n: int, n_known: int, n_blank: int,
         "n": n, "n_known": n_known, "n_blank": n_blank,
         "blank_reasons": blank_reasons, "grades": grades,
         "grade_order": list(TB.AMD_GRADES),
+        # The short wording, per grade, SERVED — the board cell's `short` is
+        # this word plus its age. A consumer that wants to name a grade (a
+        # legend, a test asserting a group row carries none of them) reads it
+        # here instead of typing the words a second time.
+        "grade_labels": {g: _grade_label(g) for g in TB.AMD_GRADES},
         "built_at": meta.get("built_at"),
         # the raw stamp is naive UTC; the marker rides WITH it so a consumer
         # that reads `built_at` and not `built_at_et` cannot take it as local.

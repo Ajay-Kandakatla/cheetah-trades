@@ -27,6 +27,13 @@
  *    fails unless styles.css holds a matching rule; `'hs-amd-' + tone` would
  *    ship `hs-amd-` as a class with no rule and turn the build red. The map
  *    below is the only place a tone becomes a class, and it holds whole tokens.
+ * 3. TWO SERVED WORDINGS, NO SURGERY (2026-09-22, after *"last column is
+ *    hidded"*). The cell prints the served `short`, the hover keeps the served
+ *    `text`. Both are built by the backend from the one table
+ *    (`turning_bullish.grade_label` + the shared age rule). This file CHOOSES
+ *    between two strings that came back; it never slices the "AMD " prefix off
+ *    one to make the other, because then the board and the backend's own
+ *    coverage histogram could word the same grade two different ways.
  *
  * A blank is NEVER a zero and never the words of a real read: the backend
  * refuses to lend an ungradeable row the `table["none"]` fallback wording
@@ -35,10 +42,18 @@
 import type { Cell } from './boardMetrics';
 
 /** One name row's served AMD cell. Every key is always present on the wire;
- *  they are optional here because a payload from an older build has none. */
+ *  they are optional here because a payload from an older build has none.
+ *
+ *  TWO WORDINGS, BOTH SERVED, ONE ENGINE. `short` is what the BOARD cell
+ *  prints; `text` is what the HOVER carries and what every other consumer
+ *  (the 🌀 AMD tab, the coverage histogram) already reads. Both come out of
+ *  `supply_demand.turning_bullish`'s one table via `grade_label` + the shared
+ *  age rule — `short` is NOT `text` with a prefix sliced off here. This file
+ *  chooses between two served strings and never manufactures a third. */
 export type HsAmd = {
   known?: boolean; grade?: string | null; phase?: string | null;
-  text?: string | null; tone?: string | null; title?: string | null;
+  text?: string | null; short?: string | null;
+  tone?: string | null; title?: string | null;
   bars_ago?: number | null; base_bars?: number | null;
   reason?: string | null; reason_text?: string | null;
 };
@@ -49,7 +64,17 @@ export type HsAmd = {
 export type HsAmdSummary = {
   available?: boolean; n?: number; n_known?: number; n_blank?: number;
   blank_reasons?: Record<string, number>; grades?: Record<string, number>;
-  grade_order?: string[]; built_at?: string | null; built_at_et?: string | null;
+  grade_order?: string[];
+  /** grade → the SHORT word the board cell prints for it, served so a consumer
+   *  that needs to name a grade (a legend, a test proving a group row carries
+   *  none of them) reads the words off the wire instead of typing them. */
+  grade_labels?: Record<string, string>;
+  built_at?: string | null;
+  /* A MARKER, not a stamp: the backend serves `true` beside a naive-UTC
+   * `built_at`, and null when there is no stamp to mark. Typing it as a
+   * string invited `built_at_utc` to be printed as if it were a date. */
+  built_at_utc?: boolean | null;
+  built_at_et?: string | null;
   built_at_date?: string | null; last_session?: string | null; due_session?: string | null;
   stale?: boolean | null; stale_note?: string | null;
   n_scanned?: number | null; n_rows?: number | null;
@@ -114,7 +139,21 @@ export function showAmdCol(d?: { amd_summary?: HsAmdSummary | null } | null): bo
   return s.available !== false;
 }
 
-/** One name row's cell. The tone is ALWAYS `dim` — see rule 1. */
+/** One name row's cell. The tone is ALWAYS `dim` — see rule 1.
+ *
+ *  THE CELL PRINTS THE SHORT, THE HOVER CARRIES THE LONG (Ajay 2026-09-22:
+ *  *"last column is hidded"*). Every one of the ~1,900 cells opened with the
+ *  literal "AMD " while the header two rows up already said 🌀 AMD, so the
+ *  widest column on the board spent four characters per row repeating its own
+ *  name. The backend now serves BOTH wordings out of the one table; this
+ *  function picks the short one for the cell and leaves the long one on the
+ *  hover, where the whole sentence is still readable.
+ *
+ *  THE FALLBACK IS THE SERVED LONG STRING, NEVER A COMPOSED ONE. A payload
+ *  from a build without `short` prints `text` exactly as it came back. This
+ *  file does not slice "AMD " off anything — if it did, the board and the
+ *  backend's own histogram could word the same grade two different ways, and
+ *  a served sentence would be edited on the way to the screen. */
 export function amdCell(r?: HsAmd | null, s?: HsAmdSummary | null): Cell {
   const why = s?.no_colour_reason ? ` ${s.no_colour_reason}` : '';
   if (!r) return { text: DASH, tone: 'dim', title: GENERIC_BLANK };
@@ -124,15 +163,18 @@ export function amdCell(r?: HsAmd | null, s?: HsAmdSummary | null): Cell {
   const text = typeof r.text === 'string' ? r.text.trim() : '';
   // THE FE BELT for the backend guard: a served `known: true` with no wording
   // is a backend bug, and it must still render as a blank with a reason rather
-  // than as an empty cell that reads like a column that stopped working.
+  // than as an empty cell that reads like a column that stopped working. The
+  // LONG form is what that belt tests, because it is the wording every other
+  // consumer reads — a row with a short and no long is a broken row.
   if (!text) return { text: DASH, tone: 'dim', title: EMPTY_TEXT_BLANK };
-  return { text, tone: 'dim', title: `${r.title || text}${why}` };
+  const short = typeof r.short === 'string' ? r.short.trim() : '';
+  return { text: short || text, tone: 'dim', title: `${r.title || text}${why}` };
 }
 
 /** A sector / industry / roster row. ALWAYS an em-dash, with the served reason.
  *  The group row's other cells are medians over the FULL membership; a count
  *  over the 25 names the payload carries would describe a different
- *  population. The counts live in one line under the table. */
+ *  population. The counts live in one line above the table. */
 export function amdGroupCell(s?: HsAmdSummary | null): Cell {
   return { text: DASH, tone: 'dim', title: s?.group_note || GROUP_BLANK };
 }
@@ -142,7 +184,7 @@ export function amdHeadTitle(s?: HsAmdSummary | null): string {
   return s?.head_title || HEAD_FALLBACK;
 }
 
-/** The line under the table: the served coverage sentence, plus the served
+/** The line above the table: the served coverage sentence, plus the served
  *  staleness sentence when the sweep that was DUE is missing. When the read
  *  itself is unavailable this is the served line that says so instead — the
  *  column then does not draw at all, and silence would be a lie. */

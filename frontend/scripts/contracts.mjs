@@ -4081,6 +4081,115 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '\u{1F300} the AMD column sits where he can SEE it, and the ranked legs stay together (2026-09-22)',
+    file: 'src/components/HottestSectors.tsx',
+    // Ajay 2026-09-22, on a screenshot: "last column is hidded". It shipped as
+    // the twelfth of twelve on a table that already scrolled sideways.
+    //
+    // The fix is a POSITION, so a contract has to pin the position — and the
+    // trap that made the first attempt dangerous: `visibleCols()` drives only
+    // the <thead>. Every <tbody> cell is hard-coded JSX in source order, so
+    // moving the header alone silently prints every name's AMD value under the
+    // "Next ER" heading and shifts all nine ranked legs one header left.
+    checks: (src) => {
+      const errs = [];
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+      // 1. the header order: AMD first, then Pre-mkt leading the ranked legs
+      const vc = (code.match(/export function visibleCols[\s\S]*?\n\}/) || [''])[0];
+      if (!vc) errs.push('visibleCols() not found \u2014 the column order is unpinnable');
+      else {
+        const iAmd = vc.indexOf('AMD_COL');
+        const iPre = vc.indexOf('PRE_COL');
+        const iCols = vc.indexOf('...HS_COLS');
+        if (iAmd < 0 || iPre < 0 || iCols < 0) {
+          errs.push('visibleCols() no longer names all three of AMD_COL / PRE_COL / HS_COLS');
+        } else if (!(iAmd < iPre && iPre < iCols)) {
+          errs.push('the \u{1F300} AMD column must come FIRST, then Pre-mkt, then HS_COLS '
+            + '\u2014 he reported it hidden when it was last');
+        }
+      }
+
+      // 2. THE TRAP: the tbody cell order must match, or the board is misaligned
+      const bodyOrder = (name, cellRe) => {
+        const fn = (code.match(new RegExp(`function ${name}\\(([\\s\\S]*?)\\n\\}`)) || [''])[0];
+        if (!fn) return null;
+        const iAmd = fn.search(cellRe);
+        const iLeg = fn.indexOf('<LegCells');
+        return iAmd < 0 || iLeg < 0 ? null : iAmd < iLeg;
+      };
+      const nameRow = bodyOrder('NameRow', /hs-amd|amdCell\(/);
+      if (nameRow === false) {
+        errs.push('NameRow renders the AMD cell AFTER the ranked legs while the header '
+          + 'puts it first \u2014 every value would print under the wrong heading');
+      }
+      // group rows: the em-dash cell must precede LegCells everywhere it is drawn
+      const groupCells = [...code.matchAll(/<AmdGroupCell[\s\S]{0,400}?<LegCells/g)].length;
+      const groupCellsAfter = [...code.matchAll(/<LegCells[\s\S]{0,400}?<AmdGroupCell/g)].length;
+      if (groupCellsAfter > 0) {
+        errs.push(`${groupCellsAfter} group row(s) render <AmdGroupCell> AFTER <LegCells> `
+          + '\u2014 a group row stays cell-COUNT correct while being column-WRONG, '
+          + 'because GroupFundCells ends in a spacer <td>');
+      }
+      if (!groupCells) {
+        errs.push('no group row renders <AmdGroupCell> before <LegCells>');
+      }
+
+      // 3. the colSpan rows must be derived, never a hard-coded count
+      if (/colSpan=\{\s*\d+\s*\}/.test(code)) {
+        errs.push('a hard-coded colSpan survives \u2014 a new column leaves that row one cell short');
+      }
+
+      // 4. nothing was hidden to make room
+      const media = (read('src/styles.css').match(
+        /@media \(max-width: 720px\)\s*\{([\s\S]*?)\n\}/) || ['', ''])[1];
+      if (/display:\s*none/.test(media)) {
+        errs.push('the 720px block hides something \u2014 which column a phone loses is HIS call');
+      }
+
+      if (!/id: 'hottest-amd-column-visible-2026-09-22'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the move needs its \u2728 entry');
+      }
+      // the question he ANSWERED must not still be asked on the card
+      if (/whether it belongs before the price columns/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the \u2728 card still asks him where the column belongs \u2014 he answered that');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '\u{1F300} the AMD cell prints a SERVED short form, never the page trimming a sentence (2026-09-22)',
+    file: 'src/lib/hottestAmd.ts',
+    // ~1,900 cells each began with the literal "AMD " while the header already
+    // said 🌀 AMD. The short form is derived from the SAME backend wording
+    // table as the long one — never by the page slicing a prefix off a served
+    // sentence, which is how two surfaces start disagreeing.
+    checks: (src) => {
+      const errs = [];
+      const py = read('../backend/supply_demand/turning_bullish.py');
+      if (!/def verdict_short/.test(py)) {
+        errs.push('the short form must be SERVED from turning_bullish, beside verdict_text');
+      }
+      if (!/AMD_TEXT/.test(py)) errs.push('one wording table, or the surfaces drift');
+      // the page must not do string surgery on a served sentence
+      for (const re of [/\.replace\(\s*['"/]AMD/, /\.slice\(\s*4\s*\)/, /startsWith\(\s*['"]AMD/]) {
+        if (re.test(src)) {
+          errs.push('hottestAmd.ts trims a served sentence \u2014 the short form is SERVED, not derived here');
+        }
+      }
+      if (!/\bshort\b/.test(src)) errs.push('the cell must read the served `short` field');
+      // a fallback must land on the served long text, never on a composed string
+      if (!/short[\s\S]{0,120}\btext\b/.test(src)) {
+        errs.push('no visible fallback from `short` to the served `text`');
+      }
+      if (/built_at_utc\?:\s*string/.test(src)) {
+        errs.push('built_at_utc is a boolean MARKER, not a stamp \u2014 typing it as a string '
+          + 'invites it to be printed as a date');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

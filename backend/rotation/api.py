@@ -542,8 +542,11 @@ async def rotation_hottest(
     """The 🔥 Hottest tab: every sector ranked, each opening into its
     industries and then its names, with the sales block on every row.
 
-    Every column the table prints is sortable (`sortable` in the payload), in
-    both directions (`dir`). The sort runs HERE and not in the browser because
+    Every RANKED column is sortable (`sortable` in the payload), in both
+    directions (`dir`). 🌀 AMD is the one exception and says so in its own
+    served sentence (`amd_summary.no_sort_reason`): it reports a read measured
+    INVERTED against its own placebo, and ranking the board on that would order
+    names by something measured to go the wrong way. The sort runs HERE and not in the browser because
     the payload keeps only `names` rows per group: a client-side sort would
     reorder the visible 25 and never reach the 46th name. A missing value
     sorts LAST in both directions.

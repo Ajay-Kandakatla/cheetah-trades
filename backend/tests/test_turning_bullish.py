@@ -164,6 +164,159 @@ def test_NEGATIVE_a_missing_verdict_produces_NO_badge_not_an_empty_one():
     assert TB.verdict_text("amd", {}) [0] == "AMD no cycle"
 
 
+# ───────────────────────────────── the SHORT form (Ajay 2026-09-22)
+#
+# *"last column is hidded"* — the 🔥 Hottest board's 🌀 AMD column was clipped
+# off the right edge, and every one of its 1,922 visible cells opened with the
+# literal "AMD ", four characters repeating the column header. `verdict_short`
+# serves the same sentence without that prefix. It is the SAME table and the
+# SAME age rule, so these tests exist to prove there is no second wording
+# engine hiding behind the new name.
+#
+# The long form is what the hover and the 🌀 AMD tab read, so the FIRST test
+# here pins it byte-for-byte. If a refactor for the short's sake moves a
+# character of the long form, this goes red before anything reaches a board.
+
+# Every AMD sentence the engine can build. Typed out on purpose: derive them
+# and the test proves only that the code agrees with itself.
+AMD_SENTENCES = [
+    ({"grade": "marked_up"},                        "AMD marked up",              "marked up"),
+    ({"grade": "marked_up", "bars_ago": 124},       "AMD marked up · 124d ago",   "marked up · 124d ago"),
+    ({"grade": "marked_up", "bars_ago": 0},         "AMD marked up · today",      "marked up · today"),
+    ({"grade": "raided"},                           "AMD raided",                 "raided"),
+    ({"grade": "raided", "raid_bars_ago": 2},       "AMD raided · 2d ago",        "raided · 2d ago"),
+    ({"grade": "raided", "raid_bars_ago": 0},       "AMD raided · today",         "raided · today"),
+    ({"grade": "stale"},                            "AMD raid stale",             "raid stale"),
+    ({"grade": "stale", "raid_bars_ago": 19},       "AMD raid stale · 19d ago",   "raid stale · 19d ago"),
+    ({"grade": "failed"},                           "AMD base failed",            "base failed"),
+    ({"grade": "failed", "failed_bars_ago": 367},   "AMD base failed · 367d ago", "base failed · 367d ago"),
+    ({"grade": "basing"},                           "AMD basing",                 "basing"),
+    # a bare base and "no cycle" carry NO age even when the dict holds one
+    ({"grade": "basing", "bars_ago": 4},            "AMD basing",                 "basing"),
+    ({"grade": "none"},                             "AMD no cycle",               "no cycle"),
+    ({"grade": "none", "bars_ago": 16},             "AMD no cycle",               "no cycle"),
+]
+
+KC_SENTENCES = [
+    ({"grade": "coiled_up"},                            "KC coiled up"),
+    ({"grade": "coiled_up", "squeeze": True, "squeeze_bars": 12},
+     "KC coiled up · squeeze 12b"),
+    ({"grade": "coiled_up", "squeeze": True, "squeeze_bars": 12, "squeeze_ratio": 0.63},
+     "KC coiled up · squeeze 12b · 0.63× wide"),
+    ({"grade": "breaking_up", "squeeze_released": True},
+     "KC breaking up · squeeze just released"),
+    ({"grade": "upper_half"},                           "KC upper half"),
+    ({"grade": "lower_half"},                           "KC lower half"),
+    ({"grade": "below_band"},                           "KC below the band"),
+    ({"grade": "none"},                                 "KC no read"),
+]
+
+
+@pytest.mark.parametrize("v,long_,_short", AMD_SENTENCES)
+def test_the_LONG_AMD_form_is_BYTE_FOR_BYTE_what_it_always_was(v, long_, _short):
+    assert TB.verdict_text("amd", v)[0] == long_
+
+
+@pytest.mark.parametrize("v,long_", KC_SENTENCES)
+def test_the_LONG_KELTNER_form_is_BYTE_FOR_BYTE_what_it_always_was(v, long_):
+    assert TB.verdict_text("keltner", v)[0] == long_
+
+
+@pytest.mark.parametrize("v,long_,short", AMD_SENTENCES)
+def test_the_SHORT_form_is_the_long_one_without_the_header_s_own_word(v, long_, short):
+    s, tone = TB.verdict_short("amd", v)
+    assert s == short
+    # same tone, always — the short is a wording change, not a second read
+    assert tone == TB.verdict_text("amd", v)[1]
+    assert long_ == "AMD " + s
+
+
+def test_EVERY_grade_has_a_short_and_it_comes_from_the_ONE_table():
+    """The guard the ask asked for: a grade added to `AMD_GRADES` without a
+    row in `AMD_TEXT` fails HERE, before it can reach a board wearing the
+    fallback's words."""
+    assert set(TB.AMD_GRADES) <= set(TB.AMD_TEXT), "a grade with no wording"
+    for g in TB.AMD_GRADES:
+        label = TB.grade_label("amd", g)
+        assert label, g
+        # the ONE table, not a second one kept in step by hand
+        assert TB.AMD_TEXT[g][0] == "AMD " + label
+        assert TB.verdict_short("amd", {"grade": g})[0] == label
+
+
+def test_NEGATIVE_the_grade_label_check_above_has_TEETH():
+    """`grade_label` returns "" for a grade the table does not hold — which is
+    exactly what the assertion above is testing for. Prove it can go false."""
+    assert TB.grade_label("amd", "a_grade_nobody_tabled") == ""
+    assert TB.grade_label("amd", None) == ""
+    assert TB.grade_label("keltner", "a_grade_nobody_tabled") == ""
+
+
+def test_the_short_is_STRICTLY_shorter_than_the_long_for_every_grade():
+    """The whole point is width. A short that saved nothing would be a second
+    wording table with no reason to exist."""
+    for g in TB.AMD_GRADES:
+        v = {"grade": g, "raid_bars_ago": 2, "failed_bars_ago": 2, "bars_ago": 2}
+        long_ = TB.verdict_text("amd", v)[0]
+        short = TB.verdict_short("amd", v)[0]
+        assert len(short) < len(long_), g
+        assert len(long_) - len(short) == len("AMD "), g
+
+
+def test_NEGATIVE_the_short_introduces_NO_vocabulary_the_long_form_lacks():
+    """A short is allowed to drop a word. It is never allowed to invent one —
+    that is how two wording tables start."""
+    for v, long_, short in AMD_SENTENCES:
+        assert "AMD" not in short, short
+        for word in short.split():
+            assert word in long_.split(), (word, long_)
+    for v, long_ in KC_SENTENCES:
+        short = TB.verdict_short("keltner", v)[0]
+        assert "KC" not in short.split(), short
+        for word in short.split():
+            assert word in long_.split(), (word, long_)
+
+
+def test_the_short_takes_its_AGE_from_the_SAME_rule_as_the_long_form():
+    """Which age belongs beside which word is decided ONCE, in `_suffix`. Hand
+    every grade a dict carrying ALL THREE age fields at once: whichever one the
+    long form picks, the short must pick the same, and the two grades that
+    carry no age must still carry none."""
+    for g in TB.AMD_GRADES:
+        v = {"grade": g, "raid_bars_ago": 7, "failed_bars_ago": 9, "bars_ago": 11}
+        long_ = TB.verdict_text("amd", v)[0]
+        short = TB.verdict_short("amd", v)[0]
+        assert short == long_[len("AMD "):], g
+        if g in ("basing", "none"):
+            assert "d ago" not in short and "today" not in short, g
+        else:
+            assert "d ago" in short, g
+
+
+def test_NEGATIVE_a_missing_verdict_has_NO_short_either():
+    for junk in (None, {}, "raided", 3, []):
+        short, tone = TB.verdict_short("amd", junk)
+        long_, _ = TB.verdict_text("amd", junk)
+        if isinstance(junk, dict):
+            # {} is a real dict with no grade: it takes the table's fallback,
+            # the SAME one the long form takes — never a different word.
+            assert short == "no cycle" and long_ == "AMD no cycle"
+        else:
+            assert short == "" and long_ == "" and tone == "muted"
+
+
+def test_an_UNTABLED_grade_takes_the_SAME_fallback_in_both_forms():
+    """`verdict_text` does `table.get(grade) or table["none"]`. If the short
+    fell back differently the two forms would name the same row differently —
+    and `hottest_amd.read_one` gates `known` on membership precisely because
+    that fallback is a real read's words."""
+    v = {"grade": "wat"}
+    assert TB.verdict_text("amd", v) == ("AMD no cycle", "muted")
+    assert TB.verdict_short("amd", v) == ("no cycle", "muted")
+    assert TB.verdict_text("keltner", v) == ("KC no read", "muted")
+    assert TB.verdict_short("keltner", v) == ("no read", "muted")
+
+
 # ─────────────────────────────────────────── the channel as a CURVE
 def test_the_channel_BENDS_because_an_EMA_and_an_ATR_both_move():
     """AJAY 2026-09-13 (MU): "I was hoping to see the KC bands like this but it

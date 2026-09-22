@@ -290,15 +290,53 @@ export const PRE_COL: HsCol = {
 export function showPreCol(d?: Pick<HsPayload, 'pre'> | null): boolean {
   return !!d?.pre?.show;
 }
-/** The columns actually printed, in print order. Pre-mkt sits FIRST, the way
- *  the legs already run newest-to-oldest (Today | 5 days | 21 days); 🌀 AMD
- *  sits LAST, after Next ER, because it is not a ranked leg — it is a state.
- *  Both are conditional on the SERVER saying so. */
+/** The columns actually printed, in print order. Both extras are conditional
+ *  on the SERVER saying so.
+ *
+ *  🌀 AMD SITS IMMEDIATELY AFTER Sector / Name (Ajay 2026-09-22: *"last column
+ *  is hidded"* — it shipped last, and on his window the header read "🌀 A" and
+ *  the cells read "AM"). It is a STATE ABOUT THE NAME, and the Sector / Name
+ *  cell already carries this row's other per-name state chips (floor-held,
+ *  at-band, 🚀, 🎪). A state belongs beside the thing it describes. The move
+ *  also keeps the ranked numeric legs (Pre-mkt | Today | 5 days | 21 days)
+ *  CONTIGUOUS and in order, which they are not when a state column is wedged
+ *  in after them.
+ *
+ *  Pre-mkt still leads the RANKED LEGS, the way they already read newest to
+ *  oldest, and HS_COLS keeps its order untouched.
+ *
+ *  THIS DOES NOT MAKE THE TABLE FIT, AND NOTHING HERE DECIDES WHICH COLUMN
+ *  GIVES WAY INSTEAD. `.hs-table` sets `min-width: 900px` (760px inside the
+ *  720px media block) and this table prints up to TWELVE columns — Sector /
+ *  Name, 🌀 AMD, ☀️ Pre-mkt and the nine in HS_COLS. On a narrow window it
+ *  scrolls sideways before the move and after it. What the move buys is the
+ *  SCROLL POSITION: the state is now the first thing right of the name, so he
+ *  reads it without moving anything, which is what he asked for.
+ *
+ *  Which of his existing columns is dropped or narrowed to END the scroll is
+ *  HIS decision, not ours — it is open in § His call of
+ *  docs/rotation/hottest_expand_all_2026_09_22.md. Note while reading it that
+ *  the day column is at its WIDEST exactly when he reads this board before the
+ *  open: `d1Label` prints `Last close YYYY-MM-DD` whenever `d1.live` is false
+ *  (rotation/hottest.py), i.e. every pre-market and after-hours read, the
+ *  ☀️ basis=premarket board included.
+ *
+ *  ON A PHONE (the ≤720px block) the move pushes every ranked leg one column
+ *  further right, because 🌀 now sits between the name and them. Whether a
+ *  phone should wrap this cell or not draw the column at all is on the same
+ *  his-call list. Nothing here picks one silently.
+ *
+ *  NO ESTIMATED px FIGURE IS QUOTED here or in either doc. The version that
+ *  shipped with the move carried an arithmetic width model — a table floor, a
+ *  box width, a per-column width for Next ER — built from measured character
+ *  counts and ASSUMED per-character advances, with no browser ever opened, and
+ *  Rule #1 does not take a model for a measurement. The px values above are
+ *  styles.css's own `min-width` declarations, read off the source. */
 export function visibleCols(d?: Pick<HsPayload, 'pre' | 'amd_summary'> | null): HsCol[] {
   return [
+    ...(showAmdCol(d) ? [AMD_COL] : []),
     ...(showPreCol(d) ? [PRE_COL] : []),
     ...HS_COLS,
-    ...(showAmdCol(d) ? [AMD_COL] : []),
   ];
 }
 /** The full-width colSpan for every grain / "showing N of M" / news row: the
@@ -881,6 +919,15 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
             : ''}
         </div>
       </td>
+      {/* 🌀 Immediately after the name, because it is a state ABOUT the name
+          and the cell above already carries this row's other state chips.
+          Shipped last on 2026-09-22 and clipped off the right edge the same
+          morning — see visibleCols. The header map and this literal are the
+          two halves of one column; they move together or the board reads a
+          column off. */}
+      {amd ? (
+        <td className={`hs-amd ${amdToneClass(amd.tone)}`} title={amd.title}>{amd.text}</td>
+      ) : null}
       <LegCells r={r} d1={d1} />
       <td className={`mono hs-num ${tone(r.sales_yoy)}`} title={
         r.sales_prior_yoy != null ? `prior quarter ${pct(r.sales_prior_yoy)}` : undefined}>
@@ -909,9 +956,6 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
       <td className="hs-er">
         {r.next_earnings || '—'}{r.earnings_when ? ` ${r.earnings_when}` : ''}
       </td>
-      {amd ? (
-        <td className={`hs-amd ${amdToneClass(amd.tone)}`} title={amd.title}>{amd.text}</td>
-      ) : null}
     </tr>
   );
 }
@@ -1177,13 +1221,23 @@ export function HottestSectors() {
             median — the same number the Hot-sectors strip prints, reused so the two can never
             disagree. Name rows are the <b>full</b> membership. Industries too small for a ranked row
             still show, flagged <i>thin</i>: a 6-name median is not a 25-name one.</p>
-          <p><b>Every column sorts, and it sorts on the server.</b> Click a header to rank on
-            it; click it again to flip the direction. The board keeps 25 names per group, so a
+          <p><b>Every ranked column sorts, and it sorts on the server.</b> Click a header to rank
+            on it; click it again to flip the direction. The board keeps 25 names per group, so a
             browser-side sort would only reorder those 25 — the round-trip re-ranks the FULL
             membership and then takes the top 25 of the column you picked. A blank always sorts
             LAST, in both directions. Sector and industry rows show the <b>median of their full
             membership</b> in the fundamental columns, so a sort there has something visible behind
-            it; the three return legs stay the rotation grid&rsquo;s sampled median.</p>
+            it; the three return legs stay the rotation grid&rsquo;s sampled median.
+            {/* The 🌀 column is the one exception, and the refusal is SERVED —
+                retyping it here is how a surface and its backend start saying
+                two different things. */}
+            {/* Gated on whether the column is DRAWN, not on whether the
+                refusal sentence happens to be in the payload: an unavailable
+                sweep still serves `no_sort_reason`, and describing a column
+                the board is not drawing is its own small lie. */}
+            {showAmdCol(data) && data?.amd_summary?.no_sort_reason
+              ? <> <b>🌀 AMD is the exception.</b> {data.amd_summary.no_sort_reason}</>
+              : null}</p>
           <p><b>Our rosters sit above the sectors.</b> Robotics, the AI complex, nuclear,
             quantum, rare earth, crypto — these are lists we curated, and they cut ACROSS the
             provider&rsquo;s sectors (robotics spans Technology, Industrials and Consumer
@@ -1274,8 +1328,10 @@ export function HottestSectors() {
               {cols.map((c) => {
                 /* A column that does not sort gets a plain header, not a
                    dead button: the caption above says "click any column
-                   header", and a header that looks like the other nine and
-                   does nothing is worse than one that never offered. */
+                   header", and a header that looks like the others and
+                   does nothing is worse than one that never offered.
+                   (No ordinal here on purpose — the count and the order of
+                   these columns both change, the argument does not.) */
                 if (c.sortable === false) {
                   return (
                     <th key={c.key} className={c.num ? 'hs-num' : ''}>
@@ -1331,9 +1387,14 @@ export function HottestSectors() {
                         {t.n_full}{t.thin ? ' · thin' : ''}
                       </span>
                     </td>
+                    {/* 🌀 second, beside the name — see visibleCols. The
+                        group row is the sneaky half of the move: its Next ER
+                        stand-in is an empty <td className="hs-spacer">, so a
+                        row left in the old order still has the right CELL
+                        COUNT and no colSpan check would catch it. */}
+                    <AmdGroupCell s={data?.amd_summary} />
                     <LegCells r={t} d1={data} isGroup />
                     <GroupFundCells r={t} />
-                    <AmdGroupCell s={data?.amd_summary} />
                   </tr>
                   {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
@@ -1383,9 +1444,9 @@ export function HottestSectors() {
                           ? ` · heat on ${s.sampled_used}` : ''}
                       </span>
                     </td>
+                    <AmdGroupCell s={data?.amd_summary} />
                     <LegCells r={s} d1={data} isGroup />
                     <GroupFundCells r={s} />
-                    <AmdGroupCell s={data?.amd_summary} />
                   </tr>
                   {s.day_tag && isGroupOpen(open, `${k}|tag`, byIndustry)
                     ? <DayTagRow key={`${k}|tagrow`} tag={s.day_tag} span={span} />
@@ -1405,9 +1466,9 @@ export function HottestSectors() {
                               {ind.n_full}{ind.thin ? ' · thin' : ''}
                             </span>
                           </td>
+                          <AmdGroupCell s={data?.amd_summary} />
                           <LegCells r={ind} d1={data} isGroup />
                           <GroupFundCells r={ind} />
-                          <AmdGroupCell s={data?.amd_summary} />
                         </tr>
                         {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (

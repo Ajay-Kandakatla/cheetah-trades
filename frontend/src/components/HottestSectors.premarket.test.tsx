@@ -222,26 +222,48 @@ describe('the ☀️ click', () => {
 // 4 · the column itself
 // ---------------------------------------------------------------------------
 describe('the Pre-mkt column', () => {
-  it('is FIRST, prints the printed-member count, and flags a thin group', async () => {
-    const { container } = (stubSeq([ok(payload(LIVE_PRE))]), view());
+  /* WHICH CELL IS THE PRE-MKT ONE — computed, never a hard-coded index.
+   *
+   * It was `td[1]` until 2026-09-22, when 🌀 AMD moved in beside Sector / Name
+   * and index 1 stopped meaning "Pre-mkt" on any payload that carries the
+   * block. This fixture has no `amd_summary`, so the old index still happened
+   * to work — an assertion that reads as one thing and holds for another. Ask
+   * `visibleCols` where the column is, the way the header does. */
+  const preIndex = (d: unknown) =>
+    1 + visibleCols(d as never).findIndex((c) => c.key === PRE_COL.key);
+  const preCellOf = (row: HTMLElement, d: unknown) =>
+    row.querySelectorAll('td')[preIndex(d)];
+
+  it('leads the RANKED legs, prints the printed-member count, and flags a thin group',
+     async () => {
+    const body = payload(LIVE_PRE);
+    const { container } = (stubSeq([ok(body)]), view());
     await screen.findByText(/Technology/);
     const heads = [...container.querySelectorAll('thead th')].map((th) => th.textContent || '');
     expect(heads[0]).toContain('Sector / Name');
-    expect(heads[1]).toContain('Pre-mkt');
+    /* THE INTENT, not the index: Pre-mkt is the first of the ranked legs and
+     * the four of them run newest-to-oldest, unbroken. */
+    const at = heads.findIndex((h) => h.includes('Pre-mkt'));
+    expect(at).toBeGreaterThan(0);
+    expect(heads[at + 1]).toContain('Last close');
+    expect(heads[at + 2]).toContain('5 days');
+    expect(heads[at + 3]).toContain('21 days');
+    expect(visibleCols(body as never).filter((c) => c.sortable !== false)[0]).toBe(PRE_COL);
 
     const sector = container.querySelector('tr.hs-sector:not(.hs-theme)') as HTMLElement;
-    expect((sector.querySelectorAll('td')[1].textContent || '').replace(/\s+/g, ' ').trim())
+    expect((preCellOf(sector, body).textContent || '').replace(/\s+/g, ' ').trim())
       .toBe('+0.8% · 12/40');
     // the roster row printed on only 4 of its 18 members — flagged thin
     const theme = container.querySelector('tr.hs-theme') as HTMLElement;
-    const themeCell = theme.querySelectorAll('td')[1];
+    const themeCell = preCellOf(theme, body);
     expect(themeCell.className).toContain('hs-pre-thin');
     expect(themeCell.getAttribute('title')).toContain('4 of 18 printed');
     expect(themeCell.getAttribute('title')).toContain('too few printed');
   });
 
   it('NEGATIVE: a name with no pre-market print is an em-dash, never a zero', async () => {
-    const { container } = (stubSeq([ok(payload(LIVE_PRE))]), view());
+    const body = payload(LIVE_PRE);
+    const { container } = (stubSeq([ok(body)]), view());
     await screen.findByText(/Technology/);
     // the fixture carries no industry layer, so read the names straight off
     // the sector the way the board does when that box is unchecked
@@ -249,13 +271,13 @@ describe('the Pre-mkt column', () => {
     fireEvent.click(screen.getByRole('button', { name: /Technology/ }));
     const rows = [...container.querySelectorAll('tr.hs-name')] as HTMLElement[];
     const asml = rows.find((r) => (r.textContent || '').includes('ASML')) as HTMLElement;
-    const cell = asml.querySelectorAll('td')[1];
+    const cell = preCellOf(asml, body);
     expect(cell.textContent).toBe('—');
     expect(cell.textContent).not.toContain('0.0%');
     expect(cell.getAttribute('title')).toBe('no pre-market print for this name yet');
     // and the one that DID print names both print times (C2)
     const nvda = rows.find((r) => (r.textContent || '').includes('NVDA')) as HTMLElement;
-    const t = nvda.querySelectorAll('td')[1].getAttribute('title') || '';
+    const t = preCellOf(nvda, body).getAttribute('title') || '';
     expect(t).toContain('printed 7:27 ET');
     expect(t).toContain('RSP +0.07% at 5:00 ET');
   });
@@ -268,7 +290,18 @@ describe('the Pre-mkt column', () => {
     expect(showPreCol({ pre: IDLE_PRE })).toBe(false);
     expect(showPreCol(null)).toBe(false);
     expect(visibleCols(null).length).toBe(9);
-    expect(visibleCols({ pre: LIVE_PRE })[0]).toBe(PRE_COL);
+    /* WAS `visibleCols({ pre: LIVE_PRE })[0]` — which reads as "Pre-mkt is the
+     * first column" but held only because this fixture carries no
+     * `amd_summary`. Since 2026-09-22 the 🌀 state column leads. The invariant
+     * that was always meant: Pre-mkt leads the RANKED legs. */
+    const ranked = visibleCols({ pre: LIVE_PRE }).filter((c) => c.sortable !== false);
+    expect(ranked[0]).toBe(PRE_COL);
+    expect(ranked.slice(0, 4).map((c) => c.key))
+      .toEqual(['pre_1d', 'rel_1d', 'rel_5d', 'rel_21d']);
+    // and it holds identically with the 🌀 column in front of it
+    const withAmd = visibleCols({ pre: LIVE_PRE, amd_summary: { available: true } } as never);
+    expect(withAmd[0].key).toBe('amd');
+    expect(withAmd.filter((c) => c.sortable !== false)[0]).toBe(PRE_COL);
   });
 
   it('preCell: a group appends its count, a printed name names both prints', () => {
@@ -438,6 +471,17 @@ describe('the stored read during RTH', () => {
     // show stayed true, so the column is drawn — with em-dashes, because an
     // ended block carries no per-row numbers
     expect(container.querySelectorAll('thead th').length).toBe(11);
-    expect((container.querySelectorAll('thead th')[1].textContent || '')).toContain('Pre-mkt');
+    // Found by CONTENT, not by index. The 🌀 AMD column now sits between the
+    // name and the ranked legs, so a hard-coded th[1] silently means a
+    // different column depending on whether the sweep was readable.
+    const heads720 = [...container.querySelectorAll('thead th')]
+      .map((th) => th.textContent || '');
+    const iPre = heads720.findIndex((t) => t.includes('Pre-mkt'));
+    expect(iPre).toBeGreaterThan(0);
+    // and it still LEADS the ranked legs. The day column's header is
+    // `d1Label()`: 'Today' only while the day is LIVE, otherwise
+    // 'Last close <date>' — and this fixture is a closed session, which is
+    // also the widest state this table is ever in.
+    expect(heads720[iPre + 1]).toMatch(/Today|Last close/);
   });
 });

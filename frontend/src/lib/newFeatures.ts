@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-22, on a screenshot of the board: "last column is hidded".
+  // The 🌀 AMD column shipped that morning as the LAST of twelve on a table
+  // that already scrolled sideways, so it was off his right edge.
+  { id: 'hottest-amd-column-visible-2026-09-22',
+    label: '\u{1F300} The AMD column moved to where you can actually see it. You said: \u201clast column is hidded\u201d \u2014 and you were right. '
+      + 'WHAT WAS WRONG: it shipped that morning as the twelfth and last column on a table that already ran wider than the screen, so the one thing you asked to see was the one thing off the edge. '
+      + 'WHAT CHANGED: it now sits immediately after the name, before the return columns. It is a state ABOUT the name, and the name cell already carries your other state chips \u2014 so it reads where you look first, and the ranked columns (Pre-mkt, the day, 5 days, 21 days) stay together and in order instead of having a state wedged after them. '
+      + 'AND THE CELLS GOT SHORTER: every cell used to begin with the word \u201cAMD\u201d while the column header already said \u{1F300} AMD \u2014 about 1,900 cells repeating the header. The cell now reads \u201craided \u00b7 2d ago\u201d, and the full sentence is still on hover. The short wording comes from the same table as the long one, so the two can never drift. '
+      + 'WHAT THIS DOES NOT FIX: the board still scrolls sideways. Twelve columns do not fit, and they did not fit before this column existed. The move decides WHICH column you have to scroll to reach, not whether you have to scroll \u2014 and the board is at its widest before the open, when the day column reads \u201cLast close \u2026\u201d instead of \u201cToday\u201d. Nothing on the board was dropped or hidden to make room. '
+      + 'NOT CHANGED: still unsortable, still colourless, still one cached read of the nightly sweep, no gate, no threshold, no ordering. '
+      + 'YOUR CALL, TWO REAL ONES: (1) which of the twelve columns comes off, or gets narrower, to end the sideways scroll for good \u2014 shortening the \u201cLast close \u2026\u201d header alone would buy more room than this whole change did, but that is your wording to change. (2) What a phone should show: as shipped, the move costs you the return columns on a narrow screen. It can wrap instead, or not draw there at all \u2014 it does neither today, on purpose, until you say.',
+    addedAt: '2026-09-22', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-22, on a screenshot of the \u{1F525} Hottest tab with the Defense
   // roster expanded: "Add an AMD tag for these. like a column for me to see
   // which one are getting manipulated." The read is MEASURED INVERTED on its
@@ -29,12 +41,12 @@ export const NEW_FEATURES: NewFeature[] = [
   // no gate, and the verdict travels with it.
   { id: 'hottest-amd-column-2026-09-22',
     label: '\u{1F300} The \u{1F525} Hottest board now shows each name\u2019s AMD cycle phase. You asked: \u201cAdd an AMD tag for these\u2026 a column for me to see which one are getting manipulated.\u201d '
-      + 'WHAT THE CELL SAYS: accumulated and marked up, raided (swept its base low and reclaimed), basing, failed, or stale \u2014 the same five words the \u{1F300} AMD tab in Chart Maps uses, read from the same nightly sweep document. One engine, one wording table, so the column and that tab can never disagree. Hover gives how long ago and how long the base ran. '
+      + 'WHAT THE CELL SAYS: accumulated and marked up, raided (swept its base low and reclaimed), basing, failed, or stale \u2014 the same wording table the \u{1F300} AMD tab in Chart Maps uses, read from the same nightly sweep document. One engine, one wording table, so the column and that tab can never disagree. Hover gives how long ago and how long the base ran. '
       + 'READ THE HOVER BEFORE YOU ACT ON IT: this read was re-measured on 3,712 names and 1,592,057 bars and it is INVERTED on its own claim \u2014 compared like-for-like with a bar sitting the same distance below the same base top, a name flagged raided reaches that base top LESS often, 51.9% against 56.1%, and it is negative in all seven distance buckets. So the column is a description of where a name is in its cycle, not a signal that it is about to go. '
       + 'WHICH IS WHY IT DOES NOT SORT AND IS NOT COLOURED: ranking on it, or painting \u201craided\u201d green, would turn a read measured worse-than-nothing into a recommendation. Both refusals are served as sentences you can read on the board rather than being silently absent. '
       + 'A BLANK IS UNKNOWN, NOT CLEAN: an empty cell means the sweep did not cover that name or could not read it, and it says which. It never means the name is un-manipulated. The line under the table prints how many of the board\u2019s names were actually read \u2014 today 1,469 of 1,476, with 7 blanks. '
       + 'NOT CHANGED: no gate, no threshold, no roster, no ordering. The sweep itself is untouched; this only reads what it already wrote at 17:20 ET on weekdays, so a Monday morning cell is Friday\u2019s read and the line says so. '
-      + 'YOUR CALL: whether you want it sortable after all (it would rank on a read measured inverted); whether it belongs before the price columns rather than after; whether the sector and industry rows should carry a count (they cannot honestly \u2014 their other cells are medians over the full membership while this payload carries 25 names per group); and whether a colour that marks only \u201cfailed\u201d, never \u201craided\u201d, would be useful.',
+      + 'YOUR CALL: whether you want it sortable after all (it would rank on a read measured inverted); whether the sector and industry rows should carry a count (they cannot honestly \u2014 their other cells are medians over the full membership while this payload carries 25 names per group); and whether a colour that marks only \u201cfailed\u201d, never \u201craided\u201d, would be useful.',
     addedAt: '2026-09-22', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-22, same message: "Also give me toggle option to open them app
   // on one click in stead of clicking on the carets".

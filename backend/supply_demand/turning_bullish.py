@@ -348,17 +348,42 @@ AMD_TEXT = {
 }
 
 
-def verdict_text(kind: str, v: Optional[dict]) -> tuple:
-    """("AMD raided · 2d ago", "good") for one verdict dict.
+# The words every verdict in a table opens with. A surface whose own column
+# header ALREADY says 🌀 AMD prints that prefix a second time in every one of
+# its cells — measured on the live `/rotation/hottest` payload, 2026-09-22:
+# 1,922 visible cells, every single one starting with the literal "AMD ",
+# which is how the column ran 26 characters wide and fell off the right edge
+# of his board. `verdict_short` serves the SAME sentence without it.
+#
+# There is no second wording table here and there never may be: two tables is
+# how the coverage histogram ("raided 198 · base failed 651") and the cell
+# beside it learn to disagree. Both forms come out of `KELTNER_TEXT` /
+# `AMD_TEXT` through `grade_label`, and both date a read through `_suffix`.
+VERDICT_PREFIX = {"keltner": "KC ", "amd": "AMD "}
 
-    Returns ("", "muted") for a missing read — the caller drops it, because an
-    empty badge is worse than no badge.
+
+def _table(kind: str) -> dict:
+    return KELTNER_TEXT if kind == "keltner" else AMD_TEXT
+
+
+def grade_label(kind: str, grade) -> str:
+    """One grade's own words, minus the prefix the reading surface already
+    carries: "raided" -> "raided", "marked_up" -> "marked up", "failed" ->
+    "base failed".
+
+    Returns "" for a grade the table does not hold — the caller decides its
+    own fallback. `verdict_short` mirrors `verdict_text` and falls back to the
+    table's "none" row, so a short can never say something the long form would
+    not have said.
     """
-    if not isinstance(v, dict):
-        return ("", "muted")
-    grade = v.get("grade")
-    table = KELTNER_TEXT if kind == "keltner" else AMD_TEXT
-    base, tone = table.get(grade) or table["none"]
+    base = (_table(kind).get(grade) or ("",))[0]
+    pre = VERDICT_PREFIX.get(kind, "")
+    return base[len(pre):] if pre and base.startswith(pre) else base
+
+
+def _suffix(kind: str, grade, v: dict) -> str:
+    """Everything that follows the grade's own words. Decided ONCE, here, so
+    the long form and the short can never date the same read differently."""
     if kind == "keltner":
         bars = v.get("squeeze_bars")
         # The squeeze length is the one number a reader wants next to "coiled",
@@ -369,10 +394,10 @@ def verdict_text(kind: str, v: Optional[dict]) -> tuple:
             ratio = v.get("squeeze_ratio")
             tight = (" · %.2f× wide" % ratio
                      if isinstance(ratio, (int, float)) and ratio == ratio else "")
-            return ("%s · squeeze %db%s" % (base, bars, tight), tone)
+            return " · squeeze %db%s" % (bars, tight)
         if v.get("squeeze_released"):
-            return ("%s · squeeze just released" % base, tone)
-        return (base, tone)
+            return " · squeeze just released"
+        return ""
     # Which age belongs beside which word: the raid dates a raid (fresh or
     # stale), the failure bar dates a failure, the markup dates a markup. A
     # bare base and "no cycle" carry no age — the old code printed "no cycle ·
@@ -381,8 +406,41 @@ def verdict_text(kind: str, v: Optional[dict]) -> tuple:
            else v.get("failed_bars_ago") if grade == "failed"
            else v.get("bars_ago") if grade == "marked_up" else None)
     if isinstance(age, int):
-        return ("%s · %s" % (base, "today" if age == 0 else "%dd ago" % age), tone)
-    return (base, tone)
+        return " · %s" % ("today" if age == 0 else "%dd ago" % age)
+    return ""
+
+
+def verdict_text(kind: str, v: Optional[dict]) -> tuple:
+    """("AMD raided · 2d ago", "good") for one verdict dict.
+
+    Returns ("", "muted") for a missing read — the caller drops it, because an
+    empty badge is worse than no badge.
+    """
+    if not isinstance(v, dict):
+        return ("", "muted")
+    grade = v.get("grade")
+    table = _table(kind)
+    base, tone = table.get(grade) or table["none"]
+    return (base + _suffix(kind, grade, v), tone)
+
+
+def verdict_short(kind: str, v: Optional[dict]) -> tuple:
+    """("raided · 2d ago", "good") — `verdict_text`'s own sentence for a
+    surface that already names the kind in its column header.
+
+    Same table (through `grade_label`), same suffix rule, same tone, and
+    `verdict_text`'s own fallback to the table's "none" row. So the short can
+    never introduce a word the long form would not have printed, and can never
+    date a read differently. Returns ("", "muted") for a missing read, exactly
+    as the long form does — the caller drops it.
+    """
+    if not isinstance(v, dict):
+        return ("", "muted")
+    grade = v.get("grade")
+    table = _table(kind)
+    tone = (table.get(grade) or table["none"])[1]
+    label = grade_label(kind, grade) or grade_label(kind, "none")
+    return (label + _suffix(kind, grade, v), tone)
 
 
 # ---------------------------------------------------------------------------
