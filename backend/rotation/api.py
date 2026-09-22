@@ -19,6 +19,18 @@ from .history import TOP_N as H_TOP_N, MIN_MOVE as H_MIN_MOVE
 from . import tracker as T
 
 log = logging.getLogger("rotation.api")
+
+# 🌀 The AMD column on the 🔥 Hottest board (Ajay 2026-09-22). Bound at MODULE
+# scope on purpose: an alias bound inside a `try` in the handler would be
+# UNBOUND in its own `except`, so a broken import of the new module would raise
+# `NameError` out of the handler and 500 his whole 🔥 tab. Here a bad import
+# drops the column and serves the board — the same discipline
+# `sector_news_tags` follows below.
+try:
+    from . import hottest_amd as HA
+except Exception as exc:                                       # noqa: BLE001
+    HA = None
+    log.warning("rotation: AMD column unavailable (import): %s", exc)
 router = APIRouter(tags=["rotation"])
 
 # Default window start. Ajay 2026-08-16: "From June this happened."
@@ -559,6 +571,22 @@ async def rotation_hottest(
     requested) a `sort=pre_1d` request is DEMOTED to the default leg and
     `sorted_by` says so, rather than ranking on a column of nothing. An
     unknown `basis` falls back to `close` — never a 4xx on a board.
+
+    🌀 `amd` / `amd_summary` (Ajay 2026-09-22: "Add an AMD tag for these. like a
+    column for me to see which one are getting manipulated") hangs the nightly
+    AMD sweep's own verdict on every NAME row — a CACHED READ of the document
+    `supply_demand.turning_bullish.warm` writes at 17:20 ET on weekdays, the
+    same document the 🌀 AMD tab in Chart Maps draws. Nothing is recomputed on
+    this request; that module forbids it in its own words. The read is MEASURED
+    INVERTED on its own claim (2026-09-14, 3,712 names: 51.9% vs 56.1%, −4.2pp
+    [−6.92, −1.89] like-for-like against its own placebo), so it sorts nothing,
+    filters nothing, orders nothing, colours nothing and gates nothing: `amd`
+    is NOT in `sortable`, group rows carry no AMD state, and the board-level
+    counts ride in one served sentence built from THIS request's own counts. A
+    missing document drops the column with a served reason; a broken import of
+    the module drops the column and still serves the board. The member-table
+    early return above carries no `amd_summary` at all, so the column simply
+    does not draw on that branch.
     """
     table, meta = _members_table()
     if table is None:
@@ -588,6 +616,16 @@ async def rotation_hottest(
         for s in body.get("sectors") or []:
             if isinstance(s, dict):
                 s.setdefault("day_tag", None)
+    # 🌀 The AMD column (Ajay 2026-09-22). A CACHED READ of the nightly sweep's
+    # own document — the same one the 🌀 AMD tab in Chart Maps draws — hung on
+    # every NAME row. It never recomputes a verdict, never reorders the board,
+    # and adds no key to `sortable`.
+    if HA is not None:
+        try:
+            body[HA.SUMMARY_KEY] = HA.attach(body)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("rotation/hottest: AMD read unavailable: %s", exc)
+            body[HA.SUMMARY_KEY] = HA.unavailable()
     return JSONResponse(_scrub(body))
 
 

@@ -12218,6 +12218,17 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-live { color: var(--ink-muted); }
 .hs-tier { white-space: nowrap; color: var(--ink-muted); }
 .hs-er { white-space: nowrap; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+/* 🌀 The AMD column (2026-09-22). DELIBERATELY COLOURLESS on this board: the
+ * read is measured INVERTED on its own claim (−4.2pp [−6.92, −1.89] against a
+ * bar inside its own live base), and a green cell scanned down 600 ranked rows
+ * is a ranking. The 🌀 AMD tab in Chart Maps keeps its tones — this is a
+ * presentation choice on one surface, not a second wording engine. The two
+ * toned rules exist so that turning colour on (his call) is a one-line change
+ * and no class is ever built by concatenation. */
+.hs-amd { white-space: nowrap; color: var(--ink-muted); font-size: 0.74rem; }
+.hs-amd-dim { color: var(--ink-muted); }
+.hs-amd-good { color: var(--cm-green, #4ade80); }
+.hs-amd-warn { color: var(--cm-amber, #fbbf24); }
 .hs-spacer { background: inherit; }
 .hs-more { font-size: 0.7rem; color: var(--ink-muted); padding-left: 2.2rem; }
 /* Tone by each cell's OWN sign — a row hot over 5 days still prints today red

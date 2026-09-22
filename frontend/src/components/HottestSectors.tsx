@@ -36,6 +36,10 @@ import type { BandStructureStudy, BounceRoomRow, ExplosiveStudy } from '../lib/b
 import { SignalWatchButton } from './SignalWatchButton';
 import { InfoButton } from './InfoButton';
 import { periodMark } from '../lib/bondeLive';
+import {
+  AMD_COL, amdCell, amdCoverageNote, amdGroupCell, amdHeadTitle, amdToneClass, showAmdCol,
+} from '../lib/hottestAmd';
+import type { HsAmd, HsAmdSummary } from '../lib/hottestAmd';
 
 /** Which session the day column on THIS row came from. `live` = the name's own
  *  move so far in the current session; `close` = the rotation snapshot's last
@@ -133,6 +137,10 @@ export type HsName = HsDayLeg & HsPreLeg & {
    *  not four fiscal quarters apart; `null`/absent = there were no period
    *  keys to check it with; `true` = checked and fine. */
   period_ok?: boolean | null;
+  /** 🌀 The served AMD cycle read for this name (2026-09-22). A pure READ of
+   *  the nightly sweep's stored document — never recomputed on the request,
+   *  and it sorts, filters, colours and gates nothing. */
+  amd?: HsAmd | null;
 };
 /** The fundamental columns a GROUP row carries: the median of its full
  *  membership, computed in rotation/hottest.py::_fund_medians. Before
@@ -203,6 +211,10 @@ export type HsPayload = {
   /** ☀️ The pre-market scan's own block (2026-09-21) — a SIBLING of `d1`,
    *  never nested inside it, so the day column cannot be changed by it. */
   pre?: HsPre | null;
+  /** 🌀 The AMD column's board-level block (2026-09-22) — a SIBLING of `d1`
+   *  and `pre`. Absent entirely on the member-table-unavailable branch, which
+   *  is exactly how the column knows not to draw there. */
+  amd_summary?: HsAmdSummary | null;
   sortable?: string[]; legs?: string[];
   sectors: HsSector[];
   /** Our own curated rosters — robotics, nuclear, quantum, the AI complex,
@@ -245,7 +257,11 @@ export type HsDir = 'desc' | 'asc';
  *  rows per group — sorting in the browser would rank the visible 25 and never
  *  reach the 46th name. `asc` is the useful direction for Next ER (who reports
  *  soonest) and for hunting the weak end of a column. */
-export const HS_COLS: { key: string; label: string; num: boolean; title?: string }[] = [
+/** One printed column. `sortable: false` (only 🌀 AMD today) renders a plain
+ *  header instead of a sort button — see the header block below. */
+export type HsCol = { key: string; label: string; num: boolean; title?: string;
+                      sortable?: boolean };
+export const HS_COLS: HsCol[] = [
   { key: 'rel_1d', label: 'Today', num: true },
   { key: 'rel_5d', label: '5 days', num: true },
   { key: 'rel_21d', label: '21 days', num: true },
@@ -263,7 +279,7 @@ export const HS_COLS: { key: string; label: string; num: boolean; title?: string
 /** ☀️ The Pre-mkt column. NOT a member of HS_COLS: it is conditional on the
  *  served `pre.show`, because an always-present column full of em-dashes is
  *  furniture on a board he already called wide. */
-export const PRE_COL: { key: string; label: string; num: boolean; title?: string } = {
+export const PRE_COL: HsCol = {
   key: 'pre_1d', label: 'Pre-mkt', num: true,
   title: "Each name's own pre-market print against RSP's own pre-market print"
     + ' (its time is in the line above); group rows are the median of the'
@@ -275,14 +291,20 @@ export function showPreCol(d?: Pick<HsPayload, 'pre'> | null): boolean {
   return !!d?.pre?.show;
 }
 /** The columns actually printed, in print order. Pre-mkt sits FIRST, the way
- *  the legs already run newest-to-oldest (Today | 5 days | 21 days). */
-export function visibleCols(d?: Pick<HsPayload, 'pre'> | null) {
-  return showPreCol(d) ? [PRE_COL, ...HS_COLS] : HS_COLS;
+ *  the legs already run newest-to-oldest (Today | 5 days | 21 days); 🌀 AMD
+ *  sits LAST, after Next ER, because it is not a ranked leg — it is a state.
+ *  Both are conditional on the SERVER saying so. */
+export function visibleCols(d?: Pick<HsPayload, 'pre' | 'amd_summary'> | null): HsCol[] {
+  return [
+    ...(showPreCol(d) ? [PRE_COL] : []),
+    ...HS_COLS,
+    ...(showAmdCol(d) ? [AMD_COL] : []),
+  ];
 }
 /** The full-width colSpan for every grain / "showing N of M" / news row: the
  *  symbol column plus whatever columns are printed. Hard-coded 10s are how a
  *  new column leaves five rows one cell short. */
-export function colSpanOf(d?: Pick<HsPayload, 'pre'> | null): number {
+export function colSpanOf(d?: Pick<HsPayload, 'pre' | 'amd_summary'> | null): number {
   return 1 + visibleCols(d).length;
 }
 
@@ -323,6 +345,8 @@ export function colLabel(key: string, d?: Pick<HsPayload, 'd1' | 'as_of'> | null
   /* The Pre-mkt column is not in HS_COLS, and the lookup below falls through
    * to the RAW KEY — so without this line the header would print `pre_1d`. */
   if (key === PRE_COL.key) return PRE_COL.label;
+  /* Same trap for the 🌀 column, which is not in HS_COLS either. */
+  if (key === AMD_COL.key) return AMD_COL.label;
   return HS_COLS.find((c) => c.key === key)?.label || key;
 }
 
@@ -352,6 +376,113 @@ export function colTitle(c: { key: string; title?: string },
   const own = c.key === 'rel_1d' ? (d?.d1?.note || '') : (c.title || '');
   return own ? `${own} · click to sort` : 'click to sort';
 }
+
+/* ── ⊞ Expand all (Ajay 2026-09-22) ──────────────────────────────────────────
+ *
+ * *"Also give me toggle option to open them app on one click in stead of
+ *  clicking on the carets"* — said over a screenshot of the Defense roster.
+ *
+ * THE DEPTH FOLLOWS THE VIEW, and that is not cosmetic. In the DEFAULT view
+ * (`byIndustry` is true, see the state below) a sector renders its INDUSTRIES
+ * and not its names; the names hang off the industry caret. So a rule that
+ * opened only the top level would answer his ask for the rosters in his
+ * screenshot and open eleven sectors into 136 empty industry headers — he
+ * would still be clicking carets, in the view that actually loads. With the
+ * checkbox off, the industry rows are not rendered at all, so inheriting into
+ * those keys would be state with no meaning.
+ *
+ * The 📰 news-tag rows share this very map (`${k}|tag`). They are LLM
+ * briefings, not names, and expand-all must never dump every one of them into
+ * the table — that clause is the whole guard and it is a pinned negative test.
+ *
+ * `all` is the blanket answer, `ov` holds every caret he moved by hand, and an
+ * explicit override always wins: a caret he closed under ⊞ stays closed.
+ */
+export type HsOpen = { all: boolean | null; ov: Record<string, boolean> };
+
+/** The preference key, in the `pcw.capFloor` shape — this board persisted
+ *  nothing before this, and one scheme is enough. */
+export const HS_EXPAND_KEY = 'hs.expandAll';
+/** `null` = never chosen on this browser, which is the shipped default
+ *  (closed). A throwing accessor (private mode, blocked site data) is a
+ *  `null`, never a crash. */
+export function readExpandAllPref(): boolean | null {
+  try {
+    const v = localStorage.getItem(HS_EXPAND_KEY);
+    return v === 'open' ? true : v === 'closed' ? false : null;
+  } catch { return null; }
+}
+export function writeExpandAllPref(v: boolean): void {
+  try { localStorage.setItem(HS_EXPAND_KEY, v ? 'open' : 'closed'); } catch { /* private mode */ }
+}
+
+/** Does the blanket `all` reach this key in THIS view? */
+export function inheritsAll(k: string, byIndustry: boolean): boolean {
+  if (k.endsWith('|tag')) return false;          // 📰 news briefings: NEVER
+  if (k.includes('|i:')) return byIndustry;      // industry rows draw only in that view
+  return true;                                   // t:* rosters and s:* sectors
+}
+/** An explicit per-caret choice beats the blanket one, in both views. */
+export function isGroupOpen(o: HsOpen, k: string, byIndustry: boolean): boolean {
+  return k in o.ov ? o.ov[k] : (o.all === true && inheritsAll(k, byIndustry));
+}
+/** One caret. Always flips what is on SCREEN, so the first click after ⊞
+ *  closes rather than re-opening something already open. */
+export function toggleKey(o: HsOpen, k: string, byIndustry: boolean): HsOpen {
+  return { all: o.all, ov: { ...o.ov, [k]: !isGroupOpen(o, k, byIndustry) } };
+}
+/** The blanket answer, which also clears every hand-moved caret — ⊞ means all. */
+export function setAll(v: boolean): HsOpen { return { all: v, ov: {} }; }
+
+/** Every roster and sector key in this payload. */
+export function topLevelKeys(d?: HsPayload | null): string[] {
+  return [
+    ...(d?.themes || []).map((t) => `t:${t.group}`),
+    ...(d?.sectors || []).map((s) => `s:${s.group}`),
+  ];
+}
+/** What ⊞ actually opens in THIS view — the top level, plus every industry
+ *  while "Break into industries" is on. Never a `|tag` key. */
+export function openedKeys(d?: HsPayload | null, byIndustry = true): string[] {
+  const out = topLevelKeys(d);
+  if (byIndustry) {
+    for (const s of d?.sectors || []) {
+      for (const ind of s.industries || []) out.push(`s:${s.group}|i:${ind.group}`);
+    }
+  }
+  return out;
+}
+/** Is everything ⊞ would open already open? An empty board is never "all
+ *  open" — the button would otherwise mount saying ⊟ Collapse all. */
+export function allGroupsOpen(o: HsOpen, keys: string[], byIndustry: boolean): boolean {
+  return keys.length > 0 && keys.every((k) => isGroupOpen(o, k, byIndustry));
+}
+/** How many rows one click puts on screen, counted from THIS payload — a
+ *  fact for the hover, never a guess. Group rows the click reveals (the
+ *  industries) plus every name row under what it opened. */
+export function expandRowCount(d?: HsPayload | null, byIndustry = true): number {
+  let n = 0;
+  for (const t of d?.themes || []) n += (t.names || []).length;
+  for (const s of d?.sectors || []) {
+    if (byIndustry) {
+      for (const ind of s.industries || []) n += 1 + (ind.names || []).length;
+    } else {
+      n += (s.names || []).length;
+    }
+  }
+  return n;
+}
+/** The control's hover. Says what it opens, why the depth is what it is in
+ *  this view, the real row count, and that the choice is remembered. */
+export const EXPAND_ALL_TITLE = (rows: number, open: boolean, byIndustry: boolean): string =>
+  (open
+    ? 'Closes every roster and sector'
+      + (byIndustry ? ' — and every industry under them' : '')
+      + ` — back to the headers, in one click: ${rows} rows leave the table.`
+    : 'Opens every roster and sector — and, while “Break into industries” is on,'
+      + ' every industry under them, because that is where the names live in this'
+      + ` view — in one click: ${rows} rows from this payload.`)
+  + ' Your choice is remembered on this browser.';
 
 /** One day cell, as text + whether it needs the visible "last close" mark.
  *
@@ -664,10 +795,22 @@ function GroupFundCells({ r }: { r: HsFundMedians }) {
   );
 }
 
+/** 🌀 The AMD cell on a GROUP row — an em-dash with the served reason, always.
+ *  A cycle phase has no median, and a count over the 25 names the payload
+ *  carries would describe a different population from the medians beside it
+ *  (those are the full membership). The counts live under the table. */
+function AmdGroupCell({ s }: { s?: HsAmdSummary | null }) {
+  if (!showAmdCol({ amd_summary: s })) return null;
+  const cell = amdGroupCell(s);
+  return (
+    <td className={`hs-amd ${amdToneClass(cell.tone)}`} title={cell.title}>{cell.text}</td>
+  );
+}
+
 function NameRow({ r, read, study, bandStudy, d1 }: {
   r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
   bandStudy?: BandStructureStudy | null;
-  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre'> | null;
+  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre' | 'amd_summary'> | null;
 }) {
   const nav = useNavigate();
   const loc = useLocation();
@@ -699,6 +842,10 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
   };
 
   const pm = periodMark(r.period_ok);
+  /* 🌀 The served AMD state. Colourless on purpose — the tone that rides in
+     the payload is the 🌀 AMD tab's, and the served refusal sentence is on the
+     hover. Drawn only when the server served the block. */
+  const amd = showAmdCol(d1) ? amdCell(r.amd, d1?.amd_summary) : null;
 
   return (
     <tr className="hs-name"
@@ -762,6 +909,9 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
       <td className="hs-er">
         {r.next_earnings || '—'}{r.earnings_when ? ` ${r.earnings_when}` : ''}
       </td>
+      {amd ? (
+        <td className={`hs-amd ${amdToneClass(amd.tone)}`} title={amd.title}>{amd.text}</td>
+      ) : null}
     </tr>
   );
 }
@@ -772,7 +922,9 @@ export function HottestSectors() {
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState<string>('rel_5d');
   const [dir, setDir] = useState<HsDir>('desc');
-  const [open, setOpen] = useState<Record<string, boolean>>({});
+  /* ⊞ One blanket answer + the carets he moved by hand. `all` starts from the
+   * remembered choice on this browser (absent = closed, the shipped default). */
+  const [open, setOpen] = useState<HsOpen>(() => ({ all: readExpandAllPref(), ov: {} }));
   const [byIndustry, setByIndustry] = useState(true);
   /* ☀️ Which basis the next read asks for, and a tick that makes a SECOND
    * click re-fetch: after the first ☀️ click `basis`, `sort` and `dir` are
@@ -829,7 +981,7 @@ export function HottestSectors() {
 
   const sectors = useMemo(() => data?.sectors || [], [data]);
   const themes = useMemo(() => data?.themes || [], [data]);
-  const toggle = (k: string) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+  const toggle = (k: string) => setOpen((o) => toggleKey(o, k, byIndustry));
   /* 🧨 ONE bounce-room POST for every name row this table can show (sector,
    * industry and roster groups alike) — the chip and the opt-in ordering read
    * that single map; a per-row fetch on a table this wide is out of the
@@ -905,6 +1057,14 @@ export function HottestSectors() {
   const preState = premarketState(data);
   const cols = visibleCols(data);
   const span = colSpanOf(data);
+  /* ⊞ What one click opens in THIS view, and how many rows that really is. */
+  const expandKeys = openedKeys(data, byIndustry);
+  const allOpen = allGroupsOpen(open, expandKeys, byIndustry);
+  const expandRows = expandRowCount(data, byIndustry);
+  /* 🌀 The served line under the table: coverage + staleness, or — when the
+     nightly sweep could not be read — the served sentence saying the column is
+     missing rather than silently dropping it. */
+  const amdNote = amdCoverageNote(data?.amd_summary);
   /* The header mark follows the SERVED order when the server demoted a
    * pre_1d request — the intent stays in `sort` for the next read. */
   const shownSort = shownSortKey(sort, data);
@@ -928,6 +1088,21 @@ export function HottestSectors() {
                  onChange={(e) => setByIndustry(e.target.checked)} />
           Break into industries
         </label>
+        {/* ⊞ Expand all (Ajay 2026-09-22: "give me toggle option to open them
+            app on one click in stead of clicking on the carets"). It sits
+            beside "Break into industries" and NOT beside ↻ / ☀️ because both
+            of these change what the table SHOWS; the other two go and fetch.
+            Yes, that is six controls on one row — in the default view this
+            removes ~150 caret clicks a visit, not 28. */}
+        <button type="button" className="cm-rescan" data-testid="hs-expand-all"
+                title={EXPAND_ALL_TITLE(expandRows, allOpen, byIndustry)}
+                onClick={() => {
+                  const next = !allOpen;
+                  setOpen(setAll(next));
+                  writeExpandAllPref(next);
+                }}>
+          {allOpen ? '⊟ Collapse all' : '⊞ Expand all'}
+        </button>
         {/* ↻ Re-scan (Ajay 2026-09-18: "can you give me rebuild or rescan
             button in hot sectors"). Same class, label and disabled shape as the
             Chart Maps re-scan, so the two read as one control. It re-runs the
@@ -1020,6 +1195,24 @@ export function HottestSectors() {
             flagged <i>thin</i>.</p>
           <p><b>Names are ranked by return, not by traction.</b> Traction measures acceleration, and it
             ranks ANDE 23rd of 76 while the 5-day ranks it 3rd.</p>
+          {/* Every measured figure in this paragraph is SERVED — retyping
+              −4.2pp here is how a surface and its study start disagreeing. */}
+          {data?.amd_summary?.honesty ? (
+            <p><b>The 🌀 AMD column.</b> {data.amd_summary.honesty}
+              {data.amd_summary.no_colour_reason
+                ? <> {data.amd_summary.no_colour_reason}</> : null}
+              {data.amd_summary.group_note ? <> {data.amd_summary.group_note}</> : null}
+            </p>
+          ) : null}
+          {/* ⊞ Expand all — what the one click opens, and why the depth
+              depends on the checkbox above it. */}
+          <p><b>The ⊞ Expand all button.</b> One click opens every roster and every
+            sector — and, while <i>Break into industries</i> is on, every industry
+            under them, because in that view the names hang off the industry caret
+            and not the sector&rsquo;s. Its hover says how many rows that is for the
+            board in front of you. A caret you close by hand afterwards stays closed,
+            the 📰 news briefings are never opened by it, and your choice is
+            remembered on this browser.</p>
           <p><b>This is a discovery list, not a signal.</b> It is trailing returns — nothing here is
             backtested and none of it is a buy signal. Sales, EPS and margin come from the weekly
             research cache, so they can be up to a week behind a fresh print. A blank prints as
@@ -1063,6 +1256,15 @@ export function HottestSectors() {
           🪜 {room.payload.band_structure_coverage.note}
         </div>
       ) : null}
+      {/* 🌀 The AMD read's own line — the histogram, the coverage, the sweep's
+          date and the staleness verdict, in ONE sentence the backend built
+          from the counts on THIS request. A count belongs here, not on a group
+          row whose other cells are full-membership medians. When the sweep
+          document could not be read, this is the served line that says the
+          column is missing rather than dropping it in silence. */}
+      {amdNote ? (
+        <div className="cm-hidden-count" data-testid="hs-amd-note">{amdNote}</div>
+      ) : null}
 
       <div className="hs-scroll">
         <table className="hs-table">
@@ -1070,6 +1272,21 @@ export function HottestSectors() {
             <tr>
               <th className="hs-sym">Sector / Name</th>
               {cols.map((c) => {
+                /* A column that does not sort gets a plain header, not a
+                   dead button: the caption above says "click any column
+                   header", and a header that looks like the other nine and
+                   does nothing is worse than one that never offered. */
+                if (c.sortable === false) {
+                  return (
+                    <th key={c.key} className={c.num ? 'hs-num' : ''}>
+                      <span className="hs-head"
+                            title={c.key === AMD_COL.key
+                              ? amdHeadTitle(data?.amd_summary) : (c.title || '')}>
+                        {colLabel(c.key, data)}
+                      </span>
+                    </th>
+                  );
+                }
                 const on = shownSort === c.key;
                 return (
                   <th key={c.key} className={`${c.num ? 'hs-num' : ''}${on ? ' is-sorted' : ''}`}
@@ -1098,7 +1315,7 @@ export function HottestSectors() {
             ) : null}
             {themes.map((t) => {
               const k = `t:${t.group}`;
-              const isOpen = !!open[k];
+              const isOpen = isGroupOpen(open, k, byIndustry);
               return (
                 <>
                   <tr key={k} className={`hs-sector hs-theme${isOpen ? ' is-open' : ''}`}>
@@ -1116,6 +1333,7 @@ export function HottestSectors() {
                     </td>
                     <LegCells r={t} d1={data} isGroup />
                     <GroupFundCells r={t} />
+                    <AmdGroupCell s={data?.amd_summary} />
                   </tr>
                   {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
@@ -1133,7 +1351,7 @@ export function HottestSectors() {
             ) : null}
             {sectors.map((s) => {
               const k = `s:${s.group}`;
-              const isOpen = !!open[k];
+              const isOpen = isGroupOpen(open, k, byIndustry);
               return (
                 <>
                   <tr key={k} className={`hs-sector${isOpen ? ' is-open' : ''}`}>
@@ -1149,7 +1367,7 @@ export function HottestSectors() {
                         <button
                           type="button"
                           className={'hs-daytag__chip' + (s.day_tag.positive ? ' is-pos' : '')}
-                          aria-expanded={!!open[`${k}|tag`]}
+                          aria-expanded={isGroupOpen(open, `${k}|tag`, byIndustry)}
                           title={dayTagTitle(s.day_tag)}
                           onClick={(ev) => { ev.stopPropagation(); toggle(`${k}|tag`); }}
                         >
@@ -1167,13 +1385,14 @@ export function HottestSectors() {
                     </td>
                     <LegCells r={s} d1={data} isGroup />
                     <GroupFundCells r={s} />
+                    <AmdGroupCell s={data?.amd_summary} />
                   </tr>
-                  {s.day_tag && open[`${k}|tag`]
+                  {s.day_tag && isGroupOpen(open, `${k}|tag`, byIndustry)
                     ? <DayTagRow key={`${k}|tagrow`} tag={s.day_tag} span={span} />
                     : null}
                   {isOpen && byIndustry ? s.industries.map((ind) => {
                     const ik = `${k}|i:${ind.group}`;
-                    const iOpen = !!open[ik];
+                    const iOpen = isGroupOpen(open, ik, byIndustry);
                     return (
                       <>
                         <tr key={ik} className="hs-industry">
@@ -1188,6 +1407,7 @@ export function HottestSectors() {
                           </td>
                           <LegCells r={ind} d1={data} isGroup />
                           <GroupFundCells r={ind} />
+                          <AmdGroupCell s={data?.amd_summary} />
                         </tr>
                         {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (

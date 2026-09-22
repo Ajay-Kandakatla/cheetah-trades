@@ -22,6 +22,29 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-22, on a screenshot of the \u{1F525} Hottest tab with the Defense
+  // roster expanded: "Add an AMD tag for these. like a column for me to see
+  // which one are getting manipulated." The read is MEASURED INVERTED on its
+  // own claim (2026-09-14), so the column ships as a STATE: no sort, no colour,
+  // no gate, and the verdict travels with it.
+  { id: 'hottest-amd-column-2026-09-22',
+    label: '\u{1F300} The \u{1F525} Hottest board now shows each name\u2019s AMD cycle phase. You asked: \u201cAdd an AMD tag for these\u2026 a column for me to see which one are getting manipulated.\u201d '
+      + 'WHAT THE CELL SAYS: accumulated and marked up, raided (swept its base low and reclaimed), basing, failed, or stale \u2014 the same five words the \u{1F300} AMD tab in Chart Maps uses, read from the same nightly sweep document. One engine, one wording table, so the column and that tab can never disagree. Hover gives how long ago and how long the base ran. '
+      + 'READ THE HOVER BEFORE YOU ACT ON IT: this read was re-measured on 3,712 names and 1,592,057 bars and it is INVERTED on its own claim \u2014 compared like-for-like with a bar sitting the same distance below the same base top, a name flagged raided reaches that base top LESS often, 51.9% against 56.1%, and it is negative in all seven distance buckets. So the column is a description of where a name is in its cycle, not a signal that it is about to go. '
+      + 'WHICH IS WHY IT DOES NOT SORT AND IS NOT COLOURED: ranking on it, or painting \u201craided\u201d green, would turn a read measured worse-than-nothing into a recommendation. Both refusals are served as sentences you can read on the board rather than being silently absent. '
+      + 'A BLANK IS UNKNOWN, NOT CLEAN: an empty cell means the sweep did not cover that name or could not read it, and it says which. It never means the name is un-manipulated. The line under the table prints how many of the board\u2019s names were actually read \u2014 today 1,469 of 1,476, with 7 blanks. '
+      + 'NOT CHANGED: no gate, no threshold, no roster, no ordering. The sweep itself is untouched; this only reads what it already wrote at 17:20 ET on weekdays, so a Monday morning cell is Friday\u2019s read and the line says so. '
+      + 'YOUR CALL: whether you want it sortable after all (it would rank on a read measured inverted); whether it belongs before the price columns rather than after; whether the sector and industry rows should carry a count (they cannot honestly \u2014 their other cells are medians over the full membership while this payload carries 25 names per group); and whether a colour that marks only \u201cfailed\u201d, never \u201craided\u201d, would be useful.',
+    addedAt: '2026-09-22', route: '/chart-maps?tab=hot_sectors' },
+  // Ajay 2026-09-22, same message: "Also give me toggle option to open them app
+  // on one click in stead of clicking on the carets".
+  { id: 'hottest-expand-all-2026-09-22',
+    label: '\u229E One click opens every group on \u{1F525} Hottest. You asked: \u201cgive me toggle option to open them app on one click in stead of clicking on the carets\u201d. '
+      + 'WHAT IT DOES: the control above the table opens \u2014 or closes \u2014 every sector, every industry and every roster at once, instead of one caret at a time. It remembers the setting, so the board comes back the way you left it, and a group that appears on a later refresh inherits the open state rather than defaulting shut. '
+      + 'IT SAYS WHAT IT WILL OPEN: the button carries the row count before you press it, because with industries expanded one click opens about 1,791 rows against 518 collapsed. That is the whole payload \u2014 no extra request is made and nothing new is fetched. '
+      + 'NOT CHANGED: it opens and closes rows only. No ordering, no filtering, no membership, no gate. '
+      + 'YOUR CALL: whether \u201call\u201d should stop at sectors and leave industries closed; and whether the setting should follow you to the other boards or stay this one\u2019s.',
+    addedAt: '2026-09-22', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-21, answering the four his-call items from the board-growth
   // research with "Yes". Item #4: leave / label / drop the steady tier -> LABEL.
   // Nothing is hidden, dropped, re-sorted or gated; the tier stays because his

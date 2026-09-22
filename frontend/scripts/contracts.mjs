@@ -3997,6 +3997,90 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '\u{1F300} the AMD column on \u{1F525} Hottest: a STATE, never a ranking (2026-09-22)',
+    file: 'src/lib/hottestAmd.ts',
+    // Ajay 2026-09-22, on a screenshot of the Defense roster: "Add an AMD tag
+    // for these. like a column for me to see which one are getting
+    // manipulated."
+    //
+    // The read he asked for is MEASURED INVERTED on its own claim (2026-09-14,
+    // 3,712 names / 1,592,057 bars: 51.9% vs 56.1% like-for-like, -4.2pp
+    // [-6.92,-1.89], negative in all seven distance buckets). So the column
+    // ships colourless, unsortable, and carrying that verdict. Three things
+    // must stay true or it starts implying an edge nobody measured:
+    //   1. every word is SERVED -- the page composes no verdict;
+    //   2. it does not sort and it is not coloured, each with a served reason;
+    //   3. a blank is UNKNOWN and never wears the words of a real read.
+    checks: (src) => {
+      const errs = [];
+      const py = read('../backend/rotation/hottest_amd.py');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+
+      if (!/AMD_MEASURED\s*=\s*\{/.test(pyCode)) {
+        errs.push('hottest_amd.py must keep the measured verdict in ONE constant');
+      }
+      for (const needle of ['sortable', 'coloured', 'no_sort_reason', 'no_colour_reason']) {
+        if (!new RegExp(`["']${needle}["']`).test(pyCode)) {
+          errs.push(`the payload must declare ${needle} \u2014 the page never decides it`);
+        }
+      }
+      if (!/["']sortable["']:\s*False/.test(pyCode)) {
+        errs.push('the column must ship NOT sortable \u2014 ranking on a read measured inverted');
+      }
+      if (!/["']coloured["']:\s*False/.test(pyCode)) {
+        errs.push('the column must ship colourless \u2014 colour would paint "raided" green');
+      }
+      // the refusal sentences must never wear the words of a real read
+      for (const m of pyCode.matchAll(/REASON_TEXT\s*=\s*\{([\s\S]*?)\n\}/g)) {
+        const body = m[1].toLowerCase();
+        if (/no cycle/.test(body)) errs.push('a blank sentence says "no cycle" \u2014 those are a real read\u2019s words');
+        if (/clean/.test(body)) errs.push('a blank sentence says "clean" \u2014 a blank is UNKNOWN, not clean');
+      }
+      // the FE prints the served cell and invents nothing
+      if (!/sortable:\s*false/.test(src)) errs.push('AMD_COL must declare itself unsortable');
+      if (/new Date\(/.test(src)) {
+        errs.push('hottestAmd.ts must not use the Date constructor \u2014 it prints the PREVIOUS ET day');
+      }
+      if (/\bbounce\b/i.test(src)) errs.push('every surface he reads says "reversal", never "bounce"');
+
+      const tsx = read('src/components/HottestSectors.tsx');
+      if (!/amdCell\(/.test(tsx)) errs.push('HottestSectors.tsx must render the served cell');
+      if (!/amdCoverageNote\(/.test(tsx)) errs.push('the board must print how many names the sweep covered');
+      const code = tsx.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      if (/\.sort\([^)]*amd|amd[^\n;]*\.sort\(/i.test(code)) {
+        errs.push('HottestSectors.tsx sorts on the AMD column \u2014 it is a state, not a ranking');
+      }
+      if (!/id: 'hottest-amd-column-2026-09-22'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the AMD column needs its \u2728 entry');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '\u229E \u{1F525} Hottest opens every group in one click, and remembers it (2026-09-22)',
+    file: 'src/components/HottestSectors.tsx',
+    // Ajay 2026-09-22: "Also give me toggle option to open them app on one
+    // click in stead of clicking on the carets". One control, persisted under
+    // the board's own key, and the row count is stated on the button because
+    // one click can open the whole payload.
+    checks: (src) => {
+      const errs = [];
+      if (!/HS_EXPAND_KEY\s*=\s*'hs\.expandAll'/.test(src)) {
+        errs.push('the expand-all preference must persist under the board\u2019s own key');
+      }
+      if (!/EXPAND_ALL_TITLE/.test(src)) {
+        errs.push('the control must say what it will open \u2014 one click can open the whole payload');
+      }
+      if (!/inheritsAll|allOpen/.test(src)) {
+        errs.push('a group that appears after the toggle must inherit the all-state, not default closed');
+      }
+      if (!/id: 'hottest-expand-all-2026-09-22'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the expand-all toggle needs its \u2728 entry');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
