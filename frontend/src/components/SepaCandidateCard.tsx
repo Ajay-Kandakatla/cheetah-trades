@@ -47,6 +47,7 @@ import { CardEnrichmentChips } from './CardEnrichmentChips';
 // hook is a module-level singleton, so the whole /sepa grid costs ONE
 // /growth/tags request no matter how many cards are on screen.
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { SoirModal } from './SoirModal';
 // Real-time tape (accumulation/distribution) + short-interest squeeze chips.
 // Lazy via IntersectionObserver; accumulation polls while the card is visible.
@@ -404,6 +405,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
                 "why-buy & signals" toggle), and renders nothing off the
                 board — a dense grid pays only for the names that qualify. */}
             <GrowthChip symbol={row.symbol} />
+            <PromoOriginChip symbol={row.symbol} />
             {owned && (
               <span className="sepa-owned"
                     style={{ color: (owned.pl_pct ?? 0) >= 0 ? '#10b981' : '#ef4444' }}

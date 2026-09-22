@@ -2,6 +2,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { TickerLink } from '../components/TickerLink';
 import { GrowthChip } from '../components/GrowthChip';
+import { PromoOriginChip } from '../components/PromoOriginChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { ExplosiveChip } from '../components/ExplosiveChip';
@@ -555,6 +556,7 @@ function CandidateCard({ c, br, study, bandStudy, onClick }: {
             {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
+            <PromoOriginChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
             <EnterableChip read={br?.enterable} className="cm-badge" />
             {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
@@ -1005,6 +1007,7 @@ function PremarketCard({ c, onClick, br, study, bandStudy }: {
             {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
+            <PromoOriginChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
             <EnterableChip read={br?.enterable} className="cm-badge" />
             {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served

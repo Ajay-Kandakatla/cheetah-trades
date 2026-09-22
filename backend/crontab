@@ -1079,6 +1079,30 @@
 # the edit would vanish on the next deploy. Capped at 12 adds per run.
 0      8     *    *    *    /usr/local/bin/python -m traders.curate
 #
+# 🎪 Promo-circuit curation (catalysts/promo_curate.py) — 2026-09-21.
+# Ajay: "make sure to do some research and add them to our list as they come
+# through". The promo sweep above records WHO tagged WHAT; this decides which
+# of those names the app can even SEE.
+#
+# NOTHING HERE IS A BUY. A tag is the PROMOTION, never foresight. An add puts
+# the name in `full` and it then passes every EXISTING downstream gate — the
+# $700M known-cap floor in zone_store, the safety_floor price/cap floors at
+# trading/entries._evaluate, the SEPA qualifier's liquidity gate — exactly like
+# a Russell micro-cap. No new gate, no exemption, no push.
+#
+# Measured on the 374 tagged outsiders in the 14-day window: 170 under $2, 121
+# under $5M median 50-day dollar volume, 24 of the 54 floor-passers are ETFs /
+# ETVs / foreign ADRs. So the gate order is in-universe -> Massive reference
+# type (an ETF never costs a bar fetch) -> traders.curate.validate -> the $2 and
+# $5M floors, and it FAILS CLOSED: an unknown security type is refused.
+#
+# Capped at 12 adds per run (traders.curate.MAX_ADDS_PER_RUN); the overflow is
+# reported as `queue_remaining`, never dropped. Adds age out after 14 days with
+# no roster tag (promo_circuit.RETAG_RESET_DAYS) — the sweep's own "campaign
+# over". Runs 10 minutes after traders.curate so the two never race the
+# universe read.
+10     8     *    *    *    /usr/local/bin/python -m catalysts.promo_curate
+#
 # Demand alerts every 15 min in session, market days only. The board is
 # separate and has no cap floor, but the PUSH still passes his 2026-09-05
 # standing gates (>=5% room overhead, print within 1% above the band floor)

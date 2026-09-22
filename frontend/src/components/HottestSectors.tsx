@@ -24,6 +24,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { TickerLink, openTickerWithModifier } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -709,6 +710,10 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
         {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11:
             "ALL TABS IN CHART MAPS"). */}
         <GrowthChip symbol={r.symbol} className="hs-badge" />
+        {/* 🎪 the promo-circuit origin label travels with the name on every
+            board that shows a 🚀 chip (Ajay 2026-09-21: "add them to our
+            list as they come through"). Renders nothing for the common case. */}
+        <PromoOriginChip symbol={r.symbol} className="hs-badge" />
         <ExplosiveChip read={read?.explosive} study={study} className="hs-badge" />
         <EnterableChip read={read?.enterable} className="hs-badge" />
         {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served

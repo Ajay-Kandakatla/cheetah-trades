@@ -12312,12 +12312,31 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
  * so only the two new tones and the two table variants are defined here. */
 .cm-badge-growth { color: #22d3ee; background: rgba(34,211,238,0.12); }
 .cm-badge-bad    { color: #f85149; background: rgba(248,81,73,0.12); }
+/* 🎪 PromoOriginChip — "entered the universe through the promo-circuit lane"
+ * (2026-09-21). Amber, never green: the tag is promotion, never foresight, so
+ * the colour that belongs to things that measured is not used here. Same
+ * three surface families as the growth chip so the two sit side by side. */
+.cm-badge-promo  { color: #f59e0b; background: rgba(245,158,11,0.12); }
+.sb-chip-promo {
+  display: inline-block; font-size: 0.66rem; padding: 1px 6px;
+  border-radius: 999px; white-space: nowrap; margin-left: 5px;
+  color: #f59e0b; background: rgba(245,158,11,0.12);
+}
+.bd-gchip-promo {
+  font-size: 0.58rem; font-weight: 700; white-space: nowrap; margin-left: 5px;
+  border-radius: 5px; padding: 0 4px; cursor: help;
+  color: #f59e0b; background: rgba(245,158,11,0.12);
+}
 .hs-badge, .sb-chip-growth, .sb-chip-bad {
   display: inline-block; font-size: 0.66rem; padding: 1px 6px;
   border-radius: 999px; white-space: nowrap; margin-left: 5px;
 }
 .hs-badge-growth { color: #22d3ee; background: rgba(34,211,238,0.12); }
 .hs-badge-bad    { color: #f85149; background: rgba(248,81,73,0.12); }
+/* 🎪 promo origin on the 🔥 Hottest table (2026-09-21). `.hs-badge` is layout
+ * only — without this variant the chip renders in the table's inherited ink and
+ * reads like a neutral label. Same amber as the other three families. */
+.hs-badge-promo  { color: #f59e0b; background: rgba(245,158,11,0.12); }
 .sb-chip-growth  { color: #22d3ee; background: rgba(34,211,238,0.12); }
 .sb-chip-bad     { color: #f85149; background: rgba(248,81,73,0.12); }
 

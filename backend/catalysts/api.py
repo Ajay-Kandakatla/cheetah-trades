@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from . import scanner
 from . import chatter as chatter_mod
@@ -382,6 +383,93 @@ async def trigger_promo_sweep():
     import asyncio
     from . import promo_circuit as pc
     return await asyncio.to_thread(pc.sweep)
+
+
+def _scrub(o):
+    """NaN / inf -> None and datetime -> ISO, recursively. FastAPI serialises
+    NaN as a bare `NaN` token, which is not JSON and breaks the frontend's
+    JSON.parse; a raw Mongo datetime is not serialisable at all."""
+    if isinstance(o, float):
+        return None if (o != o or o in (float("inf"), float("-inf"))) else o
+    if isinstance(o, datetime):
+        return o.isoformat()
+    if isinstance(o, dict):
+        return {str(k): _scrub(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_scrub(v) for v in o]
+    return o
+
+
+def _promo_curate_rows(limit: int) -> list:
+    from . import promo_curate as pcur
+    db = pcur._db()
+    if db is None:
+        return []
+    try:
+        return list(db[pcur.COLL].find({}).sort("checked_at", -1).limit(int(limit)))
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("catalysts/promo-curate read failed: %s", exc)
+        return []
+
+
+@router.get("/catalysts/promo-curate")
+async def get_promo_curate(limit: int = Query(200, ge=1, le=1000)):
+    """What the promo-curation lane ADDED to the scan universe, and what it
+    REFUSED — the refusals being the useful half.
+
+    Measured 2026-09-21 on the 374 tagged outsiders inside the board's 14-day
+    window: 170 trade under $2, 121 have median 50-day dollar volume under $5M,
+    and 24 of the 54 that clear both floors are ETFs, ETVs or foreign ADRs.
+    A job that added what the board showed would have put index funds and
+    OTC-quoted ADRs into the universe every scan and paper lane runs on.
+
+    An add means the app can SEE the name. It does not mean the app likes it,
+    and no lane trades off this list — the tag is promotion, never foresight.
+
+    `queue_remaining` and `populations` come from the LAST RUN's own summary
+    doc, never from the rows: a name already in the universe is counted and
+    never written, and a name over the per-run cap is queued rather than
+    refused, so neither has a row to count. Both are `null` / `{}` until a live
+    run has been recorded — `last_run_at` says which it is."""
+    import asyncio
+    from . import promo_curate as pcur
+    rows = await asyncio.to_thread(_promo_curate_rows, limit)
+    last = await asyncio.to_thread(pcur.last_run)
+    counts: dict = {}
+    for r in rows:
+        counts[r.get("status")] = counts.get(r.get("status"), 0) + 1
+    return JSONResponse(_scrub({
+        "rows": rows,
+        "added": counts.get("added", 0),
+        "rejected": counts.get("rejected", 0),
+        "aged_out": counts.get("aged_out", 0),
+        "queue_remaining": last.get("queue_remaining"),
+        "populations": last.get("populations") or {},
+        "last_run_at": last.get("at"),
+        "last_run": last or None,
+        "measured": pcur.MEASURED,
+        "note": ("A tagged name is added because it RESOLVES — a real common "
+                 "stock on a listing exchange, real price history, over the $2 "
+                 "and $5M median-dollar-volume floors — never because a promo "
+                 "account said it. Added means the app can SEE it, not that it "
+                 "likes it. The tag is promotion, never foresight."),
+    }))
+
+
+@router.get("/catalysts/promo-curate/tags")
+async def get_promo_curate_tags():
+    """Which universe names entered through the promo-circuit lane, for the
+    🎪 origin chip. Tiny and read on every board that shows a symbol."""
+    import asyncio
+    from . import promo_curate as pcur
+    tags = await asyncio.to_thread(pcur.origin_tags)
+    return JSONResponse(_scrub({
+        "tags": tags,
+        "measured": pcur.MEASURED,
+        "note": ("Entered the scan universe through the promo-circuit lane — "
+                 "a pump account has pushed this name; the tag is promotion, "
+                 "never foresight. Not a pick."),
+    }))
 
 
 @router.get("/catalysts/halts")

@@ -303,3 +303,25 @@ the cap under each symbol (red when it is under the floor and the toggle is
 off). Tests: `test_market_caps_for_cache_then_capped_fetch`,
 `test_build_rows_carry_market_cap_for_the_floor`, the FE "valuation floor"
 describe.
+
+
+## 2026-09-21 — curation lane + first-tag study
+
+Ajay: *"Can you please check if we can use them and make sure to do some
+research and add them to our list as they come through please?"*
+
+Two things came out of that ask, and they are deliberately separate:
+
+- **`catalysts/promo_curate.py`** — a curation lane beside `traders/curate.py`
+  that decides which tagged names the app can even SEE. It reuses
+  `traders.curate.validate` / `_record` / `added_symbols` / `MAX_ADDS_PER_RUN`,
+  the board's own `TAG_WINDOW_DAYS` / `RETAG_RESET_DAYS` / `prune_shotgun_tags`
+  / `TIER_ORDER`, and the app's existing `$2` and `$5M` floors by name. Adds
+  land in `promo_universe_adds` and are unioned into `full` by a count-guarded
+  `fetch_promo_adds()`. **An add means the app can SEE the name — nothing more;
+  the tag is promotion, never foresight.** See
+  `docs/catalysts/promo_curation.md`.
+- **`backend/scripts/promo_tag_study.py`** — the forward record of a first-ever
+  tag, matched placebo and clustered CIs. See
+  `docs/catalysts/promo_tag_study_2026_09_21.md`. No number from that study
+  reaches a surface until the script has run.

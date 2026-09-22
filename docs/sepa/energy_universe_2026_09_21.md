@@ -88,8 +88,10 @@ name carries on the boards and which theme row it groups under. It is **not**
 a signal, not a gate, and not an endorsement — NAK is on the list as a
 permitting story with no production, exactly as FRMI sits in `ai_power`.
 
-`_EXPECTED_COUNTS["themes"]` moved from (20, 300) to (20, 320): the roster is
-292 and the old ceiling had 8 names of headroom left.
+`_EXPECTED_COUNTS["themes"]` **stays (20, 300)**. Widening it was the first
+instinct and it was wrong: `test_cloud_infra_theme.py` pins the pair with
+"the size band was moved to make this fit", and 292 fits under 300 with 8
+names of headroom. The pin was right; the widening was reverted.
 
 Tests: `backend/tests/test_energy_universe_2026_09_21.py` — 19, including a
 negative for every rejected name above.

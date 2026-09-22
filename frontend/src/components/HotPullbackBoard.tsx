@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -164,6 +165,7 @@ function Row({ r, explosive, enterable, band, study, bandStudy }: {
       <div className="hp-row__head">
         <a className="hp-row__sym" href={`/chart-maps?tab=support&symbol=${encodeURIComponent(r.symbol)}`}>{r.symbol}</a>
         <GrowthChip symbol={r.symbol} className="cm-badge" />
+        <PromoOriginChip symbol={r.symbol} className="cm-badge" />
         <ExplosiveChip read={explosive} study={study} className="cm-badge" />
         <EnterableChip read={enterable} className="cm-badge" />
         <BandStructureChip read={band} study={bandStudy} className="cm-badge" />

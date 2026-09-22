@@ -91,6 +91,18 @@ Guards:
   name also needs a KNOWN market cap over `MIN_CAP_USD` in `shares_cache` before
   `zone_store` gives it bands. Without warming, a fresh add reads as covered
   while raising no alert for up to a week.
+  **2026-09-21: this was a silent no-op.** `_warm_cap` imported
+  `supply_demand.shares_cache`, a module that does not exist; the
+  `ModuleNotFoundError` was swallowed by the `except` and every add landed with
+  `market_cap: None` — the exact invisibility the warm exists to prevent. It now
+  calls the real engine, `sepa.cap_warm.warm`, and reads the cap back off the
+  `shares_cache` row.
+- **The `(0, 200)` band is now actually recorded.** `fetch_trader_adds` was
+  missing from the `_count_guarded` list at the bottom of `sepa/universe.py`, so
+  `LAST_COUNTS["traders"]` had never been written and the band was documentation
+  rather than enforcement (fixed 2026-09-21, alongside the new `promo`
+  component). `_record_count` records and logs loudly; it never rejects, so
+  nothing about the fail-EMPTY contract changed.
 
 ## Schedule
 

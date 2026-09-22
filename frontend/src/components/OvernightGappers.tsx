@@ -14,6 +14,7 @@ import { useGappers, type DayProfile } from '../hooks/useDayTrading';
 import { useSort } from '../lib/useSort';
 import { TickerName } from './TickerCell';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -160,6 +161,7 @@ export function OvernightGappers({ profile, onPick }: {
                         <TickerName symbol={g.symbol} width={16} />
                       </Link>
                       <GrowthChip symbol={g.symbol} className="cm-badge" />
+                      <PromoOriginChip symbol={g.symbol} className="cm-badge" />
                       <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                                      read={room.map.get(String(g.symbol).toUpperCase())?.explosive} />
                       <EnterableChip className="cm-badge"

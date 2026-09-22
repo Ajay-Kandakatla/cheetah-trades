@@ -22,6 +22,7 @@ import { API } from '../lib/apiBase';
 import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -197,6 +198,7 @@ export function SignalLabBoard() {
                     this from PatternChart; the no-data rows are the only place
                     a Signals name renders without one. */}
                 <GrowthChip symbol={r.symbol} className="cm-badge" />
+                <PromoOriginChip symbol={r.symbol} className="cm-badge" />
                 <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                                read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                 <EnterableChip className="cm-badge"

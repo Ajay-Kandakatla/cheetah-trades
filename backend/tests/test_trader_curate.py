@@ -185,3 +185,30 @@ def test_NEGATIVE_an_unreadable_date_is_UNKNOWN_and_not_treated_as_dead(monkeypa
     monkeypatch.setattr(prices, "load_prices",
                         lambda *a, **k: _Frame(390, "not-a-date"), raising=False)
     assert C.validate("WOLF")[0] is True
+
+
+# ── the cap warm was a silent no-op (2026-09-21) ───────────────────────────
+def test_warm_cap_uses_the_REAL_engine_and_the_DEAD_import_path_is_GONE():
+    """`_warm_cap` imported `supply_demand.shares_cache`, which does not exist.
+    The ModuleNotFoundError was swallowed by the `except` and every trader add
+    landed with `market_cap: None` — so a fresh add sat in `full` looking
+    covered while `zone_store` (KNOWN cap over MIN_CAP_USD) skipped it."""
+    import importlib
+    import inspect
+    src = inspect.getsource(C._warm_cap)
+    assert "supply_demand import shares_cache" not in src, "the dead path is back"
+    assert "cap_warm" in src and "_shares_coll" in src
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("supply_demand.shares_cache")
+    assert hasattr(importlib.import_module("sepa.cap_warm"), "warm")
+
+
+def test_NEGATIVE_a_cap_warm_failure_returns_None_and_never_blocks_the_add(
+        monkeypatch):
+    """The cap is a convenience, not a gate. A shares-cache outage must not
+    stop a name that RESOLVED from entering the universe."""
+    from sepa import cap_warm
+    def boom(*a, **k):
+        raise RuntimeError("shares provider down")
+    monkeypatch.setattr(cap_warm, "warm", boom, raising=False)
+    assert C._warm_cap("WOLF") is None

@@ -1,0 +1,664 @@
+{
+ "header": "NOT A SIGNAL, NOT A GATE \u2014 research only (Rule #10)",
+ "asked": "We have this page that pull data from social media and chatter the keeps pulling new stocks.. Can you please check if we can use them and make sure to do some research and add them to our lis tas they come through please?",
+ "asked_on": "2026-09-21",
+ "script": "backend/scripts/promo_tag_study.py",
+ "primary_key": "pooled|5|open|shotgun_kept|all",
+ "primary_reason": "pooled IS+OOS, 5 sessions, entry at the first session OPEN strictly after the tag, shotgun-pruned cohort, all tiers \u2014 the only cell with enough date clusters for a percentile bootstrap",
+ "as_of": "2026-09-22",
+ "oos_from": "2026-09-03",
+ "rerun_after": "2026-10-12",
+ "min_clusters": 20,
+ "draws": 2000,
+ "seed": 7,
+ "k_placebo": 5,
+ "benchmark_context": {
+  "symbol": "RSP",
+  "n_dates": 38,
+  "median_ret_1": -0.0012121907562388512,
+  "median_ret_5": -0.004141910377863045,
+  "median_ret_21": -0.020173214724074018
+ },
+ "base_rates": {
+  "n_events": 3452,
+  "ran_first_pct": 36.41993512238278,
+  "tagday_move_ge_8_pct": 38.071365378944265,
+  "dumped_21_pct": 31.84983348471087,
+  "median_dd_5": -0.1106719367588932,
+  "median_dd_21": -0.35274403016338496,
+  "under_20m_pct": 68.48466981132076,
+  "under_5m_pct": 69.36910377358491,
+  "under_2_pct": 39.59316037735849,
+  "cap_under_700m_pct_of_known": 70.3125,
+  "cap_unknown_pct": 22.13209733487833,
+  "cap_posthoc_pct": 0.49246813441483195,
+  "unclosable_pct": 1.593279258400927,
+  "halted_pct": 0.6373117033603708,
+  "no_history_pct": 1.738122827346466,
+  "n_cache": 741,
+  "n_refresh": 793,
+  "n_no_bars": 29,
+  "pct_of_events": 43.8,
+  "pool_refreshed": 800,
+  "match_fallback_events": 1516,
+  "cap_decile_edges": [
+   2022745.34,
+   3642069.9139999994,
+   5651477.0,
+   11760328.9707,
+   26184657.65,
+   111187336.80400002,
+   693677511.8000001,
+   6081505750.62,
+   49378640363.34619
+  ],
+  "liq_tercile_edges": [
+   184064.50896759334,
+   2908298.5060507124
+  ]
+ },
+ "lines": {
+  "pooled|1|open|shotgun_kept|all": {
+   "n": 1483,
+   "n_placebo": 5994,
+   "n_date_clusters": 35,
+   "n_symbol_clusters": 682,
+   "median": -0.0078023407022107,
+   "placebo_median": -0.00298649832410835,
+   "delta": -0.00481584237810235,
+   "ci_date": [
+    -0.011432973866270995,
+    0.0013338915470493143
+   ],
+   "ci_symbol": [
+    -0.010214302838574978,
+    0.00015506527794383474
+   ],
+   "date_excl0": false,
+   "symbol_excl0": false,
+   "win_pct": 43.83007417397168,
+   "win_ci": [
+    41.323868448506104,
+    46.36816276719299
+   ],
+   "median_dd": -0.0619469026548673,
+   "trimmed_mean": -0.010859370781639276
+  },
+  "pooled|1|close|shotgun_kept|all": {
+   "n": 1462,
+   "n_placebo": 5994,
+   "n_date_clusters": 35,
+   "n_symbol_clusters": 678,
+   "median": -0.0065534763733613,
+   "placebo_median": -0.0033898305084746,
+   "delta": -0.0031636458648867,
+   "ci_date": [
+    -0.014246285889142507,
+    0.0013344789124960922
+   ],
+   "ci_symbol": [
+    -0.012317501880159239,
+    0.0033898305084746
+   ],
+   "date_excl0": false,
+   "symbol_excl0": false,
+   "win_pct": 45.07523939808482,
+   "win_ci": [
+    42.54089793600706,
+    47.63539396347239
+   ],
+   "median_dd": null,
+   "trimmed_mean": -0.0004890148104648783
+  },
+  "pooled|5|open|shotgun_kept|all": {
+   "n": 1231,
+   "n_placebo": 4945,
+   "n_date_clusters": 31,
+   "n_symbol_clusters": 614,
+   "median": -0.0730107526881721,
+   "placebo_median": -0.0252365930599369,
+   "delta": -0.0477741596282352,
+   "ci_date": [
+    -0.07194734256908117,
+    -0.034083210376948773
+   ],
+   "ci_symbol": [
+    -0.06496903727591287,
+    -0.03431338961847651
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 29.244516653127537,
+   "win_ci": [
+    26.771077160461765,
+    31.847097024794056
+   ],
+   "median_dd": -0.1418439716312056,
+   "trimmed_mean": -0.09129260950639637
+  },
+  "pooled|5|close|shotgun_kept|all": {
+   "n": 1214,
+   "n_placebo": 4945,
+   "n_date_clusters": 31,
+   "n_symbol_clusters": 608,
+   "median": -0.0602409638554216,
+   "placebo_median": -0.0239072004526808,
+   "delta": -0.036333763402740804,
+   "ci_date": [
+    -0.061828200247652336,
+    -0.023403952078555963
+   ],
+   "ci_symbol": [
+    -0.05294143088058539,
+    -0.024816078372201057
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 32.20757825370676,
+   "win_ci": [
+    29.638701681722203,
+    34.888704838140484
+   ],
+   "median_dd": null,
+   "trimmed_mean": -0.06319227409711226
+  },
+  "pooled|21|open|shotgun_kept|all": {
+   "n": 65,
+   "n_placebo": 201,
+   "n_date_clusters": 15,
+   "n_symbol_clusters": 59,
+   "median": -0.2420535714285715,
+   "placebo_median": -0.0949380838583533,
+   "delta": -0.1471154875702182,
+   "ci_date": [
+    null,
+    null
+   ],
+   "ci_symbol": [
+    -0.29015330353780655,
+    -0.027322677322677305
+   ],
+   "date_excl0": false,
+   "symbol_excl0": true,
+   "win_pct": 15.384615384615385,
+   "win_ci": [
+    8.577002061798975,
+    26.055545700019454
+   ],
+   "median_dd": -0.3580599144079885,
+   "trimmed_mean": -0.29595964002037534
+  },
+  "pooled|21|close|shotgun_kept|all": {
+   "n": 61,
+   "n_placebo": 201,
+   "n_date_clusters": 15,
+   "n_symbol_clusters": 57,
+   "median": -0.2567567567567567,
+   "placebo_median": -0.0944700460829492,
+   "delta": -0.16228671067380748,
+   "ci_date": [
+    null,
+    null
+   ],
+   "ci_symbol": [
+    -0.3243451886796597,
+    -0.03207744182049022
+   ],
+   "date_excl0": false,
+   "symbol_excl0": true,
+   "win_pct": 19.672131147540984,
+   "win_ci": [
+    11.627688559536848,
+    31.31017848877781
+   ],
+   "median_dd": null,
+   "trimmed_mean": -0.3000274484571087
+  },
+  "IS|5|open|shotgun_kept|all": {
+   "n": 816,
+   "n_placebo": 3196,
+   "n_date_clusters": 31,
+   "n_symbol_clusters": 340,
+   "median": -0.08905410987195375,
+   "placebo_median": -0.02396709050112185,
+   "delta": -0.0650870193708319,
+   "ci_date": [
+    -0.11582569424230749,
+    -0.037890676284459836
+   ],
+   "ci_symbol": [
+    -0.09333853689246109,
+    -0.04253798033958899
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 28.55392156862745,
+   "win_ci": [
+    25.560967871659035,
+    31.747858613847434
+   ],
+   "median_dd": -0.1630434782608695,
+   "trimmed_mean": -0.10749395816272954
+  },
+  "OOS|5|open|shotgun_kept|all": {
+   "n": 415,
+   "n_placebo": 1749,
+   "n_date_clusters": 8,
+   "n_symbol_clusters": 274,
+   "median": -0.0567465321563681,
+   "placebo_median": -0.0280777537796975,
+   "delta": -0.0286687783766706,
+   "ci_date": [
+    null,
+    null
+   ],
+   "ci_symbol": [
+    -0.04304159196445636,
+    -0.014105033060578753
+   ],
+   "date_excl0": false,
+   "symbol_excl0": true,
+   "win_pct": 30.602409638554217,
+   "win_ci": [
+    26.36325898805857,
+    35.19738828289065
+   ],
+   "median_dd": -0.1068783068783069,
+   "trimmed_mean": -0.062065661848103096
+  },
+  "pooled|5|open|shotgun_kept|tier:S": {
+   "n": 14,
+   "n_placebo": 63,
+   "n_date_clusters": 1,
+   "n_symbol_clusters": 14,
+   "median": -0.10020785445297589,
+   "placebo_median": -0.0262263234579892,
+   "delta": -0.0739815309949867,
+   "ci_date": [
+    null,
+    null
+   ],
+   "ci_symbol": [
+    null,
+    null
+   ],
+   "date_excl0": false,
+   "symbol_excl0": false,
+   "win_pct": 14.285714285714286,
+   "win_ci": [
+    4.009307373792118,
+    39.941907763863696
+   ],
+   "median_dd": -0.104613530034745,
+   "trimmed_mean": 0.14233403633404804
+  },
+  "pooled|5|open|shotgun_kept|tier:A": {
+   "n": 466,
+   "n_placebo": 1931,
+   "n_date_clusters": 29,
+   "n_symbol_clusters": 430,
+   "median": -0.0463467240142162,
+   "placebo_median": -0.0238095238095237,
+   "delta": -0.022537200204692503,
+   "ci_date": [
+    -0.03962232422087092,
+    -0.00819953336415647
+   ],
+   "ci_symbol": [
+    -0.03464101189933837,
+    -0.008852431323461618
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 34.12017167381974,
+   "win_ci": [
+    29.96095959110866,
+    38.53906254401092
+   ],
+   "median_dd": -0.09744765610524361,
+   "trimmed_mean": -0.056564069748842434
+  },
+  "pooled|5|open|shotgun_kept|tier:B": {
+   "n": 751,
+   "n_placebo": 2951,
+   "n_date_clusters": 22,
+   "n_symbol_clusters": 368,
+   "median": -0.0933333333333332,
+   "placebo_median": -0.0277990797546011,
+   "delta": -0.0655342535787321,
+   "ci_date": [
+    -0.10616668772634966,
+    -0.04806573099794717
+   ],
+   "ci_symbol": [
+    -0.10161606375515059,
+    -0.049284108409208945
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 26.498002663115845,
+   "win_ci": [
+    23.466980358606744,
+    29.768241441569614
+   ],
+   "median_dd": -0.1784472769409038,
+   "trimmed_mean": -0.11298252338908209
+  },
+  "pooled|1|open|all|all": {
+   "n": 3333,
+   "n_placebo": 11426,
+   "n_date_clusters": 38,
+   "n_symbol_clusters": 1499,
+   "median": -0.0074318744838975,
+   "placebo_median": -0.00355871886121,
+   "delta": -0.0038731556226875,
+   "ci_date": [
+    -0.007357105956355142,
+    -0.0005187366359514478
+   ],
+   "ci_symbol": [
+    -0.006114100085643242,
+    -0.0013380968872158364
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 40.954095409540955,
+   "win_ci": [
+    39.29595556605464,
+    42.633063779664376
+   ],
+   "median_dd": -0.0472576832151301,
+   "trimmed_mean": -0.012326879028432606
+  },
+  "pooled|5|open|all|all": {
+   "n": 2771,
+   "n_placebo": 9360,
+   "n_date_clusters": 34,
+   "n_symbol_clusters": 1334,
+   "median": -0.0574712643678161,
+   "placebo_median": -0.0246018880518736,
+   "delta": -0.0328693763159425,
+   "ci_date": [
+    -0.0457402899518274,
+    -0.025648241147042505
+   ],
+   "ci_symbol": [
+    -0.04089677832903282,
+    -0.02481624513690314
+   ],
+   "date_excl0": true,
+   "symbol_excl0": true,
+   "win_pct": 28.6178274990978,
+   "win_ci": [
+    26.965462873718753,
+    30.329396767999178
+   ],
+   "median_dd": -0.1106719367588932,
+   "trimmed_mean": -0.07640282554325423
+  },
+  "pooled|21|open|all|all": {
+   "n": 106,
+   "n_placebo": 281,
+   "n_date_clusters": 18,
+   "n_symbol_clusters": 95,
+   "median": -0.2492424242424242,
+   "placebo_median": -0.0803571428571429,
+   "delta": -0.1688852813852813,
+   "ci_date": [
+    null,
+    null
+   ],
+   "ci_symbol": [
+    -0.26853154310984056,
+    -0.08144414657922747
+   ],
+   "date_excl0": false,
+   "symbol_excl0": true,
+   "win_pct": 17.92452830188679,
+   "win_ci": [
+    11.786105495852324,
+    26.306566133111563
+   ],
+   "median_dd": -0.35274403016338496,
+   "trimmed_mean": -0.27281045008101595
+  }
+ },
+ "accounts_pooled_5_open": {
+  "AlertsAndNews": {
+   "n": 69,
+   "n_date_clusters": 10,
+   "delta": -0.039396193152081094,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 36.231884057971016
+  },
+  "PSM_EmpowerTrading": {
+   "n": 71,
+   "n_date_clusters": 19,
+   "delta": -0.1496472708503293,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 16.901408450704224
+  },
+  "StockSenseiTrendTraders": {
+   "n": 31,
+   "n_date_clusters": 19,
+   "delta": -0.1719954233409609,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 25.806451612903224
+  },
+  "Swagger_Ape": {
+   "n": 35,
+   "n_date_clusters": 6,
+   "delta": -0.0432526708291871,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 37.142857142857146
+  },
+  "TeamBullish": {
+   "n": 59,
+   "n_date_clusters": 15,
+   "delta": -0.15402915662001432,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 23.728813559322035
+  },
+  "Xen_TorpedoCapital": {
+   "n": 83,
+   "n_date_clusters": 16,
+   "delta": -0.012914968709612597,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 27.710843373493976
+  },
+  "XkaliburTrading": {
+   "n": 80,
+   "n_date_clusters": 13,
+   "delta": -0.1667740852386841,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 17.5
+  },
+  "birdseyetrader": {
+   "n": 40,
+   "n_date_clusters": 7,
+   "delta": -0.01672522977561601,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 30.0
+  },
+  "davidscott": {
+   "n": 66,
+   "n_date_clusters": 12,
+   "delta": -0.0724880382775121,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 28.78787878787879
+  },
+  "jmjtrading": {
+   "n": 30,
+   "n_date_clusters": 8,
+   "delta": -0.0507832949927616,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 30.0
+  },
+  "sadyk189": {
+   "n": 23,
+   "n_date_clusters": 7,
+   "delta": -0.08960980152144354,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 39.130434782608695
+  },
+  "stock_catcher": {
+   "n": 158,
+   "n_date_clusters": 9,
+   "delta": -0.05622697469963295,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 25.31645569620253
+  },
+  "topstockalerts": {
+   "n": 402,
+   "n_date_clusters": 9,
+   "delta": -0.01665673817245865,
+   "ci_date": [
+    null,
+    null
+   ],
+   "win_pct": 35.82089552238806
+  }
+ },
+ "measured_literal": {
+  "as_of": "2026-09-22",
+  "primary": "pooled-5-open",
+  "n_5": 1231,
+  "n_date_clusters_5": 31,
+  "delta_5": -0.0477741596282352,
+  "ci_date_5": [
+   -0.07194734256908117,
+   -0.034083210376948773
+  ],
+  "ci_symbol_5": [
+   -0.06496903727591287,
+   -0.03431338961847651
+  ],
+  "placebo_median_5": -0.0252365930599369,
+  "oos_5": {
+   "n": 415,
+   "clusters": 8,
+   "sign": "\u2212",
+   "ci": null
+  },
+  "oos_clean": false,
+  "rerun_after": "2026-10-12",
+  "verdict": "inverted \u2014 do-not-chase radar; not a source of entries",
+  "script": "backend/scripts/promo_tag_study.py"
+ },
+ "reproductions": {
+  "seed_11": {
+   "as_of": "2026-09-22",
+   "primary": "pooled-5-open",
+   "n_5": 1231,
+   "n_date_clusters_5": 31,
+   "delta_5": -0.0477741596282352,
+   "ci_date_5": [
+    -0.07161703196948568,
+    -0.033545337160785
+   ],
+   "ci_symbol_5": [
+    -0.06482550113560956,
+    -0.03386560788868091
+   ],
+   "placebo_median_5": -0.0252365930599369,
+   "oos_5": {
+    "n": 415,
+    "clusters": 8,
+    "sign": "\u2212",
+    "ci": null
+   },
+   "oos_clean": false,
+   "rerun_after": "2026-10-12",
+   "verdict": "inverted \u2014 do-not-chase radar; not a source of entries",
+   "script": "backend/scripts/promo_tag_study.py"
+  },
+  "note": "the same script at seed 11 reproduces the point estimate exactly and the date interval to within 0.06pp; a third run the same evening, launched separately and re-fetching every stale name rather than reading the cache, reproduced EVERY field of the measured literal identically",
+  "independent_rerun": {
+   "as_of": "2026-09-22",
+   "primary": "pooled-5-open",
+   "n_5": 1231,
+   "n_date_clusters_5": 31,
+   "delta_5": -0.0477741596282352,
+   "ci_date_5": [
+    -0.07194734256908117,
+    -0.034083210376948773
+   ],
+   "ci_symbol_5": [
+    -0.06496903727591287,
+    -0.03431338961847651
+   ],
+   "placebo_median_5": -0.0252365930599369,
+   "oos_5": {
+    "n": 415,
+    "clusters": 8,
+    "sign": "\u2212",
+    "ci": null
+   },
+   "oos_clean": false,
+   "rerun_after": "2026-10-12",
+   "verdict": "inverted \u2014 do-not-chase radar; not a source of entries",
+   "script": "backend/scripts/promo_tag_study.py"
+  },
+  "independent_rerun_identical_fields": [
+   "as_of",
+   "ci_date_5",
+   "ci_symbol_5",
+   "delta_5",
+   "n_5",
+   "n_date_clusters_5",
+   "oos_5",
+   "oos_clean",
+   "placebo_median_5",
+   "primary",
+   "rerun_after",
+   "script",
+   "verdict"
+  ]
+ },
+ "limits": {
+  "oos_clusters": "the out-of-sample cohort has 8 entry dates; a percentile bootstrap on 8 clusters is not a confidence interval, so OOS is a SIGN CHECK and prints ci=n/a",
+  "in_sample_bias": "IS is the window the promo roster was itself selected in and is biased negative-or-positive by construction",
+  "h21": "the 21-session cell has 65 events and no usable interval \u2014 it is not quotable",
+  "match_fallback": "the exact cap-decile x liquidity-tercile placebo cell was empty for 1516 events, which fell back to a wider cell",
+  "per_account": "no per-account cut clears the 20-date-cluster minimum; every point estimate is negative but none carries an interval",
+  "survivorship": "names with no US bars at all are absent by construction",
+  "not_an_edge": "an inverted read is not a short signal \u2014 no entry, no stop, no borrow cost, no cost model"
+ },
+ "verdict": "inverted \u2014 do-not-chase radar; not a source of entries"
+}

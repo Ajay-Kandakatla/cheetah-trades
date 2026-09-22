@@ -174,10 +174,20 @@ def _warm_cap(sym: str) -> Optional[float]:
 
     Without this it sits in `full` with no market cap, `zone_store` skips it
     (KNOWN cap over MIN_CAP_USD), and it looks covered while raising no alert
-    until the weekly warm — up to a week of silent invisibility."""
+    until the weekly warm — up to a week of silent invisibility.
+
+    2026-09-21: this was a silent no-op. It imported `supply_demand.shares_cache`,
+    which does not exist — the `except` swallowed the ModuleNotFoundError and
+    every trader add landed with `market_cap: None`. The real engine is
+    `sepa.cap_warm.warm`, writing the row `zone_store` actually reads."""
     try:
-        from supply_demand import shares_cache as SC
-        return SC.warm([sym]).get(sym) if hasattr(SC, "warm") else None
+        from sepa import cap_warm, volume_movers as vm
+        coll = vm._shares_coll()
+        cap_warm.warm([sym], coll=coll)
+        if coll is None:
+            return None
+        cap = (coll.find_one({"_id": sym}) or {}).get("market_cap")
+        return float(cap) if cap is not None else None
     except Exception as exc:                                   # noqa: BLE001
         log.debug("traders.curate: cap warm failed for %s: %s", sym, exc)
         return None

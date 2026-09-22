@@ -3776,6 +3776,103 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🔋 energy, nuclear and critical-minerals rosters (2026-09-21)',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-09-21: "can you add x energy and then other small energy
+    // companies in to our list please", "Do we have critical minerals in our
+    // list?", "Also greenland minerals or greenland related mineral companies".
+    // THEME_UNIVERSE is the real "our list". The rosters are data; what this
+    // contract defends is that the two names validation REFUSED never come back
+    // and that the derived index stays derived.
+    checks: (src) => {
+      const errs = [];
+      const uni = read('../backend/sepa/universe.py');
+      if (!/^\s*"critical_minerals":/m.test(uni)) {
+        errs.push('the critical_minerals roster is gone from THEME_UNIVERSE');
+      }
+      for (const sym of ['XE', 'CCJ', 'CRML']) {
+        if (!new RegExp(`"${sym}"`).test(uni)) errs.push(`${sym} left the rosters — he asked for it by name`);
+      }
+      // PEN reads like a uranium ticker and is Penumbra, a medical-device
+      // company; SRUUF is a commodity trust, not an operating company. Both
+      // were caught in validation and must never be re-added by a later sweep.
+      for (const [sym, why] of [['PEN', 'Penumbra, a medical-device company'],
+                                ['SRUUF', 'a commodity trust, not an operating company']]) {
+        if (new RegExp(`"${sym}"`).test(uni)) errs.push(`${sym} is back in the universe — it is ${why}`);
+      }
+      if (!/THEME_BY_TICKER\s*(:[^=]*)?=\s*\{[\s\S]{0,200}?for /.test(uni)) {
+        errs.push('THEME_BY_TICKER must stay DERIVED from THEME_UNIVERSE, never hand-written');
+      }
+      if (!/_assert_themes_disjoint\(\)/.test(uni)) {
+        errs.push('the disjoint check must still run at import — it is what makes a double-listing a crash');
+      }
+      if (!/id: 'energy-minerals-rosters-2026-09-21'/.test(src)) {
+        errs.push('the roster additions need their ✨ entry');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🎪 promo-circuit names enter the universe through a GATE, and every board says so (2026-09-21)',
+    file: 'src/components/PromoOriginChip.tsx',
+    // Ajay 2026-09-21: "We have this page that pull data from social media and
+    // chatter the keeps pulling new stocks.. Can you please check if we can use
+    // them and make sure to do some research and add them to our lis tas they
+    // come through please?"
+    //
+    // Being tagged is the INPUT, never the test. What this contract defends:
+    // the gate order (an ETF is refused before anything fetches bars), the
+    // fail-CLOSED reference lookup, the fail-EMPTY universe fetcher, floors
+    // that are IMPORTED objects rather than retyped numbers, and the origin
+    // label travelling with the name onto every board that shows a 🚀 chip.
+    checks: (src) => {
+      const errs = [];
+      const cur = read('../backend/catalysts/promo_curate.py');
+      const uni = read('../backend/sepa/universe.py');
+
+      if (!/"promo"/.test(uni)) errs.push('the promo component left the `full` universe tuple');
+      if (!/_EXPECTED_COUNTS\[["']promo["']\]|["']promo["']\s*:\s*\(/.test(uni)) {
+        errs.push('the promo component has no size band in _EXPECTED_COUNTS');
+      }
+      if (!/def fetch_promo_adds\(/.test(uni)) errs.push('universe.py must own the promo fetcher');
+
+      // fail CLOSED on the reference lookup: an unknown security type is refused.
+      if (!/ADD_TYPES\s*=\s*frozenset\(\{\s*["']CS["']\s*\}\)/.test(cur)) {
+        errs.push('ADD_TYPES must stay {"CS"} — an ADR, ETF or unknown type is refused');
+      }
+      if (!/MAJOR_EXCHANGES/.test(cur)) errs.push('the listing-exchange gate must reuse universe.MAJOR_EXCHANGES, not a new list');
+      if (!/PERMANENT_REJECTS/.test(cur)) errs.push('a refused ADR must not be re-probed every morning');
+
+      // floors are imported objects, never retyped numbers.
+      for (const name of ['MIN_SHARE_PRICE', 'MIN_DOLLAR_VOL_USD', 'MAX_ADDS_PER_RUN']) {
+        if (!new RegExp(`import[^\\n]*${name}|${name}`).test(cur)) {
+          errs.push(`${name} must be imported from the module that enforces it`);
+        }
+      }
+
+      // the chip: renders NOTHING for a name that did not come through the lane,
+      // and never composes a verdict the backend did not serve.
+      if (!/if \(!chip\) return null/.test(src)) {
+        errs.push('PromoOriginChip must render nothing for the common case');
+      }
+      if (/\bbounce\b/i.test(src)) errs.push('every surface he reads says "reversal", never "bounce"');
+
+      // parity: every board that shows a 🚀 GrowthChip shows the origin label.
+      for (const f of ['src/components/BondeBoard.tsx', 'src/components/HottestSectors.tsx',
+                       'src/components/ExplosiveGrowth.tsx', 'src/pages/Catalysts.tsx',
+                       'src/pages/SepaCandidate.tsx', 'src/components/SepaCandidateCard.tsx']) {
+        if (!/<PromoOriginChip/.test(read(f))) {
+          errs.push(`${f} shows board rows without the promo-origin label`);
+        }
+      }
+
+      if (!/id: 'promo-curation-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the curation lane needs its ✨ entry');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

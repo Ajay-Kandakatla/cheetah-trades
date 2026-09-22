@@ -34,6 +34,7 @@ import {
 } from '../lib/supportLevels';
 import { tvChartUrl } from '../lib/tvChart';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -283,6 +284,7 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             <h2 className="sl-sym">
               {data.symbol}
               <GrowthChip symbol={data.symbol} className="cm-badge" />
+              <PromoOriginChip symbol={data.symbol} className="cm-badge" />
               <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                              read={room.map.get(String(data.symbol).toUpperCase())?.explosive} />
               {/* 🎯 chip only, no filter: this tab answers one symbol — the one

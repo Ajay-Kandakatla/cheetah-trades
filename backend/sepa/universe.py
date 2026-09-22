@@ -899,6 +899,10 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     # upper bound is the real guard: it catches a curator regression that starts
     # yielding names by the hundred (traders/curate.py caps a single run at 12).
     "traders": (0, 200),
+    # Same reasoning for the promo-circuit curation lane (2026-09-21): zero is
+    # the legitimate starting state, and the upper bound is the real guard.
+    # Steady state is MAX_ADDS_PER_RUN (12) x the 14-day candidate window = 168.
+    "promo": (0, 200),
     "broad": (1800, 6000),        # measured 3707
     "massive": (3000, 7000),      # ~5300 per the fetcher's own docstring
 }
@@ -960,6 +964,7 @@ def universe_counts(names: list[str] | None = None) -> dict:
         ("russell1000", fetch_russell1000), ("russell3000", fetch_russell3000),
         ("microcap", fetch_microcap), ("etf", fetch_etf_universe),
         ("themes", fetch_themes), ("broad", fetch_broad),
+        ("traders", fetch_trader_adds), ("promo", fetch_promo_adds),
     ))
     out: dict = {}
     for name, fn in fetchers.items():
@@ -2099,7 +2104,11 @@ _UNIVERSE_ALIASES: dict[str, tuple[str, ...]] = {
     # consumer of "full" (scan, zone_store, demand boards, quick-bounce study)
     # widens with it. A raw `russell3000` mode would have DROPPED 95 names that
     # only curated / themes / sp1500 carry — hence the layered alias.
-    "full": ("russell3000", "sp1500", "curated", "themes", "traders"),
+    # `promo` joined 2026-09-21 (Ajay: "add them to our list as they come
+    # through"): names the promo-circuit board tagged that survived the
+    # curation gate in catalysts/promo_curate.py. Being tagged is the INPUT,
+    # never the test — and an add means the app can SEE the name, nothing more.
+    "full": ("russell3000", "sp1500", "curated", "themes", "traders", "promo"),
 }
 
 
@@ -2130,6 +2139,11 @@ _COMPONENT_FETCHERS: dict = {
     # Every row carries who said it and which post, so an add is auditable and
     # flipping its status removes it from the next scan with no code change.
     "traders":     lambda: fetch_trader_adds(),
+    # Tickers the promo-circuit roster tagged that survived the curation gate
+    # (catalysts/promo_curate.py): a real common stock on a listing exchange,
+    # real price history, over the $2 and $5M-median-dollar-volume floors.
+    # Mongo-backed for the same reason `traders` is.
+    "promo":       lambda: fetch_promo_adds(),
     "russell1000": lambda: fetch_russell1000(),
     "russell3000": lambda: fetch_russell3000(),
     "micro":       lambda: fetch_microcap(),
@@ -2158,6 +2172,24 @@ def fetch_trader_adds() -> list[str]:
         return out
     except Exception as exc:                                   # noqa: BLE001
         log.warning("universe: trader adds unavailable: %s", exc)
+        return []
+
+
+def fetch_promo_adds() -> list[str]:
+    """Names curated in from the promo-circuit board. [] on any failure.
+
+    Fails EMPTY, never raising, for exactly the reason `fetch_trader_adds`
+    does: this component sits inside `full`, and a Mongo blip must cost the
+    handful of curated adds, never the whole universe every scan and board
+    runs on."""
+    try:
+        from catalysts.promo_curate import added_symbols
+        out = added_symbols()
+        if out:
+            log.info("universe: %d promo-curated add(s)", len(out))
+        return out
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("universe: promo adds unavailable: %s", exc)
         return []
 
 
@@ -2328,6 +2360,13 @@ fetch_themes = _count_guarded("themes", fetch_themes)
 fetch_broad = _count_guarded("broad", fetch_broad)
 fetch_massive_universe = _count_guarded("massive", fetch_massive_universe)
 fetch_nasdaq_listed = _count_guarded("nasdaq_listed", fetch_nasdaq_listed)
+# The two Mongo-backed curation components were declared with a (0, 200) band
+# and then never wrapped — so `LAST_COUNTS["traders"]` was never written and the
+# band was documentation, not enforcement (found 2026-09-21). `_record_count`
+# records and logs loudly; it never REJECTS, so the fail-EMPTY contract and the
+# universe size are unchanged. Observability only.
+fetch_trader_adds = _count_guarded("traders", fetch_trader_adds)
+fetch_promo_adds = _count_guarded("promo", fetch_promo_adds)
 
 
 BENCHMARK = "SPY"

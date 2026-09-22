@@ -37,6 +37,7 @@ import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
 // so the ticker page can never say something different about a name than the
 // boards do. Off the board it renders nothing at all.
 import { GrowthChip } from '../components/GrowthChip';
+import { PromoOriginChip } from '../components/PromoOriginChip';
 import { SignalWatchButton } from '../components/SignalWatchButton';
 import type { SignalKind } from '../components/SignalDrillModal';
 const WhalesFlowModal = lazyWithReload(() =>
@@ -773,6 +774,7 @@ export function SepaCandidatePage() {
                   when the name is not on it, and wears the ⛔ tone when the
                   trading engine would refuse the name. */}
               <GrowthChip symbol={base.symbol} />
+              <PromoOriginChip symbol={base.symbol} />
             </div>
           )}
           {/* Live price badge — pulls from the SSE bus (Finnhub WS feed)

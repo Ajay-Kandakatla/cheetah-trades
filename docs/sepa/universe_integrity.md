@@ -220,3 +220,29 @@ source guard that `zone_store` still builds from `full` — without which every
 
 All 5 mutations caught, including "unknown cap admitted" and "zone_store
 switched to broad".
+
+## 2026-09-21 — the `promo` component, and two bands that were never enforced
+
+Ajay: *"[the promo page] keeps pulling new stocks.. add them to our list as they
+come through"*.
+
+**Change:** `_UNIVERSE_ALIASES["full"]` =
+`("russell3000", "sp1500", "curated", "themes", "traders", "promo")`. The new
+`promo` component resolves to the `promo_universe_adds` rows that the curation
+lane (`catalysts/promo_curate.py`) admitted — a real common stock on a listing
+exchange, real price history, over `safety_floor.MIN_SHARE_PRICE` ($2 last
+close) and `hot_pullback.MIN_DOLLAR_VOL_USD` ($5M median 50-day dollar volume).
+Being tagged by a pump account is the **input**, never the test, and an add
+means only that the app can SEE the name: every downstream gate applies to it
+unchanged. Band `(0, 200)` — zero is the legitimate starting state and the
+upper bound (12 adds/run × the 14-day window = 168) is the real guard. Full
+rationale and the dry run: `docs/catalysts/promo_curation.md`.
+
+**Bug fixed in the same pass:** `fetch_trader_adds` and `fetch_promo_adds` are
+now **count-guarded**. `traders` has carried a `(0, 200)` band since 2026-09-12,
+but the fetcher was missing from the `_count_guarded` list at the bottom of
+`universe.py` — so `LAST_COUNTS["traders"]` had never once been written and the
+band was documentation, not enforcement. `_record_count` records the size and
+logs ERROR outside the band; it **never rejects** (that is `_count_ok`'s job,
+mid-fallback-chain), so the fail-EMPTY contract and the universe size are
+unchanged. This is observability only. `universe_counts()` now reports both.

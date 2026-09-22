@@ -23,6 +23,7 @@ import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { BandStructureChip } from './BandStructureChip';
 import type { BandStructureStudy } from '../lib/bandStructure';
@@ -175,6 +176,7 @@ export const PatternChart = memo(function PatternChart(
                 Breaking, VCP and the rest. ⛔ tone when the trading engine will
                 refuse the name — good sales must not make it look clean. */}
             <GrowthChip symbol={tile.symbol} />
+            <PromoOriginChip symbol={tile.symbol} />
             {/* 🧨 The explosive read (2026-09-15). PROP-FED off the tile —
                 chart_maps/board.attach_explosive puts it on every tile board
                 request whatever the sort, so the grid makes no extra call. It

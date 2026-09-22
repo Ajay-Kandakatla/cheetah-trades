@@ -24,6 +24,7 @@ import {
 } from '../lib/growthSort';
 import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -631,6 +632,11 @@ export function ExplosiveGrowth() {
                 <tr key={r.symbol}>
                   <td>
                     <TickerLink ticker={r.symbol} fromLabel="Explosive Growth" />
+                    {/* 🎪 the promo-circuit origin label. This board is
+                        where a curated promo add is least obvious, so the row
+                        says where the name came from. Renders nothing for a
+                        name that did not enter through that lane. */}
+                    <PromoOriginChip symbol={r.symbol} className="cm-badge" />
                     <ExplosiveChip className="eg" study={room.payload?.explosive_study}
                                    read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                     <EnterableChip className="eg"

@@ -55,6 +55,9 @@ def fake_lists(monkeypatch):
         # Curated in from the tracked traders' posts (2026-09-12). Tiny on
         # purpose: it is a handful of validated names, not an index layer.
         "traders": make("X", 3),
+        # Curated in from the promo-circuit board (2026-09-21). Tiny for the
+        # same reason: validated names, not an index layer.
+        "promo": make("Z", 2),
     }
     monkeypatch.setattr(U, "_COMPONENT_FETCHERS",
                         {k: (lambda v=v: list(v)) for k, v in lists.items()}
@@ -321,8 +324,13 @@ def test_full_alias_only_names_known_components(fake_lists):
     # are not in our existing list") — names the tracked public traders posted
     # that RESOLVED to a real company with real price history. Mongo-backed,
     # because the curated list is a Python literal baked into the image.
+    # `promo` joined 2026-09-21 (Ajay: "add them to our list as they come
+    # through") — names the promo-circuit board tagged that survived the
+    # curation gate: a real common stock on a listing exchange, real price
+    # history, over the $2 and $5M median-dollar-volume floors. Being tagged
+    # is the input, never the test.
     assert U._UNIVERSE_ALIASES["full"] == (
-        "russell3000", "sp1500", "curated", "themes", "traders")
+        "russell3000", "sp1500", "curated", "themes", "traders", "promo")
     for part in U._UNIVERSE_ALIASES["full"]:
         assert part in U._KNOWN_COMPONENTS, f"alias names unknown component {part}"
 
@@ -346,6 +354,76 @@ def test_NEGATIVE_an_EMPTY_traders_list_is_legitimate_not_a_broken_parse():
     lo, hi = U._EXPECTED_COUNTS["traders"]
     assert lo == 0, "zero curated adds is the normal starting state"
     assert hi <= 500, "an upper bound must still catch a runaway curator"
+
+
+# ---------------------------------------------------------------------------
+# The promo-circuit curation component (2026-09-21)
+# ---------------------------------------------------------------------------
+def test_NEGATIVE_the_promo_component_fails_EMPTY_never_raising():
+    """Same contract as `traders`: it sits inside `full`, and a Mongo blip must
+    cost the handful of curated adds, never the universe every scan runs on."""
+    import catalysts.promo_curate as PCU
+    real = PCU.added_symbols
+    try:
+        PCU.added_symbols = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("down"))
+        assert U.fetch_promo_adds() == []
+    finally:
+        PCU.added_symbols = real
+
+
+def test_NEGATIVE_an_EMPTY_promo_list_is_legitimate_not_a_broken_parse():
+    lo, hi = U._EXPECTED_COUNTS["promo"]
+    assert lo == 0, "zero promo adds is the normal starting state"
+    assert hi <= 500, "an upper bound must still catch a runaway curator"
+
+
+# ---------------------------------------------------------------------------
+# The two Mongo-backed components were BANDED and never GUARDED (2026-09-21)
+#
+# `_EXPECTED_COUNTS["traders"] = (0, 200)` shipped 2026-09-12, but
+# `fetch_trader_adds` was missing from the `_count_guarded` list at the bottom
+# of universe.py — so `LAST_COUNTS["traders"]` was never written and the band
+# was documentation, not enforcement. `_record_count` RECORDS and logs; it
+# never rejects, so wrapping these is observability only: the fail-EMPTY
+# contract and the universe size are unchanged.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("name,fetcher,patch", [
+    ("traders", "fetch_trader_adds", ("traders.curate", "added_symbols")),
+    ("promo", "fetch_promo_adds", ("catalysts.promo_curate", "added_symbols")),
+])
+def test_the_curation_components_RECORD_their_size(name, fetcher, patch,
+                                                   monkeypatch):
+    import importlib
+    mod = importlib.import_module(patch[0])
+    monkeypatch.setattr(mod, patch[1], lambda *a, **k: ["AAA", "BBB"],
+                        raising=False)
+    U.LAST_COUNTS.pop(name, None)
+    assert getattr(U, fetcher)() == ["AAA", "BBB"]
+    assert U.LAST_COUNTS[name] == {"count": 2, "expected": [0, 200], "ok": True}
+
+
+@pytest.mark.parametrize("name,fetcher,patch", [
+    ("traders", "fetch_trader_adds", ("traders.curate", "added_symbols")),
+    ("promo", "fetch_promo_adds", ("catalysts.promo_curate", "added_symbols")),
+])
+def test_NEGATIVE_a_runaway_curator_is_LOGGED_but_still_RETURNED(
+        name, fetcher, patch, monkeypatch, caplog):
+    """`_record_count` runs at the boundary, where rejecting would leave the
+    caller with nothing. 201 names logs ERROR and the 201 names still come
+    back — the band is a tell, not a filter."""
+    import importlib
+    import logging
+    mod = importlib.import_module(patch[0])
+    runaway = [f"R{i}" for i in range(201)]
+    monkeypatch.setattr(mod, patch[1], lambda *a, **k: list(runaway),
+                        raising=False)
+    U.LAST_COUNTS.pop(name, None)
+    with caplog.at_level(logging.ERROR, logger="sepa.universe"):
+        got = getattr(U, fetcher)()
+    assert got == runaway, "never rejected — that is _count_ok's job, not this"
+    assert U.LAST_COUNTS[name]["ok"] is False
+    assert U.LAST_COUNTS[name]["count"] == 201
+    assert any(r.levelno >= logging.ERROR for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------

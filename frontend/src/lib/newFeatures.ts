@@ -22,6 +22,35 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21, with the board's own link: "We have this page that pull
+  // data from social media and chatter the keeps pulling new stocks.. Can you
+  // please check if we can use them and make sure to do some research and add
+  // them to our lis tas they come through please?" Two halves: a MEASUREMENT
+  // of whether a tag is worth anything, and a GATE so the names the board
+  // shows can be seen by the scan without index funds coming with them.
+  { id: 'promo-curation-2026-09-21',
+    label: '\u{1F3AA} Promo-circuit names can now enter the scan \u2014 through a gate, with a label, and with the forward record measured. You asked: \u201ccheck if we can use them and \u2026 add them to our list as they come through\u201d. '
+      + 'THE RESEARCH FIRST, because it changes how you should read the board: every first-ever tag since late July, entered at the next session\u2019s open and held five sessions, against never-tagged names matched on size and liquidity and held over the same dates. The tagged name\u2019s median is \u22127.3% where its matched placebo is \u22122.5% \u2014 a gap of \u22124.78 points, and the confidence interval sits entirely below zero whether you cluster by date or by name (1,231 events, 31 dates). Only 29% finish the week green and the typical one draws down 14% along the way. Day one is a coin flip; the damage is the week after. Out of sample the sign agrees but there are only eight dates, so that leg is a sign check, not a measurement \u2014 it gets a real interval around 2026-10-12. '
+      + 'SO THE VERDICT IS INVERTED: the 🎪 feed is a do-not-chase radar, not a source of entries. A tag is the PROMOTION, never foresight. '
+      + 'WHAT WAS BUILT ANYWAY: the board showed 1,012 names the scan could not see at all. A job now checks the tagged names daily and adds the ones that survive \u2014 listed common stock on a major exchange, resolves with real bars, at least $2 and $5M a day. Being tagged is the INPUT, never the test: on the first dry run 374 names went in, 60 were refused on a single reference call before anything was even fetched (index funds like VOO and SOXX, foreign ADRs like NVO and BCS, and index strings the board mistook for tickers), 153 were under $2, and 30 passed everything. Twelve are added per run, the rest queue. An unknown security type is REFUSED, never added on a guess. '
+      + 'THE LABEL TRAVELS WITH THE NAME: a \u{1F3AA} chip on every board that already shows a \u{1F680} growth chip, so a promo-origin row never reads like a research-sourced one, and the chip carries the measured verdict above. A name with no tag for 14 days leaves the universe on its own. '
+      + 'NOT CHANGED: no new gate, no exemption, no push. An added name passes exactly the floors every other name does \u2014 the $700M cap floor on zones, the $2 and cap floors on entries, the liquidity gate on the scan. '
+      + 'YOUR CALL: the $2 and $5M floors at the universe gate are a NEW kind of rule (every other floor lives downstream) and the numbers are borrowed from your existing ones; six large names the index lists simply miss (UBS, STLA, MNDY, SNAP, CHYM, CBRS) get in through this lane today; three passers are too small for the zone store to read; the trader-adds lane has no security-type gate and put four ETFs in; and the cron line is written but NOT installed \u2014 the crontab is host-mounted and a deploy does not ship it.',
+    addedAt: '2026-09-21', route: '/chart-maps?tab=catalysts&sub=promo' },
+  // Ajay 2026-09-21, three asks in one sitting: "can you add x energy and then
+  // other small energy companies in to our list please", "Do we have critical
+  // minerals in our list?", "Also greenland minerals or greenland related
+  // mineral companies". THEME_UNIVERSE is the real "our list"; every candidate
+  // was validated in the api container before it was added.
+  { id: 'energy-minerals-rosters-2026-09-21',
+    label: '\u{1F50B} 39 names added to the energy, nuclear and critical-minerals lists. You asked: \u201ccan you add x energy and then other small energy companies in to our list\u201d, \u201cDo we have critical minerals in our list?\u201d and \u201cAlso greenland minerals or greenland related mineral companies\u201d. '
+      + 'WHAT WAS MISSING: nuclear held nine reactor names and no fuel cycle at all, so CCJ \u2014 the largest Western uranium producer \u2014 could not be tagged; energy held twenty names and every one was a major, a refiner or midstream, so a small-cap energy move could never read as energy; and there was no lithium, copper, titanium or antimony anywhere. '
+      + 'WHAT WAS ADDED: nine to nuclear (X-Energy, CCJ, UEC, DNN, NXE, URG, EU, LTBR, ASPI), eleven small and mid-cap producers to energy (SM, MGY, CRGY, GPOR, NOG, TALO, REPX, VTS, EGY, WTI, REI), and a new critical-minerals list of nineteen (CRML, ALB, SQM, LAC, SGML, ABAT, FCX, SCCO, TECK, HBM, ERO, IE, NAK, PPTA, UAMY, TROX, IPX, NB, IDR). The lists go from 253 names to 292. Nothing was removed and rare earths were left alone. '
+      + 'GREENLAND, MEASURED: CRML is the only liquid US-listed Greenland name \u2014 the Tanbreez rare-earth project, $1.3B, about $38M a day, full two-year history. Everything else in that complex fails structurally, not narrowly: AMRQ, AMQ, BLUJ, EGDFF and TANB have no US bars at all, and GLND is a $52M shell trading $1.0M a day. '
+      + 'HOW EACH ONE EARNED ITS PLACE: it resolves, is not delisted, carries a bar from the last two sessions and clears the boards\u2019 own dollar-volume floor. Bar COUNT is never the test. Seventeen energy and minerals candidates were refused and the reason is written down for each \u2014 among them VTLE, CIVI and BRY, whose last prices are from December and January and would have read as a flat 0%; and PEN, which reads like a uranium ticker and is Penumbra, a medical-device company. '
+      + 'NOT CHANGED: no gate, no threshold, no scan rule. A new name simply becomes visible to the scan and then passes exactly the same floors every other name does. '
+      + 'YOUR CALL: X-Energy listed in April, so it carries about 103 daily bars and every window longer than five months reads as unknown rather than flat \u2014 that is honest, not broken; and whether the three refused-for-liquidity names (AMPY, KGEI, NPWR) should be watched anyway.',
+    addedAt: '2026-09-21', route: '/sepa' },
   // Ajay 2026-09-21, answering the four questions after the latch shipped:
   // "Yes to all..". Turning the kind back on is HIS call, never mine.
   { id: 'price-alerts-on-and-feed-fold-2026-09-21',

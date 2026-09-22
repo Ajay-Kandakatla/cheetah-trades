@@ -71,6 +71,7 @@ import {
 } from '../lib/bondeLive';
 import { metricCells } from '../lib/boardMetrics';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { compareDemandProximity, demandChipText, inOrNearDemand, compareExplosive, type BounceRoomRow } from '../lib/bounceRoom';
 import { ExplosiveChip } from './ExplosiveChip';
@@ -646,6 +647,7 @@ export default function BondeBoard() {
                           clears the 100/100 explosive-growth screen is the two
                           lists agreeing. */}
                       <GrowthChip symbol={r.symbol} className="bd-gchip" />
+                      <PromoOriginChip symbol={r.symbol} className="bd-gchip" />
                       <ExplosiveChip read={read?.explosive} className="bd-gchip"
                                      study={room.payload?.explosive_study} />
                       <EnterableChip read={read?.enterable} className="bd-gchip" />

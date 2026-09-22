@@ -37,6 +37,7 @@ import OverlayLegend from './OverlayLegend';
 import { TickerLink } from './TickerLink';
 import { SepaPoliticalChip } from './SepaPoliticalChip';
 import { GrowthChip } from './GrowthChip';
+import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { SignalWatchButton } from './SignalWatchButton';
@@ -249,6 +250,7 @@ export default function PotusBoard() {
                       {e?.is_new ? <span className="pb-new mono">✨ NEW</span> : null}
                       {' '}<SepaPoliticalChip symbol={sym} />
                       {' '}<GrowthChip symbol={sym} />
+                      {' '}<PromoOriginChip symbol={sym} />
                       {' '}<ExplosiveChip study={room.payload?.explosive_study}
                                           read={roomRow?.explosive} />
                       {' '}<EnterableChip read={roomRow?.enterable} />
