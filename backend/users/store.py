@@ -316,6 +316,136 @@ def set_alert_settings(email: str, updates: dict) -> dict:
     return merged
 
 
+# ============================================================================
+# Per-user BOARD SORT preferences (2026-09-21).
+#
+# Ajay: "Can you add a server side sort to this so its persistent."
+#
+# The 🔥 Hottest table's sort was ALREADY a server round trip — it has to be,
+# because the payload truncates to `names_per_group` rows per group and a
+# browser-side sort would only ever reorder the visible 25. What the board did
+# NOT have was memory: the component opened on `useState('rel_5d')`, so the
+# column he picked survived until the next reload and never followed him from
+# the desktop to the phone. This is that memory, and nothing else — the sort
+# itself is not moving.
+#
+# Stored on the same `users` doc as `alert_settings`, one small sub-document
+# per board, for the same reason that block gives: no extra collection for two
+# strings.
+#
+#   {"board_sorts": {"hottest": {"sort": "rel_21d", "dir": "asc"}}}
+#
+# THE COLUMN VOCABULARY IS NOT OWNED HERE, and this module must never import
+# `rotation.hottest`. Which columns exist, and which of them can be ranked on,
+# is the board's fact (`H.SORT_KEYS` / `H.SORT_DIRS`); validating against it is
+# the endpoint's job (`rotation/api.py`). This store keeps already-validated
+# strings, exactly as `set_alert_settings` above keeps already-clamped floats.
+# One owner per fact: the alternative is a second copy of the column list
+# living down here and drifting the first time a column is added to the board.
+#
+# The BOARD NAME is a different fact and IS owned here, because it names a
+# storage slot rather than a column. An unknown board is ignored on read and a
+# no-op on write, so a typo'd or retired board can never quietly grow a field
+# on his user doc.
+#
+# Nothing in this block raises. A preference is a convenience; a board read
+# that 500s because Mongo hiccuped while looking up which column to rank on
+# would be a far worse bug than opening on the default column.
+# ============================================================================
+BOARD_SORT_BOARDS = ("hottest",)
+BOARD_SORT_FIELD = "board_sorts"
+
+
+def get_board_sort(email: str, board: str) -> Optional[dict]:
+    """The user's saved sort for one board, or None when there is none to apply.
+
+    Returns ``{"sort": <str>, "dir": <str>}`` — the strings EXACTLY as stored,
+    deliberately unvalidated against any column list (see the block comment:
+    the vocabulary belongs to the board, not to this store). A value that has
+    since been retired, or was never a column at all, comes back as-is and the
+    caller's own validation drops it to the board default.
+
+    Returns None — never raises — when:
+      * the email is blank (no identity, so no preference),
+      * Mongo is unreachable (`_get_db()` is None),
+      * `board` is not in BOARD_SORT_BOARDS,
+      * nothing is stored for that board, or what is stored is not a mapping.
+
+    A non-string `sort` / `dir` inside an otherwise well-shaped sub-document is
+    normalized to ``""`` rather than passed through, so the caller has exactly
+    one failure mode to handle (a string that is not a valid column) instead of
+    two (that, plus a dict where a string was expected).
+    """
+    email = (email or "").strip().lower()
+    board = (board or "").strip()
+    if not email or board not in BOARD_SORT_BOARDS:
+        return None
+    db = _get_db()
+    if db is None:
+        return None
+    try:
+        doc = db.users.find_one({"email": email}, {BOARD_SORT_FIELD: 1}) or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("users.store: board sort read failed for %s: %s", board, exc)
+        return None
+    # `isinstance` and not `or {}` — a hand-edited doc where `board_sorts` is a
+    # STRING or a list would make `.get` raise here, and this function's
+    # contract is that it returns None and never raises. The one caller today
+    # happens to catch, but a docstring is a promise the next caller will take
+    # at its word.
+    bag = doc.get(BOARD_SORT_FIELD)
+    saved = bag.get(board) if isinstance(bag, dict) else None
+    if not isinstance(saved, dict):
+        return None
+    return {
+        "sort": saved.get("sort") if isinstance(saved.get("sort"), str) else "",
+        "dir":  saved.get("dir") if isinstance(saved.get("dir"), str) else "",
+    }
+
+
+def set_board_sort(email: str, board: str, sort: str, dir: str) -> dict:  # noqa: A002
+    """Persist one board's sort for one user. Returns what was stored, or {}.
+
+    ``{}`` is the "nothing was written" answer and the caller reports it as
+    such (the endpoint answers 200 with ``stored: false``): blank email, Mongo
+    down, unknown board, or a non-string argument. Never raises.
+
+    `sort` and `dir` are written VERBATIM and are assumed already validated
+    against the board's own vocabulary by the caller — this function is not
+    where a bad column gets caught, and it deliberately has no opinion about
+    which columns exist.
+
+    The write is a DOTTED `$set` (`board_sorts.<board>`), not a whole-field
+    replace. Two boards saved from two devices in the same minute then leave
+    both preferences standing; replacing `board_sorts` wholesale would make
+    the second write silently delete the first board's row.
+    """
+    email = (email or "").strip().lower()
+    board = (board or "").strip()
+    if not email or board not in BOARD_SORT_BOARDS:
+        return {}
+    if not isinstance(sort, str) or not isinstance(dir, str):
+        return {}
+    sort, dir = sort.strip(), dir.strip()                      # noqa: A001
+    if not sort or not dir:
+        return {}
+    db = _get_db()
+    if db is None:
+        return {}
+    value = {"sort": sort, "dir": dir}
+    try:
+        db.users.update_one(
+            {"email": email},
+            {"$set": {"%s.%s" % (BOARD_SORT_FIELD, board): value},
+             "$setOnInsert": {"email": email, "created_at": _now()}},
+            upsert=True,
+        )
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("users.store: board sort write failed for %s: %s", board, exc)
+        return {}
+    return dict(value)
+
+
 def _derived(email: str) -> str:
     """Last-resort display name from the email handle.
     'ajaykandakatla@gmail.com' → 'Ajaykandakatla'

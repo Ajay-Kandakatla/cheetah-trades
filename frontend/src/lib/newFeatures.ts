@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21, on the 🔥 Hottest table: "Can you add a server side sort
+  // to this so its persistent". The sort was ALREADY a backend round-trip —
+  // what it was not was REMEMBERED. The column now lives on the user, beside
+  // the alert settings, so it follows him from the Mac to the phone.
+  { id: 'hottest-sort-persist-2026-09-21',
+    label: '\u{1F525} Hottest: the column you rank on is remembered. You said: “Can you add a server side sort to this so its persistent.” '
+      + 'WHAT WAS WRONG: the sort was always a server round-trip — it has to be, because the board carries only the top names per group and a browser reorder would rank the visible 25 and never reach the 305th Technology name — but the CHOICE lived in the page. Every reload, every tab switch, every time you opened the board on the phone, it went back to 5 days. '
+      + 'WHAT CHANGED: the column and the direction are stored against your account, next to your alert settings. The board opens on whatever you last clicked, on any device. Clicking a header is what saves it — that is the only thing that does. '
+      + 'WHAT IT IS NOT: nothing about the RANKING changed — same columns, same server sort, same numbers, same layout. No new column, nothing hidden, nothing gated, no push. A preference that fails to store never puts an error on the board and never blocks the reorder; the worst case is that the next load opens on the previous column. '
+      + 'THE ☀️ PRE-MARKET COLUMN IS DELIBERATELY NOT STORED: outside 4:00–9:30 ET there is nothing for it to rank against, so the server demotes it — saving it would strand you on a dead column on every later load. The ☀️ button still ranks on it for that read, it just never becomes your default. '
+      + 'YOUR CALL: whether the other boards (Breakouts, \u{1F680} Growth, \u{1F4C8} Bonde) should remember their sort the same way; whether ↻ Re-scan should be able to change the stored column (today it deliberately cannot); and whether you want a way to reset back to 5 days from the board itself.',
+    addedAt: '2026-09-21', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-21, answering the four his-call items from the board-growth
   // research with "Yes". Item #4: leave / label / drop the steady tier -> LABEL.
   // Nothing is hidden, dropped, re-sorted or gated; the tier stays because his

@@ -10,7 +10,7 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
 from . import backtest as B
@@ -515,11 +515,123 @@ async def rotation_changes(
     return JSONResponse(_scrub(out))
 
 
+# ── 🔥 Hottest: the column he picked, remembered (2026-09-21) ───────────────
+# Ajay: "Can you add a server side sort to this so its persistent".
+#
+# The sort was already served HERE and stays here — it has to, because the
+# payload truncates to `names` rows per group (see the endpoint's docstring).
+# What was missing was MEMORY: the board opened on `useState('rel_5d')` every
+# time, so the column he picked lasted until the next reload and never
+# followed him from the desktop to the phone.
+#
+# Three rules hold this together, and each one is a bug that would otherwise
+# ship:
+#
+#   1. THE COLUMN VOCABULARY LIVES IN `rotation.hottest` (H.SORT_KEYS /
+#      H.SORT_DIRS) and is validated HERE, once, on the way in and on the way
+#      out. `users.store` keeps validated strings and never imports this
+#      module — one owner per fact, so adding a column to the board does not
+#      need a second list updated somewhere else.
+#   2. A BOARD READ NEVER 4xxs. Identity is resolved best-effort; a
+#      preference WRITE may 400, a board read may not. An unreadable
+#      preference, an unauthenticated caller and a Mongo outage all land on
+#      exactly the same page: the board's own defaults.
+#   3. THE READ NEVER WRITES. This matters because of a demotion that is
+#      already live below: when the pre-market leg has nothing in it, a
+#      `sort=pre_1d` request is demoted to the default leg. Writing back what
+#      was SERVED would quietly overwrite his chosen column with `rel_5d` the
+#      first time he opened the board after 9:30. Only POST
+#      /rotation/hottest/sort writes, and it writes what was ASKED for.
+HOTTEST_BOARD = "hottest"
+# ☀️ Sortable, but never SAVEABLE. `pre_1d` ranks fine on a live pre-market
+# read and is refused as a stored preference, because a cold read is always
+# `basis=close`: `build_live` hands back an idle pre block and this endpoint
+# demotes the column every single time. A stored `pre_1d` is therefore a
+# preference that can never be honoured — worse than none, because it
+# displaces the column he actually picked. One tuple so the refusal, the
+# advertised `sortable` list and the frontend guard cannot drift apart.
+UNSAVEABLE_SORTS = (H.PRE_SORT,)
+# Where the column the board was asked to rank on came from. `sorted_by` /
+# `sorted_dir` keep their existing meaning — what was actually SERVED, which
+# can differ from what was asked when the pre-market demotion fires.
+SORT_SOURCE_REQUEST = "request"
+SORT_SOURCE_SAVED = "saved"
+SORT_SOURCE_DEFAULT = "default"
+
+
+def _valid_sort(v) -> Optional[str]:
+    """A sortable column name, or None. Everything else is None: the empty
+    sentinel, a Query object leaking out of a direct call (`_coerce_str`'s
+    trap), a retired column, and `"; DROP TABLE"` alike."""
+    return v if isinstance(v, str) and v in H.SORT_KEYS else None
+
+
+def _valid_dir(v) -> Optional[str]:
+    return v if isinstance(v, str) and v in H.SORT_DIRS else None
+
+
+async def _viewer_email(request) -> str:
+    """The signed-in viewer's email, BEST EFFORT — "" when there isn't one.
+
+    `auth.current_user_email` RAISES 401 in an HTTP context with no auth
+    signal, which is right for a user-scoped endpoint and wrong here: the
+    Hottest board is a read that has always answered without a session, and it
+    must not start 401ing because it now also looks up which column to open
+    on. `auth.maybe_current_user` is the non-raising sibling and stays the one
+    owner of how an identity is resolved (header, then local-auth cookie), so
+    this does not grow a second copy of that logic.
+
+    The header is passed EXPLICITLY rather than left to the dependency's
+    `Header(None)` default: a direct (non-FastAPI) call receives the Header
+    OBJECT — truthy, with no `.strip()` — the same trap `_coerce_str` above
+    exists for. Anything that still goes wrong is swallowed and read as
+    anonymous.
+    """
+    if request is None:
+        # No HTTP request at all — a cron/smoke caller importing the handler.
+        # There is no VIEWER in that context, and falling back to
+        # DEFAULT_USER_EMAIL here would serve a board ranked by Ajay's saved
+        # column to whoever the script is really acting for.
+        return ""
+    try:
+        from auth import maybe_current_user
+        email = await maybe_current_user(
+            request=request,
+            x_user_email=(request.headers or {}).get("X-User-Email"),
+        )
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rotation/hottest: identity unresolved (%s); serving anonymous", exc)
+        return ""
+    return email if isinstance(email, str) else ""
+
+
+def _saved_board_sort(email: str, board: str = HOTTEST_BOARD) -> dict:
+    """`{"sort": ..., "dir": ...}` as stored, or {}. Never raises, never builds.
+
+    Garbage that reached Mongo before this validation existed (or by hand)
+    comes back verbatim and is dropped by `_valid_sort` / `_valid_dir` at the
+    call site — the board falls back to its default rather than ranking on a
+    column that does not exist.
+    """
+    if not email:
+        return {}
+    try:
+        from users import store as user_store
+        return user_store.get_board_sort(email, board) or {}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("rotation/hottest: saved sort unreadable: %s", exc)
+        return {}
+
+
 @router.get("/rotation/hottest")
 async def rotation_hottest(
-    sort: str = Query(H.DEFAULT_SORT,
-                      description="any key in the payload's `sortable` list"),
-    dir: str = Query(H.DEFAULT_DIR, description="desc | asc"),
+    request: Request = None,
+    sort: str = Query("",
+                      description="any key in the payload's `sortable` list; "
+                                  "empty = this user's saved column, then "
+                                  + H.DEFAULT_SORT),
+    dir: str = Query("", description="desc | asc; empty = this user's saved "
+                                     "direction, then " + H.DEFAULT_DIR),
     names: int = Query(H.NAMES_PER_GROUP, ge=1, le=200,
                        description="names returned per sector/industry"),
     basis: str = Query(H.D1_CLOSE,
@@ -559,20 +671,58 @@ async def rotation_hottest(
     requested) a `sort=pre_1d` request is DEMOTED to the default leg and
     `sorted_by` says so, rather than ranking on a column of nothing. An
     unknown `basis` falls back to `close` — never a 4xx on a board.
+
+    🧠 THE SORT IS REMEMBERED (Ajay 2026-09-21: "Can you add a server side sort
+    to this so its persistent"). `sort` / `dir` default to the EMPTY SENTINEL,
+    which means "open on whatever I last picked":
+
+        an explicit, valid query param  >  this viewer's saved preference
+                                        >  H.DEFAULT_SORT / H.DEFAULT_DIR
+
+    `sort_source` / `dir_source` say which of the three answered, so the board
+    can show "your column" without guessing. They describe what the board was
+    ASKED to rank on; `sorted_by` / `sorted_dir` keep their existing meaning —
+    what was actually SERVED — and the two differ exactly when the pre-market
+    demotion above fires. THIS ENDPOINT NEVER WRITES: a demoted `pre_1d` must
+    not overwrite his saved column with `rel_5d` just because he opened the
+    board after the bell. POST /rotation/hottest/sort is the only writer.
+
+    Identity is best-effort and anonymous is a first-class answer: no session,
+    an unreadable preference or a Mongo outage all land on the defaults, which
+    is byte-for-byte how this endpoint behaved before any of this existed. A
+    board read never 401s and never 4xxs.
     """
+    # Resolved BEFORE the member table is read, so the unavailable-table body
+    # below still reports the real column instead of the empty sentinel.
+    req_sort, req_dir = _valid_sort(sort), _valid_dir(dir)
+    saved = {} if (req_sort and req_dir) else _saved_board_sort(
+        await _viewer_email(request))
+    saved_sort, saved_dir = _valid_sort(saved.get("sort")), _valid_dir(saved.get("dir"))
+
+    use_sort = req_sort or saved_sort or H.DEFAULT_SORT
+    use_dir = req_dir or saved_dir or H.DEFAULT_DIR
+    sort_source = (SORT_SOURCE_REQUEST if req_sort else
+                   SORT_SOURCE_SAVED if saved_sort else SORT_SOURCE_DEFAULT)
+    dir_source = (SORT_SOURCE_REQUEST if req_dir else
+                  SORT_SOURCE_SAVED if saved_dir else SORT_SOURCE_DEFAULT)
+    sources = {"sort_source": sort_source, "dir_source": dir_source,
+               "board": HOTTEST_BOARD}
+
     table, meta = _members_table()
     if table is None:
         return JSONResponse({"sectors": [], "reason": meta.get("reason") or "member table unavailable",
-                             "sorted_by": sort, "sorted_dir": dir, **meta}, status_code=200)
+                             "sorted_by": use_sort, "sorted_dir": use_dir,
+                             **sources, **meta}, status_code=200)
     payload = dict(_members_payload() or {})
     payload[T.MEMBERS_KEY] = table
     b = _coerce_str(basis, H.D1_CLOSE)
     if b not in (H.D1_CLOSE, H.D1_PREMARKET):
         b = H.D1_CLOSE
-    body = H.build_live(payload, sort=_coerce_str(sort, H.DEFAULT_SORT),
-                        direction=_coerce_str(dir, H.DEFAULT_DIR),
+    body = H.build_live(payload, sort=use_sort,
+                        direction=use_dir,
                         names_per_group=_coerce_int(names, H.NAMES_PER_GROUP),
                         basis=b)
+    body.update(sources)
     body.update({k: v for k, v in meta.items() if k in ("source", "built_at_iso", "age_sec", "stale")})
     # 📰 The day's bull/bear tag per sector (Ajay 2026-09-19). A pure READ of
     # what the cron already wrote — it never builds, never calls the model and
@@ -589,6 +739,93 @@ async def rotation_hottest(
             if isinstance(s, dict):
                 s.setdefault("day_tag", None)
     return JSONResponse(_scrub(body))
+
+
+@router.post("/rotation/hottest/sort")
+async def rotation_hottest_sort_save(payload: dict, request: Request = None):
+    """Remember which column the 🔥 Hottest board opens on, for this user.
+
+    Body: ``{"sort": "<any key in `sortable`>", "dir": "desc" | "asc"}``.
+    Both are required — he picks a column AND a direction in one click, and a
+    half-saved preference would open the board on a column pointing the wrong
+    way. The pair is validated against the board's own vocabulary
+    (`H.SORT_KEYS` / `H.SORT_DIRS`), which is the single owner of what a column
+    is; `users.store` never sees an unvalidated string.
+
+    THE ONLY WRITER. GET /rotation/hottest reads this preference and never
+    writes one, because that endpoint DEMOTES `sort=pre_1d` to the default leg
+    when the pre-market column has nothing in it — writing back what it served
+    would silently replace his chosen column the first time he loaded the
+    board after 9:30.
+
+    Status codes, deliberately asymmetric with the board read:
+      * 400 — unknown column or unknown direction. A preference WRITE is
+        allowed to refuse: it is an explicit action with an explicit answer,
+        and the response carries the valid lists so the caller can say what is
+        allowed instead of guessing. NOTHING is stored on a 400.
+      * 200 with ``stored: false`` — there is no identity to store it against
+        (anonymous caller), or the preference store is unreachable. The board
+        keeps working on defaults; an unsaved preference is a disappointment,
+        not an error, and must not surface as a red toast on a working board.
+      * 200 with ``stored: true`` — persisted, and the body echoes exactly
+        what is now on the user's doc.
+    """
+    body = payload if isinstance(payload, dict) else {}
+    want_sort, want_dir = _valid_sort(body.get("sort")), _valid_dir(body.get("dir"))
+    if want_sort in UNSAVEABLE_SORTS:
+        # ☀️ A VALID column that can never be an honoured PREFERENCE. A cold
+        # read is always `basis=close`, so `build_live` hands back an idle pre
+        # block and the endpoint demotes `pre_1d` to the default leg — 100% of
+        # later loads, not 20 hours of 24. Storing it would therefore replace
+        # his real column with one that is dead on arrival, and leave the board
+        # opening on the default leg in whatever direction rode along. Refused
+        # at the writer, where the rule has one owner; the board READ already
+        # never writes, so this closes the only door in.
+        return JSONResponse({
+            "stored": False,
+            "error": "%r cannot be saved as a preference" % want_sort,
+            "reason": "the pre-market column is demoted on every cold read, so "
+                      "a saved pre_1d would never be the column you got back",
+            "board": HOTTEST_BOARD,
+            "sortable": [k for k in H.SORT_KEYS if k not in UNSAVEABLE_SORTS],
+            "dirs": list(H.SORT_DIRS),
+        }, status_code=400)
+    if not want_sort or not want_dir:
+        bad = "sort" if not want_sort else "dir"
+        return JSONResponse({
+            "stored": False,
+            "error": "unknown %s: %r" % (bad, body.get(bad)),
+            "board": HOTTEST_BOARD,
+            # The valid lists ride in the 400 itself — the caller that got this
+            # wrong is exactly the caller that needs to be told what is legal.
+            # Legal HERE, on the writer: advertising a column this endpoint
+            # would turn around and refuse is worse than not listing it.
+            "sortable": [k for k in H.SORT_KEYS if k not in UNSAVEABLE_SORTS],
+            "dirs": list(H.SORT_DIRS),
+        }, status_code=400)
+
+    email = await _viewer_email(request)
+    if not email:
+        return JSONResponse({
+            "stored": False, "board": HOTTEST_BOARD,
+            "sort": want_sort, "dir": want_dir,
+            "reason": "no signed-in user — the sort applies to this view only",
+        }, status_code=200)
+
+    try:
+        from users import store as user_store
+        saved = user_store.set_board_sort(email, HOTTEST_BOARD, want_sort, want_dir)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("rotation/hottest: saved sort write failed: %s", exc)
+        saved = {}
+    if not saved:
+        return JSONResponse({
+            "stored": False, "board": HOTTEST_BOARD,
+            "sort": want_sort, "dir": want_dir,
+            "reason": "preference store unavailable — the sort applies to this view only",
+        }, status_code=200)
+    return JSONResponse({"stored": True, "board": HOTTEST_BOARD, **saved},
+                        status_code=200)
 
 
 @router.get("/rotation/backtest")

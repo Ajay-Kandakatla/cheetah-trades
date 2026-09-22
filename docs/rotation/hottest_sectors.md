@@ -466,3 +466,129 @@ a third basis (`basis=premarket`) adds a `Pre-mkt` column from each name's own
 pre-market print against RSP's own, one snapshot for the whole board, with the
 day column byte-identical and nothing measured. Full write-up:
 [`hottest_premarket_2026_09_21.md`](hottest_premarket_2026_09_21.md).
+
+---
+
+## 2026-09-21 — the column you rank on is REMEMBERED
+
+Ajay 2026-09-21: *"Can you add a server side sort to this so its persistent"*.
+
+The sort was **already** server-side — that landed 2026-09-12 and it has to be
+server-side, because the payload carries only `names_per_group` rows per group
+and a browser reorder would rank the visible 25 and never reach Technology's
+305th name. What the board did not have was **memory**. The component opened on
+`useState('rel_5d')`, so a board ranked on Sales YoY at 7am was back on 5 days
+by the time he opened it on the phone.
+
+### The choice now lives on the USER
+
+Beside the alert settings, in the same `users` document, under `board_sorts`:
+
+```
+{"board_sorts": {"hottest": {"sort": "sales_yoy", "dir": "desc"}}}
+```
+
+Written with a **dotted** `$set` (`board_sorts.hottest`), so a second board can
+never clobber a sibling.
+
+### The board asks for the preference by NOT asking for anything
+
+`GET /rotation/hottest` with **no** `sort=` and **no** `dir=` is the request for
+"whatever I last picked". The `Query` defaults moved from `H.DEFAULT_SORT` /
+`H.DEFAULT_DIR` to `""`, because with a real default there is no way to tell
+"he did not ask" from "he asked for rel_5d".
+
+Precedence, per leg: **valid query param › valid saved preference › default.**
+The response says which one it used in new `sort_source` / `dir_source` fields
+(`request` | `saved` | `default`). `sorted_by` / `sorted_dir` keep their old
+meaning — what was actually **served** — and the two differ exactly when the
+pre-market demotion fires.
+
+### One owner per fact
+
+The column vocabulary lives in `rotation/hottest.py` (`SORT_KEYS`, `SORT_DIRS`)
+and is validated in `rotation/api.py`. `users/store.py` stores already-validated
+strings and **never imports the board** — pinned by an AST test. A garbage value
+hand-edited into Mongo is re-validated on every read and falls to the default;
+it can never reach the sorter.
+
+### The READ never writes
+
+`GET /rotation/hottest` demotes `sort=pre_1d` to the default leg when the
+pre-market column has nothing in it. Writing back what it served would have
+silently replaced his chosen column with `rel_5d` the first time he opened the
+board after 9:30. `POST /rotation/hottest/sort` is the only writer, and it
+writes what was **asked for**, never what was served.
+
+### ☀️ `pre_1d` is sortable but never SAVEABLE
+
+Found in review, and worth stating plainly because it was the one real bug in
+this change. The ☀️ button was guarded from the first draft — but pressing it is
+what *makes* the Pre-mkt column appear, and that column renders as an ordinary
+sortable header wired straight to the save path. Two clicks (☀️ scan, then the
+Pre-mkt header to flip it) persisted `pre_1d`. A cold read is always
+`basis=close`, so `build_live` hands back an idle pre block and the endpoint
+demotes that column on **every** later load — his real column gone, and 🔥
+Hottest opening ranked 5 days **ascending**, coldest sectors first, until he
+noticed.
+
+Guarded on both sides of the wire, each with one owner:
+`UNSAVEABLE_SORTS = (H.PRE_SORT,)` in `rotation/api.py` (400, nothing stored,
+and the advertised `sortable` list excludes it) and the `PRE_COL.key` early
+return inside `saveBoardSort` in the component. ↻ Re-scan does not save either —
+a re-read is not a choice.
+
+### Two failure modes that must never surface
+
+* **A board read never breaks.** `auth.current_user_email` raises 401 in an HTTP
+  context with no session, so identity here is resolved **best-effort** via
+  `auth.maybe_current_user`; anonymous, Mongo down, garbage stored, or a `Header`
+  FieldInfo leaking out of a direct call all land on the default with a 200,
+  byte-identical to how this endpoint behaved before any preference existed.
+* **A failed save never reaches the board.** `saveBoardSort` is fire-and-forget;
+  a rejection, a 500, or a stub that hands back a non-promise cannot surface an
+  error, block the reorder or fail a suite. The worst case is that the next load
+  opens on the previous column.
+
+### Exactly ONE fetch on a cold load
+
+The obvious implementation — seed the state from the response inside `.then()` —
+puts `sort` back into `load`'s dependency array, re-fires the effect and fetches
+the whole board a second time, visibly re-ordering under him for an answer he
+had already been served. Nothing is seeded. What the screen shows is **derived**:
+`effectiveSort(sort, data)` / `effectiveDir(dir, data)`, falling back to
+`sorted_by` / `sorted_dir` while the local state is still null. The "ranked on"
+label, the `is-sorted` mark, the arrow, the `aria-sort` **and** `clickSort`'s
+"am I already on this column?" comparison all read the same derived key, so a
+demotion can never split what the board says from what a click does.
+
+### Nothing about the ranking changed
+
+Same columns, same server sort, same numbers, same layout. No new column,
+nothing hidden, nothing gated, no alert, no push, no measured claim.
+
+### Tests
+
+* `backend/tests/test_hottest_sort_persist_2026_09_21.py` — the three sources in
+  precedence order, the store round-trip, the AST layering guard, and the
+  negatives: anonymous, Mongo down, four shapes of garbage in `board_sorts`, a
+  non-mapping `board_sorts`, unknown column, unknown direction, a body that is
+  not a preference, a 400 never overwriting a good stored preference, an unknown
+  board name, `pre_1d` refused and refused *without* costing him the stored
+  column, and a pre-existing `pre_1d` document still reading safely.
+* `frontend/src/components/HottestSectors.sortpersist.test.tsx` (22) — the
+  derivation helpers, the URL omission, the cold load asking for nothing, the
+  **one-fetch** regression guard, the label/mark/arrow following the served
+  column, a header click persisting and re-reading, the flip on a column the
+  local state does not know about, and the negatives: a rejected save, a 500
+  save, a non-promise fetch, the ☀️ button, ↻ Re-scan, the ☀️ **header**, and a
+  payload with no `sorted_by`.
+* A frontend contract pins the save guard so it cannot be undone silently.
+
+### His call
+
+* Whether the other boards (Breakouts, 🚀 Growth, 📈 Bonde) should remember
+  their sort the same way.
+* Whether ↻ Re-scan should be able to change the stored column — today it
+  deliberately cannot.
+* Whether he wants a reset-to-5-days control on the board itself.

@@ -115,6 +115,13 @@ const stubSeq = (answers: Array<() => Promise<unknown>>) => {
     if (String(url).includes('/supply-demand/bounce-room')) {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ rows: [] }) } as Response);
     }
+    /* The sort PREFERENCE write (2026-09-21) is a POST to a path that starts
+     * with this endpoint's own, so it has to be excluded explicitly or it
+     * would be counted as a board READ and would eat the next scripted
+     * answer — every `hottest[n]` below would then be off by one. */
+    if (String(url).includes('/rotation/hottest/sort')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ stored: true }) } as Response);
+    }
     hottest.push(String(url));
     const next = answers[Math.min(hottest.length - 1, answers.length - 1)];
     return next();

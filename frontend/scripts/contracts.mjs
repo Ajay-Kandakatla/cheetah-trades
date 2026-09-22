@@ -1658,8 +1658,58 @@ const CONTRACTS = [
       // on — and the sort MUST be a server round-trip: the payload keeps only
       // `names_per_group` rows per group, so a client-side reorder ranks the
       // visible 25 and never reaches the 305th Technology name.
-      if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir\}/.test(tsx)) {
+      if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir/.test(tsx)) {
         errs.push('HottestSectors must send BOTH sort and dir to the server — a client-side sort only reorders the truncated 25');
+      }
+      /* Ajay 2026-09-21: "Can you add a server side sort to this so its
+       * persistent". The column he picks is stored on the USER, and the board
+       * asks for it by NOT asking for an order. Three things must hold or the
+       * preference is silently dead:
+       *  1. the local state starts UNCHOSEN — a hard-coded opening column
+       *     overrules the stored one on every load;
+       *  2. the read OMITS sort/dir while it is unchosen — that omission IS
+       *     the request;
+       *  3. the served column is never written back into the state inside the
+       *     response handler. `sort` is a `load` dep, so that seed re-fires
+       *     the effect and the whole board comes down TWICE on every cold
+       *     load, re-ordering on screen for an answer already served. */
+      if (!/const \[sort, setSort\] = useState<string \| null>\(null\)/.test(tsx)) {
+        errs.push('HottestSectors must open with NO chosen column (useState<string | null>(null)) — a hard-coded one overrules his stored sort on every load');
+      }
+      if (!/if \(sort\) parts\.push\(/.test(tsx)) {
+        errs.push('hottestUrl must OMIT sort/dir while the column is unchosen — the omission is what asks for the stored column');
+      }
+      const loadAt = tsx.indexOf('const load = useCallback(');
+      const loadBody = loadAt < 0 ? '' : tsx.slice(loadAt, tsx.indexOf('}, [sort, dir, basis, scanTick]);', loadAt));
+      if (!loadBody) {
+        errs.push('the HottestSectors load callback could not be found — the double-fetch guard below cannot run');
+      } else if (/setSort\(|setDir\(/.test(loadBody)) {
+        errs.push('load must NEVER seed sort/dir from the response — `sort` is a load dep, so that is a second full fetch on every cold load');
+      }
+      if (!/\/rotation\/hottest\/sort/.test(tsx)) {
+        errs.push('HottestSectors must POST the chosen column to /rotation/hottest/sort — otherwise nothing is persisted');
+      }
+      const preAt = tsx.indexOf('const onPremarket = () => {');
+      const preBody = preAt < 0 ? '' : tsx.slice(preAt, tsx.indexOf('\n  };', preAt));
+      if (!preBody) {
+        errs.push('onPremarket could not be found — the "pre_1d is never stored" guard cannot run');
+      } else if (/saveBoardSort\(/.test(preBody)) {
+        errs.push('onPremarket must NOT store pre_1d — the server demotes that column whenever the pre leg is unavailable, which would strand him on a dead column every later load');
+      }
+      /* ...and the guard that actually closes the hole, which is NOT on the ☀️
+       * button. Pressing that button is what MAKES the Pre-mkt column appear,
+       * and the column renders as an ordinary sortable header wired straight to
+       * `clickSort` → `saveBoardSort`. Two clicks used to persist `pre_1d`; a
+       * cold read is always basis=close, so it is demoted on EVERY later load
+       * and the board opens on the default leg in whatever direction rode
+       * along. The refusal therefore belongs at the single WRITER, where no
+       * caller can route around it. (The backend refuses the same write.) */
+      const saveAt = tsx.indexOf('export function saveBoardSort(');
+      const saveBody = saveAt < 0 ? '' : tsx.slice(saveAt, tsx.indexOf('\n}', saveAt));
+      if (!saveBody) {
+        errs.push('saveBoardSort could not be found — the "pre_1d is never stored" writer guard cannot run');
+      } else if (!/if \(sort === PRE_COL\.key\) return;/.test(saveBody)) {
+        errs.push('saveBoardSort must refuse PRE_COL.key outright — guarding only the ☀️ button leaves the Pre-mkt COLUMN HEADER free to store a column the server demotes on every later load');
       }
       if (/\.sort\(\(a, b\)|\[\.\.\.(sectors|names)\]\.sort\(/.test(tsx)) {
         errs.push('HottestSectors must not sort rows locally — the server sorts before it truncates');
@@ -3561,8 +3611,8 @@ const CONTRACTS = [
       if (!/shownSort === c\.key/.test(tsx)) errs.push('the header mark must follow the SERVED sort (shownSortKey), not the requested one');
       if (!/ranked on <b>\{colLabel\(shownSort, data\)\}/.test(tsx)) errs.push('the "ranked on" line must print the served sort — under a demotion the rows are on 5 days');
       if (/colLabel\(sort, data\)/.test(tsx)) errs.push('no surface line may print the REQUESTED sort while the rows are ranked on the served one');
-      if (!/'&basis=premarket'/.test(tsx)) errs.push('the ☀️ read must add &basis=premarket to the one fetch');
-      if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir\}/.test(tsx)) errs.push('the fetch must still carry sort and dir — the pre-market read is the same server-sorted read');
+      if (!/'&?basis=premarket'/.test(tsx)) errs.push('the ☀️ read must add basis=premarket to the one fetch');
+      if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir/.test(tsx)) errs.push('the fetch must still carry sort and dir — the pre-market read is the same server-sorted read');
       if (!tsx.includes("'One click is the same provider read as reloading the page — 7 snapshot calls, '")) {
         errs.push('RESCAN_COST_SENTENCE changed — the ☀️ tooltip quotes it; re-measure the call count before rewording');
       }

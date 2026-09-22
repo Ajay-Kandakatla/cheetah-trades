@@ -345,6 +345,115 @@ export function shownSortKey(sort: string,
   return sort;
 }
 
+/* ── The column choice is a SERVER-SIDE preference (Ajay 2026-09-21) ─────────
+ *
+ * *"Can you add a server side sort to this so its persistent"*.
+ *
+ * The sort was ALREADY a backend round-trip — what it was not was remembered.
+ * `useState('rel_5d')` threw his column away on every reload, so a board he
+ * had ranked on Sales YoY at 7am was back on 5 days by the time he opened it
+ * on his phone. The chosen column and direction now live on the USER, beside
+ * the alert settings, and the board asks for them by NOT asking for anything:
+ *
+ *   GET /rotation/hottest with no sort=/dir=  →  the server applies his saved
+ *   column and says what it served in `sorted_by` / `sorted_dir`.
+ *
+ * WHY THE LOCAL STATE STARTS null, AND WHY IT IS NEVER SEEDED FROM A RESPONSE.
+ * `sort` is a dependency of `load`. Writing the served column into it inside
+ * `.then()` would change `load`'s identity, re-fire the effect, and fetch the
+ * whole board a SECOND time on every cold load — visibly re-ordering under
+ * him for a preference he had already been served. So the state stays null
+ * until he actually clicks a header, and everything the screen shows is
+ * DERIVED from it: `effectiveSort` / `effectiveDir` below are the one place
+ * that resolution lives. Exactly one fetch on a cold load; the regression is
+ * pinned in HottestSectors.sortpersist.test.tsx.
+ */
+/** Where the board lands when nothing — not him, not the server — has said
+ *  otherwise. Same column the old `useState('rel_5d')` opened on. */
+export const HS_DEFAULT_SORT = 'rel_5d';
+export const HS_DEFAULT_DIR: HsDir = 'desc';
+
+/** The column the rows on screen are actually ranked by.
+ *
+ *  LOCAL INTENT WINS: once he has clicked a header this session, that is the
+ *  column, because the read carrying it may still be in the air. With no local
+ *  intent the SERVED key is the truth — it is what his saved preference
+ *  resolved to — and the hard-coded default is only ever reached when the
+ *  payload does not say (an older build, or a 200 that carries no rows). */
+export function effectiveSort(sort: string | null,
+                              d?: Pick<HsPayload, 'sorted_by'> | null): string {
+  if (sort) return sort;
+  const served = d?.sorted_by;
+  return typeof served === 'string' && served.trim() ? served : HS_DEFAULT_SORT;
+}
+
+/** The direction those rows are in, resolved the same way. An unrecognised
+ *  `sorted_dir` reads as `desc` rather than as an arrow pointing the wrong
+ *  way: every column on this board except Next ER is interesting high-first. */
+export function effectiveDir(dir: HsDir | null,
+                             d?: Pick<HsPayload, 'sorted_dir'> | null): HsDir {
+  if (dir) return dir;
+  return d?.sorted_dir === 'asc' ? 'asc' : HS_DEFAULT_DIR;
+}
+
+/** The board read's URL.
+ *
+ *  NO sort=/dir= AT ALL while the column is unchosen — that omission IS the
+ *  request for his saved preference, and it is what makes the choice follow
+ *  him from the desktop to the phone. The two params travel TOGETHER: a
+ *  `sort=` with no `dir=` would take the column from the URL and the direction
+ *  from the stored preference, an order neither side asked for.
+ *
+ *  `basis=premarket` is independent of both and still goes out while the
+ *  column is unchosen — the ☀️ scan is a basis, not a ranking. */
+export function hottestUrl(sort: string | null, dir: HsDir | null,
+                           basis: 'close' | 'premarket'): string {
+  const parts: string[] = [];
+  if (sort) parts.push(`sort=${encodeURIComponent(sort)}&dir=${dir || HS_DEFAULT_DIR}`);
+  if (basis === 'premarket') parts.push('basis=premarket');
+  const q = parts.join('&');
+  return `${API}/rotation/hottest${q ? `?${q}` : ''}`;
+}
+
+/** Write the chosen column back to the user. THE ONLY WRITE ON THIS SURFACE.
+ *
+ *  FIRE-AND-FORGET, DELIBERATELY. The re-ranked read he asked for is already
+ *  in flight; a preference that failed to store must not put a red line on a
+ *  board that is about to render correctly, and must not block the reorder.
+ *  A rejected promise, a 500, a fetch that throws synchronously under a stub —
+ *  all three are swallowed here, and the worst case is that the next reload
+ *  opens on the previously saved column. The board READ is what he is looking
+ *  at; this is bookkeeping behind it.
+ *
+ *  NOT called by the ☀️ pre-market button — see `onPremarket`. */
+export function saveBoardSort(sort: string, dir: HsDir): void {
+  /* ☀️ `pre_1d` is the one column that must never be SAVED, and the guard
+   * lives here — at the single writer — rather than on the ☀️ button alone.
+   * The button was guarded from the start; the Pre-mkt COLUMN HEADER was not,
+   * and it is an ordinary sortable header wired straight to `clickSort`. Two
+   * clicks (☀️ scan, then the Pre-mkt header to flip it) used to persist
+   * `pre_1d`, and because a cold read is always `basis=close` the server
+   * demotes it on EVERY later load: his real column would be gone and the
+   * board would open ranked 5 days ascending — coldest first — forever.
+   * The backend refuses this write too; this is the half that keeps a
+   * pointless round-trip off the wire. */
+  if (sort === PRE_COL.key) return;
+  try {
+    const r = fetch(`${API}/rotation/hottest/sort`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sort, dir }),
+    });
+    // `.catch` on whatever came back, guarded: a test stub can hand back a
+    // plain object, and an un-caught rejection here would fail a suite over a
+    // write whose whole contract is that nobody waits for it.
+    if (r && typeof (r as Promise<unknown>).catch === 'function') {
+      (r as Promise<unknown>).catch(() => { /* the board does not care */ });
+    }
+  } catch { /* the board does not care */ }
+}
+
 /** A header's hover. The day column's says which session it is, in the
  *  backend's own words, so the explanation cannot drift from the numbers. */
 export function colTitle(c: { key: string; title?: string },
@@ -770,8 +879,12 @@ export function HottestSectors() {
   const [data, setData] = useState<HsPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [sort, setSort] = useState<string>('rel_5d');
-  const [dir, setDir] = useState<HsDir>('desc');
+  /* null = "I have not picked a column this session — serve me my saved one."
+   * NEVER seeded from a response: `sort` is a `load` dep, so a setState inside
+   * `.then()` re-fires the effect and the board fetches twice on every cold
+   * load. What the screen shows is derived instead (`effSort` / `effDir`). */
+  const [sort, setSort] = useState<string | null>(null);
+  const [dir, setDir] = useState<HsDir | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [byIndustry, setByIndustry] = useState(true);
   /* ☀️ Which basis the next read asks for, and a tick that makes a SECOND
@@ -798,9 +911,7 @@ export function HottestSectors() {
     const id = ++seq.current;
     inFlight.current = true;
     setLoading(true);
-    fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}&dir=${dir}`
-          + (basis === 'premarket' ? '&basis=premarket' : ''),
-          { credentials: 'include', cache: 'no-store' })
+    fetch(hottestUrl(sort, dir, basis), { credentials: 'include', cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((j: HsPayload) => {
         if (id !== seq.current) return;                  // a newer sort won
@@ -818,7 +929,15 @@ export function HottestSectors() {
   useEffect(() => { load(); }, [load]);
   const onRescan = () => { if (inFlight.current) return; load(); };
   /* ☀️ One click = one read on the pre-market basis, ranked on the new column.
-   * `sort` is a `load` dep, so setting all three here is still ONE fetch. */
+   * `sort` is a `load` dep, so setting all three here is still ONE fetch.
+   *
+   * IT DOES NOT SAVE, on purpose. `pre_1d` is the one column the server can
+   * DEMOTE out from under a request: when RSP has not printed there is nothing
+   * to rank against, and the endpoint serves the default leg instead. Storing
+   * `pre_1d` as his preference would strand him on a column that is dead for
+   * twenty of every twenty-four hours — every later reload would open, get
+   * demoted, and show him a board ranked on something he never picked. Only a
+   * header CLICK persists. */
   const onPremarket = () => {
     if (inFlight.current) return;
     setBasis('premarket');
@@ -826,6 +945,26 @@ export function HottestSectors() {
     setDir('desc');
     setScanTick((t) => t + 1);
   };
+
+  /* WHAT THE SCREEN IS RANKED ON, derived — never stored. Until he clicks a
+   * header the local state is null and the SERVED keys are the truth, so the
+   * label, the header mark and `clickSort`'s "am I already on this column?"
+   * all read these two and not the raw state. This is the whole reason the
+   * board fetches once rather than twice; see the block above `HS_DEFAULT_SORT`. */
+  const effSort = effectiveSort(sort, data);
+  const effDir = effectiveDir(dir, data);
+  /* The header mark follows the SERVED order when the server demoted a
+   * pre_1d request — the intent stays in `sort` for the next read. Fed the
+   * DERIVED key, so a board he has not re-sorted this session still marks the
+   * column his saved preference was served on.
+   *
+   * Computed HERE, above `clickSort`, and not beside the render it feeds:
+   * `clickSort` has to answer "am I already on this column?" with the SAME
+   * key the header is bolding, or a demotion splits the two. After the pre
+   * leg ages out, `effSort` is still 'pre_1d' while the screen says 5 days —
+   * a click on that visibly-active header would read as a NEW column, skip
+   * the flip he asked for AND overwrite his stored preference with it. */
+  const shownSort = shownSortKey(effSort, data);
 
   const sectors = useMemo(() => data?.sectors || [], [data]);
   const themes = useMemo(() => data?.themes || [], [data]);
@@ -883,10 +1022,26 @@ export function HottestSectors() {
    * still rides on every name, and the omission is pinned by the explosive
    * contract's NO_TOGGLE list in frontend/scripts/contracts.mjs. */
   /** Click a new column → sort it DESC (the interesting end of every column
-   *  except Next ER). Click the active column again → flip direction. */
+   *  except Next ER). Click the ACTIVE column again → flip direction.
+   *
+   *  "Active" is `effSort`, not the raw state: on a cold load the state is
+   *  still null while the rows on screen are ranked on his saved column, and a
+   *  comparison against null would read the first click on that very column as
+   *  a NEW column and re-sort it descending instead of flipping it.
+   *
+   *  Both values are pinned into state here even when only the direction
+   *  moved, so the next read is a fully-specified request rather than a half
+   *  one the server would complete from the stored preference.
+   *
+   *  The save rides along afterwards and is not awaited — the setState above
+   *  has already started the re-ranked read, and that read is what he sees. */
   const clickSort = (k: string) => {
-    if (k === sort) setDir((d) => (d === 'desc' ? 'asc' : 'desc'));
-    else { setSort(k); setDir(k === 'next_earnings' ? 'asc' : 'desc'); }
+    const nextDir: HsDir = k === shownSort
+      ? (effDir === 'desc' ? 'asc' : 'desc')
+      : (k === 'next_earnings' ? 'asc' : 'desc');
+    setSort(k);
+    setDir(nextDir);
+    saveBoardSort(k, nextDir);
   };
 
   /* A COLD failure still shows the failure. What changed on 2026-09-18 is that
@@ -905,9 +1060,6 @@ export function HottestSectors() {
   const preState = premarketState(data);
   const cols = visibleCols(data);
   const span = colSpanOf(data);
-  /* The header mark follows the SERVED order when the server demoted a
-   * pre_1d request — the intent stays in `sort` for the next read. */
-  const shownSort = shownSortKey(sort, data);
 
   return (
     <div className="hs">
@@ -919,7 +1071,7 @@ export function HottestSectors() {
         <div className="hs-sorts">
           <span className="hs-sorted-by">
             ranked on <b>{colLabel(shownSort, data)}</b>
-            {dir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
+            {effDir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
             <span className="hs-dim"> · click any column header</span>
           </span>
         </div>
@@ -1073,10 +1225,10 @@ export function HottestSectors() {
                 const on = shownSort === c.key;
                 return (
                   <th key={c.key} className={`${c.num ? 'hs-num' : ''}${on ? ' is-sorted' : ''}`}
-                      aria-sort={on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                      aria-sort={on ? (effDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
                     <button type="button" className="hs-sort" onClick={() => clickSort(c.key)}
                             title={colTitle(c, data)}>
-                      {colLabel(c.key, data)}{arrow(on, dir)}
+                      {colLabel(c.key, data)}{arrow(on, effDir)}
                     </button>
                   </th>
                 );

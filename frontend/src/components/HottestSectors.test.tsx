@@ -201,7 +201,11 @@ describe('HottestSectors board', () => {
     const calls = stub();
     view();
     await screen.findByText(/Technology/);
-    expect(calls.some((u) => u.includes('dir=desc'))).toBe(true);
+    /* The COLD read carries no sort= and no dir= since 2026-09-21: that
+     * omission is what asks the server for his saved column. The rows still
+     * came back ranked on rel_5d desc (the fixture's `sorted_by`), so "5 days"
+     * IS the active column and clicking it flips rather than re-sorts. */
+    expect(calls.some((u) => u.includes('dir='))).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /5 days/ }));   // already active
     await waitFor(() => expect(calls.some((u) => u.includes('sort=rel_5d&dir=asc'))).toBe(true));
   });
