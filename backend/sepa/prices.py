@@ -102,6 +102,61 @@ def _mongo_get(symbol: str) -> Optional[pd.DataFrame]:
         return None
 
 
+def bulk_cached_frames(symbols) -> dict:
+    """{SYM: frame} for every symbol the Mongo price cache holds — ONE find,
+    NEVER a fetch.
+
+    Built 2026-09-21 for the 📅 "since the report" board column. The board
+    lesson it obeys is the AMD one (2026-09-21): 80 tiles × 1 call = 65 s, and
+    the fix was ONE snapshot per board. A per-name `load_prices` on a request
+    path would FETCH for a cold symbol, so this reader cannot reach the
+    network at all — a missing symbol is simply an absent key and the caller
+    prints that as "no cached price history", which is the honest answer.
+
+    Same reshaping as `_mongo_get` (DatetimeIndex; open/high/low/close/volume),
+    then `_drop_phantom_tail`, so a caller gets exactly the frame the rest of
+    the app reads.
+
+    NO TTL CHECK, on purpose, and this is the one place it differs from
+    `_mongo_get`: a frame of CLOSED bars is a fact whatever its age, and the
+    caller prints the frame's own last date as its as-of (Rule #7 — cache
+    freshness is not content freshness). Note the cache is NOT closed-bars-only
+    inside the session: `crontab:407` patches today's in-progress bar hourly
+    (`patch_latest_closes`), so a reader that cares must drop a today-dated bar
+    itself — see `trade_session` and `sepa/since_report.py`.
+    """
+    out: dict = {}
+    syms = []
+    for s in symbols or []:
+        s = str(s or "").strip().upper()
+        if s and s not in syms:
+            syms.append(s)
+    if not syms:
+        return out
+    coll = _get_mongo()
+    if coll is None:
+        return out
+    try:
+        for doc in coll.find({"symbol": {"$in": syms}}):
+            try:
+                sym = str(doc.get("symbol") or "").upper()
+                bars = doc.get("bars") or []
+                if not sym or not bars:
+                    continue
+                df = pd.DataFrame(bars)
+                df["date"] = pd.to_datetime(df["date"])
+                df = df.set_index("date")[["open", "high", "low", "close", "volume"]]
+                df = _drop_phantom_tail(df)
+                if df is not None and len(df):
+                    out[sym] = df
+            except Exception as exc:                            # noqa: BLE001
+                log.debug("bulk_cached_frames: bad doc skipped: %s", exc)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("bulk_cached_frames read failed: %s", exc)
+        return {}
+    return out
+
+
 def _mongo_put(symbol: str, df: pd.DataFrame) -> None:
     coll = _get_mongo()
     if coll is None:

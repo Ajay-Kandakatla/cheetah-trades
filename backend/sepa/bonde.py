@@ -121,6 +121,40 @@ momentum, no relative strength, no return, no persistence leg is on that line,
 by his own correction. Every leg is tri-state and an UNKNOWN is never a fail.
 Nothing on it is measured, and it gates, sorts and filters nothing.
 
+THE STEADY TIER MEASURED AS A DRAG, 2026-09-21 (Ajay: *"Yes"* → LABEL IT, not
+drop it)
+────────────────────────────────────────────────────────────────────────────
+He was offered "leave it, label it, or drop it" and said yes to labelling. A
+second replay — a different panel and a different script from the 2026-09-13
+audit — put the 5-25% tier BELOW the scored universe at 21 days:
+
+    median 21-day lift vs all-scored  −0.21pp   on 14,353 symbol-bars
+                                                over 1,611 symbols
+    95% CI symbol-clustered           −0.40 … −0.04   (wholly below zero)
+    95% CI date-clustered             −0.56 … +0.10   (SPANS ZERO)
+
+At 21 days, symbol-clustered, it is the only cell in the replay whose
+median-lift interval sits wholly below the field — but date clustering is the
+binding axis on this board and under it the drag is a lean, not a finding. At
+63 and 126 days the median lift is −0.52pp and −0.51pp and EVERY interval
+spans zero on both clusterings. Only the momentum-controlled MEAN is below
+zero at every horizon (−0.60 / −1.79 / −3.40pp), and those intervals are
+symbol-clustered only — the replay publishes no date-clustered interval for
+that read — so the MEDIAN rides beside every mean (−1.27 / −3.80 / −6.98pp).
+The lift on this board sits in ARRIVALS to the explosive tier instead
+(+3.33 / +7.49 / +12.83pp median), and even there "every CI clear of zero" is
+true of the symbol axis alone: date-clustered, 21 and 126 days span zero.
+
+The label is ADDITIVE AND REVERSIBLE. 666 names are not dropped, not hidden,
+not re-sorted and not de-prioritised; nothing sorts, filters, gates, alerts or
+buys on it. His 5% floor is his. The 2026-09-13 tier table read this tier flat
+with no published interval; this replay reads a lean against it, and both
+readings are on the page. Numbers live in `STEADY_MEASURED` and are pinned
+field-for-field against the replay artifact by
+`backend/tests/test_bonde_steady_label.py`.
+Report: `docs/research/board_growth_2026_09_21.md`.
+Script, re-runnable: `backend/scripts/board_growth_replay.py`.
+
 Scripts, re-runnable verbatim: `backend/scripts/bonde_audit/` (README.md there
 carries the run recipe, the struck claims and the limits — survivorship,
 24 cross-sections in ONE bull regime, and the derived-Q4 availability date).
@@ -179,6 +213,57 @@ MEASURED = {
     "panel_bars": 45425,
     "panel_dates": 24,
     "scripts": "backend/scripts/bonde_audit/",
+}
+
+# ── the 2026-09-21 replay's read of the STEADY tier, in exactly one place ───
+# A SEPARATE dict from MEASURED (the 2026-09-13 audit): different scripts,
+# different panel, different run date — and `measured_verdict()`, `note()` and
+# `supply_demand/rules_info.py` all read MEASURED by key, so a sibling dict is
+# the only additive shape that cannot disturb them.
+# Pinned field-for-field against the research artifact by
+# tests/test_bonde_steady_label.py. Nothing here gates, sorts or filters.
+STEADY_MEASURED = {
+    "run_date": "2026-09-21",
+    "doc": "docs/research/board_growth_2026_09_21.md",
+    "script": "backend/scripts/board_growth_replay.py",
+    "panel_dates": 24,                 # repro.n_dates_panel
+    # MEDIAN lift vs the scored universe, BOTH clusterings, EVERY horizon.
+    # Date clustering is the binding axis on this board, so it is never
+    # omitted: at 21 days it spans zero where the symbol interval does not.
+    "lift": {
+        "h21": {"n": 14353, "n_symbols": 1611, "n_dates": 20,
+                "median_lift_pp": -0.21,
+                "ci_symbol": (-0.40, -0.04), "ci_date": (-0.56, 0.10)},
+        "h63": {"n": 13131, "n_symbols": 1596, "n_dates": 18,
+                "median_lift_pp": -0.52,
+                "ci_symbol": (-0.89, 0.02), "ci_date": (-0.89, 0.23)},
+        "h126": {"n": 11124, "n_symbols": 1479, "n_dates": 15,
+                 "median_lift_pp": -0.51,
+                 "ci_symbol": (-1.18, 0.25), "ci_date": (-1.40, 0.64)},
+    },
+    # Excess over the trailing-momentum-quintile mean of all-scored. The CI is
+    # on the MEAN and is symbol-clustered ONLY — the artifact carries no
+    # date-clustered interval for this read — so the MEDIAN rides beside it.
+    "momentum_control": {
+        "h21": {"n": 11196, "mean_excess_pp": -0.60,
+                "median_excess_pp": -1.27, "ci_symbol": (-0.87, -0.30)},
+        "h63": {"n": 9974, "mean_excess_pp": -1.79,
+                "median_excess_pp": -3.80, "ci_symbol": (-2.64, -0.93)},
+        "h126": {"n": 7969, "mean_excess_pp": -3.40,
+                 "median_excess_pp": -6.98, "ci_symbol": (-5.07, -1.53)},
+    },
+    # The contrast — arrivals to the explosive tier, MEDIAN lift with BOTH
+    # clusterings. "Every CI clear of zero" is a symbol-axis claim only.
+    "explosive_arrivals": {
+        "h21": {"median_lift_pp": 3.33,
+                "ci_symbol": (1.24, 5.42), "ci_date": (-0.91, 8.37)},
+        "h63": {"median_lift_pp": 7.49,
+                "ci_symbol": (3.68, 11.46), "ci_date": (0.52, 16.06)},
+        "h126": {"median_lift_pp": 12.83,
+                 "ci_symbol": (6.70, 20.91), "ci_date": (-8.05, 19.07)},
+    },
+    # The audit's tier table read this tier flat, with no interval published.
+    "prior_read": "2026-09-13",
 }
 
 SECTION_PIVOT = "pivot"
@@ -746,6 +831,82 @@ def _sgn(v, d: int = 2) -> str:
     return ("%s%%.%df" % ("+" if v >= 0 else "−", d)) % abs(v)
 
 
+def steady_verdict() -> str:
+    """The served honesty line under the 📈 Steady header, from STEADY_MEASURED.
+
+    A LABEL, not an action: he chose "label it" over "drop it", so this string
+    is the entire change to the tier. Nothing below it is hidden, re-sorted or
+    gated, and `SECTION_CAP["steady"]` is untouched.
+
+    Every number comes out of the dict — the component renders a string it was
+    handed, exactly as `measured_verdict()` does for the board banner, so a
+    re-run of the replay moves the surface instead of leaving a stale figure
+    typed into TSX.
+
+    It says BOTH clusterings at EVERY horizon on purpose. Date clustering is
+    the binding axis on this board (symbol clustering alone left intervals
+    ~3x too tight in the 2026-09-13 audit), and under it the 21-day drag spans
+    zero. A line that printed only the symbol interval would be a stronger
+    claim than the replay supports. Same rule on the arrivals contrast: "every
+    CI clear of zero" is true of the symbol axis alone.
+    """
+    s = STEADY_MEASURED
+    lift, mom, arr = s["lift"], s["momentum_control"], s["explosive_arrivals"]
+    hs = ("h21", "h63", "h126")
+
+    def ci(pair) -> str:
+        return "%s to %s" % (_sgn(pair[0]), _sgn(pair[1]))
+
+    def across(block: dict, key: str) -> str:
+        return " / ".join(_sgn(block[h][key]) for h in hs)
+
+    h21 = lift["h21"]
+    return (
+        "MEASURED %s — AT 21 DAYS, SYMBOL-CLUSTERED, THE STEADY TIER IS THE "
+        "ONE COHORT IN THE REPLAY WHOSE MEDIAN-LIFT INTERVAL SITS WHOLLY "
+        "BELOW THE FIELD. In a point-in-time replay over %d monthly "
+        "cross-sections (%d of them carry a full 21-session forward), this "
+        "tier's MEDIAN 21-day lift over the scored universe was %spp on %s "
+        "symbol-bars across %s symbols — 95%% CI %s symbol-clustered, the "
+        "whole interval below zero; date-clustered it is %s, which spans "
+        "zero, so under the stricter clustering the drag is a lean, not a "
+        "finding. At 63 and 126 days the median lift is %spp and %spp and "
+        "every interval spans zero on both clusterings (63d: %s "
+        "symbol-clustered, %s date-clustered; 126d: %s and %s). Controlled "
+        "for trailing momentum the tier's excess over its momentum-matched "
+        "field is negative at every horizon — MEAN %spp, MEDIAN %spp at "
+        "21 / 63 / 126 days; the intervals on the mean (%s, %s, %s) are "
+        "symbol-clustered only — the replay carries no date-clustered "
+        "interval for this read. The lift on this board sits in ARRIVALS to "
+        "the explosive tier instead: MEDIAN %spp at 21 / 63 / 126 days, "
+        "symbol-clustered CIs clear of zero (%s, %s, %s); date-clustered, "
+        "21 and 126 days span zero (%s, %s) and only 63 days is clear (%s). "
+        "This is a MEASUREMENT over %d cross-sections inside one bull regime "
+        "— not a rule: nothing here is hidden, dropped, re-sorted or gated on "
+        "it, and the tier stays because his 5%% floor is his. The %s audit's "
+        "tier table read this tier flat with no interval; this replay, on the "
+        "same panel with the repro gate passed, reads a lean against it. "
+        "%s · %s"
+        % (s["run_date"], s["panel_dates"], h21["n_dates"],
+           _sgn(h21["median_lift_pp"]), f"{h21['n']:,}",
+           f"{h21['n_symbols']:,}", ci(h21["ci_symbol"]),
+           ci(h21["ci_date"]),
+           _sgn(lift["h63"]["median_lift_pp"]),
+           _sgn(lift["h126"]["median_lift_pp"]),
+           ci(lift["h63"]["ci_symbol"]), ci(lift["h63"]["ci_date"]),
+           ci(lift["h126"]["ci_symbol"]), ci(lift["h126"]["ci_date"]),
+           across(mom, "mean_excess_pp"), across(mom, "median_excess_pp"),
+           ci(mom["h21"]["ci_symbol"]), ci(mom["h63"]["ci_symbol"]),
+           ci(mom["h126"]["ci_symbol"]),
+           across(arr, "median_lift_pp"),
+           ci(arr["h21"]["ci_symbol"]), ci(arr["h63"]["ci_symbol"]),
+           ci(arr["h126"]["ci_symbol"]),
+           ci(arr["h21"]["ci_date"]), ci(arr["h126"]["ci_date"]),
+           ci(arr["h63"]["ci_date"]),
+           s["panel_dates"], s["prior_read"], s["doc"], s["script"])
+    )
+
+
 def measured_verdict() -> dict:
     """The verdict banner the tab leads with, built from MEASURED.
 
@@ -838,6 +999,10 @@ def measured_verdict() -> dict:
             "and real fills on 8% gaps would be worse for the pivot cohort "
             "than for the placebo."
         ),
+        # The 5-25% tier's own label — a SEPARATE replay (2026-09-21), served
+        # as a `str` like every other value here so the component renders a
+        # sentence it was handed. It labels; it drops nothing.
+        "steady": steady_verdict(),
         "scripts": m["scripts"],
     }
 
@@ -965,6 +1130,7 @@ def _main(argv=None) -> int:
           "for character" % (b["n_pass"], b["n_scanned"], b["n_new"],
                              b["new_days"], b.get("n_rejected")))
     print("verdict:", (b.get("measured") or {}).get("headline"))
+    print("verdict steady:", (b.get("measured") or {}).get("steady"))
     print("counts:", b["counts"])
     for k in SECTIONS:
         rows = (b["sections"] or {}).get(k) or []

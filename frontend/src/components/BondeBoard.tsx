@@ -70,6 +70,8 @@ import {
   todayCell, type BondeD1, type BondeHeldOut,
 } from '../lib/bondeLive';
 import { metricCells } from '../lib/boardMetrics';
+import { SINCE_REPORT_HEAD, sinceReportCell, sinceReportCoverage,
+         type SinceReport, type SinceReportSummary } from '../lib/sinceReport';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -120,6 +122,11 @@ export type BondeRow = {
   /** 📋 His STATIC criteria for this name, served with their cites. Every leg
    *  is tri-state: `ok: null` is UNKNOWN and never renders as a fail. */
   pick?: BondePick | null;
+  /** 📅 "since the report" (Ajay 2026-09-21). The return from the close of the
+   *  first session the market could trade on the latest reported quarter to
+   *  the latest cached close. A FACT between two dates — it sorts, filters and
+   *  gates nothing, and a blank is never a zero. */
+  since_report?: SinceReport;
 };
 
 export type BondeRegime = {
@@ -133,6 +140,9 @@ export type BondeMeasured = {
   headline?: string; body?: string; not_a_short?: string;
   tiers?: string; rejected?: string; struck?: string;
   limits?: string; scripts?: string;
+  /** The Steady tier's own measured read, served whole (Ajay 2026-09-21:
+   *  "label it", not drop it). Rendered verbatim under the Steady header. */
+  steady?: string;
 };
 
 export type BondeBoardData = {
@@ -155,6 +165,9 @@ export type BondeBoardData = {
   /** How many rows each pick leg actually knows — a board that shows dashes
    *  without saying why reads as broken. */
   pick_coverage?: BondePickCoverage | null;
+  /** 📅 Coverage + the board's own honesty line for the since-the-report
+   *  column. Served whole; no number in it is composed here. */
+  since_report_summary?: SinceReportSummary | null;
 };
 
 const SECTIONS: { key: string; label: string; blurb: string }[] = [
@@ -165,7 +178,7 @@ const SECTIONS: { key: string; label: string; blurb: string }[] = [
   { key: 'strong', label: 'Strong · sales +25%',
     blurb: 'THIS APP’S 25% mid-tier — not a number he published (the first-person quote this board carried until 2026-09-20 was fabricated; it exists in none of his posts). Measured median lift +0.37pp at 21 days, CI −0.16 to +0.78 — it includes zero, and the mean lift that does show up falls to +0.26pp once the top 5% of returns are dropped.' },
   { key: 'steady', label: 'Steady · sales +5%',
-    blurb: 'His floor — "Sales/revenue should be up 5% or more." (Stockbee, 2007). Measured flat against the scored universe (−0.01pp at 21 days). Capped here: it is 677 names on the live scan, which is a scroll, not a read.' },
+    blurb: 'His floor — "Sales/revenue should be up 5% or more." (Stockbee, 2007). Capped here: a section this size is a scroll, not a read. What this tier MEASURED is served under this header, from the same home as the verdict banner.' },
   { key: 'rejected', label: '🔎 Cleared his 5% floor, rejected by THIS APP’S character clause',
     blurb: 'NOT ON HIS SCREEN as this app drew it, and the clause that threw them out is THIS APP’S, not his (mis-attributed until 2026-09-20): accelerating OR ≥2 consecutive growth quarters. It is the one thing in this board that survived every attack, and it measures BACKWARDS: this cohort won 56.8% of the next 21 sessions against 51.2% for the names the gate accepts (+5.64pp, CI +3.91 to +7.52). It does not survive date clustering at 21 days (it does at 63). The gate is not edited because a rule change is Ajay’s call; the cohort it discards is shown here instead.' },
 ];
@@ -207,6 +220,7 @@ const BASE_NOTE: Record<string, string> = {
  *  `metricCells` — same order, same four cells — so a head sits over its cell. */
 const HEADS = {
   sym: { text: 'Ticker', title: 'Ticker · company. ✨ NEW = arrived on his screen recently; 🚀 = also clears the explosive-growth screen; 🎯 = live print in / near the board’s nearest demand band. “+ Signals” puts the name on your watchlist. 📋 chips = his static criteria (legend above) — each one his own sentence, with its link; an em-dash means this app does not know yet, never that the name failed.' },
+  since: SINCE_REPORT_HEAD,
   today: { text: 'Today', title: 'Each name’s own move so far in THIS session, when the board has a live read — not relative to the benchmark. The whole column shares one basis: when the read is on the last close, every row here is an em-dash rather than yesterday’s number under a “Today” header. The line above the sections says which it is.' },
   sales: { text: 'Sales YoY · base → latest', title: 'Latest quarterly revenue against the same quarter a year ago, with the two dollar figures under it. ⚠ marks a base that is negative or immaterial.' },
   character: { text: 'Character', title: 'His character clause: accelerating (growth rate rising), a streak of consecutive growth quarters, sales-led (top line outpacing the bottom line).' },
@@ -510,6 +524,15 @@ export default function BondeBoard() {
         )}
       </div>
 
+      {/* 📅 What the since-the-report column KNOWS, and what the 2026-09-21
+          run measured about this board. Served whole (sepa/since_report.py). */}
+      {!!d.since_report_summary && (
+        <div className="bd-note bd-since-note" data-testid="bonde-since-note"
+             title={d.since_report_summary.date_basis_note || undefined}>
+          📅 {sinceReportCoverage(d.since_report_summary)} — {d.since_report_summary.honesty}
+        </div>
+      )}
+
       {/* 📋 What the chip line KNOWS. Six em-dashes with no explanation read as
           a broken board; "short interest 0 of 199 (not warmed)" reads as the
           truth, which is that nobody has looked yet. */}
@@ -564,6 +587,15 @@ export default function BondeBoard() {
             </span>
           </h3>
           <p className="bd-blurb">{s.blurb}</p>
+          {/* The Steady tier's measured read, served whole from bonde.py and
+              rendered verbatim — no number is composed here, and it sits
+              OUTSIDE the verdict block. Rendered with an empty section too:
+              the label is about the tier, not about today's rows. */}
+          {s.key === 'steady' && m?.steady && (
+            <p className="bd-blurb bd-steady-measured" data-testid="bd-steady-measured">
+              {m.steady}
+            </p>
+          )}
           {s.rows.length === 0 ? (
             <div className="bd-empty">
               {nearDemandOnly && (d.sections?.[s.key] || []).length > 0
@@ -581,6 +613,7 @@ export default function BondeBoard() {
               <div className="bd-row bd-hdr" aria-hidden="false" role="row">
                 <div className="bd-sym" title={HEADS.sym.title}>{HEADS.sym.text}</div>
                 <div className="bd-today" title={HEADS.today.title}>{HEADS.today.text}</div>
+                <div className="bd-since" title={HEADS.since.title}>{HEADS.since.text}</div>
                 <div className="bd-sales" title={HEADS.sales.title}>{HEADS.sales.text}</div>
                 <div className="bd-chips" title={HEADS.character.title}>{HEADS.character.text}</div>
                 <div className="bd-pivot" title={HEADS.pivot.title}>{HEADS.pivot.text}</div>
@@ -669,6 +702,19 @@ export default function BondeBoard() {
                          data-testid={`bd-today-${r.symbol}`}>
                       {today.text}
                     </div>
+
+                    {/* 📅 Ajay 2026-09-21 — the return since the market had
+                        the number. A fact between two dates; a blank is an
+                        em-dash whose title says which refusal it was. */}
+                    {(() => {
+                      const sc = sinceReportCell(r.since_report, r.symbol);
+                      return (
+                        <div className={`bd-since bd-${sc.tone || 'dim'}`} title={sc.title}
+                             data-testid={`bd-since-${r.symbol}`}>
+                          {sc.text}
+                        </div>
+                      );
+                    })()}
 
                     <div className="bd-sales">
                       <span className={baseNote ? 'bd-warn' : 'bd-good'}

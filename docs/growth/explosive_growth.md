@@ -368,6 +368,38 @@ The short version:
   untouched. A crontab change does **not** ship with a deploy: the cron container
   must be recreated.
 
+## 📅 "Since the report" — 2026-09-21
+
+Every row now carries a **Since report** column, right of Price: that name's
+return from the close of the first session the market could trade on its latest
+reported quarter, to the latest cached close. Full write-up:
+[../sepa/since_report_column_2026_09_21.md](../sepa/since_report_column_2026_09_21.md).
+
+The short version:
+
+* **Why.** The 2026-09-21 research run measured this board's median member
+  **+46.40%** in the 126 sessions BEFORE its qualifying filing and **−2.21%
+  since**, with only 8 of 20 positive. The run is over by the time the board can
+  see the name, and nothing on the board said so. Ajay: *"Should the boards print
+  a 'since qualifying filing' column?"* → **Yes.**
+* **A FACT between two dates.** It sorts nothing, filters nothing, orders nothing
+  and gates nothing (Rule #10), and it has never been measured forward. The
+  header is deliberately **not** a sort control; a sort on it is a separate ask.
+* **The date is the REPORT date** (the app's earnings calendar, yfinance), **not
+  the SEC filing date** the study measured from. On CRDO the two are one day
+  apart. The header tooltip, every cell tooltip and the doc all say so.
+* **A blank is never a zero.** `—` with a tooltip that opens "Not measured:" and
+  names one of seven refusals. A zero-length window — no session has closed since
+  the reaction bar — is blank, not `+0.0%`.
+* **O(1) reads.** ONE calendar read + ONE price-cache read for the whole board,
+  attached at READ time like the 📣 block above. Measured in the api container
+  2026-09-21: calendar 0.0017 s, frames 0.019 s, attach 0.0024 s for 21 rows —
+  about 0.02 s on the request. (📈 Bonde, 200 rows: 0.003 s / 0.17 s / 0.16 s.)
+* **Coverage on his own board the day it shipped: 19 of 21 known.** The two
+  blanks are EVC and FF, whose newest calendar report is 2024-05-02 and
+  **2016-11-09** — both refused as `before_first_bar` rather than measured from
+  the wrong date.
+
 ## 📈 The Bonde chip, and the guard both boards now share (2026-09-20)
 
 Ajay, 2026-09-20: *"Especially this in Bondes. I think bondes and explosive

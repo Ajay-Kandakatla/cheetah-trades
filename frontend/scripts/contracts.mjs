@@ -1487,7 +1487,13 @@ const CONTRACTS = [
       }
       // every eg-* class the TSX uses must have a rule that SHIPS — jsdom
       // loads no stylesheets, so no render test can catch a missing one.
-      const used = new Set((tsx.match(/\beg-[a-z0-9-]+/g) || []));
+      // A template-literal id like `eg-since-${sym}` matches this scan as the
+      // token "eg-since-", which is not a class and has no rule. Trim the
+      // trailing hyphen an interpolation leaves behind before looking it up,
+      // so a legitimate per-row testid cannot fail a STYLE contract.
+      const used = new Set((tsx.match(/\beg-[a-z0-9-]+/g) || [])
+        .map((c) => c.replace(/-+$/, ''))
+        .filter(Boolean));
       for (const c of used) {
         if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
           errs.push(`.${c} is used in ExplosiveGrowth.tsx but has no CSS rule`);
@@ -3869,6 +3875,124 @@ const CONTRACTS = [
 
       if (!/id: 'promo-curation-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) {
         errs.push('the curation lane needs its ✨ entry');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '\u{1F4C5} Since report: a FACT between two dates, on the REPORT date, never flat (2026-09-21)',
+    file: 'src/lib/sinceReport.ts',
+    // Ajay 2026-09-21, answering "Should the boards print a 'since qualifying
+    // filing' column?" with "Yes". The 2026-09-21 replay found the typical name
+    // on both boards had already had its run before the board could see it
+    // (growth +46.40% before the qualifying filing, \u22122.21% since).
+    //
+    // Three things must stay true or the column starts lying:
+    //   1. it is a FACT between two dates \u2014 it sorts, filters and gates nothing;
+    //   2. the anchor is the EARNINGS REPORT date, never the SEC filing date the
+    //      study measured from, and every surface says which;
+    //   3. a blank is never 0% and never a bare dash that reads as flat.
+    checks: (src) => {
+      const errs = [];
+      const py = read('../backend/sepa/since_report.py');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+
+      if (!/RUN_MEASURED\s*=\s*\{/.test(pyCode)) {
+        errs.push('since_report.py must keep the run\u2019s numbers in ONE constant');
+      }
+      if (/board_growth_measured/.test(py)) {
+        errs.push('a served module must not read the research artifact \u2014 pin it in a test instead');
+      }
+      if (!/def honesty_line\(/.test(pyCode)) {
+        errs.push('the board\u2019s honesty sentence must be BUILT from RUN_MEASURED, not typed');
+      }
+      for (const needle of ['no_report', 'bad_date', 'not_traded_yet', 'no_bars',
+                            'before_first_bar', 'insufficient_history']) {
+        if (!new RegExp(`["']${needle}["']`).test(pyCode)) {
+          errs.push(`since_report.py lost the ${needle} refusal \u2014 a blank must always say why`);
+        }
+      }
+
+      // the FE never re-derives the number and never invents a date
+      if (/new Date\(/.test(src)) {
+        errs.push('sinceReport.ts must not use the Date constructor \u2014 it prints the PREVIOUS ET day');
+      }
+      if (!/SINCE_REPORT_BLANK/.test(src)) errs.push('every blank needs its worded reason');
+      if (!/Not measured:/.test(src)) {
+        errs.push('a blank cell must open "Not measured:" \u2014 never a dash that reads as flat');
+      }
+      if (!/REPORT\s*'?\s*\+?\s*'?date/i.test(src) || !/SEC filing date/.test(src)) {
+        errs.push('the column head must say it uses the REPORT date, not the SEC filing date');
+      }
+      if (!/sorts,\s*\n?\s*'?\s*\+?\s*'?filters and gates nothing|sorts, filters and gates nothing/.test(src)) {
+        errs.push('the column head must say in words that it decides nothing');
+      }
+      if (/\bbounce\b/i.test(src)) errs.push('every surface he reads says "reversal", never "bounce"');
+
+      // both boards render it, and neither sorts on it
+      for (const f of ['src/components/ExplosiveGrowth.tsx', 'src/components/BondeBoard.tsx']) {
+        const tsx = read(f);
+        if (!/sinceReportCell\(/.test(tsx)) errs.push(`${f} must render the served cell`);
+        if (!/sinceReportCoverage\(/.test(tsx)) errs.push(`${f} must print how many rows are known`);
+        // Strip comments first: the file's own banner says "it sorts, filters
+        // and gates nothing", which is the disclaimer, not a violation.
+        const code = tsx.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        if (/\.sort\([^)]*since_report|since_report[^\n;]*\.sort\(/i.test(code)) {
+          errs.push(`${f} sorts on the new column \u2014 it is a fact, not a ranking (Rule #10)`);
+        }
+      }
+      if (!/id: 'since-report-column-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the Since report column needs its \u2728 entry');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '\u{1F4C8} the Bonde steady tier carries its measurement, and stays on the board (2026-09-21)',
+    file: 'src/components/BondeBoard.tsx',
+    // He was offered leave / label / drop and answered "Yes"; the main session
+    // read that as LABEL. The tier stays, nothing is hidden or re-sorted, and
+    // the served line states the weaker reading as plainly as the stronger one:
+    // the h=21 interval sits below zero symbol-clustered and SPANS zero
+    // date-clustered, so it is a lean, not a finding.
+    checks: (src) => {
+      const errs = [];
+      const py = read('../backend/sepa/bonde.py');
+      const pyCode = py.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+
+      if (!/STEADY_MEASURED\s*=/.test(pyCode)) {
+        errs.push('bonde.py must keep the steady numbers in ONE constant, pinned to the artifact');
+      }
+      if (!/def steady_verdict\(/.test(pyCode)) {
+        errs.push('the steady line must be BUILT from that constant, never typed');
+      }
+      if (/board_growth_measured/.test(py)) {
+        errs.push('a served module must not read the research artifact \u2014 pin it in a test instead');
+      }
+      if (!/data-testid="bd-steady-measured"/.test(src)) {
+        errs.push('the steady section must render the served line');
+      }
+      if (!/m\?\.steady|measured\?\.steady/.test(src)) {
+        errs.push('the line must come from the SERVED measured block, never composed on the page');
+      }
+      // the tier is labelled, NOT removed
+      if (!/'steady'/.test(src)) errs.push('the steady section left the board \u2014 he said label, not drop');
+      if (/steady[^\n]*(hidden|hide|filterOut|exclude)/i.test(src)) {
+        errs.push('the steady tier must not be hidden or filtered \u2014 label only');
+      }
+      // The standing rule bans the WORD on a surface he reads. The engine's own
+      // identifiers (useBounceRoom, bounceRoom, bounce_room) keep it on purpose,
+      // so strip comments and imports and exempt the room forms.
+      const visible = src
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+        .replace(/^\s*import[\s\S]*?from\s+'[^']*';$/gm, '')
+        .replace(/[Bb]ounce[-_]?[Rr]oom/g, '');
+      if (/\bbounce\b/i.test(visible)) {
+        errs.push('every surface he reads says "reversal", never "bounce"');
+      }
+      if (!/id: 'bonde-steady-measured-2026-09-21'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the steady-tier label needs its \u2728 entry');
       }
       return errs;
     },

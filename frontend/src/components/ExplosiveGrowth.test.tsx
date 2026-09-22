@@ -2,6 +2,17 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ExplosiveGrowth, type GrowthRow } from './ExplosiveGrowth';
+import fixture from '../pages/__fixtures__/since_report_growth_2026_09_21.json';
+
+/* The repo's own source-read pattern: `import.meta.url` is not a file URL
+   under the vitest transform, so resolve from the frontend root instead. */
+async function readSource(rel: string): Promise<string> {
+  const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+  const fs: any = mod?.default || mod;
+  const root = (globalThis as any).process?.cwd?.() || '.';
+  return fs.readFileSync(`${root}/${rel}`, 'utf8');
+}
+
 
 /* 🚀 Explosive Growth board (2026-09-11).
  *
@@ -547,7 +558,8 @@ describe('ExplosiveGrowth — the just-reported highlight', () => {
     mount();
     await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
     const body = document.querySelectorAll('tbody tr');
-    const flagCell = (tr: Element) => tr.querySelectorAll('td')[14];
+    // index 15 since 2026-09-21: the 📅 Since report column sits after Price
+    const flagCell = (tr: Element) => tr.querySelectorAll('td')[15];
     expect(flagCell(body[0]).textContent).toContain('⛔');
     expect(flagCell(body[1]).textContent).toBe('—');
   });
@@ -606,10 +618,150 @@ describe('ExplosiveGrowth — the just-reported highlight', () => {
     expect(screen.queryByText(/📈 Bonde:/)).toBeNull();
   });
 
-  it('the empty-state row still spans 16 columns — no column was added', async () => {
+  it('the empty-state row spans 17 columns — 16 plus 📅 Since report (2026-09-21)', async () => {
     stubEr([], { earnings_fresh_summary: { ...SUMMARY, n: 0, n_fresh: 0, n_known: 0, n_unknown: 0 } });
     mount();
     const cell = await screen.findByText(/nothing matches the current filters/);
-    expect(cell.getAttribute('colspan')).toBe('16');
+    expect(cell.getAttribute('colspan')).toBe('17');
+  });
+});
+
+/* 📅 Since the report (Ajay 2026-09-21, item #3). A FACT column: it sorts
+ * nothing, it reorders nothing, and a blank is never a zero. */
+describe('📅 the since-the-report column', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const CELL = {
+    known: true, pct: 13.35, report_date: '2026-09-01', when: 'AMC' as const,
+    anchor_date: '2026-09-02', anchor_close: 165.22, as_of: '2026-09-19',
+    last_close: 187.27, sessions: 12, report_age_days: 20,
+    stale_report: false, calendar_fetched_at: '2026-09-21',
+    calendar_stale: false, reason: null,
+  };
+  const BLANK = {
+    known: false, pct: null, report_date: null, when: null, anchor_date: null,
+    anchor_close: null, as_of: null, last_close: null, sessions: null,
+    report_age_days: null, stale_report: null, calendar_fetched_at: null,
+    calendar_stale: null, reason: 'no_report',
+  };
+  const SRS = {
+    n: 3, n_known: 1, n_positive: 1, n_blank: 2,
+    blank_reasons: { no_report: 2 }, n_stale_report: 0, n_calendar_stale: 0,
+    as_of: '2026-09-19', date_basis: 'report',
+    date_basis_note: 'The date is the REPORT date — not the SEC filing date.',
+    honesty: 'MEASURED 2026-09-21 — the typical name on this board had already had its run before the board could see it.',
+    source: 'yfinance (Yahoo Finance) via sepa.earnings_watch',
+  };
+
+  const stubSr = (rows: GrowthRow[], extra: Record<string, unknown>) =>
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        rows, n: rows.length, groups: [], built_at: '2026-09-21T03:38:00',
+        screen: { min_sales_growth_pct: 100, min_eps_growth_pct: 100 },
+        disclaimer: 'Discovery list, NOT a signal.', ...extra,
+      }),
+    }) as unknown as Response));
+
+  const three = (withSr: boolean): GrowthRow[] => [
+    row({ symbol: 'PTGX', name: 'Protagonist', sales_growth_pct: 900.1,
+          ...(withSr ? { since_report: { ...BLANK } } : {}) }),
+    row({ symbol: 'CRDO', name: 'Credo', sales_growth_pct: 300.2,
+          ...(withSr ? { since_report: { ...CELL } } : {}) }),
+    row({ symbol: 'NVDA', name: 'NVIDIA', sales_growth_pct: 100.3,
+          ...(withSr ? { since_report: { ...BLANK } } : {}) }),
+  ];
+
+  const order = () => Array.from(
+    document.querySelectorAll('tbody tr td:first-child a'),
+  ).map((a) => a.textContent);
+
+  it('draws the header immediately after Price', async () => {
+    stubSr(three(true), { since_report_summary: SRS });
+    mount();
+    const head = await screen.findByText('Since report');
+    const heads = Array.from(document.querySelectorAll('thead th'))
+      .map((th) => th.textContent?.trim());
+    expect(heads.indexOf('Since report')).toBe(heads.findIndex(
+      (t) => t?.startsWith('Price')) + 1);
+    expect(head.tagName).toBe('TH');
+  });
+
+  it('NEGATIVE — the header is NOT a sort control', async () => {
+    stubSr(three(true), { since_report_summary: SRS });
+    mount();
+    const head = await screen.findByText('Since report');
+    expect(head.querySelector('button.eg-sort')).toBeNull();
+    expect(head.getAttribute('aria-sort')).toBeNull();
+    const before = order();
+    fireEvent.click(head);
+    expect(order()).toEqual(before);
+  });
+
+  it('prints the served return per row, and an em-dash where it is blank', async () => {
+    stubSr(three(true), { since_report_summary: SRS });
+    mount();
+    const crdo = await screen.findByTestId('growth-since-CRDO');
+    expect(crdo.textContent).toBe('+13.3%');
+    expect(crdo.getAttribute('title')).toContain('2026-09-02 close (165.22)');
+    expect(crdo.getAttribute('title')).toContain('not the SEC filing date');
+    const ptgx = screen.getByTestId('growth-since-PTGX');
+    expect(ptgx.textContent).toBe('—');
+    expect(ptgx.getAttribute('title')!.startsWith('Not measured:')).toBe(true);
+    expect(ptgx.textContent).not.toBe('0.0%');
+  });
+
+  it('renders the served honesty line and the coverage counts', async () => {
+    stubSr(three(true), { since_report_summary: SRS });
+    mount();
+    const note = await screen.findByTestId('eg-since-note');
+    expect(note.textContent).toContain(SRS.honesty);
+    expect(note.textContent).toContain('known for 1 of 3 rows');
+    expect(note.textContent).toContain('no report date on file 2');
+    expect(note.textContent).toContain(SRS.date_basis_note);
+  });
+
+  it('NEGATIVE — renders unchanged when since_report_summary is absent', async () => {
+    stubSr(three(false), {});
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(screen.queryByTestId('eg-since-note')).toBeNull();
+    expect(order()).toEqual(['PTGX', 'CRDO', 'NVDA']);
+    // the cell is still drawn, blank, so the grid never loses a column
+    expect(screen.getByTestId('growth-since-CRDO').textContent).toBe('—');
+  });
+
+  it('NEGATIVE — THE ORDER PIN: the column never reorders or removes a row', async () => {
+    stubSr(three(false), {});
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    const without = order();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    stubSr(three(true), { since_report_summary: SRS });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    expect(order()).toEqual(without);
+  });
+
+  it('renders the REAL served payload — 21 cells, 19 known', async () => {
+    const real = fixture as unknown as { rows: GrowthRow[]; since_report_summary: unknown };
+    stubSr(real.rows, { since_report_summary: real.since_report_summary });
+    mount();
+    await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
+    const cells = Array.from(document.querySelectorAll('td[data-testid^="growth-since-"]'));
+    expect(cells).toHaveLength(21);
+    expect(cells.filter((c) => c.textContent !== '—')).toHaveLength(19);
+    // the two blanks are the ten-year FF row and the 2024 EVC row
+    expect(screen.getByTestId('growth-since-FF').textContent).toBe('—');
+    expect(screen.getByTestId('growth-since-FF').getAttribute('title')!
+      .startsWith('Not measured:')).toBe(true);
+  });
+
+  it('NEGATIVE — no research figure is typed into the component', async () => {
+    const src = await readSource('src/components/ExplosiveGrowth.tsx');
+    for (const n of ['46.40', '2.21', '8 of 20', '8.19', '4.41']) {
+      expect(src).not.toContain(n);
+    }
   });
 });

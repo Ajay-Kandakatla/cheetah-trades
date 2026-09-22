@@ -35,6 +35,8 @@ import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { metricCells } from '../lib/boardMetrics';
+import { SINCE_REPORT_HEAD, sinceReportCell, sinceReportCoverage,
+         type SinceReport, type SinceReportSummary } from '../lib/sinceReport';
 
 export type GrowthZone = {
   missing?: boolean; in_band?: boolean; intact?: boolean | null;
@@ -69,6 +71,11 @@ export type GrowthRow = {
    * false` means NO REPORT DATE ON FILE, which is not the same as "did not
    * report": 16 of the 21 live rows were in that state the day this shipped. */
   earnings_fresh?: EarningsFresh;
+  /* 📅 "since the report" (Ajay 2026-09-21). The return from the close of the
+   * first session the market could trade on the latest reported quarter to
+   * the latest cached close. A FACT between two dates — attached at READ time
+   * by sepa/since_report.py; it sorts, filters and gates nothing. */
+  since_report?: SinceReport;
   as_of?: string | null;
   // The PERIOD the growth legs are measured on (2026-09-14 review fixes).
   // `period` is the fiscal quarter at slot 0 of the cached series ("FY2026
@@ -122,6 +129,9 @@ export type GrowthPayload = {
     most_recent?: { symbol: string; reported_on: string; days_ago: number } | null;
     source?: string;
   } | null;
+  /* 📅 Coverage + the board's own honesty line for the since-the-report
+   * column. Served whole — no number in it is composed here. */
+  since_report_summary?: SinceReportSummary | null;
   disclaimer?: string;
 };
 
@@ -335,6 +345,7 @@ export function ExplosiveGrowth() {
 
   const groups = data?.groups ?? [];
   const ernote = data?.earnings_fresh_summary ?? null;
+  const srs = data?.since_report_summary ?? null;
   const blockedN = (data?.rows ?? []).filter(
     (x) => (x.warnings ?? []).some((w) => w.startsWith('⛔'))).length;
   const demandN = (data?.rows ?? []).filter((x) => x.zone?.in_band && x.zone?.intact).length;
@@ -417,6 +428,18 @@ export function ExplosiveGrowth() {
           )}
           {' '}A calendar fact only: it changes no order, no filter and no gate, and the
           {' '}100%/100% screen itself has never been measured forward.
+        </div>
+      )}
+
+      {/* 📅 "Since the report" (Ajay 2026-09-21, item #3). ALWAYS rendered when
+          the summary is served — this is the ask's honesty line, not a badge,
+          and the clutter pin above applies to the just-reported strip only.
+          Every number in it is SERVED (sepa/since_report.py, pinned to
+          docs/research/board_growth_2026_09_21.md); nothing is typed here. */}
+      {!!srs && (
+        <div className="eg-note eg-since-note" data-testid="eg-since-note">
+          📅 {sinceReportCoverage(srs)} — {srs.honesty}
+          {' '}<span className="eg-dim">({srs.date_basis_note})</span>
         </div>
       )}
 
@@ -576,6 +599,12 @@ export function ExplosiveGrowth() {
                   Price{arrow('price', sortKey, sortDir)}
                 </button>
               </th>
+              {/* 📅 Ajay 2026-09-21. NOT a sort key: no eg-sort button and no
+                  aria-sort, because the ask is a fact column and a sort on it
+                  is a separate ask. growthSort.ts is untouched. */}
+              <th className="eg-num eg-since-h" title={SINCE_REPORT_HEAD.title}>
+                {SINCE_REPORT_HEAD.text}
+              </th>
               <th className="eg-num"
                   aria-sort={sortKey === 'market_cap' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
                 <button type="button" className="eg-sort"
@@ -670,6 +699,15 @@ export function ExplosiveGrowth() {
                     {pct(r.npm_latest_pct, 1)}{r.npm_expanding ? ' ↑' : ''}
                   </td>
                   <td className="eg-num">{money(r.price)}</td>
+                  {(() => {
+                    const c = sinceReportCell(r.since_report, r.symbol);
+                    return (
+                      <td className={`eg-num eg-since ${c.tone ? `eg-${c.tone}` : ''}`}
+                          title={c.title} data-testid={`growth-since-${r.symbol}`}>
+                        {c.text}
+                      </td>
+                    );
+                  })()}
                   <td className="eg-num">{cap(r.market_cap)}</td>
                   <td className="eg-num">
                     {r.avg_dollar_vol == null ? '—' : `$${(r.avg_dollar_vol / 1e6).toFixed(1)}M`}
@@ -707,7 +745,7 @@ export function ExplosiveGrowth() {
               );
             })}
             {rows.length === 0 && (
-              <tr><td colSpan={16} className="eg-dim">
+              <tr><td colSpan={17} className="eg-dim">
                 nothing matches the current filters.
               </td></tr>
             )}

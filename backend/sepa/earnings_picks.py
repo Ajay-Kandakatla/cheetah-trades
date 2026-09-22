@@ -63,13 +63,23 @@ def _today_iso() -> str:
         return time.strftime("%Y-%m-%d")
 
 
-def reaction_read(df, report_date: str, when: Optional[str]) -> Optional[dict]:
+def reaction_read(df, report_date: str, when: Optional[str],
+                  min_history: int = 50) -> Optional[dict]:
     """Pure: the post-report tape read from a daily frame.
 
     Reaction day = the report day for BMO, the NEXT session for AMC (or
     unknown timing — yfinance stamps most after-close reports correctly,
     and a same-day stamp with unknown timing behaves like BMO).
-    Returns None when the reaction day's bar isn't in the frame yet."""
+    Returns None when the reaction day's bar isn't in the frame yet.
+
+    `min_history` — how many bars must sit BEFORE the reaction session.
+    The default 50 is the precondition of the `vol_ratio` leg only (the
+    50-day average volume this read compares against), and every existing
+    caller keeps it, so the picks list is byte-identical. A caller that wants
+    only `drift_since_pct` (the 📅 since-the-report column, 2026-09-21) passes
+    `min_history=1` and accepts a `vol_ratio` computed off a shorter window —
+    `pre < 0` still refuses a reaction bar with no prior bar at all.
+    ADDITIVE ONLY: no gate, no threshold and no default moved (Rule #10)."""
     import pandas as pd
     try:
         ts = pd.Timestamp(report_date)
@@ -83,7 +93,7 @@ def reaction_read(df, report_date: str, when: Optional[str]) -> Optional[dict]:
         if k >= len(idx):
             return None                      # reaction session not traded yet
         pre = k - 1
-        if pre < 0 or k < 50:
+        if pre < 0 or k < min_history:
             return None
         closes = df["close"].to_numpy(dtype=float)
         vols = df["volume"].to_numpy(dtype=float)

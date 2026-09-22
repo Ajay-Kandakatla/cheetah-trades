@@ -151,6 +151,17 @@ def _payload(doc: dict) -> dict:
         ef = _ef.attach(rows)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("growth: earnings_fresh attach failed: %s", exc)
+    # 📅 "since the report" (Ajay 2026-09-21, item #3) — a FACT between two
+    # dates, attached at READ time like the two blocks above and for the same
+    # reason. ONE calendar read + ONE price-cache read for the whole board; it
+    # orders nothing, filters nothing and gates nothing. Its own try/except:
+    # a cold price cache must leave the column blank, never take the tab down.
+    srs = None
+    try:
+        from sepa import since_report as _sr
+        srs = _sr.attach_growth(rows)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: since_report attach failed: %s", exc)
     # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
     # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
     # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks
@@ -165,6 +176,7 @@ def _payload(doc: dict) -> dict:
         "capped": len(rows) >= T.MAX_ROWS,
         "groups": _group(rows),
         "earnings_fresh_summary": ef or None,
+        "since_report_summary": srs,
         "built_at": (doc.get("built_at").isoformat()
                      if hasattr(doc.get("built_at"), "isoformat")
                      else doc.get("built_at")),

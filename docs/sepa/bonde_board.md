@@ -82,8 +82,15 @@ median and win less than half the time", not "these reliably fall".
 |---|---|---|---|---|
 | explosive ≥100% | 1,563 | **+0.45pp** [−0.31, +1.36] | +2.43pp | +0.96pp [−1.40, +3.14] |
 | strong ≥25% | 5,391 | **+0.37pp** [−0.16, +0.78] | +5.27pp | +0.68pp [−0.68, +1.94] |
-| steady 5–25% | 17,434 | −0.01pp | — | — |
+| steady 5–25% | 17,434 | −0.01pp [^steady] | — | — |
 | declining <0% | 13,160 | −0.21pp | — | — |
+
+[^steady]: This row is the 2026-09-13 audit's read, and it published **no
+    interval** — there is no machine-readable artifact behind it, so it stays
+    here as history and is never served to the board. A second replay on
+    2026-09-21 (different script, different panel) reads the same tier
+    **−0.21pp [−0.40, −0.04] symbol-clustered** at 21 days, with a
+    date-clustered interval of [−0.56, +0.10] that spans zero. See §10.
 
 Every median lift and every win-rate lift spans zero, at both horizons, in the
 primary run and in three of four variants. **The mean is the right tail**:
@@ -461,3 +468,110 @@ Full report, with the before/after numbers and the re-run recipe:
 `docs/sepa/data_spine_audit_2026_09_20.md`. Script:
 `backend/scripts/data_spine_audit.py`. Tests:
 `backend/tests/test_data_spine_2026_09_20.py`.
+
+---
+
+## 10. The steady tier, labelled — 2026-09-21
+
+Ajay was offered three options for the 5–25% tier — *leave it, label it, or
+drop it* — and said **yes**. Read as **LABEL IT**: a label is additive and
+reversible, dropping 666 names is not. **Nothing is hidden, dropped, filtered,
+re-sorted or de-prioritised.** `SECTION_CAP["steady"]` is still 40, the tier is
+still in `SECTIONS`, and `board()` still places every steady row. His 5% floor
+is his.
+
+### What the replay measured
+
+A point-in-time replay over **24 monthly cross-sections** (a different script
+and a different panel from the 2026-09-13 audit) puts this tier below the
+scored universe at 21 days — and only there, and only on one clustering:
+
+| read | h=21 | h=63 | h=126 |
+|---|---|---|---|
+| median lift vs all-scored | **−0.21pp** | −0.52pp | −0.51pp |
+| 95% CI, symbol-clustered | **[−0.40, −0.04]** | [−0.89, +0.02] | [−1.18, +0.25] |
+| 95% CI, date-clustered | [−0.56, +0.10] | [−0.89, +0.23] | [−1.40, +0.64] |
+| n symbol-bars | 14,353 | 13,131 | 11,124 |
+| n symbols / n dates | 1,611 / 20 | 1,596 / 18 | 1,479 / 15 |
+
+Momentum-controlled — excess over the trailing-momentum-quintile mean of
+all-scored — the tier is negative at every horizon, and this is the strongest
+leg of the study:
+
+| read | h=21 | h=63 | h=126 |
+|---|---|---|---|
+| MEAN excess | −0.60pp | −1.79pp | −3.40pp |
+| MEDIAN excess | −1.27pp | −3.80pp | −6.98pp |
+| 95% CI on the mean, symbol-clustered | [−0.87, −0.30] | [−2.64, −0.93] | [−5.07, −1.53] |
+| n | 11,196 | 9,974 | 7,969 |
+
+The replay publishes **no date-clustered interval** for the momentum-controlled
+read, so the label says "symbol-clustered only" rather than implying one, and
+prints the MEDIAN beside every MEAN — the medians are three to five times the
+magnitude of the means, so a mean alone would both understate the spread and
+flatter the precision.
+
+The contrast, and where the lift on this board actually sits — **ARRIVALS** to
+the explosive tier:
+
+| read | h=21 | h=63 | h=126 |
+|---|---|---|---|
+| median lift vs all-scored | +3.33pp | +7.49pp | +12.83pp |
+| 95% CI, symbol-clustered | [+1.24, +5.42] | [+3.68, +11.46] | [+6.70, +20.91] |
+| 95% CI, date-clustered | [−0.91, +8.37] | [+0.52, +16.06] | [−8.05, +19.07] |
+
+"Every CI clear of zero" is true of the **symbol axis alone**: date-clustered,
+21 and 126 days span zero and only 63 days is clear. The served line says so.
+
+### What the label may and may not claim
+
+- **"The one cohort"** is qualified to the axis and horizon where it is true:
+  *at 21 days, symbol-clustered*. Checked across all 19 cells in the artifact —
+  `B_STEADY` is the only one whose 21-day symbol interval sits wholly below the
+  field (`ALL_SCORED` is the degenerate self-reference at 0.0; the nearest other
+  cell is `B_STRONG` at +0.56). A re-run that produces a second below-zero
+  cohort fails
+  `backend/tests/test_bonde_steady_label.py::test_THE_ONE_COHORT_claim_holds_over_every_cell_at_21d_symbol_clustered`.
+- **Date clustering is the binding axis on this board** (the 2026-09-13 audit
+  found symbol clustering alone left intervals ~3× too tight), and under it the
+  21-day drag **spans zero**. The label calls it "a lean, not a finding".
+- At 63 and 126 days **every** interval spans zero on **both** clusterings.
+- It is a **MEASUREMENT over 24 cross-sections inside one bull regime, not a
+  rule**. Survivorship is unmeasured, as it is for every cell in this panel.
+- No number on the line is retyped. Every one is read out of
+  `bonde.STEADY_MEASURED`, which is pinned field-for-field against
+  `backend/scripts/board_growth_measured.json`.
+
+### What ships where
+
+| piece | where |
+|---|---|
+| the constants | `backend/sepa/bonde.py` → `STEADY_MEASURED` (a SEPARATE dict from `MEASURED`: different script, panel and run date, and `measured_verdict()` / `note()` / `supply_demand/rules_info.py` all read `MEASURED` by key) |
+| the sentence | `backend/sepa/bonde.py` → `steady_verdict()`, built only from that dict via `_sgn` |
+| served as | `GET /bonde/board` → `measured.steady` (a `str`, like every other value there) |
+| rendered by | `frontend/src/components/BondeBoard.tsx`, under the Steady section header — it renders a string it was handed, never a typed figure |
+| CLI | `python -m sepa.bonde show` prints `verdict steady:` |
+| pins | `backend/tests/test_bonde_steady_label.py` |
+| report | `docs/research/board_growth_2026_09_21.md` |
+| re-run | `backend/scripts/board_growth_replay.py` |
+
+`note()`, `SECTION_CAP`, `SECTIONS`, `MEASURED` and the `supply_demand/rules_info.py`
+lines are **unchanged** — this is not a rule, so there is nothing to add to the
+rules panel.
+
+### Open — his call
+
+1. **Tone.** The line reads as a neutral served paragraph. Does he want the
+   Steady header itself to read as a warning instead?
+2. **Travel.** The label stays on the Bonde tab. It is not carried to the
+   🚀 board's tier chip for steady-tier names.
+3. **Re-run cadence** for the served 2026-09-21 constants — monthly, quarterly,
+   or on ask. Until then the board quotes a 2026-09-21 snapshot and says so.
+
+---
+
+## 11. Related
+
+- `docs/sepa/since_report_column_2026_09_21.md` — the "since the qualifying
+  filing" column on this board and on 🚀 Explosive Growth (his item #3 from the
+  same 2026-09-21 research).

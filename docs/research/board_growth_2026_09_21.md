@@ -65,27 +65,47 @@ explosive-read study on the same panel: median lift **+0.45pp**, CI **[−0.31, 
 The replay splits each board into names that **arrived** at that cross-section
 (first qualified there) and names that were already **incumbents**. Lift is the
 median forward return minus the same cross-section's all-scored median, in
-percentage points; CI is bootstrapped over symbols.
+percentage points.
+
+**Two intervals, and they disagree.** Cross-sections are 21 sessions apart, so a
+126-session forward overlaps six of them. Bootstrapping over **symbols** treats
+each name as independent; bootstrapping over **entry dates** (block bootstrap,
+`block = h // 21`) treats each cross-section as independent and is the stricter
+test, because 24 dates inside one regime is a small number. Both are printed
+below as `lift [symbol-clustered] · [date-clustered]`, and **no claim in this
+file rests on the symbol interval alone.**
 
 | cohort | h=21 | h=63 | h=126 |
 |---|---|---|---|
-| Bonde explosive — arrivals | **+3.33** [+1.24, +5.42] | **+7.49** [+3.68, +11.46] | **+12.83** [+6.70, +20.91] |
-| Bonde explosive — incumbents | +0.27 [−0.99, +1.31] | +0.19 [−2.21, +2.84] | +5.47 [+1.09, +10.04] |
-| growth 100/100 — arrivals | +3.69 [−0.22, +10.13] | +5.58 [−2.25, +12.44] | +8.93 [−5.45, +15.04] |
-| growth 100/100 — incumbents | −0.26 [−2.97, +2.14] | +3.16 [−4.43, +8.33] | +7.55 [−0.80, +15.79] |
-| Bonde strong tier | +0.02 [−0.45, +0.56] | −0.01 [−1.00, +1.26] | +0.67 [−1.66, +2.69] |
-| Bonde steady tier | **−0.21** [−0.40, −0.04] | −0.52 [−0.89, +0.02] | −0.51 [−1.18, +0.25] |
+| Bonde explosive — arrivals | +3.33 [+1.24, +5.42] · [−0.91, +8.37] | +7.49 [+3.68, +11.46] · [+0.52, +16.06] | +12.83 [+6.70, +20.91] · [−8.05, +19.07] |
+| Bonde explosive — incumbents | +0.27 [−0.99, +1.31] · [−2.73, +2.63] | +0.19 [−2.21, +2.84] · [−3.70, +4.37] | +5.47 [+1.09, +10.04] · [−0.49, +10.38] |
+| growth 100/100 — arrivals | +3.69 [−0.22, +10.13] · [−0.43, +11.77] | +5.58 [−2.25, +12.44] · [−0.22, +15.40] | +8.93 [−5.45, +15.04] · [−4.29, +11.80] |
+| growth 100/100 — incumbents | −0.26 [−2.97, +2.14] · [−3.93, +3.19] | +3.16 [−4.43, +8.33] · [−3.74, +10.99] | +7.55 [−0.80, +15.79] · [+0.23, +19.13] |
+| Bonde strong tier | +0.02 [−0.45, +0.56] · [−0.81, +0.86] | −0.01 [−1.00, +1.26] · [−1.40, +1.39] | +0.67 [−1.66, +2.69] · [−2.08, +3.08] |
+| Bonde steady tier | −0.21 [−0.40, −0.04] · [−0.56, +0.10] | −0.52 [−0.89, +0.02] · [−0.89, +0.23] | −0.51 [−1.18, +0.25] · [−1.40, +0.64] |
 
-Only the **arrivals** row has a CI clear of zero at every horizon, and only on the
-explosive tier (n = 224 / 219 / 158 arrivals). The incumbent row — which is what a
-board looks like on any given morning — is flat for three months and only separates
-by six. The **steady tier is a measured drag**: its CI sits below zero at h=21 and its
-momentum-controlled mean is negative at all three horizons.
+**What actually survives the stricter test.** Symbol-clustered, the explosive
+arrivals row is clear of zero at every horizon. Date-clustered, **only h=63 is**
+([+0.52, +16.06]); h=21 and h=126 span zero. So the
+honest statement is: *arrivals beat incumbency on every horizon and every
+measure, and the separation reaches significance under both clusterings only at
+three months.* The incumbent row — which is what a board looks like on any given
+morning — is flat at one and three months on both axes.
+
+**The steady tier is a lean, not a finding.** Its h=21 median lift sits below zero
+symbol-clustered ([−0.40, −0.04]) and spans zero
+date-clustered ([−0.56, +0.10]); at 63 and 126 days it
+spans zero on both. The one read that is negative at every horizon with its
+interval below zero is the **momentum-controlled mean** (−0.60 / −1.79 /
+−3.40pp), and that interval is symbol-clustered only — the replay carries no
+date-clustered interval for that read. This is why the label the board now
+carries says "a lean, not a finding" rather than calling it a drag.
 
 **Momentum control.** Each row is also compared to the all-scored **mean** of its own
 trailing-momentum quintile, so "it was already running" cannot explain the lift. The
 explosive tier survives it — mean excess **+3.52pp** [+1.44, +5.94] at h=21,
-**+12.51pp** [+3.51, +22.34] at h=126 — but the *median* excess does not move away
+**+12.51pp** [+3.51, +22.34] at h=126, **symbol-clustered; the replay carries no
+date-clustered interval for this read** — but the *median* excess does not move away
 from the baseline. That combination means a **fat right tail, not a better typical
 name**: a handful of members carry the cohort mean while the middle of the board
 tracks its momentum peers.
@@ -93,6 +113,10 @@ tracks its momentum peers.
 The quintile cells say the same thing from the other side. The board's lift
 concentrates in the members that were **beaten down** over the prior quarter, not the
 ones already running:
+
+Intervals here are **symbol-clustered**; date-clustered, the Bonde Q1 cell spans
+zero at h=126 ([−8.54, +38.17]) while the growth Q1 cell stays clear
+([+12.49, +25.61]).
 
 | momentum quintile (trailing, Q1 = worst) | Bonde explosive, h=126 lift | growth 100/100, h=126 lift |
 |---|---|---|
@@ -159,16 +183,24 @@ June, a quarter in the worst 3% of the universe, and one violent week at the end
 
 ## 6. His call
 
-1. **Arrival vs incumbency is the only cell with a clean CI at every horizon.** Worth
+1. **Arrival vs incumbency is the widest separation in the replay** — clean at every
+   horizon symbol-clustered, and at three months under both clusterings. Worth
    surfacing an "arrived this week" marker on the Explosive Growth and Bonde boards,
    the way the S/D boards stamp `first_seen`? The data exists; the boards only started
    keeping it on 2026-09-12 / 09-14, so it is forward-only from here.
-2. **The steady tier measures as a drag** (h=21 lift −0.21pp, CI below zero; momentum-
-   controlled mean negative at all three horizons, n 14,353 rows / 1,611 symbols).
-   666 names carry that tier. Leave it, label it, or drop it from the visible board?
+2. **The steady tier leans against the field** (h=21 lift −0.21pp; the interval
+   sits below zero symbol-clustered and spans zero date-clustered; the momentum-
+   controlled mean is negative at all three horizons; n 14,353 rows / 1,611 symbols).
+   666 names carry that tier. **ANSWERED 2026-09-21: label it** — the Bonde board now
+   carries a served line saying exactly this, and nothing is hidden, dropped or
+   re-sorted.
 3. **The "before the filing" split is the strongest thing in this study** (+46.40%
-   before, −2.21% since, on the growth board). Should the board print a *since
-   qualifying filing* column so the run-already-happened case is visible on the tile?
+   before, −2.21% since, on the growth board). **ANSWERED 2026-09-21: yes** — both
+   boards now carry a *Since report* column, measured from the earnings **report**
+   date rather than the SEC filing date this study used, because the report date is
+   the one the live app keeps fresh. See `docs/sepa/since_report_column_2026_09_21.md`
+   for the coverage the live calendar actually gives (growth 19 of 21 rows, Bonde 65
+   of 200) and for what a blank cell means.
 4. **The screen number does not track the run** in any cohort. The boards currently
    sort by it. Sort by something else, or keep it and say what it is?
 5. **Re-run cadence.** This is a snapshot of 2026-09-21. Monthly, quarterly, or only

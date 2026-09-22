@@ -30,6 +30,13 @@ from . import symbols
 log = logging.getLogger("sepa.earnings_watch")
 
 _REFETCH_AFTER_SEC = 3 * 24 * 3600
+REFETCH_AFTER_SEC = _REFETCH_AFTER_SEC
+"""Public alias — the ONE definition of a stale calendar doc (3 days).
+
+Added 2026-09-21 for the 📅 "since the report" column, which prints a
+`calendar_stale` fact in its tooltip. The rule already existed here and is
+what `refresh()` re-fetches on; a reader that needs it must not retype 3 days
+of its own (Rule #1)."""
 _MAP_HORIZON_DAYS = 30          # bulk map only carries dates within this window
 WARN_WINDOW_DAYS = 7            # the UI/filters treat <= this as "earnings soon"
 
@@ -165,7 +172,8 @@ def last_report_map(symbols: Optional[List[str]] = None) -> dict:
         return {}
     out: Dict[str, dict] = {}
     try:
-        for d in coll.find({"_id": {"$in": syms}}, {"last_report": 1}):
+        for d in coll.find({"_id": {"$in": syms}},
+                           {"last_report": 1, "fetched_at": 1}):
             lr = d.get("last_report")
             if not lr:
                 continue
@@ -175,6 +183,11 @@ def last_report_map(symbols: Optional[List[str]] = None) -> dict:
             out[sym] = {k: lr.get(k) for k in
                         ("date", "when", "eps_actual", "eps_estimate",
                          "surprise_pct")}
+            # WHEN THE ROW ITSELF WAS LAST REFRESHED (epoch seconds), carried
+            # additively 2026-09-21: cache freshness is not content freshness
+            # (Rule #7), and the 📅 since-the-report tooltip says which it has.
+            # Not part of `last_report` — it is a property of the DOC.
+            out[sym]["fetched_at"] = d.get("fetched_at")
     except Exception as exc:
         log.debug("earnings last_report_map read failed: %s", exc)
         return {}

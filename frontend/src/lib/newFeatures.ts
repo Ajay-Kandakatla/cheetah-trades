@@ -22,6 +22,32 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-21, answering the four his-call items from the board-growth
+  // research with "Yes". Item #4: leave / label / drop the steady tier -> LABEL.
+  // Nothing is hidden, dropped, re-sorted or gated; the tier stays because his
+  // 5% floor is his.
+  { id: 'bonde-steady-measured-2026-09-21',
+    label: '\u{1F4C8} The Steady tier now says what it measured. You said: \u201cYes\u201d to labelling it. '
+      + 'WHAT IT SAYS: in a point-in-time replay over 24 monthly cross-sections, the Steady tier is the one group on this board whose typical 21-day result sits below the rest of the scanned market \u2014 by a fifth of a percentage point, on 14,353 readings across 1,611 names. '
+      + 'AND WHY IT IS A LEAN, NOT A FINDING: that gap only clears zero when the maths treats each NAME as independent. Treat each DATE as independent, which is the stricter test on 24 dates inside one bull run, and it straddles zero. At three and six months it straddles zero either way. The one reading that is negative at every horizon is the comparison against names with the same recent momentum. The served line states all of that, in that order \u2014 it does not pick the flattering half. '
+      + 'WHERE THE LIFT ACTUALLY IS on this board: names ARRIVING on the Explosive tier, not names sitting on it. Arrivals beat the field at one, three and six months on every measure; the separation clears zero under both tests only at three months. '
+      + 'NOT CHANGED: nothing is hidden, dropped, re-ordered, filtered or gated. No tier threshold moved \u2014 5 / 25 / 100 are his own cited numbers. The tier stays exactly where it was, and now carries its own record. '
+      + 'YOUR CALL: whether the tone should be a warning rather than the neutral paragraph it is; whether the same label should travel to the Explosive Growth board\u2019s tier chip or stay on this tab; and how often the 2026-09-21 numbers get re-run.',
+    addedAt: '2026-09-21', route: '/chart-maps?tab=bonde' },
+  // Ajay 2026-09-21, item #3: "Should the boards print a 'since qualifying
+  // filing' column?" -> Yes. The anchor is the earnings REPORT date, not the
+  // SEC filing date the study used: the report date is the one the live app
+  // keeps fresh (the study's filing dates live in a research file nothing
+  // refreshes). CRDO reported 09-01 and filed 09-02 — one day.
+  { id: 'since-report-column-2026-09-21',
+    label: '\u{1F4C5} Both growth boards now show what a name has done SINCE it reported. You asked: \u201cShould the boards print a since-qualifying-filing column?\u201d '
+      + 'WHY IT IS THERE: the research you asked for found the run is usually over by the time a board can see the name. The growth board\u2019s typical member gained 46.40% in the six months BEFORE the quarter that qualified it, and has lost 2.21% since; only 8 of 20 are up. The Bonde board never had the \u201cbefore\u201d leg at all \u2014 it ran no harder than the rest of the scan. The board now says that in its own header instead of leaving you to find it. '
+      + 'WHAT THE COLUMN IS: the return from the close of the first session you could actually trade the report, to the latest close, per name, with both dates on hover. It is a fact between two dates. It sorts nothing, filters nothing and gates nothing. '
+      + 'A BLANK IS NEVER FLAT: every empty cell says why on hover \u2014 no report date on file, a date the app cannot read, a report older than the name\u2019s first bar, or not enough history. You will never see 0% standing in for \u201cwe do not know\u201d. '
+      + 'WHICH DATE: the earnings REPORT date from the app\u2019s own calendar, not the SEC filing date the study measured from. They are usually a day apart (CRDO reported Sep 1, filed Sep 2). Every tooltip says which one it is. '
+      + 'COVERAGE TODAY: 19 of 21 rows on Explosive Growth, 65 of 200 on Bonde \u2014 the calendar simply has no report on file for most Bonde names. The header prints the count rather than hiding the gap. '
+      + 'YOUR CALL: pull the Bonde names into the calendar refresh so coverage goes past 65 of 200 (a cron change); whether a report older than 157 days should blank the cell instead of showing a stale tag; whether you want to sort by this column (not built \u2014 that would make a fact into a ranking); and whether an earnings print NEWER than the screened quarter should be flagged.',
+    addedAt: '2026-09-21', route: '/chart-maps?tab=growth' },
   // Ajay 2026-09-21, with the board's own link: "We have this page that pull
   // data from social media and chatter the keeps pulling new stocks.. Can you
   // please check if we can use them and make sure to do some research and add

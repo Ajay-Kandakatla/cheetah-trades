@@ -12262,7 +12262,7 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   max-height: calc(100vh - var(--sticky-top, 0px) - 2.5rem);
   overscroll-behavior: contain;
 }
-.eg-table { width: 100%; min-width: 1040px; border-collapse: collapse; font-size: 0.78rem; }
+.eg-table { width: 100%; min-width: 1130px; border-collapse: collapse; font-size: 0.78rem; }
 .eg-table thead th {
   position: sticky; top: 0; z-index: 2;
   background: var(--bg-raised); color: var(--ink-muted);
@@ -13403,4 +13403,43 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 @media (max-width: 640px) {
   .ipo-drill { padding: 0.9rem 0.9rem 1rem; }
   .ipo-drill-k { flex-basis: 100%; }
+}
+
+
+/* 📅 Since the report (Ajay 2026-09-21, item #3) — the FACT column on the
+   🚀 Explosive Growth and 📈 Bonde boards, and the two honesty lines under
+   them. Appended AFTER every earlier .bd-* block so THIS .bd-row
+   re-declaration wins on source order and the grid gains its new track.
+   jsdom loads no stylesheet, so no render test can catch a missing rule
+   here — the FE contract check is what guards it. */
+
+.eg-since { cursor: help; }
+.eg-table thead th.eg-since-h { cursor: help; }
+.eg-since-note { margin-top: 0.35rem; }
+
+/* Seven tracks now: Ticker · Today · Since report · Sales · Character ·
+   Pivot · metrics. */
+.bd-row {
+  grid-template-columns:
+    minmax(140px, 1.4fr) minmax(64px, 0.5fr) minmax(74px, 0.55fr)
+    minmax(120px, 1fr) minmax(150px, 1.2fr) minmax(110px, 0.9fr)
+    minmax(190px, 1.3fr);
+}
+.bd-since {
+  font-size: 0.82rem; font-variant-numeric: tabular-nums;
+  text-align: right; white-space: nowrap; cursor: help;
+}
+.bd-row.bd-hdr .bd-since { text-align: right; }
+.bd-since-note { padding: 0.15rem 0 0.35rem; cursor: help; }
+
+/* The Steady tier's served measured paragraph. Same muted register as the
+   blurb above it — it is a measurement, not a warning banner. */
+.bd-steady-measured {
+  border-left: 2px solid var(--hairline, rgba(255,255,255,0.12));
+  padding-left: 0.5rem; margin-top: 0.25rem;
+}
+
+@media (max-width: 900px) {
+  .bd-row { grid-template-columns: 1fr 1fr; row-gap: 0.3rem; }
+  .bd-row.bd-hdr { display: none; }
 }

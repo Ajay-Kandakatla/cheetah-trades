@@ -54,7 +54,17 @@ async def bonde_board(
         # 🔥 Hottest board's day column uses). `attach` never raises and falls
         # back to the close basis with the reason on the payload, so a price
         # provider blinking can never take this board down.
-        return BL.attach(
+        board = BL.attach(
             B.board(new_days=new_days if isinstance(new_days, int) else B.NEW_DAYS))
+        # 📅 since the report — bolted on exactly like the live leg: ONE
+        # calendar read + ONE price-cache read over the rows already on the
+        # board. It never reorders and never raises (sepa/since_report.py);
+        # this second belt exists because `_run` executes inside a thread.
+        try:
+            from . import since_report as SR
+            board = SR.attach_bonde(board)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("bonde: since_report unavailable: %s", exc)
+        return board
 
     return JSONResponse(_scrub(await asyncio.to_thread(_run)))

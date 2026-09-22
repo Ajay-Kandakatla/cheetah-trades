@@ -278,12 +278,14 @@ class PayloadTest(unittest.TestCase):
             self.assertIn("earnings_fresh", r)
 
     def test_payload_key_set_is_otherwise_unchanged(self):
-        """NEGATIVE — exactly the old eight keys plus one."""
+        """NEGATIVE — exactly the old eight keys plus two read-time joins
+        (`earnings_fresh_summary` 2026-09-17, `since_report_summary`
+        2026-09-21). Nothing else may creep into this payload."""
         out = GA._payload({"rows": _rows()})
         self.assertEqual(
             set(out),
             {"rows", "n", "max_rows", "capped", "groups", "built_at", "screen",
-             "disclaimer", "earnings_fresh_summary"})
+             "disclaimer", "earnings_fresh_summary", "since_report_summary"})
 
 
 # ------------------------------------------------------- refresh_board_calendar

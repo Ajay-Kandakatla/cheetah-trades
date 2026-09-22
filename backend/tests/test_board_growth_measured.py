@@ -222,6 +222,58 @@ def test_bonde_explosive_arrivals_lift_is_pinned_and_clear_of_zero(art, doc, hor
     assert fmt(lift, signed=True) in doc
 
 
+def _clear(ci) -> bool:
+    """A bootstrap interval that does not straddle zero."""
+    return bool(ci) and ci[0] is not None and (ci[0] > 0 or ci[1] < 0)
+
+
+@pytest.mark.parametrize("horizon", ["h21", "h63", "h126"])
+def test_the_doc_prints_BOTH_clusterings_for_every_lift_it_quotes(art, doc, horizon):
+    """The first draft of this report quoted only the symbol-clustered interval
+    and then claimed "every CI clear of zero". Date-clustered that is false at
+    h=21 and h=126. Both intervals must appear in the table, so no reader can
+    take the looser one for the whole answer."""
+    plain = doc.replace("**", "")
+    for key in ("B_EXPL_ARRIVE", "B_EXPL_INCUMBENT", "B_STEADY", "B_STRONG"):
+        cell = art["cells"][key][horizon]
+        for axis in ("lift_ci_symbol", "lift_ci_date"):
+            lo, hi = cell[axis]
+            assert f"[{fmt(lo, signed=True)}, {fmt(hi, signed=True)}]" in plain, (
+                f"{key}/{horizon}/{axis} is not printed in the doc"
+            )
+
+
+def test_NEGATIVE_the_arrivals_claim_is_true_symbol_clustered_and_FALSE_date_clustered(art):
+    """Pin the disagreement itself. If a re-run ever makes the date-clustered
+    intervals clear too, this test fails and the doc's careful wording becomes
+    understatement that should be rewritten — which is the point."""
+    cells = {h: art["cells"]["B_EXPL_ARRIVE"][h] for h in ("h21", "h63", "h126")}
+    assert all(_clear(c["lift_ci_symbol"]) for c in cells.values())
+    assert _clear(cells["h63"]["lift_ci_date"]), "h=63 is the one that survives both"
+    assert not _clear(cells["h21"]["lift_ci_date"])
+    assert not _clear(cells["h126"]["lift_ci_date"])
+
+
+def test_NEGATIVE_the_steady_tier_is_a_LEAN_not_a_finding(art, doc_plain):
+    """Its h=21 interval is below zero on one axis and spans zero on the other,
+    and both longer horizons span zero on both. The doc and the served label
+    must say lean, never drag."""
+    steady = art["cells"]["B_STEADY"]
+    assert _clear(steady["h21"]["lift_ci_symbol"])
+    assert not _clear(steady["h21"]["lift_ci_date"])
+    for horizon in ("h63", "h126"):
+        assert not _clear(steady[horizon]["lift_ci_symbol"])
+        assert not _clear(steady[horizon]["lift_ci_date"])
+    assert "a lean, not a finding" in doc_plain
+    assert "The steady tier is a measured drag" not in doc_plain
+
+
+def test_the_doc_explains_WHY_the_two_clusterings_differ(doc_plain):
+    flat = " ".join(doc_plain.split())
+    assert "no claim in this file rests on the symbol interval alone" in flat
+    assert "block bootstrap" in flat or "block = h // 21" in flat
+
+
 @pytest.mark.parametrize("horizon", ["h21", "h63"])
 def test_bonde_explosive_incumbents_are_flat_for_three_months(art, horizon):
     cell = art["cells"]["B_EXPL_INCUMBENT"][horizon]
@@ -461,6 +513,15 @@ def test_no_served_module_imports_the_research_artifact():
     allowed = {
         "backend/scripts/board_growth_merge.py",
         "backend/tests/test_board_growth_measured.py",
+        # Tests, not served modules: they pin the 2026-09-21 research numbers
+        # that the "since the report" column and the Bonde steady label quote.
+        "backend/tests/test_since_report.py",
+        "backend/tests/test_bonde_steady_label.py",
+        # The frontend contract runner names the artifact only to FORBID it:
+        # its two 2026-09-21 blocks fail if since_report.py or bonde.py ever
+        # reads the file instead of carrying pinned constants. A guard that
+        # names the thing it guards is not a read of it.
+        "frontend/scripts/contracts.mjs",
     }
     assert set(hits) <= allowed, f"a served module reads the research artifact: {hits}"
 
@@ -474,6 +535,22 @@ def test_the_artifact_lists_its_own_limits(art, doc):
 
 
 def test_the_doc_puts_open_questions_to_him_rather_than_deciding_them(doc):
+    """Every his-call item is either still a QUESTION or explicitly marked
+    ANSWERED with what he decided. An item that is neither would be a decision
+    taken on his behalf and left looking like one of his."""
     assert "## 6. His call" in doc
-    tail = doc.split("## 6. His call", 1)[1]
-    assert tail.count("?") >= 6, "every his-call item is a question, not a decision"
+    tail = doc.split("## 6. His call", 1)[1].split("\n---", 1)[0]
+    items = re.split(r"\n(?=\d+\. )", tail.strip())
+    assert len(items) >= 6, f"the his-call list lost items: {len(items)}"
+    open_questions = 0
+    for item in items:
+        answered = "ANSWERED" in item
+        question = "?" in item
+        assert answered or question, f"neither a question nor an answer:\n{item[:160]}"
+        if answered:
+            assert re.search(r"ANSWERED \d{4}-\d{2}-\d{2}", item), (
+                "an answered item must carry the date he answered it"
+            )
+        else:
+            open_questions += 1
+    assert open_questions >= 4, "the still-open items must still read as questions"

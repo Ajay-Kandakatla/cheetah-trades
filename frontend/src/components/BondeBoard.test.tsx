@@ -6,6 +6,17 @@ import BondeBoard, { type BondeBoardData } from './BondeBoard';
 import { CM_TABS, TAB_META, isBoardTab, parseTab } from '../lib/chartMaps';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
+import bondeFixture from '../pages/__fixtures__/since_report_bonde_2026_09_21.json';
+
+/* The repo's own source-read pattern: `import.meta.url` is not a file URL
+   under the vitest transform, so resolve from the frontend root instead. */
+async function readSource(rel: string): Promise<string> {
+  const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+  const fs: any = mod?.default || mod;
+  const root = (globalThis as any).process?.cwd?.() || '.';
+  return fs.readFileSync(`${root}/${rel}`, 'utf8');
+}
+
 
 /* 📈 Bonde tab (Ajay 2026-09-13). The negatives matter most: this board shows
  * percentages off revenue bases that can be negative or immaterial, and an
@@ -838,5 +849,174 @@ describe('📋 NEGATIVE — the fabricated first-person sentences are gone', () 
     expect(blurbs.some((b) => /THIS APP’S 25% mid-tier — not a number he published/.test(b))).toBe(true);
     expect(blurbs.some((b) => /"Sales\/revenue should be up 5% or more\." \(Stockbee, 2007\)/.test(b))).toBe(true);
     expect(blurbs.some((b) => /"Sales 100% plus but no earnings" Episodic-Pivot CATEGORY/.test(b))).toBe(true);
+  });
+});
+
+/* 📅 Since the report (Ajay 2026-09-21, item #3) + the Steady tier's served
+ * label (item #4). Both are FACTS served whole: the component composes no
+ * number of its own, sorts nothing and hides nothing. */
+describe('📅 the since-the-report column and the Steady label', () => {
+  const CELL = {
+    known: true, pct: -4.41, report_date: '2026-09-01', when: 'AMC' as const,
+    anchor_date: '2026-09-02', anchor_close: 165.22, as_of: '2026-09-19',
+    last_close: 157.94, sessions: 12, report_age_days: 20,
+    stale_report: false, calendar_fetched_at: '2026-09-21',
+    calendar_stale: false, reason: null,
+  };
+  const BLANK = {
+    known: false, pct: null, report_date: null, when: null, anchor_date: null,
+    anchor_close: null, as_of: null, last_close: null, sessions: null,
+    report_age_days: null, stale_report: null, calendar_fetched_at: null,
+    calendar_stale: null, reason: 'no_report',
+  };
+  const SRS = {
+    n: 2, n_known: 1, n_positive: 0, n_blank: 1,
+    blank_reasons: { no_report: 1 }, n_stale_report: 0, n_calendar_stale: 0,
+    as_of: '2026-09-19', date_basis: 'report',
+    date_basis_note: 'The date is the REPORT date — not the SEC filing date.',
+    honesty: 'MEASURED 2026-09-21 — the typical name on this board had already had its run before the board could see it, and here it ran no harder than the scan universe.',
+    source: 'yfinance (Yahoo Finance) via sepa.earnings_watch',
+  };
+  const STEADY = 'MEASURED 2026-09-21 — AT 21 DAYS, SYMBOL-CLUSTERED, THE STEADY TIER IS THE ONE COHORT IN THE REPLAY WHOSE MEDIAN-LIFT INTERVAL SITS WHOLLY BELOW THE FIELD.';
+
+  const twoRows = (withSr: boolean) => ({
+    pivot: [], strong: [], rejected: [],
+    explosive: [row('PTGX', withSr ? { since_report: { ...CELL } } : {})],
+    steady: [row('MU', { tier: 'steady',
+                         ...(withSr ? { since_report: { ...BLANK } } : {}) })],
+  });
+
+  it('draws the header right after Today in every section with rows', async () => {
+    const { container } = draw(payload({ sections: twoRows(true),
+                                         since_report_summary: SRS } as any));
+    await screen.findByText('PTGX');
+    const hdrs = [...container.querySelectorAll('.bd-row.bd-hdr')];
+    expect(hdrs.length).toBe(2);
+    for (const h of hdrs) {
+      const tracks = [...h.children].map((c) => c.className.split(' ')[0]);
+      expect(tracks.indexOf('bd-since')).toBe(tracks.indexOf('bd-today') + 1);
+      expect(h.querySelector('.bd-since')!.textContent).toBe('Since report');
+    }
+  });
+
+  it('prints the served return per row and an em-dash where it is blank', async () => {
+    draw(payload({ sections: twoRows(true), since_report_summary: SRS } as any));
+    const cell = await screen.findByTestId('bd-since-PTGX');
+    expect(cell.textContent).toBe('−4.4%');
+    expect(cell.className).toContain('bd-bad');
+    expect(cell.getAttribute('title')).toContain('2026-09-02 close (165.22)');
+    const blank = screen.getByTestId('bd-since-MU');
+    expect(blank.textContent).toBe('—');
+    expect(blank.getAttribute('title')!.startsWith('Not measured:')).toBe(true);
+    expect(blank.textContent).not.toBe('0.0%');
+  });
+
+  it('renders the served coverage and honesty line above the sections', async () => {
+    draw(payload({ sections: twoRows(true), since_report_summary: SRS } as any));
+    const note = await screen.findByTestId('bonde-since-note');
+    expect(note.textContent).toContain(SRS.honesty);
+    expect(note.textContent).toContain('known for 1 of 2 rows');
+    expect(note.textContent).toContain('no report date on file 1');
+  });
+
+  it('NEGATIVE — no summary served, no line; the cells still draw blank', async () => {
+    draw(payload({ sections: twoRows(false) } as any));
+    await screen.findByText('PTGX');
+    expect(screen.queryByTestId('bonde-since-note')).toBeNull();
+    expect(screen.getByTestId('bd-since-PTGX').textContent).toBe('—');
+  });
+
+  it('NEGATIVE — THE ORDER PIN: the column reorders nothing across sections', async () => {
+    const order = () => [...document.querySelectorAll('.bd-row:not(.bd-hdr) .bd-sym a')]
+      .map((a) => a.textContent);
+    draw(payload({ sections: twoRows(false) } as any));
+    await screen.findByText('PTGX');
+    const before = order();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    draw(payload({ sections: twoRows(true), since_report_summary: SRS } as any));
+    await screen.findByText('PTGX');
+    expect(order()).toEqual(before);
+  });
+
+  it('serves the Steady tier’s measured line verbatim, inside the Steady section', async () => {
+    draw(payload({
+      sections: twoRows(true), since_report_summary: SRS,
+      measured: { ...payload().measured, steady: STEADY },
+    } as any));
+    const line = await screen.findByTestId('bd-steady-measured');
+    expect(line.textContent).toBe(STEADY);
+    const section = line.closest('section.bd-section')!;
+    expect(section.querySelector('.bd-h')!.textContent).toContain('Steady · sales +5%');
+    // and it is NOT inside the verdict banner block
+    expect(line.closest('.bd-verdict')).toBeNull();
+  });
+
+  it('renders the Steady line even when the tier has no rows today', async () => {
+    draw(payload({
+      sections: { pivot: [], explosive: [row('PTGX')], strong: [], steady: [], rejected: [] },
+      measured: { ...payload().measured, steady: STEADY },
+    } as any));
+    const line = await screen.findByTestId('bd-steady-measured');
+    expect(line.textContent).toBe(STEADY);
+  });
+
+  it('NEGATIVE — no steady string served, nothing rendered', async () => {
+    draw(payload());
+    await screen.findByText('PTGX');
+    expect(screen.queryByTestId('bd-steady-measured')).toBeNull();
+  });
+
+  it('NEGATIVE — the superseded typed steady figures are gone from the blurb', async () => {
+    const { container } = draw(payload());
+    await screen.findByText('PTGX');
+    const blurbs = [...container.querySelectorAll('.bd-blurb')].map((p) => p.textContent || '');
+    const steady = blurbs.find((b) => /Sales\/revenue should be up 5% or more/.test(b))!;
+    expect(steady).toBeTruthy();
+    expect(steady).not.toContain('0.01pp');
+    expect(steady).not.toContain('677 names');
+    expect(steady).toContain('a scroll, not a read');
+  });
+
+  it('renders the REAL served payload — 200 cells, 65 known', async () => {
+    draw(bondeFixture as unknown as BondeBoardData);
+    await waitFor(() => expect(
+      document.querySelectorAll('[data-testid^="bd-since-"]').length).toBeGreaterThan(0));
+    const cells = [...document.querySelectorAll('[data-testid^="bd-since-"]')];
+    expect(cells).toHaveLength(200);
+    expect(cells.filter((c) => c.textContent !== '—')).toHaveLength(65);
+    expect(screen.getByTestId('bonde-since-note').textContent)
+      .toContain('known for 65 of 200 rows');
+  });
+
+  it('the REAL served payload carries the Steady line, inside the Steady section', async () => {
+    // The capture came out of the container (which runs main, without WP-2),
+    // so `measured.steady` was filled in from the branch's own
+    // `bonde.measured_verdict()`; backend/tests/test_since_report.py pins the
+    // whole `measured` block against the served call, so this is the real
+    // paragraph, not the synthetic one the cases above use.
+    const served = (bondeFixture as any).measured.steady as string;
+    expect(typeof served).toBe('string');
+    expect(served.length).toBeGreaterThan(500);
+    draw(bondeFixture as unknown as BondeBoardData);
+    const line = await screen.findByTestId('bd-steady-measured');
+    expect(line.textContent).toBe(served);
+    const section = line.closest('section.bd-section')!;
+    expect(section.querySelector('.bd-h')!.textContent).toContain('Steady · sales +5%');
+    expect(line.closest('.bd-verdict')).toBeNull();
+  });
+
+  it('NEGATIVE — the REAL payload’s Steady line is not the synthetic stub', async () => {
+    const served = (bondeFixture as any).measured.steady as string;
+    expect(served).not.toBe('served steady sentence');
+    expect(served).not.toBe(STEADY);
+    expect(served).not.toContain('bounce');
+  });
+
+  it('NEGATIVE — no research figure is typed into the component', async () => {
+    const src = await readSource('src/components/BondeBoard.tsx');
+    for (const n of ['0.21pp', '14,353', '1,611', '0.01pp', '46.40', '4.41']) {
+      expect(src).not.toContain(n);
+    }
   });
 });
