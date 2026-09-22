@@ -1015,3 +1015,40 @@ def test_NEGATIVE_the_endpoint_serves_NULL_not_ZERO_before_any_run(
     assert body["queue_remaining"] is None
     assert body["populations"] == {} and body["last_run_at"] is None
     assert body["last_run"] is None
+
+
+# ── the cron line: installed 2026-09-21 on his "Yes" ───────────────────────
+def test_the_cron_line_exists_and_the_doc_no_longer_calls_it_HIS_CALL():
+    """He said yes on 2026-09-21 and the line was installed in the host-mounted
+    crontab. The doc used to say "Installing it is his call"; that sentence is
+    now wrong, and a doc that contradicts the deployed state is the drift this
+    repo guards against everywhere else.
+
+    The host file itself is not visible from a test (the cron container
+    bind-mounts `cheetah-market-app/backend/crontab`, a tree this worktree is
+    not), so what is pinned here is the repo copy and the doc agreeing.
+    """
+    root = Path(__file__).resolve().parents[2]
+    crontab = (root / "backend" / "crontab").read_text()
+    doc = (root / "docs" / "catalysts" / "promo_curation.md").read_text()
+
+    assert "-m catalysts.promo_curate" in crontab, "the cron line left backend/crontab"
+    assert "10     8" in crontab, "the 08:10 ET slot moved"
+    assert "Installing it is\nhis call" not in doc and "Installing it is his call" not in doc
+    assert "INSTALLED 2026-09-21" in doc
+
+    flat = " ".join(doc.split())
+    assert "a deploy does not ship a crontab change" in flat.lower(), (
+        "the doc must keep saying WHY a deploy cannot install it"
+    )
+
+
+def test_the_universe_gate_floors_are_recorded_as_HIS_decision_not_a_default():
+    """A price/liquidity floor at a universe gate is a new semantic here; he
+    ratified it on 2026-09-21. The doc must say that rather than presenting the
+    numbers as defaults this lane chose."""
+    root = Path(__file__).resolve().parents[2]
+    flat = " ".join((root / "docs" / "catalysts" / "promo_curation.md").read_text().split())
+    assert "ratified it" in flat
+    assert "safety_floor.MIN_SHARE_PRICE" in flat and "hot_pullback.MIN_DOLLAR_VOL_USD" in flat
+    assert "The defaults shipped here are $2 and $5M." not in flat

@@ -100,8 +100,12 @@ Every floor is an **imported object**, pinned by identity, never a retyped
 number (`test_every_floor_and_window_is_an_IMPORTED_constant_not_a_new_number`).
 
 > A price/liquidity floor **at the universe gate is a NEW semantic** — no other
-> universe component applies one today; the floors live downstream. It is on his
-> list (§7-2 of the spec). The defaults shipped here are $2 and $5M.
+> universe component applies one today; the floors live downstream. It was put to
+> him as exactly that on 2026-09-21 and he **ratified it** ("Yes"), so $2
+> (`safety_floor.MIN_SHARE_PRICE`) and $5M median-50d
+> (`hot_pullback.MIN_DOLLAR_VOL_USD`) are the gate's floors by his decision, not
+> by default. Both remain imported objects; neither is a number this lane owns,
+> and changing either changes it everywhere it already applies.
 
 ## Rejected rows are not re-checked forever
 
@@ -260,9 +264,22 @@ python -m catalysts.promo_curate --recheck
 `--dry` writes nothing and prints exactly what a live run would add, refuse, age
 out and skip, with the population split.
 
-The cron line lives in `backend/crontab` at 08:10 ET (ten minutes after
-`traders.curate`, so the two never race the universe read). **Installing it is
-his call** — the crontab is host-tree-mounted and a deploy does not ship it.
+The cron line runs at 08:10 ET, ten minutes after `traders.curate`, so the two
+never race the universe read.
+
+**INSTALLED 2026-09-21** on his "Yes". A deploy does not ship a crontab change —
+the cron container bind-mounts `cheetah-market-app/backend/crontab` from the host
+tree, which sits on its own branch and diverges from the repo copy — so the line
+was appended to that host file directly (backup:
+`backend/crontab.crontab.bak-2026-09-21`) and the cron container was recreated so
+supercronic re-read it. Verified in-container the same evening: the line is at
+`/app/crontab`, supercronic parsed the file with **0 errors**, and
+`catalysts.promo_curate` imports inside the cron image with its MEASURED verdict
+attached. The first live run is 08:10 ET on 2026-09-22.
+
+Until that run lands the lane contributes **0 names** and the audit endpoint
+serves `queue_remaining: null` and `populations: {}` — "never ran", not "nothing
+qualified".
 
 ## Dry run — 2026-09-21 (read-only, in the api container)
 
