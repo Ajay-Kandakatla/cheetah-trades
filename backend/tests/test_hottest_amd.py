@@ -824,6 +824,29 @@ def test_the_built_at_stamp_declares_its_zone():
     )
 
 
+def test_the_zone_marker_rides_WITH_the_raw_stamp_on_the_SERVED_block():
+    """Verified live 2026-09-22: `_doc_meta` carried the marker but `summary()`
+    dropped it, so the served block published a naive UTC `built_at` with no
+    zone beside it. The surface reads `built_at_et`, but anything reading the
+    raw stamp must find the marker in the same dict."""
+    out = HA.attach(_board(), doc=_doc(), now=TUE_AM)
+    assert out["built_at"], "the raw stamp is served for provenance"
+    assert out["built_at_utc"] is True, (
+        "the served block must carry the zone marker beside the raw stamp, "
+        "not only on the internal meta dict"
+    )
+
+
+def test_NEGATIVE_the_marker_is_never_asserted_when_there_is_no_document():
+    """An absent document must not publish a stamp that claims a zone."""
+    out = HA.attach(_board(), doc={}, now=TUE_AM)
+    assert out["built_at"] is None
+    assert not out["built_at_utc"], (
+        "no stamp, no zone claim \u2014 a bare True here would read as "
+        "'we know when this was swept'"
+    )
+
+
 def test_the_frontend_fixture_carries_the_SENTENCE_THE_BOARD_SERVES():
     """The FE unit test hand-writes the blank sentence to assert on it. If the
     backend rewords a refusal and the fixture does not follow, the FE proves a

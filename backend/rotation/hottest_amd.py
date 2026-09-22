@@ -371,9 +371,13 @@ def _doc_meta(doc: Optional[dict]) -> dict:
     # served as the raw stamp for provenance, and `built_at_utc` marks the zone
     # so a future consumer cannot read the naive string as local time; the
     # SURFACE reads `built_at_et`, which carries its own offset.
+    stamp = TB._iso(d.get("built_at"))
     return {"available": bool(d),
-            "built_at": TB._iso(d.get("built_at")),
-            "built_at_utc": True,
+            "built_at": stamp,
+            # the marker is a fact ABOUT a stamp. With no stamp there is
+            # nothing to mark, and a bare True would read as "we know when
+            # this was swept".
+            "built_at_utc": True if stamp else None,
             "n_scanned": _num(d.get("n_scanned")),
             "n_rows": _num(d.get("n_rows"))}
 
@@ -490,6 +494,9 @@ def _summary(*, available: bool, n: int, n_known: int, n_blank: int,
         "blank_reasons": blank_reasons, "grades": grades,
         "grade_order": list(TB.AMD_GRADES),
         "built_at": meta.get("built_at"),
+        # the raw stamp is naive UTC; the marker rides WITH it so a consumer
+        # that reads `built_at` and not `built_at_et` cannot take it as local.
+        "built_at_utc": meta.get("built_at_utc"),
         "built_at_et": meta.get("built_at_et"),
         "built_at_date": meta.get("built_at_date"),
         "last_session": meta.get("last_session"),
