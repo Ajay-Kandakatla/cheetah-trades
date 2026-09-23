@@ -15,7 +15,8 @@ import { memo, useCallback, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
-  gutterWidth, hoverLines, lineLabels, markerIndex, priceAt, timeTicks,
+  gutterWidth, hoverLines, lineLabels, markerIndex, offDomainBands, priceAt,
+  timeTicks,
   priceTicks, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmTile,
 } from '../lib/chartMaps';
@@ -106,6 +107,12 @@ export const PatternChart = memo(function PatternChart(
   const H = height;
   const domain = barDomain(bars, tile.bands, tile.lines, 6, tile.curves);
   const bands = clipBands(tile.bands || [], domain);
+  /* The BOARD bands that fell outside the plot. Only the board ones: they are
+   * the ones the served note points at by name, and a reader who cannot find
+   * the dashed band is being invited to read the solid intraday ones as the
+   * board's (2026-09-23). Every other overlay speaks for itself. */
+  const offBoard = offDomainBands(tile.bands || [], domain)
+    .filter((o) => isOutline(String(o.band.kind)));
   const labels = lineLabels(
     [...(tile.lines || []), ...curveLabels(tile.curves)], domain, H, PAD_Y, LABEL_FS);
   const axis = priceTicks(domain, H, PAD_Y);
@@ -265,6 +272,30 @@ export const PatternChart = memo(function PatternChart(
                         stroke={colour} strokeWidth={on ? 1.2 : 0.8}
                         opacity={on ? 0.9 : 0.45} />
                 )}
+              </g>
+            );
+          })}
+
+          {/* A BOARD BAND THAT IS NOT ON THIS CHART SAYS SO (2026-09-23).
+              `clipBands` drops a band entirely outside the domain, so on an
+              intraday frame the board's daily band usually vanished while the
+              note below still called it "the dashed band". An edge marker with
+              its numbers, on the side it fell off, instead of a claim about a
+              rectangle nobody can see. */}
+          {offBoard.map((o, i) => {
+            const colour = BAND_FILL[o.band.kind] || 'var(--text-muted, #94a3b8)';
+            const below = o.side === 'below';
+            const yEdge = below ? H - PAD_Y : PAD_Y;
+            return (
+              <g key={`offband-${i}`} data-band-kind={`${o.band.kind}-off`}>
+                <line x1={0} y1={yEdge} x2={plotW} y2={yEdge} stroke={colour}
+                      strokeWidth={1} strokeDasharray="5,3" opacity={0.6} />
+                <text x={3} y={below ? yEdge - 3 : yEdge + 9} fontSize="8.5"
+                      fill={colour} opacity={0.95}>
+                  {`${o.band.label || BAND_NAME[o.band.kind] || o.band.kind} `
+                   + `${o.band.lo.toFixed(2)}–${o.band.hi.toFixed(2)} — `
+                   + `${below ? 'below' : 'above'} this chart`}
+                </text>
               </g>
             );
           })}

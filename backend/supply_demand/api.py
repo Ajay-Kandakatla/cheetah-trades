@@ -528,6 +528,11 @@ async def get_zone_map(
     key = tf_mod.parse_tf(tf if isinstance(tf, str) else "daily")
     out["timeframe"] = key
     out["timeframe_label"] = tf_mod.tf_spec(key)["label"]
+    # The BAR SIZE, served beside the job name (2026-09-23). Since 2026-09-22
+    # `label` answers "what is this chart for" ("The big picture"), so every
+    # sentence that used to splice it in adjectivally — "Entry & stop on Daily
+    # bars" — needs the other string. One key, so no surface composes it.
+    out["timeframe_bar_label"] = tf_mod.tf_spec(key)["bar_label"]
     try:
         zoned = await asyncio.to_thread(
             price_zones_mod.for_symbol, symbol, None, key)

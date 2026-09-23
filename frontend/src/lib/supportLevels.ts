@@ -95,9 +95,36 @@ export type SupportPayload = {
     ema20?: number | null; ema50?: number | null; mood_agrees?: boolean;
   } | null;
   overlay?: { drawn?: Record<string, number>; found?: Record<string, number> } | null;
-  /** What the chart is ACTUALLY showing — the Zoom label is daily-bar
-   *  counts and does not apply on an intraday timeframe. */
+  /** What the chart is ACTUALLY showing AND where the levels came from — one
+   *  served sentence in two clauses, present on every frame since 2026-09-22.
+   *  The page prints it verbatim and composes nothing of its own. */
   chart_span?: string;
+  /** Set ONLY when an intraday frame's own window held no level and the
+   *  levels shown are the DAILY read instead (Ajay 2026-09-22). Null
+   *  everywhere else. `note` is the sentence the surface prints. */
+  levels_fallback?: {
+    from: string; from_bars: string; to: string; note: string;
+  } | null;
+  /** The level read's own scope as a NOUN PHRASE — "79 x 5-minute bars" on an
+   *  own-bars intraday frame, "6 months" on a daily one or on the named
+   *  fallback. The same string the stats row is labelled with, so the tables
+   *  and the stats cannot name two different windows (2026-09-23). */
+  levels_scope?: string;
+  /** The BAR SIZE the levels were read at ("5-minute" / "daily"). The recency
+   *  column counts BARS, so without this one 5-minute bar rendered as "tested
+   *  yesterday" (2026-09-23). */
+  levels_bar_label?: string;
+  /** The frame's bar size, beside `timeframe_label`'s job name. */
+  timeframe_bar_label?: string;
+  /** The DAILY-derived band the alerts, the gate and the paper lanes use. It
+   *  does not follow the chart — two readings, each labelled, never
+   *  conflated. */
+  board?: {
+    demand?: { lo: number; hi: number; touches?: number | null;
+               distance_pct?: number | null } | null;
+    supply?: { lo: number; hi: number; touches?: number | null;
+               distance_pct?: number | null } | null;
+  } | null;
   zoom_applies?: boolean;
   /** How many ET SESSIONS the drawn intraday frame covers, served only when a
    *  short window actually trimmed it. Null on a daily frame and on an
@@ -215,165 +242,234 @@ export function supportQuery(
   return q.toString();
 }
 
-/* ── timeframe (Ajay 2026-08-29) ───────────────────────────────────────────
- * The SECOND dropdown, and a different question from the zoom: the window
- * says how far back to look, the timeframe says how finely. Mirrors backend
- * supply_demand/timeframes.TIMEFRAMES. */
-export type Timeframe = { key: string; label: string; span?: string; bars?: number };
+/* ── the chart control (Ajay 2026-08-29, collapsed 2026-09-22) ─────────────
+ * > "Just simpliyfy this drop down. I wanna use this for entries during the
+ * >  day and it been useless for that It does help with 6 months but when it
+ * >  comes to daily charts and checking support levels for daily. at any
+ * >  giving point This has been useless"
+ *
+ * SEVENTEEN entries in one list became FIVE. Two things were wrong with the
+ * old control and only one of them was the length:
+ *
+ *  1. The options were named by BAR SIZE ("15 min", "5 min · live · pre/post
+ *     market"), so picking one meant translating a resolution into the job he
+ *     was doing. They are now named by the JOB, and the SPAN rides beside the
+ *     name — his "why do I need the look at the drop down" complaint was that
+ *     the span was only discoverable by trying an option.
+ *  2. Several entries answered the same question at different resolutions.
+ *
+ * The span ladder did NOT die with them: it moved to its own "How far back"
+ * control that renders ONLY on the daily frame, which is the one frame whose
+ * span a zoom still changes (support.py trims an intraday chart only for the
+ * 1w/2w windows, and reads every NUMBER off the frame's own budget either
+ * way). Two controls that cannot contradict each other, because the second
+ * one does not exist where it would be inert — which is the same guarantee
+ * the 2026-08-29 merge bought, at five rows instead of seventeen.
+ *
+ * Mirrors backend supply_demand/timeframes.TIMEFRAMES. */
+export type Timeframe = {
+  key: string; label: string; span?: string;
+  /** Bar size ("5-minute") and calendar span ("today only, from 04:00 ET"),
+   *  served separately so a surface can print either. `span` is the two of
+   *  them already joined BY THE SERVER — no surface builds that sentence. */
+  bar_label?: string; window_label?: string;
+  bars?: number;
+  /** Extended-hours frame: pre/post-market prints are in its bars. Only the
+   *  Support tab may draw one — every structure endpoint refuses them, so the
+   *  zone-map picker filters them out (see STRUCTURE_TIMEFRAMES). */
+  ext?: boolean;
+};
 
+/** Shown until the server's own list lands. Mirrors
+ *  `tf_options(include_live=True)`; a change backend-side needs no FE deploy,
+ *  this only has to be a truthful stand-in for the first paint. */
 export const FALLBACK_TIMEFRAMES: Timeframe[] = [
-  { key: 'daily', label: 'Daily', span: '1 year of daily bars' },
-  { key: '60m', label: '1 hour', span: '~47 sessions of hourly bars' },
-  { key: '15m', label: '15 min', span: '~10 sessions of 15-minute bars' },
-  { key: '15m_open', label: '15 min · from the open',
-    span: "today's session only, from 09:30 ET" },
-  { key: '5m_today', label: '5 min · today only · from 04:00 ET',
-    span: 'today only, from 04:00 ET — pre-market, regular and after-hours 5-minute bars' },
-  { key: '5m_live', label: '5 min · live · pre/post market',
-    span: 'last ~2.5 sessions of 5-minute bars incl. pre/post market' },
+  // Ajay 2026-09-22: "support level from market open but I do not have to see
+  // previous days in that" — THIS is the frame that answers it.
+  { key: '5m_today', label: 'Today, for an entry',
+    bar_label: '5-minute', window_label: 'today only, from 04:00 ET',
+    span: '5-minute bars · today only, from 04:00 ET', bars: 192, ext: true },
+  // Ajay 2026-09-22: "can you add a 24 hour window for me on the supply demand
+  // chart please ... I mainly need the support levels for the last 24 hours".
+  // The only TIME-windowed frame: every other one is a bar-count budget, and a
+  // bar count makes the span a function of liquidity (measured 2026-09-22, the
+  // retired 5m_live drew 3 sessions of NVDA and 5 of PTGX under one label
+  // claiming "~2.5 sessions").
+  { key: '24h', label: 'Last 24 hours',
+    bar_label: '5-minute',
+    window_label: 'the 24 hours up to the last print, pre-market through after-hours',
+    span: '5-minute bars · the 24 hours up to the last print, pre-market through after-hours',
+    bars: 288, ext: true },
+  { key: '15m', label: 'The last two weeks',
+    bar_label: '15-minute', window_label: 'the last ~10 sessions',
+    span: '15-minute bars · the last ~10 sessions', bars: 260 },
+  { key: '60m', label: 'The last two months',
+    bar_label: '1-hour', window_label: 'the last ~47 sessions',
+    span: '1-hour bars · the last ~47 sessions', bars: 330 },
+  // Ajay 2026-09-22: "It does help with 6 months". The daily frame is the only
+  // one whose span the zoom still sets, so its span text says so rather than
+  // asserting a number the zoom can contradict.
+  { key: 'daily', label: 'The big picture',
+    bar_label: 'daily',
+    window_label: '1 year by default — the Zoom dropdown sets how far back',
+    span: 'daily bars · 1 year by default — the Zoom dropdown sets how far back',
+    bars: 252 },
 ];
+
+/** The frames a STRUCTURE surface (the ticker Setup tab's zone map) may
+ *  offer. `frame_for` refuses an extended-hours frame to every caller but the
+ *  Support tab — a swing low made on 400 shares at 07:12 is not a level
+ *  anyone defended — so offering one there would be a dropdown entry that
+ *  errors. The server's own list already excludes them; this keeps the
+ *  first-paint fallback honest too. */
+export const STRUCTURE_TIMEFRAMES: Timeframe[] = FALLBACK_TIMEFRAMES.filter((t) => !t.ext);
 
 export const DEFAULT_TF = 'daily';
 
-/* ── One control instead of two (Ajay 2026-08-29) ──────────────────────────
- * "The 15 mins chart is also so confusing ... why Am I seeing from past
- * months? ... you need to make some decisions as a UX expert."
+/** RETIRED 2026-09-22, mirroring backend `timeframes.RETIRED`.
  *
- * He was right, and the root cause was two dropdowns that could contradict
- * each other: Zoom counts DAILY bars, so "1 month" + "15 min" is not a
- * narrower 15-minute chart, it is a combination with no meaning. A control
- * that can be set to nonsense will be, and then the chart looks broken.
+ * NOT deleted: an old bookmark or a tab he left open still carries these
+ * keys, and landing it on the default Daily chart without a word is exactly
+ * the silent substitution this whole change is removing. Each one resolves to
+ * the nearest SURVIVING frame and the page says that it did.
  *
- * So the two collapse into ONE list of views a person would actually ask
- * for. Every entry is a valid pair; no invalid combination is reachable.
- * The wire format keeps `window` and `tf` separate — the backend contract
- * does not change, only the way the choice is offered. */
-export type ChartView = {
-  key: string; label: string; group: 'Zoom' | 'Daily candles' | 'Intraday';
-  window: string; tf: string; hint?: string;
-  /** The canonical entry for its TIMEFRAME, used when a link names a tf whose
-   *  (window, tf) pair matches no entry — e.g. a `?tf=60m` bookmark written
-   *  before the hourly short zooms existed. Exactly one entry per tf may carry
-   *  it. Without this the fallback was "whichever sits earliest in the array",
-   *  which silently made the LIST ORDER a behavioural contract and stopped the
-   *  list being ordered for a reader. */
-  primary?: boolean;
+ *  - `15m_open` -> `15m`. Its 26-bar session budget was too thin to cluster:
+ *    measured 2026-09-22, PTGX and NVDA both returned NO support band on it.
+ *    `5m_today` answers the same "today only, no previous days" question with
+ *    192 bars, but the alias points at `15m` because that is the nearest key
+ *    that resolves on EVERY surface — an extended-hours frame is refused by
+ *    the structure endpoints, so an old `/zones?tf=15m_open` link would start
+ *    erroring. (Backend chose the same target, for the same reason.)
+ *  - `5m_live` -> `24h`. Same bar size, same pre/post policy, a span that is
+ *    true for a thin name as well as a liquid one. */
+export const RETIRED_TIMEFRAMES: Record<string, { to: string; was: string }> = {
+  '15m_open': { to: '15m', was: '15 min · from the open' },
+  '5m_live': { to: '24h', was: '5 min · live · pre/post market' },
 };
 
-export const CHART_VIEWS: ChartView[] = [
-  /* THE SPAN LADDER. Ajay picks a span here; resolution is this list's problem,
-   * not his. 2026-09-18, third round on one request: he asked to "increase the
-   * bars on the weekly chart", chose "1 week of HOURLY bars", and then twice
-   * reported seeing the same 5 candles — because the hourly week had shipped as
-   * a SEPARATE entry two groups below the one he was on. A span he has to pair
-   * with a resolution before it is readable is a chore, so 1 WEEK AND 2 WEEKS
-   * ARE THE HOURLY ONES. The 5- and 10-candle daily versions keep their keys
-   * and their honest wording, one group down, for when he wants them.
-   *
-   * ORDER IS NOT A CONTRACT any more — `primary` carries the tf fallback — so
-   * this list can finally be ordered the way it is read. */
-  { key: '60m:1w', label: '1 week', group: 'Zoom', window: '1w', tf: '60m',
-    hint: 'the last 5 sessions as hourly bars (~34) — the CHART only; every '
-        + "number stays the 1-hour frame's own ~47-session read" },
-  { key: '60m:2w', label: '2 weeks', group: 'Zoom', window: '2w', tf: '60m',
-    hint: 'the last 10 sessions as hourly bars (~67) — the CHART only; every '
-        + "number stays the 1-hour frame's own ~47-session read" },
-  { key: 'daily:1m', label: '1 month', group: 'Zoom', window: '1m', tf: 'daily',
-    hint: 'the level this week\'s trade is standing on' },
-  { key: 'daily:3m', label: '3 months', group: 'Zoom', window: '3m', tf: 'daily' },
-  { key: 'daily:6m', label: '6 months', group: 'Zoom', window: '6m', tf: 'daily' },
-  { key: 'daily:1y', label: '1 year', group: 'Zoom', window: '1y', tf: 'daily' },
-  // Ajay 2026-09-06: the bounces that come off two- and three-year-old
-  // structure — the zoom is the demand-zone lookback, so these are new reads,
-  // not longer pictures of the 1-year one.
-  { key: 'daily:2y', label: '2 years', group: 'Zoom', window: '2y', tf: 'daily',
-    hint: 'the structure a two-year-old base bounces from' },
-  { key: 'daily:3y', label: '3 years', group: 'Zoom', window: '3y', tf: 'daily' },
-  { key: 'daily:5y', label: '5 years', group: 'Zoom', window: '5y', tf: 'daily',
-    hint: 'the structural floor' },
-  { key: 'daily:all', label: 'All windows · overlay', group: 'Zoom',
-    window: 'all', tf: 'daily' },
-  /* THE DAILY-CANDLE SHORT ZOOMS. Same keys, same honest wording, kept
-   * because they are a different question — "show me this week as the five
-   * daily bars everyone else quotes" — and because a shared `?window=1w` link
-   * with no tf still lands here. THEIR HINT IS NOT THE HOURLY ONE:
-   * CHART_ONLY_LEVELS_FROM redirects a short DAILY window to 1m of daily bars,
-   * so for these two the 1-month claim is TRUE. On the hourly pair above it
-   * would be a lie — the levels there are the 60m frame's own budget
-   * (measured: 1w+60m and 6m+60m return identical supports, overhead and
-   * verdict at bars_used 330). */
-  { key: 'daily:1w', label: '1 week · daily candles', group: 'Daily candles',
-    window: '1w', tf: 'daily',
-    hint: 'the last 5 sessions — chart only; every number stays the 1-month read' },
-  { key: 'daily:2w', label: '2 weeks · daily candles', group: 'Daily candles',
-    window: '2w', tf: 'daily',
-    hint: 'the last 10 sessions — chart only; every number stays the 1-month read' },
-  // PRIMARY for tf '60m': the view a bare `?tf=60m` link resolves to, however
-  // its window reads. Must stay exactly one per tf — contract-pinned.
-  { key: '60m', label: '1 hour · ~47 sessions', group: 'Intraday',
-    window: '3m', tf: '60m', primary: true },
-  { key: '15m', label: '15 min · ~10 sessions', group: 'Intraday',
-    window: '1m', tf: '15m' },
-  { key: '15m_open', label: '15 min · today from the open', group: 'Intraday',
-    window: '1m', tf: '15m_open', hint: 'this session only, from 09:30 ET' },
-  // Ajay 2026-09-02: "add live chart please ... I wanna see where things
-  // bounced over night." The one view that draws pre/post-market bars and
-  // refreshes itself while any extended session is open.
-  // Levels come from the 6-month DAILY window (the zones he already knows);
-  // only the tape is intraday — so an overnight touch is measured against a
-  // real floor, not against 2.5 sessions of 5-minute swings.
-  { key: '5m_live', label: '5 min · live · pre/post market', group: 'Intraday',
-    window: '6m', tf: '5m_live',
-    hint: 'last ~2.5 sessions incl. overnight against the 6-month daily levels; refreshes every 30s while the tape is open' },
-  // Ajay 2026-09-17: "For the live 5 min chart data, can you make sure its
-  // only showing from todays open only. it going till 6 months." He wanted
-  // the day, not the three sessions — starting at 04:00 ET so the pre-market
-  // candles he reads every morning are still there. ADDED beside the live
-  // view, not in place of it (his call), and it is not any default. Same
-  // deal on the levels: drawn from the 6-month DAILY window.
-  { key: '5m_today', label: '5 min · today only · from 04:00 ET',
-    group: 'Intraday', window: '6m', tf: '5m_today',
-    hint: "today only — 04:00 to 20:00 ET, pre-market and after-hours included — against the 6-month daily levels; refreshes every 30s while the tape is open" },
-];
+/** Spellings a URL might carry, mirroring backend `timeframes._ALIAS`. The
+ *  retired keys are folded in last so an old bookmark resolves. */
+const TF_ALIAS: Record<string, string> = {
+  '1d': 'daily', d: 'daily', day: 'daily', '1day': 'daily',
+  '1h': '60m', h: '60m', hour: '60m', hourly: '60m', '60min': '60m',
+  '15': '15m', '15min': '15m', m15: '15m',
+  open: '15m', session: '15m', '15open': '15m',
+  '5m': '24h', '5min': '24h', live: '24h', '5m_ext': '24h',
+  '24': '24h', h24: '24h', '24hr': '24h', '24hour': '24h', last24: '24h',
+  '5today': '5m_today', today: '5m_today', '5m_day': '5m_today',
+  '5m_open': '5m_today', '5open': '5m_today',
+  ...Object.fromEntries(Object.entries(RETIRED_TIMEFRAMES).map(([k, v]) => [k, v.to])),
+};
 
-export const DEFAULT_VIEW = 'daily:1y';   // follows DEFAULT_WINDOW (1 year since 2026-09-06)
-
-/** Resolve a (window, tf) pair back to the single control's value, so a
- *  shared URL written before this change still selects the right entry. */
-export function viewKeyFor(window: string, tf: string): string {
-  const t = parseTf(tf);
-  if (t !== 'daily') {
-    /* THE PAIR FIRST, THE TIMEFRAME ONLY AS A FALLBACK (Ajay 2026-09-18).
-     * Until the hourly short zooms existed exactly one entry carried each
-     * intraday tf, so matching on tf alone was correct by accident. Three
-     * entries now carry '60m' and a tf-only match would hand back whichever
-     * sits earliest in the array — the control would name a view the chart is
-     * not drawing, and the entry it wrongly named could never be re-picked
-     * (selecting the value already shown fires no change event).
-     * The fallback is NOT optional: a link written before these entries
-     * existed carries `?tf=60m` with any window at all, and it must still
-     * resolve to the 3-month hourly view rather than blanking to the default.
-     * That is why the new pairs are listed AFTER the bare '60m' entry. */
-    return (CHART_VIEWS.find((v) => v.tf === t && v.window === window)
-         || CHART_VIEWS.find((v) => v.tf === t && v.primary)
-         || CHART_VIEWS.find((v) => v.tf === t))?.key || DEFAULT_VIEW;
-  }
-  return CHART_VIEWS.find((v) => v.tf === 'daily' && v.window === window)?.key
-    || DEFAULT_VIEW;
-}
-
-export function viewFor(key: string): ChartView {
-  return CHART_VIEWS.find((v) => v.key === key)
-    || CHART_VIEWS.find((v) => v.key === DEFAULT_VIEW)!;
-}
-
+/** Coerce a `?tf=` value against the list the server actually offers. A key
+ *  that was retired resolves to its successor; anything unknown degrades to
+ *  daily, which is what every surface answered before timeframes existed. */
 export function parseTf(
   raw: string | null | undefined,
   offered: Timeframe[] = FALLBACK_TIMEFRAMES,
 ): string {
   const v = (raw || '').trim().toLowerCase();
   if (!v) return DEFAULT_TF;
-  return offered.some((t) => t.key === v) ? v : DEFAULT_TF;
+  if (offered.some((t) => t.key === v)) return v;
+  const aliased = TF_ALIAS[v];
+  return aliased && offered.some((t) => t.key === aliased) ? aliased : DEFAULT_TF;
+}
+
+/** Non-null when `raw` names a frame that no longer exists but still
+ *  resolves — the one case the page has to SAY something about, because the
+ *  chart he gets is not the chart his link asked for. */
+export function retiredTf(
+  raw: string | null | undefined,
+  offered: Timeframe[] = FALLBACK_TIMEFRAMES,
+): { from: string; was: string; to: string } | null {
+  const v = (raw || '').trim().toLowerCase();
+  const hit = RETIRED_TIMEFRAMES[v];
+  if (!hit || !offered.some((t) => t.key === hit.to)) return null;
+  return { from: v, was: hit.was, to: hit.to };
+}
+
+/** The daily window an intraday frame pins.
+ *
+ *  The window never leaves the wire, because it still decides two DAILY reads
+ *  that must not follow the chart: the `board` block (what the alerts and
+ *  lanes use) and the named level fallback. It is simply no longer his to
+ *  pick on a frame where nothing he can see would change. Values are the pins
+ *  the merged control carried before 2026-09-22, so the wire is unchanged for
+ *  every surviving frame (`24h` inherits `5m_live`'s 6m). */
+export const FRAME_WINDOW: Record<string, string> = {
+  '5m_today': '6m',
+  '24h': '6m',
+  '15m': '1m',
+  '60m': '3m',
+};
+
+/* WHICH ZOOMS MEAN SOMETHING ON WHICH FRAME (2026-09-23).
+ *
+ * Collapsing the picker to five rows first took the zoom away from every frame
+ * but daily. That quietly broke something he ASKED FOR on 2026-09-18 — "Can you
+ * increase the bars on the weekly chart please?" -> 1 week of HOURLY bars — and
+ * it broke it the exact way the contract guarding it warned about: "the backend
+ * shipped first and the picker could not express the pair, so the feature never
+ * reached him."
+ *
+ * So the zoom is per-FRAME, not daily-only. That is what makes five rows honest
+ * rather than lossy: the 17-row list was frame x zoom flattened into one
+ * control, and this is the same reach expressed as five rows plus a zoom that
+ * offers only what the chosen frame can answer.
+ *
+ * It cannot be set to nonsense — the reason the two controls were merged on
+ * 2026-08-29 ("1 month" + "15 min" meant nothing) — because a frame only ever
+ * offers the windows its own bars can fill. The 5-minute frames define their
+ * own window, so they offer none and the control does not render.
+ */
+export const FRAME_WINDOWS: Record<string, readonly string[]> = {
+  daily: ['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all'],
+  // 330 hourly bars is ~47 sessions, so anything past 3 months is bars it does
+  // not have. 1w / 2w are the two he asked for.
+  '60m': ['1w', '2w', '1m', '3m'],
+  // 260 bars of 15 minutes is ~10 sessions — a fortnight, no further.
+  '15m': ['1w', '2w', '1m'],
+  // Fixed by definition: "today" and "the last 24 hours" are the window.
+  '5m_today': [],
+  '24h': [],
+};
+
+/** The zooms this frame can actually answer. Unknown frames get daily's list
+ *  rather than an empty one, so a frame added later is never silently
+ *  zoom-less. */
+export function windowsForFrame(tf: string | null | undefined): readonly string[] {
+  const t = parseTf(tf);
+  return FRAME_WINDOWS[t] ?? FRAME_WINDOWS.daily;
+}
+
+/** The window to send with `tf`. A zoom he is already on is KEPT when the new
+ *  frame can answer it — switching from daily-2y to hourly should not silently
+ *  throw the zoom away and it must not send an hourly frame a 2-year window
+ *  either. Otherwise the frame's own pin. */
+export function windowForFrame(tf: string | null | undefined,
+                               current: string | null | undefined): string {
+  const t = parseTf(tf);
+  const allowed = windowsForFrame(t);
+  if (!allowed.length) return FRAME_WINDOW[t] || DEFAULT_WINDOW;
+  const cur = parseWindow(current);
+  if (allowed.includes(cur)) return cur;
+  return (t === DEFAULT_TF ? DEFAULT_WINDOW : FRAME_WINDOW[t]) || DEFAULT_WINDOW;
+}
+
+/** True where a zoom changes what is drawn AND what is read. A control that
+ *  does nothing is how "1 month" + "15 min" came to mean nothing (Ajay
+ *  2026-08-29), so a frame with one window or none renders no control. */
+export function zoomApplies(tf: string | null | undefined): boolean {
+  return windowsForFrame(tf).length > 1;
+}
+
+/** The offered frame whose key this is, for naming it in a sentence. */
+export function frameFor(tf: string | null | undefined,
+                         offered: Timeframe[] = FALLBACK_TIMEFRAMES): Timeframe {
+  const k = parseTf(tf, offered);
+  return offered.find((t) => t.key === k)
+    || offered.find((t) => t.key === DEFAULT_TF)
+    || offered[0];
 }
 
 export type OvernightTouch = {
@@ -446,6 +542,12 @@ export type TradeSignal = {
     risk_pct?: number; target_basis?: string;
   } | null;
   no_repaint?: boolean;
+  /** False on a frame whose BUY/SELL is NOT written to the forward ledger
+   *  (the two 5-minute frames — `_record_signal` has no horizon for them).
+   *  Undefined on a payload served before 2026-09-23, which is treated as
+   *  recorded, because that is what every such payload was. */
+  recorded?: boolean;
+  recorded_note?: string;
 } | null;
 
 export type SmcSetup = {
@@ -526,17 +628,92 @@ export function distanceLabel(
   return `${d.toFixed(1)}% below`;
 }
 
-/** How long ago the level was last touched, in trading sessions.
- *  `bars_since_test` is a bar count, so "sessions" is the honest unit —
- *  calling them days would be wrong across every weekend and holiday. */
-export function recencyLabel(lv: SupportLevel | null | undefined): string {
+/** How long ago the level was last touched, IN THE UNIT IT WAS COUNTED IN.
+ *
+ *  `bars_since_test` is a BAR count. On the daily frame a bar is a session, so
+ *  "sessions" was the honest unit (never "days" — that is wrong across every
+ *  weekend and holiday). Since 2026-09-22 the intraday frames read their own
+ *  bars, and the same counter is then five-minute or fifteen-minute buckets:
+ *  measured on the branch, PTGX `5m_today` served `bars_since_test: 6` for a
+ *  band touched half an hour earlier, which this printed as "tested 6 sessions
+ *  ago". For a man deciding whether a level just held or is stale those are
+ *  opposite answers, so the caller passes the SERVED `levels_bar_label` and
+ *  nothing here guesses.
+ *
+ *  No conversion to minutes: that would be arithmetic this file invented. The
+ *  bar size is stated instead, which is what the server actually knows. */
+export function recencyLabel(lv: SupportLevel | null | undefined,
+                             barLabel?: string | null): string {
   if (!lv || lv.bars_since_test == null || !Number.isFinite(lv.bars_since_test)) {
     return 'not tested in this window';
   }
   const n = Math.round(lv.bars_since_test);
-  if (n <= 0) return 'tested today';
-  if (n === 1) return 'tested yesterday';
-  return `tested ${n} sessions ago`;
+  const bar = (barLabel || '').trim();
+  // The daily frame (and the named fallback, which serves 'daily' too) keeps
+  // the session wording it has always had.
+  if (!bar || bar === 'daily') {
+    if (n <= 0) return 'tested today';
+    if (n === 1) return 'tested yesterday';
+    return `tested ${n} sessions ago`;
+  }
+  if (n <= 0) return 'tested on the last bar';
+  if (n === 1) return `tested 1 ${bar} bar ago`;
+  return `tested ${n} × ${bar} bars ago`;
+}
+
+/** The recency window in the unit the levels were counted in — the header's
+ *  "touched in the last N …" clause. Same rule as `recencyLabel`. */
+export function recentWindowLabel(bars: number | null | undefined,
+                                  barLabel?: string | null): string {
+  const n = (bars == null || !Number.isFinite(bars)) ? 0 : Math.round(bars);
+  const bar = (barLabel || '').trim();
+  if (!bar || bar === 'daily') return `${n} sessions`;
+  return `${n} × ${bar} bars`;
+}
+
+/** The "Support below" table's EMPTY sentence.
+ *
+ *  It used to be composed at the call site from `window_label` — the pinned
+ *  DAILY zoom — which on the two entry frames produced, verbatim: "No band
+ *  below price in the last 6 months — nothing here to place a stop under. Try
+ *  a longer zoom." Three things were wrong at once (measured 2026-09-22, PTGX
+ *  and NVDA both serve an EMPTY `supports` on `5m_today` and `24h`):
+ *
+ *   1. the emptiness came from the frame's own 5-minute bars, not from six
+ *      months — and PTGX's 6-month daily read is NOT empty, it holds a band at
+ *      $142.43-$144.15 and the board's own demand band is printed a few lines
+ *      above on the same page;
+ *   2. it said nothing about what IS known — price standing inside a band, and
+ *      the board's band below it;
+ *   3. "Try a longer zoom" points at the "How far back" control, which does
+ *      not render on any intraday frame.
+ *
+ *  Every number here is SERVED. Nothing is computed.
+ */
+export function emptySupportNote(
+  p: SupportPayload | null | undefined,
+  opts: { zoomApplies?: boolean; longerFrameLabel?: string } = {},
+): string {
+  const scope = p?.levels_scope || p?.window_label || 'this window';
+  const out = [`No band below price in ${scope} — nothing here to place a `
+               + 'stop under.'];
+  const inside = p?.standing_in;
+  if (inside) {
+    out.push(`Price is standing INSIDE ${bandLabel(inside)} — the nearest band `
+             + 'on this chart is around price, not under it.');
+  }
+  const bd = p?.board?.demand;
+  if (bd && p?.last_price != null && Number.isFinite(bd.hi) && bd.hi < p.last_price) {
+    out.push(`Below this chart, the BOARD's demand band is `
+             + `${money(bd.lo)} – ${money(bd.hi)} — the daily read the alert `
+             + 'gate and the paper lanes use, not this chart\'s own.');
+  }
+  out.push(opts.zoomApplies
+    ? 'Try a longer zoom.'
+    : opts.longerFrameLabel
+      ? `Try \u201C${opts.longerFrameLabel}\u201D — it reads a longer window.`
+      : 'Try a chart that reads a longer window.');
+  return out.join(' ');
 }
 
 /** The evidence behind a level, in one phrase. Touch count leads because it is
@@ -568,15 +745,18 @@ export function evidenceLabel(lv: SupportLevel | null | undefined): string {
 export function headline(p: SupportPayload | null | undefined): string {
   if (!p) return '';
   if (p.error) return p.error;
+  // The unit the SERVER counted the bars in, never a guess from the frame key:
+  // on the named fallback the frame is 5-minute but the levels are daily.
+  const bar = p.levels_bar_label;
   if (p.standing_in) {
     return `Price is INSIDE a band at ${bandLabel(p.standing_in)} — `
-      + `${evidenceLabel(p.standing_in)}, ${recencyLabel(p.standing_in)}.`;
+      + `${evidenceLabel(p.standing_in)}, ${recencyLabel(p.standing_in, bar)}.`;
   }
   const sup = (p.supports || [])[0];
   if (!sup) return `No band below ${money(p.last_price)} in this window.`;
   const caveat = sup.tested ? '' : ' Single swing low, not a tested floor.';
   return `Nearest support ${bandLabel(sup)} · ${distanceLabel(sup)} · `
-    + `${evidenceLabel(sup)} · ${recencyLabel(sup)}.${caveat}`;
+    + `${evidenceLabel(sup)} · ${recencyLabel(sup, bar)}.${caveat}`;
 }
 
 /** How many of the listed supports were tested inside the recency window.

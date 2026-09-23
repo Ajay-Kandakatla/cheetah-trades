@@ -4,8 +4,11 @@ import { DEFAULT_WINDOW, FALLBACK_WINDOWS, bandLabel, distanceLabel, evidenceLab
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
   priceAsOf,
-  CHART_VIEWS, DEFAULT_VIEW, DEFAULT_TF, FALLBACK_TIMEFRAMES, parseTf,
-  viewFor, viewKeyFor, SEPA_SUPPLY_WINDOW } from './supportLevels';
+  DEFAULT_TF, FALLBACK_TIMEFRAMES, STRUCTURE_TIMEFRAMES, RETIRED_TIMEFRAMES,
+  FRAME_WINDOW, frameFor, parseTf, retiredTf, windowForFrame, zoomApplies,
+  SEPA_SUPPLY_WINDOW, windowsForFrame
+} from './supportLevels';
+import { tvChartUrl } from './tvChart';
 
 function lvl(over: Partial<SupportLevel> = {}): SupportLevel {
   return {
@@ -310,40 +313,149 @@ describe('priceAsOf', () => {
   });
 });
 
-/* ── One control, no invalid combinations (Ajay 2026-08-29) ─────────────── */
-describe('CHART_VIEWS — the merged chart control', () => {
-  it('every option is a valid (window, tf) pair', () => {
-    for (const v of CHART_VIEWS) {
-      expect(v.window).toBeTruthy();
-      expect(v.tf).toBeTruthy();
-      // an intraday view must not advertise a daily zoom in its label
-      // The GROUP is a display bucket, not a contract on the tf. Since
-      // 2026-09-18 the span ladder ('Zoom') deliberately mixes a daily 1-month
-      // view with an hourly 1-week one, because he picks a SPAN there and the
-      // list picks the resolution. What must hold is that a group exists and
-      // is one of the declared ones.
-      expect(['Zoom', 'Daily candles', 'Intraday']).toContain(v.group);
+/* ── FIVE frames, named by the JOB (Ajay 2026-09-22) ──────────────────────
+ * > "Just simpliyfy this drop down. I wanna use this for entries during the
+ * >  day and it been useless for that It does help with 6 months but when it
+ * >  comes to daily charts and checking support levels for daily. at any
+ * >  giving point This has been useless"
+ *
+ * Seventeen merged (window, tf) entries became five FRAMES plus a zoom that
+ * exists only where it changes something. These pin the agreed set, the span
+ * beside every name, and the pins that keep an invalid pair unreachable. */
+describe('the chart control — five frames, named by the job', () => {
+  it('offers EXACTLY the five agreed frames, shortest first', () => {
+    expect(FALLBACK_TIMEFRAMES.map((t) => t.key))
+      .toEqual(['5m_today', '24h', '15m', '60m', 'daily']);
+    expect(FALLBACK_TIMEFRAMES.map((t) => t.label)).toEqual([
+      'Today, for an entry', 'Last 24 hours', 'The last two weeks',
+      'The last two months', 'The big picture',
+    ]);
+    // Rule #5: a change that ADDS options has failed. Five is the ceiling.
+    expect(FALLBACK_TIMEFRAMES.length).toBeLessThanOrEqual(5);
+  });
+
+  it('every option carries a span built from its own bar size and window', () => {
+    for (const t of FALLBACK_TIMEFRAMES) {
+      expect(t.bar_label, `${t.key} has no bar_label`).toBeTruthy();
+      expect(t.window_label, `${t.key} has no window_label`).toBeTruthy();
+      // The span is the two joined BY THE SERVER (timeframes._span). Mirroring
+      // it wrong here would put a false span on screen for the first paint.
+      expect(t.span).toBe(`${t.bar_label} bars · ${t.window_label}`);
     }
   });
 
-  it('round-trips a window+tf pair back to exactly one entry', () => {
-    expect(viewKeyFor('3m', 'daily')).toBe('daily:3m');
-    expect(viewKeyFor('1y', 'daily')).toBe('daily:1y');
-    expect(viewKeyFor('1m', '60m')).toBe('60m');
-    expect(viewKeyFor('3m', '15m_open')).toBe('15m_open');
-    // an unknown pair degrades to the default rather than blanking the control
-    expect(viewKeyFor('99y', 'daily')).toBe(DEFAULT_VIEW);
-    expect(viewKeyFor('3m', 'weekly')).toBe('daily:3m');
+  it('answers BOTH of his asks, and says which is which', () => {
+    // "I mainly need the support levels for the last 24 hours"
+    const day = FALLBACK_TIMEFRAMES.find((t) => t.key === '24h')!;
+    expect(day.label).toBe('Last 24 hours');
+    expect(day.window_label).toMatch(/24 hours/);
+    // "if you cannot do it then support level from market open but I do not
+    // have to see previous days in that"
+    const today = FALLBACK_TIMEFRAMES.find((t) => t.key === '5m_today')!;
+    expect(today.window_label).toMatch(/today only/i);
+    expect(today.window_label).toMatch(/04:00 ET/);
+    // "It does help with 6 months" — the big picture keeps its zoom.
+    const big = FALLBACK_TIMEFRAMES.find((t) => t.key === 'daily')!;
+    expect(big.window_label).toMatch(/Zoom dropdown/);
   });
 
-  it('viewFor never returns undefined', () => {
-    expect(viewFor('15m').tf).toBe('15m');
-    expect(viewFor('nonsense').key).toBe(DEFAULT_VIEW);
+  it('NEGATIVE: no label is a bar size, and no span asserts "~2.5 sessions"', () => {
+    for (const t of FALLBACK_TIMEFRAMES) {
+      // The old names WERE the bar size ("15 min", "1 hour") — that is the
+      // complaint. A label must name the job, never the resolution alone.
+      expect(t.label, `${t.key} is still named by its bar size`)
+        .not.toMatch(/^\s*(daily|\d+\s*(min|minute|hour|h|m))\b/i);
+      // MEASURED 2026-09-22: a fixed BAR COUNT makes the span a function of
+      // liquidity — the retired 5m_live drew 3 sessions of NVDA and 5 of PTGX
+      // under one label claiming "~2.5 sessions". No surviving span may make
+      // a session claim a thin name can falsify.
+      expect(t.span).not.toMatch(/2\.5 sessions/);
+    }
   });
 
-  it('has no two entries resolving to the same pair', () => {
-    const pairs = CHART_VIEWS.map((v) => `${v.window}|${v.tf}`);
-    expect(new Set(pairs).size).toBe(pairs.length);
+  it('NEGATIVE: nothing in the offered list says "bounce"', () => {
+    // Every surface he READS says reversal. `overnightLine` keeps `bouncing`
+    // internally on purpose; a dropdown is not an internal.
+    for (const t of FALLBACK_TIMEFRAMES) {
+      expect(`${t.label} ${t.span}`).not.toMatch(/bounc/i);
+    }
+  });
+
+  it('pins a daily window to every intraday frame, so no invalid pair exists', () => {
+    // The window never leaves the wire — it still decides the BOARD block and
+    // the named fallback, both DAILY reads. It is just not his to pick where
+    // nothing he can see would change. These are the pins the merged control
+    // carried before 2026-09-22; 24h inherits 5m_live's 6m.
+    expect(FRAME_WINDOW).toEqual({ '5m_today': '6m', '24h': '6m', '15m': '1m', '60m': '3m' });
+    expect(windowForFrame('5m_today', '1y')).toBe('6m');
+    expect(windowForFrame('24h', '3y')).toBe('6m');
+    expect(windowForFrame('15m', '5y')).toBe('1m');
+    expect(windowForFrame('60m', 'all')).toBe('3m');
+    // Daily keeps whatever zoom he is on.
+    expect(windowForFrame('daily', '6m')).toBe('6m');
+    expect(windowForFrame('daily', 'all')).toBe('all');
+    expect(windowForFrame('daily', 'garbage')).toBe(DEFAULT_WINDOW);
+    // and an unknown frame is daily, so it keeps the zoom too
+    expect(windowForFrame('weekly', '3m')).toBe('3m');
+  });
+
+  it('the zoom offers only what the chosen frame can answer', () => {
+    // Ajay 2026-08-29: "1 month" + "15 min" was a combination with no
+    // meaning, so the two controls were merged. The merge is not undone —
+    // but daily-ONLY zoom went too far and silently dropped the hourly
+    // 1-week chart he asked for on 2026-09-18. A frame now offers exactly
+    // the zooms its own bars can fill.
+    expect(zoomApplies('daily')).toBe(true);
+    expect(zoomApplies(null)).toBe(true);
+    expect(zoomApplies('60m')).toBe(true);
+    expect(zoomApplies('15m')).toBe(true);
+    // the 5-minute frames ARE their window — nothing to zoom
+    for (const k of ['5m_today', '24h']) {
+      expect(zoomApplies(k), `${k} defines its own window`).toBe(false);
+      expect(windowsForFrame(k)).toEqual([]);
+    }
+  });
+
+  it('REGRESSION: the hourly 1-week and 2-week charts stay reachable', () => {
+    // Ajay 2026-09-18: "Can you increase the bars on the weekly chart
+    // please?" -> 1 week of HOURLY bars. It shipped backend-first once and
+    // the picker could not express the pair, so it never reached him. The
+    // five-row picker broke it the same way until the zoom went per-frame.
+    for (const w of ['1w', '2w']) {
+      expect(windowsForFrame('60m')).toContain(w);
+      expect(windowForFrame('60m', w), `60m:${w} must survive the switch`).toBe(w);
+    }
+  });
+
+  it('NEGATIVE: a frame is never sent a zoom its bars cannot fill', () => {
+    // 330 hourly bars is ~47 sessions — a 5-year window would be a label
+    // over bars that do not exist.
+    for (const w of ['1y', '2y', '5y', 'all']) {
+      expect(windowsForFrame('60m')).not.toContain(w);
+      expect(windowForFrame('60m', w)).toBe('3m');   // the frame's own pin
+    }
+    expect(windowForFrame('15m', '1y')).toBe('1m');
+  });
+
+  it('NEGATIVE: an unknown frame gets a zoom rather than silently losing one', () => {
+    expect(windowsForFrame('a-frame-added-later')).toEqual(windowsForFrame('daily'));
+  });
+
+  it('frameFor names the frame a key belongs to, and never returns undefined', () => {
+    expect(frameFor('24h').label).toBe('Last 24 hours');
+    expect(frameFor('nonsense').key).toBe(DEFAULT_TF);
+    expect(frameFor('5m_live').key).toBe('24h');      // through the retirement
+  });
+
+  it('the structure picker is offered NO extended-hours frame', () => {
+    // `frame_for` refuses them to every caller but the Support tab, so a
+    // zone-map option for one would be a dropdown entry that errors.
+    expect(STRUCTURE_TIMEFRAMES.map((t) => t.key)).toEqual(['15m', '60m', 'daily']);
+    expect(STRUCTURE_TIMEFRAMES.some((t) => t.ext)).toBe(false);
+    // NEGATIVE: and the two that ARE extended-hours are still offered on the
+    // Support tab, which is the one surface allowed to draw them.
+    expect(FALLBACK_TIMEFRAMES.filter((t) => t.ext).map((t) => t.key))
+      .toEqual(['5m_today', '24h']);
   });
 });
 
@@ -383,70 +495,121 @@ describe('overnightLine — the one-line overnight read', () => {
   });
 });
 
-describe('CHART_VIEWS — the live frame', () => {
-  it('is an Intraday view that round-trips from its tf', () => {
-    expect(viewFor('5m_live').group).toBe('Intraday');
-    expect(viewKeyFor('1m', '5m_live')).toBe('5m_live');
+
+/* ── RETIRED frames still land somewhere real (Ajay 2026-09-22) ───────────
+ * "Do not silently delete a frame." An old bookmark, or a tab he left open,
+ * still carries `15m_open` / `5m_live`. Each resolves to the nearest
+ * SURVIVING frame and the page says that it did. */
+describe('retired frames — an old link still works, and says where it went', () => {
+  it('names both retirements and where each one goes', () => {
+    expect(Object.keys(RETIRED_TIMEFRAMES).sort()).toEqual(['15m_open', '5m_live']);
+    // 15m_open -> 15m: its 26-bar session budget was measurably too thin to
+    // cluster (2026-09-22: PTGX and NVDA both returned NO support band). The
+    // alias points at 15m rather than 5m_today because 15m is the nearest key
+    // that resolves on EVERY surface — the structure endpoints refuse an
+    // extended-hours frame, so an old /zones?tf=15m_open link would error.
+    expect(RETIRED_TIMEFRAMES['15m_open'].to).toBe('15m');
+    // 5m_live -> 24h: same bar size, same pre/post policy, a span that is true
+    // for a thin name as well as a liquid one.
+    expect(RETIRED_TIMEFRAMES['5m_live'].to).toBe('24h');
+    // mirrors backend supply_demand/timeframes.RETIRED
+    for (const [, v] of Object.entries(RETIRED_TIMEFRAMES)) {
+      expect(FALLBACK_TIMEFRAMES.some((t) => t.key === v.to)).toBe(true);
+    }
+  });
+
+  it('parseTf resolves a retired key to its successor, NOT to daily', () => {
+    expect(parseTf('15m_open')).toBe('15m');
+    expect(parseTf('5m_live')).toBe('24h');
+    // the spellings a URL might carry, mirroring backend _ALIAS
+    for (const k of ['open', 'session', '15open']) expect(parseTf(k)).toBe('15m');
+    for (const k of ['5m', '5min', 'live', '5m_ext']) expect(parseTf(k)).toBe('24h');
+    for (const k of ['24', 'h24', '24hr', 'last24']) expect(parseTf(k)).toBe('24h');
+    for (const k of ['today', '5open', '5m_open']) expect(parseTf(k)).toBe('5m_today');
+    expect(parseTf('1h')).toBe('60m');
+    expect(parseTf(' 15M ')).toBe('15m');
+  });
+
+  it('retiredTf flags the case the page has to announce — and only that case', () => {
+    expect(retiredTf('5m_live')).toEqual(
+      { from: '5m_live', was: '5 min · live · pre/post market', to: '24h' });
+    expect(retiredTf('15m_open'))
+      .toEqual({ from: '15m_open', was: '15 min · from the open', to: '15m' });
+    // NEGATIVE: a live frame, an alias of a live frame, junk and an empty tf
+    // are NOT retirements — announcing one on an ordinary load would be noise.
+    for (const k of ['24h', '15m', 'daily', '', null, undefined, 'weekly', '1h']) {
+      expect(retiredTf(k as never), `${k} must not read as retired`).toBeNull();
+    }
+  });
+
+  it('NEGATIVE: a retired key never falls through to Daily without a word', () => {
+    for (const k of Object.keys(RETIRED_TIMEFRAMES)) {
+      expect(parseTf(k)).not.toBe(DEFAULT_TF);
+      expect(retiredTf(k)).not.toBeNull();
+    }
+  });
+
+  it('NEGATIVE: junk still falls back to daily, silently and on purpose', () => {
+    // Every surface answered on daily before timeframes existed, so that is
+    // the one fallback that cannot surprise anyone — and it needs no notice,
+    // because no real frame was asked for.
+    for (const junk of ['', '5m_tomorrow', 'weekly', null, undefined, '15m_opne']) {
+      expect(parseTf(junk)).toBe('daily');
+      expect(retiredTf(junk as never)).toBeNull();
+    }
+  });
+
+  it('parseTf honours the SERVED list, so a backend retirement needs no deploy', () => {
+    const served = FALLBACK_TIMEFRAMES.filter((t) => t.key !== '24h');
+    expect(parseTf('24h', served)).toBe(DEFAULT_TF);
+    expect(parseTf('5m_live', served)).toBe(DEFAULT_TF);   // its target is gone
+    expect(retiredTf('5m_live', served)).toBeNull();
   });
 });
 
-/* ── The today-only 5-minute frame (Ajay 2026-09-17) ───────────────────────
- * "For the live 5 min chart data, can you make sure its only showing from
- * todays open only. it going till 6 months." — "Today 04:00 ET — incl.
- * pre-market", and "No — keep current default, just add it." */
-describe('CHART_VIEWS — 5 min · today only', () => {
-  it('is selectable as its own Intraday view and round-trips', () => {
-    const v = viewFor('5m_today');
-    expect(v.tf).toBe('5m_today');
-    expect(v.group).toBe('Intraday');
-    expect(v.window).toBe('6m');           // levels still from the daily window
-    expect(viewKeyFor('6m', '5m_today')).toBe('5m_today');
-    expect(parseTf('5m_today')).toBe('5m_today');
-  });
-
-  it('says on its face that it is today only, from 04:00 ET', () => {
-    const v = viewFor('5m_today');
-    expect(v.label).toMatch(/today only/i);
-    expect(v.label).toMatch(/04:00 ET/);
-    // and it cannot be confused with the 2.5-session live view at a glance
-    expect(v.label).not.toBe(viewFor('5m_live').label);
-    expect(FALLBACK_TIMEFRAMES.find((t) => t.key === '5m_today')?.span)
-      .toMatch(/today only/i);
-  });
-
-  it('NEGATIVE: it is not a default anywhere, and the live view is untouched', () => {
-    expect(DEFAULT_VIEW).not.toBe('5m_today');
-    expect(DEFAULT_TF).toBe('daily');
-    expect(viewFor(DEFAULT_VIEW).tf).toBe('daily');
-    // the 2.5-session overnight view he reads keeps its label AND its slot
-    const live = viewFor('5m_live');
-    expect(live.label).toBe('5 min · live · pre/post market');
-    expect(live.window).toBe('6m');
-    expect(viewKeyFor('1m', '5m_live')).toBe('5m_live');
-    // an untouched tab's URL still carries no tf at all
-    expect(supportQuery({ symbol: 'CRDO', window: DEFAULT_WINDOW }))
-      .toBe('symbol=CRDO');
-  });
-
-  it('NEGATIVE: junk still falls back to daily, not to the new frame', () => {
-    for (const junk of ['', '5m_tomorrow', 'weekly', null, undefined]) {
-      expect(parseTf(junk)).toBe('daily');
+/* ── TradingView link-out stays in step (Ajay 2026-08-31) ─────────────────── */
+describe('tvChartUrl — an interval for every frame that can be selected', () => {
+  it('maps every offered frame to a real TradingView interval', () => {
+    const want: Record<string, string> = {
+      '5m_today': '5', '24h': '5', '15m': '15', '60m': '60', daily: 'D',
+    };
+    for (const t of FALLBACK_TIMEFRAMES) {
+      expect(tvChartUrl('NVDA', t.key), `${t.key} lost its TV interval`)
+        .toContain(`interval=${want[t.key]}`);
     }
+  });
+
+  it('a retired key still opens the right bar size, not daily', () => {
+    expect(tvChartUrl('NVDA', '5m_live')).toContain('interval=5');
+    expect(tvChartUrl('NVDA', '15m_open')).toContain('interval=15');
+  });
+
+  it('NEGATIVE: an unknown frame opens the daily chart', () => {
+    expect(tvChartUrl('NVDA', 'weekly')).toContain('interval=D');
+    expect(tvChartUrl('BRK-B')).toContain('symbol=BRK.B');
   });
 });
 
 describe('default zoom — 1 year on every surface (Ajay 2026-09-06)', () => {
-  it('opens on 1 year: engine default, ticker page, and the merged control', () => {
+  it('opens on 1 year and on the big-picture frame', () => {
     // Was 3m on Chart Maps and 6m on the ticker page (Ajay 2026-09-02);
     // 2026-09-06: "make support default to 1 year on all the tabs? I think
-    // its safer and more accurate."
+    // its safer and more accurate." 2026-09-22 moved the frame out of the
+    // zoom's control, so the default is now two facts, not one composite key.
     expect(DEFAULT_WINDOW).toBe('1y');
     expect(SEPA_SUPPLY_WINDOW).toBe('1y');
-    expect(DEFAULT_VIEW).toBe('daily:1y');
+    expect(DEFAULT_TF).toBe('daily');
     expect(parseWindow('')).toBe('1y');
     expect(parseWindow('garbage')).toBe('1y');
-    expect(viewKeyFor('99y', 'daily')).toBe('daily:1y');
-    expect(viewFor('nonsense')).toMatchObject({ window: '1y', tf: 'daily' });
+    expect(windowForFrame(DEFAULT_TF, '')).toBe('1y');
+  });
+
+  it('NEGATIVE: neither new frame became a default', () => {
+    expect(DEFAULT_TF).not.toBe('24h');
+    expect(DEFAULT_TF).not.toBe('5m_today');
+    // an untouched tab's URL still carries no tf and no window at all
+    expect(supportQuery({ symbol: 'CRDO', window: DEFAULT_WINDOW }))
+      .toBe('symbol=CRDO');
   });
 
   it('keeps shared URLs short on the default and spells out the old default (NEGATIVE)', () => {
@@ -454,165 +617,53 @@ describe('default zoom — 1 year on every surface (Ajay 2026-09-06)', () => {
     expect(supportQuery({ symbol: 'NVDA', window: '3m' })).toContain('window=3m');
     expect(supportQuery({ symbol: 'NVDA', window: '6m' })).toContain('window=6m');
   });
-});
 
-/* ── 2 / 3-year zooms (Ajay 2026-09-06) ──────────────────────────────────── */
-describe('2 / 3-year zooms (Ajay 2026-09-06)', () => {
-  it('the fallback window list runs 1m → 3m → 6m → 1y → 2y → 3y → 5y → overlay', () => {
-    expect(FALLBACK_WINDOWS.map((w) => w.key)).toEqual(['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']);
-    const bars = FALLBACK_WINDOWS.filter((w) => w.key !== 'all').map((w) => w.bars);
-    expect(bars).toEqual([...bars].sort((a, b) => a - b));
-    expect(FALLBACK_WINDOWS.find((w) => w.key === '2y')).toEqual({ key: '2y', label: '2 years', bars: 504 });
-    expect(FALLBACK_WINDOWS.find((w) => w.key === '3y')).toEqual({ key: '3y', label: '3 years', bars: 756 });
-  });
-
-  it('the chart control offers both as daily views between 1 year and 5 years', () => {
-    const daily = CHART_VIEWS.filter((v) => v.tf === 'daily').map((v) => v.key);
-    // Set, not sequence: 2026-09-18 moved the daily 1w/2w into their own group
-    // below the span ladder, so their POSITION changed while their membership
-    // and resolution did not. 2y/3y sitting between 1y and 5y is the claim.
-    expect(new Set(daily)).toEqual(new Set(['daily:1w', 'daily:2w', 'daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']));
-    const ladder = daily.filter((k) => !['daily:1w', 'daily:2w'].includes(k));
-    expect(ladder).toEqual(['daily:1m', 'daily:3m', 'daily:6m', 'daily:1y', 'daily:2y', 'daily:3y', 'daily:5y', 'daily:all']);
-    expect(viewKeyFor('2y', 'daily')).toBe('daily:2y');
-    expect(viewKeyFor('3y', 'daily')).toBe('daily:3y');
-    expect(viewFor('daily:3y')).toMatchObject({ window: '3y', tf: 'daily' });
-    expect(parseWindow('2y')).toBe('2y');
-    expect(parseWindow(' 3Y ')).toBe('3y');
-    // NEGATIVE: no intraday view borrowed a long zoom — intraday tapes are
-    // sessions, not years.
-    for (const v of CHART_VIEWS.filter((x) => x.tf !== 'daily')) {
-      expect(['2y', '3y', '5y']).not.toContain(v.window);
-    }
+  it('the wire carries the bare frame key, never a composite', () => {
+    const q = supportQuery({ symbol: 'MU', window: windowForFrame('24h', '1y'), tf: '24h' });
+    expect(q).toContain('tf=24h');
+    expect(q).toContain('window=6m');
+    expect(q).not.toContain('%3A');
   });
 });
 
-/* ── 1-week / 2-week zooms (Ajay 2026-09-18) ─────────────────────────────────
- * "Also a weekly chart for the past week and 2 week inthe charting time frames
- * in all places". Short WINDOWS, not weekly candles — the candles stay daily
- * and every NUMBER stays the 1-month read. */
-describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
-  /* FE-1 */
-  it('offers both short zooms first, in trading-day bars', () => {
+/* ── The ZOOM LADDER SURVIVED (Ajay 2026-09-06 + 2026-09-18) ──────────────
+ * "add 2 years ... also add 3 years and then keep 5 years", and "Also a
+ * weekly chart for the past week and 2 week inthe charting time frames in all
+ * places". Collapsing the frame picker must not cost him a single zoom: they
+ * moved to the "How far back" control, which renders on the daily frame. */
+describe('the zoom ladder — unchanged by the 2026-09-22 collapse', () => {
+  it('still runs 1w → 2w → 1m → 3m → 6m → 1y → 2y → 3y → 5y → overlay', () => {
     expect(FALLBACK_WINDOWS.map((w) => w.key))
       .toEqual(['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']);
-    expect(FALLBACK_WINDOWS.find((w) => w.key === '1w'))
-      .toEqual({ key: '1w', label: '1 week', bars: 5 });
-    expect(FALLBACK_WINDOWS.find((w) => w.key === '2w'))
-      .toEqual({ key: '2w', label: '2 weeks', bars: 10 });
     const bars = FALLBACK_WINDOWS.filter((w) => w.key !== 'all').map((w) => w.bars);
     expect(bars).toEqual([...bars].sort((a, b) => a - b));
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '1w')).toEqual({ key: '1w', label: '1 week', bars: 5 });
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '2w')).toEqual({ key: '2w', label: '2 weeks', bars: 10 });
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '2y')).toEqual({ key: '2y', label: '2 years', bars: 504 });
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '3y')).toEqual({ key: '3y', label: '3 years', bars: 756 });
+    expect(FALLBACK_WINDOWS.find((w) => w.key === '5y')).toEqual({ key: '5y', label: '5 years', bars: 1260 });
     // NEGATIVE: bars are SESSIONS. Nobody counted calendar days.
     expect(FALLBACK_WINDOWS.some((w) => w.bars === 7 || w.bars === 14)).toBe(false);
   });
 
-  /* FE-2 */
-  it('offers both as daily views and resolves their keys', () => {
-    const daily = CHART_VIEWS.filter((v) => v.tf === 'daily').map((v) => v.key);
-    // They are still OFFERED as daily views and still resolve — but they no
-    // longer lead the list. Since 2026-09-18 the span ladder opens with the
-    // HOURLY 1w/2w (he asked for readable weeks); the daily candles sit in
-    // their own group for when he wants the five bars everyone quotes.
-    expect(daily).toContain('daily:1w');
-    expect(daily).toContain('daily:2w');
-    expect(viewKeyFor('1w', 'daily')).toBe('daily:1w');
-    expect(viewKeyFor('2w', 'daily')).toBe('daily:2w');
-    expect(viewFor('daily:2w')).toMatchObject({ window: '2w', tf: 'daily' });
+  it('every zoom he asked for is still selectable and still parses', () => {
+    for (const w of FALLBACK_WINDOWS) expect(parseWindow(w.key)).toBe(w.key);
     expect(parseWindow(' 1W ')).toBe('1w');
-    expect(parseWindow('2w')).toBe('2w');
+    expect(parseWindow(' 3Y ')).toBe('3y');
+    // and a zoom sent with the daily frame survives the round trip
+    for (const w of FALLBACK_WINDOWS) {
+      expect(windowForFrame('daily', w.key)).toBe(w.key);
+    }
   });
 
-  /* FE-3 — REPLACED, not deleted (Ajay 2026-09-18, second ship).
-   *
-   * This used to assert that NO intraday view may carry a 1w/2w window, which
-   * was the true invariant while a short window was inert on an intraday
-   * frame. support.py now trims an intraday chart BY ET SESSION, so the
-   * assertion has to move to the hazard it was actually guarding: not the
-   * window key, but a DAILY-PROVENANCE CLAIM printed over hourly candles.
-   *
-   * daily:1w/daily:2w truthfully say every number is the 1-month read, because
-   * CHART_ONLY_LEVELS_FROM redirects them. The hourly pairs are NOT redirected
-   * — their levels are the 60m frame's own ~47-session budget — so borrowing
-   * that sentence would be the exact lie this test exists to catch. */
-  it('only the 60m pairs may borrow a short zoom, and no other intraday view may', () => {
-    for (const v of CHART_VIEWS.filter((x) => x.tf !== 'daily')) {
-      if (['1w', '2w'].includes(v.window)) {
-        expect(v.tf).toBe('60m');
+  it('NEGATIVE: an intraday frame can never carry a long zoom', () => {
+    // 2y/3y/5y and the overlay are DAILY reads. Before 2026-09-22 the merged
+    // control guaranteed this by listing no such pair; now the pin does.
+    for (const tf of ['5m_today', '24h', '15m', '60m']) {
+      for (const w of ['2y', '3y', '5y', 'all']) {
+        expect(['2y', '3y', '5y', 'all']).not.toContain(windowForFrame(tf, w));
       }
     }
-    // NEGATIVE: the frames that hold ONE session, or whose levels come off a
-    // daily window, must never be paired with a short zoom. 5m_live/5m_today
-    // read levels from 6m of DAILY bars; trimming them would silently narrow
-    // the levels without the note saying so.
-    for (const tf of ['15m_open', '5m_live', '5m_today']) {
-      const shorts = CHART_VIEWS.filter((v) => v.tf === tf && ['1w', '2w'].includes(v.window));
-      expect(shorts).toHaveLength(0);
-    }
-  });
-
-  /* FE-3b — the provenance hazard itself, stated directly. */
-  it('NEGATIVE: no intraday short zoom claims a DAILY read in its hint', () => {
-    const hourlyShorts = CHART_VIEWS.filter(
-      (v) => v.tf !== 'daily' && ['1w', '2w'].includes(v.window));
-    expect(hourlyShorts.length).toBeGreaterThan(0);   // guard against a vacuous pass
-    for (const v of hourlyShorts) {
-      const hint = v.hint || '';
-      expect(hint).not.toMatch(/1-month read|month of daily|daily read/i);
-      // and it must positively name the frame the numbers DO come from
-      expect(hint).toMatch(/1-hour frame|1 hour frame|hourly/i);
-    }
-  });
-
-  /* FE-3c — the three 60m entries must stay individually addressable.
-   * viewKeyFor matched intraday views by tf ALONE until this ship, which was
-   * correct only while one entry carried each tf. */
-  it('each 60m view round-trips to its OWN key, and a legacy tf-only link still resolves', () => {
-    expect(viewKeyFor('1w', '60m')).toBe('60m:1w');
-    expect(viewKeyFor('2w', '60m')).toBe('60m:2w');
-    expect(viewKeyFor('3m', '60m')).toBe('60m');
-    const keys = ['1w', '2w', '3m'].map((w) => viewKeyFor(w, '60m'));
-    expect(new Set(keys).size).toBe(3);
-    // LEGACY: a link written before these entries existed carries any window
-    // with ?tf=60m. It must fall back to the 3-month hourly view, NOT blank to
-    // the default and NOT land on a 1-week chart.
-    for (const w of ['1m', '6m', '1y', '5y', '99y']) {
-      expect(viewKeyFor(w, '60m')).toBe('60m');
-    }
-  });
-
-  /* FE-3d — key shape. The intraday keys are bare tf strings by history; the
-   * new ones cannot be, or they would collide with FALLBACK_TIMEFRAMES and
-   * risk reaching the wire as ?tf=60m:1w. */
-  it('every view key is a known tf, or "<tf>:<window>" whose halves both resolve', () => {
-    const tfKeys = new Set(FALLBACK_TIMEFRAMES.map((t) => t.key));
-    const winKeys = new Set(FALLBACK_WINDOWS.map((w) => w.key));
-    for (const v of CHART_VIEWS) {
-      if (tfKeys.has(v.key)) { expect(v.tf).toBe(v.key); continue; }
-      const [a, b] = v.key.split(':');
-      expect(b, `key ${v.key} is neither a tf nor a pair`).toBeTruthy();
-      if (a === 'daily') { expect(v.tf).toBe('daily'); expect(winKeys.has(b)).toBe(true); }
-      else { expect(tfKeys.has(a)).toBe(true); expect(v.tf).toBe(a); expect(v.window).toBe(b); }
-    }
-  });
-
-  /* FE-3e — the wire never carries a composite key. */
-  it('NEGATIVE: supportQuery sends the bare tf, never the picker key', () => {
-    const v = viewFor('60m:1w');
-    const q = supportQuery({ symbol: 'MU', window: v.window, tf: v.tf });
-    expect(q).toContain('tf=60m');
-    expect(q).not.toContain('60m%3A1w');
-    expect(q).not.toContain('60m:1w');
-    expect(q).toContain('window=1w');
-  });
-
-  /* FE-4 — no default moved */
-  it('moves no default', () => {
-    expect(DEFAULT_WINDOW).toBe('1y');
-    expect(DEFAULT_VIEW).toBe('daily:1y');
-    expect(SEPA_SUPPLY_WINDOW).toBe('1y');
-    expect(viewKeyFor('zzz', 'daily')).toBe('daily:1y');
-    expect(parseWindow('')).toBe('1y');
-    expect(parseWindow(null)).toBe('1y');
   });
 
   /* FE-5 NEGATIVE — the api-only-deploy degrade, pinned on purpose.
@@ -630,13 +681,7 @@ describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
     expect(() => shortHistoryNote(stale)).not.toThrow();
     expect(shortHistoryNote(stale)).toBe('');
     expect(stale.levels_window ?? null).toBeNull();
-  });
-
-  /* FE-6 */
-  it('every fallback window except the overlay has a matching daily view', () => {
-    for (const w of FALLBACK_WINDOWS) {
-      expect(CHART_VIEWS.some((v) => v.key === `daily:${w.key}`)).toBe(true);
-    }
+    expect(stale.levels_fallback ?? null).toBeNull();
   });
 
   /* FE-7 */
@@ -652,5 +697,121 @@ describe('1-week / 2-week zooms (Ajay 2026-09-18)', () => {
     // NEGATIVE: the read wording never appears without a served label.
     expect(shortHistoryNote({ short_history: { have: 13, asked: 21 } } as SupportPayload))
       .not.toContain('read asks for');
+  });
+});
+
+
+/* ── SOURCE GUARDS — the surface prints what the server sent (2026-09-22) ─── */
+describe('SOURCE GUARDS — the page composes no span of its own', () => {
+  /* The repo's own source-read pattern: `import.meta.url` is not a file URL
+     under the vitest transform, so resolve from the frontend root instead. */
+  async function readSource(rel: string): Promise<string> {
+    const mod: any = await import(/* @vite-ignore */ ('node:' + 'fs'));
+    const fs: any = mod?.default || mod;
+    const root = (globalThis as any).process?.cwd?.() || '.';
+    return fs.readFileSync(`${root}/${rel}`, 'utf8');
+  }
+  /* Comments carry the reasoning and quote the served sentences verbatim;
+     they are not what renders. Strip them before guarding the CODE. */
+  const code = (s: string) => s
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '');
+
+  it('NEGATIVE: the component builds no span and no level-source phrase', () => {
+    // The span and the provenance are ONE served sentence each
+    // (timeframes._span, support.chart_span). A surface that rebuilds either
+    // can drift from the numbers beside it, which is the bug class this whole
+    // change exists to remove.
+    return readSource('src/components/SupportLevels.tsx').then((raw) => {
+      const src = code(raw);
+      // `bar_label` narrowed 2026-09-23: the component now PASSES the served
+      // `levels_bar_label` to the level tables so the Last-tested column can
+      // say "N x 5-minute bars ago" instead of "N sessions ago". Reading a
+      // served key is the opposite of composing a span; what stays banned is
+      // INTERPOLATING one into a sentence here, which is the same shape the
+      // library guard below forbids.
+      for (const banned of [/bars\s*·/, /04:00/, /~\s*\d+\s*session/i,
+                            /\$\{[^}]*bar_label[^}]*\}\s*bars/,
+                            /levels from/i, /pre\/post/i]) {
+        expect(src, `SupportLevels.tsx composes span text: ${banned}`)
+          .not.toMatch(banned);
+      }
+      // and it must positively READ the served ones
+      expect(src).toMatch(/data\.chart_span/);
+      expect(src).toMatch(/t\.span/);
+      expect(src).toMatch(/data\.levels_fallback/);
+      // …including the unit the level read counted its bars in, and the
+      // scope the empty tables name. Both are served; neither is derived
+      // from the frame key here (on the named fallback the frame is
+      // 5-minute and the levels are daily).
+      expect(src).toMatch(/data\.levels_bar_label/);
+      expect(src).not.toMatch(/'5-minute'|"5-minute"/);
+    });
+  });
+
+  it('NEGATIVE: the library mirrors the server span, it does not assemble one at render', () => {
+    return readSource('src/lib/supportLevels.ts').then((raw) => {
+      const src = code(raw);
+      // Every mirrored span is a literal, checked field-by-field above. What
+      // must NOT exist is a helper that builds one from parts at call time.
+      expect(src).not.toMatch(/function\s+\w*[Ss]pan\w*\s*\(/);
+      expect(src).not.toMatch(/\$\{[^}]*bar_label[^}]*\}\s*bars/);
+    });
+  });
+
+  it('NEGATIVE: no bare Date constructor in either file', () => {
+    // `new Date('2026-09-22')` parses as UTC midnight and renders as the
+    // PREVIOUS day in ET. The one Date here pins an explicit midday Z.
+    return Promise.all([readSource('src/lib/supportLevels.ts'),
+                        readSource('src/components/SupportLevels.tsx')])
+      .then(([lib, comp]) => {
+        for (const [name, raw] of [['supportLevels.ts', lib],
+                                   ['SupportLevels.tsx', comp]] as const) {
+          const src = code(raw);
+          expect(src, `${name} has a bare new Date()`).not.toMatch(/new Date\(\s*\)/);
+          expect(src, `${name} builds a Date from a bare date string`)
+            .not.toMatch(/new Date\(\s*['"`]\d{4}-\d{2}-\d{2}['"`]\s*\)/);
+        }
+        expect(lib).toMatch(/new Date\(`\$\{dataThrough\}T12:00:00Z`\)/);
+      });
+  });
+
+  it('NEGATIVE: nothing the tab RENDERS says "bounce"', () => {
+    // Every surface he READS says reversal (2026-09-09). The zone-room hook
+    // keeps `bounce` in its identifier on purpose — internals are exempt, the
+    // words on screen are not.
+    return readSource('src/components/SupportLevels.tsx').then((raw) => {
+      const src = code(raw)
+        .replace(/useBounceRoom/g, '').replace(/BounceRoom/g, '')
+        .replace(/bounce_room/g, '');
+      expect(src).not.toMatch(/bounc/i);
+    });
+  });
+
+  it('the frame picker is width-capped, so the long spans stay usable', () => {
+    // A native <select> sizes to its WIDEST option, and the 24-hour span is a
+    // long sentence. Without a cap it pushes the search box off the screen at
+    // the width in his screenshot. The OPEN list still renders in full, which
+    // is where the span is read.
+    return Promise.all([readSource('src/styles.css'),
+                        readSource('src/components/SupportLevels.tsx')])
+      .then(([css, comp]) => {
+        expect(comp).toMatch(/className="cm-ctl sl-ctl-frame"/);
+        const rule = css.match(/\.sl-ctl-frame select \{[^}]*\}/);
+        expect(rule, '.sl-ctl-frame select has no rule in styles.css').toBeTruthy();
+        expect(rule![0]).toMatch(/max-width/);
+        expect(rule![0]).toMatch(/text-overflow:\s*ellipsis/);
+        // NEGATIVE: and it goes full-width on a phone rather than staying capped
+        expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]{0,200}\.sl-ctl-frame/);
+      });
+  });
+
+  it('NEGATIVE: the admin email never reaches the bundle', () => {
+    return Promise.all([readSource('src/lib/supportLevels.ts'),
+                        readSource('src/components/SupportLevels.tsx'),
+                        readSource('src/components/ZoneMap.tsx')])
+      .then((srcs) => {
+        for (const s of srcs) expect(s).not.toMatch(/@gmail\.com/i);
+      });
   });
 });

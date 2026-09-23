@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-22/23: "I am tired of the pre live post.. It give me for an
+  // entire week with lil candles", "just last 24 hours", "Just simpliyfy this
+  // drop down. I wanna use this for entries during the day and it been useless
+  // for that ... at any giving point This has been useless".
+  { id: 'support-frames-and-intraday-levels-2026-09-23',
+    label: '\u{1F4C9} The Supply/Demand chart now works for intraday entries \u2014 and the picker is five choices, not seventeen. You said it had been \u201cuseless at any giving point\u201d for entries. You were right, and here is what was actually wrong. '
+      + 'THE REAL BUG: the two 5-minute charts \u2014 the ones you would pick for an entry \u2014 were the ONLY ones that threw away their own bars and drew support from six months of DAILY bars instead. On PTGX at 145.07 they told you support was 142.43\u2013144.15, about 1% below. The 15-minute chart, reading its own bars, said 144.96\u2013145.60 \u2014 you were standing ON it. Two completely different entries. Every intraday chart now reads its levels from the bars it is actually drawing, which is what the 15-minute and hourly ones already did. '
+      + 'AND THE WEEK OF TINY CANDLES: that chart asked for a fixed NUMBER of bars, not a span \u2014 so a busy name filled it in 2.5 days and a quiet one like PTGX stretched the same count across six sessions. That is why you saw Sept 15. There is now a real \u201cLast 24 hours\u201d that is 24 hours for every name, however thinly it trades. '
+      + 'THE PICKER: seventeen options across three groups, named by bar size. Now five, named by the job \u2014 Today for an entry \u00b7 Last 24 hours \u00b7 the last two weeks \u00b7 the last two months \u00b7 the big picture \u2014 each showing its span so you do not have to open it to find out. Nothing was deleted: old links still work and tell you where they landed, and every zoom you had is still reachable, now on a second control that only offers what the chosen chart can actually answer. '
+      + 'TWO READINGS, BOTH LABELLED. The chart line is that chart\u2019s own read; the BOARD line stays the daily numbers your alerts and paper lanes use, unchanged on every frame. They will often disagree \u2014 that is the point, and each says which it is. When an intraday window holds no level at all (it happens after a gap), it falls back to the daily read and SAYS so rather than quietly swapping. '
+      + 'ALSO FIXED on the way: \u201ctested N sessions ago\u201d was counting 5-minute bars as trading days, the empty-support message claimed a 6-month window it was not using, and error text read \u201cNo Today, for an entry bars\u201d. '
+      + 'STILL NOT RIGHT, and I would rather say it: on some liquid names the entry chart comes back with price inside one band and NO support below it, so there is nothing to place a stop against. Deciding what a stop references there is a rule, not a view \u2014 your call. '
+      + 'YOUR CALL: what a stop should reference when the only read is the band price is standing in; whether \u201cToday\u201d should start at 09:30 instead of 04:00 (it is the same chart as \u201cLast 24 hours\u201d every evening and weekend); and whether the two should just merge.',
+    addedAt: '2026-09-23', route: '/chart-maps?tab=support' },
   // Ajay 2026-09-22: "Where we look at quality I need filter tab in explosive
   // growth tab, whcih manage quality like very less capital and hi ROI."
   // He also said Jhunjhunwala called these "ghee companies" and asked me to

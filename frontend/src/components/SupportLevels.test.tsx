@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SupportLevels } from './SupportLevels';
-import { CHART_VIEWS, type SupportLevel, type SupportPayload } from '../lib/supportLevels';
+import { FALLBACK_TIMEFRAMES, FALLBACK_WINDOWS,
+  type SupportLevel, type SupportPayload, windowsForFrame
+} from '../lib/supportLevels';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
@@ -184,44 +186,183 @@ describe('SupportLevels', () => {
     expect(screen.getByText(/not a tested floor/)).toBeTruthy();
   });
 
-  it('offers ONE chart control whose every option is a valid pair', async () => {
-    /* Ajay 2026-08-29: two dropdowns could contradict each other — Zoom
-     * counts DAILY bars, so "1 month" + "15 min" meant nothing and the
-     * chart looked broken. One list; no invalid combination reachable. */
+  it('offers EXACTLY five chart options, named by the job', async () => {
+    /* Ajay 2026-09-22: "Just simpliyfy this drop down. I wanna use this for
+     * entries during the day and it been useless for that ... at any giving
+     * point This has been useless." Seventeen merged (window, tf) entries,
+     * across three optgroups, named by bar size. Now five, named by the job. */
     mockFetch(PAYLOAD);
     const { container } = render(
-      <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+      <SupportLevels symbol="DHI" window="3m" tf="15m"
+                     onSymbol={noop} onWindow={noop} onView={noop2} />);
     await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
-    expect(container.querySelectorAll('select').length).toBe(1);
-    const groups = Array.from(container.querySelectorAll('optgroup'))
-      .map((g) => g.getAttribute('label'));
-    // The groups are DERIVED from CHART_VIEWS since 2026-09-18 — a hard-coded
-    // pair here silently dropped every entry in any group nobody remembered to
-    // add, which is exactly how the hourly week shipped invisible.
-    expect(groups).toEqual([...new Set(CHART_VIEWS.map((v) => v.group))]);
-    expect(groups).toContain('Zoom');
-    const opts = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
-    expect(opts).toContain('1 month');
-    expect(opts).toContain('15 min · today from the open');
+    const chart = container.querySelectorAll('select')[0];
+    const opts = Array.from(chart.querySelectorAll('option'));
+    expect(opts.map((o) => o.getAttribute('value')))
+      .toEqual(['5m_today', '24h', '15m', '60m', 'daily']);
+    // NEGATIVE: no optgroups any more — a five-row list needs no headings,
+    // and the headings were part of what made it a chore to read.
+    expect(chart.querySelectorAll('optgroup').length).toBe(0);
+    // Rule #5: at most five. A sixth option would be a failed change.
+    expect(opts.length).toBeLessThanOrEqual(5);
   });
 
-  it('reports BOTH halves of the view in ONE call, never two', async () => {
+  it('every option shows its SPAN without being selected', async () => {
+    /* "why do I need the look at the drop down" — the span used to be
+     * discoverable only by trying an option. Each row now carries the
+     * server's own `span` after the job name. */
+    mockFetch(PAYLOAD);
+    const { container } = render(
+      <SupportLevels symbol="DHI" window="3m" tf="15m"
+                     onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    const opts = Array.from(container.querySelectorAll('select')[0]
+      .querySelectorAll('option'));
+    for (const o of opts) {
+      const t = FALLBACK_TIMEFRAMES.find((x) => x.key === o.getAttribute('value'))!;
+      expect(o.textContent).toContain(t.label);
+      // the SERVED span, verbatim — the page assembles none of it
+      expect(o.textContent, `${t.key} lost its span`).toContain(t.span!);
+    }
+    // and one of them answers each of his two asks, in his words
+    expect(opts.map((o) => o.textContent).join('|')).toMatch(/Last 24 hours/);
+    expect(opts.map((o) => o.textContent).join('|')).toMatch(/today only, from 04:00 ET/);
+  });
+
+  it('the SERVED list wins over the mirrored one', async () => {
+    // A frame retired backend-side must vanish here without a frontend
+    // deploy. The mirror is a first-paint stand-in, never the source.
+    mockFetch({ ...PAYLOAD, timeframes: [
+      { key: 'daily', label: 'Only this one', span: 'daily bars · forever' },
+    ] });
+    const { container } = render(
+      <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    const opts = Array.from(container.querySelectorAll('select')[0]
+      .querySelectorAll('option')).map((o) => o.textContent);
+    expect(opts).toEqual(['Only this one · daily bars · forever']);
+  });
+
+  it('the zoom offers only what a frame can answer, and reports both halves in ONE call', async () => {
     /* Ajay 2026-08-29: "now the charts do not let me use yearly and monthly".
      * Two setters each rebuilt the URL from the same snapshot, so the second
-     * dropped the first and a Daily pick left the chart intraday. */
+     * dropped the first. And a control that can be set to nonsense will be —
+     * so a frame offers ONLY the zooms its own bars can fill, and none at all
+     * where its window is fixed (the 5-minute frames).
+     *
+     * 2026-09-23: this used to assert the zoom existed on DAILY ALONE. That
+     * went too far — it silently removed the hourly 1-week chart he asked for
+     * on 2026-09-18, which is exactly the regression the CHART_VIEWS contract
+     * was written to catch. 15-minute and hourly carry their own short zooms. */
     mockFetch(PAYLOAD);
     const onView = vi.fn();
     const { container } = render(
       <SupportLevels symbol="DHI" window="3m" tf="15m"
                      onSymbol={noop} onWindow={noop} onView={onView} />);
     await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    // a 15-minute frame carries the frame picker AND its own short zoom
+    expect(container.querySelectorAll('select').length).toBe(2);
+    // What it offers is the SERVED window list narrowed to what this frame's
+    // bars can fill — this payload serves a short list, so assert the rule
+    // rather than a fixed set.
+    const zoomKeys = [...container.querySelectorAll('select')[1].querySelectorAll('option')]
+      .map((o) => (o as HTMLOptionElement).value);
+    expect(zoomKeys.length).toBeGreaterThan(0);
+    for (const k of zoomKeys) expect(windowsForFrame('15m')).toContain(k);
+    for (const k of ['6m', '1y', '2y', '5y', 'all']) expect(zoomKeys).not.toContain(k);
 
-    fireEvent.change(container.querySelector('select')!, { target: { value: 'daily:1y' } });
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'daily' } });
     expect(onView).toHaveBeenCalledTimes(1);
-    expect(onView).toHaveBeenCalledWith('1y', 'daily');
+    // the big picture KEEPS the zoom he was on — switching frames must not
+    // silently move his lookback
+    expect(onView).toHaveBeenCalledWith('3m', 'daily');
 
-    fireEvent.change(container.querySelector('select')!, { target: { value: '15m_open' } });
-    expect(onView).toHaveBeenLastCalledWith('1m', '15m_open');
+    fireEvent.change(container.querySelector('select')!, { target: { value: '24h' } });
+    // the pinned daily window rides along — it still decides the BOARD block
+    expect(onView).toHaveBeenLastCalledWith('6m', '24h');
+  });
+
+  it('shows the zoom on the daily frame, with every window he asked for', async () => {
+    mockFetch(PAYLOAD);
+    const onView = vi.fn();
+    const { container } = render(
+      <SupportLevels symbol="DHI" window="6m" tf="daily"
+                     onSymbol={noop} onWindow={noop} onView={onView} />);
+    await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    const selects = container.querySelectorAll('select');
+    expect(selects.length).toBe(2);
+    // THE SERVER'S list wins here too — retiring a zoom backend-side must not
+    // need a frontend deploy.
+    const zoom = Array.from(selects[1].querySelectorAll('option'))
+      .map((o) => o.getAttribute('value'));
+    expect(zoom).toEqual(PAYLOAD.windows.map((w) => w.key));
+    expect(zoom).toContain('6m');          // "It does help with 6 months"
+    fireEvent.change(selects[1], { target: { value: '1m' } });
+    expect(onView).toHaveBeenLastCalledWith('1m', 'daily');
+  });
+
+  it('falls back to the full mirrored ladder before the payload lands', async () => {
+    // Every zoom he asked for (2026-09-06 "add 2 years ... keep 5 years",
+    // 2026-09-18 "past week and 2 week") survived the collapse — they moved
+    // to this control, they were not deleted.
+    mockFetch({ ...PAYLOAD, windows: [] });
+    const { container } = render(
+      <SupportLevels symbol="DHI" window="6m" tf="daily"
+                     onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    const zoom = Array.from(container.querySelectorAll('select')[1]
+      .querySelectorAll('option')).map((o) => o.getAttribute('value'));
+    expect(zoom).toEqual(FALLBACK_WINDOWS.map((w) => w.key));
+    expect(zoom).toEqual(expect.arrayContaining(['1w', '2w', '2y', '3y', '5y', 'all']));
+  });
+
+  it('NEGATIVE: a retired tf in the URL resolves AND the page says so', async () => {
+    mockFetch(PAYLOAD);
+    render(<SupportLevels symbol="DHI" window="6m" tf="24h"
+                          onSymbol={noop} onWindow={noop} onView={noop2}
+                          retired={{ from: '5m_live', was: '5 min · live · pre/post market',
+                                     to: '24h' }} />);
+    await waitFor(() => expect(screen.getByTestId('sl-tf-retired')).toBeTruthy());
+    const note = screen.getByTestId('sl-tf-retired').textContent || '';
+    expect(note).toContain('5 min · live · pre/post market');
+    expect(note).toContain('Last 24 hours');
+  });
+
+  it('NEGATIVE: an ordinary load says nothing about retirement', async () => {
+    mockFetch(PAYLOAD);
+    render(<SupportLevels symbol="DHI" window="6m" tf="24h"
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(screen.getByText('$148.22 – $152.74')).toBeTruthy());
+    expect(screen.queryByTestId('sl-tf-retired')).toBeNull();
+  });
+
+  it('names WHERE THE LEVELS CAME FROM on every frame, from the served string', async () => {
+    mockFetch({ ...PAYLOAD, timeframe: '24h',
+                chart_span: '288 x 5-minute bars · the 24 hours up to the last '
+                          + 'print · levels from these 5-minute bars' });
+    render(<SupportLevels symbol="DHI" window="6m" tf="24h"
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(
+      screen.getAllByText(/levels from these 5-minute bars/).length).toBeGreaterThan(0));
+  });
+
+  it('NEGATIVE: the named fallback is announced, never silent', async () => {
+    /* An intraday frame whose own window held no level shows DAILY bands over
+     * 5-minute candles. That is exactly the state that made the tab "useless
+     * at any given point"; the difference is that it is now said out loud. */
+    mockFetch({ ...PAYLOAD, timeframe: '24h',
+                levels_fallback: {
+                  from: 'Last 24 hours', from_bars: '5-minute', to: '6 months',
+                  note: 'The 5-minute window held no level, so these levels are '
+                      + 'the 6 months daily read — not this chart\'s own.',
+                } });
+    render(<SupportLevels symbol="DHI" window="6m" tf="24h"
+                          onSymbol={noop} onWindow={noop} onView={noop2} />);
+    await waitFor(() => expect(screen.getByTestId('sl-levels-fallback')).toBeTruthy());
+    expect(screen.getByTestId('sl-levels-fallback').textContent)
+      .toContain('not this chart\'s own');
+    // and it is absent when the frame read its own bars
+    mockFetch(PAYLOAD);
   });
 
   it('refetches when the window changes', async () => {
@@ -510,17 +651,19 @@ describe('SupportLevels — the chip names the chart actually on screen', () => 
 
 /* ── the intraday pick must carry BOTH halves (Ajay 2026-08-31) ──────────── */
 describe('intraday selection round-trip', () => {
-  it('selecting "15 min · today from the open" reports window AND tf', async () => {
+  it('selecting "Today, for an entry" reports window AND tf', async () => {
     // The other half of this regression — that the TICKER page actually passes
     // tf/onView — is pinned in scripts/contracts.mjs, where reading a page's
-    // source belongs.
+    // source belongs. `15m_open` was RETIRED 2026-09-22; `5m_today` is the
+    // frame that now answers "from market open, no previous days".
     const onView = vi.fn();
     render(<SupportLevels symbol="ACN" window="1m" tf="daily" onSymbol={noop}
                           onWindow={noop} onView={onView} />);
-    const sel = await screen.findByTitle(/Which chart the levels are read from/i)
+    const sel = await screen.findByTitle(/What this chart is for/i)
       .then((label) => label.querySelector('select')!);
-    fireEvent.change(sel, { target: { value: '15m_open' } });
-    expect(onView).toHaveBeenCalledWith('1m', '15m_open');
+    fireEvent.change(sel, { target: { value: '5m_today' } });
+    // the pinned daily window rides along — it still decides the BOARD block
+    expect(onView).toHaveBeenCalledWith('6m', '5m_today');
   });
 });
 
@@ -834,17 +977,25 @@ describe('SupportLevels · the 1-week / 2-week zooms (Ajay 2026-09-18)', () => {
     mockFetch(nvda1w);
     render(<SupportLevels symbol="NVDA" window="1w" onSymbol={noop} onWindow={noop} />);
     await waitFor(() => expect(screen.getByTestId('sl-levels-window')).toBeTruthy());
-    expect(screen.getByText('last 5 sessions · every read from 1 month of daily bars'))
-      .toBeTruthy();
+    // 2026-09-22: the header chip now names the drawn window AND the level
+    // source on EVERY frame (it used to fall back to the zoom label unless the
+    // zoom did not apply), so this sentence is on screen twice — once in the
+    // chip, once in the provenance line. Both are the SERVED `chart_span`.
+    expect(screen.getAllByText('last 5 sessions · every read from 1 month of daily bars')
+      .length).toBeGreaterThanOrEqual(1);
+    expect(document.querySelector('.sl-zoom')?.textContent)
+      .toBe('last 5 sessions · every read from 1 month of daily bars');
     expect(screen.getByTestId('sl-levels-window').textContent)
       .toContain('Every number on this tab is the 1 month read.');
-    // The daily five-candle week lives in its own group now and says so on the
-    // option itself, so it can never again be mistaken for the readable week.
-    const dailyShort = document.querySelectorAll('optgroup[label="Daily candles"] option')[0];
-    expect(dailyShort?.textContent).toBe('1 week · daily candles');
-    // …and the SPAN ladder opens with the hourly week he asked for.
-    const ladderFirst = document.querySelectorAll('optgroup[label="Zoom"] option')[0];
-    expect(ladderFirst?.textContent).toBe('1 week');
+    // 2026-09-22: the merged picker collapsed to FIVE frames and the span
+    // ladder moved to its own "How far back" control, which renders because
+    // this fixture is a daily frame. Both weeks are still there.
+    const selects = document.querySelectorAll('select');
+    expect(selects.length).toBe(2);
+    const zoom = Array.from(selects[1].querySelectorAll('option'))
+      .map((o) => o.textContent);
+    expect(zoom[0]).toBe('1 week');
+    expect(zoom).toContain('2 weeks');
     // NEGATIVE: the old sentence is false at this zoom and must not be served.
     expect(screen.queryByText(/Levels are read from this window only\./)).toBeNull();
     // "reversal", never "bounce", on anything he reads.
@@ -861,7 +1012,7 @@ describe('SupportLevels · the 1-week / 2-week zooms (Ajay 2026-09-18)', () => {
     expect(screen.queryByTestId('chart')).toBeNull();
     expect(screen.queryByText('Support below')).toBeNull();
     // the dropdown still renders so his next move is available
-    expect(document.querySelectorAll('optgroup option').length)
+    expect(document.querySelectorAll('select option').length)
       .toBeGreaterThan(0);
   });
 

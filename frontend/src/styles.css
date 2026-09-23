@@ -10971,6 +10971,24 @@ a.tk-link:hover   { color: inherit; }
 }
 .sl-search { flex: 1 1 320px; min-width: 240px; max-width: 520px; }
 
+/* THE FRAME PICKER (Ajay 2026-09-22: "Just simpliyfy this drop down").
+   Five rows, and each one carries the server's own span after the job name —
+   his complaint was that the span could only be found by trying an option.
+   A native <select> sizes itself to its WIDEST option, and
+   "Last 24 hours · 5-minute bars · the 24 hours up to the last print,
+   pre-market through after-hours" would push the search box off his screen.
+   So the control is capped and ellipsised while the OPEN list still renders
+   every row in full — which is where he reads the span. The provenance is
+   also on the header chip (`chart_span`), so nothing is only here. */
+.sl-ctl-frame select {
+  max-width: min(24rem, 52vw);
+  text-overflow: ellipsis;
+}
+@media (max-width: 720px) {
+  .sl-ctl-frame select { max-width: 100%; }
+  .sl-ctl-frame { flex: 1 1 100%; }
+}
+
 .sl-head {
   display: flex; justify-content: space-between; align-items: baseline;
   gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.25rem;

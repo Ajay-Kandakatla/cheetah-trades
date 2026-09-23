@@ -10,13 +10,22 @@
  * the query string — which is all "pre configured" needs to mean here.
  */
 
-/** Session-view timeframes → TradingView interval codes. Daily otherwise. */
+/** Session-view timeframes → TradingView interval codes. Daily otherwise.
+ *
+ *  Kept in step with supply_demand/timeframes.TIMEFRAMES (five frames since
+ *  2026-09-22). The two RETIRED keys keep their rows on purpose: `parseTf`
+ *  resolves an old `?tf=5m_live` link to `24h`, but a caller that still holds
+ *  the raw key — a bookmarked TV button, a stale prop — must open the
+ *  5-minute chart rather than silently dropping to daily. */
 const TV_INTERVAL: Record<string, string> = {
-  '5m_live': '5',
   '5m_today': '5',
+  '24h': '5',
   '15m': '15',
   '60m': '60',
   daily: 'D',
+  // retired 2026-09-22 → 24h / 15m; same bar size, so same interval.
+  '5m_live': '5',
+  '15m_open': '15',
 };
 
 export function tvChartUrl(symbol: string, tf?: string): string {

@@ -74,7 +74,7 @@ import { filterForGrid, filterTile, hiddenForTab, loadHidden, presentGroups,
 
 /** Stable empty set so `lockedOverlays` keeps identity on every non-🌀 tab. */
 const EMPTY_LOCK: Set<string> = new Set();
-import { normalizeSymbol, parseTf, parseWindow } from '../lib/supportLevels';
+import { normalizeSymbol, parseTf, parseWindow, retiredTf } from '../lib/supportLevels';
 import { useSepaScanStream } from '../hooks/useSepaScanStream';
 import { SepaScanProgress } from '../components/SepaScanProgress';
 import { DemandScanProgress } from '../components/DemandScanProgress';
@@ -191,6 +191,10 @@ export function ChartMaps() {
   const supportSymbol = normalizeSymbol(params.get('symbol'));
   const supportWindow = parseWindow(params.get('window'));
   const supportTf = parseTf(params.get('tf'));
+  /* A link written before 2026-09-22 can name a frame that no longer exists.
+   * `parseTf` lands it on the nearest surviving one; this is what lets the
+   * page SAY that it did, instead of quietly drawing a different chart. */
+  const supportTfRetired = retiredTf(params.get('tf'));
   const universe = UNIVERSE;
   /* Reaching vs already reached (Ajay 2026-08-31: "give me toggle reaching vs
    * already reached"). URL-backed so a refresh or a shared link keeps the
@@ -1130,7 +1134,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       ) : !isBoardTab(tab) ? (
         <SupportLevels symbol={supportSymbol} window={supportWindow} tf={supportTf}
                        onSymbol={setSupportSymbol} onWindow={setSupportWindow}
-                          onView={setSupportView} />
+                          onView={setSupportView} retired={supportTfRetired} />
       ) : (
       <>
       {/* 0DTE only. Two facts a reader needs BEFORE the tiles, because either

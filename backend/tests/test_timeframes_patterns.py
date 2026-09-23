@@ -48,12 +48,21 @@ def test_parse_tf_accepts_what_a_human_types_and_falls_back_to_daily():
 
 
 def test_tf_options_carry_a_label_and_a_real_span():
+    # UPDATED 2026-09-22: six frames became five, ordered SHORTEST FIRST,
+    # and `15m_open` was retired. The structure surfaces still see only the
+    # RTH-only frames — both 5-minute frames carry ext_hours and must never
+    # feed the zone engine.
     opts = TF.tf_options()
-    assert [o["key"] for o in opts] == [TF.DAILY, TF.H1, TF.M15, TF.M15_OPEN]
-    # the live chart frame is opt-in only (it must never feed the zone engine)
-    assert [o["key"] for o in TF.tf_options(include_live=True)][-1] == TF.M5_LIVE
-    for o in opts:
+    assert [o["key"] for o in opts] == [TF.M15, TF.H1, TF.DAILY]
+    assert [o["key"] for o in TF.tf_options(include_live=True)] == [
+        TF.M5_TODAY, TF.H24, TF.M15, TF.H1, TF.DAILY]
+    for o in TF.tf_options(include_live=True):
         assert o["label"] and o["span"] and o["bars"] > 0
+        # the bar size and the span ride along so the FE can print them
+        # beside the job name — Ajay must be able to tell the span WITHOUT
+        # opening the option ("why do I need the look at the drop down").
+        assert o["bar_label"] and o["window_label"]
+        assert o["span"] == f"{o['bar_label']} bars · {o['window_label']}"
 
 
 def test_hourly_budget_can_hold_bulkowskis_minimum_cup():
@@ -586,12 +595,18 @@ def test_intraday_bars_carry_a_time_or_a_session_collapses_to_one_candle():
 
 
 def test_the_session_timeframe_keeps_only_one_day():
+    """RETARGETED 2026-09-22. `15m_open` is RETIRED — its 26-bar session
+    budget was too thin to cluster (measured: PTGX and NVDA both returned no
+    support band at all on it), and `5m_today` answers the same "today only,
+    no previous days" question with 192 bars. What the ask still requires is
+    that ONE surviving frame genuinely answers it."""
     from supply_demand import timeframes as TF
-    spec = TF.tf_spec(TF.M15_OPEN)
-    assert spec["days"] == 1 and spec["bars"] <= 27      # 6.5h / 15m = 26
-    assert "09:30" in spec["span"]
-    for alias in ("open", "session", "15m_open"):
-        assert TF.parse_tf(alias) == TF.M15_OPEN, alias
+    spec = TF.tf_spec(TF.M5_TODAY)
+    assert spec["days"] == 1
+    assert "today only" in spec["span"] and "04:00 ET" in spec["span"]
+    # and the old keys must keep resolving — an open bookmark cannot break
+    for alias in ("open", "session", "15m_open", "15open"):
+        assert TF.parse_tf(alias) == TF.M15, alias
 
 
 def test_overlay_draws_the_smc_objects_and_reports_what_it_capped():

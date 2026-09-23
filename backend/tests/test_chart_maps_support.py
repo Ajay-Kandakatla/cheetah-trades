@@ -1038,7 +1038,12 @@ def test_chart_span_on_a_short_zoom_states_both_spans(loaded):
     span = S.for_symbol("TEST", "1w")["chart_span"]
     assert "last 5 sessions" in span, span
     assert "from 1 month of daily bars" in span, span
-    assert S.for_symbol("TEST", "1y")["chart_span"] == "1 year"
+    # UPDATED 2026-09-22. The header now states WHICH window the drawn levels
+    # came from on EVERY frame, not only where they were redirected (Ajay:
+    # "why do I need the look at the drop down"). An un-redirected read says
+    # "these … bars" rather than naming the window twice.
+    assert S.for_symbol("TEST", "1y")["chart_span"] == (
+        "1 year · levels from these daily bars")
 
 
 # BE-15b NEGATIVE — the intraday collision, found by the critic before ship.
@@ -1047,7 +1052,7 @@ def test_chart_span_on_a_short_zoom_states_both_spans(loaded):
 # "last 300 sessions" over a 300-bar FIVE-MINUTE chart. `window` and `tf` are
 # independent URL params and the API advertises 1w/2w, so it is reachable by
 # bookmark even though the dropdown always writes the pair together.
-@pytest.mark.parametrize("tf", ["5m_live", "60m", "15m"])
+@pytest.mark.parametrize("tf", ["5m_live", "24h", "5m_today", "60m", "15m"])
 def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
         loaded, monkeypatch, tf):
     # The intraday frame never loads in tests (no MASSIVE key, no mongo), so
@@ -1096,28 +1101,35 @@ def test_a_short_zoom_on_an_INTRADAY_frame_never_claims_daily_sessions(
     # "1 week of HOURLY bars" — so zoom_applies is now True exactly when the
     # slice actually trimmed something, and False when it could not.
     assert out["zoom_applies"] is (out.get("chart_sessions") is not None)
-    if tf == "5m_live":
-        # ext-hours: own_bars is False, so the window would have driven the
-        # LEVELS — the redirect still applies and the span must name it.
-        assert out["levels_window"] == "1m", out["levels_window"]
-        assert "1 month" in span, span
+    # UPDATED 2026-09-22 — EVERY intraday frame now carries its own bars,
+    # `5m_live`/`24h`/`5m_today` included. Before this ship the two 5-minute
+    # frames alone had own_bars False, so the daily zoom drove their LEVELS
+    # and 1W redirected them to the 1-month window. That redirect was the
+    # defect Ajay hit ("useless ... at any giving point"): the frames he
+    # picks for an entry were the only ones serving coarse daily bands.
+    assert out["levels_window"] is None, out["levels_window"]
+    # An own-bars frame read no daily window, so the span must not NAME one.
+    # It must still say where the levels came from — that clause is now on
+    # every frame — so the guard is on "daily bars", not on "levels from".
+    assert "levels from" in span, span
+    assert "of daily bars" not in span, span
+    # …and it MUST still answer "where did these numbers come from"
+    # (Ajay 2026-09-18, picker ship). 1w+60m draws 34 bars and analyses
+    # 330; going silent on that divergence is how the tab ends up looking
+    # like the levels belong to the week on screen. The label names the
+    # TIMEFRAME — never a daily window, because nothing was redirected.
+    lab = out.get("levels_window_label")
+    if out.get("chart_sessions"):
+        assert lab, "own-bars short zoom named no provenance at all"
+        # RETARGETED 2026-09-22. This used to forbid the substring "month",
+        # standing in for "did not claim the 1-MONTH daily window". Since the
+        # frames are named by the job, 60m's own label is "The last two
+        # months" and the proxy started catching the truth. Pin the real
+        # claim instead: an own-bars frame must not say DAILY anywhere.
+        assert "daily" not in lab.lower(), lab
+        assert "1 month" not in lab.lower(), lab
     else:
-        # 60m / 15m carry their OWN bars: the window never reached the levels,
-        # so there is no redirect to report and none is claimed.
-        assert out["levels_window"] is None, out["levels_window"]
-        # an own-bars frame read no daily window, so it must not name one
-        assert "levels from" not in span, span
-        # …but it MUST still answer "where did these numbers come from"
-        # (Ajay 2026-09-18, picker ship). 1w+60m draws 34 bars and analyses
-        # 330; going silent on that divergence is how the tab ends up looking
-        # like the levels belong to the week on screen. The label names the
-        # TIMEFRAME — never a daily window, because nothing was redirected.
-        lab = out.get("levels_window_label")
-        if out.get("chart_sessions"):
-            assert lab, "own-bars short zoom named no provenance at all"
-            assert "month" not in lab.lower(), lab
-        else:
-            assert lab is None, lab
+        assert lab is None, lab
 
 
 def test_the_short_zoom_still_states_its_daily_span_on_a_DAILY_frame(loaded):

@@ -27,8 +27,12 @@ import OverlayLegend from './OverlayLegend';
 import { filterTile, loadHidden, presentGroups, saveHidden, studiesWanted } from '../lib/chartOverlays';
 import {
   bandLabel, distanceLabel,
-  CHART_VIEWS, evidenceLabel, headline, money, sourceLabel, viewFor, viewKeyFor,
+  DEFAULT_TF, FALLBACK_TIMEFRAMES, FALLBACK_WINDOWS,
+  emptySupportNote,
+  evidenceLabel, frameFor,
+  headline, money, sourceLabel, parseTf, windowForFrame, windowsForFrame, zoomApplies,
   normalizeSymbol, overnightLine, priceAsOf, recencyLabel, recentCount,
+  recentWindowLabel,
   shortHistoryNote, supportQuery, testedCount,
   type SupportLevel, type SupportPayload,
 } from '../lib/supportLevels';
@@ -51,9 +55,20 @@ type Props = {
    *  rebuilt the URL from the same snapshot, so the second dropped the
    *  first — which is why picking a Daily view left the chart intraday. */
   onView?: (win: string, tf: string) => void;
+  /** Set when the URL asked for a frame that was RETIRED (2026-09-22) and
+   *  resolved to a surviving one. The page says so out loud — landing an old
+   *  link on a different chart without a word is the silent substitution this
+   *  whole change removes. Null on every ordinary load. */
+  retired?: { from: string; was: string; to: string } | null;
 };
 
-function LevelRow({ lv, side }: { lv: SupportLevel; side: 'support' | 'overhead' }) {
+/* `barLabel` is the SERVED unit the level read counted its bars in
+ * (`levels_bar_label`). Without it the Last-tested column printed a
+ * five-minute bar as "tested yesterday" on exactly the frames he was told to
+ * use for entries (2026-09-23). */
+function LevelRow({ lv, side, barLabel }: {
+  lv: SupportLevel; side: 'support' | 'overhead'; barLabel?: string;
+}) {
   return (
     <tr className={`sl-row${lv.recent ? ' sl-row-recent' : ''}`
                    + `${lv.tested ? '' : ' sl-row-untested'}`}>
@@ -62,14 +77,15 @@ function LevelRow({ lv, side }: { lv: SupportLevel; side: 'support' | 'overhead'
       <td className="sl-ev">{evidenceLabel(lv)}</td>
       <td className="sl-when">
         {lv.recent ? <span className="sl-dot" aria-hidden="true">●</span> : null}
-        {recencyLabel(lv)}
+        {recencyLabel(lv, barLabel)}
       </td>
     </tr>
   );
 }
 
-function LevelTable({ title, levels, side, empty }: {
-  title: string; levels: SupportLevel[]; side: 'support' | 'overhead'; empty: string;
+function LevelTable({ title, levels, side, empty, barLabel }: {
+  title: string; levels: SupportLevel[]; side: 'support' | 'overhead';
+  empty: string; barLabel?: string;
 }) {
   return (
     <div className="sl-table-wrap">
@@ -83,7 +99,8 @@ function LevelTable({ title, levels, side, empty }: {
           </thead>
           <tbody>
             {levels.map((lv) => (
-              <LevelRow key={`${lv.lo}-${lv.hi}-${lv.origin}`} lv={lv} side={side} />
+              <LevelRow key={`${lv.lo}-${lv.hi}-${lv.origin}`} lv={lv} side={side}
+                        barLabel={barLabel} />
             ))}
           </tbody>
         </table>
@@ -95,7 +112,7 @@ function LevelTable({ title, levels, side, empty }: {
 }
 
 export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
-                               onView }: Props) {
+                               onView, retired }: Props) {
   const [data, setData] = useState<SupportPayload | null>(null);
   // The chart ledger — same families, same localStorage key as the boards,
   // so hiding order blocks here hides them everywhere.
@@ -210,6 +227,34 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
   const trend = data?.trend_read || null;
   const overlay = data?.overlay || null;
   const sym = normalizeSymbol(symbol);
+  /* THE SERVER'S OWN LISTS, with the mirrored constants only until the first
+   * payload lands. Retiring a frame or a zoom backend-side must not need a
+   * frontend deploy — that half-ship is how the hourly week shipped invisible
+   * in 2026-09-18. */
+  const frames = data?.timeframes?.length ? data.timeframes : FALLBACK_TIMEFRAMES;
+  const windows = data?.windows?.length ? data.windows : FALLBACK_WINDOWS;
+  const curTf = parseTf(tf, frames);
+  /* THE DAILY ZOOM SURVIVES A ROUND TRIP (2026-09-23).
+   *
+   * Every intraday frame PINS its own window (`FRAME_WINDOW`), and that pin is
+   * written to the shared `window` param. So daily 1y -> "The last two weeks"
+   * -> "The big picture" handed `windowForFrame('daily', '1m')` a current of
+   * '1m' and came back at ONE MONTH — silently narrowing the one read he has
+   * said works ("It does help with 6 months"). Before the picker collapsed
+   * there was no bare `daily` row: every daily entry was an explicit
+   * (window, tf) pair, so the zoom always came back. This remembers it
+   * instead. Seeded with the window this tab was MOUNTED on, so a link that
+   * spells out `?window=` keeps carrying it — the ref only defends against the
+   * pin a FRAME write put there. */
+  const mountWindow = useRef<string>(win);
+  const lastWindow = useRef<Record<string, string>>({});
+  if (zoomApplies(curTf)) lastWindow.current[parseTf(curTf)] = win;
+  /* A frame he has not visited yet inherits the window this tab was MOUNTED
+   * on, so `?tf=15m&window=3m` still carries 3m when he switches to daily.
+   * Only a zoom he actually CHOSE on a frame overrides that for that frame. */
+  const rememberedFor = (tf: string) =>
+    lastWindow.current[parseTf(tf)] ?? mountWindow.current;
+  const retiredTo = retired ? frameFor(retired.to, frames) : null;
   const supports = data?.supports || [];
   const overhead = data?.overhead || [];
   const shortNote = shortHistoryNote(data);
@@ -232,32 +277,79 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             onAdd={(s) => onSymbol(normalizeSymbol(s))}
           />
         </div>
-        <label className="cm-ctl"
-               title="Which chart the levels are read from. Every option is a valid pair — a daily zoom and an intraday timeframe cannot be combined into something meaningless.">
+        {/* FIVE OPTIONS, NAMED BY THE JOB (Ajay 2026-09-22: "Just simpliyfy
+          * this drop down ... at any giving point This has been useless").
+          * The list is the SERVER's — a frame retired backend-side vanishes
+          * here without a frontend deploy — and each row carries the server's
+          * own `span` after its name, because his complaint was that the span
+          * could only be discovered by trying an option ("why do I need the
+          * look at the drop down"). Nothing here composes that sentence: the
+          * label and the span are two served strings with a separator. */}
+        <label className="cm-ctl sl-ctl-frame"
+               title="What this chart is for. Each option says its bar size and how far back it reaches; only the big-picture chart has a zoom.">
           Chart
-          <select value={viewKeyFor(win, tf || 'daily')}
+          <select value={curTf}
                   onChange={(e) => {
-                    const v = viewFor(e.target.value);
+                    const next = e.target.value;
                     // ONE write. Two setters would each rebuild the URL from
                     // the same snapshot and the second would drop the first.
-                    if (onView) onView(v.window, v.tf);
-                    else onWindow(v.window);
+                    // The zoom is remembered PER FRAME, not globally: `win`
+                    // is whatever the frame he is LEAVING was on, and handing
+                    // that back is how "The big picture" came back at 1 month
+                    // after a detour through a two-week chart. Now that every
+                    // frame can carry a zoom, one shared memory would let any
+                    // of them clobber the others.
+                    const w = windowForFrame(
+                      next, rememberedFor(next));
+                    if (onView) onView(w, next);
+                    else onWindow(w);
                   }}>
-            {/* Ajay 2026-09-18: the group list is derived from CHART_VIEWS, not
-              * retyped. A hard-coded pair silently DROPPED every entry in a
-              * group nobody remembered to add here — which is how a view can
-              * exist, be reachable by URL, and still be invisible in the one
-              * control he actually uses. */}
-            {([...new Set(CHART_VIEWS.map((v) => v.group))]).map((g) => (
-              <optgroup key={g} label={g}>
-                {CHART_VIEWS.filter((v) => v.group === g).map((v) => (
-                  <option key={v.key} value={v.key}>{v.label}</option>
-                ))}
-              </optgroup>
+            {frames.map((t) => (
+              <option key={t.key} value={t.key}>
+                {t.span ? `${t.label} · ${t.span}` : t.label}
+              </option>
             ))}
           </select>
         </label>
+        {/* THE ZOOM, ONLY WHERE IT MEANS ANYTHING. It used to be merged into
+          * the one control because two dropdowns could contradict each other
+          * — "1 month" + "15 min" was a combination with no meaning (Ajay
+          * 2026-08-29). The merge is not being undone, it is being expressed
+          * properly: this control offers ONLY the zooms the chosen frame can
+          * actually answer, so the meaningless pair is still unreachable while
+          * the meaningful ones survive.
+          *
+          * That matters because daily-only zoom silently dropped the hourly
+          * 1-week chart he asked for on 2026-09-18, which is precisely what
+          * `windowsForFrame` exists to stop. The 5-minute frames define their
+          * own window, so they offer none and this does not render. */}
+        {zoomApplies(curTf) ? (
+          <label className="cm-ctl"
+                 title={`How far back the ${frameFor(curTf, frames).label} chart reads. Only the zooms this chart's own bars can fill are offered.`}>
+            How far back
+            <select value={win}
+                    onChange={(e) => {
+                      const w = e.target.value;
+                      if (onView) onView(w, parseTf(curTf));
+                      else onWindow(w);
+                    }}>
+              {windows
+                .filter((w) => windowsForFrame(curTf).includes(w.key))
+                .map((w) => (
+                  <option key={w.key} value={w.key}>{w.label}</option>
+                ))}
+            </select>
+          </label>
+        ) : null}
       </div>
+
+      {/* AN OLD LINK LANDS SOMEWHERE ELSE, AND SAYS SO (2026-09-22). */}
+      {retiredTo ? (
+        <div className="cm-note cm-note-warn" data-testid="sl-tf-retired">
+          The “{retired!.was}” chart was retired — showing “{retiredTo.label}”
+          instead. Nothing you had bookmarked has stopped working.
+        </div>
+      ) : null}
 
       {!sym ? (
         <div className="cm-note">
@@ -304,10 +396,17 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               * that are not on screen. An intraday frame is named by what it
               * DREW, which is exactly what chart_span says ("34 x 1 hour bars
               * over 5 sessions"); only a daily frame is named by its zoom. */}
+            {/* WHAT IS DRAWN, AND WHERE THE LEVELS CAME FROM — on EVERY frame
+              * (2026-09-22). `chart_span` is one served sentence in two
+              * clauses ("192 x 5-minute bars · today only, from 04:00 ET ·
+              * levels from these 5-minute bars"), so the provenance is on
+              * screen without him opening anything. It used to be shown only
+              * when the zoom did not apply, which left 15m/60m naming a daily
+              * window that was not what the numbers came from. Nothing is
+              * composed here; the fallbacks are the older served strings for a
+              * payload that predates the key. */}
             <span className="sl-zoom">
-              {data.zoom_applies === false || data.chart_sessions
-                ? (data.chart_span || data.timeframe_label)
-                : data.window_label}
+              {data.chart_span || data.timeframe_label || data.window_label}
             </span>
               {data.live ? (<>
                 <span className={`sl-live sl-live-${data.live.state}`}
@@ -326,9 +425,11 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
                   </span>
                 ) : null}
               </>) : null}
+              {/* `recent_bars` is a BAR count. On a 5-minute frame "21
+                  sessions" is 1h45m (2026-09-23) — the unit is served. */}
               <span className="sl-recent">
                 {recentCount(supports)} of {supports.length} touched in the last{' '}
-                {data.recent_bars} sessions
+                {recentWindowLabel(data.recent_bars, data.levels_bar_label)}
               </span>
               <span className="sl-recent">
                 {testedCount(supports)} of {supports.length} turned at more than once
@@ -342,6 +443,17 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
           </div>
 
           <p className="sl-headline">{headline(data)}</p>
+          {/* THE NAMED FALLBACK, said out loud (2026-09-22). An intraday frame
+            * reads its own levels now; when its window holds none — the gap
+            * case — it falls back to the daily read, and that is the one state
+            * a reader must not have to infer. The sentence is SERVED
+            * (support.py::levels_fallback.note) and is also the first clause
+            * of `note`, so it reaches him either way. */}
+          {data.levels_fallback?.note ? (
+            <p className="cm-note cm-note-warn" data-testid="sl-levels-fallback">
+              {data.levels_fallback.note}
+            </p>
+          ) : null}
           {shortNote ? <p className="cm-note cm-note-warn">{shortNote}</p> : null}
 
           {trend && trend.direction !== 'unknown' ? (
@@ -437,12 +549,22 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             </p>
           ) : null}
 
+          {/* THE EMPTY SENTENCE NAMES THE FRAME, NOT THE PINNED DAILY ZOOM
+            * (2026-09-23). It said "No band below price in the last 6 months"
+            * over a chart built from 79 five-minute bars — and the 6-month
+            * read it named is NOT empty, its band is printed in the board row
+            * above. Composed by one helper off served keys only, so the
+            * sentence and the stats row cannot name two windows. */}
           <div className="sl-tables">
             <LevelTable title="Support below" levels={supports} side="support"
-                        empty={`No band below price in the last ${data.window_label} — `
-                               + 'nothing here to place a stop under. Try a longer zoom.'} />
+                        barLabel={data.levels_bar_label}
+                        empty={emptySupportNote(data, {
+                          zoomApplies: zoomApplies(curTf),
+                          longerFrameLabel: frameFor(DEFAULT_TF, frames).label,
+                        })} />
             <LevelTable title="Overhead" levels={overhead} side="overhead"
-                        empty="Nothing overhead in this window — clear above." />
+                        barLabel={data.levels_bar_label}
+                        empty={`Nothing overhead in ${data.levels_scope || 'this window'} — clear above.`} />
           </div>
 
           {(sig || mood) ? (
@@ -492,10 +614,20 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
                   input scores zero, never a neutral-positive.
                 </p>
               ) : null}
-              <p className="cm-note">
-                Computed on CLOSED bars only, so it never repaints. Every BUY/SELL
-                is written to the forward ledger and scored against real prices —
-                the hit rate is measured from your tape, not claimed.
+              {/* NOT EVERY FRAME REACHES THE LEDGER (2026-09-23).
+                * `_record_signal` is off on the two 5-minute frames. Until
+                * 2026-09-22 that was invisible because their signal WAS the
+                * daily frame's; it is now the frame's own, so the claim has
+                * to carry the exception. The reason is SERVED. */}
+              <p className="cm-note" data-testid="sl-signal-ledger">
+                Computed on CLOSED bars only, so it never repaints.{' '}
+                {sig?.recorded === false
+                  ? (sig?.recorded_note
+                     || 'This chart\u2019s BUY/SELL is not written to the forward '
+                        + 'ledger, so no hit rate is claimed for it.')
+                  : 'Every BUY/SELL is written to the forward ledger and scored '
+                    + 'against real prices — the hit rate is measured from your '
+                    + 'tape, not claimed.'}
               </p>
             </div>
           ) : null}

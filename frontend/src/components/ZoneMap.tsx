@@ -25,7 +25,7 @@ import {
 } from '../lib/zonePlan';
 import type { ZoneMapPayload } from '../lib/zonePlan';
 import { API } from '../lib/apiBase';
-import { FALLBACK_TIMEFRAMES } from '../lib/supportLevels';
+import { STRUCTURE_TIMEFRAMES } from '../lib/supportLevels';
 import { ZoneChart } from './ZoneChart';
 
 
@@ -90,9 +90,18 @@ export function ZoneMap({ symbol }: { symbol: string }) {
                title="Which bars the bands are read from. Daily is the structural floor; the intraday charts show the level this session's trade is standing on.">
           Timeframe
           <select value={tf} onChange={(e) => setTf(e.target.value)}>
-            {(data.timeframes?.length ? data.timeframes : FALLBACK_TIMEFRAMES)
+            {/* STRUCTURE_TIMEFRAMES, not the full list: `frame_for` refuses an
+              * extended-hours frame to every caller but the Support tab, so
+              * offering `5m_today` / `24h` here would be a dropdown entry that
+              * errors. The server's list already excludes them; this keeps the
+              * first-paint fallback honest too. The span rides beside the job
+              * name for the same reason it does on the Support tab — he must
+              * not have to try an option to learn how far back it reaches. */}
+            {(data.timeframes?.length ? data.timeframes : STRUCTURE_TIMEFRAMES)
               .map((t: any) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
+                <option key={t.key} value={t.key}>
+                  {t.span ? `${t.label} · ${t.span}` : t.label}
+                </option>
               ))}
           </select>
         </label>
@@ -110,7 +119,10 @@ export function ZoneMap({ symbol }: { symbol: string }) {
       </div>
       {tfLevels.length > 0 ? (
         <div className="sl-trades">
-          <h4>Entry &amp; stop on {data.timeframe_label || 'these'} bars</h4>
+          {/* The BAR SIZE, never `timeframe_label` — since 2026-09-22 that
+              names the JOB ("The big picture"), so this read "Entry & stop
+              on The big picture bars". The server sends both. */}
+          <h4>Entry &amp; stop on {data.timeframe_bar_label || 'these'} bars</h4>
           <div className="sl-scroll">
             <table className="sl-table">
               <thead>
@@ -143,7 +155,7 @@ export function ZoneMap({ symbol }: { symbol: string }) {
       ) : null}
       {data.tf_error ? (
         <p className="cm-note cm-note-warn">
-          {data.timeframe_label} bands unavailable — {data.tf_error}. The daily
+          {data.timeframe_bar_label || 'These'} bands unavailable — {data.tf_error}. The daily
           read below is unchanged.
         </p>
       ) : null}

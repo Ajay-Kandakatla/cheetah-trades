@@ -40,6 +40,21 @@ def _two_days() -> pd.DataFrame:
     return pd.concat(blocks).sort_index()
 
 
+def _overnight() -> pd.DataFrame:
+    """The OVERNIGHT shape (2026-09-22): yesterday's close and after-hours,
+    then this morning's pre-market and opening hour. `_two_days` cannot be
+    reused for the 24-hour frame — its last bar is 16:30 on day two and day
+    one's after-hours ends 16:29, exactly 24h01m earlier, so the cut lands
+    in the gap and the fixture proves nothing either way. A real overnight
+    read is taken DURING the next session, which is what this builds."""
+    return pd.concat([
+        _minutes("2026-09-16", "15:30", "15:59", "rth"),
+        _minutes("2026-09-16", "16:00", "16:29", "afterhours"),
+        _minutes("2026-09-17", "04:00", "04:29", "premarket"),
+        _minutes("2026-09-17", "09:30", "09:59", "rth"),
+    ]).sort_index()
+
+
 def _et(idx) -> pd.DatetimeIndex:
     return idx.tz_convert("America/New_York")
 
@@ -56,9 +71,12 @@ def test_the_today_only_five_minute_spec_is_registered():
     assert spec["orb_minutes"] == 5
     # The label and the span have to tell him which of the two 5-minute
     # frames he is looking at without opening anything.
-    assert spec["label"] == "5 min · today only · from 04:00 ET"
+    # RENAMED 2026-09-22: the label names the JOB, the span names the bar
+    # size and the window ("Just simpliyfy this drop down").
+    assert spec["label"] == "Today, for an entry"
+    assert spec["bar_label"] == "5-minute"
     assert "today only" in spec["span"] and "04:00 ET" in spec["span"]
-    assert spec["label"] != TF.tf_spec(TF.M5_LIVE)["label"]
+    assert spec["label"] != TF.tf_spec(TF.H24)["label"]
 
 
 def test_the_bar_budget_covers_the_whole_extended_session():
@@ -106,26 +124,53 @@ def test_the_frame_reports_the_right_source_and_a_real_as_of():
 
 def test_the_overnight_view_is_not_eaten_by_the_today_only_frame():
     """Ajay 2026-09-02: "I wanna see where things bounced over night." Pinned
-    so the today-only frame can never quietly become the live one."""
-    live = TF.tf_spec(TF.M5_LIVE)
+    so the today-only frame can never quietly become the overnight one.
+
+    UPDATED 2026-09-22: the overnight view is now `24h`, a TIME window
+    rather than a 480-bar budget, because a bar count made the span depend
+    on liquidity. `days` is unchanged at 3, so the provider fetch costs
+    exactly what it did."""
+    live = TF.tf_spec(TF.M5_LIVE)                     # the retired alias
+    assert live["key"] == TF.H24
     assert live["days"] == 3
-    assert live["bars"] == 480
-    assert live["label"] == "5 min · live · pre/post market"
-    assert live["span"] == ("last ~2.5 sessions of 5-minute bars incl. "
-                            "pre/post market")
+    assert live["bars"] == 24 * 12 == 288             # the 5-minute ceiling
+    assert live["label"] == "Last 24 hours"
+    assert "24 hours" in live["window_label"]
     assert live["rule"] == "5min" and live["ext_hours"] is True
     for raw in ("live", "5m", "5min", "5m_live", "5m_ext"):
-        assert TF.parse_tf(raw) == TF.M5_LIVE, raw
+        assert TF.parse_tf(raw) == TF.H24, raw
+    # and it is a DIFFERENT frame from the today-only one
+    assert TF.tf_spec(TF.M5_TODAY)["key"] != live["key"]
 
 
-def test_the_live_frame_still_spans_more_than_one_day():
-    df, meta = TF.frame_for("CRDO", TF.M5_LIVE, raw=_two_days(),
+def test_the_overnight_frame_still_reaches_back_past_todays_open():
+    """REPLACES `test_the_live_frame_still_spans_more_than_one_day`
+    (2026-09-22). `24h` is clipped by CLOCK, not by session, so what it must
+    prove is that it still carries the previous day's tape — that is the
+    whole "where things bounced over night" job. The fixture's two days are
+    contiguous within 24 hours of each other, so both survive the cut."""
+    df, meta = TF.frame_for("CRDO", TF.M5_LIVE, raw=_overnight(),
                             allow_ext=True)
     assert df is not None
     assert set(_et(df.index).date) == {pd.Timestamp("2026-09-16").date(),
                                        pd.Timestamp("2026-09-17").date()}
-    # and it is NOT clipped to one session
-    assert "session" not in meta
+    # a TIME window, and it says so
+    assert meta["window_hours"] == 24
+    span_h = (df.index.max() - df.index.min()) / pd.Timedelta(hours=1)
+    assert span_h <= 24, span_h
+    assert "→" in meta["session"] and "ET" in meta["session"]
+
+
+def test_the_today_only_frame_is_clipped_to_one_session_and_24h_is_not():
+    """NEGATIVE: the two 5-minute frames must not collapse into each other.
+    `5m_today` forgets yesterday; `24h` does not."""
+    today, tmeta = TF.frame_for("CRDO", TF.M5_TODAY, raw=_overnight(),
+                                allow_ext=True)
+    over, ometa = TF.frame_for("CRDO", TF.H24, raw=_overnight(),
+                               allow_ext=True)
+    assert len(set(_et(today.index).date)) == 1
+    assert len(set(_et(over.index).date)) == 2
+    assert "window_hours" not in tmeta and ometa["window_hours"] == 24
 
 
 # --- NEGATIVE: still a chart frame, never a structure frame -----------------
@@ -142,7 +187,7 @@ def test_the_new_frame_stays_out_of_the_zone_dropdown():
     assert any(o["key"] == TF.M5_TODAY
                for o in TF.tf_options(include_live=True))
     # the RTH-only frames are untouched by this change
-    for k in (TF.H1, TF.M15, TF.M15_OPEN):
+    for k in (TF.H1, TF.M15):
         assert not TF.tf_spec(k).get("ext_hours")
 
 
@@ -202,5 +247,9 @@ def test_no_default_points_at_the_new_frame():
     from pathlib import Path
     src = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "lib"
            / "supportLevels.ts").read_text()
-    assert "export const DEFAULT_VIEW = 'daily:1y';" in src
+    # The merged `DEFAULT_VIEW = 'daily:1y'` pair died with the merged picker
+    # (2026-09-22); the same two facts are now two constants, and BOTH are
+    # asserted so a default can still not drift to an intraday frame silently.
+    assert "export const DEFAULT_VIEW" not in src
     assert "export const DEFAULT_TF = 'daily';" in src
+    assert "export const DEFAULT_WINDOW = '1y';" in src

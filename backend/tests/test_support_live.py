@@ -21,17 +21,24 @@ from chart_maps import support as sup
 # --- spec -------------------------------------------------------------------
 
 def test_live_spec_registered_and_aliased():
+    """RETARGETED 2026-09-22. `5m_live` is RETIRED in favour of `24h`: same
+    bar size, same pre/post policy, and a span that is TRUE. Its 480-bar
+    budget made the span a function of liquidity — measured that day, the
+    same budget drew 3 sessions of NVDA and 5 of PTGX under one label
+    claiming "~2.5 sessions". The overnight view Ajay asked for on
+    2026-09-02 survives; only its span stopped lying."""
     spec = TF.tf_spec("5m_live")
+    assert spec["key"] == TF.H24                     # the alias resolved
     assert spec["ext_hours"] is True
     assert spec["rule"] == "5min"
-    assert TF.parse_tf("live") == "5m_live"
-    assert TF.parse_tf("5m") == "5m_live"
+    for alias in ("live", "5m", "5min", "5m_live", "5m_ext", "24h", "24"):
+        assert TF.parse_tf(alias) == TF.H24, alias
     # HIDDEN from the generic dropdown — it is a chart frame, not a
     # structure frame; only the Support tab asks for it.
-    assert not any(o["key"] == "5m_live" for o in TF.tf_options())
-    assert any(o["key"] == "5m_live" for o in TF.tf_options(include_live=True))
-    # every other intraday frame stays RTH-only
-    for k in ("60m", "15m", "15m_open"):
+    assert not any(o["key"] == TF.H24 for o in TF.tf_options())
+    assert any(o["key"] == TF.H24 for o in TF.tf_options(include_live=True))
+    # every RTH-only frame stays RTH-only
+    for k in ("60m", "15m"):
         assert not TF.tf_spec(k).get("ext_hours")
 
 
@@ -247,13 +254,26 @@ def test_data_through_is_et_so_an_evening_bar_is_not_tomorrow():
     assert sup._last_bar_date(df) == "2026-09-03"
 
 
-def test_for_symbol_reads_levels_from_the_daily_window_on_the_live_frame():
+def test_for_symbol_reads_levels_from_the_frame_it_draws():
+    """INVERTED 2026-09-22 and that is the point of the change.
+
+    Ajay: "I wanna use this for entries during the day and it been useless
+    for that ... at any giving point This has been useless." The 5-minute
+    frames were the ONLY ones whose levels came from the daily window, so
+    the frames he picks for an entry were the only ones serving coarse
+    6-month bands. They now read their own bars, through the same path
+    `15m`/`60m` already used. The daily read survives as the NAMED fallback
+    and as the board block — never as the silent default."""
     src = (Path(__file__).resolve().parents[1] / "chart_maps" / "support.py").read_text()
-    # 2026-09-05: `_frame_for(..., with_closed=True)` also hands back the frame without
-    # today's live bar; the levels still come from the DAILY window on the live frame.
-    assert 'daily_df, _have_d, levels_as_of, daily_closed = _frame_for(' in src
+    # the daily frame is still fetched on every intraday frame — for the
+    # board block and for the fallback, not to overwrite the levels
+    assert 'daily_df, _have_d, daily_as_of, daily_closed = _frame_for(' in src
     assert 'sym, spec["bars"], with_closed=True)' in src
-    assert 'and not ext_frame:\n            _record_signal' in src   # no double ledger
+    # and it no longer replaces the analysed frame unconditionally
+    assert 'df = daily_df\n        closed = daily_closed' not in src
+    assert 'own_bars = intraday' in src
+    assert 'levels_fallback' in src
+    assert 'and not ext_frame:\n            _record_signal' in src   # no ledger write
     assert 'opening_range_from_bars' in src        # one minute fetch per poll
     assert 'allow_ext=True' in src
     assert '"live": tf_mod.live_state() if ext_frame else None' in src

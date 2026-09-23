@@ -225,7 +225,12 @@ def test_the_own_bars_short_zoom_NAMES_THE_TIMEFRAME_not_a_daily_window(hourly):
         _pytest.skip("intraday frame unavailable: %s" % out.get("error"))
     lab = out.get("levels_window_label")
     assert lab, "the provenance line went silent on the view that needs it most"
-    assert "month" not in lab.lower(), f"claimed a daily-month provenance: {lab!r}"
+    # RETARGETED 2026-09-22: the frames are named by the JOB now, so 60m's
+    # own label is "The last two months" and the bare "month" proxy started
+    # catching the truth. The claim being guarded is a DAILY-window
+    # provenance, so pin that.
+    assert "daily" not in lab.lower(), f"claimed a daily provenance: {lab!r}"
+    assert "1 month" not in lab.lower(), f"claimed a daily-month provenance: {lab!r}"
     assert "hour" in lab.lower(), f"did not name the hourly frame: {lab!r}"
     note = out.get("note") or ""
     assert "Levels are read from this window only" not in note, (
@@ -241,7 +246,12 @@ def test_NEGATIVE_an_untrimmed_intraday_frame_claims_no_session_provenance(hourl
         _pytest.skip("intraday frame unavailable")
     assert out.get("chart_sessions") is None
     assert out.get("levels_window_label") is None
-    assert "Levels are read from this window only" in (out.get("note") or "")
+    # UPDATED 2026-09-22: "this window" meant the Zoom on a daily view and
+    # the FRAME on an intraday one — one sentence doing two jobs. An
+    # own-bars frame now says which bars, and says the Zoom is inert.
+    note = out.get("note") or ""
+    assert "read from this chart's own 1-hour bars" in note, note
+    assert "Zoom dropdown does not move them" in note, note
 
 
 def test_the_levels_are_IDENTICAL_across_the_two_hourly_zooms(hourly):

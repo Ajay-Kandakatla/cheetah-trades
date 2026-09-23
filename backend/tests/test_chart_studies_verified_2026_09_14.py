@@ -543,7 +543,15 @@ def test_SMC_and_the_pattern_scan_read_CLOSED_bars_in_the_support_source():
         i = src.index(call)
         assert src[i:i + 60].split(call)[1].startswith("closed.tail"), call
     i = src.index("pat_tf.scan(")
-    assert "df=closed.tail" in src[i:i + 120]
+    # UPDATED 2026-09-22: the scan now picks its frame by NAME — `pat_df` is
+    # `daily_closed` on the 5-minute frames (whose bar size
+    # patterns.timeframe cannot scale a cited duration to) and `closed`
+    # everywhere else. Both are CLOSED frames, which is what this guards, so
+    # pin that rather than the old literal.
+    assert "df=pat_df.tail" in src[i:i + 120]
+    j = src.index("pat_df = (")
+    assert "daily_closed" in src[j:j + 220] and "else closed)" in src[j:j + 220]
+    assert "pat_df = (df" not in src, "the pattern scan must never see the live bar"
     assert "with_closed=True" in inspect.getsource(S.overlay_for_symbol)
 
 

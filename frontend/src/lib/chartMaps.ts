@@ -1512,6 +1512,36 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
   cost: 3, ownstop: 3,
 };
 
+/** The bands `clipBands` DROPPED — the ones entirely outside the drawn
+ *  domain — with which edge they fell off.
+ *
+ *  `barDomain`'s `stretch` guard ignores any band edge more than one
+ *  chart-height from the candles, and `clipBands` then discards it. That is
+ *  right for the picture — stretching to a band 6% away flattens the candles
+ *  into a streak — but it means the band is simply NOT THERE, and on the
+ *  Support tab the served note points straight at it ("The dashed band is the
+ *  demand BOARD's band — what … the alert gate and the paper lanes use").
+ *  Measured 2026-09-22, NVDA on the 24-hour frame: candles 225.56-229.44,
+ *  board demand 212.19-216.82, domain {lo 225.33, hi 229.67} — the rect lands
+ *  at y 907→1231 in a 320-high viewBox, entirely off-plot. A reader hunting
+ *  the dashed band finds only the solid intraday ones, which is the exact
+ *  conflation the two-readings design exists to prevent.
+ *
+ *  Nothing here decides what to draw; the caller does. PURE. */
+export function offDomainBands(
+  bands: CmBand[], d: Domain,
+): { band: CmBand; side: 'above' | 'below' }[] {
+  const out: { band: CmBand; side: 'above' | 'below' }[] = [];
+  for (const b of bands) {
+    if (!Number.isFinite(b.lo) || !Number.isFinite(b.hi)) continue;
+    const lo = Math.min(b.lo, b.hi);
+    const hi = Math.max(b.lo, b.hi);
+    if (hi <= d.lo) out.push({ band: b, side: 'below' });
+    else if (lo >= d.hi) out.push({ band: b, side: 'above' });
+  }
+  return out;
+}
+
 /** Right-edge labels for the plan lines, de-collided. Reuses zonePlan's
  *  layoutLabels so the two chart surfaces cannot drift apart. */
 /** The now line's label carries the live price (Ajay 2026-09-08: "add the now

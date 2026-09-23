@@ -318,6 +318,14 @@ overnight read he asked for on 2026-09-02 and pinning it is the point of
 | `5m_today` | 5 min · today only · from 04:00 ET | 192 | 1 | today only, from 04:00 ET — pre-market, regular and after-hours 5-minute bars |
 | `5m_live` | 5 min · live · pre/post market | 480 | 3 | last ~2.5 sessions of 5-minute bars incl. pre/post market |
 
+> **SUPERSEDED 2026-09-22.** The table above is the 2026-09-17 state and is
+> kept because the derivations under it are still the reasons the surviving
+> frames are shaped the way they are. Six frames became five, `15m_open` and
+> `5m_live` were retired, `24h` was added, and every label now names the JOB
+> rather than the bar size. The current table, the retirement reasons and the
+> alias map live in
+> [`support_levels_tab.md` → *Five frames, named by the job*](support_levels_tab.md#five-frames-named-by-the-job-2026-09-22).
+
 **The 192 is derived, not chosen.** The extended session runs 04:00–20:00 ET
 = 16 hours = 960 minutes; at 5 minutes a bar that is 960 / 5 = **192 buckets**.
 Guessing lower would silently clip the morning he actually reads. The frame is
@@ -339,7 +347,15 @@ about what a level is made of changed here — only what the chart draws.
 
 **Aliases**: `5m_today`, `5today`, `today`, `5m_day`, `5m_open`, `5open`.
 Junk still falls back to daily. No default points at this key: `DEFAULT_TF` is
-still `daily`, and the FE's `DEFAULT_VIEW` is still `daily:1y`.
+still `daily`, and the FE opens on the same view (until 2026-09-22 that was the
+merged picker's `DEFAULT_VIEW = 'daily:1y'`; since the picker was collapsed it
+is `DEFAULT_TF` + `DEFAULT_WINDOW`).
+
+**SUPERSEDED 2026-09-22 on two points**, see
+`docs/supply_demand/support_levels_tab.md` § *Five frames, named by the job*:
+this frame now reads its LEVELS from its own 5-minute bars, not from the
+6-month daily window, with a named fallback when its window holds none; and its
+dropdown label is the job (*"Today, for an entry"*), not the bar size.
 
 Tests: `backend/tests/test_5m_today_frame_2026_09_17.py` (16) and
 `frontend/src/lib/supportLevels.test.ts`. The negatives carry the weight —

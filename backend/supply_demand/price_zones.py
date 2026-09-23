@@ -411,6 +411,9 @@ def for_symbol(symbol: str, last_price: Optional[float] = None,
     out["symbol"] = sym
     out["timeframe"] = tf_key
     out["timeframe_label"] = tf_mod.tf_spec(tf_key)["label"]
+    # The bar size, for the sentences that need a noun and not a job name
+    # (2026-09-23) — see supply_demand/api.py.
+    out["timeframe_bar_label"] = tf_mod.tf_spec(tf_key)["bar_label"]
     out["live_bar"] = live_bar if tf_key == tf_mod.DAILY else None
     out["timeframes"] = tf_mod.tf_options()
     if tf_meta:

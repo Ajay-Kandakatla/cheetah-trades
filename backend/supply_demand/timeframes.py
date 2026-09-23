@@ -31,6 +31,38 @@ The last bucket of an intraday frame is usually IN PROGRESS. `frame_for`
 stamps `as_of` with the last raw minute actually seen (never the bucket's
 future close label) and sets `partial` so a consumer can keep that bucket
 out of its structure (2026-09-05, Ajay: "yes please fix the bugs").
+
+FIVE FRAMES, NAMED BY THE JOB (Ajay 2026-09-22)
+───────────────────────────────────────────────
+> "Once done can you add a 24 hour window for me on the supply demand chart
+>  please. I am tired of the pre live post.. It give me for an entire week
+>  with lil candles. I mainly need the support levels for the last 24 hours
+>  ... even if Pre post I am not expecting to see Sept 15 why do I need the
+>  look at the drop down" … "Just simpliyfy this drop down. I wanna use this
+>  for entries during the day and it been useless for that."
+
+Six frames became five, and every label now names the QUESTION rather than
+the bar size, with the span carried beside it so the answer is readable
+without opening the dropdown.
+
+  * `24h` is NEW and is the only TIME-windowed frame in the module. Every
+    other frame is a BAR-COUNT budget, and a bar count makes the span a
+    function of LIQUIDITY: measured 2026-09-22, the retired `5m_live`'s
+    480-bar budget drew 3 sessions of NVDA and 5 of PTGX (2026-09-16 →
+    09-22) under one label claiming "~2.5 sessions". PTGX barely prints
+    outside RTH, so the same budget reaches further back. A 24-HOUR slice
+    is true for a thin name and a liquid one alike.
+  * `15m_open` RETIRED → `15m`. Its 26-bar session budget is too thin to
+    cluster: measured 2026-09-22, PTGX and NVDA both returned NO support
+    band at all on it. `5m_today` answers the same "today only, no previous
+    days" question with 192 bars. The alias points at `15m` rather than
+    `5m_today` because `15m` is the nearest key that resolves on EVERY
+    surface — the extended-hours frames are refused by the structure
+    endpoints below, so an old `?tf=15m_open` bookmark on /zones would
+    start erroring.
+  * `5m_live` RETIRED → `24h`. Same bar size, same pre/post policy, a span
+    that is true. Both keys are extended-hours and therefore Support-tab
+    only, so the alias adds no new refusal anywhere.
 """
 from __future__ import annotations
 
@@ -43,78 +75,115 @@ log = logging.getLogger("supply_demand.timeframes")
 DAILY = "daily"
 H1 = "60m"
 M15 = "15m"
+M5_TODAY = "5m_today"
+H24 = "24h"
+
+# RETIRED 2026-09-22. The constants stay so an old import keeps working and
+# so `RETIRED` can be read as a table; neither key is in `TIMEFRAMES` any
+# more, and `parse_tf` resolves both (see the module header for the reason
+# each one points where it does).
 M15_OPEN = "15m_open"
 M5_LIVE = "5m_live"
-M5_TODAY = "5m_today"
+RETIRED: dict[str, str] = {M15_OPEN: M15, M5_LIVE: H24}
+
+
+def _span(bar_label: str, window_label: str) -> str:
+    """The one sentence the dropdown prints beside a frame's job name.
+
+    Ajay 2026-09-22: "why do I need the look at the drop down" — the span
+    has to be readable WITHOUT opening the option, so it is built from the
+    two facts that decide it, never written twice."""
+    return f"{bar_label} bars · {window_label}"
+
 
 # `bars` is what the zone engine reads; `days` is the calendar fetch span.
 # swing_window shrinks intraday on purpose — a 3-bar swing on a 15m chart
 # is 45 minutes, which is already a real intraday pivot; the daily default
 # of 4-5 would find two levels a session and call the chart structureless.
+#
+# `label` names the JOB, `bar_label` the bar size, `window_label` the span.
+# The sentences in chart_maps.support read `bar_label`, never `label`: a
+# header saying "79 x Today, for an entry bars" would be nonsense.
+#
+# ORDER IS SHORTEST FIRST (2026-09-22). "I wanna use this for entries during
+# the day" — the frame he reaches for most is the one at the top. DEFAULT_TF
+# is still `daily`, so nothing opens on a different frame than it used to.
 TIMEFRAMES: tuple[dict, ...] = (
-    {"key": DAILY, "label": "Daily", "bars": 252, "days": 0,
-     "swing_window": 4, "span": "1 year of daily bars",
-     "orb_minutes": 30},
-    # 330 bars ≈ 47 sessions ≈ 9 weeks — deliberately wide enough that
-    # Bulkowski's minimum cup ("7 weeks" = 245 hourly bars) can actually
-    # form. A shorter budget would make the cup detector silently barren
-    # on this timeframe and look like a bug.
-    {"key": H1, "label": "1 hour", "bars": 330, "days": 70,
-     "swing_window": 3, "span": "~47 sessions of hourly bars",
-     "orb_minutes": 60},
-    {"key": M15, "label": "15 min", "bars": 260, "days": 15,
-     "swing_window": 2, "span": "~10 sessions of 15-minute bars",
-     "orb_minutes": 15},
-    # Ajay 2026-08-29: "can you create 15 mins from Market open time
-    # please?" — TODAY only, anchored at 09:30 ET. A session view: the
-    # levels that matter are the ones this session built, so the frame
-    # deliberately forgets everything before the bell.
-    {"key": M15_OPEN, "label": "15 min · from the open", "bars": 26,
-     "days": 1, "swing_window": 2,
-     "span": "today's session only, from 09:30 ET", "orb_minutes": 15},
     # Ajay 2026-09-17: "For the live 5 min chart data, can you make sure its
     # only showing from todays open only. it going till 6 months." Asked where
-    # the day starts, he said "Today 04:00 ET — incl. pre-market", and asked
-    # for this as an ADDITION, not a replacement — the 3-session `5m_live`
-    # frame below is the overnight view he reads and stays exactly as it is.
+    # the day starts, he said "Today 04:00 ET — incl. pre-market".
+    #
+    # THIS IS THE FRAME THAT ANSWERS his 2026-09-22 fallback ask, "support
+    # level from market open but I do not have to see previous days in that".
     #
     # Bar budget: the extended session runs 04:00-20:00 ET = 16 hours =
     # 16 × 60 = 960 minutes; at 5 minutes a bar that is 960 / 5 = 192 buckets.
     # 192 is therefore the whole day and never clips his morning — the frame
     # is clipped to today's ET date first, so `tail(192)` is a no-op by
     # construction rather than a cut.
-    {"key": M5_TODAY, "label": "5 min · today only · from 04:00 ET",
+    {"key": M5_TODAY, "label": "Today, for an entry",
+     "bar_label": "5-minute", "window_label": "today only, from 04:00 ET",
      "bars": 192, "days": 1, "swing_window": 2, "rule": "5min",
-     "ext_hours": True,
-     "span": ("today only, from 04:00 ET — pre-market, regular and "
-              "after-hours 5-minute bars"),
-     "orb_minutes": 5},
-    # Ajay 2026-09-02: "add live chart please, for supply demand? I wanna
-    # see where things bounced over night." The frame that draws pre-market
-    # and after-hours bars (04:00-20:00 ET, the last ~2.5 sessions of
-    # 5-minute candles), refreshed every 30s while any extended session is
-    # open. Levels come from the DAILY window (see
-    # chart_maps.support.for_symbol) — the session policy below is about
-    # what a LEVEL is made of, not about what the chart is allowed to show.
-    {"key": M5_LIVE, "label": "5 min · live · pre/post market", "bars": 480,
-     "days": 3, "swing_window": 2, "rule": "5min", "ext_hours": True,
-     "span": "last ~2.5 sessions of 5-minute bars incl. pre/post market",
-     "orb_minutes": 5},
+     "ext_hours": True, "orb_minutes": 5},
+    # Ajay 2026-09-22: "can you add a 24 hour window for me on the supply
+    # demand chart please ... I mainly need the support levels for the last
+    # 24 hours to see the support".
+    #
+    # THE ONLY TIME-WINDOWED FRAME IN THIS MODULE. `bars` is a CEILING, not
+    # the budget: 24 h × 12 buckets an hour = 288, which is what a 5-minute
+    # grid can hold in a day, so `tail(288)` is a no-op after the slice. The
+    # slice itself is by CLOCK (see `frame_for`), which is the whole point —
+    # a bar count would hand a thin name six sessions and a liquid one two
+    # and a half under the same label, which is the defect this replaces.
+    #
+    # `days: 3` is the same calendar fetch the retired `5m_live` paid for, so
+    # provider load per tab is unchanged.
+    {"key": H24, "label": "Last 24 hours",
+     "bar_label": "5-minute",
+     "window_label": ("the 24 hours up to the last print, pre-market "
+                      "through after-hours"),
+     "bars": 288, "days": 3, "swing_window": 2, "rule": "5min",
+     "ext_hours": True, "orb_minutes": 5},
+    {"key": M15, "label": "The last two weeks",
+     "bar_label": "15-minute", "window_label": "the last ~10 sessions",
+     "bars": 260, "days": 15, "swing_window": 2, "orb_minutes": 15},
+    # 330 bars ≈ 47 sessions ≈ 9 weeks — deliberately wide enough that
+    # Bulkowski's minimum cup ("7 weeks" = 245 hourly bars) can actually
+    # form. A shorter budget would make the cup detector silently barren
+    # on this timeframe and look like a bug.
+    {"key": H1, "label": "The last two months",
+     "bar_label": "1-hour", "window_label": "the last ~47 sessions",
+     "bars": 330, "days": 70, "swing_window": 3, "orb_minutes": 60},
+    # Ajay 2026-09-22: "It does help with 6 months". The daily frame is the
+    # only one whose span the Zoom dropdown still sets, so the span text
+    # says so instead of asserting a number the Zoom can contradict.
+    {"key": DAILY, "label": "The big picture",
+     "bar_label": "daily",
+     "window_label": "1 year by default — the Zoom dropdown sets how far back",
+     "bars": 252, "days": 0, "swing_window": 4, "orb_minutes": 30},
 )
+
+for _t in TIMEFRAMES:                       # one span sentence, built once
+    _t["span"] = _span(_t["bar_label"], _t["window_label"])
+del _t
 
 DEFAULT_TF = DAILY
 _BY_KEY = {t["key"]: t for t in TIMEFRAMES}
 
-# Aliases so a URL can say what a human would type.
+# Aliases so a URL can say what a human would type. The RETIRED keys are
+# folded in LAST so an old bookmark resolves instead of erroring.
 _ALIAS = {"1d": DAILY, "d": DAILY, "day": DAILY, "1day": DAILY,
           "1h": H1, "h": H1, "hour": H1, "hourly": H1, "60min": H1,
           "15": M15, "15min": M15, "m15": M15, "15m": M15,
-          "open": M15_OPEN, "session": M15_OPEN, "15m_open": M15_OPEN,
-          "15open": M15_OPEN,
-          "5m": M5_LIVE, "5min": M5_LIVE, "live": M5_LIVE, "5m_live": M5_LIVE,
-          "5m_ext": M5_LIVE,
+          # `open`/`session` used to mean "today's RTH session on 15-minute
+          # bars". They follow `15m_open` to `15m` for the same reason: the
+          # structure endpoints refuse an extended-hours frame.
+          "open": M15, "session": M15, "15open": M15,
+          "5m": H24, "5min": H24, "live": H24, "5m_ext": H24,
+          "24": H24, "h24": H24, "24hr": H24, "24hour": H24, "last24": H24,
           "5m_today": M5_TODAY, "5today": M5_TODAY, "today": M5_TODAY,
-          "5m_day": M5_TODAY, "5m_open": M5_TODAY, "5open": M5_TODAY}
+          "5m_day": M5_TODAY, "5m_open": M5_TODAY, "5open": M5_TODAY,
+          **RETIRED}
 
 
 def parse_tf(raw) -> str:
@@ -136,13 +205,19 @@ def tf_spec(key: str) -> dict:
 def tf_options(include_live: bool = False) -> list:
     """Dropdown payload for the FE.
 
-    `5m_live` is HIDDEN by default: it is a CHART frame whose bars include
-    pre/post market, and the zone engine must never read swings off a
-    07:12 print on 400 shares (module docstring). Only the Support tab —
-    which reads its levels from the DAILY window and uses these bars for
-    drawing alone — asks for it.
+    The extended-hours frames (`5m_today`, `24h`) are HIDDEN by default:
+    their bars include pre/post market, and the zone engine must never read
+    swings off a 07:12 print on 400 shares (module docstring). Only the
+    Support tab — which passes `allow_ext=True` and draws them — asks for
+    them, and `frame_for` refuses them everywhere else.
+
+    `bar_label` and `span` ride along so the FE can print the bar size and
+    the span beside the job name without knowing this table (Ajay
+    2026-09-22: he must be able to tell the span without opening the
+    option).
     """
     return [{"key": t["key"], "label": t["label"], "span": t["span"],
+             "bar_label": t["bar_label"], "window_label": t["window_label"],
              "bars": t["bars"]} for t in TIMEFRAMES
             if include_live or not t.get("ext_hours")]
 
@@ -217,6 +292,7 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
     key = spec["key"]
     want = int(bars or spec["bars"])
     meta = {"tf": key, "label": spec["label"], "span": spec["span"],
+            "bar_label": spec["bar_label"],
             "bars": 0, "available": False, "source": None, "as_of": None,
             "swing_window": spec["swing_window"], "reason": None}
     sym = (symbol or "").upper().strip()
@@ -264,28 +340,62 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
         meta["reason"] = "resample produced no bars"
         return None, meta
 
-    if key in (M15_OPEN, M5_TODAY):
-        # Keep only the most recent SESSION — ONE implementation for both
-        # today-only frames. The slice is by ET CALENDAR DATE, so what it
-        # yields follows the frame's own session policy: `15m_open` is
-        # fetched RTH-only and lands on 09:30-16:00, `5m_today` carries
-        # ext_hours and therefore lands on today 04:00-20:00 ET, which is
-        # the pre-market-included day Ajay asked for (2026-09-17).
+    if key in (M5_TODAY, H24):
+        # THE ONE CLOCK-SLICE BLOCK. Both frames that answer "no previous
+        # days" are cut here, off the SAME ET conversion, so there is one
+        # place where a timezone can be got wrong rather than two.
         #
-        # Before the first bar of a new day that is the previous day's
-        # session, which is the honest answer —
-        # inventing an empty frame for a day that has not opened would be
-        # worse than showing the one that just closed, and the label says
-        # which day it is.
+        # `5m_today` slices by ET CALENDAR DATE and lands on today
+        # 04:00-20:00 ET, the pre-market-included day Ajay asked for
+        # (2026-09-17). Before the first bar of a new day that is the
+        # previous day's session, which is the honest answer — inventing an
+        # empty frame for a day that has not opened would be worse than
+        # showing the one that just closed, and the label says which day.
+        #
+        # `24h` slices by CLOCK (2026-09-22), anchored on the LAST BAR
+        # PRESENT rather than on wall-clock now(). Anchoring on now() would
+        # serve an empty chart every weekend and every holiday, and it would
+        # make the frame untestable without freezing time. Anchored on the
+        # tape, "the last 24 hours" is true in session and still answers
+        # "Friday's day plus Thursday's close" on a Sunday — and the span
+        # text says "up to the last print", which is exactly what it is.
         try:
             import pandas as pd
             idx = df.index
             et = (idx.tz_localize("UTC") if idx.tz is None
                   else idx).tz_convert("America/New_York")
-            days = pd.Series(et.date, index=idx)
-            session = days.max()
-            df = df[days == session]
-            meta["session"] = str(session)
+            if key == H24:
+                end = et.max()
+                cutoff = end - pd.Timedelta(hours=24)
+                keep = et > cutoff
+                df = df[keep]
+                meta["window_hours"] = 24
+                meta["session"] = (f"{cutoff:%Y-%m-%d %H:%M} → "
+                                   f"{end:%Y-%m-%d %H:%M} ET")
+                # HOW MANY SESSIONS THE SLICE ACTUALLY HOLDS (2026-09-23).
+                # The extended session is 04:00-20:00 ET = 16 h, and the slice
+                # is anchored on the LAST BAR PRESENT — so once the tape stops
+                # the 24-hour window can only contain that one session, and
+                # `24h` draws byte-for-byte what `5m_today` draws. Measured
+                # 2026-09-22 after the close: PTGX 79 bars 04:10→16:05 on both,
+                # NVDA 192 bars 04:05→20:00 on both, identical levels. Claiming
+                # "pre-market through after-hours" over one session would be
+                # asserting coverage the chart does not contain, so the label
+                # says which of the two it is. The frames still diverge
+                # INTRADAY and on a name with no pre-market — this is wording,
+                # not a slice change.
+                sessions = sorted({str(d) for d in et[keep].date})
+                meta["sessions"] = len(sessions)
+                if len(sessions) <= 1:
+                    meta["window_label"] = (
+                        "the 24 hours up to the last print — only "
+                        f"{sessions[0] if sessions else 'one session'} "
+                        "printed in it")
+            else:
+                days = pd.Series(et.date, index=idx)
+                session = days.max()
+                df = df[days == session]
+                meta["session"] = str(session)
         except Exception as exc:                            # pragma: no cover
             log.warning("timeframes: session slice failed: %s", exc)
     df = df.tail(want)
@@ -304,7 +414,7 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
         log.warning("timeframes: as_of from raw minutes failed: %s", exc)
         partial, as_of = True, str(df.index[-1])
     meta.update({"bars": len(df), "available": True,
-                 "source": (f"1-minute bars resampled to {spec['label']}, "
+                 "source": (f"1-minute bars resampled to {spec['bar_label']}, "
                             + ("pre/post market drawn, structure from RTH"
                                if spec.get("ext_hours") else "RTH only")),
                  "as_of": as_of,

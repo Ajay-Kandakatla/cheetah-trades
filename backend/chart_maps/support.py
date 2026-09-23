@@ -629,6 +629,29 @@ def levels_from_zones(zones: dict, last_price: float) -> dict:
     }
 
 
+def _holds_a_level(zones: Optional[dict]) -> bool:
+    """Did this frame hold ANY band — below price, above it, or AROUND it?
+
+    The gate on the named intraday fallback (2026-09-22), and `standing_in`
+    is the reason it is not simply `supports or overhead`. Measured that
+    evening on today's 5-minute frame: PTGX at 145.07 was standing INSIDE a
+    $144.50–$145.96 band tested 13 times, so `supports` was empty and
+    `overhead` held one band — yet the most useful number on the screen was
+    the one under the cursor. `_bands` draws it labelled "here" and the
+    verdict names it. A fallback that fired on an empty `supports` would
+    have thrown that away and served him the 6-month daily band instead,
+    which is the exact defect this change exists to fix.
+    """
+    if zones is None:
+        return False
+    try:
+        lv = levels_from_zones(zones, float(zones["last_price"]))
+    except Exception:                                          # pragma: no cover
+        return False
+    return bool((lv.get("supports") or []) or (lv.get("overhead") or [])
+                or lv.get("standing_in"))
+
+
 def _bands(levels: dict) -> list[dict]:
     """Chart boxes for the tile. Supports drawn as demand, overhead as supply —
     the tile contract's existing two colours, so `PatternChart` needs no new
@@ -861,10 +884,47 @@ def _stats(levels: dict, zones: dict, spec: dict) -> list[dict]:
     return out
 
 
+#: The two `price_zones._verdict` states that assert price is INSIDE a band.
+#: They are the only ones whose numbers can contradict the chart, because the
+#: verdict reads pz.compute's RAW pool while the chart draws the DE-DUPED,
+#: merged pool from `levels_from_zones` (2026-09-23).
+IN_ZONE_STATES = ("AT_DEMAND", "AT_SUPPLY")
+
+
+def _in_zone_head(inside: dict) -> str:
+    """`price_zones._verdict`'s OWN two in-zone sentences, on the DRAWN band.
+
+    Measured 2026-09-22 on the branch, NVDA `5m_today`: the chart drew a
+    demand band at $225.56–$229.44 ("here · 29x tested") while the verdict
+    beside it read "In an overhead-supply band ($226.40–$229.98)" — neither
+    the numbers nor the SIDE matched, and $226.40–$229.98 was drawn nowhere.
+    The split is pre-existing in the engine (it shows on 15m too), but the
+    5-minute frames used to read the DAILY frame for both, so the two agreed
+    there until 2026-09-22.
+
+    No new rule and no new maths: the mapping below is `_verdict`'s, verbatim
+    (kind demand -> "support is right here", kind supply -> "resistance right
+    here"), applied to the band the tile actually paints. The engine's own
+    `verdict` object is served untouched at the payload's top level.
+    """
+    lo, hi = inside.get("lo"), inside.get("hi")
+    if inside.get("origin") == "supply":
+        return (f"In an overhead-supply band (${lo}–${hi}) — resistance right "
+                f"here; it needs to clear this before it runs.")
+    return (f"In a demand zone (${lo}–${hi}, {inside.get('touches')}x tested) "
+            f"— support is right here.")
+
+
 def _why(levels: dict, zones: dict, spec: dict) -> str:
     verdict = (zones.get("verdict") or {})
     sup = (levels.get("supports") or [None])[0]
     head = verdict.get("label") or ""
+    if verdict.get("state") in IN_ZONE_STATES:
+        inside = levels.get("standing_in")
+        # No drawn containing band at all: the verdict is naming a raw band
+        # this chart does not paint, so it says nothing here rather than
+        # pointing at numbers a reader cannot find.
+        head = _in_zone_head(inside) if inside else ""
     if sup and sup["distance_pct"] is not None:
         when = ("tested in the last month" if sup["recent"]
                 else f"last tested {sup['bars_since_test']} bars ago")
@@ -1229,6 +1289,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # next move (change the timeframe) is available after a miss.
         "timeframe": tf_mod.parse_tf(tf),
         "timeframe_label": tf_mod.tf_spec(tf)["label"],
+        # The bar size, beside the job name. `studies_note` and the level
+        # tables need a noun ("5-minute"), never "Today, for an entry"
+        # (2026-09-23).
+        "timeframe_bar_label": tf_mod.tf_spec(tf)["bar_label"],
         "timeframes": tf_mod.tf_options(include_live=True),
         "disclaimer": DISCLAIMER,
     }
@@ -1239,6 +1303,10 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
 
     tf_key = tf_mod.parse_tf(tf)
     intraday = tf_key != tf_mod.DAILY
+    # Empty on the daily branch, which never calls `frame_for`. It is read
+    # below for the frame's OWN window label, which `frame_for` may narrow
+    # once it has seen the bars (the `24h` one-session case, 2026-09-23).
+    tf_meta: dict = {}
     live_raw = None
     # `closed` = the frame WITHOUT today's live bar / the in-progress bucket
     # (integrator 2026-09-05). Structure (swings, gaps, ATR) reads it; the
@@ -1246,9 +1314,15 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     closed = None
     try:
         if intraday:
-            # allow_ext: this tab draws the pre/post-market bars but reads
-            # its LEVELS from the daily window below — the only place the
-            # extended frame is legitimate.
+            # allow_ext: this tab is the one caller allowed to hold an
+            # extended-hours frame. Until 2026-09-22 that was justified by
+            # "it draws these bars but reads its levels from daily"; now it
+            # reads its levels from them too, and the justification is the
+            # narrower one the guard was always really making — the SUPPORT
+            # TAB is a chart a human reads, not a universe pass that mints
+            # alerts off a 07:12 print. Nothing downstream of here reaches the gate
+            # or the lanes: `_record_signal` is off on these frames and the
+            # `board` block stays daily.
             live_raw = (tf_mod.intraday_raw(sym, tf_key)
                         if tf_mod.tf_spec(tf_key).get("ext_hours") else None)
             df, tf_meta = tf_mod.frame_for(sym, tf_key, allow_ext=True,
@@ -1256,8 +1330,12 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
             as_of = tf_meta.get("as_of")
             base = {**base, "timeframe_meta": tf_meta}
             if df is None:
+                # The frame's BAR SIZE, never its job name: since 2026-09-22
+                # `label` is "Today, for an entry", and "No Today, for an entry
+                # bars for THIN" is not a sentence. Same rule as the
+                # no-structure branch below (2026-09-23).
                 return {**base, "error": (
-                    f"No {tf_meta['label']} bars for {sym} — "
+                    f"No {tf_meta['bar_label']} bars for {sym} — "
                     f"{tf_meta.get('reason') or 'intraday data unavailable'}.")}
             if tf_meta.get("partial") and len(df) > 1:
                 closed = df.iloc[:-1]
@@ -1272,36 +1350,69 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     base = {**base, "as_of": as_of,
             "data_through": _last_bar_date(df, intraday=intraday)}
 
-    # Live / extended-hours frame (Ajay 2026-09-02: "I wanna see where things
-    # bounced over night"). The CHART draws every 5-minute bar incl. pre/post
-    # market; the LEVELS come from the DAILY frame at the selected window —
-    # the same numbers the daily views print — so an overnight touch is
-    # measured against the zones he already knows, not against 2.5 sessions
-    # of intraday swings (which, after a gap, may hold no level at all).
+    # AN INTRADAY FRAME READS ITS OWN LEVELS (Ajay 2026-09-22).
+    #
+    # > "I wanna use this for entries during the day and it been useless for
+    # >  that ... at any giving point This has been useless"
+    #
+    # Until today the two 5-minute frames — the only ones carrying
+    # `ext_hours` — swapped the DAILY frame in before any level was read, so
+    # the frames he picks FOR AN ENTRY were the only ones handing him coarse
+    # 6-month daily bands. Measured 2026-09-22, PTGX at 145.07: both
+    # 5-minute frames said 142.43-144.15 (the 6-month daily band, 0.6%
+    # under the print and untouched for months) while PTGX's OWN 5-minute
+    # tape that day put price INSIDE a 144.50-145.96 band tested 14 times.
+    # The number he needed was computable and was being discarded. `15m`
+    # and `60m` already read their own bars; the 5-minute frames now go
+    # through THAT SAME PATH. No new level maths: `own_bars` simply becomes
+    # true for them.
+    #
+    # THE ORIGINAL REASON IS NOT THROWN AWAY. The 2026-09-02 comment was
+    # right that an intraday window "after a gap, may hold no level at all".
+    # That case is now a NAMED fallback a few lines below — the daily read,
+    # announced in `levels_fallback` and in the first sentence of `note` —
+    # rather than the unconditional default it had become.
+    #
     # `chart_df` is what is drawn; `df` from here on is what is analysed.
     chart_df = df
     ext_frame = bool(intraday and tf_mod.tf_spec(tf_key).get("ext_hours"))
-    if ext_frame:
+    # The DAILY frame is still read on every intraday frame, for two things
+    # that must not follow the chart: the BOARD block (what the alerts and
+    # lanes use — see `board_read`) and the named level fallback.
+    daily_df = daily_closed = daily_as_of = None
+    if intraday:
         try:
-            daily_df, _have_d, levels_as_of, daily_closed = _frame_for(
+            daily_df, _have_d, daily_as_of, daily_closed = _frame_for(
                 sym, spec["bars"], with_closed=True)
         except Exception as exc:                              # pragma: no cover
-            log.debug("support: daily frame for live %s failed: %s", sym, exc)
-            daily_df, levels_as_of, daily_closed = None, None, None
-        if daily_df is None or not len(daily_df):
-            return {**base, "error": f"No daily price data for {sym} to read levels from."}
-        df = daily_df
-        closed = daily_closed
-        base = {**base, "levels_as_of": levels_as_of}
+            log.debug("support: daily frame for %s failed: %s", sym, exc)
+            daily_df = daily_closed = daily_as_of = None
+        if daily_df is not None and not len(daily_df):
+            daily_df = None
+        if ext_frame and daily_df is None:
+            # The extended frames are the ones the board block rides on, and
+            # they are the ones whose fallback is being promised. Without a
+            # daily frame neither promise can be kept, so say so rather than
+            # serve half an answer.
+            return {**base,
+                    "error": f"No daily price data for {sym} to read the "
+                             f"board's band from."}
 
     # A frame SHORTER than the window asked for still computes — `.iloc[-126:]`
     # on 30 bars is 30 bars — and would then be labelled "6 months" on screen.
     # A recent IPO is the ordinary case, and refusing it is worse than answering
     # it, so the truncation is reported rather than hidden or fatal.
     tf_spec_ = tf_mod.tf_spec(tf_key)
-    # The live frame analyses DAILY bars at the window, so it budgets like
-    # the daily views; the other intraday frames budget from their own spec.
-    own_bars = intraday and not ext_frame
+    # THE SPAN THE FRAME ACTUALLY HOLDS, not the one its spec advertises
+    # (2026-09-23). `frame_for` narrows this for `24h` when the 24-hour slice
+    # turned out to hold a single session — every evening, every weekend and
+    # every pre-market, where `24h` and `5m_today` draw the same chart. Every
+    # sentence on this tab that names the span reads THIS, so there is one
+    # place the two can never disagree.
+    tf_window_label = tf_meta.get("window_label") or tf_spec_["window_label"]
+    # EVERY intraday frame budgets from its own spec now, the 5-minute ones
+    # included. This one assignment is the whole behavioural change.
+    own_bars = intraday
     # The chart-only zooms (Ajay 2026-09-18). `budget` is the CHART bar count —
     # the 5 or 10 sessions his label promises. `read_budget` is what every
     # ANALYTIC read runs on, and at 1w/2w that is the 1-month window's 21 bars:
@@ -1329,16 +1440,9 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # (chart_df vs df above); this leans on it rather than widening it.
     short_intraday, short_sessions = None, 0
     if intraday and spec["key"] in CHART_ONLY_LEVELS_FROM:
-        src = chart_df if ext_frame else df
-        short_intraday, short_sessions = _last_sessions(src, spec["bars"])
+        short_intraday, short_sessions = _last_sessions(chart_df, spec["bars"])
         if short_sessions == 0:                    # could not read a session date
             short_intraday = None
-    # What the stats row and the why-sentence call the window. On an intraday
-    # timeframe the structure came from the timeframe's OWN bars, and the
-    # daily zoom label ("6 months" under an hourly chart) was a lie the header
-    # chip stopped telling on 2026-08-29 but the tile kept (2026-09-14).
-    scope_spec = (level_spec if not own_bars
-                  else {**spec, "label": f"{bars_used} x {tf_spec_['label']} bars"})
     # Three different things: `short` is CHART truncation (fewer bars than the
     # picture asked for), `level_short` is an EVIDENCE shortfall behind the
     # reads (fewer bars than the 21 the numbers ask for), `chart_only` is which
@@ -1357,10 +1461,75 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
 
     zones = pz.compute(closed, last_price=live_last, swing_window=swing,
                        lookback_bars=read_budget, max_zones=None)
+
+    # THE NAMED FALLBACK. An intraday window that holds no cluster — the gap
+    # case the 2026-09-02 comment warned about — falls back to the DAILY
+    # read rather than erroring, and SAYS SO. A silent fallback would
+    # recreate the exact confusion this change removes: he would be looking
+    # at 5-minute candles under daily bands with nothing on screen to tell
+    # him which is which.
+    levels_fallback = None
+    if (not _holds_a_level(zones)) and intraday and daily_df is not None:
+        # Everything the daily read would overwrite, kept so the fallback can
+        # be ABANDONED. If the daily window holds no level either, the
+        # intraday read — empty lists and all — is still the honest answer to
+        # what was asked, and turning that into an error would be a fresh
+        # regression on 15m/60m, which render an empty read today.
+        keep = (own_bars, chart_only, level_spec, df, closed, budget,
+                read_budget, swing, bars_used, short, level_short, zones)
+        own_bars = False
+        chart_only = spec["key"] in CHART_ONLY_LEVELS_FROM
+        level_spec = (window_spec(CHART_ONLY_LEVELS_FROM[spec["key"]])
+                      if chart_only else spec)
+        df, closed = daily_df, daily_closed
+        if closed is None or not len(closed):
+            closed = df
+        budget = spec["bars"]
+        read_budget = level_spec["bars"]
+        swing = level_spec["swing_window"]
+        bars_used = min(len(df), budget)
+        short = bars_used < budget
+        level_short = len(df) < read_budget
+        try:
+            daily_last = float(df["close"].iloc[-1])
+        except Exception:                             # pragma: no cover
+            daily_last = None
+        if daily_last is not None and not daily_last > 0:
+            daily_last = None
+        zones = pz.compute(closed, last_price=daily_last, swing_window=swing,
+                           lookback_bars=read_budget, max_zones=None)
+        if _holds_a_level(zones):
+            live_last = daily_last
+            levels_fallback = {
+                "from": tf_spec_["label"],
+                "from_bars": tf_spec_["bar_label"],
+                "to": level_spec["label"],
+                "note": (f"The {tf_spec_['bar_label']} window held no level, "
+                         f"so these levels are the {level_spec['label']} "
+                         f"daily read — not this chart's own."),
+            }
+            base = {**base, "levels_as_of": daily_as_of}
+        else:
+            (own_bars, chart_only, level_spec, df, closed, budget,
+             read_budget, swing, bars_used, short, level_short, zones) = keep
+
+    # What the stats row and the why-sentence call the window. On an intraday
+    # timeframe the structure came from the timeframe's OWN bars, and the
+    # daily zoom label ("6 months" under an hourly chart) was a lie the header
+    # chip stopped telling on 2026-08-29 but the tile kept (2026-09-14).
+    # `bar_label`, never `label`: since 2026-09-22 `label` names the JOB
+    # ("Today, for an entry"), which would read as nonsense in "N x … bars".
+    scope_spec = (level_spec if not own_bars
+                  else {**spec,
+                        "label": f"{bars_used} x {tf_spec_['bar_label']} bars"})
+
     if zones is None:
         # Two different misses with two different fixes, so two messages. The
         # fix for the second one is the dropdown sitting right there.
-        scope = tf_spec_["label"] if own_bars else level_spec["label"]
+        # The frame's BAR SIZE, not its job name: "too few to read a Today,
+        # for an entry window" is not a sentence (2026-09-22).
+        scope = (f"{tf_spec_['bar_label']} ({tf_window_label})"
+                 if own_bars else level_spec["label"])
         # `len(df)`, not `bars_used`: on this branch they are the same number
         # for every non-chart-only window (short ⟺ len(df) < budget ⟺
         # bars_used == len(df)), and on a chart-only zoom bars_used is the
@@ -1427,10 +1596,29 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         mood_read = mood_mod.mood(df.tail(read_budget))
         sig = mood_mod.signal(df.tail(read_budget), zone_bands + gaps, mood_read,
                               last_price=last_price, atr_value=atr_value)
-        # The live frame's signal IS the daily signal — recording it again
-        # under a second key would double-count the ledger.
+        # NOT recorded off a 5-minute frame (`ext_frame`). Before
+        # 2026-09-22 the reason was that its signal WAS the daily signal, so
+        # recording it would double-count; now it is its own signal and the
+        # reason is different but no weaker — `_record_signal`'s horizon
+        # table knows 15m and 60m and defaults everything else to 72 hours,
+        # which would file a five-minute call under a three-day outcome and
+        # quietly corrupt the accuracy ledger. Giving it a horizon is a
+        # measured question, not a view change.
         if sig.get("action") in ("BUY", "SELL") and not ext_frame:
             _record_signal(sym, tf_key, sig, last_price)
+        # SAID OUT LOUD (2026-09-23). The tab printed "Every BUY/SELL is
+        # written to the forward ledger and scored against real prices"
+        # unconditionally. On the two 5-minute frames it is not — and until
+        # 2026-09-22 that sentence was still true there, because the signal
+        # WAS the daily frame's signal. Now it is the frame's own, so the
+        # claim has to carry the exception with it.
+        sig["recorded"] = not ext_frame
+        if ext_frame:
+            sig["recorded_note"] = (
+                "This chart's BUY/SELL is NOT written to the forward ledger: "
+                "the ledger scores an outcome over a per-timeframe horizon and "
+                "the 5-minute frames have none, so no hit rate is claimed for "
+                "it. The daily, 15-minute and 1-hour charts are recorded.")
     except Exception as exc:                                # pragma: no cover
         log.warning("support: mood/signal for %s failed: %s", sym, exc)
         mood_read, sig = None, None
@@ -1460,15 +1648,44 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         from patterns import timeframe as pat_tf
         # Same window the bands were read from — a pattern found in bars the
         # zoom excludes would contradict the levels drawn beside it.
-        bullish = pat_tf.scan(sym, "daily" if ext_frame else tf_key,
-                              df=closed.tail(read_budget))
+        #
+        # THE 5-MINUTE FRAMES STAY ON DAILY BARS HERE (2026-09-22), even
+        # though their LEVELS no longer do. `patterns.timeframe` converts
+        # Bulkowski's cited calendar durations into bars through
+        # BARS_PER_SESSION, and that table knows daily, 60m and 15m only —
+        # an unknown key falls through to the DAILY gates, which would find
+        # a "7-week cup" inside one session and stamp it with a citation it
+        # does not have. Adding a 5-minute row is a cited-duration question,
+        # not a view change, so the scan keeps reading the daily frame it
+        # read before this change and returns byte-identical records.
+        pat_key = tf_key if tf_key in pat_tf.BARS_PER_SESSION else "daily"
+        pat_df = (daily_closed if (pat_key == "daily" and intraday
+                                   and daily_closed is not None)
+                  else closed)
+        bullish = pat_tf.scan(sym, pat_key, df=pat_df.tail(read_budget))
     except Exception as exc:                                # pragma: no cover
         log.warning("support: pattern scan for %s failed: %s", sym, exc)
         bullish = None
 
-    # The board's band on every DAILY-structure view (an intraday timeframe
-    # reads its own bars; the board has no read of those).
-    board = board_read(closed, sym, last_price) if not own_bars else None
+    # THE BOARD'S BAND, ON EVERY FRAME (2026-09-22). This block is what the
+    # alerts, the gate and the paper lanes use, and it is DAILY-derived by
+    # construction — `decide_from_frame` at the board's own geometry on the
+    # daily closed frame, priced off the daily frame's own last close. It
+    # does not follow the chart and never has: before today it appeared on
+    # the daily views and on the two 5-minute frames and was simply ABSENT
+    # from 15m/60m. Now that every intraday frame reads its own levels, the
+    # board reading is the thing that keeps them honest — two readings, each
+    # labelled ("BOARD (what alerts and lanes use)" vs this tab's finer
+    # bands), never conflated — so it is served on all five.
+    board_closed = daily_closed if intraday else closed
+    board_px = last_price
+    if intraday and daily_df is not None:
+        try:
+            board_px = float(daily_df["close"].iloc[-1])
+        except Exception:                                   # pragma: no cover
+            board_px = last_price
+    board = (board_read(board_closed, sym, board_px)
+             if board_closed is not None and len(board_closed) else None)
 
     tile = {
         "symbol": sym,
@@ -1482,9 +1699,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # A chart-only zoom opts out of bars_for's 20-bar floor by name — it
         # draws exactly the 5 or 10 sessions its label promises. Every other
         # caller keeps BARS_FLOOR.
+        # `chart_df`, never `df`: on the named fallback `df` has become the
+        # DAILY frame and drawing it here would paint daily candles under a
+        # 5-minute label (2026-09-22). `chart_df` is always the frame the
+        # timeframe asked for, already tailed to its own budget by
+        # `frame_for`, so the tail is a no-op on every non-fallback read.
         "bars": (_frame_bars(short_intraday if short_intraday is not None
-                             else (chart_df.tail(tf_spec_["bars"]) if ext_frame
-                                   else df.tail(bars_used))) if intraday
+                             else chart_df.tail(tf_spec_["bars"])) if intraday
                  else board_mod.bars_for(
                      sym, days=bars_used,
                      min_bars=(bars_used if chart_only
@@ -1502,32 +1723,39 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     # On an intraday timeframe the Zoom dropdown's DAILY bar-counts do not
     # apply, and leaving "1 month" sitting over a 15-minute chart is what
     # made the tab look wrong. State the real span instead.
-    # THE INTRADAY ARMS GO FIRST (fixed before ship, 2026-09-18). `chart_only`
-    # keys off `not own_bars`, and an EXT-HOURS frame (5m_live) also has
-    # own_bars False — so with the chart-only arm first, `?window=1w&tf=5m_live`
-    # announced "last 300 sessions" over a 300-bar FIVE-MINUTE chart. Both
-    # params are independent in the URL and the API advertises 1w/2w, so it is
-    # reachable by bookmark even though the dropdown always writes the pair.
-    # When an intraday frame is drawn, the window's DAILY bar count does not
-    # describe the chart at all; it only says where the levels were read. So the
-    # intraday arms name `level_spec` — the window the numbers actually came
-    # from — and the chart-only arm is left for daily frames, where it is true.
-    chart_span = (f"{len(tile['bars'])} x {tf_spec_['label']} bars over "
-                  f"{short_sessions} session{'' if short_sessions == 1 else 's'}"
-                  f"{' · levels from ' + level_spec['label'] + ' of daily bars' if chart_only else ''}"
-                  if short_intraday is not None else
-                  f"{len(tile['bars'])} x 5-min bars incl. pre/post market · "
-                  f"levels from {level_spec['label']} of daily bars"
-                  if ext_frame else
-                  # NO levels clause here: an own-bars frame (60m/15m) reads
-                  # its levels from its OWN bars, so naming a daily window
-                  # would be a fresh lie. `zoom_applies: false` already says
-                  # the daily zoom is inert on this frame.
-                  f"{len(tile['bars'])} x {tf_spec_['label']} bars"
-                  if intraday else
-                  f"last {len(tile['bars'])} sessions · every read from "
-                  f"{level_spec['label']} of daily bars"
-                  if chart_only else spec["label"])
+    # THE INTRADAY ARM GOES FIRST (fixed before ship, 2026-09-18, and it
+    # still matters). Both params are independent in the URL and the API
+    # advertises 1w/2w, so `?window=1w&tf=24h` is reachable by bookmark even
+    # though the dropdown always writes the pair; with the chart-only arm
+    # first it announced "last 300 sessions" over a FIVE-MINUTE chart.
+    #
+    # ONE SENTENCE, TWO CLAUSES, ON EVERY FRAME (2026-09-22). Ajay: "why do
+    # I need the look at the drop down" — the header has to answer what is
+    # DRAWN and where the LEVELS came from without him opening anything, and
+    # the two are no longer the same thing on any frame by accident. The old
+    # shape had four arms and said nothing about provenance on 15m/60m.
+    chart_part = (
+        f"{len(tile['bars'])} x {tf_spec_['bar_label']} bars over "
+        f"{short_sessions} session{'' if short_sessions == 1 else 's'}"
+        if short_intraday is not None else
+        f"{len(tile['bars'])} x {tf_spec_['bar_label']} bars · "
+        f"{tf_window_label}"
+        if intraday else
+        f"last {len(tile['bars'])} sessions"
+        if chart_only else spec["label"])
+    # Three cases, and the middle one is why this is not a one-liner: the
+    # levels came from the frame being drawn (any intraday frame now, and a
+    # daily frame at its own zoom), or from a DIFFERENT daily window — a
+    # chart-only zoom, or the named fallback. Only the third names a window;
+    # the first two say "these bars", because naming "1 year of daily bars"
+    # under a 1-year daily chart is noise, and naming any daily window under
+    # an intraday chart would be a lie.
+    redirected = bool(chart_only or levels_fallback)
+    levels_part = (f"{level_spec['label']} of daily bars" if redirected else
+                   f"these {tf_spec_['bar_label']} bars")
+    chart_span = f"{chart_part} · levels from {levels_part}"
+    if levels_fallback:
+        chart_span += (f" (the {tf_spec_['bar_label']} window held no level)")
 
     return {
         **base,
@@ -1558,6 +1786,21 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "overlay": overlay,
         "board": board,
         "chart_span": chart_span,
+        # WHERE THE NUMBERS CAME FROM, as a noun phrase (2026-09-23). The
+        # empty level tables used to name `window_label` — the pinned DAILY
+        # zoom — so an entry frame with no support below price asserted "No
+        # band below price in the last 6 months" while the same page printed
+        # the board's 6-month demand band a few lines above it. This is the
+        # SAME string `_stats`/`_why` already label the read with, so the
+        # table and the stats row cannot drift apart.
+        "levels_scope": scope_spec["label"],
+        # The BAR SIZE the level read ran on — "5-minute" on an own-bars
+        # intraday frame, "daily" on the daily frame AND on the named
+        # fallback (where `own_bars` is False again by then). The recency
+        # column counts BARS, so without this the tab printed one 5-minute
+        # bar as "tested yesterday".
+        "levels_bar_label": (tf_spec_["bar_label"] if own_bars
+                             else tf_mod.tf_spec(tf_mod.DAILY)["bar_label"]),
         # Which window the NUMBERS came from. None on every ordinary window,
         # so an FE that predates 2026-09-18 simply ignores both keys.
         # Set whenever the DRAWN frame and the READ frame are not the same
@@ -1578,12 +1821,20 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         # not redirected to 1 month and must not claim to be. The asymmetry is
         # deliberate: the FE gates the sentence on the label, not the key.
         "levels_window_label": (
-            level_spec["label"] if chart_only else
+            level_spec["label"] if chart_only or levels_fallback else
             f"{tf_spec_['label']} · {tf_spec_['span']}"
             if (own_bars and short_intraday is not None) else None),
+        # THE NAMED FALLBACK (2026-09-22), or null. `{from, from_bars, to,
+        # note}` — the one case where an intraday frame is NOT showing its
+        # own levels. `note` below carries the same sentence first so the
+        # surface says it whether or not the FE knows this key.
+        "levels_fallback": levels_fallback,
         # True when the daily zoom actually reached the chart. Since
-        # 2026-09-18 that includes an intraday frame trimmed by a short window.
-        "zoom_applies": (not intraday) or short_intraday is not None,
+        # 2026-09-18 that includes an intraday frame trimmed by a short window;
+        # since 2026-09-22 it also includes the fallback, where the daily
+        # window really is what produced the numbers.
+        "zoom_applies": ((not intraday) or short_intraday is not None
+                         or bool(levels_fallback)),
         # How many ET sessions the drawn intraday frame actually holds — null
         # when the window did not trim it. Never more than the frame contains.
         "chart_sessions": short_sessions or None,
@@ -1595,7 +1846,15 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                       if ext_frame else None),
         # Same fix: the sentence describes a DAILY frame of spec['bars']
         # sessions, which an intraday frame is not.
-        "note": (# THE OWN-BARS SHORT ZOOM (Ajay 2026-09-18, second ship).
+        "note": (
+                 # THE FALLBACK SENTENCE GOES FIRST (2026-09-22) and is not
+                 # optional. An intraday frame that could not find a level in
+                 # its own window is showing DAILY bands over 5-minute
+                 # candles, which is precisely the state that made this tab
+                 # "useless at any given point" — the difference is that now
+                 # it is announced in the first clause a reader meets.
+                 ((levels_fallback["note"] + " ") if levels_fallback else "")
+                 # THE OWN-BARS SHORT ZOOM (Ajay 2026-09-18, second ship).
                  # 1W/2W on an intraday frame takes NEITHER of the two arms
                  # below: own_bars makes chart_only False, so the generic arm
                  # fired and said "Levels are read from this window only" under
@@ -1605,12 +1864,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                  # supports, overhead and verdict at bars_used 330), not a week
                  # of anything. It must not borrow the daily arm's wording
                  # either: nothing here is redirected to a 1-month daily read.
-                 (f"The chart is the last {short_sessions} "
+                 + (f"The chart is the last {short_sessions} "
                  f"session{'' if short_sessions == 1 else 's'} of "
-                 f"{tf_spec_['label']} bars. Every number beside it — levels, "
-                 f"mood, signal, trend, patterns — is the {tf_spec_['label']} "
-                 f"frame's own {read_budget}-bar read, the same numbers every "
-                 f"other {tf_spec_['label']} zoom shows. "
+                 f"{tf_spec_['bar_label']} bars. Every number beside it — "
+                 f"levels, mood, signal, trend, patterns — is the "
+                 f"{tf_spec_['bar_label']} frame's own {read_budget}-bar "
+                 f"read, the same numbers every other {tf_spec_['bar_label']} "
+                 f"zoom shows. "
                  if (own_bars and short_intraday is not None) else
                  f"This zoom sets the CHART only — the last {spec['bars']} "
                   f"sessions. A frame that short is under the "
@@ -1619,10 +1879,18 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                   f"{level_spec['label']} read, the same numbers the "
                   f"{level_spec['label']} zoom shows. "
                   if (chart_only and not intraday) else
-                  f"The chart is the {tf_spec_['label']} frame; the short zoom "
-                  f"sets no daily span here. Every number is the "
+                  f"The chart is the {tf_spec_['bar_label']} frame; the short "
+                  f"zoom sets no daily span here. Every number is the "
                   f"{level_spec['label']} read. "
                   if chart_only else
+                  # AN INTRADAY FRAME READS ITS OWN LEVELS (2026-09-22). The
+                  # generic arm used to say "this window", which on a daily
+                  # view means the Zoom and on an intraday view means the
+                  # frame — two different things wearing one sentence.
+                  f"Levels are read from this chart's own "
+                  f"{tf_spec_['bar_label']} bars — {tf_window_label}. "
+                  f"The Zoom dropdown does not move them. "
+                  if own_bars else
                   "Levels are read from this window only. A wider zoom finds the "
                   "structural floor; a tighter one finds the level this week's "
                   "trade is standing on. ") + (BOARD_NOTE if board else "")).strip(),

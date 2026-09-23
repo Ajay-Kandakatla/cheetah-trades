@@ -58,8 +58,14 @@ export type ZoneMapPayload = {
   /** Timeframe overlay (2026-08-29). The daily re-entry read underneath is
    *  unchanged; these ride alongside it. */
   timeframe?: string;
+  /** The JOB the frame answers ("The big picture") since 2026-09-22 — a
+   *  dropdown label, NOT an adjective. Any sentence that needs a noun takes
+   *  `timeframe_bar_label` instead. */
   timeframe_label?: string;
-  timeframes?: { key: string; label: string; span?: string }[];
+  /** The bar size ("daily", "15-minute"), served beside the job name. */
+  timeframe_bar_label?: string;
+  timeframes?: { key: string; label: string; span?: string;
+                 bar_label?: string; window_label?: string }[];
   tf_bands?: { kind?: string; lo?: number; hi?: number }[];
   trade_levels?: any[];
   fair_value_gaps?: any[];

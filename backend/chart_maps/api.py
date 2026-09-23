@@ -263,9 +263,11 @@ async def chart_maps_support(
             # time in `t`. Until they are computed on the analysed frame, an
             # intraday tile says so instead of drawing the wrong numbers.
             if studies is True and res.get("timeframe") not in (None, "daily"):
+                # The BAR SIZE, not the job name: "not drawn on the The last
+                # two weeks chart" is not a sentence (2026-09-23).
                 res["studies_note"] = ("AMD / Fibonacci / mean reversion / Keltner "
                                        "are daily-frame studies — not drawn on the "
-                                       f"{res.get('timeframe_label') or res.get('timeframe')} chart.")
+                                       f"{res.get('timeframe_bar_label') or res.get('timeframe')} chart.")
             elif studies is True:
                 try:
                     # `bars_used` is the key the support payload actually

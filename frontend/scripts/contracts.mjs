@@ -553,8 +553,51 @@ const CONTRACTS = [
       if (keys.join(',') !== '1w,2w,1m,3m,6m,1y,2y,3y,5y,all') {
         errs.push(`FALLBACK_WINDOWS is ${keys.join(',') || '(not found)'} — expected 1w,2w,1m,3m,6m,1y,2y,3y,5y,all`);
       }
-      for (const k of ['daily:1w', 'daily:2w', 'daily:2y', 'daily:3y', 'daily:5y']) {
-        if (!src.includes(`key: '${k}'`)) errs.push(`CHART_VIEWS lacks ${k}`);
+      /* 2026-09-23 — THE MECHANISM CHANGED, THE REQUIREMENT DID NOT.
+       * These zooms used to be pinned as `daily:2y`-style rows in a 17-entry
+       * CHART_VIEWS list. Ajay: "Just simpliyfy this drop down ... at any
+       * giving point This has been useless". The picker is now five frames
+       * plus a zoom that offers what the chosen frame can answer — the same
+       * reach, two controls instead of one flattened list. So the check is
+       * REACHABILITY, which is what he actually asked for in the first place,
+       * and it is stricter than the old one: it reads the real table. */
+      const fw = src.match(/export const FRAME_WINDOWS[^=]*=\s*\{([\s\S]*?)\n\};/);
+      if (!fw) {
+        errs.push('FRAME_WINDOWS not found — no way to check a zoom is reachable');
+      } else {
+        const rowFor = (tf) => {
+          const m = fw[1].match(new RegExp(`'?${tf}'?:\\s*\\[([^\\]]*)\\]`));
+          return m ? [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : null;
+        };
+        const dailyZooms = rowFor('daily');
+        if (!dailyZooms) errs.push('FRAME_WINDOWS has no daily row');
+        else for (const k of ['1w', '2w', '1m', '3m', '6m', '1y', '2y', '3y', '5y', 'all']) {
+          if (!dailyZooms.includes(k)) errs.push(`the big-picture frame can no longer reach the ${k} zoom`);
+        }
+        // Ajay 2026-09-18, THIRD time of asking: "Can you increase the bars on
+        // the weekly chart please?" -> 1 week of HOURLY bars. It shipped
+        // backend-first and the picker could not express the pair, so it never
+        // reached him; then the five-row picker dropped it the same way. This
+        // is the check that catches it, whatever the picker looks like.
+        const hourly = rowFor('60m');
+        if (!hourly) errs.push('FRAME_WINDOWS has no 60m row — the hourly short zooms are unreachable');
+        else for (const k of ['1w', '2w']) {
+          if (!hourly.includes(k)) {
+            errs.push(`the hourly ${k} chart is unreachable from the picker — this is the THIRD time this regressed`);
+          }
+        }
+        // and a frame must never offer a zoom its own bars cannot fill
+        for (const k of ['1y', '2y', '5y', 'all']) {
+          if (hourly && hourly.includes(k)) errs.push(`60m offers ${k}, which is more bars than the frame has`);
+        }
+      }
+      // the 5-minute frames ARE their window; a zoom there would do nothing,
+      // which is exactly how "1 month" + "15 min" came to mean nothing.
+      if (!/'5m_today':\s*\[\]/.test(src) || !/'24h':\s*\[\]/.test(src)) {
+        errs.push('a 5-minute frame offers a zoom — its window is fixed by definition');
+      }
+      if (!/windowsForFrame\(tf\)\.length > 1/.test(src)) {
+        errs.push('zoomApplies no longer derives from FRAME_WINDOWS — a dead control can come back');
       }
       const page = read('src/pages/ChartMaps.tsx');
       for (const [v, l] of [['504', '2 years'], ['756', '3 years'], ['1260', '5 years']]) {
@@ -566,7 +609,9 @@ const CONTRACTS = [
       // tabs? I think its safer and more accurate." Three constants, one value.
       if (!/export const DEFAULT_WINDOW = '1y';/.test(src)) errs.push("DEFAULT_WINDOW is not '1y' — the Support tab would open on another zoom");
       if (!/export const SEPA_SUPPLY_WINDOW = '1y';/.test(src)) errs.push("SEPA_SUPPLY_WINDOW is not '1y' — the ticker page would open on another zoom");
-      if (!/export const DEFAULT_VIEW = 'daily:1y';/.test(src)) errs.push("DEFAULT_VIEW is not 'daily:1y'");
+      // `DEFAULT_VIEW = 'daily:1y'` was the merged-key spelling of the pair.
+      // The pair is what matters and it is unchanged.
+      if (!/export const DEFAULT_TF = 'daily';/.test(src)) errs.push("DEFAULT_TF is not 'daily'");
       if (!/id: 'support-default-1y'/.test(feats)) errs.push("newFeatures.ts lost the 'support-default-1y' highlight");
 
       // ── 1-week / 2-week zooms (Ajay 2026-09-18) ────────────────────────
@@ -592,71 +637,29 @@ const CONTRACTS = [
           errs.push(`support.py CHART_ONLY_LEVELS_FROM no longer maps ${k} -> 1m`);
         }
       }
-      // ── the HOURLY short zooms (Ajay 2026-09-18, second ship) ──────────
-      // "Can you increase the bars on the weekly chart please?" -> 1 week of
-      // HOURLY bars. The backend shipped first and the picker could not
-      // express the pair, so the feature never reached him. These pin the two
-      // halves together so that cannot recur.
-      for (const k of ['60m:1w', '60m:2w']) {
-        if (!src.includes(`key: '${k}'`)) errs.push(`CHART_VIEWS lacks ${k} — the hourly short zoom is unreachable from the picker`);
-      }
-      // A tf with MORE THAN ONE entry must name exactly one `primary`, which
-      // is what a bare `?tf=60m` link resolves to. This replaced an
-      // order-dependent check on 2026-09-18: making array position the
-      // fallback meant the list could not be ordered for a reader without
-      // changing behaviour, and the hourly week had to sit two groups below
-      // the entry he was actually on — which is why he reported it missing
-      // twice. Order is now free; `primary` carries the contract.
-      {
-        const views = src.match(/export const CHART_VIEWS[\s\S]*?\n\];/);
-        const body = views ? views[0] : '';
-        if (!body) errs.push('contracts: CHART_VIEWS block not found');
-        const entries = [...body.matchAll(/\{\s*key: '([^']+)'[\s\S]*?tf: '([^']+)'([\s\S]*?)\},/g)]
-          .map((m) => ({ key: m[1], tf: m[2], primary: /primary:\s*true/.test(m[3]) }));
-        if (entries.length < 10) errs.push(`contracts: parsed only ${entries.length} CHART_VIEWS entries — regex drifted`);
-        const byTf = {};
-        for (const e of entries) (byTf[e.tf] ||= []).push(e);
-        for (const [tf, list] of Object.entries(byTf)) {
-          // 'daily' is exempt: viewKeyFor's daily branch matches on WINDOW and
-          // never reaches the tf fallback, so a primary there would be dead
-          // weight. The contract is only about intraday tf-only links.
-          if (tf === 'daily') continue;
-          const prim = list.filter((e) => e.primary);
-          if (list.length > 1 && prim.length !== 1) {
-            errs.push(`CHART_VIEWS: tf '${tf}' has ${list.length} entries and ${prim.length} primary — a bare ?tf=${tf} link needs exactly one`);
-          }
-          if (list.length === 1 && prim.length) {
-            errs.push(`CHART_VIEWS: tf '${tf}' has one entry and does not need primary`);
-          }
-        }
-      }
-      // viewKeyFor must consult `primary` before any positional match.
-      if (!/v\.tf === t && v\.primary/.test(src)) {
-        errs.push('viewKeyFor no longer falls back to the primary entry — the tf fallback is order-dependent again');
-      }
-      // The SPAN LADDER leads with the hourly week (Ajay 2026-09-18, third
-      // round: "I still see the same charts"). If 1w/2w go back to daily here,
-      // picking "1 week" draws five candles again.
-      for (const k of ['60m:1w', '60m:2w']) {
-        const m = src.match(new RegExp(`key: '${k}'[^}]*?group: '([^']+)'`));
-        if (!m) errs.push(`CHART_VIEWS ${k} lost its group`);
-        else if (m[1] !== 'Zoom') errs.push(`CHART_VIEWS ${k} is in group '${m[1]}' — the hourly short zooms must lead the span ladder`);
-      }
-      // The component must DERIVE its optgroups, never retype them: a
-      // hard-coded list silently dropped a whole group once already.
+      // (The hourly short zooms are pinned above, against FRAME_WINDOWS —
+      //  the table that decides reachability since 2026-09-23.)
+      /* The CHART_VIEWS mechanism (17 flattened rows, optgroups, `primary`,
+       * `viewKeyFor`) was retired on 2026-09-23 when the picker went to five
+       * frames plus a per-frame zoom. What those checks PROTECTED still has to
+       * hold, so it is re-pinned here against the mechanism that replaced it. */
       {
         const comp = read('src/components/SupportLevels.tsx');
-        if (/\[\s*'Daily'\s*,\s*'Intraday'\s*\]\s*as const/.test(comp)) {
-          errs.push('SupportLevels.tsx hard-codes its optgroup list again — a new group would render no options');
+        // FIVE rows, not seventeen. He asked for this twice.
+        const tfs = src.match(/export const FALLBACK_TIMEFRAMES[\s\S]*?\n\];/);
+        const n = tfs ? [...tfs[0].matchAll(/key:\s*'([^']+)'/g)].length : 0;
+        if (!tfs) errs.push('FALLBACK_TIMEFRAMES not found');
+        else if (n > 5) errs.push(`the frame picker is back to ${n} rows — he asked twice for fewer`);
+        // A retired key must still land somewhere real, and SAY it moved.
+        for (const k of ['15m_open', '5m_live']) {
+          if (!new RegExp(`'${k}'`).test(src)) errs.push(`the retired frame ${k} no longer resolves — an old link would break`);
         }
-        if (!/new Set\(CHART_VIEWS\.map\(\(v\) => v\.group\)\)/.test(comp)) {
-          errs.push('SupportLevels.tsx no longer derives its optgroups from CHART_VIEWS');
+        if (!/retiredTo/.test(comp)) errs.push('a retired frame retargets silently — the page must say it moved');
+        // The zoom must render from the frame's own allowance, never the
+        // whole ladder, or a nonsense pair becomes reachable again.
+        if (!/windowsForFrame\(curTf\)\.includes\(w\.key\)/.test(comp)) {
+          errs.push('the zoom control no longer filters to what the frame can answer');
         }
-      }
-      // viewKeyFor must match the PAIR before falling back to the tf, or the
-      // control names a view the chart is not drawing and cannot be re-picked.
-      if (!/v\.tf === t && v\.window === window/.test(src)) {
-        errs.push('viewKeyFor no longer matches (tf, window) before falling back to tf — the three 60m views collapse to one key');
       }
       // The hourly pairs must NOT be redirected to a daily read, and must not
       // claim to be. CHART_ONLY_LEVELS_FROM is keyed by WINDOW, so the guard is
