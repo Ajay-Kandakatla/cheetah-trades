@@ -658,3 +658,87 @@ def test_attach_copies_every_declared_field_and_invents_none():
     assert row["roce_pct"] == cr["roce_pct"]
     assert row["capital_period"] == "Q2 2026"
     assert row["capital_measured"] is False
+
+
+# ---------------------------------------------------------------------------
+# A cached doc written by OLDER code is stale, whatever its timestamp
+# (2026-09-22 — found live: capital_returns shipped, all 413 docs were fresh,
+# the warm wrote 0, and the nightly cron would have skipped them too.)
+# ---------------------------------------------------------------------------
+import time as _t
+
+from sepa import board_metrics as BM
+
+
+class _Coll:
+    """Minimal stand-in that honours `fetched_at` and `$and`/`$exists`."""
+
+    def __init__(self, docs):
+        self.docs = docs
+        self.written = []
+
+    def find(self, q, proj=None):
+        ids = q.get("_id", {}).get("$in", [])
+        floor = q.get("fetched_at", {}).get("$gte")
+        needs = [list(c)[0] for c in q.get("$and", [])]
+        for d in self.docs:
+            if d["_id"] not in ids:
+                continue
+            if floor is not None and d.get("fetched_at", 0) < floor:
+                continue
+            if any(k not in d for k in needs):
+                continue
+            yield {"_id": d["_id"]}
+
+    def replace_one(self, flt, doc, upsert=False):
+        self.written.append(doc["_id"])
+
+
+class _DB:
+    def __init__(self, coll):
+        self._c = coll
+
+    def __getitem__(self, _name):
+        return self._c
+
+
+def _warm_syms(docs, syms, monkeypatch):
+    """Run warm() far enough to see which symbols survived the freshness cut."""
+    coll = _Coll(docs)
+    seen = []
+    monkeypatch.setattr(BM, "_db", lambda db=None: _DB(coll))
+    monkeypatch.setattr(BM, "for_symbol",
+                        lambda s, d=None: (seen.append(s) or {"symbol": s}))
+    BM.warm(syms)
+    return sorted(seen)
+
+
+def test_SCHEMA_KEYS_names_the_field_a_current_document_must_carry():
+    assert "capital_returns" in BM.SCHEMA_KEYS
+
+
+def test_a_FRESH_doc_missing_a_SCHEMA_KEY_is_refetched(monkeypatch):
+    """The live 2026-09-22 case: recent, and written by code that did not
+    compute capital_returns yet."""
+    docs = [{"_id": "AAA", "fetched_at": _t.time()}]           # fresh, no key
+    assert _warm_syms(docs, ["AAA"], monkeypatch) == ["AAA"]
+
+
+def test_NEGATIVE_a_fresh_doc_that_HAS_every_schema_key_is_left_alone(monkeypatch):
+    """The guard must not turn the warm into a refetch-everything job."""
+    docs = [{"_id": "AAA", "fetched_at": _t.time(), "capital_returns": {}}]
+    assert _warm_syms(docs, ["AAA"], monkeypatch) == []
+
+
+def test_NEGATIVE_a_STALE_doc_is_refetched_even_with_every_key(monkeypatch):
+    """The age check still does its own job."""
+    docs = [{"_id": "AAA", "fetched_at": _t.time() - BM.TTL_SEC - 1,
+             "capital_returns": {}}]
+    assert _warm_syms(docs, ["AAA"], monkeypatch) == ["AAA"]
+
+
+def test_a_capital_returns_of_None_still_counts_as_WRITTEN(monkeypatch):
+    """A name the provider cannot answer for stores the key as None. That is a
+    RECORDED refusal, not a missing field — it must not be refetched daily."""
+    docs = [{"_id": "AAA", "fetched_at": _t.time(), "capital_returns": None}]
+    assert _warm_syms(docs, ["AAA"], monkeypatch) == []

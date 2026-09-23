@@ -80,6 +80,11 @@ COLL = "board_metrics"
 # time today reads numbers fetched at most one refresh ago, and the cron below
 # keeps it warm without re-hammering a provider for data that has not changed.
 TTL_SEC = 36 * 3600
+# Keys a CURRENT document must carry. A cached doc missing any of them was
+# written by older code and is refetched however recent it is — see `warm`.
+# Add a key here when a new stored field must reach the boards without waiting
+# out TTL_SEC; it costs one refetch per name, once.
+SCHEMA_KEYS = ("capital_returns",)
 
 # Serial-ish on purpose. The measured failure mode of the weekly research cron
 # is exactly this: 6 workers over thousands of symbols gets rate-limited into a
@@ -455,8 +460,22 @@ def warm(symbols: list, max_workers: int = DEFAULT_WORKERS, db=None,
     if only_missing and d is not None:
         cutoff = time.time() - TTL_SEC
         try:
+            # FRESH IS NOT THE SAME AS CURRENT (2026-09-22). A recent doc was
+            # written by whatever code was deployed at the time, so a field
+            # added since then is absent from every cached doc and `fetched_at`
+            # says nothing about it. Without this, a new derived field cannot
+            # reach the boards until each doc ages past TTL_SEC — up to 36 h of
+            # a feature reading UNKNOWN with nobody able to see why.
+            #
+            # Found the day `capital_returns` shipped: all 413 docs were fresh,
+            # so the warm wrote 0 and the 17:45 cron would have skipped them
+            # too. A doc missing a key THIS code computes is stale, whatever
+            # its timestamp.
             fresh = {doc["_id"] for doc in d[COLL].find(
-                {"_id": {"$in": syms}, "fetched_at": {"$gte": cutoff}}, {"_id": 1})}
+                {"_id": {"$in": syms},
+                 "fetched_at": {"$gte": cutoff},
+                 "$and": [{k: {"$exists": True}} for k in SCHEMA_KEYS]},
+                {"_id": 1})}
             syms = [s for s in syms if s not in fresh]
         except Exception as exc:                               # noqa: BLE001
             log.debug("board_metrics: freshness check failed: %s", exc)
