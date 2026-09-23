@@ -162,6 +162,24 @@ def _payload(doc: dict) -> dict:
         srs = _sr.attach_growth(rows)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("growth: since_report attach failed: %s", exc)
+    # 💎 Capital quality (Ajay 2026-09-22, "very less capital and hi ROI"),
+    # attached at READ time for the same reason as the three blocks above: it
+    # reads the balance-sheet fields `board_metrics.attach` just flattened, and
+    # those refresh every 36h against a board rebuilt weekly.
+    #
+    # It MUST run after `_bm.attach` — every component reads a field that call
+    # puts on the row. Its own try/except: a cold peer cohort or a provider
+    # shape change must leave the read off the rows, never take the tab down.
+    #
+    # Rule #10: it changes nothing about what this board selects. It sorts
+    # nothing, filters nothing and gates nothing; it is NOT measured, and it
+    # carries `measured_note` saying so on its own face.
+    cq = None
+    try:
+        from growth import capital_quality as _cq
+        cq = _cq.attach(rows)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: capital_quality attach failed: %s", exc)
     # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
     # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
     # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks
@@ -177,6 +195,7 @@ def _payload(doc: dict) -> dict:
         "groups": _group(rows),
         "earnings_fresh_summary": ef or None,
         "since_report_summary": srs,
+        "capital_quality_summary": cq,
         "built_at": (doc.get("built_at").isoformat()
                      if hasattr(doc.get("built_at"), "isoformat")
                      else doc.get("built_at")),

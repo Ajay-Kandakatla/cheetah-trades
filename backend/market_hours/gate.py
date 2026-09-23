@@ -89,6 +89,13 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # boards are built from closed bars, so this is a MARKET kind and a
     # Sunday growth build rings on the next trading morning.
     "board_arrival",
+    # 💎 a balance sheet improved on a fresh quarter (growth/quality_alerts.py,
+    # 2026-09-22) — it reads the 🚀 board, which is built from closed bars, and
+    # the balance sheet the 17:45 metrics warm wrote. A MARKET kind: a weekend
+    # or a holiday must not ring about a filing that is not new. The kind ships
+    # OFF in push.subs.default_prefs; this classification is about WHEN it may
+    # push, not whether it is on.
+    "capital_quality_upgrade",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

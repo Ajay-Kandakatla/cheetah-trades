@@ -84,6 +84,10 @@ BREAKOUT_KIND_PREFIX = "stage_breakdown_"
 DIGEST_KINDS = frozenset({
     "growth_demand_alert", "demand_alert", "zone_bounce_alert",
     "hot_pullback_alert", "pattern_alert", "board_arrival", "earnings_reaction",
+    # 💎 growth/quality_alerts.py (2026-09-22) — its digest body is
+    # "SYM (now holds more cash than debt), SYM (…)", a LIST of names, so the
+    # feed may derive per-ticker chips from it.
+    "capital_quality_upgrade",
 })
 
 # Upper-case only, 1-5 letters, with an optional single-letter class suffix —

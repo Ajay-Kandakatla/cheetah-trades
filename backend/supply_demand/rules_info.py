@@ -233,6 +233,29 @@ def _non_zone_push_lines() -> list:
         "(growth) on trading days. Each board carries its own measured record on its tab; an "
         "arrival is a list event, not an entry."
         % (GA.MAX_INDIVIDUAL, slots["bonde"], slots["growth"]))
+    try:
+        # Lazy for the same reason: the S&D rules page must not drag the SEPA /
+        # growth board stack in at module level (feedback_sepa_book_scope).
+        from growth import quality_alerts as QA
+        from growth import capital_quality as CQ
+    except Exception as exc:                          # pragma: no cover - import shim
+        log.warning("rules_info: quality_alerts unavailable: %s", exc)
+        return lines
+    lines.append(
+        "💎 %s (OFF by default — switch it on at /notifications): one push when a name on "
+        "the 🚀 Explosive Growth board crosses a BALANCE-SHEET line on a NEW fiscal quarter "
+        "— %s. It fires on a FAIL → PASS crossing only: never on \"this name is high "
+        "quality\" (a state, not an event), never when a figure merely becomes KNOWN, never "
+        "on the two sector-relative checks (those can move because a PEER filed), and never "
+        "twice for the same quarter. %d ring individually then one digest; passes %s ET on "
+        "trading days. NOTHING GATES THIS KIND — the ≥ %s room / ≤ %s above-demand phone "
+        "gates below are about a PRICE at a ZONE, and this reports a filing. NOT MEASURED: %s"
+        % (QA.KIND,
+           ", ".join(QA.UPGRADE_PHRASE[k] for k, kind, _l in CQ.COMPONENTS
+                     if kind == CQ.DEFINITIONAL),
+           GA.MAX_INDIVIDUAL, QA.SLOT_ET,
+           _pct(AG.ALERT_MIN_ROOM_PCT), _pct(AG.ALERT_MAX_ABOVE_DEMAND_PCT),
+           CQ.MEASURED_NOTE))
     return lines
 
 

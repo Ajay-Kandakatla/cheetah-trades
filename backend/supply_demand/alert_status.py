@@ -28,7 +28,8 @@ counts {} (the page shows "no pass recorded", never zeros it did not measure).
 GET /alerts/status (supply_demand/api.py) -> ``status_payload``:
   {in_session, now_et, gate: {min_room_pct, max_above_demand_pct, min_cap_usd,
    min_cap_txt}, passes: {zone_edge, zone_bounce_alert, demand_alert,
-   earnings_reaction, board_arrival:bonde, board_arrival:growth}, disclaimer}
+   earnings_reaction, board_arrival:bonde, board_arrival:growth,
+   capital_quality_upgrade}, disclaimer}
   each RTH pass: {as_of, date, counts, cadence_sec[, reason]}
   each DAILY pass (the three added 2026-09-20): {as_of, date, counts,
   cadence_sec: None, schedule[, reason]} — `schedule` is the slot string built
@@ -61,7 +62,12 @@ ZONE_EDGE_KIND = "zone_edge"
 # registered 2026-09-20. They carry `cadence_sec: None` — a daily pass is not
 # stale five minutes after its slot — and a `schedule` string instead, so the
 # page can print WHEN it runs without typing a minute of its own.
-DAILY_PASS_KINDS = ("earnings_reaction", "board_arrival:bonde", "board_arrival:growth")
+# 💎 capital_quality_upgrade (growth/quality_alerts.py, 2026-09-22) joined
+# them: it runs once, after the evening metrics warm. It is the one daily pass
+# whose kind ships OFF — the page must still carry it, because "why was my phone
+# quiet" is exactly the question a pass he has just switched on will raise.
+DAILY_PASS_KINDS = ("earnings_reaction", "board_arrival:bonde", "board_arrival:growth",
+                    "capital_quality_upgrade")
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert") + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
@@ -281,6 +287,11 @@ def schedule_map() -> dict:
             out["board_arrival:%s" % board] = "%s ET, trading days" % BA.SLOTS_ET[board]
     except Exception as exc:                      # pragma: no cover - import shim
         log.warning("alert_status: board_arrival slots unavailable: %s", exc)
+    try:
+        from growth import quality_alerts as QA   # lazy: it pulls the growth stack
+        out["capital_quality_upgrade"] = "%s ET, trading days" % QA.SLOT_ET
+    except Exception as exc:                      # pragma: no cover - import shim
+        log.warning("alert_status: quality_alerts slot unavailable: %s", exc)
     return out
 
 

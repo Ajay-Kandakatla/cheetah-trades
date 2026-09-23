@@ -158,11 +158,14 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
                          "min_cap_usd": DA.MIN_CAP_USD, "min_cap_txt": AS.cap_floor_txt(DA.MIN_CAP_USD),
                          "enterable_status": EN.status()}
     assert p["gate"] == AS.gate_payload()
-    # SIX passes since 2026-09-20: the three RTH crons plus the three DAILY
-    # ones (📣 earnings_reaction, ✨ board_arrival on each board).
+    # SEVEN passes since 2026-09-22: the three RTH crons plus the four DAILY
+    # ones (📣 earnings_reaction, ✨ board_arrival on each board, and 💎
+    # capital_quality_upgrade). The 💎 pass is here although its KIND ships
+    # OFF — "why was my phone quiet" is exactly the question the day he
+    # switches it on, and a pass the page cannot show cannot answer it.
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
                                 "earnings_reaction", "board_arrival:bonde",
-                                "board_arrival:growth"}
+                                "board_arrival:growth", "capital_quality_upgrade"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
     ze = p["passes"]["zone_edge"]
     assert ze["as_of"] == NOW.isoformat() and ze["date"] == "2026-09-03"

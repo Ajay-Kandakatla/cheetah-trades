@@ -327,10 +327,14 @@ def test_route_adds_tickers_and_nothing_else(monkeypatch):
 # ---------------------------------------------------------------------------
 # contract guards
 # ---------------------------------------------------------------------------
-def test_digest_kinds_is_the_seven_list_bodies():
+def test_digest_kinds_is_the_eight_list_bodies():
+    # 💎 capital_quality_upgrade joined 2026-09-22: its digest body is
+    # "SYM (now holds more cash than debt), SYM (…)" — a LIST of names, so the
+    # feed may derive per-ticker chips from a row stored before `tickers`.
     assert R.DIGEST_KINDS == frozenset({
         "growth_demand_alert", "demand_alert", "zone_bounce_alert",
-        "hot_pullback_alert", "pattern_alert", "board_arrival", "earnings_reaction"})
+        "hot_pullback_alert", "pattern_alert", "board_arrival", "earnings_reaction",
+        "capital_quality_upgrade"})
 
 
 def test_every_digest_builder_emits_the_key():

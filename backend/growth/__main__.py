@@ -4,6 +4,7 @@
   python -m growth alerts    one demand-alert pass      (market days)
   python -m growth show      print the board, send nothing
   python -m growth earnings  refresh THIS BOARD's earnings dates, send nothing
+  python -m growth quality   one capital-quality-upgrade pass (market days)
 """
 from __future__ import annotations
 
@@ -34,6 +35,18 @@ def main(argv=None) -> int:
         from growth import alerts as A
         dry = "--dry-run" in argv
         print(json.dumps(A.run(dry_run=dry)))
+        return 0
+
+    if cmd == "quality":
+        # 💎 Ajay 2026-09-22: "Filter and have alerts and new look out for such
+        # companies where whcih have very high quality."
+        #
+        # Fires ONLY on a definitional capital-quality component crossing
+        # FAIL -> PASS on a NEW fiscal quarter — an accounting event, never the
+        # state "this name is high quality". The kind ships OFF
+        # (push.subs.default_prefs); he turns it on at /notifications.
+        from growth import quality_alerts as QA
+        print(json.dumps(QA.run(dry_run="--dry-run" in argv), default=str))
         return 0
 
     if cmd == "show":

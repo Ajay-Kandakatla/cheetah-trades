@@ -89,6 +89,7 @@ DEFAULT_WORKERS = 3
 
 QUARTERS_FETCHED = 12
 YOY_GAP = 4                 # fiscal quarters between a quarter and its year-ago self
+QUARTERS_FOR_TTM = 4        # definitional: a trailing twelve months is four quarters
 
 # A diluted-average-share count more than this factor away from the CURRENT
 # shares outstanding means something structural happened between the two — a
@@ -358,16 +359,84 @@ def _live_shares(symbol: str, db=None) -> Optional[float]:
         return None
 
 
+def _capex_ttm(symbol: str) -> tuple:
+    """`(capex_ttm, period_end)` — the ONE fact Massive cannot answer.
+
+    Measured 2026-09-22 across the 21 live growth names: Massive's
+    `cash_flow_statement` carries 8 aggregate lines and NO capital-expenditure
+    line at all — `capital_expenditure` and
+    `payments_to_acquire_property_plant_equipment` are both 0/21. Its investing
+    total lumps capex in with acquisitions and securities, so it cannot be
+    backed out. yfinance's quarterly cash-flow statement carries it at 19/21
+    (the two misses are mortgage REITs, which have no capex line anywhere).
+
+    This is the only place a SECOND source enters the capital-returns picture,
+    and the value it returns is period-stamped precisely so
+    `capital_returns.compute` can refuse to mix quarters with it.
+    """
+    try:
+        from sepa import symbols as S
+        qcf = S.yf_ticker(symbol).quarterly_cashflow
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("board_metrics: capex %s failed: %s", symbol, type(exc).__name__)
+        return None, None
+    try:
+        if qcf is None or getattr(qcf, "empty", True):
+            return None, None
+        cols = list(qcf.columns)
+        if len(cols) < QUARTERS_FOR_TTM:
+            return None, None
+        idx = {str(i): i for i in qcf.index}
+        row = idx.get("Capital Expenditure")
+        if row is None:
+            return None, None
+        total = 0.0
+        for c in cols[:QUARTERS_FOR_TTM]:
+            v = _f(qcf.loc[row, c])
+            if v is None:
+                return None, None          # a partial year is not a year
+            total += v
+        return total, str(cols[0])[:10]
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("board_metrics: capex parse %s failed: %s",
+                  symbol, type(exc).__name__)
+        return None, None
+
+
 def for_symbol(symbol: str, db=None) -> dict:
     """Every metric for one name. Never raises."""
     sym = symbol.upper()
     row = {"symbol": sym, "fetched_at": time.time()}
     row.update(balance_metrics(sym))
+
+    # ONE Massive call, TWO readers. `shares_yoy` wants only reported quarters;
+    # `capital_returns` wants the derived Q4s too (annual-minus-three is fine
+    # for a FLOW, meaningless for an average share count). Fetching twice would
+    # double this module's provider load for data already in hand.
+    quarters = []
     try:
-        row["shares_yoy"] = shares_yoy(_fetch_quarters(sym), _live_shares(sym, db))
+        quarters = _fetch_quarters(sym)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("board_metrics: quarters %s failed: %s", sym, type(exc).__name__)
+
+    try:
+        row["shares_yoy"] = shares_yoy(quarters, _live_shares(sym, db))
     except Exception as exc:                                   # noqa: BLE001
         log.debug("board_metrics: dilution %s failed: %s", sym, type(exc).__name__)
         row["shares_yoy"] = None
+
+    # Return on capital (Ajay 2026-09-22). Its own try/except: a provider shape
+    # change must leave these cells blank, never take a board down.
+    try:
+        from sepa import capital_returns as _cr
+        capex, capex_end = _capex_ttm(sym)
+        row["capital_returns"] = _cr.compute(
+            quarters, capex_ttm=capex, capex_period_end=capex_end,
+            balance_meaningful=bool(row.get("balance_meaningful", True)))
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("board_metrics: capital_returns %s failed: %s",
+                  sym, type(exc).__name__)
+        row["capital_returns"] = None
     return row
 
 
@@ -459,7 +528,63 @@ def attach(rows: list, db=None) -> list:
                   "market_cap", "float_shares", "shares_outstanding",
                   "sector", "balance_meaningful"):
             r[k] = m.get(k)
+        _attach_capital_returns(r, m.get("capital_returns") or {})
     return rows
+
+
+# Flat keys the boards read one cell each, same shape as everything above.
+CAPITAL_RETURN_FIELDS = ("roce_pct", "roic_pct", "roe_pct", "asset_turnover",
+                         "capex_intensity_pct", "fcf_conversion_pct",
+                         "capital_employed", "ttm_ebit", "ttm_revenue",
+                         "ttm_net_income", "ttm_operating_cash_flow",
+                         "ttm_capex", "ttm_fcf", "total_assets", "total_equity",
+                         "effective_tax_rate", "denominator_basis",
+                         # Which entity ROE's numerator AND denominator both
+                         # belong to — "parent" or "consolidated". Served for
+                         # the same reason `denominator_basis` is: two names'
+                         # ROEs are only comparable on the same basis.
+                         "roe_basis")
+
+
+def _attach_capital_returns(row: dict, cr: dict) -> None:
+    """Flatten the return-on-capital block onto a board row, in place.
+
+    RULE #7 — the as-of PERIOD, never the cache age. `capital_period` /
+    `capital_period_end` are the fiscal quarter the FIGURES come from, which is
+    a different fact from `fetched_at`: a balance sheet fetched an hour ago can
+    still be a quarter old, and only the period tells the reader which.
+
+    `capital_period_mismatch` is the defect item this exists to catch: the
+    growth board carries its own `period_end` from the income-statement screen,
+    and a balance sheet drawn from a DIFFERENT quarter than the growth figures
+    beside it is not a cosmetic inconsistency — every ratio on the row would
+    pair a numerator and a denominator from different points in time.
+    """
+    if not cr:
+        row["capital_measured"] = False
+        return
+    for k in CAPITAL_RETURN_FIELDS:
+        row[k] = cr.get(k)
+    row["capital_period"] = cr.get("period")
+    row["capital_period_end"] = cr.get("period_end")
+    row["capital_period_is_derived"] = cr.get("period_is_derived")
+    row["capital_reasons"] = cr.get("reasons") or {}
+    # Never lets a surface borrow another score's credibility — this is a
+    # screen built from accounting identities, not a measured edge.
+    row["capital_measured"] = bool(cr.get("measured"))
+
+    board_end = row.get("period_end")
+    cap_end = cr.get("period_end")
+    if board_end and cap_end:
+        try:
+            from sepa import capital_returns as _cr
+            agree = _cr.periods_agree(str(board_end)[:10], str(cap_end)[:10])
+            row["capital_period_mismatch"] = (
+                None if agree is None else (not agree))
+        except Exception:                                      # noqa: BLE001
+            row["capital_period_mismatch"] = None
+    else:
+        row["capital_period_mismatch"] = None
 
 
 def _main(argv=None) -> int:

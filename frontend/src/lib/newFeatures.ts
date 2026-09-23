@@ -22,6 +22,23 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-22: "Where we look at quality I need filter tab in explosive
+  // growth tab, whcih manage quality like very less capital and hi ROI."
+  // He also said Jhunjhunwala called these "ghee companies" and asked me to
+  // look into it. THE ATTRIBUTION DID NOT HOLD UP — see the label. His name
+  // and the word appear NOWHERE in this feature, deliberately.
+  { id: 'growth-capital-quality-2026-09-22',
+    label: '\u{1F48E} Capital quality on \u{1F680} Explosive Growth \u2014 does a name earn a lot on a little? You asked for \u201cquality like very less capital and hi ROI\u201d. '
+      + 'THE APP COULD NOT ANSWER THAT UNTIL NOW: there was no return-on-capital number anywhere in it \u2014 no ROCE, no ROIC, no ROE, no capital employed, no capex. All of it is computed now, from the filings, off the SAME provider call the board already made (no new requests). '
+      + 'SIX QUESTIONS, and each one is a chip you can toggle: holds more cash than debt \u00b7 free cash flow is positive \u00b7 share count is not rising \u00b7 earns a positive return on capital \u00b7 earns MORE on its capital than its own sector\u2019s middle \u00b7 spends LESS on capex than its own sector\u2019s middle. The grade is just how many it passed, out of how many could be answered \u2014 not a score anyone tuned. '
+      + 'NOT ONE INVENTED NUMBER. Four of the six are definitional (cash vs debt, FCF above zero, shares not rising, return above zero) and two compare a name to its OWN sector\u2019s median, computed from the 340 names that qualify. There is no \u201cROCE above 20%\u201d anywhere, because nobody has measured what the right cut would be. '
+      + 'EVERY CHIP SHIPS OFF, and here is why: on today\u2019s 21 names, turning all of them on leaves TWO \u2014 NVDA and TER. \u201cShare count not rising\u201d alone cuts it from 11 to 2. Same trap as the debt filter that returned zero of 29 rows. So each chip tells you how many rows it will hide BEFORE you click, and you can bring any reason back one at a time. '
+      + 'A BLANK IS NOT A FAIL. A name with no filings reads UNKNOWN and is never ranked against one that was measured. ROIC only reaches about half the board, so it lives in the drill-in rather than the column \u2014 a column blank for a third of the board is worse than no column. '
+      + 'NOT MEASURED, AND IT SAYS SO ON ITS FACE. This orders names by balance-sheet quality. Nobody has tested whether that predicts anything on YOUR universe \u2014 no study, no interval, no out-of-sample. It is a screen, not an edge, and it sorts nothing, gates nothing and changes nothing about which names reach the board. '
+      + 'THE ALERT is \u{1F48E} Capital quality improved, and it ships OFF until you turn it on. It fires when a name CROSSES \u2014 starts holding more cash than debt, turns free-cash-flow positive, stops diluting \u2014 on a genuinely new quarter. A grade that has not changed never re-fires. \u201cIs high quality\u201d is a state, not an event, so it is not an alert. '
+      + 'ON THE NAME YOU MENTIONED: I could not verify that Rakesh Jhunjhunwala ever said \u201cghee companies\u201d \u2014 no interview, no press, no book, just two social posts, one of which nobody could open. His name is nowhere in this feature. But the idea holds: writing under his own byline in 2002 he listed \u201cReturn on capital employed, i.e., efficient use of capital\u201d as one of three tests of earnings quality. You were after the right thing. '
+      + 'YOUR CALL: whether ROCE or ROIC should be the headline column; whether the tiny-denominator sanity bound should be switched on (it ships OFF, at zero, so no number is invented \u2014 the cost either way is in the doc); and whether this belongs on the Bonde and Breakout boards too.',
+    addedAt: '2026-09-22', route: '/chart-maps?tab=growth' },
   // Ajay 2026-09-22, on a screenshot of the board: "last column is hidded".
   // The 🌀 AMD column shipped that morning as the LAST of twelve on a table
   // that already scrolled sideways, so it was off his right edge.

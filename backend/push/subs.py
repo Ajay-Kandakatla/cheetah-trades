@@ -501,6 +501,29 @@ def default_prefs() -> dict:
         # NOT MEASURED as an entry: Bonde's rule measured INVERTED (−3.11pp)
         # and the 100/100 growth screen has never been measured forward.
         "board_arrival": True,
+        # 💎 A balance sheet IMPROVED on a fresh quarter (growth/quality_alerts.py,
+        # Ajay 2026-09-22: "Filter and have alerts and new look out for such
+        # companies where whcih have very high quality.").
+        #
+        # SHIPS OFF — the only kind in this dict that does. It is deliberate and
+        # it was CHECKED rather than assumed: OWNER_KEEP_SET below is an explicit
+        # nine-kind list and this is not on it, so `owner_prefs()` returns False
+        # for his devices either way. His 2026-09-20 "default on for any change
+        # of todays features" named the features that existed THAT DAY; a kind he
+        # has not seen yet does not inherit that sentence. He turns it on at
+        # /notifications, where the toggle says what it does.
+        #
+        # It MUST still be here: a kind missing from default_prefs silently
+        # targets ZERO devices (the 2026-06-24 chokepoint) AND renders no toggle,
+        # so he could never turn it on at all.
+        #
+        # Fires on a DEFINITIONAL component of growth/capital_quality.py crossing
+        # FAIL -> PASS on a NEW fiscal quarter — net cash, FCF positive, dilution
+        # stopped, return on capital positive. Never on "is high quality" (a
+        # state), never on unknown -> pass (the app learning, not the company
+        # improving), never twice for one quarter. A MARKET kind.
+        # NOT MEASURED: capital_quality.MEASURED is False and the body says so.
+        "capital_quality_upgrade": False,
         "morning_brief": True,        # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

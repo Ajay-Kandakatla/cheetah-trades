@@ -109,6 +109,13 @@ const DAILY_PASSES: { key: string; label: string }[] = [
   { key: 'earnings_reaction',    label: '📣 Earnings beat, institutions bought' },
   { key: 'board_arrival:bonde',  label: '✨ New on 📈 Bonde' },
   { key: 'board_arrival:growth', label: '✨ New on 🚀 Explosive Growth' },
+  /* 💎 growth/quality_alerts.py (2026-09-22). The one daily pass whose KIND
+   * ships OFF — it is here anyway, because "why was my phone quiet" is exactly
+   * the question the day he switches it on. Its counters name their own
+   * reasons (no_capital_period, baseline, same_period, no_upgrade), so a
+   * legitimately silent evening reads as silent-with-a-reason, not as a dead
+   * cron. */
+  { key: 'capital_quality_upgrade', label: '💎 Capital quality improved' },
 ];
 /* An older API sends no `schedule`; the page says how often, never WHEN — a
  * slot typed here would drift from the crontab the way the cap floor did. */

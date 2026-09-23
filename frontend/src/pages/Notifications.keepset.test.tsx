@@ -86,9 +86,17 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
     expect(potus.detail).toContain('did not loosen');
   });
 
-  it('NEGATIVE: the page never says OFF BY DEFAULT any more', () => {
+  /* NARROWED 2026-09-22. The guard was "no kind still carries stale OFF BY
+     DEFAULT copy after the 09-20/09-21 widenings turned everything on". That
+     is still the point — but 💎 capital_quality_upgrade genuinely does ship
+     off (it is the single `False` in backend push.subs.default_prefs, pinned
+     there by test_quality_alerts), so the guard now allows exactly that one
+     category and no other. */
+  it('NEGATIVE: only the 💎 kind says OFF BY DEFAULT — every other kind is on', () => {
+    const off = CATEGORIES.filter((c) => c.detail.includes('OFF BY DEFAULT'))
+      .map((c) => c.key);
+    expect(off).toEqual(['capital_quality_upgrade']);
     const { container } = draw();
-    expect(container.textContent).not.toContain('OFF BY DEFAULT');
     expect(container.textContent).not.toContain('the only notification in this app that ships off');
   });
 

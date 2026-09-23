@@ -66,6 +66,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // ✨ sepa/board_arrival.py (2026-09-20) — a name ARRIVED on 📈 Bonde or
   // 🚀 Explosive Growth. Ships ON; an arrival on a list, not an entry.
   board_arrival:       { emoji: '✨', label: 'New on a board',          group: 'trading' },
+  // 💎 growth/quality_alerts.py (2026-09-22) — a BALANCE SHEET crossed a line
+  // on a fresh fiscal quarter (net cash / FCF positive / dilution stopped /
+  // return on capital positive). Ships OFF, the only trading kind that does.
+  // A filing changed, not a setup; NOT measured.
+  capital_quality_upgrade: { emoji: '💎', label: 'Capital quality improved', group: 'trading' },
 
   // ── breakouts (also arrive as source='breakout' rows) ─────────────────────
   volume_breakout:     { emoji: '🚀', label: 'Volume breakout',         group: 'breakout' },

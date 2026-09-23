@@ -706,17 +706,22 @@ describe('Alerts page — the once-a-day passes', () => {
     expect(within(bo).queryByText(/claimed by another pass/)).not.toBeInTheDocument();
   });
 
-  it('NEGATIVE: a status without the new keys says "no pass recorded" three times, and :380 is unchanged', async () => {
+  /* FOUR daily passes since 2026-09-22 — 💎 capital_quality_upgrade joined the
+     strip. It is here although its KIND ships OFF, because "why was my phone
+     quiet" is exactly the question the day he switches it on. */
+  it('NEGATIVE: a status without the new keys says "no pass recorded" once per daily pass, and :380 is unchanged', async () => {
     stubFetch({ rows: ROWS }, STATUS_LIVE);
     draw();
     await screen.findByText(/NVDA in demand/);
-    for (const k of ['earnings_reaction', 'board_arrival:bonde', 'board_arrival:growth']) {
+    const DAILY = ['earnings_reaction', 'board_arrival:bonde', 'board_arrival:growth',
+                   'capital_quality_upgrade'];
+    for (const k of DAILY) {
       const strip = screen.getByTestId(`pass-${k}`);
       expect(within(strip).getByText('no pass recorded')).toBeInTheDocument();
       // No schedule served → the words, never an invented slot.
       expect(within(strip).getByText('· once a trading day')).toBeInTheDocument();
     }
-    expect(screen.getAllByText('no pass recorded')).toHaveLength(3);
+    expect(screen.getAllByText('no pass recorded')).toHaveLength(DAILY.length);
     // The three-pass sentence speaks for the INTRADAY gate only.
     expect(screen.getByTestId('session-line'))
       .toHaveTextContent('Session open — all three passes reported within cadence.');

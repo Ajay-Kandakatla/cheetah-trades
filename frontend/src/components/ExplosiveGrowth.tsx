@@ -37,6 +37,10 @@ import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { metricCells } from '../lib/boardMetrics';
 import { SINCE_REPORT_HEAD, sinceReportCell, sinceReportCoverage,
          type SinceReport, type SinceReportSummary } from '../lib/sinceReport';
+import { CapitalQualityChips, CapitalQualityHidden, CapitalQualityNote } from './CapitalQualityChips';
+import { QUALITY_HEAD, componentKeys, componentStats, gradeCell, partitionCapital,
+         readOf as capitalReadOf, visibleComponentCounts, visibleCounts,
+         type CapitalQuality, type CapitalQualitySummary } from '../lib/capitalQuality';
 
 export type GrowthZone = {
   missing?: boolean; in_band?: boolean; intact?: boolean | null;
@@ -76,6 +80,11 @@ export type GrowthRow = {
    * the latest cached close. A FACT between two dates — attached at READ time
    * by sepa/since_report.py; it sorts, filters and gates nothing. */
   since_report?: SinceReport;
+  /* 💎 "very less capital and hi ROI" (Ajay 2026-09-22). The balance-sheet
+   * read attached at READ time by growth/capital_quality.py — it sorts nothing,
+   * gates nothing and is NOT measured. A chip below can hide rows that FAIL one
+   * of its questions; nothing hides a row it could not answer. */
+  capital_quality?: CapitalQuality;
   as_of?: string | null;
   // The PERIOD the growth legs are measured on (2026-09-14 review fixes).
   // `period` is the fiscal quarter at slot 0 of the cached series ("FY2026
@@ -132,6 +141,10 @@ export type GrowthPayload = {
   /* 📅 Coverage + the board's own honesty line for the since-the-report
    * column. Served whole — no number in it is composed here. */
   since_report_summary?: SinceReportSummary | null;
+  /* 💎 The quality read's own coverage, per-question hide counts and its
+     NOT-MEASURED sentence. Served whole — no number and no clause of that
+     sentence is composed here. */
+  capital_quality_summary?: CapitalQualitySummary | null;
   disclaimer?: string;
 };
 
@@ -285,6 +298,25 @@ export function ExplosiveGrowth() {
   // literal debt===0 filter returns ZERO of 29 rows — see balanceRead.ts.
   const [debtTier, setDebtTier] = useState<DebtTier | null>('net cash');
   const [sector, setSector] = useState<string | null>(null);
+  /* 💎 Ajay 2026-09-22: "quality like very less capital and hi ROI".
+   *
+   * EMPTY — every quality chip ships OFF, and unlike `debtTier` above there is
+   * no honest default to open at. `debtTier` could open at "net cash" because
+   * that tier still holds most of the board; here the measurement on the live
+   * board 2026-09-22 was that stacking the definitional cuts leaves 2 of 21
+   * names (NVDA, TER) and that only 3 of 21 fail nothing at all. Every one of
+   * these questions is a real cut, so any default ON hides rows on first paint
+   * — and the served `hides_n` on each chip says exactly how many, before he
+   * clicks. Nothing is on until he asks for it. */
+  const [quality, setQuality] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const toggleQuality = useCallback((key: string) => {
+    setQuality((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }, []);
+  const clearQuality = useCallback(() => setQuality(new Set<string>()), []);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   // Ajay 2026-09-12: "sort this by demand intact". The board OPENS on demand
   // now — the four names at an intact floor were ranked 5th to 20th by sales
@@ -342,6 +374,33 @@ export function ExplosiveGrowth() {
    * and the count line below says how many went, and why. */
   const { enterableOnly, kind, setEnterableOnly, ignoreReasons, toggleReason } = useEnterableFilter();
   const part = useEnterablePartition(rows, (r) => r.symbol, room.map, enterableOnly);
+
+  /* 💎 The quality cut (Ajay 2026-09-22), applied AFTER the enterable
+   * partition so that line keeps counting exactly what it counts today — each
+   * filter reports its own stage, and neither borrows the other's number.
+   *
+   * Rule #10: this changes NOTHING about what the board selects. The 100/100
+   * screen, its ordering, its cohorts and its gates are untouched; a chip
+   * decides what is DRAWN, and only while it is lit. */
+  const cqs = data?.capital_quality_summary ?? null;
+  const qKeys = useMemo(() => componentKeys(cqs), [cqs]);
+  const qpart = useMemo(
+    () => partitionCapital(part.rows, (r) => capitalReadOf(r), quality, qKeys),
+    [part.rows, quality, qKeys],
+  );
+  const qStats = useMemo(() => componentStats(cqs), [cqs]);
+  /* 💎 The chip counts are counted over the rows ACTUALLY BEING DRAWN, not off
+   * the served whole-board summary. By this line the debt tier (ON by default
+   * at "net cash"), the enterable cut, the sector picker and the demand /
+   * buyable checkboxes have all already run, and they OVERLAP this read: the
+   * default debt tier takes the levered names, which are the same rows that
+   * fail `net_cash`. Served counts would have promised to hide rows that were
+   * no longer on the board, and a click would have moved nothing — the
+   * `debtTier` lesson at line 285 with a number attached. The verdicts are
+   * still entirely the backend's; this only counts them. */
+  const qReads = useMemo(() => part.rows.map((r) => capitalReadOf(r)), [part.rows]);
+  const qCounts = useMemo(() => visibleComponentCounts(qReads, qKeys), [qReads, qKeys]);
+  const qVisible = useMemo(() => visibleCounts(qReads, qKeys), [qReads, qKeys]);
 
   const groups = data?.groups ?? [];
   const ernote = data?.earnings_fresh_summary ?? null;
@@ -401,6 +460,20 @@ export function ExplosiveGrowth() {
         </div>
       </div>
 
+      {/* 💎 The quality chip row (Ajay 2026-09-22: "I need filter tab in
+          explosive growth tab, whcih manage quality like very less capital and
+          hi ROI").
+
+          NOT A NEW TAB — the Rule #5 push-back. He asked for a tab; this board
+          is 21 rows, and a second tab means the quality read can only be seen
+          by leaving the growth numbers behind. It is one wrapping chip row
+          directly under the chips already there, plus one column.
+
+          Every chip is OFF, and every chip carries the count of what clicking
+          it will actually do to the rows on screen. */}
+      <CapitalQualityChips summary={cqs} counts={qCounts}
+                           active={quality} onToggle={toggleQuality} />
+
       <div className="eg-note">
         <b>No market-cap floor on this board</b> — your call. Every other board and the
         trading engine use $700M, so a row marked ⛔ is real on this list and refused at
@@ -442,6 +515,14 @@ export function ExplosiveGrowth() {
           {' '}<span className="eg-dim">({srs.date_basis_note})</span>
         </div>
       )}
+
+      {/* 💎 The quality read's honesty line. The NOT-MEASURED sentence inside
+          it is SERVED (capital_quality.MEASURED_NOTE, pinned to MEASURED =
+          False by backend test) and printed verbatim — nothing about what this
+          grade predicts is typed on this page, because nobody has measured it.
+          It sits with the board's other honesty lines and never borrows the
+          measured banner of any board. */}
+      <CapitalQualityNote summary={cqs} visible={qVisible} />
 
       {/* Sectors (Ajay 2026-09-11: "I wanna see the secorts in the growth.. To
           show that only some are growing"). The denominator is the point: 9 of
@@ -540,6 +621,14 @@ export function ExplosiveGrowth() {
                      onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* 💎 What the quality chips took away — drawn the whole time one is on,
+          even at zero hidden, and it always prints how many rows are SHOWING
+          so an empty table is a stated count and never a blank board. Each
+          entry in the breakdown is the un-hide button for that one question. */}
+      <CapitalQualityHidden summary={cqs} shown={qpart.rows.length}
+                            hidden={qpart.hidden} unread={qpart.unread}
+                            hiddenByKey={qpart.hiddenByKey} active={quality}
+                            onToggle={toggleQuality} onClear={clearQuality} />
       {/* 🪜 No row on this list came back with a band read — say so once, the
           way the 🎯 n/a tabs do, instead of showing no chip anywhere and
           letting it read as a board where the read silently stopped. The
@@ -648,12 +737,21 @@ export function ExplosiveGrowth() {
               <th title="How the balance sheet reads on debt, graded against the company's own cash. Lenders and mortgage REITs read 'Debt is the business' — for them leverage is the product, not a weakness.">
                 Balance
               </th>
+              {/* 💎 Ajay 2026-09-22. Beside Balance because both read the same
+                  statement — that one grades the debt, this one grades what
+                  the business ties up and earns on it. NOT a sort key: no
+                  eg-sort button and no aria-sort, the same call the 📅 Since
+                  report column made, because the ask is a read and an ordering
+                  on it is a separate ask. growthSort.ts is untouched. */}
+              <th className="eg-q-h" title={QUALITY_HEAD.title}>
+                {QUALITY_HEAD.text}
+              </th>
               <th>Flags</th>
               <th />
             </tr>
           </thead>
           <tbody>
-            {part.rows.map((r) => {
+            {qpart.rows.map((r) => {
               const d = demandCell(r.zone);
               const warns = [...(r.warnings ?? []), ...legFlags(r)];
               const per = periodCell(r);
@@ -733,6 +831,26 @@ export function ExplosiveGrowth() {
                       </td>
                     );
                   })()}
+                  {(() => {
+                    /* 💎 The grade, in the SERVED word, with the SERVED
+                       counts. The page composes no verdict: `gradeCell` joins
+                       served strings and picks a class, and an UNKNOWN row
+                       renders its own word and its own tone so it can never be
+                       read as a failed one. */
+                    const q = gradeCell(capitalReadOf(r), qStats);
+                    return (
+                      <td className="eg-q" title={q.title}
+                          data-testid={`growth-quality-${r.symbol}`}
+                          data-unknown={q.unknown ? 'true' : 'false'}>
+                        <span className={`eg-q-chip ${q.cls}`}>{q.text}</span>
+                        {/* Rule #7 — the fiscal quarter the capital figures
+                            came from, never the cache age. */}
+                        {q.period && (
+                          <div className="eg-period eg-dim">{q.period}</div>
+                        )}
+                      </td>
+                    );
+                  })()}
                   <td className="eg-flags">
                     {warns.length === 0
                       ? <span className="eg-dim">—</span>
@@ -744,8 +862,13 @@ export function ExplosiveGrowth() {
                 </tr>
               );
             })}
-            {rows.length === 0 && (
-              <tr><td colSpan={17} className="eg-dim">
+            {/* 💎 2026-09-22: this read `rows.length` — the list BEFORE the
+                enterable and quality partitions — so a filter that emptied the
+                table rendered no rows AND no message. It reads the list that is
+                actually drawn now, so an empty table always says so, with the
+                count line above it saying which filter took what. */}
+            {qpart.rows.length === 0 && (
+              <tr><td colSpan={18} className="eg-dim">
                 nothing matches the current filters.
               </td></tr>
             )}

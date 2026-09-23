@@ -13433,6 +13433,42 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .eg-table thead th.eg-since-h { cursor: help; }
 .eg-since-note { margin-top: 0.35rem; }
 
+/* 💎 Capital quality (Ajay 2026-09-22: "quality like very less capital and hi
+   ROI") — the chip row, the count line and the ONE column on 🚀 Explosive
+   Growth. No new colour token: the chips borrow `.cm-hidden-reason` from the
+   un-hide line so a lit quality chip and a lit enterable reason read as the
+   same kind of control, which they are.
+
+   NO GRADE IS RED. Every tone below stops at amber, because nothing in this
+   read has been measured against an outcome and `--bad` is the colour this app
+   gives to things that measured badly. `none` (answered, every answer no) and
+   `unknown` (the filings could not answer) get DIFFERENT tones and different
+   words on purpose — a board that renders them alike is lying about which one
+   it is looking at. */
+.eg-qchips {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  font-size: 0.72rem; color: var(--ink-muted); line-height: 1.7;
+}
+.eg-qchips-lead { font-weight: 600; }
+.eg-qnote { margin-top: 0.35rem; }
+.eg-table thead th.eg-q-h { cursor: help; white-space: nowrap; }
+.eg-q { cursor: help; white-space: nowrap; }
+.eg-q-chip {
+  display: inline-block; font-size: 0.66rem; font-weight: 700;
+  padding: 1px 6px; border-radius: 999px; white-space: nowrap;
+}
+.eg-q-all   { color: #3fb950; background: rgba(63,185,80,0.14); }
+.eg-q-most  { color: #3fb950; background: rgba(63,185,80,0.07); }
+.eg-q-some  { color: var(--ink-muted); background: rgba(127,127,127,0.10); }
+.eg-q-none  { color: #d29922; background: rgba(210,153,34,0.12); }
+/* Unknown is muted and dotted — visibly NOT a verdict, and visibly not the
+   amber `none` sitting next to it in the same column. */
+.eg-q-unknown {
+  color: var(--ink-muted); background: none;
+  border-bottom: 1px dotted currentColor; border-radius: 0; padding: 0 1px;
+}
+.eg-q-blank { color: var(--ink-muted); }
+
 /* Seven tracks now: Ticker · Today · Since report · Sales · Character ·
    Pivot · metrics. */
 .bd-row {

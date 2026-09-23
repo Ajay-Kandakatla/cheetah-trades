@@ -101,13 +101,33 @@ class NoSendPathTest(unittest.TestCase):
                           "earnings_reaction", "board_arrival",
                           "price_alert"})
 
-    def test_no_new_push_kind_exists(self):
-        """NEGATIVE — the only KIND under growth/ is the one shipped 2026-09-11."""
+    def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):
+        """NEGATIVE — no kind reaches his phone from this package by accident.
+
+        WIDENED 2026-09-22 — 💎 `capital_quality_upgrade`
+        (growth/quality_alerts.py), on his ask: "Filter and have alerts and new
+        look out for such companies where whcih have very high quality."
+
+        What this guard is really for is unchanged and is asserted separately
+        above: the growth EARNINGS refresh path still sends nothing. The new
+        kind lives in its own module, has its own cron line, and — unlike every
+        other kind in this app — ships OFF, which the next assertion pins.
+        """
         kinds = set()
         for p in (BACKEND / "growth").glob("*.py"):
             kinds |= set(re.findall(r'^KIND\s*=\s*"([^"]+)"',
                                     p.read_text(), re.M))
-        self.assertEqual(kinds, {"growth_demand_alert"})
+        self.assertEqual(kinds, {"growth_demand_alert", "capital_quality_upgrade"})
+
+    def test_the_new_growth_kind_ships_muted(self):
+        """NEGATIVE — a kind he has not seen fire must not start ringing on a
+        deploy. It is registered (or it would target zero devices AND render no
+        toggle) and it is OFF, in default_prefs and for the owner."""
+        from push import subs
+        self.assertIn("capital_quality_upgrade", subs.default_prefs())
+        self.assertIs(subs.default_prefs()["capital_quality_upgrade"], False)
+        self.assertNotIn("capital_quality_upgrade", subs.OWNER_KEEP_SET)
+        self.assertIs(subs.owner_prefs()["capital_quality_upgrade"], False)
 
 
 class CliTest(unittest.TestCase):

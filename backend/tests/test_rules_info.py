@@ -237,10 +237,18 @@ def test_the_alerts_panel_carries_no_INVERTED_verdict_of_another_board():
 
 def test_the_alerts_section_never_imports_the_SEPA_BOARD_stack(monkeypatch):
     """SOURCE GUARD (C9, 2026-09-20). `rules_info` is the S&D rules page and it
-    must not drag the SEPA board modules in just to print two slot minutes
+    must not drag the SEPA board modules in just to print a few slot minutes
     (feedback_sepa_book_scope). The ✨ line reads `sepa.board_arrival`, which
     lazy-imports `sepa.bonde` inside its own row builders, so building the
     alerts lines never loads it.
+
+    THREE lines since 2026-09-22 — 💎 `capital_quality_upgrade` joined them. It
+    reads `growth.quality_alerts` and `growth.capital_quality`, both of which
+    lazy-import everything heavy, so the SEPA footprint of this call is
+    BYTE-IDENTICAL to what it was before that line existed. This guard now
+    names the forbidden modules instead of trusting a count: `sepa.bonde` (the
+    board the ✨ line could have pulled) and `sepa.board_metrics` (the balance
+    sheet the 💎 line could have pulled) must both stay unloaded.
 
     NOTE the deliberate limit of this guard: `rules_info.sections()` HAS built a
     separate 📈 Bonde section from `sepa.bonde.MEASURED` since 2026-09-13, so
@@ -252,9 +260,11 @@ def test_the_alerts_section_never_imports_the_SEPA_BOARD_stack(monkeypatch):
     code = ("import sys;"
             "from supply_demand import rules_info as RI;"
             "lines = RI._non_zone_push_lines();"
-            "assert len(lines) == 2, lines;"
-            "assert 'sepa.bonde' not in sys.modules, sorted(m for m in sys.modules "
-            "if m.startswith('sepa.'));"
+            "assert len(lines) == 3, lines;"
+            "loaded = sorted(m for m in sys.modules if m.startswith('sepa.'));"
+            "assert 'sepa.bonde' not in loaded, loaded;"
+            "assert 'sepa.board_metrics' not in loaded, loaded;"
+            "assert 'sepa.scanner' not in loaded, loaded;"
             "print('ok')")
     out = subprocess.run([sys.executable, "-c", code], cwd=str(ROOT / "backend"),
                          capture_output=True, text=True)
@@ -271,3 +281,12 @@ def test_rules_info_never_imports_sepa_bonde_at_MODULE_level():
     builder = src[src.index("def _non_zone_push_lines"):src.index("def sections")]
     assert "from sepa import board_arrival as BA" in builder
     assert "bonde as BD" not in builder and "import bonde" not in builder
+    # 💎 2026-09-22 — these two are lazy INSIDE the builder. `growth.alerts` and
+    # `growth.tracker` are module-level here and always have been (they carry
+    # MAX_INDIVIDUAL and the screen constants the zone lines quote), but the
+    # quality pair must not join them: `quality_alerts` imports the push stack
+    # and `capital_quality` is one lazy hop from `sepa.board_metrics`.
+    assert "from growth import quality_alerts as QA" in builder
+    assert "from growth import capital_quality as CQ" in builder
+    for form in ("from growth import quality_alerts", "from growth import capital_quality"):
+        assert form not in head, "a module-level %s on the S&D rules page" % form

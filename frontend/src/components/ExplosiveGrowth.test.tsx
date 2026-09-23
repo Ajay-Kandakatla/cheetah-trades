@@ -558,8 +558,9 @@ describe('ExplosiveGrowth — the just-reported highlight', () => {
     mount();
     await waitFor(() => expect(screen.getByText(/Sorted by/)).toBeInTheDocument());
     const body = document.querySelectorAll('tbody tr');
-    // index 15 since 2026-09-21: the 📅 Since report column sits after Price
-    const flagCell = (tr: Element) => tr.querySelectorAll('td')[15];
+    // index 16 since 2026-09-22: 📅 Since report sits after Price (09-21) and
+    // 💎 Quality sits between Balance and Flags (09-22)
+    const flagCell = (tr: Element) => tr.querySelectorAll('td')[16];
     expect(flagCell(body[0]).textContent).toContain('⛔');
     expect(flagCell(body[1]).textContent).toBe('—');
   });
@@ -618,11 +619,13 @@ describe('ExplosiveGrowth — the just-reported highlight', () => {
     expect(screen.queryByText(/📈 Bonde:/)).toBeNull();
   });
 
-  it('the empty-state row spans 17 columns — 16 plus 📅 Since report (2026-09-21)', async () => {
+  it('the empty-state row spans 18 columns — 17 plus 💎 Quality (2026-09-22)', async () => {
     stubEr([], { earnings_fresh_summary: { ...SUMMARY, n: 0, n_fresh: 0, n_known: 0, n_unknown: 0 } });
     mount();
     const cell = await screen.findByText(/nothing matches the current filters/);
-    expect(cell.getAttribute('colspan')).toBe('17');
+    expect(cell.getAttribute('colspan')).toBe('18');
+    // and the span matches the header it has to line up under
+    expect(document.querySelectorAll('thead th')).toHaveLength(18);
   });
 });
 
@@ -763,5 +766,370 @@ describe('📅 the since-the-report column', () => {
     for (const n of ['46.40', '2.21', '8 of 20', '8.19', '4.41']) {
       expect(src).not.toContain(n);
     }
+  });
+});
+
+/* ── 💎 Capital quality (Ajay 2026-09-22) ──────────────────────────────────
+ *
+ * "Ok can you now with in the explosive growth can you add a new tab.. Where we
+ *  look at quality I need filter tab in explosive growth tab, whcih manage
+ *  quality like very less capital and hi ROI."
+ *
+ * The rule this surface lives or dies by: NOTHING IS HIDDEN SILENTLY, and
+ * UNKNOWN IS NEVER FAILED. Measured on the live board 2026-09-22, stacking
+ * every definitional cut leaves 2 of 21 names — so every chip ships OFF, every
+ * chip says how many rows it would take before it is clicked, and a row the
+ * filings could not answer for is never one of them.
+ */
+
+/** One question's served answer. */
+const qPass = (detail: string) => ({ verdict: 'pass', reason: null, detail });
+const qFail = (detail: string) => ({ verdict: 'fail', reason: null, detail });
+const qUnk = (reason: string) => ({ verdict: 'unknown', reason, detail: null });
+
+const Q_KEYS = ['net_cash', 'positive_fcf', 'no_dilution', 'positive_roce',
+                'roce_above_sector', 'capex_below_sector'] as const;
+/** The backend's own labels and kinds, as served. */
+const Q_META: Record<string, { kind: string; label: string }> = {
+  net_cash: { kind: 'definitional', label: 'Holds more cash than debt' },
+  positive_fcf: { kind: 'definitional', label: 'Throws off cash, does not burn it' },
+  no_dilution: { kind: 'definitional', label: 'Share count is not rising' },
+  positive_roce: { kind: 'definitional', label: 'Earns a positive return on capital' },
+  roce_above_sector: { kind: 'relative', label: 'Earns more on capital than its sector' },
+  capex_below_sector: { kind: 'relative', label: 'Ties up less capital than its sector' },
+};
+const NOTE = 'This orders names by balance-sheet quality — how much capital the '
+  + 'business ties up and what it earns on it. Nobody has measured whether that '
+  + 'predicts anything on your universe. It is a screen, not an edge.';
+
+/** A served row read. `comps` is keyed by question; anything left out is
+ *  unknown, exactly as the backend serves a refusal. */
+function cq(comps: Record<string, { verdict: string; reason: string | null; detail: string | null }>,
+            period: string | null = 'FY2026 Q2') {
+  const components: Record<string, unknown> = {};
+  for (const k of Q_KEYS) components[k] = comps[k] ?? qUnk('missing_roce');
+  const v = (want: string) => Q_KEYS.filter((k) => (components[k] as { verdict: string }).verdict === want).length;
+  const passed = v('pass'); const failed = v('fail'); const answered = passed + failed;
+  const grade = answered <= 0 ? 'unknown'
+    : passed === answered ? 'all'
+    : passed === 0 ? 'none'
+    : passed * 2 > answered ? 'most' : 'some';
+  return { grade, passed, failed, unknown: v('unknown'), answered,
+           rank_key: answered > 0 ? passed : null, components,
+           period, period_end: period ? '2026-07-31' : null, measured: false };
+}
+
+/** The served summary, derived from the rows the same way the backend derives
+ *  it — so `hides_n` in these tests is the real failure count and a FE that
+ *  ever counted an UNKNOWN as hidden would disagree with it. */
+function cqSummary(rows: GrowthRow[]) {
+  const reads = rows.map((r) => (r as { capital_quality?: { components: Record<string, { verdict: string }>; grade: string; failed: number; passed: number } }).capital_quality)
+    .filter(Boolean) as { components: Record<string, { verdict: string }>; grade: string; failed: number; passed: number }[];
+  const grades: Record<string, number> = { all: 0, most: 0, some: 0, none: 0, unknown: 0 };
+  for (const r of reads) grades[r.grade] = (grades[r.grade] || 0) + 1;
+  const n = (k: string, want: string) => reads.filter((r) => r.components[k]?.verdict === want).length;
+  return {
+    n: reads.length, grades,
+    components: Q_KEYS.map((k) => ({
+      key: k, kind: Q_META[k].kind, label: Q_META[k].label,
+      pass_n: n(k, 'pass'), fail_n: n(k, 'fail'), unknown_n: n(k, 'unknown'),
+      hides_n: n(k, 'fail'),
+    })),
+    all_pass_n: reads.filter((r) => r.passed === Q_KEYS.length).length,
+    no_fail_n: reads.filter((r) => r.failed === 0).length,
+    peers: { available: true, n_docs: 413, min_peers: 20, sectors: {} },
+    measured: false, measured_note: NOTE,
+    study_script: 'backend/scripts/capital_quality_study.py',
+  };
+}
+
+describe('💎 the capital-quality chips and column', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const stubQ = (rows: GrowthRow[], summary: unknown) =>
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        rows, n: rows.length, groups: [], built_at: '2026-09-22T02:00:00',
+        screen: { min_sales_growth_pct: 100, min_eps_growth_pct: 100 },
+        disclaimer: 'Discovery list, NOT a signal.',
+        capital_quality_summary: summary,
+      }),
+    }) as unknown as Response));
+
+  /* Four names shaped like the live board: a clean one, one that fails a
+   * single question, one the filings could not answer at all, and one that
+   * fails everything it could answer. */
+  const NVDA = row({ symbol: 'NVDA', sales_growth_pct: 100.3,
+    capital_quality: cq({
+      net_cash: qPass('cash > debt'), positive_fcf: qPass('FCF yield 1.90%'),
+      no_dilution: qPass('shares -0.30% YoY'), positive_roce: qPass('ROCE 100.40%'),
+      roce_above_sector: qPass('100.40% vs sector median 8.10% (n=85)'),
+      capex_below_sector: qPass('2.43% vs sector median 6.00% (n=85)'),
+    }) as unknown as GrowthRow['capital_quality'] });
+  const MU = row({ symbol: 'MU', sales_growth_pct: 120.0,
+    capital_quality: cq({
+      net_cash: qPass('cash > debt'), positive_fcf: qPass('FCF yield 3.10%'),
+      no_dilution: qFail('shares +1.40% YoY'), positive_roce: qPass('ROCE 64.80%'),
+      roce_above_sector: qPass('64.80% vs sector median 8.10% (n=85)'),
+      capex_below_sector: qFail('28.00% vs sector median 6.00% (n=85)'),
+    }) as unknown as GrowthRow['capital_quality'] });
+  const NLY = row({ symbol: 'NLY', sales_growth_pct: 140.0,
+    capital_quality: cq({
+      net_cash: qUnk('missing_cash_or_debt'), positive_fcf: qUnk('missing_fcf_yield'),
+      no_dilution: qUnk('missing_shares_yoy'), positive_roce: qUnk('non_operating_sector'),
+      roce_above_sector: qUnk('non_operating_sector'),
+      capex_below_sector: qUnk('non_operating_sector'),
+    }, null) as unknown as GrowthRow['capital_quality'] });
+  const FF = row({ symbol: 'FF', sales_growth_pct: 160.0,
+    capital_quality: cq({
+      net_cash: qFail('cash <= debt'), positive_fcf: qFail('FCF yield -4.20%'),
+      no_dilution: qFail('shares +9.10% YoY'), positive_roce: qFail('ROCE -17.03%'),
+      roce_above_sector: qFail('-17.03% vs sector median 4.40% (n=29)'),
+      capex_below_sector: qFail('31.00% vs sector median 6.00% (n=29)'),
+    }) as unknown as GrowthRow['capital_quality'] });
+
+  const FOUR = [FF, NLY, MU, NVDA];
+  const tickers = () => Array.from(
+    document.querySelectorAll('tbody tr td:first-child a')).map((a) => a.textContent);
+
+  it('every chip ships OFF and carries its own served hide count', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    for (const k of Q_KEYS) {
+      const chip = screen.getByTestId(`eg-qchip-${k}`);
+      expect(chip.getAttribute('aria-pressed')).toBe('false');
+      expect(chip.className).not.toContain('cm-hidden-reason-on');
+    }
+    // the served label and the served failure count, on the chip itself
+    expect(screen.getByTestId('eg-qchip-no_dilution').textContent)
+      .toBe('Share count is not rising (2)');   // MU and FF fail; NLY cannot answer
+    // nothing hidden before he clicks
+    expect(screen.queryByTestId('eg-qhidden')).toBeNull();
+    expect(tickers()).toHaveLength(4);
+  });
+
+  it('a chip hides exactly the rows it says it hides — and its count is the SERVED one', async () => {
+    const summary = cqSummary(FOUR);
+    stubQ(FOUR, summary);
+    mount();
+    await screen.findByTestId('eg-qchips');
+
+    for (const c of summary.components) {
+      fireEvent.click(screen.getByTestId(`eg-qchip-${c.key}`));
+      const left = tickers().length;
+      expect(4 - left).toBe(c.hides_n);
+      expect(screen.getByTestId('eg-qhidden').textContent)
+        .toContain(`${left} showing · ${c.hides_n} hidden`);
+      fireEvent.click(screen.getByTestId(`eg-qchip-${c.key}`));   // and back
+      expect(tickers()).toHaveLength(4);
+    }
+  });
+
+  /* ── the count on a chip is the count of what a click DOES ───────────── */
+  it('REGRESSION: a chip counts the rows ON SCREEN, not the whole served board', async () => {
+    /* The served `hides_n` is measured over every row the backend graded. By
+     * the time the chips are drawn the board has already applied `debtTier`,
+     * which ships ON at "net cash" — and the rows it removes are the levered
+     * ones, i.e. exactly the rows that fail `net_cash`. Served counts promised
+     * to hide a row that was not on the board, and a click moved nothing. */
+    const GOOD = row({ symbol: 'GOOD', sales_growth_pct: 150, cash: 100e6, debt: 1e6,
+      cash_minus_debt: 99e6,
+      capital_quality: cq({
+        net_cash: qPass('cash > debt'), positive_fcf: qPass('FCF yield 2.00%'),
+      }) as unknown as GrowthRow['capital_quality'] });
+    const BAAD = row({ symbol: 'BAAD', sales_growth_pct: 140, cash: 10e6, debt: 100e6,
+      cash_minus_debt: -90e6,
+      capital_quality: cq({
+        net_cash: qFail('cash <= debt'), positive_fcf: qFail('FCF yield -1.00%'),
+      }) as unknown as GrowthRow['capital_quality'] });
+
+    const rows = [GOOD, BAAD];
+    const summary = cqSummary(rows);
+    expect(summary.components.find((c) => c.key === 'net_cash')!.hides_n).toBe(1);
+
+    stubQ(rows, summary);
+    mount();
+    await screen.findByTestId('eg-qchips');
+
+    // the default debt tier already took BAAD — the only row that fails it
+    expect(tickers()).toEqual(['GOOD']);
+    const chip = screen.getByTestId('eg-qchip-net_cash');
+    expect(chip.textContent).toBe('Holds more cash than debt (0)');
+    // the whole-board figure is not thrown away, it is NAMED in the hover
+    expect(chip.getAttribute('title'))
+      .toContain('1 fail it on the whole board, before the other filters.');
+
+    // and a click does what the chip said: nothing
+    fireEvent.click(chip);
+    expect(tickers()).toEqual(['GOOD']);
+    expect(screen.getByTestId('eg-qhidden').textContent).toContain('1 showing · 0 hidden');
+    expect(screen.getByTestId('eg-qchip-net_cash').textContent)
+      .toBe('✓ Holds more cash than debt (0)');
+  });
+
+  it('REGRESSION: the honesty line counts the rows on screen too', async () => {
+    const GOOD = row({ symbol: 'GOOD', sales_growth_pct: 150, cash: 100e6, debt: 1e6,
+      cash_minus_debt: 99e6,
+      capital_quality: cq({
+        net_cash: qPass('cash > debt'), positive_fcf: qPass('FCF yield 2.00%'),
+      }) as unknown as GrowthRow['capital_quality'] });
+    const BAAD = row({ symbol: 'BAAD', sales_growth_pct: 140, cash: 10e6, debt: 100e6,
+      cash_minus_debt: -90e6,
+      capital_quality: cq({
+        net_cash: qFail('cash <= debt'), positive_fcf: qFail('FCF yield -1.00%'),
+      }) as unknown as GrowthRow['capital_quality'] });
+    stubQ([GOOD, BAAD], cqSummary([GOOD, BAAD]));
+    mount();
+    const note = await screen.findByTestId('eg-qnote');
+    // "1 of 2 fail nothing" under a one-row table describes a population he
+    // cannot see. It says which set it counted, and counts the drawn one.
+    expect(note.textContent).toContain('graded 1 of 2 rows on screen');
+    expect(note.textContent).toContain('1 of 1 fail nothing');
+  });
+
+  it('NEGATIVE: a chip never hides a row that could not answer its question', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    // NLY answers nothing. Switch on every question; it must still be drawn.
+    for (const k of Q_KEYS) fireEvent.click(screen.getByTestId(`eg-qchip-${k}`));
+    expect(tickers()).toContain('NLY');
+  });
+
+  it('NEGATIVE: a row with NO read at all is never hidden — it is shown last', async () => {
+    const bare = row({ symbol: 'ZZZZ', sales_growth_pct: 999 });   // no capital_quality
+    const rows = [bare, FF, NVDA];
+    stubQ(rows, cqSummary(rows));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    fireEvent.click(screen.getByTestId('eg-qchip-net_cash'));      // FF fails it
+    expect(tickers()).toEqual(['NVDA', 'ZZZZ']);                   // unread pushed last
+    expect(screen.getByTestId('eg-qhidden').textContent)
+      .toContain('1 without a read (shown last)');
+  });
+
+  it('every chip on leaves a STATED count, never an unexplained empty board', async () => {
+    const rows = [FF];                       // the one name that fails everything
+    stubQ(rows, cqSummary(rows));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    for (const k of Q_KEYS) fireEvent.click(screen.getByTestId(`eg-qchip-${k}`));
+    expect(tickers()).toHaveLength(0);
+    const line = screen.getByTestId('eg-qhidden').textContent!;
+    expect(line).toContain('0 showing · 1 hidden');
+    expect(line).toContain('Holds more cash than debt');           // WHICH question took it
+    expect(screen.getByText(/nothing matches the current filters/)).toBeTruthy();
+    // and one click brings the board back
+    fireEvent.click(screen.getByText('show everything'));
+    expect(tickers()).toEqual(['FF']);
+    expect(screen.queryByTestId('eg-qhidden')).toBeNull();
+  });
+
+  it('the breakdown inside the count line is itself the un-hide button', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    fireEvent.click(screen.getByTestId('eg-qchip-positive_roce'));
+    expect(tickers()).not.toContain('FF');
+    fireEvent.click(screen.getByTestId('eg-qhidden-positive_roce'));
+    expect(tickers()).toContain('FF');
+  });
+
+  it('NEGATIVE: an unknown grade never reads as a failed one', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    await screen.findByTestId('eg-qchips');
+
+    const unk = screen.getByTestId('growth-quality-NLY');
+    const bad = screen.getByTestId('growth-quality-FF');
+
+    expect(unk.textContent).toBe('unknown');
+    expect(unk.getAttribute('data-unknown')).toBe('true');
+    expect(unk.querySelector('span')!.className).toContain('eg-q-unknown');
+    // it is NOT the served word for "answered, and every answer was no"
+    expect(unk.textContent).not.toContain('none');
+    expect(unk.textContent).not.toContain('0/');
+    // the reason the filings could not answer rides the hover, in served words
+    expect(unk.getAttribute('title')).toContain('non_operating_sector');
+    expect(unk.getAttribute('title')).toContain('unknown, not bad');
+
+    // the failed row is a different word, a different tone and a different flag
+    expect(bad.textContent).toContain('none 0/6');
+    expect(bad.getAttribute('data-unknown')).toBe('false');
+    expect(bad.querySelector('span')!.className).toContain('eg-q-none');
+    expect(bad.querySelector('span')!.className).not.toContain('eg-q-unknown');
+  });
+
+  it('the grade cell prints the SERVED word and the SERVED counts, with the period under it', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    expect(screen.getByTestId('growth-quality-NVDA').textContent).toContain('all 6/6');
+    expect(screen.getByTestId('growth-quality-MU').textContent).toContain('most 4/6');
+    // Rule #7 — the FISCAL PERIOD the capital figures came from, not a cache age
+    expect(screen.getByTestId('growth-quality-MU').textContent).toContain('FY2026 Q2');
+    expect(screen.getByTestId('growth-quality-MU').getAttribute('title'))
+      .toContain('Capital figures from FY2026 Q2');
+    // and the hover carries every question's served answer and served evidence
+    const t = screen.getByTestId('growth-quality-MU').getAttribute('title')!;
+    expect(t).toContain('Share count is not rising: fail (shares +1.40% YoY)');
+    expect(t).toContain('Ties up less capital than its sector: fail (28.00% vs sector median 6.00% (n=85))');
+  });
+
+  it('the NOT-MEASURED sentence is SERVED and printed verbatim on the board', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    const note = await screen.findByTestId('eg-qnote');
+    expect(note.textContent).toContain(NOTE);
+    expect(note.textContent).toContain('Capital quality: graded 4 rows');
+    expect(note.textContent).toContain('all 1 · most 1 · some 0 · none 1 · unknown 1');
+    expect(note.textContent).toContain('2 of 4 fail nothing');
+  });
+
+  it('NEGATIVE: the not-measured sentence is not typed into the component or its chips', async () => {
+    for (const f of ['src/components/ExplosiveGrowth.tsx',
+                     'src/components/CapitalQualityChips.tsx']) {
+      const src = await readSource(f);
+      expect(src).not.toContain('It is a screen, not an edge');
+      expect(src).not.toContain('Nobody has measured whether');
+    }
+  });
+
+  it('NEGATIVE: the component composes no verdict — no grade word, no question label', async () => {
+    for (const f of ['src/components/ExplosiveGrowth.tsx',
+                     'src/components/CapitalQualityChips.tsx']) {
+      const src = await readSource(f);
+      // the served grade words are never written down here
+      expect(src).not.toMatch(/['"`](most|some)['"`]/);
+      // nor is any question's wording — the labels arrive
+      for (const k of Q_KEYS) expect(src).not.toContain(Q_META[k].label);
+      // nor the served evidence grammar
+      expect(src).not.toContain('vs sector median');
+    }
+  });
+
+  it('NEGATIVE: no summary served — no chips, no honesty line, a blank cell, no crash', async () => {
+    stubQ([row({ symbol: 'AXTI' })], null);
+    mount();
+    await waitFor(() => expect(screen.getByText('AXTI')).toBeTruthy());
+    expect(screen.queryByTestId('eg-qchips')).toBeNull();
+    expect(screen.queryByTestId('eg-qnote')).toBeNull();
+    expect(screen.queryByTestId('eg-qhidden')).toBeNull();
+    const cell = screen.getByTestId('growth-quality-AXTI');
+    expect(cell.textContent).toBe('—');                    // blank, never a grade
+    expect(cell.getAttribute('title')).toContain('blank, not a grade');
+  });
+
+  it('NEGATIVE: the quality chips change nothing about what the board SELECTS', async () => {
+    stubQ(FOUR, cqSummary(FOUR));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    const before = tickers();
+    fireEvent.click(screen.getByTestId('eg-qchip-no_dilution'));
+    fireEvent.click(screen.getByTestId('eg-qchip-no_dilution'));
+    expect(tickers()).toEqual(before);                     // same rows, same order
+    expect(screen.getByText(/🚀 4 names/)).toBeTruthy();   // and the same screen count
   });
 });

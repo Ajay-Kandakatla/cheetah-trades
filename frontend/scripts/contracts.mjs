@@ -4190,6 +4190,118 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '\u{1F48E} capital quality: not ONE invented number, and no attribution it cannot prove (2026-09-22)',
+    file: 'src/lib/capitalQuality.ts',
+    // Ajay 2026-09-22: "quality like very less capital and hi ROI", plus
+    // "Rakesh Junjunwala used to call them Ghee companies. Look in to this."
+    //
+    // TWO things this contract exists to hold, both of which have burned this
+    // app before:
+    //   1. RULE #1. Four researchers and three adversarial refuters could not
+    //      find ONE sourced link between Jhunjhunwala and "ghee companies" —
+    //      no interview, no press, no book, just two social posts, one of them
+    //      unreadable. The Bonde board already shipped FABRICATED quotes
+    //      attributed to a named investor once. His name stays off this one.
+    //   2. NO FITTED THRESHOLD. Every cut is definitional or sector-relative.
+    //      The moment a "ROCE > 20" appears, the board is claiming a number
+    //      nobody measured.
+    checks: () => {
+      const errs = [];
+      const cr = read('../backend/sepa/capital_returns.py');
+      const cq = read('../backend/growth/capital_quality.py');
+      const files = {
+        'capital_returns.py': cr,
+        'capital_quality.py': cq,
+        'capitalQuality.ts': read('src/lib/capitalQuality.ts'),
+        'CapitalQualityChips.tsx': read('src/components/CapitalQualityChips.tsx'),
+        'newFeatures.ts': read('src/lib/newFeatures.ts'),
+      };
+
+      // 1 — the attribution must not reach any surface. newFeatures.ts is
+      // exempt ONLY because its card is where the negative finding is
+      // reported to him; it must say it could NOT be verified.
+      for (const [name, src] of Object.entries(files)) {
+        if (name === 'newFeatures.ts') continue;
+        if (/ghee|jhunjhunwala|junjunwala|big bull/i.test(src)) {
+          errs.push(`${name} carries an attribution that could NOT be sourced`);
+        }
+      }
+      const nf = files['newFeatures.ts'];
+      if (/jhunjhunwala/i.test(nf) && !/could not verify|not verify/i.test(nf)) {
+        errs.push('the \u2728 card names him without saying the attribution is UNVERIFIED');
+      }
+
+      // 2 — the sanity bound ships OFF, so the package invents no number
+      if (!/MIN_DENOMINATOR_ASSET_SHARE\s*=\s*0\.0\b/.test(cr)) {
+        errs.push('MIN_DENOMINATOR_ASSET_SHARE must ship at 0.0 \u2014 it is the one '
+          + 'non-definitional number in the package and nobody measured a value for it');
+      }
+      // 3 — the peer floor is the app's OWN floor, not a new one
+      if (!/MIN_PEERS\s*=\s*20\b/.test(cq) || !/MIN_SECTOR_N/.test(cq)) {
+        errs.push('MIN_PEERS must be 20 AND cite longterm.MIN_SECTOR_N, not a fresh number');
+      }
+      // 4 — no fitted cut anywhere in the read
+      for (const m of cq.matchAll(/^(?!\s*#).*?(roce|roic|roe|capex|fcf)[a-z_]*\s*[<>]=?\s*(-?\d+(\.\d+)?)/gim)) {
+        if (!/[<>]=?\s*0(\.0*)?\s*$/.test(m[0])) {
+          errs.push(`a FITTED cut survives in capital_quality.py: "${m[0].trim()}" `
+            + '\u2014 only definitional (vs 0) or sector-relative cuts are allowed');
+        }
+      }
+      // 5 — it must never claim an edge
+      if (!/\bMEASURED\s*=\s*False\b/.test(cq) || !/\bMEASURED\s*=\s*False\b/.test(cr)) {
+        errs.push('both modules must ship MEASURED = False \u2014 no study exists');
+      }
+      // 6 — it gates and sorts nothing (Rule #10)
+      if (/SORT_KEYS[^\n]*capital_quality|capital_quality[^\n]*SORT_KEYS/.test(cq + files['capitalQuality.ts'])) {
+        errs.push('capital quality entered a sort key \u2014 it is a screen, not a ranking');
+      }
+      // 7 — UNKNOWN is not a failure
+      if (!/unknown/i.test(files['capitalQuality.ts'])) {
+        errs.push('the FE must distinguish UNKNOWN from a failed component');
+      }
+      if (!/id: 'growth-capital-quality-2026-09-22'/.test(nf)) {
+        errs.push('capital quality needs its \u2728 entry');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '\u{1F48E} the quality chips hide nothing silently, and ship OFF (2026-09-22)',
+    file: 'src/components/ExplosiveGrowth.tsx',
+    // Measured on the live board 2026-09-22: stacking every definitional cut
+    // leaves 2 of 21 (NVDA, TER); "no dilution" alone takes 11 -> 2. The same
+    // shape as the `debt === 0` filter that returned ZERO of 29 rows and is
+    // why `debtTier` defaults to "net cash". A chip that empties the board
+    // without saying so reads as a broken board.
+    checks: (src) => {
+      const errs = [];
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      const chips = read('src/components/CapitalQualityChips.tsx');
+
+      // every chip OFF on first paint
+      if (!/useState<ReadonlySet<string>>\(\(\)\s*=>\s*new Set<string>\(\)\)/.test(code)) {
+        errs.push('the quality chips must ship with an EMPTY set \u2014 any default ON '
+          + 'hides rows on first paint on a 21-name board');
+      }
+      // the hidden count and its reasons must be rendered
+      if (!/CapitalQualityHidden/.test(code)) errs.push('no hidden-count line is rendered');
+      if (!/CapitalQualityNote/.test(code)) errs.push('the not-measured note is not rendered');
+      // the count must be over the DRAWN rows, not the whole served board
+      if (!/visibleComponentCounts|visibleCounts/.test(code)) {
+        errs.push('the chip counts must be measured over the rows actually on screen \u2014 '
+          + 'a count over the whole board promises hides the other filters already made');
+      }
+      // un-hide PER REASON (a per-key button that toggles that one question
+      // back off), plus a clear-all. Not a single all-or-nothing reset.
+      if (!/hiddenByKey\[c\.key\]/.test(chips) || !/onClick=\{\(\)\s*=>\s*onToggle\(c\.key\)\}/.test(chips)) {
+        errs.push('each hidden reason must be individually un-hideable \u2014 a per-key '
+          + 'control that names its own row count, not one all-or-nothing reset');
+      }
+      if (!/onClear/.test(chips)) errs.push('no clear-all alongside the per-reason un-hide');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

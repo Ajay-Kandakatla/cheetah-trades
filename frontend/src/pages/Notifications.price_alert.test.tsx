@@ -130,8 +130,11 @@ describe('Notifications · 🔔 price alerts are back (2026-09-21)', () => {
     const d = detail();
     expect(d).not.toMatch(/\b\d+ ?h(r|rs|our|ours)?\b/i);
     expect(d.toLowerCase()).not.toContain('bounce');
-    const { container } = draw();
-    expect(container.textContent).not.toContain('OFF BY DEFAULT');
+    // Scoped to THIS detail (2026-09-22): the page as a whole now carries one
+    // legitimate OFF BY DEFAULT, on 💎 capital_quality_upgrade. What this test
+    // is for is that the 🔔 kind is not still described as off.
+    expect(d).not.toContain('OFF BY DEFAULT');
+    expect(d).toContain('ON BY DEFAULT');
   });
 
   it('Essentials carries it and the derived presets follow the group', () => {

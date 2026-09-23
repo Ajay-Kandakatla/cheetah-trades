@@ -45,6 +45,14 @@ export type NotificationPrefs = {
   /* ✨ A new name arrived on 📈 Bonde or 🚀 Explosive Growth
      (sepa/board_arrival.py, 2026-09-20, same words). ON. */
   board_arrival?: boolean;
+  /* 💎 A balance sheet IMPROVED on a fresh fiscal quarter — net cash, FCF
+     positive, dilution stopped, return on capital positive
+     (growth/quality_alerts.py, 2026-09-22: "Filter and have alerts and new look
+     out for such companies where whcih have very high quality").
+     OFF — the only trading kind that ships muted. It is not in the backend
+     owner keep-set, so a re-registered device stays muted too; he switches it on
+     here. Fires on a FAIL → PASS crossing, never on the state "is high quality". */
+  capital_quality_upgrade?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;
