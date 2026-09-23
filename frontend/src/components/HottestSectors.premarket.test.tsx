@@ -373,8 +373,11 @@ describe('asOfLine — the pre-market prefix', () => {
     // and the live-day sentence is untouched too
     const live = asOfLine({ as_of: '2026-09-18', benchmark: 'RSP',
                             d1: { live: true, close_as_of: '2026-09-18' } });
-    expect(live).toBe('Today is live, measured against RSP · 5 days, 21 days,'
-      + ' Sales YoY and every sector, industry and roster row are from the 2026-09-18 close');
+    // 2026-09-23: the group rows ride the live read too, so this sentence
+    // changed — but it is still the PRE block's job to leave it alone.
+    expect(live).toBe('Today is live for the names AND for every sector, industry and'
+      + ' roster row, measured against RSP · 5 days, 21 days and Sales YoY are from'
+      + ' the 2026-09-18 close');
   });
 });
 

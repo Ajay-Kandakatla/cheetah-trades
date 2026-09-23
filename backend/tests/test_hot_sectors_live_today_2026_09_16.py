@@ -206,10 +206,18 @@ def test_NEGATIVE_the_pure_build_makes_no_live_read_and_says_so():
 
 # ── 4. NEGATIVE: group medians are never a live/close mix ───────────────────
 def test_NEGATIVE_a_group_median_is_never_a_mix_of_live_and_close_members(monkeypatch):
-    """TENB live −3.20, QLYS on its close +1.28. The industry row under them
-    has no shipped median, so it computes one — and it must compute it over the
-    CLOSE values of BOTH, not over one of each. A median of one live and one
-    last-close value is true of neither session."""
+    """TENB live −3.20, QLYS on its close +1.28.
+
+    THE INVARIANT IS UNCHANGED AND IS THE POINT OF THIS TEST: a median of one
+    live and one last-close value is true of neither session, and nothing may
+    ever produce one.
+
+    WHAT CHANGED 2026-09-23 (Ajay: "Its actualy rotating this morning I wanna
+    see live rotattion") is which of the two honest answers the row gives. It
+    used to median BOTH closes; it now medians the LIVE members only and says
+    how many that was. The forbidden middle — one of each — is pinned below
+    exactly as it always was.
+    """
     _open_market(monkeypatch)
     live = H.live_day_moves(
         ["TENB", "QLYS"], "RSP",
@@ -219,16 +227,26 @@ def test_NEGATIVE_a_group_median_is_never_a_mix_of_live_and_close_members(monkey
     sector = board["sectors"][0]
     ind = sector["industries"][0]
 
-    closes = [8.26, 1.28]                     # TENB, QLYS — both on the close
-    assert ind["rel_1d"] == pytest.approx(sum(closes) / 2)
-    assert ind["d1_source"] == "close" and ind["rel_1d_close"] == ind["rel_1d"]
-    # the mixed median would have been (−3.20 + 1.28) / 2 = −0.96
+    # the live cohort is TENB alone, and the row says so
+    assert ind["d1_source"] == "live"
+    assert ind["rel_1d"] == pytest.approx(-3.20)
+    assert ind["d1_live_n"] == 1 and ind["d1_live_of"] == 2
+
+    # THE FORBIDDEN NUMBER: (−3.20 + 1.28) / 2 = −0.96, one live and one close
     assert ind["rel_1d"] != pytest.approx(-0.96)
-    # the shipped sector row is the rotation grid's own sampled median and is
-    # reused verbatim — it does not move either, and it says close
-    assert sector["rel_1d"] == pytest.approx(-0.59)
-    assert sector["d1_source"] == "close"
-    assert board[H.D1_KEY]["group_basis"] == "close"
+    # and the both-closes median (8.26 + 1.28) / 2 = 4.77 is not served as the
+    # live figure either — it is kept, under its own key
+    closes = [8.26, 1.28]
+    assert ind["rel_1d"] != pytest.approx(sum(closes) / 2)
+    assert ind["rel_1d_close"] == pytest.approx(sum(closes) / 2)
+    # the same-cohort close is TENB's own: comparable, unlike the two above
+    assert ind["d1_live_close"] == pytest.approx(8.26)
+
+    # the shipped SECTOR row keeps the rotation grid's sampled close under its
+    # own key while its day cell rides the live cohort
+    assert sector["rel_1d_close"] == pytest.approx(-0.59)
+    assert sector["d1_source"] == "live" and sector["rel_1d"] == pytest.approx(-3.20)
+    assert board[H.D1_KEY]["group_basis"] == H.D1_LIVE
 
 
 # ── 5. The as-of block says which columns are live ─────────────────────────

@@ -330,11 +330,17 @@ describe('NEGATIVES — what a re-scan must never do', () => {
     expect(screen.getByText(/no live prices came back/)).toBeTruthy();
   });
 
-  it('the tooltip says the sector rows do NOT move', async () => {
+  /* REVERSED 2026-09-23 on Ajay's ask ("Its actualy rotating this morning I
+     wanna see live rotattion"). The group rows DO move on a re-scan now — they
+     are medians over the same live prints — so the tooltip must say so, and it
+     must still be honest about the three columns that genuinely cannot move. */
+  it('the tooltip says the sector rows DO move, and names what cannot', async () => {
     stubSeq([ok(payload(LIVE_D1))]);
     view();
     const title = (await screen.findByTestId('hottest-rescan')).getAttribute('title') || '';
-    expect(title).toContain('Sector, industry and roster rows');
-    expect(title).toContain('stay on the last close');
+    expect(title).toContain('including the sector, industry and roster rows');
+    expect(title).toContain('5 days, 21 days and Sales YoY stay on the last close');
+    // NEGATIVE: the old claim must be gone, not merely outweighed by new prose.
+    expect(title).not.toMatch(/rows.{0,40}stay on\s+the last close/);
   });
 });

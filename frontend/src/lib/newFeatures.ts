@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-23, mid-morning, screenshot of the Energy (curated) row
+  // reading "−1.7% last close" over live names: "I think the sector rotation
+  // is wrong.. Can you show me till or current market instead of last close.
+  // Its actualy rotating this morning I wanna see live rotattion".
+  { id: 'hottest-live-group-rows-2026-09-23',
+    label: '\u{1F525} The sector, industry and roster rows on \u{1F525} Hottest are LIVE now \u2014 you were reading a rotation that had already turned. You said the sector rotation looked wrong. It was. '
+      + 'WHAT WAS HAPPENING: since last week the NAME rows have been live \u2014 each name\u2019s own move this session against RSP. The sector and roster rows above them were still the previous close. At 10:44 this morning 1,751 of 1,753 names were priced live and every group row was stamped Sept 22. '
+      + 'AND IT WAS NOT A SMALL GAP. 19 of the 29 roster rows carried the OPPOSITE SIGN to their own members trading at that minute. Semi materials printed +3.9% over a cohort that was \u22121.5% on the tape. Critical minerals +3.0% over \u22123.0%. AI semis +2.6% over \u22121.3%. Crypto +0.4% over \u22121.6%. You were ranking last night. '
+      + 'NOW: every group row is the median over its OWN members trading right now, on the same benchmark and the same yardstick as the names under it. Sort on Today and the sectors re-rank intraday, and \u21bb Re-scan moves them too \u2014 it could not before. '
+      + 'NEVER HALF AND HALF. A member with no live print is LEFT OUT of the median, not folded in at yesterday\u2019s move \u2014 that blend is exactly why these rows sat on the close, and it is still refused. When a row goes live on fewer members than it has, the cell prints the count beside the number. When NOT ONE member has a live print, the row falls back to the close whole and still says \u201clast close\u201d. '
+      + 'ONE NUMBER I WILL NOT PUT NEXT TO ANOTHER. A sector\u2019s close figure is a median over the rotation grid\u2019s 40-name sample; the live figure is over the full membership. They are different sets of names, so the tooltip shows what THOSE SAME names closed at instead, and a build check fails if anything ever subtracts one from the other. '
+      + '5 days, 21 days, Sales YoY and the \u2600\ufe0f pre-market column are untouched and still the snapshot\u2019s. Nothing here is a signal, a gate or a threshold \u2014 it is a return between two prints. '
+      + 'YOUR CALL: a roster where only 2 of 19 members have printed still serves a median over those 2, marked 2/19. The pre-market column dims a thin cohort like that; the day column does not. Want it dimmed the same way?',
+    addedAt: '2026-09-23', route: '/chart-maps?tab=hot_sectors' },
   // Ajay 2026-09-22/23: "I am tired of the pre live post.. It give me for an
   // entire week with lil candles", "just last 24 hours", "Just simpliyfy this
   // drop down. I wanna use this for entries during the day and it been useless

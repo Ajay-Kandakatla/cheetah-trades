@@ -116,16 +116,41 @@ def test_closed_market_spends_no_provider_call(monkeypatch):
     assert calls == []
 
 
-def test_group_basis_is_still_close_after_a_live_build(monkeypatch):
-    """THE LIMITATION, pinned. If this test ever fails, the sector ranking
-    started moving on a click and every surface's wording is now wrong."""
+def test_the_group_rows_ride_the_live_read_and_the_basis_says_so(monkeypatch):
+    """LIFTED 2026-09-23 on Ajay's ask ("Its actualy rotating this morning I
+    wanna see live rotattion").
+
+    This test used to pin the LIMITATION — that a re-scan could not move a
+    sector row — and warned that if it ever failed, "the sector ranking started
+    moving on a click and every surface's wording is now wrong." It did, on
+    purpose, and the wording moved with it: `asOfLine`, the re-scan tooltip and
+    the ℹ️ panel are all re-pinned in the frontend suite. The invariant that
+    survives is that ONE flag drives the basis and every row, so the board can
+    never claim a session its rows do not have.
+    """
     board = _build_with(_live(lambda s: _GOOD, monkeypatch))
+    assert board[H.D1_KEY]["group_basis"] == H.D1_LIVE
+    assert H.D1_LIVE_GROUP_BASIS == H.D1_LIVE      # a token, never prose
+    assert H.D1_GROUP_BASIS == H.D1_CLOSE          # the closed-board value
+    for sec in board["sectors"]:
+        assert sec["d1_source"] == H.D1_LIVE
+        assert sec["d1_live_n"] > 0
+        for ind in sec.get("industries") or []:
+            # live, or honestly back on the close with a zero count — never a
+            # live source with nothing live in it
+            assert (ind["d1_source"] == H.D1_LIVE) == (ind["d1_live_n"] > 0)
+
+
+def test_NEGATIVE_a_closed_board_still_serves_the_close_basis(monkeypatch):
+    """The other half of the flag: no live read, no live rows, no live keys."""
+    monkeypatch.setattr(H, "_closed_reason", lambda: "holiday 2026-11-26")
+    board = _build_with(H.live_day_moves(["TENB"], "RSP", fetch=lambda s: {}))
     assert board[H.D1_KEY]["group_basis"] == H.D1_CLOSE
-    assert H.D1_GROUP_BASIS == H.D1_CLOSE
     for sec in board["sectors"]:
         assert sec["d1_source"] == H.D1_CLOSE
+        assert "d1_live_n" not in sec
         for ind in sec.get("industries") or []:
-            assert ind["d1_source"] == H.D1_CLOSE
+            assert ind["d1_source"] == H.D1_CLOSE and "d1_live_n" not in ind
 
 
 # ---------------------------------------------------------------------------

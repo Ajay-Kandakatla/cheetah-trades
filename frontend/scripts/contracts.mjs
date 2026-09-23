@@ -4305,6 +4305,66 @@ const CONTRACTS = [
       return errs;
     },
   },
+
+  /* ── 🔥 Hottest: a live group row states its cohort and never blends ──────
+   *
+   * Ajay 2026-09-23: "I think the sector rotation is wrong.. Its actualy
+   * rotating this morning I wanna see live rotattion." The group rows now go
+   * live with the names. Two ways that can quietly go wrong, and both are
+   * exactly the reason the rows sat on the close for a week:
+   *
+   *   1. BLENDING. A median over the live members PLUS the last-close members
+   *      describes no session at all. The row must filter on `d1_live_n` and
+   *      the screen must mark a row that has no live member.
+   *   2. DIFFERENCING TWO COHORTS. `rel_1d_close` is a median over a DIFFERENT
+   *      set of names (for a sector, the rotation grid's 40-name sample) than
+   *      `rel_1d`. `d1_live_close` is the same-cohort close and is the ONLY
+   *      close the tooltip may quote.
+   */
+  {
+    name: 'hottest live group rows: cohort stated, never blended, never differenced',
+    file: 'src/components/HottestSectors.tsx',
+    checks: (src) => {
+      const errs = [];
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+      // the tooltip quotes the SAME-COHORT close, never the row's other one
+      const cell = code.slice(code.indexOf('export function dayCell'),
+                              code.indexOf('export function asOfLine'));
+      if (!cell) { errs.push('dayCell not found'); return errs; }
+      if (!/was = r\.d1_live_close/.test(cell)) {
+        errs.push('the live group tooltip must read `d1_live_close` \u2014 the close over the '
+          + 'SAME members. `rel_1d_close` is a median over a different cohort.');
+      }
+      if (/groupLive[\s\S]{0,400}rel_1d_close/.test(cell)) {
+        errs.push('`rel_1d_close` must not reach the live group sentence \u2014 for a sector '
+          + 'it is the rotation grid\u2019s 40-name sample, not these names');
+      }
+      // the two close numbers are never subtracted from anything on this screen
+      if (/(rel_1d\s*[-+]\s*rel_1d_close|rel_1d_close\s*[-+]\s*rel_1d|d1_live_close\s*[-+]\s*r?\.?rel_1d)/.test(code)) {
+        errs.push('two group medians over different cohorts are being differenced \u2014 '
+          + 'a delta between them is a number no set of names produced');
+      }
+      // the denominator is printed only when the cohort is partial
+      if (!/n\s*<\s*of/.test(cell)) {
+        errs.push('`partial` must be `n < of` \u2014 a live median over FEWER members than '
+          + 'the row has must print its denominator');
+      }
+      if (!/d1_live_n\}\/\{r\.d1_live_of/.test(code)) {
+        errs.push('the partial denominator (n/of) never reaches the cell');
+      }
+      // a row with no live member is still MARKED, exactly as before
+      if (!/const marked = boardLive && !rowLive/.test(cell)) {
+        errs.push('a group row with no live member must still be marked \u201clast close\u201d '
+          + '\u2014 a live header over a close number is the bug this replaced');
+      }
+      // and nothing here decides the basis by reading prose
+      if (/group_basis\s*(===|!==)\s*['\`"](?!live|close)/.test(code)) {
+        errs.push('`group_basis` is a token (live|close); never string-match a sentence');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

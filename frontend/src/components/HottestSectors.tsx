@@ -46,9 +46,15 @@ import type { HsAmd, HsAmdSummary } from '../lib/hottestAmd';
  *  finished session. Backend-owned (rotation/hottest.py) — never inferred here
  *  from whether a number happens to look fresh. */
 export type HsD1Source = 'live' | 'close';
-/** The day leg's basis for the whole board. Group rows are ALWAYS `close`:
- *  a sector median is taken over every member it counts, and a median mixing
- *  live members with last-close members describes no session at all. */
+/** The day leg's basis for the whole board.
+ *
+ *  `group_basis` was pinned to `close` until 2026-09-23, when Ajay read a
+ *  rotating morning off rows that were a day behind the names under them
+ *  ("Its actualy rotating this morning I wanna see live rotattion" — 19 of the
+ *  29 roster rows carried the opposite SIGN to their own members' live median).
+ *  A group row now goes live with the board, as the median over the members of
+ *  that row that have a live print — never a median mixing live members with
+ *  last-close ones, which describes no session at all. */
 export type HsD1 = {
   basis?: HsD1Source; live?: boolean;
   /** When the live read was taken (ISO), and which close the rest is from. */
@@ -56,6 +62,9 @@ export type HsD1 = {
   benchmark?: string | null; benchmark_move?: number | null;
   symbols?: number | null; live_names?: number | null;
   group_basis?: HsD1Source;
+  /** The sentence for `group_basis`, written by the backend that enforces it —
+   *  this surface never composes the cohort rule itself. */
+  group_basis_note?: string | null;
   /** Plain-English why, when the board is NOT live. Must reach the screen. */
   reason?: string | null; note?: string | null;
   /** WHY a re-scan cannot help: the market calendar's own reason (weekend /
@@ -75,6 +84,13 @@ export type HsD1 = {
 export type HsDayLeg = {
   rel_1d?: number | null; rel_1d_close?: number | null;
   ret_1d_close?: number | null; d1_source?: HsD1Source;
+  /** GROUP ROWS ONLY (2026-09-23). How many of the row's members had a live
+   *  print, out of how many it has — the live median's own denominator, which
+   *  is NOT the membership `rel_1d_close` was taken over. `d1_live_close` is
+   *  the close median over THOSE SAME members, so the pair is comparable;
+   *  `rel_1d_close` and `rel_1d` are not, and are never subtracted here. */
+  d1_live_n?: number | null; d1_live_of?: number | null;
+  d1_live_close?: number | null;
 };
 
 /* ☀️ Pre-market scan (Ajay 2026-09-21: "In the hot sector table can I get a
@@ -529,18 +545,35 @@ export const EXPAND_ALL_TITLE = (rows: number, open: boolean, byIndustry: boolea
  *  When the whole board is on the close the header already says so and 300
  *  identical marks would be noise, so the rows stay clean. */
 export function dayCell(r: HsDayLeg, d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark'> | null,
-                        isGroup = false): { text: string; marked: boolean; title: string } {
+                        isGroup = false):
+                        { text: string; marked: boolean; title: string; partial: boolean } {
   const boardLive = !!d?.d1?.live;
   const rowLive = r.d1_source === 'live';
   const day = d?.d1?.close_as_of || d?.as_of || '';
   const marked = boardLive && !rowLive;
   const why = isGroup
-    ? `This row is the median over ALL of its members, taken on the ${day || 'last'} close`
-      + ' — a median mixing live names with last-close names would describe no session at all.'
+    ? `Not one member of this row has a live print, so this is the median over ALL of its`
+      + ` members taken on the ${day || 'last'} close — a median mixing live names with`
+      + ' last-close names would describe no session at all.'
     : `No live price came back for this name, so this is its ${day || 'last'} close move`
       + ' — not today.';
-  const live = `Today's move so far, measured against ${benchSymbol(d)} the same way the other columns are.`;
-  return { text: pct(r.rel_1d), marked, title: marked ? why : (rowLive ? live : '') };
+  /* A LIVE GROUP ROW says what it is a median OF, with the denominator, and
+   * gives the same-cohort close beside it. The row's other close number
+   * (`rel_1d_close`) is a median over a different set — for a sector, the
+   * rotation grid's own sample — so it is deliberately NOT the one shown here
+   * and the two are never differenced. */
+  const n = r.d1_live_n, of = r.d1_live_of, was = r.d1_live_close;
+  const groupLive = `The median over the ${n ?? '—'} of this row's ${of ?? '—'} members`
+    + ` trading now, measured against ${benchSymbol(d)} the same way the other columns are.`
+    + (was != null ? ` Those same ${n} names closed at ${pct(was)} on ${day || 'the last close'}.` : '');
+  const nameLive = `Today's move so far, measured against ${benchSymbol(d)} the same way the other columns are.`;
+  const live = isGroup ? groupLive : nameLive;
+  /* PARTIAL = this row went live on fewer members than it has. `n < of` is the
+   * one test and both numbers are served; a missing count is NOT partial,
+   * because inventing a denominator is worse than showing none. */
+  const partial = !!(rowLive && n != null && of != null && n < of);
+  return { text: pct(r.rel_1d), marked, partial,
+           title: marked ? why : (rowLive ? live : '') };
 }
 
 /** The line under the controls. It must say which columns are live and which
@@ -548,8 +581,9 @@ export function dayCell(r: HsDayLeg, d?: Pick<HsPayload, 'd1' | 'as_of' | 'bench
 export function asOfLine(d?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre'> | null): string {
   const day = d?.d1?.close_as_of || d?.as_of || '—';
   const base = d?.d1?.live
-    ? `Today is live, measured against ${benchSymbol(d)} · 5 days, 21 days,`
-      + ` Sales YoY and every sector, industry and roster row are from the ${day} close`
+    ? `Today is live for the names AND for every sector, industry and roster row,`
+      + ` measured against ${benchSymbol(d)} · 5 days, 21 days and Sales YoY are from`
+      + ` the ${day} close`
     : `every column is from the ${day} close — the last finished session, not today's`
       + (d?.d1?.reason ? ` (${d.d1.reason})` : '');
   /* ☀️ The pre-market prefix, in the SERVER's own words. Three states, in this
@@ -806,6 +840,13 @@ function LegCells({ r, d1, isGroup }: {
         {/* Never silent: a close value standing in a live column says so on
             the row, not only in a tooltip. */}
         {day.marked ? <span className="hs-d1-mark"> last close</span> : null}
+        {/* A live group median over only SOME of the row's members prints its
+            denominator, exactly as the Pre-mkt column does. Silent when every
+            member printed, which is the normal case in session — a count
+            beside all 29 roster rows every minute is noise, a count beside the
+            one row where half the names are dark is the whole point. */}
+        {isGroup && day.partial
+          ? <span className="hs-pre-n"> · {r.d1_live_n}/{r.d1_live_of}</span> : null}
       </td>
       {(['rel_5d', 'rel_21d'] as const).map((k) => (
         <td key={k} className={`mono hs-num ${tone(r[k])}`}>{pct(r[k])}</td>
@@ -1149,18 +1190,19 @@ export function HottestSectors() {
         </button>
         {/* ↻ Re-scan (Ajay 2026-09-18: "can you give me rebuild or rescan
             button in hot sectors"). Same class, label and disabled shape as the
-            Chart Maps re-scan, so the two read as one control. It re-runs the
-            live NAME leg; the sector ranking does NOT move — see the tooltip
-            and the InfoButton. */}
+            Chart Maps re-scan, so the two read as one control. Since
+            2026-09-23 it DOES move the sector ranking: the group rows ride the
+            same live read as the names. */}
         <button type="button" className="cm-rescan" data-testid="hottest-rescan"
                 disabled={loading || rescanBlocked !== null}
                 title={rescanBlocked
                   ? `Re-scan is off because ${rescanBlocked}. Every column here is already`
                     + ' the last finished session.'
                   : (rescanQuiet ? `${rescanQuiet}. ${RESCAN_COST_SENTENCE} ` : '')
-                    + "Re-reads today's live price for every name on this board and re-ranks it. "
-                    + 'Sector, industry and roster rows, 5 days, 21 days and Sales YoY stay on'
-                    + ' the last close.'}
+                    + "Re-reads today's live price for every name on this board and re-ranks it "
+                    + '— including the sector, industry and roster rows, which are medians over'
+                    + ' their own members trading now. 5 days, 21 days and Sales YoY stay on the'
+                    + ' last close.'}
                 onClick={onRescan}>
           {loading ? 'Scanning…' : '↻ Re-scan'}
         </button>
@@ -1179,19 +1221,23 @@ export function HottestSectors() {
             against <b>{benchSymbol(data)}</b>,
             the equal-weight benchmark — so a name is measured against the average stock, not the
             mega-caps. Open a sector for its industries, then its names.</p>
-          <p><b>What &ldquo;Today&rdquo; means here.</b> While the market is open, the day column on a
-            NAME row is that name&rsquo;s own move so far in this session, still measured against
-            {' '}<b>{benchSymbol(data)}</b> exactly like the other legs. Everything else — 5 days,
-            21 days, Sales YoY, and every sector, industry and roster row — comes from the last
-            close, because the rotation snapshot is built after the bell. A group row is the median
-            over <i>all</i> its members, so it can never be half live and half last-close; it stays
-            on the close and says so. When the tape is shut, or no live price comes back, the column
-            header itself changes to the session it is showing, and any single row that missed the
-            live read is marked <i>last close</i> where you can see it.</p>
+          <p><b>What &ldquo;Today&rdquo; means here.</b> While the market is open, the day column is
+            this session so far, measured against <b>{benchSymbol(data)}</b> exactly like the other
+            legs — on a NAME row that is the name&rsquo;s own move, and on a sector, industry or
+            roster row it is the median over the members of that row <i>trading now</i>. So the
+            rotation you are ranking on is the one happening this minute, not the one that finished
+            last night. 5 days, 21 days and Sales YoY still come from the last close, because the
+            rotation snapshot is built after the bell. Two things a live group row is careful about:
+            it is never half live and half last-close — a member with no live print is left out of
+            the median rather than counted at yesterday&rsquo;s move — and when it went live on
+            fewer members than it has, the cell prints that count beside the number. When the tape
+            is shut, or no live price comes back, the column header itself changes to the session it
+            is showing, and any row that missed the live read is marked <i>last close</i> where you
+            can see it.</p>
           <p><b>The ↻ Re-scan button.</b> It re-reads today&rsquo;s live price for every name on
-            this board and re-ranks the table on it. What it can <i>not</i> do is move a sector,
-            industry or roster row: those are medians over their full membership taken on the last
-            close, and a median mixing live names with last-close names describes no session at all.
+            this board and re-ranks the table on it &mdash; the group rows included, because they
+            are medians over the same live prints. What it can <i>not</i> do is move 5 days, 21 days
+            or Sales YoY: those are the snapshot&rsquo;s, and the snapshot is built after the bell.
             The line above the table always says which basis you are looking at. When the tape is
             shut the button is off and says why, in the market calendar&rsquo;s own words; outside
             {' '}{data?.d1?.session_window || '9:30–16:00 ET'} it still works but warns you the day

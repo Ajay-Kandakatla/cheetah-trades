@@ -292,7 +292,47 @@ D1_KEY = "d1"
 # sector / industry / roster median is a median over ALL of its members, and
 # a median taken over live values for some members and last-close values for
 # the rest is true of neither set. See `_close_d1`.
+#
+# 2026-09-23 — HE CAUGHT THIS ON A ROTATING MORNING. Ajay: "I think the sector
+# rotation is wrong.. Can you show me till or current market instead of last
+# close. Its actualy rotating this morning I wanna see live rotattion."
+# Measured on the live board at 10:44 ET: the NAME rows were live (1,751 of
+# 1,753 priced) while every sector / industry / roster row sat on the
+# 2026-09-22 close, and **19 of the 29 roster rows carried the OPPOSITE SIGN**
+# to their own members' live median — semi_materials printed +3.94 over a
+# cohort that was −1.53 on the tape at that minute. A rotation board whose
+# rotation rows are a day behind the names under them is not a rotation board.
+#
+# So the group day leg goes live too, on ONE cohort and saying which: the
+# median over the members of that row that have a live print, out of its FULL
+# membership — the same rule `_pre_group` has shipped since 2026-09-21, never a
+# median over the full membership with the silent names treated as zeros.
+#
+# WHAT DOES NOT CHANGE, and the trap that made this careful:
+#   * The CLOSE leg keeps its own cohort and its own key. A SECTOR row's
+#     shipped close median is over the rotation grid's SAMPLE (n=40 of 308 for
+#     Technology) and the live median is over the full membership, so the two
+#     are NOT a before/after pair — `d1_live_close` carries the same-cohort
+#     close median beside it so the row can be read honestly, and the tooltip
+#     prints both counts. Never subtract one from the other.
+#   * The payload's served `names` array is TRUNCATED to `names_per_group`
+#     (25) and it is truncated AFTER the sort, so it is the TOP of the board,
+#     not a sample of it. The medians here are taken over the FULL row list
+#     inside `_build`, never over what gets served.
+#   * Every other column (5d, 21d, Sales YoY) stays on the close exactly as it
+#     was, and with no live benchmark print the whole board falls back together.
 D1_GROUP_BASIS = D1_CLOSE
+# A TOKEN, not prose: the FE's `HsD1Source` union switches on this value, and
+# widening it to a sentence is how a board starts string-matching prose to
+# decide what it is showing. The sentence is `D1_GROUP_BASIS_NOTE`, served
+# beside it.
+D1_LIVE_GROUP_BASIS = D1_LIVE
+D1_GROUP_BASIS_NOTE = {
+    D1_CLOSE: ("a median over every member the row counts, taken on the last "
+               "close"),
+    D1_LIVE: ("a median over the members of the row that have a live print — "
+              "not the full membership, and not the same cohort as the close"),
+}
 
 # ── ☀️ Pre-market scan (Ajay 2026-09-21) ────────────────────────────────────
 # "In the hot sector table can I get a pre market scan please".
@@ -589,11 +629,13 @@ def _d1_block(live: Optional[dict], live_ok: bool, as_of, bench_symbol) -> dict:
     bench = live.get("benchmark") or bench_symbol or "RSP"
     reason = live.get("reason") or (None if live else "this build made no live price read")
     if live_ok:
-        note = (f"Today is each name's own move so far in this session, measured "
-                f"against {bench} the same way the other columns are. Everything "
-                f"else on the board — 5 days, 21 days, Sales YoY and every sector, "
-                f"industry and roster row — comes from the "
-                f"{day or 'last'} close.")
+        note = (f"Today is this session so far, measured against {bench} the same "
+                f"way the other columns are — for the names AND for the sector, "
+                f"industry and roster rows above them, so the rotation you are "
+                f"reading is the one happening now. A group row is the median "
+                f"over its own members that have a live print; the count is on "
+                f"the cell. Everything else on the board — 5 days, 21 days and "
+                f"Sales YoY — comes from the {day or 'last'} close.")
     else:
         note = (f"Every column on this board, today's included, comes from the "
                 f"{day or 'last'} close. That is the last finished session, not "
@@ -614,7 +656,9 @@ def _d1_block(live: Optional[dict], live_ok: bool, as_of, bench_symbol) -> dict:
         "benchmark_move": live.get("benchmark_move") if live_ok else None,
         "symbols": live.get("symbols") or 0,
         "live_names": (live.get("live_names") or 0) if live_ok else 0,
-        "group_basis": D1_GROUP_BASIS,
+        "group_basis": D1_LIVE_GROUP_BASIS if live_ok else D1_GROUP_BASIS,
+        "group_basis_note": D1_GROUP_BASIS_NOTE[
+            D1_LIVE_GROUP_BASIS if live_ok else D1_GROUP_BASIS],
         "reason": None if live_ok else reason,
         "note": note,
     }
@@ -915,15 +959,53 @@ def _pre_pure_block() -> dict:
 def _close_d1(legs: dict) -> dict:
     """Mark a GROUP row's day leg for what it is: the snapshot's close.
 
-    A sector / industry / roster row is a MEDIAN over every member it counts,
-    not over the handful of names printed under it. Recomputing it live would
-    need a live print for every member counted — and for the sector and
-    industry rows the counted members are the rotation grid's own sample, whose
-    membership this payload does not even carry. So the group legs stay on the
-    snapshot, on ONE basis, and say so. Half-live is not a median of anything.
+    Still the ONLY thing that happens when the board is not live, and still the
+    fallback for a row where not one member printed. `_live_d1` is the live
+    path; this stays byte-identical to what it has always served.
     """
     legs["rel_1d_close"] = legs.get("rel_1d")
     legs["d1_source"] = D1_CLOSE
+    return legs
+
+
+def _live_d1(legs: dict, rows: list) -> dict:
+    """A GROUP row's day leg, live — the median over the members of this row
+    that have a live print.
+
+    `rows` is the row's FULL member list (never the truncated `names` array the
+    payload serves, which is the top of the sort). A member counts only if its
+    own day cell went live: `d1_source == D1_LIVE` is the one test, so a name
+    the fan-out missed is absent from the median rather than sitting in it as
+    its last-close move.
+
+    Four keys are added and NOTHING existing is rewritten except `rel_1d`:
+
+      ``rel_1d``        the live median — what the Today column prints
+      ``rel_1d_close``  UNCHANGED: the close median this row has always served
+                        (for a sector, the rotation grid's own sample)
+      ``d1_live_n``     how many members printed
+      ``d1_live_of``    how many members the row has
+      ``d1_live_close`` the close median over THOSE SAME members, so the pair
+                        is comparable — the one number `rel_1d_close` is not
+
+    With no live member the row falls back to `_close_d1` whole: a live header
+    over a close number is the exact bug this replaces.
+    """
+    legs["rel_1d_close"] = legs.get("rel_1d")
+    live = [r for r in (rows or []) if r.get("d1_source") == D1_LIVE]
+    vals = [v for v in (_num(r.get("rel_1d")) for r in live) if v is not None]
+    if not vals:
+        legs["d1_source"] = D1_CLOSE
+        legs["d1_live_n"] = 0
+        legs["d1_live_of"] = len(rows or [])
+        legs["d1_live_close"] = None
+        return legs
+    legs["rel_1d"] = _median(vals)
+    legs["d1_source"] = D1_LIVE
+    legs["d1_live_n"] = len(vals)
+    legs["d1_live_of"] = len(rows or [])
+    legs["d1_live_close"] = _median(
+        [v for v in (_num(r.get("rel_1d_close")) for r in live) if v is not None])
     return legs
 
 
@@ -1044,6 +1126,16 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
                 "pre_thin": (len(vals) < THIN_N) if pre_ok else None,
                 "pre_basis": PRE_GROUP_BASIS}
 
+    def _group_d1(legs: dict, rows: list) -> dict:
+        """The group day leg on the board's ONE basis (2026-09-23).
+
+        `live_ok` is the board-wide all-or-nothing flag, so the group rows and
+        the name rows under them can never disagree about which session they
+        are showing — which is the bug he found. `rows` is always the FULL
+        member list, never the served slice.
+        """
+        return _live_d1(legs, rows) if live_ok else _close_d1(legs)
+
     def _names(symbols: list, group_median) -> list:
         rows = []
         for s in symbols or []:
@@ -1065,7 +1157,13 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             # move — because that is what `rel_1d` has always been.
             r["rel_1d_close"] = r.get("rel_1d")
             r["ret_1d_close"] = r.get("ret_1d")
-            mv = live_moves.get(s) if live_ok else None
+            # `_num` here is belt AND braces. `_live_move` already drops a NaN
+            # on the way in, but this overlay runs AFTER `_names`' own scrub, so
+            # anything that reached `moves` by another road (an injected fetch,
+            # a future caller building the block itself) would land on the row
+            # unscrubbed — and a NaN passes every <= comparison, so it reorders
+            # the board silently long before the JSON scrub sees it.
+            mv = _num(live_moves.get(s)) if live_ok else None
             if mv is None:
                 r["d1_source"] = D1_CLOSE
             else:
@@ -1088,10 +1186,10 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
     def _computed_legs(rows: list) -> dict:
         """A group row's legs when the rotation grid shipped none for it.
 
-        The day leg medians the members' CLOSE values (`rel_1d_close`) even
-        when the names above are live: a median over live values for the names
-        that priced and last-close values for the rest describes no session at
-        all. `_close_d1` then labels the row for what it is.
+        The day leg medians the members' CLOSE values (`rel_1d_close`) — never
+        a mix of live and last-close values, which describes no session at all.
+        `_group_d1` then either keeps it (board on the close) or replaces it
+        with the same-cohort LIVE median and says so.
         """
         legs = {k: _median([_num(r.get(k)) for r in rows]) for k in LEGS}
         legs["rel_1d"] = _median([_num(r.get("rel_1d_close")) for r in rows])
@@ -1117,7 +1215,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             igrp = industry_groups.get(ind) or {}
             imed = igrp.get("median_21d")
             irows = _names(syms, imed)
-            legs = _close_d1(_group_legs(ship) if ship else _computed_legs(irows))
+            legs = _group_d1(_group_legs(ship) if ship else _computed_legs(irows), irows)
             if not ship:
                 legs.update({"pct_positive_1d": None, "n_measured": len(syms), "dropped": None})
             inds.append({
@@ -1145,7 +1243,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             "industries": inds,
             "names": names[:names_per_group],
             "names_total": len(names),
-            **_close_d1(_group_legs(shipped)),
+            **_group_d1(_group_legs(shipped), names),
             **_pre_group(names),
             **_fund_medians(names),
         })
@@ -1168,7 +1266,7 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         symbols = list(grp.get("symbols") or [])
         med21 = grp.get("median_21d")
         trows = _names(symbols, med21)
-        legs = _close_d1(_group_legs(shipped) if shipped else _computed_legs(trows))
+        legs = _group_d1(_group_legs(shipped) if shipped else _computed_legs(trows), trows)
         if not shipped:
             legs.update({"pct_positive_1d": None, "n_measured": len(symbols),
                          "dropped": None})
