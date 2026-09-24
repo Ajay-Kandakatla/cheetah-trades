@@ -78,6 +78,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from auth import current_user_email
+from events.sse_headers import SSE_HEADERS
 
 log = logging.getLogger("ollama_chat")
 router = APIRouter()
@@ -282,6 +283,5 @@ async def ollama_chat(body: ChatBody, request: Request,
     return StreamingResponse(
         _stream(payload, request),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-                 "Connection": "keep-alive"},
+        headers=SSE_HEADERS,
     )

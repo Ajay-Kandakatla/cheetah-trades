@@ -82,6 +82,7 @@ from websockets.legacy.client import connect as ws_connect
 
 from .api import (MAX_IMAGE_B64_BYTES, MAX_IMAGES_PER_MESSAGE, _DATA_URL,
                   require_primary_admin)
+from events.sse_headers import SSE_HEADERS
 
 log = logging.getLogger("ollama_chat.hermes")
 router = APIRouter()
@@ -414,8 +415,7 @@ async def hermes_chat(body: AgentTurn, request: Request,
     return StreamingResponse(
         _turn(body, images, request),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no",
-                 "Connection": "keep-alive"},
+        headers=SSE_HEADERS,
     )
 
 

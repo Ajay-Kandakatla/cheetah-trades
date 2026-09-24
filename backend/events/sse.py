@@ -26,6 +26,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from .bus import subscribe, unsubscribe
+from events.sse_headers import SSE_HEADERS
 
 log = logging.getLogger("events.sse")
 
@@ -97,15 +98,7 @@ async def events(request: Request) -> StreamingResponse:
     return StreamingResponse(
         stream(),
         media_type="text/event-stream",
-        headers={
-            # Disable buffering on intermediate proxies. The
-            # X-Accel-Buffering header is honored by nginx; the
-            # Cache-Control directive covers Cloudflare and the
-            # browser's own cache.
-            "Cache-Control":      "no-cache, no-transform",
-            "X-Accel-Buffering":  "no",
-            "Connection":         "keep-alive",
-        },
+        headers=SSE_HEADERS,
     )
 
 

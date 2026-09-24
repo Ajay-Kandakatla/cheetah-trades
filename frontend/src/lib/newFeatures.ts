@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-23, late: "Sometimes I am getting this error" + a screenshot of
+  // a red `network error` on a Hermes Agent turn. The string was the BROWSER's,
+  // not ours: the app was gzipping its own SSE into silence.
+  { id: 'sse-no-longer-gzipped-2026-09-23',
+    label: '\u{1F50C} Live streams actually stream again \u2014 the app was compressing its own updates into silence. You reported a red \u201cnetwork error\u201d on the Hermes chat. That wording was never ours; it is the browser\u2019s word for a connection that died mid-answer. '
+      + 'WHAT WAS WRONG: back in August the app started gzipping big JSON replies \u2014 a good win on the chart boards. But the compressor had no exception for LIVE streams, and it holds about 250 KB before it emits anything. No chat turn, scan or tape update ever reaches that. '
+      + 'MEASURED ON THE RUNNING APP: the same live stream sent 316 bytes and then went silent for 32 seconds, versus 14,807 bytes flowing the whole time with compression off. Your browser got a 10-byte header and nothing else for the entire turn \u2014 so anything along the way was free to decide the connection was dead. Short turns finished before that happened. Long ones did not. That is the \u201csometimes\u201d. '
+      + 'THE PART THAT WOULD HAVE FOOLED ME: the code already sent a keep-alive ping every 25 seconds for exactly this reason, and compression ate that too. Adding more pings \u2014 my first instinct \u2014 would have put ZERO extra bytes on the wire. '
+      + 'FIXED IN SIX PLACES, not one: the Hermes Agent chat, the direct model chat, the live tape, the SEPA Scan button\u2019s progress stream, the app event bus and the Mac alert stream. All six now declare themselves uncompressed; the chart-board compression win is untouched. A build check walks the code, counts the streaming endpoints, and fails if a seventh is ever added without it. '
+      + 'SIDE EFFECT YOU SHOULD NOTICE: replies that used to land in one lump at the end should now appear as they are written. '
+      + 'YOUR CALL: when a turn does die, two different endings still look identical on screen \u2014 one you stopped with the Stop button, and one that was cut off. Want me to mark them differently?',
+    addedAt: '2026-09-23', route: '/ollama' },
   // Ajay 2026-09-23, mid-morning, screenshot of the Energy (curated) row
   // reading "−1.7% last close" over live names: "I think the sector rotation
   // is wrong.. Can you show me till or current market instead of last close.

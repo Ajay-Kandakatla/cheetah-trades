@@ -68,6 +68,7 @@ load_dotenv()
 # runs. See backend/live_feed.py — it feeds the same QuoteCache as Finnhub did.
 import live_feed  # noqa: E402
 import accumulation  # noqa: E402
+from events.sse_headers import SSE_HEADERS
 
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 DEFAULT_SYMBOLS = os.getenv(
@@ -1229,11 +1230,7 @@ async def stream(
     return StreamingResponse(
         sse_event_generator(request, syms),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
+        headers=SSE_HEADERS,
     )
 
 
@@ -1708,11 +1705,7 @@ async def sepa_scan_stream(
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",  # disable nginx response buffering
-            "Connection": "keep-alive",
-        },
+        headers=SSE_HEADERS,
     )
 
 
@@ -4334,11 +4327,7 @@ async def push_mac_stream(
     return StreamingResponse(
         mac_stream.event_stream(email, device_id, request),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
+        headers=SSE_HEADERS,
     )
 
 
