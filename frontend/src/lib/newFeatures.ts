@@ -22,6 +22,20 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-23: "I need 9 EMA and 20 SMA on our charts and also 200 MA on
+  // our charts as check boxes.. Also a new tab for 9EMA lines on our charts for
+  // weekly and monthly charts please". He chose the 200 as SIMPLE and chose a
+  // new tab over extra frames in the Support picker.
+  { id: 'chart-moving-averages-2026-09-23',
+    label: '\u3030\ufe0f Moving averages on every chart \u2014 9 EMA, 20 SMA, 200 SMA, each its own checkbox. You asked for all three. They are on by default, and each box hides only its own line, so turning off the 200 leaves the 9 and 20 where they are. '
+      + 'THE PART THAT IS EASY TO GET WRONG, and that I made sure of: the 200 SMA is computed on the FULL price history and then trimmed to whatever window you are looking at. Compute it on what the tile shows instead and a 120-bar chart hands you a 120-bar average wearing a 200 label \u2014 and the line would move every time you changed the zoom. It does not. There is a test that builds a frame where those two answers differ and pins the right one. '
+      + 'THE 200 IS SIMPLE, not exponential, because that is what the trend gate behind your boards uses \u2014 so the line on the chart is the same number that decides whether a name qualifies. '
+      + 'A LINE THAT CANNOT BE COMPUTED IS NOT DRAWN. A 200 SMA needs 200 bars; on a short intraday frame it is simply absent rather than a short average pretending to be a long one. Same for the 9 and the 20. Warm-up is a gap, never a guess. '
+      + 'NEW TAB \u3030\ufe0f 9 EMA \u00b7 W/M: your \u26a1 Signals watchlist drawn on WEEKLY or MONTHLY bars with the 9 EMA on them, one toggle between the two. No new scan \u2014 it reuses that list and one cached daily frame per name, about 2 seconds cold. '
+      + 'THE CURRENT WEEK AND MONTH ARE UNFINISHED, and the tab says so three ways: the bar is shaded, it carries a badge, and there is a sentence under the chart. Hovering it reads \u201c\u00b7 forming\u201d. Three weeks of September shown as a finished monthly candle is the same class of mistake as a last-close number under a live header, which this app has been burned by twice. '
+      + 'NOTHING HERE IS MEASURED. A 9 EMA on weekly bars has never been tested on your universe \u2014 no study, no interval. These are drawings: nothing sorts, filters, gates or alerts on them, and the new tab has no ordering toggle because there is no read on it to rank by. '
+      + 'YOUR CALL: the 9 EMA can technically be drawn from bar one (the maths seeds itself), but I masked its first 8 bars to match the 20 and 200 \u2014 a 9 EMA built on four closes is a guess wearing a label. Say the word if you would rather see it from bar one. Also: these averages are on the Chart Maps tiles, not yet on the Support tab\u2019s own frames \u2014 want them there too?',
+    addedAt: '2026-09-23', route: '/chart-maps?tab=ema_frames' },
   // Ajay 2026-09-23, late: "Sometimes I am getting this error" + a screenshot of
   // a red `network error` on a Hermes Agent turn. The string was the BROWSER's,
   // not ours: the app was gzipping its own SSE into silence.

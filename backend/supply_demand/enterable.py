@@ -2374,6 +2374,11 @@ KIND_BY_TAB = {
     "holdings": KIND_DEMAND, "support": KIND_DEMAND,
     "vcp": KIND_NA, "winners": KIND_NA, "topping": KIND_NA, "earnings": KIND_NA,
     "zero_dte": KIND_NA, "undervalue": KIND_NA,
+    # 〰️ 9 EMA · W/M (2026-09-23): the tiles are WEEKLY and MONTHLY bars with a
+    # moving average drawn on them. There is no demand band and no daily
+    # reversal on that frame, so a demand read would blank the tab by
+    # construction — the chip says why instead.
+    "ema_frames": KIND_NA,
 }
 
 NA_TEXT = ("no demand read for this tab — its rows are not demand reversals "

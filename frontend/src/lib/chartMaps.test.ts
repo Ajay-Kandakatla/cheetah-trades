@@ -754,6 +754,10 @@ describe('the Earnings Flow tab', () => {
        // 📁 My holdings 2026-09-14 — his own names, beside the two study tabs
        // it runs on them; mid-pack for the same no-usage-yet reason.
        'holdings',
+       // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
+       // mid-pack beside the other per-name chart boards for the same
+       // no-usage-yet reason, and nothing ahead of it moved.
+       'ema_frames',
        // 📈 Bonde 2026-09-13 — beside the growth boards it belongs with.
        'bonde',
        // 🆕 IPOs ≤2y 2026-09-20 — after the growth board it was asked for
@@ -830,7 +834,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly eleven tabs not driven by a board fetch', () => {
+  it('is one of exactly fourteen tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -862,7 +866,10 @@ describe('the Support Levels tab', () => {
     // 2026-09-20: `potus` is one /chart-maps/support call per curated name
     // (the holdings pattern); `ipo` is NOT here — it is a tile board off the
     // dispatcher and the grid draws it.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    // 2026-09-23: `ema_frames` is the twelfth — one /chart-maps/ema-frames
+    // call per name on his ⚡ Signals watchlist, on WEEKLY or MONTHLY bars;
+    // no universe pass, so the board loader and its controls are skipped.
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1758,7 +1765,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(28);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20
+    expect(CM_TABS).toHaveLength(29);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -1940,6 +1947,23 @@ describe('2026-09-14 verification fixes', () => {
       .toBe('2026-09-14 · pre');
     expect(hoverLines({ t: '2026-09-14', o: 1, h: 2, l: 0.5, c: 1.5, v: 1 } as any)[0])
       .toBe('2026-09-14');
+  });
+  /* 〰️ the EMA-frames tab (2026-09-23). The tile marks the incomplete weekly /
+   * monthly bar four ways, but the hover readout is the ONE surface that
+   * prints its OHLC as numbers — three weeks of September under a
+   * finished-looking close is the same class of mistake as a last-close number
+   * under a live header. Caught in review; it had fallen through to ''. */
+  it('the hover readout names a FORMING weekly/monthly bar', () => {
+    expect(hoverLines({ t: '2026-09-30', o: 148.08, h: 151.5, l: 146.6,
+                        c: 150, v: 16_000_000, s: 'forming' } as any)[0])
+      .toBe('2026-09-30 · forming');
+  });
+  it('NEGATIVE: a COMPLETED period carries no forming mark', () => {
+    for (const s2 of [undefined, '', 'ah', 'pre']) {
+      expect(hoverLines({ t: '2026-08-29', o: 1, h: 2, l: 0.5, c: 1.5, v: 1,
+                          ...(s2 ? { s: s2 } : {}) } as any)[0])
+        .not.toContain('forming');
+    }
   });
   it('a quiet line keeps its line but its label yields to the plan labels', () => {
     const d = { lo: 100, hi: 120 };

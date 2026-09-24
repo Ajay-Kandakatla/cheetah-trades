@@ -134,6 +134,128 @@ def _frame_to_bars(df) -> list[dict]:
     return bars
 
 
+# ---------------------------------------------------------------------------
+# moving averages — 9 EMA / 20 SMA / 200 SMA (Ajay 2026-09-23)
+# ---------------------------------------------------------------------------
+# Ajay: "I need 9 EMA and 20 SMA on our charts and also 200 MA on our charts
+# as check boxes.." The 200 is a SIMPLE average by his own answer, because
+# Minervini's trend template and this app's SEPA gate both read the 200-DAY
+# SMA — the line drawn on the chart has to be the same number as the gate that
+# put the name on the board, or the chart argues with the board.
+#
+# THREE PERIODS, AND THEY ARE HIS THREE. No 50, no 21, no 10 "for
+# completeness" (Rule #1 — never invent a level).
+#
+# These are DRAWINGS. Nothing reads them: no board ordering, no filter, no
+# sort, no alert, no gate (Rule #10). They are attached after the ranking is
+# already decided, which is also why the tile order is byte-identical with and
+# without them.
+MA_SPECS: tuple[tuple[str, str, int, str], ...] = (
+    ("ema9",   "9 EMA",   9,   "ema"),
+    ("sma20",  "20 SMA",  20,  "sma"),
+    ("sma200", "200 SMA", 200, "sma"),
+)
+
+
+def _ma_series(df) -> Optional[dict]:
+    """`{"dates": [...], "<tone>": [value|None, ...]}` for MA_SPECS, or None.
+
+    COMPUTED ON THE FRAME IT IS HANDED, AND THAT MUST BE THE FULL ONE. A 200
+    SMA on a tile that only SHOWS 120 bars is still the true 200-bar average:
+    the caller passes the untailed frame and the by-date alignment in
+    `_ma_curves` cuts it down to the window afterwards, never the other way
+    round. Computing after `.tail(days)` would quietly serve a 120-bar average
+    under a "200 SMA" label, and it would change every time he moved the zoom.
+
+    WARM-UP IS A GAP, NEVER A GUESS. The first `period - 1` bars carry None.
+    pandas gives that for free on the SMA (`rolling(n)` needs n observations);
+    the EMA does NOT — `ewm(..., adjust=False)` emits a value from the very
+    first bar, which on a 4-bar frame is a "9 EMA" of four closes. It is
+    masked to the same warm-up, so the two families cannot mean different
+    things on one chart and so a frame shorter than a period yields an
+    all-None column that `_ma_curves` drops entirely rather than drawing a
+    line of nulls.
+
+    `adjust=False` because that is what every EMA in this codebase already is
+    (keltner.py:97, mood.py:157, support.py:1139). Matching the existing
+    engines matters more here than any other convention.
+
+    PURE. No I/O, no snapshot read — pandas over a frame the caller already
+    holds in memory.
+    """
+    if df is None or getattr(df, "empty", True):
+        return None
+    if "close" not in getattr(df, "columns", []):
+        return None
+    close = df["close"].astype(float)
+    n = int(len(close))
+    out: dict = {"dates": [_row_date(ts) for ts in df.index]}
+    for tone, _label, period, kind in MA_SPECS:
+        if n < period:
+            # Not enough closes for this period to exist at all. An all-None
+            # column, which the caller omits: a 200 SMA cannot exist on a
+            # 79-bar frame and the chart must not imply that it does.
+            out[tone] = [None] * n
+            continue
+        ser = (close.ewm(span=period, adjust=False).mean() if kind == "ema"
+               else close.rolling(period).mean())
+        # `_num` is the house NaN guard — a pandas NaN breaks the frontend's
+        # JSON.parse and passes every `<=` comparison on the way there.
+        vals = [_num(v) for v in ser.tolist()]
+        for i in range(min(period - 1, n)):
+            vals[i] = None
+        out[tone] = vals
+    return out
+
+
+def _ma_curves(tile: dict, df) -> None:
+    """Draw the three moving averages as CURVES on one tile, in place.
+
+    A `line` in this payload is ONE price and renders horizontally by
+    definition, which is right for a pivot or a stop and wrong for a moving
+    average — so the MAs ride the same carrier the Keltner channel uses:
+    `curves`, a value per bar.
+
+    BY DATE AND NOT BY POSITION, for the same reason `_keltner_curves` is: the
+    tile's bars can carry today's live extended-hours bar
+    (`prices.with_today_bar`) that the cached frame does not have, and a
+    positional tail would shift every average one bar left. A date with no
+    value — the warm-up at the left edge, or a live bar the frame lacks —
+    becomes a GAP (None), never a guess.
+
+    Soft-fails: a frame that will not compute leaves the tile with its real
+    bands and simply no MA lines. A drawing must never be able to empty a tile
+    the rest of the board built correctly.
+    """
+    bars = tile.get("bars") or []
+    if not bars:
+        return
+    have = {(c or {}).get("tone") for c in (tile.get("curves") or [])}
+    if any(tone in have for tone, _l, _p, _k in MA_SPECS):
+        return          # already on this tile
+    try:
+        ser = _ma_series(df)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: moving-average series failed: %s", exc)
+        return
+    if not ser:
+        return
+    by_date = {d: i for i, d in enumerate(ser.get("dates") or [])}
+    curves = []
+    for tone, label, _period, _kind in MA_SPECS:
+        col = ser.get(tone) or []
+        vals = [(col[by_date[str(b.get("t"))]]
+                 if str(b.get("t")) in by_date else None) for b in bars]
+        if not any(v is not None for v in vals):
+            # Every value is None — the frame is shorter than the period, or
+            # the window shows nothing but warm-up. OMIT the curve; a line of
+            # nulls is a claim that the average exists.
+            continue
+        curves.append({"tone": tone, "label": label, "values": vals})
+    if curves:
+        tile["curves"] = list(tile.get("curves") or []) + curves
+
+
 def _snap_for(snaps: Optional[dict], sym: str) -> Optional[dict]:
     """The prefetched raw snapshot row for `sym`.
 
@@ -169,7 +291,8 @@ def _bulk_snaps(symbols) -> dict:
 def bars_for(symbol: str, days: int = BARS_DEFAULT,
              around: Optional[str] = None, pad_after: int = 25,
              min_bars: int = BARS_FLOOR,
-             snap: Optional[dict] = None) -> list[dict]:
+             snap: Optional[dict] = None,
+             frame_out: Optional[list] = None) -> list[dict]:
     """Daily candles for `symbol`.
 
     `around` centres the window on a dated event (a pattern confirmation),
@@ -191,6 +314,13 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
     no overlay. Every board loop now prefetches one bulk call per request, so
     the worker threads never open a connection: 80 tiles used to cost 80 TLS
     handshakes (and up to 3 per deep-window tile).
+
+    `frame_out` (2026-09-23) is an out-list the FULL, UNTAILED frame is
+    appended to — the one thing a caller cannot recover from the returned
+    bars. The moving averages are computed on it (`_ma_curves`), and a 200 SMA
+    read off a 120-bar tile would be a 120-bar average. Handing the frame back
+    costs nothing and is the difference between one frame load per tile and
+    two: `prices.load_prices` is a Mongo read, not a memory read.
     """
     from sepa import prices
     days = max(int(min_bars), min(int(days or BARS_DEFAULT), BARS_MAX))
@@ -233,6 +363,11 @@ def bars_for(symbol: str, days: int = BARS_DEFAULT,
         return []
     if df is None:
         return []
+
+    # The frame goes back BEFORE any slicing — every window below is a cut of
+    # this one, and the moving averages have to be read off the whole thing.
+    if frame_out is not None:
+        frame_out.append(df)
 
     if around:
         dates = [_row_date(d) for d in df.index]
@@ -2036,15 +2171,24 @@ def _attach_bars(tiles: list[dict], days: int,
 
     def _one(t: dict):
         spec = t.get("_bars") or {}
+        frame: list = []
         try:
             t["bars"] = bars_for(t["symbol"],
                                  days=spec.get("days") or days,
                                  around=spec.get("around"),
                                  pad_after=spec.get("pad_after", 25),
-                                 snap=_snap_for(snaps, t["symbol"]))
+                                 snap=_snap_for(snaps, t["symbol"]),
+                                 frame_out=frame)
         except Exception as exc:
             log.debug("chart-maps: bars %s failed: %s", t.get("symbol"), exc)
             t["bars"] = []
+        # The moving averages, on EVERY tile board (Ajay 2026-09-23). Unlike
+        # the study overlays — fetched only when their box is ticked — an MA
+        # is a plain chart primitive he asked to see on "our charts", so it
+        # rides the bar load that every board already does. No second frame
+        # read, no snapshot call, no threshold: the frame is already here.
+        if frame:
+            _ma_curves(t, frame[0])
 
     with ThreadPoolExecutor(max_workers=BAR_WORKERS) as pool:
         list(pool.map(_one, tiles))
@@ -4566,7 +4710,8 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
     tiles = []
     for r in rows:
         sym = r["symbol"]
-        bars = bars_for(sym, days, snap=_snap_for(raw, sym))
+        _frame: list = []
+        bars = bars_for(sym, days, snap=_snap_for(raw, sym), frame_out=_frame)
         if not bars:
             continue
         v = r.get(kind) or {}
@@ -4636,6 +4781,11 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
                                 _norm_frame(prices.load_prices(sym.upper())))
             except Exception as exc:                            # noqa: BLE001
                 log.debug("turning_bullish_tiles: curve %s failed: %s", sym, exc)
+        # The MAs reach these two tabs too — they are "our charts" as much as
+        # any other tile board, and the frame `bars_for` already read comes
+        # back in `_frame`, so this costs no extra load.
+        if _frame:
+            _ma_curves(tiles[-1], _frame[0])
 
     # Both tabs ADVERTISED the sort dropdown and ignored it until 2026-09-15:
     # `board()` handed every other tab's ordering to `_finish` and these two

@@ -503,11 +503,18 @@ def test_the_amd_payload_is_BYTE_IDENTICAL_to_the_legacy_loop(amd_stack, monkeyp
                                       pad_after=spec.get("pad_after", 25))
 
     monkeypatch.setattr(B, "_attach_bars", _legacy_attach)
+    # `frame_out` (2026-09-23) is the out-list carrying the UNTAILED frame the
+    # moving-average curves are computed on. It is forwarded here rather than
+    # swallowed on purpose: a stub that accepted and dropped it would leave the
+    # LEGACY run with no `curves` while the new run had them, and the
+    # byte-identical assertion below would then be comparing two different
+    # payloads and passing for the wrong reason.
     monkeypatch.setattr(B, "bars_for",
                         lambda sym, days=130, around=None, pad_after=25,
-                        min_bars=B.BARS_FLOOR, snap=None:
+                        min_bars=B.BARS_FLOOR, snap=None, frame_out=None:
                         real_bars_for(sym, days=days, around=around,
-                                      pad_after=pad_after, min_bars=min_bars))
+                                      pad_after=pad_after, min_bars=min_bars,
+                                      frame_out=frame_out))
     old = B.board("amd", limit=5, themes_first=False)
 
     for payload in (new, old):

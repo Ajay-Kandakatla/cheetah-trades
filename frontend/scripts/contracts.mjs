@@ -1567,6 +1567,7 @@ const CONTRACTS = [
         bonde: 'src/components/BondeBoard.tsx',
         holdings: 'src/components/HoldingsBoard.tsx',
         potus: 'src/components/PotusBoard.tsx',
+        ema_frames: 'src/components/EmaFramesBoard.tsx',
       };
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
       for (const t of nonBoard) {
@@ -2135,6 +2136,7 @@ const CONTRACTS = [
         holdings: 'src/components/HoldingsBoard.tsx',
         potus: 'src/components/PotusBoard.tsx',
         growth: 'src/components/ExplosiveGrowth.tsx',
+        ema_frames: 'src/components/EmaFramesBoard.tsx',
       };
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
       for (const t of nonBoard) {
@@ -2174,6 +2176,12 @@ const CONTRACTS = [
         //           turn a curated disclosure list into a ranking, which is
         //           the one thing the tab says on its face it is not.
         potus: /editorial order, not a ranking/,
+        //   ema_frames — the cohort IS his ⚡ Signals watchlist and the tab
+        //           draws it in that list's own order. There is no read on
+        //           this board to rank BY: a 9 EMA on weekly bars has never
+        //           been measured here, so any ordering toggle would be the
+        //           board inventing a preference it cannot defend.
+        ema_frames: /no read on this board to rank by/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];

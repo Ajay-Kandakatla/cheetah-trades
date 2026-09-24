@@ -14,6 +14,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from . import board as board_mod
+from . import ema_frames as ema_frames_mod
 from . import support as support_mod
 
 log = logging.getLogger("chart_maps.api")
@@ -283,6 +284,35 @@ async def chart_maps_support(
                 except Exception as exc:                    # pragma: no cover
                     log.debug("chart-maps/support: studies failed: %s", exc)
         return res
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.get("/chart-maps/ema-frames")
+async def chart_maps_ema_frames(
+    symbol: str = Query("", description="one US ticker"),
+    frame: str = Query(ema_frames_mod.DEFAULT_FRAME,
+                       description="weekly (default) | monthly — the bar "
+                                   "size the 9 EMA is computed on. Ajay "
+                                   "2026-09-23: 'a new tab for 9EMA lines on "
+                                   "our charts for weekly charts and monthly "
+                                   "charts'."),
+):
+    """〰️ The 9 EMA on WEEKLY or MONTHLY bars, for ONE ticker.
+
+    One cached daily frame, resampled — there is no universe pass behind this
+    and no scan is ever started by it. The tab calls it once per name on his
+    ⚡ Signals watchlist, exactly as \U0001F4C1 My holdings calls
+    /chart-maps/support once per position.
+
+    Both arguments are coerced inside the module, the house rule: these
+    handlers get called directly in the container for smoke tests and a direct
+    call receives the `Query` OBJECT, which is truthy and has no `.lower()`.
+    """
+    def _run():
+        return ema_frames_mod.build(
+            symbol if isinstance(symbol, str) else "",
+            frame if isinstance(frame, str) else ema_frames_mod.DEFAULT_FRAME)
 
     return JSONResponse(await asyncio.to_thread(_run))
 

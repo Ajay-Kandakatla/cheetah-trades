@@ -16,7 +16,7 @@ import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -65,6 +65,14 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // names he actually owns, with his cost on every chart). Beside the two
   // study tabs it runs; no usage yet, so mid-pack like them.
   'holdings',
+  // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
+  // charts for weekly charts and monthly charts please"). It draws the same
+  // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
+  // other per-name chart boards rather than at the front: TAB ORDER IS
+  // EARNED. `tabUsageKey` counts it from its first open, exactly as it
+  // counted 🌀 KC, 🌀 AMD, 📁 My holdings and 🆕 IPOs into their slots, and
+  // the next re-cut moves it on the evidence. Nothing in front of it moves.
+  'ema_frames',
   // Bonde (Ajay 2026-09-13: "create me a Bonde tab ... I wanna see his
   // stocks"). Beside the growth boards it belongs with, not at the front —
   // same measured-order rule as the two above.
@@ -115,6 +123,11 @@ export const ENTERABLE_KIND = {
   // and the Support tab answers one symbol).
   holdings: 'demand', support: 'demand',
   vcp: 'n/a', winners: 'n/a', topping: 'n/a', earnings: 'n/a', zero_dte: 'n/a', undervalue: 'n/a',
+  // 〰️ 9 EMA · W/M (2026-09-23): the tiles are WEEKLY and MONTHLY bars with a
+  // moving average on them — there is no demand band and no daily reversal to
+  // read, so a demand read would blank the tab by construction. Inert, and the
+  // chip says why.
+  ema_frames: 'n/a',
 } as Record<CmTab, EnterableKind>;
 
 /** usage/track key for one tab open (landing or click). Read back from Mongo
@@ -146,7 +159,11 @@ export function isBoardTab(t: CmTab): boolean {
     // 🏛️ POTUS (2026-09-20) is one /chart-maps/support call per curated name
     // plus the watch's candidate table — no universe pass, no tile grid.
     // `ipo` is NOT here: it is a tile board off the dispatcher like the rest.
-    && t !== 'potus';
+    && t !== 'potus'
+    // 〰️ 9 EMA · W/M (2026-09-23) is one /chart-maps/ema-frames call per name
+    // on his ⚡ Signals watchlist — weekly / monthly bars, not a universe pass —
+    // so the board loader and the sort / tier / room controls are skipped.
+    && t !== 'ema_frames';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -186,6 +203,10 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   holdings: {
     label: '\u{1F4C1} My holdings',
     blurb: 'Every name on your Portfolio page, drawn the way the Support tab draws it: the tested demand and supply bands at the zoom you pick, the swings that MADE each band marked on the bars, the SMC order blocks, and — when you tick them — the AMD phases (A on the base, M on the raid bar, D on the markup, ✗ where the base failed), the Keltner channel with its squeeze dots, Fibonacci and mean reversion. Ajay 2026-09-14: "about the new portfolio stocks I want to run these against them." YOUR COST is the pink line on each chart; YOUR STOP appears in blue only when you have typed a stop on the Portfolio page — the app never invents one. Worst position first. The DASHED band on each chart is the demand BOARD\u2019s own band \u2014 the one Back in Demand, Deep Demand, the alert gate and the paper lanes use (swing 5 \u00b7 merge 4% \u00b7 252 bars); the solid bands are the Support tab\u2019s finer levels at this zoom. Both study reads MEASURED INVERTED on 2026-09-13 and again on 2026-09-14 on ~3,700 names (see the two \u{1F300} tabs): they describe the tape, they do not predict it, and nothing here gates, alerts or trades. Not advice.',
+  },
+  ema_frames: {
+    label: '\u3030\ufe0f 9 EMA \u00b7 W/M',
+    blurb: 'The 9-period EMA drawn on WEEKLY and MONTHLY bars \u2014 and nothing about a 9 EMA on those bar sizes has ever been measured on this universe, so it is a drawing and claims nothing. Ajay 2026-09-23: "Also a new tab for 9EMA lines on our charts for weekly charts and monthly charts please". ONE tab, one bar size at a time: Weekly opens by default, Monthly is one click, and the same name stays in the same place on screen instead of sitting a full grid apart in a second section. THE NAMES ARE YOUR \u26A1 SIGNALS WATCHLIST, not a new scan \u2014 the Signals tab reads those tickers on 1-minute candles, this reads the same tickers on weekly and monthly bars, and the only cost is one cached daily frame per name. A WEEKLY BAR IS MON\u2013FRI, labelled by that week\u2019s Friday (W-FRI, the anchor the weekly market gauge and the Venky filter already use); a MONTHLY bar is one calendar month, labelled by its last day. THE CURRENT WEEK AND THE CURRENT MONTH ARE STILL FORMING and are drawn that way \u2014 dimmed, shaded, and said out loud under the chart \u2014 built from the closed daily sessions so far, with no live pre-market or after-hours print folded in. The line is computed on the RESAMPLED closes: a 9-WEEK EMA, a 9-MONTH EMA, never a 9-day EMA relabelled. A name with fewer than 9 completed periods gets NO line and a sentence saying how many it has, and the first eight points of any frame are a gap rather than a seed drawn as an average. Nothing on this tab sorts, filters, hides, gates or alerts \u2014 it draws. Not advice.',
   },
   bonde: {
     label: '\ud83d\udcc8 Bonde',
@@ -350,7 +371,14 @@ export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
   // 2026-09-14: the two lines the 📁 My holdings tab adds on a name he owns —
   // his cost, and the stop he typed on the Portfolio page. Their own tones
   // so the `trade` checkbox (BUY / STOP / TARGET of a plan) never hides them.
-  | 'cost' | 'ownstop';
+  | 'cost' | 'ownstop'
+  // 2026-09-23, Ajay: "I need 9 EMA and 20 SMA on our charts and also 200 MA
+  // on our charts as check boxes.." Each period is its OWN tone so each gets
+  // its own checkbox — he asked for three boxes, not one "moving averages"
+  // box. The 200 is SIMPLE by his answer: Minervini's trend template and the
+  // SEPA gate both read the 200-day SMA, so the drawn line is the same number
+  // as the gate that put the name on the board.
+  | 'ema9' | 'sma20' | 'sma200';
 /** `quiet` (2026-09-14): the backend flags BOS / swept / ORB lines it wants
  *  drawn but not fought over — the label yields to the plan labels under
  *  pressure (priority 0) while the line itself still draws. The flag was sent
@@ -1508,6 +1536,11 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
   // BUY / STOP / TARGET plan off the chart. The coloured line still draws;
   // only its right-edge text yields.
   amd: 1, fib: 1, meanrev: 1, keltner: 1,
+  // The moving averages sit at 1 for the same reason (2026-09-23): three more
+  // right-edge labels must never push BUY / STOP / TARGET off the gutter.
+  // `layoutLabels` drops a 1 that cannot fit; the coloured LINE still draws,
+  // which is the part he asked for — only its text yields.
+  ema9: 1, sma20: 1, sma200: 1,
   // His own numbers on his own chart are never dropped for a study label.
   cost: 3, ownstop: 3,
 };
@@ -1831,7 +1864,13 @@ export function hoverLines(bar: CmBar | null | undefined): string[] {
   // The extended-hours bar carries the AH / pre-market print as its close and
   // widened high/low (prices.with_today_bar); say so, or the readout claims an
   // official close the session never printed (2026-09-14).
-  const tape = bar.s === 'ah' ? ' · AH' : bar.s === 'pre' ? ' · pre' : '';
+  const tape = bar.s === 'ah' ? ' · AH' : bar.s === 'pre' ? ' · pre'
+    // 'forming' (2026-09-23) is the INCOMPLETE weekly/monthly bar on
+    // the 📐 EMA-frames tab. The tile says so in four places, but the
+    // hover readout is the one surface that prints its OHLC as numbers —
+    // and three weeks of September under a finished-looking close is
+    // exactly the kind of number this app has been burned by twice.
+    : bar.s === 'forming' ? ' · forming' : '';
   return [
     `${bar.t}${tape}`,
     `O ${f(bar.o)}   H ${f(bar.h)}`,
@@ -1861,6 +1900,15 @@ export function toneColor(tone: CmLineTone): string {
   // the stop HE set can never look like the same line.
   if (tone === 'cost') return 'var(--cm-pink, #ec4899)';
   if (tone === 'ownstop') return 'var(--info, #38bdf8)';
+  // The three moving averages (2026-09-23). Each colour is the one its
+  // checkbox shows in the ledger, so the swatch and the line agree — the
+  // 2026-09-12 bug ("Non of these are showing up") was exactly this list
+  // missing its cases and every new tone falling through to the grid grey.
+  // All three are existing variables with existing fallbacks in this app; no
+  // new hex is invented here.
+  if (tone === 'ema9') return 'var(--cm-vcp, #2563eb)';
+  if (tone === 'sma20') return 'var(--cm-mint, #6ee7b7)';
+  if (tone === 'sma200') return 'var(--gold, #c9a227)';
   return 'var(--text-muted, #94a3b8)';
 }
 

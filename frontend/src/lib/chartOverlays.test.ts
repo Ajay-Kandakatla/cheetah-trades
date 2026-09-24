@@ -140,11 +140,15 @@ describe('presentGroups', () => {
 describe('the 2026-09-12 default (supply/demand + order blocks only)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('defaultHidden hides everything except the three he named — plus his own position (2026-09-14)', () => {
+  it('defaultHidden hides everything except the three he named — plus his own position (2026-09-14) and the three moving averages (2026-09-23)', () => {
     // `position` is his cost and his typed stop, not a read; it is not one of
     // the uncited overlays the 2026-09-12 default exists to keep off.
+    // The 9 EMA / 20 SMA / 200 SMA join it on 2026-09-23 for the same reason:
+    // he asked for three lines by name, they say nothing and they gate
+    // nothing. Arriving off would mean he got three empty checkboxes.
     const shown = OVERLAY_GROUPS.map((g) => g.key).filter((k) => !defaultHidden().has(k));
-    expect(shown).toEqual(['demand', 'board', 'supply', 'position', 'order_block']);
+    expect(shown).toEqual(['demand', 'board', 'supply', 'position', 'order_block',
+      'ema9', 'sma20', 'sma200']);
   });
 
   it('a browser that has never saved anything gets that default', () => {

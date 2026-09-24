@@ -63,6 +63,7 @@ import BondeBoard from '../components/BondeBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
 import SessionBoard from '../components/SessionBoard';
 import HoldingsBoard from '../components/HoldingsBoard';
+import EmaFramesBoard from '../components/EmaFramesBoard';
 import PotusBoard from '../components/PotusBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import type { IpoCounts } from '../lib/ipoTab';
@@ -1052,6 +1053,14 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * owns, his cost and typed stop drawn on each — its own fetcher, no
          * universe pass, so the board controls and the grid are skipped. */
         <HoldingsBoard days={days ?? null} />
+      ) : tab === 'ema_frames' ? (
+        /* 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on
+         * our charts for weekly charts and monthly charts please"). Its own
+         * endpoint, one call per name on his ⚡ Signals watchlist, so the tile
+         * grid and the sort / tier / room controls are skipped — those describe
+         * a universe pass this tab does not run. The bars are WEEKLY or MONTHLY;
+         * the current period is drawn as forming and says so. */
+        <EmaFramesBoard />
       ) : tab === 'hot_pullback' ? (
         /* 🔥 Hot Pullback (Ajay 2026-09-09: "a new tab for hot pull back like
          * 21 day moving average drops but have a reversal from demand zones …
