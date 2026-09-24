@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-24, on ORCL ("AMD raided · today" on the POTUS tile, "AMD
+  // marked up · 14d ago" on the ticker page): "can you tell me if there is a
+  // possibility this stock is manipulated twice? I only see one Manipulation
+  // indicator wonder why" — then: "Show all the possible raids, past ones too
+  // and todays too." Label is verbatim from the amd_all_raids spec §4.
+  { id: 'amd-all-raids-2026-09-24',
+    label: "🌀 Every AMD raid on the daily chart, numbered — past ones and today's. You said: “Show all the possible raids, past ones too and todays too.” WHAT YOU SEE: with the AMD box ticked, one chip beside the AMD verdict (“7 low · 5 high raids”); click it for the list — each raid's date, the base it swept (range and start date), the swept edge and the wick, depth and volume, and what happened next (marked up / base failed / no markup yet / no markup within 25 bars). Numbered circles under the candles mark the LOW raids; high raids are in the list. A raid whose base holds an earlier raid is a RE-SWEEP and reads 3·2 — the chip counts it once, with its first raid. PAST RAIDS read closed daily bars only, so they do not change during the session. TODAY'S is marked not closed and read from the live print against the base it pierces — reclaimed (through and back: dashed numbered circle), sweeping (beyond the edge now: dashed ?, a close there breaks the base, it is not a raid), holding, or unknown before the first regular-session print. When the print is back above an OLDER base's low but still under the FRESHER base low the chart draws, today's line says both (“reclaimed · sweeping”). ORCL: 08-19 and 09-01 are two separate low raids; today's read depends on the print — at or above 139.00 it reclaims the 09-14 base, at 138.40 it reclaims the older 08-17 base (a re-sweep of 08-19) and says it is still under 139.00. DISPLAY ONLY: nothing sorts, alerts, gates or buys on it; the 🌀 AMD tab, its grades and the verdict chip are unchanged. MEASURED INVERTED (2026-09-14, 3,712 names): a fresh raid reached the base top LESS often than a like-for-like placebo, −4.2pp [−6.92, −1.89]; entering at the raid low has not been measured. YOUR CALL: grade the verdict chip on closed bars too; circle high raids; how re-sweeps count; which of today's two reads leads.",
+    addedAt: '2026-09-24', route: '/chart-maps?tab=support' },
   // Ajay 2026-09-24: "build me a news tab in chartmaps to give me a bullish
   // market or bearsish market and also pull Macro calendar that has T1 and T2
   // tier events in to this tab consider in to news. If bullish or beaish I need

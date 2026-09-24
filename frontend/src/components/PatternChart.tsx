@@ -30,6 +30,10 @@ import { BandStructureChip } from './BandStructureChip';
 import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
+import { AmdRaidsChip } from './AmdRaidsChip';
+import {
+  amdRaidMarks, occupiedFromMarkers, RAID_R, sanitizeAmdRaids,
+} from '../lib/amdRaids';
 
 const W = 620;
 const PAD_Y = 10;
@@ -137,6 +141,23 @@ export const PatternChart = memo(function PatternChart(
   });
   const theme = themeLabel(tile.theme);
   const last = bars[bars.length - 1];
+  /* 🌀 Every AMD raid (Ajay 2026-09-24: "Show all the possible raids, past
+   * ones too and todays too."). The block is served whole by the backend —
+   * past raids on CLOSED bars, today's provisional read off the live print —
+   * and filterTile drops it with the AMD family. The circles and the chip's
+   * list read the SAME sanitized array, so they cannot disagree. Row spacing
+   * is 11 viewBox units, so two circles on one row need that many units of
+   * bars between them. Display only. */
+  const raids = sanitizeAmdRaids((tile as any).amd_raids);
+  const raidMarks = amdRaidMarks(raids, bars, {
+    minGapBars: Math.max(1, Math.ceil(11 / (plotW / Math.max(bars.length, 1)))),
+    lowY: (i) => yFor(bars[i].l, domain, H, PAD_Y),
+    highY: (i) => yFor(bars[i].h, domain, H, PAD_Y),
+    top: PAD_Y + RAID_R,
+    // clear of the squeeze dot row at H - PAD_Y - 2
+    bottom: H - PAD_Y - 4 - RAID_R,
+    occupied: occupiedFromMarkers(tile.markers || [], bars),
+  });
 
   /* Hover readout. `hover` stays null on touch devices and whenever the
    * pointer is outside, so none of this runs on the 24-tile board unless you
@@ -213,6 +234,10 @@ export const PatternChart = memo(function PatternChart(
             {(tile.badges || []).map((b) => (
               <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
             ))}
+            {/* 🌀 One muted chip right after the AMD verdict it expands; the
+                list of every raid opens from it. Renders nothing without a
+                served block (AMD box unticked, non-daily frame, old payload). */}
+            <AmdRaidsChip block={raids} />
             {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
               * every board; the Signals tab reads the same store. */}
             <SignalWatchButton symbol={tile.symbol} />
@@ -395,6 +420,24 @@ export const PatternChart = memo(function PatternChart(
               </g>
             );
           })}
+
+          {/* 🌀 numbered AMD raid circles (2026-09-24) — one per drawn raid,
+              the served mark inside (3·2 = a re-sweep of raid 3's base).
+              Dashed = today, not closed; ? = beyond the edge now, not a raid.
+              Stacked clear of the tile's own glyphs; a raid with no free row
+              stays in the list and off the chart. */}
+          {raidMarks.map((m) => (
+            <g key={`raid-${m.dir}-${m.i}-${m.mark}`}
+               className={'pc-amd-raid pc-amd-raid-' + m.dir
+                          + (m.live ? ' pc-amd-raid-live' : '')
+                          + (m.unsure ? ' pc-amd-raid-unsure' : '')}
+               data-raid-mark={m.mark}>
+              <title>{m.text}</title>
+              <circle cx={xFor(m.i, bars.length, W, padR)} cy={m.y} r={m.r} />
+              <text x={xFor(m.i, bars.length, W, padR)} y={m.y + 2.3} fontSize={6.5}
+                    fontWeight={700} textAnchor="middle">{m.mark}</text>
+            </g>
+          ))}
 
           {/* plan levels */}
           {(tile.lines || [])

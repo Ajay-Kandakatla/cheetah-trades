@@ -15,6 +15,7 @@ import type { ExplosiveRead, ExplosiveStudy } from './bounceRoom';
 import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
+import type { AmdRaidsBlock } from './amdRaids';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -477,6 +478,13 @@ export type CmTile = {
    *  least one crossed band. It orders NOTHING: depth is unmeasured (the
    *  2026-09-16 band-structure study read no_signal on the adjacent claim). */
   levels_broken?: number;
+  /** 🌀 Every AMD raid on the daily Support tile (chart_maps/board.py
+   *  ::_attach_amd_raids, 2026-09-24): past raids on CLOSED bars, today's
+   *  provisional read off the live print, numbered per chain, every sentence
+   *  served. Present only on the daily Support tile with studies on; null when
+   *  the AMD box is unticked (filterTile). Display only — nothing sorts,
+   *  filters, gates or alerts on it. Read it through sanitizeAmdRaids. */
+  amd_raids?: AmdRaidsBlock | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py

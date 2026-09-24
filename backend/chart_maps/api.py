@@ -280,7 +280,8 @@ async def chart_maps_support(
                     board_mod._attach_studies(
                         {"tiles": [tile]},
                         int((res.get("bars_used") or res.get("bars")
-                             or res.get("days") or 0) or 0))
+                             or res.get("days") or 0) or 0),
+                        raids=True)
                 except Exception as exc:                    # pragma: no cover
                     log.debug("chart-maps/support: studies failed: %s", exc)
         return res

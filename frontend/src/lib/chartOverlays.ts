@@ -82,7 +82,7 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   // being folded into `trade` or `demand`. An unmeasured read must never share
   // a checkbox with the levels he actually trades.
   { key: 'amd', always: true, label: 'AMD phases', swatch: 'var(--cm-violet, #8b5cf6)',
-    hint: 'accumulation base, the raid that swept it, the markup after — A / M / D on the bars it happened, ✗ where the base failed (ICT convention, uncited; MEASURED INVERTED 2026-09-13)',
+    hint: 'accumulation base, the raid that swept it, the markup after — A / M / D on the bars it happened, ✗ where the base failed (ICT convention, uncited; MEASURED INVERTED 2026-09-13) — every raid numbered on its bar (3·2 = a re-sweep of raid 3\u2019s base; dashed = today, not closed; ? = beyond the edge now); the chip beside the verdict lists them all',
     bandKinds: ['amd_accumulation'], lineTones: ['amd'], linePrefixes: ['amd'],
     markerKinds: ['amd_a', 'amd_m', 'amd_d', 'amd_x'] },
   { key: 'fib', always: true, label: 'Fibonacci', swatch: 'var(--cm-teal, #14b8a6)',
@@ -259,6 +259,9 @@ export function filterTile<T extends Partial<CmTile>>(tile: T, hidden: Set<strin
     // with no `group` is a board badge (Setup ready, Vol drying) and is never
     // touched — only a study verdict carries one.
     badges: (tile.badges || []).filter((b) => !b.group || !hidden.has(b.group)),
+    // 🌀 Every AMD raid (2026-09-24) — the chip, its list and the numbered
+    // circles go with the AMD box, exactly like the verdict sentence above.
+    amd_raids: hidden.has('amd') ? null : (tile as any).amd_raids,
   } as T;
 }
 

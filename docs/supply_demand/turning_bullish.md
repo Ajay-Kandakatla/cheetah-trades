@@ -2,6 +2,8 @@
 
 **Both boards were measured against a placebo on 2026-09-13 and BOTH CAME BACK INVERTED on their own claim — and re-measured on 2026-09-14 on the wide list (~3,700 names) with the AMD detector that can fail a cycle: Keltner harder (−16.2pp on its break claim), AMD −4.2pp instead of −8.9pp, still inverted.** Not null — inverted. Read §3 before §2.
 
+See also: [`amd_all_raids_2026_09_24.md`](amd_all_raids_2026_09_24.md) — every AMD raid (past on closed bars, today provisional) listed and numbered on the daily Support tile; display only, the 🌀 tab and its grades unchanged.
+
 Ajay 2026-09-13: *"I want you to build a page for something that is very close
 to bullish in keltners and AMD"*, *"AMD is accumulation manipulation indicator
 we have in charts"*, *"I need two tabs in chart maps for me to look at where

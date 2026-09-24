@@ -4578,6 +4578,57 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🌀 AMD raids on the Support tile — closed bars + provisional today, display only (2026-09-24)',
+    file: 'src/components/PatternChart.tsx',
+    // Ajay 2026-09-24: "Show all the possible raids, past ones too and todays
+    // too." FRONTEND FILES ONLY — the backend strings (the one raid test,
+    // the closed-bar split, the route wiring) are pinned by the backend tests
+    // in tests/test_amd_all_raids_2026_09_24.py, so this goes green on its own.
+    // Display only: one muted chip after the verdict, the list in a drill-in,
+    // numbered circles read from the SAME served array as the list.
+    checks: (src) => {
+      const errs = [];
+      if (!/<AmdRaidsChip\b/.test(src)) errs.push('PatternChart must mount <AmdRaidsChip — the one chip that lists every raid');
+      if (!/amdRaidMarks\(/.test(src)) errs.push('PatternChart must place the circles with amdRaidMarks( — list and circles from one array');
+      if (!/occupiedFromMarkers\(/.test(src)) errs.push('PatternChart must pass occupiedFromMarkers( so a circle never prints on an A / ▲ glyph');
+      const badges = src.indexOf('(tile.badges || []).map(');
+      const chipAt = src.indexOf('<AmdRaidsChip');
+      const watchAt = src.indexOf('<SignalWatchButton');
+      if (!(badges >= 0 && chipAt > badges && chipAt < watchAt)) {
+        errs.push('the raids chip must sit right after the verdict badges and before + Signals (Rule #5 placement)');
+      }
+      const chip = read('src/components/AmdRaidsChip.tsx');
+      if (!/\{chip\.text\}/.test(chip)) errs.push('AmdRaidsChip must print the SERVED chip.text');
+      if (/raids\.length/.test(chip)) errs.push('AmdRaidsChip must not count raids itself — the served chip counts chains');
+      if (!/cm-badge-muted/.test(chip) || /cm-badge-(good|warn)/.test(chip)) {
+        errs.push('AmdRaidsChip must be muted only — the read is MEASURED INVERTED');
+      }
+      if (!/stopPropagation\(\)/.test(chip) || !/preventDefault\(\)/.test(chip)) {
+        errs.push('AmdRaidsChip must preventDefault + stopPropagation — the whole tile is a <Link>');
+      }
+      const lib = read('src/lib/amdRaids.ts');
+      if (!/draw_dirs/.test(lib)) errs.push('amdRaids.ts must filter the circles on the served draw_dirs');
+      for (const [rel, f] of [['src/lib/amdRaids.ts', lib], ['src/components/AmdRaidsChip.tsx', chip]]) {
+        if (/bounce/i.test(f)) errs.push(`${rel} says "bounce" — surfaces he reads say reversal`);
+      }
+      const ov = read('src/lib/chartOverlays.ts');
+      if (!/amd_raids:\s*hidden\.has\('amd'\)/.test(ov)) {
+        errs.push("filterTile must drop amd_raids beside hidden.has('amd') — the AMD box governs the raids too");
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      const at = nf.indexOf("'amd-all-raids-2026-09-24'");
+      if (at < 0) {
+        errs.push('the AMD raids feature has no ✨ NEW entry');
+      } else {
+        const entry = nf.slice(at, nf.indexOf('addedAt', at));
+        if (!entry.includes('Show all the possible raids, past ones too and todays too.')) errs.push('the ✨ entry must quote his words verbatim');
+        if (!/display only/i.test(entry)) errs.push('the ✨ entry must say display only');
+        if (!entry.includes('INVERTED') || !entry.includes('−4.2pp')) errs.push('the ✨ entry must name the measured INVERTED result (−4.2pp)');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

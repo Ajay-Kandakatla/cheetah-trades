@@ -13575,3 +13575,63 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .nt-model-case--bull { border-left-color: var(--positive, #22c55e); }
 .nt-model-case--bear { border-left-color: var(--negative, #f87171); }
 .nt-model-line { font-size: 0.76rem; margin: 8px 0 0; white-space: pre-wrap; }
+
+/* ── 🌀 Every AMD raid on the daily Support tile (2026-09-24) ─────────────────
+   Ajay: "Show all the possible raids, past ones too and todays too."
+   ONE muted chip after the AMD verdict; the list opens in a panel INSIDE the
+   tile (the tile has no overflow clip). --right / --left / --fixed come from
+   panelAlign so the panel never runs off a narrow screen. Display only. */
+.cm-amd-raids { position: relative; display: inline-flex; }
+.cm-amd-raids-chip { cursor: pointer; font-family: inherit; }
+.cm-amd-raids-panel {
+  position: absolute; top: calc(100% + 4px); z-index: 20;
+  width: min(460px, 92vw); max-height: 300px; overflow: auto;
+  display: flex; flex-direction: column; gap: 0.35rem;
+  padding: 0.5rem 0.6rem; border-radius: 8px;
+  background: var(--cm-card, #161a22); border: 1px solid var(--rule, #2a2f3a);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 0.72rem; font-weight: 400; line-height: 1.35;
+  color: var(--ink, #e7e7e7); white-space: normal; text-align: left; cursor: default;
+}
+.cm-amd-raids-panel--right { right: 0; }
+.cm-amd-raids-panel--left { left: 0; }
+.cm-amd-raids-panel--fixed {
+  position: fixed; left: 4vw; right: 4vw; width: auto;
+  top: 12vh; max-height: 70vh;
+}
+.cm-amd-raids-close {
+  align-self: flex-end; background: none; border: 0; cursor: pointer;
+  color: var(--cm-slate, #8595ad); font: inherit; font-size: 0.8rem; padding: 0 0.1rem;
+}
+.cm-amd-raids-close:hover { color: var(--ink, #e7e7e7); }
+.cm-amd-raids-summary { display: block; font-weight: 700; }
+.cm-amd-raids-basis { display: block; color: var(--cm-slate, #8595ad); }
+.cm-amd-raids-list { display: flex; flex-direction: column; gap: 0.25rem; }
+.cm-amd-raids-row {
+  display: flex; gap: 0.35rem; align-items: baseline;
+  padding: 0.15rem 0 0.15rem 0.35rem;
+  border-left: 2px solid var(--cm-violet, #8b5cf6);
+}
+.cm-amd-raids-row--today { border-left-style: dashed; }
+.cm-amd-raids-row--off { opacity: 0.55; }
+.cm-amd-raids-row--resweep { margin-left: 0.6rem; }
+.cm-amd-raids-mark {
+  flex: none; min-width: 2.4ch; font-weight: 700; color: var(--cm-violet, #8b5cf6);
+}
+.cm-amd-raids-text { min-width: 0; overflow-wrap: anywhere; }
+.cm-amd-raids-note { display: block; color: var(--cm-slate, #8595ad); }
+
+/* The numbered circles. Closed low raid: violet fill, dark digits. Closed high
+   raid: card fill, violet ring and digits. Today (not closed): no fill, dashed
+   ring. "?" (beyond the edge now, not a raid): the dashed ring, dimmer. */
+.pc-amd-raid circle { fill: var(--cm-violet, #8b5cf6); stroke: none; opacity: 0.92; }
+.pc-amd-raid text { fill: #0b0e14; }
+.pc-amd-raid-bearish circle {
+  fill: var(--cm-card, #161a22); stroke: var(--cm-violet, #8b5cf6); stroke-width: 1.1;
+}
+.pc-amd-raid-bearish text { fill: var(--cm-violet, #8b5cf6); }
+.pc-amd-raid-live circle {
+  fill: none; stroke: var(--cm-violet, #8b5cf6); stroke-width: 1.1; stroke-dasharray: 2, 1.5;
+}
+.pc-amd-raid-live text { fill: var(--cm-violet, #8b5cf6); }
+.pc-amd-raid-unsure { opacity: 0.7; }

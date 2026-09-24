@@ -5888,12 +5888,245 @@ def _dedupe_markers(markers: list) -> list:
     return out
 
 
-def _attach_studies(out: dict, days: int) -> None:
+# ---------------------------------------------------------------------------
+# 🌀 EVERY AMD RAID on the daily Support tile (Ajay 2026-09-24).
+#
+# ORCL read "AMD raided · today" on the 🏛️ POTUS tile and "AMD marked up ·
+# 14d ago" on the ticker page: the verdict is graded on the cached frame, whose
+# last row is today's UNFINISHED bar (rewritten hourly), and the detector keeps
+# only the latest cycle. Asked, he said: *"Show all the possible raids, past
+# ones too and todays too."* And on the two base floors: *"Keep both as they
+# are."*
+#
+# So: PAST raids read CLOSED bars only (`demand_reentry.split_today_partial`)
+# and never flip in the session; TODAY's is `amd.provisional_raid` — the same
+# walk on the closed bars plus one synthetic row built from the candle the
+# chart draws and the now-line print — labelled not closed. The verdict chip,
+# the 🌀 tab and every constant are untouched. DISPLAY ONLY: nothing sorts,
+# filters, gates, pushes, sizes or enters on `amd_raids`.
+# ---------------------------------------------------------------------------
+# Which directions get numbered circles on the chart. HIS CALL: high raids are
+# listed and counted, not drawn — the verdict beside the chip is bullish only
+# and circles for both would roughly double the marks on a dense tile.
+AMD_RAID_DRAW_DIRS = ("bullish",)
+
+_AMD_RAID_DIRS = ("bullish", "bearish")
+_AMD_RAID_PREFIX = {"bullish": "", "bearish": "H"}
+
+AMD_RAIDS_VERDICT_BASIS_NOTE = (
+    "The AMD chip beside this is graded on the cached daily bar, which already "
+    "holds today's unfinished bar (refreshed about hourly) — so it can change "
+    "during the session and can disagree with this chip. These rows read closed "
+    "bars only.")
+
+
+def _amd_raids_note() -> str:
+    """The honesty line, built from the ONE measured constant — never retyped."""
+    try:
+        from rotation.hottest_amd import AMD_MEASURED as M
+        return ("Display only — nothing sorts, alerts, gates or buys on these rows. "
+                "AMD is uncited. Measured {date} on {population}: a fresh raid "
+                "reached the base top LESS often than a like-for-like bar inside "
+                "its own base — {claim} — INVERTED. Entering at the raid low has "
+                "not been measured.").format(date=M["date"],
+                                             population=M["population"],
+                                             claim=M["claim"])
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: AMD_MEASURED unavailable: %s", exc)
+        return ("Display only — AMD is uncited; the measurement could not be "
+                "loaded.")
+
+
+def _amd_today_bar(tile: dict, last_t: Optional[str]) -> Optional[dict]:
+    """Today's candle as the chart DRAWS it plus the now-line print, or None
+    when there is no live print. A pre-market bar (`s: "pre"`) has no session
+    extreme yet — its low/high are the one pre-market print, not a session."""
+    px = _num((tile or {}).get("live_price"))
+    if px is None or px <= 0 or not last_t:
+        return None
+    bars = (tile or {}).get("bars") or []
+    last = (bars[-1] if bars else None) or {}
+    pre = last.get("s") == "pre"
+    lo = None if pre else _num(last.get("l"))
+    hi = None if pre else _num(last.get("h"))
+    if lo is not None and lo <= 0:
+        lo = None
+    if hi is not None and hi <= 0:
+        hi = None
+    return {"date": last_t, "price": px, "day_low": lo, "day_high": hi}
+
+
+def _et_now(now: Optional[datetime]) -> datetime:
+    if now is None:
+        return datetime.now(ET)
+    return now.astimezone(ET) if now.tzinfo is not None else now
+
+
+def _attach_amd_raids(tile: dict, df, *, now: Optional[datetime] = None) -> None:
+    """`tile["amd_raids"]` — every AMD raid on closed bars plus today's
+    provisional read. In place; never raises (a failure leaves None)."""
+    try:
+        _attach_amd_raids_inner(tile, df, now=now)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: amd raids for %s failed: %s",
+                  (tile or {}).get("symbol"), exc)
+        try:
+            tile["amd_raids"] = None
+        except Exception:                                      # noqa: BLE001
+            pass
+
+
+def _attach_amd_raids_inner(tile: dict, df, *, now: Optional[datetime]) -> None:
+    from supply_demand import amd as A
+    from supply_demand.demand_reentry import split_today_partial
+    now_et = _et_now(now)
+    closed, partial = split_today_partial(df, now_et=now_et)
+    if closed is None or len(closed) < A.MIN_BASE_BARS + 2:
+        tile["amd_raids"] = None
+        return
+    walks = {d: A.find_raids(closed, direction=d) for d in _AMD_RAID_DIRS}
+
+    dates = [str((b or {}).get("t"))[:10] for b in (tile.get("bars") or [])]
+    view = set(dates)
+    last_t = dates[-1] if dates else None
+    last_closed = _row_date(closed.index[-1])
+    # The tile draws a bar AFTER the last closed one (today's live candle):
+    # every closed raid is one bar older on this chart than on the closed
+    # frame — whether or not a live print exists.
+    shift = 1 if last_t and last_t > last_closed else 0
+    today_bar = _amd_today_bar(tile, last_t) if shift else None
+
+    rows = []
+    for d in _AMD_RAID_DIRS:
+        for r in walks[d]["raids"]:
+            r = dict(r)
+            r.pop("idx", None)
+            r["bars_ago"] = int(r["bars_ago"]) + shift
+            r["in_view"] = r.get("date") in view
+            r["closed"] = True
+            rows.append(r)
+
+    # Numbering per direction: a chain gets a number when any member is on
+    # this chart, ordered by its root's date.
+    numbered: dict = {}
+    count_c = {}
+    for d in _AMD_RAID_DIRS:
+        pre = _AMD_RAID_PREFIX[d]
+        drows = [r for r in rows if r["direction"] == d]
+        roots = sorted({r["chain_root"] for r in drows
+                        if r["in_view"] and r.get("chain_root")})
+        for k, root in enumerate(roots, 1):
+            numbered[(d, root)] = k
+        count_c[d] = len(roots)
+        for r in drows:
+            k = numbered.get((d, r.get("chain_root")))
+            if k is None:
+                r["n"], r["mark"] = None, None
+            else:
+                seq = r.get("sweep_seq") or 1
+                r["n"] = k
+                r["mark"] = pre + (str(k) if seq == 1 else "%d·%d" % (k, seq))
+
+    today = []
+    if today_bar:
+        for d in _AMD_RAID_DIRS:
+            pre = _AMD_RAID_PREFIX[d]
+            e = A.provisional_raid(closed, open_base=walks[d]["open_base"],
+                                   date=today_bar["date"], price=today_bar["price"],
+                                   day_low=today_bar["day_low"],
+                                   day_high=today_bar["day_high"], direction=d)
+            if not e:
+                continue
+            e["date"] = today_bar["date"]
+            e["bars_ago"] = 0
+            e["price_source"] = "now_line"
+            e["reason"] = (NO_SESSION_LOW_REASON if e["state"] == AMD_FLIGHT_UNKNOWN
+                           else None)
+            if e["state"] == "reclaimed":
+                seq = e.get("sweep_seq") or 1
+                k = numbered.get((d, e.get("chain_root")))
+                if k is None:
+                    k = count_c[d] + 1
+                e["n"] = k
+                e["mark"] = pre + ("%d·%d" % (k, seq) if seq > 1 else str(k))
+            elif e["state"] == "sweeping":
+                e["n"], e["mark"] = None, "?"
+            else:
+                e["n"], e["mark"] = None, None
+            e["text"] = A.provisional_text(e)
+            today.append(e)
+
+    rows.sort(key=lambda r: (str(r.get("date") or ""),
+                             0 if r["direction"] == "bullish" else 1))
+    for r in rows:
+        r["text"] = A.raid_row_text(r)
+
+    chains_in_view = {d: count_c[d] for d in _AMD_RAID_DIRS}
+    rows_in_view = {d: sum(1 for r in rows if r["direction"] == d and r["in_view"])
+                    for d in _AMD_RAID_DIRS}
+    resweeps_in_view = {d: sum(1 for r in rows if r["direction"] == d and r["in_view"]
+                               and (r.get("sweep_seq") or 1) > 1)
+                        for d in _AMD_RAID_DIRS}
+    chains_off_view = len({(r["direction"], r.get("chain_root")) for r in rows
+                           if (r["direction"], r.get("chain_root")) not in numbered})
+
+    draw_dirs = list(AMD_RAID_DRAW_DIRS)
+    summary = A.raids_summary(chains_in_view, rows_in_view, resweeps_in_view,
+                              chains_off_view, draw_dirs)
+    note = _amd_raids_note()
+    verdict_basis_note = AMD_RAIDS_VERDICT_BASIS_NOTE if partial is not None else None
+    chip = A.raids_chip(chains_in_view, today, chains_off_view)
+    if chip:
+        chip = {**chip, "title": "\n".join(p for p in (verdict_basis_note, summary, note) if p)}
+
+    frame_from = _row_date(closed.index[0])
+    through = last_closed
+    today_et = now_et.date().isoformat()
+    basis = "Closed daily bars %s → %s." % (frame_from, through)
+    if through == today_et and partial is None:
+        basis += (" Today's bar counts as closed from 16:00 ET but is priced off the "
+                  "last hourly patch until the 16:30 ET post-close scan rewrites it — "
+                  "a raid on today's bar can still appear or drop until then.")
+    else:
+        basis += " Past raids do not change during the session."
+    if today:
+        basis += (" Today is not closed — read from the chart's live print %.2f and "
+                  "today's candle. 'Not closed' follows the app's 16:00 ET clock, so "
+                  "on a 13:00 half-day it still reads not closed until 16:00."
+                  % today_bar["price"])
+
+    tile["amd_raids"] = {
+        "raids": rows,
+        "today": today,
+        "draw_dirs": draw_dirs,
+        "chains_in_view": chains_in_view,
+        "rows_in_view": rows_in_view,
+        "resweeps_in_view": resweeps_in_view,
+        "chains_off_view": chains_off_view,
+        "n_all": len(rows),
+        "chip": chip,
+        "summary": summary,
+        "basis": basis,
+        "verdict_basis_note": verdict_basis_note,
+        "note": note,
+        "through": through,
+        "frame_from": frame_from,
+        "cited": False,
+    }
+
+
+def _attach_studies(out: dict, days: int, *, raids: bool = False,
+                    now: Optional[datetime] = None) -> None:
     """Append the study overlays to every tile in `out`, in place.
 
     Soft-fails per tile: a name whose frame will not load keeps its real bands
     and simply carries no study lines. A study must never be able to empty a
-    tile that the rest of the board built correctly."""
+    tile that the rest of the board built correctly.
+
+    `raids=True` (the daily Support tile only, 2026-09-24) also attaches
+    `amd_raids` — every AMD raid on closed bars plus today's provisional read
+    — and drops the single `amd_m` marker the numbered circles replace. The
+    default path is unchanged."""
     tiles = (out or {}).get("tiles") or []
     if not tiles:
         return
@@ -5918,6 +6151,8 @@ def _attach_studies(out: dict, days: int) -> None:
             # The DRAWN overlay still follows the zoom — that is a picture of
             # the window he is looking at — but the sentence does not.
             _attach_verdicts(t, df)
+            if raids:
+                _attach_amd_raids(t, df, now=now)
             # The CURVE is built from the full frame as well, then aligned to
             # whatever bars the tile actually carries — so the zoom changes how
             # much of the channel is visible, never what the channel was.
@@ -5927,6 +6162,11 @@ def _attach_studies(out: dict, days: int) -> None:
             if days and len(df) > days:
                 df = df.iloc[-int(days):]
             o = _study_overlays(df, days, keltner_lines=not has_curve)
+            if raids and t.get("amd_raids"):
+                # The numbered raid circles replace the single M; A, D, ✗,
+                # the band and the raid line stay.
+                o["markers"] = [m for m in o["markers"]
+                                if (m or {}).get("kind") != "amd_m"]
             # Never twice (2026-09-14): a 🌀 AMD tile already carries its
             # base band and raid line from the stored row, and ticking any
             # other study box re-ran this on it — two rects at double
