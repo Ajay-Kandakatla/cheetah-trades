@@ -1589,3 +1589,57 @@ describe('the arrival-level filter (Ajay 2026-09-16)', () => {
     expect(TAB_META.deep_demand.blurb).not.toMatch(/bounce/i);
   });
 });
+
+/* ⌘-click on Chart Maps tabs (Ajay 2026-09-24): "add Command clicks to the
+ * Tabs in chart maps so I can open new tabs.. Of that specific Section".
+ * The tabs were <button>s — nothing to open. Each is now a real link whose
+ * href is the section's own address; a plain click still switches in place. */
+describe('ChartMaps — every tab is a link you can ⌘-click', () => {
+  it('each tab carries the href of its own section', () => {
+    draw('/chart-maps?tab=vcp');
+    const t = screen.getByRole('tab', { name: 'Back in Demand' });
+    expect(t.tagName).toBe('A');
+    expect(t.getAttribute('href')).toBe('?tab=zones');
+  });
+
+  it('the href keeps this page’s setup, so the new tab opens the same way', () => {
+    draw('/chart-maps?tab=support&symbol=NVDA&window=1y');
+    const href = screen.getByRole('tab', { name: 'Strong VCP' }).getAttribute('href')!;
+    const q = new URLSearchParams(href.replace(/^\?/, ''));
+    expect(q.get('tab')).toBe('vcp');
+    expect(q.get('symbol')).toBe('NVDA');
+    expect(q.get('window')).toBe('1y');
+  });
+
+  it('a PLAIN click still switches in place — default prevented, tab selected', async () => {
+    draw('/chart-maps?tab=zones');
+    const vcp = screen.getByRole('tab', { name: 'Strong VCP' });
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+    vcp.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Strong VCP' }))
+      .toHaveAttribute('aria-selected', 'true'));
+  });
+
+  it.each([
+    ['⌘-click', { metaKey: true }],
+    ['Ctrl-click', { ctrlKey: true }],
+    ['⇧-click', { shiftKey: true }],
+    ['middle-click', { button: 1 }],
+  ])('NEGATIVE: a %s is left to the browser — default NOT prevented, this tab unchanged',
+     (_label, over) => {
+    draw('/chart-maps?tab=zones');
+    const vcp = screen.getByRole('tab', { name: 'Strong VCP' });
+    const ev = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ...over });
+    vcp.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
+    expect(screen.getByRole('tab', { name: 'Back in Demand' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Strong VCP' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('NEGATIVE: a tab’s href never carries `pattern` from Past Winners', () => {
+    draw('/chart-maps?tab=winners&pattern=cup_handle');
+    expect(screen.getByRole('tab', { name: 'Strong VCP' }).getAttribute('href'))
+      .not.toContain('pattern');
+  });
+});

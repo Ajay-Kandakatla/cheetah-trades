@@ -871,6 +871,41 @@ export function parseTab(raw: string | null | undefined): CmTab {
   return (CM_TABS as string[]).includes(t) ? (t as CmTab) : DEFAULT_TAB;
 }
 
+/** The query string one tab lives at: the CURRENT params with `tab` set and
+ *  `pattern` dropped. ONE function for both halves of a tab — the in-place
+ *  switch (`setTab`) and the tab's own `href` — so a plain click and a
+ *  ⌘-click can never land on two different boards.
+ *
+ *  Ajay 2026-09-24: "add Command clicks to the Tabs in chart maps so I can
+ *  open new tabs.. Of that specific Section". The tabs were `<button>`s, and a
+ *  button has no address — ⌘-click, middle-click and "Open in new tab" all did
+ *  nothing, because there was nothing to open. Every tab already lived in the
+ *  URL (`?tab=`), so the address existed; the strip just never handed it out.
+ *
+ *  Everything else in the URL rides along (universe, window, `symbol`, sort…)
+ *  so the new browser tab opens the section the way this one is set up.
+ *  `pattern` is the one key dropped, exactly as `setTab` always has: it names a
+ *  pattern INSIDE Past Winners and means nothing on any other tab.
+ *
+ *  Never mutates `params` — it is React Router's live object. */
+export function tabSearch(params: URLSearchParams, t: CmTab): string {
+  const next = new URLSearchParams(params);
+  next.set('tab', t);
+  next.delete('pattern');
+  return next.toString();
+}
+
+/** True for the ONE click the strip handles itself: an unmodified primary
+ *  button. Every other click — ⌘ (mac), Ctrl (windows/linux), ⇧ (new window),
+ *  ⌥ (download), the middle button — belongs to the BROWSER, which already
+ *  knows how to open an `href` in a new tab. Intercepting any of them is how a
+ *  "link" ends up behaving like a button again. */
+export function isPlainLeftClick(e: {
+  button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean;
+}): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
 /* ── ICT tab (Ajay 2026-09-03) ────────────────────────────────────────────── */
 
 /** Where the rules come from — Ajay's own spec plus this walkthrough. The

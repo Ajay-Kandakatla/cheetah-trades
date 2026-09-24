@@ -391,7 +391,20 @@ describe('the captured pre-market board renders', () => {
   it('NEGATIVE: the served wording never says "bounce" on a surface he reads', async () => {
     const { container } = (vi.stubGlobal('fetch', stub(PRE)), page('/chart-maps?tab=amd'));
     await screen.findByRole('tablist', { name: 'In flight' });
-    expect(container.innerHTML).not.toMatch(/bounce/i);
+    /* Every word and every attribute stays under this guard EXCEPT an `href`.
+     * Since 2026-09-24 each Chart Maps tab is a real link (⌘-click opens it in
+     * a new browser tab), and the 🪃 Quick Reversal tab's href carries its
+     * internal key: `?tab=quick_bounce`. That key is not new to his screen —
+     * clicking the tab has written exactly that into the URL bar since
+     * 2026-09-06 — and internals keeping the old word is the 2026-09-09 rule as
+     * written. The LABEL he reads is still "Quick Reversal", and this still
+     * fails the moment "bounce" reaches any text, title, aria-label, class or
+     * data attribute. Whether the URL itself should say `quick_reversal` is
+     * his call, raised with the change. */
+    const read = container.innerHTML.replace(/\shref="[^"]*"/g, '');
+    expect(read).not.toMatch(/bounce/i);
+    // and the exemption is exactly one attribute wide: the label is still clean
+    expect(screen.getByRole('tab', { name: /Quick Reversal/ })).toBeInTheDocument();
   });
 
   it('the served counts still add up to the served priced total', () => {

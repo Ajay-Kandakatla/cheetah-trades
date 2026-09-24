@@ -10872,8 +10872,13 @@ a.tk-link:hover   { color: inherit; }
   background: none; border: 1px solid transparent; border-radius: 8px;
   padding: 0.35rem 0.75rem; font-size: 0.86rem; font-weight: 600;
   color: var(--cm-slate, #8595ad);
+  /* The tab is an <a> since 2026-09-24 (⌘-click opens the section in a new
+   * browser tab). These two keep it looking exactly like the button it was:
+   * no link underline, and a box that takes padding like a button does. */
+  display: inline-block; text-decoration: none;
 }
 .cm-tab:hover { color: var(--ink, #e7e7e7); }
+.cm-tab:focus-visible { outline: 2px solid var(--cm-violet, #8b5cf6); outline-offset: 1px; }
 .cm-tab-on {
   color: var(--ink, #e7e7e7); background: var(--bg-raised, #181c24);
   border-color: var(--rule, #2a2f3a);
@@ -11170,6 +11175,13 @@ a.tk-link:hover   { color: inherit; }
                color: var(--positive, #22c55e); }
 .rot-turn-down { background: color-mix(in srgb, var(--negative, #ef4444) 20%, transparent);
                  color: var(--negative, #ef4444); }
+/* 🗺️ StockTitan heatmap links (2026-09-24). Quiet on purpose — a second view
+ * of the sector, not a signal, so it reads as a link and never as a chip. */
+.rot-heatmap { margin-left: .5rem; font-size: .72rem; font-weight: 500;
+               color: var(--cm-slate, #8595ad); text-decoration: none;
+               white-space: nowrap; }
+.rot-heatmap:hover { color: var(--ink, #e7e7e7); text-decoration: underline; }
+.rot-heatmap-all { font-size: .78rem; vertical-align: middle; }
 
 @media (max-width: 640px) {
   .rot-summary { gap: .5rem 1rem; }

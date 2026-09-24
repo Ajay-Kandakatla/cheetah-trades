@@ -32,6 +32,7 @@ import {
   AMD_FLIGHT_LABEL, parseFlight, flightParam, flightChip, fetchingLabel,
   UNHIDE_PARAM, parseUnhide, unhideParam,
   dataThrough, isThinSample, parseSort, parseSource, parseTab, parseTier,
+  tabSearch, isPlainLeftClick,
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
@@ -511,10 +512,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     : null;
 
   const setTab = (t: CmTab) => {
-    const next = new URLSearchParams(params);
-    next.set('tab', t);
-    next.delete('pattern');
-    setParams(next, { replace: true });
+    setParams(new URLSearchParams(tabSearch(params, t)), { replace: true });
   };
 
   const setPattern = (p: string | null) => {
@@ -700,13 +698,26 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * "make sure this scan you did today to be on top of the chart maps"). */}
       <HotSectors />
 
+      {/* Each tab is a real LINK (Ajay 2026-09-24: "add Command clicks to the
+        * Tabs in chart maps so I can open new tabs.. Of that specific
+        * Section"). A plain click still switches in place — same `replace`
+        * history as before, no reload. ⌘/Ctrl-click, middle-click and
+        * right-click → "Open in new tab" are left to the BROWSER, which opens
+        * the `href`: this section, with this page's universe/window/symbol.
+        * The href is relative (`?tab=…`) on purpose — it resolves against the
+        * page it is on, so no router basename can make it point elsewhere. */}
       <div className="cm-tabs" role="tablist">
         {tabs.map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t}
-                  className={`cm-tab${tab === t ? ' cm-tab-on' : ''}`}
-                  onClick={() => setTab(t)}>
+          <a key={t} role="tab" aria-selected={tab === t}
+             href={`?${tabSearch(params, t)}`}
+             className={`cm-tab${tab === t ? ' cm-tab-on' : ''}`}
+             onClick={(e) => {
+               if (!isPlainLeftClick(e)) return;   // the browser's click
+               e.preventDefault();
+               setTab(t);
+             }}>
             {TAB_META[t].label}
-          </button>
+          </a>
         ))}
       </div>
 

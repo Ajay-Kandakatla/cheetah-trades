@@ -127,3 +127,68 @@ describe('Rotation', () => {
     expect(await screen.findByText(/HTTP 503/)).toBeInTheDocument();
   });
 });
+
+/* 🗺️ StockTitan heatmap links (Ajay 2026-09-24): "In the sector rotation page
+ * can you pull this page and add the link please." A link, because StockTitan
+ * refuses to be framed (x-frame-options: SAMEORIGIN). Only the SECTORS table
+ * links — a theme or a haven has no StockTitan sector. */
+describe('Rotation — StockTitan heatmap links', () => {
+  it('every sector row links to its own sector, by StockTitan’s GICS name', async () => {
+    draw();
+    await screen.findByText('Technology');
+    const hrefs = screen.getAllByTestId('rot-heatmap').map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual([
+      'https://www.stocktitan.net/stock-market-heatmap#sector=Health%20Care',
+      'https://www.stocktitan.net/stock-market-heatmap#sector=Information%20Technology',
+      'https://www.stocktitan.net/stock-market-heatmap#sector=Energy',
+    ]);
+  });
+
+  it('opens in a NEW tab, without handing StockTitan a window.opener', async () => {
+    draw();
+    await screen.findByText('Technology');
+    for (const a of screen.getAllByTestId('rot-heatmap')) {
+      expect(a).toHaveAttribute('target', '_blank');
+      expect(a.getAttribute('rel')).toContain('noopener');
+      expect(a.getAttribute('rel')).toContain('noreferrer');
+    }
+  });
+
+  it('says on hover that StockTitan is S&P 500 only — a different population', async () => {
+    draw();
+    await screen.findByText('Technology');
+    expect(screen.getAllByTestId('rot-heatmap')[0].getAttribute('title')).toMatch(/S&P 500/);
+  });
+
+  it('the page header carries the whole-map link', async () => {
+    draw();
+    await screen.findByText('Technology');
+    const all = screen.getByTestId('rot-heatmap-all');
+    expect(all).toHaveAttribute('href', 'https://www.stocktitan.net/stock-market-heatmap');
+    expect(all).toHaveAttribute('target', '_blank');
+  });
+
+  it('NEGATIVE: no theme and no haven row gets a heatmap link', async () => {
+    draw();
+    await screen.findByText('Technology');
+    // three sectors in the fixture → exactly three row links; the `energy`
+    // THEME shares a word with the Energy sector and must still get none
+    expect(screen.getAllByTestId('rot-heatmap')).toHaveLength(3);
+    const energyTheme = screen.getByText('energy').closest('tr')!;
+    expect(energyTheme.querySelector('[data-testid="rot-heatmap"]')).toBeNull();
+    const gold = screen.getByText('Gold miners').closest('tr')!;
+    expect(gold.querySelector('[data-testid="rot-heatmap"]')).toBeNull();
+  });
+
+  it('NEGATIVE: a sector name StockTitan does not carry renders no link at all', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ ...PAYLOAD, sectors: [
+        { ...PAYLOAD.sectors[0], group: 'Conglomerates' },
+      ] }),
+    })) as any);
+    draw();
+    await screen.findByText('Conglomerates');
+    expect(screen.queryAllByTestId('rot-heatmap')).toHaveLength(0);
+  });
+});

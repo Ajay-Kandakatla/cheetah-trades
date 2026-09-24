@@ -4373,6 +4373,87 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '⌘-click opens a Chart Maps tab in a new browser tab — every tab is a LINK (2026-09-24)',
+    file: 'src/pages/ChartMaps.tsx',
+    // Ajay 2026-09-24: "add Command clicks to the Tabs in chart maps so I can
+    // open new tabs.. Of that specific Section". The tabs were <button>s, and a
+    // button has no address: ⌘-click, middle-click and "Open in new tab" all
+    // did nothing. A refactor back to a button — or an onClick that swallows
+    // every click — would silently take this away and every render test would
+    // still pass, because jsdom does not open tabs.
+    checks: (src) => {
+      const errs = [];
+      const strip = src.slice(src.indexOf('<div className="cm-tabs" role="tablist">'));
+      const head = strip.slice(0, 900);
+      if (!head) return ['the cm-tabs strip could not be found'];
+      if (!/<a key=\{t\} role="tab"/.test(head)) {
+        errs.push('each Chart Maps tab must be an <a role="tab"> — a <button> has no address to open in a new tab');
+      }
+      if (!/href=\{`\?\$\{tabSearch\(params, t\)\}`\}/.test(head)) {
+        errs.push('the tab href must come from tabSearch(params, t) — the SAME address setTab switches to, so a click and a ⌘-click cannot land on two boards');
+      }
+      if (!/if \(!isPlainLeftClick\(e\)\) return;/.test(head)) {
+        errs.push('the tab onClick must hand every modified / non-primary click back to the browser (isPlainLeftClick) — intercepting them is how a link becomes a button again');
+      }
+      if (!/e\.preventDefault\(\);\s*setTab\(t\);/.test(head)) {
+        errs.push('a PLAIN click must still preventDefault and switch in place — otherwise every tab click is a full page reload');
+      }
+      const lib = read('src/lib/chartMaps.ts');
+      if (!/const setTab = \(t: CmTab\) => \{\s*setParams\(new URLSearchParams\(tabSearch\(params, t\)\)/.test(src)) {
+        errs.push('setTab must build its query with tabSearch — one owner for a tab address');
+      }
+      if (!/return e\.button === 0 && !e\.metaKey && !e\.ctrlKey && !e\.shiftKey && !e\.altKey;/.test(lib)) {
+        errs.push('isPlainLeftClick must treat ⌘, Ctrl, ⇧, ⌥ and any non-primary button as the browser’s click');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🗺️ StockTitan heatmap: every sector maps to StockTitan’s own name, and nothing is guessed (2026-09-24)',
+    file: 'src/lib/rotation.ts',
+    // StockTitan matches a sector EXACTLY and a miss quietly draws the whole
+    // S&P 500 map — a link that looks like it worked. The eleven GICS names
+    // were read off its own payload (window.__TREEMAP_API_DATA__) on
+    // 2026-09-24. A new sector, a typo, or a "helpful" fuzzy fallback would all
+    // ship a wrong link that no render test notices.
+    checks: (src) => {
+      const errs = [];
+      const THEIRS = ['Health Care', 'Information Technology', 'Consumer Discretionary',
+        'Financials', 'Consumer Staples', 'Utilities', 'Materials', 'Industrials',
+        'Real Estate', 'Energy', 'Communication Services'];
+      const table = src.slice(src.indexOf('export const STOCKTITAN_SECTOR'),
+                              src.indexOf('export function stockTitanHeatmapUrl'));
+      if (!table) return ['STOCKTITAN_SECTOR could not be found'];
+      const pairs = [...table.matchAll(/'([^']+)':\s*'([^']+)'/g)].map((m) => m[2]);
+      if (pairs.length !== 11) errs.push(`STOCKTITAN_SECTOR must map exactly 11 sectors, found ${pairs.length}`);
+      for (const t of THEIRS) {
+        if (!pairs.includes(t)) errs.push(`STOCKTITAN_SECTOR never maps to StockTitan’s "${t}"`);
+      }
+      for (const v of pairs) {
+        if (!THEIRS.includes(v)) errs.push(`"${v}" is not a StockTitan sector name — the link would open the whole map`);
+      }
+      if (!/Object\.freeze\(/.test(table)) errs.push('STOCKTITAN_SECTOR must be frozen');
+      const fn = src.slice(src.indexOf('export function stockTitanHeatmapUrl'));
+      if (!/if \(!theirs\) return null;/.test(fn)) {
+        errs.push('an unmapped sector must get NO link (return null) — never a guessed one');
+      }
+      if (!/encodeURIComponent\(ind\)/.test(fn)) {
+        errs.push('the industry must be encodeURIComponent-ed — "Oil & Gas E&P" carries a literal & that splits the hash');
+      }
+      const page = read('src/pages/Rotation.tsx');
+      if (!/target="_blank" rel="noopener noreferrer"/.test(page)) {
+        errs.push('the heatmap links must open in a new tab without handing StockTitan window.opener');
+      }
+      if (!/<Table title="Sectors" rows=\{data\.sectors\} showEtf heatmap/.test(page)) {
+        errs.push('the Sectors table must ask for heatmap links');
+      }
+      if (/<Table title="(Your themes|Safe havens)"[^>]*\bheatmap\b/.test(page)) {
+        errs.push('themes and havens have no StockTitan sector — they must not ask for heatmap links');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

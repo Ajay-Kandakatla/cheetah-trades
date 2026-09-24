@@ -164,3 +164,58 @@ close. Neither fetches a live price and neither now pretends to:
 No live read was added to either surface: the snapshot cadence is deliberate
 (a cold build is ~30 s), and a second fan-out for a strip of chips is not worth
 a provider call. Only the wording changed.
+
+---
+
+## 2026-09-24 — 🗺️ StockTitan heatmap links on /rotation
+
+Ajay 2026-09-24: *"In the sector rotation page can you pull this page and add
+the link please. https://www.stocktitan.net/stock-market-heatmap#sector=Energy"*
+
+**A link, not an embed.** StockTitan answers `x-frame-options: SAMEORIGIN`
+(checked against the live page), so an iframe renders blank.
+
+**Where.** Every row of the **Sectors** table carries `🗺️ heatmap ↗`, and the
+page title carries `🗺️ S&P 500 heatmap ↗` for the whole map. Themes and safe
+havens have no StockTitan sector and get no link. Both open in a new tab with
+`rel="noopener noreferrer"`.
+
+**The names were read, not guessed.** Our sectors are Yahoo's; StockTitan's are
+GICS. Its treemap parses the hash with `URLSearchParams` and then does
+`sectors.find(s => s.name === sector)` — an **exact** match, and a miss is not
+an error: it silently draws the whole S&P 500 map. So `STOCKTITAN_SECTOR`
+(`frontend/src/lib/rotation.ts`) was built from its own payload,
+`window.__TREEMAP_API_DATA__.sectors[].name`, read 2026-09-24:
+
+| ours (Yahoo) | StockTitan (GICS) |
+|---|---|
+| Technology | Information Technology |
+| Healthcare | Health Care |
+| Financial Services | Financials |
+| Consumer Cyclical | Consumer Discretionary |
+| Consumer Defensive | Consumer Staples |
+| Basic Materials | Materials |
+| Industrials · Energy · Real Estate · Utilities · Communication Services | identical |
+
+A sector not in the table gets **no link**, never a guessed one.
+
+**Industries need no table** — StockTitan's industry names *are* Yahoo's
+(`Semiconductors`, `Oil & Gas E&P`, `Software - Infrastructure`). The helper
+takes an optional industry (`#sector=…&industry=…`, `encodeURIComponent` so the
+literal `&` in "Oil & Gas E&P" cannot split the hash). An industry StockTitan
+does not carry falls back to that *sector's* view on its side. Not wired onto
+any industry row yet — his call.
+
+**Population caveat, on every link's hover.** StockTitan maps the S&P 500 only;
+this page's medians run over the liquid Russell 3000 ∪ S&P 1500. Two
+populations — the colours can disagree on the same day.
+
+**Tests.** `frontend/src/lib/rotation.heatmap.test.ts` (21) — all eleven
+mappings, the six that differ, the exact pasted link, a `URLSearchParams`
+round-trip (StockTitan's own parser), the `&` in an industry, and negatives: a
+theme id, a haven, the GICS spelling of our own name, wrong case, empty, null.
+`frontend/src/pages/Rotation.test.tsx` (+6) — the three sector hrefs, new-tab +
+noopener, the S&P 500 hover, the header link, no link on themes or havens (the
+`energy` theme shares a word with the Energy sector and still gets none), and an
+unmappable sector rendering no link. A frontend contract pins the table against
+StockTitan's eleven names — mutation-checked.

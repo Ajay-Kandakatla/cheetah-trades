@@ -17,7 +17,14 @@ import { InfoButton } from '../components/InfoButton';
 import {
   WINDOWS, backtestVerdict, boardQuery, etfGapLine, isThinGroup, pct, pp,
   riskStance, tone, turned, type RotBacktest, type RotBoard, type RotRow,
+  STOCKTITAN_HEATMAP_URL, stockTitanHeatmapUrl,
 } from '../lib/rotation';
+
+/* 🗺️ The hover on every heatmap link says the one thing that could mislead:
+ * StockTitan maps the S&P 500 only, while these medians run over the liquid
+ * Russell 3000 ∪ S&P 1500 — two populations, so the colours can disagree. */
+const HEATMAP_TITLE = 'StockTitan heatmap, opens in a new tab · S&P 500 members '
+  + 'only, so it can disagree with the median on this page';
 
 const HowItWorks = (
   <>
@@ -49,15 +56,22 @@ const HowItWorks = (
   </>
 );
 
-function Row({ r, showEtf }: { r: RotRow; showEtf?: boolean }) {
+function Row({ r, showEtf, heatmap }: { r: RotRow; showEtf?: boolean; heatmap?: boolean }) {
   const t = turned(r);
   const gap = showEtf ? etfGapLine(r) : null;
+  /* Only the Sectors table asks: a theme or a haven has no StockTitan sector,
+   * and the helper answers null for a name it cannot map — no guessed link. */
+  const map = heatmap ? stockTitanHeatmapUrl(r.group) : null;
   return (
     <tr>
       <td className="rot-name">
         <b>{r.group}</b>
         {r.stance ? <span className={`rot-stance rot-stance-${r.stance}`}>{r.stance}</span> : null}
         {t ? <span className={`rot-turn rot-turn-${t}`}>turned {t}</span> : null}
+        {map ? (
+          <a className="rot-heatmap" href={map} target="_blank" rel="noopener noreferrer"
+             title={HEATMAP_TITLE} data-testid="rot-heatmap">🗺️ heatmap ↗</a>
+        ) : null}
         <span className="rot-n">
           n={r.n}
           {r.dropped ? <span className="rot-dropped" title={(r.dropped_symbols || []).join(', ')}>
@@ -74,8 +88,8 @@ function Row({ r, showEtf }: { r: RotRow; showEtf?: boolean }) {
   );
 }
 
-function Table({ title, rows, showEtf, note }:
-  { title: string; rows: RotRow[]; showEtf?: boolean; note?: string }) {
+function Table({ title, rows, showEtf, heatmap, note }:
+  { title: string; rows: RotRow[]; showEtf?: boolean; heatmap?: boolean; note?: string }) {
   const usable = rows.filter((r) => !isThinGroup(r) || r.rel_window != null);
   return (
     <section className="rot-section">
@@ -93,7 +107,7 @@ function Table({ title, rows, showEtf, note }:
             </tr>
           </thead>
           <tbody>
-            {usable.map((r) => <Row key={r.group} r={r} showEtf={showEtf} />)}
+            {usable.map((r) => <Row key={r.group} r={r} showEtf={showEtf} heatmap={heatmap} />)}
           </tbody>
         </table>
       </div>
@@ -147,6 +161,9 @@ export function Rotation() {
         <h2>
           Sector Rotation
           <InfoButton title="How this is measured">{HowItWorks}</InfoButton>
+          <a className="rot-heatmap rot-heatmap-all" href={STOCKTITAN_HEATMAP_URL}
+             target="_blank" rel="noopener noreferrer" title={HEATMAP_TITLE}
+             data-testid="rot-heatmap-all">🗺️ S&amp;P 500 heatmap ↗</a>
         </h2>
         <div className="rot-controls">
           {WINDOWS.map((w) => (
@@ -195,8 +212,8 @@ export function Rotation() {
             </div>
           </div>
 
-          <Table title="Sectors" rows={data.sectors} showEtf
-                 note="Median liquid member of each sector, versus the sector ETF where they disagree." />
+          <Table title="Sectors" rows={data.sectors} showEtf heatmap
+                 note="Median liquid member of each sector, versus the sector ETF where they disagree. 🗺️ opens that sector on StockTitan's S&P 500 heatmap." />
           <Table title="Your themes" rows={data.themes}
                  note="The build-out rosters — space, quantum, semis, AI power, nuclear, energy, optical, robotics, infra." />
           <Table title="Safe havens" rows={data.havens}

@@ -170,3 +170,66 @@ export function backtestVerdict(b: RotBacktest | null | undefined): string | nul
     + `It beat equal-weight in ${beat.toFixed(0)}% of months`
     + `${isEdgeSayable(s) ? '.' : ', and the excess is not distinguishable from zero.'}`;
 }
+
+/* ── 🗺️ StockTitan sector heatmap (Ajay 2026-09-24) ──────────────────────────
+ *
+ * "In the sector rotation page can you pull this page and add the link
+ * please. https://www.stocktitan.net/stock-market-heatmap#sector=Energy"
+ *
+ * A LINK, not an embed: StockTitan answers `x-frame-options: SAMEORIGIN`, so an
+ * iframe would render blank. Checked 2026-09-24 against the live page.
+ *
+ * THE NAMES DIFFER, and a wrong one fails SILENTLY. Our sectors are Yahoo's
+ * (Technology, Healthcare, Financial Services…); StockTitan's are GICS
+ * (Information Technology, Health Care, Financials…). Its treemap reads the
+ * hash with `URLSearchParams` and then does `sectors.find(s => s.name ===
+ * sector)` — an EXACT match. A miss is not an error: it quietly draws the
+ * whole S&P 500 map, which would look like a working link to the wrong place.
+ *
+ * So the table below was not typed from memory. It was read off the page's own
+ * data (`window.__TREEMAP_API_DATA__.sectors[].name`, 2026-09-24), all eleven,
+ * and every one of ours maps to exactly one of theirs. A sector NOT in this
+ * table gets NO link rather than a guessed one.
+ *
+ * INDUSTRIES need no table: StockTitan's industry names ARE Yahoo's
+ * ("Semiconductors", "Oil & Gas E&P", "Software - Infrastructure"…), the same
+ * vocabulary our rotation builds industries from. An industry StockTitan does
+ * not carry degrades to that SECTOR's view on its side (its own code checks
+ * `industries.some(...)` and falls back), never to the whole map.
+ *
+ * POPULATION, said on the link itself: StockTitan maps the S&P 500 only. Our
+ * sector medians run over the liquid Russell 3000 ∪ S&P 1500, so the two can
+ * disagree on the same day — the heatmap is a second view, not the same number.
+ */
+export const STOCKTITAN_HEATMAP_URL = 'https://www.stocktitan.net/stock-market-heatmap';
+
+/** Ours (Yahoo) → theirs (GICS), read off StockTitan's own payload. */
+export const STOCKTITAN_SECTOR: Readonly<Record<string, string>> = Object.freeze({
+  'Technology': 'Information Technology',
+  'Healthcare': 'Health Care',
+  'Financial Services': 'Financials',
+  'Consumer Cyclical': 'Consumer Discretionary',
+  'Consumer Defensive': 'Consumer Staples',
+  'Basic Materials': 'Materials',
+  'Industrials': 'Industrials',
+  'Energy': 'Energy',
+  'Real Estate': 'Real Estate',
+  'Utilities': 'Utilities',
+  'Communication Services': 'Communication Services',
+});
+
+/** The StockTitan heatmap opened on one sector (and optionally one industry),
+ *  or null when the sector has no known StockTitan name — no link beats a link
+ *  that silently opens the whole map.
+ *
+ *  `encodeURIComponent`, exactly as StockTitan writes its own hash: an
+ *  industry like "Oil & Gas E&P" carries a literal `&`, which unencoded would
+ *  split into a second parameter and drop the industry. */
+export function stockTitanHeatmapUrl(sector: string | null | undefined,
+                                     industry?: string | null): string | null {
+  const theirs = STOCKTITAN_SECTOR[(sector || '').trim()];
+  if (!theirs) return null;
+  const ind = (industry || '').trim();
+  return `${STOCKTITAN_HEATMAP_URL}#sector=${encodeURIComponent(theirs)}`
+    + (ind ? `&industry=${encodeURIComponent(ind)}` : '');
+}

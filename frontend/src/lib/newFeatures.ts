@@ -22,6 +22,24 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-24: "add Command clicks to the Tabs in chart maps so I can
+  // open new tabs.. Of that specific Section".
+  { id: 'chart-maps-cmd-click-tabs-2026-09-24',
+    label: '\u{1F5C2}\u{FE0F} Chart Maps tabs open in a new browser tab. You said: “add Command clicks to the Tabs in chart maps so I can open new tabs.. Of that specific Section.” '
+      + 'WHAT WAS WRONG: every tab was a button, and a button has no address — ⌘-click, middle-click and “Open in new tab” all did nothing, because there was nothing to open. '
+      + 'WHAT CHANGED: every tab is now a real link. ⌘-click (Ctrl-click on Windows), middle-click, or right-click → “Open in new tab” opens THAT section in its own browser tab, set up the way this one is — same symbol, same window, same sort. A plain click still switches in place, exactly as before, with no reload. '
+      + 'WHAT IT IS NOT: no tab moved, no tab was renamed, nothing about any board changed. The new tab counts as a tab open, so it still feeds the most-used-first order.',
+    addedAt: '2026-09-24', route: '/chart-maps' },
+  // Ajay 2026-09-24: "In the sector rotation page can you pull this page and
+  // add the link please. https://www.stocktitan.net/stock-market-heatmap#sector=Energy"
+  { id: 'rotation-stocktitan-heatmap-2026-09-24',
+    label: '\u{1F5FA}\u{FE0F} Sector Rotation links to StockTitan’s heatmap. You said: “In the sector rotation page can you pull this page and add the link please.” '
+      + 'WHAT CHANGED: every row of the Sectors table has a “\u{1F5FA}\u{FE0F} heatmap ↗” link that opens StockTitan’s map ON THAT SECTOR in a new tab, and the page title carries a link to the whole map. '
+      + 'WHY A LINK AND NOT THE PAGE ITSELF: StockTitan refuses to be embedded (it sends x-frame-options: SAMEORIGIN), so an embedded copy would render blank. '
+      + 'THE NAMES WERE READ, NOT GUESSED: our sectors use Yahoo names and StockTitan uses GICS names — six of the eleven differ (Technology is “Information Technology”, Healthcare is “Health Care”, Financial Services is “Financials”, Consumer Cyclical is “Consumer Discretionary”, Consumer Defensive is “Consumer Staples”, Basic Materials is “Materials”). StockTitan matches the name exactly and a wrong one silently opens the whole map, so the eleven were read off StockTitan’s own data. '
+      + 'ONE CAVEAT, on the link’s hover: StockTitan maps the S&P 500 only; the medians on this page run over the liquid Russell 3000 and S&P 1500, so the two can disagree on the same day. '
+      + 'YOUR CALL: StockTitan also opens straight onto an INDUSTRY, using the same industry names we do — say so if you want the link on the Hot Sectors industry rows too.',
+    addedAt: '2026-09-24', route: '/rotation' },
   // Ajay 2026-09-24, on a screenshot of the Support tab's LEDGER row:
   // "I would need 9EMA and 20 SMA here too as check boxes". This closes the
   // gap I flagged to him as his call the day before.
