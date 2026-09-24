@@ -981,6 +981,52 @@ def _last_sessions(df, n: int):
     return (out if len(out) else df), len(keep)
 
 
+def _attach_ma(tile: dict, frame, *, intraday: bool) -> None:
+    """〰️ The three moving averages on a Support tile, in place.
+
+    Ajay 2026-09-24, on a screenshot of this tab's LEDGER row: *"I would need
+    9EMA and 20 SMA here too as check boxes"*. Same three families, the same
+    shared checkboxes, the same `board._ma_curves` engine — the only thing this
+    wrapper owns is WHICH FRAME and WHICH KEY.
+
+    THE FRAME. Daily gets the UNTAILED frame out of `bars_for(frame_out=...)`,
+    so a 200 SMA under a 1-year chart is a true 200-bar average and does not
+    move when he changes the Zoom. Intraday gets `chart_df`, the widest frame
+    that timeframe has, and its averages are therefore in ITS bars: a 20 SMA on
+    the 15-minute chart is twenty 15-minute bars. That is the rule this tab's
+    levels have followed since 2026-09-23 and the averages must not differ from
+    it — a 20-DAY average drawn over a 15-minute chart is the "why is one hour
+    showing Monthly?" bug wearing a new label.
+
+    THE KEY. `_intraday_stamp` on an intraday frame, because those bars carry
+    HH:MM in ET; the board default (date-only) on a daily one. Get this wrong
+    and nothing raises — the join simply matches nothing, every curve is
+    dropped as all-warm-up, and the lines silently never appear.
+
+    Soft-fails to no curves. A drawing must never be able to empty a tile.
+    """
+    if frame is None:
+        return
+    try:
+        board_mod._ma_curves(tile, frame,
+                             stamp=_intraday_stamp if intraday else None)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("support: moving averages failed: %s", exc)
+
+
+def _intraday_stamp(ts) -> str:
+    """The SAME key `_frame_bars` writes into a bar's `t`.
+
+    〰️ The moving averages (2026-09-24) join to the drawn bars by string, and
+    on an intraday frame that string carries HH:MM in ET. `board._row_date`,
+    the default, is date-only — it would match NOTHING here, every value would
+    come back None, every curve would be dropped as all-warm-up, and the
+    averages would silently never appear on a 5-minute chart. Defined beside
+    `_frame_bars` and used by both so the format has one definition.
+    """
+    return _et(ts).strftime("%Y-%m-%d %H:%M")
+
+
 def _frame_bars(df) -> list:
     """Candles straight from the analysed intraday frame.
 
@@ -995,7 +1041,7 @@ def _frame_bars(df) -> list:
                 # ET on the axis. The minute loader indexes in UTC, and a
                 # 13:30 stamp over the opening bar read as a lunch print
                 # (found 2026-09-02 building the live frame).
-                "t": _et(ts).strftime("%Y-%m-%d %H:%M"),
+                "t": _intraday_stamp(ts),
                 "o": round(float(row["open"]), 4),
                 "h": round(float(row["high"]), 4),
                 "l": round(float(row["low"]), 4),
@@ -1687,6 +1733,13 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
     board = (board_read(board_closed, sym, board_px)
              if board_closed is not None and len(board_closed) else None)
 
+    # 〰️ The moving averages need the FULL frame, not the drawn window (Ajay
+    # 2026-09-24: "I would need 9EMA and 20 SMA here too as check boxes").
+    # On the daily path `bars_for` fills this out-list with the UNTAILED frame,
+    # so a 200 SMA under a 1-year chart is still a true 200-bar average and
+    # does not move when he changes the Zoom. On an intraday path the widest
+    # frame this timeframe has IS `chart_df`, which `frame_for` already sized.
+    _ma_frame: list = []
     tile = {
         "symbol": sym,
         "name": board_mod._name_for(sym),
@@ -1709,7 +1762,8 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
                  else board_mod.bars_for(
                      sym, days=bars_used,
                      min_bars=(bars_used if chart_only
-                               else board_mod.BARS_FLOOR))),
+                               else board_mod.BARS_FLOOR),
+                     frame_out=_ma_frame)),
         "bands": _bands(levels) + _board_bands(board),
         "lines": _lines(levels, last_price),
         "markers": _touch_markers(levels),
@@ -1719,6 +1773,15 @@ def for_symbol(symbol: str, window: str = DEFAULT_WINDOW,
         "badges": [],
     }
     overlay = _draw_overlay(tile, gaps, smc_read, orb, last_price)
+    # 〰️ 9 EMA / 20 SMA / 200 SMA, the same three checkboxes the Chart Maps
+    # tiles carry — computed on THIS frame's own bars, so a 20 SMA on the
+    # 15-minute chart is twenty 15-minute bars, never twenty days painted over
+    # it. The same rule the levels themselves follow on this tab since
+    # 2026-09-23. Soft-fails to no lines; it can never empty a tile.
+    _attach_ma(tile,
+               (chart_df if intraday else
+                (_ma_frame[0] if _ma_frame else None)),
+               intraday=intraday)
     trend = trend_read(df.tail(read_budget), mood_read)
     # On an intraday timeframe the Zoom dropdown's DAILY bar-counts do not
     # apply, and leaving "1 month" sitting over a 15-minute chart is what

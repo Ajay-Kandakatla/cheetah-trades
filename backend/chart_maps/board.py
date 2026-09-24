@@ -157,7 +157,7 @@ MA_SPECS: tuple[tuple[str, str, int, str], ...] = (
 )
 
 
-def _ma_series(df) -> Optional[dict]:
+def _ma_series(df, *, stamp=None) -> Optional[dict]:
     """`{"dates": [...], "<tone>": [value|None, ...]}` for MA_SPECS, or None.
 
     COMPUTED ON THE FRAME IT IS HANDED, AND THAT MUST BE THE FULL ONE. A 200
@@ -180,6 +180,16 @@ def _ma_series(df) -> Optional[dict]:
     (keltner.py:97, mood.py:157, support.py:1139). Matching the existing
     engines matters more here than any other convention.
 
+    `stamp` (2026-09-24) formats the index into the SAME key the caller's bars
+    carry, because the by-date join in `_ma_curves` is a string match. The
+    default is `_row_date`, date-only, which is right for every daily tile —
+    but the Support tab's INTRADAY frames stamp their bars
+    `"%Y-%m-%d %H:%M"` in ET (`support._frame_bars`), and a date-only key
+    matches none of them. That would not raise: every value would simply be
+    None, every curve would be dropped as all-warm-up, and the averages would
+    silently never appear on a 5-minute chart. Caller-supplied so the two can
+    never drift.
+
     PURE. No I/O, no snapshot read — pandas over a frame the caller already
     holds in memory.
     """
@@ -189,7 +199,8 @@ def _ma_series(df) -> Optional[dict]:
         return None
     close = df["close"].astype(float)
     n = int(len(close))
-    out: dict = {"dates": [_row_date(ts) for ts in df.index]}
+    _stamp = stamp or _row_date
+    out: dict = {"dates": [_stamp(ts) for ts in df.index]}
     for tone, _label, period, kind in MA_SPECS:
         if n < period:
             # Not enough closes for this period to exist at all. An all-None
@@ -208,7 +219,7 @@ def _ma_series(df) -> Optional[dict]:
     return out
 
 
-def _ma_curves(tile: dict, df) -> None:
+def _ma_curves(tile: dict, df, *, stamp=None) -> None:
     """Draw the three moving averages as CURVES on one tile, in place.
 
     A `line` in this payload is ONE price and renders horizontally by
@@ -234,7 +245,7 @@ def _ma_curves(tile: dict, df) -> None:
     if any(tone in have for tone, _l, _p, _k in MA_SPECS):
         return          # already on this tile
     try:
-        ser = _ma_series(df)
+        ser = _ma_series(df, stamp=stamp)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: moving-average series failed: %s", exc)
         return

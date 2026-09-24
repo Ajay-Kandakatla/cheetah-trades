@@ -22,6 +22,17 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-24, on a screenshot of the Support tab's LEDGER row:
+  // "I would need 9EMA and 20 SMA here too as check boxes". This closes the
+  // gap I flagged to him as his call the day before.
+  { id: 'support-moving-averages-2026-09-24',
+    label: '\u3030\ufe0f The 9 EMA, 20 SMA and 200 SMA are on the Supply/Demand chart too \u2014 same three checkboxes, on every frame. You asked for them here after seeing them on the tiles. They appear in the LEDGER row with everything else, and the boxes are shared, so ticking one here ticks it everywhere. '
+      + 'ON AN INTRADAY FRAME THEY ARE IN THAT FRAME\u2019S OWN BARS. A 20 SMA on the 15-minute chart is twenty 15-MINUTE bars, not twenty days painted under a 15-minute label \u2014 the same rule the support levels on this tab have followed since yesterday. On the daily frame the 200 is still computed on your full history and then trimmed to the window, so it does not move when you change the Zoom. '
+      + 'A LINE THAT CANNOT BE COMPUTED IS NOT DRAWN, so on the short entry frames you will often see the 9 and the 20 and no 200 \u2014 there simply are not 200 bars there. Absent beats a short average wearing a long label. '
+      + 'ONE BUG THIS ALMOST SHIPPED WITH: the averages join to the drawn candles by timestamp, and this tab stamps intraday bars with the time while the rest of the app stamps dates only. Mismatched, nothing errors \u2014 the lines just silently never appear on any 5m/15m/60m chart. Caught before it went out and kept as a test. '
+      + 'THE TREND LINE ABOVE IS UNCHANGED \u2014 it still reads EMA20 and EMA50, a different pair from yours. '
+      + 'NOT the bullish read you asked for next. You told me to research what traders actually mean by a bullish 9/20 rather than let me define it, so that is being sourced and comes back to you as a proposal, not something already switched on.',
+    addedAt: '2026-09-24', route: '/chart-maps?tab=support' },
   // Ajay 2026-09-23: "I need 9 EMA and 20 SMA on our charts and also 200 MA on
   // our charts as check boxes.. Also a new tab for 9EMA lines on our charts for
   // weekly and monthly charts please". He chose the 200 as SIMPLE and chose a
