@@ -19,6 +19,9 @@ its own and each failing on its own:
                 and the board's own `d1` block, which says whether the day
                 column is the live session or the last close.
   * headlines — `news_search.core`, the app's ONE news routine.
+  * model_read — 🧠 the local abliterated model's stored bull + bear read of
+                the four blocks above (`news_model_read`, 2026-09-24). Served
+                from Mongo; the model runs only in a background thread.
 
 NOT A SIGNAL. Nothing here is measured to predict, nothing gates a scan,
 pushes a phone, sizes a position or enters a lane. The sector-heat study is
@@ -38,6 +41,8 @@ from news_search import core
 from rotation import heat
 from rotation import hottest as H
 from rotation import tracker as T
+
+from . import news_model_read
 
 log = logging.getLogger("chart_maps.news_tab")
 
@@ -307,8 +312,16 @@ async def build() -> dict:
         *(asyncio.wait_for(asyncio.to_thread(fn), LEG_BUDGET_SEC) for fn in legs),
         return_exceptions=True)
     verdict, macro, sectors, headlines = (_settle(r) for r in got)
-    return {
+    body = {
         "generated_at_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "verdict": verdict, "macro": macro, "sectors": sectors, "headlines": headlines,
         "budget_sec": LEG_BUDGET_SEC, "note": NOTE, "measured": False,
     }
+    # 🧠 the local model's stored two-sided read. A Mongo read on the request;
+    # the model itself only ever runs in news_model_read's background thread.
+    try:
+        read = await asyncio.wait_for(asyncio.to_thread(news_model_read.served, body), LEG_BUDGET_SEC)
+    except Exception as exc:                                   # noqa: BLE001
+        read = _settle(exc)
+    body["model_read"] = read
+    return body

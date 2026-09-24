@@ -19,6 +19,11 @@
  *     StockTitan heatmap link. The day column says "today" ONLY when the
  *     served `d1.live` is true; otherwise it is the last close and says so.
  *   ④ Headlines — the app's one news routine, last N hours.
+ *   🧠 Model read (added 2026-09-24, "You can use the abliterated model we
+ *     have via hermes. For this tab") — the local model's STORED bull AND
+ *     bear case of ①–④, its one-word lean, and the sectors / releases it
+ *     named, each already matched to served names by the server. Printed
+ *     under the gauge's own word, never in place of it. UNMEASURED.
  *
  * Contract exemptions (frontend/scripts/contracts.mjs):
  *   - no ticker rows on this tab — nothing for a growth / explosive / enterable chip to read
@@ -32,9 +37,9 @@ import { API } from '../lib/apiBase';
 import { pp, stockTitanHeatmapUrl } from '../lib/rotation';
 import { dayTagChipLabel, dayTagTitle } from './HottestSectors';
 import {
-  SECTOR_VIEWS, agreeLine, benchmarkSymbol, filterRows, heatGlyph, macroWhen, publishedAgo,
-  verdictLine, viewLabel, wordTone,
-  type NewsTabPayload, type NtMacro, type NtSectors, type NtVerdict, type NtHeadlines,
+  MODEL_WRITING, SECTOR_VIEWS, ageLabel, agreeLine, benchmarkSymbol, filterRows, heatGlyph, macroWhen,
+  nameList, publishedAgo, verdictLine, viewLabel, wordTone,
+  type NewsTabPayload, type NtMacro, type NtModelReadBlock, type NtSectors, type NtVerdict, type NtHeadlines,
   type NtWord, type SectorView,
 } from '../lib/newsTab';
 
@@ -78,6 +83,60 @@ function MarketRead({ v }: { v?: NtVerdict | null }) {
       ) : null}
       {v.as_of_label ? <p className="nt-muted">{v.as_of_label}</p> : null}
       {v.disclaimer ? <p className="nt-muted">{v.disclaimer}</p> : null}
+    </>
+  );
+}
+
+function ModelReadBlock({ b }: { b?: NtModelReadBlock | null }) {
+  const writing = b?.refreshing === true
+    ? <p className="nt-muted" data-testid="nt-model-writing">{MODEL_WRITING}</p> : null;
+  const r = b?.ok ? b.read : null;
+  if (!b || !r) {
+    return (
+      <>
+        <Reason text={b?.reason || 'model read unavailable'} testId="nt-model-reason" />
+        {writing}
+      </>
+    );
+  }
+  const lean = (r.lean || '').trim() || 'unknown';
+  const up = nameList(r.sectors_bullish);
+  const down = nameList(r.sectors_bearish);
+  const watch = nameList(r.watch);
+  const age = ageLabel(b.age_sec);
+  return (
+    <>
+      <p className="nt-model-meta" data-testid="nt-model-meta">
+        <span className={`nt-model-lean nt-word--${wordTone(lean)}`} data-testid="nt-model-lean">lean: {lean}</span>
+        <span className="nt-muted">
+          {r.model ? ` · read by ${r.model}` : ''}{age ? ` · ${age}` : ''}
+        </span>
+      </p>
+      <div className="nt-daytag__cases">
+        <div className="nt-daytag__case nt-model-case--bull">
+          <span className="nt-daytag__lbl">Bull case</span>
+          <p data-testid="nt-model-bull">{r.bull}</p>
+        </div>
+        <div className="nt-daytag__case nt-model-case--bear">
+          <span className="nt-daytag__lbl">Bear case</span>
+          <p data-testid="nt-model-bear">{r.bear}</p>
+        </div>
+      </div>
+      {up.length || down.length ? (
+        <p className="nt-model-line" data-testid="nt-model-sectors">
+          {up.length ? <><span className="nt-word--up">news-bullish</span> {up.join(' · ')}</> : null}
+          {up.length && down.length ? '   ' : null}
+          {down.length ? <><span className="nt-word--down">news-bearish</span> {down.join(' · ')}</> : null}
+        </p>
+      ) : null}
+      {watch.length ? (
+        <p className="nt-model-line" data-testid="nt-model-watch">watch: {watch.join(' · ')}</p>
+      ) : null}
+      {b.last_error ? (
+        <p className="nt-muted" data-testid="nt-model-last-error">last attempt refused — {b.last_error}</p>
+      ) : null}
+      {writing}
+      {b.note ? <p className="nt-muted" data-testid="nt-model-note">{b.note}</p> : null}
     </>
   );
 }
@@ -310,6 +369,10 @@ export default function NewsTabBoard() {
       <section className="nt-section" data-testid="nt-section-verdict">
         <h3 className="nt-head">Market read</h3>
         <MarketRead v={payload.verdict} />
+      </section>
+      <section className="nt-section" data-testid="nt-section-model">
+        <h3 className="nt-head">{'\u{1F9E0}'} Model read · bull and bear case</h3>
+        <ModelReadBlock b={payload.model_read} />
       </section>
       <section className="nt-section" data-testid="nt-section-macro">
         <h3 className="nt-head" data-testid="nt-macro-head">

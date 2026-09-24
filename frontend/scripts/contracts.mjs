@@ -4552,6 +4552,29 @@ const CONTRACTS = [
       if (!read('src/lib/newFeatures.ts').includes("'chart-maps-news-tab-2026-09-24'")) {
         errs.push('the News tab has no ✨ NEW entry');
       }
+      // 🧠 Model read (2026-09-24, "You can use the abliterated model we have via
+      // hermes. For this tab"): the LOCAL model only, no Hermes agent turn (a turn
+      // carries a shell; headlines are untrusted text), prose refused when it
+      // writes a number it was not handed, never run on the request.
+      const mr = read('../backend/chart_maps/news_model_read.py');
+      const mrCode = mr.split('"""').slice(2).join('"""');
+      if (!/^PROVIDER = "local"$/m.test(mr)) errs.push('news_model_read.py must pin PROVIDER = "local" — he named the abliterated model');
+      if (/["'](anthropic|auto)["']/.test(mrCode)) errs.push('news_model_read.py names a hosted provider — the model read is local only');
+      if (/ollama_chat|hermes/i.test(mrCode)) errs.push('news_model_read.py must not open a Hermes agent turn — same model, no tools');
+      if (!/stray_numbers\(bull \+ " " \+ bear, f\)/.test(mr)) errs.push('clean() must refuse a read that writes a number not in its facts');
+      if (!/threading\.Thread\(target=_run/.test(mr) || !/_LOCK\.acquire\(blocking=False\)/.test(mr)) {
+        errs.push('the model must run only in the single-flight background thread, never on the request');
+      }
+      if (!/news_model_read\.served, body\), LEG_BUDGET_SEC/.test(be)) {
+        errs.push('news_tab.build must read the stored model read under the ONE LEG_BUDGET_SEC');
+      }
+      if (!/<ModelReadBlock b=\{payload\.model_read\} \/>/.test(board)) errs.push('NewsTabBoard must render the 🧠 model read');
+      if (board.indexOf('nt-section-model') < board.indexOf('nt-section-verdict')) {
+        errs.push('the 🧠 model read must sit UNDER the gauge’s market read, never above it');
+      }
+      if (!read('src/lib/newFeatures.ts').includes("'chart-maps-news-model-read-2026-09-24'")) {
+        errs.push('the 🧠 model read has no ✨ NEW entry');
+      }
       return errs;
     },
   },

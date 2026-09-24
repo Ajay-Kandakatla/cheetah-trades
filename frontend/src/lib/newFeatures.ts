@@ -26,6 +26,14 @@ export const NEW_FEATURES: NewFeature[] = [
   // market or bearsish market and also pull Macro calendar that has T1 and T2
   // tier events in to this tab consider in to news. If bullish or beaish I need
   // to whcih sectors are bullish or which hotsectors are bearish. In a table."
+  // Ajay 2026-09-24: "Please promote the News tab. You can use the abliterated
+  // model we have via hermes. For this tab".
+  { id: 'chart-maps-news-model-read-2026-09-24',
+    label: '\u{1F9E0} Model read on the \u{1F4F0} News tab — your local abliterated model (huihui_ai/Qwen3.8-abliterated:27b, the one Hermes runs) reads the whole tab and writes a BULL case and a BEAR case, a one-word lean, the sectors the news supports on each side and the releases to watch. You said: “You can use the abliterated model we have via hermes. For this tab.” '
+      + 'SAME MODEL, NO TOOLS: it is called straight on Ollama, not through a Hermes agent turn — a Hermes turn has a shell on your Mac, and headlines are other people’s text. LOCAL ONLY, no hosted fallback. '
+      + 'THE APP OWNS THE NUMBERS: a read that writes any number it was not handed, drops either side, or leans anything but bullish / bearish / mixed is refused and the refusal is printed. Sector and release names are kept only when they match the tab exactly. '
+      + 'WHEN IT RUNS: never while you wait — the tab shows the last stored read and, at most once every 30 minutes while you are viewing, writes the next one in the background (about a minute on this model; the first live run took 68 s). The market word above it stays the Market Gauge’s. UNMEASURED, not a forecast; gates nothing.',
+    addedAt: '2026-09-24', route: '/chart-maps?tab=news' },
   { id: 'chart-maps-news-tab-2026-09-24',
     label: '\u{1F4F0} News tab on Chart Maps — market word, T1/T2 macro, and which sectors are bullish or bearish, in one table. You said: “build me a news tab in chartmaps to give me a bullish market or bearsish market and also pull Macro calendar that has T1 and T2 tier events … which sectors are bullish or which hotsectors are bearish. In a table.” '
       + 'THE MARKET WORD is your Market Gauge’s own state, not a new score: Constructive reads bullish, Caution reads mixed, Risk-Off reads bearish — mapped once on the server and printed beside the gauge’s own label and score, DAILY and WEEKLY side by side, because the two can disagree (they did the day this shipped: daily Caution, weekly Constructive). A read of where the gauge stands, not a forecast. '

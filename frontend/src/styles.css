@@ -13570,3 +13570,8 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .nt-study { font-size: 0.72rem; line-height: 1.45; opacity: 0.85; margin: 8px 0 0; }
 .nt-headlines li { margin-bottom: 2px; }
 .nt-note { margin-top: 0; }
+.nt-model-meta { margin: 0 0 8px; font-size: 0.78rem; }
+.nt-model-lean { font-weight: 600; text-transform: lowercase; }
+.nt-model-case--bull { border-left-color: var(--positive, #22c55e); }
+.nt-model-case--bear { border-left-color: var(--negative, #f87171); }
+.nt-model-line { font-size: 0.76rem; margin: 8px 0 0; white-space: pre-wrap; }

@@ -102,3 +102,37 @@ describe('📰 News tab — the REAL served payload', () => {
     expect(container.innerHTML).not.toMatch(/bounce/i);
   });
 });
+
+/* 🧠 the REAL model read (captured 2026-09-24 ~14:40 ET from the branch API on
+ * :8001 after one live run of huihui_ai/Qwen3.8-abliterated:27b, 68 s): lean
+ * mixed, both cases written, Technology named news-bullish, three served
+ * releases to watch. The prose quotes 20% / 74% / S&P 500 — every one of them
+ * is in the facts it was handed, which is why the server's guard let it through. */
+import LIVE_MR from './__fixtures__/news_tab_live_model_read_2026_09_24.json';
+
+describe('🧠 News tab model read — the REAL served payload', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => LIVE_MR })) as any);
+  });
+
+  it('renders the stored read with no object, NaN or undefined leaking', async () => {
+    const { container } = await mount();
+    const text = container.textContent || '';
+    for (const bad of ['NaN', 'undefined', 'Infinity', '[object Object]']) expect(text).not.toContain(bad);
+    expect(screen.getByTestId('nt-model-lean')).toHaveTextContent('lean: mixed');
+    expect((screen.getByTestId('nt-model-bull').textContent || '').length).toBeGreaterThan(40);
+    expect((screen.getByTestId('nt-model-bear').textContent || '').length).toBeGreaterThan(40);
+    expect(screen.getByTestId('nt-model-meta')).toHaveTextContent('read by huihui_ai/Qwen3.8-abliterated:27b');
+    expect(screen.getByTestId('nt-model-sectors')).toHaveTextContent('news-bullish Technology');
+    expect(screen.getByTestId('nt-model-watch')).toHaveTextContent('Jobless claims');
+    expect(screen.getByTestId('nt-model-note')).toHaveTextContent('UNMEASURED');
+  });
+
+  it('every sector and release the model named is one the same payload serves', () => {
+    const read = (LIVE_MR as any).model_read.read;
+    const sectors = new Set((LIVE_MR as any).sectors.rows.map((r: any) => r.sector));
+    const labels = new Set((LIVE_MR as any).macro.events.map((e: any) => e.label));
+    for (const s of [...read.sectors_bullish, ...read.sectors_bearish]) expect(sectors.has(s), s).toBe(true);
+    for (const w of read.watch) expect(labels.has(w), w).toBe(true);
+  });
+});

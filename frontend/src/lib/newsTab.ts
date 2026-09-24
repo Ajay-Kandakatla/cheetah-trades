@@ -148,12 +148,41 @@ export type NtHeadlines = {
   fetched_at?: number | string | null;
 };
 
+/** 🧠 the local abliterated model's stored two-sided read
+ *  (backend/chart_maps/news_model_read.py). Prose only — the server refused
+ *  any read that wrote a number it was not handed, was one-sided, or leaned
+ *  anything but bullish / bearish / mixed. UNMEASURED. */
+export type NtModelRead = {
+  lean?: string | null;
+  bull?: string | null;
+  bear?: string | null;
+  sectors_bullish?: string[] | null;
+  sectors_bearish?: string[] | null;
+  watch?: string[] | null;
+  model?: string | null;
+  provider?: string | null;
+  generated_at_iso?: string | null;
+};
+
+export type NtModelReadBlock = {
+  ok: boolean;
+  reason?: string | null;
+  read?: NtModelRead | null;
+  refreshing?: boolean | null;
+  age_sec?: number | null;
+  last_error?: string | null;
+  waiting?: string | null;
+  refresh_min_sec?: number | null;
+  note?: string | null;
+};
+
 export type NewsTabPayload = {
   generated_at_iso?: string | null;
   verdict?: NtVerdict | null;
   macro?: NtMacro | null;
   sectors?: NtSectors | null;
   headlines?: NtHeadlines | null;
+  model_read?: NtModelReadBlock | null;
   budget_sec?: number | null;
   note?: string | null;
   measured?: boolean;
@@ -267,3 +296,23 @@ export function publishedAgo(ts: number | null | undefined, now: number = Date.n
   if (hours < 48) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
 }
+
+/** "12 min ago" off the SERVED age in seconds; '' for anything unusable. */
+export function ageLabel(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return '';
+  if (sec < 60) return 'just now';
+  if (sec < 3600) return `${Math.floor(sec / 60)} min ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} h ago`;
+  return `${Math.floor(sec / 86400)} d ago`;
+}
+
+/** Served strings only, de-duplicated; junk entries dropped. */
+export function nameList(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  for (const x of v) if (typeof x === 'string' && x.trim() && !out.includes(x.trim())) out.push(x.trim());
+  return out;
+}
+
+export const MODEL_WRITING =
+  'the local model is writing a fresh read — about 2–3 min on this model, refresh then';
