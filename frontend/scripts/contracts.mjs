@@ -1568,7 +1568,15 @@ const CONTRACTS = [
         holdings: 'src/components/HoldingsBoard.tsx',
         potus: 'src/components/PotusBoard.tsx',
         ema_frames: 'src/components/EmaFramesBoard.tsx',
+        news: 'src/components/NewsTabBoard.tsx',
       };
+      /* A tab whose rows are not TICKERS has nothing for the chip to read.
+       * Exempt only in writing, the NO_TOGGLE way below: the file must SAY so,
+       * because an absent chip and a dropped chip look identical from here.
+       *   news (2026-09-24) — its rows are sectors, macro releases and
+       *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
+       *        which carries the chip. */
+      const NO_CHIP = { news: /no ticker rows on this tab/ };
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
@@ -1578,6 +1586,14 @@ const CONTRACTS = [
           continue;
         }
         const tsx = read(file);
+        if (NO_CHIP[t]) {
+          if (/<GrowthChip\s/.test(tsx)) {
+            errs.push(`${file} (tab '${t}') renders <GrowthChip> but is listed as having no ticker rows — drop it from NO_CHIP in this contract`);
+          } else if (!NO_CHIP[t].test(tsx)) {
+            errs.push(`${file} (tab '${t}') has no <GrowthChip> and no longer states why — an unexplained omission is indistinguishable from drift`);
+          }
+          continue;
+        }
         if (!/<GrowthChip\s/.test(tsx)) {
           errs.push(`${file} (tab '${t}') does not render <GrowthChip> — "ALL TABS IN CHART MAPS"`);
         }
@@ -2137,7 +2153,12 @@ const CONTRACTS = [
         potus: 'src/components/PotusBoard.tsx',
         growth: 'src/components/ExplosiveGrowth.tsx',
         ema_frames: 'src/components/EmaFramesBoard.tsx',
+        news: 'src/components/NewsTabBoard.tsx',
       };
+      /* Same written-exemption rule as the growth contract: a tab with no
+       * ticker rows has nothing for the 🧨 read to attach to, and must say so
+       * in its own file. news (2026-09-24) — sectors, macro, headlines. */
+      const NO_CHIP = { news: /no ticker rows on this tab/ };
       const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -2146,6 +2167,14 @@ const CONTRACTS = [
           continue;
         }
         const tsx = read(file);
+        if (NO_CHIP[t]) {
+          if (/<ExplosiveChip\s/.test(tsx)) {
+            errs.push(`${file} (tab '${t}') renders <ExplosiveChip> but is listed as having no ticker rows — drop it from NO_CHIP in this contract`);
+          } else if (!NO_CHIP[t].test(tsx)) {
+            errs.push(`${file} (tab '${t}') has no <ExplosiveChip> and no longer states why — an unexplained omission is indistinguishable from drift`);
+          }
+          continue;
+        }
         if (!/<ExplosiveChip\s/.test(tsx)) {
           errs.push(`${file} (tab '${t}') does not render <ExplosiveChip>`);
         }
@@ -2182,6 +2211,10 @@ const CONTRACTS = [
         //           been measured here, so any ordering toggle would be the
         //           board inventing a preference it cannot defend.
         ema_frames: /no read on this board to rank by/,
+        //   news (2026-09-24) — rows are sectors in the 🔥 Hottest board's own
+        //           served order, macro releases by date, headlines by time.
+        //           None carries a 🧨 read, so there is nothing to rank by.
+        news: /no read on this board to rank by/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -4450,6 +4483,74 @@ const CONTRACTS = [
       }
       if (/<Table title="(Your themes|Safe havens)"[^>]*\bheatmap\b/.test(page)) {
         errs.push('themes and havens have no StockTitan sector — they must not ask for heatmap links');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '📰 Chart Maps carries the News tab — the market word is the GAUGE’s, mapped once, and the sector words say what they measure (2026-09-24)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-24: "build me a news tab in chartmaps to give me a bullish
+    // market or bearsish market and also pull Macro calendar that has T1 and T2
+    // tier events in to this tab consider in to news. If bullish or beaish I
+    // need to whcih sectors are bullish or which hotsectors are bearish. In a
+    // table." What must not drift silently: (1) the market word is the Market
+    // Gauge's own state, mapped to bullish/mixed/bearish in exactly ONE place on
+    // the server — never a second score, never re-derived in the browser;
+    // (2) the tab carries its own measurements WITH their intervals and names
+    // the 5-session heat UNMEASURED; (3) nothing on it is a forecast.
+    checks: (src) => {
+      const errs = [];
+      const tabs = /export const CM_TABS: CmTab\[\] = \[([\s\S]*?)\];/.exec(src);
+      if (!tabs || !/'news'/.test(tabs[1])) errs.push("CM_TABS no longer lists 'news'");
+      if (!/t !== 'news'/.test(src)) errs.push('isBoardTab must exclude news — it has its own endpoint and renderer');
+      const at = src.indexOf('\n  news: {');
+      const meta = at < 0 ? '' : src.slice(at, src.indexOf('\n  },', at));
+      if (!meta) {
+        errs.push('TAB_META has no news entry');
+      } else {
+        for (const must of ['−0.57pp', '−2.55pp', 'UNMEASURED', 'not a forecast', 'last close']) {
+          if (!meta.includes(must)) errs.push(`the News blurb must carry "${must}" — a measured claim ships with its interval, and the heat word it prints is unmeasured`);
+        }
+        if (/\bbounce\b/i.test(meta)) errs.push('the News blurb says "bounce" — reversal, never bounce, on any surface he reads');
+        if (/2026-09-24: daily/.test(meta)) errs.push('the News blurb types a live gauge reading — the numbers are SERVED, never written into the copy');
+      }
+      const page = read('src/pages/ChartMaps.tsx');
+      // a comment may sit between the branch and the board; a `) :` would mean
+      // the next branch started, so the match is bounded by it
+      if (!/tab === 'news' \? \((?:(?!\) :)[\s\S]){0,1200}<NewsTabBoard \/>/.test(page)) {
+        errs.push('ChartMaps must mount <NewsTabBoard /> on tab === news');
+      }
+      // ONE place maps gauge state → word, and it is the server.
+      const be = read('../backend/chart_maps/news_tab.py');
+      if (!be.includes('MARKET_WORD = {"constructive": "bullish", "caution": "mixed", "risk_off": "bearish"}')) {
+        errs.push('news_tab.py must carry the one MARKET_WORD map, verbatim — the market word is the gauge’s state, mapped once');
+      }
+      if (!/LEG_BUDGET_SEC/.test(be) || /MACRO_BUDGET_SEC/.test(be)) {
+        errs.push('news_tab.py must budget all four legs with the ONE LEG_BUDGET_SEC');
+      }
+      for (const rel of ['src/lib/newsTab.ts', 'src/components/NewsTabBoard.tsx']) {
+        const f = read(rel);
+        if (/['"](constructive|risk_off)['"]/.test(f)) {
+          errs.push(`${rel} names a gauge state in a quoted literal — the browser must not re-derive the market word`);
+        }
+      }
+      const cmDir = join(FRONTEND_ROOT, '..', 'backend', 'chart_maps');
+      for (const f of readdirSync(cmDir)) {
+        if (!f.endsWith('.py') || f === 'news_tab.py') continue;
+        if (/"risk_off"/.test(readFileSync(join(cmDir, f), 'utf8'))) {
+          errs.push(`backend/chart_maps/${f} names "risk_off" — the gauge-state word map lives in news_tab.py only`);
+        }
+      }
+      const api = read('../backend/chart_maps/api.py');
+      if (!/async def chart_maps_news\(\):/.test(api)) {
+        errs.push('GET /chart-maps/news must take NO parameters — the tab is one fixed read (14 days, close basis)');
+      }
+      const board = read('src/components/NewsTabBoard.tsx');
+      if (!/stockTitanHeatmapUrl/.test(board)) errs.push('NewsTabBoard must link each sector to its StockTitan heatmap via stockTitanHeatmapUrl');
+      if (!/dayTagChipLabel/.test(board)) errs.push('NewsTabBoard must reuse the 🔥 Hottest day-tag chip (dayTagChipLabel) — one bull/bear-case renderer');
+      if (!read('src/lib/newFeatures.ts').includes("'chart-maps-news-tab-2026-09-24'")) {
+        errs.push('the News tab has no ✨ NEW entry');
       }
       return errs;
     },

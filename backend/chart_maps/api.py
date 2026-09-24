@@ -317,6 +317,18 @@ async def chart_maps_ema_frames(
     return JSONResponse(await asyncio.to_thread(_run))
 
 
+@router.get("/chart-maps/news")
+async def chart_maps_news():
+    """📰 News tab (Ajay 2026-09-24). Four served reads, one payload. The market word is the
+    Market Gauge's own state mapped once in news_tab.MARKET_WORD — nothing invented. The macro
+    rows are the calendar at its ONE cache key (macro_calendar.DEFAULT_DAYS): this route takes
+    NO window parameter so it can never evict the gauge's 14-day doc or reach the padding
+    defect at 21+ days. Gates nothing, pushes nothing, ranks nothing."""
+    from rotation.api import _scrub
+    from . import news_tab
+    return JSONResponse(_scrub(await news_tab.build()))
+
+
 @router.get("/chart-maps/ipo/upcoming/{symbol}")
 async def chart_maps_ipo_upcoming(symbol: str):
     """🗓️ "Coming up" drill-in — the fact sheet for ONE expected listing.

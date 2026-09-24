@@ -103,3 +103,87 @@ calendar — both fixed in `macro_calendar.py`:
   omits the event.
 - `frontend/src/components/HoldingDiagnosis.test.tsx` — the 📅 box renders when
   events present, omitted when not.
+
+## 2026-09-24 — FRED shadow releases printed as the print
+
+**Symptom.** "Jobless claims" showed twice a week (Thursday AND Friday) from
+2026-06-17, and a phantom T2 "Retail sales" row showed on 2026-10-08 in the
+14-day window.
+
+**Cause.** `_RELEASE_TIERS` is a first-match *substring* table. Several FRED
+releases whose names CONTAIN a needle are state / industry / research cuts of a
+print, not the print ("shadows"). `_fred_releases` dedupes on `(kind, date)`,
+which hides a shadow only when it lands on the print's own date. Two did not:
+469 (Fridays) and 494 (10-08).
+
+Measured on FRED `/releases/dates`, realtime 2026-09-24 → 2026-10-24, every
+name that matched a tier before the fix:
+
+| kind | tier | FRED id | release name | dates | role |
+|---|---|---|---|---|---|
+| claims | 2 | 180 | Unemployment Insurance Weekly Claims Report | Thu 09-24, 10-01, 10-08, 10-15, 10-22 | **the print** |
+| claims | 2 | 469 | State Unemployment Insurance Weekly Claims Report | Fri 09-25, 10-02, 10-09, 10-16, 10-23 | shadow (state detail) |
+| cpi | 1 | 10 | Consumer Price Index | 10-14 | **the print** |
+| cpi | 1 | 345 | Research Consumer Price Index | 10-14 | shadow (hidden by date luck) |
+| gdp | 2 | 53 | Gross Domestic Product | 09-30 | **the print** |
+| gdp | 2 | 140 | Gross Domestic Product by State | 09-30 | shadow |
+| gdp | 2 | 263 | Debt to Gross Domestic Product Ratios | 09-30 | shadow |
+| gdp | 2 | 331 | Gross Domestic Product by Industry | 09-30 | shadow |
+| pce | 1 | 54 | Personal Income and Outlays | 09-30 | **the print** |
+| pce | 1 | 391 | Personal Consumption Expenditures by State | 09-30 | shadow |
+| retail | 2 | 9 | Advance Monthly Sales for Retail and Food Services | 10-15 | **the print** |
+| retail | 2 | 436 | Monthly Retail Trade and Food Services | 10-15 | shadow (revised report) |
+| retail | 2 | 494 | Chicago Fed Advance Retail Trade Summary | 10-08, 10-15 | shadow — 10-08 shipped as a phantom |
+
+Single-source kinds in the same window (unchanged): adp 194 (09-30), jobs 50
+(10-02), jolts 192 (09-29), ppi 46 (10-15), housing 27 (09-24, 10-20),
+confidence 91 (09-25, 10-23), regional_fed 321 (10-15), trade 51 (10-06),
+fomc 101 padded on all 31 days (already skipped; FOMC comes from
+`FOMC_DECISION_DATES`).
+
+**Fix (at the source, never a tab-side dedupe).** `macro_calendar._RELEASE_EXCLUDE`
+— checked in `_match_tier` BEFORE the needle table, so an excluded name matches
+no tier:
+
+```python
+_RELEASE_EXCLUDE = (
+    "state unemployment insurance weekly claims",
+    " by state", " by industry",
+    "debt to gross domestic product",
+    "research consumer price index",
+    "monthly retail trade and food services",
+    "chicago fed advance retail trade",
+)
+```
+
+The `:87 "retail trade"` needle is left in place (it matches nothing real in
+this window; 9 is caught by the `advance monthly sales for retail` needle) —
+exclusion is additive and measured; removing a needle vs. a release-id
+allow-list is Ajay's call (spec §7.4).
+
+**Lock.** `get_macro_calendar` now holds a module-level `_CACHE_LOCK`
+(`threading.Lock`) around the cold compute, with a double-checked cache: two
+concurrent cold callers share ONE FRED fetch (45–105 s) instead of each
+spawning their own. `force=True` still always recomputes; the cache key is
+still `days`. Nothing served changes — a second cold caller now waits for the
+in-flight fetch.
+
+**OPEN — padding filter at `days >= 21`.** `_fred_releases` drops any source
+seen on > 3 distinct dates (FOMC-style padding). From a Thursday, `days=21`
+covers 4 Thursdays, so the weekly claims print is dropped entirely (≤ 14 days:
+3, kept; 21: 4, dropped; 30: 5, dropped). `/macro/calendar` (`le=30`) can
+reach it; the 14-day default cannot. NOT changed — his call (spec §7.5).
+Pinned by `test_fred_releases_21_keeps_the_weekly_claims_print`,
+`xfail(strict=True)`: an XPASS means someone fixed it and the marker must be
+removed deliberately.
+
+**Tests.** `backend/tests/test_macro_calendar_claims_2026_09_24.py` on the
+fixture `backend/tests/fixtures/fred_release_dates_2026_09_24.json` (66 FRED
+response rows: every pre-fix tier match, the 31 FOMC padding rows, 3 unmatched
+negatives; no key), clock frozen at 2026-09-24 (`mc.datetime` subclass +
+`_today_et`): per-name exclusions (upper-cased too) and the 8 real prints;
+one source per `(kind, date)` across the fixture with the matched-kind set
+unchanged; `_fred_releases(14)` exact rows (claims Thursdays only, no retail,
+one gdp / pce source, no fomc); `compute(14)` one claims row per ISO week; the
+lock (concurrent cold callers → one compute; `force=True` and `days=7`
+recompute; a raising compute releases the lock); the strict xfail above.

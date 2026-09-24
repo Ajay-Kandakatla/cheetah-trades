@@ -27,7 +27,8 @@
     "earnings": "n/a",
     "zero_dte": "n/a",
     "undervalue": "n/a",
-    "ema_frames": "n/a"
+    "ema_frames": "n/a",
+    "news": "n/a"
   },
   "rows": [
     {"symbol": "AAA", "read": {"kind": "demand", "verdict": "READY", "reasons": [], "reason_text": [], "reason_short": [],

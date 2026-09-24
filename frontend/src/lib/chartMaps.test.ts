@@ -763,7 +763,9 @@ describe('the Earnings Flow tab', () => {
        // 🆕 IPOs ≤2y 2026-09-20 — after the growth board it was asked for
        // beside; 🏛️ POTUS 2026-09-20 — after GnT, the other tracker board.
        // Both slots are spec §7.6, his call.
-       'session', 'signals', 'hot_sectors', 'growth', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
+       // 📰 News 2026-09-24 — right after 🔥 Hottest, whose sector rows its
+       // table reads (spec §7.2, his call).
+       'session', 'signals', 'hot_sectors', 'news', 'growth', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict', 'undervalue', 'support', 'zero_dte', 'earnings', 'winners']);
     expect(parseTab('earnings')).toBe('earnings');
   });
 
@@ -834,7 +836,7 @@ describe('the Support Levels tab', () => {
     expect(parseTab('support')).toBe('support');
   });
 
-  it('is one of exactly fourteen tabs not driven by a board fetch', () => {
+  it('is one of exactly fifteen tabs not driven by a board fetch', () => {
     // `/chart-maps` answers an unknown tab with the VCP board rather than a
     // 404, so a board fetch here would quietly draw the wrong charts under the
     // right heading. This is the flag the page branches on.
@@ -869,7 +871,9 @@ describe('the Support Levels tab', () => {
     // 2026-09-23: `ema_frames` is the twelfth — one /chart-maps/ema-frames
     // call per name on his ⚡ Signals watchlist, on WEEKLY or MONTHLY bars;
     // no universe pass, so the board loader and its controls are skipped.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    // 2026-09-24: `news` is the fifteenth — one composed /chart-maps/news
+    // read (gauge, T1/T2 macro, sector rows, headlines), no tiles.
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1765,7 +1769,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(29);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23
+    expect(CM_TABS).toHaveLength(30);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2151,5 +2155,52 @@ describe('fetchingLabel — the click says what it ASKED for (2026-09-21)', () =
 
   it('NEGATIVE: it never prints a count — only the answer can carry one', () => {
     expect(fetchingLabel(new Set(['raided']), new Set(['holding']))).not.toMatch(/\d/);
+  });
+});
+
+
+import { ENTERABLE_KIND } from './chartMaps';
+
+// ── 📰 News tab (Ajay 2026-09-24: "build me a news tab in chartmaps to give me
+// a bullish market or bearsish market … which sectors are bullish or which
+// hotsectors are bearish. In a table.") ──────────────────────────────────────
+describe('the 📰 News tab', () => {
+  it('sits right after 🔥 Hottest, is a non-board tab, parses from ?tab=', () => {
+    expect(CM_TABS.indexOf('news')).toBe(CM_TABS.indexOf('hot_sectors') + 1);
+    expect(parseTab('news')).toBe('news');
+    expect(parseTab(' NEWS ')).toBe('news');
+    expect(isBoardTab('news')).toBe(false);
+    expect(ENTERABLE_KIND.news).toBe('n/a');
+    expect(tabUsageKey('news')).toBe('chart-maps:tab:news');
+  });
+
+  it('NEGATIVE — adding the tab did not move the landing tab', () => {
+    expect(DEFAULT_TAB).toBe('zones');
+    expect(CM_TABS[0]).toBe('zones');
+  });
+
+  it('the fold headline names the gauge state and says it is not a forecast', () => {
+    expect(TAB_META.news.label).toBe('\u{1F4F0} News');
+    const { head, rest } = splitBlurb(TAB_META.news.blurb);
+    expect(head).toContain("Market Gauge's own state");
+    expect(head).toContain('not a forecast');
+    expect(rest.length).toBeGreaterThan(0);
+  });
+
+  it('the blurb carries both measured numbers with their CIs, the UNMEASURED caveat and the last-close rule', () => {
+    const b = TAB_META.news.blurb;
+    expect(b).toContain('−0.57pp');
+    expect(b).toContain('−2.55pp');
+    expect(b).toContain('95% CI');
+    expect(b).toContain('UNMEASURED');
+    expect(b).toContain('Not advice');
+    expect(b).toContain('last close');
+  });
+
+  it('NEGATIVE — no "bounce", and no live gauge number typed into the copy', () => {
+    const b = TAB_META.news.blurb;
+    expect(b).not.toMatch(/\bbounce\b/i);
+    expect(b).not.toMatch(/2026-09-24: daily/);
+    expect(b).not.toMatch(/daily 60|weekly 84/);
   });
 });

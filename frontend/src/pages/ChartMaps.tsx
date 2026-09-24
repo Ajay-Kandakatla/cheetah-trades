@@ -66,6 +66,7 @@ import SessionBoard from '../components/SessionBoard';
 import HoldingsBoard from '../components/HoldingsBoard';
 import EmaFramesBoard from '../components/EmaFramesBoard';
 import PotusBoard from '../components/PotusBoard';
+import NewsTabBoard from '../components/NewsTabBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
@@ -1151,6 +1152,15 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * already has them) and moves its sub-tab URL param to `sub` so it
          * cannot fight Chart Maps' own `tab`. */
         <CatalystsBoard embedded />
+      ) : tab === 'news' ? (
+        /* 📰 News (Ajay 2026-09-24: "give me a bullish market or bearsish
+           market … pull Macro calendar that has T1 and T2 tier events … which
+           sectors are bullish or which hotsectors are bearish. In a table.").
+           One composed read, GET /chart-maps/news — the gauge's daily +
+           weekly word, the T1/T2 macro rows, the 🔥 Hottest sector rows vs
+           RSP, the headlines. Its own fetcher, no tiles, so the board
+           controls and the grid are skipped. */
+        <NewsTabBoard />
       ) : !isBoardTab(tab) ? (
         <SupportLevels symbol={supportSymbol} window={supportWindow} tf={supportTf}
                        onSymbol={setSupportSymbol} onWindow={setSupportWindow}

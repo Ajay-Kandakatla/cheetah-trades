@@ -2379,6 +2379,9 @@ KIND_BY_TAB = {
     # reversal on that frame, so a demand read would blank the tab by
     # construction — the chip says why instead.
     "ema_frames": KIND_NA,
+    # 📰 News (2026-09-24): sector rows and headlines, no ticker rows — a
+    # demand read has nothing to read.
+    "news": KIND_NA,
 }
 
 NA_TEXT = ("no demand read for this tab — its rows are not demand reversals "

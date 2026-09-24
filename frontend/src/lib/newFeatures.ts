@@ -22,6 +22,18 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-24: "build me a news tab in chartmaps to give me a bullish
+  // market or bearsish market and also pull Macro calendar that has T1 and T2
+  // tier events in to this tab consider in to news. If bullish or beaish I need
+  // to whcih sectors are bullish or which hotsectors are bearish. In a table."
+  { id: 'chart-maps-news-tab-2026-09-24',
+    label: '\u{1F4F0} News tab on Chart Maps — market word, T1/T2 macro, and which sectors are bullish or bearish, in one table. You said: “build me a news tab in chartmaps to give me a bullish market or bearsish market and also pull Macro calendar that has T1 and T2 tier events … which sectors are bullish or which hotsectors are bearish. In a table.” '
+      + 'THE MARKET WORD is your Market Gauge’s own state, not a new score: Constructive reads bullish, Caution reads mixed, Risk-Off reads bearish — mapped once on the server and printed beside the gauge’s own label and score, DAILY and WEEKLY side by side, because the two can disagree (they did the day this shipped: daily Caution, weekly Constructive). A read of where the gauge stands, not a forecast. '
+      + 'THE MACRO ROWS are the T1 market movers and T2 trend shapers from the same FRED-scheduled calendar the gauge page uses, next 14 days, with the next market mover called out. Fixed on the way: “Jobless claims” was printing TWICE every week (Thursday and Friday) because FRED also schedules a state-level claims report on Fridays and it matched as the real print; the same family put a phantom “Retail sales” on the calendar. Eight shadow releases now excluded, and the calendar shows one claims row per week. '
+      + 'THE SECTOR TABLE is every sector of the \u{1F525} Hottest board: bullish or bearish on the day, the week and the month, meaning ABOVE or BELOW the equal-weight benchmark (RSP) — what already moved, not a prediction; the \u{1F525}/\u{1F9CA} heat rank; the day’s \u{1F4F0} bull case AND bear case where one was written (both sides always, no score); and a \u{1F5FA}\u{FE0F} heatmap link. “\u{1F525} hot, lagging today” is one click — that is your “hot sectors that are bearish”. The day column says “today” only during a live session, “last close” otherwise. '
+      + 'SAID PLAINLY ON THE TAB: sector heat was measured on 2026-09-09 and predicted nothing (−0.57pp, 95% CI −1.87 to +0.71), “a cold sector just sits there” measured INVERTED (cold turned faster, −2.55pp, 95% CI −4.48 to −0.65), and the 5-day heat that decides the \u{1F525}/\u{1F9CA} word here has never been measured. Headlines are the last 36 hours through the app’s one news routine. Nothing on this tab pushes, gates, sizes or enters a trade. '
+      + 'YOUR CALL: “mixed” for Caution was my word, not yours; the tab’s slot (after \u{1F525} Hottest); and a row can read bullish vs RSP AND \u{1F9CA} cold at once, because those are two different yardsticks — keep both, or drop one?',
+    addedAt: '2026-09-24', route: '/chart-maps?tab=news' },
   // Ajay 2026-09-24: "add Command clicks to the Tabs in chart maps so I can
   // open new tabs.. Of that specific Section".
   { id: 'chart-maps-cmd-click-tabs-2026-09-24',

@@ -16,7 +16,7 @@ import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -77,7 +77,15 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // stocks"). Beside the growth boards it belongs with, not at the front —
   // same measured-order rule as the two above.
   'bonde',
-  'session', 'signals', 'hot_sectors', 'growth',
+  'session', 'signals', 'hot_sectors',
+  // 📰 News (Ajay 2026-09-24: "build me a news tab in chartmaps to give me a
+  // bullish market or bearsish market … which sectors are bullish or which
+  // hotsectors are bearish. In a table."). Right after 🔥 Hottest, whose
+  // sector rows its table reads — not at the front: TAB ORDER IS EARNED, and
+  // `tabUsageKey` counts it from its first open like every tab before it.
+  // The slot is his call (spec §7.2).
+  'news',
+  'growth',
   // 🆕 IPOs ≤2y (Ajay 2026-09-19: "IPO of hot sector theme of stocks and
   // then add them as a tab in Chart maps"). A tile board off the chart-maps
   // dispatcher, beside the growth board it was asked for next to; no usage
@@ -128,6 +136,9 @@ export const ENTERABLE_KIND = {
   // read, so a demand read would blank the tab by construction. Inert, and the
   // chip says why.
   ema_frames: 'n/a',
+  // 📰 News (2026-09-24): sector rows and headlines, no ticker rows — a demand
+  // read has nothing to read. Inert, and the chip says why.
+  news: 'n/a',
 } as Record<CmTab, EnterableKind>;
 
 /** usage/track key for one tab open (landing or click). Read back from Mongo
@@ -163,10 +174,22 @@ export function isBoardTab(t: CmTab): boolean {
     // 〰️ 9 EMA · W/M (2026-09-23) is one /chart-maps/ema-frames call per name
     // on his ⚡ Signals watchlist — weekly / monthly bars, not a universe pass —
     // so the board loader and the sort / tier / room controls are skipped.
-    && t !== 'ema_frames';
+    && t !== 'ema_frames'
+    // 📰 News (2026-09-24) is one composed read, GET /chart-maps/news — the
+    // gauge, the T1/T2 macro rows, the sector table and the headlines. No
+    // universe pass and no tiles, so the board loader and its controls are
+    // skipped and NewsTabBoard draws it.
+    && t !== 'news';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  // 📰 News (Ajay 2026-09-24). The first sentence is the fold headline and
+  // carries the house phrase "not a forecast"; no live number is typed here —
+  // the gauge's daily and weekly reads show on the board itself.
+  news: {
+    label: '\u{1F4F0} News',
+    blurb: 'The market word here is the Market Gauge\'s own state — Constructive reads bullish, Caution reads mixed, Risk-Off reads bearish — mapped once on the server and printed beside the gauge\'s own label and score, daily AND weekly because the two can disagree: a read of where the gauge stands, not a forecast. Ajay 2026-09-24: "build me a news tab in chartmaps to give me a bullish market or bearsish market … which sectors are bullish or which hot sectors are bearish. In a table." THE MACRO ROWS are the T1 market-movers and T2 trend-shapers of the FRED-scheduled calendar the gauge page already shows, over the same 14 days, with the next market-mover called out. THE SECTOR TABLE is every sector of the 🔥 Hottest board with its measured relative strength against RSP on the day, the week and the month — bullish is above the equal-weight benchmark, bearish is below it, a description of what ALREADY moved — plus the 🔥/🧊 heat word the demand tiles print, decided on the 5-session leg against the pooled industry-sector-theme scale, and the day\'s 📰 bull case AND bear case where one was written (both sides always, no score, read by a model, not measured). The day column says whether it is the live session or the last close. "Hot but lagging" is one click. SAID PLAINLY: sector heat was MEASURED 2026-09-09 on the 21-day definition over 50,191 demand-zone arrivals and predicted nothing (−0.57pp on win rate, 95% CI −1.87 to +0.71), and "a cold sector just sits there" measured INVERTED (hot minus cold at 5 sessions −2.55pp, 95% CI −4.48 to −0.65 — cold turned faster); the 5-session heat that decides the word here is UNMEASURED. Headlines are the last 36 hours through the app\'s one news routine. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
+  },
   gnt: {
     label: '\uD83D\uDCCC GnT',
     blurb: 'Tito Adhikary (@GnT_Trades) \u2014 what he is posting, with this app\u2019s own read beside it. Ajay 2026-09-12: "I wanna track his stocks for investing". HE WON THE 2025 US INVESTING CHAMPIONSHIP, $20k+ Enhanced Growth division, +2,115.1% \u2014 a CITED claim quoted from @USICOfficial on his own pinned post, not a number this app measured, and not a transferable track record: those divisions permit concentration and leverage this app\u2019s own risk rules forbid. THE BOARD SHOWS SENTENCES, NOT A TICKER LIST, and that is deliberate. He does not post a portfolio: his timeline mixes forward ideas ("$SPCX reclaiming 150 into the close. Definitely on watch next week") with past-tense recaps of CLOSED trades, several of them PUTS ("Great day on $QQQ puts, +$12K") and some from 2022 naming stocks that no longer exist. A bare cashtag list inverts him. So every row leads with his actual words and its age, and NO row claims a direction \u2014 one of his own posts reads "caught the upside on $FSLR and downside on $META $TSLA", one sentence carrying both, so the chips are WORDS FOUND IN THE POST rather than a reading of it. Index tickers are dropped from the roster because "$SPY $QQQ weak" is him describing the tape, not naming a stock. The overlay columns are ours: whether the name is even in the scan universe (his freshest idea, SPCX, is NOT \u2014 invisible to every board and alert here), the demand-band read, and the 100/100 growth screen. Fetched twice a day, 07:40 and 17:40 CT, weekends included because his weekend wrap is where the next week\u2019s watchlist shows up. His calls, NOT advice. Nothing here gates a scan, an alert or a lane.',

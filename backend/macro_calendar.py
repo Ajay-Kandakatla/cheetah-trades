@@ -5,6 +5,9 @@ The framework is the ZONETRADER618 "Not All Data Is Equal" tiering:
              decision + dot plot + presser, Core PCE
   • TIER 2 — trend shapers : ISM mfg & services, retail sales, JOLTS, ADP,
              jobless claims, GDP, Fed-speaker remarks
+             (FRED "shadow" releases — state/industry/research cuts of a print —
+             excluded by name in _RELEASE_EXCLUDE; fixture
+             tests/fixtures/fred_release_dates_2026_09_24.json)
   • TIER 3 — context       : consumer/business confidence, housing starts/permits,
              regional Fed indices, trade balance
 Regime weighting (right now): inflation + labor-strength prints carry the most
@@ -22,6 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -70,6 +74,26 @@ FOMC_DECISION_DATES = (
     "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08",
 )
 
+# FRED release names that CONTAIN a tier needle but are NOT the print. Checked BEFORE the needle
+# table, so they never match any tier. Measured 2026-09-24 on FRED /releases/dates (30-day window),
+# every name that double-matched a kind, with its FRED release_id:
+#   469 "State Unemployment Insurance Weekly Claims Report"  Fridays — state detail of 180's Thursday print
+#   345 "Research Consumer Price Index"                       shadow of 10 (CPI)
+#   140 "Gross Domestic Product by State" · 331 "… by Industry" · 263 "Debt to Gross Domestic Product Ratios"  shadows of 53
+#   391 "Personal Consumption Expenditures by State"          shadow of 54 (Core PCE)
+#   436 "Monthly Retail Trade and Food Services" · 494 "Chicago Fed Advance Retail Trade Summary"  shadows of 9
+# The (kind, date) dedupe hides a shadow only when it lands on the print's date; 469 (Fri) and 494
+# (10-08) did not, so "Jobless claims" printed twice a week from 2026-06-17 and a phantom "Retail
+# sales" shipped, until this. Fixture: tests/fixtures/fred_release_dates_2026_09_24.json.
+_RELEASE_EXCLUDE = (
+    "state unemployment insurance weekly claims",
+    " by state", " by industry",
+    "debt to gross domestic product",
+    "research consumer price index",
+    "monthly retail trade and food services",
+    "chicago fed advance retail trade",
+)
+
 # Match FRED release names → (kind, tier, short label). First match wins; order
 # matters (specific before generic). Case-insensitive substring match.
 _RELEASE_TIERS = [
@@ -103,6 +127,8 @@ _RELEASE_TIERS = [
 
 def _match_tier(release_name: str):
     nm = (release_name or "").lower()
+    if any(x in nm for x in _RELEASE_EXCLUDE):
+        return None
     for needle, meta in _RELEASE_TIERS:
         if needle in nm:
             return meta
@@ -161,7 +187,11 @@ def _fred_releases(days: int) -> list[dict]:
 
     # Drop "no-data padding": a continuously-pending release (e.g. FOMC Press
     # Release) shows a row on EVERY day in the window. A real scheduled print
-    # lands on one (claims: weekly → ≤2) day. >3 distinct dates = padding noise.
+    # lands on one day (claims: weekly → ≤3 at the default 14-day window). >3
+    # distinct dates = padding noise. ⚠ At days >= 21 a weekly print has 4+ dates
+    # and THIS FILTER DROPS IT — open, see docs/sepa/macro_event_overlay.md
+    # 2026-09-24 (pinned by an xfail(strict=True) in
+    # tests/test_macro_calendar_claims_2026_09_24.py). No threshold change here.
     from collections import Counter
     date_count = Counter(e["source"] for e in out)
     out = [e for e in out if date_count[e["source"]] <= 3]
@@ -285,16 +315,24 @@ def compute(days: int = DEFAULT_DAYS) -> dict:
 
 
 _CACHE: dict = {"at": 0.0, "data": None}
+# One cold FRED fetch at a time; concurrent cold callers wait for it, never spawn their own.
+_CACHE_LOCK = threading.Lock()
 
 
 def get_macro_calendar(force: bool = False, days: int = DEFAULT_DAYS) -> dict:
-    now = time.time()
-    if not force and _CACHE["data"] is not None and (now - _CACHE["at"]) < TTL_SEC \
-            and _CACHE["data"].get("days") == days:
+    def _fresh() -> bool:
+        return (not force and _CACHE["data"] is not None
+                and (time.time() - _CACHE["at"]) < TTL_SEC
+                and _CACHE["data"].get("days") == days)
+
+    if _fresh():
         return _CACHE["data"]
-    data = compute(days)
-    _CACHE.update(at=now, data=data)
-    return data
+    with _CACHE_LOCK:
+        if _fresh():                    # double-check: the thread we waited on filled it
+            return _CACHE["data"]
+        data = compute(days)
+        _CACHE.update(at=time.time(), data=data)
+        return data
 
 
 def _today_et():
