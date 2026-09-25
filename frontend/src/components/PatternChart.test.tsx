@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
 import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
 import type { CmBar, CmTile } from '../lib/chartMaps';
+import type { BurstRead } from '../lib/momentumBurst';
 
 /* PatternChart — one Chart Maps study tile.
  *
@@ -542,5 +543,33 @@ describe('PatternChart — the 🎯 enterable chip', () => {
     draw({ ...TILE, enterable: read({ print: { px: 11.4, source: 'scan' } }) } as CmTile);
     expect(screen.getByText('🎯 READY').getAttribute('title'))
       .toMatch(/closed-bar read \(no live print\)/);
+  });
+});
+
+/* ⚡ Momentum burst (2026-09-24): the page hands the served read down ONLY
+ * while its checkbox is ticked; the tile prints it and decides nothing. */
+describe('PatternChart — the ⚡ momentum-burst chip', () => {
+  const BURST: BurstRead = {
+    state: 'burst', on: true, rvol: 2.1, off_low_pct: 0.92,
+    badge: '⚡ Momentum burst · 2.10× vol · +0.92% off low', title: 'served title',
+  };
+
+  it('renders the served badge when the page passes a ⚡ read', () => {
+    render(<MemoryRouter><PatternChart tile={TILE} burst={BURST} /></MemoryRouter>);
+    const el = document.querySelector('.cm-badge-burst');
+    expect(el).not.toBeNull();
+    expect(el!.textContent).toBe(BURST.badge);
+  });
+
+  it('NEGATIVE: no chip with null, with no prop, or with a "no" read on the tile', () => {
+    const { unmount } = render(<MemoryRouter><PatternChart tile={TILE} burst={null} /></MemoryRouter>);
+    expect(document.querySelector('.cm-badge-burst')).toBeNull();
+    unmount();
+    // The tile carries a ⚡ read but the page did not pass it (box unticked).
+    const r2 = draw({ ...TILE, burst: BURST });
+    expect(document.querySelector('.cm-badge-burst')).toBeNull();
+    r2.unmount();
+    render(<MemoryRouter><PatternChart tile={TILE} burst={{ ...BURST, state: 'no', on: false }} /></MemoryRouter>);
+    expect(document.querySelector('.cm-badge-burst')).toBeNull();
   });
 });

@@ -4629,6 +4629,120 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // ── ⚡ Momentum burst (Ajay 2026-09-24: "Can you add this as a check box in
+  //    our filters please.." → "Pin + badge, hide nothing") ──────────────────
+  {
+    name: '⚡ momentum-burst pin (2026-09-24): prop-fed badge, client-side stable pin, hides nothing, every non-board tab exempt in writing',
+    file: 'src/lib/momentumBurst.ts',
+    // The read is SERVED (backend/supply_demand/momentum_burst.py). The teeth:
+    //   * every non-board Chart Maps tab is exempt IN WRITING — an absent pin and
+    //     a dropped one look identical from here;
+    //   * no threshold, no rounding and no numeric comparison in the lib or the
+    //     chip — a TSX copy of the rule is a second engine that drifts;
+    //   * the ticker page's weekly figure is IMPORTED into the disambiguation
+    //     line, never typed;
+    //   * the state is `?burst=1` and nothing else: not in boardQuery (toggling
+    //     never refetches), never in localStorage;
+    //   * "reversal", never "bounce", on the three files he reads.
+    checks: (src) => {
+      const errs = [];
+      const cm = read('src/lib/chartMaps.ts');
+      const tabs = parseCmTabs(cm);
+      if (!tabs) return ['CM_TABS declaration not found'];
+
+      /* 1. BURST_EXEMPT keys == the non-board tabs, every reason written. */
+      const m = /export const BURST_EXEMPT[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src);
+      if (!m) {
+        errs.push('BURST_EXEMPT declaration not found in lib/momentumBurst.ts');
+      } else {
+        const body = m[1].replace(/\/\/[^\n]*/g, '');
+        const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t)).sort();
+        if (keys.join(',') !== nonBoard.join(',')) {
+          errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
+        }
+        for (const line of body.split('\n')) {
+          const kv = /^\s*([a-z_]+)\s*:\s*(.*?),?\s*$/.exec(line);
+          if (!kv) continue;
+          if (/^''$|^""$/.test(kv[2]) || !kv[2]) errs.push(`BURST_EXEMPT.${kv[1]} has an empty reason`);
+        }
+        if (!/const ROW_BOARD\s*=\s*\n?\s*"[^"]+"/.test(src)) {
+          errs.push('the row-board exemption reason (ROW_BOARD) must be a non-empty string');
+        }
+      }
+
+      /* 2. No maths in the lib or the chip. */
+      const chip = read('src/components/MomentumBurstChip.tsx');
+      for (const [rel, f] of [['src/lib/momentumBurst.ts', src], ['src/components/MomentumBurstChip.tsx', chip]]) {
+        if (f.includes('1.5')) errs.push(`${rel} types 1.5 — the thresholds live in momentum_burst.py`);
+        if (/\b8(\.0)?\s*%/.test(f)) errs.push(`${rel} types the ticker page's weekly figure — import BONDE_MOM_BURST_1W_PCT`);
+        if (/toFixed/.test(f)) errs.push(`${rel} rounds a number — the served badge already carries the digits`);
+        if (/\d+(\.\d+)?\s*(?:<=|>=|<|>)|(?:<=|>=|<|>)\s*\d/.test(f)) {
+          errs.push(`${rel} compares a number — the verdict is served by momentum_burst.py`);
+        }
+      }
+      if (!/import\s*\{[^}]*\bBONDE_MOM_BURST_1W_PCT\b[^}]*\}\s*from\s*'\.\/cheetahVerdict'/.test(src)) {
+        errs.push("lib/momentumBurst.ts must import BONDE_MOM_BURST_1W_PCT from './cheetahVerdict'");
+      }
+      if (/\bfetch\s*\(/.test(chip) || /useEffect|useState/.test(chip)) {
+        errs.push('MomentumBurstChip must be PROP-FED — no fetch, no effect, no state');
+      }
+
+      /* 3. The one tile renderer mounts it off the page's prop. */
+      const tile = read('src/components/PatternChart.tsx');
+      if (!/<MomentumBurstChip\s+read=\{burst\}/.test(tile)) {
+        errs.push('PatternChart must render <MomentumBurstChip read={burst}> — the page hands the read down only while the box is ticked');
+      }
+
+      /* 4. The page: toggle, pin, note, URL key — and nothing on the wire. */
+      const page = read('src/pages/ChartMaps.tsx');
+      for (const [re, msg] of [
+        [/<MomentumBurstToggle\s/, 'ChartMaps must mount <MomentumBurstToggle>'],
+        [/pinBurst\(/, 'ChartMaps must order the grid through pinBurst() — the stable partition'],
+        [/\{burstPin\.rows\.map\(/, 'ChartMaps must RENDER burstPin.rows — computing the pin and drawing tilePart.rows would pin nothing'],
+        [/burst=\{burstOn \? \(t\.burst \?\? null\) : null\}/, 'the ⚡ badge must reach a tile only while the box is ticked — burst={burstOn ? (t.burst ?? null) : null}'],
+        [/burst_note/, 'ChartMaps must print the SERVED burst_note'],
+        [/BURST_PARAM/, 'ChartMaps must read the state from BURST_PARAM (?burst=1)'],
+      ]) {
+        if (!re.test(page)) errs.push(msg);
+      }
+      const bq = /export function boardQuery\([\s\S]*?\n\}/.exec(cm);
+      if (!bq) errs.push('boardQuery not found in lib/chartMaps.ts');
+      else if (/burst/i.test(bq[0])) errs.push('boardQuery must not carry burst — the pin is client-side and toggling never refetches');
+      for (const line of page.split('\n')) {
+        if (/localStorage/.test(line) && /burst/i.test(line)) {
+          errs.push('the ⚡ state must live in the URL only — no localStorage');
+          break;
+        }
+      }
+
+      /* 5. The ✨ entry quotes the runway line and says UNMEASURED. */
+      const nf = read('src/lib/newFeatures.ts');
+      const at = nf.indexOf("'momentum-burst-2026-09-24'");
+      if (at < 0) {
+        errs.push('the ⚡ momentum burst has no ✨ NEW entry');
+      } else {
+        const entry = nf.slice(at, nf.indexOf('addedAt', at));
+        if (!entry.includes('UNMEASURED')) errs.push('the ⚡ ✨ entry must say UNMEASURED');
+        if (!entry.includes('not enough runway')) errs.push('the ⚡ ✨ entry must quote "not enough runway"');
+      }
+
+      /* 6. Every class ships a rule. */
+      const css = read('src/styles.css');
+      for (const c of ['cm-badge-burst', 'mb-toggle', 'mb-count', 'mb-unknown', 'mb-behind']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the ⚡ control would ship unstyled`);
+        }
+      }
+
+      /* 7. Reversal, never bounce, on the three files he reads. */
+      for (const rel of ['src/lib/momentumBurst.ts', 'src/components/MomentumBurstChip.tsx',
+                         'src/components/MomentumBurstToggle.tsx']) {
+        if (/bounce/i.test(read(rel))) errs.push(`${rel} says "bounce" — surfaces he reads say reversal`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

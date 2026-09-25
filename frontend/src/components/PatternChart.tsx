@@ -29,6 +29,8 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { BandStructureChip } from './BandStructureChip';
 import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
+import { MomentumBurstChip } from './MomentumBurstChip';
+import type { BurstRead } from '../lib/momentumBurst';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
 import { AmdRaidsChip } from './AmdRaidsChip';
 import {
@@ -75,7 +77,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, tvTf, study, bandStudy }: {
+  { tile, height = 190, tvTf, study, bandStudy, burst }: {
     tile: CmTile; height?: number; tvTf?: string;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
@@ -83,6 +85,10 @@ export const PatternChart = memo(function PatternChart(
     /** 🪜 The board's served band-structure verdict, for the chip's tooltip —
      *  the status never lives in this file (board.band_structure_study). */
     bandStudy?: BandStructureStudy | null;
+    /** ⚡ The served momentum-burst read, passed ONLY while the Chart Maps
+     *  checkbox is ticked (null otherwise), so the badge and the pin can never
+     *  disagree. Prop-fed; nothing is computed here. */
+    burst?: BurstRead | null;
   },
 ) {
   const location = useLocation();
@@ -211,6 +217,11 @@ export const PatternChart = memo(function PatternChart(
                 renders nothing when the name has no demand-band read, and in
                 the study's null branch it is muted and says room + floor, never
                 a score. */}
+            {/* ⚡ Momentum burst (Ajay 2026-09-24: "Pin + badge, hide
+                nothing"). Served per tile by chart_maps/board.attach_burst and
+                handed down by the page only while its checkbox is ticked.
+                Renders nothing unless the server said ⚡. UNMEASURED. */}
+            <MomentumBurstChip read={burst} />
             <ExplosiveChip read={tile.explosive} study={study} />
             {/* 🎯 The ENTERABLE read (2026-09-15). Ajay: "I only wanna see the
                 stocks that are enterable." Prop-fed off the tile, exactly like

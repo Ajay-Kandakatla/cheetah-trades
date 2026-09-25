@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-24: "For any stocks on chart maps, wanted to rank them by most
+  // explosive capable but now I want us to check for momentum burst possibility
+  // or give them special attention. Like ORCL was going to In deman it had very
+  // big momemtum and we were capturing it, Can you add this as a check box in
+  // our filters please.." Label is verbatim from the momentum_burst spec §3.5.
+  { id: 'momentum-burst-2026-09-24',
+    label: "⚡ Momentum burst checkbox on the Chart Maps boards. You said: “volume and ? <1% reversal if its already greator >1.5% is not enough runway for me to catch the upside potential.. is of no use to me” — “Up moves only”, “Pin + badge, hide nothing”. Tick it and every name with relative volume ≥ 1.5× (projected fairly through the day — never a partial day against a full one) whose print sits more than 0% and at most 1.5% above today's low moves to the top of the board in its own order with a ⚡ badge; hover it for the RVOL, the % above the low, which low, and live vs closed. A red day counts if it turned up off its low (your ORCL case). Nothing is hidden. Off by default. UNMEASURED — no study behind it; it gates, pushes, sizes and buys nothing. The row tabs (Bonde, Growth, Hot Pullback, …) are not covered yet — your call.",
+    addedAt: '2026-09-24', route: '/chart-maps' },
   // Ajay 2026-09-24, on ORCL ("AMD raided · today" on the POTUS tile, "AMD
   // marked up · 14d ago" on the ticker page): "can you tell me if there is a
   // possibility this stock is manipulated twice? I only see one Manipulation

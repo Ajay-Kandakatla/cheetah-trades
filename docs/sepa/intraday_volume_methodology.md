@@ -92,3 +92,5 @@ The curve anchors are an owner knob, not a book formula. Tightening them
 (higher early values) makes intraday entries *more* conservative; flattening
 them toward the diagonal returns toward the old linear behavior. Any change is
 a Rule #4 edit: update this doc + the behavioral test, with sign-off.
+
+Display consumer (2026-09-24): supply_demand/momentum_burst.py — Chart Maps ⚡ pin; gates nothing.

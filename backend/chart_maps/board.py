@@ -6439,6 +6439,13 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                 out["band_structure_scope"] = None if note else _bs.BOARD_SCOPE_NOTE
         except Exception as exc:                                # noqa: BLE001
             log.debug("chart-maps: band structure unavailable: %s", exc)
+    # ⚡ MOMENTUM BURST (2026-09-24), LAST and on the same snapshot: the read
+    # keys on the live print and the session low. It reorders and hides
+    # nothing — the page pins client-side — and costs ONE cached-frames read.
+    try:
+        attach_burst(_tiles, out, live=_live, session=out.get("tape_session"))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: momentum burst unavailable: %s", exc)
     return out
 
 
@@ -6518,3 +6525,166 @@ def attach_live_now(tiles: list, out: Optional[dict] = None, *, live: Optional[d
                 t["live_session"] = sess
                 stats["tagged"] += 1
     return stats
+
+
+# ---------------------------------------------------------------------------
+# ⚡ Momentum burst (2026-09-24) — relative volume surging AND the print within
+# the limit above today's low. Every rule, number and word lives in
+# `supply_demand.momentum_burst`; this is only the plumbing that hands it the
+# board's ONE live map and ONE cached-frames read. DISPLAY ONLY: the page pins
+# and badges client-side; nothing here reorders, hides, pushes or enters.
+# ---------------------------------------------------------------------------
+def _burst_frames(symbols) -> dict:
+    """ONE prices.bulk_cached_frames for the shown tiles; {} on any failure.
+    Never a fetch — a cold symbol is an absent key, which reads as no_avg."""
+    syms = []
+    for s in symbols or []:
+        s = str(s or "").strip().upper()
+        if s and s not in syms:
+            syms.append(s)
+    if not syms:
+        return {}
+    try:
+        from sepa import prices as _p
+        return _p.bulk_cached_frames(syms) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: cached frames for the burst read failed: %s", exc)
+        return {}
+
+
+def _burst_hhmm(epoch) -> Optional[str]:
+    try:
+        return datetime.fromtimestamp(float(epoch), tz=ET).strftime("%H:%M")
+    except Exception:                                           # noqa: BLE001
+        return None
+
+
+def _burst_tile(t: dict, snap: dict, frame, *, MB, sess, frac, half, today, xp) -> dict:
+    """One tile's ⚡ read from the board's own snapshot row and cached frame."""
+    ep = None
+    if xp is not None:
+        try:
+            ep = xp(snap) if snap else None
+        except Exception:                                       # noqa: BLE001
+            ep = None
+    prev = MB._f(snap.get("prev_day_close"))
+    px = low = vol = None
+    day = None
+    print_session = print_source = as_of = None
+    ext_print = ext_as_of = None
+    if sess == "rth":
+        day = today
+        low = MB._f(snap.get("low"))
+        vol = MB._f(snap.get("volume"))
+        print_source = "snapshot"
+        # A snapshot repeating yesterday (halted, not traded yet, stale) has no
+        # print dated today -> no_print, never yesterday's close read as live.
+        if ep is not None and ep.get("date") == today:
+            px = _snapshot_print(snap)
+            hm = _burst_hhmm(ep.get("epoch"))
+            as_of = f"{ep['date']} {hm} ET" if hm else None
+            print_session = ep.get("session")
+    elif sess in ("afterhours", "closed"):
+        # The CLOSED BAR. The day comes from the last trade or the frame's last
+        # bar — never `_session_day(now)`, which between 00:00 and 04:00 would
+        # name a day whose bar is not in the snapshot and put the measured day
+        # inside its own average.
+        c = MB._f(snap.get("price"))
+        lo = MB._f(snap.get("low"))
+        v = MB._f(snap.get("volume"))
+        if c is not None and c > 0 and lo is not None and lo > 0 and v is not None and v > 0:
+            px, low, vol = c, lo, v
+            print_source = "snapshot"
+            day = ep.get("date") if ep else MB.frame_last_day(frame)
+        else:
+            # Weekend / holiday: the snapshot's day fields are 0.
+            day = MB.frame_last_day(frame)
+            print_source = "daily_bar"
+            try:
+                if frame is not None and len(frame) > 0:
+                    last = frame.iloc[-1]
+                    px = MB._f(last.get("close"))
+                    low = MB._f(last.get("low"))
+                    vol = MB._f(last.get("volume"))
+                    prev = MB._f(frame.iloc[-2].get("close")) if len(frame) > 1 else None
+            except Exception:                                   # noqa: BLE001
+                px = low = vol = prev = None
+        print_session = "close"
+        as_of = f"{day} close" if day else None
+        if ep is not None and ep.get("session") in ("afterhours", "premarket"):
+            ext_print = ep.get("price")
+            hm = _burst_hhmm(ep.get("epoch"))
+            ext_as_of = f"{ep.get('date')} {hm} ET" if hm else ep.get("date")
+    else:
+        # Pre-market (or a session the clock could not name): pass what is
+        # known; the read short-circuits to unknown.
+        day = today
+        px = _snapshot_print(snap)
+        low = MB._f(snap.get("low"))
+        vol = MB._f(snap.get("volume"))
+        print_source = "snapshot"
+    avg = MB.avg_volume_before(frame, day) if day else None
+    return MB.read(px=px, low=low, prev_close=prev, today_vol=vol, avg_vol=avg,
+                   session=sess, frac=frac, half_day=half, session_day=day,
+                   print_session=print_session, print_source=print_source,
+                   as_of=as_of, ext_print=ext_print, ext_as_of=ext_as_of)
+
+
+def attach_burst(tiles: list, out: Optional[dict] = None, *, live: Optional[dict] = None,
+                 frames: Optional[dict] = None, session: Optional[str] = None,
+                 now: Optional[datetime] = None) -> dict:
+    """Fill `tile['burst']` (the ⚡ read) on every served tile and the board's
+    `burst_rule` / `burst_note` / `burst_counts`. Returns the counts.
+
+    `live` is the board's ONE snapshot map — None means `{}`, it is NEVER
+    fetched here. `frames` None -> ONE `_burst_frames` over the tiles still to
+    read. Idempotent by KEY PRESENCE. Never reorders, never drops, never
+    raises: a per-tile failure leaves `tile['burst'] = None`."""
+    from supply_demand import momentum_burst as MB
+    tiles = tiles if isinstance(tiles, list) else []
+    live = live if isinstance(live, dict) else {}
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    tape = session
+    if not tape:
+        try:
+            from supply_demand import zone_edge as ZE
+            tape = ZE.session_state(now_et)
+        except Exception:                                       # noqa: BLE001
+            tape = None
+    sess, half = MB.burst_session(tape, now_et)
+    frac = MB.session_frac(sess, now_et, half_day=half)
+    try:
+        today = _session_day(now_et).isoformat()
+    except Exception:                                           # noqa: BLE001
+        today = now_et.date().isoformat()
+
+    todo = [t for t in tiles if isinstance(t, dict) and "burst" not in t]
+    if todo:
+        if frames is None:
+            frames = _burst_frames([t.get("symbol") for t in todo])
+        frames = frames if isinstance(frames, dict) else {}
+        try:
+            from sepa import prices as _p
+            xp = getattr(_p, "extended_print", None)
+        except Exception:                                       # noqa: BLE001
+            xp = None
+        for t in todo:
+            try:
+                sym = str(t.get("symbol") or "").upper()
+                snap = (live.get(sym) if sym else None) or {}
+                snap = snap if isinstance(snap, dict) else {}
+                t["burst"] = _burst_tile(t, snap, frames.get(sym) if sym else None,
+                                         MB=MB, sess=sess, frac=frac, half=half,
+                                         today=today, xp=xp)
+            except Exception as exc:                            # noqa: BLE001
+                log.debug("chart-maps: burst read %s failed: %s", t.get("symbol"), exc)
+                t["burst"] = None
+
+    reads = [t.get("burst") for t in tiles if isinstance(t, dict)]
+    cnt = MB.counts(reads)
+    if out is not None:
+        out["burst_rule"] = MB.rule_text()
+        out["burst_note"] = MB.board_note(sess, frac, half_day=half, counts=cnt,
+                                          reads=reads)
+        out["burst_counts"] = cnt
+    return cnt

@@ -16,6 +16,7 @@ import type { BandStructureRead, BandStructureStudy } from './bandStructure';
 import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
+import type { BurstCounts, BurstRead } from './momentumBurst';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -485,6 +486,13 @@ export type CmTile = {
    *  the AMD box is unticked (filterTile). Display only — nothing sorts,
    *  filters, gates or alerts on it. Read it through sanitizeAmdRaids. */
   amd_raids?: AmdRaidsBlock | null;
+  /** ⚡ The momentum-burst read for this name (chart_maps/board.attach_burst,
+   *  2026-09-24) — served on every tile board request, off the SAME live map
+   *  the now-line uses plus one cached-frames read. The page pins and badges on
+   *  it only while `?burst=1`; it hides nothing and gates nothing. null / absent
+   *  = no read (an older payload, or a per-tile build that failed): the tile is
+   *  never pinned and renders exactly as before. UNMEASURED. */
+  burst?: BurstRead | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -787,6 +795,13 @@ export type CmBoard = {
    *  local ENTERABLE_KIND map so moving a tab between `demand` and `n/a` is a
    *  backend change, not a frontend deploy. */
   enterable_kind?: EnterableKind | string | null;
+  /** ⚡ Momentum burst (2026-09-24): the SERVED rule sentence, the session's
+   *  one-line note (pre-market / live / after the close) and the tally over the
+   *  served tiles. Words come from backend/supply_demand/momentum_burst.py;
+   *  nothing here is typed. */
+  burst_rule?: string | null;
+  burst_note?: string | null;
+  burst_counts?: BurstCounts | null;
   /** 🎯 The entry-trigger study's served verdict (2026-09-15), rendered in the
    *  coverage strip. Every number lives in
    *  backend/supply_demand/enterable.py::MEASURED and is never typed here. */

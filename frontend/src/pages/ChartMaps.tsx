@@ -87,6 +87,8 @@ import { HotPullbackBoard } from '../components/HotPullbackBoard';
 import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
 import { EnterableOnlyToggle } from '../components/EnterableOnlyToggle';
+import { MomentumBurstToggle } from '../components/MomentumBurstToggle';
+import { BURST_PARAM, burstParam, isBurst, parseBurstParam, pinBurst } from '../lib/momentumBurst';
 import { HiddenCount } from '../components/HiddenCount';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { partitionEnterable, type EnterableRead } from '../lib/enterable';
@@ -243,6 +245,22 @@ export function ChartMaps() {
     setParams((prev) => {
       const next = new URLSearchParams(prev);
       if (v) next.delete('show'); else next.set('show', 'all');
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  /* ⚡ MOMENTUM BURST (Ajay 2026-09-24: "Can you add this as a check box in our
+   * filters please" → "Pin + badge, hide nothing"). OFF by default; the ON
+   * state is `?burst=1` in the URL and nowhere else — same rule as `?show=all`.
+   * It is NOT sent to the server and is NOT a dependency of `load`: the read
+   * already rides on every tile (chart_maps/board.attach_burst), so ticking the
+   * box re-orders what is on screen and never refetches. */
+  const burstOn = parseBurstParam(params.get(BURST_PARAM));
+  const setBurstOn = useCallback((v: boolean) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const val = burstParam(v);
+      if (val) next.set(BURST_PARAM, val); else next.delete(BURST_PARAM);
       return next;
     }, { replace: true });
   }, [setParams]);
@@ -664,6 +682,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                              enterableOnly && enterableKind !== 'n/a' && tab !== 'holdings',
                              unhide),
     [tiles, tileReads, enterableOnly, enterableKind, tab, unhide]);
+  /* ⚡ The pin runs on what the 🎯 cut already SHOWS — a stable partition, so
+   * the ON grid is a permutation of the OFF grid and nothing is hidden. The
+   * checkbox count is `pinned`, i.e. exactly the names the pin moves. A ⚡ name
+   * the 🎯 filter holds back is counted as "behind 🎯", never dropped silently. */
+  const burstPin = useMemo(
+    () => pinBurst(tilePart.rows, (t) => t.burst, burstOn),
+    [tilePart.rows, burstOn]);
+  const burstBehind = useMemo(
+    () => tiles.filter((t) => isBurst(t.burst)).length - burstPin.pinned,
+    [tiles, burstPin.pinned]);
 
   /* The TWO controls both called "room" (spec §2.4). The `?room=` floor runs on
    * the SERVER against the live print and decides which tiles come back at all;
@@ -1243,6 +1271,14 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             Themes first (quantum · nuclear · robotics · AI semis)
           </label>
         )}
+        {/* ⚡ Momentum burst — on EVERY board tab. Pins + badges, hides
+          * nothing; the non-board tabs are listed with their reason in
+          * lib/momentumBurst.ts::BURST_EXEMPT. */}
+        <MomentumBurstToggle checked={burstOn} onChange={setBurstOn}
+                             count={burstPin.pinned} unknown={burstPin.unknown}
+                             behind={burstBehind} rule={data?.burst_rule}
+                             note={data?.burst_note} tiles={tiles.length} />
+        <RulesInfo section="momentum_burst" compact />
         {tab !== 'winners' && (
           <label className="cm-ctl">
             Window
@@ -1577,10 +1613,17 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                    reasonTitle={roomChipTitle}
                    onShowAll={() => setEnterableOnly(false)}
                    onEnterableOnly={() => setEnterableOnly(true)} />
+      {/* ⚡ The served session note (pre-market: every read unknown; live:
+        * how the volume is projected; after the close: the closing print),
+        * only while the box is ticked. */}
+      {burstOn && data?.burst_note ? (
+        <p className="cm-note" data-testid="cm-burst-note">⚡ {data.burst_note}</p>
+      ) : null}
       <div className={`cm-grid${stale ? ' cm-grid-stale' : ''}`} aria-busy={stale || undefined}>
-        {tilePart.rows.map((t) => (
+        {burstPin.rows.map((t) => (
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
-                        bandStudy={data?.band_structure_study} />
+                        bandStudy={data?.band_structure_study}
+                        burst={burstOn ? (t.burst ?? null) : null} />
         ))}
       </div>
 

@@ -70,7 +70,11 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # 🪜 label is a DESCRIPTIVE ordering of his two asks, and the
                 # panel is where that has to be said in words rather than
                 # implied by a dropdown label.
-                "band_structure")
+                "band_structure",
+                # ⚡ MOMENTUM BURST (2026-09-24) — the Chart Maps pin + badge.
+                # Its own section because it is UNMEASURED and gates nothing,
+                # and the reader has to meet both before the rule.
+                "momentum_burst")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -735,7 +739,57 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: band structure section unavailable: %s", exc)
 
+    # ── ⚡ Momentum burst ──────────────────────────────────
+    try:
+        out["momentum_burst"] = _momentum_burst_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: momentum burst section unavailable: %s", exc)
+
     return out
+
+
+def _momentum_burst_section() -> dict:
+    """⚡ Momentum burst — volume surging and the print within the limit above
+    today's low. Every line is built by `momentum_burst` itself or from its
+    constants; nothing is typed here. Imported LAZILY: this page must not load
+    the read's engines just to list the other sections."""
+    from . import momentum_burst as MB
+
+    start_min = int(round(MB.BURST_PROJECTION_MIN_FRAC * MB.SESSION_MINUTES))
+    lane_min = int(round(MB.LANE_VOL_CONFIRM_MIN_FRAC * MB.SESSION_MINUTES))
+    rvol_line = (
+        "RVOL: today's shares against the full %d-session average. In the "
+        "session, once %d min have passed, today's volume is projected to a "
+        "full session on the app's intraday volume curve (front-loaded, so a "
+        "hot open is not taken at face value) — never a partial day against a "
+        "full one. Before %d min only actual volume already at %s× counts; "
+        "until %d min the projection runs high and the hover says the "
+        "Auto-Pilot does not trust it yet. Day volume includes pre-market "
+        "prints."
+        % (MB.VOL_AVG_BARS, start_min, start_min, MB._g(MB.BURST_RVOL_MIN), lane_min))
+    return {
+        "title": ("Momentum burst — volume surging, the print within %s%% above "
+                  "today's low" % MB._g(MB.BURST_MAX_OFF_LOW_PCT)),
+        "emoji": "⚡",
+        "picks": [
+            MB.rule_text(),
+            rvol_line,
+            "Which low: today's session low on every board — the same low the "
+            "🎯 reversal read measures from.",
+            MB.board_note("premarket"),
+            MB.board_note("rth", MB.LANE_VOL_CONFIRM_MIN_FRAC),
+            MB.board_note("afterhours", 1.0),
+            MB.board_note("closed", 1.0),
+        ],
+        "stops": ["No stop, no target, no size: a pin and a badge."],
+        "alerts": [
+            "UNMEASURED — no study stands behind this flag; the closest "
+            "measured reads (relative volume at a demand arrival) did not "
+            "separate.",
+            "NOTHING HERE PUSHES, GATES OR BUYS.",
+        ],
+        "note": _DISCLAIMER,
+    }
 
 
 def _band_structure_section() -> dict:

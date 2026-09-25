@@ -13635,3 +13635,17 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .pc-amd-raid-live text { fill: var(--cm-violet, #8b5cf6); }
 .pc-amd-raid-unsure { opacity: 0.7; }
+
+/* ⚡ Momentum burst (Ajay 2026-09-24: "Pin + badge, hide nothing"). The badge
+   is a bright amber with an outline so it reads on the dark tiles and does not
+   blur into the 🧨 chip's softer amber beside it. The count suffixes are muted:
+   they explain the pin, they are not a second signal. UNMEASURED. */
+.cm-badge-burst {
+  color: #fbbf24; background: rgba(251,191,36,0.16);
+  border: 1px solid rgba(251,191,36,0.55); font-weight: 600;
+}
+.mb-toggle { display: inline-flex; align-items: center; gap: 0.3rem; }
+.mb-toggle input { accent-color: #fbbf24; cursor: pointer; }
+.mb-count { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.mb-unknown { color: var(--ink-muted); font-size: 0.72rem; }
+.mb-behind { color: var(--ink-muted); font-size: 0.72rem; }
