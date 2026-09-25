@@ -56,10 +56,12 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
     # or Potus or explosive growth or Earnings I wanna see all of them."
     # WIDENED 2026-09-21: 🔔 price_alert — "Yes to all.." (the one kind here
     # that is not a scan; it is a line HE drew on a ticker page).
+    # WIDENED 2026-09-25: 🔑 key_level_alert — "On: week + month + 52-week",
+    # "Holdings + Signals list", "No, close only".
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert"})
+        "board_arrival", "price_alert", "key_level_alert"})
 
 
 def test_the_killed_kinds_are_really_gone_from_the_keep_set():

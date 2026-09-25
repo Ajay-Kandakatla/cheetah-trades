@@ -49,10 +49,17 @@ export type NotificationPrefs = {
      positive, dilution stopped, return on capital positive
      (growth/quality_alerts.py, 2026-09-22: "Filter and have alerts and new look
      out for such companies where whcih have very high quality").
-     OFF — the only trading kind that ships muted. It is not in the backend
+     OFF — the first trading kind that shipped muted. It is not in the backend
      owner keep-set, so a re-registered device stays muted too; he switches it on
      here. Fires on a FAIL → PASS crossing, never on the state "is high quality". */
   capital_quality_upgrade?: boolean;
+  /* 🔑 A CLOSE through a prior-week / prior-month / 52-week RTH high or low on
+     a holding or Signals-watchlist name (supply_demand/key_level_alerts.py,
+     2026-09-25: "I wanna know when key levels are broken for a stock"). ON for
+     him: in the owner keep-set since his 2026-09-25 answers ("On: week + month +
+     52-week", "Holdings + Signals list", "No, close only"); OFF in default_prefs
+     for anyone else. */
+  key_level_alert?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

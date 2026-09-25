@@ -225,3 +225,38 @@ whether a trigger is wired. The counters flow through the generic "extra" list
 like `skipped_overlap` did — no bespoke plumbing.
 
 Full read: [`enterable.md`](enterable.md).
+
+## 9. 🔑 Key levels pass (2026-09-25)
+
+**A fourth RTH-cadence pass: `key_level_alert`.** It has no crontab line of its own — the
+zone_edge minute calls `supply_demand.key_level_alerts.run_pass` at each of its three
+in-session exits (store empty, snapshot failed, normal end). So `CADENCE_SEC["key_level_alert"]`
+is **derived** from `CADENCE_SEC["zone_edge"]` (60 s), never typed;
+`test_cadence_sec_matches_the_crontab` derives it from zone_edge's minute field and pins that the
+crontab carries no `key_level_alerts` line. The pass writes its own `alert_pass_latest` doc
+(`_id: "key_level_alert"`) every minute; zone_edge's own result carries the hook's result under
+`key_levels`, which is in `alert_status._NOT_COUNTS` so it never pollutes zone_edge's counters.
+
+The kind **ships OFF** (not in `OWNER_KEEP_SET`) — the page still lists the pass, for the 💎
+reason: "why was my phone quiet" is the first question the day it is switched on.
+
+**Its `reason`** outside the close window is `close verdicts push 16:05–16:30 ET`
+(`13:05–13:30` on half days), built from `key_levels.close_confirm_at` and
+`key_level_alerts.CLOSE_PUSH_WINDOW_MIN`. A quiet pass at 11:00 is therefore expected, not stale.
+
+| counter | meaning |
+|---|---|
+| `scope` | names in his holdings ∪ Signals watchlist (`signal_lab.merge_holdings`) |
+| `priced` / `stale_print` | names with a fresh, session-dated print / a snapshot row without one |
+| `no_frame` | no cached daily bars for the name |
+| `stale_frame` | cached bars end before the prior market day, OR the last cached close is not the official close (`key_levels.verify_last_row`) — the name is skipped, never read on wrong levels |
+| `unverified` | no snapshot price to verify the last cached close against; read anyway |
+| `members` | prior-week / prior-month / 52-week levels read (per member, never merged) |
+| `broken` / `pierced` / `reversal` / `closed_beyond` | member states this pass (§3.3 of the spec) |
+| `rearmed` | 52-week claims released because the close came back inside the claimed level by 0.15% (`key_levels.PIERCE_PCT`) — silent |
+| `pushed` | send calls that DELIVERED to at least one device |
+| `muted` | send calls that targeted nobody (the kind is OFF) — claims are kept, so switching it on never replays a backlog |
+| `claimed_elsewhere` | a close through a level already pushed in this level's life (week/month) or while the 52-week latch is armed |
+
+Note the split: on this kind `pushed` counts deliveries and `muted` counts "nobody targeted",
+where the zone passes count both as `pushed`. Full rules: [`../notifications/key_level_alert.md`](../notifications/key_level_alert.md).

@@ -124,7 +124,9 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
     assert subs.default_prefs()[QA.KIND] is False
     off = {k for k, v in subs.default_prefs().items()
            if v is False and not k.startswith("quiet_hours")}
-    assert off == {QA.KIND}, "another kind quietly shipped muted: %s" % sorted(off)
+    # 🔑 key_level_alert (2026-09-25) is OFF in default_prefs too — ON only for
+    # the owner, through OWNER_KEEP_SET (his answer).
+    assert off == {QA.KIND, "key_level_alert"}, "another kind quietly shipped muted: %s" % sorted(off)
 
 
 def test_NEGATIVE_the_kind_is_not_in_the_owner_keep_set():
@@ -135,11 +137,12 @@ def test_NEGATIVE_the_kind_is_not_in_the_owner_keep_set():
 
 
 def test_NEGATIVE_the_keep_set_itself_did_not_move():
-    """This package flips no notification pref. The nine kinds are the nine."""
+    """This package flips no notification pref. The keep-set is exactly these
+    ten (🔑 key_level_alert joined 2026-09-25 on his own answer)."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert"})
+        "board_arrival", "price_alert", "key_level_alert"})
 
 
 def test_NEGATIVE_the_kind_is_not_hard_stopped():

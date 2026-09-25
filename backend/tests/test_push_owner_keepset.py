@@ -31,11 +31,16 @@ def test_keep_set_is_the_2026_09_21_nine():
     retired in the push switch and off in your Notifications, so even a real
     crossing will not reach your phone. Turn them back on?": "Yes to all..".
     It left `_RETIRED_2026_06_13` the same day; the stored prefs are flipped
-    separately by scripts/owner_prefs_apply.py."""
+    separately by scripts/owner_prefs_apply.py.
+
+    WIDENED AGAIN 2026-09-25 — 🔑 `key_level_alert`. Asked whether to turn the
+    key-level push on, he answered "On: week + month + 52-week", scope
+    "Holdings + Signals list", "No, close only". It stays False in
+    default_prefs for everyone else."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert"})
+        "board_arrival", "price_alert", "key_level_alert"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices

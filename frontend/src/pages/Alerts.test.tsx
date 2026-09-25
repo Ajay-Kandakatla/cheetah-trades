@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, skipsToday, staleAfterSec } from './Alerts';
+import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, sessionLine, skipsToday, staleAfterSec } from './Alerts';
 import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 import { startOfEtDay } from '../lib/alertKinds';
 
@@ -32,7 +32,7 @@ const ROWS = [
     body: 'Low 161.90 at 09:33 ET, +6.1% off it.' },
 ];
 
-/* All three passes fresh at 11:00 ET. demand_alert carries no cadence_sec on
+/* All four intraday passes fresh at 11:00 ET (🔑 key levels joined 2026-09-25). demand_alert carries no cadence_sec on
  * purpose (an older API) — the fallback must fill it. */
 const STATUS_LIVE = {
   in_session: true, now_et: '2026-09-05T11:00:00-04:00',
@@ -45,6 +45,10 @@ const STATUS_LIVE = {
       counts: { candidates: 640, hits: 6, skipped_room: 0, skipped_proximity: 3, skipped_cap: 0, unknown_cap: 0, pushed: 1 } },
     demand_alert: { as_of: '2026-09-05T10:58:11-04:00', date: '2026-09-05',
       counts: { candidates: 40, hits: 2, skipped_room: 0, skipped_proximity: 0, pushed: 0 } },
+    /* 🔑 2026-09-25: rides zone_edge's minute line; counters as the backend's
+     * key_level_alerts.run_pass records them. */
+    key_level_alert: { as_of: '2026-09-05T10:59:09-04:00', date: '2026-09-05', cadence_sec: 60,
+      counts: { scope: 13, priced: 13, stale_print: 0, members: 78, broken: 2, pierced: 1, closed_beyond: 0, pushed: 0 } },
   },
   disclaimer: 'Configured price-structure alerts. Not advice.',
 };
@@ -62,6 +66,7 @@ const STATUS_STALE = {
     zone_edge: { as_of: '2026-09-05T10:02:00-04:00', date: '2026-09-05', cadence_sec: 60, counts: { candidates: 812, pushed: 1 } },
     zone_bounce_alert: { as_of: '2026-09-05T14:29:02-04:00', date: '2026-09-05', cadence_sec: 300, counts: { candidates: 640, pushed: 0 } },
     demand_alert: { as_of: '2026-09-05T14:28:11-04:00', date: '2026-09-05', cadence_sec: 300, counts: { candidates: 40, pushed: 0 } },
+    key_level_alert: { as_of: '2026-09-05T14:29:40-04:00', date: '2026-09-05', cadence_sec: 60, counts: { scope: 13, pushed: 0 } },
   },
 };
 
@@ -76,6 +81,7 @@ const STATUS_REASON = {
       counts: { candidates: 0 } },
     demand_alert: { as_of: '2026-09-05T09:33:11-04:00', date: '2026-09-05', cadence_sec: 300, reason: 'board empty or warming',
       counts: { candidates: 0 } },
+    key_level_alert: { as_of: '2026-09-05T09:35:40-04:00', date: '2026-09-05', cadence_sec: 60, counts: { scope: 13, pushed: 0 } },
   },
 };
 
@@ -376,8 +382,8 @@ describe('Alerts page — the status strip', () => {
     expect(screen.queryByTestId('pass-reason')).not.toBeInTheDocument();
     // demand_alert sent no cadence_sec → the crontab fallback.
     expect(within(screen.getByTestId('pass-demand_alert')).getByText('· every 5 min')).toBeInTheDocument();
-    // All three fresh → the header may say so.
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all three passes reported within cadence.');
+    // All four fresh → the header may say so.
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 4 passes reported within cadence.');
     expect(screen.getByText(/Gate: room ≥ 5% to the first band overhead · print ≤ 1% above the demand band/)).toBeInTheDocument();
     // The cap floor comes from the payload (review 2026-09-14 F5): "$700M+", never a figure typed in the page.
     expect(screen.getByText(/the phone gets \$700M\+ names that pass, once per band per day/)).toBeInTheDocument();
@@ -404,7 +410,7 @@ describe('Alerts page — the status strip', () => {
     const da = await screen.findByTestId('pass-demand_alert');
     expect(within(da).getByText('no pass yet today')).toBeInTheDocument();
     expect(within(da).queryByText(/last pass/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 3 passes not reporting on cadence');
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 4 passes not reporting on cadence');
     expect(screen.queryByText(/reported within cadence/)).not.toBeInTheDocument();
   });
 
@@ -413,7 +419,7 @@ describe('Alerts page — the status strip', () => {
     draw();
     const ze = await screen.findByTestId('pass-zone_edge');
     expect(within(ze).getByText('stale — last pass 10:02 ET, expected every minute')).toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 3 passes not reporting on cadence');
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 4 passes not reporting on cadence');
     // NEGATIVE: the fresh 5-minute passes are not called stale, and nothing says "running".
     expect(within(screen.getByTestId('pass-zone_bounce_alert')).getByText('last pass 14:29 ET')).toBeInTheDocument();
     expect(screen.queryByText(/passes running/)).not.toBeInTheDocument();
@@ -432,7 +438,7 @@ describe('Alerts page — the status strip', () => {
     expect(within(zb).getByText('⚠ zone store empty for today')).toBeInTheDocument();
     expect(within(screen.getByTestId('pass-demand_alert')).getByText('⚠ board empty or warming')).toBeInTheDocument();
     // The unstamped pass cannot be verified against its cadence → the header does not vouch for it.
-    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 3 passes');
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 4 passes');
   });
 
   it('in_session false: never "live" / "in session" / "session open"; a pass stored on ANOTHER day is named as such', async () => {
@@ -722,9 +728,9 @@ describe('Alerts page — the once-a-day passes', () => {
       expect(within(strip).getByText('· once a trading day')).toBeInTheDocument();
     }
     expect(screen.getAllByText('no pass recorded')).toHaveLength(DAILY.length);
-    // The three-pass sentence speaks for the INTRADAY gate only.
+    // The intraday-pass sentence speaks for the INTRADAY passes only.
     expect(screen.getByTestId('session-line'))
-      .toHaveTextContent('Session open — all three passes reported within cadence.');
+      .toHaveTextContent('Session open — all 4 passes reported within cadence.');
   });
 
   it('NEGATIVE: would_skip_room is never folded into the room aggregate', async () => {
@@ -907,5 +913,118 @@ describe('Alerts page — the truncation warning keys on the SERVER cut', () => 
     draw();
     await screen.findAllByTestId('alert-row');
     expect(screen.getByText(/newest 500 only — narrow the window/)).toBeInTheDocument();
+  });
+});
+
+/* ── 2026-09-25: the 🔑 key-levels pass ─────────────────────────────────────
+ *
+ * Ajay: "I wanna know when key levels are broken for a stock." The push kind
+ * key_level_alert rides zone_edge's every-minute crontab line and records its
+ * own pass doc, so /alerts carries it as a 4th intraday row. The header used
+ * to type "all three"; it now counts PASSES (critic 2 #8).
+ */
+const KEY_PASS_FRESH = {
+  as_of: '2026-09-05T10:59:09-04:00', date: '2026-09-05', cadence_sec: 60,
+  reason: 'close verdicts push 16:05–16:30 ET',
+  counts: { scope: 13, priced: 13, stale_print: 2, no_frame: 0, stale_frame: 1, unverified: 0,
+    members: 78, broken: 2, pierced: 1, reversal: 1, closed_beyond: 0, rearmed: 0,
+    pushed: 0, muted: 0, claimed_elsewhere: 0 },
+};
+
+describe('Alerts page — the 🔑 key-levels pass (2026-09-25)', () => {
+  it('renders the 4th pass row with its label, stamp, minute cadence and its reason', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, key_level_alert: KEY_PASS_FRESH } });
+    draw();
+    const kl = await screen.findByTestId('pass-key_level_alert');
+    expect(within(kl).getByText('🔑 Key levels')).toBeInTheDocument();
+    expect(within(kl).getByText('last pass 10:59 ET')).toBeInTheDocument();
+    expect(within(kl).getByText('· every minute')).toBeInTheDocument();
+    expect(within(kl).getByText('⚠ close verdicts push 16:05–16:30 ET')).toBeInTheDocument();
+    expect(within(kl).getByText('push calls 0')).toBeInTheDocument();
+    expect(within(kl).getByText('2 stale print')).toBeInTheDocument();
+    // NEGATIVE: the raw kind id is never the row's label.
+    expect(within(kl).queryByText('key_level_alert')).not.toBeInTheDocument();
+    // Order: the 🔑 row comes after the three zone passes.
+    const ids = screen.getAllByTestId(/^pass-/).map((el) => el.getAttribute('data-testid'));
+    expect(ids.slice(0, 4)).toEqual(['pass-zone_edge', 'pass-zone_bounce_alert', 'pass-demand_alert', 'pass-key_level_alert']);
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 4 passes reported within cadence.');
+  });
+
+  it('the header scopes the room/proximity gate to the three zone passes; 🔑 is said not to go through it', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, key_level_alert: KEY_PASS_FRESH } });
+    draw();
+    await screen.findByTestId('pass-key_level_alert');
+    expect(screen.getByText('⚙️ Every-minute passes · the phone gate covers the three zone passes')).toBeInTheDocument();
+    expect(screen.getByText(/🔑 Key levels do not go through this gate: they push on a close through a level\./)).toBeInTheDocument();
+    // NEGATIVE: the old header that put all four rows under the zone gate is gone.
+    expect(screen.queryByText('⚙️ Phone gate · the three zone passes')).not.toBeInTheDocument();
+  });
+
+  it('an older API that sends no cadence_sec for it still reads "every minute" (the zone_edge line it rides)', async () => {
+    const { cadence_sec: _drop, ...noCadence } = KEY_PASS_FRESH;
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, key_level_alert: noCadence } });
+    draw();
+    const kl = await screen.findByTestId('pass-key_level_alert');
+    expect(within(kl).getByText('· every minute')).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a status without the 🔑 pass doc renders "no pass yet today", never crashes, and the header does not vouch for it', async () => {
+    const { key_level_alert: _gone, ...three } = STATUS_LIVE.passes;
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: three });
+    draw();
+    const kl = await screen.findByTestId('pass-key_level_alert');
+    expect(within(kl).getByText('no pass yet today')).toBeInTheDocument();
+    expect(within(kl).queryByText(/last pass/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 4 passes not reporting on cadence');
+    expect(screen.queryByText(/reported within cadence/)).not.toBeInTheDocument();
+    // The rest of the page still loads.
+    expect(await screen.findAllByTestId('alert-row')).toHaveLength(3);
+  });
+
+  it('NEGATIVE: a 🔑 pass silent for 10 minutes mid-session reads STALE on the minute clock', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      key_level_alert: { ...KEY_PASS_FRESH, as_of: '2026-09-05T10:50:00-04:00', reason: null } } });
+    draw();
+    const kl = await screen.findByTestId('pass-key_level_alert');
+    expect(within(kl).getByText('stale — last pass 10:50 ET, expected every minute')).toBeInTheDocument();
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 4 passes');
+  });
+
+  it('NEGATIVE: yesterday\'s 🔑 reason is not shown under today\'s "no pass yet today"', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      key_level_alert: { ...KEY_PASS_FRESH, as_of: '2026-09-04T19:59:09-04:00', date: '2026-09-04' } } });
+    draw();
+    const kl = await screen.findByTestId('pass-key_level_alert');
+    expect(within(kl).getByText('last pass 2026-09-04 19:59 ET — no pass yet today')).toBeInTheDocument();
+    expect(within(kl).queryByTestId('pass-reason')).not.toBeInTheDocument();
+  });
+
+  it('sessionLine counts the passes and NEGATIVE: never types "three"', () => {
+    const today = '2026-09-05';
+    const all = { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, key_level_alert: KEY_PASS_FRESH } } as never;
+    expect(sessionLine(all, today)).toBe('Session open — all 4 passes reported within cadence.');
+    const { key_level_alert: _gone, ...three } = STATUS_LIVE.passes;
+    const missing = { ...STATUS_LIVE, passes: three } as never;
+    expect(sessionLine(missing, today)).toMatch(/⚠ 1 of 4 passes/);
+    const closed = { ...STATUS_LIVE, in_session: false } as never;
+    for (const line of [sessionLine(all, today), sessionLine(missing, today), sessionLine(closed, today)]) {
+      expect(line).not.toMatch(/three/i);
+    }
+  });
+
+  it('NEGATIVE: the 🔑 counters never leak into the gate\'s skip aggregate', () => {
+    const today = '2026-09-05';
+    const { key_level_alert: _gone, ...three } = STATUS_LIVE.passes;
+    const without = skipsToday({ ...STATUS_LIVE, passes: three } as never, today);
+    const withKey = skipsToday({ ...STATUS_LIVE, passes: { ...three, key_level_alert: KEY_PASS_FRESH } } as never, today);
+    expect(withKey).toEqual(without);
+  });
+
+  it('NEGATIVE: the 🔑 pass is an intraday row, not a daily one ("no pass recorded" stays with the daily four)', async () => {
+    stubFetch({ rows: ROWS }, STATUS_LIVE);
+    draw();
+    const kl = await screen.findByTestId('pass-key_level_alert');
+    expect(within(kl).queryByText('no pass recorded')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('pass-key_level_alert')).toHaveLength(1);
   });
 });

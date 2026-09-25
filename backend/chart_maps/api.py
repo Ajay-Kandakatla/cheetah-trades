@@ -243,6 +243,18 @@ async def chart_maps_support(
                         [tile], kind=_bs_kind)
                 except Exception as exc:                    # pragma: no cover
                     log.debug("chart-maps/support: band structure failed: %s", exc)
+            # 🔑 KEY LEVELS (2026-09-25), after 🪜 and on the same live row:
+            # two lines each way here (the grid draws one), the prior day on
+            # the 60m/15m frames and the pre-market high/low on the 5-minute
+            # ones. One cached-frames read for the one symbol; the tile's own
+            # bars feed the pre-market levels. Display only.
+            try:
+                from supply_demand import key_levels as KL
+                board_mod.attach_key_levels(
+                    [tile], res, live=live, frame=res.get("timeframe") or "daily",
+                    per_side=KL.SUPPORT_PER_SIDE)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/support: key levels failed: %s", exc)
             # THE BUG AJAY HIT THREE TIMES (2026-09-12): "Still not seeing, AMD
             # or keltners indicators. Whts going on?"
             #

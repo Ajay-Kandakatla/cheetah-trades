@@ -804,15 +804,40 @@ def api_payload(*, latest_coll=None, track_coll=None, now: Optional[datetime] = 
 
 
 # --------------------------------------------------------------------------
+# 🔑 key-level hook (2026-09-25)
+# --------------------------------------------------------------------------
+def _run_key_pass(key_pass, store_injected: bool, *, snapshot, now: datetime, push: bool,
+                  dry_run: bool) -> dict:
+    """The 🔑 key-level pass rides this minute (no crontab line of its own —
+    a deploy does not ship the crontab). `key_pass`: None runs
+    `key_level_alerts.run_pass` on the cron path (store NOT injected) and is
+    skipped when a test injected the store (no network in tests); False
+    skips; a callable is called. Its own try/except: a raising hook never
+    changes this pass's sends, latest doc or counts."""
+    if key_pass is False or (key_pass is None and store_injected):
+        return {"ran": False, "reason": "key-level hook skipped"}
+    try:
+        if key_pass is None:
+            from supply_demand import key_level_alerts   # lazy: only on the cron path
+            key_pass = key_level_alerts.run_pass
+        return key_pass(snapshot=snapshot, now=now, push=push, dry_run=dry_run)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("zone_edge: key-level hook failed: %s", exc)
+        return {"ran": False, "error": str(exc)}
+
+
+# --------------------------------------------------------------------------
 # The pass
 # --------------------------------------------------------------------------
 def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                store: Optional[dict] = None, snapshot: Optional[dict] = None,
                caps: Optional[dict] = None, names: Optional[dict] = None,
                coll_break=None, coll_demand=None, latest_coll=None, track_coll=None,
-               owner: Optional[str] = None, now: Optional[datetime] = None) -> dict:
+               owner: Optional[str] = None, now: Optional[datetime] = None,
+               key_pass=None) -> dict:
     """One 1-min pass. Every input is injectable for tests; the cron passes
-    none. `force` skips the session gate for in-container smoke tests only;
+    none. `key_pass` is the 🔑 key-level hook (`_run_key_pass`, 2026-09-25):
+    None runs `key_level_alerts.run_pass` on the cron path only. `force` skips the session gate for in-container smoke tests only;
     `track=False` (dry runs) reads the board without writing latest/track.
     Pushes are gated by `push_window` (04:00-20:00 since 2026-09-08 PM — the
     same as the pass; RTH-only until Ajay asked for pre/post-market pushes)."""
@@ -825,6 +850,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
     sess = session_state(now)
     day = now.astimezone(ET).date()
     day_iso = day.isoformat()
+    store_injected = store is not None
     if store is None:
         from supply_demand import zone_store
         store = zone_store.load(None, day)
@@ -855,10 +881,13 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                 ep.pop("track", None)
                 _write_latest(latest_coll, ep)
                 written = True
+        kl = _run_key_pass(key_pass, store_injected, snapshot=None, now=now, push=push,
+                           dry_run=not track)
         return {"ran": True, "reason": reason, "latest_written": written, "candidates": 0,
                 "priced": 0, "stale_print": 0, "breaking": [], "near_demand": [],
                 "pushed": 0, "skipped_room": 0, "skipped_cap": 0, "unknown_cap": 0,
-                "skipped_overlap": 0, "seconds": round(time.time() - t0, 2)}
+                "skipped_overlap": 0, "seconds": round(time.time() - t0, 2),
+                "key_levels": kl}
     syms = sorted(store)
     if snapshot is None:
         try:
@@ -866,7 +895,9 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             snapshot = prices.bulk_snapshot(syms) or {}
         except Exception as exc:
             log.warning("zone_edge: snapshot failed: %s", exc)
-            return {"ran": False, "reason": f"snapshot failed: {exc}"}
+            kl = _run_key_pass(key_pass, store_injected, snapshot={}, now=now, push=push,
+                               dry_run=not track)
+            return {"ran": False, "reason": f"snapshot failed: {exc}", "key_levels": kl}
     if not snapshot:
         log.warning("zone_edge: snapshot returned nothing for %d stored names — a quiet "
                     "pass, not a quiet day", len(syms))
@@ -1155,6 +1186,8 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
                             pass_sec=time.time() - t0, counts=counts)
     if track:
         _write_latest(latest_coll, payload)
+    kl = _run_key_pass(key_pass, store_injected, snapshot=snapshot, now=now, push=push,
+                       dry_run=not track)
     return {"ran": True, "date": day_iso, "as_of": payload["as_of"], "push_window": push_ok,
             "session": payload.get("session"), "candidates": len(syms),
             "priced": len(prints), "stale_print": stale_print,
@@ -1169,7 +1202,8 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             "skipped_knife": skipped_knife, "skipped_mood": skipped_mood,
             "skipped_floor": skipped_floor, "skipped_overlap": skipped_overlap,
             "skipped_not_enterable": skipped_not_enterable,
-            "seconds": round(time.time() - t0, 2), "payload": payload}
+            "seconds": round(time.time() - t0, 2), "payload": payload,
+            "key_levels": kl}
 
 
 if __name__ == "__main__":

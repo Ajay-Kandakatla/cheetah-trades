@@ -369,3 +369,98 @@ describe('cardLadder — repair round 2026-09-25', () => {
     expect(planLineKey('stop', undefined, 'Stop')).toBe('Stop');
   });
 });
+
+describe('cardLadder — 🔑 key levels (2026-09-25)', () => {
+  // Ajay 2026-09-25: "I wanna know when key levels are broken for a stock."
+  // The chip and the fold line are SERVED strings (key_levels.tile_block);
+  // the ladder only places them.
+  const kl = (over: Record<string, unknown> = {}) => ({
+    session: '2026-09-25', frame: 'daily', phase: 'rth', measured: false, verified: true,
+    levels: [], drawn: [], rule: 'r', stale_note: null,
+    chip: { text: '🔑 broke PWL 95.78 ↓ 10:42', tone: 'warn' },
+    fold: '🔑 RTH levels · PWH 102.10 +2.0% · PWL 95.78 −1.2% broke 10:42',
+    ...over,
+  });
+  const withKl = (block: unknown, over: Partial<CmTile> = {}) =>
+    bare({ key_levels: block as any, ...over });
+
+  it('the chip lands in PRICE (keyLevel) — not approach, SETUP, ENTRY, PLAN or the fold', () => {
+    const l = cardLadder(withKl(kl(), {
+      badges: [{ text: '↓ Came down from 97.37 (-1.3% today)', tone: 'muted' }],
+    }));
+    expect(l.keyLevel).toEqual({ text: '🔑 broke PWL 95.78 ↓ 10:42', tone: 'warn' });
+    expect(l.approach?.text).toBe('↓ Came down from 97.37 (-1.3% today)');
+    const everywhereElse = [
+      ...texts(l.entry), ...texts(l.price), ...texts(l.priceAfter), ...texts(l.setup.badges),
+      ...texts(l.plan.pills), ...texts(l.timing.badges), ...l.moreWarn.map((b) => b.text),
+    ];
+    expect(everywhereElse.some((t) => t.includes('broke PWL'))).toBe(false);
+  });
+
+  it('the close-phase wordings land in PRICE too', () => {
+    for (const text of ['🔑 closed under PWL 95.78', '🔑 closed back over PWL 95.78',
+      '🔑 after-hrs under PWL 95.78', '🔑 gapped through PWL 95.78 ↓', '🔑 broke PWH 102.10 ↑ · pre-mkt']) {
+      expect(cardLadder(withKl(kl({ chip: { text, tone: 'warn' } }))).keyLevel?.text).toBe(text);
+    }
+  });
+
+  it('the fold line is ONE READS item, and moreCount counts it', () => {
+    const l = cardLadder(withKl(kl()));
+    expect(foldTexts(l, 'reads')).toEqual(['slot:keylevels']);
+    expect(l.moreCount).toBe(1);
+    for (const g of FOLD_GROUPS.filter((x) => x !== 'reads')) expect(l.more[g]).toEqual([]);
+  });
+
+  it('NEGATIVE: no chip served → keyLevel null, but the fold line still folds', () => {
+    const l = cardLadder(withKl(kl({ chip: null })));
+    expect(l.keyLevel).toBeNull();
+    expect(foldTexts(l, 'reads')).toEqual(['slot:keylevels']);
+  });
+
+  it('NEGATIVE: an empty / whitespace / non-string fold adds no fold item and no count', () => {
+    for (const fold of [null, '', '   ', 42, undefined]) {
+      const l = cardLadder(withKl(kl({ fold })));
+      expect(foldTexts(l, 'reads')).toEqual([]);
+      expect(l.moreCount).toBe(0);
+    }
+  });
+
+  it('NEGATIVE: null, a missing block or a malformed one → no pill, no fold, no throw', () => {
+    const junk: unknown[] = [
+      null, undefined, 'x', 7, [], {},
+      kl({ levels: 'nope' }), kl({ levels: null }),
+      kl({ chip: { text: '', tone: 'warn' } }), kl({ chip: { text: '  ', tone: 'warn' } }),
+      kl({ chip: { text: 42, tone: 'warn' } }), kl({ chip: 'broke PWL' }), kl({ chip: [] }),
+    ];
+    for (const block of junk) {
+      let l: Ladder | null = null;
+      expect(() => { l = cardLadder(withKl(block)); }).not.toThrow();
+      expect(l!.keyLevel).toBeNull();
+      expect(allStrings(l!).some((s) => s.includes('undefined') || s.includes('NaN'))).toBe(false);
+    }
+    // levels not an array → the whole block is malformed: nothing folds either
+    expect(foldTexts(cardLadder(withKl(kl({ levels: 'nope' }))), 'reads')).toEqual([]);
+  });
+
+  it('NEGATIVE: an unknown chip tone reads as warn — a real break is never greyed', () => {
+    expect(cardLadder(withKl(kl({ chip: { text: '🔑 broke PWL 95.78 ↓', tone: 'loud' } }))).keyLevel?.tone)
+      .toBe('warn');
+    expect(cardLadder(withKl(kl({ chip: { text: '🔑 broke PWL 95.78 ↓', tone: 'muted' } }))).keyLevel?.tone)
+      .toBe('muted');
+  });
+
+  it('NEGATIVE: key lines never reach PLAN, and do not decide `Last` on the face', () => {
+    const l = cardLadder(bare({
+      bars: [{ t: '2026-09-24', o: 1, h: 2, l: 0.5, c: 1.5, v: 1 }],
+      lines: [{ price: 1.5, label: '🔑 PWH 1.50', tone: 'key' },
+              { price: 1.2, label: '🔑 PWL 1.20', tone: 'key_broken' }],
+    }));
+    expect(l.plan.lines).toEqual([]);
+    expect(l.plan.lastOnFace).toBe(true);
+  });
+
+  it('NEGATIVE: the input tile is not mutated', () => {
+    const t = Object.freeze(withKl(Object.freeze(kl())));
+    expect(() => cardLadder(t)).not.toThrow();
+  });
+});

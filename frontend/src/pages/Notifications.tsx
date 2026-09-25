@@ -78,7 +78,7 @@ export const CATEGORIES: CategoryDef[] = [
       + 'It is never the first cohort \u2014 the first pass after this ships records the baseline and sends nothing, so you are told about what is NEW, not about the 1,054 names already there. '
       + 'THIS IS AN ARRIVAL ON A LIST, NOT AN ENTRY. Bonde\'s own rule was measured INVERTED (\u22123.11pp against a matched placebo) and the 100/100 screen behind Explosive Growth has never been measured forward. Not a recommendation.' },
   { key: 'capital_quality_upgrade', label: 'Capital quality improved', emoji: '\u{1F48E}', group: 'trading',
-    detail: 'OFF BY DEFAULT — the only trading kind here that ships muted, deliberately. You asked for it ("Filter and have alerts and new look out for such companies where whcih have very high quality", 2026-09-22), but it is a kind you have not seen fire yet, so nothing turned it on for you. Flip it here when you want it. '
+    detail: 'OFF BY DEFAULT — deliberately; with \u{1F511} key levels below, one of the two trading kinds here that ship muted. You asked for it ("Filter and have alerts and new look out for such companies where whcih have very high quality", 2026-09-22), but it is a kind you have not seen fire yet, so nothing turned it on for you. Flip it here when you want it. '
       + 'WHAT FIRES: a name on the \u{1F680} Explosive Growth board crosses a BALANCE-SHEET line on a NEW FISCAL QUARTER — it went net cash (cash now exceeds debt), it turned free-cash-flow positive, its share count stopped rising, or its return on capital turned positive. '
       + 'It is a CROSSING, not a state: "this name is high quality" is true for months and would either repeat until you muted it or say nothing at all. Only the transition rings. '
       + 'WHAT NEVER FIRES, on purpose: a figure that merely became KNOWN (that is the app learning, not the company improving — and the next metrics warm will make ~15 of 21 names \"improve\" at once for exactly that reason); the two sector-relative checks (those can move because a PEER filed); the same quarter twice (the claim is per name per fiscal quarter, forever — the \u{1F514} price-alert lesson, where 2,022 stale re-fires all delivered to nobody); and a DETERIORATION — you asked for a look-out, not a sell signal, and turning the downgrade side on is your call, not mine. '
@@ -86,6 +86,13 @@ export const CATEGORIES: CategoryDef[] = [
       + 'NOTHING GATES IT. Your 2026-09-05 standing gates — at least 5% of room overhead, the print within 1% of the band — are about a PRICE at a ZONE; this reports a filing and names no price, so applying them would quietly turn a fundamentals notice into an entry signal. Whether a fundamentals push should carry a gate at all is an open question for you; no gate was invented for it. '
       + 'Once per name per quarter; 4 ring individually, the rest share a digest. Passes 17:52 ET on trading days, after the evening balance-sheet refresh. '
       + 'NOT MEASURED: nobody has measured whether a balance sheet improving predicts anything on your universe — and nobody can yet, because this alert’s own state is the first per-quarter history of these figures the app has ever kept. It is a screen, not an edge. Not a recommendation.' },
+  /* 🔑 supply_demand/key_level_alerts.py (2026-09-25, Ajay: "I wanna know when
+     key levels are broken for a stock"). Ships OFF and outside the owner
+     keep-set, like 💎 above — turning it on is his call. The backend
+     default_prefs() stamps it False on every stored device, so the toggle
+     reads OFF. */
+  { key: 'key_level_alert', label: 'Key level closed through', emoji: '🔑', group: 'trading',
+    detail: 'your holdings and Signals list: one push after the close when a name closed through its prior-week, prior-month or 52-week high or low. Unmeasured.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -411,11 +418,11 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, and 🔔 the price alerts you set (2026-09-21). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), and 🔑 a close through a key level on a holding or Signals name (2026-09-25). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
-      price_alert: true,
+      price_alert: true, key_level_alert: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

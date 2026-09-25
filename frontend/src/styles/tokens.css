@@ -42,6 +42,11 @@
   --neutral:       var(--ink-subtle);
   --warn:          #B08234;
 
+  /* 🔑 Key levels on the charts (2026-09-25) — bright fuchsia, ~4.4:1 on
+     --bg-surface. Distinct from every overlay colour; the 🔑 on each label and
+     the cost line's heavier stroke separate it from his pink cost line. */
+  --cm-key:        #c026d3;
+
   /* Typography */
   --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', ui-sans-serif, sans-serif;
   --font-serif: var(--font-sans);
@@ -128,6 +133,8 @@
   --negative-bg: rgba(192, 107, 107, 0.10);
   --warn:        #D9B871;
 
+  --cm-key:      #e879f9;   /* 🔑 key levels, ~7:1 on --bg */
+
   color-scheme: dark;
 }
 
@@ -158,6 +165,8 @@
     --negative:    #C06B6B;
     --negative-bg: rgba(192, 107, 107, 0.10);
     --warn:        #D9B871;
+
+    --cm-key:      #e879f9;
 
     color-scheme: dark;
   }

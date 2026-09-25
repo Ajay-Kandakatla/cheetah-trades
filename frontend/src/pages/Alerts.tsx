@@ -92,13 +92,18 @@ export function capFloorPhrase(gate: Partial<AlertsGate> | null | undefined): st
   return txt ? `${txt}+` : 'cap-floored';
 }
 
-/* Order + wording of the three passes that page the phone. The cadence
- * fallbacks mirror backend/crontab (zone_edge every minute in session; the
- * two 5-minute checks) and are used only when the API sends no cadence_sec. */
+/* Order + wording of the intraday passes. The cadence fallbacks mirror
+ * backend/crontab (zone_edge every minute in session; the two 5-minute
+ * checks) and are used only when the API sends no cadence_sec.
+ * 🔑 key_level_alert (2026-09-25) rides zone_edge's every-minute crontab line
+ * (backend CADENCE_SEC derives it from zone_edge's), so it is judged on the
+ * same minute clock. Its KIND ships OFF; the pass still runs and records its
+ * counters, so a quiet close reads as quiet-with-a-reason. */
 const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'zone_edge',         label: '🚀 🧲 Zone edge',             fallbackCadenceSec: 60 },
   { key: 'zone_bounce_alert', label: '🪃 Intraday demand turn',   fallbackCadenceSec: 300 },
   { key: 'demand_alert',      label: '🧲 Reversal at demand',      fallbackCadenceSec: 300 },
+  { key: 'key_level_alert',   label: '🔑 Key levels',              fallbackCadenceSec: 60 },
 ];
 
 /* The once-a-day passes (2026-09-20). They are NOT part of the three-pass
@@ -182,7 +187,9 @@ export function sessionLine(status: AlertsStatus, today: string): string {
     const p = status.passes?.[m.key];
     return passHealth(p, status, today, cadenceOf(p, m)).health !== 'fresh';
   }).length;
-  if (late === 0) return 'Session open — all three passes reported within cadence.';
+  // Counted from PASSES, never a typed word (critic 2 #8): "all three" went
+  // stale the day the 🔑 pass joined.
+  if (late === 0) return `Session open — all ${PASSES.length} passes reported within cadence.`;
   return `Session open (clock) — ⚠ ${late} of ${PASSES.length} passes not reporting on cadence, see below.`;
 }
 
@@ -648,12 +655,13 @@ export function AlertsPage() {
       <section style={CARD} aria-label="Alert passes">
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
           <div>
-            <div style={EYEBROW}>⚙️ Phone gate · the three zone passes</div>
+            <div style={EYEBROW}>⚙️ Every-minute passes · the phone gate covers the three zone passes</div>
             <div style={{ fontSize: '0.72rem', color: MUTED, marginTop: 1 }}>
               {status
                 ? <span data-testid="session-line" style={{ color: status.in_session && sessionLine(status, today).includes('⚠') ? AMBER : MUTED }}>{sessionLine(status, today)}</span>
                 : statusErr ? `status unavailable — ${statusErr}` : 'loading status…'}
               {' '}Gate: room ≥ {gate.min_room_pct}% to the first band overhead · print ≤ {gate.max_above_demand_pct}% above the demand band.
+              {' '}🔑 Key levels do not go through this gate: they push on a close through a level.
               {' '}The boards list every name; the phone gets {capFloorPhrase(gate)} names that pass, once per band per day.
             </div>
           </div>

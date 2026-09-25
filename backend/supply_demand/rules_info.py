@@ -74,7 +74,12 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # ⚡ MOMENTUM BURST (2026-09-24) — the Chart Maps pin + badge.
                 # Its own section because it is UNMEASURED and gates nothing,
                 # and the reader has to meet both before the rule.
-                "momentum_burst")
+                "momentum_burst",
+                # 🔑 KEY LEVELS (2026-09-25) — prior-period highs and lows on
+                # the charts plus the close-through push (ON for the owner). Its
+                # own section for the ⚡ reason: UNMEASURED, and it gates
+                # nothing.
+                "key_levels")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -745,7 +750,84 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: momentum burst section unavailable: %s", exc)
 
+    # ── 🔑 Key levels ──────────────────────────────────────
+    try:
+        out["key_levels"] = _key_levels_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: key levels section unavailable: %s", exc)
+
     return out
+
+
+def _key_levels_section() -> dict:
+    """🔑 Key levels — every number is read from `key_levels` (KL) or
+    `key_level_alerts` (KLA), never typed here; whether the push is ON is read
+    from `push.subs.owner_prefs()` at request time. That is the DEFAULT his
+    devices get (the keep-set), not a device's stored toggle, so the line says
+    "by default" and never claims the current state of his phone. Imported LAZILY, like the
+    ⚡ section: the panel must not load the engines to list the others."""
+    from datetime import datetime, timedelta
+    from push import subs
+    from . import key_level_alerts as KLA
+    from . import key_levels as KL
+
+    def g(x) -> str:
+        return "%g%%" % float(x)
+
+    hm = KL._hhmm
+
+    def window(t) -> str:
+        start = datetime.combine(datetime.min.date(), t)
+        return "%s–%s" % (hm(start.time()),
+                          hm((start + timedelta(minutes=KLA.CLOSE_PUSH_WINDOW_MIN)).time()))
+
+    def labels(periods, kinds=("high", "low")) -> str:
+        return ", ".join(KL.LABELS[(p, k)] for p in periods for k in kinds)
+
+    frames = "; ".join("%s: %s" % (f, labels(ps)) for f, ps in KL.FRAME_PERIODS.items())
+    push_names = ", ".join(KL.NAMES[KL.LABELS[(p, k)]] for p in KL.PUSH_PERIODS
+                           for k in ("high", "low"))
+    on = subs.owner_prefs().get(KLA.KIND) is True
+    year = KL.NAMES[KL.LABELS[("year", "high")]].rsplit(" ", 1)[0]
+    return {
+        "title": "Key levels — prior-period highs and lows, frozen at their own close",
+        "emoji": KL.MARK,
+        "picks": [
+            KL.rule_text(),
+            "Which levels on which chart — %s. The %s charts show extended hours, so their "
+            "regular-session levels are labelled RTH." % (frames, " and ".join(KL.EXT_FRAMES)),
+            "Frozen, never recalculated during the day: each level is set by the close of its "
+            "own period and becomes the drawn level at the %s ET roll; the %s pair is the "
+            "last %d closed sessions (left out below %d); the pre-market pair is fixed at %s ET."
+            % (hm(KL.ROLL_AT), year, KL.YEAR_BARS, KL.YEAR_BARS, hm(KL.PRE_FROZEN_AT)),
+            "Cap: %d line above and %d below the price on the cards, %d each way on the Support "
+            "tab; every level, drawn or not, is listed under ▸ more with its distance and state."
+            % (KL.GRID_PER_SIDE, KL.GRID_PER_SIDE, KL.SUPPORT_PER_SIDE),
+            "Merge for drawing only: levels on the same side within %s draw as one line at the "
+            "longer period's printed price; the state is always read per level." % g(KL.AT_LEVEL_PCT),
+            "Broken = a fresh print (under %d s old) %s or more through the level; a pierce that "
+            "comes back %s inside is a reversal. From %s ET (%s on half days) the close decides: "
+            "closed through, reversal, tested or intact."
+            % (KL.STALE_PRINT_SEC, g(KL.PIERCE_PCT), g(KL.PIERCE_PCT),
+               hm(KL.CLOSE_CONFIRM_AT), hm(KL.CLOSE_CONFIRM_AT_HALF)),
+        ],
+        "stops": ["No stop, no target, no size: a drawing and a state."],
+        "alerts": [
+            "%s %s (%s): one push when a holding or Signals-watchlist name CLOSES %s or more "
+            "through its %s — sent %s ET (%s on half days). Holdings ring individually (at most "
+            "%d), the rest ride one digest of up to %d names. Day levels and intraday pierces "
+            "never push."
+            % (KL.MARK, KLA.KIND, "ON by default" if on else "ships OFF by default; the toggle is at /notifications",
+               g(KL.PIERCE_PCT), push_names, window(KL.CLOSE_CONFIRM_AT),
+               window(KL.CLOSE_CONFIRM_AT_HALF), KLA.MAX_SINGLES(), KLA.DIGEST_MAX()),
+            "Latch: prior-week and prior-month levels push once per level and direction (the "
+            "next period's level is a new one); the %s latch re-arms only after a close "
+            "back inside the level it pushed by %s." % (year, g(KL.PIERCE_PCT)),
+            "UNMEASURED — no study stands behind a break of these levels. Nothing here gates, "
+            "sizes or buys.",
+        ],
+        "note": _DISCLAIMER,
+    }
 
 
 def _momentum_burst_section() -> dict:

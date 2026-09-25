@@ -118,6 +118,15 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   { key: 'sma200', label: '200 SMA', swatch: 'var(--gold, #c9a227)',
     hint: 'the plain 200-day average of the close — the same 200-day simple average Minervini’s trend template and the SEPA gate read. Drawn only where 200 closes exist; the first 199 bars of a frame are a gap, not a guess.',
     lineTones: ['sma200'] },
+  // 🔑 Key levels (Ajay 2026-09-25): "Can you build be key levels in to our
+  // charts? … With check box give it a brigh color in the chart. I wanna know
+  // when key levels are broken for a stock." Owned by TONE ONLY — no
+  // linePrefixes: the ICT tab's own `key low X` / `key high X` lines are tone
+  // neutral and must never be claimed (or hidden) by this box. Every key label
+  // starts with 🔑, so no existing prefix claims one either.
+  { key: 'key_levels', label: '\u{1F511} Key levels', swatch: 'var(--cm-key, #d946ef)',
+    hint: 'Regular-session (RTH) highs and lows of the prior day, week, month and 52 weeks — each frozen at the close of its own period and never recalculated during the day — plus the pre-market high/low on the 5-minute frames. Dashed = the price is through it now, or closed through it today. One above and one below the price on the cards, two on the Support tab. Unmeasured — a drawing, not a signal.',
+    lineTones: ['key', 'key_broken'] },
 ];
 
 /** The families that are ON when he has never touched a checkbox.
@@ -144,7 +153,11 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
  *  chart. If he ever wants one off, the checkbox is right there and his choice
  *  persists from then on. */
 export const DEFAULT_ON = ['demand', 'supply', 'board', 'order_block', 'position',
-  'ema9', 'sma20', 'sma200'];
+  'ema9', 'sma20', 'sma200',
+  // 🔑 Key levels (2026-09-25) are ON by the same rule: a drawing he asked for
+  // by name ("give it a brigh color in the chart"), gating nothing. A saved v2
+  // hidden-set cannot list a key that did not exist, so no LS_KEY bump.
+  'key_levels'];
 
 export function defaultHidden(): Set<string> {
   return new Set(OVERLAY_GROUPS.map((g) => g.key).filter((k) => !DEFAULT_ON.includes(k)));
@@ -273,6 +286,9 @@ export function filterTile<T extends Partial<CmTile>>(tile: T, hidden: Set<strin
     // 🌀 Every AMD raid (2026-09-24) — the chip, its list and the numbered
     // circles go with the AMD box, exactly like the verdict sentence above.
     amd_raids: hidden.has('amd') ? null : (tile as any).amd_raids,
+    // 🔑 The key-level chip and ▸ more line go with the 🔑 box, exactly like
+    // the lines: one checkbox governs the drawing and the words together.
+    key_levels: hidden.has('key_levels') ? null : (tile as any).key_levels,
     // 📋 The plan's prices, UNFILTERED (2026-09-25): the "Trade lines" box
     // decides what is DRAWN, never what the card's PLAN row says. Only in this
     // branch, so `filterTile(t, new Set())` stays the identity.

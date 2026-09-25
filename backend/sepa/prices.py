@@ -1199,6 +1199,9 @@ def bulk_live_prices(syms: list[str], snaps: Optional[dict] = None) -> dict[str,
             # the day's low / open (2026-09-08): "falling into" vs "bouncing off"
             "low":              bar.get("low"),
             "open":             bar.get("open"),
+            # the day's high (2026-09-25, additive): the 🔑 key-level break
+            # read needs the session extreme on the resistance side too.
+            "high":             bar.get("high"),
         }
         for sym, bar in snaps.items()
         # Surface a ticker if it has ANY usable price:

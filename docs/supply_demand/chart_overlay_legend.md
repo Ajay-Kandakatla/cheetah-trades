@@ -95,3 +95,32 @@ ON by default. It is the demand board's own band for the name — swing 5, merge
 4%, 252 closed bars, priced off the live print — drawn as a dashed outline so
 it reads as "the band an alert would name" over the Support tab's finer fills.
 Hiding it leaves the finer levels; hiding the finer levels leaves it.
+
+### 2026-09-25 — 🔑 Key levels
+
+> Ajay: "Can you build be key levels in to our charts? … With check box give it
+> a brigh color in the chart. I wanna know when key levels are broken for a
+> stock."
+
+New family `key_levels` (label `🔑 Key levels`), **ON by default** under the
+written `DEFAULT_ON` rule (a drawing he asked for by name, gating nothing). No
+`LS_KEY` bump: a saved v2 hidden-set cannot list a key that did not exist, so
+it shows (pinned in `chartOverlays.test.ts`).
+
+* **Owned by tone only** — `key` (a frozen prior-period RTH high/low) and
+  `key_broken` (the price is through a member of that line now, or closed
+  through it today). No `linePrefixes`, so the ICT tab's own `key low X` /
+  `key high X` lines (tone `neutral`) are never claimed or hidden by this box.
+  Every key label starts with `🔑`, so no existing prefix claims one either.
+* **Colour** `var(--cm-key, #d946ef)`: `#c026d3` on the light theme, `#e879f9`
+  in both dark blocks (`styles/tokens.css`). Swatch = line colour. The final
+  colour is his call (#4 in the key-levels spec).
+* **Style** (`PatternChart` `lineDash`): `key` solid at width 1.1 — the only
+  solid line besides `buy`; `key_broken` width 1.1, dash `3,3`. Label priority
+  1 (`TONE_PRIORITY`), so a key label yields to BUY / STOP / TARGET / his cost
+  in a crowded gutter while the line still draws.
+* `filterTile` nulls `tile.key_levels` with the box, so the lines, the PRICE
+  chip and the ▸ more line go together. `isPlanLine` is false for key lines:
+  PLAN never prints a key level.
+* UNMEASURED — a drawing and a state, not a signal. The engine and its rules
+  are in `docs/chart_maps/key_levels_2026_09_25.md`.

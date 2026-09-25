@@ -204,7 +204,7 @@ def test_the_contracts_parser_reads_the_real_set():
     assert parsed == set(subs.OWNER_KEEP_SET)
     assert "price_alert" in parsed, \
         "the Essentials preset contract demands price_alert: true from this read"
-    assert len(parsed) == 9
+    assert len(parsed) == 10
 
 
 def test_NEGATIVE_a_comment_above_the_definition_hijacks_the_parser():

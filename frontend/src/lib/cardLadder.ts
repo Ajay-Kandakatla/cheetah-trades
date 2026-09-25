@@ -41,7 +41,7 @@ export type FoldItem = {
   badge?: CmBadge; stat?: CmStat;
   /** A chip mounted by the card itself, not a served badge. `last` is the
    *  card's own last close, folded when it equals a plan price. */
-  slot?: 'explosive' | 'enterable' | 'zone' | 'last';
+  slot?: 'explosive' | 'enterable' | 'zone' | 'last' | 'keylevels';
 };
 
 export type Ladder = {
@@ -54,6 +54,11 @@ export type Ladder = {
   /** Served tape pills (⚡ tape burst / pocket pivot) then money flow —
    *  printed AFTER the approach line and the ⚡ momentum-burst slot. */
   priceAfter: CmBadge[];
+  /** 🔑 The served key-level chip (2026-09-25) — printed after the position
+   *  pills, before the approach line. Non-null only while the price is through
+   *  a level now, or after the close-confirm minute when it CLOSED through one;
+   *  the server decides, this file only checks the shape. */
+  keyLevel: { text: string; tone: CmBadge['tone'] } | null;
   why: string | null;                              // null when wholly printed elsewhere
   setup: { badges: CmBadge[]; stats: CmStat[] };
   plan: {
@@ -316,6 +321,13 @@ export function cardLadder(tile: CmTile, opts: { skip?: ReadonlyArray<OuterChip>
   const lastC = lastBar ? lastBar.c : undefined;
   const lastOnFace = !planLines.some((l) => l.price === lastC);   // the one numeric op: ===
 
+  /* 🔑 Key levels (2026-09-25): the served chip for PRICE and the served fold
+   * line for READS. A malformed block (levels not an array, chip text empty or
+   * not a string) prints nothing — never a crash, never a guessed sentence. */
+  const kl = keyLevelsOf(t.key_levels);
+  const keyLevel = kl ? keyChip(kl.chip) : null;
+  const keyFold = !!kl && typeof kl.fold === 'string' && kl.fold.trim().length > 0;
+
   /* ▸ more — labelled groups, each drawn only when it has items. */
   const more: Record<FoldGroup, FoldItem[]> = { risk: [], tape: [], floor: [], sector: [], reads: [] };
   for (const g of FOLD_GROUPS) {
@@ -329,6 +341,7 @@ export function cardLadder(tile: CmTile, opts: { skip?: ReadonlyArray<OuterChip>
   if (t.explosive && !skip.has('explosive')) reads.push({ slot: 'explosive' });
   if (zone && !zone.onFace) reads.push({ slot: 'zone' });
   if (ent && ent.kind === 'n/a' && !skip.has('enterable')) reads.push({ slot: 'enterable' });
+  if (keyFold) reads.push({ slot: 'keylevels' });
   more.reads = [...reads, ...more.reads];
 
   const moreCount = FOLD_GROUPS.reduce((n, g) => n + more[g].length, 0);
@@ -344,6 +357,7 @@ export function cardLadder(tile: CmTile, opts: { skip?: ReadonlyArray<OuterChip>
     approach,
     price,
     priceAfter,
+    keyLevel,
     why,
     setup: { badges: setupBadges, stats: setupStats },
     plan: { buyZone, lines: planLines, stats: planStats, pills: planPills, lastOnFace },
@@ -353,6 +367,24 @@ export function cardLadder(tile: CmTile, opts: { skip?: ReadonlyArray<OuterChip>
     moreWarn,
     dropped,
   };
+}
+
+/** The key-level block when it has the served shape, else null. */
+function keyLevelsOf(v: unknown): { chip?: unknown; fold?: unknown } | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  if (!Array.isArray((v as { levels?: unknown }).levels)) return null;
+  return v as { chip?: unknown; fold?: unknown };
+}
+
+const CHIP_TONES = new Set(['good', 'warn', 'muted']);
+/** The served chip, only with a non-empty string text. The server always sends
+ *  `warn`; an unknown tone reads as `warn` so a real break is never greyed. */
+function keyChip(c: unknown): Ladder['keyLevel'] {
+  if (!c || typeof c !== 'object') return null;
+  const text = (c as { text?: unknown }).text;
+  if (typeof text !== 'string' || !text.trim()) return null;
+  const tone = (c as { tone?: unknown }).tone;
+  return { text, tone: (typeof tone === 'string' && CHIP_TONES.has(tone) ? tone : 'warn') as CmBadge['tone'] };
 }
 
 /* ── PLAN row names (repair 2026-09-25) ─────────────────────────────────────

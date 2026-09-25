@@ -163,7 +163,10 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     # capital_quality_upgrade). The 💎 pass is here although its KIND ships
     # OFF — "why was my phone quiet" is exactly the question the day he
     # switches it on, and a pass the page cannot show cannot answer it.
+    # EIGHT since 2026-09-25: 🔑 key_level_alert rides the zone_edge minute and
+    # records its own pass doc (its kind ships OFF — same reason as 💎).
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
+                                "key_level_alert",
                                 "earnings_reaction", "board_arrival:bonde",
                                 "board_arrival:growth", "capital_quality_upgrade"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
@@ -287,10 +290,16 @@ def test_cadence_sec_matches_the_crontab():
         assert m, f"unexpected minute field {field!r}"
         return int(m.group(1)) * 60
 
+    # 🔑 key_level_alert (2026-09-25) has no crontab line: zone_edge's pass calls
+    # it, so its cadence is DERIVED from zone_edge's minute field
     assert AS.CADENCE_SEC == {"zone_edge": seconds(minute_field("supply_demand.zone_edge")),
                               "zone_bounce_alert": seconds(minute_field("supply_demand.zone_bounce_alerts")),
-                              "demand_alert": seconds(minute_field("supply_demand.demand_alerts"))}
-    assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300}
+                              "demand_alert": seconds(minute_field("supply_demand.demand_alerts")),
+                              "key_level_alert": seconds(minute_field("supply_demand.zone_edge"))}
+    assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
+                              "key_level_alert": 60}
+    assert not [ln for ln in lines if "key_level_alerts" in ln and not ln.lstrip().startswith("#")], \
+        "NEGATIVE: the key-level pass has no crontab line of its own"
 
 
 # ── the three DAILY passes (2026-09-20) ─────────────────────────────────────
@@ -356,5 +365,29 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
     """NEGATIVE: `CADENCE_SEC` is what the page measures RTH staleness against.
     A daily pass must never appear in it (test_cadence_sec_matches_the_crontab
     compares it to the crontab's minute fields)."""
-    assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert"}
-    assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300}
+    assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert", "key_level_alert"}
+    assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
+                              "key_level_alert": 60}
+
+
+# ── 🔑 key_level_alert (2026-09-25) ─────────────────────────────────────────
+def test_key_level_pass_is_listed_with_zone_edges_cadence_and_reads_no_pass_yet():
+    p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=NOW)
+    kl = p["passes"]["key_level_alert"]
+    assert kl == {"as_of": None, "date": None, "counts": {}, "cadence_sec": AS.CADENCE_SEC["zone_edge"]}
+    assert "key_level_alert" in AS.PASS_KINDS and "key_level_alert" not in AS.DAILY_PASS_KINDS
+
+
+def test_key_level_pass_serves_its_counters_and_reason():
+    pc = FakeColl()
+    AS.record_pass("key_level_alert", {"scope": 13, "members": 60, "closed_beyond": 2, "pushed": 1},
+                   NOW, coll=pc, reason="close verdicts push 16:05–16:30 ET")
+    kl = AS.status_payload(pass_coll=pc, latest_coll=FakeColl(), now=NOW)["passes"]["key_level_alert"]
+    assert kl["counts"] == {"scope": 13, "members": 60, "closed_beyond": 2, "pushed": 1}
+    assert kl["reason"] == "close verdicts push 16:05–16:30 ET" and kl["cadence_sec"] == 60
+
+
+def test_NEGATIVE_the_key_level_result_never_pollutes_zone_edges_counts():
+    res = {"ran": True, "candidates": 4, "pushed": 1,
+           "key_levels": {"ran": True, "counts": {"pushed": 9}, "messages": [1, 2]}}
+    assert AS.counts_from_result(res) == {"candidates": 4, "pushed": 1}

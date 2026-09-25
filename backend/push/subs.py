@@ -368,6 +368,7 @@ OWNER_KEEP_SET: frozenset = frozenset({
     "earnings_reaction",   # 📣 earnings beat + institutional buying
     "board_arrival",       # ✨ a new name on 📈 Bonde / 🚀 Explosive Growth
     "price_alert",         # 🔔 a line HE drew on a ticker page (2026-09-21, "Yes to all..")
+    "key_level_alert",     # 🔑 close through a week/month/52w key level (2026-09-25, his "On: week + month + 52-week")
 })
 
 
@@ -505,7 +506,8 @@ def default_prefs() -> dict:
         # Ajay 2026-09-22: "Filter and have alerts and new look out for such
         # companies where whcih have very high quality.").
         #
-        # SHIPS OFF — the only kind in this dict that does. It is deliberate and
+        # SHIPS OFF — the first kind in this dict that did (🔑 key_level_alert
+        # below is OFF in these defaults too, but ON for the owner). It is deliberate and
         # it was CHECKED rather than assumed: OWNER_KEEP_SET below is an explicit
         # nine-kind list and this is not on it, so `owner_prefs()` returns False
         # for his devices either way. His 2026-09-20 "default on for any change
@@ -524,7 +526,22 @@ def default_prefs() -> dict:
         # improving), never twice for one quarter. A MARKET kind.
         # NOT MEASURED: capital_quality.MEASURED is False and the body says so.
         "capital_quality_upgrade": False,
-        "morning_brief": True,        # 8:30am post-fast-scan summary
+        # 🔑 A CLOSE through a prior-week / prior-month / 52-week RTH high or
+        # low on a holding or Signals-watchlist name (supply_demand/
+        # key_level_alerts.py, Ajay 2026-09-25: "I wanna know when key levels
+        # are broken for a stock.").
+        #
+        # OFF for everyone else (default_prefs); ON for HIS devices through
+        # OWNER_KEEP_SET. Asked 2026-09-25, he answered "On: week + month +
+        # 52-week", scope "Holdings + Signals list", and "No, close only" to
+        # intraday pierce pings. His already-registered phones are flipped by
+        # scripts/owner_prefs_apply.py (a data write). It must still be here: a
+        # kind missing from default_prefs targets ZERO devices and renders no toggle.
+        #
+        # A MARKET kind (market_hours.gate). NOT MEASURED: key_levels.MEASURED
+        # is False and every push says "Unmeasured".
+        "key_level_alert": False,
+        "morning_brief": True,       # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay
         # holds or watches (Ajay 2026-08-16: "give me updated and notification

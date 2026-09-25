@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-25: "Can you build be key levels in to our charts? They are
+  // like demand zones. but very critical. … With check box give it a brigh
+  // color in the chart. I wanna know when key levels are broken for a stock."
+  // Label verbatim from the key_levels spec §3.8.
+  { id: 'key-levels-2026-09-25',
+    label: "🔑 Key levels on the charts. You said: “Can you build be key levels in to our charts? … With check box give it a brigh color in the chart. I wanna know when key levels are broken for a stock.” A 🔑 Key levels checkbox (on) draws the regular-session high and low of the prior week, prior month and 52 weeks in bright fuchsia — one above and one below the price on every Chart Maps card, two each way on the Support tab, where the 1-hour, 15-minute and 5-minute charts add the prior day, and the 5-minute ones the pre-market high/low. Each level is frozen at the close of its own period and never recalculated during the day; only the break check is live. While the price is through a level the line turns dashed and the card's PRICE row says so; from 4:05 pm the close decides and the card says whether it closed through. A pierce that came back is listed as a reversal under ▸ more. UNMEASURED — a drawing and a fact, not a signal; nothing sorts, gates, sizes or buys on it.",
+    addedAt: '2026-09-25', route: '/chart-maps?tab=support' },
   // Ajay 2026-09-24: "Can you organize the chips on the cards they very over
   // whelming we have touch a similar feature in the past see if you can reuse
   // some of that work. I want them to categorized in a good way so I have

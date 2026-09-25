@@ -69,6 +69,14 @@ const BAND_FILL: Record<string, string> = {
   board_supply: 'var(--negative, #ef4444)',
 };
 
+/** A plan line's dash. `buy` and 🔑 `key` are the only SOLID lines, so a key
+ *  level stays easy to tell apart; 🔑 `key_broken` (through it now, or closed
+ *  through it today) is a short 3,3 dash; everything else keeps 5,4. */
+const lineDash = (tone: string): string | undefined =>
+  tone === 'buy' || tone === 'key' ? undefined
+    : tone === 'key_broken' ? '3,3'
+      : tone === 'ownstop' ? '2,3' : '5,4';
+
 /** Board bands are outlines, never fills — one look, one meaning. */
 const isOutline = (kind: string) => kind === 'board_demand' || kind === 'board_supply';
 
@@ -280,7 +288,7 @@ export const PatternChart = memo(function PatternChart(
   const entryHas = (ladder.enterableOnFace && !!enterableChip) || ladder.entry.length > 0
     || !!(ladder.zone && ladder.zone.onFace);
   const priceHas = !!ladder.approach || ladder.price.length > 0 || ladder.priceAfter.length > 0
-    || isBurst(burst);
+    || isBurst(burst) || !!ladder.keyLevel;
   const setupHas = !!ladder.why || ladder.setup.badges.length > 0 || ladder.setup.stats.length > 0;
   const timingHas = ladder.timing.badges.length > 0 || ladder.timing.stats.length > 0
     || !!ladder.timing.mergedBoard || studyChips.length > 0 || !!raids || ladder.moreCount > 0;
@@ -295,6 +303,16 @@ export const PatternChart = memo(function PatternChart(
     if (it.slot === 'explosive') return <Fragment key={`s-${i}`}>{explosiveChip}</Fragment>;
     if (it.slot === 'enterable') return <Fragment key={`s-${i}`}>{enterableChip}</Fragment>;
     if (it.slot === 'zone') return <Fragment key={`s-${i}`}>{zonePill}</Fragment>;
+    // 🔑 The served key-level line: every member, its distance and state,
+    // undrawn ones and reversals included (cardLadder puts it here only when
+    // `fold` is a non-empty string).
+    if (it.slot === 'keylevels') {
+      return (
+        <span key={`s-${i}`} className="cm-badge cm-badge-muted cm-keylevels-fold">
+          {tile.key_levels?.fold}
+        </span>
+      );
+    }
     return null;
   };
 
@@ -367,6 +385,14 @@ export const PatternChart = memo(function PatternChart(
                 <span className="cm-rung-tag">PRICE</span>
                 <div className="cm-rung-items">
                   {ladder.price.map(pill)}
+                  {/* 🔑 Key level (2026-09-25): the served chip, only while
+                      the price is through a level now or after it CLOSED
+                      through one. Display only — UNMEASURED. */}
+                  {ladder.keyLevel ? (
+                    <span className={`cm-badge cm-badge-${ladder.keyLevel.tone} cm-keylevel`}>
+                      {ladder.keyLevel.text}
+                    </span>
+                  ) : null}
                   {ladder.approach ? (
                     <span className={`cm-approach cm-approach-${ladder.approach.tone}`}>
                       {ladder.approach.text}
@@ -583,10 +609,10 @@ export const PatternChart = memo(function PatternChart(
                 // label and a price (2026-09-14), and duplicate React keys in
                 // a subtree that re-renders on every mousemove drop children.
                 <line key={`ln-${li}-${l.label}-${l.price}`}
+                      data-tone={l.tone}
                       x1={0} y1={y} x2={plotW} y2={y}
                       stroke={toneColor(l.tone)} strokeWidth={l.tone === 'cost' ? 1.4 : 1.1}
-                      strokeDasharray={l.tone === 'buy' ? undefined
-                                       : l.tone === 'ownstop' ? '2,3' : '5,4'}
+                      strokeDasharray={lineDash(l.tone)}
                       opacity={0.9} />
               );
             })}

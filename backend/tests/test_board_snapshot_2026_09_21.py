@@ -339,10 +339,10 @@ def test_the_pinned_reshape_literal_is_untouched():
 
 def test_NEGATIVE_a_live_row_cannot_stand_in_for_a_raw_one():
     """Why the board prefetches the RAW map and not `bulk_live_prices` rows:
-    the reshape drops `high` and `date`, which `with_today_bar` needs to build
-    a bar at all."""
+    the reshape drops `date`, which `with_today_bar` needs to build a bar at
+    all. (`high` is carried since 2026-09-25 — the 🔑 key-levels break read
+    needs the session high; `date` is still dropped.)"""
     reshaped = P.bulk_live_prices(["AAA"], snaps={"AAA": ROWS["rth"]})["AAA"]
-    assert "high" not in reshaped
     assert "date" not in reshaped
 
 

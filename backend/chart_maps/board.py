@@ -6442,11 +6442,95 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # ⚡ MOMENTUM BURST (2026-09-24), LAST and on the same snapshot: the read
     # keys on the live print and the session low. It reorders and hides
     # nothing — the page pins client-side — and costs ONE cached-frames read.
+    # 🔑 KEY LEVELS (2026-09-25) share that ONE cached-frames read, so the
+    # frames are fetched here once and handed to both. ICT tiles get no key
+    # levels (they draw their own `key low/high`), so there the burst read
+    # keeps fetching its own frames exactly as before.
+    _frames = None
+    if t != "ict":
+        try:
+            _frames = _burst_frames([x.get("symbol") for x in _tiles
+                                     if isinstance(x, dict)])
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: shared cached frames unavailable: %s", exc)
+            _frames = {}
     try:
-        attach_burst(_tiles, out, live=_live, session=out.get("tape_session"))
+        attach_burst(_tiles, out, live=_live, session=out.get("tape_session"),
+                     frames=_frames)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart-maps: momentum burst unavailable: %s", exc)
+    # 🔑 KEY LEVELS, after ⚡ and in their own try: display only — the lines,
+    # the PRICE chip and the ▸ more line; nothing sorts, hides or gates on them.
+    if t != "ict":
+        try:
+            attach_key_levels(_tiles, out, live=_live, frames=_frames)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: key levels unavailable: %s", exc)
     return out
+
+
+# ---------------------------------------------------------------------------
+# 🔑 Key levels (2026-09-25) — prior day / week / month / 52-week RTH highs and
+# lows, frozen at their period's close; only the break read is live. Every
+# rule, number and word lives in `supply_demand.key_levels`; this is only the
+# plumbing that hands it the board's ONE live map and ONE cached-frames read.
+# DISPLAY ONLY: nothing here reorders, hides, pushes or enters.
+# ---------------------------------------------------------------------------
+def attach_key_levels(tiles: list, out: Optional[dict] = None, *, live: Optional[dict],
+                      frames: Optional[dict] = None, frame: str = "daily",
+                      per_side: Optional[int] = None, now: Optional[datetime] = None,
+                      first_seen: Optional[dict] = None) -> dict:
+    """Fill `tile['key_levels']` and append the 🔑 lines on every tile.
+
+    Idempotent: the `key` / `key_broken` lines and the block are stripped and
+    recomputed. `live` None means `{}` — never fetched here. `frames` None ->
+    ONE `_burst_frames` over the tiles. `first_seen` None -> ONE
+    `read_first_seen` for the session. A per-tile failure leaves that tile
+    WITHOUT `key_levels` (and without key lines); the rest still read.
+    Sets `out['key_levels_rule']`. Returns {tiles, lines, chips, stale}."""
+    from supply_demand import key_levels as KL
+    tiles = [t for t in (tiles if isinstance(tiles, list) else []) if isinstance(t, dict)]
+    live = live if isinstance(live, dict) else {}
+    per_side = KL.GRID_PER_SIDE if per_side is None else int(per_side)
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    stats = {"tiles": 0, "lines": 0, "chips": 0, "stale": 0}
+    key_tones = (KL.TONE, KL.TONE_BROKEN)
+    for t in tiles:
+        t.pop("key_levels", None)
+        if isinstance(t.get("lines"), list):
+            t["lines"] = [ln for ln in t["lines"]
+                          if not (isinstance(ln, dict) and ln.get("tone") in key_tones)]
+    if out is not None:
+        out["key_levels_rule"] = KL.rule_text()
+    if not tiles:
+        return stats
+    if frames is None:
+        frames = _burst_frames([t.get("symbol") for t in tiles])
+    frames = frames if isinstance(frames, dict) else {}
+    if first_seen is None:
+        first_seen = KL.read_first_seen(KL.levels_session(now_et).isoformat())
+    for t in tiles:
+        sym = str(t.get("symbol") or "").strip().upper()
+        if not sym:
+            continue
+        try:
+            block, lines = KL.tile_block(
+                sym, frames.get(sym), frame=frame, row=KL.row_from_live(live.get(sym)),
+                now=now_et, per_side=per_side, bars=t.get("bars"), first_seen=first_seen,
+                existing_lines=[ln for ln in (t.get("lines") or []) if isinstance(ln, dict)])
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: key levels %s failed: %s", sym, exc)
+            continue
+        t["key_levels"] = block
+        if lines:
+            if not isinstance(t.get("lines"), list):
+                t["lines"] = []
+            t["lines"].extend(lines)
+        stats["tiles"] += 1
+        stats["lines"] += len(lines)
+        stats["chips"] += int(bool(block.get("chip")))
+        stats["stale"] += int(bool(block.get("stale_note")))
+    return stats
 
 
 def now_label(label, session) -> str:

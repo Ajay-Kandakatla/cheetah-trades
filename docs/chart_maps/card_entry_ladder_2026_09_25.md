@@ -85,3 +85,19 @@ One labelled rung per entry question, read top to bottom. A rung with nothing in
   `At Supply · caution`. Live data on 2026-09-25 carried only At_Supply and At_Demand. On Breaking, "Buy zone" is
   the broken lid (the served enterable band for supply_break) — a `Lid` label is his call.
 - The backend `short` / `rung` fields and `At_Demand` → `At demand` at the source are a later api branch.
+
+## 🔑 Key levels on the card (2026-09-25)
+
+- **PRICE:** the served `tile.key_levels.chip` prints as ONE pill after the position pills and before the approach
+  line (`Ladder.keyLevel`; `priceHas` counts it, so the chip alone opens PRICE). The server serves it only while the
+  price is through a level now (`🔑 broke PWL 95.78 ↓ 10:42`, `🔑 gapped through …`, ` · pre-mkt` before the open), or
+  from the close-confirm minute when it CLOSED through one (`🔑 closed under …`, `🔑 closed back over …`, else
+  `🔑 after-hrs under …`). The chip never starts with an arrow, so the approach regex never takes it.
+- **▸ more · READS:** one item `{slot: 'keylevels'}` renders the served `fold` string (every member, its distance and
+  state, undrawn members, reversals, the stale note). It counts toward `moreCount`; an empty or non-string fold adds
+  nothing.
+- Nothing in ENTRY (display first) or PLAN (`isPlanLine` excludes the key tones).
+- A malformed block (not an object, `levels` not an array, chip text empty or not a string) prints nothing and
+  never throws; an unknown chip tone reads as `warn`.
+- Unticking 🔑 Key levels nulls the block in `filterTile`: no line, no pill, no fold item.
+- Tests: `lib/cardLadder.test.ts` (🔑 block), `components/PatternChart.keyLevels.test.tsx`.

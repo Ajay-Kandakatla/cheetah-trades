@@ -57,6 +57,28 @@ describe('kind registry', () => {
     expect(kindEmoji('some_future_kind')).toBe('📣');
   });
 
+  /* 🔑 2026-09-25 — Ajay: "I wanna know when key levels are broken for a
+   * stock." The push kind ships OFF, but the day he turns it on its history
+   * rows must read as a label, never as the raw id. */
+  it('labels the 🔑 key-level kind, not its raw id', () => {
+    expect(kindLabel('key_level_alert')).toBe('🔑 Key level closed through');
+    expect(kindText('key_level_alert')).toBe('Key level closed through');
+    expect(kindEmoji('key_level_alert')).toBe('🔑');
+    expect(ALERT_KINDS.key_level_alert.group).toBe('zones');
+  });
+
+  it('NEGATIVE: the 🔑 kind is not a ZONE_KINDS member and never says "bounce" or "broke"', () => {
+    // ZONE_KINDS is the three kinds behind alert_gates.py; the /alerts default
+    // filter and the boards' 🔔 chip read it. A close through a key level
+    // passes no room/proximity gate, so it must not join them.
+    expect(ZONE_KINDS).not.toContain('key_level_alert');
+    expect(ZONE_KINDS).toHaveLength(3);
+    expect(kindLabel('key_level_alert')).not.toMatch(/bounce/i);
+    // The kind fires on a CLOSE through the level, not a live pierce.
+    expect(ALERT_KINDS.key_level_alert.label).toMatch(/closed through/);
+    expect(ALERT_KINDS.key_level_alert.label).not.toMatch(/\bbroke\b/i);
+  });
+
   it('null / empty kind reads as the generic notification', () => {
     expect(kindLabel(null)).toBe('📣 Notification');
     expect(kindLabel('')).toBe('📣 Notification');

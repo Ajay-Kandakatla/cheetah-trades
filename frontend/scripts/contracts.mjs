@@ -4853,6 +4853,35 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🔑 key levels (2026-09-25): the ✨ entry stays, and toneColor paints the key tones (never the grid grey)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-25: "With check box give it a brigh color in the chart." The
+    // 2026-09-12 study overlays shipped with no toneColor case and every line
+    // fell through to the grid grey ("Non of these are showing up"). The key
+    // tones must never repeat that, and the ✨ entry must not be lost in a rebase.
+    checks: (src) => {
+      const errs = [];
+      const fn = /export function toneColor\([\s\S]*?\n\}/.exec(src);
+      if (!fn) {
+        errs.push('lib/chartMaps.ts must export toneColor');
+      } else {
+        if (!/tone === 'key'(?![\w])/.test(fn[0])) errs.push("toneColor has no 'key' case — key levels would draw grid grey");
+        if (!/tone === 'key_broken'/.test(fn[0])) errs.push("toneColor has no 'key_broken' case — a broken key level would draw grid grey");
+        if (!/var\(--cm-key,/.test(fn[0])) errs.push('the key tones must paint var(--cm-key, …), the swatch the 🔑 checkbox shows');
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'key-levels-2026-09-25'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'key-levels-2026-09-25'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf('addedAt', idAt));
+        if (!entry.includes('UNMEASURED')) errs.push('the 🔑 ✨ entry must say UNMEASURED');
+        if (/bounce/i.test(entry)) errs.push('the 🔑 ✨ entry says "bounce" — surfaces he reads say reversal');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

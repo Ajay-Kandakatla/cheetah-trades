@@ -146,9 +146,11 @@ describe('the 2026-09-12 default (supply/demand + order blocks only)', () => {
     // The 9 EMA / 20 SMA / 200 SMA join it on 2026-09-23 for the same reason:
     // he asked for three lines by name, they say nothing and they gate
     // nothing. Arriving off would mean he got three empty checkboxes.
+    // 🔑 key_levels joins them on 2026-09-25 by the same written rule: a
+    // drawing he asked for by name ("With check box give it a brigh color").
     const shown = OVERLAY_GROUPS.map((g) => g.key).filter((k) => !defaultHidden().has(k));
     expect(shown).toEqual(['demand', 'board', 'supply', 'position', 'order_block',
-      'ema9', 'sma20', 'sma200']);
+      'ema9', 'sma20', 'sma200', 'key_levels']);
   });
 
   it('a browser that has never saved anything gets that default', () => {
@@ -398,5 +400,115 @@ describe('filterTile — plan_lines for the entry ladder', () => {
     const out = filterTile(t, new Set());
     expect(out).toBe(t);
     expect('plan_lines' in out).toBe(false);
+  });
+});
+
+describe('🔑 key levels (2026-09-25)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  // Ajay 2026-09-25: "With check box give it a brigh color in the chart. I
+  // wanna know when key levels are broken for a stock."
+  const keyTile = (): any => ({
+    symbol: 'K', href: '/k', bars: [], markers: [], stats: [], why: '', bands: [],
+    lines: [
+      { price: 103, label: '🔑 PWH 103.00', tone: 'key' },
+      { price: 98.5, label: '🔑 52wL = PML 98.50', tone: 'key_broken' },
+      { price: 100, label: 'BUY', tone: 'buy' },
+      { price: 100.2, label: 'now', tone: 'now' },
+    ],
+    key_levels: { levels: [], chip: { text: '🔑 broke PML 98.50 ↓', tone: 'warn' }, fold: '🔑 RTH levels · …' },
+  });
+  const group = () => OVERLAY_GROUPS.find((g) => g.key === 'key_levels')!;
+
+  it('is one family owning both key tones BY TONE, with no label prefix', () => {
+    expect(group().lineTones).toEqual(['key', 'key_broken']);
+    expect(group().linePrefixes).toBeUndefined();
+    expect(group().always).toBeUndefined();
+    expect(group().label).toBe('🔑 Key levels');
+    expect(group().hint).toContain('never recalculated during the day');
+    expect(group().hint).toContain('Unmeasured');
+  });
+
+  it('shows in the legend only when a payload carries a key or key_broken line', () => {
+    expect(presentGroups([keyTile()]).map((g) => g.key)).toContain('key_levels');
+    const onlyBroken: any = { bands: [], markers: [], lines: [{ price: 1, label: '🔑 PWL 1.00', tone: 'key_broken' }] };
+    expect(presentGroups([onlyBroken]).map((g) => g.key)).toContain('key_levels');
+  });
+
+  it('NEGATIVE: a payload with no key line offers no 🔑 checkbox (the key_levels block alone is not a drawing)', () => {
+    const t: any = { bands: [], markers: [], lines: [{ price: 1, label: 'BUY', tone: 'buy' }],
+                     key_levels: { levels: [], chip: null, fold: 'x' } };
+    expect(presentGroups([t]).map((g) => g.key)).not.toContain('key_levels');
+  });
+
+  it("NEGATIVE: ICT's own `key low 95.00` (tone neutral) is NOT claimed by the 🔑 box", () => {
+    const ict: any = { bands: [], markers: [], lines: [
+      { price: 95, label: 'key low 95.00', tone: 'neutral' },
+      { price: 99, label: 'key high 99.00', tone: 'neutral' },
+    ] };
+    expect(presentGroups([ict]).map((g) => g.key)).not.toContain('key_levels');
+    expect(filterTile(ict, new Set(['key_levels'])).lines.map((l: any) => l.label))
+      .toEqual(['key low 95.00', 'key high 99.00']);
+  });
+
+  it('is ON by default, and a saved v2 hidden-set from before it existed still shows it', () => {
+    expect(DEFAULT_ON).toContain('key_levels');
+    expect(defaultHidden().has('key_levels')).toBe(false);
+    const store: Record<string, string> = {
+      'cm-hidden-overlays-v2': '["fvg","range","trade","structure","now","amd","fib","meanrev","keltner"]',
+    };
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store[k] ?? null, setItem: () => {} });
+    expect(loadHidden().has('key_levels')).toBe(false);
+    expect(loadHidden().has('fvg')).toBe(true);
+  });
+
+  it('once he unticks it, the choice persists', () => {
+    const store: Record<string, string> = {};
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; },
+    });
+    saveHidden(new Set(['key_levels']));
+    expect(loadHidden().has('key_levels')).toBe(true);
+  });
+
+  it('hidden → both key tones gone and key_levels nulled; every other line stays', () => {
+    const out: any = filterTile(keyTile(), new Set(['key_levels']));
+    expect(out.lines.map((l: any) => l.label)).toEqual(['BUY', 'now']);
+    expect(out.key_levels).toBeNull();
+  });
+
+  it('NEGATIVE: nothing hidden → the SAME object, block untouched', () => {
+    const t = keyTile();
+    const out = filterTile(t, new Set());
+    expect(out).toBe(t);
+    expect((out as any).key_levels).toBe(t.key_levels);
+  });
+
+  it('NEGATIVE: hiding ANOTHER family keeps the key lines and the block', () => {
+    const t = keyTile();
+    const out: any = filterTile(t, new Set(['trade']));
+    expect(out.lines.map((l: any) => l.tone)).toEqual(['key', 'key_broken', 'now']);
+    expect(out.key_levels).toBe(t.key_levels);
+  });
+
+  it('NEGATIVE: a key line is never a plan line (PLAN never prints a key level)', () => {
+    expect(isPlanLine({ label: '🔑 PWL 98.50', tone: 'key' })).toBe(false);
+    expect(isPlanLine({ label: '🔑 PWL 98.50', tone: 'key_broken' })).toBe(false);
+    const out: any = filterTile(keyTile(), new Set(['trade']));
+    expect(out.plan_lines.map((l: any) => l.label)).toEqual(['BUY']);
+  });
+
+  it('colour: neither key tone is the grid grey; the swatch IS the line colour', () => {
+    const grey = toneColor('neutral');
+    expect(toneColor('key')).not.toEqual(grey);
+    expect(toneColor('key_broken')).not.toEqual(grey);
+    expect(toneColor('key')).toBe('var(--cm-key, #d946ef)');
+    expect(toneColor('key_broken')).toBe(toneColor('key'));
+    expect(group().swatch).toBe(toneColor('key'));
+  });
+
+  it("NEGATIVE: the fuchsia is not any other family's colour (his pink cost included)", () => {
+    const others = OVERLAY_GROUPS.filter((g) => g.key !== 'key_levels').map((g) => g.swatch);
+    expect(others).not.toContain(group().swatch);
+    expect(toneColor('key')).not.toBe(toneColor('cost'));
   });
 });

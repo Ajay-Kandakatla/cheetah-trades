@@ -41,6 +41,13 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   zone_bounce_alert:   { emoji: '🪃', label: 'Intraday demand turn',   group: 'zones' },
   supply_break_alert:  { emoji: '🚀', label: 'Breaking resistance',     group: 'zones' },
   trade_flash:         { emoji: '⚡', label: 'Trade flash at a zone',   group: 'zones' },
+  // 🔑 supply_demand/key_level_alerts.py (2026-09-25) — a holding or Signals
+  // name CLOSED through its prior-week, prior-month or 52-week high or low.
+  // Rides the every-minute zone_edge pass, pushes only in the close window.
+  // Ships OFF and outside the owner keep-set (his call). UNMEASURED. Grouped
+  // with the zones for the history list, but NOT in ZONE_KINDS: it is not
+  // one of the three kinds that pass through alert_gates.py.
+  key_level_alert:     { emoji: '🔑', label: 'Key level closed through', group: 'zones' },
 
   // ── trading ───────────────────────────────────────────────────────────────
   pivot_alert:         { emoji: '🎯', label: 'Pivot / buy zone',        group: 'trading' },

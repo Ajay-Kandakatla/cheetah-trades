@@ -403,7 +403,14 @@ export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
   // box. The 200 is SIMPLE by his answer: Minervini's trend template and the
   // SEPA gate both read the 200-day SMA, so the drawn line is the same number
   // as the gate that put the name on the board.
-  | 'ema9' | 'sma20' | 'sma200';
+  | 'ema9' | 'sma20' | 'sma200'
+  // 🔑 Key levels (2026-09-25), Ajay: "With check box give it a brigh color in
+  // the chart. I wanna know when key levels are broken for a stock." Two tones,
+  // one family: `key` = a frozen prior-period RTH high/low, `key_broken` = the
+  // price is through a member of that line now, or closed through it today
+  // (supply_demand/key_levels.chart_lines). Tone-owned, never prefix-owned, so
+  // the ICT tab's `key low X` (tone neutral) is not claimed by the checkbox.
+  | 'key' | 'key_broken';
 /** `quiet` (2026-09-14): the backend flags BOS / swept / ORB lines it wants
  *  drawn but not fought over — the label yields to the plan labels under
  *  pressure (priority 0) while the line itself still draws. The flag was sent
@@ -432,6 +439,54 @@ export type CmBadge = {
  *  `values` is aligned 1:1 with `tile.bars`; a null is a GAP in the drawn
  *  path, never a point joined through. */
 export type CmCurve = { tone: CmLineTone; label: string; values: (number | null)[] };
+
+/** 🔑 One key-level MEMBER as supply_demand/key_levels.tile_block serves it
+ *  (2026-09-25). A prior-period regular-session high or low, frozen at its
+ *  period's close; only `state` is live. Every member is here, drawn or not —
+ *  `drawn` says whether a line carries it. UNMEASURED: display only. */
+export type CmKeyLevel = {
+  id: string;
+  label: string;                 // "PWL", "52wH", "pre-mkt H", …
+  name: string;                  // "prior-week low", …
+  price: number;
+  period: 'pre' | 'day' | 'week' | 'month' | 'year';
+  kind: 'high' | 'low';
+  as_of: string | null;
+  set_on: string | null;         // year levels: the bar that set it
+  side: 'support' | 'resistance' | null;
+  direction: 'up' | 'down' | null;
+  /** null outside the state window (evenings, weekends) or on a stale block. */
+  state: 'broken' | 'reversal' | 'pierced' | 'tested' | 'intact' | 'unknown'
+    | 'closed_beyond' | null;
+  gap: boolean;
+  closed_beyond: boolean | null;
+  ah_through: boolean;
+  beyond_pct?: number | null;
+  first_through: string | null;
+  reversal_at: string | null;
+  last_close_cross: { date: string; direction: 'up' | 'down' } | null;
+  dist_pct: number | null;
+  drawn: boolean;
+};
+
+/** 🔑 The tile's key-level block (`tile.key_levels`, 2026-09-25). `chip` is
+ *  non-null only while the price is through a level NOW, or from the
+ *  close-confirm minute when it CLOSED through one; `fold` is the one ▸ more
+ *  line listing every member. Both are SERVED strings — the card prints them,
+ *  never composes them. `filterTile` nulls the block with the 🔑 box. */
+export type CmKeyLevels = {
+  session: string;
+  frame: string;
+  phase: 'pre' | 'rth' | 'close' | null;
+  measured: boolean;
+  verified: boolean;
+  levels: CmKeyLevel[];
+  drawn: { price: number; label: string; ids: string[]; tone: CmLineTone }[];
+  chip: { text: string; tone: 'warn' | 'good' | 'muted' } | null;
+  fold: string | null;
+  rule: string;
+  stale_note: string | null;
+};
 
 export type CmTile = {
   symbol: string;
@@ -498,6 +553,10 @@ export type CmTile = {
    *  card's PLAN row prints the prices whether or not they are drawn (Ajay
    *  2026-09-25, the entry ladder). Absent = read `lines`. Display only. */
   plan_lines?: CmLine[];
+  /** 🔑 Key levels (chart_maps/board.attach_key_levels, 2026-09-25): every
+   *  board tab except ICT, and the Support tab. null when the 🔑 box is
+   *  unticked (filterTile); absent on an older payload. UNMEASURED. */
+  key_levels?: CmKeyLevels | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1629,6 +1688,9 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
   ema9: 1, sma20: 1, sma200: 1,
   // His own numbers on his own chart are never dropped for a study label.
   cost: 3, ownstop: 3,
+  // 🔑 Key levels (2026-09-25) sit at 1 with the MAs: a key label yields to
+  // BUY / STOP / TARGET under pressure; the fuchsia LINE still draws.
+  key: 1, key_broken: 1,
 };
 
 /** The bands `clipBands` DROPPED — the ones entirely outside the drawn
@@ -2005,6 +2067,10 @@ export function toneColor(tone: CmLineTone): string {
   if (tone === 'ema9') return 'var(--cm-vcp, #2563eb)';
   if (tone === 'sma20') return 'var(--cm-mint, #6ee7b7)';
   if (tone === 'sma200') return 'var(--gold, #c9a227)';
+  // 🔑 Key levels (2026-09-25): the bright fuchsia he asked for ("give it a
+  // brigh color"), the same token its checkbox swatch shows. Broken or not,
+  // one colour — the dash is what says "through it".
+  if (tone === 'key' || tone === 'key_broken') return 'var(--cm-key, #d946ef)';
   return 'var(--text-muted, #94a3b8)';
 }
 

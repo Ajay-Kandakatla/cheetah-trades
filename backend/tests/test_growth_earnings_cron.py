@@ -93,13 +93,14 @@ class NoSendPathTest(unittest.TestCase):
         # them") — still pinned here, because what this test is really for is
         # that the growth EARNINGS path never touches the keep-set.
         # WIDENED AGAIN 2026-09-21 — 🔔 price_alert ("Yes to all.."), which
-        # this path also never touches.
+        # this path also never touches. WIDENED 2026-09-25 — 🔑
+        # key_level_alert (his "On: week + month + 52-week"), also untouched here.
         self.assertEqual(set(subs.OWNER_KEEP_SET),
                          {"hot_pullback_alert", "pattern_alert",
                           "demand_alert", "position_alert",
                           "potus_investment", "growth_demand_alert",
                           "earnings_reaction", "board_arrival",
-                          "price_alert"})
+                          "price_alert", "key_level_alert"})
 
     def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):
         """NEGATIVE — no kind reaches his phone from this package by accident.

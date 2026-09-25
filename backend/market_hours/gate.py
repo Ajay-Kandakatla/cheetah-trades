@@ -96,6 +96,11 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # OFF in push.subs.default_prefs; this classification is about WHEN it may
     # push, not whether it is on.
     "capital_quality_upgrade",
+    # 🔑 a close through a prior-week / prior-month / 52-week level
+    # (supply_demand/key_level_alerts.py, 2026-09-25) — computed from closed
+    # daily bars and the session close, so a MARKET kind: silent on weekends
+    # and NYSE holidays. It ships OFF in push.subs.default_prefs.
+    "key_level_alert",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

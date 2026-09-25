@@ -18,6 +18,8 @@ never ran". This module keeps the last pass's counters per kind:
                      skipped_cap / unknown_cap / pushed (zone_edge.check_once).
   zone_bounce_alert  written here by zone_bounce_alerts.check_once
   demand_alert       written here by demand_alerts.check_once
+  key_level_alert    written here by key_level_alerts.run_pass (2026-09-25),
+                     the 🔑 hook on the zone_edge minute
 
 ``alert_pass_latest`` collection: {_id: kind, as_of: ET iso, date: YYYY-MM-DD,
 counts: {...ints}, reason?: str}. One doc per kind, replaced every pass.
@@ -68,7 +70,11 @@ ZONE_EDGE_KIND = "zone_edge"
 # quiet" is exactly the question a pass he has just switched on will raise.
 DAILY_PASS_KINDS = ("earnings_reaction", "board_arrival:bonde", "board_arrival:growth",
                     "capital_quality_upgrade")
-PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert") + DAILY_PASS_KINDS
+# 🔑 key_level_alert (supply_demand/key_level_alerts.py, 2026-09-25) rides the
+# zone_edge minute — no crontab line of its own — and records its own pass doc.
+# Its kind ships OFF; the page still carries it for the capital_quality reason.
+KEY_LEVEL_KIND = "key_level_alert"
+PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -78,6 +84,10 @@ PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert") + DAILY_PASS_
 # 14:30 because the header was inferred from the clock alone). Change the
 # crontab -> change this; the source guard in test_alert_status pins both.
 CADENCE_SEC = {ZONE_EDGE_KIND: 60, "zone_bounce_alert": 300, "demand_alert": 300}
+# DERIVED, never typed: the key-level pass is called by zone_edge's own cron
+# line (zone_edge.check_once → key_level_alerts.run_pass), so its cadence IS
+# zone_edge's.
+CADENCE_SEC[KEY_LEVEL_KIND] = CADENCE_SEC[ZONE_EDGE_KIND]
 
 # The cap floor is READ from demand_alerts.MIN_CAP_USD at request time, never
 # retyped (review 2026-09-14, finding 6: this said "$1B+" for four days after
@@ -128,7 +138,10 @@ def clean_counts(counts) -> dict:
 
 
 _NOT_COUNTS = ("ran", "date", "as_of", "reason", "payload", "seconds", "latest_written",
-               "breaking", "near_demand")
+               "breaking", "near_demand",
+               # the 🔑 hook's own result rides zone_edge's (2026-09-25); it
+               # records its own pass doc, never zone_edge's counts
+               "key_levels")
 
 
 def counts_from_result(result: dict) -> dict:
@@ -317,6 +330,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         ZONE_EDGE_KIND:      _with_cadence(ZONE_EDGE_KIND, read_zone_edge(latest_coll)),
         "zone_bounce_alert": _with_cadence("zone_bounce_alert", read_pass("zone_bounce_alert", pass_coll)),
         "demand_alert":      _with_cadence("demand_alert", read_pass("demand_alert", pass_coll)),
+        KEY_LEVEL_KIND:      _with_cadence(KEY_LEVEL_KIND, read_pass(KEY_LEVEL_KIND, pass_coll)),
     }
     for kind in DAILY_PASS_KINDS:
         passes[kind] = _daily(kind, read_pass(kind, pass_coll), sched)
@@ -329,7 +343,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]
