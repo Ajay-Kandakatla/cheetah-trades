@@ -75,9 +75,13 @@ Three guards, all installed at import for the same collection-time reason:
    and fall back quietly (that is how "1,020 names" hid the cause today), so
    a test that FAILS carries a "live network refused" section naming the
    hosts it reached for, and the run ends with a short list of every test
-   that tried. On 2026-09-24 that list is 9 tests in 4 files calling Yahoo
-   through yfinance (curl_cffi, invisible to a socket log) for junk symbols;
-   refused, they get the no-data path they were written for.
+   that tried. On 2026-09-24 that list was 9 tests in 4 files calling Yahoo
+   through yfinance (curl_cffi, invisible to a socket log) for junk symbols.
+   On 2026-09-25 each had its own read stubbed and the list is EMPTY, so any
+   name in it is a new offender (docs/sepa/universe_test_snapshot.md). An
+   attempt is credited to the test running AT THE TIME, so a background
+   thread's fetch can land on the next test; module caches (macro calendar,
+   gauge) mean only the first test to fill one ever shows up.
 3. `sepa.universe`'s module-global provenance (_LAST_SOURCE, LAST_COUNTS) is
    cleared around every test. The russell2000 derivation reads its parents'
    provenance, and a 'curated' left behind by one test's resolve failed three

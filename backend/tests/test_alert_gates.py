@@ -23,6 +23,21 @@ def _sup(lo, hi, touches=2):
     return {"kind": "supply", "lo": lo, "hi": hi, "touches": touches, "strength": 50.0}
 
 
+@pytest.fixture
+def no_bars(monkeypatch):
+    """A name with no daily bars: `sepa.prices.load_prices` answers None, as it
+    does for a delisted or unknown symbol. Every read here that is handed no
+    frame loads one through it (daily_frame, mood_read, and bullish_context's
+    pattern read via chart_maps.support), and before this stand-in that load
+    went to Yahoo for "X" / "NOPE" / "__nope__" (tests/conftest.py)."""
+    from sepa import prices
+
+    def _none(symbol, period="2y", force=False):
+        return None
+
+    monkeypatch.setattr(prices, "load_prices", _none)
+
+
 # ── the two owner numbers come straight from his sentence ─────────────────────
 def test_owner_constants_are_his_sentence():
     assert AG.ALERT_MIN_ROOM_PCT == 5.0             # "atleast 5% to Supply"
@@ -471,7 +486,7 @@ def test_mood_rank_is_a_tie_break_not_a_filter():
     assert AG.mood_rank({}) == 1
 
 
-def test_mood_read_scores_a_frame_and_degrades_to_none():
+def test_mood_read_scores_a_frame_and_degrades_to_none(no_bars):
     rising = _mood_frame([50 + i * 0.4 for i in range(80)])
     m = AG.mood_read("RISE", rising)
     assert m and m["score"] > 0 and m["constructive"] is True and m["heavy"] is False
@@ -482,7 +497,7 @@ def test_mood_read_scores_a_frame_and_degrades_to_none():
     # NEGATIVE: too few bars, or no frame at all for an unknown symbol -> None,
     # and the alert still fires (mood never gates)
     assert AG.mood_read("TINY", _mood_frame([10.0, 10.1, 10.2])) is None
-    assert AG.mood_read("NOPE", None) is None or True     # no network in tests
+    assert AG.mood_read("NOPE", None) is None
 
 
 def test_mood_never_decides_whether_an_alert_fires():
@@ -595,7 +610,7 @@ def test_the_knife_gate_needs_BOTH_falling_lows_and_a_falling_average():
     assert liq.is_falling_knife({"trend": "rising"}, 100.0, ma50=90.0, ma50_prior=110.0) is False
 
 
-def test_the_knife_gate_fails_closed_when_it_cannot_read_the_structure():
+def test_the_knife_gate_fails_closed_when_it_cannot_read_the_structure(no_bars):
     """No bars, too few bars, junk -> no evidence of anything, so no push.
     Same side direction_gate fails on."""
     assert AG.knife_read("X", frame=_frame([10.0] * 20)) is None
@@ -628,7 +643,7 @@ def test_the_mood_gate_reads_the_turn_not_the_two_year_trend():
     assert rev["bars"] == AG.REVERSAL_MOOD_BARS
 
 
-def test_the_mood_gate_fails_closed_and_honours_its_floor():
+def test_the_mood_gate_fails_closed_and_honours_its_floor(no_bars):
     assert AG.REVERSAL_MOOD_FLOOR == 25.0        # mood.LABELS: >= +25 is "bullish"
     assert AG.reversal_mood_gate("X", read=None) is False
     assert AG.reversal_mood_gate("X", read={}) is False
@@ -637,7 +652,7 @@ def test_the_mood_gate_fails_closed_and_honours_its_floor():
     assert AG.reversal_mood_gate("X", read={"score": 25.0}) is True
 
 
-def test_the_things_to_see_can_never_block_a_push():
+def test_the_things_to_see_can_never_block_a_push(no_bars):
     """GEX, patterns, sentiment and SECTOR HEAT ride along. His own ledger says
     no chart pattern beats the 50% placebo, and sector heat measured flat on
     50,191 replayed demand arrivals (docs/supply_demand/sector_heat.md), so
@@ -752,7 +767,7 @@ def test_the_sweep_read_is_a_read_and_never_a_gate():
         assert "sweep" not in inspect.getsource(gate), gate.__name__
 
 
-def test_the_sweep_read_degrades_to_none_instead_of_raising():
+def test_the_sweep_read_degrades_to_none_instead_of_raising(no_bars):
     assert AG.sweep_read(None, "X", frame=_sweep_frame(1.0, True)) is None
     assert AG.sweep_read(BAND, "X", frame=None) is None
     assert AG.sweep_read(BAND, "X", frame=_frame([100.0] * 5)) is None

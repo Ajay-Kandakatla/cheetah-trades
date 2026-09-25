@@ -34,12 +34,21 @@ def test_session_from_ts_stale_or_missing_is_closed():
     assert pl.session_from_ts(_ms("2026-01-05 10:00")) == "closed"   # months old
 
 
+def _no_zones_yet(syms, background=True):
+    """The live table's zone read with nothing cached: every row reads PENDING.
+    The real one starts a daemon thread that loads each miss's daily bars
+    (price_zones -> sepa.prices.load_prices -> Yahoo) and outlives the test, so
+    the refusal landed on whichever test happened to be running next."""
+    return {}
+
+
 def test_live_rows_prices_only_actionable_statuses(monkeypatch):
     rows = [{"ticker": "AAA", "status": "SEEDING", "best_tier": "A",
              "accounts": [{"handle": "topstockalerts"}], "days_since_last_tag": 1.0, "pct_since_tag": 2.0,
              "base_close": 10.5, "first_tagged_at": "2026-09-01T19:20:00+00:00"},
             {"ticker": "ZZZ", "status": "QUIET", "accounts": []}]
     monkeypatch.setattr(pl, "_board_rows", lambda: [r for r in rows if r["status"] != "QUIET"])
+    monkeypatch.setattr(pl, "zones_for", _no_zones_yet)
     import sepa.prices as prices
     monkeypatch.setattr(prices, "bulk_live_prices", lambda syms: {
         "AAA": {"last_trade_price": 11.0, "prev_day_close": 10.0, "last_trade_ts_ms": None}})
@@ -99,6 +108,7 @@ def _stub_world(monkeypatch, rows, state, send_result):
     from push import sender
     monkeypatch.setattr(sender, "send_to_user", lambda email, msg, kind: (sent.append((kind, msg)), dict(send_result))[1])
     monkeypatch.setattr(pl, "_board_rows", lambda: rows)
+    monkeypatch.setattr(pl, "zones_for", _no_zones_yet)
     import sepa.prices as prices
     monkeypatch.setattr(prices, "bulk_live_prices", lambda syms: {
         "RUN": {"last_trade_price": 7.0, "price": 10.0, "prev_day_close": 7.14, "last_trade_ts_ms": None},

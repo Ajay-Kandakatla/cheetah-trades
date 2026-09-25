@@ -94,13 +94,34 @@ consumes them.
 Side effect: the full backend suite went from **~6m20s to ~1m11s**, because
 it no longer waits on network timeouts.
 
-### Still reaching for Yahoo (refused, deterministic, listed at the end of every run)
+### The offender list is empty (2026-09-25)
 
-9 tests in `test_alert_gates.py`, `test_amd_chips_2026_09_21.py`,
-`test_market_gauge.py` and `test_promo_live.py` call a price read for junk or
-placeholder symbols (`"NOPE"`, `"X"`). Refused, they get the no-data path they
-were written for. Before this branch they depended on live Yahoo data (`X` is
-a real ticker). Stubbing the price read in each would clear the list.
+On 2026-09-24, 9 tests in `test_alert_gates.py`, `test_amd_chips_2026_09_21.py`,
+`test_market_gauge.py` and `test_promo_live.py` still reached for Yahoo, for
+junk or placeholder symbols (`"NOPE"`, `"X"`). Refused, they got the no-data
+path they were written for. On 2026-09-25 each one's own read was stubbed:
+
+| file | the read that reached Yahoo | stand-in |
+|---|---|---|
+| `test_alert_gates.py` (5 tests) | `sepa.prices.load_prices`, via `daily_frame`, `mood_read` and `bullish_context`'s pattern read | `no_bars` fixture: `None`, the no-data answer |
+| `test_amd_chips_2026_09_21.py` | the keltner tab's curve frame, `prices.load_prices` (the one I/O leg `amd_board` missed) | `None` in `amd_board` |
+| `test_market_gauge.py` | `macro_calendar.imminent_events` in the outlook: its earnings leg calls yfinance `Ticker.calendar` on a thread pool | `[]` in the autouse `_hermetic` fixture |
+| `test_promo_live.py` | `zones_for`: a daemon thread loads each miss's bars and outlives the test | `_no_zones_yet` (`{}`, every row PENDING) |
+| `test_safety_floor.py` | `_evaluate` -> `regime()` -> live `get_gauge()` -> the same macro calendar | `normal_tape` fixture: `"normal"` |
+
+Two ways the list lied:
+
+- **Module caches hide offenders.** The macro calendar and the gauge are cached
+  in-process, so only the FIRST test to build one reached Yahoo.
+  `test_safety_floor.py` showed up only after the gauge test stopped filling
+  the calendar first, and it fails the same way run alone.
+- **Background threads blame the wrong test.** Attempts are credited to
+  whichever test is running at the time. The promo zone thread's fetch was
+  listed under `test_room_read_decision_table`, which never makes one itself,
+  and the blamed test changed from run to run.
+
+The list is now empty. Any name in it is a new offender: stub that module's
+own read. Don't widen the guard.
 
 ## The snapshot
 

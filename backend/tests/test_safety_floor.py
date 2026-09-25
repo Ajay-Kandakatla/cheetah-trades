@@ -94,8 +94,20 @@ def test_market_cap_lookup_failure_returns_none_not_an_exception():
     assert SF.market_cap("") is None
 
 
+@pytest.fixture
+def normal_tape(monkeypatch):
+    """_evaluate reads the regime off the Market Gauge (exit_engine.regime ->
+    get_gauge). With no persisted doc that computes the whole gauge LIVE, and
+    its outlook builds the macro calendar, whose earnings leg calls Yahoo; the
+    gauge is cached in-process, so only the first of these tests reached it.
+    They are about the floors: pin 'normal', what regime() answers when the
+    gauge is unavailable (same stand-in as test_auto_entry.py)."""
+    from trading import entries as EN
+    monkeypatch.setattr(EN, "regime", lambda: "normal")
+
+
 # ---------------------------------------------------------------- regression
-def test_evaluate_blocks_a_sub_two_dollar_fill():
+def test_evaluate_blocks_a_sub_two_dollar_fill(normal_tape):
     """REGRESSION for the real 2026-09-09 order: SABR filled at $2.24 for
     11,043 shares and stopped out -4.46% / -0.74R. The same lane at $1.90 must
     now be refused BY PRICE, with the reason naming the floor."""
@@ -112,7 +124,7 @@ def test_evaluate_blocks_a_sub_two_dollar_fill():
         EN._live_price, SF.market_cap = orig_price, orig_cap
 
 
-def test_evaluate_blocks_a_ten_million_dollar_cap():
+def test_evaluate_blocks_a_ten_million_dollar_cap(normal_tape):
     from trading import entries as EN
 
     orig_price, orig_cap = EN._live_price, SF.market_cap
@@ -125,7 +137,7 @@ def test_evaluate_blocks_a_ten_million_dollar_cap():
         EN._live_price, SF.market_cap = orig_price, orig_cap
 
 
-def test_evaluate_lets_a_real_name_through_the_floors():
+def test_evaluate_lets_a_real_name_through_the_floors(normal_tape):
     """NEGATIVE of the two above: AXTI-class inputs add NO floor reason. Other
     checks (disarmed, broker) may still block — this asserts only that none of
     the blocks came from safety_floor."""

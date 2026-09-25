@@ -271,7 +271,7 @@ def amd_board(monkeypatch):
     `board(kind, limit=120, db=None, grades=None)` (memory
     cheetah_amd_manipulation) and, like the real one, sorts THEN slices.
     """
-    from sepa import scanner
+    from sepa import prices, scanner
 
     state = {"pool": [], "snaps": {}, "tb_calls": [], "snap_calls": []}
 
@@ -301,6 +301,11 @@ def amd_board(monkeypatch):
     monkeypatch.setattr(B, "_velocity_decor", lambda tiles: None)
     monkeypatch.setattr(B, "_session_day", lambda *a, **k: __import__(
         "datetime").date(2026, 9, 21))
+    # The keltner tab draws each tile's curves off its daily frame. No bars:
+    # the tile carries no curves. This leg was missed, so the host's parquet
+    # cache answered for some pool names and Yahoo for the rest.
+    monkeypatch.setattr(prices, "load_prices",
+                        lambda symbol, period="2y", force=False: None)
     return state
 
 

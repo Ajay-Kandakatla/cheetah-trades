@@ -17,10 +17,19 @@ from sepa import market_gauge as mg
 @pytest.fixture(autouse=True)
 def _hermetic(monkeypatch):
     """Keep the suite off the network: compute() must not fetch live index bars
-    for the weekly gauge or call the live pre-market snapshot. Weekly-specific
-    tests override _weekly_frames with synthetic frames."""
+    for the weekly gauge, call the live pre-market snapshot, or build the macro
+    calendar. Weekly-specific tests override _weekly_frames with synthetic frames.
+
+    The outlook's first line comes from macro_calendar.imminent_events. Its
+    first call builds the whole calendar, whose earnings leg asks yfinance's
+    Ticker.calendar for ~100 names on a thread pool, and caches it module-wide:
+    only the FIRST compute() of a session reached Yahoo, so which test did
+    depended on the order. No events here — the watch list is the inputs' alone."""
+    import macro_calendar
     monkeypatch.setattr(mg, "_weekly_frames", lambda: [])
     monkeypatch.setattr(mg, "_premarket_gap", lambda: None)
+    monkeypatch.setattr(macro_calendar, "imminent_events",
+                        lambda within_days=5, max_tier=1: [])
 
 
 def _df(closes, vols):
