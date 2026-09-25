@@ -124,6 +124,12 @@ While he is there: **IWB and IWV are 107 days old** and near the loader's
 120-day warning, possibly predating the June 2026 reconstitution. Refreshing both
 also lifts the Russell 3000 above 2,559 and shrinks this list's shortfall.
 
+Any new or refreshed export in `sepa/data/` also needs the backend suite's
+universe snapshot regenerated in the same commit (added 2026-09-24,
+`docs/sepa/universe_test_snapshot.md`). `test_hermetic_universe_2026_09_24.py`
+fails with the command until it is:
+`.venv/bin/python scripts/refresh_universe_test_snapshot.py` from `backend/`.
+
 **The file drop publishes no fabricated additions.** The source-change
 re-baseline in `universe_changes.refresh_one` (documented in
 `docs/sepa/universe_changes.md`) writes the new snapshot and skips the change

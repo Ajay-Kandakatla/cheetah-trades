@@ -1,0 +1,52 @@
+{
+  "taken": "2026-09-24",
+  "source": "S&P and Nasdaq-100 lists: the api container cache /root/.cheetah/universe (the cheetah-scans volume). Russell and micro-cap lists: this checkout's iShares exports, parsed in the api container by sepa.universe._load_ishares_local_xls. Written by scripts/refresh_universe_test_snapshot.py.",
+  "lists": {
+    "microcap": {
+      "count": 1278,
+      "sha256": "b7de2f15f52858853de3eb56972220dda5d6bf8d6c8c3b1090c595f1c100d61c"
+    },
+    "nasdaq100": {
+      "count": 101,
+      "sha256": "1b8a0529fe4f926cd8025c887d613bbfff4054e0fe7b0541fa55ff19aa9f5f18"
+    },
+    "russell1000": {
+      "count": 1001,
+      "sha256": "93ab73e481cd5ae1fdec64f19a095ce9d72bf5a75f134dc930eb8c561571491a"
+    },
+    "russell3000": {
+      "count": 2559,
+      "sha256": "103a4878d7f33d044f35261bfddbfa89f74172b3798a29496a35c2937e22da71"
+    },
+    "sp400": {
+      "count": 400,
+      "sha256": "8d2f61d47f3c6d4f7634f502fc80c1ee7eaa51465b1c067fc9a844f88b99d8ad"
+    },
+    "sp500": {
+      "count": 503,
+      "sha256": "5d5e35e604082061571ee285778ecce657a199e3d644a76fcf1f604743577be6"
+    },
+    "sp600": {
+      "count": 603,
+      "sha256": "8182ad91fbf6a976617d09a3b3970e66a0cccf72506059f56fd08a9387ca397c"
+    }
+  },
+  "ishares_exports": {
+    "russell1000": {
+      "file": "sepa/data/iShares-Russell-1000-ETF_fund.xls",
+      "sha256": "d64390c4ce100c5745b55f2601d470c0b9b7f10e0a54bb77ac7344dd66fbfe26",
+      "note": "the list above is this export's parse, same order"
+    },
+    "russell3000": {
+      "file": "sepa/data/iShares-Russell-3000-ETF_fund.xls",
+      "sha256": "5420dd133d71c25ace28bd63cfad7baf20ebe1f8e0aabb184e4de36fcee40c24",
+      "note": "the list above is this export's parse, same order"
+    },
+    "microcap": {
+      "file": "sepa/data/iShares-Micro-Cap-ETF_fund.xls",
+      "sha256": "3f57692109c6432c862e1e4c6700ff1b9ef6511547f762dd283076b3bf2f4c1e",
+      "note": "the list above is this export's parse, same order"
+    }
+  },
+  "regenerate": "docs/sepa/universe_test_snapshot.md"
+}

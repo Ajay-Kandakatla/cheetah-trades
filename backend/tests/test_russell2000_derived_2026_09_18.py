@@ -70,8 +70,15 @@ def parents(monkeypatch, tmp_path):
     state = {"r1000": ["AAPL", "MSFT", "NVDA", "AMZN"],
              "r3000": ["AAPL", "MSFT", "NVDA", "AMZN",
                        "ANDE", "TENB", "QLYS", "CRDO", "SDIG", "BITF"]}
-    monkeypatch.setattr(U, "fetch_russell1000", lambda: list(state["r1000"]))
-    monkeypatch.setattr(U, "fetch_russell3000", lambda: list(state["r3000"]))
+    # Each stub records its provenance the way the real fetcher does on every
+    # resolve. Without it the derivation's parent guard read whatever an
+    # EARLIER test's real resolve had left in U._LAST_SOURCE — on 2026-09-24 a
+    # 'curated' russell3000 from test_cloud_infra_theme.py, which failed three
+    # tests here that pass alone.
+    monkeypatch.setattr(U, "fetch_russell1000", lambda: U._record(
+        "russell1000", U.SRC_ISHARES_LOCAL, list(state["r1000"])))
+    monkeypatch.setattr(U, "fetch_russell3000", lambda: U._record(
+        "russell3000", U.SRC_ISHARES_LOCAL, list(state["r3000"])))
     monkeypatch.setattr(U, "_LOCAL_IWM_PATH", tmp_path / "absent.xls")
     monkeypatch.setattr(U, "_cache_path", lambda name: tmp_path / f"{name}.txt")
     U._LAST_SOURCE.pop("russell2000", None)
