@@ -45,6 +45,13 @@ import { useBounceRoom } from '../hooks/useBounceRoom';
 import { filterTile, loadHidden, presentGroups, saveHidden, studiesWanted } from '../lib/chartOverlays';
 import { supportQuery } from '../lib/supportLevels';
 import type { CmTile } from '../lib/chartMaps';
+import type { OuterChip } from '../lib/cardLadder';
+import { outerChipsFor } from '../lib/outerChips';
+
+/** 📋 The pb-tile head prints 🚀 🎪 🧨 🎯 and + Signals — the tile skips its
+ *  own copies, so one POTUS card shows each once (2026-09-25). 🎯 / 🧨 are
+ *  skipped only when the head's chip text EQUALS the tile's (`outerChipsFor`). */
+export const POTUS_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'promo', 'explosive', 'enterable', 'watch'];
 
 /* The order is FIXED and it is an editorial order, not a ranking: a disclosed
  * federal equity stake is a harder fact than a contractor relationship, which
@@ -267,7 +274,13 @@ export default function PotusBoard() {
                       * inferred names. Readable on the tile, never a tooltip. */}
                     {e?.notes ? <p className="pb-tile__note">{e.notes}</p> : null}
                     {tile ? (
-                      <PatternChart tile={tile} study={room.payload?.explosive_study} />
+                      <PatternChart tile={tile} study={room.payload?.explosive_study}
+                                    outerChips={outerChipsFor(POTUS_OUTER_CHIPS, tile, {
+                                      enterable: roomRow?.enterable,
+                                      explosive: roomRow?.explosive,
+                                      outerStudy: room.payload?.explosive_study,
+                                      tileStudy: room.payload?.explosive_study,
+                                    })} />
                     ) : (
                       <p className="cm-foot mono">{rd?.error || 'loading chart…'}</p>
                     )}

@@ -4743,6 +4743,116 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // ── 📋 The Chart Maps card as an ENTRY LADDER (Ajay 2026-09-24: "I want
+  //    them to categorized in a good way so I have enough info for entry of a
+  //    stock." → 2026-09-25 "Yes, build the ladder") ─────────────────────────
+  {
+    name: '📋 the Chart Maps card reads as an entry ladder — organised, then folded, nothing removed (2026-09-25)',
+    file: 'src/components/PatternChart.tsx',
+    // The teeth:
+    //   * the rungs render in the entry order, the chart between PRICE and PLAN;
+    //   * the study run (verdicts + raids chip) sits in TIMING, never the fold;
+    //   * the fold is HIDDEN, never unmounted, and its button cannot follow the
+    //     tile <Link>;
+    //   * the classifier is strings only — no number is parsed, rounded or
+    //     scaled, and nothing says "bounce";
+    //   * every new class ships a rule, and no chip rule cuts text mid-word;
+    //   * the Trade-lines box decides what is DRAWN, never what PLAN prints;
+    //   * ⊞ follows the 🔥 Hottest persistence convention; the wrappers skip the
+    //     chips they already print.
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bcardLadder\b[^}]*\}\s*from\s*'\.\.\/lib\/cardLadder'/.test(src)) {
+        errs.push('PatternChart must import cardLadder from ../lib/cardLadder — one classifier for every card');
+      }
+      const ret = src.indexOf('<Link');
+      const body = ret >= 0 ? src.slice(ret) : '';
+      const at = (needle) => body.indexOf(needle);
+      const seq = ['cm-rung-entry', 'cm-rung-price', '<svg', 'cm-rung-plan', 'cm-rung-timing', 'className="cm-more"'];
+      const pos = seq.map(at);
+      if (pos.some((p) => p < 0)) {
+        errs.push(`the ladder is missing a rung: ${seq.filter((_, i) => pos[i] < 0).join(', ')}`);
+      } else if (!pos.every((p, i) => i === 0 || p > pos[i - 1])) {
+        errs.push('the rungs must render ENTRY < PRICE < chart < PLAN < TIMING < ▸ more, in that source order');
+      }
+      const run = at('{studyRun}');
+      if (!(run > at('cm-rung-timing') && run < at('className="cm-more"'))) {
+        errs.push('{studyRun} must render inside TIMING, before the fold — the raids chip never lands in ▸ more');
+      }
+      if (!/className="cm-more"\s+hidden=\{/.test(body)) errs.push('the fold must use hidden={…} so every folded read stays in the DOM');
+      if (/\{more\s*&&/.test(src)) errs.push('the fold must never be a conditional render ({more && …}) — getByText pins would lose folded reads');
+      const btn = /<button[^>]*cm-badge-more[\s\S]*?<\/button>/.exec(body);
+      if (!btn) {
+        errs.push('the ▸ more button (cm-badge-more) is missing');
+      } else {
+        for (const [re, msg] of [[/aria-expanded=/, 'aria-expanded'], [/preventDefault\(\)/, 'preventDefault()'],
+                                 [/stopPropagation\(\)/, 'stopPropagation()']]) {
+          if (!re.test(btn[0])) errs.push(`the ▸ more button needs ${msg} — the whole tile is a <Link>`);
+        }
+      }
+
+      const lib = read('src/lib/cardLadder.ts');
+      for (const [re, msg] of [[/toFixed/, 'toFixed'], [/\*\s*100\b/, '*100'], [/\/\s*100\b/, '/100'],
+                               [/parseFloat/, 'parseFloat'], [/Number\(/, 'Number(']]) {
+        if (re.test(lib)) errs.push(`lib/cardLadder.ts uses ${msg} — the classifier is strings only`);
+      }
+      if (/bounce/i.test(lib)) errs.push('lib/cardLadder.ts says "bounce" — surfaces he reads say reversal');
+
+      const css = read('src/styles.css');
+      for (const c of ['cm-rungs', 'cm-rung', 'cm-rung-tag', 'cm-rung-items', 'cm-rung-note', 'cm-approach',
+                       'cm-approach-good', 'cm-approach-warn', 'cm-approach-muted', 'cm-more', 'cm-more-group',
+                       'cm-badge-more', 'cm-badge-more-warn', 'cm-tile-ident', 'cm-tile-actions', 'cm-kv',
+                       'cm-stat-wide']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) errs.push(`.${c} has no CSS rule — jsdom loads no stylesheet, so only this catches it`);
+      }
+      const cssNc = css.replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const m of cssNc.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        if (/\.cm-(badge|rung|more)/.test(m[1]) && /text-overflow\s*:\s*ellipsis/.test(m[2])) {
+          errs.push(`${m[1].trim()} cuts text with an ellipsis — chips wrap at spaces, never mid-word`);
+        }
+      }
+
+      const ov = read('src/lib/chartOverlays.ts');
+      if (!/plan_lines:/.test(ov) || !/isPlanLine\(/.test(ov)) {
+        errs.push('filterTile must copy the plan lines into plan_lines — the Trade-lines box decides what is DRAWN, not what PLAN prints');
+      }
+      if (!/export function pxText\(/.test(read('src/lib/chartMaps.ts'))) {
+        errs.push('lib/chartMaps.ts must export pxText — one price format for the plan row and the now-line');
+      }
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/CM_MORE_EXPAND_KEY\s*=\s*'cm\.expandMore'/.test(lib)) {
+        errs.push('⊞ must persist under the board’s own key (the 🔥 Hottest convention)');
+      }
+      if (!/readMoreExpandPref\(\)/.test(page) || !/writeMoreExpandPref\(/.test(page) || !/expandAll=\{moreAll\}/.test(page)) {
+        errs.push('ChartMaps must read / write the ⊞ preference and hand it to every grid card (expandAll={moreAll})');
+      }
+      for (const [rel, konst] of [['src/components/SupportLevels.tsx', 'SUPPORT_OUTER_CHIPS'],
+                                  ['src/components/PotusBoard.tsx', 'POTUS_OUTER_CHIPS'],
+                                  ['src/components/EmaFramesBoard.tsx', 'EMA_OUTER_CHIPS']]) {
+        /* 🎯 / 🧨 differ by source (the head reads the room endpoint, the tile
+         * its own served read), so the list goes through outerChipsFor, which
+         * skips them only on identical chip text (repair 2026-09-25). */
+        if (!new RegExp('outerChips=\\{outerChipsFor\\(' + konst + ',').test(read(rel))) {
+          errs.push(`${rel} prints chips beside the tile — it must pass outerChips={outerChipsFor(${konst}, …)} so each prints once and 🎯/🧨 skip only on equal text`);
+        }
+      }
+
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("'card-entry-ladder-2026-09-25'");
+      if (idAt < 0) {
+        errs.push('the entry ladder has no ✨ NEW entry (card-entry-ladder-2026-09-25)');
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf('addedAt', idAt));
+        if (!entry.includes('nothing removed')) errs.push('the ✨ entry must say "nothing removed"');
+        if (!entry.includes('I want them to categorized in a good way so I have enough info for entry of a stock.')) {
+          errs.push('the ✨ entry must quote his words verbatim');
+        }
+        if (/bounce/i.test(entry)) errs.push('the ✨ entry says "bounce"');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

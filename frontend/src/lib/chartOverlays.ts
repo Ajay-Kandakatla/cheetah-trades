@@ -210,6 +210,17 @@ function lineGroup(l: { label?: string; tone?: string }): string | undefined {
   return BY_TONE[l.tone || ''];
 }
 
+/** 📋 Is this line one of the PLAN's prices (2026-09-25, the entry ladder)?
+ *  Exactly the lines the "Trade lines" and "Your position" families own —
+ *  BUY / STOP / TARGET and his cost / stop — decided by the SAME `lineGroup`
+ *  the checkboxes use, so a BOS or swept line that happens to carry a stop
+ *  tone never prints as the plan's stop. */
+export function isPlanLine(l: { label?: string; tone?: string } | null | undefined): boolean {
+  if (!l) return false;
+  const g = lineGroup(l);
+  return g === 'trade' || g === 'position';
+}
+
 /** Which groups actually appear on this view — a checkbox for an overlay the
  *  board never draws is a control that does nothing. */
 export function presentGroups(tiles: Array<Partial<CmTile>>): OverlayGroup[] {
@@ -262,6 +273,10 @@ export function filterTile<T extends Partial<CmTile>>(tile: T, hidden: Set<strin
     // 🌀 Every AMD raid (2026-09-24) — the chip, its list and the numbered
     // circles go with the AMD box, exactly like the verdict sentence above.
     amd_raids: hidden.has('amd') ? null : (tile as any).amd_raids,
+    // 📋 The plan's prices, UNFILTERED (2026-09-25): the "Trade lines" box
+    // decides what is DRAWN, never what the card's PLAN row says. Only in this
+    // branch, so `filterTile(t, new Set())` stays the identity.
+    plan_lines: ((tile as any).plan_lines ?? tile.lines ?? []).filter((l: any) => isPlanLine(l)),
   } as T;
 }
 

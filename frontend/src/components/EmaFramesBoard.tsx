@@ -43,6 +43,13 @@ import {
   type EmaFrame, type EmaFrameRead,
 } from '../lib/emaFrames';
 import type { CmTile } from '../lib/chartMaps';
+import type { OuterChip } from '../lib/cardLadder';
+import { outerChipsFor } from '../lib/outerChips';
+
+/** 📋 The chip strip above each tile prints 🚀 🧨 🎯 — the tile skips its own
+ *  copies, so one 9 EMA card shows each once (2026-09-25). 🎯 / 🧨 are skipped
+ *  only when the strip's chip text EQUALS the tile's (`outerChipsFor`). */
+export const EMA_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'explosive', 'enterable'];
 
 export default function EmaFramesBoard() {
   const [frame, setFrame] = useState<EmaFrame>(() => loadEmaFrame());
@@ -182,7 +189,13 @@ export default function EmaFramesBoard() {
                                     read={roomRow?.explosive} />
                 {' '}<EnterableChip read={roomRow?.enterable} />
               </div>
-              <PatternChart tile={filterTile(r.tile, shown)} />
+              <PatternChart tile={filterTile(r.tile, shown)}
+                            outerChips={outerChipsFor(EMA_OUTER_CHIPS, r.tile, {
+                              enterable: roomRow?.enterable,
+                              explosive: roomRow?.explosive,
+                              outerStudy: room.payload?.explosive_study,
+                              tileStudy: null,
+                            })} />
               {note ? (
                 <div className="cm-note" data-testid={`ema-forming-${r.symbol}`}>{note}</div>
               ) : null}

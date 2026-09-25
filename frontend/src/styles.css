@@ -13649,3 +13649,59 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .mb-count { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 .mb-unknown { color: var(--ink-muted); font-size: 0.72rem; }
 .mb-behind { color: var(--ink-muted); font-size: 0.72rem; }
+
+/* ── 📋 The Chart Maps card as an ENTRY LADDER (2026-09-25) ──────────────────
+   Ajay 2026-09-24: "I want them to categorized in a good way so I have enough
+   info for entry of a stock." One labelled rung per entry question, read top
+   to bottom — ENTRY, PRICE, the chart, SETUP, PLAN, TIMING — and a per-card
+   ▸ more for context. Organised first, folded second; a rung with nothing in
+   it draws nothing. Chips WRAP at spaces here and are never cut mid-word: the
+   old `white-space: nowrap` pill is what clipped the long sentences on a phone.
+   Reuses .cm-tile-actions and .cm-badge-more (the 09-14 CSS above) and the
+   .cm-quad-label look for the rung tags; .cm-quad* is left alone. */
+.cm-rungs { display: flex; flex-direction: column; gap: 0.3rem; margin: 0.25rem 0 0.35rem; }
+.cm-rung, .cm-more-group { display: grid; grid-template-columns: 3.3rem minmax(0, 1fr); gap: 0.45rem; align-items: baseline; }
+.cm-rung-tag {
+  font-size: 0.55rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint, #6b7686);
+}
+.cm-rung-items { display: flex; flex-wrap: wrap; gap: 0.25rem 0.35rem; align-items: baseline; min-width: 0; }
+/* [G7] backstop — the card already skips an empty rung. */
+.cm-rung:has(> .cm-rung-items:empty), .cm-more-group:has(> .cm-rung-items:empty) { display: none; }
+.cm-rungs .cm-badge, .cm-more .cm-badge { white-space: normal; overflow-wrap: break-word; border-radius: 0.55rem; }
+.cm-rungs .cm-tile-why { flex-basis: 100%; margin: 0; }
+.cm-rung-note { font-size: 0.66rem; color: var(--cm-slate, #8595ad); }
+.cm-approach { font-size: 0.74rem; line-height: 1.35; flex-basis: 100%; }
+.cm-approach-good { color: #10b981; }
+.cm-approach-warn { color: #f59e0b; }
+.cm-approach-muted { color: var(--cm-slate, #8595ad); }
+/* [G6] the key/value grid: two pairs a row, a long value spans the row. */
+.cm-kv {
+  display: grid; grid-template-columns: max-content auto max-content minmax(0, 1fr);
+  gap: 0.12rem 0.55rem; font-size: 0.72rem; width: 100%;
+}
+.cm-kv .cm-stat { display: contents; }
+.cm-kv .cm-stat-v { white-space: nowrap; }
+.cm-kv .cm-stat-wide > .cm-stat-k { grid-column: 1; }
+.cm-kv .cm-stat-wide > .cm-stat-v { grid-column: 2 / -1; white-space: normal; }
+.cm-rungs .cm-badge-band, .cm-rungs .cm-badge-band-muted { flex-basis: 100%; }
+.cm-rungs .cm-badge-burst { border-style: dashed; }
+.cm-rungs .cm-badge-more { margin-left: auto; }
+.cm-badge-more-warn { color: #f59e0b; }
+.cm-more {
+  border-top: 1px solid var(--hairline, rgba(255, 255, 255, 0.08));
+  padding-top: 0.35rem; margin-top: 0.3rem; display: flex; flex-direction: column; gap: 0.3rem;
+}
+.cm-more[hidden] { display: none; }
+.cm-tile-head { flex-wrap: nowrap; align-items: flex-start; }
+.cm-tile-id { flex: 1; min-width: 0; flex-wrap: wrap; }
+.cm-tile-actions { flex-shrink: 0; }
+.cm-tile-ident { display: flex; flex-wrap: wrap; gap: 0.25rem; flex-basis: 100%; }
+.cm-tile-ident:empty { display: none; }
+.iz-chart .cm-rungs, .iz-chart .cm-more { display: none; }
+@media (max-width: 640px) {
+  .cm-rung, .cm-more-group { grid-template-columns: 2.9rem minmax(0, 1fr); }
+  .cm-kv { grid-template-columns: max-content minmax(0, 1fr); }
+  .cm-kv .cm-stat-wide > .cm-stat-v { grid-column: 2; }
+}
+@media (pointer: coarse) { .cm-badge-more { min-height: 2rem; padding: 0 0.6rem; } }

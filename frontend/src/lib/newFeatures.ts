@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-24: "Can you organize the chips on the cards they very over
+  // whelming we have touch a similar feature in the past see if you can reuse
+  // some of that work. I want them to categorized in a good way so I have
+  // enough info for entry of a stock." → 2026-09-25: "Yes, build the ladder",
+  // buy shown as "Zone + entry", ⊞ expand all "Yes, off by default". Label per
+  // the card-chips spec §9 (the example prices are VOYA's live 2026-09-24 ones).
+  { id: 'card-entry-ladder-2026-09-25',
+    label: '📋 Chart Maps cards now read as an entry ladder. You said: “I want them to categorized in a good way so I have enough info for entry of a stock.” Each card is labelled rows, top to bottom: ENTRY (🎯 verdict, and any warning like At Supply · caution), PRICE (the reversal / falling / settling line, then the ⚡ burst when that box is ticked), the chart, PLAN (Buy zone 94.86–97.08 · entry 96.09, Stop, Target, R:R, room, the 🪜 ceiling/floor line), TIMING (📌 board days, back in, AMD today). Tape, sector, break-even and study reads fold behind ▸ more on each card — nothing removed, and an amber ⚠ on ▸ more says a warning is folded. ⊞ Expand all beside the ⚡ box opens every card at once (off by default, remembered on this browser). Buy / stop / target are written out even with the Trade lines box unticked. Four lines that printed twice now print once (why-line tail, Bands, On board, Sector flow). Display only: no gate, sort, alert or number changed.',
+    addedAt: '2026-09-25', route: '/chart-maps?tab=zones' },
   // Ajay 2026-09-24: "For any stocks on chart maps, wanted to rank them by most
   // explosive capable but now I want us to check for momentum burst possibility
   // or give them special attention. Like ORCL was going to In deman it had very

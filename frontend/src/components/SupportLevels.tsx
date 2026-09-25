@@ -42,6 +42,14 @@ import { PromoOriginChip } from './PromoOriginChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
+import type { OuterChip } from '../lib/cardLadder';
+import { outerChipsFor } from '../lib/outerChips';
+
+/** 📋 The chips the sl-head prints for this one symbol (🚀 🎪 🧨 🎯) — the
+ *  tile below skips its own copy, so the card shows each once (2026-09-25).
+ *  🎯 / 🧨 are skipped only when the head's chip text EQUALS the tile's
+ *  (`outerChipsFor`): the head reads bounce-room, the tile its own served read. */
+export const SUPPORT_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'promo', 'explosive', 'enterable'];
 
 type Props = {
   symbol: string;
@@ -514,9 +522,17 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             </p>
           ) : null}
           <div className="sl-chart">
+            {/* 📋 outerChips: the sl-head above already prints 🚀 🎪 🧨 🎯 for
+                this one symbol, so the tile does not print them twice. */}
             <PatternChart tile={filterTile(data.tile, hiddenOverlays)} height={320}
                           study={room.payload?.explosive_study}
-                          bandStudy={data.band_structure_study} />
+                          bandStudy={data.band_structure_study}
+                          outerChips={outerChipsFor(SUPPORT_OUTER_CHIPS, data.tile, {
+                            enterable: room.map.get(String(data.symbol).toUpperCase())?.enterable,
+                            explosive: room.map.get(String(data.symbol).toUpperCase())?.explosive,
+                            outerStudy: room.payload?.explosive_study,
+                            tileStudy: room.payload?.explosive_study,
+                          })} />
           </div>
           <p className="cm-note">
             Chart shows <strong>{data.chart_span || data.window_label}</strong>

@@ -493,6 +493,11 @@ export type CmTile = {
    *  = no read (an older payload, or a per-tile build that failed): the tile is
    *  never pinned and renders exactly as before. UNMEASURED. */
   burst?: BurstRead | null;
+  /** 📋 The plan's own lines (BUY / STOP / TARGET, his cost / stop), copied by
+   *  `filterTile` BEFORE the "Trade lines" box strips them from `lines`, so the
+   *  card's PLAN row prints the prices whether or not they are drawn (Ajay
+   *  2026-09-25, the entry ladder). Absent = read `lines`. Display only. */
+  plan_lines?: CmLine[];
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1662,9 +1667,19 @@ export function offDomainBands(
  *  price here please from current market") — "now 4.17", "now · pre 52.41",
  *  "LAST · AH 75.94". Sub-dollar names keep a third decimal. */
 export function nowLabelText(label: string, price: number): string {
-  if (!Number.isFinite(price)) return label;
-  const px = Math.abs(price) < 1 ? price.toFixed(3) : price.toFixed(2);
+  const px = pxText(price);
+  if (px == null) return label;
   return `${label || 'now'} ${px}`;
+}
+
+/** 📋 One price as the card prints it (2026-09-25, the entry ladder): 3 dp
+ *  under a dollar, else 2 — the now-line's own rule, now shared so the plan
+ *  row and the gutter label can never disagree about a price. `null` for
+ *  anything that is not a finite number, so the caller DROPS the item and
+ *  "NaN" / "undefined" never reach the card. */
+export function pxText(p: unknown): string | null {
+  if (typeof p !== 'number' || !Number.isFinite(p)) return null;
+  return Math.abs(p) < 1 ? p.toFixed(3) : p.toFixed(2);
 }
 
 /** A curve's gutter label — its value at the LAST bar it has one.

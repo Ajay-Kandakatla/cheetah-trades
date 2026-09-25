@@ -88,6 +88,7 @@ import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
 import { EnterableOnlyToggle } from '../components/EnterableOnlyToggle';
 import { MomentumBurstToggle } from '../components/MomentumBurstToggle';
+import { readMoreExpandPref, writeMoreExpandPref } from '../lib/cardLadder';
 import { BURST_PARAM, burstParam, isBurst, parseBurstParam, pinBurst } from '../lib/momentumBurst';
 import { HiddenCount } from '../components/HiddenCount';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
@@ -264,6 +265,12 @@ export function ChartMaps() {
       return next;
     }, { replace: true });
   }, [setParams]);
+
+  /* ⊞ EXPAND ALL (his answer 2026-09-25: "Yes, off by default"). One page
+   * answer for every card's ▸ more, remembered per browser the 🔥 Hottest way
+   * (lib/cardLadder.ts CM_MORE_EXPAND_KEY; never chosen = closed). A card he
+   * opens or closes by hand keeps that until this is pressed again. */
+  const [moreAll, setMoreAll] = useState<boolean>(() => readMoreExpandPref() === true);
 
   /* 🎯 UN-HIDE BY REASON (Ajay 2026-09-17: "Can you give me a toggle for the
    * room too? I am not seeing all stocks on the selected filter due to this
@@ -1279,6 +1286,20 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                              behind={burstBehind} rule={data?.burst_rule}
                              note={data?.burst_note} tiles={tiles.length} />
         <RulesInfo section="momentum_burst" compact />
+        {/* ⊞ Expand all — every card's ▸ more in one click (the 🔥 Hottest
+            precedent). Display only: it opens folds, never hides a card. */}
+        <button type="button" className="cm-rescan" data-testid="cm-expand-more"
+                aria-pressed={moreAll}
+                title={moreAll
+                  ? 'Close \u25B8 more on every card. A card you opened or closed by hand follows this again. Remembered on this browser.'
+                  : 'Open \u25B8 more on every card \u2014 risk, tape, floor, sector and study reads. A card you open or close by hand keeps your choice until you press this again. Remembered on this browser.'}
+                onClick={() => {
+                  const next = !moreAll;
+                  setMoreAll(next);
+                  writeMoreExpandPref(next);
+                }}>
+          {moreAll ? '\u229F Collapse all' : '\u229E Expand all'}
+        </button>
         {tab !== 'winners' && (
           <label className="cm-ctl">
             Window
@@ -1623,7 +1644,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         {burstPin.rows.map((t) => (
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
                         bandStudy={data?.band_structure_study}
-                        burst={burstOn ? (t.burst ?? null) : null} />
+                        burst={burstOn ? (t.burst ?? null) : null}
+                        expandAll={moreAll} />
         ))}
       </div>
 

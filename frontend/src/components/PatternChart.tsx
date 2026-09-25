@@ -11,15 +11,18 @@
  *
  * All geometry lives in lib/chartMaps.ts. This file only draws.
  */
-import { memo, useCallback, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
   gutterWidth, hoverLines, lineLabels, markerIndex, offDomainBands, priceAt,
   timeTicks,
-  priceTicks, themeLabel, toneColor, tooltipPos, xFor, yFor,
-  type CmTile,
+  priceTicks, pxText, themeLabel, toneColor, tooltipPos, xFor, yFor,
+  type CmBadge, type CmStat, type CmTile,
 } from '../lib/chartMaps';
+import {
+  cardLadder, FOLD_GROUPS, FOLD_LABEL, planLineKey, type FoldItem, type OuterChip,
+} from '../lib/cardLadder';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
@@ -30,7 +33,7 @@ import { BandStructureChip } from './BandStructureChip';
 import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
 import { MomentumBurstChip } from './MomentumBurstChip';
-import type { BurstRead } from '../lib/momentumBurst';
+import { isBurst, type BurstRead } from '../lib/momentumBurst';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
 import { AmdRaidsChip } from './AmdRaidsChip';
 import {
@@ -77,7 +80,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, tvTf, study, bandStudy, burst }: {
+  { tile, height = 190, tvTf, study, bandStudy, burst, outerChips, expandAll }: {
     tile: CmTile; height?: number; tvTf?: string;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
@@ -89,12 +92,26 @@ export const PatternChart = memo(function PatternChart(
      *  checkbox is ticked (null otherwise), so the badge and the pin can never
      *  disagree. Prop-fed; nothing is computed here. */
     burst?: BurstRead | null;
+    /** 📋 The chips the WRAPPER already prints beside this tile (the Support
+     *  head, the POTUS head, the 9 EMA strip). The tile skips exactly these,
+     *  so one card never shows the same chip twice. */
+    outerChips?: ReadonlyArray<OuterChip>;
+    /** ⊞ The page's "Expand all" answer for every card's ▸ more. A card he
+     *  opens or closes by hand keeps his choice until ⊞ is pressed again. */
+    expandAll?: boolean;
   },
 ) {
   const location = useLocation();
   const bars = tile.bars || [];
   const svgRef = useRef<SVGSVGElement>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+  /* 📋 ▸ more, per card per session (the SepaCandidateCard "#3 declutter"
+   * toggle). `null` = follow the page's ⊞; a click here overrides it, and a
+   * new ⊞ answer clears the override (⊞ means all). Above the early return. */
+  const [moreOv, setMoreOv] = useState<boolean | null>(null);
+  const moreId = useId();
+  useEffect(() => { setMoreOv(null); }, [expandAll]);
+  const more = moreOv ?? !!expandAll;
 
   // Client px -> viewBox units. Exact because .cm-svg is width:100% with no
   // height set, so the rendered box keeps the viewBox's aspect ratio and the
@@ -188,6 +205,99 @@ export const PatternChart = memo(function PatternChart(
   const carryQ = sanitizeSourceQuery(location.search);
   const backTarget = carryQ ? `/chart-maps?${carryQ}` : '/chart-maps';
 
+  /* 📋 THE ENTRY LADDER (Ajay 2026-09-24: "I want them to categorized in a
+   * good way so I have enough info for entry of a stock"; 2026-09-25 "Yes,
+   * build the ladder"). ENTRY → PRICE → chart → SETUP → PLAN → TIMING →
+   * ▸ more. lib/cardLadder.ts decides every rung from the SERVED strings; this
+   * file only draws them. Nothing is removed: the fold is `hidden`, never
+   * unmounted, so every folded read stays in the DOM and on the ticker page. */
+  const skip = new Set<OuterChip>(outerChips || []);
+  const ladder = cardLadder(tile, { skip: outerChips });
+  const pill = (b: CmBadge, i: number) => (
+    <span key={`${i}-${b.text}`} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
+  );
+  const kv = (st: CmStat, i: number, wide = false) => (
+    <span key={`${i}-${st.k}`} className={`cm-stat${wide || st.v.length > 16 ? ' cm-stat-wide' : ''}`}>
+      <span className="cm-stat-k">{st.k}</span>
+      <span className="cm-stat-v">{st.v}</span>
+    </span>
+  );
+  const lastPx = last ? pxText(last.c) : null;
+  const lastStat = (
+    <span className="cm-stat">
+      <span className="cm-stat-k">Last</span>
+      <span className="cm-stat-v">{lastPx ?? '\u2014'}</span>
+    </span>
+  );
+
+  /* PLAN rows: the served band as the buy ZONE plus the BUY line as the entry
+   * (his answer 2026-09-25: "Zone + entry"), then stop / target, then the
+   * served room stats. A price that is not a finite number drops its row. */
+  const lineOf = (tone: string) => ladder.plan.lines.find((l) => l.tone === tone);
+  const buyPx = pxText(lineOf('buy')?.price);
+  const zoneLo = pxText(ladder.plan.buyZone?.lo);
+  const zoneHi = pxText(ladder.plan.buyZone?.hi);
+  const planRows: { st: CmStat; wide?: boolean }[] = [];
+  if (zoneLo && zoneHi) {
+    planRows.push({ wide: true, st: { k: 'Buy zone',
+      v: `${zoneLo}\u2013${zoneHi}${buyPx ? ` \u00B7 entry ${buyPx}` : ''}` } });
+  } else if (buyPx) {
+    planRows.push({ st: { k: 'Entry', v: buyPx } });
+  }
+  /* A row is named by WHAT THE LINE IS, not by its tone: the fixed word only
+   * when the served label is the canonical one. Breaking serves its lid as
+   * {label:'BREAK', tone:'target'}, Holdings a '200d' MA as tone 'stop' — those
+   * print under their own served label, never as "Target" / "Stop". */
+  for (const [tone, k] of [['stop', 'Stop'], ['target', 'Target'], ['cost', 'Cost'],
+                           ['ownstop', 'Your stop']] as const) {
+    const line = lineOf(tone);
+    const px = pxText(line?.price);
+    if (!px || !line) continue;
+    const label = typeof line.label === 'string' ? line.label.trim() : '';
+    planRows.push({ st: { k: planLineKey(tone, label, k), v: px } });
+  }
+  for (const st of ladder.plan.stats) planRows.push({ st });
+  const showBand = !skip.has('band');
+  const planHas = planRows.length > 0 || ladder.plan.lastOnFace && !!last
+    || ladder.plan.pills.length > 0 || (showBand && !!tile.band_structure);
+
+  /* 🎯 One mount, placed on the face or in READS by the ladder. */
+  const enterableChip = skip.has('enterable') ? null : <EnterableChip read={tile.enterable} />;
+  const explosiveChip = skip.has('explosive') ? null
+    : <ExplosiveChip read={tile.explosive} study={study} />;
+  const zonePill = ladder.zone ? (
+    <span className={`cm-badge cm-badge-${ladder.zone.tone}`}>{ladder.zone.text}</span>
+  ) : null;
+
+  // 🌀 The study run: served overlay verdicts (KC first, AMD last), then the raids
+  // chip that expands the AMD verdict. Hoisted so contract #13's source order holds.
+  const studyChips = (tile.badges || []).map((b, i) => ({ b, i }))
+    .filter(({ b }) => !!b && !!b.group)
+    .sort((x, y) => Number(x.b.group === 'amd') - Number(y.b.group === 'amd') || x.i - y.i)
+    .map(({ b }) => <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>);
+  const studyRun = (<>{studyChips}<AmdRaidsChip block={raids} /></>);
+
+  const entryHas = (ladder.enterableOnFace && !!enterableChip) || ladder.entry.length > 0
+    || !!(ladder.zone && ladder.zone.onFace);
+  const priceHas = !!ladder.approach || ladder.price.length > 0 || ladder.priceAfter.length > 0
+    || isBurst(burst);
+  const setupHas = !!ladder.why || ladder.setup.badges.length > 0 || ladder.setup.stats.length > 0;
+  const timingHas = ladder.timing.badges.length > 0 || ladder.timing.stats.length > 0
+    || !!ladder.timing.mergedBoard || studyChips.length > 0 || !!raids || ladder.moreCount > 0;
+
+  /* ▸ more — the folded-warn cue: a warn-toned served chip behind the fold
+   * turns the button amber and says how many (the vetoes never fold). */
+  const warnN = ladder.moreWarn.length;
+  const moreTitle = 'Risk, tape, floor, sector and study reads \u2014 nothing dropped'
+    + (warnN ? ` \u00B7 folded warning${warnN === 1 ? '' : 's'}: ${ladder.moreWarn.map((b) => b.text).join(' \u00B7 ')}` : '');
+  const foldItem = (it: FoldItem, i: number) => {
+    if (it.badge) return pill(it.badge, i);
+    if (it.slot === 'explosive') return <Fragment key={`s-${i}`}>{explosiveChip}</Fragment>;
+    if (it.slot === 'enterable') return <Fragment key={`s-${i}`}>{enterableChip}</Fragment>;
+    if (it.slot === 'zone') return <Fragment key={`s-${i}`}>{zonePill}</Fragment>;
+    return null;
+  };
+
   return (
     <Link
       to={withSource(tile.href, 'chart-maps', location.search)}
@@ -200,58 +310,25 @@ export const PatternChart = memo(function PatternChart(
           <div className="cm-tile-id">
             <b>{tile.symbol}</b>
             {tile.name ? <span className="cm-tile-name">{tile.name}</span> : null}
+            {/* What the company IS: theme, growth, promo origin, the served
+                company facts. Never an entry read. */}
+            <div className="cm-tile-ident">
+              {theme ? <span className="cm-badge cm-badge-theme">{theme}</span> : null}
+              {/* 🚀 Explosive Growth (Ajay 2026-09-11: "I am hoping this new
+                  list will be considerd in all chart maps. Like in Deep demand
+                  scan"). Every tile board renders through this component, so one
+                  chip here lights up Back in Demand, Deep Demand, Quick Reversal,
+                  Breaking, VCP and the rest. ⛔ tone when the trading engine will
+                  refuse the name — good sales must not make it look clean. */}
+              {skip.has('growth') ? null : <GrowthChip symbol={tile.symbol} />}
+              {skip.has('promo') ? null : <PromoOriginChip symbol={tile.symbol} />}
+              {ladder.ident.map(pill)}
+            </div>
           </div>
-          <div className="cm-tile-badges">
-            {theme ? <span className="cm-badge cm-badge-theme">{theme}</span> : null}
-            {/* 🚀 Explosive Growth (Ajay 2026-09-11: "I am hoping this new
-                list will be considerd in all chart maps. Like in Deep demand
-                scan"). Every tile board renders through this component, so one
-                chip here lights up Back in Demand, Deep Demand, Quick Bounce,
-                Breaking, VCP and the rest. ⛔ tone when the trading engine will
-                refuse the name — good sales must not make it look clean. */}
-            <GrowthChip symbol={tile.symbol} />
-            <PromoOriginChip symbol={tile.symbol} />
-            {/* 🧨 The explosive read (2026-09-15). PROP-FED off the tile —
-                chart_maps/board.attach_explosive puts it on every tile board
-                request whatever the sort, so the grid makes no extra call. It
-                renders nothing when the name has no demand-band read, and in
-                the study's null branch it is muted and says room + floor, never
-                a score. */}
-            {/* ⚡ Momentum burst (Ajay 2026-09-24: "Pin + badge, hide
-                nothing"). Served per tile by chart_maps/board.attach_burst and
-                handed down by the page only while its checkbox is ticked.
-                Renders nothing unless the server said ⚡. UNMEASURED. */}
-            <MomentumBurstChip read={burst} />
-            <ExplosiveChip read={tile.explosive} study={study} />
-            {/* 🎯 The ENTERABLE read (2026-09-15). Ajay: "I only wanna see the
-                stocks that are enterable." Prop-fed off the tile, exactly like
-                the 🧨 chip — chart_maps/board.attach_enterable puts it on every
-                tile board, keyed on the SAME live snapshot the now-line uses,
-                so the tile and the phone read one print. Renders nothing when
-                the name has no read, and nothing here decides the verdict. */}
-            <EnterableChip read={tile.enterable} />
-            {/* 🪜 The BAND STRUCTURE read (2026-09-16). Ajay: "prioritize stock
-                by the thinnest over head or Supply zone" and "the support bands
-                are bigger and atleast another one very close if its falls below
-                the first support level". Prop-fed off the tile exactly like the
-                two chips above — chart_maps/board.attach_band_structure puts it
-                on every tile board, on the SAME live snapshot the now-line
-                uses. It prints the server's own sentence, so this file derives
-                no percentage; it renders nothing when the name has no band read
-                and nothing when the tab has none, and while the study is
-                pending it is muted, because the ordering behind it is
-                descriptive and not a prediction. */}
-            <BandStructureChip read={tile.band_structure} study={bandStudy} />
-            {(tile.badges || []).map((b) => (
-              <span key={b.text} className={`cm-badge cm-badge-${b.tone}`}>{b.text}</span>
-            ))}
-            {/* 🌀 One muted chip right after the AMD verdict it expands; the
-                list of every raid opens from it. Renders nothing without a
-                served block (AMD box unticked, non-daily frame, old payload). */}
-            <AmdRaidsChip block={raids} />
+          <div className="cm-tile-actions">
             {/* Ajay 2026-09-07: "One click and add to signals tab" — every card,
               * every board; the Signals tab reads the same store. */}
-            <SignalWatchButton symbol={tile.symbol} />
+            {skip.has('watch') ? null : <SignalWatchButton symbol={tile.symbol} />}
             <button type="button" className="cm-tv"
                     title={`Open ${tile.symbol} in TradingView`}
                     aria-label={`Open ${tile.symbol} in TradingView`}
@@ -260,6 +337,52 @@ export const PatternChart = memo(function PatternChart(
             </button>
           </div>
         </div>
+
+        {entryHas || priceHas ? (
+          <div className="cm-rungs">
+            {/* ① ENTRY — can I enter? 🎯 first, then the served verdicts and
+                vetoes (warn → good → muted), then the zone pill ONLY when it
+                disagrees with the board's premise (amber, his call #4). */}
+            {entryHas ? (
+              <div className="cm-rung cm-rung-entry">
+                <span className="cm-rung-tag">ENTRY</span>
+                <div className="cm-rung-items">
+                  {/* 🎯 The ENTERABLE read (2026-09-15). Ajay: "I only wanna see
+                      the stocks that are enterable." Prop-fed off the tile,
+                      exactly like the 🧨 chip — nothing here decides the
+                      verdict. The n/a kind folds into READS. */}
+                  {ladder.enterableOnFace ? enterableChip : null}
+                  {ladder.entryNotes.map((n, i) => (
+                    <span key={`n-${i}-${n}`} className="cm-rung-note">{`\u00B7 ${n}`}</span>
+                  ))}
+                  {ladder.entry.map(pill)}
+                  {ladder.zone && ladder.zone.onFace ? zonePill : null}
+                </div>
+              </div>
+            ) : null}
+            {/* ② PRICE — where is it now? Position pills, the approach LINE in
+                its served tone, the ⚡ momentum burst, then tape and money. */}
+            {priceHas ? (
+              <div className="cm-rung cm-rung-price">
+                <span className="cm-rung-tag">PRICE</span>
+                <div className="cm-rung-items">
+                  {ladder.price.map(pill)}
+                  {ladder.approach ? (
+                    <span className={`cm-approach cm-approach-${ladder.approach.tone}`}>
+                      {ladder.approach.text}
+                    </span>
+                  ) : null}
+                  {/* ⚡ Momentum burst (Ajay 2026-09-24: "Pin + badge, hide
+                      nothing"). Served per tile by chart_maps/board.attach_burst
+                      and handed down by the page only while its checkbox is
+                      ticked. Renders nothing unless the server said ⚡. UNMEASURED. */}
+                  <MomentumBurstChip read={burst} />
+                  {ladder.priceAfter.map(pill)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="cm-svg" role="img"
              onMouseMove={onMove} onMouseLeave={onLeave}
@@ -606,19 +729,105 @@ export const PatternChart = memo(function PatternChart(
           ) : null}
         </svg>
 
-        <div className="cm-tile-why">{tile.why}</div>
-        <div className="cm-tile-stats">
-          {(tile.stats || []).map((s) => (
-            <span key={s.k} className="cm-stat">
-              <span className="cm-stat-k">{s.k}</span>
-              <span className="cm-stat-v">{s.v}</span>
-            </span>
-          ))}
-          <span className="cm-stat cm-stat-last">
-            <span className="cm-stat-k">Last</span>
-            <span className="cm-stat-v">{last ? last.c : '—'}</span>
-          </span>
-        </div>
+        {setupHas || planHas || timingHas ? (
+          <div className="cm-rungs">
+            {/* SETUP — pattern tabs only: the why line when it is not a copy of
+                the PRICE line, the stats no rung claims, and every served badge
+                the ladder does not know (the safety net — on the face, never
+                in the fold). */}
+            {setupHas ? (
+              <div className="cm-rung cm-rung-setup">
+                <span className="cm-rung-tag">SETUP</span>
+                <div className="cm-rung-items">
+                  {ladder.why ? <div className="cm-tile-why">{ladder.why}</div> : null}
+                  {ladder.setup.badges.map(pill)}
+                  {ladder.setup.stats.length ? (
+                    <div className="cm-kv">{ladder.setup.stats.map((st, i) => kv(st, i))}</div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {/* ③ PLAN — buy zone / entry, stop, target, R:R, room, printed as
+                text whether or not the Trade-lines box draws them (his call
+                #2), then the served room pills and the 🪜 line. */}
+            {planHas ? (
+              <div className="cm-rung cm-rung-plan">
+                <span className="cm-rung-tag">PLAN</span>
+                <div className="cm-rung-items">
+                  {planRows.length || (ladder.plan.lastOnFace && last) ? (
+                    <div className="cm-kv">
+                      {planRows.map((r, i) => kv(r.st, i, r.wide))}
+                      {ladder.plan.lastOnFace && last ? lastStat : null}
+                    </div>
+                  ) : null}
+                  {ladder.plan.pills.map(pill)}
+                  {/* 🪜 The BAND STRUCTURE read (2026-09-16). Ajay: "prioritize
+                      stock by the thinnest over head or Supply zone". Prop-fed;
+                      it prints the server's own sentence, so this file derives
+                      no percentage. The `Bands` stat that repeats it word for
+                      word is not printed a second time. */}
+                  {showBand ? <BandStructureChip read={tile.band_structure} study={bandStudy} /> : null}
+                </div>
+              </div>
+            ) : null}
+            {/* ④ TIMING — fresh or stale: dwell, back in, then the study run
+                (KC, then AMD, then the raids chip that expands it), then ▸ more.
+                The study verdicts sit HERE, not in ENTRY: both reads are
+                MEASURED INVERTED and must not look like an entry trigger. */}
+            {timingHas ? (
+              <div className="cm-rung cm-rung-timing">
+                <span className="cm-rung-tag">TIMING</span>
+                <div className="cm-rung-items cm-tile-badges">
+                  {ladder.timing.badges.map(pill)}
+                  {ladder.timing.mergedBoard ? (
+                    <span className="cm-stat"><span className="cm-stat-v">{ladder.timing.mergedBoard}</span></span>
+                  ) : null}
+                  {ladder.timing.stats.map((st, i) => (
+                    <span key={`${i}-${st.k}`} className="cm-stat">
+                      <span className="cm-stat-k">{st.k}</span>
+                      <span className="cm-stat-v">{st.v}</span>
+                    </span>
+                  ))}
+                  {studyRun}
+                  {ladder.moreCount > 0 ? (
+                    <button type="button"
+                            className={`cm-badge cm-badge-more${warnN ? ' cm-badge-more-warn' : ''}`}
+                            aria-expanded={more} aria-controls={moreId} title={moreTitle}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoreOv(!more); }}>
+                      {more ? '\u25BE less' : `\u25B8 more \u00B7 ${ladder.moreCount}${warnN ? ` \u00B7 \u26A0${warnN}` : ''}`}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* ▸ more — labelled groups, each drawn only when it has items. HIDDEN,
+            never unmounted: every folded read stays in the DOM. */}
+        {ladder.moreCount > 0 ? (
+          <div id={moreId} className="cm-more" hidden={!more}>
+            {FOLD_GROUPS.filter((g) => ladder.more[g].length > 0).map((g) => {
+              const items = ladder.more[g];
+              const stats = items.filter((it) => it.stat || it.slot === 'last');
+              const chips = items.filter((it) => !(it.stat || it.slot === 'last'));
+              return (
+                <div key={g} className="cm-more-group">
+                  <span className="cm-rung-tag">{FOLD_LABEL[g]}</span>
+                  <div className="cm-rung-items">
+                    {stats.length ? (
+                      <div className="cm-kv">
+                        {stats.map((it, i) => (it.stat ? kv(it.stat, i)
+                          : <Fragment key={`last-${i}`}>{lastStat}</Fragment>))}
+                      </div>
+                    ) : null}
+                    {chips.map(foldItem)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </Link>
   );

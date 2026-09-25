@@ -360,3 +360,43 @@ describe("the demand BOARD's band on the per-ticker views (2026-09-14)", () => {
     expect(presentGroups([{ ...withBoard(), bands: [{ kind: 'demand', lo: 1, hi: 2 }] }]).map((g) => g.key)).not.toContain('board');
   });
 });
+
+/* 📋 The entry ladder (2026-09-25): the "Trade lines" box decides what is
+ * DRAWN, never what the card's PLAN row prints. filterTile copies the plan's
+ * own lines into `plan_lines` before it strips them — in the filtering branch
+ * only, so the identity above still holds. */
+import { isPlanLine } from './chartOverlays';
+describe('filterTile — plan_lines for the entry ladder', () => {
+  const planTile = (): any => ({
+    symbol: 'P', href: '/p', bars: [], markers: [], stats: [], why: '', bands: [],
+    lines: [
+      { price: 96.09, label: 'BUY', tone: 'buy' },
+      { price: 93.44, label: 'STOP', tone: 'stop' },
+      { price: 103.05, label: 'TARGET', tone: 'target' },
+      { price: 11, label: 'your cost 11.00', tone: 'cost' },
+      { price: 95.5, label: 'BOS 95.50', tone: 'stop', quiet: true },
+      { price: 96.2, label: 'now', tone: 'now' },
+    ],
+  });
+
+  it('the trade box hidden → lines lose BUY/STOP/TARGET, plan_lines keep them (and his cost)', () => {
+    const out: any = filterTile(planTile(), new Set(['trade']));
+    expect(out.lines.map((l: any) => l.label)).not.toContain('BUY');
+    expect(out.plan_lines.map((l: any) => l.label)).toEqual(['BUY', 'STOP', 'TARGET', 'your cost 11.00']);
+  });
+
+  it('NEGATIVE: a BOS line with a stop tone and the now line are never plan lines', () => {
+    expect(isPlanLine({ label: 'BOS 95.50', tone: 'stop' })).toBe(false);
+    expect(isPlanLine({ label: 'now', tone: 'now' })).toBe(false);
+    expect(isPlanLine({ label: 'swept 12', tone: 'stop' })).toBe(false);
+    expect(isPlanLine(null)).toBe(false);
+    expect(isPlanLine({ label: 'STOP', tone: 'stop' })).toBe(true);
+  });
+
+  it('NEGATIVE: nothing hidden → the SAME object, no plan_lines key added', () => {
+    const t = planTile();
+    const out = filterTile(t, new Set());
+    expect(out).toBe(t);
+    expect('plan_lines' in out).toBe(false);
+  });
+});
