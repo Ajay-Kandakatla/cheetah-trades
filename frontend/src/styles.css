@@ -7704,6 +7704,23 @@ a.tk-link {
 a.tk-link:visited { color: inherit; }
 a.tk-link:hover   { color: inherit; }
 
+/* Catalysts tickers → Supply & Demand (2026-09-25). These were <button>s;
+ * as TickerLink anchors, a.tk-link's `color: inherit` would out-rank their
+ * own colours, so each keeps its look here. */
+a.tk-link.cat-pred-card__ticker        { color: var(--ink); }
+a.tk-link.cat-pred-card__ticker:hover  { color: var(--gold); }
+a.tk-link.cat-tl-event__ticker         { color: var(--gold); }
+a.tk-link.cat-tl-event__ticker:hover   { color: #0a0a0a; }
+a.tk-link.cat-tl-chip                  { display: inline-flex; }
+.cat-card__ticker a.tk-link:hover,
+.cat-tl-ticker a.tk-link:hover,
+.cat-stale-row a.tk-link:hover,
+.vat__ticker a.tk-link:hover           { color: var(--gold); }
+/* 🔎 sits first in the card's compact icon row and borrows .cdl__icon's box;
+ * a <button> needs its UA padding and font reset to match the <a> icons. */
+.cat-deepdive-btn { padding: 0; font: inherit; font-size: 12px; }
+.cat-deepdive-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
 /* === Timeline view === */
 .cat-timeline-view { display: flex; flex-direction: column; gap: 24px; margin-top: 12px; }
 .cat-section { background: var(--bg-raised); border: 1px solid var(--hairline); border-radius: 8px; padding: 16px 18px; }

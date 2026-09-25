@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-25: "Can you help make all the catalyst pages to be going to
+  // Ticker supply and demand please?"
+  { id: 'catalyst-links-supply-2026-09-25',
+    label: '🧭 Every ticker on the Catalysts tab now opens its Supply & Demand page. You said: “make all the catalyst pages to be going to Ticker supply and demand.” Predictions, Frenzy, Now, Pre-market, Calendar, Timeline and the 🚨 volume-alert strip used to open the news drawer on a click; now the name, the card and the row all go to the ticker’s Supply & Demand tab, and ← Back returns to the same sub-tab. ⌘-click opens it in a new tab. The drawer (chatter, news, SEC filings, insiders) is one 🔎 away at the bottom of each card, and the “deep-dive” box still opens it for any symbol. Russell and Promo already linked there. Links only — nothing ranked, gated or bought differently.',
+    addedAt: '2026-09-25', route: '/chart-maps?tab=catalysts' },
   // Ajay 2026-09-25: "Can you build be key levels in to our charts? They are
   // like demand zones. but very critical. … With check box give it a brigh
   // color in the chart. I wanna know when key levels are broken for a stock."

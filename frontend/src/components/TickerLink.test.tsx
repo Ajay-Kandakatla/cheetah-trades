@@ -104,3 +104,47 @@ describe('TickerLink derived source', () => {
       .toBe('/sepa/CR?tab=setup&from=demand-zones');
   });
 });
+
+
+/* openTickerWithModifier's optional `tab` (2026-09-25) — the Catalysts cards
+ * and rows that cannot be an <a> land on Supply & Demand through it. */
+import { openTickerWithModifier } from './TickerLink';
+
+describe('openTickerWithModifier tab', () => {
+  const loc = { pathname: '/chart-maps', search: '?tab=catalysts&sub=frenzy' };
+  const parse = (u: string) => new URL(u, 'http://x');
+
+  it('a plain click navigates to the asked tab and keeps the source + its sub-tab', () => {
+    const nav = vi.fn();
+    openTickerWithModifier({ button: 0 } as never, nav, loc, 'EOSE', 'Catalysts', 'supply');
+    const u = parse(nav.mock.calls[0][0]);
+    expect(u.pathname).toBe('/sepa/EOSE');
+    expect(u.searchParams.get('tab')).toBe('supply');
+    expect(u.searchParams.get('from')).toBe('chart-maps');
+    expect(u.searchParams.get('from_q')).toBe('tab=catalysts&sub=frenzy');
+    expect(nav.mock.calls[0][1].state.label).toBe('Catalysts');
+  });
+
+  it('⌘-click opens the same tab in a new window and does not navigate here', () => {
+    const nav = vi.fn();
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    openTickerWithModifier({ metaKey: true, button: 0 } as never, nav, loc, 'EOSE', 'Catalysts', 'supply');
+    expect(nav).not.toHaveBeenCalled();
+    expect(parse(open.mock.calls[0][0] as string).searchParams.get('tab')).toBe('supply');
+    open.mockRestore();
+  });
+
+  it('NEGATIVE — no tab asked → no tab param (every older caller is unchanged)', () => {
+    const nav = vi.fn();
+    openTickerWithModifier(undefined, nav, loc, 'EOSE', 'Catalysts');
+    const u = parse(nav.mock.calls[0][0]);
+    expect(u.searchParams.has('tab')).toBe(false);
+    expect(u.searchParams.get('from')).toBe('chart-maps');
+  });
+
+  it('NEGATIVE — an unregistered page still gets the tab, just no source', () => {
+    const nav = vi.fn();
+    openTickerWithModifier(undefined, nav, { pathname: '/nowhere', search: '' }, 'EOSE', undefined, 'supply');
+    expect(nav.mock.calls[0][0]).toBe('/sepa/EOSE?tab=supply');
+  });
+});

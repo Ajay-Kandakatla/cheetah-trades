@@ -4882,6 +4882,44 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧭 Catalysts (2026-09-25): every ticker opens its Supply & Demand tab, the drawer stays behind 🔎',
+    file: 'src/pages/Catalysts.tsx',
+    // Ajay 2026-09-25: "Can you help make all the catalyst pages to be going to
+    // Ticker supply and demand please?" Every sub-tab used to open the deep-dive
+    // drawer on a ticker click. A revert to setDrillTicker on a list click, or a
+    // ticker <button> without the tab, silently undoes it.
+    checks: (src) => {
+      const errs = [];
+      if (!/export const CATALYST_TICKER_TAB = 'supply';/.test(src)) {
+        errs.push("CATALYST_TICKER_TAB must stay 'supply'");
+      }
+      if (/onClickTicker/.test(src)) {
+        errs.push('onClickTicker is back — list clicks must go through openSupply / CatTicker, not the drawer');
+      }
+      if (/onClick=\{\(\) => setDrillTicker\(/.test(src) || /onClick=\{\(t\) => setDrillTicker\(t\)\}/.test(src)) {
+        errs.push('a list click opens the drawer again — only 🔎 and the deep-dive box may call setDrillTicker');
+      }
+      if (/className="cat-(pred-card__ticker|tl-event__ticker|tl-chip)"[^>]*onClick/.test(src)) {
+        errs.push('a ticker is a <button> again — it must be a CatTicker <a> so ⌘-click keeps the tab');
+      }
+      const cat = /function CatTicker\([\s\S]*?\n\}\n/.exec(src);
+      if (!cat || !/tab=\{CATALYST_TICKER_TAB\}/.test(cat[0])) {
+        errs.push('CatTicker must pass tab={CATALYST_TICKER_TAB} to TickerLink');
+      }
+      if (!/openTickerWithModifier\(e, navigate, location, t, 'Catalysts', CATALYST_TICKER_TAB\)/.test(src)) {
+        errs.push('openSupply must hand CATALYST_TICKER_TAB to openTickerWithModifier');
+      }
+      if ((src.match(/if \(!isInnerControl\(e\)\)/g) || []).length < 5) {
+        errs.push('the card / row clicks (Now, Pre-market, accumulator, stale, volume strip) must skip inner controls');
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      if (!nf.includes("id: 'catalyst-links-supply-2026-09-25'")) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'catalyst-links-supply-2026-09-25'");
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

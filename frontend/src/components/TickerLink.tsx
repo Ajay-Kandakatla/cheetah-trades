@@ -123,12 +123,13 @@ export function openTickerWithModifier(
   location: { pathname: string; search: string },
   ticker: string,
   fromLabel?: string,
+  /** Same as the component's `tab` — rides as `?tab=`. Omit for the default. */
+  tab?: string,
 ) {
   // Same derivation as the component: the new-tab branch below starts with no
   // state and no history, so ?from= is the ONLY thing its back button can use.
-  const url = withSource(`/sepa/${encodeURIComponent(ticker)}`,
-                         sourceKeyFor(location.pathname) || '',
-                         location.search);
+  const base = `/sepa/${encodeURIComponent(ticker)}${tab ? `?tab=${encodeURIComponent(tab)}` : ''}`;
+  const url = withSource(base, sourceKeyFor(location.pathname) || '', location.search);
   if (e && (e.metaKey || e.ctrlKey || e.shiftKey || (e as any).button === 1)) {
     window.open(url, '_blank', 'noopener,noreferrer');
     return;

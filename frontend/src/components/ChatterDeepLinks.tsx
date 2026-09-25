@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 type Props = {
   ticker: string;
@@ -8,6 +8,9 @@ type Props = {
   compact?: boolean;
   className?: string;
   style?: CSSProperties;
+  /** Compact mode only: an in-app control rendered FIRST in the icon row —
+   *  the Catalysts cards put their 🔎 deep-dive here (2026-09-25). */
+  lead?: ReactNode;
 };
 
 /**
@@ -21,7 +24,7 @@ type Props = {
  *             so the user can jump straight from a catalyst card without
  *             expanding the whole panel
  */
-export function ChatterDeepLinks({ ticker, subreddits, compact, className, style }: Props) {
+export function ChatterDeepLinks({ ticker, subreddits, compact, className, style, lead }: Props) {
   const t = encodeURIComponent(ticker);
   const redditQ = encodeURIComponent(`"${ticker}" OR "$${ticker}"`);
 
@@ -59,6 +62,7 @@ export function ChatterDeepLinks({ ticker, subreddits, compact, className, style
   if (compact) {
     return (
       <span className={`cdl cdl--compact${className ? ' ' + className : ''}`} style={style}>
+        {lead}
         {links.map((l) => (
           <a
             key={l.key}

@@ -1,6 +1,7 @@
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMemo, useState } from 'react';
-import { TickerLink } from '../components/TickerLink';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import { TickerLink, openTickerWithModifier } from '../components/TickerLink';
 import { GrowthChip } from '../components/GrowthChip';
 import { PromoOriginChip } from '../components/PromoOriginChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -114,6 +115,13 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   const [drillTicker, setDrillTicker] = useState<string | null>(null);
   const [manualTicker, setManualTicker] = useState('');
+  /* Every ticker on this board opens its Supply & Demand tab (Ajay
+   * 2026-09-25). Rows and cards that cannot be an <a> go through here, which
+   * still honours ⌘ / Ctrl / Shift / middle-click as "new tab". */
+  const navigate = useNavigate();
+  const location = useLocation();
+  const openSupply: OnTicker = (t, e) =>
+    openTickerWithModifier(e, navigate, location, t, 'Catalysts', CATALYST_TICKER_TAB);
   const [playbookOpen, setPlaybookOpen] = useState(false);
 
   // Volume alerts feed (always polling, regardless of tab) — fires browser
@@ -178,7 +186,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
 
       {/* Volume alert toaster — always visible regardless of tab */}
       {volumeAlerts.length > 0 && (
-        <VolumeAlertToaster alerts={volumeAlerts} onClick={(t) => setDrillTicker(t)} />
+        <VolumeAlertToaster alerts={volumeAlerts} onClick={openSupply} />
       )}
 
       {/* Top tabs: Predictions / Now / Pre-market / Calendar / Timeline */}
@@ -242,19 +250,19 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
       </div>
 
       {tab === 'predictions' && (
-        <PredictionsView onClickTicker={(t) => setDrillTicker(t)} />
+        <PredictionsView onDeepDive={setDrillTicker} />
       )}
       {tab === 'frenzy' && (
-        <FrenzyRadarView onClickTicker={(t) => setDrillTicker(t)} />
+        <FrenzyRadarView onDeepDive={setDrillTicker} />
       )}
       {tab === 'premarket' && (
-        <PremarketView onClickTicker={(t) => setDrillTicker(t)} />
+        <PremarketView onOpen={openSupply} onDeepDive={setDrillTicker} />
       )}
       {tab === 'calendar' && (
-        <CalendarView onClickTicker={(t) => setDrillTicker(t)} />
+        <CalendarView />
       )}
       {tab === 'timeline' && (
-        <TimelineView onClickTicker={(t) => setDrillTicker(t)} />
+        <TimelineView onOpen={openSupply} />
       )}
       {tab === 'russell' && <RussellWatch />}
       {tab === 'promo' && <PromoCircuit />}
@@ -464,7 +472,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
           <CandidateCard key={c.ticker} c={c} br={br.get(c.ticker.toUpperCase())}
                          study={brPayload?.explosive_study}
                          bandStudy={brPayload?.band_structure_study}
-                         onClick={() => setDrillTicker(c.ticker)} />
+                         onOpen={openSupply} onDeepDive={setDrillTicker} />
         ))}
       </div>
 
@@ -531,11 +539,59 @@ export function CatalystsPage() {
 }
 
 
+// ---- Ticker → Supply & Demand ------------------------------------------
+
+/* Ajay 2026-09-25: "make all the catalyst pages to be going to Ticker supply
+ * and demand". Every ticker on every Catalysts sub-tab opens /sepa/SYM on the
+ * Supply & Demand tab — the name itself, the card around it, and the row it
+ * sits in. The deep-dive drawer (chatter, news, SEC filings, insiders) that a
+ * click used to open is one 🔎 away on the cards, and the "deep-dive" box in
+ * the bar still opens it for any symbol. Russell and Promo already linked here. */
+export const CATALYST_TICKER_TAB = 'supply';
+
+type OnTicker = (t: string, e?: ReactMouseEvent) => void;
+
+/** A click that landed on a link, button or field INSIDE a clickable card or
+ *  row belongs to that control, not to the card — without this the chips'
+ *  own links (StockTwits, Reddit, the 🔎) would also navigate the page. */
+export function isInnerControl(e: ReactMouseEvent): boolean {
+  const target = e.target as HTMLElement | null;
+  const hit = target?.closest?.('a, button, input, select, textarea, label, [role="button"]');
+  return !!hit && hit !== e.currentTarget && (e.currentTarget as HTMLElement).contains(hit);
+}
+
+/** The ticker as a real <a> to its Supply & Demand tab, so ⌘-click,
+ *  middle-click and right-click → "Open in new tab" all work. */
+function CatTicker({ ticker, className, children }: {
+  ticker: string; className?: string; children?: ReactNode;
+}) {
+  return (
+    <TickerLink ticker={ticker} tab={CATALYST_TICKER_TAB} fromLabel="Catalysts"
+                showWatchlist={false} className={className}
+                title={`${ticker} — Supply & Demand (Cmd/Ctrl-click for new tab)`}>
+      {children ?? ticker}
+    </TickerLink>
+  );
+}
+
+/** 🔎 — the catalyst deep-dive drawer the ticker click used to open. */
+function DeepDiveButton({ ticker, onDeepDive }: { ticker: string; onDeepDive: (t: string) => void }) {
+  return (
+    <button type="button" className="cdl__icon cat-deepdive-btn"
+            title="Catalyst deep-dive: chatter, news, SEC filings, insiders"
+            aria-label={`Catalyst deep-dive for ${ticker}`}
+            onClick={(e) => { e.stopPropagation(); onDeepDive(ticker); }}>
+      🔎
+    </button>
+  );
+}
+
+
 // ---- CandidateCard ----------------------------------------------------
 
-function CandidateCard({ c, br, study, bandStudy, onClick }: {
+function CandidateCard({ c, br, study, bandStudy, onOpen, onDeepDive }: {
   c: Candidate; br?: BounceRoomRow; study?: ExplosiveStudy | null;
-  bandStudy?: BandStructureStudy | null; onClick: () => void;
+  bandStudy?: BandStructureStudy | null; onOpen: OnTicker; onDeepDive: (t: string) => void;
 }) {
   const isUp = c.change_pct > 0;
   const cap = c.market_cap;
@@ -548,11 +604,12 @@ function CandidateCard({ c, br, study, bandStudy, onClick }: {
   const bounceText = bounceLabel(br);
 
   return (
-    <article className={`cat-card cat-card--${c.quadrant.toLowerCase()}`} onClick={onClick}>
+    <article className={`cat-card cat-card--${c.quadrant.toLowerCase()}`}
+             onClick={(e) => { if (!isInnerControl(e)) onOpen(c.ticker, e); }}>
       <header className="cat-card__head">
         <div>
           <h3 className="cat-card__ticker">
-            {c.ticker}
+            <CatTicker ticker={c.ticker} />
             {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
@@ -642,7 +699,8 @@ function CandidateCard({ c, br, study, bandStudy, onClick }: {
 
       {/* External chatter quick-jumps — sit in card chrome so the user
           doesn't have to expand the deep-dive to read posts */}
-      <ChatterDeepLinks ticker={c.ticker} compact />
+      <ChatterDeepLinks ticker={c.ticker} compact
+                        lead={<DeepDiveButton ticker={c.ticker} onDeepDive={onDeepDive} />} />
     </article>
   );
 }
@@ -835,11 +893,12 @@ function DeepDivePanel({ ticker, onClose }: { ticker: string; onClose: () => voi
               <footer className="ntp-footer">
                 <TickerLink
                   ticker={data.ticker}
+                  tab={CATALYST_TICKER_TAB}
                   fromLabel="Catalysts"
                   className="ntp-action ntp-action--primary"
-                  title="Open full SEPA detail (Cmd/Ctrl-click for new tab)"
+                  title="Open this ticker's Supply & Demand tab (Cmd/Ctrl-click for new tab)"
                 >
-                  Open full SEPA detail →
+                  Open Supply &amp; Demand →
                 </TickerLink>
               </footer>
             </>
@@ -862,7 +921,7 @@ function DeepDivePanel({ ticker, onClose }: { ticker: string; onClose: () => voi
 // VolumeAlertToaster — floating banner with today's fired alerts
 // ====================================================================
 
-function VolumeAlertToaster({ alerts, onClick }: { alerts: VolumeAlert[]; onClick: (t: string) => void }) {
+function VolumeAlertToaster({ alerts, onClick }: { alerts: VolumeAlert[]; onClick: OnTicker }) {
   const [collapsed, setCollapsed] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const visible = alerts.filter((a) => !dismissed.has(a.ticker));
@@ -881,8 +940,9 @@ function VolumeAlertToaster({ alerts, onClick }: { alerts: VolumeAlert[]; onClic
           {visible.slice(0, 8).map((a) => {
             const p = a.payload || {};
             return (
-              <li key={a.ticker + (a.fired_at ?? '')} className="vat__item" onClick={() => onClick(a.ticker)}>
-                <strong className="vat__ticker">{a.ticker}</strong>
+              <li key={a.ticker + (a.fired_at ?? '')} className="vat__item"
+                  onClick={(e) => { if (!isInnerControl(e)) onClick(a.ticker, e); }}>
+                <strong className="vat__ticker"><CatTicker ticker={a.ticker} /></strong>
                 <span className="vat__surge mono">{p.surge?.toFixed(1)}× vol</span>
                 <span className={`vat__chg mono ${(p.change_pct ?? 0) > 0 ? 'pos' : 'neg'}`}>
                   {(p.change_pct ?? 0) > 0 ? '+' : ''}{(p.change_pct ?? 0).toFixed(1)}%
@@ -909,7 +969,7 @@ function VolumeAlertToaster({ alerts, onClick }: { alerts: VolumeAlert[]; onClic
 // PremarketView — pre-market gappers
 // ====================================================================
 
-function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }) {
+function PremarketView({ onOpen, onDeepDive }: { onOpen: OnTicker; onDeepDive: (t: string) => void }) {
   const { data, loading, refetch } = usePremarketScan();
   /* 🧨 This view has its own list, so it makes its own single bounce-room
    * POST — one per list, never one per card. */
@@ -972,7 +1032,7 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
       {data && data.candidates.length > 0 && (
         <div className="cat-grid">
           {prePart.rows.map((c) => (
-            <PremarketCard key={c.ticker} c={c} onClick={() => onClickTicker(c.ticker)}
+            <PremarketCard key={c.ticker} c={c} onOpen={onOpen} onDeepDive={onDeepDive}
                            br={preBr.get(c.ticker.toUpperCase())} study={prePayload?.explosive_study}
                            bandStudy={prePayload?.band_structure_study} />
           ))}
@@ -990,8 +1050,8 @@ function PremarketView({ onClickTicker }: { onClickTicker: (t: string) => void }
   );
 }
 
-function PremarketCard({ c, onClick, br, study, bandStudy }: {
-  c: PremarketCandidate; onClick: () => void;
+function PremarketCard({ c, onOpen, onDeepDive, br, study, bandStudy }: {
+  c: PremarketCandidate; onOpen: OnTicker; onDeepDive: (t: string) => void;
   br?: BounceRoomRow; study?: ExplosiveStudy | null;
   bandStudy?: BandStructureStudy | null;
 }) {
@@ -999,11 +1059,12 @@ function PremarketCard({ c, onClick, br, study, bandStudy }: {
   const cap = c.market_cap;
   const capStr = cap ? (cap >= 1e9 ? `$${(cap / 1e9).toFixed(1)}B` : `$${(cap / 1e6).toFixed(0)}M`) : '—';
   return (
-    <article className="cat-card cat-card--premarket" onClick={onClick}>
+    <article className="cat-card cat-card--premarket"
+             onClick={(e) => { if (!isInnerControl(e)) onOpen(c.ticker, e); }}>
       <header className="cat-card__head">
         <div>
           <h3 className="cat-card__ticker">
-            {c.ticker}
+            <CatTicker ticker={c.ticker} />
             {/* 🚀 also on the Explosive Growth board (Ajay 2026-09-11: "ALL
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
@@ -1032,6 +1093,9 @@ function PremarketCard({ c, onClick, br, study, bandStudy }: {
       <p className="cat-card__summary">
         Pre-market gap on {c.ticker}. Wait for market open to confirm — pre-market spikes can fake out without a volume floor. Watch first 30 min for VWAP retest.
       </p>
+      <span className="cdl cdl--compact">
+        <DeepDiveButton ticker={c.ticker} onDeepDive={onDeepDive} />
+      </span>
     </article>
   );
 }
@@ -1041,7 +1105,7 @@ function PremarketCard({ c, onClick, br, study, bandStudy }: {
 // CalendarView — forward catalyst calendar (timeline)
 // ====================================================================
 
-function CalendarView({ onClickTicker }: { onClickTicker: (t: string) => void }) {
+function CalendarView() {
   const { data, loading, forceRefresh } = useCatalystCalendar(30);
   const [filter, setFilter] = useState<'all' | 'earnings' | 'fda' | 'macro'>('all');
 
@@ -1106,7 +1170,7 @@ function CalendarView({ onClickTicker }: { onClickTicker: (t: string) => void })
             <div className="cat-tl-date mono">{formatDate(date)}</div>
             <div className="cat-tl-events">
               {evs.map((e, i) => (
-                <CalendarEventCard key={i} ev={e} onClickTicker={onClickTicker} />
+                <CalendarEventCard key={i} ev={e} />
               ))}
             </div>
           </div>
@@ -1123,7 +1187,7 @@ function formatDate(iso: string): string {
   } catch { return iso; }
 }
 
-function CalendarEventCard({ ev, onClickTicker }: { ev: CalendarEvent; onClickTicker: (t: string) => void }) {
+function CalendarEventCard({ ev }: { ev: CalendarEvent }) {
   const typeLabel = ev.type === 'earnings' ? '📊 Earnings'
     : ev.type === 'fda_readout' ? '🧬 FDA / Clinical'
     : '🏛️ Macro';
@@ -1132,9 +1196,7 @@ function CalendarEventCard({ ev, onClickTicker }: { ev: CalendarEvent; onClickTi
       <div className="cat-tl-event__type">{typeLabel}</div>
       <div className="cat-tl-event__title">
         {ev.ticker ? (
-          <button type="button" className="cat-tl-event__ticker" onClick={() => onClickTicker(ev.ticker!)}>
-            {ev.ticker}
-          </button>
+          <CatTicker ticker={ev.ticker} className="cat-tl-event__ticker" />
         ) : null}
         {' '}
         {ev.url ? <a href={ev.url} target="_blank" rel="noreferrer">{ev.title} ↗</a> : ev.title}
@@ -1206,7 +1268,7 @@ function InsidersSection({ ticker }: { ticker: string }) {
 // + stalled tickers
 // ====================================================================
 
-function TimelineView({ onClickTicker }: { onClickTicker: (t: string) => void }) {
+function TimelineView({ onOpen }: { onOpen: OnTicker }) {
   const { data: timeline, loading: tlLoading } = useCatalystTimeline();
   const { data: stale, loading: stLoading } = useCatalystStale(3);
   const { data: multiDay, loading: mdLoading } = useCatalystMultiDayAccumulators(3, 10);
@@ -1244,7 +1306,7 @@ function TimelineView({ onClickTicker }: { onClickTicker: (t: string) => void })
             </thead>
             <tbody>
               {multiDay.accumulators.map((a) => (
-                <MultiDayAccumRow key={a.ticker} a={a} onClick={() => onClickTicker(a.ticker)} />
+                <MultiDayAccumRow key={a.ticker} a={a} onOpen={onOpen} />
               ))}
             </tbody>
           </table>
@@ -1285,7 +1347,7 @@ function TimelineView({ onClickTicker }: { onClickTicker: (t: string) => void })
         {timeline && timeline.events.length > 0 && (
           <ol className="cat-tl-events">
             {timeline.events.slice().reverse().map((e, i) => (
-              <TimelineEventRow key={i} e={e} onClick={onClickTicker} />
+              <TimelineEventRow key={i} e={e} />
             ))}
           </ol>
         )}
@@ -1311,21 +1373,21 @@ function TimelineView({ onClickTicker }: { onClickTicker: (t: string) => void })
               hint="REAL or OVERLOOKED — quality signal sustained for hours"
               records={stale.stable_winners}
               borderColor="var(--positive)"
-              onClick={onClickTicker}
+              onOpen={onOpen}
             />
             <StaleBucket
               title="⚠️ Stalled chatter"
               hint="PUMP_RISK — chatter not converting to evidence (often means the pump is fading)"
               records={stale.stalled_chatter}
               borderColor="#fb923c"
-              onClick={onClickTicker}
+              onOpen={onOpen}
             />
             <StaleBucket
               title="💤 Ambient dead"
               hint="DEAD — moves with no chatter or evidence follow-up"
               records={stale.ambient_dead}
               borderColor="var(--ink-subtle)"
-              onClick={onClickTicker}
+              onOpen={onOpen}
             />
           </div>
         )}
@@ -1335,14 +1397,14 @@ function TimelineView({ onClickTicker }: { onClickTicker: (t: string) => void })
 }
 
 
-function MultiDayAccumRow({ a, onClick }: { a: MultiDayAccumulator; onClick: () => void }) {
+function MultiDayAccumRow({ a, onOpen }: { a: MultiDayAccumulator; onOpen: OnTicker }) {
   const cap = a.market_cap;
   const capStr = cap ? (cap >= 1e9 ? `$${(cap / 1e9).toFixed(1)}B` : `$${(cap / 1e6).toFixed(0)}M`) : '—';
   const labelClass = a.accumulation_score >= 60 ? 'pos strong' : a.accumulation_score >= 30 ? 'pos' : '';
   return (
-    <tr onClick={onClick} className="cat-tl-row">
+    <tr onClick={(e) => { if (!isInnerControl(e)) onOpen(a.ticker, e); }} className="cat-tl-row">
       <td>
-        <strong className="cat-tl-ticker">{a.ticker}</strong>
+        <strong className="cat-tl-ticker"><CatTicker ticker={a.ticker} /></strong>
         {a.company_name && <div className="cat-tl-name">{a.company_name.slice(0, 30)}</div>}
       </td>
       <td className="mono cat-tl-num">
@@ -1376,7 +1438,7 @@ function MultiDayAccumRow({ a, onClick }: { a: MultiDayAccumulator; onClick: () 
 }
 
 
-function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: string) => void }) {
+function TimelineEventRow({ e }: { e: TimelineEvent }) {
   const time = new Date(e.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -1387,14 +1449,14 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
           <div className="cat-tl-row-line">
             <span className="cat-tl-tag cat-tl-tag--enter">🆕 New ({e.n_entered})</span>
             {e.entered.slice(0, 8).map((c, i) => (
-              <button key={i} type="button" className="cat-tl-chip" onClick={() => onClick(c.ticker)}>
+              <CatTicker key={i} ticker={c.ticker} className="cat-tl-chip">
                 {c.ticker}
                 {c.change_pct !== undefined && (
                   <span className={`mono ${(c.change_pct ?? 0) > 0 ? 'pos' : 'neg'}`}>
                     {' '}{(c.change_pct ?? 0) > 0 ? '+' : ''}{(c.change_pct ?? 0).toFixed(1)}%
                   </span>
                 )}
-              </button>
+              </CatTicker>
             ))}
           </div>
         )}
@@ -1402,9 +1464,9 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
           <div className="cat-tl-row-line">
             <span className="cat-tl-tag cat-tl-tag--chatter">⬆️ Chatter ({e.n_chatter_jumps})</span>
             {e.chatter_jumpers.slice(0, 6).map((c, i) => (
-              <button key={i} type="button" className="cat-tl-chip" onClick={() => onClick(c.ticker)}>
+              <CatTicker key={i} ticker={c.ticker} className="cat-tl-chip">
                 {c.ticker} <span className="mono pos">+{c.delta.toFixed(0)}</span>
-              </button>
+              </CatTicker>
             ))}
           </div>
         )}
@@ -1412,9 +1474,9 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
           <div className="cat-tl-row-line">
             <span className="cat-tl-tag cat-tl-tag--evidence">📈 Evidence ({e.n_evidence_jumps})</span>
             {e.evidence_jumpers.slice(0, 6).map((c, i) => (
-              <button key={i} type="button" className="cat-tl-chip" onClick={() => onClick(c.ticker)}>
+              <CatTicker key={i} ticker={c.ticker} className="cat-tl-chip">
                 {c.ticker} <span className="mono pos">+{c.delta.toFixed(0)}</span>
-              </button>
+              </CatTicker>
             ))}
           </div>
         )}
@@ -1422,9 +1484,9 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
           <div className="cat-tl-row-line">
             <span className="cat-tl-tag cat-tl-tag--quad">🔀 Quadrant ({e.n_quadrant_transitions})</span>
             {e.quadrant_transitions.slice(0, 6).map((q, i) => (
-              <button key={i} type="button" className="cat-tl-chip" onClick={() => onClick(q.ticker)}>
+              <CatTicker key={i} ticker={q.ticker} className="cat-tl-chip">
                 {q.ticker} <span className="mono">{q.from_quadrant} → {q.to_quadrant}</span>
-              </button>
+              </CatTicker>
             ))}
           </div>
         )}
@@ -1432,9 +1494,9 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
           <div className="cat-tl-row-line">
             <span className="cat-tl-tag cat-tl-tag--phase">🔁 Phase ({e.n_phase_transitions})</span>
             {e.phase_transitions.slice(0, 6).map((p, i) => (
-              <button key={i} type="button" className="cat-tl-chip" onClick={() => onClick(p.ticker)}>
+              <CatTicker key={i} ticker={p.ticker} className="cat-tl-chip">
                 {p.ticker} <span className="mono">{p.from_phase} → {p.to_phase}</span>
-              </button>
+              </CatTicker>
             ))}
           </div>
         )}
@@ -1442,7 +1504,7 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
           <div className="cat-tl-row-line">
             <span className="cat-tl-tag cat-tl-tag--exit">↘️ Dropped ({e.n_exited})</span>
             {e.exited.slice(0, 8).map((c, i) => (
-              <span key={i} className="cat-tl-chip cat-tl-chip--muted">{c.ticker}</span>
+              <CatTicker key={i} ticker={c.ticker} className="cat-tl-chip cat-tl-chip--muted" />
             ))}
           </div>
         )}
@@ -1452,8 +1514,8 @@ function TimelineEventRow({ e, onClick }: { e: TimelineEvent; onClick: (t: strin
 }
 
 
-function StaleBucket({ title, hint, records, borderColor, onClick }:
-  { title: string; hint: string; records: StaleRecord[]; borderColor: string; onClick: (t: string) => void }) {
+function StaleBucket({ title, hint, records, borderColor, onOpen }:
+  { title: string; hint: string; records: StaleRecord[]; borderColor: string; onOpen: OnTicker }) {
   return (
     <div className="cat-stale-bucket" style={{ borderLeftColor: borderColor }}>
       <div className="cat-stale-bucket__h">
@@ -1466,8 +1528,8 @@ function StaleBucket({ title, hint, records, borderColor, onClick }:
       ) : (
         <ul className="cat-stale-list">
           {records.slice(0, 8).map((r) => (
-            <li key={r.ticker} onClick={() => onClick(r.ticker)} className="cat-stale-row">
-              <strong>{r.ticker}</strong>
+            <li key={r.ticker} onClick={(e) => { if (!isInnerControl(e)) onOpen(r.ticker, e); }} className="cat-stale-row">
+              <strong><CatTicker ticker={r.ticker} /></strong>
               <span className="mono cat-stale-hours">{r.hours_on_list}h</span>
               <span className={`mono ${(r.change_pct ?? 0) > 0 ? 'pos' : 'neg'}`}>
                 {(r.change_pct ?? 0) > 0 ? '+' : ''}{(r.change_pct ?? 0).toFixed(1)}%
@@ -1513,7 +1575,7 @@ const TIER_HINTS: Record<PredictionTier, string> = {
 };
 
 
-function PredictionsView({ onClickTicker }: { onClickTicker: (t: string) => void }) {
+function PredictionsView({ onDeepDive }: { onDeepDive: (t: string) => void }) {
   const { data, loading, refreshing, forceRefresh } = usePredictions(5 * 60_000);
   const [tierFilter, setTierFilter] = useState<PredictionTier | 'ALL'>('ALL');
 
@@ -1578,7 +1640,7 @@ function PredictionsView({ onClickTicker }: { onClickTicker: (t: string) => void
 
       <div className="cat-pred-grid">
         {filtered.map((p) => (
-          <PredictionCard key={p.ticker} p={p} onClickTicker={onClickTicker} />
+          <PredictionCard key={p.ticker} p={p} onDeepDive={onDeepDive} />
         ))}
       </div>
     </div>
@@ -1586,7 +1648,7 @@ function PredictionsView({ onClickTicker }: { onClickTicker: (t: string) => void
 }
 
 
-function PredictionCard({ p, onClickTicker }: { p: Prediction; onClickTicker: (t: string) => void }) {
+function PredictionCard({ p, onDeepDive }: { p: Prediction; onDeepDive: (t: string) => void }) {
   const tierColor = TIER_COLORS[p.conviction_tier];
   const isUp = (p.change_pct ?? 0) > 0;
   const cap = p.market_cap;
@@ -1599,13 +1661,7 @@ function PredictionCard({ p, onClickTicker }: { p: Prediction; onClickTicker: (t
     >
       <header className="cat-pred-card__head">
         <div className="cat-pred-card__main">
-          <button
-            type="button"
-            className="cat-pred-card__ticker"
-            onClick={() => onClickTicker(p.ticker)}
-          >
-            {p.ticker}
-          </button>
+          <CatTicker ticker={p.ticker} className="cat-pred-card__ticker" />
           {p.company_name && <span className="cat-pred-card__name">{p.company_name.slice(0, 40)}</span>}
         </div>
         <div className="cat-pred-card__score">
@@ -1672,7 +1728,8 @@ function PredictionCard({ p, onClickTicker }: { p: Prediction; onClickTicker: (t
       )}
 
       {/* Quick external chatter jumps */}
-      <ChatterDeepLinks ticker={p.ticker} compact />
+      <ChatterDeepLinks ticker={p.ticker} compact
+                        lead={<DeepDiveButton ticker={p.ticker} onDeepDive={onDeepDive} />} />
     </article>
   );
 }
@@ -1715,7 +1772,7 @@ const FRENZY_SIGNAL_LABELS: Record<string, string> = {
 };
 
 
-function FrenzyRadarView({ onClickTicker }: { onClickTicker: (t: string) => void }) {
+function FrenzyRadarView({ onDeepDive }: { onDeepDive: (t: string) => void }) {
   const { data, loading, refetch } = useFrenzyRadar(2 * 60_000);
   const [tierFilter, setTierFilter] = useState<FrenzyTier | 'ALL'>('ALL');
 
@@ -1790,7 +1847,7 @@ function FrenzyRadarView({ onClickTicker }: { onClickTicker: (t: string) => void
 
       <div className="cat-pred-grid">
         {filtered.map((c) => (
-          <FrenzyCard key={c.ticker} c={c} onClickTicker={onClickTicker} />
+          <FrenzyCard key={c.ticker} c={c} onDeepDive={onDeepDive} />
         ))}
       </div>
     </div>
@@ -1798,7 +1855,7 @@ function FrenzyRadarView({ onClickTicker }: { onClickTicker: (t: string) => void
 }
 
 
-function FrenzyCard({ c, onClickTicker }: { c: FrenzyCandidate; onClickTicker: (t: string) => void }) {
+function FrenzyCard({ c, onDeepDive }: { c: FrenzyCandidate; onDeepDive: (t: string) => void }) {
   const tierColor = FRENZY_TIER_COLORS[c.tier];
   const isUp = (c.change_pct ?? 0) > 0;
   const cap = c.market_cap;
@@ -1811,13 +1868,7 @@ function FrenzyCard({ c, onClickTicker }: { c: FrenzyCandidate; onClickTicker: (
     >
       <header className="cat-pred-card__head">
         <div className="cat-pred-card__main">
-          <button
-            type="button"
-            className="cat-pred-card__ticker"
-            onClick={() => onClickTicker(c.ticker)}
-          >
-            {c.ticker}
-          </button>
+          <CatTicker ticker={c.ticker} className="cat-pred-card__ticker" />
           {c.company_name && <span className="cat-pred-card__name">{c.company_name.slice(0, 40)}</span>}
         </div>
         <div className="cat-pred-card__score">
@@ -1872,7 +1923,8 @@ function FrenzyCard({ c, onClickTicker }: { c: FrenzyCandidate; onClickTicker: (
         </div>
       )}
 
-      <ChatterDeepLinks ticker={c.ticker} compact />
+      <ChatterDeepLinks ticker={c.ticker} compact
+                        lead={<DeepDiveButton ticker={c.ticker} onDeepDive={onDeepDive} />} />
     </article>
   );
 }
