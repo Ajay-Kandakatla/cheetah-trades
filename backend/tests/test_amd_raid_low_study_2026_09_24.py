@@ -1003,3 +1003,34 @@ def test_a1_13_amendment_source_guard():
     body = SRC[SRC.index("def balance_gate"):SRC.index("def date_split")]
     assert "for v in MATCH_VARS" in body
     assert "2026-09-25, before any outcome" in S.AMENDMENT_1
+
+
+# ── The committed result (full run 2026-09-25/26) ────────────────────────────
+_MEASURED = pathlib.Path(S.__file__).with_name("amd_raid_low_measured.json")
+_PREREG_SHA = "b90edd9f3a219ed1bfb7700677ce37af6e05fd3b"
+
+
+def test_committed_result_came_from_this_script_at_the_prereg_commit():
+    """The JSON the doc quotes was written by THIS script, run at the
+    pre-registration commit — an edit to the script after the run breaks the
+    pairing instead of silently re-labelling an old number."""
+    d = json.loads(_MEASURED.read_text())
+    assert d["git_head"] == _PREREG_SHA
+    assert d["script_sha256"] == S._sha256_file(S.__file__)
+    assert d["amd_sha256"] == S._sha256_file(A.__file__)
+    assert d["balance"]["balanced"] is True
+
+
+def test_committed_verdict_is_the_mechanical_one_and_the_doc_says_it():
+    """NEGATIVE — the printed status is `verdict()`'s output, never hand-edited;
+    re-running the rule on the committed numbers must give the same status, and
+    the doc must not call it anything stronger."""
+    d = json.loads(_MEASURED.read_text())
+    assert d["verdict"]["status"] == "no_signal"
+    assert d["verdict"]["tags"] == []
+    assert d["primary"]["diff_ci"][0] < 0 < d["primary"]["diff_ci"][1]   # neither edge nor inverted
+    doc = (pathlib.Path(S.__file__).parents[2] / "docs" / "supply_demand"
+           / "amd_raid_low_study_2026_09_24.md").read_text()
+    results = doc[doc.index("## 5. Results"):doc.index("## 6.")]
+    assert "NO_SIGNAL" in results and "Results — NOT RUN" not in doc
+    assert not re.search(r"\bEDGE\b|\bINVERTED\b", results)

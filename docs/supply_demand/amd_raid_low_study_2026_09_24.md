@@ -290,9 +290,88 @@ Descriptive facts known before the run (read-only probe, no outcome computed):
 - Geometry: raid low under the edge (`depth_pct`) median **0.69%** (p10 0.13, p90 3.00) — the brief's "~1-4% apart" is wrong; raid low under the raid close median 2.23%; raid low to base top median 12.0% (p10 5.5, p90 24.2).
 - ORCL fixture, t ≥ 120: prefix vs 120/100/60/40-bar slices, 0 raid-field and 0 `open_base` mismatches (chain fields were not compared).
 
-## 5. Results — NOT RUN
+## 5. Results — RUN 2026-09-25 21:22 → 2026-09-26 00:55 ET · **NO_SIGNAL**
 
-Filled in from `amd_raid_low_measured.json` after the full run: the headline line verbatim from the `stats` output, then primary (E1 mean per fill, P1 mean, lift with CI, MDL, excess over RSP with CI), fills, stop-outs, balance, stability (halves, one-per-date/symbol, same-symbol, drop-one-block, largest block), survivorship, and the secondary rows labelled SECONDARY.
+From `backend/scripts/amd_raid_low_measured.json`, written by `stats` at `--git-head b90edd9` (the pre-registration commit; `script_sha256` 507bf9ad…, `amd_sha256` 18bd410a… = the image's, the worktree's and the live api's `amd.py`). AS_OF 2026-09-25. Run in the two steps of §4. Nothing in §3 was changed after the first `stats` print.
+
+**Headline (verbatim from `stats`):**
+
+> 🌀 Raid-low entry (buy limit at the raid low for 3 sessions, filled only when price trades below it, stop 0.5% under): NO_SIGNAL — matched raids +0.02% per fill vs +0.03% at an ordinary base low · lift -0.01pp [-0.06, +0.03] · all raid fills +0.03% · vs RSP +0.10pp [-0.06, +0.26] · filled 57% vs 60% · stopped 95%
+
+**Verdict (mechanical, §3.8):** `no_signal`, tags none, failed (a) (b) (c) (c2) (d) (e). (f) and (g) passed. Balanced, so `inverted` was callable and was not met: the lift CI straddles zero.
+
+### 5.1 Step 1: the gate, features only (no outcome existed)
+- Walked 5,744 names (29 skipped `bad_ohlc`); 87,111 events (`bad_event` 0), 454,963 pool rows; 2017-03-16 .. 2026-09-25, 1,091 sessions. `in_study` list 3,766, walked 3,738; 1,663 ended names.
+- In study: 57,780 evaluable events, 5,473 open (excluded, counted), 60 terminal.
+- PIT check (50 names, 760 events): set / attr / history / `open_base` mismatches all 0. Snapshot verify: 0 docs moved, 0 bars differ (both steps).
+- **Amendment 1 match: 53,605 matched (92.8%), 3,416 widened, 4,175 unmatched. SMD rho +0.057, delta +0.014, nu −0.060 → BALANCED** (the stride-25 re-smoke's IMBALANCED was the sparse-density false stop the amendment predicted). Filled subsets: rho +0.054, delta −0.017, nu −0.050. v1 cells (record only): rho +0.116, nu −0.168.
+
+### 5.2 Primary
+| | value |
+|---|---|
+| E1 mean per fill, all evaluable in_study | **+0.03%** [−0.07, +0.13], n 32,699 fills |
+| Matched E1 vs P1 (nearest twin, same date) | +0.02% vs +0.03% |
+| **Lift Δ** (widest of symbol [−0.05, +0.02] and date-block [−0.06, +0.03]) | **−0.01pp [−0.06, +0.03]**, MDL 0.06pp |
+| Excess over RSP (leg b) | +0.10pp [−0.06, +0.26], n 32,672 (no_bench 27) |
+| Fill rate E1 / P1 / E2 | 56.6% / 60.5% / 70.7%; E1 − P1 **−2.63pp [−3.31, −1.95]** |
+| E1 exits | stopped 94.7% (gap-stop 10.2%), target 5.0%, clock 0.3%, terminal 0.0% |
+| Win rate · median · trimmed mean | 5.3% · −0.50% · −0.17% |
+| Per-event expectancy (unfilled = 0) · mean fill delay | +0.02% · 1.48 sessions |
+| Unmatched 4,175 (7.2%, in the headline mean, not in Δ) | fill rate 40.2%, filled E1 mean +0.25% |
+
+### 5.3 Stability (point Δ)
+- Date halves −0.06pp / +0.03pp; symbol halves −0.01pp / −0.02pp; one-per-date −0.29pp; one-per-symbol +0.09pp; same-symbol twin (P1s) −0.03pp.
+- Drop-one-date-block: every one of the 18 runs is ≤ 0; minimum −0.03pp without 2026-03-09..04-07.
+- Largest block (2026-02-05..03-06, n 4,112): with it Δ −0.01pp [−0.06, +0.03], xs +0.10pp [−0.06, +0.26]; without it Δ −0.01pp [−0.06, +0.04], xs +0.13pp [−0.03, +0.30].
+- Survivorship (PARTIAL — `price_cache` holds only names the app ever cached, since ~2024-09): cache-all Δ +0.01pp (81,270 events); cache-only Δ −0.01pp (23,490); ended names Δ −0.01pp (19,859). Terminal rows: E1 645 fills, mean +0.12%; placebo 5,357 fills, mean −0.01%.
+
+### 5.4 SECONDARY — labelled, no verdict
+| Key | E1 mean per fill | Δ vs its placebo |
+|---|---|---|
+| S1 ATR-scaled stop | +0.12% [−0.10, +0.36] | −0.02pp [−0.09, +0.06] |
+| S2 1-ATR stop | +0.63% [−0.18, +1.49] | +0.07pp [−0.09, +0.24] |
+| X1 target = swept edge (no placebo) | −0.10% [−0.13, −0.06] | — |
+| X2 no target | +0.09% [−0.05, +0.23] | −0.01pp [−0.09, +0.08] |
+| X3 no stop, no target, 21 sessions | +2.76% [+1.04, +4.63] | +0.03pp [−0.29, +0.35] |
+| W10 window | +0.03% [−0.06, +0.13] | −0.03pp [−0.07, +0.01] |
+| W25 window | +0.04% [−0.05, +0.14] | −0.03pp [−0.07, +0.01] |
+| FT touch fill | +0.12% [+0.01, +0.24] | −0.03pp [−0.08, +0.02] |
+| Price ≥ $2 | +0.04% [−0.06, +0.14] | −0.00pp [−0.04, +0.04] |
+| First sweep | +0.03% [−0.07, +0.14] | +0.00pp [−0.06, +0.07] |
+| Re-sweep | +0.02% [−0.07, +0.14] | −0.03pp [−0.11, +0.04] |
+| CX cancels (no placebo) | +0.02% [−0.07, +0.12] | paired CX − E1 −0.00pp [−0.01, +0.00] |
+
+References: E0 (buy the raid close) +0.29% [−0.20, +0.74]; E0N (next open, 95.8% taken) +0.29% [−0.10, +0.67]; E2 (limit at the swept edge, 70.7% filled) +0.19% [−0.08, +0.50]. Paired per event: E1 − E0 −0.27pp [−0.68, +0.16]; E1 − E2 −0.12pp [−0.28, +0.03].
+
+Selection diagnostic (conditions on the future; descriptive only): E0 on events where the E1 limit later FILLED −2.22% [−2.49, −1.97]; where it never filled +3.57% [+3.08, +4.05]. Price trading back under the raid low is itself the bad news, which is why the limit at the low collects the losers. The HINDSIGHT row is in the JSON and is not quoted (§6).
+
+X3's E1 mean is the only primary-family mean whose CI clears zero, and the ordinary base low makes the same (+0.03pp [−0.29, +0.35]): it is the tape over 21 sessions, not the raid.
+
+### 5.5 His surface — the study's events are the tile's raids
+`--explain` against the bullish rows of `amd_raids` on `GET /chart-maps/support?symbol=X&studies=true` (live api, 2026-09-25 evening). Date, `raid_price` and `raid_level` agree to the cent on all seven:
+
+| Raid | L / E | Study |
+|---|---|---|
+| ORCL 2026-08-19 | 137.43 / 138.72 | unfilled (evaluable) |
+| ORCL 2026-09-01 | 139.95 / 141.02 | filled 09-02 at 139.95, target 153.99 on 09-03 (+10.03%) — but **open** (the 21-session hold runs past AS_OF), so excluded |
+| ORCL 2026-09-24 | 133.48 / 139.00 | open, excluded (today's raid) |
+| CRDO 2026-08-19 | 229.18 / 231.25 | filled 08-20, stopped the same bar, −0.50% |
+| CRDO 2026-07-28 | 184.68 / 185.865 | filled 07-29, stopped the same bar, −0.50% |
+| GLW 2026-08-19 | 150.70 / 150.73 | filled 08-20, stopped the same bar, −0.50% |
+| GLW 2026-06-09 | 166.00 / 172.43 | unfilled (evaluable) |
+
+### 5.6 Hand-audit (seed 20260925: 3 filled E1, 3 filled P1 draws, 1 terminal)
+All seven re-walked by `--explain` from the raw bars and checked by eye: fill bar strict, fill price `min(open, L)`, stop / target / terminal, `ret`. **7 / 7 correct.**
+- CAMT 2026-02-03, NKTX 2025-11-05, RNA 2026-05-19 (E1): filled next bar at L, low through S0 on the fill bar → stop at S0, −0.50%.
+- NET 2025-11-14, DNLI 2025-12-19 (P1): same, −0.50%. DNLI's first window bar printed a low EQUAL to L (16.81) → correctly NOT a fill (strict); filled the next bar.
+- RMNI 2025-12-24 (P1): fill-bar low 3.925 (prints 3.92 at 2 dp) is above S0 3.9203 → no fill-bar stop; the next bar opened 3.90 under S0 → exit at the open, −1.015%. Correct; the 2-dp print is what made it look wrong.
+- FFIC 2026-05-11 (terminal, ended name): opened 15.48 under L 15.54 → filled at the open; low through S0 15.4623 → −0.114%. Correct.
+
+### 5.7 What this does NOT say
+- It does not say raids are meaningless. It says **this entry** — a limit at the raid low, 0.5% stop, target the base top — earns what the same order at an ordinary low in the lower third of a base earns: about nothing, because 95% of fills are stopped within a session or two.
+- It does not test a wider stop as a claim. S2 (1 ATR) and X3 (no stop) are SECONDARY; neither beats its placebo.
+- It does not measure bearish (high) raids, the markup claim (`AMD_MEASURED`, −4.2pp) or any lane. No surface line, sort, alert or paper variant follows from it (§6, §7.6).
+- Survivorship is partial (§5.3).
 
 ## 6. What this can never say
 
