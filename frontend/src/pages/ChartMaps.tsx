@@ -37,7 +37,7 @@ import {
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   type CmBoard, type CmTab,
-  splitBlurb,
+  splitBlurb, BOARD_LIMIT,
 } from '../lib/chartMaps';
 // The room floor's TWO states come from the one shared list (2026-09-17) — the
 // same array the Back in Demand panel renders. See lib/bounceRoom.ts.
@@ -285,6 +285,11 @@ export function ChartMaps() {
       return next;
     }, { replace: true });
   }, [setParams]);
+  /* The SAME box for the five chart-card tabs (Ajay 2026-09-27: "Got on add
+   * it to all tabs now please" / "In chartmaps") — Holdings, POTUS, Signals,
+   * Session, 9 EMA W/M each take it as a prop and run their own ONE live
+   * request under their own tab key (hooks/useGexCards). Same URL key. */
+  const gexCtl = useMemo(() => ({ on: gexOn, onChange: setGexOn }), [gexOn, setGexOn]);
 
   /* ⊞ EXPAND ALL (his answer 2026-09-25: "Yes, off by default"). One page
    * answer for every card's ▸ more, remembered per browser the 🔥 Hottest way
@@ -344,9 +349,6 @@ export function ChartMaps() {
    * the turning one and dropped 86% of its own document. Multi-select, and
    * NOTHING selected normalises back to the server default (the turning grade)
    * rather than asking for an empty board — same rule as the level chips. */
-  /** The server's own ceiling (chart_maps.board.LIMIT_MAX). Asking for less is
- *  how "Showing 24 of 587" happened. */
-const BOARD_LIMIT = 80;
 
 const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const gradeSel = useMemo(() => parseGrades(params.get('grades')), [params]);
@@ -1139,7 +1141,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         /* Reads the SAME two demand boards, asked a different question. Picking
          * a row hands the symbol to the Support tab, which is where the drill-in
          * (bands, SMC cards, chart) already lives — one place per job. */
-        <SessionBoard onPick={(sym) => {
+        <SessionBoard gex={gexCtl} onPick={(sym) => {
           const next = new URLSearchParams(params);
           next.set('tab', 'support');
           next.set('symbol', sym);
@@ -1150,7 +1152,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * want to run these against them"). One Support-tab tile per name he
          * owns, his cost and typed stop drawn on each — its own fetcher, no
          * universe pass, so the board controls and the grid are skipped. */
-        <HoldingsBoard days={days ?? null} />
+        <HoldingsBoard days={days ?? null} gex={gexCtl} />
       ) : tab === 'ema_frames' ? (
         /* 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on
          * our charts for weekly charts and monthly charts please"). Its own
@@ -1158,7 +1160,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * grid and the sort / tier / room controls are skipped — those describe
          * a universe pass this tab does not run. The bars are WEEKLY or MONTHLY;
          * the current period is drawn as forming and says so. */
-        <EmaFramesBoard />
+        <EmaFramesBoard gex={gexCtl} />
       ) : tab === 'hot_pullback' ? (
         /* 🔥 Hot Pullback (Ajay 2026-09-09: "a new tab for hot pull back like
          * 21 day moving average drops but have a reversal from demand zones …
@@ -1179,7 +1181,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         /* The Signal Lab's working surface, mounted as a tab (Ajay 2026-09-01:
          * "add the signals tab inside chart maps"). Same component as the
          * /signal-lab page — one implementation, one watchlist. */
-        <SignalLabBoard />
+        <SignalLabBoard gex={gexCtl} />
       ) : tab === 'overnight' ? (
         /* The Day Trading page's overnight movers scan, mounted here because
          * this is where he starts the day (Ajay 2026-09-01: "I think we need a
@@ -1221,7 +1223,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
            editorial order, then the watch's HEURISTIC candidates — its own
            fetcher, no universe pass, so the board controls and the grid are
            skipped. */
-        <PotusBoard />
+        <PotusBoard gex={gexCtl} />
       ) : tab === 'growth' ? (
         /* 🚀 Explosive Growth (Ajay 2026-09-11: 100%+ sales AND 100%+ quarterly
          * EPS, "I wanna know when ever these are in demand, separately just

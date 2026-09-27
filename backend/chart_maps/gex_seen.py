@@ -3,7 +3,9 @@
 Ajay 2026-09-27: "Only Chart Maps names nightly". Every `board()` call records
 the symbols it served into Mongo `chart_maps_seen`, one doc per (ET date, tab):
 `_id="2026-09-28:zones"`, `{date_et, tab, symbols: [...], updated_at}`.
-`symbols` is ordered by LAST SEEN, oldest first: each record moves the names it
+The five chart-card tabs that board() does not serve (CARD_TABS: holdings,
+POTUS, Signals, Session, 9 EMA W/M) are recorded by POST /chart-maps/gex-live
+instead, under the same key shape. `symbols` is ordered by LAST SEEN, oldest first: each record moves the names it
 served to the end (one atomic pipeline update, no duplicates), so the per-tab
 cap in `recent_symbols` keeps the names on screen latest — the ones showing at
 the close — not the day's first 80 (critic 2026-09-27). The
@@ -26,6 +28,20 @@ log = logging.getLogger("chart_maps.gex_seen")
 
 COLL = "chart_maps_seen"
 ET = ZoneInfo("America/New_York")
+
+# The five Chart Maps tabs that draw the same chart card but are NOT served by
+# board.board() (Ajay 2026-09-27: "Got on add it to all tabs now please" /
+# "In chartmaps"). board() records its own tabs; these are recorded by
+# POST /chart-maps/gex-live when the tab asks for its live read, under the same
+# per-tab cap and the same last-seen order. Keys = the frontend CM_TABS keys.
+CARD_TABS = ("holdings", "potus", "signals", "session", "ema_frames")
+
+
+def seen_tabs() -> tuple:
+    """Every tab whose served names the nightly sweep covers: board.TABS
+    first (their order unchanged), then CARD_TABS."""
+    from chart_maps import board as B
+    return tuple(B.TABS) + tuple(t for t in CARD_TABS if t not in B.TABS)
 
 
 def _coll(coll=None):
@@ -93,8 +109,9 @@ def recent_symbols(days: Optional[int] = None, per_tab: Optional[int] = None,
     gex_history.NIGHTLY_MAX_AGE_DAYS). PER TAB: newest date first, and inside
     a day most recently seen first (the stored list read back to front),
     deduped, at most `per_tab` (default board.LIMIT_MAX); then the
-    union across tabs in board.TABS order, deduped. No global cut, so no tab
-    is ever cut for its name's place in the alphabet. [] on failure."""
+    union across tabs in seen_tabs() order (board.TABS, then CARD_TABS),
+    deduped. No global cut, so no tab is ever cut for its name's place in the
+    alphabet. A doc under any other tab key is ignored. [] on failure."""
     try:
         from options import gex_history as GH
         from chart_maps import board as B
@@ -111,7 +128,7 @@ def recent_symbols(days: Optional[int] = None, per_tab: Optional[int] = None,
             if tab:
                 by_tab.setdefault(tab, []).append(doc)
         out, seen = [], set()
-        for tab in B.TABS:
+        for tab in seen_tabs():
             kept = []
             for doc in sorted(by_tab.get(tab) or [],
                               key=lambda x: str(x.get("date_et") or ""),

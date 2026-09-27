@@ -16,6 +16,13 @@
  * refreshes every 45s while a session is on (premarket/regular/afterhours)
  * and sits still when the market is closed. Whoever asked LAST owns the
  * screen (the Support-tab race lesson, 2026-08-31).
+ *
+ * 🧲 (Ajay 2026-09-27: "Got on add it to all tabs now please" / "In
+ * chartmaps"): ONLY on the Chart Maps ⚡ Signals tab (the `gex` control is
+ * passed there, never on /signal-lab) every card wears its served 🧲 chip and
+ * "🧲 Bullish GEX first" (ON by default) orders the cards bullish → mixed →
+ * bearish → no read, ties in watchlist order. Unticked: the watchlist order,
+ * exactly. It hides nothing.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -31,6 +38,9 @@ import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterable
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import { useGexCards } from '../hooks/useGexCards';
+import { GexToggle } from './GexToggle';
+import type { GexControl } from '../lib/gexRead';
 import { SymbolSearch } from './SymbolSearch';
 import { PremarketEntry } from './PremarketEntry';
 import type { CmTile } from '../lib/chartMaps';
@@ -49,7 +59,7 @@ type Payload = {
 };
 
 const POLL_MS = 45_000;
-export function SignalLabBoard() {
+export function SignalLabBoard({ gex }: { gex?: GexControl | null } = {}) {
   // ONE watchlist for the app (Ajay 2026-09-07: "one click and add to signals
   // tab" from every board) — the store fetches the account's list once, the
   // cards' + Signals buttons write to it, this board renders it.
@@ -64,7 +74,12 @@ export function SignalLabBoard() {
    * opt-in ordering both read it. */
   const rowSymbols = useMemo(() => (data?.rows || []).map((r) => r.symbol).filter(Boolean), [data]);
   const room = useBounceRoom(rowSymbols);
-  const rows = useExplosiveOrder(data?.rows || [], (r) => r.symbol, room.map, explosiveFirst);
+  /* 🧲 ONE live request for the board's names under this tab's own key; the
+   * order runs on the watchlist order BEFORE the opt-in 🧨 order. */
+  const gx = useGexCards(rowSymbols, 'signals', gex, data);
+  const gexOrder = gx.order;
+  const gexSorted = useMemo(() => gexOrder(data?.rows || [], (r) => r.symbol), [gexOrder, data]);
+  const rows = useExplosiveOrder(gexSorted, (r) => r.symbol, room.map, explosiveFirst);
   /* 🎯 The enterable cut over the watchlist order (2026-09-15). <PremarketEntry>
    * above is deliberately NOT touched — it serves its own grades from
    * supply_demand/premarket_entry and answers a different question. */
@@ -138,6 +153,13 @@ export function SignalLabBoard() {
           <div className="slab-meta">
             {/* 🧨 opt-in ordering over the board's own bounce-room read —
                 default OFF, so the watchlist order he typed is what he sees. */}
+            {gex ? (
+              <GexToggle on={gex.on} onChange={gex.onChange}
+                         counts={gx.countOf(part.rows.map((r) => r.symbol))}
+                         rule={gx.live.payload?.rule} scope={gx.live.payload?.scope}
+                         sortOff={gx.sortOff} live={gx.live}
+                     truncated={gx.truncated} />
+            ) : null}
             <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
             <span className={`slab-state slab-state--${data.session_state}`}>
               {data.session_state === 'regular' ? 'LIVE — refreshing every 45s'
@@ -170,6 +192,7 @@ export function SignalLabBoard() {
                     already reads it from. */}
                 <PatternChart tvTf="daily" study={room.payload?.explosive_study}
                               bandStudy={room.payload?.band_structure_study}
+                              gex={gx.readOf(r.symbol)}
                               tile={{ ...r.tile,
                                       band_structure: room.map.get(String(r.symbol).toUpperCase())?.band_structure ?? null }} />
                 {r.latest ? (

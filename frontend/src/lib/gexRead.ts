@@ -193,18 +193,27 @@ export function countGex<T>(
   return lg.groups.map((g) => ({ key: g.key, label: g.label, n: n.get(g.group) ?? 0 }));
 }
 
-const H13 = "🧲 is not wired into this tab yet — waiting on Ajay's answer (H13)";
+/** The ONE state a chart-card tab needs from the page: the `?gex=off` box
+ *  (ChartMaps owns the URL key). A board mounted without it (the standalone
+ *  /signal-lab page) draws no 🧲 chip, makes no live request and keeps its
+ *  own order exactly as before. */
+export type GexControl = { on: boolean; onChange: (v: boolean) => void };
 
-/** Every Chart Maps tab that is NOT a tile grid, and why 🧲 is not on it. The
- *  contract checks these keys against CM_TABS, so a new non-grid tab has to be
- *  listed here with a reason before it ships. */
+/** The five Chart Maps tabs that draw the same chart card as the tile grids
+ *  but run their own fetcher (Ajay 2026-09-27: "Got on add it to all tabs now
+ *  please" / "In chartmaps"). Each asks for its live read under its OWN tab
+ *  key — the server records those names for the 17:50 ET sweep
+ *  (chart_maps/gex_seen.CARD_TABS) — and orders its cards with the same box. */
+export const GEX_CARD_TABS = ['holdings', 'potus', 'signals', 'session', 'ema_frames'] as const;
+export type GexCardTab = typeof GEX_CARD_TABS[number];
+
+const H13 = "not a chart-card tab — 🧲 would need its own column or chip here; Ajay's 2026-09-27 answer (H13) covered the five chart-card tabs only";
+
+/** Every Chart Maps tab that has NO 🧲 chip, and why. The contract checks
+ *  these keys plus GEX_CARD_TABS against the non-grid CM_TABS, so a new
+ *  non-grid tab has to be listed in one or the other before it ships. */
 export const GEX_EXEMPT: Record<string, string> = {
   support: 'one symbol per view',
-  holdings: H13,
-  potus: H13,
-  signals: H13,
-  session: H13,
-  ema_frames: H13,
   bonde: H13,
   growth: H13,
   gnt: H13,

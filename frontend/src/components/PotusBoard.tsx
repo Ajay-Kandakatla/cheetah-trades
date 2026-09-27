@@ -29,6 +29,14 @@
  *
  * NOTHING HERE IS SORTED BY RETURN. The groups are the curator's grouping and
  * the candidates are newest-first as served.
+ *
+ * 🧲 (Ajay 2026-09-27: "Got on add it to all tabs now please" / "In
+ * chartmaps"): with the Chart Maps `gex` control passed, every card wears its
+ * served 🧲 chip and "🧲 Bullish GEX first" (ON by default) orders the cards
+ * INSIDE EACH GROUP bullish → mixed → bearish → no read, ties in the curated
+ * order. The groups themselves never move, no card changes group, the watch
+ * candidates table is untouched, and unticked every group is back in its
+ * curated order exactly. It hides nothing.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -42,6 +50,9 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { SignalWatchButton } from './SignalWatchButton';
 import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useGexCards } from '../hooks/useGexCards';
+import { GexToggle } from './GexToggle';
+import type { GexControl } from '../lib/gexRead';
 import { filterTile, loadHidden, presentGroups, saveHidden, studiesWanted } from '../lib/chartOverlays';
 import { supportQuery } from '../lib/supportLevels';
 import type { CmTile } from '../lib/chartMaps';
@@ -114,7 +125,7 @@ function publishedEt(v: number | string | null | undefined): string {
   }
 }
 
-export default function PotusBoard() {
+export default function PotusBoard({ gex }: { gex?: GexControl | null } = {}) {
   const [payload, setPayload] = useState<PotusPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [reads, setReads] = useState<Record<string, TileRead>>({});
@@ -204,6 +215,14 @@ export default function PotusBoard() {
    * that one map rather than firing a request per tile. */
   const room = useBounceRoom(symbols);
 
+  /* 🧲 ONE live request for every curated name under this tab's own key; the
+   * order runs INSIDE each group, the group order stays editorial. */
+  const gx = useGexCards(symbols, 'potus', gex, reads);
+  const gexOrder = gx.order;
+  const shownGroups = useMemo(
+    () => groups.map((g) => ({ ...g, tickers: gexOrder(g.tickers, (t) => t) })),
+    [groups, gexOrder]);
+
   const present = useMemo(
     () => presentGroups(symbols.map((s) => reads[s]?.tile).filter(Boolean) as CmTile[]),
     [symbols, reads]);
@@ -231,11 +250,17 @@ export default function PotusBoard() {
           {payload?.as_of ? ` · as of ${payload.as_of}` : ''}
           {loading ? ' · loading charts…' : ''}
         </span>
+        {gex ? (
+          <GexToggle on={gex.on} onChange={gex.onChange} counts={gx.countOf(symbols)}
+                     rule={gx.live.payload?.rule} scope={gx.live.payload?.scope}
+                     sortOff={gx.sortOff} live={gx.live}
+                     truncated={gx.truncated} />
+        ) : null}
       </div>
 
       <OverlayLegend present={present} hidden={hiddenOverlays} onToggle={toggleOverlay} />
 
-      {groups.map((g) => (
+      {shownGroups.map((g) => (
         <section className="pb-group" key={g.key} data-testid={`pb-group-${g.key}`}>
           <h3 className="pb-group__head">
             {GROUP_LABEL[g.key] || g.key} <span className="pb-count mono">({g.tickers.length})</span>
@@ -275,6 +300,7 @@ export default function PotusBoard() {
                     {e?.notes ? <p className="pb-tile__note">{e.notes}</p> : null}
                     {tile ? (
                       <PatternChart tile={tile} study={room.payload?.explosive_study}
+                                    gex={gx.readOf(sym)}
                                     outerChips={outerChipsFor(POTUS_OUTER_CHIPS, tile, {
                                       enterable: roomRow?.enterable,
                                       explosive: roomRow?.explosive,

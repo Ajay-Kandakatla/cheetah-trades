@@ -27,6 +27,14 @@
  * that list's own order. The 🚀 / 🧨 / 🎯 chips on each tile are that NAME's
  * reads, carried so the tab is not a dead end — they are not this board's, and
  * sorting on one would hand a drawing surface a preference it cannot defend.
+ *
+ * THE ONE EXCEPTION IS HIS: 🧲 (Ajay 2026-09-27: "Got on add it to all tabs
+ * now please" / "In chartmaps"). With the Chart Maps `gex` control passed,
+ * every card wears its served 🧲 chip and "🧲 Bullish GEX first" (ON by
+ * default) orders the cards bullish → mixed → bearish → no read, ties in the
+ * watchlist order. Unticked: the watchlist order, exactly. The read is the
+ * server's (chart_maps/gex_read.py), UNMEASURED, and it hides nothing — the 9
+ * EMA itself still ranks nothing.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -36,6 +44,9 @@ import { GrowthChip } from './GrowthChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useGexCards } from '../hooks/useGexCards';
+import { GexToggle } from './GexToggle';
+import type { GexControl } from '../lib/gexRead';
 import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
 import {
   EMA_FRAMES, EMA_FRAME_LABEL, countLine, emaFramesQuery, emptyReason,
@@ -51,7 +62,7 @@ import { outerChipsFor } from '../lib/outerChips';
  *  only when the strip's chip text EQUALS the tile's (`outerChipsFor`). */
 export const EMA_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'explosive', 'enterable'];
 
-export default function EmaFramesBoard() {
+export default function EmaFramesBoard({ gex }: { gex?: GexControl | null } = {}) {
   const [frame, setFrame] = useState<EmaFrame>(() => loadEmaFrame());
   const [symbols, setSymbols] = useState<string[] | null>(null);
   const [listErr, setListErr] = useState<string | null>(null);
@@ -130,11 +141,16 @@ export default function EmaFramesBoard() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const rows = useMemo(
+  const listed = useMemo(
     () => (symbols || []).map((s) => reads[s]).filter(Boolean) as EmaFrameRead[],
     [symbols, reads]);
+  /* 🧲 ONE live request for the watchlist under this tab's own key; the cards
+   * come back in watchlist order when the box is unticked. */
+  const gx = useGexCards(symbols || [], 'ema_frames', gex, reads);
+  const gexOrder = gx.order;
+  const rows = useMemo(() => gexOrder(listed, (r) => r.symbol), [gexOrder, listed]);
   const tiles = useMemo(
-    () => rows.map((r) => r.tile).filter(Boolean) as CmTile[], [rows]);
+    () => listed.map((r) => r.tile).filter(Boolean) as CmTile[], [listed]);
   const groups = useMemo(() => presentGroups(tiles), [tiles]);
   const empty = emptyReason(symbols, listErr);
   // The frame sentence is the SERVED one, off the first tile that arrived —
@@ -156,11 +172,22 @@ export default function EmaFramesBoard() {
         {what ? <span className="cm-phase-hint">{what}</span> : null}
       </div>
 
+      {gex ? (
+        <div className="cm-controls">
+          <GexToggle on={gex.on} onChange={gex.onChange}
+                     counts={gx.countOf(rows.map((r) => r.symbol))}
+                     rule={gx.live.payload?.rule} scope={gx.live.payload?.scope}
+                     sortOff={gx.sortOff} live={gx.live}
+                     truncated={gx.truncated} />
+        </div>
+      ) : null}
+
       <div className="cm-note">
         The 9 EMA on {frame} bars, on your ⚡ Signals watchlist. Nothing about a
         9 EMA on weekly or monthly bars has been measured on this universe — no
         study, no interval, no out-of-sample — so this board draws and nothing
-        else: it orders nothing, hides nothing and alerts nothing.
+        else: the 9 EMA orders nothing, hides nothing and alerts nothing
+        {gex ? '; only the 🧲 box re-orders the cards, and it hides nothing' : ''}.
       </div>
 
       <OverlayLegend present={groups} hidden={shown} locked={LOCKED}
@@ -189,7 +216,7 @@ export default function EmaFramesBoard() {
                                     read={roomRow?.explosive} />
                 {' '}<EnterableChip read={roomRow?.enterable} />
               </div>
-              <PatternChart tile={filterTile(r.tile, shown)}
+              <PatternChart tile={filterTile(r.tile, shown)} gex={gx.readOf(r.symbol)}
                             outerChips={outerChipsFor(EMA_OUTER_CHIPS, r.tile, {
                               enterable: roomRow?.enterable,
                               explosive: roomRow?.explosive,

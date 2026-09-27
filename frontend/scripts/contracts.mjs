@@ -4747,7 +4747,7 @@ const CONTRACTS = [
   //    exposure bullish or bearish signal to the stocks in our chartmaps and
   //    make it sorted by bullish gex please.." → "Checkbox, ON by default") ──
   {
-    name: '🧲 Chart Maps GEX (2026-09-27): served chips in PRICE, served-key stable sort before the ⚡ pin, one just-in-time POST, URL-only state, every non-grid tab exempt in writing',
+    name: '🧲 Chart Maps GEX (2026-09-27): served chips in PRICE, served-key stable sort before the ⚡ pin, one just-in-time POST, URL-only state, the five chart-card tabs wired, every other non-grid tab exempt in writing',
     file: 'src/lib/gexRead.ts',
     // The read, the bucket, the strength, the group, the sort key, every chip
     // word and the legend are SERVED (backend/chart_maps/gex_read.py). The teeth:
@@ -4766,7 +4766,11 @@ const CONTRACTS = [
       const tabs = parseCmTabs(cm);
       if (!tabs) return ['CM_TABS declaration not found'];
 
-      /* 1. GEX_EXEMPT keys == the non-grid tabs, every reason written. */
+      /* 1. GEX_EXEMPT keys + GEX_CARD_TABS == the non-grid tabs (disjoint),
+       *    every exemption reason written. */
+      const cardM = /export const GEX_CARD_TABS\s*=\s*\[([^\]]*)\]/.exec(src);
+      const cardTabs = cardM ? [...cardM[1].matchAll(/'([a-z_]+)'/g)].map((x) => x[1]) : null;
+      if (!cardTabs) errs.push('GEX_CARD_TABS declaration not found in lib/gexRead.ts');
       const m = /export const GEX_EXEMPT[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src);
       if (!m) {
         errs.push('GEX_EXEMPT declaration not found in lib/gexRead.ts');
@@ -4774,8 +4778,12 @@ const CONTRACTS = [
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
         const nonGrid = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t)).sort();
-        if (keys.join(',') !== nonGrid.join(',')) {
-          errs.push(`GEX_EXEMPT keys [${keys.join(', ')}] != the non-grid CM_TABS [${nonGrid.join(', ')}] — a grid tab must get 🧲, a non-grid tab must say why not`);
+        const covered = [...keys, ...(cardTabs || [])].sort();
+        if (covered.join(',') !== nonGrid.join(',')) {
+          errs.push(`GEX_EXEMPT keys + GEX_CARD_TABS [${covered.join(', ')}] != the non-grid CM_TABS [${nonGrid.join(', ')}] — a non-grid tab must be wired (GEX_CARD_TABS) or say why not (GEX_EXEMPT)`);
+        }
+        for (const k of keys) {
+          if ((cardTabs || []).includes(k)) errs.push(`'${k}' is both exempt and a 🧲 card tab`);
         }
         for (const line of body.split('\n')) {
           const kv = /^\s*([a-z_]+)\s*:\s*(.*?),?\s*$/.exec(line);
@@ -4866,10 +4874,46 @@ const CONTRACTS = [
         }
       }
 
+      /* 10. The five chart-card tabs (Ajay 2026-09-27: "Got on add it to all
+       *     tabs now please" / "In chartmaps"): each board runs ONE live read
+       *     under its OWN tab key through useGexCards, orders with it, mounts
+       *     the same <GexToggle>, hands the served read to its PatternChart,
+       *     and ChartMaps passes it the one URL-backed control. The backend
+       *     records exactly these keys for the nightly sweep. */
+      const CARD_FILE = {
+        holdings: 'src/components/HoldingsBoard.tsx',
+        potus: 'src/components/PotusBoard.tsx',
+        signals: 'src/components/SignalLabBoard.tsx',
+        session: 'src/components/SessionBoard.tsx',
+        ema_frames: 'src/components/EmaFramesBoard.tsx',
+      };
+      const CARD_TAG = {
+        holdings: 'HoldingsBoard', potus: 'PotusBoard', signals: 'SignalLabBoard',
+        session: 'SessionBoard', ema_frames: 'EmaFramesBoard',
+      };
+      for (const t of cardTabs || []) {
+        const rel = CARD_FILE[t];
+        if (!rel) { errs.push(`🧲 card tab '${t}' has no board file listed in this contract`); continue; }
+        const f = read(rel);
+        if (!new RegExp(`useGexCards\\([^;]*'${t}'`).test(f)) errs.push(`${rel} must ask for its live read through useGexCards(…, '${t}', …) — its OWN tab key`);
+        if (!/gexOrder\(/.test(f)) errs.push(`${rel} must order its cards with the 🧲 order (gx.order)`);
+        if (!/<GexToggle\s/.test(f)) errs.push(`${rel} must mount the same <GexToggle>`);
+        if (!/gex=\{gx\.readOf\(/.test(f)) errs.push(`${rel} must hand the served read to its PatternChart — gex={gx.readOf(…)}`);
+        if (/localStorage[^\n]*gex|gex[^\n]*localStorage/i.test(f)) errs.push(`${rel}: the 🧲 state lives in the URL only`);
+        if (!new RegExp(`<${CARD_TAG[t]}[^>]*gex=\\{gexCtl\\}`).test(page)) errs.push(`ChartMaps must pass the one 🧲 control to <${CARD_TAG[t]} gex={gexCtl}>`);
+      }
+      const seen = read('../backend/chart_maps/gex_seen.py');
+      const beCard = /CARD_TABS\s*=\s*\(([^)]*)\)/.exec(seen);
+      const beKeys = beCard ? [...beCard[1].matchAll(/"([a-z_]+)"/g)].map((x) => x[1]).sort() : [];
+      if (beKeys.join(',') !== [...(cardTabs || [])].sort().join(',')) {
+        errs.push(`backend gex_seen.CARD_TABS [${beKeys.join(', ')}] != GEX_CARD_TABS [${(cardTabs || []).join(', ')}] — a card tab whose names are not recorded misses the nightly sweep`);
+      }
+
       /* 9. Reversal, never bounce, in the four new files (import paths of the
        *    shared room-read modules are identifiers, not words he reads). */
       for (const rel of ['src/lib/gexRead.ts', 'src/components/GexChip.tsx',
-                         'src/components/GexToggle.tsx', 'src/hooks/useGexLive.ts']) {
+                         'src/components/GexToggle.tsx', 'src/hooks/useGexLive.ts',
+                         'src/hooks/useGexCards.ts']) {
         const body = read(rel).split('\n').filter((l) => !/^\s*import\b.*\bfrom\s+'[^']+';\s*$/.test(l)).join('\n');
         if (/bounce/i.test(body)) errs.push(`${rel} says "bounce" — surfaces he reads say reversal`);
       }

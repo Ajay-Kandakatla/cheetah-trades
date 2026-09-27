@@ -8,6 +8,12 @@
  * two surfaces), then decorated with his cost and his typed stop. Worst
  * position first. The overlay ledger is the same one every other tile surface
  * mounts, on the same localStorage key.
+ *
+ * 🧲 (Ajay 2026-09-27: "Got on add it to all tabs now please" / "In
+ * chartmaps"): mounted on Chart Maps (the `gex` control passed), every card
+ * wears its served 🧲 chip and "🧲 Bullish GEX first" (ON by default) orders
+ * the cards bullish → mixed → bearish → no read, ties in the worst-first
+ * order. Unticked: worst position first, exactly. It never hides a position.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -20,6 +26,9 @@ import { EnterableChip } from './EnterableChip';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import { useGexCards } from '../hooks/useGexCards';
+import { GexToggle } from './GexToggle';
+import type { GexControl } from '../lib/gexRead';
 import { filterTile, loadHidden, presentGroups, saveHidden, studiesWanted } from '../lib/chartOverlays';
 import { supportQuery } from '../lib/supportLevels';
 import {
@@ -44,7 +53,7 @@ type TileRead = {
   bandNote?: string | null;
 };
 
-export default function HoldingsBoard({ days }: { days?: number | null }) {
+export default function HoldingsBoard({ days, gex }: { days?: number | null; gex?: GexControl | null }) {
   const [rows, setRows] = useState<HoldingLike[] | null>(null);
   const [rowsErr, setRowsErr] = useState<string | null>(null);
   const [win, setWin] = useState<string>(() => holdingsWindow(days));
@@ -136,8 +145,14 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
    * no-chart rows and the opt-in ordering read that one map. */
   const rowSymbols = useMemo(() => ordered.map(({ h }) => h.symbol).filter(Boolean), [ordered]);
   const room = useBounceRoom(rowSymbols);
+  /* 🧲 ONE live request for the holdings, under this tab's own key. The order
+   * runs on the worst-first list BEFORE the opt-in 🧨 order (an explicit pick
+   * keeps its precedence, the ⚡-on-top rule of the grid tabs). */
+  const gx = useGexCards(rowSymbols, 'holdings', gex, reads);
+  const gexOrder = gx.order;
+  const gexSorted = useMemo(() => gexOrder(tiles, (t) => t.tile.symbol), [gexOrder, tiles]);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
-  const shownTiles = useExplosiveOrder(tiles, (t) => t.tile.symbol, room.map, explosiveFirst);
+  const shownTiles = useExplosiveOrder(gexSorted, (t) => t.tile.symbol, room.map, explosiveFirst);
 
   /* 🪜 One banner for the board, off the reads that came back. Every response
    * carries the same served verdict (band_structure.measured_verdict()), so the
@@ -207,9 +222,17 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
           </select>
         </label>
         <span className="cm-foot mono">
-          {rows.length} holding{rows.length === 1 ? '' : 's'} · worst position first
+          {rows.length} holding{rows.length === 1 ? '' : 's'}
+          {gx.on && gx.legend && !gx.sortOff ? ' · 🧲 order, worst position first on ties' : ' · worst position first'}
           {loading ? ' · loading charts…' : ''}
         </span>
+        {gex ? (
+          <GexToggle on={gex.on} onChange={gex.onChange}
+                     counts={gx.countOf(tiles.map((t) => t.tile.symbol))}
+                     rule={gx.live.payload?.rule} scope={gx.live.payload?.scope}
+                     sortOff={gx.sortOff} live={gx.live}
+                     truncated={gx.truncated} />
+        ) : null}
         <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
       </div>
 
@@ -237,7 +260,7 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
         {shownTiles.map(({ tile }) => (
           <PatternChart key={`${tile.symbol}-${win}`} tile={tile}
                         study={room.payload?.explosive_study}
-                        bandStudy={bandStudy} />
+                        bandStudy={bandStudy} gex={gx.readOf(tile.symbol)} />
         ))}
       </div>
 

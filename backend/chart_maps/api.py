@@ -166,12 +166,21 @@ async def chart_maps_gex_live(body: GexLiveBody):
     list; always 200 otherwise. Display only — UNMEASURED; it orders the grid
     client-side and gates, sizes and alerts nothing."""
     from supply_demand.bounce_room import normalize_symbols
-    from . import gex_read
+    from . import gex_read, gex_seen
     raw = list(body.symbols or [])
     if not normalize_symbols(raw, cap=board_mod.LIMIT_MAX):
         raise HTTPException(status_code=422,
                             detail="symbols: at least one ticker is required")
     tab = body.tab if body.tab in board_mod.TABS else None
+    # The five chart-card tabs board() never serves (holdings, POTUS, Signals,
+    # Session, 9 EMA W/M) put their names on tonight's sweep HERE ("Only Chart
+    # Maps names nightly"): same capped, normalised list, same per-tab doc.
+    # Once per list — a pending re-poll repeats it. Never raises; the ledger
+    # is never written by this route.
+    if body.tab in gex_seen.CARD_TABS and body.repoll is not True:
+        await asyncio.to_thread(
+            gex_seen.record, body.tab,
+            normalize_symbols(raw, cap=board_mod.LIMIT_MAX))
     return JSONResponse(await asyncio.to_thread(
         gex_read.live_payload, raw, tab=tab, repoll=body.repoll is True))
 

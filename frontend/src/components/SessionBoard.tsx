@@ -11,6 +11,13 @@
  *
  * All numbers come from backend/supply_demand/session_board.py; everything
  * shaped here lives in ../lib/sessionBoard so it can be tested without a DOM.
+ *
+ * 🧲 (Ajay 2026-09-27: "Got on add it to all tabs now please" / "In
+ * chartmaps"): with the Chart Maps `gex` control passed, every chart card
+ * wears its served 🧲 chip and "🧲 Bullish GEX first" (ON by default) orders
+ * the filtered rows bullish → mixed → bearish → no read, ties in the served
+ * session order. Unticked: the served order, exactly. It hides nothing; the
+ * bias / band / setup filters decide what shows, 🧲 only re-orders it.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../lib/apiBase';
@@ -25,6 +32,9 @@ import { useEnterableFilter, useEnterablePartition } from '../hooks/useEnterable
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
+import { useGexCards } from '../hooks/useGexCards';
+import { GexToggle } from './GexToggle';
+import type { GexControl } from '../lib/gexRead';
 import type { BandStructureStudy, BounceRoomRow, ExplosiveStudy } from '../lib/bounceRoom';
 import OverlayLegend from './OverlayLegend';
 import { filterTile, loadHidden, presentGroups, saveHidden } from '../lib/chartOverlays';
@@ -41,7 +51,9 @@ function toneColor(tone: string): string {
   return 'var(--cm-slate, #8595ad)';
 }
 
-export default function SessionBoard({ onPick }: { onPick?: (sym: string) => void }) {
+export default function SessionBoard({ onPick, gex }: {
+  onPick?: (sym: string) => void; gex?: GexControl | null;
+}) {
   const [tf, setTf] = useState<string>('15m');
   const [bias, setBias] = useState<Bias | 'all'>('all');
   const [atBandOnly, setAtBandOnly] = useState(false);
@@ -102,8 +114,15 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
    * no-data cards, the tiles' own chips and the opt-in ordering share it. */
   const rowSymbols = useMemo(() => filtered.map((r) => r.symbol).filter(Boolean), [filtered]);
   const room = useBounceRoom(rowSymbols);
+  /* 🧲 ONE live request for EVERY served row under this tab's own key — not
+   * the filtered cut, so a filter click reaches no endpoint. The order runs on
+   * the filtered rows BEFORE the opt-in 🧨 order. */
+  const servedSymbols = useMemo(() => rows.map((r) => r.symbol).filter(Boolean), [rows]);
+  const gx = useGexCards(servedSymbols, 'session', gex, data);
+  const gexOrder = gx.order;
+  const gexSorted = useMemo(() => gexOrder(filtered, (r) => r.symbol), [gexOrder, filtered]);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
-  const shown = useExplosiveOrder(filtered, (r) => r.symbol, room.map, explosiveFirst);
+  const shown = useExplosiveOrder(gexSorted, (r) => r.symbol, room.map, explosiveFirst);
   /* 🎯 The enterable cut, applied AFTER the board's own order (Ajay
    * 2026-09-15: "I do not want to see not enterable alerts or stocks in any of
    * the chart maps"). The served BLOCKED verdict is the only thing it removes,
@@ -178,6 +197,13 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
                  onChange={(e) => setSetupsOnly(e.target.checked)} />
           {' '}Complete SMC setup
         </label>
+        {gex ? (
+          <GexToggle on={gex.on} onChange={gex.onChange}
+                     counts={gx.countOf(part.rows.map((r) => r.symbol))}
+                     rule={gx.live.payload?.rule} scope={gx.live.payload?.scope}
+                     sortOff={gx.sortOff} live={gx.live}
+                     truncated={gx.truncated} />
+        ) : null}
         <ExplosiveFirstToggle checked={explosiveFirst} onChange={setExplosiveFirst} />
         <button type="button" className="sb-refresh" onClick={() => load()}>Refresh</button>
       </div>
@@ -230,7 +256,8 @@ export default function SessionBoard({ onPick }: { onPick?: (sym: string) => voi
                           tile={{ ...filterTile(r.tile, hiddenOverlays),
                                   band_structure: room.map.get(String(r.symbol).toUpperCase())?.band_structure ?? null }}
                           bandStudy={room.payload?.band_structure_study}
-                          study={room.payload?.explosive_study} />
+                          study={room.payload?.explosive_study}
+                          gex={gx.readOf(r.symbol)} />
           : <NoDataCard key={r.symbol} row={r} onPick={onPick}
                         study={room.payload?.explosive_study}
                         bandStudy={room.payload?.band_structure_study}

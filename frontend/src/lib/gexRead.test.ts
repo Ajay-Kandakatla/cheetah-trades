@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import RAW from '../components/__fixtures__/gex_contract_example_2026_09_27.json?raw';
 import {
-  GEX_EXEMPT, GEX_PARAM, countGex, gexOf, gexParam, parseGexParam, sanitizeGexRow, sortByGex,
+  GEX_CARD_TABS, GEX_EXEMPT, GEX_PARAM, countGex, gexOf, gexParam, parseGexParam, sanitizeGexRow, sortByGex,
   validLegend, type GexLegend, type GexTileRead,
 } from './gexRead';
 import { CM_TABS, isBoardTab } from './chartMaps';
@@ -153,11 +153,15 @@ describe('🧲 countGex', () => {
 });
 
 describe('🧲 GEX_EXEMPT', () => {
-  it('lists exactly the non-grid Chart Maps tabs, each with a reason', () => {
+  it('with the five chart-card tabs, lists exactly the non-grid Chart Maps tabs, each with a reason', () => {
     const grid = CM_TABS.filter((t) => isBoardTab(t));
     const nonGrid = CM_TABS.filter((t) => !isBoardTab(t)).sort();
-    expect(Object.keys(GEX_EXEMPT).sort()).toEqual(nonGrid);
+    // 2026-09-27 "Got on add it to all tabs now please": the five card tabs
+    // left the exempt list and are wired (GEX_CARD_TABS).
+    expect([...Object.keys(GEX_EXEMPT), ...GEX_CARD_TABS].sort()).toEqual(nonGrid);
+    for (const t of GEX_CARD_TABS) expect(GEX_EXEMPT[t]).toBeUndefined();
     for (const t of grid) expect(GEX_EXEMPT[t]).toBeUndefined();
     for (const v of Object.values(GEX_EXEMPT)) expect(v.trim().length).toBeGreaterThan(0);
+    expect([...GEX_CARD_TABS].sort()).toEqual(['ema_frames', 'holdings', 'potus', 'session', 'signals']);
   });
 });

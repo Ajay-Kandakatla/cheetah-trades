@@ -11,13 +11,15 @@
  *
  * The live line says where the just-in-time read stands: reading, still
  * reading, failed (last close shown), market closed, or the read's own time.
+ * `truncated` (the caller's own count, or the served one): names past the
+ * per-request cap that were never read — they sit with the no-read group.
  * UNMEASURED.
  */
 import type { ReactNode } from 'react';
 import type { GexLiveState } from '../hooks/useGexLive';
 import type { GexSortOff } from '../lib/gexRead';
 
-export function GexToggle({ on, onChange, counts, rule, scope, sortOff, live }: {
+export function GexToggle({ on, onChange, counts, rule, scope, sortOff, live, truncated }: {
   on: boolean;
   onChange: (v: boolean) => void;
   counts: ReadonlyArray<{ key: string; label: string; n: number }>;
@@ -25,9 +27,11 @@ export function GexToggle({ on, onChange, counts, rule, scope, sortOff, live }: 
   scope?: string | null;
   sortOff?: GexSortOff | null;
   live?: Pick<GexLiveState, 'payload' | 'loading' | 'error' | 'pending'> | null;
+  truncated?: number;
 }) {
   const title = [rule, scope, sortOff?.title].filter(Boolean).join('\n');
   const p = live?.payload ?? null;
+  const cut = Math.max(0, Number(truncated) || 0, Number(p?.truncated) || 0);
   let liveLine: ReactNode = null;
   if (live?.loading) {
     liveLine = <span className="gex-live"> · live read…</span>;
@@ -48,6 +52,12 @@ export function GexToggle({ on, onChange, counts, rule, scope, sortOff, live }: 
       <span className="gex-count">{counts.map((c) => ` · ${c.n} ${c.label}`).join('')}</span>
       {sortOff ? <span className="gex-sort-off"> · {sortOff.label}</span> : null}
       {liveLine}
+      {cut ? (
+        <span className="gex-live gex-truncated"
+              title="One GEX request reads this tab's first names in its own order, up to the Chart Maps per-tab cap; the rest were not read and sort with the no-read group.">
+          {` · ${cut} past the cap, not read`}
+        </span>
+      ) : null}
     </label>
   );
 }
