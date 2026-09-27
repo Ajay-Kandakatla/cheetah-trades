@@ -66,3 +66,23 @@ ordering, vanna signs + degenerate inputs, VEX reads + fail-closed,
 best-case buckets + None guards) and `tests/test_soir_coverage_gex.py`
 (slim_row None-safe new fields, board_bucket table, board latest-date
 selection/sorting/notes). FE: `lib/gexBoard.test.ts`.
+
+## Chart Maps 🧲 chip + coverage (2026-09-27)
+
+Full write-up: `docs/chart_maps/gex_chips_2026_09_27.md`. What changed for this ledger:
+
+- **Coverage grew.** The 17:50 ET sweep (`run()`, cron default `include_chart_maps=True`) now also covers every name
+  a Chart Maps tab served in the last `NIGHTLY_MAX_AGE_DAYS` (7), at most `chart_maps.board.LIMIT_MAX` (80) per tab
+  (Mongo `chart_maps_seen`, `chart_maps.gex_seen`). That is about 175 → 800+ names, and the sweep takes about
+  2–3.5 min at `SWEEP_WORKERS` (8). The core universe is unchanged and still capped at `MAX_UNIVERSE` 200.
+- **Rows are tagged** `universe: "core" | "chart_maps"`. The GEX Board page shows both (H10).
+- **The refresh button stays core-only.** `POST /options/gex-board/refresh` calls `run(include_chart_maps=False)`
+  because it runs behind a request.
+- **Index.** `{symbol: 1, date_et: -1}` (`symbol_date`) via `ensure_index()`, in `run()` and once per process in
+  `snapshot_for`.
+- **Settled rows are still stored and still read here.** A row whose nearest expiry had settled when it was
+  recorded is shown as "no read" on Chart Maps only (`chart_maps.gex_read.settled`). The GEX Board, the push context
+  line (`supply_demand.bullish_context`) and the Desk report read them unchanged. The engine fix (skip a settled
+  expiry inside `compute_opex`) is his call (H19).
+- The Chart Maps live read is never written to this ledger.
+- Still **not Minervini**, still never an input to scanner gates, the score, `is_buyable`, alerts or Auto-Pilot.

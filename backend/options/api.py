@@ -279,10 +279,14 @@ async def add_gex_board_symbol(symbol: str):
 async def refresh_gex_board():
     """On-demand re-snapshot of the GEX universe (same job the 17:50 cron
     runs — portfolio + watchlists + SOIR bullish/watch + top SEPA). Threaded;
-    ~30-60s for the ~200-name universe. Returns the run summary."""
+    ~30-60s for the ~200-name universe. Returns the run summary.
+
+    CORE ONLY (2026-09-27): the nightly cron also sweeps the Chart Maps names
+    (several hundred more, ~2-3 min) — too long for a request behind
+    Cloudflare's ~100 s timeout, so this button keeps the classic universe."""
     import asyncio
     from . import gex_history
-    return await asyncio.to_thread(gex_history.run)
+    return await asyncio.to_thread(gex_history.run, include_chart_maps=False)
 
 
 @router.get("/options/gex-history/{symbol}")

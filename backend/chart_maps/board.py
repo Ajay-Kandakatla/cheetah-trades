@@ -44,6 +44,11 @@ ET = ZoneInfo("America/New_York")
 # (no scan imports), so it is safe to import at module load even where the
 # tests stub supply_demand.demand_reentry.
 from supply_demand import demand_order as _order
+# 🧲 GEX read (2026-09-27). Imported at module load on purpose: it binds the
+# ledger's named constants (NIGHTLY_MAX_AGE_DAYS, SWEEP_WORKERS) from the real
+# options.gex_history once, so a test that swaps that module for a fake later
+# still gets a working read. It imports nothing from this module at load.
+from . import gex_read as _gex_read  # noqa: E402,F401
 
 log = logging.getLogger("chart_maps.board")
 
@@ -3839,8 +3844,11 @@ def _sales_badge(sales: dict) -> dict:
 
 
 def _gex_decor(tiles: list, wall_kind: str) -> Optional[str]:
-    """🧲 dealer-gamma chips on shown tiles (Ajay 2026-08-27: "add the gex
-    chips to the demand zone tabs"). Decoration only, applied AFTER _finish
+    """Put-wall / call-wall confluence badges on shown tiles (Ajay 2026-08-27:
+    "add the gex chips to the demand zone tabs"). Since 2026-09-27 the
+    bullish / bearish verdict is the served 🧲 chip on EVERY tab
+    (`attach_gex` → chart_maps.gex_read); the historical notes below describe
+    the retired verdict badges. Decoration only, applied AFTER _finish
     so ranking never depends on it, and only over the shown slice (~24
     symbols — the topping-tab model).
 
@@ -3869,13 +3877,10 @@ def _gex_decor(tiles: list, wall_kind: str) -> Optional[str]:
             if not row:
                 continue
             as_of = max(as_of or "", row.get("date_et") or "")
-            bucket = GH.board_bucket(row)
-            if bucket == "bullish":
-                t.setdefault("badges", []).append(
-                    {"text": "🧲 Gamma helps — dips get bought", "tone": "good"})
-            elif bucket == "bearish":
-                t.setdefault("badges", []).append(
-                    {"text": "🧲 Gamma hurts — moves amplified", "tone": "warn"})
+            # The bullish / bearish verdict badges ("🧲 Gamma helps / hurts")
+            # were retired 2026-09-27: every tile now carries the served 🧲
+            # chip from `attach_gex` (chart_maps.gex_read). Only the
+            # wall-confluence badges below stay here.
             wall = _f(row.get("put_wall" if wall_kind == "demand" else "call_wall"))
             if wall is None:
                 continue
@@ -6466,7 +6471,75 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
             attach_key_levels(_tiles, out, live=_live, frames=_frames)
         except Exception as exc:                                # noqa: BLE001
             log.debug("chart-maps: key levels unavailable: %s", exc)
+    # 🧲 GEX (2026-09-27), LAST: the nightly dealer-gamma read on EVERY tile,
+    # on the same cached-frames read (ICT fetches its own). Display + a
+    # client-side order only — hides, gates, sizes and alerts nothing.
+    try:
+        attach_gex(_tiles, out, tab=t, frames=_frames if t != "ict" else None)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: gex read unavailable: %s", exc)
+    # The names this tab served feed tonight's 17:50 ET GEX sweep
+    # (chart_maps.gex_seen — "Only Chart Maps names nightly").
+    try:
+        from . import gex_seen as _gex_seen
+        _gex_seen.record(t, [x.get("symbol") for x in _tiles if isinstance(x, dict)])
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: gex coverage record failed: %s", exc)
     return out
+
+
+# ---------------------------------------------------------------------------
+# 🧲 GEX (2026-09-27) — the nightly dealer-gamma read on every tile. Every
+# rule, number and word lives in `chart_maps.gex_read`; this is only the
+# plumbing. DISPLAY ONLY: the page orders client-side; nothing here reorders,
+# hides, pushes, gates or enters.
+# ---------------------------------------------------------------------------
+def attach_gex(tiles: list, out: Optional[dict] = None, *, tab: Optional[str] = None,
+               frames: Optional[dict] = None, today=None) -> dict:
+    """`tile["gex"]` on every dict tile + the served payload keys. Never
+    reorders, drops or raises. Returns the served counts."""
+    from . import gex_read as GR
+    shown = [x for x in (tiles or []) if isinstance(x, dict)]
+    try:
+        blocks = GR.nightly_blocks([x.get("symbol") for x in shown],
+                                   frames=frames, today=today, tab=tab)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: gex nightly failed: %s", exc)
+        blocks = {}
+    served = []
+    for x in shown:
+        sym = str(x.get("symbol") or "").strip().upper()
+        blk = blocks.get(sym) or GR.compose(sym, None, None, "not_asked", tab=tab)
+        x["gex"] = blk
+        served.append(blk)
+    cnt = GR.counts(served)
+    usable_dates = sorted({b["nightly"]["as_of"] for b in served
+                           if GR.usable(b.get("nightly")) and b["nightly"].get("as_of")})
+    as_of = usable_dates[-1] if usable_dates else None
+    n_night = sum(1 for b in served if GR.usable(b.get("nightly")))
+    n_settled = sum(1 for b in served
+                    if (b.get("nightly") or {}).get("void") == "settled")
+    if served:
+        note = f"{n_night} of {len(served)} names have a nightly read"
+        if as_of:
+            note += f" ({GR.nightly_as_of_text(as_of)})"
+        note += "; "
+        if n_settled:
+            note += (f"{n_settled} more read no read because their nearest expiry "
+                     "had already settled. ")
+        note += ("The rest read live when this tab opens in market hours, and "
+                 "nightly after the 17:50 ET sweep.")
+    else:
+        note = None
+    if out is not None:
+        out["gex_rule"] = GR.RULE_TEXT
+        out["gex_legend"] = GR.LEGEND
+        out["gex_scope"] = GR.SCOPE_NOTE
+        out["gex_sort_off"] = GR.SORT_OFF.get(tab) if tab else None
+        out["gex_counts"] = cnt
+        out["gex_as_of"] = as_of
+        out["gex_note"] = note
+    return cnt
 
 
 # ---------------------------------------------------------------------------

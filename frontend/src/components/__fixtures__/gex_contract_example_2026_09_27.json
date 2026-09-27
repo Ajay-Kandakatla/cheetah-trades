@@ -1,0 +1,975 @@
+{
+ "_note": "HAND-WRITTEN contract example (spec gex_chart_maps §3.3), 2026-09-27 — NOT a live capture. Tiles carry only symbol + gex; the test adds the chart scaffolding. The live-capture fixture (gex_board_live_2026_09_27.json) lands in the verification step.",
+ "board": {
+  "tab": "zones",
+  "count": 9,
+  "matched": 9,
+  "scanned": 100,
+  "tiles": [
+   {
+    "symbol": "AAA",
+    "gex": {
+     "symbol": "AAA",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "mixed",
+      "void": null,
+      "regime": "pinning",
+      "spot": 100.0,
+      "flip_strike": 97.5,
+      "put_wall": 95.0,
+      "call_wall": 105.0,
+      "net_gex_dollars": 1200000.0,
+      "adv_dollars_50": 400000000.0,
+      "strength": null,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX mixed",
+       "tone": "muted",
+       "title": "🧲 GEX mixed: regime and flip disagree — no directional read\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $100.00 · flip $97.50 · put wall $95.00 · call wall $105.00\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 1,
+      "key": null,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "BBB",
+    "gex": {
+     "symbol": "BBB",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bearish",
+      "void": null,
+      "regime": "amplifying",
+      "spot": 41.2,
+      "flip_strike": 43.0,
+      "put_wall": 39.14,
+      "call_wall": 43.26,
+      "net_gex_dollars": -1889999.9999999998,
+      "adv_dollars_50": 900000000.0,
+      "strength": -0.0021,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bearish · 0.21%",
+       "tone": "warn",
+       "title": "🧲 GEX bearish: dealers net SHORT gamma with price under the flip — moves amplified\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $41.20 · flip $43.00 · put wall $39.14 · call wall $43.26\nStrength 0.21%: dealer hedging per 1% move ≈ 0.21% of BBB's average day ($900M/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 2,
+      "key": -0.0021,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "CCC",
+    "gex": {
+     "symbol": "CCC",
+     "live_status": "not_asked",
+     "nightly": null,
+     "live": null,
+     "chips": [
+      {
+       "kind": "none",
+       "text": "🧲 no GEX read",
+       "tone": "muted",
+       "title": "No nightly GEX read for CCC in the last 7 days.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 3,
+      "key": null,
+      "source": null
+     }
+    }
+   },
+   {
+    "symbol": "DDD",
+    "gex": {
+     "symbol": "DDD",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bullish",
+      "void": null,
+      "regime": "pinning",
+      "spot": 212.4,
+      "flip_strike": 205.0,
+      "put_wall": 201.78,
+      "call_wall": 223.02,
+      "net_gex_dollars": 9900000.0,
+      "adv_dollars_50": 2200000000.0,
+      "strength": 0.0045,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bullish · 0.45%",
+       "tone": "good",
+       "title": "🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $212.40 · flip $205.00 · put wall $201.78 · call wall $223.02\nStrength 0.45%: dealer hedging per 1% move ≈ 0.45% of DDD's average day ($2.2B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 0,
+      "key": 0.0045,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "EEE",
+    "gex": {
+     "symbol": "EEE",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": null,
+      "void": "settled",
+      "regime": "pinning",
+      "spot": 100.0,
+      "flip_strike": 97.5,
+      "put_wall": 95.0,
+      "call_wall": 105.0,
+      "net_gex_dollars": null,
+      "adv_dollars_50": 600000000.0,
+      "strength": null,
+      "expiration_date": "2026-09-25",
+      "days_to_expiry": 0,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "none",
+       "text": "🧲 no GEX read",
+       "tone": "muted",
+       "title": "Last close read used the Fri 9/25 expiry, which settled that afternoon — that dealer book is gone; the next live read in market hours, or the next 17:50 ET sweep, reads the new chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 3,
+      "key": null,
+      "source": null
+     }
+    }
+   },
+   {
+    "symbol": "FFF",
+    "gex": {
+     "symbol": "FFF",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bullish",
+      "void": null,
+      "regime": "pinning",
+      "spot": 18.3,
+      "flip_strike": 17.9,
+      "put_wall": 17.39,
+      "call_wall": 19.21,
+      "net_gex_dollars": null,
+      "adv_dollars_50": null,
+      "strength": null,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bullish",
+       "tone": "good",
+       "title": "🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $18.30 · flip $17.90 · put wall $17.39 · call wall $19.21\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 0,
+      "key": null,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "GGG",
+    "gex": {
+     "symbol": "GGG",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bearish",
+      "void": null,
+      "regime": "amplifying",
+      "spot": 64.0,
+      "flip_strike": 70.5,
+      "put_wall": 60.8,
+      "call_wall": 67.2,
+      "net_gex_dollars": -5797000.0,
+      "adv_dollars_50": 310000000.0,
+      "strength": -0.0187,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bearish · 1.9%",
+       "tone": "warn",
+       "title": "🧲 GEX bearish: dealers net SHORT gamma with price under the flip — moves amplified\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $64.00 · flip $70.50 · put wall $60.80 · call wall $67.20\nStrength 1.9%: dealer hedging per 1% move ≈ 1.9% of GGG's average day ($310M/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 2,
+      "key": -0.0187,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "HHH",
+    "gex": {
+     "symbol": "HHH",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bullish",
+      "void": null,
+      "regime": "pinning",
+      "spot": 88.1,
+      "flip_strike": 80.0,
+      "put_wall": 83.69,
+      "call_wall": 92.5,
+      "net_gex_dollars": 53460000.0,
+      "adv_dollars_50": 1800000000.0,
+      "strength": 0.0297,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bullish · 3.0%",
+       "tone": "good",
+       "title": "🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $88.10 · flip $80.00 · put wall $83.69 · call wall $92.50\nStrength 3.0%: dealer hedging per 1% move ≈ 3.0% of HHH's average day ($1.8B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 0,
+      "key": 0.0297,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "III",
+    "gex": {
+     "symbol": "III",
+     "live_status": "not_asked",
+     "nightly": null,
+     "live": null,
+     "chips": [
+      {
+       "kind": "none",
+       "text": "🧲 no GEX read",
+       "tone": "muted",
+       "title": "No nightly GEX read for III in the last 7 days.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 3,
+      "key": null,
+      "source": null
+     }
+    }
+   }
+  ],
+  "gex_rule": "🧲 Bullish GEX first: bullish names (dealers net long gamma, price at or above the flip — dips get bought) strongest first, then mixed, then bearish (net short gamma, price under the flip — moves amplified) weakest first, then names with no read. Strength = net dealer gamma per 1% move ÷ the stock's 50-day average $ volume; it runs larger when the nearest expiry is a day out, so those names rank higher by construction. A read whose nearest expiry has already settled counts as no read. Inside a group, and for mixed / no read, the tab's own order holds. UNMEASURED — no study says this predicts the next move. It re-orders only; it hides, gates, sizes and alerts nothing.",
+  "gex_legend": {
+   "no_read_group": 3,
+   "groups": [
+    {
+     "group": 0,
+     "key": "bullish",
+     "label": "bullish"
+    },
+    {
+     "group": 1,
+     "key": "mixed",
+     "label": "mixed"
+    },
+    {
+     "group": 2,
+     "key": "bearish",
+     "label": "bearish"
+    },
+    {
+     "group": 3,
+     "key": "none",
+     "label": "no read"
+    }
+   ]
+  },
+  "gex_scope": "🧲 orders the tiles this page is showing — the tab's own top names after its cut — not the whole universe behind it.",
+  "gex_sort_off": null,
+  "gex_counts": {
+   "bullish": 3,
+   "mixed": 1,
+   "bearish": 2,
+   "none": 3
+  },
+  "gex_as_of": "2026-09-25",
+  "gex_note": "6 of 9 names have a nightly read (Fri 9/25 close); 1 more read no read because Friday's expiry settled. The rest read live when this tab opens in market hours, and nightly after the 17:50 ET sweep.",
+  "disclaimer": "Study board."
+ },
+ "live": {
+  "as_of": "2026-09-28T14:42:00Z",
+  "as_of_text": "live 10:42 ET",
+  "session": "rth",
+  "market_closed": null,
+  "rows": {
+   "AAA": {
+    "symbol": "AAA",
+    "live_status": "ok",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": "mixed",
+     "void": null,
+     "regime": "pinning",
+     "spot": 100.0,
+     "flip_strike": 97.5,
+     "put_wall": 95.0,
+     "call_wall": 105.0,
+     "net_gex_dollars": 1200000.0,
+     "adv_dollars_50": 400000000.0,
+     "strength": null,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": {
+     "kind": "live",
+     "bucket": "mixed",
+     "void": null,
+     "regime": "pinning",
+     "spot": 100.0,
+     "flip_strike": 97.5,
+     "put_wall": 95.0,
+     "call_wall": 105.0,
+     "net_gex_dollars": 1200000.0,
+     "adv_dollars_50": 400000000.0,
+     "strength": null,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-28T14:42:00Z",
+     "as_of_text": "live 10:42 ET"
+    },
+    "chips": [
+     {
+      "kind": "single",
+      "text": "🧲 GEX mixed",
+      "tone": "muted",
+      "title": "🧲 GEX mixed: regime and flip disagree — no directional read\nNow (live 10:42 ET): spot $100.00 · flip $97.50 · put wall $95.00 · call wall $105.00\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 1,
+     "key": null,
+     "source": "live"
+    }
+   },
+   "BBB": {
+    "symbol": "BBB",
+    "live_status": "failed",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": "bearish",
+     "void": null,
+     "regime": "amplifying",
+     "spot": 41.2,
+     "flip_strike": 43.0,
+     "put_wall": 39.14,
+     "call_wall": 43.26,
+     "net_gex_dollars": -1889999.9999999998,
+     "adv_dollars_50": 900000000.0,
+     "strength": -0.0021,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": null,
+    "chips": [
+     {
+      "kind": "single",
+      "text": "🧲 GEX bearish · 0.21%",
+      "tone": "warn",
+      "title": "🧲 GEX bearish: dealers net SHORT gamma with price under the flip — moves amplified\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $41.20 · flip $43.00 · put wall $39.14 · call wall $43.26\nStrength 0.21%: dealer hedging per 1% move ≈ 0.21% of BBB's average day ($900M/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 2,
+     "key": -0.0021,
+     "source": "nightly"
+    }
+   },
+   "CCC": {
+    "symbol": "CCC",
+    "live_status": "ok",
+    "nightly": null,
+    "live": {
+     "kind": "live",
+     "bucket": null,
+     "void": "no_gamma",
+     "regime": null,
+     "spot": 100.0,
+     "flip_strike": 97.5,
+     "put_wall": 95.0,
+     "call_wall": 105.0,
+     "net_gex_dollars": null,
+     "adv_dollars_50": 500000000.0,
+     "strength": null,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-28T14:42:00Z",
+     "as_of_text": "live 10:42 ET"
+    },
+    "chips": [
+     {
+      "kind": "none",
+      "text": "🧲 no GEX read",
+      "tone": "muted",
+      "title": "No nightly GEX read for CCC in the last 7 days.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 3,
+     "key": null,
+     "source": null
+    }
+   },
+   "DDD": {
+    "symbol": "DDD",
+    "live_status": "ok",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": "bullish",
+     "void": null,
+     "regime": "pinning",
+     "spot": 212.4,
+     "flip_strike": 205.0,
+     "put_wall": 201.78,
+     "call_wall": 223.02,
+     "net_gex_dollars": 9900000.0,
+     "adv_dollars_50": 2200000000.0,
+     "strength": 0.0045,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": {
+     "kind": "live",
+     "bucket": "bearish",
+     "void": null,
+     "regime": "amplifying",
+     "spot": 201.0,
+     "flip_strike": 205.0,
+     "put_wall": 190.95,
+     "call_wall": 211.05,
+     "net_gex_dollars": -13640000.0,
+     "adv_dollars_50": 2200000000.0,
+     "strength": -0.0062,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-28T14:42:00Z",
+     "as_of_text": "live 10:42 ET"
+    },
+    "chips": [
+     {
+      "kind": "close",
+      "text": "🧲 close: bullish · 0.45%",
+      "tone": "good",
+      "title": "🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $212.40 · flip $205.00 · put wall $201.78 · call wall $223.02\nStrength 0.45%: dealer hedging per 1% move ≈ 0.45% of DDD's average day ($2.2B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     },
+     {
+      "kind": "now",
+      "text": "🧲 now: bearish · 0.62%",
+      "tone": "warn",
+      "title": "🧲 GEX bearish: dealers net SHORT gamma with price under the flip — moves amplified\nNow (live 10:42 ET): spot $201.00 · flip $205.00 · put wall $190.95 · call wall $211.05\nStrength 0.62%: dealer hedging per 1% move ≈ 0.62% of DDD's average day ($2.2B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 2,
+     "key": -0.0062,
+     "source": "live"
+    }
+   },
+   "EEE": {
+    "symbol": "EEE",
+    "live_status": "ok",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": null,
+     "void": "settled",
+     "regime": "pinning",
+     "spot": 100.0,
+     "flip_strike": 97.5,
+     "put_wall": 95.0,
+     "call_wall": 105.0,
+     "net_gex_dollars": null,
+     "adv_dollars_50": 600000000.0,
+     "strength": null,
+     "expiration_date": "2026-09-25",
+     "days_to_expiry": 0,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": {
+     "kind": "live",
+     "bucket": "bullish",
+     "void": null,
+     "regime": "pinning",
+     "spot": 100.0,
+     "flip_strike": 97.5,
+     "put_wall": 95.0,
+     "call_wall": 105.0,
+     "net_gex_dollars": 719999.9999999999,
+     "adv_dollars_50": 600000000.0,
+     "strength": 0.0012,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-28T14:42:00Z",
+     "as_of_text": "live 10:42 ET"
+    },
+    "chips": [
+     {
+      "kind": "single",
+      "text": "🧲 GEX bullish · 0.12%",
+      "tone": "good",
+      "title": "Last close read used the Fri 9/25 expiry, which settled that afternoon — that dealer book is gone; the next live read in market hours, or the next 17:50 ET sweep, reads the new chain.\n🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nNow (live 10:42 ET): spot $100.00 · flip $97.50 · put wall $95.00 · call wall $105.00\nStrength 0.12%: dealer hedging per 1% move ≈ 0.12% of EEE's average day ($600M/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 0,
+     "key": 0.0012,
+     "source": "live"
+    }
+   },
+   "FFF": {
+    "symbol": "FFF",
+    "live_status": "ok",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": "bullish",
+     "void": null,
+     "regime": "pinning",
+     "spot": 18.3,
+     "flip_strike": 17.9,
+     "put_wall": 17.39,
+     "call_wall": 19.21,
+     "net_gex_dollars": null,
+     "adv_dollars_50": null,
+     "strength": null,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": {
+     "kind": "live",
+     "bucket": "bullish",
+     "void": null,
+     "regime": "pinning",
+     "spot": 18.4,
+     "flip_strike": 17.9,
+     "put_wall": 17.48,
+     "call_wall": 19.32,
+     "net_gex_dollars": null,
+     "adv_dollars_50": null,
+     "strength": null,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-28T14:42:00Z",
+     "as_of_text": "live 10:42 ET"
+    },
+    "chips": [
+     {
+      "kind": "single",
+      "text": "🧲 GEX bullish",
+      "tone": "good",
+      "title": "🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nNow (live 10:42 ET): spot $18.40 · flip $17.90 · put wall $17.48 · call wall $19.32\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 0,
+     "key": null,
+     "source": "live"
+    }
+   },
+   "GGG": {
+    "symbol": "GGG",
+    "live_status": "pending",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": "bearish",
+     "void": null,
+     "regime": "amplifying",
+     "spot": 64.0,
+     "flip_strike": 70.5,
+     "put_wall": 60.8,
+     "call_wall": 67.2,
+     "net_gex_dollars": -5797000.0,
+     "adv_dollars_50": 310000000.0,
+     "strength": -0.0187,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": null,
+    "chips": [
+     {
+      "kind": "single",
+      "text": "🧲 GEX bearish · 1.9%",
+      "tone": "warn",
+      "title": "🧲 GEX bearish: dealers net SHORT gamma with price under the flip — moves amplified\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $64.00 · flip $70.50 · put wall $60.80 · call wall $67.20\nStrength 1.9%: dealer hedging per 1% move ≈ 1.9% of GGG's average day ($310M/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 2,
+     "key": -0.0187,
+     "source": "nightly"
+    }
+   },
+   "HHH": {
+    "symbol": "HHH",
+    "live_status": "ok",
+    "nightly": {
+     "kind": "nightly",
+     "bucket": "bullish",
+     "void": null,
+     "regime": "pinning",
+     "spot": 88.1,
+     "flip_strike": 80.0,
+     "put_wall": 83.69,
+     "call_wall": 92.5,
+     "net_gex_dollars": 53460000.0,
+     "adv_dollars_50": 1800000000.0,
+     "strength": 0.0297,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-25",
+     "as_of_text": "Fri 9/25 close"
+    },
+    "live": {
+     "kind": "live",
+     "bucket": "bullish",
+     "void": null,
+     "regime": "pinning",
+     "spot": 88.3,
+     "flip_strike": 80.0,
+     "put_wall": 83.88,
+     "call_wall": 92.72,
+     "net_gex_dollars": 53460000.0,
+     "adv_dollars_50": 1800000000.0,
+     "strength": 0.0297,
+     "expiration_date": "2026-10-02",
+     "days_to_expiry": 7,
+     "reliability": "single_name",
+     "as_of": "2026-09-28T14:42:00Z",
+     "as_of_text": "live 10:42 ET"
+    },
+    "chips": [
+     {
+      "kind": "single",
+      "text": "🧲 GEX bullish · 3.0%",
+      "tone": "good",
+      "title": "🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nNow (live 10:42 ET): spot $88.30 · flip $80.00 · put wall $83.88 · call wall $92.72\nStrength 3.0%: dealer hedging per 1% move ≈ 3.0% of HHH's average day ($1.8B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 0,
+     "key": 0.0297,
+     "source": "live"
+    }
+   },
+   "III": {
+    "symbol": "III",
+    "live_status": "no_options",
+    "nightly": null,
+    "live": null,
+    "chips": [
+     {
+      "kind": "none",
+      "text": "🧲 no options read",
+      "tone": "muted",
+      "title": "Massive returned no options chain for III on this read (no listed options, or the request was refused) — it retries after 60s.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+     }
+    ],
+    "sort": {
+     "group": 3,
+     "key": null,
+     "source": null
+    }
+   }
+  },
+  "pending": 1,
+  "counts": {
+   "bullish": 3,
+   "mixed": 1,
+   "bearish": 3,
+   "none": 2
+  },
+  "legend": {
+   "no_read_group": 3,
+   "groups": [
+    {
+     "group": 0,
+     "key": "bullish",
+     "label": "bullish"
+    },
+    {
+     "group": 1,
+     "key": "mixed",
+     "label": "mixed"
+    },
+    {
+     "group": 2,
+     "key": "bearish",
+     "label": "bearish"
+    },
+    {
+     "group": 3,
+     "key": "none",
+     "label": "no read"
+    }
+   ]
+  },
+  "scope": "🧲 orders the tiles this page is showing — the tab's own top names after its cut — not the whole universe behind it.",
+  "sort_off": null,
+  "ttl_sec": 60,
+  "budget_sec": 25.0,
+  "truncated": 0,
+  "rule": "🧲 Bullish GEX first: bullish names (dealers net long gamma, price at or above the flip — dips get bought) strongest first, then mixed, then bearish (net short gamma, price under the flip — moves amplified) weakest first, then names with no read. Strength = net dealer gamma per 1% move ÷ the stock's 50-day average $ volume; it runs larger when the nearest expiry is a day out, so those names rank higher by construction. A read whose nearest expiry has already settled counts as no read. Inside a group, and for mixed / no read, the tab's own order holds. UNMEASURED — no study says this predicts the next move. It re-orders only; it hides, gates, sizes and alerts nothing.",
+  "note": "1 names still reading live — they land on the next request."
+ },
+ "zero_dte": {
+  "tab": "zero_dte",
+  "count": 3,
+  "matched": 3,
+  "scanned": 3,
+  "tiles": [
+   {
+    "symbol": "XXX",
+    "gex": {
+     "symbol": "XXX",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "mixed",
+      "void": null,
+      "regime": "pinning",
+      "spot": 100.0,
+      "flip_strike": 97.5,
+      "put_wall": 95.0,
+      "call_wall": 105.0,
+      "net_gex_dollars": 1200000.0,
+      "adv_dollars_50": 4000000000.0,
+      "strength": null,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX mixed",
+       "tone": "muted",
+       "title": "On 0DTE a dealer pin is the RISK for a premium buyer — this tab's own Pinned badge is a warning — so 🧲 does not order this tab and its chips are muted. The tab's Pinned / Amplifying badge reads the 0DTE chain; 🧲 reads the nearest expiry.\n🧲 GEX mixed: regime and flip disagree — no directional read\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $100.00 · flip $97.50 · put wall $95.00 · call wall $105.00\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 1,
+      "key": null,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "ZZZ",
+    "gex": {
+     "symbol": "ZZZ",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bearish",
+      "void": null,
+      "regime": "amplifying",
+      "spot": 500.0,
+      "flip_strike": 510.0,
+      "put_wall": 475.0,
+      "call_wall": 525.0,
+      "net_gex_dollars": -15500000.0,
+      "adv_dollars_50": 5000000000.0,
+      "strength": -0.0031,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bearish · 0.31%",
+       "tone": "muted",
+       "title": "On 0DTE a dealer pin is the RISK for a premium buyer — this tab's own Pinned badge is a warning — so 🧲 does not order this tab and its chips are muted. The tab's Pinned / Amplifying badge reads the 0DTE chain; 🧲 reads the nearest expiry.\n🧲 GEX bearish: dealers net SHORT gamma with price under the flip — moves amplified\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $500.00 · flip $510.00 · put wall $475.00 · call wall $525.00\nStrength 0.31%: dealer hedging per 1% move ≈ 0.31% of ZZZ's average day ($5.0B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 2,
+      "key": -0.0031,
+      "source": "nightly"
+     }
+    }
+   },
+   {
+    "symbol": "YYY",
+    "gex": {
+     "symbol": "YYY",
+     "live_status": "not_asked",
+     "nightly": {
+      "kind": "nightly",
+      "bucket": "bullish",
+      "void": null,
+      "regime": "pinning",
+      "spot": 600.0,
+      "flip_strike": 590.0,
+      "put_wall": 570.0,
+      "call_wall": 630.0,
+      "net_gex_dollars": 71400000.0,
+      "adv_dollars_50": 7000000000.0,
+      "strength": 0.0102,
+      "expiration_date": "2026-10-02",
+      "days_to_expiry": 7,
+      "reliability": "single_name",
+      "as_of": "2026-09-25",
+      "as_of_text": "Fri 9/25 close"
+     },
+     "live": null,
+     "chips": [
+      {
+       "kind": "single",
+       "text": "🧲 GEX bullish · 1.0%",
+       "tone": "muted",
+       "title": "On 0DTE a dealer pin is the RISK for a premium buyer — this tab's own Pinned badge is a warning — so 🧲 does not order this tab and its chips are muted. The tab's Pinned / Amplifying badge reads the 0DTE chain; 🧲 reads the nearest expiry.\n🧲 GEX bullish: dealers net LONG gamma with price at/above the flip — dips get bought, moves damped\nLast close (Fri 9/25 close — the 17:50 ET post-close dealer book): spot $600.00 · flip $590.00 · put wall $570.00 · call wall $630.00\nStrength 1.0%: dealer hedging per 1% move ≈ 1.0% of YYY's average day ($7.0B/day, 50 closed sessions) · nearest expiry Fri 10/2 (7 days out) — near-expiry chains read stronger, so a name with an expiry a day out ranks higher by construction\nSingle-name chain — reliability is lower than an index chain.\nUNMEASURED — no study says this predicts the next move. It orders the board only; it hides, gates, sizes and alerts nothing."
+      }
+     ],
+     "sort": {
+      "group": 0,
+      "key": 0.0102,
+      "source": "nightly"
+     }
+    }
+   }
+  ],
+  "gex_rule": "🧲 Bullish GEX first: bullish names (dealers net long gamma, price at or above the flip — dips get bought) strongest first, then mixed, then bearish (net short gamma, price under the flip — moves amplified) weakest first, then names with no read. Strength = net dealer gamma per 1% move ÷ the stock's 50-day average $ volume; it runs larger when the nearest expiry is a day out, so those names rank higher by construction. A read whose nearest expiry has already settled counts as no read. Inside a group, and for mixed / no read, the tab's own order holds. UNMEASURED — no study says this predicts the next move. It re-orders only; it hides, gates, sizes and alerts nothing.",
+  "gex_legend": {
+   "no_read_group": 3,
+   "groups": [
+    {
+     "group": 0,
+     "key": "bullish",
+     "label": "bullish"
+    },
+    {
+     "group": 1,
+     "key": "mixed",
+     "label": "mixed"
+    },
+    {
+     "group": 2,
+     "key": "bearish",
+     "label": "bearish"
+    },
+    {
+     "group": 3,
+     "key": "none",
+     "label": "no read"
+    }
+   ]
+  },
+  "gex_scope": "🧲 orders the tiles this page is showing — the tab's own top names after its cut — not the whole universe behind it.",
+  "gex_sort_off": {
+   "label": "0DTE keeps its own order",
+   "title": "On 0DTE a dealer pin is the RISK for a premium buyer — this tab's own Pinned badge is a warning — so 🧲 does not order this tab and its chips are muted. The tab's Pinned / Amplifying badge reads the 0DTE chain; 🧲 reads the nearest expiry."
+  },
+  "gex_counts": {
+   "bullish": 1,
+   "mixed": 1,
+   "bearish": 1,
+   "none": 0
+  },
+  "gex_as_of": "2026-09-25",
+  "gex_note": "3 of 3 names have a nightly read (Fri 9/25 close).",
+  "disclaimer": "Study board."
+ }
+}

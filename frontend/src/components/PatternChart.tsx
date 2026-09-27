@@ -34,6 +34,8 @@ import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
 import { MomentumBurstChip } from './MomentumBurstChip';
 import { isBurst, type BurstRead } from '../lib/momentumBurst';
+import { GexChip } from './GexChip';
+import type { GexTileRead } from '../lib/gexRead';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
 import { AmdRaidsChip } from './AmdRaidsChip';
 import {
@@ -88,7 +90,7 @@ const BAND_NAME: Record<string, string> = {
 };
 
 export const PatternChart = memo(function PatternChart(
-  { tile, height = 190, tvTf, study, bandStudy, burst, outerChips, expandAll }: {
+  { tile, height = 190, tvTf, study, bandStudy, burst, gex, outerChips, expandAll }: {
     tile: CmTile; height?: number; tvTf?: string;
     /** 🧨 The board's served explosive verdict, for the chip's tooltip —
      *  the number never lives in this file (board.explosive_study). */
@@ -100,6 +102,10 @@ export const PatternChart = memo(function PatternChart(
      *  checkbox is ticked (null otherwise), so the badge and the pin can never
      *  disagree. Prop-fed; nothing is computed here. */
     burst?: BurstRead | null;
+    /** 🧲 The served GEX read for this name (Ajay 2026-09-27) — the page's
+     *  just-in-time row when it landed, else the board's nightly block. Its
+     *  chips are drawn in the PRICE row; nothing is computed here. UNMEASURED. */
+    gex?: GexTileRead | null;
     /** 📋 The chips the WRAPPER already prints beside this tile (the Support
      *  head, the POTUS head, the 9 EMA strip). The tile skips exactly these,
      *  so one card never shows the same chip twice. */
@@ -288,7 +294,7 @@ export const PatternChart = memo(function PatternChart(
   const entryHas = (ladder.enterableOnFace && !!enterableChip) || ladder.entry.length > 0
     || !!(ladder.zone && ladder.zone.onFace);
   const priceHas = !!ladder.approach || ladder.price.length > 0 || ladder.priceAfter.length > 0
-    || isBurst(burst) || !!ladder.keyLevel;
+    || isBurst(burst) || !!ladder.keyLevel || !!(gex && gex.chips && gex.chips.length);
   const setupHas = !!ladder.why || ladder.setup.badges.length > 0 || ladder.setup.stats.length > 0;
   const timingHas = ladder.timing.badges.length > 0 || ladder.timing.stats.length > 0
     || !!ladder.timing.mergedBoard || studyChips.length > 0 || !!raids || ladder.moreCount > 0;
@@ -403,6 +409,11 @@ export const PatternChart = memo(function PatternChart(
                       and handed down by the page only while its checkbox is
                       ticked. Renders nothing unless the server said ⚡. UNMEASURED. */}
                   <MomentumBurstChip read={burst} />
+                  {/* 🧲 GEX (Ajay 2026-09-27): the served chip(s) — dealer
+                      positioning around the current print, so PRICE, not
+                      ENTRY (it is not an entry signal) and not ▸ more. One
+                      chip, or close + now when they disagree. UNMEASURED. */}
+                  <GexChip read={gex} />
                   {ladder.priceAfter.map(pill)}
                 </div>
               </div>

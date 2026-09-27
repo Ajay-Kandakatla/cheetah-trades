@@ -17,6 +17,7 @@ import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
+import type { GexCounts, GexLegend, GexSortOff, GexTileRead } from './gexRead';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -251,7 +252,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   zones: {
     label: 'Back in Demand',
-    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. Order (2026-09-03): the approaching boards rank closest to the level first; money flow (CMF) breaks ties within a 0.5% distance bucket; Back in Demand keeps reward:risk first. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot. 🧭 SPY and QQQ are pinned above this board (2026-09-16) as a strip with a CHART each — every stored band drawn on it, at two resolutions you can flip between (Fine, the finer geometry; Board, the very set the demand engine and the tiles below are drawn with) — plus the full level ladder folded underneath. Computed overnight from closed daily bars, never filtered or ordered by the controls here, and context only: they gate nothing and claim nothing.',
+    blurb: 'Names that left a demand zone and have pulled back into it. Green band is the zone, with the buy / stop / target written on. Order (2026-09-03): the approaching boards rank closest to the level first; money flow (CMF) breaks ties within a 0.5% distance bucket; Back in Demand keeps reward:risk first. \ud83e\uddf2 GEX chip in the PRICE row (2026-09-27): bullish, mixed or bearish dealer gamma from last night\'s close, with a live read when the tab opens (both shown when they disagree); the \ud83e\uddf2 Bullish GEX first box orders the page by it and hides nothing. UNMEASURED. \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. 🧭 SPY and QQQ are pinned above this board (2026-09-16) as a strip with a CHART each — every stored band drawn on it, at two resolutions you can flip between (Fine, the finer geometry; Board, the very set the demand engine and the tiles below are drawn with) — plus the full level ladder folded underneath. Computed overnight from closed daily bars, never filtered or ordered by the controls here, and context only: they gate nothing and claim nothing.',
   },
   earnings: {
     label: 'Earnings Flow',
@@ -262,7 +263,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // that indexes TAB_META directly — parseTab sends it to `ict`.
   supply: {
     label: 'Into Supply',
-    blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'The inverse of Back in Demand: names that have rallied INTO a tested band of overhead supply, or are about to. Red band is the ceiling, green the next support beneath it. Not a short list — it is where an advance is most likely to stall, so check it before you buy and watch it if you hold. "Room up:down" under 1.00 means more air below than above. \ud83e\uddf2 GEX chip in the PRICE row (2026-09-27): bullish, mixed or bearish dealer gamma from last night\'s close, with a live read when the tab opens (both shown when they disagree); the \ud83e\uddf2 Bullish GEX first box orders the page by it and hides nothing. UNMEASURED. \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band.',
   },
   // Ajay 2026-09-03 (late): "create a new chart maps tab for ICT Strategy,
   // replace supply tab with this new tab." The concepts are his own spec +
@@ -290,7 +291,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // measured harmful — so this copy describes the geometry and never ranks on it.
   deep_demand: {
     label: 'Deep Demand',
-    blurb: 'Penalized price, intact business. Names that crossed one or more demand bands and are arriving at the next level down — the 2nd, the 3rd or the 4th — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red bands are the levels already crossed, each labelled 1st / 2nd / 3rd, green is the level being entered; the tile names the count once more than one was crossed. Four is as deep as this window goes: the board is served the four bands nearest the price, so three crossed levels is the arithmetic ceiling, not a preference. The 2nd \u00b7 3rd \u00b7 4th chips filter the board to the arrival levels you want \u2014 all three on is the whole board, and turning every one off means all of them rather than nothing; each chip carries how many names that level would show right now. Depth is not a measured edge \u2014 the filter narrows, it never ranks: a 4th- or 3rd-level name is not placed above a closer 2nd-level one. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03, unchanged): names inside their arrival band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 marks dealer gamma from last night\'s close (same read as the GEX Board): helps = dealers dampen dips at your entry, hurts = they amplify moves; \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band. No chip just means the name is outside the nightly ~200-name gamma snapshot.',
+    blurb: 'Penalized price, intact business. Names that crossed one or more demand bands and are arriving at the next level down — the 2nd, the 3rd or the 4th — kept only when Pradeep Bonde\'s sales tiers (his 5% YoY floor) say revenue is still growing, so a falling knife with a dying top line never shows. These fail the trend gate by design: the market has already punished them. Red bands are the levels already crossed, each labelled 1st / 2nd / 3rd, green is the level being entered; the tile names the count once more than one was crossed. Four is as deep as this window goes: the board is served the four bands nearest the price, so three crossed levels is the arithmetic ceiling, not a preference. The 2nd \u00b7 3rd \u00b7 4th chips filter the board to the arrival levels you want \u2014 all three on is the whole board, and turning every one off means all of them rather than nothing; each chip carries how many names that level would show right now. Depth is not a measured edge \u2014 the filter narrows, it never ranks: a 4th- or 3rd-level name is not placed above a closer 2nd-level one. 💰 marks money flowing back IN while price sits at the band — CMF-20 plus up/down volume-day counts (Minervini p.71-76) — and it decides ties. Order (2026-09-03, unchanged): names inside their arrival band first, then the nearest approaching names; within a distance bucket money flow (CMF) ranks — supersedes the 2026-08-26 CMF-first order; 🔻 means sellers are still in control, shown so you know why it ranks last. \ud83e\uddf2 GEX chip in the PRICE row (2026-09-27): bullish, mixed or bearish dealer gamma from last night\'s close, with a live read when the tab opens (both shown when they disagree); the \ud83e\uddf2 Bullish GEX first box orders the page by it and hides nothing. UNMEASURED. \ud83d\udee1\ufe0f/\ud83e\uddf1 flags a put/call wall sitting ON the drawn band.',
   },
   quick_bounce: {
     label: '\u{1FA83} Quick Reversal',
@@ -557,6 +558,12 @@ export type CmTile = {
    *  board tab except ICT, and the Support tab. null when the 🔑 box is
    *  unticked (filterTile); absent on an older payload. UNMEASURED. */
   key_levels?: CmKeyLevels | null;
+  /** 🧲 The NIGHTLY GEX read for this name (chart_maps/board.attach_gex,
+   *  2026-09-27) — served on every tile of every board tab, live_status
+   *  "not_asked"; the page's one just-in-time request replaces it per symbol
+   *  when the live read lands. Absent on an older payload → no chip, and the
+   *  tile sorts in the served no-read group. UNMEASURED. */
+  gex?: GexTileRead | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -866,6 +873,18 @@ export type CmBoard = {
   burst_rule?: string | null;
   burst_note?: string | null;
   burst_counts?: BurstCounts | null;
+  /** 🧲 GEX (2026-09-27): the served rule sentence, the legend (which group is
+   *  "no read" and each group's label), the scope note ("orders the page, not
+   *  the universe"), the tab's sort-off reason (0DTE keeps its own order; null
+   *  elsewhere), the tally, the newest nightly date and a one-line coverage
+   *  note. Words come from backend/chart_maps/gex_read.py; nothing is typed. */
+  gex_rule?: string | null;
+  gex_legend?: GexLegend | null;
+  gex_scope?: string | null;
+  gex_sort_off?: GexSortOff | null;
+  gex_counts?: GexCounts | null;
+  gex_as_of?: string | null;
+  gex_note?: string | null;
   /** 🎯 The entry-trigger study's served verdict (2026-09-15), rendered in the
    *  coverage strip. Every number lives in
    *  backend/supply_demand/enterable.py::MEASURED and is never typed here. */

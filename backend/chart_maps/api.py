@@ -10,8 +10,9 @@ import asyncio
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from . import board as board_mod
 from . import ema_frames as ema_frames_mod
@@ -145,6 +146,34 @@ async def chart_maps(
         )
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+class GexLiveBody(BaseModel):
+    """POST body for /chart-maps/gex-live — the shown tiles' symbols."""
+    symbols: list[str]
+    tab: Optional[str] = None
+    repoll: bool = False
+
+
+@router.post("/chart-maps/gex-live")
+async def chart_maps_gex_live(body: GexLiveBody):
+    """🧲 Just-in-time GEX read (Ajay 2026-09-27: "Also just in time GEX read
+    too." / "One tab open both"). ONE batched call per tab open: the nightly
+    ledger read plus a LIVE compute_opex per symbol at the current spot,
+    through chart_maps.gex_read's own pool, single-flight and TTL cache. The
+    live read is never stored in the post-close ledger. Capped at
+    board.LIMIT_MAX symbols (the rest counted in `truncated`); 422 on an empty
+    list; always 200 otherwise. Display only — UNMEASURED; it orders the grid
+    client-side and gates, sizes and alerts nothing."""
+    from supply_demand.bounce_room import normalize_symbols
+    from . import gex_read
+    raw = list(body.symbols or [])
+    if not normalize_symbols(raw, cap=board_mod.LIMIT_MAX):
+        raise HTTPException(status_code=422,
+                            detail="symbols: at least one ticker is required")
+    tab = body.tab if body.tab in board_mod.TABS else None
+    return JSONResponse(await asyncio.to_thread(
+        gex_read.live_payload, raw, tab=tab, repoll=body.repoll is True))
 
 
 @router.get("/chart-maps/support")

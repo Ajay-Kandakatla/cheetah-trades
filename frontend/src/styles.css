@@ -13650,6 +13650,20 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .mb-unknown { color: var(--ink-muted); font-size: 0.72rem; }
 .mb-behind { color: var(--ink-muted); font-size: 0.72rem; }
 
+/* 🧲 GEX on Chart Maps (Ajay 2026-09-27). The chip keeps the SERVED tone
+   (good / warn / muted) of the shared cm-badge family and only adds a dotted
+   outline so it reads as a positioning read, not an entry verdict. The toggle
+   mirrors the ⚡ one; the tally, the sort-off reason and the live line are
+   muted — they explain the order, they are not a second signal. UNMEASURED. */
+.cm-gex { border: 1px dotted currentColor; white-space: nowrap; }
+.gex-toggle { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+.gex-toggle input { accent-color: #10b981; cursor: pointer; }
+.gex-toggle input:disabled { cursor: not-allowed; }
+.gex-count { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.gex-sort-off { color: var(--ink-muted); font-size: 0.72rem; }
+.gex-live { color: var(--ink-muted); font-size: 0.72rem; }
+.gex-live-failed { color: #f59e0b; }
+
 /* ── 📋 The Chart Maps card as an ENTRY LADDER (2026-09-25) ──────────────────
    Ajay 2026-09-24: "I want them to categorized in a good way so I have enough
    info for entry of a stock." One labelled rung per entry question, read top

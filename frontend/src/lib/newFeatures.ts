@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-27: "Can you add gex exposure bullish or bearish signal to the
+  // stocks in our chartmaps and make it sorted by bullish gex please.." → his
+  // answers: "Checkbox, ON by default", "GEX vs the stock's size", "Only Chart
+  // Maps names nightly", "Also just in time GEX read too.", "One tab open
+  // both". Label verbatim from the GEX Chart Maps spec §3.7.
+  { id: 'gex-chart-maps-2026-09-27',
+    label: "🧲 Bullish GEX first on every Chart Maps board. You said: “Can you add gex exposure bullish or bearish signal to the stocks in our chartmaps and make it sorted by bullish gex please..” — then “Checkbox, ON by default”, “GEX vs the stock's size”, “Only Chart Maps names nightly”, “Also just in time GEX read too.” and “One tab open both”. Every tile wears a 🧲 chip in its PRICE row: 🧲 GEX bullish (dealers long gamma, price at or above the flip — dips get bought), 🧲 GEX bearish (short gamma, under the flip — moves amplified), 🧲 GEX mixed, or 🧲 no GEX read. The number is the strength: dealer hedging per 1% move as a % of the stock's average daily $ volume, so a small name with heavy gamma can outrank NVDA — names whose nearest expiry is a day out read stronger. Opening a tab shows last night's read at once and fires ONE live read for the names on screen; when the close and now disagree you see both (🧲 close: bullish · 🧲 now: bearish). A read whose expiry already settled (Friday's close read over the weekend) shows as no read. 0DTE keeps its own order (a pin is the risk there). The 17:50 ET sweep now also covers every name a Chart Maps tab showed in the last 7 days. The box only re-orders — untick it for the tab's own order. It hides nothing, and no alert, gate or Auto-Pilot decision reads it. UNMEASURED: nobody has tested whether this predicts the next move.",
+    addedAt: '2026-09-27', route: '/chart-maps?tab=zones' },
   // Ajay 2026-09-25: "Can you build be key levels in to our charts? They are
   // like demand zones. but very critical. … With check box give it a brigh
   // color in the chart. I wanna know when key levels are broken for a stock."

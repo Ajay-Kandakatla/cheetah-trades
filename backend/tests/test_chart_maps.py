@@ -1207,8 +1207,23 @@ def gex_stub(monkeypatch):
     return table
 
 
+# A recent ledger date: since 2026-09-27 the 🧲 chip ignores a nightly row
+# older than gex_history.NIGHTLY_MAX_AGE_DAYS, so a fixed 2026-08 date would
+# read "no GEX read" forever.
+from datetime import date as _gex_date, timedelta as _gex_td  # noqa: E402
+_GEX_DAY = (_gex_date.today() - _gex_td(days=1)).isoformat()
+
+
+def _gex_badges(t):
+    return [b["text"] for b in t.get("badges") or []]
+
+
+def _gex_chips(t):
+    return [c["text"] for c in t["gex"]["chips"]]
+
+
 def _gex_row(regime="pinning", spot=100.0, flip=90.0, put_wall=None,
-             call_wall=None, date_et="2026-08-26"):
+             call_wall=None, date_et=_GEX_DAY):
     return {"symbol": "X", "date_et": date_et, "spot": spot, "regime": regime,
             "flip_strike": flip, "put_wall": put_wall, "call_wall": call_wall,
             "net_gex_dollars": 4.2e6}
@@ -1227,10 +1242,13 @@ def test_zones_gex_chip_says_helps_and_flags_the_wall_on_the_band(
 
     out = B.board("zones", limit=5, min_tier="any")
     t = next(t for t in out["tiles"] if t["symbol"] == "GEXY")
-    texts = [b["text"] for b in t["badges"]]
-    assert any("🧲 Gamma helps" in x for x in texts)
+    texts = _gex_badges(t)
+    # 2026-09-27: the verdict moved from a badge to the served tile chip.
+    assert t["gex"]["nightly"]["bucket"] == "bullish"
+    assert _gex_chips(t) == ["🧲 GEX bullish"]
+    assert not any(x.startswith("🧲 ") for x in texts)
     assert any(x.startswith("🛡️ Put wall") and "at zone" in x for x in texts)
-    assert out["gex_as_of"] == "2026-08-26"
+    assert out["gex_as_of"] == _GEX_DAY
 
 
 def test_gex_chip_negative_cases_render_nothing(prices, reentry_stub, gex_stub):
@@ -1249,11 +1267,19 @@ def test_gex_chip_negative_cases_render_nothing(prices, reentry_stub, gex_stub):
                                    put_wall=40.0)
 
     out = B.board("zones", limit=5, min_tier="any")
-    by = {t["symbol"]: [b["text"] for b in t["badges"]] for t in out["tiles"]}
+    by = {t["symbol"]: _gex_badges(t) for t in out["tiles"]}
+    tiles = {t["symbol"]: t for t in out["tiles"]}
     assert not any("🧲" in x or "🛡️" in x for x in by["NOGEX"])
     assert not any("🧲" in x or "🛡️" in x for x in by["MIXED"])
-    assert any("🧲 Gamma helps" in x for x in by["FARWALL"])
+    assert not any("🧲" in x for x in by["FARWALL"])
     assert not any("🛡️" in x for x in by["FARWALL"])
+    # The served chip: uncovered → no read, mixed stays mixed, bullish stays
+    # bullish even though its wall is far away.
+    assert _gex_chips(tiles["NOGEX"]) == ["🧲 no GEX read"]
+    assert tiles["NOGEX"]["gex"]["sort"]["group"] == 3
+    assert _gex_chips(tiles["MIXED"]) == ["🧲 GEX mixed"]
+    assert tiles["MIXED"]["gex"]["nightly"]["bucket"] == "mixed"
+    assert _gex_chips(tiles["FARWALL"]) == ["🧲 GEX bullish"]
 
 
 def test_supply_gex_chip_warns_and_flags_the_call_wall_at_the_lid(
@@ -1273,8 +1299,11 @@ def test_supply_gex_chip_warns_and_flags_the_call_wall_at_the_lid(
 
     out = B.board("supply", limit=5, min_tier="any")
     t = next(t for t in out["tiles"] if t["symbol"] == "LIDX")
-    texts = [b["text"] for b in t["badges"]]
-    assert any("🧲 Gamma hurts" in x for x in texts)
+    texts = _gex_badges(t)
+    assert t["gex"]["nightly"]["bucket"] == "bearish"
+    assert _gex_chips(t) == ["🧲 GEX bearish"]
+    assert t["gex"]["chips"][0]["tone"] == "warn"
+    assert not any(x.startswith("🧲 ") for x in texts)
     assert any(x.startswith("🧱 Call wall") and "at lid" in x for x in texts)
     assert not any("🛡️" in x for x in texts)
 
@@ -1292,9 +1321,11 @@ def test_deep_demand_gex_chip_never_corrupts_flow_counts(
 
     out = B.board("deep_demand", limit=5, min_tier="any")
     t = next(t for t in out["tiles"] if t["symbol"] == "DGEX")
-    assert any("🧲 Gamma helps" in b["text"] for b in t["badges"])
+    assert t["gex"]["nightly"]["bucket"] == "bullish"
+    assert _gex_chips(t) == ["🧲 GEX bullish"]
+    assert not any(x.startswith("🧲 ") for x in _gex_badges(t))
     assert out["flow_counts"]["inflow"] == 1
-    assert out["gex_as_of"] == "2026-08-26"
+    assert out["gex_as_of"] == _GEX_DAY
 
 
 # ---------------------------------------------------------------------------

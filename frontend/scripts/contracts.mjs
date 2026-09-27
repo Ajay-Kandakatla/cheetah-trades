@@ -4743,6 +4743,139 @@ const CONTRACTS = [
       return errs;
     },
   },
+  // ── 🧲 Bullish GEX first on Chart Maps (Ajay 2026-09-27: "Can you add gex
+  //    exposure bullish or bearish signal to the stocks in our chartmaps and
+  //    make it sorted by bullish gex please.." → "Checkbox, ON by default") ──
+  {
+    name: '🧲 Chart Maps GEX (2026-09-27): served chips in PRICE, served-key stable sort before the ⚡ pin, one just-in-time POST, URL-only state, every non-grid tab exempt in writing',
+    file: 'src/lib/gexRead.ts',
+    // The read, the bucket, the strength, the group, the sort key, every chip
+    // word and the legend are SERVED (backend/chart_maps/gex_read.py). The teeth:
+    //   * every non-grid Chart Maps tab is exempt IN WRITING;
+    //   * no rounding, no numeric-literal comparison, no % literal and no
+    //     quoted bucket name in the lib, the chip or the toggle — a TSX copy
+    //     of the bucket rule is a second engine that drifts;
+    //   * the chip is PROP-FED and prints chip.text / chip.title;
+    //   * PatternChart draws it in PRICE, right after the ⚡ chip;
+    //   * the page sorts what 🎯 shows BEFORE the ⚡ pin, fires ONE live POST,
+    //     keeps the state in `?gex=off` only (not boardQuery, not localStorage);
+    //   * the ✨ entry quotes the ask and says UNMEASURED; no "bounce".
+    checks: (src) => {
+      const errs = [];
+      const cm = read('src/lib/chartMaps.ts');
+      const tabs = parseCmTabs(cm);
+      if (!tabs) return ['CM_TABS declaration not found'];
+
+      /* 1. GEX_EXEMPT keys == the non-grid tabs, every reason written. */
+      const m = /export const GEX_EXEMPT[^=]*=\s*\{([\s\S]*?)\n\};/.exec(src);
+      if (!m) {
+        errs.push('GEX_EXEMPT declaration not found in lib/gexRead.ts');
+      } else {
+        const body = m[1].replace(/\/\/[^\n]*/g, '');
+        const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
+        const nonGrid = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t)).sort();
+        if (keys.join(',') !== nonGrid.join(',')) {
+          errs.push(`GEX_EXEMPT keys [${keys.join(', ')}] != the non-grid CM_TABS [${nonGrid.join(', ')}] — a grid tab must get 🧲, a non-grid tab must say why not`);
+        }
+        for (const line of body.split('\n')) {
+          const kv = /^\s*([a-z_]+)\s*:\s*(.*?),?\s*$/.exec(line);
+          if (!kv) continue;
+          if (/^''$|^""$/.test(kv[2]) || !kv[2]) errs.push(`GEX_EXEMPT.${kv[1]} has an empty reason`);
+        }
+        if (!/const H13\s*=\s*"[^"]+"/.test(src)) errs.push('the not-wired-yet reason (H13) must be a non-empty string');
+      }
+
+      /* 2. No maths and no bucket names in the lib, the chip or the toggle. */
+      const chip = read('src/components/GexChip.tsx');
+      const toggle = read('src/components/GexToggle.tsx');
+      for (const [rel, f] of [['src/lib/gexRead.ts', src], ['src/components/GexChip.tsx', chip],
+                              ['src/components/GexToggle.tsx', toggle]]) {
+        if (/toFixed/.test(f)) errs.push(`${rel} rounds a number — the served chip already carries the digits`);
+        if (/\d+(\.\d+)?\s*(?:<=|>=|<|>)|(?:<=|>=|<|>)\s*\d/.test(f)) {
+          errs.push(`${rel} compares a number — the group, key and verdict are served by gex_read.py`);
+        }
+        if (f.includes('%')) errs.push(`${rel} carries a % — the strength text is served`);
+        if (/['"`](bullish|bearish|mixed|none)['"`]/.test(f)) {
+          errs.push(`${rel} spells a bucket in quotes — buckets and labels come from the served legend`);
+        }
+      }
+
+      /* 3. The chip is prop-fed and prints the served words. */
+      if (/\bfetch\s*\(/.test(chip) || /useEffect|useState/.test(chip)) {
+        errs.push('GexChip must be PROP-FED — no fetch, no effect, no state');
+      }
+      if (!/chip\.text/.test(chip) || !/chip\.title/.test(chip)) {
+        errs.push('GexChip must render the served chip.text and chip.title');
+      }
+
+      /* 4. The one tile renderer draws it in PRICE, right after the ⚡ chip. */
+      const tile = read('src/components/PatternChart.tsx');
+      const price = tile.indexOf('cm-rung cm-rung-price');
+      const burstAt = tile.indexOf('<MomentumBurstChip', price);
+      const gexAt = tile.indexOf('<GexChip read={gex} />', price);
+      const planAt = tile.indexOf('cm-rung-plan', price);
+      if (price < 0 || gexAt < 0 || burstAt < 0 || !(burstAt < gexAt) || (planAt >= 0 && !(gexAt < planAt))) {
+        errs.push('PatternChart must render <GexChip read={gex} /> inside cm-rung-price, right after <MomentumBurstChip');
+      }
+
+      /* 5. The page: toggle, sort before the pin, one live read, URL key only. */
+      const page = read('src/pages/ChartMaps.tsx');
+      for (const [re, msg] of [
+        [/<GexToggle\s/, 'ChartMaps must mount <GexToggle>'],
+        [/sortByGex\(tilePart\.rows/, 'ChartMaps must sort what 🎯 shows — sortByGex(tilePart.rows, …)'],
+        [/pinBurst\(gexSorted/, 'the ⚡ pin must run on the 🧲 order — pinBurst(gexSorted, …)'],
+        [/useGexLive\(/, 'ChartMaps must ask for the live read through useGexLive()'],
+        [/GEX_PARAM/, 'ChartMaps must read the state from GEX_PARAM (?gex=off)'],
+        [/gex_sort_off/, 'ChartMaps must honour the served gex_sort_off (0DTE keeps its own order)'],
+      ]) {
+        if (!re.test(page)) errs.push(msg);
+      }
+      for (const line of page.split('\n')) {
+        if (/localStorage/.test(line) && /gex/i.test(line)) {
+          errs.push('the 🧲 state must live in the URL only — no localStorage');
+          break;
+        }
+      }
+      const bq = /export function boardQuery\([\s\S]*?\n\}/.exec(cm);
+      if (!bq) errs.push('boardQuery not found in lib/chartMaps.ts');
+      else if (/gex/i.test(bq[0])) errs.push('boardQuery must not carry gex — the order is client-side and toggling never refetches');
+
+      /* 6. The hook posts to the one route, sends repoll, reads the served TTL. */
+      const hook = read('src/hooks/useGexLive.ts');
+      if (!/\/chart-maps\/gex-live/.test(hook)) errs.push('useGexLive must POST /chart-maps/gex-live');
+      if (!/\brepoll\b/.test(hook)) errs.push('useGexLive must send repoll (true only on the pending re-polls)');
+      if (!/ttl_sec/.test(hook)) errs.push('useGexLive must read the served ttl_sec, not a typed TTL');
+
+      /* 7. The ✨ entry quotes the ask and says UNMEASURED. */
+      const nf = read('src/lib/newFeatures.ts');
+      const at = nf.indexOf("'gex-chart-maps-2026-09-27'");
+      if (at < 0) {
+        errs.push('the 🧲 GEX chips have no ✨ NEW entry');
+      } else {
+        const entry = nf.slice(at, nf.indexOf('addedAt', at));
+        if (!entry.includes('UNMEASURED')) errs.push('the 🧲 ✨ entry must say UNMEASURED');
+        if (!entry.includes('sorted by bullish gex')) errs.push('the 🧲 ✨ entry must quote "sorted by bullish gex"');
+        if (/bounce/i.test(entry)) errs.push('the 🧲 ✨ entry says "bounce" — say reversal');
+      }
+
+      /* 8. Every class ships a rule. */
+      const css = read('src/styles.css');
+      for (const c of ['cm-gex', 'gex-toggle', 'gex-count', 'gex-sort-off', 'gex-live', 'gex-live-failed']) {
+        if (!new RegExp('\\.' + c + '(?![\\w-])').test(css)) {
+          errs.push(`.${c} has no CSS rule — the 🧲 control would ship unstyled`);
+        }
+      }
+
+      /* 9. Reversal, never bounce, in the four new files (import paths of the
+       *    shared room-read modules are identifiers, not words he reads). */
+      for (const rel of ['src/lib/gexRead.ts', 'src/components/GexChip.tsx',
+                         'src/components/GexToggle.tsx', 'src/hooks/useGexLive.ts']) {
+        const body = read(rel).split('\n').filter((l) => !/^\s*import\b.*\bfrom\s+'[^']+';\s*$/.test(l)).join('\n');
+        if (/bounce/i.test(body)) errs.push(`${rel} says "bounce" — surfaces he reads say reversal`);
+      }
+      return errs;
+    },
+  },
   // ── 📋 The Chart Maps card as an ENTRY LADDER (Ajay 2026-09-24: "I want
   //    them to categorized in a good way so I have enough info for entry of a
   //    stock." → 2026-09-25 "Yes, build the ladder") ─────────────────────────

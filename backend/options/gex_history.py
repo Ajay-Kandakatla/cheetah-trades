@@ -21,6 +21,28 @@ log = logging.getLogger("options.gex_history")
 
 TOP_SEPA_N = 30
 MAX_UNIVERSE = 200
+# Named 2026-09-27 (Chart Maps 🧲 chip) so the chip's live read and its
+# freshness rule reuse the sweep's own numbers by name. Values unchanged.
+SWEEP_WORKERS = 8
+NIGHTLY_MAX_AGE_DAYS = 7
+
+# {symbol, date_et desc} — serves snapshot_for's $match/$sort and series()
+# (2026-09-27: the collection had only _id, so every board load COLLSCANned).
+INDEX = [("symbol", 1), ("date_et", -1)]
+_INDEXED = False
+
+
+def ensure_index(coll) -> bool:
+    """Idempotent create_index (the zone_edge.ensure_track_index pattern).
+    A fake collection without create_index is fine — returns False."""
+    if coll is None:
+        return False
+    try:
+        coll.create_index(INDEX, name="symbol_date")
+        return True
+    except Exception as exc:                        # noqa: BLE001
+        log.debug("gex_history: index: %s", exc)
+        return False
 
 
 def _coll():
@@ -130,8 +152,15 @@ def board(days_back: int = 5) -> dict:
     }
 
 
-def snapshot_universe() -> list:
-    """Portfolio + watchlists + SOIR BULLISH/WATCH + top SEPA. Deduped."""
+def snapshot_universe(include_chart_maps: bool = False) -> list:
+    """Portfolio + watchlists + SOIR BULLISH/WATCH + top SEPA. Deduped.
+
+    include_chart_maps (2026-09-27, default False so every existing caller is
+    unchanged): append the names Chart Maps served in the last
+    NIGHTLY_MAX_AGE_DAYS (chart_maps.gex_seen) that the core list lacks."""
+    if include_chart_maps:
+        core, extra = universe_split(True)
+        return core + extra
     seen = []
 
     def _add(syms):
@@ -172,6 +201,28 @@ def snapshot_universe() -> list:
     except Exception as exc:
         log.debug("gex universe: sepa top skipped: %s", exc)
     return seen[:MAX_UNIVERSE]
+
+
+def universe_split(include_chart_maps: bool = True) -> tuple:
+    """(core, extra). core = the classic universe, still cut at MAX_UNIVERSE;
+    extra = Chart Maps names served recently (per-tab capped inside
+    gex_seen.recent_symbols) minus core. Any failure → extra []."""
+    core = list(snapshot_universe())
+    if not include_chart_maps:
+        return core, []
+    try:
+        from chart_maps import gex_seen
+        have = set(core)
+        extra = []
+        for s in gex_seen.recent_symbols() or []:
+            t = (s or "").upper().strip()
+            if t and t not in have:
+                have.add(t)
+                extra.append(t)
+    except Exception as exc:                        # noqa: BLE001
+        log.debug("gex universe: chart maps names skipped: %s", exc)
+        extra = []
+    return core, extra
 
 
 MOVER_MIN_ABS_PCT = 4.0
@@ -215,18 +266,27 @@ def add_symbol(symbol: str) -> Optional[dict]:
     return dict(row, bucket=board_bucket(row))
 
 
-def run(workers: int = 8) -> dict:
+def run(workers: int = SWEEP_WORKERS, include_chart_maps: bool = True) -> dict:
     """One daily sweep: compute_opex per universe name, upsert slim rows.
     Threaded (2026-07-17) so the board's on-demand refresh finishes in ~20s
     instead of minutes; the scanner already runs 20 workers on the options
-    key, so 8 is well inside the budget."""
+    key, so 8 is well inside the budget.
+
+    include_chart_maps (2026-09-27): the 17:50 cron (default True) also
+    sweeps every name a Chart Maps tab served in the last
+    NIGHTLY_MAX_AGE_DAYS; each row is tagged universe "core" | "chart_maps".
+    The board page's on-demand refresh passes False (core only — it runs
+    behind a request)."""
     coll = _coll()
     if coll is None:
         return {"ok": False, "reason": "no mongo"}
+    ensure_index(coll)
     from concurrent.futures import ThreadPoolExecutor
     from options import opex
     d = _et_date()
-    syms = snapshot_universe()
+    core, extra = universe_split(include_chart_maps)
+    syms = list(core) + list(extra)
+    core_set = set(core)
     n_ok = n_fail = 0
 
     def _one(sym):
@@ -242,6 +302,7 @@ def run(workers: int = 8) -> dict:
         if row is None:
             n_fail += 1
             continue
+        row["universe"] = "core" if sym in core_set else "chart_maps"
         try:
             coll.update_one({"_id": f"{sym}:{d}"}, {"$set": row}, upsert=True)
             n_ok += 1
@@ -251,10 +312,10 @@ def run(workers: int = 8) -> dict:
     log.info("gex_history: %d recorded, %d skipped (of %d) for %s",
              n_ok, n_fail, len(syms), d)
     return {"ok": True, "date_et": d, "recorded": n_ok, "skipped": n_fail,
-            "universe": len(syms)}
+            "universe": len(syms), "core": len(core), "chart_maps": len(extra)}
 
 
-def snapshot_for(symbols: list, max_age_days: int = 7) -> dict:
+def snapshot_for(symbols: list, max_age_days: int = NIGHTLY_MAX_AGE_DAYS) -> dict:
     """{symbol: latest slim row} for a set of symbols, one aggregation.
 
     Feeds the demand-zone boards' 🧲 chips (Ajay 2026-08-27: "add the gex
@@ -268,10 +329,13 @@ def snapshot_for(symbols: list, max_age_days: int = 7) -> dict:
     are decoration, never worth an error."""
     from datetime import date, timedelta
 
+    global _INDEXED
     coll = _coll()
     syms = sorted({str(s).upper() for s in (symbols or []) if s})
     if coll is None or not syms:
         return {}
+    if not _INDEXED:
+        _INDEXED = ensure_index(coll)
     floor = (date.today() - timedelta(days=max_age_days)).isoformat()
     try:
         rows = coll.aggregate([

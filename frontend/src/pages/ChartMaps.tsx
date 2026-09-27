@@ -88,6 +88,9 @@ import { useMyFeatures } from '../hooks/useMyFeatures';
 import { RulesInfo } from '../components/RulesInfo';
 import { EnterableOnlyToggle } from '../components/EnterableOnlyToggle';
 import { MomentumBurstToggle } from '../components/MomentumBurstToggle';
+import { GexToggle } from '../components/GexToggle';
+import { useGexLive } from '../hooks/useGexLive';
+import { GEX_PARAM, countGex, gexOf, gexParam, parseGexParam, sortByGex } from '../lib/gexRead';
 import { readMoreExpandPref, writeMoreExpandPref } from '../lib/cardLadder';
 import { BURST_PARAM, burstParam, isBurst, parseBurstParam, pinBurst } from '../lib/momentumBurst';
 import { HiddenCount } from '../components/HiddenCount';
@@ -262,6 +265,23 @@ export function ChartMaps() {
       const next = new URLSearchParams(prev);
       const val = burstParam(v);
       if (val) next.set(BURST_PARAM, val); else next.delete(BURST_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
+  /* 🧲 BULLISH GEX FIRST (Ajay 2026-09-27: "make it sorted by bullish gex
+   * please.." → "Checkbox, ON by default"). ON by default, so the state that
+   * has to be visible is the OFF one: `?gex=off` in the URL and nowhere else —
+   * the `?show=all` rule. NOT sent to the server and NOT a dependency of
+   * `load`: the nightly read rides on every tile (chart_maps/board.attach_gex)
+   * and the live read comes from ONE batched request (useGexLive), so ticking
+   * the box re-orders what is on screen and never refetches the board. */
+  const gexOn = parseGexParam(params.get(GEX_PARAM));
+  const setGexOn = useCallback((v: boolean) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const val = gexParam(v);
+      if (val) next.set(GEX_PARAM, val); else next.delete(GEX_PARAM);
       return next;
     }, { replace: true });
   }, [setParams]);
@@ -693,9 +713,40 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
    * the ON grid is a permutation of the OFF grid and nothing is hidden. The
    * checkbox count is `pinned`, i.e. exactly the names the pin moves. A ⚡ name
    * the 🎯 filter holds back is counted as "behind 🎯", never dropped silently. */
+  /* 🧲 The GEX order runs on what the 🎯 cut already SHOWS, BEFORE the ⚡ pin
+   * (⚡ stays on top). One just-in-time request for those names ("One tab open
+   * both"): every tile draws the nightly read at once and swaps in the live
+   * row when it lands. A STABLE sort on SERVED keys — group, then key, then
+   * the tab's own order — so the ON grid is a permutation of the OFF grid and
+   * nothing is hidden. The legend (which group is "no read") is served; with
+   * no legend, or a tab the server says keeps its own order (0DTE), the grid
+   * is the served order.
+   *
+   * The live request asks for EVERY served tile (≤ BOARD_LIMIT), not only the
+   * ones 🎯 shows: a view preference (🎯, its un-hide chips) must reach no
+   * endpoint, not even as a symbol-list change (ChartMapsReasonToggle pins
+   * that), and un-hiding a name then shows its live read at once instead of
+   * firing a second chain pull.
+   *
+   * `gexForThisTab`: for the half second after a tab switch `data` is still
+   * the PREVIOUS tab's payload (the same `data.tab` check as the 🎯 kind
+   * above). Without it the new tab name + the old tab's symbols missed the
+   * cache and POSTed up to 80 old names — real chain pulls queued ahead of the
+   * new tab's names — and the old tab's `gex_sort_off` steered the new tab. */
+  const gexForThisTab = (data?.tab ?? tab) === tab;
+  const gexLive = useGexLive(
+    isBoardTab(tab) && gexForThisTab ? tiles.map((t) => t.symbol) : [], data, tab);
+  const gexLegend = gexLive.payload?.legend ?? data?.gex_legend ?? null;
+  const gexSortOff = gexForThisTab ? (data?.gex_sort_off ?? null) : null;
+  const gexSorted = useMemo(
+    () => sortByGex(tilePart.rows, (t) => gexOf(t, gexLive.map), gexOn && !gexSortOff, gexLegend),
+    [tilePart.rows, gexLive.map, gexOn, gexSortOff, gexLegend]);
+  const gexCounts = useMemo(
+    () => countGex(tilePart.rows, (t) => gexOf(t, gexLive.map), gexLegend),
+    [tilePart.rows, gexLive.map, gexLegend]);
   const burstPin = useMemo(
-    () => pinBurst(tilePart.rows, (t) => t.burst, burstOn),
-    [tilePart.rows, burstOn]);
+    () => pinBurst(gexSorted, (t) => t.burst, burstOn),
+    [gexSorted, burstOn]);
   const burstBehind = useMemo(
     () => tiles.filter((t) => isBurst(t.burst)).length - burstPin.pinned,
     [tiles, burstPin.pinned]);
@@ -1278,6 +1329,12 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             Themes first (quantum · nuclear · robotics · AI semis)
           </label>
         )}
+        {/* 🧲 Bullish GEX first — on EVERY tile-grid tab, ON by default.
+          * Re-orders, hides nothing; the non-grid tabs are listed with their
+          * reason in lib/gexRead.ts::GEX_EXEMPT. UNMEASURED. */}
+        <GexToggle on={gexOn} onChange={setGexOn} counts={gexCounts}
+                   rule={gexLive.payload?.rule ?? data?.gex_rule}
+                   scope={data?.gex_scope} sortOff={gexSortOff} live={gexLive} />
         {/* ⚡ Momentum burst — on EVERY board tab. Pins + badges, hides
           * nothing; the non-board tabs are listed with their reason in
           * lib/momentumBurst.ts::BURST_EXEMPT. */}
@@ -1645,6 +1702,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
                         bandStudy={data?.band_structure_study}
                         burst={burstOn ? (t.burst ?? null) : null}
+                        gex={gexOf(t, gexLive.map)}
                         expandAll={moreAll} />
         ))}
       </div>
