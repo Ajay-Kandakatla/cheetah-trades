@@ -218,7 +218,7 @@ throttle**. This is **HIS call** (Rule #10). Nothing has been changed.
 |---|---|---|
 | minervini | −$5,094, −0.21R | **UNMEASURED.** There is no placebo study of the auto_entry trigger. Lid-break 57.5% vs 24–26% measures a touch of the prior high, not P&L |
 | breakout / zone_edge | −$3,856, −0.39R | Zones beat SPY nowhere. The entry-trigger / ENTERABLE study found **no_signal** |
-| demand_zone | −$1,473 (n=2) | Same-day demand alerts are a **coin flip**. Bounce-gate baseline: 24% win / 75% stop-out |
+| demand_zone | −$1,473 (n=2) | Same-day demand alerts are a **coin flip**. Reversal-gate baseline: 24% win / 75% stop-out |
 | options_zone | −$325 | Uses the same zone signal, so it inherits the null |
 | zero_dte | −$513 | The signal_lab tags have **no placebo study**. ICT +0.03R (no edge). Raid-low no_signal |
 | catalyst / hot_pullback | no fills | 8-K = volatility, not direction; promo INVERTED. Hot pullback is null |
