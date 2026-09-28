@@ -133,3 +133,12 @@ pull and is not built.
 Both are display + decision-support. `analyze_tape(trades, quotes=None)` keeps
 its old single-argument behaviour, so every existing caller works unchanged
 (`test_analyze_tape_without_quotes_still_works_and_flags_tick`).
+
+## Trade eligibility (2026-09-27)
+
+Sides, delta and bursts now read **regular prints only**. Venue share and
+dark blocks read every print that is real volume, with busted prints and
+official open/close re-reports removed. Each dark block carries `date_et`
+and `kind`. The full rule and the ORCL before/after are in
+`docs/sepa/orderflow_methodology.md` § "Trade eligibility + date stamps
+(2026-09-27)".

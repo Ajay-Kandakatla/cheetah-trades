@@ -169,7 +169,18 @@ def get_cached(symbol: str) -> Optional[dict]:
 
 
 def _is_stale(doc: dict) -> bool:
-    """Stale = not from the latest session, or >20 min old during RTH."""
+    """Stale = not from the latest session, or >20 min old during RTH, or
+    computed before the 2026-09-27 trade-eligibility rule.
+
+    A snapshot whose `tape` has no `excluded` key was built when every print
+    (auction crosses, official-close re-reports, busted prints) counted as a
+    buy or a sell — ORCL 2026-09-25's closing cross read as five BUY rows. It
+    must never be served as fresh: the page shows the rescan hint instead.
+    """
+    from .history import tape_method
+    from .tape import ELIGIBILITY_METHOD
+    if tape_method(doc) != ELIGIBILITY_METHOD:
+        return True
     now = _now_et()
     try:
         as_of = datetime.fromisoformat((doc.get("as_of_utc") or "").rstrip("Z"))

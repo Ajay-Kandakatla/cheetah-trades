@@ -16,8 +16,8 @@ import { useEffect, useRef } from 'react';
 import { useOrderflow } from '../hooks/useOrderflow';
 import { InfoButton } from './InfoButton';
 import {
-  accuracyLine, binDelta, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares,
-  fmtSharesAbs,
+  accuracyLine, binDelta, blockKindTag, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares,
+  fmtSharesAbs, printSideView, printStamp,
   sparklinePoints, verdictView,
 } from '../lib/orderflow';
 import type { TapeData } from '../lib/orderflow';
@@ -96,12 +96,6 @@ function DeltaBars({ series }: { series: [string, number][] }) {
   );
 }
 
-const SIDE_CHIP: Record<string, { label: string; color: string }> = {
-  buy: { label: 'BUY', color: '#10b981' },
-  sell: { label: 'SELL', color: '#ef4444' },
-  unknown: { label: '—', color: '#9ca3af' },
-};
-
 export function TapePanel({ symbol }: { symbol: string }) {
   const { data, loading, scanning, scan, accuracy } = useOrderflow(symbol);
 
@@ -150,6 +144,9 @@ export function TapePanel({ symbol }: { symbol: string }) {
   const cls = classificationView(d.tape?.classification);
   const venues = d.tape?.venues;
   const dark = darkShareView(venues?.dark_pct, venues?.is_heavy);
+  // Served sentence (orderflow/tape.py:excluded_note) — counts of the prints
+  // held out of buy/sell. Absent on snapshots written before 2026-09-27.
+  const excludedNote = d.tape?.excluded?.note;
 
   return (
     <section style={CARD}>
@@ -278,14 +275,25 @@ export function TapePanel({ symbol }: { symbol: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {venues.blocks.slice(0, 8).map((b, i) => (
+                  {venues.blocks.slice(0, 8).map((b, i) => {
+                    const tag = blockKindTag(b.kind);
+                    return (
                     <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                      <td style={{ padding: '2px 10px 2px 0' }}>{b.time}</td>
+                      <td style={{ padding: '2px 10px 2px 0' }} data-testid="tape-block-stamp">
+                        {printStamp({ date_et: b.date_et, time_et: b.time, exec_date_et: b.exec_date_et, exec_time_et: b.exec_time_et }, d.et_date)}
+                        {tag && (
+                          <span title={tag.title} style={{ marginLeft: 6, fontSize: '0.62rem', color: '#9ca3af',
+                            border: '1px solid rgba(156,163,175,0.4)', borderRadius: 999, padding: '0 5px', cursor: 'help' }}>
+                            {tag.label}
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '2px 10px 2px 0' }}>${b.price.toFixed(2)}</td>
                       <td style={{ padding: '2px 10px 2px 0' }}>{fmtSharesAbs(b.size)}</td>
                       <td style={{ padding: '2px 0', color: '#a78bfa' }}>{fmtDollars(b.dollars)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -307,6 +315,14 @@ export function TapePanel({ symbol }: { symbol: string }) {
             <p>We flag prints ≥ max($100k, the day's top 0.1% by dollar value) — adaptive, so a $40
               small-cap and NVDA both show sensible tapes. A session where the big prints lean
               heavily to the buy side = institutions accumulating.</p>
+            <p><strong>Auctions and non-regular prints.</strong> The opening and closing auction
+              crosses are listed as <strong>OPEN AUCTION</strong> / <strong>CLOSE AUCTION</strong>{' '}
+              with no side — nobody aggressed — and never count toward Big buy $ or Big sell $.
+              Official open/close re-reports of a cross, cancelled prints and average-price /
+              contingent / derivatively-priced prints are left out of buy/sell, delta and bursts;
+              the line under the tiles counts them.</p>
+            <p>Each row shows the date and the tape time (New York). A print executed on an
+              earlier day and reported late also shows when it executed.</p>
           </InfoButton>
         </div>
         {prints && prints.prints.length > 0 ? (
@@ -316,6 +332,11 @@ export function TapePanel({ symbol }: { symbol: string }) {
               <Tile label="Big sell $" value={fmtDollars(prints.sell_dollars)} color="#ef4444" />
               <Tile label="Threshold" value={fmtDollars(prints.threshold_dollars)} sub="top 0.1% of today's prints" />
             </div>
+            {excludedNote && (
+              <p data-testid="tape-excluded-note" style={{ margin: '0 0 0.4rem', fontSize: '0.7rem', color: 'var(--cm-slate)' }}>
+                {excludedNote}
+              </p>
+            )}
             <div style={{ overflowX: 'auto' }}>
               <table className="mono" style={{ fontSize: '0.74rem', borderCollapse: 'collapse', minWidth: 420 }}>
                 <thead>
@@ -328,10 +349,10 @@ export function TapePanel({ symbol }: { symbol: string }) {
                 </thead>
                 <tbody>
                   {prints.prints.slice(0, 10).map((p, i) => {
-                    const sc = SIDE_CHIP[p.side] ?? SIDE_CHIP.unknown;
+                    const sc = printSideView(p.side, p.kind);
                     return (
                       <tr key={i} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '0.22rem 0.8rem 0.22rem 0', color: 'var(--cm-slate)' }}>{p.time_et}</td>
+                        <td style={{ padding: '0.22rem 0.8rem 0.22rem 0', color: 'var(--cm-slate)' }} data-testid="tape-print-stamp">{printStamp(p, d.et_date)}</td>
                         <td style={{ padding: '0.22rem 0.8rem 0.22rem 0', color: sc.color, fontWeight: 800 }}>{sc.label}</td>
                         <td style={{ padding: '0.22rem 0.8rem 0.22rem 0' }}>{p.size.toLocaleString()} @ ${p.price}</td>
                         <td style={{ padding: '0.22rem 0', fontWeight: 700 }}>{fmtDollars(p.dollars)}</td>
@@ -343,9 +364,16 @@ export function TapePanel({ symbol }: { symbol: string }) {
             </div>
           </>
         ) : (
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.76rem', color: 'var(--cm-slate)' }}>
-            No institutional-size prints this session.
-          </p>
+          <>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.76rem', color: 'var(--cm-slate)' }}>
+              No institutional-size prints this session.
+            </p>
+            {excludedNote && (
+              <p data-testid="tape-excluded-note" style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: 'var(--cm-slate)' }}>
+                {excludedNote}
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -363,10 +391,10 @@ export function TapePanel({ symbol }: { symbol: string }) {
         {bursts.length ? (
           <ul style={{ listStyle: 'none', margin: '0.35rem 0 0', padding: 0, display: 'grid', gap: '0.25rem' }}>
             {bursts.map((b, i) => {
-              const sc = SIDE_CHIP[b.side] ?? SIDE_CHIP.unknown;
+              const sc = printSideView(b.side);
               return (
                 <li key={i} className="mono" style={{ fontSize: '0.75rem' }}>
-                  <span style={{ color: 'var(--cm-slate)' }}>{b.time_et}</span>{' '}
+                  <span style={{ color: 'var(--cm-slate)' }} data-testid="tape-burst-stamp">{printStamp(b, d.et_date)}</span>{' '}
                   <span style={{ color: sc.color, fontWeight: 800 }}>{sc.label} FLASH</span>{' '}
                   {fmtDollars(b.dollars)} · {b.n_trades} prints in 10s @ ${b.price}
                 </li>

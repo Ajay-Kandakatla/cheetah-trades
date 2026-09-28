@@ -95,11 +95,19 @@ def is_subpenny(price: float, eps: float = SUBPENNY_EPS) -> bool:
 
 
 def identify(trades: Optional[pd.DataFrame],
-             quotes: Optional[pd.DataFrame] = None) -> dict:
+             quotes: Optional[pd.DataFrame] = None,
+             total_volume: Optional[int] = None) -> dict:
     """Split a tape into retail vs everything else.
 
     `quotes` (NBBO) is what makes the SIGN trustworthy. Without it the counts
     are still reported but `signed` is False and no imbalance is returned.
+
+    `total_volume` (2026-09-27) is the denominator of `retail_pct_of_volume`
+    when the caller hands in a FILTERED tape: the Tape tab passes its regular
+    prints as `trades` (so retail prints and their sign come from real flow)
+    and the session's real volume (busted + summary re-reports out) here, so
+    the percent stays a share of real volume. None = the sum of `trades`, the
+    pre-2026-09-27 behaviour every other caller keeps.
     """
     out = {"available": False, "signed": False,
            "retail_trades": 0, "retail_shares": 0, "retail_pct_of_volume": None,
@@ -112,7 +120,8 @@ def identify(trades: Optional[pd.DataFrame],
     if off.empty:
         return {**out, "available": True}
     retail = off[off["price"].map(is_subpenny)]
-    total_vol = int(trades["size"].sum())
+    total_vol = (int(total_volume) if total_volume is not None
+                 else int(trades["size"].sum()))
     r_shares = int(retail["size"].sum()) if not retail.empty else 0
 
     out.update({

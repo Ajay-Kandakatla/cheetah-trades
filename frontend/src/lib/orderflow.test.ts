@@ -1,6 +1,6 @@
 /* Tape (order-flow) presentation helpers — pure-logic tests incl. negatives. */
 import { describe, expect, it } from 'vitest';
-import { accuracyLine, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares, fmtSharesAbs, sparklinePoints, verdictView } from './orderflow';
+import { accuracyLine, blockKindTag, classificationView, darkShareView, deltaTone, fmtDollars, fmtShares, fmtSharesAbs, fmtTapeStamp, printSideView, printStamp, sparklinePoints, verdictView } from './orderflow';
 
 describe('verdictView', () => {
   it('maps the three verdicts to distinct tones', () => {
@@ -167,5 +167,64 @@ describe('binDelta', () => {
   it('handles an empty or missing series', () => {
     expect(binDelta([], 130)).toEqual([]);
     expect(binDelta(undefined as unknown as [string, number][], 130)).toEqual([]);
+  });
+});
+
+/* Date stamps + auction labels (2026-09-27). Ajay on the ORCL Tape tab: "Can
+ * you add date stamps please to the tape?" then "this is for oracle hoping
+ * this info is accurate". Rows below are the real ORCL 2026-09-25 prints. */
+
+describe('fmtTapeStamp', () => {
+  it('renders weekday, month-day and time', () => {
+    expect(fmtTapeStamp('2026-09-25', '16:04:14')).toBe('Fri 09-25 16:04:14');
+    expect(fmtTapeStamp('2026-09-28', '09:30:14')).toBe('Mon 09-28 09:30:14');
+    expect(fmtTapeStamp('2026-09-25', null)).toBe('Fri 09-25');
+  });
+  it('NEGATIVE: a missing or malformed date falls back to the bare time, never a wrong day', () => {
+    expect(fmtTapeStamp(undefined, '16:04:14')).toBe('16:04:14');
+    expect(fmtTapeStamp('', '16:04:14')).toBe('16:04:14');
+    expect(fmtTapeStamp('2026-02-30', '16:04:14')).toBe('16:04:14');
+    expect(fmtTapeStamp('09/25/2026', '16:04:14')).toBe('16:04:14');
+    expect(fmtTapeStamp(null, null)).toBe('—');
+  });
+});
+
+describe('printStamp', () => {
+  it('uses the row date, else the snapshot date (old snapshots)', () => {
+    expect(printStamp({ date_et: '2026-09-25', time_et: '16:04:14' }, '2026-09-26')).toBe('Fri 09-25 16:04:14');
+    expect(printStamp({ time_et: '16:04:14' }, '2026-09-25')).toBe('Fri 09-25 16:04:14');
+  });
+  it('a late report executed on an earlier day shows its execution date', () => {
+    expect(printStamp({ date_et: '2026-09-25', time_et: '04:00:00', exec_date_et: '2026-09-24', exec_time_et: '22:10:03' }))
+      .toBe('Fri 09-25 04:00:00 (executed Thu 09-24 22:10:03)');
+  });
+  it('NEGATIVE: same-day execution adds nothing, whatever the time gap', () => {
+    expect(printStamp({ date_et: '2026-09-25', time_et: '16:04:14', exec_date_et: '2026-09-25', exec_time_et: '16:04:14' }))
+      .toBe('Fri 09-25 16:04:14');
+    expect(printStamp({ date_et: '2026-09-25', time_et: '04:00:00', exec_date_et: '2026-09-25', exec_time_et: '00:19:00' }))
+      .toBe('Fri 09-25 04:00:00');
+  });
+});
+
+describe('printSideView', () => {
+  it('labels auction crosses as the auction, never BUY/SELL', () => {
+    expect(printSideView(null, 'auction_close')).toEqual({ label: 'CLOSE AUCTION', color: '#9ca3af', auction: true });
+    expect(printSideView(null, 'auction_open').label).toBe('OPEN AUCTION');
+    expect(printSideView('buy', 'auction_reopen').label).toBe('REOPEN AUCTION');   // kind wins even if a side leaked
+  });
+  it('NEGATIVE: a regular print keeps its side; junk reads —', () => {
+    expect(printSideView('buy', 'regular').label).toBe('BUY');
+    expect(printSideView('sell').label).toBe('SELL');
+    expect(printSideView('unknown', 'regular').label).toBe('—');
+    expect(printSideView(null, 'regular').label).toBe('—');
+    expect(printSideView(undefined, 'something_new').auction).toBe(false);
+  });
+});
+
+describe('blockKindTag', () => {
+  it('tags a non-regular dark block only', () => {
+    expect(blockKindTag('non_flow')?.label).toBe('non-regular');
+    expect(blockKindTag('regular')).toBeNull();
+    expect(blockKindTag(undefined)).toBeNull();
   });
 });

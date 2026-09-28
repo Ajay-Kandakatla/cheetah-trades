@@ -44,6 +44,19 @@ def _coll():
 
 
 # ── 1. RECORD ────────────────────────────────────────────────────────────────
+def tape_method(snap: dict) -> str:
+    """Which tape rule produced this verdict. PURE.
+
+    From 2026-09-27 the tape classifies every print by its Massive sale
+    conditions before it sides it (tape.ELIGIBILITY_METHOD); `checks_passed`
+    means something different on each side of that date (ORCL 2026-09-25: 3/5
+    on every print, 1/5 on regular prints). A snapshot whose tape carries no
+    `excluded` key was built the old way.
+    """
+    from .tape import ELIGIBILITY_METHOD, LEGACY_METHOD
+    return ELIGIBILITY_METHOD if "excluded" in (snap.get("tape") or {}) else LEGACY_METHOD
+
+
 def record(snap: dict) -> bool:
     """One observation per (symbol, et_date, verdict). Idempotent."""
     coll = _coll()
@@ -56,6 +69,7 @@ def record(snap: dict) -> bool:
     doc = {"symbol": sym, "et_date": d, "verdict": v,
            "entry_price": snap.get("last_price"),
            "checks_passed": snap.get("checks_passed"),
+           "method": tape_method(snap),
            "recorded_at": int(time.time()), "resolved": False}
     try:
         r = coll.update_one({"_id": doc_id}, {"$setOnInsert": doc}, upsert=True)

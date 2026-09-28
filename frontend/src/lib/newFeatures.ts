@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-27: "Can you add date stamps please to the tape?" / "this is
+  // for oracle hoping this info is accurate"
+  { id: 'tape-dates-auctions-2026-09-27',
+    label: '🕰️ The Tape tab now dates every row and counts each trade once. You said: “Can you add date stamps please to the tape?” and “hoping this info is accurate.” Big prints, Trade Flash bursts and dark blocks read like “Fri 09-25 16:04:14”. The exchange re-sends the official open and close several times after a session, and cancelled trades stay in the feed; the tape used to count every copy as buying or selling — ORCL on 09-25 showed one $229M closing auction five times. Now the opening and closing auctions show once as OPEN AUCTION / CLOSE AUCTION with no buy/sell side, re-reports and cancelled trades are left out, and a line under the tiles says how many prints were excluded. ORCL 09-25 corrected: big buy $111M vs big sell $120M (was $1,564M vs $118M), session delta −0.94M shares (was +9.71M), and the tape volume now matches the exchange’s daily volume.',
+    addedAt: '2026-09-27' },
   // Ajay 2026-09-25: "Can you help make all the catalyst pages to be going to
   // Ticker supply and demand please?"
   { id: 'catalyst-links-supply-2026-09-25',

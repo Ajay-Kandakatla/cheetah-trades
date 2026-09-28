@@ -108,15 +108,27 @@ def dark_blocks(df: pd.DataFrame, top: int = TOP_BLOCKS) -> list:
     if d.empty:
         return []
     d = d.sort_values("dollars", ascending=False).head(top)
+    # `date_et` (2026-09-27, Ajay: "Can you add date stamps please to the
+    # tape?") — the Tape tab serves the last session's snapshot on later
+    # days, so a bare time does not say which day. `kind` rides along when the
+    # frame carries one (tape.print_kind): a block can be an average-price or
+    # prior-reference report, which is real volume but not a live price.
+    from .tape import stamp_et, _exec_stamp
     out = []
     for ts, r in d.iterrows():
-        out.append({
+        row = {
             "time": ts.tz_convert("America/New_York").strftime("%H:%M:%S")
                     if hasattr(ts, "tz_convert") else str(ts),
             "price": round(float(r["price"]), 2),
             "size": int(r["size"]),
             "dollars": int(r["dollars"]),
-        })
+        }
+        if hasattr(ts, "tz_convert"):
+            row["date_et"] = stamp_et(ts)["date_et"]
+            row.update(_exec_stamp(r))
+        if "kind" in d.columns:
+            row["kind"] = str(r["kind"])
+        out.append(row)
     return out
 
 

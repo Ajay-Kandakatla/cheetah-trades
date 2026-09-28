@@ -5,6 +5,31 @@ export type TapeVerdict = 'BUY' | 'WAIT' | 'AVOID';
 
 export type TapeCheck = { key: string; label: string; pass: boolean; detail: string };
 
+/** How the backend classified a print by its Massive sale conditions
+ *  (orderflow/tape.py:print_kind, 2026-09-27). Only these reach the list. */
+export type PrintKind = 'regular' | 'auction_open' | 'auction_close' | 'auction_reopen';
+
+export type TapePrint = {
+  /** SIP (tape) date + time, New York. date_et is absent before 2026-09-27. */
+  date_et?: string;
+  time_et: string;
+  /** When the trade EXECUTED (participant timestamp), when the backend had it. */
+  exec_date_et?: string;
+  exec_time_et?: string;
+  kind?: PrintKind;
+  price: number; size: number; dollars: number;
+  /** null for auction crosses — nobody aggressed. */
+  side: string | null;
+};
+
+export type TapeExcluded = {
+  busted: { n: number; shares: number };
+  summary: { n: number; shares: number };
+  non_flow: { n: number; shares: number; dollars: number };
+  auctions: { n: number; shares: number; dollars: number; open: number; close: number; reopen: number };
+  note?: string;
+};
+
 export type TapeData = {
   found: boolean;
   symbol: string;
@@ -30,9 +55,13 @@ export type TapeData = {
     };
     big_prints: {
       threshold_dollars: number; buy_dollars: number; sell_dollars: number;
-      prints: { time_et: string; price: number; size: number; dollars: number; side: string }[];
+      prints: TapePrint[];
     };
-    bursts: { time_et: string; side: string; dollars: number; volume: number; n_trades: number; price: number }[];
+    /** date_et: optional — snapshots before 2026-09-27 carry the time only. */
+    bursts: { date_et?: string; time_et: string; side: string; dollars: number; volume: number; n_trades: number; price: number }[];
+    /** What was held out of buy/sell and why (2026-09-27). `note` is the
+     *  served sentence the panel renders verbatim. Absent on older snapshots. */
+    excluded?: TapeExcluded | null;
     /* How each print was assigned a side. `quote` = Lee-Ready against the real
      * NBBO; `tick` = the old uptick/downtick approximation; `mixed` = quote
      * coverage too thin to headline. Added 2026-08-13. */
@@ -51,7 +80,8 @@ export type TapeData = {
       dark_shares: number; lit_shares: number; total_shares: number;
       dark_pct: number | null; dark_trades: number; is_heavy: boolean;
       read: string;
-      blocks: { time: string; price: number; size: number; dollars: number }[];
+      blocks: { time: string; date_et?: string; exec_date_et?: string; exec_time_et?: string;
+        kind?: string; price: number; size: number; dollars: number }[];
       disclaimer: string;
     };
     truncated: boolean;
@@ -188,4 +218,69 @@ export function accuracyLine(acc: { verdicts?: Record<string, { n: number; hit_1
   if (buy.hit_1d_pct == null) return `${buy.n} BUY signal${buy.n === 1 ? '' : 's'} recorded — grading starts at T+1`;
   const caveat = buy.n < 30 ? ` (small n — wide error bars until ~30+)` : '';
   return `our measured record: ${buy.n} BUY signals, ${buy.hit_1d_pct}% up next day${caveat}`;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** "Fri 09-25 16:04:14" from ("2026-09-25", "16:04:14").
+ *  Ajay 2026-09-27: "Can you add date stamps please to the tape?" — the page
+ *  serves the last session's snapshot on later days, so a bare time does not
+ *  say which day. Weekday from the calendar date in UTC, so the viewer's own
+ *  time zone can never shift it. A missing or malformed date falls back to
+ *  the bare time (never a wrong day); nothing at all reads "—". */
+export function fmtTapeStamp(date?: string | null, time?: string | null): string {
+  const t = (time ?? '').trim();
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((date ?? '').trim());
+  if (!m) return t || '—';
+  const y = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, da));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== da) return t || '—';
+  return `${WEEKDAYS[dt.getUTCDay()]} ${m[2]}-${m[3]}${t ? ` ${t}` : ''}`;
+}
+
+/** The stamp for one row: its own tape date (else the snapshot's et_date,
+ *  for snapshots written before rows carried one) and time. When the trade
+ *  EXECUTED on a different calendar date — a late report — that date is
+ *  appended; no time threshold, only a date difference. */
+export function printStamp(
+  p: { date_et?: string | null; time_et?: string | null; exec_date_et?: string | null; exec_time_et?: string | null },
+  fallbackDate?: string | null,
+): string {
+  const date = p.date_et ?? fallbackDate ?? null;
+  const base = fmtTapeStamp(date, p.time_et);
+  if (p.exec_date_et && date && p.exec_date_et !== date) {
+    return `${base} (executed ${fmtTapeStamp(p.exec_date_et, p.exec_time_et)})`;
+  }
+  return base;
+}
+
+const AUCTION_LABEL: Record<string, string> = {
+  auction_open: 'OPEN AUCTION',
+  auction_close: 'CLOSE AUCTION',
+  auction_reopen: 'REOPEN AUCTION',
+};
+const SIDE_LABEL: Record<string, { label: string; color: string }> = {
+  buy: { label: 'BUY', color: '#10b981' },
+  sell: { label: 'SELL', color: '#ef4444' },
+};
+const NEUTRAL = '#9ca3af';
+
+/** The side cell of a big-print row. An auction cross is labelled as the
+ *  auction and NEVER as BUY/SELL — nobody aggressed, and the backend keeps it
+ *  out of Big buy $ / Big sell $. Anything unrecognised reads "—". */
+export function printSideView(side?: string | null, kind?: string | null):
+  { label: string; color: string; auction: boolean } {
+  if (kind && AUCTION_LABEL[kind]) return { label: AUCTION_LABEL[kind], color: NEUTRAL, auction: true };
+  const s = side ? SIDE_LABEL[side] : undefined;
+  return s ? { ...s, auction: false } : { label: '—', color: NEUTRAL, auction: false };
+}
+
+/** A dark block that is real volume but not a live price (average-price,
+ *  contingent, derivatively-priced, out-of-sequence report). null otherwise. */
+export function blockKindTag(kind?: string | null): { label: string; title: string } | null {
+  if (kind !== 'non_flow') return null;
+  return {
+    label: 'non-regular',
+    title: 'Average-price / contingent / derivatively-priced / out-of-sequence report: real off-exchange volume, but not a live price. Not counted as buying or selling.',
+  };
 }

@@ -16,6 +16,16 @@ Configured house values (NOT a book method):
   BURST_ONE_SIDED          75% of window volume on one side
   BURST_MIN_TRADES         15 prints in the window (a real burst, not one block)
   VALUE_AREA_PCT           70% — standard volume-profile value area
+
+Trade eligibility (2026-09-27, docs/sepa/orderflow_methodology.md §"Trade
+eligibility"): every print is classified by its Massive sale conditions and
+correction indicator (`print_kind`) BEFORE any side is assigned. Busted and
+summary re-reports are dropped everywhere; average-price / contingent /
+derivatively-priced / out-of-sequence prints stay in volume but never in
+sides, delta, bursts or big-print $; auction crosses stay in volume and are
+LISTED in big prints with no side. The sets below are derived from Massive's
+own `update_rules.consolidated` flags — a test pins them to a checked-in copy
+of the reference so they cannot drift silently.
 """
 from __future__ import annotations
 
@@ -46,6 +56,115 @@ FETCH_TIMEOUT_SEC = 10
 LATE_WINDOW_MIN = 30            # "who's in control NOW" — the last 30 min of tape
 
 
+# ── Trade eligibility (Massive sale conditions + correction indicator) ────────
+# Ajay 2026-09-27, on the ORCL Tape tab: "Can you add date stamps please to the
+# tape?" then "this is for oracle hoping this info is accurate". It was not:
+# ORCL 2026-09-25's one closing cross (1,671,248 @ $137.10, $229.1M) was listed
+# FIVE times as a "buy" — the cross itself (cond 8) plus four NYSE "Official
+# Close" re-sends (cond 15) at 16:04, 16:10, 18:30 and 19:00 — so Big buy $
+# read $1,563.8M where the regular prints hold $110.7M. Each re-send has its
+# own id and sequence number; only the CONDITION identifies it.
+#
+# Ids are Massive's (`GET /v3/reference/conditions?asset_class=stocks`).
+# Correction indicator (Massive glossary): 1 original later corrected,
+# 7 original marked erroneous, 8 original cancelled, 10 cancel record,
+# 11 error record. 0 / null = regular, 12 = the corrected record (kept).
+CORRECTION_DROP = frozenset({1, 7, 8, 10, 11})
+# consolidated.updates_volume == false: the print duplicates an execution that
+# is already on the tape. Dropped everywhere, including volume.
+SUMMARY_CONDITIONS = frozenset({
+    15,     # Market Center Official Close
+    16,     # Market Center Official Open
+    38,     # Corrected Consolidated Close (per listing market)
+})
+# consolidated.updates_high_low or updates_open_close == false (minus 12 and
+# 37, below): real volume, but not a current arms-length price. Kept in volume
+# and venue share; never in sides, delta, bursts or big-print $.
+NON_FLOW_CONDITIONS = frozenset({
+    2,      # Average Price Trade
+    5,      # Bunched Sold Trade
+    7,      # Cash Sale
+    10,     # Derivatively Priced
+    13,     # Extended Hours (Sold Out Of Sequence)
+    20,     # Next Day
+    21,     # Price Variation Trade
+    22,     # Prior Reference Price
+    29,     # Seller
+    32,     # Sold (Out Of Sequence)
+    33,     # Sold (Out of Sequence) and Stopped Stock
+    52,     # Contingent Trade
+    53,     # Qualified Contingent Trade
+})
+# Flagged false for SESSION (Form T = after hours) and SIZE (odd lots never set
+# the last sale) reasons, not a stale price. Kept as regular flow — the status
+# quo; dropping them is Ajay's call, not a default.
+KEPT_DESPITE_FLAGS = frozenset({
+    12,     # Form T/Extended Hours
+    37,     # Odd Lot Trade
+})
+# Auction crosses. Real volume, but nobody aggressed: side = None, never in
+# delta / bursts / big-print $, LISTED in big prints as an auction row.
+# Condition-based, not clock-based: ORCL's NYSE crosses printed at 09:30:14
+# and 16:04:14, which a "09:30:00 / 16:00:00" filter misses.
+AUCTION_OPEN_CONDITIONS = frozenset({17, 25})     # Market Center Opening Trade, Opening Prints
+AUCTION_CLOSE_CONDITIONS = frozenset({8, 19})     # Closing Prints, Market Center Closing Trade
+AUCTION_REOPEN_CONDITIONS = frozenset({18, 28})   # Market Center Reopening Trade, Re-Opening Prints
+
+# Ledger tag for the rule a verdict was computed under (orderflow/history.py).
+ELIGIBILITY_METHOD = "eligibility_2026_09_27"
+LEGACY_METHOD = "all_prints"
+
+PRINT_KINDS = ("busted", "summary", "non_flow", "auction_open", "auction_close",
+               "auction_reopen", "regular")
+AUCTION_KINDS = frozenset({"auction_open", "auction_close", "auction_reopen"})
+VOLUME_KINDS = frozenset({"non_flow", "regular"}) | AUCTION_KINDS   # busted + summary out
+
+
+def print_kind(conditions, correction=None) -> str:
+    """Classify ONE print. First match wins. PURE.
+
+    busted → summary → non_flow → auction_open/close/reopen → regular.
+    Missing / malformed conditions read as regular (the pre-2026-09-27
+    behaviour), never as an exclusion.
+    """
+    try:
+        if correction is not None and correction == correction \
+                and int(correction) in CORRECTION_DROP:
+            return "busted"
+    except (TypeError, ValueError):
+        pass
+    conds = set()
+    if isinstance(conditions, (list, tuple, set, frozenset)):
+        for c in conditions:
+            try:
+                conds.add(int(c))
+            except (TypeError, ValueError):
+                continue
+    elif hasattr(conditions, "tolist"):                    # numpy array
+        return print_kind(conditions.tolist(), correction)
+    if conds & SUMMARY_CONDITIONS:
+        return "summary"
+    if conds & NON_FLOW_CONDITIONS:
+        return "non_flow"
+    if conds & AUCTION_OPEN_CONDITIONS:
+        return "auction_open"
+    if conds & AUCTION_CLOSE_CONDITIONS:
+        return "auction_close"
+    if conds & AUCTION_REOPEN_CONDITIONS:
+        return "auction_reopen"
+    return "regular"
+
+
+def label_kinds(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a `kind` column from raw Massive `conditions` / `correction`
+    columns. Either column may be absent; a frame with neither is all
+    'regular'. PURE (returns the same frame, mutated)."""
+    conds = df["conditions"] if "conditions" in df.columns else [None] * len(df)
+    corr = df["correction"] if "correction" in df.columns else [None] * len(df)
+    df["kind"] = [print_kind(c, k) for c, k in zip(conds, corr)]
+    return df
+
+
 def _et_zone():
     from zoneinfo import ZoneInfo
     return ZoneInfo("America/New_York")
@@ -55,8 +174,14 @@ def _et_zone():
 def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
     """All prints for one ET calendar day (04:00-20:00 ET), ascending.
 
-    Returns DataFrame [ts_utc index, price, size] with attrs['truncated'] set
-    when the page cap was hit, or None on no data / provider failure.
+    Returns DataFrame [ts_utc index, price, size, exchange, kind, exec_utc]
+    with attrs['truncated'] set when the page cap was hit, or None on no data
+    / provider failure. ALL rows are returned (busted and summary included) —
+    `kind` says what each one is; `analyze_tape` decides what counts where,
+    and every other consumer keeps its pre-2026-09-27 frame plus two columns.
+    `exec_utc` is Massive's `participant_timestamp` (when the trade executed);
+    the index stays the SIP time, which the window, NBBO merge and resample
+    all key on.
     """
     import requests
     from massive_keys import stocks_key
@@ -116,7 +241,13 @@ def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
     # `exchange` is kept (2026-08-13) so orderflow.darkpool can split lit vs
     # FINRA-TRF (off-exchange) volume. Purely additive — every existing
     # consumer selects the columns it needs.
-    keep = ["ts_utc", "price", "size"] + (["exchange"] if "exchange" in df.columns else [])
+    # `kind` (2026-09-27) from the sale conditions + correction indicator —
+    # see print_kind. Every consumer before this read every row as a trade.
+    label_kinds(df)
+    if "participant_timestamp" in df.columns:
+        df["exec_utc"] = pd.to_datetime(df["participant_timestamp"], unit="ns", utc=True)
+    keep = (["ts_utc", "price", "size"] + (["exchange"] if "exchange" in df.columns else [])
+            + ["kind"] + (["exec_utc"] if "exec_utc" in df.columns else []))
     df = df[keep].dropna(subset=["ts_utc", "price", "size"]).sort_values("ts_utc").set_index("ts_utc")
     df = df[(df["price"] > 0) & (df["size"] > 0)]
     df.attrs["truncated"] = truncated
@@ -149,8 +280,15 @@ def delta_summary(df: pd.DataFrame) -> dict:
     """Cumulative volume delta + per-minute series from a sided tape.
 
     Expects columns price, size, side (+1/-1/0). Unknown-side volume is
-    excluded from delta but counted in totals.
+    excluded from delta but counted in totals. `analyze_tape` hands it the
+    REGULAR prints only (2026-09-27) — auctions, re-reports and non-flow
+    prints never reach it. An empty tape is all zeros, never a crash.
     """
+    if df is None or df.empty:
+        return {"buy_volume": 0, "sell_volume": 0, "delta": 0,
+                "delta_pct_of_volume": 0.0, "classified_pct": 0.0,
+                "late_delta": 0, "late_window_min": LATE_WINDOW_MIN,
+                "series": [], "per_minute": [], "n_trades": 0}
     signed = df["size"] * df["side"]
     buy_vol = int(df.loc[df["side"] > 0, "size"].sum())
     sell_vol = int(df.loc[df["side"] < 0, "size"].sum())
@@ -187,32 +325,86 @@ def delta_summary(df: pd.DataFrame) -> dict:
     }
 
 
-def find_big_prints(df: pd.DataFrame) -> dict:
-    """Top prints by notional — >= max($100k, today's 99.9th pct notional)."""
+def stamp_et(ts) -> dict:
+    """{date_et, time_et} for one UTC timestamp, in New York time. PURE.
+
+    Ajay 2026-09-27: "Can you add date stamps please to the tape?" — the page
+    serves the last session's snapshot on later days (Friday's prints on a
+    Sunday), so a bare 16:04:14 does not say WHICH 16:04:14.
+    """
+    t = ts.tz_convert(_et_zone())
+    return {"date_et": t.strftime("%Y-%m-%d"), "time_et": t.strftime("%H:%M:%S")}
+
+
+def _exec_stamp(r) -> dict:
+    """exec_date_et / exec_time_et from Massive's participant_timestamp (when
+    the trade EXECUTED), when the frame carries it. The row's own date_et /
+    time_et stay the SIP time — the time the tape shows it."""
+    ex = r.get("exec_utc") if hasattr(r, "get") else None
+    if ex is None or pd.isna(ex):
+        return {}
+    s = stamp_et(pd.Timestamp(ex))
+    return {"exec_date_et": s["date_et"], "exec_time_et": s["time_et"]}
+
+
+def _side_word(v) -> str:
+    return "buy" if v > 0 else ("sell" if v < 0 else "unknown")
+
+
+def find_big_prints(df: pd.DataFrame, auctions: Optional[pd.DataFrame] = None) -> dict:
+    """Top prints by notional — >= max($100k, today's 99.9th pct notional).
+
+    `df` is the REGULAR, sided tape: the threshold and the buy/sell $ come
+    from it alone. `auctions` (optional, 2026-09-27) are the session's cross
+    prints: listed when they clear the same threshold, with `side: None` and
+    `kind: auction_open|auction_close|auction_reopen`, and NEVER added to buy
+    or sell $ — nobody aggressed in an auction.
+    """
     notional = df["price"] * df["size"]
-    if not len(notional):
+    has_auctions = auctions is not None and len(auctions) > 0
+    if not len(notional) and not has_auctions:
         return {"threshold_dollars": BIG_PRINT_FLOOR_DOLLARS, "prints": [],
                 "buy_dollars": 0.0, "sell_dollars": 0.0}
-    threshold = max(BIG_PRINT_FLOOR_DOLLARS, float(notional.quantile(BIG_PRINT_TOP_QUANTILE)))
+    threshold = (max(BIG_PRINT_FLOOR_DOLLARS, float(notional.quantile(BIG_PRINT_TOP_QUANTILE)))
+                 if len(notional) else BIG_PRINT_FLOOR_DOLLARS)
     big = df[notional >= threshold].copy()
     big["dollars"] = (big["price"] * big["size"]).round(0)
     buy_d = float(big.loc[big["side"] > 0, "dollars"].sum())
     sell_d = float(big.loc[big["side"] < 0, "dollars"].sum())
-    big = big.sort_values("dollars", ascending=False).head(BIG_PRINTS_MAX)
-    et = _et_zone()
-    prints = [{
-        "time_et": ts.tz_convert(et).strftime("%H:%M:%S"),
-        "price": round(float(r["price"]), 2),
-        "size": int(r["size"]),
-        "dollars": float(r["dollars"]),
-        "side": "buy" if r["side"] > 0 else ("sell" if r["side"] < 0 else "unknown"),
-    } for ts, r in big.iterrows()]
-    return {"threshold_dollars": round(threshold, 0), "prints": prints,
+    rows = []
+    for ts, r in big.iterrows():
+        rows.append({
+            **stamp_et(ts),
+            "price": round(float(r["price"]), 2),
+            "size": int(r["size"]),
+            "dollars": float(r["dollars"]),
+            "side": _side_word(r["side"]),
+            "kind": "regular",
+            **_exec_stamp(r),
+        })
+    if has_auctions:
+        a = auctions[(auctions["price"] * auctions["size"]) >= threshold]
+        for ts, r in a.iterrows():
+            rows.append({
+                **stamp_et(ts),
+                "price": round(float(r["price"]), 2),
+                "size": int(r["size"]),
+                "dollars": float(round(r["price"] * r["size"], 0)),
+                "side": None,
+                "kind": str(r.get("kind") or "auction_open"),
+                **_exec_stamp(r),
+            })
+    rows.sort(key=lambda p: -p["dollars"])
+    return {"threshold_dollars": round(threshold, 0), "prints": rows[:BIG_PRINTS_MAX],
             "buy_dollars": buy_d, "sell_dollars": sell_d}
 
 
 def find_bursts(df: pd.DataFrame) -> list:
-    """Trade-flash bursts: 10s windows, >=$250k, >=75% one-sided, >=15 prints."""
+    """Trade-flash bursts: 10s windows, >=$250k, >=75% one-sided, >=15 prints.
+
+    Fed REGULAR prints only (tape.analyze_tape and trade_flash both filter on
+    print_kind first) — an auction cross or a re-report is not urgency.
+    """
     if df.empty:
         return []
     w = df.copy()
@@ -228,16 +420,98 @@ def find_bursts(df: pd.DataFrame) -> list:
     one_sided = (g["signed"].abs() / g["volume"])
     g = g[one_sided >= BURST_ONE_SIDED]
     g = g.sort_values("dollars", ascending=False).head(BURSTS_MAX)
-    et = _et_zone()
     out = [{
-        "time_et": ts.tz_convert(et).strftime("%H:%M:%S"),
+        **stamp_et(ts),
         "side": "buy" if r["signed"] > 0 else "sell",
         "dollars": round(float(r["dollars"]), 0),
         "volume": int(r["volume"]),
         "n_trades": int(r["n"]),
         "price": round(float(r["px"]), 2),
     } for ts, r in g.iterrows()]
-    return sorted(out, key=lambda b: b["time_et"])
+    return sorted(out, key=lambda b: (b["date_et"], b["time_et"]))
+
+
+def split_by_kind(trades: pd.DataFrame) -> dict:
+    """{all, volume, flow, auctions} views of one tape. PURE.
+
+    volume   = everything except busted + summary (real shares that traded)
+    flow     = regular prints only (sides, delta, bursts, big-print $)
+    auctions = the cross prints (listed, never sided)
+    A frame with no `kind` column (old caches, synthetic tapes) is all flow —
+    the pre-2026-09-27 behaviour.
+    """
+    df = trades.copy()
+    if "kind" not in df.columns:
+        df["kind"] = "regular"
+    vol = df[df["kind"].isin(VOLUME_KINDS)]
+    return {"all": df, "volume": vol,
+            "flow": vol[vol["kind"] == "regular"].copy(),
+            "auctions": vol[vol["kind"].isin(AUCTION_KINDS)]}
+
+
+def excluded_summary(trades: pd.DataFrame) -> Optional[dict]:
+    """What was held out of buy/sell, and why — the Tape tab's one-line note.
+    None when the tape carries no `kind` (nothing was classified). PURE."""
+    if trades is None or "kind" not in trades.columns:
+        return None
+    k = trades["kind"]
+    dollars = trades["price"] * trades["size"]
+
+    def part(mask, with_dollars=False):
+        out = {"n": int(mask.sum()), "shares": int(trades.loc[mask, "size"].sum())}
+        if with_dollars:
+            out["dollars"] = float(round(dollars[mask].sum(), 0))
+        return out
+
+    auc = k.isin(AUCTION_KINDS)
+    out = {
+        "busted": part(k == "busted"),
+        "summary": part(k == "summary"),
+        "non_flow": part(k == "non_flow", True),
+        "auctions": {**part(auc, True),
+                     "open": int((k == "auction_open").sum()),
+                     "close": int((k == "auction_close").sum()),
+                     "reopen": int((k == "auction_reopen").sum())},
+    }
+    out["note"] = excluded_note(out)
+    return out
+
+
+def _money(d: float) -> str:
+    a = abs(d)
+    if a >= 1e9:
+        return f"${a / 1e9:.1f}B"
+    if a >= 1e6:
+        return f"${a / 1e6:.1f}M"
+    if a >= 1e3:
+        return f"${a / 1e3:.0f}K"
+    return f"${a:.0f}"
+
+
+def excluded_note(ex: dict) -> str:
+    """The served sentence. Counts come from `excluded_summary`; nothing here
+    is estimated. PURE."""
+    parts = []
+    a = ex.get("auctions") or {}
+    if a.get("n"):
+        legs = [f"{a[k]} {k}" for k in ("open", "close", "reopen") if a.get(k)]
+        parts.append(f"{' + '.join(legs)} auction cross{'es' if a['n'] > 1 else ''} "
+                     f"({_money(a.get('dollars') or 0)}, listed without a side)")
+    s = ex.get("summary") or {}
+    if s.get("n"):
+        parts.append(f"{s['n']:,} official open/close re-report{'s' if s['n'] != 1 else ''} "
+                     f"of a cross already on the tape")
+    nf = ex.get("non_flow") or {}
+    if nf.get("n"):
+        parts.append(f"{nf['n']:,} average-price / contingent / derivatively-priced / "
+                     f"out-of-sequence print{'s' if nf['n'] != 1 else ''} "
+                     f"({_money(nf.get('dollars') or 0)})")
+    b = ex.get("busted") or {}
+    if b.get("n"):
+        parts.append(f"{b['n']:,} cancelled or busted print{'s' if b['n'] != 1 else ''}")
+    if not parts:
+        return "Every print this session was a regular trade — nothing held out of buy/sell."
+    return "Not counted as buying or selling: " + ", ".join(parts) + "."
 
 
 def volume_profile(bars_1min: pd.DataFrame) -> Optional[dict]:
@@ -289,10 +563,19 @@ def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) ->
     always computed: they are the documented fallback for prints that land at
     the midpoint or outside the quote window, and they give us the agreement
     figure that quantifies the upgrade.
+
+    Trade eligibility (2026-09-27): sides, delta, bursts, retail and big-print
+    $ read the REGULAR prints only; venues and dark blocks read every print
+    that is real volume (busted + summary out); auction crosses are listed in
+    big prints with no side. See `print_kind`.
     """
     from . import darkpool, quotes as quotes_mod, retail as retail_mod
 
-    df = trades.copy()
+    views = split_by_kind(trades)
+    df = views["flow"]
+    vol_df = views["volume"]
+    # Sides over the flow prints ONLY, so an excluded print can never set the
+    # reference tick for the regular print after it.
     tick_sides = tick_rule_sides(df["price"].tolist())
 
     qr = quotes_mod.quote_rule_sides(df, quotes, fallback_sides=tick_sides)
@@ -308,14 +591,21 @@ def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) ->
         "tick_agreement_pct": quotes_mod.agreement(tick_sides, qr["sides"]),
     }
 
-    venues = darkpool.split_venues(df)
-    blocks = darkpool.dark_blocks(df)
+    venues = darkpool.split_venues(vol_df)
+    blocks = darkpool.dark_blocks(vol_df)
     # Retail flow: sub-penny off-exchange prints, signed on the quote midpoint.
     # Needs the SAME quotes the classifier uses, so it costs nothing extra.
-    retail_read = retail_mod.identify(df, quotes)
+    # Retail prints + their sign from the REGULAR prints; the percent divides
+    # by the session's real volume (busted + summary out), the same base as
+    # the venue split — not by the regular prints alone.
+    retail_read = retail_mod.identify(df, quotes,
+                                      total_volume=int(vol_df["size"].sum()))
+    # The last REGULAR print is the last trade; a summary or prior-reference
+    # print can carry a stale price. Falls back when there is no flow at all.
+    last_src = df if len(df) else (vol_df if len(vol_df) else trades)
     return {
         "delta": delta_summary(df),
-        "big_prints": find_big_prints(df),
+        "big_prints": find_big_prints(df, auctions=views["auctions"]),
         "bursts": find_bursts(df),
         "classification": classification,
         "venues": {**venues, "read": darkpool.read(venues),
@@ -323,8 +613,9 @@ def analyze_tape(trades: pd.DataFrame, quotes: Optional[pd.DataFrame] = None) ->
                    "disclaimer": darkpool.DISCLAIMER},
         "retail": {**retail_read,
                    "divergence": retail_mod.divergence(retail_read, blocks)},
+        "excluded": excluded_summary(trades),
         "truncated": bool(trades.attrs.get("truncated", False)),
-        "last_price": round(float(df["price"].iloc[-1]), 2),
+        "last_price": round(float(last_src["price"].iloc[-1]), 2),
     }
 
 

@@ -1,0 +1,514 @@
+{
+"source": "GET https://api.massive.com/v3/reference/conditions?asset_class=stocks (pulled 2026-09-27), sale_condition rows trimmed to id/name/sip_mapping/update_rules.consolidated",
+"results": [
+{
+"id": 1,
+"name": "Acquisition",
+"sip_mapping": {
+"UTP": "A"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 2,
+"name": "Average Price Trade",
+"sip_mapping": {
+"CTA": "B",
+"UTP": "W",
+"FINRA_TDDS": "W"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 3,
+"name": "Automatic Execution",
+"sip_mapping": {
+"CTA": "E"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 4,
+"name": "Bunched Trade",
+"sip_mapping": {
+"UTP": "B"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 5,
+"name": "Bunched Sold Trade",
+"sip_mapping": {
+"UTP": "G"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 6,
+"name": "CAP Election",
+"sip_mapping": {
+"CTA": "I"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 7,
+"name": "Cash Sale",
+"sip_mapping": {
+"FINRA_TDDS": "C",
+"CTA": "C",
+"UTP": "C"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 8,
+"name": "Closing Prints",
+"sip_mapping": {
+"UTP": "6"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 9,
+"name": "Cross Trade",
+"sip_mapping": {
+"CTA": "X",
+"UTP": "X"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 10,
+"name": "Derivatively Priced",
+"sip_mapping": {
+"UTP": "4",
+"CTA": "4"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 11,
+"name": "Distribution",
+"sip_mapping": {
+"UTP": "D"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 12,
+"name": "Form T/Extended Hours",
+"sip_mapping": {
+"CTA": "T",
+"UTP": "T",
+"FINRA_TDDS": "T"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 13,
+"name": "Extended Hours (Sold Out Of Sequence)",
+"sip_mapping": {
+"CTA": "U",
+"UTP": "U",
+"FINRA_TDDS": "U"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 14,
+"name": "Intermarket Sweep",
+"sip_mapping": {
+"CTA": "F",
+"UTP": "F"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 15,
+"name": "Market Center Official Close",
+"sip_mapping": {
+"UTP": "M",
+"CTA": "M"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": false
+}
+},
+{
+"id": 16,
+"name": "Market Center Official Open",
+"sip_mapping": {
+"CTA": "Q",
+"UTP": "Q"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": false
+}
+},
+{
+"id": 17,
+"name": "Market Center Opening Trade",
+"sip_mapping": {
+"CTA": "O"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 18,
+"name": "Market Center Reopening Trade",
+"sip_mapping": {
+"CTA": "5"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 19,
+"name": "Market Center Closing Trade",
+"sip_mapping": {
+"CTA": "6"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 20,
+"name": "Next Day",
+"sip_mapping": {
+"UTP": "N",
+"FINRA_TDDS": "N",
+"CTA": "N"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 21,
+"name": "Price Variation Trade",
+"sip_mapping": {
+"CTA": "H",
+"UTP": "H"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 22,
+"name": "Prior Reference Price",
+"sip_mapping": {
+"CTA": "P",
+"UTP": "P",
+"FINRA_TDDS": "P"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 23,
+"name": "Rule 155 Trade (AMEX)",
+"sip_mapping": {
+"UTP": "K",
+"CTA": "K"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 24,
+"name": "Rule 127 (NYSE Only)",
+"sip_mapping": {
+"CTA": "K"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 25,
+"name": "Opening Prints",
+"sip_mapping": {
+"UTP": "O"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 27,
+"name": "Stopped Stock (Regular Trade)",
+"sip_mapping": {
+"UTP": "1"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 28,
+"name": "Re-Opening Prints",
+"sip_mapping": {
+"UTP": "5"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 29,
+"name": "Seller",
+"sip_mapping": {
+"CTA": "R",
+"UTP": "R",
+"FINRA_TDDS": "R"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 30,
+"name": "Sold Last",
+"sip_mapping": {
+"CTA": "L",
+"UTP": "L"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 31,
+"name": "Sold Last and Stopped Stock",
+"sip_mapping": {
+"UTP": "2"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 32,
+"name": "Sold (Out Of Sequence)",
+"sip_mapping": {
+"CTA": "Z",
+"UTP": "Z",
+"FINRA_TDDS": "Z"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 33,
+"name": "Sold (Out of Sequence) and Stopped Stock",
+"sip_mapping": {
+"UTP": "3"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 34,
+"name": "Split Trade",
+"sip_mapping": {
+"UTP": "S"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 35,
+"name": "Stock Option",
+"sip_mapping": {
+"UTP": "V"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 36,
+"name": "Yellow Flag Regular Trade",
+"sip_mapping": {
+"UTP": "Y"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+},
+{
+"id": 37,
+"name": "Odd Lot Trade",
+"sip_mapping": {
+"CTA": "I",
+"UTP": "I",
+"FINRA_TDDS": "I"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 38,
+"name": "Corrected Consolidated Close (per listing market)",
+"sip_mapping": {
+"CTA": "9",
+"UTP": "9"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": false
+}
+},
+{
+"id": 52,
+"name": "Contingent Trade",
+"sip_mapping": {
+"UTP": "V",
+"CTA": "V"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 53,
+"name": "Qualified Contingent Trade",
+"sip_mapping": {
+"CTA": "7",
+"UTP": "7"
+},
+"consolidated": {
+"updates_high_low": false,
+"updates_open_close": false,
+"updates_volume": true
+}
+},
+{
+"id": 55,
+"name": "Opening Reopening Trade Detail",
+"sip_mapping": {
+"CTA": "G"
+},
+"consolidated": {
+"updates_high_low": true,
+"updates_open_close": true,
+"updates_volume": true
+}
+}
+]
+}

@@ -4920,6 +4920,36 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Tape rows carry a date stamp and auctions never read BUY/SELL (2026-09-27)',
+    file: 'src/components/TapePanel.tsx',
+    // Ajay 2026-09-27, on the ORCL Tape tab: "Can you add date stamps please to
+    // the tape?" then "this is for oracle hoping this info is accurate". ORCL
+    // 09-25's closing cross was listed five times as a BUY (cross + four
+    // Official Close re-sends). The backend now labels auctions by condition
+    // (orderflow/tape.py:print_kind); the panel must stamp every big-print,
+    // burst and dark-block row with its date, render the auction label from
+    // printSideView (never the raw side), and show the served excluded note.
+    checks: (src) => {
+      const errs = [];
+      if (!/data-testid="tape-print-stamp">\{printStamp\(p, d\.et_date\)\}/.test(src)) errs.push('big-print rows must render printStamp(p, d.et_date)');
+      if (!/data-testid="tape-burst-stamp">\{printStamp\(b, d\.et_date\)\}/.test(src)) errs.push('burst lines must render printStamp(b, d.et_date)');
+      if (!/data-testid="tape-block-stamp"[\s\S]{0,80}\{printStamp\(\{ date_et: b\.date_et, time_et: b\.time/.test(src)) errs.push('dark-block rows must render printStamp with b.date_et');
+      if (!/const sc = printSideView\(p\.side, p\.kind\);/.test(src)) errs.push('big-print side must come from printSideView(p.side, p.kind)');
+      if (/SIDE_CHIP\[p\.side\]/.test(src)) errs.push('the raw SIDE_CHIP[p.side] lookup is back — an auction row would read BUY/SELL');
+      if ((src.match(/data-testid="tape-excluded-note"/g) || []).length < 2) errs.push('the excluded note must render in both the prints and no-prints branches');
+      if (!/const excludedNote = d\.tape\?\.excluded\?\.note;/.test(src)) errs.push('the excluded note must be the served d.tape.excluded.note, not FE-written');
+      const lib = read('src/lib/orderflow.ts');
+      for (const [k, v] of [['auction_open', 'OPEN AUCTION'], ['auction_close', 'CLOSE AUCTION'], ['auction_reopen', 'REOPEN AUCTION']]) {
+        if (!lib.includes(`${k}: '${v}'`)) errs.push(`orderflow.ts must label ${k} as '${v}'`);
+      }
+      if (!/export function fmtTapeStamp\(/.test(lib)) errs.push('fmtTapeStamp is gone from lib/orderflow.ts');
+      const py = read('../backend/orderflow/tape.py');
+      if (!/^def print_kind\(/m.test(py)) errs.push('backend tape.py lost print_kind');
+      if (!/"side": None,/.test(py)) errs.push('backend auction rows must be served with side None');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -54,6 +54,11 @@ EVENTS_COLL = "trade_flash_events"
 # the overlap free rather than double-pushed.
 LOOKBACK_MIN = 7
 
+# BACKSTOP since 2026-09-27: fetch_recent_trades now drops every auction print
+# by its CONDITION (tape.print_kind), which also catches crosses that print off
+# the bell (ORCL 2026-09-25: 09:30:14 and 16:04:14). This clock filter stays for
+# any path that hands build_events bursts from an unclassified frame.
+#
 # BOTH auction crosses print as one enormous trade stamped exactly at the bell,
 # and `find_bursts` reads each as a giant one-sided burst on essentially every
 # symbol. Measured 2026-08-21 — open: AVGO $1,085.3M "sell", FANG $33.2M
@@ -225,10 +230,29 @@ def fetch_recent_trades(symbol: str, minutes: int = LOOKBACK_MIN):
     df = pd.DataFrame(rows)
     ts = "sip_timestamp" if "sip_timestamp" in df.columns else "participant_timestamp"
     df["ts_utc"] = pd.to_datetime(df[ts], unit="ns", utc=True)
+    df = regular_only(df)
     # Restores ascending order after the descending fetch above.
     df = df[["ts_utc", "price", "size"]].dropna().sort_values("ts_utc").set_index("ts_utc")
     df = df[(df["price"] > 0) & (df["size"] > 0)]
     return df if len(df) else None
+
+
+def regular_only(df):
+    """Raw Massive rows → only the REGULAR prints (same row order). PURE.
+
+    Trade eligibility (2026-09-27): the same `tape.print_kind` the Tape tab
+    uses. Auction crosses, official open/close re-reports, average-price /
+    contingent / derivatively-priced prints and busted prints never reach
+    tick_rule_sides or find_bursts, so none of them can fire a flash. This is
+    what catches ORCL's 09:30:14 open cross, which the clock-based
+    AUCTION_CROSS_ET (kept as a backstop) cannot see. Rows with no
+    `conditions` column read as regular — the pre-2026-09-27 behaviour.
+    """
+    from .tape import print_kind
+    conds = df["conditions"] if "conditions" in df.columns else [None] * len(df)
+    corr = df["correction"] if "correction" in df.columns else [None] * len(df)
+    keep = [print_kind(c, k) == "regular" for c, k in zip(conds, corr)]
+    return df[keep]
 
 
 def board_bands() -> list:
