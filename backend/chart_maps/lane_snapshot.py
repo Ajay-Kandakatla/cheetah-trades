@@ -4,8 +4,8 @@ lane reads (spec 2026-09-27 §3.7, WP-SNAP).
 Ajay 2026-09-27: "stop minerviews use all strategies from Most used from Chart
 maps. All of them and journal the," — every Chart Maps tab becomes a PAPER lane.
 
-WHAT THIS DOES. Once every 5 minutes in RTH (cron → `GET /chart-maps/lane-
-snapshot?record=true`, in the api process) it calls each enabled tab's OWN
+WHAT THIS DOES. Once every 5 minutes in RTH (the engine tick → `GET /chart-
+maps/lane-snapshot?record=true`, trading/tick_jobs.py; in the api process) it calls each enabled tab's OWN
 builder — the same board he opens — and stores, per strategy, the tiles/rows
 that are a 🎯 READY long on that board, plus the board's OWN build stamp. The
 per-minute engine tick never builds a board: it reads this doc and re-confirms

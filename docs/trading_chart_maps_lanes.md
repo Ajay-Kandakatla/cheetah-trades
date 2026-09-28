@@ -30,9 +30,10 @@ Spec: `scratchpad/autopilot_chart_maps_lanes_spec.md` (rev 2). Related docs:
 | Chokepoint caps | `backend/trading/program_caps.py` | in-flight cap, one lane per name, per-strategy caps, one entry per minute, 0.25% sizing, ON/OFF |
 | Buy chokepoint | `backend/trading/entries.py` `enter` / `_evaluate` | every stock buy; calls `program_caps` |
 | Generic lane + dispatcher | `backend/trading/chart_maps_lanes.py` | runs every lane in usage order; one adapter per tab |
-| Snapshot job | `backend/chart_maps/lane_snapshot.py`, route `GET /chart-maps/lane-snapshot` | calls each tab's OWN builder every 5 min in RTH, stores slim long candidates |
+| Snapshot job | `backend/chart_maps/lane_snapshot.py`, route `GET /chart-maps/lane-snapshot` | calls each tab's OWN builder every 5 min in RTH (asked for by the engine tick, see [Scheduling](#scheduling-both-jobs-ride-the-engine-tick)), stores slim long candidates |
+| Tick jobs | `backend/trading/tick_jobs.py`, called by `exit_engine._main` after `tick()` | the snapshot trigger and the daily review, no crontab line |
 | Journal exits | `backend/trading/journal.py` | market exits now close the round-trip, priced off broker fills |
-| Review + scoreboard | `backend/trading/lane_review.py`, routes under `/trading/review*` and `/trading/strategies` | 17:00 ET scoring, loser lines, proposals |
+| Review + scoreboard | `backend/trading/lane_review.py`, routes under `/trading/review*` and `/trading/strategies` | 16:50 ET scoring (first tick at/after), loser lines, proposals |
 | Page | `/trading?view=strategies` (🗺️ Chart Maps, second view after Dashboard) | switches, scoreboard, skips, proposal cards |
 
 Live link: https://pounce.ajaykandakatla.dev/trading?view=strategies
@@ -233,7 +234,7 @@ So a program lane's result measures **the tab's entry, plus the bracket stop and
 | deep_demand | levels 2/3/4 **MEASURED NULL** | `backend/scripts/deep_levels_measured.json`, `docs/supply_demand/deep_levels_study.md` |
 | amd, keltner | **INVERTED** vs placebo (~3,700 names) | `backend/scripts/turning_bullish_amd_study.py`, `backend/scripts/turning_bullish_keltner_study.py`, `docs/supply_demand/turning_bullish.md` |
 | bonde | thesis **INVERTED** (2026-09-13) | the board's own `measured` block (`/bonde/board`) |
-| growth | arrivals +7.49pp at 63 sessions (CI +0.52..+16.06); no entry, stop or cost model | `backend/scripts/board_growth_measured.json` |
+| growth | arrivals +7.49pp at 63 sessions (CI +0.52..+16.06); no entry, stop or cost model | `backend/scripts/board_growth_study.py` |
 | hot_pullback | **null**, +0.100R (−0.188..+0.405) | `backend/studies/hot_pullback_study.py` |
 | breaking | tagged lane −0.70R; **−0.54R (−0.92..−0.10) outside the opening-bell clusters** | the 2026-09-27 Auto-Pilot autopsy (autopsy branch) |
 | signals / 0DTE | first tag **inconclusive**: the sign depends on the placebo | the 2026-09-27 Auto-Pilot autopsy |
@@ -264,7 +265,7 @@ Now (`_MARKET_EXIT_KINDS`, `_is_exit_row`):
 - **The first such row closes the trade.** Later rows for the same symbol before its next `entry` are retries of the same close and are absorbed, never summed. `qty` on those rows is the position *remaining at that tick*: ASX's 608/608/124/1 would sum to 1,341 shares for a 608-share trade.
 - **The price** is the VWAP of the broker's filled sells for that symbol (`journal_exit_fills`, written by `journal.resolve_exit_fills`), taken from `exit_ts − EXIT_FILL_BACK_SEC` to the next entry, capped at the entry qty. When no fill is known yet, it is the tick's last price, **marked approximate** (`price_source "tick_last"`, `approx True`). No price at all → closed but unpriced.
 - **Dollars** use the broker-sold qty when fills are known (SLAB: 56 requested, 6 sold), otherwise the entry qty (`realized.qty_basis`).
-- `reconcile()` stays broker-free. Fills are backfilled by the 17:00 review and by `python -m trading.lane_review --backfill-fills --since D [--dry]`.
+- `reconcile()` stays broker-free. Fills are backfilled by the 16:50 tick review and by `python -m trading.lane_review --backfill-fills --since D [--dry]`.
 
 **At deploy the Journal page numbers change**: the 9 stale "open" trades close, several as losses, and the win rate and analytics shift. The autopsy picks up the newly closed losers at up to `autopsy.MAX_PER_RUN` per tick.
 
@@ -295,7 +296,7 @@ A strategy with many `distribution_exit` rows is measuring the SEPA sell rule mo
 
 Full detail: [`trading_lane_review.md`](trading_lane_review.md).
 
-1. **17:00 ET, weekdays** (cron, closed-day gated: `python -m market_hours.gate trading.lane_review`), after the 16:45 autopsy pass. A weekend or holiday writes nothing.
+1. **The first engine tick at or after 16:50 ET on a trading day** (`tick_jobs.maybe_run_review`, see [Scheduling](#scheduling-both-jobs-ride-the-engine-tick)), after the 16:45 autopsy pass. Claimed once per day; a weekend or holiday writes nothing.
 2. It backfills exit fills from the broker (paged `closed_orders_since`, which caps at 500 rows per call), then `journal.reconcile()`. A broker error leaves those exits approximate and the summary says so.
 3. It scores every strategy, writes one Rule #9 loser line per losing trade (entry read, band, room, what the autopsy says happened, how it exited), and writes `lane_reviews` for the day.
 4. It **proposes**, deterministically, and never applies:
@@ -305,6 +306,39 @@ Full detail: [`trading_lane_review.md`](trading_lane_review.md).
 6. A Claude scheduled routine reads `GET /trading/review/latest?format=summary` and brings him the headline, losers and open proposals. The public host is behind oauth2-proxy; `X-User-Email` works only against the local API on the Mac mini, so the routine runs there.
 
 **There is no auto-pause.** A losing strategy keeps trading until he confirms a pause.
+
+---
+
+## Scheduling: both jobs ride the engine tick
+
+**2026-09-27 follow-up.** The snapshot and the review were designed as three new crontab lines (two snapshot lines, one 17:00 review line). The crontab is host-mounted from the main tree and a deploy never ships it, so no line was added and neither job would ever have run. Both now ride the one line that already runs every minute on market-day hours:
+
+`*  9-16 * * 1-5 /usr/local/bin/python -m trading.exit_engine tick` (cron container)
+
+`exit_engine._main` calls `tick_jobs.run_after_tick(summary)` **after** `tick()` has returned, so every exit the tick manages has already run; the call is fenced and never changes the tick's exit code. The api's own routes never call `tick()`, so nothing else triggers these jobs.
+
+**Snapshot trigger** (`tick_jobs.maybe_trigger_snapshot`):
+
+- only while the program is ON (`program_caps.enabled`: `cm_program` true on paper or sim). With the program OFF there is no call and no api CPU. (The api route itself builds only the generic lanes that are ON, so an OFF program would build nothing anyway.)
+- only on an open market day: the tick's broker clock says open **and** `market_hours.gate.closed_reason` is None (an early-close day stops with the clock);
+- only from `bounce_room.SESSION_OPEN` (09:30) to before `zone_edge_entry.LAST_ENTRY_ET` (15:45), the last minute a lane may buy. A 15:45 build would feed no entry; the 15:40 build is still fresh (`SNAPSHOT_MAX_AGE_SEC`) until 15:45.
+- at most once per `SNAPSHOT_EVERY_MIN` (5) bucket: a `program_state` claim (`lane_snapshot_trigger`, the same `$lt` upsert as the entry clock), so two overlapping ticks never both fire a bucket and a slow tick never claims an older one;
+- the call: `GET {INTERNAL_API_BASE or http://api:8000}/chart-maps/lane-snapshot?record=true` with `X-User-Email: cron@internal` (the header every cron to api call uses). The boards build in the api process, never in the cron container.
+- fire-and-forget: `SNAPSHOT_TIMEOUT_SEC` = (3 s connect, 5 s read). A read timeout counts as sent: the route runs `lane_snapshot.run` in `asyncio.to_thread`, which a client disconnect cannot stop, and `_RUN_LOCK` turns an overlapping call into a skip. A refused connection, a connect timeout or an HTTP error is logged and ledgered **once per ET day** (`cm_snapshot_trigger_failed`).
+
+**Daily review** (`tick_jobs.maybe_run_review`):
+
+- the first tick at or after 16:50 ET (the tick's last hour is 16, so 17:00 can never be reached by this line), after the 16:45 autopsy pass;
+- a trading day only (`market_hours.gate`); a weekend or holiday runs nothing and claims nothing;
+- claimed atomically first (one `find_one_and_update` upsert of `lane_review:<day>` on `program_state`), so two ticks never both run it; once it reaches `done` or `failed` (`tick_jobs.REVIEW_FINAL_STATUSES`) the tick never runs it again that day. A review that fails is ledgered (`cm_lane_review_failed`) and not retried by the tick. `python -m trading.lane_review --day D` stays the manual re-run.
+- in-process: `lane_review.build(day=today, record=True)`. It is broker-light: it only READS the broker's closed orders (paged) to price market exits, then `journal.reconcile()`; it never places or cancels an order and does not need the api.
+- time budget: the build runs in a **daemon** worker thread joined for at most `REVIEW_BUDGET_SEC` (45 s). On an overrun the tick returns, the cron process exits and the unfinished build dies with it; the day is marked `over_budget` and ledgered (`cm_lane_review_over_budget`), and a later tick re-claims it (the build is idempotent: `replace_one` upserts, `journal.reconcile` upserts by trade_id). A day always overrunning is retried at most once per tick until 16:59, each attempt adding at most 45 s to a tick whose exits already ran.
+- a dead owner: a `running` claim whose process was killed (a `cron` redeploy, an OOM) is re-claimable once its `claimed_at` is `REVIEW_BUDGET_SEC` old, since no live owner can hold it longer; a younger one is left to its owner.
+- the review runs whatever the program switch says (it backfills fills and scores since `cm_program_started`), as the designed 17:00 line would have.
+
+Tests: `backend/tests/test_tick_jobs_2026_09_27.py`.
+
+**2026-09-27 fix round.** The first cut ran the review in a normal (non-daemon) thread and said an overrun "finishes in the background". That was wrong: Python keeps the process alive until a non-daemon thread ends, and the cron container's `supercronic` never starts a job while its previous run is still going, so every `exit_engine tick` would have been skipped until the review finished (worst case `BROKER_MAX_PAGES` × the Alpaca timeout, about 10 min, i.e. 16:51-16:59). The thread is now a daemon, an overrun is abandoned and re-claimed by a later tick, and a killed owner's `running` claim is re-claimable after `REVIEW_BUDGET_SEC`. Pinned by `test_NEG_an_overrunning_review_does_not_keep_the_cron_process_alive` (a subprocess with a 20 s build and a 0.3 s budget must exit in under 10 s), `test_NEG_review_over_budget_returns_and_is_ledgered`, `test_a_dead_owners_running_claim_is_taken_over_after_the_budget` and `test_NEG_a_final_day_is_never_taken_over_however_old`.
 
 ---
 
@@ -332,7 +366,7 @@ All four keys (`cm_program`, `cm_program_started`, `cm_lanes`, `cm_lane_caps`) m
 - **bonde's `scan_ts` was None on the weekend probe.** If a board has no build stamp on a weekday, that lane never trades ("stale board (build time unknown)") until the stamp is wired.
 - **Api CPU in RTH.** The snapshot pass costs about 10 × 1.3-3.6 s every 5 min in the api process that serves his pages. Watch `built_ms`.
 - **`positions()` mixes stocks and options.** Count by symbol/OCC strings, never by `asset_class`.
-- **The crontab is host-mounted.** A deploy does not ship the two snapshot lines or the 17:00 review line; they are installed and checked in the cron container.
+- **The crontab is host-mounted.** A deploy does not ship a new line, which is why neither job has one: both ride the existing `exit_engine tick` line (next section). Deploy `cron` too, or the cron container keeps the old `exit_engine` without the hook.
 - **The container runs origin/main.** Verify branch code on the branch API (`:8001`), never through a `/trading/journal*` route (those call `reconcile()`, which writes).
 
 ---

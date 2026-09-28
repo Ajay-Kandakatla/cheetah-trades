@@ -67,8 +67,10 @@ export type CmCaps = {
 export type CmMinute = { key?: string | null; sid?: string | null; symbol?: string | null; at?: string | null };
 
 export type CmProgram = {
-  enabled?: boolean | null; started?: string | null; mode?: string | null; caps?: CmCaps | null;
-  open?: { n?: number | null; positions?: number | string[] | null; pending?: number | string[] | null; by_sid?: Record<string, number> | null } | null;
+  /** enabled = the switch AND a paper/sim broker; switch = the raw cm_program value. */
+  enabled?: boolean | null; switch?: boolean | null; started?: string | null; mode?: string | null; caps?: CmCaps | null;
+  /** `error` = the broker could not be read (program_caps.status_block); the count is then unknown, never 0. */
+  open?: { n?: number | null; positions?: number | string[] | null; pending?: number | string[] | null; by_sid?: Record<string, number> | null; error?: string | null } | null;
   minute?: CmMinute | null; last_entry?: CmMinute | null;
   usage_order?: { day?: string | null; order?: string[] | null; counts?: Record<string, number> | null; source?: string | null } | null;
   rules?: string[] | null;
@@ -106,7 +108,7 @@ export const POLL_MS = 60_000;
 export const UNMEASURED_TEXT =
   'UNMEASURED forward paper measurement — no strategy here trades a measured edge; the program measures which ones make money, one small paper trade at a time.';
 export const CODE_CONFIRM_TEXT = "Confirm = add to Claude's TODO. Nothing in the engine changes.";
-export const NO_REVIEW_TEXT = 'No daily review yet — it is written at 17:00 ET on market days.';
+export const NO_REVIEW_TEXT = 'No daily review yet — it is written after 16:50 ET on market days.';
 export const NO_STRATEGIES_TEXT = 'No strategies in the payload.';
 export const SEPA_SELL_KIND = 'distribution_exit';
 
@@ -251,6 +253,7 @@ export function countOf(v: unknown): number {
 export function openLine(p?: CmProgram | null): string {
   const o = p?.open ?? null;
   const max = num(p?.caps?.max_open);
+  if (o && typeof o.error === 'string' && o.error) return `open count unavailable (broker: ${o.error}) / ${max == null ? '—' : max} max`;
   const n = num(o?.n) ?? countOf(o?.positions) + countOf(o?.pending);
   return `${n} / ${max == null ? '—' : max} open (${countOf(o?.pending)} pending)`;
 }

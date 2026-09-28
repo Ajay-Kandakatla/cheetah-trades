@@ -1696,6 +1696,15 @@ def _main(argv) -> int:
         print("usage: python -m trading.exit_engine tick [--force]")
         return 2
     summary = tick(force="--force" in argv[1:])
+    # Chart Maps lanes (2026-09-27): the 5-min lane snapshot trigger and the
+    # daily lane review ride THIS cron line (the crontab is host-mounted; a
+    # deploy never ships a new line). They run AFTER tick() has managed every
+    # exit, are fenced, and never change the tick's exit code.
+    try:
+        from trading import tick_jobs
+        summary["after_tick"] = tick_jobs.run_after_tick(summary)
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("after-tick jobs failed: %s", exc)
     log.info("EXIT-ENGINE tick: %s", summary)
     return 0 if summary.get("ok") else 1
 

@@ -3,7 +3,8 @@
 Ajay 2026-09-27: "analayze losses everyday with a routine or something and
 restategize and confirm with me". There is NO auto-pause:
 
-  * after the close (17:00 ET on weekdays, closed-day gated) this job first
+  * after the close (the first exit_engine tick at/after 16:50 ET on a
+    trading day, trading/tick_jobs.py; closed-day gated) this job first
     prices the day's market exits from the broker's own fills
     (journal.resolve_exit_fills, paged closed orders), reconciles the journal,
     then scores every strategy and writes one `lane_reviews` doc per day;

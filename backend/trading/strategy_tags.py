@@ -163,9 +163,11 @@ _PRIORS_RAW = {
                 "backend/scripts/turning_bullish_keltner_study.py"),
     "bonde": ("inverted", "Bonde thesis measured INVERTED (2026-09-13); the board's own "
               "MEASURED block.", "backend/sepa/bonde.py"),
+    # Cites the re-runnable study, never the merged research JSON: Rule #10's
+    # guard (tests/test_board_growth_*.py) forbids a served module naming it.
     "growth": ("unmeasured", "Board arrivals +7.49pp at 63 sessions (CI +0.52..+16.06), "
                "but no entry, stop or cost model was measured.",
-               "backend/scripts/board_growth_measured.json"),
+               "backend/scripts/board_growth_study.py"),
     "hot_pullback": ("null", "+0.100R (CI -0.188..+0.405) — includes zero.",
                      "backend/studies/hot_pullback_study.py"),
     "breaking": ("negative", "Tagged lane -0.70R; -0.54R (-0.92..-0.10) outside the "

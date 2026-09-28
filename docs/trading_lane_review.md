@@ -10,8 +10,21 @@ R, not dollars.
 
 ## What runs
 
-`python -m trading.lane_review [--day YYYY-MM-DD] [--dry]` after the close (17:00 ET on
-session days; weekends and NYSE holidays return `{"skipped": ...}` and write nothing):
+**When.** On the first `exit_engine tick` at or after **16:50 ET** on a trading day
+(`trading/tick_jobs.py` `maybe_run_review`, called by `exit_engine._main` after `tick()`
+has managed every exit), claimed once per day in `program_state` (`lane_review:<day>`).
+There is **no crontab line**: the crontab is host-mounted and a deploy never ships a new
+line, so the designed 17:00 line would never have run; the per-minute tick line
+(`* 9-16 * * 1-5`) already runs in the cron container and its last hour is 16, hence 16:50
+(after the 16:45 autopsy pass). A failure is ledgered `cm_lane_review_failed` and not
+retried by the tick. A build past `REVIEW_BUDGET_SEC` (45 s) is ledgered
+`cm_lane_review_over_budget` and abandoned with its cron process (a daemon thread, so the
+next tick is never held up); a later tick re-claims the day, as it does a `running` claim
+older than the budget whose process was killed (2026-09-27 fix round). Detail:
+[`trading_chart_maps_lanes.md` › Scheduling](trading_chart_maps_lanes.md#scheduling-both-jobs-ride-the-engine-tick).
+
+Manual run: `python -m trading.lane_review [--day YYYY-MM-DD] [--dry]` (weekends and NYSE
+holidays return `{"skipped": ...}` and write nothing):
 
 1. **Broker fills first.** Market exits (watchdog stop, SEPA distribution sell, hot pullback
    exit, flatten) have no fill price in the ledger. The job pages the broker's closed orders
@@ -80,3 +93,5 @@ dismissed cards return only on more evidence, demand_residents only when on, the
 reads `cm_lane_entries` and never says the other word, the 0DTE R formula, SEPA-sell exits
 counted and unpriced closes kept out of expectancy, Confirm config / code / twice, Dismiss,
 and the routes (403 / 404 / 409 / 400).
+`backend/tests/test_tick_jobs_2026_09_27.py`: the tick-driven schedule (once a day at the
+first tick >= 16:50, never before, never on a closed day, a raising review never breaks the tick).

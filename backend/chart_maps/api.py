@@ -345,7 +345,7 @@ async def chart_maps_news():
 @router.get("/chart-maps/lane-snapshot")
 async def chart_maps_lane_snapshot(
     record: bool = Query(False, description="true = store one cm_lane_snapshot doc per "
-                                            "sid (the cron's call); false (default) = "
+                                            "sid (the engine tick's call); false (default) = "
                                             "build and report only, no Mongo write"),
     sids: str = Query("", description="comma list of generic lane sids; empty = every "
                                       "generic lane that is ON right now"),

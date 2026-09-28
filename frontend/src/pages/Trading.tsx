@@ -22,7 +22,7 @@
  *   POST /trading/options/close/{underlying} — close one options position now (confirm)
  *   GET  /trading/strategies        — 🗺️ Chart Maps strategies tab (2026-09-27): the paper
  *                                     program, every tab-as-a-lane row, skips + scoreboard
- *   GET  /trading/review/latest     — the daily loss review (17:00 ET) + its proposal cards
+ *   GET  /trading/review/latest     — the daily loss review (after 16:50 ET) + its proposal cards
  *   POST /trading/review/proposals/{id}/confirm|dismiss — decide one card (Confirm has a dialog)
  *   POST /trading/config {cm_program | cm_lanes} — the program / per-strategy switches
  *
