@@ -557,12 +557,32 @@ def _finish(brk, pos: dict, out: dict, exit_px: float, filled_at, px_cache: dict
 
 # ── entries ──────────────────────────────────────────────────────────────────
 
+def _mode_of(brk) -> str:
+    m = getattr(brk, "mode", None)
+    if callable(m):
+        try:
+            return str(m())
+        except Exception:                          # noqa: BLE001
+            pass
+    return _broker_mode()
+
+
 def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
                  open_docs: list, equity: float) -> None:
     from options import zero_dte as ZD
+    from trading import program_caps as PC
     if not in_entry_window(now_et):
         out["entry_reason"] = "outside %s–%s ET" % (ENTRY_OPEN_ET.strftime("%H:%M"),
                                                     LAST_ENTRY_ET.strftime("%H:%M"))
+        return
+    mode = _mode_of(brk)
+    # Chart Maps lane program (2026-09-27): while the program is ON the
+    # `signals` strategy switch decides 0DTE ENTRIES (default OFF). _manage
+    # has already run above, so open contracts keep their exits. With the
+    # program OFF nothing changes here.
+    if PC.enabled(cfg, mode) and not PC.strategy_on(STRATEGY, cfg, mode):
+        out["entry_reason"] = "program: signals OFF"
+        PC.log_skip(STRATEGY, "*", PC.DAY_PREFIX + "signals is OFF")
         return
     attempts = _attempts_today(day)
     if attempts is None:
@@ -608,6 +628,26 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
             _record_attempt(day, sym, key, "dry_run", "not armed", {"signal": sig, "occ": c["occ"]})
             out["dry_run"].append(sym)
             continue
+        # The program chokepoint (every mode): in-flight open cap, a pending
+        # entry, the per-strategy caps while ON, then the atomic minute claim.
+        # A transient refusal records no attempt (retried next tick).
+        try:
+            inf = PC.inflight(brk)
+            blocked = PC.check(STRATEGY, c["occ"], brk=brk, cfg=cfg, mode=mode, asset="option",
+                               held=str(c["occ"]).upper() in inf["positions"], inf=inf)
+        except Exception as exc:                   # noqa: BLE001
+            blocked = [PC.TRANSIENT_PREFIX + "open orders unreadable (%s)" % str(exc)[:80]]
+        why = blocked[0] if blocked else None
+        if why is None:
+            ok, why = PC.claim(STRATEGY, sym)
+            why = None if ok else why
+        if why is not None:
+            PC.log_skip(STRATEGY, sym if not PC.sid_level(why) else "*", why)
+            out["skipped"].append({"symbol": sym, "reason": why})
+            if PC.is_transient(why):
+                break
+            _record_attempt(day, sym, key, "skipped", why, {"signal": sig, "occ": c["occ"]})
+            continue
         try:
             resp = brk.submit_option_order(c["occ"], qty, "buy", limit, position_intent="buy_to_open",
                                            client_order_id="zdte-%s" % pos_id)
@@ -615,6 +655,8 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
             _record_attempt(day, sym, key, "blocked", str(exc), {"signal": sig, "occ": c["occ"]})
             out["blocked"].append({"symbol": sym, "reason": str(exc)})
             continue
+        PC.record_entry(STRATEGY, sym, asset="option", occ=c["occ"],
+                        order_id=(resp or {}).get("id"), client_order_id="zdte-%s" % pos_id)
         order_ts = _utc_iso()
         doc = {"pos_id": pos_id, "symbol": sym, "side": c["otype"], "strategy": STRATEGY,
                "status": "open", "occ": c["occ"], "expiry": c.get("expiry"), "qty": qty,

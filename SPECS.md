@@ -937,3 +937,26 @@ table, and replace UNVERIFIED → `(book p.X confirmed)` or `(NOT IN BOOK — in
 heuristic)`. Several thresholds (volume 1.5×, drying-up 0.7, base 15-bar idle, etc.)
 are clearly the author's pragmatic implementation choices — those should be
 labelled as such, not as Minervini doctrine.
+
+---
+
+## 11. Auto-Pilot Chart Maps program (2026-09-27)
+
+Owner ask, 2026-09-27: *"stop minerviews use all strategies from Most used from Chart maps. All of them and journal the,"*.
+Minervini `auto_entry` is OFF; every Chart Maps strategy that is a long buy list becomes a **paper** lane, prioritised by how often he opens its tab, journaled per strategy. **UNMEASURED forward paper measurement**: no lane trades a measured edge.
+
+| piece | file | |
+|---|---|---|
+| roster (22 lanes + 7 not-a-lane, usage order, top 10 ON) | `backend/trading/strategy_tags.py` | legacy tags (`demand_zone`, `breakout`, `catalyst`, `quick_bounce`, `hot_pullback`, `zero_dte`) map to sids |
+| chokepoint caps | `backend/trading/program_caps.py`, called by `trading/entries.py` | 0.25% risk, 1/day and 2 open per strategy, 15 open (paper, pending counted), one lane per name, **one entry per ET minute in every mode**, in-flight cap in every mode |
+| generic lane + dispatcher | `backend/trading/chart_maps_lanes.py` | usage-order dispatch; a LIST lane buys a 🎯 READY demand reversal on a name from the tab's list, not the tab's own setup |
+| snapshot job | `backend/chart_maps/lane_snapshot.py`, `GET /chart-maps/lane-snapshot` | each tab's own builder every 5 min in RTH; the tick never builds a board |
+| journal exit fix | `backend/trading/journal.py` | `watchdog_exit` / `distribution_exit` / `hot_pullback_exit` / `flatten_done` close the trade, priced off broker fills (else tick last, marked approximate) |
+| daily review | `backend/trading/lane_review.py`, `GET /trading/strategies`, `/trading/review*` | 17:00 ET; scoreboard with CIs; Confirm/Dismiss proposals, never auto-applied |
+| page | `/trading?view=strategies` (🗺️ Chart Maps) | |
+
+Mongo: `program_entries`, `program_state` (`entry_clock`, `usage_order`), `cm_lane_log`, `cm_lane_snapshot`, `cm_lane_state`, `cm_lane_entries`, `journal_exit_fills`, `lane_reviews`, `lane_proposals`.
+Config keys (in the `get_config` whitelist): `cm_program`, `cm_program_started`, `cm_lanes`, `cm_lane_caps` (tighten-only).
+Cron (host-mounted, installed separately): the lane snapshot every 5 min in RTH and `trading.lane_review` at 17:00 ET, both closed-day gated.
+
+Docs: [`docs/trading_chart_maps_lanes.md`](docs/trading_chart_maps_lanes.md) (roster, rules per strategy, caps, SEPA sell rule on every position, priors, journal, review routine, HIS CALL), [`docs/trading_engine_inflight_cap.md`](docs/trading_engine_inflight_cap.md), [`docs/trading_lane_review.md`](docs/trading_lane_review.md).

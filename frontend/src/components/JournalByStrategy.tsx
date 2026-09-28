@@ -14,8 +14,15 @@
  * win rate is not a rate), a lane with only OPEN trades shows "—" for every
  * closed-only stat, nulls print "—" (never NaN), the note under the table says
  * this is a PAPER account with small n. Nothing here places or moves an order.
+ *
+ * 🗺️ Chart Maps lanes (2026-09-27): every Chart Maps tab is now a paper lane
+ * whose journal tag is the tab key (deep_demand, amd, bonde, …, plus the
+ * existing hot_pullback / quick_bounce / zero_dte lanes). Those rows come
+ * AFTER the known lanes, labelled with the tab's own Chart Maps label, and a
+ * tag nobody knows still comes last as itself — never dropped.
  */
 import type { CSSProperties } from 'react';
+import { TAB_META } from '../lib/chartMaps';
 
 export type StrategyKey = 'minervini' | 'demand_zone' | 'breakout' | 'catalyst' | 'options_zone' | 'manual';
 
@@ -68,27 +75,45 @@ export const STRATEGY_META: Record<StrategyKey, StrategyMeta> = {
 };
 
 const UNKNOWN_GLYPH = '•';
+const PROGRAM_GLYPH = '🗺️';
 
-/** Meta for any tag. Absent tag → manual (the pre-2026-09-05 rows). A tag we
- *  do not know is shown as itself, underscores spaced — never relabelled as a
- *  known lane. */
+/** Is this tag a 🗺️ Chart Maps program lane (a Chart Maps tab key)? */
+export function isProgramTag(key?: string | null): boolean {
+  return !!key && !(key in STRATEGY_META) && Object.prototype.hasOwnProperty.call(TAB_META, key);
+}
+
+/** A TAB_META label that opens with its own emoji ("🔥 Hot Pullback") keeps
+ *  it as the glyph; a plain one ("Deep Demand") wears the 🗺️ program glyph. */
+function programMeta(key: string): StrategyMeta {
+  const raw = (TAB_META as Record<string, { label: string }>)[key].label;
+  const m = /^(\S+)\s+(.+)$/u.exec(raw);
+  const split = m && !/[A-Za-z0-9]/.test(m[1]);
+  return {
+    glyph: split ? m![1] : PROGRAM_GLYPH,
+    label: split ? m![2] : raw,
+    blurb: `🗺️ Chart Maps lane — the ${raw} tab as a paper lane (2026-09-27). UNMEASURED forward paper measurement.`,
+  };
+}
+
+/** Meta for any tag. Absent tag → manual (the pre-2026-09-05 rows). A Chart
+ *  Maps program tag wears its tab's label. A tag we do not know is shown as
+ *  itself, underscores spaced — never relabelled as a known lane. */
 export function strategyMeta(key?: string | null): StrategyMeta {
   if (key == null || key === '') return STRATEGY_META.manual;
   const known = (STRATEGY_META as Record<string, StrategyMeta>)[key];
   if (known) return known;
+  if (isProgramTag(key)) return programMeta(key);
   return { glyph: UNKNOWN_GLYPH, label: String(key).replace(/_/g, ' '), blurb: `Lane "${key}" — not one the page knows; shown as the engine tagged it.` };
 }
 
-/** Canonical lanes first (null when the server sent none), then anything the
- *  server added that we do not know. */
+/** Canonical lanes first (null when the server sent none), then the Chart
+ *  Maps program lanes the server sent, then anything we do not know. */
 export function strategyRows(by?: Record<string, StrategyStats | null | undefined> | null): Array<[string, StrategyStats | null]> {
   const src = by && typeof by === 'object' ? by : {};
   const out: Array<[string, StrategyStats | null]> = [];
   for (const k of STRATEGY_ORDER) out.push([k, src[k] && typeof src[k] === 'object' ? (src[k] as StrategyStats) : null]);
-  for (const k of Object.keys(src)) {
-    if ((STRATEGY_ORDER as string[]).includes(k)) continue;
-    if (src[k] && typeof src[k] === 'object') out.push([k, src[k] as StrategyStats]);
-  }
+  const extra = Object.keys(src).filter((k) => !(STRATEGY_ORDER as string[]).includes(k) && src[k] && typeof src[k] === 'object');
+  for (const k of [...extra.filter(isProgramTag), ...extra.filter((k) => !isProgramTag(k))]) out.push([k, src[k] as StrategyStats]);
   return out;
 }
 

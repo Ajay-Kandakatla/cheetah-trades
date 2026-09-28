@@ -26,6 +26,14 @@ POST /trading/sim-reset?confirm=yes wipe SIM broker state (admin, sim-only)
 GET  /trading/ledger?limit=100      trade_ledger tail
 GET  /trading/journal?limit&decisions  round-trip journal (+ open MTM, decisions)
 GET  /trading/analytics             Minervini batting/expectancy/win-loss stats
+GET  /trading/strategies            Chart Maps lane program: every strategy row
+                                    (usage order, switches, today's entries /
+                                    skips, scoreboard, prior) + the program caps
+GET  /trading/review/latest?format=full|summary  the latest daily loss review
+GET  /trading/review?day=YYYY-MM-DD the review of one day
+POST /trading/review/proposals/{pid}/confirm  apply a PROPOSED change (config
+                                    keys only; a code-level card becomes a TODO)
+POST /trading/review/proposals/{pid}/dismiss  dismiss a proposal
 
 Style mirrors giants/api.py (asyncio.to_thread, lazy imports) but EVERY
 route — GETs included — is admin-gated: status/preview/ledger expose account
@@ -193,25 +201,26 @@ async def trading_config(payload: dict = Body(...),
         # {demand_residents: bool, breakout_any_band: bool, min_touches: 1..10};
         # null resets to STRICT (the module defaults). Unknown keys rejected so
         # a typo cannot silently leave the engine strict.
-        raw = payload.get("zone_edge_rules")
-        if raw is None:
-            updates["zone_edge_rules"] = {}
-        elif isinstance(raw, dict):
-            clean = {}
-            for k, v in raw.items():
-                if k in ("demand_residents", "breakout_any_band"):
-                    if not isinstance(v, bool):
-                        raise HTTPException(400, "zone_edge_rules.%s must be a boolean" % k)
-                    clean[k] = v
-                elif k == "min_touches":
-                    if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 10:
-                        raise HTTPException(400, "zone_edge_rules.min_touches must be an integer 1..10")
-                    clean[k] = v
-                else:
-                    raise HTTPException(400, "zone_edge_rules: unknown key %r" % k)
-            updates["zone_edge_rules"] = clean
-        else:
-            raise HTTPException(400, "zone_edge_rules must be an object or null")
+        # One validator (trading/zone_edge_entry.validate_rules), shared with
+        # the daily review's Confirm (trading/lane_review.confirm).
+        from trading import zone_edge_entry as _zee
+        try:
+            updates["zone_edge_rules"] = _zee.validate_rules(payload.get("zone_edge_rules"))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+    if any(k in payload for k in ("cm_program", "cm_lanes", "cm_lane_caps")):
+        # Chart Maps lane program (trading/program_caps.py, 2026-09-27): the
+        # master switch, the per-strategy ON/OFF overrides and the
+        # tighten-only per-strategy caps — one validator, shared with the
+        # daily review's Confirm.
+        from trading import exit_engine as _ee
+        from trading import program_caps
+        try:
+            updates.update(program_caps.validate_updates(
+                {k: payload[k] for k in ("cm_program", "cm_lanes", "cm_lane_caps")
+                 if k in payload}, _ee.get_config()))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
     if not updates:
         raise HTTPException(400, "nothing to update — send equity_cap, "
                                  "auto_min_score, auto_min_rs, "
@@ -507,3 +516,69 @@ async def trading_analytics(email: str = Depends(current_user_email)):
         return analytics.compute(closed, open_marks=marks)
 
     return JSONResponse(await asyncio.to_thread(work))
+
+
+# ── Chart Maps lane program (2026-09-27) ─────────────────────────────────────
+
+@router.get("/strategies")
+async def trading_strategies(email: str = Depends(current_user_email)):
+    """The Trading page's 🗺️ Chart Maps view: every Chart Maps strategy in
+    usage order with its switch, today's entries and skip reasons, its
+    scoreboard (n, win% [CI], exp R [CI], $) and its prior, plus the program
+    header. Read-only (never reconciles the journal)."""
+    _require_admin(email)
+    from trading import chart_maps_lanes
+    return JSONResponse(await asyncio.to_thread(chart_maps_lanes.strategies_payload))
+
+
+@router.get("/review/latest")
+async def trading_review_latest(format: str = "full",
+                                email: str = Depends(current_user_email)):
+    """The newest daily loss review. format=summary is the compact read the
+    Claude routine consumes."""
+    _require_admin(email)
+    from trading import lane_review
+    fmt = "summary" if str(format or "").lower() == "summary" else "full"
+    return JSONResponse(await asyncio.to_thread(lane_review.latest, fmt))
+
+
+@router.get("/review")
+async def trading_review_day(day: str = "",
+                             email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import lane_review
+    doc = await asyncio.to_thread(lane_review.get, str(day or "")[:10])
+    if doc is None:
+        raise HTTPException(404, "no review for that day")
+    return JSONResponse(doc)
+
+
+@router.post("/review/proposals/{pid}/confirm")
+async def trading_review_confirm(pid: str,
+                                 email: str = Depends(current_user_email)):
+    """Apply one PROPOSED change: config-level keys only (validated exactly
+    like POST /trading/config); a code-level card becomes a TODO and changes
+    nothing in the engine. Ledgered either way."""
+    _require_admin(email)
+    from trading import lane_review
+    try:
+        out = await asyncio.to_thread(lane_review.confirm, pid, email)
+    except KeyError:
+        raise HTTPException(404, "unknown proposal")
+    except ValueError as exc:
+        raise HTTPException(409 if "already" in str(exc) else 400, str(exc))
+    return JSONResponse(out)
+
+
+@router.post("/review/proposals/{pid}/dismiss")
+async def trading_review_dismiss(pid: str,
+                                 email: str = Depends(current_user_email)):
+    _require_admin(email)
+    from trading import lane_review
+    try:
+        out = await asyncio.to_thread(lane_review.dismiss, pid, email)
+    except KeyError:
+        raise HTTPException(404, "unknown proposal")
+    except ValueError as exc:
+        raise HTTPException(409 if "already" in str(exc) else 400, str(exc))
+    return JSONResponse(out)

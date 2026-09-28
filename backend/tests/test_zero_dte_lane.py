@@ -22,6 +22,7 @@ from trading.broker_alpaca import BrokerError
 
 from tests.test_trading_engine import FakeColl, FakeDB
 from tests.test_options_lane import FakeOptBroker
+from tests.test_program_caps import add_program_colls
 
 ET = ZoneInfo("America/New_York")
 TODAY = date.fromisoformat(EE._et_day())
@@ -86,6 +87,7 @@ def zenv(monkeypatch):
         db.trading_config.rows[0]["zero_dte_entry"] = enabled
         db.zero_dte_positions = FakeColl([dict(d) for d in open_docs])
         db.zero_dte_lane_state = FakeColl([dict(a) for a in attempts])
+        add_program_colls(db)            # program_caps (2026-09-27)
         for mod in (EE, ZD):
             monkeypatch.setattr(mod, "_db", lambda: db)
             monkeypatch.setattr(mod, "broker", fake)

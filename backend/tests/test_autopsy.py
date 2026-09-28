@@ -1153,7 +1153,8 @@ def test_losers_skip_exits_older_than_the_backlog_window(monkeypatch):
 # ── Explicit strategy tag (2026-09-05 lanes) ─────────────────────────────────
 
 def test_detect_prefers_the_explicit_tag_and_falls_back_to_inference():
-    assert AP.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual")
+    # + chart_maps (2026-09-27): READY demand reversals bought off a Chart Maps tab.
+    assert AP.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual", "chart_maps")
     band = {"kind": "demand", "lo": 98.0, "hi": 99.5, "touches": 3, "strength": 1.5}
     # demand_zone tag, no state doc matched -> zone_edge/demand from the reason.
     d = AP.detect({"strategy": "demand_zone",

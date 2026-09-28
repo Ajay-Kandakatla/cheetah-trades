@@ -108,7 +108,9 @@ from zoneinfo import ZoneInfo
 
 from supply_demand import alert_gates
 from trading import entries
+from trading import program_caps
 from trading import risk_rules
+from trading import strategy_tags
 from trading.broker import get_broker
 from trading.exit_engine import (
     _broker_mode, _db, _et_day, _utc_iso, get_config, ledger, update_config)
@@ -511,6 +513,30 @@ def active_rules(cfg: Optional[dict] = None) -> dict:
         if isinstance(mt, int) and not isinstance(mt, bool) and 1 <= mt <= 10:
             out["min_touches"] = mt
     return out
+
+
+def validate_rules(raw) -> dict:
+    """POST /trading/config `zone_edge_rules` (and the daily review's Confirm):
+    {demand_residents: bool, breakout_any_band: bool, min_touches: 1..10};
+    None resets to STRICT ({}). Unknown keys are rejected so a typo cannot
+    silently leave the engine strict. Raises ValueError."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise ValueError("zone_edge_rules must be an object or null")
+    clean = {}
+    for k, v in raw.items():
+        if k in ("demand_residents", "breakout_any_band"):
+            if not isinstance(v, bool):
+                raise ValueError("zone_edge_rules.%s must be a boolean" % k)
+            clean[k] = v
+        elif k == "min_touches":
+            if isinstance(v, bool) or not isinstance(v, int) or not 1 <= v <= 10:
+                raise ValueError("zone_edge_rules.min_touches must be an integer 1..10")
+            clean[k] = v
+        else:
+            raise ValueError("zone_edge_rules: unknown key %r" % k)
+    return clean
 
 
 def _qualify(kind: str, row: dict, rules: Optional[dict] = None) -> Optional[str]:
@@ -1106,15 +1132,56 @@ def _ledger_disabled_once(cfg: dict, gate: dict) -> bool:
 
 # ── The per-tick runner (exit_engine.tick step (h), AFTER exits) ────────────
 
-def run(broker=None, cfg: Optional[dict] = None) -> dict:
+def _lane_tag(c: dict, qb_names) -> str:
+    """The journal LANE tag a candidate is bought under: demand rows are the
+    demand_zone lane (quick_bounce on a study-listed name), supply-side rows
+    the breakout lane."""
+    lane = "demand_zone" if c.get("kind") == "demand" else "breakout"
+    if lane == "demand_zone" and c.get("symbol") in qb_names:
+        lane = QB_STRATEGY
+    return lane
+
+
+def _priority_index() -> dict:
+    """{sid: rank} from the Chart Maps usage order (most-opened tab first);
+    {} when unreadable (the board order then stands)."""
+    try:
+        return {sid: i for i, sid in enumerate(program_caps.priority_order()["order"])}
+    except Exception as exc:                       # noqa: BLE001
+        log.debug("zone_edge_entry: usage order unavailable: %s", exc)
+        return {}
+
+
+def _broker_mode_of(brk) -> str:
+    m = getattr(brk, "mode", None)
+    if callable(m):
+        try:
+            return str(m())
+        except Exception:                          # noqa: BLE001
+            pass
+    return _broker_mode()
+
+
+def run(broker=None, cfg: Optional[dict] = None, sides=None,
+        reconcile: bool = True) -> dict:
     """Evaluate the board once; place at most MAX_ZONE_ENTRIES_PER_DAY buys
-    via entries.enter(). Returns a summary; never raises past its fence."""
+    via entries.enter(). Returns a summary; never raises past its fence.
+
+    sides / reconcile (2026-09-27, Chart Maps lane program): the dispatcher
+    runs the demand side and the supply side as two slots in usage order —
+    `sides` keeps only candidates whose side is listed (None = both) and
+    reconcile=False skips the execution-race reconcile (the supply slot
+    runs it). Every candidate first passes the program's cheap-skip
+    (trading/program_caps.check): a capped / OFF / minute-taken lane writes
+    no state and no race row, only a cm_lane_log reason."""
     brk = broker if broker is not None else globals()["broker"]
     cfg = cfg or get_config()
     day = _et_day()
     out = {"ok": True, "ran": False, "day": day, "entered": [], "blocked": [],
            "skipped": [], "skipped_alert_gate": 0, "evaluated": 0, "rejected": 0,
            "entries_today": 0, "errors": []}
+    if sides is not None:
+        out["sides"] = list(sides)
 
     # Master gate: configured AND armed AND zone_edge_entry flag AND open.
     try:
@@ -1142,6 +1209,8 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     def _finish(reason: Optional[str] = None) -> dict:
         if reason:
             out["reason"] = reason
+        if not reconcile:
+            return out
         try:
             out["race"] = reconcile_race(now=now_et, broker=brk)
         except Exception as exc:                   # noqa: BLE001
@@ -1163,9 +1232,23 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     rules = active_rules(cfg)
     out["rules"] = rules
     cands, rejected = read_candidates(latest, rules)
+    if sides is not None:
+        cands = [c for c in cands if c.get("side") in tuple(sides)]
     out["rejected"] = len(rejected)
     if not cands:
         return _finish("no_candidates")
+    # Most-used Chart Maps tab first while the lane program is ON
+    # (2026-09-27): demand (zones / quick_bounce) and breakouts (breaking)
+    # ordered by usage rank; the board's own order breaks ties. Program OFF
+    # keeps the board's order (breakouts first).
+    for c in cands:
+        c["_lane"] = _lane_tag(c, qb_names)
+    rank = (_priority_index()
+            if program_caps.enabled(cfg, _broker_mode_of(brk)) else {})
+    if rank:
+        cands = [c for _, c in sorted(
+            enumerate(cands),
+            key=lambda t: (rank.get(strategy_tags.norm(t[1]["_lane"]), len(rank)), t[0]))]
 
     try:
         positions = brk.positions()
@@ -1176,6 +1259,15 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
     held = {str(p.get("symbol") or "").upper() for p in positions
             if isinstance(p, dict)}
     pos_count = len(positions)
+    mode = _broker_mode_of(brk)
+    cap = program_caps.open_cap(cfg, mode)
+    try:
+        inf = program_caps.inflight(brk)
+    except Exception as exc:                       # noqa: BLE001
+        out["ok"] = False
+        out["errors"].append("open orders: %s" % exc)
+        return _finish("inflight_unavailable")
+    stopped_sids: set = set()
     # Attempt bookkeeping FAILS CLOSED: if today's state rows cannot be read
     # the daily cap / per-symbol guards cannot be applied -> no attempts this
     # tick (nothing recorded; re-evaluated next tick).
@@ -1199,6 +1291,8 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
 
     for c in cands:
         sym = c["symbol"]
+        lane = c["_lane"]
+        sid = strategy_tags.norm(lane)
         out["evaluated"] += 1
         # Cheap skips — NOT attempts: no state, no race doc, re-evaluated
         # next tick if the situation changes.
@@ -1208,6 +1302,9 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         if sym in held:
             _skip(sym, "already held")
             continue
+        if sid in stopped_sids:
+            _skip(sym, "%s stopped this tick" % sid)
+            continue
         if entries_by_side.get(c["side"], 0) >= MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY:
             _skip(sym, "daily cap %d reached (%s side)"
                   % (MAX_ZONE_ENTRIES_PER_SIDE_PER_DAY, c["side"]))
@@ -1215,8 +1312,26 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         if entries_today >= MAX_ZONE_ENTRIES_PER_DAY:
             _skip(sym, "daily cap %d reached" % MAX_ZONE_ENTRIES_PER_DAY)
             continue
-        if pos_count >= risk_rules.MAX_POSITIONS:
-            _skip(sym, "no position slot (%d/%d)" % (pos_count, risk_rules.MAX_POSITIONS))
+        # risk_rules.MAX_POSITIONS live; program_caps.PROGRAM_MAX_OPEN while
+        # the paper program is ON (program_caps.open_cap).
+        if pos_count >= cap:
+            _skip(sym, "no position slot (%d/%d)" % (pos_count, cap))
+            continue
+        # The program's cheap-skip (every mode): OFF, the per-strategy caps,
+        # the in-flight open cap (pending entries counted), a pending entry,
+        # one lane per name, the minute. Logged for the Trading page; no
+        # state, no race row.
+        preason = program_caps.check(lane, sym, brk=brk, cfg=cfg, mode=mode,
+                                     held=sym in held, inf=inf)
+        if preason:
+            program_caps.log_skip(lane, sym if not program_caps.sid_level(preason[0]) else "*",
+                                  preason[0])
+            _skip(sym, preason[0])
+            if program_caps.sid_level(preason[0]):
+                if any(program_caps.MINUTE_TAKEN_TEXT in r or "portfolio full" in r
+                       or "unreadable" in r for r in preason):
+                    break
+                stopped_sids.add(sid)
             continue
         key = state_key(sym, c["band"], day)
         st = _get_state(key)
@@ -1322,7 +1437,10 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                                         "proximity": (attempt.get("gate") or {}).get("proximity"),
                                         "gate": attempt.get("gate"),
                                         "dist_pct": c.get("dist_pct"),
-                                        "first_seen": c.get("first_seen")},
+                                        "first_seen": c.get("first_seen"),
+                                        "sid": sid, "tab": sid,
+                                        "kind": "demand" if c["kind"] == "demand" else "breakout",
+                                        "stop_pct": stop_pct},
                                 stop_price=stop_price, allow_earnings=False)
         except ValueError as exc:
             veto = str(exc)
@@ -1344,6 +1462,16 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                 # Not an attempt: the clock flipped under us — retry when open.
                 _clear_state(key)
                 _skip(sym, "market closed")
+                continue
+            if program_caps.is_transient(veto):
+                # Not an attempt either (2026-09-27): the minute went, the
+                # program is full, an entry is pending — retry next tick, never
+                # burn the band for the day.
+                _clear_state(key)
+                program_caps.log_skip(lane, sym, veto)
+                _skip(sym, veto)
+                if program_caps.MINUTE_TAKEN_TEXT in veto or "portfolio full" in veto:
+                    break
                 continue
             out["blocked"].append(sym)
             _set_state(key, result="blocked", reason=veto)

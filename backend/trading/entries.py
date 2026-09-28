@@ -8,10 +8,13 @@ trading/risk_rules.py (TLSW pp.291-315, page-cited). preview() is the same
 evaluation with NO order — pure math plus a blocked[] list for the UI.
 
 Check order (each cite = the printed TLSW page):
-  configured -> armed -> position count < MAX_POSITIONS (p.312) ->
-  never average down (pp.304-305) -> earnings shield (<=7d) ->
-  price -> market-hours (market orders only when open) ->
-  size > 0 shares (p.312 + p.304 streak multiplier).
+  configured -> armed -> in-flight open cap (positions + pending buys, option
+  spreads included; MAX_POSITIONS p.312, or the paper program's
+  program_caps.PROGRAM_MAX_OPEN while it is ON), one lane per name, one entry
+  per minute (trading/program_caps.py, 2026-09-27) -> never average down
+  (pp.304-305) -> earnings shield (<=7d) -> price -> market-hours (market
+  orders only when open) -> size > 0 shares (p.312 + p.304 streak multiplier;
+  min-composed with the program's 0.25% risk budget while it is ON).
 """
 from __future__ import annotations
 
@@ -20,7 +23,8 @@ import logging
 import math
 from typing import Optional
 
-from trading import risk_rules, safety_floor
+from trading import program_caps, risk_rules, safety_floor
+from trading import strategy_tags
 from trading.broker import BrokerError, get_broker
 from trading.exit_engine import _db, get_config, ledger, regime
 
@@ -33,15 +37,35 @@ EARNINGS_SHIELD_DAYS = 7      # block entries into a report inside this window
 # Journal LANE tag on every entry row (Ajay 2026-09-05: "Keep the minervini
 # entries but also make sure you have demand zone and catalyst based entries
 # time to time and journal it appropriately"). The caller names its lane;
-# anything unknown is journaled as manual — a bad tag must never block a buy.
+# anything unknown is journaled as manual — a bad tag must never block a buy
+# (2026-09-27: except a not-a-lane tab, which is refused, and an unknown tag
+# still takes the one-entry-per-minute slot; only an explicit manual is exempt).
 STRATEGIES = ("minervini", "demand_zone", "breakout", "catalyst", "manual")
+# Chart Maps lane program (2026-09-27): every generic lane's sid plus the two
+# existing lanes whose tags used to be coerced to manual (hot_pullback,
+# quick_bounce), and the two options lanes' tags. The literal tuple above
+# stays the historical five (pinned).
+STRATEGIES_ALL = STRATEGIES + strategy_tags.PROGRAM_TAGS + ("zero_dte", "options_zone")
 # entry_reason is a small JSON-safe dict; anything bigger is truncated so a
 # runaway payload can never bloat the ledger row.
 REASON_MAX_BYTES = 2048
 
 
 def _strategy_tag(strategy) -> str:
-    return strategy if isinstance(strategy, str) and strategy in STRATEGIES else "manual"
+    return strategy if isinstance(strategy, str) and strategy in STRATEGIES_ALL else "manual"
+
+
+def _mode() -> str:
+    """"sim" | "paper" | "live" of THIS module's broker (duck-called so test
+    fakes without mode() read ALPACA_PAPER like exit_engine does)."""
+    m = getattr(broker, "mode", None)
+    if callable(m):
+        try:
+            return str(m())
+        except Exception:                          # noqa: BLE001
+            pass
+    import os
+    return "live" if (os.getenv("ALPACA_PAPER", "1") or "1").strip() == "0" else "paper"
 
 
 def _json_clean(v):
@@ -126,8 +150,15 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
               stop_pct: Optional[float] = None,
               allow_earnings: bool = False,
               top_up: bool = False,
-              stop_price: Optional[float] = None):
+              stop_price: Optional[float] = None,
+              strategy: str = "manual"):
     """Run every entry check WITHOUT raising. Returns (blocked, ctx).
+
+    strategy (2026-09-27) is the journal lane tag; trading/program_caps.check
+    applies the in-flight open cap, the pending-entry and one-lane-per-name
+    rules and the minute peek for it, and — while the paper program is ON —
+    the per-strategy caps and the 0.25% risk budget. preview() passes none
+    (= manual).
 
     top_up=True is the PYRAMID path (TTLAC §3 Add and Reduce / §5 scale-up,
     TLSW pp.307-308): size = full-position shares MINUS shares already held,
@@ -164,16 +195,28 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
         blocked.append("engine disarmed — entries require armed=true "
                        "(POST /trading/arm?armed=true)")
 
+    tag = _strategy_tag(strategy)
+    mode = _mode()
+    ctx["strategy"], ctx["mode"] = tag, mode
+    ctx["program"] = program_caps.enabled(cfg, mode)
     held = None
+    positions = []
+    inf = None
     if broker.configured() and symbol:
         try:
             positions = broker.positions()
             for p in positions:
                 if (p.get("symbol") or "").upper() == symbol:
                     held = p
-            if held is None and len(positions) >= risk_rules.MAX_POSITIONS:
-                blocked.append("portfolio full: %d/%d positions (p.312)"
-                               % (len(positions), risk_rules.MAX_POSITIONS))
+            try:
+                inf = program_caps.inflight(broker)
+            except BrokerError:
+                inf = None
+                blocked.append("broker error: open orders unreadable — entry refused "
+                               "(in-flight cap fails closed)")
+            if inf is not None:
+                blocked += program_caps.check(tag, symbol, brk=broker, cfg=cfg, mode=mode,
+                                              held=held is not None, inf=inf)
             acct = broker.account()
             ctx["equity"] = float(acct.get("equity") or 0)
             ctx["market_open"] = bool(broker.clock().get("is_open"))
@@ -331,6 +374,37 @@ def _evaluate(symbol: str, limit_price: Optional[float] = None,
         except ValueError as exc:
             blocked.append("risk math: %s" % exc)
 
+    # Paper program risk budget (2026-09-27, "Small: 0.25% risk"): shares at
+    # risk = PROGRAM_RISK_PCT of equity used over the PLACED stop distance,
+    # min-composed with position_size — never larger, so the streak and
+    # pilot multipliers still bind.
+    rb = program_caps.risk_budget(tag, cfg, mode)
+    ctx["risk_budget"] = None
+    plan = ctx.get("stop_plan")
+    if rb is not None and price and plan is not None and not top_up:
+        per_share = round(price - plan.stop_price, 4)
+        eq_used = ctx["equity_used"]
+        if per_share > 0 and eq_used > 0:
+            risk_shares = int(math.floor(eq_used * rb / 100.0 / per_share))
+            shares = min(int(ctx["sizing"]["shares"]), risk_shares)
+            ctx["sizing"] = {"shares": shares, "allocation": round(shares * price, 2),
+                             "multiplier": ctx["sizing"]["multiplier"]}
+            ctx["risk_budget"] = {"pct": rb, "usd": round(eq_used * rb / 100.0, 2),
+                                  "per_share": per_share, "shares_by_risk": risk_shares}
+            ctx["equity_risk_pct"] = round(shares * per_share / eq_used * 100.0, 4)
+            if shares <= 0:
+                blocked.append("position size 0 at %.2f%% risk ($%.2f) with a %.2f/share stop"
+                               % (rb, eq_used * rb / 100.0, per_share))
+        else:
+            blocked.append("position size 0 at %.2f%% risk: no stop distance" % rb)
+    if ctx["program"] and price and ctx["sizing"] and inf is not None:
+        ok, why = program_caps.gross_ok(positions=positions,
+                                        pending_notional=inf["pending_notional"],
+                                        add_usd=ctx["sizing"]["shares"] * price,
+                                        equity_used=ctx["equity_used"], cfg=cfg, mode=mode)
+        if not ok:
+            blocked.append(why)
+
     return blocked, ctx
 
 
@@ -383,13 +457,35 @@ def enter(symbol: str, limit_price: Optional[float] = None,
     why-dict the caller hands over; they change nothing about the checks or
     the order — they ride on the 'entry' ledger row for the journal's
     by_strategy split and the autopsy's strategy read."""
+    # A not-a-lane tab (vcp, topping, support, ...) never buys, in any mode —
+    # refused here, before the tag is coerced to manual below.
+    if strategy_tags.is_not_a_lane(strategy):
+        raise ValueError("program-cap: %s is not a lane (never buys)"
+                         % strategy_tags.norm(strategy))
+    tag = _strategy_tag(strategy)
+    # The minute tag: only an explicit manual (or no tag) is exempt. An
+    # unknown tag is still JOURNALED as manual, but it claims the minute like
+    # any lane, so a typo can never skip the one-entry-per-minute rule.
+    minute_tag = ("manual" if strategy is None or strategy == "manual"
+                  else tag if tag != "manual" else str(strategy))
+    # One entry per ET minute (program_caps, every mode, manual exempt): a
+    # lane that cannot win the minute makes no broker, quote or earnings read.
+    if minute_tag != "manual":
+        why = program_caps.minute_taken_reason(program_caps.minute_taken())
+        if why:
+            raise ValueError(why)
     blocked, ctx = _evaluate(symbol, limit_price=limit_price,
                              stop_pct=stop_pct, allow_earnings=allow_earnings,
-                             top_up=top_up, stop_price=stop_price)
+                             top_up=top_up, stop_price=stop_price, strategy=tag)
     if blocked:
         raise ValueError("; ".join(blocked))
 
     sym = ctx["symbol"]
+    # The atomic claim, AFTER every check passed and BEFORE the order. A
+    # claimed minute whose submit then fails stays claimed (fails closed).
+    ok, why = program_caps.claim(minute_tag, sym)
+    if not ok:
+        raise ValueError(why)
     price = ctx["price"]
     plan = ctx["stop_plan"]
     target = ctx["target"]
@@ -432,12 +528,19 @@ def enter(symbol: str, limit_price: Optional[float] = None,
         "regime": ctx["regime"], "earnings": ctx["earnings"],
         "allow_earnings": bool(allow_earnings),
         "top_up": bool(top_up),
-        "strategy": _strategy_tag(strategy),
+        "strategy": tag,
         "entry_reason": _safe_reason(reason),
+        "risk_budget": ctx.get("risk_budget"),
+        "program": bool(ctx.get("program")),
+        "sid": strategy_tags.norm(tag),
     }
     ledger("entry", symbol=sym, detail=detail, dry_run=False,
            cite="stop p.299/301/311; target p.301/311; size p.312; "
                 "streak p.304; breakeven trigger p.308")
+    program_caps.record_entry(tag, sym, asset="stock", order_id=order.get("id"),
+                              client_order_id=client_order_id,
+                              snapshot_ref=(reason or {}).get("snapshot_ref")
+                              if isinstance(reason, dict) else None)
     return {
         "order_id": order.get("id"),
         "shares": qty,

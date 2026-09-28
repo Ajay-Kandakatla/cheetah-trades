@@ -82,3 +82,21 @@ contract "Trading page carries the 0DTE paper lane tab".
   0DTE tab's Massive read. Both are what the tab already shows.
 
 Decision support on a paper account — not advice.
+
+## 2026-09-27 — inside the Chart Maps lane program
+
+The 0DTE lane is the `signals` strategy of the Chart Maps lane program
+(`trading/program_caps.py`, `docs/trading_chart_maps_lanes.md`). With the program OFF (the
+deploy state) nothing changes: the lane enters on its own `zero_dte_entry` switch, exactly as
+before. With the program ON, `signals` is OFF by default (it is not in the frozen top ten), so
+the lane stops ENTERING — `entry_reason` reads `program: signals OFF` and a `cm_lane_log` row
+says why — while `_manage` still runs every tick, so open contracts keep their stops, targets
+and the 15:45 flatten. In every mode an entry now passes the shared chokepoint before it is
+sent: the in-flight open cap (positions + pending entries), one lane per name, and the atomic
+one-entry-per-ET-minute claim. A TRANSIENT refusal (`program-wait:` — minute taken, portfolio
+full) records no attempt, so the signal is retried next tick; a day cap (`program-cap:`) is
+recorded as a `skipped` attempt. A filled entry is written to `program_entries` (sid `signals`,
+the OCC symbol). The daily loss review scores the lane in R = realized $ / (fill x 100 x qty x
+PREMIUM_STOP_PCT). UNMEASURED. Tests: `test_lanes_program_adoption.py` (program OFF still
+submits; program ON + signals OFF manages but never enters; a refused claim never submits; a
+day cap records a skipped attempt), `test_lane_review.py` (the R formula).

@@ -177,6 +177,15 @@ def get_config() -> dict:
         # the paper account, exactly like the 0DTE lane above.
         "hot_pullback_entry": bool(doc.get("hot_pullback_entry", True)),
         "last_hot_pullback_disabled_day": doc.get("last_hot_pullback_disabled_day"),
+        # Chart Maps lane program (trading/program_caps.py; Ajay 2026-09-27
+        # "use all strategies from Most used from Chart maps ... and journal").
+        # Master switch default OFF; paper/sim only (live is never a program).
+        # cm_lanes = per-strategy ON/OFF overrides, cm_lane_caps = tighten-only
+        # per-strategy caps. Both validated by program_caps.validate_updates.
+        "cm_program": bool(doc.get("cm_program", False)),
+        "cm_program_started": doc.get("cm_program_started"),
+        "cm_lanes": dict(doc["cm_lanes"]) if isinstance(doc.get("cm_lanes"), dict) else {},
+        "cm_lane_caps": dict(doc["cm_lane_caps"]) if isinstance(doc.get("cm_lane_caps"), dict) else {},
         # Owner exits Alpaca refused outside the session (see FLATTEN_HELD_CODE).
         "flatten_queue": _norm_queue(doc.get("flatten_queue")),
         "flatten_queue_rev": int(doc.get("flatten_queue_rev") or 0),
@@ -903,6 +912,75 @@ def _sent_order_filled(entry: dict) -> bool:
     return bool(o is not None and (o.get("status") or "").lower() == "filled")
 
 
+def _run_lanes_fixed_order() -> dict:
+    """The entry lanes in their pre-program order, verbatim: (h) zone-edge,
+    (j) catalyst, (k) options, (l) 0DTE, (m) hot pullback. Returns the same
+    summary keys the tick always carried plus `errors`. Runs with the Chart
+    Maps program OFF (trading/chart_maps_lanes.run_program) and as the
+    fallback when the dispatcher cannot be imported."""
+    summary = {"errors": []}
+    # (h) zone-edge entries (Supply & Demand strategy, owner rules; flag
+    # `zone_edge_entry`, default OFF) — same fence as (f): a buy-side crash
+    # can never break stop protection above. Buys still flow ONLY through
+    # entries.enter().
+    try:
+        from trading import zone_edge_entry
+        summary["zone_edge_entry"] = zone_edge_entry.run(broker=broker,
+                                                         cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("zone_edge_entry run failed: %s", exc)
+        summary["errors"].append("zone_edge_entry: %s" % exc)
+
+    # (j) catalyst-lane entries (trading/catalyst_entry.py, owner rules; flag
+    # `catalyst_entry`, default OFF) — fenced exactly like (h): a buy-side
+    # crash can never break stop protection above. Reads ONLY the cached
+    # catalyst scan (never triggers one); buys flow ONLY through
+    # entries.enter().
+    try:
+        from trading import catalyst_entry
+        summary["catalyst_entry"] = catalyst_entry.run(broker=broker,
+                                                       cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("catalyst_entry run failed: %s", exc)
+        summary["errors"].append("catalyst_entry: %s" % exc)
+
+    # (k) options lane (trading/options_lane.py, owner rules; flag
+    # `options_entry`, default OFF) — manages its open contracts (underlying
+    # under the band floor / target / DTE / earnings) THEN looks for one new
+    # demand-zone entry. Fenced exactly like (h)/(j).
+    try:
+        from trading import options_lane
+        summary["options_lane"] = options_lane.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("options_lane run failed: %s", exc)
+        summary["errors"].append("options_lane: %s" % exc)
+
+    # (l) 0DTE paper lane (trading/zero_dte_lane.py, owner rules; flag
+    # `zero_dte_entry`, default ON, paper-only) — manages its same-day
+    # contracts (stock stop/target, premium, 15:45 flatten) THEN looks for
+    # fresh Signal Lab tags. Fenced exactly like (k).
+    try:
+        from trading import zero_dte_lane
+        summary["zero_dte_lane"] = zero_dte_lane.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("zero_dte_lane run failed: %s", exc)
+        summary["errors"].append("zero_dte_lane: %s" % exc)
+
+    # (m) 🔥 Hot Pullback paper lane (trading/hot_pullback_entry.py, owner
+    # rules; flag `hot_pullback_entry`, default ON, paper-only) — closes its
+    # open positions on stop / target / the 3-session clock, THEN buys
+    # yesterday's flush-into-demand signals at today's open. Fenced exactly
+    # like (k)/(l): a crash here can never reach stop protection above.
+    try:
+        from trading import hot_pullback_entry
+        summary["hot_pullback"] = hot_pullback_entry.run(broker=broker, cfg=get_config())
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("hot_pullback lane run failed: %s", exc)
+        summary["errors"].append("hot_pullback: %s" % exc)
+
+    return summary
+
+
 def tick(force: bool = False) -> dict:
     summary = {"ok": True, "forced": bool(force), "market_open": None,
                "armed": False, "regime": None, "positions": 0,
@@ -963,6 +1041,13 @@ def tick(force: bool = False) -> dict:
     reg = regime()
     summary.update(armed=armed, regime=reg)
     tick_started_iso = _utc_iso()
+    # One entry per ET minute (program_caps.claim): every claim inside this
+    # tick uses the tick's OWN minute, so a slow tick cannot take the next one.
+    try:
+        from trading import program_caps as _pc
+        _pc.set_tick_minute(datetime.now(timezone.utc))
+    except Exception as exc:                       # noqa: BLE001
+        log.warning("program tick minute not pinned: %s", exc)
 
     # (d) protect + ratchet every position
     try:
@@ -1229,17 +1314,35 @@ def tick(force: bool = False) -> dict:
         log.warning("auto_entry run failed: %s", exc)
         summary["errors"].append("auto_entry: %s" % exc)
 
-    # (h) zone-edge entries (Supply & Demand strategy, owner rules; flag
-    # `zone_edge_entry`, default OFF) — same fence as (f): a buy-side crash
-    # can never break stop protection above. Buys still flow ONLY through
-    # entries.enter().
+    # (h)(j)(k)(l)(m) the entry lanes — Chart Maps lane program dispatcher
+    # (trading/chart_maps_lanes.run_program, 2026-09-27). Program OFF runs
+    # _run_lanes_fixed_order() below, the pre-program lane code verbatim;
+    # program ON runs every lane in usage order under the program caps. If
+    # the dispatcher cannot even be imported, the fixed order runs so exits
+    # keep being managed. Every lane stays fenced; run_program never raises.
     try:
-        from trading import zone_edge_entry
-        summary["zone_edge_entry"] = zone_edge_entry.run(broker=broker,
-                                                         cfg=get_config())
+        from trading import chart_maps_lanes
+        _run_program = chart_maps_lanes.run_program
     except Exception as exc:                       # noqa: BLE001
-        log.warning("zone_edge_entry run failed: %s", exc)
-        summary["errors"].append("zone_edge_entry: %s" % exc)
+        log.warning("chart_maps_lanes unavailable, fixed lane order: %s", exc)
+        summary["errors"].append("chart_maps_lanes: %s" % exc)
+        _run_program = None
+    if _run_program is not None:
+        try:
+            lanes = _run_program(broker=broker, cfg=get_config())
+        except Exception as exc:                   # noqa: BLE001 — never re-run lanes
+            log.warning("chart_maps_lanes.run_program raised: %s", exc)
+            lanes = {"errors": ["chart_maps_lanes: %s" % exc]}
+    else:
+        lanes = _run_lanes_fixed_order()
+    lanes = dict(lanes or {})
+    summary["errors"].extend(lanes.pop("errors", None) or [])
+    summary.update(lanes)
+    try:
+        from trading import program_caps as _pc
+        _pc.set_tick_minute(None)
+    except Exception:                              # noqa: BLE001
+        pass
 
     # (h2) quick-bounce day-trade close (trading/zone_edge_entry.quick_bounce_eod;
     # owner switch `quick_bounce_eod_flatten`, default ON): at 15:55 ET the
@@ -1251,53 +1354,6 @@ def tick(force: bool = False) -> dict:
     except Exception as exc:                       # noqa: BLE001
         log.warning("quick_bounce_eod failed: %s", exc)
         summary["errors"].append("quick_bounce_eod: %s" % exc)
-
-    # (j) catalyst-lane entries (trading/catalyst_entry.py, owner rules; flag
-    # `catalyst_entry`, default OFF) — fenced exactly like (h): a buy-side
-    # crash can never break stop protection above. Reads ONLY the cached
-    # catalyst scan (never triggers one); buys flow ONLY through
-    # entries.enter().
-    try:
-        from trading import catalyst_entry
-        summary["catalyst_entry"] = catalyst_entry.run(broker=broker,
-                                                       cfg=get_config())
-    except Exception as exc:                       # noqa: BLE001
-        log.warning("catalyst_entry run failed: %s", exc)
-        summary["errors"].append("catalyst_entry: %s" % exc)
-
-    # (k) options lane (trading/options_lane.py, owner rules; flag
-    # `options_entry`, default OFF) — manages its open contracts (underlying
-    # under the band floor / target / DTE / earnings) THEN looks for one new
-    # demand-zone entry. Fenced exactly like (h)/(j).
-    try:
-        from trading import options_lane
-        summary["options_lane"] = options_lane.run(broker=broker, cfg=get_config())
-    except Exception as exc:                       # noqa: BLE001
-        log.warning("options_lane run failed: %s", exc)
-        summary["errors"].append("options_lane: %s" % exc)
-
-    # (l) 0DTE paper lane (trading/zero_dte_lane.py, owner rules; flag
-    # `zero_dte_entry`, default ON, paper-only) — manages its same-day
-    # contracts (stock stop/target, premium, 15:45 flatten) THEN looks for
-    # fresh Signal Lab tags. Fenced exactly like (k).
-    try:
-        from trading import zero_dte_lane
-        summary["zero_dte_lane"] = zero_dte_lane.run(broker=broker, cfg=get_config())
-    except Exception as exc:                       # noqa: BLE001
-        log.warning("zero_dte_lane run failed: %s", exc)
-        summary["errors"].append("zero_dte_lane: %s" % exc)
-
-    # (m) 🔥 Hot Pullback paper lane (trading/hot_pullback_entry.py, owner
-    # rules; flag `hot_pullback_entry`, default ON, paper-only) — closes its
-    # open positions on stop / target / the 3-session clock, THEN buys
-    # yesterday's flush-into-demand signals at today's open. Fenced exactly
-    # like (k)/(l): a crash here can never reach stop protection above.
-    try:
-        from trading import hot_pullback_entry
-        summary["hot_pullback"] = hot_pullback_entry.run(broker=broker, cfg=get_config())
-    except Exception as exc:                       # noqa: BLE001
-        log.warning("hot_pullback lane run failed: %s", exc)
-        summary["errors"].append("hot_pullback: %s" % exc)
 
     # (g) journal reconcile — derive/update the perpetual trade_journal from
     # the ledger so it is current between ticks. Read-only over the ledger, no
@@ -1417,6 +1473,11 @@ def status() -> dict:
     except Exception as exc:                       # noqa: BLE001
         out["zero_dte_lane"] = {"enabled": bool(cfg.get("zero_dte_entry")),
                                 "error": str(exc)}
+    try:
+        from trading import program_caps
+        out["chart_maps_program"] = program_caps.status_block(cfg, _broker_mode(), broker)
+    except Exception as exc:                       # noqa: BLE001
+        out["chart_maps_program"] = {"enabled": False, "error": str(exc)}
     if not out["configured"]:
         return out
     try:

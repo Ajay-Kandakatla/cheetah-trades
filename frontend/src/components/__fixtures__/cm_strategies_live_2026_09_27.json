@@ -1,0 +1,1504 @@
+{
+ "_source": "Built 2026-09-27 to the spec §3.8 GET /trading/strategies schema with the live 2026-09-27 /usage/summary tab counts and the §1.9 priors; program OFF (deploy state), a Sunday (no snapshot is fresh). NOT captured from :8001 — the endpoint is built in parallel (WP-GEN/WP-CORE); re-capture it there before the promote (spec §5.2).",
+ "program": {
+  "enabled": false,
+  "started": null,
+  "mode": "paper",
+  "caps": {
+   "risk_pct": 0.25,
+   "per_strategy_per_day": 1,
+   "per_strategy_open": 2,
+   "max_open": 15,
+   "one_entry_per_minute": true,
+   "gross_pct": 100.0,
+   "options_risk_pct": 1.0
+  },
+  "open": {
+   "n": 4,
+   "positions": 4,
+   "pending": 0,
+   "by_sid": {
+    "manual": 4
+   }
+  },
+  "minute": {
+   "key": null,
+   "sid": null,
+   "symbol": null,
+   "at": null
+  },
+  "last_entry": null,
+  "usage_order": {
+   "day": "2026-09-27",
+   "order": [
+    "zones",
+    "deep_demand",
+    "hot_sectors",
+    "catalysts",
+    "amd",
+    "bonde",
+    "hot_pullback",
+    "growth",
+    "quick_bounce",
+    "patterns",
+    "breaking",
+    "keltner",
+    "signals",
+    "ict",
+    "gnt",
+    "ipo",
+    "potus",
+    "gabbar",
+    "session",
+    "undervalue",
+    "overnight",
+    "earnings"
+   ],
+   "counts": {
+    "zones": 268,
+    "deep_demand": 125,
+    "hot_sectors": 122,
+    "catalysts": 85,
+    "amd": 72,
+    "bonde": 69,
+    "hot_pullback": 69,
+    "growth": 59,
+    "quick_bounce": 57,
+    "patterns": 49,
+    "breaking": 39,
+    "keltner": 30,
+    "signals": 28,
+    "ict": 23,
+    "gnt": 21,
+    "ipo": 18,
+    "potus": 17,
+    "gabbar": 17,
+    "session": 11,
+    "undervalue": 8,
+    "overnight": 6,
+    "earnings": 1
+   },
+   "source": "usage_stats"
+  },
+  "rules": [
+   "Paper only: the program never runs on a live account.",
+   "0.25% of equity at risk a trade, min'd with the streak and progressive multipliers.",
+   "Each strategy: at most 1 new buy a day and 2 open.",
+   "The whole program: at most 15 open, stocks and options together, pending orders counted.",
+   "At most 1 new buy a minute across every lane.",
+   "One lane per name: a lane never buys a name that is already held."
+  ]
+ },
+ "strategies": [
+  {
+   "sid": "zones",
+   "tabs": [
+    "zones"
+   ],
+   "label_tab": "zones",
+   "rank": 1,
+   "opens": 268,
+   "lane": "zone_edge",
+   "adapter": null,
+   "adapter_version": null,
+   "default_on": true,
+   "enabled": true,
+   "note": "Existing lane, journaled as `demand_zone`; now under the program's caps.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": {
+    "key": "zone_edge_entry",
+    "value": true
+   },
+   "snapshot": null,
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "no_signal",
+    "note": "🎯 READY replay no_signal; reversal baseline 24% win / 75% stop-out",
+    "source": "scripts/entry_trigger_measured.json"
+   }
+  },
+  {
+   "sid": "deep_demand",
+   "tabs": [
+    "deep_demand"
+   ],
+   "label_tab": "deep_demand",
+   "rank": 2,
+   "opens": 125,
+   "lane": "generic",
+   "adapter": "PLAN",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": true,
+   "enabled": true,
+   "note": "Buys the tab's served BUY with its served STOP, only on a 🎯 READY read that agrees with the band.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "null",
+    "note": "levels 2/3/4 MEASURED NULL",
+    "source": "scripts/deep_levels_measured.json"
+   }
+  },
+  {
+   "sid": "hot_sectors",
+   "tabs": [
+    "hot_sectors"
+   ],
+   "label_tab": "hot_sectors",
+   "rank": 3,
+   "opens": 122,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup. A sector view; not counted in the top 10.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "null",
+    "note": "sector heat null (−0.57pp)",
+    "source": "studies/sector_heat_study.py"
+   }
+  },
+  {
+   "sid": "catalysts",
+   "tabs": [
+    "catalysts"
+   ],
+   "label_tab": "catalysts",
+   "rank": 4,
+   "opens": 85,
+   "lane": "catalyst_entry",
+   "adapter": null,
+   "adapter_version": null,
+   "default_on": true,
+   "enabled": true,
+   "note": "Existing lane, journaled as `catalyst`; now under the program's caps.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": {
+    "key": "catalyst_entry",
+    "value": true
+   },
+   "snapshot": null,
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "amd",
+   "tabs": [
+    "amd"
+   ],
+   "label_tab": "amd",
+   "rank": 5,
+   "opens": 72,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": true,
+   "enabled": true,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "inverted",
+    "note": "INVERTED vs placebo (~3,700 names)",
+    "source": "scripts/turning_bullish_amd_study.py"
+   }
+  },
+  {
+   "sid": "bonde",
+   "tabs": [
+    "bonde"
+   ],
+   "label_tab": "bonde",
+   "rank": 6,
+   "opens": 69,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": true,
+   "enabled": true,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": null,
+    "source_key": null,
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale board (build time unknown)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "inverted",
+    "note": "thesis INVERTED (2026-09-13)",
+    "source": null
+   }
+  },
+  {
+   "sid": "hot_pullback",
+   "tabs": [
+    "hot_pullback"
+   ],
+   "label_tab": "hot_pullback",
+   "rank": 7,
+   "opens": 69,
+   "lane": "hot_pullback_entry",
+   "adapter": null,
+   "adapter_version": null,
+   "default_on": true,
+   "enabled": true,
+   "note": "Existing lane, journaled as `hot_pullback`; now under the program's caps.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": {
+    "key": "hot_pullback_entry",
+    "value": true
+   },
+   "snapshot": null,
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "null",
+    "note": "null, +0.100R (−0.188..+0.405)",
+    "source": "studies/hot_pullback_study.py"
+   }
+  },
+  {
+   "sid": "growth",
+   "tabs": [
+    "growth"
+   ],
+   "label_tab": "growth",
+   "rank": 8,
+   "opens": 59,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": true,
+   "enabled": true,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "arrivals +7.49pp at 63 sessions; no entry, stop or cost model",
+    "source": "scripts/board_growth_measured.json"
+   }
+  },
+  {
+   "sid": "quick_bounce",
+   "tabs": [
+    "quick_bounce"
+   ],
+   "label_tab": "quick_bounce",
+   "rank": 9,
+   "opens": 57,
+   "lane": "zone_edge",
+   "adapter": null,
+   "adapter_version": null,
+   "default_on": true,
+   "enabled": true,
+   "note": "Existing lane, journaled as `quick_bounce`; now under the program's caps.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": {
+    "key": "zone_edge_entry",
+    "value": true
+   },
+   "snapshot": null,
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "patterns",
+   "tabs": [
+    "patterns"
+   ],
+   "label_tab": "patterns",
+   "rank": 10,
+   "opens": 49,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": true,
+   "enabled": true,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup. Confirmed patterns are bought only at demand, never on the breakout; most are cup-with-handle bases.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "breaking",
+   "tabs": [
+    "breaking"
+   ],
+   "label_tab": "breaking",
+   "rank": 11,
+   "opens": 39,
+   "lane": "zone_edge",
+   "adapter": null,
+   "adapter_version": null,
+   "default_on": true,
+   "enabled": true,
+   "note": "Existing lane, journaled as `breakout`; now under the program's caps.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": {
+    "key": "zone_edge_entry",
+    "value": true
+   },
+   "snapshot": null,
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "negative",
+    "note": "tagged lane −0.54R (−0.92..−0.10) outside the clusters",
+    "source": null
+   }
+  },
+  {
+   "sid": "keltner",
+   "tabs": [
+    "keltner"
+   ],
+   "label_tab": "keltner",
+   "rank": 12,
+   "opens": 30,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "inverted",
+    "note": "INVERTED vs placebo (~3,700 names)",
+    "source": "scripts/turning_bullish_keltner_study.py"
+   }
+  },
+  {
+   "sid": "signals",
+   "tabs": [
+    "signals",
+    "zero_dte"
+   ],
+   "label_tab": "signals",
+   "rank": 13,
+   "opens": 28,
+   "lane": "zero_dte_lane",
+   "adapter": null,
+   "adapter_version": null,
+   "default_on": false,
+   "enabled": false,
+   "note": "Existing 0DTE lane (tag `zero_dte`); OFF inside the program — with the program OFF it runs as today.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": {
+    "key": "zero_dte_entry",
+    "value": true
+   },
+   "snapshot": null,
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "inconclusive",
+    "note": "first tag inconclusive: the sign depends on the placebo",
+    "source": null
+   }
+  },
+  {
+   "sid": "ict",
+   "tabs": [
+    "ict"
+   ],
+   "label_tab": "ict",
+   "rank": 14,
+   "opens": 23,
+   "lane": "generic",
+   "adapter": "PLAN",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys the tab's served BUY with its served STOP, only on a 🎯 READY read that agrees with the band.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "null",
+    "note": "no edge vs placebo (+0.03R, 6,004 signals)",
+    "source": "backend/ict/backtest.py"
+   }
+  },
+  {
+   "sid": "gnt",
+   "tabs": [
+    "gnt"
+   ],
+   "label_tab": "gnt",
+   "rank": 15,
+   "opens": 21,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "ipo",
+   "tabs": [
+    "ipo"
+   ],
+   "label_tab": "ipo",
+   "rank": 16,
+   "opens": 18,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "potus",
+   "tabs": [
+    "potus"
+   ],
+   "label_tab": "potus",
+   "rank": 17,
+   "opens": 17,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "gabbar",
+   "tabs": [
+    "gabbar"
+   ],
+   "label_tab": "gabbar",
+   "rank": 18,
+   "opens": 17,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "OOS 72% recovered, no placebo",
+    "source": null
+   }
+  },
+  {
+   "sid": "session",
+   "tabs": [
+    "session"
+   ],
+   "label_tab": "session",
+   "rank": 19,
+   "opens": 11,
+   "lane": "generic",
+   "adapter": "PLAN",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys the tab's served BUY with its served STOP, only on a 🎯 READY read that agrees with the band.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "undervalue",
+   "tabs": [
+    "undervalue"
+   ],
+   "label_tab": "undervalue",
+   "rank": 20,
+   "opens": 8,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "overnight",
+   "tabs": [
+    "overnight"
+   ],
+   "label_tab": "overnight",
+   "rank": 21,
+   "opens": 6,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  },
+  {
+   "sid": "earnings",
+   "tabs": [
+    "earnings"
+   ],
+   "label_tab": "earnings",
+   "rank": 22,
+   "opens": 1,
+   "lane": "generic",
+   "adapter": "LIST",
+   "adapter_version": "cm-lanes-v1",
+   "default_on": false,
+   "enabled": false,
+   "note": "Buys a 🎯 READY demand reversal on a name from this tab's list, not the tab's own setup.",
+   "switch": {
+    "key": "cm_lanes",
+    "value": null
+   },
+   "lane_switch": null,
+   "snapshot": {
+    "as_of": "2026-09-25T15:45:03-04:00",
+    "source_as_of": 1790366400,
+    "source_key": "generated_at",
+    "age_sec": 158400,
+    "stale": true,
+    "stale_reason": "stale snapshot (built another day)",
+    "n": 0,
+    "top": []
+   },
+   "today": {
+    "entries": [],
+    "skips": {},
+    "last_skips": []
+   },
+   "scoreboard": {
+    "n_closed": 0,
+    "n_open": 0,
+    "wins": 0,
+    "losses": 0,
+    "win_pct": null,
+    "win_ci": [
+     null,
+     null
+    ],
+    "exp_r": null,
+    "exp_r_ci": [
+     null,
+     null
+    ],
+    "total_usd": 0.0,
+    "open_risk_usd": 0.0,
+    "n_approx": 0,
+    "n_unpriced": 0,
+    "exits_by_kind": {},
+    "last_trade": null,
+    "small_n": true,
+    "measured": false
+   },
+   "prior": {
+    "status": "unmeasured",
+    "note": "UNMEASURED as an entry",
+    "source": null
+   }
+  }
+ ],
+ "not_lanes": [
+  {
+   "tab": "support",
+   "opens": 96,
+   "reason": "a one-ticker tool, not a list"
+  },
+  {
+   "tab": "holdings",
+   "opens": 10,
+   "reason": "his own positions"
+  },
+  {
+   "tab": "ema_frames",
+   "opens": 9,
+   "reason": "weekly/monthly chart view, kind n/a"
+  },
+  {
+   "tab": "vcp",
+   "opens": 8,
+   "reason": "OFF with Minervini: the SEPA slice, whose lane is auto_entry"
+  },
+  {
+   "tab": "news",
+   "opens": 4,
+   "reason": "no tickers"
+  },
+  {
+   "tab": "winners",
+   "opens": 1,
+   "reason": "a hindsight ledger selected by outcome"
+  },
+  {
+   "tab": "topping",
+   "opens": 0,
+   "reason": "bearish; the program is long-only"
+  }
+ ]
+}

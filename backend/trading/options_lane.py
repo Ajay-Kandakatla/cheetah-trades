@@ -340,9 +340,12 @@ def call_spread_fallback(has_target: bool) -> str:
     return "bull_call_spread" if has_target else "long_call"
 
 
-def size_contracts(debit_per_contract: float, equity: float) -> tuple:
-    """(qty, budget) — whole contracts inside the premium budget."""
-    budget = min(equity * RISK_PCT_OF_EQUITY / 100.0, MAX_PREMIUM_PER_TRADE)
+def size_contracts(debit_per_contract: float, equity: float,
+                   risk_pct: float = RISK_PCT_OF_EQUITY) -> tuple:
+    """(qty, budget) — whole contracts inside the premium budget. `risk_pct`
+    (2026-09-27) is program_caps.option_risk_pct: RISK_PCT_OF_EQUITY while
+    the Chart Maps program is OFF, min(it, PROGRAM_RISK_PCT) while it is ON."""
+    budget = min(equity * risk_pct / 100.0, MAX_PREMIUM_PER_TRADE)
     cost = debit_per_contract * 100.0
     if cost <= 0:
         return 0, budget
@@ -660,7 +663,8 @@ def _plan_put_spread(brk, sym: str, expiry: str, band_lo: float) -> dict:
             "iv": _f(short_s.get("iv")), "delta": _f(short_s.get("delta"))}
 
 
-def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> dict:
+def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date,
+               risk_pct: float = RISK_PCT_OF_EQUITY) -> dict:
     """Build the order plan for one gated candidate. Pure apart from the
     broker chain reads. Returns {"ok": bool, "reason", ...plan}."""
     sym = c["symbol"]
@@ -705,7 +709,7 @@ def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> d
             out["otype"] = "put"
             out["iv"], out["delta"] = ps["iv"] if ps["iv"] is not None else iv, ps["delta"]
             credit, width = ps["credit"], ps["width"]
-            qty, budget = size_contracts(width - credit, equity)      # risk = width - credit
+            qty, budget = size_contracts(width - credit, equity, risk_pct)  # risk = width - credit
             out.update({"legs": ps["legs"], "credit": credit, "width": width,
                         "debit": round(-credit, 2), "limit_price": round(-credit, 2),
                         "qty": qty, "budget": round(budget, 2),
@@ -739,7 +743,7 @@ def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> d
         out["reason"] = "net debit %.2f not positive" % debit
         return out
     limit = round_up_tick(debit)
-    qty, budget = size_contracts(limit, equity)
+    qty, budget = size_contracts(limit, equity, risk_pct)
     out.update({"legs": legs, "debit": round(debit, 2), "limit_price": limit,
                 "qty": qty, "budget": round(budget, 2),
                 "max_loss": round(limit * 100.0 * qty, 2)})
@@ -790,6 +794,10 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
         return
     held = {str(d.get("symbol") or "").upper() for d in open_docs}
     tried = {str(a.get("symbol") or "").upper() for a in attempts}
+    from trading import program_caps as PC
+    mode = ZEE._broker_mode_of(brk)
+    risk_pct = PC.option_risk_pct(STRATEGY, RISK_PCT_OF_EQUITY, cfg, mode)
+    out["risk_pct"] = risk_pct
     rules = ZEE.active_rules(cfg)
     cands, rejected = ZEE.read_candidates(latest, rules)
     cands = [c for c in cands if c.get("kind") == "demand"]
@@ -811,7 +819,7 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
             out["skipped_alert_gate"] += 1
             out["skipped"].append({"symbol": sym, "reason": why})
             continue
-        plan = plan_entry(brk, c, gate[1], equity, today)
+        plan = plan_entry(brk, c, gate[1], equity, today, risk_pct=risk_pct)
         if not plan["ok"]:
             _record_attempt(day, sym, "blocked", plan.get("reason"), plan)
             out["blocked"].append({"symbol": sym, "reason": plan.get("reason")})
@@ -825,6 +833,29 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
                                note="disarmed — dry run, nothing sent"),
                    dry_run=True, cite=CITE)
             out["dry_run"].append(sym)
+            return                                  # one per tick either way
+        # The program chokepoint (2026-09-27, every mode): in-flight open cap
+        # (a spread takes 2 slots), a pending entry, the minute claim. options
+        # _zone is non-roster: no per-strategy caps. A transient refusal
+        # records no attempt (retried next tick).
+        legs_n = max(1, len(plan.get("legs") or []))
+        try:
+            inf = PC.inflight(brk)
+            first_occ = str((plan.get("legs") or [{}])[0].get("symbol") or sym).upper()
+            blocked = PC.check(STRATEGY, first_occ, brk=brk, cfg=cfg, mode=mode, asset="option",
+                               held=first_occ in inf["positions"], inf=inf, adds=legs_n)
+        except Exception as exc:                   # noqa: BLE001
+            blocked = [PC.TRANSIENT_PREFIX + "open orders unreadable (%s)" % str(exc)[:80]]
+            first_occ = sym
+        why = blocked[0] if blocked else None
+        if why is None:
+            ok, why = PC.claim(STRATEGY, sym)
+            why = None if ok else why
+        if why is not None:
+            PC.log_skip(STRATEGY, sym, why)
+            out["skipped"].append({"symbol": sym, "reason": why})
+            if not PC.is_transient(why):
+                _record_attempt(day, sym, "skipped", why, plan)
             return                                  # one per tick either way
         try:
             resp = _place(brk, plan, day)
@@ -854,6 +885,9 @@ def _try_entries(brk, cfg: dict, out: dict, now_et: datetime, day: str,
                "mode": _broker_mode(), "close_reason": None, "exit_credit": None,
                "realized_pnl": None, "closed_ts": None}
         _save_position(pos)
+        PC.record_entry(STRATEGY, sym, asset="option", occ=first_occ,
+                        order_id=resp.get("id"), client_order_id="opt-%s-%s"
+                        % (sym, day.replace("-", "")))
         _record_attempt(day, sym, "entered", None, {"order_id": resp.get("id")})
         ledger("options_entry", symbol=sym,
                detail=dict(plan, strategy=STRATEGY, gate=gate[1], order_id=resp.get("id"),

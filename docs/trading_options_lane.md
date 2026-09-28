@@ -131,3 +131,18 @@ row. The Auto-Pilot ▸ Options tab prints the line under each position row
 closed / sold put spread / cheap-IV variants, NEGATIVE empty doc; the entry keeps the reasons;
 `_public` carries the narrative), `OptionsLaneTab.test.tsx` (one why row per position that has
 one).
+
+## 2026-09-27 — inside the Chart Maps lane program
+
+The options lane (`options_zone`) is not a Chart Maps tab, so it has no per-strategy switch or
+per-strategy caps and runs LAST in the tick. It does count toward the program's open cap: every
+spread leg is a slot (`program_caps.check(..., adds=len(legs))`), and a pending entry counts
+like a position. Before `_place` it claims the ET minute (one entry per minute across every
+lane, program ON or OFF); a refused claim sends nothing — a transient refusal records no
+attempt, so it is retried next tick. Sizing: with the program ON the premium at risk is
+min(RISK_PCT_OF_EQUITY, 0.25)% of equity (`program_caps.option_risk_pct`, reported as
+`risk_pct` in the run summary); with it OFF the lane keeps its own 1.0%. `RISK_PCT_OF_EQUITY`
+itself is unchanged. A placed entry is written to `program_entries` (first leg's OCC). The
+daily loss review scores it in R = realized $ / max_loss. UNMEASURED. Tests:
+`test_lanes_program_adoption.py` (a refused claim never submits; 0.25% ON vs 1.0% OFF;
+options_zone counts in the open cap but meets no strategy cap), `test_options_lane.py`.

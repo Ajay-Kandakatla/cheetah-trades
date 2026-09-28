@@ -97,6 +97,7 @@ from zoneinfo import ZoneInfo
 from supply_demand import alert_gates
 from supply_demand.zone_bounce_alerts import STALE_PRINT_SEC   # the phone's line, reused
 from trading import entries
+from trading import program_caps
 from trading import risk_rules
 from trading import zone_edge_entry
 from trading.broker import get_broker
@@ -723,6 +724,15 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         return out
     held = {str(p.get("symbol") or "").upper() for p in positions if isinstance(p, dict)}
     pos_count = len(positions)
+    mode = zone_edge_entry._broker_mode_of(brk)
+    cap = program_caps.open_cap(cfg, mode)
+    try:
+        inf = program_caps.inflight(brk)
+    except Exception as exc:                       # noqa: BLE001
+        out["ok"] = False
+        out["errors"].append("open orders: %s" % exc)
+        out["reason"] = "inflight_unavailable"
+        return out
     entered_rows = _entered_today(day)
     if entered_rows is None:
         out["ok"] = False
@@ -803,8 +813,22 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         if entries_today >= MAX_CATALYST_ENTRIES_PER_DAY:
             _skip(sym, "daily cap %d reached" % MAX_CATALYST_ENTRIES_PER_DAY)
             continue
-        if pos_count >= risk_rules.MAX_POSITIONS:
-            _skip(sym, "no position slot (%d/%d)" % (pos_count, risk_rules.MAX_POSITIONS))
+        # risk_rules.MAX_POSITIONS live; the paper program's cap while it is
+        # ON — program_caps.open_cap(
+        if pos_count >= cap:
+            _skip(sym, "no position slot (%d/%d)" % (pos_count, cap))
+            continue
+        # The program's cheap-skip (2026-09-27, every mode): OFF, the
+        # per-strategy caps, the in-flight open cap, a pending entry, one lane
+        # per name, the minute — logged, no state, no ledger row.
+        preason = program_caps.check("catalyst", sym, brk=brk, cfg=cfg, mode=mode,
+                                     held=sym in held, inf=inf)
+        if preason:
+            lvl = program_caps.sid_level(preason[0])
+            program_caps.log_skip("catalyst", "*" if lvl else sym, preason[0])
+            _skip(sym, preason[0])
+            if lvl:
+                break
             continue
         ok, g = zone_gate(c, rows.get(sym), docs.get(sym))
         if not ok:
@@ -839,7 +863,9 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                   "bounce": g["bounce"], "proximity": g["proximity"], "side": g["side"],
                   "price": c["price"], "dollar_volume": c["dollar_volume"],
                   "print": g["print"], "print_basis": "catalyst scan price",
-                  "print_age_sec": g["print_age_sec"], "stop_pct": g["stop_pct"]}
+                  "print_age_sec": g["print_age_sec"], "stop_pct": g["stop_pct"],
+                  "sid": "catalysts", "tab": "catalysts", "kind": "demand",
+                  "band": g["band"]}
         veto = None
         res = None
         try:
@@ -864,6 +890,13 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                 _clear_state(key)
                 _skip(sym, "market closed")
                 continue
+            if program_caps.is_transient(veto):
+                # The minute went / the program is full: not an attempt,
+                # retried next tick (2026-09-27).
+                _clear_state(key)
+                program_caps.log_skip("catalyst", sym, veto)
+                _skip(sym, veto)
+                break
             out["blocked"].append(sym)
             _set_state(key, result="blocked", reason=veto)
             ledger("catalyst_entry_blocked", symbol=sym,

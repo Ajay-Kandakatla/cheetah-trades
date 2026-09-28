@@ -166,6 +166,33 @@ def narrative(row: dict, entry_px, stop_px, target_px) -> str:
     return "; ".join(bits) + ". " + tail
 
 
+def alert_gate_read(sym: str) -> tuple:
+    """(ok, reason, gates) — the STANDING alert gate on the live print
+    (2026-09-27, critic 6): every S/D demand lane passes it. Read through
+    supply_demand.bounce_room (the same row the boards serve): enter only
+    when the row is covered and its enterable gates say room_ok (at least
+    alert_gates.ALERT_MIN_ROOM_PCT to the first proven supply) AND prox_ok
+    (within alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT of demand). Unreadable =
+    refused (fail closed). The floor and the drags stay a board read."""
+    try:
+        from supply_demand import bounce_room
+        row = ((bounce_room.api_payload([sym], background=False) or {})
+               .get("rows") or {}).get(sym) or {}
+    except Exception as exc:                                   # noqa: BLE001
+        return False, "alert gate: live read failed (%s)" % str(exc)[:80], None
+    if row.get("coverage") not in ("store", "ondemand"):
+        return False, "alert gate: no live read (coverage %s)" % (row.get("coverage") or "none"), None
+    en = row.get("enterable") if isinstance(row.get("enterable"), dict) else {}
+    gates = en.get("gates") if isinstance(en.get("gates"), dict) else {}
+    if gates.get("room_ok") is True and gates.get("prox_ok") is True:
+        return True, None, gates
+    short = list(en.get("reason_short") or [])
+    if not short:
+        short = [k for k in ("room", "proximity")
+                 if gates.get("room_ok" if k == "room" else "prox_ok") is not True]
+    return False, "alert gate: %s" % (short[0] if short else "not passed"), gates
+
+
 def gate(config: dict, broker_mode: str, market_open: bool) -> dict:
     """Everything that has to be true before the lane may place anything."""
     enabled = config.get("hot_pullback_entry")
@@ -357,12 +384,31 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
     board = {"rows": rows}
     held_syms = {p["symbol"] for p in _open_positions()}
 
+    # Chart Maps lane program (2026-09-27): the broker's in-flight read once
+    # per run for the shared cheap-skip — OFF / daily cap / open cap / a
+    # pending entry / one lane per name / the minute. Unreadable = no entries.
+    from trading import program_caps as PC
+    try:
+        inf = PC.inflight(broker)
+    except Exception as exc:                                   # noqa: BLE001
+        out["note"] = "open orders unreadable — no entries (%s)" % str(exc)[:120]
+        return out
+
     from trading import entries as TE
     for row in (board.get("rows") or []):
         if entries_today >= MAX_ENTRIES_PER_DAY or open_n >= MAX_OPEN:
             break
         sym = row.get("symbol")
         if not sym or sym in held_syms:
+            continue
+        preason = PC.check(STRATEGY, sym, brk=broker, cfg=cfg, mode=mode,
+                           held=str(sym).upper() in inf["positions"], inf=inf)
+        if preason:
+            lvl = PC.sid_level(preason[0])
+            PC.log_skip(STRATEGY, "*" if lvl else sym, preason[0])
+            out["skipped"].append({"symbol": sym, "why": preason[0]})
+            if lvl:
+                break
             continue
         if not signal_is_fresh(str(row.get("date") or ""), today, between):
             out["skipped"].append({"symbol": sym, "why": "signal is not yesterday's flush"})
@@ -380,6 +426,15 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
             _ledger("hot_pullback_skip", sym, {"why": why})
             out["skipped"].append({"symbol": sym, "why": why})
             continue
+        # The standing alert gate (room + proximity) on the live print. A
+        # refusal is logged ONCE per day/reason in cm_lane_log — never a
+        # hot_pullback_skip ledger row (it would repeat every minute of the
+        # 09:30-10:00 window).
+        g_ok, g_why, g_gates = alert_gate_read(sym)
+        if not g_ok:
+            PC.log_skip(STRATEGY, sym, g_why)
+            out["skipped"].append({"symbol": sym, "why": g_why})
+            continue
         target = _f((row.get("plan") or {}).get("target"))
         note = narrative(row, entry_px, stop, target)
         try:
@@ -387,8 +442,15 @@ def run(broker=None, cfg: Optional[dict] = None, now: Optional[datetime] = None)
                            reason={"lane": STRATEGY, "why": note,
                                    "signal_date": row.get("date"),
                                    "flush_pct": row.get("flush_pct"),
-                                   "band": row.get("band")})
+                                   "band": row.get("band"),
+                                   "sid": STRATEGY, "tab": STRATEGY, "kind": "demand",
+                                   "gate": g_gates})
         except ValueError as exc:
+            if PC.is_transient(str(exc)):
+                # the minute went / the program is full: no ledger row, retry
+                PC.log_skip(STRATEGY, sym, str(exc))
+                out["skipped"].append({"symbol": sym, "why": str(exc)})
+                break
             _ledger("hot_pullback_skip", sym, {"why": str(exc)})
             out["skipped"].append({"symbol": sym, "why": str(exc)})
             continue

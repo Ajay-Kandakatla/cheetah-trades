@@ -124,7 +124,7 @@ DAILY_PERIOD = "2y"
 
 CLASSES = ("stop_clamped", "shakeout", "band_failed", "market_down",
            "chased", "no_follow_through", "unclassified")
-STRATEGIES = ("zone_edge", "minervini", "catalyst", "manual")
+STRATEGIES = ("zone_edge", "minervini", "catalyst", "manual", "chart_maps")
 STATUSES = ("preliminary", "final", "incomplete")
 
 CITE = ("autopsy: Supply & Demand OWNER RULES, no book "
@@ -611,8 +611,8 @@ def _tagged_det(tag: str, entry: dict, state: Optional[dict]) -> Optional[dict]:
     reason = entry.get("entry_reason")
     reason = reason if isinstance(reason, dict) else {}
     st = state if (isinstance(state, dict) and state) else {}
-    if tag in ("demand_zone", "breakout"):
-        kind = "demand" if tag == "demand_zone" else "breakout"
+    if tag in ("demand_zone", "breakout", "quick_bounce"):
+        kind = "breakout" if tag == "breakout" else "demand"
         side = st.get("side") or reason.get("side") or ("demand" if kind == "demand" else "supply")
         band = _band(st.get("band")) or _band(reason.get("band"))
         return {"strategy": "zone_edge", "side": side, "kind": kind, "band": band,
@@ -630,6 +630,15 @@ def _tagged_det(tag: str, entry: dict, state: Optional[dict]) -> Optional[dict]:
         trig = entry.get("trigger") if isinstance(entry.get("trigger"), dict) else {}
         pivot = trig.get("pivot") if trig.get("pivot") is not None else reason.get("pivot")
         return _minervini_det(pivot)
+    # Chart Maps lane program (2026-09-27): a READY demand reversal bought off
+    # a Chart Maps tab (and the hot-pullback lane) carries kind "demand" and
+    # the band it rested on — the same demand-side read as a zone-edge entry.
+    from trading import strategy_tags
+    band = _band(reason.get("band"))
+    if strategy_tags.is_roster(tag) and reason.get("kind") == "demand" and band is not None:
+        return {"strategy": "chart_maps", "side": "demand", "kind": "demand",
+                "band": band, "tier": None, "first_seen": None,
+                "stop_requested_pct": _f(reason.get("stop_pct"))}
     return None
 
 

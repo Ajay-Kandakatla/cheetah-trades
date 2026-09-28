@@ -40,6 +40,7 @@ import trading.exit_engine as EE
 import trading.zone_edge_entry as ZE
 from supply_demand.alert_gates import ALERT_MAX_ABOVE_DEMAND_PCT, ALERT_MIN_ROOM_PCT
 from trading.risk_rules import ABS_MAX_STOP_PCT
+from tests.test_program_caps import add_program_colls
 
 ET = ZoneInfo("America/New_York")
 DAY = EE._et_day()
@@ -118,6 +119,7 @@ class FakeDB:
         self.catalyst_entry_state = FakeColl()
         self.zone_edge_entry_state = FakeColl()
         self.auto_entry_state = FakeColl()
+        add_program_colls(self)          # program_caps (2026-09-27)
 
 
 class FakeBroker:
@@ -887,6 +889,13 @@ def test_tick_step_j_fenced_after_h(monkeypatch):
             '                                                       cfg=get_config())\n'
             '    except Exception as exc:')
     assert hook in eng, "tick step (j) catalyst_entry.run missing or not fenced like (h)"
+    # 2026-09-27: (h)(j)(k)(l)(m) live in _run_lanes_fixed_order (program OFF);
+    # the program dispatcher runs the catalysts slot through the same run().
+    fixed = eng[eng.index("def _run_lanes_fixed_order"):eng.index("def tick(force")]
+    assert hook in fixed
+    import inspect
+    from trading import chart_maps_lanes as CML
+    assert "catalyst_entry.run(broker=brk, cfg=cfg)" in inspect.getsource(CML._run_existing)
     assert eng.index('summary["zone_edge_entry"] = zone_edge_entry.run(') \
         < eng.index('summary["catalyst_entry"] = catalyst_entry.run(') \
         < eng.index('summary["journal"] = journal.reconcile()')

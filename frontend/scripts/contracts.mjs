@@ -4920,6 +4920,61 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'Trading page carries the 🗺️ Chart Maps strategies tab (2026-09-27)',
+    file: 'src/pages/Trading.tsx',
+    // Ajay 2026-09-27: "stop minerviews use all strategies from Most used from
+    // Chart maps. All of them and journal the," — every Chart Maps tab as a
+    // paper lane, journaled, with a daily loss review whose proposals he
+    // Confirms or Dismisses ("restategize and confirm with me"). Pinned: the
+    // View union + VIEWS carry `strategies` SECOND (after Dashboard), the page
+    // imports and mounts <ChartMapsStrategiesTab> on that view, the tab never
+    // POSTs an order (/trading/enter, flatten, arm), every proposal Confirm
+    // goes through a dialog and a code-level card says nothing in the engine
+    // changes, Dismiss posts no body, ON asks first, and no string on the tab
+    // says "bounce" (reversal, 2026-09-09).
+    checks: (src) => {
+      const errs = [];
+      if (!/import\s*\{[^}]*\bChartMapsStrategiesTab\b[^}]*\}\s*from\s*'\.\.\/components\/ChartMapsStrategiesTab'/.test(src)) {
+        errs.push("Trading.tsx no longer imports ChartMapsStrategiesTab from '../components/ChartMapsStrategiesTab'");
+      }
+      if (!/export\s+type\s+View\s*=[^;]*'strategies'/.test(src)) errs.push("Trading.tsx View type lost 'strategies'");
+      const views = /export const VIEWS[^=]*=\s*\[([\s\S]*?)\n\];/.exec(src);
+      const keys = views ? [...views[1].replace(/\/\/[^\n]*/g, '').matchAll(/key:\s*'([a-z_]+)'/g)].map((m) => m[1]) : [];
+      if (keys[0] !== 'dashboard' || keys[1] !== 'strategies') errs.push(`VIEWS must start dashboard, strategies — got ${keys.slice(0, 3).join(', ') || 'nothing'}`);
+      if (!/\{\s*key:\s*'strategies'\s*,\s*label:\s*'🗺️ Chart Maps'\s*\}/.test(src)) errs.push("VIEWS no longer carries { key: 'strategies', label: '🗺️ Chart Maps' }");
+      if (!/v\s*===\s*'strategies'/.test(src.slice(src.indexOf('export function parseView')))) errs.push("parseView no longer accepts 'strategies' (the ✨ route breaks)");
+      if (!/view\s*===\s*'strategies'\s*&&\s*<ChartMapsStrategiesTab\b/.test(src)) errs.push("Trading.tsx does not mount <ChartMapsStrategiesTab> on view === 'strategies'");
+      const tab = read('src/components/ChartMapsStrategiesTab.tsx');
+      const lib = read('src/lib/chartMapsLanes.ts');
+      if (/\/trading\/(enter|flatten|arm|sim-reset|options\/close|zero-dte\/close)/.test(tab)) {
+        errs.push('ChartMapsStrategiesTab must never POST an order path (/trading/enter, flatten, arm, close)');
+      }
+      if (!/\$\{API\}\/trading\/strategies`/.test(tab)) errs.push('ChartMapsStrategiesTab no longer polls GET /trading/strategies');
+      if (!/\$\{API\}\/trading\/review\/latest\?format=full`/.test(tab)) errs.push('ChartMapsStrategiesTab no longer reads GET /trading/review/latest');
+      if (!/\{\s*cm_lanes:\s*\{\s*\[sid\]:\s*next\s*\}\s*\}/.test(tab) || !/\{\s*cm_program:\s*next\s*\}/.test(tab)) {
+        errs.push('the switches must POST exactly {cm_program} / {cm_lanes: {sid}} to /trading/config');
+      }
+      if (!/onClick=\{\(\)\s*=>\s*setConfirmPid\(pr\.id\)\}/.test(tab) || !/confirmPid === pr\.id[\s\S]{0,120}role="dialog"/.test(tab)) {
+        errs.push('a proposal Confirm must open a dialog first — never confirm on one click');
+      }
+      const confirmCall = /onClick=\{\(\)\s*=>\s*\{\s*void confirmProposal\(pr\.id\);\s*\}\}>Yes, confirm/.test(tab);
+      if (!confirmCall) errs.push('confirmProposal may only be called from the dialog\'s "Yes, confirm" button');
+      if (!/\/dismiss`, undefined,/.test(tab)) errs.push('Dismiss must POST no body (it never sends config)');
+      if (!/setConfirmSid\(r\.sid\)/.test(tab) || !/setConfirmProgram\(true\)/.test(tab)) errs.push('turning a strategy / the program ON must ask first');
+      if (!/CODE_CONFIRM_TEXT\s*=\s*"Confirm = add to Claude's TODO\. Nothing in the engine changes\."/.test(lib)) {
+        errs.push("CODE_CONFIRM_TEXT must say a code-level Confirm changes nothing in the engine");
+      }
+      if (/bounc/i.test(tab)) errs.push('ChartMapsStrategiesTab says "bounce" — surfaces he reads say reversal');
+      if (/bounc/i.test(lib.replace(/\\bquick_bounce\\b/g, ''))) errs.push('chartMapsLanes.ts says "bounce" outside the quick_bounce → Quick Reversal mapping');
+      if (!/UNMEASURED forward paper measurement/.test(lib)) errs.push('the tab lost its UNMEASURED forward paper measurement line');
+      const nf = read('src/lib/newFeatures.ts');
+      if (!/id:\s*'chart-maps-lanes-2026-09-27'[\s\S]{0,4000}?route:\s*'\/trading\?view=strategies'/.test(nf)) {
+        errs.push("newFeatures.ts lacks the 'chart-maps-lanes-2026-09-27' highlight routed to /trading?view=strategies");
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

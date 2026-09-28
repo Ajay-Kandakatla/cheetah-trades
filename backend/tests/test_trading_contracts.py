@@ -491,8 +491,10 @@ def test_zone_edge_entry_cites_no_book_and_defers_risk_to_risk_rules():
     assert re.search(r"\bpp?\.\s?\d", src) is None, (
         "a page cite crept into trading/zone_edge_entry.py")
     assert "OWNER RULES" in src
+    # 2026-09-27: the position slot is program_caps.open_cap( — risk_rules.
+    # MAX_POSITIONS live, the paper program's cap while it is ON.
     for token in ("risk_rules.ABS_MAX_STOP_PCT", "risk_rules.MIN_REWARD_RISK",
-                  "risk_rules.MAX_POSITIONS"):
+                  "program_caps.open_cap("):
         assert token in src, (
             f"`{token}` no longer read from risk_rules in zone_edge_entry.py "
             f"— risk numbers must never be re-derived locally")
@@ -521,10 +523,17 @@ def test_zone_edge_entry_wired_fenced_and_configurable():
     assert hook in eng, (
         "tick step (h) zone_edge_entry.run is missing or no longer fenced in "
         "its own try/except — a zone-entry crash could break stop protection")
-    assert eng.index('summary["auto_entry"] = auto_entry.run(') \
-        < eng.index('summary["zone_edge_entry"] = zone_edge_entry.run(') \
-        < eng.index("summary[\"journal\"] = journal.reconcile()"), (
-        "step (h) must run right after (f) auto_entry and before (g) journal")
+    # 2026-09-27: step (h) lives in _run_lanes_fixed_order (the program-OFF
+    # lane order, verbatim); tick() runs the lane block right after (f) and
+    # before (g) through chart_maps_lanes.run_program.
+    fixed = eng[eng.index("def _run_lanes_fixed_order"):eng.index("def tick(force")]
+    assert 'summary["zone_edge_entry"] = zone_edge_entry.run(' in fixed
+    tick_src = eng[eng.index("def tick(force"):eng.index("def _broker_mode")]
+    assert tick_src.index('summary["auto_entry"] = auto_entry.run(') \
+        < tick_src.index("lanes = _run_program(broker=broker, cfg=get_config())") \
+        < tick_src.index("summary[\"journal\"] = journal.reconcile()"), (
+        "the lane block must run right after (f) auto_entry and before (g) journal")
+    assert "lanes = _run_lanes_fixed_order()" in tick_src
     assert 'out["zone_edge_entry"] = zone_edge_entry.status_block(cfg)' in eng
     api_path = os.path.join(TRADING_DIR, "api.py")
     with open(api_path, encoding="utf-8") as fh:
@@ -805,7 +814,8 @@ def test_autopsy_params_importable_and_equal():
                           "unclassified")
     assert [r["class"] for r in ap.rules_list()] == list(ap.CLASSES)
     # 2026-09-05 lanes: the catalyst lane got its own autopsy label (deliberate).
-    assert ap.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual")
+    # 2026-09-27: + chart_maps (the Chart Maps lane program's demand reversals).
+    assert ap.STRATEGIES == ("zone_edge", "minervini", "catalyst", "manual", "chart_maps")
 
 
 def test_autopsy_never_touches_the_broker_and_cites_no_book():
@@ -977,7 +987,7 @@ def test_catalyst_entry_params_locked_and_cite_no_book():
     from trading import catalyst_entry as ce
     assert ce.MAX_CATALYST_ENTRIES_PER_DAY == 1
     assert ce.CATALYST_MIN_PRICE == 2.0 and ce.CATALYST_MIN_DOLLAR_VOL == 2_000_000
-    for token in ("risk_rules.ABS_MAX_STOP_PCT", "risk_rules.MAX_POSITIONS"):
+    for token in ("risk_rules.ABS_MAX_STOP_PCT", "program_caps.open_cap("):
         assert token in src
 
 
@@ -1140,9 +1150,14 @@ def test_zero_dte_lane_2026_09_08_owner_numbers_locked_and_engine_seams():
     assert (ZD.MAX_ENTRIES_PER_DAY, ZD.MAX_OPEN) == (3, 3)
     assert (ZD.PREMIUM_TAKE_PCT, ZD.PREMIUM_STOP_PCT) == (100.0, 50.0)
     assert ZD.SKIP_REGIMES == ("PINNED",)
-    src = inspect.getsource(EE.tick) if hasattr(EE, "tick") else inspect.getsource(EE)
+    # 2026-09-27: step (l) lives in _run_lanes_fixed_order (program OFF) and
+    # in chart_maps_lanes.run_program (program ON, the `signals` slot).
+    src = inspect.getsource(EE._run_lanes_fixed_order)
     assert 'summary["zero_dte_lane"] = zero_dte_lane.run(broker=broker, cfg=get_config())' in src
     assert src.index("options_lane.run(") < src.index("zero_dte_lane.run("), "step (l) runs after (k)"
+    from trading import chart_maps_lanes as CML
+    assert "zero_dte_lane.run(broker=brk, cfg=cfg)" in inspect.getsource(CML._run_existing)
+    assert "_run_program(broker=broker, cfg=get_config())" in inspect.getsource(EE.tick)
     cfg_src = inspect.getsource(EE.get_config)
     assert '"zero_dte_entry": bool(doc.get("zero_dte_entry", True))' in cfg_src, "default ON (paper)"
     api_src = inspect.getsource(TA)
@@ -1152,3 +1167,80 @@ def test_zero_dte_lane_2026_09_08_owner_numbers_locked_and_engine_seams():
     assert '"paper": mode != "live"' in run_src and "paper-only" in run_src
     assert "never a market order" in ZD.__doc__
 
+
+
+# ── Chart Maps lane program 2026-09-27 ───────────────────────────────────────
+# Ajay: "stop minerviews use all strategies from Most used from Chart maps. All
+# of them and journal the," / "Small: 0.25% risk, 15 open max" / "Top 10
+# most-used first". Every buy passes trading/program_caps.py.
+
+def test_chart_maps_program_2026_09_27_constants_seams_and_no_order_path():
+    import inspect
+    from trading import program_caps as PC, strategy_tags as ST, chart_maps_lanes as CML
+    from trading import exit_engine as EE, entries as EN, lane_review as LR
+    # his numbers
+    assert (PC.PROGRAM_RISK_PCT, PC.PER_STRATEGY_MAX_ENTRIES_PER_DAY,
+            PC.PER_STRATEGY_MAX_OPEN, PC.PROGRAM_MAX_OPEN) == (0.25, 1, 2, 15)
+    assert PC.PROGRAM_MAX_GROSS_PCT == 100.0
+    assert PC.OPEN_INTENTS == ("buy_to_open", "sell_to_open")
+    from trading.broker import OPEN_STATUSES
+    assert PC.PENDING_BUY_STATUSES == frozenset(OPEN_STATUSES) - {"held"}
+    assert (PC.TRANSIENT_PREFIX, PC.DAY_PREFIX) == ("program-wait: ", "program-cap: ")
+    assert (PC.ENTRY_CLOCK_ID, PC.PROGRAM_ENTRIES_COLL, PC.PROGRAM_STATE_COLL, PC.LOG_COLL) == \
+        ("entry_clock", "program_entries", "program_state", "cm_lane_log")
+    assert not hasattr(PC, "PROGRAM_MIN_ENTRY_GAP_SEC"), "rev 1's 60-s gap must stay removed"
+    assert len(ST.DEFAULT_ON) == 10 and "vcp" not in ST.DEFAULT_ON and "hot_sectors" not in ST.DEFAULT_ON
+    assert CML.ADAPTER_VERSION == "cm-lanes-v1" and CML.SNAPSHOT_MAX_AGE_SEC == 600
+    from trading import zone_edge_entry as ZEE
+    assert CML.STOP_BUFFER_PCT == ZEE.STOP_BUFFER_PCT and CML.LAST_ENTRY_ET == ZEE.LAST_ENTRY_ET
+    assert CML.MAX_CONFIRMS_PER_SID == 3
+    assert (LR.KILL_MIN_N, LR.CLASS_PROPOSE_MIN, LR.BOOT_B, LR.BOOT_SEED) == (20, 3, 2000, 20260927)
+    assert LR.APPLYABLE_KEYS == ("cm_lanes", "cm_lane_caps", "zone_edge_rules")
+    # never an order path of their own
+    for mod in (PC, CML, LR, ST):
+        src = inspect.getsource(mod)
+        for token in ("submit_", "cancel_order(", "close_position(", "replace_order("):
+            assert token not in src, "%s carries %s" % (mod.__name__, token)
+    # config whitelist carries the 4 keys (the silent-drop trap)
+    cfg_src = inspect.getsource(EE.get_config)
+    for key in ('"cm_program": bool(doc.get("cm_program", False))',
+                '"cm_program_started": doc.get("cm_program_started")',
+                '"cm_lanes": dict(doc["cm_lanes"])', '"cm_lane_caps": dict(doc["cm_lane_caps"])'):
+        assert key in cfg_src, key
+    # the chokepoint: peek before _evaluate, claim after it, record after the order
+    enter_src = inspect.getsource(EN.enter)
+    # fix round 2026-09-27: a not-a-lane tag is refused first; the minute is
+    # claimed under minute_tag (an unknown tag claims it too, manual is exempt)
+    assert enter_src.index("strategy_tags.is_not_a_lane(strategy)") \
+        < enter_src.index("program_caps.minute_taken()") < enter_src.index("_evaluate(") \
+        < enter_src.index("program_caps.claim(minute_tag, sym)") < enter_src.index("broker.submit_bracket(") \
+        < enter_src.index("program_caps.record_entry(")
+    assert "program_caps.check(tag, symbol" in inspect.getsource(EN._evaluate)
+    assert "program_caps.risk_budget(tag, cfg, mode)" in inspect.getsource(EN._evaluate)
+    # tick: the minute is pinned; the lane block falls back to the fixed order
+    tick_src = inspect.getsource(EE.tick)
+    assert "_pc.set_tick_minute(datetime.now(timezone.utc))" in tick_src
+    assert tick_src.index("set_tick_minute(datetime") < tick_src.index("_run_program(broker=broker")
+    assert "from trading import chart_maps_lanes" in tick_src
+    assert 'summary["journal"] = journal.reconcile()' in tick_src
+    assert 'out["chart_maps_program"] = program_caps.status_block(' in inspect.getsource(EE.status)
+    # the api accepts the three keys through the ONE validator
+    with open(os.path.join(TRADING_DIR, "api.py"), encoding="utf-8") as fh:
+        api = fh.read()
+    assert "program_caps.validate_updates(" in api
+    for route in ('@router.get("/strategies")', '@router.get("/review/latest")',
+                  '@router.post("/review/proposals/{pid}/confirm")',
+                  '@router.post("/review/proposals/{pid}/dismiss")'):
+        assert route in api and "_require_admin(email)" in api.split(route)[1].split("@router")[0]
+    # every lane that buys adopts the chokepoint
+    for fname, token in (("zone_edge_entry.py", "program_caps.check(lane, sym"),
+                         ("catalyst_entry.py", 'program_caps.check("catalyst", sym'),
+                         ("hot_pullback_entry.py", "PC.check(STRATEGY, sym"),
+                         ("zero_dte_lane.py", "PC.claim(STRATEGY, sym)"),
+                         ("options_lane.py", "PC.claim(STRATEGY, sym)")):
+        with open(os.path.join(TRADING_DIR, fname), encoding="utf-8") as fh:
+            assert token in fh.read(), (fname, token)
+    # the STRATEGIES literal stays; the program tags ride in STRATEGIES_ALL
+    assert EN.STRATEGIES == ("minervini", "demand_zone", "breakout", "catalyst", "manual")
+    for tag in ("hot_pullback", "quick_bounce", "deep_demand", "amd", "zero_dte", "options_zone"):
+        assert EN._strategy_tag(tag) == tag

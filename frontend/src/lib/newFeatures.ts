@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-27: "stop minerviews use all strategies from Most used from
+  // Chart maps. All of them and journal the," — then "Small: 0.25% risk, 15
+  // open max", "analayze losses everyday … and restategize and confirm with
+  // me", "Top 10 most-used first". Spec: autopilot_chart_maps_lanes rev 2 §3.9.
+  { id: 'chart-maps-lanes-2026-09-27',
+    label: '🗺️ Every Chart Maps strategy is now a paper lane on the Auto-Pilot, journaled one by one. You said: “stop minerviews use all strategies from Most used from Chart maps. All of them and journal the,” — the Minervini auto-entry is off, and the new 🗺️ Chart Maps view (second on the Trading page) lists every Chart Maps tab in the order you open them most. Rules: 0.25% risk a trade, 1 a day and 2 open per strategy, 15 open in all (pending orders and option legs counted), 1 buy a minute across every lane, one lane per name, paper only. Top 10 ON (the 10 most-used tabs that are buy lists); every other strategy is built and OFF until you switch it on (ON asks first). The list tabs (AMD, Bonde, Growth, Patterns, …) buy a 🎯 READY demand reversal on a name from that tab, not the tab’s own setup; every row shows today’s buys and why it skipped, win % and exp R with 95% CIs, and its prior (most are MEASURED null or INVERTED). After each close a daily loss review writes one line per loser and proposes changes as cards: Confirm asks first and a code change only goes on Claude’s TODO; Dismiss is one click. The master switch stays OFF until you flip it. UNMEASURED — a forward paper measurement, not an edge.',
+    addedAt: '2026-09-27', route: '/trading?view=strategies' },
   // Ajay 2026-09-25: "Can you help make all the catalyst pages to be going to
   // Ticker supply and demand please?"
   { id: 'catalyst-links-supply-2026-09-25',

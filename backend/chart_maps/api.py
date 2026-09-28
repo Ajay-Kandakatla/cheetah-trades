@@ -342,6 +342,26 @@ async def chart_maps_news():
     return JSONResponse(_scrub(await news_tab.build()))
 
 
+@router.get("/chart-maps/lane-snapshot")
+async def chart_maps_lane_snapshot(
+    record: bool = Query(False, description="true = store one cm_lane_snapshot doc per "
+                                            "sid (the cron's call); false (default) = "
+                                            "build and report only, no Mongo write"),
+    sids: str = Query("", description="comma list of generic lane sids; empty = every "
+                                      "generic lane that is ON right now"),
+):
+    """Auto-Pilot Chart Maps lanes (2026-09-27): build each generic lane's slim
+    READY long candidates off the tab's OWN board and report per sid
+    {n, built_ms, source_as_of, source_key, error}. Places nothing. A closed
+    day answers {"skipped": reason} and writes nothing. UNMEASURED forward paper
+    measurement. Query args are coerced here (direct calls get Query objects)."""
+    from . import lane_snapshot
+    rec = record is True
+    raw = sids if isinstance(sids, str) else ""
+    wanted = [s.strip() for s in raw.split(",") if s.strip()] or None
+    return JSONResponse(await asyncio.to_thread(lane_snapshot.run, wanted, rec))
+
+
 @router.get("/chart-maps/ipo/upcoming/{symbol}")
 async def chart_maps_ipo_upcoming(symbol: str):
     """🗓️ "Coming up" drill-in — the fact sheet for ONE expected listing.

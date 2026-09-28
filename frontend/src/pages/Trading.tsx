@@ -20,6 +20,11 @@
  *                                     open / recent contracts + the lane's own journal)
  *   POST /trading/config {options_entry} — the options lane switch
  *   POST /trading/options/close/{underlying} — close one options position now (confirm)
+ *   GET  /trading/strategies        — 🗺️ Chart Maps strategies tab (2026-09-27): the paper
+ *                                     program, every tab-as-a-lane row, skips + scoreboard
+ *   GET  /trading/review/latest     — the daily loss review (17:00 ET) + its proposal cards
+ *   POST /trading/review/proposals/{id}/confirm|dismiss — decide one card (Confirm has a dialog)
+ *   POST /trading/config {cm_program | cm_lanes} — the program / per-strategy switches
  *
  * Poll pattern follows LiveGateStrip (10s interval, alive-flag cleanup).
  * SIM / PAPER / LIVE is always front-and-center — this page can move real money.
@@ -39,6 +44,7 @@ import { TradeAutopsies } from '../components/TradeAutopsies';
 import { CatalystEntryCard, type CatalystEntryInfo } from '../components/CatalystEntryCard';
 import { OptionsLaneTab, type OptionsLaneStatus } from '../components/OptionsLaneTab';
 import { ZeroDteLaneTab } from '../components/ZeroDteLaneTab';
+import { ChartMapsStrategiesTab } from '../components/ChartMapsStrategiesTab';
 import { JournalByStrategy, StrategyChip, type StrategyStats } from '../components/JournalByStrategy';
 import { BuyVerdictChip } from '../components/BuyVerdictChip';
 import { useBuyVerdicts } from '../hooks/useBuyVerdicts';
@@ -1906,9 +1912,14 @@ type ConfirmState =
 const SIM_NOTE_KEY = 'trading.simNoteDismissed';
 const VIEW_KEY = 'trading.view';
 
-export type View = 'dashboard' | 'journal' | 'analytics' | 'options' | 'zero_dte';
+export type View = 'dashboard' | 'strategies' | 'journal' | 'analytics' | 'options' | 'zero_dte';
 export const VIEWS: { key: View; label: string }[] = [
   { key: 'dashboard', label: 'Dashboard' },
+  // 🗺️ Chart Maps strategies (Ajay 2026-09-27: "stop minerviews use all
+  // strategies from Most used from Chart maps. All of them and journal the,").
+  // Every Chart Maps tab as a paper lane, its journal and the daily loss
+  // review — second, right after Dashboard (spec §3.9 / HIS CALL #8).
+  { key: 'strategies', label: '🗺️ Chart Maps' },
   { key: 'journal', label: 'Journal' },
   { key: 'analytics', label: 'Analytics' },
   // Options lane tab (2026-09-06) — paper options on demand-zone touches.
@@ -1918,7 +1929,7 @@ export const VIEWS: { key: View; label: string }[] = [
 ];
 /** A ?view= / stored value → a View, or null for anything else (never a crash). */
 export function parseView(v?: string | null): View | null {
-  return v === 'dashboard' || v === 'journal' || v === 'analytics' || v === 'options' || v === 'zero_dte' ? v : null;
+  return v === 'dashboard' || v === 'strategies' || v === 'journal' || v === 'analytics' || v === 'options' || v === 'zero_dte' ? v : null;
 }
 
 export function TradingPage() {
@@ -2113,6 +2124,11 @@ export function TradingPage() {
       {/* 0DTE lane (2026-09-08) — same-day paper options on Signal Lab tags;
           owns its own poll, switch and close-now dialog. */}
       {view === 'zero_dte' && <ZeroDteLaneTab onChanged={refresh} />}
+      {/* 🗺️ Chart Maps strategies (2026-09-27) — every Chart Maps tab as a
+          paper lane: the program switch, per-strategy switches, today's
+          entries and skips, the scoreboard and the daily loss review with its
+          Confirm / Dismiss cards. Owns its own 60 s poll. */}
+      {view === 'strategies' && <ChartMapsStrategiesTab onChanged={refresh} />}
 
       {view === 'dashboard' && <>
       {statusErr && !status && (

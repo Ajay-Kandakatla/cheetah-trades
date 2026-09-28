@@ -23,6 +23,7 @@ import trading.options_lane as OL
 from trading.broker_alpaca import BrokerError
 
 from tests.test_trading_engine import FakeBrokerModule, FakeColl, FakeDB, _position
+from tests.test_program_caps import add_program_colls
 
 ET = ZoneInfo("America/New_York")
 TODAY = date.fromisoformat(EE._et_day())
@@ -165,6 +166,7 @@ def oenv(monkeypatch):
         db.options_lane_state = FakeColl([dict(a) for a in attempts])
         db.trade_journal = FakeColl()
         db.trading_account_baseline = FakeColl()
+        add_program_colls(db)            # program_caps (2026-09-27)
         pushes = []
         for mod in (EE, EN, ZE):
             monkeypatch.setattr(mod, "_db", lambda: db)

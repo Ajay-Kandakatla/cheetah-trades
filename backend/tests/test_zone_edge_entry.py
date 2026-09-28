@@ -44,6 +44,7 @@ import trading.entries as EN
 import trading.exit_engine as EE
 import trading.zone_edge_entry as ZE
 from trading.risk_rules import ABS_MAX_STOP_PCT, MAX_POSITIONS, MIN_REWARD_RISK
+from tests.test_program_caps import add_program_colls
 
 ET = ZoneInfo("America/New_York")
 DAY = EE._et_day()
@@ -144,6 +145,9 @@ class FakeDB:
         self.zone_edge_track = FakeColl()
         self.usage_events = FakeColl()
         self.portfolio_holdings = FakeColl()
+        # Chart Maps lane program (2026-09-27): the chokepoint's minute clock,
+        # program ledger and skip log (trading/program_caps.py).
+        add_program_colls(self)
 
 
 class FakeBroker:

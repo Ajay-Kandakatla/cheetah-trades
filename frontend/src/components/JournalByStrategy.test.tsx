@@ -169,3 +169,48 @@ describe('JournalByStrategy — wording he reads (2026-09-14)', () => {
     expect(m.blurb).toMatch(/not one the page knows/);
   });
 });
+
+/* 🗺️ Chart Maps lanes (2026-09-27): the engine now journals every Chart Maps
+   tab lane under its tab key (deep_demand, amd, …) and hot_pullback /
+   quick_bounce are no longer coerced to manual. The table must label them
+   with the tab's own Chart Maps name, AFTER the known lanes and BEFORE any
+   tag it does not know — never drop them, never relabel them as manual. */
+describe('JournalByStrategy — 🗺️ Chart Maps program lanes (2026-09-27)', () => {
+  const DD: StrategyStats = { n: 2, open: 1, closed: 1, wins: 0, losses: 1, win_rate_pct: 0, avg_r: -0.92, expectancy_pct: -2.1, realized_pnl: -187 };
+
+  it('renders deep_demand as "Deep Demand" with its stats instead of dropping it', () => {
+    render(<JournalByStrategy byStrategy={{ ...FULL, deep_demand: DD }} />);
+    const row = screen.getByRole('row', { name: /Deep Demand/ });
+    expect(row.getAttribute('data-strategy')).toBe('deep_demand');
+    expect(within(row).getByText('-0.92R')).toBeInTheDocument();
+    expect(within(row).getByText('-$187.00')).toBeInTheDocument();
+    // NEGATIVE: not the raw tag, not relabelled into a known lane.
+    expect(screen.queryByText(/deep demand/)).toBeNull();
+    expect(row.textContent).not.toMatch(/manual|Minervini/);
+  });
+
+  it('orders known lanes, then program lanes, then unknown tags last', () => {
+    render(<JournalByStrategy byStrategy={{ ...FULL, zone_edge: { n: 1, closed: 1 }, amd: { n: 1 }, hot_pullback: { n: 1 } }} />);
+    const keys = screen.getAllByRole('row').slice(1).map((r) => r.getAttribute('data-strategy'));
+    expect(keys.slice(0, STRATEGY_ORDER.length)).toEqual([...STRATEGY_ORDER]);
+    expect(keys.slice(STRATEGY_ORDER.length)).toEqual(['amd', 'hot_pullback', 'zone_edge']);
+  });
+
+  it('labels the re-tagged existing lanes from TAB_META; quick_bounce reads Quick Reversal (negative: never "bounce")', () => {
+    expect(strategyMeta('hot_pullback').label).toBe('Hot Pullback');
+    expect(strategyMeta('hot_pullback').glyph).toBe('🔥');
+    expect(strategyMeta('deep_demand')).toMatchObject({ glyph: '🗺️', label: 'Deep Demand' });
+    const qb = strategyMeta('quick_bounce');
+    expect(qb.label).toBe('Quick Reversal');
+    expect(`${qb.glyph} ${qb.label} ${qb.blurb}`).not.toMatch(/bounc/i);
+    expect(strategyMeta('amd').blurb).toMatch(/UNMEASURED/);
+    render(<StrategyChip strategy="quick_bounce" />);
+    expect(screen.getByTestId('strategy-chip').textContent).not.toMatch(/bounc/i);
+  });
+
+  it('NEGATIVE: the legacy lane keys keep their own labels, not the tab labels', () => {
+    expect(strategyMeta('demand_zone').label).toBe('demand zone');
+    expect(strategyMeta('catalyst').label).toBe('catalyst');
+    expect(strategyMeta('breakout').label).toBe('breakout');
+  });
+});
