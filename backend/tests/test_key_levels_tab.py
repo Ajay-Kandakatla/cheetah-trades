@@ -642,7 +642,7 @@ def kl_board(monkeypatch):
 def test_25_the_tab_through_board_one_snapshot_one_first_seen_rank_order(kl_board):
     assert "key_levels" in B.TABS
     assert (B.TABS.index("dual_momentum") == B.TABS.index("key_levels") + 1
-            and B.TABS[-1] == "dual_momentum")
+            and B.TABS.index("ath") == B.TABS.index("dual_momentum") + 1)
     frames = {s: _frame() for s in ("AAA", "BBB", "CCC", "DDD")}
     kl_board["seed"](frames, {"AAA": _rth(100.9), "BBB": _rth(100.2), "CCC": _rth(96.0),
                               "DDD": _rth(100.5)})

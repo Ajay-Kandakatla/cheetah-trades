@@ -230,6 +230,7 @@ Later additions take a mid-pack slot until usage earns them one:
 | added | tab | slot |
 |---|---|---|
 | 2026-09-28 | 🔑 Key Levels (`key_levels`) | right after 📁 My holdings — no usage yet (his call, spec §7.5) |
+| 2026-09-29 | 🏔️ ATH (`ath`) | right after 🏎️ Dual Momentum — no usage yet (HIS CALL #10 in the ATH spec) |
 
 ### 🔑 Key Levels (2026-09-28)
 
@@ -265,6 +266,42 @@ Backend contract, counts invariant and the his-call list:
 `chartMaps.test.ts` ("the 🔑 Key Levels tab"), `KeyLevelsBoardNote.test.tsx`,
 `KeyLevelsTab.payload.test.tsx` and the `contracts.mjs` block "🔑 Key Levels tab
 (2026-09-28)…".
+
+### 🏔️ ATH (2026-09-29)
+
+Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that are
+reaching all time highs? call it ATH. Once some of them are going below their
+ATH or 52 Week Highs..". A tile board off the `/chart-maps` dispatcher
+(`?tab=ath`), built like 🔑 Key Levels (closed-bar half memoised per session,
+ONE universe snapshot per request), with a served two-key toggle on `sort=`:
+`default` = 🏔️ At ATH (through, at, or within the `zone_edge.NEW_HIGH_TOL` band
+of the high; through-today first) and `slipping` = ↘️ Slipping (a high set in
+the last `SLIP_LOOKBACK_SESSIONS` closed sessions, now more than the same band
+under it; freshest first). Server-side in `backend/chart_maps/ath_tab.py`; the
+long history is `backend/chart_maps/ath_history.py` (ONE Massive monthly call
+per name into its own `ath_history` collection, filled by ONE paced background
+thread — never on a request, never the shared price cache).
+
+- HONEST HISTORY: a name is called all-time ONLY when the stored monthly
+  history reaches its listing date — the 2-year daily frame alone never proves
+  it. Everything else says "high since <first bar>"; the served headers count
+  proven all-time and "high since" names apart in both groups, and while the
+  history fills the header says how many names are still waiting for it.
+- Bars from an earlier listing under the same ticker are cut where a curated
+  cut (`symbols.FIRST_SESSION` / `RENAMES`) or a month-long gap in the ticker's
+  own monthly series proves them; a history reaching back before the listing
+  date is never called all-time.
+- Payload: `board.ath_board` (served `header`, `note`, `counts`, `history`),
+  `tile.ath` (the served `text` = `badges[0]`, routed to the PRICE rung by
+  `cardLadder.PRICE_PREFIX`), printed verbatim by
+  `components/AthBoardNote.tsx`.
+
+UNMEASURED — a distance and a date, not a signal; it gates, pushes, sizes and
+enters nothing. Contract, counts invariant, perf and the his-call list:
+`docs/chart_maps/ath_tab_2026_09_29.md`. Pinned in `test_ath_tab.py`,
+`test_ath_history.py`, `chartMaps.test.ts` ("the 🏔️ ATH tab"),
+`AthBoardNote.test.tsx`, `AthTab.payload.test.tsx` and the `contracts.mjs`
+block "🏔️ ATH tab (2026-09-29)…".
 
 ## 🚀 Breaking tab — the zone-edge read as cards (2026-09-06)
 

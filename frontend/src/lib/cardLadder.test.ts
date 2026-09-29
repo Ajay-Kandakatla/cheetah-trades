@@ -586,3 +586,34 @@ describe('cardLadder — 🏎️ Dual Momentum tab (2026-09-29)', () => {
     }
   });
 });
+
+describe('cardLadder — 🏔️ ATH tab pills (2026-09-29)', () => {
+  // Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that are
+  // reaching all time highs? call it ATH." The tab serves one 🏔️ / ↘️ badge
+  // per tile (ath_tab.tile_badge) — a distance to a high, routed to PRICE.
+  const withBadge = (text: string, tone: CmBadge['tone'] = 'good') =>
+    bare({ badges: [{ text, tone }] });
+
+  it('the served 🏔️ and ↘️ pills land in PRICE, whole', () => {
+    for (const text of [
+      '\u{1F3D4}\u{FE0F} 0.40% under the all-time high 101.20 (2026-09-25)',
+      '\u{1F3D4}\u{FE0F} new high since 2003-09 today · +1.20% over 99.00 (2026-07) — not proven all-time',
+    ]) {
+      const l = cardLadder(withBadge(text));
+      expect(texts(l.price)).toEqual([text]);
+      expect(texts(l.setup.badges)).toEqual([]);
+    }
+    const slip = '\u{2198}\u{FE0F} 4.10% under the 52-week high 88.00 set 2026-09-17 (7 sessions ago)';
+    const l = cardLadder(withBadge(slip, 'warn'));
+    expect(texts(l.price)).toEqual([slip]);
+    expect(l.moreWarn.map((b) => b.text)).not.toContain(slip);
+  });
+
+  it('NEGATIVE: 🏔 without VS16 and a plain "ATH" badge stay in SETUP', () => {
+    for (const text of ['\u{1F3D4} 0.40% under the all-time high 101.20', 'ATH', '\u{2198} 4.10% under']) {
+      const l = cardLadder(withBadge(text));
+      expect(l.price).toEqual([]);
+      expect(texts(l.setup.badges)).toEqual([text]);
+    }
+  });
+});

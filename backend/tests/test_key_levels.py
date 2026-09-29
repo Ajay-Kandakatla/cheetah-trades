@@ -703,7 +703,10 @@ _IMPORT_RE = re.compile(
 ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_alerts.py",
            "supply_demand/rules_info.py", "supply_demand/key_levels.py",
            # the 🔑 Key Levels tab (2026-09-28): one display module, orders one board
-           "chart_maps/key_levels_tab.py"}
+           "chart_maps/key_levels_tab.py",
+           # the 🏔️ ATH tab (2026-09-29): display only, reuses the session /
+           # closed-bar / print / verify / 52-week engine
+           "chart_maps/ath_tab.py"}
 
 
 def test_import_guard_display_only():

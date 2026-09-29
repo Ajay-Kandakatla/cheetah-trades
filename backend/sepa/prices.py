@@ -227,7 +227,13 @@ def _fetch_yfinance(symbol: str, period: str) -> Optional[pd.DataFrame]:
     return df.rename(columns=str.lower)[["open", "high", "low", "close", "volume"]]
 
 
-def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
+def _fetch_massive(symbol: str, period: str, *, timespan: str = "day",
+                   start: Optional[str] = None, end: Optional[str] = None) -> Optional[pd.DataFrame]:
+    """Massive aggregates for ``symbol`` over ``period`` (day bars, adjusted).
+
+    timespan/start/end added 2026-09-29 for chart_maps.ath_history (monthly bars
+    since the provider's floor); default call byte-identical.
+    """
     import requests
     key = stocks_key()
     if not key:
@@ -243,7 +249,7 @@ def _fetch_massive(symbol: str, period: str) -> Optional[pd.DataFrame]:
     tick = symbols.for_massive(symbol)
     url = (
         f"https://api.massive.com/v2/aggs/ticker/{tick}"
-        f"/range/1/day/{from_date.date()}/{to_date.date()}"
+        f"/range/1/{timespan}/{start or from_date.date()}/{end or to_date.date()}"
     )
     try:
         r = requests.get(

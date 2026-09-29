@@ -20,7 +20,7 @@ import type { BurstCounts, BurstRead } from './momentumBurst';
 import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM } from './dmFilters';
 import type { CmDmFilters, CmDmTileFilter } from './dmFilters';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -81,6 +81,13 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // and the next re-cut moves it on the evidence. The slot is his call
   // (dual_momentum_tab spec §7 #1).
   'dual_momentum',
+  // 🏔️ ATH (Ajay 2026-09-29: "Can you give me a new tab - for all the stocks
+  // that are reaching all time highs? call it ATH. Once some of them are going
+  // below their ATH or 52 Week Highs.."). Right after 🏎️ Dual Momentum,
+  // mid-pack — TAB ORDER IS EARNED; tabUsageKey counts it from the first open
+  // and the next re-cut moves it on the evidence. The slot is his call
+  // (ath_tab spec §7 #10).
+  'ath',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -180,6 +187,11 @@ export function dmCapSortNext(served: string | null | undefined): string {
   return served === DM_SORT_MARKET_CAP ? DM_SORT_MARKET_CAP_ASC : DM_SORT_MARKET_CAP;
 }
 
+/** 🏔️ ATH tab (2026-09-29): the tab-scoped served sort key for the ↘️ Slipping
+ *  group (chart_maps/ath_tab.SORT_SLIPPING); `default` is 🏔️ At ATH. The
+ *  toggle's labels are taken from the SERVED `sorts`, never typed here. */
+export const ATH_SORT_SLIPPING = 'slipping';
+
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
  *  buckets) to re-cut CM_TABS from measured use. */
@@ -222,6 +234,13 @@ export function isBoardTab(t: CmTab): boolean {
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  // 🏔️ ATH (Ajay 2026-09-29). Every number on the board is served — the band,
+  // the look-back and every count ride in the header, none is typed here.
+  // UNMEASURED: no study measures names at an all-time high forward.
+  ath: {
+    label: '\u{1F3D4}\u{FE0F} ATH',
+    blurb: 'Names at their all-time high, and names slipping back under a high they just set. Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that are reaching all time highs? call it ATH. Once some of them are going below their ATH or 52 Week Highs.." THE TOGGLE switches between two groups: \u{1F3D4}\u{FE0F} At ATH \u2014 names trading through, at, or just under their all-time high, the ones through it today first, then the closest under \u2014 and \u2198\u{FE0F} Slipping \u2014 names that set an all-time or a fifty-two-week high recently and now trade under it by more than the same band, freshest high first. The line above the grid prints the band, the look-back and every count; the button lit is the group the server served. EACH CARD shows the high and the day it was set, the fifty-two-week high, the distance from each and whether the price is above the fifty-day average. HONEST HISTORY: all-time means the full listed history. A name whose price history starts after its listing, or that has no listing date on file, says "high since" its first bar and is never called all-time. Bars from an earlier listing under the same ticker are cut where a curated cut or a month-long gap in the ticker\u2019s own history proves them, and a history reaching back before the listing date is never called all-time either. Every other Chart Maps checkbox works here as on the other boards: themes first, the momentum burst, the liquidity floor and the chart ledger \u2014 support / demand, overhead / supply, key levels, AMD phases, Fibonacci, mean reversion, Keltner and the moving averages. UNMEASURED \u2014 no study in this app says a stock at its all-time high keeps rising or that one slipping under it comes back. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
+  },
   // 🏎️ Dual Momentum (Ajay 2026-09-29). The leaders and their rank are the
   // /dual-momentum page's engine; every number on the board is served, none
   // is typed here. UNMEASURED: no study pairs the rank with a demand band.
@@ -651,6 +670,61 @@ export type CmDmCapSort = {
   line: string;
 };
 
+/** 🏔️ ATH tab (2026-09-29): the board-level block (chart_maps/ath_tab
+ *  .ready_block / warming_block). `header` and `note` are SERVED sentences —
+ *  AthBoardNote prints them verbatim. `counts` is null while the memo warms.
+ *  Invariant (server): scanned == at_ath + slipping + at_52w_only + rest +
+ *  stale + no_print + no_bars. `band_pct` / `lookback_sessions` are served so
+ *  no number is typed here. UNMEASURED. */
+export type CmAthBoard = {
+  state: 'ready' | 'warming';
+  session: string;
+  phase: 'pre' | 'rth' | 'close' | null;
+  group: 'at_ath' | 'slipping';
+  counts: {
+    scanned: number; at_ath: number; at_ath_proven: number; through_today: number;
+    slipping: number; slip_from_ath: number; slip_from_52w: number; slip_above_sma50: number;
+    at_52w_only: number; rest: number; stale: number; no_print: number; no_bars: number;
+    history_pending: number; history_short: number; split_refetch: number;
+    no_turnover?: number; dropped_thin?: number; shown?: number;
+  } | null;
+  header: string;
+  note: string;
+  built_at: string | null;
+  measured: boolean;
+  band_pct: number;
+  lookback_sessions: number;
+  history: { read: number | null; pending: number | null; filling: boolean } | null;
+};
+
+/** 🏔️ The per-tile ATH read (chart_maps/ath_tab.classify). `text` ==
+ *  `badges[0].text`. `proven` false = the history does not reach the listing:
+ *  the label says "High since …" and never "ATH". Display only. */
+export type CmAthRead = {
+  group: 'at_ath' | 'slipping' | string;
+  proven: boolean;
+  status: string;
+  label: string;
+  since: string;
+  listed: string | null;
+  high: number;
+  high_date: string;
+  high_date_is_month: boolean;
+  high_today: boolean;
+  pct_from_high: number | null;
+  through_prior_pct: number | null;
+  w52: { price: number; date: string | null; today: boolean } | null;
+  pct_from_52w: number | null;
+  sma50: number | null;
+  above_sma50: boolean | null;
+  px: number;
+  basis: string | null;
+  tape: string | null;
+  slip: { from: string; price: number; date: string; sessions_ago: number | null;
+          pct: number | null } | null;
+  text: string;
+};
+
 /** 🏎️ The per-tile dual-momentum block — the /dual-momentum engine's pick,
  *  verbatim (rank, returns in %, RS). Display only on this surface. */
 export type CmDualMomentum = {
@@ -772,6 +846,9 @@ export type CmTile = {
   /** 🏎️ Dual Momentum tab, 💰 order only (2026-09-29): the cached market cap
    *  the order used (null = no cached cap). Display only. */
   dm_market_cap?: number | null;
+  /** 🏔️ ATH tab only (2026-09-29): the all-time / 52-week high read the tab
+   *  is grouped and ordered by. Absent on every other tab. UNMEASURED. */
+  ath?: CmAthRead | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1139,6 +1216,9 @@ export type CmBoard = {
   /** 🏎️ Dual Momentum tab only (2026-09-29): the served regime line, header,
    *  note and counts DualMomentumBoardNote prints. Absent on every other tab. */
   dual_momentum_board?: CmDualMomentumBoard | null;
+  /** 🏔️ ATH tab only (2026-09-29): the served header / note / counts
+   *  AthBoardNote prints. Absent on every other tab. */
+  ath_board?: CmAthBoard | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

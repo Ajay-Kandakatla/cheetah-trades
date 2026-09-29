@@ -24,7 +24,7 @@ import {
   ICT_PARAM_LABELS, ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   ROOM_TABS, parseMinRoom,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
-  DM_SORT_NEAREST,
+  DM_SORT_NEAREST, ATH_SORT_SLIPPING,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -774,6 +774,9 @@ describe('the Earnings Flow tab', () => {
        // 🏎️ Dual Momentum 2026-09-29 — right after Key Levels, mid-pack for
        // the same no-usage-yet reason (dual_momentum_tab spec §7 #1, his call).
        'dual_momentum',
+       // 🏔️ ATH 2026-09-29 — right after Dual Momentum, mid-pack for the same
+       // no-usage-yet reason (ath_tab spec §7 #10, his call).
+       'ath',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1789,7 +1792,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(32);   // +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(33);   // +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2296,7 +2299,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath')).toEqual(CM_TABS_6D3AD93);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2340,5 +2343,73 @@ describe('the 🏎️ Dual Momentum tab', () => {
       .toBe('nearest_demand');
     expect(parseSort('nearest_demand', [{ key: 'default', label: 'x' }, { key: 'rs', label: 'RS' }]))
       .toBe(DEFAULT_SORT);
+  });
+});
+
+
+// ── 🏔️ ATH tab (Ajay 2026-09-29: "Can you give me a new tab - for all the
+// stocks that are reaching all time highs? call it ATH. Once some of them are
+// going below their ATH or 52 Week Highs.."). A tile board off the dispatcher;
+// two served groups on the sort toggle. UNMEASURED. ─────────────────────────
+describe('the 🏔️ ATH tab', () => {
+  const HIS = 'Can you give me a new tab - for all the stocks that are reaching all time highs? call it ATH. Once some of them are going below their ATH or 52 Week Highs..';
+
+  it('sits right after 🏎️ Dual Momentum and is a board tab', () => {
+    expect(CM_TABS.indexOf('ath')).toBe(CM_TABS.indexOf('dual_momentum') + 1);
+    expect(CM_TABS.filter((t) => t === 'ath')).toHaveLength(1);
+    expect(isBoardTab('ath')).toBe(true);
+  });
+
+  it('parses from ?tab=, case- and space-tolerant', () => {
+    expect(parseTab('ath')).toBe('ath');
+    expect(parseTab(' ATH ')).toBe('ath');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab, not to ath', () => {
+    for (const raw of ['all-time', 'ath_', 'athtab', 'high', 'at-h', 'aths']) {
+      expect(parseTab(raw)).toBe(DEFAULT_TAB);
+    }
+  });
+
+  it('TAB_META: the 🏔️ label (VS16 included), an UNMEASURED blurb with his ask verbatim', () => {
+    const m = TAB_META.ath;
+    expect(m.label).toBe('\u{1F3D4}\u{FE0F} ATH');
+    expect(m.blurb).toContain('UNMEASURED');
+    expect(m.blurb).toContain(HIS);
+    expect(m.blurb).toContain('high since');
+    expect(m.blurb).toContain('earlier listing under the same ticker are cut where a curated cut or a month-long gap');
+    expect(m.blurb).not.toContain('never count');
+    expect(splitBlurb(m.blurb).head.length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: the blurb never says bounce / fake, types no NaN, and no number outside his quote and the date', () => {
+    const b = TAB_META.ath.blurb;
+    expect(/bounce|fake/i.test(b)).toBe(false);
+    expect(b.includes('NaN')).toBe(false);
+    expect(b.includes('undefined')).toBe(false);
+    const outside = b.replace(/"[^"]*"/g, '').replace('2026-09-29', '');
+    expect(/\d/.test(outside)).toBe(false);
+  });
+
+  it('🎯 is n/a here: no ENTERABLE_KIND entry (the Key Levels mirror)', () => {
+    expect((ENTERABLE_KIND as Record<string, unknown>).ath).toBeUndefined();
+  });
+
+  it('the ↘️ group key is the served tab-scoped key and rides the query like any sort', () => {
+    expect(ATH_SORT_SLIPPING).toBe('slipping');
+    expect(boardQuery({ tab: 'ath', sort: ATH_SORT_SLIPPING })).toContain('sort=slipping');
+    // NEGATIVE: the default group writes no sort at all
+    expect(boardQuery({ tab: 'ath', sort: DEFAULT_SORT })).not.toContain('sort=');
+    expect(boardQuery({ tab: 'ath' })).not.toContain('sort=');
+    // parseSort keeps it only while the server OFFERS it
+    expect(parseSort('slipping', [{ key: 'default', label: 'x' }, { key: 'slipping', label: 'y' }]))
+      .toBe('slipping');
+    expect(parseSort('slipping', [{ key: 'default', label: 'x' }, { key: 'nearest_demand', label: 'y' }]))
+      .toBe(DEFAULT_SORT);
+  });
+
+  it('NEGATIVE: the room floor and the other tab-scoped params never ride on ath', () => {
+    const q = boardQuery({ tab: 'ath', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching' });
+    for (const k of ['min_room', 'levels', 'grades', 'phase']) expect(q).not.toContain(k);
   });
 });
