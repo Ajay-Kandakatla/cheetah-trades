@@ -75,6 +75,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   price_alert:               '🔔 Price alerts',
   position_alert:            '💼 Position alerts',
   key_level_alert:           '🔑 Key level closed through',
+  med_catalyst:              '🧬 Medical catalyst',
   morning_brief:             '🌅 Morning brief',
   product_launch:            '🚀 Product launches',
   todo_reminder:             '📌 Todo reminders',

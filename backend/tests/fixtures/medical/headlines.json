@@ -1,0 +1,2620 @@
+{
+ "rules_version": "med-rules-v2",
+ "note": "Labelled headlines for catalysts.medical.classify (spec §3.4.5). `expected.events` is the EXACT multiset of event types; per-event keys present are asserted. synthetic=true rows are invented.",
+ "rows": [
+  {
+   "id": "s01",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences Says Phase 3 DAYBREAK Study Met Primary Endpoints With Zenkuda (Tarcocimab Tedromer) And Tabirafusp-ted (KSI-501) Showing Non-inferiority In Vision Gains",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "trial": "DAYBREAK",
+      "high": true
+     }
+    ],
+    "modality": [
+     "antibody_bispecific"
+    ],
+    "areas": [
+     "ophthalmology"
+    ],
+    "attributed": true,
+    "merge_only": false
+   }
+  },
+  {
+   "id": "s02",
+   "source": "S",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Zenkuda and tabirafusp-ted Meet Primary Endpoints in Pivotal DAYBREAK Trial in wAMD, with Zenkuda Demonstrating a Potential New Standard-of-Care Profile; biologics license application (BLA) planned for the fourth quarter of 2026",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "pivotal",
+      "trial": "DAYBREAK",
+      "high": true
+     }
+    ],
+    "areas": [
+     "ophthalmology"
+    ]
+   },
+   "note": "intent 'planned' -> NOT regulatory_filing, NOT fda_approval"
+  },
+  {
+   "id": "s03",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences To Host Webcast To Report Phase 3 DAYBREAK Topline Results For Wet AMD Candidates On September 28 At 8:30 AM Eastern Time",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "readout_scheduled"
+     }
+    ],
+    "areas": [
+     "ophthalmology"
+    ]
+   }
+  },
+  {
+   "id": "s04",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences to Present Topline Results on September 28, 2026 from DAYBREAK Pivotal Phase 3 Study of Zenkuda and KSI-501 in Patients with Wet Age-Related Macular Degeneration",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "readout_scheduled"
+     }
+    ]
+   }
+  },
+  {
+   "id": "s05",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "12 Health Care Stocks Moving In Monday's Pre-Market Session",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "s06",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences Stock Pops 70% After Eye-Disease Drugs Pass Key Trial",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": null,
+      "from_commentary": true
+     }
+    ],
+    "areas": [
+     "ophthalmology"
+    ],
+    "merge_only": true
+   }
+  },
+  {
+   "id": "s07",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Inside the Eye-Drug Breakthrough That Sent Kodiak Sciences Up 172%",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   },
+   "note": "commentary; bare 'breakthrough' is never a designation"
+  },
+  {
+   "id": "s08",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Why This Regeneron Eye Rival Just Catapulted More Than 120%",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "s09",
+   "source": "F",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences soars as Zenkuda, tabirafusp-ted hit primary endpoints in phase III wet AMD trial",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "from_commentary": true
+     }
+    ],
+    "attributed": true,
+    "merge_only": true
+   }
+  },
+  {
+   "id": "s10",
+   "source": "M",
+   "ticker": "MNOV",
+   "company": "MediciNova, Inc.",
+   "title": "MediciNova Announces Topline Results from  MN-001-NATG-202 Clinical Trial of MN-001 (Tipelukast)",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "unknown",
+      "phase": null,
+      "high": false
+     }
+    ],
+    "modality": [
+     "unclassified"
+    ],
+    "areas": [
+     "unclassified"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s11",
+   "source": "M",
+   "ticker": "HCM",
+   "company": "HUTCHMED (China) Ltd",
+   "title": "HUTCHMED Announces Submission of US NDA for ORPATHYS® plus TAGRISSO® in MET-Driven EGFR-Mutated Lung Cancer",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "submitted"
+     }
+    ],
+    "areas": [
+     "oncology"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s11b",
+   "source": "M",
+   "ticker": "AZN",
+   "company": "ASTRAZENECA PLC",
+   "title": "HUTCHMED Announces Submission of US NDA for ORPATHYS® plus TAGRISSO® in MET-Driven EGFR-Mutated Lung Cancer",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "submitted"
+     }
+    ],
+    "attributed": false
+   }
+  },
+  {
+   "id": "s12",
+   "source": "M",
+   "ticker": "RLAY",
+   "company": "Relay Therapeutics, Inc.",
+   "title": "Elevar Therapeutics Announces FDA Approval of Lyrfigtu (Lirafugratinib) as Second-line Cholangiocarcinoma with FGFR2 Fusion",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "novel",
+      "regulator": "FDA",
+      "high": true
+     }
+    ],
+    "modality": [
+     "small_molecule"
+    ],
+    "areas": [
+     "oncology"
+    ],
+    "attributed": false
+   },
+   "note": "partner tag RLAY -> not the issuer"
+  },
+  {
+   "id": "s13",
+   "source": "M",
+   "ticker": "ARVN",
+   "company": "Arvinas, Inc.",
+   "title": "Arvinas Announces First Patient Dosed in Phase 1/2 Clinical Trial of ARV-6723, the Company’s First Immuno-Oncology Candidate",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "trial_milestone",
+      "subtype": "first_patient",
+      "phase": "1/2"
+     }
+    ],
+    "areas": [
+     "oncology"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s14",
+   "source": "M",
+   "ticker": "MSLE",
+   "company": "Satellos Bioscience Inc.",
+   "title": "Satellos Announces FDA Clearance of IND Application for Forazapadin in Facioscapulohumeral Muscular Dystrophy (FSHD) and a Partnership with FSHD Canada Foundation",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "ind_cleared"
+     }
+    ],
+    "areas": [
+     "neurology",
+     "rare_disease"
+    ],
+    "attributed": true
+   },
+   "note": "NOT fda_approval; the partnership tail sits in the filing clause -> no deal event"
+  },
+  {
+   "id": "s15",
+   "source": "M",
+   "ticker": "CCCC",
+   "company": "C4 Therapeutics, Inc.",
+   "title": "C4 Therapeutics Presents New Biomarker Data from the Cemsidomide Phase 1 Trial with Dexamethasone and Phase 1b Trial with Elranatamab (ELREXFIO®) in Relapsed/Refractory Multiple Myeloma at the 23rd International Myeloma Society (IMS) Annual Meeting",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "presented",
+      "phase": "1"
+     }
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s16",
+   "source": "M",
+   "ticker": "ELDN",
+   "company": "Eledon Pharmaceuticals, Inc.",
+   "title": "Eledon Presents Updated Long-Term Phase 2 BESTOW Extension Study Results at the International Congress of The Transplantation Society",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "presented",
+      "phase": "2",
+      "trial": "BESTOW"
+     }
+    ],
+    "areas": [
+     "immunology"
+    ]
+   }
+  },
+  {
+   "id": "s17",
+   "source": "M",
+   "ticker": "ZLDPY",
+   "company": "Zealand Pharma A/S",
+   "title": "Zealand Pharma announces initiation of the registrational Phase 3 ZUPREME program of petrelintide in people with overweight or obesity",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "trial_milestone",
+      "subtype": "initiated",
+      "phase": "3",
+      "trial": "ZUPREME"
+     }
+    ],
+    "modality": [
+     "glp1_obesity"
+    ],
+    "areas": [
+     "cardio_metabolic"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s18",
+   "source": "M",
+   "ticker": "HCM",
+   "company": "HUTCHMED (China) Ltd",
+   "title": "HUTCHMED Highlights Clinical Data to be Presented at the ESMO Congress 2026",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming",
+      "congress": "ESMO"
+     }
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s19",
+   "source": "F",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna To Present Three Abstracts On Intismeran Autogene At European Society For Medical Oncology Congress 2026",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming"
+     }
+    ],
+    "modality": [
+     "mrna"
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s20",
+   "source": "F",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Surges 9% as Phase 3 Melanoma Data Wins Presidential Symposium Slot; Merck and BioNTech Edge Higher",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming",
+      "phase": "3",
+      "from_commentary": true
+     }
+    ],
+    "modality": [
+     "unclassified"
+    ],
+    "areas": [
+     "oncology"
+    ],
+    "attributed": true,
+    "merge_only": true
+   }
+  },
+  {
+   "id": "s20b",
+   "source": "F",
+   "ticker": "BNTX",
+   "company": "BioNTech SE",
+   "title": "Moderna Surges 9% as Phase 3 Melanoma Data Wins Presidential Symposium Slot; Merck and BioNTech Edge Higher",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data"
+     }
+    ],
+    "attributed": false
+   },
+   "note": "clause rule: BioNTech only in the trailing clause"
+  },
+  {
+   "id": "s21",
+   "source": "F",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Announces Late-Breaking Data to be Presented at ESMO Congress 2026",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming"
+     }
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s22",
+   "source": "F",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Eyes Cancer Vaccine Filing as It Expands Beyond COVID",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "modality": [
+     "vaccine"
+    ],
+    "areas": [
+     "oncology",
+     "infectious_disease"
+    ]
+   },
+   "note": "intent 'Eyes'"
+  },
+  {
+   "id": "s23",
+   "source": "F",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Inc. (MRNA) Holds High-Level Investment Talks With UAE, Soars to 4-Year Peak",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "s24",
+   "source": "F",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Why Moderna (MRNA) Is Up 29.1% After Melanoma Vaccine Success And Middle East Expansion Talks",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "s25",
+   "source": "F",
+   "ticker": "CRSP",
+   "company": "CRISPR Therapeutics AG",
+   "title": "Failure of Novartis' Pelacarsen Could Reshape the Lp(a) Race for CRISPR and Ionis",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "attributed": false
+   },
+   "note": "bare 'Failure' is no NEG cue; 'race for' third party"
+  },
+  {
+   "id": "s25b",
+   "source": "F",
+   "ticker": "IONS",
+   "company": "Ionis Pharmaceuticals, Inc.",
+   "title": "Failure of Novartis' Pelacarsen Could Reshape the Lp(a) Race for CRISPR and Ionis",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "attributed": false
+   }
+  },
+  {
+   "id": "s26",
+   "source": "F",
+   "ticker": "CRSP",
+   "company": "CRISPR Therapeutics AG",
+   "title": "Anthropic AI Discovery Gene-Editing Stocks Falling",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "modality": [
+     "gene_editing"
+    ]
+   }
+  },
+  {
+   "id": "s27",
+   "source": "F",
+   "ticker": "CRSP",
+   "company": "CRISPR Therapeutics AG",
+   "title": "CRSP, NTLA, BEAM, PRME, EDIT Shares Slip — Did Claude Just Spook Gene-Editing Stocks?",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "s28",
+   "source": "G",
+   "ticker": "MIRM",
+   "company": "Mirum Pharmaceuticals, Inc.",
+   "title": "Mirum Pharmaceuticals Announces Primary Endpoint Met in Phase 3 AZURE-1 Study of Brelovitug in Chronic Hepatitis Delta Virus",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "trial": "AZURE-1",
+      "high": true
+     }
+    ],
+    "modality": [
+     "antibody_bispecific"
+    ],
+    "areas": [
+     "infectious_disease"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s29",
+   "source": "G",
+   "ticker": "MIRM",
+   "company": "Mirum Pharmaceuticals, Inc.",
+   "title": "FDA Approves Mirum and Incyte's Atebrioz for Fibrodysplasia Ossificans Progressiva",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "novel",
+      "high": true
+     }
+    ],
+    "areas": [
+     "rare_disease"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s29b",
+   "source": "G",
+   "ticker": "INCY",
+   "company": "Incyte Corporation",
+   "title": "FDA Approves Mirum and Incyte's Atebrioz for Fibrodysplasia Ossificans Progressiva",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "novel",
+      "high": true
+     }
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s30",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Approves Zilurgisertib, an Oral ALK2 Inhibitor, for FOP",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "high": true
+     }
+    ],
+    "modality": [
+     "small_molecule"
+    ],
+    "areas": [
+     "rare_disease"
+    ]
+   }
+  },
+  {
+   "id": "s31",
+   "source": "G",
+   "ticker": "MIRM",
+   "company": "Mirum Pharmaceuticals, Inc.",
+   "title": "Mirum Pharmaceuticals Announces FDA Approval of Atebrioz and Positive Phase 3 Data for Hepatitis Delta",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "high": true
+     },
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "high": true
+     }
+    ],
+    "areas": [
+     "infectious_disease"
+    ]
+   },
+   "note": "two events in one title"
+  },
+  {
+   "id": "s32",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "Lupin Receives Tentative U.S. FDA Approval For Apixaban Oral Suspension",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "tentative",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "s33",
+   "source": "G",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "FDA Refuses to Review Moderna's Influenza Vaccine for Potential Approval",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_crl",
+      "subtype": "refuse_to_file",
+      "high": true
+     }
+    ],
+    "modality": [
+     "vaccine"
+    ],
+    "areas": [
+     "infectious_disease"
+    ]
+   }
+  },
+  {
+   "id": "s34",
+   "source": "G",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Withdraws BLA For its Influenza COVID-19 Combination Vaccine",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_crl",
+      "subtype": "withdrawn",
+      "high": false
+     }
+    ],
+    "modality": [
+     "vaccine"
+    ],
+    "areas": [
+     "infectious_disease"
+    ]
+   }
+  },
+  {
+   "id": "s35",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Approves First mRNA Flu Vaccine For Older Adults",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "high": true
+     }
+    ],
+    "modality": [
+     "mrna",
+     "vaccine"
+    ],
+    "areas": [
+     "infectious_disease"
+    ]
+   }
+  },
+  {
+   "id": "s36",
+   "source": "G",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Receives U.S. FDA Approval for Updated 2026-2027 COVID-19 Vaccines",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "updated_vaccine",
+      "high": true
+     }
+    ],
+    "modality": [
+     "vaccine"
+    ],
+    "areas": [
+     "infectious_disease"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s37",
+   "source": "G",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "title": "Moderna Just Got a Major FDA Approval. The Stock Is Slipping.",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "from_commentary": true
+     }
+    ],
+    "merge_only": true
+   }
+  },
+  {
+   "id": "s38",
+   "source": "G",
+   "ticker": "ABBV",
+   "company": "AbbVie Inc.",
+   "title": "FDA Approves AbbVie's Juvmo for Parkinson Disease",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "novel",
+      "high": true
+     }
+    ],
+    "areas": [
+     "neurology"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s39",
+   "source": "G",
+   "ticker": "LLY",
+   "company": "Eli Lilly and Company",
+   "title": "Eli Lilly Just Won FDA Approval for a Once Weekly Insulin and the Stock Is Knocking on $1,200",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "from_commentary": true
+     }
+    ],
+    "modality": [
+     "unclassified"
+    ],
+    "areas": [
+     "cardio_metabolic"
+    ],
+    "attributed": true,
+    "merge_only": true
+   }
+  },
+  {
+   "id": "s40",
+   "source": "G",
+   "ticker": "LLY",
+   "company": "Eli Lilly and Company",
+   "title": "Lilly gets FDA approval for severe alopecia areata treatment for paediatric patients",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "label_expansion",
+      "high": true
+     }
+    ],
+    "areas": [
+     "immunology"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "s40b",
+   "source": "G",
+   "ticker": "LLY",
+   "company": "ELI LILLY & Co",
+   "title": "Lilly gets FDA approval for severe alopecia areata treatment for paediatric patients",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "label_expansion"
+     }
+    ],
+    "attributed": true
+   },
+   "note": "SEC company_tickers title"
+  },
+  {
+   "id": "s41",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "Natera's Signatera Wins Japan PMDA Approval as Bladder Cancer CDx",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "exus_approval",
+      "regulator": "PMDA",
+      "high": false
+     }
+    ],
+    "modality": [
+     "diagnostics"
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s42",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "FDA approves IND for Nutshell’s NRF2 degrader NTS-231",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "ind_cleared"
+     }
+    ],
+    "modality": [
+     "small_molecule"
+    ]
+   }
+  },
+  {
+   "id": "s43",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "Q&A: Cutlip on the SELUTION SLR DEB's FDA Approval for Coronary In-Stent Restenosis",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "modality": [
+     "medtech_device"
+    ],
+    "areas": [
+     "cardio_metabolic"
+    ]
+   }
+  },
+  {
+   "id": "s44",
+   "source": "G",
+   "ticker": "LLY",
+   "company": "Eli Lilly and Company",
+   "title": "InnoCare Announces Strategic Research Collaboration and License Agreement with Lilly to Develop New Medicines",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "deal",
+      "subtype": "licensing"
+     }
+    ],
+    "attributed": true
+   },
+   "issuer_medical": true
+  },
+  {
+   "id": "s44b",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "InnoCare Announces Strategic Research Collaboration and License Agreement with Lilly to Develop New Medicines",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "dropped": [
+     "non_medical_event:deal"
+    ]
+   },
+   "note": "medical gate: no resolved issuer"
+  },
+  {
+   "id": "s45",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "ADARx Pharmaceuticals Announces Pricing of Upsized $446.3 Million Initial Public Offering",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [],
+    "dropped": [
+     "non_medical_event:financing"
+    ]
+   },
+   "note": "medical gate: no resolved issuer"
+  },
+  {
+   "id": "s45b",
+   "source": "G",
+   "ticker": "ADRX",
+   "company": "ADARx Pharmaceuticals, Inc.",
+   "title": "ADARx Pharmaceuticals Announces Pricing of Upsized $446.3 Million Initial Public Offering",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "financing",
+      "subtype": "ipo",
+      "dilutive": true
+     }
+    ]
+   },
+   "issuer_medical": true,
+   "note": "synthetic ticker: the resolved-issuer branch of the same title"
+  },
+  {
+   "id": "s46",
+   "source": "G",
+   "ticker": "INNV",
+   "company": "InnovAge Holding Corp.",
+   "title": "InnovAge Announces Pricing of Secondary Offering of Common Stock by Selling Stockholders",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "financing",
+      "subtype": "secondary_holders",
+      "dilutive": false
+     }
+    ],
+    "attributed": true
+   },
+   "issuer_medical": true
+  },
+  {
+   "id": "s47",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "AstraZeneca seeks U.S. FDA approval for lung cancer treatment",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "submitted"
+     }
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s48",
+   "source": "R",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Approves First Treatment for MCT8 Deficiency",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "high": true
+     }
+    ],
+    "areas": [
+     "rare_disease"
+    ]
+   }
+  },
+  {
+   "id": "s49",
+   "source": "R",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Approves First Gene Therapy for Pediatric Patients with Sanfilippo Syndrome Type A",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval"
+     }
+    ],
+    "modality": [
+     "gene_therapy"
+    ],
+    "areas": [
+     "rare_disease"
+    ]
+   }
+  },
+  {
+   "id": "s50",
+   "source": "R",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Grants Accelerated Approval to a New Breast Cancer Treatment",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "accelerated",
+      "high": true
+     }
+    ],
+    "areas": [
+     "oncology"
+    ]
+   }
+  },
+  {
+   "id": "s51",
+   "source": "R",
+   "ticker": null,
+   "company": null,
+   "title": "FDA intends to evaluate changes to the PMTA regulatory framework",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "s52",
+   "source": "M",
+   "ticker": "BZAI",
+   "company": "Blaize Holdings, Inc.",
+   "title": "BLAIZE HOLDINGS DEADLINE: ROSEN, THE FIRST FILING FIRM, Encourages Blaize Holdings, Inc. Investors to Secure Counsel",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   },
+   "note": "roundup (law-firm spam); CS BLA never hits BLAIZE"
+  },
+  {
+   "id": "s53",
+   "source": "M",
+   "ticker": "BLK",
+   "company": "BlackRock, Inc.",
+   "title": "BlackRock Investor News: If You Have Suffered Losses in BlackRock",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   },
+   "note": "no BLA hit in BlackRock"
+  },
+  {
+   "id": "s54",
+   "source": "G",
+   "ticker": null,
+   "company": null,
+   "title": "Belite Bio Announces Presentation of Tinlarebant Phase 3 DRAGON Study Results at Euretina 2026",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming",
+      "phase": "3",
+      "trial": "DRAGON",
+      "congress": "Euretina"
+     }
+    ],
+    "areas": [
+     "ophthalmology"
+    ]
+   }
+  },
+  {
+   "id": "n01",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "XYZ Phase 3 Trial Did Not Meet Primary Endpoint",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3",
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "n02",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "ABC Fails to Meet Primary Endpoint in Phase 2b",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "2",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "n03",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "DEF Announces Positive Topline Results; Key Secondary Endpoint Not Met",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "mixed",
+      "secondary_missed": true,
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "n04",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "GHI Receives Complete Response Letter from FDA for Its BLA",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_crl",
+      "subtype": "crl",
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "n05",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "Shareholders Approve Merger With JKL",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "n06",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "MNO Receives Nasdaq Approval to Transfer Listing",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "n07",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Places Clinical Hold on PQR's Phase 1 Trial",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "placed",
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "n08",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Lifts Partial Clinical Hold on STU Program",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "lifted",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "n09",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "VWX Granted Breakthrough Therapy Designation for Its Lead Candidate",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "designation",
+      "subtype": "breakthrough_therapy",
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "n10",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "YZA Receives Fast Track Designation",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "designation",
+      "subtype": "fast_track",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "n11",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "PDUFA Target Action Date Extended to March 2027",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "pdufa",
+      "subtype": "extended"
+     }
+    ]
+   }
+  },
+  {
+   "id": "n12",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Advisory Committee Votes 10-2 in Favor of BCD",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "adcom",
+      "direction": "positive",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "n13",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "EFG Phase 2 Study Showed No Statistically Significant Difference",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "2"
+     }
+    ]
+   }
+  },
+  {
+   "id": "n14",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "HIJ Discontinues Phase 3 Program After Futility Analysis",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3",
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "n05b",
+   "source": "synthetic",
+   "ticker": "JKLX",
+   "company": "JKL Therapeutics",
+   "title": "Shareholders Approve Merger With JKL",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "deal",
+      "subtype": "mna"
+     }
+    ]
+   },
+   "issuer_medical": true,
+   "note": "'approve' in a shareholder sentence is never fda_approval; the merger is a deal on a medical issuer"
+  },
+  {
+   "id": "n15",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Places Partial Clinical Hold on QRS's Phase 2 Program",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "placed",
+      "partial": true,
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "r01",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "ABC Phase 3 Study Did Not Hit Its Primary Endpoint",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r02",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "XYZ Phase 3 Trial Fails to Hit Primary Endpoint",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r03",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "DEF Phase 3 Trial Failed to Show Statistically Significant Improvement in Overall Survival",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r04",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "QRS Did Not Meet Primary Endpoint but Showed Statistically Significant Improvement in Key Secondary Endpoint",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "mixed",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "r05",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "GHI Phase 3 Trial in Heart Failure Met Primary Endpoint",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "high": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "r06",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "JKL Phase 3 Study in Kidney Failure Patients Achieved Statistical Significance",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r07",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "MNO Phase 3 Trial Misses Key Secondary Endpoint",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "mixed",
+      "phase": "3",
+      "secondary_missed": true,
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "r08",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Accepts BLA for Zenkuda Based on Positive Phase 3 DAYBREAK Results; Approval Decision Expected in 2027",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "accepted"
+     },
+     {
+      "event_type": "pdufa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r09",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Accepts BLA for Zenkuda; Approval Decision Expected in 2027",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing"
+     },
+     {
+      "event_type": "pdufa"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r10",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "AstraZeneca files for US FDA approval of HUTCHMED lung cancer drug combination",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "submitted"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r11",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Moderna strikes compromise with FDA to advance flu vaccine for 2026 approval",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r12",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Solving the Cholinergic Problem: Cobenfy's Path From Shelf to FDA Approval",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r13",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "TUV Reports Positive Phase 2 Data and Plans to Start Phase 3",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "2",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "r14",
+   "source": "rev2",
+   "ticker": "TUV",
+   "company": "TUV Therapeutics",
+   "title": "TUV Initiates Pivotal Phase 3 Trial Following Positive Phase 2 Results",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "trial_milestone",
+      "subtype": "initiated",
+      "phase": "3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r15",
+   "source": "rev2",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences Shares Rise After DAYBREAK Phase 3 Trial Results",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "unknown",
+      "phase": "3",
+      "from_commentary": true,
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "r16",
+   "source": "rev2",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences Soars 141% on “Truly Impressive” Pivotal Wet AMD Trial Win",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "pivotal",
+      "from_commentary": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "r17",
+   "source": "rev2",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences soars after pivotal DAYBREAK Phase 3 wet AMD results clear key endpoints",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "from_commentary": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "r18",
+   "source": "rev2",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "Kodiak Sciences Inc. (KOD) Discusses DAYBREAK Topline Data and Primary Endpoint Results Transcript",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r19",
+   "source": "rev2",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "title": "A Look At Kodiak Sciences (KOD) Valuation After Positive Phase 3 GLOW2 Results For Zenkuda",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r20",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Positive Phase 3 Topline Results Announced; Data to Be Presented at ASCO",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3"
+     },
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r21",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "ABC Expects Phase 3 Topline Data in the Fourth Quarter",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "readout_scheduled"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r22",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "FDA pulls clearance of Pfizer-BioNTech COVID-19 vaccine for children under 5",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_revoked",
+      "subtype": "revoked",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "r23",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Rescinds EUA but Approves Updated 2025-2026 COVID Vaccines",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_revoked"
+     },
+     {
+      "event_type": "fda_approval"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r24",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Moderna's mRNA flu shot mFlusiva snags FDA nod after refusal-to-file imbroglio",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r25",
+   "source": "rev2",
+   "ticker": "PFE",
+   "company": "Pfizer Inc.",
+   "title": "EXCLUSIVE: Pfizer, BioNTech halt US COVID vaccine study after recruitment struggles",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "trial_milestone",
+      "subtype": "discontinued",
+      "high": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "r26",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Teva to Host Conference Call to Discuss Third Quarter 2026 Financial Results on November 3, 2026 at 8 a.m. ET",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r27",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "IN8bio to Present at Sidoti Small-Cap Virtual Conference",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r28",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "XYZ to Present at the H.C. Wainwright 28th Annual Global Investment Conference",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r29",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Launches Expedited IND Pilot, Begins Accepting Applications",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r30",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Roundup: FDA Approves Lilly’s Olumiant, AbbVie’s Juvmo, Mirum &amp; Incyte’s Atebrioz",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r31",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Shareholders who lost money in shares of acquired Doximity, Inc. (NYSE: DOCS) should contact Wolf Haldenstein",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "r32",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Palisade Bio to Present Clinical and Translational Data for PALI-2108 in Ulcerative Colitis and Crohn’s Disease at UEG Week 2026",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "conference_data",
+      "subtype": "upcoming"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r33",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "VWX Receives Breakthrough Therapy Designation Based on Positive Phase 2 Data",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "designation",
+      "subtype": "breakthrough_therapy"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r34",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "FDA Approves Moderna's mRNA Flu Vaccine After Phase 3 Success",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r35",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "The FDA Just Approved New COVID Shots. Here’s What Happens Now.",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval"
+     }
+    ]
+   }
+  },
+  {
+   "id": "r36",
+   "source": "rev2",
+   "ticker": null,
+   "company": null,
+   "title": "Cancer Drug Breakthroughs Accelerate as Biotech Funding Recovers",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g01",
+   "source": "F",
+   "ticker": "CRL",
+   "company": "Charles River Laboratories International, Inc.",
+   "title": "Charles River Laboratories (CRL) Stock Still Seems Reasonable Despite Rapid Cell Banking Launch",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   },
+   "note": "parenthesised ticker CRL is never an FDA complete response letter"
+  },
+  {
+   "id": "g02",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "Acme Bio (NYSE: CRL) Announces Board Changes",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g03",
+   "source": "F",
+   "ticker": "PRME",
+   "company": "Prime Medicine, Inc.",
+   "title": "Prime Medicine Gets FDA Green Light for Gene Editing Study",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "ind_cleared",
+      "high": false
+     }
+    ],
+    "modality": [
+     "gene_editing"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "g04",
+   "source": "F",
+   "ticker": "PRME",
+   "company": "Prime Medicine, Inc.",
+   "title": "FDA Clears Prime Medicine’s IND Application For PM647, Investigational In Vivo Prime Editor For Alpha-1 Antitrypsin Deficiency",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "ind_cleared"
+     }
+    ]
+   }
+  },
+  {
+   "id": "g05",
+   "source": "F",
+   "ticker": "LNTH",
+   "company": "Lantheus Holdings, Inc.",
+   "title": "Lantheus Holdings (LNTH) Stock May Be 14% Undervalued On FDA Approval",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g06",
+   "source": "F",
+   "ticker": "MRK",
+   "company": "Merck & Co., Inc.",
+   "title": "Merck (MRK) Stock May Be 37% Undervalued On Fresh FDA Approval",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g07",
+   "source": "F",
+   "ticker": "CGEM",
+   "company": "Cullinan Therapeutics, Inc.",
+   "title": "Cullinan Therapeutics (CGEM) Could Be 50% Below Fair Value On Phase 3 Zipalertinib Data",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g08",
+   "source": "F",
+   "ticker": "INCY",
+   "company": "Incyte Corporation",
+   "title": "Incyte (INCY) Stock Could Be 34% Above Fair Value After EADV Data",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g09",
+   "source": "F",
+   "ticker": "IMVT",
+   "company": "Immunovant, Inc.",
+   "title": "Immunovant (IMVT): One Trial Failure Doesn’t Break the Bull Case",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g10",
+   "source": "F",
+   "ticker": "MRK",
+   "company": "Merck & Co., Inc.",
+   "title": "Merck’s Remigromig, a Tri-specific Agonist of the Wingless-related Integration Site (Wnt) Pathway, Met Primary Endpoint in the Pivotal Phase 2b/3 BRUNELLO Study of Adults with Diabetic Macular Edema",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "2/3",
+      "trial": "BRUNELLO",
+      "high": true
+     }
+    ],
+    "areas": [
+     "ophthalmology",
+     "cardio_metabolic"
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "g11",
+   "source": "F",
+   "ticker": "KYTX",
+   "company": "Kyverna Therapeutics, Inc.",
+   "title": "Kyverna Therapeutics Reports Positive One-Year Data Demonstrating Durable Clinical Responses and Favorable Safety Profile for Miv-cel in Stiff Person Syndrome",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": null,
+      "high": false
+     }
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "g12",
+   "source": "M",
+   "ticker": "QGEN",
+   "company": "Qiagen N.V.",
+   "title": "QIAGEN Completes U.S. QIAstat-Dx Bloodstream Infection Portfolio With FDA Clearance of New Bacteria Detection Panel",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "device_clearance",
+      "high": true
+     }
+    ]
+   },
+   "note": "device clearance is high impact under the §3.8 table (only tentative/generic excluded) — HIS CALL"
+  },
+  {
+   "id": "g13",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "ABC Submits 510(k) to FDA for Its Glucose Monitor",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": []
+   },
+   "note": "a 510(k) SUBMISSION is never an approval"
+  },
+  {
+   "id": "g14",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "ABC Receives FDA 510(k) Clearance for Its Glucose Monitor",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "device_clearance"
+     }
+    ],
+    "modality": [
+     "medtech_device"
+    ]
+   }
+  },
+  {
+   "id": "g15",
+   "source": "synthetic",
+   "ticker": "FTAI",
+   "company": "FTAI Aviation Ltd.",
+   "title": "FTAI Acquires 27 Boeing 737-700 Aircraft from WestJet",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [],
+    "dropped": [
+     "non_medical_event:deal"
+    ]
+   },
+   "issuer_medical": false,
+   "note": "medical gate: non-medical issuer, no medical word"
+  },
+  {
+   "id": "g16",
+   "source": "synthetic",
+   "ticker": "ACMM",
+   "company": "Acme Motors Inc.",
+   "title": "Acme Motors Announces Voluntary Recall of 12,000 Sedans",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [],
+    "dropped": [
+     "non_medical_event:safety"
+    ]
+   },
+   "issuer_medical": false
+  },
+  {
+   "id": "g17",
+   "source": "synthetic",
+   "ticker": "BRKB",
+   "company": "Burke Bank Corp.",
+   "title": "Burke Bank Prices $50 Million Public Offering of Subordinated Notes",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [],
+    "dropped": [
+     "non_medical_event:financing"
+    ]
+   },
+   "issuer_medical": false
+  },
+  {
+   "id": "g18",
+   "source": "synthetic",
+   "ticker": "ABCT",
+   "company": "ABC Therapeutics, Inc.",
+   "title": "ABC Therapeutics Announces $150 Million Public Offering",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "financing",
+      "subtype": "public",
+      "dilutive": true
+     }
+    ]
+   },
+   "issuer_medical": true,
+   "note": "offering on a medical issuer = financing, dilutive"
+  },
+  {
+   "id": "g19",
+   "source": "synthetic",
+   "ticker": null,
+   "company": null,
+   "title": "EMA's CHMP Adopts Positive Opinion for XYZ in Myasthenia Gravis",
+   "context": "",
+   "synthetic": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "exus_approval",
+      "regulator": "EMA",
+      "high": false
+     }
+    ],
+    "areas": [
+     "immunology"
+    ]
+   }
+  },
+  {
+   "id": "g20",
+   "source": "S",
+   "ticker": "ACAD",
+   "company": "Acadia Pharmaceuticals Inc.",
+   "title": "Acadia Pharmaceuticals Announces Phase 3 Enabling Topline Results from Phase 2 RADIANT Study of Remlifanserin for the Treatment of Alzheimer’s Disease",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "unknown",
+      "phase": "2",
+      "trial": "RADIANT",
+      "high": false
+     }
+    ],
+    "areas": [
+     "neurology"
+    ]
+   },
+   "note": "'Phase 3 Enabling' is the NEXT phase, never this readout's"
+  },
+  {
+   "id": "g21",
+   "source": "F",
+   "ticker": "MIRM",
+   "company": "Mirum Pharmaceuticals, Inc.",
+   "title": "Mirum Pharma's Brelovitug Meets Phase 3 Primary Endpoint In AZURE-1 Study For Chronic Hepatitis Delta",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "trial": "AZURE-1",
+      "high": true
+     }
+    ],
+    "attributed": true
+   }
+  },
+  {
+   "id": "g22",
+   "source": "F",
+   "ticker": "ZYME",
+   "company": "Zymeworks Inc.",
+   "title": "Zymeworks Guides FY26 Total Sales, Including Collaboration Revenue From YUPELRI, Of $278M-$292M",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   },
+   "note": "collaboration REVENUE is guidance, never a partnership"
+  },
+  {
+   "id": "g23",
+   "source": "F",
+   "ticker": "COGT",
+   "company": "Cogent Biosciences, Inc.",
+   "title": "Cogent Biosciences (COGT) Looks Fully Valued Following FDA NDA Acceptance",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": []
+   }
+  },
+  {
+   "id": "g24",
+   "source": "F",
+   "ticker": "ACAD",
+   "company": "Acadia Pharmaceuticals Inc.",
+   "title": "Acadia’s Remlifanserin Advances Toward Phase 3 In Alzheimer’s Psychosis Despite Narrow Miss On Primary Endpoint",
+   "context": "",
+   "synthetic": false,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": null,
+      "high": false
+     }
+    ]
+   },
+   "note": "'Toward Phase 3' is a future phase: no Phase 3 push for a Phase 2 miss"
+  }
+ ],
+ "attribution": [
+  {
+   "id": "a01",
+   "title": "Eli Lilly Just Won FDA Approval for a Once Weekly Insulin and the Stock Is Knocking on $1,200",
+   "ticker": "LLY",
+   "company": "Eli Lilly and Company",
+   "attributed": true
+  },
+  {
+   "id": "a02",
+   "title": "Lilly gets FDA approval for severe alopecia areata treatment for paediatric patients",
+   "ticker": "LLY",
+   "company": "ELI LILLY & Co",
+   "attributed": true
+  },
+  {
+   "id": "a03",
+   "title": "HUTCHMED Announces Submission of US NDA for ORPATHYS plus TAGRISSO in MET-Driven EGFR-Mutated Lung Cancer",
+   "ticker": "HCM",
+   "company": "HUTCHMED (China) Ltd",
+   "attributed": true
+  },
+  {
+   "id": "a04",
+   "title": "HUTCHMED Announces Submission of US NDA for ORPATHYS plus TAGRISSO in MET-Driven EGFR-Mutated Lung Cancer",
+   "ticker": "AZN",
+   "company": "ASTRAZENECA PLC",
+   "attributed": false
+  },
+  {
+   "id": "a05",
+   "title": "Failure of Novartis' Pelacarsen Could Reshape the Lp(a) Race for CRISPR and Ionis",
+   "ticker": "CRSP",
+   "company": "CRISPR Therapeutics AG",
+   "attributed": false
+  },
+  {
+   "id": "a06",
+   "title": "Failure of Novartis' Pelacarsen Could Reshape the Lp(a) Race for CRISPR and Ionis",
+   "ticker": "IONS",
+   "company": "Ionis Pharmaceuticals, Inc.",
+   "attributed": false
+  },
+  {
+   "id": "a07",
+   "title": "Intellia's CRISPR therapy wins FDA approval",
+   "ticker": "CRSP",
+   "company": "CRISPR Therapeutics AG",
+   "attributed": false
+  },
+  {
+   "id": "a08",
+   "title": "CRISPR Therapeutics Announces Positive Phase 3 Data",
+   "ticker": "CRSP",
+   "company": "CRISPR Therapeutics AG",
+   "attributed": true
+  },
+  {
+   "id": "a09",
+   "title": "Moderna Surges 9% as Phase 3 Melanoma Data Wins Presidential Symposium Slot; Merck and BioNTech Edge Higher",
+   "ticker": "BNTX",
+   "company": "BioNTech SE",
+   "attributed": false
+  },
+  {
+   "id": "a10",
+   "title": "Moderna Surges 9% as Phase 3 Melanoma Data Wins Presidential Symposium Slot; Merck and BioNTech Edge Higher",
+   "ticker": "MRNA",
+   "company": "Moderna, Inc.",
+   "attributed": true
+  },
+  {
+   "id": "a11",
+   "title": "Why Regeneron Rival Kodiak Sciences Just Skyrocketed 90%-Plus",
+   "ticker": "KOD",
+   "company": "Kodiak Sciences Inc.",
+   "attributed": true
+  },
+  {
+   "id": "a12",
+   "title": "FDA Approves Mirum and Incyte's Atebrioz for Fibrodysplasia Ossificans Progressiva",
+   "ticker": "INCY",
+   "company": "Incyte Corporation",
+   "attributed": true
+  },
+  {
+   "id": "a13",
+   "title": "FDA Approves Mirum and Incyte's Atebrioz for Fibrodysplasia Ossificans Progressiva",
+   "ticker": "MIRM",
+   "company": "Mirum Pharmaceuticals, Inc.",
+   "attributed": true
+  },
+  {
+   "id": "a14",
+   "title": "Bristol Myers Squibb Receives FDA Approval for Cobenfy",
+   "ticker": "BMY",
+   "company": "Bristol-Myers Squibb Company",
+   "attributed": true
+  },
+  {
+   "id": "a15",
+   "title": "BMS wins FDA nod for X",
+   "ticker": "BMY",
+   "company": "Bristol-Myers Squibb Company",
+   "attributed": true
+  },
+  {
+   "id": "a16",
+   "title": "Live Oak Acquisition Corp. VI Completes $230,000,000 Initial Public Offering",
+   "ticker": "SAN",
+   "company": "Banco Santander, S.A.",
+   "attributed": false
+  },
+  {
+   "id": "a17",
+   "title": "Elevar Therapeutics Announces FDA Approval of Lyrfigtu",
+   "ticker": "RLAY",
+   "company": "Relay Therapeutics, Inc.",
+   "attributed": false
+  },
+  {
+   "id": "a18",
+   "title": "Merck & Co. Receives FDA Approval for Keytruda Subcutaneous",
+   "ticker": "MRK",
+   "company": "Merck & Co., Inc.",
+   "attributed": true
+  }
+ ]
+}

@@ -60,6 +60,12 @@ export type NotificationPrefs = {
      52-week", "Holdings + Signals list", "No, close only"); OFF in default_prefs
      for anyone else. */
   key_level_alert?: boolean;
+  /* 🧬 A high-impact medical event — FDA approval or rejection, Phase 3
+     topline, Breakthrough Therapy designation, clinical hold placed
+     (catalysts/medical, 2026-09-29: "… add right setup and alerts"). ON for
+     him via the owner keep-set; False in default_prefs for anyone else.
+     UNMEASURED — setup: pending study. */
+  med_catalyst?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

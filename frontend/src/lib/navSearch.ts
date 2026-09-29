@@ -34,7 +34,7 @@ export const NAV_SYNONYMS: Record<string, string[]> = {
   'demand-zones':  ['zones', 'supply', 'demand', 'bands'],
   zones:           ['zones', 'supply', 'demand', 'bands'],
   trading:         ['autopilot', 'auto-pilot', 'paper', 'positions', 'journal', 'exit', 'stops', 'alpaca', 'trading', 'autopsy'],
-  catalysts:       ['news', '8-k', 'promo', 'movers', 'russell', 'seeding'],
+  catalysts:       ['news', '8-k', 'promo', 'movers', 'russell', 'seeding', 'medical', 'fda', 'biotech'],
   sepa:            ['scanner', 'minervini', 'breakouts', 'vcp', 'stage 2', 'trend template', 'candidates'],
   'sepa-global':   ['scanner', 'minervini', 'simple', 'friends'],
   'market-gauge':  ['regime', 'risk on', 'risk off', 'market health', 'exposure'],
@@ -92,6 +92,8 @@ export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=overnight',   label: 'Chart Maps ▸ Overnight',    keywords: ['gappers', 'after hours', 'pre-market', 'movers'] },
   // 🔑 Key Levels (2026-09-28): names closest to a prior-week / prior-month / 52-week low.
   { parent: 'chart-maps', to: '/chart-maps?tab=key_levels',  label: 'Chart Maps ▸ 🔑 Key Levels', keywords: ['key levels', 'key level', 'prior week low', 'prior month low', '52 week low', 'pwl', 'pml', 'near support'] },
+  // 🧬 Medical catalysts (2026-09-29): FDA decisions, trial readouts, designations, holds.
+  { parent: 'chart-maps', to: '/chart-maps?tab=catalysts&sub=medical', label: 'Chart Maps ▸ Catalysts ▸ 🧬 Medical', keywords: ['medical', 'fda', 'fda approval', 'crl', 'pdufa', 'phase 3', 'topline', 'clinical trial', 'clinical hold', 'breakthrough therapy', 'biotech', 'mrna', 'esmo', 'asco'] },
   { parent: 'sepa',       to: '/sepa?tab=supply',            label: 'SEPA ▸ Supply / Demand',    keywords: ['zones', 'supply', 'demand', 'in demand', 'levels'] },
   { parent: 'notifications', to: '/notifications',           label: 'Notifications ▸ push settings', keywords: ['push settings', 'mute', 'kinds', 'devices', 'quiet hours'] },
   { parent: 'trading',    to: '/trading',                    label: 'Trading ▸ Auto-Pilot journal', keywords: ['journal', 'auto-pilot', 'autopilot', 'paper trades', 'execution race'] },

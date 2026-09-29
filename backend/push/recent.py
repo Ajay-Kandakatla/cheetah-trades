@@ -88,6 +88,9 @@ DIGEST_KINDS = frozenset({
     # "SYM (now holds more cash than debt), SYM (…)", a LIST of names, so the
     # feed may derive per-ticker chips from it.
     "capital_quality_upgrade",
+    # 🧬 catalysts/medical/alerts.py (2026-09-29) — its digest body is
+    # "SYM · label · +N%" lines, a LIST of names.
+    "med_catalyst",
 })
 
 # Upper-case only, 1-5 letters, with an optional single-letter class suffix —

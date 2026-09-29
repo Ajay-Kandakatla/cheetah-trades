@@ -369,6 +369,14 @@ OWNER_KEEP_SET: frozenset = frozenset({
     "board_arrival",       # ✨ a new name on 📈 Bonde / 🚀 Explosive Growth
     "price_alert",         # 🔔 a line HE drew on a ticker page (2026-09-21, "Yes to all..")
     "key_level_alert",     # 🔑 close through a week/month/52w key level (2026-09-25, his "On: week + month + 52-week")
+    # 🧬 med_catalyst (catalysts/medical/alerts.py, 2026-09-29). Ajay: "can you
+    # add a new routine to scan for … amd trails or other medi cal nws … and
+    # add right setup and alerts". ON for the owner because he asked for alerts
+    # — the key_level_alert precedent (False in default_prefs, in this set).
+    # HIS CALL #1: one word turns it off (drop this line). A MARKET kind
+    # (market_hours.gate). UNMEASURED: every push says "not a buy signal" /
+    # "not a sell signal"; setup: pending study.
+    "med_catalyst",
 })
 
 
@@ -541,6 +549,18 @@ def default_prefs() -> dict:
         # A MARKET kind (market_hours.gate). NOT MEASURED: key_levels.MEASURED
         # is False and every push says "Unmeasured".
         "key_level_alert": False,
+        # 🧬 An FDA decision / Phase 3 topline / Breakthrough Therapy / clinical
+        # hold on a healthcare name (catalysts/medical/alerts.py, Ajay
+        # 2026-09-29: "…and add right setup and alerts").
+        #
+        # OFF for everyone else (default_prefs); ON for HIS devices through
+        # OWNER_KEEP_SET (HIS CALL #1). His already-registered phones are
+        # flipped by scripts/owner_prefs_apply.py after the promote (a data
+        # write). It must still be here: a kind missing from default_prefs
+        # targets ZERO devices and renders no toggle.
+        #
+        # A MARKET kind (market_hours.gate). NOT MEASURED: setup: pending study.
+        "med_catalyst": False,
         "morning_brief": True,       # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

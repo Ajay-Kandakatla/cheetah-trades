@@ -242,7 +242,8 @@ def test_the_alerts_section_never_imports_the_SEPA_BOARD_stack(monkeypatch):
     lazy-imports `sepa.bonde` inside its own row builders, so building the
     alerts lines never loads it.
 
-    THREE lines since 2026-09-22 — 💎 `capital_quality_upgrade` joined them. It
+    FOUR lines since 2026-09-29 — 🧬 `med_catalyst` joined them (it reads
+    catalysts.medical, no SEPA module). THREE since 2026-09-22 — 💎 `capital_quality_upgrade` joined them. It
     reads `growth.quality_alerts` and `growth.capital_quality`, both of which
     lazy-import everything heavy, so the SEPA footprint of this call is
     BYTE-IDENTICAL to what it was before that line existed. This guard now
@@ -260,7 +261,7 @@ def test_the_alerts_section_never_imports_the_SEPA_BOARD_stack(monkeypatch):
     code = ("import sys;"
             "from supply_demand import rules_info as RI;"
             "lines = RI._non_zone_push_lines();"
-            "assert len(lines) == 3, lines;"
+            "assert len(lines) == 4, lines;"
             "loaded = sorted(m for m in sys.modules if m.startswith('sepa.'));"
             "assert 'sepa.bonde' not in loaded, loaded;"
             "assert 'sepa.board_metrics' not in loaded, loaded;"
@@ -290,3 +291,52 @@ def test_rules_info_never_imports_sepa_bonde_at_MODULE_level():
     assert "from growth import capital_quality as CQ" in builder
     for form in ("from growth import quality_alerts", "from growth import capital_quality"):
         assert form not in head, "a module-level %s on the S&D rules page" % form
+
+
+# ── 🧬 med_catalyst (2026-09-29) ────────────────────────────────────────────
+def _med_line() -> str:
+    lines = [l for l in RI.sections()["alerts"]["alerts"] if "med_catalyst" in l]
+    assert len(lines) == 1
+    return lines[0]
+
+
+def test_the_medical_line_states_the_gate_from_its_constants():
+    from catalysts.medical import alerts as MA
+    from catalysts.medical import taxonomy as MT
+    from trading import safety_floor as SF
+    t = _med_line()
+    assert t.startswith("🧬 med_catalyst (ON for the owner — mute at /notifications): ")
+    assert MT.HIGH_IMPACT_TEXT in t
+    assert ("$%.0f" % SF.MIN_SHARE_PRICE) in t and RI._b(SF.THIN_DOLLAR_VOL) in t
+    assert ("≤ %.0f minutes" % MA.RTH_EXPOSURE_MAX_MIN) in t and ("within %d sessions" % MA.RECAP_SESSIONS) in t
+    assert ("%d ring individually" % MA.MAX_SINGLES) in t
+    assert "UNMEASURED — setup: pending study." in t
+    # it sits right after the 📣 line and before ✨
+    al = RI._non_zone_push_lines()
+    assert "earnings_reaction" in al[0] and "med_catalyst" in al[1] and "board_arrival" in al[2]
+
+
+def test_the_medical_line_MOVES_when_a_constant_moves(monkeypatch):
+    """MUTATION GUARD: every number is read, never typed."""
+    from catalysts.medical import alerts as MA
+    from trading import safety_floor as SF
+    monkeypatch.setattr(SF, "THIN_DOLLAR_VOL", 20_000_000.0)
+    monkeypatch.setattr(MA, "RTH_EXPOSURE_MAX_MIN", 30.0)
+    monkeypatch.setattr(MA, "RECAP_SESSIONS", 9)
+    t = _med_line()
+    assert RI._b(20_000_000.0) in t and "≤ 30 minutes" in t and "within 9 sessions" in t
+    assert "≤ 10 minutes" not in t and "within 21 sessions" not in t
+
+
+def test_a_broken_medical_import_never_drops_the_lines_after_it(monkeypatch):
+    import builtins
+    real = builtins.__import__
+
+    def fake(name, *a, **k):
+        if name.startswith("catalysts.medical"):
+            raise ImportError("boom")
+        return real(name, *a, **k)
+    monkeypatch.setattr(builtins, "__import__", fake)
+    al = RI._non_zone_push_lines()
+    assert not [l for l in al if "med_catalyst" in l]
+    assert [l for l in al if "board_arrival" in l] and [l for l in al if "capital_quality_upgrade" in l]

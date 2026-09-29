@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-29: "can you add a new routine to scan for … medi cal nws and
+  // sector them separatively … and add right setup and alerts". Label from the
+  // medical-catalysts spec §3.11 (numbers change with HIS CALLs #1, #2, #7).
+  { id: 'medical-catalysts-2026-09-29',
+    label: '🧬 Medical catalysts on Chart Maps ▸ Catalysts. You said: “can you add a new routine to scan for … amd trails or other medi cal nws and sector them separatively like new fdaapprovals or break throughs like mrnaresearch how to catch thsse sectorsand companiesand add right setup and alerts”. Every 5 minutes from 4:00 am to 7:55 pm ET on trading days the app reads company news for every healthcare name in the scan universe, new SEC 8-K press releases and the FDA’s own press releases, and files each item by event (FDA approval or rejection, Phase 1–3 results, conference data, designations, clinical holds, deals, offerings), by modality (mRNA, gene editing, cell therapy, ADCs, GLP-1 …) and by disease area. Each event shows the move when it was first seen, the close, relative volume and dollar volume; a 🔥 roll-up shows which modalities and areas are getting the news and how those names moved over 5 and 21 sessions. The ticker page’s Catalyst tab lists that name’s events. A 🧬 phone alert — ON for your phone, mute it at /notifications — fires for FDA approvals and rejections, Phase 3 results, Breakthrough Therapy designations and clinical holds on names at $2 and up trading at least $5M a day, while the news is still fresh (pre-market, after hours, or within 10 minutes of regular trading). UNMEASURED — setup: pending study; nothing here is a buy signal.',
+    addedAt: '2026-09-29', route: '/chart-maps?tab=catalysts&sub=medical' },
   // Ajay 2026-09-28: "Once done can you fix this table too? so much empty space"
   { id: 'bonde-table-density-2026-09-28',
     label: '📈 Bonde table, tightened. You said: “Once done can you fix this table too? so much empty space”. '

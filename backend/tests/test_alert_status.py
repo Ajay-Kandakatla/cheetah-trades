@@ -165,8 +165,10 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     # switches it on, and a pass the page cannot show cannot answer it.
     # EIGHT since 2026-09-25: 🔑 key_level_alert rides the zone_edge minute and
     # records its own pass doc (its kind ships OFF — same reason as 💎).
+    # NINE since 2026-09-29: 🧬 med_catalyst rides promo_live's 5-minute line
+    # and records its own pass doc.
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
-                                "key_level_alert",
+                                "key_level_alert", "med_catalyst",
                                 "earnings_reaction", "board_arrival:bonde",
                                 "board_arrival:growth", "capital_quality_upgrade"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
@@ -286,20 +288,24 @@ def test_cadence_sec_matches_the_crontab():
     def seconds(field: str) -> int:
         if field == "*":
             return 60
-        m = re.fullmatch(r"\d+-\d+/(\d+)", field)
+        m = re.fullmatch(r"(?:\d+-\d+|\*)/(\d+)", field)       # `3-58/5` and, since 2026-09-29, `*/5`
         assert m, f"unexpected minute field {field!r}"
         return int(m.group(1)) * 60
 
     # 🔑 key_level_alert (2026-09-25) has no crontab line: zone_edge's pass calls
-    # it, so its cadence is DERIVED from zone_edge's minute field
+    # it, so its cadence is DERIVED from zone_edge's minute field. 🧬
+    # med_catalyst (2026-09-29) likewise rides catalysts.promo_live's line.
     assert AS.CADENCE_SEC == {"zone_edge": seconds(minute_field("supply_demand.zone_edge")),
                               "zone_bounce_alert": seconds(minute_field("supply_demand.zone_bounce_alerts")),
                               "demand_alert": seconds(minute_field("supply_demand.demand_alerts")),
-                              "key_level_alert": seconds(minute_field("supply_demand.zone_edge"))}
+                              "key_level_alert": seconds(minute_field("supply_demand.zone_edge")),
+                              "med_catalyst": seconds(minute_field("catalysts.promo_live"))}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
-                              "key_level_alert": 60}
+                              "key_level_alert": 60, "med_catalyst": 300}
     assert not [ln for ln in lines if "key_level_alerts" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the key-level pass has no crontab line of its own"
+    assert not [ln for ln in lines if "catalysts.medical" in ln and not ln.lstrip().startswith("#")], \
+        "NEGATIVE: the medical pass has no crontab line of its own (it rides promo_live)"
 
 
 # ── the three DAILY passes (2026-09-20) ─────────────────────────────────────
@@ -365,9 +371,10 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
     """NEGATIVE: `CADENCE_SEC` is what the page measures RTH staleness against.
     A daily pass must never appear in it (test_cadence_sec_matches_the_crontab
     compares it to the crontab's minute fields)."""
-    assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert", "key_level_alert"}
+    assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert", "key_level_alert",
+                                   "med_catalyst"}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
-                              "key_level_alert": 60}
+                              "key_level_alert": 60, "med_catalyst": 300}
 
 
 # ── 🔑 key_level_alert (2026-09-25) ─────────────────────────────────────────
@@ -391,3 +398,20 @@ def test_NEGATIVE_the_key_level_result_never_pollutes_zone_edges_counts():
     res = {"ran": True, "candidates": 4, "pushed": 1,
            "key_levels": {"ran": True, "counts": {"pushed": 9}, "messages": [1, 2]}}
     assert AS.counts_from_result(res) == {"candidates": 4, "pushed": 1}
+
+
+# ── 🧬 med_catalyst (2026-09-29) ────────────────────────────────────────────
+def test_the_medical_pass_is_served_with_its_cadence_and_its_counters():
+    p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=NOW)
+    assert p["passes"]["med_catalyst"] == {"as_of": None, "date": None, "counts": {}, "cadence_sec": 300}
+    assert "med_catalyst" in AS.PASS_KINDS and "med_catalyst" not in AS.DAILY_PASS_KINDS
+    pc = FakeColl()
+    AS.record_pass("med_catalyst", {"roster": 362, "events_new": 3, "pushed": 1, "stale": 2}, NOW, coll=pc)
+    row = AS.status_payload(pass_coll=pc, latest_coll=FakeColl(), now=NOW)["passes"]["med_catalyst"]
+    assert row["counts"] == {"roster": 362, "events_new": 3, "pushed": 1, "stale": 2}
+
+
+def test_alert_status_stays_a_leaf_it_never_imports_the_medical_package():
+    import re
+    src = (ROOT / "backend/supply_demand/alert_status.py").read_text()
+    assert not re.search(r"^\s*(from|import)\s+catalysts", src, re.M)

@@ -58,6 +58,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   stage_out_alert:     { emoji: '📉', label: 'Stage-out',               group: 'trading' },
   accumulation_change: { emoji: '🏦', label: 'Accumulation change',     group: 'trading' },
   scalp_tape:          { emoji: '🎛️', label: 'Scalp tape',              group: 'trading' },
+  // 🧬 catalysts/medical (2026-09-29) — a high-impact medical event (FDA
+  // approval / CRL, Phase 3 topline, Breakthrough Therapy, clinical hold) on
+  // a $2+ name trading $5M+/day, while the news is still fresh. ON for the
+  // owner (keep-set), off for everyone else. UNMEASURED — setup: pending study.
+  med_catalyst:        { emoji: '🧬', label: 'Medical catalyst',        group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },

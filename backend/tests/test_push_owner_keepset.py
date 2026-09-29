@@ -36,11 +36,17 @@ def test_keep_set_is_the_2026_09_21_nine():
     WIDENED AGAIN 2026-09-25 — 🔑 `key_level_alert`. Asked whether to turn the
     key-level push on, he answered "On: week + month + 52-week", scope
     "Holdings + Signals list", "No, close only". It stays False in
-    default_prefs for everyone else."""
+    default_prefs for everyone else.
+
+    WIDENED AGAIN 2026-09-29 — 🧬 `med_catalyst`. Ajay: "can you add a new
+    routine to scan for … amd trails or other medi cal nws … and add right
+    setup and alerts". ON for the owner because he asked for alerts (the
+    key_level_alert precedent); False in default_prefs for everyone else. HIS
+    CALL #1 turns it off."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert", "key_level_alert"})
+        "board_arrival", "price_alert", "key_level_alert", "med_catalyst"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices

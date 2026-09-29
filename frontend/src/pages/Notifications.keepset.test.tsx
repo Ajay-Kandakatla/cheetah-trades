@@ -54,7 +54,9 @@ import NotificationsPage, { CATEGORIES, PRESETS } from './Notifications';
 
 const RETIRED = ['minervini_flashcards', 'vb_workout', 'vb_supplement', 'vb_education'];
 const KEEP_SET = ['hot_pullback_alert', 'pattern_alert', 'demand_alert', 'position_alert',
-  'potus_investment', 'growth_demand_alert', 'earnings_reaction', 'board_arrival'];
+  'potus_investment', 'growth_demand_alert', 'earnings_reaction', 'board_arrival',
+  // 🧬 2026-09-29: med_catalyst ships ON for the owner (backend OWNER_KEEP_SET).
+  'med_catalyst'];
 
 const draw = () => render(<MemoryRouter><NotificationsPage /></MemoryRouter>);
 

@@ -1,0 +1,135 @@
+{
+ "hits": {
+  "total": {
+   "value": 5
+  },
+  "hits": [
+   {
+    "_id": "0001193125-26-403481:d185059dex991.htm",
+    "_source": {
+     "adsh": "0001193125-26-403481",
+     "ciks": [
+      "0001468748"
+     ],
+     "display_names": [
+      "Kodiak Sciences Inc.  (KOD)  (CIK 0001468748)"
+     ],
+     "sics": [
+      "2836"
+     ],
+     "items": [
+      "8.01",
+      "9.01"
+     ],
+     "file_date": "2026-09-28",
+     "form": "8-K",
+     "file_type": "EX-99.1",
+     "root_forms": [
+      "8-K"
+     ]
+    }
+   },
+   {
+    "_id": "0001759425-26-000049:mirm-20260925.htm",
+    "_source": {
+     "adsh": "0001759425-26-000049",
+     "ciks": [
+      "0001759425"
+     ],
+     "display_names": [
+      "Mirum Pharmaceuticals, Inc.  (MIRM)  (CIK 0001759425)"
+     ],
+     "sics": [
+      "2834"
+     ],
+     "items": [
+      "8.01"
+     ],
+     "file_date": "2026-09-28",
+     "form": "8-K",
+     "file_type": "8-K",
+     "root_forms": [
+      "8-K"
+     ]
+    }
+   },
+   {
+    "_id": "0001437749-26-031364:ex_950508.htm",
+    "_source": {
+     "adsh": "0001437749-26-031364",
+     "ciks": [
+      "0001005731"
+     ],
+     "display_names": [
+      "IDT CORP  (IDT)  (CIK 0001005731)"
+     ],
+     "sics": [
+      "4813"
+     ],
+     "items": [
+      "2.02",
+      "9.01"
+     ],
+     "file_date": "2026-09-28",
+     "form": "8-K",
+     "file_type": "EX-99.1",
+     "root_forms": [
+      "8-K"
+     ]
+    }
+   },
+   {
+    "_id": "0000730263-26-000028:thoq4fy26-qa.htm",
+    "_source": {
+     "adsh": "0000730263-26-000028",
+     "ciks": [
+      "0000730263"
+     ],
+     "display_names": [
+      "THOR INDUSTRIES INC  (THO)  (CIK 0000730263)"
+     ],
+     "sics": [
+      "3716"
+     ],
+     "items": [
+      "2.02",
+      "7.01",
+      "9.01"
+     ],
+     "file_date": "2026-09-22",
+     "form": "8-K",
+     "file_type": "EX-99.3",
+     "root_forms": [
+      "8-K"
+     ]
+    }
+   },
+   {
+    "_id": "0001193125-26-401157:d168737dex991.htm",
+    "_source": {
+     "adsh": "0001193125-26-401157",
+     "ciks": [
+      "0001070494"
+     ],
+     "display_names": [
+      "ACADIA PHARMACEUTICALS INC  (ACAD)  (CIK 0001070494)"
+     ],
+     "sics": [
+      "2834"
+     ],
+     "items": [
+      "7.01",
+      "8.01",
+      "9.01"
+     ],
+     "file_date": "2026-09-24",
+     "form": "8-K",
+     "file_type": "EX-99.1",
+     "root_forms": [
+      "8-K"
+     ]
+    }
+   }
+  ]
+ }
+}

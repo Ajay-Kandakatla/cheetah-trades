@@ -594,6 +594,28 @@ async def get_calendar(
     return cal_mod.get_calendar(days=days, force=force)
 
 
+# 🧬 Medical catalysts (2026-09-29). Declared ABOVE `/catalysts/{ticker}` —
+# below it, "/catalysts/medical" is swallowed by `deep_dive` (route order).
+# UNMEASURED: the payload serves `labels.setup = "pending study"` and never an
+# entry, stop or target.
+@router.get("/catalysts/medical")
+async def get_medical(days: int = Query(30, ge=1, le=180), type: Optional[str] = None,
+                      modality: Optional[str] = None, area: Optional[str] = None,
+                      high_only: bool = False):
+    import asyncio
+    from .medical import board as med_board
+    payload = await asyncio.to_thread(med_board.board_payload, days, type, modality, area, high_only)
+    return _scrub(payload)
+
+
+@router.get("/catalysts/medical/{symbol}")
+async def get_medical_symbol(symbol: str, days: int = Query(180, ge=1, le=730)):
+    import asyncio
+    from .medical import board as med_board
+    payload = await asyncio.to_thread(med_board.symbol_payload, symbol, days)
+    return _scrub(payload)
+
+
 @router.get("/catalysts/{ticker}")
 async def deep_dive(ticker: str, with_gemma: bool = Query(True)):
     """Deep dive on a single ticker — chatter + evidence + Gemma review.
