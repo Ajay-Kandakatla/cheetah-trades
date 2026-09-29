@@ -9,6 +9,11 @@
 `backend/tests/test_biotech_theme.py` ·
 `frontend/src/components/HottestSectors.test.tsx`
 
+> **2026-09-28: MDB and TDC moved to `data_infra`; roster 16; headroom 8.**
+> A ticker lives in exactly one roster, and Ajay asked for a data sector
+> naming MongoDB (see `docs/sepa/universe_data_infra.md`). The sections below
+> are the 2026-09-18 record.
+
 ---
 
 ## 0. The ask, verbatim

@@ -580,6 +580,9 @@ describe('themeLabel', () => {
     // so a roster that exists only in supply_demand/sectors.py never reaches
     // him — the Hot-sectors strip ranks THEMES, and this is one.
     'semi_materials',
+    // 2026-09-28: the data layer (SNOW, DDOG, MDB …) — rank 12 on the backend,
+    // appended here at the end like semi_materials.
+    'data_infra',
   ];
 
   it('labels every theme the backend can emit', () => {
@@ -592,6 +595,16 @@ describe('themeLabel', () => {
   it('lists the themes in the backend priority order', () => {
     // Legend order and tile order should tell the same story.
     expect(Object.keys(THEME_LABEL)).toEqual(BACKEND_THEMES);
+  });
+
+  it('labels data_infra (2026-09-28)', () => {
+    expect(themeLabel('data_infra')).toBe('🗄️ Data infra');
+  });
+
+  it('NEGATIVE: cloud_infra is still unlabelled here — the backfill is his call', () => {
+    // documents the known gap: the fallback prints the key with spaces
+    expect(THEME_LABEL.cloud_infra).toBeUndefined();
+    expect(themeLabel('cloud_infra')).toBe('cloud infra');
   });
 
   it('carries the two Ajay named specifically', () => {
