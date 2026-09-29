@@ -67,6 +67,10 @@ Same minute:
 | 🧲 GEX chips | yes | the builder calls `_gex_decor(out, "demand")` |
 | Server room floor (`ROOM_TABS`) | **no**; HIS CALL #2 | — |
 | 🌀 AMD grade / 🔻 in-flight tab buttons | **no**; HIS CALL #4 (they pick a slice of the AMD sweep; the read MEASURED INVERTED) | — |
+| 🌀 AMD raided filter (2026-09-29) | yes | `hottest_amd.attach` → grade `== TB.AMD_TURNING` (`dual_momentum_filters_2026_09_29.md`) |
+| 📍 near demand filter (2026-09-29) | yes | `dm_zone.gate.prox_ok` (`demand_proximity_gate`'s own default = `ALERT_MAX_ABOVE_DEMAND_PCT`); no band under the print = fail |
+| 🔑 near lower key level filter (2026-09-29) | yes | `KLT.build` (memoised) / `KLT.rank`, `KEY_LEVEL_NEAR_PCT` HIS CALL |
+| 💰 market-cap order (2026-09-29) | yes; `market_cap` / `market_cap_asc`, tab-scoped like 📍 | `promo_circuit.market_caps_for(…, cap=0)` → `market_cap_key`, pre-cut |
 | BUY / STOP / TARGET plan lines | **no**; HIS CALL #4 | — |
 
 ## Payload (`GET /chart-maps?tab=dual_momentum&limit=80[&sort=nearest_demand]`)
@@ -96,7 +100,7 @@ keeps being served meanwhile; a new scan generation or ET date is tried at once.
 1. **Tab slot:** right after 🔑 Key Levels.
 2. **🎯 on this tab (BLOCKING before promote).** The shipped default is kind `demand` with 🎯 Enterable only ON, exactly as on every demand board. The critic's pre-build probe: 77 of 80 leaders BLOCKED, 2 READY, 1 with no stored bands, so the default view shows 2 of 80 and none of the page's top 15. Untick 🎯 to see every leader. The options are (b) open this tab with the filter OFF, (c) chip-only, (d) kind `n/a`. The server room floor is not added.
 3. **Pool and liquidity:** ranks 1–80. The house liquidity floor applies and its count is printed.
-4. **Not carried:** the AMD grade/flight tab buttons and the plan lines. The AMD phases overlay checkbox DOES work here.
+4. **Not carried:** the AMD grade/flight tab buttons and the plan lines. The AMD phases overlay checkbox DOES work here. **Amended 2026-09-29:** a 🌀 raided FILTER is carried since 2026-09-29 at his ask ("Can you add AMD raided and near demand zone and near lower Key level filters to dual momentum please"); the grade/flight buttons still are not. See `dual_momentum_filters_2026_09_29.md`.
 5. Beyond the curated data heal: WP-DATA, see `docs/sepa/dual_momentum_data_audit_2026_09_29.md`.
 6. The BNY/GOLD refetch: WP-DATA.
 7. **Declutter:** both the toggle and the Sort select show the one served sort.

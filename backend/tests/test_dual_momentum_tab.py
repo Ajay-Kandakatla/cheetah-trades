@@ -32,6 +32,7 @@ from sepa import scanner
 from supply_demand import alert_gates as AG
 from supply_demand import bounce_room, room_floor, zone_store
 from supply_demand import enterable as EN
+from supply_demand import key_levels as KL
 
 ET = ZoneInfo("America/New_York")
 # the REAL attachers, captured before the board fixture stubs them (test 16)
@@ -96,12 +97,14 @@ def _clean_memo(monkeypatch):
     DMT._memo.clear()
     DMT._warming.clear()
     DMT._failed.clear()
+    DMT._kl_memo.clear()                    # the 🔑 filter read's pool memo (2026-09-29)
     spawns = []
     monkeypatch.setattr(DMT, "_spawn", lambda target, name: spawns.append((target, name)))
     yield spawns
     DMT._memo.clear()
     DMT._warming.clear()
     DMT._failed.clear()
+    DMT._kl_memo.clear()
 
 
 @pytest.fixture
@@ -428,6 +431,25 @@ def dm_board(monkeypatch, scan_file):
     monkeypatch.setattr(B, "_gex_decor", gex_spy)
     monkeypatch.setattr(B, "_attach_studies",
                         lambda out, days: state["studies"].append(len(out.get("tiles") or [])))
+    # 🌀 / 📍 / 🔑 filter reads (2026-09-29): hermetic defaults — no sweep, every
+    # key level unread, no first-seen row. The filters test file overrides them
+    # through `state` ("amd_cells" / "amd_summary" / "level_reads" / "level_error").
+    state.update(amd_cells={}, amd_summary={"available": False},
+                 level_reads=None, level_error=None, fs_calls=[])
+
+    def amd_reads_stub(syms, **k):
+        return dict(state["amd_cells"]), dict(state["amd_summary"])
+
+    def level_reads_stub(syms, raw, **k):
+        lr = state["level_reads"]
+        if lr is None:
+            return {s: {"status": DMT.LEVEL_UNREAD, "near": None} for s in syms}, state["level_error"]
+        return dict(lr), state["level_error"]
+
+    monkeypatch.setattr(DMT, "amd_reads", amd_reads_stub)
+    monkeypatch.setattr(DMT, "key_level_reads", level_reads_stub)
+    monkeypatch.setattr(KL, "read_first_seen",
+                        lambda *a, **k: state["fs_calls"].append(a) or {})
 
     def seed(picks, docs, snaps, scan=None, rows=None):
         state["picks"] = picks
