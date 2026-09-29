@@ -68,6 +68,7 @@ import EmaFramesBoard from '../components/EmaFramesBoard';
 import PotusBoard from '../components/PotusBoard';
 import NewsTabBoard from '../components/NewsTabBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
+import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
@@ -526,7 +527,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // The ICT tab warms its OWN engine (ict_board cache), not the demand scan —
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
-    data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict');
+    data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -807,6 +808,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * (`dropped_uncorroborated`) is narrowed here rather than widening a
         * shared board type from this package. */}
       {tab === 'ipo' && <IpoUpcomingStrip data={data?.upcoming ?? null} corroboration={data?.corroboration ?? null} counts={(data?.counts as IpoCounts | null | undefined) ?? null} />}
+      {/* 🔑 Key Levels tab (2026-09-28): the served header (what was ranked,
+        * what was not and why) and the UNMEASURED note, printed verbatim. It
+        * also carries the warming line, so the generic demand counter below is
+        * skipped on this tab. */}
+      {tab === 'key_levels' && <KeyLevelsBoardNote board={data?.key_levels_board ?? null} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
@@ -1474,7 +1480,9 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             The charts appear here as soon as it lands; you don't need to refresh.
           </p>
         </>
-      ) : data?.warming ? (
+      ) : data?.warming && tab !== 'key_levels' ? (
+        /* 🔑 Key Levels warms its own memo (not the demand scan) — its
+         * served warming line is printed by KeyLevelsBoardNote above. */
         <>
           <DemandScanProgress progress={demandProgress ?? data.progress}
                               universeLabel={data.universe_key || universe}

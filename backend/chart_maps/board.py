@@ -51,7 +51,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -3801,6 +3801,80 @@ def ipo_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     }
 
 
+def key_level_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                    universe: str = "full", themes_first: bool = False,
+                    sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                    ctx: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
+    """🔑 Key Levels — names near a LOWER key level, closest first.
+
+    Ajay 2026-09-28: *"Also create me tab for keylevel main. Sort them by
+    stocks that are near lower keylevels"*.
+
+    The closed-bar half (levels, the last-bar read, the 50-bar turnover) is
+    memoised per session in `chart_maps.key_levels_tab`; this ranks it against
+    ONE universe `bulk_snapshot` and hands that map, the clock and the ONE
+    first-seen read to `board()` through `ctx`, so the 🔑 badge and the drawn
+    🔑 line read the same row at the same minute. Turnover = the scan row's,
+    else the closed frame's `quick_bounce.avg_dollar_vol` (same formula); a
+    name with neither is counted `no_turnover`, never called thin.
+
+    UNMEASURED and display only — an order by distance, not a signal.
+    """
+    from chart_maps import key_levels_tab as KLT
+    from supply_demand import key_levels as KL
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    session = KLT.session_for(now_et)
+    got = KLT.cached_or_warm(universe, now=now_et)
+    if got["state"] == "warming":
+        return {"tiles": [], "warming": True, "note": KLT.WARMING_NOTE,
+                "key_levels_board": KLT.warming_block(now=now_et)}
+    entry = got["entry"]
+    raw = _bulk_snaps(entry["syms"])                                # the ONE fan-out
+    first_seen = KL.read_first_seen(session.isoformat())            # ONE read, shared with the decorator
+    if ctx is not None:
+        ctx.update(snaps=raw, now=now_et, first_seen=first_seen)
+    ph = KL.phase(now_et, session)
+    ranked, counts = KLT.rank(entry, raw, now=now_et, first_seen=first_seen)
+    try:
+        from sepa import scanner
+        latest = scanner.load_latest() or {}
+        scan_by_sym = {r.get("symbol"): r for r in (latest.get("all_results") or [])
+                       if isinstance(r, dict) and r.get("symbol")}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("key_level_tiles: scan rows unavailable: %s", exc)
+        scan_by_sym = {}
+    tiles = []
+    for r in ranked:
+        sym = r["symbol"]
+        m = tile_metrics(scan_by_sym.get(sym) or {})
+        if m.get("avg_turnover") is None:
+            # No scan row (a third of the universe, every pinned ETF): the
+            # closed frame's 50-bar close x volume — the same formula.
+            m["avg_turnover"] = r.get("avg_dollar_vol_50")
+        tiles.append({"symbol": sym, "theme": _theme(sym), "href": _href(sym),
+                      "last_close": r.get("ref_close"),
+                      "bands": [], "lines": [], "markers": [], "stats": [],
+                      "badges": [{"text": r["near"]["text"], "tone": "muted"}],
+                      "key_level_near": r["near"],
+                      **m, "_m": dict(m), "_score": -abs(r["near"]["distance_pct"])})
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    no_turnover = (sum(1 for t in tiles if t["_m"].get("avg_turnover") is None)
+                   if floor_on else 0)
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier=min_tier, snaps=raw)
+    for t in out:
+        t["name"] = _name_for(t["symbol"])
+    counts = {**counts, "no_turnover": no_turnover,
+              "dropped_thin": meta["dropped_thin"] - no_turnover, "shown": len(out)}
+    return {"tiles": out, "sort_unavailable": meta.get("sort_unavailable"),
+            "matched": counts["ranked"] - meta["dropped_thin"],
+            "note": KLT.EMPTY_NOTE if not out else KLT.NOTE,
+            "key_levels_board": KLT.ready_block(
+                counts, now=now_et, session=session, ph=ph,
+                sort_label=None if sort == DEFAULT_SORT else SORTS.get(sort),
+                themes_first=themes_first, built_at=entry.get("built_at"))}
+
+
 def _usd_short(v) -> str:
     """$1.5B / $281M. Whole units — a dollar-volume figure carrying cents is
     false precision on a number that moves by millions between prints."""
@@ -6232,6 +6306,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = earnings_tiles(limit, days)
     elif t == "ipo":
         out = ipo_tiles(limit, days, themes_first, tier)
+    elif t == "key_levels":
+        out = key_level_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -6321,6 +6397,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     out["sort"] = DEFAULT_SORT if _fixed else srt
     out["sorts"] = [] if _fixed else [{"key": k, "label": v}
                                               for k, v in SORTS.items()]
+    if t == "key_levels":
+        # "⭐ Best setup first" is false on this tab: its default is a distance.
+        from chart_maps import key_levels_tab as _KLT
+        out["sorts"] = [{**s, "label": _KLT.DEFAULT_SORT_LABEL} if s["key"] == DEFAULT_SORT
+                        else s for s in out["sorts"]]
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier
@@ -6461,9 +6542,16 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         log.debug("chart-maps: momentum burst unavailable: %s", exc)
     # 🔑 KEY LEVELS, after ⚡ and in their own try: display only — the lines,
     # the PRICE chip and the ▸ more line; nothing sorts, hides or gates on them.
+    # The 🔑 Key Levels tab draws 2 each way and hands its OWN clock and
+    # first-seen read (`_ctx`), so its badge and its drawn line agree; every
+    # other tab passes None (the grid cap, its own clock, its own read).
+    _kl_per_side = None
+    if t == "key_levels":
+        from chart_maps import key_levels_tab as _KLT
+        _kl_per_side = _KLT.DRAW_PER_SIDE
     if t != "ict":
         try:
-            attach_key_levels(_tiles, out, live=_live, frames=_frames)
+            attach_key_levels(_tiles, out, live=_live, frames=_frames, per_side=_kl_per_side, now=_ctx.get("now"), first_seen=_ctx.get("first_seen"))
         except Exception as exc:                                # noqa: BLE001
             log.debug("chart-maps: key levels unavailable: %s", exc)
     return out

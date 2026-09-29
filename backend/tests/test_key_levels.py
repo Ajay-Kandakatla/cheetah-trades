@@ -701,7 +701,9 @@ _IMPORT_RE = re.compile(
     r"|from\s+\.\s+import\s+[^\n]*\bkey_levels\b"
     r"|from\s+\.key_levels\s+import)", re.M)
 ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_alerts.py",
-           "supply_demand/rules_info.py", "supply_demand/key_levels.py"}
+           "supply_demand/rules_info.py", "supply_demand/key_levels.py",
+           # the 🔑 Key Levels tab (2026-09-28): one display module, orders one board
+           "chart_maps/key_levels_tab.py"}
 
 
 def test_import_guard_display_only():
@@ -910,3 +912,54 @@ def test_a_high_lost_downward_reads_back_under_and_natural_breaks_still_say_brok
                         row={**row, "open": 100.4}, now=NOW_RTH, session=NOW_RTH.date(),
                         first_seen={})
     assert KL.chip(lv, "rth")["text"] == "🔑 gapped through PWH 100.00 ↑"
+
+
+# --------------------------------------------------------------------------
+# 2026-09-28 — the 🔑 Key Levels tab: set_on for every period, board pins
+# --------------------------------------------------------------------------
+def test_board_periods_are_the_daily_grids_own_periods():
+    assert KL.BOARD_PERIODS == KL.FRAME_PERIODS["daily"]
+    assert KL.BOARD_KINDS == ("low",)
+    assert KL.THROUGH_STATES == ("broken", "closed_beyond")
+    assert KL.LAST_BAR_STATES == ("reversal", "tested")
+
+
+def test_week_month_day_members_carry_set_on_the_bar_of_the_extreme():
+    s = date(2026, 9, 29)                                     # a Tuesday
+    df = _frame("2026-09-28", n=80, sets={"2026-09-23": {"low": 95.0, "high": 104.0},
+                                          "2026-08-12": {"low": 90.0},
+                                          "2026-08-20": {"high": 110.0}})
+    lv = KL.period_levels(KL.closed_frame(df, s), s, ("day", "week", "month", "year"))
+    by = {m["id"].rsplit("_", 1)[0]: m for m in lv}
+    assert by["week_low"]["set_on"] == "2026-09-23" and by["week_high"]["set_on"] == "2026-09-23"
+    assert by["month_low"]["set_on"] == "2026-08-12" and by["month_high"]["set_on"] == "2026-08-20"
+    assert by["day_low"]["set_on"] == "2026-09-28" and by["day_high"]["set_on"] == "2026-09-28"
+    # ties -> the FIRST bar of the period (flat frame: every low is 99)
+    flat = KL.period_levels(KL.closed_frame(_frame("2026-09-28", n=80), s), s, ("week",))
+    assert _by_id(flat, "week_low")[0]["set_on"] == "2026-09-21"
+    # year unchanged: set_on = the argmin over the last YEAR_BARS closed bars
+    big = _frame("2026-09-28", n=300, sets={"2026-03-04": {"low": 70.0}})
+    yl = _by_id(KL.period_levels(KL.closed_frame(big, s), s, ("year",)), "year_low")[0]
+    assert yl["set_on"] == "2026-03-04" and yl["as_of"] == "2026-09-28"
+
+
+def test_NEGATIVE_week_set_on_changes_no_card_or_push_text():
+    from supply_demand import key_level_alerts as KLA
+    s = date(2026, 9, 29)
+    df = _frame("2026-09-28", n=80, sets={"2026-09-23": {"low": 95.0}})
+    lv = KL.period_levels(KL.closed_frame(df, s), s, ("week",))
+    wl = _by_id(lv, "week_low")[0]
+    assert wl["set_on"] == "2026-09-23"
+    fold = KL.fold_text([wl], frame="daily", stale_note=None, session=s)
+    assert fold == "🔑 RTH levels · PWL 95.00" and "(set" not in fold
+    assert KLA._frozen_note(wl, False) == "level frozen at the Fri 09-25 close"
+    assert KLA._frozen_note(wl, True) == "prior-week low frozen at the Fri 09-25 close"
+    assert "set" not in KLA._frozen_note(wl, True)
+
+
+def test_import_guard_passes_with_the_cost_probe_which_imports_only_the_tab_module():
+    probe = (BACKEND / "scripts" / "key_levels_tab_cost_probe.py").read_text(encoding="utf-8")
+    assert not _IMPORT_RE.search(probe)
+    assert "from chart_maps import key_levels_tab as KLT" in probe
+    assert "import key_levels\n" not in probe and "key_levels as KL\n" not in probe
+    test_import_guard_display_only()

@@ -1577,7 +1577,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2159,7 +2159,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4657,7 +4657,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -4947,6 +4947,58 @@ const CONTRACTS = [
       const py = read('../backend/orderflow/tape.py');
       if (!/^def print_kind\(/m.test(py)) errs.push('backend tape.py lost print_kind');
       if (!/"side": None,/.test(py)) errs.push('backend auction rows must be served with side None');
+      return errs;
+    },
+  },
+  {
+    name: '🔑 Key Levels tab (2026-09-28): closest-first off the served block, UNMEASURED, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-28: "Also create me tab for keylevel main. Sort them by
+    // stocks that are near lower keylevels". The board is ranked on the server
+    // (chart_maps/key_levels_tab.py) and the page prints its served header;
+    // losing any of these links silently drops the tab or the UNMEASURED word.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('key_levels')) errs.push("CM_TABS must carry 'key_levels'");
+      const meta = /\n  key_levels: \{\n    label: '([^']*)',\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.key_levels (label + blurb) is missing');
+      } else {
+        if (!meta[2].includes('UNMEASURED')) errs.push('the TAB_META.key_levels blurb must say UNMEASURED');
+        if (/bounce/i.test(meta[2])) errs.push('the TAB_META.key_levels blurb says "bounce" — surfaces he reads say reversal');
+      }
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'key_levels' && <KeyLevelsBoardNote/.test(page)) errs.push("ChartMaps.tsx must render <KeyLevelsBoardNote … /> on tab === 'key_levels'");
+      if (!/data\?\.warming && tab !== 'key_levels' \?/.test(page)) errs.push('the generic (demand) warming branch must skip the key_levels tab');
+      const board = read('../backend/chart_maps/board.py');
+      if (!/elif t == "key_levels":/.test(board)) errs.push('board.py lost the elif t == "key_levels": dispatch');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"key_levels"/.test(tabsPy[1])) errs.push('board.py TABS must carry "key_levels"');
+      if (!/attach_key_levels\([^\n]*now=_ctx\.get\("now"\)/.test(board)) errs.push('board.py attach_key_levels must take now=_ctx.get("now") — one clock for the badge and the line');
+      let klt = '';
+      try { klt = read('../backend/chart_maps/key_levels_tab.py'); } catch { errs.push('backend/chart_maps/key_levels_tab.py is missing'); }
+      if (klt) {
+        if (!klt.includes('UNMEASURED')) errs.push('key_levels_tab.py must say UNMEASURED');
+        if (!klt.includes('avg_dollar_vol')) errs.push('key_levels_tab.py must take turnover from quick_bounce.avg_dollar_vol (the house 50-bar mean)');
+        // `quick_bounce` is a MODULE NAME (internal identifiers keep `bounce`,
+        // cheetah-ops) — the tab imports its avg_dollar_vol. Any other
+        // "bounc" is served wording and fails.
+        if (/bounc/i.test(klt.replace(/quick_bounce/g, ''))) errs.push('key_levels_tab.py says "bounce"');
+      }
+      const ladder = read('src/lib/cardLadder.ts');
+      const pp = /const PRICE_PREFIX = \[([^\]]*)\]/.exec(ladder);
+      if (!pp || !/'\\u\{1F511\} '|'🔑 '/.test(pp[1])) errs.push('cardLadder PRICE_PREFIX must route the served 🔑 position pill to PRICE');
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'key-levels-tab-2026-09-28'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'key-levels-tab-2026-09-28'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf('\n    addedAt', idAt) + 80);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🔑 Key Levels ✨ entry must say UNMEASURED');
+        if (/bounce/i.test(entry)) errs.push('the 🔑 Key Levels ✨ entry says "bounce"');
+        if (!entry.includes("route: '/chart-maps?tab=key_levels'")) errs.push("the 🔑 Key Levels ✨ entry must route to '/chart-maps?tab=key_levels'");
+      }
       return errs;
     },
   },

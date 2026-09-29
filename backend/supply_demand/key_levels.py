@@ -26,7 +26,10 @@ never served. A pierce that came back inside is a `reversal`.
 DISPLAY ONLY and UNMEASURED (`MEASURED = False`): nothing in trading/, the
 scans, the gates or any lane imports this module (a source-guard test pins
 it). No in-house study measures these breaks; the follow-up study is
-pre-registered in docs/chart_maps/key_levels_2026_09_25.md.
+pre-registered in docs/chart_maps/key_levels_2026_09_25.md. The 🔑 Key Levels
+tab (2026-09-28, his ask) ORDERS one display board by distance to the nearest
+lower level (`chart_maps/key_levels_tab.py`); nothing gates, pushes, sizes or
+enters on it.
 
 Spec: the key-levels build spec v2 (2026-09-25), §3.1–§3.4. Pure except
 `read_first_seen`; heavy imports are lazy inside the functions.
@@ -80,6 +83,13 @@ STATE_COLL = "key_level_state"   # one doc per session: {_id: "YYYY-MM-DD", firs
 MEASURED = False
 TONE, TONE_BROKEN = "key", "key_broken"
 MARK = "🔑"
+# The 🔑 Key Levels tab (2026-09-28): which members it ranks on. The daily
+# grid's own periods (pinned equal by a test) and lows only — the defaults;
+# adding "day" or "high" is his call (spec §7.1).
+BOARD_PERIODS = FRAME_PERIODS["daily"]
+BOARD_KINDS = ("low",)
+THROUGH_STATES = ("broken", "closed_beyond")
+LAST_BAR_STATES = ("reversal", "tested")      # close-phase states carried past the 20:00 roll
 
 _HALF_CENT = 0.005 + 1e-9        # same price to the cent — a representation tolerance, not a threshold
 _MINUS = "−"
@@ -359,25 +369,26 @@ def _is_after_hours_print(row: Optional[dict], session: date) -> bool:
 # ---------------------------------------------------------------------------
 # levels
 # ---------------------------------------------------------------------------
-def verify_last_row(closed, row: Optional[dict]) -> tuple[Optional[str], bool]:
-    """(stale sentence | None, verified). The last closed close must equal
-    the snapshot `prev_day_close` OR its day `close`, to the cent — either
-    match is enough (before Massive rolls the day it is `close`, after it is
+def verify_last(last_close, last_date_iso, row: Optional[dict]) -> tuple[Optional[str], bool]:
+    """`verify_last_row` on primitives: the last closed close and its date.
+    (stale sentence | None, verified). The last closed close must equal the
+    snapshot `prev_day_close` OR its day `close`, to the cent — either match is
+    enough (before Massive rolls the day it is `close`, after it is
     `prev_day_close`). No snapshot price at all -> (None, False)."""
-    if closed is None or len(closed) == 0:
+    if last_date_iso is None:
         return None, False
     if not _has_row(row):
         return None, False
     pdc, cl = _pos(row.get("prev_day_close")), _pos(row.get("close"))
     if pdc is None and cl is None:
         return None, False
-    last = _f(closed["close"].iloc[-1])
+    last = _f(last_close)
     if last is None:
         return None, False
     for official in (pdc, cl):
         if official is not None and abs(last - official) <= _HALF_CENT:
             return None, True
-    d = _norm_index(closed)[-1].date().isoformat()
+    d = str(last_date_iso)[:10]
     official = pdc if pdc is not None else cl
     if cl is not None:
         from sepa import prices
@@ -386,6 +397,15 @@ def verify_last_row(closed, row: Optional[dict]) -> tuple[Optional[str], bool]:
             official = cl        # the snapshot is still that bar's day: its close is the comparator
     return (f"the {d} bar in our cache is not the final close yet "
             f"({last:.2f} vs {official:.2f})"), False
+
+
+def verify_last_row(closed, row: Optional[dict]) -> tuple[Optional[str], bool]:
+    """(stale sentence | None, verified) for a closed frame — `verify_last`
+    on its last close and date."""
+    if closed is None or len(closed) == 0:
+        return None, False
+    return verify_last(_f(closed["close"].iloc[-1]),
+                       _norm_index(closed)[-1].date().isoformat(), row)
 
 
 def _member(period: str, kind: str, price, as_of, *, set_on=None,
@@ -438,13 +458,23 @@ def period_levels(closed, session: date, periods) -> list[dict]:
             return
         sub_idx = idx[sub_mask]
         as_of_d = sub_idx[-1].date()
-        for kind, col, fn in (("high", "high", "max"), ("low", "low", "min")):
+        for kind, col, fn, arg in (("high", "high", "max", np.nanargmax),
+                                   ("low", "low", "min", np.nanargmin)):
             price = getattr(sub[col], fn)()
             lcc = None
             if period in ("week", "month"):
                 px = _f(price)
                 lcc = _last_close_cross(closed, idx, as_of_d, px, kind) if px else None
-            m = _member(period, kind, price, as_of_d.isoformat(), last_close_cross=lcc)
+            # The bar that set it (2026-09-28, every period — the year block
+            # below always did). Every card / push reader still gates on
+            # period == "year"; the 🔑 Key Levels tab reads it to flag a low
+            # made in the last session.
+            try:
+                set_on = sub_idx[int(arg(sub[col].to_numpy(dtype=float)))].date().isoformat()
+            except Exception:                                   # noqa: BLE001
+                set_on = None
+            m = _member(period, kind, price, as_of_d.isoformat(), set_on=set_on,
+                        last_close_cross=lcc)
             if m:
                 out.append(m)
 
@@ -580,16 +610,27 @@ def member_state(level: dict, *, ref_close: float, row: Optional[dict], now: dat
     return out
 
 
-def _anchor(row: Optional[dict], now: datetime, session: date, ref_close) -> Optional[float]:
-    """The fresh print, else the day close in RTH/AH, else ref_close."""
+def anchor_read(row: Optional[dict], now: datetime, session: date,
+                ref_close) -> tuple[Optional[float], Optional[str], Optional[str]]:
+    """(price, basis, tape): the fresh print ("live", with its tape session),
+    else the day close in RTH/AH ("day_close"), else ref_close ("last_close");
+    (None, None, None) when there is no ref_close either."""
     x = fresh_print(row, now, session) if isinstance(row, dict) else None
     if x is not None:
-        return x
+        return x, "live", _print_session(row)
     if phase(now, session) in ("rth", "close") and isinstance(row, dict):
         c = _pos(row.get("close"))
         if c is not None:
-            return c
-    return _f(ref_close)
+            return c, "day_close", None
+    r = _f(ref_close)
+    if r is None:
+        return None, None, None
+    return r, "last_close", None
+
+
+def _anchor(row: Optional[dict], now: datetime, session: date, ref_close) -> Optional[float]:
+    """The fresh print, else the day close in RTH/AH, else ref_close."""
+    return anchor_read(row, now, session, ref_close)[0]
 
 
 def read_levels(levels, *, symbol, ref_close, row, now, session, first_seen) -> list[dict]:
@@ -811,6 +852,33 @@ def rule_text() -> str:
 # ---------------------------------------------------------------------------
 # one tile
 # ---------------------------------------------------------------------------
+def closed_levels(symbol, df, *, frame: str, session: date, closed=None) -> dict:
+    """The FROZEN half of `tile_block`: {"levels", "ref_close", "last_date",
+    "stale_note"} from CLOSED daily bars only. `closed` = an already-cut
+    closed frame (the Key Levels tab's build cuts once per name); None ->
+    `closed_frame(df, session)`. No bars -> no levels and the "no cached daily
+    bars" note; bars ending before the prior market day -> the "need bars
+    through" note, levels still computed. Pre-market levels are not here —
+    they come from the intraday bars, not the daily frame."""
+    sym = str(symbol or "").upper()
+    frame = frame if frame in FRAME_PERIODS else "daily"
+    periods = FRAME_PERIODS[frame]
+    if closed is None and df is not None:
+        closed = closed_frame(df, session)
+    if closed is None or len(closed) == 0:
+        return {"levels": [], "ref_close": None, "last_date": None,
+                "stale_note": f"no cached daily bars for {sym}"}
+    last_d = _norm_index(closed)[-1].date()
+    need = prev_market_day(session)
+    stale_note = None
+    if last_d < need:
+        stale_note = (f"key levels need bars through {need.isoformat()}; "
+                      f"cached bars end {last_d.isoformat()}")
+    return {"levels": period_levels(closed, session, [p for p in periods if p != "pre"]),
+            "ref_close": _f(closed["close"].iloc[-1]),
+            "last_date": last_d.isoformat(), "stale_note": stale_note}
+
+
 def tile_block(symbol, df, *, frame, row, now, per_side, bars=None, first_seen=None,
                existing_lines=()) -> tuple[dict, list]:
     """(tile['key_levels'] block, lines to append) for one tile."""
@@ -826,19 +894,12 @@ def tile_block(symbol, df, *, frame, row, now, per_side, bars=None, first_seen=N
     levels: list[dict] = []
     ref_close = None
 
-    closed = closed_frame(df, session) if df is not None else None
-    if closed is None or len(closed) == 0:
-        stale_note = f"no cached daily bars for {sym}"
-    else:
-        last_d = _norm_index(closed)[-1].date()
-        need = prev_market_day(session)
-        if last_d < need:
-            stale_note = (f"key levels need bars through {need.isoformat()}; "
-                          f"cached bars end {last_d.isoformat()}")
-        else:
-            stale_note, verified = verify_last_row(closed, row)
-        ref_close = _f(closed["close"].iloc[-1])
-        levels = period_levels(closed, session, [p for p in periods if p != "pre"])
+    frozen = closed_levels(sym, df, frame=frame, session=session)
+    stale_note = frozen["stale_note"]
+    ref_close = frozen["ref_close"]
+    levels = list(frozen["levels"])
+    if frozen["last_date"] is not None and not stale_note:
+        stale_note, verified = verify_last(ref_close, frozen["last_date"], row)
     if "pre" in periods:
         levels += premarket_levels(bars, session, now_et)
 
@@ -878,6 +939,130 @@ def tile_block(symbol, df, *, frame, row, now, per_side, bars=None, first_seen=N
              "fold": fold_text(read, frame=frame, stale_note=stale_note, session=session),
              "rule": rule_text(), "stale_note": stale_note}
     return block, lines
+
+
+# ---------------------------------------------------------------------------
+# the 🔑 Key Levels tab (2026-09-28) — nearest LOWER level, per name. Pure;
+# every side, state, anchor and distance is the engine's own read above.
+# ---------------------------------------------------------------------------
+def row_or_none(raw) -> Optional[dict]:
+    """`row_from_snapshot(raw)` when it carries any value, else None."""
+    row = row_from_snapshot(raw)
+    return row if _has_row(row) else None
+
+
+def last_bar_read(member: dict, closed) -> Optional[dict]:
+    """The CLOSE-phase read of the LAST closed bar against one level whose
+    period ended BEFORE that bar — so the 20:00 roll does not erase the
+    session that just closed. ONE `member_state` call at that bar's
+    close-confirm minute, sided by the close before it.
+    {date, state, low_through_pct} when the state is in LAST_BAR_STATES;
+    None when the bar is inside the level's own period (as_of >= its date),
+    with fewer than two closed bars, or on any non-finite value."""
+    try:
+        if not isinstance(member, dict) or closed is None or len(closed) < 2:
+            return None
+        d = _norm_index(closed)[-1].date()
+        as_of = date.fromisoformat(str(member.get("as_of"))[:10])
+        if as_of >= d:
+            return None
+        L = _pos(member.get("price"))
+        bar = closed.iloc[-1]
+        o, h, lo, c = (_pos(bar.get(k)) for k in ("open", "high", "low", "close"))
+        prev = _pos(closed["close"].iloc[-2])
+        if L is None or None in (o, h, lo, c, prev):
+            return None
+        row = {"open": o, "high": h, "low": lo, "close": c, "last_trade_price": None,
+               "last_trade_ts_ms": None, "prev_day_close": prev}
+        now = datetime.combine(d, close_confirm_at(d), tzinfo=ET)
+        st = member_state(member, ref_close=prev, row=row, now=now, session=d,
+                          first=None, symbol="")
+    except Exception:                                           # noqa: BLE001
+        return None
+    state = st.get("state")
+    if state not in LAST_BAR_STATES:
+        return None
+    through = _through_pct(st["side"], lo, L)
+    return {"date": d.isoformat(), "state": state,
+            "low_through_pct": round(through, 2) if through > 0 else None}
+
+
+def is_through(member: dict, anchor_px) -> bool:
+    """A lower level the print is already through: a through state, an
+    after-hours print through it, or (support side) the anchor itself beyond
+    it — rth with no fresh print reads `pierced` while the DAY CLOSE anchor is
+    through."""
+    if member.get("state") in THROUGH_STATES or member.get("ah_through"):
+        return True
+    L = _f(member.get("price"))
+    return (member.get("side") == "support" and L is not None and L > 0
+            and _beyond("support", _f(anchor_px), L))
+
+
+def nearest_lower(read: list, anchor_px) -> dict:
+    """{status, nearest, through}. Lower = a BOARD_KINDS member of
+    BOARD_PERIODS on the SUPPORT side (sided by the last close — the house
+    rule); a low above the last close is not a lower level. status 'ranked'
+    (the nearest not-through low by |dist|, a tie to the longer period),
+    'broken' (every lower level is through) or 'no_level'."""
+    lows = [m for m in read or [] if isinstance(m, dict)
+            and m.get("kind") in BOARD_KINDS and m.get("period") in BOARD_PERIODS
+            and m.get("side") == "support"]
+    through = [m for m in lows if is_through(m, anchor_px)]
+    live = [m for m in lows if not is_through(m, anchor_px) and _f(m.get("dist_pct")) is not None]
+    nearest = (min(live, key=lambda m: (abs(float(m["dist_pct"])),
+                                        -PERIOD_RANK.get(m.get("period"), 0)))
+               if live else None)
+    status = "ranked" if live else ("broken" if through else "no_level")
+    return {"status": status, "nearest": nearest, "through": through}
+
+
+def near_text(label, price, distance_pct, state, basis, ph, *, set_on=None,
+              set_last_session=False, last_bar=None) -> str:
+    """The card's 🔑 position line. Never 'bounce'."""
+    p = float(price)
+    d = float(distance_pct)
+    if d > 0:
+        s = f"{MARK} {d:.2f}% above {label} {p:.2f}"
+    elif d == 0:
+        s = f"{MARK} at {label} {p:.2f}"
+    else:
+        s = (f"{MARK} {abs(d):.2f}% under {label} {p:.2f} — not through "
+             f"({PIERCE_PCT:g}% breaks it)")
+    if state in ("tested", "pierced", "reversal"):
+        s += f" · {state}"
+    if set_last_session and set_on:
+        s += f" · made {_day_mmdd(set_on, weekday=True)}, the last session"
+    if isinstance(last_bar, dict) and last_bar.get("date") and last_bar.get("state"):
+        s += f" · {_day_mmdd(last_bar['date'], weekday=True)} {last_bar['state']}"
+        lt = _f(last_bar.get("low_through_pct"))
+        if lt:
+            s += f" (low went {lt:.2f}% under)"
+    if basis == "day_close":
+        s += " · day close"
+    elif basis == "last_close" and ph is not None:
+        s += " · last close"
+    return s
+
+
+def near_block(nl: dict, *, px, basis, tape, ph, last_date, last_bar) -> dict:
+    """The tab's per-tile payload for the nearest lower level (`nl` from
+    `nearest_lower`, status 'ranked'). distance_pct = the engine's dist_pct
+    with the sign flipped (print above the level = positive); -0.0 -> 0.0."""
+    m = nl["nearest"]
+    d = -float(m["dist_pct"]) + 0.0
+    set_on = m.get("set_on")
+    set_last = bool(set_on) and set_on == last_date
+    lb = last_bar if isinstance(last_bar, dict) else None
+    price = float(m["price"])
+    return {"label": m.get("label"), "name": m.get("name"), "period": m.get("period"),
+            "price": price, "distance_pct": d, "state": m.get("state"),
+            "as_of": m.get("as_of"), "set_on": set_on, "set_last_session": set_last,
+            "last_bar": lb, "print": _f(px), "print_basis": basis, "print_session": tape,
+            "through": [{"label": t.get("label"), "price": float(t["price"]),
+                         "state": t.get("state")} for t in nl.get("through") or []],
+            "text": near_text(m.get("label"), price, d, m.get("state"), basis, ph,
+                              set_on=set_on, set_last_session=set_last, last_bar=lb)}
 
 
 # ---------------------------------------------------------------------------

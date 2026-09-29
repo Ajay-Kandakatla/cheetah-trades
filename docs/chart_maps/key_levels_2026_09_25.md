@@ -1,7 +1,13 @@
 # 🔑 Key levels on the charts (2026-09-25)
 
-**UNMEASURED.** A drawing and a fact, not a signal. Nothing sorts, gates, sizes, enters or scans on it. No in-house
-study measures a break of a prior-day, week, month or 52-week level (`key_levels.MEASURED = False`).
+**UNMEASURED.** A drawing and a fact, not a signal. Nothing sorts, gates, sizes, enters or scans on it — except the
+🔑 Key Levels tab, which ORDERS one display board by distance (2026-09-28, his ask;
+`docs/chart_maps/key_levels_tab_2026_09_28.md`). No in-house study measures a break of a prior-day, week, month or
+52-week level (`key_levels.MEASURED = False`).
+
+**2026-09-28:** `set_on` (the bar that set the extreme) now fills for EVERY period, not only the 52-week pair. Every
+card, ▸ more and push reader still gates on `period == "year"`, so nothing they show changed; the Key Levels tab reads it
+to flag a low made in the last session.
 
 ## The ask, verbatim
 

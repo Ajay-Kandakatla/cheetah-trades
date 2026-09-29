@@ -225,6 +225,47 @@ the level boards before the option / ledger tabs. Pinned in
 `frontend/src/lib/chartMaps.test.ts` ("tab order — most-used first") and
 `frontend/scripts/contracts.mjs` ("Chart Maps runs most-used first…").
 
+Later additions take a mid-pack slot until usage earns them one:
+
+| added | tab | slot |
+|---|---|---|
+| 2026-09-28 | 🔑 Key Levels (`key_levels`) | right after 📁 My holdings — no usage yet (his call, spec §7.5) |
+
+### 🔑 Key Levels (2026-09-28)
+
+Ajay 2026-09-28: "Also create me tab for keylevel main. Sort them by stocks that
+are near lower keylevels". A tile board off the `/chart-maps` dispatcher
+(`?tab=key_levels`): every name in the full scan universe whose print sits above,
+or within the `PIERCE_PCT` break buffer of, a prior-week low (PWL), prior-month
+low (PML) or 52-week low (52wL) not yet broken, ordered by the % from the print
+down to the NEAREST such low, closest first (tie → longer period → symbol). The
+ranking is server-side (`backend/chart_maps/key_levels_tab.py`, levels from the
+one engine `supply_demand/key_levels.py`, frozen on CLOSED bars); the page reads
+it, it never re-sorts or re-computes:
+
+- `tile.key_level_near` — the ranked low (`label`, `price`, `distance_pct`,
+  `state`, `print_basis` live / day close / last close, `set_last_session`,
+  `last_bar` = the closed session's tested / reversal read, `through` = lower
+  lows already broken) and its served `text`, which is also `tile.badges[0]`.
+  `cardLadder` routes that 🔑 pill to the PRICE rung (`PRICE_PREFIX`); the 🔑
+  break CHIP keeps its own slot.
+- `board.key_levels_board` — the served `header` (ranked / broken / no low
+  below / stale / no print / under the floor / no turnover) and the UNMEASURED
+  `note`, printed verbatim by `components/KeyLevelsBoardNote.tsx` above the
+  grid. While the memo warms, that header is the warming line (role=status) and
+  the generic demand-scan counter is NOT shown on this tab.
+- The 🔑 overlay family is forced visible and locked on this tab
+  (`chartOverlays.tabFamily`, the 🌀 KC / AMD precedent); the cards draw two key
+  lines each way here.
+
+UNMEASURED — no study says a stock near a key low holds or reverses there; it is
+a distance, not a buy signal, and it gates, pushes, sizes and enters nothing.
+Backend contract, counts invariant and the his-call list:
+`docs/chart_maps/key_levels_tab_2026_09_28.md`. Pinned in
+`chartMaps.test.ts` ("the 🔑 Key Levels tab"), `KeyLevelsBoardNote.test.tsx`,
+`KeyLevelsTab.payload.test.tsx` and the `contracts.mjs` block "🔑 Key Levels tab
+(2026-09-28)…".
+
 ## 🚀 Breaking tab — the zone-edge read as cards (2026-09-06)
 
 Ajay 2026-09-06: "Can you change the deep demand to be like In Demand with

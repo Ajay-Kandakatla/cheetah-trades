@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-28: "Also create me tab for keylevel main. Sort them by
+  // stocks that are near lower keylevels". Label verbatim from the
+  // key_levels_tab spec §3.6.
+  { id: 'key-levels-tab-2026-09-28',
+    label: "🔑 Key Levels tab on Chart Maps. You said: “Also create me tab for keylevel main. Sort them by stocks that are near lower keylevels.” The new tab lists every name in the full scan universe whose price sits above its prior-week low, prior-month low or 52-week low, closest first — each card says which low, its price, how far above it the print is, whether that print is the last close or the day's close, whether the low was only made in the last session, and whether the last session traded down to it. A name already through every low below it today is not listed; the line above the grid counts those, plus names with no low below them, names whose bars are behind and names with no print. The fuchsia 🔑 lines are drawn two each way on this tab. UNMEASURED — no study says a stock near a key low holds or turns there; it is a distance, not a buy signal. Nothing is gated, pushed or bought because of it.",
+    addedAt: '2026-09-28', route: '/chart-maps?tab=key_levels' },
   // Ajay 2026-09-27: "Can you add date stamps please to the tape?" / "this is
   // for oracle hoping this info is accurate"
   { id: 'tape-dates-auctions-2026-09-27',

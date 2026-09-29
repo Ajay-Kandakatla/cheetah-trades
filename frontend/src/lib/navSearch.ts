@@ -90,6 +90,8 @@ export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=catalysts',   label: 'Chart Maps ▸ Catalysts',    keywords: ['news', '8-k', 'promo', 'movers', 'russell', 'seeding'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=ict',         label: 'Chart Maps ▸ ICT',          keywords: ['fvg', 'fair value gap', 'swing', 'liquidity', 'manipulation'] },
   { parent: 'chart-maps', to: '/chart-maps?tab=overnight',   label: 'Chart Maps ▸ Overnight',    keywords: ['gappers', 'after hours', 'pre-market', 'movers'] },
+  // 🔑 Key Levels (2026-09-28): names closest to a prior-week / prior-month / 52-week low.
+  { parent: 'chart-maps', to: '/chart-maps?tab=key_levels',  label: 'Chart Maps ▸ 🔑 Key Levels', keywords: ['key levels', 'key level', 'prior week low', 'prior month low', '52 week low', 'pwl', 'pml', 'near support'] },
   { parent: 'sepa',       to: '/sepa?tab=supply',            label: 'SEPA ▸ Supply / Demand',    keywords: ['zones', 'supply', 'demand', 'in demand', 'levels'] },
   { parent: 'notifications', to: '/notifications',           label: 'Notifications ▸ push settings', keywords: ['push settings', 'mute', 'kinds', 'devices', 'quiet hours'] },
   { parent: 'trading',    to: '/trading',                    label: 'Trading ▸ Auto-Pilot journal', keywords: ['journal', 'auto-pilot', 'autopilot', 'paper trades', 'execution race'] },

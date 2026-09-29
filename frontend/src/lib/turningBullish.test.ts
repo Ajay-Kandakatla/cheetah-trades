@@ -92,8 +92,26 @@ describe('the tab forces its own overlay family', () => {
   it('NEGATIVE — no other tab claims a family', () => {
     expect(tabFamily('keltner')).toBe('keltner');
     expect(tabFamily('amd')).toBe('amd');
+    // 🔑 Key Levels tab (2026-09-28) forces + locks its own 🔑 family.
+    expect(tabFamily('key_levels')).toBe('key_levels');
     for (const t of CM_TABS) {
-      if (t !== 'keltner' && t !== 'amd') expect(tabFamily(t)).toBeUndefined();
+      if (t !== 'keltner' && t !== 'amd' && t !== 'key_levels') expect(tabFamily(t)).toBeUndefined();
+    }
+  });
+
+  it('🔑 Key Levels tab forces its family visible there ONLY', () => {
+    const hidden = new Set(['key_levels', 'keltner']);
+    const onTab = hiddenForTab(hidden, 'key_levels');
+    expect(onTab.has('key_levels')).toBe(false);
+    expect(onTab.has('keltner')).toBe(true);
+    // his saved set is not mutated
+    expect(hidden.has('key_levels')).toBe(true);
+  });
+
+  it('NEGATIVE — on any other tab an unticked 🔑 box still hides key_levels', () => {
+    const hidden = new Set(['key_levels']);
+    for (const t of ['zones', 'support', 'keltner', 'amd', 'holdings']) {
+      expect(hiddenForTab(hidden, t).has('key_levels')).toBe(true);
     }
   });
 });

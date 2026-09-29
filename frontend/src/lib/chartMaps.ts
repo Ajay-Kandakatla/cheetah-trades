@@ -18,7 +18,7 @@ import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -67,6 +67,12 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // names he actually owns, with his cost on every chart). Beside the two
   // study tabs it runs; no usage yet, so mid-pack like them.
   'holdings',
+  // 🔑 Key Levels (Ajay 2026-09-28: "Also create me tab for keylevel main.
+  // Sort them by stocks that are near lower keylevels"). Mid-pack right after
+  // 📁 My holdings — TAB ORDER IS EARNED; tabUsageKey counts it from the
+  // first open and the next re-cut moves it on the evidence. The slot is his
+  // call (spec §7.5).
+  'key_levels',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -185,6 +191,12 @@ export function isBoardTab(t: CmTab): boolean {
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  // 🔑 Key Levels (Ajay 2026-09-28). Every number on the board is served;
+  // nothing here is typed. UNMEASURED: a distance, not a ranking of setups.
+  key_levels: {
+    label: '\u{1F511} Key Levels',
+    blurb: 'Every name in the full scan universe whose price sits above \u2014 or within the break buffer of \u2014 a prior-week low, prior-month low or 52-week low not yet broken, closest first: ranked by the % from the print down to the nearest of them. Ajay 2026-09-28: "Also create me tab for keylevel main. Sort them by stocks that are near lower keylevels". The lows are the same \u{1F511} levels every card draws: the regular-session lows of the prior complete week, the prior calendar month and the last year of sessions, each frozen at the close of its own period \u2014 only the break check is live. A card says when its low was only made in the last session, and when the last session traded down to it (tested or reversal). A name already through every low below it today is not listed; the line above the grid counts those, the names with no low below the price, the names whose daily bars are behind and the names with no print to check them against. Pre-market and after-hours prints count once they are fresh; outside the session the ranking uses the last close, and a card whose print is the last close or the day\'s close says so. UNMEASURED \u2014 no study here says a stock near a key low holds or reverses there; this is a distance, not a buy signal. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
+  },
   // 📰 News (Ajay 2026-09-24). The first sentence is the fold headline and
   // carries the house phrase "not a forecast"; no live number is typed here —
   // the gauge's daily and weekly reads show on the board itself.
@@ -452,7 +464,7 @@ export type CmKeyLevel = {
   period: 'pre' | 'day' | 'week' | 'month' | 'year';
   kind: 'high' | 'low';
   as_of: string | null;
-  set_on: string | null;         // year levels: the bar that set it
+  set_on: string | null;         // the bar that set it (every period since 2026-09-28; the cards still show it on 52w only)
   side: 'support' | 'resistance' | null;
   direction: 'up' | 'down' | null;
   /** null outside the state window (evenings, weekends) or on a stale block. */
@@ -486,6 +498,62 @@ export type CmKeyLevels = {
   fold: string | null;
   rule: string;
   stale_note: string | null;
+};
+
+/** 🔑 Key Levels tab (2026-09-28): the closed session's read of the last
+ *  closed bar against the ranked low (chart_maps/key_levels_tab via
+ *  key_levels.last_bar_read) — carried past the 20:00 roll so a name that
+ *  traded under its low yesterday and closed on it does not read as untouched. */
+export type CmKeyLevelLastBar = {
+  date: string;
+  state: 'reversal' | 'tested';
+  low_through_pct: number | null;
+};
+
+/** 🔑 Key Levels tab (2026-09-28): the nearest LOWER key level the print is
+ *  not through, per tile (`tile.key_level_near`). Every field is SERVED; the
+ *  card prints `text` (== `tile.badges[0].text`) and composes nothing.
+ *  `distance_pct` = (print − level)/print ×100, 2 dp; below zero = inside the
+ *  break buffer, not through. UNMEASURED: a distance, not a signal. */
+export type CmKeyLevelNear = {
+  label: string;                 // "PWL" | "PML" | "52wL"
+  name: string;                  // "prior-week low", …
+  period: 'day' | 'week' | 'month' | 'year';
+  price: number;
+  distance_pct: number;
+  /** null outside 04:00–20:00 ET of a market day. */
+  state: 'intact' | 'tested' | 'pierced' | 'reversal' | 'unknown' | null;
+  as_of: string | null;
+  set_on: string | null;
+  /** The low was made on the last closed bar (flagged, not dropped). */
+  set_last_session: boolean;
+  last_bar: CmKeyLevelLastBar | null;
+  print: number;
+  print_basis: 'live' | 'day_close' | 'last_close';
+  print_session: 'premarket' | 'rth' | 'afterhours' | null;
+  /** Lower lows already through (context only). [] when none. */
+  through: { label: string; price: number; state: string | null }[];
+  text: string;
+};
+
+/** 🔑 Key Levels tab (2026-09-28): the board-level block. `header` and `note`
+ *  are SERVED sentences — KeyLevelsBoardNote prints them verbatim. `counts` is
+ *  null while the memo warms. Invariant (server): scanned == ranked + broken +
+ *  no_level + stale + no_print. */
+export type CmKeyLevelsBoard = {
+  state: 'ready' | 'warming';
+  session: string;
+  phase: 'pre' | 'rth' | 'close' | null;
+  periods: string[];
+  counts: {
+    scanned: number; ranked: number; broken: number; no_level: number;
+    stale: number; no_print: number; set_last_session: number;
+    no_turnover: number; dropped_thin: number; shown: number;
+  } | null;
+  header: string;
+  note: string;
+  built_at: string | null;
+  measured: boolean;
 };
 
 export type CmTile = {
@@ -557,6 +625,10 @@ export type CmTile = {
    *  board tab except ICT, and the Support tab. null when the 🔑 box is
    *  unticked (filterTile); absent on an older payload. UNMEASURED. */
   key_levels?: CmKeyLevels | null;
+  /** 🔑 Key Levels tab only (2026-09-28): the nearest lower key level the
+   *  print is not through — what the tab is ordered by. Absent on every other
+   *  tab. UNMEASURED. */
+  key_level_near?: CmKeyLevelNear | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -918,6 +990,9 @@ export type CmBoard = {
    *  served `note` / `criteria`; the strip never reads them. */
   upcoming?: IpoUpcoming[] | null;
   corroboration?: IpoCorroboration | null;
+  /** 🔑 Key Levels tab only (2026-09-28): the served header / note / counts
+   *  KeyLevelsBoardNote prints. Absent on every other tab. */
+  key_levels_board?: CmKeyLevelsBoard | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

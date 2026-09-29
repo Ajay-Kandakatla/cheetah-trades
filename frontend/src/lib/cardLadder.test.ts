@@ -464,3 +464,60 @@ describe('cardLadder — 🔑 key levels (2026-09-25)', () => {
     expect(() => cardLadder(t)).not.toThrow();
   });
 });
+
+describe('cardLadder — 🔑 Key Levels tab position pill (2026-09-28)', () => {
+  // Ajay 2026-09-28: "Also create me tab for keylevel main. Sort them by
+  // stocks that are near lower keylevels". The tab serves one 🔑 badge per
+  // tile (key_levels.near_text); the ladder routes it to PRICE, whole.
+  const withBadge = (text: string, over: Partial<CmTile> = {}) =>
+    bare({ badges: [{ text, tone: 'muted' }], ...over });
+
+  it('a served 🔑 distance pill lands in PRICE', () => {
+    const l = cardLadder(withBadge('🔑 0.41% above PWL 97.20'));
+    expect(texts(l.price)).toEqual(['🔑 0.41% above PWL 97.20']);
+    expect(texts(l.setup.badges)).toEqual([]);
+  });
+
+  it('the at / under-in-buffer wordings land in PRICE too', () => {
+    for (const text of ['🔑 at PML 41.10', '🔑 0.10% under PWL 42.25 — not through (0.15% breaks it) · tested · day close']) {
+      expect(texts(cardLadder(withBadge(text)).price)).toEqual([text]);
+    }
+  });
+
+  it('a long served text (made … the last session / … tested (low went …)) stays ONE pill, untruncated', () => {
+    const text = '🔑 0.22% above 52wL 33.60 · made Mon 09-28, the last session · Mon 09-28 tested (low went 1.18% under) · last close';
+    const l = cardLadder(withBadge(text));
+    expect(l.price).toHaveLength(1);
+    expect(l.price[0].text).toBe(text);
+    const elsewhere = [...texts(l.entry), ...texts(l.priceAfter), ...texts(l.setup.badges),
+      ...texts(l.plan.pills), ...texts(l.timing.badges), ...l.moreWarn.map((b) => b.text)];
+    expect(elsewhere.some((t) => t.includes('last session') || t.includes('low went'))).toBe(false);
+    expect(l.moreCount).toBe(0);
+  });
+
+  it('NEGATIVE: the served key CHIP still lands in keyLevel, not duplicated into PRICE', () => {
+    const l = cardLadder(bare({
+      badges: [{ text: '🔑 0.41% above PWL 97.20', tone: 'muted' }],
+      key_levels: {
+        session: '2026-09-28', frame: 'daily', phase: 'rth', measured: false, verified: true,
+        levels: [], drawn: [], rule: 'r', stale_note: null, fold: null,
+        chip: { text: '🔑 broke PML 95.10 ↓ 10:42', tone: 'warn' },
+      },
+    }));
+    expect(l.keyLevel).toEqual({ text: '🔑 broke PML 95.10 ↓ 10:42', tone: 'warn' });
+    expect(texts(l.price)).toEqual(['🔑 0.41% above PWL 97.20']);
+    expect(texts(l.price).some((t) => t.includes('broke PML'))).toBe(false);
+  });
+
+  it('NEGATIVE: an unknown non-🔑 badge still falls through to SETUP', () => {
+    const l = cardLadder(withBadge('Something the ladder never heard of'));
+    expect(texts(l.setup.badges)).toEqual(['Something the ladder never heard of']);
+    expect(l.price).toEqual([]);
+  });
+
+  it('NEGATIVE: a bare 🔑 with no space is not a position pill', () => {
+    const l = cardLadder(withBadge('🔑'));
+    expect(l.price).toEqual([]);
+    expect(texts(l.setup.badges)).toEqual(['🔑']);
+  });
+});

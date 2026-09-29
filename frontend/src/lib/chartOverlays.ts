@@ -125,7 +125,7 @@ export const OVERLAY_GROUPS: OverlayGroup[] = [
   // neutral and must never be claimed (or hidden) by this box. Every key label
   // starts with 🔑, so no existing prefix claims one either.
   { key: 'key_levels', label: '\u{1F511} Key levels', swatch: 'var(--cm-key, #d946ef)',
-    hint: 'Regular-session (RTH) highs and lows of the prior day, week, month and 52 weeks — each frozen at the close of its own period and never recalculated during the day — plus the pre-market high/low on the 5-minute frames. Dashed = the price is through it now, or closed through it today. One above and one below the price on the cards, two on the Support tab. Unmeasured — a drawing, not a signal.',
+    hint: 'Regular-session (RTH) highs and lows of the prior day, week, month and 52 weeks — each frozen at the close of its own period and never recalculated during the day — plus the pre-market high/low on the 5-minute frames. Dashed = the price is through it now, or closed through it today. One above and one below the price on the cards, two on the Support tab and the \u{1F511} Key Levels tab. Unmeasured — a drawing, not a signal.',
     lineTones: ['key', 'key_broken'] },
 ];
 
@@ -200,7 +200,10 @@ function isStaleFlatKeltner(l: { tone?: string }, curves: any[] | undefined): bo
  *  checkbox to tick. A tab's own family is forced visible ON THAT TAB ONLY;
  *  his saved choices are untouched and every other tab still honours them. */
 export function tabFamily(tab: string): string | undefined {
-  return tab === 'keltner' ? 'keltner' : tab === 'amd' ? 'amd' : undefined;
+  // 🔑 Key Levels tab (2026-09-28): the tab exists for the 🔑 lines, so its
+  // own family is forced visible and locked there — the keltner / amd precedent.
+  return tab === 'keltner' ? 'keltner' : tab === 'amd' ? 'amd'
+    : tab === 'key_levels' ? 'key_levels' : undefined;
 }
 
 /** `hidden` minus the tab's own family. Returns the SAME set when there is

@@ -100,7 +100,11 @@ const ENTRY_PREFIX = ['\u{1F52A} closed under the floor', 'Reports ', 'S4 Declin
 /** The Holdings tile's P/L against his cost — always FIRST in ENTRY. */
 const COST_SUFFIX = ' vs your cost';
 
-const PRICE_PREFIX = ['◉ ', '→ ', '↓ ', '↑ ', '\u{1FA79} ', '\u{1F680} '];
+/** `\u{1F511} ` (2026-09-28): the 🔑 Key Levels tab's served position pill
+ *  (`🔑 0.41% above PWL 97.20 …`, key_levels.near_text) — a distance to a
+ *  level, i.e. a PRICE fact. The 🔑 key CHIP is not a badge (it rides on
+ *  `tile.key_levels.chip`) and keeps its own `keyLevel` slot. */
+const PRICE_PREFIX = ['◉ ', '→ ', '↓ ', '↑ ', '\u{1FA79} ', '\u{1F680} ', '\u{1F511} '];
 /** 🎯 Gabbar position (the aggressive-band twin of 🛡️, board.py gabbar
  *  badges): `🎯 In Gabbar band (…)` or `🎯 {d}% above|below {label}`. Any
  *  other 🎯 badge falls through to SETUP, the unknown-badge safety net. */

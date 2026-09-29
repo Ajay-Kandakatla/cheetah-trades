@@ -264,3 +264,23 @@ describe('retired 2026-09-20 · learning + volleyball + flash cards', () => {
     expect(row.keywords).not.toContain('charts');
   });
 });
+
+
+describe('🔑 Key Levels tab deep link (2026-09-28)', () => {
+  it('"key level" finds /chart-maps?tab=key_levels', () => {
+    expect(tos(searchNav(index, 'key level'))).toContain('/chart-maps?tab=key_levels');
+    expect(tos(searchNav(index, 'prior week low'))).toContain('/chart-maps?tab=key_levels');
+    expect(tos(searchNav(index, 'pwl'))).toContain('/chart-maps?tab=key_levels');
+  });
+
+  it('NEGATIVE: exactly one entry, and none without Chart Maps in the menu', () => {
+    expect(EXTRA_ENTRIES.filter((e) => e.to === '/chart-maps?tab=key_levels')).toHaveLength(1);
+    expect(index.filter((e) => e.to === '/chart-maps?tab=key_levels')).toHaveLength(1);
+    const without = buildIndex({ ...MENU, primary: MENU.primary.filter((m) => m.feature !== 'chart-maps') }, subgroupOf);
+    expect(tos(without)).not.toContain('/chart-maps?tab=key_levels');
+  });
+
+  it('NEGATIVE: an unrelated query does not surface it', () => {
+    expect(tos(searchNav(index, 'whatsapp'))).not.toContain('/chart-maps?tab=key_levels');
+  });
+});

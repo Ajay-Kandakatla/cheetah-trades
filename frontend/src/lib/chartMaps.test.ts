@@ -754,6 +754,9 @@ describe('the Earnings Flow tab', () => {
        // 📁 My holdings 2026-09-14 — his own names, beside the two study tabs
        // it runs on them; mid-pack for the same no-usage-yet reason.
        'holdings',
+       // 🔑 Key Levels 2026-09-28 — right after My holdings, mid-pack for the
+       // same no-usage-yet reason (spec §7.5, his call).
+       'key_levels',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1769,7 +1772,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(30);   // +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(31);   // +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2202,5 +2205,45 @@ describe('the 📰 News tab', () => {
     expect(b).not.toMatch(/\bbounce\b/i);
     expect(b).not.toMatch(/2026-09-24: daily/);
     expect(b).not.toMatch(/daily 60|weekly 84/);
+  });
+});
+
+
+// ── 🔑 Key Levels tab (Ajay 2026-09-28: "Also create me tab for keylevel main.
+// Sort them by stocks that are near lower keylevels"). A tile board off the
+// dispatcher, closest-to-a-key-low first. UNMEASURED. ─────────────────────────
+describe('the 🔑 Key Levels tab', () => {
+  it('sits right after My holdings and is a board tab', () => {
+    expect(CM_TABS.indexOf('key_levels')).toBe(CM_TABS.indexOf('holdings') + 1);
+    expect(isBoardTab('key_levels')).toBe(true);
+  });
+
+  it('parses from ?tab=, case- and space-tolerant', () => {
+    expect(parseTab('key_levels')).toBe('key_levels');
+    expect(parseTab(' KEY_LEVELS ')).toBe('key_levels');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab, not to key_levels', () => {
+    for (const raw of ['key-levels', 'keylevels', 'key levels', 'key_level']) {
+      expect(parseTab(raw)).toBe(DEFAULT_TAB);
+    }
+  });
+
+  it('TAB_META: the 🔑 label, an UNMEASURED blurb with his words, a non-empty fold head', () => {
+    const m = TAB_META.key_levels;
+    expect(m.label).toBe('🔑 Key Levels');
+    expect(m.blurb).toContain('UNMEASURED');
+    expect(m.blurb).toContain('Sort them by stocks that are near lower keylevels');
+    expect(splitBlurb(m.blurb).head.length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: the blurb never says bounce, and types no live count', () => {
+    expect(/bounce/i.test(TAB_META.key_levels.blurb)).toBe(false);
+    expect(TAB_META.key_levels.blurb.includes('NaN')).toBe(false);
+  });
+
+  it('NEGATIVE: the most-used-first lead is unchanged by the new tab', () => {
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+    expect(CM_TABS.filter((t) => t === 'key_levels')).toHaveLength(1);
   });
 });

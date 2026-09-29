@@ -810,6 +810,14 @@ def _key_levels_section() -> dict:
             "closed through, reversal, tested or intact."
             % (KL.STALE_PRINT_SEC, g(KL.PIERCE_PCT), g(KL.PIERCE_PCT),
                hm(KL.CLOSE_CONFIRM_AT), hm(KL.CLOSE_CONFIRM_AT_HALF)),
+            "%s Key Levels tab: every name whose print sits above, or within the %s break "
+            "buffer of, a %s not yet broken, ordered by the %% from the print down to the "
+            "nearest one, closest first — a tie goes to the longer period, then the symbol. "
+            "A low made in the last session is flagged, not dropped. A name through every low "
+            "below it is counted above the grid, never listed. UNMEASURED — an order by "
+            "distance, not a signal."
+            % (KL.MARK, g(KL.PIERCE_PCT),
+               " / ".join(KL.LABELS[(p, "low")] for p in KL.BOARD_PERIODS)),
         ],
         "stops": ["No stop, no target, no size: a drawing and a state."],
         "alerts": [
