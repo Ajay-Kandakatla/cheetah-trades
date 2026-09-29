@@ -10873,7 +10873,7 @@ a.tk-link.cat-tl-chip                  { display: inline-flex; }
 
 /* ── Chart Maps (/chart-maps) — charts-only pattern study board ───────────── */
 .cm-page { padding: 0.9rem 1rem 2rem; max-width: 1500px; margin: 0 auto; }
-.cm-head { margin-bottom: 0.6rem; }
+.cm-head { margin-bottom: 0.6rem; position: relative; z-index: 31; }   /* ℹ️ panel paints above the pinned strip (z 30) */
 .cm-title { font-size: 1.25rem; margin: 0; display: flex; align-items: center; gap: 0.4rem; }
 .cm-sub { margin: 0.2rem 0 0; font-size: 0.82rem; color: var(--cm-slate, #8595ad); }
 
@@ -10884,6 +10884,37 @@ a.tk-link.cat-tl-chip                  { display: inline-flex; }
   overflow-x: auto; -webkit-overflow-scrolling: touch;
   border-bottom: 1px solid var(--rule, #2a2f3a); padding-bottom: 0.35rem;
 }
+/* 📌 Pinned tab strip (Ajay 2026-09-28: "Pin the tab I am in, as I navigate back and fort lost where I am").
+ * The WRAPPER sticks; .cm-tabs stays the sideways scroller. No ancestor overflow changes: html's hidden
+ * propagates to the viewport and body/.app/.main use `clip`, which is not a scroll container (see :17-22, :35-40).
+ * top = --sticky-top: the phone nav's measured height (useStickyTop), unset (0) on desktop where the nav scrolls away. */
+.cm-tabs-bar {
+  position: sticky;
+  top: var(--sticky-top, 0px);
+  z-index: 30;
+  background: var(--bg);
+  margin: 0.7rem 0 0.4rem;
+  padding-top: 0.3rem;
+}
+.cm-tabs-bar > .cm-tabs { margin: 0; }
+.cm-page { --cm-nav-top: var(--sticky-top, 0px); }
+/* Boards under the strip stick BELOW it. Never `--sticky-top: calc(var(--sticky-top) …)` on one element — a cycle. */
+.cm-tabs-bar ~ * { --sticky-top: calc(var(--cm-nav-top, 0px) + var(--cm-tabs-h, 0px)); }
+.cm-page .cat-page--embedded .cat-tl-date { top: var(--sticky-top, 0px); }
+/* The two tables on Chart Maps tabs with NO scroll box of their own stick to the viewport through the global
+ * `thead { position: sticky; top: 0 }` (:247) and would slide under the strip. ONLY these two: a table inside an
+ * overflow-x box (.nt-scroll, .og__wrap, .sl-table-wrap, .sl-scroll, .gnt-scroll, .hs-scroll, .eg-scroll) sticks
+ * inside that box, and an offset there would push its header down over its own rows. */
+.cm-tabs-bar ~ * :is(.pb-table, .cat-tl-table) > thead { top: var(--sticky-top, 0px); }
+.cm-tabs-fade {
+  position: absolute; top: 0.3rem; bottom: calc(1px + var(--cm-tabs-sb, 0px)); width: 26px;
+  display: flex; align-items: center; pointer-events: none;
+  opacity: 0; transition: opacity 0.15s;
+  font-weight: 700; color: var(--cm-slate, #8595ad);
+}
+.cm-tabs-fade-l { left: 0; justify-content: flex-start; background: linear-gradient(to right, var(--bg) 45%, transparent); }
+.cm-tabs-fade-r { right: 0; justify-content: flex-end; background: linear-gradient(to left, var(--bg) 45%, transparent); }
+.cm-tabs-more-l .cm-tabs-fade-l, .cm-tabs-more-r .cm-tabs-fade-r { opacity: 1; }
 .cm-tab {
   white-space: nowrap; flex-shrink: 0; cursor: pointer;
   background: none; border: 1px solid transparent; border-radius: 8px;

@@ -22,6 +22,10 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-28: "Pin the tab I am in, as I navigate back and fort lost where I am"
+  { id: 'chart-maps-pinned-tab-2026-09-28',
+    label: '📌 Chart Maps keeps your place. You said: “Pin the tab I am in, as I navigate back and fort lost where I am.” The tab strip now stays pinned at the top while you scroll the charts, the tab you are on is always scrolled into view (‹ › fades mean more tabs off that edge), and switching tabs from deep in a board opens the new one at its top. After you open a ticker, coming back with ← Back or the browser’s back lands on the same tab with the same chart where you left it (once, within 30 minutes). The menu still opens Back in Demand, and keeps your place only if you were on Back in Demand. A menu round trip without a ticker in between, or a new browser tab, opens at the top as before. A bare Chart Maps link still opens on Back in Demand and the tab order is unchanged. Navigation only: nothing ranked, gated or bought differently.',
+    addedAt: '2026-09-28', route: '/chart-maps' },
   // Ajay 2026-09-28: "Can you fix the horizontal columns hiding and also can
   // you help me with multi column sort also can you help with info icon on the
   // quality?" Label verbatim from the hottest_multisort spec §3.6.

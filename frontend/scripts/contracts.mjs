@@ -5200,6 +5200,80 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '📌 Chart Maps tab strip stays pinned, keeps the active tab in view, and a return lands where he was (2026-09-28)',
+    file: 'src/pages/ChartMaps.tsx',
+    // Ajay 2026-09-28: "Pin the tab I am in, as I navigate back and fort lost
+    // where I am". Three parts: a sticky wrapper around the strip, the active
+    // tab scrolled into view inside the strip only (never the page), and a
+    // one-shot sessionStorage record — armed by leaving for a ticker page —
+    // that restores the same tab and place after the board renders.
+    // docs/chart_maps/pinned_tab_strip_2026_09_28.md.
+    checks: (src) => {
+      const errs = [];
+      const at = src.indexOf('<div className="cm-tabs" role="tablist">');
+      if (at < 0) return ['the cm-tabs strip could not be found'];
+      if (!src.slice(Math.max(0, at - 400), at).includes('className={`cm-tabs-bar')) {
+        errs.push('the strip must sit inside the sticky .cm-tabs-bar wrapper (within 400 chars above it)');
+      }
+      if (src.includes('.scrollIntoView(')) {
+        errs.push('ChartMaps.tsx must not call scrollIntoView — it scrolls the WINDOW vertically when the strip is off-screen');
+      }
+      for (const n of ['revealActiveTab', 'takeCmScroll', 'saveCmScroll', 'snapshotCmScroll', 'restoreCmScroll', 'leaveAction(window.location.pathname']) {
+        if (!src.includes(n)) errs.push(`ChartMaps.tsx must use ${n}`);
+      }
+      if (!src.includes('if (isBoardTab(tab) && (loading || !tiles.length)) return;')) {
+        errs.push('the restore must wait for the board to render: `if (isBoardTab(tab) && (loading || !tiles.length)) return;`');
+      }
+      const reveals = (src.match(/syncStrip\(true\)/g) || []).length;
+      if (reveals !== 1) errs.push(`exactly one syncStrip(true) (the mount / tab-change layout effect), found ${reveals}`);
+      if (!src.includes('new RO(() => syncStrip(false))')) {
+        errs.push('the strip ResizeObserver must call syncStrip(false) — a resize never snaps the strip back');
+      }
+      if (!/const setTab = \(t: CmTab\) => \{\s*setParams\(new URLSearchParams\(tabSearch\(params, t\)\), \{ replace: true \}\);/.test(src)) {
+        errs.push('setTab must keep `replace` history (HIS CALL #2 default)');
+      }
+      // Comments stripped: the rule's own comment names the cycle it forbids.
+      const css = read('src/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+      const bar = /\.cm-tabs-bar \{([^}]*)\}/.exec(css);
+      if (!bar) errs.push('styles.css lost the .cm-tabs-bar rule');
+      else {
+        for (const d of ['position: sticky', 'top: var(--sticky-top, 0px)', 'background: var(--bg)', 'z-index: 30']) {
+          if (!bar[1].includes(d)) errs.push(`.cm-tabs-bar must have \`${d}\``);
+        }
+      }
+      if (!/\.cm-tabs-bar ~ \* \{[^}]*--sticky-top: calc\(var\(--cm-nav-top/.test(css)) {
+        errs.push('boards under the strip must read --sticky-top from --cm-nav-top + --cm-tabs-h');
+      }
+      if (css.includes('--sticky-top: calc(var(--sticky-top')) {
+        errs.push('`--sticky-top: calc(var(--sticky-top …` is a custom-property cycle — every inner sticky header falls back to 0');
+      }
+      const th = /\.cm-tabs-bar ~ \* :is\(([^)]*)\) > thead \{ top: var\(--sticky-top, 0px\); \}/.exec(css);
+      if (!th || !/\.pb-table/.test(th[1]) || !/\.cat-tl-table/.test(th[1])) {
+        errs.push('the POTUS .pb-table and Catalysts .cat-tl-table theads must stick below the strip');
+      } else {
+        for (const bad of ['nt-table', 'og__table', 'sl-table', 'gnt-table', 'hs-table', 'eg-table']) {
+          if (th[1].includes(bad)) errs.push(`.${bad} sits in its own overflow box — an offset pushes its header over its own rows`);
+        }
+      }
+      if (/\.cm-(?:tabs-bar ~ \*|page)\s+thead\s*\{/.test(css)) {
+        errs.push('no blanket Chart Maps thead offset — tables in their own scroll box would get their header pushed over their rows');
+      }
+      const fade = /\.cm-tabs-fade \{([^}]*)\}/.exec(css);
+      if (!fade || !fade[1].includes('var(--cm-tabs-sb')) errs.push('.cm-tabs-fade must stop above a classic scrollbar (var(--cm-tabs-sb))');
+      if (!/\.cm-head \{[^}]*z-index: 31/.test(css)) errs.push('.cm-head needs z-index: 31 so the ℹ️ panel paints above the strip');
+      const lib = read('src/lib/cmPinnedTab.ts');
+      if (!lib.includes('export const CM_SCROLL_MAX_AGE_MS = 30 * 60 * 1000;')) errs.push('CM_SCROLL_MAX_AGE_MS must stay 30 min');
+      if (!lib.includes('export const CM_TICKER_PATH_RE = /^\\/sepa\\/[^/?#]+/;')) errs.push('CM_TICKER_PATH_RE must be the /sepa/:symbol route');
+      const take = /export function takeCmScroll\([\s\S]*?\n\}/.exec(lib);
+      if (!take || !take[0].includes('removeItem(CM_SCROLL_KEY)')) errs.push('takeCmScroll must remove the record (one-shot)');
+      const cm = read('src/lib/chartMaps.ts');
+      const order = parseCmTabs(cm);
+      if (!order || order[0] !== 'zones') errs.push('CM_TABS[0] must stay zones (Back in Demand)');
+      if (!cm.includes('export const DEFAULT_TAB: CmTab = CM_TABS[0];')) errs.push('DEFAULT_TAB must stay CM_TABS[0]');
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
