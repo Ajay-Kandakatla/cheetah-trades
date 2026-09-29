@@ -21,6 +21,12 @@ Schema (push_history collection)
                                     # on a single / a legacy row; the feed falls
                                     # back to [ticker] there.
       url:        str | None,      # tap-route
+      items:      list[{symbol, text}] | None,
+                                    # EVERY entry a consolidated push is about,
+                                    # in body order (2026-09-29). Log-only: the
+                                    # sender strips it from the device payload.
+                                    # Capped at MAX_ITEMS; None when absent.
+      items_total: int | None,      # valid entries BEFORE the MAX_ITEMS cap
       user_email: str | None,      # None = broadcast
       sent:       int,             # devices reached
       failed:     int,             # delivery failures
@@ -104,6 +110,34 @@ def _tickers(raw) -> Optional[list]:
     return [t.upper() for t in raw][:MAX_TICKERS]
 
 
+MAX_ITEMS = 100        # storage guard; measured max 44 trade_flash events/push over 90 days
+ITEM_TEXT_MAX = 300    # one line; a longer one is trimmed, never dropped
+
+
+def _items(raw) -> tuple[Optional[list], Optional[int]]:
+    """payload['items'] -> (stored list, items_total) or (None, None).
+    Keeps dict entries whose `text` is a non-blank str; `text` stripped + trimmed to
+    ITEM_TEXT_MAX; `symbol` stripped+upper when a non-blank str else None; every other
+    key dropped. items_total = count of valid entries BEFORE the MAX_ITEMS cap; the
+    stored list is the first MAX_ITEMS in order. Not a list / empty / no valid entry
+    -> (None, None)."""
+    if not isinstance(raw, list) or not raw:
+        return None, None
+    valid: list[dict] = []
+    for it in raw:
+        if not isinstance(it, dict):
+            continue
+        text = it.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        sym = it.get("symbol")
+        sym = sym.strip().upper() if isinstance(sym, str) and sym.strip() else None
+        valid.append({"symbol": sym, "text": text.strip()[:ITEM_TEXT_MAX]})
+    if not valid:
+        return None, None
+    return valid[:MAX_ITEMS], len(valid)
+
+
 def record(payload: dict, *, user_email: Optional[str] = None,
            result: Optional[dict] = None) -> None:
     """Insert one history row. Best-effort — failures are swallowed.
@@ -117,6 +151,7 @@ def record(payload: dict, *, user_email: Optional[str] = None,
         return
     try:
         now = int(time.time())
+        items, items_total = _items(payload.get("items"))
         coll.insert_one({
             "ts":         now,
             "ts_iso":     datetime.fromtimestamp(now, tz=timezone.utc),
@@ -132,6 +167,11 @@ def record(payload: dict, *, user_email: Optional[str] = None,
             # carrying a non-string, is None — never a guess.
             "tickers":    _tickers(payload.get("tickers")),
             "url":        payload.get("url"),
+            # EVERY entry a "+N more" push is about (2026-09-29, Ajay: "I am
+            # unable to see the other that are hiddedn her … show them all").
+            # The phone never gets these (sender.LOG_ONLY_KEYS); /alerts does.
+            "items":       items,
+            "items_total": items_total,
             # The 🎯 verdict AT PUSH TIME (2026-09-15). The honest read for a
             # pushed row is the one the phone graded, so it is STORED with the
             # row rather than recomputed hours later on a different print.
@@ -210,4 +250,4 @@ def list_recent(user_email: Optional[str] = None, limit: int = 25,
         return []
 
 
-__all__ = ["record", "list_recent", "MAX_LIMIT", "MAX_TICKERS"]
+__all__ = ["record", "list_recent", "MAX_LIMIT", "MAX_TICKERS", "MAX_ITEMS"]

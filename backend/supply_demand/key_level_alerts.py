@@ -259,13 +259,18 @@ def digest_text(items: list) -> dict:
              f"{KL._word(lead['kind'], lead['direction'])} {lead['name']}")
     if len(items) > 1:
         title += f" +{len(items) - 1} more"
-    lines = [f"{s} closed {_phrase(ms, close=c)}" for s, ms, c in items[:DIGEST_MAX()]]
+    # EVERY name gets its line (2026-09-29, /alerts lists them all as `items`,
+    # log-only — push.sender strips it); the body still prints DIGEST_MAX().
+    all_lines = [f"{s} closed {_phrase(ms, close=c)}" for s, ms, c in items]
+    lines = all_lines[:DIGEST_MAX()]
     if len(items) > DIGEST_MAX():
         lines.append(f"+{len(items) - DIGEST_MAX()} more")
     lines.append(_UNMEASURED_DIGEST)
     url = url_for(lead_sym)
     return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url},
-            "kind": KIND, "ticker": None, "tickers": [s for s, _m, _c in items]}
+            "kind": KIND, "ticker": None, "tickers": [s for s, _m, _c in items],
+            "items": [{"symbol": s, "text": ln}
+                      for (s, _m, _c), ln in zip(items, all_lines)]}
 
 
 def MAX_SINGLES() -> int:

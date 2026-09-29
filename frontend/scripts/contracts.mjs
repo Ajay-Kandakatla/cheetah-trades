@@ -5594,6 +5594,52 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'a consolidated push lists EVERY item on /alerts; the phone payload stays short (2026-09-29)',
+    file: 'src/pages/Alerts.tsx',
+    // Ajay 2026-09-29, on "⚡ Tape burst at a zone — CRWV +7 more": "I am
+    // unable to see the other that are hiddedn her … Can you show them all and
+    // make all the tickers clicable individually?"
+    //
+    // Every composer LOGS each entry as `items`; push/sender strips them
+    // before the device (Web Push caps a payload at ~4 KB and a 44-burst push
+    // would fail the whole notification silently); push_history stores them;
+    // push/recent serves them; /alerts links each ticker on its own.
+    // docs/alerts/every_item_2026_09_29.md
+    checks: (src) => {
+      const errs = [];
+      if (!/<AlertItems/.test(src) || !/row\.items/.test(src)) {
+        errs.push('Alerts.tsx must render the served row.items through <AlertItems> — the raw body hides every name past the 4th line');
+      }
+      const items = read('src/components/AlertItems.tsx');
+      if (!/TickerLink/.test(items)) errs.push('AlertItems.tsx must link each ticker through TickerLink (a real href, ⌘-click works)');
+      if (!/not stored in this push/.test(items)) errs.push('AlertItems.tsx must say "+N more not stored in this push" for an old row — never a silent short list');
+      if (!/ITEMS_FOLD_AT/.test(items)) errs.push('AlertItems.tsx must fold on ITEMS_FOLD_AT (measured p90 16, max 44 per push)');
+      const sender = read('../backend/push/sender.py');
+      if (!/LOG_ONLY_KEYS/.test(sender)) errs.push('push/sender.py must strip LOG_ONLY_KEYS before a device sees the payload');
+      const sends = (sender.match(/_send_one\(sub, device\)/g) || []).length;
+      if (sends !== 2) errs.push(`push/sender.py must call _send_one(sub, device) in BOTH send_to_all and send_to_user (found ${sends}) — the unstripped payload would reach the phone`);
+      const hist = read('../backend/push/history.py');
+      if (!/"items":/.test(hist) || !/MAX_ITEMS/.test(hist)) errs.push('push/history.py::record must store the sanitized items, capped at MAX_ITEMS');
+      const recent = read('../backend/push/recent.py');
+      if (!/def served_items\(/.test(recent) || !/ITEM_URL_BY_KIND/.test(recent)) {
+        errs.push('push/recent.py must serve items through served_items and ONE ITEM_URL_BY_KIND map');
+      }
+      for (const rel of [
+        '../backend/orderflow/trade_flash.py',
+        '../backend/supply_demand/demand_alerts.py',
+        '../backend/supply_demand/zone_bounce_alerts.py',
+        '../backend/supply_demand/zone_edge.py',
+        '../backend/supply_demand/key_level_alerts.py',
+        '../backend/supply_demand/accumulation_changes.py',
+        '../backend/catalysts/medical/alerts.py',
+        '../backend/push/hooks.py',
+      ]) {
+        if (!read(rel).includes('"items"')) errs.push(`${rel} must log every entry as "items" — its digest body stops at 4-8 lines`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

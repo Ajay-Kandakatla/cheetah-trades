@@ -174,6 +174,14 @@ def build_events(symbol: str, board: str, band: dict, bursts: list,
     return out
 
 
+PUSH_BODY_LINES = 4     # lines the PHONE shows; /alerts lists every event (items)
+
+
+def tape_url(sym: str) -> str:
+    """The Tape tab of one name — the push's tap-route and each /alerts item's."""
+    return f"/sepa/{sym}?tab=tape&from=supply-demand"
+
+
 def headline(ev: dict) -> str:
     """One push line per event. Names the meaning, not just the numbers. PURE."""
     m = ev.get("dollars") or 0
@@ -368,14 +376,20 @@ def record_and_push(events: list) -> dict:
     lead = fresh[0]
     title = f"⚡ Tape burst at a zone — {lead['symbol']}" + (
         f" +{len(fresh) - 1} more" if len(fresh) > 1 else "")
-    body = "\n".join(headline(e) for e in fresh[:4])
+    lines = [headline(e) for e in fresh]
+    body = "\n".join(lines[:PUSH_BODY_LINES])
+    # EVERY burst, in body order (2026-09-29, Ajay on "CRWV +7 more": "I am
+    # unable to see the other that are hiddedn her"). Log-only: push.sender
+    # strips `items` before the device payload, so the phone is unchanged.
+    items = [{"symbol": e["symbol"], "text": ln} for e, ln in zip(fresh, lines)]
     pushed = False
     try:
         from push import sender
         r = sender.send_to_user(_owner_email(), {
             "title": title, "body": body,
-            "url": f"/sepa/{lead['symbol']}?tab=tape&from=supply-demand",
+            "url": tape_url(lead["symbol"]),
             "kind": "trade_flash",
+            "items": items,
         }, kind="trade_flash")
         pushed = bool(r and r.get("sent"))
     except Exception as exc:

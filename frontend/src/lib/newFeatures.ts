@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-29, on the "⚡ Tape burst at a zone — CRWV +7 more" card: "I am
+  // unable to see the other that are hiddedn her … Can you show them all and
+  // make all the tickers clicable individually?" Label from the
+  // alerts_all_tickers spec WP-C. docs/alerts/every_item_2026_09_29.md
+  { id: 'alerts-every-item', label: '⚡ Every name in a "+N more" alert — on the Alerts page a consolidated push (Tape burst, Demand zone, Breaking resistance, Key levels, Juggernaut, Leaderboard, 13F flow, Medical) now lists EVERY name it had, not just the 4–8 lines your phone showed, and each ticker in each line is its own link (⌘-click opens a new tab). The phone notification is unchanged. Older alerts link the names they printed and say how many were never stored', addedAt: '2026-09-29', route: '/alerts' },
   // Ajay 2026-09-29: "Can you pull these in to chart maps and add the demand
   // zones logic to these?" + "I want a toggle and also the check boxes we have
   // like AMD and supple and demand zones computing and also key levels".

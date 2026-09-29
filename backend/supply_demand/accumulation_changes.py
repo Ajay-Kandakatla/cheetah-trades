@@ -461,7 +461,8 @@ def _notify(changes: list) -> int:
         log.warning("accumulation: push unavailable: %s", exc)
         return 0
 
-    top = sorted(changes, key=lambda c: -abs(c.get("net_change_usd") or 0))[:5]
+    ordered = sorted(changes, key=lambda c: -abs(c.get("net_change_usd") or 0))
+    top = ordered[:5]
     body = "\n".join(alert_line(c) for c in top)
     if len(changes) > len(top):
         body += f"\n+{len(changes) - len(top)} more"
@@ -472,6 +473,10 @@ def _notify(changes: list) -> int:
         "tag": "accumulation-change",
         "url": "/supply-demand",
         "kind": "accumulation_change",
+        # EVERY change, in body order (2026-09-29, /alerts lists them all).
+        # Log-only: push.sender strips `items` before the device payload.
+        "items": [{"symbol": (str(c.get("symbol")).upper() if c.get("symbol") else None),
+                   "text": alert_line(c)} for c in ordered],
     }
     try:
         owner = HOUSE_OWNER_EMAILS[0] if HOUSE_OWNER_EMAILS else None

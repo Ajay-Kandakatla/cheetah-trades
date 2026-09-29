@@ -282,14 +282,19 @@ def single_text(ev: dict) -> dict:
 def digest_text(evs: list) -> dict:
     T = _tax()
     n = len(evs)
-    lines = [f"{str(e['ticker']).upper()} · {T.event_label(e)} · {move_text(e)}" for e in evs[:DIGEST_MAX_LINES]]
+    # EVERY event gets its line (2026-09-29, /alerts lists them all as `items`,
+    # log-only — push.sender strips it); the body still prints DIGEST_MAX_LINES.
+    all_lines = [f"{str(e['ticker']).upper()} · {T.event_label(e)} · {move_text(e)}" for e in evs]
+    lines = all_lines[:DIGEST_MAX_LINES]
     k = n - min(n, DIGEST_MAX_LINES)
     if k > 0:
         lines.append(f"+{k} more on Chart Maps ▸ Catalysts ▸ 🧬 Medical")
     return {"title": f"🧬 {n} more medical catalysts", "body": "\n".join(lines), "icon": "/icon.svg",
             "url": BOARD_URL, "tag": "med-digest", "kind": KIND, "ticker": None,
             "tickers": [str(e["ticker"]).upper() for e in evs],
-            "data": {"url": BOARD_URL, "source": KIND}}
+            "data": {"url": BOARD_URL, "source": KIND},
+            "items": [{"symbol": str(e["ticker"]).upper(), "text": ln}
+                      for e, ln in zip(evs, all_lines)]}
 
 
 def rehash_text() -> str:
