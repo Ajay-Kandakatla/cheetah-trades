@@ -12127,8 +12127,45 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   overflow: auto;
   max-height: calc(100vh - var(--sticky-top, 0px) - 2.5rem);
   overscroll-behavior: contain;
+  min-width: 0;
+  max-width: 100%;
 }
-.hs-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 0.78rem; }
+/* Ajay 2026-09-28: "Can you fix the horizontal columns hiding". ROOT CAUSE:
+ * `.hs` is declared twice — the Hot-sectors strip's rule carries
+ * `align-items: baseline`, and the table's rule below never resets it — so
+ * the scroll box, a flex child, was sized to the TABLE's min-content width.
+ * It had nothing to scroll, and html's `overflow-x: hidden` cut the right-hand
+ * columns off where no scroll could reach them. The wrapper is now the direct
+ * flex child: it stretches to `.hs` and never grows past it, so the box inside
+ * scrolls sideways at every width. `.hs` itself is untouched (the strip
+ * shares it); the stretch must sit on the DIRECT flex child to take effect. */
+.hs-scrollwrap { position: relative; align-self: stretch; min-width: 0; max-width: 100%; }
+/* The fade that says "more columns this way" — only while one is off-right. */
+.hs-scrollwrap::after {
+  content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 28px;
+  pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 4;
+  background: linear-gradient(to right, transparent, var(--bg-raised));
+}
+.hs-scrollwrap.is-more-right::after { opacity: 1; }
+.hs-morecols {
+  align-self: flex-end;
+  padding: 0.18rem 0.55rem; border-radius: 8px; font-size: 0.72rem;
+  border: 1px solid var(--cm-border, #2a2f3a); background: var(--cm-card, #161a22);
+  color: var(--ink-muted); cursor: pointer; white-space: nowrap;
+}
+.hs-morecols:hover { color: var(--ink); border-color: var(--accent, #38bdf8); }
+/* A full-width row (grain label, 📰 day-tag, "showing N of M") keeps its text
+ * inside the VISIBLE box while the columns scroll under it. `max-width`, never
+ * `width`: a table that fits must not grow a phantom scroll. 16px = the td's
+ * 2 × 8px side padding. `--hs-box-w` is written by useHScrollCue. */
+.hs-rowpin {
+  position: sticky; left: 0; box-sizing: border-box;
+  max-width: calc(var(--hs-box-w, 100%) - 16px);
+}
+/* `separate` + zero spacing, not `collapse`: a collapsed border is painted by
+ * the TABLE, so under a sticky cell the row separators scroll away from it.
+ * Cells draw only a bottom border, so the look is unchanged. */
+.hs-table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; font-size: 0.78rem; }
 .hs-table thead th {
   position: sticky; top: 0; z-index: 2;
   background: var(--bg-raised); color: var(--ink-muted);
@@ -12158,6 +12195,22 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .hs-theme > td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
 .hs-theme > td { background: color-mix(in srgb, var(--gold) 7%, var(--bg-sunken)); }
+
+/* Sector / Name stays put while the columns scroll (2026-09-28). Sticky cells
+ * need OPAQUE backgrounds — the industry row's is translucent, so it gets an
+ * opaque twin here — and the header corner sits above both sticky axes. */
+.hs-table th.hs-sym, .hs-table td.hs-sym {
+  position: sticky; left: 0; z-index: 1; background: var(--bg-raised);
+}
+.hs-table thead th.hs-sym { z-index: 3; }
+.hs-sector > td.hs-sym { background: var(--bg-sunken); }
+.hs-industry > td.hs-sym { background: color-mix(in srgb, var(--bg-sunken) 45%, var(--bg-raised)); }
+.hs-theme > td.hs-sym { background: color-mix(in srgb, var(--gold) 7%, var(--bg-sunken)); }
+.hs-scrollwrap.is-more-left .hs-table td.hs-sym,
+.hs-scrollwrap.is-more-left .hs-table th.hs-sym { box-shadow: 4px 0 6px -4px rgba(0, 0, 0, 0.6); }
+.hs-scrollwrap.is-more-left .hs-theme > td.hs-sym {
+  box-shadow: inset 3px 0 0 var(--gold), 4px 0 6px -4px rgba(0, 0, 0, 0.6);
+}
 
 /* The table embedded in the Chart Maps Hot-sectors strip. It is a guest in a
    narrower box than the /chart-maps?tab=hottest page, so it scrolls sideways
@@ -12242,6 +12295,33 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-table th.is-sorted { color: var(--ink); }
 .hs-table th.is-sorted .hs-sort { font-weight: 700; }
 .hs-sorted-by { font-size: 0.72rem; color: var(--ink-muted); }
+/* Multi-column sort (2026-09-28): a served tie-break as a tap target, the
+ * "then by" picker (the touch path for shift-click), and ✕ clear. */
+.hs-then {
+  background: none; border: 0; font: inherit; cursor: pointer; padding: 0; margin-left: 0.3em;
+  color: var(--ink-muted);
+}
+.hs-then:hover { color: var(--ink); text-decoration: underline; }
+.hs-thenby { font-size: 0.72rem; margin-left: 4px; }
+.hs-sortclear {
+  background: none; border: 0; font: inherit; cursor: pointer; padding: 0 0 0 6px;
+  color: var(--ink-muted);
+}
+.hs-sortclear:hover { color: var(--ink); text-decoration: underline; }
+/* The Quality header: its sort button and the ⓘ, side by side. */
+.hs-thwrap { display: inline-flex; align-items: center; gap: 4px; }
+/* ⓘ Quality — the served explainer's body. */
+.hs-qi p { margin: 0 0 8px; }
+.hs-qi ul { margin: 0 0 8px 16px; padding: 0; }
+.hs-qi li { margin: 2px 0; }
+.hs-qi-table { width: 100%; border-collapse: collapse; margin: 0 0 8px; font-size: 12px; }
+.hs-qi-table th, .hs-qi-table td {
+  text-align: left; vertical-align: top; padding: 3px 6px 3px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.hs-qi-table th { font-weight: 600; white-space: nowrap; }
+.hs-qi-table td.mono { white-space: nowrap; }
+.hs-qi-note { color: var(--ink-muted); font-size: 12px; }
 .hs-dim { color: var(--ink-muted); opacity: 0.8; }
 /* A group row's fundamental cell is a MEDIAN of its membership, not a filed
  * number — dimmed so it never reads as a company's own figure. */

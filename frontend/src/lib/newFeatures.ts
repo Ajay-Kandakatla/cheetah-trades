@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-28: "Can you fix the horizontal columns hiding and also can
+  // you help me with multi column sort also can you help with info icon on the
+  // quality?" Label verbatim from the hottest_multisort spec §3.6.
+  { id: 'hottest-multisort-quality-2026-09-28', addedAt: '2026-09-28', route: '/chart-maps?tab=hot_sectors',
+    label: '🔥 Hottest: every column reachable, sort on up to 3 columns, and ⓘ on Quality. You said: “Can you fix the horizontal columns hiding and also can you help me with multi column sort also can you help with info icon on the quality?” WHAT CHANGED: the table was growing wider than the page and the page cut its right edge off — it now scrolls sideways inside its own box, Sector / Name stays put while you scroll, and a fade plus “N more columns →” appear when columns sit off to the right. Shift-click (or ⌘-click) a second and third header to break ties — the headers number them 1 ▼ 2 ▲; “then by” does the same on a phone; a plain click goes back to one column; ✕ clear goes back to 5 days. The ⓘ beside Quality says exactly how the score is built — points, penalties, tiers, 🎯, ⚠️, blanks. WHAT IT IS NOT: Quality describes the last filed quarters; it is not a measured predictor — no study has tested it. YOUR CALL: the 3-key max, how exact ties fall, a sticky name column on a phone, remembering the sort, and the 10 surprise points that never arrive.' },
   // Ajay 2026-09-28, verbatim: "Can you create a new sector for DATA driven
   // companies like DATA DOG, Mongo DB and Snow flake in to the add them
   // accross board where we have sectors". Label verbatim from the

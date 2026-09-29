@@ -69,6 +69,18 @@ before the move and it scrolls sideways after it. What the move buys is the
 **scroll position**: the state is now the first thing right of the name, so he
 reads it without moving anything, which is what he asked for.
 
+**Premise fixed 2026-09-28 — "scrolls sideways" was not what was happening.**
+On 2026-09-28 he reported the NEXT last column, Next ER, cut to "N". The move
+above never touched the cause: the scroll box was sized to the TABLE (its flex
+parent `.hs` inherits `align-items: baseline` from the Hot-sectors strip's rule
+of the same name), so it had nothing to scroll, and the page's
+`overflow-x: hidden` cut the right-hand columns off where no scroll could reach
+them. The box now stretches to the page and scrolls sideways inside itself,
+Sector / Name stays sticky, and a "N more columns →" cue appears when columns
+sit off to the right — **nothing was dropped or narrowed**. The table still does
+not fit a narrow window; it now scrolls. Details and the real-browser probe
+table: `docs/rotation/hottest_columns_visible_2026_09_28.md`.
+
 **No estimated px figure is quoted on this page.** The version of this doc
 written with the change carried an arithmetic width model — an overflow, a
 saving, a per-column width for Next ER — built from measured character counts
@@ -298,9 +310,13 @@ size and so did **not** shrink with the table — at 0.74rem against the table's
    (memory `cheetah_amd_manipulation.md`). Nothing here guesses at it.
 8. **Which column gives way on a narrow window — OPEN, and it is a board
    decision.** The move changed the scroll POSITION, not the scroll: with
-   twelve columns against a 900px floor this table still runs off the right
-   edge of a narrow window, and it did before 🌀 shipped too. The only thing
-   that ends it is dropping or narrowing one of the twelve. Nothing here picks
+   twelve columns against a 900px floor this table is wider than a narrow
+   window, and it was before 🌀 shipped too. **Premise fixed 2026-09-28:** the
+   right-hand columns were being CUT by the page, not scrolled — that is fixed
+   (`docs/rotation/hottest_columns_visible_2026_09_28.md`), nothing was
+   dropped, and every column is now reachable by a sideways scroll inside the
+   table's own box. What stays open is only whether to END that scroll. The
+   only thing that ends it is dropping or narrowing one of the twelve. Nothing here picks
    a victim — the earlier draft of this page named Next ER, which was a
    reviewer deciding one of his columns for him, and that sentence is gone.
    Candidates if he wants one: **Next ER** (a date he can get on the ticker

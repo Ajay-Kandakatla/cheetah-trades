@@ -466,3 +466,16 @@ a third basis (`basis=premarket`) adds a `Pre-mkt` column from each name's own
 pre-market print against RSP's own, one snapshot for the whole board, with the
 day column byte-identical and nothing measured. Full write-up:
 [`hottest_premarket_2026_09_21.md`](hottest_premarket_2026_09_21.md).
+
+---
+
+## 2026-09-28 — tie-breaks (multi-column sort) + ⓘ Quality
+
+Ajay 2026-09-28: *"can you help me with multi column sort also can you help with
+info icon on the quality?"* — `then_by=key:dir,key:dir` adds up to two
+tie-breaks after `sort`/`dir` (which are unchanged; a request without it ranks
+identically at every level), served back as `sorted_then_by`; exact ties fall
+to the symbol A→Z on name rows and keep their stored order on group rows. The
+payload also carries `quality_info`, the Quality score described from the
+engine's own constants — a description, not a measured predictor. Full
+write-up: [`hottest_multisort_quality_2026_09_28.md`](hottest_multisort_quality_2026_09_28.md).

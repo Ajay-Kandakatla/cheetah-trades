@@ -30,4 +30,49 @@ describe('InfoButton', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('the body text')).toBeInTheDocument();
   });
+
+  /* `sheet` (2026-09-28): the 🔥 Hottest Quality ⓘ sits in a table header
+     inside an `overflow: auto` box, which clips an absolute popover. The sheet
+     is portalled onto <body> instead. */
+  describe('sheet mode', () => {
+    it('renders the pop under document.body, NOT inside the wrapper', () => {
+      const { container } = render(<InfoButton inline sheet title="Q">sheet body</InfoButton>);
+      fireEvent.click(trigger('Q'));
+      const dlg = screen.getByRole('dialog');
+      expect(dlg).toHaveClass('info-button__pop--sheet');
+      expect(container.querySelector('.info-button')?.contains(dlg)).toBe(false);
+      expect(dlg.parentElement).toBe(document.body);
+    });
+
+    it('NEGATIVE: a mousedown INSIDE the portalled pop does not close it', () => {
+      render(<InfoButton inline sheet title="Q"><span>inner text</span></InfoButton>);
+      fireEvent.click(trigger('Q'));
+      fireEvent.mouseDown(screen.getByText('inner text'));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('an outside mousedown closes it', () => {
+      render(<div><p>elsewhere</p><InfoButton inline sheet title="Q">x</InfoButton></div>);
+      fireEvent.click(trigger('Q'));
+      fireEvent.mouseDown(screen.getByText('elsewhere'));
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('opening focuses the close button; Esc closes and returns focus to the trigger', () => {
+      render(<InfoButton inline sheet title="Q">x</InfoButton>);
+      fireEvent.click(trigger('Q'));
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close' }));
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(document.activeElement).toBe(trigger('Q'));
+    });
+
+    it('NEGATIVE: without `sheet` the pop stays inside the wrapper, as before', () => {
+      const { container } = render(<InfoButton inline title="Q">x</InfoButton>);
+      fireEvent.click(trigger('Q'));
+      const dlg = screen.getByRole('dialog');
+      expect(dlg).not.toHaveClass('info-button__pop--sheet');
+      expect(container.querySelector('.info-button')?.contains(dlg)).toBe(true);
+    });
+  });
 });

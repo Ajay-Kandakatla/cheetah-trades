@@ -40,6 +40,14 @@ import {
   AMD_COL, amdCell, amdCoverageNote, amdGroupCell, amdHeadTitle, amdToneClass, showAmdCol,
 } from '../lib/hottestAmd';
 import type { HsAmd, HsAmdSummary } from '../lib/hottestAmd';
+import {
+  HS_DEFAULT_SORT, HS_MAX_SORT_KEYS, isDefaultSort, nextSortState, samePlan, sortBasis,
+  sortMark, thenByParam,
+} from '../lib/hottestSort';
+import type { HsSortKey, HsSortState } from '../lib/hottestSort';
+import { useHScrollCue } from '../hooks/useHScrollCue';
+import { HottestQualityInfo, showQualityInfo, tierLabel } from './HottestQualityInfo';
+import type { HsQualityInfo } from './HottestQualityInfo';
 
 /** Which session the day column on THIS row came from. `live` = the name's own
  *  move so far in the current session; `close` = the rotation snapshot's last
@@ -232,6 +240,13 @@ export type HsPayload = {
    *  is exactly how the column knows not to draw there. */
   amd_summary?: HsAmdSummary | null;
   sortable?: string[]; legs?: string[];
+  /** Multi-column sort (2026-09-28): the tie-breaks the server APPLIED after
+   *  `sorted_by` — a bad, duplicate or extra key is dropped server-side, so
+   *  this can be shorter than what was asked for — and its key cap. */
+  sorted_then_by?: HsSortKey[]; sort_max_keys?: number;
+  /** ⓘ Quality (2026-09-28): the served explainer of the 0–100 score, built
+   *  from earnings_quality's own constants. Absent → no ⓘ is drawn. */
+  quality_info?: HsQualityInfo | null;
   sectors: HsSector[];
   /** Our own curated rosters — robotics, nuclear, quantum, the AI complex,
    *  crypto. They cut ACROSS the provider's sectors (robotics spans Technology,
@@ -322,33 +337,41 @@ export function showPreCol(d?: Pick<HsPayload, 'pre'> | null): boolean {
  *  Pre-mkt still leads the RANKED LEGS, the way they already read newest to
  *  oldest, and HS_COLS keeps its order untouched.
  *
- *  THIS DOES NOT MAKE THE TABLE FIT, AND NOTHING HERE DECIDES WHICH COLUMN
- *  GIVES WAY INSTEAD. `.hs-table` sets `min-width: 900px` (760px inside the
- *  720px media block) and this table prints up to TWELVE columns — Sector /
- *  Name, 🌀 AMD, ☀️ Pre-mkt and the nine in HS_COLS. On a narrow window it
- *  scrolls sideways before the move and after it. What the move buys is the
- *  SCROLL POSITION: the state is now the first thing right of the name, so he
- *  reads it without moving anything, which is what he asked for.
+ *  THIS DOES NOT MAKE THE TABLE FIT — the move never could. `.hs-table` sets
+ *  `min-width: 900px` (760px inside the 720px media block) and this table
+ *  prints up to TWELVE columns — Sector / Name, 🌀 AMD, ☀️ Pre-mkt and the nine
+ *  in HS_COLS. What the move buys is the SCROLL POSITION: the state is the
+ *  first thing right of the name, so he reads it without moving anything.
  *
- *  Which of his existing columns is dropped or narrowed to END the scroll is
- *  HIS decision, not ours — it is open in § His call of
- *  docs/rotation/hottest_expand_all_2026_09_22.md. Note while reading it that
- *  the day column is at its WIDEST exactly when he reads this board before the
- *  open: `d1Label` prints `Last close YYYY-MM-DD` whenever `d1.live` is false
- *  (rotation/hottest.py), i.e. every pre-market and after-hours read, the
- *  ☀️ basis=premarket board included.
+ *  WHY A COLUMN WAS STILL CUT, AND THE FIX (2026-09-28). On 2026-09-28 the
+ *  NEXT last column, Next ER, was cut to "N" on his screen: the move had
+ *  never touched the cause. The cause was layout, not width — the table's
+ *  flex parent `.hs` inherits `align-items: baseline` from the Hot-sectors
+ *  strip's rule of the same name, so the scroll box was sized to the TABLE
+ *  instead of to the page. It had nothing to scroll, and the page's own
+ *  `overflow-x: hidden` cut the right-hand columns off where nobody could
+ *  reach them. The box's wrapper (`.hs-scrollwrap`, the direct flex child)
+ *  now stretches to its parent and never grows past it, so the box scrolls
+ *  sideways INSIDE ITSELF and every column is on screen or one sideways
+ *  scroll away, at any width. Sector / Name is sticky on the left while it
+ *  scrolls, the full-width rows (grain labels, 📰 day-tags, "showing N of M")
+ *  pin their text to the visible box, and a fade plus "N more columns →"
+ *  appear whenever a column sits off to the right. NO COLUMN WAS DROPPED OR
+ *  NARROWED to get there.
  *
- *  ON A PHONE (the ≤720px block) the move pushes every ranked leg one column
- *  further right, because 🌀 now sits between the name and them. Whether a
- *  phone should wrap this cell or not draw the column at all is on the same
- *  his-call list. Nothing here picks one silently.
+ *  Which of his columns, if any, should give way to END the sideways scroll
+ *  is HIS decision, not ours — it stays open on the his-call list in
+ *  docs/rotation/hottest_expand_all_2026_09_22.md. The day column is at its
+ *  WIDEST exactly when he reads this board before the open: `d1Label` prints
+ *  `Last close YYYY-MM-DD` whenever `d1.live` is false (rotation/hottest.py),
+ *  i.e. every pre-market and after-hours read, the ☀️ basis=premarket board
+ *  included. Whether a phone keeps Sector / Name sticky is on the same list.
  *
- *  NO ESTIMATED px FIGURE IS QUOTED here or in either doc. The version that
- *  shipped with the move carried an arithmetic width model — a table floor, a
- *  box width, a per-column width for Next ER — built from measured character
- *  counts and ASSUMED per-character advances, with no browser ever opened, and
- *  Rule #1 does not take a model for a measurement. The px values above are
- *  styles.css's own `min-width` declarations, read off the source. */
+ *  NO ESTIMATED px FIGURE IS QUOTED here. The px values above are styles.css's
+ *  own `min-width` declarations, read off the source; measured widths live in
+ *  docs/rotation/hottest_columns_visible_2026_09_28.md, produced by
+ *  frontend/scripts/hottest-layout-probe.mjs in a real browser with all eight
+ *  of the app's stylesheets. */
 export function visibleCols(d?: Pick<HsPayload, 'pre' | 'amd_summary'> | null): HsCol[] {
   return [
     ...(showAmdCol(d) ? [AMD_COL] : []),
@@ -747,6 +770,9 @@ function DayTagRow({ tag, span }: { tag: HsDayTag; span: number }) {
   return (
     <tr className="hs-daytag">
       <td colSpan={span}>
+        {/* Pinned to the visible box: the row spans every column, and without
+            this its prose would run off under the sideways scroll. */}
+        <div className="hs-rowpin">
         <div className="hs-daytag__head">
           <strong>{tag.symbol}</strong>
           {tag.company ? <span className="hs-daytag__co">{tag.company}</span> : null}
@@ -809,6 +835,7 @@ function DayTagRow({ tag, span }: { tag: HsDayTag; span: number }) {
           Written from the headlines above and the numbers already on this row.
           Nothing here is measured, no edge is claimed, and this gates no alert
           and enters no lane.
+        </div>
         </div>
       </td>
     </tr>
@@ -890,7 +917,8 @@ function AmdGroupCell({ s }: { s?: HsAmdSummary | null }) {
 function NameRow({ r, read, study, bandStudy, d1 }: {
   r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
   bandStudy?: BandStructureStudy | null;
-  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre' | 'amd_summary'> | null;
+  d1?: Pick<HsPayload, 'd1' | 'as_of' | 'benchmark' | 'pre' | 'amd_summary'
+             | 'quality_info'> | null;
 }) {
   const nav = useNavigate();
   const loc = useLocation();
@@ -991,7 +1019,9 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
       <td className={`mono hs-num ${tone(r.net_margin)}`}>
         {pct(r.net_margin)}{r.margin_expanding ? ' ↑' : ''}
       </td>
-      <td className="mono hs-num" title={r.eq_tier || undefined}>
+      {/* The hover names the tier in the SERVED explainer's words ("Red
+          flag"), the raw key only when no explainer came back. */}
+      <td className="mono hs-num" title={tierLabel(r.eq_tier, d1?.quality_info)}>
         {typeof r.eq_score === 'number' ? r.eq_score.toFixed(0) : '—'}
         {r.code_33 ? ' 🎯' : ''}{r.inventory_flag ? ' ⚠️' : ''}
       </td>
@@ -1008,6 +1038,13 @@ export function HottestSectors() {
   const [loading, setLoading] = useState(false);
   const [sort, setSort] = useState<string>('rel_5d');
   const [dir, setDir] = useState<HsDir>('desc');
+  /* Tie-breaks after `sort` (Ajay 2026-09-28: "can you help me with multi
+   * column sort"). Sent as ONE extra param, and only when there is one — a
+   * single-key read is byte-identical to the URL before this existed. The
+   * string, not the array, is the `load` dependency: an equal plan never
+   * re-fetches. */
+  const [thenBy, setThenBy] = useState<HsSortKey[]>([]);
+  const thenKey = thenByParam(thenBy);
   /* ⊞ One blanket answer + the carets he moved by hand. `all` starts from the
    * remembered choice on this browser (absent = closed, the shipped default). */
   const [open, setOpen] = useState<HsOpen>(() => ({ all: readExpandAllPref(), ov: {} }));
@@ -1037,6 +1074,7 @@ export function HottestSectors() {
     inFlight.current = true;
     setLoading(true);
     fetch(`${API}/rotation/hottest?sort=${encodeURIComponent(sort)}&dir=${dir}`
+          + thenKey
           + (basis === 'premarket' ? '&basis=premarket' : ''),
           { credentials: 'include', cache: 'no-store' })
       .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
@@ -1052,7 +1090,7 @@ export function HottestSectors() {
       .finally(() => {
         if (id === seq.current) { inFlight.current = false; setLoading(false); }
       });
-  }, [sort, dir, basis, scanTick]);
+  }, [sort, dir, thenKey, basis, scanTick]);
   useEffect(() => { load(); }, [load]);
   const onRescan = () => { if (inFlight.current) return; load(); };
   /* ☀️ One click = one read on the pre-market basis, ranked on the new column.
@@ -1062,6 +1100,7 @@ export function HottestSectors() {
     setBasis('premarket');
     setSort(PRE_COL.key);
     setDir('desc');
+    setThenBy([]);
     setScanTick((t) => t + 1);
   };
 
@@ -1120,11 +1159,19 @@ export function HottestSectors() {
    * board he already called wide), not a silent browser reorder. The chip
    * still rides on every name, and the omission is pinned by the explosive
    * contract's NO_TOGGLE list in frontend/scripts/contracts.mjs. */
-  /** Click a new column → sort it DESC (the interesting end of every column
-   *  except Next ER). Click the active column again → flip direction. */
-  const clickSort = (k: string) => {
-    if (k === sort) setDir((d) => (d === 'desc' ? 'asc' : 'desc'));
-    else { setSort(k); setDir(k === 'next_earnings' ? 'asc' : 'desc'); }
+  /* The scroll box, and the cue that says which columns sit off to its right
+   * (2026-09-28). Called before the early returns below — a hook must run on
+   * every render. The deps include `open` and `byIndustry` because opening a
+   * group widens the TABLE without resizing the box. */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const cueCols = visibleCols(data);
+  const cue = useHScrollCue(scrollRef, cueCols.map((c) => colLabel(c.key, data)),
+                            [data, cueCols.length, open, byIndustry]);
+  const scrollRight = () => {
+    const el = scrollRef.current;
+    if (el && typeof el.scrollBy === 'function') {
+      el.scrollBy({ left: el.clientWidth * 0.8, behavior: 'smooth' });
+    }
   };
 
   /* A COLD failure still shows the failure. What changed on 2026-09-18 is that
@@ -1154,6 +1201,46 @@ export function HottestSectors() {
   /* The header mark follows the SERVED order when the server demoted a
    * pre_1d request — the intent stays in `sort` for the next read. */
   const shownSort = shownSortKey(sort, data);
+  /* THE plan every mark draws and every click builds on: the SERVED one
+   * (primary included) once the read has landed, the request while it is in
+   * flight. A failed read therefore leaves header and rows in agreement. */
+  const basisPlan = sortBasis(shownSort, { sort, dir, thenBy }, data, loading);
+  const maxKeys = typeof data?.sort_max_keys === 'number' && data.sort_max_keys >= 1
+    ? data.sort_max_keys : HS_MAX_SORT_KEYS;
+  /** PLAIN click: today's rule on the client state, byte for byte — a new
+   *  column opens at its default direction, the active one flips — and the
+   *  tie-breaks go. ADDITIVE (shift / ⌘ / ctrl, "then by", a "then" chip):
+   *  builds on what the server applied, adds / flips / removes a tie-break. At
+   *  the cap nothing changes and nothing is fetched.
+   *  AFTER A FAILED READ (`err` set over a board that stayed) the state holds a
+   *  request that never landed, so a plain click too builds on `basisPlan` —
+   *  the board on screen. When the answer then equals that stale request
+   *  (click the column whose read failed, again) no dep changes, so the click
+   *  RETRIES the read instead of going dead. */
+  const clickSort = (k: string, additive = false) => {
+    const from: HsSortState = additive || err ? basisPlan : { sort, dir, thenBy };
+    const next = nextSortState(from, k, additive, maxKeys);
+    if (next === from) return;
+    if (samePlan(next, { sort, dir, thenBy })) {
+      if (!inFlight.current) load();
+      return;
+    }
+    setSort(next.sort);
+    setDir(next.dir);
+    setThenBy(next.thenBy);
+  };
+  const clearSort = () => {
+    if (samePlan({ sort: HS_DEFAULT_SORT, dir: 'desc', thenBy: [] }, { sort, dir, thenBy })) {
+      if (!inFlight.current) load();                 // the default read failed: retry it
+      return;
+    }
+    setSort(HS_DEFAULT_SORT); setDir('desc'); setThenBy([]);
+  };
+  /* The "then by" choices: every printed, sortable column not already in the
+   * plan, labelled as its header is. */
+  const thenOptions = cols.filter((c) => c.sortable !== false
+    && c.key !== basisPlan.sort && !basisPlan.thenBy.some((t) => t.key === c.key));
+  const planFull = 1 + basisPlan.thenBy.length >= maxKeys;
 
   return (
     <div className="hs">
@@ -1164,9 +1251,33 @@ export function HottestSectors() {
             arrow IS the state. */}
         <div className="hs-sorts">
           <span className="hs-sorted-by">
-            ranked on <b>{colLabel(shownSort, data)}</b>
-            {dir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
-            <span className="hs-dim"> · click any column header</span>
+            ranked on <b>{colLabel(basisPlan.sort, data)}</b>
+            {basisPlan.dir === 'desc' ? ' ▼ high → low' : ' ▲ low → high'}
+            {/* Each served tie-break, as a tap target: a tap flips it, the
+                next removes it — the touch path for what shift-click does. */}
+            {basisPlan.thenBy.map((k) => (
+              <button key={k.key} type="button" className="hs-then"
+                      title="tap to flip this tie-break, tap again to remove it"
+                      onClick={() => clickSort(k.key, true)}>
+                {' '}then <b>{colLabel(k.key, data)}</b>{k.dir === 'desc' ? ' ▼' : ' ▲'}
+              </button>
+            ))}
+            {' '}
+            <select className="hs-thenby" aria-label="then by" value=""
+                    disabled={planFull || !thenOptions.length}
+                    onChange={(e) => { if (e.target.value) clickSort(e.target.value, true); }}>
+              <option value="">+ then by…</option>
+              {thenOptions.map((c) => (
+                <option key={c.key} value={c.key}>{colLabel(c.key, data)}</option>
+              ))}
+            </select>
+            {!isDefaultSort(basisPlan) ? (
+              <button type="button" className="hs-sortclear" data-testid="hs-sort-clear"
+                      title="back to 5 days, high → low, no tie-breaks"
+                      onClick={clearSort}>✕ clear</button>
+            ) : null}
+            <span className="hs-dim"> · click any column header · shift- or ⌘-click adds a
+              tie-break (up to {maxKeys})</span>
           </span>
         </div>
         <label className="hs-toggle">
@@ -1218,7 +1329,7 @@ export function HottestSectors() {
           {loading && basis === 'premarket' ? 'Scanning…' : '☀️ Pre-market scan'}
         </button>
         <InfoButton inline title="🔥 Hottest — how to read this">
-          <p>Every sector ranked on <b>{colLabel(shownSort, data)}</b>
+          <p>Every sector ranked on <b>{colLabel(basisPlan.sort, data)}</b>
             against <b>{benchSymbol(data)}</b>,
             the equal-weight benchmark — so a name is measured against the average stock, not the
             mega-caps. Open a sector for its industries, then its names.</p>
@@ -1272,7 +1383,11 @@ export function HottestSectors() {
             on it; click it again to flip the direction. The board keeps 25 names per group, so a
             browser-side sort would only reorder those 25 — the round-trip re-ranks the FULL
             membership and then takes the top 25 of the column you picked. A blank always sorts
-            LAST, in both directions. Sector and industry rows show the <b>median of their full
+            LAST, in both directions. <b>Tie-breaks:</b> shift- or ⌘-click a second and third
+            header (or use <i>then by</i>) to break ties, up to {maxKeys} columns — the headers
+            number them 1, 2, 3; a plain click goes back to one column, ✕ clear back to 5 days.
+            Exact ties after that fall to the name A→Z on name rows, while sectors, industries
+            and rosters keep their usual order. The ⓘ beside Quality explains that score. Sector and industry rows show the <b>median of their full
             membership</b> in the fundamental columns, so a sort there has something visible behind
             it; the three return legs stay the rotation grid&rsquo;s sampled median.
             {/* The 🌀 column is the one exception, and the refusal is SERVED —
@@ -1367,7 +1482,16 @@ export function HottestSectors() {
         <div className="cm-hidden-count" data-testid="hs-amd-note">{amdNote}</div>
       ) : null}
 
-      <div className="hs-scroll">
+      {/* Columns off to the right are ANNOUNCED, never silently cut
+          (2026-09-28). The label list comes from colLabel, not textContent. */}
+      {cue.right ? (
+        <button type="button" className="hs-morecols" data-testid="hs-more-cols"
+                title={`Off to the right: ${cue.offRight.join(', ')}`} onClick={scrollRight}>
+          {cue.offRight.length} more column{cue.offRight.length === 1 ? '' : 's'} →
+        </button>
+      ) : null}
+      <div className={`hs-scrollwrap${cue.right ? ' is-more-right' : ''}${cue.left ? ' is-more-left' : ''}`}>
+      <div className="hs-scroll" ref={scrollRef} onScroll={cue.onScroll}>
         <table className="hs-table">
           <thead>
             <tr>
@@ -1390,14 +1514,31 @@ export function HottestSectors() {
                     </th>
                   );
                 }
-                const on = shownSort === c.key;
+                const on = basisPlan.sort === c.key;
+                const prio = basisPlan.thenBy.findIndex((t) => t.key === c.key);
+                const sortBtn = (
+                  <button type="button" className="hs-sort"
+                          onMouseDown={(e) => { if (e.shiftKey) e.preventDefault(); }}
+                          onClick={(e) => clickSort(c.key, e.shiftKey || e.metaKey || e.ctrlKey)}
+                          title={colTitle(c, data)}>
+                    {colLabel(c.key, data)}{sortMark(c.key, basisPlan.sort, basisPlan.dir, basisPlan.thenBy)}
+                  </button>
+                );
                 return (
                   <th key={c.key} className={`${c.num ? 'hs-num' : ''}${on ? ' is-sorted' : ''}`}
-                      aria-sort={on ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
-                    <button type="button" className="hs-sort" onClick={() => clickSort(c.key)}
-                            title={colTitle(c, data)}>
-                      {colLabel(c.key, data)}{arrow(on, dir)}
-                    </button>
+                      data-sort-priority={prio >= 0 ? prio + 2 : undefined}
+                      aria-sort={on ? (basisPlan.dir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+                    {/* ⓘ Quality (2026-09-28): a SIBLING of the sort button,
+                        never inside it — opening it fires no fetch. A sheet,
+                        because this box scrolls and would clip a popover. */}
+                    {c.key === 'eq_score' && showQualityInfo(data) ? (
+                      <span className="hs-thwrap">
+                        {sortBtn}
+                        <InfoButton inline sheet align="right" title="Quality score">
+                          <HottestQualityInfo info={data!.quality_info!} />
+                        </InfoButton>
+                      </span>
+                    ) : sortBtn}
                   </th>
                 );
               })}
@@ -1413,7 +1554,7 @@ export function HottestSectors() {
                 provider's eleven follow underneath, unchanged. */}
             {themes.length ? (
               <tr className="hs-grain"><td colSpan={span}>
-                our rosters · cut across the sectors below
+                <div className="hs-rowpin">our rosters · cut across the sectors below</div>
               </td></tr>
             ) : null}
             {themes.map((t) => {
@@ -1446,7 +1587,7 @@ export function HottestSectors() {
                   {isOpen ? t.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && t.names_total > t.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={span} className="hs-more">
-                      showing {t.names.length} of {t.names_total}
+                      <div className="hs-rowpin">showing {t.names.length} of {t.names_total}</div>
                     </td></tr>
                   ) : null}
                 </>
@@ -1454,7 +1595,7 @@ export function HottestSectors() {
             })}
             {themes.length ? (
               <tr className="hs-grain"><td colSpan={span}>
-                the provider&rsquo;s sectors
+                <div className="hs-rowpin">the provider&rsquo;s sectors</div>
               </td></tr>
             ) : null}
             {sectors.map((s) => {
@@ -1520,7 +1661,7 @@ export function HottestSectors() {
                         {iOpen ? ind.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${ik}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                         {iOpen && ind.names_total > ind.names.length ? (
                           <tr key={`${ik}|more`}><td colSpan={span} className="hs-more">
-                            showing {ind.names.length} of {ind.names_total}
+                            <div className="hs-rowpin">showing {ind.names.length} of {ind.names_total}</div>
                           </td></tr>
                         ) : null}
                       </>
@@ -1529,7 +1670,7 @@ export function HottestSectors() {
                   {isOpen && !byIndustry ? s.names.filter((r) => showName(r.symbol)).map((r) => <NameRow key={`${k}|${r.symbol}`} r={r} read={readOf(r.symbol)} study={room.payload?.explosive_study} bandStudy={room.payload?.band_structure_study} d1={data} />) : null}
                   {isOpen && !byIndustry && s.names_total > s.names.length ? (
                     <tr key={`${k}|more`}><td colSpan={span} className="hs-more">
-                      showing {s.names.length} of {s.names_total}
+                      <div className="hs-rowpin">showing {s.names.length} of {s.names_total}</div>
                     </td></tr>
                   ) : null}
                 </>
@@ -1537,6 +1678,7 @@ export function HottestSectors() {
             })}
           </tbody>
         </table>
+      </div>
       </div>
       {data?.note ? <p className="rw__note">{data.note}</p> : null}
     </div>

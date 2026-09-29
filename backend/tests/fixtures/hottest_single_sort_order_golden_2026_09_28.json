@@ -1,0 +1,2494 @@
+{
+ "eq_score:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Software",
+    "Hardware"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "CHAR",
+    "ALFA"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "GOLF",
+    "ECHO",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "CHAR",
+    "ALFA",
+    "BETA"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Technology",
+   "Energy"
+  ],
+  "sorted_by": "eq_score",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "CHAR",
+    "FOXT"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "crypto",
+   "quantum",
+   "space"
+  ]
+ },
+ "eq_score:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Coal",
+    "Oil"
+   ],
+   "Technology": [
+    "Hardware",
+    "Software",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "ALFA",
+    "BETA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "eq_score",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "FOXT",
+    "CHAR",
+    "JULI"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "net_margin:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "CHAR",
+    "ALFA"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "GOLF",
+    "FOXT"
+   ],
+   "Technology": [
+    "CHAR",
+    "ALFA",
+    "BETA",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Energy",
+   "Technology"
+  ],
+  "sorted_by": "net_margin",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "JULI",
+    "FOXT"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ECHO",
+    "HOTL",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "crypto",
+   "space",
+   "quantum"
+  ]
+ },
+ "net_margin:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Hardware",
+    "Software"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "GOLF",
+    "ECHO",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "BETA",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "net_margin",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "CHAR",
+    "FOXT"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "ALFA",
+    "HOTL",
+    "ECHO"
+   ]
+  },
+  "themes": [
+   "quantum",
+   "space",
+   "crypto"
+  ]
+ },
+ "next_earnings:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "CHAR",
+    "ALFA"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "CHAR",
+    "ALFA",
+    "BETA",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "next_earnings",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "JULI",
+    "FOXT"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ALFA",
+    "ECHO"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "next_earnings:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "ALFA",
+    "CHAR",
+    "BETA",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "next_earnings",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "CHAR",
+    "FOXT"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ECHO",
+    "ALFA",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "pre_1d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Chemicals",
+    "Steel"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Software",
+    "Hardware"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "INDI",
+    "HOTL",
+    "JULI"
+   ],
+   "Energy": [
+    "ECHO",
+    "GOLF",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "CHAR",
+    "BETA"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Basic Materials",
+   "Energy"
+  ],
+  "sorted_by": "rel_5d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "pre_1d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Coal",
+    "Oil"
+   ],
+   "Technology": [
+    "Hardware",
+    "Software",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Energy",
+   "Technology",
+   "Basic Materials"
+  ],
+  "sorted_by": "rel_5d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "crypto",
+   "quantum",
+   "space"
+  ]
+ },
+ "q_eps_yoy:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "GOLF",
+    "ECHO",
+    "FOXT"
+   ],
+   "Technology": [
+    "ALFA",
+    "CHAR",
+    "BETA",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Energy",
+   "Technology",
+   "Basic Materials"
+  ],
+  "sorted_by": "q_eps_yoy",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ECHO",
+    "ALFA",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "crypto",
+   "space",
+   "quantum"
+  ]
+ },
+ "q_eps_yoy:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Coal",
+    "Oil"
+   ],
+   "Technology": [
+    "Hardware",
+    "Software",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Technology",
+   "Energy"
+  ],
+  "sorted_by": "q_eps_yoy",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ALFA",
+    "ECHO"
+   ]
+  },
+  "themes": [
+   "quantum",
+   "space",
+   "crypto"
+  ]
+ },
+ "rel_1d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "CHAR",
+    "ALFA"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "INDI",
+    "JULI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "CHAR",
+    "ALFA",
+    "BETA",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Technology",
+   "Energy"
+  ],
+  "sorted_by": "rel_1d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "space",
+   "crypto",
+   "quantum"
+  ]
+ },
+ "rel_1d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Chemicals",
+    "Steel"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Hardware",
+    "Software"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "INDI",
+    "JULI",
+    "HOTL"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "BETA",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "rel_1d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "quantum",
+   "space",
+   "crypto"
+  ]
+ },
+ "rel_21d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Coal",
+    "Oil"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "DELT",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Energy",
+   "Technology",
+   "Basic Materials"
+  ],
+  "sorted_by": "rel_21d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "FOXT",
+    "JULI",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "crypto",
+   "space",
+   "quantum"
+  ]
+ },
+ "rel_21d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Chemicals",
+    "Steel"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Hardware",
+    "Software"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "INDI",
+    "JULI"
+   ],
+   "Energy": [
+    "GOLF",
+    "ECHO",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "BETA",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Technology",
+   "Energy"
+  ],
+  "sorted_by": "rel_21d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "quantum",
+   "space",
+   "crypto"
+  ]
+ },
+ "rel_5d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Chemicals",
+    "Steel"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Software",
+    "Hardware"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "INDI",
+    "HOTL",
+    "JULI"
+   ],
+   "Energy": [
+    "ECHO",
+    "GOLF",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "CHAR",
+    "BETA"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Basic Materials",
+   "Energy"
+  ],
+  "sorted_by": "rel_5d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "rel_5d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Coal",
+    "Oil"
+   ],
+   "Technology": [
+    "Hardware",
+    "Software",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Energy",
+   "Technology",
+   "Basic Materials"
+  ],
+  "sorted_by": "rel_5d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "crypto",
+   "quantum",
+   "space"
+  ]
+ },
+ "ret_1d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "CHAR",
+    "ALFA"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "INDI",
+    "JULI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "CHAR",
+    "ALFA",
+    "BETA",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "ret_1d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "ret_1d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "INDI",
+    "JULI",
+    "HOTL"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "BETA",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "ret_1d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "ret_21d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "DELT",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "ret_21d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "FOXT",
+    "JULI",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "ret_21d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "INDI",
+    "JULI"
+   ],
+   "Energy": [
+    "GOLF",
+    "ECHO",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "BETA",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "ret_21d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "ret_5d:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "INDI",
+    "HOTL",
+    "JULI"
+   ],
+   "Energy": [
+    "ECHO",
+    "GOLF",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "CHAR",
+    "BETA"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "ret_5d",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "HOTL",
+    "ECHO",
+    "ALFA"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "ret_5d:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "ret_5d",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "sales_tier:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "ALFA",
+    "BETA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "sales_tier",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ALFA",
+    "ECHO",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "sales_tier:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "FOXT",
+    "GOLF"
+   ],
+   "Technology": [
+    "ALFA",
+    "BETA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Technology",
+   "Energy"
+  ],
+  "sorted_by": "sales_tier",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "CHAR",
+    "FOXT"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ALFA",
+    "ECHO"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "sales_yoy:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Semis",
+    "Software",
+    "Hardware"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "CHAR",
+    "ALFA"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "HOTL",
+    "JULI",
+    "INDI"
+   ],
+   "Energy": [
+    "ECHO",
+    "GOLF",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "CHAR",
+    "BETA",
+    "ALFA"
+   ]
+  },
+  "sectors": [
+   "Energy",
+   "Technology",
+   "Basic Materials"
+  ],
+  "sorted_by": "sales_yoy",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "CHAR",
+    "FOXT",
+    "JULI"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "ECHO",
+    "ALFA",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "quantum",
+   "crypto",
+   "space"
+  ]
+ },
+ "sales_yoy:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Coal",
+    "Oil"
+   ],
+   "Technology": [
+    "Hardware",
+    "Software",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology": [
+    "ALFA",
+    "BETA",
+    "CHAR",
+    "DELT"
+   ]
+  },
+  "sectors": [
+   "Basic Materials",
+   "Technology",
+   "Energy"
+  ],
+  "sorted_by": "sales_yoy",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "HOTL",
+    "ALFA",
+    "ECHO"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "traction:asc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "HOTL",
+    "JULI"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "GOLF",
+    "ECHO"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "INDI",
+    "HOTL",
+    "JULI"
+   ],
+   "Energy": [
+    "GOLF",
+    "ECHO",
+    "FOXT"
+   ],
+   "Technology": [
+    "DELT",
+    "ALFA",
+    "BETA",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "traction",
+  "sorted_dir": "asc",
+  "theme_names": {
+   "crypto": [
+    "FOXT",
+    "JULI",
+    "CHAR"
+   ],
+   "quantum": [
+    "DELT",
+    "BETA"
+   ],
+   "space": [
+    "HOTL",
+    "ALFA",
+    "ECHO"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ },
+ "traction:desc": {
+  "industries": {
+   "Basic Materials": [
+    "Steel",
+    "Chemicals"
+   ],
+   "Energy": [
+    "Oil",
+    "Coal"
+   ],
+   "Technology": [
+    "Software",
+    "Hardware",
+    "Semis"
+   ]
+  },
+  "industry_names": {
+   "Basic Materials / Chemicals": [
+    "INDI"
+   ],
+   "Basic Materials / Steel": [
+    "JULI",
+    "HOTL"
+   ],
+   "Energy / Coal": [
+    "FOXT"
+   ],
+   "Energy / Oil": [
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology / Hardware": [
+    "BETA"
+   ],
+   "Technology / Semis": [
+    "DELT"
+   ],
+   "Technology / Software": [
+    "ALFA",
+    "CHAR"
+   ]
+  },
+  "sector_names": {
+   "Basic Materials": [
+    "JULI",
+    "HOTL",
+    "INDI"
+   ],
+   "Energy": [
+    "FOXT",
+    "ECHO",
+    "GOLF"
+   ],
+   "Technology": [
+    "BETA",
+    "ALFA",
+    "DELT",
+    "CHAR"
+   ]
+  },
+  "sectors": [
+   "Technology",
+   "Energy",
+   "Basic Materials"
+  ],
+  "sorted_by": "traction",
+  "sorted_dir": "desc",
+  "theme_names": {
+   "crypto": [
+    "JULI",
+    "FOXT",
+    "CHAR"
+   ],
+   "quantum": [
+    "BETA",
+    "DELT"
+   ],
+   "space": [
+    "ECHO",
+    "ALFA",
+    "HOTL"
+   ]
+  },
+  "themes": [
+   "space",
+   "quantum",
+   "crypto"
+  ]
+ }
+}

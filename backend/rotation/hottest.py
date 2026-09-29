@@ -78,6 +78,13 @@ TIER_RANK = {"explosive": 5, "strong": 4, "steady": 3, "weak": 2, "declining": 1
 # down, so the one column the ☀️ pre-market leg adds is never retyped here.
 SORT_DIRS = ("desc", "asc")
 DEFAULT_DIR = "desc"
+# Multi-column sort (Ajay 2026-09-28: "can you help me with multi column
+# sort"). `sort` + `dir` stay EXACTLY what they were — the primary key — and
+# `then_by=key:dir,key:dir` adds tie-breaks after it. The primary plus the
+# tie-breaks never exceed this; a request for more is trimmed, never a 4xx.
+# HIS CALL (default 3): docs/rotation/hottest_multisort_quality_2026_09_28.md.
+MAX_SORT_KEYS = 3
+THEN_BY_PARAM = "then_by"
 
 
 def _num(v):
@@ -126,6 +133,146 @@ def _sorter(key: str, direction: str):
         present, v = _sort_value(row, key)
         return (present, -v if asc else v)
     return _k
+
+
+def parse_then_by(raw) -> list:
+    """`then_by` as it arrives on the wire -> `[(key, dir), ...]`. SYNTAX only.
+
+    None, a non-string (a FastAPI Query object on a direct call) or '' -> [].
+    Split on ',', strip, skip empty tokens; `key:dir` -> (key, dir); a bare
+    `key` -> (key, DEFAULT_DIR). Nothing is validated here — `_sort_plan` is
+    the ONE validator, so an unknown key or a bad dir is dropped or corrected
+    in exactly one place.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        return []
+    out = []
+    for tok in raw.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        if ":" in tok:
+            k, d = tok.split(":", 1)
+            k, d = k.strip(), d.strip()
+        else:
+            k, d = tok, DEFAULT_DIR
+        if not k:
+            continue
+        out.append((k, d or DEFAULT_DIR))
+    return out
+
+
+def _sort_plan(sort_key: str, sort_dir: str, then_by, pre_ok: bool) -> list:
+    """THE one validator of a multi-column sort. Runs AFTER the primary's own
+    validation and the `pre_1d` demotion, so a tie-break that duplicates the
+    demoted primary is caught as a duplicate.
+
+    plan = [(primary, dir)] + each requested tie-break that is:
+      * a key in `SORT_KEYS` (🌀 AMD is not, and so can never break a tie),
+      * not `pre_1d` while the pre-market leg has nothing to rank on,
+      * not already in the plan (the first mention wins);
+    a bad dir becomes `DEFAULT_DIR`. An invalid entry never consumes a slot,
+    and the plan stops at `MAX_SORT_KEYS`. Never raises.
+    """
+    plan = [(sort_key, sort_dir)]
+    try:
+        items = list(then_by or [])
+    except TypeError:
+        items = []
+    for item in items:
+        if len(plan) >= MAX_SORT_KEYS:
+            break
+        try:
+            k, d = item
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(k, str) or k not in SORT_KEYS:
+            continue
+        if k == PRE_SORT and not pre_ok:
+            continue
+        if any(k == p for p, _ in plan):
+            continue
+        plan.append((k, d if d in SORT_DIRS else DEFAULT_DIR))
+    return plan
+
+
+def _multi_sorter(plan: list):
+    """One `sorted(key=..., reverse=True)` key for the whole plan.
+
+    A single-key plan returns `_sorter(k, d)` ITSELF, so the single-column path
+    is the same function it has always been. Longer plans concatenate each
+    key's `(present, value)` pair into one flat tuple: a missing value is
+    `(0, 0.0)` inside its OWN pair, so it sorts last within the tie of the keys
+    before it, in both directions, key by key.
+    """
+    if len(plan) == 1:
+        k, d = plan[0]
+        return _sorter(k, d)
+    parts = [_sorter(k, d) for k, d in plan]
+
+    def _k(row):
+        out = ()
+        for p in parts:
+            out += p(row)
+        return out
+    return _k
+
+
+def _rank_names(rows: list, by) -> None:
+    """Sort NAME rows in place on `by`, exact ties falling to the symbol A→Z.
+
+    Pre-sort by symbol, then the stable `reverse=True` sort keeps equal keys in
+    that A→Z order (appending the symbol to the key tuple would print ties
+    Z→A under `reverse=True`). A no-op pre-sort in prod: `tracker` already
+    serves every grain's `symbols` A→Z, so today's single-key order is
+    unchanged. GROUP rows never come through here — they keep their input
+    order on a tie, as they always have.
+    """
+    rows.sort(key=lambda r: str(r.get("symbol") or ""))
+    rows.sort(key=by, reverse=True)
+
+
+def _research_ttl_sec() -> Optional[int]:
+    """`research.CACHE_TTL_SEC` — the age past which `decision_snapshot` drops a
+    row, which is the one `_decision_map` applies (it passes no max_age_sec).
+    Read at call time so the ⓘ Quality text never retypes it. None when the
+    module or the attribute is missing (tests stub `sepa.research`)."""
+    try:
+        from sepa import research
+        v = int(research.CACHE_TTL_SEC)
+        return v if v > 0 else None
+    except Exception:                                          # noqa: BLE001
+        return None
+
+
+def _as_of_range(decisions) -> Optional[dict]:
+    """Oldest / newest research-cache `cached_at` over the rows this board read,
+    as ET dates, with the count. None when there is none — never 1970."""
+    stamps = []
+    for d in (decisions or {}).values():
+        v = _num((d or {}).get("cached_at")) if isinstance(d, dict) else None
+        if v is not None and v > 0:
+            stamps.append(v)
+    if not stamps:
+        return None
+    tz = _et_zone()
+
+    def _d(ts):
+        return datetime.fromtimestamp(ts, timezone.utc).astimezone(tz).strftime("%Y-%m-%d")
+    return {"oldest": _d(min(stamps)), "newest": _d(max(stamps)), "n": len(stamps)}
+
+
+def _quality_info(decisions) -> Optional[dict]:
+    """The ⓘ Quality explainer, built from `sepa.earnings_quality`'s own
+    constants by `sepa.earnings_quality_info`. A failure here drops the ⓘ and
+    never the board."""
+    try:
+        from sepa import earnings_quality_info as EQI
+        return EQI.describe(fundamentals_as_of=_as_of_range(decisions),
+                            max_age_sec=_research_ttl_sec())
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("hottest: quality_info unavailable: %s", exc)
+        return None
 
 
 def _fund_medians(rows: list) -> dict:
@@ -1011,19 +1158,22 @@ def _live_d1(legs: dict, rows: list) -> dict:
 
 def build(payload: dict, *, sort: str = DEFAULT_SORT,
           direction: str = DEFAULT_DIR,
-          names_per_group: int = NAMES_PER_GROUP) -> dict:
+          names_per_group: int = NAMES_PER_GROUP,
+          then_by=None) -> dict:
     """Assemble the board from an already-built rotation payload. PURE — no
     Mongo, no fetch — except the two bulk joins and the live day read, all
-    three injected by `build_live`. Keeps the shape testable off a fixture."""
+    three injected by `build_live`. Keeps the shape testable off a fixture.
+    `then_by` = parsed tie-breaks (`parse_then_by`), validated in `_sort_plan`."""
     return _build(payload, sort=sort, direction=direction,
                   names_per_group=names_per_group,
-                  decisions={}, earnings={}, live=None)
+                  decisions={}, earnings={}, live=None, then_by=then_by)
 
 
 def build_live(payload: dict, *, sort: str = DEFAULT_SORT,
           direction: str = DEFAULT_DIR,
                names_per_group: int = NAMES_PER_GROUP,
-               basis: str = D1_CLOSE) -> dict:
+               basis: str = D1_CLOSE,
+               then_by=None) -> dict:
     """`build` plus the three bulk reads, done ONCE for the whole board rather
     than per row.
 
@@ -1052,13 +1202,13 @@ def build_live(payload: dict, *, sort: str = DEFAULT_SORT,
     return _build(payload, sort=sort, direction=direction,
                   names_per_group=names_per_group,
                   decisions=_decision_map(syms), earnings=_earnings_map(syms),
-                  live=live, pre=pre)
+                  live=live, pre=pre, then_by=then_by)
 
 
 def _build(payload: dict, *, sort: str, names_per_group: int,
            decisions: dict, earnings: dict,
            direction: str = DEFAULT_DIR, live: Optional[dict] = None,
-           pre: Optional[dict] = None) -> dict:
+           pre: Optional[dict] = None, then_by=None) -> dict:
     sort_key = sort if sort in SORT_KEYS else DEFAULT_SORT
     sort_dir = direction if direction in SORT_DIRS else DEFAULT_DIR
     # `_by` is deliberately NOT built here: `sort=pre_1d` may still be demoted
@@ -1112,7 +1262,11 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         # default and SAY SO (`sorted_by`), rather than ranking on a total tie
         # under a header that claims otherwise.
         sort_key = DEFAULT_SORT
-    _by = _sorter(sort_key, sort_dir)
+    # ONE comparator for all four levels (2026-09-28). A single-key plan is
+    # `_sorter(sort_key, sort_dir)` itself, so a request with no `then_by`
+    # ranks exactly as it always has.
+    plan = _sort_plan(sort_key, sort_dir, then_by, pre_ok)
+    _by = _multi_sorter(plan)
 
     def _pre_group(rows: list) -> dict:
         """A group row's pre-market leg: the median over the members that
@@ -1179,8 +1333,8 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
             rows.append(r)
         # Sorted AFTER the overlay: `rel_1d` is a sortable column, and ranking
         # on yesterday before truncating to 25 would hide today's movers behind
-        # yesterday's.
-        rows.sort(key=_by, reverse=True)
+        # yesterday's. Exact ties fall to the symbol A→Z (`_rank_names`).
+        _rank_names(rows, _by)
         return rows
 
     def _computed_legs(rows: list) -> dict:
@@ -1296,6 +1450,13 @@ def _build(payload: dict, *, sort: str, names_per_group: int,
         "sorted_by": sort_key,
         "sorted_dir": sort_dir,
         "sortable": list(SORT_KEYS),
+        # What was APPLIED after `sorted_by`, never what was asked for — a bad,
+        # duplicate or extra key is dropped and this list is the truth.
+        "sorted_then_by": [{"key": k, "dir": d} for k, d in plan[1:]],
+        "sort_max_keys": MAX_SORT_KEYS,
+        # ⓘ Quality (2026-09-28): how eq_score is built, from the engine's own
+        # constants — a description, not a measured predictor.
+        "quality_info": _quality_info(decisions),
         "legs": list(LEGS),
         "sectors": out_sectors,
         "themes": out_themes,
