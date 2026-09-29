@@ -167,24 +167,33 @@ def find_merge_target(coll, ev: dict, *, lo_date: date, hi_date: date) -> Option
              came first ("Reports Topline Results From Phase 3 …" at 03:05, "Positive
              Results … Met Primary" at 06:58) — never across two different trials.
              merge_into then lifts the stored direction.
-    Unresolved events never merge (no issuer to key on)."""
+    Unresolved events never merge (no issuer to key on).
+
+    Fix round 3 (OOS grade 2026-09-29: "…; Meets Week 48 Endpoints In ISLEND-1 And
+    ISLEND-2 Trials" merged into GILD's KEYNOTE-D46/EVOKE-03 negative): for a
+    trial readout (TRIAL_TYPES) EVERY window rule skips a target whose SUBJECT
+    keys (trial acronym / NCT id / drug code / drug name, `subjects_of`) are
+    present on both sides and disjoint — two different trials never merge. No
+    key on either side, or another kind -> the old rule. Fix round 4: the test is
+    `different_story` (trial keys first, then same-class drug keys) and it covers
+    FDA approvals too (SPLIT_TYPES)."""
     if coll is None or not ev.get("ticker"):
         return None
     t = ev["ticker"]
     base_q = {"ticker": t, "session_date": {"$gte": _sd(lo_date), "$lte": _sd(hi_date)}}
+    def same_story(hit) -> bool:
+        return not different_story(ev, hit)
     try:
-        hit = coll.find_one(dict(base_q, type_dir=ev["type_dir"]))
-        if hit is not None:
-            return hit
-        if ev.get("event_type") == "topline" and ev.get("type_dir") == "topline_unknown":
-            hit = coll.find_one(dict(base_q, event_type="topline"))
-            if hit is not None:
+        for hit in coll.find(dict(base_q, type_dir=ev["type_dir"])):
+            if same_story(hit):
                 return hit
+        if ev.get("event_type") == "topline" and ev.get("type_dir") == "topline_unknown":
+            for hit in coll.find(dict(base_q, event_type="topline")):
+                if same_story(hit):
+                    return hit
         if ev.get("event_type") == "topline" and ev.get("direction") in DIRECTED:
-            mine = set(ev.get("trials") or [])
             for hit in coll.find(dict(base_q, type_dir="topline_unknown")):
-                theirs = set(hit.get("trials") or [])
-                if not (mine and theirs and not (mine & theirs)):
+                if same_story(hit):
                     return hit
         if ev.get("event_type") == "topline" and ev.get("trials"):
             for tr in ev["trials"]:
@@ -198,6 +207,77 @@ def find_merge_target(coll, ev: dict, *, lo_date: date, hi_date: date) -> Option
 
 
 DIRECTED = ("positive", "negative", "mixed")
+
+
+def subjects_of(ev: dict) -> frozenset:
+    """An event's SUBJECT keys: `subjects` (classify.extract_subjects) plus its
+    `trials` / `trial_keys` — a doc stored before fix round 3 carries trials only."""
+    return frozenset(str(x).upper() for x in list(ev.get("subjects") or []) + list(ev.get("trials") or [])
+                     + list(ev.get("trial_keys") or []) if x)
+
+
+def trial_keys_of(ev: dict) -> frozenset:
+    """fix round 4: the trial-IDENTITY keys (trial name / NCT id) — `trial_keys`
+    (classify.extract_trial_keys) plus `trials`."""
+    return frozenset(str(x).upper() for x in list(ev.get("trial_keys") or []) + list(ev.get("trials") or []) if x)
+
+
+def drug_keys_of(ev: dict) -> frozenset:
+    """The drug / product keys: every subject key that is not a trial key."""
+    return subjects_of(ev) - trial_keys_of(ev)
+
+
+def _generic_id(k: str) -> bool:
+    """An INN ("selpercatinib") or a drug code ("PN-881") — the NON-brand name
+    of a drug. A brand and an INN / code can name the SAME drug (Retevmo =
+    selpercatinib), so only two keys of the SAME class can prove two drugs differ."""
+    from .classify import _DRUG_CODE, _INN
+    return bool(_INN.fullmatch(k.lower()) or _DRUG_CODE.fullmatch(k))
+
+
+def _disjoint(a: frozenset, b: frozenset) -> bool:
+    return bool(a) and bool(b) and not (a & b)
+
+
+# Disjoint subject keys SPLIT trial readouts and (fix round 4, OOS grade #4: an
+# approval of another product — ABT's Volt PMA merged into the Piccolo 510(k)
+# event, MRK's EXZOLT blocked as a recap of Keytruda) FDA approvals.
+TRIAL_TYPES = frozenset({"topline", "conference_data", "trial_milestone", "readout_scheduled"})
+SPLIT_TYPES = TRIAL_TYPES | frozenset({"fda_approval"})
+
+
+def different_story(a: dict, b: dict) -> bool:
+    """Two same-name events are about different trials / products (fix round 4,
+    critic 2026-09-29 #1/#3):
+      * both carry TRIAL keys -> different iff those are disjoint (ATTAIN-1 vs
+        ATTAIN-2 differ though both name orforglipron);
+      * else compare DRUG keys: different only when both carry them, they are
+        disjoint AND both sides hold a key of the same class (brand vs brand, or
+        INN / code vs INN / code) — "Retevmo" vs "selpercatinib" may be one drug;
+      * a trial-only side against a drug-only side ("Islatravir And Lenacapavir
+        Meets …" vs "ISLEND-1 And ISLEND-2 Results") -> the SAME story (old rule).
+    Only SPLIT_TYPES split; every other kind keeps the ticker + kind rule."""
+    if a.get("event_type") not in SPLIT_TYPES:
+        return False
+    ta, tb = trial_keys_of(a), trial_keys_of(b)
+    if ta and tb:
+        return not (ta & tb)
+    da, db = drug_keys_of(a), drug_keys_of(b)
+    if not _disjoint(da, db):
+        return False
+    ga, gb = {k for k in da if _generic_id(k)}, {k for k in db if _generic_id(k)}
+    return bool((ga and gb) or ((da - ga) and (db - gb)))
+
+
+def same_subject(a: dict, b: dict) -> bool:
+    """The rehash link (alerts._repeat at any date, alerts.event_origin): not a
+    different story AND a SHARED key — for a trial kind a shared TRIAL key only
+    (fix round 4, critic #1: a drug name alone linked ATTAIN-2 to ATTAIN-1)."""
+    if different_story(a, b):
+        return False
+    if a.get("event_type") in TRIAL_TYPES:
+        return bool(trial_keys_of(a) & trial_keys_of(b))
+    return bool(subjects_of(a) & subjects_of(b))
 
 
 def merge_into(coll, target: dict, ev: dict, *, impact_fn=None, session_fn=None, label_fn=None) -> str:
@@ -223,6 +303,8 @@ def merge_into(coll, target: dict, ev: dict, *, impact_fn=None, session_fn=None,
         "modality": _union(target.get("modality"), ev.get("modality")),
         "areas": _union(target.get("areas"), ev.get("areas")),
         "trials": sorted(set((target.get("trials") or []) + (ev.get("trials") or []))),
+        "subjects": sorted(set((target.get("subjects") or []) + (ev.get("subjects") or []))),
+        "trial_keys": sorted(set((target.get("trial_keys") or []) + (ev.get("trial_keys") or []))),
         "phase": phase,
         "rules_version": ev.get("rules_version") or target.get("rules_version"),
     }
@@ -309,6 +391,52 @@ def events_since(coll, since_date: date, *, query: Optional[dict] = None) -> lis
         return []
 
 
+def events_for_tickers(coll, tickers) -> list:
+    """Every stored event of these names, any date — the push gate's rehash
+    lookback (alerts.REHASH_SESSIONS = None follows merge rule (ii): "any
+    earlier date still stored")."""
+    tickers = sorted({str(t).upper() for t in (tickers or []) if t})
+    if coll is None or not tickers:
+        return []
+    try:
+        return list(coll.find({"ticker": {"$in": tickers}}))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("medical.store: ticker events read failed: %s", _redact(exc))
+        return []
+
+
+def owned_subjects(coll, tickers) -> dict:
+    """fix round 4 (OOS grade #1): {TICKER: {KEY}} — the subject keys stored on a
+    name's events that NO other name's event carries (a partner's or rival's
+    product named in the issuer's headline — "Trodelvy–KEYTRUDA" — is never the
+    issuer's own). Generic / disease / stop words are never keys worth matching."""
+    from .classify import generic_key
+    rows = events_for_tickers(coll, tickers)
+    per = {}
+    for r in rows:
+        t = str(r.get("ticker") or "").upper()
+        if not t:
+            continue
+        for k in subjects_of(r):
+            if not generic_key(k):
+                per.setdefault(t, set()).add(k)
+    keys = sorted({k for v in per.values() for k in v})
+    if coll is None or not keys:
+        return per
+    try:
+        shared = list(coll.find({"subjects": {"$in": keys}}))
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("medical.store: owned-subjects read failed: %s", _redact(exc))
+        return {}
+    for r in shared:
+        t = str(r.get("ticker") or "").upper()
+        for k in subjects_of(r):
+            for owner, v in per.items():
+                if owner != t and k in v:
+                    v.discard(k)
+    return {t: v for t, v in per.items() if v}
+
+
 # ---------------------------------------------------------------------------
 # state
 # ---------------------------------------------------------------------------
@@ -369,5 +497,6 @@ def _redact(exc) -> str:
 
 __all__ = ["ARTICLES", "EVENTS", "STATE", "ALERTS", "MERGE_SESSIONS", "colls", "ensure_indexes",
            "tkey", "event_key", "insert_article", "link_article", "find_merge_target", "merge_into",
-           "insert_event", "set_push", "set_fields", "events_since", "get_state", "set_state",
+           "insert_event", "set_push", "set_fields", "events_since", "events_for_tickers", "owned_subjects", "subjects_of", "trial_keys_of", "drug_keys_of", "different_story",
+           "same_subject", "TRIAL_TYPES", "SPLIT_TYPES", "get_state", "set_state",
            "claim_lease", "release_lease", "higher_phase"]

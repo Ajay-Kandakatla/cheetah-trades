@@ -1076,6 +1076,49 @@ describe('Alerts page — the 🧬 medical-catalysts pass (2026-09-29)', () => {
     expect(await screen.findAllByTestId('alert-row')).toHaveLength(3);
   });
 
+  /* fix round 3 (2026-09-29): SHADOW mode — the pass records what would have
+   * pushed and sends nothing; the row says so in words, never as a raw key. */
+  it('a shadow pass shows "🧬 shadow — nothing is sent" and "🧬 shadow — N would have pushed this pass"', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      med_catalyst: { ...STATUS_LIVE.passes.med_catalyst, counts: { roster: 362, pushed: 0, shadow: 2, shadow_mode: 1 } } } });
+    draw();
+    const mc = await screen.findByTestId('pass-med_catalyst');
+    expect(within(mc).getByText('🧬 shadow — nothing is sent')).toBeInTheDocument();
+    expect(within(mc).getByText('🧬 shadow — 2 would have pushed this pass')).toBeInTheDocument();
+    expect(within(mc).queryByText(/shadow_mode/)).not.toBeInTheDocument();
+  });
+
+  /* fix round 4 (critic #5): the per-pass count is 0 five minutes after a
+   * would-push; the session count (from the stored events) keeps it visible. */
+  it('the session count stays visible when the latest pass held nothing back', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      med_catalyst: { ...STATUS_LIVE.passes.med_catalyst,
+        counts: { roster: 362, pushed: 0, shadow: 0, shadow_mode: 1, shadow_session: 3 } } } });
+    draw();
+    const mc = await screen.findByTestId('pass-med_catalyst');
+    expect(within(mc).getByText('🧬 shadow — 3 would have pushed this session')).toBeInTheDocument();
+    expect(within(mc).queryByText(/this pass/)).not.toBeInTheDocument();
+    expect(within(mc).queryByText(/shadow_session/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a shadow session with nothing held back shows no session count', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      med_catalyst: { ...STATUS_LIVE.passes.med_catalyst,
+        counts: { roster: 362, pushed: 0, shadow: 0, shadow_mode: 1, shadow_session: 0 } } } });
+    draw();
+    const mc = await screen.findByTestId('pass-med_catalyst');
+    expect(within(mc).getByText('🧬 shadow — nothing is sent')).toBeInTheDocument();
+    expect(within(mc).queryByText(/would have pushed/)).not.toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a live pass (shadow_mode 0, shadow 0) wears no shadow chip', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      med_catalyst: { ...STATUS_LIVE.passes.med_catalyst, counts: { roster: 362, pushed: 1, shadow: 0, shadow_mode: 0 } } } });
+    draw();
+    const mc = await screen.findByTestId('pass-med_catalyst');
+    expect(within(mc).queryByText(/🧬 shadow/)).not.toBeInTheDocument();
+  });
+
   it('NEGATIVE: a 🧬 pass silent for 20 minutes mid-session reads STALE on the 5-minute clock', async () => {
     stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
       med_catalyst: { ...STATUS_LIVE.passes.med_catalyst, as_of: '2026-09-05T10:40:00-04:00' } } });

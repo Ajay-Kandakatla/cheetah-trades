@@ -175,3 +175,51 @@ articles: 20 → 16 high-impact events; RVMD, LNTH, ANIP, VTGN gone; CLDX's two 
 Still HIS CALL: device clearances (QGEN, SIBN) and label updates (MRK WINREVAIR) are high impact under
 §3.8; partner CRLs ring on the partner (ALKS); distinct approvals on one name inside ±3 sessions still
 merge (LLY), and the 21-session recap mutes a second one.
+
+## 2026-09-29 — fix round 3 (OOS grade: strict 0.56 → see numbers)
+
+Six defects from the out-of-sample grade, each a row in `tests/test_med_fix3_2026_09_29.py`:
+the opinion FORM (a quoted rating, "Strong Buy/Sell", "Name: <rating> …") is commentary (PTGX);
+the rival guard fires wherever the issuer sits — another company's possessive owning the thing
+before the cue, another company's product as the cue's object, another company as the verb-led
+cue's subject, and "competition with / a win for …" (LH Roche assay, MDT/Edwards); "meets … endpoints"
+with up to four words between (never "met with FDA") is positive (GILD ISLEND); every event carries
+`subjects` (`extract_subjects`: trial acronyms incl. "Libretto-432" and lists "ISLEND-1 And ISLEND-2",
+NCT ids, drug codes, ®/™-marked names, INN stems, capitalised brands, "Results for <Brand>", the
+issuer's possessive product — never a disease / biomarker / year / Roman numeral / company word);
+merges of trial readouts never cross disjoint subjects (an undirected topline no longer merges into
+another trial); every FDA approval carries a `materiality` class (device_clearance / label_update /
+generic_formulation / biosimilar — a property, never a subtype change). RULES_VERSION left at v3
+(the pinned version test was not in scope). Known limit: brand vs INN ("Retevmo" / "selpercatinib")
+are different keys, so disjointness splits trial readouts only; approvals keep ticker + kind.
+
+**Numbers (the OOS set is now TUNED against — no longer independent):** replay of the 80 names'
+stored raw rows (scratchpad `medcat_r3/replay.py`, liquidity gate neutralised as the grader did):
+18 → 18 pushes; strict 10/18 = 0.56 [0.34, 0.75] → 12/17 graded = 0.71 [0.47, 0.87] (+ LH 08-10
+ungraded); letter 15/18 = 0.83 → 17/17 = 1.00 [0.82, 1.00]. Out: PTGX, LH 08-04 (Roche), PEN 07-27
+rehash. In: GILD islatravir and LLY Jaypirca Phase 3 positives (both "missed_by_recap" in the grade),
+LH 08-10 (Labcorp's own CDx, ungraded). With `PUSH_MATERIAL_ONLY = True`: 13 pushes, strict 11/12
+graded, but PEN THUNDERBOLT (graded material) is dropped with MDT, LLY EBGLYSS and AMRX ×2.
+
+## 2026-09-29 — fix round 4 (critic of round 3 + generic bugs from a FRESH OOS grade)
+
+A second independent grade (80 new names, 2025-10-01..2026-01-31, verdict SHIP-SHADOW, strict
+0.53 [0.36, 0.70]) stays OUT-OF-SAMPLE: nothing was tuned on its rows; every test row in
+`tests/test_med_fix4_2026_09_29.py` is a synthetic headline of the same form or a critic probe.
+Trial keys keep their number / suffix (`extract_trial_keys`: "REDEFINE 1" → REDEFINE-1, "PURPOSE 2" →
+PURPOSE-2, "VENTURE-Oral" → VENTURE-ORAL, "MAESTRO-NASH OUTCOMES" → MAESTRO-NASH-OUTCOMES, never the
+bare tail; a word carrying digits is never glued to a neighbour) and `extract_trial` uses the same
+normaliser; events carry `trial_keys` beside `subjects`. `store.different_story` compares trial keys
+first, then drug keys of the SAME class only (brand vs brand, INN / code vs INN / code — "Retevmo" and
+"selpercatinib" may be one drug), and now splits FDA approvals too (another product's approval no
+longer merges into / recaps the first); `store.same_subject` (the rehash and event-age link) needs a
+shared TRIAL key for a trial kind. Attribution: the issuer as the headline's reporter ("…, <Issuer>
+Says / Announces") or colon-prefix subject ("<Issuer>: FDA Approval of <Product>'s …") owns the
+product; a disease possessive ("For Alzheimer's …") is never a rival. A pivotal / registrational token
+in the outcome's own clause lifts a lower phase to pivotal (never "supports a registrational path",
+never a future phase, never "Pivotal Phase 2b/3"). An undirected readout headline takes its direction
+from the summary's FIRST sentence when that is directed and not post-hoc / regulatory talk
+(`direction_from = "summary"`). "Publication in / of" is not a new readout. Materiality: an sNDA /
+sBLA, a manufacturing-site approval or a packaging change is `label_update` (clause or the summary's
+first sentence) — the switch stays OFF. Known limit: "<Issuer>: FDA Approves <Rival>'s Test" is now
+attributed to the issuer (the colon rule cannot tell a product from a company without a lexicon).

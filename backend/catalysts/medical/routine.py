@@ -65,7 +65,8 @@ COUNTERS = ("roster", "sliced", "finnhub_calls", "finnhub_cache_hits", "edgar_hi
             "high_impact", "pushed", "muted", "claimed_elsewhere", "recap", "blocked_price",
             "blocked_dollar_vol", "blocked_unknown_liquidity", "stale", "closed_day", "baseline",
             "budget_exhausted", "call_timeouts", "finnhub_stopped", "edgar_stopped", "massive_stopped",
-            "fda_stopped", "errors")
+            "fda_stopped", "errors", "shadow", "shadow_mode", "shadow_session", "subject_relevant",
+            "contradicted")
 
 
 # ---------------------------------------------------------------------------
@@ -310,9 +311,13 @@ def _ev_doc(ev: dict, art: dict, cl: dict, *, ticker, company, now_utc: datetime
             "direction": ev.get("direction"), "phase": ev.get("phase"), "regulator": ev.get("regulator")}
     td = T.type_dir(base)
     trials = [ev["trial"]] if ev.get("trial") else []
+    trial_keys = sorted({str(x).upper() for x in list(ev.get("trial_keys") or []) + trials if x})
+    subjects = sorted({str(x).upper() for x in list(ev.get("subjects") or []) + trial_keys if x})
     key = S.event_key(ticker, td, sd, company=company, title=art.get("title") or "")
     doc = dict(base, _id=key, event_key=key, ticker=ticker, company=company, type_dir=td,
-               trials=trials, secondary_missed=ev.get("secondary_missed"),
+               trials=trials, subjects=subjects, trial_keys=trial_keys, materiality=ev.get("materiality"),
+               direction_from=ev.get("direction_from"),
+               secondary_missed=ev.get("secondary_missed"),
                dilutive=ev.get("dilutive"), cue=ev.get("cue"),
                congress=ev.get("congress"), partial=ev.get("partial"),
                modality=list(cl.get("modality") or ["unclassified"]),
@@ -515,6 +520,7 @@ async def _body(*, now_et, now_utc, fx, c, counts, deadline, clock, push, dry_ru
         i = 0
     fetched = []
     slice_ = rost[i:i + SLICE_MAX]
+    owned = S.owned_subjects(ev_c, slice_)             # fix round 4: product-only headlines
     for n, sym in enumerate(slice_):
         if counts.get("finnhub_stopped"):
             break
@@ -533,7 +539,7 @@ async def _body(*, now_et, now_utc, fx, c, counts, deadline, clock, push, dry_ru
         fetched.append(sym)
         first_fetch = sym not in names_done
         arts = await SRC.finnhub_articles(sym, company=company, forms=forms, counts=counts,
-                                          fetch=_rows_fetch(rows))
+                                          fetch=_rows_fetch(rows), subject_keys=owned.get(sym.upper()))
         for a in arts:
             queue.append((a, (not lap_done) or first_fetch))
         if not cached and fx["pace_sec"] and n < len(slice_) - 1:
@@ -583,7 +589,8 @@ async def _body(*, now_et, now_utc, fx, c, counts, deadline, clock, push, dry_ru
             1 for d in (cl.get("dropped") or []) if str(d).startswith("non_medical_event"))
         # EDGAR (the filer) and FDA RSS (the page company) name the issuer
         # structurally; only headline feeds need the title to attribute it.
-        if tk and cl.get("attributed") is False and art.get("provider") in ("finnhub", "massive"):
+        if tk and cl.get("attributed") is False and art.get("provider") in ("finnhub", "massive") \
+                and not _attributed_via_subject(C, art, cl, tk, forms):
             counts["unattributed"] += 1
             continue
         keys = []
@@ -612,6 +619,8 @@ async def _body(*, now_et, now_utc, fx, c, counts, deadline, clock, push, dry_ru
             else:
                 counts["events_merged"] += 1
         S.link_article(arts_c, aid, keys)
+        for k in keys:
+            counts["contradicted"] += _contradict(ev_c, k, at=now_utc)
 
     # ── 6. reactions ─────────────────────────────────────────────────────
     _detect(new_events, fx=fx, ev_c=ev_c, now_et=now_et, remaining=remaining, counts=counts)
@@ -620,12 +629,97 @@ async def _body(*, now_et, now_utc, fx, c, counts, deadline, clock, push, dry_ru
     # ── 7. push ──────────────────────────────────────────────────────────
     pending = [e for e in S.events_since(ev_c, now_et.date() - timedelta(days=FILL_DAYS))
                if (e.get("push") or {}).get("state") == "pending"]
+    counts["shadow_mode"] = 1 if A.SHADOW else 0
     if pending:
-        prior = S.events_since(ev_c, R.add_market_days(now_et.date(), -(A.RECAP_SESSIONS + MERGE_SESSIONS + 5)))
+        prior = _prior(ev_c, now_et, pending)
         res = A.run_push(pending, now_et=now_et, prior=prior, claim_coll=c[S.ALERTS], events_coll=ev_c,
                          owner=owner, sender=fx["sender"], act=bool(push) and not dry_run, counts=counts)
         out["messages"] = res["messages"]
         out["decisions"] = res["decisions"]
+    # fix round 4 (critic #5): the pass doc is REPLACED every 5 minutes and an
+    # event stamped `shadow` is no longer pending, so `shadow` read 0 one pass
+    # later — this session's would-pushes, counted from the stored events.
+    counts["shadow_session"] = shadow_session_count(ev_c, now_et)
+
+
+def shadow_session_count(ev_c, now_et) -> int:
+    """Events of this session (and later, the after-hours ones) stamped
+    push.state = "shadow" — what shadow mode held back today."""
+    return sum(1 for e in S.events_since(ev_c, now_et.date())
+               if (e.get("push") or {}).get("state") == "shadow")
+
+
+def _attributed_via_subject(C, art: dict, cl: dict, tk: str, forms: tuple) -> bool:
+    """fix round 4 (OOS grade #1): a headline kept only because it names one of
+    the issuer's OWN stored subject keys (sources.subject_hit) is attributed with
+    those keys as issuer forms — the classifier's rival guards still apply."""
+    via = art.get("via_subject") or []
+    if not via:
+        return False
+    import re as _re
+    evs = cl.get("events") or []
+    span = evs[0].get("cue_span") if evs else None
+    try:
+        return bool(C.attribute(art.get("title") or "", ticker=tk,
+                                forms=tuple(forms or ()) + tuple(_re.escape(k) for k in via), cue_span=span))
+    except Exception:                                           # noqa: BLE001
+        return False
+
+
+ACCEPTED_FILING = ("regulatory_filing", "accepted")
+
+
+def _contradict(ev_c, key: str, *, at) -> int:
+    """fix round 4 (OOS grade #2: "NDA For <drug> Reeives FDA's Approval" was the
+    NDA's ACCEPTANCE — the correct "FDA Acceptance" headline came 4 h later and
+    retracted nothing). An FDA approval and an accepted NDA / BLA filing of the
+    SAME drug (a shared subject key) on the same name within store.MERGE_SESSIONS
+    cannot both be new: the approval is stamped `contradicted` and is no longer
+    high impact (taxonomy.is_high_impact). Works in both arrival orders. An
+    approval already pushed stays pushed — only later passes see it."""
+    if ev_c is None:
+        return 0
+    try:
+        doc = ev_c.find_one({"_id": key})
+    except Exception:                                           # noqa: BLE001
+        return 0
+    if not doc or not doc.get("ticker"):
+        return 0
+    is_appr = doc.get("event_type") == "fda_approval"
+    is_acc = (doc.get("event_type"), doc.get("subtype")) == ACCEPTED_FILING
+    if not (is_appr or is_acc) or not S.subjects_of(doc):
+        return 0
+    sd = date.fromisoformat(str(doc["session_date"])[:10])
+    q = {"ticker": doc["ticker"], "session_date": {"$gte": R.add_market_days(sd, -MERGE_SESSIONS).isoformat(),
+                                                   "$lte": R.add_market_days(sd, MERGE_SESSIONS).isoformat()}}
+    try:
+        others = list(ev_c.find(dict(q, event_type="regulatory_filing", subtype="accepted") if is_appr
+                                else dict(q, event_type="fda_approval")))
+    except Exception:                                           # noqa: BLE001
+        return 0
+    n = 0
+    for o in others:
+        appr, acc = (doc, o) if is_appr else (o, doc)
+        if appr.get("contradicted") or not (S.subjects_of(appr) & S.subjects_of(acc)):
+            continue
+        S.set_fields(ev_c, appr["_id"], {"contradicted": {"by": acc["_id"], "why": "filing_accepted", "at": at},
+                                         "impact": "low"})
+        appr["contradicted"] = True
+        n += 1
+    return n
+
+
+def _prior(ev_c, now_et, pending: list) -> list:
+    """The push gate's history: every event of the last RECAP_SESSIONS (+ slack)
+    plus, fix round 3, EVERY stored event of the pending names — the rehash
+    lookback (alerts.REHASH_SESSIONS = None) and the stale gate's event lineage."""
+    rows = S.events_since(ev_c, R.add_market_days(now_et.date(), -(A.RECAP_SESSIONS + MERGE_SESSIONS + 5)))
+    seen = {r.get("_id") for r in rows}
+    for r in S.events_for_tickers(ev_c, [e.get("ticker") for e in pending]):
+        if r.get("_id") not in seen:
+            seen.add(r.get("_id"))
+            rows.append(r)
+    return rows
 
 
 def _session_of(published) -> date:
@@ -747,7 +841,7 @@ def explain(symbol: str, *, now=None, colls: Optional[dict] = None) -> list:
     now_et = _et_now(now)
     evs = [e for e in S.events_since(c[S.EVENTS], now_et.date() - timedelta(days=FILL_DAYS),
                                      query={"ticker": symbol.upper()})]
-    prior = S.events_since(c[S.EVENTS], R.add_market_days(now_et.date(), -(A.RECAP_SESSIONS + 10)))
+    prior = _prior(c[S.EVENTS], now_et, evs)
     return [dict(A.explain(e, now_et=now_et, prior=prior), push=e.get("push"),
                  sources=len(e.get("sources") or []), reaction=e.get("reaction"))
             for e in evs]

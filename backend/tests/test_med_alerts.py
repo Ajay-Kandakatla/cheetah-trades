@@ -46,6 +46,13 @@ def kod(**kw) -> dict:
     return ev
 
 
+@pytest.fixture(autouse=True)
+def _live_mode(monkeypatch):
+    """Fix round 3 ships SHADOW = True (tests/test_med_fix3_2026_09_29.py pins
+    it); the send-path tests below exercise LIVE mode."""
+    monkeypatch.setattr(A, "SHADOW", False)
+
+
 def liq(ev, **kw):
     ev["reaction"]["liquidity"].update(kw)
     return ev
@@ -114,7 +121,12 @@ def test_recap_a_second_same_kind_event_within_21_sessions_stays_on_the_board_on
     assert A.gate(again, now_et=et(2026, 10, 5, 6, 30), baseline=False, prior=[first]) == "recap"
     # NEGATIVE: a first event that never rang (blocked) is not a recap source
     blocked = kod(push={"state": "blocked:price"})
-    assert A.gate(again, now_et=et(2026, 10, 5, 6, 30), baseline=False, prior=[blocked]) is None
+    assert A.gate(again, now_et=et(2026, 10, 5, 6, 30), baseline=False, prior=[blocked]) != "recap"
+    # fix round 3: …but the SAME trial (DAYBREAK) inherits the story's age -> stale;
+    # with no shared subject key it may still ring
+    assert A.gate(again, now_et=et(2026, 10, 5, 6, 30), baseline=False, prior=[blocked]) == "stale"
+    assert A.gate(dict(again, trials=[]), now_et=et(2026, 10, 5, 6, 30), baseline=False,
+                  prior=[dict(blocked, trials=[])]) is None
     # NEGATIVE: another direction is another kind
     neg = kod(push={"state": "pushed"}, type_dir="topline_negative", direction="negative")
     assert A.gate(again, now_et=et(2026, 10, 5, 6, 30), baseline=False, prior=[neg]) is None
@@ -204,7 +216,9 @@ def test_kod_pushes_once_and_a_second_pass_is_claimed_elsewhere():
     counts = {}
     out, claims, evc = _push([kod()], sender=s, counts=counts)
     assert len(s.calls) == 1 and s.calls[0][2] == "med_catalyst" and counts["pushed"] == 1
-    assert set(claims.docs) == {"MC:KOD|topline|2026-09-28", "MC:KOD|topline_positive|2026-09-28"}
+    # fix round 3: the topline claim is per trial (DAYBREAK) + the per-session marker
+    assert set(claims.docs) == {"MC:KOD|topline|2026-09-28|DAYBREAK", "MC:KOD|topline|2026-09-28|+",
+                                "MC:KOD|topline_positive|2026-09-28"}
     assert evc.docs["KOD|topline_positive|2026-09-28"]["push"]["state"] == "pushed"
     s2, c2 = Sender(), {}
     _push([kod()], sender=s2, claims=claims, counts=c2)

@@ -238,12 +238,16 @@ def _non_zone_push_lines() -> list:
         lines.append(
             "🧬 med_catalyst (ON for the owner — mute at /notifications): %s; prior close ≥ $%.0f "
             "and 50-session median dollar volume ≥ %s; only while the regular session has traded "
-            "the news ≤ %.0f minutes; not a repeat of the same kind on the name within %d "
-            "sessions; one topline push per name per session; once per event; %d ring "
-            "individually then one digest; every 5 min 04:00–19:55 ET on trading days. "
+            "the news ≤ %.0f minutes, counted from the story's first sighting; not a repeat of "
+            "the same kind on the name within %d sessions (a different trial, or an approval of a "
+            "different product, is not a repeat; the same trial — or, for approvals and "
+            "designations, the same drug — is a repeat %s); one topline push per name per "
+            "session per trial; once per event; %d ring "
+            "individually then one digest; every 5 min 04:00–19:55 ET on trading days. %s "
             "UNMEASURED — setup: pending study."
-            % (MT.HIGH_IMPACT_TEXT, SFL.MIN_SHARE_PRICE, _b(SFL.THIN_DOLLAR_VOL),
-               MA.RTH_EXPOSURE_MAX_MIN, MA.RECAP_SESSIONS, MA.MAX_SINGLES))
+            % (MT.high_impact_text(), SFL.MIN_SHARE_PRICE, _b(SFL.THIN_DOLLAR_VOL),
+               MA.RTH_EXPOSURE_MAX_MIN, MA.RECAP_SESSIONS, MA.rehash_text(), MA.MAX_SINGLES,
+               MA.shadow_text()))
     except Exception as exc:                          # pragma: no cover - import shim
         log.warning("rules_info: med_catalyst line unavailable: %s", exc)
     try:

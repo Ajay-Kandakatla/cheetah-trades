@@ -81,6 +81,16 @@ COMMENT = re.compile(
     # Upgrade)" pushed as Phase 3 toplines -> analyst-rating words are commentary.
     r"|upgrades?|upgraded|downgrades?|downgraded|reiterates?|buy the dip|analyst rating|rating (?:upgrade|downgrade|change)"
     r"|(?:buy|sell|hold|outperform|underperform|overweight|underweight|neutral|market perform|sector perform) rating)\b", I)
+# fix round 3 (OOS grade 2026-09-29, PTGX "Protagonist Therapeutics: 'Strong Buy'
+# ICOTYDE FDA Approval And PN-881 Advancement" pushed as an FDA approval): the
+# opinion-piece FORM — a QUOTED rating anywhere ('Buy', "Hold", 'Strong Sell'),
+# the two-word ratings unquoted, or a "Name: <rating> …" prefix — is commentary.
+_RATING = r"(?:strong\s+)?(?:buy|sell|hold|outperform|underperform|overweight|underweight|neutral|accumulate)"
+COMMENT_FORM = re.compile(
+    r"['\"‘’“”]\s*" + _RATING + r"\s*[,.!]?\s*['\"‘’“”]"
+    r"|\bstrong\s+(?:buy|sell)\b"
+    r"|^[^:;!?]{2,80}:\s+(?:(?:upgrad|downgrad|reiterat|rat|initiat)\w*\s+(?:(?:to|at|as|with)\s+(?:an?\s+)?)?)?"
+    + _RATING + r"(?=\s+(?:on|after|as|despite|before|ahead|amid|into|for|here|now|thesis|rating)\b|\s*[,;—–-]|\s*$)", I)
 PV = (r"pops?|popping|soar(?:s|ed|ing)?|jump(?:s|ed|ing)?|surg(?:es|ed|ing)|sinks?|sank|falls?|falling|fell"
       r"|slid(?:es|ing)?|slides?|plung(?:es|ed|ing)|rocket(?:s|ed|ing)?|skyrocket(?:s|ed|ing)?|climb(?:s|ed|ing)?"
       r"|rall(?:y|ies|ied|ying)|tumbl(?:es|ed|ing)|slip(?:s|ped|ping)?|spik(?:es|ed|ing)|crater(?:s|ed|ing)?"
@@ -282,6 +292,13 @@ POS = [r"\bmet (?:its |the |both |all |key )?" + _PH_OPT + r"(?:co-)?primary(?: 
        r"\bnon-?inferior(?:ity)?", r"\bsuperior(?:ity)? (?:to|over|vs)",
        r"\bpass(?:es|ed)? (?:a |the )?(?:key |pivotal )?(?:trial|study)",
        r"\btrial win\b|\bwins?\b" + GAP + r"{0,20}\btrial\b",
+       # fix round 3 (OOS grade: GILD "…; Meets Week 48 Endpoints In ISLEND-1 And
+       # ISLEND-2 Trials", "Meets Dual Primary Endpoints" came out undirected): up to
+       # four words between the verb and "endpoints" — never "Met With FDA On
+       # Endpoints" (a meeting). A negated verb ("did not meet …") is masked by NEG
+       # before POS runs.
+       r"\b(?:met|meets?|achiev(?:ed|es)|hits?)\s+(?:(?!(?:not|no|with|to|on|regarding|about|discuss\w*|fda|agency"
+       r"|regulators?)\b)[\w/-]+\s+){0,4}?end ?points?\b",
        # fix round 2 (critic probe, recall): "Halts Phase 3 … Trial Early for Efficacy"
        r"\bearly (?:for|due to|on|after) (?:overwhelming |positive |strong |clear )?efficacy\b"]
 _EFFICACY_STOP = re.compile(POS[-1], I)
@@ -298,7 +315,10 @@ _PASSED_FUTILITY = re.compile(
 # interaction (dropped) or secondary / uncontrolled data (direction unknown).
 _NOT_READOUT_REG = re.compile(r"\b(?:end[- ]of[- ]phase|type [abc] meeting|feedback|alignment|design)\b", I)
 _NOT_READOUT_DATA = re.compile(r"\b(?:post[- ]hoc|subgroups?|sub-?analys[ie]s|exploratory|open[- ]label extension"
-                               r"|long[- ]term extension|extension (?:portion|study|period|phase)|published in)\b", I)
+                               r"|long[- ]term extension|extension (?:portion|study|period|phase)|published in"
+                               # fix round 4 (OOS grade #7): "Announces Publication in The Lancet of
+                               # Positive Phase 3 Data" is a journal paper of an old readout
+                               r"|publication (?:in|of))\b", I)
 PH = r"phase\s*(?:\d|i{1,3}|iv)\w*(?:/\d\w*)?"
 TOPCUE = [r"top[- ]?line", r"primary (?:efficacy )?endpoints?",
           r"\b" + PH + r"\b" + GAP + r"{0,60}\b(?:results?|data|readout)\b",
@@ -430,7 +450,11 @@ MOD_AREA_WORDS = re.compile(r"^(?:crispr|mrna|gene|cell|vaccines?|antibod\w*|onc
 ISSUER_ALIASES = {"BMY": ("BMS",), "JNJ": ("J&J", "Janssen"), "MRK": ("MSD",), "GSK": ("GSK",),
                   "RHHBY": ("Roche", "Genentech")}
 THIRD_PARTY = re.compile(r"\b(?:race for|vs\.?|versus|than|threat to|peers? like|competitors? like|rivals? like"
-                         r"|such as|including|against|reshape)\b[^;!?]{0,30}$", I)
+                         r"|such as|including|against|reshape"
+                         # fix round 3 (OOS: MDT credited with "Edwards wins FDA clearance
+                         # for LAA clip, setting up competition with AtriCure and Medtronic")
+                         r"|competition (?:with|for|from)|compet(?:es|ing|e) (?:with|against)|win for|blow to"
+                         r"|weighs? on|pressure on)\b[^;!?]{0,30}$", I)
 
 
 def normalise_name(name: Optional[str]) -> str:
@@ -502,10 +526,126 @@ def _rival_possessive(head: str, forms) -> bool:
     return False
 
 
+def _form_rx(forms) -> list:
+    fr = []
+    for f in forms or ():
+        try:
+            fr.append(re.compile(r"(?<![\w$])(?:" + str(f) + r")", I))
+        except re.error:
+            continue
+    return fr
+
+
+_OBJ_POSSESSIVE = re.compile(r"^\s*(?:(?:of|for|to|on)\s+)?(?:the\s+)?(?:its\s+partner\s+)?"
+                             r"(?-i:((?:[A-Z][\w&.-]*\s+){0,2}[A-Z][\w&.-]*))['’]s\b", I)
+# a headline's own SUBJECT: 1-5 capitalised words (a parenthesised ticker allowed)
+# right before a verb-led cue, or before a reporting verb that precedes the cue
+_SUBJ_PHRASE = re.compile(r"^\W*(?-i:((?:[A-Z][\w&.’'-]*\s+(?:(?:and|&|of)\s+)?){0,4}[A-Z][\w&.’'-]*))"
+                          r"\s*(?:\([^)]*\)\s*)?(?:(?:announces?|reports?|says?|unveils?|posts?|shares?|releases?)\s+)?$")
+_VERB_CUE = re.compile(r"^(?:receives?|received|wins?|won|gets?|got|gains?|secures?|lands?|obtains?|announces?"
+                       r"|earns?|snags?|reports?|nabs?|scores?)\b", I)
+_NOT_SUBJECT = re.compile(r"^(?:FDA|EMA|CHMP|MHRA|NICE|U\.?S\.?|US|EU|Breaking|Update[ds]?|Exclusive|Report(?:ed)?"
+                          r"|Correction|Watch|Why|How|What|New|The|A|An)\b", I)
+
+
+def _rival_owner_before(title: str, cue0: int, hits: list, fr: list) -> bool:
+    """The LAST non-regulator possessive before the cue belongs to another company
+    and the issuer is not re-named between it and the cue."""
+    last = None
+    for pm in _POSSESSIVE.finditer(title[:cue0]):
+        if pm.group(1) in _POSSESSIVE_NOT_RIVAL:
+            continue
+        last = pm
+    if last is None:
+        return False
+    if any(r.match(title, last.start()) for r in fr):
+        return False
+    # the possessive may be the tail of a multi-word issuer name ("Eli Lilly's")
+    if any(h < last.start() and not re.search(r"[;!?]|\b(?:and|&|of)\b", title[h:last.start()], I)
+           and len(title[h:last.start()].split()) <= 2 for h in hits):
+        return False
+    return not any(last.end() <= h < cue0 for h in hits)
+
+
+def _not_a_company(phrase: str) -> bool:
+    """A disease / modality / medical phrase ("Alzheimer's", "Parkinson's") —
+    never another company (fix round 4, critic #4)."""
+    return bool(MEDICAL_WORDS.search(phrase) or _areas(phrase, phrase) != ["unclassified"])
+
+
+_REPORT_VERB = r"(?:says?|said|announces?|announced|reports?|reported|confirms?|confirmed)"
+
+
+def _issuer_reports(title: str, hits: list, fr: list) -> bool:
+    """fix round 4 (critic #4): the issuer is the headline's REPORTER — "…,
+    <Issuer> Says / Announces" or "… - <Issuer>" at the end — so the phrase that
+    leads the headline is the issuer's own product ("Opdivo Gets FDA Nod …,
+    Bristol Myers Squibb Says")."""
+    for h in hits:
+        if not re.search(r"(?:[,;:\u2013\u2014]|\s-)\s*$", title[:h]):
+            continue
+        for r in fr:
+            m = r.match(title, h)
+            if m and re.match(r"\s*(?:\([^)]*\)\s*)?(?:" + _REPORT_VERB + r"\b|[.!]?\s*$)", title[m.end():], I):
+                return True
+    return False
+
+
+def _issuer_colon_subject(title: str, hits: list, fr: list) -> bool:
+    """"<Issuer>: FDA Approval of Keytruda's Subcutaneous Form" — the colon-prefix
+    names the headline's subject; what follows is the issuer's own news (fix
+    round 4, critic #4). Opinion forms ("Name: 'Strong Buy' …") are dropped
+    earlier by COMMENT_FORM."""
+    for h in hits:
+        if title[:h].strip(" \"'\u201c\u2018"):
+            continue
+        for r in fr:
+            m = r.match(title, h)
+            if m and re.match(r"\s*(?:\([^)]*\)\s*)?:\s", title[m.end():]):
+                return True
+    return False
+
+
+def _rival_object_after(title: str, cue1: int, fr: list, hits: Optional[list] = None) -> bool:
+    """"… Approved By FDA / FDA Approval of Roche's Assay": the cue's OBJECT is
+    another company's product. Never a disease possessive ("Approval For
+    Alzheimer's Agitation"), never when the issuer is the colon-prefix subject."""
+    m = _OBJ_POSSESSIVE.match(title[cue1:])
+    if not m:
+        return False
+    a = cue1 + m.start(1)
+    words = m.group(1).split()
+    if words[-1] in _POSSESSIVE_NOT_RIVAL or _not_a_company(m.group(1)):
+        return False
+    if hits and _issuer_colon_subject(title, hits, fr):
+        return False
+    return not any(r.match(title, a) or r.search(m.group(1)) for r in fr)
+
+
+def _rival_subject(title: str, cue_span: tuple, fr: list) -> bool:
+    """"Edwards wins FDA clearance …, … Medtronic": the headline's subject company
+    (the capitalised phrase leading the cue's clause) is not the issuer."""
+    a = cstart(title, cue_span[0])
+    pre = title[a:cue_span[0]]
+    cue_txt = title[cue_span[0]:cue_span[1]]
+    m = _SUBJ_PHRASE.match(pre)
+    if not m or not pre.strip():
+        return False
+    ends_with_verb = bool(re.search(r"\b(?:announces?|reports?|says?|unveils?|posts?|shares?|releases?)\s*$", pre, I))
+    if not (_VERB_CUE.match(cue_txt) or ends_with_verb):
+        return False
+    subj = m.group(1)
+    if _NOT_SUBJECT.match(subj) or MEDICAL_WORDS.search(subj) or _modality(subj) != ["unclassified"] \
+            or _areas(subj, subj) != ["unclassified"]:
+        return False
+    return not any(r.search(subj) for r in fr)
+
+
 def attribute(title: str, *, ticker: str, forms: tuple, cue_span: Optional[tuple] = None) -> bool:
     """§3.4.3 rule 3 — is `ticker` the SUBJECT of this title?"""
     title = title or ""
-    hits = _mentions(title, forms or name_forms(ticker, None))
+    forms = forms or name_forms(ticker, None)
+    hits = _mentions(title, forms)
     if not hits:
         return False
     first = hits[0]
@@ -518,6 +658,21 @@ def attribute(title: str, *, ticker: str, forms: tuple, cue_span: Optional[tuple
     # it -> the issuer is not the subject.
     if cue_span and first > cue_span[0] and _rival_possessive(title[:cue_span[0]], forms):
         return False
+    # fix round 3 (OOS grade 2026-09-29): the rival guard fired only when the
+    # issuer was named AFTER the cue. "Labcorp Announces Availability of Roche's
+    # Ventana … Assay, … Approved By FDA" credited LH with Roche's approval; "Edwards
+    # wins FDA clearance …, setting up competition with AtriCure and Medtronic"
+    # credited MDT. Wherever the issuer sits: another company's possessive owning
+    # the thing before the cue, another company's product as the cue's object, or
+    # another company as the headline's subject -> not the issuer's event.
+    if cue_span:
+        fr = _form_rx(forms)
+        if _rival_owner_before(title, cue_span[0], hits, fr) or _rival_object_after(title, cue_span[1], fr, hits):
+            return False
+        # fix round 4 (critic #4): "Opdivo Gets FDA Nod …, Bristol Myers Squibb
+        # Says" — the issuer REPORTING its own product is not a rival subject.
+        if first >= cue_span[1] and _rival_subject(title, cue_span, fr) and not _issuer_reports(title, hits, fr):
+            return False
     c0 = cend(title, 0)
     if cue_span:
         ca, cb = cstart(title, cue_span[0]), cend(title, cue_span[1])
@@ -569,7 +724,21 @@ def extract_phase(masked: str, anchor: Optional[tuple], *, drop_future: bool = T
         return None
     aa, ab = anchor
     best = min(merged, key=lambda x: (0 if (x[0] < ab and x[1] > aa) else min(abs(x[0] - ab), abs(aa - x[1])), x[0]))
+    # fix round 4 (OOS grade #5): "Phase 1/2 … registrational expansion cohort met
+    # the primary endpoint" — a pivotal / registrational token in the OUTCOME's
+    # own clause lifts a lower phase to pivotal (never a "supports a registrational
+    # path" talk token, never a future one — those were dropped above).
+    from .store import _PHASE_RANK
+    if _PHASE_RANK.get(best[2], 0.0) < _PHASE_RANK["pivotal"]:
+        ca, cb = cstart(masked, aa), cend(masked, ab)
+        for a0, b0, v in merged:                          # "pivotal Phase 2b/3" stays 2/3
+            if v == "pivotal" and ca <= a0 and b0 <= cb and not _PIVOTAL_TALK.search(masked[max(0, a0 - 30):a0]):
+                return "pivotal"
     return best[2]
+
+
+_PIVOTAL_TALK = re.compile(r"\b(?:support\w*|enabl\w*|potential(?:ly)?|path(?:way)?s?\s+to(?:ward)?|inform\w*"
+                           r"|pav\w*|toward\w*|for\s+a)\b" + GAP + r"{0,12}$", I)
 
 
 def direction(masked: str) -> tuple:
@@ -625,11 +794,278 @@ _TRIAL_STOP = frozenset({"FDA", "NDA", "BLA", "IND", "PDUFA", "ESMO", "ASCO", "C
 
 
 def extract_trial(text: str) -> Optional[str]:
-    """'DAYBREAK', 'AZURE-1', 'NCT06556368' — else None."""
-    for m in _TRIAL_RX.finditer(text or ""):
-        v = m.group(1) or m.group(2)
-        if v and v.upper() not in _TRIAL_STOP and not v.isdigit():
-            return v
+    """'DAYBREAK', 'AZURE-1', 'REDEFINE-2', 'NCT06556368' — else None. Fix round 4
+    (critic 2026-09-29): the SAME normaliser as the trial keys (`extract_trial_keys`)
+    — "REDEFINE 1 Trial" and "REDEFINE 2 Trial" were both 'REDEFINE', so merge rule
+    (ii) ("same trial at any earlier date") fused two different trials."""
+    for k in extract_trial_keys(text):
+        if k.startswith("NCT") or len(k.split("-")[0]) >= 4:
+            return k
+    return None
+
+
+# ---------------------------------------------------------------------------
+# fix round 3 — SUBJECT keys: what an event is ABOUT (trial acronym, NCT id,
+# drug code, drug / product name). The push gate's repeat block, the topline
+# claim and the store's merge rules compare them: two events whose keys are
+# both present and DISJOINT are different trials / drugs and never merge or
+# block each other (OOS 2026-09-29: GILD's islatravir Phase 3 and LLY's Jaypirca
+# Phase 3 positives were swallowed by an earlier, unrelated topline); two that
+# SHARE a key are the same story (PEN THUNDERBOLT re-reported 31 sessions later).
+# Unknown is never guessed: no key -> [] and the old ticker + kind rule applies.
+# ---------------------------------------------------------------------------
+# Fix round 4 (critic 2026-09-29): a trial NAME keeps its number / suffix —
+# "REDEFINE 1" -> REDEFINE-1, "PURPOSE 2" -> PURPOSE-2, "VENTURE-Oral" ->
+# VENTURE-ORAL, "MAESTRO-NASH OUTCOMES" -> MAESTRO-NASH-OUTCOMES (never the bare
+# generic tail OUTCOMES). A name is at most two capitalised words plus a trailing
+# 1-2 digit number, adjacent to "trial / study / program"; a word carrying digits
+# (a drug code, "KEYNOTE-689") is never glued to its neighbour.
+_TW = r"(?:[A-Z][A-Z0-9]{2,}(?:-[A-Za-z0-9]+)*|[A-Z][a-z]+-\d+[A-Za-z]?)"
+_TNUM = r"\d{1,2}[A-Za-z]?"
+_TNAME = r"(?-i:" + _TW + r"(?:\s+" + _TW + r")?(?:\s+" + _TNUM + r"\b)?)"
+_TRIAL_LIST = re.compile(r"(" + _TNAME + r"(?:\s*(?:/|,|&|\band\b)\s*" + _TNAME + r")*)"
+                         r"(?=\s+(?:pivotal\s+|registrational\s+|confirmatory\s+)?(?:phase\s+\S+\s+)?(?:[\w-]+\s+)?"
+                         r"(?:trials?|stud(?:y|ies)|programs?)\b)", I)
+_TNUM_RX = re.compile(_TNUM)
+_NCT = re.compile(r"(?-i:\bNCT\d{8}\b)")
+_DRUG_CODE = re.compile(r"(?<![\w$.-])((?=[a-zA-Z]{0,4}[A-Z])[a-zA-Z]{1,5}-?\d{3,7}[A-Za-z]?)(?![\w-])")
+_YEARISH = re.compile(r"^(?:FY|CY|Q|H|FQ)?-?(?:19|20)\d\d[A-Za-z]?$", I)
+_MARKED = re.compile(r"(?<![\w-])([A-Za-z][\w-]{2,})\s*(?:\u00ae|\u2122|\((?:TM|R)\))")
+_INN = re.compile(r"\b([a-z]{3,}(?:mab|tinib|ciclib|rafenib|lisib|parib|degib|rasib|glutide|trutide|patide|lintide"
+                  r"|glipron|avir|evir|ivir|uvir|cept|leucel|temcel|siran|rsen|vedotin|deruxtecan|govitecan"
+                  r"|mafodotin|ozogamicin|tesirine|delpar|gliflozin|xaban|sertib|metinib))\b", I)
+_INN_NOT = frozenset({"concept", "concepts", "intercept", "except", "accept", "precept", "percept"})
+_ROMAN = re.compile(r"(?:I{1,3}|IV|VI{0,3}|IX|X)")            # "Phase III" is not a trial name
+_MUTATION = re.compile(r"[A-Z]\d{1,4}[A-Z]")                 # G12C, V600E, T790M — a biomarker
+_CAPS = re.compile(r"(?-i:\b([A-Z][A-Z0-9]{3,}(?:-[A-Za-z0-9]+)*)\b)")
+# 4+ letter capitals that name a disease, biomarker, body, market or newsroom
+# word — never a product. Anything the area / modality / medical-word tables
+# already match is dropped too.
+_CAPS_NOT = frozenset({
+    "TNBC", "NSCLC", "SCLC", "KRAS", "EGFR", "HER2", "BRCA", "BRAF", "PTEN", "NTRK", "FGFR", "ROS1", "IDH1", "IDH2",
+    "CDK4", "PDL1", "MASH", "NASH", "COPD", "ADHD", "PTSD", "HFPEF", "HFREF", "ATTR", "IGAN", "DLBCL", "HIV-1",
+    "COVID", "COVID-19", "GLP-1", "USPTO", "NYSE", "NASDAQ", "AMEX", "OTCQB", "OTCQX", "PDUFA", "SNDA", "SBLA",
+    "ANDA", "CHMP", "MHRA", "PMDA", "NMPA", "UPDATE", "UPDATED", "BREAKING", "CORRECTION", "EXCLUSIVE", "ALERT",
+    "NEWS", "REPORT", "WATCH", "PRESS", "RELEASE", "PHASE", "TRIAL", "STUDY", "DATA", "RESULTS", "TOPLINE",
+    "POSITIVE", "NEGATIVE", "APPROVAL", "APPROVED", "CLEARANCE", "PIVOTAL", "GLOBAL", "CLINICAL", "WEEK", "WEEKS",
+    "WITH", "FROM", "INTO", "THAT", "THIS", "FOR", "AND", "THE", "INC", "CORP", "LTD", "PLC", "ETF", "SPAC",
+    "CEO", "CFO", "USA", "CRISPR", "MRNA", "RMAT", "PRIME"})
+# Title-case product slot: "Results for Jaypirca", "Trial of Retevmo", "Approval
+# for Its Trodelvy", "Evaluating Islatravir". The slot word is dropped when it is
+# a generic word (below) or matches the medical / area / modality tables.
+_SLOT = re.compile(r"(?:\b(?:results?|data|trials?|stud(?:y|ies)|approval|nod|clearance|designation|readout)\s+"
+                   r"(?:of|for|with|on)\s+(?:its\s+|their\s+|the\s+)?|\bevaluating\s+|\bfor\s+its\s+)"
+                   r"(?-i:([A-Z][a-z]{3,}[a-z0-9]*))\b(?!['\u2019]s\b)", I)
+_SLOT_NOT = frozenset({
+    "additional", "adults", "adult", "patients", "patient", "people", "children", "treatment", "use", "expanded",
+    "broader", "full", "extended", "updated", "first", "second", "third", "late", "early", "oral", "once", "two",
+    "three", "four", "its", "their", "the", "this", "that", "label", "advanced", "metastatic", "relapsed",
+    "refractory", "chronic", "acute", "severe", "moderate", "weight", "combination", "monotherapy", "positive",
+    "negative", "topline", "strong", "key", "primary", "pivotal", "global", "strengths", "supplemental",
+    "companion", "device", "system", "test", "assay", "company", "breast", "lung", "skin", "heart", "liver",
+    "kidney", "blood", "seasonal", "influenza", "stroke", "clot", "previously", "certain", "select", "new",
+    "novel", "investigational", "late-stage", "mid-stage", "long-term", "higher", "lower", "high", "low",
+    "potential", "multiple", "several", "both", "each", "prostate", "melanoma", "vaccine", "drug", "phase",
+    "results", "data", "study", "studies", "trial", "trials", "program", "pivotal", "registrational",
+    "biosimilar", "generic", "injection", "tablets", "capsules"})
+
+
+def generic_key(k: str) -> bool:
+    """fix round 4: a stored subject key too generic to identify a product in a
+    headline on its own — a stop / disease / body / newsroom word. (Modality
+    suffixes are NOT generic here: "zolimab" is a drug name.)"""
+    u = (k or "").upper()
+    base = u.split("-")[0]
+    return (u in _CAPS_NOT or u in _TRIAL_STOP or base in _CAPS_NOT or base in _TRIAL_STOP
+            or u.lower() in _SLOT_NOT or bool(MEDICAL_WORDS.fullmatch(u)) or _areas(u, "") != ["unclassified"])
+
+
+def _generic_word(w: str) -> bool:
+    return (w.lower() in _SLOT_NOT or bool(MEDICAL_WORDS.fullmatch(w)) or _modality(w) != ["unclassified"]
+            or _areas(w, "") != ["unclassified"])
+
+
+def _mostly_caps(t: str) -> bool:
+    letters = re.findall(r"[A-Za-z]{2,}", t or "")
+    return bool(letters) and sum(1 for w in letters if w.isupper()) > len(letters) / 2
+
+
+def _trial_key_spans(t: str, *, ticker: Optional[str] = None, forms: tuple = ()) -> list:
+    """[(start, end, KEY)] of every trial NAME adjacent to "trial / study /
+    program", in text order (fix round 4). A list ("ISLEND-1 And ISLEND-2",
+    "KEYNOTE-D46/EVOKE-03") gives one key per item; inside an item only the name
+    next to the trial word counts; stop / disease / issuer words split it."""
+    fr = _form_rx(forms)
+    caps = _mostly_caps(t)
+
+    def issuer_word(w: str, at: int) -> bool:
+        if ticker and w.upper() == ticker.upper():
+            return True
+        return any(r.match(t, at) for r in fr)
+
+    out = []
+    for m in _TRIAL_LIST.finditer(t):
+        items = [[]]
+        for tm in re.finditer(r"[A-Za-z0-9-]+|[/,&]", m.group(1)):
+            w, at = tm.group(0), m.start(1) + tm.start()
+            if w in ("/", ",", "&") or w.lower() == "and":
+                items.append([])
+                continue
+            items[-1].append((w, at))
+        for it in items:
+            segs, cur = [], []
+            for w, at in it:
+                if _TNUM_RX.fullmatch(w):
+                    if cur:
+                        cur.append((w, at))
+                    continue
+                u = w.upper()
+                base = u.split("-")[0]
+                if (u in _TRIAL_STOP or u in _CAPS_NOT or base in _TRIAL_STOP or base in _CAPS_NOT
+                        or _ROMAN.fullmatch(w) or w.isdigit() or issuer_word(w, at)):
+                    if cur:
+                        segs.append(cur)
+                    cur = []
+                    continue
+                if any(ch.isdigit() for ch in w):
+                    if cur:
+                        segs.append(cur)
+                    segs.append([(w, at)])
+                    cur = []
+                    continue
+                if caps and cur:
+                    segs.append(cur)
+                    cur = []
+                cur.append((w, at))
+            if cur:
+                segs.append(cur)
+            if segs:
+                last = segs[-1]
+                out.append((last[0][1], last[-1][1] + len(last[-1][0]), "-".join(x[0] for x in last).upper()))
+    out.extend((m.start(), m.end(), m.group(0)) for m in _NCT.finditer(t))
+    return sorted(out)
+
+
+def extract_trial_keys(text: str, *, ticker: Optional[str] = None, forms: tuple = ()) -> list:
+    """PURE: the trial-IDENTITY keys (trial names + NCT ids), in text order,
+    de-duplicated. A subset of `extract_subjects`; the rest are drug / product
+    keys (store.drug_keys_of)."""
+    seen, out = set(), []
+    for _a, _b, k in _trial_key_spans(text or "", ticker=ticker, forms=forms):
+        if k not in seen:
+            seen.add(k)
+            out.append(k)
+    return out
+
+
+def extract_subjects(text: str, *, ticker: Optional[str] = None, forms: tuple = ()) -> list:
+    """PURE: the sorted, upper-cased subject keys of a headline (see above)."""
+    t = text or ""
+    out = set()
+    fr = _form_rx(forms)
+
+    def issuer_word(w: str, at: int) -> bool:
+        if ticker and w.upper() == ticker.upper():
+            return True
+        return any(r.match(t, at) for r in fr)
+
+    spans = _trial_key_spans(t, ticker=ticker, forms=forms)
+    out.update(k for _a, _b, k in spans)
+    out.update(m.group(0) for m in _NCT.finditer(t))
+    for m in _DRUG_CODE.finditer(t):
+        v = m.group(1)
+        if not _YEARISH.match(v) and not v.upper().startswith("NCT") and v.upper() not in _CAPS_NOT:
+            out.add(v.upper())
+    for m in _MARKED.finditer(t):
+        if not issuer_word(m.group(1), m.start(1)):
+            out.add(m.group(1).upper())
+    for m in _INN.finditer(t):
+        if m.group(1).lower() not in _INN_NOT:
+            out.add(m.group(1).upper())
+    if not _mostly_caps(t):
+        for m in _CAPS.finditer(t):
+            w = m.group(1)
+            base = w.split("-")[0]
+            if any(a <= m.start(1) < b for a, b, _k in spans):
+                continue                                    # a word of a trial NAME is not a product
+            if w in _CAPS_NOT or w in _TRIAL_STOP or issuer_word(w, m.start(1)) or _CONGRESS_CS.fullmatch(w) \
+                    or _MUTATION.fullmatch(w) or _YEARISH.match(w) or _generic_word(w) \
+                    or base in _CAPS_NOT or base in _TRIAL_STOP or _generic_word(base):
+                continue
+            out.add(w.upper())
+    for m in _SLOT.finditer(t):
+        w = m.group(1)
+        if not _generic_word(w) and not issuer_word(w, m.start(1)):
+            out.add(w.upper())
+    for pm in _POSSESSIVE.finditer(t):                      # "<issuer>'s <Product>"
+        if not issuer_word(pm.group(1), pm.start(1)):
+            continue
+        nm = re.match(r"\s+(?-i:([A-Z][\w-]{3,}))", t[pm.end():])
+        if nm and not _generic_word(nm.group(1)):
+            out.add(nm.group(1).upper())
+    return sorted(out)
+
+
+def subjects_disjoint(a, b) -> bool:
+    """Both carry subject keys and share none -> different trials / drugs."""
+    sa, sb = {str(x).upper() for x in (a or []) if x}, {str(x).upper() for x in (b or []) if x}
+    return bool(sa) and bool(sb) and not (sa & sb)
+
+
+def subjects_overlap(a, b) -> bool:
+    sa, sb = {str(x).upper() for x in (a or []) if x}, {str(x).upper() for x in (b or []) if x}
+    return bool(sa & sb)
+
+
+# ---------------------------------------------------------------------------
+# fix round 3 — MATERIALITY class of an FDA approval (HIS CALL: taxonomy
+# PUSH_MATERIAL_ONLY decides whether these push; default = today's behaviour).
+# A property of the event like modality — never a change of its subtype.
+# ---------------------------------------------------------------------------
+MATERIALITY_CLASSES = ("device_clearance", "label_update", "generic_formulation", "biosimilar")
+_MAT_BIOSIMILAR = re.compile(r"\bbiosimilar\w*|\binterchangeab\w*", I)
+_MAT_GENERIC_FORM = re.compile(
+    r"\badditional strengths?\b|\bnew strengths?\b|\b(?:vial|syringe|bag|bottle|pen)\s+presentations?\b"
+    r"|\bpresentations?\s+of\b|\bnew formulation\b|\breformulat\w*|\bready[- ]to[- ](?:use|dilute|administer)\b"
+    r"|\bpre-?mixed\b|\binjection\s+solution\b|\binjection,?\s+USP\b|\b505\(b\)\(2\)", I)
+_MAT_LABEL_UPDATE = re.compile(
+    r"\bmaintenance dos(?:e|es|ing)\b|\bdos(?:e|es|ing)\s+(?:every|interval|regimen|schedule|frequency|option)\b"
+    r"|\bevery\s+(?:\w+|\d+)\s+(?:weeks|months)\b|\b(?:extended|less frequent|new)\s+dosing\b"
+    r"|\blabel(?:ing)?\s+(?:update|change)\b|\bupdate[ds]?\s+to\s+(?:the\s+)?(?:\w+\s+)?(?:product\s+)?label\b"
+    r"|\bupdated\s+(?:\w+\s+)?label\b|\bself-administ\w*|\bat-home\s+administ\w*", I)
+
+
+# fix round 4 (OOS grade #3): a SUPPLEMENTAL application (sNDA / sBLA), a
+# manufacturing-site approval or a packaging change is a label update — it was
+# typed `novel` / `label_expansion` with materiality None, so the switch could
+# never reach it. Read on the cue's clause and the summary's first sentence.
+_MAT_SUPPLEMENT = re.compile(
+    _cs(r"\bs(?:NDA|BLA)s?\b") + r"|\bsupplemental\s+(?:new\s+drug|biologics?\s+license)\s+applications?\b"
+    r"|\bmanufacturing\s+(?:site|facilit(?:y|ies)|plant)\b"
+    r"|\b(?:at|for)\s+(?:its\s+|the\s+|a\s+)?(?:[\w,.'-]+\s+){0,3}(?:site|facility|plant)\b"
+    r"|\bpackag(?:e|ed|ing)\b|\bcarrying\s+case\b", I)
+
+
+def first_sentence(text: str) -> str:
+    """The first sentence of an article summary (≤ 400 chars)."""
+    t = (text or "").strip()
+    if not t:
+        return ""
+    return re.split(r"(?<=[.!?])\s+(?=[A-Z\"'\u201c])", t, maxsplit=1)[0][:400]
+
+
+def materiality_class(subtype: Optional[str], clause: str, text_all: str = "") -> Optional[str]:
+    """device_clearance / label_update / generic_formulation / biosimilar, else None."""
+    if subtype == "device_clearance":
+        return "device_clearance"
+    if _MAT_BIOSIMILAR.search(clause or "") or _MAT_BIOSIMILAR.search(text_all or ""):
+        return "biosimilar"
+    if _MAT_LABEL_UPDATE.search(clause or ""):
+        return "label_update"
+    if _MAT_SUPPLEMENT.search(clause or "") or _MAT_SUPPLEMENT.search(first_sentence(text_all)):
+        return "label_update"
+    if _MAT_GENERIC_FORM.search(clause or ""):
+        return "generic_formulation"
     return None
 
 
@@ -657,7 +1093,8 @@ def _approval_subtype(clause: str) -> str:
         return "device_clearance"
     # fix round 2 (live run: MRK "FDA Approves Update To US Product Label For
     # WINREVAIR" typed novel): a label update is a label change.
-    if re.search(_cs(r"\bs(?:NDA|BLA)\b") + r"|label expansion|expanded (?:indication|label|approval)"
+    if re.search(_cs(r"\bs(?:NDA|BLA)\b") + r"|supplemental (?:new drug|biologics? license) application"
+                 r"|label expansion|expanded (?:indication|label|approval)"
                  r"|additional indication|\b(?:for|in) (?:adolescents|children|pediatric|paediatric|younger patients)\b"
                  r"|label update|update to (?:the )?(?:U\.?S\.? )?(?:product )?label|updated (?:product )?label",
                  clause, I):
@@ -700,7 +1137,8 @@ def medical_words_hit(title: str) -> bool:
 
 def _ev(typ: str, sub, **kw) -> dict:
     e = {"event_type": typ, "subtype": sub, "direction": None, "phase": None, "regulator": None, "trial": None,
-         "cue": None, "cue_span": None, "from_commentary": False}
+         "cue": None, "cue_span": None, "from_commentary": False, "subjects": [], "trial_keys": [],
+         "materiality": None}
     e.update(kw)
     return e
 
@@ -726,7 +1164,7 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
         out["roundup"] = True
         out["reasons"].append("roundup")
         return out
-    if COMMENT.search(t0):
+    if COMMENT.search(t0) or COMMENT_FORM.search(t0):
         out["commentary"] = True
         out["reasons"].append("commentary")
         return out
@@ -802,7 +1240,9 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
                 if typ == "trial_milestone":
                     ev["phase"] = extract_phase(t[x.start():cend(t, x.end())], (0, 1), drop_future=False)
                 if typ == "fda_approval":
-                    ev["subtype"] = _approval_subtype(t0[cstart(t0, x.start()):cend(t0, x.end())])
+                    clause0 = t0[cstart(t0, x.start()):cend(t0, x.end())]
+                    ev["subtype"] = _approval_subtype(clause0)
+                    ev["materiality"] = materiality_class(ev["subtype"], clause0, context or "")
                 events.append(ev)
                 emitted.add(typ)
                 t = mask(t, x.start(), cend(t, x.end()) if ext else x.end())
@@ -844,8 +1284,20 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
                     d = "negative"
                 elif sneg and d == "positive":
                     d = "mixed"
+                d_from = "title"
+                # fix round 4 (OOS grade #6): an undirected readout headline
+                # ("Demonstrated Meaningful …", "Boosts Survival") takes its
+                # direction from the summary's FIRST sentence when that one is
+                # directed and is not post-hoc / OLE / publication talk.
+                if d == "unknown" and context:
+                    s1 = first_sentence(context)
+                    if s1 and not _NOT_READOUT_DATA.search(s1) and not _NOT_READOUT_REG.search(s1):
+                        d1, _a1, sec1 = _direction(s1)
+                        if d1 in ("positive", "negative", "mixed"):
+                            d, sec, d_from = d1, sec1, "summary"
                 events.append(_ev("topline", None, direction=d, phase=extract_phase(t, anchor or cue),
-                                  secondary_missed=bool(sec), cue=t0[cue[0]:cue[1]], cue_span=cue))
+                                  secondary_missed=bool(sec), cue=t0[cue[0]:cue[1]], cue_span=cue,
+                                  direction_from=d_from))
                 emitted.add("topline")
         elif any(re.search(sp, t, I) for sp in STOP):
             sp = next(re.search(p, t, I) for p in STOP if re.search(p, t, I))
@@ -875,9 +1327,13 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
 
     # trial name on the events that carry one
     trial = extract_trial(t0)
+    subjects = extract_subjects(t0, ticker=ticker, forms=forms)
+    tkeys = extract_trial_keys(t0, ticker=ticker, forms=forms)
     for e in events:
         if e["event_type"] in ("topline", "conference_data", "trial_milestone", "readout_scheduled"):
             e["trial"] = trial
+        e["subjects"] = list(subjects)
+        e["trial_keys"] = list(tkeys)
 
     # 10 medical gate (§3.4.6)
     medical = bool(issuer_medical) or medical_words_hit(t0)
