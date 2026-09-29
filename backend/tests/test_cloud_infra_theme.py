@@ -23,6 +23,9 @@ THE CUT RULE these tests defend (steps 1-4 mechanical, STEP 5 JUDGMENT):
 
 NO EDGE IS CLAIMED HERE. Sector/industry heat measured NULL for demand
 outcomes on 2026-09-09 (-0.57pp, CI spans zero). The row is context.
+
+2026-09-28: MDB and TDC moved to data_infra (Ajay's data-sector ask; a ticker
+lives in one roster) — this roster is 16 names, 8 over MIN_COHORT_N.
 """
 import inspect
 
@@ -44,8 +47,11 @@ FULL = {s.upper() for s in U.load_universe("full")}
 # --------------------------------------------------------------------------
 def test_the_theme_exists_and_carries_the_hosting_anchors():
     assert KEY in U.THEME_UNIVERSE
-    assert len(ROSTER) == 18
+    # 18 at launch; 16 since 2026-09-28 (MDB and TDC moved to data_infra).
+    assert len(ROSTER) == 16
     assert len(set(ROSTER)) == len(ROSTER), "a duplicate inside one roster"
+    assert not ({"MDB", "TDC"} & set(ROSTER))
+    assert U.theme_for("MDB") == U.theme_for("TDC") == "data_infra"
     # DOCN is the anchor of his ask, RXT is item 1, BLZE is the one name of the
     # eight originally handed over that actually passed the thesis test.
     assert {"DOCN", "RXT", "BLZE"} <= set(ROSTER)
@@ -64,7 +70,9 @@ def test_the_rosters_stay_disjoint():
     # 18 since 2026-09-21: critical_minerals (Ajay: "Do we have critical
     # minerals in our list?"). The roster count is the only thing that moved;
     # cloud_infra and its rank are untouched.
-    assert len(U.THEME_UNIVERSE) == 18, "16 before cloud_infra, 17 after, 18 with critical_minerals"
+    # 19 since 2026-09-28: data_infra (Ajay's data-sector ask).
+    assert len(U.THEME_UNIVERSE) == 19, (
+        "16 before cloud_infra, 17 after, 18 with critical_minerals, 19 with data_infra")
 
 
 def test_NEGATIVE_it_does_not_steal_from_the_five_themes_that_hold_this_industry():
@@ -148,9 +156,11 @@ def test_NEGATIVE_the_step5_judgment_line_is_applied_consistently():
     Microsoft's cloud — it sells the management layer, the capacity is
     Microsoft's. TDC is in as a data platform others run workloads on, despite
     being on-prem-heavy, which is a delivery-model objection not a product one.
-    A defensible stricter line drops DBX/BOX/TDC -> 15 names, still 7 over
-    MIN_COHORT_N. If he takes that line, invert this test."""
-    assert {"DBX", "BOX", "TDC"} <= set(ROSTER)
+    A defensible stricter line drops DBX/BOX -> 14 names, still 6 over
+    MIN_COHORT_N. If he takes that line, invert this test. (TDC moved to
+    data_infra 2026-09-28 — the warehouse is the data layer, not capacity.)"""
+    assert {"DBX", "BOX"} <= set(ROSTER)
+    assert U.theme_for("TDC") == "data_infra"
     assert "AVPT" not in ROSTER
     for app in ("FIVN", "APPN", "AI", "RZLV", "ZETA", "RAMP", "YEXT"):
         assert app not in ROSTER, "%s is an application, not hosted capacity" % app
@@ -205,9 +215,10 @@ def test_the_themes_component_stays_inside_its_size_band():
 def test_the_row_is_not_thin_and_has_room_to_lose_members():
     """`n` on the board is KEPT members, not roster size (crypto prints n=14 on
     a 17-name roster). The rejected 8-name roster sat exactly on MIN_COHORT_N,
-    so one stale member would have flipped it to `thin`."""
+    so one stale member would have flipped it to `thin`. 2026-09-28: 16 names
+    after MDB and TDC moved to data_infra -> 8 of headroom."""
     assert TR.MIN_COHORT_N == 8
-    assert len(ROSTER) - TR.MIN_COHORT_N == 10
+    assert len(ROSTER) - TR.MIN_COHORT_N == 8
 
 
 # --------------------------------------------------------------------------
@@ -266,5 +277,6 @@ def test_the_theme_ranks_behind_the_buildout_that_sells_it():
     assert set(P) == set(U.THEME_UNIVERSE), "a roster with no rank sorts wrong"
     assert P[KEY] == P["datacenter_build"] + 1
     assert P["ai_infra"] < P["datacenter_build"] < P[KEY]
-    for below in ("defense", "rare_earth", "infosec", "crypto", "biotech"):
+    for below in ("data_infra", "defense", "rare_earth", "infosec", "crypto",
+                  "biotech"):
         assert P[below] > P[KEY]

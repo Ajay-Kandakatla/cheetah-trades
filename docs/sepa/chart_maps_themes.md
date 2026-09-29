@@ -93,6 +93,9 @@ as `semi_materials` and `datacenter_build`. Everything below shifts one rank and
 relative order is unchanged: `defense 12, rare_earth 13, infosec 14, crypto 15,
 biotech 16`.
 
+*(ranks since shifted: critical_minerals 2026-09-21, data_infra 2026-09-28 —
+see below.)*
+
 The current full ordering lives in `THEME_PRIORITY` and is pinned by
 `backend/tests/test_theme_priority.py::test_priority_is_the_order_ajay_asked_for`
 — read it there, not from the 2026-08 snapshot table above, which predates
@@ -104,8 +107,9 @@ PHYSICAL BOX — racks, cooling, power distribution, transmission gear.
 `cloud_infra` is the RENTED CAPACITY running on top of it. Different businesses,
 different cycles.
 
-**Roster (18):** NET · MDB · NTAP · TWLO · AKAM · DOCN · FFIV · VRSN · GTLB ·
-GDDY · NTNX · DBX · BOX · TDC · BAND · BLZE · RXT · ATEN.
+**Roster (16 since 2026-09-28; 18 at launch):** NET · NTAP · TWLO · AKAM · DOCN ·
+FFIV · VRSN · GTLB · GDDY · NTNX · DBX · BOX · BAND · BLZE · RXT · ATEN.
+MDB and TDC moved to `data_infra` on 2026-09-28 (a ticker lives in one roster).
 
 Derivation, exclusions and the measured numbers: **`docs/sepa/universe_cloud_infra.md`**.
 Tests: `backend/tests/test_cloud_infra_theme.py`.
@@ -119,6 +123,40 @@ labelling that surface is a separate call (it would re-label 12 existing chips).
 **No edge is claimed.** Sector/industry heat measured **null** against demand
 outcomes on 2026-09-09 (−0.57pp, CI spans zero; the cold cohort won at 5
 sessions). The row is context.
+
+## `data_infra` — the 19th roster (2026-09-28)
+
+> Ajay: *"Can you create a new sector for DATA driven companies like DATA DOG,
+> Mongo DB and Snow flake in to the add them accross board where we have
+> sectors"*
+
+**Rank 12, directly behind `cloud_infra` (11).** It is the same software story
+one layer up: `cloud_infra` rents the capacity, `data_infra` is the data layer
+running on it. **The rank is mine, not his.** Everything below shifts one rank;
+relative order is unchanged.
+
+The full current order (0-18): `space 0, quantum 1, ai_semis 2,
+semi_materials 3, ai_power 4, nuclear 5, energy 6, optical 7, robotics 8,
+ai_infra 9, datacenter_build 10, cloud_infra 11, data_infra 12, defense 13,
+rare_earth 14, critical_minerals 15, infosec 16, crypto 17, biotech 18`.
+
+**Three rosters, three businesses:** `ai_infra` = the physical box,
+`cloud_infra` = the rented capacity, `data_infra` = the data layer (database,
+warehouse, observability, search).
+
+**Roster (8):** SNOW · DDOG · MDB · DT · ESTC · TDC · AMPL · PLTR — his three
+first. MDB and TDC moved from `cloud_infra`. PLTR is HIS CALL: without it the
+row is 7 and prints `· thin`; ORCL (out on the SEGMENT rule) would make it 9.
+
+Derivation, exclusions and the measured numbers: **`docs/sepa/universe_data_infra.md`**.
+Tests: `backend/tests/test_data_infra_theme.py`.
+
+Labels: `HottestSectors.tsx THEME_LABELS.data_infra = 'Data infra'`;
+Chart Maps tile badge `chartMaps.ts THEME_LABEL.data_infra = '🗄️ Data infra'`.
+The Hot-sectors strip, `/rotation` and the Changes line print the raw key, as
+for every other theme (HIS CALL to backfill).
+
+**No edge is claimed** — sector heat measured null on 2026-09-09.
 
 ## Roster construction
 

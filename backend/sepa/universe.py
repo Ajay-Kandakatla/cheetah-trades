@@ -407,6 +407,9 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # `cloud_infra` is the RENTED CAPACITY that runs on top of it. Two different
     # businesses on two different cycles; they will be confused within a month
     # if this paragraph is deleted.
+    # `data_infra` (2026-09-28) is the DATA LAYER that runs on this capacity —
+    # database, warehouse, observability, search. Three rosters, three
+    # businesses.
     #
     # THE CUT RULE. Re-runnable, so the roster can be argued with instead of
     # taken on trust. STEPS 1-4 ARE MECHANICAL AND REPRODUCIBLE.
@@ -441,6 +444,9 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     #                 TDC       a data platform others run workloads on.
     #                           On-prem-heavy today, which is a DELIVERY-MODEL
     #                           objection, not a product objection.
+    #                           MOVED to data_infra 2026-09-28 (Ajay's data-
+    #                           sector ask; a ticker lives in one roster). MDB
+    #                           moved the same day.
     #                 TWLO,BAND communications transport; the product is the pipe.
     #               OUT by the same test, and the line that separates them:
     #                 AVPT      governance/backup TOOLING that manages data
@@ -462,9 +468,13 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     #   MSFT ($13.25B/day), ORCL ($4.50B/day), PLTR ($5.76B/day) — conglomerates
     #     and application platforms where cloud is a SEGMENT. Same call `space`
     #     made on LMT/NOC/RTX/BA above. HIS CALL, flagged in the wrap-up.
+    #     PLTR is in data_infra since 2026-09-28 (it passes THAT roster's
+    #     thesis test); ORCL and MSFT stay out of both on this same SEGMENT
+    #     rule — HIS CALL.
     #   SNOW, DDOG, DT, ESTC — the obvious cloud-data/observability names,
     #     excluded ONLY because the provider files them under
     #     "Software - Application", which step 1 does not read. HIS CALL.
+    #     RESOLVED 2026-09-28: all four are in data_infra.
     #   PAYMENTS filed under Software-Infrastructure by the provider:
     #     XYZ TOST FOUR CPAY WEX RELY STNE PAGS PAYO PGY EEFT ACIW FLYW MQ EVTC
     #     IIIV IMXI PAYS PRTH RPAY PSFE — a fintech index wearing a cloud label.
@@ -505,11 +515,74 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # sessions). This row is context. It gates nothing and it must never borrow
     # infosec's +8.00pp morning.
     #
-    # 18 names leaves 10 of headroom over rotation.tracker.MIN_COHORT_N (8)
-    # before the row prints `· thin`.
-    "cloud_infra": ["NET", "MDB", "NTAP", "TWLO", "AKAM", "DOCN", "FFIV",
-                    "VRSN", "GTLB", "GDDY", "NTNX", "DBX", "BOX", "TDC",
+    # 16 names (MDB and TDC moved to data_infra 2026-09-28) leaves 8 of
+    # headroom over rotation.tracker.MIN_COHORT_N (8) before the row prints
+    # `· thin`.
+    "cloud_infra": ["NET", "NTAP", "TWLO", "AKAM", "DOCN", "FFIV",
+                    "VRSN", "GTLB", "GDDY", "NTNX", "DBX", "BOX",
                     "BAND", "BLZE", "RXT", "ATEN"],
+    # Data infrastructure — the DATA LAYER, added 2026-09-28 on Ajay's ask,
+    # verbatim: "Can you create a new sector for DATA driven companies like
+    # DATA DOG, Mongo DB and Snow flake in to the add them accross board where
+    # we have sectors".
+    #
+    # NAMING: `ai_infra` = the box (racks, cooling, power). `cloud_infra` = the
+    # rented capacity (compute, storage, edge, DNS, delivery, comms).
+    # `data_infra` = the DATA LAYER running on that capacity (database,
+    # warehouse / data cloud, observability, search, event analytics).
+    #
+    # THE CUT RULE:
+    #   1. ANCHORS    his three: DDOG, MDB, SNOW.
+    #   2. THESIS (JUDGMENT — MINE, NOT A RULE): "Is the PRODUCT ITSELF the
+    #               layer where a customer's data is stored, queried, searched
+    #               or observed — database, data warehouse / data cloud,
+    #               observability telemetry, search, event analytics,
+    #               data-integration platform?"
+    #   3. SEGMENT    a conglomerate where the data layer is one segment of the
+    #               business is OUT. cloud_infra's own rule as it applies to
+    #               the conglomerates MSFT and ORCL (the SEGMENT line above),
+    #               reused, not reinvented; IBM is the same case. PLTR is NOT
+    #               under this rule here: its product IS the data platform
+    #               (see "PLTR IS IN" below). HIS CALL.
+    #   4. PARTITION  _assert_themes_disjoint() — a ticker lives in ONE roster.
+    #               MDB and TDC MOVED from cloud_infra; nothing else moved.
+    #   5. LIVENESS   last cached bar == the freshest session 2026-09-28.
+    #               VALIDATED BY DATE, NEVER BY BAR COUNT (the SDIG trap).
+    #   6. LIQUIDITY  50-bar average dollar volume >= 20_000_000, reused BY NAME
+    #               from rotation.tracker.build(min_dollar_vol=20_000_000.0) and
+    #               trading.safety_floor.MIN_DOLLAR_VOL. No new number.
+    #
+    # EXCLUSIONS, each with its reason:
+    #   SEGMENT: ORCL ($4.3B/day), IBM ($1.5B/day, owns Db2 and Confluent),
+    #     MSFT — the data layer is one segment of a conglomerate. Same call as
+    #     cloud_infra made on ORCL/MSFT above. HIS CALL.
+    #   DOMO: last bar 2026-09-23 (stale) and $7.2M/day (under the floor).
+    #   CFLT: in sepa.symbols.DELISTED (acquired by IBM) — never re-add.
+    #   BASE: last bar 2025-09-23. FROG, KVYO: 2026-08-31. CWAN: 2026-06-24.
+    #   INFA, SWI, PSTG: no cached bars.
+    #   PD: an incident-response workflow APP, not a data layer. It also sits
+    #     under the 50-bar floor ($18.8M) but clears the 20-day median ($21.7M),
+    #     so the metric does not decide it; the thesis does.
+    #   PRGS: mixed infrastructure-software portfolio.
+    #   Data vendors SPGI ICE MSCI FDS VRSK: they SELL their own data; the
+    #     customer's data does not live in them. HIS CALL.
+    #   Storage hardware P (Everpure) and QMCO; backup CVLT (its peer RBRK is
+    #     in infosec). HIS CALL.
+    #   Apps IOT, AI, AVPT, BRZE, RAMP, ZETA, OTEX, INOD, NTCT; edge FSLY.
+    #   PARTITION holds NTAP NTNX GTLB DBX BOX — they stay in cloud_infra.
+    #
+    # PLTR IS IN ON THE THESIS TEST, NOT THE COUNT: its product is the
+    # data-integration / analytics platform over the customer's data. The
+    # consequence: 8 names = exactly MIN_COHORT_N, zero headroom. A member
+    # drops from `n` only after more than MAX_STALE_DAYS (10) calendar days
+    # without a bar, and one such member prints `· thin`. Without PLTR: 7,
+    # `· thin`. With ORCL too: 9. HIS CALL: PLTR and/or ORCL.
+    #
+    # NET-NEW TO `full`: 0 (2730 -> 2730), measured in the api container. A
+    # measurement cohort, not coverage.
+    #
+    # NO EDGE IS CLAIMED (sector heat measured NULL 2026-09-09). Gates nothing.
+    "data_infra": ["SNOW", "DDOG", "MDB", "DT", "ESTC", "TDC", "AMPL", "PLTR"],
     # Racks, cooling, transmission hardware.
     "ai_infra":  ["VRT", "MOD", "SMCI", "ANET", "ETN", "PWR", "GEV", "NVT",
                   "HUBB", "POWL", "AAON", "CLS", "FLEX",
@@ -649,28 +722,35 @@ THEME_PRIORITY: dict[str, int] = {
     # with semi_materials and datacenter_build. Everything below shifts one
     # rank; relative order is unchanged.
     "cloud_infra": 11,
-    "defense":   12,
-    "rare_earth": 13,
+    # 2026-09-28 — directly behind cloud_infra because it is the same software
+    # story one layer up: cloud_infra rents the capacity, data_infra is the data
+    # layer running on it. THE RANK IS MINE, NOT HIS — he asked for the sector,
+    # not for this placement, exactly as with semi_materials, datacenter_build,
+    # cloud_infra and critical_minerals. Everything below shifts one rank;
+    # relative order is unchanged.
+    "data_infra": 12,
+    "defense":   13,
+    "rare_earth": 14,
     # 2026-09-21 — directly behind rare_earth because it is the SAME story one
     # layer wider: the reactors, batteries and grid above all bottleneck on
     # these inputs. THE RANK IS MINE, NOT HIS — he asked for the names, not for
     # the placement, exactly as with semi_materials, datacenter_build and
     # cloud_infra. Everything below shifts one rank; relative order is
     # unchanged.
-    "critical_minerals": 14,
+    "critical_minerals": 15,
     # 2026-09-14 — ahead of crypto, behind the AI build-out. It is an
     # AI-ecosystem story (agent and model security is the new attack surface)
     # but an indirect one, so it does not outrank the hardware.
-    "infosec":   15,
+    "infosec":   16,
     # Last on purpose: it is the only roster here with no AI-ecosystem thesis,
     # and his standing rule puts AI-ecosystem winners on top of every list.
-    "crypto":    16,
+    "crypto":    17,
     # 2026-09-14 — ranked BELOW every AI theme and below crypto, deliberately.
     # It is the one theme here that is not an AI story at all, and his standing
     # rule is that AI-ecosystem winners lead any list. This tag decides which
     # label a name carries when it sits in two themes; it does not decide where
     # a theme ranks on a board — the rotation grain ranks on measured return.
-    "biotech":   17,
+    "biotech":   18,
 }
 
 # Rank used for a tagged theme that is not in THEME_PRIORITY — still ahead of
@@ -892,7 +972,7 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     # so there is no lower bound — only an upper one to catch a bad parse.
     "microcap": (0, 2500),        # measured 1278
     "etf": (150, 600),            # measured 373
-    "themes": (20, 300),          # measured 292 (2026-09-21), hand-curated
+    "themes": (20, 300),          # measured 298 (2026-09-28), hand-curated
     # ZERO IS LEGITIMATE here and nowhere else in this table: on day one nothing
     # has been curated in from the tracked traders, and the default band starts
     # at 1 — which would fail an empty list and log it as a broken parse. The

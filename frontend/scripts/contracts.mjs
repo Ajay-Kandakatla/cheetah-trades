@@ -3864,6 +3864,42 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🗄️ data_infra theme — his three anchors, the cloud_infra move (2026-09-28)',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-09-28: "Can you create a new sector for DATA driven companies
+    // like DATA DOG, Mongo DB and Snow flake in to the add them accross board
+    // where we have sectors". Matched INSIDE the extracted roster blocks, never
+    // the whole file: universe.py's curated UNIVERSE list quotes SNOW, DDOG,
+    // MDB and PLTR too. ORCL and PLTR are deliberately NOT guarded — both are
+    // HIS CALL, and a guard would block his answer.
+    checks: (src) => {
+      const errs = [];
+      const uni = read('../backend/sepa/universe.py');
+      const di = uni.match(/^\s*"data_infra":\s*\[([^\]]*)\]/m);
+      if (!di) {
+        errs.push('the data_infra roster is gone from THEME_UNIVERSE');
+      } else {
+        for (const s of ['DDOG', 'MDB', 'SNOW']) {
+          if (!new RegExp(`"${s}"`).test(di[1])) errs.push(`${s} left data_infra — he named it`);
+        }
+        if (/"CFLT"/.test(di[1])) errs.push('CFLT is delisted (sepa.symbols.DELISTED)');
+      }
+      const ci = uni.match(/^\s*"cloud_infra":\s*\[([^\]]*)\]/m);
+      if (ci) {
+        for (const s of ['MDB', 'TDC']) {
+          if (new RegExp(`"${s}"`).test(ci[1])) errs.push(`${s} is back in cloud_infra — a ticker lives in one roster`);
+        }
+      }
+      if (!/data_infra:\s*'Data infra'/.test(read('src/components/HottestSectors.tsx'))) {
+        errs.push('the Hottest row needs its readable label');
+      }
+      if (!/id: 'data-infra-theme-2026-09-28'/.test(src)) {
+        errs.push('the theme needs its ✨ entry');
+      }
+      return errs;
+    },
+  },
+  {
     name: '🎪 promo-circuit names enter the universe through a GATE, and every board says so (2026-09-21)',
     file: 'src/components/PromoOriginChip.tsx',
     // Ajay 2026-09-21: "We have this page that pull data from social media and

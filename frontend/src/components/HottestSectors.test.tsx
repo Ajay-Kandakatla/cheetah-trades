@@ -9,6 +9,7 @@ import { HottestSectors, pct, tone, tierChip } from './HottestSectors';
 import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { EnterableFilterProvider } from '../hooks/useEnterableFilter';
 import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
+import LIVE_THEME_ROW from './__fixtures__/hottest_theme_row_2026_09_28.json';
 
 /* Shaped exactly like the live payload, with ANDE's real numbers from
  * 2026-09-10: strong name, cold sector, thin industry, declining sales. */
@@ -517,5 +518,107 @@ describe('the ✨ highlight copy for cloud_infra', () => {
     expect(e!.addedAt).toBe('2026-09-18');
     expect(Number.isNaN(Date.parse(e!.addedAt))).toBe(false);
     expect(NEW_FEATURES.filter((f) => f.id === e!.id).length).toBe(1);
+  });
+});
+
+/* ------------------------------------------------------------------------ *
+ * data_infra — the 19th theme, 2026-09-28. Ajay: "Can you create a new      *
+ * sector for DATA driven companies like DATA DOG, Mongo DB and Snow flake". *
+ * Both rows are SERVED rows from GET /rotation/hottest on the branch        *
+ * backend (throwaway container, scratch DB, rotation rebuilt with the new   *
+ * rosters, as_of 2026-09-28, names trimmed to 2) — the keys AND the counts  *
+ * are the server's, not hand-typed.                                         *
+ * ------------------------------------------------------------------------ */
+const DATA_ROW = LIVE_THEME_ROW.data_infra_row;
+const CLOUD_ROW = LIVE_THEME_ROW.cloud_infra_row;
+
+describe('the served data_infra / cloud_infra rows (branch capture)', () => {
+  it('data_infra was served with 8 names, not thin; cloud_infra with 16', () => {
+    expect([DATA_ROW.group, DATA_ROW.n_full, DATA_ROW.thin]).toEqual(['data_infra', 8, false]);
+    expect([CLOUD_ROW.group, CLOUD_ROW.n_full, CLOUD_ROW.thin]).toEqual(['cloud_infra', 16, false]);
+  });
+
+  it('his three anchors were served in the data_infra row, all 8 names', () => {
+    const syms = LIVE_THEME_ROW.served_symbols.data_infra;
+    expect(syms.length).toBe(8);
+    for (const s of ['DDOG', 'MDB', 'SNOW']) expect(syms).toContain(s);
+  });
+
+  it('NEGATIVE: MDB and TDC are not in the served cloud_infra membership (16)', () => {
+    const syms = LIVE_THEME_ROW.served_symbols.cloud_infra;
+    expect(syms.length).toBe(16);
+    expect(syms).not.toContain('MDB');
+    expect(syms).not.toContain('TDC');
+  });
+});
+const dataRow = async () => {
+  const btn = await screen.findByRole('button', { name: /^▸ Data infra/ });
+  return btn.closest('tr') as HTMLElement;
+};
+
+describe('HottestSectors — the data_infra row (2026-09-28)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); _resetSignalWatchlist(); });
+
+  it('renders with its readable label, never the raw key', async () => {
+    stub({ ...PAYLOAD, themes: [DATA_ROW] });
+    view();
+    expect(await screen.findByRole('button', { name: /Data infra/ })).toBeTruthy();
+    expect(screen.queryByText('data_infra')).toBeNull();
+  });
+
+  it('NEGATIVE: the 8-name row shows 8 and is not flagged thin (exactly MIN_COHORT_N)', async () => {
+    stub({ ...PAYLOAD, themes: [DATA_ROW] });
+    view();
+    const row = await dataRow();
+    expect(within(row).getByText('8')).toBeTruthy();
+    expect(row.textContent).not.toMatch(/· thin/);
+  });
+
+  it('NEGATIVE: the 7-name row (PLTR out, his call) DOES say · thin', async () => {
+    stub({ ...PAYLOAD, themes: [{ ...DATA_ROW, n_full: 7, names_total: 7, n_measured: 7, thin: true }] });
+    view();
+    const row = await dataRow();
+    expect(row.textContent).toMatch(/· thin/);
+  });
+
+  it('NEGATIVE: cloud_infra (16) and data_infra (8) are two distinct rows', async () => {
+    stub({ ...PAYLOAD, themes: [CLOUD_ROW, DATA_ROW] });
+    view();
+    const dataBtn = await screen.findByRole('button', { name: /^▸ Data infra/ });
+    const cloudBtn = await screen.findByRole('button', { name: /^▸ Cloud infra/ });
+    expect(dataBtn).not.toBe(cloudBtn);
+    /* the anchored data pattern must not catch the cloud button */
+    expect(/^▸ Data infra/.test(cloudBtn.textContent || '')).toBe(false);
+    const cloudRow = cloudBtn.closest('tr') as HTMLElement;
+    expect(within(cloudRow).getByText('16')).toBeTruthy();
+    expect(cloudRow.textContent).not.toMatch(/· thin/);
+    expect(within(dataBtn.closest('tr') as HTMLElement).getByText('8')).toBeTruthy();
+  });
+});
+
+describe('the ✨ highlight copy for data_infra', () => {
+  it('exists once, dated, routed to the Hot-sectors tab', async () => {
+    const { NEW_FEATURES } = await import('../lib/newFeatures');
+    const hits = NEW_FEATURES.filter((f) => f.id === 'data-infra-theme-2026-09-28');
+    expect(hits.length).toBe(1);
+    expect(hits[0].addedAt).toBe('2026-09-28');
+    expect(hits[0].route).toBe('/chart-maps?tab=hot_sectors');
+  });
+
+  it('names his three, the move, the his-calls and the day-one caveat', async () => {
+    const { NEW_FEATURES } = await import('../lib/newFeatures');
+    const body = NEW_FEATURES.find((f) => f.id === 'data-infra-theme-2026-09-28')!.label;
+    for (const re of [/DDOG/, /MDB/, /SNOW/, /PLTR/, /TDC/, /Oracle/, /Cloud infra/,
+                      /Supply & Demand/, /new row, not money coming in/,
+                      /NEVER BEEN MEASURED/i, /no gate moved/i]) {
+      expect(body).toMatch(re);
+    }
+  });
+
+  it('NEGATIVE: no "bounce" and no edge claim', async () => {
+    const { NEW_FEATURES } = await import('../lib/newFeatures');
+    const body = NEW_FEATURES.find((f) => f.id === 'data-infra-theme-2026-09-28')!.label;
+    expect(body).not.toMatch(/bounce/i);
+    expect(body).not.toMatch(/outperform|predicts|beats the|win rate/i);
   });
 });

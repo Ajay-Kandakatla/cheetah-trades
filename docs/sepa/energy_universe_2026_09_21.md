@@ -81,6 +81,9 @@ order is unchanged — the same rule used for `semi_materials`,
 `datacenter_build` and `cloud_infra`. **The rank is mine, not his**; he asked
 for the names, not the placement.
 
+*2026-09-28: `data_infra` was inserted at 12, so `critical_minerals` now sits
+at **15** (infosec 16, crypto 17, biotech 18); relative order unchanged.*
+
 ## What this does and does not do
 
 A theme roster is a **tag and a measurement cohort**. It decides which label a

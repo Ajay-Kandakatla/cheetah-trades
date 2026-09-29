@@ -143,6 +143,14 @@ def test_priority_is_the_order_ajay_asked_for():
                      # capacity rented off them. Everything below shifted one
                      # rank; relative order is unchanged.
                      "cloud_infra",
+                     # 2026-09-28 — data_infra, inserted directly BEHIND
+                     # cloud_infra: the same software story one layer up
+                     # (cloud_infra rents the capacity, data_infra is the data
+                     # layer on it). Ajay asked for a data sector; the
+                     # placement is mine, same as cloud_infra and
+                     # critical_minerals. Everything below shifted one rank;
+                     # relative order is unchanged.
+                     "data_infra",
                      "defense", "rare_earth",
                      # 2026-09-21 — critical_minerals, inserted directly BEHIND
                      # rare_earth because it is the same story one layer wider:

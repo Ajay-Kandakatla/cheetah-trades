@@ -121,7 +121,8 @@ MINERALS_TOO_THIN = ("KRO", "USAU", "WWR", "GPHOF", "GLND")
 
 def test_the_critical_minerals_roster_exists_and_is_ranked():
     assert "critical_minerals" in THEME_UNIVERSE
-    assert THEME_PRIORITY["critical_minerals"] == 14
+    # 2026-09-28 data_infra inserted at 12 — shifted one more.
+    assert THEME_PRIORITY["critical_minerals"] == 15
     # Directly behind rare_earth, the story it widens.
     assert THEME_PRIORITY["critical_minerals"] == THEME_PRIORITY["rare_earth"] + 1
 
@@ -171,6 +172,7 @@ def test_rare_earth_is_untouched_and_UUUU_stays_there():
 def test_the_themes_below_critical_minerals_shifted_by_exactly_one():
     """The file's own rule when a theme is inserted: everything below shifts
     one rank, relative order unchanged."""
-    assert THEME_PRIORITY["infosec"] == 15
-    assert THEME_PRIORITY["crypto"] == 16
-    assert THEME_PRIORITY["biotech"] == 17
+    # 2026-09-28 data_infra inserted at 12 — shifted one more.
+    assert THEME_PRIORITY["infosec"] == 16
+    assert THEME_PRIORITY["crypto"] == 17
+    assert THEME_PRIORITY["biotech"] == 18
