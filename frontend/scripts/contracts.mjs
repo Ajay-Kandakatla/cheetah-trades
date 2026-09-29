@@ -5105,6 +5105,83 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🏎️ Dual Momentum filters + 💰 order (2026-09-29): 🌀/📍/🔑 over the pool pre-cut, served counts, never silent, cap order tab-scoped, never bounce',
+    file: 'src/lib/dmFilters.ts',
+    // Ajay 2026-09-29: "Can you add AMD raided and near demand zone and near
+    // lower Key level filters to dual momentum please" and, the same day,
+    // "Also a sort by market cap please". The boxes are VIEWS over existing
+    // reads (the AMD Raided tab's stored grade, the 🎯 gate's own proximity
+    // read, the Key Levels tab's build/rank) applied over the WHOLE pool
+    // BEFORE the cut; the 💰 order is two tab-scoped sort keys over the same
+    // pool. Losing any link here silently changes WHICH leaders he sees.
+    checks: (src) => {
+      const errs = [];
+      const ts = /export const DM_FILTER_KEYS = \[([^\]]*)\] as const/.exec(src);
+      let dmt = '';
+      try { dmt = read('../backend/chart_maps/dual_momentum_tab.py'); } catch { errs.push('backend/chart_maps/dual_momentum_tab.py is missing'); }
+      const py = /^FILTER_KEYS = \(([^)]*)\)/m.exec(dmt);
+      const keysOf = (m) => (m ? m[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : null);
+      if (!ts || !py) errs.push('DM_FILTER_KEYS (dmFilters.ts) or FILTER_KEYS (dual_momentum_tab.py) is missing');
+      else if (JSON.stringify(keysOf(ts)) !== JSON.stringify(keysOf(py)) || JSON.stringify(keysOf(py)) !== '["amd","zone","level"]') {
+        errs.push(`DM_FILTER_KEYS ${JSON.stringify(keysOf(ts))} must equal FILTER_KEYS ${JSON.stringify(keysOf(py))} == ["amd","zone","level"]`);
+      }
+      if (dmt) {
+        for (const need of ['TB.AMD_TURNING', 'AMD_MEASURED', 'demand_proximity_gate', 'def near_demand_pct', 'KLT.rank', 'KLT.MEMO_TTL_SEC', 'market_caps_for', 'cap=0']) {
+          if (!dmt.includes(need)) errs.push(`dual_momentum_tab.py must use ${need} (reuse the engine / constant by name)`);
+        }
+        if ((dmt.match(/^KEY_LEVEL_NEAR_PCT\s*=\s*1\.0\s*$/gm) || []).length !== 1 || (dmt.match(/KEY_LEVEL_NEAR_PCT\s*=/g) || []).length !== 1) {
+          errs.push('dual_momentum_tab.py must define KEY_LEVEL_NEAR_PCT = 1.0 exactly once');
+        }
+        if (!/HIS CALL[^\n]*\n[^\n]*\nKEY_LEVEL_NEAR_PCT|HIS CALL[^\n]*\nKEY_LEVEL_NEAR_PCT/.test(dmt)) errs.push('KEY_LEVEL_NEAR_PCT must sit under its HIS CALL comment');
+        // The 📍 bound is read off demand_proximity_gate's own default — the tab
+        // test_06 source guard bans the alert constant's NAME in this module.
+        if (/ALERT_MAX_ABOVE_DEMAND_PCT/.test(dmt)) errs.push('dual_momentum_tab.py must not spell ALERT_MAX_ABOVE_DEMAND_PCT (read it off demand_proximity_gate)');
+        if (/51\.9/.test(dmt)) errs.push('dual_momentum_tab.py retypes the AMD measurement (use HA.AMD_MEASURED)');
+        if (/amd_verdict|find_cycle|find_raids/.test(dmt)) errs.push('dual_momentum_tab.py must not read a per-name AMD frame (the sweep document is the AMD tab state)');
+        if (!/^SORT_MARKET_CAP = "market_cap"$/m.test(dmt) || !/^SORT_MARKET_CAP_ASC = "market_cap_asc"$/m.test(dmt)) errs.push('dual_momentum_tab.py lost SORT_MARKET_CAP / SORT_MARKET_CAP_ASC');
+        if (!/^TAB_SORTS = \(SORT_NEAREST_DEMAND,\) \+ CAP_SORTS/m.test(dmt)) errs.push('dual_momentum_tab.py TAB_SORTS must carry 📍 + both 💰 keys');
+        if (/bounc/i.test(dmt.replace(/bounce_room/g, ''))) errs.push('dual_momentum_tab.py says "bounce"');
+      }
+      const board = read('../backend/chart_maps/board.py');
+      const a = board.indexOf('def dual_momentum_tiles');
+      const body = a >= 0 ? board.slice(a, board.indexOf('\ndef ', a + 10)) : '';
+      const pPass = body.indexOf('DMT.passes(');
+      const pCap = body.indexOf('DMT.market_caps(');
+      const pFin = body.indexOf('_finish(tiles');
+      if (!(pPass > 0 && pFin > pPass)) errs.push('board.py dual_momentum_tiles: the filter (DMT.passes) must run BEFORE _finish(tiles …) — pre-cut');
+      if (!(pCap > pPass && pFin > pCap)) errs.push('board.py dual_momentum_tiles: the 💰 order must read caps AFTER the filter and BEFORE _finish(tiles …)');
+      if ((body.match(/DMT\.market_caps\(/g) || []).length !== 1) errs.push('board.py dual_momentum_tiles: exactly ONE cap read');
+      if ((board.match(/dm_filters=/g) || []).length !== 1 || !/elif t == "dual_momentum":\n\s*out = dual_momentum_tiles\([^)]*dm_filters=/.test(board)) {
+        errs.push('board.py: dm_filters= must appear once, on the dual_momentum dispatch only');
+      }
+      if (!/t == "dual_momentum"\s*\n?\s*and sort in _DMT\.TAB_SORTS/.test(board)) errs.push('board.py: the tab-scoped sort coercion must use _DMT.TAB_SORTS (📍 + 💰 on this tab only)');
+      const note = read('src/components/DualMomentumBoardNote.tsx');
+      for (const id of ['cm-dm-filter-line', 'cm-dm-cap-line', 'cm-dm-sort-market_cap']) {
+        if (!note.includes(`data-testid="${id}"`)) errs.push(`DualMomentumBoardNote.tsx must render data-testid="${id}" (never silent)`);
+      }
+      if (!note.includes('dmCapSortNext(served)')) errs.push('the 💰 button must ask for dmCapSortNext(served) — the direction flips off the SERVED sort');
+      if (/bounce/i.test(note)) errs.push('DualMomentumBoardNote.tsx says "bounce"');
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'dual_momentum' && <DualMomentumBoardNote[^\n]*onToggleFilter=/.test(page)) errs.push("ChartMaps.tsx must pass onToggleFilter= on the tab === 'dual_momentum' && <DualMomentumBoardNote line");
+      const cm = read('src/lib/chartMaps.ts');
+      if (!/if \(p\.tab === 'dual_momentum' && p\.dmFilters\) q\.set\(DM_FILTER_PARAM, p\.dmFilters\);/.test(cm)) errs.push("chartMaps.ts boardQuery must set the dm param only under p.tab === 'dual_momentum'");
+      if (!/export const DM_SORT_MARKET_CAP = 'market_cap';/.test(cm) || !/export const DM_SORT_MARKET_CAP_ASC = 'market_cap_asc';/.test(cm)) errs.push('chartMaps.ts DM_SORT_MARKET_CAP / _ASC must equal the served keys');
+      const nf = read('src/lib/newFeatures.ts');
+      const at = nf.indexOf("id: 'chart-maps-dm-filters-2026-09-29'");
+      if (at < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-dm-filters-2026-09-29'");
+      } else {
+        const entry = nf.slice(at, nf.indexOf("' },", at) + 4);
+        for (const need of ['Can you add AMD raided and near demand zone and near lower Key level filters to dual momentum please',
+                            'Also a sort by market cap please', 'MEASURED INVERTED', 'UNMEASURED', '💰']) {
+          if (!entry.includes(need)) errs.push(`the 🏎️ filters ✨ entry must carry: ${need}`);
+        }
+        if (/bounce/i.test(entry)) errs.push('the 🏎️ filters ✨ entry says "bounce"');
+      }
+      return errs;
+    },
+  },
+  {
     name: '🔥 Hottest: every column reachable, multi-sort, ⓘ Quality (2026-09-28)',
     file: 'src/components/HottestSectors.tsx',
     // Ajay 2026-09-28: "Can you fix the horizontal columns hiding and also can

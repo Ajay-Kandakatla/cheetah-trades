@@ -29,9 +29,19 @@ Momentum page does today on every request.
 UNMEASURED: no study in this app says a dual-momentum leader sitting near a
 demand band does better than one that is not. Nothing here gates a scan,
 pushes a phone, sizes a position or enters a lane.
+
+THE FILTERS (Ajay 2026-09-29, verbatim): "Can you add AMD raided and near
+demand zone and near lower Key level filters to dual momentum please".
+The three filters are VIEWS over existing reads — 🌀 the AMD Raided tab's own
+stored sweep grade (`rotation.hottest_amd.attach`, MEASURED INVERTED on its
+own claim), 📍 the 🎯 gate's own proximity read copied onto `dm_zone`, and 🔑
+the Key Levels tab's own `build` / `rank` (UNMEASURED; the 1% cut is his
+call). They narrow the leaders shown; they gate nothing, push nothing, sort
+nothing and enter no lane.
 """
 from __future__ import annotations
 
+import copy
 import inspect
 import logging
 import math
@@ -42,6 +52,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from supply_demand import alert_gates as AG
+from supply_demand import turning_bullish as TB
 
 log = logging.getLogger("chart_maps.dual_momentum_tab")
 
@@ -57,6 +68,15 @@ FAIL_RETRY_SEC = 5 * 60
 SORT_NEAREST_DEMAND = "nearest_demand"
 DEFAULT_SORT_LABEL = f"{MARK} Dual-momentum rank"
 NEAREST_SORT_LABEL = "\U0001F4CD Nearest demand first"   # 📍
+# 💰 market cap order (Ajay 2026-09-29: "Also a sort by market cap please").
+# Two tab-scoped keys so the direction lives in `?sort=` like the toggle:
+# largest first is the first click, smallest first the second. Display only.
+SORT_MARKET_CAP = "market_cap"
+SORT_MARKET_CAP_ASC = "market_cap_asc"
+CAP_SORTS = (SORT_MARKET_CAP, SORT_MARKET_CAP_ASC)
+TAB_SORTS = (SORT_NEAREST_DEMAND,) + CAP_SORTS          # every key only this tab honours
+MARKET_CAP_LABEL = "\U0001F4B0 Market cap \u2014 largest first"      # 💰
+MARKET_CAP_ASC_LABEL = "\U0001F4B0 Market cap \u2014 smallest first"
 RANK_CHIP_FMT = MARK + " #{rank} dual momentum"          # IDENT rung (FE prefix "🏎️ #")
 NO_BAND_TEXT = "→ no demand band under the price"
 NO_DOC_TEXT = "→ no demand band — no stored bands for this name"
@@ -96,6 +116,9 @@ _warming: set = set()
 # ONE newest failure: {"key": (generation, et_date_iso, pool_n), "ts", "reason", "no_scan"}
 _failed: dict = {}
 _lock = threading.Lock()
+# ONE newest 🔑 pool entry for the filter read: {"key": (session_iso,
+# generation, syms, universe), "entry", "ts"} — see `_kl_pool_entry`.
+_kl_memo: dict = {}
 
 
 def _f(v) -> Optional[float]:
@@ -403,6 +426,56 @@ def rank_key(rank, symbol) -> tuple:
     return (r, str(symbol or ""))
 
 
+def market_cap_key(cap, rank, symbol, *, largest_first: bool = True) -> tuple:
+    """💰 known caps first — largest (or smallest) first; a name with no
+    cached cap (None / NaN / not positive) sorts LAST in BOTH directions;
+    ties -> the page's rank, then the symbol."""
+    r = int(rank) if _f(rank) is not None else 10 ** 6
+    c = _f(cap)
+    if c is None or c <= 0:
+        return (1, 0.0, r, str(symbol or ""))
+    return (0, -c if largest_first else c, r, str(symbol or ""))
+
+
+def market_caps(syms, *, caps_fn=None) -> dict:
+    """{SYM: cap or None} — the app's ONE cached cap: the weekly shares cache
+    read through `catalysts.promo_circuit.market_caps_for` (the reader the
+    demand / zone-edge cap gates and the 🪜 band note use; its stored
+    `market_cap` is the field `trading.safety_floor` reads for the cap
+    floor). `cap=0` cuts its provider tail — a render never becomes one
+    network call per name. Fails open to every name None (sorted last)."""
+    syms = [str(s) for s in (syms or [])]
+    if caps_fn is None:
+        from catalysts.promo_circuit import market_caps_for
+
+        def caps_fn(names):
+            return market_caps_for(names, {}, cap=0)
+    try:
+        got = caps_fn(list(syms)) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("dual momentum tab: market-cap read failed: %s", exc)
+        got = {}
+    got = got if isinstance(got, dict) else {}
+    return {s: _f(got.get(s)) for s in syms}
+
+
+def cap_block(caps: dict, syms, sort: str) -> Optional[dict]:
+    """The served 💰 line when a cap order is on (None otherwise): which way,
+    and how many of the ordered leaders had no cached cap (they sit last)."""
+    if sort not in CAP_SORTS:
+        return None
+    syms = list(syms or [])
+    c = caps if isinstance(caps, dict) else {}
+    none = sum(1 for s in syms if (_f(c.get(s)) or 0.0) <= 0)
+    largest = sort == SORT_MARKET_CAP
+    line = (f"\U0001F4B0 Ordered by market cap, {'largest' if largest else 'smallest'} "
+            f"first — the weekly shares-cache cap; display only, it gates nothing. "
+            f"{_n(none)} of {_n(len(syms))} leaders have no cached market cap — they sit "
+            "last, in rank order.")
+    return {"sort": sort, "largest_first": largest, "ordered": len(syms),
+            "with_cap": len(syms) - none, "no_cap": none, "line": line}
+
+
 def _pct(v) -> str:
     f = _f(v)
     return "—" if f is None else f"{f:+.1f}%"
@@ -472,6 +545,10 @@ def header_text(counts: dict, *, entry: dict, sort: str, themes_first: bool) -> 
     order = ("" if sort != SORT_NEAREST_DEMAND else
              " — reordered \U0001F4CD nearest demand first (floor intact, then unknown, "
              "then swept, then broken; closest first; rank breaks ties)")
+    if sort in CAP_SORTS:
+        order = (" — reordered \U0001F4B0 by market cap, "
+                 f"{'largest' if sort == SORT_MARKET_CAP else 'smallest'} first "
+                 "(no cached cap last; rank breaks ties)")
     if themes_first:
         order += " — theme names lead (themes box)"
     return (f"{MARK} Ranks 1–{_n(c.get('pool'))} of the {_n(e.get('eligible'))} names "
@@ -493,7 +570,8 @@ def _scan_txt(v) -> str:
     return str(v) if v not in (None, "") else "—"
 
 
-def _block(state: str, *, entry: Optional[dict], counts, sort, header: str) -> dict:
+def _block(state: str, *, entry: Optional[dict], counts, sort, header: str,
+           filters: Optional[dict] = None, cap_sort: Optional[dict] = None) -> dict:
     e = entry or {}
     return {"state": state, "regime": e.get("regime"),
             "regime_line": regime_line(e.get("regime")) if entry else None,
@@ -504,13 +582,16 @@ def _block(state: str, *, entry: Optional[dict], counts, sort, header: str) -> d
             "sort": sort, "header": header, "note": NOTE,
             "built_at": e.get("built_at"),
             "scan_generated_at": e.get("scan_generated_at"),
-            "page_route": PAGE_ROUTE, "measured": MEASURED}
+            "page_route": PAGE_ROUTE, "measured": MEASURED, "filters": filters,
+            "cap_sort": cap_sort}
 
 
-def ready_block(counts: dict, *, entry: dict, sort: str, themes_first: bool) -> dict:
+def ready_block(counts: dict, *, entry: dict, sort: str, themes_first: bool,
+                filters: Optional[dict] = None, cap_sort: Optional[dict] = None) -> dict:
     return _block("ready", entry=entry, counts=counts, sort=sort,
                   header=header_text(counts, entry=entry, sort=sort,
-                                     themes_first=themes_first))
+                                     themes_first=themes_first), filters=filters,
+                  cap_sort=cap_sort)
 
 
 def warming_block() -> dict:
@@ -528,3 +609,218 @@ def error_note(reason) -> str:
 
 def error_block(reason) -> dict:
     return _block("error", entry=None, counts=None, sort=None, header=error_note(reason))
+
+
+# ---------------------------------------------------------------------------
+# 🌀 / 📍 / 🔑 filters (Ajay 2026-09-29): views over existing reads, gate nothing
+# ---------------------------------------------------------------------------
+FILTER_PARAM = "dm"
+FILTER_KEYS = ("amd", "zone", "level")             # canonical order; FE DM_FILTER_KEYS pinned equal
+FILTER_LABELS = {"amd": "\U0001F300 AMD raided",
+                 "zone": "\U0001F4CD Near demand zone",
+                 "level": "\U0001F511 Near a lower key level"}
+AMD_RAIDED = TB.AMD_TURNING                         # the AMD Raided tab's own state — never the literal
+# HIS CALL (spec §7 #1): no existing "near a key level" constant (PIERCE_PCT is the
+# break buffer, AT_LEVEL_PCT the "at the level" band). A display cut-off, NOT a rule.
+KEY_LEVEL_NEAR_PCT = 1.0
+LEVEL_STATUSES = ("ranked", "broken", "no_level", "stale", "no_print")   # ⊂ KLT.COUNT_KEYS (test-pinned)
+LEVEL_UNREAD = "unread"
+FILTERS_NOTE = ("Ticked boxes narrow the leaders — every ticked box must pass. They sort "
+                "nothing, push nothing, gate nothing and enter no lane.")
+FILTER_EMPTY_FMT = (MARK + " No leader in ranks 1–{pool} passes every ticked box ({labels}) — "
+                    "untick one to see more; the line above says how many each box hid.")
+
+
+def near_demand_pct() -> float:
+    """The 🎯 gate's own proximity bound: the default `demand_proximity_gate`
+    binds (the 🎯 read calls it without overriding it), read off its signature
+    — the `_engine_min_rs` pattern — so this module never spells or retypes
+    the alert constant."""
+    return float(inspect.signature(AG.demand_proximity_gate)
+                 .parameters["max_above_pct"].default)
+
+
+def parse_filters(spec) -> tuple:
+    """`"level,AMD, foo"` -> ("amd", "level"). Unknown tokens are dropped (never
+    an error); None / non-str / blank -> (). Canonical FILTER_KEYS order."""
+    if not isinstance(spec, str) or not spec.strip():
+        return ()
+    toks = {t.strip().lower() for t in spec.replace("+", ",").split(",")}
+    return tuple(k for k in FILTER_KEYS if k in toks)
+
+
+def amd_reads(syms, *, doc=None, now=None) -> tuple:
+    """({SYM: cell}, summary) — ONE `hottest_amd.attach` over a one-roster
+    body (the AMD Raided tab's stored sweep, rename-aware, 5-min cached).
+    `attach` never raises: store down -> every cell blank("store_unavailable")."""
+    from rotation import hottest_amd as HA
+    rows = [{"symbol": s} for s in syms]
+    summary = HA.attach({"themes": [{"names": rows}]}, doc=doc, now=now)
+    return {r["symbol"]: r.get(HA.ROW_KEY) for r in rows}, (summary or {})
+
+
+def _kl_pool_entry(syms, *, now, universe, build_fn):
+    """The Key Levels tab's own `build` over the pool, MEMOISED (critic fix 2,
+    2026-09-29): the per-box counts are served on every ready request, ticked
+    or not, and the build is a closed-bar read that cannot change inside one
+    (session, scan generation, pool). Key = (session ISO, `scan_generation()`,
+    tuple(syms)); freshness = the Key Levels tab's own `KLT.MEMO_TTL_SEC`
+    (cache freshness, NOT a rule). ONE newest entry. A raising build is never
+    memoised (the caller turns it into LEVEL_UNREAD). The live-print `rank`
+    is NOT memoised — it runs on every request against this request's
+    snapshot."""
+    from chart_maps import key_levels_tab as KLT
+    session = KLT.session_for(now)
+    key = (session.isoformat(), scan_generation(), tuple(syms), str(universe))
+    with _lock:
+        held_key, held, ts = _kl_memo.get("key"), _kl_memo.get("entry"), _kl_memo.get("ts")
+    if (held is not None and held_key == key
+            and (time.time() - float(ts or 0)) < KLT.MEMO_TTL_SEC):
+        return held
+    entry = (build_fn or KLT.build)(universe, session, universe_fn=lambda _u: list(syms))
+    with _lock:
+        _kl_memo.clear()
+        _kl_memo.update(key=key, entry=entry, ts=time.time())
+    return entry
+
+
+def key_level_reads(syms, raw, *, now, first_seen, universe="full", build_fn=None) -> tuple:
+    """({SYM: {"status", "near"}}, error-or-None) — the Key Levels tab's own
+    `build` over the pool (memoised, `_kl_pool_entry`) + its own per-name
+    `rank` outcome. Never mutates the entry; a failed build -> every name
+    LEVEL_UNREAD and the reason."""
+    from chart_maps import key_levels_tab as KLT
+    syms = [str(s) for s in (syms or [])]
+    try:
+        entry = _kl_pool_entry(syms, now=now, universe=universe, build_fn=build_fn)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("dual momentum tab: key-level read failed: %s", exc)
+        return {s: {"status": LEVEL_UNREAD, "near": None} for s in syms}, (str(exc)[:200] or "unknown")
+    out = {}
+    for s in syms:
+        ranked, counts = KLT.rank({**entry, "syms": [s]}, raw, now=now, first_seen=first_seen or {})
+        st = next((k for k in LEVEL_STATUSES if counts.get(k)), LEVEL_UNREAD)
+        # a COPY: the entry is memoised, the tile's block must never alias it
+        out[s] = {"status": st, "near": copy.deepcopy(ranked[0]["near"]) if ranked else None}
+    return out, None
+
+
+def tile_filter(amd_cell, zone, level_read) -> dict:
+    """One leader's three reads — PURE. True passes, False fails, None = not
+    read (a ticked box hides a None; it never passes)."""
+    cell = amd_cell if isinstance(amd_cell, dict) else None
+    if cell is not None and cell.get("known") is True:
+        amd = cell.get("grade") == AMD_RAIDED
+        amd_grade, amd_reason = cell.get("grade"), None
+    else:
+        amd, amd_grade = None, None
+        amd_reason = cell.get("reason") if cell is not None else None
+    gate = (zone or {}).get("gate") if isinstance(zone, dict) else None
+    prox = gate.get("prox_ok") if isinstance(gate, dict) else None
+    if isinstance(zone, dict) and zone.get("reason") == "no_band":
+        # A stored doc was read against a real print and no demand band sits
+        # under it: that IS the read, and it is not near demand — a plain
+        # FAIL, never "not read" (critic fix 3, 2026-09-29).
+        zone_ok = False
+    else:
+        zone_ok = prox if isinstance(prox, bool) else None
+    lr = level_read if isinstance(level_read, dict) else {}
+    status = lr.get("status") if lr.get("status") in LEVEL_STATUSES else LEVEL_UNREAD
+    near = lr.get("near") if isinstance(lr.get("near"), dict) else None
+    level = None
+    if status == "ranked":
+        d = _f((near or {}).get("distance_pct"))
+        level = None if d is None else abs(d) <= KEY_LEVEL_NEAR_PCT
+    elif status in ("broken", "no_level"):
+        level = False
+    return {"amd": amd, "amd_grade": amd_grade, "amd_reason": amd_reason,
+            "zone": zone_ok, "level": level, "level_status": status,
+            "level_near": near if status == "ranked" else None}
+
+
+def passes(tf, active) -> bool:
+    """Every ticked box must be True — None (not read) never passes."""
+    tf = tf if isinstance(tf, dict) else {}
+    return all(tf.get(k) is True for k in active)
+
+
+def _measured_clause() -> str:
+    from rotation import hottest_amd as HA
+    M = HA.AMD_MEASURED
+    return f"MEASURED INVERTED on its own claim ({M['date']}): {M['claim']} — a narrowing, not a pick."
+
+
+def amd_note(summary) -> str:
+    s = summary if isinstance(summary, dict) else {}
+    if not s.get("available"):
+        return ("\U0001F300 The nightly AMD sweep could not be read, so no leader has an AMD "
+                "state right now — ticked, this box hides every leader. " + _measured_clause())
+    stamp = str(s.get("built_at_et") or "")[:16].replace("T", " ") or "time unknown"
+    txt = (f"\U0001F300 The AMD Raided tab's own state, from the nightly sweep ({stamp} ET). "
+           + _measured_clause())
+    if s.get("stale") and s.get("stale_note"):
+        txt += " " + str(s["stale_note"])
+    return txt
+
+
+def zone_note() -> str:
+    return (f"\U0001F4CD In the demand band or at most {near_demand_pct():g}% above its top — "
+            "the \U0001F3AF gate's own proximity read, the same number the phone alerts use. "
+            "UNMEASURED on these leaders.")
+
+
+def level_note(error=None) -> str:
+    from chart_maps import key_levels_tab as KLT
+    txt = (f"\U0001F511 The Key Levels tab's nearest {KLT.LOWS} not yet broken, at most "
+           f"{KEY_LEVEL_NEAR_PCT:g}% from the print — a display cut-off awaiting your call. "
+           "UNMEASURED.")
+    if error:
+        txt += (f" The key-level read failed this time ({error}); ticked, this box hides "
+                "every leader.")
+    return txt
+
+
+def filter_line(items, passed_all, pool) -> Optional[str]:
+    on = [i for i in (items or []) if isinstance(i, dict) and i.get("on")]
+    if not on:
+        return None
+    bits = []
+    for i in on:
+        b = f"{i['label']}: {_n(i.get('pass'))} pass, {_n(i.get('hidden'))} hidden"
+        if int(i.get("no_read") or 0) > 0:
+            b += f" ({_n(i.get('no_read'))} not read)"
+        bits.append(b)
+    return (f"Filters on — {'; '.join(bits)}. {_n(passed_all)} of {_n(pool)} pass every "
+            f"ticked box (each count is over all {_n(pool)} ranked leaders; a name can fail "
+            "more than one).")
+
+
+def filter_empty_note(active, pool) -> str:
+    return FILTER_EMPTY_FMT.format(pool=_n(pool),
+                                   labels=" + ".join(FILTER_LABELS[k] for k in active
+                                                     if k in FILTER_LABELS))
+
+
+def filters_block(tfs, active, *, pool, amd_summary, level_error) -> dict:
+    """Per-box counts over EVERY pool tile, each box independently (computed
+    whether or not it is ticked), plus the served line when any is ticked."""
+    tfs = [t if isinstance(t, dict) else {} for t in (tfs or [])]
+    act = tuple(k for k in FILTER_KEYS if k in (active or ()))
+    notes = {"amd": amd_note(amd_summary), "zone": zone_note(),
+             "level": level_note(level_error)}
+    items = []
+    for k in FILTER_KEYS:
+        vals = [t.get(k) for t in tfs]
+        n_pass = sum(1 for v in vals if v is True)
+        n_fail = sum(1 for v in vals if v is False)
+        n_none = len(vals) - n_pass - n_fail
+        on = k in act
+        items.append({"key": k, "label": FILTER_LABELS[k], "on": on, "pass": n_pass,
+                      "fail": n_fail, "no_read": n_none,
+                      "hidden": (n_fail + n_none) if on else 0, "note": notes[k]})
+    passed_all = sum(1 for t in tfs if passes(t, act)) if act else None
+    return {"keys": list(FILTER_KEYS), "active": list(act), "pool": int(pool or 0),
+            "passed_all": passed_all, "items": items,
+            "line": filter_line(items, passed_all, pool) if act else None,
+            "note": FILTERS_NOTE, "near_demand_pct": near_demand_pct(),
+            "near_level_pct": KEY_LEVEL_NEAR_PCT, "measured": False}

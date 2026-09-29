@@ -3913,7 +3913,8 @@ _DM_ATTACH_OWNED = ATTACH_OWNED_KEYS
 def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                         themes_first: bool = THEMES_FIRST_DEFAULT,
                         sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
-                        ctx: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
+                        ctx: Optional[dict] = None, now: Optional[datetime] = None,
+                        dm_filters: Optional[str] = None) -> dict:
     """🏎️ Dual Momentum — the Dual Momentum page's leaders, each drawn with the
     demand engine's nearest band, first lid, room, floor and 🎯 gate read.
 
@@ -3935,11 +3936,22 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     reach the page; neither is an explicit `_finish` sort, so the theme lead
     still applies when its box is ticked.
 
+    FILTERS (Ajay 2026-09-29: *"Can you add AMD raided and near demand zone
+    and near lower Key level filters to dual momentum please"*). `dm_filters`
+    = "amd,zone,level" (AND). Each box is an existing read over the WHOLE pool,
+    applied BEFORE the order and the cut: 🌀 `hottest_amd.attach` (the AMD
+    Raided tab's stored grade), 📍 `dm_zone.gate.prox_ok` (the 🎯 read), 🔑
+    the Key Levels tab's `build` / `rank`. A name with no read for a ticked
+    box is hidden and counted "not read". The per-box counts are computed on
+    every ready request; a view only — it gates, pushes and enters nothing.
+
     UNMEASURED and display only — nothing gates, pushes, sizes or enters.
     """
     import copy
     from chart_maps import dual_momentum_tab as DMT
+    from chart_maps import key_levels_tab as KLT
     from supply_demand import enterable as EN
+    from supply_demand import key_levels as KL
 
     now_et = (now or datetime.now(ET)).astimezone(ET)
     got = DMT.cached_or_warm(now=now_et, pool_n=LIMIT_MAX)
@@ -3959,8 +3971,10 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     scan_rows = entry.get("scan_rows") or {}
     syms = [str(p["symbol"]).upper() for p in picks]
     raw = _bulk_snaps(syms)                                        # the ONE fan-out
+    session = KLT.session_for(now_et)
+    first_seen = KL.read_first_seen(session.isoformat())            # ONE read, shared with the decorator
     if ctx is not None:
-        ctx.update(snaps=raw)
+        ctx.update(snaps=raw, now=now_et, first_seen=first_seen)
 
     tiles = []
     by_sym: dict = {}
@@ -4017,18 +4031,7 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         t["why"] = DMT.why_text(by_sym[sym], zone)
         t["dm_zone"] = zone
 
-    nearest = sort == DMT.SORT_NEAREST_DEMAND
-    sort_unavailable = None
-    if nearest:
-        tiles.sort(key=lambda x: DMT.nearest_demand_key(
-            x["dm_zone"], x["dual_momentum"]["rank"], x["symbol"]))
-        if not any(isinstance(x["dm_zone"].get("demand"), dict) for x in tiles):
-            sort_unavailable = DMT.NEAREST_SORT_UNAVAILABLE
-    else:
-        tiles.sort(key=lambda x: DMT.rank_key(x["dual_momentum"]["rank"], x["symbol"]))
-    for i, t in enumerate(tiles):
-        t["_score"] = float(len(tiles) - i)
-
+    # The counts are over the WHOLE pool, before any filter.
     counts = {k: 0 for k in DMT.COUNT_KEYS}
     counts["pool"] = len(tiles)
     for t in tiles:
@@ -4042,6 +4045,55 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         elif reason in counts:
             counts[reason] += 1
 
+    # 🌀 / 📍 / 🔑 — every read over the whole pool, BEFORE the order and the cut.
+    active = DMT.parse_filters(dm_filters)
+    try:
+        amd_cells, amd_summary = DMT.amd_reads(syms, now=now_et)          # ONE sweep read
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("dual_momentum_tiles: AMD read failed: %s", exc)
+        amd_cells, amd_summary = {}, {"available": False, "error": str(exc)[:200]}
+    try:
+        lv_reads, lv_err = DMT.key_level_reads(syms, raw, now=now_et, first_seen=first_seen)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("dual_momentum_tiles: key-level read failed: %s", exc)
+        lv_reads, lv_err = {}, (str(exc)[:200] or "unknown")
+    for t in tiles:
+        fsym = t["symbol"]
+        t["dm_filter"] = DMT.tile_filter((amd_cells or {}).get(fsym), t["dm_zone"],
+                                         (lv_reads or {}).get(fsym))
+    filters = DMT.filters_block([t["dm_filter"] for t in tiles], active, pool=len(tiles),
+                                amd_summary=amd_summary, level_error=lv_err)
+    if active:
+        tiles = [t for t in tiles if DMT.passes(t["dm_filter"], active)]
+
+    nearest = sort == DMT.SORT_NEAREST_DEMAND
+    sort_unavailable = None
+    cap_sort = None
+    if nearest:
+        tiles.sort(key=lambda x: DMT.nearest_demand_key(
+            x["dm_zone"], x["dual_momentum"]["rank"], x["symbol"]))
+        if not any(isinstance(x["dm_zone"].get("demand"), dict) for x in tiles):
+            sort_unavailable = DMT.NEAREST_SORT_UNAVAILABLE
+    elif sort in DMT.CAP_SORTS:
+        # 💰 (Ajay 2026-09-29: "Also a sort by market cap please") — the WHOLE
+        # pool after the filters, BEFORE the cut, exactly like 📍. ONE cached
+        # cap read (the weekly shares cache, no provider call), only when this
+        # order is asked for. No cap -> last in both directions; rank breaks
+        # ties. Display only: the cap gates, pushes and enters nothing here.
+        caps = DMT.market_caps([x["symbol"] for x in tiles])
+        largest = sort == DMT.SORT_MARKET_CAP
+        tiles.sort(key=lambda x: DMT.market_cap_key(
+            caps.get(x["symbol"]), x["dual_momentum"]["rank"], x["symbol"],
+            largest_first=largest))
+        for x in tiles:
+            x["dm_market_cap"] = caps.get(x["symbol"])
+            x["stats"].append({"k": "Cap", "v": _usd_short(caps.get(x["symbol"]))})
+        cap_sort = DMT.cap_block(caps, [x["symbol"] for x in tiles], sort)
+    else:
+        tiles.sort(key=lambda x: DMT.rank_key(x["dual_momentum"]["rank"], x["symbol"]))
+    for i, t in enumerate(tiles):
+        t["_score"] = float(len(tiles) - i)
+
     out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier, snaps=raw)
     gex_as_of = _gex_decor(out, "demand")
     counts["dropped_thin"] = meta["dropped_thin"]
@@ -4053,10 +4105,13 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": entry.get("generated_at"),
             "scan_generated_at": entry.get("scan_generated_at"),
             "gex_as_of": gex_as_of,
-            "note": DMT.NOTE if picks else DMT.EMPTY_NOTE,
+            "note": (DMT.filter_empty_note(active, counts["pool"])
+                     if (active and picks and filters["passed_all"] == 0)
+                     else (DMT.NOTE if picks else DMT.EMPTY_NOTE)),
             "disclaimer": DMT.DISCLAIMER,
             "dual_momentum_board": DMT.ready_block(counts, entry=entry, sort=sort,
-                                                   themes_first=themes_first)}
+                                                   themes_first=themes_first,
+                                                   filters=filters, cap_sort=cap_sort)}
 
 
 def _usd_short(v) -> str:
@@ -6451,7 +6506,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           target: str = "zone", bias: str = "all", micro: str = "60m",
           min_room: Optional[float] = None, studies: bool = False,
           levels: str = "all", grades: Optional[str] = None,
-          flight: Optional[str] = None) -> dict:
+          flight: Optional[str] = None, dm: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -6469,6 +6524,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     the live print (None = the house default, 0 = off). Every other tab
     ignores it and carries no room keys.
 
+    `dm` (2026-09-29) reaches ONLY the dual_momentum tab — the 🌀 / 📍 / 🔑
+    filter boxes, a comma list "amd,zone,level" (AND; unknown tokens ignored).
+    Every other tab ignores it and carries no `dm_filter` keys.
+
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
     chart-pattern ledger, "zone" is the demand-zone re-entry backtest.
     `minervini_only` narrows the pattern winners to those that were SEPA
@@ -6482,10 +6541,12 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # bookmark should show the board, not a 422.
     # 📍 `nearest_demand` is a TAB-SCOPED key (🏎️ Dual Momentum, 2026-09-29):
     # offered and honoured there only; on every other tab it is an unknown
-    # sort and falls back like any stale bookmark.
+    # sort and falls back like any stale bookmark. The 💰 `market_cap` /
+    # `market_cap_asc` keys (same day) are tab-scoped the same way
+    # (`dual_momentum_tab.TAB_SORTS`).
     from chart_maps import dual_momentum_tab as _DMT
     srt = sort if (sort in SORTS or (t == "dual_momentum"
-                                     and sort == _DMT.SORT_NEAREST_DEMAND)) else DEFAULT_SORT
+                                     and sort in _DMT.TAB_SORTS)) else DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
     # Out-of-band slot for a builder that already fetched the raw live rows for
@@ -6500,7 +6561,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     elif t == "key_levels":
         out = key_level_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
     elif t == "dual_momentum":
-        out = dual_momentum_tiles(limit, days, themes_first, srt, tier, ctx=_ctx)
+        out = dual_momentum_tiles(limit, days, themes_first, srt, tier, ctx=_ctx,
+                                  dm_filters=dm if isinstance(dm, str) else None)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -6605,6 +6667,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                 _dm_sorts.append({**s, "label": _DMT.DEFAULT_SORT_LABEL})
                 _dm_sorts.append({"key": _DMT.SORT_NEAREST_DEMAND,
                                   "label": _DMT.NEAREST_SORT_LABEL})
+                # 💰 both directions, served so the toggle's labels are served
+                _dm_sorts.append({"key": _DMT.SORT_MARKET_CAP,
+                                  "label": _DMT.MARKET_CAP_LABEL})
+                _dm_sorts.append({"key": _DMT.SORT_MARKET_CAP_ASC,
+                                  "label": _DMT.MARKET_CAP_ASC_LABEL})
             else:
                 _dm_sorts.append(s)
         out["sorts"] = _dm_sorts

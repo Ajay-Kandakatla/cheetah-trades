@@ -76,6 +76,7 @@ import NewsTabBoard from '../components/NewsTabBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
+import { DM_FILTER_PARAM, dmFiltersParam, parseDmFilters, type DmFilterKey } from '../lib/dmFilters';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
@@ -458,6 +459,27 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     setParams(next, { replace: true });
   };
 
+  /* 🏎️ Dual Momentum filter boxes (Ajay 2026-09-29: "Can you add AMD raided
+   * and near demand zone and near lower Key level filters to dual momentum
+   * please"). The ticked set lives in the URL as `?dm=amd,zone,level` and
+   * nowhere else; it rides to the server on this tab only, where every box
+   * runs over the whole pool BEFORE the cut — so a tick refetches. The boxes'
+   * checked state is the SERVED `on`, never this parse. */
+  const dmSel = useMemo(() => parseDmFilters(params.get(DM_FILTER_PARAM)), [params]);
+  const dmSpec = tab === 'dual_momentum' ? (dmFiltersParam(dmSel) ?? undefined) : undefined;
+  const toggleDmFilter = useCallback((key: string) => {
+    setParams((prev) => {
+      // Read the CURRENT param, never a captured copy: ticking 🌀 then 🔑
+      // must write both.
+      const sel = parseDmFilters(prev.get(DM_FILTER_PARAM));
+      if (sel.has(key as DmFilterKey)) sel.delete(key as DmFilterKey); else sel.add(key as DmFilterKey);
+      const spec = dmFiltersParam(sel);
+      const next = new URLSearchParams(prev);
+      if (spec) next.set(DM_FILTER_PARAM, spec); else next.delete(DM_FILTER_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
   const levelsSpec = levelsParam(levelSel) ?? 'all';
@@ -558,7 +580,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            minRoom: ROOM_TAB ? minRoom : undefined,
                            grades: gradesSpec,
                            flight: flightSpec,
-                           levels: levelsSpec });
+                           levels: levelsSpec,
+                           dmFilters: dmSpec });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
@@ -577,7 +600,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -945,7 +968,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * `sorts`, its pressed button is the served `sort`, and a click goes
         * through `setSortParam` — the Sort select's own setter. It also carries
         * the warming line, so the generic demand counter is skipped here. */}
-      {tab === 'dual_momentum' && <DualMomentumBoardNote board={data?.dual_momentum_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
+      {tab === 'dual_momentum' && <DualMomentumBoardNote board={data?.dual_momentum_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleDmFilter} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry

@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-29: "Can you add AMD raided and near demand zone and near lower
+  // Key level filters to dual momentum please". Label from the dm_filters spec
+  // §3.6; the 1% figures are the served constants (KEY_LEVEL_NEAR_PCT is HIS
+  // CALL #1 — if he changes it, change this label). Same day, same entry:
+  // "Also a sort by market cap please" (the 💰 order).
+  { id: 'chart-maps-dm-filters-2026-09-29', addedAt: '2026-09-29', route: '/chart-maps?tab=dual_momentum',
+    label: '🏎️ Dual Momentum: three filter boxes. You said: “Can you add AMD raided and near demand zone and near lower Key level filters to dual momentum please”. Above the leaders: 🌀 AMD raided (the same state the 🌀 AMD Raided tab lists, from the nightly sweep), 📍 Near demand zone (in the demand band or at most 1% above it — the 🎯 gate’s own proximity read) and 🔑 Near a lower key level (the Key Levels tab’s nearest prior-week, prior-month or 52-week low not yet broken, at most 1% away). Each box shows how many of the 80 ranked leaders pass it; tick several and a leader must pass all of them. The boxes run over all 80 leaders before the page is cut, a line says how many each box hid, and if nothing passes the page says so. A leader the app could not read for a box is hidden while that box is ticked and counted as not read. 🎯 Enterable only still applies on top. HONESTY: AMD raided was MEASURED INVERTED against its own placebo; the demand and key-level reads are UNMEASURED; the 1% key-level distance is your call. The boxes narrow the list only — nothing is sorted, pushed, gated or bought because of them. 💰 MARKET CAP ORDER — you said: “Also a sort by market cap please”. A third button beside 🏎️ rank and 📍 nearest demand orders the leaders largest market cap first; click it again for smallest first (the choice stays in the link). It orders every leader left after the boxes, before the page is cut; a name with no cached market cap sits last either way and a line says how many had none. The cap is the app’s weekly shares-cache number; the order is display only and gates nothing.' },
   // Ajay 2026-09-29: "Can you pull these in to chart maps and add the demand
   // zones logic to these?" + "I want a toggle and also the check boxes we have
   // like AMD and supple and demand zones computing and also key levels".

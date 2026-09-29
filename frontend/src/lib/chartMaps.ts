@@ -17,6 +17,8 @@ import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
+import { DM_FILTER_PARAM } from './dmFilters';
+import type { CmDmFilters, CmDmTileFilter } from './dmFilters';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -163,6 +165,20 @@ export const ENTERABLE_KIND = {
  *  "📍 Nearest demand first" (chart_maps/dual_momentum_tab.SORT_NEAREST_DEMAND).
  *  The toggle's labels are taken from the SERVED `sorts`, never typed here. */
 export const DM_SORT_NEAREST = 'nearest_demand';
+
+/** 💰 Dual Momentum market-cap order (Ajay 2026-09-29: "Also a sort by market
+ *  cap please") — two tab-scoped served keys (dual_momentum_tab.SORT_MARKET_CAP
+ *  / SORT_MARKET_CAP_ASC) so the direction lives in `?sort=` like the toggle.
+ *  Labels are served, never typed here. */
+export const DM_SORT_MARKET_CAP = 'market_cap';
+export const DM_SORT_MARKET_CAP_ASC = 'market_cap_asc';
+
+/** The key a 💰 click asks for, given the SERVED sort: largest first, and a
+ *  second click (largest first already served) flips to smallest first; from
+ *  smallest first it flips back. From any other order: largest first. */
+export function dmCapSortNext(served: string | null | undefined): string {
+  return served === DM_SORT_MARKET_CAP ? DM_SORT_MARKET_CAP_ASC : DM_SORT_MARKET_CAP;
+}
 
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
@@ -614,6 +630,22 @@ export type CmDualMomentumBoard = {
   scan_generated_at?: string | null;
   page_route?: string | null;
   measured: boolean;
+  /** 🌀 / 📍 / 🔑 filter boxes (2026-09-29) — ready state only; null otherwise. */
+  filters?: CmDmFilters | null;
+  /** 💰 market-cap order (2026-09-29) — served only while a cap order is on:
+   *  which way, and how many of the ordered leaders had no cached cap (they
+   *  sit last). `line` is printed verbatim. Null otherwise. */
+  cap_sort?: CmDmCapSort | null;
+};
+
+/** 💰 The served market-cap order block (chart_maps/dual_momentum_tab.cap_block). */
+export type CmDmCapSort = {
+  sort: string;
+  largest_first: boolean;
+  ordered: number;
+  with_cap: number;
+  no_cap: number;
+  line: string;
 };
 
 /** 🏎️ The per-tile dual-momentum block — the /dual-momentum engine's pick,
@@ -731,6 +763,12 @@ export type CmTile = {
   /** 🏎️ Dual Momentum tab only (2026-09-29): the demand-zone read. Absent on
    *  every other tab. UNMEASURED. */
   dm_zone?: CmDmZone | null;
+  /** 🏎️ Dual Momentum tab only (2026-09-29): the 🌀 / 📍 / 🔑 filter read —
+   *  true passes, false fails, null = not read. Server-decided. */
+  dm_filter?: CmDmTileFilter | null;
+  /** 🏎️ Dual Momentum tab, 💰 order only (2026-09-29): the cached market cap
+   *  the order used (null = no cached cap). Display only. */
+  dm_market_cap?: number | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1681,6 +1719,7 @@ export function boardQuery(p: {
   levels?: string;
   grades?: string;
   flight?: string;
+  dmFilters?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -1722,6 +1761,10 @@ export function boardQuery(p: {
   }
   // 🔻 The live state filter — AMD only, and only when it NARROWS.
   if (p.tab === 'amd' && p.flight) q.set('flight', p.flight);
+  // 🏎️ Dual Momentum filter boxes (Ajay 2026-09-29: "Can you add AMD raided
+  // and near demand zone and near lower Key level filters to dual momentum
+  // please") — only on that tab, only when a box is ticked.
+  if (p.tab === 'dual_momentum' && p.dmFilters) q.set(DM_FILTER_PARAM, p.dmFilters);
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe
