@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RussellWatch, mdy } from './RussellWatch';
+import { RussellWatch, byLatest, mdy } from './RussellWatch';
 
 const PAYLOAD = {
   adds_r2000: [
@@ -130,5 +130,50 @@ describe('add dates (Ajay 2026-09-02: "add the dates of these candidates additio
     expect(document.querySelectorAll('.rw__adds').length).toBe(0);
     expect(document.body.textContent).toContain('schedule n/a');
     expect(document.querySelector('.rw__sched')).toBeNull();
+  });
+});
+
+
+describe('sorted by latest (Ajay 2026-09-28: "May be just sort by latest")', () => {
+  const row = (symbol: string, first_seen: string | null, market_cap = 1e9) =>
+    ({ symbol, board: 'add_r2000', market_cap, first_seen });
+
+  it('puts the newest on-list-since date on top', () => {
+    const out = byLatest([row('OLD', '2026-09-02'), row('NEW', '2026-09-28'), row('MID', '2026-09-19')]);
+    expect(out.map((r) => r.symbol)).toEqual(['NEW', 'MID', 'OLD']);
+  });
+
+  it('keeps the served (market-cap) order for names flagged the same day', () => {
+    const out = byLatest([row('BIG', '2026-09-28', 4e9), row('SMALL', '2026-09-28', 2e9), row('OLD', '2026-09-02', 9e9)]);
+    expect(out.map((r) => r.symbol)).toEqual(['BIG', 'SMALL', 'OLD']);
+  });
+
+  it('reads timestamps and plain dates on the same scale', () => {
+    const out = byLatest([row('DAY', '2026-09-27'), row('TS', '2026-09-28T13:05:00Z')]);
+    expect(out.map((r) => r.symbol)).toEqual(['TS', 'DAY']);
+  });
+
+  it('NEGATIVE: a row with no ledger date (or garbage) sorts last, never first', () => {
+    const out = byLatest([row('NONE', null), row('BAD', 'not-a-date'), row('REAL', '2026-09-02')]);
+    expect(out.map((r) => r.symbol)).toEqual(['REAL', 'NONE', 'BAD']);
+  });
+
+  it('NEGATIVE: does not mutate the served array', () => {
+    const served = [row('A', '2026-09-02'), row('B', '2026-09-28')];
+    byLatest(served);
+    expect(served.map((r) => r.symbol)).toEqual(['A', 'B']);
+  });
+
+  it('renders the table newest first and says so in the header', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ ...PAYLOAD, adds_r2000: [
+        { ...row('WMG', '2026-09-02', 4.0e9) }, { ...row('ERO', '2026-09-28', 3.9e9) },
+        { ...row('BRC', '2026-09-11', 3.6e9) }, { ...row('MNDY', '2026-09-28', 3.4e9) },
+      ] }) } as any));
+    draw();
+    await waitFor(() => expect(screen.getByText('WMG')).toBeTruthy());
+    const syms = Array.from(document.querySelectorAll('tbody tr td.og__sym a.tk-link')).map((a) => a.textContent);
+    expect(syms).toEqual(['ERO', 'MNDY', 'BRC', 'WMG']);
+    expect(document.body.textContent).toContain('On list since ↓');
   });
 });

@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-28: "can you give me a date sort in this please?" → "May be
+  // just sort by latest"
+  { id: 'russell-watch-latest-first-2026-09-28',
+    label: '📅 Russell inclusion watch is now sorted by latest. You said: “May be just sort by latest.” Both tables (Russell 2000 add candidates and Russell 1000 promotions) put the newest “On list since” date on top; names flagged the same day keep their market-cap order, and a row with no date sits at the bottom.',
+    addedAt: '2026-09-28', route: '/chart-maps?tab=catalysts&sub=russell' },
   // Ajay 2026-09-27: "Can you add date stamps please to the tape?" / "this is
   // for oracle hoping this info is accurate"
   { id: 'tape-dates-auctions-2026-09-27',

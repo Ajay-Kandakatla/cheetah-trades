@@ -73,6 +73,20 @@ export function AddsCell({ e }: { e?: AddEvent | null }) {
   );
 }
 
+/* Latest first (Ajay 2026-09-28: "can you give me a date sort in this
+ * please?" → "May be just sort by latest"): the newest "on list since" on
+ * top. Stable, so names flagged the same day keep the served order (market
+ * cap, largest first); a row with no ledger date sorts last, never first. */
+const seenKey = (iso?: string | null): number => {
+  if (!iso) return -Infinity;
+  const t = Date.parse(iso.includes('T') ? iso : `${iso.slice(0, 10)}T12:00:00Z`);
+  return Number.isNaN(t) ? -Infinity : t;
+};
+export const byLatest = <T extends { first_seen?: string | null }>(rows: T[]): T[] =>
+  rows.map((r, i) => ({ r, i, k: seenKey(r.first_seen) }))
+    .sort((a, b) => (b.k - a.k) || (a.i - b.i))
+    .map((x) => x.r);
+
 function Table({ title, hint, rows, band }: {
   title: string; hint: string; rows: Row[]; band?: number | null;
 }) {
@@ -89,12 +103,12 @@ function Table({ title, hint, rows, band }: {
               <th>Symbol</th><th className="og__num">Mkt cap</th>
               <th className="og__num">Last</th><th className="og__num">Today</th>
               <th className="og__num">$ Vol today</th>
-              <th className="og__num" title="first build that flagged this name">On list since</th>
+              <th className="og__num" title="first build that flagged this name — the table is sorted newest first" aria-sort="descending">On list since ↓</th>
               <th className="og__num" title="the day it would be IN the index, per FTSE's published calendar">Adds</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {byLatest(rows).map((r) => (
               <tr key={r.symbol}>
                 <td className="og__sym"><TickerLink ticker={r.symbol} /></td>
                 <td className="og__num mono">{fmtCap(r.market_cap)}</td>
