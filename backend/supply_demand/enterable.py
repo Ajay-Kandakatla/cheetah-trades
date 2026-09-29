@@ -2369,6 +2369,10 @@ KIND_BY_TAB = {
     "growth": KIND_DEMAND, "gnt": KIND_DEMAND, "catalysts": KIND_DEMAND,
     "hot_sectors": KIND_DEMAND, "keltner": KIND_DEMAND, "amd": KIND_DEMAND,
     "gabbar": KIND_DEMAND, "ict": KIND_DEMAND,
+    # 🏎️ Dual Momentum (2026-09-29): a leader list drawn with the demand read —
+    # the gate read he asked for; the default-on 🎯 filter hides BLOCKED
+    # leaders (HIS CALL #2).
+    "dual_momentum": KIND_DEMAND,
     "breaking": KIND_SUPPLY_BREAK,
     # chip only — the FE never hides a position or a single-symbol page
     "holdings": KIND_DEMAND, "support": KIND_DEMAND,

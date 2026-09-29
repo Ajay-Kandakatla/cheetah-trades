@@ -75,6 +75,7 @@ import PotusBoard from '../components/PotusBoard';
 import NewsTabBoard from '../components/NewsTabBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
+import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
@@ -326,6 +327,18 @@ export function ChartMaps() {
    * before the first payload lands, so moving a tab between `demand` and `n/a`
    * (his call, spec §7.16) is a backend change, not a deploy. */
   const enterableOnly = params.get('show') !== 'all';
+  /* ONE sort setter for the page (2026-09-29): the Sort select and the
+   * 🏎️ Dual Momentum toggle both write `?sort=` through it, so the two
+   * controls can never write the param two different ways. The default key
+   * is removed rather than written, as the select always did. */
+  const setSortParam = useCallback((key: string) => {
+    setParams((p) => {
+      const n = new URLSearchParams(p);
+      if (key === DEFAULT_SORT) n.delete('sort');
+      else n.set('sort', key);
+      return n;
+    }, { replace: true });
+  }, [setParams]);
   const setEnterableOnly = useCallback((v: boolean) => {
     setParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -610,7 +623,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // The ICT tab warms its OWN engine (ict_board cache), not the demand scan —
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
-    data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels');
+    data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
+      && tab !== 'dual_momentum');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -925,6 +939,13 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * also carries the warming line, so the generic demand counter below is
         * skipped on this tab. */}
       {tab === 'key_levels' && <KeyLevelsBoardNote board={data?.key_levels_board ?? null} />}
+      {/* 🏎️ Dual Momentum tab (2026-09-29): the served regime line, header and
+        * UNMEASURED note, plus the 🏎️ rank / 📍 nearest-demand toggle (Ajay:
+        * "I want a toggle …"). The toggle's labels come from the served
+        * `sorts`, its pressed button is the served `sort`, and a click goes
+        * through `setSortParam` — the Sort select's own setter. It also carries
+        * the warming line, so the generic demand counter is skipped here. */}
+      {tab === 'dual_momentum' && <DualMomentumBoardNote board={data?.dual_momentum_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
@@ -1445,12 +1466,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             <select
               aria-label="Sort the board"
               value={sort}
-              onChange={(e) => setParams((p) => {
-                const n = new URLSearchParams(p);
-                if (e.target.value === DEFAULT_SORT) n.delete('sort');
-                else n.set('sort', e.target.value);
-                return n;
-              }, { replace: true })}
+              onChange={(e) => setSortParam(e.target.value)}
             >
               {(data?.sorts || []).map((o) => (
                 <option key={o.key} value={o.key}>{o.label}</option>
@@ -1592,7 +1608,10 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             The charts appear here as soon as it lands; you don't need to refresh.
           </p>
         </>
-      ) : data?.warming && tab !== 'key_levels' ? (
+      ) : data?.warming && tab === 'dual_momentum' ? null
+      /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
+       * scan) — its served warming line is printed by DualMomentumBoardNote. */
+      : data?.warming && tab !== 'key_levels' ? (
         /* 🔑 Key Levels warms its own memo (not the demand scan) — its
          * served warming line is printed by KeyLevelsBoardNote above. */
         <>

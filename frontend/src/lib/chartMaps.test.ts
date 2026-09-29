@@ -24,6 +24,7 @@ import {
   ICT_PARAM_LABELS, ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   ROOM_TABS, parseMinRoom,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
+  DM_SORT_NEAREST,
 } from './chartMaps';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
@@ -770,6 +771,9 @@ describe('the Earnings Flow tab', () => {
        // 🔑 Key Levels 2026-09-28 — right after My holdings, mid-pack for the
        // same no-usage-yet reason (spec §7.5, his call).
        'key_levels',
+       // 🏎️ Dual Momentum 2026-09-29 — right after Key Levels, mid-pack for
+       // the same no-usage-yet reason (dual_momentum_tab spec §7 #1, his call).
+       'dual_momentum',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1785,7 +1789,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(31);   // +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(32);   // +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2258,5 +2262,83 @@ describe('the 🔑 Key Levels tab', () => {
   it('NEGATIVE: the most-used-first lead is unchanged by the new tab', () => {
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'key_levels')).toHaveLength(1);
+  });
+});
+
+
+// ── 🏎️ Dual Momentum tab (Ajay 2026-09-29: "Can you pull these in to chart
+// maps and add the demand zones logic to these?" + "I want a toggle and also
+// the check boxes we have like AMD and supple and demand zones computing and
+// also key levels"). A tile board off the dispatcher; the page's engine, the
+// demand engine's zones. UNMEASURED. ─────────────────────────────────────────
+/** CM_TABS at 6d3ad93, before the insertion — the tab order the new tab must
+ *  not disturb. */
+const CM_TABS_6D3AD93 = ['zones', 'deep_demand', 'quick_bounce', 'breaking', 'hot_pullback', 'patterns',
+  'keltner', 'amd', 'holdings', 'key_levels', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors',
+  'news', 'growth', 'ipo', 'gnt', 'potus', 'catalysts', 'overnight', 'gabbar', 'vcp', 'topping', 'ict',
+  'undervalue', 'support', 'zero_dte', 'earnings', 'winners'];
+
+describe('the 🏎️ Dual Momentum tab', () => {
+  it('sits right after 🔑 Key Levels and is a board tab', () => {
+    expect(CM_TABS.indexOf('dual_momentum')).toBe(CM_TABS.indexOf('key_levels') + 1);
+    expect(isBoardTab('dual_momentum')).toBe(true);
+  });
+
+  it('parses from ?tab=, case- and space-tolerant', () => {
+    expect(parseTab('dual_momentum')).toBe('dual_momentum');
+    expect(parseTab(' DUAL_MOMENTUM ')).toBe('dual_momentum');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab, not to dual_momentum', () => {
+    for (const raw of ['dual-momentum', 'dualmomentum', 'dual momentum', 'dual_moment', 'momentum']) {
+      expect(parseTab(raw)).toBe(DEFAULT_TAB);
+    }
+  });
+
+  it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+    expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
+  });
+
+  it('TAB_META: the 🏎️ label (VS16 included), an UNMEASURED blurb with BOTH his asks, a fold head', () => {
+    const m = TAB_META.dual_momentum;
+    expect(m.label).toBe('\u{1F3CE}\u{FE0F} Dual Momentum');
+    expect(m.blurb).toContain('UNMEASURED');
+    expect(m.blurb).toContain('Can you pull these in to chart maps and add the demand zones logic to these?');
+    expect(m.blurb).toContain('I want a toggle and also the check boxes we have like AMD and supple and demand zones computing and also key levels');
+    // The blurb must tell him the default-on 🎯 filter is on here too (spec §7 #2).
+    expect(m.blurb).toContain('Enterable only is ON here too');
+    expect(splitBlurb(m.blurb).head.length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: the blurb never says bounce, types no NaN, and types no threshold number outside his quotes and the date', () => {
+    const b = TAB_META.dual_momentum.blurb;
+    expect(/bounce/i.test(b)).toBe(false);
+    expect(b.includes('NaN')).toBe(false);
+    expect(b.includes('undefined')).toBe(false);
+    const outsideQuotes = b.replace(/"[^"]*"/g, '').replace('2026-09-29', '');
+    expect(/\d/.test(outsideQuotes)).toBe(false);
+  });
+
+  it('🎯 kind is demand (the gate read he asked for), mirrored from KIND_BY_TAB', () => {
+    expect(ENTERABLE_KIND.dual_momentum).toBe('demand');
+  });
+
+  it('NEGATIVE: the server-side room floor is NOT applied here (HIS CALL #2 default)', () => {
+    expect(ROOM_TABS).not.toContain('dual_momentum');
+    const q = boardQuery({ tab: 'dual_momentum', limit: 80, minRoom: 5 });
+    expect(q).not.toContain('min_room');
+  });
+
+  it('the 📍 sort key is the served tab-scoped key and rides the query like any sort', () => {
+    expect(DM_SORT_NEAREST).toBe('nearest_demand');
+    expect(boardQuery({ tab: 'dual_momentum', sort: DM_SORT_NEAREST })).toContain('sort=nearest_demand');
+    // parseSort keeps it only while the server OFFERS it — a ⌘-carried
+    // ?sort=nearest_demand on another tab degrades to the default.
+    expect(parseSort('nearest_demand', [{ key: 'default', label: 'x' }, { key: 'nearest_demand', label: 'y' }]))
+      .toBe('nearest_demand');
+    expect(parseSort('nearest_demand', [{ key: 'default', label: 'x' }, { key: 'rs', label: 'RS' }]))
+      .toBe(DEFAULT_SORT);
   });
 });

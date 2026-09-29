@@ -92,6 +92,8 @@ export const EXTRA_ENTRIES: ExtraEntry[] = [
   { parent: 'chart-maps', to: '/chart-maps?tab=overnight',   label: 'Chart Maps ▸ Overnight',    keywords: ['gappers', 'after hours', 'pre-market', 'movers'] },
   // 🔑 Key Levels (2026-09-28): names closest to a prior-week / prior-month / 52-week low.
   { parent: 'chart-maps', to: '/chart-maps?tab=key_levels',  label: 'Chart Maps ▸ 🔑 Key Levels', keywords: ['key levels', 'key level', 'prior week low', 'prior month low', '52 week low', 'pwl', 'pml', 'near support'] },
+  // 🏎️ Dual Momentum (2026-09-29): the /dual-momentum leaders as Chart Maps cards with demand zones.
+  { parent: 'chart-maps', to: '/chart-maps?tab=dual_momentum', label: 'Chart Maps ▸ 🏎️ Dual Momentum', keywords: ['dual momentum', 'antonacci', 'momentum leaders', 'relative momentum', 'absolute momentum', '12 month return'] },
   // 🧬 Medical catalysts (2026-09-29): FDA decisions, trial readouts, designations, holds.
   { parent: 'chart-maps', to: '/chart-maps?tab=catalysts&sub=medical', label: 'Chart Maps ▸ Catalysts ▸ 🧬 Medical', keywords: ['medical', 'fda', 'fda approval', 'crl', 'pdufa', 'phase 3', 'topline', 'clinical trial', 'clinical hold', 'breakthrough therapy', 'biotech', 'mrna', 'esmo', 'asco'] },
   { parent: 'sepa',       to: '/sepa?tab=supply',            label: 'SEPA ▸ Supply / Demand',    keywords: ['zones', 'supply', 'demand', 'in demand', 'levels'] },

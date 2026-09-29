@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-29: "Can you pull these in to chart maps and add the demand
+  // zones logic to these?" + "I want a toggle and also the check boxes we have
+  // like AMD and supple and demand zones computing and also key levels".
+  // Label from the dual_momentum_tab spec §3.5. WP-DATA ships in this diff, so
+  // the WOLF / BNY / SPCX sentence is in (critic 2026-09-29 #3). If HIS CALL #6
+  // (the BK→BNY / AMRK→GOLD RENAMES + refetch) is NO, drop the BNY clause.
+  { id: 'chart-maps-dual-momentum-2026-09-29',
+    label: '🏎️ Dual Momentum tab on Chart Maps. You said: “Can you pull these in to chart maps and add the demand zones logic to these?” and “I want a toggle and also the check boxes we have like AMD and supple and demand zones computing and also key levels”. The new tab shows the same leaders the Dual Momentum page ranks, in the page’s own order, as chart cards — every card prints its dual-momentum rank, its 12-, 6-, 3- and 1-month returns and its RS rank, and the line above the grid prints the page’s regime and SPY’s 12-month return. Each card also carries the demand engine’s read, the same one Back in Demand uses: the nearest demand band under the price, the first lid above it, the room to that lid, whether the band floor is intact, swept or broken, and the 🎯 gate read. A leader with no demand band under the price says so — no band is invented. THE TOGGLE switches between 🏎️ the dual-momentum rank and 📍 nearest demand first. Every Chart Maps checkbox works here: ⚡ momentum burst, themes first, the chart ledger (support / demand, overhead / supply, 🔑 key levels, AMD phases, Fibonacci, mean reversion, Keltner, the moving averages) and 🎯 Enterable only — on by default as on every demand board; most leaders sit well above their band, so untick it to see every leader. Fixed on the page and the tab: three of the page’s top picks were prices from a different security under the same ticker — WOLF’s +2,249% ran across its Chapter 11 (the new shares began 2025-09-29), SPCX’s +475% across a fund that used the ticker before, and BNY’s +1,435% across a BlackRock muni fund’s bars. Their returns now start at the new security’s first session, so WOLF and SPCX leave the picks until they have 12 months of their own prices, and BNY reads BNY Mellon’s own history (traded as BK before 2026-05-21) once it is re-read. UNMEASURED — no study says a dual-momentum leader near a demand band does better than one that is not. Nothing is gated, pushed or bought because of it.',
+    addedAt: '2026-09-29', route: '/chart-maps?tab=dual_momentum' },
   // Ajay 2026-09-29: "can you add a new routine to scan for … medi cal nws and
   // sector them separatively … and add right setup and alerts". Label from the
   // medical-catalysts spec §3.11 (numbers change with HIS CALLs #1, #2, #7).

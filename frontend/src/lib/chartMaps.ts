@@ -18,7 +18,7 @@ import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -73,6 +73,12 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // first open and the next re-cut moves it on the evidence. The slot is his
   // call (spec §7.5).
   'key_levels',
+  // 🏎️ Dual Momentum (Ajay 2026-09-29: "Can you pull these in to chart maps
+  // and add the demand zones logic to these?"). Right after 🔑 Key Levels,
+  // mid-pack — TAB ORDER IS EARNED; tabUsageKey counts it from the first open
+  // and the next re-cut moves it on the evidence. The slot is his call
+  // (dual_momentum_tab spec §7 #1).
+  'dual_momentum',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -147,7 +153,16 @@ export const ENTERABLE_KIND = {
   // 📰 News (2026-09-24): sector rows and headlines, no ticker rows — a demand
   // read has nothing to read. Inert, and the chip says why.
   news: 'n/a',
+  // 🏎️ Dual Momentum (2026-09-29): a leader list drawn with the demand read —
+  // the gate read he asked for. The default-on 🎯 filter hides BLOCKED leaders
+  // here as on every demand board (dual_momentum_tab spec §7 #2, HIS CALL).
+  dual_momentum: 'demand',
 } as Record<CmTab, EnterableKind>;
+
+/** 🏎️ Dual Momentum tab (2026-09-29): the tab-scoped served sort key for
+ *  "📍 Nearest demand first" (chart_maps/dual_momentum_tab.SORT_NEAREST_DEMAND).
+ *  The toggle's labels are taken from the SERVED `sorts`, never typed here. */
+export const DM_SORT_NEAREST = 'nearest_demand';
 
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
@@ -191,6 +206,13 @@ export function isBoardTab(t: CmTab): boolean {
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
+  // 🏎️ Dual Momentum (Ajay 2026-09-29). The leaders and their rank are the
+  // /dual-momentum page's engine; every number on the board is served, none
+  // is typed here. UNMEASURED: no study pairs the rank with a demand band.
+  dual_momentum: {
+    label: '\u{1F3CE}\uFE0F Dual Momentum',
+    blurb: 'The leaders the Dual Momentum page ranks, drawn as Chart Maps cards with the demand engine\'s zones on each. Ajay 2026-09-29: "Can you pull these in to chart maps and add the demand zones logic to these?" and "I want a toggle and also the check boxes we have like AMD and supple and demand zones computing and also key levels". THE NAMES AND THEIR ORDER come from the Dual Momentum page\'s own engine, unchanged: the same rank prints on every card beside the twelve-, six-, three- and one-month returns and the RS rank, and the line above the grid prints the page\'s regime word and SPY\'s twelve-month return (the page\'s hurdle) \u2014 the regime never hides a leader. EACH CARD carries the demand engine\'s read on the same board geometry every demand tab draws: the nearest demand band under the print, the first lid above it, the room to that lid, whether the band floor is intact, swept or broken, and the \u{1F3AF} gate read \u2014 the same read Back in Demand prints, never a copy of it. A leader with no demand band under the price says so; no band is invented. THE TOGGLE switches the order between \u{1F3CE}\uFE0F the dual-momentum rank and \u{1F4CD} nearest demand first (floor intact first, then closest to its band, the rank breaking ties); the button lit is the order the server applied. Every other Chart Maps checkbox works here as it does on the demand boards: \u26A1 momentum burst, themes first, and the chart ledger \u2014 support / demand, overhead / supply, \u{1F511} key levels, AMD phases, Fibonacci, mean reversion, Keltner and the moving averages. \u{1F3AF} Enterable only is ON here too, as on every demand board \u2014 most leaders sit well above their band, so untick it (or press show all) to see every leader. UNMEASURED \u2014 no study in this app says a dual-momentum leader near a demand band does better than one that is not. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
+  },
   // 🔑 Key Levels (Ajay 2026-09-28). Every number on the board is served;
   // nothing here is typed. UNMEASURED: a distance, not a ranking of setups.
   key_levels: {
@@ -556,6 +578,80 @@ export type CmKeyLevelsBoard = {
   measured: boolean;
 };
 
+/** 🏎️ Dual Momentum tab (2026-09-29): the engine's own regime block, verbatim
+ *  (sepa/dual_momentum.compute → `regime`). `label` is the engine's sentence;
+ *  `spy_return_12m` is null when SPY's frame is short. */
+export type CmDualMomentumRegime = {
+  label?: string | null;
+  risk_on?: boolean | null;
+  spy_return_12m?: number | null;
+};
+
+/** 🏎️ Dual Momentum tab (2026-09-29): the board-level block
+ *  (chart_maps/dual_momentum_tab.ready_block / warming_block / no_scan_block /
+ *  error_block — a failed build is served as 'error', never as 'warming').
+ *  `regime_line`, `header` and `note` are SERVED sentences —
+ *  DualMomentumBoardNote prints them verbatim. `counts` is null while the memo
+ *  warms. Invariant (server): held + swept + broken + floor_unknown ==
+ *  with_band. UNMEASURED. */
+export type CmDualMomentumBoard = {
+  state: 'ready' | 'warming' | 'no_scan' | 'error';
+  regime?: CmDualMomentumRegime | null;
+  regime_line?: string | null;
+  gate_lookback_days?: number | null;
+  pool?: number | null;
+  eligible?: number | null;
+  universe?: number | null;
+  counts: {
+    pool: number; with_band: number; no_band: number; no_doc: number; no_print: number;
+    held: number; swept: number; broken: number; floor_unknown: number;
+    dropped_thin: number; shown: number;
+  } | null;
+  sort?: string | null;
+  header: string;
+  note: string;
+  built_at?: string | null;
+  scan_generated_at?: string | null;
+  page_route?: string | null;
+  measured: boolean;
+};
+
+/** 🏎️ The per-tile dual-momentum block — the /dual-momentum engine's pick,
+ *  verbatim (rank, returns in %, RS). Display only on this surface. */
+export type CmDualMomentum = {
+  rank: number;
+  score?: number | null;
+  return_1m?: number | null;
+  return_3m?: number | null;
+  return_6m?: number | null;
+  return_12m?: number | null;
+  return_gate?: number | null;
+  abs_mom_pass?: boolean | null;
+  beats_spy?: boolean | null;
+  rs_rank?: number | null;
+  stage?: number | string | null;
+  is_sepa_candidate?: boolean | null;
+};
+
+/** 🏎️ The per-tile zone read (chart_maps/dual_momentum_tab.zone_read): the
+ *  nearest demand band from the ONE demand engine (bounce_room.demand_read),
+ *  the room block the demand boards print, the raw floor word and the 🎯 gate
+ *  read copied from `tile.enterable` — never recomputed. `reason` != 'ok'
+ *  means no band is drawn and `text` says why. */
+export type CmDmZone = {
+  reason: 'ok' | 'no_band' | 'no_doc' | 'no_print' | string;
+  demand: { lo: number; hi: number; touches?: number | null; in_band?: boolean | null;
+            distance_pct?: number | null } | null;
+  room?: Record<string, unknown> | null;
+  room_stat?: string | null;
+  floor?: string | null;
+  floor_state?: string | null;
+  floor_held?: boolean | null;
+  gate?: { verdict?: string | null; room_ok?: boolean | null; prox_ok?: boolean | null } | null;
+  print?: { px?: number | null; source?: string | null } | null;
+  text?: string | null;
+};
+
 export type CmTile = {
   symbol: string;
   name?: string | null;
@@ -629,6 +725,12 @@ export type CmTile = {
    *  print is not through — what the tab is ordered by. Absent on every other
    *  tab. UNMEASURED. */
   key_level_near?: CmKeyLevelNear | null;
+  /** 🏎️ Dual Momentum tab only (2026-09-29): the page's pick for this name
+   *  (rank + returns + RS). Absent on every other tab. */
+  dual_momentum?: CmDualMomentum | null;
+  /** 🏎️ Dual Momentum tab only (2026-09-29): the demand-zone read. Absent on
+   *  every other tab. UNMEASURED. */
+  dm_zone?: CmDmZone | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -993,6 +1095,9 @@ export type CmBoard = {
   /** 🔑 Key Levels tab only (2026-09-28): the served header / note / counts
    *  KeyLevelsBoardNote prints. Absent on every other tab. */
   key_levels_board?: CmKeyLevelsBoard | null;
+  /** 🏎️ Dual Momentum tab only (2026-09-29): the served regime line, header,
+   *  note and counts DualMomentumBoardNote prints. Absent on every other tab. */
+  dual_momentum_board?: CmDualMomentumBoard | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;

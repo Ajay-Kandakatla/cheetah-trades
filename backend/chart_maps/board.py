@@ -51,7 +51,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -1353,7 +1353,7 @@ def _session_day(now: Optional[datetime] = None):
 
 
 def attach_enterable(tiles: list, kind: str = "demand", *,
-                     live: Optional[dict] = None) -> int:
+                     live: Optional[dict] = None, docs: Optional[dict] = None) -> int:
     """Fill `tile['enterable']` (the whole read) and `_m['enterable']` (rank).
 
     THE PRINT IT READS (spec 2026-09-15, B3). The 🧨 chip keys on the CLOSED
@@ -1397,13 +1397,19 @@ def attach_enterable(tiles: list, kind: str = "demand", *,
                 m["enterable"] = None
         return 0
 
-    syms = [str(t["symbol"]).upper() for t in todo]
-    try:
-        from supply_demand import zone_store
-        _day, docs = zone_store.load_latest(syms)
-    except Exception as exc:                                    # noqa: BLE001
-        log.warning("chart-maps: zone_store read failed for enterable: %s", exc)
-        docs = {}
+    # `docs` (2026-09-29, the 🏎️ Dual Momentum builder): a caller that already
+    # holds the docs passes them, so its own zone read and this gate read can
+    # never be two different store generations. None = today's path exactly —
+    # ONE store read here, which every other caller still takes.
+    if docs is None:
+        syms = [str(t["symbol"]).upper() for t in todo]
+        try:
+            from supply_demand import zone_store
+            _day, docs = zone_store.load_latest(syms)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("chart-maps: zone_store read failed for enterable: %s", exc)
+            docs = {}
+    docs = docs if isinstance(docs, dict) else {}
 
     done = 0
     session_day = _session_day()          # the date the snapshot's print belongs to
@@ -3875,6 +3881,167 @@ def key_level_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                 themes_first=themes_first, built_at=entry.get("built_at"))}
 
 
+# 🏎️ the header's floor buckets, keyed by `dual_momentum_tab.floor_rank`
+_DM_FLOOR_BUCKET = {0: "held", 1: "floor_unknown", 2: "swept", 3: "broken"}
+
+# 🏎️ tile_metrics keys a board attacher OWNS on the tile. `attach_explosive`
+# and `attach_band_structure` are idempotent by KEY PRESENCE, so copying
+# tile_metrics' `explosive: None` / `band_structure: None` onto the tile would
+# make both skip every leader (LIVE step 2026-09-29: 80/80 tiles with no 🪜
+# read and no 🧨 read, and the 🪜 / 🧨 sorts silently inert). They stay in `_m`
+# (the sort columns); they are never spread onto the tile.
+_DM_ATTACH_OWNED = ("explosive", "band_structure")
+
+
+def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                        themes_first: bool = THEMES_FIRST_DEFAULT,
+                        sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                        ctx: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
+    """🏎️ Dual Momentum — the Dual Momentum page's leaders, each drawn with the
+    demand engine's nearest band, first lid, room, floor and 🎯 gate read.
+
+    Ajay 2026-09-29: *"Can you pull these in to chart maps and add the demand
+    zones logic to these?"* + *"I want a toggle and also the check boxes we
+    have like AMD and supple and demand zones computing and also key levels"*.
+
+    THE POOL is `sepa.dual_momentum.compute(top_n=LIMIT_MAX)` with the page's
+    own defaults, memoised per scan generation in
+    `chart_maps.dual_momentum_tab` (the engine is never re-ranked here; the
+    page's rank rides on every tile). ONE `_bulk_snaps` for the pool, handed
+    to `board()` through `ctx`. ONE `zone_store.load_latest`, handed BOTH to
+    the zone read and to the 🎯 read (`attach_enterable(docs=…)`, pre-cut), so
+    the two can never read two store generations.
+
+    ORDER. Default = the page's rank. `nearest_demand` (📍) = floor intact →
+    unknown → swept → broken → no band, closest first, rank breaks ties. Both
+    are applied PRE-CUT over the ≤80 pool, so the toggle decides which tiles
+    reach the page; neither is an explicit `_finish` sort, so the theme lead
+    still applies when its box is ticked.
+
+    UNMEASURED and display only — nothing gates, pushes, sizes or enters.
+    """
+    import copy
+    from chart_maps import dual_momentum_tab as DMT
+    from supply_demand import enterable as EN
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    got = DMT.cached_or_warm(now=now_et, pool_n=LIMIT_MAX)
+    if got["state"] == "no_scan":
+        return {"tiles": [], "note": DMT.NO_SCAN_NOTE,
+                "dual_momentum_board": DMT.no_scan_block()}
+    if got["state"] == "warming":
+        return {"tiles": [], "warming": True, "note": DMT.WARMING_NOTE,
+                "dual_momentum_board": DMT.warming_block()}
+    if got["state"] == "error":
+        return {"tiles": [], "note": DMT.error_note(got.get("reason")),
+                "dual_momentum_board": DMT.error_block(got.get("reason"))}
+    # The memo is shared across requests: nothing below (the tile skeleton,
+    # tile_metrics, _finish popping keys) may ever reach a memoised dict.
+    entry = copy.deepcopy(got["entry"])
+    picks = [p for p in entry.get("picks") or [] if isinstance(p, dict) and p.get("symbol")]
+    scan_rows = entry.get("scan_rows") or {}
+    syms = [str(p["symbol"]).upper() for p in picks]
+    raw = _bulk_snaps(syms)                                        # the ONE fan-out
+    if ctx is not None:
+        ctx.update(snaps=raw)
+
+    tiles = []
+    by_sym: dict = {}
+    for p in picks:
+        sym = str(p["symbol"]).upper()
+        row = scan_rows.get(sym) or {}
+        m = tile_metrics(row)
+        t = {"symbol": sym, "name": p.get("name") or _name_for(sym),
+             "href": _href(sym), "theme": _theme(sym),
+             "last_close": _f(row.get("last_close")),
+             "bars": [], "lines": [], "markers": [], "bands": [],
+             "badges": [{"text": DMT.RANK_CHIP_FMT.format(rank=p.get("rank")), "tone": "good"}],
+             "stats": DMT.dm_stats(p),
+             "dual_momentum": {k: (_num(p.get(k)) if isinstance(p.get(k), float) else p.get(k))
+                               for k in (
+                 "rank", "score", "return_1m", "return_3m", "return_6m", "return_12m",
+                 "return_gate", "abs_mom_pass", "beats_spy", "rs_rank", "stage",
+                 "is_sepa_candidate")},
+             **{k: v for k, v in m.items() if k not in _DM_ATTACH_OWNED},
+             "_m": dict(m)}
+        tiles.append(t)
+        by_sym[sym] = p
+
+    # ONE zone read, feeding the zone read below AND the 🎯 read.
+    try:
+        from supply_demand import zone_store
+        _day, docs = zone_store.load_latest(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("dual_momentum_tiles: zone_store read failed: %s", exc)
+        docs = {}
+    docs = docs if isinstance(docs, dict) else {}
+    live = _live_from_snaps(tiles, raw)
+    attach_enterable(tiles, kind=EN.KIND_BY_TAB["dual_momentum"], live=live, docs=docs)
+
+    for t in tiles:
+        sym = t["symbol"]
+        doc = docs.get(sym) or {}
+        snap = (live or {}).get(sym) or {}
+        prev = _f(snap.get("prev_day_close"))
+        if prev is None:
+            prev = _f(doc.get("prev_close"))
+        zone = DMT.zone_read(_explosive_px(t), doc, t.get("enterable"), prev_close=prev)
+        dem = zone.get("demand")
+        if isinstance(dem, dict):
+            t["bands"].append({"kind": "demand", "lo": float(dem["lo"]),
+                               "hi": float(dem["hi"]), "label": "demand"})
+            room = zone.get("room") or {}
+            if _num(room.get("target_lo")) is not None and _num(room.get("target_hi")) is not None:
+                t["bands"].append({"kind": "supply", "lo": float(room["target_lo"]),
+                                   "hi": float(room["target_hi"]), "label": "first lid"})
+            t["_bars"] = {"days": _zone_window(_stored_band(doc, dem), days)}
+        t["badges"].append(DMT.zone_badge(zone, _dist_badge))
+        t["stats"].extend(DMT.zone_stats(zone))
+        t["why"] = DMT.why_text(by_sym[sym], zone)
+        t["dm_zone"] = zone
+
+    nearest = sort == DMT.SORT_NEAREST_DEMAND
+    sort_unavailable = None
+    if nearest:
+        tiles.sort(key=lambda x: DMT.nearest_demand_key(
+            x["dm_zone"], x["dual_momentum"]["rank"], x["symbol"]))
+        if not any(isinstance(x["dm_zone"].get("demand"), dict) for x in tiles):
+            sort_unavailable = DMT.NEAREST_SORT_UNAVAILABLE
+    else:
+        tiles.sort(key=lambda x: DMT.rank_key(x["dual_momentum"]["rank"], x["symbol"]))
+    for i, t in enumerate(tiles):
+        t["_score"] = float(len(tiles) - i)
+
+    counts = {k: 0 for k in DMT.COUNT_KEYS}
+    counts["pool"] = len(tiles)
+    for t in tiles:
+        z = t["dm_zone"]
+        reason = z.get("reason")
+        if reason == "ok":
+            counts["with_band"] += 1
+            # bucketed by the SAME rank the 📍 order uses: held 0, unknown 1,
+            # swept 2, broken 3 (a future state ranks with broken, never held)
+            counts[_DM_FLOOR_BUCKET[DMT.floor_rank(z.get("floor"))]] += 1
+        elif reason in counts:
+            counts[reason] += 1
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier, snaps=raw)
+    gex_as_of = _gex_decor(out, "demand")
+    counts["dropped_thin"] = meta["dropped_thin"]
+    counts["shown"] = len(out)
+    return {"tiles": out, **meta,
+            "sort_unavailable": meta.get("sort_unavailable") or sort_unavailable,
+            "matched": len(tiles) - meta["dropped_thin"],
+            "scanned": entry.get("universe_size"),
+            "generated_at": entry.get("generated_at"),
+            "scan_generated_at": entry.get("scan_generated_at"),
+            "gex_as_of": gex_as_of,
+            "note": DMT.NOTE if picks else DMT.EMPTY_NOTE,
+            "disclaimer": DMT.DISCLAIMER,
+            "dual_momentum_board": DMT.ready_block(counts, entry=entry, sort=sort,
+                                                   themes_first=themes_first)}
+
+
 def _usd_short(v) -> str:
     """$1.5B / $281M. Whole units — a dollar-volume figure carrying cents is
     false precision on a number that moves by millions between prints."""
@@ -6294,7 +6461,12 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     src = source if source in ("pattern", "zone") else "pattern"
     # An unknown sort falls back to the default rather than erroring: a stale
     # bookmark should show the board, not a 422.
-    srt = sort if sort in SORTS else DEFAULT_SORT
+    # 📍 `nearest_demand` is a TAB-SCOPED key (🏎️ Dual Momentum, 2026-09-29):
+    # offered and honoured there only; on every other tab it is an unknown
+    # sort and falls back like any stale bookmark.
+    from chart_maps import dual_momentum_tab as _DMT
+    srt = sort if (sort in SORTS or (t == "dual_momentum"
+                                     and sort == _DMT.SORT_NEAREST_DEMAND)) else DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
     # Out-of-band slot for a builder that already fetched the raw live rows for
@@ -6308,6 +6480,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = ipo_tiles(limit, days, themes_first, tier)
     elif t == "key_levels":
         out = key_level_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
+    elif t == "dual_momentum":
+        out = dual_momentum_tiles(limit, days, themes_first, srt, tier, ctx=_ctx)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -6402,6 +6576,19 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         from chart_maps import key_levels_tab as _KLT
         out["sorts"] = [{**s, "label": _KLT.DEFAULT_SORT_LABEL} if s["key"] == DEFAULT_SORT
                         else s for s in out["sorts"]]
+    if t == "dual_momentum":
+        # The 🏎️ / 📍 toggle is these two served keys: the page's own rank
+        # (relabelled — "⭐ Best setup first" is false here) and, right after
+        # it, the tab-scoped nearest-demand order.
+        _dm_sorts = []
+        for s in out["sorts"]:
+            if s["key"] == DEFAULT_SORT:
+                _dm_sorts.append({**s, "label": _DMT.DEFAULT_SORT_LABEL})
+                _dm_sorts.append({"key": _DMT.SORT_NEAREST_DEMAND,
+                                  "label": _DMT.NEAREST_SORT_LABEL})
+            else:
+                _dm_sorts.append(s)
+        out["sorts"] = _dm_sorts
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier
