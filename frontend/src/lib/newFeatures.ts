@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that are
+  // reaching all time highs? call it ATH. …". Numbers from ath_tab spec §3.3
+  // (the 2% band = zone_edge.NEW_HIGH_TOL, the 21-session look-back); change
+  // with HIS CALLs #1/#2. Earlier-listing wording per critic 2026-09-29 #3.
+  { id: 'chart-maps-ath-2026-09-29',
+    label: '🏔️ ATH tab on Chart Maps. You said: “Can you give me a new tab - for all the stocks that are reaching all time highs? call it ATH. Once some of them are going below their ATH or 52 Week Highs..” One toggle, two views: 🏔️ At ATH — names at, or within 2% of, their high, the ones through it today first; ↘️ Slipping — names that set a high or a 52-week high in the last 21 sessions and now trade more than 2% under it, freshest first. Each card shows the high and the day it was set, the 52-week high, the % from each and whether the price is above the 50-day. All-time means the full listed history: a name is called all-time only when its monthly price history reaches its listing date; every other name says “high since …”, and the line above the grid counts the two apart. Bars from an earlier company under the same ticker are cut where a curated cut or a month-long gap proves them. While the long history loads in the background the line says how many names are still waiting for it. UNMEASURED — display only; nothing gates, pushes or trades on it.',
+    addedAt: '2026-09-29', route: '/chart-maps?tab=ath' },
   // Ajay 2026-09-29: "Can you pull these in to chart maps and add the demand
   // zones logic to these?" + "I want a toggle and also the check boxes we have
   // like AMD and supple and demand zones computing and also key levels".

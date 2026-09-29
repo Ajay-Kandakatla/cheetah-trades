@@ -1577,7 +1577,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2159,7 +2159,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4695,7 +4695,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5100,6 +5100,82 @@ const CONTRACTS = [
         if (!entry.includes('UNMEASURED')) errs.push('the 🏎️ Dual Momentum ✨ entry must say UNMEASURED');
         if (/bounce/i.test(entry)) errs.push('the 🏎️ Dual Momentum ✨ entry says "bounce"');
         if (!entry.includes("route: '/chart-maps?tab=dual_momentum'")) errs.push("the 🏎️ Dual Momentum ✨ entry must route to '/chart-maps?tab=dual_momentum'");
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🏔️ ATH tab (2026-09-29): mounted after 🏎️, UNMEASURED served, proven vs high-since served, toggle persisted, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that
+    // are reaching all time highs? call it ATH. Once some of them are going
+    // below their ATH or 52 Week Highs..". Any of these links lost silently
+    // drops the tab, its UNMEASURED word, its proven-vs-"high since" honesty
+    // (served by the backend, never composed in the TSX) or the URL-persisted
+    // 🏔️ / ↘️ toggle.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('ath')) {
+        errs.push("CM_TABS must carry 'ath'");
+      } else if (tabs.indexOf('ath') !== tabs.indexOf('dual_momentum') + 1) {
+        errs.push("CM_TABS: 'ath' must sit right after 'dual_momentum' (ATH spec HIS CALL #10)");
+      }
+      const meta = /\n  ath: \{\n    label: '([^']*)',\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.ath (label + blurb) is missing');
+      } else {
+        if (!meta[2].includes('UNMEASURED')) errs.push('the TAB_META.ath blurb must say UNMEASURED');
+        if (/bounce|fake/i.test(meta[2])) errs.push('the TAB_META.ath blurb says "bounce"/"fake"');
+        if (/never count/i.test(meta[2])) errs.push('the TAB_META.ath blurb claims earlier-listing bars "never count" — they are cut only where a curated cut or a gap proves them');
+      }
+      if (/\n  ath: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry ath (🎯 n/a, the Key Levels precedent)');
+      if (!/export const ATH_SORT_SLIPPING = 'slipping';/.test(src)) errs.push("chartMaps.ts must export ATH_SORT_SLIPPING = 'slipping'");
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'ath' && <AthBoardNote board=\{data\?\.ath_board \?\? null\} sorts=\{data\?\.sorts\} sort=\{data\?\.sort\} onSort=\{setSortParam\} \/>/.test(page)) {
+        errs.push("ChartMaps.tsx must render <AthBoardNote board={data?.ath_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} /> on tab === 'ath' (the toggle persists through ?sort=)");
+      }
+      if (!/data\?\.warming && tab === 'ath' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the ath tab — its warming line is served');
+      const note = read('src/components/AthBoardNote.tsx');
+      // The component prints the SERVED header/note; it must never compose the
+      // proven / "high since" / all-time wording itself.
+      const code = note.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      if (/all-time|high since|proven|UNMEASURED/i.test(code)) errs.push('AthBoardNote.tsx composes ATH wording — the header and note must be printed as served');
+      if (!/board as \{ header\?: unknown \}\)\.header/.test(note)) errs.push('AthBoardNote.tsx must print the served header');
+      const board = read('../backend/chart_maps/board.py');
+      if (!/elif t == "ath":/.test(board)) errs.push('board.py lost the elif t == "ath": dispatch');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"ath"/.test(tabsPy[1])) errs.push('board.py TABS must carry "ath"');
+      if (!/\(t == "ath" and sort == _ATH\.SORT_SLIPPING\)/.test(board)) errs.push('board.py must honour the tab-scoped ↘️ slipping sort on ath only');
+      let at = '';
+      try { at = read('../backend/chart_maps/ath_tab.py'); } catch { errs.push('backend/chart_maps/ath_tab.py is missing'); }
+      if (at) {
+        if (!at.includes('UNMEASURED')) errs.push('ath_tab.py must say UNMEASURED');
+        if (/bounc|fake/i.test(at.replace(/quick_bounce/g, ''))) errs.push('ath_tab.py says "bounce"/"fake"');
+        if (!/from supply_demand\.zone_edge import NEW_HIGH_TOL/.test(at)) errs.push('ath_tab.py must import NEW_HIGH_TOL from zone_edge (the one "at the high" band)');
+        if (/0\.98/.test(at)) errs.push('ath_tab.py retypes 0.98 — import NEW_HIGH_TOL');
+        if (!/KL\.anchor_read/.test(at) || !/KL\.verify_last/.test(at)) errs.push('ath_tab.py must use key_levels anchor_read / verify_last (the one live print + verify)');
+        if (!/bulk_cached_frames/.test(at)) errs.push('ath_tab.py must read the cached frames via prices.bulk_cached_frames');
+        if (!/"slip_from_high_since"/.test(at)) errs.push('ath_tab.py must count slips from a "high since" apart from a proven all-time high');
+        if (!/proven all-time high/.test(at) || !/not proven all-time/.test(at)) errs.push('ath_tab.py headers must word proven all-time and "high since" apart');
+        if (!/def monthly_reaches_listing\(/.test(at)) errs.push('ath_tab.py must prove all-time from the monthly history (monthly_reaches_listing), never the 2-year frame alone');
+      }
+      let ah = '';
+      try { ah = read('../backend/chart_maps/ath_history.py'); } catch { errs.push('backend/chart_maps/ath_history.py is missing'); }
+      if (ah) {
+        if (!ah.includes('_cut_foreign_head(')) errs.push('ath_history.py must apply prices._cut_foreign_head');
+        if (!ah.includes('_fetch_massive')) errs.push('ath_history.py must fetch through the ONE Massive fetcher prices._fetch_massive');
+        if (/_mongo_put|price_cache|load_prices\(/.test(ah)) errs.push('ath_history.py must never touch the shared price cache or loader (_mongo_put / price_cache / load_prices)');
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-ath-2026-09-29'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-ath-2026-09-29'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf("route: '", idAt) + 60);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🏔️ ATH ✨ entry must say UNMEASURED');
+        if (/bounce|fake/i.test(entry)) errs.push('the 🏔️ ATH ✨ entry says "bounce"/"fake"');
+        if (!entry.includes("route: '/chart-maps?tab=ath'")) errs.push("the 🏔️ ATH ✨ entry must route to '/chart-maps?tab=ath'");
       }
       return errs;
     },

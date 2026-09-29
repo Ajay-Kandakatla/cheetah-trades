@@ -76,6 +76,7 @@ import NewsTabBoard from '../components/NewsTabBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
+import AthBoardNote from '../components/AthBoardNote';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
@@ -624,7 +625,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
-      && tab !== 'dual_momentum');
+      && tab !== 'dual_momentum' && tab !== 'ath');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -946,6 +947,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * through `setSortParam` — the Sort select's own setter. It also carries
         * the warming line, so the generic demand counter is skipped here. */}
       {tab === 'dual_momentum' && <DualMomentumBoardNote board={data?.dual_momentum_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
+      {/* 🏔️ ATH tab (2026-09-29): the served header and UNMEASURED note, plus
+        * the 🏔️ At ATH / ↘️ Slipping toggle — labels from the served `sorts`,
+        * pressed = the served `sort`, a click through `setSortParam`. It also
+        * carries the warming line, so the generic demand counter is skipped. */}
+      {tab === 'ath' && <AthBoardNote board={data?.ath_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
@@ -1609,6 +1615,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
           </p>
         </>
       ) : data?.warming && tab === 'dual_momentum' ? null
+      /* 🏔️ ATH warms its own memo too — AthBoardNote prints its warming line. */
+      : data?.warming && tab === 'ath' ? null
       /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
        * scan) — its served warming line is printed by DualMomentumBoardNote. */
       : data?.warming && tab !== 'key_levels' ? (

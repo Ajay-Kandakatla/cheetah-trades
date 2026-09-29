@@ -117,9 +117,9 @@ def scan_file(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------
 def test_01_tab_sits_right_after_key_levels_and_nothing_else_moved():
     assert B.TABS.index("dual_momentum") == B.TABS.index("key_levels") + 1
-    assert B.TABS[-1] == "dual_momentum"
-    # NEGATIVE: the tuple minus the insertion is the 6d3ad93 tuple
-    assert tuple(t for t in B.TABS if t != "dual_momentum") == TABS_BEFORE
+    # NEGATIVE: the tuple minus the insertions is the 6d3ad93 tuple (🏔️ ath
+    # was appended right after dual_momentum on 2026-09-29)
+    assert tuple(t for t in B.TABS if t not in ("dual_momentum", "ath")) == TABS_BEFORE
 
 
 # --------------------------------------------------------------------------

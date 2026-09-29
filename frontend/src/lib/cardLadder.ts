@@ -108,7 +108,12 @@ const COST_SUFFIX = ' vs your cost';
  *  (`🔑 0.41% above PWL 97.20 …`, key_levels.near_text) — a distance to a
  *  level, i.e. a PRICE fact. The 🔑 key CHIP is not a badge (it rides on
  *  `tile.key_levels.chip`) and keeps its own `keyLevel` slot. */
-const PRICE_PREFIX = ['◉ ', '→ ', '↓ ', '↑ ', '\u{1FA79} ', '\u{1F680} ', '\u{1F511} '];
+const PRICE_PREFIX = ['◉ ', '→ ', '↓ ', '↑ ', '\u{1FA79} ', '\u{1F680} ', '\u{1F511} ',
+  // 🏔️ / ↘️ (2026-09-29): the 🏔️ ATH tab's served pill (`🏔️ 0.40% under the
+  // all-time high …`, `↘️ 4.10% under the 52-week high … set …`,
+  // ath_tab.tile_badge) — a distance to a high, a PRICE fact, the 🔑 precedent.
+  // VS16 on both: a bare `🏔 ` is not the served text and stays in SETUP.
+  '\u{1F3D4}\u{FE0F} ', '\u{2198}\u{FE0F} '];
 /** 🎯 Gabbar position (the aggressive-band twin of 🛡️, board.py gabbar
  *  badges): `🎯 In Gabbar band (…)` or `🎯 {d}% above|below {label}`. Any
  *  other 🎯 badge falls through to SETUP, the unknown-badge safety net. */

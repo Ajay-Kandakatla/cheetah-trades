@@ -325,3 +325,24 @@ describe('🏎️ Dual Momentum tab deep link (2026-09-29)', () => {
     expect(tos(searchNav(index, 'key level'))).not.toContain(DM);
   });
 });
+
+describe('🏔️ ATH tab deep link (2026-09-29)', () => {
+  const ATH = '/chart-maps?tab=ath';
+  it('"all time high" and "ath" find the tab', () => {
+    for (const q of ['all time high', 'ath', 'all-time high', 'slipping']) {
+      expect(tos(searchNav(index, q)), q).toContain(ATH);
+    }
+  });
+
+  it('NEGATIVE: exactly one entry, and none without Chart Maps in the menu', () => {
+    expect(EXTRA_ENTRIES.filter((e) => e.to === ATH)).toHaveLength(1);
+    expect(index.filter((e) => e.to === ATH)).toHaveLength(1);
+    const without = buildIndex({ ...MENU, primary: MENU.primary.filter((m) => m.feature !== 'chart-maps') }, subgroupOf);
+    expect(tos(without)).not.toContain(ATH);
+  });
+
+  it('NEGATIVE: an unrelated query does not surface it', () => {
+    expect(tos(searchNav(index, 'whatsapp'))).not.toContain(ATH);
+    expect(tos(searchNav(index, 'dual momentum'))).not.toContain(ATH);
+  });
+});

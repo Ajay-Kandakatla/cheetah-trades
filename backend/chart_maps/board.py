@@ -51,7 +51,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -278,6 +278,41 @@ def _snap_for(snaps: Optional[dict], sym: str) -> Optional[dict]:
     if snaps is None:
         return None
     return snaps.get((sym or "").upper()) or {}
+
+
+def _bulk_snaps_fanout(symbols) -> dict:
+    """The SAME `_bulk_snaps` read for a universe-sized pool, its
+    `prices._SNAP_CHUNK`-sized chunks fetched side by side on `BAR_WORKERS`
+    threads (the bar-load pool; `prices._http` keeps one session per thread).
+
+    Measured 2026-09-29 (🏔️ ATH, 2,709 names, in-container cProfile): the
+    serial universe snapshot was 3.8 s of a 4.6 s warm request — 11 chunk
+    calls one after another. Every chunk is one `_bulk_snaps` call, so the
+    merged map is exactly what the serial call returns (a chunk that fails is
+    `{}` either way). A pool of one chunk is the plain call.
+    """
+    syms = sorted({(s or "").strip().upper() for s in (symbols or []) if s})
+    if not syms:
+        return {}
+    from sepa import prices
+    size = int(getattr(prices, "_SNAP_CHUNK", 250) or 250)
+    chunks = [syms[i:i + size] for i in range(0, len(syms), size)]
+    if len(chunks) == 1:
+        return _bulk_snaps(chunks[0])
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _one(chunk):
+        try:
+            return _bulk_snaps(chunk) or {}
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("chart-maps: snapshot chunk of %d failed: %s", len(chunk), exc)
+            return {}
+
+    out: dict = {}
+    with ThreadPoolExecutor(max_workers=min(BAR_WORKERS, len(chunks))) as pool:
+        for part in pool.map(_one, chunks):
+            out.update(part)
+    return out
 
 
 def _bulk_snaps(symbols) -> dict:
@@ -4059,6 +4094,84 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                                    themes_first=themes_first)}
 
 
+def ath_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+              universe: str = "full", themes_first: bool = False,
+              sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+              ctx: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
+    """🏔️ ATH — names at their all-time high, or slipping under a recent high.
+
+    Ajay 2026-09-29: *"Can you give me a new tab - for all the stocks that are
+    reaching all time highs? call it ATH. Once some of them are going below
+    their ATH or 52 Week Highs.."*
+
+    Built like 🔑 Key Levels: the closed-bar half (the all-time / 52-week high,
+    the 50-day, the turnover) is memoised per session in `chart_maps.ath_tab`;
+    this ranks it against ONE universe `bulk_snapshot` and hands that map and
+    the clock to `board()` through `ctx`. `sort` picks the served group: the
+    tab-scoped `slipping` key = ↘️ Slipping, anything else = 🏔️ At ATH. The
+    group's own order rides on `_score`; neither key is an explicit `_finish`
+    sort.
+
+    UNMEASURED and display only — a distance and a date, not a signal.
+    """
+    from chart_maps import ath_tab as ATH
+    from supply_demand import key_levels as KL
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    group = ATH.GROUP_SLIP if sort == ATH.SORT_SLIPPING else ATH.GROUP_AT
+    session = ATH.session_for(now_et)
+    got = ATH.cached_or_warm(universe, now=now_et)
+    if got["state"] == "warming":
+        return {"tiles": [], "warming": True, "note": ATH.WARMING_NOTE,
+                "ath_board": ATH.warming_block(now=now_et, group=group)}
+    entry = got["entry"]
+    raw = _bulk_snaps_fanout(entry["syms"])           # the ONE universe snapshot, chunks side by side
+    if ctx is not None:
+        ctx.update(snaps=raw, now=now_et)
+    ph = KL.phase(now_et, session)
+    rows, counts = ATH.rank(entry, raw, now=now_et, group=group)
+    try:
+        from sepa import scanner
+        latest = scanner.load_latest() or {}
+        scan_by_sym = {r.get("symbol"): r for r in (latest.get("all_results") or [])
+                       if isinstance(r, dict) and r.get("symbol")}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("ath_tiles: scan rows unavailable: %s", exc)
+        scan_by_sym = {}
+    tiles = []
+    for i, r in enumerate(rows):
+        sym = r["symbol"]
+        m = tile_metrics(scan_by_sym.get(sym) or {})
+        if m.get("avg_turnover") is None:
+            # No scan row: the closed frame's 50-bar close x volume — the same
+            # formula (the 🔑 Key Levels pattern).
+            m["avg_turnover"] = r.get("adv50")
+        tiles.append({"symbol": sym, "theme": _theme(sym), "href": _href(sym),
+                      "last_close": r.get("ref_close"),
+                      "bands": [], "markers": [],
+                      "lines": ATH.tile_lines(r), "stats": ATH.tile_stats(r),
+                      "badges": [ATH.tile_badge(r)], "why": ATH.why_text(r),
+                      "ath": dict(r["ath"]),
+                      **published_metrics(m), "_m": dict(m),
+                      "_score": float(len(rows) - i)})
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    no_turnover = (sum(1 for t in tiles if t["_m"].get("avg_turnover") is None)
+                   if floor_on else 0)
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier=min_tier, snaps=raw)
+    for t in out:
+        t["name"] = _name_for(t["symbol"])
+    counts = {**counts, "no_turnover": no_turnover,
+              "dropped_thin": meta["dropped_thin"] - no_turnover, "shown": len(out)}
+    history = {**(entry.get("history") or {}), "filling": ATH.filling()}
+    empty_note = ATH.EMPTY_NOTE_SLIP if group == ATH.GROUP_SLIP else ATH.EMPTY_NOTE_AT
+    return {"tiles": out, "sort_unavailable": meta.get("sort_unavailable"),
+            "matched": len(rows) - meta["dropped_thin"],
+            "note": empty_note if not out else ATH.NOTE,
+            "ath_board": ATH.ready_block(counts, now=now_et, session=session, ph=ph,
+                                         group=group, built_at=entry.get("built_at"),
+                                         history=history)}
+
+
 def _usd_short(v) -> str:
     """$1.5B / $281M. Whole units — a dollar-volume figure carrying cents is
     false precision on a number that moves by millions between prints."""
@@ -6483,9 +6596,13 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # 📍 `nearest_demand` is a TAB-SCOPED key (🏎️ Dual Momentum, 2026-09-29):
     # offered and honoured there only; on every other tab it is an unknown
     # sort and falls back like any stale bookmark.
+    # ↘️ `slipping` is the 🏔️ ATH tab's tab-scoped key (2026-09-29), the same
+    # precedent: honoured there only, an unknown sort everywhere else.
     from chart_maps import dual_momentum_tab as _DMT
-    srt = sort if (sort in SORTS or (t == "dual_momentum"
-                                     and sort == _DMT.SORT_NEAREST_DEMAND)) else DEFAULT_SORT
+    from chart_maps import ath_tab as _ATH
+    srt = sort if (sort in SORTS
+                   or (t == "dual_momentum" and sort == _DMT.SORT_NEAREST_DEMAND)
+                   or (t == "ath" and sort == _ATH.SORT_SLIPPING)) else DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
     # Out-of-band slot for a builder that already fetched the raw live rows for
@@ -6501,6 +6618,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = key_level_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
     elif t == "dual_momentum":
         out = dual_momentum_tiles(limit, days, themes_first, srt, tier, ctx=_ctx)
+    elif t == "ath":
+        out = ath_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -6608,6 +6727,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
             else:
                 _dm_sorts.append(s)
         out["sorts"] = _dm_sorts
+    if t == "ath":
+        # The 🏔️ / ↘️ toggle is exactly these two served keys: no metric sort
+        # is offered, so none can silently flip ↘️ Slipping back to 🏔️ At ATH.
+        out["sorts"] = [{"key": DEFAULT_SORT, "label": _ATH.AT_ATH_LABEL},
+                        {"key": _ATH.SORT_SLIPPING, "label": _ATH.SLIPPING_LABEL}]
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier
