@@ -52,3 +52,45 @@ describe('useStickyTop', () => {
     vi.unstubAllGlobals();
   });
 });
+
+/* 2026-09-28 — the pinned Chart Maps tab strip publishes its own height as
+ * --cm-tabs-h on the page root through the same hook. */
+function Custom({ h = 38 }: { h?: number }) {
+  const host = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useStickyTop(ref, true, { varName: '--cm-tabs-h', host });
+  return <div ref={host} data-testid="host"><div ref={ref} data-h={h}>bar</div></div>;
+}
+
+describe('useStickyTop — custom variable on a custom host', () => {
+  afterEach(() => { vi.restoreAllMocks(); setStickyTop(null); });
+  const mockH = () => vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    return { height: Number(this.dataset.h ?? 0) } as DOMRect;
+  });
+
+  it('the custom variable lands on the host element', () => {
+    mockH();
+    const { getByTestId } = render(<Custom h={38.2} />);
+    expect(getByTestId('host').style.getPropertyValue('--cm-tabs-h')).toBe('38px');
+  });
+
+  it('NEGATIVE: the <html> --sticky-top is untouched by a custom-var call', () => {
+    mockH();
+    setStickyTop(52);
+    render(<Custom />);
+    expect(varOf()).toBe('52px');
+    expect(document.documentElement.style.getPropertyValue('--cm-tabs-h')).toBe('');
+  });
+
+  it('unmount removes only the custom variable', () => {
+    mockH();
+    setStickyTop(52);
+    const { getByTestId, unmount } = render(<Custom />);
+    const host = getByTestId('host');
+    host.style.setProperty('--other', '1px');
+    unmount();
+    expect(host.style.getPropertyValue('--cm-tabs-h')).toBe('');
+    expect(host.style.getPropertyValue('--other')).toBe('1px');
+    expect(varOf()).toBe('52px');
+  });
+});

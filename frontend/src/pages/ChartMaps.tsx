@@ -17,8 +17,14 @@
  * patterns — their stop brackets differ ~2x, which is the exact comparison the
  * 2026-07-10 pattern audit found broken.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useStickyTop } from '../hooks/useStickyTop';
+import {
+  CM_TABS_H_VAR, CM_TABS_SB_VAR, CM_RESTORE_DEADLINE_MS, boardTopScrollY, clearHideRec, leaveAction,
+  readStripBox, restoreCmScroll, revealActiveTab, saveCmScroll, snapshotCmScroll, stripEdges, stripOf,
+  stripScrollbarPx, takeCmScroll, type CmScrollRec,
+} from '../lib/cmPinnedTab';
 import { API } from '../lib/apiBase';
 import { PatternChart } from '../components/PatternChart';
 import { PatternsBoard } from './PatternsPage';
@@ -178,6 +184,83 @@ export function ChartMaps() {
   const tabs = canCatalysts ? CM_TABS : CM_TABS.filter((t) => t !== 'catalysts');
   const rawTab = parseTab(params.get('tab'));
   const tab = rawTab === 'catalysts' && !canCatalysts ? parseTab(null) : rawTab;
+  /* 📌 Pinned tab strip + "lands where he was" (Ajay 2026-09-28: "Pin the tab
+   * I am in, as I navigate back and fort lost where I am"). lib/cmPinnedTab.ts
+   * owns the rules; docs/chart_maps/pinned_tab_strip_2026_09_28.md. */
+  const pageRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const tabRef = useRef(tab); tabRef.current = tab;
+  const pending = useRef<CmScrollRec | null>(null);
+  const mountedAt = useRef(0);
+  const prevTab = useRef(tab);
+  // The bar's height, for boards under it that stick below it (styles.css).
+  useStickyTop(barRef, true, { varName: CM_TABS_H_VAR, host: pageRef });
+  const [edges, setEdges] = useState({ l: false, r: false });
+  const syncStrip = useCallback((reveal: boolean) => {
+    const bar = barRef.current, strip = stripOf(bar); if (!bar || !strip) return;
+    if (reveal) revealActiveTab(strip);
+    const e = stripEdges(readStripBox(strip));
+    setEdges((p) => (p.l === e.l && p.r === e.r ? p : e));
+    const sb = `${stripScrollbarPx(strip)}px`;
+    if (bar.style.getPropertyValue(CM_TABS_SB_VAR) !== sb) bar.style.setProperty(CM_TABS_SB_VAR, sb);
+  }, []);
+  // Mount (incl. coming BACK) and every tab change, before paint: the active
+  // tab is scrolled into view inside the strip — the strip only, never the page.
+  useLayoutEffect(() => { syncStrip(true); }, [tab, tabs.length, syncStrip]);
+  useEffect(() => {
+    const strip = stripOf(barRef.current); if (!strip) return;
+    let raf = 0;
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; syncStrip(false); }); };
+    strip.addEventListener('scroll', onScroll, { passive: true });
+    const RO = typeof ResizeObserver === 'undefined' ? null : ResizeObserver;
+    const ro = RO ? new RO(() => syncStrip(false)) : null;   // fades + scrollbar only; a resize NEVER re-reveals
+    ro?.observe(strip);
+    return () => { strip.removeEventListener('scroll', onScroll); if (raf) cancelAnimationFrame(raf); ro?.disconnect(); };
+  }, [syncStrip]);
+  /* Take on mount, save on leave — ONE layout effect so StrictMode's dev
+   * double mount writes an untaken restore back instead of losing it. The
+   * cleanup runs while the old DOM is attached, and `window.location.pathname`
+   * is already the destination (pushState runs before the re-render): a
+   * ticker page arms the record, the menu or any other page drops it. */
+  useLayoutEffect(() => {
+    const page = pageRef.current, bar = barRef.current;
+    pending.current = takeCmScroll(tabRef.current);
+    mountedAt.current = Date.now();
+    const cancel = () => { pending.current = null; off(); };
+    const evs = ['wheel', 'touchstart', 'keydown', 'mousedown'] as const;
+    const off = () => evs.forEach((n) => window.removeEventListener(n, cancel, true));
+    if (pending.current) evs.forEach((n) => window.addEventListener(n, cancel, { capture: true, passive: true }));
+    // A pending restore written on hide is re-stamped src:'hide', so becoming
+    // visible again removes it (clearHideRec) like any other hide record.
+    const hide = () => saveCmScroll(pending.current ? { ...pending.current, src: 'hide' }
+      : snapshotCmScroll(page, bar, tabRef.current, 'hide'));
+    const leave = () => {
+      const act = leaveAction(window.location.pathname, !!pending.current);
+      saveCmScroll(act === 'keep' ? pending.current
+        : act === 'snapshot' ? snapshotCmScroll(page, bar, tabRef.current, 'leave') : null);
+    };
+    const onVis = () => (document.visibilityState === 'hidden' ? hide() : clearHideRec());
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted) clearHideRec(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', hide);
+    window.addEventListener('pageshow', onShow);
+    return () => {
+      off(); document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', hide); window.removeEventListener('pageshow', onShow);
+      leave();
+    };
+  }, []);
+  // A tab switch from deep in a board opens the new tab at its top, right
+  // under the pinned strip. Nothing moves when he is above the strip.
+  useEffect(() => {
+    if (prevTab.current === tab) return;
+    prevTab.current = tab;
+    const s = sentinelRef.current, bar = barRef.current; if (!s || !bar) return;
+    const navTop = parseFloat(getComputedStyle(bar).top) || 0;
+    const y = boardTopScrollY(s.getBoundingClientRect().top, window.scrollY, navTop);
+    if (y != null) window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+  }, [tab]);
   // Count every tab open (landing or click) — Ajay 2026-09-06: "Move most
   // used tabs to the beginning of the list"; nothing had recorded which tab
   // was open, so the strip's order is re-cut from these counts (Mongo
@@ -664,6 +747,27 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
    * On the FIRST load there is nothing to dim — that is the "Loading charts…"
    * note below, unchanged. */
   const stale = loading && tiles.length > 0;
+  /* 📌 Restore where he was — AFTER the board renders, once, same tab only,
+   * within CM_SCROLL_MAX_AGE_MS (takeCmScroll), and never after he has started
+   * reading (wheel/touch/key/mouse cancel it) or past the deadline. */
+  useEffect(() => {
+    const rec = pending.current; if (!rec) return;
+    if (rec.tab !== tab) { pending.current = null; return; }
+    if (isBoardTab(tab) && (loading || !tiles.length)) return;   // restore AFTER the board renders
+    let done = false;
+    const finish = () => { done = true; pending.current = null; ro?.disconnect(); };
+    const attempt = () => {
+      if (done || pending.current !== rec) return;
+      if (Date.now() - mountedAt.current > CM_RESTORE_DEADLINE_MS) return finish();
+      if (restoreCmScroll(pageRef.current, rec)) finish();
+    };
+    const raf = requestAnimationFrame(attempt);
+    const RO = typeof ResizeObserver === 'undefined' ? null : ResizeObserver;
+    const ro = RO && pageRef.current ? new RO(() => attempt()) : null;
+    if (ro && pageRef.current) ro.observe(pageRef.current);
+    const t = window.setTimeout(attempt, Math.max(0, CM_RESTORE_DEADLINE_MS - (Date.now() - mountedAt.current)) + 1);
+    return () => { cancelAnimationFrame(raf); ro?.disconnect(); window.clearTimeout(t); };
+  }, [tab, loading, tiles.length]);
   /* The control row's own gate, lifted to a const so the "Fetching …" line can
    * render inside that row when it exists and in the note slot when it does
    * not — exactly one of the two, never both. */
@@ -721,7 +825,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const ictSrc = useMemo(() => ictSource(data?.source), [data?.source]);
 
   return (
-    <div className="cm-page">
+    <div className="cm-page" ref={pageRef}>
       <div className="cm-head">
         <h1 className="cm-title">
           🗺️ Chart Maps
@@ -742,20 +846,28 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * right-click → "Open in new tab" are left to the BROWSER, which opens
         * the `href`: this section, with this page's universe/window/symbol.
         * The href is relative (`?tab=…`) on purpose — it resolves against the
-        * page it is on, so no router basename can make it point elsewhere. */}
-      <div className="cm-tabs" role="tablist">
-        {tabs.map((t) => (
-          <a key={t} role="tab" aria-selected={tab === t}
-             href={`?${tabSearch(params, t)}`}
-             className={`cm-tab${tab === t ? ' cm-tab-on' : ''}`}
-             onClick={(e) => {
-               if (!isPlainLeftClick(e)) return;   // the browser's click
-               e.preventDefault();
-               setTab(t);
-             }}>
-            {TAB_META[t].label}
-          </a>
-        ))}
+        * page it is on, so no router basename can make it point elsewhere.
+        * 📌 Pinned (Ajay 2026-09-28: 'Pin the tab I am in…'): the WRAPPER
+        * sticks under the nav; the strip inside stays the sideways scroller. */}
+      <div className="cm-tabs-sentinel" ref={sentinelRef} aria-hidden="true" />
+      <div ref={barRef} data-testid="cm-tabs-bar"
+           className={`cm-tabs-bar${edges.l ? ' cm-tabs-more-l' : ''}${edges.r ? ' cm-tabs-more-r' : ''}`}>
+        <div className="cm-tabs" role="tablist">
+          {tabs.map((t) => (
+            <a key={t} role="tab" aria-selected={tab === t}
+               href={`?${tabSearch(params, t)}`}
+               className={`cm-tab${tab === t ? ' cm-tab-on' : ''}`}
+               onClick={(e) => {
+                 if (!isPlainLeftClick(e)) return;   // the browser's click
+                 e.preventDefault();
+                 setTab(t);
+               }}>
+              {TAB_META[t].label}
+            </a>
+          ))}
+        </div>
+        <span className="cm-tabs-fade cm-tabs-fade-l" aria-hidden="true">‹</span>
+        <span className="cm-tabs-fade cm-tabs-fade-r" aria-hidden="true">›</span>
       </div>
 
       {/* The blurb FOLDS to its first sentence (Ajay 2026-09-20, on the Bonde
