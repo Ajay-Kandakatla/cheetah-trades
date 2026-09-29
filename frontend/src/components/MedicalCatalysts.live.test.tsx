@@ -1,5 +1,5 @@
 /* 🧬 The REAL captured payload (lib/__fixtures__/medicalCatalysts.live — branch API on a scratch
- * DB after one pass over real sources, 2026-09-29) through the real 🧬 board and the real ticker
+ * DB after one pass over real sources with the REAL classifier, 2026-09-29 03:47 ET) through the real 🧬 board and the real ticker
  * Catalyst-tab timeline. Catches backend↔frontend shape drift the hand-written fixture cannot:
  * served labels, the roll-up, UNMEASURED / "Setup: pending study", and no NaN / undefined /
  * bounce / Stop / Target / Entry anywhere. */
@@ -47,7 +47,7 @@ describe('🧬 board on the REAL payload', () => {
     expect(kod.textContent).toContain('close +178.0%');
     expect(kod.textContent).toContain('RVOL 57.1×');
     expect(kod.textContent).toContain('$22.7M');
-    expect(w.getByText('sources (7)')).toBeInTheDocument();
+    expect(w.getByText('sources (8)')).toBeInTheDocument();
     expect(w.getByRole('link', { name: '🧬 timeline' }).getAttribute('href')).toBe('/sepa/KOD?tab=catalyst');
   });
 
@@ -67,8 +67,18 @@ describe('🧬 board on the REAL payload', () => {
     const served = LIVE_BOARD.rollup.by_area.find((r) => r.key === 'ophthalmology')!;
     const cells = [...eye.querySelectorAll('td')].map((td) => td.textContent);
     expect(cells[1]).toBe(String(served.n_events));
-    expect(eye).toHaveClass('mc-roll__row--small');       // served small_n: true
+    expect(served.small_n).toBe(false);                    // 5 unique tickers in the served window
+    expect(eye).not.toHaveClass('mc-roll__row--small');
     clean(eye.textContent ?? '');
+  });
+
+  it('roll-up by area: a served small_n row (infectious_disease, 2 tickers) is greyed', async () => {
+    draw();
+    await screen.findByTestId('mc-roll');
+    fireEvent.click(screen.getByRole('button', { name: 'By area' }));
+    const served = LIVE_BOARD.rollup.by_area.find((r) => r.key === 'infectious_disease')!;
+    expect(served.small_n).toBe(true);
+    expect(screen.getByTestId('mc-roll-infectious_disease')).toHaveClass('mc-roll__row--small');
   });
 
   it('NEGATIVE: the unresolved FDA-RSS approval has no ticker link', async () => {

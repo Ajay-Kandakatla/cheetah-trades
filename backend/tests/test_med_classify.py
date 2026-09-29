@@ -516,3 +516,180 @@ def test_no_entry_stop_or_target_and_no_bounce_in_the_taxonomy_text():
     import re
     blob = " ".join([T.UNMEASURED_NOTE, T.HIGH_IMPACT_TEXT] + [v["label"] for v in T.EVENT_TYPES.values()])
     assert not re.search(r"bounce|\b(?:entry|stop|target)\b", blob, re.I)
+
+
+# ---------------------------------------------------------------------------
+# fix round 2 (2026-09-29) — critic probe (63 headlines, push precision 0.44)
+# and the live dry run (5 of 16 would-push events wrong). Every failing
+# headline is a fixture row f01-f60; these pin the push set and the mechanisms.
+# ---------------------------------------------------------------------------
+F_ROWS = [r for r in ROWS if r["id"].startswith("f")]
+F_PUSH = {"f23", "f32", "f39", "f49", "f55", "f56", "f57", "f58", "f59"}
+
+
+def _would_push(row: dict) -> bool:
+    r = run(row)
+    return (any(T.is_high_impact(e) for e in r["events"]) and r["attributed"] is not False
+            and not r["merge_only"])
+
+
+def test_fix_round_2_push_set_is_exactly_the_true_high_impact_rows():
+    assert len(F_ROWS) == 60
+    got = {r["id"] for r in F_ROWS if _would_push(r)}
+    assert got == F_PUSH, (sorted(got - F_PUSH), sorted(F_PUSH - got))
+
+
+@pytest.mark.parametrize("title", [
+    "FDA Delays Approval of Novavax COVID-19 Vaccine Pending Postmarketing Commitment",
+    "FDA Approval of Novavax Vaccine Delayed to 2027",
+    "Novavax Still Lacks FDA Approval for Its Updated Vaccine",
+    "Merck Acquires Rights to FDA-Approved Cough Drug From Bellus for $2 Billion",
+    "FDA Approves Amgen's Thousand Oaks Manufacturing Facility for Biosimilar Production",
+    "AIM ImmunoTech Highlights Ampligen's Role Following FDA Approval of Revolution Medicines' Daraxonrasib",
+    "FDA Approves Label Update for Leqembi Adding MRI Monitoring to Boxed Warning",
+])
+def test_NEGATIVE_approval_words_that_are_not_an_approval(title):
+    assert "fda_approval" not in types(cls(title, "NVAX", "Novavax, Inc."))
+
+
+def test_approval_controls_still_fire():
+    e = one(cls("XYZ Therapeutics Receives FDA Approval for Drugzumab With Boxed Warning", "XYZ"), "fda_approval")
+    assert e["subtype"] == "novel" and T.is_high_impact(e)
+    e = one(cls("Sarepta Announces FDA Approval of Elevidys for Non-Ambulatory Patients", "SRPT",
+                "Sarepta Therapeutics, Inc."), "fda_approval")
+    assert T.is_high_impact(e)
+
+
+@pytest.mark.parametrize("clause,sub", [
+    ("Receives Final FDA Approval Of Its Abbreviated New Drug Application For Everolimus", "generic"),
+    ("the Only Radiopharmaceutical FDA has Determined to be Bioequivalent", "generic"),
+    ("FDA Approves Update To US Product Label For WINREVAIR", "label_expansion"),
+    ("Receives FDA Approval For Olumiant In Pediatric Patients Aged 12", "label_expansion"),
+    ("Receives FDA Approval for Juvmo in Parkinson's Disease", "novel"),
+])
+def test_approval_subtypes(clause, sub):
+    assert C._approval_subtype(clause) == sub
+
+
+def test_generic_approval_is_never_high_impact():
+    e = one(cls("ANI Pharmaceuticals Receives Final FDA Approval Of Its Abbreviated New Drug Application",
+                "ANIP", "ANI Pharmaceuticals, Inc."), "fda_approval")
+    assert e["subtype"] == "generic" and T.is_high_impact(e) is False
+
+
+@pytest.mark.parametrize("title", [
+    "Replimune Resubmits BLA for RP1 Following CRL",
+    "Replimune Completes Type A Meeting With FDA Regarding Complete Response Letter",
+    "Charles River Laboratories $CRL Raises 2026 Revenue Guidance on Biotech Demand",
+    "CRL: Charles River Beats Q3 Estimates as Drug Developers Return",
+])
+def test_NEGATIVE_background_or_ticker_crl_is_not_a_crl(title):
+    assert "fda_crl" not in types(cls(title))
+
+
+def test_crl_with_a_later_resubmission_plan_still_fires():
+    e = one(cls("Outlook Therapeutics Receives Complete Response Letter From FDA; Company Plans to Resubmit",
+                "OTLK", "Outlook Therapeutics, Inc."), "fda_crl")
+    assert T.is_high_impact(e)
+
+
+@pytest.mark.parametrize("title,sub", [
+    ("Novavax Announces Removal of Clinical Hold on Combination Trial", "lifted"),
+    ("Clinical Hold on Novavax Phase 1 Trial Resolved", "lifted"),
+    ("FDA Lifts Hold on Novavax Combination Vaccine Trial", "lifted"),
+    ("Beam Submits Complete Response to FDA Clinical Hold Letter for BEAM-302", "response"),
+    ("FDA Places Partial Clinical Hold on Iovance's Registrational Trial", "placed"),
+])
+def test_clinical_hold_subtypes(title, sub):
+    r = cls(title)
+    e = one(r, "clinical_hold")
+    assert e["subtype"] == sub
+    assert T.is_high_impact(e) is (sub == "placed")
+    assert "fda_crl" not in types(r)
+
+
+def test_response_to_hold_has_its_own_label():
+    assert T.event_label({"event_type": "clinical_hold", "subtype": "response"}) == \
+        "Response to clinical hold submitted"
+
+
+def test_NEGATIVE_not_a_readout_positive():
+    assert types(cls("Viking Receives Positive Phase 3 Design Feedback From FDA at End-of-Phase 2 Meeting")) == []
+    for t in ("Alnylam Presents Post-Hoc Analysis of Phase 3 HELIOS-B Showing Statistically Significant Benefit",
+              "Vistagen Announces Positive Data from Open-Label Extension Portion of PALISADE-4 Phase 3 Study",
+              "Anavex Phase 3 Trial Passes Prespecified Interim Futility Analysis, Will Continue to Completion"):
+        e = one(cls(t), "topline")
+        assert e["direction"] == "unknown" and not T.is_high_impact(e), t
+
+
+def test_a_subgroup_win_does_not_rescue_a_primary_miss():
+    e = one(cls("Sage Phase 3 Trial Misses Primary Goal but Shows Statistically Significant Benefit in Subgroup"),
+            "topline")
+    assert e["direction"] == "negative" and e["phase"] == "3"
+    # …but a SECONDARY endpoint win still makes it mixed (unchanged)
+    assert one(cls("QRS Did Not Meet Primary Endpoint but Showed Statistically Significant Improvement in Key "
+                   "Secondary Endpoint"), "topline")["direction"] == "mixed"
+
+
+def test_efficacy_stop_is_a_positive_readout_not_a_discontinuation():
+    r = cls("Novo Nordisk Halts Phase 3 FLOW Kidney Trial Early for Efficacy")
+    assert types(r) == ["topline"] and r["events"][0]["direction"] == "positive"
+    assert one(cls("HIJ Discontinues Phase 3 Program After Futility Analysis"), "topline")["direction"] == "negative"
+
+
+@pytest.mark.parametrize("title", [
+    "Jefferies Upgrades Viking Therapeutics After VK2735 Phase 3 Trial Met Primary Endpoint",
+    "Viking Therapeutics: Buy The Dip After Positive Phase 3 Obesity Data (Rating Upgrade)",
+    "Analyst Reiterates Buy Rating on Viking After Phase 3 Data",
+])
+def test_NEGATIVE_analyst_rating_pieces_are_commentary(title):
+    r = cls(title, "VKTX", "Viking Therapeutics, Inc.")
+    assert r["commentary"] is True and r["events"] == []
+
+
+def test_NEGATIVE_a_rivals_possessive_before_the_cue_unattributes():
+    lly = C.name_forms("LLY", "Eli Lilly and Company")
+    t = "Amgen's MariTide Met Primary Endpoint in Phase 3 Trial, Outperforming Lilly's Zepbound"
+    assert C.attribute(t, ticker="LLY", forms=lly, cue_span=(15, 36)) is False
+    beam = C.name_forms("BEAM", "Beam Therapeutics Inc.")
+    t = "Intellia's Clinical Hold Weighs on Gene-Editing Peers CRISPR, Beam"
+    assert C.attribute(t, ticker="BEAM", forms=beam, cue_span=(11, 24)) is False
+
+
+def test_issuer_named_first_or_regulator_possessive_keeps_attribution():
+    lly = C.name_forms("LLY", "Eli Lilly and Company")
+    assert cls("Lilly's Orforglipron Met Primary Endpoint in Phase 3, Beating Novo's Semaglutide",
+               "LLY", "Eli Lilly and Company")["attributed"] is True
+    t = "FDA's Approval Comes for Lilly's Kisunla in Early Alzheimer's"
+    assert C.attribute(t, ticker="LLY", forms=lly, cue_span=(0, 14)) is True
+
+
+def test_NEGATIVE_non_medical_partnerships_and_talk_are_not_deals():
+    for t in ("Merck Canada Partners with the Montreal Museum of Fine Arts to Present a Premiere",
+              "Veeva Expands Amgen Partnership With Global Vault CRM Rollout Plan",
+              "VKTX Stock Eyes Blockbuster Week — Retail Traders See A Stronger Hand In Buyout Talks"):
+        r = cls(t, "MRK", "Merck & Co., Inc.")
+        assert "deal" not in types(r), t
+    r = cls("Rhythm Receives Health Canada Approval Of IMCIVREE In Patients With Acquired Hypothalamic Obesity",
+            "RYTM", "Rhythm Pharmaceuticals, Inc.")
+    assert types(r) == ["exus_approval"]
+    # M&A of a medical issuer stays, medical word or not
+    assert types(cls("Bio-Techne (TECH) Shareholders Approve the Merck KGaA Takeover", "TECH",
+                     "Bio-Techne Corporation")) == ["deal"]
+    assert types(cls("AbbVie Just Became a Partner Before Its IPO", "ABBV", "AbbVie Inc.")) == []
+
+
+def test_slump_next_to_stock_is_a_price_story():
+    r = cls("CLDX Stock Slumps 11% – This Analyst Sees Upside, Calls Phase 3 Trial Safety Concerns 'Misplaced'",
+            "CLDX", "Celldex Therapeutics, Inc.")
+    assert r["merge_only"] is True
+    assert cls("Pfizer Drops Phase 3 Program in Obesity", "PFE", "Pfizer Inc.")["merge_only"] is False
+
+
+def test_diabetic_eye_disease_is_not_cardio_metabolic():
+    assert cls("Positive Data in Diabetic Retinopathy")["areas"] == ["ophthalmology"]
+    assert "cardio_metabolic" in cls("Phase 3 in Type 2 Diabetes Met Primary Endpoint")["areas"]
+
+
+def test_rules_version_bumped_for_fix_round_2():
+    assert T.RULES_VERSION == "med-rules-v3" and DATA["rules_version"] == T.RULES_VERSION

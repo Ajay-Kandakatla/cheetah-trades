@@ -1,6 +1,6 @@
 {
- "rules_version": "med-rules-v2",
- "note": "Labelled headlines for catalysts.medical.classify (spec §3.4.5). `expected.events` is the EXACT multiset of event types; per-event keys present are asserted. synthetic=true rows are invented.",
+ "rules_version": "med-rules-v3",
+ "note": "Labelled headlines for catalysts.medical.classify (spec §3.4.5). `expected.events` is the EXACT multiset of event types; per-event keys present are asserted. synthetic=true rows are invented. Rows f01-f60 (fix round 2, 2026-09-29; source C = critic probe, L = live dry run): every headline judged wrong, plus positive controls (f55-f60) that must still push.",
  "rows": [
   {
    "id": "s01",
@@ -2230,11 +2230,11 @@
      }
     ],
     "areas": [
-     "ophthalmology",
-     "cardio_metabolic"
+     "ophthalmology"
     ],
     "attributed": true
-   }
+   },
+   "note": "fix round 2 (2026-09-29): Diabetic Macular Edema is an eye disease — cardio_metabolic dropped (live run flagged the extra area)"
   },
   {
    "id": "g11",
@@ -2487,6 +2487,1079 @@
     ]
    },
    "note": "'Toward Phase 3' is a future phase: no Phase 3 push for a Phase 2 miss"
+  },
+  {
+   "id": "f01",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Delays Approval of Novavax COVID-19 Vaccine Pending Postmarketing Commitment",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): delay is not an approval"
+  },
+  {
+   "id": "f02",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Declines Approval of Novavax Updated COVID-19 Vaccine",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): decline is not an approval"
+  },
+  {
+   "id": "f03",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Blocks Approval of Novavax Shot Over Trial Demands",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): block is not an approval"
+  },
+  {
+   "id": "f04",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Withholds Approval of Novavax Vaccine",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): withhold is not an approval"
+  },
+  {
+   "id": "f05",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Approval of Novavax Vaccine Delayed to 2027",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): delayed after the word"
+  },
+  {
+   "id": "f06",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "Novavax Still Lacks FDA Approval for Its Updated Vaccine",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): lacks"
+  },
+  {
+   "id": "f07",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "Novavax Loses FDA Approval Race as Rivals Ship Updated Shots",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): loses"
+  },
+  {
+   "id": "f08",
+   "source": "C",
+   "ticker": "CYTK",
+   "company": "Cytokinetics, Incorporated",
+   "title": "FDA Panel Recommends Approval of Cytokinetics' Aficamten",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "adcom",
+      "subtype": "meeting",
+      "direction": "positive",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): panel = adcom"
+  },
+  {
+   "id": "f09",
+   "source": "C",
+   "ticker": "CYTK",
+   "company": "Cytokinetics, Incorporated",
+   "title": "FDA Advisers Back Approval of Cytokinetics' Aficamten in Obstructive HCM",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "adcom",
+      "subtype": "meeting",
+      "direction": "positive",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): advisers = adcom"
+  },
+  {
+   "id": "f10",
+   "source": "C",
+   "ticker": "ACHV",
+   "company": "Achieve Life Sciences, Inc.",
+   "title": "Achieve Receives FDA Approval to Proceed with Phase 3 ORCA-4 Trial of Cytisinicline",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "ind_cleared",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): trial go-ahead"
+  },
+  {
+   "id": "f11",
+   "source": "C",
+   "ticker": "AGEN",
+   "company": "Agenus Inc.",
+   "title": "FDA Grants Approval for Agenus to Begin Phase 3 BATTMAN Trial of Bot/Bal",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "trial_milestone",
+      "subtype": "initiated",
+      "phase": "3",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): trial go-ahead"
+  },
+  {
+   "id": "f12",
+   "source": "C",
+   "ticker": "NVCR",
+   "company": "NovoCure Limited",
+   "title": "NovoCure Receives FDA IDE Approval to Begin Pivotal Study of Tumor Treating Fields in Pancreatic Cancer",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "ind_cleared",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): IDE go-ahead"
+  },
+  {
+   "id": "f13",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Approves Expanded Access Program for Novavax Vaccine",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): expanded access"
+  },
+  {
+   "id": "f14",
+   "source": "C",
+   "ticker": "AMGN",
+   "company": "Amgen Inc.",
+   "title": "FDA Approves Amgen's Thousand Oaks Manufacturing Facility for Biosimilar Production",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): manufacturing"
+  },
+  {
+   "id": "f15",
+   "source": "C",
+   "ticker": "MRK",
+   "company": "Merck & Co., Inc.",
+   "title": "Merck Acquires Rights to FDA-Approved Cough Drug From Bellus for $2 Billion",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "deal",
+      "subtype": "mna",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): FDA-Approved adjective"
+  },
+  {
+   "id": "f16",
+   "source": "C",
+   "ticker": "MASI",
+   "company": "Masimo Corporation",
+   "title": "Masimo Launches FDA-Cleared W1 Medical Watch in Europe",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): FDA-Cleared adjective"
+  },
+  {
+   "id": "f17",
+   "source": "C",
+   "ticker": "PFE",
+   "company": "Pfizer Inc.",
+   "title": "Pfizer's FDA-Approved RSV Vaccine Abrysvo Wins European Commission Approval for Adults 18-59",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): adjective; EC approval not pushed"
+  },
+  {
+   "id": "f18",
+   "source": "C",
+   "ticker": "REPL",
+   "company": "Replimune Group, Inc.",
+   "title": "Replimune Resubmits BLA for RP1 Following CRL",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "regulatory_filing",
+      "subtype": "submitted",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): background CRL"
+  },
+  {
+   "id": "f19",
+   "source": "C",
+   "ticker": "REPL",
+   "company": "Replimune Group, Inc.",
+   "title": "Replimune Completes Type A Meeting With FDA Regarding CRL for RP1",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): background CRL"
+  },
+  {
+   "id": "f20",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "Novavax Addresses CRL Issues in New Filing",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): background CRL"
+  },
+  {
+   "id": "f21",
+   "source": "C",
+   "ticker": "CRL",
+   "company": "Charles River Laboratories International, Inc.",
+   "title": "Charles River Laboratories $CRL Raises 2026 Revenue Guidance on Biotech Demand",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): $ticker"
+  },
+  {
+   "id": "f22",
+   "source": "C",
+   "ticker": "CRL",
+   "company": "Charles River Laboratories International, Inc.",
+   "title": "CRL: Charles River Beats Q3 Estimates as Drug Developers Return",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): ticker: prefix"
+  },
+  {
+   "id": "f23",
+   "source": "C",
+   "ticker": "OTLK",
+   "company": "Outlook Therapeutics, Inc.",
+   "title": "Despite Positive Phase 3 Data, FDA Issues CRL to Outlook Therapeutics",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_crl",
+      "subtype": "crl",
+      "high": true
+     }
+    ],
+    "attributed": true
+   },
+   "note": "fix round 2 (2026-09-29): CRL only, no topline"
+  },
+  {
+   "id": "f24",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "Novavax Announces Removal of Clinical Hold on COVID-Influenza Combination Trial",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "lifted",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): removal = lifted"
+  },
+  {
+   "id": "f25",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "Clinical Hold on Novavax Phase 1 Trial Resolved",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "lifted",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): resolved = lifted"
+  },
+  {
+   "id": "f26",
+   "source": "C",
+   "ticker": "BEAM",
+   "company": "Beam Therapeutics Inc.",
+   "title": "Beam Therapeutics Submits Complete Response to FDA Clinical Hold Letter for BEAM-302",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "response",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): a reply, not a hold, not a CRL"
+  },
+  {
+   "id": "f27",
+   "source": "C",
+   "ticker": "ANVS",
+   "company": "Anavex Life Sciences Corp.",
+   "title": "Anavex Phase 3 Trial Passes Prespecified Interim Futility Analysis, Will Continue to Completion",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "unknown",
+      "phase": "3",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): passed futility"
+  },
+  {
+   "id": "f28",
+   "source": "C",
+   "ticker": "VKTX",
+   "company": "Viking Therapeutics, Inc.",
+   "title": "Viking Receives Positive Phase 3 Design Feedback From FDA at End-of-Phase 2 Meeting",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): regulatory feedback"
+  },
+  {
+   "id": "f29",
+   "source": "C",
+   "ticker": "VKTX",
+   "company": "Viking Therapeutics, Inc.",
+   "title": "Jefferies Upgrades Viking Therapeutics After VK2735 Phase 3 Trial Met Primary Endpoint",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): analyst upgrade"
+  },
+  {
+   "id": "f30",
+   "source": "C",
+   "ticker": "VKTX",
+   "company": "Viking Therapeutics, Inc.",
+   "title": "Viking Therapeutics: Buy The Dip After Positive Phase 3 Obesity Data (Rating Upgrade)",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): buy the dip"
+  },
+  {
+   "id": "f31",
+   "source": "C",
+   "ticker": "ALNY",
+   "company": "Alnylam Pharmaceuticals, Inc.",
+   "title": "Alnylam Presents Post-Hoc Analysis of Phase 3 HELIOS-B Showing Statistically Significant Reduction in Hospitalizations",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "unknown",
+      "phase": "3",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): post-hoc"
+  },
+  {
+   "id": "f32",
+   "source": "C",
+   "ticker": "SAGE",
+   "company": "Sage Therapeutics, Inc.",
+   "title": "Sage Phase 3 Trial Misses Primary Goal but Shows Statistically Significant Benefit in Subgroup",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3",
+      "high": true
+     }
+    ],
+    "attributed": true
+   },
+   "note": "fix round 2 (2026-09-29): miss = negative"
+  },
+  {
+   "id": "f33",
+   "source": "C",
+   "ticker": "LLY",
+   "company": "Eli Lilly and Company",
+   "title": "Amgen's MariTide Met Primary Endpoint in Phase 3 Trial, Outperforming Lilly's Zepbound",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "high": true
+     }
+    ],
+    "attributed": false
+   },
+   "note": "fix round 2 (2026-09-29): rival's readout"
+  },
+  {
+   "id": "f34",
+   "source": "C",
+   "ticker": "BEAM",
+   "company": "Beam Therapeutics Inc.",
+   "title": "Intellia's Clinical Hold Weighs on Gene-Editing Peers CRISPR, Beam",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "placed",
+      "high": true
+     }
+    ],
+    "attributed": false
+   },
+   "note": "fix round 2 (2026-09-29): rival's hold"
+  },
+  {
+   "id": "f35",
+   "source": "L",
+   "ticker": "RVMD",
+   "company": "Revolution Medicines, Inc.",
+   "title": "AIM ImmunoTech Highlights Ampligen’s Potential Role in the Evolving Pancreatic Cancer Treatment Landscape Following FDA Approval of Revolution Medicines’ Daraxonrasib",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [],
+    "attributed": true
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: background approval"
+  },
+  {
+   "id": "f36",
+   "source": "L",
+   "ticker": "ANIP",
+   "company": "ANI Pharmaceuticals, Inc.",
+   "title": "ANI Pharmaceuticals Receives Final FDA Approval Of Its Abbreviated New Drug Application For Everolimus Tablets For Oral Suspension",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "generic",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: ANDA = generic"
+  },
+  {
+   "id": "f37",
+   "source": "L",
+   "ticker": "LNTH",
+   "company": "Lantheus Holdings, Inc.",
+   "title": "Lantheus Receives Final FDA Approval for BRAVNETSA™ (Lutetium Lu 177 Dotatate), the Only Radiopharmaceutical FDA has Determined to be Bioequivalent and Therapeutically Equivalent",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "generic",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: bioequivalent = generic"
+  },
+  {
+   "id": "f38",
+   "source": "L",
+   "ticker": "VTGN",
+   "company": "Vistagen Therapeutics, Inc.",
+   "title": "Vistagen Announces Preliminary Positive Data from Open-Label Extension Portion of PALISADE-4 Phase 3 Study of Fasedienol for the Acute Treatment of Social Anxiety Disorder",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "unknown",
+      "phase": "3",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: OLE is not a topline"
+  },
+  {
+   "id": "f39",
+   "source": "L",
+   "ticker": "MRK",
+   "company": "Merck & Co., Inc.",
+   "title": "Merck Says FDA Approves Update To US Product Label For WINREVAIR For Injection, 45mg, 60mg, Based On The Phase 3 HYPERION Trial",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "label_expansion",
+      "high": true
+     }
+    ],
+    "attributed": true
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: label update subtype"
+  },
+  {
+   "id": "f40",
+   "source": "L",
+   "ticker": "RYTM",
+   "company": "Rhythm Pharmaceuticals, Inc.",
+   "title": "Rhythm Pharmaceuticals Receives Health Canada Approval Of IMCIVREE For Additional Indication Of Weight Management In Adult And Pediatric Patients 4 Years And Older With Acquired Hypothalamic Obesity",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "exus_approval",
+      "subtype": "approval",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: acquired = adjective"
+  },
+  {
+   "id": "f41",
+   "source": "L",
+   "ticker": "MRK",
+   "company": "Merck & Co., Inc.",
+   "title": "Merck Canada Partners with the Montreal Museum of Fine Arts to Present the North American Premiere of Chiharu Shiota: The Soul Trembles",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: non-medical partnership"
+  },
+  {
+   "id": "f42",
+   "source": "L",
+   "ticker": "GKOS",
+   "company": "Glaukos Corporation",
+   "title": "Glaukos Partners with NBA Champion Stephen Curry to Launch \"Could it be KC?\" Campaign to Raise Awareness of Keratoconus",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: non-medical partnership"
+  },
+  {
+   "id": "f43",
+   "source": "L",
+   "ticker": "VEEV",
+   "company": "Veeva Systems Inc.",
+   "title": "Veeva Expands Amgen Partnership With Global Vault CRM Rollout Plan",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: non-medical partnership"
+  },
+  {
+   "id": "f44",
+   "source": "L",
+   "ticker": "VKTX",
+   "company": "Viking Therapeutics, Inc.",
+   "title": "VKTX Stock Eyes Blockbuster Week Despite Share Offering — Retail Traders See A Stronger Hand In Buyout Talks",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: buyout talk"
+  },
+  {
+   "id": "f45",
+   "source": "L",
+   "ticker": "ABBV",
+   "company": "AbbVie Inc.",
+   "title": "Nvidia Backed This AI Drug Startup. AbbVie Just Became a Partner Before Its IPO",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: someone else's IPO"
+  },
+  {
+   "id": "f46",
+   "source": "L",
+   "ticker": "CLDX",
+   "company": "Celldex Therapeutics, Inc.",
+   "title": "CLDX Stock Slumps 11% – This Analyst Sees Nearly 90% Upside, Calls Phase 3 Trial Safety Concerns ‘Misplaced’",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "safety",
+      "subtype": "safety",
+      "high": false
+     }
+    ],
+    "merge_only": true
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: price story"
+  },
+  {
+   "id": "f47",
+   "source": "L",
+   "ticker": "CMPX",
+   "company": "Compass Therapeutics, Inc.",
+   "title": "Compass Therapeutics’ FDA Setback Raises Concerns On Wall Street — H.C. Wainwright Calls Tovecimig Filing Strategy ‘Risky’",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: FDA setback is not a readout"
+  },
+  {
+   "id": "f48",
+   "source": "L",
+   "ticker": "RGNX",
+   "company": "REGENXBIO Inc.",
+   "title": "REGENXBIO Presents Positive Three-Year Durability Data for Surabgene Lomparvovec in Diabetic Retinopathy at Retina Society Annual Scientific Meeting",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "high": false
+     }
+    ],
+    "areas": [
+     "ophthalmology"
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): LIVE: diabetic retinopathy is eye, not metabolic"
+  },
+  {
+   "id": "f49",
+   "source": "C",
+   "ticker": "NVO",
+   "company": "Novo Nordisk A/S",
+   "title": "Novo Nordisk Halts Phase 3 FLOW Kidney Trial Early for Efficacy",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "high": true
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): recall: efficacy stop"
+  },
+  {
+   "id": "f50",
+   "source": "C",
+   "ticker": "BIIB",
+   "company": "Biogen Inc.",
+   "title": "FDA Approves Label Update for Leqembi Adding MRI Monitoring to Boxed Warning",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": []
+   },
+   "note": "fix round 2 (2026-09-29): safety label change is not an approval"
+  },
+  {
+   "id": "f51",
+   "source": "C",
+   "ticker": "NVAX",
+   "company": "Novavax, Inc.",
+   "title": "FDA Lifts Hold on Novavax Combination Vaccine Trial",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "lifted",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): recall: lifted without 'clinical'"
+  },
+  {
+   "id": "f52",
+   "source": "C",
+   "ticker": "MNMD",
+   "company": "Mind Medicine (MindMed) Inc.",
+   "title": "MindMed Doses First Patient in Phase 3 Emerge Study of MM120",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "trial_milestone",
+      "subtype": "first_patient",
+      "phase": "3",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): recall: doses first patient"
+  },
+  {
+   "id": "f53",
+   "source": "C",
+   "ticker": "ZYME",
+   "company": "Zymeworks Inc.",
+   "title": "Zymeworks Completes Acquisition of Theravance Biopharma",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "deal",
+      "subtype": "mna",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): M&A kept: Biopharma is a medical word"
+  },
+  {
+   "id": "f54",
+   "source": "C",
+   "ticker": "TECH",
+   "company": "Bio-Techne Corporation",
+   "title": "Bio-Techne (TECH) Shareholders Approve the Merck KGaA Takeover and Reject the Pay Package",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "deal",
+      "subtype": "mna",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): M&A of the issuer kept without a medical word"
+  },
+  {
+   "id": "f55",
+   "source": "C",
+   "ticker": "OTLK",
+   "company": "Outlook Therapeutics, Inc.",
+   "title": "Outlook Therapeutics Receives Complete Response Letter From FDA for ONS-5010; Company Plans to Resubmit",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_crl",
+      "subtype": "crl",
+      "high": true
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): CRL with a LATER resubmission plan still pushes"
+  },
+  {
+   "id": "f56",
+   "source": "C",
+   "ticker": "XYZ",
+   "company": "XYZ Therapeutics",
+   "title": "XYZ Therapeutics Receives FDA Approval for Drugzumab With Boxed Warning",
+   "context": "",
+   "synthetic": true,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "fda_approval",
+      "subtype": "novel",
+      "high": true
+     },
+     {
+      "event_type": "safety",
+      "subtype": "safety",
+      "high": false
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): a novel approval with a boxed warning still pushes"
+  },
+  {
+   "id": "f57",
+   "source": "C",
+   "ticker": "NTLA",
+   "company": "Intellia Therapeutics, Inc.",
+   "title": "FDA Places Clinical Hold on Intellia's Phase 3 MAGNITUDE-2 Trial After Liver Toxicity Case",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "clinical_hold",
+      "subtype": "placed",
+      "high": true
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): hold placed still pushes"
+  },
+  {
+   "id": "f58",
+   "source": "C",
+   "ticker": "LLY",
+   "company": "Eli Lilly and Company",
+   "title": "Lilly's Orforglipron Met Primary Endpoint in Phase 3 ATTAIN-2, Beating Novo's Semaglutide",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "positive",
+      "phase": "3",
+      "high": true
+     }
+    ],
+    "attributed": true
+   },
+   "note": "fix round 2 (2026-09-29): issuer named first: rival possessive after cue is fine"
+  },
+  {
+   "id": "f59",
+   "source": "C",
+   "ticker": "AXSM",
+   "company": "Axsome Therapeutics, Inc.",
+   "title": "Axsome's Phase 3 ACCORD-2 Trial Misses Primary Endpoint in Alzheimer's Agitation",
+   "context": "",
+   "synthetic": false,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3",
+      "high": true
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): negative Phase 3 still pushes"
+  },
+  {
+   "id": "f60",
+   "source": "C",
+   "ticker": "HIJ",
+   "company": "HIJ Bio",
+   "title": "HIJ Discontinues Phase 3 Program After Futility Analysis",
+   "context": "",
+   "synthetic": true,
+   "issuer_medical": true,
+   "expected": {
+    "events": [
+     {
+      "event_type": "topline",
+      "direction": "negative",
+      "phase": "3",
+      "high": true
+     }
+    ]
+   },
+   "note": "fix round 2 (2026-09-29): a failed futility look stays negative"
   }
  ],
  "attribution": [

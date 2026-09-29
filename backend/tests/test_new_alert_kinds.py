@@ -61,7 +61,9 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert", "key_level_alert"})
+        "board_arrival", "price_alert", "key_level_alert",
+        # WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
+        "med_catalyst"})
 
 
 def test_the_killed_kinds_are_really_gone_from_the_keep_set():

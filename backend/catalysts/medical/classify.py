@@ -75,15 +75,24 @@ COMMENT = re.compile(
     r"|^a look at |\?\s*$|\b(?:transcript|slideshow)\s*$"
     r"|\b(?:comments? on|statement on|reacts? to|responds? to)\b"
     r"|\b(?:valuation|options flow|price target|initiates coverage|stock forecast|anniversary"
-    r"|under-?valued|over-?valued|fully valued|fair value|bull case|bear case)\b", I)
+    r"|under-?valued|over-?valued|fully valued|fair value|bull case|bear case"
+    # fix round 2 (critic probe 2026-09-29): "Jefferies Upgrades Viking … Phase 3
+    # Trial Met Primary Endpoint", "Buy The Dip After Positive Phase 3 … (Rating
+    # Upgrade)" pushed as Phase 3 toplines -> analyst-rating words are commentary.
+    r"|upgrades?|upgraded|downgrades?|downgraded|reiterates?|buy the dip|analyst rating|rating (?:upgrade|downgrade|change)"
+    r"|(?:buy|sell|hold|outperform|underperform|overweight|underweight|neutral|market perform|sector perform) rating)\b", I)
 PV = (r"pops?|popping|soar(?:s|ed|ing)?|jump(?:s|ed|ing)?|surg(?:es|ed|ing)|sinks?|sank|falls?|falling|fell"
       r"|slid(?:es|ing)?|slides?|plung(?:es|ed|ing)|rocket(?:s|ed|ing)?|skyrocket(?:s|ed|ing)?|climb(?:s|ed|ing)?"
       r"|rall(?:y|ies|ied|ying)|tumbl(?:es|ed|ing)|slip(?:s|ped|ping)?|spik(?:es|ed|ing)|crater(?:s|ed|ing)?"
       r"|plummet(?:s|ed|ing)?|tank(?:s|ed|ing)?|catapult(?:s|ed|ing)?|edg(?:es|ed) (?:higher|lower|up|down)"
       r"|trad(?:es|ing) (?:higher|lower)|rises?|rising|rose|dives?|dived|leaps?|leapt|zooms?|explodes?"
       r"|ripping|rips")
-M1 = re.compile(r"\b(?:stock|shares?)\b" + GAP + r"{0,15}\b(?:" + PV + r")\b", I)
-M3 = re.compile(r"\b(?:" + PV + r")\b\s+(?:by\s+|nearly\s+|more than\s+|over\s+)?[+-]?\d+(?:\.\d+)?\s?(?:%|x\b)"
+# fix round 2 (live run: "CLDX Stock Slumps 11% – … Calls Phase 3 Trial Safety
+# Concerns 'Misplaced'" CREATED a safety event): slump / drop are price verbs
+# next to stock/shares or a % move only — "Pfizer Drops Program" stays news.
+PV_PRICE = PV + r"|slump(?:s|ed|ing)?|drops?|dropped|dropping"
+M1 = re.compile(r"\b(?:stock|shares?)\b" + GAP + r"{0,15}\b(?:" + PV_PRICE + r")\b", I)
+M3 = re.compile(r"\b(?:" + PV_PRICE + r")\b\s+(?:by\s+|nearly\s+|more than\s+|over\s+)?[+-]?\d+(?:\.\d+)?\s?(?:%|x\b)"
                 r"|\b(?:up|down)\s+(?:nearly\s+|more than\s+)?\d+(?:\.\d+)?\s?%|\bjust (?:got|won|received|hit)\b", I)
 UNREL = re.compile(r"\b(?:shareholders?|stockholders?|board|nasdaq|nyse|court|hsr|antitrust|listing|merger)\b"
                    + GAP + r"{0,25}\bapprov\w*", I)
@@ -98,7 +107,13 @@ INTENT_A = re.compile(r"^" + GAP + r"{0,15}\b(?:planned|expected|anticipated|tar
 REG = r"\b(?:NDA|BLA|sNDA|sBLA|MAA)\b"
 # fix round: "Charles River Laboratories (CRL) Stock …" — the CS CRL cue never
 # fires on a parenthesised ticker / exchange notation.
-_CRL_TICKER = re.compile(r"\(\s*(?:(?:NYSE|NASDAQ|Nasdaq|NYSE American|OTC)\s*:\s*)?$|\b(?:NYSE|NASDAQ|Nasdaq)\s*:\s*$")
+_CRL_TICKER = re.compile(r"\$\s*$|\(\s*(?:(?:NYSE|NASDAQ|Nasdaq|NYSE American|OTC)\s*:\s*)?$|\b(?:NYSE|NASDAQ|Nasdaq)\s*:\s*$")
+# fix round 2 (critic probe): a CRL named as BACKGROUND is not a new CRL —
+# "Resubmits BLA … Following CRL", "Type A Meeting With FDA Regarding CRL",
+# "Addresses CRL Issues". Applies to both "CRL" and "complete response letter".
+_CRL_BACKREF = re.compile(r"\b(?:regarding|following|after|address\w*|respon\w* to|resolv\w*|over|about|post)\b"
+                          + GAP + r"{0,15}$", I)
+_RESUBMIT = re.compile(r"\bresubmi\w*", I)
 _IND = _cs(r"\bIND\b") + r"|investigational new drug"
 _IND_POLICY = r"\b(?:pilot|guidance|policy|framework)\b"
 LADDER = [
@@ -112,8 +127,15 @@ LADDER = [
         (r"\b(?:pulls?|pulled|revok\w+|rescind\w*|suspend\w*)\s+(?:\w+\s+){0,2}?(?:approval|clearance"
          r"|authori[sz]ation|" + _cs(r"EUA") + r")", "revoked")]),
     ("clinical_hold", True, [
-        (r"(?:lift(?:s|ed)?|remov(?:es|ed)|release[sd]?|resolv(?:es|ed))\b" + GAP + r"{0,30}(?:partial\s+)?"
-         r"clinical hold|clinical hold" + GAP + r"{0,20}\b(?:lifted|removed|released)", "lifted"),
+        # fix round 2 (critic probe): "Removal of Clinical Hold", "Clinical Hold
+        # on Novavax Phase 1 Trial Resolved", "FDA Lifts Hold" pushed as PLACED.
+        (r"(?:lift(?:s|ed|ing)?|remov(?:es|ed|al|ing)|release[sd]?|resol(?:ves?|ved|ution|ving)|clear(?:s|ed))\b"
+         + GAP + r"{0,30}(?:partial\s+)?clinical hold|clinical hold" + GAP
+         + r"{0,40}\b(?:lifted|removed|released|resolved|cleared)"
+         r"|\b(?:lift(?:s|ed|ing)?|remov(?:es|ed|al))\s+(?:the\s+)?(?:partial\s+)?hold\b"
+         r"|\bhold\s+(?:is\s+|was\s+|has been\s+)?lifted\b", "lifted"),
+        # "Submits Complete Response to FDA Clinical Hold Letter": a reply, not a new hold
+        (r"\b(?:submi\w*|respon\w*|repl(?:y|ies|ied))\b" + GAP + r"{0,40}(?:partial\s+)?clinical hold", "response"),
         (r"(?:partial\s+)?clinical hold", "placed")]),
     ("regulatory_filing", True, [
         (r"(?:submi(?:ssion|ts?|tted)|files?|filed|filing)\b" + GAP + r"{0,40}(?:" + _cs(REG)
@@ -130,11 +152,20 @@ LADDER = [
         # Editing Study" was an approval): a go-ahead FOR A STUDY is a trial
         # clearance, not a marketing approval.
         (r"\b(?:green light|go-ahead|nod|clear(?:s|ed|ance)?|allow\w*)\b" + GAP + r"{0,12}\b(?:for|to)\b" + GAP
-         + r"{0,30}\b(?:stud(?:y|ies)|trials?|clinical testing)\b", "ind_cleared")]),
+         + r"{0,30}\b(?:stud(?:y|ies)|trials?|clinical testing)\b", "ind_cleared"),
+        # fix round 2 (critic probe): "Receives FDA Approval to Proceed With Phase 3
+        # Trial", "IDE Approval to Begin Pivotal Study" are trial go-aheads.
+        (r"\bapprov\w*\s+to\s+(?:proceed|begin|start|initiate|commence|resume)\b" + GAP
+         + r"{0,40}\b(?:stud(?:y|ies)|trials?|phase|clinical testing)\b", "ind_cleared")]),
     ("pdufa", True, [
-        (_cs(r"\bPDUFA\b") + r"|target action date|goal date|approval decision (?:expected|anticipated|date)",
+        (_cs(r"\bPDUFA\b") + r"|target action date|goal date|approval decision (?:expected|anticipated|date)"
+         r"|\bFDA (?:action|decision) (?:date|on)\b",
          "date")]),
-    ("adcom", True, [(r"advisory committee|" + _cs(r"\b(?:AdCom|ODAC|VRBPAC)\b"), "meeting")]),
+    # fix round 2 (critic probe): "FDA Panel Recommends Approval", "FDA Advisers
+    # Back Approval of …" pushed as FDA approvals -> they are the committee.
+    ("adcom", True, [(r"advisory committee|" + _cs(r"\b(?:AdCom|ODAC|VRBPAC)\b")
+                      + r"|\bFDA(?:['\u2019]s)?\s+(?:expert\s+|outside\s+)?(?:panel|advis[eo]rs|advisory panel)\b",
+                      "meeting")]),
     ("designation", False, [
         (r"breakthrough therapy", "breakthrough_therapy"), (r"breakthrough device", "breakthrough_device"),
         (r"fast[- ]track", "fast_track"), (r"orphan (?:drug )?(?:designation|status)", "orphan"),
@@ -152,7 +183,8 @@ LADDER = [
         (r"\b(?:expects?|anticipates?|guides? to|on track to (?:report|announce))\b" + GAP + r"{0,40}\b(?:top[- ]?"
          r"line|results|data|readout)", "scheduled")]),
     ("trial_milestone", True, [
-        (r"first (?:patient|participant|subject)s? (?:dosed|enrolled|randomi[sz]ed|treated)", "first_patient"),
+        (r"first (?:patient|participant|subject)s? (?:dosed|enrolled|randomi[sz]ed|treated)"
+         r"|\bdos(?:es|ed) (?:the )?first (?:patient|participant|subject)s?\b", "first_patient"),
         (r"(?:completes?|completed|completion of) (?:patient )?(?:enrollment|enrolment|dosing|recruitment)",
          "enrollment_complete"),
         (r"\b(?:initiat(?:es|ed|ion|ing)|start(?:s|ed|ing)?|launch(?:es|ed|ing)?|begins?|began|commenc\w+)\b"
@@ -171,6 +203,27 @@ LADDER = [
          + _cs(r"(?:510\(k\)|\bDe Novo\b)") + r"|" + _cs(r"(?:510\(k\)|\bDe Novo\b)") + GAP
          + r"{0,20}\b(?:clearance|cleared|authori[sz]ation|granted)\b|" + _cs(r"\bPMA\b") + r"\s+approval", "DEV")]),
 ]
+# fix round 2 (critic probe 2026-09-29, fda_approval precision 0.31): an
+# approval WORD is not an approval. Before it: a negative / pending-review verb
+# ("FDA Delays / Declines / Withholds Approval", "Lacks", "Loses", "Panel
+# Recommends", "Advisers Back"); after it: "… Delayed / Pushed Back"; in its
+# clause: a non-marketing object ("Approval to Proceed With Phase 3", "IDE
+# Approval to Begin", "Expanded Access", "Manufacturing Facility"); the
+# adjective "FDA-Approved" / "FDA-Cleared"; a background preposition right
+# before the cue ("… Following FDA Approval of Revolution Medicines' …").
+_APPR_NEG_B = re.compile(r"\b(?:declin\w*|delay\w*|block\w*|withh[oe]ld\w*|lacks?|lacking|los(?:es|t|ing)|question\w*"
+                         r"|doubts?|narrow\w*|recommend\w*|backs?|backing|without|no|not|panel|advis[eo]rs?|staff"
+                         r"|reviewers?)\b" + GAP + r"{0,25}$", I)
+_APPR_NEG_A = re.compile(r"^" + GAP + r"{0,30}\b(?:delayed|postponed|pushed back|put on hold|in doubt)\b", I)
+_APPR_NOT_MARKETING = re.compile(r"\bto (?:proceed|begin|start|initiate|commence)\b|expanded access|study plan"
+                                 r"|\bprotocol\b|" + _cs(r"\bIDE\b") + r"|investigational device exemption"
+                                 r"|manufactur\w*|\bfacility\b"
+                                 # a SAFETY label change is not an approval ("Approves Label Update … Boxed Warning")
+                                 r"|(?:label(?:ing)? (?:update|change)|update to (?:the )?(?:product )?label)" + GAP
+                                 + r"{0,60}\b(?:boxed warning|warnings?|monitoring|REMS|safety)\b", I)
+_APPR_ADJ = re.compile(r"FDA\s*-\s*(?:approved|cleared|authori[sz]ed)", I)
+_APPR_BACKREF = re.compile(r"\b(?:after|following|post|since|despite|amid|in the wake of|on the back of)\W+"
+                           r"(?:(?:the|its|an?|U\.?S\.?)\s+)?$", I)
 _APPROVAL_WORD = re.compile(r"approv\w*|clear\w*|authori\w*|nod|green light|go-ahead|510\(k\)|De Novo", I)
 
 CONGRESS_NAMED = (r"\b(?:UEG Week|DDW|WCLC|ERS|ATS|ASGCT|ESGCT|CROI|ISTH|EAN|ECTRIMS|AES|ESMO|ASCO|AACR|SABCS|SITC|AAN"
@@ -191,7 +244,7 @@ PENDING_B = re.compile(r"\b(?:path|road|journey|race|push|bid|quest|hopes?|chanc
                        r"|anticipated|could|may|if)\b" + GAP + r"{0,20}$|\bto\s+(?:U\.?S\.?\s+)?(?:FDA\s+)?$", I)
 PENDING_A = re.compile(r"^\W*(?:\w+\W+){0,1}?(?:decision|date|expected|anticipated|pathway|path|process"
                        r"|application|submission|filing|request|timeline|package)\b", I)
-BACKGROUND = re.compile(r"\b(?:after|following|based on|on the back of|supported by|building on|backed by"
+BACKGROUND = re.compile(r"\b(?:despite|after|following|based on|on the back of|supported by|building on|backed by"
                         r"|on the strength of)\b", I)
 HEAD = [r"\bFDA\b" + GAP + r"{0,40}\b(?:approv(?:es|ed|al)|grants?|clear(?:s|ed|ance)|nod)",
         r"(?:receives?|wins?|won|gets?|got|snags?|lands?|secures?)\b" + GAP + r"{0,30}FDA",
@@ -206,11 +259,11 @@ SECMISS = [re.compile(r"\b(?:key |important |main )?secondary (?:efficacy )?endp
                       r"|not (?:meet|hit|achieve))\b" + GAP + r"{0,30}\bsecondary\b" + GAP + r"{0,20}endpoints?", I)]
 NEG = [r"\b(?:did not|didn['’]t|does not|doesn['’]t|failed to|fails to|fail to|failing to|not|unable to)\s+"
        r"(?:meet|achieve|reach|show|demonstrate|hit)\b",
-       r"\bmiss(?:es|ed)?\b" + GAP + r"{0,20}\bprimary\b" + GAP + r"{0,20}endpoints?",
+       r"\bmiss(?:es|ed)?\b" + GAP + r"{0,20}\bprimary\b" + GAP + r"{0,20}(?:endpoints?|goal|target)",
        r"\bprimary (?:efficacy )?endpoints?\s+(?:was |were )?not\s+(?:met|achieved|reached)",
        r"\b(?:not|no|lack of|without)\s+(?:a\s+)?statistically significant", r"\bfutility\b",
        r"\b(?:trial|study)\s+(?:fail(?:s|ed)?|failure)\b", r"\bfail(?:s|ed)?\b" + GAP + r"{0,20}\b(?:trial|study)\b",
-       r"\bsetback\b", r"\bthrew in the towel\b", r"\bnegative (?:top[- ]?line|results|data|outcome)\b",
+       r"(?<!FDA )(?<!regulatory )(?<!Regulatory )\bsetback\b", r"\bthrew in the towel\b", r"\bnegative (?:top[- ]?line|results|data|outcome)\b",
        r"\bfell short of\b" + GAP + r"{0,20}\b(?:primary|endpoint)"]
 # fix round (critic grading: KYTX "Reports Positive One-Year Data Demonstrating
 # Durable Clinical Responses" came out undirected): up to two words may sit
@@ -228,10 +281,24 @@ POS = [r"\bmet (?:its |the |both |all |key )?" + _PH_OPT + r"(?:co-)?primary(?: 
        r"\bpositive (?:[\w-]+ ){0,2}?(?:top[- ]?line|phase|pivotal|results|data|outcome|readout|study)",
        r"\bnon-?inferior(?:ity)?", r"\bsuperior(?:ity)? (?:to|over|vs)",
        r"\bpass(?:es|ed)? (?:a |the )?(?:key |pivotal )?(?:trial|study)",
-       r"\btrial win\b|\bwins?\b" + GAP + r"{0,20}\btrial\b"]
+       r"\btrial win\b|\bwins?\b" + GAP + r"{0,20}\btrial\b",
+       # fix round 2 (critic probe, recall): "Halts Phase 3 … Trial Early for Efficacy"
+       r"\bearly (?:for|due to|on|after) (?:overwhelming |positive |strong |clear )?efficacy\b"]
+_EFFICACY_STOP = re.compile(POS[-1], I)
 STOP = [r"\bdiscontinu\w*\b" + GAP + r"{0,30}\b(?:trial|study|program|development)\b",
         r"\bterminat\w*\b" + GAP + r"{0,20}\b(?:trial|study|program)\b",
         r"\bhalt(?:s|ed)?\b" + GAP + r"{0,30}\b(?:trial|study|program)\b"]
+# fix round 2 (critic probe): "Phase 3 Trial Passes Prespecified Interim
+# Futility Analysis" read NEGATIVE — a passed / survived futility look is masked.
+_PASSED_FUTILITY = re.compile(
+    r"\b(?:pass(?:es|ed|ing)?|clear(?:s|ed)?|surviv\w+|continu\w*|proceed\w*)\b" + GAP + r"{0,35}\bfutility\b"
+    r"(?:\s+(?:analysis|review|look|concerns?|boundary))?|\b(?:no|without)\s+(?:a\s+)?futility\b"
+    r"|\bfutility\b" + GAP + r"{0,40}\b(?:will continue|to continue|continu(?:es|ed|ation)|proceed\w*)\b", I)
+# A POSITIVE "topline" that is not a new controlled readout: a regulatory
+# interaction (dropped) or secondary / uncontrolled data (direction unknown).
+_NOT_READOUT_REG = re.compile(r"\b(?:end[- ]of[- ]phase|type [abc] meeting|feedback|alignment|design)\b", I)
+_NOT_READOUT_DATA = re.compile(r"\b(?:post[- ]hoc|subgroups?|sub-?analys[ie]s|exploratory|open[- ]label extension"
+                               r"|long[- ]term extension|extension (?:portion|study|period|phase)|published in)\b", I)
 PH = r"phase\s*(?:\d|i{1,3}|iv)\w*(?:/\d\w*)?"
 TOPCUE = [r"top[- ]?line", r"primary (?:efficacy )?endpoints?",
           r"\b" + PH + r"\b" + GAP + r"{0,60}\b(?:results?|data|readout)\b",
@@ -255,10 +322,18 @@ EXUS_REGULATORS = (("EMA", r"\bEMA\b"), ("European Commission", r"European Commi
 EXUS_CUE = r"\bapprov(?:al|es|ed)\b|positive opinion|marketing authori[sz]ation"
 SAFETY = r"(?:patient|participant) deaths?|boxed warning|safety (?:signal|concern|event|issue)s?" \
          r"|paus(?:es|ed) (?:dosing|enrollment|the (?:trial|study))|(?:voluntary )?recall|serious adverse"
-DEAL = (("mna", r"\bacquire[sd]?\b|acquisition of|to acquire|buyout|\bmerger\b|merge with|tender offer|takeover"),
+# fix round 2 (live run: RYTM "…Weight Management In … Acquired Hypothalamic
+# Obesity" became M&A): "acquired" before a condition is an adjective.
+_ACQ_ADJ = (r"(?!(?:\s+[\w-]+){0,2}\s+(?:obesity|deficien\w*|hemophilia|diseases?|disorders?|syndromes?|resistan\w*"
+            r"|infections?|pneumonia|an(?:a)?emia|thrombo\w*|immunodeficiency|TTP)\b)")
+DEAL = (("mna", r"\bacquires?\b|\bacquired\b" + _ACQ_ADJ + r"|acquisition of|to acquire|buyout|\bmerger\b|merge with|tender offer|takeover"),
         ("licensing", r"licens(?:e|ing) (?:agreement|deal)|in-licens\w*|exclusive license"),
         ("partnership", r"collaboration(?! revenue)|partnership|partners with|strategic alliance"),
         ("milestone", r"milestone payment|\bupfront\b"))
+# a deal cue followed by talk / rumour is chatter, not a deal (VKTX "Buyout Talks")
+_DEAL_TALK = re.compile(r"^\W*(?:talks?|rumou?rs?|speculation|chatter|interest|hopes?|bets?)\b", I)
+# "…Became a Partner Before Its IPO": the IPO is someone else's
+_IPO_OTHER = re.compile(r"\b(?:before|ahead of|pre)\W+(?:(?:its|their|an?|the)\s+)?$", I)
 FINANCING = (("secondary_holders", r"secondary offering\b.{0,60}selling (?:stock|share)holders"),
              ("ipo", r"initial public offering|" + _cs(r"\bIPO\b")),
              ("registered_direct", r"registered direct"),
@@ -272,7 +347,8 @@ FINANCING = (("secondary_holders", r"secondary offering\b.{0,60}selling (?:stock
 # 3.4.6 medical gate
 # ---------------------------------------------------------------------------
 MEDICAL_WORDS = re.compile(
-    r"\b(?:FDA|EMA|CHMP|clinical|trials?|phase\s*\d|patients?|therap\w+|drugs?|vaccines?|biotech\w*|pharma\w*"
+    r"\b(?:FDA|EMA|CHMP|clinical|trials?|phase\s*\d|patients?|(?:bio)?therap\w+|drugs?|vaccines?|biotech\w*"
+    r"|(?:bio)?pharma\w*"
     r"|medic\w+|disease|oncolog\w*|cancer|tumou?r|antibod\w+|genes?|diagnos\w+|surgical|biolog\w+|molecule"
     r"|pipeline|orphan|(?-i:IND|NDA|BLA))\b", I)
 GATED_TYPES = frozenset({"deal", "financing", "safety", "trial_milestone"})
@@ -326,7 +402,7 @@ AREA_RX = {
                   r"|alopecia areata|myasthenia gravis|Sj[oö]gren(?:\W?s)?\b|autoimmun\w+|immunolog\w+|hidradenitis"
                   r"|vitiligo|asthma|eosinophilic|nephrotic syndrome|IgA nephropathy|transplant\w*|urticaria|"
                   + _cs(r"\b(?:SLE|IBD|COPD)\b"),
-    "cardio_metabolic": r"obesity|overweight|diabet\w+|insulin|heart failure|hypertension|cholesterol|Lp\(a\)"
+    "cardio_metabolic": r"obesity|overweight|\bdiabet(?!ic\s+(?:macular|retinopathy|retinal|eye))\w+|insulin|heart failure|hypertension|cholesterol|Lp\(a\)"
                         r"|lipoprotein|cardiomyopathy|atrial fibrillation|cardiovascular|coronary"
                         r"|chronic kidney disease|hypertriglyceridemia|thrombo\w+|\bstroke\b|"
                         + _cs(r"\b(?:LDL|MASH|NASH|CKD)\b"),
@@ -405,6 +481,27 @@ def _mentions(title: str, forms) -> list:
     return sorted(hits)
 
 
+_POSSESSIVE = re.compile(r"(?-i:\b([A-Z][\w&.-]*))['\u2019]s\b")
+_POSSESSIVE_NOT_RIVAL = frozenset({"FDA", "EMA", "CHMP", "MHRA", "NICE", "PMDA", "NMPA", "U.S", "US", "America",
+                                   "Europe", "EU", "Japan", "China", "World", "Today", "Week", "Year", "Trump",
+                                   "Street", "Wall", "Investor", "Investors", "Company", "Patients"})
+
+
+def _rival_possessive(head: str, forms) -> bool:
+    fr = []
+    for f in forms or ():
+        try:
+            fr.append(re.compile(r"(?<![\w$])(?:" + str(f) + r")", I))
+        except re.error:
+            continue
+    for pm in _POSSESSIVE.finditer(head or ""):
+        if pm.group(1) in _POSSESSIVE_NOT_RIVAL:
+            continue
+        if not any(r.match(head, pm.start()) for r in fr):
+            return True
+    return False
+
+
 def attribute(title: str, *, ticker: str, forms: tuple, cue_span: Optional[tuple] = None) -> bool:
     """§3.4.3 rule 3 — is `ticker` the SUBJECT of this title?"""
     title = title or ""
@@ -413,6 +510,13 @@ def attribute(title: str, *, ticker: str, forms: tuple, cue_span: Optional[tuple
         return False
     first = hits[0]
     if THIRD_PARTY.search(title[max(0, first - 40):first]):
+        return False
+    # fix round 2 (critic probe): with ticker LLY, "Amgen's MariTide Met Primary
+    # Endpoint in Phase 3 Trial, Outperforming Lilly's Zepbound" pushed a LLY
+    # Phase 3 positive; with BEAM, "Intellia's Clinical Hold Weighs on … Beam".
+    # Another company's possessive BEFORE the cue, the issuer first named AFTER
+    # it -> the issuer is not the subject.
+    if cue_span and first > cue_span[0] and _rival_possessive(title[:cue_span[0]], forms):
         return False
     c0 = cend(title, 0)
     if cue_span:
@@ -477,6 +581,8 @@ def direction(masked: str) -> tuple:
 def _direction(masked: str) -> tuple:
     """(direction, first outcome-cue span, secondary_missed)."""
     m, neg, sec, first = masked, False, False, None
+    for x in list(_PASSED_FUTILITY.finditer(m)):
+        m = mask(m, x.start(), x.end())
     for p in SECMISS:
         for x in list(p.finditer(m)):
             sec = True
@@ -488,10 +594,14 @@ def _direction(masked: str) -> tuple:
             m = mask(m, x.start(), cend(m, x.end()))
     pos = False
     for p in POS:
-        x = re.search(p, m, I)
-        if x:
+        for x in re.finditer(p, m, I):
+            # "Misses Primary Goal but Shows Statistically Significant Benefit
+            # in Subgroup" (Sage, critic probe) is a MISS, not mixed.
+            if _NOT_READOUT_DATA.search(m[cstart(m, x.start()):cend(m, x.end())]):
+                continue
             pos = True
             first = first or (x.start(), x.end())
+            break
     mixed_lit = re.search(r"mixed (?:results|data)", masked, I) or re.search(
         r"\bmet\b" + GAP + r"{0,60}\bbut\b" + GAP + r"{0,40}\b(?:missed|did not|failed)", masked, I)
     if mixed_lit or (pos and (neg or sec)):
@@ -533,7 +643,11 @@ def _regulator_exus(t: str) -> Optional[str]:
 def _approval_subtype(clause: str) -> str:
     if re.search(r"tentative", clause, I):
         return "tentative"
-    if re.search(_cs(r"\bANDA\b") + r"|\bgeneric\b|biosimilar", clause, I):
+    # fix round 2 (live run): ANIP "Final FDA Approval Of Its Abbreviated New
+    # Drug Application" and LNTH "…Determined to be Bioequivalent and
+    # Therapeutically Equivalent" were typed NOVEL (and pushed).
+    if re.search(_cs(r"\bANDA\b") + r"|\bgeneric\b|biosimilar|abbreviated new drug application"
+                 r"|bioequivalen\w*|therapeutic(?:ally)? equivalen\w*", clause, I):
         return "generic"
     if re.search(r"accelerated", clause, I):
         return "accelerated"
@@ -541,8 +655,11 @@ def _approval_subtype(clause: str) -> str:
         return "eua"
     if re.search(r"\bclear(?:s|ed|ance)\b|510\(k\)|\bDe Novo\b|\bPMA\b", clause, I):
         return "device_clearance"
+    # fix round 2 (live run: MRK "FDA Approves Update To US Product Label For
+    # WINREVAIR" typed novel): a label update is a label change.
     if re.search(_cs(r"\bs(?:NDA|BLA)\b") + r"|label expansion|expanded (?:indication|label|approval)"
-                 r"|additional indication|\bfor (?:adolescents|children|pediatric|paediatric|younger patients)\b",
+                 r"|additional indication|\b(?:for|in) (?:adolescents|children|pediatric|paediatric|younger patients)\b"
+                 r"|label update|update to (?:the )?(?:U\.?S\.? )?(?:product )?label|updated (?:product )?label",
                  clause, I):
         return "label_expansion"
     if re.search(r"\bupdated\b.{0,30}vaccines?", clause, I):
@@ -634,7 +751,12 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
                 post = t[x.end():x.end() + 25]
                 intent = bool(INTENT_B.search(pre)) or bool(INTENT_A.search(post))
                 cl = t[cstart(t, x.start()):cend(t, x.end())]
-                if typ == "fda_crl" and sub == "crl" and x.group(0) == "CRL" and _CRL_TICKER.search(t0[:x.start()]):
+                if typ == "fda_crl" and sub == "crl" and x.group(0) == "CRL" and (
+                        _CRL_TICKER.search(t0[:x.start()])
+                        or (not t0[:x.start()].strip() and t0[x.end():].lstrip().startswith(":"))):
+                    continue                                    # "(CRL)", "$CRL", "NYSE: CRL", "CRL: Charles River …"
+                if typ == "fda_crl" and sub == "crl" and (_CRL_BACKREF.search(t0[max(0, x.start() - 40):x.start()])
+                                                         or _RESUBMIT.search(t0[:x.start()])):
                     continue
                 if typ == "readout_scheduled" and re.search(
                         r"financial results|earnings|fiscal|quarter(?:ly)?\s+(?:\d{4}\s+)?(?:financial|results"
@@ -644,10 +766,15 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
                         r"\b(?:pilot|guidance|policy|framework|program)\b", cl, I):
                     continue
                 if typ == "fda_approval":
+                    if (_APPR_ADJ.fullmatch(x.group(0).strip())
+                            or _APPR_NOT_MARKETING.search(t0[cstart(t0, x.start()):cend(t0, x.end())])
+                            or _APPR_BACKREF.search(t0[max(0, x.start() - 30):x.start()])):
+                        intent = True
                     w = _APPROVAL_WORD.search(x.group(0))
                     if w:
                         wa, wb = x.start() + w.start(), x.start() + w.end()
-                        if PENDING_B.search(t[max(0, wa - 20):wa]) or PENDING_A.search(t[wb:wb + 25]):
+                        if (PENDING_B.search(t[max(0, wa - 20):wa]) or PENDING_A.search(t[wb:wb + 25])
+                                or _APPR_NEG_B.search(t[max(0, wa - 30):wa]) or _APPR_NEG_A.search(t[wb:wb + 40])):
                             intent = True
                 if intent:
                     t = mask(t, x.start(), cend(t, x.end()))
@@ -667,7 +794,8 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
                     ev["subtype"] = ("extended" if re.search(r"extend\w*|delay\w*", cl, I) else
                                      "set" if re.search(r"\b(?:set|sets|assigned|assigns)\b", cl, I) else "upcoming")
                 if typ == "adcom":
-                    if re.search(r"vot(?:es|ed)\b" + GAP + r"{0,20}(?:in favor|favorabl|to (?:support|recommend))", t0, I):
+                    if re.search(r"vot(?:es|ed)\b" + GAP + r"{0,20}(?:in favor|favorabl|to (?:support|recommend))"
+                                 r"|\b(?:recommend\w*|backs?|backed|endors\w*|supports?)\s+(?:the\s+)?approval", t0, I):
                         ev["direction"] = "positive"
                     elif re.search(r"vot(?:es|ed)\b" + GAP + r"{0,25}against|negative vote", t0, I):
                         ev["direction"] = "negative"
@@ -706,9 +834,12 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
                 cue = (x.start(), x.end())
         if cue:
             pre = t[max(0, cue[0] - 25):cue[0]]
-            if not INTENT_B.search(pre):
-                d, anchor, sec = _direction(t)
-                sneg = any(re.search(sp, t, I) for sp in STOP)
+            d, anchor, sec = _direction(t)
+            reg_talk = d == "positive" and _NOT_READOUT_REG.search(t0)
+            if d == "positive" and _NOT_READOUT_DATA.search(t0):
+                d = "unknown"                               # OLE / post-hoc / published: no new readout
+            if not INTENT_B.search(pre) and not reg_talk:
+                sneg = any(re.search(sp, t, I) for sp in STOP) and not _EFFICACY_STOP.search(t)
                 if sneg and d == "unknown":
                     d = "negative"
                 elif sneg and d == "positive":
@@ -728,13 +859,15 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
         events.append(_ev("safety", "safety", cue=t0[x.start():x.end()], cue_span=(x.start(), x.end())))
         t = mask(t, x.start(), x.end())
     for sub, rx in DEAL:
-        x = re.search(rx, t, I)
+        x = next((y for y in re.finditer(rx, t, I) if not _DEAL_TALK.search(t[y.end():y.end() + 20])), None)
         if x:
             events.append(_ev("deal", sub, cue=t0[x.start():x.end()], cue_span=(x.start(), x.end())))
             t = mask(t, x.start(), x.end())
             break
     for sub, rx in FINANCING:
         x = re.search(rx, t0 if sub == "secondary_holders" else t, I)
+        if x and sub == "ipo" and _IPO_OTHER.search(t0[max(0, x.start() - 20):x.start()]):
+            x = None
         if x:
             events.append(_ev("financing", sub, dilutive=(sub != "secondary_holders"),
                               cue=t0[x.start():x.end()], cue_span=(x.start(), x.end())))
@@ -752,6 +885,15 @@ def classify(title: str, *, context: str = "", ticker: Optional[str] = None, for
     for e in events:
         if e["event_type"] in GATED_TYPES and not (ticker and medical):
             out["dropped"].append(f"non_medical_event:{e['event_type']}")
+            continue
+        # fix round 2 (live run board): "Merck Canada Partners with the Montreal
+        # Museum of Fine Arts", "Glaukos Partners with … Stephen Curry", "Veeva
+        # Expands Amgen Partnership With Global Vault CRM" were medical DEALS on
+        # the issuer flag alone -> a partnership / licence / milestone needs a
+        # medical word in its own title. M&A OF a medical issuer stays (a
+        # takeover is material whatever the headline says about it).
+        if e["event_type"] == "deal" and e.get("subtype") != "mna" and not medical_words_hit(t0):
+            out["dropped"].append("non_medical_event:deal")
             continue
         kept.append(e)
     events = kept

@@ -8,7 +8,7 @@ UNMEASURED — setup: pending study. Nothing here is a buy or sell signal.
 """
 from __future__ import annotations
 
-RULES_VERSION = "med-rules-v2"
+RULES_VERSION = "med-rules-v3"   # v3 = fix round 2 (2026-09-29): approval / CRL / hold / topline precision
 MEASURED = False
 STATUS = "unmeasured"
 SETUP_STATUS = "pending study"
@@ -187,6 +187,8 @@ def event_label(ev: dict) -> str:
     if t == "clinical_hold":
         if s == "lifted":
             return "Clinical hold lifted"
+        if s == "response":
+            return "Response to clinical hold submitted"
         return "Partial clinical hold placed" if ev.get("partial") else "Clinical hold placed"
     if t == "safety":
         return "Safety event"

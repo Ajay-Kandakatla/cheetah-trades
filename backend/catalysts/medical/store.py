@@ -161,7 +161,12 @@ def find_merge_target(coll, ev: dict, *, lo_date: date, hi_date: date) -> Option
       * same ticker + type_dir with session_date in [lo, hi] (MERGE_SESSIONS);
       * (i)  a `topline_unknown` merges into a topline of ANY direction in that window;
       * (ii) a topline with a trial merges into the same ticker + type_dir + trial
-             at ANY earlier date still stored (one primary readout per trial per direction).
+             at ANY earlier date still stored (one primary readout per trial per direction);
+      * (iii) fix round 2 (live run: CLDX / ALKS each showed TWO topline rows): a
+             DIRECTED topline merges into a `topline_unknown` in the window that
+             came first ("Reports Topline Results From Phase 3 …" at 03:05, "Positive
+             Results … Met Primary" at 06:58) — never across two different trials.
+             merge_into then lifts the stored direction.
     Unresolved events never merge (no issuer to key on)."""
     if coll is None or not ev.get("ticker"):
         return None
@@ -175,6 +180,12 @@ def find_merge_target(coll, ev: dict, *, lo_date: date, hi_date: date) -> Option
             hit = coll.find_one(dict(base_q, event_type="topline"))
             if hit is not None:
                 return hit
+        if ev.get("event_type") == "topline" and ev.get("direction") in DIRECTED:
+            mine = set(ev.get("trials") or [])
+            for hit in coll.find(dict(base_q, type_dir="topline_unknown")):
+                theirs = set(hit.get("trials") or [])
+                if not (mine and theirs and not (mine & theirs)):
+                    return hit
         if ev.get("event_type") == "topline" and ev.get("trials"):
             for tr in ev["trials"]:
                 hit = coll.find_one({"ticker": t, "type_dir": ev["type_dir"], "trials": tr,
@@ -186,7 +197,10 @@ def find_merge_target(coll, ev: dict, *, lo_date: date, hi_date: date) -> Option
     return None
 
 
-def merge_into(coll, target: dict, ev: dict, *, impact_fn=None, session_fn=None) -> str:
+DIRECTED = ("positive", "negative", "mixed")
+
+
+def merge_into(coll, target: dict, ev: dict, *, impact_fn=None, session_fn=None, label_fn=None) -> str:
     """Add `ev`'s source and fields to `target`; the key NEVER changes (the
     push claim stays stable). Returns the target key.
 
@@ -194,6 +208,9 @@ def merge_into(coll, target: dict, ev: dict, *, impact_fn=None, session_fn=None)
       * an event whose impact a merge lifts to HIGH ("KOD topline, no phase"
         + a later "Phase 3" source) while its push says `not_high_impact` is
         re-armed to `pending` — the gate's `stale` rule still guards lateness;
+      * fix round 2: a `topline_unknown` target takes a DIRECTED source's
+        direction (type_dir / secondary_missed follow; `_id` never changes);
+        `label_fn(merged) -> str` re-labels after any phase / direction lift;
       * `session_fn(published_at) -> date`: when the merged earliest
         publication maps to an EARLIER session than the stored one, the event
         moves to that session (same `_id`) and its reaction is nulled so the
@@ -209,7 +226,16 @@ def merge_into(coll, target: dict, ev: dict, *, impact_fn=None, session_fn=None)
         "phase": phase,
         "rules_version": ev.get("rules_version") or target.get("rules_version"),
     }
+    if target.get("type_dir") == "topline_unknown" and ev.get("direction") in DIRECTED:
+        upd["direction"] = ev["direction"]
+        upd["type_dir"] = ev.get("type_dir") or f"topline_{ev['direction']}"
+        upd["secondary_missed"] = ev.get("secondary_missed")
     merged.update(upd)
+    if label_fn is not None:
+        try:
+            upd["label"] = label_fn(merged)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("medical.store: relabel failed: %s", _redact(exc))
     if impact_fn is not None:
         upd["impact"] = "high" if impact_fn(merged) else "low"
     # Mongo hands datetimes back NAIVE (UTC); a new doc carries aware ones —

@@ -289,6 +289,11 @@ def liquidity(frame, session_date: date) -> dict:
     return out
 
 
+def _pos(x) -> Optional[float]:
+    v = _f(x)
+    return v if (v is not None and v > 0) else None
+
+
 def _ms_to_et(ms) -> Optional[datetime]:
     v = _f(ms)
     if v is None or v <= 0:
@@ -308,7 +313,9 @@ def at_detection(snap: Optional[dict], base: tuple, now_et: datetime, *, avg_vol
     snap = snap or {}
     n = as_et(now_et)
     base_px, basis = (base or (None, "unknown"))
-    price = _f(snap.get("last_trade_price")) or _f(snap.get("price"))
+    # fix round 2 (live run: 110 of 115 events had move_pct −100 and the KOD push
+    # title read "· -100% ·"): a snapshot 0.0 is "no print", never a price.
+    price = _pos(snap.get("last_trade_price")) or _pos(snap.get("price"))
     ts = _ms_to_et(snap.get("last_trade_ts_ms"))
     try:
         from catalysts.promo_live import session_from_ts

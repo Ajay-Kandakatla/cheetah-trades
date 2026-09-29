@@ -52,13 +52,13 @@ def test_finnhub_KOD_fixture_becomes_articles_keyed_and_dated():
     counts = {}
     arts = run(SRC.finnhub_articles("KOD", company="Kodiak Sciences Inc.", fetch=rows_fetch(load("finnhub_KOD.json")),
                                     counts=counts))
-    first = [a for a in arts if a["key"] == "fh:142466027"][0]
+    first = [a for a in arts if a["key"] == "fh:KOD:142466027"][0]
     assert first["title"].startswith("Kodiak Sciences Says Phase 3 DAYBREAK Study Met Primary Endpoints")
     assert first["provider"] == "finnhub" and first["ticker"] == "KOD" and first["source"] == "Benzinga"
     assert datetime.fromtimestamp(first["published"], timezone.utc).astimezone(ET).strftime("%H:%M") == "02:34"
     assert len(first["context"]) <= SRC.EXHIBIT_LEAD_CHARS
     # the 06:30 PR copy never names the company in its TITLE -> dropped by the title rule
-    assert not [a for a in arts if a["key"] == "fh:142465362"]
+    assert not [a for a in arts if a["key"] == "fh:KOD:142465362"]
     assert counts["irrelevant_dropped"] >= 1
 
 
