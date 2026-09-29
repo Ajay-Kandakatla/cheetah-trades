@@ -523,3 +523,8 @@ session low exists, all three states mean exactly what they meant on
 4. The unknown count reaches him through the `· —` chips' hover line. The
    alternative is a fourth non-clickable `❔ Unknown · 44` label on an already
    dense row (Rule #5).
+
+**2026-09-29** — 🌀 AMD and Keltner tiles served no 🧨 / 🪜 read and both sorts did nothing: the builder spread
+`tile_metrics`' always-None `explosive` / `band_structure` keys flat onto the tile, and the attachers skip a
+tile that already has the key. Fixed with `board.published_metrics` (drops `board.ATTACH_OWNED_KEYS` from the
+flat spread; `_m` keeps them). See `docs/chart_maps/key_levels_tab_2026_09_28.md`, same date.

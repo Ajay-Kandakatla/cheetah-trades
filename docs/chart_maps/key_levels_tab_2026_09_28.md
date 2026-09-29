@@ -154,3 +154,15 @@ fresh lows are flagged and counted, not dropped.
 `backend/chart_maps/api.py` (tab description), `backend/supply_demand/rules_info.py` (one pick),
 `backend/scripts/key_levels_tab_cost_probe.py`, tests `backend/tests/test_key_levels_tab.py` +
 `backend/tests/test_key_levels.py`.
+
+## 2026-09-29 — the 🧨 / 🪜 reads were missing on this tab (fixed)
+
+`key_level_tiles` spread `tile_metrics` flat onto each tile, which carried its always-None `explosive` and
+`band_structure` columns onto the tile. `attach_explosive` / `attach_band_structure` are idempotent by KEY
+PRESENCE, so they skipped every tile: no 🧨 chip, no 🪜 read, and the 🧨 sort fell to an all-None column
+(live 2026-09-29: "No demand-band read for these names", ordered A, AA, AAL…). The same spread hit 🌀 AMD and
+Keltner (`turning_bullish_tiles`). Fix: `board.ATTACH_OWNED_KEYS` + `board.published_metrics`, the one filter
+every flat spread goes through; `_m` keeps both columns for the sorts. This tab is not in
+`enterable.KIND_BY_TAB`, so its 🪜 read is the honest n/a read (was a bare None) and the 🪜 sort stays off here.
+Tests: `backend/tests/test_board_attach_owned_keys_2026_09_29.py` (includes an AST source guard against a new
+flat spread).

@@ -1007,6 +1007,24 @@ def tile_metrics(row: dict) -> dict:
     }
 
 
+# The `tile_metrics` columns whose TILE-level key belongs to an attacher, not
+# to the builder (2026-09-29). `attach_explosive` and `attach_band_structure`
+# are idempotent by KEY PRESENCE (None is a real answer to them), so a builder
+# that spreads `tile_metrics` flat onto the tile hands them a key that is
+# already there — always None — and they skip the tile: no 🧨 / 🪜 read on the
+# tab, and both sorts fall to an all-None column (found live on 🔑 Key Levels,
+# 🌀 AMD and Keltner). The `_m` sort columns keep every key; only the FLAT
+# spread drops these. Every flat spread goes through `published_metrics`.
+ATTACH_OWNED_KEYS = ("explosive", "band_structure")
+
+
+def published_metrics(m: Optional[dict]) -> dict:
+    """`tile_metrics` output minus `ATTACH_OWNED_KEYS` — the part a builder may
+    spread flat onto a tile. PURE; never mutates `m` (the same dict usually
+    goes on to `_m`, where the sorts need every column)."""
+    return {k: v for k, v in (m or {}).items() if k not in ATTACH_OWNED_KEYS}
+
+
 # Dropdown options, in the order they are offered. `theme` is the default and
 # keeps the board's existing behaviour exactly.
 # Mirrors the Back in Demand dropdown (DemandReentryPanel.tsx SORTS) so the two
@@ -3857,7 +3875,8 @@ def key_level_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                       "bands": [], "lines": [], "markers": [], "stats": [],
                       "badges": [{"text": r["near"]["text"], "tone": "muted"}],
                       "key_level_near": r["near"],
-                      **m, "_m": dict(m), "_score": -abs(r["near"]["distance_pct"])})
+                      **published_metrics(m), "_m": dict(m),
+                      "_score": -abs(r["near"]["distance_pct"])})
     floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
     no_turnover = (sum(1 for t in tiles if t["_m"].get("avg_turnover") is None)
                    if floor_on else 0)
@@ -4851,10 +4870,12 @@ def turning_bullish_tiles(kind: str, limit: int = LIMIT_DEFAULT,
             # The live, unconfirmed half — where this name is against its base
             # edge RIGHT NOW. None when no live print came back.
             "amd_flight": flight_by_sym.get(sym),
-            **tile_metrics(scan_by_sym.get(sym) or {}),
+            # Minus ATTACH_OWNED_KEYS: a flat None there would make the 🧨 and
+            # 🪜 attachers skip this tile (see `published_metrics`).
+            **published_metrics(tile_metrics(scan_by_sym.get(sym) or {})),
             # The same numbers again under the private key `_finish` reads.
-            # The flat spread above is the tile's published shape and stays;
-            # `_m` is popped before the payload leaves, so this adds nothing
+            # The flat spread above is the tile's published shape (minus the
+            # attacher-owned keys); `_m` keeps every column and is popped before the payload leaves, so this adds nothing
             # to the wire and lets these two tabs use the ONE ranking engine
             # instead of a second sort written here.
             "_m": tile_metrics(scan_by_sym.get(sym) or {}),
