@@ -142,6 +142,36 @@ RENAMES: dict[str, tuple[str, str, str]] = {
              "2026-03-27). Same CIK 0000895447 and FIGI BBG000BF4DG3. SCVL "
              "last bar 2026-06-11 close 17.43; SHOE first bar 2026-06-12 open "
              "17.43. Consecutive sessions, 0.0% overnight, no split."),
+    # --- 2026-09-29 Dual Momentum data audit: TICKER REUSE + RENAME ----------
+    # HIS CALL #6: these two entries ship ONLY together with the one-time
+    # refetch `load_prices("BNY", force=True)` / `("GOLD", force=True)` in the
+    # same promote. Without the refetch the read-time cut
+    # (prices._cut_foreign_head) leaves BNY ~90 bars and GOLD ~208 bars in
+    # every load_prices / bulk_cached_frames read app-wide. If he says no,
+    # delete this block and the tests marked "RENAMES hunk" in
+    # tests/test_foreign_head_cut_2026_09_29.py; FIRST_SESSION stays.
+    "BK": ("BNY", "2026-05-21",
+           "Bank of New York Mellon renamed BK -> BNY. Same FIGI "
+           "BBG000BD8PN9 across both symbols; Massive ticker event "
+           "2026-05-21 BK->BNY and the inactive BK listing shows "
+           "delisted_utc 2026-05-21. BK last bar 2026-05-20 close 137.16; "
+           "BNY first bar 2026-05-21 open 136.46. Consecutive sessions, "
+           "-0.5% overnight, no split (splice ratio 1.005, 1-day gap). "
+           "Massive's BNY frame BEFORE 2026-05-21 is a DIFFERENT security: "
+           "BlackRock New York Municipal Income Trust (FUND, FIGI "
+           "BBG000BZF6G2, ~$10) to 2026-02-06, then a 104-day hole — that "
+           "reused-ticker head gave BNY a fake +1,435% 12m on the Dual "
+           "Momentum page. Verified 2026-09-29 (scratchpad dm_audit.py)."),
+    "AMRK": ("GOLD", "2025-12-02",
+             "A-Mark Precious Metals renamed to Gold.com, AMRK -> GOLD. FIGI "
+             "BBG005ZVDK48; Massive ticker event 2025-12-02. AMRK last bar "
+             "2025-12-01 close 29.25; GOLD first bar 2025-12-02 open 30.13. "
+             "Consecutive sessions, +3.0% overnight, no split. The GOLD frame "
+             "BEFORE that is a DIFFERENT security: Barrick (FIGI "
+             "BBG000BB07P9) to 2025-05-08 close 18.86, then a 208-day hole; "
+             "Barrick has traded as `B` since 2025-05-09. Verified "
+             "2026-09-29 (scratchpad dm_audit sweep)."),
+    # --- end 2026-09-29 RENAMES block ----------------------------------------
 }
 
 # Reverse index, built once. A current symbol can have more than one former name
@@ -344,6 +374,68 @@ DELISTED: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# First session of the CURRENT security under a reused / reorganised ticker
+# ---------------------------------------------------------------------------
+# {SYMBOL: (first_session_iso, evidence)}. Built 2026-09-29 from the Dual
+# Momentum data audit (Ajay: WOLF +2,248.76%, SPCX +474.95% on his page).
+#
+# A provider serves ONE series per ticker, so when a ticker passes from one
+# security to another (a Chapter 11 reorg that cancels the old equity, an ETF
+# that closes and hands its symbol to an IPO) the new security's frame starts
+# with the old one's bars. Every return that spans the handover is the ratio of
+# two different companies' prices. That is not a rename: there is no history
+# to splice, so the bars before `first_session` are dropped at read time
+# (`prices._cut_foreign_head`).
+#
+# CURATED, NOT INFERRED — for the same reason as RENAMES: a wrong entry deletes
+# real history from a chart real money is sized against. Every entry names the
+# FIGI / list_date it was checked against. Never add an entry without them.
+# A symbol here must NOT also be a RENAMES key or target (a test pins it).
+FIRST_SESSION: dict[str, tuple[str, str]] = {
+    "WOLF": ("2025-09-29",
+             "Wolfspeed emerged from Chapter 11; the old equity was cancelled. "
+             "Old FIGI BBG000BG14P4 (listed 1993-02-09) last bar 2025-09-26 "
+             "close 1.21. New FIGI BBG01XLDHDP0, list_date 2025-09-29, "
+             "Massive ticker event 2025-09-29; first bar open 18.00 / close "
+             "22.10. No split record. That one day was 92% of the 12m log "
+             "gain behind the page's +2,248.76%. Verified 2026-09-29."),
+    "SPCX": ("2026-06-12",
+             "Ticker reuse. SPCX was The SPAC and New Issue ETF (ETF, FIGI "
+             "BBG00YJ8L8T5, ~$22) to 2026-04-06, then a 67-day hole, then "
+             "SpaceX: list_date 2026-06-12 on XNAS, Massive ticker event "
+             "2026-06-12, first bar open 150.00 / close 160.95 on 522M shares. "
+             "Only ~75 SpaceX bars exist, so no real 6m / 12m return. "
+             "Verified 2026-09-29."),
+    "SOLS": ("2025-10-30",
+             "Ticker reuse. Two sub-penny OTC SOLLENSYS CORP bars (2025-03/04), "
+             "a 204-day hole, then Solstice Advanced Materials (Honeywell "
+             "spin-off): list_date 2025-10-20, first regular bar 2025-10-30. "
+             "The head produced a fake +48,739,900% day. Verified 2026-09-29."),
+}
+
+
+def first_session(symbol: str) -> Optional[str]:
+    """First session (ISO date) of the security trading under ``symbol`` today,
+    when a curated FIRST_SESSION entry exists; else None. PURE."""
+    entry = FIRST_SESSION.get((symbol or "").strip().upper())
+    return entry[0] if entry else None
+
+
+def rename_effective(symbol: str) -> Optional[str]:
+    """The ``effective`` date a NEW symbol started printing under a rename, or
+    None. PURE.
+
+    Looks the symbol up as a RENAMES *target* (via ``_FORMER``). With several
+    former names the LATEST effective wins: that is the date the current
+    symbol began printing. An OLD symbol (``SATS``) returns None — its own
+    bars are all its own.
+    """
+    s = (symbol or "").strip().upper()
+    effs = [RENAMES[old][1] for old in _FORMER.get(s, []) if old in RENAMES]
+    return max(effs) if effs else None
+
+
 def is_delisted(symbol: str) -> bool:
     """True when the symbol is a verified dead listing. PURE.
 
@@ -420,5 +512,6 @@ def yf_ticker(symbol: str):
     return yf.Ticker(for_yahoo(resolve(symbol)))
 
 
-__all__ = ["RENAMES", "DELISTED", "resolve", "former_names", "rename_of",
-           "is_delisted", "for_massive", "for_yahoo", "yf_ticker"]
+__all__ = ["RENAMES", "DELISTED", "FIRST_SESSION", "resolve", "former_names",
+           "rename_of", "first_session", "rename_effective", "is_delisted",
+           "for_massive", "for_yahoo", "yf_ticker"]

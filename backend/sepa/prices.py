@@ -114,8 +114,8 @@ def bulk_cached_frames(symbols) -> dict:
     prints that as "no cached price history", which is the honest answer.
 
     Same reshaping as `_mongo_get` (DatetimeIndex; open/high/low/close/volume),
-    then `_drop_phantom_tail`, so a caller gets exactly the frame the rest of
-    the app reads.
+    then `_cut_foreign_head` (2026-09-29) and `_drop_phantom_tail`, so a caller
+    gets exactly the frame the rest of the app reads.
 
     NO TTL CHECK, on purpose, and this is the one place it differs from
     `_mongo_get`: a frame of CLOSED bars is a fact whatever its age, and the
@@ -146,7 +146,7 @@ def bulk_cached_frames(symbols) -> dict:
                 df = pd.DataFrame(bars)
                 df["date"] = pd.to_datetime(df["date"])
                 df = df.set_index("date")[["open", "high", "low", "close", "volume"]]
-                df = _drop_phantom_tail(df)
+                df = _drop_phantom_tail(_cut_foreign_head(df, sym))
                 if df is not None and len(df):
                     out[sym] = df
             except Exception as exc:                            # noqa: BLE001
@@ -382,6 +382,87 @@ def splice_history(old_df: Optional[pd.DataFrame], new_df: Optional[pd.DataFrame
     return out[~out.index.duplicated(keep="last")].sort_index()
 
 
+def _day_index(df: pd.DataFrame) -> pd.DatetimeIndex:
+    """The frame's index as tz-naive calendar days. PURE.
+
+    Massive frames are naive UTC stamps (04:00/05:00 = the ET session date);
+    yfinance frames are tz-aware ET. Dropping the tz keeps the wall-clock date
+    of each, so both compare correctly against an ISO session date.
+    """
+    idx = pd.DatetimeIndex(df.index)
+    if idx.tz is not None:
+        idx = idx.tz_localize(None)
+    return idx.normalize()
+
+
+def _cut_foreign_head(df: Optional[pd.DataFrame], symbol: str) -> Optional[pd.DataFrame]:
+    """Drop bars that belong to a DIFFERENT security under the same ticker. PURE.
+
+    Built 2026-09-29 from the Dual Momentum data audit. Ajay's page showed WOLF
+    +2,248.76%, BNY +1,435% and SPCX +474.95% for 12 months: each frame began
+    with another security's bars (Wolfspeed's cancelled pre-Chapter-11 equity,
+    the BlackRock NY Muni fund, the SPAC ETF), so the return was the ratio of
+    two companies' prices. Two CURATED sources, never inference:
+
+    1. ``symbols.first_session(symbol)`` (FIRST_SESSION: reorg / ticker reuse
+       with no history to splice) → keep bars on or after that date,
+       unconditionally.
+    2. ``symbols.rename_effective(symbol)`` (the symbol is a RENAMES target) →
+       split at ``effective``. The head is KEPT only when it passes
+       ``splice_history``'s own two tests — calendar gap
+       ≤ ``SPLICE_MAX_GAP_DAYS`` and boundary ratio ≤ ``SPLICE_MAX_JUMP_RATIO``
+       (the new security's first open against the head's last close). A head
+       that passes is either a clean splice of the old symbol (BK+BNY after
+       the refetch) or a provider back-fill of the same company (Yahoo
+       serves renamed tickers' full history under the new symbol), and must
+       survive. A head behind a hole or a jump is the previous holder of the
+       ticker and is dropped.
+
+    Anything else comes back as the SAME object. The cut never adds, reorders
+    or edits a bar; the output index is always a subset of the input.
+
+    Applied at FETCH time (on the live frame before the splice loop) AND at
+    READ time (every ``load_prices`` return and ``bulk_cached_frames``) — the
+    ``_drop_phantom_tail`` precedent: ``patch_latest_closes`` keeps cached
+    frames alive past the TTL, so a fetch-only fix would never reach today's
+    cached WOLF / SPCX / BNY. The read-time cut is app-wide by design: the
+    scan, RS ranks, the zone build, lanes and charts all read these frames.
+    """
+    if df is None or len(df) == 0 or not symbol:
+        return df
+    try:
+        first = symbols.first_session(symbol)
+        if first:
+            keep = _day_index(df) >= pd.Timestamp(first)
+            return df if bool(keep.all()) else df[keep]
+        eff = symbols.rename_effective(symbol)
+        if not eff:
+            return df
+        days = _day_index(df)
+        eff_ts = pd.Timestamp(eff)
+        head = df[days < eff_ts]
+        tail = df[days >= eff_ts]
+        if len(head) == 0 or len(tail) == 0:
+            return df
+        gap_days = (_day_index(tail)[0] - _day_index(head)[-1]).days
+        if gap_days > SPLICE_MAX_GAP_DAYS:
+            log.info("foreign head %s: %d-day hole before %s — cut %d bars",
+                     symbol, gap_days, eff, len(head))
+            return tail
+        prev_close = float(head["close"].iloc[-1])
+        next_open = float(tail["open"].iloc[0])
+        if prev_close > 0 and next_open > 0:
+            ratio = max(next_open / prev_close, prev_close / next_open)
+            if ratio > SPLICE_MAX_JUMP_RATIO:
+                log.info("foreign head %s: %.2fx jump at %s — cut %d bars",
+                         symbol, ratio, eff, len(head))
+                return tail
+        return df
+    except (KeyError, ValueError, TypeError, IndexError) as exc:
+        log.debug("foreign head cut skipped for %s: %s", symbol, exc)
+        return df
+
+
 def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
     """Fetch under the symbol that trades today, splicing in any former name.
 
@@ -391,7 +472,12 @@ def _fetch(symbol: str, period: str) -> Optional[pd.DataFrame]:
     then tells Ajay the company was acquired. It was trading at $91.89.
     """
     live = symbols.resolve(symbol)
-    df = _fetch_one(live, period)
+    # 2026-09-29: drop a reused ticker's foreign head BEFORE splicing.
+    # splice_history keeps only old bars dated before the new frame's first
+    # bar, and Massive's BNY / GOLD frames begin with the PREVIOUS holder's
+    # bars (a muni fund, Barrick) — so without this cut the head is empty and
+    # the reused-ticker frame comes back unchanged. See _cut_foreign_head.
+    df = _cut_foreign_head(_fetch_one(live, period), live)
 
     olds = symbols.former_names(live)
     if not olds:
@@ -544,16 +630,18 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
 
     Cache order: Mongo → parquet → fetch. None on failure (delisted, no data).
     A trailing phantom-duplicate bar is stripped at read time (see
-    ``_drop_phantom_tail``) so detectors never see a placeholder last session."""
+    ``_drop_phantom_tail``) so detectors never see a placeholder last session,
+    and a curated foreign head (another security's bars under a reused ticker,
+    2026-09-29) is dropped on every return path (see ``_cut_foreign_head``)."""
     if not force:
         df = _mongo_get(symbol)
         if df is not None:
-            return _drop_phantom_tail(df)
+            return _drop_phantom_tail(_cut_foreign_head(df, symbol))
         df = _parquet_get(symbol)
         if df is not None:
             # Backfill Mongo so subsequent reads stay there
             _mongo_put(symbol, df)
-            return _drop_phantom_tail(df)
+            return _drop_phantom_tail(_cut_foreign_head(df, symbol))
 
     df = _fetch(symbol, period)
     if df is None or df.empty:
@@ -561,7 +649,7 @@ def load_prices(symbol: str, period: str = "2y", force: bool = False) -> Optiona
 
     _mongo_put(symbol, df)
     _parquet_put(symbol, df)
-    return _drop_phantom_tail(df)
+    return _drop_phantom_tail(_cut_foreign_head(df, symbol))
 
 
 # ---------------------------------------------------------------------------
