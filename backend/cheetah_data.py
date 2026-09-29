@@ -238,7 +238,7 @@ CHEETAH_STOCKS = [
             {"label": "GM 85%", "type": "quality"},
         ],
         "tier2": ["UPST", "AFRM"],
-        "tier3": ["LMND", "LC"],
+        "tier3": ["LMND", "HAPN"],
         "why": "Member growth accelerating; Galileo platform; rate-cut tailwind for lending.",
     },
     {

@@ -122,6 +122,9 @@ SECTORS: list[Sector] = [
     #   SDIG  126 bars but stopped printing — acquired by Bitfarms
     # and two were false negatives on a keyless container and DID validate
     # against production (BITF 390 bars, SMLR 337), which is why they are here.
+    # 2026-09-29 dead-ticker cleanup (sepa/symbols.py): BITF renamed KEEL on
+    # 2026-04-06 (Keel Infrastructure, same company) so KEEL replaces it; SMLR
+    # was delisted 2026-01-20 and is dropped.
     #
     # The miners are no longer a pure crypto bet: IREN, CORZ, APLD, WULF and
     # HUT are converting halls to AI/HPC hosting, which is why several already
@@ -139,11 +142,11 @@ SECTORS: list[Sector] = [
         "sp_tickers": [
             # miners (several dual-track into AI/HPC hosting)
             "IREN", "MARA", "RIOT", "CLSK", "CIFR", "WULF", "HUT", "BTDR",
-            "CORZ", "BTBT", "APLD", "BITF", "HIVE", "CAN", "SLNH", "ARBK",
+            "CORZ", "BTBT", "APLD", "KEEL", "HIVE", "CAN", "SLNH", "ARBK",
             # exchanges / brokers
             "COIN", "HOOD", "GLXY", "BKKT",
             # treasury holders — the stock is a levered proxy for the coin
-            "MSTR", "SMLR", "DFDV", "UPXI",
+            "MSTR", "DFDV", "UPXI",
         ],
         "thesis": (
             "Earnings are levered to coin price and hash price, and the better "
