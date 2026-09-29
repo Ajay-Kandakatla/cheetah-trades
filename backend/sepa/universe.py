@@ -67,7 +67,9 @@ UNIVERSE: list[str] = [
     # EVERY ONE PRICE-VALIDATED against production data before it went in.
     # GREE (7 bars) and SDIG (acquired by Bitfarms, stopped printing) FAILED
     # that check and are deliberately absent.
-    "BITF", "HIVE", "CAN", "SLNH", "ARBK", "BKKT", "SMLR", "DFDV", "UPXI",
+    # 2026-09-29 dead-ticker cleanup (sepa/symbols.py): BITF -> KEEL (rename,
+    # 2026-04-06); SMLR delisted 2026-01-20, dropped.
+    "KEEL", "HIVE", "CAN", "SLNH", "ARBK", "BKKT", "DFDV", "UPXI",
     # Crypto ETFs — they CHART AND SCAN BUT NEVER ALERT, the same deal he
     # accepted for the robotics funds: the provider reports AUM for a fund and
     # never a market cap, and zone_store keeps only a KNOWN cap over MIN_CAP_USD,
@@ -236,7 +238,7 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # exchanges and brokers, and the treasury holders.
     #
     # A TREASURY HOLDER IS A LEVERED COIN PROXY, not an operating business —
-    # MSTR, SMLR, DFDV, UPXI, BTCS, CEP and SBET move with the coin and with
+    # MSTR, DFDV, UPXI, BTCS and SBET move with the coin and with
     # their own issuance, and their "earnings" are mark-to-market. Read them
     # that way.
     #
@@ -245,12 +247,14 @@ THEME_UNIVERSE: dict[str, list[str]] = {
     # exists, is cheap contracted power. And the COINS stay out entirely —
     # BNB/ETH/XRP are not scannable US equities.
     #
-    # The 24-name roster in supply_demand/sectors.py has no partition
+    # The 23-name roster in supply_demand/sectors.py has no partition
     # constraint and still holds all of them; it renders on /supply-demand,
     # which he does not use. This is the Chart Maps copy.
-    "crypto":    ["CLSK", "BTBT", "BITF", "HIVE", "CAN", "SLNH", "ARBK",
+    # 2026-09-29 dead-ticker cleanup (sepa/symbols.py): BITF -> KEEL (rename,
+    # 2026-04-06); SMLR (delisted 2026-01-20) and CEP (delisted) dropped.
+    "crypto":    ["CLSK", "BTBT", "KEEL", "HIVE", "CAN", "SLNH", "ARBK",
                   "COIN", "HOOD", "BKKT",
-                  "MSTR", "SMLR", "DFDV", "UPXI", "BTCS", "CEP", "SBET"],
+                  "MSTR", "DFDV", "UPXI", "BTCS", "SBET"],
     # Ajay 2026-09-11: "there are companies like SNDK but for raw material for
     # Semis" -> "yes add that". Then, correcting me: "i dont use supply deman
     # page at all.. I only been using chart maps". The sector I first added to

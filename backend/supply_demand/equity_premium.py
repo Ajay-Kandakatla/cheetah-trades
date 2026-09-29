@@ -108,8 +108,9 @@ def _classify_tag(*, equity_share_pct: float, ps: float, pb: float,
       NORMAL          — typical operating multiple
     """
     # Hardcoded BTC-treasury / coin-adjacent vehicles
-    treasury_set = {"MSTR", "COIN", "MARA", "RIOT", "CLSK", "HUT", "BITF",
-                    "GBTC", "IBIT", "FBTC", "SMLR", "TSLA"}  # TSLA has BTC on BS
+    # 2026-09-29: BITF -> KEEL (rename 2026-04-06); SMLR delisted, dropped.
+    treasury_set = {"MSTR", "COIN", "MARA", "RIOT", "CLSK", "HUT", "KEEL",
+                    "GBTC", "IBIT", "FBTC", "TSLA"}  # TSLA has BTC on BS
     if ticker.upper() in treasury_set and equity_share_pct >= 30:
         return ("TREASURY",
                 f"{int(equity_share_pct)}% of market cap = book equity. "

@@ -86,3 +86,139 @@ fetch each makes the splice land so both can pass the 220-bar floor:
 path), `tests/test_scan_skip_accounting.py` (skip reasons, absorb rules,
 recovered_count), `tests/test_catalysts_ghosts.py` (ghost drop + live
 movers untouched).
+
+---
+
+## 2026-09-29 — dead-ticker triage (48 names)
+
+**Ask (Ajay, 2026-09-29):** "Remove the dead ones please" — the 48 universe
+names the latest SEPA scan skipped as stale (no bar in ~10 sessions) or
+"no price data". **Branch:** `fix/delist-dead-tickers-2026-09-29`.
+
+Each verdict checked against Massive **live** on 2026-09-29: reference
+lookup (both spellings for class shares), the inactive record's
+`delisted_utc`, ticker events, daily aggs 2026-08-15→09-29 and a successor
+search by CIK and by name. Re-probed by the executor the same day: all 48
+old symbols reference NOT_FOUND, no aggs after the listed last bar, and all
+8 successors active with 19–31 aggs through 09-29.
+
+**Result: 40 DEAD → `DELISTED`, 7 RENAME → `RENAMES`, 1 HIS CALL (VSCO),
+0 ALIVE.**
+
+`load_universe("full")` measured in the api container (branch
+`symbols.py` loaded in place of the deployed one, read-only):
+**2,728 → 2,685 (−43)** = 40 dead + 3 renames whose successor was already
+in the universe (KEEL, VMRK, DMC collapse into one slot each). The other
+4 renames swap in place (NXH, HOS, HAPN, SHOE come in).
+
+| Symbol | Company | Verdict | Delisted / effective | Last bar | Successor / note |
+|---|---|---|---|---|---|
+| ADRO | Aduro Biotech (Chinook CVR row) | DEAD | 2020-10-06 | 2020-10-05 | KDNY (same CIK) also delisted 2023-08-14 |
+| AKE | Akero Therapeutics CVR | DEAD | never an equity (AKRO 2025-12-10) | none | CVR row in iShares R3000 |
+| AMWD | American Woodmark | DEAD | 2026-05-29 | 2026-05-27 | acquirer MBC keeps its own series |
+| APGE | Apogee Therapeutics | DEAD | 2026-09-04 | 2026-09-02 | acquired by AbbVie |
+| AVNS | Avanos Medical | DEAD | 2026-07-28 | 2026-07-24 | take-private |
+| BBBY | Bed Bath & Beyond, Inc. | **RENAME** | eff. 2026-08-17 | 2026-08-14 | **NXH**, +4.6% boundary |
+| BITF | Bitfarms Ltd. | **RENAME** | eff. 2026-04-06 | 2026-04-02 | **KEEL**, +4.5% boundary |
+| CCRN | Cross Country Healthcare | DEAD | 2026-07-22 | 2026-07-20 | sold to Knox Lane |
+| CEP | Cantor Equity Partners (SPAC) | DEAD | 2025-12-09 | 2025-12-08 | de-SPAC into XXI: new issuer, −24.7% boundary, never splice |
+| CPRX | Catalyst Pharmaceuticals | DEAD | 2026-07-16 | 2026-07-14 | acquired by Angelini |
+| CRNX | Crinetics Pharmaceuticals | DEAD | 2026-09-02 | 2026-08-31 | acquired by Vertex |
+| CVGW | Calavo Growers | DEAD | 2026-05-29 | 2026-05-27 | acquirer AVO keeps its own series |
+| CWAN | Clearwater Analytics | DEAD | 2026-06-29 | 2026-06-24 | take-private at $24.55 |
+| EQR | Equity Residential | **RENAME** | eff. 2026-08-18 | 2026-08-17 | **VMRK**, +0.8% boundary |
+| ESPR | Esperion Therapeutics | DEAD | 2026-07-14 | 2026-07-10 | ARCHIMED buyout |
+| FDP | Fresh Del Monte Produce | **RENAME** | eff. 2026-06-29 | 2026-06-26 | **DMC**, −0.75% boundary |
+| FFIC | Flushing Financial | DEAD | 2026-06-02 | 2026-06-01 | merged into OCFC (different CIK) |
+| GTLS | Chart Industries | DEAD | 2026-07-17 | 2026-07-15 | acquired by Baker Hughes |
+| GTXI | GTx Inc. CVR | DEAD | 2019-06-10 | none | CVR row in iShares R3000 / IWC |
+| HLX | Helix Energy Solutions | **RENAME** | eff. 2026-09-02 | 2026-09-01 | **HOS**, +2.2% boundary |
+| INH | Inhibrx Inc CVR | DEAD | never an equity | none | CVR row; INBX is a separate entity |
+| KALV | KalVista Pharmaceuticals | DEAD | 2026-06-12 | 2026-06-10 | cash deal |
+| KW | Kennedy-Wilson Holdings | DEAD | 2026-06-17 | 2026-06-15 | Fairfax take-private |
+| LBRDA | Liberty Broadband A | DEAD | 2026-08-21 | 2026-08-19 | absorbed by CHTR (exchange ratio) |
+| LBRDK | Liberty Broadband C | DEAD | 2026-08-21 | 2026-08-19 | absorbed by CHTR (exchange ratio) |
+| LC | LendingClub | **RENAME** | eff. 2026-06-22 | 2026-06-18 | **HAPN**, +1.0% boundary |
+| LEG | Leggett & Platt | DEAD | 2026-08-27 | 2026-08-26 | Somnigroup bid; no completion release found |
+| LPRO | Open Lending | DEAD | 2026-07-31 | 2026-07-29 | cash deal |
+| NFBK | Northfield Bancorp | DEAD | 2026-07-21 | 2026-07-20 | acquired by Columbia Financial |
+| NUVL | Nuvalent | DEAD | 2026-07-16 | 2026-07-14 | acquired by GSK |
+| OLPX | Olaplex Holdings | DEAD | 2026-07-08 | 2026-07-06 | acquired by Henkel |
+| P5N994 | Petrocorp Inc Escrow | DEAD | never listed | none | iShares NNQS placeholder |
+| PRA | ProAssurance | DEAD | 2026-06-29 | 2026-06-25 | cash deal at $25.00 |
+| RMAX | RE/MAX Holdings | DEAD | 2026-08-25 | 2026-08-24 | acquired by Real Brokerage |
+| SCVL | Shoe Carnival | **RENAME** | eff. 2026-06-12 | 2026-06-11 | **SHOE**, 0.0% boundary |
+| SEM | Select Medical | DEAD | 2026-07-01 | 2026-06-30 | take-private |
+| SILA | Sila Realty Trust | DEAD | 2026-07-02 | 2026-06-30 | buyout |
+| SKYT | SkyWater Technology | DEAD | 2026-08-03 | 2026-07-30 | acquirer IONQ keeps its own series |
+| SMLR | Semler Scientific | DEAD | 2026-01-20 | 2026-01-15 | merged into Strive |
+| SNBR | Sleep Number | DEAD | 2026-06-23 | 2026-06-22 | Chapter 11; OTC SNBRQ is a shell, not a rename |
+| STEL | Stellar Bancorp | DEAD | 2026-07-01 | 2026-06-30 | merged into Prosperity |
+| TALK | Talkspace | DEAD | 2026-08-18 | 2026-08-14 | acquired by UHS |
+| THR | Thermon Group | DEAD | 2026-06-02 | 2026-05-29 | combined into CECO |
+| TMHC | Taylor Morrison Home | DEAD | 2026-07-27 | 2026-07-23 | acquired by Berkshire Hathaway |
+| TWO | Two Harbors Investment | DEAD | 2026-08-26 | 2026-08-24 | TWOD (same CIK) is senior notes, never map |
+| VSCO | Victoria's Secret & Co. | **HIS CALL** | ticker change 2026-06-02 | 2026-06-01 | VSXY, same FIGI/CIK, but +44.6% boundary open |
+| WBS | Webster Financial | DEAD | 2026-08-20 | 2026-08-19 | acquired by Banco Santander |
+| WSR | Whitestone REIT | DEAD | 2026-07-15 | 2026-07-13 | acquired by Ares |
+
+Per-entry evidence (deal pin, volume multiple, news source) lives on each
+`sepa.symbols.DELISTED` / `RENAMES` entry.
+
+### VSCO → VSXY is HIS CALL
+
+The identity is certain (same composite FIGI BBG01103B471, same CIK, a
+Massive `ticker_change` on 2026-06-02). The boundary is not: VSCO closed
+54.30 on 06-01 and VSXY opened 78.53 on 06-02, 1.45×, above
+`prices.SPLICE_MAX_JUMP_RATIO` (1.35×). The premarket tape shows a real news
+gap (54.30 at 04:00, then 62–80 from 07:00 on heavy volume), probably the Q1
+print, but that is unconfirmed. `splice_history` would refuse the join anyway
+and serve VSXY alone, so a RENAMES entry would dedup the universe and
+nothing more. Until Ajay decides, VSCO stays in the universe as a stale name
+beside VSXY.
+
+### Open items (not done here)
+
+- **Rosters still carry three of these names.** The fate filter already
+  keeps them out of every `load_universe` path, but the roster guards fail:
+  `supply_demand/sectors.py` crypto_equities (BITF → KEEL, SMLR dead),
+  `sepa/universe.py` curated `UNIVERSE` (BITF, SMLR) and the `crypto` theme
+  (BITF, SMLR, CEP), `supply_demand/equity_premium.py` treasury set (BITF,
+  SMLR).
+- **Ingestion filter.** AKE, GTXI, INH (CVR rows) and P5N994 (an NNQS escrow
+  placeholder) come in from the iShares holdings files. A CVR/NNQS filter in
+  the iShares parser would be sturdier than a DELISTED entry per row.
+- **AVB** stays DELISTED. Its successor is now known (VMRK, the renamed EQR
+  side of the merger), but AVB holders were paid at an exchange ratio, so it
+  is not a splice.
+- **LC** appears in `cheetah_data.py` tier3 as a raw literal.
+
+### Post-deploy step
+
+The successor caches are short or stale (NXH ends 2026-09-01, HAPN
+2026-08-25, SHOE 2026-09-09). One forced fetch each lets the splice land:
+
+    docker exec cheetah-market-app-api-1 python -c "from sepa import prices; [prices.load_prices(s, force=True) for s in ('NXH','KEEL','VMRK','DMC','HOS','HAPN','SHOE')]"
+
+### Tests
+
+`tests/test_delist_dead_tickers_2026_09_29.py`: every new name flagged
+with dated evidence; renames resolve and splice across their real boundary
+bars; VSCO's boundary refused and VSCO unmapped (negative); successors,
+acquirers and TWOD untouched (negative); prior entries unchanged; every
+`load_universe` mode plus the env literal and env file drop the dead and
+resolve the renames; the count drops by exactly the number removed.
+
+### 2026-09-29 — roster repair after the dead-ticker cleanup
+
+Hard-coded rosters that still held a name from this cleanup were fixed, so no
+board shows a name the scan can no longer see:
+
+- `supply_demand/sectors.py` crypto_equities: BITF -> KEEL, SMLR dropped (roster 24 -> 23).
+- `sepa/universe.py` curated `UNIVERSE`: BITF -> KEEL, SMLR dropped. `crypto` theme: BITF -> KEEL, SMLR and CEP dropped.
+- `supply_demand/equity_premium.py` `treasury_set`: BITF -> KEEL (KEEL keeps the TREASURY tag), SMLR dropped.
+- `cheetah_data.py` SOFI tier3 peer: LC -> HAPN.
+- EQR evidence line corrected: FIGI and ticker events match, the CIK does NOT (inactive EQR record = 0000931182, ERP Operating LP; VMRK = 0000906107).
+- AVB evidence line notes VMRK is the acquirer, not a successor; AVB stays DELISTED.
+
+Known and out of scope: SATS (renamed ECHO 2026-06-24, already on main) is still in the `space` theme.

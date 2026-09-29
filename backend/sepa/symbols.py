@@ -91,6 +91,57 @@ RENAMES: dict[str, tuple[str, str, str]] = {
            "20h, so that is roughly one wasted pair per day, not per scan, "
            "plus the three force=True callers. splice_history returns the new "
            "frame on an empty old, so nothing crashes and nothing corrupts."),
+    # --- 2026-09-29 dead-ticker triage (Ajay: "Remove the dead ones please").
+    # Each verified against Massive live 2026-09-29: old symbol reference
+    # NOT_FOUND, successor active with the SAME CIK (and composite FIGI unless
+    # noted) plus a ticker_change event on `effective`; boundary bars are
+    # consecutive sessions inside SPLICE_MAX_JUMP_RATIO / SPLICE_MAX_GAP_DAYS.
+    # VSCO -> VSXY is NOT here: +44.6% at the boundary open fails the splice
+    # guard, so it is HIS CALL (docs/sepa/symbol_fates_audit.md).
+    "BBBY": ("NXH", "2026-08-17",
+             "Bed Bath & Beyond, Inc. (ex-Overstock/Beyond) renamed "
+             "Neighborhood Intelligence, Inc. Same CIK 0001130713 and FIGI "
+             "BBG000BF7BV7; NXH events OSTK->BYON->BBBY->NXH. BBBY last bar "
+             "2026-08-14 close 4.35; NXH first bar 2026-08-17 open 4.55. "
+             "Consecutive sessions (Fri->Mon), +4.6% overnight, no split."),
+    "BITF": ("KEEL", "2026-04-06",
+             "Bitfarms Ltd. rebranded Keel Infrastructure Corp. on its U.S. "
+             "redomicile (GlobeNewswire 2026-02-06). Same CIK 0001812477; "
+             "composite FIGI changed with the redomicile. BITF last bar "
+             "2026-04-02 close 1.98 (04-03 Good Friday); KEEL first bar "
+             "2026-04-06 open 2.07. Consecutive sessions, +4.5% overnight, "
+             "no split."),
+    "EQR": ("VMRK", "2026-08-18",
+            "Equity Residential renamed Vivmark Residential after the "
+            "AvalonBay merger (EQR surviving; Benzinga 2026-05-21). Same "
+            "FIGI BBG000BG8M31, and VMRK's ticker events run EQR (2003-09-10) "
+            "-> VMRK (2026-08-18). CIK differs: the inactive EQR record "
+            "carries 0000931182 (ERP Operating LP, the operating-partnership "
+            "record), VMRK carries 0000906107. EQR last bar 2026-08-17 close "
+            "63.66; VMRK first bar 2026-08-18 open 64.16. Consecutive "
+            "sessions, +0.8% overnight, no split."),
+    "FDP": ("DMC", "2026-06-29",
+            "Fresh Del Monte Produce renamed Del Monte Corporation. Same CIK "
+            "0001047340; DMC events FDP->DMC 2026-06-29. FDP last bar "
+            "2026-06-26 close 29.22; DMC first bar 2026-06-29 open 29.00. "
+            "Consecutive sessions (Fri->Mon), -0.75% overnight, no split."),
+    "HLX": ("HOS", "2026-09-02",
+            "Helix Energy Solutions renamed Hornbeck Offshore Services after "
+            "the Hornbeck merger (Helix surviving; Benzinga 2026-04-23). Same "
+            "CIK 0000866829 and FIGI BBG000J7Q1L9. HLX last bar 2026-09-01 "
+            "close 10.60; HOS first bar 2026-09-02 open 10.83. Consecutive "
+            "sessions, +2.2% overnight, no split."),
+    "LC": ("HAPN", "2026-06-22",
+           "LendingClub Corporation renamed Happen, Inc. (Motley Fool "
+           "2026-05-13). Same CIK 0001409970 and FIGI BBG001YKDND6. LC last "
+           "bar 2026-06-18 close 19.21; HAPN first bar 2026-06-22 open 19.40 "
+           "(06-19 Juneteenth). Consecutive sessions, +1.0% overnight, no "
+           "split."),
+    "SCVL": ("SHOE", "2026-06-12",
+             "Shoe Carnival Inc renamed Shoe Station Group, Inc. (Investing.com "
+             "2026-03-27). Same CIK 0000895447 and FIGI BBG000BF4DG3. SCVL "
+             "last bar 2026-06-11 close 17.43; SHOE first bar 2026-06-12 open "
+             "17.43. Consecutive sessions, 0.0% overnight, no split."),
 }
 
 # Reverse index, built once. A current symbol can have more than one former name
@@ -171,10 +222,125 @@ DELISTED: dict[str, str] = {
           "session 10x volume — take-private close.",
     "AVB": "AvalonBay Communities. Last bar 2026-08-14; reference NOT_FOUND, "
            "no successor by name search. No deal-close pin — likely a "
-           "stock-for-stock merger; revisit if a successor surfaces.",
+           "stock-for-stock merger; revisit if a successor surfaces. "
+           "2026-09-29: the acquirer surfaced — AvalonBay merged into EQR, "
+           "which became VMRK. VMRK is the ACQUIRER, a different issuer, not "
+           "a successor to splice; AVB stays DELISTED.",
     "GFRR": "Never in the universe — a ghost in Massive's movers snapshot "
             "that erred the catalysts cron every 5 minutes. Reference "
             "NOT_FOUND, zero aggs, Yahoo 404s the quote.",
+    # --- 2026-09-29 dead-ticker triage (Ajay: "Remove the dead ones please").
+    # The latest SEPA scan skipped these as stale / no price data. Verified
+    # 2026-09-29 against Massive live: reference NOT_FOUND, an inactive record
+    # with delisted_utc, no daily aggs after the last bar through 2026-09-29,
+    # no same-CIK or by-name active successor. An acquirer that keeps its own
+    # series (MBC, AVO, OCFC, CHTR, IONQ ...) is NOT a splice.
+    "ADRO": "Aduro Biotech -> Chinook (KDNY, same CIK, delisted 2023-08-14). "
+            "ADRO delisted 2020-10-06; the iShares row is an unlisted Chinook "
+            "CVR marked NO MARKET. No active ticker under the CIK.",
+    "AKE": "Akero Therapeutics CVR — an iShares R3000 row, never a tradeable "
+           "equity. Parent AKRO delisted 2025-12-10 on the merger (Benzinga "
+           "2025-11-18). No aggs, no cache frame.",
+    "AMWD": "American Woodmark. Last bar 2026-05-27, delisted 2026-05-29 — "
+            "stock-for-stock into MasterBrand (MBC keeps its own series; "
+            "GlobeNewswire 2025-10-13).",
+    "APGE": "Apogee Therapeutics. Last bar 2026-09-02, pinned $134.95-135.08, "
+            "delisted 2026-09-04 — acquired by AbbVie (Motley Fool 2026-07-12).",
+    "AVNS": "Avanos Medical. Last bar 2026-07-24, pinned $24.97-24.99, "
+            "delisted 2026-07-28 — take-private (Benzinga 2026-04-14).",
+    "CCRN": "Cross Country Healthcare. Last bar 2026-07-20, pinned "
+            "$13.22-13.25, delisted 2026-07-22 — sold to Knox Lane "
+            "(GlobeNewswire 2026-05-13).",
+    "CEP": "Cantor Equity Partners (SPAC). Last bar 2025-12-08, delisted "
+           "2025-12-09 — de-SPAC into XXI, a NEW issuer (different CIK, "
+           "-24.7% boundary). Never splice SPAC-shell history.",
+    "CPRX": "Catalyst Pharmaceuticals. Last bar 2026-07-14, pinned "
+            "$31.47-31.49, delisted 2026-07-16 — acquired by Angelini Pharma "
+            "(GlobeNewswire 2026-07-16).",
+    "CRNX": "Crinetics Pharmaceuticals. Last bar 2026-08-31, pinned "
+            "$84.78-84.95, delisted 2026-09-02 — acquired by Vertex (Motley "
+            "Fool 2026-07-30).",
+    "CVGW": "Calavo Growers. Last bar 2026-05-27, delisted 2026-05-29 — "
+            "acquired by Mission Produce (AVO keeps its own series; "
+            "GlobeNewswire 2026-05-28).",
+    "CWAN": "Clearwater Analytics. Last bar 2026-06-24, pinned against the "
+            "$24.55 buyout, delisted 2026-06-29 — take-private "
+            "(GlobeNewswire 2026-03-30).",
+    "ESPR": "Esperion Therapeutics. Last bar 2026-07-10, pinned $3.15-3.19, "
+            "delisted 2026-07-14 — ARCHIMED buyout (Benzinga 2026-05-01).",
+    "FFIC": "Flushing Financial. Last bar 2026-06-01 on 10x volume, delisted "
+            "2026-06-02 — merged into OceanFirst (OCFC, different CIK; "
+            "Benzinga 2026-04-27).",
+    "GTLS": "Chart Industries. Last bar 2026-07-15, pinned against the $210 "
+            "cash takeout, delisted 2026-07-17 — acquired by Baker Hughes "
+            "(Benzinga 2025-07-29).",
+    "GTXI": "GTx Inc. CVR — an iShares R3000/Micro-Cap row valued at $0.01, "
+            "never a tradeable equity. GTx delisted 2019-06-10. No aggs, no "
+            "cache frame.",
+    "INH": "Inhibrx Inc CVR — an iShares R3000/Micro-Cap row, never a "
+           "tradeable equity. Checked 2026-09-29: no Massive record at all. "
+           "INBX is a separate "
+           "entity (CIK 0002007919), not a successor.",
+    "KALV": "KalVista Pharmaceuticals. Last bar 2026-06-10, pinned "
+            "$26.95-27.00, delisted 2026-06-12 — cash acquisition "
+            "(GlobeNewswire 2026-05-12 merger probe).",
+    "KW": "Kennedy-Wilson Holdings. Last bar 2026-06-15 on 13x volume, "
+          "delisted 2026-06-17 — Fairfax take-private (Benzinga 2026-06-16).",
+    "LBRDA": "Liberty Broadband Class A. Last bar 2026-08-19 on 8.7x volume, "
+             "delisted 2026-08-21 — absorbed by Charter (CHTR, different "
+             "CIK; GlobeNewswire 2024-12-06).",
+    "LBRDK": "Liberty Broadband Class C. Last bar 2026-08-19 on ~7x volume, "
+             "delisted 2026-08-21 — absorbed by Charter (CHTR, different "
+             "CIK; GlobeNewswire 2024-12-06).",
+    "LEG": "Leggett & Platt. Last bar 2026-08-26 on 5-9x volume, delisted "
+           "2026-08-27 — Somnigroup bid (Benzinga 2025-12-01); no completion "
+           "release found, verdict rests on inactive + zero aggs since.",
+    "LPRO": "Open Lending. Last bar 2026-07-29, pinned $3.14-3.15, delisted "
+            "2026-07-31 — cash deal (GlobeNewswire 2026-06 merger probes).",
+    "NFBK": "Northfield Bancorp. Last bar 2026-07-20, delisted 2026-07-21 — "
+            "acquired by Columbia Financial (GlobeNewswire 2026-07-20).",
+    "NUVL": "Nuvalent. Last bar 2026-07-14, pinned $123.9-123.96, delisted "
+            "2026-07-16 — acquired by GSK (Investing.com 2026-06-11).",
+    "OLPX": "Olaplex Holdings. Last bar 2026-07-06, pinned $2.05-2.07, "
+            "delisted 2026-07-08 — acquired by Henkel (Benzinga 2026-03-26).",
+    "P5N994": "Petrocorp Inc Escrow — an iShares R3000 NNQS placeholder, never "
+              "a listed equity. Checked 2026-09-29: no Massive record, zero "
+              "aggs ever, no cache frame.",
+    "PRA": "ProAssurance. Last bar 2026-06-25, pinned at exactly $25.00, "
+           "delisted 2026-06-29 — cash deal (GlobeNewswire 2025-06-15).",
+    "RMAX": "RE/MAX Holdings. Last bar 2026-08-24 on ~6x volume, delisted "
+            "2026-08-25 — acquired by Real Brokerage (Benzinga 2026-04-27).",
+    "SEM": "Select Medical. Last bar 2026-06-30, pinned $16.50-16.53, "
+           "delisted 2026-07-01 — take-private (GlobeNewswire 2026-03 merger "
+           "probes).",
+    "SILA": "Sila Realty Trust. Last bar 2026-06-30, pinned $30.29-30.36, "
+            "delisted 2026-07-02 — buyout (Benzinga 2026-04-20).",
+    "SKYT": "SkyWater Technology. Last bar 2026-07-30, delisted 2026-08-03 — "
+            "acquired by IonQ (IONQ keeps its own series; Motley Fool "
+            "2026-05-11).",
+    "SMLR": "Semler Scientific. Last bar 2026-01-15, delisted 2026-01-20 — "
+            "merged into Strive (GlobeNewswire 2025-12-09).",
+    "SNBR": "Sleep Number. Last bar 2026-06-22, delisted 2026-06-23 after the "
+            "June 12 Chapter 11 (Benzinga 2026-06-18). OTC SNBRQ is a "
+            "bankrupt shell, not a rename.",
+    "STEL": "Stellar Bancorp. Last bar 2026-06-30 on 15.9x volume, delisted "
+            "2026-07-01 — merged into Prosperity Bancshares (Benzinga "
+            "2026-01-28).",
+    "TALK": "Talkspace. Last bar 2026-08-14, pinned $5.21-5.25, delisted "
+            "2026-08-18 — acquired by UHS (Benzinga 2026-05-29).",
+    "THR": "Thermon Group. Last bar 2026-05-29, delisted 2026-06-02 — "
+           "combined into CECO Environmental (GlobeNewswire 2026-05-15).",
+    "TMHC": "Taylor Morrison Home. Last bar 2026-07-23, pinned $71.85-72.48, "
+            "delisted 2026-07-27 — acquired by Berkshire Hathaway (Benzinga "
+            "2026-06-02).",
+    "TWO": "Two Harbors Investment. Last bar 2026-08-24, pinned ~$12.0, "
+           "delisted 2026-08-26 — acquired by CrossCountry (Benzinga "
+           "2026-03-27). TWOD under the same CIK is senior notes: never map.",
+    "WBS": "Webster Financial. Last bar 2026-08-19 on 18.8x volume, delisted "
+           "2026-08-20 — acquired by Banco Santander (GlobeNewswire "
+           "2026-05-18).",
+    "WSR": "Whitestone REIT. Last bar 2026-07-13, pinned $18.96-19.00, "
+           "delisted 2026-07-15 — acquired by Ares (GlobeNewswire 2026-04-09).",
 }
 
 

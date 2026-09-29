@@ -37,9 +37,11 @@ def test_the_sector_exists_and_leads_with_the_name_he_asked_for():
 
 def test_it_covers_miners_exchanges_AND_treasury_holders():
     t = set(_sector()["sp_tickers"])
-    assert {"MARA", "RIOT", "CLSK", "BITF", "HIVE"} <= t, "miners"
+    assert {"MARA", "RIOT", "CLSK", "KEEL", "HIVE"} <= t, "miners"
     assert {"COIN", "HOOD", "GLXY"} <= t, "exchanges / brokers"
-    assert {"MSTR", "SMLR"} <= t, "treasury holders"
+    assert {"MSTR", "DFDV"} <= t, "treasury holders"
+    # 2026-09-29 dead-ticker cleanup: BITF renamed KEEL, SMLR delisted.
+    assert not ({"BITF", "SMLR"} & t), "dead / renamed names must be gone"
 
 
 def test_THE_CENTRAL_DISTINCTION_the_COINS_are_still_refused():
