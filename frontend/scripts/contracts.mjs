@@ -5002,6 +5002,112 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧬 medical catalysts (2026-09-29): sub-tab mounted, UNMEASURED served, the kind declares itself everywhere, never bounce',
+    file: 'src/pages/Catalysts.tsx',
+    // Ajay 2026-09-29: "can you add a new routine to scan for … amd trails or
+    // other medi cal nws and sector them separatively like new fdaapprovals or
+    // break throughs like mrnaresearch how to catch thsse sectorsand
+    // companiesand add right setup and alerts". The setup is PENDING STUDY:
+    // every surface prints the served UNMEASURED note, none names a price to
+    // act at, and the med_catalyst kind must exist in every registry or it
+    // sends to zero devices in silence.
+    checks: (src) => {
+      const errs = [];
+      // 1. the sub-tab
+      const tt = /type TopTab = ([^;]*);/.exec(src);
+      if (!tt || !/'medical'/.test(tt[1])) errs.push("TopTab must carry 'medical'");
+      const tops = /const TOP_TABS: TopTab\[\] = \[([^\]]*)\]/.exec(src);
+      if (!tops || !/'medical'/.test(tops[1])) errs.push("TOP_TABS must carry 'medical' — ?sub=medical would fall back to Predictions");
+      if (!src.includes("{tab === 'medical' && <MedicalCatalysts />}")) errs.push("Catalysts.tsx must render {tab === 'medical' && <MedicalCatalysts />}");
+      // 2. the served note + setup, on both surfaces
+      const board = read('src/components/MedicalCatalysts.tsx');
+      const panel = read('src/components/MedicalEventsPanel.tsx');
+      const row = read('src/components/MedicalEventRow.tsx');
+      if (!/data-testid="mc-unmeasured">\{data\.labels\.note\}/.test(board)) errs.push('MedicalCatalysts must render the SERVED data.labels.note in data-testid="mc-unmeasured"');
+      if (!/data-testid="mc-setup">Setup: \{data\.labels\.setup\}/.test(board)) errs.push('MedicalCatalysts must render the SERVED labels.setup in data-testid="mc-setup"');
+      if (!/data-testid="mc-panel-unmeasured">\{data\.labels\.note\}/.test(panel)) errs.push('MedicalEventsPanel must render the SERVED data.labels.note in data-testid="mc-panel-unmeasured"');
+      if (!/data-testid="mc-panel-setup">Setup: \{data\.labels\.setup\}/.test(panel)) errs.push('MedicalEventsPanel must render the SERVED labels.setup in data-testid="mc-panel-setup"');
+      // 3. never bounce, never a price to act at
+      for (const [rel, txt] of [['MedicalCatalysts.tsx', board], ['MedicalEventRow.tsx', row], ['MedicalEventsPanel.tsx', panel]]) {
+        if (/bounce/i.test(txt)) errs.push(`${rel} says "bounce" — surfaces he reads say reversal`);
+        if (/\b(Stop|Target|Entry)\b/.test(txt)) errs.push(`${rel} carries Stop / Target / Entry — the setup is pending study`);
+      }
+      // 4. the ticker page mounts the panel inside the catalyst branch
+      const sepa = read('src/pages/SepaCandidate.tsx');
+      const catAt = sepa.indexOf("{tab === 'catalyst' && (");
+      const catBranch = catAt < 0 ? '' : sepa.slice(catAt, sepa.indexOf("{tab === '", catAt + 10));
+      if (!/<MedicalEventsPanel symbol=\{symbol\}/.test(catBranch)) errs.push("SepaCandidate.tsx's catalyst branch must mount <MedicalEventsPanel symbol={symbol} />");
+      // 5. five registries
+      if (!/\bmed_catalyst:/.test(read('src/lib/alertKinds.ts'))) errs.push('alertKinds.ts must register med_catalyst or the bell renders a raw id');
+      if (!/med_catalyst\?: boolean/.test(read('src/hooks/useNotificationPrefs.ts'))) errs.push('NotificationPrefs must carry med_catalyst?: boolean');
+      const notif = read('src/pages/Notifications.tsx');
+      const nm = notif.match(/key: 'med_catalyst'[\s\S]*?\},\n/);
+      if (!nm) errs.push('med_catalyst must be listed on the Notifications page — a kind the page cannot show cannot be muted');
+      const d = nm ? nm[0] : '';
+      for (const need of ['NOT MEASURED', 'Not a recommendation', 'add right setup and alerts']) {
+        if (nm && !d.includes(need)) errs.push(`the med_catalyst Notifications entry must say ${need}`);
+      }
+      const subs = read('../backend/push/subs.py');
+      const dm = subs.match(/["']med_catalyst["']\s*:\s*(True|False)/);
+      if (!dm) errs.push('push/subs.py default_prefs must list "med_catalyst"');
+      const gate = read('../backend/market_hours/gate.py');
+      if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes('med_catalyst')) errs.push('market_hours/gate.py must treat med_catalyst as a MARKET kind');
+      if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes('med_catalyst')) errs.push('med_catalyst must NOT be a PERSONAL kind — a closed day has no session to trade the news');
+      // 6. default-state coherence (HIS CALL #1 flips the keep-set)
+      if (dm && dm[1] !== 'False') errs.push('med_catalyst must be False in push/subs.py default_prefs — everyone else starts off');
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      if (keepSet(subs).includes('med_catalyst')) {
+        if (nm && !d.includes('ON FOR YOUR PHONE')) errs.push('med_catalyst is in OWNER_KEEP_SET — the Notifications entry must say ON FOR YOUR PHONE');
+        if (!/med_catalyst:\s*true/.test(ess)) errs.push('med_catalyst is in OWNER_KEEP_SET — Essentials must carry med_catalyst: true');
+      } else {
+        if (nm && !d.includes('OFF BY DEFAULT')) errs.push('med_catalyst is NOT in OWNER_KEEP_SET — the Notifications entry must say OFF BY DEFAULT');
+        if (!/med_catalyst:\s*false/.test(ess)) errs.push('med_catalyst is NOT in OWNER_KEEP_SET — Essentials must carry med_catalyst: false');
+      }
+      // 7. the /alerts pass row
+      if (!/key: 'med_catalyst'/.test(read('src/pages/Alerts.tsx'))) errs.push("Alerts.tsx PASSES must carry key: 'med_catalyst'");
+      // 8. it rides promo_live — NO crontab line of its own (NEGATIVE)
+      const cron = cronCommands(read('../backend/crontab'));
+      if (cron.some((l) => /catalysts\.medical/.test(l))) errs.push('backend/crontab runs catalysts.medical — it must ride promo_live (the crontab is host-mounted; a deploy does not ship it)');
+      const promoLines = cron.filter((l) => /catalysts\.promo_live/.test(l));
+      if (promoLines.length !== 1) errs.push(`backend/crontab must run catalysts.promo_live exactly once — found ${promoLines.length}`);
+      const promo = read('../backend/catalysts/promo_live.py');
+      const mainAt = promo.indexOf('if __name__ == "__main__"');
+      const main = mainAt < 0 ? '' : promo.slice(mainAt);
+      const wz = main.indexOf('warm_zones()');
+      const hk = main.indexOf('_run_medical_hook()');
+      if (hk < 0 || wz < 0 || hk < wz) errs.push('promo_live.py __main__ must call _run_medical_hook() after warm_zones()');
+      // 9. ✨ + nav
+      if (!read('src/lib/newFeatures.ts').includes("id: 'medical-catalysts-2026-09-29'")) errs.push("newFeatures.ts lost the ✨ entry id: 'medical-catalysts-2026-09-29'");
+      if (!/sub=medical/.test(read('src/lib/navSearch.ts'))) errs.push('navSearch.ts must deep-link sub=medical');
+      // 10. the owner's address never reaches the bundle
+      const scanEmail = (dir) => {
+        for (const ent of readdirSync(join(FRONTEND_ROOT, dir), { withFileTypes: true })) {
+          const rel = `${dir}/${ent.name}`;
+          if (ent.isDirectory()) scanEmail(rel);
+          else if (/\.(ts|tsx|js|jsx)$/.test(ent.name) && /ajaykandakatla@/.test(read(rel))) {
+            errs.push(`${rel} carries the owner's email — it must never reach the JS bundle`);
+          }
+        }
+      };
+      scanEmail('src');
+      // 11. every mc-* class the three components use has a rule (the hsm lesson)
+      const css = read('src/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+      const used = new Set();
+      for (const txt of [board, row, panel]) {
+        for (const m of txt.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\}|\{([^}]*)\})/g)) {
+          for (const cls of (m[1] || m[2] || m[3] || '').split(/[\s${}?:'"+()]+/)) {
+            if (/^mc-[\w-]*[\w]$/.test(cls)) used.add(cls);
+          }
+        }
+      }
+      for (const fn of ['mc-dir--pos', 'mc-dir--neg', 'mc-dir--mixed', 'mc-dir--unknown', 'mc-push--on', 'mc-push--off', 'mc-push--held']) used.add(fn);
+      for (const c of [...used].sort()) {
+        if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) errs.push(`styles.css has no rule for .${c} — the 🧬 board would ship unstyled`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -20,6 +20,8 @@ never ran". This module keeps the last pass's counters per kind:
   demand_alert       written here by demand_alerts.check_once
   key_level_alert    written here by key_level_alerts.run_pass (2026-09-25),
                      the 🔑 hook on the zone_edge minute
+  med_catalyst       written here by catalysts.medical.routine (2026-09-29),
+                     the 🧬 hook on the promo_live 5-minute line
 
 ``alert_pass_latest`` collection: {_id: kind, as_of: ET iso, date: YYYY-MM-DD,
 counts: {...ints}, reason?: str}. One doc per kind, replaced every pass.
@@ -74,7 +76,12 @@ DAILY_PASS_KINDS = ("earnings_reaction", "board_arrival:bonde", "board_arrival:g
 # zone_edge minute — no crontab line of its own — and records its own pass doc.
 # Its kind ships OFF; the page still carries it for the capital_quality reason.
 KEY_LEVEL_KIND = "key_level_alert"
-PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND) + DAILY_PASS_KINDS
+# 🧬 med_catalyst (catalysts/medical/routine.py, 2026-09-29) rides promo_live's
+# `*/5 4-19 * * 1-5` crontab line — no line of its own — and records its own
+# pass doc. Its kind ships ON for the owner only (OWNER_KEEP_SET). The module
+# is NOT imported here: this file stays a module-level leaf.
+MED_KIND = "med_catalyst"
+PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -88,6 +95,10 @@ CADENCE_SEC = {ZONE_EDGE_KIND: 60, "zone_bounce_alert": 300, "demand_alert": 300
 # line (zone_edge.check_once → key_level_alerts.run_pass), so its cadence IS
 # zone_edge's.
 CADENCE_SEC[KEY_LEVEL_KIND] = CADENCE_SEC[ZONE_EDGE_KIND]
+# The 🧬 hook runs inside `python -m catalysts.promo_live` (backend/crontab:459,
+# `*/5 4-19 * * 1-5`), so its cadence IS that line's: 300 s. The source guard in
+# test_alert_status derives it from the crontab's minute field.
+CADENCE_SEC[MED_KIND] = 300
 
 # The cap floor is READ from demand_alerts.MIN_CAP_USD at request time, never
 # retyped (review 2026-09-14, finding 6: this said "$1B+" for four days after
@@ -331,6 +342,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         "zone_bounce_alert": _with_cadence("zone_bounce_alert", read_pass("zone_bounce_alert", pass_coll)),
         "demand_alert":      _with_cadence("demand_alert", read_pass("demand_alert", pass_coll)),
         KEY_LEVEL_KIND:      _with_cadence(KEY_LEVEL_KIND, read_pass(KEY_LEVEL_KIND, pass_coll)),
+        MED_KIND:            _with_cadence(MED_KIND, read_pass(MED_KIND, pass_coll)),
     }
     for kind in DAILY_PASS_KINDS:
         passes[kind] = _daily(kind, read_pass(kind, pass_coll), sched)
@@ -343,7 +355,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

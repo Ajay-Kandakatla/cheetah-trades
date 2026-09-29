@@ -229,6 +229,23 @@ def _non_zone_push_lines() -> list:
         "never pushes. Once per report. Owner settings, not measured."
         % (E.MIN_VOL_RATIO, round((1 - E.MIN_CLOSE_LOC) * 100), _b(E.MIN_DOLLAR_VOL)),
     ]
+    # 🧬 med_catalyst (2026-09-29) — its OWN try/except that never returns, so
+    # a failure here cannot drop the lines below. Every number is read from
+    # catalysts.medical.alerts / trading.safety_floor (lazy imports).
+    try:
+        from catalysts.medical import alerts as MA
+        from catalysts.medical import taxonomy as MT
+        lines.append(
+            "🧬 med_catalyst (ON for the owner — mute at /notifications): %s; prior close ≥ $%.0f "
+            "and 50-session median dollar volume ≥ %s; only while the regular session has traded "
+            "the news ≤ %.0f minutes; not a repeat of the same kind on the name within %d "
+            "sessions; one topline push per name per session; once per event; %d ring "
+            "individually then one digest; every 5 min 04:00–19:55 ET on trading days. "
+            "UNMEASURED — setup: pending study."
+            % (MT.HIGH_IMPACT_TEXT, SFL.MIN_SHARE_PRICE, _b(SFL.THIN_DOLLAR_VOL),
+               MA.RTH_EXPOSURE_MAX_MIN, MA.RECAP_SESSIONS, MA.MAX_SINGLES))
+    except Exception as exc:                          # pragma: no cover - import shim
+        log.warning("rules_info: med_catalyst line unavailable: %s", exc)
     try:
         from sepa import board_arrival as BA          # lazy: never load the SEPA boards here
         slots = BA.SLOTS_ET

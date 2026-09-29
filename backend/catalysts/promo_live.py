@@ -453,13 +453,47 @@ def check_alerts(owner: Optional[str] = None) -> dict:
     return out
 
 
+def _run_medical_hook(hook=None) -> dict:
+    """🧬 The medical-catalysts pass rides THIS cron line (backend/crontab:459,
+    `*/5 4-19 * * 1-5`) — no crontab line of its own (the host crontab is
+    mounted; a deploy does not ship it). `hook`: None -> the lazy
+    catalysts.medical.routine.run_tick; False -> skip; a callable -> call it.
+    Never raises: its own failure is a redacted `{"ran": False, "error": …}`
+    and promo's result is untouched. Bounded by routine.HOOK_BUDGET_SEC, so
+    promo + hook end inside the 300 s tick (supercronic skips an overlap)."""
+    if hook is False:
+        return {"ran": False, "reason": "skipped"}
+    try:
+        if hook is None:
+            from catalysts.medical.routine import run_tick as hook
+        return hook()
+    except Exception as exc:                                # noqa: BLE001
+        from observability.logsetup import redact
+        err = redact(f"{type(exc).__name__}: {exc}")
+        log.warning("promo_live: medical hook failed: %s", err)
+        return {"ran": False, "error": err}
+
+
 if __name__ == "__main__":
     import json
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
-    res = check_alerts()
+    # 🧬 2026-09-29 (critic): the medical hook makes httpx calls with Finnhub
+    # `token=` / Massive `apiKey=` in the URL and supercronic ships job output to
+    # `docker logs` — silence httpx's INFO request line and scrub every record.
+    from observability.logsetup import install_redaction
+    install_redaction()
+    res = {}
+    t0 = time.time()
     try:
-        res["zones"] = warm_zones()
-    except Exception as exc:                                # pragma: no cover
-        res["zones"] = {"ok": False, "error": str(exc)}
-    print(json.dumps(res, indent=2, default=str))
+        res = check_alerts()
+        try:
+            res["zones"] = warm_zones()
+        except Exception as exc:                            # pragma: no cover
+            res["zones"] = {"ok": False, "error": str(exc)}
+    finally:
+        # 🧬 2026-09-29: in a `finally`, so a raising check_alerts() can no
+        # longer skip the medical pass; the exception still propagates after it.
+        res["medical"] = _run_medical_hook()
+        res["elapsed_sec"] = round(time.time() - t0, 2)
+        print(json.dumps(res, indent=2, default=str))

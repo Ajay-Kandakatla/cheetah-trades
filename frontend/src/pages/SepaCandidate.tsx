@@ -23,6 +23,7 @@ import { CheetahVerdictPanel } from '../components/CheetahVerdictPanel';
 const BreakoutHistoryBody = lazyWithReload(() => import('../components/BreakoutHistoryModal').then(m => ({ default: m.BreakoutHistoryBody })));
 import { NewsReadButton } from '../components/NewsReadButton';
 import { TwoSidedNewsButton } from '../components/TwoSidedNewsButton';
+import { MedicalEventsPanel } from '../components/MedicalEventsPanel';
 import type { ChartInterval } from '../components/LiveCandlesChart';
 const LiveCandlesChart = lazyWithReload(() => import('../components/LiveCandlesChart').then(m => ({ default: m.LiveCandlesChart })));
 import { ChartReadingGuide } from '../components/ChartReadingGuide';
@@ -1571,6 +1572,12 @@ export function SepaCandidatePage() {
                     question and writes the bull case AND the bear case, off
                     the same prompt the 🔥 sector tiles use. Also on demand. */}
                 <TwoSidedNewsButton symbol={symbol} />
+
+                {/* 🧬 This name's classified medical events (2026-09-29) —
+                    FDA decisions, trial readouts, designations, holds. The
+                    served UNMEASURED note rides with it; a fetch error is one
+                    muted line and never takes the tab with it. */}
+                <MedicalEventsPanel symbol={symbol} />
 
                 {data.catalyst ? (
                   <>

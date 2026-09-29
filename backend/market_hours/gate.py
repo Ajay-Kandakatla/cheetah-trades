@@ -101,6 +101,12 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # daily bars and the session close, so a MARKET kind: silent on weekends
     # and NYSE holidays. It ships OFF in push.subs.default_prefs.
     "key_level_alert",
+    # 🧬 an FDA decision / Phase 3 topline / hold on a healthcare name
+    # (catalysts/medical/alerts.py, 2026-09-29) — its gate reads closed daily
+    # bars and a live print, so a MARKET kind: silent on weekends and NYSE
+    # holidays (the routine checks closed_reason BEFORE claiming, so the event
+    # stays pending and rings on the next trading morning).
+    "med_catalyst",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

@@ -18,6 +18,7 @@ import { ChatterDeepLinks } from '../components/ChatterDeepLinks';
 import { MarketGaugeBanner } from '../components/MarketGaugeBanner';
 import { RussellWatch } from '../components/RussellWatch';
 import { PromoCircuit } from '../components/PromoCircuit';
+import { MedicalCatalysts } from '../components/MedicalCatalysts';
 import {
   useCatalystScan,
   useDeepDive,
@@ -39,7 +40,7 @@ import type {
   FrenzyCandidate, FrenzyTier,
 } from '../hooks/useCatalysts';
 
-type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline' | 'russell' | 'promo';
+type TopTab = 'predictions' | 'frenzy' | 'now' | 'premarket' | 'calendar' | 'timeline' | 'russell' | 'promo' | 'medical';
 
 /* 'room' leads (Ajay 2026-09-05: "for catalyst same deal make sure you sort
  * stocks by bigger gaps in to supply like EOSE stock and CLYM as an example
@@ -89,7 +90,8 @@ const QUADRANT_HELP: Record<Quadrant, string> = {
  * parent already is one), and the sub-tab URL param is `sub` because `tab` is
  * Chart Maps' own. Standalone (embedded false) keeps the full page chrome. */
 export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
-  const TOP_TABS: TopTab[] = ['predictions', 'frenzy', 'now', 'premarket', 'calendar', 'timeline', 'russell', 'promo'];
+  /* 🧬 'medical' (2026-09-29) sits after 'promo': /chart-maps?tab=catalysts&sub=medical. */
+  const TOP_TABS: TopTab[] = ['predictions', 'frenzy', 'now', 'premarket', 'calendar', 'timeline', 'russell', 'promo', 'medical'];
   const parseTab = (v: string | null): TopTab => (TOP_TABS.includes(v as TopTab) ? (v as TopTab) : 'predictions');
   /* Deep links (push taps, ✨ NEW highlights) land on the right sub-tab:
    * /chart-maps?tab=catalysts&sub=promo (embedded) or ?tab=promo (standalone). */
@@ -240,6 +242,16 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
         >
           🎪 Promo Circuit
         </button>
+        {/* 🧬 Ajay 2026-09-29: "… sector them separatively like new fdaapprovals
+            or break throughs like mrnaresearch …" — FDA / trial / designation /
+            hold news filed by event, modality and area. UNMEASURED. */}
+        <button
+          type="button"
+          className={`cat-tab ${tab === 'medical' ? 'is-active' : ''}`}
+          onClick={() => setTab('medical')}
+        >
+          🧬 Medical
+        </button>
         <button
           type="button"
           className={`cat-tab ${tab === 'timeline' ? 'is-active' : ''}`}
@@ -266,6 +278,7 @@ export function CatalystsBoard({ embedded }: { embedded?: boolean }) {
       )}
       {tab === 'russell' && <RussellWatch />}
       {tab === 'promo' && <PromoCircuit />}
+      {tab === 'medical' && <MedicalCatalysts />}
 
       {/* Original "Now" content follows — only render when on Now tab */}
       {tab !== 'now' ? null : <>

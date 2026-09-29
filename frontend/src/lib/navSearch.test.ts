@@ -284,3 +284,23 @@ describe('🔑 Key Levels tab deep link (2026-09-28)', () => {
     expect(tos(searchNav(index, 'whatsapp'))).not.toContain('/chart-maps?tab=key_levels');
   });
 });
+
+describe('🧬 Medical catalysts deep link (2026-09-29)', () => {
+  const MED = '/chart-maps?tab=catalysts&sub=medical';
+  it('"fda", "phase 3", "clinical hold", "mrna" find the 🧬 Medical sub-tab', () => {
+    for (const q of ['fda', 'fda approval', 'phase 3', 'clinical hold', 'mrna', 'medical', 'pdufa']) {
+      expect(tos(searchNav(index, q)), q).toContain(MED);
+    }
+    expect(NAV_SYNONYMS.catalysts).toEqual(expect.arrayContaining(['medical', 'fda', 'biotech']));
+  });
+  it('exactly one entry, only when Chart Maps is in the menu', () => {
+    expect(EXTRA_ENTRIES.filter((e) => e.to === MED)).toHaveLength(1);
+    expect(index.filter((e) => e.to === MED)).toHaveLength(1);
+    const without = buildIndex({ ...MENU, primary: MENU.primary.filter((m) => m.feature !== 'chart-maps') }, subgroupOf);
+    expect(tos(without)).not.toContain(MED);
+  });
+  it('NEGATIVE: an unrelated query does not surface it', () => {
+    expect(tos(searchNav(index, 'whatsapp'))).not.toContain(MED);
+    expect(tos(searchNav(index, 'key level'))).not.toContain(MED);
+  });
+});

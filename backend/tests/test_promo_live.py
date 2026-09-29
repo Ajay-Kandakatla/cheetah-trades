@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from catalysts import promo_live as pl
 from push import subs
@@ -318,3 +319,85 @@ def test_the_floor_never_hides_a_row_from_the_board(monkeypatch):
     payload = pl.live_rows(force=True)
     assert "RUN" in [r["ticker"] for r in payload["rows"]]
     assert payload["alert_min_cap_usd"] == pl.PROMO_MIN_CAP_USD
+
+
+# ── 🧬 the medical hook rides this cron line (2026-09-29) ──────────────────
+def _main_src() -> str:
+    import inspect
+    src = inspect.getsource(pl)
+    return src[src.index('if __name__ == "__main__"'):]
+
+
+def test_cron_entry_runs_the_medical_hook_last_inside_a_finally():
+    main = _main_src()
+    assert main.index("check_alerts()") < main.index("warm_zones()") < main.index("_run_medical_hook()")
+    fin = main[main.index("finally:"):]
+    assert "_run_medical_hook()" in fin, "the hook sits inside the finally block"
+    assert main.index("finally:") < main.index("_run_medical_hook()")
+
+
+def _exec_main(check_alerts, hook, capsys):
+    import logging as _logging
+    import time as _time
+    calls = []
+    ns = {"__name__": "__main__", "logging": _logging, "time": _time,
+          "check_alerts": check_alerts, "warm_zones": lambda: calls.append("zones") or {"ok": True},
+          "_run_medical_hook": lambda: calls.append("medical") or hook()}
+    exec(compile(_main_src(), "promo_live_main", "exec"), ns)
+    return calls
+
+
+def test_a_raising_check_alerts_still_runs_the_hook_and_still_raises(capsys):
+    def boom():
+        raise RuntimeError("promo broke")
+    with pytest.raises(RuntimeError, match="promo broke"):
+        _exec_main(boom, lambda: {"ran": True}, capsys)
+    out = capsys.readouterr().out
+    assert '"medical"' in out and '"ran": true' in out
+
+
+def test_the_normal_order_is_alerts_zones_then_medical(capsys):
+    calls = _exec_main(lambda: {"ok": True, "pushed": 0}, lambda: {"ran": False, "reason": "lease held"}, capsys)
+    assert calls == ["zones", "medical"]
+    out = capsys.readouterr().out
+    assert '"lease held"' in out and '"elapsed_sec"' in out
+
+
+def test_a_raising_hook_is_a_redacted_result_and_never_raises():
+    def hook():
+        raise RuntimeError("GET https://api.massive.com/v2/reference/news?apiKey=SEKRET&x=1")
+    res = pl._run_medical_hook(hook)
+    assert res["ran"] is False and "SEKRET" not in res["error"] and "apiKey=<redacted>" in res["error"]
+
+
+def test_hook_false_skips_and_a_callable_is_called():
+    assert pl._run_medical_hook(False) == {"ran": False, "reason": "skipped"}
+    assert pl._run_medical_hook(lambda: {"ran": True, "counts": {}}) == {"ran": True, "counts": {}}
+
+
+# ── 🧬 critic 2026-09-29: the cron entry must redact before the hook's httpx calls ──
+def _reset_redaction():
+    import logging as _logging
+    from observability.logsetup import RedactFilter
+    root = _logging.getLogger()
+    for h in [root] + list(root.handlers):
+        for f in [f for f in h.filters if isinstance(f, RedactFilter)]:
+            h.removeFilter(f)
+    _logging.getLogger("httpx").setLevel(_logging.NOTSET)
+
+
+def test_cron_entry_installs_redaction_before_the_hook(capsys):
+    import logging as _logging
+    from observability.logsetup import RedactFilter
+    main = _main_src()
+    assert "install_redaction()" in main
+    assert main.index("basicConfig") < main.index("install_redaction()") < main.index("check_alerts()")
+    _reset_redaction()
+    try:
+        assert _logging.getLogger("httpx").level == _logging.NOTSET      # before: nothing silences it
+        _exec_main(lambda: {"ok": True}, lambda: {"ran": False}, capsys)
+        assert _logging.getLogger("httpx").level >= _logging.WARNING, "httpx INFO would log the keyed URL"
+        assert any(isinstance(f, RedactFilter) for f in _logging.getLogger().filters)
+    finally:
+        _reset_redaction()
+

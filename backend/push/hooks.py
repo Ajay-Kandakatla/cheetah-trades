@@ -202,3 +202,12 @@ def notify_autopilot(kind: str, ticker: str, detail: str) -> dict:
     log.info("notify_autopilot: %s %s → sent=%d failed=%d",
              kind, ticker, r.get("sent", 0), r.get("failed", 0))
     return r
+
+
+def notify_med_catalyst(*, owner: str, payload: dict) -> dict:
+    """🧬 med_catalyst (catalysts/medical/alerts.py, 2026-09-29). Ajay: "…add
+    right setup and alerts". Owner-scoped (send_to_user) under its own pref
+    kind, so the closed-day drop, quiet hours and the /notifications toggle all
+    apply at the sender. UNMEASURED — the payload says "not a buy signal" /
+    "not a sell signal"; no entry, stop or target is ever sent."""
+    return sender.send_to_user(owner, payload, kind="med_catalyst")

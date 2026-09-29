@@ -93,6 +93,20 @@ export const CATEGORIES: CategoryDef[] = [
      reads OFF. */
   { key: 'key_level_alert', label: 'Key level closed through', emoji: '🔑', group: 'trading',
     detail: 'your holdings and Signals list: one push after the close when a name closed through its prior-week, prior-month or 52-week high or low. Unmeasured.' },
+  /* 🧬 catalysts/medical (2026-09-29, Ajay: "… add right setup and alerts").
+     ON for him: in backend push/subs.OWNER_KEEP_SET (the key_level_alert
+     precedent) and False in default_prefs for everyone else — HIS CALL #1
+     flips it off with one word. The numbers below are the build's defaults
+     (HIS CALLs #2 / #7 / #8); the contract re-reads the keep-set. */
+  { key: 'med_catalyst', label: 'Medical catalyst (FDA, Phase 3, hold)', emoji: '🧬', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — you asked for alerts; everyone else starts off. You said: "can you add a new routine to scan for … amd trails or other medi cal nws and sector them separatively like new fdaapprovals or break throughs like mrnaresearch how to catch thsse sectorsand companiesand add right setup and alerts". '
+      + 'WHAT FIRES: an FDA approval (not a tentative or generic one); a complete response letter, refuse-to-file or rejection; a Phase 3 or pivotal topline read that is clearly positive or clearly negative; a Breakthrough Therapy designation; a clinical hold placed. '
+      + 'Only on a name whose prior close is at least $2 and whose 50-session median dollar volume is at least $5M a day, and only while the news is fresh — pre-market, after hours, or while the regular session has traded it for 10 minutes or less. '
+      + 'One topline push per name per session, never a repeat of the same kind on the same name within 21 sessions, once per event. Every 5 minutes, 04:00–19:55 ET on trading days; weekend news rings Monday pre-market. '
+      + 'A name whose news only the rolling company-news read finds (not an 8-K or a wire release) can be found after the open and then stays on the board without ringing. '
+      + 'WHAT NEVER FIRES: Phase 2 results, mixed results including every secondary-endpoint miss, pulled or revoked approvals, filings, PDUFA dates, adcom votes, conference data, scheduled readouts, deals and offerings — all of them still list on Chart Maps \u25B8 Catalysts \u25B8 \u{1F9EC} Medical. '
+      + 'Negative events end "not a sell signal", positive ones "not a buy signal". '
+      + 'NOT MEASURED: events are sorted by fixed word rules and nobody has measured what a stock does after one on your universe — setup: pending study. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -418,11 +432,12 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), and 🔑 a close through a key level on a holding or Signals name (2026-09-25). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
       price_alert: true, key_level_alert: true,
+      med_catalyst: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

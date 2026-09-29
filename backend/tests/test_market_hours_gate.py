@@ -95,6 +95,13 @@ def test_personal_and_market_sets_are_disjoint_and_cover_default_prefs():
     assert not unclassified, f"classify these in market_hours.gate: {sorted(unclassified)}"
 
 
+def test_med_catalyst_is_a_market_kind_2026_09_29(no_override):
+    """🧬 reads closed daily bars and a live print: silent on weekends and holidays."""
+    assert "med_catalyst" in gate.MARKET_ALERT_KINDS and "med_catalyst" not in gate.PERSONAL_KINDS
+    assert gate.should_drop_kind("med_catalyst", LABOR_DAY) == "holiday 2026-09-07"
+    assert gate.should_drop_kind("med_catalyst", TUESDAY) is None
+
+
 def test_the_three_phone_kinds_are_market_kinds():
     assert {"pivot_alert", "position_alert", "todo_reminder"} & (
         gate.MARKET_ALERT_KINDS | gate.PERSONAL_KINDS) == {"pivot_alert", "position_alert", "todo_reminder"}

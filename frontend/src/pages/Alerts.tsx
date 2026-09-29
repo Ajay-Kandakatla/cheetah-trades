@@ -104,6 +104,9 @@ const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   { key: 'zone_bounce_alert', label: '🪃 Intraday demand turn',   fallbackCadenceSec: 300 },
   { key: 'demand_alert',      label: '🧲 Reversal at demand',      fallbackCadenceSec: 300 },
   { key: 'key_level_alert',   label: '🔑 Key levels',              fallbackCadenceSec: 60 },
+  /* 🧬 med_catalyst (2026-09-29) rides promo_live's every-5-minutes crontab
+   * line (04:00–19:55 ET on trading days); backend CADENCE_SEC says 300. */
+  { key: 'med_catalyst',      label: '🧬 Medical catalysts',       fallbackCadenceSec: 300 },
 ];
 
 /* The once-a-day passes (2026-09-20). They are NOT part of the three-pass
