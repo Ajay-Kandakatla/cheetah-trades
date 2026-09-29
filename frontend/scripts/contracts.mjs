@@ -3602,8 +3602,10 @@ const CONTRACTS = [
       if (!/PRE_COL\.label/.test(bodyOf('colLabel') || '')) errs.push('colLabel must print PRE_COL.label ("Pre-mkt"), never the raw key');
       const preCol = tsx.slice(tsx.indexOf('export const PRE_COL'), tsx.indexOf('};', tsx.indexOf('export const PRE_COL')));
       if (!/members that printed/.test(preCol)) errs.push('the Pre-mkt column title must say the group cell is the median of the members that printed');
-      if (!/shownSort === c\.key/.test(tsx)) errs.push('the header mark must follow the SERVED sort (shownSortKey), not the requested one');
-      if (!/ranked on <b>\{colLabel\(shownSort, data\)\}/.test(tsx)) errs.push('the "ranked on" line must print the served sort — under a demotion the rows are on 5 days');
+      // 2026-09-28: `basisPlan.sort` = sortBasis(shownSort, …) — the SERVED
+      // sorted_by once landed (a superset of the shownSortKey demotion rule).
+      if (!/(shownSort|basisPlan\.sort) === c\.key/.test(tsx)) errs.push('the header mark must follow the SERVED sort (shownSortKey / basisPlan.sort), not the requested one');
+      if (!/ranked on <b>\{colLabel\((shownSort|basisPlan\.sort), data\)\}/.test(tsx)) errs.push('the "ranked on" line must print the served sort — under a demotion the rows are on 5 days');
       if (/colLabel\(sort, data\)/.test(tsx)) errs.push('no surface line may print the REQUESTED sort while the rows are ranked on the served one');
       if (!/'&basis=premarket'/.test(tsx)) errs.push('the ☀️ read must add &basis=premarket to the one fetch');
       if (!/sort=\$\{encodeURIComponent\(sort\)\}&dir=\$\{dir\}/.test(tsx)) errs.push('the fetch must still carry sort and dir — the pre-market read is the same server-sorted read');
@@ -4998,6 +5000,166 @@ const CONTRACTS = [
         if (!entry.includes('UNMEASURED')) errs.push('the 🔑 Key Levels ✨ entry must say UNMEASURED');
         if (/bounce/i.test(entry)) errs.push('the 🔑 Key Levels ✨ entry says "bounce"');
         if (!entry.includes("route: '/chart-maps?tab=key_levels'")) errs.push("the 🔑 Key Levels ✨ entry must route to '/chart-maps?tab=key_levels'");
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🔥 Hottest: every column reachable, multi-sort, ⓘ Quality (2026-09-28)',
+    file: 'src/components/HottestSectors.tsx',
+    // Ajay 2026-09-28: "Can you fix the horizontal columns hiding and also can
+    // you help me with multi column sort also can you help with info icon on
+    // the quality?" Three things must not silently revert:
+    //   1. the ROOT CAUSE fix — the scroll wrapper is the direct flex child of
+    //      `.hs` and stretches to it, so the box scrolls sideways inside
+    //      itself instead of growing past the page and being cut by html's
+    //      overflow-x: hidden; Sector / Name is sticky; full-width rows pin
+    //      their text to the visible box;
+    //   2. the multi-sort is a SERVER sort — one extra `then_by` param, every
+    //      mark drawn from the served plan, no client sort;
+    //   3. the ⓘ prints only the SERVED explainer — no number or citation is
+    //      typed into the component.
+    checks: (tsx) => {
+      const errs = [];
+      const css = read('src/styles.css');
+      const rule = (sel) => {
+        const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const m = new RegExp(`(?:^|\\n)${esc}\\s*\\{([^}]*)\\}`).exec(css);
+        return m ? m[1] : null;
+      };
+      const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+      // 1 · layout
+      const wrap = rule('.hs-scrollwrap');
+      if (!wrap) errs.push('styles.css has no .hs-scrollwrap rule');
+      else {
+        for (const d of [/align-self:\s*stretch/, /min-width:\s*0/, /max-width:\s*100%/]) {
+          if (!d.test(wrap)) errs.push(`.hs-scrollwrap lost ${d.source} — the box shrink-wraps the table again and the page cuts its right edge`);
+        }
+      }
+      const scroll = rule('.hs-scroll');
+      if (!scroll || !/min-width:\s*0/.test(scroll) || !/max-width:\s*100%/.test(scroll)) {
+        errs.push('.hs-scroll must keep min-width: 0 and max-width: 100% — it may never grow past its wrapper');
+      }
+      const symRule = /\.hs-table[^{,]*td\.hs-sym[^{]*\{([^}]*)\}/.exec(css);
+      if (!symRule || !/position:\s*sticky/.test(symRule[1]) || !/left:\s*0/.test(symRule[1])
+          || !/background:/.test(symRule[1])) {
+        errs.push('td.hs-sym under .hs-table must be `position: sticky; left: 0` with an opaque background — Sector / Name holds while the columns scroll');
+      }
+      const theadZ = /z-index:\s*(\d+)/.exec(rule('.hs-table thead th') || '');
+      const cornerZ = /z-index:\s*(\d+)/.exec(rule('.hs-table thead th.hs-sym') || '');
+      if (!theadZ || !cornerZ || !(Number(cornerZ[1]) > Number(theadZ[1]))) {
+        errs.push('.hs-table thead th.hs-sym must sit ABOVE the other sticky headers (the corner of both sticky axes)');
+      }
+      if (!/\.hs-scrollwrap\.is-more-right::after\s*\{/.test(css)) errs.push('the "more columns" fade rule is gone');
+      const pin = rule('.hs-rowpin');
+      if (!pin || !/position:\s*sticky/.test(pin) || !/left:\s*0/.test(pin)
+          || !/max-width:\s*calc\(var\(--hs-box-w/.test(pin)) {
+        errs.push('.hs-rowpin must be sticky left:0 with max-width read from var(--hs-box-w — full-width rows ran across the whole table');
+      }
+      if (/--hs-box-w/.test(tsx)) {
+        errs.push('HottestSectors.tsx must never type --hs-box-w — the hook owns it, and the hs-* sweep would demand a .hs-box-w rule');
+      }
+      for (const sel of ['.hs', '.hs-scrollwrap', '.hs-scroll', '.cm-page']) {
+        const esc = sel.replace(/[.]/g, '\\.');
+        for (const m of css.matchAll(new RegExp(`(?:^|\\n)${esc}\\s*\\{([^}]*)\\}`, 'g'))) {
+          if (/overflow(-x)?:\s*(hidden|clip)/.test(m[1])) {
+            errs.push(`${sel} clips its overflow — that is exactly how Next ER was cut`);
+          }
+        }
+      }
+      const iWrap = tsx.indexOf('className={`hs-scrollwrap');
+      const iScroll = tsx.indexOf('<div className="hs-scroll"');
+      if (iWrap < 0 || iScroll < 0 || iWrap > iScroll) {
+        errs.push('the .hs-scrollwrap wrapper must enclose .hs-scroll — the stretch only works on the DIRECT flex child');
+      }
+      const cue = /useHScrollCue\([\s\S]*?\[([^\]]*)\]\)/.exec(tsx);
+      if (!cue || !/\bopen\b/.test(cue[1]) || !/\bbyIndustry\b/.test(cue[1])) {
+        errs.push('useHScrollCue must re-measure on `open` and `byIndustry` — opening a group widens the TABLE, not the box');
+      }
+
+      // 2 · multi-sort
+      if (!/const thenKey = thenByParam\(thenBy\)/.test(tsx)
+          || !/&dir=\$\{dir\}`\s*\n\s*\+ thenKey/.test(tsx)) {
+        errs.push('thenByParam(thenBy) must be appended to the pinned sort/dir fetch');
+      }
+      if (!/sortBasis\(shownSort,/.test(tsx)) errs.push('the header must draw from sortBasis(shownSort, …)');
+      if (!/sortMark\(c\.key, basisPlan\.sort, basisPlan\.dir, basisPlan\.thenBy\)/.test(tsx)) {
+        errs.push('the header marks must be sortMark(…basisPlan…) — the SERVED plan, never a guessed client state');
+      }
+      if (!/const on = basisPlan\.sort === c\.key/.test(tsx)) {
+        errs.push('is-sorted / aria-sort must sit on basisPlan.sort — the SERVED primary (critic 2026-09-28: a failed click left "Quality 1▲" over 5-day rows)');
+      }
+      if (/colLabel\(shownSort, data\)/.test(tsx)) {
+        errs.push('"ranked on" must print basisPlan.sort — shownSort is the request after a failed read');
+      }
+      if (!/aria-sort=\{on \? \(basisPlan\.dir === 'desc'/.test(tsx)) {
+        errs.push('aria-sort must read basisPlan.dir, and sit on the primary only');
+      }
+      const lib = read('src/lib/hottestSort.ts');
+      const libCode = strip(lib);
+      if (/\.sort\(/.test(libCode)) errs.push('hottestSort.ts must not sort anything — the server sorts before it truncates');
+      if (/new Date\(|Date\.now\(/.test(libCode)) errs.push('hottestSort.ts must not read a clock');
+      const fnBody = (name) => {
+        const i = libCode.indexOf(`export function ${name}(`);
+        if (i < 0) return null;
+        const open = libCode.indexOf('{\n', libCode.indexOf(')', i));
+        let depth = 0;
+        for (let j = open; j < libCode.length; j++) {
+          if (libCode[j] === '{') depth++;
+          else if (libCode[j] === '}' && --depth === 0) return libCode.slice(open, j + 1);
+        }
+        return null;
+      };
+      for (const fn of ['shownThenBy', 'sortBasis']) {
+        const b = fnBody(fn);
+        if (!b) errs.push(`hottestSort.ts lost export function ${fn}`);
+        else if (/\bset[A-Z]\w*\(/.test(b)) errs.push(`${fn} must be pure — a set* call there is a second fan-out`);
+      }
+      if (!/d\.sorted_by/.test(fnBody('sortBasis') || '')) {
+        errs.push('sortBasis must take the settled PRIMARY from the served sorted_by, not the client state');
+      }
+      const py = read('../backend/rotation/hottest.py');
+      const pyMax = /^MAX_SORT_KEYS\s*=\s*(\d+)/m.exec(py);
+      const feMax = /export const HS_MAX_SORT_KEYS = (\d+);/.exec(lib);
+      if (!pyMax || !feMax || pyMax[1] !== feMax[1]) {
+        errs.push(`HS_MAX_SORT_KEYS (${feMax?.[1]}) must equal hottest.py MAX_SORT_KEYS (${pyMax?.[1]})`);
+      }
+      const pyDef = /^DEFAULT_SORT\s*=\s*"([a-z0-9_]+)"/m.exec(py);
+      const feDef = /export const HS_DEFAULT_SORT = '([a-z0-9_]+)';/.exec(lib);
+      if (!pyDef || !feDef || pyDef[1] !== feDef[1]) {
+        errs.push(`HS_DEFAULT_SORT (${feDef?.[1]}) must equal hottest.py DEFAULT_SORT (${pyDef?.[1]})`);
+      }
+      if (!/then_by: str = Query\(/.test(read('../backend/rotation/api.py'))) {
+        errs.push('GET /rotation/hottest must accept then_by: str = Query(…)');
+      }
+
+      // 3 · ⓘ Quality
+      const qi = read('src/components/HottestQualityInfo.tsx');
+      const qiCode = strip(qi);
+      const bigNum = qiCode.match(/(?<![\w.#-])(?:[2-9]|\d{2,})(?:\.\d+)?(?![\w])/g);
+      if (bigNum) errs.push(`HottestQualityInfo.tsx types a number (${bigNum.slice(0, 3).join(', ')}) — every number in the ⓘ is served`);
+      if (/p\.\s?\d|Minervini|chapter|book|week/i.test(qiCode)) {
+        errs.push('HottestQualityInfo.tsx carries a citation or a cadence — every word of the ⓘ is served');
+      }
+      if (!/<InfoButton inline sheet/.test(tsx)) errs.push('the Quality ⓘ must be an InfoButton `sheet` — an absolute pop is clipped by the scroll box');
+      const pol = read('src/styles/polish.css');
+      const sheet = /\.info-button__pop\.info-button__pop--sheet\s*\{([^}]*)\}/.exec(pol);
+      if (!sheet || !/position:\s*fixed/.test(sheet[1])) errs.push('.info-button__pop--sheet must be position: fixed');
+      const qiClasses = new Set();
+      for (const m of qi.replace(/data-testid=\{?[`'"][^`'"]*[`'"]\}?/g, '').matchAll(/hs-[a-z0-9-]+/g)) qiClasses.add(m[0]);
+      if (!qiClasses.size) errs.push('no hs-* classes in HottestQualityInfo.tsx — did it get renamed?');
+      for (const c of qiClasses) {
+        if (!new RegExp(`\\.${c}(?![\\w-])`).test(css)) errs.push(`styles.css has no rule for .${c} (HottestQualityInfo.tsx)`);
+      }
+
+      if (!/id: 'hottest-multisort-quality-2026-09-28'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push('the change needs its ✨ entry');
+      }
+      if (!exists('scripts/hottest-layout-probe.mjs')) errs.push('scripts/hottest-layout-probe.mjs is gone — the only real-browser check of the fix');
+      for (const f of ['src/lib/hottestSort.ts', 'src/hooks/useHScrollCue.ts',
+                       'src/components/HottestQualityInfo.tsx', 'scripts/hottest-layout-probe.mjs']) {
+        if (exists(f) && /\bbounce\b/i.test(read(f))) errs.push(`${f} says "bounce" — surfaces he reads say "reversal"`);
       }
       return errs;
     },

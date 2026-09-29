@@ -532,6 +532,9 @@ async def rotation_hottest(
     sort: str = Query(H.DEFAULT_SORT,
                       description="any key in the payload's `sortable` list"),
     dir: str = Query(H.DEFAULT_DIR, description="desc | asc"),
+    then_by: str = Query("", description="up to 2 tie-break keys after `sort`, comma-separated "
+        "key:dir (e.g. q_eps_yoy:desc,net_margin:asc); every key must be in `sortable`; a bad, "
+        "duplicate or extra key is dropped, never a 4xx — `sorted_then_by` says what was applied"),
     names: int = Query(H.NAMES_PER_GROUP, ge=1, le=200,
                        description="names returned per sector/industry"),
     basis: str = Query(H.D1_CLOSE,
@@ -590,11 +593,25 @@ async def rotation_hottest(
     the module drops the column and still serves the board. The member-table
     early return above carries no `amd_summary` at all, so the column simply
     does not draw on that branch.
+
+    Multi-column sort (Ajay 2026-09-28: "can you help me with multi column
+    sort"). `sort` + `dir` are the primary key exactly as before — a request
+    without `then_by` ranks identically at every level. `then_by=key:dir,...`
+    adds up to `MAX_SORT_KEYS - 1` tie-breaks; each key must be in `sortable`
+    (so 🌀 AMD can never break a tie), a bad dir becomes `desc`, and a bad,
+    duplicate or extra key is DROPPED, never a 4xx — `sorted_then_by` is what
+    was applied. One comparator runs at every level; a missing value sorts
+    LAST per key; exact ties fall to the symbol A→Z on name rows and keep
+    their stored order on sector / industry / roster rows. A key no group row
+    carries — Next ER — leaves the sectors in their stored order, as it
+    always has, when it is the ONLY key; every group row then ties on it, so a
+    tie-break after it (e.g. Next ER then Quality) still ranks the group rows.
     """
     table, meta = _members_table()
     if table is None:
         return JSONResponse({"sectors": [], "reason": meta.get("reason") or "member table unavailable",
-                             "sorted_by": sort, "sorted_dir": dir, **meta}, status_code=200)
+                             "sorted_by": sort, "sorted_dir": dir, "sorted_then_by": [],
+                             **meta}, status_code=200)
     payload = dict(_members_payload() or {})
     payload[T.MEMBERS_KEY] = table
     b = _coerce_str(basis, H.D1_CLOSE)
@@ -603,7 +620,8 @@ async def rotation_hottest(
     body = H.build_live(payload, sort=_coerce_str(sort, H.DEFAULT_SORT),
                         direction=_coerce_str(dir, H.DEFAULT_DIR),
                         names_per_group=_coerce_int(names, H.NAMES_PER_GROUP),
-                        basis=b)
+                        basis=b,
+                        then_by=H.parse_then_by(_coerce_str(then_by, "")))
     body.update({k: v for k, v in meta.items() if k in ("source", "built_at_iso", "age_sec", "stale")})
     # 📰 The day's bull/bear tag per sector (Ajay 2026-09-19). A pure READ of
     # what the cron already wrote — it never builds, never calls the model and
