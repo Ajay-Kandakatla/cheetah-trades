@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-28: "Once done can you fix this table too? so much empty space"
+  { id: 'bonde-table-density-2026-09-28',
+    label: '📈 Bonde table, tightened. You said: “Once done can you fix this table too? so much empty space”. '
+      + 'Each row now reads across on its first line — ticker ☆, company, ✨/pair badges and + Signals — with the 🎯 🚀 🧨 ⛔ 🪜 reads flowing on the next line and wrapping INSIDE the Ticker column instead of running over Today and Since report, and his 📋 criteria chips with ▸ all N on the third. '
+      + 'The four metric headers (Shares YoY, Cash − debt, EV / sales, FCF yield) have their own widths and sit over their numbers; on a narrow window the table scrolls sideways with the ticker pinned. '
+      + 'A section where NO name has an Episodic Pivot draws that column narrow as “EP” (hover for the full name) and it widens by itself when one appears — one pivot anywhere in the section keeps it wide. '
+      + 'Nothing was removed, re-sorted, filtered or gated.',
+    addedAt: '2026-09-28', route: '/chart-maps?tab=bonde' },
   // Ajay 2026-09-28: "Pin the tab I am in, as I navigate back and fort lost where I am"
   { id: 'chart-maps-pinned-tab-2026-09-28',
     label: '📌 Chart Maps keeps your place. You said: “Pin the tab I am in, as I navigate back and fort lost where I am.” The tab strip now stays pinned at the top while you scroll the charts, the tab you are on is always scrolled into view (‹ › fades mean more tabs off that edge), and switching tabs from deep in a board opens the new one at its top. After you open a ticker, coming back with ← Back or the browser’s back lands on the same tab with the same chart where you left it (once, within 30 minutes). The menu still opens Back in Demand, and keeps your place only if you were on Back in Demand. A menu round trip without a ticker in between, or a new browser tab, opens at the top as before. A bare Chart Maps link still opens on Back in Demand and the tab order is unchanged. Navigation only: nothing ranked, gated or bought differently.',

@@ -339,10 +339,15 @@ describe('🎯 headers and the demand-band filter', () => {
   it('every section with rows carries a header row over the five columns', async () => {
     drawWithRoom(payload(FOUR), ROOM);
     await screen.findByText('PTGX');
-    for (const h of ['Ticker', 'Sales YoY · base → latest', 'Character', 'Episodic pivot',
+    for (const h of ['Ticker', 'Sales YoY · base → latest', 'Character',
                      'Shares YoY', 'Cash − debt', 'EV / sales', 'FCF yield']) {
       expect(screen.getByText(h)).toBeInTheDocument();
     }
+    // FOUR has no pivot on any row, so the Episodic Pivot head is drawn narrow
+    // as "EP" with its full name on hover (2026-09-28, table density).
+    const ep = document.querySelector('.bd-hdr .bd-pivot')!;
+    expect(ep.textContent).toBe('EP');
+    expect(ep.getAttribute('title')).toMatch(/^Episodic pivot \(EP\)\./);
     // the heads sit in the SAME grid as a row, so they align with the cells
     expect(screen.getByText('Ticker').closest('.bd-row')).toHaveClass('bd-hdr');
     expect(screen.getByText('Shares YoY').closest('.bd-metrics')).not.toBeNull();
