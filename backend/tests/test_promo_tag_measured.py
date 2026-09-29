@@ -286,6 +286,9 @@ def test_NEGATIVE_an_inverted_read_never_becomes_a_short_or_a_gate(art, doc_flat
     ).stdout.split()
     allowed = {"backend/tests/test_promo_tag_measured.py",
                "backend/catalysts/promo_curate.py"}
+    # A captured board payload (a test fixture) carries promo_curate's served
+    # `artifact` path as DATA — it is not a module that reads the file.
+    hits = [h for h in hits if "/__fixtures__/" not in h]
     assert set(hits) <= allowed, f"a served module reads the research artifact: {hits}"
 
 
