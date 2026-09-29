@@ -3914,7 +3914,8 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                         themes_first: bool = THEMES_FIRST_DEFAULT,
                         sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
                         ctx: Optional[dict] = None, now: Optional[datetime] = None,
-                        dm_filters: Optional[str] = None) -> dict:
+                        dm_filters: Optional[str] = None,
+                        dm_mode: Optional[str] = None) -> dict:
     """🏎️ Dual Momentum — the Dual Momentum page's leaders, each drawn with the
     demand engine's nearest band, first lid, room, floor and 🎯 gate read.
 
@@ -3944,6 +3945,10 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     the Key Levels tab's `build` / `rank`. A name with no read for a ticked
     box is hidden and counted "not read". The per-box counts are computed on
     every ready request; a view only — it gates, pushes and enters nothing.
+    `dm_mode` (Ajay 2026-09-29: "How can I see all of these? at the same
+    time?"): ANY (default) = a leader passing any ticked box shows; "all" =
+    every ticked box must pass. Each shown leader carries a served badge per
+    ticked box it passes (`DMT.filter_badges` off its `dm_filter`).
 
     UNMEASURED and display only — nothing gates, pushes, sizes or enters.
     """
@@ -4047,6 +4052,7 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
     # 🌀 / 📍 / 🔑 — every read over the whole pool, BEFORE the order and the cut.
     active = DMT.parse_filters(dm_filters)
+    mode = DMT.parse_mode(dm_mode)
     try:
         amd_cells, amd_summary = DMT.amd_reads(syms, now=now_et)          # ONE sweep read
     except Exception as exc:                                    # noqa: BLE001
@@ -4062,9 +4068,11 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         t["dm_filter"] = DMT.tile_filter((amd_cells or {}).get(fsym), t["dm_zone"],
                                          (lv_reads or {}).get(fsym))
     filters = DMT.filters_block([t["dm_filter"] for t in tiles], active, pool=len(tiles),
-                                amd_summary=amd_summary, level_error=lv_err)
+                                amd_summary=amd_summary, level_error=lv_err, mode=mode)
     if active:
-        tiles = [t for t in tiles if DMT.passes(t["dm_filter"], active)]
+        tiles = [t for t in tiles if DMT.passes(t["dm_filter"], active, mode)]
+        for t in tiles:
+            t["badges"].extend(DMT.filter_badges(t["dm_filter"], active))
 
     nearest = sort == DMT.SORT_NEAREST_DEMAND
     sort_unavailable = None
@@ -4105,8 +4113,8 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": entry.get("generated_at"),
             "scan_generated_at": entry.get("scan_generated_at"),
             "gex_as_of": gex_as_of,
-            "note": (DMT.filter_empty_note(active, counts["pool"])
-                     if (active and picks and filters["passed_all"] == 0)
+            "note": (DMT.filter_empty_note(active, counts["pool"], mode)
+                     if (active and picks and filters["shown"] == 0)
                      else (DMT.NOTE if picks else DMT.EMPTY_NOTE)),
             "disclaimer": DMT.DISCLAIMER,
             "dual_momentum_board": DMT.ready_block(counts, entry=entry, sort=sort,
@@ -6506,7 +6514,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           target: str = "zone", bias: str = "all", micro: str = "60m",
           min_room: Optional[float] = None, studies: bool = False,
           levels: str = "all", grades: Optional[str] = None,
-          flight: Optional[str] = None, dm: Optional[str] = None) -> dict:
+          flight: Optional[str] = None, dm: Optional[str] = None,
+          dm_mode: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -6525,8 +6534,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     ignores it and carries no room keys.
 
     `dm` (2026-09-29) reaches ONLY the dual_momentum tab — the 🌀 / 📍 / 🔑
-    filter boxes, a comma list "amd,zone,level" (AND; unknown tokens ignored).
-    Every other tab ignores it and carries no `dm_filter` keys.
+    filter boxes, a comma list "amd,zone,level" (unknown tokens ignored), and
+    `dm_mode` how they combine: "all" = every ticked box, anything else = ANY
+    (the default). Every other tab ignores both and carries no `dm_filter` keys.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
     chart-pattern ledger, "zone" is the demand-zone re-entry backtest.
@@ -6562,7 +6572,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = key_level_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
     elif t == "dual_momentum":
         out = dual_momentum_tiles(limit, days, themes_first, srt, tier, ctx=_ctx,
-                                  dm_filters=dm if isinstance(dm, str) else None)
+                                  dm_filters=dm if isinstance(dm, str) else None,
+                                  dm_mode=dm_mode if isinstance(dm_mode, str) else None)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below

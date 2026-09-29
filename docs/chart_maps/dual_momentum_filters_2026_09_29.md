@@ -12,7 +12,7 @@ Surface: https://pounce.ajaykandakatla.dev/chart-maps?tab=dual_momentum
 
 ## What each box reads (no new maths)
 
-Each box is an existing read, run over the **whole 80-name pool** before the order and the cut. The param is `?dm=amd,zone,level`, and every ticked box must pass (AND).
+Each box is an existing read, run over the **whole 80-name pool** before the order and the cut. The param is `?dm=amd,zone,level`. Since the later 2026-09-29 change (below) a leader passing **ANY** ticked box shows by default; `?dm_mode=all` (the "must match all" switch) restores AND.
 
 | Box | Read | Pass | Fail | Not read |
 |---|---|---|---|---|
@@ -20,11 +20,26 @@ Each box is an existing read, run over the **whole 80-name pool** before the ord
 | 📍 Near demand zone | `dm_zone.gate.prox_ok`, which is the 🎯 read's own `alert_gates.demand_proximity_gate`. Its default bound is `ALERT_MAX_ABOVE_DEMAND_PCT`, read off the signature by `near_demand_pct()` and never retyped. | `prox_ok is True` | `prox_ok is False`, **or `dm_zone.reason == "no_band"`** (a stored doc with no demand band under the print, critic fix 3) | no stored doc (`no_doc`) or no print (`no_print`) |
 | 🔑 Near a lower key level | The Key Levels tab's own `KLT.build` over the pool (memoised, see below), then `KLT.rank` per name. | status `ranked` and `abs(distance_pct) <= KEY_LEVEL_NEAR_PCT` | `broken` / `no_level`, or farther than the cut | `stale` / `no_print` / `unread` (build failed) |
 
-- A ticked box **hides** a name it could not read and counts it as "not read". A missing read never counts as a pass.
+- A name the app could not read for a box **never passes that box** and is counted as "not read". In "all" mode that hides it; in "any" mode it still shows if it passes another ticked box.
 - Counts are served per box over all 80 names, whether or not the box is ticked, so every box can show its number before he ticks it. `passed_all` counts the names that pass every ticked box.
 - `filters.line` says what each ticked box hid. When nothing passes, the note is `filter_empty_note` ("untick one to see more").
 - 🎯 Enterable only still applies on top of the survivors. The two lines are separate and each says what it hid.
 - The filters sort, push, gate and enter nothing. The test `T15` greps that no module outside `chart_maps/` reads `dm_filter`.
+
+## ANY by default + "must match all" + served badges (2026-09-29, later)
+
+> "How can I see all of these? at the same time? is there a check box selection?"
+> — Ajay, 2026-09-29, after 🌀 AMD raided 5 · 📍 near demand 12 · 🔑 near a lower key level 2 showed **0** names with all three ticked (AND).
+
+- **ANY is the default.** With several boxes ticked, a leader passing ANY ticked box shows (`DMT.passes(tf, active, mode)`, `mode = DMT.parse_mode(?dm_mode)`). A not-read box never passes, in either mode, so a name passing none of the ticked boxes is hidden.
+- **"must match all"** (served label `MODE_ALL_LABEL`) is a checkbox after the three boxes, rendered while any box is ticked. It writes `?dm_mode=all` into the URL next to `?dm=`; unticking drops the param. Absent, blank or unknown (`dm_mode=foo`) = ANY. Checked = the SERVED `filters.mode`, never the URL parse. `boardQuery` sends `dm_mode=all` on this tab only (ANY is the server default, so it is never sent).
+- **Served badges.** Each tile shown under an active filter carries one badge per TICKED box it passes (`DMT.filter_badges(t["dm_filter"], active)`: text = the box's `FILTER_LABELS` label, tone good, `dm_filter` = the key). A fail, a not-read or an unticked box never gets one. `cardLadder` routes the three exact labels (`IDENT_EXACT`, pinned equal to `FILTER_LABELS` by contract) onto the identity line beside the 🏎️ rank chip; the 🔑 position pill still goes to PRICE. The TSX computes no pass and reads no `dm_filter`.
+- **Served counts per mode.** `filters` now also carries `mode`, `mode_param`, `mode_all_label`, `passed_any`, `shown` (= `passed_any` in ANY, `passed_all` in ALL) and `hidden` (= pool − shown; in ANY = the names passing none of the ticked boxes). The per-box `pass / fail / no_read` are unchanged and mode-independent; an item's own `hidden` stays "what this box alone hides".
+- **Line per mode.** ANY: `Filters on (any ticked box) — 🌀 AMD raided: 5 pass; … N of 80 pass at least one ticked box, M hidden (…)` (per-box "hidden" is not printed, since a box's fails can still show through another box). ALL: `Filters on (must match all) — …: 5 pass, 75 hidden; … N of 80 pass every ticked box …`.
+- **Empty state per mode.** ANY: `FILTER_EMPTY_ANY_FMT` ("passes any ticked box (🌀 … or 🔑 …) — tick another box to see more"). ALL: `FILTER_EMPTY_FMT` as before ("untick one to see more"). Served via `note` when the ticked boxes leave 0 of a non-empty pool.
+- **Order.** Unchanged: the union is the filtered pool, and the 🏎️ / 📍 / 💰 order still applies to it before the cut.
+- Tests: `backend/tests/test_dm_filter_mode_2026_09_29.py` (M1–M7); the AND pins in `test_dual_momentum_filters.py` now pass `dm_mode="all"`. FE: `src/lib/dmFilterMode.test.ts`, `src/components/DualMomentumFilterMode.test.tsx`, `src/pages/ChartMapsDualMomentumFilterMode.test.tsx`; `ChartMapsDualMomentumFilters.test.tsx`'s fake server honours `dm_mode` (ANY default). Contract block extended (mode default, badges before the cut, label parity, mode in the URL, no pass maths in the TSX).
+- Probe (read-only, prod api container, branch modules from stdin): 2026-09-29 17:25 ET, pool seeded from the prod `/chart-maps?tab=dual_momentum&limit=80&min_tier=any` payload (built 16:54 ET), Mongo writes refused (none attempted; `create_index` made a no-op). All three ticked: per box 🌀 5 pass (5 not read) · 📍 13 pass (5 not read) · 🔑 2 pass. **ANY: 17 of 80** — ERAS ORKA CLYM SYRE RXT INTC ATEX RLAY PLSE AAOI LQDA APPS VIAV VSTS HUT CLMT PACS (SYRE, AAOI, VSTS carry 🌀+📍 badges; 17 = 5 + 13 + 2 − 3 overlaps). **ALL: 0 of 80**, the ALL empty note served. The earlier 16-name read (… INBX …) was the intraday pool; after the close 📍 read 13 (ORKA new), CLMT read raided and INBX left the union.
 
 ## 💰 Market-cap order
 

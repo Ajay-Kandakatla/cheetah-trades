@@ -629,6 +629,25 @@ FILTERS_NOTE = ("Ticked boxes narrow the leaders — every ticked box must pass.
                 "nothing, push nothing, gate nothing and enter no lane.")
 FILTER_EMPTY_FMT = (MARK + " No leader in ranks 1–{pool} passes every ticked box ({labels}) — "
                     "untick one to see more; the line above says how many each box hid.")
+# HOW the ticked boxes combine (Ajay 2026-09-29, after 🌀 5 · 📍 12 · 🔑 2 showed
+# 0 names together: "How can I see all of these? at the same time? is there a
+# check box selection?"). ANY (the default) = a leader passing ANY ticked box
+# shows, with a served badge for each ticked box it passes; ALL = the "must
+# match all" switch, every ticked box must pass. `?dm_mode=all`; absent or
+# unknown = any. Not-read never passes a box in either mode.
+FILTER_MODE_PARAM = "dm_mode"
+MODE_ANY = "any"
+MODE_ALL = "all"
+FILTER_MODES = (MODE_ANY, MODE_ALL)
+FILTER_MODE_DEFAULT = MODE_ANY
+MODE_ALL_LABEL = "must match all"
+FILTERS_NOTE_ANY = ("Ticked boxes narrow the leaders — a leader passing ANY ticked box shows, "
+                    "with a badge for each ticked box it passes; tick \u201cmust match all\u201d "
+                    "to need every one. They sort nothing, push nothing, gate nothing and "
+                    "enter no lane.")
+FILTER_EMPTY_ANY_FMT = (MARK + " No leader in ranks 1–{pool} passes any ticked box ({labels}) — "
+                        "tick another box to see more; the line above says how many each "
+                        "box passed.")
 
 
 def near_demand_pct() -> float:
@@ -738,10 +757,32 @@ def tile_filter(amd_cell, zone, level_read) -> dict:
             "level_near": near if status == "ranked" else None}
 
 
-def passes(tf, active) -> bool:
-    """Every ticked box must be True — None (not read) never passes."""
+def parse_mode(v) -> str:
+    """`?dm_mode=` -> MODE_ALL only for "all" (any case / spacing); absent,
+    blank, junk or a non-str -> MODE_ANY (the default)."""
+    return MODE_ALL if isinstance(v, str) and v.strip().lower() == MODE_ALL else MODE_ANY
+
+
+def passes(tf, active, mode=FILTER_MODE_DEFAULT) -> bool:
+    """ANY (default): at least one ticked box is True. ALL: every ticked box is
+    True. None (not read) never passes a box; no ticked box -> True."""
     tf = tf if isinstance(tf, dict) else {}
-    return all(tf.get(k) is True for k in active)
+    act = tuple(active or ())
+    if not act:
+        return True
+    hits = [tf.get(k) is True for k in act]
+    return all(hits) if parse_mode(mode) == MODE_ALL else any(hits)
+
+
+def filter_badges(tf, active) -> list:
+    """The served badge for EACH TICKED box this leader passes (True only —
+    never a fail, never a not-read), in FILTER_KEYS order; [] with nothing
+    ticked. Text = the box's own label, so the card reads which box let the
+    leader in. Built from the tile's `dm_filter` read — the page computes none."""
+    tf = tf if isinstance(tf, dict) else {}
+    act = set(active or ())
+    return [{"text": FILTER_LABELS[k], "tone": "good", "dm_filter": k}
+            for k in FILTER_KEYS if k in act and tf.get(k) is True]
 
 
 def _measured_clause() -> str:
@@ -754,7 +795,7 @@ def amd_note(summary) -> str:
     s = summary if isinstance(summary, dict) else {}
     if not s.get("available"):
         return ("\U0001F300 The nightly AMD sweep could not be read, so no leader has an AMD "
-                "state right now — ticked, this box hides every leader. " + _measured_clause())
+                "state right now — ticked, this box passes no leader. " + _measured_clause())
     stamp = str(s.get("built_at_et") or "")[:16].replace("T", " ") or "time unknown"
     txt = (f"\U0001F300 The AMD Raided tab's own state, from the nightly sweep ({stamp} ET). "
            + _measured_clause())
@@ -775,37 +816,62 @@ def level_note(error=None) -> str:
            f"{KEY_LEVEL_NEAR_PCT:g}% from the print — a display cut-off awaiting your call. "
            "UNMEASURED.")
     if error:
-        txt += (f" The key-level read failed this time ({error}); ticked, this box hides "
-                "every leader.")
+        txt += (f" The key-level read failed this time ({error}); ticked, this box passes "
+                "no leader.")
     return txt
 
 
-def filter_line(items, passed_all, pool) -> Optional[str]:
+def filter_line(items, passed_all, pool, *, mode=MODE_ALL, shown=None) -> Optional[str]:
+    """The served line for the ticked boxes. ALL: each box's pass / hidden
+    (what that box hid) and how many pass every box. ANY: each box's pass
+    count, then how many pass at least one and how many are hidden (they pass
+    none — a not-read counts as not passing)."""
     on = [i for i in (items or []) if isinstance(i, dict) and i.get("on")]
     if not on:
         return None
+    if parse_mode(mode) == MODE_ANY:
+        bits = []
+        for i in on:
+            b = f"{i['label']}: {_n(i.get('pass'))} pass"
+            if int(i.get("no_read") or 0) > 0:
+                b += f" ({_n(i.get('no_read'))} not read)"
+            bits.append(b)
+        n_shown = int(shown or 0)
+        n_pool = int(pool or 0)
+        return (f"Filters on (any ticked box) — {'; '.join(bits)}. {_n(n_shown)} of {_n(n_pool)} "
+                f"pass at least one ticked box, {_n(max(n_pool - n_shown, 0))} hidden (they pass "
+                "none of them; a leader passing several shows once, with a badge for each).")
     bits = []
     for i in on:
         b = f"{i['label']}: {_n(i.get('pass'))} pass, {_n(i.get('hidden'))} hidden"
         if int(i.get("no_read") or 0) > 0:
             b += f" ({_n(i.get('no_read'))} not read)"
         bits.append(b)
-    return (f"Filters on — {'; '.join(bits)}. {_n(passed_all)} of {_n(pool)} pass every "
-            f"ticked box (each count is over all {_n(pool)} ranked leaders; a name can fail "
-            "more than one).")
+    return (f"Filters on ({MODE_ALL_LABEL}) — {'; '.join(bits)}. {_n(passed_all)} of {_n(pool)} "
+            f"pass every ticked box (each count is over all {_n(pool)} ranked leaders; a name "
+            "can fail more than one).")
 
 
-def filter_empty_note(active, pool) -> str:
-    return FILTER_EMPTY_FMT.format(pool=_n(pool),
-                                   labels=" + ".join(FILTER_LABELS[k] for k in active
-                                                     if k in FILTER_LABELS))
+def filter_empty_note(active, pool, mode=FILTER_MODE_DEFAULT) -> str:
+    labs = [FILTER_LABELS[k] for k in active if k in FILTER_LABELS]
+    if parse_mode(mode) == MODE_ALL:
+        return FILTER_EMPTY_FMT.format(pool=_n(pool), labels=" + ".join(labs))
+    return FILTER_EMPTY_ANY_FMT.format(pool=_n(pool), labels=" or ".join(labs))
 
 
-def filters_block(tfs, active, *, pool, amd_summary, level_error) -> dict:
+def filters_block(tfs, active, *, pool, amd_summary, level_error,
+                  mode=FILTER_MODE_DEFAULT) -> dict:
     """Per-box counts over EVERY pool tile, each box independently (computed
-    whether or not it is ticked), plus the served line when any is ticked."""
+    whether or not it is ticked), plus the served line when any is ticked.
+
+    `mode` (ANY default / ALL) decides `shown` = how many leaders the ticked
+    boxes let through (`passed_any` / `passed_all`) and `hidden` = pool - shown
+    (in ANY: the leaders passing NONE of the ticked boxes). An item's own
+    `hidden` stays what that box ON ITS OWN hides (fail + not read) — the ALL
+    line's per-box number; the ANY line prints only each box's pass count."""
     tfs = [t if isinstance(t, dict) else {} for t in (tfs or [])]
     act = tuple(k for k in FILTER_KEYS if k in (active or ()))
+    md = parse_mode(mode)
     notes = {"amd": amd_note(amd_summary), "zone": zone_note(),
              "level": level_note(level_error)}
     items = []
@@ -818,9 +884,14 @@ def filters_block(tfs, active, *, pool, amd_summary, level_error) -> dict:
         items.append({"key": k, "label": FILTER_LABELS[k], "on": on, "pass": n_pass,
                       "fail": n_fail, "no_read": n_none,
                       "hidden": (n_fail + n_none) if on else 0, "note": notes[k]})
-    passed_all = sum(1 for t in tfs if passes(t, act)) if act else None
+    passed_all = sum(1 for t in tfs if passes(t, act, MODE_ALL)) if act else None
+    passed_any = sum(1 for t in tfs if passes(t, act, MODE_ANY)) if act else None
+    shown = (passed_all if md == MODE_ALL else passed_any) if act else None
     return {"keys": list(FILTER_KEYS), "active": list(act), "pool": int(pool or 0),
-            "passed_all": passed_all, "items": items,
-            "line": filter_line(items, passed_all, pool) if act else None,
-            "note": FILTERS_NOTE, "near_demand_pct": near_demand_pct(),
+            "mode": md, "mode_param": FILTER_MODE_PARAM, "mode_all_label": MODE_ALL_LABEL,
+            "passed_all": passed_all, "passed_any": passed_any, "shown": shown,
+            "hidden": (len(tfs) - shown) if act else 0, "items": items,
+            "line": filter_line(items, passed_all, pool, mode=md, shown=shown) if act else None,
+            "note": (FILTERS_NOTE if md == MODE_ALL else FILTERS_NOTE_ANY),
+            "near_demand_pct": near_demand_pct(),
             "near_level_pct": KEY_LEVEL_NEAR_PCT, "measured": False}

@@ -83,11 +83,18 @@ async def chart_maps(
                                        "grades to show, or 'all'. Empty = the "
                                        "turning grade only, as before."),
     dm: str = Query("", description="dual_momentum tab only — comma list of filters "
-                                     "amd,zone,level; every ticked one must pass (AND). "
+                                     "amd,zone,level; a leader passing ANY ticked one shows "
+                                     "(dm_mode=all: every ticked one must pass). "
                                      "Unknown tokens are ignored; empty = no filter. Ajay "
                                      "2026-09-29: 'Can you add AMD raided and near demand "
                                      "zone and near lower Key level filters to dual "
                                      "momentum please'."),
+    dm_mode: str = Query("", description="dual_momentum tab only — how the ticked dm boxes "
+                                          "combine: 'all' = every ticked box must pass; "
+                                          "absent or anything else = any ticked box (the "
+                                          "default). Ajay 2026-09-29: 'How can I see all of "
+                                          "these? at the same time? is there a check box "
+                                          "selection?'"),
     min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
                           description="liquidity floor by 50-day avg $ volume: "
                                       "deep (>=$50M) | ok (>=$10M, default) | "
@@ -147,6 +154,7 @@ async def chart_maps(
             grades=(grades if isinstance(grades, str) and grades.strip() else None),
             flight=(flight if isinstance(flight, str) and flight.strip() else None),
             dm=(dm if isinstance(dm, str) and dm.strip() else None),
+            dm_mode=(dm_mode if isinstance(dm_mode, str) and dm_mode.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

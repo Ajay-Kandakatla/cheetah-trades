@@ -102,7 +102,11 @@ def test_T2_NEG_an_unread_cell_is_none_and_never_passes(cell):
 def test_T2_NEG_passes_needs_True_never_truthiness():
     assert DMT.passes({"amd": 1}, ("amd",)) is False
     assert DMT.passes({"amd": "raided"}, ("amd",)) is False
-    assert DMT.passes({"amd": True, "zone": None}, ("amd", "zone")) is False
+    # ALL ("must match all"): a None on a ticked box fails the leader
+    assert DMT.passes({"amd": True, "zone": None}, ("amd", "zone"), "all") is False
+    # ANY (the default since 2026-09-29): one True ticked box is enough
+    assert DMT.passes({"amd": True, "zone": None}, ("amd", "zone")) is True
+    assert DMT.passes({"amd": None, "zone": False}, ("amd", "zone")) is False
     assert DMT.passes({"amd": True, "zone": False}, ("amd",)) is True     # unticked box ignored
     assert DMT.passes({}, ()) is True and DMT.passes(None, ()) is True
     assert DMT.passes(None, ("amd",)) is False
@@ -240,7 +244,7 @@ def test_T5_NEG_a_raising_build_leaves_every_name_unread():
     assert {r["status"] for r in reads.values()} == {DMT.LEVEL_UNREAD}
     assert all(DMT.tile_filter(None, None, r)["level"] is None for r in reads.values())
     note = DMT.level_note(err)
-    assert "failed" in note and "price cache down" in note and "hides every leader" in note
+    assert "failed" in note and "price cache down" in note and "passes no leader" in note
     assert "failed" not in DMT.level_note(None)
 
 
@@ -272,6 +276,8 @@ def _six(dm_board):
 
 
 def test_T6_AND_every_box_alone_and_together(dm_board):
+    # dm_mode="all" — the "must match all" switch (ANY is the default since
+    # 2026-09-29; tests/test_dm_filter_mode_2026_09_29.py pins ANY).
     _six(dm_board)
     want = {"": ["AAA", "BBB", "CCC", "DDD", "EEE", "FFF"],
             "amd": ["AAA", "BBB", "CCC"], "zone": ["AAA", "CCC", "DDD"],
@@ -279,7 +285,7 @@ def test_T6_AND_every_box_alone_and_together(dm_board):
             "amd,zone": ["AAA", "CCC"], "zone,level": ["AAA"], "amd,zone,level": ["AAA"]}
     counts = None
     for spec, syms in want.items():
-        out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm=spec)
+        out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm=spec, dm_mode="all")
         assert _syms(out) == syms, spec
         f = out["dual_momentum_board"]["filters"]
         got = {k: (i["pass"], i["fail"], i["no_read"]) for k, i in _items(out).items()}
@@ -331,9 +337,10 @@ def test_T7_filter_is_pre_cut(dm_board):
 def test_T8_zero_result_serves_the_empty_note(dm_board):
     _six(dm_board)
     dm_board["amd_cells"]["AAA"] = _known("basing")
-    out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm="amd,zone,level")
+    out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm="amd,zone,level",
+                  dm_mode="all")
     assert out["tiles"] == []
-    assert out["note"] == DMT.filter_empty_note(ALL, 6)
+    assert out["note"] == DMT.filter_empty_note(ALL, 6, "all")
     assert "untick" in out["note"] and "1–6" in out["note"]
     for k in ALL:
         assert DMT.FILTER_LABELS[k] in out["note"]
@@ -375,7 +382,8 @@ def test_T10_every_ticked_combination_serves_a_line_naming_what_it_hid(dm_board)
     _six(dm_board)
     for n in (1, 2, 3):
         for combo in itertools.combinations(ALL, n):
-            out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm=",".join(combo))
+            out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm=",".join(combo),
+                          dm_mode="all")
             f = out["dual_momentum_board"]["filters"]
             line = f["line"]
             assert isinstance(line, str) and line.startswith("Filters on"), combo
@@ -416,7 +424,8 @@ def test_T11_one_read_each_and_no_per_name_amd(dm_board, monkeypatch):
     monkeypatch.setattr(B, "_attach_amd_raids", boom)
     dm_board["snap_calls"].clear()
     dm_board["fs_calls"].clear()
-    out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm="amd,zone,level")
+    out = B.board(tab="dual_momentum", limit=80, min_tier="any", dm="amd,zone,level",
+                  dm_mode="all")
     assert _syms(out) == ["AAA"]
     assert len(dm_board["snap_calls"]) == 1
     assert calls == {"amd": 1, "level": 1}

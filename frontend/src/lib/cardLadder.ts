@@ -94,6 +94,14 @@ const ZONE_CAUTION = new Set(['At_Supply', 'Into_Supply', 'Extended_No_Support']
  *  VS16 is part of the served literal and of this prefix, byte for byte. */
 const IDENT_PREFIX = ['\u{1F7E2} Sales', '\u{1F4C9} Sales', '❔ Sales data missing',
   '\u{1F48E} ', 'Recent IPO', '\u{1F3CE}\u{FE0F} #'];
+/** The 🏎️ Dual Momentum filter-box badges (2026-09-29, Ajay: "How can I see
+ *  all of these? at the same time?") — served per ticked box a shown leader
+ *  passes, text = the box's own label (dual_momentum_tab.FILTER_LABELS,
+ *  pinned equal by contract). They say WHY the name is on this filtered page,
+ *  so they sit on the identity line beside the 🏎️ rank chip. Exact match only:
+ *  the 🔑 position pill ('🔑 0.41% above PWL …') still goes to PRICE. */
+const IDENT_EXACT = new Set(['\u{1F300} AMD raided', '\u{1F4CD} Near demand zone',
+  '\u{1F511} Near a lower key level']);
 
 const ENTRY_EXACT = new Set([
   'Buyable', 'Setup ready', 'Qualifier', 'Buyable then', 'SEPA qualifier', 'Target hit', 'Backtested',
@@ -182,7 +190,8 @@ type Rung = 'ident' | 'entry' | 'zone' | 'price' | 'priceAfter' | 'plan' | 'timi
 function rungOf(text: string): Rung {
   if (ZONE_STATES.has(text)) return 'zone';
   if (text in FOLD_EXACT) return FOLD_EXACT[text];
-  if (startsAny(text, IDENT_PREFIX) || (text.startsWith('$') && text.endsWith(' cap'))) return 'ident';
+  if (IDENT_EXACT.has(text) || startsAny(text, IDENT_PREFIX)
+      || (text.startsWith('$') && text.endsWith(' cap'))) return 'ident';
   if (ENTRY_EXACT.has(text) || startsAny(text, ENTRY_PREFIX) || text.endsWith(COST_SUFFIX)) return 'entry';
   if (text.startsWith(PUT_WALL)) return 'tape';
   if (PRICE_EXACT.has(text) || startsAny(text, PRICE_PREFIX) || endsAny(text, PRICE_SUFFIX)

@@ -17,7 +17,7 @@ import type { EnterableKind, EnterableRead, EnterableStudy } from './enterable';
 import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
-import { DM_FILTER_PARAM } from './dmFilters';
+import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM } from './dmFilters';
 import type { CmDmFilters, CmDmTileFilter } from './dmFilters';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum';
@@ -472,6 +472,9 @@ export type CmMarker = { date: string; label?: string; kind?: string; price?: nu
 export type CmStat = { k: string; v: string };
 export type CmBadge = {
   text: string; tone: 'good' | 'warn' | 'muted';
+  /** 🏎️ Dual Momentum (2026-09-29): the filter box this served badge says the
+   *  leader passed ('amd' | 'zone' | 'level'). Display only. */
+  dm_filter?: string;
   /** Overlay family this badge belongs to, when it belongs to one. Present on
    *  the study verdicts (`keltner`, `amd`) so `filterTile` can drop the
    *  SENTENCE along with that family's bands and lines — one checkbox governs
@@ -1720,6 +1723,7 @@ export function boardQuery(p: {
   grades?: string;
   flight?: string;
   dmFilters?: string;
+  dmMode?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -1765,6 +1769,9 @@ export function boardQuery(p: {
   // and near demand zone and near lower Key level filters to dual momentum
   // please") — only on that tab, only when a box is ticked.
   if (p.tab === 'dual_momentum' && p.dmFilters) q.set(DM_FILTER_PARAM, p.dmFilters);
+  // … and how they combine (Ajay 2026-09-29: "How can I see all of these? at
+  // the same time?"): ANY is the server default, so only "must match all" rides.
+  if (p.tab === 'dual_momentum' && p.dmMode === DM_MODE_ALL) q.set(DM_MODE_PARAM, DM_MODE_ALL);
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe

@@ -5166,6 +5166,43 @@ const CONTRACTS = [
       const cm = read('src/lib/chartMaps.ts');
       if (!/if \(p\.tab === 'dual_momentum' && p\.dmFilters\) q\.set\(DM_FILTER_PARAM, p\.dmFilters\);/.test(cm)) errs.push("chartMaps.ts boardQuery must set the dm param only under p.tab === 'dual_momentum'");
       if (!/export const DM_SORT_MARKET_CAP = 'market_cap';/.test(cm) || !/export const DM_SORT_MARKET_CAP_ASC = 'market_cap_asc';/.test(cm)) errs.push('chartMaps.ts DM_SORT_MARKET_CAP / _ASC must equal the served keys');
+      // ANY by default + the "must match all" switch + served badges (Ajay
+      // 2026-09-29: "How can I see all of these? at the same time? is there a
+      // check box selection?"). The server decides ANY / ALL and serves one
+      // badge per ticked box passed; the TSX never re-derives either.
+      if (dmt) {
+        if (!/^FILTER_MODE_DEFAULT = MODE_ANY$/m.test(dmt) || !/^MODE_ALL = "all"$/m.test(dmt) || !/^FILTER_MODE_PARAM = "dm_mode"$/m.test(dmt)) {
+          errs.push('dual_momentum_tab.py: FILTER_MODE_DEFAULT must be MODE_ANY, MODE_ALL = "all", FILTER_MODE_PARAM = "dm_mode"');
+        }
+        if (!/def filter_badges\(tf, active\)[\s\S]*?if k in act and tf\.get\(k\) is True/.test(dmt)) errs.push('dual_momentum_tab.filter_badges must badge ONLY ticked boxes that are True');
+        const labs = /^FILTER_LABELS = \{([^}]*)\}/m.exec(dmt);
+        const pyLabels = labs ? [...labs[1].matchAll(/"([^"]+)"\s*[,}]?\s*$/gm)].map((m) => m[1]) : [];
+        const unesc = (x) => x.replace(/\\U([0-9A-Fa-f]{8})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+          .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)));
+        const ladderSrc = read('src/lib/cardLadder.ts');
+        const ie = /const IDENT_EXACT = new Set\(\[([^\]]*)\]\)/.exec(ladderSrc);
+        const tsLabels = ie ? [...ie[1].matchAll(/'([^']+)'/g)].map((m) => unesc(m[1])) : [];
+        const py = pyLabels.map(unesc).filter((x) => /AMD raided|Near demand zone|Near a lower key level/.test(x));
+        if (py.length !== 3 || JSON.stringify(py) !== JSON.stringify(tsLabels)) {
+          errs.push(`cardLadder IDENT_EXACT ${JSON.stringify(tsLabels)} must equal dual_momentum_tab.FILTER_LABELS ${JSON.stringify(py)} (the served filter badges sit on the identity line)`);
+        }
+      }
+      {
+        const pPass2 = body.indexOf('DMT.passes(t["dm_filter"], active, mode)');
+        const pBadge = body.indexOf('DMT.filter_badges(t["dm_filter"], active)');
+        if (!(pPass2 > 0 && pBadge > pPass2 && pFin > pBadge)) errs.push('board.py dual_momentum_tiles: DMT.passes(..., active, mode) then DMT.filter_badges(t["dm_filter"], active), both BEFORE _finish(tiles …)');
+        if ((board.match(/dm_mode=/g) || []).length !== 1 || !/elif t == "dual_momentum":\n\s*out = dual_momentum_tiles\([\s\S]{0,300}?dm_mode=/.test(board)) {
+          errs.push('board.py: dm_mode= must appear once, on the dual_momentum dispatch only');
+        }
+        if (!/if \(p\.tab === 'dual_momentum' && p\.dmMode === DM_MODE_ALL\) q\.set\(DM_MODE_PARAM, DM_MODE_ALL\);/.test(cm)) errs.push("chartMaps.ts boardQuery must set dm_mode=all only under p.tab === 'dual_momentum'");
+        if (!/export const DM_MODE_PARAM = 'dm_mode';/.test(src) || !/export function parseDmMode/.test(src)) errs.push('dmFilters.ts must export DM_MODE_PARAM = \'dm_mode\' and parseDmMode');
+        if (!/tab === 'dual_momentum' && <DualMomentumBoardNote[^\n]*onToggleMode=\{toggleDmMode\}/.test(page)) errs.push('ChartMaps.tsx must pass onToggleMode={toggleDmMode} on the DualMomentumBoardNote line (the mode lives in ?dm_mode=)');
+        if (!/next\.set\(DM_MODE_PARAM, DM_MODE_ALL\)/.test(page) || !/next\.delete\(DM_MODE_PARAM\)/.test(page)) errs.push('ChartMaps.tsx: the switch must write / drop ?dm_mode=all in the URL');
+        if (!note.includes('data-testid="cm-dm-filter-mode"') || !/checked=\{f\.mode === 'all'\}/.test(note)) errs.push('DualMomentumBoardNote.tsx: the "must match all" switch must render with checked = the SERVED mode');
+        for (const [f, txt] of [['DualMomentumBoardNote.tsx', note], ['ChartMaps.tsx', page]]) {
+          if (/dm_filter\s*[?.]|\.some\(\([^)]*\)\s*=>[^\n]*dm_filter|passed_any\s*[-+]/.test(txt)) errs.push(`${f} reads tile.dm_filter / re-derives a pass — the server decides ANY / ALL and serves the badges`);
+        }
+      }
       const nf = read('src/lib/newFeatures.ts');
       const at = nf.indexOf("id: 'chart-maps-dm-filters-2026-09-29'");
       if (at < 0) {
@@ -5173,7 +5210,9 @@ const CONTRACTS = [
       } else {
         const entry = nf.slice(at, nf.indexOf("' },", at) + 4);
         for (const need of ['Can you add AMD raided and near demand zone and near lower Key level filters to dual momentum please',
-                            'Also a sort by market cap please', 'MEASURED INVERTED', 'UNMEASURED', '💰']) {
+                            'Also a sort by market cap please', 'MEASURED INVERTED', 'UNMEASURED', '💰',
+                            'How can I see all of these? at the same time? is there a check box selection?',
+                            'must match all']) {
           if (!entry.includes(need)) errs.push(`the 🏎️ filters ✨ entry must carry: ${need}`);
         }
         if (/bounce/i.test(entry)) errs.push('the 🏎️ filters ✨ entry says "bounce"');
