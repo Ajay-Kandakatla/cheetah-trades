@@ -239,6 +239,16 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
     case 'skipped_timing_unknown': return `${n} skipped: report timing unknown`;
     case 'fetch_failed':      return `${n} surprise fetches failed`;
     case 'dropped_not_last_bar': return `${n} reacted on an older bar`;
+    /* 🧬 fix round 3 (2026-09-29): the medical kind ships in SHADOW — the pass
+     * runs the full gate and records what WOULD have pushed, but sends nothing
+     * until the backend switch (catalysts/medical/alerts.SHADOW) is flipped. The
+     * flag chip explains a silent phone; the count chip says what it held back. */
+    case 'shadow_mode':       return '🧬 shadow — nothing is sent';
+    case 'shadow':            return `🧬 shadow — ${n} would have pushed this pass`;
+    /* fix round 4 (critic #5): the pass doc is replaced every 5 minutes, so the
+     * per-pass count is gone one pass later — this one is counted from the
+     * stored events (push.state = "shadow") of the session, and it stays. */
+    case 'shadow_session':    return `🧬 shadow — ${n} would have pushed this session`;
     default: return null;
   }
 }
@@ -246,7 +256,8 @@ const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'sk
                    'skipped_mood', 'skipped_floor', 'skipped_not_enterable', 'skipped_cap', 'unknown_cap',
                    'stale_print', 'unknown_prev', 'unknown_room',
                    'first_pass', 'since_tracking', 'fresh', 'claimed_elsewhere',
-                   'skipped_timing_unknown', 'fetch_failed', 'dropped_not_last_bar'];
+                   'skipped_timing_unknown', 'fetch_failed', 'dropped_not_last_bar', 'shadow_mode', 'shadow',
+                   'shadow_session'];
 /* `pushed` on the backend counts send CALLS that terminated — delivered, or
  * nobody targeted (a muted kind still counts, demand_alerts._terminal). So the
  * chip says "push calls", and each row's delivery line says what landed. */

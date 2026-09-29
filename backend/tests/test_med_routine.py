@@ -130,6 +130,14 @@ def fetchers(now=NOW, **over):
     return fx, calls
 
 
+@pytest.fixture(autouse=True)
+def _live_mode(monkeypatch):
+    """Fix round 3 ships alerts.SHADOW = True; these routine tests exercise LIVE
+    sends (the shadow path is pinned in tests/test_med_fix3_2026_09_29.py)."""
+    from catalysts.medical import alerts as _A
+    monkeypatch.setattr(_A, "SHADOW", False)
+
+
 def seeded(now=NOW, lap=True, names=("KOD", "MRNA", "MIRM", "MNOV", "HUMA")):
     """State of a routine that has been running: lap complete, feeds seen."""
     c = fake_colls()

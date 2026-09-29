@@ -90,7 +90,8 @@ DESIGNATION_HIGH_SUBTYPES = frozenset({"breakthrough_therapy"})
 HOLD_HIGH_SUBTYPES = frozenset({"placed"})
 
 HIGH_IMPACT_TABLE = (
-    ("fda_approval", "FDA approval (not tentative or generic)"),
+    ("fda_approval", "FDA approval (not tentative or generic, and not contradicted by an FDA acceptance of the "
+                     "same drug's NDA / BLA reported nearby)"),
     ("fda_crl", "FDA complete response letter, refuse-to-file or rejection (not a withdrawn application)"),
     ("topline", "Phase 3 / Phase 2/3 / pivotal topline positive or negative (never mixed or undirected)"),
     ("designation", "Breakthrough Therapy designation"),
@@ -98,6 +99,28 @@ HIGH_IMPACT_TABLE = (
 )
 HIGH_IMPACT_TYPES = frozenset(k for k, _t in HIGH_IMPACT_TABLE)
 HIGH_IMPACT_TEXT = "High impact = " + "; ".join(t for _k, t in HIGH_IMPACT_TABLE)
+
+# ── fix round 3 (OOS grade 2026-09-29) — MATERIALITY, HIS CALL ─────────────
+# The grader marked a routine 510(k) on a $100B+ name (MDT Nellcor), a dosing-
+# interval label update (LLY EBGLYSS), generic-type formulations / strength line
+# extensions (AMRX romidepsin, iohexol) and a biosimilar indication as not
+# material. Whether they push is Ajay's call, so it is ONE switch and it ships
+# at TODAY's behaviour (False = every FDA approval that is not tentative / generic
+# stays high impact). True = an approval whose `materiality` (classify.
+# materiality_class) is one of IMMATERIAL_CLASSES is low impact — on the board
+# chip AND the push, because is_high_impact is the one definition. NOTE: a True
+# also drops genuine device clearances (PEN THUNDERBOLT graded material).
+PUSH_MATERIAL_ONLY = False
+IMMATERIAL_CLASSES = frozenset({"device_clearance", "label_update", "generic_formulation", "biosimilar"})
+IMMATERIAL_TEXT = ("not a device clearance, dosing / label update, generic-type formulation or strength "
+                   "line extension, or biosimilar")
+
+
+def high_impact_text() -> str:
+    """HIGH_IMPACT_TEXT plus the materiality clause while the switch is on."""
+    if PUSH_MATERIAL_ONLY:
+        return HIGH_IMPACT_TEXT + "; FDA approvals only when " + IMMATERIAL_TEXT
+    return HIGH_IMPACT_TEXT
 
 
 def _phase(ev: dict) -> str:
@@ -109,6 +132,13 @@ def is_high_impact(ev: dict) -> bool:
     """§3.8 — the ONLY definition (board chip + push gate)."""
     t, s = ev.get("event_type"), ev.get("subtype")
     if t == "fda_approval":
+        if PUSH_MATERIAL_ONLY and ev.get("materiality") in IMMATERIAL_CLASSES:
+            return False
+        # fix round 4 (OOS grade #2: a garbled "NDA … Reeives FDA's Approval" was
+        # the NDA's ACCEPTANCE) — routine._contradict stamps the approval when the
+        # same drug's filing acceptance is stored within store.MERGE_SESSIONS.
+        if ev.get("contradicted"):
+            return False
         return s not in FDA_APPROVAL_LOW_SUBTYPES and ev.get("regulator") == "FDA"
     if t == "fda_crl":
         return s in FDA_CRL_HIGH_SUBTYPES

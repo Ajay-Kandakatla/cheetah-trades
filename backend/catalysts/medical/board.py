@@ -105,6 +105,9 @@ def row(ev: dict) -> dict:
                     for s in (ev.get("sources") or [])],
         "n_sources": len(ev.get("sources") or []),
         "push": {"state": push.get("state"), "reason": push.get("reason"), "at_et": _iso_et(push.get("at"))},
+        # fix round 3: shadow mode's record — {value, reason, mode, title?}; None before a shadow pass
+        "would_push": ({k: v for k, v in (ev.get("would_push") or {}).items() if k != "at"}
+                       or None),
         "reaction": {"at_detection": reac.get("at_detection"), "at_close": reac.get("at_close"),
                      "fwd": reac.get("fwd")},
         "liquidity": {k: liq.get(k) for k in ("base_close", "base_basis", "adv50_usd", "avg_vol50",

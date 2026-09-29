@@ -55,3 +55,40 @@ Three events ring individually per pass; the rest go in one digest.
 `supply_demand.alert_status` records a `med_catalyst` pass doc every pass (`cadence_sec` 300 — derived from promo_live's `*/5` crontab minute field by `test_cadence_sec_matches_the_crontab`), with the counters (roster, sliced, events_new, high_impact, pushed, muted, stale, recap, blocked_price, blocked_dollar_vol, closed_day, baseline, budget_exhausted, call_timeouts…), so the page can say why the phone was quiet.
 
 The ℹ️ rules panel carries one 🧬 line built from the enforcing constants (`supply_demand/rules_info.py`, right after the 📣 line).
+
+## 2026-09-29 — fix round 3: SHADOW mode (verdict SHIP-SHADOW)
+
+An independent out-of-sample grade on real Finnhub news 2026-06-01..08-15 (80 random healthcare
+names) gave strict push precision 0.56 [0.34, 0.75]. The kind now ships in **shadow**:
+`catalysts/medical/alerts.SHADOW = True`. Every pass runs the full gate and the same claims
+(under the `SHADOW:` prefix, so "once per event / one topline per trial per session" behave as
+live), stamps a would-push event `push.state = "shadow"` with a `would_push` record
+(`{value, reason, mode, title}`; blocked events get `value: false` and the gate reason), counts
+`shadow` and `shadow_mode` on the pass doc, and **never calls the sender**. /alerts shows
+`🧬 shadow — nothing is sent` and `🧬 shadow — N would have pushed`. Flipping the switch to False
+(Ajay's word only) sends through the identical gate, once per event; an event already stamped
+`shadow` is not pending and never rings late. Gate changes in the same round: the repeat block
+skips a trial readout whose subject keys (trial acronym / NCT id / drug code / drug name) are
+disjoint from the earlier one's, and blocks the SAME trial / drug at any earlier stored date
+(`REHASH_SESSIONS = None`, HIS CALL); the stale gate counts regular-session minutes from the
+EVENT's first sighting (its own earliest publication and every same-subject, same-kind stored
+event), not the newest article. `taxonomy.PUSH_MATERIAL_ONLY` (default False = today's
+behaviour, HIS CALL) drops device clearances, dosing / label updates, generic-type formulations
+and biosimilars from high impact when switched on — it also drops genuine device clearances.
+
+## 2026-09-29 — fix round 4 (still SHADOW; nothing tuned on the fresh OOS set)
+
+Gate: the repeat block and the stale gate's event lineage use `store.different_story` /
+`store.same_subject` — two trials that share only a drug name (ATTAIN-1 / ATTAIN-2) are neither a
+recap nor one story's age; FDA approvals of different products split the same way. The topline claim
+is made on the event's IDENTITY keys (trial keys, else drug keys) and also yields to any claim in the
+same name + session slot that is not a different story (one readout phrased by drug and by trial rings
+once). An FDA approval and an FDA acceptance of the SAME drug's NDA / BLA on the same name within
+`store.MERGE_SESSIONS` cannot both be new: the approval is stamped `contradicted` and is low impact
+(`taxonomy.is_high_impact`), in either arrival order; an approval already sent stays sent. Finnhub
+headlines that name only one of the issuer's OWN stored subject keys (a key no other name carries,
+capitalised) are kept (`via_subject`) and attributed with that key as an issuer form, rival guards
+intact. /alerts: `🧬 shadow — N would have pushed this pass` plus `🧬 shadow — N would have pushed
+this session` (`shadow_session`, counted from the stored `push.state = "shadow"` events — the pass
+doc is replaced every 5 minutes). Not changed (his call): the 10-minute stale gate on a 55-minute
+Finnhub lap; `shadow` in `PUSHED_LIKE` after the switch goes live.

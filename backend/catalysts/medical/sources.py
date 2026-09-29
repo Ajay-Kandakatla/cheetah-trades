@@ -141,6 +141,25 @@ def relevant(title: str, *, ticker: str, company: Optional[str], forms: tuple = 
     return False
 
 
+def subject_hit(title: str, keys) -> list:
+    """fix round 4 (OOS grade #1: a product-only headline — "FDA Approves First
+    Oral Antibiotic Zoliflodacin …" — never reached the classifier): the stored
+    subject keys this headline names. A purely alphabetic key must appear
+    CAPITALISED (a proper noun), never as an ordinary lower-case word. `keys` are
+    the name's OWN keys (store.owned_subjects: never a key another name carries)."""
+    t = title or ""
+    out = []
+    for k in sorted({str(x).upper() for x in (keys or []) if x}):
+        rx = re.compile(r"(?<![\w-])" + re.escape(k) + r"(?![\w-])", re.I)
+        for m in rx.finditer(t):
+            w = m.group(0)
+            if re.fullmatch(r"[A-Za-z]+", w) and not w[0].isupper():
+                continue
+            out.append(k)
+            break
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Finnhub
 # ---------------------------------------------------------------------------
@@ -151,8 +170,11 @@ async def _default_finnhub(symbol: str, days_back: int):
 
 async def finnhub_articles(symbol: str, *, company: Optional[str], days_back: int = FINNHUB_DAYS_BACK,
                            fetch: Optional[Callable] = None, forms: tuple = (),
-                           counts: Optional[dict] = None) -> list:
-    """Company news for one roster name -> relevant, dated articles."""
+                           counts: Optional[dict] = None, subject_keys=None) -> list:
+    """Company news for one roster name -> relevant, dated articles. A headline
+    that names none of the house forms but one of the name's OWN stored subject
+    keys (`subject_keys`, fix round 4) is kept with `via_subject` = those keys —
+    the routine then attributes it with the product as an issuer form."""
     counts = counts if counts is not None else {}
     fetch = fetch or _default_finnhub
     try:
@@ -170,13 +192,20 @@ async def finnhub_articles(symbol: str, *, company: Optional[str], days_back: in
             continue
         if not title:
             continue
+        via = None
         if not relevant(title, ticker=symbol, company=company, forms=forms):
-            counts["irrelevant_dropped"] = counts.get("irrelevant_dropped", 0) + 1
-            continue
+            via = subject_hit(title, subject_keys) or None
+            if not via:
+                counts["irrelevant_dropped"] = counts.get("irrelevant_dropped", 0) + 1
+                continue
+            counts["subject_relevant"] = counts.get("subject_relevant", 0) + 1
         related = [s.strip().upper() for s in str(r.get("related") or "").split(",") if s.strip()]
-        out.append(_article(provider="finnhub", source=r.get("source"), title=title, url=r.get("url"),
-                            published=float(ts), nid=r.get("id"), ticker=symbol.upper(),
-                            tickers=related or [symbol.upper()], context=r.get("summary") or ""))
+        art = _article(provider="finnhub", source=r.get("source"), title=title, url=r.get("url"),
+                       published=float(ts), nid=r.get("id"), ticker=symbol.upper(),
+                       tickers=related or [symbol.upper()], context=r.get("summary") or "")
+        if via:
+            art["via_subject"] = via
+        out.append(art)
     return out
 
 
