@@ -88,8 +88,12 @@ const ZONE_STATES = new Set([
  *  "Clear Runway" would read as a warning it is not. */
 const ZONE_CAUTION = new Set(['At_Supply', 'Into_Supply', 'Extended_No_Support']);
 
+/** `\u{1F3CE}\u{FE0F} #` (2026-09-29): the 🏎️ Dual Momentum tab's served rank
+ *  chip (`🏎️ #3 dual momentum`, dual_momentum_tab.RANK_CHIP_FMT) — WHO the
+ *  name is on the page it came from, so it sits on the identity line. The
+ *  VS16 is part of the served literal and of this prefix, byte for byte. */
 const IDENT_PREFIX = ['\u{1F7E2} Sales', '\u{1F4C9} Sales', '❔ Sales data missing',
-  '\u{1F48E} ', 'Recent IPO'];
+  '\u{1F48E} ', 'Recent IPO', '\u{1F3CE}\u{FE0F} #'];
 
 const ENTRY_EXACT = new Set([
   'Buyable', 'Setup ready', 'Qualifier', 'Buyable then', 'SEPA qualifier', 'Target hit', 'Backtested',

@@ -1577,7 +1577,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2159,7 +2159,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4695,7 +4695,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5036,6 +5036,70 @@ const CONTRACTS = [
         if (!entry.includes('UNMEASURED')) errs.push('the 🔑 Key Levels ✨ entry must say UNMEASURED');
         if (/bounce/i.test(entry)) errs.push('the 🔑 Key Levels ✨ entry says "bounce"');
         if (!entry.includes("route: '/chart-maps?tab=key_levels'")) errs.push("the 🔑 Key Levels ✨ entry must route to '/chart-maps?tab=key_levels'");
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🏎️ Dual Momentum tab (2026-09-29): the page engine + the ONE demand engine, toggle served, UNMEASURED, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-29: "Can you pull these in to chart maps and add the demand
+    // zones logic to these?" + "I want a toggle and also the check boxes we
+    // have like AMD and supple and demand zones computing and also key levels".
+    // The leaders come from sepa/dual_momentum (the /dual-momentum page's own
+    // engine); the zones and the 🎯 gate read from the ONE demand engine. Any
+    // of these links lost silently drops the tab, its gate read, its UNMEASURED
+    // word or its 🏎️ rank chip.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('dual_momentum')) {
+        errs.push("CM_TABS must carry 'dual_momentum'");
+      } else if (tabs.indexOf('dual_momentum') !== tabs.indexOf('key_levels') + 1) {
+        errs.push("CM_TABS: 'dual_momentum' must sit right after 'key_levels' (spec §7 #1)");
+      }
+      const meta = /\n  dual_momentum: \{\n    label: '([^']*)',\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.dual_momentum (label + blurb) is missing');
+      } else {
+        if (!meta[2].includes('UNMEASURED')) errs.push('the TAB_META.dual_momentum blurb must say UNMEASURED');
+        if (/bounce/i.test(meta[2])) errs.push('the TAB_META.dual_momentum blurb says "bounce" — surfaces he reads say reversal');
+      }
+      if (!/\n  dual_momentum: 'demand',/.test(src)) errs.push("ENTERABLE_KIND must carry dual_momentum: 'demand' (the mirror of KIND_BY_TAB)");
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'dual_momentum' && <DualMomentumBoardNote/.test(page)) errs.push("ChartMaps.tsx must render <DualMomentumBoardNote … /> on tab === 'dual_momentum'");
+      if (!/data\?\.warming && tab === 'dual_momentum' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the dual_momentum tab — its warming line is served');
+      const board = read('../backend/chart_maps/board.py');
+      if (!/elif t == "dual_momentum":/.test(board)) errs.push('board.py lost the elif t == "dual_momentum": dispatch');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"dual_momentum"/.test(tabsPy[1])) errs.push('board.py TABS must carry "dual_momentum"');
+      let dmt = '';
+      try { dmt = read('../backend/chart_maps/dual_momentum_tab.py'); } catch { errs.push('backend/chart_maps/dual_momentum_tab.py is missing'); }
+      if (dmt) {
+        if (!dmt.includes('UNMEASURED')) errs.push('dual_momentum_tab.py must say UNMEASURED');
+        // `bounce_room` is a MODULE NAME (internal identifiers keep `bounce`,
+        // cheetah-ops) — the tab imports its demand_read. Any other "bounc" is
+        // served wording and fails.
+        if (/bounc/i.test(dmt.replace(/bounce_room/g, ''))) errs.push('dual_momentum_tab.py says "bounce"');
+        if (!/sepa\.dual_momentum|from sepa import dual_momentum/.test(dmt)) errs.push('dual_momentum_tab.py must reuse sepa.dual_momentum (the page engine), not re-rank');
+        if (/def room_gate\b|def demand_proximity_gate\b/.test(dmt)) errs.push('dual_momentum_tab.py must not re-implement the alert gate (reuse alert_gates)');
+        if (/ALERT_MIN_ROOM_PCT\s*=/.test(dmt)) errs.push('dual_momentum_tab.py must not retype ALERT_MIN_ROOM_PCT');
+      }
+      let en = '';
+      try { en = read('../backend/supply_demand/enterable.py'); } catch { errs.push('backend/supply_demand/enterable.py is missing'); }
+      if (en && !/"dual_momentum":\s*KIND_DEMAND/.test(en)) errs.push('enterable.py KIND_BY_TAB must carry "dual_momentum": KIND_DEMAND');
+      const ladder = read('src/lib/cardLadder.ts');
+      const ip = /const IDENT_PREFIX = \[([^\]]*)\]/.exec(ladder);
+      if (!ip || !/'\\u\{1F3CE\}\\u\{FE0F\} #'|'🏎️ #'/.test(ip[1])) errs.push('cardLadder IDENT_PREFIX must route the served 🏎️ rank chip (VS16 included) to IDENT');
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-dual-momentum-2026-09-29'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-dual-momentum-2026-09-29'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf('\n    addedAt', idAt) + 80);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🏎️ Dual Momentum ✨ entry must say UNMEASURED');
+        if (/bounce/i.test(entry)) errs.push('the 🏎️ Dual Momentum ✨ entry says "bounce"');
+        if (!entry.includes("route: '/chart-maps?tab=dual_momentum'")) errs.push("the 🏎️ Dual Momentum ✨ entry must route to '/chart-maps?tab=dual_momentum'");
       }
       return errs;
     },

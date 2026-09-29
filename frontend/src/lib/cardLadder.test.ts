@@ -521,3 +521,68 @@ describe('cardLadder — 🔑 Key Levels tab position pill (2026-09-28)', () => 
     expect(texts(l.setup.badges)).toEqual(['🔑']);
   });
 });
+
+describe('cardLadder — 🏎️ Dual Momentum tab (2026-09-29)', () => {
+  const RANK = '\u{1F3CE}\u{FE0F} #3 dual momentum';          // dual_momentum_tab.RANK_CHIP_FMT
+  const DIST = '→ 3.21% above the demand band';            // board._dist_badge
+  const NO_BAND = '→ no demand band under the price';      // NO_BAND_TEXT
+  const NO_DOC = '→ no demand band — no stored bands for this name';
+  const NO_PRINT = '→ no print to read the bands against';
+  const dmTile = (over: Partial<CmTile> = {}): CmTile => bare({
+    symbol: 'DMX',
+    badges: [{ text: RANK, tone: 'good' }, { text: DIST, tone: 'warn' }],
+    stats: [
+      { k: '12m', v: '+566.1%' }, { k: '6m', v: '+120.4%' }, { k: '3m', v: '+31.0%' },
+      { k: '1m', v: '+4.2%' }, { k: 'RS', v: '97' },
+      { k: 'Room', v: '+12.4% -> 52.30' }, { k: 'Band', v: 'floor intact' },
+    ],
+    why: '\u{1F3CE}\u{FE0F} #3 dual momentum · 12m +566.1% · 3.21% above its demand band 45.10–46.00 · room +12.4% -> 52.30 · floor intact',
+    ...over,
+  });
+
+  it('the served rank chip routes to IDENT, the distance badge to PRICE', () => {
+    const l = cardLadder(dmTile());
+    expect(texts(l.ident)).toEqual([RANK]);
+    expect(texts(l.price)).toEqual([DIST]);
+    expect(texts(l.setup.badges)).toEqual([]);
+  });
+
+  it('Room lands in PLAN, Band in the FLOOR fold, the returns and RS in SETUP; no To band', () => {
+    const l = cardLadder(dmTile());
+    expect(l.plan.stats.map((s) => s.k)).toEqual(['Room']);
+    expect(foldTexts(l, 'floor')).toEqual(['Band']);
+    expect(l.setup.stats.map((s) => s.k)).toEqual(['12m', '6m', '3m', '1m', 'RS']);
+    const keys = [...l.plan.stats, ...l.setup.stats, ...l.timing.stats].map((s) => s.k);
+    expect(keys).not.toContain('To band');
+  });
+
+  it('the distance to the band is printed EXACTLY ONCE across the rungs (critic 9a, Rule #5)', () => {
+    const l = cardLadder(dmTile());
+    const rungs = allStrings({ ...l, why: null });
+    expect(rungs.filter((s) => s.includes('3.21%'))).toHaveLength(1);
+  });
+
+  it('the three NO_* texts route to PRICE, never to SETUP', () => {
+    for (const t of [NO_BAND, NO_DOC, NO_PRINT]) {
+      const l = cardLadder(dmTile({ badges: [{ text: RANK, tone: 'good' }, { text: t, tone: 'muted' }] }));
+      expect(texts(l.price), t).toEqual([t]);
+      expect(texts(l.setup.badges), t).toEqual([]);
+    }
+  });
+
+  it('NEGATIVE: 🏎 WITHOUT the VS16, and a 🏎️ badge that is not "#rank", do NOT route to IDENT', () => {
+    const noVs = '\u{1F3CE} #3 dual momentum';
+    const other = '\u{1F3CE}\u{FE0F} Dual momentum leader';
+    const l = cardLadder(bare({ badges: [{ text: noVs, tone: 'good' }, { text: other, tone: 'good' }] }));
+    expect(texts(l.ident)).toEqual([]);
+    expect(texts(l.setup.badges)).toEqual([noVs, other]);
+  });
+
+  it('NEGATIVE: no NaN / undefined / [object Object] anywhere on a DM ladder', () => {
+    for (const s of allStrings(cardLadder(dmTile()))) {
+      expect(s.includes('NaN'), s).toBe(false);
+      expect(s.includes('undefined'), s).toBe(false);
+      expect(s.includes('[object Object]'), s).toBe(false);
+    }
+  });
+});

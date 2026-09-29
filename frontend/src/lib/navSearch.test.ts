@@ -304,3 +304,24 @@ describe('🧬 Medical catalysts deep link (2026-09-29)', () => {
     expect(tos(searchNav(index, 'key level'))).not.toContain(MED);
   });
 });
+
+describe('🏎️ Dual Momentum tab deep link (2026-09-29)', () => {
+  const DM = '/chart-maps?tab=dual_momentum';
+  it('"dual momentum" and "antonacci" find the tab', () => {
+    for (const q of ['dual momentum', 'antonacci', 'momentum leaders', 'absolute momentum']) {
+      expect(tos(searchNav(index, q)), q).toContain(DM);
+    }
+  });
+
+  it('NEGATIVE: exactly one entry, and none without Chart Maps in the menu', () => {
+    expect(EXTRA_ENTRIES.filter((e) => e.to === DM)).toHaveLength(1);
+    expect(index.filter((e) => e.to === DM)).toHaveLength(1);
+    const without = buildIndex({ ...MENU, primary: MENU.primary.filter((m) => m.feature !== 'chart-maps') }, subgroupOf);
+    expect(tos(without)).not.toContain(DM);
+  });
+
+  it('NEGATIVE: an unrelated query does not surface it', () => {
+    expect(tos(searchNav(index, 'whatsapp'))).not.toContain(DM);
+    expect(tos(searchNav(index, 'key level'))).not.toContain(DM);
+  });
+});

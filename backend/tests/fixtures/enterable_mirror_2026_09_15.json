@@ -18,6 +18,7 @@
     "amd": "demand",
     "gabbar": "demand",
     "ict": "demand",
+    "dual_momentum": "demand",
     "breaking": "supply_break",
     "holdings": "demand",
     "support": "demand",
