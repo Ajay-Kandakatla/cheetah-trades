@@ -224,7 +224,7 @@ const HEADS = {
   today: { text: 'Today', title: 'Each name’s own move so far in THIS session, when the board has a live read — not relative to the benchmark. The whole column shares one basis: when the read is on the last close, every row here is an em-dash rather than yesterday’s number under a “Today” header. The line above the sections says which it is.' },
   sales: { text: 'Sales YoY · base → latest', title: 'Latest quarterly revenue against the same quarter a year ago, with the two dollar figures under it. ⚠ marks a base that is negative or immaterial.' },
   character: { text: 'Character', title: 'His character clause: accelerating (growth rate rising), a streak of consecutive growth quarters, sales-led (top line outpacing the bottom line).' },
-  pivot: { text: 'Episodic pivot', title: 'The gap on the pivot day, its volume multiple and how long ago. — = no pivot on this name.' },
+  pivot: { text: 'Episodic pivot', short: 'EP', title: 'The gap on the pivot day, its volume multiple and how long ago. — = no pivot on this name.' },
   metrics: [
     { text: 'Shares YoY', title: 'Diluted share count, year over year. Down = buybacks; up = dilution.' },
     { text: 'Cash − debt', title: 'Net cash (positive) or net debt (negative).' },
@@ -232,6 +232,18 @@ const HEADS = {
     { text: 'FCF yield', title: 'Free cash flow as a share of market cap.' },
   ],
 };
+
+/** The narrow Episodic Pivot head's hover text (2026-09-28): the full name,
+ *  the column's own meaning, and why it is narrow right now. */
+const PIVOT_EMPTY_TITLE = `${HEADS.pivot.text} (EP). ${HEADS.pivot.title} No name in this section has one right now, so the column is drawn narrow — it widens by itself the moment one does.`;
+
+/** The Episodic Pivot column is narrow ("EP") only when EVERY SERVED row of
+ *  the section has no pivot — the render's own em-dash branch (`!r.pivot`).
+ *  An empty section is not "all empty" (it draws no table at all). A pivot
+ *  object with null fields still renders "gap —", which is a datum. */
+export function pivotColumnEmpty(rows: readonly BondeRow[] | null | undefined): boolean {
+  return !!rows && rows.length > 0 && rows.every((r) => !r.pivot);
+}
 
 export default function BondeBoard() {
   const [d, setD] = useState<BondeBoardData | null>(null);
@@ -344,7 +356,10 @@ export default function BondeBoard() {
       const part = partitionEnterable(rows, (r) => r.symbol, enterableMap, enterableOn,
                                       ignoreReasons);
       return { ...s, rows: part.rows, part,
-               total: d.counts?.[s.key] ?? all.length, shown: all.length };
+               total: d.counts?.[s.key] ?? all.length, shown: all.length,
+               // EP collapse reads the SERVED rows — a filter never widens or
+               // narrows the column under his eyes.
+               pivotEmpty: pivotColumnEmpty(all) };
     });
     // `ignoreReasons` belongs here: this board calls the partition by hand
     // rather than through the hook, so a missed dep means his chip lights up
@@ -609,14 +624,22 @@ export default function BondeBoard() {
                 : 'nothing in this tier right now.'}
             </div>
           ) : (
-            <div className="bd-rows">
+            /* 📈 Ajay 2026-09-28: "so much empty space". The table scrolls
+               sideways in its own box with the Ticker pinned, so html's
+               overflow-x:hidden never cuts a column. */
+            <div className="bd-scroll" data-testid={`bd-scroll-${s.key}`}>
+            <div className={`bd-rows${s.pivotEmpty ? ' bd-rows--pivot-empty' : ''}`}>
               <div className="bd-row bd-hdr" aria-hidden="false" role="row">
                 <div className="bd-sym" title={HEADS.sym.title}>{HEADS.sym.text}</div>
                 <div className="bd-today" title={HEADS.today.title}>{HEADS.today.text}</div>
                 <div className="bd-since" title={HEADS.since.title}>{HEADS.since.text}</div>
                 <div className="bd-sales" title={HEADS.sales.title}>{HEADS.sales.text}</div>
                 <div className="bd-chips" title={HEADS.character.title}>{HEADS.character.text}</div>
-                <div className="bd-pivot" title={HEADS.pivot.title}>{HEADS.pivot.text}</div>
+                <div className={`bd-pivot${s.pivotEmpty ? ' bd-pivot--empty' : ''}`}
+                     title={s.pivotEmpty ? PIVOT_EMPTY_TITLE : HEADS.pivot.title}
+                     aria-label={HEADS.pivot.text}>
+                  {s.pivotEmpty ? HEADS.pivot.short : HEADS.pivot.text}
+                </div>
                 <div className="bd-metrics">
                   {HEADS.metrics.map((h) => <span key={h.text} className="bd-m" title={h.title}>{h.text}</span>)}
                 </div>
@@ -631,69 +654,62 @@ export default function BondeBoard() {
                 const pmark = periodMark(r.period_ok);
                 return (
                   <div key={`${s.key}-${r.symbol}`} className="bd-row">
+                    {/* Three lines (Ajay 2026-09-28: "so much empty space") —
+                        identity, the live reads, his criteria. Every element
+                        that was here still is; only the packing changed. */}
                     <div className="bd-sym">
-                      <TickerLink ticker={r.symbol} fromLabel="Bonde" />
-                      {/* One click puts the name on his ⚡ Signals watchlist —
-                          the "trackers" ask. Non-compact: a bare "+" beside the
-                          chips does not read as a control (the same contract
-                          the Hottest table carries). */}
-                      <SignalWatchButton symbol={r.symbol} />
-                      {r.is_new && (
-                        /* The DATE on the badge, not only in the title: "✨ NEW"
-                           alone cannot be told from a 29-day-old arrival. */
-                        <span className="bd-new" data-testid={`bd-new-${r.symbol}`}
-                              title={r.first_seen
-                                ? `First appeared on his screen ${String(r.first_seen).slice(0, 10)}`
-                                : 'Newly arrived on his screen'}>
-                          ✨ NEW{r.first_seen ? ` · ${String(r.first_seen).slice(5, 10)}` : ''}
-                        </span>
-                      )}
-                      {/* The year-over-year pair, tri-state. `false` = checked
-                          and not four quarters apart; `null` = no period keys
-                          to check it with. A tick is never printed for either. */}
-                      {pmark && (
-                        <span className={pmark.cls} data-testid={`bd-pair-${r.symbol}`}
-                              title={pmark.title}>{pmark.text}</span>
-                      )}
-                      {/* ⚡ rows carry every tier, so the section header does not
-                          state it. A row the board WITHHELD the tier from (its
-                          pair did not check out) prints an em-dash. */}
-                      {s.key === 'pivot' && (
-                        <span className="bd-tier bd-dim" data-testid={`bd-tier-${r.symbol}`}
-                              title={r.tier
-                                ? 'His sales tier for this name.'
-                                : 'The growth claim is withheld on this row — its year-over-year pair is not four fiscal quarters apart. The Episodic Pivot is a gap-and-volume event and stands on its own.'}>
-                          {tierText(r.tier)}
-                        </span>
-                      )}
-                      {/* Only in / near rows wear the chip — "10% above demand"
-                          on every row is noise, not a read (Rule #5). */}
-                      {dchip && read?.demand && inOrNearDemand(read) && (
-                        <span className={`bd-dchip${read.demand.in_band ? ' bd-dchip-in' : ' bd-dchip-near'}`}
-                              title={`Board demand band ${read.demand.lo}–${read.demand.hi} (${read.demand.touches}× tested)${read.print != null ? ` · print ${read.print}` : ''}${read.fresh === false ? ' · stale print' : ''}${room.payload?.store_date ? ` · bands as of ${room.payload.store_date}` : ''}. Same band an alert would name. Not a buy signal.`}>
-                          🎯 {dchip}
-                        </span>
-                      )}
-                      {/* 🚀 reaches every Chart Maps tab (Ajay 2026-09-11:
-                          "ALL TABS IN CHART MAPS"). Here it is the useful
-                          cross-check: a name on Bonde's SALES screen that also
-                          clears the 100/100 explosive-growth screen is the two
-                          lists agreeing. */}
-                      <GrowthChip symbol={r.symbol} className="bd-gchip" />
-                      <PromoOriginChip symbol={r.symbol} className="bd-gchip" />
-                      <ExplosiveChip read={read?.explosive} className="bd-gchip"
-                                     study={room.payload?.explosive_study} />
-                      <EnterableChip read={read?.enterable} className="bd-gchip" />
-                      {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's
-                          own served ceiling/floor read. `cm-badge` rather than
-                          `bd-gchip`: the shared pill is the class that ships
-                          with the -band / -band-muted tones. */}
-                      <BandStructureChip read={read?.band_structure} className="cm-badge"
-                                         study={room.payload?.band_structure_study} />
-                      {r.name && <div className="bd-coname">{r.name}</div>}
-                      {/* 📋 His static criteria, on EVERY row including 🔎 —
-                          the cohort the app's clause rejects is exactly the
-                          one a reader most needs the facts for. */}
+                      <div className="bd-sym-l1">
+                        <TickerLink ticker={r.symbol} fromLabel="Bonde" />
+                        {r.name && <div className="bd-coname">{r.name}</div>}
+                        {r.is_new && (
+                          /* The DATE on the badge: "✨ NEW" alone cannot be
+                             told from a 29-day-old arrival. */
+                          <span className="bd-new" data-testid={`bd-new-${r.symbol}`}
+                                title={r.first_seen
+                                  ? `First appeared on his screen ${String(r.first_seen).slice(0, 10)}`
+                                  : 'Newly arrived on his screen'}>
+                            ✨ NEW{r.first_seen ? ` · ${String(r.first_seen).slice(5, 10)}` : ''}
+                          </span>
+                        )}
+                        {/* The year-over-year pair, tri-state: `false` = not four
+                            quarters apart; `null` = nothing to check it with. */}
+                        {pmark && (
+                          <span className={pmark.cls} data-testid={`bd-pair-${r.symbol}`}
+                                title={pmark.title}>{pmark.text}</span>
+                        )}
+                        {/* ⚡ rows carry every tier; a WITHHELD tier prints —. */}
+                        {s.key === 'pivot' && (
+                          <span className="bd-tier bd-dim" data-testid={`bd-tier-${r.symbol}`}
+                                title={r.tier
+                                  ? 'His sales tier for this name.'
+                                  : 'The growth claim is withheld on this row — its year-over-year pair is not four fiscal quarters apart. The Episodic Pivot is a gap-and-volume event and stands on its own.'}>
+                            {tierText(r.tier)}
+                          </span>
+                        )}
+                        {/* The "trackers" ask: one click onto ⚡ Signals.
+                            Non-compact — a bare "+" does not read as a control. */}
+                        <SignalWatchButton symbol={r.symbol} />
+                      </div>
+                      <div className="bd-sym-l2">
+                        {/* 🎯 only on in / near rows (Rule #5). */}
+                        {dchip && read?.demand && inOrNearDemand(read) && (
+                          <span className={`bd-dchip${read.demand.in_band ? ' bd-dchip-in' : ' bd-dchip-near'}`}
+                                title={`Board demand band ${read.demand.lo}–${read.demand.hi} (${read.demand.touches}× tested)${read.print != null ? ` · print ${read.print}` : ''}${read.fresh === false ? ' · stale print' : ''}${room.payload?.store_date ? ` · bands as of ${room.payload.store_date}` : ''}. Same band an alert would name. Not a buy signal.`}>
+                            🎯 {dchip}
+                          </span>
+                        )}
+                        {/* 🚀 on every Chart Maps tab (Ajay 2026-09-11). */}
+                        <GrowthChip symbol={r.symbol} className="bd-gchip" />
+                        <PromoOriginChip symbol={r.symbol} className="bd-gchip" />
+                        <ExplosiveChip read={read?.explosive} className="bd-gchip"
+                                       study={room.payload?.explosive_study} />
+                        <EnterableChip read={read?.enterable} className="bd-gchip" />
+                        {/* 🪜 the row's served ceiling/floor read (2026-09-16);
+                            last on the line, so the long sentence wraps last. */}
+                        <BandStructureChip read={read?.band_structure} className="cm-badge"
+                                           study={room.payload?.band_structure_study} />
+                      </div>
+                      {/* 📋 His static criteria, on EVERY row including 🔎. */}
                       <BondePickChips pick={r.pick} legend={d.pick_legend}
                                       symbol={r.symbol} />
                     </div>
@@ -755,6 +771,7 @@ export default function BondeBoard() {
                   </div>
                 );
               })}
+            </div>
             </div>
           )}
         </section>

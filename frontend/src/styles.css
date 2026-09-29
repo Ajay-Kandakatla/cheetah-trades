@@ -12549,13 +12549,13 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .bd-dchip-in { background: rgba(217,119,6,0.22); }
 /* Column headers (2026-09-14, "add headers"): the same grid as a row, so each
-   head sits over its cell; hidden when the grid collapses on a phone. */
+   head sits over its cell — at every width since 2026-09-28 (the table
+   scrolls sideways instead of collapsing and hiding them). */
 .bd-row.bd-hdr {
   font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--ink-muted); padding: 0.15rem 0 0.25rem; align-items: end;
 }
 .bd-row.bd-hdr > div { cursor: help; }
-.bd-row.bd-hdr .bd-m { min-width: 52px; text-align: right; white-space: nowrap; }
 .bd-toggle input { accent-color: var(--gold, #c9a227); cursor: pointer; }
 /* The empty-⚡-Pivots explanation. Styled as a notice rather than an error:
    the scanners being off is his own rule working, not a fault. */
@@ -12602,11 +12602,9 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-rows { display: flex; flex-direction: column; }
 .bd-row {
   display: grid;
-  grid-template-columns: minmax(140px, 1.4fr) minmax(120px, 1fr) minmax(150px, 1.2fr) minmax(110px, 0.9fr) minmax(190px, 1.3fr);
-  gap: 0.6rem; align-items: center;
+  gap: 0.6rem; align-items: start;
   padding: 0.4rem 0; border-bottom: 1px solid var(--hairline, rgba(255,255,255,0.06));
 }
-.bd-sym { display: flex; flex-direction: column; gap: 0.12rem; }
 .bd-new {
   font-size: 0.58rem; font-weight: 800; letter-spacing: 0.04em;
   color: var(--gold, #c9a227); border: 1px solid rgba(201,162,39,0.45);
@@ -12623,8 +12621,6 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   background: rgba(56,189,248,0.08); border-radius: 5px; padding: 0 4px;
   cursor: help;
 }
-.bd-metrics { display: flex; gap: 0.5rem; justify-content: flex-end; font-size: 0.72rem; }
-.bd-m { font-variant-numeric: tabular-nums; cursor: help; min-width: 52px; text-align: right; }
 .bd-note { font-size: 0.74rem; color: var(--ink-muted); line-height: 1.5; }
 .bd-foot { margin-top: 0.4rem; }
 .bd-good { color: var(--positive, #10b981); }
@@ -12632,11 +12628,6 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .bd-bad  { color: var(--bad, #f85149); }
 .bd-dim  { color: var(--ink-muted); }
 .bd-err  { color: var(--bad, #f85149); }
-@media (max-width: 860px) {
-  .bd-row { grid-template-columns: 1fr 1fr; row-gap: 0.3rem; }
-  .bd-row.bd-hdr { display: none; }
-  .bd-metrics { justify-content: flex-start; }
-}
 
 /* The 🚀 growth chip on a Bonde row — same three states GrowthChip emits
    everywhere (`<class>`, `<class>-growth`, `<class>-bad`). */
@@ -13333,17 +13324,10 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 
 /* 📈 Bonde — the live Today column, the trackers and the held-out footnote
-   (2026-09-20, P5). Appended AFTER the existing .bd-* block, so the .bd-row
-   re-declaration below wins on source order and the grid gains its new track.
-   jsdom loads no stylesheet, so nothing in a render test can catch a missing
+   (2026-09-20, P5). The .bd-row track template lives in ONE place since
+   2026-09-28 (the "Bonde table density" block further down). jsdom loads no stylesheet, so nothing in a render test can catch a missing
    rule here — the contract check is what guards it. */
 
-/* Six tracks now: Ticker · Today · Sales · Character · Pivot · metrics. */
-.bd-row {
-  grid-template-columns:
-    minmax(140px, 1.4fr) minmax(64px, 0.5fr) minmax(120px, 1fr)
-    minmax(150px, 1.2fr) minmax(110px, 0.9fr) minmax(190px, 1.3fr);
-}
 .bd-today {
   font-size: 0.82rem; font-variant-numeric: tabular-nums;
   text-align: right; white-space: nowrap; cursor: help;
@@ -13402,10 +13386,8 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   letter-spacing: 0.06em; color: var(--ink-muted);
 }
 
-/* Phones: the grid collapses, so the Today cell stops being right-aligned in a
-   column that no longer exists. */
+/* Phones: the held-out grid folds to two tracks. */
 @media (max-width: 720px) {
-  .bd-today { text-align: left; }
   .bd-heldout-row { grid-template-columns: 1fr 1fr; }
 }
 
@@ -13516,14 +13498,6 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 }
 .eg-q-blank { color: var(--ink-muted); }
 
-/* Seven tracks now: Ticker · Today · Since report · Sales · Character ·
-   Pivot · metrics. */
-.bd-row {
-  grid-template-columns:
-    minmax(140px, 1.4fr) minmax(64px, 0.5fr) minmax(74px, 0.55fr)
-    minmax(120px, 1fr) minmax(150px, 1.2fr) minmax(110px, 0.9fr)
-    minmax(190px, 1.3fr);
-}
 .bd-since {
   font-size: 0.82rem; font-variant-numeric: tabular-nums;
   text-align: right; white-space: nowrap; cursor: help;
@@ -13538,10 +13512,70 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   padding-left: 0.5rem; margin-top: 0.25rem;
 }
 
-@media (max-width: 900px) {
-  .bd-row { grid-template-columns: 1fr 1fr; row-gap: 0.3rem; }
-  .bd-row.bd-hdr { display: none; }
+/* 📈 Bonde table density (Ajay 2026-09-28: "Once done can you fix this table
+   too? so much empty space"). ONE track template for every section; the
+   Ticker column is the only flexible track and is pinned while the rest scroll
+   sideways inside .bd-scroll (html's overflow-x:hidden would otherwise CUT a
+   wide table). Every cell holds its own content: nothing paints into a
+   neighbour. docs/sepa/bonde_table_density_2026_09_28.md */
+.bd-scroll { min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.bd-rows {
+  --bd-gap: 0.6rem;
+  --bd-w-sym: 22rem;  --bd-w-today: 4rem;  --bd-w-since: 4.75rem;
+  --bd-w-sales: 8rem; --bd-w-char: 9rem;   --bd-w-pivot: 7rem;
+  --bd-w-metric: 4.25rem; --bd-metric-gap: 0.4rem;
+  --bd-w-metrics: calc(4 * var(--bd-w-metric) + 3 * var(--bd-metric-gap));
+  min-width: calc(var(--bd-w-sym) + var(--bd-w-today) + var(--bd-w-since)
+                  + var(--bd-w-sales) + var(--bd-w-char) + var(--bd-w-pivot)
+                  + var(--bd-w-metrics) + 6 * var(--bd-gap));
 }
+.bd-rows.bd-rows--pivot-empty { --bd-w-pivot: 2.5rem; }
+.bd-row {
+  grid-template-columns:
+    minmax(var(--bd-w-sym), 1fr) var(--bd-w-today) var(--bd-w-since)
+    var(--bd-w-sales) var(--bd-w-char) var(--bd-w-pivot) var(--bd-w-metrics);
+  column-gap: var(--bd-gap);
+  padding: 0.25rem 0;          /* tuning knob 1 (spec §3.2): C8 max 123 → 120px at 1440 */
+}
+.bd-row > * { min-width: 0; }
+.bd-row > .bd-sym {
+  position: sticky; left: 0; z-index: 1; background: var(--bg);
+  align-self: stretch; padding-right: 0.5rem;
+  display: flex; flex-direction: column; gap: 0.15rem; overflow-wrap: anywhere;
+}
+.bd-row.bd-hdr > .bd-sym { justify-content: flex-end; }
+.bd-row.bd-hdr > div { white-space: normal; overflow-wrap: normal; }
+.bd-sym-l1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.4rem; min-width: 0; }
+.bd-sym-l1 > .cm-watch { margin-left: auto; }
+.bd-sym-l1 > .bd-new, .bd-sym-l1 > .bd-pair-warn,
+.bd-sym-l1 > .bd-unverified, .bd-sym-l1 > .bd-tier { margin-left: 0; }
+.bd-sym-l2 { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.25rem; min-width: 0; line-height: 1.25; }
+.bd-sym-l2:empty { display: none; }
+.bd-sym-l2 > * { margin-left: 0; max-width: 100%; min-width: 0; }
+.bd-sym .cm-badge, .bd-sym .bd-gchip, .bd-sym .bd-dchip, .bd-sym .bd-pick-chip {
+  white-space: normal; overflow-wrap: anywhere;
+}
+.bd-sym .cm-badge { border-radius: 0.55rem; }
+.bd-sym .bd-pick { margin-top: 0; }
+.bd-sym .bd-pick-more:not([open]) { flex-basis: auto; margin-top: 0; }
+/* "▸ all N" inside the Ticker cell: two tracks at EVERY width — the glyph,
+   then label / value / source / link stacked in the second track. Five tracks
+   in a 12-34rem cell split each entry into slivers that break letter by letter
+   (critic 2026-09-28: 15 → 212-10,088 mid-word breaks); an auto-placed
+   two-track fold drops every other entry into the 14px glyph track. */
+.bd-sym .bd-pick-row { grid-template-columns: 14px minmax(0, 1fr); }
+.bd-sym .bd-pick-row > :nth-child(n+3) { grid-column: 2; }
+.bd-sales { font-variant-numeric: tabular-nums; }
+.bd-metrics {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--bd-metric-gap); font-size: 0.72rem;
+}
+.bd-m { min-width: 0; text-align: right; font-variant-numeric: tabular-nums; cursor: help; }
+.bd-row:not(.bd-hdr) .bd-m { white-space: nowrap; }
+.bd-row.bd-hdr .bd-m { white-space: normal; }
+.bd-pivot--empty { text-align: center; }
+@media (max-width: 900px) { .bd-rows { --bd-w-sym: 16rem; } }
+@media (max-width: 600px) { .bd-rows { --bd-w-sym: 12rem; } }
 
 /* ── 📰 News tab on Chart Maps (2026-09-24) ─────────────────────────────── */
 .nt-board { display: flex; flex-direction: column; gap: 18px; }

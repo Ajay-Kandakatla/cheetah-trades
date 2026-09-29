@@ -1,0 +1,6568 @@
+{
+ "board": {
+  "sections": {
+   "pivot": [],
+   "explosive": [
+    {
+     "symbol": "PTGX",
+     "name": "Protagonist Therapeutics, Inc.",
+     "last_close": 142.44,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 3749.2,
+     "prior_yoy_pct": 99.0,
+     "accelerating": true,
+     "consecutive_growth_q": 2,
+     "sales_led": true,
+     "bonde_reason": "sales +3749.2% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 213475000.0,
+     "base_rev": 5546000.0,
+     "base_state": "ok",
+     "rev_added": 207929000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 2.29,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_too_small",
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 3749.2,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 3749.2,
+         "prior": 99.0
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": 119.61,
+        "why": "no_threshold_in_his_writing",
+        "source": "13F level via yfinance (never a flow)"
+       },
+       "sector_3": {
+        "ok": true,
+        "value": "Healthcare",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "to_profit",
+        "why": "no_threshold_in_his_writing",
+        "latest": 2.29,
+        "year_ago": -0.55,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 2,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": false,
+        "n_pairs_available": 9,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": true,
+        "value": 18.26,
+        "why": null,
+        "as_of": "2026-08-05",
+        "age_days": 55,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 55,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-08-05",
+        "age_days": 55,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 52888670.0,
+        "why": null,
+        "tier": null,
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 9217048576.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": true,
+        "value": 15.34,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 11.92,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 11,
+        "why": null,
+        "value_note": "covered by 11",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 10.1,
+        "why": null,
+        "as_of": "2016-08-11",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 7,
+      "n_fail": 3,
+      "n_unknown": 8
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 11.8,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 782576000.0,
+     "debt": 9216000.0,
+     "cash_minus_debt": 773360000.0,
+     "ev_sales": 29.81,
+     "fcf_yield": 1.04,
+     "market_cap": 9217048576.0,
+     "float_shares": 52888670.0,
+     "shares_outstanding": 64708285.0,
+     "sector": "Healthcare",
+     "balance_meaningful": true,
+     "roce_pct": 7.62,
+     "roic_pct": 7.49,
+     "roe_pct": 10.98,
+     "asset_turnover": 0.352,
+     "capex_intensity_pct": 0.22,
+     "fcf_conversion_pct": 157.5,
+     "capital_employed": 848363000.0,
+     "ttm_ebit": 58342000.0,
+     "ttm_revenue": 281992000.0,
+     "ttm_net_income": 82909000.0,
+     "ttm_operating_cash_flow": 131197000.0,
+     "ttm_capex": 615000.0,
+     "ttm_fcf": 130582000.0,
+     "total_assets": 885544000.0,
+     "total_equity": 841543000.0,
+     "effective_tax_rate": 0.0169,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {},
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": 0.40885379952064294,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": -2.56,
+      "report_date": "2026-08-05",
+      "when": "AMC",
+      "anchor_date": "2026-08-06",
+      "anchor_close": 146.18,
+      "as_of": "2026-09-28",
+      "last_close": 142.44,
+      "sessions": 36,
+      "report_age_days": 55,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "LQDA",
+     "name": "Liquidia Corporation",
+     "last_close": 73.67,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 1842.7,
+     "prior_yoy_pct": 4158.5,
+     "accelerating": false,
+     "consecutive_growth_q": 4,
+     "sales_led": true,
+     "bonde_reason": "sales +1842.7% YoY ≥ the app's 25% mid-tier, with 4q consistency",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 171679000.0,
+     "base_rev": 8837000.0,
+     "base_state": "ok",
+     "rev_added": 162842000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 0.74,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": false,
+        "value": 42.31,
+        "why": null,
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 1842.7,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 1842.7,
+         "prior": 4158.5
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": 81.83,
+        "why": "no_threshold_in_his_writing",
+        "source": "13F level via yfinance (never a flow)"
+       },
+       "sector_3": {
+        "ok": true,
+        "value": "Healthcare",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "to_profit",
+        "why": "no_threshold_in_his_writing",
+        "latest": 0.74,
+        "year_ago": -0.49,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": false,
+        "value": -11.48,
+        "why": null,
+        "as_of": "2026-08-12",
+        "age_days": 48,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 48,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-08-12",
+        "age_days": 48,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 63513719.0,
+        "why": null,
+        "tier": null,
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 6594119680.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": true,
+        "value": 10.16,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 13.25,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 5,
+        "why": null,
+        "value_note": "covered by 5",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": true,
+        "value": 8.2,
+        "why": null,
+        "as_of": "2018-07-26",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 7,
+      "n_fail": 4,
+      "n_unknown": 7
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 18.5,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 284180992.0,
+     "debt": 182896000.0,
+     "cash_minus_debt": 101284992.0,
+     "ev_sales": 13.359,
+     "fcf_yield": 1.13,
+     "market_cap": 6594119680.0,
+     "float_shares": 63513719.0,
+     "shares_outstanding": 89508891.0,
+     "sector": "Healthcare",
+     "balance_meaningful": true,
+     "roce_pct": 65.9,
+     "roic_pct": null,
+     "roe_pct": 131.82,
+     "asset_turnover": 1.157,
+     "capex_intensity_pct": 4.44,
+     "fcf_conversion_pct": 106.56,
+     "capital_employed": 332620000.0,
+     "ttm_ebit": 168575000.0,
+     "ttm_revenue": 450907000.0,
+     "ttm_net_income": 138606000.0,
+     "ttm_operating_cash_flow": 167708000.0,
+     "ttm_capex": 20014000.0,
+     "ttm_fcf": 147694000.0,
+     "total_assets": 521918000.0,
+     "total_equity": 195114000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roic_pct": "no_tax_expense"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": 7.409031126698807,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": -6.5,
+      "report_date": "2026-08-12",
+      "when": "BMO",
+      "anchor_date": "2026-08-12",
+      "anchor_close": 78.79,
+      "as_of": "2026-09-28",
+      "last_close": 73.67,
+      "sessions": 32,
+      "report_age_days": 48,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "ONDS",
+     "name": "Ondas Inc.",
+     "last_close": 7.68,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 1235.4,
+     "prior_yoy_pct": 1079.8,
+     "accelerating": true,
+     "consecutive_growth_q": 4,
+     "sales_led": true,
+     "bonde_reason": "sales +1235.4% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 83772000.0,
+     "base_rev": 6273388.0,
+     "base_state": "ok",
+     "rev_added": 77498612.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": false,
+        "value": -0.19,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": false,
+        "value": -133.93,
+        "why": null,
+        "value_note": "to_loss"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 1235.4,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 1235.4,
+         "prior": 1079.8
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": 57.27,
+        "why": "no_threshold_in_his_writing",
+        "source": "13F level via yfinance (never a flow)"
+       },
+       "sector_3": {
+        "ok": true,
+        "value": "Technology",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "loss_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": -0.19,
+        "year_ago": -0.08,
+        "seq_turn": "to_loss",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 533409384.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 4472084992.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 3.68,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 39.64,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 1,
+        "why": null,
+        "value_note": "covered by 1",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": true,
+        "value": 8.7,
+        "why": null,
+        "as_of": "2018-02-01",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 5,
+      "n_fail": 5,
+      "n_unknown": 8
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": null,
+     "shares_yoy_reason": "unstable_share_basis",
+     "shares_yoy_period": "Q2 2026",
+     "cash": 1384493056.0,
+     "debt": 41096000.0,
+     "cash_minus_debt": 1343397056.0,
+     "ev_sales": 17.353,
+     "fcf_yield": -1.55,
+     "market_cap": 4472084992.0,
+     "float_shares": 533409384.0,
+     "shares_outstanding": 582302699.0,
+     "sector": "Technology",
+     "balance_meaningful": true,
+     "roce_pct": -16.57,
+     "roic_pct": null,
+     "roe_pct": 20.12,
+     "asset_turnover": 0.111,
+     "capex_intensity_pct": 6.3,
+     "fcf_conversion_pct": -102.98,
+     "capital_employed": 2830414000.0,
+     "ttm_ebit": -244441458.0,
+     "ttm_revenue": 174103430.0,
+     "ttm_net_income": 167055500.0,
+     "ttm_operating_cash_flow": -161062077.0,
+     "ttm_capex": 10965000.0,
+     "ttm_fcf": -172027077.0,
+     "total_assets": 2993497000.0,
+     "total_equity": 1569992000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roic_pct": "effective_tax_rate_out_of_range"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": 0.9162303664921503,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    },
+    {
+     "symbol": "PFSI",
+     "name": "PennyMac Financial Services, Inc.",
+     "last_close": 63.66,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 331.7,
+     "prior_yoy_pct": 24.4,
+     "accelerating": true,
+     "consecutive_growth_q": 2,
+     "sales_led": true,
+     "bonde_reason": "sales +331.7% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 19496000.0,
+     "base_rev": 4516000.0,
+     "base_state": "ok",
+     "rev_added": 14980000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 0.41,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": false,
+        "value": -83.86,
+        "why": null
+       },
+       "eps_seq_100": {
+        "ok": false,
+        "value": -73.2,
+        "why": null,
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": false,
+        "value": {
+         "now": -83.86,
+         "prior": 7.75
+        },
+        "why": null
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 331.7,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": false,
+        "value": {
+         "now": 331.7,
+         "prior": 24.4
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Financial Services",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "profit_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": 0.41,
+        "year_ago": 2.54,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 2,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": false,
+        "n_pairs_available": 9,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 27396142.0,
+        "why": null,
+        "tier": null,
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 3307237120.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": true,
+        "value": 6.98,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 5.61,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 6,
+        "why": null,
+        "value_note": "covered by 6",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 13.4,
+        "why": null,
+        "as_of": "2013-05-09",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 4,
+      "n_fail": 8,
+      "n_unknown": 6
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": -0.7,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 415953984.0,
+     "debt": 23826997248.0,
+     "cash_minus_debt": -23411043264.0,
+     "ev_sales": 8.047,
+     "fcf_yield": null,
+     "market_cap": 3307237120.0,
+     "float_shares": 27396142.0,
+     "shares_outstanding": 51951572.0,
+     "sector": "Financial Services",
+     "balance_meaningful": false,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": 4336886000.0,
+     "ttm_ebit": -1669567000.0,
+     "ttm_revenue": 36290000.0,
+     "ttm_net_income": 392382000.0,
+     "ttm_operating_cash_flow": -1785529000.0,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": 29859451000.0,
+     "total_equity": 4336886000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roce_pct": "non_operating_sector",
+      "roic_pct": "non_operating_sector",
+      "roe_pct": "non_operating_sector",
+      "asset_turnover": "non_operating_sector",
+      "capex_intensity_pct": "non_operating_sector",
+      "fcf_conversion_pct": "non_operating_sector"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -2.74977085242896,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    },
+    {
+     "symbol": "ARR",
+     "name": "ARMOUR Residential REIT, Inc.",
+     "last_close": 13.98,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 132.0,
+     "prior_yoy_pct": 94.6,
+     "accelerating": true,
+     "consecutive_growth_q": 4,
+     "sales_led": false,
+     "bonde_reason": "sales +132.0% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 76819000.0,
+     "base_rev": 33105000.0,
+     "base_state": "ok",
+     "rev_added": 43714000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 0.86,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": "to_profit"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 132.0,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 132.0,
+         "prior": 94.6
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Real Estate",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "to_profit",
+        "why": "no_threshold_in_his_writing",
+        "latest": 0.86,
+        "year_ago": -0.94,
+        "seq_turn": "to_profit",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": false,
+        "value": -0.07,
+        "why": null,
+        "as_of": "2026-07-22",
+        "age_days": 69,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 69,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-07-22",
+        "age_days": 69,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 141257200.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 1978911488.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 4.99,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 9.96,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 5,
+        "why": null,
+        "value_note": "covered by 5",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 18.8,
+        "why": null,
+        "as_of": "2007-12-03",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 4,
+      "n_fail": 6,
+      "n_unknown": 8
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 55.1,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 1636774016.0,
+     "debt": 19516631040.0,
+     "cash_minus_debt": -17879857024.0,
+     "ev_sales": 40.505,
+     "fcf_yield": null,
+     "market_cap": 1978911488.0,
+     "float_shares": 141257200.0,
+     "shares_outstanding": 141553046.0,
+     "sector": "Real Estate",
+     "balance_meaningful": false,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": 2579094000.0,
+     "ttm_ebit": 173361000.0,
+     "ttm_revenue": 236426000.0,
+     "ttm_net_income": 430928000.0,
+     "ttm_operating_cash_flow": 319490000.0,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": 22745816000.0,
+     "total_equity": 2579094000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roce_pct": "non_operating_sector",
+      "roic_pct": "non_operating_sector",
+      "roe_pct": "non_operating_sector",
+      "asset_turnover": "non_operating_sector",
+      "capex_intensity_pct": "non_operating_sector",
+      "fcf_conversion_pct": "non_operating_sector"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -0.4255319148936206,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": -13.33,
+      "report_date": "2026-07-22",
+      "when": "AMC",
+      "anchor_date": "2026-07-23",
+      "anchor_close": 16.13,
+      "as_of": "2026-09-28",
+      "last_close": 13.98,
+      "sessions": 46,
+      "report_age_days": 69,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "NLY",
+     "name": "Annaly Capital Management, Inc.",
+     "last_close": 20.35,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 105.8,
+     "prior_yoy_pct": 95.7,
+     "accelerating": true,
+     "consecutive_growth_q": 4,
+     "sales_led": false,
+     "bonde_reason": "sales +105.8% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q1",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 452691000.0,
+     "base_rev": 219971000.0,
+     "base_state": "ok",
+     "rev_added": 232720000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 0.33,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": true,
+        "value": 120.0,
+        "why": null
+       },
+       "eps_seq_100": {
+        "ok": false,
+        "value": -77.7,
+        "why": null,
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": true,
+        "value": {
+         "now": 120.0,
+         "prior": 80.49
+        },
+        "why": null
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 105.8,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 105.8,
+         "prior": 95.7
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Real Estate",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "profit_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": 0.33,
+        "year_ago": 0.15,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": true,
+        "value": 5.22,
+        "why": null,
+        "as_of": "2026-07-21",
+        "age_days": 70,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 70,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-07-21",
+        "age_days": 70,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 752342682.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": false,
+        "value": 15338089472.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 3.79,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 2.74,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 10,
+        "why": null,
+        "value_note": "covered by 10",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 29.0,
+        "why": null,
+        "as_of": "1997-10-08",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 6,
+      "n_fail": 7,
+      "n_unknown": 5
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 23.1,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q1 2026",
+     "cash": 480364000.0,
+     "debt": 125222871040.0,
+     "cash_minus_debt": -124742507040.0,
+     "ev_sales": 43.672,
+     "fcf_yield": null,
+     "market_cap": 15338089472.0,
+     "float_shares": 752342682.0,
+     "shares_outstanding": 753714442.0,
+     "sector": "Real Estate",
+     "balance_meaningful": false,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": 16325811000.0,
+     "ttm_ebit": 2195244000.0,
+     "ttm_revenue": 1368220000.0,
+     "ttm_net_income": 2185690000.0,
+     "ttm_operating_cash_flow": -552267000.0,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": 138537591000.0,
+     "total_equity": 16274109000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q1 2026",
+     "capital_period_end": "2026-03-31",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roce_pct": "non_operating_sector",
+      "roic_pct": "non_operating_sector",
+      "roe_pct": "non_operating_sector",
+      "asset_turnover": "non_operating_sector",
+      "capex_intensity_pct": "non_operating_sector",
+      "fcf_conversion_pct": "non_operating_sector"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -0.8296943231441019,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": -9.23,
+      "report_date": "2026-07-21",
+      "when": "AMC",
+      "anchor_date": "2026-07-22",
+      "anchor_close": 22.42,
+      "as_of": "2026-09-28",
+      "last_close": 20.35,
+      "sessions": 47,
+      "report_age_days": 70,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "DBRG",
+     "name": "DigitalBridge Group, Inc.",
+     "last_close": 15.98,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 15961.5,
+     "prior_yoy_pct": 58.9,
+     "accelerating": true,
+     "consecutive_growth_q": 2,
+     "sales_led": true,
+     "bonde_reason": "sales +15961.5% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 508679000.0,
+     "base_rev": -3207000.0,
+     "base_state": "non_positive",
+     "rev_added": null,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 1.15,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": true,
+        "value": 1050.0,
+        "why": null
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_too_small",
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 15961.5,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 15961.5,
+         "prior": 58.9
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Financial Services",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "profit_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": 1.15,
+        "year_ago": 0.1,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 2,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": false,
+        "n_pairs_available": 9,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": true,
+        "value": 74.24,
+        "why": null,
+        "as_of": "2026-08-04",
+        "age_days": 56,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 56,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-08-04",
+        "age_days": 56,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 170288839.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 2996174592.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 2.85,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 6.57,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 1,
+        "why": null,
+        "value_note": "covered by 1",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 12.3,
+        "why": null,
+        "as_of": "2014-06-27",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 6,
+      "n_fail": 5,
+      "n_unknown": 7
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 5.2,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 508220992.0,
+     "debt": 319684000.0,
+     "cash_minus_debt": 188536992.0,
+     "ev_sales": 6.17,
+     "fcf_yield": 12.45,
+     "market_cap": 2996174592.0,
+     "float_shares": 170288839.0,
+     "shares_outstanding": 187495281.0,
+     "sector": "Financial Services",
+     "balance_meaningful": false,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": 2646279000.0,
+     "ttm_ebit": 191258000.0,
+     "ttm_revenue": 632634000.0,
+     "ttm_net_income": 343775000.0,
+     "ttm_operating_cash_flow": 179259000.0,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": 3763519000.0,
+     "total_equity": 2345465000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roce_pct": "non_operating_sector",
+      "roic_pct": "non_operating_sector",
+      "roe_pct": "non_operating_sector",
+      "asset_turnover": "non_operating_sector",
+      "capex_intensity_pct": "non_operating_sector",
+      "fcf_conversion_pct": "non_operating_sector"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": 0.0,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": 0.38,
+      "report_date": "2026-08-04",
+      "when": "AMC",
+      "anchor_date": "2026-08-05",
+      "anchor_close": 15.92,
+      "as_of": "2026-09-28",
+      "last_close": 15.98,
+      "sessions": 37,
+      "report_age_days": 56,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "ASST",
+     "name": "Strive, Inc.",
+     "last_close": 29.0,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 1597.5,
+     "prior_yoy_pct": 1516.4,
+     "accelerating": true,
+     "consecutive_growth_q": 4,
+     "sales_led": true,
+     "bonde_reason": "sales +1597.5% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 2941000.0,
+     "base_rev": 173259.0,
+     "base_state": "too_small",
+     "rev_added": 2767741.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": false,
+        "value": -3.77,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": "narrowing"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 1597.5,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 1597.5,
+         "prior": 1516.4
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Financial Services",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "loss_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": -3.77,
+        "year_ago": -0.17,
+        "seq_turn": "narrowing",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": false,
+        "value": -1389.8,
+        "why": null,
+        "as_of": "2026-08-10",
+        "age_days": 50,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 50,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-08-10",
+        "age_days": 50,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 72869981.0,
+        "why": null,
+        "tier": null,
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 2813076736.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 1.89,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 26.12,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 2,
+        "why": null,
+        "value_note": "covered by 2",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": true,
+        "value": 3.7,
+        "why": null,
+        "as_of": "2023-02-03",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 4,
+      "n_fail": 6,
+      "n_unknown": 8
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": null,
+     "shares_yoy_reason": "unstable_share_basis",
+     "shares_yoy_period": "Q2 2026",
+     "cash": 188320000.0,
+     "debt": 3319000.0,
+     "cash_minus_debt": 185001000.0,
+     "ev_sales": 356.756,
+     "fcf_yield": -16.18,
+     "market_cap": 2813076736.0,
+     "float_shares": 72869981.0,
+     "shares_outstanding": 87804613.0,
+     "sector": "Financial Services",
+     "balance_meaningful": false,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": 1351847000.0,
+     "ttm_ebit": -816630000.0,
+     "ttm_revenue": 8501000.0,
+     "ttm_net_income": -931473000.0,
+     "ttm_operating_cash_flow": -79323947.0,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": 1377109000.0,
+     "total_equity": 646155000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roce_pct": "non_operating_sector",
+      "roic_pct": "non_operating_sector",
+      "roe_pct": "non_operating_sector",
+      "asset_turnover": "non_operating_sector",
+      "capex_intensity_pct": "non_operating_sector",
+      "fcf_conversion_pct": "non_operating_sector"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -1.1548913043478255,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": 133.12,
+      "report_date": "2026-08-10",
+      "when": "BMO",
+      "anchor_date": "2026-08-10",
+      "anchor_close": 12.44,
+      "as_of": "2026-09-28",
+      "last_close": 29.0,
+      "sessions": 34,
+      "report_age_days": 50,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "SBET",
+     "name": "Sharplink, Inc.",
+     "last_close": 9.5,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 1553.3,
+     "prior_yoy_pct": 1525.7,
+     "accelerating": true,
+     "consecutive_growth_q": 4,
+     "sales_led": true,
+     "bonde_reason": "sales +1553.3% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 11528000.0,
+     "base_rev": 697291.0,
+     "base_state": "too_small",
+     "rev_added": 10830709.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": false,
+        "value": -1.88,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": "narrowing"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 1553.3,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 1553.3,
+         "prior": 1525.7
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": 51.6,
+        "why": "no_threshold_in_his_writing",
+        "source": "13F level via yfinance (never a flow)"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Financial Services",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "loss_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": -1.88,
+        "year_ago": -4.27,
+        "seq_turn": "narrowing",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 9,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 190116270.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 2063624192.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 3.19,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 16.13,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 1,
+        "why": null,
+        "value_note": "covered by 1",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 29.4,
+        "why": null,
+        "as_of": "1997-05-21",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 3,
+      "n_fail": 6,
+      "n_unknown": 9
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": null,
+     "shares_yoy_reason": "unstable_share_basis",
+     "shares_yoy_period": "Q2 2026",
+     "cash": 56195000.0,
+     "debt": 0.0,
+     "cash_minus_debt": 56195000.0,
+     "ev_sales": 40.55,
+     "fcf_yield": -45.24,
+     "market_cap": 2063624192.0,
+     "float_shares": 190116270.0,
+     "shares_outstanding": 217223604.0,
+     "sector": "Financial Services",
+     "balance_meaningful": false,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": 1410606000.0,
+     "ttm_ebit": -1707643272.0,
+     "ttm_revenue": 50201978.0,
+     "ttm_net_income": -1710024372.0,
+     "ttm_operating_cash_flow": -33199527.0,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": 1416092000.0,
+     "total_equity": 1410520000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roce_pct": "non_operating_sector",
+      "roic_pct": "non_operating_sector",
+      "roe_pct": "non_operating_sector",
+      "asset_turnover": "non_operating_sector",
+      "capex_intensity_pct": "non_operating_sector",
+      "fcf_conversion_pct": "non_operating_sector"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -1.3499480789200495,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    },
+    {
+     "symbol": "VEEA",
+     "name": "Veea Inc.",
+     "last_close": 2.86,
+     "tier": "explosive",
+     "sales_score": 100,
+     "growth_yoy_pct": 141.6,
+     "prior_yoy_pct": 1165.0,
+     "accelerating": false,
+     "consecutive_growth_q": 2,
+     "sales_led": true,
+     "bonde_reason": "sales +141.6% YoY ≥ the app's 25% mid-tier, with 2q consistency",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 176221.0,
+     "base_rev": 72927.0,
+     "base_state": "too_small",
+     "rev_added": 103294.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": false,
+        "value": -0.08,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": "narrowing"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 141.6,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 141.6,
+         "prior": 1165.0
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": true,
+        "value": "Technology",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "loss_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": -0.08,
+        "year_ago": -0.19,
+        "seq_turn": "narrowing",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 2,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": true,
+        "n_pairs_available": 2,
+        "value_note": "trailing — the count ended where the revenue history ends, not where growth did",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": true,
+        "value": 1521105.0,
+        "why": null,
+        "tier": "best",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 8896625.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": null,
+        "value": null,
+        "why": "not_warmed"
+       },
+       "neglect_analysts": {
+        "ok": null,
+        "value": null,
+        "why": "no_analyst_doc"
+       },
+       "ipo_10y": {
+        "ok": true,
+        "value": 5.5,
+        "why": null,
+        "as_of": "2021-03-16",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 6,
+      "n_fail": 1,
+      "n_unknown": 11
+     },
+     "is_new": true,
+     "first_seen": "2026-09-21T21:40:00.798079+00:00",
+     "shares_yoy_pct": null,
+     "shares_yoy_reason": "split_suspected",
+     "shares_yoy_period": "Q2 2026",
+     "cash": 886966.0,
+     "debt": 13438310.0,
+     "cash_minus_debt": -12551344.0,
+     "ev_sales": 45.031,
+     "fcf_yield": -178.42,
+     "market_cap": 8896625.0,
+     "float_shares": 1521105.0,
+     "shares_outstanding": 3110708.0,
+     "sector": "Technology",
+     "balance_meaningful": true,
+     "roce_pct": -243.97,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": 0.017,
+     "capex_intensity_pct": 40.66,
+     "fcf_conversion_pct": null,
+     "capital_employed": 19671473.0,
+     "ttm_ebit": -20339319.0,
+     "ttm_revenue": 491488.0,
+     "ttm_net_income": -12247188.0,
+     "ttm_operating_cash_flow": -19285216.0,
+     "ttm_capex": 199830.0,
+     "ttm_fcf": -19485046.0,
+     "total_assets": 30082166.0,
+     "total_equity": 8050853.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roic_pct": "no_tax_expense",
+      "roe_pct": "negative_equity",
+      "fcf_conversion_pct": "nonpositive_denominator"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -6.493506493506499,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    }
+   ],
+   "strong": [
+    {
+     "symbol": "RDW",
+     "name": "Redwire Corporation",
+     "last_close": 11.2,
+     "tier": "strong",
+     "sales_score": 100,
+     "growth_yoy_pct": 89.6,
+     "prior_yoy_pct": 57.9,
+     "accelerating": true,
+     "consecutive_growth_q": 4,
+     "sales_led": true,
+     "bonde_reason": "sales +89.6% YoY ≥ the app's 25% mid-tier, with acceleration",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 117074000.0,
+     "base_rev": 61760000.0,
+     "base_state": "ok",
+     "rev_added": 55314000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": false,
+        "value": -0.19,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": "narrowing"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 89.6,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": true,
+        "value": {
+         "now": 89.6,
+         "prior": 57.9
+        },
+        "why": null,
+        "value_note": "read here as y/y — his post does not say which base"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": 69.41,
+        "why": "no_threshold_in_his_writing",
+        "source": "13F level via yfinance (never a flow)"
+       },
+       "sector_3": {
+        "ok": false,
+        "value": "Industrials",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "loss_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": -0.19,
+        "year_ago": -1.41,
+        "seq_turn": "narrowing",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 4,
+        "why": "no_threshold_in_his_writing",
+        "capped": true,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 246182942.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 2799917056.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": false,
+        "value": 3.39,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 16.08,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 3,
+        "why": null,
+        "value_note": "covered by 3",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": true,
+        "value": 5.7,
+        "why": null,
+        "as_of": "2021-01-14",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 4,
+      "n_fail": 5,
+      "n_unknown": 9
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 146.2,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 556966976.0,
+     "debt": 90275000.0,
+     "cash_minus_debt": 466691976.0,
+     "ev_sales": 5.692,
+     "fcf_yield": -0.93,
+     "market_cap": 2799917056.0,
+     "float_shares": 246182942.0,
+     "shares_outstanding": 249992609.0,
+     "sector": "Industrials",
+     "balance_meaningful": true,
+     "roce_pct": -13.93,
+     "roic_pct": null,
+     "roe_pct": -19.24,
+     "asset_turnover": 0.247,
+     "capex_intensity_pct": 6.99,
+     "fcf_conversion_pct": null,
+     "capital_employed": 1749106000.0,
+     "ttm_ebit": -215260000.0,
+     "ttm_revenue": 426272000.0,
+     "ttm_net_income": -244098000.0,
+     "ttm_operating_cash_flow": -76189000.0,
+     "ttm_capex": 29783000.0,
+     "ttm_fcf": -105972000.0,
+     "total_assets": 1943344000.0,
+     "total_equity": 1629857000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roic_pct": "nonpositive_pretax_income",
+      "fcf_conversion_pct": "nonpositive_denominator"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -3.6273666092943206,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    }
+   ],
+   "steady": [],
+   "rejected": [
+    {
+     "symbol": "HNI",
+     "name": "HNI Corporation",
+     "last_close": 46.86,
+     "tier": "explosive",
+     "sales_score": 96,
+     "growth_yoy_pct": 120.7,
+     "prior_yoy_pct": null,
+     "accelerating": false,
+     "consecutive_growth_q": 1,
+     "sales_led": true,
+     "bonde_reason": "growing (+120.7% YoY) but not accelerating and < 2 consecutive growth quarters",
+     "period": "FY2027 Q2",
+     "period_ok": true,
+     "prior_hole": true,
+     "pivot": null,
+     "latest_rev": 1472400000.0,
+     "base_rev": 667100000.0,
+     "base_state": "ok",
+     "rev_added": 805300000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 0.7,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": false,
+        "value": -31.37,
+        "why": null
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": "to_profit"
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "prior_hole"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 120.7,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": null,
+        "value": {
+         "now": 120.7,
+         "prior": null
+        },
+        "why": "prior_hole"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": true,
+        "value": "Consumer Cyclical",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "profit_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": 0.7,
+        "year_ago": 1.02,
+        "seq_turn": "to_profit",
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 1,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": false,
+        "n_pairs_available": 13,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 70994409.0,
+        "why": null,
+        "tier": null,
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": true,
+        "value": 3382439168.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": true,
+        "value": 8.42,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 6.02,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 4,
+        "why": null,
+        "value_note": "covered by 4",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": false,
+        "value": 28.2,
+        "why": null,
+        "as_of": "1998-07-02",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 5,
+      "n_fail": 4,
+      "n_unknown": 9
+     },
+     "is_new": false,
+     "first_seen": "2026-09-14T03:46:46.605765+00:00",
+     "shares_yoy_pct": 53.1,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2027",
+     "cash": 108200000.0,
+     "debt": 1644099968.0,
+     "cash_minus_debt": -1535899968.0,
+     "ev_sales": 1.126,
+     "fcf_yield": 3.08,
+     "market_cap": 3382439168.0,
+     "float_shares": 70994409.0,
+     "shares_outstanding": 72181800.0,
+     "sector": "Consumer Cyclical",
+     "balance_meaningful": true,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": null,
+     "ttm_ebit": null,
+     "ttm_revenue": null,
+     "ttm_net_income": null,
+     "ttm_operating_cash_flow": null,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": null,
+     "total_equity": null,
+     "effective_tax_rate": null,
+     "denominator_basis": null,
+     "roe_basis": null,
+     "capital_period": null,
+     "capital_period_end": null,
+     "capital_period_is_derived": null,
+     "capital_reasons": {
+      "roce_pct": "incomplete_ttm_window",
+      "roic_pct": "incomplete_ttm_window",
+      "roe_pct": "incomplete_ttm_window",
+      "asset_turnover": "incomplete_ttm_window",
+      "capex_intensity_pct": "incomplete_ttm_window",
+      "fcf_conversion_pct": "incomplete_ttm_window"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -0.7413683541622568,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    },
+    {
+     "symbol": "AUR",
+     "name": "Aurora Innovation, Inc.",
+     "last_close": 5.29,
+     "tier": "explosive",
+     "sales_score": 92,
+     "growth_yoy_pct": 100.0,
+     "prior_yoy_pct": null,
+     "accelerating": false,
+     "consecutive_growth_q": 1,
+     "sales_led": true,
+     "bonde_reason": "growing (+100.0% YoY) but not accelerating and < 2 consecutive growth quarters",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": false,
+     "pivot": null,
+     "latest_rev": 2000000.0,
+     "base_rev": 1000000.0,
+     "base_state": "ok",
+     "rev_added": 1000000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": false,
+        "value": -0.14,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": null,
+        "value": null,
+        "why": "seq_base_non_positive",
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 100.0,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": null,
+        "value": {
+         "now": 100.0,
+         "prior": null
+        },
+        "why": "prior_hole"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": true,
+        "value": "Consumer Cyclical",
+        "why": null,
+        "value_note": "a fact about the name, not a gate"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "loss_both",
+        "why": "no_threshold_in_his_writing",
+        "latest": -0.14,
+        "year_ago": -0.11,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 1,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": false,
+        "n_pairs_available": 8,
+        "value_note": "trailing — his sentence projects forward; this app does not; pairs beyond the prior are not period-checked",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": false,
+        "value": -18.87,
+        "why": null,
+        "as_of": "2026-07-29",
+        "age_days": 62,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch)"
+       },
+       "report_age": {
+        "ok": null,
+        "value": 62,
+        "why": "no_threshold_in_his_writing",
+        "as_of": "2026-07-29",
+        "age_days": 62,
+        "stale": false,
+        "stale_after": 157,
+        "source": "earnings_calendar (sepa/earnings_watch) — the same doc as the surprise leg"
+       },
+       "float_25m": {
+        "ok": false,
+        "value": 1522416466.0,
+        "why": null,
+        "tier": "pullback_prone",
+        "source": "yfinance floatShares"
+       },
+       "cap_10b": {
+        "ok": false,
+        "value": 10601980928.0,
+        "why": null,
+        "source": "yfinance marketCap"
+       },
+       "short_dtc_5": {
+        "ok": true,
+        "value": 5.62,
+        "why": null,
+        "as_of": "2026-08-31",
+        "stale": false,
+        "age_days": 29,
+        "pct_of_shares": 11.2,
+        "source": "FINRA short interest via Massive"
+       },
+       "neglect_analysts": {
+        "ok": false,
+        "value": 8,
+        "why": null,
+        "value_note": "covered by 8",
+        "source": "Yahoo estimate row (analyst_pulse)"
+       },
+       "ipo_10y": {
+        "ok": true,
+        "value": 5.4,
+        "why": null,
+        "as_of": "2021-05-06",
+        "source": "Finnhub profile date, uncorroborated (21.4% of profile dates on this universe are recycled tickers)"
+       }
+      },
+      "n_pass": 4,
+      "n_fail": 5,
+      "n_unknown": 9
+     },
+     "is_new": false,
+     "first_seen": null,
+     "shares_yoy_pct": 10.7,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": 1216999936.0,
+     "debt": 82000000.0,
+     "cash_minus_debt": 1134999936.0,
+     "ev_sales": 2194.02,
+     "fcf_yield": -3.91,
+     "market_cap": 10601980928.0,
+     "float_shares": 1522416466.0,
+     "shares_outstanding": 1708146085.0,
+     "sector": "Consumer Cyclical",
+     "balance_meaningful": true,
+     "roce_pct": -46.28,
+     "roic_pct": null,
+     "roe_pct": -45.64,
+     "asset_turnover": 0.002,
+     "capex_intensity_pct": 1440.0,
+     "fcf_conversion_pct": null,
+     "capital_employed": 2057000000.0,
+     "ttm_ebit": -970000000.0,
+     "ttm_revenue": 5000000.0,
+     "ttm_net_income": -900000000.0,
+     "ttm_operating_cash_flow": -679000000.0,
+     "ttm_capex": 72000000.0,
+     "ttm_fcf": -751000000.0,
+     "total_assets": 2167000000.0,
+     "total_equity": 1953000000.0,
+     "effective_tax_rate": null,
+     "denominator_basis": {
+      "capital_employed": "average",
+      "equity": "average",
+      "assets": "average"
+     },
+     "roe_basis": "parent",
+     "capital_period": "Q2 2026",
+     "capital_period_end": "2026-06-30",
+     "capital_period_is_derived": false,
+     "capital_reasons": {
+      "roic_pct": "nonpositive_pretax_income",
+      "fcf_conversion_pct": "nonpositive_denominator"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -11.092715231788079,
+     "today_basis": "live",
+     "since_report": {
+      "known": true,
+      "pct": -15.22,
+      "report_date": "2026-07-29",
+      "when": "AMC",
+      "anchor_date": "2026-07-30",
+      "anchor_close": 6.24,
+      "as_of": "2026-09-28",
+      "last_close": 5.29,
+      "sessions": 41,
+      "report_age_days": 62,
+      "stale_report": false,
+      "calendar_fetched_at": "2026-09-28",
+      "calendar_stale": false,
+      "reason": null
+     }
+    },
+    {
+     "symbol": "SPHD",
+     "name": "Invesco S&P 500 High Dividend Low Volatility ETF",
+     "last_close": 48.68,
+     "tier": "steady",
+     "sales_score": 53,
+     "growth_yoy_pct": 20.5,
+     "prior_yoy_pct": null,
+     "accelerating": false,
+     "consecutive_growth_q": 1,
+     "sales_led": false,
+     "bonde_reason": "growing (+20.5% YoY) but not accelerating and < 2 consecutive growth quarters",
+     "period": "FY2026 Q2",
+     "period_ok": true,
+     "prior_hole": true,
+     "pivot": null,
+     "latest_rev": 1825600000.0,
+     "base_rev": 1515500000.0,
+     "base_state": "ok",
+     "rev_added": 310100000.0,
+     "pick": {
+      "legs": {
+       "eps_5c": {
+        "ok": true,
+        "value": 0.76,
+        "why": null
+       },
+       "eps_yoy_100": {
+        "ok": null,
+        "value": null,
+        "why": "year_ago_loss"
+       },
+       "eps_seq_100": {
+        "ok": false,
+        "value": 49.02,
+        "why": null,
+        "value_note": null
+       },
+       "eps_accel": {
+        "ok": null,
+        "value": null,
+        "why": "prior_hole"
+       },
+       "sales_5": {
+        "ok": true,
+        "value": 20.5,
+        "why": null,
+        "value_note": "against his 5% floor"
+       },
+       "rev_39_x2": {
+        "ok": null,
+        "value": {
+         "now": 20.5,
+         "prior": null
+        },
+        "why": "prior_hole"
+       },
+       "fund_holding": {
+        "ok": null,
+        "value": null,
+        "why": "no_inst_read"
+       },
+       "sector_3": {
+        "ok": null,
+        "value": null,
+        "why": "no_sector"
+       },
+       "turnaround": {
+        "ok": null,
+        "value": "to_profit",
+        "why": "no_threshold_in_his_writing",
+        "latest": 0.76,
+        "year_ago": -0.03,
+        "seq_turn": null,
+        "value_note": "year-ago quarter vs the latest; his words give no rule",
+        "source": "scan row EPS series (sepa/qoq slot 0 vs slot 4)"
+       },
+       "growth_streak": {
+        "ok": null,
+        "value": 1,
+        "why": "no_threshold_in_his_writing",
+        "capped": false,
+        "history_ended": true,
+        "n_pairs_available": 1,
+        "value_note": "trailing — the count ended where the revenue history ends, not where growth did",
+        "source": "sepa/sales.compute consecutive_growth_q (counts up to 4 quarters)"
+       },
+       "theme": {
+        "ok": null,
+        "value": "not on the app's map",
+        "why": "no_threshold_in_his_writing",
+        "mapped": false,
+        "ids": [],
+        "source": "the app's theme map (supply_demand/sectors.py, 167 tickers across 26 themes) — his word is theme, the map is ours; a miss is unmapped, not themeless"
+       },
+       "surprise": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "report_age": {
+        "ok": null,
+        "value": null,
+        "why": "not_on_calendar"
+       },
+       "float_25m": {
+        "ok": null,
+        "value": null,
+        "why": "no_float_in_doc"
+       },
+       "cap_10b": {
+        "ok": null,
+        "value": null,
+        "why": "no_cap_in_doc"
+       },
+       "short_dtc_5": {
+        "ok": null,
+        "value": null,
+        "why": "not_warmed"
+       },
+       "neglect_analysts": {
+        "ok": null,
+        "value": null,
+        "why": "no_analyst_doc"
+       },
+       "ipo_10y": {
+        "ok": null,
+        "value": null,
+        "why": "no_listing_date"
+       }
+      },
+      "n_pass": 2,
+      "n_fail": 1,
+      "n_unknown": 15
+     },
+     "is_new": false,
+     "first_seen": null,
+     "shares_yoy_pct": -0.2,
+     "shares_yoy_reason": null,
+     "shares_yoy_period": "Q2 2026",
+     "cash": null,
+     "debt": null,
+     "cash_minus_debt": null,
+     "ev_sales": null,
+     "fcf_yield": null,
+     "market_cap": null,
+     "float_shares": null,
+     "shares_outstanding": null,
+     "sector": null,
+     "balance_meaningful": true,
+     "roce_pct": null,
+     "roic_pct": null,
+     "roe_pct": null,
+     "asset_turnover": null,
+     "capex_intensity_pct": null,
+     "fcf_conversion_pct": null,
+     "capital_employed": null,
+     "ttm_ebit": null,
+     "ttm_revenue": null,
+     "ttm_net_income": null,
+     "ttm_operating_cash_flow": null,
+     "ttm_capex": null,
+     "ttm_fcf": null,
+     "total_assets": null,
+     "total_equity": null,
+     "effective_tax_rate": null,
+     "denominator_basis": null,
+     "roe_basis": null,
+     "capital_period": null,
+     "capital_period_end": null,
+     "capital_period_is_derived": null,
+     "capital_reasons": {
+      "roce_pct": "incomplete_ttm_window",
+      "roic_pct": "incomplete_ttm_window",
+      "roe_pct": "incomplete_ttm_window",
+      "asset_turnover": "incomplete_ttm_window",
+      "capex_intensity_pct": "incomplete_ttm_window",
+      "fcf_conversion_pct": "incomplete_ttm_window"
+     },
+     "capital_measured": false,
+     "capital_period_mismatch": null,
+     "today_pct": -0.5515832482124681,
+     "today_basis": "live",
+     "since_report": {
+      "known": false,
+      "pct": null,
+      "report_date": null,
+      "when": null,
+      "anchor_date": null,
+      "anchor_close": null,
+      "as_of": null,
+      "last_close": null,
+      "sessions": null,
+      "report_age_days": null,
+      "stale_report": null,
+      "calendar_fetched_at": null,
+      "calendar_stale": null,
+      "reason": "no_report"
+     }
+    }
+   ]
+  },
+  "counts": {
+   "pivot": 0,
+   "explosive": 60,
+   "strong": 270,
+   "steady": 665,
+   "rejected": 69
+  },
+  "regime": {
+   "is_bull": false,
+   "label": "market_in_correction",
+   "score": 66.3,
+   "scanners_paused": true
+  },
+  "caps": {
+   "pivot": 60,
+   "explosive": 60,
+   "strong": 60,
+   "steady": 40,
+   "rejected": 40
+  },
+  "n_pass": 997,
+  "n_tiered": 995,
+  "n_period_mismatch": 0,
+  "n_period_mismatch_pass": 0,
+  "n_period_mismatch_rejected": 0,
+  "period_mismatch_symbols": [],
+  "n_rejected": 69,
+  "n_scanned": 2101,
+  "n_new": 33,
+  "new_days": 30,
+  "scan_ts": null,
+  "note": "MEASURED 2026-09-13 AND THE THESIS IS INVERTED. This board was built on the idea that Bonde's sales screen is the universe and the Episodic Pivot is the entry, so ⚡ the intersection is the selection. On 780 Pivots reconstructed from closed bars (2024-09-13 → 2026-09-11) the 376 that also passed his sales gate ran a 21-day median −3.22% (win 39.8%) against −0.11% (49.6%) for date-matched non-Pivot names — −3.11pp, 95% CI −5.28 to −1.16. His sales gate alone separated nothing (−0.40pp, CI −1.40 to +0.61), and it passes 997 of 2,101 names on this scan (47.5%) — half the market is a description, not a selection. Everything here is a STUDY BOARD: ⚡ Pivots are shown because you asked to see his stocks, not because anything measured says to buy them, and the tiers are his 5% floor (2007) / this app's 25% mid-tier / the 100% boundary of his “Sales 100% plus” category (2010), ordered by top-line growth — never by the 0-100 score, which the audit could not separate from the return tail. 🔎 at the bottom is the cohort THIS APP'S character clause rejects (called his until 2026-09-20), which is the only cell that beat the market on win rate (56.8% vs 51.2%). The 5% and 100% are his; 25% is this app's (docs/sepa/sales_confidence_methodology.md lists the figures that failed verification: 30% and MAGNA 53+). His 2025 two-quarter revenue figure is his and is shown as a pick leg in the 📋 legend above, not as a tier. The Pivot's 8% gap on 5x volume are THIS APP'S owner settings, not numbers he published. Scripts: backend/scripts/bonde_audit/. Nothing on this tab gates a scan, fires an alert or buys in any lane. ⚡ PIVOTS ARE PAUSED RIGHT NOW, and that is your own rule rather than a fault: the regime gate reads “market in correction”, and you chose to sit out bear markets, so every setup scanner in the app short-circuits and writes nothing. It bites harder than it looks — EVERY setup kind is currently stale, not just this one, because that gate was itself broken until 2026-08-31 (it imported a function that never existed and always answered “cannot tell, go ahead”) and the fleet went quiet as soon as it started working. The sales tiers below are unaffected: they read the scan, not the setup scanners.",
+  "measured": {
+   "headline": "MEASURED 2026-09-13 AND THIS BOARD’S OWN THESIS IS INVERTED",
+   "body": "This tab shipped on the idea that Bonde's sales screen is the universe and the Episodic Pivot is the entry, so the intersection is the selection. Measured on 780 Episodic Pivots reconstructed from CLOSED bars 2024-09-13 → 2026-09-11, the 376 that ALSO passed his sales gate returned a median −3.22% over the next 21 sessions (win rate 39.8%) against −0.11% (49.6%) for date-matched non-EP names — a lift of −3.11pp, 95% CI −5.28 to −1.16 symbol-clustered and −5.19 to −1.13 date-clustered. His sales gate on its own separated nothing at any horizon (−0.40pp, CI −1.40 to +0.61). Expectancy on the setup's own bracket is −0.92% (CI −2.14 to +0.27), and the sales gate moves it by −0.06pp. THIS IS A STUDY BOARD, NOT A BUY LIST.",
+   "not_a_short": "It does not read the other way either: that cohort's 21-day MEAN is −2.18% with a CI that includes zero. The finding is “these bleed at the median and win less than half the time”, not “these reliably fall”.",
+   "tiers": "The tiers below do not separate on the typical name. Over 45,425 symbol-bars in 24 monthly cross-sections, the ≥100% and ≥25% tiers beat the scored universe by a MEDIAN of +0.45pp and +0.37pp over 21 days — both CIs include zero — with win rates level with the market. The average lift that does show up is the right tail: it falls to +0.26pp once the top 5% of returns are dropped, and every date-clustered interval spans zero. Names passing the full gate are statistically indistinguishable from any stock (+0.48pp, CI −0.47 to +2.20).",
+   "rejected": "The one result that survived every attack is about the cohort his gate THROWS AWAY. Among names that clear his 5% floor, requiring the character clause measures negative: the rejected names win 56.8% of the next 21 sessions against 51.2% for the ones the gate accepts (+5.64pp, CI +3.91 to +7.52). Clause by clause it is the CONSISTENCY half — ≥2 consecutive growth quarters costs 3.31pp of win rate (CI −4.68 to −1.83); `accelerating` is a null, not a negative. The gate is not edited, because changing a rule is Ajay's call, and the clause is this app's — mis-attributed to him until 2026-09-20; the cohort is shown instead, in 🔎 below. Caveat: this one does not survive date clustering at 21 days (it does at 63), and the variant matching production's raw list position shrinks it to 1,030 bars with CIs spanning zero.",
+   "struck": "Struck on re-measurement and said nowhere: that EP+PASS also loses to EP+FAIL (−2.42pp, CI −4.88 to +0.30 — spans zero in all four variants), that BOTH character clauses are inverted (only the consistency one is), and the first pass's “coverage is 46%” limitation, which was its own no-retry fetcher losing half its requests.",
+   "limits": "Limits: delisting survivorship is unmeasured (today's universe membership, so anything that went to zero is absent from every cell); the tier panel is 24 cross-sections inside ONE bull regime; 24.3% of quarterly rows carry no filing date and are assumed available at end-of-quarter + 90 days; 24.6% of pivots are unclassifiable and the dropout is structural (recent IPOs and de-SPACs); returns are gross of commissions, slippage and borrow, and real fills on 8% gaps would be worse for the pivot cohort than for the placebo.",
+   "steady": "MEASURED 2026-09-21 — AT 21 DAYS, SYMBOL-CLUSTERED, THE STEADY TIER IS THE ONE COHORT IN THE REPLAY WHOSE MEDIAN-LIFT INTERVAL SITS WHOLLY BELOW THE FIELD. In a point-in-time replay over 24 monthly cross-sections (20 of them carry a full 21-session forward), this tier's MEDIAN 21-day lift over the scored universe was −0.21pp on 14,353 symbol-bars across 1,611 symbols — 95% CI −0.40 to −0.04 symbol-clustered, the whole interval below zero; date-clustered it is −0.56 to +0.10, which spans zero, so under the stricter clustering the drag is a lean, not a finding. At 63 and 126 days the median lift is −0.52pp and −0.51pp and every interval spans zero on both clusterings (63d: −0.89 to +0.02 symbol-clustered, −0.89 to +0.23 date-clustered; 126d: −1.18 to +0.25 and −1.40 to +0.64). Controlled for trailing momentum the tier's excess over its momentum-matched field is negative at every horizon — MEAN −0.60 / −1.79 / −3.40pp, MEDIAN −1.27 / −3.80 / −6.98pp at 21 / 63 / 126 days; the intervals on the mean (−0.87 to −0.30, −2.64 to −0.93, −5.07 to −1.53) are symbol-clustered only — the replay carries no date-clustered interval for this read. The lift on this board sits in ARRIVALS to the explosive tier instead: MEDIAN +3.33 / +7.49 / +12.83pp at 21 / 63 / 126 days, symbol-clustered CIs clear of zero (+1.24 to +5.42, +3.68 to +11.46, +6.70 to +20.91); date-clustered, 21 and 126 days span zero (−0.91 to +8.37, −8.05 to +19.07) and only 63 days is clear (+0.52 to +16.06). This is a MEASUREMENT over 24 cross-sections inside one bull regime — not a rule: nothing here is hidden, dropped, re-sorted or gated on it, and the tier stays because his 5% floor is his. The 2026-09-13 audit's tier table read this tier flat with no interval; this replay, on the same panel with the repro gate passed, reads a lean against it. docs/research/board_growth_2026_09_21.md · backend/scripts/board_growth_replay.py",
+   "scripts": "backend/scripts/bonde_audit/"
+  },
+  "pick_legend": {
+   "header": "A pick list of his STATIC criteria — entries are yours (S&D, momentum). Each chip is one sentence he published, with its link. Nothing on the pick line is a signal, nothing on it is measured, and it gates, sorts and filters nothing.",
+   "criteria": [
+    {
+     "key": "eps_5c",
+     "label": "EPS ≥ 5¢",
+     "quote": "I only track companies whose earnings are up 100% or more quarter over quarter and the earnings should be at least 5 cents.",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "Latest quarterly EPS off the scan row's filings (sepa/qoq.compute).",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "eps_yoy_100",
+     "label": "EPS ≥ +100% y/y",
+     "quote": "On such stocks a significant earnings acceleration compared to last year same quarter as well as quarter over quarter is what to look for. I like to look for companies which had earnings acceleration of 100% plus in such cases.",
+     "url": "https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html",
+     "date": "2010-02-12",
+     "source": "stockbee",
+     "data": "Latest quarter against the SAME quarter a year earlier (sepa/qoq.yoy_pct), only when the year-ago quarter made money.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [
+      {
+       "quote": "And there was this small stock called USLB. At that time it was called US laboratories. And that had come out with earnings and the sales growth was some 900% and the profit was 2,600%.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2968s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:49:28",
+       "note": "a worked example — direction only, sales named first; it carries no threshold and changes no number"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "eps_seq_100",
+     "label": "EPS ≥ +100% q/q",
+     "quote": "I only track companies whose earnings are up 100% or more quarter over quarter and the earnings should be at least 5 cents.",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "Latest quarter against the quarter before it (sepa/qoq.compute), refused when the two filings are not consecutive quarters.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [
+      {
+       "quote": "And there was this small stock called USLB. At that time it was called US laboratories. And that had come out with earnings and the sales growth was some 900% and the profit was 2,600%.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2968s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:49:28",
+       "note": "a worked example — direction only, sales named first; it carries no threshold and changes no number"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "eps_accel",
+     "label": "Earnings accelerating",
+     "quote": "Now what one is looking for is earnings acceleration. · On such stocks a significant earnings acceleration compared to last year same quarter as well as quarter over quarter is what to look for. I like to look for companies which had earnings acceleration of 100% plus in such cases.",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "This quarter's y/y EPS growth against the previous quarter's y/y EPS growth. EARNINGS acceleration — the sales flags on this board are the app's own read.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "sales_5",
+     "label": "Sales ≥ 5% y/y",
+     "quote": "Sales/revenue should be up 5% or more.",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "The pillar's own rounded seam against SALES_FLOOR_PCT (sepa/buyable_verdict._bonde_pillar). ✓ on every row the board draws, by construction.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "surprise",
+     "label": "Earnings surprise",
+     "quote": "Beats analyst estimate · An earnings surprise on stock which has not rallied significantly will lead to breakout next day.",
+     "url": "https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html",
+     "date": "2010-02-12",
+     "source": "stockbee",
+     "data": "The most recent reported quarter in the `earnings_calendar` cache (sepa/earnings_watch), as a percent. Labelled stale past 157 days; the label never changes the verdict.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "A beat is any surprise above zero here. \"Earnings Beats by wide margin\" carries no number, so whether a magnitude floor should apply is Ajay's call.",
+     "cites": [
+      {
+       "quote": "And I opened the newspaper. It used to have the list of stocks which are released earnings last night.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2963s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:49:23",
+       "note": "his origin universe was last night's reporters"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "float_25m",
+     "label": "Float < 25M",
+     "quote": "Float below 25 million is ideal for this. The best moves happen on float below 10 million. Earnings breakouts on companies with 100 million plus float tend to have pullbacks. · Stocks with lower floats (under 25M shares) tend to see the biggest episodic pivot moves … This coupled with high short interest ( 5 plus days to cover) can result in explosive moves",
+     "url": "https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html",
+     "date": "2010-02-12",
+     "source": "stockbee",
+     "data": "yfinance `floatShares`, cached in `board_metrics`. Unknown until `python -m sepa.board_metrics warm --all` has refreshed the doc.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "short_dtc_5",
+     "label": "Days to cover ≥ 5",
+     "quote": "Stocks with lower floats (under 25M shares) tend to see the biggest episodic pivot moves … This coupled with high short interest ( 5 plus days to cover) can result in explosive moves",
+     "url": "https://x.com/PradeepBonde/status/1801220695197614404",
+     "date": "2024-06-13",
+     "source": "x",
+     "data": "FINRA short interest via Massive, cached in `short_interest_latest`. Unknown on every row until the warm has run.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "The warm cadence and its crontab line are Ajay's call; the crontab is host-mounted and a deploy does not ship it.",
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "neglect_analysts",
+     "label": "No analyst coverage",
+     "quote": "Even better is stock which has no analyst coverage and is neglected. · Stock with no analyst coverage",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "The count of analysts on Yahoo's current-quarter estimate row, cached in `analyst_pulse`. Yahoo never prints a zero — an EMPTY estimate frame is the only evidence of no coverage.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "Reading an empty Yahoo estimate frame as his \"no analyst coverage\" is a reading pending Ajay's nod, and whether a small count (say ≤2) should also read as neglected is his call — his words give no number.",
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "fund_holding",
+     "label": "Fund holding",
+     "quote": "Marketsmith to find earnings and earnings trends, float, fund holding · They will have very low capitalization, low fund ownership, and low interest from analysts and general investors.",
+     "url": "https://stockbee.blogspot.com/2014/07/my-process-flow-for-episodic-pivots-ep.html",
+     "date": "2014-07-30",
+     "source": "stockbee",
+     "data": "Institutional ownership from the scan row (yfinance `heldPercentInstitutions`) — a 13F LEVEL, never a flow.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "He names fund holding as something he looks at and gives no number, so this leg is always shown as a fact and never as a pass or a fail.",
+     "cites": [],
+     "fact": true
+    },
+    {
+     "key": "ipo_10y",
+     "label": "IPO ≤ 10y",
+     "quote": "The most explosive Episodic Pivots occur in stocks that have Gone Public in the last 10 years and have a capitalization of less than $ 10 billion once they enter their growth phase.",
+     "url": "https://stockbee.blogspot.com/2025/09/find-young-episodic-pivots.html",
+     "date": "2025-09-01",
+     "source": "stockbee",
+     "data": "Listing date from the `ipo_dates` cache (Finnhub profile), uncorroborated.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "It is the least-corroborated leg — 21.4% of profile dates on this universe are recycled tickers, which reads as a falsely young ✓. Whether it stays among the chips is Ajay's call.",
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "cap_10b",
+     "label": "Cap < $10B",
+     "quote": "The most explosive Episodic Pivots occur in stocks that have Gone Public in the last 10 years and have a capitalization of less than $ 10 billion once they enter their growth phase. · This scan finds stocks incorporated or IPOed in last 10 years that have a market capitalization below 11 billion and have two quarters of revenue growth of 39% plus.",
+     "url": "https://stockbee.blogspot.com/2025/09/find-young-episodic-pivots.html",
+     "date": "2025-09-01",
+     "source": "stockbee",
+     "data": "yfinance `marketCap`, cached in `board_metrics`.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "His prose says less than $10 billion and his scan line in the same post says below 11 billion. This leg passes at the prose bound; which one to use is Ajay's call.",
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "rev_39_x2",
+     "label": "Revenue ≥ 39% ×2",
+     "quote": "This scan finds stocks incorporated or IPOed in last 10 years that have a market capitalization below 11 billion and have two quarters of revenue growth of 39% plus.",
+     "url": "https://stockbee.blogspot.com/2025/09/find-young-episodic-pivots.html",
+     "date": "2025-09-01",
+     "source": "stockbee",
+     "data": "This quarter's and the previous quarter's revenue growth, read here as year over year — his post does not say which base.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "This figure is his. Whether it joins or replaces a sales TIER on this board is Ajay's call; nothing about the tiers moved.",
+     "cites": [
+      {
+       "quote": "And there was this small stock called USLB. At that time it was called US laboratories. And that had come out with earnings and the sales growth was some 900% and the profit was 2,600%.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2968s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:49:28",
+       "note": "a worked example — direction only, sales named first; it carries no threshold and changes no number"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "sector_3",
+     "label": "His three EP sectors",
+     "quote": "If you want to make money from Earnings Episodic Pivots, focus on three sectors: technology, healthcare, and consumer discretionary.",
+     "url": "https://x.com/PradeepBonde/status/1618245698008551424",
+     "date": "2023-01-25",
+     "source": "x",
+     "data": "The scan row's sector, in yfinance vocabulary — consumer discretionary is named \"Consumer Cyclical\" there. A FACT about the name, not a gate.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": null,
+     "cites": [
+      {
+       "quote": "I have seen that over any time period of last 24 years 25 years right there are three sectors where the biggest money is in the market. Technology, biotechnology or healthcare related stock and third is consumer discretionary.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=4024s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "1:07:04",
+       "note": null
+      },
+      {
+       "quote": "You can get rid of everything else if you really want to make money.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=4037s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "1:07:17",
+       "note": "the exclusion half — the X post says focus on; whether it is a filter is Ajay's call, the leg's pass line does not change"
+      },
+      {
+       "quote": "once in a while you'll have gold stocks making money. once in a while you're a uranium stock making money but just trading technology stock is where the money is.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=4042s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "1:07:22",
+       "note": "technology ranked first; gold and uranium named as once in a while — a rank on the row is Ajay's call"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "report_age",
+     "label": "Days since last report",
+     "quote": "And I opened the newspaper. It used to have the list of stocks which are released earnings last night.",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2963s",
+     "date": "2026-02-18",
+     "source": "tape",
+     "ts": "0:49:23",
+     "recorded": "~June 2025",
+     "data": "Days from today to the `date` of the last reported quarter in the `earnings_calendar` cache — the SAME doc the surprise leg reads, so it costs no extra read. A FACT: his words name no window; the stale label past 157 days is this app's.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "What recency reads as in play is Ajay's call; the 157-day label never flips anything.",
+     "cites": [],
+     "fact": true
+    },
+    {
+     "key": "turnaround",
+     "label": "Turnaround (loss → profit y/y)",
+     "quote": "I have a specific setup of turnaround stocks where I know based on their history that it can be held for a little longer than the growth stock",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=682s",
+     "date": "2026-02-18",
+     "source": "tape",
+     "ts": "0:11:22",
+     "recorded": "~June 2025",
+     "data": "Year-ago quarter EPS ≤ 0 and latest quarter EPS > 0, on the same fiscal-pair guard the y/y legs use (sepa/qoq). This is the cohort the y/y EPS legs mark year_ago_loss; the sequential flip (qoq income_turn) rides beside it.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "Whether a turnaround reads as a pass or stays a fact is Ajay's call — his words give no rule.",
+     "cites": [],
+     "fact": true
+    },
+    {
+     "key": "growth_streak",
+     "label": "Revenue growth streak (trailing)",
+     "quote": "which is based on projecting how many quarters in a row that stock is likely to have a growth",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=780s",
+     "date": "2026-02-18",
+     "source": "tape",
+     "ts": "0:13:00",
+     "recorded": "~June 2025",
+     "data": "Trailing count of consecutive quarters of positive y/y revenue growth — sales.compute's own consecutive_growth_q, never recomputed here; it counts up to 4, so 4 reads as 4 or more, and it stops where the revenue history stops, which the leg says when it happens. Only the latest two year-ago pairs are period-checked. His sentence is a FORWARD projection this app does not make.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "What count reads as a pass is Ajay's call; his words give none.",
+     "cites": [],
+     "fact": true
+    },
+    {
+     "key": "theme",
+     "label": "Theme (the app's map)",
+     "quote": "there is 100 times more money on story stocks EP … Understanding what theme is working and finding story EP in them is now my major focus",
+     "url": "https://x.com/PradeepBonde/status/1723676670924558778",
+     "date": "2023-11-12",
+     "source": "x",
+     "data": "The app's own theme map (supply_demand/sectors.sectors_for_ticker), in memory, no network — his word is theme, the map is ours. The map names 167 tickers across 26 themes and is S&P-heavy: a miss reads not on the app's map — UNMAPPED, never themeless — and most of this board's small caps miss it.",
+     "computed": true,
+     "not_computed_why": null,
+     "his_call": "Whether the app's map is the right reading of his word theme, and whether a miss should read unknown instead of a fact about the map, is Ajay's call.",
+     "cites": [
+      {
+       "quote": "that reason must be might be theme That might be sector that might be whatever earnings catalyst story but the that particular stock should have a reason to go up",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=873s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:14:33",
+       "note": null
+      }
+     ],
+     "fact": true
+    },
+    {
+     "key": "run_up_65d",
+     "label": "Has not rallied into earnings",
+     "quote": "Besides that I look for price action on that stock by looking at how much they are up in last 65 days or so. I am looking for stocks which have not rallied in anticipation of earnings.",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "It is a PRICE read over 65 days, and the correction that shaped this line asked for static information only.",
+     "his_call": "Whether a 65-day run-up number belongs on the row is Ajay's call.",
+     "cites": [
+      {
+       "quote": "Now I tended to believe this when I was new in the market right till I actually checked it out and when I checked it out I found that actually the stock which make the biggest move are the one which were written down the most right",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=1624s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:27:04",
+       "note": "agrees in direction only; 'written down' is the caption's hearing of beaten down; a different mechanism and still a price read — legend only"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "story_ep",
+     "label": "Story / theme EP",
+     "quote": "there is 100 times more money on story stocks EP … Understanding what theme is working and finding story EP in them is now my major focus",
+     "url": "https://x.com/PradeepBonde/status/1723676670924558778",
+     "date": "2023-11-12",
+     "source": "x",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "There is no feed that decides whether a name is a story stock, and inventing one would be this app's judgement wearing his words.",
+     "his_call": null,
+     "cites": [
+      {
+       "quote": "that reason must be might be theme That might be sector that might be whatever earnings catalyst story but the that particular stock should have a reason to go up",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=873s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:14:33",
+       "note": null
+      },
+      {
+       "quote": "today if you have to make money what is in play AI uh robotics humanoid robotics or like crypto wallets or things like that",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=4010s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "1:06:50",
+       "note": "DATED — what was in play when this was recorded, ~June 2025 (at [1:05:11] he says 'the last month is over May'); printed with its date, never a standing rule"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "pead",
+     "label": "Post-earnings drift",
+     "quote": "PEAD or post earnings announcement drift is a well studied and proven market anomaly. · Post earnings announcements drift is well known markrt anomaly and EP is based on that.",
+     "url": "https://stockbee.blogspot.com/2007/03/how-to-trade-earnings.html",
+     "date": "2007-03-30",
+     "source": "stockbee",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "It is the anomaly his whole method rests on, not a per-name screen: there is nothing to tick on a row.",
+     "his_call": null,
+     "cites": [
+      {
+       "quote": "And that changed how that became the EP kind of an idea then.",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2995s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "0:49:55",
+       "note": "the origin: he systematised the search after one trade"
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "reactor_watchlist",
+     "label": "Reacted well to earnings",
+     "quote": "Keep a watchlist of stocks that reacted positively to earnings (earnings Episodic Pivots) , they always offer another lower risk entry opportunity after few weeks or months.",
+     "url": "https://x.com/PradeepBonde/status/1426157185168510979",
+     "date": "2021-08-13",
+     "source": "x",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "It is a watchlist he keeps over weeks and months, and the reaction is a price read — dynamic, so out of scope for this line.",
+     "his_call": null,
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "top_sector",
+     "label": "Top sector",
+     "quote": "Top Sector · In top 10 sector",
+     "url": "https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html",
+     "date": "2010-02-12",
+     "source": "stockbee",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "No sector RANK feed reaches this board, and the app's own rotation read is a different concept with its own page.",
+     "his_call": null,
+     "cites": [
+      {
+       "quote": "So take the first point right and which is you have to trade what is in the market likes right",
+       "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=3872s",
+       "date": "2026-02-18",
+       "recorded": "~June 2025",
+       "source": "tape",
+       "ts": "1:04:32",
+       "note": null
+      }
+     ],
+     "fact": false
+    },
+    {
+     "key": "earnings_40",
+     "label": "Earnings 40% plus",
+     "quote": "Earnings 40% plus",
+     "url": "https://stockbee.blogspot.com/2010/02/what-are-episodic-pivots-and-how-to.html",
+     "date": "2010-02-12",
+     "source": "stockbee",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "It is one entry in his catalogue of EP catalyst CATEGORIES, not a screen number he says he runs: he writes that he only focuses on the 100%-plus names.",
+     "his_call": null,
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "ep_origin_300",
+     "label": "The paragraph that started EP (300–500%)",
+     "quote": "the earnings is like phenomenally good 300 400 500%. Then those stocks can double or triple.",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=2939s",
+     "date": "2026-02-18",
+     "source": "tape",
+     "ts": "0:48:59",
+     "recorded": "~June 2025",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "The book paragraph that started EP, quoted by him — NOT his screen; his published screen is 100% (2007, 2010). Nothing here moves off his published number.",
+     "his_call": "A second, higher tier chip at the origin figure, or legend only — default legend only.",
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "valuation",
+     "label": "Valuation",
+     "quote": "But if I have to do longerterm trading, I will base lot of my longerterm trading on a setup which is very very analysis based, which is based on valuation, which is based on projecting how many quarters in a row that stock is likely to have a growth.",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=774s",
+     "date": "2026-02-18",
+     "source": "tape",
+     "ts": "0:12:54",
+     "recorded": "~June 2025",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "He names valuation and no metric and no number; a chip would be this app choosing a ratio and wearing his word for it. The quarters-in-a-row half is the growth_streak fact.",
+     "his_call": "Which metric, if any — his words give none.",
+     "cites": [],
+     "fact": false
+    },
+    {
+     "key": "volume_9m",
+     "label": "9 million volume",
+     "quote": "that is why I use the 9 million volume because I know volume is a object effective way to find where the crowd is",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=3952s",
+     "date": "2026-02-18",
+     "source": "tape",
+     "ts": "1:05:52",
+     "recorded": "~June 2025",
+     "data": "Not computed here.",
+     "computed": false,
+     "not_computed_why": "Unit and window are unstated, and volume is dynamic — the class his correction removed from this line. His 2010 post's construct is RELATIVE (ten times average volume), not an absolute floor.",
+     "his_call": "Shares or dollars, which window, and whether a dynamic liquidity floor belongs on a static line at all.",
+     "cites": [],
+     "fact": false
+    }
+   ],
+   "computed_keys": [
+    "eps_5c",
+    "eps_yoy_100",
+    "eps_seq_100",
+    "eps_accel",
+    "sales_5",
+    "surprise",
+    "float_25m",
+    "short_dtc_5",
+    "neglect_analysts",
+    "fund_holding",
+    "ipo_10y",
+    "cap_10b",
+    "rev_39_x2",
+    "sector_3",
+    "report_age",
+    "turnaround",
+    "growth_streak",
+    "theme"
+   ],
+   "why_codes": [
+    "future_listing_date",
+    "no_analyst_doc",
+    "no_cap_in_doc",
+    "no_eps_series",
+    "no_estimate_read",
+    "no_float_in_doc",
+    "no_inst_read",
+    "no_listing_date",
+    "no_metrics_doc",
+    "no_period_keys",
+    "no_sales_read",
+    "no_sector",
+    "no_si_record",
+    "no_surprise_in_report",
+    "no_symbol",
+    "no_threshold_in_his_writing",
+    "not_on_calendar",
+    "not_warmed",
+    "pair_not_a_year_apart",
+    "prior_hole",
+    "seq_base_non_positive",
+    "seq_base_too_small",
+    "seq_base_unknown",
+    "seq_not_adjacent",
+    "year_ago_loss"
+   ],
+   "not_a_source": "The third-party YouTube SUMMARY was never a source and nothing from it is cited. The INTERVIEW itself (Words of Rizdom, published 2026-02-18, recorded ~June 2025, received 2026-09-20) is cited by timestamp: every tape quote is his own words from the caption track, linked at the second it starts. Everything else is a post on stockbee.blogspot.com or his own X account, with its date.",
+   "warm_note": "Short interest reads unknown on every row until `python -m short_interest.client warm-si` has run in the api container; a crontab line does not ship with a deploy.",
+   "tape_header": {
+    "quote": "a good chart itself is not a setup … they don't go up just because there is a pretty good chart or support or resistance",
+    "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=857s",
+    "date": "2026-02-18",
+    "recorded": "~June 2025",
+    "source": "tape",
+    "ts": "0:14:17",
+    "note": null
+   },
+   "tape": {
+    "url": "https://www.youtube.com/watch?v=fjox2hapu98",
+    "title": "Trading Legend: His Strategy Has Made the MOST Millionaire Traders - StockBee",
+    "show": "Words of Rizdom",
+    "published": "2026-02-18",
+    "recorded": "~June 2025",
+    "recorded_cite": {
+     "quote": "the last month is over May",
+     "url": "https://www.youtube.com/watch?v=fjox2hapu98&t=3911s",
+     "date": "2026-02-18",
+     "recorded": "~June 2025",
+     "source": "tape",
+     "ts": "1:05:11",
+     "note": null
+    },
+    "received": "2026-09-20"
+   },
+   "fact_keys": [
+    "fund_holding",
+    "report_age",
+    "turnaround",
+    "growth_streak",
+    "theme"
+   ]
+  },
+  "pick_coverage": {
+   "eps_5c": {
+    "known": 197,
+    "rows": 200
+   },
+   "eps_yoy_100": {
+    "known": 121,
+    "rows": 200
+   },
+   "eps_seq_100": {
+    "known": 107,
+    "rows": 200
+   },
+   "eps_accel": {
+    "known": 73,
+    "rows": 200
+   },
+   "sales_5": {
+    "known": 200,
+    "rows": 200
+   },
+   "surprise": {
+    "known": 85,
+    "rows": 200
+   },
+   "float_25m": {
+    "known": 196,
+    "rows": 200
+   },
+   "short_dtc_5": {
+    "known": 189,
+    "rows": 200
+   },
+   "neglect_analysts": {
+    "known": 191,
+    "rows": 200
+   },
+   "fund_holding": {
+    "known": 84,
+    "rows": 200
+   },
+   "ipo_10y": {
+    "known": 196,
+    "rows": 200
+   },
+   "cap_10b": {
+    "known": 196,
+    "rows": 200
+   },
+   "rev_39_x2": {
+    "known": 160,
+    "rows": 200
+   },
+   "sector_3": {
+    "known": 196,
+    "rows": 200
+   },
+   "report_age": {
+    "known": 85,
+    "rows": 200
+   },
+   "turnaround": {
+    "known": 197,
+    "rows": 200
+   },
+   "growth_streak": {
+    "known": 200,
+    "rows": 200
+   },
+   "theme": {
+    "known": 200,
+    "rows": 200
+   }
+  },
+  "d1": {
+   "basis": "live",
+   "live": true,
+   "market_closed": null,
+   "in_session": false,
+   "session_window": "9:30-16:00 ET",
+   "as_of": "2026-09-29T04:44:39.558806+00:00",
+   "close_as_of": null,
+   "symbols": 200,
+   "live_names": 200,
+   "reason": null,
+   "tape_session": "closed",
+   "note": "Today is each name's own move so far in this session, read live off one snapshot. Everything else on this board — the sales tier, the year-over-year growth, the character chips, the Episodic Pivot and the CPA metrics — comes from the last scan."
+  },
+  "since_report_summary": {
+   "n": 200,
+   "n_known": 85,
+   "n_positive": 32,
+   "n_blank": 115,
+   "blank_reasons": {
+    "no_report": 115
+   },
+   "n_stale_report": 0,
+   "n_calendar_stale": 0,
+   "as_of": "2026-09-28",
+   "date_basis": "report",
+   "date_basis_note": "The date is the REPORT date — the most recent past report on the app's earnings calendar (yfinance via sepa/earnings_watch, field last_report.date) — NOT the SEC 10-Q/10-K filing date the 2026-09-21 study measured from. On CRDO the two are one day apart (reported 2026-09-01, filed 2026-09-02); immaterial over 126 sessions, but they are different dates and no surface here calls them the same thing.",
+   "measured": {
+    "run_date": "2026-09-21",
+    "doc": "docs/research/board_growth_2026_09_21.md",
+    "sessions_before": 126,
+    "benchmark": "RSP",
+    "board": {
+     "n": 160,
+     "n_known": 152,
+     "n_positive": 57,
+     "pre_median_pct": 8.19,
+     "pre_share_pos": 66.4,
+     "since_median_pct": -4.41,
+     "since_share_pos": 37.5
+    },
+    "universe": {
+     "n": 2090,
+     "n_known": 1656,
+     "n_positive": 514,
+     "pre_median_pct": 8.14,
+     "pre_share_pos": 65.5,
+     "since_median_pct": -4.63,
+     "since_share_pos": 31.0
+    }
+   },
+   "honesty": "MEASURED 2026-09-21 — the typical name on this board had already had its run before the board could see it, and here it ran no harder than the scan universe: the visible Bonde board's median member gained +8.19% in the 126 sessions before its qualifying filing (scan universe +8.14%) and is −4.41% since (57 of 152 positive). This column is that ‘since’ leg per name, from the REPORT date on the earnings calendar; the study measured from the SEC filing date. A fact between two dates: it changes no order, no filter and no gate. docs/research/board_growth_2026_09_21.md",
+   "source": "yfinance (Yahoo Finance) via sepa.earnings_watch — verify on EarningsWhispers; dates can shift"
+  }
+ },
+ "bounce_room": {
+  "as_of": "2026-09-29T00:45:07.258772-04:00",
+  "in_session": false,
+  "store_date": "2026-09-28",
+  "params": {
+   "touch_tol_pct": 1.0,
+   "wick_pct": 1.5,
+   "bounce_min_pct": 3.0,
+   "strong_pct": 5.0,
+   "lookback_sessions": 5,
+   "near_pct": 2.0,
+   "demand_near_pct": 2.0,
+   "stale_print_sec": 180,
+   "new_high_tol": 0.98
+  },
+  "explosive_study": {
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "enterable_study": {
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "band_structure_study": {
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "band_structure_coverage": {
+   "rows_with_read": 60,
+   "rows_without_read": 0,
+   "note": null
+  },
+  "rows": {
+   "PTGX": {
+    "symbol": "PTGX",
+    "print": 142.44,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": {
+     "band": {
+      "kind": "demand",
+      "lo": 128.34,
+      "hi": 132.92,
+      "touches": 1,
+      "strength": 13.0
+     },
+     "role": "demand",
+     "touch_low": 134.1,
+     "touch_date": "2026-09-24",
+     "sessions_ago": 2,
+     "bounce_pct": 6.22,
+     "floor_pct": 3.92,
+     "strong": false,
+     "atr_x": 1.6
+    },
+    "room": {
+     "state": "IN_BAND",
+     "room_pct": 0.0,
+     "atr_days": 0.0,
+     "band": {
+      "kind": "supply",
+      "lo": 141.1,
+      "hi": 143.29,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 139.46,
+     "hi": 144.43,
+     "touches": 1,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "swept",
+       "rank": null,
+       "label": "floor swept"
+      },
+      {
+       "key": "room_rank",
+       "value": 0.0,
+       "rank": null,
+       "label": "room to supply: 0.0%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "swept",
+     "session_low": true,
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 0.0,
+      "atr_days": 0.0,
+      "band": {
+       "kind": "supply",
+       "lo": 141.1,
+       "hi": 143.29,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 139.46,
+      "hi": 144.43
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 142.44,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "room"
+     ],
+     "reason_text": [
+      "already inside overhead supply — no room to run"
+     ],
+     "reason_short": [
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": true,
+      "floor_state": "swept",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 139.46,
+      "hi": 144.43
+     },
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 0.6,
+      "room_pct_raw": 0.5967424880651462,
+      "target": 143.29,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 141.1,
+       "hi": 143.29,
+       "touches": 2
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "PTGX",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "IN_BAND",
+      "band": {
+       "kind": "supply",
+       "lo": 141.1,
+       "hi": 143.29,
+       "height_pct": 1.54,
+       "touches": 2,
+       "strength": 34.0,
+       "proven": true
+      },
+      "height_pct": 1.54,
+      "distance_pct": 0.0,
+      "walls_above": 1,
+      "walls_to_high": 1,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 139.46,
+       "hi": 144.43,
+       "height_pct": 3.49,
+       "touches": 1,
+       "strength": 13.0,
+       "proven": false
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 3.49,
+      "second": {
+       "kind": "demand",
+       "lo": 128.34,
+       "hi": 132.92,
+       "height_pct": 3.22,
+       "touches": 1,
+       "strength": 13.0,
+       "proven": false
+      },
+      "gap_pct": 4.59,
+      "bands_below": 9
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 142.44,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 1.5% wide, price in it · floor 3.5% wide, next demand band 4.6% below it"
+    }
+   },
+   "LQDA": {
+    "symbol": "LQDA",
+    "print": 73.5,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": {
+     "band": {
+      "kind": "demand",
+      "lo": 64.94,
+      "hi": 67.26,
+      "touches": 2,
+      "strength": 67.0
+     },
+     "role": "demand",
+     "touch_low": 67.655,
+     "touch_date": "2026-09-28",
+     "sessions_ago": 0,
+     "bounce_pct": 8.64,
+     "floor_pct": 4.2,
+     "strong": true,
+     "atr_x": 2.1
+    },
+    "room": {
+     "state": "ROOM",
+     "room_pct": 23.95,
+     "atr_days": 6.2,
+     "band": {
+      "kind": "supply",
+      "lo": 91.1,
+      "hi": 93.61,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 69.71,
+     "hi": 70.85,
+     "touches": 2,
+     "in_band": false,
+     "distance_pct": 3.61,
+     "near": false
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "swept",
+       "rank": null,
+       "label": "floor swept"
+      },
+      {
+       "key": "room_rank",
+       "value": 23.95,
+       "rank": null,
+       "label": "room to supply: 23.9%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "swept",
+     "session_low": true,
+     "room": {
+      "state": "ROOM",
+      "room_pct": 23.95,
+      "atr_days": 6.2,
+      "band": {
+       "kind": "supply",
+       "lo": 91.1,
+       "hi": 93.61,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 69.71,
+      "hi": 70.85
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 73.5,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "proximity"
+     ],
+     "reason_text": [
+      "not at the band — the print must sit between the floor and 1% above its top"
+     ],
+     "reason_short": [
+      "not at band"
+     ],
+     "gates": {
+      "room_ok": true,
+      "prox_ok": false,
+      "floor_state": "swept",
+      "session_low": true
+     },
+     "drags": [
+      {
+       "key": "reclaim",
+       "text": "reclaiming the band from below — these hit the floor stop 66% of the time, against 11% for arrivals from above",
+       "measured_stop_pct": 66.0
+      }
+     ],
+     "band": {
+      "lo": 69.71,
+      "hi": 70.85
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 23.9,
+      "room_pct_raw": 23.945578231292508,
+      "target": 91.1,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 91.1,
+       "hi": 93.61,
+       "touches": 2
+      },
+      "weak": {
+       "lo": 76.68,
+       "hi": 79.41,
+       "touches": 1,
+       "strength": 33.0,
+       "pct": 4.3
+      }
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "LQDA",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "supply",
+       "lo": 91.1,
+       "hi": 93.61,
+       "height_pct": 3.41,
+       "touches": 2,
+       "strength": 74.0,
+       "proven": true
+      },
+      "height_pct": 3.41,
+      "distance_pct": 23.95,
+      "walls_above": 1,
+      "walls_to_high": 1,
+      "at_highs": false,
+      "untested_band": {
+       "kind": "broken_support",
+       "lo": 76.68,
+       "hi": 79.41,
+       "height_pct": 3.71,
+       "touches": 1,
+       "strength": 33.0,
+       "proven": false
+      },
+      "untested_distance_pct": 4.33,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 69.71,
+       "hi": 70.85,
+       "height_pct": 1.55,
+       "touches": 2,
+       "strength": 83.0,
+       "proven": true
+      },
+      "in_band": false,
+      "distance_pct": 3.61,
+      "height_pct": 1.55,
+      "second": {
+       "kind": "demand",
+       "lo": 64.94,
+       "hi": 67.26,
+       "height_pct": 3.16,
+       "touches": 2,
+       "strength": 67.0,
+       "proven": true
+      },
+      "gap_pct": 3.33,
+      "bands_below": 9
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 73.5,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 3.4% wide, 23.9% up (untested band 4.3% up) · floor 1.6% wide, next demand band 3.3% below it"
+    }
+   },
+   "ONDS": {
+    "symbol": "ONDS",
+    "print": 7.71,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": {
+     "band": {
+      "kind": "demand",
+      "lo": 7.28,
+      "hi": 7.31,
+      "touches": 2,
+      "strength": 42.0
+     },
+     "role": "demand",
+     "touch_low": 7.18,
+     "touch_date": "2026-09-24",
+     "sessions_ago": 2,
+     "bounce_pct": 7.38,
+     "floor_pct": 5.05,
+     "strong": false,
+     "atr_x": 1.5
+    },
+    "room": {
+     "state": "ROOM",
+     "room_pct": 7.78,
+     "atr_days": 1.7,
+     "band": {
+      "kind": "supply",
+      "lo": 8.31,
+      "hi": 8.58,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 7.64,
+     "hi": 7.92,
+     "touches": 1,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "swept",
+       "rank": null,
+       "label": "floor swept"
+      },
+      {
+       "key": "room_rank",
+       "value": 7.78,
+       "rank": null,
+       "label": "room to supply: 7.8%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "swept",
+     "session_low": true,
+     "room": {
+      "state": "ROOM",
+      "room_pct": 7.78,
+      "atr_days": 1.7,
+      "band": {
+       "kind": "supply",
+       "lo": 8.31,
+       "hi": 8.58,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 7.64,
+      "hi": 7.92
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 7.71,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "floor_swept"
+     ],
+     "reason_text": [
+      "band floor swept — the push gate needs one of intact · 🎯 swept the stops -2.6% · reclaimed in 0 bars"
+     ],
+     "reason_short": [
+      "floor swept"
+     ],
+     "gates": {
+      "room_ok": true,
+      "prox_ok": true,
+      "floor_state": "swept",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 7.64,
+      "hi": 7.92
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 7.8,
+      "room_pct_raw": 7.782101167315182,
+      "target": 8.31,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 8.31,
+       "hi": 8.58,
+       "touches": 2
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "ONDS",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "supply",
+       "lo": 8.31,
+       "hi": 8.58,
+       "height_pct": 3.5,
+       "touches": 2,
+       "strength": 60.0,
+       "proven": true
+      },
+      "height_pct": 3.5,
+      "distance_pct": 7.78,
+      "walls_above": 6,
+      "walls_to_high": 6,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 7.64,
+       "hi": 7.92,
+       "height_pct": 3.63,
+       "touches": 1,
+       "strength": 24.0,
+       "proven": false
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 3.63,
+      "second": {
+       "kind": "demand",
+       "lo": 7.28,
+       "hi": 7.31,
+       "height_pct": 0.39,
+       "touches": 2,
+       "strength": 42.0,
+       "proven": true
+      },
+      "gap_pct": 4.28,
+      "bands_below": 6
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 7.71,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 3.5% wide, 7.8% up · floor 3.6% wide, next demand band 4.3% below it"
+    }
+   },
+   "PFSI": {
+    "symbol": "PFSI",
+    "print": 63.66,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "ROOM",
+     "room_pct": 11.01,
+     "atr_days": 4.1,
+     "band": {
+      "kind": "broken_support",
+      "lo": 70.67,
+      "hi": 71.67,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": null,
+    "explosive": null,
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 63.66,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "no_band"
+     ],
+     "reason_text": [
+      "no demand band at or below the print"
+     ],
+     "reason_short": [
+      "no band"
+     ],
+     "gates": {
+      "room_ok": null,
+      "prox_ok": null,
+      "floor_state": null,
+      "session_low": true
+     },
+     "drags": [],
+     "band": null,
+     "room": null,
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "PFSI",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "broken_support",
+       "lo": 70.67,
+       "hi": 71.67,
+       "height_pct": 1.57,
+       "touches": 2,
+       "strength": 51.0,
+       "proven": true
+      },
+      "height_pct": 1.57,
+      "distance_pct": 11.01,
+      "walls_above": 10,
+      "walls_to_high": 10,
+      "at_highs": false,
+      "untested_band": {
+       "kind": "broken_support",
+       "lo": 63.89,
+       "hi": 66.17,
+       "height_pct": 3.58,
+       "touches": 1,
+       "strength": 20.0,
+       "proven": false
+      },
+      "untested_distance_pct": 0.36,
+      "in_untested_band": false
+     },
+     "floor": null,
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 63.66,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 1.6% wide, 11.0% up (untested band 0.4% up)"
+    }
+   },
+   "ARR": {
+    "symbol": "ARR",
+    "print": 14.04,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "ROOM",
+     "room_pct": 8.9,
+     "atr_days": 3.7,
+     "band": {
+      "kind": "broken_support",
+      "lo": 15.29,
+      "hi": 15.88,
+      "touches": 3
+     },
+     "at_highs": false
+    },
+    "demand": null,
+    "explosive": null,
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 14.04,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "no_band"
+     ],
+     "reason_text": [
+      "no demand band at or below the print"
+     ],
+     "reason_short": [
+      "no band"
+     ],
+     "gates": {
+      "room_ok": null,
+      "prox_ok": null,
+      "floor_state": null,
+      "session_low": true
+     },
+     "drags": [],
+     "band": null,
+     "room": null,
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "ARR",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "broken_support",
+       "lo": 15.29,
+       "hi": 15.88,
+       "height_pct": 4.2,
+       "touches": 3,
+       "strength": 51.0,
+       "proven": true
+      },
+      "height_pct": 4.2,
+      "distance_pct": 8.9,
+      "walls_above": 7,
+      "walls_to_high": 7,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": null,
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 14.04,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 4.2% wide, 8.9% up"
+    }
+   },
+   "NLY": {
+    "symbol": "NLY",
+    "print": 20.439,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "ROOM",
+     "room_pct": 3.04,
+     "atr_days": 1.4,
+     "band": {
+      "kind": "supply",
+      "lo": 21.06,
+      "hi": 21.39,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 20.39,
+     "hi": 21.18,
+     "touches": 5,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "swept",
+       "rank": null,
+       "label": "floor swept"
+      },
+      {
+       "key": "room_rank",
+       "value": 3.04,
+       "rank": null,
+       "label": "room to supply: 3.0%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "swept",
+     "session_low": true,
+     "room": {
+      "state": "ROOM",
+      "room_pct": 3.04,
+      "atr_days": 1.4,
+      "band": {
+       "kind": "supply",
+       "lo": 21.06,
+       "hi": 21.39,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 20.39,
+      "hi": 21.18
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 20.439,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "room"
+     ],
+     "reason_text": [
+      "only 3% to the first proven band overhead — the rule wants 5%"
+     ],
+     "reason_short": [
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": true,
+      "floor_state": "swept",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 20.39,
+      "hi": 21.18
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 3.0,
+      "room_pct_raw": 3.0383091149273382,
+      "target": 21.06,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 21.06,
+       "hi": 21.39,
+       "touches": 2
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "NLY",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "supply",
+       "lo": 21.06,
+       "hi": 21.39,
+       "height_pct": 1.61,
+       "touches": 2,
+       "strength": 26.0,
+       "proven": true
+      },
+      "height_pct": 1.61,
+      "distance_pct": 3.04,
+      "walls_above": 6,
+      "walls_to_high": 6,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 20.39,
+       "hi": 21.18,
+       "height_pct": 3.87,
+       "touches": 5,
+       "strength": 79.0,
+       "proven": true
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 3.87,
+      "second": null,
+      "gap_pct": null,
+      "bands_below": 1
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 20.439,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 1.6% wide, 3.0% up · floor 3.9% wide, no band under it"
+    }
+   },
+   "DBRG": {
+    "symbol": "DBRG",
+    "print": 15.98,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "IN_BAND",
+     "room_pct": 0.0,
+     "atr_days": 0.0,
+     "band": {
+      "kind": "supply",
+      "lo": 15.45,
+      "hi": 15.98,
+      "touches": 22
+     },
+     "at_highs": true
+    },
+    "demand": {
+     "lo": 15.32,
+     "hi": 15.9,
+     "touches": 19,
+     "in_band": false,
+     "distance_pct": 0.5,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "intact",
+       "rank": null,
+       "label": "floor intact"
+      },
+      {
+       "key": "room_rank",
+       "value": 0.0,
+       "rank": null,
+       "label": "room to supply: 0.0%"
+      }
+     ],
+     "intact": true,
+     "floor_state": "intact",
+     "session_low": true,
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 0.0,
+      "atr_days": 0.0,
+      "band": {
+       "kind": "supply",
+       "lo": 15.45,
+       "hi": 15.98,
+       "touches": 22
+      },
+      "at_highs": true
+     },
+     "band": {
+      "lo": 15.32,
+      "hi": 15.9
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 15.98,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "room"
+     ],
+     "reason_text": [
+      "already inside overhead supply — no room to run"
+     ],
+     "reason_short": [
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": true,
+      "floor_state": "intact",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 15.32,
+      "hi": 15.9
+     },
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 0.0,
+      "room_pct_raw": 0.0,
+      "target": 15.98,
+      "touches": 22,
+      "band": {
+       "kind": "supply",
+       "lo": 15.45,
+       "hi": 15.98,
+       "touches": 22
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "DBRG",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "IN_BAND",
+      "band": {
+       "kind": "supply",
+       "lo": 15.45,
+       "hi": 15.98,
+       "height_pct": 3.32,
+       "touches": 22,
+       "strength": 100.0,
+       "proven": true
+      },
+      "height_pct": 3.32,
+      "distance_pct": 0.0,
+      "walls_above": 1,
+      "walls_to_high": 1,
+      "at_highs": true,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 15.32,
+       "hi": 15.9,
+       "height_pct": 3.63,
+       "touches": 19,
+       "strength": 81.0,
+       "proven": true
+      },
+      "in_band": false,
+      "distance_pct": 0.5,
+      "height_pct": 3.63,
+      "second": {
+       "kind": "demand",
+       "lo": 12.46,
+       "hi": 12.9,
+       "height_pct": 2.75,
+       "touches": 1,
+       "strength": 3.0,
+       "proven": false
+      },
+      "gap_pct": 15.14,
+      "bands_below": 5
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 15.98,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 3.3% wide, price in it · floor 3.6% wide, next demand band 15.1% below it"
+    }
+   },
+   "ASST": {
+    "symbol": "ASST",
+    "print": 29.1,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "CLEAR",
+     "room_pct": null,
+     "atr_days": null,
+     "band": null,
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 18.49,
+     "hi": 19.15,
+     "touches": 1,
+     "in_band": false,
+     "distance_pct": 34.19,
+     "near": false
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "intact",
+       "rank": null,
+       "label": "floor intact"
+      },
+      {
+       "key": "room_rank",
+       "value": null,
+       "rank": null,
+       "label": "clear overhead"
+      }
+     ],
+     "intact": true,
+     "floor_state": "intact",
+     "session_low": true,
+     "room": {
+      "state": "CLEAR",
+      "room_pct": null,
+      "atr_days": null,
+      "band": null,
+      "at_highs": false
+     },
+     "band": {
+      "lo": 18.49,
+      "hi": 19.15
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 29.1,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "proximity"
+     ],
+     "reason_text": [
+      "not at the band — the print must sit between the floor and 1% above its top"
+     ],
+     "reason_short": [
+      "not at band"
+     ],
+     "gates": {
+      "room_ok": true,
+      "prox_ok": false,
+      "floor_state": "intact",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 18.49,
+      "hi": 19.15
+     },
+     "room": {
+      "state": "CLEAR",
+      "room_pct": null,
+      "target": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "ASST",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "CLEAR",
+      "band": null,
+      "height_pct": null,
+      "distance_pct": null,
+      "walls_above": 0,
+      "walls_to_high": 0,
+      "at_highs": false,
+      "untested_band": {
+       "kind": "supply",
+       "lo": 33.8,
+       "hi": 35.0,
+       "height_pct": 4.12,
+       "touches": 1,
+       "strength": 27.0,
+       "proven": false
+      },
+      "untested_distance_pct": 16.15,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 18.49,
+       "hi": 19.15,
+       "height_pct": 2.27,
+       "touches": 1,
+       "strength": 21.0,
+       "proven": false
+      },
+      "in_band": false,
+      "distance_pct": 34.19,
+      "height_pct": 2.27,
+      "second": {
+       "kind": "demand",
+       "lo": 15.28,
+       "hi": 15.61,
+       "height_pct": 1.13,
+       "touches": 3,
+       "strength": 58.0,
+       "proven": true
+      },
+      "gap_pct": 9.9,
+      "bands_below": 10
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 29.1,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling untested — nearest untested band 16.1% up · floor 2.3% wide, next demand band 9.9% below it"
+    }
+   },
+   "SBET": {
+    "symbol": "SBET",
+    "print": 9.5,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "ROOM",
+     "room_pct": 12.84,
+     "atr_days": 1.9,
+     "band": {
+      "kind": "supply",
+      "lo": 10.72,
+      "hi": 11.1,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 8.69,
+     "hi": 8.76,
+     "touches": 2,
+     "in_band": false,
+     "distance_pct": 7.79,
+     "near": false
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "swept",
+       "rank": null,
+       "label": "floor swept"
+      },
+      {
+       "key": "room_rank",
+       "value": 12.84,
+       "rank": null,
+       "label": "room to supply: 12.8%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "swept",
+     "session_low": true,
+     "room": {
+      "state": "ROOM",
+      "room_pct": 12.84,
+      "atr_days": 1.9,
+      "band": {
+       "kind": "supply",
+       "lo": 10.72,
+       "hi": 11.1,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 8.69,
+      "hi": 8.76
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 9.5,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "proximity"
+     ],
+     "reason_text": [
+      "not at the band — the print must sit between the floor and 1% above its top"
+     ],
+     "reason_short": [
+      "not at band"
+     ],
+     "gates": {
+      "room_ok": true,
+      "prox_ok": false,
+      "floor_state": "swept",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 8.69,
+      "hi": 8.76
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 12.8,
+      "room_pct_raw": 12.842105263157903,
+      "target": 10.72,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 10.72,
+       "hi": 11.1,
+       "touches": 2
+      },
+      "weak": {
+       "lo": 10.03,
+       "hi": 10.39,
+       "touches": 1,
+       "strength": 24.0,
+       "pct": 5.6
+      }
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "SBET",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "supply",
+       "lo": 10.72,
+       "hi": 11.1,
+       "height_pct": 4.0,
+       "touches": 2,
+       "strength": 54.0,
+       "proven": true
+      },
+      "height_pct": 4.0,
+      "distance_pct": 12.84,
+      "walls_above": 1,
+      "walls_to_high": 1,
+      "at_highs": false,
+      "untested_band": {
+       "kind": "supply",
+       "lo": 9.32,
+       "hi": 9.65,
+       "height_pct": 3.47,
+       "touches": 1,
+       "strength": 35.0,
+       "proven": false
+      },
+      "untested_distance_pct": 0.0,
+      "in_untested_band": true
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 8.69,
+       "hi": 8.76,
+       "height_pct": 0.74,
+       "touches": 2,
+       "strength": 65.0,
+       "proven": true
+      },
+      "in_band": false,
+      "distance_pct": 7.79,
+      "height_pct": 0.74,
+      "second": {
+       "kind": "demand",
+       "lo": 7.81,
+       "hi": 7.88,
+       "height_pct": 0.74,
+       "touches": 2,
+       "strength": 52.0,
+       "proven": true
+      },
+      "gap_pct": 8.53,
+      "bands_below": 6
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 9.5,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 4.0% wide, 12.8% up (price inside an untested band) · floor 0.7% wide, next demand band 8.5% below it"
+    }
+   },
+   "VEEA": {
+    "symbol": "VEEA",
+    "print": 2.88,
+    "fresh": false,
+    "coverage": "ondemand",
+    "bounce": null,
+    "room": {
+     "state": "ROOM",
+     "room_pct": 165.97,
+     "atr_days": 4.0,
+     "band": {
+      "kind": "broken_support",
+      "lo": 7.66,
+      "hi": 7.81,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 2.85,
+     "hi": 2.95,
+     "touches": 1,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "broken",
+       "rank": null,
+       "label": "floor broken"
+      },
+      {
+       "key": "room_rank",
+       "value": 165.97,
+       "rank": null,
+       "label": "room to supply: 166.0%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "broken",
+     "session_low": true,
+     "room": {
+      "state": "ROOM",
+      "room_pct": 165.97,
+      "atr_days": 4.0,
+      "band": {
+       "kind": "broken_support",
+       "lo": 7.66,
+       "hi": 7.81,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 2.85,
+      "hi": 2.95
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 2.88,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "floor_broken"
+     ],
+     "reason_text": [
+      "band floor broken — the push gate needs one of intact · 🔪 broke the band and stayed under"
+     ],
+     "reason_short": [
+      "floor broken"
+     ],
+     "gates": {
+      "room_ok": true,
+      "prox_ok": true,
+      "floor_state": "broken",
+      "session_low": true
+     },
+     "drags": [
+      {
+       "key": "weak_day",
+       "text": "down 6.5% today — the 3-8% bucket closed above the alert print only 22% of the time (vs 57% otherwise)",
+       "measured_up_pct": 22.0
+      }
+     ],
+     "band": {
+      "lo": 2.85,
+      "hi": 2.95
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 166.0,
+      "room_pct_raw": 165.97222222222223,
+      "target": 7.66,
+      "touches": 2,
+      "band": {
+       "kind": "demand",
+       "lo": 7.66,
+       "hi": 7.81,
+       "touches": 2
+      },
+      "weak": {
+       "lo": 3.52,
+       "hi": 3.64,
+       "touches": 1,
+       "strength": 18.0,
+       "pct": 22.2
+      }
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "VEEA",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "broken_support",
+       "lo": 7.66,
+       "hi": 7.81,
+       "height_pct": 5.21,
+       "touches": 2,
+       "strength": 20.0,
+       "proven": true
+      },
+      "height_pct": 5.21,
+      "distance_pct": 165.97,
+      "walls_above": 6,
+      "walls_to_high": 5,
+      "at_highs": false,
+      "untested_band": {
+       "kind": "broken_support",
+       "lo": 3.52,
+       "hi": 3.64,
+       "height_pct": 4.17,
+       "touches": 1,
+       "strength": 18.0,
+       "proven": false
+      },
+      "untested_distance_pct": 22.22,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 2.85,
+       "hi": 2.95,
+       "height_pct": 3.47,
+       "touches": 1,
+       "strength": 10.0,
+       "proven": false
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 3.47,
+      "second": {
+       "kind": "demand",
+       "lo": 2.18,
+       "hi": 2.26,
+       "height_pct": 2.78,
+       "touches": 1,
+       "strength": 10.0,
+       "proven": false
+      },
+      "gap_pct": 20.49,
+      "bands_below": 4
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 2.88,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 5.2% wide, 166.0% up (untested band 22.2% up) · floor 3.5% wide, next demand band 20.5% below it"
+    }
+   },
+   "RDW": {
+    "symbol": "RDW",
+    "print": 11.1985,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "ROOM",
+     "room_pct": 2.69,
+     "atr_days": 0.4,
+     "band": {
+      "kind": "supply",
+      "lo": 11.5,
+      "hi": 11.85,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 10.11,
+     "hi": 10.21,
+     "touches": 3,
+     "in_band": false,
+     "distance_pct": 8.83,
+     "near": false
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "intact",
+       "rank": null,
+       "label": "floor intact"
+      },
+      {
+       "key": "room_rank",
+       "value": 2.69,
+       "rank": null,
+       "label": "room to supply: 2.7%"
+      }
+     ],
+     "intact": true,
+     "floor_state": "intact",
+     "session_low": true,
+     "room": {
+      "state": "ROOM",
+      "room_pct": 2.69,
+      "atr_days": 0.4,
+      "band": {
+       "kind": "supply",
+       "lo": 11.5,
+       "hi": 11.85,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 10.11,
+      "hi": 10.21
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 11.1985,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "proximity",
+      "room"
+     ],
+     "reason_text": [
+      "not at the band — the print must sit between the floor and 1% above its top",
+      "only 2.7% to the first proven band overhead — the rule wants 5%"
+     ],
+     "reason_short": [
+      "not at band",
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": false,
+      "floor_state": "intact",
+      "session_low": true
+     },
+     "drags": [
+      {
+       "key": "weak_day",
+       "text": "down 3.6% today — the 3-8% bucket closed above the alert print only 22% of the time (vs 57% otherwise)",
+       "measured_up_pct": 22.0
+      }
+     ],
+     "band": {
+      "lo": 10.11,
+      "hi": 10.21
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 2.7,
+      "room_pct_raw": 2.6923248649372753,
+      "target": 11.5,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 11.5,
+       "hi": 11.85,
+       "touches": 2
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "RDW",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "ROOM",
+      "band": {
+       "kind": "supply",
+       "lo": 11.5,
+       "hi": 11.85,
+       "height_pct": 3.13,
+       "touches": 2,
+       "strength": 43.0,
+       "proven": true
+      },
+      "height_pct": 3.13,
+      "distance_pct": 2.69,
+      "walls_above": 2,
+      "walls_to_high": 2,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 10.11,
+       "hi": 10.21,
+       "height_pct": 0.89,
+       "touches": 3,
+       "strength": 71.0,
+       "proven": true
+      },
+      "in_band": false,
+      "distance_pct": 8.83,
+      "height_pct": 0.89,
+      "second": {
+       "kind": "demand",
+       "lo": 9.34,
+       "hi": 9.68,
+       "height_pct": 3.04,
+       "touches": 1,
+       "strength": 31.0,
+       "proven": false
+      },
+      "gap_pct": 3.84,
+      "bands_below": 8
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 11.1985,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 3.1% wide, 2.7% up · floor 0.9% wide, next demand band 3.8% below it"
+    }
+   },
+   "HNI": {
+    "symbol": "HNI",
+    "print": 46.86,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": {
+     "band": {
+      "kind": "supply",
+      "lo": 43.64,
+      "hi": 45.2,
+      "touches": 1,
+      "strength": 46.0
+     },
+     "role": "broken_supply",
+     "touch_low": 45.075,
+     "touch_date": "2026-09-21",
+     "sessions_ago": 5,
+     "bounce_pct": 3.96,
+     "floor_pct": 3.0,
+     "strong": false,
+     "atr_x": 1.4
+    },
+    "room": {
+     "state": "IN_BAND",
+     "room_pct": 0.0,
+     "atr_days": 0.0,
+     "band": {
+      "kind": "supply",
+      "lo": 46.46,
+      "hi": 47.72,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 45.39,
+     "hi": 46.92,
+     "touches": 2,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "broken",
+       "rank": null,
+       "label": "floor broken"
+      },
+      {
+       "key": "room_rank",
+       "value": 0.0,
+       "rank": null,
+       "label": "room to supply: 0.0%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "broken",
+     "session_low": true,
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 0.0,
+      "atr_days": 0.0,
+      "band": {
+       "kind": "supply",
+       "lo": 46.46,
+       "hi": 47.72,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 45.39,
+      "hi": 46.92
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 46.86,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "room"
+     ],
+     "reason_text": [
+      "already inside overhead supply — no room to run"
+     ],
+     "reason_short": [
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": true,
+      "floor_state": "broken",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 45.39,
+      "hi": 46.92
+     },
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 1.8,
+      "room_pct_raw": 1.8352539479300032,
+      "target": 47.72,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 46.46,
+       "hi": 47.72,
+       "touches": 2
+      },
+      "weak": {
+       "lo": 47.51,
+       "hi": 49.21,
+       "touches": 1,
+       "strength": 27.0,
+       "pct": 1.4
+      }
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "HNI",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "IN_BAND",
+      "band": {
+       "kind": "supply",
+       "lo": 46.46,
+       "hi": 47.72,
+       "height_pct": 2.69,
+       "touches": 2,
+       "strength": 58.0,
+       "proven": true
+      },
+      "height_pct": 2.69,
+      "distance_pct": 0.0,
+      "walls_above": 2,
+      "walls_to_high": 2,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 45.39,
+       "hi": 46.92,
+       "height_pct": 3.27,
+       "touches": 2,
+       "strength": 51.0,
+       "proven": true
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 3.27,
+      "second": {
+       "kind": "demand",
+       "lo": 42.21,
+       "hi": 43.71,
+       "height_pct": 3.2,
+       "touches": 1,
+       "strength": 23.0,
+       "proven": false
+      },
+      "gap_pct": 3.59,
+      "bands_below": 7
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 46.86,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 2.7% wide, price in it · floor 3.3% wide, next demand band 3.6% below it"
+    }
+   },
+   "AUR": {
+    "symbol": "AUR",
+    "print": 5.37,
+    "fresh": false,
+    "coverage": "store",
+    "bounce": null,
+    "room": {
+     "state": "NEAR",
+     "room_pct": 0.93,
+     "atr_days": 0.1,
+     "band": {
+      "kind": "supply",
+      "lo": 5.42,
+      "hi": 5.54,
+      "touches": 2
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 5.31,
+     "hi": 5.49,
+     "touches": 1,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "swept",
+       "rank": null,
+       "label": "floor swept"
+      },
+      {
+       "key": "room_rank",
+       "value": 0.93,
+       "rank": null,
+       "label": "room to supply: 0.9%"
+      }
+     ],
+     "intact": false,
+     "floor_state": "swept",
+     "session_low": true,
+     "room": {
+      "state": "NEAR",
+      "room_pct": 0.93,
+      "atr_days": 0.1,
+      "band": {
+       "kind": "supply",
+       "lo": 5.42,
+       "hi": 5.54,
+       "touches": 2
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 5.31,
+      "hi": 5.49
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 5.37,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "room"
+     ],
+     "reason_text": [
+      "only 0.9% to the first proven band overhead — the rule wants 5%"
+     ],
+     "reason_short": [
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": true,
+      "floor_state": "swept",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 5.31,
+      "hi": 5.49
+     },
+     "room": {
+      "state": "ROOM",
+      "room_pct": 0.9,
+      "room_pct_raw": 0.9310986964618215,
+      "target": 5.42,
+      "touches": 2,
+      "band": {
+       "kind": "supply",
+       "lo": 5.42,
+       "hi": 5.54,
+       "touches": 2
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "AUR",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "NEAR",
+      "band": {
+       "kind": "supply",
+       "lo": 5.42,
+       "hi": 5.54,
+       "height_pct": 2.23,
+       "touches": 2,
+       "strength": 52.0,
+       "proven": true
+      },
+      "height_pct": 2.23,
+      "distance_pct": 0.93,
+      "walls_above": 4,
+      "walls_to_high": 4,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 5.31,
+       "hi": 5.49,
+       "height_pct": 3.35,
+       "touches": 1,
+       "strength": 26.0,
+       "proven": false
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 3.35,
+      "second": {
+       "kind": "demand",
+       "lo": 5.09,
+       "hi": 5.27,
+       "height_pct": 3.35,
+       "touches": 1,
+       "strength": 19.0,
+       "proven": false
+      },
+      "gap_pct": 0.74,
+      "bands_below": 7
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 5.37,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 2.2% wide, 0.9% up · floor 3.4% wide, next demand band 0.7% below it"
+    }
+   },
+   "SPHD": {
+    "symbol": "SPHD",
+    "print": 48.68,
+    "fresh": false,
+    "coverage": "ondemand",
+    "bounce": null,
+    "room": {
+     "state": "IN_BAND",
+     "room_pct": 0.0,
+     "atr_days": 0.0,
+     "band": {
+      "kind": "supply",
+      "lo": 48.68,
+      "hi": 50.6,
+      "touches": 10
+     },
+     "at_highs": false
+    },
+    "demand": {
+     "lo": 48.49,
+     "hi": 49.74,
+     "touches": 5,
+     "in_band": true,
+     "distance_pct": 0.0,
+     "near": true
+    },
+    "explosive": {
+     "score": null,
+     "grade": null,
+     "components": [
+      {
+       "key": "intact",
+       "value": "intact",
+       "rank": null,
+       "label": "floor intact"
+      },
+      {
+       "key": "room_rank",
+       "value": 0.0,
+       "rank": null,
+       "label": "room to supply: 0.0%"
+      }
+     ],
+     "intact": true,
+     "floor_state": "intact",
+     "session_low": true,
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 0.0,
+      "atr_days": 0.0,
+      "band": {
+       "kind": "supply",
+       "lo": 48.68,
+       "hi": 50.6,
+       "touches": 10
+      },
+      "at_highs": false
+     },
+     "band": {
+      "lo": 48.49,
+      "hi": 49.74
+     },
+     "convention": null,
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "oos_d_hit5": null,
+      "oos_ci": null,
+      "mdl": 2.2218848542641836,
+      "script": "backend/scripts/explosive_study.py"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "print": {
+      "px": 48.68,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-15",
+      "n_episodes": 24922,
+      "survivor_key": null,
+      "mdl": null,
+      "script": "backend/scripts/entry_trigger_study.py"
+     },
+     "verdict": "BLOCKED",
+     "reasons": [
+      "room"
+     ],
+     "reason_text": [
+      "already inside overhead supply — no room to run"
+     ],
+     "reason_short": [
+      "room < 5%"
+     ],
+     "gates": {
+      "room_ok": false,
+      "prox_ok": true,
+      "floor_state": "intact",
+      "session_low": true
+     },
+     "drags": [],
+     "band": {
+      "lo": 48.49,
+      "hi": 49.74
+     },
+     "room": {
+      "state": "IN_BAND",
+      "room_pct": 3.9,
+      "room_pct_raw": 3.9441248972884173,
+      "target": 50.6,
+      "touches": 10,
+      "band": {
+       "kind": "supply",
+       "lo": 48.68,
+       "hi": 50.6,
+       "touches": 10
+      },
+      "weak": null
+     },
+     "survivor": null
+    },
+    "band_structure": {
+     "symbol": "SPHD",
+     "kind": "demand",
+     "applicable": true,
+     "ceiling": {
+      "state": "IN_BAND",
+      "band": {
+       "kind": "supply",
+       "lo": 48.68,
+       "hi": 50.6,
+       "height_pct": 3.94,
+       "touches": 10,
+       "strength": 100.0,
+       "proven": true
+      },
+      "height_pct": 3.94,
+      "distance_pct": 0.0,
+      "walls_above": 4,
+      "walls_to_high": 3,
+      "at_highs": false,
+      "untested_band": null,
+      "untested_distance_pct": null,
+      "in_untested_band": false
+     },
+     "floor": {
+      "band": {
+       "kind": "demand",
+       "lo": 48.49,
+       "hi": 49.74,
+       "height_pct": 2.57,
+       "touches": 5,
+       "strength": 50.0,
+       "proven": true
+      },
+      "in_band": true,
+      "distance_pct": 0.0,
+      "height_pct": 2.57,
+      "second": {
+       "kind": "demand",
+       "lo": 46.58,
+       "hi": 47.91,
+       "height_pct": 2.73,
+       "touches": 6,
+       "strength": 60.0,
+       "proven": true
+      },
+      "gap_pct": 1.19,
+      "bands_below": 2
+     },
+     "score": null,
+     "na_text": null,
+     "print": {
+      "px": 48.68,
+      "source": "scan"
+     },
+     "measured": {
+      "status": "no_signal",
+      "run_date": "2026-09-16",
+      "n_episodes": 24994,
+      "oos_lift": null,
+      "oos_ci": null,
+      "mdl": 2.7950260647449885,
+      "script": "backend/scripts/band_structure_study.py"
+     },
+     "stat": "ceiling 3.9% wide, price in it · floor 2.6% wide, next demand band 1.2% below it"
+    }
+   }
+  },
+  "requested": 14,
+  "covered": 14,
+  "pending": 0,
+  "unavailable": 0,
+  "disclaimer": "Configured price-structure heuristic (supply/demand bands from zone_store; touch / bounce / room thresholds are owner settings), not a book method. Coverage is partial (pending / unavailable rows are not CLEAR). Decision support, not a buy signal, not advice."
+ },
+ "growth_tags": {
+  "n": 21,
+  "tags": {
+   "PTGX": {
+    "sales": 3749.2,
+    "eps": 516.36,
+    "refused": false
+   },
+   "LQDA": {
+    "sales": 1842.7,
+    "eps": 251.02,
+    "refused": false
+   },
+   "ARR": {
+    "sales": 132.0,
+    "eps": 191.49,
+    "refused": false
+   },
+   "NLY": {
+    "sales": 105.8,
+    "eps": 120.0,
+    "refused": false
+   }
+  }
+ },
+ "promo_tags": {
+  "tags": {},
+  "measured": {
+   "as_of": "2026-09-22",
+   "primary": "pooled-5-open",
+   "n_5": 1231,
+   "n_date_clusters_5": 31,
+   "delta_5": -0.0477741596282352,
+   "ci_date_5": [
+    -0.07194734256908117,
+    -0.034083210376948773
+   ],
+   "ci_symbol_5": [
+    -0.06496903727591287,
+    -0.03431338961847651
+   ],
+   "placebo_median_5": -0.0252365930599369,
+   "oos_5": {
+    "n": 415,
+    "clusters": 8,
+    "sign": "−",
+    "ci": null
+   },
+   "oos_clean": false,
+   "rerun_after": "2026-10-12",
+   "verdict": "inverted — do-not-chase radar; not a source of entries",
+   "script": "backend/scripts/promo_tag_study.py",
+   "doc": "docs/catalysts/promo_tag_study_2026_09_21.md",
+   "artifact": "backend/scripts/promo_tag_measured.json"
+  },
+  "note": "Entered the scan universe through the promo-circuit lane — a pump account has pushed this name; the tag is promotion, never foresight. Not a pick."
+ }
+}

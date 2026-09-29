@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-28: "Once done can you fix this table too? so much empty space"
+  { id: 'bonde-table-density-2026-09-28',
+    label: '📈 Bonde table, tightened. You said: “Once done can you fix this table too? so much empty space”. '
+      + 'Each row now reads across on its first line — ticker ☆, company, ✨/pair badges and + Signals — with the 🎯 🚀 🧨 ⛔ 🪜 reads flowing on the next line and wrapping INSIDE the Ticker column instead of running over Today and Since report, and his 📋 criteria chips with ▸ all N on the third. '
+      + 'The four metric headers (Shares YoY, Cash − debt, EV / sales, FCF yield) have their own widths and sit over their numbers; on a narrow window the table scrolls sideways with the ticker pinned. '
+      + 'A section where NO name has an Episodic Pivot draws that column narrow as “EP” (hover for the full name) and it widens by itself when one appears — one pivot anywhere in the section keeps it wide. '
+      + 'Nothing was removed, re-sorted, filtered or gated.',
+    addedAt: '2026-09-28', route: '/chart-maps?tab=bonde' },
   // Ajay 2026-09-28: "Also create me tab for keylevel main. Sort them by
   // stocks that are near lower keylevels". Label verbatim from the
   // key_levels_tab spec §3.6.

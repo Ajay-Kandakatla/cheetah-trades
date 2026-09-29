@@ -5002,6 +5002,156 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'the 📈 Bonde table is dense and contained — every cell holds its own content (2026-09-28)',
+    file: 'src/components/BondeBoard.tsx',
+    // Ajay 2026-09-28: "Once done can you fix this table too? so much empty
+    // space". jsdom loads no stylesheet, so the CSS half of the fix is pinned
+    // here and measured by scripts/bonde-layout-probe.mjs in headless Chrome.
+    // docs/sepa/bonde_table_density_2026_09_28.md
+    checks: (src) => {
+      const errs = [];
+      // ── TSX ───────────────────────────────────────────────────────────────
+      if (!/className="bd-scroll"[\s\S]{0,200}className=\{`bd-rows/.test(src)) {
+        errs.push('each section must wrap .bd-rows in a .bd-scroll box — html overflow-x:hidden cuts a wide table');
+      }
+      if (!src.includes('className="bd-sym-l1"')) errs.push('the ticker cell lost line 1 (.bd-sym-l1)');
+      const l2 = src.indexOf('className="bd-sym-l2"');
+      if (l2 < 0) errs.push('the ticker cell lost line 2 (.bd-sym-l2)');
+      if (l2 >= 0 && src.indexOf('<BondePickChips', l2) < 0) errs.push('<BondePickChips must come after .bd-sym-l2 (line 3)');
+      if (!/pivotColumnEmpty\(all\)/.test(src)) errs.push('the EP collapse must be computed as pivotColumnEmpty(all)');
+      // (the declaration `pivotColumnEmpty(rows: …)` is a parameter, not a call)
+      if (/pivotColumnEmpty\((s\.)?rows\b(?!\s*:)|pivotColumnEmpty\(part/.test(src)) {
+        errs.push('the collapse must read the SERVED rows — a filter must never narrow the column');
+      }
+      if (!src.includes('aria-label={HEADS.pivot.text}')) errs.push('the EP head must keep aria-label={HEADS.pivot.text}');
+      const hs = src.indexOf('className="bd-row bd-hdr"');
+      const he = src.indexOf('{s.rows.map', hs);
+      const hdr = hs >= 0 && he > hs ? src.slice(hs, he) : '';
+      const nHead = (hdr.match(/className=\{?["'`]bd-(sym|today|since|sales|chips|pivot|metrics)\b/g) || []).length;
+      if (nHead !== 7) errs.push(`the head row must carry exactly 7 cells (found ${nHead})`);
+
+      // ── CSS ───────────────────────────────────────────────────────────────
+      const css = read('src/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+      const rules = [];
+      {
+        const stack = [];
+        let i = 0;
+        for (;;) {
+          const o = css.indexOf('{', i);
+          const c = css.indexOf('}', i);
+          if (c < 0 && o < 0) break;
+          if (o < 0 || (c >= 0 && c < o)) { stack.pop(); i = c + 1; continue; }
+          const pre = css.slice(i, o).split(';').pop().trim();
+          if (pre.startsWith('@')) { stack.push(pre); i = o + 1; continue; }
+          const q = css.indexOf('}', o);
+          rules.push({ sels: pre.split(',').map((x) => x.replace(/\s+/g, ' ').trim()),
+                       body: css.slice(o + 1, q), media: stack[stack.length - 1] || null });
+          i = q + 1;
+        }
+      }
+      const exact = (sel) => rules.filter((r) => r.sels.length === 1 && r.sels[0] === sel);
+      const listed = (sel) => rules.filter((r) => r.sels.includes(sel));
+      const has = (rs, re) => rs.some((r) => re.test(r.body));
+      // (a) ONE track template
+      const tracks = exact('.bd-row').filter((r) => /grid-template-columns/.test(r.body));
+      if (tracks.length !== 1) {
+        errs.push(`exactly ONE .bd-row rule may set grid-template-columns (found ${tracks.length}) — a stale track layer is back`);
+      } else {
+        const v = /grid-template-columns:\s*([^;]*)/.exec(tracks[0].body)[1].trim();
+        const parts = []; let depth = 0; let cur = '';
+        for (const ch of v) {
+          if (ch === '(') depth++;
+          if (ch === ')') depth--;
+          if (/\s/.test(ch) && depth === 0) { if (cur) parts.push(cur); cur = ''; } else cur += ch;
+        }
+        if (cur) parts.push(cur);
+        if (parts.length !== 7) errs.push(`the .bd-row track list must have 7 entries (found ${parts.length})`);
+      }
+      // (b) heads never hidden
+      if (has(listed('.bd-row.bd-hdr'), /display:\s*none/)) errs.push('no rule may hide .bd-row.bd-hdr — unlabelled numbers are the bug');
+      // (c) the scroll box
+      const sc = exact('.bd-scroll');
+      if (!has(sc, /overflow-x:\s*auto/) || !has(sc, /min-width:\s*0/)) errs.push('.bd-scroll must have overflow-x: auto and min-width: 0');
+      // (d) the min-width sum lives on .bd-rows
+      const rw = exact('.bd-rows').find((r) => /min-width:\s*calc\(/.test(r.body));
+      if (!rw) errs.push('.bd-rows must carry min-width: calc(…) over the track widths');
+      else {
+        for (const v of ['sym', 'today', 'since', 'sales', 'char', 'pivot', 'metrics']) {
+          if (!rw.body.includes(`--bd-w-${v}`)) errs.push(`.bd-rows min-width must name --bd-w-${v}`);
+        }
+      }
+      // (e) the EP collapse
+      if (!has(exact('.bd-rows.bd-rows--pivot-empty'), /--bd-w-pivot\s*:/)) errs.push('.bd-rows.bd-rows--pivot-empty must set --bd-w-pivot');
+      // (f) the scoped wrap
+      const wrap = listed('.bd-sym .cm-badge');
+      if (!has(wrap, /white-space:\s*normal/) || !has(wrap, /overflow-wrap:\s*anywhere/)) {
+        errs.push('.bd-sym .cm-badge must wrap (white-space: normal; overflow-wrap: anywhere) — the 🪜 sentence painted over Today');
+      }
+      // (g)
+      if (!has(exact('.bd-row > *'), /min-width:\s*0/)) errs.push('.bd-row > * must have min-width: 0');
+      // (h) sticky + opaque
+      const pin = exact('.bd-row > .bd-sym');
+      for (const [re, what] of [[/position:\s*sticky/, 'position: sticky'], [/left:\s*0/, 'left: 0'],
+                                [/z-index:\s*1\b/, 'z-index: 1'], [/background:\s*var\(--bg/, 'background: var(--bg)']]) {
+        if (!has(pin, re)) errs.push(`.bd-row > .bd-sym must have ${what}`);
+      }
+      // (i) the overlapping-head rule is gone
+      if (rules.some((r) => r.sels.some((x) => /\.bd-m\b/.test(x)) && /min-width:\s*52px/.test(r.body))) {
+        errs.push('a .bd-m rule has min-width: 52px again — that is what made the metric heads overlap');
+      }
+      if (!has(exact('.bd-row.bd-hdr .bd-m'), /white-space:\s*normal/)) errs.push('.bd-row.bd-hdr .bd-m must have white-space: normal (heads wrap, never overlap)');
+      // (j)
+      const mt = exact('.bd-metrics');
+      if (!has(mt, /display:\s*grid/) || !has(mt, /repeat\(4,/)) errs.push('.bd-metrics must be a 4-column grid (display: grid; repeat(4, …))');
+      // (k) NEGATIVE: the base pill is untouched
+      if (!has(exact('.cm-badge').filter((r) => !r.media), /white-space:\s*nowrap/)) {
+        errs.push('the base .cm-badge rule must keep white-space: nowrap — the wrap fix is scoped to .bd-sym');
+      }
+      // (l)
+      if (!has(exact('.bd-sym-l2:empty'), /display:\s*none/)) errs.push('.bd-sym-l2:empty must be display: none');
+      // (m)
+      const base = exact('.bd-row').filter((r) => !r.media && /display:\s*grid/.test(r.body));
+      if (!has(base, /align-items:\s*start/)) errs.push('the base .bd-row block must be align-items: start (each row reads across on its first line)');
+      if (has(exact('.bd-row'), /align-items:\s*center/)) errs.push('a .bd-row rule is align-items: center again');
+      // (n) "▸ all N" in the Ticker cell: two tracks at EVERY width, entries
+      //     3+ (value / source / link) pinned to the second track. Five tracks
+      //     in the cell broke the fold letter by letter (critic 2026-09-28).
+      const pr = exact('.bd-sym .bd-pick-row').filter((r) => !r.media);
+      if (!has(pr, /grid-template-columns:\s*14px\s+minmax\(0,\s*1fr\)\s*(;|$)/)) {
+        errs.push('.bd-sym .bd-pick-row must be grid-template-columns: 14px minmax(0, 1fr) at every width');
+      }
+      if (!has(exact('.bd-sym .bd-pick-row > :nth-child(n+3)'), /grid-column:\s*2\b/)) {
+        errs.push('.bd-sym .bd-pick-row > :nth-child(n+3) must be grid-column: 2 — auto-placement drops every other entry into the 14px glyph track');
+      }
+      // NEGATIVE: no .bd-sym .bd-pick-row rule, in any media block, brings back a 3+ track template
+      for (const r of listed('.bd-sym .bd-pick-row')) {
+        const m = /grid-template-columns:\s*([^;]*)/.exec(r.body);
+        if (!m) continue;
+        const n = m[1].trim().replace(/\([^)]*\)/g, '()').split(/\s+/).filter(Boolean).length;
+        if (n > 2) errs.push(`.bd-sym .bd-pick-row has a ${n}-track template${r.media ? ` in ${r.media}` : ''} — the fold breaks letter by letter`);
+      }
+
+      // ── ✨ entry + probe ───────────────────────────────────────────────────
+      const nf = read('src/lib/newFeatures.ts');
+      const at = nf.indexOf("id: 'bonde-table-density-2026-09-28'");
+      if (at < 0) errs.push("newFeatures.ts lost the ✨ entry id: 'bonde-table-density-2026-09-28'");
+      else {
+        const entry = nf.slice(at, nf.indexOf('addedAt', at) + 80);
+        if (!entry.includes("route: '/chart-maps?tab=bonde'")) errs.push("the ✨ entry must route to '/chart-maps?tab=bonde'");
+        if (!entry.includes('so much empty space')) errs.push('the ✨ entry must quote his ask ("so much empty space")');
+        if (/bounce/i.test(entry)) errs.push('the ✨ entry says "bounce"');
+      }
+      let probe = '';
+      try { probe = read('scripts/bonde-layout-probe.mjs'); } catch { errs.push('scripts/bonde-layout-probe.mjs is missing'); }
+      if (probe) {
+        if (!probe.includes('[1440, 1280, 1024, 768, 390]')) errs.push('the probe must measure [1440, 1280, 1024, 768, 390]');
+        if (!probe.includes('C10') || !probe.includes('C11')) errs.push('the probe must run C10 (painted) and C11 (no mid-word break)');
+        if (probe.includes('elementFromPoint')) errs.push('the probe must not use elementFromPoint — hit-testing cannot prove paint');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

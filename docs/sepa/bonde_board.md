@@ -575,3 +575,8 @@ rules panel.
 - `docs/sepa/since_report_column_2026_09_21.md` — the "since the qualifying
   filing" column on this board and on 🚀 Explosive Growth (his item #3 from the
   same 2026-09-21 research).
+
+## 12. Table density (2026-09-28)
+
+- `docs/sepa/bonde_table_density_2026_09_28.md` — his "so much empty space" fix: three-line ticker cell, one track template, sideways scroll with the Ticker pinned, the served-rows "EP" collapse.
+- Measured by `frontend/scripts/bonde-layout-probe.mjs` (headless Chrome, 1440/1280/1024/768/390) on snapshots written by `BondeBoard.layout.test.tsx`.
