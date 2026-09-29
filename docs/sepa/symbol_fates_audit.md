@@ -86,3 +86,33 @@ fetch each makes the splice land so both can pass the 220-bar floor:
 path), `tests/test_scan_skip_accounting.py` (skip reasons, absorb rules,
 recovered_count), `tests/test_catalysts_ghosts.py` (ghost drop + live
 movers untouched).
+
+## §2026-09-29 — reused tickers and a reorg (Dual Momentum data audit)
+
+A new fate class: the ticker is **alive**, but its frame begins with a
+**different security's** bars. The Dual Momentum page ranked WOLF +2,248.76%,
+BNY +1,435% and SPCX +474.95% (12m) on those heads. Full evidence and the
+top-50 + 29-name pool cross-check: `docs/sepa/dual_momentum_data_audit_2026_09_29.md`.
+
+- **`sepa/symbols.py` `FIRST_SESSION`** (new curated map, evidence per entry):
+  WOLF 2025-09-29 (Ch.11 reorg, new FIGI BBG01XLDHDP0), SPCX 2026-06-12 (SPAC
+  ETF → SpaceX), SOLS 2025-10-30 (OTC shell → Solstice). Disjoint from
+  RENAMES keys, targets and DELISTED (test-pinned).
+- **Two RENAMES entries** (boundary bars checked, same FIGI): BK → BNY
+  2026-05-21 (137.16 → 136.46), AMRK → GOLD 2025-12-02 (29.25 → 30.13). Both
+  new symbols' earlier bars belonged to another security (a muni fund,
+  Barrick) behind a 104- / 208-day hole. **Ships only with the one-time
+  refetch** (HIS CALL #6):
+
+      docker exec cheetah-market-app-api-1 python -c "from sepa import prices; prices.load_prices('BNY', force=True); prices.load_prices('GOLD', force=True)"
+
+- **`sepa/prices._cut_foreign_head`**: a curated, read-time cut (fetch, all
+  three `load_prices` returns, `bulk_cached_frames`). A renamed symbol's head
+  is kept only when it passes `splice_history`'s own gap and ratio tests. A
+  symbol in neither map comes back as the same object. App-wide reach: until
+  the refetch, BNY (~90 bars) and GOLD (~208 bars) drop out of every 200-day /
+  52-week read. Readers that bypass `load_prices` / `bulk_cached_frames`
+  (`supply_demand/hot_pullback.py`, `supply_demand/premarket_entry.py`,
+  `political/watch.py`, `studies/*`) are not covered.
+- **Finding the next one:** `backend/scripts/dm_frame_audit.py` (read-only).
+- **Tests:** `backend/tests/test_foreign_head_cut_2026_09_29.py`.

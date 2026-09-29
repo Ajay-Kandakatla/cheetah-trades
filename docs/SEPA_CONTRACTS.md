@@ -519,6 +519,8 @@ point is the breakout day itself (p.203). Contract: `test_breakout_window.py`
 > weekend / holiday / transient-patch-gap noise. `prices.is_stale(df, asof=…)`;
 > regression in `test_phantom_bar.py` (`test_is_stale_*`).
 
+> **Foreign head cut (2026-09-29).** `load_prices`/`bulk_cached_frames` drop a curated foreign head: bars of a different security under a reused / reorganised ticker (`sepa.symbols.FIRST_SESSION`, and a RENAMES target's head that fails `splice_history`'s gap/ratio tests), via `prices._cut_foreign_head`; a symbol in neither map is returned unchanged. Evidence: `docs/sepa/dual_momentum_data_audit_2026_09_29.md`; regression `backend/tests/test_foreign_head_cut_2026_09_29.py`.
+
 ### 5d. The green **ENTER** verdict requires Stage 2 (2026-06-02)
 
 The per-card **decision verdict** (`entry_exit.decision` — the green/amber banner
