@@ -1128,3 +1128,106 @@ describe('Alerts page — the 🧬 medical-catalysts pass (2026-09-29)', () => {
     expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 5 passes');
   });
 });
+
+/* 2026-09-29 — every entry of a consolidated push, each ticker its own link.
+ * Ajay, on "⚡ Tape burst at a zone — CRWV +7 more": "I am unable to see the
+ * other that are hiddedn her … Can you show them all and make all the tickers
+ * clicable individually?" Rows below are as push/recent.served_items serves
+ * them. */
+const TF_SYMS = ['CRWV', 'KLAC', 'NVDA', 'AVGO', 'CRWV', 'KLAC', 'NVDA', 'AVGO'];
+const tfLine = (s: string, i: number) => `${s} 13:${String(10 + i).padStart(2, '0')}:00 — $1.0M buy burst, buyers pushing INTO the supply ceiling`;
+const TF_NEW = {
+  _id: 'tf1', ts: T('2026-09-05T14:17:30Z'), ts_iso: '2026-09-05T14:17:30+00:00',
+  kind: 'trade_flash', ticker: null, tickers: [], source: 'push', sent: 1, failed: 0, total: 1,
+  title: '⚡ Tape burst at a zone — CRWV +7 more', url: '/sepa/CRWV?tab=tape&from=supply-demand',
+  body: TF_SYMS.slice(0, 4).map(tfLine).join('\n'),
+  items: TF_SYMS.map((s, i) => ({ symbol: s, text: tfLine(s, i), url: `/sepa/${s}?tab=tape&from=supply-demand`, pushed: i < 4 })),
+  items_not_stored: 0,
+};
+const HIS_LINES = [
+  'CRWV 13:17:30 — $1.8M sell burst, sellers defending the supply ceiling',
+  'CRWV 13:14:30 — $1.0M buy burst, buyers pushing INTO the supply ceiling',
+  'CRWV 13:15:40 — $897K buy burst, buyers pushing INTO the supply ceiling',
+  'KLAC 13:14:30 — $562K buy burst, buyers pushing INTO the supply ceiling',
+];
+const TF_LEGACY = {
+  ...TF_NEW, _id: 'tf0', body: HIS_LINES.join('\n'), sent: 0, total: 0,
+  items: HIS_LINES.map((t) => {
+    const s = t.split(' ')[0];
+    return { symbol: s, text: t, url: `/sepa/${s}?tab=tape&from=supply-demand`, pushed: true };
+  }),
+  items_not_stored: 4,
+};
+const KL_ROW = {
+  _id: 'kl1', ts: T('2026-09-05T13:00:00Z'), ts_iso: '2026-09-05T13:00:00+00:00',
+  kind: 'key_level_alert', ticker: null, tickers: ['PCT'], source: 'push', sent: 1, failed: 0, total: 1,
+  title: '🔑 Key levels closed through — PCT over prior-month high', url: '/chart-maps?tab=support&symbol=PCT',
+  body: 'PCT closed over prior-month high $1\nUnmeasured — a close through a level, not a signal.',
+  items: [
+    { symbol: 'PCT', text: 'PCT closed over prior-month high $1', url: '/chart-maps?tab=support&symbol=PCT', pushed: true },
+    { symbol: null, text: 'Unmeasured — a close through a level, not a signal.', url: null, pushed: true },
+  ],
+  items_not_stored: 0,
+};
+const BRK_ROW = {
+  _id: 'brk1', ts: T('2026-09-05T12:30:00Z'), ts_iso: '2026-09-05T12:30:00+00:00',
+  kind: 'demand_alert', ticker: null, tickers: ['BRK.B'], source: 'push', sent: 1, failed: 0, total: 1,
+  title: '🧲 Nearing demand — BRK.B', url: '/chart-maps?tab=zones&phase=approaching',
+  body: 'BRK.B $480 · 2% above $470–475 · $1.0T',
+  items: [{ symbol: 'BRK.B', text: 'BRK.B $480 · 2% above $470–475 · $1.0T', url: '/sepa/BRK.B?tab=supply', pushed: true }],
+  items_not_stored: 0,
+};
+
+describe('Alerts page — every entry of a consolidated push (2026-09-29)', () => {
+  it('lists all 8 bursts, each ticker its own tape link from alerts, with the off-push divider', async () => {
+    stubFetch({ rows: [TF_NEW] });
+    const { container } = draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    const lines = within(rows[0]).getAllByTestId('alert-item');
+    expect(lines).toHaveLength(8);
+    expect(lines[4].textContent).toBe(tfLine('CRWV', 4));   // line 5, never on the phone
+    expect(lines[4]).toBeVisible();
+    const links = within(rows[0]).getAllByRole('link', { name: /^(CRWV|KLAC|NVDA|AVGO)$/ });
+    expect(links).toHaveLength(8);
+    for (const a of links) {
+      expect(a.getAttribute('href')).toMatch(/^\/sepa\/(CRWV|KLAC|NVDA|AVGO)\?tab=tape&from=alerts/);
+      expect(a.textContent).toMatch(/^(CRWV|KLAC|NVDA|AVGO)$/);
+    }
+    expect(within(rows[0]).getByText('+4 more not in the notification:')).toBeInTheDocument();
+    // NEGATIVE: the header chip strip is gone on an itemized row
+    expect(within(rows[0]).queryByTestId('alert-tks')).toBeNull();
+    expect(container.querySelectorAll('a a')).toHaveLength(0);
+  });
+
+  it('his legacy row: 4 links and "+4 more not stored in this push", no off-push divider', async () => {
+    stubFetch({ rows: [TF_LEGACY] });
+    draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    const links = within(rows[0]).getAllByRole('link', { name: /^(CRWV|KLAC)$/ });
+    expect(links).toHaveLength(4);
+    expect(within(rows[0]).getByText('+4 more not stored in this push')).toBeInTheDocument();
+    // NEGATIVE: every legacy line was on the phone
+    expect(within(rows[0]).queryByTestId('alert-items-offpush')).toBeNull();
+  });
+
+  it('a key-level entry links to its Support chart; a class share keeps its dot', async () => {
+    stubFetch({ rows: [KL_ROW, BRK_ROW] });
+    draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    const pct = within(rows[0]).getByRole('link', { name: 'PCT' });
+    expect(pct.getAttribute('href')).toBe('/chart-maps?tab=support&symbol=PCT');
+    expect(within(rows[0]).getByText('Unmeasured — a close through a level, not a signal.')).toBeInTheDocument();
+    const brk = within(rows[1]).getByRole('link', { name: 'BRK.B' });
+    expect(brk.getAttribute('href')!.startsWith('/sepa/BRK.B?tab=supply&from=alerts')).toBe(true);
+  });
+
+  it('NEGATIVE: items: [] falls back to the body text and the header chips', async () => {
+    stubFetch({ rows: [{ ...DIGEST_ROW, items: [], items_not_stored: 0 }] });
+    const { container } = draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    expect(within(rows[0]).getByText('AAA, BBB, CCC · pushed 09:05 ET')).toBeInTheDocument();
+    expect(within(rows[0]).getByTestId('alert-tks')).toBeInTheDocument();
+    expect(within(rows[0]).queryByTestId('alert-items')).toBeNull();
+    expect(container.querySelectorAll('a a')).toHaveLength(0);
+  });
+});

@@ -15,6 +15,23 @@ CONTACT_EMAIL = "mailto:cheetah@example.com"  # required by VAPID — placeholde
 _vapid_obj_cache = None
 
 
+# Keys a composer adds for the LOG only (2026-09-29, Ajay: "I am unable to see
+# the other that are hiddedn her … show them all"). `items` lists EVERY entry a
+# consolidated push is about; push_history stores it for /alerts, but a device
+# never receives it: 44 items x ~100 B would break the ~4 KB Web Push ceiling
+# and pywebpush would fail the whole notification.
+LOG_ONLY_KEYS = frozenset({"items"})   # logged to push_history, never sent to a device
+
+
+def device_payload(payload: dict) -> dict:
+    """The dict a DEVICE receives: `payload` minus LOG_ONLY_KEYS. A NEW dict when a
+    key is stripped (the caller's dict, which history records, is never mutated);
+    the same object when there is nothing to strip."""
+    if not isinstance(payload, dict) or not any(k in payload for k in LOG_ONLY_KEYS):
+        return payload
+    return {k: v for k, v in payload.items() if k not in LOG_ONLY_KEYS}
+
+
 def _vapid_obj():
     """Build a Vapid object from the PEM. pywebpush 2.0 changed vapid_private_key
     to expect DER-base64 (not PEM) when passed as a string, so we instantiate
@@ -77,10 +94,11 @@ def send_to_all(payload: dict, kind: Optional[str] = None) -> dict:
         log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
         return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind)
+    device = device_payload(payload)
     sent = 0
     failed = 0
     for sub in targets:
-        ok = _send_one(sub, payload)
+        ok = _send_one(sub, device)
         if ok:
             sent += 1
         else:
@@ -110,10 +128,11 @@ def send_to_user(user_email: str, payload: dict, kind: Optional[str] = None) -> 
         log.info("push.sender: kind=%s dropped — market closed (%s)", kind, reason)
         return {"sent": 0, "failed": 0, "total_targets": 0, "skipped": reason}
     targets = subs.list_subscriptions(filter_kind=kind, user_email=user_email)
+    device = device_payload(payload)
     sent = 0
     failed = 0
     for sub in targets:
-        ok = _send_one(sub, payload)
+        ok = _send_one(sub, device)
         if ok:
             sent += 1
         else:

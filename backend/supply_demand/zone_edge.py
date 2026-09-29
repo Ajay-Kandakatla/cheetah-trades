@@ -445,19 +445,24 @@ def break_digest_message(items: list) -> Optional[dict]:
     title = f"🚀 Breaking resistance — {lead_txt}"
     if len(items) > 1:
         title += f" +{len(items) - 1} more"
-    lines = []
-    for it in items[:DIGEST_MAX]:
+    # EVERY name gets its line (2026-09-29, /alerts lists them all as `items`,
+    # log-only — push.sender strips it); the body still prints DIGEST_MAX.
+    all_lines = []
+    for it in items:
         d, band = float(it["dist_pct"]), it["band"]
         where = (f"broke {_band_txt(band)} (+{abs(d):.1f}%)" if it["tier"] == "broke"
                  else f"{d:g}% under {_band_txt(band)}")
         room = f" · {AG.room_txt(it.get('room'))}" if "room" in it else ""
-        lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} · "
-                     f"tested {int(band.get('touches') or 0)}x{room} · {DA.fmt_cap(it.get('cap'))}")
+        all_lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} · "
+                         f"tested {int(band.get('touches') or 0)}x{room} · {DA.fmt_cap(it.get('cap'))}")
+    lines = all_lines[:DIGEST_MAX]
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more")
     url = "/chart-maps?tab=deep_demand"
     return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url},
-            "kind": KIND_BREAK}
+            "kind": KIND_BREAK,
+            "items": [{"symbol": str(it["symbol"]).upper(), "text": ln}
+                      for it, ln in zip(items, all_lines)]}
 
 
 def tape_tag(session: Optional[str]) -> str:

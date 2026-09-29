@@ -106,6 +106,10 @@ def notify_juggernauts(*, juggernauts: list[dict],
         "url":  "/watchlist",
         "kind": "juggernaut_watchlist",
         "ticker": None,
+        # EVERY juggernaut, in body order (2026-09-29, /alerts lists them all).
+        # Log-only: push.sender strips it before the device payload.
+        "items": [{"symbol": j["ticker"], "text": ln}
+                  for j, ln in zip(juggernauts, lines)],
     }
     # Goes through sender.send_to_all → also routed to Mac SSE via the
     # mac_outbox fan-out in notify._send_push (one notification stream).
@@ -143,6 +147,10 @@ def notify_leaderboard_breakout(*, broke_out: list[dict], today_et: str) -> dict
         "url":  "/leaderboard",
         "kind": "leaderboard_breakout",
         "ticker": broke_out[0]["symbol"] if len(broke_out) == 1 else None,
+        # EVERY breakout, in body order (2026-09-29, /alerts lists them all).
+        # Log-only: push.sender strips it before the device payload.
+        "items": [{"symbol": b["symbol"], "text": ln}
+                  for b, ln in zip(broke_out, lines)],
     }
     return sender.send_to_all(payload, kind="leaderboard_breakout")
 

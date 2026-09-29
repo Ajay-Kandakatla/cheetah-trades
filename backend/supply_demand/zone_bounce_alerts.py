@@ -325,21 +325,26 @@ def digest_message(items: list) -> dict:
     title = f"🪃 Reversal off demand levels — {lead['symbol']} +{lead['hit']['bounce_pct']:.1f}%"
     if len(items) > 1:
         title += f" +{len(items) - 1} more"
-    lines = []
     # `tickers` (2026-09-20) — the names the body lists, strongest first, so
     # each one is its own link on the alert surfaces.
     tickers = [str(it["symbol"]).upper() for it in items[:DIGEST_MAX]]
-    for it in items[:DIGEST_MAX]:
+    # EVERY name gets its line (2026-09-29, /alerts lists them all as `items`,
+    # log-only — push.sender strips it); the body still prints DIGEST_MAX.
+    all_lines = []
+    for it in items:
         role = "broken supply" if str(it["band"].get("kind") or "").lower() == "supply" else "demand"
         when = f" (low {it['low_time']})" if it.get("low_time") else ""
-        lines.append(f"{it['symbol']} ${float(it['print']):g} · +{it['hit']['bounce_pct']:.1f}% "
-                     f"off {_band_txt(it['band'])}{when} · {_room_txt(it.get('room'))} · "
-                     f"{role} · {fmt_cap(it.get('cap'))}")
+        all_lines.append(f"{it['symbol']} ${float(it['print']):g} · +{it['hit']['bounce_pct']:.1f}% "
+                         f"off {_band_txt(it['band'])}{when} · {_room_txt(it.get('room'))} · "
+                         f"{role} · {fmt_cap(it.get('cap'))}")
+    lines = all_lines[:DIGEST_MAX]
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more")
     url = "/chart-maps?tab=zones"
     return {"title": title, "body": "\n".join(lines), "url": url,
-            "data": {"url": url}, "kind": KIND, "ticker": None, "tickers": tickers}
+            "data": {"url": url}, "kind": KIND, "ticker": None, "tickers": tickers,
+            "items": [{"symbol": str(it["symbol"]).upper(), "text": ln}
+                      for it, ln in zip(items, all_lines)]}
 
 
 # --------------------------------------------------------------------------

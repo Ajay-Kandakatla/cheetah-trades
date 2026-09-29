@@ -301,12 +301,14 @@ def digest_message(items: list) -> Optional[dict]:
     has_at = any(it["hit"].get("tier") == "at" for it in items)
     head = "🧲 Demand zone — " if has_at else "🧲 Nearing demand — "
     title = head + lead + (f" +{len(items) - 1} more" if len(items) > 1 else "")
-    lines = []
     # `tickers` (2026-09-20) — one clickable chip per name on every alert
     # surface, in the order the BODY lists them (dist_pct asc, capped at
     # DIGEST_MAX). The "+N more on the board" tail names nobody.
     tickers = [str(it["symbol"]).upper() for it in items[:DIGEST_MAX]]
-    for it in items[:DIGEST_MAX]:
+    # EVERY name gets its line (2026-09-29, /alerts lists them all as `items`,
+    # log-only — push.sender strips it); the body still prints DIGEST_MAX.
+    all_lines = []
+    for it in items:
         where = ("in demand" if it["hit"].get("state") == "in"
                  else f"{it['hit']['dist_pct']:g}% above")
         ap = it.get("approach") if isinstance(it.get("approach"), dict) else None
@@ -315,13 +317,16 @@ def digest_message(items: list) -> Optional[dict]:
         room = f" · {AG.room_txt(it.get('room'))}" if "room" in it else ""
         mood_s = AG.mood_txt(it.get("mood"))
         room = room + (f" · {mood_s}" if mood_s else "")
-        lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} "
-                     f"{_band_txt(it['band'])}{room} · {fmt_cap(it.get('cap'))}")
+        all_lines.append(f"{it['symbol']} ${float(it['last']):g} · {where} "
+                         f"{_band_txt(it['band'])}{room} · {fmt_cap(it.get('cap'))}")
+    lines = all_lines[:DIGEST_MAX]
     if len(items) > DIGEST_MAX:
         lines.append(f"+{len(items) - DIGEST_MAX} more on the board")
     url = "/chart-maps?tab=zones&phase=approaching"
     return {"title": title, "body": "\n".join(lines), "url": url, "data": {"url": url},
-            "kind": KIND, "ticker": None, "tickers": tickers}
+            "kind": KIND, "ticker": None, "tickers": tickers,
+            "items": [{"symbol": str(it["symbol"]).upper(), "text": ln}
+                      for it, ln in zip(items, all_lines)]}
 
 
 # --------------------------------------------------------------------------

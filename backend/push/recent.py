@@ -27,7 +27,10 @@ Query params (all optional; absent = the old feed):
 
 Row shape (normalized across both sources, unchanged apart from `tickers`):
     {_id, ts, ts_iso, title, body, kind, ticker, tickers, url,
-     source: 'push' | 'breakout', sent, failed, total, dismissed?, repeat?}
+     source: 'push' | 'breakout', sent, failed, total, dismissed?, repeat?,
+     items?, items_not_stored?}
+`items` / `items_not_stored` (2026-09-29) are present ONLY on a push row that
+lists linkable lines — see ``served_items``.
 `repeat` is present ONLY on a survivor of a fold:
     {count, first_ts, first_ts_iso, last_ts, truncated, line}
 `line` is the whole sentence — every reader prints it verbatim and none of
@@ -98,6 +101,297 @@ DIGEST_KINDS = frozenset({
 # UHAL-B, BF-B, LEN-B, GEF-B); the dot form is kept for a Massive-spelled body.
 # Lower case never matches, so "nvda" in prose is not a ticker.
 _TOKEN = re.compile(r"^[A-Z]{1,5}(?:[.-][A-Z])?$")
+
+# --------------------------------------------------------------------------
+# Every item of a consolidated push (2026-09-29)
+# --------------------------------------------------------------------------
+# Ajay, on the "⚡ Tape burst at a zone — CRWV +7 more" card: "I am unable to
+# see the other that are hiddedn her … Can you show them all and make all the
+# tickers clicable individually?". The composers now LOG every entry as
+# `items` (push.sender strips it from the device payload); this module serves
+# them, each line's leading ticker linked. docs/alerts/every_item_2026_09_29.md
+DEFAULT_ITEM_URL = "/sepa/{sym}?tab=supply"       # the page's own chip destination
+# kind -> per-ticker page for one ITEM line. Mirrors each kind's single-push url
+# (pinned by tests against zone_edge._url, key_level_alerts.url_for, the
+# trade_flash / med_catalyst builders). A kind here ALSO opts its OLD rows
+# (no stored items) into the body-line parse.
+ITEM_URL_BY_KIND = {
+    "trade_flash":          "/sepa/{sym}?tab=tape&from=supply-demand",
+    "demand_alert":         DEFAULT_ITEM_URL,
+    "zone_bounce_alert":    DEFAULT_ITEM_URL,
+    "supply_break_alert":   DEFAULT_ITEM_URL,
+    "key_level_alert":      "/chart-maps?tab=support&symbol={sym}",
+    "med_catalyst":         "/sepa/{sym}?tab=catalyst",
+    "juggernaut_watchlist": DEFAULT_ITEM_URL,
+    "leaderboard_breakout": DEFAULT_ITEM_URL,
+    "accumulation_change":  DEFAULT_ITEM_URL,
+}
+ITEM_KINDS = frozenset(ITEM_URL_BY_KIND)
+_LEAD_MARK = re.compile(r"^[^A-Za-z0-9+$]+")   # emoji / spaces / bullets before a line's first token
+_MORE_TAIL = re.compile(r"^\+(\d+) more\b")    # "+3 more on the board"
+_TITLE_MORE = re.compile(r"\+(\d+) more\b")    # "… CRWV +7 more"
+
+
+def lead_token(text: str) -> str:
+    """First token after stripping a leading marker (_LEAD_MARK), cut at '(' and
+    rstripped of ',:;' (and a closing ')', so "(NVDA) x" reads NVDA). '' when
+    nothing is left. '🆕 NVDA · $1' -> 'NVDA'; '+3 more' -> '+3';
+    '$68.39 · …' -> '$68.39'."""
+    if not isinstance(text, str):
+        return ""
+    t = _LEAD_MARK.sub("", text.strip())
+    if not t:
+        return ""
+    return t.split(" ")[0].split("(")[0].rstrip(",:;)")
+
+
+def lead_symbol(text: str, known: frozenset) -> Optional[str]:
+    """lead_token when it matches _TOKEN AND is in `known`, else None. Lower case
+    never matches."""
+    tok = lead_token(text)
+    if tok and _TOKEN.match(tok) and tok in known:
+        return tok
+    return None
+
+
+def item_url(kind: Optional[str], sym: str) -> str:
+    return ITEM_URL_BY_KIND.get(kind or "", DEFAULT_ITEM_URL).format(sym=sym)
+
+
+def _stored_items(raw) -> list:
+    """The row's stored `items`: dict entries with a non-blank str `text`,
+    `symbol` upper-cased when a non-blank str else None. [] otherwise."""
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for it in raw:
+        if not isinstance(it, dict):
+            continue
+        text = it.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        sym = it.get("symbol")
+        sym = sym.strip().upper() if isinstance(sym, str) and sym.strip() else None
+        out.append({"symbol": sym, "text": text.strip()})
+    return out
+
+
+def _tail_rest(line: str) -> Optional[str]:
+    """For a body's own "+N more…" tail line: '' when it is a PURE tail marker
+    ("+3 more", "+3 more on the board", "+3 more on /watchlist"), else what
+    rides after it — zone_edge._tag_msg appends " · pre-mkt" to the body END,
+    so "+3 more · pre-mkt" keeps "pre-mkt" (a session tag is never dropped).
+    None when the line is not a tail at all."""
+    m = _MORE_TAIL.match(line)
+    if not m:
+        return None
+    rest = line[m.end():]
+    if rest.startswith(" on "):
+        cut = rest.find(" · ")
+        rest = "" if cut < 0 else rest[cut:]
+    rest = rest.strip()
+    if rest.startswith("·"):
+        rest = rest[1:].strip()
+    return rest
+
+
+def _body_lines(row: dict) -> list:
+    body = row.get("body")
+    return ([ln.strip() for ln in body.split("\n") if ln.strip()]
+            if isinstance(body, str) and body else [])
+
+
+def served_items(row: dict, known: frozenset) -> Optional[tuple]:
+    """(items, not_stored) for one push row, or None (= the row renders its body as today).
+    items: [{"symbol": str|None, "text": str, "url": str|None, "pushed": bool}]
+
+    1. stored = the row's valid `items` ([] when absent / not a list).
+    2. no stored items = a LEGACY row: only a kind in ITEM_KINDS, and never a
+       single (a non-blank `ticker`).
+    3. the body's lines come first, verbatim (`pushed: True`); a line is
+       matched POSITIONALLY to the next stored entry when it IS that entry's
+       text, or its leading token equals the entry's symbol case-insensitively
+       (the builder's own symbol is trusted even outside _TOKEN); a None
+       symbol or a lower-case body therefore never stalls the walk into
+       repeating lines. Any other line links its leading token only when it
+       is known. With stored items, the body's own "+N more…" tail is dropped
+       (the unpushed entries below ARE those names — "more" is never said
+       twice); a session tag riding on it survives (``_tail_rest``).
+    4. the stored items the body never printed follow (`pushed: False`).
+    5. not_stored: stored -> items_total - len(stored); legacy -> the body's
+       "+N more" tail, else the title's "+N more" minus the lines printed.
+    """
+    kind = row.get("kind")
+    stored = _stored_items(row.get("items"))
+    if not stored:
+        if kind not in ITEM_KINDS:
+            return None
+        tick = row.get("ticker")
+        if isinstance(tick, str) and tick.strip():
+            return None
+    lines = _body_lines(row)
+    if stored:
+        kept = []
+        for ln in lines:
+            rest = _tail_rest(ln)
+            if rest is None:
+                kept.append(ln)
+            elif rest:
+                kept.append(rest)
+        lines = kept
+    trusted = frozenset(known) | {it["symbol"] for it in stored if it["symbol"]}
+    out: list = []
+    j = 0
+    for line in lines:
+        tok = lead_token(line)
+        nxt = stored[j] if j < len(stored) else None
+        if nxt is not None and (line == nxt["text"]
+                                or (nxt["symbol"] and tok.upper() == nxt["symbol"])):
+            sym = nxt["symbol"] or lead_symbol(line, trusted)
+            j += 1
+        else:
+            sym = lead_symbol(line, trusted)
+        out.append({"symbol": sym, "text": line,
+                    "url": item_url(kind, sym) if sym else None, "pushed": True})
+    for it in stored[j:]:
+        sym = it["symbol"]
+        out.append({"symbol": sym, "text": it["text"],
+                    "url": item_url(kind, sym) if sym else None, "pushed": False})
+    if not any(e["symbol"] for e in out):
+        return None
+    not_stored = 0
+    if stored:
+        total = row.get("items_total")
+        if isinstance(total, int) and not isinstance(total, bool):
+            not_stored = max(0, total - len(stored))
+    else:
+        tail = next((m for m in (_MORE_TAIL.match(ln) for ln in lines) if m), None)
+        if tail:
+            not_stored = int(tail.group(1))
+        else:
+            tm = _TITLE_MORE.search(row.get("title") or "") \
+                if isinstance(row.get("title"), str) else None
+            if tm:
+                printed = sum(1 for ln in lines if not _MORE_TAIL.match(ln))
+                not_stored = max(0, int(tm.group(1)) + 1 - printed)
+    return out, not_stored
+
+
+# --------------------------------------------------------------------------
+# OLD ⚡ tape-burst rows: every burst, re-read from trade_flash_events
+# --------------------------------------------------------------------------
+# A trade_flash row stored before 2026-09-29 printed 4 bursts and dropped the
+# rest — but every burst it was about is still a document in
+# trade_flash_events (the dedupe store the push was built from), stamped
+# `recorded_at` by build_events a moment BEFORE the push's own `ts`. So HIS
+# "CRWV +7 more" card can list all 8. The read is trusted ONLY when the window
+# holds exactly the title's N+1 events (1,672 of 1,677 old rows on prod,
+# 2026-09-29); anything else keeps the honest "+N more not stored" line.
+# The window is shorter than the 5-minute poll cadence, so two pushes never
+# share one. docs/alerts/every_item_2026_09_29.md
+TAPE_WINDOW_BEFORE_SEC = 240
+TAPE_WINDOW_AFTER_SEC = 5
+# Engineering bounds on the ONE ranged read per request (not trading numbers):
+# a full page (MAX_LIMIT rows) at the measured p99 of 24 events per push, and a
+# server-side time cap so a slow Mongo can never stall /alerts.
+TAPE_RECON_MAX_DOCS = MAX_LIMIT * 24
+TAPE_RECON_MAX_MS = 2000
+_TAPE_FIELDS = {"_id": 0, "symbol": 1, "time_et": 1, "dollars": 1, "side": 1,
+                "board": 1, "recorded_at": 1}
+
+
+def _num_stamp(v) -> Optional[float]:
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    return float(v) if v == v else None
+
+
+def tape_recon_want(row: dict) -> Optional[int]:
+    """N+1 (the title's count) when an OLD trade_flash row hid bursts and is
+    worth a re-read, else None. Stored items, a single, no "+N more" title, a
+    body that already printed them all or no usable ts -> None."""
+    if row.get("kind") != "trade_flash" or _stored_items(row.get("items")):
+        return None
+    tick = row.get("ticker")
+    if isinstance(tick, str) and tick.strip():
+        return None
+    title = row.get("title")
+    m = _TITLE_MORE.search(title) if isinstance(title, str) else None
+    if not m:
+        return None
+    want = int(m.group(1)) + 1
+    printed = sum(1 for ln in _body_lines(row) if not _MORE_TAIL.match(ln))
+    if want <= printed:
+        return None
+    ts = _num_stamp(row.get("ts"))
+    if ts is None or ts <= 0:
+        return None
+    return want
+
+
+def tape_items_for_legacy(rows: list, get_db) -> dict:
+    """{row index: items} for the OLD trade_flash rows whose bursts can be
+    re-read from trade_flash_events. ONE ranged find for the whole page
+    (bounded by TAPE_RECON_MAX_DOCS and TAPE_RECON_MAX_MS), bucketed in memory.
+
+    A row is filled only when its window [ts-240s, ts+5s] holds EXACTLY the
+    title's N+1 events; they are sorted dollars-desc (the builder's order) and
+    each line is trade_flash.headline(e) — the builder's own function, so a
+    rebuilt line is byte-identical to the one the phone showed. Mongo down, a
+    failed read, a count mismatch or a window cut by the doc cap -> the row is
+    left out (the honest "+N more not stored" path). Never raises."""
+    wants = {}
+    for i, r in enumerate(rows):
+        w = tape_recon_want(r)
+        if w is not None:
+            wants[i] = w
+    if not wants:
+        return {}
+    try:
+        db = get_db()
+    except Exception:                                        # noqa: BLE001
+        db = None
+    if db is None:
+        return {}
+    stamps = [_num_stamp(rows[i].get("ts")) for i in wants]
+    lo = min(stamps) - TAPE_WINDOW_BEFORE_SEC
+    hi = max(stamps) + TAPE_WINDOW_AFTER_SEC
+    try:
+        from orderflow.trade_flash import EVENTS_COLL, headline
+        cur = (db[EVENTS_COLL].find({"recorded_at": {"$gte": lo, "$lte": hi}}, _TAPE_FIELDS)
+               .sort("recorded_at", -1).limit(TAPE_RECON_MAX_DOCS)
+               .max_time_ms(TAPE_RECON_MAX_MS))
+        docs = list(cur)
+    except Exception as exc:                                 # noqa: BLE001
+        log.warning("push.recent: trade_flash_events read failed: %s", exc)
+        return {}
+    evs = []
+    for d in docs:
+        at = _num_stamp(d.get("recorded_at")) if isinstance(d, dict) else None
+        if at is not None:
+            evs.append((at, d))
+    # The cap cut the OLDEST end of a desc read: a window reaching at or below
+    # the last stamp returned may be missing documents, so it is not trusted.
+    complete_above = evs[-1][0] if len(docs) >= TAPE_RECON_MAX_DOCS and evs else None
+    out = {}
+    for i, want in wants.items():
+        ts = _num_stamp(rows[i].get("ts"))
+        a, b = ts - TAPE_WINDOW_BEFORE_SEC, ts + TAPE_WINDOW_AFTER_SEC
+        if complete_above is not None and a <= complete_above:
+            continue
+        hit = [d for at, d in evs if a <= at <= b]
+        if len(hit) != want:
+            continue
+        hit.sort(key=lambda e: -(_num_stamp(e.get("dollars")) or 0))
+        try:
+            items = [{"symbol": str(e["symbol"]).strip().upper(), "text": headline(e)}
+                     for e in hit]
+        except Exception:                                    # noqa: BLE001
+            continue
+        if all(it["symbol"] for it in items):
+            out[i] = items
+    return out
+
 
 KNOWN_TTL_SEC = 3600
 _known_cache: dict = {"at": 0.0, "set": None}
@@ -174,8 +468,8 @@ def derive_tickers(row: dict, known: frozenset) -> list:
     out, seen = [], set()
     for line in body.split("\n"):
         for item in line.split(", "):
-            tok = item.strip().split(" ")[0].split("(")[0].rstrip(",:;")
-            if _TOKEN.match(tok) and tok in known and tok not in seen:
+            tok = lead_symbol(item, known)
+            if tok and tok not in seen:
                 seen.add(tok)
                 out.append(tok)
     return out
@@ -526,7 +820,12 @@ def _gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
     # purge — flipping it back is one line.
     pushes = [p for p in pushes if p.get("kind") not in _retired_kinds()]
     known = known_symbols() if pushes else frozenset()
-    for p in pushes:
+    # OLD ⚡ tape-burst rows get every burst back from trade_flash_events —
+    # one bounded read for the whole page, only when such a row is on it.
+    tape = tape_items_for_legacy(pushes, get_db) if pushes else {}
+    for idx, p in enumerate(pushes):
+        if idx in tape:
+            p["items"], p["items_total"] = tape[idx], len(tape[idx])
         p["source"] = "push"
         # Present on every row, null on the ones stored before 2026-09-15 and
         # on the kinds that carry no read.
@@ -535,6 +834,14 @@ def _gather(email: Optional[str], limit: int, *, kinds: Optional[str] = None,
         # what an old digest body names. Never None — the chips render nothing
         # on [].
         p["tickers"] = derive_tickers(p, known)
+        # EVERY item of a consolidated push (2026-09-29): served only when the
+        # row lists linkable lines; `items_total` is storage-only, never served.
+        served = served_items(p, known)
+        p.pop("items_total", None)
+        if served:
+            p["items"], p["items_not_stored"] = served
+        else:
+            p.pop("items", None)
 
     breakout_rows: list = []
     bq = breakout_query(kind_list, since, tick)
@@ -598,4 +905,7 @@ async def notifications_recent(
 __all__ = ["router", "gather", "gather_payload", "parse_kinds", "breakout_kinds",
            "breakout_query", "normalize_breakout", "derive_tickers", "known_symbols",
            "collapse_repeats", "repeat_key", "repeat_block", "repeat_line",
-           "DIGEST_KINDS", "MAX_LIMIT", "KNOWN_TTL_SEC", "COLLAPSE_OVERFETCH"]
+           "DIGEST_KINDS", "MAX_LIMIT", "KNOWN_TTL_SEC", "COLLAPSE_OVERFETCH",
+           "served_items", "lead_symbol", "lead_token", "item_url", "ITEM_KINDS",
+           "ITEM_URL_BY_KIND", "DEFAULT_ITEM_URL", "tape_items_for_legacy",
+           "tape_recon_want", "TAPE_WINDOW_BEFORE_SEC", "TAPE_WINDOW_AFTER_SEC"]

@@ -42,6 +42,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TickerChips } from '../components/TickerChips';
+import { AlertItems, type AlertItem } from '../components/AlertItems';
 import { API } from '../lib/apiBase';
 import { useAlertHistory, foldedCount, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
 import {
@@ -385,11 +386,21 @@ function deliveryText(row: AlertRow): { text: string; tone: string } {
  * `AlertRow` because the field is additive and optional — the hook's type is
  * shared with callers that never render chips, and an older API sends
  * neither key. */
-type AlertRowT = AlertRow & { tickers?: string[] | null };
+/* 2026-09-29: a consolidated push ("CRWV +7 more") serves EVERY entry as
+ * `items` (push/recent served_items) — Ajay: "I am unable to see the other
+ * that are hiddedn her … make all the tickers clicable individually". */
+type AlertRowT = AlertRow & {
+  tickers?: string[] | null;
+  items?: AlertItem[] | null;
+  items_not_stored?: number | null;
+};
 
 function AlertRowCard({ row }: { row: AlertRowT }) {
   const isInternal = !!row.url && row.url.startsWith('/') && !row.url.startsWith('//');
   const delivery = deliveryText(row);
+  // Served entries replace the raw body; every ticker inside them is its own
+  // link, so the header chip strip would only repeat them.
+  const items = Array.isArray(row.items) && row.items.length ? row.items : null;
   return (
     <div style={ROW} data-testid="alert-row">
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -402,12 +413,16 @@ function AlertRowCard({ row }: { row: AlertRowT }) {
         <EnterableChip read={row.enterable} className="cm-badge" />
         {/* Every name in the push, each its own real <a href> — a digest used
             to link at most one of them (2026-09-20). ⌘-click opens a tab. */}
-        <TickerChips tickers={row.tickers} ticker={row.ticker} tab="supply"
-                     fromLabel="Alerts" fromKey="alerts" testIdPrefix="alert-tk" />
+        {!items ? (
+          <TickerChips tickers={row.tickers} ticker={row.ticker} tab="supply"
+                       fromLabel="Alerts" fromKey="alerts" testIdPrefix="alert-tk" />
+        ) : null}
         <span style={{ fontSize: '0.86rem', fontWeight: 600, lineHeight: 1.35, flex: '1 1 12rem' }}>{row.title}</span>
       </div>
       {/* FULL body — the lock screen shows ~180 chars; this is the rest. */}
-      {row.body ? (
+      {items ? (
+        <AlertItems items={items} notStored={row.items_not_stored} />
+      ) : row.body ? (
         <div style={{ fontSize: '0.82rem', lineHeight: 1.5, color: '#cfcfd4', whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 3 }}>
           {row.body}
         </div>
