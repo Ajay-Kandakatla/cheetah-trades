@@ -32,6 +32,14 @@
  * printed verbatim with role="status", then each ticked box's served note;
  * unticked notes live only in the hover. Composes no sentence, counts nothing.
  *
+ * THE "must match all" SWITCH (Ajay 2026-09-29, after 🌀 5 · 📍 12 · 🔑 2
+ * showed 0 together: "How can I see all of these? at the same time? is there
+ * a check box selection?"). Several ticked boxes now show a leader passing ANY
+ * of them (the server default) — each shown tile carries a SERVED badge per
+ * ticked box it passes. The switch (label served as `mode_all_label`) sits
+ * after the boxes while any box is ticked; CHECKED = the SERVED `mode` ===
+ * 'all'; a click hands off to the page's one `?dm_mode=` setter.
+ *
  * THE 💰 BUTTON (Ajay 2026-09-29: "Also a sort by market cap please"). A third
  * order beside 🏎️ / 📍: largest first, a second click smallest first — both
  * served keys, written to `?sort=` through the same one setter. The served
@@ -106,12 +114,13 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set(DM_FILTER_KEYS);
 const count = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) ? v : null;
 
-type FilterProps = { filters: unknown; onToggle: (key: string) => void };
+type FilterProps = { filters: unknown; onToggle: (key: string) => void; onToggleMode?: () => void };
 
-/** The 🌀 / 📍 / 🔑 boxes. Checked = served `on`; nothing for a malformed block. */
-export function DualMomentumFilters({ filters, onToggle }: FilterProps) {
+/** The 🌀 / 📍 / 🔑 boxes. Checked = served `on`; nothing for a malformed block.
+ *  + the served "must match all" switch while a box is ticked (checked = served mode). */
+export function DualMomentumFilters({ filters, onToggle, onToggleMode }: FilterProps) {
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return null;
-  const f = filters as { items?: unknown; line?: unknown; note?: unknown };
+  const f = filters as { items?: unknown; line?: unknown; note?: unknown; mode?: unknown; mode_all_label?: unknown };
   if (!Array.isArray(f.items)) return null;
   const items = (f.items as unknown[]).filter((i): i is CmDmFilterItem =>
     !!i && typeof i === 'object' && typeof (i as CmDmFilterItem).key === 'string'
@@ -120,6 +129,8 @@ export function DualMomentumFilters({ filters, onToggle }: FilterProps) {
   const line = text(f.line);
   const note = text(f.note);
   const on = items.filter((i) => i.on === true);
+  const modeLabel = text(f.mode_all_label);
+  const showMode = !!onToggleMode && !!modeLabel && on.length > 0;
   return (
     <>
       <span className="cm-phase-sub" role="group" aria-label="Filter the leaders"
@@ -136,6 +147,13 @@ export function DualMomentumFilters({ filters, onToggle }: FilterProps) {
             </label>
           );
         })}
+        {showMode ? (
+          <label className="cm-ctl cm-ctl-check dm-filter-mode">
+            <input type="checkbox" data-testid="cm-dm-filter-mode"
+                   checked={f.mode === 'all'} onChange={() => onToggleMode!()} />
+            {modeLabel}
+          </label>
+        ) : null}
       </span>
       {line ? <p className="cm-note" data-testid="cm-dm-filter-line" role="status">{line}</p> : null}
       {on.map((i) => (text(i.note)
@@ -149,9 +167,10 @@ export function DualMomentumFilters({ filters, onToggle }: FilterProps) {
 type Props = SortProps & {
   board: CmDualMomentumBoard | null | undefined;
   onToggleFilter?: (key: string) => void;
+  onToggleMode?: () => void;
 };
 
-export default function DualMomentumBoardNote({ board, sorts, sort, onSort, onToggleFilter }: Props) {
+export default function DualMomentumBoardNote({ board, sorts, sort, onSort, onToggleFilter, onToggleMode }: Props) {
   if (!board || typeof board !== 'object' || Array.isArray(board)) return null;
   const header = text((board as { header?: unknown }).header);
   if (!header) return null;
@@ -169,7 +188,7 @@ export default function DualMomentumBoardNote({ board, sorts, sort, onSort, onTo
       {capLine ? <p className="cm-note" data-testid="cm-dm-cap-line" role="status">{capLine}</p> : null}
       {onToggleFilter
         ? <DualMomentumFilters filters={(board as { filters?: unknown }).filters}
-                               onToggle={onToggleFilter} />
+                               onToggle={onToggleFilter} onToggleMode={onToggleMode} />
         : null}
       <p className="cm-note" data-testid="cm-dm-header"
          role={state === 'warming' ? 'status' : undefined}>{header}</p>

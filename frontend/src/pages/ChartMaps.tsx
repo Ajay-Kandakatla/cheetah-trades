@@ -76,7 +76,7 @@ import NewsTabBoard from '../components/NewsTabBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
-import { DM_FILTER_PARAM, dmFiltersParam, parseDmFilters, type DmFilterKey } from '../lib/dmFilters';
+import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM, dmFiltersParam, parseDmFilters, parseDmMode, type DmFilterKey } from '../lib/dmFilters';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
@@ -479,6 +479,20 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       return next;
     }, { replace: true });
   }, [setParams]);
+  /* … and how they combine (Ajay 2026-09-29: "How can I see all of these? at
+   * the same time? is there a check box selection?"). ANY is the default and
+   * leaves no param; the "must match all" switch writes `?dm_mode=all`. The
+   * switch's checked state is the SERVED mode, never this parse. */
+  const dmModeSpec = tab === 'dual_momentum' && parseDmMode(params.get(DM_MODE_PARAM)) === DM_MODE_ALL
+    ? DM_MODE_ALL : undefined;
+  const toggleDmMode = useCallback(() => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (parseDmMode(prev.get(DM_MODE_PARAM)) === DM_MODE_ALL) next.delete(DM_MODE_PARAM);
+      else next.set(DM_MODE_PARAM, DM_MODE_ALL);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
@@ -581,7 +595,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            grades: gradesSpec,
                            flight: flightSpec,
                            levels: levelsSpec,
-                           dmFilters: dmSpec });
+                           dmFilters: dmSpec,
+                           dmMode: dmModeSpec });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
@@ -600,7 +615,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -968,7 +983,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * `sorts`, its pressed button is the served `sort`, and a click goes
         * through `setSortParam` — the Sort select's own setter. It also carries
         * the warming line, so the generic demand counter is skipped here. */}
-      {tab === 'dual_momentum' && <DualMomentumBoardNote board={data?.dual_momentum_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleDmFilter} />}
+      {tab === 'dual_momentum' && <DualMomentumBoardNote board={data?.dual_momentum_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleDmFilter} onToggleMode={toggleDmMode} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry

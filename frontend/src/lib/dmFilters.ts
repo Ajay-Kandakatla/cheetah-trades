@@ -8,6 +8,13 @@
  * dual_momentum tab only (chart_maps/dual_momentum_tab.FILTER_KEYS, pinned
  * equal by contract). The server decides every pass; this file compares no
  * number — it only parses and writes the param.
+ *
+ * HOW THE BOXES COMBINE (Ajay 2026-09-29, after 🌀 5 · 📍 12 · 🔑 2 showed 0
+ * together: "How can I see all of these? at the same time? is there a check
+ * box selection?"). ANY is the default — a leader passing any ticked box
+ * shows, with a served badge for each ticked box it passes. The "must match
+ * all" switch writes `?dm_mode=all` (every ticked box must pass). Absent or
+ * unknown = any. Mirrors chart_maps/dual_momentum_tab.parse_mode.
  */
 
 export const DM_FILTER_PARAM = 'dm';
@@ -37,6 +44,16 @@ export function dmFiltersParam(sel: Iterable<string>): string | null {
   return keys.length ? keys.join(',') : null;
 }
 
+export const DM_MODE_PARAM = 'dm_mode';
+export const DM_MODE_ALL = 'all';
+export const DM_MODE_ANY = 'any';
+export type DmMode = typeof DM_MODE_ALL | typeof DM_MODE_ANY;
+
+/** `?dm_mode=` -> 'all' only for "all" (any case / spacing); anything else -> 'any'. */
+export function parseDmMode(v: string | null | undefined): DmMode {
+  return typeof v === 'string' && v.trim().toLowerCase() === DM_MODE_ALL ? DM_MODE_ALL : DM_MODE_ANY;
+}
+
 /** One served box (chart_maps/dual_momentum_tab.filters_block items). */
 export type CmDmFilterItem = {
   key: string; label: string; on: boolean;
@@ -48,6 +65,10 @@ export type CmDmFilters = {
   keys: string[]; active: string[]; pool: number; passed_all: number | null;
   items: CmDmFilterItem[]; line: string | null; note: string;
   near_demand_pct: number; near_level_pct: number; measured: boolean;
+  /** 2026-09-29: how the ticked boxes combined ('any' default | 'all'), the
+   *  switch's served label, and the served union / shown / hidden counts. */
+  mode?: string; mode_param?: string; mode_all_label?: string;
+  passed_any?: number | null; shown?: number | null; hidden?: number;
 };
 
 /** The per-tile read (`tile.dm_filter`): true passes, false fails, null = not read. */
