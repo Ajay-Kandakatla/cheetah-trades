@@ -126,7 +126,9 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
            if v is False and not k.startswith("quiet_hours")}
     # 🔑 key_level_alert (2026-09-25) is OFF in default_prefs too — ON only for
     # the owner, through OWNER_KEEP_SET (his answer).
-    assert off == {QA.KIND, "key_level_alert"}, "another kind quietly shipped muted: %s" % sorted(off)
+    # 🧬 med_catalyst (2026-09-29) likewise: OFF in default_prefs, ON for the
+    # owner through OWNER_KEEP_SET (spec HIS CALL #1).
+    assert off == {QA.KIND, "key_level_alert", "med_catalyst"}, "another kind quietly shipped muted: %s" % sorted(off)
 
 
 def test_NEGATIVE_the_kind_is_not_in_the_owner_keep_set():
@@ -138,11 +140,13 @@ def test_NEGATIVE_the_kind_is_not_in_the_owner_keep_set():
 
 def test_NEGATIVE_the_keep_set_itself_did_not_move():
     """This package flips no notification pref. The keep-set is exactly these
-    ten (🔑 key_level_alert joined 2026-09-25 on his own answer)."""
+    eleven (🔑 key_level_alert joined 2026-09-25 on his own answer; 🧬 med_catalyst 2026-09-29)."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert", "key_level_alert"})
+        "board_arrival", "price_alert", "key_level_alert",
+        # WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
+        "med_catalyst"})
 
 
 def test_NEGATIVE_the_kind_is_not_hard_stopped():

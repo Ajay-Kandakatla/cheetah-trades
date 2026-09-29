@@ -334,7 +334,9 @@ def test_digest_kinds_is_the_eight_list_bodies():
     assert R.DIGEST_KINDS == frozenset({
         "growth_demand_alert", "demand_alert", "zone_bounce_alert",
         "hot_pullback_alert", "pattern_alert", "board_arrival", "earnings_reaction",
-        "capital_quality_upgrade"})
+        "capital_quality_upgrade",
+        # 🧬 med_catalyst joined 2026-09-29: its digest body is one "SYM · label · move" line per name.
+        "med_catalyst"})
 
 
 def test_every_digest_builder_emits_the_key():

@@ -120,11 +120,26 @@ def _default_healthcare() -> set:
         db = _get_db()
         if db is None:
             return set()
-        return {str(d.get("symbol") or "").upper()
-                for d in db.companies.find({"sector": "Healthcare"}, {"symbol": 1}) if d.get("symbol")}
+        from companies import sector_overrides
+        # Suites 2026-09-29: this direct `companies` read must heal the sector
+        # itself (tests/test_sector_overrides_2026_09_19) — an override can move
+        # a name INTO or OUT OF Healthcare.
+        q = {"$or": [{"sector": "Healthcare"}, {"symbol": {"$in": sorted(sector_overrides.SECTOR_OVERRIDES)}}]}
+        return healthcare_symbols(db.companies.find(q, {"symbol": 1, "sector": 1, "industry": 1}))
     except Exception as exc:                                    # noqa: BLE001
         log.warning("medical.routine: healthcare read failed: %s", SRC.redact_exc(exc))
         return set()
+
+
+def healthcare_symbols(docs) -> set:
+    """PURE: the Healthcare names among company docs, AFTER the sector override."""
+    from companies import sector_overrides
+    out = set()
+    for d in docs or ():
+        d = sector_overrides.apply(dict(d)) or d
+        if d.get("symbol") and str(d.get("sector") or "").strip() == "Healthcare":
+            out.add(str(d["symbol"]).upper())
+    return out
 
 
 def _default_scope(owner: Optional[str]) -> set:
@@ -580,7 +595,7 @@ async def _body(*, now_et, now_utc, fx, c, counts, deadline, clock, push, dry_ru
                                          hi_date=R.add_market_days(sd, MERGE_SESSIONS))
             if target is not None:
                 keys.append(S.merge_into(ev_c, target, doc, impact_fn=_tax().is_high_impact,
-                                         session_fn=_session_of))
+                                         session_fn=_session_of, label_fn=_tax().event_label))
                 counts["events_merged"] += 1
                 continue
             if doc["from_commentary"]:

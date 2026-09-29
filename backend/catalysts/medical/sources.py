@@ -89,7 +89,13 @@ def article_key(item: dict) -> str:
     prov = item.get("provider")
     nid = item.get("id") or item.get("_nid")
     if prov == "finnhub" and nid:
-        return f"fh:{nid}"
+        # fix round 2 (live run): Finnhub hands ONE story to every ticker it tags
+        # ("Mirum Pharmaceuticals and Incyte Announce U.S. FDA Approval …" came
+        # back for MIRM and INCY); keyed on the id alone the second ticker's copy
+        # was a dup, MIRM never got the approval, and a Zacks recap 3 days later
+        # pushed as new. The ticker is part of the key.
+        tk = (item.get("ticker") or "").upper().strip()
+        return f"fh:{tk}:{nid}" if tk else f"fh:{nid}"
     if prov == "sec" and item.get("adsh"):
         return f"sec:{item['adsh']}"
     if prov == "massive" and nid:
@@ -109,7 +115,7 @@ def _article(*, provider, source, title, url, published, nid=None, ticker=None, 
          "url": (url or "").strip(), "published": published, "ticker": ticker,
          "tickers_tagged": list(tickers or []), "context": (context or "")[:EXHIBIT_LEAD_CHARS],
          "text_basis": basis, "sic": sic, "cik": cik}
-    a["key"] = article_key({"provider": provider, "id": nid, "adsh": adsh, "guid": guid,
+    a["key"] = article_key({"provider": provider, "id": nid, "adsh": adsh, "guid": guid, "ticker": ticker,
                             "url": url, "title": title, "published": published})
     return a
 

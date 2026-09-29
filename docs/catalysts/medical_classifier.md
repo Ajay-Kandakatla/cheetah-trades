@@ -3,7 +3,7 @@
 Ajay, 2026-09-29: *"…sector them separatively like new fdaapprovals or break throughs like mrnaresearch…"*
 
 Deterministic word rules, **no model** (a local-model assist is HIS CALL #5, not built). Pure: stdlib `re`
-only, no I/O. `RULES_VERSION = "med-rules-v2"` (`taxonomy.py`). UNMEASURED — setup: pending study.
+only, no I/O. `RULES_VERSION = "med-rules-v3"` (`taxonomy.py`; v3 = fix round 2, 2026-09-29). UNMEASURED — setup: pending study.
 
 Port of the reference harness `scratchpad/medcat_rev/rules_v2_final.py` (92/92 cases) and `attr.py`
 (18/18), plus the v1 tables the harness never carried (fda_approval subtypes, ex-US approval, safety,
@@ -113,7 +113,7 @@ Precision fixes, each pinned by a fixture row (`g01`–`g24`):
 FDA approvals for ABBV, INCY, LLY, MIRM, MRK, QGEN (device clearance), MCT8 (unresolved, never pushed).
 The stand-in's false highs (Charles River CRL, PRME IND, LNTH / MRK valuation pieces) are gone.
 Known recall gap (not widened — HIS CALL): "Misses Primary **Goal**" / "Misses **Main** Endpoint" give
-no topline (the NEG rule needs *primary … endpoint*).
+no topline (the NEG rule needs *primary … endpoint*). *Goal / target* fixed 2026-09-29 (fix round 2); *Main* Endpoint still open.
 
 ## How to add a rule
 
@@ -127,3 +127,51 @@ HIS CALLs: device clearances (510(k) / "FDA Clears …") are high impact under t
 panel clearance would ring; exclude `device_clearance` from high impact if that is noise. Two different
 approvals of the same type on one name within ±3 sessions collapse into one event (LLY), and the
 21-session recap then mutes the second one on the phone.
+
+## Fix round 2 — 2026-09-29 (`med-rules-v3`)
+
+Two independent checks found the v2 rules pushing wrong things: a critic probe of 63 new headlines
+(about 40 of them traps) measured **high-impact push precision 0.44** (fda_approval 0.31), and the live
+dry run over 09-21..09-28 had **5 of 16 would-push events wrong** (RVMD, MIRM recap, ANIP, VTGN, LLY
+merge) plus 4 questionable. Every failing headline is now a fixture row (`f01`–`f60`, source C = critic,
+L = live; `f55`–`f60` are positive controls that must still push) and `test_fix_round_2_push_set_*`
+pins the exact push set. What changed:
+
+- **An approval word is not an approval**: a negative / pending verb before it (*delays, declines,
+  blocks, withholds, lacks, loses, panel, advisers, recommends, backs*), *delayed / pushed back* after it,
+  a non-marketing clause (*to proceed / begin*, IDE, expanded access, manufacturing facility, a SAFETY
+  label change), the adjective *FDA-Approved / FDA-Cleared*, or a background preposition right before
+  the cue (*…Following FDA Approval of Revolution Medicines'…*). *FDA Panel / FDA Advisers* are adcom;
+  *Approval to Proceed With Phase 3* is an IND-style go-ahead.
+- **Subtypes**: *Abbreviated New Drug Application*, *bioequivalent*, *therapeutically equivalent* →
+  generic (not high impact: ANIP, LNTH); *label update* / *in pediatric patients* → label expansion
+  (still high impact under §3.8).
+- **CRL as background** (*Following / Regarding / Addresses … CRL*, a resubmission named before it,
+  `$CRL`, `CRL:` ticker prefix) is no CRL. A CRL whose release adds *plans to resubmit* still fires.
+- **Holds**: removal / resolved / cleared / *FDA Lifts Hold* → lifted; a *response to a clinical hold
+  letter* is its own low-impact subtype `response`.
+- **Toplines**: a passed / survived futility look is masked; a positive in a subgroup / post-hoc clause
+  does not rescue a primary miss (Sage → negative); positive + OLE / post-hoc / *published in* →
+  direction unknown (VTGN); positive + end-of-phase / feedback / design → no topline; *early for
+  efficacy* is a positive readout; *misses primary goal / target* is negative; an *FDA setback* is not
+  a readout; analyst upgrades / ratings / *buy the dip* are commentary.
+- **Attribution**: another company's possessive before the cue with the issuer first named after it →
+  not the subject (LLY in *Amgen's MariTide … Outperforming Lilly's Zepbound*).
+- **Board-only**: partnerships / licences / milestones need a medical word in their own title (the
+  Montreal museum, Stephen Curry, Veeva CRM); M&A of a medical issuer stays; *acquired* before a
+  condition is an adjective (RYTM); *buyout talks* and someone else's IPO are no events; *slumps*
+  next to stock/shares is a price story; diabetic eye disease is ophthalmology, not cardio-metabolic.
+
+Pipeline fixes in the same round: a snapshot print of 0.0 is no price (110 of 115 live events showed
+−100%); a directed topline lifts an earlier `topline_unknown` on the same name instead of making a second
+row (CLDX, ALKS); Finnhub article keys carry the ticker so a joint release reaches both issuers (MIRM +
+INCY); the Healthcare read applies the sector override.
+
+**Numbers (same set tuned against — not independent; re-grade on fresh headlines):** critic probe
+0.44 → 0.90 push precision (19/21; the two left are ALKS partner CRL — HIS CALL — and Sage, which the
+probe labelled not-high but is a Phase 3 primary miss). Replay of the live run's 1,478 stored
+articles: 20 → 16 high-impact events; RVMD, LNTH, ANIP, VTGN gone; CLDX's two rows are one.
+
+Still HIS CALL: device clearances (QGEN, SIBN) and label updates (MRK WINREVAIR) are high impact under
+§3.8; partner CRLs ring on the partner (ALKS); distinct approvals on one name inside ±3 sessions still
+merge (LLY), and the 21-session recap mutes a second one.
