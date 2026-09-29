@@ -3903,13 +3903,11 @@ def key_level_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 # 🏎️ the header's floor buckets, keyed by `dual_momentum_tab.floor_rank`
 _DM_FLOOR_BUCKET = {0: "held", 1: "floor_unknown", 2: "swept", 3: "broken"}
 
-# 🏎️ tile_metrics keys a board attacher OWNS on the tile. `attach_explosive`
-# and `attach_band_structure` are idempotent by KEY PRESENCE, so copying
-# tile_metrics' `explosive: None` / `band_structure: None` onto the tile would
-# make both skip every leader (LIVE step 2026-09-29: 80/80 tiles with no 🪜
-# read and no 🧨 read, and the 🪜 / 🧨 sorts silently inert). They stay in `_m`
-# (the sort columns); they are never spread onto the tile.
-_DM_ATTACH_OWNED = ("explosive", "band_structure")
+# 🏎️ The tile spread goes through `published_metrics` (ATTACH_OWNED_KEYS) like
+# every other builder: copying tile_metrics' `explosive: None` /
+# `band_structure: None` onto the tile made both attachers skip every leader
+# (LIVE 2026-09-29: 80/80 tiles with no 🪜 / 🧨 read). `_m` keeps every column.
+_DM_ATTACH_OWNED = ATTACH_OWNED_KEYS
 
 
 def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
@@ -3981,7 +3979,7 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  "rank", "score", "return_1m", "return_3m", "return_6m", "return_12m",
                  "return_gate", "abs_mom_pass", "beats_spy", "rs_rank", "stage",
                  "is_sepa_candidate")},
-             **{k: v for k, v in m.items() if k not in _DM_ATTACH_OWNED},
+             **published_metrics(m),
              "_m": dict(m)}
         tiles.append(t)
         by_sym[sym] = p
