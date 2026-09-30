@@ -125,7 +125,7 @@ def engine_status() -> dict:
     scan_at = None
     try:
         from sepa import scanner
-        latest = scanner.load_latest() or {}
+        latest = scanner.load_latest_shared() or {}
         scan_at = _to_epoch(latest.get("generated_at"))
     except Exception:
         scan_at = None

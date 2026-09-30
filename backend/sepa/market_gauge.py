@@ -219,7 +219,7 @@ def _index_follow_through() -> bool:
 
 def _breadth_red_pct() -> Optional[int]:
     try:
-        rows = (sepa_scanner.load_latest() or {}).get("all_results") or []
+        rows = (sepa_scanner.load_latest_shared() or {}).get("all_results") or []
         ch = [r.get("day_change_pct") for r in rows if r.get("day_change_pct") is not None]
         if ch:
             return round(100 * sum(1 for x in ch if x < 0) / len(ch))
@@ -248,7 +248,7 @@ def _macro_level() -> tuple[str, Optional[float]]:
 
 def _scan_rows() -> list:
     try:
-        return (sepa_scanner.load_latest() or {}).get("all_results") or []
+        return (sepa_scanner.load_latest_shared() or {}).get("all_results") or []
     except Exception:
         return []
 

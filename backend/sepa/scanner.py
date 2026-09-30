@@ -1705,6 +1705,7 @@ def latest_key() -> Optional[tuple]:
 
 
 _SHARED_LOCK = threading.Lock()
+_SHARED_BUILD = threading.Lock()
 _SHARED: dict = {"key": None, "value": None}
 
 
@@ -1722,12 +1723,21 @@ def load_latest_shared() -> Optional[dict]:
     with _SHARED_LOCK:
         if _SHARED["key"] == key:
             return _SHARED["value"]
-    val = load_latest()
-    if val is not None:
+    # Single-flight: json.loads holds the GIL for the whole C call, so N
+    # threads parsing at once still stall the loop — one parse per write.
+    with _SHARED_BUILD:
         with _SHARED_LOCK:
+            if _SHARED["key"] == key:
+                return _SHARED["value"]
+        val = load_latest()
+        with _SHARED_LOCK:
+            if val is None:
+                # A read that lands mid-write (write_text is not atomic) keeps
+                # serving the last good scan instead of "no scan".
+                return _SHARED["value"]
             _SHARED["key"] = key
             _SHARED["value"] = val
-    return val
+            return val
 
 
 # ---------------------------------------------------------------------------

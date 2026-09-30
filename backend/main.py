@@ -14,6 +14,8 @@ Run:
 from __future__ import annotations
 
 import asyncio
+import copy
+import gzip
 import json
 import logging
 import math
@@ -1408,7 +1410,7 @@ async def market_overview():
             idx.append({"symbol": sym, "label": label, "last": last, "day_pct": pct})
 
         # Breadth across the latest scan (today's day_change_pct per name).
-        rows = (scanner.load_latest() or {}).get("all_results") or []
+        rows = (scanner.load_latest_shared() or {}).get("all_results") or []
         ch = [r.get("day_change_pct") for r in rows if r.get("day_change_pct") is not None]
         breadth = None
         if ch:
@@ -1490,6 +1492,7 @@ def _scrub_nan(o):
 
 @app.get("/sepa/scan")
 async def sepa_scan_get(
+    request: Request,
     slim: bool = Query(False, description="Drop all_results (~95% payload reduction). Use for fast phone first-paint."),
 ):
     """Return the most recent persisted scan (no recompute).
@@ -1500,14 +1503,22 @@ async def sepa_scan_get(
     for fast phone first-paint and only fetches the full payload on demand
     (when the user toggles 'show all analyzed').
     """
-    body = await asyncio.to_thread(_sepa_scan_body, bool(slim))
-    if body is None:
+    built = await asyncio.to_thread(_sepa_scan_body, bool(slim))
+    if built is None:
         return JSONResponse({"candidates": [], "message": "no scan yet — POST /sepa/scan"},
                             status_code=200)
+    body, gz = built
+    if "gzip" in (request.headers.get("accept-encoding") or "").lower():
+        # Pre-compressed off the loop; GZipMiddleware passes a response that
+        # already has Content-Encoding through untouched (level-9 gzip of the
+        # 24 MB body on the loop cost ~1.1 s per fetch).
+        return Response(content=gz, media_type="application/json",
+                        headers={"Content-Encoding": "gzip", "Vary": "Accept-Encoding"})
     return Response(content=body, media_type="application/json")
 
 
 _SCAN_BODY_LOCK = threading.Lock()
+_SCAN_BODY_BUILD = threading.Lock()
 _SCAN_BODY: dict = {}
 
 
@@ -1540,25 +1551,33 @@ def _sepa_scan_payload(latest: dict, slim: bool) -> dict:
     return _scrub_nan(slim_payload)
 
 
-def _sepa_scan_body(slim: bool) -> Optional[bytes]:
-    """The /sepa/scan response bytes, built ONCE per scan write (keyed by
-    latest.json's mtime + size) and in a worker thread. The full payload is
-    ~24 MB at the full universe: parsing, scrubbing and encoding it on the
-    event loop froze every request (HTTP 524 incident 2026-09-30)."""
+def _sepa_scan_body(slim: bool) -> Optional[tuple]:
+    """(json bytes, gzip bytes) for /sepa/scan, built ONCE per scan write
+    (keyed by latest.json's mtime + size), single-flight, in a worker thread.
+    The full payload is ~24 MB at the full universe: parsing, scrubbing,
+    encoding and gzipping it on the event loop froze every request (HTTP 524
+    incident 2026-09-30). Reads the SHARED parse — _sepa_scan_payload only
+    builds new dicts/lists (_scrub_nan copies), it never mutates it."""
     key = sepa_scanner.latest_key()
     if key is None:
         return None
     with _SCAN_BODY_LOCK:
         hit = _SCAN_BODY.get(slim)
         if hit and hit[0] == key:
-            return hit[1]
-    latest = sepa_scanner.load_latest()
-    if not latest:
-        return None
-    body = JSONResponse(_sepa_scan_payload(latest, slim)).body
-    with _SCAN_BODY_LOCK:
-        _SCAN_BODY[slim] = (key, body)
-    return body
+            return hit[1], hit[2]
+    with _SCAN_BODY_BUILD:
+        with _SCAN_BODY_LOCK:
+            hit = _SCAN_BODY.get(slim)
+            if hit and hit[0] == key:
+                return hit[1], hit[2]
+        latest = sepa_scanner.load_latest_shared()
+        if not latest:
+            return None
+        body = JSONResponse(_sepa_scan_payload(latest, slim)).body
+        gz = gzip.compress(body, compresslevel=6)
+        with _SCAN_BODY_LOCK:
+            _SCAN_BODY[slim] = (key, body, gz)
+        return body, gz
 
 
 @app.post("/sepa/scan")
@@ -2024,11 +2043,16 @@ async def sepa_candidate_detail(symbol: str):
     user see WHY a score was assigned. Added 2026-05-22.
     """
     sym = symbol.upper()
-    latest = sepa_scanner.load_latest() or {}
+    # Shared parse, off the loop (HTTP 524 incident 2026-09-30). It is
+    # READ-ONLY: the row is deep-copied, and the persist path below reads its
+    # own private copy before it writes.
+    latest = await asyncio.to_thread(sepa_scanner.load_latest_shared) or {}
     base = next(
         (c for c in (latest.get("all_results") or []) if c["symbol"] == sym),
         None,
     )
+    if base is not None:
+        base = copy.deepcopy(base)
 
     # Fallback path — symbol isn't in the latest scan, so run a one-shot
     # analyze. Mirrors POST /sepa/analyze/{symbol} but inline so the GET
@@ -2062,6 +2086,7 @@ async def sepa_candidate_detail(symbol: str):
                 base = analyzed
                 # Persist into latest scan so subsequent calls hit the fast path.
                 try:
+                    latest = await asyncio.to_thread(sepa_scanner.load_latest) or {}
                     all_res = [r for r in (latest.get("all_results") or []) if r["symbol"] != sym]
                     all_res.append(analyzed)
                     latest["all_results"] = all_res

@@ -86,6 +86,31 @@ def test_NEG_a_half_written_file_is_not_cached(latest):
     assert sc.load_latest_shared()["generated_at"] == 1.0
 
 
+def test_NEG_a_mid_write_read_keeps_serving_the_last_good_scan(latest):
+    _write(latest.path, SCAN)
+    good = sc.load_latest_shared()
+    latest.path.write_text('{"all_results": [')
+    assert sc.load_latest_shared() is good, "a torn read must not turn into 'no scan'"
+    assert sc._SHARED["key"] != sc.latest_key(), "the torn file is never memoised"
+
+
+def test_NEG_concurrent_misses_parse_once(latest, monkeypatch):
+    import time as _t
+    _write(latest.path, SCAN)
+    slow = sc.load_latest
+
+    def _slow():
+        _t.sleep(0.05)
+        return slow()
+    monkeypatch.setattr(sc, "load_latest", _slow)
+    out = []
+    ts = [threading.Thread(target=lambda: out.append(sc.load_latest_shared())) for _ in range(6)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(latest.parses) == 1, "six simultaneous misses = one parse (json.loads holds the GIL)"
+    assert all(o is out[0] for o in out)
+
+
 def test_NEG_the_key_changes_when_only_the_size_changes(latest):
     _write(latest.path, SCAN)
     k1 = sc.latest_key()
@@ -113,17 +138,27 @@ def _compile(names, ns):
 @pytest.fixture
 def scan_endpoint(latest):
     from starlette.responses import JSONResponse, Response
+    import gzip as _gzip
     ns = {"asyncio": asyncio, "json": json, "_math": math, "threading": threading,
-          "JSONResponse": JSONResponse, "Response": Response, "Optional": None,
-          "Query": lambda d=None, **k: d, "sepa_scanner": sc,
-          "_SCAN_BODY_LOCK": threading.Lock(), "_SCAN_BODY": {}}
+          "gzip": _gzip, "JSONResponse": JSONResponse, "Response": Response,
+          "Optional": None, "Request": object, "Query": lambda d=None, **k: d,
+          "sepa_scanner": sc, "_SCAN_BODY_LOCK": threading.Lock(),
+          "_SCAN_BODY_BUILD": threading.Lock(), "_SCAN_BODY": {}}
     _compile(["_scrub_nan", "_sepa_scan_payload", "_sepa_scan_body", "sepa_scan_get"], ns)
     return types.SimpleNamespace(ns=ns, latest=latest)
 
 
-def _get(ns, slim):
-    resp = asyncio.run(ns["sepa_scan_get"](slim=slim))
-    return resp, json.loads(resp.body)
+def _req(accept=""):
+    return types.SimpleNamespace(headers={"accept-encoding": accept} if accept else {})
+
+
+def _get(ns, slim, accept=""):
+    resp = asyncio.run(ns["sepa_scan_get"](_req(accept), slim=slim))
+    body = resp.body
+    if resp.headers.get("content-encoding") == "gzip":
+        import gzip as _gzip
+        body = _gzip.decompress(body)
+    return resp, json.loads(body)
 
 
 def test_full_and_slim_payloads_match_the_old_handler(scan_endpoint):
@@ -141,13 +176,33 @@ def test_the_body_is_built_once_per_scan_write(scan_endpoint):
     ns = scan_endpoint.ns
     _write(scan_endpoint.latest.path, SCAN)
     _get(ns, False)
-    _get(ns, False)
+    _get(ns, False, "gzip, br")
     _get(ns, True)
-    _get(ns, True)
-    assert len(scan_endpoint.latest.parses) == 2, "one parse per variant, not per request"
+    _get(ns, True, "gzip")
+    assert len(scan_endpoint.latest.parses) == 1, "one shared parse per scan write, not per request"
     _write(scan_endpoint.latest.path, {**SCAN, "generated_at": 9.0}, bump=10**9)
     _, full = _get(ns, False)
-    assert full["generated_at"] == 9.0 and len(scan_endpoint.latest.parses) == 3
+    assert full["generated_at"] == 9.0 and len(scan_endpoint.latest.parses) == 2
+
+
+def test_gzip_clients_get_the_precompressed_body_and_others_plain_json(scan_endpoint):
+    ns = scan_endpoint.ns
+    _write(scan_endpoint.latest.path, SCAN)
+    gz_resp, gz_body = _get(ns, False, "gzip, deflate")
+    plain_resp, plain_body = _get(ns, False)
+    assert gz_resp.headers["content-encoding"] == "gzip" and gz_resp.headers["vary"] == "Accept-Encoding"
+    assert "content-encoding" not in plain_resp.headers
+    assert gz_body == plain_body, "same payload either way"
+
+
+def test_NEG_the_shared_parse_is_not_mutated_by_building_the_bodies(scan_endpoint):
+    ns = scan_endpoint.ns
+    _write(scan_endpoint.latest.path, SCAN)
+    shared = sc.load_latest_shared()
+    before = json.dumps(shared, sort_keys=True, default=str)
+    _get(ns, False)
+    _get(ns, True)
+    assert json.dumps(shared, sort_keys=True, default=str) == before
 
 
 def test_NEG_no_scan_yet_keeps_the_old_message(scan_endpoint):
@@ -178,7 +233,8 @@ def _fn_src(name):
     return ast.get_source_segment(MAIN_SRC, fn)
 
 
-@pytest.mark.parametrize("name", ["market_regime_get", "sepa_live_prices", "sepa_scan_get"])
+@pytest.mark.parametrize("name", ["market_regime_get", "sepa_live_prices", "sepa_scan_get",
+                                  "sepa_candidate_detail", "market_overview"])
 def test_NEG_polled_endpoints_never_call_load_latest_on_the_loop(name):
     src = _fn_src(name)
     assert "load_latest()" not in src, f"{name} parses the 24 MB scan per request"
@@ -191,3 +247,35 @@ def test_NEG_live_api_contract_tests_are_opt_in():
     mk = (BACKEND.parent / "Makefile").read_text()
     assert "-e SEPA_TEST_API=http://localhost:8000 api python -m pytest tests/test_sepa_contracts.py" in mk, \
         "make contracts must still run the live shape checks inside the api container"
+
+
+# Every caller of the SHARED (read-only) parse was audited for mutation on
+# 2026-09-30. A new caller must be audited too: add it here only after
+# checking it never writes into the dict or its rows.
+AUDITED_SHARED_CALLERS = {
+    "main.py": 5,                          # regime, live-prices, scan body, overview, candidate detail
+    "sepa/market_gauge.py": 2,             # _breadth_red_pct, _scan_rows (read-only sums)
+    "observability/engine_heartbeat.py": 1,  # reads generated_at only
+}
+
+
+def test_NEG_every_shared_parse_caller_is_audited():
+    found = {}
+    for path in BACKEND.rglob("*.py"):
+        rel = path.relative_to(BACKEND).as_posix()
+        if rel.startswith((".venv/", "tests/")) or rel == "sepa/scanner.py":
+            continue
+        n = path.read_text(errors="replace").count("load_latest_shared")
+        if n:
+            found[rel] = n
+    assert found == AUDITED_SHARED_CALLERS, (
+        "a new caller of load_latest_shared: audit it never mutates the shared scan, "
+        f"then update AUDITED_SHARED_CALLERS. found={found}")
+
+
+def test_NEG_candidate_detail_copies_the_row_and_persists_from_a_private_copy():
+    src = _fn_src("sepa_candidate_detail")
+    assert "base = copy.deepcopy(base)" in src
+    persist = src.split("# Persist into latest scan", 1)[1]
+    assert "asyncio.to_thread(sepa_scanner.load_latest)" in persist.split("latest[\"all_results\"]", 1)[0], \
+        "the persist path must mutate its own parse, never the shared one"
