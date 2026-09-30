@@ -96,6 +96,12 @@ async def chart_maps(
                                           "default). Ajay 2026-09-29: 'How can I see all of "
                                           "these? at the same time? is there a check box "
                                           "selection?'"),
+    uv: str = Query("", description="undervalue tab only — which view: 'peers' = 🏷️ vs "
+                                     "peers (P/S against the industry median, whole scan); "
+                                     "absent or anything else = the 💎 P/S ÷ growth board "
+                                     "(default, unchanged). Ajay 2026-09-29: 'create me "
+                                     "another tab where valuations are wrong …' then 'Use "
+                                     "the same tab actually'."),
     min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
                           description="liquidity floor by 50-day avg $ volume: "
                                       "deep (>=$50M) | ok (>=$10M, default) | "
@@ -156,6 +162,7 @@ async def chart_maps(
             flight=(flight if isinstance(flight, str) and flight.strip() else None),
             dm=(dm if isinstance(dm, str) and dm.strip() else None),
             dm_mode=(dm_mode if isinstance(dm_mode, str) and dm_mode.strip() else None),
+            uv=(uv if isinstance(uv, str) and uv.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

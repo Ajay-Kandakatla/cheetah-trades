@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-29: "create me another tab where valuations are wrong …" then
+  // "Use the same tab actually". Label from the undervalue_peers spec §4 WP-FE;
+  // the numbers are chart_maps/undervalue_peers constants (HIS CALLs #1-#5) —
+  // if he changes one, change this label.
+  { id: 'chart-maps-undervalue-peers-2026-09-29', addedAt: '2026-09-29', route: '/chart-maps?tab=undervalue&uv=peers',
+    label: '🏷️ Under Value vs peers — on the same 💎 tab. You said: “create me another tab where valuations are wrong based on analytics, this is purely driven by wrong valuation of the stocks in the whole universe we have.. What I am looking for is great sales growth, annual review but Market cap and stock price is very low at least 50% low compared to peers.” and then “Use the same tab actually”. So the 💎 Under Value tab now has a toggle: 💎 P/S ÷ growth (the board you had, unchanged and still the default) and 🏷️ vs peers. The new view runs over every name in the latest scan and keeps a name only when all four legs hold: its price-to-sales is at most 50% of the median of its industry peers (at least 5 readable peers, the name never counted in its own median; its sector when the industry is thinner), sales grew at least +20% in the latest quarter AND at least +20% over the trailing year, on at least $100M of revenue. Share price is never compared across companies — only market cap per dollar of sales. Each card shows its P/S against the peer median and the discount, the peer group and count, EV/Sales against the same peers, sales growth against the peers’ growth, trailing revenue with its quarter, market cap with the date of its share count, the next earnings date, and red-flag chips for net debt, burning cash, dilution or a negative ROCE. Names whose revenue, market cap, currency or sector could not be read are not read — counted in the line above the grid, never dropped silently. UNMEASURED — cheap is often cheap for a reason, and no study here says these do better. The 50%, 5 peers, 20%/20% and $100M are your calls.' },
   // Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that are
   // reaching all time highs? call it ATH. …". Numbers from ath_tab spec §3.3
   // (the 2% band = zone_edge.NEW_HIGH_TOL, the 21-session look-back); change

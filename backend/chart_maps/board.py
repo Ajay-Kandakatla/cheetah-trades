@@ -5788,6 +5788,119 @@ def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "generated_at": None}
 
 
+
+def undervalue_peer_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                          themes_first: bool = THEMES_FIRST_DEFAULT,
+                          sort: str = DEFAULT_SORT,
+                          min_tier: str = DEFAULT_MIN_TIER,
+                          phase: str = "all") -> dict:
+    """🏷️ Under Value → vs peers (Ajay 2026-09-29: "... Market cap and stock
+    price is very low at least 50% low compared to peers", then "Use the same
+    tab actually"). The whole scan ranked by discount to its industry peers'
+    price-to-sales; every rule, word and number lives in
+    `chart_maps.undervalue_peers` (UNMEASURED, display only). This builder only
+    draws the tiles: zones, the phase lens (`_uv_band_state`, unchanged) and
+    the shared plumbing. `undervalue_tiles` is untouched and stays the default.
+    """
+    from chart_maps import undervalue_peers as UVP
+    from sepa import prices
+    from supply_demand import price_zones as pz
+
+    entry = UVP.read()
+    counts = dict(entry.get("counts") or {})
+    uvp_error = entry.get("error") or None
+    flash_syms = _flash_symbols()
+    tiles = []
+    no_prices = 0
+    phase_hidden = 0
+    for row in entry.get("passed") or []:
+        sym = row["symbol"]
+        df = None
+        try:
+            df = prices.load_prices(sym)
+        except Exception:
+            pass
+        if df is None or not len(df):
+            no_prices += 1
+            continue
+        last = float(df["close"].iloc[-1])
+        zones = None
+        try:
+            zones = pz.compute(df)
+        except Exception:
+            zones = None
+        bands = []
+        for b in ((zones or {}).get("demand_zones") or [])[:2]:
+            bands.append({"kind": "demand", "lo": float(b["lo"]),
+                          "hi": float(b["hi"]), "label": "demand"})
+        for b in ((zones or {}).get("supply_zones") or [])[:2]:
+            bands.append({"kind": "supply", "lo": float(b["lo"]),
+                          "hi": float(b["hi"]), "label": "supply"})
+
+        band_state, band_dist = _uv_band_state(zones, df, last)
+        if phase == "reached" and band_state != "in":
+            phase_hidden += 1
+            continue
+        if phase == "approaching" and band_state != "near":
+            phase_hidden += 1
+            continue
+
+        parts = UVP.tile_parts(row)
+        badges = [parts["badges"][0], _sales_badge(row.get("sales") or {})]
+        badges.extend(parts["badges"][1:])
+        if phase != "all" and band_state == "in":
+            badges.insert(0, {"text": "\u25c9 in the demand band", "tone": "good"})
+        elif phase != "all" and band_state == "near" and band_dist is not None:
+            badges.insert(0, {"text": f"\u2192 {band_dist}% above the band",
+                              "tone": "warn"})
+        if sym in flash_syms:
+            badges.append({"text": "⚡ Tape burst at zone", "tone": "good"})
+        tiles.append({
+            "symbol": sym,
+            "name": _name_for(sym),
+            "href": _href(sym, "analysis"),
+            "bars": [],
+            "_bars": {"days": days},
+            "bands": bands,
+            "lines": [{"price": last, "label": "now", "tone": "now"}],
+            "markers": [],
+            "stats": parts["stats"],
+            "why": parts["why"],
+            "theme": _theme(sym),
+            "badges": badges,
+            "_score": -float(row["ratio"]) * 1000.0,   # deepest discount first
+            # NEVER spread flat: ATTACH_OWNED_KEYS belong to the attach passes.
+            "_m": tile_metrics(row.get("scan_row") or {}),
+        })
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier)
+    gex_as_of = _gex_decor(out, "demand")
+    # Round 2 (2026-09-29): an empty board says WHY. A failed read is never
+    # "no name passes"; EMPTY_NOTE only when nothing passed the four legs;
+    # names that passed but were filtered out are named with their filter.
+    passed_n = int(counts.get("passed") or 0)
+    dropped_thin = int(meta.get("dropped_thin", 0) or 0)
+    if out:
+        note = UVP.NOTE
+    elif uvp_error:
+        note = UVP.header(counts, uvp_error)
+    elif passed_n == 0:
+        note = UVP.EMPTY_NOTE
+    else:
+        note = UVP.hidden_note(
+            passed_n, phase=phase, phase_hidden=phase_hidden, no_prices=no_prices,
+            min_tier=min_tier, dropped_thin=dropped_thin,
+            no_bars=max(0, len(tiles) - dropped_thin))
+    return {"tiles": out, **meta,
+            "phase": (phase if phase in ("reached", "approaching") else "all"),
+            "matched": len(tiles),
+            "gex_as_of": gex_as_of,
+            "screened": int(counts.get("scanned") or 0),
+            "note": note,
+            "generated_at": None,
+            "_uvp_entry": {"counts": {**counts, "dropped_thin": dropped_thin},
+                           "error": uvp_error}}
+
 def gabbar_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                  themes_first: bool = THEMES_FIRST_DEFAULT,
                  sort: str = DEFAULT_SORT,
@@ -6628,7 +6741,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           min_room: Optional[float] = None, studies: bool = False,
           levels: str = "all", grades: Optional[str] = None,
           flight: Optional[str] = None, dm: Optional[str] = None,
-          dm_mode: Optional[str] = None) -> dict:
+          dm_mode: Optional[str] = None, uv: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -6650,6 +6763,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     filter boxes, a comma list "amd,zone,level" (unknown tokens ignored), and
     `dm_mode` how they combine: "all" = every ticked box, anything else = ANY
     (the default). Every other tab ignores both and carries no `dm_filter` keys.
+
+    `uv` (2026-09-29) reaches ONLY the undervalue tab — `peers` = the 🏷️
+    vs-peers view, anything else = the 💎 view (default, unchanged). Every
+    other tab ignores it and carries no `undervalue_view` key.
 
     `source` splits the winners tab (Ajay 2026-08-16): "pattern" is the
     chart-pattern ledger, "zone" is the demand-zone re-entry backtest.
@@ -6723,8 +6840,15 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     elif t == "breaking":
         out = breaking_tiles(limit, days, themes_first, srt, tier, min_room=min_room)
     elif t == "undervalue":
-        out = undervalue_tiles(limit, days, themes_first, srt, tier,
-                               phase=(phase or "all"))
+        from chart_maps import undervalue_peers as _UVP
+        _uv = _UVP.parse_view(uv)
+        if _uv == _UVP.VIEW_PEERS:
+            out = undervalue_peer_tiles(limit, days, themes_first, srt, tier,
+                                        phase=(phase or "all"))
+        else:
+            out = undervalue_tiles(limit, days, themes_first, srt, tier,
+                                   phase=(phase or "all"))
+        out["undervalue_view"] = _UVP.view_block(_uv, out.pop("_uvp_entry", None))
     elif t == "gabbar":
         out = gabbar_tiles(limit, days, themes_first, srt, tier,
                            level=level if isinstance(level, str) else "all",

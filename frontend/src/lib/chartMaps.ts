@@ -19,6 +19,8 @@ import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
 import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM } from './dmFilters';
 import type { CmDmFilters, CmDmTileFilter } from './dmFilters';
+import { UV_VIEW_PARAM, UV_VIEW_PEERS } from './undervalueView';
+import type { CmUndervalueView } from './undervalueView';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
@@ -371,7 +373,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   undervalue: {
     label: 'Under Value',
-    blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name — nothing here is estimated.',
+    blurb: 'Incredible sales, lagging price tag (2026-08-28). The whole universe screened for Bonde strong/explosive revenue (+25% / +100% YoY floors), kept only when price-to-sales divided by growth (PSG) is \u2264 0.15 — calibrated on LightPath at ~12x sales with +109% growth. Cheapest-for-growth ranks first, zones drawn per name so the entry is a level, not a feeling. Backlogs and contracts are not machine-readable: the screen finds the divergence, you check the story. Missing revenue or share data excludes a name — nothing here is estimated. The 🏷️ vs peers toggle ranks the whole scan by discount to its industry peers’ price-to-sales instead (UNMEASURED).',
   },
   session: {
     label: 'Session',
@@ -1219,6 +1221,10 @@ export type CmBoard = {
   /** 🏔️ ATH tab only (2026-09-29): the served header / note / counts
    *  AthBoardNote prints. Absent on every other tab. */
   ath_board?: CmAthBoard | null;
+  /** 💎 Under Value only (2026-09-29): the served 💎/🏷️ toggle — labels,
+   *  the served view, and (🏷️ vs peers only) the header / note / counts
+   *  UndervalueViewNote prints. Absent on every other tab. */
+  undervalue_view?: CmUndervalueView | null;
   tiles: CmTile[];
   disclaimer?: string;
   note?: string;
@@ -1804,6 +1810,7 @@ export function boardQuery(p: {
   flight?: string;
   dmFilters?: string;
   dmMode?: string;
+  uvView?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -1818,6 +1825,9 @@ export function boardQuery(p: {
       && (p.phase === 'approaching' || p.phase === 'reached')) {
     q.set('phase', p.phase);
   }
+  // 🏷️ Under Value vs peers (Ajay 2026-09-29: "Use the same tab actually").
+  // The 💎 view is the server default, so only the peers view rides.
+  if (p.tab === 'undervalue' && p.uvView === UV_VIEW_PEERS) q.set(UV_VIEW_PARAM, UV_VIEW_PEERS);
   if (p.tab === 'zones' && p.target === 'order_block') {
     q.set('target', 'order_block');
   }

@@ -1131,11 +1131,10 @@ def test_psg_growth_is_capped_so_base_effects_cannot_buy_cheapness():
     assert at_cap == pytest.approx(beyond), "growth beyond the cap is inert"
 
 
-def test_undervalue_board_keeps_lagging_growers_and_counts_exclusions(
-        prices, monkeypatch, sales_stub, gex_stub):
-    """The LPTH archetype passes; a grower already priced for it is counted
-    out; missing revenue or share data EXCLUDES with a count, never an
-    estimated ratio; weak-sales names never reach the valuation step."""
+def _uv_fixture(prices, monkeypatch, sales_stub):
+    """The 💎 Under Value synthetic universe (CHEAP passes, RICH priced for
+    it, NOREV/NOSHARES excluded with a count, WEAK never screened). Shared by
+    the pin below and the byte-identity golden (2026-09-29)."""
     import sys as _sys
 
     from sepa import universe as _uni
@@ -1168,6 +1167,14 @@ def test_undervalue_board_keeps_lagging_growers_and_counts_exclusions(
     for s in ("CHEAP", "RICH", "NOREV", "NOSHARES", "WEAK"):
         prices[s] = _frame(200, start=90.05)   # last close = 100.0
 
+
+def test_undervalue_board_keeps_lagging_growers_and_counts_exclusions(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """The LPTH archetype passes; a grower already priced for it is counted
+    out; missing revenue or share data EXCLUDES with a count, never an
+    estimated ratio; weak-sales names never reach the valuation step."""
+    _uv_fixture(prices, monkeypatch, sales_stub)
+
     out = B.board("undervalue", limit=5, min_tier="any")
     syms = [t["symbol"] for t in out["tiles"]]
     # CHEAP: cap 7.45M sh x $100 = $745M / $62.8M = 11.9x / 108.9 = 0.109 ✓
@@ -1181,6 +1188,50 @@ def test_undervalue_board_keeps_lagging_growers_and_counts_exclusions(
     stats = {s["k"]: s["v"] for s in t0["stats"]}
     assert stats["PSG"] == "0.109" and stats["Rev YoY"] == "+109%"
     assert "LPTH" in out["note"]
+
+
+_UV_GOLDEN = (Path(__file__).resolve().parent / "fixtures"
+              / "undervalue_psg_golden_2026_09_29.json")
+
+
+def _uv_golden_payloads():
+    import json
+    kw = dict(limit=5, days=B.BARS_DEFAULT, themes_first=False,
+              sort=B.DEFAULT_SORT, min_tier="any")
+    return {
+        "all": json.loads(json.dumps(B.undervalue_tiles(**kw),
+                                     sort_keys=True, default=str)),
+        "reached": json.loads(json.dumps(
+            B.undervalue_tiles(**kw, phase="reached"),
+            sort_keys=True, default=str)),
+    }
+
+
+def _uv_source_hashes():
+    import hashlib
+    import inspect
+    return {fn.__name__: hashlib.sha256(
+                inspect.getsource(fn).encode()).hexdigest()
+            for fn in (B.undervalue_tiles, B.psg_ratio, B._uv_band_state)}
+
+
+def test_the_psg_view_is_byte_identical_to_the_pre_toggle_board(
+        prices, monkeypatch, sales_stub, gex_stub):
+    """Ajay 2026-09-29 "Use the same tab actually": the 🏷️ vs-peers view is a
+    toggle on the 💎 tab, and the 💎 view must stay EXACTLY what it was. The
+    golden was captured on the untouched tree (origin/main 8d62a4c) before
+    the first edit — a golden captured after would be a tautology. The
+    source hashes pin that the old builder was never edited at all."""
+    import json
+    _uv_fixture(prices, monkeypatch, sales_stub)
+    golden = json.loads(_UV_GOLDEN.read_text())
+    got = _uv_golden_payloads()
+    assert json.dumps(got["all"], sort_keys=True) == \
+        json.dumps(golden["payloads"]["all"], sort_keys=True)
+    assert json.dumps(got["reached"], sort_keys=True) == \
+        json.dumps(golden["payloads"]["reached"], sort_keys=True)
+    assert [t["symbol"] for t in got["all"]["tiles"]] == ["CHEAP"]
+    assert _uv_source_hashes() == golden["source_sha256"]
 
 
 # ---------------------------------------------------------------------------

@@ -5221,6 +5221,82 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🏷️ Under Value vs peers (2026-09-29): same tab, 💎 default unchanged, UNMEASURED served, no maths in TSX, toggle persisted, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-29: "create me another tab where valuations are wrong based
+    // on analytics …" then "Use the same tab actually". Any of these links lost
+    // silently turns the toggle into a new tab, changes the 💎 default, drops
+    // the UNMEASURED word, or lets the TSX compose a number the server did not
+    // serve.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs) {
+        errs.push('CM_TABS could not be parsed');
+      } else {
+        if (tabs.some((t) => /peer|mispric/.test(t))) errs.push('CM_TABS gained a peers/mispriced tab — he said "Use the same tab actually"');
+        if (tabs.filter((t) => t === 'undervalue').length !== 1) errs.push("CM_TABS must carry 'undervalue' exactly once");
+      }
+      if (/'(?:undervalue_peers|peers|mispriced)'/.test((/export type CmTab = ([^;]*);/.exec(src) || ['', ''])[1])) errs.push('CmTab gained a peers tab — same tab only');
+      if (!src.includes("p.tab === 'undervalue' && p.uvView === UV_VIEW_PEERS) q.set(UV_VIEW_PARAM, UV_VIEW_PEERS)")) {
+        errs.push("boardQuery must send uv=peers on the undervalue tab only: p.tab === 'undervalue' && p.uvView === UV_VIEW_PEERS) q.set(UV_VIEW_PARAM, UV_VIEW_PEERS)");
+      }
+      if (!/undervalue_view\?: CmUndervalueView \| null;/.test(src)) errs.push('CmBoard must type undervalue_view?: CmUndervalueView | null');
+      const uv = read('src/lib/undervalueView.ts');
+      const want = { UV_VIEW_PARAM: 'uv', UV_VIEW_PEERS: 'peers', UV_VIEW_PSG: 'psg' };
+      for (const [k, v] of Object.entries(want)) {
+        if (!new RegExp(`export const ${k} = '${v}';`).test(uv)) errs.push(`undervalueView.ts must export ${k} = '${v}'`);
+      }
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!page.includes("tab === 'undervalue' && <UndervalueViewNote block={data?.undervalue_view ?? null} onView={setUvView} />")) {
+        errs.push("ChartMaps.tsx must render <UndervalueViewNote block={data?.undervalue_view ?? null} onView={setUvView} /> on tab === 'undervalue'");
+      }
+      if (!page.includes('parseUvView(params.get(UV_VIEW_PARAM))')) errs.push('ChartMaps.tsx must read the view from the URL: parseUvView(params.get(UV_VIEW_PARAM))');
+      const note = read('src/components/UndervalueViewNote.tsx');
+      const code = note.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      if (/UNMEASURED|peer|median|toFixed|Math\.|%/.test(code)) errs.push('UndervalueViewNote.tsx composes wording or maths — print the served header/note only');
+      if (!/block as \{ header\?: unknown \}\)\.header/.test(note)) errs.push('UndervalueViewNote.tsx must print the served header');
+      let py = '';
+      try { py = read('../backend/chart_maps/undervalue_peers.py'); } catch { errs.push('backend/chart_maps/undervalue_peers.py is missing'); }
+      if (py) {
+        if (!py.includes('UNMEASURED')) errs.push('undervalue_peers.py must say UNMEASURED');
+        if (!/^MEASURED = False/m.test(py)) errs.push('undervalue_peers.py must carry MEASURED = False');
+        const consts = [['PEER_PS_MAX_FRACTION', '0\\.50'], ['MIN_PEERS', '5'], ['MIN_SALES_YOY_Q_PCT', '20\\.0'],
+                        ['MIN_SALES_TTM_GROWTH_PCT', '20\\.0'], ['MIN_TTM_REVENUE_USD', '100_000_000\\.0']];
+        for (const [k, v] of consts) {
+          if (!new RegExp(`^${k} = ${v}\\b`, 'm').test(py)) errs.push(`undervalue_peers.py: ${k} must be ${v.replace(/\\/g, '')} (HIS CALL — change the ✨ label with it)`);
+        }
+        const pyWant = { VIEW_PARAM: 'uv', VIEW_PEERS: 'peers', VIEW_PSG: 'psg' };
+        for (const [k, v] of Object.entries(pyWant)) {
+          if (!new RegExp(`^${k} = "${v}"`, 'm').test(py)) errs.push(`undervalue_peers.py must carry ${k} = "${v}" (equal to undervalueView.ts)`);
+        }
+        if (!/from growth\.capital_quality import _median/.test(py)) errs.push('undervalue_peers.py must import _median from growth.capital_quality (one median)');
+        if (!/market_caps_for/.test(py)) errs.push('undervalue_peers.py must read caps via promo_circuit.market_caps_for');
+        if (!/decision_snapshot/.test(py)) errs.push('undervalue_peers.py must read fundamentals via research.decision_snapshot');
+        if (!py.includes('never compared across companies')) errs.push('undervalue_peers.py NOTE must say the share price is never compared across companies');
+        if (/bounc|fake/i.test(py)) errs.push('undervalue_peers.py says "bounce"/"fake"');
+      }
+      const board = read('../backend/chart_maps/board.py');
+      if (!board.includes('            out = undervalue_tiles(limit, days, themes_first, srt, tier,')) errs.push('board.py: the 💎 default branch must still call undervalue_tiles(limit, days, themes_first, srt, tier, …)');
+      if (!board.includes('def undervalue_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,')) errs.push('board.py: def undervalue_tiles(limit: int = LIMIT_DEFAULT … signature changed');
+      const api = read('../backend/chart_maps/api.py');
+      if (!/uv: str = Query\(/.test(api)) errs.push('api.py must declare uv: str = Query(');
+      if (!api.includes('uv=(uv if isinstance(uv, str) and uv.strip() else None),')) errs.push('api.py must pass uv through, coerced');
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-undervalue-peers-2026-09-29'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-undervalue-peers-2026-09-29'");
+      } else {
+        const end = nf.indexOf('\n  {', idAt);
+        const entry = nf.slice(idAt, end < 0 ? undefined : end);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🏷️ vs peers ✨ entry must say UNMEASURED');
+        if (!entry.includes("route: '/chart-maps?tab=undervalue&uv=peers'")) errs.push("the 🏷️ vs peers ✨ entry must route to '/chart-maps?tab=undervalue&uv=peers'");
+        if (/bounce|fake/i.test(entry)) errs.push('the 🏷️ vs peers ✨ entry says "bounce"/"fake"');
+      }
+      return errs;
+    },
+  },
+  {
     name: '🏔️ ATH tab (2026-09-29): mounted after 🏎️, UNMEASURED served, proven vs high-since served, toggle persisted, never bounce',
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that
