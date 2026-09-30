@@ -78,6 +78,8 @@ import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
 import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM, dmFiltersParam, parseDmFilters, parseDmMode, type DmFilterKey } from '../lib/dmFilters';
 import AthBoardNote from '../components/AthBoardNote';
+import UndervalueViewNote from '../components/UndervalueViewNote';
+import { UV_VIEW_PARAM, UV_VIEW_PSG, parseUvView, uvViewParam } from '../lib/undervalueView';
 import type { IpoCounts } from '../lib/ipoTab';
 import HotSectors from '../components/HotSectors';
 import IndexZones from '../components/IndexZones';
@@ -495,6 +497,20 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     }, { replace: true });
   }, [setParams]);
 
+  /* 🏷️ Under Value vs peers (Ajay 2026-09-29: "Use the same tab actually").
+   * The view lives in the URL as `?uv=peers` and rides on the undervalue tab
+   * only; absent = the 💎 view (server default). The PRESSED toggle button is
+   * the SERVED `undervalue_view.view`, never this parse. */
+  const uvView = tab === 'undervalue' ? parseUvView(params.get(UV_VIEW_PARAM)) : UV_VIEW_PSG;
+  const setUvView = useCallback((v: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const val = uvViewParam(parseUvView(v));
+      if (val) next.set(UV_VIEW_PARAM, val); else next.delete(UV_VIEW_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
   const levelsSpec = levelsParam(levelSel) ?? 'all';
@@ -597,7 +613,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            flight: flightSpec,
                            levels: levelsSpec,
                            dmFilters: dmSpec,
-                           dmMode: dmModeSpec });
+                           dmMode: dmModeSpec,
+                           uvView });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
@@ -616,7 +633,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, uvView, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -990,6 +1007,10 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * pressed = the served `sort`, a click through `setSortParam`. It also
         * carries the warming line, so the generic demand counter is skipped. */}
       {tab === 'ath' && <AthBoardNote board={data?.ath_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
+      {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
+        * toggle — labels served, pressed = the served view, a click through
+        * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
+      {tab === 'undervalue' && <UndervalueViewNote block={data?.undervalue_view ?? null} onView={setUvView} />}
 
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
