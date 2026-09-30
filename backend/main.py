@@ -2016,9 +2016,13 @@ async def sepa_candidate_detail(symbol: str):
                 cache_key=latest.get("generated_at"),
             )
             rs_map = {sym: rs_one} if rs_one is not None else {}
+            # Pre-earnings blackout (entry_exit.PREEARNINGS_BLOCK_DAYS) — the
+            # same one-read calendar the scan uses (2026-09-29, MU).
+            earnings_map = await asyncio.to_thread(sc._earnings_map)
             analyzed = await asyncio.to_thread(
                 sc._analyze_symbol, sym, rs_map,
                 require_liquidity=False, require_min_adr=0.0,
+                earnings_map=earnings_map,
             )
             if analyzed is not None:
                 base = analyzed
@@ -2126,7 +2130,12 @@ def _analyze_for_verdict(sym: str, latest: dict):
         universe = [r["symbol"] for r in (latest.get("all_results") or [])] or [sym]
         rs_one = rs_rank.rank_one(sym, universe, cache_key=latest.get("generated_at"))
         rs_map = {sym: rs_one} if rs_one is not None else {}
-        return sc._analyze_symbol(sym, rs_map, require_liquidity=False, require_min_adr=0.0)
+        # 2026-09-29: the Portfolio / Auto-Pilot position cards read this
+        # verdict too — without the calendar they never showed the
+        # pre-earnings blackout (same gap the scanner call sites had).
+        earnings_map = sc._earnings_map()
+        return sc._analyze_symbol(sym, rs_map, require_liquidity=False, require_min_adr=0.0,
+                                  earnings_map=earnings_map)
     except Exception as exc:
         log.warning("verdict analyze %s failed: %s", sym, exc)
         return None
@@ -2448,7 +2457,10 @@ async def sepa_rescan(symbol: str):
     await asyncio.to_thread(prices.load_prices, sym, "2y", True)
     # Mini RS across universe to contextualize this symbol
     rs_map = await asyncio.to_thread(rs_rank.rs_ranks, [sym])
-    res = await asyncio.to_thread(sc._analyze_symbol, sym, rs_map)
+    # Pre-earnings blackout — same one-read calendar as the scan (2026-09-29).
+    earnings_map = await asyncio.to_thread(sc._earnings_map)
+    res = await asyncio.to_thread(sc._analyze_symbol, sym, rs_map,
+                                  earnings_map=earnings_map)
     return JSONResponse(res or {"error": "no data"})
 
 
@@ -2481,8 +2493,13 @@ async def sepa_analyze_one(symbol: str, with_catalyst: bool = Query(False)):
         universe_syms.append(sym)
     rs_map = await asyncio.to_thread(rs_rank.rs_ranks, universe_syms)
 
+    # Pre-earnings blackout — same one-read calendar as the scan. Without it the
+    # Rescan button (this endpoint) wrote a blackout-free row back into the
+    # latest scan and wiped the WAIT (2026-09-29, MU).
+    earnings_map = await asyncio.to_thread(sc._earnings_map)
     res = await asyncio.to_thread(sc._analyze_symbol, sym, rs_map,
-                                  require_liquidity=False, require_min_adr=0.0)
+                                  require_liquidity=False, require_min_adr=0.0,
+                                  earnings_map=earnings_map)
     if res is None:
         return JSONResponse(
             {"error": f"insufficient price history for {sym}"},

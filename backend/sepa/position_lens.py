@@ -160,6 +160,9 @@ def evaluate(symbol: str, entry: float, *,
         try:
             base = scanner._analyze_symbol(
                 sym, {}, require_liquidity=False, require_min_adr=0.0,
+                # Pre-earnings blackout — same one-read calendar as the scan
+                # (2026-09-29, MU).
+                earnings_map=scanner._earnings_map(),
             )
         except Exception:
             base = None

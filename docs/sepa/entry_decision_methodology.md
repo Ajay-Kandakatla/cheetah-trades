@@ -60,7 +60,14 @@ if actionable and vol_ok:  → ENTER   # only reached when buyable_eligible
 ```
 
 `build_entry_exit` receives `setup_ready` from the scanner at both call sites
-(full + fast paths). Called standalone (no `setup_ready`), it falls back to
+(full + fast paths). Since 2026-09-29 it also receives `earnings_date`
+(next report from the `earnings_calendar` cache via `earnings_watch.bulk_map`;
+past/garbage/missing → None) at both call sites — before that the "earnings"
+step of the precedence below never fired (MU, 2026-09-30 AMC). The on-demand
+paths (Rescan / `POST /sepa/analyze`, `POST /sepa/rescan`, the candidate
+fallback, `position_lens`) pass it too, and days-to-earnings counts on the
+America/New_York calendar (`entry_exit.et_date`; UTC blocked a report a day
+early after 20:00 ET) — round 2, 2026-09-29. Called standalone (no `setup_ready`), it falls back to
 `stage == 2` so it still cannot greenlight a Stage 1 name.
 
 **Frontend** (`pivotTiming`), mirroring the same gate so the meter never contradicts

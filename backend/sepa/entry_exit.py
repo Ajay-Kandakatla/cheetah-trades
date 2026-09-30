@@ -36,6 +36,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
@@ -68,6 +69,22 @@ ATR_STOP_MULTIPLIER    = 2.0    # daily-ATR swing multiplier (slide: 2.0)
 STRUCTURE_STOP_ATR_BUFFER = 0.5    # daily swing low − ATR×0.5 (slide: 0.5)
 SWING_LOW_LOOKBACK_BARS   = 10     # bars back to locate the recent swing low
 MA50_ALIGN_BAND_PCT       = 3.0    # swing low within ±this % of MA50 = "aligns"
+
+
+# Earnings dates are US-exchange calendar dates. Days-to-earnings is counted on
+# the America/New_York calendar (fixed 2026-09-29): counting on UTC made the
+# blackout fire a day early after 20:00 ET (EDT) / 19:00 ET (EST), when the UTC
+# date has already rolled over. Blackout length (PREEARNINGS_BLOCK_DAYS) and
+# the verdict order are unchanged.
+ET = ZoneInfo("America/New_York")
+
+
+def et_date(now: datetime):
+    """The America/New_York calendar date of `now` (naive `now` = UTC, the
+    same clock `build_entry_exit` defaults to)."""
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return now.astimezone(ET).date()
 
 
 def _bday_offset(start: datetime, n: int) -> str:
@@ -209,7 +226,7 @@ def build_entry_exit(
         if earnings_date:
             try:
                 ed = datetime.fromisoformat(earnings_date).date()
-                earnings_in_days = (ed - now.date()).days
+                earnings_in_days = (ed - et_date(now)).days   # ET calendar
                 if 0 <= earnings_in_days <= PREEARNINGS_BLOCK_DAYS:
                     earnings_block = True
             except Exception:

@@ -681,6 +681,43 @@ def test_enter_verdict_requires_stage2():
     assert verdict(3, False) != "ENTER"
 
 
+def test_scanner_feeds_earnings_date_to_entry_exit():
+    """§5d earnings blackout (MU 2026-09-29): both scanner call sites of
+    build_entry_exit must pass `earnings_date`, or PREEARNINGS_BLOCK_DAYS never
+    fires and a name reporting tomorrow reads ENTER. Full suite (incl. the
+    on-demand callers — Rescan / candidate fallback / position lens — and the
+    America/New_York day count): tests/test_earnings_blackout_2026_09_29.py."""
+    import ast
+    from sepa import scanner
+    from datetime import datetime, timedelta, timezone
+    from sepa.entry_exit import build_entry_exit, PREEARNINGS_BLOCK_DAYS
+    tree = ast.parse(Path(scanner.__file__).read_text())
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+             and getattr(n.func, "attr", None) == "build_entry_exit"]
+    assert len(calls) == 2
+    for c in calls:
+        v = next((k.value for k in c.keywords if k.arg == "earnings_date"), None)
+        # VALUE, not presence (round 2): _next_earnings_date(symbol, earnings_map)
+        assert isinstance(v, ast.Call) and getattr(v.func, "id", None) == "_next_earnings_date", c.lineno
+        assert len(v.args) >= 2 and isinstance(v.args[1], ast.Name) \
+            and v.args[1].id == "earnings_map", c.lineno
+    plan = {"entries": {"aggressive": 100.0}, "buy_zone": {"lo": 100.0, "hi": 102.5},
+            "stop": {"recommended": 93.0, "recommended_label": "base low"},
+            "targets": {"r1": 110.0}}
+    now = datetime(2026, 9, 29, 20, 0, tzinfo=timezone.utc)
+
+    def card(emap):
+        return build_entry_exit(
+            last_close=101.0, trade_plan=plan, df=None, stage={"stage": 2},
+            vol={"high_vol_breakout": True}, setup_ready=True, now=now,
+            earnings_date=scanner._next_earnings_date("MU", emap, now=now))
+    assert card({"MU": "2026-09-30"})["decision"] == "WAIT"
+    assert card({"MU": (now.date() + timedelta(days=PREEARNINGS_BLOCK_DAYS + 1)).isoformat()})["decision"] == "ENTER"
+    assert card({"MU": "2026-09-28"})["decision"] == "ENTER"   # past → ignored
+    assert card({"MU": "garbage"})["decision"] == "ENTER"
+    assert card(None)["decision"] == "ENTER"
+
+
 # --- Live scan tests (require running API) -------------------------------
 
 API_HOST = os.getenv("SEPA_TEST_API", "http://localhost:8000")

@@ -555,6 +555,37 @@ no more WATCH-but-ENTER cards. Contracts: `test_entry_decision_stage2.py` +
 `pivot-meter` frontend contract (`scripts/contracts.mjs`). Methodology:
 `docs/sepa/entry_decision_methodology.md`.
 
+> **Earnings blackout wired into the scan (2026-09-29, MU).** `build_entry_exit`
+> always implemented the pre-earnings blackout (`PREEARNINGS_BLOCK_DAYS` = 3,
+> verdict step 2 → **WAIT** "Earnings in Nd — don't enter naked"), but neither
+> scanner call site passed `earnings_date`, so it never fired (MU, reporting
+> 2026-09-30 AMC, read actionable on 09-29). Both paths (`_analyze_symbol` full
+> scan, `_hot_recompute` fast scan) now pass `scanner._next_earnings_date(sym,
+> earnings_map)`; the map is ONE cached read per scan of Mongo
+> `earnings_calendar` via `earnings_watch.bulk_map()` (the FE 📅 chip's source,
+> today..+30d). Past / unparseable / missing dates → None → the card is exactly
+> as before. Blackout length and verdict order unchanged. Contracts:
+> `test_scanner_feeds_earnings_date_to_entry_exit` (in `test_sepa_contracts.py`)
+> + `tests/test_earnings_blackout_2026_09_29.py` (AST source guard on both call
+> sites).
+>
+> **Round 2 (same day, critic).** (1) The on-demand callers now pass the same
+> one-read map (`earnings_map = await asyncio.to_thread(sc._earnings_map)` /
+> `scanner._earnings_map()`): `POST /sepa/analyze` (the card's **Rescan**
+> button — it writes its row back into the latest scan, so it used to WIPE the
+> blackout the scan had set), `POST /sepa/rescan`, the `GET /sepa/candidate`
+> fallback and `position_lens`. NOT changed (outside the fix list, reported):
+> the `/sepa/verdicts` batch helper `_analyze_for_verdict`. (2) The source guard
+> pins the keyword VALUE (`earnings_map` bound from `_earnings_map`, or the
+> helper call; `earnings_date=_next_earnings_date(symbol, earnings_map)`), and
+> end-to-end tests drive the real `scan_universe` / `scan_universe_fast` loops —
+> incl. the retry and fast-fallback submits — and the real `sepa_analyze_one`
+> body; each call site mutated to `None` fails a test. (3) Days-to-earnings is
+> counted on the **America/New_York** calendar (`entry_exit.et_date`, also used
+> by the scanner's past-date drop): on UTC a scan after 20:00 ET (EDT) blocked a
+> report 4 days out a day early and dropped a same-day report as "past".
+> `PREEARNINGS_BLOCK_DAYS` and the verdict order are unchanged.
+
 ---
 
 ## 6. Trend Template — 8 gates LOCKED

@@ -428,10 +428,57 @@ def _refresh_spy_baseline() -> Optional[float]:
     return _SPY_12M_RETURN
 
 
+# ── Next-earnings date for the entry_exit pre-earnings blackout ────────────
+# BUG FIXED 2026-09-29 (MU reports 2026-09-30 AMC): `entry_exit.build_entry_exit`
+# has always implemented the blackout (PREEARNINGS_BLOCK_DAYS), but neither
+# scanner call site passed `earnings_date`, so it never fired and MU's card read
+# "actionable" the day before the print. The date comes from the SAME cache the
+# rest of the app reads for "earnings in N days" — Mongo `earnings_calendar`
+# via `earnings_watch.bulk_map()` (the FE 📅 chip's endpoint): ONE cached read
+# per scan, no provider call per name. Missing / past / unparseable → None →
+# exactly the pre-fix behaviour (no blackout, no crash).
+def _earnings_map() -> dict:
+    """{SYM: "YYYY-MM-DD"} next earnings, read once per scan. {} on any failure."""
+    try:
+        from . import earnings_watch
+        m = (earnings_watch.bulk_map() or {}).get("map") or {}
+        return {str(k).upper(): (v or {}).get("date")
+                for k, v in m.items() if isinstance(v, dict) and v.get("date")}
+    except Exception as exc:
+        log.warning("scanner: earnings calendar unavailable (%s) — no blackout", exc)
+        return {}
+
+
+def _next_earnings_date(symbol: str, earnings_map: Optional[dict],
+                        now=None) -> Optional[str]:
+    """The ISO date to hand `build_entry_exit(earnings_date=...)`, or None.
+
+    Past dates and unparseable values are dropped here, measured on the same
+    clock `build_entry_exit` counts days-to-earnings on (the America/New_York
+    calendar, `entry_exit.et_date`), so the card never carries a stale or
+    garbage earnings stamp."""
+    if not earnings_map or not symbol:
+        return None
+    raw = earnings_map.get(str(symbol).upper())
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        from datetime import date as _date, datetime as _dt, timezone as _tz
+        from .entry_exit import et_date
+        d = _date.fromisoformat(raw.strip()[:10])
+        today = et_date(now or _dt.now(_tz.utc))
+    except Exception:
+        return None
+    if d < today:
+        return None
+    return d.isoformat()
+
+
 def _analyze_symbol(symbol: str, rs_map: dict, *,
                     require_liquidity: bool = True,
                     require_min_adr: float = 0.0,
-                    skips: Optional[dict] = None) -> Optional[dict]:
+                    skips: Optional[dict] = None,
+                    earnings_map: Optional[dict] = None) -> Optional[dict]:
     # Every early None used to be indistinguishable from "never scanned" in
     # the persisted payload (69 of 1,746 names unaccounted for, audit
     # 2026-08-25). `skips` records symbol -> reason so the scan can fold them
@@ -651,6 +698,9 @@ def _analyze_symbol(symbol: str, rs_map: dict, *,
             # not ENTER (TTLAC pp.186-188; Ajay 2026-06-22).
             distribution_selling=dist_selling,
             climax_distribution=climax_dist,
+            # Pre-earnings blackout (entry_exit.PREEARNINGS_BLOCK_DAYS) — was
+            # never passed before 2026-09-29, so it never fired (MU).
+            earnings_date=_next_earnings_date(symbol, earnings_map),
         )
     except Exception as exc:
         log.debug("entry_exit failed for %s: %s", symbol, exc)
@@ -827,6 +877,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
 
     log.info("Computing RS ranks over %d symbols...", len(work))
     rs_map = rs_rank.rs_ranks(work, emitter=emitter)
+    # Next-earnings dates for the entry_exit blackout — ONE cached read.
+    earnings_map = _earnings_map()
 
     # Warm company-name cache so each result can attach its long name without
     # paying a per-row yfinance lookup. Cached 30 days in Mongo.
@@ -850,7 +902,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
     # Switched from ex.map() to as_completed() so progress events fire on
     # actual completion order (which symbol just finished), not submission order.
     with ThreadPoolExecutor(max_workers=_SCAN_WORKERS) as ex:
-        futures = {ex.submit(_analyze_symbol, s, rs_map, skips=skips): s
+        futures = {ex.submit(_analyze_symbol, s, rs_map, skips=skips,
+                             earnings_map=earnings_map): s
                    for s in work}
         completed = 0
         for fut in as_completed(futures):
@@ -894,7 +947,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
         time.sleep(0.5)  # tiny settle for transient yfinance rate-limits
 
         with ThreadPoolExecutor(max_workers=_SCAN_RETRY_WORKERS) as ex:
-            retry_futures = {ex.submit(_analyze_symbol, s, rs_map, skips=skips): s
+            retry_futures = {ex.submit(_analyze_symbol, s, rs_map, skips=skips,
+                                       earnings_map=earnings_map): s
                              for s in retry_targets}
             retry_done = 0
             for fut in as_completed(retry_futures):
@@ -1163,7 +1217,8 @@ def scan_universe(symbols: Optional[List[str]] = None,
 
 
 def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict,
-                   skips: Optional[dict] = None) -> Optional[dict]:
+                   skips: Optional[dict] = None,
+                   earnings_map: Optional[dict] = None) -> Optional[dict]:
     """Re-evaluate the price-derived layers using cached research as scaffolding.
 
     The research blob supplies VCP / Power Play / base count / fundamentals /
@@ -1342,6 +1397,9 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict,
             # not ENTER (TTLAC pp.186-188; Ajay 2026-06-22).
             distribution_selling=dist_selling,
             climax_distribution=climax_dist,
+            # Pre-earnings blackout (entry_exit.PREEARNINGS_BLOCK_DAYS) — was
+            # never passed before 2026-09-29, so it never fired (MU).
+            earnings_date=_next_earnings_date(symbol, earnings_map),
         )
     except Exception as exc:
         log.debug("entry_exit failed for %s (fast scan): %s", symbol, exc)
@@ -1467,6 +1525,8 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
 
     log.info("Computing RS ranks over %d symbols (fast scan)...", len(work))
     rs_map = rs_rank.rs_ranks(work, emitter=emitter)
+    # Next-earnings dates for the entry_exit blackout — ONE cached read.
+    earnings_map = _earnings_map()
 
     _emit("phase", phase="scanning", total=len(work))
 
@@ -1478,7 +1538,8 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         if blob is None:
             missing.append(symbol)
             if fallback_when_missing:
-                return _analyze_symbol(symbol, rs_map, skips=skips)
+                return _analyze_symbol(symbol, rs_map, skips=skips,
+                                       earnings_map=earnings_map)
             skips[symbol] = "no cached research (fallback disabled)"
             return None
         df = prices.load_prices(symbol)
@@ -1491,7 +1552,8 @@ def scan_universe_fast(symbols: Optional[List[str]] = None,
         if prices.is_stale(df):   # delisted/halted — see _analyze_symbol
             skips[symbol] = f"stale — last bar {df.index[-1].date()}"
             return None
-        return _hot_recompute(symbol, df, rs_map, blob, skips=skips)
+        return _hot_recompute(symbol, df, rs_map, blob, skips=skips,
+                              earnings_map=earnings_map)
 
     failures: List[dict] = []
     with ThreadPoolExecutor(max_workers=_SCAN_WORKERS) as ex:
