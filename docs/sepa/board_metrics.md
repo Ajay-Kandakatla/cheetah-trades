@@ -49,7 +49,12 @@ the 17:20 turning-bullish sweep, so they never contend for the same provider.
 
 **Two sources, split by what each can actually answer:**
 
-- **Massive** `/vX/reference/financials` → `income_statement.diluted_average_shares`.
+- **Massive** v1 income statements → `diluted_shares_outstanding` (weighted
+  average), served as `income_statement.diluted_average_shares` by
+  `sepa/massive_fundamentals.py` since 2026-09-30 (the vX endpoint sunsets
+  2026-10-09 — see `docs/sepa/massive_fundamentals_v1.md`). v1 stamps a Q4 with
+  its 10-K date, but a Q4 is still derived, so the helper emits every quarterly
+  Q4 with `filing_date: None` and the guard below is unchanged.
   The only source with share-count *history*, which dilution needs. Its balance
   sheet is useless here — measured `cash` at 1.2-3.4%, `long_term_debt` at 27.6-39.6%.
 - **yfinance `.info`** → `totalCash`, `totalDebt`, `enterpriseToRevenue`,

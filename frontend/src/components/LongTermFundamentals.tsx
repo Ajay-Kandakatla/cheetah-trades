@@ -41,6 +41,9 @@ export type LongTermMetrics = {
 
 export type LongTermResp = {
   symbol: string; ok: boolean; reason?: string | null;
+  /** Provider reason code, set ONLY when the financials provider did not
+   *  answer (backend/sepa/massive_fundamentals.py, 2026-09-30). */
+  error?: string | null;
   sector?: string | null; sector_n?: number; ranked?: boolean;
   rank_basis?: string | null; min_sector_n?: number;
   score?: number | null; covered_weight?: number | null;
@@ -145,6 +148,15 @@ export function LongTermFundamentals({ symbol }: { symbol: string }) {
 
   if (loading) return <div className="lt-note">Reading filed financials for {symbol}…</div>;
   if (err) return <div className="lt-note">Could not load fundamentals: {err}</div>;
+  if (data && !data.ok && data.error) {
+    // An OUTAGE is not a company with no filings — never headline it as one.
+    return (
+      <div className="lt-note">
+        <strong>Financial statements unavailable for {symbol} right now.</strong>{' '}
+        {data.reason || `The provider did not answer (${data.error}).`}
+      </div>
+    );
+  }
   if (!data || !data.ok) {
     return (
       <div className="lt-note">
@@ -215,7 +227,11 @@ export function LongTermFundamentals({ symbol }: { symbol: string }) {
           </span>
         )}
         {cov.latest_fiscal_year && <span> · latest FY {cov.latest_fiscal_year}</span>}
-        {cov.filing_date && <span> · filed {cov.filing_date}</span>}
+        {cov.filing_date && (
+          <span title="The most recent SEC filing that carried this fiscal year. A later 10-Q or 10-K can restate an older year, so this can post-date the original 10-K.">
+            {' '}· latest filing {cov.filing_date}
+          </span>
+        )}
         {data.ranked && data.covered_weight !== null && data.covered_weight !== undefined
           && data.covered_weight < 1 && (
           <span className="lt-cov-warn">

@@ -57,6 +57,18 @@ describe('dilution cell', () => {
     expect(DILUTION_BLANK.unstable_share_basis).toMatch(/1,559%/);
   });
 
+  it('NEGATIVE — a provider outage says OUTAGE, never "no share-count history"', () => {
+    // backend/sepa/board_metrics.py FINANCIALS_UNAVAILABLE (2026-09-30). The
+    // old fallback sentence would claim the company files nothing.
+    const c = dilutionCell({ shares_yoy_pct: null, shares_yoy_reason: 'financials_unavailable' });
+    expect(c.text).toBe('—');
+    expect(c.title).toMatch(/outage/);
+    expect(c.title).not.toMatch(/No reported share-count history/);
+    // A row with no reason at all keeps the old sentence — the two stay apart.
+    expect(dilutionCell({ shares_yoy_pct: null }).title)
+      .toBe('No reported share-count history for this name.');
+  });
+
   it('NEGATIVE — a missing value is never rendered as zero', () => {
     for (const v of [null, undefined, NaN, Infinity]) {
       expect(dilutionCell({ shares_yoy_pct: v as any }).text).toBe('—');

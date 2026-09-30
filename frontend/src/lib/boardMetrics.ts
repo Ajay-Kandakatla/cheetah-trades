@@ -44,6 +44,10 @@ export const DILUTION_BLANK: Record<string, string> = {
     'The share count in the filing is more than 3x away from the shares outstanding today, so a split or recapitalisation sits between them. The percentage would be arithmetically true and economically false.',
   unstable_share_basis:
     'This company’s reported diluted share count swings between quarters — an up-C or dual-class structure where units drop out of the EPS denominator when they are anti-dilutive. A year-over-year comparison would measure one basis against another. (Rocket Companies reads +1,559% this way, and is not diluting.)',
+  // backend/sepa/board_metrics.py FINANCIALS_UNAVAILABLE (2026-09-30): the
+  // provider did not answer, which says nothing about the company's filings.
+  financials_unavailable:
+    'The financial-statements provider did not answer when this row was built — an outage, not a fact about the filings. The next board refresh retries it.',
 };
 
 /** Signed percent, one decimal, real minus sign. */

@@ -29,7 +29,9 @@ signs. This score adds that.
 
 ## Inputs (no new API call)
 
-All from the **same** 8-quarter Massive `/vX/reference/financials` fetch
+All from the **same** Massive financials fetch (v1 income statements + balance
+sheets via `sepa/massive_fundamentals.py` since 2026-09-30; vX before — see
+`docs/sepa/massive_fundamentals_v1.md`; the scored screens still see 8 quarters)
 `canslim._fetch_massive_financials` already makes, exposed as newest-first series
 (index 0 = latest filed quarter): `eps_q_series`, `rev_q_series`, `ni_q_series`,
 `inv_q_series`. Receivables arrive as an optional `recv_q_series` (yfinance
@@ -104,7 +106,11 @@ already earns the full 35 acceleration points). Output also carries a `tier`
 
 ## Data limits (Rule #1 — we do NOT invent precision)
 
-Verified live against Massive `/vX/reference/financials` on 2026-06-08:
+Verified live against Massive vX financials on 2026-06-08; re-verified on the
+v1 successor 2026-09-30 (`revenue`, `diluted_earnings_per_share`,
+`consolidated_net_income_loss`, `inventories`; v1 zero-fills an absent line and
+the helper reads an exact 0.0 as absent, so a name with no inventory line still
+yields `None`, never 0):
 
 - ✅ income statement: `revenues`, `diluted_earnings_per_share`,
   **`net_income_loss`**, `gross_profit`, `operating_income_loss`.

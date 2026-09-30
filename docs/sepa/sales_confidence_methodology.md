@@ -48,7 +48,8 @@ revises no sales number here.
 ## 3. Algorithm (`sales.compute(rev_q_series, eps_growth_q)`)
 
 Input: newest-first **quarterly revenue series** (8 quarters, from the same
-Massive financials fetch `canslim` already does — no extra API call). Needs ≥ 5
+Massive financials fetch `canslim` already does — v1 income statements since
+2026-09-30, `docs/sepa/massive_fundamentals_v1.md` — no extra API call). Needs ≥ 5
 quarters for one YoY comparison, else `score = None` (we never invent a score).
 
 - `growth_yoy_pct` = (rev[0] − rev[4]) / |rev[4]| × 100

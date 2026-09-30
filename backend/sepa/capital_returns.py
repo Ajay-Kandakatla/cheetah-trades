@@ -15,8 +15,12 @@ problem, and this module is that gap closed.
 NO SECOND PROVIDER, NO SECOND FETCH
 ───────────────────────────────────
 Everything below is computed from the payload `sepa/board_metrics.py` ALREADY
-pulls — one Massive `/vX/reference/financials` call per name, 12 quarters, made
-once per board warm. This module is pure: it takes that `results` list and
+pulls — one Massive quarterly fetch per name, 12 quarters, made once per board
+warm. Since 2026-09-30 that fetch is the v1 fundamentals family (income +
+balance + cash flow) via `sepa.massive_fundamentals`, served in the vX report
+shape this module was written against; every quarterly Q4 still arrives with
+`filing_date: None`, so `period_is_derived` and the restatement ordering in
+`ttm_window` mean what they meant. This module is pure: it takes that `results` list and
 returns numbers. It opens no socket. That keeps the house rule the boards are
 built on — ONE snapshot per board, never a per-name fetch on a board request
 (80 tiles x 1 call = 65 s, the measured reason `board_metrics` exists).
@@ -110,6 +114,8 @@ REASONS = (
     "no_capex",                     # provider has no capital-expenditure line
     "capex_period_mismatch",        # capex is from a different fiscal quarter
     "nonpositive_denominator",      # generic guard for a ratio's base
+    "financials_unavailable",       # the PROVIDER did not answer (an outage,
+                                    # not a filing fact) — 2026-09-30
 )
 
 # THE SANITY BOUND — SHIPPED OFF, BECAUSE IT IS A NUMBER NOBODY MEASURED.
@@ -221,9 +227,11 @@ def ttm_window(results: list) -> Optional[list]:
     five-quarter span against a four-quarter one and report it as a year.
 
     A quarter that appears TWICE — an original filing and a restatement — is
-    resolved by FILING DATE, never by the provider's list order. `_fetch_quarters`
-    sends no `sort` parameter, so that order is the provider's default and not a
-    guarantee; left to it, the same company would print two different ROCEs
+    resolved by FILING DATE, never by the provider's list order. Under vX
+    `_fetch_quarters` sent no `sort` parameter, so that order was the provider's
+    default and not a guarantee (v1 is asked for `period_end.desc`, which still
+    says nothing about two rows of one quarter); left to it, the same company
+    would print two different ROCEs
     depending on which row happened to come first, and `positive_roce` is a
     GRADED chip. A filing date is a filed fact, not a chosen number.
     """
@@ -348,7 +356,8 @@ def periods_agree(end_a: Optional[str], end_b: Optional[str]) -> Optional[bool]:
 
 def compute(results: list, capex_ttm: Optional[float] = None,
             capex_period_end: Optional[str] = None,
-            balance_meaningful: bool = True) -> dict:
+            balance_meaningful: bool = True,
+            provider_error: Optional[str] = None) -> dict:
     """Every return-on-capital figure for one name, from one filing set.
 
     `capex_ttm` and `capex_period_end` come from the ONLY source that carries a
@@ -407,6 +416,14 @@ def compute(results: list, capex_ttm: Optional[float] = None,
 
     def refuse(field: str, reason: str) -> None:
         out["reasons"][field] = reason if reason in REASONS else "missing_input"
+
+    if provider_error:
+        # The provider did not answer. Every ratio refuses with that, not with
+        # "no_quarters" — which would claim the company files nothing.
+        for f in ("roce_pct", "roic_pct", "roe_pct", "asset_turnover",
+                  "capex_intensity_pct", "fcf_conversion_pct"):
+            refuse(f, "financials_unavailable")
+        return out
 
     win = ttm_window(results)
     if win is None:

@@ -34,8 +34,11 @@ said so before this column.
 
 TWO SOURCES, SPLIT BY WHAT EACH CAN ACTUALLY ANSWER
 ───────────────────────────────────────────────────
-**Massive** `/vX/reference/financials` → `income_statement.diluted_average_shares`.
-It is the only source with a share-count HISTORY, which dilution needs. Its
+**Massive** v1 income statements → `diluted_shares_outstanding` (the weighted
+average, served under the vX name `income_statement.diluted_average_shares` by
+`sepa.massive_fundamentals` since 2026-09-30; the vX financials
+endpoint sunsets 2026-10-09). It is the only source with a share-count
+HISTORY, which dilution needs. Its
 balance sheet is useless here: measured `cash` at 1.2-3.4% and `long_term_debt`
 at 27.6-39.6%, so it cannot produce net debt at any usable rate.
 
@@ -62,6 +65,14 @@ and MU is the proof: its corrupt value is 2,000,000, which is a perfectly
 ordinary share count for a real microcap. A magnitude floor would pass MU's
 garbage and reject genuine small names. `filing_date is None` separates derived
 from reported exactly, with no invented number, so that is the whole test.
+
+ON v1 (2026-09-30) the guard is unchanged and still load-bearing. v1 stamps a
+Q4 with its 10-K date and fills its share count far better than vX did (NVDA
+Q4 FY2026 reads 24,430,000,000, not −28,000,000), but no 10-Q exists for a
+fourth quarter, so the value is still derived and still breaks at the edges:
+v1 NVDA Q4 FY2024 reads 47,336,000,000 against ~24.9 B either side.
+`massive_fundamentals` therefore emits every quarterly Q4 with
+`filing_date: None`, exactly as vX did, and this module drops it as before.
 """
 from __future__ import annotations
 
@@ -145,6 +156,11 @@ BASIS_CHECK_QUARTERS = 5
 # numbers would invite exactly the wrong read, so the cell says "n/a" and says
 # why. Measured share of the boards: growth 6/29 (20.7%), breakout 45/250 (18%).
 NON_OPERATING_SECTORS = ("Financial Services", "Real Estate")
+
+# The refusal a board cell carries when the financials PROVIDER did not answer
+# (2026-09-30) — distinct from every reason about the filings themselves.
+# Shared with `capital_returns.REASONS` and the frontend's DILUTION_BLANK.
+FINANCIALS_UNAVAILABLE = "financials_unavailable"
 
 
 def _f(v) -> Optional[float]:
@@ -274,31 +290,18 @@ def shares_yoy(results: list, live_shares: Optional[float] = None) -> Optional[d
 
 
 def _fetch_quarters(symbol: str) -> list:
-    """Massive quarterly financials, newest first. [] on any failure."""
-    try:
-        import requests
-        from massive_keys import stocks_key
-    except Exception as exc:                                   # noqa: BLE001
-        log.debug("board_metrics: massive import failed: %s", exc)
-        return []
-    key = stocks_key()
-    if not key:
-        return []
-    try:
-        r = requests.get("https://api.massive.com/vX/reference/financials",
-                         params={"ticker": symbol.upper(),
-                                 "limit": QUARTERS_FETCHED,
-                                 "timeframe": "quarterly", "apiKey": key},
-                         timeout=12)
-        if r.status_code != 200:
-            return []
-        return (r.json() or {}).get("results") or []
-    except Exception as exc:                                   # noqa: BLE001
-        # Never let a provider string reach a log line — the key rides in the
-        # query string and this repo has leaked one that way before.
-        log.debug("board_metrics: quarters %s failed: %s",
-                  symbol, type(exc).__name__)
-        return []
+    """Massive quarterly financials, newest first. [] when the company files
+    nothing (an ETF, a trust, a delisted name).
+
+    RAISES `massive_fundamentals.FinancialsUnavailable` when the provider does
+    not answer (2026-09-30). It used to return [] for that too, and a board row
+    built during an outage then read "no share-count history" for 36 hours —
+    a claim about the company that was really a fact about the provider.
+    """
+    from sepa import massive_fundamentals as MF
+    return MF.fetch_reports(symbol.upper(), timeframe="quarterly",
+                            limit=QUARTERS_FETCHED,
+                            statements=MF.ALL_STATEMENTS, timeout=12)
 
 
 # ---------------------------------------------------------------------------
@@ -418,17 +421,32 @@ def for_symbol(symbol: str, db=None) -> dict:
     # `capital_returns` wants the derived Q4s too (annual-minus-three is fine
     # for a FLOW, meaningless for an average share count). Fetching twice would
     # double this module's provider load for data already in hand.
+    from sepa import massive_fundamentals as MF
     quarters = []
+    provider_error = None
     try:
         quarters = _fetch_quarters(sym)
+    except MF.FinancialsUnavailable as exc:
+        # An outage, said as one (2026-09-30): the row carries the reason code,
+        # both readers refuse with FINANCIALS_UNAVAILABLE, and `warm` never
+        # lets this row overwrite a good one.
+        provider_error = exc.reason
+        row["financials_error"] = exc.reason
+        log.warning("board_metrics: quarters %s unavailable: %s", sym, exc.reason)
     except Exception as exc:                                   # noqa: BLE001
+        provider_error = "unexpected_error"
+        row["financials_error"] = provider_error
         log.debug("board_metrics: quarters %s failed: %s", sym, type(exc).__name__)
 
-    try:
-        row["shares_yoy"] = shares_yoy(quarters, _live_shares(sym, db))
-    except Exception as exc:                                   # noqa: BLE001
-        log.debug("board_metrics: dilution %s failed: %s", sym, type(exc).__name__)
-        row["shares_yoy"] = None
+    if provider_error:
+        row["shares_yoy"] = {"pct": None, "reason": FINANCIALS_UNAVAILABLE,
+                             "error": provider_error}
+    else:
+        try:
+            row["shares_yoy"] = shares_yoy(quarters, _live_shares(sym, db))
+        except Exception as exc:                               # noqa: BLE001
+            log.debug("board_metrics: dilution %s failed: %s", sym, type(exc).__name__)
+            row["shares_yoy"] = None
 
     # Return on capital (Ajay 2026-09-22). Its own try/except: a provider shape
     # change must leave these cells blank, never take a board down.
@@ -437,7 +455,8 @@ def for_symbol(symbol: str, db=None) -> dict:
         capex, capex_end = _capex_ttm(sym)
         row["capital_returns"] = _cr.compute(
             quarters, capex_ttm=capex, capex_period_end=capex_end,
-            balance_meaningful=bool(row.get("balance_meaningful", True)))
+            balance_meaningful=bool(row.get("balance_meaningful", True)),
+            provider_error=provider_error)
     except Exception as exc:                                   # noqa: BLE001
         log.debug("board_metrics: capital_returns %s failed: %s",
                   sym, type(exc).__name__)
@@ -471,9 +490,12 @@ def warm(symbols: list, max_workers: int = DEFAULT_WORKERS, db=None,
             # so the warm wrote 0 and the 17:45 cron would have skipped them
             # too. A doc missing a key THIS code computes is stale, whatever
             # its timestamp.
+            # A doc written during a provider outage is never fresh — the
+            # next warm retries it rather than serving the outage for 36 h.
             fresh = {doc["_id"] for doc in d[COLL].find(
                 {"_id": {"$in": syms},
                  "fetched_at": {"$gte": cutoff},
+                 "financials_error": {"$exists": False},
                  "$and": [{k: {"$exists": True}} for k in SCHEMA_KEYS]},
                 {"_id": 1})}
             syms = [s for s in syms if s not in fresh]
@@ -490,15 +512,31 @@ def warm(symbols: list, max_workers: int = DEFAULT_WORKERS, db=None,
             except Exception as exc:                           # noqa: BLE001
                 log.debug("board_metrics: %s failed: %s", futs[fut], exc)
 
+    kept_prior = 0
+    provider_errors = sum(1 for r in rows if r.get("financials_error"))
     if d is not None:
         for r in rows:
             try:
+                if r.get("financials_error") and d[COLL].find_one(
+                        {"_id": r["symbol"], "financials_error": {"$exists": False}},
+                        {"_id": 1}):
+                    # An outage never overwrites a good row. The prior doc
+                    # keeps serving until it ages out; with no prior doc the
+                    # error row IS written, so the board can say why it is
+                    # blank instead of implying the company files nothing.
+                    kept_prior += 1
+                    continue
                 d[COLL].replace_one({"_id": r["symbol"]}, {**r, "_id": r["symbol"]},
                                     upsert=True)
                 written += 1
             except Exception as exc:                           # noqa: BLE001
                 log.debug("board_metrics: write %s failed: %s", r.get("symbol"), exc)
-    return {"n": len(syms), "written": written}
+    if provider_errors:
+        log.warning("board_metrics: %d of %d names hit a financials provider "
+                    "error (%d kept their prior row)", provider_errors,
+                    len(rows), kept_prior)
+    return {"n": len(syms), "written": written,
+            "provider_errors": provider_errors, "kept_prior": kept_prior}
 
 
 def snapshot(symbols: list, db=None, max_age_sec: int = TTL_SEC) -> dict:

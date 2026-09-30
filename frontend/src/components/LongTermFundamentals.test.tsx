@@ -160,6 +160,26 @@ describe('LongTermFundamentals', () => {
       expect(screen.getByText(/No filed annual financials/)).toBeInTheDocument());
   });
 
+  it('NEGATIVE: a provider OUTAGE never reads as "no filed annual financials"', async () => {
+    // backend/sepa/longterm.py metrics() on FinancialsUnavailable (2026-09-30).
+    mockFetch({ symbol: 'AAPL', ok: false, error: 'rate_limited',
+                reason: 'financials provider unavailable (rate_limited) — this is an outage, not a company with no filings; retry later' });
+    const { container } = render(<LongTermFundamentals symbol="AAPL" />);
+    await waitFor(() =>
+      expect(screen.getByText(/Financial statements unavailable for AAPL/)).toBeInTheDocument());
+    expect(container.textContent).toMatch(/outage/);
+    expect(container.textContent).not.toMatch(/No filed annual financials/);
+    expect(container.textContent).not.toMatch(/ETFs, trusts/);
+  });
+
+  it('the filing date is labelled as the LATEST filing, not the original 10-K', async () => {
+    mockFetch({ ...FULL, coverage: { ...FULL.coverage, filing_date: '2026-08-05' } });
+    const { container } = render(<LongTermFundamentals symbol="LLY" />);
+    await waitFor(() => expect(screen.getByText('ROCE')).toBeInTheDocument());
+    expect(container.textContent).toMatch(/latest filing 2026-08-05/);
+    expect(container.textContent).not.toMatch(/· filed 2026-08-05/);
+  });
+
   it('NEGATIVE: a thin score is shown as not-ranked with its reason', async () => {
     mockFetch({
       ...FULL, symbol: 'DDOG', score: 55.5, ranked: false, covered_weight: 0.48,

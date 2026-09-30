@@ -27,9 +27,11 @@ selection.
 | Mongo collection | `board_metrics` (existing, 36 h TTL) |
 | Tests | `backend/tests/test_capital_returns.py` |
 
-**No second provider path and no second collection.** The Massive
-`/vX/reference/financials` call that `board_metrics` already makes once per name
-per board warm now feeds two readers: `shares_yoy` (reported quarters only) and
+**No second provider path and no second collection.** The Massive quarterly
+fetch that `board_metrics` already makes once per name per board warm (v1
+fundamentals via `sepa/massive_fundamentals.py` since 2026-09-30 — see
+`docs/sepa/massive_fundamentals_v1.md`; every quarterly Q4 still arrives with
+`filing_date: None`) now feeds two readers: `shares_yoy` (reported quarters only) and
 `capital_returns` (derived Q4s included — see below). The board read path is
 unchanged: `snapshot()` is still ONE Mongo read per board, and nothing fetches
 per name on a board request. That rule is why `board_metrics` exists — 80 tiles

@@ -10,10 +10,13 @@ the fundamentals ranking for longterm."*
 
 WHERE THE NUMBERS COME FROM
 ───────────────────────────
-One endpoint: Massive `/vX/reference/financials?timeframe=annual`. It returns
-the income statement, balance sheet and cash-flow statement per fiscal year,
-as filed. AAPL answers with 17 years (2009-2025); NTSK, which IPO'd
-2025-09-18, answers with one. That spread is the whole reason `coverage` is a
+Massive's v1 fundamentals, annual timeframe — income statements, balance
+sheets and cash-flow statements per fiscal year, read through
+`sepa.massive_fundamentals` (2026-09-30; the vX financials endpoint it
+replaced sunsets 2026-10-09). AAPL answers with 16 years (2010-2025) on v1
+where vX gave 17; NTSK, which IPO'd 2025-09-18, answers with one. v1 values
+are RESTATED (split-adjusted EPS, a later `filing_date` on older years) and v1
+carries no delisted names — see that module's docstring. That spread is the whole reason `coverage` is a
 first-class field on every response — see SHORT HISTORY below.
 
 Nothing here is scraped and nothing is estimated. If a line item is absent the
@@ -168,25 +171,16 @@ def _num(v) -> Optional[float]:
 def annual_financials(symbol: str, years: int = MAX_YEARS) -> list[dict]:
     """Filed annual statements, newest first. [] when the provider has none.
 
-    Never raises — a fundamentals tab must degrade to "no filings" rather than
-    500 a page he opens on every ticker.
+    RAISES `massive_fundamentals.FinancialsUnavailable` when the provider does
+    not answer (2026-09-30). It used to swallow every failure into [], which
+    printed "no filed annual financials" on AAPL during an outage — a claim
+    about the company that was really a fact about the provider. `metrics()`
+    catches it and says which.
     """
-    try:
-        import requests
-        from massive_keys import stocks_key
-        r = requests.get(
-            "https://api.massive.com/vX/reference/financials",
-            params={"ticker": str(symbol).upper(), "timeframe": "annual",
-                    "limit": int(years), "apiKey": stocks_key()},
-            timeout=30,
-        )
-        if r.status_code != 200:
-            log.debug("longterm: %s financials HTTP %s", symbol, r.status_code)
-            return []
-        results = (r.json() or {}).get("results") or []
-    except Exception as exc:                                   # noqa: BLE001
-        log.debug("longterm: %s financials failed: %s", symbol, exc)
-        return []
+    from sepa import massive_fundamentals as MF
+    results = MF.fetch_reports(str(symbol).upper(), timeframe="annual",
+                               limit=int(years), statements=MF.ALL_STATEMENTS,
+                               timeout=30)
 
     out = []
     for row in results:
@@ -274,7 +268,18 @@ def metrics(symbol: str, *, rows: Optional[list[dict]] = None) -> dict:
     paying for the same HTTP call twice.
     """
     sym = str(symbol).upper()
-    rows = annual_financials(sym) if rows is None else rows
+    if rows is None:
+        from sepa import massive_fundamentals as MF
+        try:
+            rows = annual_financials(sym)
+        except MF.FinancialsUnavailable as exc:
+            # A provider outage, said as one. `error` is the stable code; the
+            # reason is the sentence the Fundamentals tab prints verbatim.
+            return {"symbol": sym, "ok": False, "error": exc.reason,
+                    "reason": ("financials provider unavailable (%s) — this is "
+                               "an outage, not a company with no filings; "
+                               "retry later" % exc.reason),
+                    "years": 0, "coverage": {}, "metrics": {}, "history": []}
     if not rows:
         return {"symbol": sym, "ok": False, "reason": "no filed annual financials",
                 "years": 0, "coverage": {}, "metrics": {}, "history": []}
@@ -540,6 +545,16 @@ def warm(universe=None, max_workers: int = DEFAULT_WORKERS, db=None) -> dict:
     sectors = _sector_map(db)
     rows, failed = {}, 0
 
+    # AN OUTAGE NEVER EMPTIES THE BOARD (2026-09-30). A name whose metrics
+    # failed because the PROVIDER did not answer keeps last week's row rather
+    # than vanishing from the cross-section for a week — the same rule
+    # `board_metrics.warm` keeps. A name with no filings still drops out.
+    try:
+        prior_rows = (stored(db).get("rows") or {})
+    except Exception:                                          # noqa: BLE001
+        prior_rows = {}
+    carried = 0
+
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(metrics, s): s for s in syms}
         for fut in as_completed(futs):
@@ -551,6 +566,14 @@ def warm(universe=None, max_workers: int = DEFAULT_WORKERS, db=None) -> dict:
                 continue
             if not r.get("ok"):
                 failed += 1
+                prior = prior_rows.get(s)
+                if r.get("error") and isinstance(prior, dict) and prior.get("m"):
+                    rows[s] = {"m": dict(prior["m"]),
+                               "coverage": prior.get("coverage") or {},
+                               "absent_because": prior.get("absent_because") or {},
+                               "sector": sectors.get(s) or prior.get("sector"),
+                               "carried_forward": True}
+                    carried += 1
                 continue
             rows[s] = {"m": r["metrics"], "coverage": r["coverage"],
                        "absent_because": r.get("absent_because") or {},
@@ -603,6 +626,7 @@ def warm(universe=None, max_workers: int = DEFAULT_WORKERS, db=None) -> dict:
         "n_scanned": len(syms),
         "n_rows": len(rows),
         "n_failed": failed,
+        "n_carried_forward": carried,
         "n_ranked": ranked,
         "sector_n": {sec: len(v.get("roce", [])) for sec, v in pools.items()},
         "weights": dict(WEIGHTS),
@@ -613,7 +637,8 @@ def warm(universe=None, max_workers: int = DEFAULT_WORKERS, db=None) -> dict:
     if db is not None:
         db[COLL].replace_one({"_id": DOC_ID}, doc, upsert=True)
     return {"ok": True, "scanned": len(syms), "rows": len(rows),
-            "failed": failed, "ranked": ranked, "sectors": len(pools)}
+            "failed": failed, "carried_forward": carried, "ranked": ranked,
+            "sectors": len(pools)}
 
 
 def _et_iso() -> str:
@@ -650,6 +675,9 @@ def score_for(symbol: str, db=None) -> dict:
         "symbol": sym,
         "ok": live.get("ok", False),
         "reason": live.get("reason"),
+        # Set ONLY when the provider did not answer (2026-09-30) — the tab must
+        # not headline an outage as "No filed annual financials".
+        "error": live.get("error"),
         "sector": sec,
         "sector_n": sector_n,
         "ranked": ranked,
@@ -661,6 +689,9 @@ def score_for(symbol: str, db=None) -> dict:
         "score_used": sc.get("used") or [],
         "score_imputed": sc.get("imputed") or [],
         "score_reason": sc.get("reason"),
+        # True when last week's warm could not reach the provider for this
+        # name and carried its prior row forward (2026-09-30).
+        "score_carried_forward": bool(row.get("carried_forward")),
         "absent_because": live.get("absent_because") or {},
         "percentiles": row.get("pcts") or {},
         "weights": dict(WEIGHTS),

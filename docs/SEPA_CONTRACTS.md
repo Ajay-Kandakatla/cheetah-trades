@@ -1381,7 +1381,15 @@ to default — never the other way around.
   the same regression test. Example: 2026-05-24 CANSLIM swap from
   yfinance to Massive financials (`backend/sepa/canslim.py`). Same
   `passed: X/3` output, same component weight, just faster + more
-  reliable input.
+  reliable input. **2026-09-30: Massive vX financials → v1 fundamentals**
+  (`backend/sepa/massive_fundamentals.py`; vX sunsets 2026-10-09). Same
+  formulas, same thresholds, same output shape. Values agree on unaffected
+  names (AAPL, MU, HRMY, PLTR identical); they differ where vX was
+  DEFECTIVE — mixed pre/post-split EPS bases (SMCI A −0.55 → 49.99 now
+  passes; NVDA, AVGO, CMG, WMT, CRWD), recycled-ticker history (RKT carried
+  Rock-Tenn), omitted quarters (CRWV, ORCL, ASO) and garbage derived-Q4 share
+  counts. Every moved number and its cause:
+  `docs/sepa/massive_fundamentals_v1.md` § "Old vs new".
 * **Adding optional new fields** to `CandidateRow` that the formula
   doesn't read. Frontend can surface them as chips, but the SCORE
   calculation must not change.

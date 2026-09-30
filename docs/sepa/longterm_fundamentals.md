@@ -30,12 +30,19 @@ or inverted.
 
 ## Data source
 
-One endpoint: Massive `/vX/reference/financials?timeframe=annual`. Income
-statement, balance sheet and cash-flow statement per fiscal year, as filed.
+Massive v1 fundamentals, annual timeframe (income statements + balance sheets +
+cash-flow statements) via `sepa/massive_fundamentals.py` since 2026-09-30 — the
+vX `timeframe=annual` endpoint this used sunsets 2026-10-09; see
+`docs/sepa/massive_fundamentals_v1.md`. Income statement, balance sheet and
+cash-flow statement per fiscal year. **v1 restates**: EPS history is
+split-adjusted, `filing_date` on an older year is the latest filing that
+carried it (not the original 10-K), and delisted names return nothing. A
+provider outage now returns `ok: false` with `error: <code>` and a reason that
+says *outage* — it no longer reads as "no filed annual financials".
 
 | | |
 |---|---|
-| AAPL | 17 filed years available (2009–2025), 12 kept |
+| AAPL | 16 filed years on v1 (2010–2025; vX had 17), 12 kept |
 | CRWD | 7 years |
 | NTSK | 1 year (IPO 2025-09-18) |
 | Universe warm | 2,685 scanned · 1,979 with filings · 1,773 ranked |

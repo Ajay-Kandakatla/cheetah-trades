@@ -201,25 +201,18 @@ def test_NEGATIVE_an_UNLABELLED_report_is_DROPPED_and_COUNTED_never_placed():
 
 # ────────────────────────────────────── the five series ride the SAME alignment
 def _fake_massive(monkeypatch, q_results, a_results=()):
-    """`_fetch_massive_financials` against a stubbed HTTP layer — the real
-    function, so the five comprehensions under test are the shipped ones."""
-    class _Resp:
-        def __init__(self, payload):
-            self.status_code = 200
-            self._p = payload
+    """`_fetch_massive_financials` against a stubbed provider layer — the real
+    function, so the five comprehensions under test are the shipped ones.
 
-        def json(self):
-            return {"results": list(self._p)}
+    Since 2026-09-30 the provider layer is `sepa.massive_fundamentals` (v1),
+    which hands back vX-shaped reports; the stub serves these reports verbatim,
+    duplicates and all, so canslim's OWN alignment is what is under test."""
+    from sepa import massive_fundamentals as MF
 
-    class _Sess:
-        def get(self, url, params=None, timeout=None):
-            return _Resp(q_results if params.get("timeframe") == "quarterly"
-                         else a_results)
+    def _fetch(symbol, *, timeframe, limit, statements=(), timeout=None, key=None):
+        return list(q_results if timeframe == "quarterly" else a_results)
 
-    class _Requests:
-        Session = _Sess
-
-    monkeypatch.setitem(sys.modules, "requests", _Requests)
+    monkeypatch.setattr(MF, "fetch_reports", _fetch)
     monkeypatch.setattr(CS, "stocks_key", lambda: "test-key")
     monkeypatch.setattr(CS, "_massive_financials_disabled", False)
     return CS._fetch_massive_financials("TEST")

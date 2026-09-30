@@ -401,6 +401,14 @@ provider re-hits).
   - **Research** (this module) — refreshed weekly on Sundays. Includes VCP
     base detection, power play detection, base count, CANSLIM fundamentals,
     liquidity baseline, ADR baseline, IPO age, company name, stage snapshot.
+    CANSLIM C/A (and the board dilution / return-on-capital columns and the
+    long-term Fundamentals tab) read filed statements from Massive's **v1
+    fundamentals** (`/stocks/financials/v1/{income-statements,balance-sheets,
+    cash-flow-statements}`) through ONE helper, `sepa/massive_fundamentals.py`
+    (2026-09-30; the vX financials endpoint sunsets 2026-10-09). A provider
+    outage raises `FinancialsUnavailable` and surfaces as a named reason — never
+    as "no filings", never as zeros. Field map + semantic changes:
+    `docs/sepa/massive_fundamentals_v1.md`.
     Costs ~1-2s per symbol (so 20-30 min on Russell 1000).
   - **Hot** (`scanner.scan_universe_fast`) — runs on demand or daily. Joins
     cached research with today's prices and recomputes only the price-derived

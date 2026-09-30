@@ -13,10 +13,12 @@ book. They serve as a fundamentals filter complementing SEPA's price action.
 
 Data sources — feature-flag controlled by ``CANSLIM_SOURCE`` env var:
 
-  * "hybrid"   (default, 2026-05-24+) — C and A from Massive
-    /vX/reference/financials (faster, complete diluted-EPS history);
-    I from yfinance (Polygon doesn't expose institutional ownership %).
-    Falls back to full-yfinance when Massive returns empty or errors.
+  * "hybrid"   (default, 2026-05-24+) — C and A from Massive's v1
+    fundamentals (income statements + balance sheets, via
+    `sepa.massive_fundamentals` since 2026-09-30 — the vX financials endpoint
+    it replaced sunsets 2026-10-09); I from yfinance (Polygon doesn't expose
+    institutional ownership %). Falls back to full-yfinance when Massive
+    returns empty or errors, and says why in `_massive_error`.
 
   * "massive"  — strict; uses Massive for C+A and yfinance for I.
     Fails C/A with None if Massive has no data (no yfinance fallback).
@@ -121,6 +123,12 @@ def _from_hybrid(symbol: str) -> dict:
         # never lose CANSLIM data we previously had.
         result = _from_yfinance(symbol)
         result["_source"] = "yfinance"  # fallback path took over
+        # WHY it fell back, when the reason was the provider rather than the
+        # company (2026-09-30). A yfinance number standing in for an outage
+        # must be tellable apart from one standing in for "files nothing".
+        err = _massive_last_error.get(str(symbol).upper())
+        if err:
+            result["_massive_error"] = err
         return result
 
     # Got EPS data from Massive — now pull just the institutional ownership
@@ -171,16 +179,30 @@ def _from_hybrid(symbol: str) -> dict:
 # ---------- Source: Massive (strict) -----------------------------------------
 
 # Process-level lazy-disable mirrors the pattern in options/soir.py — once
-# we see 401/403/429 on the financials endpoint we stop hammering it for
-# the rest of this scan run.
+# we see 401/403 on the financials endpoint we stop hammering it for the rest
+# of this scan run. (A 429 is retried inside `massive_fundamentals` and does
+# NOT disable the run — it is "not now", not "not entitled".)
 _massive_financials_disabled = False
+
+# symbol -> the provider reason code of its last failed fetch, cleared on the
+# next success. Read by `_from_hybrid` so a yfinance fallback caused by an
+# OUTAGE says so. A plain dict: single assignments are atomic under the GIL and
+# the scan's thread pool only ever writes whole values.
+_massive_last_error: dict = {}
 
 
 def _fetch_massive_financials(symbol: str) -> Optional[dict]:
-    """Pull last 6 quarterly + 4 annual reports from Massive. Computes the
+    """Pull the last 12 quarterly + 4 annual reports from Massive. Computes the
     same q_eps_growth / y_eps_growth / rev_growth_q numbers yfinance does.
 
-    Returns dict with the three growth metrics, or None on failure.
+    Returns dict with the three growth metrics, or None on failure — and on a
+    PROVIDER failure the reason code is left in `_massive_last_error[SYMBOL]`.
+
+    Source since 2026-09-30: the v1 fundamentals family via
+    `sepa.massive_fundamentals`, which hands back reports in the vX shape this
+    function always read, so every comprehension below is unchanged. Three v1
+    calls where vX took two: quarterly income + quarterly balance sheet (for
+    inventory) + annual income.
     """
     global _massive_financials_disabled
     if _massive_financials_disabled:
@@ -188,16 +210,9 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
     api_key = stocks_key()
     if not api_key:
         return None
+    from sepa import massive_fundamentals as MF
 
-    try:
-        import requests
-    except ImportError:
-        log.warning("canslim.massive: requests not installed")
-        return None
-
-    sess = requests.Session()
-    base = "https://api.massive.com/vX/reference/financials"
-
+    sym = str(symbol).upper()
     try:
         # Quarterly — 12 quarters since 2026-09-12 (was 8): 5 for the latest YoY
         # (Q vs Q-4), enough back-history for the sales score's acceleration +
@@ -208,45 +223,46 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         # The SCORED screens still see exactly 8 — see the slice at the call
         # sites below. Widening their input would silently move `sales.score`
         # and `earnings_quality`, which are book-cited and thresholded.
-        rq = sess.get(base, params={
-            "ticker":    symbol.upper(),
-            "limit":     12,
-            "timeframe": "quarterly",
-            "apiKey":    api_key,
-        }, timeout=8)
-        # Annual — need 4 years for trailing 3yr average growth
-        ra = sess.get(base, params={
-            "ticker":    symbol.upper(),
-            "limit":     4,
-            "timeframe": "annual",
-            "apiKey":    api_key,
-        }, timeout=8)
-    except Exception as exc:
-        # SCRUBBED at the source. `requests` embeds the full request URL in its
-        # timeout/connection errors and the Massive key rides in that URL as
-        # `apiKey=`, so handing `exc` straight to a logger printed the live key
-        # in plaintext (seen 2026-09-12 during the qoq backfill — the 5th
-        # credential exposure). The root log filter also catches this now, but
-        # the module that KNOWS the secret is in the string should never be the
-        # one relying on a downstream filter.
+        #
+        # Asked for 12 + 3: the Q4 EPS derivation below needs Q1..Q3 of the
+        # OLDEST fiscal year in the window, which 12 alone cuts off (critic
+        # 2026-09-30: the oldest Q4 read None for NVDA, NFLX, PEP, TER). The
+        # extra three are trimmed right after the derivation.
+        q_results = MF.fetch_reports(sym, timeframe="quarterly", limit=12 + 3,
+                                     statements=(MF.INCOME, MF.BALANCE),
+                                     timeout=8, key=api_key)
+        # Annual — need 4 years for trailing 3yr average growth. Newest first:
+        # v1 is asked for `period_end.desc` explicitly, where vX's order was
+        # the provider's default.
+        a_results = MF.fetch_reports(sym, timeframe="annual", limit=4,
+                                     statements=(MF.INCOME,),
+                                     timeout=8, key=api_key)
+    except MF.FinancialsUnavailable as exc:
+        _massive_last_error[sym] = exc.reason
+        if exc.reason == "not_authorized":
+            if not _massive_financials_disabled:
+                log.warning("canslim.massive: %s returned %s — plan doesn't include "
+                            "financials. Disabling Massive financials for this run.",
+                            symbol, exc.status)
+                _massive_financials_disabled = True
+            return None
+        # The key rides in a header, not the URL, so the exception text is
+        # clean — `_scrub` stays anyway: the module that knows a secret is
+        # near never relies on that alone.
         log.warning("canslim.massive: fetch failed for %s: %s",
                     symbol, _scrub(exc))
         return None
-
-    if rq.status_code in (401, 403):
-        if not _massive_financials_disabled:
-            log.warning("canslim.massive: %s returned %s — plan doesn't include "
-                        "financials. Disabling Massive financials for this run.",
-                        symbol, rq.status_code)
-            _massive_financials_disabled = True
+    except Exception as exc:                                   # noqa: BLE001
+        _massive_last_error[sym] = "unexpected_error"
+        log.warning("canslim.massive: fetch failed for %s: %s",
+                    symbol, type(exc).__name__)
         return None
-    if rq.status_code != 200 or ra.status_code != 200:
-        log.debug("canslim.massive: %s quarterly=%s annual=%s",
-                  symbol, rq.status_code, ra.status_code)
-        return None
-
-    q_results = (rq.json() or {}).get("results") or []
-    a_results = (ra.json() or {}).get("results") or []
+    _massive_last_error.pop(sym, None)
+    # Q4 EPS the way vX served it — annual minus Q1..Q3 — not v1's derived Q4
+    # net income over its broken derived Q4 share count (NFLX FY2024 Q4 read
+    # 0.11 against ~0.43). See `massive_fundamentals.derive_q4_eps`.
+    MF.derive_q4_eps(q_results, a_results)
+    q_results = q_results[:12]
 
     # ALIGN BY FISCAL PERIOD BEFORE ANYTHING READS A SLOT (2026-09-20, his
     # *"#2 Yes"*). Massive OMITS a quarter it does not have and does NOT
@@ -272,7 +288,10 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         # margin-expansion read (p.145-147); inventory gives the inventory-vs-sales
         # red flag (p.153-155). All come from the SAME 8-quarter fetch — no extra
         # API call. net_income_loss & inventory verified present on Massive
-        # /vX/reference/financials (income_statement + balance_sheet) 2026-06-08.
+        # vX financials 2026-06-08; since 2026-09-30 they come from the v1
+        # income-statements (consolidated_net_income_loss) and balance-sheets
+        # (inventories) — an exact 0.0 there is read as ABSENT, see
+        # `sepa/massive_fundamentals.py`.
         # PERIOD KEYS, parallel to the series (2026-09-12). Massive OMITS a
         # missing quarter rather than leaving a placeholder, so list position is
         # not quarter adjacency — ORCL is missing Q2 FY2025 and Q2 FY2026, NVDA
@@ -408,7 +427,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "a_strong_y_eps":  (y is not None and y >= 25),
         "i_institutional": (inst is not None and 40 <= inst <= 80),
     }
-    return {
+    out = {
         "q_eps_growth_pct":   q,
         "y_eps_growth_pct":   y,
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
@@ -427,6 +446,13 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "passed":  sum(1 for v in checks.values() if v),
         "_source": "massive",
     }
+    # Present ONLY when C/A are blank because the provider did not answer — not
+    # because the company files nothing (2026-09-30). Same key as the hybrid
+    # fallback, so one reader serves both paths.
+    err = None if m else _massive_last_error.get(str(symbol).upper())
+    if err:
+        out["_massive_error"] = err
+    return out
 
 
 # ---------- Source: yfinance (legacy / fallback) -----------------------------
