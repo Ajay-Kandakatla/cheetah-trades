@@ -172,6 +172,16 @@ RENAMES: dict[str, tuple[str, str, str]] = {
              "Barrick has traded as `B` since 2025-05-09. Verified "
              "2026-09-29 (scratchpad dm_audit sweep)."),
     # --- end 2026-09-29 RENAMES block ----------------------------------------
+    # --- 2026-09-29 Russell holdings refresh: a rename the live IWV list shows.
+    "DOMO": ("HUCK", "2026-09-24",
+             "Domo, Inc. renamed Huckleberry.ai, Inc. Same CIK 0001505952 and "
+             "composite FIGI BBG00L2NS0B7 (both Class B); Massive ticker "
+             "events DOMO 2018-06-29 -> HUCK 2026-09-24; DOMO reference "
+             "NOT_FOUND, its inactive record delisted_utc 2026-09-24. DOMO "
+             "last bar 2026-09-23 close 3.55; HUCK first bar 2026-09-24 open "
+             "3.45. Consecutive sessions, -2.8% overnight, no split. The live "
+             "iShares IWV/IWC holdings (as of 2026-09-28) list HUCK. Verified "
+             "2026-09-29 against Massive live."),
 }
 
 # Reverse index, built once. A current symbol can have more than one former name
@@ -371,6 +381,21 @@ DELISTED: dict[str, str] = {
            "2026-05-18).",
     "WSR": "Whitestone REIT. Last bar 2026-07-13, pinned $18.96-19.00, "
            "delisted 2026-07-15 — acquired by Ares (GlobeNewswire 2026-04-09).",
+    # --- 2026-09-29 Russell holdings refresh. Both are still listed in the
+    # iShares R3000 file; verified against Massive live 2026-09-29: reference
+    # NOT_FOUND, an inactive record with delisted_utc, no aggs after the last
+    # bar, no same-CIK active successor.
+    "THRD": "Third Harmonic Bio. Last bar 2025-07-30 (5.38, ~6x volume), "
+            "pinned $5.38-5.45 for weeks, delisted_utc 2025-07-31 (CIK "
+            "0001923840) — voluntary Nasdaq delisting under its Plan of "
+            "Liquidation and Dissolution ($5.35/share first distribution; "
+            "Form 25 filed 2025-07-31, SEC 8-K). Still an iShares IWV/IWC row "
+            "at Price 0.00 on 2026-09-28.",
+    "TBPH": "Theravance Biopharma. Last bar 2026-09-23, pinned $17.02-17.05 "
+            "for five sessions, final two sessions 6.2M and 10.0M shares vs "
+            "~0.4M before, delisted_utc 2026-09-24 (CIK 0001583107) — "
+            "acquired by Zymeworks for $17.00 cash + a non-tradeable CVR, "
+            "closed 2026-09-23 (GlobeNewswire 2026-09-23).",
 }
 
 

@@ -819,8 +819,56 @@ def fetch_themes() -> list[str]:
 # ---------------------------------------------------------------------------
 # Remote-list fetchers (cached to disk for 30 days)
 # ---------------------------------------------------------------------------
+# 2026-09-29 (round 2): the iShares lists' cache FILES are versioned. The
+# caches the old May-xls loader wrote hold no holdings date and would keep
+# serving that vintage for up to 30 days after the deploy; a new file name
+# stops them matching, and every file under the new name is written with its
+# holdings-date sidecar (`_cache_as_of_path`). Keyed by the LIST name so every
+# caller (`_read_cached`, `_cache_age_days`, universe_changes._expire_cache)
+# follows without change.
+_CACHE_KEY_VERSIONS: dict[str, str] = {
+    "russell1000": "russell1000_v2",
+    "russell3000": "russell3000_v2",
+    "microcap": "microcap_v2",
+}
+
+
 def _cache_path(name: str) -> Path:
-    return UNIV_CACHE_DIR / f"{name}.txt"
+    return UNIV_CACHE_DIR / f"{_CACHE_KEY_VERSIONS.get(name, name)}.txt"
+
+
+def _cache_as_of_path(name: str) -> Path:
+    """Sidecar holding the SOURCE's own list date for a cached list
+    (``<key>.as_of``, one ISO date). Written beside the list, so a cache hit
+    carries the date the holdings are from, not just when we fetched them."""
+    p = _cache_path(name)
+    return p.with_name(p.stem + ".as_of")
+
+
+def _read_cached_as_of(name: str) -> str | None:
+    """The sidecar date for `name`'s cache, or None (absent / unreadable)."""
+    try:
+        raw = _cache_as_of_path(name).read_text().strip()
+    except Exception:
+        return None
+    try:
+        from datetime import date as _date
+        return _date.fromisoformat(raw).isoformat()
+    except ValueError:
+        return None
+
+
+def _write_cached_as_of(name: str, as_of: str | None) -> None:
+    """Write (or, when the source stated no date, REMOVE) the sidecar, so a
+    stale date can never outlive the list it described."""
+    p = _cache_as_of_path(name)
+    try:
+        if as_of:
+            p.write_text(as_of)
+        elif p.exists():
+            p.unlink()
+    except Exception as exc:                            # noqa: BLE001
+        log.warning("universe: could not write %s: %s", p.name, exc)
 
 
 def _read_cached(name: str) -> list[str] | None:
@@ -912,8 +960,15 @@ _LAST_SOURCE: dict[str, dict] = {}
 
 
 def _record(name: str, source: str, syms: list[str], *,
-            age_days: float | None = None) -> list[str]:
-    _LAST_SOURCE[name] = {"source": source, "n": len(syms), "age_days": age_days}
+            age_days: float | None = None,
+            as_of: str | None = None) -> list[str]:
+    rec = {"source": source, "n": len(syms), "age_days": age_days}
+    # `as_of` is the date the SOURCE says its list is from (the iShares
+    # "Fund Holdings as of" line). Only the iShares paths know it, so the key
+    # is only present when it is — every other record keeps its old shape.
+    if as_of is not None:
+        rec["as_of"] = as_of
+    _LAST_SOURCE[name] = rec
     return syms
 
 
@@ -923,7 +978,10 @@ def last_source(name: str) -> dict | None:
     Returns ``{"source": str, "n": int, "age_days": float | None}`` where
     source is one of: ``cache`` (fresh, within TTL), ``wikipedia``,
     ``datahub``, ``stale-cache`` (expired but real), ``curated`` (WRONG
-    universe — last-resort only), ``empty``.
+    universe — last-resort only), ``empty``; and for the iShares lists
+    ``ishares-network`` (live holdings CSV), ``ishares-snapshot`` (the
+    committed fallback file — the live fetch FAILED) and ``ishares-local``
+    (an IWM export dropped on disk). iShares records also carry ``as_of``.
     """
     rec = _LAST_SOURCE.get(name)
     return dict(rec) if rec else None
@@ -973,8 +1031,10 @@ _EXPECTED_COUNTS: dict[str, tuple[int, int]] = {
     # of this band is to say so out loud rather than mislabel it.
     "russell3000": (1800, 3200),  # measured 2559
     # microcap is an optional layer (IWC holdings file); absent is legitimate,
-    # so there is no lower bound — only an upper one to catch a bad parse.
-    "microcap": (0, 2500),        # measured 1278
+    # so there is no lower bound HERE — only an upper one to catch a bad parse.
+    # A truncated LIVE parse is caught instead by the snapshot-anchored floor
+    # ISHARES_LIVE_MIN_SNAPSHOT_FRACTION in `_resolve_ishares` (2026-09-29).
+    "microcap": (0, 2500),        # measured 1278 (live 2026-09-28: 1,353)
     "etf": (150, 600),            # measured 373
     "themes": (20, 300),          # measured 298 (2026-09-28), hand-curated
     # ZERO IS LEGITIMATE here and nowhere else in this table: on day one nothing
@@ -1064,6 +1124,34 @@ def universe_counts(names: list[str] | None = None) -> dict:
                          "error": f"{type(exc).__name__}: {exc}"[:160]}
     out["_failing"] = sorted(k for k, v in out.items()
                              if isinstance(v, dict) and not v.get("ok"))
+    # iShares provenance (2026-09-29). A list can be the right SIZE and still
+    # be months old: it resolved from the committed snapshot because the live
+    # holdings CSV failed. Say where each came from, and name every list that
+    # is being SERVED from a snapshot older than ISHARES_SNAPSHOT_STALE_DAYS.
+    #
+    # Round 2: `_snapshot_served` names EVERY list the snapshot served, at any
+    # age — a served snapshot means the live fetch failed, which the health
+    # audit reports with the holdings date. `_stale` stays the stricter subset.
+    stale: list[str] = []
+    served: list[str] = []
+    try:
+        snaps = ishares_snapshot_status()
+    except Exception:                                   # noqa: BLE001
+        snaps = {}
+    for name, snap in snaps.items():
+        entry = out.get(name)
+        if not isinstance(entry, dict):
+            continue
+        rec = last_source(name) or {}
+        entry["source"] = rec.get("source")
+        entry["as_of"] = rec.get("as_of")
+        entry["snapshot"] = snap
+        if snap.get("served"):
+            served.append(name)
+            if snap.get("stale"):
+                stale.append(name)
+    out["_stale"] = sorted(stale)
+    out["_snapshot_served"] = sorted(served)
     return out
 
 
@@ -1375,6 +1463,8 @@ _NON_EQUITY_BLOCKLIST: set[str] = {
 # 1000 — checked 2026-05-21).
 import re as _re
 _FUTURES_PATTERN = _re.compile(r"^[A-Z]{1,3}[HMUZ][0-9]$")
+# A class share written with a space, as the live iShares CSV does: "BRK B".
+_CLASS_SHARE_SPACE = _re.compile(r"^[A-Z]{1,5} [A-Z]$")
 
 
 def _normalize_ishares_ticker(raw: str) -> str | None:
@@ -1395,6 +1485,17 @@ def _normalize_ishares_ticker(raw: str) -> str | None:
         return None
     if _FUTURES_PATTERN.match(s):
         return None
+    # 2026-09-29: the live latest-holdings.csv writes class shares with a
+    # SPACE ("BRK B", "HEI A", "UHAL B") where the old export wrote "BRKB".
+    # The shape check below rejected the space silently — HEI-A ($69M/day),
+    # BF-A, GEF-B, LEN-B and UHAL-B would have left `full`. The joined form
+    # goes through the SAME remap table first (so "RUSH A" would stay RUSHA,
+    # as the curated entry says); anything else becomes the dash form.
+    if _CLASS_SHARE_SPACE.match(s):
+        joined = s.replace(" ", "")
+        if joined in _CLASS_SHARE_REMAP:
+            return _CLASS_SHARE_REMAP[joined]
+        return s.replace(" ", "-")
     # Class-share remap takes precedence over dot-to-dash because
     # iShares typically emits the joined form (BRKB) not the dotted form.
     if s in _CLASS_SHARE_REMAP:
@@ -1502,35 +1603,70 @@ def fetch_massive_universe(limit: int | None = None,
         return []
 
 
-# --- iShares manually-downloaded SpreadsheetML loader -------------------
+# --- iShares holdings: live CSV first, committed snapshot second ---------
 #
-# Why this exists (2026-05-29): iShares' public CSV download endpoints
-# (1467271812596.ajax?fileType=csv&...) now serve a Cloudflare-style HTML
-# disclaimer interstitial instead of CSV unless the requester executes JS
-# AND clicks "Individual Investor". Even Chrome TLS impersonation via
-# curl_cffi fails. Headless browsers (Playwright) would work but add a
-# heavy dep for one source.
+# HISTORY. 2026-05-29: the old `1467271812596.ajax?fileType=csv` endpoint
+# started serving HTML, so Ajay downloaded the "Download Holdings" .xls
+# exports by hand and they became the PRIMARY source. Nobody refreshed them:
+# on 2026-09-29 `full` was still built from "Fund Holdings as of May 28, 2026"
+# — before the June 26 reconstitution and the Sep 21 Q3 IPO adds — and the
+# weekly `universe_changes` job re-read the same file and reported "no change"
+# every Sunday.
 #
-# Pragmatic answer: Ajay downloads the IWB / IWV "Download Holdings" file
-# from iShares (the button gives a .xls SpreadsheetML XML, not CSV) and
-# drops it into `backend/sepa/data/`. We parse that file as the primary
-# source. Russell reconstitutes annually + iShares rebalances quarterly,
-# so a manual refresh every ~3 months keeps coverage current.
+# 2026-09-29 (diagnosed read-only in the api container): iShares redesigned
+# its product pages. The old ajax URL answers HTTP 200 `text/csv` with 1.45 MB
+# of product-page HTML (not a TLS / Cloudflare block — curl_cffi Chrome
+# impersonation gets the same HTML). The page now links
+# `/us/products/<id>/<slug>/latest-holdings.csv`, which returns the real CSV
+# to plain `requests` with our UA: a ~9-line metadata block, then the
+# `Ticker,Name,Sector,Asset Class,...,Price,Location,Exchange,...` table.
+#
+# So the order is now:
+#   1. live `latest-holdings.csv`                     -> ``ishares-network``
+#   2. the committed snapshot in ``backend/sepa/data`` -> ``ishares-snapshot``
+#      (a WARNING when the live fetch fails; a second WARNING past
+#      ISHARES_SNAPSHOT_STALE_DAYS; `universe_counts()["_snapshot_served"]`
+#      names it at ANY age for the health audit — no silent staleness)
+#   3. the old clean fallback (curated ∪ S&P 500 ∪ S&P 400), or [] for microcap
+# The snapshot is NOT written to the 30-day disk cache: a cached snapshot would
+# read back as plain ``cache`` and hide that the live fetch failed, and it
+# would keep serving the fallback for a month after iShares recovers.
+# Round 2 (2026-09-29): a failed live fetch is memoised for
+# ISHARES_LIVE_FAILURE_MEMO_SEC (the outage is one download per hour, not per
+# call); the cache files are versioned (`_CACHE_KEY_VERSIONS`) and carry the
+# holdings date in a sidecar, so a cache hit keeps its `as_of`.
 
 _DATA_DIR = Path(__file__).parent / "data"
-_LOCAL_IWB_PATH = _DATA_DIR / "iShares-Russell-1000-ETF_fund.xls"
-_LOCAL_IWV_PATH = _DATA_DIR / "iShares-Russell-3000-ETF_fund.xls"
+# Committed snapshots of the live CSV (same format the network path parses).
+# Refreshed 2026-09-29 from "Fund Holdings as of Sep 28, 2026". Re-save them
+# from the same URL (ISHARES_HOLDINGS_URL) whenever the health audit says a
+# snapshot is being served and is stale.
+_LOCAL_IWB_PATH = _DATA_DIR / "iShares-Russell-1000-ETF_holdings.csv"
+_LOCAL_IWV_PATH = _DATA_DIR / "iShares-Russell-3000-ETF_holdings.csv"
 # Micro-cap extension ("beyond Russell 3000", user 2026-05-30). The Russell
 # 3000 ≈ Russell 1000 + Russell 2000, so true small/micro names below it come
-# from the iShares Micro-Cap ETF (IWC) holdings. Same "Download Holdings" .xls
-# format. Optional — if the file isn't present, the micro-cap layer is just
-# skipped (the broad mode still returns R3000 ∪ ETFs).
-_LOCAL_IWC_PATH = _DATA_DIR / "iShares-Micro-Cap-ETF_fund.xls"
+# from the iShares Micro-Cap ETF (IWC) holdings. Optional — if neither the live
+# CSV nor the file is available, the micro-cap layer is just skipped (the
+# broad mode still returns R3000 ∪ ETFs).
+_LOCAL_IWC_PATH = _DATA_DIR / "iShares-Micro-Cap-ETF_holdings.csv"
 # The Russell 2000 (IWM). Ajay 2026-09-18: "Yes add it." ABSENT today — until
 # he drops the "Download Holdings" export here, `fetch_russell2000` derives the
 # list from FTSE's own definition (Russell 3000 minus Russell 1000) and says
-# so on every surface. See `russell2000_coverage`.
+# so on every surface. See `russell2000_coverage`. A live IWM fetch is now
+# possible (same URL shape) but is NOT wired: that is a construction change of
+# the Russell 2000 list and his call.
 _LOCAL_IWM_PATH = _DATA_DIR / "iShares-Russell-2000-ETF_fund.xls"
+
+# The live holdings link, per fund. Verified 2026-09-29 for IWB, IWV, IWC
+# (and IWM 239710 / ishares-russell-2000-etf, not wired).
+ISHARES_HOLDINGS_URL = ("https://www.ishares.com/us/products/{pid}/{slug}/"
+                        "latest-holdings.csv")
+_ISHARES_FUNDS: dict[str, tuple[str, str, str]] = {
+    # list name     (fund, product id, slug)
+    "russell1000": ("IWB", "239707", "ishares-russell-1000-etf"),
+    "russell3000": ("IWV", "239714", "ishares-russell-3000-etf"),
+    "microcap":    ("IWC", "239716", "ishares-microcap-etf"),
+}
 
 # Provenance labels for the iShares ladder, so `last_source()` can tell a real
 # export from a derivation. Named constants, never retyped strings — the
@@ -1538,39 +1674,94 @@ _LOCAL_IWM_PATH = _DATA_DIR / "iShares-Russell-2000-ETF_fund.xls"
 # compares them.
 SRC_ISHARES_LOCAL = "ishares-local"
 SRC_ISHARES_NETWORK = "ishares-network"
+# The committed snapshot, served because the live fetch failed. NOT live data:
+# universe_changes refuses to diff it (it would compare a file against itself).
+SRC_ISHARES_SNAPSHOT = "ishares-snapshot"
 SRC_DERIVED_R2000 = "derived-r3000-minus-r1000"
 
-# SpreadsheetML 2003 namespace — iShares' Holdings.xls export uses this.
+# How old a served snapshot may be before it is called STALE. Not a new
+# number: it is the 120-day age warning the old local-xls loader already
+# carried ("refresh from iShares.com 'Download Holdings'"), now named.
+ISHARES_SNAPSHOT_STALE_DAYS = 120
+
+# 2026-09-29 (round 2) — an iShares OUTAGE must not re-download on every
+# `load_universe` call. A failed (or rejected) live fetch is remembered per
+# fund for this long; until it expires the ladder goes straight to the
+# snapshot. One hour, as the fix round specified. universe_changes' forced
+# weekly refresh clears it (`forget_ishares_memos`) so that job always asks.
+ISHARES_LIVE_FAILURE_MEMO_SEC = 60 * 60
+
+# 2026-09-29 (round 2) — a live parse SMALLER than this share of the committed
+# snapshot's own count is a truncated download, not a smaller fund, and is
+# rejected for the snapshot. Anchored on the snapshot so it needs no absolute
+# number; it is the only lower bound microcap has (its `_EXPECTED_COUNTS`
+# floor is 0 because an absent layer is legitimate). 60% as the fix round
+# specified. Applied to all three iShares lists: for russell1000/3000 their
+# static floors (900 / 1800) are already higher, so it never loosens them.
+ISHARES_LIVE_MIN_SNAPSHOT_FRACTION = 0.60
+
+# The fund's OWN categorical marks for a residual line that is not a tradeable
+# listing: HOLX "NO MARKET (E.G. UNLISTED)" at $0.01, VUECF / P5N994
+# "Non-Nms Quotation Service". Prefix match, upper-cased. Together with a
+# Price of exactly 0 (THRD, SBT, PDLI, GTXI) this drops the dead rows iShares
+# still lists as Equity — no threshold involved.
+_ISHARES_RESIDUAL_EXCHANGE_PREFIXES = ("NO MARKET", "NON-NMS")
+
+# SpreadsheetML 2003 namespace — iShares' old Holdings.xls export uses this.
 _SS_NS = "{urn:schemas-microsoft-com:office:spreadsheet}"
 
+_AS_OF_FORMATS = ("%b %d, %Y", "%m/%d/%Y", "%d-%b-%Y", "%Y-%m-%d", "%B %d, %Y")
 
-def _load_ishares_local_xls(path: Path, *, source_label: str) -> list[str]:
-    """Parse an iShares "Download Holdings" .xls (SpreadsheetML XML).
 
-    Locates the 'Holdings' worksheet, finds the row whose first cell
-    is 'Ticker', then iterates data rows pulling column 0 (Ticker)
-    and column 3 (Asset Class) — filters to Equity only to drop
-    cash / derivatives / future positions.
+def _parse_as_of(raw: str) -> str | None:
+    """'Sep 28, 2026' / '05/28/2026' / … -> '2026-09-28', else None."""
+    from datetime import datetime as _dt
+    s = (raw or "").strip().strip('"').strip()
+    for fmt in _AS_OF_FORMATS:
+        try:
+            return _dt.strptime(s, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
 
-    Each surviving ticker is run through _normalize_ishares_ticker
-    (class-share remap + futures/junk filter) for symmetry with the
-    network path, and dedup'd.
 
-    Raises FileNotFoundError if the file isn't present, RuntimeError
-    on parse failure (bad XML, missing Holdings sheet, etc.).
+def _ishares_csv_records(text: str, *, source_label: str) -> tuple[list[dict], str | None]:
+    """Split an iShares holdings CSV into row dicts + its "as of" date.
+
+    Works on the live `latest-holdings.csv` and on the pre-2026 ajax CSV: both
+    carry a metadata block of drifting length above a header row whose first
+    field is ``Ticker``. Raises RuntimeError on anything else — notably the
+    HTML product page the old URL now returns with a `text/csv` header.
     """
-    if not path.exists():
-        raise FileNotFoundError(f"iShares local file missing: {path}")
+    import csv
+    import io
+    if not text or not text.strip():
+        raise RuntimeError(f"{source_label}: iShares CSV is empty")
+    lines = text.lstrip("﻿").splitlines()
+    as_of = None
+    header_idx = None
+    for i, ln in enumerate(lines[:50]):
+        stripped = ln.lstrip()
+        if as_of is None and stripped.lower().startswith(("fund holdings as of",
+                                                           '"fund holdings as of')):
+            parts = next(csv.reader([stripped]), [])
+            if len(parts) > 1:
+                as_of = _parse_as_of(parts[1])
+        # Header row has "Ticker" as first field (with or without quotes).
+        if stripped.startswith(("Ticker,", '"Ticker"')):
+            header_idx = i
+            break
+    if header_idx is None:
+        head = (lines[0] if lines else "")[:60]
+        raise RuntimeError(f"iShares CSV: header row with 'Ticker' not found "
+                           f"({source_label}; first line {head!r})")
+    records = [dict(r) for r in csv.DictReader(io.StringIO("\n".join(lines[header_idx:])))]
+    return records, as_of
 
-    # File age — useful warning when the user forgets to refresh quarterly.
-    age_days = (time.time() - path.stat().st_mtime) / 86400
-    if age_days > 120:
-        log.warning(
-            "universe: %s local file is %.0f days old (%s) — "
-            "refresh from iShares.com 'Download Holdings'",
-            source_label, age_days, path.name,
-        )
 
+def _ishares_xls_records(path: Path, *, source_label: str) -> tuple[list[dict], str | None]:
+    """Row dicts + as-of date from an old "Download Holdings" .xls
+    (SpreadsheetML XML). Raises RuntimeError on a parse failure."""
     from lxml import etree
     # iShares files have occasional malformed bits; recover=True
     # lets lxml skip them rather than aborting the whole parse.
@@ -1595,67 +1786,380 @@ def _load_ishares_local_xls(path: Path, *, source_label: str) -> list[str]:
             out.append(data.text if data is not None and data.text else "")
         return out
 
-    # Find the header row (first cell == 'Ticker'). iShares puts ~7 rows
-    # of fund metadata above it; that count drifts so detect, don't hardcode.
+    # iShares puts ~7 rows of fund metadata above the header; that count
+    # drifts so detect, don't hardcode.
+    as_of = None
+    header = None
     header_idx = None
-    ticker_col = 0
-    asset_class_col = None
     for i, r in enumerate(rows[:50]):
         cells = _cell_strings(r)
+        if cells and cells[0].strip().lower() == "fund holdings as of" and len(cells) > 1:
+            as_of = _parse_as_of(cells[1])
         if cells and cells[0].strip() == "Ticker":
             header_idx = i
-            for j, h in enumerate(cells):
-                if h.strip().lower() == "asset class":
-                    asset_class_col = j
-                    break
+            header = [h.strip() for h in cells]
             break
     if header_idx is None:
         raise RuntimeError(f"{source_label}: header row with 'Ticker' not found in {path.name}")
-
-    raw_tickers = []
-    n_skipped_non_equity = 0
+    records = []
     for r in rows[header_idx + 1:]:
         cells = _cell_strings(r)
-        if not cells:
-            continue
-        ticker_raw = (cells[ticker_col] if ticker_col < len(cells) else "").strip()
-        if not ticker_raw:
-            continue
-        # Asset Class filter — drop cash, derivatives, futures, etc.
-        if asset_class_col is not None and asset_class_col < len(cells):
-            asset_class = cells[asset_class_col].strip().lower()
-            if asset_class and asset_class != "equity":
-                n_skipped_non_equity += 1
-                continue
-        raw_tickers.append(ticker_raw)
+        if cells:
+            records.append({h: (cells[j] if j < len(cells) else "")
+                            for j, h in enumerate(header)})
+    return records, as_of
 
-    # Same cleanup pipeline as the network path so behavior is identical.
-    n_dropped_non_equity = 0
-    n_dropped_shape = 0
-    n_remapped_class = 0
+
+def _clean_ishares_records(records: list[dict], *, source_label: str) -> list[str]:
+    """The ONE cleanup both formats go through, so they cannot drift apart
+    again (the network branch used to have no Asset Class filter at all).
+
+      1. Asset Class must be Equity (drops Futures / Cash / Money Market).
+      2. Drop the fund's residual lines: Exchange starting "NO MARKET" or
+         "Non-Nms", or a Price of exactly 0 (dead names iShares still lists).
+      3. `_normalize_ishares_ticker` (blocklist, futures, class shares incl.
+         the new space form, shape check); dedup in order.
+    """
+    def _get(rec: dict, name: str) -> str:
+        for k, v in rec.items():
+            if k is not None and str(k).strip().lower() == name:
+                return "" if v is None else str(v).strip()
+        return ""
+
+    has = lambda name: any(k is not None and str(k).strip().lower() == name  # noqa: E731
+                           for rec in records[:1] for k in rec)
+    has_ac, has_px, has_ex = has("asset class"), has("price"), has("exchange")
+
+    n_non_equity_row = n_residual = n_zero_price = 0
+    n_dropped_non_equity = n_dropped_shape = n_remapped_class = 0
     seen, out = set(), []
-    for r in raw_tickers:
-        r_up = r.strip().upper()
-        norm = _normalize_ishares_ticker(r)
+    for rec in records:
+        raw = _get(rec, "ticker")
+        if not raw:
+            continue
+        if has_ac:
+            ac = _get(rec, "asset class").lower()
+            if ac and ac != "equity":
+                n_non_equity_row += 1
+                continue
+        if has_ex:
+            ex = _get(rec, "exchange").upper()
+            if ex.startswith(_ISHARES_RESIDUAL_EXCHANGE_PREFIXES):
+                n_residual += 1
+                continue
+        if has_px:
+            px_raw = _get(rec, "price").replace(",", "")
+            try:
+                if float(px_raw) == 0.0:
+                    n_zero_price += 1
+                    continue
+            except ValueError:
+                pass                       # "-" or blank: not evidence of death
+        r_up = raw.strip().upper()
+        norm = _normalize_ishares_ticker(raw)
         if norm is None:
             if r_up in _NON_EQUITY_BLOCKLIST or _FUTURES_PATTERN.match(r_up):
                 n_dropped_non_equity += 1
             else:
                 n_dropped_shape += 1
             continue
-        if r_up in _CLASS_SHARE_REMAP and norm != r_up:
+        if norm != r_up:
             n_remapped_class += 1
         if norm not in seen:
             seen.add(norm)
             out.append(norm)
-
     log.info(
-        "universe: %s local-xls loaded — kept=%d  "
-        "class_share_remapped=%d  skipped_non_equity_row=%d  "
-        "dropped_non_equity_norm=%d  dropped_shape=%d  age=%.0fd",
-        source_label, len(out), n_remapped_class, n_skipped_non_equity,
-        n_dropped_non_equity, n_dropped_shape, age_days,
+        "universe: %s iShares holdings cleaned — kept=%d  class_share_remapped=%d  "
+        "skipped_non_equity_row=%d  skipped_residual_exchange=%d  "
+        "skipped_zero_price=%d  dropped_non_equity_norm=%d  dropped_shape=%d",
+        source_label, len(out), n_remapped_class, n_non_equity_row, n_residual,
+        n_zero_price, n_dropped_non_equity, n_dropped_shape,
     )
+    return out
+
+
+def _parse_ishares_csv(text: str, *, source_label: str) -> list[str]:
+    """Holdings CSV text -> clean equity tickers. Raises on HTML / no rows."""
+    records, _as_of = _ishares_csv_records(text, source_label=source_label)
+    out = _clean_ishares_records(records, source_label=source_label)
+    if not out:
+        raise RuntimeError(f"{source_label}: iShares CSV parsed to zero equities")
+    return out
+
+
+def _load_ishares_file(path: Path, *, source_label: str) -> tuple[list[str], str | None]:
+    """A holdings file on disk (.csv snapshot or old .xls export) ->
+    (clean tickers, as-of ISO date or None).
+
+    Raises FileNotFoundError if the file isn't present, RuntimeError on a
+    parse failure.
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"iShares local file missing: {path}")
+    if path.suffix.lower() == ".csv":
+        records, as_of = _ishares_csv_records(
+            path.read_text(encoding="utf-8", errors="replace"),
+            source_label=source_label)
+    else:
+        records, as_of = _ishares_xls_records(path, source_label=source_label)
+    out = _clean_ishares_records(records, source_label=source_label)
+    age = _snapshot_age_days(path, as_of)
+    if age is not None and age > ISHARES_SNAPSHOT_STALE_DAYS:
+        log.warning(
+            "universe: %s local iShares file %s is STALE — holdings as of %s, "
+            "%.0f days old (> %d). Re-save it from %s",
+            source_label, path.name, as_of or "unknown (file mtime)", age,
+            ISHARES_SNAPSHOT_STALE_DAYS, ISHARES_HOLDINGS_URL,
+        )
+    return out, as_of
+
+
+def _load_ishares_local_xls(path: Path, *, source_label: str) -> list[str]:
+    """Back-compat wrapper (the IWM drop-in path and its tests): the tickers
+    only. Same cleanup as the live CSV."""
+    out, _as_of = _load_ishares_file(path, source_label=source_label)
+    return out
+
+
+def ishares_snapshot_as_of(path: Path) -> str | None:
+    """The "Fund Holdings as of" date written INSIDE a snapshot file, or None.
+
+    The file's mtime is NOT the holdings date — in the image it is the build
+    or checkout time — so staleness is measured from the content first.
+    """
+    try:
+        if not path.exists():
+            return None
+        if path.suffix.lower() == ".csv":
+            head = path.read_text(encoding="utf-8", errors="replace")[:4000]
+            import csv
+            for ln in head.splitlines()[:50]:
+                s = ln.lstrip("﻿").lstrip()
+                if s.lower().startswith(("fund holdings as of", '"fund holdings as of')):
+                    parts = next(csv.reader([s]), [])
+                    return _parse_as_of(parts[1]) if len(parts) > 1 else None
+            return None
+        _recs, as_of = _ishares_xls_records(path, source_label=path.name)
+        return as_of
+    except Exception:
+        return None
+
+
+def _days_since(as_of: str | None, today=None) -> float | None:
+    """Whole days from an ISO date to `today` (default: the local date)."""
+    from datetime import date as _date
+    if not as_of:
+        return None
+    try:
+        return float(((today or _date.today()) - _date.fromisoformat(as_of)).days)
+    except (TypeError, ValueError):
+        return None
+
+
+def _snapshot_age_days(path: Path, as_of: str | None = None,
+                       today=None) -> float | None:
+    """Days since the snapshot's holdings date; the file mtime only when the
+    file carries no date. None when there is no file."""
+    age = _days_since(as_of or ishares_snapshot_as_of(path), today)
+    return age if age is not None else _file_age_days(path)
+
+
+def _fetch_ishares_live(name: str) -> tuple[list[str], str | None]:
+    """The live latest-holdings.csv for one tracked fund -> (tickers, as_of).
+    Raises on any failure, including the HTML product page."""
+    _fund, pid, slug = _ISHARES_FUNDS[name]
+    text = _fetch_text(ISHARES_HOLDINGS_URL.format(pid=pid, slug=slug), timeout=20)
+    records, as_of = _ishares_csv_records(text, source_label=name)
+    out = _clean_ishares_records(records, source_label=name)
+    if not out:
+        raise RuntimeError(f"{name}: iShares CSV parsed to zero equities")
+    return out, as_of
+
+
+# In-process memos for the iShares ladder (2026-09-29, round 2).
+#   _ISHARES_FAILED    (list, cache dir) -> (failed_at, why). The cache dir is
+#                      part of the key so a test's tmp cache never inherits a
+#                      production failure (and vice versa); in the app it is
+#                      constant, so this is "per fund".
+#   _ISHARES_RESOLVED  list -> (cache generation, (syms, as_of)). A generation
+#                      is the cache file's + sidecar's (path, mtime_ns, size):
+#                      a rewrite, an expiry or universe_changes deleting the
+#                      file all change it, so a memo can never outlive its file.
+#   _ISHARES_SNAPSHOT  list -> (snapshot file generation, (syms, as_of)), so an
+#                      outage parses the committed file once, not per call.
+_ISHARES_FAILED: dict[tuple[str, str], tuple[float, str]] = {}
+_ISHARES_RESOLVED: dict[str, tuple[tuple, tuple]] = {}
+_ISHARES_SNAPSHOT: dict[str, tuple[tuple, tuple]] = {}
+
+
+def _clock() -> float:
+    """Wall clock for the failure memo (a seam tests replace)."""
+    return time.time()
+
+
+def _file_generation(path: Path) -> tuple | None:
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return (str(path), st.st_mtime_ns, st.st_size)
+
+
+def _cache_generation(name: str) -> tuple | None:
+    """Identity of `name`'s FRESH cache (list + sidecar), None when there is
+    no cache or it is past UNIV_CACHE_TTL_SEC — same rule as `_read_cached`."""
+    path = _cache_path(name)
+    gen = _file_generation(path)
+    if gen is None:
+        return None
+    if (time.time() - path.stat().st_mtime) >= UNIV_CACHE_TTL_SEC:
+        return None
+    return gen + (_file_generation(_cache_as_of_path(name)),)
+
+
+def forget_ishares_memos(name: str | None = None) -> None:
+    """Drop the in-process memos for one list (or all). universe_changes calls
+    this with its forced refresh: that job exists to ASK the source."""
+    for key in list(_ISHARES_FAILED):
+        if name is None or key[0] == name:
+            _ISHARES_FAILED.pop(key, None)
+    for memo in (_ISHARES_RESOLVED, _ISHARES_SNAPSHOT):
+        if name is None:
+            memo.clear()
+        else:
+            memo.pop(name, None)
+
+
+def _load_ishares_snapshot(name: str, snapshot: Path) -> tuple[list[str], str | None]:
+    """`_load_ishares_file`, memoised on the file's generation. Raises as it
+    does (FileNotFoundError / RuntimeError); a failure is never memoised."""
+    gen = _file_generation(snapshot)
+    hit = _ISHARES_SNAPSHOT.get(name)
+    if gen is not None and hit and hit[0] == gen:
+        syms, as_of = hit[1]
+        return list(syms), as_of
+    out, as_of = _load_ishares_file(snapshot, source_label=name)
+    if gen is not None:
+        _ISHARES_SNAPSHOT[name] = (gen, (tuple(out), as_of))
+    return out, as_of
+
+
+def _ishares_live_floor(name: str, snapshot: Path) -> int:
+    """Smallest live list accepted: ISHARES_LIVE_MIN_SNAPSHOT_FRACTION of the
+    snapshot's own count (0 when there is no readable snapshot)."""
+    import math
+    try:
+        snap, _ = _load_ishares_snapshot(name, snapshot)
+    except Exception:                                   # noqa: BLE001
+        return 0
+    return int(math.ceil(ISHARES_LIVE_MIN_SNAPSHOT_FRACTION * len(snap)))
+
+
+def _resolve_ishares(name: str, snapshot: Path) -> tuple | None:
+    """fresh cache -> live CSV -> committed snapshot.
+
+    Returns ``(syms, source, age_days, as_of)`` for the caller to `_record`
+    (the provenance call stays visible in each public fetcher), or None when
+    all three fail — the caller owns the last resort. A cache hit carries the
+    holdings date from its sidecar, so staleness survives the cache.
+
+    A failed or rejected live fetch is remembered for
+    ISHARES_LIVE_FAILURE_MEMO_SEC: until then the ladder skips the network and
+    serves the snapshot (an outage costs one download per hour, not one per
+    `load_universe` call).
+    """
+    gen = _cache_generation(name)
+    if gen is not None:
+        hit = _ISHARES_RESOLVED.get(name)
+        if hit and hit[0] == gen:
+            syms, as_of = hit[1]
+            return list(syms), "cache", _cache_age_days(name), as_of
+        cached = _read_cached(name)
+        if cached:
+            as_of = _read_cached_as_of(name)
+            _ISHARES_RESOLVED[name] = (gen, (tuple(cached), as_of))
+            return cached, "cache", _cache_age_days(name), as_of
+
+    fkey = (name, str(UNIV_CACHE_DIR))
+    now = _clock()
+    failed = _ISHARES_FAILED.get(fkey)
+    memo_hit = bool(failed and (now - failed[0]) < ISHARES_LIVE_FAILURE_MEMO_SEC)
+    if memo_hit:
+        why = (f"live fetch failed {now - failed[0]:.0f}s ago: {failed[1]} — "
+               f"not retried for {ISHARES_LIVE_FAILURE_MEMO_SEC}s")
+    else:
+        why = ""
+        try:
+            out, as_of = _fetch_ishares_live(name)
+            floor = _ishares_live_floor(name, snapshot)
+            if _count_ok(name, out) and len(out) >= floor:
+                _write_cached(name, out)
+                _write_cached_as_of(name, as_of)
+                _ISHARES_FAILED.pop(fkey, None)
+                gen2 = _cache_generation(name)
+                if gen2 is not None:
+                    _ISHARES_RESOLVED[name] = (gen2, (tuple(out), as_of))
+                log.info("universe: %s live iShares holdings — %d names, as of %s",
+                         name, len(out), as_of)
+                age = _days_since(as_of)
+                return out, SRC_ISHARES_NETWORK, (age if age is not None else 0.0), as_of
+            if len(out) < floor:
+                log.warning("universe: %s live iShares list has %d names, under "
+                            "%.0f%% of the snapshot's count (floor %d) — a "
+                            "truncated download, rejected", name, len(out),
+                            ISHARES_LIVE_MIN_SNAPSHOT_FRACTION * 100, floor)
+            why = f"rejected ({len(out)} names)"
+        except Exception as exc:
+            why = str(exc)[:200]
+        _ISHARES_FAILED[fkey] = (now, why)
+
+    try:
+        out, as_of = _load_ishares_snapshot(name, snapshot)
+    except FileNotFoundError:
+        log.warning("universe: %s live iShares fetch failed (%s) and the "
+                    "snapshot %s is absent", name, why, snapshot.name)
+        return None
+    except Exception as exc:
+        log.warning("universe: %s live iShares fetch failed (%s) and the "
+                    "snapshot %s did not parse (%s)", name, why, snapshot.name, exc)
+        return None
+    if not (out and _count_ok(name, out)):
+        return None
+    age = _snapshot_age_days(snapshot, as_of)
+    # WARNING on the call that actually failed; INFO while the memo holds, so
+    # an outage is one loud line per hour, not one per call. The health audit
+    # (`universe_counts()["_snapshot_served"]`) still sees every served list.
+    log.log(
+        logging.INFO if memo_hit else logging.WARNING,
+        "universe: %s live iShares fetch failed (%s) — serving the committed "
+        "snapshot %s (holdings as of %s, %s days old). NOT cached; the live "
+        "list is retried once the %ds failure memo expires", name, why,
+        snapshot.name, as_of, "?" if age is None else f"{age:.0f}",
+        ISHARES_LIVE_FAILURE_MEMO_SEC,
+    )
+    return out, SRC_ISHARES_SNAPSHOT, age, as_of
+
+
+def ishares_snapshot_status(today=None) -> dict:
+    """Per iShares list: the committed snapshot's holdings date and age, and
+    whether the LAST resolve actually served it. Read by `universe_counts`
+    (and so by the health audit). PURE apart from reading the files."""
+    out: dict = {}
+    for name, path in (("russell1000", _LOCAL_IWB_PATH),
+                       ("russell3000", _LOCAL_IWV_PATH),
+                       ("microcap", _LOCAL_IWC_PATH)):
+        as_of = ishares_snapshot_as_of(path)
+        age = _snapshot_age_days(path, as_of, today=today) if path.exists() else None
+        served = (last_source(name) or {}).get("source") == SRC_ISHARES_SNAPSHOT
+        out[name] = {
+            "file": path.name,
+            "exists": path.exists(),
+            "as_of": as_of,
+            "age_days": None if age is None else round(age, 1),
+            "stale": bool(age is None or age > ISHARES_SNAPSHOT_STALE_DAYS),
+            "stale_after_days": ISHARES_SNAPSHOT_STALE_DAYS,
+            "served": served,
+        }
     return out
 
 
@@ -1684,219 +2188,56 @@ def fetch_nasdaq_listed(limit: int | None = None) -> list[str]:
                                   cache_name="nasdaq_listed")
 
 
-def fetch_russell1000() -> list[str]:
-    """Return Russell 1000 components, cached 30 days.
-
-    Source priority:
-      1. ``backend/sepa/data/iShares-Russell-1000-ETF_fund.xls`` — manually
-         downloaded SpreadsheetML export from iShares.com (their public
-         CSV download URLs now require JS / Cloudflare clearance and
-         can't be fetched programmatically). Quarterly refresh.
-      2. Network fetch of the iShares IWB CSV URL (usually returns HTML
-         interstitial these days; kept for if/when iShares relaxes).
-      3. Clean fallback: curated ∪ S&P 500 ∪ S&P 400 MidCap.
-    """
-    cached = _read_cached("russell1000")
-    if cached:
-        return _record("russell1000", "cache", cached,
-                       age_days=_cache_age_days("russell1000"))
-
-    # --- (1) local SpreadsheetML file --------------------------------
+def _russell_clean_fallback(name: str) -> list[str]:
+    """Deterministic, no-404 last resort: curated leaders + S&P 500 (large) +
+    S&P 400 (mid). ~1030 strict names from Wikipedia — a good universe that is
+    NOT the Russell list, so the caller records it as ``curated`` (and the
+    count band says so out loud for russell3000)."""
     try:
-        out = _load_ishares_local_xls(_LOCAL_IWB_PATH, source_label="russell1000")
-        if out:
-            _write_cached("russell1000", out)
-            return _record("russell1000", SRC_ISHARES_LOCAL, out,
-                           age_days=_file_age_days(_LOCAL_IWB_PATH))
-    except FileNotFoundError:
-        log.info("universe: russell1000 local xls absent — trying network")
-    except Exception as exc:
-        log.warning("universe: russell1000 local-xls parse failed (%s) — trying network", exc)
-
-    # --- (2) network fetch (legacy path; usually 200/HTML now) -------
-    try:
-        import io
-        import pandas as pd
-        import requests
-        url = (
-            "https://www.ishares.com/us/products/239707/ishares-russell-1000-etf/"
-            "1467271812596.ajax?fileType=csv&fileName=IWB_holdings&dataType=fund"
-        )
-        # Dynamic header detection — iShares periodically shifts the
-        # leading-metadata row count (was 9, has been 7/10 historically).
-        # Hard-coded skiprows breaks the day they shift again. Instead we
-        # download the raw bytes and find the row that starts with the
-        # canonical column header ``"Ticker"`` (always quoted).
-        resp = requests.get(url, timeout=15,
-                            headers={"User-Agent": "Mozilla/5.0 (compatible; cheetah/0.1)"})
-        resp.raise_for_status()
-        text = resp.text
-        lines = text.splitlines()
-        header_idx = None
-        for i, ln in enumerate(lines[:50]):
-            # Header row has "Ticker" as first field (with or without
-            # quotes). Match defensively against both forms.
-            if ln.lstrip().startswith(("Ticker,", '"Ticker"')):
-                header_idx = i
-                break
-        if header_idx is None:
-            raise RuntimeError("iShares CSV: header row with 'Ticker' not found")
-        # Re-parse from the located header. Use io.StringIO so we don't
-        # re-hit the network.
-        df = pd.read_csv(io.StringIO(text), skiprows=header_idx)
-        # Pull raw tickers, then run each through the cleanup pipeline
-        # that handles class-share remap + futures/junk filtering.
-        raw = [str(s) for s in df["Ticker"].tolist() if isinstance(s, str)]
-        n_dropped_non_equity = 0
-        n_dropped_shape = 0
-        n_remapped_class = 0
-        seen, out = set(), []
-        for r in raw:
-            r_up = r.strip().upper()
-            norm = _normalize_ishares_ticker(r)
-            if norm is None:
-                if r_up in _NON_EQUITY_BLOCKLIST or _FUTURES_PATTERN.match(r_up):
-                    n_dropped_non_equity += 1
-                else:
-                    n_dropped_shape += 1
-                continue
-            if r_up in _CLASS_SHARE_REMAP and norm != r_up:
-                n_remapped_class += 1
-            if norm not in seen:
-                seen.add(norm)
-                out.append(norm)
-        log.info(
-            "universe: russell1000 cleaned — kept=%d  "
-            "class_share_remapped=%d  dropped_non_equity=%d  dropped_shape=%d",
-            len(out), n_remapped_class, n_dropped_non_equity, n_dropped_shape,
-        )
-        _write_cached("russell1000", out)
-        return _record("russell1000", SRC_ISHARES_NETWORK, out)
-    except Exception as exc:
-        log.warning(
-            "universe: russell1000 network fetch failed (%s) — "
-            "falling back to curated ∪ S&P 500 ∪ S&P 400 MidCap", exc,
-        )
-        # Deterministic, no-404 fallback: curated leaders + S&P 500 (large)
-        # + S&P 400 (mid). Together ~1030 strict names from Wikipedia —
-        # much cleaner than the Massive alphabetical grab which used to
-        # silently truncate at A-C.
+        sp500 = fetch_sp500()
         try:
-            sp500 = fetch_sp500()
-            try:
-                sp400 = fetch_sp400()
-            except Exception:
-                sp400 = []
-            merged = list(dict.fromkeys(list(UNIVERSE) + sp500 + sp400))
-            log.info(
-                "universe: russell1000 via curated+sp500+sp400 = %d names",
-                len(merged),
-            )
-            return _record("russell1000", "curated", merged)
-        except Exception as exc2:
-            log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
-            return _record("russell1000", "curated", fetch_sp500())
+            sp400 = fetch_sp400()
+        except Exception:
+            sp400 = []
+        merged = list(dict.fromkeys(list(UNIVERSE) + sp500 + sp400))
+        log.info("universe: %s via curated+sp500+sp400 = %d names", name, len(merged))
+        return merged
+    except Exception as exc2:
+        log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
+        return fetch_sp500()
+
+
+def fetch_russell1000() -> list[str]:
+    """Return Russell 1000 components (iShares IWB holdings), cached 30 days.
+
+    Source priority (2026-09-29 — see the section comment above _DATA_DIR):
+      1. live ``latest-holdings.csv`` for IWB           -> ``ishares-network``
+      2. committed snapshot ``_LOCAL_IWB_PATH``         -> ``ishares-snapshot``
+      3. clean fallback: curated ∪ S&P 500 ∪ S&P 400    -> ``curated``
+    """
+    got = _resolve_ishares("russell1000", _LOCAL_IWB_PATH)
+    if got:
+        syms, src, age, as_of = got
+        return _record("russell1000", src, syms, age_days=age, as_of=as_of)
+    log.warning("universe: russell1000 — live list and snapshot both failed; "
+                "falling back to curated ∪ S&P 500 ∪ S&P 400 MidCap")
+    return _record("russell1000", "curated", _russell_clean_fallback("russell1000"))
 
 
 def fetch_russell3000() -> list[str]:
-    """Return Russell 3000 components, cached 30 days.
+    """Return Russell 3000 components (iShares IWV holdings), cached 30 days.
 
-    Source priority (same as fetch_russell1000):
-      1. ``backend/sepa/data/iShares-Russell-3000-ETF_fund.xls`` — manually
-         downloaded SpreadsheetML export.
-      2. Network fetch of the IWV CSV URL (usually returns HTML now).
-      3. Clean fallback: curated ∪ S&P 500 ∪ S&P 400 MidCap (~1030 names,
-         strict; better than Massive's noisy alphabetical 5097).
+    Same ladder as fetch_russell1000. IWV is a SAMPLED fund (2,587 names on
+    2026-09-28 against ~2,992 for IWB ∪ IWM) — widening to IWB ∪ IWM is a
+    construction change and HIS call, not done here.
     """
-    cached = _read_cached("russell3000")
-    if cached:
-        return _record("russell3000", "cache", cached,
-                       age_days=_cache_age_days("russell3000"))
-
-    # --- (1) local SpreadsheetML file --------------------------------
-    try:
-        out = _load_ishares_local_xls(_LOCAL_IWV_PATH, source_label="russell3000")
-        if out:
-            _write_cached("russell3000", out)
-            return _record("russell3000", SRC_ISHARES_LOCAL, out,
-                           age_days=_file_age_days(_LOCAL_IWV_PATH))
-    except FileNotFoundError:
-        log.info("universe: russell3000 local xls absent — trying network")
-    except Exception as exc:
-        log.warning("universe: russell3000 local-xls parse failed (%s) — trying network", exc)
-
-    # --- (2) network fetch (legacy path; usually 200/HTML now) -------
-    try:
-        import io
-        import pandas as pd
-        import requests
-        url = (
-            "https://www.ishares.com/us/products/239714/ishares-russell-3000-etf/"
-            "1467271812596.ajax?fileType=csv&fileName=IWV_holdings&dataType=fund"
-        )
-        # Same dynamic header detection as fetch_russell1000 — iShares
-        # CSVs ship with a leading metadata block of varying row count.
-        resp = requests.get(url, timeout=20,
-                            headers={"User-Agent": "Mozilla/5.0 (compatible; cheetah/0.1)"})
-        resp.raise_for_status()
-        text = resp.text
-        lines = text.splitlines()
-        header_idx = None
-        for i, ln in enumerate(lines[:50]):
-            if ln.lstrip().startswith(("Ticker,", '"Ticker"')):
-                header_idx = i
-                break
-        if header_idx is None:
-            raise RuntimeError("iShares CSV: header row with 'Ticker' not found")
-        df = pd.read_csv(io.StringIO(text), skiprows=header_idx)
-        raw = [str(s) for s in df["Ticker"].tolist() if isinstance(s, str)]
-        n_dropped_non_equity = 0
-        n_dropped_shape = 0
-        n_remapped_class = 0
-        seen, out = set(), []
-        for r in raw:
-            r_up = r.strip().upper()
-            norm = _normalize_ishares_ticker(r)
-            if norm is None:
-                if r_up in _NON_EQUITY_BLOCKLIST or _FUTURES_PATTERN.match(r_up):
-                    n_dropped_non_equity += 1
-                else:
-                    n_dropped_shape += 1
-                continue
-            if r_up in _CLASS_SHARE_REMAP and norm != r_up:
-                n_remapped_class += 1
-            if norm not in seen:
-                seen.add(norm)
-                out.append(norm)
-        log.info(
-            "universe: russell3000 cleaned — kept=%d  "
-            "class_share_remapped=%d  dropped_non_equity=%d  dropped_shape=%d",
-            len(out), n_remapped_class, n_dropped_non_equity, n_dropped_shape,
-        )
-        _write_cached("russell3000", out)
-        return _record("russell3000", SRC_ISHARES_NETWORK, out)
-    except Exception as exc:
-        log.warning(
-            "universe: russell3000 network fetch failed (%s) — "
-            "falling back to curated ∪ S&P 500 ∪ S&P 400 MidCap", exc,
-        )
-        # Same clean fallback as russell1000 — strict ~1030 names from
-        # Wikipedia instead of the noisy Massive 5097.
-        try:
-            sp500 = fetch_sp500()
-            try:
-                sp400 = fetch_sp400()
-            except Exception:
-                sp400 = []
-            merged = list(dict.fromkeys(list(UNIVERSE) + sp500 + sp400))
-            log.info(
-                "universe: russell3000 via curated+sp500+sp400 = %d names",
-                len(merged),
-            )
-            return _record("russell3000", "curated", merged)
-        except Exception as exc2:
-            log.warning("universe: Wikipedia fallback also failed (%s) — using S&P 500 only", exc2)
-            return _record("russell3000", "curated", fetch_sp500())
+    got = _resolve_ishares("russell3000", _LOCAL_IWV_PATH)
+    if got:
+        syms, src, age, as_of = got
+        return _record("russell3000", src, syms, age_days=age, as_of=as_of)
+    log.warning("universe: russell3000 — live list and snapshot both failed; "
+                "falling back to curated ∪ S&P 500 ∪ S&P 400 MidCap")
+    return _record("russell3000", "curated", _russell_clean_fallback("russell3000"))
 
 
 def fetch_russell2000() -> list[str]:
@@ -1919,8 +2260,9 @@ def fetch_russell2000() -> list[str]:
     it under this name would invent membership.
 
     THE DERIVED LIST INHERITS ITS PARENTS' SHORTFALL. Measured 2026-09-18: the
-    IWV export on disk lists 2,559 tradeable holdings and the IWB export 1,001,
-    so the derivation is 1,560 names, not ~2,000. Never present it as a
+    IWV export on disk listed 2,559 tradeable holdings and the IWB export
+    1,001, so the derivation was 1,560 names, not ~2,000 (live 2026-09-28:
+    2,587 - 1,022 ≈ 1,565 — IWV is a sampled fund). Never present it as a
     complete Russell 2000 — call `russell2000_coverage()` and serve what it
     says.
     """
@@ -1948,10 +2290,11 @@ def fetch_russell2000() -> list[str]:
                     "deriving from russell3000 minus russell1000", exc)
 
     # --- (2) the derivation ------------------------------------------
-    # No network path exists for IWM: the iShares CSV endpoints serve a
-    # Cloudflare interstitial (see the module comment above _DATA_DIR), so a
-    # network branch here would be an untestable stub. The derivation IS the
-    # index's own definition, which is why it is second and not a fallback.
+    # No network path is wired for IWM. Since 2026-09-29 one exists (the same
+    # latest-holdings.csv the parents use), but switching the Russell 2000
+    # from a derivation to the real 1,970-name list is a CONSTRUCTION change
+    # (universe_changes re-baselines on it) and his call. The derivation IS
+    # the index's own definition, which is why it is second, not a fallback.
     try:
         big = fetch_russell1000()
     except Exception as exc:
@@ -2070,8 +2413,8 @@ def russell2000_coverage() -> dict:
         "Derived as Russell 3000 minus Russell 1000, which is FTSE's own "
         "definition of the Russell 2000. It holds {n} names; the index is "
         "named for about two thousand. The shortfall is inherited: the iShares "
-        "Russell 3000 export on disk lists {r3000} tradeable holdings and the "
-        "Russell 1000 export lists {r1000}. The names it is missing are small "
+        "Russell 3000 holdings list {r3000} tradeable names and the "
+        "Russell 1000 holdings list {r1000}. The names it is missing are small "
         "caps — exactly this list's population. Treat it as part of the "
         "Russell 2000, not as the Russell 2000. A change on this list cannot "
         "be attributed to a parent: a name leaving here may have entered the "
@@ -2083,27 +2426,19 @@ def russell2000_coverage() -> dict:
 
 
 def fetch_microcap() -> list[str]:
-    """Micro-cap names below the Russell 3000, from the local iShares
-    Micro-Cap ETF (IWC) holdings .xls. Returns [] (not an error) when the
-    file is absent — the broad universe is still valid without it.
+    """Micro-cap names below the Russell 3000: the iShares Micro-Cap ETF (IWC)
+    holdings — live CSV first, then the committed snapshot. Returns [] (not
+    an error) when both fail — the broad universe is still valid without it.
 
     Cached 30 days like the other Russell sources.
     """
-    cached = _read_cached("microcap")
-    if cached:
-        return cached
-    if not _LOCAL_IWC_PATH.exists():
-        log.info("universe: microcap IWC file absent (%s) — skipping micro-cap layer",
-                 _LOCAL_IWC_PATH.name)
-        return []
-    try:
-        out = _load_ishares_local_xls(_LOCAL_IWC_PATH, source_label="microcap")
-        if out:
-            _write_cached("microcap", out)
-        return out
-    except Exception as exc:
-        log.warning("universe: microcap local-xls parse failed (%s) — skipping", exc)
-        return []
+    got = _resolve_ishares("microcap", _LOCAL_IWC_PATH)
+    if got:
+        syms, src, age, as_of = got
+        return _record("microcap", src, syms, age_days=age, as_of=as_of)
+    log.info("universe: microcap — no live IWC list and no snapshot — "
+             "skipping micro-cap layer")
+    return _record("microcap", "empty", [])
 
 
 def fetch_etf_universe() -> list[str]:

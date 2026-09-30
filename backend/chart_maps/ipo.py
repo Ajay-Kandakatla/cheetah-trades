@@ -96,8 +96,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 log = logging.getLogger("chart_maps.ipo")
 
@@ -173,8 +174,19 @@ def _as_date(v) -> Optional[date]:
         return None
 
 
-def _today() -> date:
-    return datetime.utcnow().date()
+# The trading calendar's clock. The board's `as_of` and every "today" window
+# are an ET session date: `datetime.utcnow().date()` rolled the tab to
+# TOMORROW from 20:00 ET (EDT) / 19:00 ET (EST) every evening (fixed
+# 2026-09-29).
+ET = ZoneInfo("America/New_York")
+
+
+def _today(now: Optional[datetime] = None) -> date:
+    """Today's date in New York. `now` (tests) may be naive UTC or aware."""
+    n = now or datetime.now(timezone.utc)
+    if n.tzinfo is None:
+        n = n.replace(tzinfo=timezone.utc)
+    return n.astimezone(ET).date()
 
 
 # ---------------------------------------------------------------------------
