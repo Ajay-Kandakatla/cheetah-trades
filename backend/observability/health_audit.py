@@ -261,14 +261,39 @@ def check_universe_counts():
         from sepa import universe as U
         res = U.universe_counts()
         failing = res.get("_failing") or []
-        n = len([k for k in res if k != "_failing"])
+        # 2026-09-29: a list served from a STALE iShares snapshot (the live
+        # holdings CSV failed) is the right size and the wrong vintage — the
+        # count band alone cannot see it.
+        stale = res.get("_stale") or []
+        # Round 2: ANY served snapshot warns, at any age — it means the live
+        # holdings fetch failed, and the list is frozen at the snapshot's date.
+        # `_stale` is a subset; it only adds the word STALE.
+        served = sorted(set(res.get("_snapshot_served") or []) | set(stale))
+        n = len([k for k in res if not str(k).startswith("_")])
+
+        def _snap_line(k: str) -> str:
+            snap = (res.get(k) or {}).get("snapshot") or {}
+            tag = "STALE, " if k in stale else ""
+            return (f"{k} ({tag}holdings as of {snap.get('as_of')}, "
+                    f"{snap.get('age_days')}d)")
+
         if failing:
             detail = ", ".join(
                 f"{k}={res[k].get('count')} (want {res[k]['expected'][0]}-"
                 f"{res[k]['expected'][1]})" for k in failing)
+            if served:
+                detail += "; iShares snapshot served: " + ", ".join(
+                    _snap_line(k) for k in served)
             return _fail("universe_counts", "data", WARN,
                          f"{len(failing)}/{n} ticker lists outside their sane "
                          f"range: {detail}", len(failing))
+        if served:
+            detail = ", ".join(_snap_line(k) for k in served)
+            word = "a STALE " if stale else "the committed "
+            return _fail("universe_counts", "data", WARN,
+                         f"{len(served)} ticker list(s) served from {word}"
+                         f"iShares snapshot — the live holdings fetch failed: "
+                         f"{detail}", len(served))
         return _ok("universe_counts", "data",
                    f"all {n} ticker lists within their sane range", 0)
     except Exception as exc:

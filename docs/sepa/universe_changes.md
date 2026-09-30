@@ -38,8 +38,8 @@ announcement and effective date. Nothing here gates, alerts or enters.
 | `sp400` | same |
 | `sp600` | same |
 | `nasdaq100` | same, `on_exhausted="empty"` — never the curated fallback |
-| `russell1000` | local iShares IWB export → IWB CSV URL → curated fallback |
-| `russell3000` | local iShares IWV export → IWV CSV URL → curated fallback |
+| `russell1000` | live IWB `latest-holdings.csv` → committed snapshot (refused here) → curated fallback |
+| `russell3000` | live IWV `latest-holdings.csv` → committed snapshot (refused here) → curated fallback |
 | `russell2000` | **DERIVED** — see `docs/sepa/russell2000_derived.md` |
 
 `russell2000` is **last on purpose**: it is derived from the other two Russell
@@ -147,6 +147,57 @@ module cannot answer; the endpoint still returns 200.
 
 **No frontend reads this endpoint today** (grep of `frontend/src`, 2026-09-18).
 
+### 2026-09-29 — the Russell lists are diffed LIVE, and the snapshot is refused
+
+Until today the Russell fetchers read the local iShares exports FIRST ("Fund
+Holdings as of May 28, 2026"). This job expired the cache, re-read the same
+file and reported "no change" every Sunday — June's reconstitution and the
+Sep 21 Q3 IPO adds never reached the log. The fetchers now read the live
+`latest-holdings.csv` (see `universe_integrity.md` §2026-09-29).
+
+* `ishares-snapshot` (the committed fallback file, served when the live fetch
+  fails) is refused like `curated` / `stale-cache`: no diff, no snapshot row.
+  Diffing it against last week's live list would publish the file's age as
+  index events, and storing it would flip the baseline's source twice.
+* A derived `russell2000` whose parent resolved to the snapshot is refused
+  the same way (the reason names the parent).
+* **HIS CALL — the first live run re-baselines.** `ishares-local` →
+  `ishares-network` is a construction change, so the first Sunday after the
+  deploy stores the live list as the new baseline and publishes nothing
+  (pinned by `test_the_first_live_run_after_the_local_file_is_a_rebaseline`).
+  The June reconstitution and the Sep IPO adds are therefore never in the
+  change log. The alternative (publishing them, dated the refresh day) needs a
+  code change.
+
+### 2026-09-29 (round 2) — a parent re-baseline re-baselines the derived Russell 2000
+
+The derived `russell2000` keeps the source `derived-r3000-minus-r1000` whatever
+its parents were rebuilt from, so the construction check could not see the
+first live Sunday. The parents re-baselined, and the subtraction would have
+published the same backlog as Russell 2000 adds and drops.
+
+* `run()` passes `refresh_one(..., parents_rebaselined=…)`: the names that
+  re-baselined earlier in the SAME run. A derived list whose parent
+  (`russell1000` / `russell3000`) is in it re-baselines too. Its reason names
+  the parent. It publishes nothing, and it stores the new baseline.
+* An ordinary week (parents live both weeks) still diffs and publishes the
+  derived list. A real list (russell3000) is never re-baselined by a sibling.
+* `run(["russell2000"])` alone refreshes no parent, so nothing re-baselines it.
+* `_expire_cache` also deletes the iShares holdings-date sidecar and clears the
+  in-process failure memo (`universe.forget_ishares_memos`). The forced weekly
+  refresh always asks iShares, even inside an outage's memo hour.
+
+**10-04 dry run** (api container, read-only; branch modules loaded in memory,
+TEMP cache, in-memory DB seeded from the 09-27 snapshots, nothing written):
+
+| index | prev (09-27) | now | raw diff | published |
+|---|---|---|---|---|
+| russell1000 | 1,001 `ishares-local` | 1,022 `ishares-network` | +71 / −50 | re-baselined, 0 |
+| russell3000 | 2,559 `ishares-local` | 2,587 `ishares-network` | +130 / −102 | re-baselined, 0 |
+| russell2000 | 1,560 derived | 1,565 derived | +136 / −131 | **re-baselined, 0** (was +136 / −131 without the fix) |
+
+No change row was written. Three baseline snapshots were stored in memory.
+
 ---
 
 ## Tests
@@ -156,3 +207,9 @@ module cannot answer; the endpoint still returns 200.
   `test_a_sane_diff_reaches_the_change_log_UNLESS_the_source_flipped`.
 * `backend/tests/test_russell2000_derived_2026_09_18.py` — the derivation, the
   coverage payload, and the four re-baseline negatives.
+* `backend/tests/test_russell_universe_refresh_2026_09_29.py` — live-vs-live
+  adds/drops through the real fetcher, the snapshot refusal, the parent
+  refusal, the pinned first-run re-baseline.
+* `backend/tests/test_russell_universe_refresh_round2_2026_09_29.py` — the
+  parent-driven re-baseline of the derived list and its negatives (a normal
+  week, an unrelated index, a real list, a first snapshot).

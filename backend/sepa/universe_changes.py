@@ -61,6 +61,18 @@ SANE_CHURN_FRACTION = 0.35
 # always dominates.
 MIN_ABS_CHURN = 8
 
+# Sources that are NOT a live read of the index, so never diffed or stored:
+# the wrong universe (curated), nothing (empty), an expired cache, and the
+# committed iShares snapshot the Russell fetchers fall back to (2026-09-29) —
+# that one is added from `universe.SRC_ISHARES_SNAPSHOT` in `_not_live()`, never
+# retyped here.
+_NOT_LIVE = ("curated", "empty", "stale-cache")
+
+
+def _not_live() -> tuple:
+    from sepa import universe as U
+    return _NOT_LIVE + (U.SRC_ISHARES_SNAPSHOT,)
+
 
 def _fetchers() -> dict:
     from sepa import universe as U
@@ -97,6 +109,13 @@ def _expire_cache(name: str) -> None:
         p = U._cache_path(name)
         if p.exists():
             p.unlink()
+        # 2026-09-29 (round 2): the iShares lists also keep a holdings-date
+        # sidecar and an in-process failure memo. Drop both, so this forced
+        # refresh really asks iShares even within an outage's memo hour.
+        side = U._cache_as_of_path(name)
+        if side.exists():
+            side.unlink()
+        U.forget_ishares_memos(name)
     except Exception as exc:
         log.debug("universe-changes: could not expire %s cache: %s", name, exc)
 
@@ -166,8 +185,20 @@ def _construction(source) -> str:
     return "src:" + src
 
 
-def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
-    """Refetch one index, diff it against the last snapshot, persist both."""
+# The lists a DERIVED russell2000 is built from. A re-baseline of either one
+# re-baselines the derivation in the same run (see refresh_one).
+_DERIVED_R2000_PARENTS = ("russell1000", "russell3000")
+
+
+def refresh_one(name: str, *, force: bool = True, db=None,
+                parents_rebaselined=None) -> dict:
+    """Refetch one index, diff it against the last snapshot, persist both.
+
+    `parents_rebaselined` — the names that re-baselined earlier in the SAME
+    run (`run()` passes it). A derived russell2000 whose parent is in it
+    re-baselines too, instead of publishing the parent's rebuild as Russell
+    2000 membership changes.
+    """
     fetchers = _fetchers()
     if name not in fetchers:
         return {"index": name, "ok": False, "reason": "unknown index"}
@@ -187,15 +218,32 @@ def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
     source = src.get("source")
     # A list that resolved to the curated fallback or to an expired snapshot is
     # not evidence of anything — diffing it would invent adds and drops.
-    if not syms or source in ("curated", "empty", "stale-cache"):
+    #
+    # 2026-09-29: the committed iShares snapshot joins them. Until today the
+    # Russell lists were READ from a local file first, so this job expired the
+    # cache, re-read the same May-28 file and reported "no change" every week.
+    # They now come from the live holdings CSV; when that fails the fetcher
+    # serves the snapshot (`ishares-snapshot`), and diffing THAT against the
+    # last live list would publish the snapshot's age as index events — and
+    # storing it would flip the baseline's source twice. Skip; next week retries.
+    not_live = _not_live()
+    if not syms or source in not_live:
         return {"index": name, "ok": False, "n": len(syms), "source": source,
                 "reason": f"resolved to {source} — not a live list"}
-    # universe.py only records provenance inside _resolve_index, which the S&P
-    # ladder and nasdaq100 use — the Russell lists read local iShares .xls files
-    # and record nothing, so `source` is None for them. That is expected, not a
-    # failure, but it means we CANNOT tell a fresh Russell read from a stale
-    # one. Say so in the payload instead of implying we verified it; the churn
-    # gate below is the only guard those lists get.
+    # A DERIVED russell2000 is only as live as its parents. Their records are
+    # the ones fetch_russell2000 just produced (a parent cache hit is live: the
+    # snapshot is never written to the cache).
+    if source == U.SRC_DERIVED_R2000:
+        for parent in ("russell1000", "russell3000"):
+            psrc = (U.last_source(parent) or {}).get("source")
+            if psrc in not_live:
+                return {"index": name, "ok": False, "n": len(syms),
+                        "source": source,
+                        "reason": f"parent {parent} resolved to {psrc} — "
+                                  f"not a live list"}
+    # Every tracked fetcher records provenance now (the S&P ladder via
+    # _resolve_index, the iShares lists via _resolve_ishares). Kept as a field
+    # so a fetcher that forgets to record is visible in the payload.
     provenance_known = source is not None
 
     prev = _latest_snapshot(db, name) if db is not None else None
@@ -224,6 +272,25 @@ def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
     prev_source = (prev or {}).get("source")
     rebaselined = bool(prev is not None
                        and _construction(prev_source) != _construction(source))
+    rebase_reason = (f"source changed ({prev_source} -> {source}) — "
+                     f"re-baselined, no membership change published")
+
+    # A PARENT RE-BASELINE RE-BASELINES THE DERIVATION (2026-09-29, round 2).
+    # The derived russell2000 keeps the same source string whatever its parents
+    # were rebuilt from, so the construction check above cannot see it. The
+    # first live Sunday (10-04) re-baselines russell1000 and russell3000
+    # (ishares-local -> ishares-network) — and without this the subtraction
+    # would publish that same June reconstitution / Sep IPO backlog as Russell
+    # 2000 adds and drops. A parent that re-baselined in this run means the
+    # derived delta is the rebuild, not an index event.
+    if (not rebaselined and prev is not None and source == U.SRC_DERIVED_R2000
+            and parents_rebaselined):
+        moved = [p for p in _DERIVED_R2000_PARENTS if p in parents_rebaselined]
+        if moved:
+            rebaselined = True
+            rebase_reason = (f"parent {', '.join(moved)} re-baselined in this "
+                             f"run — the derived list re-baselines with it, no "
+                             f"membership change published")
 
     # A DERIVED list's diff cannot name the parent that moved. `CBC`/`FRMI`
     # prove the two iShares exports are already out of step, so an attribution
@@ -254,8 +321,7 @@ def refresh_one(name: str, *, force: bool = True, db=None) -> dict:
         out["raw_diff_not_published"] = {"added": len(d["added"]),
                                          "removed": len(d["removed"])}
         out["added"], out["removed"] = [], []
-        out["reason"] = (f"source changed ({prev_source} -> {source}) — "
-                         f"re-baselined, no membership change published")
+        out["reason"] = rebase_reason
     else:
         out["rebaselined"] = False
 
@@ -322,7 +388,16 @@ def run(names: Optional[list] = None, *, force: bool = True) -> dict:
     """Refresh + diff every tracked index."""
     db = _db()
     t0 = time.time()
-    results = [refresh_one(n, force=force, db=db) for n in (names or TRACKED)]
+    # TRACKED puts russell2000 after both parents, so their re-baselines are
+    # known by the time the derivation is diffed. Asking for russell2000 alone
+    # (names=["russell2000"]) refreshes no parent, so nothing re-baselines it.
+    results = []
+    rebased: set = set()
+    for n in (names or TRACKED):
+        r = refresh_one(n, force=force, db=db, parents_rebaselined=set(rebased))
+        if r.get("rebaselined"):
+            rebased.add(n)
+        results.append(r)
     changed = [r for r in results if r.get("ok") and (r.get("added") or r.get("removed"))
                and not r.get("first_snapshot")]
     return {

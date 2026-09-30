@@ -29,10 +29,11 @@ METHOD (approximation, uncited — NOT FTSE's actual rules):
       more index money tracks R2000 than R1000, so a promotion is usually
       NET SELLING by trackers, not buying.
 
-  Membership baseline = the iShares XLS snapshots in sepa/data (manual
-  downloads — iShares blocks programmatic fetch). The payload carries the
-  baseline file date; a name added since that date (EMAT) will wrongly
-  appear as a candidate until the files are re-downloaded.
+  Membership baseline = the live iShares holdings (IWB / IWV
+  latest-holdings.csv since 2026-09-29), falling back to the committed
+  snapshots in sepa/data. The payload carries the holdings as-of date; a
+  name FTSE added that no iShares fund holds yet (EMAT, FRBT on 2026-09-28)
+  still appears as a candidate.
 
 Coverage is honest and incremental: caps come from the weekly shares
 cache, topped up with at most MAX_FRESH_FETCHES yfinance lookups per
@@ -289,12 +290,19 @@ def _baseline() -> tuple[set, set, Optional[str]]:
     from sepa import universe as U
     r1000 = set(U.fetch_russell1000())
     r3000 = set(U.fetch_russell3000())
+    # 2026-09-29: the holdings DATE the source states ("Fund Holdings as of"),
+    # not a file mtime — in the image the mtime is the build time.
+    # Round 2: every resolve now carries it — live, snapshot AND a cache hit
+    # (read from the cache's sidecar). So the date is exactly the one the
+    # list we just used was built from. The old fallbacks (the committed
+    # snapshot's date, then its mtime) are gone: they stamped a LIVE list with
+    # the snapshot's date. A list with no stated date (the curated fallback)
+    # reports None rather than a borrowed one.
     date = None
-    try:
-        p = U._LOCAL_IWB_PATH
-        date = time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(p)))
-    except Exception:
-        pass
+    for name in ("russell1000", "russell3000"):
+        date = (U.last_source(name) or {}).get("as_of")
+        if date:
+            break
     return r1000, r3000, date
 
 
@@ -463,9 +471,10 @@ def _build_now() -> dict:
         "baseline": {
             "files_date": baseline_date,
             "r1000": len(r1000), "r3000": len(r3000),
-            "note": ("membership from the iShares XLS snapshots in sepa/data — "
-                     "manual downloads; a name added since that date still "
-                     "shows as a candidate until the files are refreshed"),
+            "note": ("membership from the iShares holdings as of files_date "
+                     "(live CSV, or the committed snapshot when the live "
+                     "fetch fails); a name no iShares fund holds yet still "
+                     "shows as a candidate"),
         },
         "method_note": ("Approximation, uncited: plain market cap vs current "
                         "member cap percentiles (add: p25 of R2000 <= cap < p10 "

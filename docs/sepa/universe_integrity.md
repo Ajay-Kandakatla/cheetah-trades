@@ -246,3 +246,108 @@ band was documentation, not enforcement. `_record_count` records the size and
 logs ERROR outside the band; it **never rejects** (that is `_count_ok`'s job,
 mid-fallback-chain), so the fail-EMPTY contract and the universe size are
 unchanged. This is observability only. `universe_counts()` now reports both.
+
+## 2026-09-29 — the Russell layer was four months old; now it reads the live holdings
+
+**What was wrong.** `full`'s Russell layer came from the iShares exports in
+`backend/sepa/data`, "Fund Holdings as of May 28, 2026": before the June 26
+reconstitution and the Sep 21 Q3 IPO adds. The local file was tried FIRST and
+always parsed, so the network branch never ran. That branch was dead anyway:
+iShares redesigned its site and the old `1467271812596.ajax?fileType=csv` URL
+now returns 1.45 MB of product-page HTML with a `text/csv` header. It is not a
+TLS block; curl_cffi Chrome impersonation gets the same HTML. The page now
+links `/us/products/<id>/<slug>/latest-holdings.csv`, which plain `requests`
+with our UA can fetch.
+
+**The ladder now** (`sepa/universe._resolve_ishares`, used by
+`fetch_russell1000` / `fetch_russell3000` / `fetch_microcap`):
+
+| step | source label | cached? |
+|---|---|---|
+| 1. live `latest-holdings.csv` (IWB 239707, IWV 239714, IWC 239716) | `ishares-network` | yes, 30 days |
+| 2. committed snapshot `sepa/data/iShares-*_holdings.csv` | `ishares-snapshot` + WARNING | **no** |
+| 3. curated ∪ S&P 500 ∪ S&P 400 (R1000/R3000), `[]` (microcap) | `curated` / `empty` | no |
+
+- The snapshot is not cached, so a cached fallback can never read back as a
+  plain `cache` hit, and the next call retries the live list.
+- A truncated live parse (outside `_EXPECTED_COUNTS`) is rejected, and the
+  snapshot serves.
+- The snapshots were refreshed on 2026-09-29 from "as of Sep 28, 2026". The
+  three May `.xls` files are gone. The `.xls` loader stays for the IWM drop-in.
+
+**One cleanup for both formats** (`_clean_ishares_records`):
+1. `Asset Class == Equity`. The CSV branch used to have no such filter.
+2. Residual rows are dropped by the fund's own marks: Exchange starting with
+   `NO MARKET` or `Non-Nms` (HOLX at $0.01, VUECF, P5N994), or a Price of
+   exactly 0 (THRD, SBT, PDLI, GTXI). No threshold is involved. NTRB's $0.00
+   "SERIES A" row goes, but its real $8.23 row stays.
+3. Class shares written with a space (`BRK B`, `HEI A`, `UHAL B`) go through
+   the curated remap first and otherwise become the dash form. Before this
+   they were silently dropped, and HEI-A ($69M/day), BF-A, GEF-B, LEN-B and
+   UHAL-B would have left `full`.
+
+**No silent staleness.** `ISHARES_SNAPSHOT_STALE_DAYS = 120` (the old loader's
+existing 120-day warning, now named). Age is measured from the "Fund Holdings
+as of" date inside the file, not the mtime; in the image the mtime is the
+build time.
+- A served snapshot older than that logs `STALE`.
+- `universe_counts()` gives every iShares list its `source` and `snapshot`
+  status, and names the stale served ones in `_stale`.
+- `health_audit.check_universe_counts` WARNs on `_stale`, even when every
+  count is inside its band.
+
+**Measured in the api container, read-only** (branch modules loaded in
+memory; no cache, Mongo or `/app` writes; Massive bars fetched in memory):
+
+| | before | after |
+|---|---|---|
+| `full` | 2,685 | **2,725** (+90 / −50) |
+| russell3000 | 2,559 (cache ← May xls) | 2,587 (live, as of 09-28) |
+| russell1000 | 1,001 | 1,022 |
+| microcap | 1,278 | 1,353 |
+| themes | 296 / 300 | 296 / 300 (untouched) |
+
+- **44 adds pass the $20M floor** (HOLX is now excluded). They include FIG,
+  SUNB, FROG, TTAN, CHYM, INIO, QNT, FRVO, DPC and BXDC.
+- JMKE (43 bars), STLN (40) and HUCK (4) fail on history, not on dollars.
+- Of the 50 removes, three are liquid:
+  - PGY ($54M) and RZLV ($36M): no longer in IWV. **HIS CALL**: keep them via curated?
+  - VSCO: stale since 06-01, and VSXY is already in `full`.
+- Q3 adds now in `full`:
+  - R1000: all 5 (INIO QNT JMKE FRVO DPC).
+  - R2000: 7 of 28 (PBLS CSQR EROC COAG LCLN BXDC BRUN).
+- Still missing:
+  - 19 are held only by IWM. That is IWV sampling; **Option B (IWB ∪ IWM) is
+    HIS CALL.**
+  - EMAT and FRBT are in no iShares fund yet.
+  - The 5 microcap-only names reach `broad`, not `full`.
+
+The liquidity floor is still the only gate on what gets scanned. No names
+were added by hand. `THEME_UNIVERSE` is untouched.
+
+**Tests:** `backend/tests/test_russell_universe_refresh_2026_09_29.py`.
+
+### 2026-09-29 (round 2) — critic fixes on the live-holdings ladder
+
+| # | was | now |
+|---|---|---|
+| 1 | a parent re-baseline left the derived russell2000 publishing the backlog | it re-baselines with its parents in the same run (`universe_changes.md` §round 2) |
+| 2 | a cache hit dropped the holdings date (`as_of=None`), and russell_watch stamped a live list with the snapshot's date | cache files versioned (`_CACHE_KEY_VERSIONS`: `russell1000_v2`, `russell3000_v2`, `microcap_v2`), so the May caches in the shared volume stop matching on deploy. Each file has a `<key>.as_of` sidecar, and a cache hit records `as_of`. `russell_watch._baseline` takes `files_date` from the list it used. It reports None for the curated fallback and never borrows the snapshot's date. |
+| 3 | an iShares outage re-downloaded on every `load_universe` call | a failed or rejected live fetch is memoised per fund for `ISHARES_LIVE_FAILURE_MEMO_SEC = 3600`, so the ladder goes straight to the snapshot. The outage logs one WARNING, then INFO. The resolved list is memoised per cache generation (path, mtime_ns, size of the list + sidecar), and the snapshot is parsed once per file generation. |
+| 4 | the health audit warned only on a snapshot past 120 days | `universe_counts()["_snapshot_served"]` names every served snapshot at any age. `check_universe_counts` WARNs with each one's holdings date, and adds `STALE` for the `_stale` subset. |
+| 5 | microcap's band `(0, 2500)` accepted a truncated IWC parse | a live list under `ISHARES_LIVE_MIN_SNAPSHOT_FRACTION = 0.60` of the committed snapshot's count is rejected, and the snapshot serves. Applied to all three lists; it never loosens a static floor (R1000 614 < 900, R3000 1,553 < 1,800). Microcap floor today: 812 (snapshot 1,353). No snapshot means no floor. |
+
+**Re-measured in the api container, read-only** (branch modules in memory,
+TEMP cache; no `_v2` file appeared in the shared cache volume):
+
+- `full` = **2,725** (unchanged from round 1), 4.2 s cold, one iShares fetch.
+- R1000 1,022 · R3000 2,587 · microcap 1,353 · derived R2000 1,565, all live
+  as of 2026-09-28. A cache hit keeps `as_of` 2026-09-28.
+- Simulated outage: three `load_universe("full")` calls plus five
+  `fetch_russell3000` calls made **1** iShares attempt, and `full` stayed 2,725
+  off the snapshot. The next attempt came after the memo expired (fake clock
+  +3600 s). The health check WARNed "served from the committed iShares
+  snapshot … holdings as of 2026-09-28".
+
+**Tests:** `backend/tests/test_russell_universe_refresh_round2_2026_09_29.py`.
+

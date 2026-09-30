@@ -251,3 +251,36 @@ top-50 + 29-name pool cross-check: `docs/sepa/dual_momentum_data_audit_2026_09_2
   `political/watch.py`, `studies/*`) are not covered.
 - **Finding the next one:** `backend/scripts/dm_frame_audit.py` (read-only).
 - **Tests:** `backend/tests/test_foreign_head_cut_2026_09_29.py`.
+
+## §2026-09-29 — Russell holdings refresh: THRD, TBPH out; DOMO → HUCK
+
+Found while refreshing the Russell layer from the live iShares holdings (see
+`universe_integrity.md` §2026-09-29). All three were verified against Massive
+live on 2026-09-29.
+
+| Symbol | Verdict | Effective | Evidence |
+|---|---|---|---|
+| THRD | DEAD → `DELISTED` | delisted 2025-07-31 | Reference NOT_FOUND. Inactive record CIK 0001923840, `delisted_utc` 2025-07-31. Last bar 2025-07-30 at 5.38 on about 6x volume, after weeks pinned at $5.38–5.45. It was a voluntary delisting under its Plan of Liquidation ($5.35/share first distribution, Form 25). The iShares row still lists it at Price 0.00. |
+| TBPH | DEAD → `DELISTED` | delisted 2026-09-24 | Reference NOT_FOUND. Inactive record CIK 0001583107. Pinned at $17.02–17.05 for five sessions, and the last two sessions traded 6.2M and 10.0M shares against about 0.4M. Zymeworks bought it for $17.00 cash plus a CVR, closing 2026-09-23 (GlobeNewswire). |
+| DOMO | **RENAME** → HUCK | 2026-09-24 | Same CIK 0001505952 and FIGI BBG00L2NS0B7. Massive has a `ticker_change` on 2026-09-24. DOMO's last bar was 09-23 at 3.55 and HUCK's first bar was 09-24 at 3.45: consecutive sessions, −2.8%, inside `SPLICE_MAX_JUMP_RATIO`. |
+
+- The iShares parser now drops Price-0 and NO MARKET / Non-Nms rows (the
+  "ingestion filter" open item above). THRD would leave the live list even
+  without the `DELISTED` entry, and the entry covers every other path.
+- Unchanged: **VSCO → VSXY is still HIS CALL** (1.45× boundary). GBTG and
+  GETY are watch-only. GETY leaves `full` only because IWV no longer holds it;
+  it is not marked dead.
+
+### Post-deploy step (main session)
+
+HUCK has 4 bars. One forced fetch lets the DOMO history splice in:
+
+    docker exec cheetah-market-app-api-1 python -c "from sepa import prices; prices.load_prices('HUCK', force=True)"
+
+**Tests:** `backend/tests/test_russell_universe_refresh_2026_09_29.py` covers
+the fates, the boundary splice, `_resolve_fates`, and negatives for HUCK,
+ZYME, VSCO, VSXY, GBTG and GETY.
+
+**2026-09-29 (round 2):** no fate changed. The critic round touched only the
+iShares ladder (see `universe_integrity.md` §round 2). THRD, TBPH and
+DOMO → HUCK stand as above. `full` re-measured at 2,725.
