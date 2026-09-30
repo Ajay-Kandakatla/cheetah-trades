@@ -1,0 +1,5702 @@
+{
+ "_comment": "synthetic — replaced by the real capture in §5",
+ "event": {
+  "count": 4,
+  "min_tier": "ok",
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "enterable_kind": "n/a",
+  "tape_session": "premarket",
+  "tab": "resiliency",
+  "sort": "default",
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🛡️ T1 hold rate"
+   },
+   {
+    "key": "res_t2",
+    "label": "🛡️ T2 hold rate"
+   },
+   {
+    "key": "res_down",
+    "label": "🛡️ T1 on SPY-down days"
+   },
+   {
+    "key": "res_today",
+    "label": "📅 Today's move"
+   }
+  ],
+  "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort_unavailable": null,
+  "matched": 4,
+  "resiliency_board": {
+   "state": "ready",
+   "session": "2026-09-30",
+   "phase": "pre",
+   "market_closed": null,
+   "sort": "default",
+   "header": "🛡️ 4 names read on the cached daily bars. T1 days in the last 365 days: 43 (cpi 12, jobs 12, pce 11, fomc 8), SPY fell on 19; T2-only days: 96, SPY fell on 44. Rated (a close on every T1 day): 3; held on at least 75% of them: 2. 📈 bullish EOD tape on 2026-09-29: 2. 🌅 bullish pre-market tape: 1 of 3 read. 0 under the liquidity floor; showing 4.",
+   "today_line": "📅 2026-09-30 is a T1 data day — Core PCE (T1); GDP, ADP payrolls (T2). SPY +0.33% vs its prior close (pre-market 08:52 ET). 2 of 3 names with a print are holding (down no more than 0.5%).",
+   "events_line": "Data days: FRED's own release dates (jobs report, CPI, Core PCE, GDP, retail sales, JOLTS, ADP, jobless claims, PPI) and the Fed's FOMC calendar. ISM and Fed-speaker remarks have no dated history here and are not counted.",
+   "rules": {
+    "hold_max_drop_pct": 0.5,
+    "hold_rate_min_pct": 75.0,
+    "window_days": 365,
+    "t2_excludes_t1": true,
+    "pre_rvol_min": 1.5,
+    "pre_min_sessions": 5,
+    "vol_avg_bars": 50,
+    "benchmark": "SPY",
+    "lines": [
+     "Held = the close on the data day is down no more than 0.5% from the prior session's close (HIS CALL #1).",
+     "Window = the last 365 days of T1 (T2) sessions; rated = a close on every one (HIS CALL #4, #6).",
+     "The 🛡️ box = held on at least 75% of the window's sessions (HIS CALL #5).",
+     "A session with any T1 print counts as T1 only (HIS CALL #7).",
+     "📈 EOD = the app's accumulation day on the last closed session (HIS CALL #11).",
+     "🌅 Pre-market = a print above the prior close on at least 1.5× the name's own pre-market volume by the same minute, over at least 5 cached sessions (HIS CALL #12)."
+    ]
+   },
+   "events": {
+    "available": true,
+    "window_days": 365,
+    "first": "2025-10-01",
+    "last": "2026-09-29",
+    "t1_sessions": 43,
+    "t1_spy_down": 19,
+    "t2_sessions": 96,
+    "t2_spy_down": 44,
+    "t1_by_kind": {
+     "cpi": 12,
+     "jobs": 12,
+     "pce": 11,
+     "fomc": 8
+    },
+    "t2_by_kind": {
+     "claims": 49,
+     "retail": 12,
+     "jolts": 11,
+     "adp": 11,
+     "gdp": 6,
+     "ppi": 7
+    },
+    "sources": [
+     "FRED release dates",
+     "Federal Reserve FOMC calendar"
+    ],
+    "unsourced": [
+     "ISM mfg & services",
+     "Fed-speaker remarks"
+    ],
+    "errors": []
+   },
+   "today": {
+    "event_day": true,
+    "session": "2026-09-30",
+    "t1": [
+     "Core PCE"
+    ],
+    "t2": [
+     "GDP",
+     "ADP payrolls"
+    ],
+    "spy_move_pct": 0.33,
+    "spy_as_of_et": "08:52",
+    "read": 3,
+    "holding": 2,
+    "down": 1,
+    "no_print": 1
+   },
+   "counts": {
+    "scanned": 4,
+    "no_bars": 0,
+    "stale": 0,
+    "rated_t1": 3,
+    "partial_t1": 1,
+    "t1_pass": 2,
+    "rated_t2": 3,
+    "partial_t2": 1,
+    "t2_pass": 1,
+    "eod_read": 3,
+    "eod_pass": 2,
+    "pre_read": 3,
+    "pre_pass": 1,
+    "no_turnover": 0,
+    "dropped_thin": 0,
+    "shown": 4
+   },
+   "filters": {
+    "keys": [
+     "t1",
+     "t2",
+     "eod",
+     "pre"
+    ],
+    "active": [],
+    "pool": 4,
+    "mode": "any",
+    "mode_param": "res_mode",
+    "mode_all_label": "must match all",
+    "passed_all": null,
+    "passed_any": null,
+    "shown": null,
+    "hidden": 0,
+    "items": [
+     {
+      "key": "t1",
+      "label": "🛡️ Held on T1",
+      "on": false,
+      "pass": 2,
+      "fail": 1,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "🛡️ A close on every T1 day of the last 365 days and down no more than 0.5% on at least 75% of them. T1 hold: UNMEASURED — the persistence study has not run yet."
+     },
+     {
+      "key": "t2",
+      "label": "🛡️ Held on T2",
+      "on": false,
+      "pass": 1,
+      "fail": 2,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "🛡️ A close on every T2 day of the last 365 days and down no more than 0.5% on at least 75% of them. T2 hold: UNMEASURED — the persistence study has not run yet."
+     },
+     {
+      "key": "eod",
+      "label": "📈 Bullish tape EOD",
+      "on": false,
+      "pass": 2,
+      "fail": 1,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "📈 The last session closed up, in the upper half of its range, on more volume than its 50-session average — the app's accumulation day. EOD tape: UNMEASURED — the study has not run yet."
+     },
+     {
+      "key": "pre",
+      "label": "🌅 Bullish tape pre-market",
+      "on": false,
+      "pass": 1,
+      "fail": 3,
+      "no_read": 0,
+      "hidden": 0,
+      "note": "🌅 A pre-market print above yesterday's close on at least 1.5× the name's own pre-market volume by the same minute (its cached sessions, at least 5). Read 04:00–09:30 ET only. UNMEASURED."
+     }
+    ],
+    "line": null,
+    "note": "Ticked boxes narrow the board — a name passing ANY ticked box shows.",
+    "measured": false
+   },
+   "study": {
+    "status": "pending",
+    "run_date": null,
+    "t1": {
+     "verdict": "unmeasured",
+     "text": "T1 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "t2": {
+     "verdict": "unmeasured",
+     "text": "T2 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "eod": {
+     "verdict": "unmeasured",
+     "text": "EOD tape: UNMEASURED — the study has not run yet."
+    },
+    "pre": {
+     "verdict": "unmeasured",
+     "text": "Pre-market tape: UNMEASURED — the cached pre-market history is too short to measure."
+    }
+   },
+   "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "measured": false,
+   "built_at": "2026-09-30T08:41:10-04:00"
+  },
+  "tiles": [
+   {
+    "symbol": "AAA",
+    "name": "Synthetic Utility Co",
+    "theme": null,
+    "href": "/sepa/AAA?tab=supply",
+    "last_close": 38.93,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 40,
+      "h": 41.19,
+      "l": 39.6,
+      "c": 40.79,
+      "v": 1005000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 40.79,
+      "h": 41.79,
+      "l": 40.39,
+      "c": 41.39,
+      "v": 1006000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 41.39,
+      "h": 41.98,
+      "l": 40.99,
+      "c": 41.58,
+      "v": 1007000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 41.58,
+      "h": 41.98,
+      "l": 40.9,
+      "c": 41.3,
+      "v": 1008000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 41.3,
+      "h": 41.7,
+      "l": 40.25,
+      "c": 40.65,
+      "v": 1009000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 40.65,
+      "h": 41.05,
+      "l": 39.45,
+      "c": 39.85,
+      "v": 1010000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 39.85,
+      "h": 40.25,
+      "l": 38.78,
+      "c": 39.18,
+      "v": 1011000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 39.18,
+      "h": 39.58,
+      "l": 38.48,
+      "c": 38.88,
+      "v": 1012000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 38.88,
+      "h": 39.45,
+      "l": 38.48,
+      "c": 39.05,
+      "v": 1013000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 39.05,
+      "h": 40.03,
+      "l": 38.65,
+      "c": 39.63,
+      "v": 1014000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 39.63,
+      "h": 40.82,
+      "l": 39.23,
+      "c": 40.42,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 40.42,
+      "h": 41.54,
+      "l": 40.02,
+      "c": 41.14,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 41.14,
+      "h": 41.94,
+      "l": 40.74,
+      "c": 41.54,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 41.54,
+      "h": 41.94,
+      "l": 41.08,
+      "c": 41.48,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 41.48,
+      "h": 41.88,
+      "l": 40.58,
+      "c": 40.98,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 40.98,
+      "h": 41.38,
+      "l": 39.81,
+      "c": 40.21,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 40.21,
+      "h": 40.61,
+      "l": 39.05,
+      "c": 39.45,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 39.45,
+      "h": 39.85,
+      "l": 38.56,
+      "c": 38.96,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 38.96,
+      "h": 39.36,
+      "l": 38.51,
+      "c": 38.91,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 38.91,
+      "h": 39.72,
+      "l": 38.51,
+      "c": 39.32,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 39.32,
+      "h": 40.44,
+      "l": 38.92,
+      "c": 40.04,
+      "v": 1025000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 40.04,
+      "h": 41.23,
+      "l": 39.64,
+      "c": 40.83,
+      "v": 1026000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 40.83,
+      "h": 41.81,
+      "l": 40.43,
+      "c": 41.41,
+      "v": 1027000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 41.41,
+      "h": 41.98,
+      "l": 41.01,
+      "c": 41.58,
+      "v": 1028000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 41.58,
+      "h": 41.98,
+      "l": 40.87,
+      "c": 41.27,
+      "v": 1029000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 41.27,
+      "h": 41.67,
+      "l": 40.2,
+      "c": 40.6,
+      "v": 1030000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 40.6,
+      "h": 41.0,
+      "l": 39.4,
+      "c": 39.8,
+      "v": 1031000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 39.8,
+      "h": 40.2,
+      "l": 38.75,
+      "c": 39.15,
+      "v": 1032000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 39.15,
+      "h": 39.55,
+      "l": 38.48,
+      "c": 38.88,
+      "v": 1033000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 38.88,
+      "h": 39.48,
+      "l": 38.48,
+      "c": 39.08,
+      "v": 1034000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 39.08,
+      "h": 40.08,
+      "l": 38.68,
+      "c": 39.68,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 39.68,
+      "h": 40.87,
+      "l": 39.28,
+      "c": 40.47,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 40.47,
+      "h": 41.58,
+      "l": 40.07,
+      "c": 41.18,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 41.18,
+      "h": 41.96,
+      "l": 40.78,
+      "c": 41.56,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 41.56,
+      "h": 41.96,
+      "l": 41.07,
+      "c": 41.47,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 41.47,
+      "h": 41.87,
+      "l": 40.55,
+      "c": 40.95,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 40.95,
+      "h": 41.35,
+      "l": 39.78,
+      "c": 40.18,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 40.18,
+      "h": 40.58,
+      "l": 39.03,
+      "c": 39.43,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 39.43,
+      "h": 39.83,
+      "l": 38.56,
+      "c": 38.96,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 38.96,
+      "h": 39.36,
+      "l": 38.53,
+      "c": 38.93,
+      "v": 1044000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 36/43 (84%)",
+      "tone": "good"
+     },
+     {
+      "text": "📅 T1 today · holding +0.42%",
+      "tone": "good"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "36/43 · 84% · SPY down: 16/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "80/96 · 83% · SPY down: 38/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · +1.20% · closed at 78% of range · vol 1.34× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "+0.20% · vol 1.10× usual by 08:52 (12 sessions)"
+     },
+     {
+      "k": "Today",
+      "v": "+0.42% vs 40.83 · pre-market 08:52 ET"
+     },
+     {
+      "k": "T1 worst",
+      "v": "-3.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "0.9%/day · β 0.31"
+     }
+    ],
+    "why": "Held 36 of 43 T1 days (84%), 16 of 19 when SPY fell · worst -3.12% (2026-03-11 CPI) · typical day 0.9%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 36,
+      "rate_pct": 83.72,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 16,
+      "down_rate_pct": 84.21,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -3.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 80,
+      "rate_pct": 83.33,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 38,
+      "down_rate_pct": 86.36,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": true,
+      "tier": 1,
+      "labels": [
+       "Core PCE"
+      ],
+      "state": "read",
+      "move_pct": 0.42,
+      "holding": true,
+      "print": 41.0,
+      "prev_close": 40.83,
+      "basis": "live",
+      "tape": "premarket",
+      "as_of_et": "08:52"
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 1.2,
+      "close_loc_pct": 78.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 1.34,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": true,
+      "bullish": true
+     },
+     "pre": {
+      "state": "read",
+      "text": "+0.20% · vol 1.10× usual by 08:52 (12 sessions)",
+      "move_pct": 0.2,
+      "print": 41.0,
+      "prev_close": 40.74,
+      "as_of_et": "08:52",
+      "pm_volume": 128000,
+      "pm_dollar_vol": 5248000.0,
+      "baseline_vol": 100000.0,
+      "baseline_sessions": 12,
+      "pm_rvol": 1.1,
+      "up": true,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "sigma_pct": 0.9,
+     "beta": 0.31,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": true,
+     "t2": true,
+     "eod": true,
+     "pre": false
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "BBB",
+    "name": "Synthetic Staples Inc",
+    "theme": null,
+    "href": "/sepa/BBB?tab=supply",
+    "last_close": 46.17,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 47,
+      "h": 47.4,
+      "l": 46.4,
+      "c": 46.8,
+      "v": 1010000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 46.8,
+      "h": 47.2,
+      "l": 45.79,
+      "c": 46.19,
+      "v": 1011000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 46.19,
+      "h": 46.59,
+      "l": 45.0,
+      "c": 45.4,
+      "v": 1012000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 45.4,
+      "h": 45.8,
+      "l": 44.29,
+      "c": 44.69,
+      "v": 1013000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 44.69,
+      "h": 45.09,
+      "l": 43.92,
+      "c": 44.32,
+      "v": 1014000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 44.32,
+      "h": 44.81,
+      "l": 43.92,
+      "c": 44.41,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 44.41,
+      "h": 45.34,
+      "l": 44.01,
+      "c": 44.94,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 44.94,
+      "h": 46.11,
+      "l": 44.54,
+      "c": 45.71,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 45.71,
+      "h": 46.86,
+      "l": 45.31,
+      "c": 46.46,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 46.46,
+      "h": 47.33,
+      "l": 46.06,
+      "c": 46.93,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 46.93,
+      "h": 47.35,
+      "l": 46.53,
+      "c": 46.95,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 46.95,
+      "h": 47.35,
+      "l": 46.11,
+      "c": 46.51,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 46.51,
+      "h": 46.91,
+      "l": 45.37,
+      "c": 45.77,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 45.77,
+      "h": 46.17,
+      "l": 44.59,
+      "c": 44.99,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 44.99,
+      "h": 45.39,
+      "l": 44.04,
+      "c": 44.44,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 44.44,
+      "h": 44.84,
+      "l": 43.91,
+      "c": 44.31,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 44.31,
+      "h": 45.05,
+      "l": 43.91,
+      "c": 44.65,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 44.65,
+      "h": 45.74,
+      "l": 44.25,
+      "c": 45.34,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 45.34,
+      "h": 46.54,
+      "l": 44.94,
+      "c": 46.14,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 46.14,
+      "h": 47.17,
+      "l": 45.74,
+      "c": 46.77,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 46.77,
+      "h": 47.41,
+      "l": 46.37,
+      "c": 47.01,
+      "v": 1030000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 47.01,
+      "h": 47.41,
+      "l": 46.38,
+      "c": 46.78,
+      "v": 1031000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 46.78,
+      "h": 47.18,
+      "l": 45.76,
+      "c": 46.16,
+      "v": 1032000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 46.16,
+      "h": 46.56,
+      "l": 44.96,
+      "c": 45.36,
+      "v": 1033000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 45.36,
+      "h": 45.76,
+      "l": 44.27,
+      "c": 44.67,
+      "v": 1034000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 44.67,
+      "h": 45.07,
+      "l": 43.92,
+      "c": 44.32,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 44.32,
+      "h": 44.84,
+      "l": 43.92,
+      "c": 44.44,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 44.44,
+      "h": 45.39,
+      "l": 44.04,
+      "c": 44.99,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 44.99,
+      "h": 46.17,
+      "l": 44.59,
+      "c": 45.77,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 45.77,
+      "h": 46.91,
+      "l": 45.37,
+      "c": 46.51,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 46.51,
+      "h": 47.36,
+      "l": 46.11,
+      "c": 46.96,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 46.96,
+      "h": 47.36,
+      "l": 46.55,
+      "c": 46.95,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 46.95,
+      "h": 47.35,
+      "l": 46.09,
+      "c": 46.49,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 46.49,
+      "h": 46.89,
+      "l": 45.34,
+      "c": 45.74,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 45.74,
+      "h": 46.14,
+      "l": 44.56,
+      "c": 44.96,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 44.96,
+      "h": 45.36,
+      "l": 44.02,
+      "c": 44.42,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 44.42,
+      "h": 44.82,
+      "l": 43.91,
+      "c": 44.31,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 44.31,
+      "h": 45.07,
+      "l": 43.91,
+      "c": 44.67,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 44.67,
+      "h": 45.77,
+      "l": 44.27,
+      "c": 45.37,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 45.37,
+      "h": 46.57,
+      "l": 44.97,
+      "c": 46.17,
+      "v": 1049000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 33/43 (77%)",
+      "tone": "good"
+     },
+     {
+      "text": "📅 T1 today · holding +0.05%",
+      "tone": "good"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "33/43 · 77% · SPY down: 14/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "70/96 · 73% · SPY down: 30/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · -0.40% · closed at 30% of range · vol 0.80× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "-0.30% · vol 0.70× usual by 08:52 (12 sessions)"
+     },
+     {
+      "k": "Today",
+      "v": "+0.05% vs 40.83 · pre-market 08:52 ET"
+     },
+     {
+      "k": "T1 worst",
+      "v": "-2.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "1.2%/day · β 0.45"
+     }
+    ],
+    "why": "Held 33 of 43 T1 days (77%), 14 of 19 when SPY fell · worst -2.12% (2026-03-11 CPI) · typical day 1.2%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 33,
+      "rate_pct": 76.74,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 14,
+      "down_rate_pct": 73.68,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -2.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 70,
+      "rate_pct": 72.92,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 30,
+      "down_rate_pct": 68.18,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": true,
+      "tier": 1,
+      "labels": [
+       "Core PCE"
+      ],
+      "state": "read",
+      "move_pct": 0.05,
+      "holding": true,
+      "print": 41.0,
+      "prev_close": 40.83,
+      "basis": "live",
+      "tape": "premarket",
+      "as_of_et": "08:52"
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": -0.4,
+      "close_loc_pct": 30.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 0.8,
+      "up": false,
+      "upper_half": false,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "pre": {
+      "state": "read",
+      "text": "-0.30% · vol 0.70× usual by 08:52 (12 sessions)",
+      "move_pct": -0.3,
+      "print": 41.0,
+      "prev_close": 40.74,
+      "as_of_et": "08:52",
+      "pm_volume": 128000,
+      "pm_dollar_vol": 5248000.0,
+      "baseline_vol": 100000.0,
+      "baseline_sessions": 12,
+      "pm_rvol": 0.7,
+      "up": false,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "sigma_pct": 1.2,
+     "beta": 0.45,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": true,
+     "t2": false,
+     "eod": false,
+     "pre": false
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "CCC",
+    "name": "Synthetic Chips Corp",
+    "theme": null,
+    "href": "/sepa/CCC?tab=supply",
+    "last_close": 55.28,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 54,
+      "h": 54.4,
+      "l": 52.86,
+      "c": 53.26,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 53.26,
+      "h": 53.66,
+      "l": 52.42,
+      "c": 52.82,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 52.82,
+      "h": 53.23,
+      "l": 52.42,
+      "c": 52.83,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 52.83,
+      "h": 53.69,
+      "l": 52.43,
+      "c": 53.29,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 53.29,
+      "h": 54.44,
+      "l": 52.89,
+      "c": 54.04,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 54.04,
+      "h": 55.22,
+      "l": 53.64,
+      "c": 54.82,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 54.82,
+      "h": 55.75,
+      "l": 54.42,
+      "c": 55.35,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 55.35,
+      "h": 55.85,
+      "l": 54.95,
+      "c": 55.45,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 55.45,
+      "h": 55.85,
+      "l": 54.68,
+      "c": 55.08,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 55.08,
+      "h": 55.48,
+      "l": 53.98,
+      "c": 54.38,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 54.38,
+      "h": 54.78,
+      "l": 53.18,
+      "c": 53.58,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 53.58,
+      "h": 53.98,
+      "l": 52.57,
+      "c": 52.97,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 52.97,
+      "h": 53.37,
+      "l": 52.36,
+      "c": 52.76,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 52.76,
+      "h": 53.42,
+      "l": 52.36,
+      "c": 53.02,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 53.02,
+      "h": 54.06,
+      "l": 52.62,
+      "c": 53.66,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 53.66,
+      "h": 54.86,
+      "l": 53.26,
+      "c": 54.46,
+      "v": 1030000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 54.46,
+      "h": 55.54,
+      "l": 54.06,
+      "c": 55.14,
+      "v": 1031000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 55.14,
+      "h": 55.86,
+      "l": 54.74,
+      "c": 55.46,
+      "v": 1032000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 55.46,
+      "h": 55.86,
+      "l": 54.91,
+      "c": 55.31,
+      "v": 1033000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 55.31,
+      "h": 55.71,
+      "l": 54.34,
+      "c": 54.74,
+      "v": 1034000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 54.74,
+      "h": 55.14,
+      "l": 53.55,
+      "c": 53.95,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 53.95,
+      "h": 54.35,
+      "l": 52.82,
+      "c": 53.22,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 53.22,
+      "h": 53.62,
+      "l": 52.4,
+      "c": 52.8,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 52.8,
+      "h": 53.24,
+      "l": 52.4,
+      "c": 52.84,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 52.84,
+      "h": 53.72,
+      "l": 52.44,
+      "c": 53.32,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 53.32,
+      "h": 54.48,
+      "l": 52.92,
+      "c": 54.08,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 54.08,
+      "h": 55.25,
+      "l": 53.68,
+      "c": 54.85,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 54.85,
+      "h": 55.76,
+      "l": 54.45,
+      "c": 55.36,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 55.36,
+      "h": 55.83,
+      "l": 54.96,
+      "c": 55.43,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 55.43,
+      "h": 55.83,
+      "l": 54.64,
+      "c": 55.04,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 55.04,
+      "h": 55.44,
+      "l": 53.92,
+      "c": 54.32,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 54.32,
+      "h": 54.72,
+      "l": 53.13,
+      "c": 53.53,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 53.53,
+      "h": 53.93,
+      "l": 52.54,
+      "c": 52.94,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 52.94,
+      "h": 53.34,
+      "l": 52.36,
+      "c": 52.76,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 52.76,
+      "h": 53.45,
+      "l": 52.36,
+      "c": 53.05,
+      "v": 1049000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 53.05,
+      "h": 54.11,
+      "l": 52.65,
+      "c": 53.71,
+      "v": 1050000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 53.71,
+      "h": 54.91,
+      "l": 53.31,
+      "c": 54.51,
+      "v": 1051000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 54.51,
+      "h": 55.57,
+      "l": 54.11,
+      "c": 55.17,
+      "v": 1052000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 55.17,
+      "h": 55.86,
+      "l": 54.77,
+      "c": 55.46,
+      "v": 1053000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 55.46,
+      "h": 55.86,
+      "l": 54.88,
+      "c": 55.28,
+      "v": 1054000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 22/43 (51%)",
+      "tone": "muted"
+     },
+     {
+      "text": "📅 T1 today · down -1.20%",
+      "tone": "warn"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "22/43 · 51% · SPY down: 7/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "50/96 · 52% · SPY down: 20/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · +2.10% · closed at 91% of range · vol 2.20× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "+0.65% · vol 1.90× usual by 08:52 (12 sessions)"
+     },
+     {
+      "k": "Today",
+      "v": "-1.20% vs 40.83 · pre-market 08:52 ET"
+     },
+     {
+      "k": "T1 worst",
+      "v": "-1.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "3.1%/day · β 1.62"
+     }
+    ],
+    "why": "Held 22 of 43 T1 days (51%), 7 of 19 when SPY fell · worst -1.12% (2026-03-11 CPI) · typical day 3.1%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 22,
+      "rate_pct": 51.16,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 7,
+      "down_rate_pct": 36.84,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -1.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 50,
+      "rate_pct": 52.08,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 20,
+      "down_rate_pct": 45.45,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": true,
+      "tier": 1,
+      "labels": [
+       "Core PCE"
+      ],
+      "state": "read",
+      "move_pct": -1.2,
+      "holding": false,
+      "print": 41.0,
+      "prev_close": 40.83,
+      "basis": "live",
+      "tape": "premarket",
+      "as_of_et": "08:52"
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 2.1,
+      "close_loc_pct": 91.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 2.2,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": true,
+      "bullish": true
+     },
+     "pre": {
+      "state": "read",
+      "text": "+0.65% · vol 1.90× usual by 08:52 (12 sessions)",
+      "move_pct": 0.65,
+      "print": 41.0,
+      "prev_close": 40.74,
+      "as_of_et": "08:52",
+      "pm_volume": 128000,
+      "pm_dollar_vol": 5248000.0,
+      "baseline_vol": 100000.0,
+      "baseline_sessions": 12,
+      "pm_rvol": 1.9,
+      "up": true,
+      "vol_ok": true,
+      "bullish": true
+     },
+     "sigma_pct": 3.1,
+     "beta": 1.62,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": false,
+     "t2": false,
+     "eod": true,
+     "pre": true
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "DDD",
+    "name": "Synthetic New Listing",
+    "theme": null,
+    "href": "/sepa/DDD?tab=supply",
+    "last_close": 61.52,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 61,
+      "h": 61.8,
+      "l": 60.6,
+      "c": 61.4,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 61.4,
+      "h": 62.52,
+      "l": 61.0,
+      "c": 62.12,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 62.12,
+      "h": 63.31,
+      "l": 61.72,
+      "c": 62.91,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 62.91,
+      "h": 63.9,
+      "l": 62.51,
+      "c": 63.5,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 63.5,
+      "h": 64.08,
+      "l": 63.1,
+      "c": 63.68,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 63.68,
+      "h": 64.08,
+      "l": 62.99,
+      "c": 63.39,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 63.39,
+      "h": 63.79,
+      "l": 62.33,
+      "c": 62.73,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 62.73,
+      "h": 63.13,
+      "l": 61.53,
+      "c": 61.93,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 61.93,
+      "h": 62.33,
+      "l": 60.87,
+      "c": 61.27,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 61.27,
+      "h": 61.67,
+      "l": 60.58,
+      "c": 60.98,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 60.98,
+      "h": 61.57,
+      "l": 60.58,
+      "c": 61.17,
+      "v": 1030000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 61.17,
+      "h": 62.16,
+      "l": 60.77,
+      "c": 61.76,
+      "v": 1031000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 61.76,
+      "h": 62.95,
+      "l": 61.36,
+      "c": 62.55,
+      "v": 1032000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 62.55,
+      "h": 63.67,
+      "l": 62.15,
+      "c": 63.27,
+      "v": 1033000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 63.27,
+      "h": 64.06,
+      "l": 62.87,
+      "c": 63.66,
+      "v": 1034000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 63.66,
+      "h": 64.06,
+      "l": 63.19,
+      "c": 63.59,
+      "v": 1035000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 63.59,
+      "h": 63.99,
+      "l": 62.68,
+      "c": 63.08,
+      "v": 1036000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 63.08,
+      "h": 63.48,
+      "l": 61.91,
+      "c": 62.31,
+      "v": 1037000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 62.31,
+      "h": 62.71,
+      "l": 61.15,
+      "c": 61.55,
+      "v": 1038000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 61.55,
+      "h": 61.95,
+      "l": 60.67,
+      "c": 61.07,
+      "v": 1039000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 61.07,
+      "h": 61.47,
+      "l": 60.63,
+      "c": 61.03,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 61.03,
+      "h": 61.85,
+      "l": 60.63,
+      "c": 61.45,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 61.45,
+      "h": 62.58,
+      "l": 61.05,
+      "c": 62.18,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 62.18,
+      "h": 63.37,
+      "l": 61.78,
+      "c": 62.97,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 62.97,
+      "h": 63.94,
+      "l": 62.57,
+      "c": 63.54,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 63.54,
+      "h": 64.09,
+      "l": 63.14,
+      "c": 63.69,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 63.69,
+      "h": 64.09,
+      "l": 62.97,
+      "c": 63.37,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 63.37,
+      "h": 63.77,
+      "l": 62.29,
+      "c": 62.69,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 62.69,
+      "h": 63.09,
+      "l": 61.49,
+      "c": 61.89,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 61.89,
+      "h": 62.29,
+      "l": 60.85,
+      "c": 61.25,
+      "v": 1049000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 61.25,
+      "h": 61.65,
+      "l": 60.59,
+      "c": 60.99,
+      "v": 1050000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 60.99,
+      "h": 61.6,
+      "l": 60.59,
+      "c": 61.2,
+      "v": 1051000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 61.2,
+      "h": 62.21,
+      "l": 60.8,
+      "c": 61.81,
+      "v": 1052000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 61.81,
+      "h": 63.01,
+      "l": 61.41,
+      "c": 62.61,
+      "v": 1053000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 62.61,
+      "h": 63.71,
+      "l": 62.21,
+      "c": 63.31,
+      "v": 1054000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 63.31,
+      "h": 64.08,
+      "l": 62.91,
+      "c": 63.68,
+      "v": 1055000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 63.68,
+      "h": 64.08,
+      "l": 63.18,
+      "c": 63.58,
+      "v": 1056000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 63.58,
+      "h": 63.98,
+      "l": 62.65,
+      "c": 63.05,
+      "v": 1057000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 63.05,
+      "h": 63.45,
+      "l": 61.87,
+      "c": 62.27,
+      "v": 1058000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 62.27,
+      "h": 62.67,
+      "l": 61.12,
+      "c": 61.52,
+      "v": 1059000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "not rated — no close on every data day"
+     },
+     {
+      "k": "T2 held",
+      "v": "not rated — no close on every data day"
+     },
+     {
+      "k": "EOD tape",
+      "v": "no 50-session volume average yet"
+     },
+     {
+      "k": "Pre-market",
+      "v": "+0.10% · vol 1.20× usual by 08:52 (12 sessions)"
+     },
+     {
+      "k": "Today",
+      "v": "no print yet today"
+     },
+     {
+      "k": "σ · β",
+      "v": "2.4%/day · β 1.10"
+     }
+    ],
+    "why": "Not rated on T1 — its daily bars do not cover every data day in the window",
+    "resiliency": {
+     "t1": null,
+     "t2": null,
+     "today": {
+      "event_day": true,
+      "tier": 1,
+      "labels": [
+       "Core PCE"
+      ],
+      "state": "no_print",
+      "move_pct": null,
+      "holding": null,
+      "print": null,
+      "prev_close": null,
+      "basis": null,
+      "tape": null,
+      "as_of_et": null
+     },
+     "eod": {
+      "state": "no_avg",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 0.8,
+      "close_loc_pct": 60.0,
+      "volume": 900000,
+      "avg_vol_50": null,
+      "rvol": null,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": null,
+      "bullish": null
+     },
+     "pre": {
+      "state": "read",
+      "text": "+0.10% · vol 1.20× usual by 08:52 (12 sessions)",
+      "move_pct": 0.1,
+      "print": 41.0,
+      "prev_close": 40.74,
+      "as_of_et": "08:52",
+      "pm_volume": 128000,
+      "pm_dollar_vol": 5248000.0,
+      "baseline_vol": 100000.0,
+      "baseline_sessions": 12,
+      "pm_rvol": 1.2,
+      "up": true,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "sigma_pct": 2.4,
+     "beta": 1.1,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": null,
+     "t2": null,
+     "eod": null,
+     "pre": false
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   }
+  ]
+ },
+ "event_t1": {
+  "count": 2,
+  "min_tier": "ok",
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "enterable_kind": "n/a",
+  "tape_session": "premarket",
+  "tab": "resiliency",
+  "sort": "default",
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🛡️ T1 hold rate"
+   },
+   {
+    "key": "res_t2",
+    "label": "🛡️ T2 hold rate"
+   },
+   {
+    "key": "res_down",
+    "label": "🛡️ T1 on SPY-down days"
+   },
+   {
+    "key": "res_today",
+    "label": "📅 Today's move"
+   }
+  ],
+  "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort_unavailable": null,
+  "matched": 4,
+  "resiliency_board": {
+   "state": "ready",
+   "session": "2026-09-30",
+   "phase": "pre",
+   "market_closed": null,
+   "sort": "default",
+   "header": "🛡️ 4 names read on the cached daily bars. T1 days in the last 365 days: 43 (cpi 12, jobs 12, pce 11, fomc 8), SPY fell on 19; T2-only days: 96, SPY fell on 44. Rated (a close on every T1 day): 3; held on at least 75% of them: 2. 📈 bullish EOD tape on 2026-09-29: 2. 🌅 bullish pre-market tape: 1 of 3 read. 0 under the liquidity floor; showing 2.",
+   "today_line": "📅 2026-09-30 is a T1 data day — Core PCE (T1); GDP, ADP payrolls (T2). SPY +0.33% vs its prior close (pre-market 08:52 ET). 2 of 3 names with a print are holding (down no more than 0.5%).",
+   "events_line": "Data days: FRED's own release dates (jobs report, CPI, Core PCE, GDP, retail sales, JOLTS, ADP, jobless claims, PPI) and the Fed's FOMC calendar. ISM and Fed-speaker remarks have no dated history here and are not counted.",
+   "rules": {
+    "hold_max_drop_pct": 0.5,
+    "hold_rate_min_pct": 75.0,
+    "window_days": 365,
+    "t2_excludes_t1": true,
+    "pre_rvol_min": 1.5,
+    "pre_min_sessions": 5,
+    "vol_avg_bars": 50,
+    "benchmark": "SPY",
+    "lines": [
+     "Held = the close on the data day is down no more than 0.5% from the prior session's close (HIS CALL #1).",
+     "Window = the last 365 days of T1 (T2) sessions; rated = a close on every one (HIS CALL #4, #6).",
+     "The 🛡️ box = held on at least 75% of the window's sessions (HIS CALL #5).",
+     "A session with any T1 print counts as T1 only (HIS CALL #7).",
+     "📈 EOD = the app's accumulation day on the last closed session (HIS CALL #11).",
+     "🌅 Pre-market = a print above the prior close on at least 1.5× the name's own pre-market volume by the same minute, over at least 5 cached sessions (HIS CALL #12)."
+    ]
+   },
+   "events": {
+    "available": true,
+    "window_days": 365,
+    "first": "2025-10-01",
+    "last": "2026-09-29",
+    "t1_sessions": 43,
+    "t1_spy_down": 19,
+    "t2_sessions": 96,
+    "t2_spy_down": 44,
+    "t1_by_kind": {
+     "cpi": 12,
+     "jobs": 12,
+     "pce": 11,
+     "fomc": 8
+    },
+    "t2_by_kind": {
+     "claims": 49,
+     "retail": 12,
+     "jolts": 11,
+     "adp": 11,
+     "gdp": 6,
+     "ppi": 7
+    },
+    "sources": [
+     "FRED release dates",
+     "Federal Reserve FOMC calendar"
+    ],
+    "unsourced": [
+     "ISM mfg & services",
+     "Fed-speaker remarks"
+    ],
+    "errors": []
+   },
+   "today": {
+    "event_day": true,
+    "session": "2026-09-30",
+    "t1": [
+     "Core PCE"
+    ],
+    "t2": [
+     "GDP",
+     "ADP payrolls"
+    ],
+    "spy_move_pct": 0.33,
+    "spy_as_of_et": "08:52",
+    "read": 3,
+    "holding": 2,
+    "down": 1,
+    "no_print": 1
+   },
+   "counts": {
+    "scanned": 4,
+    "no_bars": 0,
+    "stale": 0,
+    "rated_t1": 3,
+    "partial_t1": 1,
+    "t1_pass": 2,
+    "rated_t2": 3,
+    "partial_t2": 1,
+    "t2_pass": 1,
+    "eod_read": 3,
+    "eod_pass": 2,
+    "pre_read": 3,
+    "pre_pass": 1,
+    "no_turnover": 0,
+    "dropped_thin": 0,
+    "shown": 2
+   },
+   "filters": {
+    "keys": [
+     "t1",
+     "t2",
+     "eod",
+     "pre"
+    ],
+    "active": [
+     "t1"
+    ],
+    "pool": 4,
+    "mode": "any",
+    "mode_param": "res_mode",
+    "mode_all_label": "must match all",
+    "passed_all": 2,
+    "passed_any": 2,
+    "shown": 2,
+    "hidden": 2,
+    "items": [
+     {
+      "key": "t1",
+      "label": "🛡️ Held on T1",
+      "on": true,
+      "pass": 2,
+      "fail": 1,
+      "no_read": 1,
+      "hidden": 2,
+      "note": "🛡️ A close on every T1 day of the last 365 days and down no more than 0.5% on at least 75% of them. T1 hold: UNMEASURED — the persistence study has not run yet."
+     },
+     {
+      "key": "t2",
+      "label": "🛡️ Held on T2",
+      "on": false,
+      "pass": 1,
+      "fail": 2,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "🛡️ A close on every T2 day of the last 365 days and down no more than 0.5% on at least 75% of them. T2 hold: UNMEASURED — the persistence study has not run yet."
+     },
+     {
+      "key": "eod",
+      "label": "📈 Bullish tape EOD",
+      "on": false,
+      "pass": 2,
+      "fail": 1,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "📈 The last session closed up, in the upper half of its range, on more volume than its 50-session average — the app's accumulation day. EOD tape: UNMEASURED — the study has not run yet."
+     },
+     {
+      "key": "pre",
+      "label": "🌅 Bullish tape pre-market",
+      "on": false,
+      "pass": 1,
+      "fail": 3,
+      "no_read": 0,
+      "hidden": 0,
+      "note": "🌅 A pre-market print above yesterday's close on at least 1.5× the name's own pre-market volume by the same minute (its cached sessions, at least 5). Read 04:00–09:30 ET only. UNMEASURED."
+     }
+    ],
+    "line": "Filters on (any ticked box) — 🛡️ Held on T1: 2 pass. 2 of 4 pass at least one ticked box, 2 hidden (they pass none of them; a name passing several shows once, with a badge for each).",
+    "note": "Ticked boxes narrow the board — a name passing ANY ticked box shows.",
+    "measured": false
+   },
+   "study": {
+    "status": "pending",
+    "run_date": null,
+    "t1": {
+     "verdict": "unmeasured",
+     "text": "T1 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "t2": {
+     "verdict": "unmeasured",
+     "text": "T2 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "eod": {
+     "verdict": "unmeasured",
+     "text": "EOD tape: UNMEASURED — the study has not run yet."
+    },
+    "pre": {
+     "verdict": "unmeasured",
+     "text": "Pre-market tape: UNMEASURED — the cached pre-market history is too short to measure."
+    }
+   },
+   "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "measured": false,
+   "built_at": "2026-09-30T08:41:10-04:00"
+  },
+  "tiles": [
+   {
+    "symbol": "AAA",
+    "name": "Synthetic Utility Co",
+    "theme": null,
+    "href": "/sepa/AAA?tab=supply",
+    "last_close": 38.93,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 40,
+      "h": 41.19,
+      "l": 39.6,
+      "c": 40.79,
+      "v": 1005000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 40.79,
+      "h": 41.79,
+      "l": 40.39,
+      "c": 41.39,
+      "v": 1006000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 41.39,
+      "h": 41.98,
+      "l": 40.99,
+      "c": 41.58,
+      "v": 1007000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 41.58,
+      "h": 41.98,
+      "l": 40.9,
+      "c": 41.3,
+      "v": 1008000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 41.3,
+      "h": 41.7,
+      "l": 40.25,
+      "c": 40.65,
+      "v": 1009000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 40.65,
+      "h": 41.05,
+      "l": 39.45,
+      "c": 39.85,
+      "v": 1010000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 39.85,
+      "h": 40.25,
+      "l": 38.78,
+      "c": 39.18,
+      "v": 1011000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 39.18,
+      "h": 39.58,
+      "l": 38.48,
+      "c": 38.88,
+      "v": 1012000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 38.88,
+      "h": 39.45,
+      "l": 38.48,
+      "c": 39.05,
+      "v": 1013000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 39.05,
+      "h": 40.03,
+      "l": 38.65,
+      "c": 39.63,
+      "v": 1014000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 39.63,
+      "h": 40.82,
+      "l": 39.23,
+      "c": 40.42,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 40.42,
+      "h": 41.54,
+      "l": 40.02,
+      "c": 41.14,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 41.14,
+      "h": 41.94,
+      "l": 40.74,
+      "c": 41.54,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 41.54,
+      "h": 41.94,
+      "l": 41.08,
+      "c": 41.48,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 41.48,
+      "h": 41.88,
+      "l": 40.58,
+      "c": 40.98,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 40.98,
+      "h": 41.38,
+      "l": 39.81,
+      "c": 40.21,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 40.21,
+      "h": 40.61,
+      "l": 39.05,
+      "c": 39.45,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 39.45,
+      "h": 39.85,
+      "l": 38.56,
+      "c": 38.96,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 38.96,
+      "h": 39.36,
+      "l": 38.51,
+      "c": 38.91,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 38.91,
+      "h": 39.72,
+      "l": 38.51,
+      "c": 39.32,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 39.32,
+      "h": 40.44,
+      "l": 38.92,
+      "c": 40.04,
+      "v": 1025000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 40.04,
+      "h": 41.23,
+      "l": 39.64,
+      "c": 40.83,
+      "v": 1026000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 40.83,
+      "h": 41.81,
+      "l": 40.43,
+      "c": 41.41,
+      "v": 1027000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 41.41,
+      "h": 41.98,
+      "l": 41.01,
+      "c": 41.58,
+      "v": 1028000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 41.58,
+      "h": 41.98,
+      "l": 40.87,
+      "c": 41.27,
+      "v": 1029000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 41.27,
+      "h": 41.67,
+      "l": 40.2,
+      "c": 40.6,
+      "v": 1030000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 40.6,
+      "h": 41.0,
+      "l": 39.4,
+      "c": 39.8,
+      "v": 1031000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 39.8,
+      "h": 40.2,
+      "l": 38.75,
+      "c": 39.15,
+      "v": 1032000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 39.15,
+      "h": 39.55,
+      "l": 38.48,
+      "c": 38.88,
+      "v": 1033000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 38.88,
+      "h": 39.48,
+      "l": 38.48,
+      "c": 39.08,
+      "v": 1034000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 39.08,
+      "h": 40.08,
+      "l": 38.68,
+      "c": 39.68,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 39.68,
+      "h": 40.87,
+      "l": 39.28,
+      "c": 40.47,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 40.47,
+      "h": 41.58,
+      "l": 40.07,
+      "c": 41.18,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 41.18,
+      "h": 41.96,
+      "l": 40.78,
+      "c": 41.56,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 41.56,
+      "h": 41.96,
+      "l": 41.07,
+      "c": 41.47,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 41.47,
+      "h": 41.87,
+      "l": 40.55,
+      "c": 40.95,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 40.95,
+      "h": 41.35,
+      "l": 39.78,
+      "c": 40.18,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 40.18,
+      "h": 40.58,
+      "l": 39.03,
+      "c": 39.43,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 39.43,
+      "h": 39.83,
+      "l": 38.56,
+      "c": 38.96,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 38.96,
+      "h": 39.36,
+      "l": 38.53,
+      "c": 38.93,
+      "v": 1044000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 36/43 (84%)",
+      "tone": "good"
+     },
+     {
+      "text": "📅 T1 today · holding +0.42%",
+      "tone": "good"
+     },
+     {
+      "text": "🛡️ Held on T1",
+      "tone": "good",
+      "res_filter": "t1"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "36/43 · 84% · SPY down: 16/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "80/96 · 83% · SPY down: 38/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · +1.20% · closed at 78% of range · vol 1.34× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "+0.20% · vol 1.10× usual by 08:52 (12 sessions)"
+     },
+     {
+      "k": "Today",
+      "v": "+0.42% vs 40.83 · pre-market 08:52 ET"
+     },
+     {
+      "k": "T1 worst",
+      "v": "-3.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "0.9%/day · β 0.31"
+     }
+    ],
+    "why": "Held 36 of 43 T1 days (84%), 16 of 19 when SPY fell · worst -3.12% (2026-03-11 CPI) · typical day 0.9%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 36,
+      "rate_pct": 83.72,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 16,
+      "down_rate_pct": 84.21,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -3.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 80,
+      "rate_pct": 83.33,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 38,
+      "down_rate_pct": 86.36,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": true,
+      "tier": 1,
+      "labels": [
+       "Core PCE"
+      ],
+      "state": "read",
+      "move_pct": 0.42,
+      "holding": true,
+      "print": 41.0,
+      "prev_close": 40.83,
+      "basis": "live",
+      "tape": "premarket",
+      "as_of_et": "08:52"
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 1.2,
+      "close_loc_pct": 78.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 1.34,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": true,
+      "bullish": true
+     },
+     "pre": {
+      "state": "read",
+      "text": "+0.20% · vol 1.10× usual by 08:52 (12 sessions)",
+      "move_pct": 0.2,
+      "print": 41.0,
+      "prev_close": 40.74,
+      "as_of_et": "08:52",
+      "pm_volume": 128000,
+      "pm_dollar_vol": 5248000.0,
+      "baseline_vol": 100000.0,
+      "baseline_sessions": 12,
+      "pm_rvol": 1.1,
+      "up": true,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "sigma_pct": 0.9,
+     "beta": 0.31,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": true,
+     "t2": true,
+     "eod": true,
+     "pre": false
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "BBB",
+    "name": "Synthetic Staples Inc",
+    "theme": null,
+    "href": "/sepa/BBB?tab=supply",
+    "last_close": 46.17,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 47,
+      "h": 47.4,
+      "l": 46.4,
+      "c": 46.8,
+      "v": 1010000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 46.8,
+      "h": 47.2,
+      "l": 45.79,
+      "c": 46.19,
+      "v": 1011000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 46.19,
+      "h": 46.59,
+      "l": 45.0,
+      "c": 45.4,
+      "v": 1012000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 45.4,
+      "h": 45.8,
+      "l": 44.29,
+      "c": 44.69,
+      "v": 1013000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 44.69,
+      "h": 45.09,
+      "l": 43.92,
+      "c": 44.32,
+      "v": 1014000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 44.32,
+      "h": 44.81,
+      "l": 43.92,
+      "c": 44.41,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 44.41,
+      "h": 45.34,
+      "l": 44.01,
+      "c": 44.94,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 44.94,
+      "h": 46.11,
+      "l": 44.54,
+      "c": 45.71,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 45.71,
+      "h": 46.86,
+      "l": 45.31,
+      "c": 46.46,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 46.46,
+      "h": 47.33,
+      "l": 46.06,
+      "c": 46.93,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 46.93,
+      "h": 47.35,
+      "l": 46.53,
+      "c": 46.95,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 46.95,
+      "h": 47.35,
+      "l": 46.11,
+      "c": 46.51,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 46.51,
+      "h": 46.91,
+      "l": 45.37,
+      "c": 45.77,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 45.77,
+      "h": 46.17,
+      "l": 44.59,
+      "c": 44.99,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 44.99,
+      "h": 45.39,
+      "l": 44.04,
+      "c": 44.44,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 44.44,
+      "h": 44.84,
+      "l": 43.91,
+      "c": 44.31,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 44.31,
+      "h": 45.05,
+      "l": 43.91,
+      "c": 44.65,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 44.65,
+      "h": 45.74,
+      "l": 44.25,
+      "c": 45.34,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 45.34,
+      "h": 46.54,
+      "l": 44.94,
+      "c": 46.14,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 46.14,
+      "h": 47.17,
+      "l": 45.74,
+      "c": 46.77,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 46.77,
+      "h": 47.41,
+      "l": 46.37,
+      "c": 47.01,
+      "v": 1030000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 47.01,
+      "h": 47.41,
+      "l": 46.38,
+      "c": 46.78,
+      "v": 1031000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 46.78,
+      "h": 47.18,
+      "l": 45.76,
+      "c": 46.16,
+      "v": 1032000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 46.16,
+      "h": 46.56,
+      "l": 44.96,
+      "c": 45.36,
+      "v": 1033000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 45.36,
+      "h": 45.76,
+      "l": 44.27,
+      "c": 44.67,
+      "v": 1034000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 44.67,
+      "h": 45.07,
+      "l": 43.92,
+      "c": 44.32,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 44.32,
+      "h": 44.84,
+      "l": 43.92,
+      "c": 44.44,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 44.44,
+      "h": 45.39,
+      "l": 44.04,
+      "c": 44.99,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 44.99,
+      "h": 46.17,
+      "l": 44.59,
+      "c": 45.77,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 45.77,
+      "h": 46.91,
+      "l": 45.37,
+      "c": 46.51,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 46.51,
+      "h": 47.36,
+      "l": 46.11,
+      "c": 46.96,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 46.96,
+      "h": 47.36,
+      "l": 46.55,
+      "c": 46.95,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 46.95,
+      "h": 47.35,
+      "l": 46.09,
+      "c": 46.49,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 46.49,
+      "h": 46.89,
+      "l": 45.34,
+      "c": 45.74,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 45.74,
+      "h": 46.14,
+      "l": 44.56,
+      "c": 44.96,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 44.96,
+      "h": 45.36,
+      "l": 44.02,
+      "c": 44.42,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 44.42,
+      "h": 44.82,
+      "l": 43.91,
+      "c": 44.31,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 44.31,
+      "h": 45.07,
+      "l": 43.91,
+      "c": 44.67,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 44.67,
+      "h": 45.77,
+      "l": 44.27,
+      "c": 45.37,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 45.37,
+      "h": 46.57,
+      "l": 44.97,
+      "c": 46.17,
+      "v": 1049000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 33/43 (77%)",
+      "tone": "good"
+     },
+     {
+      "text": "📅 T1 today · holding +0.05%",
+      "tone": "good"
+     },
+     {
+      "text": "🛡️ Held on T1",
+      "tone": "good",
+      "res_filter": "t1"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "33/43 · 77% · SPY down: 14/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "70/96 · 73% · SPY down: 30/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · -0.40% · closed at 30% of range · vol 0.80× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "-0.30% · vol 0.70× usual by 08:52 (12 sessions)"
+     },
+     {
+      "k": "Today",
+      "v": "+0.05% vs 40.83 · pre-market 08:52 ET"
+     },
+     {
+      "k": "T1 worst",
+      "v": "-2.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "1.2%/day · β 0.45"
+     }
+    ],
+    "why": "Held 33 of 43 T1 days (77%), 14 of 19 when SPY fell · worst -2.12% (2026-03-11 CPI) · typical day 1.2%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 33,
+      "rate_pct": 76.74,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 14,
+      "down_rate_pct": 73.68,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -2.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 70,
+      "rate_pct": 72.92,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 30,
+      "down_rate_pct": 68.18,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": true,
+      "tier": 1,
+      "labels": [
+       "Core PCE"
+      ],
+      "state": "read",
+      "move_pct": 0.05,
+      "holding": true,
+      "print": 41.0,
+      "prev_close": 40.83,
+      "basis": "live",
+      "tape": "premarket",
+      "as_of_et": "08:52"
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": -0.4,
+      "close_loc_pct": 30.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 0.8,
+      "up": false,
+      "upper_half": false,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "pre": {
+      "state": "read",
+      "text": "-0.30% · vol 0.70× usual by 08:52 (12 sessions)",
+      "move_pct": -0.3,
+      "print": 41.0,
+      "prev_close": 40.74,
+      "as_of_et": "08:52",
+      "pm_volume": 128000,
+      "pm_dollar_vol": 5248000.0,
+      "baseline_vol": 100000.0,
+      "baseline_sessions": 12,
+      "pm_rvol": 0.7,
+      "up": false,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "sigma_pct": 1.2,
+     "beta": 0.45,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": true,
+     "t2": false,
+     "eod": false,
+     "pre": false
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   }
+  ]
+ },
+ "non_event": {
+  "count": 4,
+  "min_tier": "ok",
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "enterable_kind": "n/a",
+  "tape_session": "premarket",
+  "tab": "resiliency",
+  "sort": "default",
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🛡️ T1 hold rate"
+   },
+   {
+    "key": "res_t2",
+    "label": "🛡️ T2 hold rate"
+   },
+   {
+    "key": "res_down",
+    "label": "🛡️ T1 on SPY-down days"
+   },
+   {
+    "key": "res_today",
+    "label": "📅 Today's move"
+   }
+  ],
+  "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort_unavailable": "Today is not a T1 or T2 data day — the board is in T1 hold-rate order.",
+  "matched": 4,
+  "resiliency_board": {
+   "state": "ready",
+   "session": "2026-10-05",
+   "phase": "rth",
+   "market_closed": null,
+   "sort": "default",
+   "header": "🛡️ 4 names read on the cached daily bars. T1 days in the last 365 days: 43 (cpi 12, jobs 12, pce 11, fomc 8), SPY fell on 19; T2-only days: 96, SPY fell on 44. Rated (a close on every T1 day): 3; held on at least 75% of them: 2. 📈 bullish EOD tape on 2026-09-29: 2. 🌅 pre-market not open. 0 under the liquidity floor; showing 4.",
+   "today_line": "📅 2026-10-05 has no T1 or T2 print. Next T1: CPI 2026-10-14.",
+   "events_line": "Data days: FRED's own release dates (jobs report, CPI, Core PCE, GDP, retail sales, JOLTS, ADP, jobless claims, PPI) and the Fed's FOMC calendar. ISM and Fed-speaker remarks have no dated history here and are not counted.",
+   "rules": {
+    "hold_max_drop_pct": 0.5,
+    "hold_rate_min_pct": 75.0,
+    "window_days": 365,
+    "t2_excludes_t1": true,
+    "pre_rvol_min": 1.5,
+    "pre_min_sessions": 5,
+    "vol_avg_bars": 50,
+    "benchmark": "SPY",
+    "lines": [
+     "Held = the close on the data day is down no more than 0.5% from the prior session's close (HIS CALL #1).",
+     "Window = the last 365 days of T1 (T2) sessions; rated = a close on every one (HIS CALL #4, #6).",
+     "The 🛡️ box = held on at least 75% of the window's sessions (HIS CALL #5).",
+     "A session with any T1 print counts as T1 only (HIS CALL #7).",
+     "📈 EOD = the app's accumulation day on the last closed session (HIS CALL #11).",
+     "🌅 Pre-market = a print above the prior close on at least 1.5× the name's own pre-market volume by the same minute, over at least 5 cached sessions (HIS CALL #12)."
+    ]
+   },
+   "events": {
+    "available": true,
+    "window_days": 365,
+    "first": "2025-10-01",
+    "last": "2026-09-29",
+    "t1_sessions": 43,
+    "t1_spy_down": 19,
+    "t2_sessions": 96,
+    "t2_spy_down": 44,
+    "t1_by_kind": {
+     "cpi": 12,
+     "jobs": 12,
+     "pce": 11,
+     "fomc": 8
+    },
+    "t2_by_kind": {
+     "claims": 49,
+     "retail": 12,
+     "jolts": 11,
+     "adp": 11,
+     "gdp": 6,
+     "ppi": 7
+    },
+    "sources": [
+     "FRED release dates",
+     "Federal Reserve FOMC calendar"
+    ],
+    "unsourced": [
+     "ISM mfg & services",
+     "Fed-speaker remarks"
+    ],
+    "errors": []
+   },
+   "today": {
+    "event_day": false,
+    "session": "2026-10-05",
+    "next_t1": {
+     "date": "2026-10-14",
+     "label": "CPI"
+    }
+   },
+   "counts": {
+    "scanned": 4,
+    "no_bars": 0,
+    "stale": 0,
+    "rated_t1": 3,
+    "partial_t1": 1,
+    "t1_pass": 2,
+    "rated_t2": 3,
+    "partial_t2": 1,
+    "t2_pass": 1,
+    "eod_read": 3,
+    "eod_pass": 2,
+    "pre_read": 0,
+    "pre_pass": 0,
+    "no_turnover": 0,
+    "dropped_thin": 0,
+    "shown": 4
+   },
+   "filters": {
+    "keys": [
+     "t1",
+     "t2",
+     "eod",
+     "pre"
+    ],
+    "active": [],
+    "pool": 4,
+    "mode": "any",
+    "mode_param": "res_mode",
+    "mode_all_label": "must match all",
+    "passed_all": null,
+    "passed_any": null,
+    "shown": null,
+    "hidden": 0,
+    "items": [
+     {
+      "key": "t1",
+      "label": "🛡️ Held on T1",
+      "on": false,
+      "pass": 2,
+      "fail": 1,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "🛡️ A close on every T1 day of the last 365 days and down no more than 0.5% on at least 75% of them. T1 hold: UNMEASURED — the persistence study has not run yet."
+     },
+     {
+      "key": "t2",
+      "label": "🛡️ Held on T2",
+      "on": false,
+      "pass": 1,
+      "fail": 2,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "🛡️ A close on every T2 day of the last 365 days and down no more than 0.5% on at least 75% of them. T2 hold: UNMEASURED — the persistence study has not run yet."
+     },
+     {
+      "key": "eod",
+      "label": "📈 Bullish tape EOD",
+      "on": false,
+      "pass": 2,
+      "fail": 1,
+      "no_read": 1,
+      "hidden": 0,
+      "note": "📈 The last session closed up, in the upper half of its range, on more volume than its 50-session average — the app's accumulation day. EOD tape: UNMEASURED — the study has not run yet."
+     },
+     {
+      "key": "pre",
+      "label": "🌅 Bullish tape pre-market",
+      "on": false,
+      "pass": 0,
+      "fail": 0,
+      "no_read": 4,
+      "hidden": 0,
+      "note": "🌅 A pre-market print above yesterday's close on at least 1.5× the name's own pre-market volume by the same minute (its cached sessions, at least 5). Read 04:00–09:30 ET only. UNMEASURED."
+     }
+    ],
+    "line": null,
+    "note": "Ticked boxes narrow the board — a name passing ANY ticked box shows.",
+    "measured": false
+   },
+   "study": {
+    "status": "pending",
+    "run_date": null,
+    "t1": {
+     "verdict": "unmeasured",
+     "text": "T1 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "t2": {
+     "verdict": "unmeasured",
+     "text": "T2 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "eod": {
+     "verdict": "unmeasured",
+     "text": "EOD tape: UNMEASURED — the study has not run yet."
+    },
+    "pre": {
+     "verdict": "unmeasured",
+     "text": "Pre-market tape: UNMEASURED — the cached pre-market history is too short to measure."
+    }
+   },
+   "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "measured": false,
+   "built_at": "2026-09-30T08:41:10-04:00"
+  },
+  "tiles": [
+   {
+    "symbol": "AAA",
+    "name": "Synthetic Utility Co",
+    "theme": null,
+    "href": "/sepa/AAA?tab=supply",
+    "last_close": 38.93,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 40,
+      "h": 41.19,
+      "l": 39.6,
+      "c": 40.79,
+      "v": 1005000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 40.79,
+      "h": 41.79,
+      "l": 40.39,
+      "c": 41.39,
+      "v": 1006000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 41.39,
+      "h": 41.98,
+      "l": 40.99,
+      "c": 41.58,
+      "v": 1007000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 41.58,
+      "h": 41.98,
+      "l": 40.9,
+      "c": 41.3,
+      "v": 1008000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 41.3,
+      "h": 41.7,
+      "l": 40.25,
+      "c": 40.65,
+      "v": 1009000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 40.65,
+      "h": 41.05,
+      "l": 39.45,
+      "c": 39.85,
+      "v": 1010000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 39.85,
+      "h": 40.25,
+      "l": 38.78,
+      "c": 39.18,
+      "v": 1011000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 39.18,
+      "h": 39.58,
+      "l": 38.48,
+      "c": 38.88,
+      "v": 1012000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 38.88,
+      "h": 39.45,
+      "l": 38.48,
+      "c": 39.05,
+      "v": 1013000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 39.05,
+      "h": 40.03,
+      "l": 38.65,
+      "c": 39.63,
+      "v": 1014000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 39.63,
+      "h": 40.82,
+      "l": 39.23,
+      "c": 40.42,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 40.42,
+      "h": 41.54,
+      "l": 40.02,
+      "c": 41.14,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 41.14,
+      "h": 41.94,
+      "l": 40.74,
+      "c": 41.54,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 41.54,
+      "h": 41.94,
+      "l": 41.08,
+      "c": 41.48,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 41.48,
+      "h": 41.88,
+      "l": 40.58,
+      "c": 40.98,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 40.98,
+      "h": 41.38,
+      "l": 39.81,
+      "c": 40.21,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 40.21,
+      "h": 40.61,
+      "l": 39.05,
+      "c": 39.45,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 39.45,
+      "h": 39.85,
+      "l": 38.56,
+      "c": 38.96,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 38.96,
+      "h": 39.36,
+      "l": 38.51,
+      "c": 38.91,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 38.91,
+      "h": 39.72,
+      "l": 38.51,
+      "c": 39.32,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 39.32,
+      "h": 40.44,
+      "l": 38.92,
+      "c": 40.04,
+      "v": 1025000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 40.04,
+      "h": 41.23,
+      "l": 39.64,
+      "c": 40.83,
+      "v": 1026000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 40.83,
+      "h": 41.81,
+      "l": 40.43,
+      "c": 41.41,
+      "v": 1027000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 41.41,
+      "h": 41.98,
+      "l": 41.01,
+      "c": 41.58,
+      "v": 1028000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 41.58,
+      "h": 41.98,
+      "l": 40.87,
+      "c": 41.27,
+      "v": 1029000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 41.27,
+      "h": 41.67,
+      "l": 40.2,
+      "c": 40.6,
+      "v": 1030000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 40.6,
+      "h": 41.0,
+      "l": 39.4,
+      "c": 39.8,
+      "v": 1031000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 39.8,
+      "h": 40.2,
+      "l": 38.75,
+      "c": 39.15,
+      "v": 1032000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 39.15,
+      "h": 39.55,
+      "l": 38.48,
+      "c": 38.88,
+      "v": 1033000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 38.88,
+      "h": 39.48,
+      "l": 38.48,
+      "c": 39.08,
+      "v": 1034000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 39.08,
+      "h": 40.08,
+      "l": 38.68,
+      "c": 39.68,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 39.68,
+      "h": 40.87,
+      "l": 39.28,
+      "c": 40.47,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 40.47,
+      "h": 41.58,
+      "l": 40.07,
+      "c": 41.18,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 41.18,
+      "h": 41.96,
+      "l": 40.78,
+      "c": 41.56,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 41.56,
+      "h": 41.96,
+      "l": 41.07,
+      "c": 41.47,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 41.47,
+      "h": 41.87,
+      "l": 40.55,
+      "c": 40.95,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 40.95,
+      "h": 41.35,
+      "l": 39.78,
+      "c": 40.18,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 40.18,
+      "h": 40.58,
+      "l": 39.03,
+      "c": 39.43,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 39.43,
+      "h": 39.83,
+      "l": 38.56,
+      "c": 38.96,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 38.96,
+      "h": 39.36,
+      "l": 38.53,
+      "c": 38.93,
+      "v": 1044000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 36/43 (84%)",
+      "tone": "good"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "36/43 · 84% · SPY down: 16/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "80/96 · 83% · SPY down: 38/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · +1.20% · closed at 78% of range · vol 1.34× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "Pre-market read 04:00–09:30 ET only — not open now."
+     },
+     {
+      "k": "T1 worst",
+      "v": "-3.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "0.9%/day · β 0.31"
+     }
+    ],
+    "why": "Held 36 of 43 T1 days (84%), 16 of 19 when SPY fell · worst -3.12% (2026-03-11 CPI) · typical day 0.9%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 36,
+      "rate_pct": 83.72,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 16,
+      "down_rate_pct": 84.21,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -3.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 80,
+      "rate_pct": 83.33,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 38,
+      "down_rate_pct": 86.36,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": false,
+      "tier": null,
+      "labels": [],
+      "state": "no_event",
+      "move_pct": null,
+      "holding": null,
+      "print": null,
+      "prev_close": null,
+      "basis": null,
+      "tape": null,
+      "as_of_et": null
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 1.2,
+      "close_loc_pct": 78.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 1.34,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": true,
+      "bullish": true
+     },
+     "pre": {
+      "state": "not_open",
+      "text": "Pre-market read 04:00–09:30 ET only — not open now.",
+      "move_pct": null,
+      "print": null,
+      "prev_close": null,
+      "as_of_et": null,
+      "pm_volume": null,
+      "pm_dollar_vol": null,
+      "baseline_vol": null,
+      "baseline_sessions": null,
+      "pm_rvol": null,
+      "up": null,
+      "vol_ok": null,
+      "bullish": null
+     },
+     "sigma_pct": 0.9,
+     "beta": 0.31,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": true,
+     "t2": true,
+     "eod": true,
+     "pre": null
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "BBB",
+    "name": "Synthetic Staples Inc",
+    "theme": null,
+    "href": "/sepa/BBB?tab=supply",
+    "last_close": 46.17,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 47,
+      "h": 47.4,
+      "l": 46.4,
+      "c": 46.8,
+      "v": 1010000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 46.8,
+      "h": 47.2,
+      "l": 45.79,
+      "c": 46.19,
+      "v": 1011000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 46.19,
+      "h": 46.59,
+      "l": 45.0,
+      "c": 45.4,
+      "v": 1012000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 45.4,
+      "h": 45.8,
+      "l": 44.29,
+      "c": 44.69,
+      "v": 1013000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 44.69,
+      "h": 45.09,
+      "l": 43.92,
+      "c": 44.32,
+      "v": 1014000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 44.32,
+      "h": 44.81,
+      "l": 43.92,
+      "c": 44.41,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 44.41,
+      "h": 45.34,
+      "l": 44.01,
+      "c": 44.94,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 44.94,
+      "h": 46.11,
+      "l": 44.54,
+      "c": 45.71,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 45.71,
+      "h": 46.86,
+      "l": 45.31,
+      "c": 46.46,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 46.46,
+      "h": 47.33,
+      "l": 46.06,
+      "c": 46.93,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 46.93,
+      "h": 47.35,
+      "l": 46.53,
+      "c": 46.95,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 46.95,
+      "h": 47.35,
+      "l": 46.11,
+      "c": 46.51,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 46.51,
+      "h": 46.91,
+      "l": 45.37,
+      "c": 45.77,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 45.77,
+      "h": 46.17,
+      "l": 44.59,
+      "c": 44.99,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 44.99,
+      "h": 45.39,
+      "l": 44.04,
+      "c": 44.44,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 44.44,
+      "h": 44.84,
+      "l": 43.91,
+      "c": 44.31,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 44.31,
+      "h": 45.05,
+      "l": 43.91,
+      "c": 44.65,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 44.65,
+      "h": 45.74,
+      "l": 44.25,
+      "c": 45.34,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 45.34,
+      "h": 46.54,
+      "l": 44.94,
+      "c": 46.14,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 46.14,
+      "h": 47.17,
+      "l": 45.74,
+      "c": 46.77,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 46.77,
+      "h": 47.41,
+      "l": 46.37,
+      "c": 47.01,
+      "v": 1030000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 47.01,
+      "h": 47.41,
+      "l": 46.38,
+      "c": 46.78,
+      "v": 1031000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 46.78,
+      "h": 47.18,
+      "l": 45.76,
+      "c": 46.16,
+      "v": 1032000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 46.16,
+      "h": 46.56,
+      "l": 44.96,
+      "c": 45.36,
+      "v": 1033000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 45.36,
+      "h": 45.76,
+      "l": 44.27,
+      "c": 44.67,
+      "v": 1034000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 44.67,
+      "h": 45.07,
+      "l": 43.92,
+      "c": 44.32,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 44.32,
+      "h": 44.84,
+      "l": 43.92,
+      "c": 44.44,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 44.44,
+      "h": 45.39,
+      "l": 44.04,
+      "c": 44.99,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 44.99,
+      "h": 46.17,
+      "l": 44.59,
+      "c": 45.77,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 45.77,
+      "h": 46.91,
+      "l": 45.37,
+      "c": 46.51,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 46.51,
+      "h": 47.36,
+      "l": 46.11,
+      "c": 46.96,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 46.96,
+      "h": 47.36,
+      "l": 46.55,
+      "c": 46.95,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 46.95,
+      "h": 47.35,
+      "l": 46.09,
+      "c": 46.49,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 46.49,
+      "h": 46.89,
+      "l": 45.34,
+      "c": 45.74,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 45.74,
+      "h": 46.14,
+      "l": 44.56,
+      "c": 44.96,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 44.96,
+      "h": 45.36,
+      "l": 44.02,
+      "c": 44.42,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 44.42,
+      "h": 44.82,
+      "l": 43.91,
+      "c": 44.31,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 44.31,
+      "h": 45.07,
+      "l": 43.91,
+      "c": 44.67,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 44.67,
+      "h": 45.77,
+      "l": 44.27,
+      "c": 45.37,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 45.37,
+      "h": 46.57,
+      "l": 44.97,
+      "c": 46.17,
+      "v": 1049000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 33/43 (77%)",
+      "tone": "good"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "33/43 · 77% · SPY down: 14/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "70/96 · 73% · SPY down: 30/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · -0.40% · closed at 30% of range · vol 0.80× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "Pre-market read 04:00–09:30 ET only — not open now."
+     },
+     {
+      "k": "T1 worst",
+      "v": "-2.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "1.2%/day · β 0.45"
+     }
+    ],
+    "why": "Held 33 of 43 T1 days (77%), 14 of 19 when SPY fell · worst -2.12% (2026-03-11 CPI) · typical day 1.2%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 33,
+      "rate_pct": 76.74,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 14,
+      "down_rate_pct": 73.68,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -2.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 70,
+      "rate_pct": 72.92,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 30,
+      "down_rate_pct": 68.18,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": false,
+      "tier": null,
+      "labels": [],
+      "state": "no_event",
+      "move_pct": null,
+      "holding": null,
+      "print": null,
+      "prev_close": null,
+      "basis": null,
+      "tape": null,
+      "as_of_et": null
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": -0.4,
+      "close_loc_pct": 30.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 0.8,
+      "up": false,
+      "upper_half": false,
+      "vol_ok": false,
+      "bullish": false
+     },
+     "pre": {
+      "state": "not_open",
+      "text": "Pre-market read 04:00–09:30 ET only — not open now.",
+      "move_pct": null,
+      "print": null,
+      "prev_close": null,
+      "as_of_et": null,
+      "pm_volume": null,
+      "pm_dollar_vol": null,
+      "baseline_vol": null,
+      "baseline_sessions": null,
+      "pm_rvol": null,
+      "up": null,
+      "vol_ok": null,
+      "bullish": null
+     },
+     "sigma_pct": 1.2,
+     "beta": 0.45,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": true,
+     "t2": false,
+     "eod": false,
+     "pre": null
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "CCC",
+    "name": "Synthetic Chips Corp",
+    "theme": null,
+    "href": "/sepa/CCC?tab=supply",
+    "last_close": 55.28,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 54,
+      "h": 54.4,
+      "l": 52.86,
+      "c": 53.26,
+      "v": 1015000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 53.26,
+      "h": 53.66,
+      "l": 52.42,
+      "c": 52.82,
+      "v": 1016000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 52.82,
+      "h": 53.23,
+      "l": 52.42,
+      "c": 52.83,
+      "v": 1017000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 52.83,
+      "h": 53.69,
+      "l": 52.43,
+      "c": 53.29,
+      "v": 1018000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 53.29,
+      "h": 54.44,
+      "l": 52.89,
+      "c": 54.04,
+      "v": 1019000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 54.04,
+      "h": 55.22,
+      "l": 53.64,
+      "c": 54.82,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 54.82,
+      "h": 55.75,
+      "l": 54.42,
+      "c": 55.35,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 55.35,
+      "h": 55.85,
+      "l": 54.95,
+      "c": 55.45,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 55.45,
+      "h": 55.85,
+      "l": 54.68,
+      "c": 55.08,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 55.08,
+      "h": 55.48,
+      "l": 53.98,
+      "c": 54.38,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 54.38,
+      "h": 54.78,
+      "l": 53.18,
+      "c": 53.58,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 53.58,
+      "h": 53.98,
+      "l": 52.57,
+      "c": 52.97,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 52.97,
+      "h": 53.37,
+      "l": 52.36,
+      "c": 52.76,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 52.76,
+      "h": 53.42,
+      "l": 52.36,
+      "c": 53.02,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 53.02,
+      "h": 54.06,
+      "l": 52.62,
+      "c": 53.66,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 53.66,
+      "h": 54.86,
+      "l": 53.26,
+      "c": 54.46,
+      "v": 1030000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 54.46,
+      "h": 55.54,
+      "l": 54.06,
+      "c": 55.14,
+      "v": 1031000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 55.14,
+      "h": 55.86,
+      "l": 54.74,
+      "c": 55.46,
+      "v": 1032000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 55.46,
+      "h": 55.86,
+      "l": 54.91,
+      "c": 55.31,
+      "v": 1033000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 55.31,
+      "h": 55.71,
+      "l": 54.34,
+      "c": 54.74,
+      "v": 1034000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 54.74,
+      "h": 55.14,
+      "l": 53.55,
+      "c": 53.95,
+      "v": 1035000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 53.95,
+      "h": 54.35,
+      "l": 52.82,
+      "c": 53.22,
+      "v": 1036000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 53.22,
+      "h": 53.62,
+      "l": 52.4,
+      "c": 52.8,
+      "v": 1037000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 52.8,
+      "h": 53.24,
+      "l": 52.4,
+      "c": 52.84,
+      "v": 1038000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 52.84,
+      "h": 53.72,
+      "l": 52.44,
+      "c": 53.32,
+      "v": 1039000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 53.32,
+      "h": 54.48,
+      "l": 52.92,
+      "c": 54.08,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 54.08,
+      "h": 55.25,
+      "l": 53.68,
+      "c": 54.85,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 54.85,
+      "h": 55.76,
+      "l": 54.45,
+      "c": 55.36,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 55.36,
+      "h": 55.83,
+      "l": 54.96,
+      "c": 55.43,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 55.43,
+      "h": 55.83,
+      "l": 54.64,
+      "c": 55.04,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 55.04,
+      "h": 55.44,
+      "l": 53.92,
+      "c": 54.32,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 54.32,
+      "h": 54.72,
+      "l": 53.13,
+      "c": 53.53,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 53.53,
+      "h": 53.93,
+      "l": 52.54,
+      "c": 52.94,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 52.94,
+      "h": 53.34,
+      "l": 52.36,
+      "c": 52.76,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 52.76,
+      "h": 53.45,
+      "l": 52.36,
+      "c": 53.05,
+      "v": 1049000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 53.05,
+      "h": 54.11,
+      "l": 52.65,
+      "c": 53.71,
+      "v": 1050000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 53.71,
+      "h": 54.91,
+      "l": 53.31,
+      "c": 54.51,
+      "v": 1051000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 54.51,
+      "h": 55.57,
+      "l": 54.11,
+      "c": 55.17,
+      "v": 1052000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 55.17,
+      "h": 55.86,
+      "l": 54.77,
+      "c": 55.46,
+      "v": 1053000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 55.46,
+      "h": 55.86,
+      "l": 54.88,
+      "c": 55.28,
+      "v": 1054000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [
+     {
+      "text": "🛡️ T1 held 22/43 (51%)",
+      "tone": "muted"
+     }
+    ],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "22/43 · 51% · SPY down: 7/19"
+     },
+     {
+      "k": "T2 held",
+      "v": "50/96 · 52% · SPY down: 20/44"
+     },
+     {
+      "k": "EOD tape",
+      "v": "09-29 · +2.10% · closed at 91% of range · vol 2.20× 50d"
+     },
+     {
+      "k": "Pre-market",
+      "v": "Pre-market read 04:00–09:30 ET only — not open now."
+     },
+     {
+      "k": "T1 worst",
+      "v": "-1.12% · 2026-03-11 CPI"
+     },
+     {
+      "k": "Last T1",
+      "v": "+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)"
+     },
+     {
+      "k": "σ · β",
+      "v": "3.1%/day · β 1.62"
+     }
+    ],
+    "why": "Held 22 of 43 T1 days (51%), 7 of 19 when SPY fell · worst -1.12% (2026-03-11 CPI) · typical day 3.1%",
+    "resiliency": {
+     "t1": {
+      "tier": 1,
+      "events": 43,
+      "n": 43,
+      "held": 22,
+      "rate_pct": 51.16,
+      "rated": true,
+      "down_events": 19,
+      "down_n": 19,
+      "down_held": 7,
+      "down_rate_pct": 36.84,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-03-11",
+       "labels": [
+        "CPI"
+       ],
+       "ret_pct": -1.12,
+       "spy_ret_pct": -1.4
+      },
+      "last": {
+       "date": "2026-09-16",
+       "labels": [
+        "FOMC decision"
+       ],
+       "ret_pct": 0.35,
+       "held": true,
+       "spy_ret_pct": -0.12
+      }
+     },
+     "t2": {
+      "tier": 2,
+      "events": 96,
+      "n": 96,
+      "held": 50,
+      "rate_pct": 52.08,
+      "rated": true,
+      "down_events": 44,
+      "down_n": 44,
+      "down_held": 20,
+      "down_rate_pct": 45.45,
+      "median_ret_pct": 0.21,
+      "worst": {
+       "date": "2026-04-02",
+       "labels": [
+        "ADP payrolls"
+       ],
+       "ret_pct": -2.4,
+       "spy_ret_pct": -0.9
+      },
+      "last": {
+       "date": "2026-09-24",
+       "labels": [
+        "Jobless claims"
+       ],
+       "ret_pct": 0.12,
+       "held": true,
+       "spy_ret_pct": 0.05
+      }
+     },
+     "today": {
+      "event_day": false,
+      "tier": null,
+      "labels": [],
+      "state": "no_event",
+      "move_pct": null,
+      "holding": null,
+      "print": null,
+      "prev_close": null,
+      "basis": null,
+      "tape": null,
+      "as_of_et": null
+     },
+     "eod": {
+      "state": "read",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 2.1,
+      "close_loc_pct": 91.0,
+      "volume": 1340000,
+      "avg_vol_50": 1000000,
+      "rvol": 2.2,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": true,
+      "bullish": true
+     },
+     "pre": {
+      "state": "not_open",
+      "text": "Pre-market read 04:00–09:30 ET only — not open now.",
+      "move_pct": null,
+      "print": null,
+      "prev_close": null,
+      "as_of_et": null,
+      "pm_volume": null,
+      "pm_dollar_vol": null,
+      "baseline_vol": null,
+      "baseline_sessions": null,
+      "pm_rvol": null,
+      "up": null,
+      "vol_ok": null,
+      "bullish": null
+     },
+     "sigma_pct": 3.1,
+     "beta": 1.62,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": false,
+     "t2": false,
+     "eod": true,
+     "pre": null
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   },
+   {
+    "symbol": "DDD",
+    "name": "Synthetic New Listing",
+    "theme": null,
+    "href": "/sepa/DDD?tab=supply",
+    "last_close": 61.52,
+    "bars": [
+     {
+      "t": "2026-08-03",
+      "o": 61,
+      "h": 61.8,
+      "l": 60.6,
+      "c": 61.4,
+      "v": 1020000
+     },
+     {
+      "t": "2026-08-04",
+      "o": 61.4,
+      "h": 62.52,
+      "l": 61.0,
+      "c": 62.12,
+      "v": 1021000
+     },
+     {
+      "t": "2026-08-05",
+      "o": 62.12,
+      "h": 63.31,
+      "l": 61.72,
+      "c": 62.91,
+      "v": 1022000
+     },
+     {
+      "t": "2026-08-06",
+      "o": 62.91,
+      "h": 63.9,
+      "l": 62.51,
+      "c": 63.5,
+      "v": 1023000
+     },
+     {
+      "t": "2026-08-07",
+      "o": 63.5,
+      "h": 64.08,
+      "l": 63.1,
+      "c": 63.68,
+      "v": 1024000
+     },
+     {
+      "t": "2026-08-10",
+      "o": 63.68,
+      "h": 64.08,
+      "l": 62.99,
+      "c": 63.39,
+      "v": 1025000
+     },
+     {
+      "t": "2026-08-11",
+      "o": 63.39,
+      "h": 63.79,
+      "l": 62.33,
+      "c": 62.73,
+      "v": 1026000
+     },
+     {
+      "t": "2026-08-12",
+      "o": 62.73,
+      "h": 63.13,
+      "l": 61.53,
+      "c": 61.93,
+      "v": 1027000
+     },
+     {
+      "t": "2026-08-13",
+      "o": 61.93,
+      "h": 62.33,
+      "l": 60.87,
+      "c": 61.27,
+      "v": 1028000
+     },
+     {
+      "t": "2026-08-14",
+      "o": 61.27,
+      "h": 61.67,
+      "l": 60.58,
+      "c": 60.98,
+      "v": 1029000
+     },
+     {
+      "t": "2026-08-17",
+      "o": 60.98,
+      "h": 61.57,
+      "l": 60.58,
+      "c": 61.17,
+      "v": 1030000
+     },
+     {
+      "t": "2026-08-18",
+      "o": 61.17,
+      "h": 62.16,
+      "l": 60.77,
+      "c": 61.76,
+      "v": 1031000
+     },
+     {
+      "t": "2026-08-19",
+      "o": 61.76,
+      "h": 62.95,
+      "l": 61.36,
+      "c": 62.55,
+      "v": 1032000
+     },
+     {
+      "t": "2026-08-20",
+      "o": 62.55,
+      "h": 63.67,
+      "l": 62.15,
+      "c": 63.27,
+      "v": 1033000
+     },
+     {
+      "t": "2026-08-21",
+      "o": 63.27,
+      "h": 64.06,
+      "l": 62.87,
+      "c": 63.66,
+      "v": 1034000
+     },
+     {
+      "t": "2026-08-24",
+      "o": 63.66,
+      "h": 64.06,
+      "l": 63.19,
+      "c": 63.59,
+      "v": 1035000
+     },
+     {
+      "t": "2026-08-25",
+      "o": 63.59,
+      "h": 63.99,
+      "l": 62.68,
+      "c": 63.08,
+      "v": 1036000
+     },
+     {
+      "t": "2026-08-26",
+      "o": 63.08,
+      "h": 63.48,
+      "l": 61.91,
+      "c": 62.31,
+      "v": 1037000
+     },
+     {
+      "t": "2026-08-27",
+      "o": 62.31,
+      "h": 62.71,
+      "l": 61.15,
+      "c": 61.55,
+      "v": 1038000
+     },
+     {
+      "t": "2026-08-28",
+      "o": 61.55,
+      "h": 61.95,
+      "l": 60.67,
+      "c": 61.07,
+      "v": 1039000
+     },
+     {
+      "t": "2026-08-31",
+      "o": 61.07,
+      "h": 61.47,
+      "l": 60.63,
+      "c": 61.03,
+      "v": 1040000
+     },
+     {
+      "t": "2026-09-01",
+      "o": 61.03,
+      "h": 61.85,
+      "l": 60.63,
+      "c": 61.45,
+      "v": 1041000
+     },
+     {
+      "t": "2026-09-02",
+      "o": 61.45,
+      "h": 62.58,
+      "l": 61.05,
+      "c": 62.18,
+      "v": 1042000
+     },
+     {
+      "t": "2026-09-03",
+      "o": 62.18,
+      "h": 63.37,
+      "l": 61.78,
+      "c": 62.97,
+      "v": 1043000
+     },
+     {
+      "t": "2026-09-04",
+      "o": 62.97,
+      "h": 63.94,
+      "l": 62.57,
+      "c": 63.54,
+      "v": 1044000
+     },
+     {
+      "t": "2026-09-07",
+      "o": 63.54,
+      "h": 64.09,
+      "l": 63.14,
+      "c": 63.69,
+      "v": 1045000
+     },
+     {
+      "t": "2026-09-08",
+      "o": 63.69,
+      "h": 64.09,
+      "l": 62.97,
+      "c": 63.37,
+      "v": 1046000
+     },
+     {
+      "t": "2026-09-09",
+      "o": 63.37,
+      "h": 63.77,
+      "l": 62.29,
+      "c": 62.69,
+      "v": 1047000
+     },
+     {
+      "t": "2026-09-10",
+      "o": 62.69,
+      "h": 63.09,
+      "l": 61.49,
+      "c": 61.89,
+      "v": 1048000
+     },
+     {
+      "t": "2026-09-11",
+      "o": 61.89,
+      "h": 62.29,
+      "l": 60.85,
+      "c": 61.25,
+      "v": 1049000
+     },
+     {
+      "t": "2026-09-14",
+      "o": 61.25,
+      "h": 61.65,
+      "l": 60.59,
+      "c": 60.99,
+      "v": 1050000
+     },
+     {
+      "t": "2026-09-15",
+      "o": 60.99,
+      "h": 61.6,
+      "l": 60.59,
+      "c": 61.2,
+      "v": 1051000
+     },
+     {
+      "t": "2026-09-16",
+      "o": 61.2,
+      "h": 62.21,
+      "l": 60.8,
+      "c": 61.81,
+      "v": 1052000
+     },
+     {
+      "t": "2026-09-17",
+      "o": 61.81,
+      "h": 63.01,
+      "l": 61.41,
+      "c": 62.61,
+      "v": 1053000
+     },
+     {
+      "t": "2026-09-18",
+      "o": 62.61,
+      "h": 63.71,
+      "l": 62.21,
+      "c": 63.31,
+      "v": 1054000
+     },
+     {
+      "t": "2026-09-21",
+      "o": 63.31,
+      "h": 64.08,
+      "l": 62.91,
+      "c": 63.68,
+      "v": 1055000
+     },
+     {
+      "t": "2026-09-22",
+      "o": 63.68,
+      "h": 64.08,
+      "l": 63.18,
+      "c": 63.58,
+      "v": 1056000
+     },
+     {
+      "t": "2026-09-23",
+      "o": 63.58,
+      "h": 63.98,
+      "l": 62.65,
+      "c": 63.05,
+      "v": 1057000
+     },
+     {
+      "t": "2026-09-24",
+      "o": 63.05,
+      "h": 63.45,
+      "l": 61.87,
+      "c": 62.27,
+      "v": 1058000
+     },
+     {
+      "t": "2026-09-25",
+      "o": 62.27,
+      "h": 62.67,
+      "l": 61.12,
+      "c": 61.52,
+      "v": 1059000
+     }
+    ],
+    "lines": [],
+    "bands": [],
+    "markers": [],
+    "badges": [],
+    "stats": [
+     {
+      "k": "T1 held",
+      "v": "not rated — no close on every data day"
+     },
+     {
+      "k": "T2 held",
+      "v": "not rated — no close on every data day"
+     },
+     {
+      "k": "EOD tape",
+      "v": "no 50-session volume average yet"
+     },
+     {
+      "k": "Pre-market",
+      "v": "Pre-market read 04:00–09:30 ET only — not open now."
+     },
+     {
+      "k": "σ · β",
+      "v": "2.4%/day · β 1.10"
+     }
+    ],
+    "why": "Not rated on T1 — its daily bars do not cover every data day in the window",
+    "resiliency": {
+     "t1": null,
+     "t2": null,
+     "today": {
+      "event_day": false,
+      "tier": null,
+      "labels": [],
+      "state": "no_event",
+      "move_pct": null,
+      "holding": null,
+      "print": null,
+      "prev_close": null,
+      "basis": null,
+      "tape": null,
+      "as_of_et": null
+     },
+     "eod": {
+      "state": "no_avg",
+      "date": "2026-09-29",
+      "source": "closed",
+      "chg_pct": 0.8,
+      "close_loc_pct": 60.0,
+      "volume": 900000,
+      "avg_vol_50": null,
+      "rvol": null,
+      "up": true,
+      "upper_half": true,
+      "vol_ok": null,
+      "bullish": null
+     },
+     "pre": {
+      "state": "not_open",
+      "text": "Pre-market read 04:00–09:30 ET only — not open now.",
+      "move_pct": null,
+      "print": null,
+      "prev_close": null,
+      "as_of_et": null,
+      "pm_volume": null,
+      "pm_dollar_vol": null,
+      "baseline_vol": null,
+      "baseline_sessions": null,
+      "pm_rvol": null,
+      "up": null,
+      "vol_ok": null,
+      "bullish": null
+     },
+     "sigma_pct": 2.4,
+     "beta": 1.1,
+     "adv50": 120000000.0
+    },
+    "res_filter": {
+     "t1": null,
+     "t2": null,
+     "eod": null,
+     "pre": null
+    },
+    "volume": null,
+    "rvol": null,
+    "turnover": null,
+    "avg_turnover": 120000000.0,
+    "change": null
+   }
+  ]
+ },
+ "warming": {
+  "count": 0,
+  "min_tier": "ok",
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "enterable_kind": "n/a",
+  "tape_session": "premarket",
+  "tab": "resiliency",
+  "sort": "default",
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🛡️ T1 hold rate"
+   },
+   {
+    "key": "res_t2",
+    "label": "🛡️ T2 hold rate"
+   },
+   {
+    "key": "res_down",
+    "label": "🛡️ T1 on SPY-down days"
+   },
+   {
+    "key": "res_today",
+    "label": "📅 Today's move"
+   }
+  ],
+  "note": "🛡️ Reading every name's closes on the last year's T1 and T2 days from the cached daily bars — the charts appear here as soon as it lands; you don't need to refresh.",
+  "sort_unavailable": null,
+  "matched": 0,
+  "warming": true,
+  "resiliency_board": {
+   "state": "warming",
+   "session": "2026-09-30",
+   "phase": "pre",
+   "market_closed": null,
+   "sort": "default",
+   "header": "🛡️ Reading every name's closes on the last year's T1 and T2 days from the cached daily bars — the charts appear here as soon as it lands; you don't need to refresh.",
+   "today_line": null,
+   "events_line": null,
+   "rules": {
+    "hold_max_drop_pct": 0.5,
+    "hold_rate_min_pct": 75.0,
+    "window_days": 365,
+    "t2_excludes_t1": true,
+    "pre_rvol_min": 1.5,
+    "pre_min_sessions": 5,
+    "vol_avg_bars": 50,
+    "benchmark": "SPY",
+    "lines": [
+     "Held = the close on the data day is down no more than 0.5% from the prior session's close (HIS CALL #1).",
+     "Window = the last 365 days of T1 (T2) sessions; rated = a close on every one (HIS CALL #4, #6).",
+     "The 🛡️ box = held on at least 75% of the window's sessions (HIS CALL #5).",
+     "A session with any T1 print counts as T1 only (HIS CALL #7).",
+     "📈 EOD = the app's accumulation day on the last closed session (HIS CALL #11).",
+     "🌅 Pre-market = a print above the prior close on at least 1.5× the name's own pre-market volume by the same minute, over at least 5 cached sessions (HIS CALL #12)."
+    ]
+   },
+   "events": null,
+   "today": null,
+   "counts": null,
+   "filters": null,
+   "study": {
+    "status": "pending",
+    "run_date": null,
+    "t1": {
+     "verdict": "unmeasured",
+     "text": "T1 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "t2": {
+     "verdict": "unmeasured",
+     "text": "T2 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "eod": {
+     "verdict": "unmeasured",
+     "text": "EOD tape: UNMEASURED — the study has not run yet."
+    },
+    "pre": {
+     "verdict": "unmeasured",
+     "text": "Pre-market tape: UNMEASURED — the cached pre-market history is too short to measure."
+    }
+   },
+   "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "measured": false,
+   "built_at": null
+  },
+  "tiles": []
+ },
+ "error": {
+  "count": 0,
+  "min_tier": "ok",
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "enterable_kind": "n/a",
+  "tape_session": "premarket",
+  "tab": "resiliency",
+  "sort": "default",
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🛡️ T1 hold rate"
+   },
+   {
+    "key": "res_t2",
+    "label": "🛡️ T2 hold rate"
+   },
+   {
+    "key": "res_down",
+    "label": "🛡️ T1 on SPY-down days"
+   },
+   {
+    "key": "res_today",
+    "label": "📅 Today's move"
+   }
+  ],
+  "note": "🛡️ The Resiliency board could not be built just now (RuntimeError) — it retries in 5 minutes. Nothing else on Chart Maps is affected.",
+  "sort_unavailable": null,
+  "matched": 0,
+  "resiliency_board": {
+   "state": "error",
+   "session": "2026-09-30",
+   "phase": "pre",
+   "market_closed": null,
+   "sort": "default",
+   "header": "🛡️ The Resiliency board could not be built just now (RuntimeError) — it retries in 5 minutes. Nothing else on Chart Maps is affected.",
+   "today_line": null,
+   "events_line": null,
+   "rules": {
+    "hold_max_drop_pct": 0.5,
+    "hold_rate_min_pct": 75.0,
+    "window_days": 365,
+    "t2_excludes_t1": true,
+    "pre_rvol_min": 1.5,
+    "pre_min_sessions": 5,
+    "vol_avg_bars": 50,
+    "benchmark": "SPY",
+    "lines": [
+     "Held = the close on the data day is down no more than 0.5% from the prior session's close (HIS CALL #1).",
+     "Window = the last 365 days of T1 (T2) sessions; rated = a close on every one (HIS CALL #4, #6).",
+     "The 🛡️ box = held on at least 75% of the window's sessions (HIS CALL #5).",
+     "A session with any T1 print counts as T1 only (HIS CALL #7).",
+     "📈 EOD = the app's accumulation day on the last closed session (HIS CALL #11).",
+     "🌅 Pre-market = a print above the prior close on at least 1.5× the name's own pre-market volume by the same minute, over at least 5 cached sessions (HIS CALL #12)."
+    ]
+   },
+   "events": null,
+   "today": null,
+   "counts": null,
+   "filters": null,
+   "study": {
+    "status": "pending",
+    "run_date": null,
+    "t1": {
+     "verdict": "unmeasured",
+     "text": "T1 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "t2": {
+     "verdict": "unmeasured",
+     "text": "T2 hold: UNMEASURED — the persistence study has not run yet."
+    },
+    "eod": {
+     "verdict": "unmeasured",
+     "text": "EOD tape: UNMEASURED — the study has not run yet."
+    },
+    "pre": {
+     "verdict": "unmeasured",
+     "text": "Pre-market tape: UNMEASURED — the cached pre-market history is too short to measure."
+    }
+   },
+   "note": "🛡️ UNMEASURED — no study in this app yet says a name that held on past T1 days holds on the next one, and a quiet, low-volatility name holds most days by construction — its typical daily move and beta are on every card. The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "measured": false,
+   "built_at": null
+  },
+  "tiles": []
+ }
+}

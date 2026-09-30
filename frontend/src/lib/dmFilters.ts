@@ -58,6 +58,10 @@ export function parseDmMode(v: string | null | undefined): DmMode {
 export type CmDmFilterItem = {
   key: string; label: string; on: boolean;
   pass: number; fail: number; no_read: number; hidden: number; note: string;
+  /** 🛡️ Resiliency only (2026-09-30): a served box that is switched off
+   *  (the 🌅 volume check) — greyed, its served one-line reason beside it.
+   *  Dual Momentum never serves these. */
+  off?: boolean; off_reason?: string | null;
 };
 
 /** `dual_momentum_board.filters` — ready state only; null otherwise. */

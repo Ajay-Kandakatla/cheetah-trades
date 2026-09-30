@@ -706,7 +706,10 @@ ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_
            "chart_maps/key_levels_tab.py",
            # the 🏔️ ATH tab (2026-09-29): display only, reuses the session /
            # closed-bar / print / verify / 52-week engine
-           "chart_maps/ath_tab.py"}
+           "chart_maps/ath_tab.py",
+           # the 🛡️ Resiliency tab (2026-09-30): display only, reuses the session /
+           # closed-bar / print / verify engine
+           "chart_maps/resiliency_tab.py"}
 
 
 def test_import_guard_display_only():

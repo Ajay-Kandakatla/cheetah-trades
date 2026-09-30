@@ -93,7 +93,12 @@ const ZONE_CAUTION = new Set(['At_Supply', 'Into_Supply', 'Extended_No_Support']
  *  name is on the page it came from, so it sits on the identity line. The
  *  VS16 is part of the served literal and of this prefix, byte for byte. */
 const IDENT_PREFIX = ['\u{1F7E2} Sales', '\u{1F4C9} Sales', '❔ Sales data missing',
-  '\u{1F48E} ', 'Recent IPO', '\u{1F3CE}\u{FE0F} #'];
+  '\u{1F48E} ', 'Recent IPO', '\u{1F3CE}\u{FE0F} #',
+  // 🛡️ Resiliency (2026-09-30): the served hold-record chip
+  // (`🛡️ T1 held 34/43 (79%)`, resiliency_tab.T1_BADGE_FMT) — what the name
+  // IS on this board, so the identity line. rungOf checks IDENT BEFORE the
+  // 🛡️ → PRICE (Gabbar position) rule, so these never reach PRICE.
+  '\u{1F6E1}\u{FE0F} T1 held', '\u{1F6E1}\u{FE0F} T2 held'];
 /** The 🏎️ Dual Momentum filter-box badges (2026-09-29, Ajay: "How can I see
  *  all of these? at the same time?") — served per ticked box a shown leader
  *  passes, text = the box's own label (dual_momentum_tab.FILTER_LABELS,
@@ -101,7 +106,11 @@ const IDENT_PREFIX = ['\u{1F7E2} Sales', '\u{1F4C9} Sales', '❔ Sales data miss
  *  so they sit on the identity line beside the 🏎️ rank chip. Exact match only:
  *  the 🔑 position pill ('🔑 0.41% above PWL …') still goes to PRICE. */
 const IDENT_EXACT = new Set(['\u{1F300} AMD raided', '\u{1F4CD} Near demand zone',
-  '\u{1F511} Near a lower key level']);
+  '\u{1F511} Near a lower key level',
+  // 🛡️ Resiliency filter-box badges (2026-09-30) — resiliency_tab.FILTER_LABELS,
+  // pinned equal by contract; same WHY-it-is-here role as the 🏎️ boxes.
+  '\u{1F6E1}\u{FE0F} Held on T1', '\u{1F6E1}\u{FE0F} Held on T2',
+  '\u{1F4C8} Bullish tape EOD', '\u{1F305} Bullish tape pre-market']);
 
 const ENTRY_EXACT = new Set([
   'Buyable', 'Setup ready', 'Qualifier', 'Buyable then', 'SEPA qualifier', 'Target hit', 'Backtested',
@@ -121,7 +130,11 @@ const PRICE_PREFIX = ['◉ ', '→ ', '↓ ', '↑ ', '\u{1FA79} ', '\u{1F680} '
   // all-time high …`, `↘️ 4.10% under the 52-week high … set …`,
   // ath_tab.tile_badge) — a distance to a high, a PRICE fact, the 🔑 precedent.
   // VS16 on both: a bare `🏔 ` is not the served text and stays in SETUP.
-  '\u{1F3D4}\u{FE0F} ', '\u{2198}\u{FE0F} '];
+  '\u{1F3D4}\u{FE0F} ', '\u{2198}\u{FE0F} ',
+  // 📅 (2026-09-30): the 🛡️ Resiliency tab's served today pill on a T1/T2
+  // session (`📅 T1 today · holding +0.42%`, resiliency_tab.TODAY_HOLD_FMT /
+  // TODAY_DOWN_FMT) — today's move against the prior close, a PRICE fact.
+  '\u{1F4C5} T1 today', '\u{1F4C5} T2 today'];
 /** 🎯 Gabbar position (the aggressive-band twin of 🛡️, board.py gabbar
  *  badges): `🎯 In Gabbar band (…)` or `🎯 {d}% above|below {label}`. Any
  *  other 🎯 badge falls through to SETUP, the unknown-badge safety net. */
@@ -172,6 +185,9 @@ const FOLD_KEYS: Record<string, FoldGroup> = {
   'Float/day': 'tape', Flow: 'tape', 'Vol days': 'tape', 'Avg $/day': 'tape',
   Band: 'floor',
   'Sector flow (5d)': 'sector',
+  // 🛡️ Resiliency (2026-09-30): context reads. T1 held / T2 held / EOD tape /
+  // Pre-market / Today stay on the face.
+  'T1 worst': 'reads', 'Last T1': 'reads', 'σ · β': 'reads',
 };
 
 const TONE_RANK: Record<string, number> = { warn: 0, good: 1, muted: 2 };

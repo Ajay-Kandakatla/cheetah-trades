@@ -231,6 +231,7 @@ Later additions take a mid-pack slot until usage earns them one:
 |---|---|---|
 | 2026-09-28 | 🔑 Key Levels (`key_levels`) | right after 📁 My holdings — no usage yet (his call, spec §7.5) |
 | 2026-09-29 | 🏔️ ATH (`ath`) | right after 🏎️ Dual Momentum — no usage yet (HIS CALL #10 in the ATH spec) |
+| 2026-09-30 | 🛡️ Resiliency (`resiliency`) | right after 🏔️ ATH — no usage yet (HIS CALL #16 in the resiliency spec) |
 
 ### 🔑 Key Levels (2026-09-28)
 
@@ -302,6 +303,45 @@ enters nothing. Contract, counts invariant, perf and the his-call list:
 `test_ath_history.py`, `chartMaps.test.ts` ("the 🏔️ ATH tab"),
 `AthBoardNote.test.tsx`, `AthTab.payload.test.tsx` and the `contracts.mjs`
 block "🏔️ ATH tab (2026-09-29)…".
+
+### 🛡️ Resiliency (2026-09-30)
+
+Ajay 2026-09-30: "Can you build me a new tab- Resileincy. This is to help me
+with #1 - Stocks that are not going to by more than 0.5% during a T1 event like
+FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is
+positive and bullish EOD or Pre market. but volume has to be accounted for. We
+have all of this data already." A tile board off the `/chart-maps` dispatcher
+(`?tab=resiliency`), built like 🏔️ ATH (closed-bar half memoised per session,
+ONE universe snapshot per request) with the 🏎️ Dual Momentum box machinery.
+Server-side in `backend/chart_maps/resiliency_tab.py`; the page reads it and
+never re-sorts, re-filters or re-computes:
+
+- Four served orders on `sort=` — `default` 🛡️ T1 hold rate, `res_t2`,
+  `res_down` (T1 on SPY-down days), `res_today` (📅 today's move; on a
+  non-data day the server serves `default` and a `sort_unavailable` reason).
+  `components/ResiliencyBoardNote.tsx` draws the four buttons from the served
+  `sorts`; pressed = the served `sort`.
+- Four boxes on `?res=t1,t2,eod,pre` (+ `?res_mode=all`), `lib/resiliencyFilters.ts`
+  — the `DualMomentumFilters` component reused with `knownKeys` /
+  `testIdPrefix` props (DM output unchanged); checked = the served `on`.
+- `board.resiliency_board` — served `header`, `today_line`, `events_line`,
+  `rules.lines`, box notes, `study` texts and `note`, printed verbatim (the
+  events line, rule lines, unticked box notes and study texts sit in a
+  `<details>` fold, still in the DOM). While the memo warms the header is the
+  warming line (role=status), no boxes render and the demand-scan counter is
+  not polled.
+- Cards: `cardLadder` routes the 🛡️ `T1 held` / `T2 held` chips and the four
+  box badges to IDENT (checked before the 🛡️ → PRICE Gabbar rule), the 📅
+  `T1 today` / `T2 today` pill to PRICE, and folds `T1 worst`, `Last T1`,
+  `σ · β` into READS.
+
+UNMEASURED until the persistence study lands; it gates, pushes, sizes and
+enters nothing. Backend contract and the his-call list:
+`docs/chart_maps/resiliency_tab_2026_09_30.md`. Pinned in `chartMaps.test.ts`
+("the 🛡️ Resiliency tab"), `resiliencyFilters.test.ts`,
+`ResiliencyBoardNote.test.tsx`, `ResiliencyTab.payload.test.tsx`,
+`ChartMapsResiliency.test.tsx`, `cardLadder.test.ts` and the `contracts.mjs`
+block "🛡️ Resiliency tab (2026-09-30)…".
 
 ## 🚀 Breaking tab — the zone-edge read as cards (2026-09-06)
 

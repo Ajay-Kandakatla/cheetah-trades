@@ -114,17 +114,25 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set(DM_FILTER_KEYS);
 const count = (v: unknown): number | null =>
   typeof v === 'number' && Number.isFinite(v) ? v : null;
 
-type FilterProps = { filters: unknown; onToggle: (key: string) => void; onToggleMode?: () => void };
+type FilterProps = {
+  filters: unknown; onToggle: (key: string) => void; onToggleMode?: () => void;
+  /** 🛡️ Resiliency (2026-09-30) reuses these boxes with its own served keys
+   *  and test ids; both default to the Dual Momentum values, so the DM output
+   *  is byte-identical. */
+  knownKeys?: ReadonlyArray<string>;
+  testIdPrefix?: string;
+};
 
 /** The 🌀 / 📍 / 🔑 boxes. Checked = served `on`; nothing for a malformed block.
  *  + the served "must match all" switch while a box is ticked (checked = served mode). */
-export function DualMomentumFilters({ filters, onToggle, onToggleMode }: FilterProps) {
+export function DualMomentumFilters({ filters, onToggle, onToggleMode, knownKeys, testIdPrefix = 'cm-dm' }: FilterProps) {
   if (!filters || typeof filters !== 'object' || Array.isArray(filters)) return null;
   const f = filters as { items?: unknown; line?: unknown; note?: unknown; mode?: unknown; mode_all_label?: unknown };
   if (!Array.isArray(f.items)) return null;
+  const known: ReadonlySet<string> = knownKeys ? new Set(knownKeys) : KNOWN_KEYS;
   const items = (f.items as unknown[]).filter((i): i is CmDmFilterItem =>
     !!i && typeof i === 'object' && typeof (i as CmDmFilterItem).key === 'string'
-    && KNOWN_KEYS.has((i as CmDmFilterItem).key) && !!text((i as CmDmFilterItem).label));
+    && known.has((i as CmDmFilterItem).key) && !!text((i as CmDmFilterItem).label));
   if (!items.length) return null;
   const line = text(f.line);
   const note = text(f.note);
@@ -134,32 +142,40 @@ export function DualMomentumFilters({ filters, onToggle, onToggleMode }: FilterP
   return (
     <>
       <span className="cm-phase-sub" role="group" aria-label="Filter the leaders"
-            data-testid="cm-dm-filters">
+            data-testid={`${testIdPrefix}-filters`}>
         {items.map((i) => {
-          const n = count(i.pass);
+          // A served OFF box (🛡️ Resiliency 🌅, 2026-09-30) is greyed with its
+          // served reason in place of the count; a box already ticked stays
+          // clickable so it can be unticked. DM serves no `off`: unchanged.
+          const offReason = i.off === true ? text(i.off_reason) : null;
+          const n = offReason ? null : count(i.pass);
           return (
-            <label key={i.key} className="cm-ctl cm-ctl-check dm-filter"
+            <label key={i.key} className={`cm-ctl cm-ctl-check dm-filter${offReason ? ' cm-dim' : ''}`}
                    title={text(i.note) ?? undefined}>
-              <input type="checkbox" data-testid={`cm-dm-filter-${i.key}`}
-                     checked={i.on === true} onChange={() => onToggle(i.key)} />
+              <input type="checkbox" data-testid={`${testIdPrefix}-filter-${i.key}`}
+                     checked={i.on === true} disabled={!!offReason && i.on !== true}
+                     onChange={() => onToggle(i.key)} />
               {i.label}
               {n !== null ? <span className="dm-filter-count"> · {n}</span> : null}
+              {offReason
+                ? <span className="dm-filter-count" data-testid={`${testIdPrefix}-filter-off-${i.key}`}> · {offReason}</span>
+                : null}
             </label>
           );
         })}
         {showMode ? (
           <label className="cm-ctl cm-ctl-check dm-filter-mode">
-            <input type="checkbox" data-testid="cm-dm-filter-mode"
+            <input type="checkbox" data-testid={`${testIdPrefix}-filter-mode`}
                    checked={f.mode === 'all'} onChange={() => onToggleMode!()} />
             {modeLabel}
           </label>
         ) : null}
       </span>
-      {line ? <p className="cm-note" data-testid="cm-dm-filter-line" role="status">{line}</p> : null}
+      {line ? <p className="cm-note" data-testid={`${testIdPrefix}-filter-line`} role="status">{line}</p> : null}
       {on.map((i) => (text(i.note)
-        ? <p key={i.key} className="cm-note cm-dim" data-testid={`cm-dm-filter-note-${i.key}`}>{i.note}</p>
+        ? <p key={i.key} className="cm-note cm-dim" data-testid={`${testIdPrefix}-filter-note-${i.key}`}>{i.note}</p>
         : null))}
-      {on.length && note ? <p className="cm-note cm-dim" data-testid="cm-dm-filters-note">{note}</p> : null}
+      {on.length && note ? <p className="cm-note cm-dim" data-testid={`${testIdPrefix}-filters-note`}>{note}</p> : null}
     </>
   );
 }

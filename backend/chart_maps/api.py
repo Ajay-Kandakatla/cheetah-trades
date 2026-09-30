@@ -27,7 +27,7 @@ async def chart_maps(
                                         "deep_demand | gabbar | zero_dte | "
                                         "earnings | winners | keltner | amd | "
                                         "ipo | key_levels | dual_momentum | "
-                                        "ath"),
+                                        "ath | resiliency"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("full",
@@ -102,6 +102,19 @@ async def chart_maps(
                                      "(default, unchanged). Ajay 2026-09-29: 'create me "
                                      "another tab where valuations are wrong …' then 'Use "
                                      "the same tab actually'."),
+    res: str = Query("", description="resiliency tab only — comma list of boxes "
+                                      "t1,t2,eod,pre; a name passing ANY ticked one shows "
+                                      "(res_mode=all: every ticked one must pass). Unknown "
+                                      "tokens are ignored; empty = no box. Ajay 2026-09-30: "
+                                      "'Can you build me a new tab- Resileincy. This is to help "
+                                      "me with #1 - Stocks that are not going to by more than "
+                                      "0.5% during a T1 event like FOMC or any others like "
+                                      "todays Inflation and GDP track T2s as well. #3 - Tape is "
+                                      "positive and bullish EOD or Pre market. but volume has "
+                                      "to be accounted for. We have all of this data already.'"),
+    res_mode: str = Query("", description="resiliency tab only — how the ticked res boxes "
+                                           "combine: 'all' = every ticked box must pass; absent "
+                                           "or anything else = any ticked box (the default)."),
     min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
                           description="liquidity floor by 50-day avg $ volume: "
                                       "deep (>=$50M) | ok (>=$10M, default) | "
@@ -163,6 +176,8 @@ async def chart_maps(
             dm=(dm if isinstance(dm, str) and dm.strip() else None),
             dm_mode=(dm_mode if isinstance(dm_mode, str) and dm_mode.strip() else None),
             uv=(uv if isinstance(uv, str) and uv.strip() else None),
+            res=(res if isinstance(res, str) and res.strip() else None),
+            res_mode=(res_mode if isinstance(res_mode, str) and res_mode.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

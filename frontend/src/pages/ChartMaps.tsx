@@ -78,6 +78,8 @@ import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
 import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM, dmFiltersParam, parseDmFilters, parseDmMode, type DmFilterKey } from '../lib/dmFilters';
 import AthBoardNote from '../components/AthBoardNote';
+import ResiliencyBoardNote from '../components/ResiliencyBoardNote';
+import { RES_FILTER_PARAM, RES_MODE_PARAM, parseResFilters, parseResMode, resFiltersParam, type ResFilterKey } from '../lib/resiliencyFilters';
 import UndervalueViewNote from '../components/UndervalueViewNote';
 import { UV_VIEW_PARAM, UV_VIEW_PSG, parseUvView, uvViewParam } from '../lib/undervalueView';
 import type { IpoCounts } from '../lib/ipoTab';
@@ -497,6 +499,35 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     }, { replace: true });
   }, [setParams]);
 
+  /* 🛡️ Resiliency boxes (Ajay 2026-09-30: "Can you build me a new tab-
+   * Resileincy."). Copies of the 🏎️ handlers on `?res=` / `?res_mode=`: the
+   * ticked set lives in the URL only, rides to the server on this tab only,
+   * and the boxes' checked state is the SERVED `on`, never this parse. */
+  const resSel = useMemo(() => parseResFilters(params.get(RES_FILTER_PARAM)), [params]);
+  const resSpec = tab === 'resiliency' ? (resFiltersParam(resSel) ?? undefined) : undefined;
+  const toggleResFilter = useCallback((key: string) => {
+    setParams((prev) => {
+      // Read the CURRENT param, never a captured copy: ticking 🛡️ T1 then 📈
+      // must write both.
+      const sel = parseResFilters(prev.get(RES_FILTER_PARAM));
+      if (sel.has(key as ResFilterKey)) sel.delete(key as ResFilterKey); else sel.add(key as ResFilterKey);
+      const spec = resFiltersParam(sel);
+      const next = new URLSearchParams(prev);
+      if (spec) next.set(RES_FILTER_PARAM, spec); else next.delete(RES_FILTER_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+  const resModeSpec = tab === 'resiliency' && parseResMode(params.get(RES_MODE_PARAM)) === DM_MODE_ALL
+    ? DM_MODE_ALL : undefined;
+  const toggleResMode = useCallback(() => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (parseResMode(prev.get(RES_MODE_PARAM)) === DM_MODE_ALL) next.delete(RES_MODE_PARAM);
+      else next.set(RES_MODE_PARAM, DM_MODE_ALL);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
   /* 🏷️ Under Value vs peers (Ajay 2026-09-29: "Use the same tab actually").
    * The view lives in the URL as `?uv=peers` and rides on the undervalue tab
    * only; absent = the 💎 view (server default). The PRESSED toggle button is
@@ -614,6 +645,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            levels: levelsSpec,
                            dmFilters: dmSpec,
                            dmMode: dmModeSpec,
+                           resFilters: resSpec,
+                           resMode: resModeSpec,
                            uvView });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
@@ -633,7 +666,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, uvView, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, uvView, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -680,7 +713,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
-      && tab !== 'dual_momentum' && tab !== 'ath');
+      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'resiliency');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -1007,6 +1040,13 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * pressed = the served `sort`, a click through `setSortParam`. It also
         * carries the warming line, so the generic demand counter is skipped. */}
       {tab === 'ath' && <AthBoardNote board={data?.ath_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
+      {/* 🛡️ Resiliency tab (2026-09-30): the served header, today's data-day
+        * line, the rules, the boxes and the UNMEASURED note, plus the four-way
+        * order toggle — labels from the served `sorts`, pressed = the served
+        * `sort`, a click through `setSortParam`; boxes through `?res=` /
+        * `?res_mode=`. It also carries the warming line, so the generic demand
+        * counter is skipped. */}
+      {tab === 'resiliency' && <ResiliencyBoardNote board={data?.resiliency_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleResFilter} onToggleMode={toggleResMode} />}
       {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
         * toggle — labels served, pressed = the served view, a click through
         * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
@@ -1676,6 +1716,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       ) : data?.warming && tab === 'dual_momentum' ? null
       /* 🏔️ ATH warms its own memo too — AthBoardNote prints its warming line. */
       : data?.warming && tab === 'ath' ? null
+      /* 🛡️ Resiliency warms its own memo — ResiliencyBoardNote prints its warming line. */
+      : data?.warming && tab === 'resiliency' ? null
       /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
        * scan) — its served warming line is printed by DualMomentumBoardNote. */
       : data?.warming && tab !== 'key_levels' ? (

@@ -18,11 +18,12 @@ import type { IpoCorroboration, IpoUpcoming } from './ipoTab';
 import type { AmdRaidsBlock } from './amdRaids';
 import type { BurstCounts, BurstRead } from './momentumBurst';
 import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM } from './dmFilters';
-import type { CmDmFilters, CmDmTileFilter } from './dmFilters';
+import type { CmDmFilterItem, CmDmFilters, CmDmTileFilter } from './dmFilters';
+import { RES_FILTER_PARAM, RES_MODE_PARAM } from './resiliencyFilters';
 import { UV_VIEW_PARAM, UV_VIEW_PEERS } from './undervalueView';
 import type { CmUndervalueView } from './undervalueView';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -90,6 +91,15 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // and the next re-cut moves it on the evidence. The slot is his call
   // (ath_tab spec §7 #10).
   'ath',
+  // 🛡️ Resiliency (Ajay 2026-09-30: "Can you build me a new tab- Resileincy.
+  // This is to help me with #1 - Stocks that are not going to by more than
+  // 0.5% during a T1 event like FOMC or any others like todays Inflation and
+  // GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre
+  // market. but volume has to be accounted for. We have all of this data
+  // already."). Right after 🏔️ ATH, mid-pack — TAB ORDER IS EARNED;
+  // tabUsageKey counts it from the first open and the next re-cut moves it on
+  // the evidence. The slot is his call (resiliency spec §7 #16).
+  'resiliency',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -194,6 +204,14 @@ export function dmCapSortNext(served: string | null | undefined): string {
  *  toggle's labels are taken from the SERVED `sorts`, never typed here. */
 export const ATH_SORT_SLIPPING = 'slipping';
 
+/** 🛡️ Resiliency tab (2026-09-30): the three tab-scoped served sort keys
+ *  (chart_maps/resiliency_tab.SORT_T2 / SORT_DOWN / SORT_TODAY); `default` is
+ *  🛡️ T1 hold rate. The toggle's labels are taken from the SERVED `sorts`,
+ *  never typed here. */
+export const RES_SORT_T2 = 'res_t2';
+export const RES_SORT_DOWN = 'res_down';
+export const RES_SORT_TODAY = 'res_today';
+
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
  *  buckets) to re-cut CM_TABS from measured use. */
@@ -239,6 +257,16 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // 🏔️ ATH (Ajay 2026-09-29). Every number on the board is served — the band,
   // the look-back and every count ride in the header, none is typed here.
   // UNMEASURED: no study measures names at an all-time high forward.
+  // 🛡️ Resiliency (Ajay 2026-09-30). Every number on the board is served;
+  // nothing here is typed. UNMEASURED: holding on past data days is not a
+  // forecast. Copy = resiliency spec §3.12 (the 0.5% / 75% / 365 days live in
+  // the served rules, HIS CALLs #1/#4/#5). The 🌅 volume leg is OFF
+  // (resiliency_tab.PM_VOLUME_VERIFIED = False, follow-up 2026-09-30): the
+  // blurb must not promise it until that flag flips (contracts + backend pin).
+  resiliency: {
+    label: '\u{1F6E1}\u{FE0F} Resiliency',
+    blurb: 'Names that held up on the market-moving data days, and names whose last session\'s tape is bullish on real volume. Ajay 2026-09-30: "Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already." THE DATA DAYS are the app\'s own macro calendar: T1 = the jobs report, CPI, Core PCE and the FOMC decision; T2 = retail sales, JOLTS, ADP, jobless claims, GDP and PPI, and a day with any T1 print counts as T1 only. Their dates are FRED\'s own release dates and the Fed\'s FOMC calendar; ISM and Fed-speaker remarks have no dated history here and are not counted. EACH CARD shows on how many of the last year\'s T1 days the name closed down no more than the served limit from the prior close, the same for the days SPY fell, its worst T1 day, the same for T2, its typical daily move and beta so a naturally quiet name reads as one, the last session\'s tape (change, where it closed in its range, volume against its 50-day average) and, before the open, its pre-market move (the pre-market volume check is OFF until its two volume sources are reconciled, so the \u{1F305} box passes none for now). ON A T1 OR T2 DAY every card also shows today\'s move against the prior close, live, and whether it is holding. THE BOXES narrow the board: a name passing ANY ticked box shows, with a badge for each; tick "must match all" to need every one. THE TOGGLE orders by T1 hold rate, T2 hold rate, T1 hold rate on the days SPY fell, or today\'s move. The line above the grid prints every number the boxes use. UNMEASURED until the study lands \u2014 holding on past data days is not proven to predict the next one. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
+  },
   ath: {
     label: '\u{1F3D4}\u{FE0F} ATH',
     blurb: 'Names at their all-time high, and names slipping back under a high they just set. Ajay 2026-09-29: "Can you give me a new tab - for all the stocks that are reaching all time highs? call it ATH. Once some of them are going below their ATH or 52 Week Highs.." THE TOGGLE switches between two groups: \u{1F3D4}\u{FE0F} At ATH \u2014 names trading through, at, or just under their all-time high, the ones through it today first, then the closest under \u2014 and \u2198\u{FE0F} Slipping \u2014 names that set an all-time or a fifty-two-week high recently and now trade under it by more than the same band, freshest high first. The line above the grid prints the band, the look-back and every count; the button lit is the group the server served. EACH CARD shows the high and the day it was set, the fifty-two-week high, the distance from each and whether the price is above the fifty-day average. HONEST HISTORY: all-time means the full listed history. A name whose price history starts after its listing, or that has no listing date on file, says "high since" its first bar and is never called all-time. Bars from an earlier listing under the same ticker are cut where a curated cut or a month-long gap in the ticker\u2019s own history proves them, and a history reaching back before the listing date is never called all-time either. Every other Chart Maps checkbox works here as on the other boards: themes first, the momentum burst, the liquidity floor and the chart ledger \u2014 support / demand, overhead / supply, key levels, AMD phases, Fibonacci, mean reversion, Keltner and the moving averages. UNMEASURED \u2014 no study in this app says a stock at its all-time high keeps rising or that one slipping under it comes back. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
@@ -496,6 +524,9 @@ export type CmBadge = {
   /** 🏎️ Dual Momentum (2026-09-29): the filter box this served badge says the
    *  leader passed ('amd' | 'zone' | 'level'). Display only. */
   dm_filter?: string;
+  /** 🛡️ Resiliency (2026-09-30): the filter box this served badge says the
+   *  name passed ('t1' | 't2' | 'eod' | 'pre'). Display only. */
+  res_filter?: string;
   /** Overlay family this badge belongs to, when it belongs to one. Present on
    *  the study verdicts (`keltner`, `amd`) so `filterTile` can drop the
    *  SENTENCE along with that family's bands and lines — one checkbox governs
@@ -727,6 +758,132 @@ export type CmAthRead = {
   text: string;
 };
 
+/** 🛡️ Resiliency tab (2026-09-30): the board-level block
+ *  (chart_maps/resiliency_tab ready / warming / error blocks, spec §3.8).
+ *  `header`, `today_line`, `events_line`, `rules.lines`, every box note, the
+ *  `study` texts and `note` are SERVED sentences — ResiliencyBoardNote prints
+ *  them verbatim and composes none. `counts` is null while the memo warms.
+ *  UNMEASURED until the study lands. */
+export type CmResiliencyBoard = {
+  state: 'ready' | 'warming' | 'error';
+  session: string;
+  phase: 'pre' | 'rth' | 'close' | null;
+  market_closed: string | null;
+  sort: string;
+  header: string;
+  today_line: string | null;
+  events_line: string | null;
+  rules: {
+    hold_max_drop_pct: number; hold_rate_min_pct: number; window_days: number; t2_excludes_t1: boolean;
+    pre_rvol_min: number; pre_min_sessions: number; vol_avg_bars: number; benchmark: string;
+    lines: string[];
+  } | null;
+  events: {
+    available: boolean; window_days: number; first: string | null; last: string | null;
+    t1_sessions: number; t1_spy_down: number; t2_sessions: number; t2_spy_down: number;
+    t1_by_kind: Record<string, number>; t2_by_kind: Record<string, number>;
+    /** T2 prints that sat on a T1 day (counted as T1 only) — the header names
+     *  a kind whose every print landed there (2026-09-30). */
+    t2_on_t1_by_kind?: Record<string, { n: number; t1_labels: string[] }>;
+    sources: string[]; unsourced: string[];
+    errors: Array<{ release_id: number | null; reason: string }>;
+  } | null;
+  today: {
+    event_day: boolean; session: string;
+    t1?: string[]; t2?: string[];
+    spy_move_pct?: number | null; spy_as_of_et?: string | null;
+    spy_basis?: 'live' | 'day_bar' | 'day_close' | null;
+    read?: number; holding?: number; down?: number; no_print?: number;
+    next_t1?: { date: string; label: string } | null;
+  } | null;
+  counts: {
+    scanned: number; no_bars: number; stale: number;
+    rated_t1: number; partial_t1: number; t1_pass: number;
+    rated_t2: number; partial_t2: number; t2_pass: number;
+    eod_read: number; eod_pass: number; pre_read: number; pre_pass: number;
+    no_turnover: number; dropped_thin: number; shown: number;
+  } | null;
+  /** The Dual Momentum filters shape exactly (dual_momentum_tab.filters_block),
+   *  keys = resiliency_tab.FILTER_KEYS. */
+  filters: CmResFilters | null;
+  study: {
+    status: 'pending' | 'measured' | string;
+    run_date: string | null;
+    t1?: CmResStudyLine; t2?: CmResStudyLine; eod?: CmResStudyLine; pre?: CmResStudyLine;
+  } | null;
+  note: string;
+  measured: boolean;
+  built_at: string | null;
+};
+
+/** 🛡️ The served boxes block — dual_momentum_tab.filters_block's shape,
+ *  keys = resiliency_tab.FILTER_KEYS ('t1', 't2', 'eod', 'pre'). */
+export type CmResFilters = {
+  keys: string[]; active: string[]; pool: number;
+  mode: string; mode_param: string; mode_all_label: string;
+  passed_all: number | null; passed_any: number | null; shown: number | null; hidden: number;
+  items: CmDmFilterItem[]; line: string | null; note: string; measured: boolean;
+};
+
+/** One served study sentence (resiliency_tab.study_block). */
+export type CmResStudyLine = {
+  verdict: 'unmeasured' | 'separates' | 'no_signal' | 'inverted' | 'too_small' | string;
+  text: string;
+};
+
+/** 🛡️ One tier's hold record over the window (resiliency_tab.tier_stats).
+ *  `rated` = a close on every window session; rates null when n == 0;
+ *  `down_*` = the sessions where SPY's own event-day return was < 0. */
+export type CmResTierStats = {
+  tier: number; events: number; n: number; held: number; rate_pct: number | null; rated: boolean;
+  down_events: number; down_n: number; down_held: number; down_rate_pct: number | null;
+  median_ret_pct: number | null;
+  worst: { date: string; labels: string[]; ret_pct: number; spy_ret_pct: number | null } | null;
+  last: { date: string; labels: string[]; ret_pct: number; held: boolean; spy_ret_pct: number | null } | null;
+};
+
+/** 📅 Today's move on a T1/T2 session (resiliency_tab.today_read). A name with
+ *  no print today is `no_print`, never "holding +0.00%". */
+export type CmResTodayRead = {
+  event_day: boolean; tier: 1 | 2 | null; labels: string[];
+  state: 'read' | 'no_print' | 'stale' | 'not_open' | 'no_event' | string;
+  move_pct: number | null; holding: boolean | null; print: number | null; prev_close: number | null;
+  /** `day_bar` = no fresh print during RTH: the snapshot's still-forming day
+   *  bar, labelled intraday; `day_close` only after the close (2026-09-30). */
+  basis: 'live' | 'day_bar' | 'day_close' | null; tape: 'premarket' | 'rth' | 'afterhours' | null; as_of_et: string | null;
+};
+
+/** 📈 The EOD tape read — the app's accumulation day (resiliency_tab.eod_read). */
+export type CmResEodRead = {
+  state: 'read' | 'no_bars' | 'no_avg' | 'no_volume' | 'flat_bar' | 'stale' | string;
+  date: string | null; source: 'closed' | 'session' | string | null;
+  chg_pct: number | null; close_loc_pct: number | null; volume: number | null; avg_vol_50: number | null;
+  rvol: number | null; up: boolean | null; upper_half: boolean | null; vol_ok: boolean | null;
+  bullish: boolean | null;
+};
+
+/** 🌅 The pre-market tape read (resiliency_tab.pre_read). Any unread leg →
+ *  `bullish` null. */
+export type CmResPreRead = {
+  state: 'read' | 'not_open' | 'no_print' | 'stale' | 'no_volume' | 'no_baseline' | 'baseline_warming' | string;
+  text: string | null;
+  move_pct: number | null; print: number | null; prev_close: number | null; as_of_et: string | null;
+  pm_volume: number | null; pm_dollar_vol: number | null; baseline_vol: number | null;
+  baseline_sessions: number | null; pm_rvol: number | null;
+  up: boolean | null; vol_ok: boolean | null; bullish: boolean | null;
+};
+
+/** The per-tile resiliency block (`tile.resiliency`). Display only. */
+export type CmResiliencyRead = {
+  t1: CmResTierStats | null; t2: CmResTierStats | null;
+  today: CmResTodayRead; eod: CmResEodRead; pre: CmResPreRead;
+  sigma_pct: number | null; beta: number | null; adv50: number | null;
+};
+
+/** The per-tile box read (`tile.res_filter`): true passes, false fails,
+ *  null = not read. Server-decided; the page never re-derives it. */
+export type CmResTileFilter = { t1: boolean | null; t2: boolean | null; eod: boolean | null; pre: boolean | null };
+
 /** 🏎️ The per-tile dual-momentum block — the /dual-momentum engine's pick,
  *  verbatim (rank, returns in %, RS). Display only on this surface. */
 export type CmDualMomentum = {
@@ -851,6 +1008,12 @@ export type CmTile = {
   /** 🏔️ ATH tab only (2026-09-29): the all-time / 52-week high read the tab
    *  is grouped and ordered by. Absent on every other tab. UNMEASURED. */
   ath?: CmAthRead | null;
+  /** 🛡️ Resiliency tab only (2026-09-30): the T1/T2 hold records, today's
+   *  move, and the 📈 / 🌅 tape reads. Absent on every other tab. UNMEASURED. */
+  resiliency?: CmResiliencyRead | null;
+  /** 🛡️ Resiliency tab only (2026-09-30): the 🛡️ / 📈 / 🌅 box read —
+   *  server-decided. Absent on every other tab. */
+  res_filter?: CmResTileFilter | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1221,6 +1384,10 @@ export type CmBoard = {
   /** 🏔️ ATH tab only (2026-09-29): the served header / note / counts
    *  AthBoardNote prints. Absent on every other tab. */
   ath_board?: CmAthBoard | null;
+  /** 🛡️ Resiliency tab only (2026-09-30): the served header / today line /
+   *  events line / rules / boxes / study / note ResiliencyBoardNote prints.
+   *  Absent on every other tab. */
+  resiliency_board?: CmResiliencyBoard | null;
   /** 💎 Under Value only (2026-09-29): the served 💎/🏷️ toggle — labels,
    *  the served view, and (🏷️ vs peers only) the header / note / counts
    *  UndervalueViewNote prints. Absent on every other tab. */
@@ -1810,6 +1977,8 @@ export function boardQuery(p: {
   flight?: string;
   dmFilters?: string;
   dmMode?: string;
+  resFilters?: string;
+  resMode?: string;
   uvView?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
@@ -1862,6 +2031,11 @@ export function boardQuery(p: {
   // … and how they combine (Ajay 2026-09-29: "How can I see all of these? at
   // the same time?"): ANY is the server default, so only "must match all" rides.
   if (p.tab === 'dual_momentum' && p.dmMode === DM_MODE_ALL) q.set(DM_MODE_PARAM, DM_MODE_ALL);
+  // 🛡️ Resiliency boxes (Ajay 2026-09-30: "Can you build me a new tab-
+  // Resileincy.") — only on that tab, only when a box is ticked; ANY is the
+  // server default, so only "must match all" rides (the DM precedent).
+  if (p.tab === 'resiliency' && p.resFilters) q.set(RES_FILTER_PARAM, p.resFilters);
+  if (p.tab === 'resiliency' && p.resMode === DM_MODE_ALL) q.set(RES_MODE_PARAM, DM_MODE_ALL);
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe

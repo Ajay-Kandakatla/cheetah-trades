@@ -1003,6 +1003,13 @@ def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
                 # still uses `close` (the regular-session close).
                 last_trade = item.get("lastTrade") or {}
                 prev_day = item.get("prevDay") or {}
+                # Massive's latest minute bar (2026-09-30, the 🛡️ Resiliency tab's
+                # pre-market volume): `av` = the day's accumulated shares so far,
+                # `t` = that minute's stamp in MILLISECONDS (lastTrade.t is ns).
+                # Pre-open the `day` bar is all zeros (probe 2026-09-30), so this is
+                # the only pre-market volume the snapshot carries. Additive — never
+                # read by the SEPA scorer.
+                mn = item.get("min") or {}
                 result[sym] = {
                     "open":             day.get("o"),
                     "high":             day.get("h"),
@@ -1017,6 +1024,8 @@ def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
                     "last_trade_ts_ms": last_trade.get("t"),
                     "prev_day_close":   prev_day.get("c"),
                     "todays_change":    item.get("todaysChange"),
+                    "min_av":           mn.get("av"),
+                    "min_t_ms":         mn.get("t"),
                 }
         except Exception as exc:
             log.warning("bulk_snapshot: chunk failed: %s", _scrub_key(exc))

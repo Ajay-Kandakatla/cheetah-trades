@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-30: "Can you build me a new tab- Resileincy. …" Label from the
+  // resiliency spec §3.12. The 0.5% / 365 days / 75% / accumulation day (1.0×
+  // the 50-day) are resiliency_tab constants = HIS CALLs #1 (down-only 0.5%),
+  // #4 (365 days), #5 (75%), #11 (EOD volume bar) — if he changes one, change
+  // this label. The 🌅 volume leg is OFF (resiliency_tab.PM_VOLUME_VERIFIED =
+  // False, follow-up 2026-09-30): this label must not promise the pre-market
+  // volume bar until that flag flips (contracts + backend pin).
+  { id: 'chart-maps-resiliency-2026-09-30', addedAt: '2026-09-30', route: '/chart-maps?tab=resiliency',
+    label: '🛡️ Resiliency tab on Chart Maps. You said: “Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already.” Four boxes: 🛡️ Held on T1 — closed down no more than 0.5% (prior close to that day\'s close) on at least 75% of the last 365 days\' T1 days (jobs, CPI, Core PCE, FOMC); 🛡️ Held on T2 — the same on T2-only days (retail sales, JOLTS, ADP, jobless claims, GDP, PPI); 📈 Bullish tape EOD — the last session closed up, in the upper half of its range, on volume above its 50-day average; 🌅 Bullish tape pre-market — its volume check is OFF until the two pre-market volume sources are reconciled, so the box passes none for now; each card still shows its pre-market move. On a T1/T2 day every card shows today\'s move and whether it is holding. Each card shows its typical daily move and beta so a quiet name reads as one. UNMEASURED until the persistence study lands — display only. The 0.5%, 75%, 365 days and the down-only reading are your calls.' },
   // Ajay 2026-09-29: "create me another tab where valuations are wrong …" then
   // "Use the same tab actually". Label from the undervalue_peers spec §4 WP-FE;
   // the numbers are chart_maps/undervalue_peers constants (HIS CALLs #1-#5) —
