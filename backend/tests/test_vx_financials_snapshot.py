@@ -277,48 +277,145 @@ def _done_snapshot(tmp_path):
     _run(tmp_path, script)
 
 
+def _quiet():
+    return dict(sleep=lambda s: None, log=lambda m: None)
+
+
+OLD_NULL = _row("1", "2019", fd=None, end="2019-12-31")
+OLD_DATED = _row("2", "2020", fd="2020-01-02")
+NEW_NULL = _row("0", "2026", fp="Q4", fd=None, end="2026-06-30")
+NEWER = _row("3", "2020", fp="Q2", fd="2020-02-01")
+TAIL = S.tail_url("2020-01-02")
+
+
+def _topup_script(null_answers=None, tail_answers=None, boundaries=True):
+    sc = {S.first_url(): null_answers or [_Resp(200, _page([OLD_NULL, NEW_NULL, OLD_DATED], U2))],
+          S.newest_url(): [_probe("2020-02-01")] * 3,
+          TAIL: tail_answers or [_Resp(200, _page([OLD_DATED, NEWER]))]}
+    if boundaries:
+        sc[S.cik_url("1")] = [_Resp(200, _page([OLD_NULL]))]
+        sc[S.cik_url("2")] = [_Resp(200, _page([OLD_DATED]))]
+    return sc
+
+
 def test_topup_catches_new_null_rows_and_the_newer_tail_only(tmp_path):
     _done_snapshot(tmp_path)
-    new_null = _row("0", "2026", fp="Q4", fd=None, end="2026-06-30")
-    null_walk = [_Resp(200, _page([_row("1", "2019", fd=None, end="2019-12-31"), new_null,
-                                   _row("2", "2020", fd="2020-01-02")], U2))]
-    tail = S.tail_url("2020-01-02")
-    newer = _row("3", "2020", fp="Q2", fd="2020-02-01")
-    sess = _Session({S.first_url(): null_walk,
-                     tail: [_Resp(200, _page([_row("2", "2020", fd="2020-01-02"), newer]))]})
-    rep = S.topup(str(tmp_path), sess, KEY, sleep=lambda s: None, log=lambda m: None)
-    assert rep["added"] == {"null_section": 1, "tail": 1, "ties": 0}
-    assert [S.strip_key(u) for u in sess.calls] == [S.first_url(), tail], \
-        "the null walk stops at the first dated row; it never follows U2"
+    sess = _Session(_topup_script())
+    rep = S.topup(str(tmp_path), sess, KEY, **_quiet())
+    assert rep["complete"] and rep["added"] == {"null_section": 1, "tail": 1, "boundaries": 0}
+    called = [S.strip_key(u) for u in sess.calls]
+    assert U2 not in called, "the null walk stops at the first dated row"
+    assert called.count(S.cik_url("1")) == 1 and called.count(S.cik_url("2")) == 1, \
+        "the CIK of every page's last row is re-read once"
     m = S.verify(str(tmp_path))
     assert m["ok"] and m["rows"] == 4 and m["unique_rows"] == 4 and m["topup_rows"] == 2
-    assert m["topups"][0]["added"]["null_section"] == 1
-    again = _Session({S.first_url(): list(null_walk),
-                      tail: [_Resp(200, _page([_row("2", "2020", fd="2020-01-02"), newer]))]})
-    rep2 = S.topup(str(tmp_path), again, KEY, sleep=lambda s: None, log=lambda m: None)
-    assert rep2["added"] == {"null_section": 0, "tail": 0, "ties": 0}, "a second top-up adds nothing"
+    st = S.load_state(str(tmp_path))
+    assert st["boundary_check_done"] and st["topups"][-1]["complete"]
+    again = _Session(_topup_script(boundaries=False))
+    rep2 = S.topup(str(tmp_path), again, KEY, **_quiet())
+    assert rep2["added"] == {"null_section": 0, "tail": 0}, "a second top-up adds nothing"
+    assert not any("cik=" in u for u in again.calls), "the page-break re-read runs once"
 
 
 def test_NEG_topup_refuses_before_the_crawl_is_done(tmp_path):
     _run(tmp_path, {U0: [_Resp(200, _page([_row("1", "2019")], U1))]}, max_pages=1)
     with pytest.raises(S.Fatal, match="after the main crawl"):
-        S.topup(str(tmp_path), _Session({}), KEY, sleep=lambda s: None, log=lambda m: None)
+        S.topup(str(tmp_path), _Session({}), KEY, **_quiet())
 
 
-def test_NEG_rows_that_tie_on_the_cursor_key_are_named_and_their_cik_re_read(tmp_path):
-    q = _row("7", "2020", fd="2020-01-02")
-    ttm = dict(q, timeframe="ttm")
-    script = {U0: [_Resp(200, _page([q, ttm]))]}
-    _run(tmp_path, script)
+def test_NEG_a_cut_off_null_walk_is_asked_again_not_taken_as_the_end(tmp_path):
+    _done_snapshot(tmp_path)
+    cut = _Resp(200, _page([OLD_NULL]))
+    sess = _Session(_topup_script(null_answers=[cut, _Resp(200, _page([OLD_NULL, NEW_NULL, OLD_DATED]))]))
+    rep = S.topup(str(tmp_path), sess, KEY, **_quiet())
+    assert rep["added"]["null_section"] == 1, "the row after the cut-off page is still found"
+    assert [S.strip_key(u) for u in sess.calls].count(S.first_url()) == 2
+    assert S.load_state(str(tmp_path))["topups"][-1]["cut_offs"] == 1
+
+
+def test_NEG_a_cut_off_tail_is_asked_again_until_it_reaches_the_newest(tmp_path):
+    _done_snapshot(tmp_path)
+    short = _Resp(200, _page([OLD_DATED]))
+    sess = _Session(_topup_script(tail_answers=[short, _Resp(200, _page([OLD_DATED, NEWER]))]))
+    rep = S.topup(str(tmp_path), sess, KEY, **_quiet())
+    assert rep["added"]["tail"] == 1
+    assert [S.strip_key(u) for u in sess.calls].count(TAIL) == 2
+
+
+def test_NEG_rows_found_before_a_failure_are_written_not_lost(tmp_path):
+    _done_snapshot(tmp_path)
+    sc = _topup_script(tail_answers=[_Resp(200, _page([OLD_DATED, NEWER], U2))])
+    sc[U2] = [_Resp(410)] * 10
+    sess = _Session(sc)
+    clock = iter([0] * 7 + [10**12] * 10)
+    with pytest.raises(S.DeadlineReached):
+        S.topup(str(tmp_path), sess, KEY, now=lambda: next(clock), deadline=100, **_quiet())
+    assert len(list((tmp_path / "topup").glob("*-null_section.json.gz"))) == 1
+    assert len(list((tmp_path / "topup").glob("*-tail.json.gz"))) == 1, \
+        "the tail's find is written even though the tail walk itself failed"
+    st = S.load_state(str(tmp_path))
+    last = st["topups"][-1]
+    assert last["complete"] is False and last["added"] == {"null_section": 1, "tail": 1}
+    assert S.verify(str(tmp_path))["topup_rows"] == 2
+
+
+def test_NEG_a_row_skipped_at_a_page_break_is_recovered_by_the_cik_re_read(tmp_path):
+    a = _row("7", "2020", fp="Q1", fd="2020-01-02")
+    skipped = dict(a, timeframe="ttm")
+    _run(tmp_path, {U0: [_Resp(200, _page([a]))]})
+    sess = _Session({S.first_url(): [_Resp(200, _page([a]))],
+                     S.newest_url(): [_probe("2020-01-02")],
+                     S.tail_url("2020-01-02"): [_Resp(200, _page([a]))],
+                     S.cik_url("7"): [_Resp(200, _page([a, skipped]))]})
+    rep = S.topup(str(tmp_path), sess, KEY, **_quiet())
+    assert rep["added"]["boundaries"] == 1
     m = S.verify(str(tmp_path))
-    assert m["cursor_key_tie_ciks"] == 1 and m["cursor_key_tie_sample"] == ["7"]
-    annual = dict(q, timeframe="annual")
-    sess = _Session({S.first_url(): [_Resp(200, _page([q]))],
-                     S.tail_url("2020-01-02"): [_Resp(200, _page([q, ttm]))],
-                     S.cik_url("7"): [_Resp(200, _page([q, ttm, annual]))]})
-    rep = S.topup(str(tmp_path), sess, KEY, sleep=lambda s: None, log=lambda m: None)
-    assert rep["added"] == {"null_section": 0, "tail": 0, "ties": 1}
-    assert S.cik_url("7") in [S.strip_key(u) for u in sess.calls]
+    assert m["unique_rows"] == 2 and m["cursor_key_tie_ciks"] == 1
+
+
+def test_NEG_the_page_break_re_read_resumes_after_a_failure(tmp_path):
+    _done_snapshot(tmp_path)
+    sc = _topup_script()
+    sc[S.cik_url("2")] = [_Resp(401)]
+    with pytest.raises(S.Fatal):
+        S.topup(str(tmp_path), _Session(sc), KEY, boundary_chunk=1, **_quiet())
+    st = S.load_state(str(tmp_path))
+    assert st["boundary_next"] == 1 and not st.get("boundary_check_done")
+    sc2 = _topup_script(boundaries=False)
+    sc2[S.cik_url("2")] = [_Resp(200, _page([OLD_DATED]))]
+    sess = _Session(sc2)
+    S.topup(str(tmp_path), sess, KEY, boundary_chunk=1, **_quiet())
+    called = [S.strip_key(u) for u in sess.calls]
+    assert S.cik_url("1") not in called and S.cik_url("2") in called
+    assert S.load_state(str(tmp_path))["boundary_check_done"]
+
+
+def test_NEG_a_vanished_newest_row_is_re_probed_not_waited_on_forever(tmp_path):
+    last = _Resp(200, _page([_row("1", "2021", fd="2021-05-01")]))
+    script = {S.newest_url(): [_probe("2021-06-01"), _probe("2021-05-01")],
+              U0: [last] * S.REPROBE_EVERY}
+    st, sess, sleeps = _run(tmp_path, script)
+    assert st["done"] and st["newest_filing_date"] == "2021-05-01"
+    assert len(sleeps) == S.REPROBE_EVERY - 1 and st["pages"] == 1
+
+
+def test_NEG_follow_after_the_stop_time_makes_no_api_call(tmp_path, monkeypatch):
+    _done_snapshot(tmp_path)
+    st = S.load_state(str(tmp_path))
+    st["topups"] = [{"run": "x", "added": {}, "complete": True}]
+    S.save_state(str(tmp_path), st)
+    sess = _Session({})
+    m = S.follow(str(tmp_path), sess, KEY, now=lambda: 100.0, stop_at=50.0, **_quiet())
+    assert sess.calls == [] and m["ok"]
+
+
+def test_NEG_past_the_deadline_main_exits_0_so_docker_does_not_restart_it(tmp_path, monkeypatch):
+    monkeypatch.setenv(S.KEY_ENV, KEY)
+
+    def _late(*a, **k):
+        raise S.DeadlineReached("late")
+    monkeypatch.setattr(S, "crawl", _late)
+    assert S.main(["--out", str(tmp_path)]) == 0
 
 
 def test_NEG_crosscheck_counts_copies_not_a_set(tmp_path):

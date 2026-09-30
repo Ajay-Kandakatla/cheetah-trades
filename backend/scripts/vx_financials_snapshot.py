@@ -34,8 +34,13 @@ What one pass cannot see, and the top-up that catches it (critic 2026-09-30)
     fiscal_period — timeframe is not in it): a page break between two such
     rows could skip one.
   `topup` re-walks the null section, walks the dated tail from the crawl's
-  last filing_date, and re-reads every tied CIK by cik=, keeping only rows
-  the snapshot lacks (counted per row_key, so true duplicates survive).
+  last filing_date (both with the cut-off guard), and ONCE re-reads by cik=
+  the CIK of the last row on every crawl page (a row skipped at a page break
+  would tie with that row, so it belongs to that CIK). Only rows the snapshot
+  lacks are kept (counted per row_key, so true duplicates survive), and each
+  section is written the moment it ends or fails.
+  Not caught, by design: rows the feed adds later with an OLD non-null
+  filing_date (the snapshot keeps the original filing dates it saw).
 
 Run (host data dir mounted at /out) — crawl, then top up every 12 h until
 6 h before the sunset:
@@ -73,6 +78,11 @@ FOLLOW_EVERY_SEC = 12 * 3600
 # long windows: a short first wait is what sets the crawl's speed.
 BACKOFF_BASE_SEC = 3.0
 BACKOFF_CAP_SEC = 900.0
+# After this many cut-off pages in a row, ask the feed for its newest
+# filing_date again (the probed row may have been deleted or re-dated).
+REPROBE_EVERY = 5
+# The page-break re-read saves its resume point every this many CIKs.
+BOUNDARY_CHUNK = 200
 TIMEOUT_SEC = 90
 FATAL_STATUSES = {400, 401, 403, 404}
 ROW_KEY_FIELDS = ("cik", "timeframe", "fiscal_year", "fiscal_period",
@@ -211,21 +221,39 @@ def fetch_page(session, url: str, key: str, *, sleep: Callable[[float], None],
 
 
 def walk(session, url: str, key: str, on_page: Callable[[List[dict]], bool], *,
+         end_ok: Optional[Callable[[List[dict], Optional[str]], bool]] = None,
          sleep: Callable[[float], None], now: Callable[[], float], deadline: float,
-         log: Log) -> int:
+         log: Log) -> Tuple[int, int]:
     """Hand each page's rows to `on_page` through the next_urls (nothing is
-    held in memory); `on_page` returning True ends the walk. Returns pages."""
-    pages = 0
+    held in memory); `on_page` returning True ends the walk.
+
+    `end_ok(page_rows, newest_filing_date_so_far)` decides whether a page with
+    no next_url is the real end. When it says no, the page is a cut-off: its
+    rows are NOT handed on and the same URL is asked again (critic
+    2026-09-30: the top-up walks had lost the crawl's cut-off guard).
+    Returns (pages, cut_offs)."""
+    pages = cut = 0
+    seen_max: Optional[str] = None
     while url:
         body, _ = fetch_page(session, url, key, sleep=sleep, now=now, deadline=deadline, log=log)
-        pages += 1
-        if on_page([r for r in (body.get("results") or []) if isinstance(r, dict)]):
-            break
+        rows = [r for r in (body.get("results") or []) if isinstance(r, dict)]
         nxt = body.get("next_url")
         if nxt and strip_key(nxt) == strip_key(url):
             raise Fatal(f"next_url points at itself: {strip_key(url)}")
+        if not nxt and end_ok is not None and not end_ok(rows, seen_max):
+            wait = backoff(min(cut, 8))
+            log(f"cut-off page on {strip_key(url)}; asking again in {wait:.0f}s")
+            sleep(wait)
+            cut += 1
+            continue
+        pages += 1
+        dated = [str(r["filing_date"]) for r in rows if r.get("filing_date")]
+        if dated:
+            seen_max = max(dated + ([seen_max] if seen_max else []))
+        if on_page(rows):
+            break
         url = strip_key(nxt) if nxt else ""
-    return pages
+    return pages, cut
 
 
 def probe_newest(session, key: str, **kw) -> str:
@@ -235,6 +263,36 @@ def probe_newest(session, key: str, **kw) -> str:
     if not d:
         raise Fatal("could not read the feed's newest filing_date")
     return str(d)
+
+
+class NewestGate:
+    """Is a page with no next_url the real end? Only when the rows reached the
+    feed's newest filing_date. After every REPROBE_EVERY misses in a row the
+    newest is probed again, so a deleted or re-dated newest row cannot keep the
+    crawl asking forever."""
+
+    def __init__(self, newest: str, reprobe: Callable[[], str], log: Log) -> None:
+        self.newest = newest
+        self.reprobe = reprobe
+        self.log = log
+        self.misses = 0
+
+    def __call__(self, rows: List[dict], carried: Optional[str]) -> bool:
+        dated = [str(r["filing_date"]) for r in rows if r.get("filing_date")]
+        last = max(dated + ([carried] if carried else [])) if (dated or carried) else ""
+        if last >= self.newest:
+            self.misses = 0
+            return True
+        self.misses += 1
+        if self.misses % REPROBE_EVERY == 0:
+            fresh = self.reprobe()
+            if fresh != self.newest:
+                self.log(f"feed's newest filing_date moved {self.newest} -> {fresh}")
+                self.newest = fresh
+            if last >= self.newest:
+                self.misses = 0
+                return True
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +312,8 @@ def crawl(out: str, session, key: str, *, sleep: Callable[[float], None] = time.
         log(f"feed's newest filing_date {state['newest_filing_date']}")
     fetched = 0
     cut_offs = 0
+    gate = NewestGate(state.get("newest_filing_date") or "",
+                      lambda: probe_newest(session, key, **kw), log)
     while not state.get("done"):
         if max_pages is not None and fetched >= max_pages:
             break
@@ -266,18 +326,21 @@ def crawl(out: str, session, key: str, *, sleep: Callable[[float], None] = time.
         dates = [r.get("filing_date") for r in results if isinstance(r, dict)]
         real = sorted(d for d in dates if d)
         last = real[-1] if real else state.get("last_filing_date")
-        if not nxt and (last or "") < state["newest_filing_date"]:
+        if not nxt and not gate([r for r in results if isinstance(r, dict)],
+                                state.get("last_filing_date")):
             # No next_url before the newest filing: a cut-off answer, not the
             # end. Nothing is recorded; the same cursor is asked again.
+            state["newest_filing_date"] = gate.newest
             state["premature_ends"] = int(state.get("premature_ends") or 0) + 1
             save_state(out, state)
-            wait = backoff(cut_offs)
+            wait = backoff(min(cut_offs, 8))
             log(f"cut-off page (no next_url, last filing {last} < newest "
-                f"{state['newest_filing_date']}); asking again in {wait:.0f}s")
+                f"{gate.newest}); asking again in {wait:.0f}s")
             sleep(wait)
             cut_offs += 1
             continue
         cut_offs = 0
+        state["newest_filing_date"] = gate.newest
         n = int(state["pages"])
         record = {"page": n, "url": strip_key(url), "request_id": body.get("request_id"),
                   "fetched_at": _now_iso(), "results": results}
@@ -301,7 +364,8 @@ def crawl(out: str, session, key: str, *, sleep: Callable[[float], None] = time.
 
 
 # ---------------------------------------------------------------------------
-# rows — keys are hashed (12 bytes) so ~1M rows index in ~150 MB, not GBs
+# rows — keys are hashed (12 bytes): ~1M rows index in ~280 MB max RSS
+# (two Counters; measured by the critic 2026-09-30), not GBs
 # ---------------------------------------------------------------------------
 def row_key(r: dict) -> tuple:
     return tuple(str(r.get(f)) for f in ROW_KEY_FIELDS)
@@ -398,9 +462,30 @@ def missing_rows(fresh: List[dict], idx: Index) -> List[dict]:
 # ---------------------------------------------------------------------------
 # top-up — rows one forward pass cannot see
 # ---------------------------------------------------------------------------
+def boundary_ciks(out: str) -> List[str]:
+    """The CIK of the last row on every crawl page. A row the server skipped
+    at a page break would tie with that row on the cursor key, so it belongs
+    to that CIK; re-reading these CIKs by cik= recovers it."""
+    ciks = set()
+    for _, rec in iter_pages(out):
+        rows = [r for r in (rec.get("results") or []) if isinstance(r, dict)]
+        if rows and rows[-1].get("cik"):
+            ciks.add(str(rows[-1]["cik"]))
+    return sorted(ciks)
+
+
+def _write_topup(out: str, name: str, rows: List[dict], meta: dict) -> None:
+    os.makedirs(os.path.join(out, "topup"), exist_ok=True)
+    _atomic_write(os.path.join(out, "topup", f"{name}.json.gz"),
+                  gzip.compress(json.dumps({**meta, "results": rows}).encode()))
+
+
 def topup(out: str, session, key: str, *, sleep: Callable[[float], None] = time.sleep,
           now: Callable[[], float] = time.time, deadline: float = DEADLINE_EPOCH,
-          log: Log = _print) -> dict:
+          boundary_chunk: int = BOUNDARY_CHUNK, log: Log = _print) -> dict:
+    """Null section re-walk, dated tail, and (once) the page-break re-read.
+    Each section's rows are written the moment it ends — or fails — so a
+    brownout or the deadline never throws away rows already found."""
     if not key:
         raise Fatal(f"{KEY_ENV} is not set")
     state = load_state(out)
@@ -408,43 +493,69 @@ def topup(out: str, session, key: str, *, sleep: Callable[[float], None] = time.
         raise Fatal("top-up runs only after the main crawl is done")
     kw = dict(sleep=sleep, now=now, deadline=deadline, log=log)
     idx = build_index(out)
-    added: Dict[str, List[dict]] = {}
-
-    m = Missing(idx)
-
-    def _nulls(page: List[dict]) -> bool:
-        m.feed([r for r in page if not r.get("filing_date")])
-        return any(r.get("filing_date") for r in page)
-    walk(session, first_url(), key, _nulls, **kw)
-    added["null_section"] = m.commit()
-
-    since = state.get("last_filing_date") or "2000-01-01"
-    m = Missing(idx)
-    walk(session, tail_url(since), key, lambda page: m.feed(page) or False, **kw)
-    added["tail"] = m.commit()
-
-    ties = sorted(idx.tie_ciks)
-    added["ties"] = []
-    for cik in ties:
-        m = Missing(idx)
-        walk(session, cik_url(cik), key, lambda page: m.feed(page) or False, **kw)
-        added["ties"].extend(m.commit())
-
     run = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    counts = {k: len(v) for k, v in added.items()}
-    rows = [r for v in added.values() for r in v]
-    if rows:
-        os.makedirs(os.path.join(out, "topup"), exist_ok=True)
-        _atomic_write(os.path.join(out, "topup", f"{run}.json.gz"),
-                      gzip.compress(json.dumps({"run": run, "added": counts,
-                                                "tail_since": since, "tied_ciks": ties,
-                                                "results": rows}).encode()))
-    state = load_state(out)
-    state.setdefault("topups", []).append({"run": run, "added": counts,
-                                           "tail_since": since, "tied_ciks": len(ties)})
-    save_state(out, state)
-    log(f"top-up {run}: {counts} (tied CIKs re-read: {len(ties)})")
-    return {"run": run, "added": counts, "tied_ciks": ties}
+    since = state.get("last_filing_date") or "2000-01-01"
+    counts: Dict[str, int] = {}
+    cutoffs = {"n": 0}
+
+    def _section(name: str, fill: Callable[["Missing"], None]) -> None:
+        m = Missing(idx)
+        try:
+            fill(m)
+        finally:
+            rows = m.commit()
+            counts[name.rstrip("0123456789")] = counts.get(name.rstrip("0123456789"), 0) + len(rows)
+            if rows:
+                _write_topup(out, f"{run}-{name}", rows, {"run": run, "section": name,
+                                                           "tail_since": since})
+
+    def _nulls(m: "Missing") -> None:
+        def page(rows: List[dict]) -> bool:
+            m.feed([r for r in rows if not r.get("filing_date")])
+            return any(r.get("filing_date") for r in rows)
+        cutoffs["n"] += walk(session, first_url(), key, page,
+                             end_ok=lambda rows, mx: any(r.get("filing_date") for r in rows),
+                             **kw)[1]
+
+    def _tail(m: "Missing") -> None:
+        gate = NewestGate(probe_newest(session, key, **kw),
+                          lambda: probe_newest(session, key, **kw), log)
+        cutoffs["n"] += walk(session, tail_url(since), key, lambda rows: m.feed(rows) or False,
+                             end_ok=gate, **kw)[1]
+
+    complete = False
+    try:
+        _section("null_section", _nulls)
+        _section("tail", _tail)
+        if not state.get("boundary_check_done"):
+            ciks = boundary_ciks(out)
+            i = int(state.get("boundary_next") or 0)
+            while i < len(ciks):
+                chunk = ciks[i:i + boundary_chunk]
+
+                def _chunk(m: "Missing", chunk: List[str] = chunk) -> None:
+                    for cik in chunk:
+                        walk(session, cik_url(cik), key, lambda rows: m.feed(rows) or False, **kw)
+                _section(f"boundaries{i}", _chunk)
+                i += len(chunk)
+                st = load_state(out)
+                st["boundary_next"] = i
+                st["boundary_ciks"] = len(ciks)
+                save_state(out, st)
+                log(f"page-break re-read {i}/{len(ciks)} CIKs")
+            st = load_state(out)
+            st["boundary_check_done"] = True
+            save_state(out, st)
+        complete = True
+    finally:
+        st = load_state(out)
+        st.setdefault("topups", []).append({"run": run, "added": dict(counts),
+                                            "tail_since": since, "complete": complete,
+                                            "cut_offs": cutoffs["n"]})
+        st["premature_ends"] = int(st.get("premature_ends") or 0) + cutoffs["n"]
+        save_state(out, st)
+        log(f"top-up {run}: {counts} complete={complete} cut-offs={cutoffs['n']}")
+    return {"run": run, "added": counts, "complete": complete}
 
 
 # ---------------------------------------------------------------------------
@@ -528,6 +639,10 @@ def follow(out: str, session, key: str, *, sleep: Callable[[float], None] = time
     """Crawl to the end, then top up every `every_sec` until `stop_at`."""
     kw = dict(sleep=sleep, now=now, deadline=deadline, log=log)
     crawl(out, session, key, **kw)
+    if now() >= stop_at and load_state(out).get("topups"):
+        # A restart after the last top-up (e.g. past the sunset): nothing left
+        # to fetch, so no API call and no restart loop on a dead endpoint.
+        return verify(out)
     while True:
         topup(out, session, key, **kw)
         m = verify(out)
@@ -570,8 +685,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             return 0 if m["ok"] else 1
         st = crawl(a.out, session, key, max_pages=a.max_pages)
     except DeadlineReached as exc:
+        # Exit 0: past the sunset a restart cannot fetch anything.
         print(f"STOPPED: {exc}", flush=True)
-        return 2
+        return 0
     print(f"{'DONE' if st.get('done') else 'PAUSED'}: {st['pages']} pages, {st['rows']} rows",
           flush=True)
     return 0
