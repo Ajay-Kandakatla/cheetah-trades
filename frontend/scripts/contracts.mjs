@@ -1577,7 +1577,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2159,7 +2159,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4695,7 +4695,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5156,8 +5156,14 @@ const CONTRACTS = [
       }
       if (!/t == "dual_momentum"\s*\n?\s*and sort in _DMT\.TAB_SORTS/.test(board)) errs.push('board.py: the tab-scoped sort coercion must use _DMT.TAB_SORTS (📍 + 💰 on this tab only)');
       const note = read('src/components/DualMomentumBoardNote.tsx');
+      // 2026-09-30: the boxes are shared with 🛡️ Resiliency through a
+      // `testIdPrefix` prop that DEFAULTS to 'cm-dm' — the DM ids are then
+      // `${testIdPrefix}-filter-…` with that default, byte-identical output.
+      const dmPrefixed = /testIdPrefix = 'cm-dm'/.test(note);
+      const hasId = (id) => note.includes(`data-testid="${id}"`)
+        || (dmPrefixed && id.startsWith('cm-dm-filter') && note.includes('data-testid={`${testIdPrefix}' + id.slice('cm-dm'.length) + '`}'));
       for (const id of ['cm-dm-filter-line', 'cm-dm-cap-line', 'cm-dm-sort-market_cap']) {
-        if (!note.includes(`data-testid="${id}"`)) errs.push(`DualMomentumBoardNote.tsx must render data-testid="${id}" (never silent)`);
+        if (!hasId(id)) errs.push(`DualMomentumBoardNote.tsx must render data-testid="${id}" (never silent)`);
       }
       if (!note.includes('dmCapSortNext(served)')) errs.push('the 💰 button must ask for dmCapSortNext(served) — the direction flips off the SERVED sort');
       if (/bounce/i.test(note)) errs.push('DualMomentumBoardNote.tsx says "bounce"');
@@ -5181,8 +5187,11 @@ const CONTRACTS = [
           .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)));
         const ladderSrc = read('src/lib/cardLadder.ts');
         const ie = /const IDENT_EXACT = new Set\(\[([^\]]*)\]\)/.exec(ladderSrc);
-        const tsLabels = ie ? [...ie[1].matchAll(/'([^']+)'/g)].map((m) => unesc(m[1])) : [];
-        const py = pyLabels.map(unesc).filter((x) => /AMD raided|Near demand zone|Near a lower key level/.test(x));
+        // 2026-09-30: IDENT_EXACT also carries the 🛡️ Resiliency box labels
+        // (pinned by the Resiliency block); this check compares the DM three.
+        const dmRe = /AMD raided|Near demand zone|Near a lower key level/;
+        const tsLabels = ie ? [...ie[1].matchAll(/'([^']+)'/g)].map((m) => unesc(m[1])).filter((x) => dmRe.test(x)) : [];
+        const py = pyLabels.map(unesc).filter((x) => dmRe.test(x));
         if (py.length !== 3 || JSON.stringify(py) !== JSON.stringify(tsLabels)) {
           errs.push(`cardLadder IDENT_EXACT ${JSON.stringify(tsLabels)} must equal dual_momentum_tab.FILTER_LABELS ${JSON.stringify(py)} (the served filter badges sit on the identity line)`);
         }
@@ -5198,7 +5207,9 @@ const CONTRACTS = [
         if (!/export const DM_MODE_PARAM = 'dm_mode';/.test(src) || !/export function parseDmMode/.test(src)) errs.push('dmFilters.ts must export DM_MODE_PARAM = \'dm_mode\' and parseDmMode');
         if (!/tab === 'dual_momentum' && <DualMomentumBoardNote[^\n]*onToggleMode=\{toggleDmMode\}/.test(page)) errs.push('ChartMaps.tsx must pass onToggleMode={toggleDmMode} on the DualMomentumBoardNote line (the mode lives in ?dm_mode=)');
         if (!/next\.set\(DM_MODE_PARAM, DM_MODE_ALL\)/.test(page) || !/next\.delete\(DM_MODE_PARAM\)/.test(page)) errs.push('ChartMaps.tsx: the switch must write / drop ?dm_mode=all in the URL');
-        if (!note.includes('data-testid="cm-dm-filter-mode"') || !/checked=\{f\.mode === 'all'\}/.test(note)) errs.push('DualMomentumBoardNote.tsx: the "must match all" switch must render with checked = the SERVED mode');
+        const modeId = note.includes('data-testid="cm-dm-filter-mode"')
+          || (/testIdPrefix = 'cm-dm'/.test(note) && note.includes('data-testid={`${testIdPrefix}-filter-mode`}'));
+        if (!modeId || !/checked=\{f\.mode === 'all'\}/.test(note)) errs.push('DualMomentumBoardNote.tsx: the "must match all" switch must render with checked = the SERVED mode');
         for (const [f, txt] of [['DualMomentumBoardNote.tsx', note], ['ChartMaps.tsx', page]]) {
           if (/dm_filter\s*[?.]|\.some\(\([^)]*\)\s*=>[^\n]*dm_filter|passed_any\s*[-+]/.test(txt)) errs.push(`${f} reads tile.dm_filter / re-derives a pass — the server decides ANY / ALL and serves the badges`);
         }
@@ -5368,6 +5379,131 @@ const CONTRACTS = [
         if (!entry.includes('UNMEASURED')) errs.push('the 🏔️ ATH ✨ entry must say UNMEASURED');
         if (/bounce|fake/i.test(entry)) errs.push('the 🏔️ ATH ✨ entry says "bounce"/"fake"');
         if (!entry.includes("route: '/chart-maps?tab=ath'")) errs.push("the 🏔️ ATH ✨ entry must route to '/chart-maps?tab=ath'");
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🛡️ Resiliency tab (2026-09-30): mounted after 🏔️, UNMEASURED served, boxes = the backend keys, note composes nothing, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-09-30: "Can you build me a new tab- Resileincy. This is to
+    // help me with #1 - Stocks that are not going to by more than 0.5% during
+    // a T1 event like FOMC or any others like todays Inflation and GDP track
+    // T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but
+    // volume has to be accounted for. We have all of this data already."
+    // Any of these links lost silently drops the tab, its UNMEASURED word, the
+    // served boxes (FE keys must equal the backend's), the one-engine reuse
+    // (anchor_read / verify_last / past_events / BURST_RVOL_MIN) or the rule
+    // that the note prints served sentences and composes none.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('resiliency')) {
+        errs.push("CM_TABS must carry 'resiliency'");
+      } else if (tabs.indexOf('resiliency') !== tabs.indexOf('ath') + 1) {
+        errs.push("CM_TABS: 'resiliency' must sit right after 'ath' (resiliency spec HIS CALL #16)");
+      }
+      const HIS = 'Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already.';
+      const meta = /\n  resiliency: \{\n    label: '([^']*)',\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.resiliency (label + blurb) is missing');
+      } else {
+        if (!meta[2].includes('UNMEASURED')) errs.push('the TAB_META.resiliency blurb must say UNMEASURED');
+        if (!meta[2].includes(HIS)) errs.push('the TAB_META.resiliency blurb must quote his ask verbatim');
+        if (/bounce|fake|won't drop|won\\'t drop/i.test(meta[2])) errs.push('the TAB_META.resiliency blurb says "bounce"/"fake"/"won\'t drop"');
+      }
+      if (/\n  resiliency: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry resiliency (🎯 n/a, the ATH precedent)');
+      for (const [k, v] of [['RES_SORT_T2', 'res_t2'], ['RES_SORT_DOWN', 'res_down'], ['RES_SORT_TODAY', 'res_today']]) {
+        if (!src.includes(`export const ${k} = '${v}';`)) errs.push(`chartMaps.ts must export ${k} = '${v}'`);
+      }
+      if (!/if \(p\.tab === 'resiliency' && p\.resFilters\) q\.set\(RES_FILTER_PARAM, p\.resFilters\);/.test(src)) errs.push("boardQuery must send res only under p.tab === 'resiliency'");
+      if (!/if \(p\.tab === 'resiliency' && p\.resMode === DM_MODE_ALL\) q\.set\(RES_MODE_PARAM, DM_MODE_ALL\);/.test(src)) errs.push("boardQuery must send res_mode=all only under p.tab === 'resiliency'");
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'resiliency' && <ResiliencyBoardNote board=\{data\?\.resiliency_board \?\? null\} sorts=\{data\?\.sorts\} sort=\{data\?\.sort\} onSort=\{setSortParam\} onToggleFilter=\{toggleResFilter\} onToggleMode=\{toggleResMode\} \/>/.test(page)) {
+        errs.push("ChartMaps.tsx must render <ResiliencyBoardNote board={data?.resiliency_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleResFilter} onToggleMode={toggleResMode} /> on tab === 'resiliency'");
+      }
+      if (!/data\?\.warming && tab === 'resiliency' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the resiliency tab — its warming line is served');
+      if (!/tab !== 'resiliency'\);/.test(page)) errs.push('the demand-scan progress poll must skip the resiliency tab');
+      if (/res_filter\s*[?.]/.test(page)) errs.push('ChartMaps.tsx reads tile.res_filter — the server decides every box and serves the badges');
+
+      const lib = read('src/lib/resiliencyFilters.ts');
+      const ts = /export const RES_FILTER_KEYS = \[([^\]]*)\] as const/.exec(lib);
+      if (!/import \{[^}]*parseDmMode[^}]*\} from '\.\/dmFilters'/.test(lib)) errs.push('resiliencyFilters.ts must import parseDmMode (one mode parser)');
+      const note = read('src/components/ResiliencyBoardNote.tsx');
+      const code = note.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      if (/UNMEASURED|hold rate|%|toFixed|Math\./.test(code)) errs.push('ResiliencyBoardNote.tsx composes wording or maths — every sentence and number must be printed as served');
+      if (/bounce|fake/i.test(note)) errs.push('ResiliencyBoardNote.tsx says "bounce"/"fake"');
+      if (!/<DualMomentumFilters[^>]*knownKeys=\{RES_FILTER_KEYS\}[^>]*testIdPrefix="cm-res"/.test(note)) errs.push('ResiliencyBoardNote.tsx must reuse DualMomentumFilters with knownKeys={RES_FILTER_KEYS} testIdPrefix="cm-res"');
+
+      const board = read('../backend/chart_maps/board.py');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"resiliency"/.test(tabsPy[1])) errs.push('board.py TABS must carry "resiliency"');
+      if (!/elif t == "resiliency":/.test(board)) errs.push('board.py lost the elif t == "resiliency": dispatch');
+      if (!/\(t == "resiliency" and sort in _RES\.TAB_SORTS\)/.test(board)) errs.push('board.py must honour the tab-scoped resiliency sorts on this tab only');
+
+      let rt = '';
+      try { rt = read('../backend/chart_maps/resiliency_tab.py'); } catch { errs.push('backend/chart_maps/resiliency_tab.py is missing'); }
+      if (rt) {
+        const py = /^FILTER_KEYS = \(([^)]*)\)/m.exec(rt);
+        const keysOf = (m) => (m ? m[1].split(',').map((x) => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : null);
+        if (!ts || !py) errs.push('RES_FILTER_KEYS (resiliencyFilters.ts) or FILTER_KEYS (resiliency_tab.py) is missing');
+        else if (JSON.stringify(keysOf(ts)) !== JSON.stringify(keysOf(py)) || JSON.stringify(keysOf(py)) !== '["t1","t2","eod","pre"]') {
+          errs.push(`RES_FILTER_KEYS ${JSON.stringify(keysOf(ts))} must equal FILTER_KEYS ${JSON.stringify(keysOf(py))} == ["t1","t2","eod","pre"]`);
+        }
+        if (!rt.includes('UNMEASURED')) errs.push('resiliency_tab.py must say UNMEASURED');
+        if (/bounc|fake|won't drop/i.test(rt.replace(/quick_bounce/g, ''))) errs.push('resiliency_tab.py says "bounce"/"fake"/"won\'t drop"');
+        if (!/BURST_RVOL_MIN/.test(rt)) errs.push('resiliency_tab.py must import the 1.5× bar as momentum_burst.BURST_RVOL_MIN');
+        const rtCode = rt.replace(/#[^\n]*/g, '');
+        if (/=\s*1\.5\b/.test(rtCode)) errs.push('resiliency_tab.py retypes 1.5 — import BURST_RVOL_MIN');
+        for (const need of ['KL.anchor_read', 'KL.verify_last', 'bulk_cached_frames', 'past_events']) {
+          if (!rt.includes(need)) errs.push(`resiliency_tab.py must use ${need} (the one engine)`);
+        }
+        // The served box labels sit on the card's identity line (cardLadder IDENT_EXACT).
+        const consts = {};
+        for (const m of rt.matchAll(/^([A-Z_]*MARK) = "([^"]*)"/gm)) consts[m[1]] = m[2];
+        const unesc = (x) => x.replace(/\\U([0-9A-Fa-f]{8})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+          .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+          .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)));
+        const labs = /^FILTER_LABELS = \{([\s\S]*?)\}/m.exec(rt);
+        const pyLabels = labs ? [...labs[1].matchAll(/"(t1|t2|eod|pre)":\s*([A-Z_]+)\s*\+\s*"([^"]*)"/g)]
+          .map((m) => (consts[m[2]] !== undefined ? unesc(consts[m[2]]) + unesc(m[3]) : `?${m[2]}`)) : [];
+        const ladderSrc = read('src/lib/cardLadder.ts');
+        const ie = /const IDENT_EXACT = new Set\(\[([^\]]*)\]\)/.exec(ladderSrc);
+        const tsLabels = ie ? [...ie[1].matchAll(/'([^']+)'/g)].map((m) => unesc(m[1])).filter((x) => /Held on T[12]|Bullish tape/.test(x)) : [];
+        if (pyLabels.length !== 4 || JSON.stringify(pyLabels) !== JSON.stringify(tsLabels)) {
+          errs.push(`cardLadder IDENT_EXACT ${JSON.stringify(tsLabels)} must equal resiliency_tab.FILTER_LABELS ${JSON.stringify(pyLabels)}`);
+        }
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-resiliency-2026-09-30'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-resiliency-2026-09-30'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf("' },", idAt) + 4);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🛡️ Resiliency ✨ entry must say UNMEASURED');
+        if (!entry.includes(HIS)) errs.push('the 🛡️ Resiliency ✨ entry must quote his ask verbatim');
+        if (/bounce|fake|won't drop/i.test(entry)) errs.push('the 🛡️ Resiliency ✨ entry says "bounce"/"fake"/"won\'t drop"');
+        if (!entry.includes("route: '/chart-maps?tab=resiliency'")) errs.push("the 🛡️ Resiliency ✨ entry must route to '/chart-maps?tab=resiliency'");
+      }
+      // Follow-up 2026-09-30: while resiliency_tab.PM_VOLUME_VERIFIED is False
+      // the 🌅 volume leg is OFF — neither the ✨ entry nor the tab blurb may
+      // promise the pre-market volume bar, and both must say it is off.
+      const pmv = /^PM_VOLUME_VERIFIED = (True|False)\b/m.exec(rt || '');
+      if (!pmv) {
+        errs.push('resiliency_tab.py lost PM_VOLUME_VERIFIED = True|False');
+      } else if (pmv[1] === 'False') {
+        const promise = /1\.5×|by the same minute|pre-market volume against its own usual volume|pre-market tape is bullish/;
+        const nfEntry = idAt < 0 ? '' : nf.slice(idAt, nf.indexOf("' },", idAt) + 4);
+        for (const [what, txt] of [['the 🛡️ Resiliency ✨ entry', nfEntry], ['the TAB_META.resiliency blurb', meta ? meta[2] : '']]) {
+          if (promise.test(txt)) errs.push(`${what} promises the pre-market volume bar while PM_VOLUME_VERIFIED = False`);
+          if (!txt.includes('volume check is OFF')) errs.push(`${what} must say the pre-market "volume check is OFF" while PM_VOLUME_VERIFIED = False`);
+        }
+        if (!/it\.update\(off=True, off_reason=PRE_OFF_REASON\)/.test(rt)) errs.push('resiliency_tab.filters_block must serve the 🌅 box off + off_reason while PM_VOLUME_VERIFIED = False');
+      }
+      const dmf = read('src/components/DualMomentumBoardNote.tsx');
+      if (!/filter-off-\$\{i\.key\}/.test(dmf) || !/disabled=\{!!offReason && i\.on !== true\}/.test(dmf)) {
+        errs.push('DualMomentumFilters must grey a served off box (disabled unless ticked) and print its served off_reason');
       }
       return errs;
     },

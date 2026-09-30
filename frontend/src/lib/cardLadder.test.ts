@@ -617,3 +617,75 @@ describe('cardLadder — 🏔️ ATH tab pills (2026-09-29)', () => {
     }
   });
 });
+
+describe('cardLadder — 🛡️ Resiliency tab (2026-09-30)', () => {
+  // Ajay 2026-09-30: "Can you build me a new tab- Resileincy. …" The tab
+  // serves a 🛡️ hold-record chip (IDENT), a 📅 today pill on a T1/T2 session
+  // (PRICE) and one badge per ticked box passed (IDENT).
+  const HOLD = '\u{1F6E1}\u{FE0F} T1 held 34/43 (79%)';        // resiliency_tab.T1_BADGE_FMT
+  const HOLD2 = '\u{1F6E1}\u{FE0F} T2 held 70/96 (73%)';
+  const TODAY_UP = '\u{1F4C5} T1 today · holding +0.42%';      // TODAY_HOLD_FMT
+  const TODAY_DN = '\u{1F4C5} T1 today · down -1.20%';         // TODAY_DOWN_FMT
+  const TODAY_T2 = '\u{1F4C5} T2 today · holding +0.10%';
+  const BOXES = ['\u{1F6E1}\u{FE0F} Held on T1', '\u{1F6E1}\u{FE0F} Held on T2',
+    '\u{1F4C8} Bullish tape EOD', '\u{1F305} Bullish tape pre-market'];
+  const resTile = (over: Partial<CmTile> = {}): CmTile => bare({
+    symbol: 'RSX',
+    badges: [{ text: HOLD, tone: 'good' }, { text: TODAY_UP, tone: 'good' }, { text: BOXES[0], tone: 'good' }],
+    stats: [
+      { k: 'T1 held', v: '34/43 · 79% · SPY down: 15/19' }, { k: 'T2 held', v: '70/96 · 73% · SPY down: 30/44' },
+      { k: 'EOD tape', v: '09-29 · +1.20% · closed at 78% of range · vol 1.34× 50d' },
+      { k: 'Pre-market', v: 'not open' }, { k: 'Today', v: '+0.42% vs 227.21 · pre-market 08:52 ET' },
+      { k: 'T1 worst', v: '-3.12% · 2026-03-11 CPI' }, { k: 'Last T1', v: '+0.35% · 2026-09-16 FOMC decision (SPY -0.12%)' },
+      { k: 'σ · β', v: '1.9%/day · β 0.62' },
+    ],
+    ...over,
+  });
+
+  it('the hold chips and every box badge route to IDENT; the 📅 today pills to PRICE', () => {
+    const l = cardLadder(resTile());
+    expect(texts(l.ident)).toEqual([HOLD, BOXES[0]]);
+    expect(texts(l.price)).toEqual([TODAY_UP]);
+    expect(texts(l.setup.badges)).toEqual([]);
+    for (const t of [HOLD2, ...BOXES]) expect(texts(cardLadder(bare({ badges: [{ text: t, tone: 'good' }] })).ident), t).toEqual([t]);
+    for (const t of [TODAY_DN, TODAY_T2]) {
+      const one = cardLadder(bare({ badges: [{ text: t, tone: 'warn' }] }));
+      expect(texts(one.price), t).toEqual([t]);
+      expect(one.moreWarn.map((b) => b.text), t).not.toContain(t);
+    }
+  });
+
+  it('T1 held / T2 held / EOD tape / Pre-market / Today stay on the face; T1 worst, Last T1 and σ · β fold into READS', () => {
+    const l = cardLadder(resTile());
+    expect(l.setup.stats.map((s) => s.k)).toEqual(['T1 held', 'T2 held', 'EOD tape', 'Pre-market', 'Today']);
+    expect(foldTexts(l, 'reads')).toEqual(['T1 worst', 'Last T1', 'σ · β']);
+    expect(l.plan.stats).toEqual([]);
+  });
+
+  it('NEGATIVE: the other 🛡️ literals keep their rungs — Gabbar position on PRICE, the put wall in TAPE', () => {
+    const gab = '\u{1F6E1}\u{FE0F} In Gabbar band (conservative)';
+    const wall = '\u{1F6E1}\u{FE0F} Put wall 180 · 12k OI';
+    const l = cardLadder(bare({ badges: [{ text: gab, tone: 'good' }, { text: wall, tone: 'muted' }] }));
+    expect(texts(l.price)).toEqual([gab]);
+    expect(foldTexts(l, 'tape')).toEqual([wall]);
+    expect(texts(l.ident)).toEqual([]);
+  });
+
+  it('NEGATIVE: near-misses do not route to IDENT / PRICE (no VS16, other tier, a box label with a suffix)', () => {
+    for (const t of ['\u{1F6E1} T1 held 34/43 (79%)', '\u{1F6E1}\u{FE0F} T3 held 1/2 (50%)',
+                     '\u{1F4C8} Bullish tape EOD (x)', '\u{1F305} Bullish tape', '\u{1F4C5} T3 today · holding +0.10%',
+                     '\u{1F4C5} today']) {
+      const l = cardLadder(bare({ badges: [{ text: t, tone: 'good' }] }));
+      expect(texts(l.ident), t).toEqual([]);
+      if (!t.startsWith('\u{1F6E1}\u{FE0F} ')) expect(texts(l.price), t).toEqual([]);
+    }
+  });
+
+  it('NEGATIVE: no NaN / undefined / [object Object] anywhere on a Resiliency ladder', () => {
+    for (const s of allStrings(cardLadder(resTile()))) {
+      expect(s.includes('NaN'), s).toBe(false);
+      expect(s.includes('undefined'), s).toBe(false);
+      expect(s.includes('[object Object]'), s).toBe(false);
+    }
+  });
+});

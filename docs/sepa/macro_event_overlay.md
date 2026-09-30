@@ -187,3 +187,64 @@ unchanged; `_fred_releases(14)` exact rows (claims Thursdays only, no retail,
 one gdp / pce source, no fomc); `compute(14)` one claims row per ISO week; the
 lock (concurrent cold callers → one compute; `force=True` and `days=7`
 recompute; a raising compute releases the lock); the strict xfail above.
+
+## 2026-09-30 — past_events (history)
+
+**Why.** The 🛡️ Resiliency tab on Chart Maps (Ajay 2026-09-30, "Stocks that are not
+going to by more than 0.5% during a T1 event like FOMC … track T2s as well") needs the
+PAST T1/T2 data days. No historical event list existed: `_fred_releases` reads UPCOMING
+dates only (`realtime_start = today`) and its >3-dates padding filter drops every
+claims week, so it cannot be widened to the past.
+
+**What.** `macro_calendar.past_events(start, end, *, max_tier=2, fetch=None, force=False)`:
+
+- FRED per-release `/fred/release` (the NAME) + `/fred/release/dates`
+  (`realtime_start=start`, `realtime_end=9999-12-31`, `include_release_dates_with_no_data=false`,
+  `sort_order=asc`, `limit=10000`) for `HISTORY_RELEASE_IDS = (50, 10, 54, 53, 9, 192, 194, 180, 46)`.
+  Each id only SELECTS a fetch; the release NAME is classified by `_match_tier` — the one
+  classifier (a renamed or shadow name classifies to nothing and contributes nothing).
+- FOMC rows from `FOMC_DECISION_DATES` (label "FOMC decision", source "Federal Reserve FOMC
+  calendar", `release_id None`). FRED 101 is never fetched. The constant gained the three
+  2024 decision days **2024-09-18, 2024-11-07, 2024-12-18** (meetings Sep 17-18, Nov 6-7,
+  Dec 17-18 on federalreserve.gov/monetarypolicy/fomccalendars.htm, re-fetched 2026-09-30)
+  so the 2-year price cache has its full FOMC history.
+- Rows `{date, kind, tier, label, source, release_id}`, sorted `(date, tier)`, deduped on
+  `(kind, date)`, `start <= date <= end`, `tier <= max_tier`. PPI is tier 2 (the module's own
+  tiering; `TIER_TAXONOMY` omits it — his call #7 in the tab doc).
+- `HISTORY_UNSOURCED = ("ISM mfg & services", "Fed-speaker remarks")` — taxonomy kinds with no
+  FRED release, so no dated history; returned with every answer and printed on the tab.
+- Soft-fails PER release: an error row `{release_id, reason}` where reason is `"HTTP <code>"`
+  (`FredHTTPError`), `"no FRED key"`, or the exception CLASS — **never `str(exc)`**: a requests
+  error string carries the request URL with the `api_key` (the `:165` leak in
+  `_fred_releases` is untouched here). `available` = at least one release answered.
+- Cached in-process per `(start, end, max_tier)` for `HISTORY_TTL_SEC` (= `TTL_SEC`, 6 h)
+  behind its own `_HISTORY_LOCK` (double-checked, like `get_macro_calendar`); only a clean
+  read (available, no error rows) is cached. An injected `fetch` bypasses the cache.
+- `_fred_releases`, `compute`, `get_macro_calendar` and `imminent_events` are unchanged.
+
+**Measured 2026-09-30 ~09:25 ET** (api container, read-only, key never printed; realtime
+2024-09-01 → now; the fixture `backend/tests/fixtures/fred_release_history_2026_09_30.json`
+is this capture):
+
+| id | FRED name | `_match_tier` | dates | last | sec |
+|---|---|---|---|---|---|
+| 50 | Employment Situation | jobs, 1 | 24 | 2026-09-04 | 1.5 |
+| 10 | Consumer Price Index | cpi, 1 | 24 | 2026-09-11 | 2.7 |
+| 54 | Personal Income and Outlays | pce, 1 | 25 | 2026-09-30 | 1.5 |
+| 53 | Gross Domestic Product | gdp, 2 | 25 | 2026-09-30 | 1.4 |
+| 9 | Advance Monthly Sales for Retail and Food Services | retail, 2 | 27 | 2026-09-28 | 1.5 |
+| 192 | Job Openings and Labor Turnover Survey | jolts, 2 | 25 | 2026-09-29 | 1.4 |
+| 194 | ADP National Employment Report | adp, 2 | 26 | 2026-09-30 | 1.4 |
+| 180 | Unemployment Insurance Weekly Claims Report | claims, 2 | 101 | 2026-09-24 | 1.6 |
+| 46 | Producer Price Index | ppi, 2 | 24 | 2026-09-10 | 1.4 |
+
+FRED revision-date rows count (retail 2026-09-28 Mon, GDP 2024-10-02) — his call #9 in the tab
+doc. One cold read = 18 FRED calls ≈ 15–27 s; it runs only in the tab's background build.
+
+**Tests.** `backend/tests/test_macro_calendar_history_2026_09_30.py` (17): exact per-kind
+counts from the fixture, T1/T2 kinds, PPI tier 2, the 2024 FOMC rows, claims on Thursdays,
+inclusive window + `max_tier`, dedupe, the cache and `force`; NEGATIVE: 101 never fetched,
+one release HTTP 500 → one error row and no key in payload or logs (caplog), a requests-style
+error string carrying `api_key=` → only the class name, all releases failing → unavailable,
+never raises, a failed read is not cached, no key → "no FRED key", a name matching no tier or
+a shadow name ignored, a release named "FOMC …" contributes nothing, `_fred_releases` untouched.

@@ -63,6 +63,10 @@ TIER_TAXONOMY = {
 # ⚠ VERIFY ANNUALLY: extend this list each year when the Fed publishes the next
 # year's calendar (they release it ~1.5 years ahead).
 FOMC_DECISION_DATES = (
+    # 2024 — added 2026-09-30 for the 🛡️ Resiliency tab's event history (past_events):
+    # meetings Sep 17-18, Nov 6-7, Dec 17-18 (federalreserve.gov fomccalendars.htm,
+    # re-fetched 2026-09-30).
+    "2024-09-18", "2024-11-07", "2024-12-18",
     # 2025
     "2025-01-29", "2025-03-19", "2025-05-07", "2025-06-18",
     "2025-07-30", "2025-09-17", "2025-10-29", "2025-12-10",
@@ -197,6 +201,159 @@ def _fred_releases(days: int) -> list[dict]:
     out = [e for e in out if date_count[e["source"]] <= 3]
     out.sort(key=lambda e: (e["date"], e["tier"]))
     return out
+
+
+# ---------------------------------------------------------------------------
+# PAST events — the dated history of T1/T2 prints (2026-09-30, the 🛡️ Resiliency
+# tab). `_fred_releases` reads UPCOMING dates only and its >3-dates padding filter
+# drops every claims week, so history is read PER RELEASE from FRED's
+# `/fred/release/dates` (≈1.5 s an id, measured 2026-09-30).
+# ---------------------------------------------------------------------------
+# FRED releases whose PAST dates feed the event history. Ids measured 2026-09-24/-30
+# (docs/sepa/macro_event_overlay.md table + the resiliency spec §1.1). Each id only
+# SELECTS a fetch; the release NAME is classified by _match_tier (the one classifier).
+#   50 Employment Situation · 10 CPI · 54 Personal Income and Outlays · 53 GDP ·
+#   9 Advance Retail Sales · 192 JOLTS · 194 ADP · 180 UI Weekly Claims · 46 PPI
+# FOMC (FRED 101, padded onto every day) is NEVER fetched — FOMC_DECISION_DATES is the source.
+HISTORY_RELEASE_IDS = (50, 10, 54, 53, 9, 192, 194, 180, 46)
+HISTORY_UNSOURCED = ("ISM mfg & services", "Fed-speaker remarks")   # taxonomy kinds with no dated history
+HISTORY_TTL_SEC = TTL_SEC
+HISTORY_FOMC_SOURCE = "Federal Reserve FOMC calendar"
+HISTORY_FOMC_LABEL = "FOMC decision"
+FRED_BASE = "https://api.stlouisfed.org/fred/"
+
+_HISTORY_CACHE: dict = {}              # (start_iso, end_iso, max_tier) -> {"at", "data"}
+_HISTORY_LOCK = threading.Lock()
+
+
+class FredHTTPError(Exception):
+    """A non-200 FRED answer. Carries ONLY the status code — never the URL
+    (the URL holds the api_key)."""
+
+    def __init__(self, code):
+        super().__init__(f"HTTP {code}")
+        self.code = code
+
+
+def _fred_key() -> str:
+    try:
+        from sepa import fred
+        return fred.api_key() or ""
+    except Exception:
+        return os.getenv("FRED_API_KEY", "").strip()
+
+
+def _fred_get(path: str, params: dict) -> dict:
+    """GET FRED `path` with the key. Raises FredHTTPError on a non-200."""
+    key = _fred_key()
+    if not key:
+        raise LookupError("no FRED key")
+    import requests
+    r = requests.get(FRED_BASE + path, params={**params, "api_key": key, "file_type": "json"},
+                     timeout=(15, 30))
+    if r.status_code != 200:
+        raise FredHTTPError(r.status_code)
+    return r.json() or {}
+
+
+def _safe_reason(exc: BaseException) -> str:
+    """The error class or the HTTP code — NEVER str(exc): a requests error
+    string carries the request URL, api_key included."""
+    if isinstance(exc, FredHTTPError):
+        return f"HTTP {exc.code}"
+    if isinstance(exc, LookupError) and str(exc) == "no FRED key":
+        return "no FRED key"
+    return type(exc).__name__
+
+
+def _iso(d) -> str:
+    return d.isoformat() if hasattr(d, "isoformat") else str(d)[:10]
+
+
+def _compute_past_events(start, end, max_tier: int, fetch) -> dict:
+    s_iso, e_iso = _iso(start)[:10], _iso(end)[:10]
+    events: list = []
+    errors: list = []
+    answered = 0
+    seen: set = set()
+    for rid in HISTORY_RELEASE_IDS:
+        try:
+            rel = fetch("release", {"release_id": rid}) or {}
+            name = ((rel.get("releases") or [{}])[0] or {}).get("name") or ""
+            meta = _match_tier(name)
+            if not meta or meta[0] == "fomc":
+                answered += 1
+                continue
+            kind, tier, label = meta
+            if tier > max_tier:
+                answered += 1
+                continue
+            got = fetch("release/dates", {
+                "release_id": rid, "realtime_start": s_iso, "realtime_end": "9999-12-31",
+                "include_release_dates_with_no_data": "false", "sort_order": "asc",
+                "limit": 10000}) or {}
+            answered += 1
+        except Exception as exc:                                # noqa: BLE001
+            reason = _safe_reason(exc)
+            log.warning("FRED release %s history failed: %s", rid, reason)
+            errors.append({"release_id": rid, "reason": reason})
+            continue
+        for x in got.get("release_dates") or []:
+            d = str((x or {}).get("date") or "")[:10]
+            if len(d) != 10 or d < s_iso or d > e_iso or (kind, d) in seen:
+                continue
+            seen.add((kind, d))
+            events.append({"date": d, "kind": kind, "tier": tier, "label": label,
+                           "source": name, "release_id": rid})
+    if max_tier >= 1:
+        for d in FOMC_DECISION_DATES:
+            if s_iso <= d <= e_iso and ("fomc", d) not in seen:
+                seen.add(("fomc", d))
+                events.append({"date": d, "kind": "fomc", "tier": 1,
+                               "label": HISTORY_FOMC_LABEL, "source": HISTORY_FOMC_SOURCE,
+                               "release_id": None})
+    events.sort(key=lambda e: (e["date"], e["tier"], e["kind"]))
+    return {"events": events, "errors": errors, "unsourced": list(HISTORY_UNSOURCED),
+            "start": s_iso, "end": e_iso, "available": answered > 0}
+
+
+def past_events(start, end, *, max_tier: int = 2, fetch=None, force: bool = False) -> dict:
+    """The dated T1/T2 history between `start` and `end` (inclusive, ISO days).
+
+    {"events": [{date, kind, tier, label, source, release_id}],
+     "errors": [{release_id, reason}], "unsourced": list(HISTORY_UNSOURCED),
+     "start": iso, "end": iso, "available": bool}
+
+    Events sorted (date, tier), deduped on (kind, date), tier <= max_tier. FRED
+    per-release dates for HISTORY_RELEASE_IDS, each release NAME classified by
+    `_match_tier`; FOMC rows from FOMC_DECISION_DATES (release_id None). A
+    release whose name matches no tier, or kind == "fomc", contributes nothing.
+    Soft-fails PER release (error row; reason = the exception class or
+    "HTTP <code>", NEVER str(exc)). available = at least one FRED release
+    answered. Cached in-process per (start, end, max_tier) for HISTORY_TTL_SEC
+    behind its own lock (double-checked, like get_macro_calendar) — only a
+    clean read (no error rows) is cached. `fetch(path, params) -> dict` is
+    injectable (tests; an injected fetch bypasses the cache)."""
+    if fetch is not None:
+        return _compute_past_events(start, end, max_tier, fetch)
+    key = (_iso(start)[:10], _iso(end)[:10], int(max_tier))
+
+    def _fresh():
+        hit = _HISTORY_CACHE.get(key)
+        return (None if force or hit is None or (time.time() - hit["at"]) >= HISTORY_TTL_SEC
+                else hit["data"])
+
+    got = _fresh()
+    if got is not None:
+        return got
+    with _HISTORY_LOCK:
+        got = _fresh()
+        if got is not None:
+            return got
+        data = _compute_past_events(start, end, max_tier, _fred_get)
+        if data["available"] and not data["errors"]:
+            _HISTORY_CACHE[key] = {"at": time.time(), "data": data}
+        return data
 
 
 def _fomc_events(days: int) -> list[dict]:

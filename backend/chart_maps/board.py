@@ -51,7 +51,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -4235,6 +4235,108 @@ def ath_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                          history=history)}
 
 
+def resiliency_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                     universe: str = "full", themes_first: bool = False,
+                     sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                     ctx: Optional[dict] = None, now: Optional[datetime] = None,
+                     res_filters: Optional[str] = None,
+                     res_mode: Optional[str] = None) -> dict:
+    """🛡️ Resiliency — names that held up on the market-moving data days, and
+    names whose last session or pre-market tape is bullish on real volume.
+
+    Ajay 2026-09-30: *"Can you build me a new tab- Resileincy. This is to help
+    me with #1 - Stocks that are not going to by more than 0.5% during a T1
+    event like FOMC or any others like todays Inflation and GDP track T2s as
+    well. #3 - Tape is positive and bullish EOD or Pre market. but volume has
+    to be accounted for. We have all of this data already."*
+
+    Built like 🏔️ ATH: the closed-bar half is memoised per session in
+    `chart_maps.resiliency_tab`; this ranks it against ONE universe
+    `bulk_snapshot` (+ the benchmark) and hands that map and the clock to
+    `board()` through `ctx`. The order rides on `_score`; the pool is cut to
+    `LIMIT_MAX * TAPE_POOL_MULT` after the liquidity floor so the 🧨 attach
+    reads at most that many names. UNMEASURED and display only.
+    """
+    from chart_maps import dual_momentum_tab as DMT
+    from chart_maps import resiliency_tab as RES
+    from supply_demand import key_levels as KL
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    session = RES.session_for(now_et)
+    got = RES.cached_or_warm(universe, now=now_et)
+    if got["state"] == "warming":
+        return {"tiles": [], "warming": True, "note": RES.WARMING_NOTE,
+                "resiliency_board": RES.warming_block(now=now_et, sort=sort)}
+    if got["state"] == "error":
+        return {"tiles": [], "note": RES.error_note(got.get("reason")),
+                "resiliency_board": RES.error_block(got.get("reason"), now=now_et, sort=sort)}
+    entry = got["entry"]
+    raw = _bulk_snaps_fanout(list(entry["syms"]) + [RES.BENCH])   # the ONE universe snapshot
+    if ctx is not None:
+        ctx.update(snaps=raw, now=now_et)
+    ph = KL.phase(now_et, session)
+    # the baseline is only aggregated when the pre-market volume leg is compared
+    # (RES.PM_VOLUME_VERIFIED — his call, fix round 2026-09-30)
+    pm = (RES.pm_cached_or_warm(entry["syms"], session)
+          if ph == "pre" and RES.PM_VOLUME_VERIFIED else None)
+    active = RES.parse_filters(res_filters)
+    mode = DMT.parse_mode(res_mode)
+    rows, counts, filters, today, sort_unavailable = RES.rank(
+        entry, raw, pm, now=now_et, sort=sort, active=active, mode=mode)
+    try:
+        from sepa import scanner
+        latest = scanner.load_latest() or {}
+        scan_by_sym = {r.get("symbol"): r for r in (latest.get("all_results") or [])
+                       if isinstance(r, dict) and r.get("symbol")}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("resiliency_tiles: scan rows unavailable: %s", exc)
+        scan_by_sym = {}
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    kept, no_turnover, dropped_thin = [], 0, 0
+    for r in rows:
+        m = tile_metrics(scan_by_sym.get(r["symbol"]) or {})
+        if m.get("avg_turnover") is None:
+            m["avg_turnover"] = r.get("adv50")      # the closed frame's 50-bar close x volume
+        if not passes_liquidity(m.get("avg_turnover"), min_tier):
+            dropped_thin += 1
+            no_turnover += int(floor_on and m.get("avg_turnover") is None)
+            continue
+        kept.append((r, m))
+    pool_max = LIMIT_MAX * TAPE_POOL_MULT
+    event_day = bool(today.get("event_day"))
+    pool = kept[:pool_max]
+    tiles = []
+    for i, (r, m) in enumerate(pool):
+        sym = r["symbol"]
+        tiles.append({"symbol": sym, "theme": _theme(sym), "href": _href(sym),
+                      "last_close": r.get("ref_close"), "bands": [], "markers": [], "lines": [],
+                      "badges": RES.tile_badges(r, active, event_day=event_day),
+                      "stats": RES.tile_stats(r, event_day=event_day),
+                      "why": RES.why_text(r),
+                      "resiliency": r["resiliency"], "res_filter": dict(r["res_filter"]),
+                      **published_metrics(m), "_m": dict(m),
+                      "_score": float(len(pool) - i)})
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier=min_tier, snaps=raw)
+    for t in out:
+        t["name"] = _name_for(t["symbol"])
+    counts = {**counts, "no_turnover": no_turnover,
+              "dropped_thin": dropped_thin - no_turnover + int(meta["dropped_thin"]),
+              "shown": len(out)}
+    if out:
+        note = RES.note_text()
+    elif active and not filters.get("shown"):
+        note = RES.filter_empty_note(active, mode)
+    else:
+        note = RES.EMPTY_NOTE
+    pm_state = (pm or {}).get("state") if pm is not None else None
+    return {"tiles": out, "sort_unavailable": sort_unavailable or meta.get("sort_unavailable"),
+            "matched": len(kept),
+            "note": note,
+            "resiliency_board": RES.ready_block(counts, entry=entry, now=now_et, sort=sort,
+                                                filters=filters, today=today,
+                                                pm_state=pm_state)}
+
+
 def _usd_short(v) -> str:
     """$1.5B / $281M. Whole units — a dollar-volume figure carrying cents is
     false precision on a number that moves by millions between prints."""
@@ -6741,7 +6843,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           min_room: Optional[float] = None, studies: bool = False,
           levels: str = "all", grades: Optional[str] = None,
           flight: Optional[str] = None, dm: Optional[str] = None,
-          dm_mode: Optional[str] = None, uv: Optional[str] = None) -> dict:
+          dm_mode: Optional[str] = None, uv: Optional[str] = None,
+          res: Optional[str] = None, res_mode: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -6763,6 +6866,12 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     filter boxes, a comma list "amd,zone,level" (unknown tokens ignored), and
     `dm_mode` how they combine: "all" = every ticked box, anything else = ANY
     (the default). Every other tab ignores both and carries no `dm_filter` keys.
+
+    `res` (2026-09-30) reaches ONLY the resiliency tab — the 🛡️ / 📈 / 🌅
+    boxes, a comma list "t1,t2,eod,pre" (unknown tokens ignored), and
+    `res_mode` how they combine: "all" = every ticked box, anything else = ANY
+    (the default, the `dm` machinery). Every other tab ignores both and carries
+    no `res_filter` keys.
 
     `uv` (2026-09-29) reaches ONLY the undervalue tab — `peers` = the 🏷️
     vs-peers view, anything else = the 💎 view (default, unchanged). Every
@@ -6788,9 +6897,17 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # ↘️ `slipping` is the 🏔️ ATH tab's tab-scoped key (2026-09-29), the same
     # precedent: honoured there only, an unknown sort everywhere else.
     from chart_maps import ath_tab as _ATH
+    # 🛡️ `res_t2` / `res_down` / `res_today` are the Resiliency tab's (2026-09-30),
+    # the same precedent.
+    from chart_maps import resiliency_tab as _RES
     srt = sort if (sort in SORTS
                    or (t == "dual_momentum" and sort in _DMT.TAB_SORTS)
-                   or (t == "ath" and sort == _ATH.SORT_SLIPPING)) else DEFAULT_SORT
+                   or (t == "ath" and sort == _ATH.SORT_SLIPPING)
+                   or (t == "resiliency" and sort in _RES.TAB_SORTS)) else DEFAULT_SORT
+    if t == "resiliency" and srt not in _RES.TAB_SORTS:
+        # only the tab's own four served orders (the ATH precedent: no generic
+        # metric sort is offered, so none may silently reorder the board)
+        srt = DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
     # Out-of-band slot for a builder that already fetched the raw live rows for
@@ -6810,6 +6927,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                                   dm_mode=dm_mode if isinstance(dm_mode, str) else None)
     elif t == "ath":
         out = ath_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
+    elif t == "resiliency":
+        out = resiliency_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx,
+                               res_filters=res if isinstance(res, str) else None,
+                               res_mode=res_mode if isinstance(res_mode, str) else None)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -6934,6 +7055,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         # is offered, so none can silently flip ↘️ Slipping back to 🏔️ At ATH.
         out["sorts"] = [{"key": DEFAULT_SORT, "label": _ATH.AT_ATH_LABEL},
                         {"key": _ATH.SORT_SLIPPING, "label": _ATH.SLIPPING_LABEL}]
+    if t == "resiliency":
+        # 🛡️ T1 / 🛡️ T2 / 🛡️ SPY-down / 📅 today — exactly these four served keys
+        # (the ATH precedent: no generic metric sort on this tab).
+        out["sorts"] = _RES.served_sorts()
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier

@@ -777,6 +777,9 @@ describe('the Earnings Flow tab', () => {
        // 🏔️ ATH 2026-09-29 — right after Dual Momentum, mid-pack for the same
        // no-usage-yet reason (ath_tab spec §7 #10, his call).
        'ath',
+       // 🛡️ Resiliency 2026-09-30 — right after ATH, mid-pack for the same
+       // no-usage-yet reason (resiliency spec §7 #16, his call).
+       'resiliency',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1792,7 +1795,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(33);   // +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(34);   // +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2299,7 +2302,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency')).toEqual(CM_TABS_6D3AD93);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2411,5 +2414,72 @@ describe('the 🏔️ ATH tab', () => {
   it('NEGATIVE: the room floor and the other tab-scoped params never ride on ath', () => {
     const q = boardQuery({ tab: 'ath', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching' });
     for (const k of ['min_room', 'levels', 'grades', 'phase']) expect(q).not.toContain(k);
+  });
+});
+
+import { RES_SORT_DOWN, RES_SORT_T2, RES_SORT_TODAY } from './chartMaps';
+
+describe('the 🛡️ Resiliency tab', () => {
+  const HIS = 'Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already.';
+
+  it('sits right after 🏔️ ATH and is a board tab', () => {
+    expect(CM_TABS.indexOf('resiliency')).toBe(CM_TABS.indexOf('ath') + 1);
+    expect(CM_TABS.filter((t) => t === 'resiliency')).toHaveLength(1);
+    expect(isBoardTab('resiliency')).toBe(true);
+  });
+
+  it('parses from ?tab=, case- and space-tolerant', () => {
+    expect(parseTab('resiliency')).toBe('resiliency');
+    expect(parseTab(' Resiliency ')).toBe('resiliency');
+  });
+
+  it('NEGATIVE: near-miss spellings (his own "Resileincy" included) fall to the default tab', () => {
+    for (const raw of ['resileincy', 'resilient', 'resiliency_', 'resilience', 'res']) {
+      expect(parseTab(raw), raw).toBe(DEFAULT_TAB);
+    }
+  });
+
+  it('TAB_META: the 🛡️ label (VS16 included), an UNMEASURED blurb with his ask verbatim', () => {
+    const m = TAB_META.resiliency;
+    expect(m.label).toBe('\u{1F6E1}\u{FE0F} Resiliency');
+    expect(m.blurb).toContain('UNMEASURED');
+    expect(m.blurb).toContain(HIS);
+    expect(m.blurb).toContain('T1 = the jobs report, CPI, Core PCE and the FOMC decision');
+    expect(m.blurb).toContain('ISM and Fed-speaker remarks have no dated history here and are not counted');
+    expect(m.blurb).toContain('Not advice.');
+    expect(splitBlurb(m.blurb).head.length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: the blurb never says bounce / fake / "won\'t drop", types no NaN, and no number outside his quote, the date, T1/T2 and the 50-day', () => {
+    const b = TAB_META.resiliency.blurb;
+    expect(/bounce|fake|won't drop/i.test(b)).toBe(false);
+    expect(b.includes('NaN')).toBe(false);
+    expect(b.includes('undefined')).toBe(false);
+    const outside = b.replace(/"[^"]*"/g, '').replace('2026-09-30', '')
+      .replace(/\bT[12]\b/g, '').replace('50-day', '');
+    expect(/\d/.test(outside)).toBe(false);
+  });
+
+  it('🎯 is n/a here: no ENTERABLE_KIND entry (the ATH precedent)', () => {
+    expect((ENTERABLE_KIND as Record<string, unknown>).resiliency).toBeUndefined();
+  });
+
+  it('the three tab-scoped order keys are the served keys and ride the query like any sort', () => {
+    expect([RES_SORT_T2, RES_SORT_DOWN, RES_SORT_TODAY]).toEqual(['res_t2', 'res_down', 'res_today']);
+    for (const k of [RES_SORT_T2, RES_SORT_DOWN, RES_SORT_TODAY]) {
+      expect(boardQuery({ tab: 'resiliency', sort: k })).toContain(`sort=${k}`);
+    }
+    expect(boardQuery({ tab: 'resiliency', sort: DEFAULT_SORT })).not.toContain('sort=');
+    const offered = [{ key: 'default', label: 'a' }, { key: 'res_t2', label: 'b' },
+      { key: 'res_down', label: 'c' }, { key: 'res_today', label: 'd' }];
+    expect(parseSort('res_today', offered)).toBe('res_today');
+    // NEGATIVE: a key the server does not offer falls back to the default
+    expect(parseSort('res_today', [{ key: 'default', label: 'x' }, { key: 'slipping', label: 'y' }])).toBe(DEFAULT_SORT);
+  });
+
+  it('NEGATIVE: the room floor, DM boxes and the other tab-scoped params never ride on resiliency', () => {
+    const q = boardQuery({ tab: 'resiliency', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching',
+                           dmFilters: 'amd', dmMode: 'all' });
+    for (const k of ['min_room', 'levels', 'grades', 'phase', 'dm=', 'dm_mode']) expect(q).not.toContain(k);
   });
 });

@@ -195,6 +195,18 @@ def _pocket_pivot(df: pd.DataFrame, lookback: int = 10) -> dict:
     }
 
 
+def accumulation_day(close, prev_close, high, low, volume, avg_vol) -> bool:
+    """The ONE accumulation-day test (`_count_accum_dist_days` counts it; the
+    🛡️ Resiliency tab's 📈 bullish-EOD-tape read calls it, 2026-09-30): close
+    up vs the prior close AND close in the upper half of the day's range
+    (>= 0.5) AND volume above the average. A flat bar (high == low) is never
+    one. PURE; the caller supplies finite floats."""
+    if high == low:
+        return False
+    upper_half = (close - low) / (high - low) >= 0.5
+    return bool(close > prev_close and upper_half and volume > avg_vol)
+
+
 def _count_accum_dist_days(df: pd.DataFrame,
                             lookback: int = DIST_DAY_LOOKBACK) -> dict:
     """Count accumulation + distribution days in last `lookback` sessions.
@@ -249,9 +261,8 @@ def _count_accum_dist_days(df: pd.DataFrame,
         v_yest  = vols[i - 1]
         if h_today == l_today:
             continue
-        upper_half = (c_today - l_today) / (h_today - l_today) >= 0.5
-        # Accumulation day
-        if c_today > c_yest and upper_half and v_today > avg_vol:
+        # Accumulation day — the one engine (accumulation_day above)
+        if accumulation_day(c_today, c_yest, h_today, l_today, v_today, avg_vol):
             accum += 1
         # Distribution day (book p.76: down ≥ 0.2% on ABOVE-AVERAGE volume).
         # Symmetric with the accumulation test above (both use avg_vol).
