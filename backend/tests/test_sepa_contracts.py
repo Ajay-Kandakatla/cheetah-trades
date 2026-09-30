@@ -720,13 +720,20 @@ def test_scanner_feeds_earnings_date_to_entry_exit():
 
 # --- Live scan tests (require running API) -------------------------------
 
-API_HOST = os.getenv("SEPA_TEST_API", "http://localhost:8000")
+# OPT-IN: these hit a RUNNING api. The Makefile's contracts-sepa target sets
+# SEPA_TEST_API (inside the api container). Unset -> skipped, so a full-suite
+# run from a worktree never pulls the ~24 MB scan out of the LIVE app
+# (2026-09-30: that froze it -> HTTP 524 on his boards).
+API_HOST = os.getenv("SEPA_TEST_API", "")
 TEST_EMAIL = os.getenv("SEPA_TEST_EMAIL", "ajaykandakatla@gmail.com")
 
 
 @pytest.fixture(scope="module")
 def scan_payload():
-    """Fetch a live /sepa/scan payload. Skips if API isn't reachable."""
+    """Fetch a live /sepa/scan payload. Skips unless SEPA_TEST_API is set or
+    if the API isn't reachable."""
+    if not API_HOST:
+        pytest.skip("live-API contract tests are opt-in: set SEPA_TEST_API")
     try:
         import requests
     except ImportError:

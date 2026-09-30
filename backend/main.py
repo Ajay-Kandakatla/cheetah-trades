@@ -18,6 +18,7 @@ import json
 import logging
 import math
 import os
+import threading
 import time
 from collections import deque
 from contextlib import asynccontextmanager
@@ -28,7 +29,7 @@ import websockets
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, BackgroundTasks, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, StreamingResponse, PlainTextResponse, Response
 # Moved to the top so all routes (including the ones defined near the
 # router-registration block, before the original line-1771 import) can
 # use the user-email dependency without a NameError at module load.
@@ -1246,9 +1247,13 @@ async def market_regime_get(force: bool = Query(False, description="Bypass 15-mi
     See backend/sepa/regime_backtest_10y.json for backtested accuracy.
     """
     from sepa import market_regime as mr
-    latest_scan = sepa_scanner.load_latest()
-    rows = (latest_scan or {}).get("all_results") or []
-    return JSONResponse(mr.regime(scan_rows=rows, force=force))
+
+    def _regime() -> dict:
+        # Shared parse (once per scan write) and off the event loop: this is
+        # polled by every open page (HTTP 524 incident 2026-09-30).
+        rows = (sepa_scanner.load_latest_shared() or {}).get("all_results") or []
+        return mr.regime(scan_rows=rows, force=force)
+    return JSONResponse(await asyncio.to_thread(_regime))
 
 
 @app.get("/market/macro-risk")
@@ -1495,36 +1500,65 @@ async def sepa_scan_get(
     for fast phone first-paint and only fetches the full payload on demand
     (when the user toggles 'show all analyzed').
     """
-    latest = sepa_scanner.load_latest()
-    if not latest:
+    body = await asyncio.to_thread(_sepa_scan_body, bool(slim))
+    if body is None:
         return JSONResponse({"candidates": [], "message": "no scan yet — POST /sepa/scan"},
                             status_code=200)
-    if slim:
-        # Build a slim payload — same shape minus the heavy all_results
-        # array. If candidates is empty (typical: scanner stores only
-        # all_results), filter from all_results so the UI has something
-        # to render immediately. Includes top-rated analyzed names
-        # (BUY/STRONG_BUY/WATCH) so 'show all' isn't blank pre-loadFull.
-        all_r = latest.get("all_results") or []
-        cands = latest.get("candidates") or [
-            c for c in all_r if c.get("is_candidate")
+    return Response(content=body, media_type="application/json")
+
+
+_SCAN_BODY_LOCK = threading.Lock()
+_SCAN_BODY: dict = {}
+
+
+def _sepa_scan_payload(latest: dict, slim: bool) -> dict:
+    if not slim:
+        return _scrub_nan(latest)
+    # Build a slim payload — same shape minus the heavy all_results
+    # array. If candidates is empty (typical: scanner stores only
+    # all_results), filter from all_results so the UI has something
+    # to render immediately. Includes top-rated analyzed names
+    # (BUY/STRONG_BUY/WATCH) so 'show all' isn't blank pre-loadFull.
+    all_r = latest.get("all_results") or []
+    cands = latest.get("candidates") or [
+        c for c in all_r if c.get("is_candidate")
+    ]
+    # If still empty, surface the top-rated names so the page paints
+    # with SOMETHING — slim payload should be useful, not blank.
+    if not cands:
+        cands = [
+            c for c in all_r
+            if (c.get("rating") or "").upper() in ("STRONG_BUY", "BUY", "WATCH")
         ]
-        # If still empty, surface the top-rated names so the page paints
-        # with SOMETHING — slim payload should be useful, not blank.
-        if not cands:
-            cands = [
-                c for c in all_r
-                if (c.get("rating") or "").upper() in ("STRONG_BUY", "BUY", "WATCH")
-            ]
-        slim_payload = {k: v for k, v in latest.items() if k != "all_results"}
-        slim_payload["candidates"] = cands
-        slim_payload["_slim"] = True
-        slim_payload["_full_count"] = len(all_r)
-        # Scrub NaN/Inf — strict JSON encoder can't emit them. Exposed
-        # 2026-05-28 by book-aligned is_candidate semantics fix that
-        # widened the candidate list from 1 to 230.
-        return JSONResponse(_scrub_nan(slim_payload))
-    return JSONResponse(_scrub_nan(latest))
+    slim_payload = {k: v for k, v in latest.items() if k != "all_results"}
+    slim_payload["candidates"] = cands
+    slim_payload["_slim"] = True
+    slim_payload["_full_count"] = len(all_r)
+    # Scrub NaN/Inf — strict JSON encoder can't emit them. Exposed
+    # 2026-05-28 by book-aligned is_candidate semantics fix that
+    # widened the candidate list from 1 to 230.
+    return _scrub_nan(slim_payload)
+
+
+def _sepa_scan_body(slim: bool) -> Optional[bytes]:
+    """The /sepa/scan response bytes, built ONCE per scan write (keyed by
+    latest.json's mtime + size) and in a worker thread. The full payload is
+    ~24 MB at the full universe: parsing, scrubbing and encoding it on the
+    event loop froze every request (HTTP 524 incident 2026-09-30)."""
+    key = sepa_scanner.latest_key()
+    if key is None:
+        return None
+    with _SCAN_BODY_LOCK:
+        hit = _SCAN_BODY.get(slim)
+        if hit and hit[0] == key:
+            return hit[1]
+    latest = sepa_scanner.load_latest()
+    if not latest:
+        return None
+    body = JSONResponse(_sepa_scan_payload(latest, slim)).body
+    with _SCAN_BODY_LOCK:
+        _SCAN_BODY[slim] = (key, body)
+    return body
 
 
 @app.post("/sepa/scan")
@@ -1815,7 +1849,7 @@ async def sepa_live_prices():
     Response: {updated_at, prices: {SYMBOL: {price, change_pct, volume}}}
     """
     from sepa import prices as sepa_prices, scanner as sepa_sc
-    latest = sepa_sc.load_latest() or {}
+    latest = await asyncio.to_thread(sepa_sc.load_latest_shared) or {}
     # Pool all_results symbols so we cover watchlist + non-candidates too
     symbols = [r["symbol"] for r in (latest.get("all_results") or [])]
     if not symbols:

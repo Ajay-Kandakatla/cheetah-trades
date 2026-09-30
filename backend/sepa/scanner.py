@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
@@ -1691,6 +1692,42 @@ def load_latest() -> Optional[dict]:
     except Exception as exc:
         log.warning("failed to read latest scan: %s", exc)
         return None
+
+
+def latest_key() -> Optional[tuple]:
+    """(mtime_ns, size) of latest.json — changes on every scan write; None
+    when there is no scan file."""
+    try:
+        st = LATEST_PATH.stat()
+    except OSError:
+        return None
+    return (st.st_mtime_ns, st.st_size)
+
+
+_SHARED_LOCK = threading.Lock()
+_SHARED: dict = {"key": None, "value": None}
+
+
+def load_latest_shared() -> Optional[dict]:
+    """load_latest() parsed ONCE per scan write (keyed by latest_key()) and
+    shared between callers. READ-ONLY: never mutate the dict or its rows —
+    call load_latest() for a private copy.
+
+    2026-09-30: latest.json is ~24 MB at the full universe. /market/regime and
+    /sepa/live-prices re-parsed it on the event loop on every poll, which kept
+    the api pegged and froze every request (HTTP 524 on his boards)."""
+    key = latest_key()
+    if key is None:
+        return None
+    with _SHARED_LOCK:
+        if _SHARED["key"] == key:
+            return _SHARED["value"]
+    val = load_latest()
+    if val is not None:
+        with _SHARED_LOCK:
+            _SHARED["key"] = key
+            _SHARED["value"] = val
+    return val
 
 
 # ---------------------------------------------------------------------------

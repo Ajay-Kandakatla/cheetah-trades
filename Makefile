@@ -21,7 +21,7 @@ contracts: contracts-sepa contracts-kell contracts-trading contracts-frontend  #
 
 contracts-sepa:                ## Run the SEPA contracts regression test (docs/SEPA_CONTRACTS.md).
 	@echo "→ SEPA contracts (docs/SEPA_CONTRACTS.md)"
-	@docker compose exec -T -e PYTHONPATH=/app api python -m pytest tests/test_sepa_contracts.py -v --tb=short
+	@docker compose exec -T -e PYTHONPATH=/app -e SEPA_TEST_API=http://localhost:8000 api python -m pytest tests/test_sepa_contracts.py -v --tb=short
 
 contracts-vcp:                 ## VCP behavioral contracts (docs/sepa/vcp_methodology.md). Fold into `contracts-sepa` after the api image is rebuilt with test_vcp.py.
 	@echo "→ VCP behavioral contracts (docs/sepa/vcp_methodology.md)"
