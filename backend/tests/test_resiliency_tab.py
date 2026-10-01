@@ -820,6 +820,23 @@ def test_study_block_measured_replaces_the_first_note_sentence():
     assert R.study_block({"status": "pending"})["t1"]["verdict"] == "unmeasured"
 
 
+def test_NEG_an_inverted_tier_reads_as_a_weaker_hold_never_a_sell():
+    # critic 2026-10-01: the measured T2 box is INVERTED (-3.33pp [-5.75, -1.01]) while
+    # its names still held +1.4pp more than peers on data days — he acts on sell
+    # signals, so the served words must not read like one
+    blk = {"verdict": "inverted", "lift_pp": 1.43, "ci": [-0.3, 3.19], "n_events": 66,
+           "placebo_lift_pp": 4.77, "placebo_ci": [2.96, 6.57], "specific_pp": -3.33,
+           "specific_ci": [-5.75, -1.01], "specific": "unclear"}
+    t = R.study_block({"status": "measured", "run_date": "2026-10-01", "t2": blk})["t2"]["text"]
+    assert "INVERTED: the box holds worse on data days than on ordinary days" in t
+    assert "not a sell read" in t
+    low = t.lower()
+    assert "sell signal" not in low and "short" not in low and "avoid" not in low
+    nos = R.study_block({"status": "measured", "run_date": "2026-10-01",
+                         "t1": {**blk, "verdict": "no_signal"}})["t1"]["text"]
+    assert nos.endswith("NO_SIGNAL: the box can't be told apart from an ordinary day.")
+
+
 def test_NEG_measured_module_absent_falls_back(monkeypatch):
     import builtins
     real = builtins.__import__

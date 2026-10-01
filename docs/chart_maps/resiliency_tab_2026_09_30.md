@@ -1,10 +1,42 @@
 # 🛡️ Resiliency tab on Chart Maps (2026-09-30)
 
-**UNMEASURED.** No study in this app says a name that held on past T1 days holds on the next one, and a quiet,
-low-volatility name holds most days by construction — its typical daily move (σ) and beta (β) are on every card.
-The tape reads are the app's own definitions (the accumulation day; the 1.5× volume bar). Nothing here gates a scan,
-pushes a phone, sizes a position or enters a lane (`resiliency_tab.MEASURED = False`; the persistence study is
-`backend/scripts/resiliency_study.py`, its verdict literal `chart_maps/resiliency_measured.py`, read lazily).
+**MEASURED 2026-10-01 — no box predicts the next data day.** T1 box names held +4.33pp [+0.72, +7.83] more often
+than peers on the next T1 day and +2.87pp [−1.28, +7.47] on the next ordinary day; the difference, +1.46pp
+[−4.53, +7.18], cannot tell the two apart (NO_SIGNAL). T2 box names still held +1.43pp [−0.30, +3.19] more on data
+days, but kept less of their ordinary-day margin (−3.33pp [−5.75, −1.01], INVERTED): the T2 box is weaker on data
+days — it is not a sell read. The volume-confirmed EOD close did not lead the next session (NO_SIGNAL). Nothing here gates a scan, pushes a phone,
+sizes a position or enters a lane (`resiliency_tab.MEASURED = False` stays — the verdict only changes the served
+sentences; any gate is his call). Study `backend/scripts/resiliency_study.py`, artifact
+`backend/scripts/resiliency_measured.json`, literal `chart_maps/resiliency_measured.py`.
+
+## Result — the persistence study (run 2026-10-01, as of the 2026-09-30 close)
+
+Prereg `docs/research/resiliency_2026_09_30_prereg.md`, commit `20d84110` (pushed before the run). 2,749 of 2,750
+names priced. Ran in a throwaway `cheetah-api` container (cache volume mounted read-only, Mongo writes stubbed —
+one blocked `price_cache.create_index`), 168 s. Bootstrap over event dates, 2,000 draws, seed 20260930.
+
+| Read | Verdict | Data-day lift | Ordinary-day (placebo) lift | **Event-specific** (the verdict CI) | Events |
+|---|---|---|---|---|---|
+| T1 🛡️ | **NO_SIGNAL** (general) | +4.33pp [+0.72, +7.83] | +2.87pp [−1.28, +7.47] | **+1.46pp [−4.53, +7.18]** | 42 |
+| T2 🛡️ | **INVERTED** | +1.43pp [−0.30, +3.19] | +4.77pp [+2.96, +6.57] | **−3.33pp [−5.75, −1.01]** | 66 |
+| EOD tape | **NO_SIGNAL** | next session +0.046pp [−0.011, +0.093] | label-shuffle band [−0.024, +0.024] | — | 450 days |
+| Pre-market | UNMEASURED | ≤ 31 patchy intraday sessions | | | |
+
+- 52% of T1 box rows (69% for T2) sit in the lowest volatility quintile (base rate 20%). The lifts are compared
+  within σ quintile × β tercile, but that stratification may not remove the quiet-name effect — unmeasured.
+- Halves (stratified lift): T1 first +5.29pp [+1.32, +9.42], second +3.26pp [−3.05, +8.71]; T2 first −0.07pp
+  [−1.87, +1.73], second +3.15pp [+0.04, +6.24]. Not tested against each other.
+- T1 event-day return difference +0.14pp [−0.04, +0.31] (the expectancy line): no edge in return either.
+- EOD: the observed +0.046pp sits outside every label shuffle, but the pre-registered read is the stratified CI, which
+  spans zero. Size for scale: +0.05pp a session. Next open→close −0.001pp [−0.043, +0.035].
+- No stop exists in these reads, so there is no stop-out rate.
+
+Re-run (outside 09:00–16:30 ET, never inside the live api). `--events-json` replays this run's event list; the price
+cache and the universe are live, so a re-run drifts from these numbers as bars and names change:
+
+```bash
+docker run --rm --cpus 4 --memory 3g --network cheetah-market-app_default --env-file <file holding FRED_API_KEY> -e MONGO_URL=mongodb://mongo:27017 -e MONGO_DB=cheetah -e TZ=America/New_York -e SEPA_UNIVERSE_MODE=full -e PYTHONPATH=/app -e PYTHONDONTWRITEBYTECODE=1 -v <main tree>/backend:/app:ro -v cheetah-market-app_cheetah-scans:/root/.cheetah:ro -v <out dir>:/out -w /out cheetah-api:latest python -u /app/scripts/resiliency_study.py --prereg-commit 20d84110 --as-of 2026-09-30 --events-json /app/scripts/resiliency_measured.json --out /out/resiliency_measured.json
+```
 
 ## The ask, verbatim
 

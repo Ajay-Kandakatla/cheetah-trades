@@ -766,6 +766,15 @@ _STUDY_PENDING_TEXT = {
     "pre": "UNMEASURED — pre-market volume history is too short to measure.",
 }
 _VERDICTS = ("separates", "no_signal", "inverted", "too_small", "unmeasured")
+# The verdict word in plain words (critic 2026-10-01): a T2 INVERTED read means the
+# box names held LESS above their peers on data days than on ordinary days — a
+# weaker hold, never a sell read. He acts on sell signals, so the page says so.
+_TIER_GLOSS = {
+    "separates": "the box holds better on data days than on ordinary days",
+    "no_signal": "the box can't be told apart from an ordinary day",
+    "inverted": "the box holds worse on data days than on ordinary days — a weaker hold, not a sell read",
+    "too_small": "too few data days to read",
+}
 
 
 def _study_sentence(key: str, blk: dict, run_date) -> str:
@@ -799,7 +808,8 @@ def _study_sentence(key: str, blk: dict, run_date) -> str:
                     f"and {pl:+.1f}pp more often on the next ordinary day; the data-day edge "
                     f"beyond ordinary days is {sp:+.1f}pp [{slo:+.1f}, {shi:+.1f}]"
                     + (f", {int(n)} data days" if _f(n) is not None else "")
-                    + f" — {word}.")
+                    + f" — {word}"
+                    + (f": {_TIER_GLOSS[v]}." if v in _TIER_GLOSS else "."))
         return f"{head}: {word}."
     if key == "eod" and lift is not None and lo is not None and hi is not None:
         return (f"{head}: a volume-confirmed up close led the next session by {lift:+.2f}pp "

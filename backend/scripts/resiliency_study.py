@@ -66,18 +66,17 @@ NOTHING HERE IS TYPED TWICE. Every definition is imported from
 READ-ONLY. Every pymongo write method is replaced in-process by a recorded
 no-op before anything connects; the attempted writes are printed.
 
-RUN (api container, OUTSIDE 09:00–16:30 ET, branch tree staged under /tmp,
-never into /app):
-  cd /Users/ajay/clinet-test/wt-resiliency/backend
-  tar --exclude='.venv' --exclude='tests' --exclude='__pycache__' -cf <scratch>/resil_study.tar .
-  docker exec cheetah-market-app-api-1 mkdir -p /tmp/resil_study
-  docker cp <scratch>/resil_study.tar cheetah-market-app-api-1:/tmp/resil_study/resil_study.tar
-  docker exec -w /tmp/resil_study cheetah-market-app-api-1 tar -xf resil_study.tar
-  docker exec -d -w /tmp/resil_study -e PYTHONPATH=/tmp/resil_study cheetah-market-app-api-1 \
-      sh -c 'python -u scripts/resiliency_study.py --prereg-commit <hash> \
-             --out /tmp/resil_study/resiliency_measured.json > /tmp/resil_study/run.log 2>&1'
-  docker cp cheetah-market-app-api-1:/tmp/resil_study/resiliency_measured.json backend/scripts/resiliency_measured.json
-  docker exec cheetah-market-app-api-1 rm -rf /tmp/resil_study
+RUN (OUTSIDE 09:00–16:30 ET, in a THROWAWAY container — never inside the live
+api: a study there starved it into HTTP 524s on 2026-09-30):
+  docker run --rm --cpus 4 --memory 3g --network cheetah-market-app_default \
+      --env-file <file holding FRED_API_KEY> -e MONGO_URL=mongodb://mongo:27017 \
+      -e MONGO_DB=cheetah -e TZ=America/New_York -e SEPA_UNIVERSE_MODE=full \
+      -e PYTHONPATH=/app -e PYTHONDONTWRITEBYTECODE=1 \
+      -v <main tree>/backend:/app:ro -v cheetah-market-app_cheetah-scans:/root/.cheetah:ro \
+      -v <out dir>:/out -w /out cheetah-api:latest \
+      python -u /app/scripts/resiliency_study.py --prereg-commit <hash> \
+      --out /out/resiliency_measured.json
+  cp <out dir>/resiliency_measured.json backend/scripts/resiliency_measured.json
 Then paste `measured_literal(<json>)` into `chart_maps/resiliency_measured.py`.
 """
 from __future__ import annotations

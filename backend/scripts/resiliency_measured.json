@@ -1,0 +1,2636 @@
+{
+ "study": "resiliency_2026_09_30",
+ "script": "backend/scripts/resiliency_study.py",
+ "prereg": "docs/research/resiliency_2026_09_30_prereg.md",
+ "prereg_commit": "20d84110",
+ "smoke": false,
+ "run_date": "2026-10-01",
+ "as_of": "2026-09-30",
+ "universe_n": 2750,
+ "events_used": {
+  "source": "macro_calendar.past_events",
+  "errors": [],
+  "events": [
+   {
+    "date": "2024-10-01",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2024-10-02",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2024-10-02",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2024-10-03",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-10-04",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2024-10-10",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2024-10-10",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-10-11",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2024-10-17",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-10-17",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2024-10-24",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-10-29",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2024-10-30",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2024-10-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2024-10-31",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2024-10-31",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-11-01",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2024-11-07",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2024-11-07",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-11-13",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2024-11-14",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-11-14",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2024-11-15",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2024-11-21",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-11-27",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2024-11-27",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-11-27",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2024-12-03",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2024-12-04",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2024-12-05",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-12-06",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2024-12-11",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2024-12-12",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-12-12",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2024-12-17",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2024-12-18",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2024-12-19",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2024-12-19",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2024-12-20",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2024-12-26",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-01-02",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-01-07",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-01-08",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-01-08",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-01-10",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-01-14",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-01-15",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-01-16",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-01-16",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-01-23",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-01-29",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-01-30",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-01-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-01-31",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-02-04",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-02-05",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-02-06",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-02-07",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-02-12",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-02-13",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-02-13",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-02-14",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-02-20",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-02-27",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-02-27",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-02-28",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-03-05",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-03-06",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-03-07",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-03-11",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-03-12",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-03-13",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-03-13",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-03-17",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-03-19",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-03-20",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-03-27",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-03-27",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-03-28",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-04-01",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-04-02",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-04-03",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-04-04",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-04-10",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-04-10",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-04-11",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-04-16",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-04-17",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-04-24",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-04-25",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-04-29",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-04-30",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-04-30",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-04-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-05-01",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-05-02",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-05-07",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-05-08",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-05-13",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-05-15",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-05-15",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-05-15",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-05-22",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-05-29",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-05-29",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-05-30",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-06-03",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-06-04",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-06-05",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-06-06",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-06-11",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-06-12",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-06-12",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-06-17",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-06-18",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-06-18",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-06-26",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-06-26",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-06-27",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-07-01",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-07-02",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-07-03",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-07-03",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-07-10",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-07-15",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-07-16",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-07-17",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-07-17",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-07-24",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-07-29",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-07-30",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-07-30",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-07-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-07-31",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-07-31",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-08-01",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-08-07",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-08-12",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-08-14",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-08-14",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-08-15",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-08-21",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-08-28",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-08-28",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-08-29",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-09-03",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-09-04",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-09-04",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-09-05",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-09-10",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-09-11",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-09-11",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-09-16",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-09-17",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-09-18",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-09-25",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-09-25",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-09-26",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-09-30",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-10-01",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-10-24",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-10-29",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-11-05",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-11-20",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-11-20",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-11-25",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2025-11-25",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-11-26",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-12-03",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2025-12-04",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-12-05",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-12-09",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2025-12-10",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2025-12-11",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-12-16",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2025-12-16",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2025-12-18",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2025-12-18",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-12-23",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2025-12-23",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2025-12-24",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2025-12-31",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-01-07",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-01-07",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-01-08",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-01-09",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-01-13",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-01-14",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-01-14",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-01-15",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-01-22",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-01-22",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-01-22",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-01-28",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2026-01-29",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-01-30",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-02-04",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-02-05",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-02-05",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-02-10",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-02-11",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-02-12",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-02-13",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-02-19",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-02-20",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-02-20",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-02-26",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-02-27",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-03-04",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-03-05",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-03-06",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-03-06",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-03-11",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-03-12",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-03-13",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-03-13",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-03-13",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-03-18",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2026-03-18",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-03-19",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-03-26",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-03-31",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-04-01",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-04-01",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-04-02",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-04-03",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-04-09",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-04-09",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-04-09",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-04-10",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-04-14",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-04-16",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-04-21",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-04-23",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-04-29",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2026-04-30",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-04-30",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-04-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-05-05",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-05-06",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-05-07",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-05-08",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-05-12",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-05-13",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-05-14",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-05-14",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-05-21",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-05-28",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-05-28",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-05-28",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-06-02",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-06-03",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-06-04",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-06-05",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-06-10",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-06-11",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-06-11",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-06-17",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2026-06-17",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-06-18",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-06-25",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-06-25",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-06-25",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-06-30",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-07-01",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-07-02",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-07-02",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-07-09",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-07-14",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-07-15",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-07-16",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-07-16",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-07-23",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-07-29",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2026-07-30",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-07-30",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-07-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-08-04",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-08-05",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-08-06",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-08-07",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-08-12",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-08-13",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-08-13",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-08-14",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-08-20",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-08-26",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-08-26",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   },
+   {
+    "date": "2026-08-27",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-09-01",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-09-02",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-09-03",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-09-04",
+    "kind": "jobs",
+    "tier": 1,
+    "label": "Jobs report (NFP)",
+    "source": "Employment Situation",
+    "release_id": 50
+   },
+   {
+    "date": "2026-09-10",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-09-10",
+    "kind": "ppi",
+    "tier": 2,
+    "label": "PPI",
+    "source": "Producer Price Index",
+    "release_id": 46
+   },
+   {
+    "date": "2026-09-11",
+    "kind": "cpi",
+    "tier": 1,
+    "label": "CPI",
+    "source": "Consumer Price Index",
+    "release_id": 10
+   },
+   {
+    "date": "2026-09-16",
+    "kind": "fomc",
+    "tier": 1,
+    "label": "FOMC decision",
+    "source": "Federal Reserve FOMC calendar",
+    "release_id": null
+   },
+   {
+    "date": "2026-09-16",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-09-17",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-09-24",
+    "kind": "claims",
+    "tier": 2,
+    "label": "Jobless claims",
+    "source": "Unemployment Insurance Weekly Claims Report",
+    "release_id": 180
+   },
+   {
+    "date": "2026-09-28",
+    "kind": "retail",
+    "tier": 2,
+    "label": "Retail sales",
+    "source": "Advance Monthly Sales for Retail and Food Services",
+    "release_id": 9
+   },
+   {
+    "date": "2026-09-29",
+    "kind": "jolts",
+    "tier": 2,
+    "label": "JOLTS",
+    "source": "Job Openings and Labor Turnover Survey",
+    "release_id": 192
+   },
+   {
+    "date": "2026-09-30",
+    "kind": "pce",
+    "tier": 1,
+    "label": "Core PCE",
+    "source": "Personal Income and Outlays",
+    "release_id": 54
+   },
+   {
+    "date": "2026-09-30",
+    "kind": "adp",
+    "tier": 2,
+    "label": "ADP payrolls",
+    "source": "ADP National Employment Report",
+    "release_id": 194
+   },
+   {
+    "date": "2026-09-30",
+    "kind": "gdp",
+    "tier": 2,
+    "label": "GDP",
+    "source": "Gross Domestic Product",
+    "release_id": 53
+   }
+  ]
+ },
+ "definitions": {
+  "HOLD_MAX_DROP_PCT": 0.5,
+  "HOLD_WINDOW_DAYS": 365,
+  "HOLD_RATE_MIN_PCT": 75.0,
+  "T2_EXCLUDES_T1_DAYS": true,
+  "VOL_AVG_BARS": 50,
+  "BETA_BARS": 252,
+  "BENCH": "SPY",
+  "PCT_DP": 2,
+  "MIN_BUCKET_N": 30,
+  "SIGMA_BINS": 5,
+  "BETA_BINS": 3,
+  "EOD_MIN_PRIOR_BARS": 51,
+  "CI_PCT": 95.0,
+  "draws": 2000,
+  "seed": 20260930,
+  "shuffle_draws": 200,
+  "refuse_window_et": "09:00\u201316:30",
+  "universe": "full"
+ },
+ "t1": {
+  "verdict": "no_signal",
+  "specific": "general",
+  "lift_pp": 4.33,
+  "ci": [
+   0.72,
+   7.83
+  ],
+  "raw_lift_pp": 6.5,
+  "raw_ci": [
+   2.47,
+   10.32
+  ],
+  "placebo_lift_pp": 2.87,
+  "placebo_ci": [
+   -1.28,
+   7.47
+  ],
+  "specific_pp": 1.46,
+  "specific_ci": [
+   -4.53,
+   7.18
+  ],
+  "ret_diff_pp": 0.14,
+  "ret_ci": [
+   -0.04,
+   0.31
+  ],
+  "n_events": 42,
+  "n_label_rows": 109712,
+  "n_r_rows": 3286,
+  "low_sigma_share_pct": 52.34,
+  "halves": {
+   "first": {
+    "from": "2025-10-24",
+    "to": "2026-04-09",
+    "n_events": 21,
+    "lift_pp": 5.29,
+    "ci": [
+     1.32,
+     9.42
+    ]
+   },
+   "second": {
+    "from": "2026-04-10",
+    "to": "2026-09-30",
+    "n_events": 21,
+    "lift_pp": 3.26,
+    "ci": [
+     -3.05,
+     8.71
+    ]
+   }
+  },
+  "test_events": 42,
+  "sessions": 86
+ },
+ "t2": {
+  "verdict": "inverted",
+  "specific": "unclear",
+  "lift_pp": 1.43,
+  "ci": [
+   -0.3,
+   3.19
+  ],
+  "raw_lift_pp": 7.8,
+  "raw_ci": [
+   5.04,
+   10.31
+  ],
+  "placebo_lift_pp": 4.77,
+  "placebo_ci": [
+   2.96,
+   6.57
+  ],
+  "specific_pp": -3.33,
+  "specific_ci": [
+   -5.75,
+   -1.01
+  ],
+  "ret_diff_pp": -0.02,
+  "ret_ci": [
+   -0.08,
+   0.04
+  ],
+  "n_events": 66,
+  "n_label_rows": 172596,
+  "n_r_rows": 13046,
+  "low_sigma_share_pct": 69.44,
+  "halves": {
+   "first": {
+    "from": "2025-11-05",
+    "to": "2026-04-21",
+    "n_events": 33,
+    "lift_pp": -0.07,
+    "ci": [
+     -1.87,
+     1.73
+    ]
+   },
+   "second": {
+    "from": "2026-04-23",
+    "to": "2026-09-29",
+    "n_events": 33,
+    "lift_pp": 3.15,
+    "ci": [
+     0.04,
+     6.24
+    ]
+   }
+  },
+  "test_events": 68,
+  "sessions": 145
+ },
+ "eod": {
+  "verdict": "no_signal",
+  "lift_pp": 0.046,
+  "ci": [
+   -0.011,
+   0.093
+  ],
+  "placebo_pct": 0.0,
+  "placebo_mean_pp": -0.002,
+  "placebo_band": [
+   -0.024,
+   0.024
+  ],
+  "oc_lift_pp": -0.001,
+  "oc_ci": [
+   -0.043,
+   0.035
+  ],
+  "n_days": 450,
+  "n_rows": 462439,
+  "n_r_rows": 181709,
+  "mean_next_pct": 0.0,
+  "share_up_pct": 48.68,
+  "control_mean_next_pct": -0.04,
+  "control_share_up_pct": 47.98,
+  "stop_out": "no stop exists in this read \u2014 no stop-out rate"
+ },
+ "pre": {
+  "verdict": "unmeasured",
+  "reason": "pre-market volume history is the intraday cache: \u226431 sessions, patchy \u2014 too short to measure"
+ },
+ "n_names_with_bars": 2749,
+ "first_bar": "2024-09-30",
+ "last_bar": "2026-09-30",
+ "limits": [
+  "survivorship: the universe is today's list \u2014 names that left it are absent from both groups",
+  "two-year price cache: the first test event needs a full year of trailing data days, so only about one year of test events exists",
+  "FRED revision dates (e.g. a retail-sales or GDP revision day) count as event sessions, exactly as the tab counts them",
+  "ISM and Fed-speaker remarks have no dated history and are absent from T2",
+  "pre-market volume history is the intraday cache (<= 31 patchy sessions) \u2014 Q4 is not measured",
+  "Q3 has no stop, so no stop-out rate exists; the next-session return is the expectancy line"
+ ],
+ "runtime_sec": 168.2,
+ "attempted_writes": [
+  "price_cache.create_index"
+ ]
+}
