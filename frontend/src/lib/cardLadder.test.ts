@@ -687,6 +687,9 @@ describe('cardLadder — 🛡️ Resiliency tab (2026-09-30)', () => {
       expect(s.includes('undefined'), s).toBe(false);
       expect(s.includes('[object Object]'), s).toBe(false);
     }
+  });
+});
+
 /* 🧱 The served 1% pad (2026-09-30): the PLAN buy zone passes the enterable
  * band's pad_lo through when well-formed, drops it otherwise. The ladder never
  * computes a pad. */
