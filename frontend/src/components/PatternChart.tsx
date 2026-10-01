@@ -34,6 +34,7 @@ import type { BandStructureStudy } from '../lib/bandStructure';
 import { EnterableChip } from './EnterableChip';
 import { MomentumBurstChip } from './MomentumBurstChip';
 import { isBurst, type BurstRead } from '../lib/momentumBurst';
+import { clipStrip, keyPadStrip, padStrip, padTitle } from '../lib/zonePad';
 import type { ExplosiveStudy } from '../lib/bounceRoom';
 import { AmdRaidsChip } from './AmdRaidsChip';
 import {
@@ -245,10 +246,14 @@ export const PatternChart = memo(function PatternChart(
   const buyPx = pxText(lineOf('buy')?.price);
   const zoneLo = pxText(ladder.plan.buyZone?.lo);
   const zoneHi = pxText(ladder.plan.buyZone?.hi);
+  // 🧱 The served pad under the buy zone (2026-09-30) — cardLadder passes it
+  // only when well-formed; printed, never computed.
+  const zonePad = pxText(ladder.plan.buyZone?.pad_lo);
   const planRows: { st: CmStat; wide?: boolean }[] = [];
   if (zoneLo && zoneHi) {
     planRows.push({ wide: true, st: { k: 'Buy zone',
-      v: `${zoneLo}\u2013${zoneHi}${buyPx ? ` \u00B7 entry ${buyPx}` : ''}` } });
+      v: `${zoneLo}\u2013${zoneHi}${zonePad ? ` \u00B7 pad to ${zonePad}` : ''}`
+        + `${buyPx ? ` \u00B7 entry ${buyPx}` : ''}` } });
   } else if (buyPx) {
     planRows.push({ st: { k: 'Entry', v: buyPx } });
   }
@@ -457,6 +462,32 @@ export const PatternChart = memo(function PatternChart(
                         stroke={colour} strokeWidth={on ? 1.2 : 0.8}
                         opacity={on ? 0.9 : 0.45} />
                 )}
+                {/* 🧱 The served 1% pad under a demand floor (Ajay 2026-09-30:
+                    "if the demand zone or key level is 133, it holding at
+                    132"). Same colour, half the band's fill, no edge lines, so
+                    the DRAWN floor above it stays the visible edge. A board
+                    outline band gets a dotted outline instead. Clipped to the
+                    plot; nothing drawn without a served pad_lo. */}
+                {(() => {
+                  const raw = padStrip(b);
+                  const pad = clipStrip(raw, domain);
+                  if (!raw || !pad) return null;
+                  const yPadTop = yFor(pad.hi, domain, H, PAD_Y);
+                  const yPadBot = yFor(pad.lo, domain, H, PAD_Y);
+                  return (
+                    <rect data-band-pad={b.kind} x={0} y={yPadTop} width={plotW}
+                          height={Math.max(yPadBot - yPadTop, 1)}
+                          fill={outline ? 'none' : colour}
+                          stroke={outline ? colour : 'none'}
+                          strokeWidth={outline ? 1 : 0}
+                          strokeDasharray={outline ? '2,3' : undefined}
+                          opacity={outline ? (on ? 0.8 : 0.6) : (on ? 0.13 : 0.065)}>
+                      <title>
+                        {padTitle(b.label || BAND_NAME[b.kind] || b.kind, raw, b.pad_pct)}
+                      </title>
+                    </rect>
+                  );
+                })()}
               </g>
             );
           })}
@@ -598,6 +629,25 @@ export const PatternChart = memo(function PatternChart(
                     fontWeight={700} textAnchor="middle">{m.mark}</text>
             </g>
           ))}
+
+          {/* 🧱 A 🔑 support low's served pad (2026-09-30): a faint fuchsia
+              strip from the level down to pad_price, under the line itself. */}
+          {(tile.lines || []).map((l, li) => {
+            const raw = keyPadStrip(l);
+            const pad = clipStrip(raw, domain);
+            if (!raw || !pad) return null;
+            const yPadTop = yFor(pad.hi, domain, H, PAD_Y);
+            const yPadBot = yFor(pad.lo, domain, H, PAD_Y);
+            return (
+              <rect key={`kpad-${li}-${l.label}`} data-key-pad={l.tone}
+                    x={0} y={yPadTop} width={plotW} height={Math.max(yPadBot - yPadTop, 1)}
+                    fill={toneColor(l.tone)} opacity={0.08}>
+                <title>
+                  {padTitle(l.label || 'Key level', raw)}
+                </title>
+              </rect>
+            );
+          })}
 
           {/* plan levels */}
           {(tile.lines || [])

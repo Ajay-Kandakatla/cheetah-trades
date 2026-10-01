@@ -143,7 +143,20 @@ def year_rearm(claim_doc: Optional[dict], close) -> bool:
     side = "resistance" if claim_doc.get("direction") == "up" else "support"
     if claim_doc.get("direction") not in ("up", "down"):
         return False
-    return KL._back_inside(side, C, L)
+    # 🧱 2026-09-30: a support-side LOW re-arms back inside its PADDED edge
+    # (level_pad.key_edge) — the same edge the break was read on. The kind is
+    # stored on new claims; older ones carry it in the _id
+    # (KL:SYM:year:{kind}:{dir}, claim_key_for).
+    kind = claim_doc.get("kind") or _kind_from_id(claim_doc.get("_id"))
+    return KL._back_inside(side, C, KL._edge(L, kind, side))
+
+
+def _kind_from_id(key) -> Optional[str]:
+    """'low' / 'high' from a year claim _id KL:SYM:year:{kind}:{dir}; None otherwise."""
+    parts = str(key or "").split(":")
+    if len(parts) >= 5 and parts[0] == "KL" and parts[2] == "year" and parts[3] in ("high", "low"):
+        return parts[3]
+    return None
 
 
 def write_first_seen(coll, session_iso: str, first: dict, now: datetime) -> bool:

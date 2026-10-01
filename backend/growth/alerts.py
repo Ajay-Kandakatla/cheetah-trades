@@ -237,7 +237,7 @@ def _scan(rows: list, snapshot: dict, now: datetime) -> tuple:
             continue
         hits.sort(key=lambda t: (t[0], t[1]))
         _, _, band, hit = hits[0]
-        ok_room, room = AG.room_gate(px, bands)
+        ok_room, room = AG.room_gate(px, bands, entry_band=band)
         if not ok_room:
             counts["skipped_room"] += 1
             continue

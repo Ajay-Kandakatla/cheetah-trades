@@ -76,6 +76,7 @@ from . import sd_liquidity as liq
 from . import price_zones
 from . import demand_order as _order
 from . import alert_gates as _gates
+from . import level_pad as LP
 # Room to the first unbroken band overhead (Ajay 2026-09-05, TRU: "There is
 # only 0.5% room"). Re-exported so callers can read dr.room_block / the floor
 # default; the module itself is a leaf so chart_maps can import it while the
@@ -871,7 +872,10 @@ def trade_plan(last_price: float, entry_zone: Optional[dict],
     if not lo or not hi or hi <= lo:
         return None
 
-    stop = round(lo * (1.0 - stop_buffer_pct / 100.0), 2)
+    # 🧱 2026-09-30: the stop sits under the PADDED floor (level_pad — Ajay's 1%
+    # pad under a demand band, where the stops actually sit). Validity above
+    # still reads the drawn lo/hi.
+    stop = round(LP.support_floor(entry_zone) * (1.0 - stop_buffer_pct / 100.0), 2)
     risk_pct = round((last_price - stop) / last_price * 100.0, 1) if last_price else None
 
     # `resistance` accepts a single band (legacy) or the full band list of
@@ -1242,11 +1246,13 @@ def _pick_entry_zone(last_price: float, demand_zones: list[dict]) -> Optional[di
     if not demand_zones:
         return None
 
+    # 🧱 2026-09-30: inside/distance read the PADDED floor (level_pad): a print
+    # in a band's 1% pad picks that band at distance 0.
     def distance(z: dict) -> float:
-        lo, hi = z.get("lo") or 0.0, z.get("hi") or 0.0
-        if lo <= last_price <= hi:
+        fl, hi = LP.support_floor(z) or 0.0, z.get("hi") or 0.0
+        if fl <= last_price <= hi:
             return 0.0
-        return (lo - last_price) if last_price < lo else (last_price - hi)
+        return (fl - last_price) if last_price < fl else (last_price - hi)
 
     inside = [z for z in demand_zones if distance(z) == 0.0]
     if inside:
@@ -1269,8 +1275,8 @@ def _pick_entry_zone(last_price: float, demand_zones: list[dict]) -> Optional[di
     # while the stop under the band floor is 13.7% away — the plan would have
     # survived a band-distance gate carrying a risk the house cap forbids.
     if (best.get("hi") or 0) < last_price:
-        lo = best.get("lo") or 0.0
-        stop = lo * (1.0 - STOP_BUFFER_PCT / 100.0)
+        fl = LP.support_floor(best) or 0.0
+        stop = fl * (1.0 - STOP_BUFFER_PCT / 100.0)
         if last_price > 0 and (last_price - stop) / last_price * 100.0 > _entry_below_tol_pct():
             return None
     return best
@@ -1497,7 +1503,10 @@ def decide_from_frame(df, sym: str, *, today_row=None,
     if px_basis is None:
         basis = "frame"
 
-    zones = price_zones.compute(df, last_price=px_basis, **zone_geom())
+    # 🧱 2026-09-30: the board opts into the 1% pad (level_pad). zone_geom() is
+    # UNCHANGED so every study that calls it keeps reproducing its numbers.
+    zones = price_zones.compute(df, last_price=px_basis, **zone_geom(),
+                                demand_pad_pct=LP.pad_pct())
     if not zones:
         return None
 
@@ -1536,8 +1545,10 @@ def decide_from_frame(df, sym: str, *, today_row=None,
     closes = [round(float(c), 2) for c in df["close"].tolist()]
 
     band = None
-    if entry_zone and entry_zone.get("lo", 0) <= last_price <= entry_zone.get("hi", 0):
-        band = reentry_read(closes, entry_zone["hi"], entry_zone["lo"], last_price)
+    # 🧱 In-band and the broken-band guard read the PADDED floor: a close in the
+    # 1% pad is not a "close under the floor".
+    if entry_zone and LP.in_band(entry_zone, last_price):
+        band = reentry_read(closes, entry_zone["hi"], LP.support_floor(entry_zone), last_price)
     else:
         band = {"is_reentry": False, "fell_from_pct": None,
                 "bars_since_above": None, "in_band": False,
@@ -1595,8 +1606,8 @@ def decide_from_frame(df, sym: str, *, today_row=None,
         # `band_break_read`, NOT `reentry_read`: the latter returns the empty
         # shape whenever price is outside the band, which it always is here,
         # so until 2026-09-05 this field never carried data.
-        "top_band_read": (band_break_read(closes, demand[0]["hi"], demand[0]["lo"])
-                          if demand and last_price < demand[0]["lo"] else None),
+        "top_band_read": (band_break_read(closes, demand[0]["hi"], LP.support_floor(demand[0]))
+                          if demand and LP.under_floor(demand[0], last_price) else None),
         "verdict": _verdict_after_break(zones.get("verdict"), entry_zone, band),
         # The re-entry read.
         "in_demand_band": band["in_band"],

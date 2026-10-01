@@ -593,3 +593,19 @@ describe('layoutLabels keeps price order when labels collide', () => {
     for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(11);
   });
 });
+
+/* 🧱 The served 1% pad (2026-09-30): the band label names it in cents. */
+describe('bandLabel — the served pad', () => {
+  it('"$133–$135 (pad to $131.67)" for a padded demand band', () => {
+    expect(bandLabel(zone({ lo: 133, hi: 135, pad_lo: 131.67, pad_pct: 1 })))
+      .toBe('$133–$135 (pad to $131.67)');
+  });
+  // --- negatives ---
+  it('NEGATIVE: no pad / malformed pad / supply → today\'s label exactly', () => {
+    expect(bandLabel(zone({ lo: 133, hi: 135 }))).toBe('$133–$135');
+    expect(bandLabel(zone({ lo: 133, hi: 135, pad_lo: null }))).toBe('$133–$135');
+    expect(bandLabel(zone({ lo: 133, hi: 135, pad_lo: NaN }))).toBe('$133–$135');
+    expect(bandLabel(zone({ lo: 133, hi: 135, pad_lo: 133 }))).toBe('$133–$135');
+    expect(bandLabel(zone({ kind: 'supply', lo: 133, hi: 135, pad_lo: 131.67 }))).toBe('$133–$135');
+  });
+});

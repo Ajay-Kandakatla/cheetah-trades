@@ -215,7 +215,10 @@ def test_tail_rule_drops_today_and_phantom_only():
 
 
 # ── container replica 1: the served band == bounce_room.demand_read's pick ───
-def test_served_band_pick_equals_bounce_room_demand_read():
+def test_served_band_pick_equals_bounce_room_demand_read(monkeypatch):
+    # 🧱 2026-09-30: the published explosive study replays the PRE-PAD engine (drawn floors).
+    from supply_demand import level_pad as _LP
+    monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", 0.0)
     zones = [{"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 3},
              {"kind": "demand", "lo": 95.0, "hi": 99.5, "touches": 2},      # widest, top 99.5
              {"kind": "demand", "lo": 96.0, "hi": 98.0, "touches": 5},      # nested: higher lo, lower hi

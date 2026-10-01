@@ -62,6 +62,7 @@ import math
 from datetime import date, datetime, timedelta
 from typing import Optional
 
+from supply_demand import level_pad as LP
 from trading import risk_rules
 from trading import zone_edge_entry as ZEE
 from trading.broker import BrokerError, get_broker
@@ -502,7 +503,7 @@ def narrative(pos: dict) -> str:
     why = "Options lane entry (paper Auto-Pilot, owner rules)"
     last = _f(pos.get("entry_underlying"))
     if band.get("lo") is not None and band.get("hi") is not None:
-        rel = "in" if (last is not None and float(band["lo"]) <= last <= float(band["hi"])) else "at"
+        rel = "in" if (last is not None and LP.in_band(band, last)) else "at"   # 🧱 padded floor
         why += ": the stock printed %s %s the demand band %s–%s" % (
             _fmt_px(last) if last is not None else "?", rel, _fmt_px(band["lo"]), _fmt_px(band["hi"]))
         t = _f(band.get("touches"))
@@ -669,7 +670,8 @@ def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> d
     target = _f(room.get("target"))
     out = {"ok": False, "symbol": sym, "band": band, "last": c["last"],
            "target_underlying": target,
-           "stop_underlying": round(float(band["lo"]) * (1.0 - STOP_BUFFER_PCT / 100.0), 2)}
+           # 🧱 2026-09-30: under the PADDED floor (level_pad), PAPER only
+           "stop_underlying": round(LP.support_floor(band) * (1.0 - STOP_BUFFER_PCT / 100.0), 2)}
     if c["last"] < MIN_UNDERLYING_PRICE:
         out["reason"] = "underlying %.2f < $%g" % (c["last"], MIN_UNDERLYING_PRICE)
         return out
@@ -699,7 +701,8 @@ def plan_entry(brk, c: dict, gate_detail: dict, equity: float, today: date) -> d
     structure = structure_for(iv, target is not None)
     short_c, short_s = None, None
     if structure == "short_put_spread":
-        ps = _plan_put_spread(brk, sym, expiry, float(band["lo"]))
+        # 🧱 the short put sits at or under the PADDED floor (level_pad)
+        ps = _plan_put_spread(brk, sym, expiry, LP.support_floor(band))
         if ps["ok"]:
             out["structure"] = "short_put_spread"
             out["otype"] = "put"

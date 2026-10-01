@@ -177,6 +177,7 @@ from typing import Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
 from . import zone_store
+from . import level_pad as LP
 from .alert_gates import ALERT_MIN_ROOM_PCT
 from .zone_bounce_alerts import (BOUNCE_MIN_PCT, STRONG_PCT, TOUCH_TOL_PCT, WICK_PCT,
                                  is_eligible, print_from_snapshot)
@@ -470,7 +471,7 @@ def in_demand_read(print_px, doc: dict) -> Optional[dict]:
         if not _valid_band(band) or not is_eligible(band, prev_close, px):
             continue
         lo, hi = float(band["lo"]), float(band["hi"])
-        if not (lo <= px <= hi):
+        if not LP.in_band(band, px):          # 🧱 the PADDED floor (level_pad)
             continue
         if best is None or lo > float(best["lo"]):
             best = band
@@ -571,13 +572,14 @@ def demand_read(print_px, doc: dict, near_pct: float = DEMAND_NEAR_PCT) -> Optio
         if _kind(b) != "demand":
             continue
         lo, hi = _f(b.get("lo")), _f(b.get("hi"))
-        if lo is None or hi is None or lo > px:
+        # 🧱 2026-09-30: under the PADDED floor = fell through (level_pad)
+        if lo is None or hi is None or LP.under_floor(b, px):
             continue
-        cands.append((lo, hi, int(_f(b.get("touches")) or 0)))
+        cands.append((lo, hi, int(_f(b.get("touches")) or 0), b))
     if not cands:
         return None
-    lo, hi, touches = max(cands, key=lambda t: t[1])
-    inside = lo <= px <= hi
+    lo, hi, touches, _b = max(cands, key=lambda t: t[1])
+    inside = LP.in_band(_b, px)
     dist = 0.0 if inside else round((px - hi) / px * 100.0, 2)
     return {"lo": lo, "hi": hi, "touches": touches, "in_band": inside,
             "distance_pct": dist, "near": bool(inside or dist <= near_pct)}

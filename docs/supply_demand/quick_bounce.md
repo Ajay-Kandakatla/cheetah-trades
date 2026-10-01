@@ -140,3 +140,10 @@ $1B+ names only, so the smallest listed names never show).
 - `nearest_demand` measures against PROVEN demand bands only; NTAP-style
   bounces off a 1-touch broken-supply shelf are the 🪃 alert's business, not
   this list's.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`nearest_demand` and `closed_under` read the PADDED floor; the row's stop sits 0.5% under the pad (131.01 for a 133 floor); `room_gate` names the band. The wording he reads is unchanged ("Quick Reversal"); the touch read and the failed-zone line (`BREAK_BUFFER_PCT`) stay on the drawn floor (HIS CALL #6).
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

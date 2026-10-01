@@ -14,6 +14,7 @@
  * Configured price-structure read — NOT a book method, NOT advice.
  */
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
+import { padStrip } from './zonePad';
 
 /** One bar as the backend sends it. `open/high/low/volume` were added
  *  2026-08-16; a payload cached before that has only `date` + `close`. */
@@ -282,6 +283,9 @@ export type BandSpec = {
   lo: number; hi: number;
   kind: 'supply' | 'demand';
   isEntry: boolean;
+  /** 🧱 The served pad under a demand floor (2026-09-30) — present only when
+   *  lib/zonePad.padStrip accepts it; the primitive draws it at half alpha. */
+  pad_lo?: number;
 };
 
 /** Is this the band the plan actually points at?
@@ -312,7 +316,12 @@ export function bandsFor(data: Pick<ZoneMapPayload,
   const take = (zones: Zone[] | undefined, kind: 'supply' | 'demand'): BandSpec[] =>
     (zones || [])
       .filter((z) => z && ok(z.lo) && ok(z.hi) && z.hi > z.lo)
-      .map((z) => ({ lo: z.lo, hi: z.hi, kind, isEntry: kind === 'demand' && sameBand(z, ez) }));
+      .map((z) => {
+        const spec: BandSpec = { lo: z.lo, hi: z.hi, kind, isEntry: kind === 'demand' && sameBand(z, ez) };
+        const pad = padStrip({ kind, lo: z.lo, pad_lo: z.pad_lo });
+        if (pad) spec.pad_lo = pad.lo;
+        return spec;
+      });
   return [...take(data.supply_zones, 'supply'), ...take(data.demand_zones, 'demand')];
 }
 

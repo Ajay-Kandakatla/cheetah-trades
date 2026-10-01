@@ -486,7 +486,15 @@ export type CmBar = { t: string; o: number; h: number; l: number; c: number; v: 
 // `neutral` is a range that is neither a floor nor a lid — the 0DTE gamma
 // walls, which bracket where dealer hedging is expected to contain the tape.
 // Colouring it green or red would imply a direction it does not have.
-export type CmBand = { kind: 'base' | 'demand' | 'supply' | 'neutral' | 'board_demand' | 'board_supply'; lo: number; hi: number; label?: string };
+export type CmBand = {
+  kind: 'base' | 'demand' | 'supply' | 'neutral' | 'board_demand' | 'board_supply'; lo: number; hi: number; label?: string;
+  /** 🧱 The served 1% pad under a demand floor (2026-09-30,
+   *  supply_demand/level_pad.pad_fields). `lo` stays the DRAWN edge; the pad
+   *  is drawn as a lighter strip from `lo` down to `pad_lo` (lib/zonePad.ts).
+   *  Absent on supply and on any unpadded band. Never computed here. */
+  pad_lo?: number | null;
+  pad_pct?: number | null;
+};
 // The last four are the 2026-09-12 study overlays. They were missing from
 // this union, so `toneColor` and `TONE_PRIORITY` had no case for them and
 // every study line rendered grid-grey with a droppable label.
@@ -515,7 +523,13 @@ export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
  *  pressure (priority 0) while the line itself still draws. The flag was sent
  *  for weeks with no consumer; "BOS 211.50" carried a STOP tone at priority 3
  *  and could push the real support label off the gutter. */
-export type CmLine = { price: number; label: string; tone: CmLineTone; quiet?: boolean };
+export type CmLine = {
+  price: number; label: string; tone: CmLineTone; quiet?: boolean;
+  /** 🧱 A 🔑 support LOW's served pad edge (2026-09-30,
+   *  supply_demand/key_levels.chart_lines): the level breaks only past this.
+   *  null / absent on highs and on any unpadded line. Never computed here. */
+  pad_price?: number | null;
+};
 export type CmTapeSession = 'premarket' | 'rth' | 'afterhours' | 'closed';
 export type CmMarker = { date: string; label?: string; kind?: string; price?: number };
 export type CmStat = { k: string; v: string };

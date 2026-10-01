@@ -79,7 +79,12 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # the charts plus the close-through push (ON for the owner). Its
                 # own section for the ⚡ reason: UNMEASURED, and it gates
                 # nothing.
-                "key_levels")
+                "key_levels",
+                # 🧱 ZONE PAD (2026-09-30) — the 1% stop-side pad under demand
+                # floors and support key levels. Its own section because it
+                # moves a line on every board above, and every HIS CALL behind
+                # it is a one-constant flip the panel has to name.
+                "zone_pad")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -777,7 +782,161 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: key levels section unavailable: %s", exc)
 
+    # ── 🧱 Zone pad ────────────────────────────────────────
+    try:
+        out["zone_pad"] = _zone_pad_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: zone pad section unavailable: %s", exc)
+    try:
+        # ONE entry under "stops" (the two pad lines joined): the panel caps each
+        # category at a few lines and the stop is what the pad moves on every one.
+        pad = " ".join(_pad_lines())
+        for key in PAD_LINE_SECTIONS:
+            sec = out.get(key)
+            if isinstance(sec, dict):
+                sec["stops"] = list(sec.get("stops") or []) + [pad]
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: zone pad lines unavailable: %s", exc)
+
     return out
+
+
+# The sections whose rules the 🧱 pad changes; each carries the two pad lines.
+PAD_LINE_SECTIONS = ("in_demand", "deep_demand", "alerts", "autopilot",
+                     "quick_bounce", "key_levels")
+
+
+def _g(x) -> str:
+    return "%g" % float(x)
+
+
+def _stacked_pct(pad_pct, buf_pct) -> float:
+    """% under the DRAWN edge of a stop `buf_pct` under a floor padded `pad_pct`."""
+    return round((1.0 - (1.0 - float(pad_pct) / 100.0) * (1.0 - float(buf_pct) / 100.0)) * 100.0, 4)
+
+
+def _pad_rule_line() -> str:
+    from . import level_pad as LP
+    p = _g(LP.pad_pct())
+    return ("🧱 Pad: every SUPPORT read (in the zone, near demand, arrival, crossed, broken, "
+            "the stop) uses the floor %s%% under a demand band's drawn edge, and a key-level "
+            "LOW the price is above breaks only %s%% beyond a %s%% pad under it; RESISTANCE "
+            "reads (a band above the print as a ceiling, room, target) use the drawn edges — "
+            "except that the band a read is ABOUT is never its own ceiling. The measured "
+            "floor-held phone gate reads the %s floor."
+            % (p, _g(SL_PIERCE()), p, "padded" if _pad_floor_held() else "drawn"))
+
+
+def SL_PIERCE() -> float:
+    from . import sd_liquidity as SL
+    return SL.SWEEP_MIN_PIERCE_PCT
+
+
+def _pad_floor_held() -> bool:
+    from . import level_pad as LP
+    return bool(LP.PAD_FLOOR_HELD)
+
+
+def _pad_lines() -> list:
+    """The two lines every section the pad touches carries: the rule and the verdict."""
+    from . import zone_pad_measured as ZPM
+    return [_pad_rule_line(), "🧱 " + ZPM.verdict_line()]
+
+
+def _zone_pad_section() -> dict:
+    """🧱 The 1% pad — every number read from level_pad (LP), sd_liquidity (SL),
+    alert_gates (AG), demand_reentry (DR), zone_bounce_alerts (ZB) and
+    quick_bounce (QB); nothing typed here. Imported LAZILY like ⚡ and 🔑."""
+    from . import level_pad as LP
+    from . import sd_liquidity as SL
+    from . import zone_pad_measured as ZPM
+    p = LP.pad_pct()
+    pierce = SL.SWEEP_MIN_PIERCE_PCT
+    ex = 133.0                                      # his own example level, verbatim from the ask
+    ex_fl = LP.padded(ex)
+    phone_stop = round(ex_fl * (1.0 - AG.STOP_BUFFER_PCT / 100.0), 2) if ex_fl else None
+    board_stop = round(ex_fl * (1.0 - DR.STOP_BUFFER_PCT / 100.0), 2) if ex_fl else None
+    kl_break = round(_stacked_pct(p, pierce), 2)
+    return {
+        "title": "🧱 %s%% pad under demand floors and support key levels" % _g(p),
+        "emoji": "🧱",
+        "picks": [
+            "Your ask (2026-09-30): “Also increase our Demand zone and key levels sizes by "
+            "1%. becuz Generally we are missing this, I been noticing if the demand zone or key "
+            "level is 133, it holding at 132. My theory is MMs know stoplosses are beyond 133.”",
+            _pad_rule_line(),
+            "The number is the house stop shelf (sd_liquidity STOP_SHELF_PCT = %s%%, “where "
+            "the stops actually sit”): a %s floor counts down to %s. The drawn band edges and "
+            "key-level prices never move; the pad draws as a lighter strip under the edge."
+            % (_g(LP.describe()["shelf_pct"]), _g(ex), _g(ex_fl)),
+            "Where it counts: Back in Demand and Deep Demand membership, the broken-band and "
+            "crossed reads, Quick Reversal, the 🔑 Key Levels tab and its broken lows, the "
+            "⚡ Signals READY gates, the card entry ladder, the paper Auto-Pilot lanes, "
+            "your holdings stop, and the charts.",
+            "Phone gate: proximity was band floor ≤ print ≤ top +%s; now the floor side "
+            "reaches %s%% lower (%s× the floor) and the +%s above the top is unchanged. Room "
+            "stays ≥ %s to the drawn bottom of the first proven lid; the band the push is "
+            "about is never its own ceiling. With the floor-held gate on the drawn floor the "
+            "set of pushes is unchanged — only the plan's stop, risk and R move."
+            % (_pct(AG.ALERT_MAX_ABOVE_DEMAND_PCT), _g(p), _g(round(1.0 - p / 100.0, 6)),
+               _pct(AG.ALERT_MAX_ABOVE_DEMAND_PCT), _pct(AG.ALERT_MIN_ROOM_PCT)),
+        ],
+        "stops": [
+            "Phone plan, paper lanes, Quick Reversal row and holdings stop: %s%% under the pad "
+            "= %s%% under the drawn edge (was %s%%); a %s floor stops at %s."
+            % (_g(AG.STOP_BUFFER_PCT), _g(_stacked_pct(p, AG.STOP_BUFFER_PCT)),
+               _g(AG.STOP_BUFFER_PCT), _g(ex), _g(phone_stop)),
+            "Board plan (Back in Demand, Deep Demand, tiles): %s%% under the pad = %s%% under "
+            "the drawn edge (was %s%%); a %s floor stops at %s."
+            % (_g(DR.STOP_BUFFER_PCT), _g(_stacked_pct(p, DR.STOP_BUFFER_PCT)),
+               _g(DR.STOP_BUFFER_PCT), _g(ex), _g(board_stop)),
+            "About %s%% more risk per share, so fewer R to the same target and a smaller paper "
+            "size; stops wider than the %s cap skip more tall bands." % (_g(p), _pct(RR.ABS_MAX_STOP_PCT)),
+        ],
+        "alerts": [
+            "Sell signals that now fire LATER: 🔑 a close through a support LOW needs %s%% under "
+            "the level (was %s%%); the 🔴 holdings STOP / NEAR_STOP sit %s%% lower; the paper "
+            "stock, catalyst, Quick Reversal and options stops sit %s%% lower; the 52-week latch "
+            "re-arms sooner. Highs and up-breaks are unchanged."
+            % (_g(kl_break), _g(pierce), _g(p), _g(p)),
+            "Display reads that arrive later: 🔪 closed under the floor, the 🔑 broke chip, the "
+            "🔑 tab's broken count, Deep Demand crossed levels. The 🎯/🔪 sweep badge keeps the "
+            "drawn floor and says “inside the %s%% pad” when the pierce stayed in it."
+            % _g(p),
+            "🧱 " + ZPM.verdict_line(),
+            "HIS CALL 1 — PAD_FLOOR_HELD = %s: the measured floor-held phone gate reads the %s "
+            "floor. Flip it and a name holding in the pad can ring the phone."
+            % (LP.PAD_FLOOR_HELD, "padded" if LP.PAD_FLOOR_HELD else "drawn"),
+            "HIS CALL 2 — PAD_BAND_KINDS = %s: only demand-origin bands are padded (not "
+            "broken-supply shelves acting as support)." % (", ".join(LP.PAD_BAND_KINDS),),
+            "HIS CALL 3 — PAD_KEY_KINDS = %s: only key-level lows on the support side are "
+            "padded (not highs the price is above)." % (", ".join(LP.PAD_KEY_KINDS),),
+            "HIS CALL 4 — stops stack under the pad (STOP_BUFFER_PCT %s%% phone / %s%% board). "
+            "DECIDED 2026-10-01, your words: “Both sides”. So names whose R:R sits near the "
+            "board floor leave Back in Demand." % (_g(AG.STOP_BUFFER_PCT), _g(DR.STOP_BUFFER_PCT)),
+            "HIS CALL 5 — the sell timing above (%s%% for a 🔑 support low, %s%% lower holdings "
+            "and paper stops). DECIDED 2026-10-01, your words: “Both sides”."
+            % (_g(kl_break), _g(p)),
+            "HIS CALL 6 — undercut tolerances are not stacked: the 🪃 reversal wick (WICK_PCT "
+            "%s%%) and the Quick Reversal failed-zone line (BREAK_BUFFER_PCT %s%%) stay on the "
+            "drawn floor." % (_g(ZB.WICK_PCT), _g(QB.BREAK_BUFFER_PCT)),
+            "HIS CALL 7 — one knob: DEMAND_PAD_PCT = STOP_SHELF_PCT = %s%% for zones AND key "
+            "levels (and the 🎯 stop-shelf read); 0 turns the pad off everywhere." % _g(p),
+            "HIS CALL 8 — scope: fine geometry (Support tab's finer levels, the zones page, the "
+            "Tape tab, Under Value tiles) and the SPY/QQQ strip are NOT padded.",
+            "HIS CALL 9 — paper lanes may enter inside the pad (the paper stock lane has no "
+            "floor-held gate). The demand lane changes both ways: it adds prints inside the "
+            "pad and drops reclaims from just under the floor (a prior close in the pad is "
+            "residence, not an arrival). Keep, or require the drawn floor for paper entries.",
+            "HIS CALL 10 — if the pad study reads no_signal or inverted: keep the pad (your "
+            "rule, labelled) or set DEMAND_PAD_PCT = 0.",
+            "HIS CALL 11 — the trade autopsy keeps the drawn floor for band_failed / shakeout.",
+            "HIS CALL 12 — the band a push is about is never its own ceiling, even when the "
+            "print is only inside its pad (ON).",
+        ],
+        "note": _DISCLAIMER + (" UNMEASURED until the pad study reports."
+                               if ZPM.status() == ZPM.STATUS_PENDING else ""),
+    }
 
 
 def _key_levels_section() -> dict:

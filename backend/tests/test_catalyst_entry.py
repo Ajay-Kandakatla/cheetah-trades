@@ -40,6 +40,22 @@ import trading.exit_engine as EE
 import trading.zone_edge_entry as ZE
 from supply_demand.alert_gates import ALERT_MAX_ABOVE_DEMAND_PCT, ALERT_MIN_ROOM_PCT
 from trading.risk_rules import ABS_MAX_STOP_PCT
+from supply_demand import level_pad as LP
+
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: every stop pin runs with the pad ON (default) and OFF (the
+    pre-pad regression)."""
+    if request.param is not None:
+        monkeypatch.setattr(LP, "DEMAND_PAD_PCT", request.param)
+    return LP.pad_pct()
+
+
+def _fl(lo):
+    """The padded demand floor, computed HERE from the constant (never the engine)."""
+    p = LP.pad_pct()
+    return round(lo * (1 - p / 100.0), 2) if p > 0 else lo
 
 ET = ZoneInfo("America/New_York")
 DAY = EE._et_day()
@@ -614,7 +630,7 @@ def test_requires_bounce_or_demand_proximity(env):
     assert CE.run()["entered"] == []
 
 
-def test_proximity_anchor_stop_under_band_floor_absolute_level(env):
+def test_proximity_anchor_stop_under_band_floor_absolute_level(env, padmode):
     br, docs = happy()
     _, db, enter_calls, pushes, _ = env(payload=scan([cand()]), bounce=br, docs=docs)
     out = CE.run()
@@ -622,7 +638,7 @@ def test_proximity_anchor_stop_under_band_floor_absolute_level(env):
     call = enter_calls[0]
     assert call["symbol"] == "EOSE" and call["limit_price"] is None
     assert call["allow_earnings"] is False and call["top_up"] is False
-    assert call["stop_price"] == pytest.approx(4.80 * (1 - ZE.STOP_BUFFER_PCT / 100.0), abs=1e-4)
+    assert call["stop_price"] == pytest.approx(_fl(4.80) * (1 - ZE.STOP_BUFFER_PCT / 100.0), abs=1e-4)
     assert call["stop_pct"] == pytest.approx((5.0 - call["stop_price"]) / 5.0 * 100, abs=0.01)
     assert call["strategy"] == "catalyst"
     r = call["reason"]
@@ -642,15 +658,15 @@ def test_proximity_anchor_stop_under_band_floor_absolute_level(env):
     assert led[0]["detail"]["strategy"] == "catalyst"
     assert "TLSW" not in (led[0].get("cite") or "") and "p." not in (led[0].get("cite") or "")
     assert pushes and pushes[0][0] == "EOSE" and pushes[0][1] == "paper"
-    assert "EOSE" in pushes[0][2] and "4.78" in pushes[0][2]
+    assert "EOSE" in pushes[0][2] and ("%.2f" % call["stop_price"]) in pushes[0][2]
 
 
-def test_bounce_off_demand_uses_bounce_band_with_buffer(env):
+def test_bounce_off_demand_uses_bounce_band_with_buffer(env, padmode):
     b = bounce_of(DEMAND, touch_low=4.82, bounce_pct=3.7)
     br, docs = happy(print_px=5.0, bounce=b)
     _, db, enter_calls, _, _ = env(payload=scan([cand()]), bounce=br, docs=docs)
     assert CE.run()["entered"] == ["EOSE"]
-    assert enter_calls[0]["stop_price"] == pytest.approx(4.80 * 0.995, abs=1e-4)
+    assert enter_calls[0]["stop_price"] == pytest.approx(_fl(4.80) * 0.995, abs=1e-4)
     assert enter_calls[0]["reason"]["bounce"]["bounce_pct"] == 3.7
     assert enter_calls[0]["reason"]["side"] == "demand"
 
@@ -671,7 +687,7 @@ def test_bounce_off_broken_supply_stops_at_that_band_lo(env):
     assert enter_calls[0]["reason"]["proximity"]["anchor"] == "bounce"    # review 2026-09-05
 
 
-def test_bounce_anchor_must_still_be_within_the_proximity_line(env):
+def test_bounce_anchor_must_still_be_within_the_proximity_line(env, padmode):
     """REGRESSION (review 2026-09-05): a bounce read anchored the buy with NO
     proximity check, while zone_bounce_alerts gates every bounce push on
     alert_gates.demand_proximity_gate. A 3%+ lift is REQUIRED for a bounce
@@ -692,7 +708,7 @@ def test_bounce_anchor_must_still_be_within_the_proximity_line(env):
     br, docs = happy(print_px=97.5, bands=(b95, far), bounce=bounce_of(b95, 95.5, 2.1))
     _, db, enter_calls, _, _ = env(payload=scan([cand(price=97.5)]), bounce=br, docs=docs)
     assert CE.run()["entered"] == ["EOSE"]
-    assert enter_calls[0]["stop_price"] == pytest.approx(95.0 * 0.995, abs=1e-4)
+    assert enter_calls[0]["stop_price"] == pytest.approx(_fl(95.0) * 0.995, abs=1e-4)
     assert enter_calls[0]["reason"]["proximity"] == {
         "ok": True, "band": {"kind": "demand", "lo": 95.0, "hi": 97.0, "touches": 3},
         "above_top_pct": pytest.approx(0.52, abs=0.01), "anchor": "bounce"}

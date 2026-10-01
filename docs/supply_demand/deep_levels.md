@@ -273,3 +273,10 @@ The qualifier, `below_top_pct`, `reclaiming`, the level count and the 7%
 See `docs/chart_maps/deep_demand_levels.md` (2026-09-17) and
 `backend/supply_demand/deep_demand_wording.py`. Depth remains MEASURED
 `no_signal` (2026-09-16); nothing here claims otherwise.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`arrival()` reads INSIDE and CROSSED off the padded floor — a print inside a band's 1% pad arrived at it and did not cross it; `read()`'s "in" and `reclaiming` follow; `top_band` / `second_band` / `broken_bands` gain `"kind": "demand"` and `pad_lo` / `pad_pct` (lo / hi stay drawn so room_floor's ceilings stay drawn). "Crossed" arrives later for a name holding in a pad (a display change, listed).
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

@@ -180,3 +180,47 @@ describe('setBands', () => {
     expect(() => prim.setBands([band({})])).not.toThrow();
   });
 });
+
+/* 🧱 The served 1% pad under a demand floor (2026-09-30): the same strip at half
+ * alpha, from y(lo) down to y(pad_lo). It reads BandSpec.pad_lo; nothing here
+ * computes a price. */
+describe('the pad strip', () => {
+  it('a padded demand band draws one more rect from y(lo) to y(pad_lo), at half alpha', () => {
+    // $30 → y=280, $29.7 → y=281.2 → rounded 281 under the fake scale.
+    const rects = draw([band({ lo: 30, hi: 40, pad_lo: 29.7 })]);
+    expect(rects).toHaveLength(2);
+    const [fill, pad] = rects;
+    expect(fill.fill).toBe('rgba(34,197,94,0.10)');
+    expect(pad.fill).toBe('rgba(34,197,94,0.05)');
+    expect(pad.y).toBe(280);
+    expect(pad.h).toBe(1);
+    const wide = draw([band({ lo: 30, hi: 40, pad_lo: 25 })]);
+    expect(wide[1].y).toBe(280);
+    expect(wide[1].h).toBe(20);     // $25 → y=300
+  });
+
+  it('the entry band pad is half the entry fill, drawn under its bottom edge', () => {
+    const rects = draw([band({ lo: 30, hi: 40, pad_lo: 25, isEntry: true })]);
+    expect(rects).toHaveLength(4);      // fill + top + bottom edge + pad
+    expect(rects[3].fill).toBe('rgba(34,197,94,0.11)');
+    expect(rects[3].y).toBe(280);
+  });
+
+  // --- negatives ---
+  it('NEGATIVE: no pad_lo, NaN, ≥ lo → no strip', () => {
+    expect(draw([band({ lo: 30, hi: 40 })])).toHaveLength(1);
+    expect(draw([band({ lo: 30, hi: 40, pad_lo: NaN })])).toHaveLength(1);
+    expect(draw([band({ lo: 30, hi: 40, pad_lo: 30 })])).toHaveLength(1);
+    expect(draw([band({ lo: 30, hi: 40, pad_lo: 31 })])).toHaveLength(1);
+  });
+
+  it('NEGATIVE: a supply band never draws a pad', () => {
+    expect(draw([band({ kind: 'supply', lo: 30, hi: 40, pad_lo: 25 })])).toHaveLength(2);
+  });
+
+  it('NEGATIVE: a pad price off the visible scale is skipped, never pinned', () => {
+    const rects = draw([band({ lo: 30, hi: 40, pad_lo: 25 })],
+      fakeSeries((p) => (p < 29 ? null : 400 - p * 4)));
+    expect(rects).toHaveLength(1);
+  });
+});

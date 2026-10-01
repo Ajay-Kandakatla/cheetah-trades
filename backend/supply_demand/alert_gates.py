@@ -25,10 +25,12 @@ Two owner settings, both straight from that sentence:
   room_pct < ALERT_MIN_ROOM_PCT fails. A garbage print fails closed.
 
 ``demand_proximity_gate(print, band) -> bool``
-  ``band.lo <= print <= band.hi * (1 + ALERT_MAX_ABOVE_DEMAND_PCT/100)`` — at the
-  level or within 1% above it. Under the floor = fell through = no push ("I am
-  late by the time it reaches me" is the complaint; a bounce that already ran 4%
-  above the top lists, it does not ring). Garbage fails closed.
+  ``level_pad.support_floor(band) <= print <= band.hi * (1 + ALERT_MAX_ABOVE_DEMAND_PCT/100)``
+  — at the level or within 1% above it; the floor is the PADDED floor for a demand band
+  (band.lo x (1 - DEMAND_PAD_PCT/100), 🧱 2026-09-30), band.lo for a broken-supply shelf.
+  Under the floor = fell through = no push ("I am late by the time it reaches me"
+  is the complaint; a bounce that already ran 4% above the top lists, it does not
+  ring). Garbage fails closed.
 
 ``is_proven_band(band) -> bool``  (Ajay 2026-09-06, the KLAC lesson; 2026-09-08 touches only)
   A band counts as OVERHEAD only when it is tested: touches >= LID_MIN_TOUCHES
@@ -140,13 +142,20 @@ def _slim(band: dict) -> dict:
             "touches": int(_f(band.get("touches")) or 0)}
 
 
-def overhead_bands(bands, print_px, prev_close=None) -> list:
+def overhead_bands(bands, print_px, prev_close=None, entry_band=None) -> list:
     """Everything price meets going UP: unbroken PROVEN supply bands with
     hi >= print, plus proven demand bands strictly above the print. A demand
     band that CONTAINS the print is support, never overhead; a band that fails
     is_proven_band is skipped (KLAC 2026-09-06). Same shape as
     bounce_room.overhead_bands with ONE addition — the broken-supply rule when
-    prev_close is known."""
+    prev_close is known.
+
+    `entry_band` (🧱 2026-09-30, the 1% pad): the band a read is ABOUT is never
+    its own ceiling — a print inside its 1% pad sits under its drawn lo. Skipped
+    by identity (level_pad.same_band), and only when that band is PADDED
+    (level_pad.is_padded: a demand band, pad on). None, a supply shelf or pad 0
+    = byte-identical to before. Every
+    other band keeps its DRAWN edges (resistance reads never read the pad)."""
     px = _f(print_px)
     if px is None or px <= 0:
         return []
@@ -154,10 +163,20 @@ def overhead_bands(bands, print_px, prev_close=None) -> list:
     if pc is not None and pc <= 0:
         pc = None
     gap = gap_day(px, pc)                                 # DYN 2026-09-08: the gap resets the roles
+    _same = None
+    if entry_band is not None:
+        from . import level_pad as LP                     # function-local: this module stays a leaf
+        # Only a PADDED band (a demand band with the pad on) is excluded: that is
+        # the one case the pad creates (a print in its pad sits under its drawn
+        # lo). A supply shelf or pad 0 keeps today's read exactly.
+        if LP.is_padded(entry_band):
+            _same = LP.same_band
     out = []
     for b in bands or []:
         if not _valid_band(b) or not is_proven_band(b):
             continue                                      # unproven lid = noise, not a ceiling
+        if _same is not None and _same(b, entry_band):
+            continue                                      # never its own ceiling (🧱 pad)
         lo, hi = float(b["lo"]), float(b["hi"])
         if _kind(b) == "supply":
             if hi < px:
@@ -253,7 +272,11 @@ def approach_read(print_px, band, prev_close=None, day_low=None) -> Optional[dic
     px = _f(print_px)
     if px is None or px <= 0 or not _valid_band(band):
         return None
-    lo, hi = float(band["lo"]), float(band["hi"])
+    from . import level_pad as LP                         # function-local: this module stays a leaf
+    hi = float(band["hi"])
+    lo = LP.support_floor(band)                           # 🧱 the PADDED floor for a demand band
+    if lo is None:
+        return None
     pc, dl = _f(prev_close), _f(day_low)
     pc = pc if pc is not None and pc > 0 else None
     dl = dl if dl is not None and dl > 0 else None
@@ -320,11 +343,12 @@ def first_weak_lid(bands, print_px, target=None) -> Optional[dict]:
             "strength": _f(b.get("strength")), "pct": round((lo - px) / px * 100.0, 1)}
 
 
-def first_overhead(bands, print_px, prev_close=None) -> Optional[dict]:
+def first_overhead(bands, print_px, prev_close=None, entry_band=None) -> Optional[dict]:
     """The band price meets FIRST going up: the one containing the print
-    (lowest lo when nested), else the lowest lo above it. None = clear."""
+    (lowest lo when nested), else the lowest lo above it. None = clear.
+    `entry_band`: see overhead_bands (never its own ceiling)."""
     px = _f(print_px)
-    over = overhead_bands(bands, px, prev_close)
+    over = overhead_bands(bands, px, prev_close, entry_band=entry_band)
     if not over or px is None:
         return None
     inside = [b for b in over if b["lo"] <= px <= b["hi"]]
@@ -333,14 +357,15 @@ def first_overhead(bands, print_px, prev_close=None) -> Optional[dict]:
     return min(over, key=lambda b: b["lo"])
 
 
-def room_read(print_px, bands, prev_close=None) -> Optional[dict]:
+def room_read(print_px, bands, prev_close=None, entry_band=None) -> Optional[dict]:
     """{"state": "IN_BAND"|"ROOM", "room_pct", "target", "touches", "band"} for the
     first overhead band; None = CLEAR (or an unusable print — callers check the
-    print first when the difference matters)."""
+    print first when the difference matters). `entry_band`: the band the read is
+    about, never its own ceiling (🧱 2026-09-30)."""
     px = _f(print_px)
     if px is None or px <= 0:
         return None
-    first = first_overhead(bands, px, prev_close)
+    first = first_overhead(bands, px, prev_close, entry_band=entry_band)
     if first is None:
         return None
     in_band = first["lo"] <= px <= first["hi"]
@@ -358,13 +383,15 @@ def room_read(print_px, bands, prev_close=None) -> Optional[dict]:
 
 
 def room_gate(print_px, bands, prev_close=None,
-              min_room_pct: float = ALERT_MIN_ROOM_PCT) -> tuple:
+              min_room_pct: float = ALERT_MIN_ROOM_PCT, entry_band=None) -> tuple:
     """(ok, room). CLEAR passes with room None; IN_BAND fails; room under
-    `min_room_pct` fails. A garbage print fails closed: (False, None)."""
+    `min_room_pct` fails. A garbage print fails closed: (False, None).
+    `entry_band` (🧱 2026-09-30): the band the push is about is never its own
+    ceiling; the 5% number and every other target are unchanged."""
     px = _f(print_px)
     if px is None or px <= 0:
         return False, None
-    room = room_read(px, bands, prev_close)
+    room = room_read(px, bands, prev_close, entry_band=entry_band)
     if room is None:
         return True, None
     if room["state"] == "IN_BAND":
@@ -434,12 +461,18 @@ def direction_gate(approach, allowed=PUSH_DIRECTIONS) -> bool:
 def demand_proximity_gate(print_px, band,
                           max_above_pct: float = ALERT_MAX_ABOVE_DEMAND_PCT) -> bool:
     """At the demand level or within `max_above_pct` above its top. Under the
-    floor (fell through) and garbage both fail."""
+    floor (fell through) and garbage both fail. 🧱 2026-09-30: the floor is the
+    PADDED floor (level_pad.support_floor — 1% under a demand band's drawn lo);
+    the upper bound is UNCHANGED."""
     px = _f(print_px)
     if px is None or px <= 0 or not _valid_band(band):
         return False
-    lo, hi = float(band["lo"]), float(band["hi"])
-    return bool(lo <= px <= hi * (1.0 + max_above_pct / 100.0))
+    from . import level_pad as LP                         # function-local: this module stays a leaf
+    fl = LP.support_floor(band)
+    if fl is None:
+        return False
+    hi = float(band["hi"])
+    return bool(fl <= px <= hi * (1.0 + max_above_pct / 100.0))
 
 
 def room_txt(room: Optional[dict]) -> str:
@@ -467,10 +500,20 @@ def plan_txt(print_px, band, room: Optional[dict],
     px = _f(print_px)
     if px is None or px <= 0 or not _valid_band(band):
         return ""
+    from . import level_pad as LP                         # function-local: this module stays a leaf
     lo, hi = float(band["lo"]), float(band["hi"])
-    stop = lo * (1.0 - stop_buffer_pct / 100.0)
+    # 🧱 2026-09-30: the stop sits `stop_buffer_pct` under the PADDED floor
+    # (level_pad) — the same stop the paper lane places.
+    fl = LP.support_floor(band)
+    if fl is None:
+        return ""
+    stop = fl * (1.0 - stop_buffer_pct / 100.0)
     risk_pct = (px - stop) / px * 100.0
-    out = (f"buy ${lo:g}-{hi:g} · stop ${stop:.2f} ({stop_buffer_pct:g}% under the floor, "
+    if LP.is_padded(band) and fl != lo:
+        where = f"under the {LP.pad_pct():g}% pad at ${fl:.2f}"
+    else:
+        where = "under the floor"
+    out = (f"buy ${lo:g}-{hi:g} · stop ${stop:.2f} ({stop_buffer_pct:g}% {where}, "
            f"{risk_pct:.1f}% risk)")
     target = _f((room or {}).get("target")) if room else None
     if target is None:
@@ -745,6 +788,18 @@ def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS,
     df = daily_frame(symbol, frame)
     if df is None or len(df) < window + 2:
         return None
+    from . import level_pad as LP                         # function-local: this module stays a leaf
+    # 🧱 2026-09-30: the MEASURED floor-held read keeps the DRAWN floor unless
+    # HIS CALL #1 (level_pad.PAD_FLOOR_HELD) flips it.
+    floor = LP.sweep_floor(band)
+    if floor is None:
+        return None
+    # Corner guard (🧱 2026-09-30): no day low known but the print is already
+    # under the floor — the print IS a pierce. Tightening only; unreachable
+    # before the pad (a push needed the print inside the band).
+    _pl = _f(last)
+    if _f(day_low) is None and _pl is not None and 0 < _pl < floor:
+        day_low = _pl
     # The CLOSED window first, then the session bar (finding F3, 2026-09-14).
     # Slicing AFTER the append made the window 14 closed bars + today, so a
     # floor swept exactly `window` closed bars back fell out of it and read
@@ -754,13 +809,20 @@ def sweep_read(band, symbol=None, frame=None, window: int = SWEEP_WINDOW_BARS,
     # the closed window the pre-2026-09-14 read used, never in place of a bar.
     try:
         from . import sd_liquidity as liq
-        lo, hi = float(band["lo"]), float(band["hi"])
+        lo, hi = floor, float(band["hi"])
         w = with_session_bar(df.iloc[-window:], day_low, last, day)
         sw = liq.find_sweep(w, lo, hi)
         state = sw.get("state") or "intact"
-        if not sw.get("found") and float(w["low"].min()) < lo:
+        wlow = float(w["low"].min())
+        if not sw.get("found") and wlow < lo:
             state = "broken"          # pierced somewhere in the window, never reclaimed
+        pad_fl = LP.support_floor(band)
+        # The pierce stayed inside the 1% pad (Ajay's 133 -> 132): the read and
+        # the gate are UNCHANGED, only the wording says so (sweep_txt).
+        in_pad = bool(state in ("swept", "broken") and pad_fl is not None
+                      and LP.is_padded(band) and wlow >= pad_fl)
         return {"state": state,
+                "in_pad": in_pad,
                 "pierce_pct": sw.get("pierce_pct"),
                 "reclaim_bars": sw.get("reclaim_bars"),
                 "vol_x": _f(sw.get("sweep_volume_x")),   # NaN (a forming bar's volume) -> None
@@ -787,12 +849,21 @@ def sweep_txt(read: Optional[dict]) -> str:
         v = _f(read.get("vol_x"))
         if v is not None:
             bits.append("%.1fx vol" % v)
-        return "\U0001F3AF swept the stops" + (" " + " · ".join(bits) if bits else "")
+        return ("\U0001F3AF swept the stops" + (" " + " · ".join(bits) if bits else "")
+                + _in_pad_txt(read))
     if st == "broken":
         p = _f(read.get("pierce_pct"))
         return ("\U0001F52A broke the band%s and stayed under"
-                % (" by %.1f%%" % p if p is not None else ""))
+                % (" by %.1f%%" % p if p is not None else "")) + _in_pad_txt(read)
     return ""
+
+
+def _in_pad_txt(read: dict) -> str:
+    """" · inside the 1% pad" when the pierce stayed inside the 🧱 pad (2026-09-30)."""
+    if not read.get("in_pad"):
+        return ""
+    from . import level_pad as LP                         # function-local: this module stays a leaf
+    return " · inside the %g%% pad" % LP.pad_pct()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -95,6 +95,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from supply_demand import alert_gates
+from supply_demand import level_pad as LP
 from supply_demand.zone_bounce_alerts import STALE_PRINT_SEC   # the phone's line, reused
 from trading import entries
 from trading import risk_rules
@@ -579,9 +580,13 @@ def zone_gate(c: dict, row: Optional[dict], doc: Optional[dict]) -> tuple:
         # over the top — "I am late" — and must not be bought either.
         if not alert_gates.demand_proximity_gate(px, anchor):
             b_lo, b_hi = _f(anchor.get("lo")), _f(anchor.get("hi"))
-            if b_lo is not None and px < b_lo:
-                d["reason"] = ("alert gate: print %.2f back under bounce band floor %g"
-                               % (px, b_lo))
+            if b_lo is not None and LP.under_floor(anchor, px):
+                if LP.is_padded(anchor):
+                    d["reason"] = ("alert gate: print %.2f back under the padded band floor %g"
+                                   % (px, LP.support_floor(anchor)))
+                else:
+                    d["reason"] = ("alert gate: print %.2f back under bounce band floor %g"
+                                   % (px, b_lo))
             else:
                 d["reason"] = ("alert gate: print %.1f%% above bounce band top %g (max %g%%)"
                                % ((px / (b_hi or px) - 1.0) * 100.0, b_hi or 0.0,
@@ -618,7 +623,9 @@ def zone_gate(c: dict, row: Optional[dict], doc: Optional[dict]) -> tuple:
     d["band"] = {"kind": anchor.get("kind"), "lo": lo, "hi": _f(anchor.get("hi")),
                  "touches": int(_f(anchor.get("touches")) or 0)}
     # Stop: under the demand floor (zone_edge rule); a broken-supply shelf's lo as is.
-    stop = round(lo * (1.0 - STOP_BUFFER_PCT / 100.0), 4) if side == "demand" else round(lo, 4)
+    # 🧱 2026-09-30: the demand floor is the PADDED floor (level_pad), PAPER only.
+    stop = (round(LP.support_floor(anchor) * (1.0 - STOP_BUFFER_PCT / 100.0), 4)
+            if side == "demand" else round(lo, 4))
     stop_pct = round((px - stop) / px * 100.0, 2)
     d["stop_price"], d["stop_pct"] = stop, stop_pct
     if stop_pct <= 0:
@@ -932,8 +939,8 @@ def rules_list() -> list:
                  "the print between its floor and %g%% above its top; a bounce that "
                  "already ran past the line lists on the board, it is not bought"
                  % (alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT, alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT),
-         "value": "band.lo <= print <= band.hi x (1 + %g%%) — bounce band or demand band"
-                  % alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT,
+         "value": "%s — reversal band or demand band (a broken-supply shelf keeps band.lo)"
+                  % LP.proximity_text(alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT),
          "source": "owner rule (%s; S&D, no book)" % quote},
         {"rule": "The print is the cached scan's own price (no tape read from the tick); "
                  "older than the phone's stale line it is not acted on — "

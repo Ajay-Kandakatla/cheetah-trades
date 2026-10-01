@@ -2673,7 +2673,8 @@ def assess(*, kind: str = KIND_DEMAND, px, band, bands, prev_close=None, day_low
                     drags=[], band=None, room=None, survivor=None)
 
     if room_ok is None:
-        room_ok, room = AG.room_gate(px_f, bands or [], prev_close)
+        # 🧱 the band this read is about is never its own ceiling (level_pad)
+        room_ok, room = AG.room_gate(px_f, bands or [], prev_close, entry_band=band)
     room_ok = bool(room_ok)
 
     sweep = None
@@ -2717,8 +2718,17 @@ def assess(*, kind: str = KIND_DEMAND, px, band, bands, prev_close=None, day_low
                 gates={"room_ok": room_ok, "prox_ok": prox_ok,
                        "floor_state": floor_state, "session_low": sess_low},
                 drags=drags,
-                band={"lo": _f(band.get("lo")), "hi": _f(band.get("hi"))},
+                # 🧱 pad_lo / pad_pct for the card ladder's buy zone (demand only)
+                band={"lo": _f(band.get("lo")), "hi": _f(band.get("hi")),
+                      **(_pad_fields(band) if k != KIND_SUPPLY_BREAK else {})},
                 room=room_srv, survivor=survivor)
+
+
+def _pad_fields(band) -> dict:
+    """🧱 level_pad.pad_fields, imported INSIDE (this module's top-level import
+    set is pinned by its source guard)."""
+    from supply_demand import level_pad as LP                     # noqa: PLC0415
+    return LP.pad_fields(band)
 
 
 def read(*, doc, px, day_low=None, prev_close=None, change_pct=None,

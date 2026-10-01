@@ -411,7 +411,8 @@ def test_the_bounce_room_row_carries_the_read_and_a_pending_row_carries_no_key()
     doc = _doc("AAA", [DEM, RES], 95.0)
     row = BR.read_symbol("AAA", doc, _snap(91.0, 95.0, low=90.5), now=NOW)
     assert row["enterable"]["kind"] == EN.KIND_DEMAND
-    assert row["enterable"]["band"] == {"lo": 90.0, "hi": 92.0}
+    # 🧱 2026-09-30: the padded floor rides along for the card ladder
+    assert row["enterable"]["band"] == {"lo": 90.0, "hi": 92.0, "pad_lo": 89.1, "pad_pct": 1.0}
     assert "enterable" not in BR.read_symbol("AAA", None, None, now=NOW)
     assert "enterable" not in BR.read_symbol("AAA", {"error": "no data"}, None, now=NOW)
     assert "enterable" not in BR.read_symbol("AAA", doc, None, now=NOW)

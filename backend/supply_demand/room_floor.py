@@ -48,6 +48,7 @@ import math
 from typing import Optional
 
 from . import alert_gates as _gates
+from . import level_pad as LP
 
 MIN_ROOM_DEFAULT = _gates.ALERT_MIN_ROOM_PCT   # Ajay 2026-09-05: "more room atleast >5%"
 
@@ -61,14 +62,11 @@ def _f(x) -> Optional[float]:
 
 
 def _same_band(a: dict, b: Optional[dict]) -> bool:
+    # ONE identity rule (🧱 2026-09-30): level_pad.same_band — the 2-dp grain,
+    # a legacy single-level band (no hi) compares what exists.
     if not b:
         return False
-    alo, ahi, blo, bhi = _f(a.get("lo")), _f(a.get("hi")), _f(b.get("lo")), _f(b.get("hi"))
-    if alo is None or blo is None:
-        return False
-    # a legacy single-level band has no hi: compare what exists
-    return round(alo, 2) == round(blo, 2) and (
-        ahi is None or bhi is None or round(ahi, 2) == round(bhi, 2))
+    return LP.same_band(a, b)
 
 
 def plan_bands(cands, entry_band: Optional[dict] = None, *, proven: bool = True) -> list:

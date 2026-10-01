@@ -80,6 +80,7 @@ from . import alert_gates as AG
 from . import bullish_context as BC
 from . import alert_status as AS
 from . import enterable as EN
+from . import level_pad as LP
 # The 5-min siblings' freshness rule (review 2026-09-14, finding 5): this pass
 # used to push on bulk_live_prices()['price'] — the day AGGREGATE's close, with
 # no stamp — while zone_edge and zone_bounce refuse a print older than their
@@ -152,6 +153,11 @@ def read(last, band: dict, change_pct=None, prev_close=None,
     except (KeyError, TypeError, ValueError):
         return None
     if last <= 0 or hi <= 0 or lo > hi:
+        return None
+    # 🧱 2026-09-30: residence / inside / under read the PADDED floor (level_pad
+    # — 1% under a demand band's drawn lo). A broken-supply shelf keeps its lo.
+    lo = LP.support_floor(band)
+    if lo is None:
         return None
     was_at = was_near = False
     if prev_close is not None:
@@ -786,7 +792,8 @@ def _check_once(*, push: bool, board: Optional[dict], live: Optional[dict],
         if not zdoc:
             unknown_room += 1                             # nobody measured its supply: silent
             continue
-        ok, room = AG.room_gate(it["last"], zdoc.get("bands") or [], it.get("prev_close"))
+        ok, room = AG.room_gate(it["last"], zdoc.get("bands") or [], it.get("prev_close"),
+                                entry_band=it["band"])
         it["room"] = room
         if not ok:
             skipped_room += 1

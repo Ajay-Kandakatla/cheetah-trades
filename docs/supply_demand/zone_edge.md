@@ -280,3 +280,10 @@ Verified on live data 2026-09-14 (review of the alert logic), all in `zone_edge.
   1 otherwise). Break-side claims are unchanged (exact key only).
 
 Tests: `tests/test_alerts_review_fixes_2026_09_14.py` section 8.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`read_near_demand` reads "inside" off the padded floor (`level_pad.in_band`) and the served band carries `pad_lo` / `pad_pct`; `room_gate` names the band (`entry_band=`), so a padded band is never its own ceiling. Dedupe keys still read the DRAWN lo. With the floor-held gate on the drawn floor (HIS CALL #1) the set of demand pushes is unchanged — a print in the pad has a day low under the drawn floor and the gate refuses it; only the plan line moves (stop 0.5% under the pad).
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

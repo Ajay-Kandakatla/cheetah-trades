@@ -141,3 +141,10 @@ rejection (`bulk_snapshot` falls back to today-ET when `day.t` is absent, so a
 Saturday read stamps Friday's aggregate with Saturday's date). A rejected
 snapshot returns the frame untouched with `appended: false` and a `reason`.
 Tests: `tests/test_prices_today_bar.py` block "engine fixes 2026-09-05".
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`compute()` gains ONE keyword, `demand_pad_pct` (None / 0 = byte-for-byte today, pinned by `test_price_zones_compute_opt_in_pads_demand_only`). When > 0 a demand band's `in_price` reads its padded floor (`level_pad.padded(lo)`), the band gains additive `pad_lo` / `pad_pct` (lo / hi never move), `in_zone` follows `in_price` (so a print in the pad reads AT_DEMAND), a demand band whose pad holds the print is not `overhead`, and `params.demand_pad_pct` says so. Only `demand_reentry.decide_from_frame` opts in; `zone_geom()` and every other caller are unchanged.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

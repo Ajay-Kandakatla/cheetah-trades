@@ -23,6 +23,22 @@ import pytest
 PE = importlib.import_module("supply_demand.premarket_entry")
 AG = importlib.import_module("supply_demand.alert_gates")
 
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    from supply_demand import level_pad as _LP
+    if request.param is not None:
+        monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", request.param)
+    return _LP.pad_pct()
+
+
+def _fl(lo):
+    """The padded demand floor, computed HERE from the constant (never the engine)."""
+    from supply_demand import level_pad as _LP
+    p = _LP.pad_pct()
+    return round(lo * (1 - p / 100.0), 2) if p > 0 else lo
+
 ET = ZoneInfo("America/New_York")
 BAND = {"kind": "demand", "lo": 100.0, "hi": 102.0, "mid": 101.0}
 
@@ -194,12 +210,14 @@ def _rec(**kw):
     return base
 
 
-def test_a_clean_row_grades_ready_and_carries_a_plan():
+def test_a_clean_row_grades_ready_and_carries_a_plan(padmode):
     row = PE._row(_rec(), _live(), "session")
     assert row["grade"] == PE.GRADE_READY
     assert row["symbol"] == "TEST"
     assert row["drags"] == [] and row["blockers"] == []
-    assert "buy $100-102" in row["plan"] and "stop $99.50" in row["plan"]
+    # 🧱 2026-09-30: the stop sits 0.5% under the PADDED floor (99.00 -> 98.50)
+    assert "buy $100-102" in row["plan"] and ("stop $%.2f" % (_fl(100.0) * 0.995)) in row["plan"]
+    assert ("stop $98.50" if padmode else "stop $99.50") in row["plan"]
     assert row["above_band_pct"] == pytest.approx(0.49, abs=0.01)
 
 

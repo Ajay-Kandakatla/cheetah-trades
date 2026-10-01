@@ -212,3 +212,10 @@ keeps "UNMEASURED". Priors: Huddart (positive after both 52w crossings); the ICT
 - Team LBR, "MP Value Area Rule (80% Rule)" — http://teamlbr.blogspot.com/2008/09/mp-value-area-rule-80-rule.html
 - Wikipedia, Pivot point — https://en.wikipedia.org/wiki/Pivot_point_(technical_analysis)
 - Shannon, "How To Use The Anchored VWAP" — https://alphatrends.net/archives/2017/12/use-anchored-vwap-avwap/
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+A LOW on the SUPPORT side carries a 1% pad (`level_pad.key_edge`, the house stop shelf): it breaks only `PIERCE_PCT` (0.15%) beyond the padded edge — PWL 133.00 closes through at ≤ 131.4725 (was 132.8005) — and a close inside the pad keeps it support. `member_state`, `_last_close_cross`, `is_through` and `year_rearm` read the edge; `beyond_pct` / `dist_pct` stay measured from the drawn level. Members and chart lines serve `pad_price`; `near_text` says "inside the 1% pad (131.67); 0.15% under that breaks it"; `rule_text` carries one clause. Highs and lows the price is under are unchanged. SELL timing: the 🔑 close-through push on a support low now needs 1.15% under; the 52w down-latch re-arms sooner (131.87 for a 133 low, was 133.20). Pre-pad pins in `test_key_levels.py` / `test_key_level_alerts.py` run with the pad OFF as the regression; the padded twins are `tests/test_key_levels_pad_2026_09_30.py`. `MEASURED` stays False.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

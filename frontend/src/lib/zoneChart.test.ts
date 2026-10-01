@@ -510,3 +510,36 @@ describe('gutterBars', () => {
     expect(gutterBars(100, 600, -10)).toBe(0);
   });
 });
+
+/* 🧱 The served 1% pad (2026-09-30): bandsFor passes a demand band's pad_lo to
+ * the primitive only when lib/zonePad accepts it. Nothing is computed. */
+describe('bandsFor — the served pad', () => {
+  it('carries pad_lo on a padded demand band, entry or not', () => {
+    const ez = zone({ lo: 133, hi: 135, pad_lo: 131.67 });
+    const b = bandsFor({ supply_zones: [], demand_zones: [ez, zone({ lo: 120, hi: 122, pad_lo: 118.8 })], entry_zone: ez });
+    expect(b[0]).toEqual({ lo: 133, hi: 135, kind: 'demand', isEntry: true, pad_lo: 131.67 });
+    expect(b[1].pad_lo).toBe(118.8);
+  });
+
+  // --- negatives ---
+  it('NEGATIVE: an unpadded band carries no pad_lo key at all (payload unchanged)', () => {
+    const b = bandsFor({ supply_zones: [], demand_zones: [zone({ lo: 133, hi: 135 })], entry_zone: null });
+    expect(b[0]).toEqual({ lo: 133, hi: 135, kind: 'demand', isEntry: false });
+    expect('pad_lo' in b[0]).toBe(false);
+  });
+
+  it('NEGATIVE: a supply band with pad_lo, or a malformed pad, is not padded', () => {
+    const b = bandsFor({
+      supply_zones: [zone({ kind: 'supply', lo: 150, hi: 152, pad_lo: 148.5 })],
+      demand_zones: [
+        zone({ lo: 133, hi: 135, pad_lo: NaN }),
+        zone({ lo: 133, hi: 135, pad_lo: 134 }),
+        zone({ lo: 133, hi: 135, pad_lo: '131.67' as never }),
+        zone({ lo: 133, hi: 135, pad_lo: null }),
+      ],
+      entry_zone: null,
+    });
+    expect(b).toHaveLength(5);
+    for (const x of b) expect('pad_lo' in x).toBe(false);
+  });
+});

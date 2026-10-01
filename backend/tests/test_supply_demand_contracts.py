@@ -572,7 +572,8 @@ def test_reentry_fix_top_band_read_uses_the_no_in_band_read():
     band_break_read, and deep_demand must read the FIRST-break age from it."""
     from supply_demand import deep_demand as DD
     src = inspect.getsource(dr.decide_from_frame)
-    assert '"top_band_read": (band_break_read(closes, demand[0]["hi"], demand[0]["lo"])' in src
+    # 🧱 2026-09-30: the break read runs on the PADDED floor (level_pad)
+    assert '"top_band_read": (band_break_read(closes, demand[0]["hi"], LP.support_floor(demand[0]))' in src
     assert 'top_band_read": (reentry_read(' not in src
     assert '"bars_since_top_break": tb.get("bars_since_first_break")' in inspect.getsource(DD.read)
 

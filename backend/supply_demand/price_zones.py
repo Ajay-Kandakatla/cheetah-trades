@@ -221,7 +221,8 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
             swing_window: Optional[int] = None,
             merge_pct: Optional[float] = None,
             half_width_pct: Optional[float] = None,
-            lookback_bars: Optional[int] = None) -> Optional[dict]:
+            lookback_bars: Optional[int] = None,
+            demand_pad_pct: Optional[float] = None) -> Optional[dict]:
     """Supply/demand bands for one frame.
 
     The four knobs default to this module's constants, so every existing caller
@@ -240,6 +241,13 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
     NOTE the floor moves with it (MIN_BARS / MIN_BARS_ABS above). A 21-bar frame
     cannot clear the 60-bar default gate, and silently returning None for the
     shortest dropdown option would have looked like "no structure found".
+
+    `demand_pad_pct` (2026-09-30, Ajay's 1% pad — `supply_demand/level_pad.py`):
+    None or 0 = byte-for-byte today. When > 0, a demand band's `in_price` reads
+    its PADDED floor (`level_pad.padded(lo)`), the band gains additive `pad_lo` /
+    `pad_pct` keys (lo/hi never move), `in_zone` follows `in_price`, a demand band
+    whose pad holds the print is not `overhead`, and `params.demand_pad_pct` says
+    so. Ordering, strength and distance are unchanged.
     """
     if df is None or "high" not in df or "low" not in df:
         return None
@@ -263,14 +271,35 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
 
     max_vol = max((z["volume"] for z in allz), default=1) or 1
     max_touch = max((z["touches"] for z in allz), default=1) or 1
+    _pad = None
+    if demand_pad_pct is not None:
+        try:
+            _pad = float(demand_pad_pct)
+        except (TypeError, ValueError):
+            _pad = None
+        if _pad is not None and not (_pad > 0):
+            _pad = None
+    LP = None
+    if _pad is not None:
+        from supply_demand import level_pad as LP   # lazy: pad off = today's import graph
+
     for z in allz:
         z["strength"] = _strength(z, max_vol, max_touch)
-        z["in_price"] = z["lo"] <= last_price <= z["hi"]
+        if LP is not None and z["kind"] in LP.PAD_BAND_KINDS:
+            _fl = LP.padded(z["lo"], pct=_pad)
+            z["pad_lo"] = _fl
+            z["pad_pct"] = _pad
+            z["in_price"] = _fl is not None and _fl <= last_price <= z["hi"]
+        else:
+            z["in_price"] = z["lo"] <= last_price <= z["hi"]
 
     # Nearest overhead (any band above) + nearest support (any band below). A
     # band's origin (supply/demand) is kept for coloring; what matters for entry
     # is what sits directly above/below the price now (broken support = resistance).
-    overhead = sorted((z for z in allz if z["lo"] > last_price), key=lambda z: z["lo"])
+    # With the pad on, a demand band whose pad holds the print is IN zone, never
+    # its own overhead.
+    overhead = sorted((z for z in allz if z["lo"] > last_price and not z["in_price"]),
+                      key=lambda z: z["lo"])
     below = sorted((z for z in allz if z["hi"] < last_price), key=lambda z: -z["hi"])
     nearest_res = overhead[0] if overhead else None
     nearest_sup = below[0] if below else None
@@ -306,7 +335,8 @@ def compute(df: pd.DataFrame, last_price: Optional[float] = None, *,
                    "half_width_pct": (ZONE_HALF_WIDTH_PCT if half_width_pct is None
                                       else float(half_width_pct)),
                    "near_pct": NEAR_PCT,
-                   "clear_runway_pct": CLEAR_RUNWAY_PCT},
+                   "clear_runway_pct": CLEAR_RUNWAY_PCT,
+                   **({"demand_pad_pct": _pad} if _pad is not None else {})},
         "disclaimer": DISCLAIMER,
     }
 

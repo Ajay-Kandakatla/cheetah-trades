@@ -26,6 +26,7 @@
 import type { CmBadge, CmLine, CmStat, CmTile } from './chartMaps';
 import { isPlanLine } from './chartOverlays';
 import { bandStructureChipText } from './bandStructure';
+import { padStrip } from './zonePad';
 
 export type FoldGroup = 'risk' | 'tape' | 'floor' | 'sector' | 'reads';
 export const FOLD_GROUPS: FoldGroup[] = ['risk', 'tape', 'floor', 'sector', 'reads'];
@@ -62,7 +63,9 @@ export type Ladder = {
   why: string | null;                              // null when wholly printed elsewhere
   setup: { badges: CmBadge[]; stats: CmStat[] };
   plan: {
-    buyZone: { lo: number; hi: number } | null;
+    /** `pad_lo` (🧱 2026-09-30) only when the server sent a well-formed pad
+     *  under the band (lib/zonePad.padStrip); absent otherwise. */
+    buyZone: { lo: number; hi: number; pad_lo?: number } | null;
     lines: CmLine[]; stats: CmStat[]; pills: CmBadge[]; lastOnFace: boolean;
   };
   timing: { badges: CmBadge[]; stats: CmStat[]; mergedBoard: string | null };  // group badges are NOT here
@@ -353,7 +356,16 @@ export function cardLadder(tile: CmTile, opts: { skip?: ReadonlyArray<OuterChip>
   const rawLines = Array.isArray(t.plan_lines) ? t.plan_lines : Array.isArray(t.lines) ? t.lines : [];
   const planLines = rawLines.filter((l) => !!l && !l.quiet && isPlanLine(l));
   const band = ent && ent.band && typeof ent.band === 'object' ? ent.band : null;
-  const buyZone = band ? { lo: band.lo, hi: band.hi } : null;
+  /* 🧱 The served pad (2026-09-30) passes through; malformed is dropped. A
+   * band with no kind is demand (level_pad.band_kind's convention — the
+   * enterable band is always the demand band the read is about). */
+  const pad = band
+    ? padStrip({ kind: (band as { kind?: unknown }).kind ?? 'demand', lo: band.lo,
+                 pad_lo: (band as { pad_lo?: unknown }).pad_lo })
+    : null;
+  const buyZone = band
+    ? (pad ? { lo: band.lo, hi: band.hi, pad_lo: pad.lo } : { lo: band.lo, hi: band.hi })
+    : null;
   const bars = Array.isArray(t.bars) ? t.bars : [];
   const lastBar = bars.length ? bars[bars.length - 1] : null;
   const lastC = lastBar ? lastBar.c : undefined;

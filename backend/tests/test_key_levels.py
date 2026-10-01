@@ -23,6 +23,16 @@ import pytest
 
 from supply_demand import key_levels as KL
 
+
+@pytest.fixture
+def nopad(monkeypatch):
+    """🧱 2026-09-30: the pad OFF. Tests that pin the 0.15%-from-the-level
+    boundary on a LOW run as the pre-pad REGRESSION; their padded twins live in
+    tests/test_key_levels_pad_2026_09_30.py."""
+    from supply_demand import level_pad as _LP
+    monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", 0.0)
+
+
 ET = ZoneInfo("America/New_York")
 BACKEND = Path(__file__).resolve().parents[1]
 
@@ -252,7 +262,7 @@ def test_NEGATIVE_last_evenings_print_at_0400_is_not_fresh_and_the_state_is_unkn
     assert st["state"] == "unknown"
 
 
-def test_a_0402_print_beyond_is_broken_and_the_chip_says_pre_mkt():
+def test_a_0402_print_beyond_is_broken_and_the_chip_says_pre_mkt(nopad):
     now = _at(2026, 9, 25, 4, 2, 30)
     row = _row(px=99.0, ts=_ms(_at(2026, 9, 25, 4, 2)))
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=101.0, row=row,
@@ -291,7 +301,7 @@ TS_RTH = _ms(_at(2026, 9, 25, 10, 59))
     ("low", 101.0, 99.86, 99.85),
     ("high", 99.0, 100.14, 100.15),
 ])
-def test_014_pct_beyond_is_NOT_broken_015_is(kind, ref, px_014, px_015):
+def test_014_pct_beyond_is_NOT_broken_015_is(kind, ref, px_014, px_015, nopad):
     lvl = _lvl(kind=kind, price=100.0)
     near = _state(lvl, ref=ref, row=_row(px=px_014, ts=TS_RTH), now=NOW_RTH)
     assert near["state"] != "broken"
@@ -300,7 +310,7 @@ def test_014_pct_beyond_is_NOT_broken_015_is(kind, ref, px_014, px_015):
     assert far["direction"] == ("down" if kind == "low" else "up")
 
 
-def test_pierced_then_print_inside_the_buffer_is_pierced_no_chip():
+def test_pierced_then_print_inside_the_buffer_is_pierced_no_chip(nopad):
     row = _row(px=99.95, ts=TS_RTH, low=99.50, high=101.0, open_=100.5, close=99.95)
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=101.0, row=row,
                         now=NOW_RTH, session=NOW_RTH.date(), first_seen={})
@@ -308,7 +318,7 @@ def test_pierced_then_print_inside_the_buffer_is_pierced_no_chip():
     assert KL.chip(lv, "rth") is None
 
 
-def test_pierced_then_print_back_inside_is_a_reversal_no_chip():
+def test_pierced_then_print_back_inside_is_a_reversal_no_chip(nopad):
     row = _row(px=100.30, ts=TS_RTH, low=99.50, high=101.0, open_=100.5, close=100.30)
     first = {KL.first_seen_key("AAA", "week_low_10000", "down", "reversal"): "10:40"}
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=101.0, row=row,
@@ -318,14 +328,14 @@ def test_pierced_then_print_back_inside_is_a_reversal_no_chip():
     assert "reversal 10:40" in KL.fold_text(lv, frame="daily", stale_note=None)
 
 
-def test_a_through_stamp_counts_as_pierced_even_without_the_day_low():
+def test_a_through_stamp_counts_as_pierced_even_without_the_day_low(nopad):
     first = {KL.first_seen_key("AAA", "week_low_10000", "down", "through"): "04:12"}
     st = _state(_lvl(price=100.0), ref=101.0, row=_row(px=100.05, ts=TS_RTH),
                 now=NOW_RTH, first=first)
     assert st["state"] == "pierced" and st["first_through"] == "04:12"
 
 
-def test_gap_on_an_open_beyond_changes_the_chip_wording():
+def test_gap_on_an_open_beyond_changes_the_chip_wording(nopad):
     row = _row(px=99.2, ts=TS_RTH, open_=99.0, low=98.8, high=99.5, close=99.2)
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=101.0, row=row,
                         now=NOW_RTH, session=NOW_RTH.date(), first_seen={})
@@ -338,7 +348,7 @@ def test_gap_on_an_open_beyond_changes_the_chip_wording():
     assert lv[0]["gap"] is False
 
 
-def test_broke_chip_carries_the_first_through_time_only_when_known():
+def test_broke_chip_carries_the_first_through_time_only_when_known(nopad):
     row = _row(px=99.0, ts=TS_RTH, low=98.9, high=101.0, open_=100.5, close=99.0)
     first = {KL.first_seen_key("AAA", "week_low_10000", "down", "through"): "10:42"}
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=101.0, row=row,
@@ -383,25 +393,25 @@ def test_close_inside_the_buffer_after_a_pierce_is_TESTED_never_broke():
     assert "broke" not in (KL.fold_text(lv, frame="daily", stale_note=None) or "")
 
 
-def test_close_back_inside_after_a_pierce_is_a_reversal():
+def test_close_back_inside_after_a_pierce_is_a_reversal(nopad):
     lv = _close_read(100.20)
     assert lv[0]["state"] == "reversal" and KL.chip(lv, "close") is None
 
 
-def test_close_through_is_closed_beyond_and_the_chip_says_closed_under():
+def test_close_through_is_closed_beyond_and_the_chip_says_closed_under(nopad):
     lv = _close_read(99.80)
     assert lv[0]["state"] == "closed_beyond" and lv[0]["closed_beyond"] is True
     assert KL.chip(lv, "close")["text"] == "🔑 closed under PWL 100.00"
 
 
-def test_closed_back_over_wording_for_a_low_crossed_upward():
+def test_closed_back_over_wording_for_a_low_crossed_upward(nopad):
     row = _row(low=99.0, high=100.5, open_=99.2, close=100.4)
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=99.0, row=row,
                         now=NOW_CLOSE, session=NOW_CLOSE.date(), first_seen={})
     assert KL.chip(lv, "close")["text"] == "🔑 closed back over PWL 100.00"
 
 
-def test_after_hours_print_through_with_a_close_inside_is_ah_through():
+def test_after_hours_print_through_with_a_close_inside_is_ah_through(nopad):
     now = _at(2026, 9, 25, 17, 0)
     lv = _close_read(100.20, px=99.70, ts=_ms(_at(2026, 9, 25, 16, 59)), now=now)
     assert lv[0]["state"] == "reversal" and lv[0]["ah_through"] is True
@@ -421,7 +431,7 @@ def test_NEGATIVE_closed_beyond_is_null_before_the_close_confirm_minute():
 # --------------------------------------------------------------------------
 # merge for drawing
 # --------------------------------------------------------------------------
-def test_same_side_members_merge_but_state_stays_per_member():
+def test_same_side_members_merge_but_state_stays_per_member(nopad):
     lvls = [_lvl("week", "low", 99.75), _lvl("day", "low", 100.00)]
     row = _row(px=99.80, ts=TS_RTH, low=99.80, high=101.0, open_=100.5, close=99.80)
     lv = KL.read_levels(lvls, symbol="AAA", ref_close=101.0, row=row,
@@ -439,7 +449,7 @@ def test_same_side_members_merge_but_state_stays_per_member():
     assert cl[0]["ids"] == ["week_low_9975", "day_low_10000"]
 
 
-def test_NEGATIVE_members_on_opposite_sides_of_the_close_never_merge():
+def test_NEGATIVE_members_on_opposite_sides_of_the_close_never_merge(nopad):
     lvls = [_lvl("day", "low", 50.00), _lvl("week", "high", 50.12)]
     row = _row(px=49.90, ts=TS_RTH, low=49.90, high=50.10, open_=50.05, close=49.90)
     lv = KL.read_levels(lvls, symbol="AAA", ref_close=50.05, row=row,
@@ -709,7 +719,10 @@ ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_
            "chart_maps/ath_tab.py",
            # the 🛡️ Resiliency tab (2026-09-30): display only, reuses the session /
            # closed-bar / print / verify engine
-           "chart_maps/resiliency_tab.py"}
+           "chart_maps/resiliency_tab.py",
+           # 🧱 zone-pad study (2026-09-30): a read-only research replay that
+           # reuses the key-level break test; never on a push or lane path
+           "scripts/zone_pad_study_2026_09_30.py"}
 
 
 def test_import_guard_display_only():
@@ -816,7 +829,7 @@ def test_a_close_exactly_AT_a_high_keeps_it_resistance_up(period):
     assert lv[0]["state"] != "closed_beyond" and KL.chip(lv, "close") is None
 
 
-def test_a_close_exactly_AT_a_low_keeps_it_support_down_and_off_the_tie_by_position():
+def test_a_close_exactly_AT_a_low_keeps_it_support_down_and_off_the_tie_by_position(nopad):
     st = _state(_lvl("week", "low", 100.0), ref=100.0, row=_row(px=99.8, ts=TS_RTH), now=NOW_RTH)
     assert (st["side"], st["direction"], st["state"]) == ("support", "down", "broken")
     # NEGATIVE: one cent off the tie is decided by position, not by kind.
@@ -829,7 +842,7 @@ def test_a_close_exactly_AT_a_low_keeps_it_support_down_and_off_the_tie_by_posit
 HALF = date(2026, 11, 27)
 
 
-def test_half_day_after_hours_print_from_1305_is_ah_through():
+def test_half_day_after_hours_print_from_1305_is_ah_through(nopad):
     now = datetime(2026, 11, 27, 13, 30, tzinfo=ET)
     row = _row(px=99.70, ts=_ms(datetime(2026, 11, 27, 13, 29, tzinfo=ET)),
                low=99.50, high=101.0, open_=100.5, close=100.20)
@@ -889,7 +902,7 @@ def test_set_on_carries_the_year_when_it_is_not_the_sessions_year():
     assert "(set 10-01)" not in block["fold"] and "52wH 131.20 (set 03-04)" in block["fold"]
 
 
-def test_a_low_reclaimed_upward_reads_back_over_never_broke():
+def test_a_low_reclaimed_upward_reads_back_over_never_broke(nopad):
     row = _row(px=100.5, ts=TS_RTH, low=99.2, high=100.6, open_=99.3, close=100.5)
     lv = KL.read_levels([_lvl(price=100.0)], symbol="AAA", ref_close=99.0, row=row,
                         now=NOW_RTH, session=NOW_RTH.date(), first_seen={})
