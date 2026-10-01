@@ -44,6 +44,10 @@ ET = ZoneInfo("America/New_York")
 # (no scan imports), so it is safe to import at module load even where the
 # tests stub supply_demand.demand_reentry.
 from supply_demand import demand_order as _order
+# 🧱 The 1% pad under a demand floor (2026-09-30): a leaf module, safe at load.
+# Tiles on the BOARD geometry spread `LP.pad_fields(src)` into their demand
+# band (pad_lo / pad_pct, drawn as a lighter strip); lo/hi never move.
+from supply_demand import level_pad as LP
 
 log = logging.getLogger("chart_maps.board")
 
@@ -2526,7 +2530,7 @@ def supply_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                           "label": "ceiling"})
         if f_lo is not None and f_hi is not None:
             bands.append({"kind": "demand", "lo": f_lo, "hi": f_hi,
-                          "label": "support"})
+                          "label": "support", **LP.pad_fields(floor)})
 
         # `neutral` for the levels and `now` for price: none of these is a BUY,
         # a STOP or a TARGET, and borrowing those tones would dress a caution
@@ -2907,7 +2911,8 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         bands = []
         z_lo, z_hi = _num(zone.get("lo")), _num(zone.get("hi"))
         if z_lo is not None and z_hi is not None:
-            bands.append({"kind": "demand", "lo": z_lo, "hi": z_hi, "label": "demand"})
+            bands.append({"kind": "demand", "lo": z_lo, "hi": z_hi, "label": "demand",
+                          **LP.pad_fields(zone)})
         if _ob:
             blk = _ob.get("block") or {}
             b_lo, b_hi = _num(blk.get("lo")), _num(blk.get("hi"))
@@ -3161,7 +3166,8 @@ def quick_bounce_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         band = r["band"]
         st = r["stats"] or {}
         room = r.get("room") or {}
-        bands = [{"kind": "demand", "lo": band["lo"], "hi": band["hi"], "label": "demand"}]
+        bands = [{"kind": "demand", "lo": band["lo"], "hi": band["hi"], "label": "demand",
+                  **LP.pad_fields(band)}]
         tb = room.get("band") or {}
         if _num(tb.get("lo")) is not None and _num(tb.get("hi")) is not None:
             bands.append({"kind": "supply", "lo": float(tb["lo"]), "hi": float(tb["hi"]),
@@ -3449,7 +3455,8 @@ def zone_winner_tiles(limit: int = LIMIT_DEFAULT, days: int = 90) -> dict:
 
         bands = []
         if lo is not None and hi is not None and hi > lo:
-            bands.append({"kind": "demand", "lo": lo, "hi": hi, "label": "demand"})
+            bands.append({"kind": "demand", "lo": lo, "hi": hi, "label": "demand",
+                          **LP.pad_fields({"kind": "demand", "lo": lo, "hi": hi})})
         lines = []
         for v, label, t in ((entry, "BUY", "buy"), (stp, "STOP", "stop"),
                             (tgt, "TARGET", "target")):
@@ -4060,7 +4067,8 @@ def dual_momentum_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         dem = zone.get("demand")
         if isinstance(dem, dict):
             t["bands"].append({"kind": "demand", "lo": float(dem["lo"]),
-                               "hi": float(dem["hi"]), "label": "demand"})
+                               "hi": float(dem["hi"]), "label": "demand",
+                               **LP.pad_fields(dem)})
             room = zone.get("room") or {}
             if _num(room.get("target_lo")) is not None and _num(room.get("target_hi")) is not None:
                 t["bands"].append({"kind": "supply", "lo": float(room["target_lo"]),
@@ -4541,7 +4549,8 @@ def deep_demand_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
         dist = _disp_dist(r, live, d, "second_band")
         if s_lo is not None:
             bands.append({"kind": "demand", "lo": s_lo, "hi": s_hi,
-                          "label": DW.band_label(level, dist, reclaiming, phase)})
+                          "label": DW.band_label(level, dist, reclaiming, phase),
+                          **LP.pad_fields(second)})
         # The lids price meets FIRST overhead, as the zones tiles draw them
         # (review 2026-09-14, D2): the TARGET line used to land on a band the
         # deep tile never drew. Deduped against EVERY crossed band, on its

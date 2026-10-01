@@ -734,3 +734,10 @@ and the room floor are untouched).
 The ordering inconsistency found the same day (the backend key put a reversal
 INTO supply first; the page put it third) is written up in `bounce_room.md`
 § Ordering; the track-record "vs SPY" window in `demand_track_record.md`.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+The board opts into the 1% pad (`compute(..., demand_pad_pct=level_pad.pad_pct())`; `zone_geom()` unchanged so studies keep reproducing). `trade_plan`'s stop sits `STOP_BUFFER_PCT` (1.5%) under the PADDED floor — a 133 floor stops at 129.69, 2.485% under the drawn edge (was 1.5%) — so board R:R falls and `risk_exceeds_max` flags more. `_pick_entry_zone` reads inside / distance / the SYRE stop off the padded floor: a print in a band's pad picks that band. The broken-band guard (`reentry_read`) and `top_band_read` read the padded floor: a close inside the pad is no longer a close under the floor, so more Back-in-Demand rows qualify.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

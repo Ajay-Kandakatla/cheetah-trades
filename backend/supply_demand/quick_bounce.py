@@ -69,6 +69,7 @@ from typing import Callable, Iterable, Optional
 from . import alert_gates as AG
 from . import price_zones
 from . import demand_reentry as DR
+from . import level_pad as LP
 from .zone_bounce_alerts import BOUNCE_MIN_PCT, TOUCH_TOL_PCT, WICK_PCT
 
 log = logging.getLogger("supply_demand.quick_bounce")
@@ -575,7 +576,7 @@ def nearest_demand(px: float, bands: list) -> Optional[dict]:
         if not (AG._valid_band(b) and AG.is_proven_band(b)) or AG._kind(b) != "demand":
             continue
         lo, hi = float(b["lo"]), float(b["hi"])
-        if lo <= px <= hi:
+        if LP.in_band(b, px):                    # 🧱 the PADDED floor (level_pad)
             d = 0.0
         elif px > hi:
             d = (px - hi) / hi * 100.0
@@ -592,9 +593,9 @@ def closed_under(doc: dict, band: dict) -> int:
     """Count of `doc["recent"]` sessions (the store's last five CLOSED bars)
     whose close sits under the band's floor. 0 when the doc carries no recent
     rows — absence is "unknown", never "clean"."""
-    try:
-        lo = float(band["lo"])
-    except (KeyError, TypeError, ValueError):
+    # 🧱 2026-09-30: "under the floor" = under the PADDED floor (level_pad).
+    lo = LP.support_floor(band)
+    if lo is None:
         return 0
     n = 0
     for s in (doc or {}).get("recent") or []:
@@ -615,12 +616,15 @@ def live_row(symbol: str, stats: dict, doc: dict, px: Optional[float],
         return None
     band = near["band"]
     bands, pc = doc.get("bands") or [], doc.get("prev_close")
-    ok, room = AG.room_gate(px, bands, pc, min_room_pct=ROOM_MIN_PCT)   # the house floor: flagged always
+    ok, room = AG.room_gate(px, bands, pc, min_room_pct=ROOM_MIN_PCT,
+                            entry_band=band)     # the house floor: flagged always
     if min_room:
-        ok_min = ok if float(min_room) == ROOM_MIN_PCT else AG.room_gate(px, bands, pc, min_room_pct=float(min_room))[0]
+        ok_min = ok if float(min_room) == ROOM_MIN_PCT else AG.room_gate(
+            px, bands, pc, min_room_pct=float(min_room), entry_band=band)[0]
         if not ok_min:
             return {"symbol": symbol, "hidden": "room", "room": room, "dist_pct": near["dist_pct"]}
-    stop = round(float(band["lo"]) * (1.0 - STOP_BUFFER_PCT / 100.0), 2)
+    # 🧱 the stop sits under the PADDED floor (level_pad), like the phone plan
+    stop = round(LP.support_floor(band) * (1.0 - STOP_BUFFER_PCT / 100.0), 2)
     return {"symbol": symbol, "print": px, "band": band, "dist_pct": near["dist_pct"],
             "state": near["state"], "room": room, "room_ok": ok,
             # How many of the last closed sessions CLOSED under this floor

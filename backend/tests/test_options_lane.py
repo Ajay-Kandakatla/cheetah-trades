@@ -22,6 +22,22 @@ import trading.zone_edge_entry as ZE
 import trading.options_lane as OL
 from trading.broker_alpaca import BrokerError
 
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    from supply_demand import level_pad as _LP
+    if request.param is not None:
+        monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", request.param)
+    return _LP.pad_pct()
+
+
+def _fl(lo):
+    """The padded demand floor, computed HERE from the constant (never the engine)."""
+    from supply_demand import level_pad as _LP
+    p = _LP.pad_pct()
+    return round(lo * (1 - p / 100.0), 2) if p > 0 else lo
+
 from tests.test_trading_engine import FakeBrokerModule, FakeColl, FakeDB, _position
 
 ET = ZoneInfo("America/New_York")
@@ -258,7 +274,7 @@ def test_exit_reasons_come_from_the_underlying_not_the_premium():
 
 # ── entries ───────────────────────────────────────────────────────────────────
 
-def test_demand_touch_passing_the_gate_buys_one_long_call(oenv):
+def test_demand_touch_passing_the_gate_buys_one_long_call(oenv, padmode):
     fake, db, pushes = oenv()
     out = OL.run()
     assert out["ran"] and out["entered"] == ["KLAC"], out
@@ -268,13 +284,14 @@ def test_demand_touch_passing_the_gate_buys_one_long_call(oenv):
     assert o["side"] == "buy" and o["position_intent"] == "buy_to_open" and o["limit_price"] == 6.3
     pos = _pos(db)
     assert pos["status"] == "open" and pos["structure"] == "long_call"
-    assert pos["stop_underlying"] == 163.78 and pos["target_underlying"] == 191.11
+    assert pos["stop_underlying"] == round(_fl(164.6) * 0.995, 2) and pos["target_underlying"] == 191.11
+    assert pos["stop_underlying"] == (162.14 if padmode else 163.78)     # 🧱 under the pad
     assert pos["expiry"] == EXP_PICK and pos["dte"] == 38 and pos["debit"] == 6.3
     assert pos["max_loss"] == 630.0 and pos["strategy"] == "options_zone"
     row = _rows(db, "options_entry")[0]
     assert row["dry_run"] is False and row["detail"]["gate"]["ok"] is True
     assert row["detail"]["gate"]["room"]["target"] == 191.11
-    assert len(pushes) == 1 and "long call" in pushes[0][2] and "163.78" in pushes[0][2]
+    assert len(pushes) == 1 and "long call" in pushes[0][2] and ("%.2f" % pos["stop_underlying"]) in pushes[0][2]
     st = db.options_lane_state.rows[0]
     assert st["result"] == "entered" and st["symbol"] == "KLAC"
 
@@ -612,7 +629,7 @@ def test_put_spread_pure_rules():
     assert OL.take_profit_reason(OPEN_LONG, quotes) is None, "debit structures never take profit on premium"
 
 
-def test_rich_iv_sells_a_put_spread_under_the_band_floor_as_one_credit_package(oenv):
+def test_rich_iv_sells_a_put_spread_under_the_band_floor_as_one_credit_package(oenv, padmode):
     snaps = {k: dict(v) for k, v in SNAPS_LONG_CALL.items()}
     snaps[_occ(165)]["iv"] = 0.55
     fake, db, pushes = oenv(snaps=snaps)
@@ -628,7 +645,7 @@ def test_rich_iv_sells_a_put_spread_under_the_band_floor_as_one_credit_package(o
     assert pos["credit"] == 1.9 and pos["width"] == 10.0 and pos["debit"] == -1.9
     assert pos["max_loss"] == 810.0 and pos["take_profit_debit"] == 0.47
     assert [l["role"] for l in pos["legs"]] == ["short", "long"]
-    assert pos["stop_underlying"] == 163.78 and pos["target_underlying"] == 191.11
+    assert pos["stop_underlying"] == round(_fl(164.6) * 0.995, 2) and pos["target_underlying"] == 191.11
     assert "1.90 credit" in pushes[0][2] and "short put spread" in pushes[0][2]
     assert [c[1]["otype"] for c in fake.calls if c[0] == "option_contracts"] == ["call", "put"]
 

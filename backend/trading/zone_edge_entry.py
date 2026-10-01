@@ -107,6 +107,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from supply_demand import alert_gates
+from supply_demand import level_pad as LP
 from trading import entries
 from trading import risk_rules
 from trading.broker import get_broker
@@ -572,7 +573,7 @@ def stop_request(last, band_lo) -> tuple:
     return stop_price, stop_pct
 
 
-def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
+def room_ok(last, stop_pct, zone_doc: Optional[dict], band: Optional[dict] = None) -> tuple:
     """Room sanity for an entry: the FIRST band price meets going up must
     sit >= risk_rules.MIN_REWARD_RISK x the stop that will be PLACED
     (max(stop_pct, RISK_STOP_FLOOR_PCT)) away, in %.
@@ -586,8 +587,13 @@ def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
       * a band that fails alert_gates.is_proven_band (touches < 2 or
         strength < 40) is skipped — the KLAC lesson (2026-09-06).
     Nothing overhead = unbounded room = ok. No zone doc = unknown = NOT ok
-    (fails closed). Returns (ok, detail)."""
+    (fails closed). Returns (ok, detail).
+
+    `band` (🧱 2026-09-30): the entry band. When it is PADDED (level_pad — a
+    demand band, pad on) it is never its own ceiling: a print inside its 1% pad
+    sits under its drawn lo. Every other band keeps its DRAWN edges."""
     last, stop_pct = _f(last), _f(stop_pct)
+    own = band if (isinstance(band, dict) and LP.is_padded(band)) else None
     need = None
     if last is not None and stop_pct is not None:
         need = round(risk_rules.MIN_REWARD_RISK * max(stop_pct, RISK_STOP_FLOOR_PCT), 2)
@@ -606,6 +612,8 @@ def room_ok(last, stop_pct, zone_doc: Optional[dict]) -> tuple:
         lo, hi = _f(b.get("lo")), _f(b.get("hi"))
         if lo is None or not alert_gates.is_proven_band(b):
             continue                               # unproven lid = noise (KLAC 2026-09-06)
+        if own is not None and LP.same_band(b, own):
+            continue                               # 🧱 never its own ceiling
         if hi is None or hi < lo:
             hi = lo                                # degenerate band = its floor
         if kind == "supply" and hi >= last:
@@ -748,9 +756,14 @@ def alert_gate(c: dict, zone_doc: Optional[dict]):
         prox = alert_gates.demand_proximity_gate(last, band)
         detail["proximity"] = bool(prox)
         if not prox:
-            if last < band["lo"]:
-                detail["reason"] = ("alert gate: print %.2f under demand band floor %g "
-                                    "(fell through)" % (last, band["lo"]))
+            if LP.under_floor(band, last):
+                if LP.is_padded(band):
+                    detail["reason"] = ("alert gate: print %.2f under the padded demand "
+                                        "floor %g (fell through)"
+                                        % (last, LP.support_floor(band)))
+                else:
+                    detail["reason"] = ("alert gate: print %.2f under demand band floor %g "
+                                        "(fell through)" % (last, band["lo"]))
             else:
                 detail["reason"] = ("alert gate: print %.1f%% above demand band top %g "
                                     "(max %g%%)" % ((last / band["hi"] - 1.0) * 100.0,
@@ -1238,7 +1251,9 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
         seen.add(sym)
 
         # The owner stop request + the two pre-order sanity gates.
-        stop_price, stop_pct = stop_request(c["last"], c["band"]["lo"])
+        # 🧱 the stop sits under the PADDED floor (level_pad); a breakout's
+        # cleared SUPPLY band keeps its drawn lo. stop_request never pads again.
+        stop_price, stop_pct = stop_request(c["last"], LP.support_floor(c["band"]))
         attempt = {"side": c["side"], "kind": c["kind"], "tier": c["tier"],
                    "band": c["band"], "last": c["last"],
                    "stop_price": stop_price, "stop_pct": stop_pct,
@@ -1270,7 +1285,7 @@ def run(broker=None, cfg: Optional[dict] = None) -> dict:
                 continue
             attempt["gate"] = gate[1] if gate is not None else None
             if needs_room:
-                ok_room, room = room_ok(c["last"], stop_pct, zone_doc)
+                ok_room, room = room_ok(c["last"], stop_pct, zone_doc, band=c["band"])
                 attempt["room"] = room
                 if not ok_room:
                     reason = room["reason"]
@@ -1427,9 +1442,8 @@ def rules_list() -> list:
                  "the print sits between the band floor and %g%% above its top — "
                  "under the floor it fell through, above the line the engine is "
                  "late" % alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT,
-         "value": "band.lo <= print <= band.hi x (1 + %g%%) "
-                  "(alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT)"
-                  % alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT,
+         "value": "%s (level_pad.DEMAND_PAD_PCT, alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT)"
+                  % LP.proximity_text(alert_gates.ALERT_MAX_ABOVE_DEMAND_PCT),
          "source": "owner rule (Ajay 2026-09-05, same quote; S&D, no book)"},
         {"rule": "Signal must be fresh — a board doc older than this (or "
                  "from another day) places nothing",

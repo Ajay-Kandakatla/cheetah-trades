@@ -132,6 +132,7 @@ from market_hours.reminder import is_market_day
 from . import alert_gates as AG
 from . import demand_alerts as DA
 from . import enterable as EN
+from . import level_pad as LP
 from .zone_bounce_alerts import print_from_snapshot
 
 log = logging.getLogger(__name__)
@@ -237,9 +238,12 @@ def _kind(band: dict) -> str:
 
 
 def _slim_band(band: dict) -> dict:
+    # 🧱 pad_lo / pad_pct ride along for a padded demand band (drawing + ladder);
+    # lo/hi stay DRAWN, so every dedupe key built from them is unchanged.
     return {"kind": _kind(band), "lo": float(band["lo"]), "hi": float(band["hi"]),
             "touches": int(_f(band.get("touches")) or 0),
-            "strength": float(_f(band.get("strength")) or 0.0)}
+            "strength": float(_f(band.get("strength")) or 0.0),
+            **LP.pad_fields(band)}
 
 
 def _clean(obj):
@@ -369,7 +373,9 @@ def read_near_demand(px, bands: list, change_pct=None, prev_close=None,
               and float(b["hi"]) < px and pc is not None and float(b["hi"]) < pc
               and not AG.gap_day(px, pc)]
     tier, band, dist = None, None, None
-    inside = [b for b in demand if float(b["lo"]) <= px <= float(b["hi"])]
+    # 🧱 2026-09-30: "inside" reads the PADDED floor (level_pad) — a print in the
+    # 1% pad under the drawn lo is IN the band.
+    inside = [b for b in demand if LP.in_band(b, px)]
     if inside:
         tier, band, dist = "in", max(inside, key=lambda b: float(b["hi"])), 0.0
     else:
@@ -989,7 +995,7 @@ def check_once(*, push: bool = True, force: bool = False, track: bool = True,
             if (cap_ok and rd["arrival"] and rd["band"]["touches"] >= MIN_TOUCHES_PUSH):
                 # phone gate: >= 5% to the first unbroken band overhead; the in/near
                 # tier already IS the "<1% above demand" rule (EDGE_PCT)
-                ok, room = AG.room_gate(px, bands, prev)
+                ok, room = AG.room_gate(px, bands, prev, entry_band=rd["band"])
                 approach = AG.approach_read(
                     px, rd["band"], prev, (snapshot.get(sym) or {}).get("low"))
                 # Bouncing only (Ajay 2026-09-09, after CASY). The BOARD still

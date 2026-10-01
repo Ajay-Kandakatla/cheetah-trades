@@ -2760,7 +2760,9 @@ def test_quick_bounce_tab_lists_qualifying_names_at_a_band_nearest_first(prices,
     assert out["study"]["quick_rate_pct"] == 40.0 and out["study"]["persistence"] == {"gap_pts": 5.0}
     assert out["store_date"] == "2026-09-04" and out["min_room"] == 5.0
     bbb, aaa = out["tiles"]
-    assert bbb["title"] == "BBB — quick bounce 67% (4/6)" and bbb["why"].startswith("buy $100-102 · stop $99.50")
+    assert bbb["title"] == "BBB — quick bounce 67% (4/6)"
+    # 🧱 1% pad (2026-09-30): the stop sits under the PADDED floor $99.00, not the drawn $100.
+    assert bbb["why"].startswith("buy $100-102 · stop $98.50 (0.5% under the 1% pad at $99.00"), bbb["why"]
     assert [b["kind"] for b in bbb["bands"]] == ["demand", "supply"] and bbb["bands"][1]["lo"] == 115.0
     assert [l["label"] for l in bbb["lines"]] == ["BUY", "STOP", "TARGET"] and bbb["lines"][2]["price"] == 115.0
     stats_bbb = {s["k"]: s["v"] for s in bbb["stats"]}
@@ -2772,6 +2774,13 @@ def test_quick_bounce_tab_lists_qualifying_names_at_a_band_nearest_first(prices,
     # room off: the lidded name lists, flagged
     out_any = B.board("quick_bounce", limit=10, min_tier="any", min_room=0)
     assert [t["symbol"] for t in out_any["tiles"]] == ["BBB", "DDD", "AAA"] and out_any["hidden_low_room"] == 0
+    # pad OFF (the kill switch) restores the pre-pad plan text exactly
+    from supply_demand import level_pad as LP
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0)
+    off = B.board("quick_bounce", limit=10, min_tier="any")
+    bbb0 = [t for t in off["tiles"] if t["symbol"] == "BBB"][0]
+    assert bbb0["why"].startswith("buy $100-102 · stop $99.50"), bbb0["why"]
+    assert "pad" not in bbb0["why"]
 
 
 def test_quick_bounce_tab_without_stats_says_so(monkeypatch):

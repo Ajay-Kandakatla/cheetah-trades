@@ -131,7 +131,11 @@ def entry_band(avg_cost: Optional[float], demand: list, supply: list) -> Optiona
                 continue
             bands.append({"lo": lo, "hi": hi, "kind": z.get("kind") or kind,
                           "touches": z.get("touches")})
-    inside = [b for b in bands if b["lo"] <= avg <= b["hi"] * (1 + ENTRY_ABOVE_BAND_PCT / 100)]
+    # 🧱 2026-09-30: "inside" reads the PADDED floor for a demand band (level_pad);
+    # a supply shelf keeps its drawn lo.
+    from supply_demand import level_pad as LP        # leaf module, no cycle
+    inside = [b for b in bands
+              if LP.support_floor(b) <= avg <= b["hi"] * (1 + ENTRY_ABOVE_BAND_PCT / 100)]
     if inside:
         return max(inside, key=lambda b: b["hi"])
     below = [b for b in bands if b["hi"] < avg and (avg / b["hi"] - 1) * 100 <= ENTRY_BELOW_COST_PCT]
@@ -140,11 +144,18 @@ def entry_band(avg_cost: Optional[float], demand: list, supply: list) -> Optiona
 
 def stop_for(band: Optional[dict]) -> Optional[float]:
     """The stop under the entry band: floor x (1 - STOP_BUFFER_PCT%) — the
-    number the alert plan printed and the paper lane placed."""
+    number the alert plan printed and the paper lane placed. 🧱 2026-09-30: the
+    floor of a DEMAND band is its PADDED floor (level_pad, 1% under the drawn
+    lo); a supply shelf keeps its drawn lo. A SELL signal he acts on — the
+    STOP / NEAR_STOP states move 1% lower with it."""
     if not band:
         return None
     from supply_demand import alert_gates
-    return round(float(band["lo"]) * (1 - alert_gates.STOP_BUFFER_PCT / 100.0), 2)
+    from supply_demand import level_pad as LP        # leaf module, no cycle
+    fl = LP.support_floor(band)
+    if fl is None:
+        return None
+    return round(fl * (1 - alert_gates.STOP_BUFFER_PCT / 100.0), 2)
 
 
 def stop_state(live: Optional[float], stop: Optional[float]) -> dict:

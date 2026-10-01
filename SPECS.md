@@ -486,6 +486,16 @@ TTL); cache misses fetch via yfinance `.info["longName"]`. The scanner calls
 Tiny env-var holder. `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `has_polygon()`,
 `has_finnhub()`. Polygon routing **not yet wired** — see § 9.
 
+### Supply/Demand level pad — `supply_demand/level_pad.py` (2026-09-30)
+Ajay's 1% pad under demand floors and support key levels ("if the demand zone or key
+level is 133, it holding at 132"). ONE constant, `DEMAND_PAD_PCT = sd_liquidity.STOP_SHELF_PCT`
+(1.0; 0 = off everywhere). Every SUPPORT read (in the zone / near demand / arrival / crossed /
+broken / the stop) goes through `support_floor(band)` / `in_band` / `under_floor` / `key_edge`;
+RESISTANCE reads, dedupe keys, drawn band edges and the measured floor-held gate keep the drawn
+edge (`PAD_FLOOR_HELD = False`, his call). Payloads gain `pad_lo` / `pad_pct` / `pad_price`,
+never a moved edge. UNMEASURED (`zone_pad_measured.py`, pending). Full rule, sites, phone-gate
+statement, sell-timing list and HIS CALLs: `docs/supply_demand/zone_pad_2026_09_30.md`.
+
 ---
 
 ## 4. Live Data Layer

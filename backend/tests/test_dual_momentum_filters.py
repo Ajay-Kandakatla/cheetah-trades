@@ -188,7 +188,11 @@ def _kl_setup():
     return frames, snaps, build_fn
 
 
-def test_T5_key_level_reads_real_engine_and_parity_with_the_tab():
+def test_T5_key_level_reads_real_engine_and_parity_with_the_tab(monkeypatch):
+    # 🧱 2026-09-30: pins the 0.15%-from-the-level boundary on lows — the pre-pad
+    # REGRESSION (pad OFF); the padded parity is in tests/test_key_levels_pad_2026_09_30.py.
+    from supply_demand import level_pad as _LP
+    monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", 0.0)
     frames, snaps, build_fn = _kl_setup()
     syms = list(frames)
     reads, err = DMT.key_level_reads(syms, snaps, now=NOW, first_seen={}, build_fn=build_fn)

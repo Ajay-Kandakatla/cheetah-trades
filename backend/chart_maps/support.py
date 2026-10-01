@@ -55,6 +55,7 @@ from typing import Optional
 from supply_demand import patterns as pat_mod
 from supply_demand import price_zones as pz
 from supply_demand import timeframes as tf_mod
+from supply_demand import level_pad as LP
 
 from . import board as board_mod
 
@@ -825,8 +826,9 @@ def _board_bands(board: Optional[dict]) -> list[dict]:
     d, s = board.get("demand"), board.get("supply")
     if d:
         t = f" · {d['touches']}× tested" if d.get("touches") else ""
+        # 🧱 the board band carries its 1% pad (level_pad); `d` is a demand band
         out.append({"kind": "board_demand", "lo": d["lo"], "hi": d["hi"],
-                    "label": f"board demand{t}"})
+                    "label": f"board demand{t}", **LP.pad_fields(d)})
     if s:
         out.append({"kind": "board_supply", "lo": s["lo"], "hi": s["hi"],
                     "label": "board overhead"})

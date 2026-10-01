@@ -350,6 +350,31 @@ def _expected_stop_pct(last, lo):
     return round((last - stop) / last * 100.0, 2)
 
 
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    from supply_demand import level_pad as _LP
+    if request.param is not None:
+        monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", request.param)
+    return _LP.pad_pct()
+
+
+def _fl(lo):
+    """The padded demand floor, computed HERE from the constant (never the engine)."""
+    from supply_demand import level_pad as _LP
+    p = _LP.pad_pct()
+    return round(lo * (1 - p / 100.0), 2) if p > 0 else lo
+
+
+def _demand_stop(lo):
+    """🧱 A DEMAND row's owner stop: 0.5% under the padded floor (4 dp)."""
+    return round(_fl(lo) * (1 - ZE.STOP_BUFFER_PCT / 100.0), 4)
+
+
+def _expected_demand_stop_pct(last, lo):
+    return round((last - _demand_stop(lo)) / last * 100.0, 2)
+
+
 # ── Gates ────────────────────────────────────────────────────────────────────
 
 def test_flag_off_noops_with_single_daily_disabled_ledger(env):
@@ -557,7 +582,7 @@ def test_stop_wider_than_book_max_blocked_and_recorded(env):
     assert out2["skipped"] == [{"symbol": "AAA", "reason": "attempted today (same band)"}]
 
 
-def test_room_below_2r_blocked(env):
+def test_room_below_2r_blocked(env, padmode):
     """AAA: last 100, band lo 95 -> stop 94.525 (5.48%) -> needs 10.95% room;
     nearest supply floor at 106 (6%, past the 5% alert gate) -> blocked
     'room < 2R'. (Geometry widened 2026-09-05: the alert gate's 5% floor now
@@ -575,7 +600,7 @@ def test_room_below_2r_blocked(env):
     blk = _kind_rows(db, "zone_entry_blocked")[0]["detail"]
     assert blk["room"]["next_band"] == {"kind": "supply", "lo": 106.0, "hi": 108.0}
     assert blk["room"]["room_pct"] == pytest.approx(6.0)
-    assert blk["room"]["need_pct"] == pytest.approx(MIN_REWARD_RISK * _expected_stop_pct(100.0, 95.0))
+    assert blk["room"]["need_pct"] == pytest.approx(MIN_REWARD_RISK * _expected_demand_stop_pct(100.0, 95.0))
 
 
 def test_room_unknown_without_zone_doc_blocked(env):
@@ -726,7 +751,7 @@ def test_same_symbol_twice_in_one_tick_handled_once(env):
 
 # ── Success / veto / error paths ────────────────────────────────────────────
 
-def test_success_path_enters_with_owner_stop_and_records_everything(env):
+def test_success_path_enters_with_owner_stop_and_records_everything(env, padmode):
     row = demand_row(last=100.0, lo=98.0, hi=99.5, tier="near", dist_pct=0.5,
                      first_seen="10:12")
     fake, db, enter_calls, pushes, _ = env(
@@ -740,8 +765,8 @@ def test_success_path_enters_with_owner_stop_and_records_everything(env):
     call = enter_calls[0]
     assert call["symbol"] == "AAA" and call["limit_price"] is None
     assert call["allow_earnings"] is False and call["top_up"] is False
-    assert call["stop_pct"] == pytest.approx(_expected_stop_pct(100.0, 98.0))
-    assert call["stop_pct"] == pytest.approx(2.49, abs=0.01)
+    assert call["stop_pct"] == pytest.approx(_expected_demand_stop_pct(100.0, 98.0))
+    assert call["stop_pct"] == pytest.approx(3.47 if padmode else 2.49, abs=0.01)   # 🧱 under the pad
     # state
     st = _state_rows(db)[0]
     assert st["key"] == "AAA:98-99.5:%s" % DAY
@@ -768,7 +793,7 @@ def test_success_path_enters_with_owner_stop_and_records_everything(env):
     assert len(rows) == 1 and rows[0]["dry_run"] is False
     det = rows[0]["detail"]
     assert det["side"] == "demand" and det["band"]["lo"] == 98.0
-    assert det["stop_pct"] == pytest.approx(2.49, abs=0.01)
+    assert det["stop_pct"] == pytest.approx(3.47 if padmode else 2.49, abs=0.01)
     assert det["dist_pct"] == 0.5 and det["first_seen"] == "10:12"
     assert det["order_id"] == "o-1"
     assert "OWNER RULES" in rows[0]["cite"] and "risk_rules" in rows[0]["cite"]
@@ -1617,7 +1642,7 @@ def test_api_config_accepts_zone_edge_rules_and_status_shows_them(env):
 # Stop anchoring: the engine decided a LEVEL (band floor x 0.995); the placed
 # stop must be that level whatever the tape printed by order time.
 
-def test_stop_is_anchored_under_the_band_floor_when_the_live_print_drifts_up(env):
+def test_stop_is_anchored_under_the_band_floor_when_the_live_print_drifts_up(env, padmode):
     """Signal print 100.00, band 98-99.5 -> owner stop 97.51. The order goes
     out ~1.5% higher (101.50). A percent-of-price hand-off would put the
     broker stop at 98.97 — INSIDE the band being bought. The placed stop
@@ -1630,20 +1655,25 @@ def test_stop_is_anchored_under_the_band_floor_when_the_live_print_drifts_up(env
     assert out["entered"] == ["AAA"], out
     assert len(fake.brackets) == 1
     placed = fake.brackets[0]["stop_price"]
-    assert placed == pytest.approx(97.51, abs=0.005), placed
+    want = round(_demand_stop(98.0), 2)                  # 🧱 96.53 under the pad, 97.51 without
+    assert want == (96.53 if padmode else 97.51)
+    assert placed == pytest.approx(want, abs=0.005), placed
     assert placed < 98.0, "stop must be under the band floor, not inside the band"
     det = _kind_rows(db, "zone_entry")[0]["detail"]
-    assert det["order"]["stop"]["stop_price"] == pytest.approx(97.51, abs=0.005)
-    assert "stop 97.51" in pushes[0][3]
+    assert det["order"]["stop"]["stop_price"] == pytest.approx(want, abs=0.005)
+    assert ("stop %.2f" % want) in pushes[0][3]
 
 
-def test_stop_anchor_refused_when_drift_pushes_risk_past_the_ceiling(env):
+def test_stop_anchor_refused_when_drift_pushes_risk_past_the_ceiling(env, padmode):
     """Signal print 100.00, band floor 91 -> stop 90.545 = 9.46% (passes the
     local gate). By order time the print is 101.00 -> 10.35% to the level:
     past ABS_MAX_STOP_PCT. Refuse with a reason; never clamp the stop back
-    up into the band and never place the order."""
+    up into the band and never place the order. 🧱 With the pad on the same
+    stop comes from a 91.92 floor (padded to 91.00)."""
+    lo = 91.92 if padmode else 91.0
+    assert _demand_stop(lo) == 90.545
     fake, db, _, pushes, _ = env(
-        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=91.0, hi=99.5,
+        latest=latest_doc(near_demand=[demand_row(last=100.0, lo=lo, hi=99.5,
                                                   dist_pct=0.5)]),
         zones={"AAA": zone_doc("AAA", supply_los=(150.0,))},
         real_enter=True, live_price=101.0)
@@ -1655,25 +1685,27 @@ def test_stop_anchor_refused_when_drift_pushes_risk_past_the_ceiling(env):
     assert "90.5" in st["reason"] and "%g%%" % ABS_MAX_STOP_PCT in st["reason"], st["reason"]
 
 
-def test_stop_anchor_refused_when_the_print_is_already_through_the_level(env):
+def test_stop_anchor_refused_when_the_print_is_already_through_the_level(env, padmode):
     """The tape printed 97.00 by order time — under the 97.51 level. A stop
-    above the entry is not a plan: refuse, no order."""
+    above the entry is not a plan: refuse, no order. 🧱 Under the pad the level
+    is 96.53, so the tape has to print 96.00."""
     fake, db, _, _, _ = env(
         latest=latest_doc(near_demand=[demand_row(last=100.0, lo=98.0, hi=99.5)]),
         zones={"AAA": zone_doc("AAA", supply_los=(130.0,))},
-        real_enter=True, live_price=97.0)
+        real_enter=True, live_price=96.0 if padmode else 97.0)
     out = ZE.run()
     assert fake.brackets == [] and out["blocked"] == ["AAA"]
     assert "not below" in _state_rows(db)[0]["reason"]
 
 
-def test_run_hands_entries_the_absolute_stop_level(env):
+def test_run_hands_entries_the_absolute_stop_level(env, padmode):
     _, _, enter_calls, _, _ = env(
         latest=latest_doc(near_demand=[demand_row()]),
         zones={"AAA": zone_doc("AAA", supply_los=(130.0,))})
     ZE.run()
-    assert enter_calls[0]["stop_price"] == pytest.approx(97.51)
-    assert enter_calls[0]["stop_pct"] == pytest.approx(2.49, abs=0.01)
+    # 🧱 the padded floor 97.02 x 0.995 = 96.5349 (4 dp, never padded twice)
+    assert enter_calls[0]["stop_price"] == pytest.approx(96.5349 if padmode else 97.51)
+    assert enter_calls[0]["stop_pct"] == pytest.approx(3.47 if padmode else 2.49, abs=0.01)
 
 
 # Room gate: the FIRST band overhead is kind-agnostic (broken demand above the

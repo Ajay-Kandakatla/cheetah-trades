@@ -29,6 +29,16 @@ from supply_demand import key_level_alerts as KLA
 from supply_demand import key_levels as KL
 from supply_demand import zone_edge as ZE
 
+
+@pytest.fixture
+def nopad(monkeypatch):
+    """🧱 2026-09-30: the pad OFF. Tests that pin the 0.15%-from-the-level
+    boundary on a LOW run as the pre-pad REGRESSION; their padded twins live in
+    tests/test_key_levels_pad_2026_09_30.py."""
+    from supply_demand import level_pad as _LP
+    monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", 0.0)
+
+
 ET = ZoneInfo("America/New_York")
 BACKEND = Path(__file__).resolve().parents[1]
 ROOT = BACKEND.parent
@@ -156,7 +166,7 @@ def _week(end, extra=None):
 # --------------------------------------------------------------------------
 # close window
 # --------------------------------------------------------------------------
-def test_rth_broken_member_never_pushes_and_stamps_first_through():
+def test_rth_broken_member_never_pushes_and_stamps_first_through(nopad):
     colls = _colls()
     fr = _week("2026-09-18")
     now = _at(2026, 9, 21, 10, 42)
@@ -179,7 +189,7 @@ def test_rth_broken_member_never_pushes_and_stamps_first_through():
 
 @pytest.mark.parametrize("hh,mm,fires", [(16, 4, False), (16, 5, True), (16, 29, True),
                                          (16, 30, False), (19, 0, False)])
-def test_close_window_is_16_05_to_16_30(hh, mm, fires):
+def test_close_window_is_16_05_to_16_30(hh, mm, fires, nopad):
     colls = _colls()
     fr = _week("2026-09-18")
     now = _at(2026, 9, 21, hh, mm)
@@ -191,7 +201,7 @@ def test_close_window_is_16_05_to_16_30(hh, mm, fires):
         assert colls["claim_coll"].calls["update_one"] == 0, "nothing claimed outside the window"
 
 
-def test_half_day_window_is_13_05_to_13_30():
+def test_half_day_window_is_13_05_to_13_30(nopad):
     fr = _frame("2026-11-25", {"2026-11-16": (103.0, 100.0, 102.0), "2026-11-17": (103.0, 101.0, 102.0),
                                "2026-11-18": (103.0, 101.0, 102.0), "2026-11-19": (103.0, 101.0, 102.0),
                                "2026-11-20": (103.0, 101.0, 102.0)})
@@ -220,7 +230,7 @@ def test_NEGATIVE_day_levels_never_push():
 # --------------------------------------------------------------------------
 # week / month latch: once per LIFE and direction
 # --------------------------------------------------------------------------
-def test_week_latch_is_once_per_level_life_and_direction():
+def test_week_latch_is_once_per_level_life_and_direction(nopad):
     colls = _colls()
     snd = Sender()
     # Mon: close under PWL 100.00 -> push
@@ -332,7 +342,7 @@ def _mon():
     return fr, now, _snap(fr, now, close=99.8, low=99.5)
 
 
-def test_transport_failure_releases_and_the_next_pass_sends():
+def test_transport_failure_releases_and_the_next_pass_sends(nopad):
     colls = _colls()
     fr, now, row = _mon()
     out = _run("WULX", fr, row, now, colls, sender=Sender({"sent": 0, "failed": 1, "total_targets": 1}))
@@ -349,7 +359,7 @@ def test_a_raising_sender_releases():
     assert out["counts"]["pushed"] == 0 and colls["claim_coll"].docs == {}
 
 
-def test_nobody_targeted_is_terminal_claims_kept_and_counted_muted():
+def test_nobody_targeted_is_terminal_claims_kept_and_counted_muted(nopad):
     colls = _colls()
     fr, now, row = _mon()
     out = _run("WULX", fr, row, now, colls, sender=Sender({"sent": 0, "failed": 0, "total_targets": 0}))
@@ -361,7 +371,7 @@ def test_nobody_targeted_is_terminal_claims_kept_and_counted_muted():
     assert snd.sent == [] and out["counts"]["claimed_elsewhere"] == 1
 
 
-def test_a_second_pass_in_the_same_window_sends_nothing():
+def test_a_second_pass_in_the_same_window_sends_nothing(nopad):
     colls = _colls()
     fr, now, row = _mon()
     snd = Sender()
@@ -370,7 +380,7 @@ def test_a_second_pass_in_the_same_window_sends_nothing():
     assert len(snd.sent) == 1 and out["counts"]["claimed_elsewhere"] == 1 and out["counts"]["pushed"] == 0
 
 
-def test_push_off_claims_nothing_and_sends_nothing():
+def test_push_off_claims_nothing_and_sends_nothing(nopad):
     colls = _colls()
     fr, now, row = _mon()
     snd = Sender()
@@ -382,7 +392,7 @@ def test_push_off_claims_nothing_and_sends_nothing():
 # --------------------------------------------------------------------------
 # routing: singles for holdings only, then ONE digest
 # --------------------------------------------------------------------------
-def test_singles_only_for_held_names_capped_then_one_digest_with_more():
+def test_singles_only_for_held_names_capped_then_one_digest_with_more(nopad):
     colls = _colls()
     fr, now, _row = _mon()
     held = [f"H{i}" for i in range(5)]
@@ -410,7 +420,7 @@ def test_singles_only_for_held_names_capped_then_one_digest_with_more():
     assert set(held) - {m["ticker"] for m in singles} <= set(digest["tickers"])
 
 
-def test_NEGATIVE_watchlist_only_names_never_get_a_single():
+def test_NEGATIVE_watchlist_only_names_never_get_a_single(nopad):
     colls = _colls()
     fr, now, row = _mon()
     snd = Sender()
@@ -464,7 +474,7 @@ def test_digest_exact_strings():
     assert KLA.digest_text(items[:1])["title"] == "🔑 Key levels closed through — MP over prior-month high"
 
 
-def test_NEGATIVE_close_messages_never_say_bounce_premkt_or_afterhrs():
+def test_NEGATIVE_close_messages_never_say_bounce_premkt_or_afterhrs(nopad):
     fr, now, row = _mon()
     colls = _colls()
     snd = Sender()
@@ -482,7 +492,7 @@ def test_NEGATIVE_close_messages_never_say_bounce_premkt_or_afterhrs():
 # --------------------------------------------------------------------------
 # scope and prices
 # --------------------------------------------------------------------------
-def test_scope_is_holdings_union_signals_and_ONE_extra_snapshot_call(monkeypatch):
+def test_scope_is_holdings_union_signals_and_ONE_extra_snapshot_call(monkeypatch, nopad):
     import sys
     import types
     from daytrading import signal_lab as SL
@@ -517,7 +527,7 @@ def test_scope_is_holdings_union_signals_and_ONE_extra_snapshot_call(monkeypatch
     assert calls == []
 
 
-def test_guards_count_and_never_push_on_a_stale_or_missing_frame():
+def test_guards_count_and_never_push_on_a_stale_or_missing_frame(nopad):
     colls = _colls()
     fr, now, row = _mon()
     stale = _week("2026-09-15")
@@ -546,7 +556,7 @@ def test_empty_scope_records_a_reason_and_reads_nothing(monkeypatch):
 # --------------------------------------------------------------------------
 # dry run + first-seen doc
 # --------------------------------------------------------------------------
-def test_dry_run_writes_nothing_anywhere():
+def test_dry_run_writes_nothing_anywhere(nopad):
     colls = _colls()
     fr, now, row = _mon()
     snd = Sender()
@@ -559,7 +569,7 @@ def test_dry_run_writes_nothing_anywhere():
     assert out["counts"]["broken"] == 1 and all(c.writes == 0 for c in colls.values())
 
 
-def test_first_seen_doc_is_replaced_whole_so_a_dotted_symbol_is_one_key():
+def test_first_seen_doc_is_replaced_whole_so_a_dotted_symbol_is_one_key(nopad):
     colls = _colls()
     fr = _week("2026-09-18")
     now = _at(2026, 9, 21, 11, 5)
@@ -571,7 +581,7 @@ def test_first_seen_doc_is_replaced_whole_so_a_dotted_symbol_is_one_key():
     assert KL.read_first_seen("2026-09-21", coll=fc) == doc["first"], "the engine reads what we wrote"
 
 
-def test_reversal_is_stamped_once_and_the_single_carries_the_first_through_time():
+def test_reversal_is_stamped_once_and_the_single_carries_the_first_through_time(nopad):
     colls = _colls()
     fr = _week("2026-09-18")
     t1, t2 = _at(2026, 9, 21, 10, 42), _at(2026, 9, 21, 11, 30)
@@ -756,7 +766,9 @@ def test_rules_panel_section_is_built_from_the_constants():
     assert "key_levels" in RI.SECTION_KEYS and sec["emoji"] == KL.MARK
     blob = " ".join([sec["title"]] + sec["picks"] + sec["stops"] + sec["alerts"] + [sec["note"]])
     assert KL.rule_text() in sec["picks"]
-    assert sec["stops"] == ["No stop, no target, no size: a drawing and a state."]
+    assert sec["stops"][0] == "No stop, no target, no size: a drawing and a state."
+    # 🧱 2026-09-30: the pad line rides every section the pad touches, built by rules_info
+    assert sec["stops"][1:] == [" ".join(RI._pad_lines())]
     assert "UNMEASURED" in blob and "bounc" not in blob.lower()
     assert "(ON by default)" in blob and "ships OFF by default" not in blob
     assert "OFF unless" not in blob, "owner_prefs() is the default, never his stored toggle"

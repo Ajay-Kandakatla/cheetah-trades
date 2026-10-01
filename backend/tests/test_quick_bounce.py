@@ -17,6 +17,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from supply_demand import quick_bounce as QB          # noqa: E402
 from supply_demand import alert_gates as AG           # noqa: E402
 
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    from supply_demand import level_pad as _LP
+    if request.param is not None:
+        monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", request.param)
+    return _LP.pad_pct()
+
+
+def _fl(lo):
+    """The padded demand floor, computed HERE from the constant (never the engine)."""
+    from supply_demand import level_pad as _LP
+    p = _LP.pad_pct()
+    return round(lo * (1 - p / 100.0), 2) if p > 0 else lo
+
 BAND = {"kind": "demand", "lo": 164.60, "hi": 169.81, "touches": 3, "strength": 100.0}
 
 
@@ -199,12 +215,15 @@ def test_nearest_demand_inside_above_within_five_pct_never_under():
     assert QB.nearest_demand(179.0, bands) is None, "5.4% above it; the 1-touch band at 176-177 is not a level"
 
 
-def test_live_row_measures_room_to_the_first_proven_lid_and_writes_the_plan():
+def test_live_row_measures_room_to_the_first_proven_lid_and_writes_the_plan(padmode):
     doc = {"bands": [BAND, WEAK, LID], "prev_close": 167.56, "atr14": 6.0}
     r = QB.live_row("KLAC", STATS, doc, 169.50)
     assert r["state"] == "inside" and r["dist_pct"] == 0.0 and r["room"]["target"] == 191.11
-    assert r["stop"] == 163.78 and r["risk_pct"] == 3.37 and r["target"] == 191.11 and r["rr"] == 3.8
-    assert r["plan"].startswith("buy $164.6-169.81 · stop $163.78")
+    stop = round(_fl(164.6) * (1 - QB.STOP_BUFFER_PCT / 100.0), 2)       # 🧱 under the pad
+    assert r["stop"] == stop == (162.14 if padmode else 163.78)
+    assert r["risk_pct"] == round((169.50 - stop) / 169.50 * 100, 2) and r["target"] == 191.11
+    assert r["rr"] == round((191.11 - 169.50) / (169.50 - stop), 1)
+    assert r["plan"].startswith("buy $164.6-169.81 · stop $%.2f" % stop)
     assert r["stats"]["quick_rate_pct"] == 66.7
     # a proven lid right overhead: hidden for room (and the caller counts it)
     tight = {"bands": [BAND, dict(WEAK, touches=2, strength=50.0), LID], "prev_close": 167.56}

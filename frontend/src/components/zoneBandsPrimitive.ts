@@ -26,6 +26,7 @@ import type {
 } from 'lightweight-charts';
 import type { CanvasRenderingTarget2D } from 'fancy-canvas';
 import type { BandSpec } from '../lib/zoneChart';
+import { padStrip } from '../lib/zonePad';
 
 /* Fills chosen so a band never competes with a candle for attention: the
  * entry band is the only one with an outline, matching the SVG version's rule
@@ -34,6 +35,12 @@ const FILL = {
   supply: 'rgba(239,68,68,0.10)',
   demand: 'rgba(34,197,94,0.10)',
   entry: 'rgba(34,197,94,0.22)',
+};
+/* 🧱 The served 1% pad under a demand floor (2026-09-30): the same strip at
+ * half the band's alpha, no edge, so the drawn floor stays the visible edge. */
+const PAD_FILL = {
+  demand: 'rgba(34,197,94,0.05)',
+  entry: 'rgba(34,197,94,0.11)',
 };
 const EDGE = {
   supply: 'rgba(239,68,68,0.45)',
@@ -76,6 +83,20 @@ class ZoneBandsRenderer implements ISeriesPrimitivePaneRenderer {
           const lw = Math.max(1, Math.round(horizontalPixelRatio));
           ctx.fillRect(0, top, bitmapSize.width, lw);
           if (b.isEntry) ctx.fillRect(0, bottom - lw, bitmapSize.width, lw);
+        }
+
+        // The pad reads the SERVED pad_lo (bandsFor passes it only when
+        // well-formed); a pad price off the visible scale is skipped, never
+        // pinned to the edge.
+        const pad = padStrip({ kind: b.kind, lo: b.lo, pad_lo: b.pad_lo });
+        if (pad) {
+          const yPad = series.priceToCoordinate(pad.lo);
+          if (yPad != null) {
+            const pTop = Math.round(Math.min(yLo, yPad) * verticalPixelRatio);
+            const pBot = Math.round(Math.max(yLo, yPad) * verticalPixelRatio);
+            ctx.fillStyle = b.isEntry ? PAD_FILL.entry : PAD_FILL.demand;
+            ctx.fillRect(0, pTop, bitmapSize.width, Math.max(1, pBot - pTop));
+          }
         }
       }
     });

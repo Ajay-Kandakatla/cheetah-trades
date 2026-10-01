@@ -12,6 +12,18 @@ _spec = importlib.util.spec_from_file_location(
 sw = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sw)
 
+import pytest  # noqa: E402
+
+from supply_demand import level_pad as LP  # noqa: E402
+
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    if request.param is not None:
+        monkeypatch.setattr(LP, "DEMAND_PAD_PCT", request.param)
+    return LP.pad_pct()
+
 Z = [{"lo": 110, "hi": 112, "mid": 111, "touches": 3},
      {"lo": 120, "hi": 123, "mid": 121.5, "touches": 2},
      {"lo": 95, "hi": 97, "mid": 96, "touches": 4}]
@@ -339,8 +351,12 @@ def test_entry_band_is_the_band_the_cost_sits_in_or_just_above():
     assert sw.entry_band(91.0, [{"lo": 95, "hi": 92}], []) is None       # inverted band ignored
 
 
-def test_stop_is_half_a_percent_under_the_entry_band_floor_and_states_are_two():
-    assert sw.stop_for({"lo": 55.7, "hi": 57.08}) == 55.42          # the MAN plan's own number
+def test_stop_is_half_a_percent_under_the_entry_band_floor_and_states_are_two(padmode):
+    # 🧱 2026-09-30: a DEMAND band's stop sits 0.5% under its PADDED floor
+    # (55.7 x 0.99 = 55.14 -> 54.86); pad off = the MAN plan's own number
+    assert sw.stop_for({"lo": 55.7, "hi": 57.08}) == (54.86 if padmode else 55.42)
+    # NEGATIVE: MAN's band was a SUPPLY shelf — never padded, the plan's own number
+    assert sw.stop_for({"lo": 55.7, "hi": 57.08, "kind": "supply"}) == 55.42
     assert sw.stop_for(None) is None
     assert sw.stop_state(56.0, 55.42) == {"stop_state": None, "stop_distance_pct": 1.05}
     assert sw.stop_state(55.9, 55.42) == {"stop_state": "NEAR_STOP", "stop_distance_pct": 0.87}
@@ -352,11 +368,25 @@ def test_stop_is_half_a_percent_under_the_entry_band_floor_and_states_are_two():
 
 
 def test_row_carries_the_entry_band_stop_and_next_support(monkeypatch):
+    """🧱 2026-09-30 — a SELL signal he acts on: the holdings stop sits 0.5% under
+    the PADDED floor (90 x 0.99 = 89.10 -> 88.65), so STOP / NEAR_STOP fire later."""
+    monkeypatch.setattr(sw, "_zones_for", lambda sym, live=None: (Z, DEM, 2.0, None))
+    r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.9, "day_change_pct": -2.0})
+    assert r["entry_band"]["lo"] == 90.0 and r["stop_price"] == 88.65
+    assert r["stop_state"] is None and r["stop_distance_pct"] == 1.41
+    assert r["next_support"] == {"lo": 80.0, "hi": 82.0}
+    r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.5})
+    assert r["stop_state"] == "NEAR_STOP"                 # was STOP before the pad
+    r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 88.65})
+    assert r["stop_state"] == "STOP"
+
+
+def test_row_stop_with_the_pad_off_is_the_pre_pad_number(monkeypatch):
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0.0)
     monkeypatch.setattr(sw, "_zones_for", lambda sym, live=None: (Z, DEM, 2.0, None))
     r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.9, "day_change_pct": -2.0})
     assert r["entry_band"]["lo"] == 90.0 and r["stop_price"] == 89.55
     assert r["stop_state"] == "NEAR_STOP" and r["stop_distance_pct"] == 0.39
-    assert r["next_support"] == {"lo": 80.0, "hi": 82.0}
     r = sw._row({"ticker": "VST", "shares": 10, "cost_basis": 910}, {"last": 89.5})
     assert r["stop_state"] == "STOP"
     # NEGATIVE: no band under the entry -> no stop, no state, nothing to push

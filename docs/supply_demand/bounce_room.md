@@ -348,3 +348,10 @@ after ~10 s. The route: `curl -s -X POST localhost:8000/supply-demand/bounce-roo
 application/json' -H 'X-User-Email: ...' -d '{"symbols":["EOSE","CLYM"]}'`.
 
 Not a book method. Not a buy signal. Not advice.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`in_demand_read` and `demand_read` read the PADDED floor (`level_pad.in_band` / `under_floor`); `off_floor_pct` stays measured from the drawn lo (display). `overhead_bands`, `room_read` and `is_touch` are unchanged (resistance and touch reads keep the drawn edges).
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

@@ -1490,6 +1490,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                              behind={burstBehind} rule={data?.burst_rule}
                              note={data?.burst_note} tiles={tiles.length} />
         <RulesInfo section="momentum_burst" compact />
+        {/* 🧱 The 1% pad under demand floors and support key levels (Ajay
+            2026-09-30) — its rule, the stops it moves, the sell signals that
+            now fire later and every HIS CALL, served by
+            supply_demand/rules_info.py (section zone_pad). */}
+        <RulesInfo section="zone_pad" compact />
         {/* ⊞ Expand all — every card's ▸ more in one click (the 🔥 Hottest
             precedent). Display only: it opens folds, never hides a card. */}
         <button type="button" className="cm-rescan" data-testid="cm-expand-more"

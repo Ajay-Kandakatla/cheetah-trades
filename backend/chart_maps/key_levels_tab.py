@@ -59,6 +59,16 @@ def _join_or(items: list) -> str:
 NAMES = _join_or([KL.NAMES[lab] for lab in _LOW_LABELS])
 BUF = f"{KL.PIERCE_PCT:g}%"
 
+
+def buf_text() -> str:
+    """The break buffer in words (🧱 2026-09-30): with the pad on a support LOW
+    breaks only PIERCE_PCT beyond its level_pad pad, so the header says both —
+    built from level_pad (through key_levels) and PIERCE_PCT, never typed."""
+    p = KL.LP.pad_pct()
+    if p <= 0:
+        return f"the {BUF} break buffer"
+    return f"the {p:g}% pad plus the {BUF} break buffer"
+
 NOTE = (f"{KL.MARK} UNMEASURED — no study in this app says a stock near its {NAMES} "
         "holds there or turns there. The order is a distance, not a ranking of setups; "
         "nothing here gates a scan, pushes a phone, sizes a position or enters a lane.")
@@ -279,8 +289,8 @@ def header_text(counts: dict, *, ph, sort_label=None, themes_first: bool = False
     order = ("closest first" if not sort_label
              else f"ordered by {sort_label} (your pick), closest first breaks ties")
     lead = " — theme names lead (themes box)" if themes_first else ""
-    return (f"{KL.MARK} {_n(c.get('ranked'))} names sit above, or within the {BUF} break "
-            f"buffer of, a {LOWS} not yet broken — {order}, by % from the {basis} down to "
+    return (f"{KL.MARK} {_n(c.get('ranked'))} names sit above, or within {buf_text()} "
+            f"of, a {LOWS} not yet broken — {order}, by % from the {basis} down to "
             f"the nearest one{lead}. {_n(c.get('set_last_session'))} of them sit on a low made "
             f"in the last session (flagged on the card). Not listed: {_n(c.get('broken'))} "
             f"through every low below them, {_n(c.get('no_level'))} with no low below the "

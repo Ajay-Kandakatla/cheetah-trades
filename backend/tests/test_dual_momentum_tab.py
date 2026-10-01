@@ -545,7 +545,9 @@ def test_05_attach_enterable_docs_kwarg_skips_the_store_and_default_reads_once(m
     tiles = [{"symbol": "AAA", "last_close": 100.0, "_m": {}}]
     doc = _doc([(97.0, 99.5)], [(110.0, 112.0)])
     B.attach_enterable(tiles, kind="demand", live={}, docs={"AAA": doc})
-    assert calls == [] and tiles[0]["enterable"]["band"] == {"lo": 97.0, "hi": 99.5}
+    # 🧱 2026-09-30: the served band carries its 1% pad (97 x 0.99 = 96.03)
+    assert calls == [] and tiles[0]["enterable"]["band"] == {"lo": 97.0, "hi": 99.5,
+                                                             "pad_lo": 96.03, "pad_pct": 1.0}
     # NEGATIVE: every other caller (no docs) still makes exactly ONE store read
     tiles = [{"symbol": "AAA", "last_close": 100.0, "_m": {}},
              {"symbol": "BBB", "last_close": 50.0, "_m": {}}]

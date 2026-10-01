@@ -270,7 +270,7 @@ def _row(rec: dict, live: dict, pass_name: str) -> Optional[dict]:
         return None
 
     bands = rec.get("bands") or []
-    room_ok, room = AG.room_gate(print_px, bands, prev_close)
+    room_ok, room = AG.room_gate(print_px, bands, prev_close, entry_band=band)
     prox_ok = AG.demand_proximity_gate(print_px, band)
 
     approach = AG.approach_read(print_px, band, prev_close, _f(live.get("low")))

@@ -30,6 +30,16 @@ from chart_maps import key_levels_tab as KLT
 from supply_demand import key_levels as KL
 from supply_demand import quick_bounce as QB
 
+
+@pytest.fixture
+def nopad(monkeypatch):
+    """🧱 2026-09-30: the pad OFF. Tests that pin the 0.15%-from-the-level
+    boundary on a LOW run as the pre-pad REGRESSION; their padded twins live in
+    tests/test_key_levels_pad_2026_09_30.py."""
+    from supply_demand import level_pad as _LP
+    monkeypatch.setattr(_LP, "DEMAND_PAD_PCT", 0.0)
+
+
 ET = ZoneInfo("America/New_York")
 BACKEND = Path(__file__).resolve().parents[1]
 
@@ -179,7 +189,7 @@ def test_3_nearest_lower_picks_the_closest_and_a_tie_goes_to_the_longer_period()
     assert nl["nearest"]["label"] == "PML" and nl["nearest"]["period"] == "month"
 
 
-def test_4_NEGATIVE_a_low_above_the_last_close_is_not_a_lower_level():
+def test_4_NEGATIVE_a_low_above_the_last_close_is_not_a_lower_level(nopad):
     # Last close 101, PWL 101.5 above it (resistance side); the print 102 is above it.
     df = _frame(pwl=101.5, pml=None, sets={"2026-09-23": {"low": 101.5, "high": 103.0}})
     df["low"] = df["low"].clip(lower=101.5)
@@ -198,7 +208,7 @@ def test_5_NEGATIVE_a_high_below_the_price_never_counts_under_the_default_kinds(
     assert KL.nearest_lower([low], 101.0)["status"] == "ranked"
 
 
-def test_6_NEGATIVE_a_broken_low_never_ranks_the_next_one_does():
+def test_6_NEGATIVE_a_broken_low_never_ranks_the_next_one_does(nopad):
     df = _frame(pwl=100.0, pml=97.0)
     read, px = _read(df, KL.row_from_snapshot(_rth(99.5)))
     nl = KL.nearest_lower(read, px)
@@ -210,7 +220,7 @@ def test_6_NEGATIVE_a_broken_low_never_ranks_the_next_one_does():
     assert {t["label"] for t in nl["through"]} == {"PWL", "PML"}
 
 
-def test_7_NEGATIVE_closed_beyond_and_after_hours_through_never_rank():
+def test_7_NEGATIVE_closed_beyond_and_after_hours_through_never_rank(nopad):
     df = _frame(pwl=100.0, pml=None)
     read, px = _read(df, KL.row_from_snapshot(_snap(close=99.5, low=99.4, open_=101.0,
                                                     high=101.0, pdc=101.0)), now=AH)
@@ -224,7 +234,7 @@ def test_7_NEGATIVE_closed_beyond_and_after_hours_through_never_rank():
     assert KL.nearest_lower(read, px)["status"] == "broken"
 
 
-def test_8_NEGATIVE_rth_day_close_through_by_the_buffer_is_through():
+def test_8_NEGATIVE_rth_day_close_through_by_the_buffer_is_through(nopad):
     df = _frame(pwl=100.0, pml=None)
     stale = _snap(px=101.0, at=NOW, age_sec=900, open_=101.0, high=101.0, low=99.6,
                   close=99.7, pdc=101.0)
@@ -242,7 +252,7 @@ def _rank(frames, snaps, now=NOW, first_seen=None):
     return KLT.rank(entry, snaps, now=now, first_seen=first_seen or {})
 
 
-def test_9_a_print_inside_the_buffer_ranks_with_a_negative_distance_ordered_by_abs():
+def test_9_a_print_inside_the_buffer_ranks_with_a_negative_distance_ordered_by_abs(nopad):
     frames = {"AAA": _frame(), "BBB": _frame(), "CCC": _frame()}
     snaps = {"AAA": _rth(99.9), "BBB": _rth(100.2), "CCC": _rth(100.05)}
     ranked, counts = _rank(frames, snaps)
@@ -294,7 +304,7 @@ def _aa(last_low=41.75, last_close=42.25, n=60):
                   sets={"2026-09-28": {"low": last_low, "close": last_close}})
 
 
-def test_12_last_bar_read_carries_the_closed_session_past_the_roll():
+def test_12_last_bar_read_carries_the_closed_session_past_the_roll(nopad):
     df = _aa()
     closed = KL.closed_frame(df, SESSION)
     pwl = [m for m in KL.period_levels(closed, SESSION, ("week",)) if m["kind"] == "low"][0]
@@ -312,7 +322,7 @@ def test_12_last_bar_read_carries_the_closed_session_past_the_roll():
     assert "last close" not in near["text"]            # off-hours: the header says it once
 
 
-def test_13_NEGATIVE_last_bar_read_cases():
+def test_13_NEGATIVE_last_bar_read_cases(nopad):
     df = _aa()
     closed = KL.closed_frame(df, SESSION)
     pwl = [m for m in KL.period_levels(closed, SESSION, ("week",)) if m["kind"] == "low"][0]
@@ -413,7 +423,7 @@ def test_19_NEGATIVE_stale_by_date_and_a_verify_mismatch_are_stale_never_ranked(
     assert ranked == [] and counts["stale"] == 2
 
 
-def test_20_the_counts_invariant_over_a_mixed_pool():
+def test_20_the_counts_invariant_over_a_mixed_pool(nopad):
     frames = {"RNK": _frame(), "BRK": _frame(), "NOL": _frame(pwl=None, pml=None),
               "OLD": _frame(end="2026-09-22"), "NOP": _frame(), "MIS": _frame()}
     frames["NOL"]["low"] = 101.5        # every low above the last close: nothing below
@@ -639,7 +649,7 @@ def kl_board(monkeypatch):
     return state
 
 
-def test_25_the_tab_through_board_one_snapshot_one_first_seen_rank_order(kl_board):
+def test_25_the_tab_through_board_one_snapshot_one_first_seen_rank_order(kl_board, nopad):
     assert "key_levels" in B.TABS
     assert (B.TABS.index("dual_momentum") == B.TABS.index("key_levels") + 1
             and B.TABS.index("ath") == B.TABS.index("dual_momentum") + 1)
@@ -716,7 +726,7 @@ def test_28_the_default_sort_is_labelled_for_this_tab_only(kl_board, monkeypatch
     assert {s["key"]: s["label"] for s in out["sorts"]}["default"] == "⭐ Best setup first"
 
 
-def test_29_payload_is_json_safe_and_the_words_are_honest(kl_board):
+def test_29_payload_is_json_safe_and_the_words_are_honest(kl_board, nopad):
     frames = {"AAA": _frame(), "BBB": _frame()}
     kl_board["seed"](frames, {"AAA": _rth(99.9), "BBB": _rth(100.4)})
     out = B.board(tab="key_levels", limit=24)
@@ -745,7 +755,7 @@ def test_29_payload_is_json_safe_and_the_words_are_honest(kl_board):
     assert "(your pick)" not in header
 
 
-def test_29b_empty_board_serves_the_empty_note(kl_board):
+def test_29b_empty_board_serves_the_empty_note(kl_board, nopad):
     kl_board["seed"]({"AAA": _frame()}, {"AAA": _rth(96.0)})
     out = B.board(tab="key_levels", limit=24)
     assert out["tiles"] == [] and out["note"] == KLT.EMPTY_NOTE

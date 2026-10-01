@@ -441,12 +441,22 @@ def test_a_tab_with_no_demand_read_carries_no_verdict_and_is_still_shown():
 # ═══════════════════════════════════════════════════════════════════════════
 # 5 — read(), is_shown(), slim()
 # ═══════════════════════════════════════════════════════════════════════════
+def test_read_band_carries_no_pad_keys_with_the_pad_off(monkeypatch):
+    from supply_demand import level_pad as LP
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0.0)
+    doc = {"bands": [demand_band(lo=90.0, hi=95.0), demand_band(lo=97.0, hi=100.0),
+                     supply_band()],
+           "prev_close": 99.0}
+    assert EN.read(doc=doc, px=100.5, day_low=98.0)["band"] == {"lo": 97.0, "hi": 100.0}
+
+
 def test_read_takes_the_band_the_boards_take_and_refuses_only_a_dead_print():
     doc = {"bands": [demand_band(lo=90.0, hi=95.0), demand_band(lo=97.0, hi=100.0),
                      supply_band()],
            "prev_close": 99.0}
     r = EN.read(doc=doc, px=100.5, day_low=98.0)
-    assert r["band"] == {"lo": 97.0, "hi": 100.0}      # highest hi at/below the print
+    # highest hi at/below the print; 🧱 2026-09-30 the padded floor rides along
+    assert r["band"] == {"lo": 97.0, "hi": 100.0, "pad_lo": 96.03, "pad_pct": 1.0}
     assert EN.read(doc=doc, px=0.0) is None
     assert EN.read(doc=doc, px=None) is None
     assert EN.read(doc=doc, px=float("nan")) is None

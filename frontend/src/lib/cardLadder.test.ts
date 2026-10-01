@@ -617,3 +617,47 @@ describe('cardLadder — 🏔️ ATH tab pills (2026-09-29)', () => {
     }
   });
 });
+
+/* 🧱 The served 1% pad (2026-09-30): the PLAN buy zone passes the enterable
+ * band's pad_lo through when well-formed, drops it otherwise. The ladder never
+ * computes a pad. */
+describe('cardLadder — the served pad under the buy zone', () => {
+  const withBand = (band: Record<string, unknown> | null) =>
+    cardLadder({ ...VOYA, enterable: { ...VOYA.enterable!, band: band as never } });
+
+  it('passes pad_lo through', () => {
+    expect(withBand({ lo: 133, hi: 135, pad_lo: 131.67 }).plan.buyZone)
+      .toEqual({ lo: 133, hi: 135, pad_lo: 131.67 });
+    expect(withBand({ kind: 'demand', lo: 133, hi: 135, pad_lo: 131.67 }).plan.buyZone?.pad_lo)
+      .toBe(131.67);
+  });
+
+  // --- negatives ---
+  it('NEGATIVE: malformed pads are dropped — no pad_lo key at all', () => {
+    for (const pad_lo of [undefined, null, NaN, '131.67', 133, 140, 0, -1]) {
+      const z = withBand({ lo: 133, hi: 135, pad_lo }).plan.buyZone;
+      expect(z).toEqual({ lo: 133, hi: 135 });
+      expect(z && 'pad_lo' in z).toBe(false);
+    }
+  });
+
+  it('NEGATIVE: a supply-kind band never carries a pad', () => {
+    expect(withBand({ kind: 'supply', lo: 133, hi: 135, pad_lo: 131.67 }).plan.buyZone)
+      .toEqual({ lo: 133, hi: 135 });
+  });
+
+  it('NEGATIVE: the live 2026-09-25 boards (no pad served) → no buy zone carries pad_lo', async () => {
+    const raw = (await import('../components/__fixtures__/card_ladder_live_2026_09_25.json?raw')).default;
+    const live = JSON.parse(raw) as { boards: Record<string, { tiles: CmTile[] }> };
+    let zones = 0;
+    for (const b of Object.values(live.boards)) {
+      for (const t of b.tiles) {
+        const z = cardLadder(t).plan.buyZone;
+        if (!z) continue;
+        zones += 1;
+        expect('pad_lo' in z).toBe(false);
+      }
+    }
+    expect(zones).toBeGreaterThan(0);
+  });
+});

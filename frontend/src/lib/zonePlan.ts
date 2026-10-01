@@ -10,6 +10,8 @@
  * NOT a book method and NOT advice — a configured price-structure read.
  */
 
+import { padStrip } from './zonePad';
+
 export type Zone = {
   kind: 'supply' | 'demand';
   lo: number; hi: number; mid: number;
@@ -20,6 +22,11 @@ export type Zone = {
   oldest_touch_bars?: number;
   strength: number;
   in_price?: boolean;
+  /** 🧱 The served 1% pad under a demand floor (2026-09-30,
+   *  supply_demand/level_pad.pad_fields via price_zones.compute). `lo` stays
+   *  the drawn edge. Absent on supply and on unpadded bands. */
+  pad_lo?: number | null;
+  pad_pct?: number | null;
 };
 
 export type Plan = {
@@ -134,7 +141,11 @@ export function level(v: number | null | undefined): string {
 export function bandLabel(z: Zone | null | undefined): string {
   if (!z) return '—';
   const lo = money(z.lo), hi = money(z.hi);
-  return lo === hi ? `${level(z.lo)}–${level(z.hi)}` : `${lo}–${hi}`;
+  const range = lo === hi ? `${level(z.lo)}–${level(z.hi)}` : `${lo}–${hi}`;
+  // 🧱 The served pad (2026-09-30) in cents — it is where the stops sit, so it
+  // is never rounded. Only a well-formed demand pad prints (lib/zonePad).
+  const pad = padStrip(z);
+  return pad ? `${range} (pad to ${level(pad.lo)})` : range;
 }
 
 /** How wide the band is, in % of its floor. Zones thinner than ~1% are lines,

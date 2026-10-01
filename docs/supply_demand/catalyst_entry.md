@@ -269,3 +269,10 @@ payload) and the `bounce_room` zone docs for every candidate missing one (synchr
 `compute_batch`, bounce_room's own budget). Returns counts (`scan`, `candidates`,
 `docs_have`, `docs_built`, `docs_missing`, `error`); never raises. Without it the lane could
 only fire on a day someone had opened the Catalysts board.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+PAPER lane: a demand-side stop is `level_pad.support_floor(anchor) × (1 − 0.5%)` — 1% lower than before (a broken-supply shelf's lo is unchanged); the "back under the floor" refusal reads the padded floor. The room read still runs before the band is chosen, so a print inside its own pad reads "no room" there (the safe side, noted, unchanged).
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

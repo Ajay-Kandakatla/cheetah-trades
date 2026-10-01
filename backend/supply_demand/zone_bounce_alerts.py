@@ -83,6 +83,7 @@ from market_hours.reminder import is_market_day
 from . import alert_gates as AG
 from . import alert_status as AS
 from . import enterable as EN
+from . import level_pad as LP
 
 log = logging.getLogger(__name__)
 
@@ -261,7 +262,9 @@ def room_for(print_px, bands: list, touched: dict, prev_close=None) -> Optional[
         if room is None:
             return None
         raw_room = (float(room["target"]) - px) / px * 100.0
-        stop = _f((touched or {}).get("lo"))
+        # 🧱 2026-09-30: R against the PADDED floor (level_pad); a broken-supply
+        # shelf keeps its drawn lo. No extra buffer (this read's own convention).
+        stop = LP.support_floor(touched or {})
         risk_pct = (px - stop) / px * 100.0 if stop is not None and stop < px else None
         rr = round(raw_room / risk_pct, 1) if risk_pct and risk_pct > 0 else None
         return dict(room, rr=rr)

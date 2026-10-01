@@ -14,6 +14,15 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from supply_demand import demand_alerts as DA  # noqa: E402
+from supply_demand import level_pad as LP  # noqa: E402
+
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    if request.param is not None:
+        monkeypatch.setattr(LP, "DEMAND_PAD_PCT", request.param)
+    return LP.pad_pct()
 
 ET = ZoneInfo("America/New_York")
 IN_SESSION = datetime(2026, 9, 3, 11, 0, tzinfo=ET)
@@ -147,6 +156,18 @@ def test_near_needs_a_down_day_flat_or_rising_is_departing():
 
 
 def test_below_the_band_is_a_breakdown_not_an_approach():
+    # 🧱 2026-09-30: under the PADDED floor (95 x 0.99 = 94.05) is the breakdown
+    assert DA.read(94.0, _band(95, 105), change_pct=-2.0) is None
+    assert DA.read(94.04, _band(95, 105)) is None
+    # inside the 1% pad = in the band
+    assert DA.read(94.9, _band(95, 105)) == {"tier": "at", "state": "in", "dist_pct": 0.0}
+    assert DA.read(94.05, _band(95, 105)) == {"tier": "at", "state": "in", "dist_pct": 0.0}
+    # NEGATIVE: a broken-supply shelf is not padded
+    assert DA.read(94.9, dict(_band(95, 105), kind="supply")) is None
+
+
+def test_below_the_drawn_floor_is_a_breakdown_with_the_pad_off(monkeypatch):
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0.0)
     assert DA.read(94.0, _band(95, 105), change_pct=-2.0) is None
     assert DA.read(94.9, _band(95, 105)) is None
 
@@ -531,7 +552,7 @@ def test_state_key_uses_fixed_two_decimals():
     assert DA.state_key("NTAP", _band(180.0, 183.5), "2026-09-03", "at") == "NTAP:180.00-183.50:2026-09-03:at"
 
 
-def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypatch):
+def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypatch, padmode):
     """Ajay 2026-09-05: "Need only alerts on stocks that have atleast 5% to Supply
     and also <1% bounce from demand zone". NEAR (1-3% above, falling) is listed
     and counted, never pushed; AT (inside / <=1% above) rings when the room to
@@ -547,9 +568,11 @@ def test_phone_gate_near_tier_lists_but_no_longer_pushes_at_still_rings(monkeypa
     assert out["at"] == 1 and out["near"] == 1 and out["pushed"] == 1
     assert out["skipped_proximity"] == 1 and out["skipped_room"] == 0 and out["unknown_room"] == 0
     assert [s["title"] for s in sent] == ["🧲 AAPL ↑ reversal off demand $200–210"]
+    stop_txt = ("stop $197.01 (0.5% under the 1% pad at $198.00, 6.6% risk)" if padmode
+                else "stop $199.00 (0.5% under the floor, 5.7% risk)")
     assert sent[0]["body"] == ("$211 · 0.47% above · ↑ reversal off the band, +1.2% off the 208.468 low · tested 3x · "
-                               "room: clear runway · buy $200-210 · stop $199.00 "
-                               "(0.5% under the floor, 5.7% risk) · target: clear runway · $3.0T · AAPL Inc")
+                               "room: clear runway · buy $200-210 · " + stop_txt +
+                               " · target: clear runway · $3.0T · AAPL Inc")
     assert list(coll.docs) == ["AAPL:200.00-210.00:2026-09-03:at"], "NEAR is not recorded: nothing was sent"
     # a lid 2.8% over the print (unbroken: hi 219 >= prev 215): listed, counted, silent
     sent.clear()

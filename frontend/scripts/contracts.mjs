@@ -5908,6 +5908,55 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧱 the 1% pad under demand floors is SERVED, drawn, never computed on the FE (2026-09-30)',
+    file: 'src/lib/zonePad.ts',
+    // Ajay 2026-09-30: "Also increase our Demand zone and key levels sizes by
+    // 1%. … if the demand zone or key level is 133, it holding at 132." The
+    // one number lives in backend/supply_demand/level_pad.py
+    // (DEMAND_PAD_PCT = sd_liquidity.STOP_SHELF_PCT); the FE reads the served
+    // pad_lo / pad_price and only compares. A typed 0.99 here would be a
+    // second pad that silently disagrees with the engine when he flips it.
+    checks: (src) => {
+      const errs = [];
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+      for (const [re, what] of [[/0\.99/, '0.99'], [/\*\s*\(\s*1\s*-/, '* (1 -'], [/\/\s*100\b/, '/ 100']]) {
+        if (re.test(code)) errs.push(`zonePad.ts must not type the pad (${what}) — it reads the served pad_lo / pad_price`);
+      }
+      if (!/export function padStrip\(/.test(code)) errs.push('zonePad.ts lost padStrip');
+      if (!/export function keyPadStrip\(/.test(code)) errs.push('zonePad.ts lost keyPadStrip');
+      for (const rel of ['src/components/PatternChart.tsx', 'src/components/zoneBandsPrimitive.ts']) {
+        const f = read(rel).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+        if (!/pad_lo/.test(f)) errs.push(`${rel} must read the served pad_lo`);
+        if (!/from '\.\.\/lib\/zonePad'/.test(f)) errs.push(`${rel} must draw the pad through lib/zonePad`);
+        if (/0\.99\b/.test(f) || /pad_lo\s*=(?!=)/.test(f) || /pad_lo\s*:\s*[^,}]*\*/.test(f)) {
+          errs.push(`${rel} must never compute a pad — it reads pad_lo`);
+        }
+      }
+      const lp = read('../backend/supply_demand/level_pad.py');
+      if (!/^DEMAND_PAD_PCT = SL\.STOP_SHELF_PCT\b/m.test(lp)) {
+        errs.push('backend level_pad.py must keep DEMAND_PAD_PCT = SL.STOP_SHELF_PCT (the one number, reused by name)');
+      }
+      const ri = read('../backend/supply_demand/rules_info.py');
+      const keys = /SECTION_KEYS\s*=\s*\(([\s\S]*?)\)\s*\n\s*\n_DISCLAIMER/.exec(ri);
+      if (!keys || !/"zone_pad"/.test(keys[1])) errs.push('backend rules_info.py SECTION_KEYS must contain "zone_pad"');
+      if (!/<RulesInfo section="zone_pad"/.test(read('src/pages/ChartMaps.tsx'))) {
+        errs.push('ChartMaps.tsx must mount <RulesInfo section="zone_pad" …> — his HIS CALL switches live there');
+      }
+      const nf = read('src/lib/newFeatures.ts');
+      const at = nf.indexOf("id: 'sd-level-pad-2026-09-30'");
+      if (at < 0) {
+        errs.push("newFeatures.ts lacks the 'sd-level-pad-2026-09-30' ✨ entry");
+      } else {
+        const lq = nf.indexOf("label: '", at);
+        const end = nf.indexOf("' },", lq);
+        const label = lq > at && end > lq ? nf.slice(lq, end) : '';
+        if (!label) errs.push('the sd-level-pad ✨ entry has no label');
+        if (/bounce/i.test(label)) errs.push('the sd-level-pad ✨ label must say "reversal", never "bounce"');
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

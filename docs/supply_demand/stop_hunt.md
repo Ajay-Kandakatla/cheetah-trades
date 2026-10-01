@@ -211,3 +211,10 @@ The closed window is now cut first and today is merged into IT: append path → 
 merge path → `window` rows (what the frame already yielded after 10:00). Nothing widened: a sweep
 one bar older than the window is still not "now" on either path, and today's own pierce still
 counts on top. Pinned by `test_F3_*` in `tests/test_alerts_review_fixes_2026_09_14.py`.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`sweep_read` takes its floor from `level_pad.sweep_floor(band)` — the DRAWN floor unless HIS CALL #1 (`PAD_FLOOR_HELD`) flips it — so the measured +8.60pp gate is unchanged. New: a corner guard (no day low known but the print is under the floor = a pierce; tightening only) and `in_pad` (the pierce stayed inside the 1% pad), which `sweep_txt` renders as "· inside the 1% pad". State and `floor_held_gate` are unchanged.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

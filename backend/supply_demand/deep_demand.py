@@ -40,6 +40,7 @@ from typing import Optional
 
 from .price_zones import NEAR_PCT, MAX_ZONES_PER_SIDE
 from .demand_reentry import MIN_TOUCHES, MIN_ZONE_STRENGTH
+from . import level_pad as LP
 
 log = logging.getLogger("supply_demand.deep_demand")
 
@@ -213,7 +214,7 @@ def arrival(dz: list, last) -> Optional[tuple]:
         lo, hi = _lo_hi(z)
         if lo is None:
             continue
-        if lo <= last <= hi:
+        if LP.in_band(z, last):                      # 🧱 the PADDED floor (level_pad)
             idx = i
             break
     if idx is None:                                  # pass 2 — NEAR from above
@@ -238,7 +239,9 @@ def arrival(dz: list, last) -> Optional[tuple]:
         lo, hi = _lo_hi(dz[j])
         if lo is None:
             return None      # a malformed band overhead — fail closed, never guess
-        if last < lo:        # strictly below: a straddling band was not crossed
+        # strictly below the PADDED floor (🧱 2026-09-30): a print inside a
+        # band's 1% pad did not cross it
+        if LP.under_floor(dz[j], last):
             broken.append(dz[j])
     levels_broken = len(broken)
     if levels_broken == 0:
@@ -329,7 +332,7 @@ def read(rec: dict) -> Optional[dict]:
     top = broken[0]                      # the HIGHEST level it crossed
     t_lo, t_hi = _lo_hi(top)
 
-    if s_lo <= last <= s_hi:
+    if LP.in_band(second, last):         # 🧱 same padded floor arrival() used
         state = "in"
         dist_pct = 0.0
     else:                                # between the levels, coming down
@@ -360,29 +363,34 @@ def read(rec: dict) -> Optional[dict]:
         "level": levels_broken + 1,              # 2..4 — never ordered on
         # Yesterday closed UNDER the ARRIVAL band: today's position in it is
         # a reclaim from below, not an arrival from the top (D5, wording).
-        "reclaiming": bool(pc is not None and pc > 0 and pc < s_lo),
+        "reclaiming": bool(pc is not None and pc > 0 and pc < LP.support_floor(second)),
         # Every band carries its touch count and its AGE fields (2026-09-14):
         # the tile sizes its window to `oldest_touch_bars`, and without it every
         # deep tile was 130 bars with the band's swings off-screen (56/100).
         # `top_band` = the HIGHEST level crossed (shape unchanged).
-        "top_band": {"lo": top.get("lo"), "hi": top.get("hi"),
+        # 🧱 2026-09-30: every band says it is demand and carries pad_lo/pad_pct
+        # (lo/hi stay DRAWN, so room_floor's ceilings stay drawn).
+        "top_band": {"kind": "demand", "lo": top.get("lo"), "hi": top.get("hi"),
                      "touches": top.get("touches"),
                      "bars_since_test": top.get("bars_since_test"),
-                     "oldest_touch_bars": top.get("oldest_touch_bars")},
+                     "oldest_touch_bars": top.get("oldest_touch_bars"),
+                     **LP.pad_fields(top)},
         # `second_band` = the ARRIVAL band (shape unchanged, name unchanged —
         # four modules and the FE key on the literal).
-        "second_band": {"lo": s_lo, "hi": s_hi,
+        "second_band": {"kind": "demand", "lo": s_lo, "hi": s_hi,
                         "touches": second.get("touches"),
                         "strength": second.get("strength"),
                         "bars_since_test": second.get("bars_since_test"),
-                        "oldest_touch_bars": second.get("oldest_touch_bars")},
+                        "oldest_touch_bars": second.get("oldest_touch_bars"),
+                        **LP.pad_fields(second)},
         # EVERY crossed level, high→low, so the tile can draw them all and
         # room_floor can measure past all of them. len == levels_broken.
-        "broken_bands": [{"lo": b.get("lo"), "hi": b.get("hi"),
+        "broken_bands": [{"kind": "demand", "lo": b.get("lo"), "hi": b.get("hi"),
                           "touches": b.get("touches"),
                           "strength": b.get("strength"),
                           "bars_since_test": b.get("bars_since_test"),
-                          "oldest_touch_bars": b.get("oldest_touch_bars")}
+                          "oldest_touch_bars": b.get("oldest_touch_bars"),
+                          **LP.pad_fields(b)}
                          for b in broken],
         # How far below the FIRST (highest) crossed level price sits.
         "below_top_pct": round((t_lo - last) / t_lo * 100.0, 2),

@@ -44,6 +44,7 @@ from zoneinfo import ZoneInfo
 
 from scalping import candles
 from supply_demand import sd_liquidity
+from supply_demand import level_pad as LP
 
 log = logging.getLogger("supply_demand.key_levels")
 
@@ -181,16 +182,36 @@ def _side(level: float, ref_close: float, kind: Optional[str] = None) -> tuple[s
     return ("resistance", "up") if kind == "high" else ("support", "down")
 
 
+def _padded_side(level: float, ref_close: float, kind: Optional[str] = None) -> tuple[str, str]:
+    """`_side` with the 🧱 pad (2026-09-30, level_pad): a LOW whose reference
+    close sits inside its pad (at or above level_pad.key_edge) stays SUPPORT —
+    a close in the pad did not flip it to resistance. Highs, and every level
+    with the pad off, are sided exactly as `_side` does."""
+    if kind in LP.PAD_KEY_KINDS and LP.pad_pct() > 0:
+        E = LP.key_edge(level, kind, "support")
+        if E is not None and ref_close >= E:
+            return "support", "down"
+    return _side(level, ref_close, kind)
+
+
+def _edge(L: float, kind: Optional[str], side: str) -> float:
+    """The level's BREAK edge (level_pad.key_edge): padded for a support-side
+    low, the level itself otherwise."""
+    E = LP.key_edge(L, kind, side)
+    return L if E is None else E
+
+
 def _member_side(level: dict, ref_close: float) -> tuple[str, str]:
     """The side of one member. Pre-market levels are set AFTER yesterday's
     close, so the price sits inside their range at 09:30 by construction:
     they are sided by KIND (high = resistance / up, low = support / down),
     never by yesterday's close (a gap day would flip them). Every other
-    member is sided by position (`_side`)."""
+    member is sided by position (`_padded_side` — a close inside a low's
+    🧱 pad keeps it support)."""
     kind = level.get("kind")
     if level.get("period") == "pre" and kind in ("high", "low"):
         return ("resistance", "up") if kind == "high" else ("support", "down")
-    return _side(float(level["price"]), float(ref_close), kind)
+    return _padded_side(float(level["price"]), float(ref_close), kind)
 
 
 def _through_pct(side: str, x: float, L: float) -> float:
@@ -220,12 +241,14 @@ def _in_buffer(x: Optional[float], L: float) -> bool:
     return abs(x - L) / L * 100.0 < PIERCE_PCT - 1e-9
 
 
-def _came_within(side: str, X: Optional[float], L: float) -> bool:
+def _came_within(side: str, X: Optional[float], L: float,
+                 E: Optional[float] = None) -> bool:
     """X came within AT_LEVEL_PCT of L on its side, or went through by less
-    than PIERCE_PCT (never beyond)."""
+    than PIERCE_PCT (never beyond). `E` (🧱 2026-09-30): the break edge
+    (level_pad.key_edge) — never beyond E; anywhere inside [E, L] counts."""
     if X is None:
         return False
-    if _beyond(side, X, L):
+    if _beyond(side, X, L if E is None else E):
         return False
     return -_through_pct(side, X, L) <= AT_LEVEL_PCT + 1e-9
 
@@ -433,8 +456,8 @@ def _last_close_cross(closed, idx, after: date, level: float,
         prev, cur = _f(closes[i - 1]), _f(closes[i])
         if prev is None or cur is None:
             continue
-        side, direction = _side(level, prev, kind)
-        if _beyond(side, cur, level):
+        side, direction = _padded_side(level, prev, kind)
+        if _beyond(side, cur, _edge(level, kind, side)):        # 🧱 the padded edge
             found = {"date": days[i].isoformat(), "direction": direction}
     return found
 
@@ -550,12 +573,17 @@ def member_state(level: dict, *, ref_close: float, row: Optional[dict], now: dat
     ah_through, beyond_pct, first_through, reversal_at} — the §3.3 tables."""
     L = float(level["price"])
     side, direction = _member_side(level, ref_close)
+    # 🧱 2026-09-30: every break test reads the BREAK EDGE — padded for a
+    # support-side low (level_pad.key_edge), the level itself otherwise.
+    # beyond_pct / dist_pct stay measured from the drawn L.
+    E = _edge(L, level.get("kind"), side)
     first = first if isinstance(first, dict) else {}
     through_at = first.get(first_seen_key(symbol, level.get("id"), direction, "through"))
     reversal_at = first.get(first_seen_key(symbol, level.get("id"), direction, "reversal"))
     out = {"side": side, "direction": direction, "state": None, "gap": False,
            "closed_beyond": None, "ah_through": False, "beyond_pct": None,
-           "first_through": through_at, "reversal_at": reversal_at}
+           "first_through": through_at, "reversal_at": reversal_at,
+           "pad_price": E if abs(E - L) > 1e-12 else None}
     ph = phase(now, session)
     if ph is None:
         return out
@@ -565,20 +593,20 @@ def member_state(level: dict, *, ref_close: float, row: Optional[dict], now: dat
     if ph in ("rth", "close"):
         X = _pos(row.get("low")) if side == "support" else _pos(row.get("high"))
         op = _pos(row.get("open"))
-        out["gap"] = _beyond(side, op, L)
-    pierced_before = _beyond(side, X, L) or bool(through_at)
+        out["gap"] = _beyond(side, op, E)
+    pierced_before = _beyond(side, X, E) or bool(through_at)
 
     def _pct(v):
         return round((v - L) / L * 100.0, 2) if v is not None else None
 
     if ph in ("pre", "rth"):
-        if x is not None and _beyond(side, x, L):
+        if x is not None and _beyond(side, x, E):
             state = "broken"
-        elif pierced_before and x is not None and _back_inside(side, x, L):
+        elif pierced_before and x is not None and _back_inside(side, x, E):
             state = "reversal"
         elif pierced_before:
             state = "pierced"
-        elif _came_within(side, X, L):
+        elif _came_within(side, X, L, E):
             state = "tested"
         elif X is not None or x is not None:
             state = "intact"
@@ -593,18 +621,18 @@ def member_state(level: dict, *, ref_close: float, row: Optional[dict], now: dat
     if C is None:
         out["state"] = "unknown"
         return out
-    if _beyond(side, C, L):
+    if _beyond(side, C, E):
         state = "closed_beyond"
-    elif pierced_before and _back_inside(side, C, L):
+    elif pierced_before and _back_inside(side, C, E):
         state = "reversal"
-    elif _came_within(side, X, L) or _in_buffer(C, L):
+    elif _came_within(side, X, L, E) or _in_buffer(C, E):
         state = "tested"
     else:
         state = "intact"
     out["state"] = state
     out["closed_beyond"] = state == "closed_beyond"
     out["beyond_pct"] = _pct(C)
-    if (state != "closed_beyond" and x is not None and _beyond(side, x, L)
+    if (state != "closed_beyond" and x is not None and _beyond(side, x, E)
             and _is_after_hours_print(row, session)):
         out["ah_through"] = True
     return out
@@ -680,8 +708,23 @@ def merge_for_draw(levels, ref_close: float, tol_pct: float = AT_LEVEL_PCT) -> l
         out.append({"price": round(float(lead["price"]), 4),
                     "label": " = ".join(m["label"] for m in ordered),
                     "ids": [m["id"] for m in ordered],
-                    "tone": TONE_BROKEN if broken else TONE})
+                    "tone": TONE_BROKEN if broken else TONE,
+                    # 🧱 the lead member's pad when it is a padded support low
+                    "pad_price": _lead_pad(lead, ref)})
     return out
+
+
+def _lead_pad(lead: dict, ref) -> Optional[float]:
+    """The 🧱 pad under a cluster's lead member: its break edge when it is a
+    support-side LOW with the pad on, else None (highs never carry one)."""
+    if ref is None or lead.get("kind") not in LP.PAD_KEY_KINDS:
+        return None
+    L = _f(lead.get("price"))
+    if L is None or L <= 0:
+        return None
+    side = _member_side(lead, ref)[0]
+    E = LP.key_edge(L, lead.get("kind"), side)
+    return E if E is not None and abs(E - L) > 1e-12 else None
 
 
 def rank_for_chart(clusters, anchor: Optional[float], per_side: int) -> list[dict]:
@@ -728,8 +771,10 @@ def chart_lines(clusters, *, frame: str, existing_lines=()) -> list[dict]:
             continue
         rth = frame in EXT_FRAMES and not any(i.startswith("pre_") for i in ids)
         mid = f"{c.get('label')} RTH" if rth else f"{c.get('label')}"
+        pad = _f(c.get("pad_price"))
         out.append({"price": round(px, 4), "label": f"{MARK} {mid} {px:.2f}",
-                    "tone": c.get("tone") or TONE})
+                    "tone": c.get("tone") or TONE,
+                    "pad_price": round(pad, 4) if pad is not None and 0 < pad < px else None})
     return out
 
 
@@ -846,7 +891,16 @@ def rule_text() -> str:
             f"close decides; levels within {AT_LEVEL_PCT:g}% on the same side draw as one line, "
             f"{GRID_PER_SIDE} above and {GRID_PER_SIDE} below the price on the cards and "
             f"{SUPPORT_PER_SIDE} each way on the Support tab — UNMEASURED, a drawing and a "
-            f"fact, not a signal.")
+            f"fact, not a signal." + _pad_clause())
+
+
+def _pad_clause() -> str:
+    """🧱 2026-09-30 — one clause from level_pad / PIERCE_PCT; "" with the pad off."""
+    p = LP.pad_pct()
+    if p <= 0:
+        return ""
+    return (f" A LOW the price is above carries a {p:g}% pad under it and breaks only "
+            f"{PIERCE_PCT:g}% beyond the pad (a configured rule, UNMEASURED).")
 
 
 # ---------------------------------------------------------------------------
@@ -995,8 +1049,11 @@ def is_through(member: dict, anchor_px) -> bool:
     if member.get("state") in THROUGH_STATES or member.get("ah_through"):
         return True
     L = _f(member.get("price"))
-    return (member.get("side") == "support" and L is not None and L > 0
-            and _beyond("support", _f(anchor_px), L))
+    if L is None or L <= 0:
+        return False
+    E = _f(member.get("pad_price")) or L                 # 🧱 the padded break edge
+    return (member.get("side") == "support"
+            and _beyond("support", _f(anchor_px), E))
 
 
 def nearest_lower(read: list, anchor_px) -> dict:
@@ -1018,14 +1075,20 @@ def nearest_lower(read: list, anchor_px) -> dict:
 
 
 def near_text(label, price, distance_pct, state, basis, ph, *, set_on=None,
-              set_last_session=False, last_bar=None) -> str:
-    """The card's 🔑 position line. Never 'bounce'."""
+              set_last_session=False, last_bar=None, pad_price=None) -> str:
+    """The card's 🔑 position line. Never 'bounce'. `pad_price` (🧱 2026-09-30):
+    the member's padded break edge — a print under the level but inside the
+    pad says so."""
     p = float(price)
     d = float(distance_pct)
+    pad = _f(pad_price)
     if d > 0:
         s = f"{MARK} {d:.2f}% above {label} {p:.2f}"
     elif d == 0:
         s = f"{MARK} at {label} {p:.2f}"
+    elif pad is not None and 0 < pad < p:
+        s = (f"{MARK} {abs(d):.2f}% under {label} {p:.2f} — inside the {LP.pad_pct():g}% pad "
+             f"({pad:.2f}); {PIERCE_PCT:g}% under that breaks it")
     else:
         s = (f"{MARK} {abs(d):.2f}% under {label} {p:.2f} — not through "
              f"({PIERCE_PCT:g}% breaks it)")
@@ -1061,8 +1124,10 @@ def near_block(nl: dict, *, px, basis, tape, ph, last_date, last_bar) -> dict:
             "last_bar": lb, "print": _f(px), "print_basis": basis, "print_session": tape,
             "through": [{"label": t.get("label"), "price": float(t["price"]),
                          "state": t.get("state")} for t in nl.get("through") or []],
+            "pad_price": _f(m.get("pad_price")),
             "text": near_text(m.get("label"), price, d, m.get("state"), basis, ph,
-                              set_on=set_on, set_last_session=set_last, last_bar=lb)}
+                              set_on=set_on, set_last_session=set_last, last_bar=lb,
+                              pad_price=m.get("pad_price"))}
 
 
 # ---------------------------------------------------------------------------

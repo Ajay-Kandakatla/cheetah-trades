@@ -166,3 +166,10 @@ every flat spread goes through; `_m` keeps both columns for the sorts. This tab 
 `enterable.KIND_BY_TAB`, so its 🪜 read is the honest n/a read (was a bare None) and the 🪜 sort stays off here.
 Tests: `backend/tests/test_board_attach_owned_keys_2026_09_29.py` (includes an AST source guard against a new
 flat spread).
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+The tab ranks and counts through `key_levels.nearest_lower` / `is_through`, which now read a support low's PADDED edge: a print inside a low's 1% pad is RANKED (negative distance, the card says "inside the 1% pad"), and only a print 0.15% past the pad counts it broken. The header states it from the constants ("within the 1% pad plus the 0.15% break buffer of"). `rank_key` is unchanged (distance from the drawn level). The DM "Near a lower key level" filter inherits.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

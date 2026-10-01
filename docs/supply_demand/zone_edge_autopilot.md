@@ -362,3 +362,10 @@ so the engine's own entries widen with the boards.
 Watch for: `rules_info._b` formatted integer billions only and printed **"$0B"**
 for this floor on the first run — the ℹ️ panel would have said there is no floor
 at all. Fixed and pinned in `test_rules_info`.
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+PAPER lane: the placed stop is `stop_request(last, level_pad.support_floor(band))` — 0.5% under the PADDED floor (131.67 × 0.995 = 131.0116 for a 133 floor; a breakout's cleared SUPPLY band keeps its drawn lo; never padded twice). `room_ok(band=)` never counts a padded own band as its ceiling; `alert_gate` says "under the padded demand floor" when the print fell through the pad. Exits come 1% later (a sell-timing change, listed). Paper lanes can enter inside the pad (no floor-held gate here) — HIS CALL #9.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

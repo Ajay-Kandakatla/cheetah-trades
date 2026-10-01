@@ -15,6 +15,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from supply_demand import alert_gates as AG   # noqa: E402
+from supply_demand import level_pad as LP     # noqa: E402
+
+
+@pytest.fixture
+def nopad(monkeypatch):
+    """🧱 2026-09-30: the pad OFF — the pre-pad engine, for the regressions."""
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0.0)
 
 DEM = {"kind": "demand", "lo": 90.0, "hi": 92.0, "touches": 2, "strength": 30.0}
 
@@ -96,6 +103,15 @@ def test_print_inside_the_band_passes_under_the_floor_fails():
     assert AG.demand_proximity_gate(91.0, DEM) is True
     assert AG.demand_proximity_gate(90.0, DEM) is True              # on the floor
     assert AG.demand_proximity_gate(92.0, DEM) is True              # on the top
+    # 🧱 2026-09-30: the floor side reaches the 1% pad (90 x 0.99 = 89.10)
+    assert AG.demand_proximity_gate(89.99, DEM) is True, "inside the 1% pad"
+    assert AG.demand_proximity_gate(89.10, DEM) is True             # on the padded floor
+    assert AG.demand_proximity_gate(89.09, DEM) is False, "fell through the pad = no push"
+    assert AG.demand_proximity_gate(80.0, DEM) is False
+
+
+def test_print_under_the_drawn_floor_fails_with_the_pad_off(nopad):
+    assert AG.demand_proximity_gate(90.0, DEM) is True
     assert AG.demand_proximity_gate(89.99, DEM) is False, "fell through = no push"
     assert AG.demand_proximity_gate(80.0, DEM) is False
 
@@ -212,7 +228,20 @@ def test_klac_2026_09_02_the_one_touch_lid_no_longer_blocks_the_push():
     assert len(KLAC_BANDS) == 3
 
 
-def test_plan_txt_is_the_paper_lanes_stop_and_the_first_proven_target():
+def test_plan_txt_under_the_pad_is_the_paper_lanes_stop_and_the_first_proven_target():
+    """🧱 2026-09-30: the stop sits 0.5% under the PADDED floor (164.6 x 0.99 = 162.95)."""
+    room = AG.room_read(169.50, KLAC_BANDS, 167.56)
+    txt = AG.plan_txt(169.50, KLAC_BANDS[0], room)
+    assert txt == ("buy $164.6-169.81 · stop $162.14 (0.5% under the 1% pad at $162.95, "
+                   "4.3% risk) · target $191.11 (2.9R)")
+    assert AG.plan_txt(169.50, KLAC_BANDS[0], None).endswith("4.3% risk) · target: clear runway")
+    # NEGATIVE: a broken-supply shelf is not padded — today's exact wording
+    shelf = dict(KLAC_BANDS[0], kind="supply")
+    assert AG.plan_txt(169.50, shelf, room) == \
+        "buy $164.6-169.81 · stop $163.78 (0.5% under the floor, 3.4% risk) · target $191.11 (3.8R)"
+
+
+def test_plan_txt_is_the_paper_lanes_stop_and_the_first_proven_target(nopad):
     room = AG.room_read(169.50, KLAC_BANDS, 167.56)
     txt = AG.plan_txt(169.50, KLAC_BANDS[0], room)
     assert txt == "buy $164.6-169.81 · stop $163.78 (0.5% under the floor, 3.4% risk) · target $191.11 (3.8R)"
@@ -387,6 +416,11 @@ def test_touch_tolerance_is_one_percent_above_the_top():
     assert AG.approach_read(19.0, DYN_BAND, 18.4, 18.80)["dir"] == "lifting"
 
 
+def test_smr_under_the_drawn_floor_is_no_read_with_the_pad_off(nopad):
+    band = {"kind": "demand", "lo": 10.83, "hi": 11.22, "touches": 2, "strength": 40.0}
+    assert AG.approach_read(10.80, band, 9.70, 9.895) is None
+
+
 def test_smr_run_up_into_the_band_reads_reclaiming_not_bouncing():
     """SMR 2026-09-08: closed 9.70, opened 9.97, ran +12% and the alert fired at
     10.835 inside 10.83–11.22. Ajay bought at 10.91 "after the alert did some run
@@ -397,8 +431,10 @@ def test_smr_run_up_into_the_band_reads_reclaiming_not_bouncing():
     assert ap["text"] == "↑ reclaiming the band from below (+11.7% today)"
     # above the band from below: still a reclaim (the run is the fact)
     assert AG.approach_read(11.3, band, 9.70, 9.895)["dir"] == "reclaiming"
-    # NEGATIVE: still under the floor → nothing reached, no read
-    assert AG.approach_read(10.80, band, 9.70, 9.895) is None
+    # 🧱 inside the 1% pad (10.83 x 0.99 = 10.72) is back IN the band: a reclaim
+    assert AG.approach_read(10.80, band, 9.70, 9.895)["dir"] == "reclaiming"
+    # NEGATIVE: still under the PADDED floor → nothing reached, no read
+    assert AG.approach_read(10.70, band, 9.70, 9.895) is None
     # NEGATIVE: yesterday closed INSIDE the band → not a reclaim (resting / bouncing as before)
     assert AG.approach_read(10.9, band, 10.9, 10.9)["dir"] == "resting"
     assert AG.approach_read(11.0, band, 10.9, 10.85)["dir"] == "bouncing"

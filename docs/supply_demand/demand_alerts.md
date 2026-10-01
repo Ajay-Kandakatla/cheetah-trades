@@ -271,3 +271,10 @@ Verified on live data 2026-09-14; tests in `tests/test_alerts_review_fixes_2026_
 
 Tests: `tests/test_alerts_review_fixes_2026_09_14.py` section 8 (`test_F1_*`, `test_F4a_*`,
 `test_F4b_*`, `test_F6_*`).
+
+
+## 2026-09-30 — 🧱 the 1% pad (Ajay: "if the demand zone or key level is 133, it holding at 132")
+
+`read()` reads residence / inside / under off the PADDED floor (a broken-supply shelf keeps its lo): a print in the pad is "at · in", a prior close in the pad is residence, not an arrival. The phone gate's `room_gate` names the band (`entry_band=it["band"]`). `state_key` still reads the drawn lo (no re-push on deploy day). The plan in the body puts the stop 0.5% under the pad.
+
+Canonical doc: `docs/supply_demand/zone_pad_2026_09_30.md` (the ask verbatim, every site, the phone-gate statement, the sell-timing list and the HIS CALL list). UNMEASURED — no study here says the pad pays.

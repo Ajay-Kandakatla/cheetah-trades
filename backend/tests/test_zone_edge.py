@@ -20,6 +20,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from supply_demand import zone_edge as ZE      # noqa: E402
 from supply_demand import demand_alerts as DA  # noqa: E402
+from supply_demand import level_pad as LP      # noqa: E402
+
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    if request.param is not None:
+        monkeypatch.setattr(LP, "DEMAND_PAD_PCT", request.param)
+    return LP.pad_pct()
+
+
+def _padded(band):
+    """A served demand band: the drawn band plus pad_lo / pad_pct when the pad is on."""
+    return {**band, **LP.pad_fields(band)}
+
+
+def _stop_txt(lo, px, target):
+    """The plan's stop clause, computed HERE: 0.5% under the padded floor."""
+    p = LP.pad_pct()
+    fl = round(lo * (1 - p / 100.0), 2) if p > 0 else lo
+    stop = fl * 0.995
+    risk = (px - stop) / px * 100
+    rr = (target - px) / (px - stop)
+    where = ("under the %g%% pad at $%.2f" % (p, fl)) if p > 0 else "under the floor"
+    return "stop $%.2f (0.5%% %s, %.1f%% risk)" % (stop, where, risk), "(%.1fR)" % rr
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[2]
@@ -275,17 +300,20 @@ def test_breaking_garbage_never_crashes():
 
 
 # ── side B: the pure read ────────────────────────────────────────────────────
-def test_near_demand_in_and_near_tiers():
+def test_near_demand_in_and_near_tiers(padmode):
     r = ZE.read_near_demand(91.0, [DEM, RES], -1.0, 95.0)
-    assert r["tier"] == "in" and r["dist_pct"] == 0.0 and r["role"] == "demand" and r["band"] == DEM
+    assert r["tier"] == "in" and r["dist_pct"] == 0.0 and r["role"] == "demand" and r["band"] == _padded(DEM)
     r = ZE.read_near_demand(92.5, [DEM, RES], -1.0, 95.0)
-    assert r["tier"] == "near" and r["dist_pct"] == 0.54 and r["band"] == DEM
+    assert r["tier"] == "near" and r["dist_pct"] == 0.54 and r["band"] == _padded(DEM)
+    # 🧱 89.50 is inside DEM's 1% pad (89.10) with the pad on; under the floor with it off
+    r = ZE.read_near_demand(89.5, [DEM], -1.0, 95.0)
+    assert (r["tier"] == "in") if padmode else (r is None)
     assert ZE.read_near_demand(92.92, [DEM], -1.0, 95.0)["dist_pct"] == 0.99
     assert ZE.read_near_demand(93.0, [DEM], -1.0, 95.0) is None, "1.08% above: not <1%"
     assert ZE.read_near_demand(89.0, [DEM], -1.0, 95.0) is None, "under the floor, nothing beneath"
     r = ZE.read_near_demand(89.0, [DEM, LOWDEM], -1.0, 95.0)
     assert r is None, "under DEM's floor, 8.5% above LOWDEM: neither"
-    assert ZE.read_near_demand(82.5, [DEM, LOWDEM], -1.0, 95.0)["band"] == LOWDEM
+    assert ZE.read_near_demand(82.5, [DEM, LOWDEM], -1.0, 95.0)["band"] == _padded(LOWDEM)
 
 
 def test_broken_supply_counts_as_support_only_once_yesterday_closed_above_it():
@@ -443,16 +471,18 @@ def test_unknown_cap_is_skipped_from_the_board_small_cap_listed_not_pushed(monke
     assert out2["breaking"] == [] and out2["unknown_cap"] == 3
 
 
-def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_state(monkeypatch):
+def test_near_demand_arrival_pushes_via_demand_alert_kind_and_demand_alerts_state(monkeypatch, padmode):
     sent = _capture(monkeypatch)
     store = {"AAA": _doc("AAA", [DEM, RES], 95.0)}
     out, colls = _run(store, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9}, names={"AAA": "Alpha"})
     assert out["singles_demand"] == 1 and out["pushed"] == 1 and len(sent) == 1
     m = sent[0]
     assert m["title"] == "🧲 AAA ↑ reversal off demand $90–92"      # the ONLY approach the phone takes since 2026-09-09
+    st, rr = _stop_txt(90.0, 91.0, 100.0)
+    assert st == ("stop $88.65 (0.5% under the 1% pad at $89.10, 2.6% risk)" if padmode
+                  else "stop $89.55 (0.5% under the floor, 1.6% risk)")
     assert m["body"] == ("$91 · ↑ reversal off the band, +1.2% off the 89.91 low · tested 2x · room +9.9% -> $100 · "
-                         "buy $90-92 · stop $89.55 "
-                         "(0.5% under the floor, 1.6% risk) · target $100 (6.2R) · $5.0B · Alpha")   # RES 100-102 (hi >= prev 95) is the first unbroken lid
+                         "buy $90-92 · " + st + " · target $100 " + rr + " · $5.0B · Alpha")   # RES 100-102 (hi >= prev 95) is the first unbroken lid
     assert m["kind"] == "demand_alert" == DA.KIND and m["kind_arg"] == "demand_alert"
     key = DA.state_key("AAA", DEM, DAY, "at")
     assert list(colls["coll_demand"].docs) == [key] == ["AAA:90.00-92.00:2026-09-03:at"]
@@ -1135,7 +1165,7 @@ def test_state_and_first_seen_keys_use_fixed_two_decimals():
     assert ZE._band_txt(RES) == "$100–102", "display text keeps the short form"
 
 
-def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch):
+def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch, padmode):
     """Ajay 2026-09-05: "When alert I need the same logic. Need only alerts on
     stocks that have atleast 5% to Supply and also <1% bounce from demand zone".
     The board lists; only the phone tightens."""
@@ -1149,12 +1179,12 @@ def test_phone_gate_near_demand_needs_five_percent_room_to_supply(monkeypatch):
     roomy = {"kind": "supply", "lo": 96.0, "hi": 97.0, "touches": 2, "strength": 50.0}   # 5.49% over
     out2, _ = _run({"AAA": _doc("AAA", [DEM, roomy], 95.0)}, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9})
     assert out2["pushed"] == 1 and out2["skipped_room"] == 0
+    st, rr = _stop_txt(90.0, 91.0, 96.0)
     assert sent[-1]["body"] == ("$91 · ↑ reversal off the band, +1.2% off the 89.91 low · tested 2x · "
-                                "room +5.5% -> $96 · buy $90-92 · stop $89.55 "
-                                "(0.5% under the floor, 1.6% risk) · target $96 (3.4R) · $5.0B")
+                                "room +5.5% -> $96 · buy $90-92 · " + st + " · target $96 " + rr + " · $5.0B")
     out3, _ = _run({"AAA": _doc("AAA", [DEM], 95.0)}, {"AAA": _bounce(91.0, 95.0, -4.2)}, {"AAA": 5e9})
-    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · ↑ reversal off the band, +1.2% off the 89.91 low · tested 2x · room: clear runway · buy $90-92 · stop $89.55 "
-                                                       "(0.5% under the floor, 1.6% risk) · target: clear runway · $5.0B")
+    assert out3["pushed"] == 1 and sent[-1]["body"] == ("$91 · ↑ reversal off the band, +1.2% off the 89.91 low · tested 2x · room: clear runway · buy $90-92 · "
+                                                       + st + " · target: clear runway · $5.0B")
     assert ZE.EDGE_PCT == AG.ALERT_MAX_ABOVE_DEMAND_PCT == 1.0, "the in/near tier IS the <1% rule — reused, not duplicated"
 
 

@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-09-30: "Also increase our Demand zone and key levels sizes by
+  // 1%. …" Label verbatim from the zone_pad spec §4 WP-FE. Every number in it
+  // is a served constant (level_pad.DEMAND_PAD_PCT = sd_liquidity.STOP_SHELF_PCT,
+  // alert_gates.STOP_BUFFER_PCT, demand_reentry.STOP_BUFFER_PCT,
+  // sd_liquidity.SWEEP_MIN_PIERCE_PCT, the room gate) — if he flips one of the
+  // HIS CALLs, change this label.
+  { id: 'sd-level-pad-2026-09-30', addedAt: '2026-09-30', route: '/chart-maps?tab=zones',
+    label: '🧱 1% pad under demand zones and support key levels. You said: “Also increase our Demand zone and key levels sizes by 1%. becuz Generally we are missing this, I been noticing if the demand zone or key level is 133, it holding at 132. My theory is MMs know stoplosses are beyond 133.” Every demand zone now reaches 1% under its drawn floor (a 133 floor counts down to 131.67), and a key-level LOW the price is above — prior day, week, month, 52-week or pre-market — breaks only 0.15% under that pad instead of 0.15% under the level. The drawn edge stays where it was; the pad is the lighter strip under it on every chart. Stops move with it: the phone plan, the paper lanes and your holdings stop sit 0.5% under the pad (131.01 for a 133 floor), the board plan 1.5% under the pad — about 1% more risk per share and fewer R to the same target. Back in Demand changes both ways: it adds names inside the pad (most wear 🔪 band broken, 20 of 26 on 2026-09-30) and drops names whose R:R sat near its floor (6 of 22). Sell signals that now fire later: 🔑 a close through a support low, 🔴 the stop on your holdings, the paper stops. Unchanged: at least 5% room to supply, at most 1% above the band top, supply zones, highs, Gabbar levels, and the one measured phone gate (the band floor must not have been pierced) — it still reads the drawn edge, so a name holding at 132 shows on the boards but does not ring your phone until you flip it (ℹ️ Rules → 🧱 Pad). UNMEASURED until the pad study reports.' },
   // Ajay 2026-09-29: "create me another tab where valuations are wrong …" then
   // "Use the same tab actually". Label from the undervalue_peers spec §4 WP-FE;
   // the numbers are chart_maps/undervalue_peers constants (HIS CALLs #1-#5) —

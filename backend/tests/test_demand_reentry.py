@@ -24,6 +24,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from supply_demand import demand_reentry as dr
 from supply_demand import price_zones as pz
+from supply_demand import level_pad as LP
+
+
+@pytest.fixture(params=[None, 0.0], ids=["pad", "nopad"])
+def padmode(request, monkeypatch):
+    """🧱 2026-09-30: pad ON (default) and OFF (the pre-pad regression)."""
+    if request.param is not None:
+        monkeypatch.setattr(LP, "DEMAND_PAD_PCT", request.param)
+    return LP.pad_pct()
+
+
+def _fl(lo):
+    """The padded demand floor, computed HERE from the constant (never the engine)."""
+    p = LP.pad_pct()
+    return round(lo * (1 - p / 100.0), 2) if p > 0 else lo
+
+
+def _stop(lo, buf=None):
+    buf = dr.STOP_BUFFER_PCT if buf is None else buf
+    return round(_fl(lo) * (1 - buf / 100.0), 2)
 
 
 # ── reentry_read — the transition test ────────────────────────────────────────
@@ -90,14 +110,15 @@ def test_lookback_window_is_respected():
 
 
 # ── trade_plan — the written entry/exit ───────────────────────────────────────
-def test_trade_plan_levels_and_reward_risk():
+def test_trade_plan_levels_and_reward_risk(padmode):
     p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0})
     assert p["entry_low"] == 100.0 and p["entry_high"] == 106.0
-    # stop sits UNDER the floor by the buffer, never inside the band
+    # stop sits UNDER the (padded, 🧱 2026-09-30) floor by the buffer, never inside the band
     assert p["stop"] < 100.0
-    assert p["stop"] == pytest.approx(98.5, abs=0.01)
+    assert p["stop"] == pytest.approx(_stop(100.0), abs=0.01)
+    assert p["stop"] == pytest.approx(97.52 if padmode else 98.5, abs=0.01)
     assert p["target"] == 120.0
-    assert p["rr"] == pytest.approx((120 - 103) / (103 - 98.5), abs=0.02)
+    assert p["rr"] == pytest.approx((120 - 103) / (103 - _stop(100.0)), abs=0.02)
     assert p["risk_exceeds_max"] is False
 
 
@@ -148,7 +169,20 @@ def test_entry_zone_falls_back_to_the_nearest_band_below():
     implies is inside the house max stop. See the ELVN tests below.
     """
     zones = [{"lo": 95, "hi": 99, "strength": 50}, {"lo": 60, "hi": 65, "strength": 99}]
+    assert dr._pick_entry_zone(102.5, zones)["hi"] == 99, "nearest must beat strongest"
+
+
+def test_entry_zone_nearest_band_with_the_pad_off(monkeypatch):
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0.0)
+    zones = [{"lo": 95, "hi": 99, "strength": 50}, {"lo": 60, "hi": 65, "strength": 99}]
     assert dr._pick_entry_zone(103, zones)["hi"] == 99, "nearest must beat strongest"
+
+
+def test_entry_zone_the_pad_widens_the_prospective_stop_past_the_cap():
+    """🧱 2026-09-30: at 103 the padded stop (95 x 0.99 x 0.985 = 92.64) sits
+    10.06% under the print, past the house max stop — no entry (a TIGHTENING)."""
+    zones = [{"lo": 95, "hi": 99, "strength": 50}, {"lo": 60, "hi": 65, "strength": 99}]
+    assert dr._pick_entry_zone(103, zones) is None
 
 
 def test_entry_zone_is_none_when_there_is_no_demand_below():
@@ -602,12 +636,18 @@ def test_entry_zone_does_not_fall_off_a_cliff_four_cents_below_a_band():
     assert dr._pick_entry_zone(287.07, zones)["lo"] == 287.11
 
 
-def test_entry_zone_still_prefers_a_band_at_or_below_price():
+def test_entry_zone_still_prefers_a_band_at_or_below_price(padmode):
     """The near-miss tolerance must not start preferring overhead bands when a
-    perfectly good one sits just under price."""
-    zones = [{"lo": 101.0, "hi": 103.0, "strength": 90},   # just ABOVE
+    perfectly good one sits just under price. 🧱 2026-09-30: with the pad on,
+    100.00 is INSIDE the 101-103 band's 1% pad (99.99) — that band holds the
+    print, so it wins at distance 0; 100.00 against a 101.8 floor (pad 100.78)
+    is still overhead and the band below wins."""
+    zones = [{"lo": 101.0, "hi": 103.0, "strength": 90},   # just ABOVE (its pad holds 100.00)
              {"lo": 97.0, "hi": 99.5, "strength": 50}]     # just BELOW
-    assert dr._pick_entry_zone(100.0, zones)["lo"] == 97.0
+    assert dr._pick_entry_zone(100.0, zones)["lo"] == (101.0 if padmode else 97.0)
+    zones2 = [{"lo": 101.8, "hi": 103.0, "strength": 90},  # overhead even with the pad
+              {"lo": 97.0, "hi": 99.5, "strength": 50}]
+    assert dr._pick_entry_zone(100.0, zones2)["lo"] == 97.0
 
 
 def test_entry_zone_rejects_a_band_beyond_the_near_miss_tolerance():
@@ -1151,13 +1191,13 @@ def test_NBIX_would_still_have_qualified_without_the_break():
 # belongs to was stopped out before it was quoted. WARNS, does not gate.
 # ═════════════════════════════════════════════════════════════════════════════
 
-def test_a_low_under_the_proposed_stop_is_flagged():
+def test_a_low_under_the_proposed_stop_is_flagged(padmode):
     p = dr.trade_plan(103.0, {"lo": 100.0, "hi": 106.0}, {"lo": 120.0},
                       recent_lows=[102.0, 101.0, 97.0, 102.5])
-    assert p["stop"] == 98.5
+    assert p["stop"] == _stop(100.0) == (97.52 if padmode else 98.5)
     assert p["stop_recently_hit"] is True
     assert p["bars_since_stop_hit"] == 1
-    assert p["lowest_low_pct_below_stop"] == 1.52
+    assert p["lowest_low_pct_below_stop"] == round((_stop(100.0) - 97.0) / _stop(100.0) * 100, 2)
 
 
 def test_the_stop_check_reads_LOWS_not_closes():
@@ -1224,14 +1264,24 @@ def test_junk_lows_do_not_crash_or_fabricate_a_hit():
     assert p2["stop_recently_hit"] is False
 
 
-def test_the_real_NBIX_stop_was_already_run():
-    """Stop $150.25 quoted the same session NBIX printed a $148.78 low."""
+def test_the_real_NBIX_stop_was_already_run(monkeypatch):
+    """Stop $150.25 quoted the same session NBIX printed a $148.78 low (pad OFF)."""
+    monkeypatch.setattr(LP, "DEMAND_PAD_PCT", 0.0)
     p = dr.trade_plan(152.72, {"lo": 152.54, "hi": 155.30}, {"lo": 165.0},
                       recent_lows=[158.0, 155.0, 149.90, 148.78])
     assert p["stop"] == 150.25
     assert p["stop_recently_hit"] is True
     assert p["bars_since_stop_hit"] == 0, "run today"
     assert p["lowest_low_pct_below_stop"] == 0.98
+
+
+def test_the_real_NBIX_stop_under_the_pad_was_not_run():
+    """🧱 2026-09-30: under the pad the NBIX stop is 152.54 x 0.99 = 151.01, x 0.985
+    = 148.74 — BELOW the 148.78 low. His 133 -> 132 case on a real name."""
+    p = dr.trade_plan(152.72, {"lo": 152.54, "hi": 155.30}, {"lo": 165.0},
+                      recent_lows=[158.0, 155.0, 149.90, 148.78])
+    assert p["stop"] == 148.74
+    assert p["stop_recently_hit"] is False
 
 
 def test_the_stop_check_never_changes_the_stop_itself():
@@ -1829,7 +1879,7 @@ def test_rr_at_entry_high_is_measured_at_the_worst_permitted_fill():
         "buying higher against the same stop and target must be worse")
 
 
-def test_qbts_the_target_one_cent_above_the_entry_band_is_flagged():
+def test_qbts_the_target_one_cent_above_the_entry_band_is_flagged(padmode):
     """QBTS 2026-08-31: 1.34R at spot, 0.01R at the top of its own entry band.
 
     The 2026-08-13 VRT fix stopped a target landing INSIDE the entry band. It
@@ -1839,7 +1889,10 @@ def test_qbts_the_target_one_cent_above_the_entry_band_is_flagged():
     number holds only at the bottom of the band.
     """
     p = dr.trade_plan(16.99, {"lo": 16.92, "hi": 17.41}, {"lo": 17.42})
-    assert p["rr"] >= 1.0                      # passes the floor at spot
+    if not LP.pad_pct():
+        assert p["rr"] >= 1.0                  # passes the floor at spot
+    else:                                      # 🧱 the padded stop is wider: fewer R at spot
+        assert p["rr"] == round((17.42 - 16.99) / (16.99 - _stop(16.92)), 2)
     assert p["rr_at_entry_high"] < 0.1         # and is worthless at the top
     assert p["thin_across_band"] is True
 
@@ -2291,7 +2344,7 @@ def _below_band_frame(bars_below=8):
                         index=pd.bdate_range("2025-08-01", periods=n))
 
 
-def test_top_band_read_carries_break_evidence_for_a_name_below_its_first_band():
+def test_top_band_read_carries_break_evidence_for_a_name_below_its_first_band(padmode):
     """`reentry_read` returns the empty shape whenever price is not inside the
     band, and decide_from_frame only asked it about the top band when price
     was BELOW it — so deep_demand's bars_since_top_break / fell_from_pct could
@@ -2308,7 +2361,9 @@ def test_top_band_read_carries_break_evidence_for_a_name_below_its_first_band():
     # The run-up that led INTO the break, measured against the band top: the
     # 40-bar window peaks at 104 against a 96.03 top.
     assert tb["fell_from_pct"] == pytest.approx(round((104.0 / top["hi"] - 1) * 100, 1), abs=0.1)
-    assert tb["lowest_close_pct_below"] == pytest.approx(round((1 - 92.0 / top["lo"]) * 100, 2), abs=0.01)
+    # 🧱 measured from the served PADDED floor (pad_lo; the drawn lo when the pad is off)
+    fl = top.get("pad_lo") or top["lo"]
+    assert tb["lowest_close_pct_below"] == pytest.approx(round((1 - 92.0 / fl) * 100, 2), abs=0.01)
 
 
 def test_band_break_read_needs_no_in_band_and_is_the_reentry_reads_own_scan():
