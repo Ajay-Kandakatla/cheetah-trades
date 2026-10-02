@@ -135,17 +135,57 @@ win rate.
 
 ## 5. Results
 
-**Pending.** The full run is for after 20:00 ET (never during RTH, never while a deploy is pending).
-The main session pastes the emitted `MEASURED` literal into `zone_pad_measured.py` and quotes the verdict
-line here, verbatim, with its CI.
+**MEASURED 2026-10-01: no_signal** — padded stop vs drawn-edge stop, real levels minus random levels:
+**+0.05% per trade [−0.07, +0.16]**, 11,133 trades over 190 dates (primary DiD on %@20; quotable: both pair
+counts ≥ 120, ≥ 100 dates). Full run after 20:00 ET in a throwaway read-only container on main `59c5b09e`
+(arm A = today's engine with `DEMAND_PAD_PCT` set to 0 for the run), 2,250 names from the zone store, 529 s.
+Events 2025-10-02 → 2026-07-07 (the 60-session clock needs bars after each event). Artifact
+`backend/scripts/zone_pad_measured.json` (every number below is in its `q1`–`q3b`).
 
-Pipeline check, 2026-09-30 10:10 ET: a 50-name smoke (`--limit-names 50`) ran end to end in 15 s in a
-throwaway read-only container. All four stages ran, the placebo accepted matches for every question and
-the stats printed. **Its numbers are not quoted anywhere.**
+**Q2 — the pad vs the pre-pad engine (cohort A, n 25,748, 190 dates).** The wider stop wins more often and stops out less,
+but each trade risks more:
 
-Full run (outside RTH), touching nothing inside the live container:
+| | win | stop-out | mean R |
+|---|---|---|---|
+| A drawn-edge stop | 25.6% | 73.8% | +0.296 |
+| B padded stop | 32.5% | 66.4% | +0.223 |
+| paired B − A | **+6.96pp [+6.51, +7.42]** | **−7.43pp [−7.89, −6.98]** | **−0.07R [−0.12, −0.03]** |
+
+The placebo matched 11,133 of the 25,748 cohort-A events (43.2%); the DiD runs on those pairs. The %@20 gain
+(+0.14% [+0.07, +0.21]) shows up just as much at random levels, so the primary DiD is null: the %@20
+gain comes from the wider stop, not the zone, and it costs −0.07R a trade. The phone's cohort (floor held on the drawn edge, n 6,136): win +6.44pp,
+stop-out −7.38pp, mean R −0.01R [−0.06, +0.03], DiD +0.19% [−0.07, +0.42] — no_signal.
+
+**New entries the pad adds** (prints inside the pad, n 6,386): win 13.6%, stop-out 86.4%; vs ordinary entries
+win −18.89pp [−20.41, −17.40], %@20 −0.36% [−0.58, −0.14]. Mean R +0.47 looks better than arm A, but an entry
+inside the pad sits only 0.5–1.5% above its stop, so R is inflated; %@20 is the honest read.
+
+**Q1 — his observation, zones.** A pierce into the pad reversed 74.1% of the time (all bands n 38,587; proven
+only n 25,509); at random levels 77.1% / 77.0%. Real − placebo: all bands **−2.96pp [−5.33, −0.59]**, proven only
+−2.91pp [−5.83, +0.03]. The 133 → 132 hold is real price behaviour, but real zones did it no more often than random
+levels — slightly less.
+
+**Q3 — key levels (PWL/PML/52wL support tests, n 52,961).** Pierce-into-pad reversed 87.6%; real − placebo
+−1.57pp [−2.93, −0.21] — real levels reversed LESS often than random ones in that strip, though a slightly larger
+share of their reversals sat in it (+1.96pp [+1.29, +2.63]).
+
+**Q3b — the sells the pad delays (key levels, his "both sides").** The pad held back 20,008 of 44,705
+close-through sell reads. 82.0% closed back at or above the level within 12 bars; 78.7% broke the pad later anyway.
+For those that broke, the later padded close sat −2.29% [−2.38, −2.21] under the first close-through — negative
+**by construction** (the later close is under the pad), so it is not evidence of a cost; the only read is the
+placebo contrast, real − random +0.19pp [+0.13, +0.25] (real levels slightly less bad). The 21.3% that never broke
+are not scored, so the net cost or benefit of delaying all 20,008 sells is **NOT measured**.
+
+**Q4 — floors the pad "rescues"** (pierced the drawn floor, intact on the pad, n 3,314) vs truly intact floors:
+win −7.16pp [−9.25, −5.02], stop-out +8.73pp [+6.60, +10.82] — the 2026-09-09 swept-floor finding again.
+
+Verdict per §4: **no_signal**. Q1–Q4 are descriptive and do not change it. HIS CALL #10 decides: keep the pad
+(his rule, labelled) or set `DEMAND_PAD_PCT = 0`.
+
+Re-run (after 20:00 ET, never inside the live api, never while a deploy is pending):
 
 ```bash
-docker run --rm --cpus 4 --memory 1.5g --network cheetah-market-app_default -e MONGO_URL=mongodb://mongo:27017 -e MONGO_DB=cheetah -e PYTHONPATH=/app -e PYTHONDONTWRITEBYTECODE=1 -v /Users/ajay/clinet-test/wt-zonepad/backend:/app:ro -v /tmp/zp_out:/out -w /out cheetah-api:latest python -u /app/scripts/zone_pad_study_2026_09_30.py --stage all --events /out/zp_events.csv --kl /out/zp_kl.csv --placebo /out/zp_placebo.csv --stats-json /out/zp_stats.json --measured-out /out/zone_pad_measured.json --emit-measured
-cp /tmp/zp_out/zone_pad_measured.json /Users/ajay/clinet-test/wt-zonepad/backend/scripts/
+docker run --rm --cpus 4 --memory 3g --network cheetah-market-app_default -e MONGO_URL=mongodb://mongo:27017 -e MONGO_DB=cheetah -e TZ=America/New_York -e PYTHONPATH=/app -e PYTHONDONTWRITEBYTECODE=1 -v <main tree>/backend:/app:ro -v <out dir>:/out -w /out cheetah-api:latest python -u /app/scripts/zone_pad_study_2026_09_30.py --stage all --events /out/zp_events.csv --kl /out/zp_kl.csv --placebo /out/zp_placebo.csv --stats-json /out/zp_stats.json --measured-out /out/zone_pad_measured.json --emit-measured
 ```
+
+The bars cache and the zone store are live, so a re-run drifts from these numbers as both change.

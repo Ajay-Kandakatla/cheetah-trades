@@ -155,8 +155,13 @@ def test_pad_fields_never_touch_lo_hi():
     assert LP.describe()["shelf_pct"] == SL.STOP_SHELF_PCT
 
 
-def test_zone_pad_measured_is_pending_and_says_so():
-    assert ZPM.MEASURED is None and ZPM.status() == ZPM.STATUS_PENDING
+def test_zone_pad_measured_reports_and_pending_still_says_so(monkeypatch):
+    # 2026-10-01: the full run reported no_signal (pinned to its artifact in
+    # test_zone_pad_study); with no literal the panel falls back to UNMEASURED
+    assert ZPM.status() == ZPM.STATUS_NO_SIGNAL
+    assert ZPM.verdict_line().startswith("MEASURED 2026-10-01: no_signal")
+    monkeypatch.setattr(ZPM, "MEASURED", None)
+    assert ZPM.status() == ZPM.STATUS_PENDING
     assert ZPM.verdict_line() == ZPM.PENDING_NOTE
     assert "UNMEASURED" in ZPM.PENDING_NOTE
 

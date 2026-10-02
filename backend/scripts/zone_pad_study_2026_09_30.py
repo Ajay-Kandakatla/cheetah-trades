@@ -37,9 +37,9 @@ deploy is pending (a deploy recreates the container and kills the run).
 
 ARMS
 ----
-It runs on origin/main inside the container, where `level_pad` does not exist. Arm A (today)
-is the main-code chain on DRAWN bands; when `supply_demand.level_pad` imports (the branch),
-`LP.DEMAND_PAD_PCT` is set to 0 for the run so arm A is today's engine either way. Arm B (the
+Written before the pad shipped; since 2026-10-01 `level_pad` is on main. Arm A (the pre-pad
+engine) is the main-code chain on DRAWN bands: `LP.DEMAND_PAD_PCT` is set to 0 for the run
+(every pad read is at call time), and on a tree without `level_pad` nothing needs changing. Arm B (the
 pad) is EMULATED here from the one number `sd_liquidity.STOP_SHELF_PCT`:
     _floor_b(band)  = round(lo x (1 - pad/100), 2)
     B-proximity     = _floor_b <= px <= hi x (1 + ALERT_MAX_ABOVE_DEMAND_PCT/100)
@@ -142,8 +142,8 @@ def geom() -> dict:
 
 
 def arm_a_pad_off():
-    """Arm A = today's engine. On the branch, turn the pad off for this process and return
-    the value it had; on main (no level_pad) return None and change nothing."""
+    """Arm A = the pre-pad engine. Where `level_pad` exists (main since 2026-10-01), turn the
+    pad off for this process and return the value it had; without it return None."""
     try:
         from supply_demand import level_pad as LP
     except ImportError:

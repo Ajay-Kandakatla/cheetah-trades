@@ -9,8 +9,10 @@ The pad itself lives in `supply_demand/level_pad.py` (his rule, configured). Thi
 says whether the pad was ever MEASURED to pay: padded stop vs drawn-edge stop, real levels
 minus random (placebo) levels, date-clustered 95% CI.
 
-STATUS TODAY: **pending**. `MEASURED = None`. The replay
-(`backend/scripts/zone_pad_study_2026_09_30.py`) has not reported yet.
+STATUS: **no_signal** (run 2026-10-01 after 20:00 ET in a throwaway read-only container,
+529 s, on main 59c5b09e). Padded stop vs drawn-edge stop, real minus random levels:
++0.05% per trade [-0.07, +0.16], 11,133 trades over 190 dates. Artifact
+`backend/scripts/zone_pad_measured.json`; every secondary read is in its `q1`-`q3b`.
 
 HOW THIS FILE GETS ITS NUMBER. Run the study's `--stage stats --emit-measured` and paste the
 emitted `MEASURED = {...}` literal in here verbatim, beside the JSON it wrote
@@ -28,8 +30,27 @@ STATUS_PENDING = "pending"
 
 PENDING_NOTE = "The 1% pad is his rule, UNMEASURED — no study here says it pays."
 
-# ── the measurement, pasted verbatim from --emit-measured (none yet) ────────
-MEASURED: Optional[dict] = None
+# ── the measurement, pasted verbatim from --emit-measured ──────────────────
+MEASURED: Optional[dict] = {'run_date': '2026-10-01',
+ 'status': 'no_signal',
+ 'did_pct': 0.04842892692819109,
+ 'did_ci_lo': -0.07456699089467633,
+ 'did_ci_hi': 0.15856239180230458,
+ 'n_trades': 11133,
+ 'n_dates': 190,
+ 'clock': 20,
+ 'placebo_accept_pct': 43.23830977163275,
+ 'arm_a_win': 25.555382942364457,
+ 'arm_a_stop': 73.81544197607582,
+ 'arm_a_mean_R': 0.29642583013031926,
+ 'arm_b_win': 32.511263010719276,
+ 'arm_b_stop': 66.38962249495106,
+ 'arm_b_mean_R': 0.222577519913571,
+ 'pad_pct': 1.0,
+ 'universe': 'store',
+ 'first_date': '2025-10-02',
+ 'last_date': '2026-07-07',
+ 'script': 'backend/scripts/zone_pad_study_2026_09_30.py'}
 
 _KNOWN = (STATUS_SUPPORTS, STATUS_NO_SIGNAL, STATUS_INVERTED)
 

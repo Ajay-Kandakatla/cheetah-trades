@@ -603,3 +603,26 @@ def test_report_wording_never_says_bounce():
     assert printed
     for s in printed:
         assert "bounce" not in s.lower() and "fake" not in s.lower(), s
+
+
+# ── 2026-10-01: the full run's literal is pasted verbatim from its artifact ──────
+def test_measured_literal_is_the_artifact_verbatim():
+    import json
+    from pathlib import Path
+    art = json.loads((Path(__file__).resolve().parents[1] / "scripts" / "zone_pad_measured.json")
+                     .read_text(encoding="utf-8"))
+    assert ZPM.MEASURED == art["measured"], "paste ZP.measured_literal(artifact['measured']) — never hand-edit"
+    for k in ZP.MEASURED_KEYS:
+        assert k in ZPM.MEASURED
+    line = ZPM.verdict_line()
+    assert line.startswith("MEASURED 2026-10-01: no_signal")
+    assert "[-0.07, +0.16]" in line and "11133 trades over 190 dates" in line
+
+
+def test_NEG_key_level_pad_clause_stays_unmeasured():
+    # critic 2026-10-01: the primary read ZONE stops; key-level sells (Q3/Q3b) are
+    # descriptive only and their net cost was not measured — he acts on these sells
+    from supply_demand import key_levels as KL
+    assert ZPM.status() == ZPM.STATUS_NO_SIGNAL
+    assert "(a configured rule, UNMEASURED)" in KL._pad_clause()
+    assert "MEASURED no_signal" not in KL._pad_clause()
