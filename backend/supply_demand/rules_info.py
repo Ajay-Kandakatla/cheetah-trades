@@ -84,7 +84,12 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # floors and support key levels. Its own section because it
                 # moves a line on every board above, and every HIS CALL behind
                 # it is a one-constant flip the panel has to name.
-                "zone_pad")
+                "zone_pad",
+                # 📉 DOWN 40%+ (2026-10-02) — the Chart Maps list of names far
+                # under their 52-week high. Its own section because it is
+                # UNMEASURED, gates nothing, and its listing line, its held-out
+                # names and its 💥 window are each a named constant.
+                "fallen")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -798,7 +803,54 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: zone pad lines unavailable: %s", exc)
 
+    # ── 📉 Down 40%+ ───────────────────────────────────────
+    try:
+        out["fallen"] = _fallen_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: fallen section unavailable: %s", exc)
+
     return out
+
+
+def _fallen_section() -> dict:
+    """📉 Down 40%+ — every number read from `chart_maps.fallen_tab` (FAL) or
+    `chart_maps.fallen_catalysts` (FC), never typed here. Imported LAZILY, like
+    the ⚡ section: the panel must not load the tab to list the others."""
+    from chart_maps import fallen_catalysts as FC
+    from chart_maps import fallen_tab as FAL
+
+    short = ("counted, not listed" if not FAL.LIST_SHORT_HISTORY else "listed")
+    held = ("ETFs, " if not FAL.INCLUDE_ETFS else "") + "delisted names, stale cached bars"
+    kinds = " > ".join(FC.KIND_LABELS[k] for k in FC.PRIORITY)
+    return {
+        "title": f"{FAL.TAB_LABEL} — far under the 52-week high, with Bonde's pick legs",
+        "emoji": FAL.MARK,
+        "picks": [
+            "Listed: every universe name whose last closed close is %g%% or more under its "
+            "52-week high — the highest intraday high of the last %d closed sessions. Names "
+            "with fewer than %d sessions of history are %s."
+            % (FAL.THRESHOLD_PCT, FAL.YEAR_BARS, FAL.YEAR_BARS, short),
+            "Not listed, counted: %s, and names with a one-session close move of %g× or more "
+            "in the last %d sessions (the price layer's own split / decimal-shift guard) — "
+            "those are named under the grid; a real collapse can trip it too."
+            % (held, FAL.GLITCH_RATIO, FAL.YEAR_BARS),
+            "Bonde: the \U0001F4C8 Bonde tab's own pick line, unchanged — nothing here retypes "
+            "one of his numbers; his sources are one click away on each card.",
+            FAL.order_line(FAL.DEFAULT_SORT),
+            "Depth view: %s%% — a view over the listed names, never below the %g%% line."
+            % (" / ".join(str(d) for d in FAL.DEPTH_STEPS), FAL.THRESHOLD_PCT),
+            "%s What hit it: the %d biggest down days since the high, and what this app has "
+            "on file from %d session before to %d after each — most specific first (%s). "
+            "Possible, never proof of cause." % (FC.HIT_MARK, FC.TOP_DROPS, FC.WINDOW_BEFORE,
+                                                 FC.WINDOW_AFTER, kinds),
+            "UNMEASURED — no study says a name this far under its 52-week high, with any "
+            "count of Bonde's legs, does anything next. Display only.",
+        ],
+        "stops": ["No stop, no target, no size: a list and its reads. The demand band on each "
+                  "card is the demand engine's own."],
+        "alerts": ["Pushes nothing — no alert kind reads this tab."],
+        "note": _DISCLAIMER,
+    }
 
 
 # The sections whose rules the 🧱 pad changes; each carries the two pad lines.

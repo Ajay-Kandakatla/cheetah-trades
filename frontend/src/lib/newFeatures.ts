@@ -22,6 +22,14 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that
+  // dropped more than 40% lowers …" + "Scan the universe and bring me these
+  // stocks" + "also add things like possible catalyst that made is drop like
+  // that." Label = fallen spec §3.10. The 40 / 252 / 40-50-60-70 are
+  // fallen_tab.THRESHOLD_PCT / KL.YEAR_BARS / DEPTH_STEPS (contract-pinned
+  // equal) = HIS CALLs #2-#4 — if he changes one, change this label.
+  { id: 'chart-maps-fallen-2026-10-02', addedAt: '2026-10-02', route: '/chart-maps?tab=fallen',
+    label: '📉 Down 40%+ tab on Chart Maps. You said: “Can you build me a tab in chart maps about stocks that dropped more than 40% lowers from like app loving company as an example whcih si 60% low. But I also need you to capture informations about sales like Bondes and other indicators based on Bondes formula please.” then “Scan the universe and bring me these stocks” and “also add things like possible catalyst that made is drop like that.” Every name 40% or more under its 52-week high (the highest intraday high of the last 252 closed sessions); ETFs and names with a one-session jump the price layer calls impossible are held out and counted. Each card: the % below and the day of the high, the 52-week low, cap, sector, the sales numbers and Bonde\'s pick legs exactly as the 📈 Bonde tab reads them (his sources one click away), the demand band, and 💥 What hit it — the biggest down day since the high and what the app has on file around it, labelled possible. Order: most Bonde legs passing first; sort by depth, sales growth or cap; pick 40 / 50 / 60 / 70%. UNMEASURED — display only. The 40%, the 52-week reference, the order and the 💥 sources are your calls.' },
   // Ajay 2026-09-30: "Can you build me a new tab- Resileincy. …" Label from the
   // resiliency spec §3.12. The 0.5% / 365 days / 75% / accumulation day (1.0×
   // the 50-day) are resiliency_tab constants = HIS CALLs #1 (down-only 0.5%),

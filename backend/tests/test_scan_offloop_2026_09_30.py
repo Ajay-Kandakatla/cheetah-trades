@@ -256,6 +256,10 @@ AUDITED_SHARED_CALLERS = {
     "main.py": 5,                          # regime, live-prices, scan body, overview, candidate detail
     "sepa/market_gauge.py": 2,             # _breadth_red_pct, _scan_rows (read-only sums)
     "observability/engine_heartbeat.py": 1,  # reads generated_at only
+    # 📉 Down 40%+ (2026-10-03 audit): reads all_results + generated_at in the
+    # background build; scan_part / B._row / BV._bonde_pillar / Q.compute /
+    # tile_metrics read the row, BP.attach writes only the tab's NEW row dicts.
+    "chart_maps/fallen_tab.py": 1,
 }
 
 

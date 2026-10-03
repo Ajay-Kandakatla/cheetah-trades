@@ -43,7 +43,7 @@ import {
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
   type CmBoard, type CmTab,
-  splitBlurb,
+  splitBlurb, FALLEN_DEPTH_PARAM,
 } from '../lib/chartMaps';
 // The room floor's TWO states come from the one shared list (2026-09-17) — the
 // same array the Back in Demand panel renders. See lib/bounceRoom.ts.
@@ -79,6 +79,9 @@ import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
 import { DM_FILTER_PARAM, DM_MODE_ALL, DM_MODE_PARAM, dmFiltersParam, parseDmFilters, parseDmMode, type DmFilterKey } from '../lib/dmFilters';
 import AthBoardNote from '../components/AthBoardNote';
 import ResiliencyBoardNote from '../components/ResiliencyBoardNote';
+import FallenBoardNote from '../components/FallenBoardNote';
+import FallenCardExtras from '../components/FallenCardExtras';
+import { depthToSend } from '../lib/fallen';
 import { RES_FILTER_PARAM, RES_MODE_PARAM, parseResFilters, parseResMode, resFiltersParam, type ResFilterKey } from '../lib/resiliencyFilters';
 import UndervalueViewNote from '../components/UndervalueViewNote';
 import { UV_VIEW_PARAM, UV_VIEW_PSG, parseUvView, uvViewParam } from '../lib/undervalueView';
@@ -542,6 +545,13 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     }, { replace: true });
   }, [setParams]);
 
+  /* 📉 Down 40%+ depth view (Ajay 2026-10-02: "stocks that dropped more than
+   * 40% lowers …"). The step lives in the URL as `?depth=` and rides on this
+   * tab only; absent = the served default step. The PRESSED button is the
+   * SERVED `on`, never this parse, and a click on the served default deletes
+   * the param (fallen.depthToSend). */
+  const fallenDepth = tab === 'fallen' ? (params.get(FALLEN_DEPTH_PARAM) || undefined) : undefined;
+
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
   const levelsSpec = levelsParam(levelSel) ?? 'all';
@@ -567,6 +577,17 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   };
   const [themesFirst, setThemesFirst] = useState(THEMES_FIRST_DEFAULT);
   const [data, setData] = useState<CmBoard | null>(null);
+  /* 📉 Down 40%+: the depth setter reads the SERVED steps (declared after
+   * `data`, which it needs). See `fallenDepth` above. */
+  const fallenBoard = data?.fallen_board ?? null;
+  const setFallenDepth = useCallback((key: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const val = depthToSend(fallenBoard, key);
+      if (val) next.set(FALLEN_DEPTH_PARAM, val); else next.delete(FALLEN_DEPTH_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams, fallenBoard]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -647,7 +668,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            dmMode: dmModeSpec,
                            resFilters: resSpec,
                            resMode: resModeSpec,
-                           uvView });
+                           uvView, fallenDepth });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
@@ -666,7 +687,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, uvView, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, uvView, fallenDepth, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -713,7 +734,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
-      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'resiliency');
+      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'fallen' && tab !== 'resiliency');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -1047,6 +1068,14 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * `?res_mode=`. It also carries the warming line, so the generic demand
         * counter is skipped. */}
       {tab === 'resiliency' && <ResiliencyBoardNote board={data?.resiliency_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleResFilter} onToggleMode={toggleResMode} />}
+      {/* 📉 Down 40%+ tab (2026-10-02): the served header, order line, count
+        * line, UNMEASURED note, 💥 sources and held-out names, Bonde's legend
+        * ONCE for the tab, the served sort buttons (pressed = the served
+        * `sort`, a click through `setSortParam`) and the served depth buttons
+        * (pressed = the served `on`, a click through `setFallenDepth`). It
+        * also carries the warming line, so the generic demand counter is
+        * skipped. */}
+      {tab === 'fallen' && <FallenBoardNote board={data?.fallen_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onDepth={setFallenDepth} />}
       {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
         * toggle — labels served, pressed = the served view, a click through
         * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
@@ -1055,7 +1084,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
         * a rule section; the zones tab is the "in demand" board. */}
-      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'breaking' || tab === 'quick_bounce') && (
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'breaking' || tab === 'fallen' || tab === 'quick_bounce') && (
         <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
           <RulesInfo section={tab === 'zones' ? 'in_demand' : tab === 'breaking' ? 'alerts' : tab} />
         </div>
@@ -1723,6 +1752,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       : data?.warming && tab === 'ath' ? null
       /* 🛡️ Resiliency warms its own memo — ResiliencyBoardNote prints its warming line. */
       : data?.warming && tab === 'resiliency' ? null
+      /* 📉 Down 40%+ warms its own memo — FallenBoardNote prints its warming line. */
+      : data?.warming && tab === 'fallen' ? null
       /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
        * scan) — its served warming line is printed by DualMomentumBoardNote. */
       : data?.warming && tab !== 'key_levels' ? (
@@ -1894,12 +1925,23 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         <p className="cm-note" data-testid="cm-burst-note">⚡ {data.burst_note}</p>
       ) : null}
       <div className={`cm-grid${stale ? ' cm-grid-stale' : ''}`} aria-busy={stale || undefined}>
-        {burstPin.rows.map((t) => (
+        {burstPin.rows.map((t) => (tab === 'fallen' ? (
+          /* 📉 Down 40%+: the card plus its served 💥 / Bonde lines as a
+           * SIBLING — PatternChart is one <Link>, and the pick chips' cites
+           * are links of their own. */
+          <div key={`${t.symbol}-${t.href}`} className="cm-fallen-card" data-testid={`cm-fallen-card-${t.symbol}`}>
+            <PatternChart tile={t} study={data?.explosive_study}
+                          bandStudy={data?.band_structure_study}
+                          burst={burstOn ? (t.burst ?? null) : null}
+                          expandAll={moreAll} />
+            <FallenCardExtras tile={t} legend={data?.fallen_board?.pick_legend ?? null} />
+          </div>
+        ) : (
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
                         bandStudy={data?.band_structure_study}
                         burst={burstOn ? (t.burst ?? null) : null}
                         expandAll={moreAll} />
-        ))}
+        )))}
       </div>
 
       {tilePart.rows.length ? (

@@ -720,6 +720,9 @@ ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_
            # the 🛡️ Resiliency tab (2026-09-30): display only, reuses the session /
            # closed-bar / print / verify engine
            "chart_maps/resiliency_tab.py",
+           # the 📉 Down 40%+ tab (2026-10-02): display only, reuses the session /
+           # closed-bar / 52-week high-low engine
+           "chart_maps/fallen_tab.py",
            # 🧱 zone-pad study (2026-09-30): a read-only research replay that
            # reuses the key-level break test; never on a push or lane path
            "scripts/zone_pad_study_2026_09_30.py"}

@@ -475,8 +475,10 @@ def test_only_three_backend_modules_mention_momentum_burst():
     hits.discard("supply_demand/momentum_burst.py")      # the module itself
     # + the 🛡️ Resiliency tab (2026-09-30): imports BURST_RVOL_MIN / PCT_DP /
     #   avg_volume_before — display only, gates nothing
+    # + the 📉 Down 40%+ tab (2026-10-02): imports avg_volume_before for the
+    #   drop day's volume multiple — display only, gates nothing
     assert hits == {"chart_maps/board.py", "supply_demand/rules_info.py",
-                    "chart_maps/resiliency_tab.py"}, hits
+                    "chart_maps/resiliency_tab.py", "chart_maps/fallen_tab.py"}, hits
 
 
 def test_attach_burst_makes_no_push_enter_or_size_call():

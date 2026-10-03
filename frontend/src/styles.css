@@ -11100,6 +11100,12 @@ a.tk-link.cat-tl-chip                  { display: inline-flex; }
  * Dimmed, never removed and never inert: the grid keeps its place so the page
  * does not jump, and the tiles stay clickable — no pointer-events change. */
 .cm-grid-stale { opacity: 0.45; transition: opacity 0.15s ease; }
+/* 📉 Down 40%+ (2026-10-02): the card and its served 💥 / Bonde lines as one
+ * grid cell — the extras are a SIBLING of the tile's <Link>, never inside it. */
+.cm-fallen-card { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.cm-fallen-extras { padding: 0 0.35rem; font-size: 0.74rem; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+.cm-fallen-hit { margin: 0 0 0.2rem; color: var(--ink, #e7e7e7); }
+.cm-fallen-drops { margin-top: 0.25rem; cursor: pointer; color: var(--cm-slate, #8595ad); }
 
 .cm-tile {
   border: 1px solid var(--rule, #2a2f3a); border-radius: 12px;

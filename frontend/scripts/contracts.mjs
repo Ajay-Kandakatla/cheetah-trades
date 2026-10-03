@@ -1577,7 +1577,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2159,7 +2159,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4695,7 +4695,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5504,6 +5504,132 @@ const CONTRACTS = [
       const dmf = read('src/components/DualMomentumBoardNote.tsx');
       if (!/filter-off-\$\{i\.key\}/.test(dmf) || !/disabled=\{!!offReason && i\.on !== true\}/.test(dmf)) {
         errs.push('DualMomentumFilters must grey a served off box (disabled unless ticked) and print its served off_reason');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '📉 Down 40%+ tab (2026-10-02): mounted after 🛡️, label = THRESHOLD_PCT, UNMEASURED served, Bonde legend once, the FE composes and counts nothing, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that
+    // dropped more than 40% lowers from like app loving company as an example
+    // whcih si 60% low. But I also need you to capture informations about
+    // sales like Bondes and other indicators based on Bondes formula please."
+    // then "Scan the universe and bring me these stocks" and "also add things
+    // like possible catalyst that made is drop like that."
+    // Any of these links lost silently drops the tab, its UNMEASURED word, the
+    // one-place threshold (the label and the ✨ numbers are read off the
+    // backend constants, never typed twice), the once-per-tab Bonde legend,
+    // or the rule that the FE prints served sentences and counts no legs.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('fallen')) {
+        errs.push("CM_TABS must carry 'fallen'");
+      } else {
+        if (tabs.indexOf('fallen') !== tabs.indexOf('resiliency') + 1) errs.push("CM_TABS: 'fallen' must sit right after 'resiliency' (fallen spec HIS CALL #17)");
+        if (tabs.filter((t) => t === 'fallen').length !== 1) errs.push("CM_TABS lists 'fallen' more than once");
+        if (tabs.slice(0, 3).join(',') !== 'zones,deep_demand,quick_bounce') errs.push('CM_TABS lead three changed with the 📉 insertion');
+      }
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\U([0-9A-Fa-f]{8})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)));
+      let ft = '';
+      try { ft = read('../backend/chart_maps/fallen_tab.py'); } catch { errs.push('backend/chart_maps/fallen_tab.py is missing'); }
+      const thrM = /^THRESHOLD_PCT = ([0-9.]+)/m.exec(ft);
+      const T = thrM ? String(Number(thrM[1])) : null;
+      if (ft && !T) errs.push('fallen_tab.py lost THRESHOLD_PCT = <number>');
+      const depM = /^DEPTH_STEPS = \(([^)]*)\)/m.exec(ft);
+      const D = depM ? depM[1].split(',').map((x) => x.trim()).filter(Boolean) : null;
+      if (ft && !D) errs.push('fallen_tab.py lost DEPTH_STEPS = (…)');
+      if (T && D && String(Number(D[0])) !== T) errs.push(`fallen_tab.DEPTH_STEPS[0] (${D[0]}) must equal THRESHOLD_PCT (${T})`);
+      let kl = '';
+      try { kl = read('../backend/supply_demand/key_levels.py'); } catch { errs.push('backend/supply_demand/key_levels.py is missing'); }
+      const yM = /^YEAR_BARS = (\d+)/m.exec(kl);
+      const Y = yM ? yM[1] : null;
+      if (kl && !Y) errs.push('key_levels.py lost YEAR_BARS = <int>');
+      if (ft && !/^YEAR_BARS = KL\.YEAR_BARS\b/m.test(ft)) errs.push('fallen_tab.py must import YEAR_BARS = KL.YEAR_BARS (never type 252)');
+
+      const HIS = [
+        'Can you build me a tab in chart maps about stocks that dropped more than 40% lowers from like app loving company as an example whcih si 60% low. But I also need you to capture informations about sales like Bondes and other indicators based on Bondes formula please.',
+        'Scan the universe and bring me these stocks',
+        'also add things like possible catalyst that made is drop like that.',
+      ];
+      const meta = /\n  fallen: \{\n    label: '([^']*)',\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.fallen (label + blurb) is missing');
+      } else {
+        if (T && unesc(meta[1]) !== `\u{1F4C9} Down ${T}%+`) errs.push(`TAB_META.fallen.label "${unesc(meta[1])}" must be "📉 Down ${T}%+" (fallen_tab.THRESHOLD_PCT)`);
+        const blurb = meta[2].replace(/\\'/g, "'");
+        if (!blurb.includes('UNMEASURED')) errs.push('the TAB_META.fallen blurb must say UNMEASURED');
+        for (const h of HIS) if (!blurb.includes(h)) errs.push(`the TAB_META.fallen blurb must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (/bounce|fake/i.test(blurb)) errs.push('the TAB_META.fallen blurb says "bounce"/"fake"');
+        if (/\b39\b/.test(blurb)) errs.push('the TAB_META.fallen blurb carries the token 39');
+      }
+      if (/\n  fallen: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry fallen (🎯 n/a, the ATH / Resiliency precedent — fallen spec §7 #18)');
+      for (const [k, v] of [['FALLEN_SORT_DEPTH', 'fallen_depth'], ['FALLEN_SORT_SALES', 'fallen_sales'], ['FALLEN_DEPTH_PARAM', 'depth']]) {
+        if (!src.includes(`export const ${k} = '${v}';`)) errs.push(`chartMaps.ts must export ${k} = '${v}'`);
+      }
+      if (ft) {
+        for (const [py, v] of [['SORT_DEPTH', 'fallen_depth'], ['SORT_SALES', 'fallen_sales'], ['DEPTH_PARAM', 'depth']]) {
+          if (!new RegExp(`^${py} = "${v}"`, 'm').test(ft)) errs.push(`fallen_tab.${py} must be "${v}" (the FE constant)`);
+        }
+      }
+      if (!/if \(p\.tab === 'fallen' && p\.fallenDepth\) q\.set\(FALLEN_DEPTH_PARAM, p\.fallenDepth\);/.test(src)) errs.push("boardQuery must send depth only under p.tab === 'fallen'");
+      if ((src.match(/q\.set\(FALLEN_DEPTH_PARAM/g) || []).length !== 1) errs.push('boardQuery must set the depth param in exactly one place');
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'fallen' && <FallenBoardNote board=\{data\?\.fallen_board \?\? null\} sorts=\{data\?\.sorts\} sort=\{data\?\.sort\} onSort=\{setSortParam\} onDepth=\{setFallenDepth\} \/>/.test(page)) {
+        errs.push("ChartMaps.tsx must render <FallenBoardNote board={data?.fallen_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onDepth={setFallenDepth} /> on tab === 'fallen'");
+      }
+      if (!/data\?\.warming && tab === 'fallen' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the fallen tab — its warming line is served');
+      if (!/tab !== 'fallen' && tab !== 'resiliency'\);/.test(page)) errs.push('the demand-scan progress poll must skip the fallen tab');
+      if (!/\|\| tab === 'fallen' \|\| tab === 'quick_bounce'\) && \(\s*<div className="cm-rules"/.test(page)) errs.push('the ℹ️ Rules mount must include the fallen tab (section "fallen")');
+      if (!/<FallenCardExtras tile=\{t\} legend=\{data\?\.fallen_board\?\.pick_legend \?\? null\} \/>/.test(page)) errs.push('the grid must wrap each fallen card with <FallenCardExtras tile={t} legend={data?.fallen_board?.pick_legend ?? null} />');
+      if (!/const fallenDepth = tab === 'fallen' \?/.test(page)) errs.push("ChartMaps.tsx must read ?depth= on the fallen tab only");
+
+      const note = read('src/components/FallenBoardNote.tsx');
+      const extras = read('src/components/FallenCardExtras.tsx');
+      const lib = read('src/lib/fallen.ts');
+      const legendUses = (note.match(/<BondeCriteriaLegend\b/g) || []).length;
+      if (legendUses !== 1) errs.push(`FallenBoardNote.tsx must render <BondeCriteriaLegend> exactly once — found ${legendUses}`);
+      if (/<BondeCriteriaLegend\b/.test(extras) || /<BondeCriteriaLegend\b/.test(page)) errs.push('the Bonde legend renders once for the tab (FallenBoardNote), never per card or again on the page');
+      if (!/<BondePickChips\b/.test(extras)) errs.push('FallenCardExtras.tsx must render <BondePickChips> (the 📈 Bonde tab\'s own chips)');
+      for (const [f, t] of [['FallenBoardNote.tsx', note], ['FallenCardExtras.tsx', extras], ['lib/fallen.ts', lib]]) {
+        if (/5¢|\b25M\b|\b39\b|\b100%|\$10B|10y|157/.test(t)) errs.push(`${f} carries a digit-bearing Bonde threshold — every Bonde number is served`);
+        if (/bounce|fake|caused|because/i.test(t)) errs.push(`${f} says bounce / fake / caused / because`);
+        if (/n_pass\s*[+\-]|\.filter\([^)]*ok/.test(t)) errs.push(`${f} computes a count over the legs — the count line is served`);
+        const code = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+        if (/toFixed|Math\.|UNMEASURED/.test(code)) errs.push(`${f} composes wording or maths — every sentence and number is printed as served`);
+      }
+      const ladder = read('src/lib/cardLadder.ts');
+      if (!/const PRICE_SUFFIX = \[[^\]]*' below the 52-week high'/.test(ladder)) errs.push("cardLadder PRICE_SUFFIX must carry ' below the 52-week high' (the 📉 pill is a PRICE fact)");
+
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-fallen-2026-10-02'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-fallen-2026-10-02'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf("' },", idAt) + 4);
+        if (!entry.includes("route: '/chart-maps?tab=fallen'")) errs.push("the 📉 ✨ entry must route to '/chart-maps?tab=fallen'");
+        if (!entry.includes('UNMEASURED')) errs.push('the 📉 ✨ entry must say UNMEASURED');
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`the 📉 ✨ entry must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (/bounce|fake/i.test(entry)) errs.push('the 📉 ✨ entry says "bounce"/"fake"');
+        if (T && !entry.includes(`Every name ${T}% or more under its 52-week high`)) errs.push(`the 📉 ✨ entry's threshold must equal fallen_tab.THRESHOLD_PCT (${T})`);
+        if (T && !entry.includes(`The ${T}%, the 52-week reference`)) errs.push(`the 📉 ✨ entry's his-call line must name THRESHOLD_PCT (${T})`);
+        if (Y && !entry.includes(`the last ${Y} closed sessions`)) errs.push(`the 📉 ✨ entry's year must equal KL.YEAR_BARS (${Y})`);
+        if (D && !entry.includes(`pick ${D.map((x) => String(Number(x))).join(' / ')}%`)) errs.push(`the 📉 ✨ entry's depth steps must equal fallen_tab.DEPTH_STEPS (${D.join(' / ')})`);
+      }
+
+      const board = read('../backend/chart_maps/board.py');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"fallen"/.test(tabsPy[1])) errs.push('board.py TABS must carry "fallen"');
+      if (!/elif t == "fallen":/.test(board)) errs.push('board.py lost the elif t == "fallen": dispatch');
+      if (!/\(t == "fallen" and sort in _FAL\.TAB_SORTS\)/.test(board)) errs.push('board.py must honour the tab-scoped fallen sorts on this tab only');
+      if (ft) {
+        if (!ft.includes('UNMEASURED')) errs.push('fallen_tab.py must say UNMEASURED');
+        if (/bounc|fake/i.test(ft.replace(/quick_bounce/g, ''))) errs.push('fallen_tab.py says "bounce"/"fake"');
+        if (!/% below the 52-week high"/.test(ft)) errs.push('fallen_tab.py must serve the 📉 pill as "… below the 52-week high" (the cardLadder PRICE suffix)');
       }
       return errs;
     },

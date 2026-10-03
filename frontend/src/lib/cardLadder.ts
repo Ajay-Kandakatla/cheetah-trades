@@ -145,7 +145,12 @@ const GABBAR_AIM = '\u{1F3AF} ';
 const isGabbarAim = (t: string) => t.startsWith(`${GABBAR_AIM}In Gabbar band`)
   || (t.startsWith(GABBAR_AIM) && (t.includes('% above ') || t.includes('% below ')));
 const PRICE_EXACT = new Set(['At the lid']);
-const PRICE_SUFFIX = [' above the band'];
+/** ` below the 52-week high` (2026-10-02): the 📉 Down 40%+ tab's served pill
+ *  (`📉 63.18% below the 52-week high`, fallen_tab.tile_badges) — a distance
+ *  to a high, a PRICE fact, the 🏔️ precedent. Matched by its exact SUFFIX so
+ *  the 📈 Bonde tab's `📉 Sales …` badge (IDENT, checked first) and any other
+ *  📉 badge keep their rungs. */
+const PRICE_SUFFIX = [' above the band', ' below the 52-week high'];
 /** 🛡️ Gabbar position — but NOT the 🛡️ put wall, which is tape. */
 const SHIELD = '\u{1F6E1}️ ';
 const PUT_WALL = '\u{1F6E1}️ Put wall';

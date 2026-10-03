@@ -22,8 +22,10 @@ import type { CmDmFilterItem, CmDmFilters, CmDmTileFilter } from './dmFilters';
 import { RES_FILTER_PARAM, RES_MODE_PARAM } from './resiliencyFilters';
 import { UV_VIEW_PARAM, UV_VIEW_PEERS } from './undervalueView';
 import type { CmUndervalueView } from './undervalueView';
+import type { CmFallenBoard, CmFallenRead } from './fallen';
+import type { BondePick } from './bondePicks';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -100,6 +102,16 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // tabUsageKey counts it from the first open and the next re-cut moves it on
   // the evidence. The slot is his call (resiliency spec §7 #16).
   'resiliency',
+  // 📉 Down 40%+ (Ajay 2026-10-02: "Can you build me a tab in chart maps
+  // about stocks that dropped more than 40% lowers from like app loving
+  // company as an example whcih si 60% low. But I also need you to capture
+  // informations about sales like Bondes and other indicators based on Bondes
+  // formula please." then "Scan the universe and bring me these stocks" and
+  // "also add things like possible catalyst that made is drop like that.").
+  // Right after 🛡️ Resiliency, mid-pack — TAB ORDER IS EARNED; tabUsageKey
+  // counts it from the first open and the next re-cut moves it on the
+  // evidence. The slot is his call (fallen spec §7 #17).
+  'fallen',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -212,6 +224,15 @@ export const RES_SORT_T2 = 'res_t2';
 export const RES_SORT_DOWN = 'res_down';
 export const RES_SORT_TODAY = 'res_today';
 
+/** 📉 Down 40%+ tab (2026-10-02): the two tab-scoped served sort keys
+ *  (chart_maps/fallen_tab.SORT_DEPTH / SORT_SALES) and the depth-view param
+ *  (fallen_tab.DEPTH_PARAM). `default` is the served default order; the 💰
+ *  cap keys are the Dual Momentum ones above. Labels and the depth steps are
+ *  taken from the SERVED payload, never typed here. */
+export const FALLEN_SORT_DEPTH = 'fallen_depth';
+export const FALLEN_SORT_SALES = 'fallen_sales';
+export const FALLEN_DEPTH_PARAM = 'depth';
+
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
  *  buckets) to re-cut CM_TABS from measured use. */
@@ -263,6 +284,15 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   // the served rules, HIS CALLs #1/#4/#5). The 🌅 volume leg is OFF
   // (resiliency_tab.PM_VOLUME_VERIFIED = False, follow-up 2026-09-30): the
   // blurb must not promise it until that flag flips (contracts + backend pin).
+  // 📉 Down 40%+ (Ajay 2026-10-02). Every number on the board is served — the
+  // threshold, the 252-session year, the depth steps and every count ride in
+  // the header / count line, none is typed here outside his quotes. Copy =
+  // fallen spec §3.9. UNMEASURED: no study measures names far under a
+  // 52-week high, with any count of Bonde's legs, forward.
+  fallen: {
+    label: '\u{1F4C9} Down 40%+',
+    blurb: 'Stocks far under their 52-week high, with Bonde\'s static pick legs and what may have hit them. Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that dropped more than 40% lowers from like app loving company as an example whcih si 60% low. But I also need you to capture informations about sales like Bondes and other indicators based on Bondes formula please." then "Scan the universe and bring me these stocks" and "also add things like possible catalyst that made is drop like that." THE LIST is every name in the universe whose last closed close sits at or past the line above the grid under its 52-week high (the highest intraday high of the last year of closed sessions); ETFs and names whose bars carry a one-session jump the price layer calls impossible are left out and counted. EACH CARD shows the distance, the high and its day, the 52-week low, cap, sector, the sales numbers the \u{1F4C8} Bonde tab shows, his pick legs with their sources, the demand band, and \u{1F4A5} what hit it \u2014 the biggest down day since the high and what this app has on file around it, labelled possible. UNMEASURED \u2014 nothing here gates, pushes or trades. Not advice.',
+  },
   resiliency: {
     label: '\u{1F6E1}\u{FE0F} Resiliency',
     blurb: 'Names that held up on the market-moving data days, and names whose last session\'s tape is bullish on real volume. Ajay 2026-09-30: "Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already." THE DATA DAYS are the app\'s own macro calendar: T1 = the jobs report, CPI, Core PCE and the FOMC decision; T2 = retail sales, JOLTS, ADP, jobless claims, GDP and PPI, and a day with any T1 print counts as T1 only. Their dates are FRED\'s own release dates and the Fed\'s FOMC calendar; ISM and Fed-speaker remarks have no dated history here and are not counted. EACH CARD shows on how many of the last year\'s T1 days the name closed down no more than the served limit from the prior close, the same for the days SPY fell, its worst T1 day, the same for T2, its typical daily move and beta so a naturally quiet name reads as one, the last session\'s tape (change, where it closed in its range, volume against its 50-day average) and, before the open, its pre-market move (the pre-market volume check is OFF until its two volume sources are reconciled, so the \u{1F305} box passes none for now). ON A T1 OR T2 DAY every card also shows today\'s move against the prior close, live, and whether it is holding. THE BOXES narrow the board: a name passing ANY ticked box shows, with a badge for each; tick "must match all" to need every one. THE TOGGLE orders by T1 hold rate, T2 hold rate, T1 hold rate on the days SPY fell, or today\'s move. The line above the grid prints every number the boxes use. UNMEASURED until the study lands \u2014 holding on past data days is not proven to predict the next one. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
@@ -1028,6 +1058,14 @@ export type CmTile = {
   /** 🛡️ Resiliency tab only (2026-09-30): the 🛡️ / 📈 / 🌅 box read —
    *  server-decided. Absent on every other tab. */
   res_filter?: CmResTileFilter | null;
+  /** 📉 Down 40%+ tab only (2026-10-02): the distance under the 52-week high,
+   *  the Bonde sales read, the 💥 drop days and what is on file around them —
+   *  every sentence SERVED (chart_maps/fallen_tab.tile_block). Absent on every
+   *  other tab. UNMEASURED. */
+  fallen?: CmFallenRead | null;
+  /** 📉 Down 40%+ tab only (2026-10-02): Bonde's pick legs exactly as the 📈
+   *  Bonde tab serves them (sepa/bonde_picks), drawn by BondePickChips. */
+  pick?: BondePick | null;
 };
 
 /** 🪜 The tile path's coverage block (chart_maps/board.py
@@ -1402,6 +1440,10 @@ export type CmBoard = {
    *  events line / rules / boxes / study / note ResiliencyBoardNote prints.
    *  Absent on every other tab. */
   resiliency_board?: CmResiliencyBoard | null;
+  /** 📉 Down 40%+ tab only (2026-10-02): the served header / order line /
+   *  count line / depth steps / Bonde legend / 💥 sources / held-out names
+   *  FallenBoardNote prints. Absent on every other tab. */
+  fallen_board?: CmFallenBoard | null;
   /** 💎 Under Value only (2026-09-29): the served 💎/🏷️ toggle — labels,
    *  the served view, and (🏷️ vs peers only) the header / note / counts
    *  UndervalueViewNote prints. Absent on every other tab. */
@@ -1994,6 +2036,7 @@ export function boardQuery(p: {
   resFilters?: string;
   resMode?: string;
   uvView?: string;
+  fallenDepth?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -2050,6 +2093,10 @@ export function boardQuery(p: {
   // server default, so only "must match all" rides (the DM precedent).
   if (p.tab === 'resiliency' && p.resFilters) q.set(RES_FILTER_PARAM, p.resFilters);
   if (p.tab === 'resiliency' && p.resMode === DM_MODE_ALL) q.set(RES_MODE_PARAM, DM_MODE_ALL);
+  // 📉 Down 40%+ depth view (Ajay 2026-10-02: "stocks that dropped more than
+  // 40% lowers …") — only on that tab, and only when the caller picked a
+  // served step that is not the served default (fallen.depthToSend).
+  if (p.tab === 'fallen' && p.fallenDepth) q.set(FALLEN_DEPTH_PARAM, p.fallenDepth);
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe

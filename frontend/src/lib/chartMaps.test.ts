@@ -780,6 +780,9 @@ describe('the Earnings Flow tab', () => {
        // 🛡️ Resiliency 2026-09-30 — right after ATH, mid-pack for the same
        // no-usage-yet reason (resiliency spec §7 #16, his call).
        'resiliency',
+       // 📉 Down 40%+ 2026-10-02 — right after Resiliency, mid-pack for the
+       // same no-usage-yet reason (fallen spec §7 #17, his call).
+       'fallen',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1795,7 +1798,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(34);   // +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(35);   // +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2302,7 +2305,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen')).toEqual(CM_TABS_6D3AD93);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2481,5 +2484,78 @@ describe('the 🛡️ Resiliency tab', () => {
     const q = boardQuery({ tab: 'resiliency', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching',
                            dmFilters: 'amd', dmMode: 'all' });
     for (const k of ['min_room', 'levels', 'grades', 'phase', 'dm=', 'dm_mode']) expect(q).not.toContain(k);
+  });
+});
+
+import { FALLEN_DEPTH_PARAM, FALLEN_SORT_DEPTH, FALLEN_SORT_SALES } from './chartMaps';
+
+describe('the 📉 Down 40%+ tab', () => {
+  const HIS = [
+    'Can you build me a tab in chart maps about stocks that dropped more than 40% lowers from like app loving company as an example whcih si 60% low. But I also need you to capture informations about sales like Bondes and other indicators based on Bondes formula please.',
+    'Scan the universe and bring me these stocks',
+    'also add things like possible catalyst that made is drop like that.',
+  ];
+
+  it('sits right after 🛡️ Resiliency, once, and is a board tab', () => {
+    expect(CM_TABS.indexOf('fallen')).toBe(CM_TABS.indexOf('resiliency') + 1);
+    expect(CM_TABS.filter((t) => t === 'fallen')).toHaveLength(1);
+    expect(isBoardTab('fallen')).toBe(true);
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+  });
+
+  it('parses from ?tab=, case- and space-tolerant', () => {
+    expect(parseTab('fallen')).toBe('fallen');
+    expect(parseTab(' Fallen ')).toBe('fallen');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab', () => {
+    for (const raw of ['fall', 'fallen_', 'down40', 'down_40', 'down 40', 'fallen40']) {
+      expect(parseTab(raw), raw).toBe(DEFAULT_TAB);
+    }
+  });
+
+  it('TAB_META: the 📉 label, an UNMEASURED blurb with all three asks verbatim, a fold head', () => {
+    const m = TAB_META.fallen;
+    expect(m.label).toBe('\u{1F4C9} Down 40%+');
+    expect(m.blurb).toContain('UNMEASURED');
+    for (const h of HIS) expect(m.blurb).toContain(h);
+    expect(m.blurb).toContain('labelled possible');
+    expect(m.blurb).toContain('Not advice.');
+    expect(splitBlurb(m.blurb).head.length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: the blurb never says bounce / fake / caused / because, types no junk, and no number outside his quotes, the date and the 52-week', () => {
+    const b = TAB_META.fallen.blurb;
+    expect(/bounce|fake|caused|because/i.test(b)).toBe(false);
+    for (const bad of ['NaN', 'undefined', '[object Object]']) expect(b.includes(bad), bad).toBe(false);
+    const outside = b.replace(/"[^"]*"/g, '').replace('2026-10-02', '').replace(/52-week/g, '');
+    expect(/\d/.test(outside), outside).toBe(false);
+  });
+
+  it('🎯 is n/a here: no ENTERABLE_KIND entry (the ATH / Resiliency precedent)', () => {
+    expect((ENTERABLE_KIND as Record<string, unknown>).fallen).toBeUndefined();
+  });
+
+  it('the tab-scoped order keys are the served keys and ride the query like any sort', () => {
+    expect([FALLEN_SORT_DEPTH, FALLEN_SORT_SALES, FALLEN_DEPTH_PARAM]).toEqual(['fallen_depth', 'fallen_sales', 'depth']);
+    for (const k of [FALLEN_SORT_DEPTH, FALLEN_SORT_SALES, 'market_cap', 'market_cap_asc']) {
+      expect(boardQuery({ tab: 'fallen', sort: k })).toContain(`sort=${k}`);
+    }
+    expect(boardQuery({ tab: 'fallen', sort: DEFAULT_SORT })).not.toContain('sort=');
+  });
+
+  it('boardQuery sends depth only on this tab, only when the caller picked one', () => {
+    expect(new URLSearchParams(boardQuery({ tab: 'fallen', fallenDepth: '60' })).get('depth')).toBe('60');
+    expect(boardQuery({ tab: 'fallen' })).not.toContain('depth=');
+    expect(boardQuery({ tab: 'fallen', fallenDepth: '' })).not.toContain('depth=');
+    for (const tab of ['ath', 'resiliency', 'zones', 'dual_momentum', 'key_levels'] as const) {
+      expect(boardQuery({ tab, fallenDepth: '60' }), tab).not.toContain('depth=');
+    }
+  });
+
+  it('NEGATIVE: the room floor, DM / Resiliency boxes and the other tab-scoped params never ride on fallen', () => {
+    const q = boardQuery({ tab: 'fallen', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching',
+                           dmFilters: 'amd', dmMode: 'all', resFilters: 't1', resMode: 'all', uvView: 'peers' });
+    for (const k of ['min_room', 'levels', 'grades', 'phase', 'dm=', 'dm_mode', 'res=', 'res_mode', 'uv=']) expect(q).not.toContain(k);
   });
 });

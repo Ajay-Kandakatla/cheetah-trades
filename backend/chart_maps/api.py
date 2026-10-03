@@ -27,7 +27,7 @@ async def chart_maps(
                                         "deep_demand | gabbar | zero_dte | "
                                         "earnings | winners | keltner | amd | "
                                         "ipo | key_levels | dual_momentum | "
-                                        "ath | resiliency"),
+                                        "ath | resiliency | fallen"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("full",
@@ -112,6 +112,10 @@ async def chart_maps(
                                       "todays Inflation and GDP track T2s as well. #3 - Tape is "
                                       "positive and bullish EOD or Pre market. but volume has "
                                       "to be accounted for. We have all of this data already.'"),
+    depth: str = Query("", description="fallen tab only — the depth view: 40 (default) | 50 | "
+                                        "60 | 70 — a view over the listed names, never below "
+                                        "the tab's threshold; unknown values serve the "
+                                        "default."),
     res_mode: str = Query("", description="resiliency tab only — how the ticked res boxes "
                                            "combine: 'all' = every ticked box must pass; absent "
                                            "or anything else = any ticked box (the default)."),
@@ -178,6 +182,7 @@ async def chart_maps(
             uv=(uv if isinstance(uv, str) and uv.strip() else None),
             res=(res if isinstance(res, str) and res.strip() else None),
             res_mode=(res_mode if isinstance(res_mode, str) and res_mode.strip() else None),
+            depth=(depth if isinstance(depth, str) and depth.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

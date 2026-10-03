@@ -690,6 +690,46 @@ describe('cardLadder — 🛡️ Resiliency tab (2026-09-30)', () => {
   });
 });
 
+describe('cardLadder — 📉 Down 40%+ tab pill (2026-10-02)', () => {
+  // Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that
+  // dropped more than 40% lowers …". The tab serves one 📉 pill per tile
+  // (fallen_tab.tile_badges) — a distance under the 52-week high, a PRICE fact.
+  const withBadge = (text: string, tone: CmBadge['tone'] = 'warn') => bare({ badges: [{ text, tone }] });
+
+  it('the served 📉 pill lands in PRICE, whole, and is not repeated as a fold warning', () => {
+    for (const text of ['\u{1F4C9} 63.18% below the 52-week high', '\u{1F4C9} 40.00% below the 52-week high']) {
+      const l = cardLadder(withBadge(text));
+      expect(texts(l.price)).toEqual([text]);
+      expect(texts(l.setup.badges)).toEqual([]);
+      expect(texts(l.ident)).toEqual([]);
+      expect(l.moreWarn.map((b) => b.text)).not.toContain(text);
+    }
+  });
+
+  it('the card cap badge beside it stays on IDENT', () => {
+    const l = cardLadder(bare({ badges: [{ text: '\u{1F4C9} 63.18% below the 52-week high', tone: 'warn' },
+                                         { text: '$92.1B cap', tone: 'muted' }] }));
+    expect(texts(l.price)).toEqual(['\u{1F4C9} 63.18% below the 52-week high']);
+    expect(texts(l.ident)).toEqual(['$92.1B cap']);
+  });
+
+  it('NEGATIVE: the 📈 Bonde tab\'s 📉 Sales badge stays IDENT (checked first)', () => {
+    const t = '\u{1F4C9} Sales declining -12%';
+    const l = cardLadder(withBadge(t));
+    expect(texts(l.ident)).toEqual([t]);
+    expect(l.price).toEqual([]);
+  });
+
+  it('NEGATIVE: another 📉 badge and near-miss suffixes stay in SETUP', () => {
+    for (const t of ['\u{1F4C9} 5\u2193 vs 3\u2191 days on above-avg volume', '\u{1F4C9} 63.18% below the 52-week high (x)',
+                     '\u{1F4C9} 63.18% below the 52-week low', '\u{1F4C9} 12.00% below the 50-day']) {
+      const l = cardLadder(withBadge(t));
+      expect(l.price, t).toEqual([]);
+      expect(texts(l.setup.badges), t).toEqual([t]);
+    }
+  });
+});
+
 /* 🧱 The served 1% pad (2026-09-30): the PLAN buy zone passes the enterable
  * band's pad_lo through when well-formed, drops it otherwise. The ladder never
  * computes a pad. */

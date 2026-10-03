@@ -889,8 +889,9 @@ def test_14_no_trading_push_or_scanner_module_imports_the_tab():
 # --------------------------------------------------------------------------
 def test_15_ath_sits_right_after_dual_momentum():
     assert B.TABS.index("ath") == B.TABS.index("dual_momentum") + 1
-    # 🛡️ resiliency was appended right after ath on 2026-09-30
-    assert B.TABS[-1] == "resiliency" and B.TABS[-2] == "ath"
+    # 🛡️ resiliency was appended right after ath on 2026-09-30, 📉 fallen right
+    # after resiliency on 2026-10-02
+    assert B.TABS[-3:] == ("ath", "resiliency", "fallen")
     from supply_demand import enterable as EN
     assert "ath" not in EN.KIND_BY_TAB                           # 🎯 n/a (HIS CALL #8)
 
