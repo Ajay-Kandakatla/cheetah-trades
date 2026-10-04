@@ -17,6 +17,7 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -256,6 +257,7 @@ function NoDataCard({ row, onPick, read, study, bandStudy }: {
       </button>
       <GrowthChip symbol={row.symbol} className="sb-chip" />
       <PromoOriginChip symbol={row.symbol} className="sb-chip" />
+      <ShortInterestChip symbol={row.symbol} className="sb-chip" />
       <ExplosiveChip read={read?.explosive} study={study} className="sb-chip" />
       <EnterableChip read={read?.enterable} className="sb-chip" />
       {/* 🪜 the row's own served ceiling/floor read — the tiles above get it

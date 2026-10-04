@@ -1205,3 +1205,27 @@
 # toggle at /notifications. Every day, no closed-day gate: the government
 # announces on weekends too.
 35     6     *    *    *    /usr/local/bin/python -m political.watch
+
+# ── 🩳 Short interest — bulk warm of short_interest_latest (short_interest/client.py, 2026-10-03).
+# Ajay, verbatim: "I would like to see a new field for sotcks about short
+# interest I heard EOSE has about 40% short interest is Short Interest always
+# accurate about a stocks down fall? can you add this field to all our chart
+# maps scan. also the individual tickers please"
+#
+# Cost per run: 0 provider calls when FINRA's calendar says no newer settlement
+# can be published yet; 1 call when one can but Massive has not loaded it; 3
+# calls (~5 s) when it has (newest-settlement probe + the latest and prior
+# whole-market settlements). Nothing is written when a call fails or the
+# latest settlement looks partial.
+#
+# python -m: the cache is Mongo, not API memory — every Chart Maps tile and the
+# ticker page read it through GET /short-interest/map.
+#
+# No market_hours.gate, deliberately: this is not a price read. FINRA publishes
+# on its own business-day calendar and the warm checks that calendar itself.
+#
+# THIS FILE IS NOT THE LIVE CRONTAB — installing it is an ops step (the live
+# crontab is the host file bind-mounted into the cron container; a deploy does
+# not ship this line).
+40     7     *    *    1-5  /usr/local/bin/python -m short_interest.client warm-si
+40     18    *    *    1-5  /usr/local/bin/python -m short_interest.client warm-si

@@ -15,6 +15,7 @@ import { PatternChart } from './PatternChart';
 import OverlayLegend from './OverlayLegend';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { ExplosiveFirstToggle } from './ExplosiveFirstToggle';
@@ -249,6 +250,7 @@ export default function HoldingsBoard({ days }: { days?: number | null }) {
             <div key={h.symbol}>
               <b>{h.symbol}</b> <GrowthChip symbol={h.symbol} />
               {' '}<PromoOriginChip symbol={h.symbol} />
+              {' '}<ShortInterestChip symbol={h.symbol} />
               {' '}<ExplosiveChip study={room.payload?.explosive_study}
                                   read={room.map.get(String(h.symbol).toUpperCase())?.explosive} />
               {/* 🎯 chip only. This board never hides a position: the enterable

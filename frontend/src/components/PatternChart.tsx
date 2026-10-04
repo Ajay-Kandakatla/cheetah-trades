@@ -28,6 +28,7 @@ import { openTvChart } from '../lib/tvChart';
 import { SignalWatchButton } from './SignalWatchButton';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { BandStructureChip } from './BandStructureChip';
 import type { BandStructureStudy } from '../lib/bandStructure';
@@ -345,6 +346,9 @@ export const PatternChart = memo(function PatternChart(
                   refuse the name — good sales must not make it look clean. */}
               {skip.has('growth') ? null : <GrowthChip symbol={tile.symbol} />}
               {skip.has('promo') ? null : <PromoOriginChip symbol={tile.symbol} />}
+              {/* 🩳 short interest (Ajay 2026-10-03: "add this field to all our
+                  chart maps scan") — served chip text with its FINRA date. */}
+              {skip.has('short') ? null : <ShortInterestChip symbol={tile.symbol} />}
               {ladder.ident.map(pill)}
             </div>
           </div>

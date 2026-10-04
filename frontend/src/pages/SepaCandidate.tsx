@@ -39,6 +39,8 @@ import { CardEnrichmentChips } from '../components/CardEnrichmentChips';
 // boards do. Off the board it renders nothing at all.
 import { GrowthChip } from '../components/GrowthChip';
 import { PromoOriginChip } from '../components/PromoOriginChip';
+import { ShortInterestChip } from '../components/ShortInterestChip';
+import { ShortInterestPanel } from '../components/ShortInterestPanel';
 import { SignalWatchButton } from '../components/SignalWatchButton';
 import type { SignalKind } from '../components/SignalDrillModal';
 const WhalesFlowModal = lazyWithReload(() =>
@@ -776,6 +778,9 @@ export function SepaCandidatePage() {
                   trading engine would refuse the name. */}
               <GrowthChip symbol={base.symbol} />
               <PromoOriginChip symbol={base.symbol} />
+              {/* 🩳 short interest with its FINRA settlement date (Ajay 2026-10-03:
+                  "also the individual tickers please"). */}
+              <ShortInterestChip symbol={base.symbol} />
             </div>
           )}
           {/* Live price badge — pulls from the SSE bus (Finnhub WS feed)
@@ -1682,6 +1687,7 @@ export function SepaCandidatePage() {
                   <span> — what credentialed analysts and credible commentators think.</span>
                 </div>
                 <SmartMoneyPanel data={data.smart_money} symbol={symbol} />
+                <ShortInterestPanel symbol={symbol} />
               </section>
             )}
 

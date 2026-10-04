@@ -36,6 +36,7 @@ import { API } from '../lib/apiBase';
 import { TickerLink } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -250,6 +251,7 @@ export default function GntBoard({ trader: initial = 'gnt' }: { trader?: string 
                         ALSO a 100/100 grower is the row worth reading twice. */}
                     <GrowthChip symbol={t.symbol} />
                     <PromoOriginChip symbol={t.symbol} />
+                    <ShortInterestChip symbol={t.symbol} />
                     <ExplosiveChip study={room.payload?.explosive_study}
                                    read={room.map.get(String(t.symbol).toUpperCase())?.explosive} />
                     <EnterableChip read={room.map.get(String(t.symbol).toUpperCase())?.enterable} />

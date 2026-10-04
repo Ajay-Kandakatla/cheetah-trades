@@ -6219,6 +6219,114 @@ const CONTRACTS = [
       return errs;
     },
   },
+
+  {
+    name: 'the \u{1FA73} short interest reaches EVERY Chart Maps tab and the ticker page (2026-10-03)',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-10-03: "I would like to see a new field for sotcks about short
+    // interest ... can you add this field to all our chart maps scan. also the
+    // individual tickers please". ONE chip (served text, FINRA date), mounted
+    // beside every <PromoOriginChip/> — the growth-chip precedent above. A new
+    // non-board tab whose renderer forgets it fails here.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs) return ['CM_TABS declaration not found'];
+      const RENDERER = {
+        hot_pullback: 'src/components/HotPullbackBoard.tsx',
+        patterns: 'src/pages/PatternsPage.tsx',
+        session: 'src/components/SessionBoard.tsx',
+        signals: 'src/components/SignalLabBoard.tsx',
+        hot_sectors: 'src/components/HottestSectors.tsx',
+        catalysts: 'src/pages/Catalysts.tsx',
+        overnight: 'src/components/OvernightGappers.tsx',
+        support: 'src/components/SupportLevels.tsx',
+        gnt: 'src/components/GntBoard.tsx',
+        bonde: 'src/components/BondeBoard.tsx',
+        holdings: 'src/components/HoldingsBoard.tsx',
+        potus: 'src/components/PotusBoard.tsx',
+        ema_frames: 'src/components/EmaFramesBoard.tsx',
+        news: 'src/components/NewsTabBoard.tsx',
+        growth: 'src/components/ExplosiveGrowth.tsx',
+      };
+      // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
+      // ticker rows, and its file says so.
+      const NO_CHIP = { news: /no ticker rows on this tab/ };
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t));
+      for (const t of nonBoard) {
+        const file = RENDERER[t];
+        if (!file) {
+          errs.push(`tab '${t}' has no renderer listed in this contract — add it and give it a <ShortInterestChip>`);
+          continue;
+        }
+        const tsx = read(file);
+        if (NO_CHIP[t]) {
+          if (/<ShortInterestChip\s/.test(tsx)) {
+            errs.push(`${file} (tab '${t}') renders <ShortInterestChip> but is listed as having no ticker rows — drop it from NO_CHIP`);
+          } else if (!NO_CHIP[t].test(tsx)) {
+            errs.push(`${file} (tab '${t}') has no <ShortInterestChip> and no longer states why`);
+          }
+          continue;
+        }
+        if (!/<ShortInterestChip\s/.test(tsx)) {
+          errs.push(`${file} (tab '${t}') does not render <ShortInterestChip> — "add this field to all our chart maps scan"`);
+        }
+      }
+      const tile = read('src/components/PatternChart.tsx');
+      if (!/<ShortInterestChip\s+symbol=\{tile\.symbol\}/.test(tile)) {
+        errs.push('PatternChart must render <ShortInterestChip symbol={tile.symbol}> — it is the one renderer behind every board tab');
+      }
+      const page = read('src/pages/SepaCandidate.tsx');
+      if (!/<ShortInterestChip\s/.test(page)) errs.push('the ticker page header must render <ShortInterestChip> — "also the individual tickers please"');
+      if (!/<ShortInterestPanel\s/.test(page)) errs.push('the ticker page must render <ShortInterestPanel> (Smart Money tab)');
+      if (!/<RulesInfo section="short_interest"/.test(read('src/pages/ChartMaps.tsx'))) {
+        errs.push('ChartMaps.tsx must mount <RulesInfo section="short_interest" /> once per tab, beside the 🧨 pill');
+      }
+
+      // One request per board: the FE chunk equals the backend cap.
+      const hook = read('src/hooks/useShortInterest.ts');
+      const fe = /SI_CHUNK\s*=\s*(\d+)/.exec(hook);
+      if (!exists('../backend/short_interest/read.py')) {
+        errs.push('backend short_interest/read.py is missing — the chip has no served read');
+      } else {
+        const be = /MAP_MAX_SYMBOLS\s*=\s*(\d+)/.exec(read('../backend/short_interest/read.py'));
+        if (!fe || !be || fe[1] !== be[1]) {
+          errs.push(`useShortInterest SI_CHUNK (${fe ? fe[1] : '?'}) must equal backend read.MAP_MAX_SYMBOLS (${be ? be[1] : '?'})`);
+        }
+      }
+      const ri = exists('../backend/supply_demand/rules_info.py') ? read('../backend/supply_demand/rules_info.py') : '';
+      const keys = /SECTION_KEYS\s*=\s*\(([\s\S]*?)\)\s*\n\s*\n_DISCLAIMER/.exec(ri);
+      if (!keys || !/"short_interest"/.test(keys[1])) errs.push('backend rules_info.py SECTION_KEYS must contain "short_interest"');
+
+      // Display only: the FE prints served strings. No arithmetic, no
+      // toFixed, no forecast words.
+      for (const rel of ['src/components/ShortInterestChip.tsx', 'src/components/ShortInterestPanel.tsx', 'src/lib/shortInterest.ts']) {
+        const t = read(rel);
+        if (/(pct_of_float|pct_of_shares_out|days_to_cover|si_shares)[^;\n]*(toFixed|[*\/+-]\s*\d)/.test(t)) {
+          errs.push(`${rel} computes on a short-interest field — every number is served by short_interest/read.py`);
+        }
+        if (/\b(bounce|fake|predict)/i.test(t)) errs.push(`${rel} says bounce / fake / predict`);
+      }
+
+      // Nothing on the board side: no attach, no sort.
+      const board = read('../backend/chart_maps/board.py');
+      if (/short_interest\.read|from short_interest import read/.test(board)) {
+        errs.push('chart_maps/board.py must not import short_interest.read — the chip is delivered by its own endpoint, nothing attaches to tiles');
+      }
+      const sorts = /^SORTS[^=]*=\s*\{([\s\S]*?)\n\}/m.exec(board);
+      if (!sorts) {
+        errs.push('chart_maps/board.py SORTS block not found');
+      } else {
+        for (const m of sorts[1].replace(/#[^\n]*/g, '').matchAll(/^\s*"([^"]+)"\s*:/gm)) {
+          if (/short|\bsi\b/.test(m[1])) errs.push(`chart_maps/board.py SORTS has '${m[1]}' — nothing sorts by short interest`);
+        }
+      }
+      if (!/id: 'short-interest-2026-10-03'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push("newFeatures.ts lacks the 'short-interest-2026-10-03' ✨ entry");
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

@@ -298,3 +298,25 @@ def test_import_order_bonde_then_client_and_back():
             except ModuleNotFoundError as exc:      # bonde_picks lands in P2b
                 if "bonde_picks" not in str(exc):
                     raise
+
+
+# ───────────────────────────────────────────── 2026-10-03: a None never overwrites
+def test_NEGATIVE_a_None_answer_never_overwrites_a_good_doc(monkeypatch):
+    """`_fetch_short_interest_rows` answers [] on ANY HTTP error, so a None is
+    also what an outage looks like. Replacing a held settlement with a "no
+    record" would blank a good number on every board until the next warm."""
+    monkeypatch.setattr(client, "short_interest_for", lambda s: None)
+    good = {"_id": "EOSE", "symbol": "EOSE", "settlement_date": "2026-08-31",
+            "short_interest": 111323398, "days_to_cover": 4.95, "fetched_at": 1.0}
+    db = FakeDB({client.SI_COLL: FakeColl([good])})
+    res = client.warm_short_interest(["EOSE"], db=db, sleep_sec=0)
+    assert res["kept"] == 1 and res["written"] == 0
+    assert db[client.SI_COLL].docs["EOSE"] == good
+
+
+def test_per_symbol_kept_key_defaults_to_zero(monkeypatch):
+    monkeypatch.setattr(client, "short_interest_for", lambda s: {"settlement_date": "2026-08-31"})
+    res = client.warm_short_interest(["FOO"], db=FakeDB(), sleep_sec=0)
+    assert res["kept"] == 0
+    # ...and the long-standing exact result shape is unchanged.
+    assert res == {"n": 1, "fetched": 1, "written": 1, "skipped": 0, "failed": 0}

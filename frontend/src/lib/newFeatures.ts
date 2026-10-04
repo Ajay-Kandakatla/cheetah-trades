@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-03: "I would like to see a new field for sotcks about short
+  // interest …" Label from the short-interest spec §3.8. Every number on the
+  // chip is served by short_interest/read.py; the EOSE line is re-filled from
+  // scripts/short_interest_live_check.py on build day (it goes stale).
+  { id: 'short-interest-2026-10-03', addedAt: '2026-10-03', route: '/chart-maps',
+    label: '🩳 Short interest on every Chart Maps card and on the ticker page. You said: “I would like to see a new field for sotcks about short interest I heard EOSE has about 40% short interest is Short Interest always accurate about a stocks down fall? can you add this field to all our chart maps scan. also the individual tickers please” One chip per card: shares short as a % of float (or of shares outstanding when no float is on file — the chip says which), days to cover, and the FINRA settlement date it was counted on; a newer settlement the app has not picked up yet makes the chip say stale. Hover for the rest (shares short, the change since the prior settlement, both percentages with their counts and dates, the source); the full read sits on the ticker page\'s Smart Money tab, with ℹ️ Rules → 🩳 on every tab explaining it once. EOSE on the 09-15 settlement: about 33% short of float or of shares outstanding, not 40% — sites quoting ~42% use a smaller float. Not a forecast: published studies find at most a small average effect across many stocks, one that shrank after it was published, and part of any name\'s short interest is hedging; UNMEASURED on this app\'s universe. Nothing here sorts, gates, pushes or trades. Not advice.' },
   // Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that
   // dropped more than 40% lowers …" + "Scan the universe and bring me these
   // stocks" + "also add things like possible catalyst that made is drop like

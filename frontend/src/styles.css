@@ -12517,6 +12517,11 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
  * only — without this variant the chip renders in the table's inherited ink and
  * reads like a neutral label. Same amber as the other three families. */
 .hs-badge-promo  { color: #f59e0b; background: rgba(245,158,11,0.12); }
+/* 🩳 ShortInterestChip (2026-10-03) appends `${family}-muted`. `.cm-badge-muted`
+ * and `.sb-chip-muted` already exist; these two give the 🔥 Hottest and 📈 Bonde
+ * mounts the same neutral slate, so the chip never reads as a plain row value. */
+.hs-badge-muted  { color: #8595ad; background: rgba(133,149,173,0.10); }
+.bd-gchip-muted  { color: #8595ad; background: rgba(133,149,173,0.10); }
 .sb-chip-growth  { color: #22d3ee; background: rgba(34,211,238,0.12); }
 .sb-chip-bad     { color: #f85149; background: rgba(248,81,73,0.12); }
 

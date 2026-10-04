@@ -36,7 +36,7 @@ export const FOLD_LABEL: Record<FoldGroup, string> = {
 
 /** A chip the WRAPPER already prints beside the tile (Support head, POTUS
  *  head, the 9 EMA strip), so the tile skips its own copy. */
-export type OuterChip = 'growth' | 'promo' | 'explosive' | 'enterable' | 'band' | 'watch';
+export type OuterChip = 'growth' | 'promo' | 'explosive' | 'enterable' | 'band' | 'watch' | 'short';
 
 export type FoldItem = {
   badge?: CmBadge; stat?: CmStat;

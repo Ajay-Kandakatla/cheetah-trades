@@ -875,7 +875,7 @@ def test_23g_source_pins_on_the_board():
 # --------------------------------------------------------------------------
 def test_24_rules_panel_section_is_last_and_built_from_the_constants(monkeypatch):
     from supply_demand import rules_info as RI
-    assert RI.SECTION_KEYS[-1] == "fallen"
+    assert RI.SECTION_KEYS[-2:] == ("fallen", "short_interest")   # 2026-10-03: 🩳 appended after
     secs = RI.sections()
     assert tuple(secs) == RI.SECTION_KEYS
     sec = secs["fallen"]

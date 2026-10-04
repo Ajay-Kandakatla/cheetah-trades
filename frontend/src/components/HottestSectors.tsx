@@ -25,6 +25,7 @@ import { API } from '../lib/apiBase';
 import { TickerLink, openTickerWithModifier } from './TickerLink';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -969,6 +970,7 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
             board that shows a 🚀 chip (Ajay 2026-09-21: "add them to our
             list as they come through"). Renders nothing for the common case. */}
         <PromoOriginChip symbol={r.symbol} className="hs-badge" />
+        <ShortInterestChip symbol={r.symbol} className="hs-badge" />
         <ExplosiveChip read={read?.explosive} study={study} className="hs-badge" />
         <EnterableChip read={read?.enterable} className="hs-badge" />
         {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served

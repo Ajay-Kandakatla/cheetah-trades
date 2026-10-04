@@ -74,6 +74,7 @@ import { SINCE_REPORT_HEAD, sinceReportCell, sinceReportCoverage,
          type SinceReport, type SinceReportSummary } from '../lib/sinceReport';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { compareDemandProximity, demandChipText, inOrNearDemand, compareExplosive, type BounceRoomRow } from '../lib/bounceRoom';
 import { ExplosiveChip } from './ExplosiveChip';
@@ -701,6 +702,7 @@ export default function BondeBoard() {
                         {/* 🚀 on every Chart Maps tab (Ajay 2026-09-11). */}
                         <GrowthChip symbol={r.symbol} className="bd-gchip" />
                         <PromoOriginChip symbol={r.symbol} className="bd-gchip" />
+                        <ShortInterestChip symbol={r.symbol} className="bd-gchip" />
                         <ExplosiveChip read={read?.explosive} className="bd-gchip"
                                        study={room.payload?.explosive_study} />
                         <EnterableChip read={read?.enterable} className="bd-gchip" />

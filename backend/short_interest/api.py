@@ -9,9 +9,16 @@ Endpoints:
   GET /short/{symbol}/history?days=30
       Last `days` records (default 30). Used by sparkline trend rendering.
 
-The data path goes through `short_interest.client` which manages the
-1-day Mongo cache. No bulk endpoint exposed here — bulk loading happens
-in the SEPA scanner's parallel worker pool.
+  GET /short-interest/map?symbols=A,B,C   (2026-10-03)
+      🩳 Short INTEREST (bi-monthly FINRA settlement) for up to
+      `read.MAP_MAX_SYMBOLS` names — the ONE bulk read behind the chip on
+      every Chart Maps tab and the ticker page. ONE `$in` read of the
+      `short_interest_latest` cache via `short_interest.read.si_map`, off the
+      event loop; never a provider call. A name with no cached doc is absent.
+
+The short-VOLUME paths go through `short_interest.client`, which manages the
+1-day Mongo cache. `/short/{symbol}/interest` is the older live per-name read
+(two provider calls per hit); the chip and the ticker page never use it.
 """
 from __future__ import annotations
 
@@ -55,6 +62,21 @@ async def get_short_interest(symbol: str):
     if not data:
         return JSONResponse({"symbol": sym, "available": False})
     return {**data, "available": True}
+
+
+@router.get("/short-interest/map")
+async def short_interest_read_map(
+    symbols: str = Query("", description="comma-separated tickers; first 200 read"),
+):
+    """🩳 Served short-interest blocks for a batch of names (display only).
+
+    Every word and number is built by `short_interest.read`; the front end
+    prints `chip` / `title` / `rows` verbatim. Never fetches from the provider.
+    """
+    from short_interest import read as SR
+    syms = [s.strip().upper() for s in (symbols or "").split(",") if s.strip()]
+    items = await asyncio.to_thread(SR.si_map, syms)
+    return {"items": items, "n": len(items), "max_symbols": SR.MAP_MAX_SYMBOLS}
 
 
 @router.get("/short/{symbol}/history")

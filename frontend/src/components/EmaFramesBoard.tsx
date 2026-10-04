@@ -33,6 +33,7 @@ import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import OverlayLegend from './OverlayLegend';
 import { GrowthChip } from './GrowthChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -49,7 +50,7 @@ import { outerChipsFor } from '../lib/outerChips';
 /** 📋 The chip strip above each tile prints 🚀 🧨 🎯 — the tile skips its own
  *  copies, so one 9 EMA card shows each once (2026-09-25). 🎯 / 🧨 are skipped
  *  only when the strip's chip text EQUALS the tile's (`outerChipsFor`). */
-export const EMA_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'explosive', 'enterable'];
+export const EMA_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'explosive', 'enterable', 'short'];
 
 export default function EmaFramesBoard() {
   const [frame, setFrame] = useState<EmaFrame>(() => loadEmaFrame());
@@ -185,6 +186,7 @@ export default function EmaFramesBoard() {
             <div key={`${r.symbol}-${r.frame}`}>
               <div className="cm-tile-chips" data-testid={`ema-chips-${r.symbol}`}>
                 <GrowthChip symbol={r.symbol} />
+                {' '}<ShortInterestChip symbol={r.symbol} />
                 {' '}<ExplosiveChip study={room.payload?.explosive_study}
                                     read={roomRow?.explosive} />
                 {' '}<EnterableChip read={roomRow?.enterable} />

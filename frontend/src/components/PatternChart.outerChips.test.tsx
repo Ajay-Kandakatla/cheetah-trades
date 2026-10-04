@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
 import { EnterableChip } from './EnterableChip';
@@ -12,6 +12,7 @@ import type { OuterChip } from '../lib/cardLadder';
 import { outerChipsFor } from '../lib/outerChips';
 import { VOYA } from '../lib/__fixtures__/cardLadder.tiles';
 import { _resetSignalWatchlist } from '../hooks/useSignalWatchlist';
+import { _resetShortInterestCache } from '../hooks/useShortInterest';
 
 /* 📋 D8 (2026-09-25): three wrappers print chips in their own head beside the
  * tile — the Support tab's sl-head (🚀 🎪 🧨 🎯), the POTUS pb-tile head
@@ -45,14 +46,14 @@ describe('outerChips — each wrapper chip prints once on the card', () => {
   afterEach(() => { cleanup(); _resetSignalWatchlist(); });
 
   it('Support: 🎯 and 🧨 once each', () => {
-    expect(SUPPORT_OUTER_CHIPS).toEqual(['growth', 'promo', 'explosive', 'enterable']);
+    expect(SUPPORT_OUTER_CHIPS).toEqual(['growth', 'promo', 'explosive', 'enterable', 'short']);
     card(SUPPORT_OUTER_CHIPS);
     expect(count(/^🎯 READY$/)).toBe(1);
     expect(count(/^🧨/)).toBe(1);
   });
 
   it('POTUS: 🎯, 🧨 and + Signals once each; the tile keeps TV ↗', () => {
-    expect(POTUS_OUTER_CHIPS).toEqual(['growth', 'promo', 'explosive', 'enterable', 'watch']);
+    expect(POTUS_OUTER_CHIPS).toEqual(['growth', 'promo', 'explosive', 'enterable', 'watch', 'short']);
     card(POTUS_OUTER_CHIPS, true);
     expect(count(/^🎯 READY$/)).toBe(1);
     expect(count(/^🧨/)).toBe(1);
@@ -61,7 +62,7 @@ describe('outerChips — each wrapper chip prints once on the card', () => {
   });
 
   it('9 EMA: 🎯 and 🧨 once each; 🪜 stays on the tile (the strip has none)', () => {
-    expect(EMA_OUTER_CHIPS).toEqual(['growth', 'explosive', 'enterable']);
+    expect(EMA_OUTER_CHIPS).toEqual(['growth', 'explosive', 'enterable', 'short']);
     const { container } = card(EMA_OUTER_CHIPS);
     expect(count(/^🎯 READY$/)).toBe(1);
     expect(count(/^🧨/)).toBe(1);
@@ -97,10 +98,49 @@ describe('outerChips — each wrapper chip prints once on the card', () => {
     const same = outerChipsFor(POTUS_OUTER_CHIPS, TILE, { enterable: TILE.enterable, explosive: TILE.explosive });
     expect(same).toBe(POTUS_OUTER_CHIPS);
     const a = outerChipsFor(POTUS_OUTER_CHIPS, TILE, { explosive: TILE.explosive });
-    expect(a).toEqual(['growth', 'promo', 'explosive', 'watch']);
+    expect(a).toEqual(['growth', 'promo', 'explosive', 'watch', 'short']);
     expect(outerChipsFor(POTUS_OUTER_CHIPS, TILE, { explosive: TILE.explosive })).toBe(a);
-    expect(outerChipsFor(EMA_OUTER_CHIPS, TILE, {})).toEqual(['growth']);
+    expect(outerChipsFor(EMA_OUTER_CHIPS, TILE, {})).toEqual(['growth', 'short']);
     /* No read on either side → nothing to print twice → skip stands. */
     expect(outerChipsFor(EMA_OUTER_CHIPS, { enterable: null, explosive: null }, {})).toBe(EMA_OUTER_CHIPS);
+  });
+});
+
+/* 🩳 short interest (2026-10-03): Support, POTUS and the 9 EMA strip print the
+ * chip in their own head, so the tile skips its copy ('short' in each list);
+ * a plain board tile prints it exactly once. */
+describe('outerChips — 🩳 short interest prints once', () => {
+  const SI = { symbol: 'VOYA', status: 'ok', chip: '🩳 SI 2.0% float · 1.5d · 9/15', title: 't', rows: [] };
+  const stubSi = () => vi.stubGlobal('fetch', vi.fn(async (url: string) => (
+    String(url).includes('/short-interest/map')
+      ? { ok: true, json: async () => ({ items: { VOYA: SI }, n: 1, max_symbols: 200 }) }
+      : { ok: false, status: 404, json: async () => ({}) }) as unknown as Response));
+  afterEach(() => { cleanup(); _resetSignalWatchlist(); _resetShortInterestCache(); vi.unstubAllGlobals(); });
+
+  it('a plain board tile (no outerChips) renders the 🩳 chip once', async () => {
+    _resetShortInterestCache(); stubSi();
+    const { container } = render(<MemoryRouter><PatternChart tile={TILE} /></MemoryRouter>);
+    await waitFor(() => expect(container.querySelectorAll('.cm-tile [data-testid=si-chip]')).toHaveLength(1));
+    expect(container.querySelector('[data-testid=si-chip]')?.textContent).toBe(SI.chip);
+  });
+
+  it('NEGATIVE: Support / POTUS / 9 EMA tiles skip their own 🩳 (the wrapper head prints it)', async () => {
+    for (const base of [SUPPORT_OUTER_CHIPS, POTUS_OUTER_CHIPS, EMA_OUTER_CHIPS]) {
+      expect(base).toContain('short');
+      _resetShortInterestCache(); stubSi();
+      const { container, unmount } = render(
+        <MemoryRouter>
+          <PatternChart tile={TILE} outerChips={outerChipsFor(base, TILE, { enterable: TILE.enterable, explosive: TILE.explosive })} />
+          <PatternChart tile={TILE} />
+        </MemoryRouter>,
+      );
+      /* The sibling plain tile proves the read landed; the skipped tile has none. */
+      await waitFor(() => expect(container.querySelectorAll('[data-testid=si-chip]')).toHaveLength(1));
+      const tiles = container.querySelectorAll('.cm-tile');
+      expect(tiles[0].querySelector('[data-testid=si-chip]')).toBeNull();
+      expect(tiles[1].querySelector('[data-testid=si-chip]')).not.toBeNull();
+      unmount();
+      vi.unstubAllGlobals();
+    }
   });
 });

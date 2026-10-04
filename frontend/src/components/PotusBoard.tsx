@@ -38,6 +38,7 @@ import { TickerLink } from './TickerLink';
 import { SepaPoliticalChip } from './SepaPoliticalChip';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { SignalWatchButton } from './SignalWatchButton';
@@ -51,7 +52,7 @@ import { outerChipsFor } from '../lib/outerChips';
 /** 📋 The pb-tile head prints 🚀 🎪 🧨 🎯 and + Signals — the tile skips its
  *  own copies, so one POTUS card shows each once (2026-09-25). 🎯 / 🧨 are
  *  skipped only when the head's chip text EQUALS the tile's (`outerChipsFor`). */
-export const POTUS_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'promo', 'explosive', 'enterable', 'watch'];
+export const POTUS_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'promo', 'explosive', 'enterable', 'watch', 'short'];
 
 /* The order is FIXED and it is an editorial order, not a ranking: a disclosed
  * federal equity stake is a harder fact than a contractor relationship, which
@@ -258,6 +259,7 @@ export default function PotusBoard() {
                       {' '}<SepaPoliticalChip symbol={sym} />
                       {' '}<GrowthChip symbol={sym} />
                       {' '}<PromoOriginChip symbol={sym} />
+                      {' '}<ShortInterestChip symbol={sym} />
                       {' '}<ExplosiveChip study={room.payload?.explosive_study}
                                           read={roomRow?.explosive} />
                       {' '}<EnterableChip read={roomRow?.enterable} />

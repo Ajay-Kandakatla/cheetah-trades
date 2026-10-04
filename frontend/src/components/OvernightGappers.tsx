@@ -15,6 +15,7 @@ import { useSort } from '../lib/useSort';
 import { TickerName } from './TickerCell';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -162,6 +163,7 @@ export function OvernightGappers({ profile, onPick }: {
                       </Link>
                       <GrowthChip symbol={g.symbol} className="cm-badge" />
                       <PromoOriginChip symbol={g.symbol} className="cm-badge" />
+                      <ShortInterestChip symbol={g.symbol} className="cm-badge" />
                       <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                                      read={room.map.get(String(g.symbol).toUpperCase())?.explosive} />
                       <EnterableChip className="cm-badge"

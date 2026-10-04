@@ -1095,6 +1095,9 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * constants). */}
       <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
         <RulesInfo section="explosive" />
+        {/* 🩳 short interest rides every tab, so its explainer does too —
+          * once per tab, never per card (Rule #5). */}
+        <RulesInfo section="short_interest" />
       </div>
 
       {/* 🎯 ENTERABLE — the filter he asked for, and the rules behind it.

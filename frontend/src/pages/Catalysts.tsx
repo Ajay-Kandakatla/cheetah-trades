@@ -4,6 +4,7 @@ import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { TickerLink, openTickerWithModifier } from '../components/TickerLink';
 import { GrowthChip } from '../components/GrowthChip';
 import { PromoOriginChip } from '../components/PromoOriginChip';
+import { ShortInterestChip } from '../components/ShortInterestChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import { useExplosiveOrder } from '../hooks/useExplosiveOrder';
 import { ExplosiveChip } from '../components/ExplosiveChip';
@@ -627,6 +628,7 @@ function CandidateCard({ c, br, study, bandStudy, onOpen, onDeepDive }: {
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
             <PromoOriginChip symbol={c.ticker} className="cm-badge" />
+            <ShortInterestChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
             <EnterableChip read={br?.enterable} className="cm-badge" />
             {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served
@@ -1082,6 +1084,7 @@ function PremarketCard({ c, onOpen, onDeepDive, br, study, bandStudy }: {
                 TABS IN CHART MAPS"). */}
             <GrowthChip symbol={c.ticker} className="cm-badge" />
             <PromoOriginChip symbol={c.ticker} className="cm-badge" />
+            <ShortInterestChip symbol={c.ticker} className="cm-badge" />
             <ExplosiveChip read={br?.explosive} study={study} className="cm-badge" />
             <EnterableChip read={br?.enterable} className="cm-badge" />
             {/* 🪜 Ajay 2026-09-16 "in all chartmaps tabs" — the row's own served

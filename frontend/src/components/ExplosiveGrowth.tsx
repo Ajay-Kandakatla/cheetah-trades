@@ -25,6 +25,7 @@ import {
 import type { GrowthSortKey, SortDir } from '../lib/growthSort';
 import { SignalWatchButton } from './SignalWatchButton';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -764,6 +765,7 @@ export function ExplosiveGrowth() {
                         says where the name came from. Renders nothing for a
                         name that did not enter through that lane. */}
                     <PromoOriginChip symbol={r.symbol} className="cm-badge" />
+                    <ShortInterestChip symbol={r.symbol} className="cm-badge" />
                     <ExplosiveChip className="eg" study={room.payload?.explosive_study}
                                    read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                     <EnterableChip className="eg"

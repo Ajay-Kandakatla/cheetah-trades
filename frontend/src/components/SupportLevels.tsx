@@ -39,6 +39,7 @@ import {
 import { tvChartUrl } from '../lib/tvChart';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { useBounceRoom } from '../hooks/useBounceRoom';
@@ -49,7 +50,7 @@ import { outerChipsFor } from '../lib/outerChips';
  *  tile below skips its own copy, so the card shows each once (2026-09-25).
  *  🎯 / 🧨 are skipped only when the head's chip text EQUALS the tile's
  *  (`outerChipsFor`): the head reads bounce-room, the tile its own served read. */
-export const SUPPORT_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'promo', 'explosive', 'enterable'];
+export const SUPPORT_OUTER_CHIPS: ReadonlyArray<OuterChip> = ['growth', 'promo', 'explosive', 'enterable', 'short'];
 
 type Props = {
   symbol: string;
@@ -385,6 +386,7 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
               {data.symbol}
               <GrowthChip symbol={data.symbol} className="cm-badge" />
               <PromoOriginChip symbol={data.symbol} className="cm-badge" />
+              <ShortInterestChip symbol={data.symbol} className="cm-badge" />
               <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                              read={room.map.get(String(data.symbol).toUpperCase())?.explosive} />
               {/* 🎯 chip only, no filter: this tab answers one symbol — the one

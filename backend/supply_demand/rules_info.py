@@ -89,7 +89,12 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # under their 52-week high. Its own section because it is
                 # UNMEASURED, gates nothing, and its listing line, its held-out
                 # names and its 💥 window are each a named constant.
-                "fallen")
+                "fallen",
+                # 🩳 SHORT INTEREST (2026-10-03) — the FINRA count on every
+                # Chart Maps tile and the ticker page. Its own section because
+                # it is a DATA LABEL, not a rule: the reader has to meet what
+                # the number is, its as-of and "not a forecast" before the chip.
+                "short_interest")
 
 _DISCLAIMER = ("Configured house rules on price structure — not a book method, "
                "not a buy signal, not financial advice.")
@@ -809,7 +814,21 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: fallen section unavailable: %s", exc)
 
+    # ── 🩳 Short interest ──────────────────────────────────
+    try:
+        out["short_interest"] = _short_interest_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: short interest section unavailable: %s", exc)
+
     return out
+
+
+def _short_interest_section() -> dict:
+    """🩳 Short interest — every line is built by `short_interest.read` from its
+    own constants (publication day, ingest grace), never typed here. Imported
+    LAZILY, like the ⚡ and 📉 sections."""
+    from short_interest import read as SR
+    return SR.rules_section()
 
 
 def _fallen_section() -> dict:

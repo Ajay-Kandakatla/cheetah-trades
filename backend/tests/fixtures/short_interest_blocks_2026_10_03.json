@@ -1,0 +1,561 @@
+{
+ "today": "2026-10-03",
+ "cases": [
+  {
+   "name": "eose_v2_float",
+   "doc": {
+    "_id": "EOSE",
+    "symbol": "EOSE",
+    "v": 2,
+    "settlement_date": "2026-09-15",
+    "short_interest": 120015346,
+    "avg_daily_volume": 29047980,
+    "days_to_cover": 4.13,
+    "prev_settlement_date": "2026-08-31",
+    "prev_short_interest": 111323398,
+    "si_change_pct": 7.8,
+    "float_shares": 357328674,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "shares_outstanding": 361687337,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_float": 33.59,
+    "pct_of_shares": 33.18,
+    "squeeze": "high",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "checked_settlement": "2026-09-15",
+    "fetched_at": 1791067200.0
+   },
+   "block": {
+    "symbol": "EOSE",
+    "status": "ok",
+    "settlement_date": "2026-09-15",
+    "published_on": "2026-09-24",
+    "prev_settlement_date": "2026-08-31",
+    "si_shares": 120015346,
+    "prev_si_shares": 111323398,
+    "si_change_pct": 7.8,
+    "avg_daily_volume": 29047980,
+    "days_to_cover": 4.13,
+    "float_shares": 357328674,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "pct_of_float": 33.59,
+    "shares_outstanding": 361687337,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_shares_out": 33.18,
+    "headline_basis": "float",
+    "stale": false,
+    "stale_reason": null,
+    "next_settlement_date": "2026-09-30",
+    "next_due_on": "2026-10-13",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-10-03T22:40:00Z",
+    "chip": "🩳 SI 33.6% float · 4.1d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 120,015,346 shares short (+7.8% vs 2026-08-31). 33.6% of float — float 357.3M, yfinance floatShares (shares_cache), as of 2026-09-04. 33.2% of shares outstanding — 361.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. 4.1 days to cover (shares short ÷ 29.0M average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "rows": [
+     {
+      "k": "Settlement",
+      "v": "2026-09-15 (FINRA; published ~2026-09-24)"
+     },
+     {
+      "k": "Shares short",
+      "v": "120,015,346 · +7.8% vs 2026-08-31 (111,323,398)"
+     },
+     {
+      "k": "% of float",
+      "v": "33.6% — float 357,328,674 (yfinance floatShares (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "% of shares outstanding",
+      "v": "33.2% — shares outstanding 361,687,337 (yfinance sharesOutstanding (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "Days to cover",
+      "v": "4.13 — shares short ÷ 29,047,980 average daily volume (the provider's window)"
+     },
+     {
+      "k": "Freshness",
+      "v": "current — next settlement 2026-09-30, due ~2026-10-13"
+     },
+     {
+      "k": "Source",
+      "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
+     }
+    ]
+   }
+  },
+  {
+   "name": "bynd_v2_float",
+   "doc": {
+    "_id": "BYND",
+    "symbol": "BYND",
+    "v": 2,
+    "settlement_date": "2026-09-15",
+    "short_interest": 5092081,
+    "avg_daily_volume": 1093085,
+    "days_to_cover": 4.66,
+    "prev_settlement_date": null,
+    "prev_short_interest": null,
+    "si_change_pct": null,
+    "float_shares": 499658369,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "shares_outstanding": 515818978,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_float": 1.02,
+    "pct_of_shares": 0.99,
+    "squeeze": "low",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "checked_settlement": "2026-09-15",
+    "fetched_at": 1791067200.0
+   },
+   "block": {
+    "symbol": "BYND",
+    "status": "ok",
+    "settlement_date": "2026-09-15",
+    "published_on": "2026-09-24",
+    "prev_settlement_date": null,
+    "si_shares": 5092081,
+    "prev_si_shares": null,
+    "si_change_pct": null,
+    "avg_daily_volume": 1093085,
+    "days_to_cover": 4.66,
+    "float_shares": 499658369,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "pct_of_float": 1.02,
+    "shares_outstanding": 515818978,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_shares_out": 0.99,
+    "headline_basis": "float",
+    "stale": false,
+    "stale_reason": null,
+    "next_settlement_date": "2026-09-30",
+    "next_due_on": "2026-10-13",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-10-03T22:40:00Z",
+    "chip": "🩳 SI 1.0% float · 4.7d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 5,092,081 shares short (no prior settlement on file). 1.0% of float — float 499.7M, yfinance floatShares (shares_cache), as of 2026-09-04. 1.0% of shares outstanding — 515.8M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. 4.7 days to cover (shares short ÷ 1.1M average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "rows": [
+     {
+      "k": "Settlement",
+      "v": "2026-09-15 (FINRA; published ~2026-09-24)"
+     },
+     {
+      "k": "Shares short",
+      "v": "5,092,081 · no prior settlement on file"
+     },
+     {
+      "k": "% of float",
+      "v": "1.0% — float 499,658,369 (yfinance floatShares (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "% of shares outstanding",
+      "v": "1.0% — shares outstanding 515,818,978 (yfinance sharesOutstanding (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "Days to cover",
+      "v": "4.66 — shares short ÷ 1,093,085 average daily volume (the provider's window)"
+     },
+     {
+      "k": "Freshness",
+      "v": "current — next settlement 2026-09-30, due ~2026-10-13"
+     },
+     {
+      "k": "Source",
+      "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
+     }
+    ]
+   }
+  },
+  {
+   "name": "fcg_v2_no_denoms",
+   "doc": {
+    "_id": "FCG",
+    "symbol": "FCG",
+    "v": 2,
+    "settlement_date": "2026-09-15",
+    "short_interest": 440253,
+    "avg_daily_volume": 878632,
+    "days_to_cover": 1.0,
+    "prev_settlement_date": null,
+    "prev_short_interest": null,
+    "si_change_pct": null,
+    "float_shares": null,
+    "float_asof": null,
+    "float_source": null,
+    "shares_outstanding": null,
+    "shares_asof": null,
+    "shares_source": null,
+    "pct_of_float": null,
+    "pct_of_shares": null,
+    "squeeze": "low",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "checked_settlement": "2026-09-15",
+    "fetched_at": 1791067200.0
+   },
+   "block": {
+    "symbol": "FCG",
+    "status": "ok",
+    "settlement_date": "2026-09-15",
+    "published_on": "2026-09-24",
+    "prev_settlement_date": null,
+    "si_shares": 440253,
+    "prev_si_shares": null,
+    "si_change_pct": null,
+    "avg_daily_volume": 878632,
+    "days_to_cover": 1.0,
+    "float_shares": null,
+    "float_asof": null,
+    "float_source": null,
+    "pct_of_float": null,
+    "shares_outstanding": null,
+    "shares_asof": null,
+    "shares_source": null,
+    "pct_of_shares_out": null,
+    "headline_basis": null,
+    "stale": false,
+    "stale_reason": null,
+    "next_settlement_date": "2026-09-30",
+    "next_due_on": "2026-10-13",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-10-03T22:40:00Z",
+    "chip": "🩳 SI 440.3K sh · 1.0d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 440,253 shares short (no prior settlement on file). % of float: not read (no float on file). % of shares outstanding: not read. 1.0 days to cover (shares short ÷ 878.6K average daily volume, the provider's window). A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "rows": [
+     {
+      "k": "Settlement",
+      "v": "2026-09-15 (FINRA; published ~2026-09-24)"
+     },
+     {
+      "k": "Shares short",
+      "v": "440,253 · no prior settlement on file"
+     },
+     {
+      "k": "% of float",
+      "v": "not read — no float on file"
+     },
+     {
+      "k": "% of shares outstanding",
+      "v": "not read — no shares outstanding on file"
+     },
+     {
+      "k": "Days to cover",
+      "v": "1.00 — shares short ÷ 878,632 average daily volume (the provider's window)"
+     },
+     {
+      "k": "Freshness",
+      "v": "current — next settlement 2026-09-30, due ~2026-10-13"
+     },
+     {
+      "k": "Source",
+      "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
+     }
+    ]
+   }
+  },
+  {
+   "name": "uhal_v2_conflict",
+   "doc": {
+    "_id": "UHAL",
+    "symbol": "UHAL",
+    "v": 2,
+    "settlement_date": "2026-09-15",
+    "short_interest": 1600483,
+    "avg_daily_volume": 154626,
+    "days_to_cover": 10.35,
+    "prev_settlement_date": null,
+    "prev_short_interest": null,
+    "si_change_pct": null,
+    "float_shares": 106063035,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "shares_outstanding": 19435630,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_float": 1.51,
+    "pct_of_shares": 8.23,
+    "squeeze": "elevated",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "checked_settlement": "2026-09-15",
+    "fetched_at": 1791067200.0
+   },
+   "block": {
+    "symbol": "UHAL",
+    "status": "ok",
+    "settlement_date": "2026-09-15",
+    "published_on": "2026-09-24",
+    "prev_settlement_date": null,
+    "si_shares": 1600483,
+    "prev_si_shares": null,
+    "si_change_pct": null,
+    "avg_daily_volume": 154626,
+    "days_to_cover": 10.35,
+    "float_shares": 106063035,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "pct_of_float": 1.51,
+    "shares_outstanding": 19435630,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_shares_out": 8.23,
+    "headline_basis": "float",
+    "stale": false,
+    "stale_reason": null,
+    "next_settlement_date": "2026-09-30",
+    "next_due_on": "2026-10-13",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-10-03T22:40:00Z",
+    "chip": "🩳 SI 1.5% float · 10.3d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 1,600,483 shares short (no prior settlement on file). 1.5% of float — float 106.1M, yfinance floatShares (shares_cache), as of 2026-09-04. 8.2% of shares outstanding — 19.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. 10.3 days to cover (shares short ÷ 154.6K average daily volume, the provider's window). ⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree; read both with care. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "rows": [
+     {
+      "k": "Settlement",
+      "v": "2026-09-15 (FINRA; published ~2026-09-24)"
+     },
+     {
+      "k": "Shares short",
+      "v": "1,600,483 · no prior settlement on file"
+     },
+     {
+      "k": "% of float",
+      "v": "1.5% — float 106,063,035 (yfinance floatShares (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "% of shares outstanding",
+      "v": "8.2% — shares outstanding 19,435,630 (yfinance sharesOutstanding (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "Days to cover",
+      "v": "10.35 — shares short ÷ 154,626 average daily volume (the provider's window)"
+     },
+     {
+      "k": "Freshness",
+      "v": "current — next settlement 2026-09-30, due ~2026-10-13"
+     },
+     {
+      "k": "Source",
+      "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
+     },
+     {
+      "k": "⚠ Counts disagree",
+      "v": "⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree; read both with care."
+     }
+    ]
+   }
+  },
+  {
+   "name": "eose_v1_legacy_stale",
+   "doc": {
+    "_id": "EOSE",
+    "symbol": "EOSE",
+    "settlement_date": "2026-08-31",
+    "short_interest": 111323398,
+    "avg_daily_volume": 22470177,
+    "days_to_cover": 4.95,
+    "shares_outstanding": 364167744,
+    "pct_of_shares": 30.57,
+    "prev_settlement_date": "2026-08-14",
+    "si_change_pct": -1.3,
+    "squeeze": "high",
+    "fetched_at": 1789950400.192525
+   },
+   "block": {
+    "symbol": "EOSE",
+    "status": "stale",
+    "settlement_date": "2026-08-31",
+    "published_on": "2026-09-10",
+    "prev_settlement_date": "2026-08-14",
+    "si_shares": 111323398,
+    "prev_si_shares": null,
+    "si_change_pct": -1.3,
+    "avg_daily_volume": 22470177,
+    "days_to_cover": 4.95,
+    "float_shares": null,
+    "float_asof": null,
+    "float_source": null,
+    "pct_of_float": null,
+    "shares_outstanding": 364167744,
+    "shares_asof": "2026-09-21",
+    "shares_source": "Massive reference shares outstanding (legacy per-name warm)",
+    "pct_of_shares_out": 30.57,
+    "headline_basis": "shares_out",
+    "stale": true,
+    "stale_reason": "a newer FINRA settlement (2026-09-15) was due by 2026-09-28; this app still holds 2026-08-31",
+    "next_settlement_date": "2026-09-15",
+    "next_due_on": "2026-09-28",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-09-21T00:26:40Z",
+    "chip": "🩳 SI 30.6% shs out · 5.0d · 8/31 · stale",
+    "title": "🩳 Short interest — FINRA settlement 2026-08-31 (published ~2026-09-10). 111,323,398 shares short (-1.3% vs 2026-08-14). % of float: not read (no float on file). 30.6% of shares outstanding — 364.2M, Massive reference shares outstanding (legacy per-name warm), as of 2026-09-21. 5.0 days to cover (shares short ÷ 22.5M average daily volume, the provider's window). STALE — a newer FINRA settlement (2026-09-15) was due by 2026-09-28; this app still holds 2026-08-31. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "rows": [
+     {
+      "k": "Settlement",
+      "v": "2026-08-31 (FINRA; published ~2026-09-10)"
+     },
+     {
+      "k": "Shares short",
+      "v": "111,323,398 · -1.3% vs 2026-08-14"
+     },
+     {
+      "k": "% of float",
+      "v": "not read — no float on file"
+     },
+     {
+      "k": "% of shares outstanding",
+      "v": "30.6% — shares outstanding 364,167,744 (Massive reference shares outstanding (legacy per-name warm), as of 2026-09-21)"
+     },
+     {
+      "k": "Days to cover",
+      "v": "4.95 — shares short ÷ 22,470,177 average daily volume (the provider's window)"
+     },
+     {
+      "k": "Freshness",
+      "v": "STALE — a newer FINRA settlement (2026-09-15) was due by 2026-09-28; this app still holds 2026-08-31"
+     },
+     {
+      "k": "Source",
+      "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
+     }
+    ]
+   }
+  },
+  {
+   "name": "no_record_miss",
+   "doc": {
+    "_id": "NOREC",
+    "symbol": "NOREC",
+    "v": 2,
+    "settlement_date": null,
+    "checked_settlement": "2026-09-15",
+    "fetched_at": 1791067200.0
+   },
+   "block": {
+    "symbol": "NOREC",
+    "status": "no_record",
+    "settlement_date": null,
+    "published_on": null,
+    "prev_settlement_date": null,
+    "si_shares": null,
+    "prev_si_shares": null,
+    "si_change_pct": null,
+    "avg_daily_volume": null,
+    "days_to_cover": null,
+    "float_shares": null,
+    "float_asof": null,
+    "float_source": null,
+    "pct_of_float": null,
+    "shares_outstanding": null,
+    "shares_asof": null,
+    "shares_source": null,
+    "pct_of_shares_out": null,
+    "headline_basis": null,
+    "stale": null,
+    "stale_reason": null,
+    "next_settlement_date": null,
+    "next_due_on": null,
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-10-03T22:40:00Z",
+    "chip": null,
+    "title": "Short interest: no FINRA record on file for NOREC at the last warm — not read.",
+    "rows": [
+     {
+      "k": "Short interest",
+      "v": "not read — no FINRA record at the last warm"
+     }
+    ]
+   }
+  },
+  {
+   "name": "dtc_missing",
+   "doc": {
+    "_id": "EOSE",
+    "symbol": "EOSE",
+    "v": 2,
+    "settlement_date": "2026-09-15",
+    "short_interest": 120015346,
+    "avg_daily_volume": 29047980,
+    "days_to_cover": null,
+    "prev_settlement_date": "2026-08-31",
+    "prev_short_interest": 111323398,
+    "si_change_pct": 7.8,
+    "float_shares": 357328674,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "shares_outstanding": 361687337,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_float": 33.59,
+    "pct_of_shares": 33.18,
+    "squeeze": "high",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "checked_settlement": "2026-09-15",
+    "fetched_at": 1791067200.0
+   },
+   "block": {
+    "symbol": "EOSE",
+    "status": "ok",
+    "settlement_date": "2026-09-15",
+    "published_on": "2026-09-24",
+    "prev_settlement_date": "2026-08-31",
+    "si_shares": 120015346,
+    "prev_si_shares": 111323398,
+    "si_change_pct": 7.8,
+    "avg_daily_volume": 29047980,
+    "days_to_cover": null,
+    "float_shares": 357328674,
+    "float_asof": "2026-09-04",
+    "float_source": "yfinance floatShares (shares_cache)",
+    "pct_of_float": 33.59,
+    "shares_outstanding": 361687337,
+    "shares_asof": "2026-09-04",
+    "shares_source": "yfinance sharesOutstanding (shares_cache)",
+    "pct_of_shares_out": 33.18,
+    "headline_basis": "float",
+    "stale": false,
+    "stale_reason": null,
+    "next_settlement_date": "2026-09-30",
+    "next_due_on": "2026-10-13",
+    "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
+    "fetched_at": "2026-10-03T22:40:00Z",
+    "chip": "🩳 SI 33.6% float · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 120,015,346 shares short (+7.8% vs 2026-08-31). 33.6% of float — float 357.3M, yfinance floatShares (shares_cache), as of 2026-09-04. 33.2% of shares outstanding — 361.7M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. Days to cover: not read. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "rows": [
+     {
+      "k": "Settlement",
+      "v": "2026-09-15 (FINRA; published ~2026-09-24)"
+     },
+     {
+      "k": "Shares short",
+      "v": "120,015,346 · +7.8% vs 2026-08-31 (111,323,398)"
+     },
+     {
+      "k": "% of float",
+      "v": "33.6% — float 357,328,674 (yfinance floatShares (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "% of shares outstanding",
+      "v": "33.2% — shares outstanding 361,687,337 (yfinance sharesOutstanding (shares_cache), as of 2026-09-04)"
+     },
+     {
+      "k": "Days to cover",
+      "v": "not read"
+     },
+     {
+      "k": "Freshness",
+      "v": "current — next settlement 2026-09-30, due ~2026-10-13"
+     },
+     {
+      "k": "Source",
+      "v": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest"
+     }
+    ]
+   }
+  }
+ ]
+}

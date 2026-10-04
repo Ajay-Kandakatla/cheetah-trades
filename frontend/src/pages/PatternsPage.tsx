@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { GrowthChip } from '../components/GrowthChip';
 import { PromoOriginChip } from '../components/PromoOriginChip';
+import { ShortInterestChip } from '../components/ShortInterestChip';
 import { ExplosiveChip } from '../components/ExplosiveChip';
 import { EnterableChip } from '../components/EnterableChip';
 import { BandStructureChip } from '../components/BandStructureChip';
@@ -591,6 +592,7 @@ function VerdictRow({ v, navigate, ex }: {
         <TickerCell symbol={v.symbol} size="0.88rem" />
         <GrowthChip symbol={v.symbol} className="cm-badge" />
         <PromoOriginChip symbol={v.symbol} className="cm-badge" />
+        <ShortInterestChip symbol={v.symbol} className="cm-badge" />
         <ExplosiveChip className="cm-badge" study={ex?.study}
                        read={ex?.room.get(String(v.symbol).toUpperCase())?.explosive} />
         <EnterableChip className="cm-badge"
@@ -678,6 +680,7 @@ function Card({ p, navigate, ex }: {
         <TickerCell symbol={p.symbol} size="0.95rem" />
         <GrowthChip symbol={p.symbol} className="cm-badge" />
         <PromoOriginChip symbol={p.symbol} className="cm-badge" />
+        <ShortInterestChip symbol={p.symbol} className="cm-badge" />
         <ExplosiveChip className="cm-badge" study={ex?.study}
                        read={ex?.room.get(String(p.symbol).toUpperCase())?.explosive} />
         <EnterableChip className="cm-badge"

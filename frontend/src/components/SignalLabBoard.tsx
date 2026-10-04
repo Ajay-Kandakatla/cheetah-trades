@@ -23,6 +23,7 @@ import { useSignalWatchlist } from '../hooks/useSignalWatchlist';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
 import { PromoOriginChip } from './PromoOriginChip';
+import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { BandStructureChip } from './BandStructureChip';
@@ -199,6 +200,7 @@ export function SignalLabBoard() {
                     a Signals name renders without one. */}
                 <GrowthChip symbol={r.symbol} className="cm-badge" />
                 <PromoOriginChip symbol={r.symbol} className="cm-badge" />
+                <ShortInterestChip symbol={r.symbol} className="cm-badge" />
                 <ExplosiveChip className="cm-badge" study={room.payload?.explosive_study}
                                read={room.map.get(String(r.symbol).toUpperCase())?.explosive} />
                 <EnterableChip className="cm-badge"

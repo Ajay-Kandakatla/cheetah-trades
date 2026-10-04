@@ -41,6 +41,7 @@ would render a confident number of the wrong series.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import time
 from massive_keys import stocks_key
@@ -314,7 +315,10 @@ def _fetch_short_interest_rows(symbol: str, limit: int = 4) -> list[dict]:
             return []
         return (r.json() or {}).get("results") or []
     except Exception as exc:
-        log.warning("short_interest(SI): fetch failed for %s: %s", symbol, exc)
+        # type name only: an exception's text can carry the request URL and,
+        # with it, the apiKey (the 5th-leak lesson, 2026-09-12).
+        log.warning("short_interest(SI): fetch failed for %s: %s", symbol,
+                    type(exc).__name__)
         return []
 
 
@@ -336,7 +340,7 @@ def _shares_outstanding(symbol: str) -> Optional[int]:
                 res = (r.json() or {}).get("results") or {}
                 val = res.get("share_class_shares_outstanding") or res.get("weighted_shares_outstanding")
         except Exception as exc:
-            log.debug("short_interest(shares): %s failed: %s", sym, exc)
+            log.debug("short_interest(shares): %s failed: %s", sym, type(exc).__name__)
     _float_cache[sym] = val
     return val
 
@@ -480,6 +484,18 @@ def short_interest_map(symbols, db=None) -> dict:
     return out
 
 
+class _WarmResult(dict):
+    """The per-symbol warm's result. `kept` (2026-10-03) reads 0 until a None
+    answer keeps a held doc; it is only materialised when non-zero so the
+    long-standing exact-shape result (n/fetched/written/skipped/failed) is
+    unchanged for every caller that compares it whole."""
+
+    def __missing__(self, key):
+        if key == "kept":
+            return 0
+        raise KeyError(key)
+
+
 def warm_short_interest(symbols, db=None, sleep_sec: float = 0.25,
                         force: bool = False) -> dict:
     """Fetch + store short interest for `symbols`. Network, cron-only.
@@ -489,26 +505,38 @@ def warm_short_interest(symbols, db=None, sleep_sec: float = 0.25,
     as a remembered miss (`settlement_date: None`) so the next warm does not
     re-pay for a name the provider has no record for, and the board can tell
     "never warmed" from "warmed, no record". Never raises.
+
+    FIX 2026-10-03: `_fetch_short_interest_rows` answers `[]` on ANY HTTP
+    error, so a `None` here is also what a provider outage looks like. A
+    `None` therefore never REPLACES a doc that holds a settlement — the good
+    older number is kept (`kept`) rather than overwritten with "no record".
+    When the existence read itself fails the answer is unknowable, so a `None`
+    is not written at all (counted `failed`).
     """
     syms = []
     for s in symbols or []:
         s = str(s or "").strip().upper()
         if s and s not in syms:
             syms.append(s)
-    res = {"n": len(syms), "fetched": 0, "written": 0, "skipped": 0, "failed": 0}
+    res = _WarmResult(n=len(syms), fetched=0, written=0, skipped=0, failed=0)
     coll = _si_coll(db)
     if coll is None or not syms:
         return res
 
     fresh = set()
-    if not force:
-        cutoff = time.time() - SI_WARM_TTL_SEC
-        try:
-            fresh = {d["_id"] for d in coll.find(
-                {"_id": {"$in": syms}, "fetched_at": {"$gte": cutoff}}, {"_id": 1})}
-        except Exception as exc:                               # noqa: BLE001
-            log.warning("short_interest: warm freshness read failed: %s", exc)
-            fresh = set()
+    held: Optional[set] = set()     # names whose doc holds a settlement; None = unknown
+    cutoff = time.time() - SI_WARM_TTL_SEC
+    try:
+        for d in coll.find({"_id": {"$in": syms}},
+                           {"_id": 1, "fetched_at": 1, "settlement_date": 1}):
+            if d.get("settlement_date"):
+                held.add(d["_id"])
+            if not force and (d.get("fetched_at") or 0) >= cutoff:
+                fresh.add(d["_id"])
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest: warm freshness read failed: %s", type(exc).__name__)
+        fresh = set()
+        held = None
 
     todo = [s for s in syms if s not in fresh]
     res["skipped"] = len(syms) - len(todo)
@@ -540,6 +568,19 @@ def warm_short_interest(symbols, db=None, sleep_sec: float = 0.25,
                 "squeeze": d.get("squeeze"),
                 "fetched_at": time.time(),
             }
+        elif held is None:
+            # Could not tell whether a good doc exists: never risk replacing it.
+            res["failed"] += 1
+            if i < len(todo) - 1 and sleep_sec:
+                time.sleep(sleep_sec)
+            continue
+        elif sym in held:
+            # A None over a held settlement is as likely an outage as a real
+            # "no record" — keep the good older number.
+            res["kept"] += 1
+            if i < len(todo) - 1 and sleep_sec:
+                time.sleep(sleep_sec)
+            continue
         else:
             # A remembered miss — reads as `no_si_record`, not as "not warmed".
             doc = {"_id": sym, "symbol": sym, "settlement_date": None,
@@ -555,17 +596,408 @@ def warm_short_interest(symbols, db=None, sleep_sec: float = 0.25,
     return res
 
 
+# ---------- Short-INTEREST bulk warm, by settlement date (2026-10-03) ---------
+#
+# Ajay 2026-10-03: "can you add this field to all our chart maps scan. also the
+# individual tickers please". The per-name warm above is TWO Massive calls per
+# symbol (~79 min for the 2,744-name universe). Massive answers a whole FINRA
+# settlement in ONE call (`settlement_date=X&limit=50000`, ~1.8 s, 22.6k
+# tickers, measured 2026-10-03), so the universe warm is at most THREE calls:
+#   1. which settlements are newest (one per-ticker call on SETTLEMENT_REF_TICKER)
+#   2. the latest settlement, whole market
+#   3. the prior settlement, whole market (for the change and the partial guard)
+# and ZERO calls when FINRA's calendar says no newer settlement can be out yet
+# (`read.newer_settlement_can_exist`). Denominators come from ONE `shares_cache`
+# read at warm time (yfinance float / shares outstanding, with their date), so
+# the served read stays ONE `$in` query. A good older doc is never replaced by a
+# miss, never moved backwards, and nothing is written when a call fails.
+
+SI_BULK_LIMIT = 50000
+SI_BULK_MAX_PAGES = 5
+SI_BULK_SLEEP_SEC = 0.25
+# HIS CALL #11 — a data-completeness constant, not a market threshold: a
+# latest settlement with fewer rows than this share of the prior one is taken
+# as a partial provider load and written NOT AT ALL (retried next run).
+SI_BULK_MIN_ROWS_RATIO = 0.9
+SI_BULK_WRITE_CHUNK = 1000
+# The newest-settlement probe ticker (probe 2026-10-03: 210 settlements back to
+# 2017-12-29, never gapped).
+SETTLEMENT_REF_TICKER = "AAPL"
+
+_SI_URL = "https://api.massive.com/stocks/v1/short-interest"
+
+
+def _finite(v) -> Optional[float]:
+    if v is None or isinstance(v, bool):
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+def _pos_int(v) -> Optional[int]:
+    f = _finite(v)
+    return int(round(f)) if (f is not None and f > 0) else None
+
+
+def _nonneg_int(v) -> Optional[int]:
+    f = _finite(v)
+    return int(round(f)) if (f is not None and f >= 0) else None
+
+
+def _fetch_settlement_rows(settlement_date: str, calls: Optional[list] = None
+                           ) -> Optional[dict]:
+    """{TICKER: row} for ONE FINRA settlement, whole market. None on no key, a
+    non-200, an exception or zero rows. Logs a status code or an exception TYPE
+    only — never `str(exc)` or a URL (either can carry the apiKey)."""
+    api_key = stocks_key()
+    if not api_key:
+        log.warning("short_interest(bulk): no Massive key")
+        return None
+    try:
+        import requests
+    except ImportError:
+        return None
+    d = str(settlement_date)[:10]
+    out: dict = {}
+    url: Optional[str] = _SI_URL
+    params: Optional[dict] = {"settlement_date": d, "limit": SI_BULK_LIMIT, "apiKey": api_key}
+    pages = 0
+    while url and pages < SI_BULK_MAX_PAGES:
+        if pages and SI_BULK_SLEEP_SEC:
+            time.sleep(SI_BULK_SLEEP_SEC)
+        pages += 1
+        if calls is not None:
+            calls.append(d)
+        try:
+            r = requests.get(url, params=params, timeout=60)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest(bulk): %s fetch failed: %s", d, type(exc).__name__)
+            return None
+        if r.status_code != 200:
+            log.warning("short_interest(bulk): %s HTTP %s", d, r.status_code)
+            return None
+        try:
+            body = r.json() or {}
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest(bulk): %s bad body: %s", d, type(exc).__name__)
+            return None
+        for row in body.get("results") or []:
+            if not isinstance(row, dict):
+                continue
+            t = str(row.get("ticker") or "").strip().upper()
+            if t and str(row.get("settlement_date") or "")[:10] == d:
+                out[t] = row
+        nxt = body.get("next_url")
+        if nxt:
+            url, params = str(nxt), {"apiKey": api_key}
+        else:
+            url = None
+    return out or None
+
+
+def _settlement_dates_from_provider(calls: Optional[list] = None
+                                    ) -> Optional[tuple]:
+    """(latest, prior) settlement dates the provider holds, via ONE per-ticker
+    call on SETTLEMENT_REF_TICKER. None when it answers nothing."""
+    if calls is not None and stocks_key():
+        calls.append("discover")           # no key → no HTTP call is made
+    rows = _fetch_short_interest_rows(SETTLEMENT_REF_TICKER, limit=2)
+    dates = [str(r.get("settlement_date"))[:10] for r in rows or []
+             if isinstance(r, dict) and r.get("settlement_date")]
+    if not dates:
+        return None
+    return (dates[0], dates[1] if len(dates) > 1 else None)
+
+
+def _denominators(db) -> dict:
+    """{SYM: {float_shares, shares_outstanding, as_of_iso}} — ONE `shares_cache`
+    read (yfinance floatShares / sharesOutstanding, written by
+    sepa.volume_movers). Non-finite or <= 0 → None. Any failure → {}."""
+    out: dict = {}
+    try:
+        d = db if db is not None else _get_db()
+        if d is None:
+            return {}
+        for doc in d["shares_cache"].find(
+                {}, {"float_shares": 1, "shares_outstanding": 1, "as_of": 1}):
+            sym = str(doc.get("_id") or "").strip().upper()
+            if not sym:
+                continue
+            asof = None
+            a = _finite(doc.get("as_of"))
+            if a is not None and a > 0:
+                try:
+                    asof = datetime.fromtimestamp(a, tz=timezone.utc).date().isoformat()
+                except (OverflowError, OSError, ValueError):
+                    asof = None
+            out[sym] = {"float_shares": _pos_int(doc.get("float_shares")),
+                        "shares_outstanding": _pos_int(doc.get("shares_outstanding")),
+                        "as_of_iso": asof}
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest(bulk): shares_cache read failed: %s", type(exc).__name__)
+        return {}
+    return out
+
+
+def _build_doc(sym, row, prev_row, denom, *, latest, prior, fetched_at) -> Optional[dict]:
+    """The v2 `short_interest_latest` doc for one ticker, or None when the row
+    carries no usable short-interest count (a reported 0 is real and kept)."""
+    from short_interest import read as SR       # lazy: read imports this module
+
+    if not isinstance(row, dict):
+        return None
+    si = _nonneg_int(row.get("short_interest"))
+    if si is None:
+        return None
+    dtc = _finite(row.get("days_to_cover"))
+    dtc = dtc if (dtc is not None and dtc >= 0) else None
+    adv = _nonneg_int(row.get("avg_daily_volume"))
+    has_prev = isinstance(prev_row, dict)
+    prev_si = _nonneg_int(prev_row.get("short_interest")) if has_prev else None
+    chg = round((si - prev_si) / prev_si * 100.0, 1) if (prev_si is not None and prev_si > 0) else None
+    den = denom if isinstance(denom, dict) else {}
+    fl = _pos_int(den.get("float_shares"))
+    so = _pos_int(den.get("shares_outstanding"))
+    asof = den.get("as_of_iso")
+    pf = round(si / fl * 100.0, 2) if fl else None
+    ps = round(si / so * 100.0, 2) if so else None
+    sym = str(sym).upper()
+    return {
+        "_id": sym, "symbol": sym, "v": 2,
+        "settlement_date": str(latest)[:10],
+        "short_interest": si,
+        "avg_daily_volume": adv,
+        "days_to_cover": dtc,
+        "prev_settlement_date": (str(prior)[:10] if (has_prev and prior) else None),
+        "prev_short_interest": prev_si,
+        "si_change_pct": chg,
+        "float_shares": fl,
+        "float_asof": asof if fl else None,
+        "float_source": SR.FLOAT_SOURCE if fl else None,
+        "shares_outstanding": so,
+        "shares_asof": asof if so else None,
+        "shares_source": SR.SHARES_SOURCE if so else None,
+        "pct_of_float": pf,
+        # LEGACY KEY NAME kept: the 📈 Bonde DTC leg displays `pct_of_shares`.
+        "pct_of_shares": ps,
+        # Legacy compatibility only — read.py never serves it.
+        "squeeze": _squeeze_signal(ps, dtc),
+        "source": SR.SOURCE_SI,
+        "checked_settlement": str(latest)[:10],
+        "fetched_at": fetched_at,
+    }
+
+
+def _canonical_rows(rows: dict) -> dict:
+    """Re-key provider rows to the app's spelling (2026-10-03): Massive spells
+    class shares with a dot (BRK.B); the universe, tiles and `shares_cache`
+    use the dash (BRK-B). Without this a class share is written under BRK.B
+    with no float, and BRK-B gets a remembered miss. A row the provider
+    already spells the app's way wins a collision."""
+    from sepa.symbols import for_yahoo       # lazy, like read.py: no import cycle
+    out: dict = {}
+    for t, row in (rows or {}).items():
+        c = for_yahoo(t)
+        if c in out and c != t:
+            continue
+        out[c] = row
+    return out
+
+
+def warm_short_interest_bulk(scope=None, db=None, *, force: bool = False,
+                             dry_run: bool = False, today=None,
+                             sleep_sec: float = SI_BULK_SLEEP_SEC) -> dict:
+    """Warm `short_interest_latest` from whole-market FINRA settlements.
+
+    0 provider calls when no newer settlement can be out (FINRA calendar), 1
+    when one can but the provider still answers the held one, 3 on a new
+    settlement. Writes every FINRA ticker as a v2 doc, a remembered miss for a
+    `scope` name FINRA has no row for, and only `checked_settlement` on a held
+    doc the new settlement lacks -- both only once `due_date(latest)` has
+    passed; before that such a name is `deferred` (left pending, fetched again
+    next run), since the provider may still be loading the settlement. ATOMIC on failure: any failed call, or a
+    partial settlement, writes nothing. Never raises.
+    """
+    res = {"mode": "bulk", "provider_calls": 0, "latest": None, "prior": None,
+           "rows_latest": 0, "rows_prior": 0, "written": 0, "misses": 0, "kept": 0,
+           "deferred": 0, "skipped_reason": None, "error": None}
+    if dry_run:
+        res["docs"] = []
+    try:
+        _warm_bulk(res, scope, db, force=force, dry_run=dry_run, today=today,
+                   sleep_sec=sleep_sec)
+    except Exception as exc:                                   # noqa: BLE001
+        log.warning("short_interest(bulk): warm failed: %s", type(exc).__name__)
+        res["error"] = "warm failed: %s" % type(exc).__name__
+    return res
+
+
+def _warm_bulk(res, scope, db, *, force, dry_run, today, sleep_sec) -> None:
+    from short_interest import read as SR       # lazy: read imports this module
+
+    coll = _si_coll(db)
+    if coll is None:
+        res["error"] = "no_db"
+        return
+    names: list = []
+    for s in scope or []:
+        s = str(s or "").strip().upper()
+        if s and s not in names:
+            names.append(s)
+
+    existing: dict = {}
+    for d in coll.find({}, {"settlement_date": 1, "checked_settlement": 1, "v": 1}):
+        if d.get("_id"):
+            existing[str(d["_id"]).upper()] = d
+    marks = []
+    for d in existing.values():
+        if d.get("checked_settlement"):
+            marks.append(str(d["checked_settlement"])[:10])
+        elif d.get("v") == 2 and d.get("settlement_date"):
+            marks.append(str(d["settlement_date"])[:10])
+    held = max(marks) if marks else None
+    # Pending = a scope name the bulk warm has not answered at `held` yet. A
+    # legacy (per-name) doc never carries `checked_settlement`, so it is pending
+    # until a bulk warm reaches it.
+    pending = [s for s in names
+               if s not in existing
+               or str(existing[s].get("checked_settlement") or "")[:10] != held]
+
+    if not force and held and not pending and not SR.newer_settlement_can_exist(held, today):
+        nxt = SR.next_settlement_after(SR._as_date(held))
+        res["skipped_reason"] = ("no newer FINRA settlement can be out before %s"
+                                 % SR.publication_date(nxt).isoformat())
+        return
+
+    calls: list = []
+    try:
+        disc = _settlement_dates_from_provider(calls)
+    finally:
+        res["provider_calls"] = len(calls)
+    if not disc:
+        res["error"] = "settlement discovery failed (no rows for %s)" % SETTLEMENT_REF_TICKER
+        return
+    latest, prior = disc
+    res["latest"], res["prior"] = latest, prior
+    if held and latest < held:
+        res["skipped_reason"] = "provider at %s, behind the held %s" % (latest, held)
+        return
+    if not force and latest == held and not pending:
+        res["skipped_reason"] = "provider still at %s" % latest
+        return
+    if not prior:
+        res["error"] = "no prior settlement from the provider"
+        return
+
+    if sleep_sec:
+        time.sleep(sleep_sec)
+    rows_latest = _fetch_settlement_rows(latest, calls)
+    res["provider_calls"] = len(calls)
+    if rows_latest is None:
+        res["error"] = "latest settlement %s fetch failed" % latest
+        return
+    if sleep_sec:
+        time.sleep(sleep_sec)
+    rows_prior = _fetch_settlement_rows(prior, calls)
+    res["provider_calls"] = len(calls)
+    if rows_prior is None:
+        res["error"] = "prior settlement %s fetch failed" % prior
+        return
+    rows_latest, rows_prior = _canonical_rows(rows_latest), _canonical_rows(rows_prior)
+    res["rows_latest"], res["rows_prior"] = len(rows_latest), len(rows_prior)
+    if len(rows_latest) < SI_BULK_MIN_ROWS_RATIO * len(rows_prior):
+        res["error"] = ("partial settlement %s: %d of %d rows"
+                        % (latest, len(rows_latest), len(rows_prior)))
+        return
+
+    denoms = _denominators(db)
+    now = time.time()
+    ops: list = []       # (kind, sym, payload)
+    built = set()
+    for t, row in rows_latest.items():
+        ex = existing.get(t)
+        ex_sd = str((ex or {}).get("settlement_date") or "")[:10]
+        if ex and ex_sd and ex_sd > latest:
+            continue                       # never move a doc backwards
+        if not force and ex and ex.get("v") == 2 and ex_sd == latest:
+            built.add(t)
+            continue
+        doc = _build_doc(t, row, rows_prior.get(t), denoms.get(t),
+                         latest=latest, prior=prior, fetched_at=now)
+        if doc is None:
+            continue
+        ops.append(("replace", t, doc))
+        built.add(t)
+    # Inside the ingest window (publication day through due_date(latest)) the
+    # provider may still be loading the settlement: a universe name missing
+    # from it is left PENDING (no `checked_settlement`, no miss doc) so a later
+    # run fetches again. Only after the window is a missing name recorded.
+    settled = SR._today(today) > SR.due_date(SR._as_date(latest))
+    for s in names:
+        if s in built:
+            continue
+        ex = existing.get(s)
+        ex_sd = str((ex or {}).get("settlement_date") or "")[:10]
+        if ex and ex_sd:
+            # A good older number: keep the data, record that it was checked.
+            if ex_sd <= latest:
+                op = ("check", s, None)
+            else:
+                continue
+        else:
+            op = ("miss", s, {"_id": s, "symbol": s, "v": 2, "settlement_date": None,
+                              "checked_settlement": latest, "fetched_at": now})
+        if not settled:
+            res["deferred"] += 1
+            continue
+        ops.append(op)
+
+    if dry_run:
+        res["docs"] = [p for k, _s, p in ops if k in ("replace", "miss")]
+        res["written"] = sum(1 for k, _s, _p in ops if k == "replace")
+        res["misses"] = sum(1 for k, _s, _p in ops if k == "miss")
+        res["kept"] = sum(1 for k, _s, _p in ops if k == "check")
+        return
+
+    from pymongo import ReplaceOne, UpdateOne
+    for i in range(0, len(ops), SI_BULK_WRITE_CHUNK):
+        chunk = ops[i:i + SI_BULK_WRITE_CHUNK]
+        reqs = []
+        for kind, sym, payload in chunk:
+            if kind == "check":
+                reqs.append(UpdateOne({"_id": sym}, {"$set": {"checked_settlement": latest}}))
+            else:
+                reqs.append(ReplaceOne({"_id": sym}, payload, upsert=True))
+        try:
+            coll.bulk_write(reqs, ordered=False)
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest(bulk): write failed: %s", type(exc).__name__)
+            res["error"] = "write failed: %s" % type(exc).__name__
+            return
+        for kind, _s, _p in chunk:
+            key = {"replace": "written", "miss": "misses", "check": "kept"}[kind]
+            res[key] += 1
+
+
 def _main(argv=None) -> int:
-    """`python -m short_interest.client warm-si [--all-passers] [--force]
-    [--symbols A,B,C] [--sleep 0.25] | show-si`.
+    """`python -m short_interest.client warm-si [--dry-run] [--force]`
+    `| warm-si --per-symbol [--all-passers | --symbols A,B,C] [--sleep 0.25] [--force]`
+    `| show-si`.
 
-    Default scope is the Bonde board's shown names (≤260). `--all-passers`
-    widens to every Bonde-pillar passer off the latest scan (~1,051 names, so
-    ~35 min at the default sleep — run it detached, off-RTH).
+    `warm-si` (2026-10-03) is the BULK warm over the `full` universe: 0, 1 or 3
+    provider calls (see `warm_short_interest_bulk`). `--per-symbol` keeps the
+    old per-name path: default scope the Bonde board's shown names (≤260);
+    `--all-passers` widens to every Bonde-pillar passer (~1,051 names, ~35 min).
+    `--symbols` or `--all-passers` alone still means the per-name path (what
+    those invocations did before the bulk warm), never a silent whole-market run.
 
-    `from sepa import bonde` lives INSIDE this function on purpose: the board
-    path is sepa.bonde → sepa.bonde_picks → (inside attach) short_interest.client,
-    so a module-level import here would close the cycle.
+    `from sepa import …` lives INSIDE this function on purpose: the board path
+    is sepa.bonde → sepa.bonde_picks → (inside attach) short_interest.client, so
+    a module-level import here would close the cycle. Never prints the key or
+    a URL.
     """
     import sys
     args = list(sys.argv[1:] if argv is None else argv)
@@ -579,7 +1011,8 @@ def _main(argv=None) -> int:
             return 1
         docs = list(coll.find({}))
         n = len(docs)
-        fresh = stale = miss = 0
+        fresh = stale = miss = v2 = 0
+        checked = []
         for d in docs:
             age = _age_days(d.get("settlement_date"))
             if age is None:
@@ -588,13 +1021,41 @@ def _main(argv=None) -> int:
                 stale += 1
             else:
                 fresh += 1
+            if d.get("v") == 2:
+                v2 += 1
+            if d.get("checked_settlement"):
+                checked.append(str(d["checked_settlement"])[:10])
         print("short_interest(%s): %d docs, %d fresh (<=%dd), %d stale, %d no-record"
               % (SI_COLL, n, fresh, SI_STALE_DAYS, stale, miss))
+        print("short_interest(%s): %d v2 (bulk), %d legacy, max checked_settlement %s"
+              % (SI_COLL, v2, n - v2, max(checked) if checked else None))
         return 0
 
     if cmd != "warm-si":
-        print("usage: python -m short_interest.client warm-si|show-si")
+        print("usage: python -m short_interest.client warm-si [--dry-run] [--force] "
+              "| warm-si --per-symbol [...] | show-si")
         return 2
+
+    force = "--force" in args
+
+    per_symbol = any(f in args for f in ("--per-symbol", "--symbols", "--all-passers"))
+    if not per_symbol:
+        try:
+            from sepa import universe       # function-local: see the docstring
+            scope = list(universe.load_universe("full") or [])
+        except Exception as exc:                               # noqa: BLE001
+            log.warning("short_interest(bulk): universe unavailable: %s", type(exc).__name__)
+            scope = []
+        res = warm_short_interest_bulk(scope=scope, db=db, force=force,
+                                       dry_run="--dry-run" in args)
+        print("short_interest(bulk%s): latest %s prior %s, %d provider calls, rows %d/%d, "
+              "%d written, %d misses, %d kept, %d deferred, skipped=%s, error=%s"
+              % (" DRY-RUN" if "--dry-run" in args else "", res["latest"], res["prior"],
+                 res["provider_calls"], res["rows_latest"], res["rows_prior"],
+                 res["written"], res["misses"], res["kept"], res["deferred"],
+                 res["skipped_reason"],
+                 res["error"]))
+        return 0 if not res["error"] else 1
 
     sleep_sec = 0.25
     if "--sleep" in args:
@@ -624,10 +1085,10 @@ def _main(argv=None) -> int:
             from sepa import bonde          # function-local: see the docstring
             syms = bonde.symbols(db=db)
 
-    res = warm_short_interest(syms, db=db, sleep_sec=sleep_sec,
-                              force="--force" in args)
-    print("short_interest: %d symbols, %d fetched, %d written, %d skipped, %d failed"
-          % (res["n"], res["fetched"], res["written"], res["skipped"], res["failed"]))
+    res = warm_short_interest(syms, db=db, sleep_sec=sleep_sec, force=force)
+    print("short_interest: %d symbols, %d fetched, %d written, %d skipped, %d failed, %d kept"
+          % (res["n"], res["fetched"], res["written"], res["skipped"], res["failed"],
+             res["kept"]))
     return 0
 
 
