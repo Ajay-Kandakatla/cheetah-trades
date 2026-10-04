@@ -865,3 +865,42 @@ def test_plain_warm_si_is_still_the_bulk_warm(monkeypatch):
     assert client._main(["warm-si"]) == 0 and calls == [("bulk", None)]
     calls.clear()
     assert client._main(["warm-si", "--dry-run", "--force"]) == 0 and calls == [("bulk", None)]
+
+
+# ── 2026-10-03 live check: a provably wrong float never heads the chip ─────────
+def _sized(si, fl, so):
+    d = dict(CASES["eose_v2_float"]["doc"])
+    d.update({"short_interest": si, "float_shares": fl, "shares_outstanding": so})
+    return d
+
+
+def test_NEGATIVE_brk_b_shape_a_float_under_the_short_falls_back_to_shares_out():
+    # live BRK-B read 1,015.5% "of float": short ~1.9M vs a float on file of ~0.19M,
+    # shares outstanding ~2.16B -> the float is the wrong number, not the position
+    b = SR.si_block(_sized(1_900_000, 187_100, 2_160_000_000), FIX_TODAY)
+    assert b["float_suspect"] == SR.SHORT_EXCEEDS_FLOAT
+    assert b["pct_of_float"] is None and b["headline_basis"] == "shares_out"
+    assert "float" not in b["chip"] and "shs out" in b["chip"]
+    assert "the float looks wrong" in b["title"]
+    assert any(r["k"] == "⚠ Counts disagree" for r in b["rows"])
+
+
+def test_a_genuinely_small_float_is_kept():
+    # UI shape: insiders hold ~93%, float 4.2M of 60.5M, short 0.4M -> real, kept
+    b = SR.si_block(_sized(405_000, 4_224_881, 60_528_381), FIX_TODAY)
+    assert b["float_suspect"] is None and b["headline_basis"] == "float"
+    assert b["pct_of_float"] == 9.59
+
+
+def test_a_real_short_above_the_float_is_kept_when_it_is_also_large_vs_shares_out():
+    # GameStop-2021 shape: re-lent shares push short interest past the float; with
+    # the short also above half of shares outstanding the float is not called wrong
+    b = SR.si_block(_sized(71_000_000, 50_000_000, 69_700_000), FIX_TODAY)
+    assert b["float_suspect"] is None and b["headline_basis"] == "float"
+    assert b["pct_of_float"] == 142.0
+
+
+def test_NEGATIVE_a_float_above_shares_out_never_heads_the_chip():
+    b = SR.si_block(_sized(1_600_483, 106_100_000, 19_440_000), FIX_TODAY)
+    assert b["float_suspect"] == SR.FLOAT_EXCEEDS_SHARES
+    assert b["pct_of_float"] is None and b["chip"].startswith("🩳 SI 8.2% shs out")

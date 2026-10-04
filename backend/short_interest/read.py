@@ -256,8 +256,8 @@ _BLOCK_KEYS = (
     "si_shares", "prev_si_shares", "si_change_pct", "avg_daily_volume", "days_to_cover",
     "float_shares", "float_asof", "float_source", "pct_of_float",
     "shares_outstanding", "shares_asof", "shares_source", "pct_of_shares_out",
-    "headline_basis", "stale", "stale_reason", "next_settlement_date", "next_due_on",
-    "source", "fetched_at", "chip", "title", "rows",
+    "headline_basis", "float_suspect", "stale", "stale_reason", "next_settlement_date",
+    "next_due_on", "source", "fetched_at", "chip", "title", "rows",
 )
 
 
@@ -299,6 +299,13 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
     so = _pos_int(doc.get("shares_outstanding"))
     pf = round(si / fl * 100.0, 2) if fl else None
     ps = round(si / so * 100.0, 2) if so else None
+    # 2026-10-03 live check: 98 of 3,143 cached floats disagree with shares
+    # outstanding (dual classes, ADRs, floats stale across a reverse split) and
+    # BRK-B read 1,015% "of float". A float that is provably wrong never heads
+    # the chip; the % falls back to shares outstanding and the rows say why.
+    suspect = _float_suspect(si, fl, so)
+    if suspect:
+        pf = None
 
     if legacy:
         shares_source = LEGACY_SHARES_SOURCE if so else None
@@ -342,6 +349,7 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
         "shares_source": shares_source,
         "pct_of_shares_out": ps,
         "headline_basis": basis,
+        "float_suspect": suspect,
         "stale": fr["stale"],
         "stale_reason": fr["stale_reason"],
         "next_settlement_date": fr["next_settlement_date"],
@@ -355,15 +363,41 @@ def si_block(doc: Optional[dict], today: Optional[date] = None) -> Optional[dict
     return b
 
 
+FLOAT_EXCEEDS_SHARES = "float_exceeds_shares_out"
+SHORT_EXCEEDS_FLOAT = "short_exceeds_float"
+# Short interest above the float is possible (re-lent shares — GameStop 2021),
+# but not when it is also at most this share of shares outstanding: then the
+# float on file is the wrong number, not the short position.
+SUSPECT_MAX_SHARES_OUT_FRACTION = 0.5
+
+
+def _float_suspect(si, fl, so) -> Optional[str]:
+    """Why the float on file cannot head the chip, or None. A genuinely small
+    float (UI: insiders hold ~93%) is NOT suspect — only a float that is
+    larger than shares outstanding, or smaller than a short position that is
+    itself well under shares outstanding."""
+    if not (fl and so) or si is None:
+        return None
+    if fl > so:
+        return FLOAT_EXCEEDS_SHARES
+    if si > fl and si <= so * SUSPECT_MAX_SHARES_OUT_FRACTION:
+        return SHORT_EXCEEDS_FLOAT
+    return None
+
+
 def _conflict(b: dict) -> bool:
-    fl, so = b.get("float_shares"), b.get("shares_outstanding")
-    return bool(fl and so and fl > so)
+    return bool(b.get("float_suspect"))
 
 
 def _conflict_sentence(b: dict) -> str:
+    fl = _human_shares(b["float_shares"])
+    so = _human_shares(b["shares_outstanding"])
+    if b.get("float_suspect") == SHORT_EXCEEDS_FLOAT:
+        return ("⚠ The float on file (%s) is smaller than the shares sold short while "
+                "shares outstanding is %s — the float looks wrong, so the %% shown is of "
+                "shares outstanding." % (fl, so))
     return ("⚠ The float on file (%s) is larger than shares outstanding (%s) — the two "
-            "counts disagree; read both with care."
-            % (_human_shares(b["float_shares"]), _human_shares(b["shares_outstanding"])))
+            "counts disagree, so the %% shown is of shares outstanding." % (fl, so))
 
 
 def chip_text(b: Optional[dict]) -> Optional[str]:

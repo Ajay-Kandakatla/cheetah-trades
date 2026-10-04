@@ -47,6 +47,7 @@
     "shares_source": "yfinance sharesOutstanding (shares_cache)",
     "pct_of_shares_out": 33.18,
     "headline_basis": "float",
+    "float_suspect": null,
     "stale": false,
     "stale_reason": null,
     "next_settlement_date": "2026-09-30",
@@ -133,6 +134,7 @@
     "shares_source": "yfinance sharesOutstanding (shares_cache)",
     "pct_of_shares_out": 0.99,
     "headline_basis": "float",
+    "float_suspect": null,
     "stale": false,
     "stale_reason": null,
     "next_settlement_date": "2026-09-30",
@@ -219,6 +221,7 @@
     "shares_source": null,
     "pct_of_shares_out": null,
     "headline_basis": null,
+    "float_suspect": null,
     "stale": false,
     "stale_reason": null,
     "next_settlement_date": "2026-09-30",
@@ -299,20 +302,21 @@
     "float_shares": 106063035,
     "float_asof": "2026-09-04",
     "float_source": "yfinance floatShares (shares_cache)",
-    "pct_of_float": 1.51,
+    "pct_of_float": null,
     "shares_outstanding": 19435630,
     "shares_asof": "2026-09-04",
     "shares_source": "yfinance sharesOutstanding (shares_cache)",
     "pct_of_shares_out": 8.23,
-    "headline_basis": "float",
+    "headline_basis": "shares_out",
+    "float_suspect": "float_exceeds_shares_out",
     "stale": false,
     "stale_reason": null,
     "next_settlement_date": "2026-09-30",
     "next_due_on": "2026-10-13",
     "source": "FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest",
     "fetched_at": "2026-10-03T22:40:00Z",
-    "chip": "🩳 SI 1.5% float · 10.3d · 9/15",
-    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 1,600,483 shares short (no prior settlement on file). 1.5% of float — float 106.1M, yfinance floatShares (shares_cache), as of 2026-09-04. 8.2% of shares outstanding — 19.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. 10.3 days to cover (shares short ÷ 154.6K average daily volume, the provider's window). ⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree; read both with care. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
+    "chip": "🩳 SI 8.2% shs out · 10.3d · 9/15",
+    "title": "🩳 Short interest — FINRA settlement 2026-09-15 (published ~2026-09-24). 1,600,483 shares short (no prior settlement on file). % of float: not read (no float on file). 8.2% of shares outstanding — 19.4M, yfinance sharesOutstanding (shares_cache), as of 2026-09-04. 10.3 days to cover (shares short ÷ 154.6K average daily volume, the provider's window). ⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree, so the % shown is of shares outstanding. A count of open short positions — not a forecast. Source: FINRA short interest (Rule 4560) via Massive /stocks/v1/short-interest. Not advice.",
     "rows": [
      {
       "k": "Settlement",
@@ -324,7 +328,7 @@
      },
      {
       "k": "% of float",
-      "v": "1.5% — float 106,063,035 (yfinance floatShares (shares_cache), as of 2026-09-04)"
+      "v": "not read — no float on file"
      },
      {
       "k": "% of shares outstanding",
@@ -344,7 +348,7 @@
      },
      {
       "k": "⚠ Counts disagree",
-      "v": "⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree; read both with care."
+      "v": "⚠ The float on file (106.1M) is larger than shares outstanding (19.4M) — the two counts disagree, so the % shown is of shares outstanding."
      }
     ]
    }
@@ -385,6 +389,7 @@
     "shares_source": "Massive reference shares outstanding (legacy per-name warm)",
     "pct_of_shares_out": 30.57,
     "headline_basis": "shares_out",
+    "float_suspect": null,
     "stale": true,
     "stale_reason": "a newer FINRA settlement (2026-09-15) was due by 2026-09-28; this app still holds 2026-08-31",
     "next_settlement_date": "2026-09-15",
@@ -455,6 +460,7 @@
     "shares_source": null,
     "pct_of_shares_out": null,
     "headline_basis": null,
+    "float_suspect": null,
     "stale": null,
     "stale_reason": null,
     "next_settlement_date": null,
@@ -517,6 +523,7 @@
     "shares_source": "yfinance sharesOutstanding (shares_cache)",
     "pct_of_shares_out": 33.18,
     "headline_basis": "float",
+    "float_suspect": null,
     "stale": false,
     "stale_reason": null,
     "next_settlement_date": "2026-09-30",
