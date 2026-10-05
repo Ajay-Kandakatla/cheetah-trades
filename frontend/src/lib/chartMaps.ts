@@ -23,9 +23,10 @@ import { RES_FILTER_PARAM, RES_MODE_PARAM } from './resiliencyFilters';
 import { UV_VIEW_PARAM, UV_VIEW_PEERS } from './undervalueView';
 import type { CmUndervalueView } from './undervalueView';
 import type { CmFallenBoard, CmFallenRead } from './fallen';
+import type { CmDrop10Board, CmDrop10Read } from './drop10';
 import type { BondePick } from './bondePicks';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -112,6 +113,11 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // counts it from the first open and the next re-cut moves it on the
   // evidence. The slot is his call (fallen spec §7 #17).
   'fallen',
+  // 🔻 Down 10%+ today (Ajay 2026-10-03: "I would like to know about stocks
+  // that falled intraday more than 10% new tab please."). Right after 📉 Down
+  // 40%+, its daily cousin — TAB ORDER IS EARNED; tabUsageKey counts it from
+  // the first open and the next re-cut moves it on the evidence.
+  'drop10',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -233,6 +239,13 @@ export const FALLEN_SORT_DEPTH = 'fallen_depth';
 export const FALLEN_SORT_SALES = 'fallen_sales';
 export const FALLEN_DEPTH_PARAM = 'depth';
 
+/** 🔻 Down 10%+ today (2026-10-05): the three tab-scoped served sort keys
+ *  (chart_maps/drop10_tab.SORT_NOW / SORT_RECLAIM / SORT_RVOL). `default` is
+ *  the served default order (deepest at the low). Labels are SERVED. */
+export const DROP10_SORT_NOW = 'drop10_now';
+export const DROP10_SORT_RECLAIM = 'drop10_reclaim';
+export const DROP10_SORT_RVOL = 'drop10_rvol';
+
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
  *  buckets) to re-cut CM_TABS from measured use. */
@@ -292,6 +305,14 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   fallen: {
     label: '\u{1F4C9} Down 40%+',
     blurb: 'Stocks far under their 52-week high, with Bonde\'s static pick legs and what may have hit them. Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that dropped more than 40% lowers from like app loving company as an example whcih si 60% low. But I also need you to capture informations about sales like Bondes and other indicators based on Bondes formula please." then "Scan the universe and bring me these stocks" and "also add things like possible catalyst that made is drop like that." THE LIST is every name in the universe whose last closed close sits at or past the line above the grid under its 52-week high (the highest intraday high of the last year of closed sessions); ETFs and names whose bars carry a one-session jump the price layer calls impossible are left out and counted. EACH CARD shows the distance, the high and its day, the 52-week low, cap, sector, the sales numbers the \u{1F4C8} Bonde tab shows, his pick legs with their sources, the demand band, and \u{1F4A5} what hit it \u2014 the biggest down day since the high and what this app has on file around it, labelled possible. UNMEASURED \u2014 nothing here gates, pushes or trades. Not advice.',
+  },
+  // 🔻 Down 10%+ today (Ajay 2026-10-03). Every number on the board is served —
+  // the threshold, the session, the as-of time and every count ride in the
+  // header / count line; none is typed here outside his quote. UNMEASURED: no
+  // study measures what a name that fell this far intraday does next.
+  drop10: {
+    label: '\u{1F53B} Down 10%+ today',
+    blurb: 'Stocks whose session low fell 10% or more under the prior close. Ajay 2026-10-03: "I would like to know about stocks that falled intraday more than 10% new tab please." THE LIST is every stock in the universe whose low this session sat at or past that line under the prior session\'s close \u2014 the ones still that far down and the ones that came back above it (reclaimed), both listed and labelled. In market hours it is LIVE (today\'s snapshot, re-read about every minute); after 16:00 ET it is today\'s regular session; before the open, overnight and on weekends it is the last closed session. ETFs, delisted names and drops the data cannot be trusted on (a split, a bad print, a decimal shift) are left out, counted and named under the grid. EACH CARD shows the low and where the print is now, the gap against the move after the open, the volume against its 50-day normal (projected to a full session during the day), what its sector ETF, its theme and RSP did, the demand band, and \u{1F4A5} what is on file from the session before through today, labelled possible. UNMEASURED \u2014 nothing here gates, pushes or trades. Not advice.',
   },
   resiliency: {
     label: '\u{1F6E1}\u{FE0F} Resiliency',
@@ -1063,6 +1084,10 @@ export type CmTile = {
    *  every sentence SERVED (chart_maps/fallen_tab.tile_block). Absent on every
    *  other tab. UNMEASURED. */
   fallen?: CmFallenRead | null;
+  /** 🔻 Down 10%+ today tab only (2026-10-05): the low, the state, the legs,
+   *  the volume vs normal and the 💥 one-session read — every sentence SERVED
+   *  (chart_maps/drop10_tab.tile_block). Absent on every other tab. */
+  drop10?: CmDrop10Read | null;
   /** 📉 Down 40%+ tab only (2026-10-02): Bonde's pick legs exactly as the 📈
    *  Bonde tab serves them (sepa/bonde_picks), drawn by BondePickChips. */
   pick?: BondePick | null;
@@ -1444,6 +1469,10 @@ export type CmBoard = {
    *  count line / depth steps / Bonde legend / 💥 sources / held-out names
    *  FallenBoardNote prints. Absent on every other tab. */
   fallen_board?: CmFallenBoard | null;
+  /** 🔻 Down 10%+ today tab only (2026-10-05): the served header / order line
+   *  / count line / 💥 sources / held-out names / live refresh cadence
+   *  Drop10BoardNote prints. Absent on every other tab. */
+  drop10_board?: CmDrop10Board | null;
   /** 💎 Under Value only (2026-09-29): the served 💎/🏷️ toggle — labels,
    *  the served view, and (🏷️ vs peers only) the header / note / counts
    *  UndervalueViewNote prints. Absent on every other tab. */

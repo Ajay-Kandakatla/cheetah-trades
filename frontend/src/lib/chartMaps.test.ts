@@ -783,6 +783,9 @@ describe('the Earnings Flow tab', () => {
        // 📉 Down 40%+ 2026-10-02 — right after Resiliency, mid-pack for the
        // same no-usage-yet reason (fallen spec §7 #17, his call).
        'fallen',
+       // 🔻 Down 10%+ today 2026-10-05 — right after Down 40%+, its daily
+       // cousin, mid-pack for the same no-usage-yet reason.
+       'drop10',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1798,7 +1801,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(35);   // +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(36);   // +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2305,7 +2308,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10')).toEqual(CM_TABS_6D3AD93);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });

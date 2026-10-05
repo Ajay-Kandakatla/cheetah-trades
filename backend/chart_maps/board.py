@@ -55,7 +55,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency", "fallen")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency", "fallen", "drop10")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -4503,6 +4503,120 @@ def _usd_short(v) -> str:
 from sepa.sales import BONDE_PASS_TIERS  # one definition — sepa/sales.py
 
 
+
+def drop10_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                 universe: str = "full", themes_first: bool = False,
+                 sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                 ctx: Optional[dict] = None, now: Optional[datetime] = None) -> dict:
+    """🔻 Down 10%+ today — stocks whose session low sits 10% or more under the
+    prior close, still down or reclaimed.
+
+    Ajay 2026-10-03: *"I would like to know about stocks that falled intraday
+    more than 10% new tab please."*
+
+    The whole read (the prior closes, the universe snapshot, the 💥 one-day
+    catalysts) is memoised in `chart_maps.drop10_tab` by a background thread;
+    this orders it, applies the liquidity floor, cuts to `limit + BAR_BUFFER`
+    and makes ONE `_bulk_snaps` over that pool (handed to `board()` through
+    `ctx`) plus ONE `zone_store.load_latest` for the demand zone read (the 📉
+    shape). Memo rows are never mutated: every tile is built from a deep copy.
+
+    UNMEASURED and display only — a distance, not a signal.
+    """
+    import copy
+    from chart_maps import drop10_tab as D10
+    from chart_maps import dual_momentum_tab as DMT
+    from supply_demand import enterable as EN
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    got = D10.cached_or_warm(universe, now=now_et)
+    if got["state"] == "warming":
+        return {"tiles": [], "warming": True, "note": D10.WARMING_NOTE,
+                "drop10_board": D10.warming_block(now=now_et, sort=sort)}
+    if got["state"] == "error":
+        return {"tiles": [], "note": D10.error_note(got.get("reason")),
+                "drop10_board": D10.error_block(got.get("reason"), now=now_et, sort=sort)}
+    entry = got["entry"]                                    # READ-ONLY (the memo's)
+    rows, counts = D10.rank(entry, sort=sort)
+
+    # 1 — the liquidity floor on the 50 closed sessions before this one
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    kept, no_turnover, dropped_thin = [], 0, 0
+    for r in rows:
+        m = {"avg_turnover": r.get("adv50"), "liquidity_tier": liquidity_tier(r.get("adv50"))}
+        if not passes_liquidity(m.get("avg_turnover"), min_tier):
+            dropped_thin += 1
+            no_turnover += int(floor_on and m.get("avg_turnover") is None)
+            continue
+        kept.append((r, m))
+
+    # 2 — the pool, deep-copied, and the tile skeletons
+    pool = [(copy.deepcopy(r), m) for r, m in kept[:limit + BAR_BUFFER]]
+    tiles = []
+    by_sym: dict = {}
+    for i, (r, m) in enumerate(pool):
+        sym = r["symbol"]
+        tiles.append({"symbol": sym, "theme": _theme(sym), "href": _href(sym),
+                      "last_close": r["last"], "bars": [], "bands": [], "lines": [],
+                      "markers": [D10.tile_marker(r)],
+                      "badges": D10.tile_badges(r),
+                      "stats": D10.tile_stats(r),
+                      "drop10": D10.tile_block(r),
+                      **published_metrics(m), "_m": dict(m),
+                      "_score": float(len(pool) - i)})
+        by_sym[sym] = r
+
+    # 3 — ONE snapshot over the pool, ONE zone read, the 🏎️ DM zone block
+    syms = [t["symbol"] for t in tiles]
+    raw = _bulk_snaps(syms)
+    if ctx is not None:
+        ctx.update(snaps=raw, now=now_et)
+    try:
+        from supply_demand import zone_store
+        _day, docs = zone_store.load_latest(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("drop10_tiles: zone_store read failed: %s", exc)
+        docs = {}
+    docs = docs if isinstance(docs, dict) else {}
+    live = _live_from_snaps(tiles, raw)
+    attach_enterable(tiles, kind=EN.KIND_DEMAND, live=live, docs=docs)
+    for t in tiles:
+        sym = t["symbol"]
+        doc = docs.get(sym) or {}
+        zone = DMT.zone_read(_explosive_px(t), doc, t.get("enterable"),
+                             prev_close=by_sym[sym].get("prev_close"))
+        dem = zone.get("demand")
+        if isinstance(dem, dict):
+            t["bands"].append({"kind": "demand", "lo": float(dem["lo"]),
+                               "hi": float(dem["hi"]), "label": "demand",
+                               **LP.pad_fields(dem)})
+            room = zone.get("room") or {}
+            if _num(room.get("target_lo")) is not None and _num(room.get("target_hi")) is not None:
+                t["bands"].append({"kind": "supply", "lo": float(room["target_lo"]),
+                                   "hi": float(room["target_hi"]), "label": "first lid"})
+            t["_bars"] = {"days": _zone_window(_stored_band(doc, dem), days)}
+        t["badges"].append(DMT.zone_badge(zone, _dist_badge))
+        t["stats"].extend(DMT.zone_stats(zone))
+        t["why"] = D10.why_text(by_sym[sym], DMT.zone_text(zone))
+        t["drop10"]["zone"] = zone
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier=min_tier, snaps=raw)
+    for t in out:
+        t["name"] = by_sym[t["symbol"]].get("name") or _name_for(t["symbol"])
+    counts.update(no_turnover=no_turnover,
+                  dropped_thin=dropped_thin - no_turnover + int(meta["dropped_thin"]),
+                  shown=len(out))
+    tier_label = {"deep": f"Deep · ≥${int(LIQ_DEEP_USD / 1e6)}M/day",
+                  "ok": f"Tradeable · ≥${int(LIQ_OK_USD / 1e6)}M/day",
+                  "thin": f"Thin · ≥${int(LIQ_THIN_USD / 1e6)}M/day",
+                  "any": "no floor"}.get(min_tier, min_tier)
+    return {"tiles": out, "sort_unavailable": meta.get("sort_unavailable"),
+            "matched": len(kept),
+            "note": D10.NOTE if out else D10.EMPTY_NOTE,
+            "drop10_board": D10.ready_block(counts, entry=entry, sort=sort,
+                                            min_tier_label=tier_label,
+                                            stale=bool(got.get("stale")))}
+
 def _bonde_gate(snap: Optional[dict]) -> tuple[str, Optional[dict]]:
     """("pass"|"fail"|"unknown", sales_block) for one symbol's sales snapshot."""
     sales = (snap or {}).get("sales") or None
@@ -7054,17 +7168,24 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # 📉 `fallen_depth` / `fallen_sales` (+ the 💰 cap keys) are the Down 40%+
     # tab's (2026-10-02), the same precedent.
     from chart_maps import fallen_tab as _FAL
+    # 🔻 `drop10_now` / `drop10_reclaim` / `drop10_rvol` are the Down 10%+
+    # today tab's (2026-10-05), the same precedent.
+    from chart_maps import drop10_tab as _D10
     srt = sort if (sort in SORTS
                    or (t == "dual_momentum" and sort in _DMT.TAB_SORTS)
                    or (t == "ath" and sort == _ATH.SORT_SLIPPING)
                    or (t == "resiliency" and sort in _RES.TAB_SORTS)
-                   or (t == "fallen" and sort in _FAL.TAB_SORTS)) else DEFAULT_SORT
+                   or (t == "fallen" and sort in _FAL.TAB_SORTS)
+                   or (t == "drop10" and sort in _D10.TAB_SORTS)) else DEFAULT_SORT
     if t == "resiliency" and srt not in _RES.TAB_SORTS:
         # only the tab's own four served orders (the ATH precedent: no generic
         # metric sort is offered, so none may silently reorder the board)
         srt = DEFAULT_SORT
     if t == "fallen" and srt not in _FAL.TAB_SORTS:
         # only the tab's own five served orders (the resiliency precedent)
+        srt = DEFAULT_SORT
+    if t == "drop10" and srt not in _D10.TAB_SORTS:
+        # only the tab's own four served orders (the resiliency precedent)
         srt = DEFAULT_SORT
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
@@ -7092,6 +7213,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     elif t == "fallen":
         out = fallen_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx,
                            depth=depth if isinstance(depth, str) else None)
+    elif t == "drop10":
+        out = drop10_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -7223,6 +7346,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     if t == "fallen":
         # 📋 / 📉 / 📈 / 💰 — exactly these five served keys.
         out["sorts"] = _FAL.served_sorts()
+    if t == "drop10":
+        # 🔻 / 📉 / 🔄 / 📊 — exactly these four served keys.
+        out["sorts"] = _D10.served_sorts()
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier

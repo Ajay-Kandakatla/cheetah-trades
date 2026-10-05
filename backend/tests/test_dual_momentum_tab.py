@@ -124,7 +124,7 @@ def test_01_tab_sits_right_after_key_levels_and_nothing_else_moved():
     # was appended right after dual_momentum on 2026-09-29; 🛡️ resiliency right
     # after ath on 2026-09-30)
     assert tuple(t for t in B.TABS
-                 if t not in ("dual_momentum", "ath", "resiliency", "fallen")) == TABS_BEFORE
+                 if t not in ("dual_momentum", "ath", "resiliency", "fallen", "drop10")) == TABS_BEFORE
 
 
 # --------------------------------------------------------------------------

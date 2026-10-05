@@ -90,6 +90,10 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # UNMEASURED, gates nothing, and its listing line, its held-out
                 # names and its 💥 window are each a named constant.
                 "fallen",
+                # 🔻 DOWN 10%+ TODAY (2026-10-05) — stocks whose session low sat
+                # 10% or more under the prior close. Its own section because it
+                # is UNMEASURED, gates nothing, and reads the LIVE session.
+                "drop10",
                 # 🩳 SHORT INTEREST (2026-10-03) — the FINRA count on every
                 # Chart Maps tile and the ticker page. Its own section because
                 # it is a DATA LABEL, not a rule: the reader has to meet what
@@ -814,6 +818,12 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: fallen section unavailable: %s", exc)
 
+    # ── 🔻 Down 10%+ today ─────────────────────────────────
+    try:
+        out["drop10"] = _drop10_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: drop10 section unavailable: %s", exc)
+
     # ── 🩳 Short interest ──────────────────────────────────
     try:
         out["short_interest"] = _short_interest_section()
@@ -864,6 +874,49 @@ def _fallen_section() -> dict:
                                                  FC.WINDOW_AFTER, kinds),
             "UNMEASURED — no study says a name this far under its 52-week high, with any "
             "count of Bonde's legs, does anything next. Display only.",
+        ],
+        "stops": ["No stop, no target, no size: a list and its reads. The demand band on each "
+                  "card is the demand engine's own."],
+        "alerts": ["Pushes nothing — no alert kind reads this tab."],
+        "note": _DISCLAIMER,
+    }
+
+
+def _drop10_section() -> dict:
+    """🔻 Down 10%+ today — every number read from `chart_maps.drop10_tab` (D10)
+    or `chart_maps.fallen_catalysts` (FC), never typed here. Imported LAZILY."""
+    from chart_maps import drop10_tab as D10
+    from chart_maps import fallen_catalysts as FC
+
+    held = ("ETFs, " if not D10.INCLUDE_ETFS else "") + "delisted names"
+    kinds = " > ".join(FC.KIND_LABELS[k] for k in FC.PRIORITY)
+    return {
+        "title": f"{D10.TAB_LABEL} — the session low {D10.THRESHOLD_PCT:g}% or more under "
+                 "the prior close",
+        "emoji": D10.MARK,
+        "picks": [
+            "Listed: every universe stock whose session LOW is %g%% or more under the prior "
+            "session's close — still down (the print %g%%+ under it) or reclaimed (the print "
+            "back above that line). The prior close is the cached daily bar before the "
+            "session." % (D10.THRESHOLD_PCT, D10.THRESHOLD_PCT),
+            "Which session: in regular hours, today's live snapshot (refreshed about every "
+            "%d seconds); after 16:00 ET, today's regular session; before the open, overnight, "
+            "weekends and holidays, the last closed session off the cached daily bars."
+            % D10.LIVE_TTL_SEC,
+            "Not listed, counted: %s, names whose cached bars end before the prior market day, "
+            "and drops the data cannot be trusted on — a %g× or larger move (the price layer's "
+            "own guard), a live prior close %g%%+ off the cached one, or a split Massive lists "
+            "as executed that day. Those are named under the grid; check the chart."
+            % (held, D10.GLITCH_RATIO, D10.PREV_CLOSE_TOL_PCT),
+            D10.order_line(D10.DEFAULT_SORT),
+            "Volume vs normal: the session's shares against the 50 closed sessions before it, "
+            "projected to a full session in regular hours (the ⚡ momentum-burst leg).",
+            "%s What hit it: what this app has on file from %d session before through the "
+            "session — most specific first (%s) — and what the sector ETF, the theme's median "
+            "member and RSP did. Possible, never proof of cause." % (FC.HIT_MARK,
+                                                                     FC.WINDOW_BEFORE, kinds),
+            "UNMEASURED — no study says what a stock that fell this far intraday does next, "
+            "reclaimed or not. Display only.",
         ],
         "stops": ["No stop, no target, no size: a list and its reads. The demand band on each "
                   "card is the demand engine's own."],

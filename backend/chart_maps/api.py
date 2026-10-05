@@ -27,7 +27,7 @@ async def chart_maps(
                                         "deep_demand | gabbar | zero_dte | "
                                         "earnings | winners | keltner | amd | "
                                         "ipo | key_levels | dual_momentum | "
-                                        "ath | resiliency | fallen"),
+                                        "ath | resiliency | fallen | drop10"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("full",

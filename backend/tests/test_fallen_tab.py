@@ -875,7 +875,8 @@ def test_23g_source_pins_on_the_board():
 # --------------------------------------------------------------------------
 def test_24_rules_panel_section_is_last_and_built_from_the_constants(monkeypatch):
     from supply_demand import rules_info as RI
-    assert RI.SECTION_KEYS[-2:] == ("fallen", "short_interest")   # 2026-10-03: 🩳 appended after
+    # 2026-10-03: 🩳 appended after; 2026-10-05: 🔻 drop10 right after fallen
+    assert RI.SECTION_KEYS[-3:] == ("fallen", "drop10", "short_interest")
     secs = RI.sections()
     assert tuple(secs) == RI.SECTION_KEYS
     sec = secs["fallen"]
@@ -890,7 +891,8 @@ def test_24_rules_panel_section_is_last_and_built_from_the_constants(monkeypatch
 
 
 def test_25_fallen_is_the_last_tab_and_not_a_demand_tab():
-    assert "fallen" in BOARD.TABS and BOARD.TABS[-1] == "fallen"
+    # 2026-10-05: 🔻 drop10 appended right after fallen
+    assert "fallen" in BOARD.TABS and BOARD.TABS[-2:] == ("fallen", "drop10")
     from supply_demand import enterable as EN
     assert "fallen" not in EN.KIND_BY_TAB                          # 🎯 n/a (HIS CALL #18)
 

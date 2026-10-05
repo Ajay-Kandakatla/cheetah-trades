@@ -1577,7 +1577,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2159,7 +2159,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4695,7 +4695,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5635,6 +5635,93 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🔻 Down 10%+ today tab (2026-10-05): mounted after 📉, label = THRESHOLD_PCT, UNMEASURED served, live re-read on the served cadence, the FE composes and counts nothing, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-10-03: "I would like to know about stocks that falled intraday
+    // more than 10% new tab please."
+    // Any of these links lost silently drops the tab, its UNMEASURED word, the
+    // one-place threshold (the label and the ✨ number are read off the backend
+    // constant, never typed twice), the live re-read, or the rule that the FE
+    // prints served sentences and counts nothing.
+    checks: (src) => {
+      const errs = [];
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('drop10')) {
+        errs.push("CM_TABS must carry 'drop10'");
+      } else {
+        if (tabs.indexOf('drop10') !== tabs.indexOf('fallen') + 1) errs.push("CM_TABS: 'drop10' must sit right after 'fallen'");
+        if (tabs.filter((t) => t === 'drop10').length !== 1) errs.push("CM_TABS lists 'drop10' more than once");
+      }
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)));
+      let dt = '';
+      try { dt = read('../backend/chart_maps/drop10_tab.py'); } catch { errs.push('backend/chart_maps/drop10_tab.py is missing'); }
+      const thrM = /^THRESHOLD_PCT = ([0-9.]+)/m.exec(dt);
+      const T = thrM ? String(Number(thrM[1])) : null;
+      if (dt && !T) errs.push('drop10_tab.py lost THRESHOLD_PCT = <number>');
+      const HIS = ['I would like to know about stocks that falled intraday more than 10% new tab please.'];
+      const meta = /\n  drop10: \{\n    label: '([^']*)',\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.drop10 (label + blurb) is missing');
+      } else {
+        if (T && unesc(meta[1]) !== `\u{1F53B} Down ${T}%+ today`) errs.push(`TAB_META.drop10.label "${unesc(meta[1])}" must be "🔻 Down ${T}%+ today" (drop10_tab.THRESHOLD_PCT)`);
+        const blurb = meta[2].replace(/\\'/g, "'");
+        if (!blurb.includes('UNMEASURED')) errs.push('the TAB_META.drop10 blurb must say UNMEASURED');
+        for (const h of HIS) if (!blurb.includes(h)) errs.push(`the TAB_META.drop10 blurb must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (/bounce|fake/i.test(blurb)) errs.push('the TAB_META.drop10 blurb says "bounce"/"fake"');
+      }
+      if (dt && !new RegExp(`^TAB_LABEL = f"\\{MARK\\} Down \\{THRESHOLD_PCT:g\\}%\\+ today"`, 'm').test(dt)) errs.push('drop10_tab.TAB_LABEL must stay f"{MARK} Down {THRESHOLD_PCT:g}%+ today" (== TAB_META.drop10.label)');
+      if (/\n  drop10: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry drop10 (🎯 n/a, the 📉 precedent)');
+      for (const [k, v, py] of [['DROP10_SORT_NOW', 'drop10_now', 'SORT_NOW'], ['DROP10_SORT_RECLAIM', 'drop10_reclaim', 'SORT_RECLAIM'], ['DROP10_SORT_RVOL', 'drop10_rvol', 'SORT_RVOL']]) {
+        if (!src.includes(`export const ${k} = '${v}';`)) errs.push(`chartMaps.ts must export ${k} = '${v}'`);
+        if (dt && !new RegExp(`^${py} = "${v}"`, 'm').test(dt)) errs.push(`drop10_tab.${py} must be "${v}" (the FE constant)`);
+      }
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'drop10' && <Drop10BoardNote board=\{data\?\.drop10_board \?\? null\} sorts=\{data\?\.sorts\} sort=\{data\?\.sort\} onSort=\{setSortParam\} \/>/.test(page)) {
+        errs.push("ChartMaps.tsx must render <Drop10BoardNote board={data?.drop10_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} /> on tab === 'drop10'");
+      }
+      if (!/data\?\.warming && tab === 'drop10' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the drop10 tab — its warming line is served');
+      if (!/tab !== 'drop10' && tab !== 'fallen'/.test(page)) errs.push('the demand-scan progress poll must skip the drop10 tab');
+      if (!/\|\| tab === 'drop10' \|\| tab === 'fallen' \|\| tab === 'quick_bounce'\) && \(\s*<div className="cm-rules"/.test(page)) errs.push('the ℹ️ Rules mount must include the drop10 tab (section "drop10")');
+      if (!/<Drop10CardExtras tile=\{t\} \/>/.test(page)) errs.push('the grid must wrap each drop10 card with <Drop10CardExtras tile={t} />');
+      if (!/const drop10Every = tab === 'drop10' \? drop10RefreshMs\(data\?\.drop10_board\) : null;/.test(page)) errs.push('ChartMaps.tsx must re-read the live drop10 board on the SERVED cadence (drop10RefreshMs)');
+
+      const note = read('src/components/Drop10BoardNote.tsx');
+      const extras = read('src/components/Drop10CardExtras.tsx');
+      const lib = read('src/lib/drop10.ts');
+      for (const [f, t] of [['Drop10BoardNote.tsx', note], ['Drop10CardExtras.tsx', extras], ['lib/drop10.ts', lib]]) {
+        if (/bounce|fake|caused|because/i.test(t)) errs.push(`${f} says bounce / fake / caused / because`);
+        const code = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+        if (/toFixed|UNMEASURED|\b10%/.test(code)) errs.push(`${f} composes wording or types the threshold — every sentence and number is printed as served`);
+        if (f !== 'lib/drop10.ts' && /Math\./.test(code)) errs.push(`${f} does maths — every number is printed as served`);
+      }
+
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-drop10-2026-10-05'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-drop10-2026-10-05'");
+      } else {
+        const entry = nf.slice(idAt, nf.indexOf("' },", idAt) + 4);
+        if (!entry.includes("route: '/chart-maps?tab=drop10'")) errs.push("the 🔻 ✨ entry must route to '/chart-maps?tab=drop10'");
+        if (!entry.includes('UNMEASURED')) errs.push('the 🔻 ✨ entry must say UNMEASURED');
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🔻 ✨ entry must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (/bounce|fake/i.test(entry)) errs.push('the 🔻 ✨ entry says "bounce"/"fake"');
+        if (T && !entry.includes(`${T}% or more under the prior close`)) errs.push(`the 🔻 ✨ entry's threshold must equal drop10_tab.THRESHOLD_PCT (${T})`);
+      }
+
+      const board = read('../backend/chart_maps/board.py');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"drop10"/.test(tabsPy[1])) errs.push('board.py TABS must carry "drop10"');
+      if (!/elif t == "drop10":/.test(board)) errs.push('board.py lost the elif t == "drop10": dispatch');
+      if (!/\(t == "drop10" and sort in _D10\.TAB_SORTS\)/.test(board)) errs.push('board.py must honour the tab-scoped drop10 sorts on this tab only');
+      if (dt) {
+        if (!dt.includes('UNMEASURED')) errs.push('drop10_tab.py must say UNMEASURED');
+        if (/bounc|fake/i.test(dt.replace(/quick_bounce/g, ''))) errs.push('drop10_tab.py says "bounce"/"fake"');
+      }
+      return errs;
+    },
+  },
+  {
     name: '🔥 Hottest: every column reachable, multi-sort, ⓘ Quality (2026-09-28)',
     file: 'src/components/HottestSectors.tsx',
     // Ajay 2026-09-28: "Can you fix the horizontal columns hiding and also can
@@ -6252,7 +6339,7 @@ const CONTRACTS = [
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {

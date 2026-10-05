@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-03: "I would like to know about stocks that falled intraday
+  // more than 10% new tab please." The 10 is drop10_tab.THRESHOLD_PCT
+  // (contract-pinned) — if he changes it, change this label.
+  { id: 'chart-maps-drop10-2026-10-05', addedAt: '2026-10-05', route: '/chart-maps?tab=drop10',
+    label: '🔻 Down 10%+ today tab on Chart Maps. You said: “I would like to know about stocks that falled intraday more than 10% new tab please.” Every stock in the universe whose session low fell 10% or more under the prior close — the ones still that far down and the ones that reclaimed above it, both listed and labelled. LIVE in market hours (re-read about every minute), today’s regular session after 16:00 ET, the last closed session overnight and on weekends. Each card: the low and the print now, the gap vs the move after the open, volume vs its 50-day normal (projected to a full session during the day), what its sector ETF, theme and RSP did — so a sector-wide day reads differently from a name-only drop — the demand band, the 🩳 short interest, and 💥 what is on file from the session before through today, labelled possible. Splits, bad prints and ETFs are left out, counted and named. Orders: deepest at the low, deepest now, most reclaimed, volume vs normal. UNMEASURED — nothing here gates, pushes or trades. YOUR CALLS: the 10%, whether pre-market / after-hours prints should count, a last-5-sessions view, and the time of the low (needs a 1-minute read per name).' },
   // Ajay 2026-10-03: "I would like to see a new field for sotcks about short
   // interest …" Label from the short-interest spec §3.8. Every number on the
   // chip is served by short_interest/read.py; the EOSE line is re-filled from

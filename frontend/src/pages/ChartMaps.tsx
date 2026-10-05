@@ -81,6 +81,9 @@ import AthBoardNote from '../components/AthBoardNote';
 import ResiliencyBoardNote from '../components/ResiliencyBoardNote';
 import FallenBoardNote from '../components/FallenBoardNote';
 import FallenCardExtras from '../components/FallenCardExtras';
+import Drop10BoardNote from '../components/Drop10BoardNote';
+import Drop10CardExtras from '../components/Drop10CardExtras';
+import { drop10RefreshMs } from '../lib/drop10';
 import { depthToSend } from '../lib/fallen';
 import { RES_FILTER_PARAM, RES_MODE_PARAM, parseResFilters, parseResMode, resFiltersParam, type ResFilterKey } from '../lib/resiliencyFilters';
 import UndervalueViewNote from '../components/UndervalueViewNote';
@@ -726,6 +729,18 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     return () => window.clearInterval(t);
   }, [load]);
 
+  /* 🔻 Down 10%+ today is LIVE in market hours: re-read it on the SERVED
+   * cadence (drop10_board.refresh_sec, the server's own cache freshness) while
+   * the tab is visible. Off after the close and overnight (null). */
+  const drop10Every = tab === 'drop10' ? drop10RefreshMs(data?.drop10_board) : null;
+  useEffect(() => {
+    if (!drop10Every) return;
+    const t = window.setInterval(() => {
+      if (!document.hidden) void load();
+    }, drop10Every);
+    return () => window.clearInterval(t);
+  }, [drop10Every, load]);
+
   /* The demand scan's live counter, polled faster than the board itself. The
    * board key is the universe the SERVER resolved (`universe_key`) — asking
    * for progress under a key the server didn't scan returns a permanent
@@ -734,7 +749,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
-      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'fallen' && tab !== 'resiliency');
+      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'drop10' && tab !== 'fallen' && tab !== 'resiliency');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -1076,6 +1091,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * also carries the warming line, so the generic demand counter is
         * skipped. */}
       {tab === 'fallen' && <FallenBoardNote board={data?.fallen_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onDepth={setFallenDepth} />}
+      {/* 🔻 Down 10%+ today (2026-10-05): the served header, order line, count
+        * line, UNMEASURED note, 💥 sources and held-out names, and the served
+        * sort buttons (pressed = the served `sort`). It also carries the
+        * warming line, so the generic demand counter is skipped. */}
+      {tab === 'drop10' && <Drop10BoardNote board={data?.drop10_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
       {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
         * toggle — labels served, pressed = the served view, a click through
         * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
@@ -1084,7 +1104,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
         * a rule section; the zones tab is the "in demand" board. */}
-      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'breaking' || tab === 'fallen' || tab === 'quick_bounce') && (
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'breaking' || tab === 'drop10' || tab === 'fallen' || tab === 'quick_bounce') && (
         <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
           <RulesInfo section={tab === 'zones' ? 'in_demand' : tab === 'breaking' ? 'alerts' : tab} />
         </div>
@@ -1757,6 +1777,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       : data?.warming && tab === 'resiliency' ? null
       /* 📉 Down 40%+ warms its own memo — FallenBoardNote prints its warming line. */
       : data?.warming && tab === 'fallen' ? null
+      /* 🔻 Down 10%+ today warms its own memo — Drop10BoardNote prints its warming line. */
+      : data?.warming && tab === 'drop10' ? null
       /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
        * scan) — its served warming line is printed by DualMomentumBoardNote. */
       : data?.warming && tab !== 'key_levels' ? (
@@ -1938,6 +1960,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                           burst={burstOn ? (t.burst ?? null) : null}
                           expandAll={moreAll} />
             <FallenCardExtras tile={t} legend={data?.fallen_board?.pick_legend ?? null} />
+          </div>
+        ) : tab === 'drop10' ? (
+          /* 🔻 Down 10%+ today: the card plus its served 💥 lines as a SIBLING
+           * — PatternChart is one <Link>, and an item's source is a link. */
+          <div key={`${t.symbol}-${t.href}`} className="cm-fallen-card" data-testid={`cm-drop10-card-${t.symbol}`}>
+            <PatternChart tile={t} study={data?.explosive_study}
+                          bandStudy={data?.band_structure_study}
+                          burst={burstOn ? (t.burst ?? null) : null}
+                          expandAll={moreAll} />
+            <Drop10CardExtras tile={t} />
           </div>
         ) : (
           <PatternChart key={`${t.symbol}-${t.href}`} tile={t} study={data?.explosive_study}
