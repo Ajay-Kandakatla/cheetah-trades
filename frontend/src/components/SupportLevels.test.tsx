@@ -868,6 +868,21 @@ describe('SupportLevels — the \u{1FA9C} read and its pending banner', () => {
     expect(screen.getByTestId('chart-band-read').textContent).toBe(READ.stat);
   });
 
+  /* FOLDED (Ajay 2026-10-05: "can you collapse this info"). The verdict line
+   * stays on the page; the long body sits behind "why". */
+  it('the banner is FOLDED by default — headline shown, body behind "why"', async () => {
+    try { localStorage.removeItem('cm.study.open.sl-band-structure'); } catch { /* ignore */ }
+    mockFetch(payload({ band_structure_study: VERDICT, band_structure_kind: 'demand' }));
+    render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
+    const banner = await screen.findByTestId('sl-band-structure-study');
+    expect(banner.tagName).toBe('DETAILS');
+    expect((banner as HTMLDetailsElement).open).toBe(false);
+    const summary = banner.querySelector('summary') as HTMLElement;
+    expect(summary.textContent).toContain(VERDICT.headline);
+    expect(summary.textContent).toContain('why');
+    expect(summary.textContent).not.toContain('not a prediction');
+  });
+
   it('NEGATIVE: no verdict served — the chip still renders and NO banner is invented', async () => {
     mockFetch(payload());          // tile has the read; the payload has no study
     render(<SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);

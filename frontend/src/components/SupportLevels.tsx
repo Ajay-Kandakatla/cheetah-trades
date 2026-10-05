@@ -42,6 +42,7 @@ import { PromoOriginChip } from './PromoOriginChip';
 import { ShortInterestChip } from './ShortInterestChip';
 import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
+import { StudyNote } from './StudyNote';
 import { useBounceRoom } from '../hooks/useBounceRoom';
 import type { OuterChip } from '../lib/cardLadder';
 import { outerChipsFor } from '../lib/outerChips';
@@ -494,16 +495,19 @@ export function SupportLevels({ symbol, window: win, tf, onSymbol, onWindow,
             * renders when the server sent no verdict — a banner this file
             * invented would be worse than the missing one. There is no scope
             * note and no sort_unavailable note on this tab: it draws ONE
-            * symbol, so nothing was cut and nothing was ordered. */}
+            * symbol, so nothing was cut and nothing was ordered.
+            *
+            * FOLDED (Ajay 2026-10-05: "can you collapse this info"): the
+            * headline — the verdict — always shows; the body opens on "why".
+            * The same `StudyNote` fold the Chart Maps banners use, closed by
+            * default, his choice remembered per browser. */}
           {data.band_structure_study?.headline ? (
-            <div className="cm-note cm-band-study" data-testid="sl-band-structure-study">
-              <strong>{data.band_structure_study.headline}</strong>
-              {data.band_structure_study.body ? <p>{data.band_structure_study.body}</p> : null}
-              {data.band_structure_study.fallback_note
-                ? <p>{data.band_structure_study.fallback_note}</p> : null}
-              {data.band_structure_study.limits
-                ? <p className="cm-dim">{data.band_structure_study.limits}</p> : null}
-            </div>
+            <StudyNote id="sl-band-structure" className="cm-band-study"
+                       testId="sl-band-structure-study"
+                       headline={data.band_structure_study.headline}
+                       body={data.band_structure_study.body}
+                       fallbackNote={data.band_structure_study.fallback_note}
+                       limits={data.band_structure_study.limits} />
           ) : null}
           {/* 🪜 NO READ, said out loud (critique J2, 2026-09-16). The chip
             * rides on the tile and renders NOTHING when this name has no
