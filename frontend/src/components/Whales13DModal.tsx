@@ -53,10 +53,12 @@ function fmtForm(f: string): { emoji: string; tone: 'new' | 'amend' | 'insider' 
   if (f === '144') {
     return { emoji: '📤', tone: 'notice', label: 'Form 144 (pre-sale notice)' };
   }
-  if (f.startsWith('SC 13D')) {
+  // EDGAR renamed the 5% forms in Dec 2024: "SC 13D/G" → "SCHEDULE 13D/G"
+  // (+ "/A"). Both generations appear in a lookback window (2026-10-06).
+  if (/^(SC|SCHEDULE) 13D/.test(f)) {
     return { emoji: '📜', tone: isAmend ? 'amend' : 'new', label: f };
   }
-  if (f.startsWith('SC 13G')) {
+  if (/^(SC|SCHEDULE) 13G/.test(f)) {
     return { emoji: '📑', tone: isAmend ? 'amend' : 'new', label: f };
   }
   return { emoji: '📄', tone: 'new', label: f };

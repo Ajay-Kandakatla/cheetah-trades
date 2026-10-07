@@ -389,13 +389,19 @@ export type WhalePayload = {
     insider_pct?: string;
     institutional_pct?: string;
     institutional_float_pct?: string;
-    n_institutions?: string;
+    // Older yfinance gave a string ("1881"); the 2026-10-06 parser for the
+    // current index-keyed frame emits an int. Absent when unreadable.
+    n_institutions?: string | number | null;
   };
   moves: {
     net_signal: 'accumulating' | 'distributing' | 'balanced';
     n_buying: number;
     n_selling: number;
     n_unchanged: number;
+    // null = unknown: a top-N holder list cannot prove a new position or a
+    // full exit (2026-10-06). Never render a null as 0.
+    n_new?: number | null;
+    n_sold_out?: number | null;
     notable_buys: WhaleNotable[];
     notable_sells: WhaleNotable[];
   };

@@ -193,7 +193,7 @@ export function NodeThesisPanel({ ticker, onClose }: Props) {
                   <div className="ntp-major mono">
                     {whales.major.institutional_pct && <span>Inst held: <strong>{whales.major.institutional_pct}</strong></span>}
                     {whales.major.insider_pct && <span> · Insider: <strong>{whales.major.insider_pct}</strong></span>}
-                    {whales.major.n_institutions && <span> · {whales.major.n_institutions} funds</span>}
+                    {Number(whales.major.n_institutions) > 0 && <span> · {whales.major.n_institutions} funds</span>}
                   </div>
                 )}
 

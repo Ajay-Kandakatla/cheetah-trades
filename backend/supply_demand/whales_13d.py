@@ -11,6 +11,7 @@ contact email) per SEC policy.
 
 Scope of v1:
   - Per-ticker list of recent SC 13D / SC 13D/A / SC 13G / SC 13G/A filings
+    (and their post-Dec-2024 EDGAR names SCHEDULE 13D / 13G, +/A)
   - Returns filer name, filing date, form type, accession number, and
     a deep link to the primary document on SEC.gov.
   - Does NOT parse % owned from cover page — that's deferred to v2.
@@ -46,12 +47,23 @@ _USER_AGENT = os.getenv(
 # almost never triggers 13D — ARM had 25 Form 4s + 9 Form 144s but
 # zero 13D/G in 6 months. Form 4/144 is the actual real-time-ish
 # institutional signal for established names.
+#
+# Fixed 2026-10-06: EDGAR renamed the 5% forms in Dec 2024 — new filings
+# arrive as "SCHEDULE 13D" / "SCHEDULE 13G" (+ "/A"). Matching only the
+# old "SC 13…" names silently dropped every filing since (0 of 3,458
+# cached docs carried one; VST had 6 since 2025, all missed). Both
+# naming generations are accepted; the old names still appear on
+# pre-2025 filings inside the window.
+_FORMS_13_DG = (
+    "SC 13D", "SC 13D/A",
+    "SC 13G", "SC 13G/A",
+    "SCHEDULE 13D", "SCHEDULE 13D/A",
+    "SCHEDULE 13G", "SCHEDULE 13G/A",
+)
 _FORMS_TRACKED = (
     "4", "4/A",
     "144",
-    "SC 13D", "SC 13D/A",
-    "SC 13G", "SC 13G/A",
-)
+) + _FORMS_13_DG
 
 # Buckets used for per-form-type counts in the payload.
 def _form_bucket(form: str) -> str | None:
@@ -59,7 +71,7 @@ def _form_bucket(form: str) -> str | None:
         return "form4"
     if form == "144":
         return "form144"
-    if form.startswith("SC 13"):
+    if form in _FORMS_13_DG:
         return "form13"
     return None
 

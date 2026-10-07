@@ -60,13 +60,17 @@ type WhalesPayload = {
   major?: {
     institutional_pct?: string | number | null;
     insider_pct?:       string | number | null;
-    n_institutions?:    number | null;
+    n_institutions?:    string | number | null;
   };
   moves?: {
     net_signal:   'accumulating' | 'distributing' | 'balanced';
     n_buying:     number;
     n_selling:    number;
     n_unchanged?: number;
+    // null = unknown (a top-10 list cannot prove an opening or an exit).
+    // Not rendered; a null must never print as 0 (2026-10-06).
+    n_new?:       number | null;
+    n_sold_out?:  number | null;
     notable_buys:  Mover[];
     notable_sells: Mover[];
   };
@@ -394,8 +398,8 @@ export function WhalesFlowModal({
               <p style={{ fontSize: '0.78rem', color: 'var(--cm-slate)', margin: '0.3rem 0 0' }}>
                 {moves.n_buying} buying · {moves.n_selling} selling
                 {moves.n_unchanged ? ` · ${moves.n_unchanged} unchanged` : ''}
-                {data?.major?.n_institutions
-                  ? `  (out of ${data.major.n_institutions} reporting funds)` : ''}
+                {Number(data?.major?.n_institutions) > 0
+                  ? `  (out of ${data?.major?.n_institutions} reporting funds)` : ''}
               </p>
             )}
             {/* $ totals line — shows the actual capital deployed last

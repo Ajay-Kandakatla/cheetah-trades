@@ -177,20 +177,7 @@ def _fetch_yfinance_holders(ticker: str) -> dict:
         # Major holders: % insider, % institution, etc.
         major = {}
         try:
-            mh = t.major_holders
-            if mh is not None and not mh.empty:
-                # pandas: usually 2 cols (value, label)
-                for _, row in mh.iterrows():
-                    label = str(row.iloc[1]).strip().lower() if len(row) > 1 else ""
-                    val = str(row.iloc[0]).strip() if len(row) > 0 else ""
-                    if "insider" in label and "%" not in major.get("insider_pct", ""):
-                        major["insider_pct"] = val
-                    elif "institution" in label and "float" not in label:
-                        major["institutional_pct"] = val
-                    elif "float" in label:
-                        major["institutional_float_pct"] = val
-                    elif "number" in label:
-                        major["n_institutions"] = val
+            major = _parse_major_holders(t.major_holders)
         except Exception:
             pass
 
@@ -198,6 +185,78 @@ def _fetch_yfinance_holders(ticker: str) -> dict:
     except Exception as exc:
         log.warning("yfinance whales fetch failed for %s: %s", ticker, exc)
         return {"institutional": [], "mutual_fund": [], "major": {}}
+
+
+# Current yfinance (1.2.0 in the api image, measured 2026-10-06) returns
+# major_holders as an N x 1 frame ("Value") INDEXED by these keys, values as
+# fractions (0.92015) and the count as a float (1881.0). Older yfinance
+# returned rows of (value_text, label_text), e.g. ("92.02%", "% of Shares
+# Held by Institutions"). The old row-wise parser read row.iloc[1] — absent
+# on the 1-column frame — so `major` came back {} for all 4,033 cached docs.
+_MAJOR_INDEX_KEYS = {
+    "insiderspercentheld":          "insider_pct",
+    "institutionspercentheld":      "institutional_pct",
+    "institutionsfloatpercentheld": "institutional_float_pct",
+    "institutionscount":            "n_institutions",
+}
+
+
+def _finite(x) -> float | None:
+    import math
+    try:
+        v = float(x)
+    except Exception:
+        return None
+    return v if math.isfinite(v) else None
+
+
+def _parse_major_holders(mh) -> dict:
+    """Normalize yfinance `major_holders` (either generation) into
+    {insider_pct, institutional_pct, institutional_float_pct, n_institutions}.
+
+    Percent fields are display strings ("92.02%") in both generations so the
+    cached payload keeps the shape the FE already renders; n_institutions is
+    an int. A key that cannot be read is left OUT — never a 0 placeholder.
+    """
+    major: dict = {}
+    if mh is None or getattr(mh, "empty", True):
+        return major
+
+    # New shape: index-keyed, one value column.
+    idx = [str(i).strip().lower() for i in getattr(mh, "index", [])]
+    if any(k in _MAJOR_INDEX_KEYS for k in idx):
+        for raw_key, (_, row) in zip(idx, mh.iterrows()):
+            out_key = _MAJOR_INDEX_KEYS.get(raw_key)
+            v = _finite(row.iloc[0]) if len(row) else None
+            if out_key is None or v is None:
+                continue
+            if out_key == "n_institutions":
+                if v > 0:
+                    major[out_key] = int(round(v))
+            else:
+                major[out_key] = f"{v * 100:.2f}%"
+        return major
+
+    # Old shape: rows of (value, label). "Number of Institutions Holding
+    # Shares" also contains "institution", so the count is matched first.
+    for _, row in mh.iterrows():
+        if len(row) < 2:
+            continue
+        label = str(row.iloc[1]).strip().lower()
+        val = str(row.iloc[0]).strip()
+        if not val or val.lower() == "nan":
+            continue
+        if "number" in label:
+            v = _finite(val.replace(",", ""))
+            if v is not None and v > 0:
+                major["n_institutions"] = int(round(v))
+        elif "insider" in label:
+            major["insider_pct"] = val
+        elif "float" in label:
+            major["institutional_float_pct"] = val
+        elif "institution" in label:
+            major["institutional_pct"] = val
+    return major
 
 
 def _row_to_holder(row, ticker: str, kind: str) -> dict:
@@ -303,8 +362,12 @@ def _summarize_moves(holders: list[dict]) -> dict:
     n_buying = 0
     n_selling = 0
     n_unchanged = 0
-    n_new = 0
-    n_sold_out = 0
+    # A new position or a full exit needs the PRIOR quarter's holder list;
+    # yfinance hands us only the current top-N, so neither can be proven
+    # here. None (not 0) until a real quarter-over-quarter comparison feeds
+    # them — a 0 read as "no fund opened or exited" (fixed 2026-10-06).
+    n_new = None
+    n_sold_out = None
     total_buy_pct = 0.0
     total_sell_pct = 0.0
     notable_buys = []
