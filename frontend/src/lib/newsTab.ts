@@ -49,6 +49,22 @@ export type NtMacroEvent = {
   label: string;
   days_until?: number | null;
   when_label?: string | null;
+  /* 2026-10-07 — the Fed's own calendar: ET time, detail, read-time released flag. */
+  time_et?: string | null;
+  time_label?: string | null;
+  detail?: string | null;
+  past?: boolean | null;
+  past_label?: string | null;
+  source?: string | null;
+};
+
+/** The Fed-calendar freshness line (fed_schedule.status_view). */
+export type NtFedStatus = {
+  note?: string | null;
+  as_of_iso?: string | null;
+  age_sec?: number | null;
+  stale?: boolean | null;
+  floor?: boolean | null;
 };
 
 export type NtMacro = {
@@ -57,6 +73,8 @@ export type NtMacro = {
   days?: number | null;
   tier_labels?: Record<string, string> | null;
   next_tier1?: Partial<NtMacroEvent> | null;
+  next_fomc?: (Partial<NtMacroEvent> & { sep?: boolean | null }) | null;
+  fed?: NtFedStatus | null;
   events?: NtMacroEvent[] | null;
   disclaimer?: string | null;
 };
@@ -283,6 +301,16 @@ export function macroWhen(ev: Partial<NtMacroEvent> | null | undefined): string 
   const date = ev.date || '';
   const when = ev.when_label || '';
   return [date, when].filter(Boolean).join(' · ');
+}
+
+/** "released 2:00 pm ET" once out, else "2:00 pm ET"; '' when the server
+ *  served no time. The browser computes nothing from the clock. */
+export function macroTimeBit(ev: unknown): string {
+  if (!ev || typeof ev !== 'object') return '';
+  const e = ev as { past_label?: unknown; time_label?: unknown };
+  if (typeof e.past_label === 'string' && e.past_label.trim()) return e.past_label.trim();
+  if (typeof e.time_label === 'string' && e.time_label.trim()) return e.time_label.trim();
+  return '';
 }
 
 /** "3h ago" off an epoch (seconds or ms). Empty for a missing or broken stamp. */

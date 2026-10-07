@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-07: "First today there was an FOMC event why is it not in our new tab in
+  // chart maps. I want us to pull dynamic dates". Tiers are macro_calendar.FED_KIND_TIERS
+  // (HIS CALL) — change them there and here.
+  { id: 'chart-maps-news-fed-calendar-2026-10-07', addedAt: '2026-10-07', route: '/chart-maps?tab=news',
+    label: '📅 Fed dates on the 📰 News macro block now come from the Federal Reserve itself. You said: “First today there was an FOMC event why is it not in our new tab in chart maps. I want us to pull dynamic dates.” Today\'s event was the FOMC MINUTES of the Sep 15-16 meeting (2:00 pm ET) — the app only knew rate-decision days, from a list typed in by hand, so it could never show minutes. Now the app reads federalreserve.gov\'s own calendar and FOMC page: FOMC decisions (dot-plot meetings and the 2:30 pm press conference noted), FOMC minutes (T2), the Fed Chair\'s speeches and testimony (T2) and the Beige Book (T3, gauge page only), each with its ET time, marked “released” once it is out and kept on the list all day. When the next FOMC decision is past the 14-day window it is pinned on its own line. The last good copy is kept, so a Fed outage never blanks the list — it says how old it is, and if the Fed has never answered it falls back to the built-in decision days and says so. FRED\'s dates for CPI, jobs, PPI, retail sales and claims were checked against BLS, BEA and Census and all matched. Nothing here gates, pushes or trades. YOUR CALLS: the tiers, Chair-only vs every governor, the 14-day window.' },
   // 2026-10-06, after the 2026-10-05 Docker crash: Ajay approved locking the api
   // port to this Mac, fixing the connection leak, and a watchdog that pushes him.
   // The numbers are ops/docker_watchdog.py's constants (FORWARDER_ALERT_AT,

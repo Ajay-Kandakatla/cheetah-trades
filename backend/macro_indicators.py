@@ -124,6 +124,12 @@ def _next_releases() -> dict:
             k, d = e.get("kind"), e.get("date")
             if k and d and (k not in out or d < out[k]):
                 out[k] = d
+        # FRED never carries an FOMC date (padding, dropped) — the Fed Funds
+        # "next release" is the next decision from the Fed's own schedule (LKG
+        # read, no fetch).
+        nf = macro_calendar.next_fomc()
+        if nf and nf.get("date"):
+            out.setdefault("fomc", nf["date"])
     except Exception as exc:
         log.debug("macro_indicators: next-release lookup failed: %s", exc)
     return out

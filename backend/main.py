@@ -1357,7 +1357,7 @@ async def macro_calendar_get(days: int = Query(14, ge=7, le=30),
                              force: bool = Query(False, description="Bypass the 6h cache"),
                              email: str = Depends(current_user_email)):
     """Tiered macro calendar for the regime check — upcoming data releases (real
-    FRED-scheduled dates) bucketed T1 market-movers / T2 trend-shapers / T3
+    FRED release dates + the Federal Reserve's own calendar) bucketed T1 market-movers / T2 trend-shapers / T3
     context, plus earnings ahead for tracked names. Educational, NOT a forecast."""
     import macro_calendar
     return JSONResponse(_scrub_nan(await asyncio.to_thread(macro_calendar.get_macro_calendar, force, days)))

@@ -985,8 +985,10 @@ def _session_events(calendar: Optional[dict], past: list, session: date) -> dict
     s_iso = session.isoformat()
     rows = []
     for e in ((calendar or {}).get("macro") or []) + list(past or []):
+        # Only the kinds the measured history uses (FRED kinds + FOMC decisions):
+        # Fed-calendar rows (minutes, Beige, Chair) never make a T1/T2 day here.
         if isinstance(e, dict) and str(e.get("date") or "")[:10] == s_iso \
-                and e.get("tier") in (1, 2):
+                and e.get("tier") in (1, 2) and e.get("kind") in macro_calendar.HISTORY_KINDS:
             rows.append(e)
     t1, t2, seen = [], [], set()
     for e in rows:
@@ -1004,7 +1006,8 @@ def _next_t1(calendar: Optional[dict], session: date) -> Optional[dict]:
     s_iso = session.isoformat()
     best = None
     for e in (calendar or {}).get("macro") or []:
-        if not isinstance(e, dict) or e.get("tier") != 1:
+        if not isinstance(e, dict) or e.get("tier") != 1 \
+                or e.get("kind") not in macro_calendar.HISTORY_KINDS:
             continue
         d = str(e.get("date") or "")[:10]
         if d > s_iso and (best is None or d < best["date"]):

@@ -12,8 +12,11 @@
  *   ① Market read — the Market Gauge's daily AND weekly state, the served
  *     word beside the gauge's own label and score, the served watch lines
  *     printed verbatim (never rewritten here).
- *   ② Macro — the T1 market movers + T2 trend shapers of the FRED calendar,
- *     over the calendar's one default window, the next market mover marked.
+ *   ② Macro — the T1 market movers + T2 trend shapers of the calendar (FRED
+ *     releases + the Fed's own calendar: FOMC decisions, minutes, Chair
+ *     remarks, each with its served ET time and "released" mark), over the
+ *     calendar's one default window, the next market mover marked, the next
+ *     FOMC decision pinned when it is further out (2026-10-07).
  *   ③ Sectors vs RSP — the 🔥 Hottest sector rows in SERVED order, the heat
  *     word from rotation.heat, the 📰 day tag (bull AND bear case), the
  *     StockTitan heatmap link. The day column says "today" ONLY when the
@@ -37,7 +40,7 @@ import { API } from '../lib/apiBase';
 import { pp, stockTitanHeatmapUrl } from '../lib/rotation';
 import { dayTagChipLabel, dayTagTitle } from './HottestSectors';
 import {
-  MODEL_WRITING, SECTOR_VIEWS, ageLabel, agreeLine, benchmarkSymbol, filterRows, heatGlyph, macroWhen,
+  MODEL_WRITING, SECTOR_VIEWS, ageLabel, agreeLine, benchmarkSymbol, filterRows, heatGlyph, macroTimeBit, macroWhen,
   nameList, publishedAgo, verdictLine, viewLabel, wordTone,
   type NewsTabPayload, type NtMacro, type NtModelReadBlock, type NtSectors, type NtVerdict, type NtHeadlines,
   type NtWord, type SectorView,
@@ -145,6 +148,10 @@ function MacroBlock({ m }: { m?: NtMacro | null }) {
   if (!m || !m.ok) return <Reason text={m?.reason || 'macro calendar unavailable'} testId="nt-macro-reason" />;
   const events = m.events || [];
   const next = m.next_tier1;
+  const nf = m.next_fomc;
+  const nfBits = nf ? [nf.when_label, macroTimeBit(nf), nf.detail].filter(Boolean).join(' · ') : '';
+  const fed = m.fed;
+  const fedAge = ageLabel(fed?.age_sec);
   const isNext = (e: { date: string; kind?: string | null; label: string }) =>
     !!next && next.date === e.date && (next.kind ? next.kind === e.kind : next.label === e.label);
   return (
@@ -152,6 +159,13 @@ function MacroBlock({ m }: { m?: NtMacro | null }) {
       {next?.label ? (
         <p className="nt-next" data-testid="nt-next-t1">
           Next market mover: <strong>{next.label}</strong> {macroWhen(next)}
+          {macroTimeBit(next) ? ` · ${macroTimeBit(next)}` : ''}
+        </p>
+      ) : null}
+      {nf?.date ? (
+        <p className="nt-next" data-testid="nt-next-fomc">
+          Next FOMC decision: <strong>{nf.date}</strong>
+          {nfBits ? ` · ${nfBits}` : ''}
         </p>
       ) : null}
       {events.length === 0 ? (
@@ -166,14 +180,19 @@ function MacroBlock({ m }: { m?: NtMacro | null }) {
                   className={isNext(e) ? 'is-next' : undefined}>
                 <td><span className={`nt-tier nt-tier--${e.tier}`}
                           title={e.tier_label || m.tier_labels?.[String(e.tier)] || ''}>T{e.tier}</span></td>
-                <td>{e.label}{isNext(e) ? <span className="nt-next-tag"> · next market mover</span> : null}</td>
+                <td>{e.label}{e.detail ? <span className="nt-muted nt-macro-detail"> · {e.detail}</span> : null}{isNext(e) ? <span className="nt-next-tag"> · next market mover</span> : null}</td>
                 <td className="nt-num">{e.date}</td>
-                <td className="nt-muted">{e.when_label || ''}</td>
+                <td className="nt-muted">{[e.when_label, macroTimeBit(e)].filter(Boolean).join(' · ')}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+      {fed?.note ? (
+        <p className={`nt-muted${fed.stale || fed.floor ? ' nt-stale' : ''}`} data-testid="nt-macro-fed">
+          {fed.note}{fedAge ? ` · checked ${fedAge}` : ''}
+        </p>
+      ) : null}
       {m.disclaimer ? <p className="nt-muted">{m.disclaimer}</p> : null}
     </>
   );

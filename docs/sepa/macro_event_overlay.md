@@ -79,8 +79,10 @@ calendar — both fixed in `macro_calendar.py`:
      federalreserve.gov/monetarypolicy/fomccalendars.htm, the statement lands on
      the **last day** of each two-day meeting). `_fomc_events()` injects the
      real decision days; `_fred_releases()` now **skips** any `kind == "fomc"`
-     row so the schedule is the single source. **⚠ Verify annually** — extend the
-     list when the Fed publishes the next year (~1.5 yrs ahead).
+     row so the schedule is the single source. **Since 2026-10-07 the list is
+     the FLOOR only** (`fed_schedule.FLOOR_DECISION_DATES`) — the Fed's own pages
+     are read dynamically (see "Dynamic Fed calendar" below); verify the list
+     only if the News block's stale/floor note shows.
    - The FOMC window is **ET** (`_today_et`, matching `imminent_events`), not UTC:
      an FOMC at 2pm ET must still read as "today" in the evening even after UTC
      has rolled past midnight.
@@ -91,10 +93,107 @@ calendar — both fixed in `macro_calendar.py`:
    6h-cached, so the longer timeout only costs a cold load.
 
 3. **Cron warm-up.** Added a `crontab` entry warming `get_macro_calendar(days=14)`
-   at 4am/10am/4pm ET (TTL is 6h) so a cold regime-page load never waits on the
-   slow FRED call. `days=14` matches the page's fetch so the cache key lines up.
-   Deploy needs **`cron`** for this to take effect (the timeout/FOMC fixes only
-   need `api`).
+   at 4am/10am/4pm ET (TTL is 6h). **Corrected 2026-10-07:** that warm runs in
+   the separate **cron** container, so it cannot fill the api's in-process
+   `_CACHE` (INFERRED from the topology; the api computes its own doc on its
+   first read after the TTL). Since 2026-10-07 the warm's `compute()` also
+   refreshes the shared Mongo Fed LKG (`macro_fed_calendar`), which the api
+   then reads. Deploy needs **`cron`** for that (no crontab edit).
+
+## Dynamic Fed calendar (2026-10-07)
+
+_Ajay 2026-10-07, with a screenshot of the 📰 News macro block: "First today
+there was an FOMC event why is it not in our new tab in chart maps. I want us to
+pull dynamic dates"._
+
+**Why it was missing (MEASURED):** the 10-07 event was the **FOMC minutes** of
+the Sep 15-16 meeting at 2:00 p.m. ET — not a decision. The calendar knew only
+decision days (a hand-typed constant), and FRED has no minutes release, so no
+code path could emit it. The decision days themselves were correct.
+
+**Sources** (`backend/fed_schedule.py`, stdlib `re` + `html` parsers, never raise):
+
+| source | what it gives | horizon (MEASURED 10-07) |
+|---|---|---|
+| `federalreserve.gov/json/calendar.json` (UTF-8 BOM, descriptions HTML-escaped twice) | FOMC meetings (decision day + 2:00 p.m.), press conferences (2:30 p.m.), **minutes**, **Beige Book**, speeches + testimony with times | current year only |
+| `federalreserve.gov/monetarypolicy/fomccalendars.htm` | decision days per year panel, `*` = SEP (dot plot), "(Released …)" minutes dates; notation votes skipped | 2021 .. next year |
+
+**Merge, per year:** calendar.json if it parsed ≥ `FED_MIN_MEETINGS_PER_YEAR`
+(6; the Fed schedules 8) meetings that year, else fomccalendars.htm, else the
+floor `FLOOR_DECISION_DATES` (re-exported as `macro_calendar.FOMC_DECISION_DATES`).
+Minutes, Beige Book and remarks come from calendar.json only.
+
+**Never invents:** no minutes date estimated from decision + 21 (MEASURED Nov
+2024 was +19), no presser time, SEP flag or time of day filled in by
+assumption, no ISM business-day rule.
+
+**LKG + refresh:** each source's last good parse lives in Mongo
+`macro_fed_calendar` (`{_id, parsed, fetched_at, last_modified,
+last_attempt_at, last_error, schema}`). `macro_calendar.compute()` is the only
+caller of `fed_schedule.current()`, which re-reads a source when its LKG is
+older than `FED_REFRESH_SEC` (6 h, with `If-Modified-Since`). A non-200, a
+timeout or a parse failure keeps the last good copy and records `last_error`
+(class / HTTP code only, never a URL). Every other reader (`past_events`,
+`next_fomc`, macro_indicators) uses `load()` = LKG ∪ floor and never fetches.
+The News block footer says "checked … ago"; past `FED_STALE_SEC` (24 h) it says
+the copy is stale, and with no LKG at all it says it fell back to the built-in
+decision days.
+
+**New rows** (tiers are **HIS CALL**, `macro_calendar.FED_KIND_TIERS`):
+`fomc_minutes` T2 ("FOMC minutes", detail "Meeting of …"), `fed_chair` T2
+("Fed Chair remarks", Chair only — Vice Chairs and Governors excluded),
+`beige_book` T3 (gauge page only). The decision row keeps the label "FOMC
+decision"; dot plot (SEP) and "press conference 2:30 pm ET" go in its `detail`.
+Each row carries `time_et`; `imminent_events` adds the read-time `time_label`,
+`past` and `past_label` ("released 2:00 pm ET", "began …" for the Chair), and
+`when_label` stays today / tomorrow / in N days. The 📰 block also pins the
+next FOMC decision when it is past the 14-day window, and re-derives
+`next_tier1` at read time (first T1 row not yet out).
+
+**Unchanged by design:** 🛡️ Resiliency counts only `HISTORY_KINDS` (FRED kinds
++ decisions) — minutes and Chair days are not T1/T2 days there; history rows
+are decisions only.
+
+**Fixes on the way:** `_fred_releases` and `_earnings_ahead` use the ET date
+(a compute between 20:00 and 23:59 ET dropped that day's FRED rows under UTC);
+the FRED retry log line goes through `_safe_reason` (the exception text carried
+the `api_key` URL); the Fed Funds "next release" on macro_indicators is now the
+next decision (it was always None).
+
+Fixtures: `backend/tests/fixtures/fed_calendar_2026_10_07.json` (trimmed, filter
+documented in `backend/scripts/capture_fed_calendar_fixtures.py`) and
+`fed_fomccalendars_2026_10_07.htm` (verbatim). Tests:
+`backend/tests/test_fed_schedule_2026_10_07.py`,
+`backend/tests/test_macro_calendar_fed_2026_10_07.py`,
+`frontend/src/components/NewsTabBoard.fed.live.test.tsx`.
+
+**Critic fixes (2026-10-07, `backend/tests/test_fed_schedule_critic_fixes_2026_10_07.py`;
+each test fails if its fix is reverted):**
+- *Merge (medium):* a year takes calendar.json only when it has ≥
+  `FED_MIN_MEETINGS_PER_YEAR` meetings **and** at least as many as
+  fomccalendars.htm lists for that year. Before, one json meeting row that
+  failed to parse silently dropped that decision (MEASURED by retitling the
+  2026-10 row: 2026-10-28 vanished and `next_fomc` jumped to 12-09).
+- *Weekend remarks:* the weekday bound applies only to FOMC and Beige rows. The
+  Fed lists Chair speeches on weekends (Powell 2026-03-21 Sat, 2025-05-25 Sun),
+  which used to be counted as `rejected`. The year bound still applies.
+- *Parser schema:* an LKG whose `schema` ≠ `_SCHEMA` is re-read without
+  `If-Modified-Since`, so a 304 can no longer pin an older parser's output. A
+  failed re-read keeps the old copy.
+- *Notes:* with no Mongo store the footer says `FED_NOTE_NO_STORE` ("store
+  unavailable"), not "Fed calendar unreachable". When the FOMC page parsed but
+  calendar.json never did, it says `FED_NOTE_NO_JSON` (minutes and Chair remarks
+  not shown). `_coll()` closes the client when its ping fails.
+- *Chair times:* the Fed states no time zone for speeches and testimony, so
+  `fed_chair` labels read "10:00 am" with no " ET"
+  (`macro_calendar.TIME_ZONE_UNSTATED_KINDS`). FOMC decision, presser and
+  minutes times keep ET.
+- Pinned with tests: `_earnings_ahead` on the ET day at 23:30 ET; the same-day
+  time tiebreak in `compute()` and `imminent_events`; calendar.json with no
+  current-year minutes is not ok.
+- Not done (spec §3.2 hermetic rule): with no store, `current()` still does not
+  fetch. A Mongo outage at the first compute after a restart therefore serves
+  the floor for one 6 h TTL, and the footer now says so plainly.
 
 ## Tests
 

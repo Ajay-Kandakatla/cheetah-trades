@@ -1,0 +1,562 @@
+{
+ "generated_at_iso": "2026-10-07T10:39:41Z",
+ "verdict": {
+  "ok": true,
+  "as_of_label": "live Wed 06:39 ET",
+  "generated_at_iso": "2026-10-07T10:39:38Z",
+  "daily": {
+   "score": 54,
+   "state": "caution",
+   "state_label": "Caution",
+   "word": "mixed"
+  },
+  "weekly": {
+   "score": 84,
+   "state": "constructive",
+   "state_label": "Constructive",
+   "word": "bullish"
+  },
+  "agree": false,
+  "drivers": [
+   "8 index distribution days (under distribution)"
+  ],
+  "outlook": {
+   "label": "Mixed tape — reduced-exposure band",
+   "note": "Daily gauge 54 (caution) · weekly 84 (constructive). Reads the CURRENT regime and the triggers that would change it — not a prediction of where price closes. Mixed tape — trade smaller, be selective (p.304).",
+   "watch": [
+    "13 pts would flip it up to Constructive; 20 down to Risk-Off",
+    "distribution at 8/5 — one more index distribution day tips it weaker",
+    "no recent follow-through — a +1.4% up-day on higher volume would confirm a turn",
+    "VIX 15.01 · 10.7th pct — a spike above the 70th percentile pressures the tape",
+    "WEEKLY structure stronger than the day — near-term softness inside a healthier larger trend (historically a pullback within an uptrend rather than a top)"
+   ]
+  },
+  "disclaimer": "Educational market-health read, not a forecast or personalized buy/sell/position-sizing advice. The weekly gauge and outlook read the CURRENT regime across horizons — they do not predict where price closes. Economic pillars read live from FRED (neutral if no key); index futures are not wired (only the SPY/QQQ ETF pre-market print), and true order-flow / dark-pool tape needs a feed."
+ },
+ "macro": {
+  "ok": true,
+  "days": 14,
+  "tier_labels": {
+   "1": "Market movers",
+   "2": "Trend shapers",
+   "3": "Context"
+  },
+  "next_tier1": null,
+  "next_fomc": {
+   "date": "2026-10-28",
+   "kind": "fomc",
+   "tier": 1,
+   "label": "FOMC decision",
+   "detail": "press conference 2:30 pm ET",
+   "sep": false,
+   "days_until": 21,
+   "when_label": "in 21 days",
+   "time_label": "2:00 pm ET",
+   "past": false,
+   "past_label": null
+  },
+  "fed": {
+   "note": "FOMC decisions, minutes and Fed Chair remarks: federalreserve.gov",
+   "as_of_iso": "2026-10-07T10:39:32Z",
+   "age_sec": 5,
+   "stale": false,
+   "floor": false
+  },
+  "events": [
+   {
+    "date": "2026-10-07",
+    "kind": "fomc_minutes",
+    "tier": 2,
+    "tier_label": "Trend shapers",
+    "label": "FOMC minutes",
+    "days_until": 0,
+    "when_label": "today",
+    "time_et": "14:00",
+    "time_label": "2:00 pm ET",
+    "detail": "Meeting of September 15-16",
+    "past": true,
+    "past_label": "released 2:00 pm ET",
+    "source": "Federal Reserve calendar (federalreserve.gov)"
+   }
+  ],
+  "disclaimer": "A heads-up on what data could move the regime + which days carry earnings risk — not a forecast or advice."
+ },
+ "sectors": {
+  "ok": true,
+  "as_of": "2026-10-06",
+  "benchmark": {
+   "symbol": "RSP",
+   "window": 1.676004405497289,
+   "d1": 0.5731337627889355,
+   "d5": 1.3508353221957092,
+   "d21": -3.0456621004566142,
+   "d63": 0.061262959472196954
+  },
+  "ranked_by": "rel_5d",
+  "heat_window": "5d",
+  "d1": {
+   "live": false,
+   "basis": "close",
+   "as_of": null,
+   "reason": "no live price for RSP, so today cannot be measured against it",
+   "market_closed": null
+  },
+  "rows": [
+   {
+    "sector": "Technology",
+    "n": 317,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.51,
+    "rel_5d": 3.82,
+    "rel_21d": 8.19,
+    "pct_positive_1d": 52.5,
+    "read": {
+     "1d": "bearish",
+     "5d": "bullish",
+     "21d": "bullish"
+    },
+    "heat": {
+     "tone": "hot",
+     "percentile": 86.4,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": true,
+    "cold_leading_1d": false,
+    "leader": "PTC",
+    "day_tag": null
+   },
+   {
+    "sector": "Energy",
+    "n": 88,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.43,
+    "rel_5d": 3.05,
+    "rel_21d": -1.61,
+    "pct_positive_1d": 55.0,
+    "read": {
+     "1d": "bearish",
+     "5d": "bullish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "hot",
+     "percentile": 81.6,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": true,
+    "cold_leading_1d": false,
+    "leader": "SEI",
+    "day_tag": null
+   },
+   {
+    "sector": "Utilities",
+    "n": 55,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": 0.86,
+    "rel_5d": 0.24,
+    "rel_21d": -0.72,
+    "pct_positive_1d": 92.5,
+    "read": {
+     "1d": "bullish",
+     "5d": "bullish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "neutral",
+     "percentile": 61.2,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "TLN",
+    "day_tag": null
+   },
+   {
+    "sector": "Basic Materials",
+    "n": 81,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.08,
+    "rel_5d": 0.19,
+    "rel_21d": -1.9,
+    "pct_positive_1d": 67.5,
+    "read": {
+     "1d": "bearish",
+     "5d": "bullish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "neutral",
+     "percentile": 60.2,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "MTRN",
+    "day_tag": null
+   },
+   {
+    "sector": "Industrials",
+    "n": 256,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.1,
+    "rel_5d": 0.03,
+    "rel_21d": -1.78,
+    "pct_positive_1d": 67.5,
+    "read": {
+     "1d": "bearish",
+     "5d": "bullish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "neutral",
+     "percentile": 56.3,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "RXO",
+    "day_tag": null
+   },
+   {
+    "sector": "Consumer Cyclical",
+    "n": 198,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": 0.46,
+    "rel_5d": -0.22,
+    "rel_21d": -3.48,
+    "pct_positive_1d": 65.0,
+    "read": {
+     "1d": "bullish",
+     "5d": "bearish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "neutral",
+     "percentile": 49.5,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "MAT",
+    "day_tag": null
+   },
+   {
+    "sector": "Consumer Defensive",
+    "n": 74,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": 0.02,
+    "rel_5d": -1.04,
+    "rel_21d": -2.32,
+    "pct_positive_1d": 67.5,
+    "read": {
+     "1d": "bullish",
+     "5d": "bearish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "neutral",
+     "percentile": 38.8,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "LW",
+    "day_tag": null
+   },
+   {
+    "sector": "Financial Services",
+    "n": 239,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.72,
+    "rel_5d": -1.24,
+    "rel_21d": -3.44,
+    "pct_positive_1d": 35.0,
+    "read": {
+     "1d": "bearish",
+     "5d": "bearish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "cold",
+     "percentile": 32.0,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "XP",
+    "day_tag": null
+   },
+   {
+    "sector": "Communication Services",
+    "n": 57,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.68,
+    "rel_5d": -1.51,
+    "rel_21d": -0.39,
+    "pct_positive_1d": 45.0,
+    "read": {
+     "1d": "bearish",
+     "5d": "bearish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "cold",
+     "percentile": 29.1,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "ECHO",
+    "day_tag": null
+   },
+   {
+    "sector": "Real Estate",
+    "n": 93,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -0.25,
+    "rel_5d": -2.7,
+    "rel_21d": -4.75,
+    "pct_positive_1d": 80.0,
+    "read": {
+     "1d": "bearish",
+     "5d": "bearish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "cold",
+     "percentile": 17.5,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "DLR",
+    "day_tag": null
+   },
+   {
+    "sector": "Healthcare",
+    "n": 255,
+    "benchmark": {
+     "symbol": "RSP",
+     "window": 1.676004405497289,
+     "d1": 0.5731337627889355,
+     "d5": 1.3508353221957092,
+     "d21": -3.0456621004566142,
+     "d63": 0.061262959472196954
+    },
+    "rel_1d": -2.15,
+    "rel_5d": -3.44,
+    "rel_21d": -2.06,
+    "pct_positive_1d": 22.5,
+    "read": {
+     "1d": "bearish",
+     "5d": "bearish",
+     "21d": "bearish"
+    },
+    "heat": {
+     "tone": "cold",
+     "percentile": 7.8,
+     "heat_window": "5d",
+     "thin": false,
+     "grain": "sector"
+    },
+    "hot_lagging_1d": false,
+    "cold_leading_1d": false,
+    "leader": "OPCH",
+    "day_tag": null
+   }
+  ],
+  "tags_date": null,
+  "study": {
+   "measured_on": "rel_21d",
+   "shipped_on": "rel_5d",
+   "date": "2026-09-09",
+   "arrivals": 50191,
+   "dates": 192,
+   "names": 2243,
+   "hot_win_rate_pp": -0.57,
+   "hot_win_rate_ci": [
+    -1.87,
+    0.71
+   ],
+   "hot_minus_cold_5d_pp": -2.55,
+   "hot_minus_cold_5d_ci": [
+    -4.48,
+    -0.65
+   ],
+   "script": "backend/studies/sector_heat_study.py",
+   "doc": "docs/supply_demand/sector_heat.md",
+   "note": "Sector heat describes what already moved; it is not a forecast. MEASURED 2026-09-09 on the rel_21d definition over 50,191 demand-zone arrivals: a hot sector changed the win rate by −0.57pp (95% CI −1.87 to +0.71) — nothing. 'A cold sector just sits there' measured INVERTED: at 5 sessions hot minus cold was −2.55pp (95% CI −4.48 to −0.65), the one interval in the study clear of zero — cold turned faster. The 🔥/🧊 word on this table is decided on the 5-session leg (rel_5d), which is UNMEASURED; the 21-day null neither validates nor condemns it. Script: backend/studies/sector_heat_study.py."
+  },
+  "source": "scan",
+  "built_at_iso": "2026-10-06T16:31:55-04:00",
+  "stale": false
+ },
+ "headlines": {
+  "ok": true,
+  "items": [
+   {
+    "title": "S&P 500, Nasdaq hit records — but 'the breadth of the rally has narrowed': Chart of the Day - Yahoo Finance",
+    "url": "https://news.google.com/rss/articles/CBMi2gFBVV95cUxPVEp4d2xwaDVOY2E0UmQ3WGxzdV9aRnJwV3JEUWczMUNRU3VORE1taVNseWwybUNwejFRb2trT3BVVV9ialFBdkpwZFdjOG0ySGIwblE4QlJISEVnRlZLSEk0Q1I2MkxBcHZuMHVvNzlIZGF3SE5qU1BGOVVvRHFSM0U2amhXUTJOTmFXcnQ2bVMycmg4dm5Tak5zbzR5LTdKVlZlRGlZT19FLVJqM1hzWlUxYVliLWRrd3NuVXprZk1xd2hkYko4OWxnUVpkejZ3SHM4Unc3ZUdhUQ?oc=5",
+    "source": "Yahoo Finance",
+    "published": 1791367200,
+    "provider": "google"
+   },
+   {
+    "title": "US stock market hits all-time high as investors continue to bet on AI - Al Jazeera",
+    "url": "https://news.google.com/rss/articles/CBMiqAFBVV95cUxPWGVpQWRLR19SM1hhdGdPN2RwTXl0LWhrVU5TRUpvc0ltbEhjazZObHpMRGx0NVBydTZldHlTYTNCV0RKUUY2R1YwUEFqWXdTNkxtS0FJbUkwLXh4NGRpeUhmZlNNVU52TzM0OW1vUFRpZUJmLVFCSU1ySlpLVHBPWGRyT2FLWENwNXg5cEN2c2JRVFJRMDF3akJuUVVENHpHczhzX3B0dm_SAa4BQVVfeXFMUHZJa1dVeDE2cGhpZXlYUGRGbjZzbWdZMjl0VzdWSmZFbzFKYjVvWmd3b0pZVEdEU3J5ckpyQ0ZDQTR3ODJybFB0S2VjMmg4QlpqWmFQNW9Pc0t5eDF0NlNFMkl6UDdGbUV4aDhNVm1Rd3B1cEhBNFpLMWx2VE1nZlVUejRZVjFkV3gtbFRrV1ZoUjZNSmxYcjdmZHZ5VGZyWFYyeWdvWFJBem5mTjl3?oc=5",
+    "source": "Al Jazeera",
+    "published": 1791354877,
+    "provider": "google"
+   },
+   {
+    "title": "U.S. stock futures steady after tech rally lifts S&P 500, Nasdaq to records - Yahoo Finance",
+    "url": "https://news.google.com/rss/articles/CBMilwFBVV95cUxPN1h2RUZNbXFSZVNmZEZpWWRtYXdLNmhubTgzdG40cGVoNE9QZ2d6cTVKbi1CVmpDeWYySXRhT1JFTWM4NU5oNWs3M0dNQ0FmMDdxNXoyUktfR1dTemxTaWpKUXRsbjZRY1BvTTEzOUJSX09fdFZZZ3FNa3VsOU1UemJyOVFJSy1ON1NfMzRsd2c3anY1bDV3?oc=5",
+    "source": "Yahoo Finance",
+    "published": 1791333840,
+    "provider": "google"
+   },
+   {
+    "title": "Stock Market Guides Nasdaq, S&P 500 To New Highs, But This Sector Gets A Bloody Nose - Investor's Business Daily",
+    "url": "https://news.google.com/rss/articles/CBMi0wFBVV95cUxPaldHelZqaWVoRjl6MVAwT3RYUXl5bE5RVEJzZWZtemRBOVpueUQ5bXJqOXA0UnhUd3AtVnc1bld0cFJMNVlCdUhnOGwtWXFkR1JsOU1hRUV0MFloTXpHazkyWWNNQU5uZ0d5eVExTC1IWFRKenBmeWFoemdBQmwwUzdwUXBFVXFwY0FpODhUYV9jRzFGamh5dnZ4QkFwQWNGWkpEZWJMY0NkVDVPMVQ4eDd3dlhtZXhDVWlra1FobWQ1MlR3NXJnbG9FRDN5MlJHd0hj?oc=5",
+    "source": "Investor's Business Daily",
+    "published": 1791323940,
+    "provider": "google"
+   },
+   {
+    "title": "S&P 500 and Nasdaq surge to record highs after AI chipmaker rally - The Guardian",
+    "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxOMmNydTJJRjhlaHZkMm1FYXBxeTNkcXRnLTA1S2YtNWhicmVhc2txU3pfb0p4NmFfVzRRQUdaRVhaUXROMy15a2VSOWZVV3oyTTF3TWZ4MEg3dkJOcTRBUzBIdEJJcXZMeWdBR0FsMHY1UldtTnV5bVRuWDBhQU16WXlkbmtpVzdCWDl3?oc=5",
+    "source": "The Guardian",
+    "published": 1791319080,
+    "provider": "google"
+   },
+   {
+    "title": "S&P 500 Joins Nasdaq in All-Time-High Territory: Stock Market Today - Kiplinger",
+    "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxQMkhicjZaVkUwY0xtS0JqUDBZTGs4Z0c3TktjZHAtNFVfS2ZyRUl1VHJVbm1va2hQTXJ4VVRoTkpqbHhPTEdhQklIMEpLSFRiM2ctZExfS2Vvd213Vng2S0s4V2lCTUQxMmtqR3ZoN04tSU0yVHpJVko4d2lKWlZNdG1FSExfRjJwaVd1aVNoNWhnN0VNWnEzbVp4b2RjWEFZZU9fa2VQblVuZlM4YXc?oc=5",
+    "source": "Kiplinger",
+    "published": 1791317679,
+    "provider": "google"
+   },
+   {
+    "title": "S&P 500 closes at record high as Nvidia nears $6 trillion milestone - NBC News",
+    "url": "https://news.google.com/rss/articles/CBMigwFBVV95cUxOc3hzcS00a3M2eTZZRUtOU0tMU2ZpNFN1ejYzRkt6X3NSVC1UN3I5RkJmRkduOFN0Uno3cXZjTEJITG1GeVB2eDMwMTYxMUV3Q0k2NlZlVE9ON3gyQTM2aHNqUDJPRFRnMkp2NmZiRVZlYnVxQV9yOGhIQVZYNjVVTHR4NA?oc=5",
+    "source": "NBC News",
+    "published": 1791317493,
+    "provider": "google"
+   },
+   {
+    "title": "S&P 500, Nasdaq reach record closing highs as focus pivots to earnings - Reuters",
+    "url": "https://news.google.com/rss/articles/CBMihwFBVV95cUxPZ0p5VWxQQ0ZmUUI0Vk5wRUVjTUJhZjZGUlZjU2tWU1AtOEdqYjZ0OFRtRXNrUVdrTFlNZjVWdzluRjUyaWhHTlYxMG5Yc21pMHFubTdiX1RIRTRUSnB4UTZPckRMZTlzTHBEbkZKU1ROMTZpWE9lMXhPQkhyQmhBV3JNdkFrQVk?oc=5",
+    "source": "Reuters",
+    "published": 1791282420,
+    "provider": "google"
+   }
+  ],
+  "window_hours": 36,
+  "query": "stock market OR Nasdaq OR S&P 500",
+  "counts": {
+   "raw": 12,
+   "undated_dropped": 0,
+   "stale_dropped": 4,
+   "irrelevant_dropped": 0,
+   "deduped": 0
+  },
+  "fetched_at": 1791369579.72895
+ },
+ "budget_sec": 8.0,
+ "note": "A read of what the app already serves — the Market Gauge's state, the macro calendar (FRED release dates plus the Federal Reserve's own calendar), the rotation grid's sector medians against RSP, and the last 36 hours of market headlines. Nothing here is a forecast, nothing here is measured to predict, and nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+ "measured": false,
+ "model_read": {
+  "ok": false,
+  "reason": "not run in probe"
+ }
+}

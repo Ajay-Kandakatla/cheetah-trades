@@ -10,7 +10,8 @@ its own and each failing on its own:
 
   * verdict   — the Market Gauge's daily AND weekly state (`sepa.market_gauge`),
                 its word mapped ONCE in `MARKET_WORD`. Nothing is re-scored.
-  * macro     — T1 + T2 rows of the FRED-scheduled calendar, read at the
+  * macro     — T1 + T2 rows of the macro calendar (FRED release dates plus
+                the Federal Reserve's own calendar), read at the
                 calendar's ONE cache key (`macro_calendar.DEFAULT_DAYS`). This
                 module never passes a window length to the calendar: a second
                 key would evict the gauge's doc and force a cold FRED fetch.
@@ -36,6 +37,7 @@ import math
 import time
 from typing import Optional
 
+import fed_schedule
 import macro_calendar
 from news_search import core
 from rotation import heat
@@ -58,7 +60,7 @@ MARKET_QUERY = "stock market OR Nasdaq OR S&P 500"
 # calendar, rotation doc) still warm for the next refresh.
 LEG_BUDGET_SEC = 8.0
 TIMED_OUT = "still loading — timed out after {:.0f}s, refresh"
-NOTE = ("A read of what the app already serves — the Market Gauge's state, the FRED-scheduled macro calendar, "
+NOTE = ("A read of what the app already serves — the Market Gauge's state, the macro calendar (FRED release dates plus the Federal Reserve's own calendar), "
         "the rotation grid's sector medians against RSP, and the last 36 hours of market headlines. "
         "Nothing here is a forecast, nothing here is measured to predict, and nothing here gates a scan, "
         "pushes a phone, sizes a position or enters a lane. Not advice.")
@@ -163,16 +165,53 @@ def macro_block() -> dict:
         rows.append({"date": e.get("date"), "kind": e.get("kind"), "tier": tier,
                      "tier_label": macro_calendar.TIER_LABELS.get(tier),
                      "label": e.get("label"), "days_until": e.get("days_until"),
-                     "when_label": e.get("when_label")})
+                     "when_label": e.get("when_label"),
+                     "time_et": e.get("time_et"), "time_label": e.get("time_label"),
+                     "detail": e.get("detail"), "past": e.get("past"),
+                     "past_label": e.get("past_label"), "source": e.get("source")})
     labels = cal.get("tier_labels") or macro_calendar.TIER_LABELS
     return {
         "ok": True,
         "days": macro_calendar.DEFAULT_DAYS,
         "tier_labels": {str(k): v for k, v in labels.items()},
-        "next_tier1": cal.get("next_tier1"),
+        "next_tier1": _next_tier1(rows),
+        "next_fomc": _next_fomc(cal.get("next_fomc"), rows),
+        "fed": _fed_view(cal.get("fed")),
         "events": rows,
         "disclaimer": cal.get("disclaimer"),
     }
+
+
+def _next_tier1(rows: list) -> Optional[dict]:
+    """The first SERVED tier-1 row not yet out — re-derived at read time, never
+    the doc's compute-time `next_tier1` (which goes stale within the 6 h cache)."""
+    for r in rows:
+        if r.get("tier") == 1 and r.get("past") is not True:
+            return {k: r.get(k) for k in ("date", "kind", "tier", "label", "when_label",
+                                          "days_until", "time_label", "past_label")}
+    return None
+
+
+def _next_fomc(nf, rows: list) -> Optional[dict]:
+    """The next FOMC decision, pinned only when it is NOT already a served row."""
+    if not isinstance(nf, dict) or not nf.get("date"):
+        return None
+    w = macro_calendar.when_fields(nf["date"], nf.get("time_et"), "fomc")
+    if not w or w["days_until"] < 0 or w["past"] is True:
+        return None
+    if any(r.get("kind") == "fomc" and r.get("date") == nf["date"] for r in rows):
+        return None
+    out = {k: nf.get(k) for k in ("date", "kind", "tier", "label", "detail", "sep")}
+    out.update(w)
+    return out
+
+
+def _fed_view(status) -> Optional[dict]:
+    try:
+        return fed_schedule.status_view(status)
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("news_tab: fed status view failed: %s", type(exc).__name__)
+        return None
 
 
 def d1_block(body: dict) -> dict:

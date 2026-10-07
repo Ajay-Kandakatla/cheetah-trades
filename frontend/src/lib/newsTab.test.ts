@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  SECTOR_VIEWS, agreeLine, d1Label, filterRows, heatGlyph, macroWhen, publishedAgo,
+  SECTOR_VIEWS, agreeLine, d1Label, filterRows, heatGlyph, macroTimeBit, macroWhen, publishedAgo,
   verdictLine, viewLabel, wordTone, type NtSectorRow,
 } from './newsTab';
 import { benchmarkSymbol } from './newsTab';
@@ -175,3 +175,23 @@ describe('benchmarkSymbol — the benchmark is an OBJECT on the wire', () => {
   });
 });
 
+/* 2026-10-07 — the Fed's own calendar: the served ET time / "released" mark. */
+describe('macroTimeBit', () => {
+  it('past_label wins over time_label; time_label alone works', () => {
+    expect(macroTimeBit({ time_label: '2:00 pm ET', past_label: 'released 2:00 pm ET' })).toBe('released 2:00 pm ET');
+    expect(macroTimeBit({ time_label: '2:00 pm ET', past_label: null })).toBe('2:00 pm ET');
+    expect(macroTimeBit({ past_label: 'began 10:00 am ET' })).toBe('began 10:00 am ET');
+  });
+  it('NEGATIVE — {}, null, non-strings and blanks → empty', () => {
+    expect(macroTimeBit({})).toBe('');
+    expect(macroTimeBit(null)).toBe('');
+    expect(macroTimeBit(undefined)).toBe('');
+    expect(macroTimeBit('2:00 pm ET')).toBe('');
+    expect(macroTimeBit({ time_label: 14, past_label: { a: 1 } })).toBe('');
+    expect(macroTimeBit({ time_label: '  ', past_label: '' })).toBe('');
+  });
+  it('macroWhen is unchanged by the new fields', () => {
+    expect(macroWhen({ date: '2026-10-07', when_label: 'today', time_label: '2:00 pm ET', past_label: 'released 2:00 pm ET' }))
+      .toBe('2026-10-07 · today');
+  });
+});

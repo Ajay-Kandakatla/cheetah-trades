@@ -13720,6 +13720,8 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .nt-error { color: var(--negative, #f87171); font-size: 0.8rem; }
 .nt-next { font-size: 0.78rem; margin: 0 0 6px; }
 .nt-next-tag { color: var(--gold, #c9a227); font-size: 0.68rem; }
+.nt-macro-detail { font-size: 0.72rem; }
+.nt-stale { color: var(--warn, #c98a27); }
 .nt-scroll { overflow-x: auto; max-width: 100%; }
 .nt-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
 .nt-table th, .nt-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line, rgba(255,255,255,0.08)); vertical-align: top; }

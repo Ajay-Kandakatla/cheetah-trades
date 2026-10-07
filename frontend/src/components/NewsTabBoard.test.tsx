@@ -360,3 +360,111 @@ describe('NewsTabBoard', () => {
     expect(src).not.toMatch(/\bbounce\b/i);
   });
 });
+
+/* 2026-10-07 — Ajay: "First today there was an FOMC event why is it not in our
+ * new tab in chart maps. I want us to pull dynamic dates". The 10-07 event was
+ * the FOMC MINUTES at 2:00 pm ET; times, detail and the "released" mark are
+ * SERVED (macro_calendar.when_fields) — the browser reads no clock. */
+describe('NewsTabBoard — the Fed calendar rows', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const MINUTES = {
+    date: '2026-10-07', kind: 'fomc_minutes', tier: 2, tier_label: 'Trend shapers', label: 'FOMC minutes',
+    days_until: 0, when_label: 'today', time_et: '14:00', time_label: '2:00 pm ET',
+    detail: 'Meeting of September 15-16', past: false, past_label: null,
+    source: 'Federal Reserve calendar (federalreserve.gov)',
+  };
+  const NEXT_FOMC = {
+    date: '2026-10-28', kind: 'fomc', tier: 1, label: 'FOMC decision', detail: 'press conference 2:30 pm ET',
+    sep: false, days_until: 21, when_label: 'in 21 days', time_label: '2:00 pm ET', past: false, past_label: null,
+  };
+  const FED_OK = { note: 'FOMC decisions, minutes and Fed Chair remarks: federalreserve.gov', as_of_iso: '2026-10-07T09:00:00Z', age_sec: 10800, stale: false, floor: false };
+
+  function fedPayload(macroOver: Record<string, any> = {}) {
+    const p = payload();
+    p.macro = {
+      ...p.macro,
+      next_tier1: null,
+      events: [{ ...MINUTES }],
+      next_fomc: { ...NEXT_FOMC },
+      fed: { ...FED_OK },
+      ...macroOver,
+    };
+    return p;
+  }
+
+  it('a minutes row prints the label, the meeting and "today · 2:00 pm ET"', async () => {
+    await mount(fedPayload());
+    const r0 = screen.getByTestId('nt-macro-row-0');
+    expect(r0).toHaveTextContent('FOMC minutes');
+    expect(r0).toHaveTextContent('Meeting of September 15-16');
+    expect(r0).toHaveTextContent('today · 2:00 pm ET');
+    expect(r0).not.toHaveTextContent('released');
+  });
+
+  it('the released variant prints "today · released 2:00 pm ET"', async () => {
+    await mount(fedPayload({ events: [{ ...MINUTES, past: true, past_label: 'released 2:00 pm ET' }] }));
+    const r0 = screen.getByTestId('nt-macro-row-0');
+    expect(r0).toHaveTextContent('today · released 2:00 pm ET');
+    expect(r0).not.toHaveTextContent('today · 2:00 pm ET');
+  });
+
+  it('NEGATIVE — a row with no time / detail prints no "ET", no "null", no dangling " · "', async () => {
+    await mount(fedPayload({
+      events: [{ date: '2026-10-08', kind: 'claims', tier: 2, label: 'Jobless claims', days_until: 1,
+                 when_label: 'tomorrow', time_et: null, time_label: null, detail: null, past: false, past_label: null }],
+    }));
+    const r0 = screen.getByTestId('nt-macro-row-0');
+    expect(r0.textContent).not.toMatch(/\bET\b/);
+    expect(r0.textContent).not.toContain('null');
+    expect(r0.textContent).not.toMatch(/·\s*$/);
+    const cells = Array.from(r0.querySelectorAll('td')).map((c) => c.textContent || '');
+    expect(cells[1]).toBe('Jobless claims');
+    expect(cells[3]).toBe('tomorrow');
+  });
+
+  it('pins the next FOMC decision; NEGATIVE absent when next_fomc is null', async () => {
+    await mount(fedPayload());
+    const nf = screen.getByTestId('nt-next-fomc');
+    expect(nf).toHaveTextContent('Next FOMC decision');
+    expect(nf).toHaveTextContent('2026-10-28');
+    expect(nf).toHaveTextContent('in 21 days · 2:00 pm ET · press conference 2:30 pm ET');
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    await mount(fedPayload({ next_fomc: null }));
+    expect(screen.queryByTestId('nt-next-fomc')).toBeNull();
+  });
+
+  it('the Fed freshness line: note + "checked 3 h ago"; NEGATIVE fresh has no nt-stale', async () => {
+    await mount(fedPayload());
+    const f = screen.getByTestId('nt-macro-fed');
+    expect(f).toHaveTextContent('federalreserve.gov · checked 3 h ago');
+    expect(f).not.toHaveClass('nt-stale');
+  });
+
+  it('stale and floor variants carry nt-stale', async () => {
+    await mount(fedPayload({ fed: { ...FED_OK, age_sec: 90000, stale: true,
+      note: 'Fed calendar not re-read since 2026-10-06T09:00:00Z — showing the last good copy' } }));
+    expect(screen.getByTestId('nt-macro-fed')).toHaveClass('nt-stale');
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    await mount(fedPayload({ fed: { note: 'Fed calendar unreachable — FOMC decision days from the built-in list', age_sec: null, stale: false, floor: true } }));
+    const f = screen.getByTestId('nt-macro-fed');
+    expect(f).toHaveClass('nt-stale');
+    expect(f.textContent).not.toContain('checked');
+  });
+
+  it('NEGATIVE — fed null → no freshness line', async () => {
+    await mount(fedPayload({ fed: null }));
+    expect(screen.queryByTestId('nt-macro-fed')).toBeNull();
+  });
+
+  it('the next-mover line carries the served time bit', async () => {
+    await mount(fedPayload({
+      next_tier1: { date: '2026-10-14', kind: 'cpi', tier: 1, label: 'CPI', when_label: 'in 7 days', time_label: null, past_label: null },
+    }));
+    const n = screen.getByTestId('nt-next-t1');
+    expect(n).toHaveTextContent('CPI 2026-10-14 · in 7 days');
+    expect(n.textContent).not.toMatch(/·\s*$/);
+  });
+});
