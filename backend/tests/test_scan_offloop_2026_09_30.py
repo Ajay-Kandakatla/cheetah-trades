@@ -260,6 +260,10 @@ AUDITED_SHARED_CALLERS = {
     # background build; scan_part / B._row / BV._bonde_pillar / Q.compute /
     # tile_metrics read the row, BP.attach writes only the tab's NEW row dicts.
     "chart_maps/fallen_tab.py": 1,
+    # 🛡️ Resiliency (2026-10-07 audit): resiliency_tiles builds a NEW
+    # {symbol: row} map off all_results and only `tile_metrics` (PURE) reads the
+    # row; the metrics dict it returns is the one written to.
+    "chart_maps/board.py": 1,
 }
 
 

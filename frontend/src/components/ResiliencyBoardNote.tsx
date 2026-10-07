@@ -8,16 +8,20 @@
  *
  * The board is read and ordered on the server (chart_maps/resiliency_tab.py).
  * This component prints its SERVED sentences verbatim — the header, today's
- * data-day line, the data-days line, one line per rule, each box's note, the
- * study sentences and the note — plus the four-button order toggle and the
+ * data-day line, the 📅 market line (SPY, RSP, the median name, n up of n read;
+ * 2026-10-07), the data-days line, one line per rule, each box's note, the
+ * study sentences and the note — plus the five-button order toggle and the
  * four boxes. It composes no sentence, reads no count and does no maths: a
  * number typed here could disagree with the board it describes.
  *
- * THE TOGGLE is four buttons whose LABELS are the served `sorts` entries
- * `default`, `res_t2`, `res_down` and `res_today`; if any one is missing the
- * toggle does not render (a button that asks for an order the server does not
- * offer would be a silent no-op). The PRESSED button is the SERVED `sort` —
- * never the URL. A click hands the key to the page's one sort setter.
+ * THE TOGGLE is five buttons whose LABELS are the served `sorts` entries
+ * `res_today`, `res_t1`, `res_t2`, `res_down` and `res_growth` (2026-10-07);
+ * if any one is missing the toggle does not render (a button that asks for an
+ * order the server does not offer would be a silent no-op). `default` is never
+ * a button: the server RESOLVES it (📅 today's move once the session has a
+ * print, else 🛡️ T1) and serves the explicit key it resolved to as `sort` — the
+ * generic Sort select keeps `default`. The PRESSED button is the SERVED `sort`
+ * — never the URL. A click hands the key to the page's one sort setter.
  *
  * THE BOXES are the Dual Momentum boxes, reused (DualMomentumFilters with this
  * tab's served keys and test ids): CHECKED = the served `on`, the "must match
@@ -29,7 +33,7 @@
  * Renders NOTHING for an absent or malformed block. While the memo warms the
  * header is the served warming line with role="status" and no box renders.
  */
-import { DEFAULT_SORT, RES_SORT_DOWN, RES_SORT_T2, RES_SORT_TODAY } from '../lib/chartMaps';
+import { RES_SORT_DOWN, RES_SORT_GROWTH, RES_SORT_T1, RES_SORT_T2, RES_SORT_TODAY } from '../lib/chartMaps';
 import type { CmResiliencyBoard, CmSort } from '../lib/chartMaps';
 import { RES_FILTER_KEYS } from '../lib/resiliencyFilters';
 import { DualMomentumFilters } from './DualMomentumBoardNote';
@@ -39,7 +43,7 @@ const text = (v: unknown): string | null =>
 const obj = (v: unknown): Record<string, unknown> | null =>
   v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : null;
 
-const SORT_KEYS = [DEFAULT_SORT, RES_SORT_T2, RES_SORT_DOWN, RES_SORT_TODAY] as const;
+const SORT_KEYS = [RES_SORT_TODAY, RES_SORT_T1, RES_SORT_T2, RES_SORT_DOWN, RES_SORT_GROWTH] as const;
 const STUDY_KEYS = ['t1', 't2', 'eod', 'pre'] as const;
 const KNOWN_BOXES: ReadonlySet<string> = new Set(RES_FILTER_KEYS);
 
@@ -49,7 +53,7 @@ type SortProps = {
   onSort: (key: string) => void;
 };
 
-/** The 🛡️ T1 / 🛡️ T2 / 🛡️ SPY-down / 📅 today toggle. Labels served, pressed = served sort. */
+/** The 📅 today / 🛡️ T1 / 🛡️ T2 / 🛡️ SPY-down / 🚀 growth toggle. Labels served, pressed = served sort. */
 export function ResiliencySortToggle({ sorts, sort, onSort }: SortProps) {
   const offered = Array.isArray(sorts) ? sorts : [];
   const label = (key: string): string | null => {
@@ -91,6 +95,7 @@ export default function ResiliencyBoardNote({ board, sorts, sort, onSort, onTogg
   const raw = b.state;
   const state = raw === 'warming' || raw === 'error' ? raw : 'ready';
   const todayLine = text(b.today_line);
+  const marketLine = text(b.market_line);
   const eventsLine = text(b.events_line);
   const note = text(b.note);
   const rules = obj(b.rules);
@@ -121,6 +126,7 @@ export default function ResiliencyBoardNote({ board, sorts, sort, onSort, onTogg
       <p className="cm-note" data-testid="cm-res-header"
          role={state === 'warming' ? 'status' : undefined}>{header}</p>
       {todayLine ? <p className="cm-note" data-testid="cm-res-today">{todayLine}</p> : null}
+      {marketLine ? <p className="cm-note" data-testid="cm-res-market">{marketLine}</p> : null}
       {note && note !== header ? <p className="cm-note" data-testid="cm-res-note">{note}</p> : null}
       {hasFold ? (
         <details className="cm-note cm-dim" data-testid="cm-res-rules">

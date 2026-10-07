@@ -5413,7 +5413,7 @@ const CONTRACTS = [
         if (/bounce|fake|won't drop|won\\'t drop/i.test(meta[2])) errs.push('the TAB_META.resiliency blurb says "bounce"/"fake"/"won\'t drop"');
       }
       if (/\n  resiliency: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry resiliency (🎯 n/a, the ATH precedent)');
-      for (const [k, v] of [['RES_SORT_T2', 'res_t2'], ['RES_SORT_DOWN', 'res_down'], ['RES_SORT_TODAY', 'res_today']]) {
+      for (const [k, v] of [['RES_SORT_T1', 'res_t1'], ['RES_SORT_T2', 'res_t2'], ['RES_SORT_DOWN', 'res_down'], ['RES_SORT_TODAY', 'res_today'], ['RES_SORT_GROWTH', 'res_growth']]) {
         if (!src.includes(`export const ${k} = '${v}';`)) errs.push(`chartMaps.ts must export ${k} = '${v}'`);
       }
       if (!/if \(p\.tab === 'resiliency' && p\.resFilters\) q\.set\(RES_FILTER_PARAM, p\.resFilters\);/.test(src)) errs.push("boardQuery must send res only under p.tab === 'resiliency'");
@@ -5473,6 +5473,44 @@ const CONTRACTS = [
         const tsLabels = ie ? [...ie[1].matchAll(/'([^']+)'/g)].map((m) => unesc(m[1])).filter((x) => /Held on T[12]|Bullish tape/.test(x)) : [];
         if (pyLabels.length !== 4 || JSON.stringify(pyLabels) !== JSON.stringify(tsLabels)) {
           errs.push(`cardLadder IDENT_EXACT ${JSON.stringify(tsLabels)} must equal resiliency_tab.FILTER_LABELS ${JSON.stringify(pyLabels)}`);
+        }
+      }
+      // 📅 every session + 🚀 growth (Ajay 2026-10-07: "I want the highest growth
+      // stocks on top like Vistra for example"). The served sort keys, the
+      // removed not-a-data-day sentence, the chip / pill prefixes the card
+      // ladder routes on, the one-engine reuse and the shared scan parse.
+      if (rt) {
+        if (!rt.includes('"res_t1"') || !rt.includes('"res_growth"')) errs.push('resiliency_tab.py must serve "res_t1" and "res_growth"');
+        if (rt.includes('TODAY_SORT_UNAVAILABLE') || rt.includes('not a T1 or T2 data day')) errs.push('resiliency_tab.py must never serve "not a T1 or T2 data day" again (2026-10-07)');
+        for (const need of ['qoq.score_board', 'qoq._seq_pct', '_rev_base', 'decision_snapshot', 'mode_for', 'day_from_snapshot']) {
+          if (!rt.includes(need)) errs.push(`resiliency_tab.py must use ${need} (the one engine)`);
+        }
+        const lad = read('src/lib/cardLadder.ts');
+        const identPre = /const IDENT_PREFIX = \[([\s\S]*?)\];/.exec(lad);
+        const pricePre = /const PRICE_PREFIX = \[([\s\S]*?)\];/.exec(lad);
+        if (!/^GROWTH_CHIP_PREFIX = "Sales "/m.test(rt)) errs.push('resiliency_tab.py must define GROWTH_CHIP_PREFIX = "Sales "');
+        if (!identPre || !identPre[1].includes("'Sales '")) errs.push("cardLadder IDENT_PREFIX must carry 'Sales ' (resiliency_tab.GROWTH_CHIP_PREFIX)");
+        if (!/^TODAY_PLAIN_FMT = TODAY_MARK \+ " today · /m.test(rt)) errs.push('resiliency_tab.py TODAY_PLAIN_FMT must start TODAY_MARK + " today · "');
+        if (!/^TODAY_LAST_FMT = TODAY_MARK \+ " last session /m.test(rt)) errs.push('resiliency_tab.py TODAY_LAST_FMT must start TODAY_MARK + " last session "');
+        if (!pricePre || !pricePre[1].includes("'\\u{1F4C5} today · '") || !pricePre[1].includes("'\\u{1F4C5} last session '")) {
+          errs.push("cardLadder PRICE_PREFIX must carry '\\u{1F4C5} today · ' and '\\u{1F4C5} last session '");
+        }
+        const tilesFn = board.slice(board.indexOf('def resiliency_tiles('), board.indexOf('def fallen_tiles('));
+        if (!tilesFn.includes('load_latest_shared()') || tilesFn.includes('scanner.load_latest()')) errs.push('board.py resiliency_tiles must read scanner.load_latest_shared() (READ-ONLY), never load_latest()');
+      }
+      {
+        const nf2 = read('src/lib/newFeatures.ts');
+        const at2 = nf2.indexOf("id: 'chart-maps-resiliency-today-growth-2026-10-07'");
+        const ASK1 = 'Can you do a scan for me on the reseliency tab.. Is it working? Today is a very red day.. I wanna see which stocks were reselient cuz Vista was very reselient';
+        const ASK2 = 'I want the highest growth stocks on top like Vistra for example';
+        if (at2 < 0) {
+          errs.push("newFeatures.ts lost the ✨ entry id: 'chart-maps-resiliency-today-growth-2026-10-07'");
+        } else {
+          const e2 = nf2.slice(at2, nf2.indexOf("' },", at2) + 4);
+          if (!e2.includes(ASK1) || !e2.includes(ASK2)) errs.push('the 📅 🚀 Resiliency ✨ entry must quote BOTH asks verbatim');
+          if (!e2.includes('UNMEASURED')) errs.push('the 📅 🚀 Resiliency ✨ entry must say UNMEASURED');
+          if (/bounce|fake/i.test(e2)) errs.push('the 📅 🚀 Resiliency ✨ entry says "bounce"/"fake"');
+          if (!e2.includes("route: '/chart-maps?tab=resiliency'")) errs.push("the 📅 🚀 Resiliency ✨ entry must route to '/chart-maps?tab=resiliency'");
         }
       }
       const nf = read('src/lib/newFeatures.ts');

@@ -2461,7 +2461,8 @@ describe('the 🛡️ Resiliency tab', () => {
     expect(/bounce|fake|won't drop/i.test(b)).toBe(false);
     expect(b.includes('NaN')).toBe(false);
     expect(b.includes('undefined')).toBe(false);
-    const outside = b.replace(/"[^"]*"/g, '').replace('2026-09-30', '')
+    // 2026-10-07: the blurb dates his second ask too (spec §3.10) — a date, not a typed number
+    const outside = b.replace(/"[^"]*"/g, '').replace('2026-09-30', '').replace('2026-10-07', '')
       .replace(/\bT[12]\b/g, '').replace('50-day', '');
     expect(/\d/.test(outside)).toBe(false);
   });

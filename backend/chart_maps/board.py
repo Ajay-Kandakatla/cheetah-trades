@@ -4272,14 +4272,23 @@ def resiliency_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     now_et = (now or datetime.now(ET)).astimezone(ET)
     session = RES.session_for(now_et)
     got = RES.cached_or_warm(universe, now=now_et)
-    if got["state"] == "warming":
-        return {"tiles": [], "warming": True, "note": RES.WARMING_NOTE,
-                "resiliency_board": RES.warming_block(now=now_et, sort=sort)}
-    if got["state"] == "error":
+    if got["state"] in ("warming", "error"):
+        # no read yet: an explicit tab key is honoured, `default` serves as 🛡️ T1
+        w_sort = sort if sort in RES.TAB_SORTS else RES.SORT_T1
+        w_sorts = RES.served_sorts(RES.SORT_T1, today_label=RES.today_sort_label(
+            RES.today_mode(now_et)["mode"]))
+        if got["state"] == "warming":
+            return {"tiles": [], "warming": True, "note": RES.WARMING_NOTE,
+                    "res_sort": w_sort, "res_sorts": w_sorts,
+                    "resiliency_board": RES.warming_block(now=now_et, sort=w_sort)}
         return {"tiles": [], "note": RES.error_note(got.get("reason")),
-                "resiliency_board": RES.error_block(got.get("reason"), now=now_et, sort=sort)}
+                "res_sort": w_sort, "res_sorts": w_sorts,
+                "resiliency_board": RES.error_block(got.get("reason"), now=now_et, sort=w_sort)}
     entry = got["entry"]
-    raw = _bulk_snaps_fanout(list(entry["syms"]) + [RES.BENCH])   # the ONE universe snapshot
+    _syms = list(entry["syms"])
+    _seen = set(_syms)
+    # the ONE universe snapshot (+ SPY and the equal-weight RSP for the 📅 market line)
+    raw = _bulk_snaps_fanout(_syms + [s for s in (RES.BENCH, RES.EW_BENCH) if s not in _seen])
     if ctx is not None:
         ctx.update(snaps=raw, now=now_et)
     ph = KL.phase(now_et, session)
@@ -4291,9 +4300,17 @@ def resiliency_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     mode = DMT.parse_mode(res_mode)
     rows, counts, filters, today, sort_unavailable = RES.rank(
         entry, raw, pm, now=now_et, sort=sort, active=active, mode=mode)
+    # the served sort is the RESOLVED explicit key (never `default` from this tab)
+    _rk = dict(mode=today.get("mode"), n_read=today.get("read"),
+               n_growth=counts.get("growth_ranked"))
+    served, _su = RES.resolve_sort(sort, **_rk)
+    dflt, _su = RES.resolve_sort(RES.DEFAULT_SORT_KEY, **_rk)
+    res_sorts = RES.served_sorts(dflt, today_label=RES.today_sort_label(
+        today.get("mode"), bool(today.get("data_pre"))))
     try:
         from sepa import scanner
-        latest = scanner.load_latest() or {}
+        # READ-ONLY: the shared parse (one per scan write) — never mutate it or its rows
+        latest = scanner.load_latest_shared() or {}
         scan_by_sym = {r.get("symbol"): r for r in (latest.get("all_results") or [])
                        if isinstance(r, dict) and r.get("symbol")}
     except Exception as exc:                                    # noqa: BLE001
@@ -4340,7 +4357,8 @@ def resiliency_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     return {"tiles": out, "sort_unavailable": sort_unavailable or meta.get("sort_unavailable"),
             "matched": len(kept),
             "note": note,
-            "resiliency_board": RES.ready_block(counts, entry=entry, now=now_et, sort=sort,
+            "res_sort": served, "res_sorts": res_sorts,
+            "resiliency_board": RES.ready_block(counts, entry=entry, now=now_et, sort=served,
                                                 filters=filters, today=today,
                                                 pm_state=pm_state)}
 
@@ -7178,7 +7196,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                    or (t == "fallen" and sort in _FAL.TAB_SORTS)
                    or (t == "drop10" and sort in _D10.TAB_SORTS)) else DEFAULT_SORT
     if t == "resiliency" and srt not in _RES.TAB_SORTS:
-        # only the tab's own four served orders (the ATH precedent: no generic
+        # only the tab's own five served orders (the ATH precedent: no generic
         # metric sort is offered, so none may silently reorder the board)
         srt = DEFAULT_SORT
     if t == "fallen" and srt not in _FAL.TAB_SORTS:
@@ -7340,9 +7358,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out["sorts"] = [{"key": DEFAULT_SORT, "label": _ATH.AT_ATH_LABEL},
                         {"key": _ATH.SORT_SLIPPING, "label": _ATH.SLIPPING_LABEL}]
     if t == "resiliency":
-        # 🛡️ T1 / 🛡️ T2 / 🛡️ SPY-down / 📅 today — exactly these four served keys
-        # (the ATH precedent: no generic metric sort on this tab).
-        out["sorts"] = _RES.served_sorts()
+        # 🛡️ default (resolved) / 📅 / 🛡️ T1 / T2 / SPY-down / 🚀 — exactly these six
+        # served keys (the ATH precedent: no generic metric sort on this tab); the
+        # served `sort` is the key `default` resolved to (2026-10-07).
+        out["sorts"] = out.pop("res_sorts", None) or _RES.served_sorts()
+        out["sort"] = out.pop("res_sort", None) or srt
     if t == "fallen":
         # 📋 / 📉 / 📈 / 💰 — exactly these five served keys.
         out["sorts"] = _FAL.served_sorts()

@@ -35,6 +35,26 @@ never on a request); every request ranks it against ONE universe snapshot.
 The boxes are the 🏎️ Dual Momentum filter machinery (`DMT.passes` /
 `DMT.parse_mode`, ANY by default, "must match all").
 
+📅 EVERY SESSION / 🚀 GROWTH (2026-10-07). Ajay: "Can you do a scan for me on
+the reseliency tab.. Is it working? [...] I wanna see which stocks were
+reselient cuz Vista was very reselient", then "I want the highest
+growth stocks on top like Vistra for example". The 📅 read now runs on EVERY
+session through ONE function (`today_read`) on the 🔻 tab's clock
+(`drop10_tab.mode_for`): live in market hours (the unchanged `KL.anchor_read`
+path), the snapshot day bar's regular-session close after it
+(`drop10_tab.day_from_snapshot`, never the after-hours print), and before the
+open, overnight and on weekends the LAST closed session's close against the one
+before it off the closed bars, checked against the snapshot (`KL.verify_last`)
+and dated — never "today", never a tier. A T1/T2 day's pre-market keeps its
+live pre-market read. The default order resolves per request: today's move
+(biggest gain first) once the session has a print, else the T1 hold rate.
+Each card also carries the latest quarter's sales and EPS growth against the
+same quarter a year earlier (`research.decision_snapshot`, read in the warm
+thread only); the 🚀 order blends both legs with `qoq.score_board`, ranking a
+leg only off a material year-ago base (`qoq.MIN_EPS_BASE` through
+`qoq._seq_pct`; `bonde._rev_base`). Both are ORDERS, UNMEASURED — the MEASURED
+lines on this tab are about data days only.
+
 DISPLAY ONLY and UNMEASURED: nothing here gates a scan, pushes a phone, sizes
 a position or enters a lane. The persistence study is
 `backend/scripts/resiliency_study.py`; its verdict literal lives in
@@ -54,7 +74,9 @@ from typing import Optional
 
 import macro_calendar
 from chart_maps import dual_momentum_tab as DMT
-from sepa import breakout_audit, universe
+from rotation import tracker as RT
+from sepa import bonde as SB
+from sepa import breakout_audit, qoq, universe
 from sepa import volume as V
 from supply_demand import key_levels as KL
 from supply_demand import momentum_burst as MB
@@ -97,18 +119,47 @@ FILTER_PARAM, FILTER_MODE_PARAM = "res", "res_mode"
 FILTER_KEYS = ("t1", "t2", "eod", "pre")  # canonical order; FE RES_FILTER_KEYS pinned equal by contract
 FILTER_LABELS = {"t1": MARK + " Held on T1", "t2": MARK + " Held on T2",
                  "eod": EOD_MARK + " Bullish tape EOD", "pre": PRE_MARK + " Bullish tape pre-market"}
-SORT_T2, SORT_DOWN, SORT_TODAY = "res_t2", "res_down", "res_today"
-TAB_SORTS = (SORT_T2, SORT_DOWN, SORT_TODAY)
+EW_BENCH = RT.BENCHMARK                    # "RSP" — rotation.tracker (import, never the literal)
+GROWTH_MARK = "\U0001F680"                # 🚀 (sort LABEL only — never a badge prefix; cardLadder routes '🚀 ' to PRICE)
+MODE_LIVE, MODE_AFTER, MODE_CLOSED = "live", "after_close", "closed"   # == drop10_tab.MODE_* (test-pinned)
+LAST_BASIS = "last_session"
+SORT_T1, SORT_T2, SORT_DOWN, SORT_TODAY, SORT_GROWTH = (
+    "res_t1", "res_t2", "res_down", "res_today", "res_growth")
+TAB_SORTS = (SORT_T1, SORT_T2, SORT_DOWN, SORT_TODAY, SORT_GROWTH)
 DEFAULT_SORT_KEY = "default"              # == board.DEFAULT_SORT (test-pinned; no board import here)
-DEFAULT_SORT_LABEL = MARK + " T1 hold rate"
+DEFAULT_SORT_LABEL = MARK + " T1 hold rate"   # unchanged text; now also the res_t1 label
+T1_SORT_LABEL = DEFAULT_SORT_LABEL
 T2_SORT_LABEL = MARK + " T2 hold rate"
 DOWN_SORT_LABEL = MARK + " T1 on SPY-down days"
 TODAY_SORT_LABEL = TODAY_MARK + " Today's move"
+LAST_SORT_LABEL = TODAY_MARK + " Last session's move"
+GROWTH_SORT_LABEL = GROWTH_MARK + " Sales + EPS growth"
+DEFAULT_LABEL_SUFFIX = " (default)"
 T1_BADGE_FMT = MARK + " T1 held {held}/{n} ({rate:.0f}%)"          # IDENT rung (FE prefix "🛡️ T1 held")
 TODAY_HOLD_FMT = TODAY_MARK + " T{tier} today · holding {move:+.2f}%"   # PRICE rung
 TODAY_DOWN_FMT = TODAY_MARK + " T{tier} today · down {move:+.2f}%"
-TODAY_SORT_UNAVAILABLE = ("Today is not a T1 or T2 data day — the board is in T1 "
-                          "hold-rate order.")
+TODAY_PLAIN_FMT = TODAY_MARK + " today · {move:+.2f}%"                # "📅 today · +4.53%"
+TODAY_LAST_FMT = TODAY_MARK + " last session {day} · {move:+.2f}%"    # "📅 last session Wed 10-07 · +4.53%"
+TODAY_SORT_NO_READ = "No name has a print to order by yet — the board is in T1 hold-rate order."
+GROWTH_SORT_UNAVAILABLE = ("No sales or EPS figures are on file for these names right now — "
+                           "the board is in its default order.")
+GROWTH_CHIP_PREFIX = "Sales "             # == cardLadder IDENT_PREFIX entry (contract)
+GROWTH_CHIP_FMT = "Sales {sales} · EPS {eps} YoY ({period})"
+GROWTH_NO_FIGURES = "no quarterly figures on file"
+GROWTH_MISMATCH = "quarters not a year apart on file"
+GROWTH_PERIOD_UNKNOWN = "quarter not on file"
+GROWTH_STAT_KEY = "Growth"
+EPS_MIN_BASE = qoq.MIN_EPS_BASE           # $0.10 (import) — HIS CALL: applied to the YEAR-AGO quarter
+REV_MIN_BASE = SB.MIN_MATERIAL_BASE_REV   # $1,000,000 (import)
+PCT_AGREE_TOL = 0.011         # 2-dp representation tolerance (stored % vs its own series), NOT a rule
+MARKET_LIVE_WHEN = "Today, live"
+MARKET_PRE_WHEN = "Pre-market today, live"
+MARKET_AFTER_WHEN_FMT = "Today's close ({close} ET)"
+MARKET_LAST_WHEN_FMT = "Last session ({day} close)"
+MARKET_LINE_FMT = (TODAY_MARK + " {when}: {bench} {spy} · {ew} {rsp} · median name {med} ({word}) · "
+                   "{up} of {n} names read are up.")
+MARKET_EMPTY_FMT = TODAY_MARK + " {when}: no name has a print to read yet."
+NO_PRINT_WORD = "no print"
 EVENT_SOURCES = ("FRED release dates", "Federal Reserve FOMC calendar")
 MODE_ANY, MODE_ALL = DMT.MODE_ANY, DMT.MODE_ALL
 MODE_ALL_LABEL = DMT.MODE_ALL_LABEL
@@ -150,6 +201,8 @@ def _note_tail() -> str:
             f"{PM_RVOL_MIN:g}× volume bar)." if PM_VOLUME_VERIFIED else
             " The EOD tape read is the app's own accumulation day; the pre-market "
             + PRE_OFF_REASON + ".")
+    tape += (f" {TODAY_MARK} Today's move and {GROWTH_MARK} sales + EPS growth are orders, "
+             "UNMEASURED — the MEASURED lines here are about data days only.")
     return tape + " Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice."
 
 
@@ -660,43 +713,206 @@ def pre_read(raw: Optional[dict], *, ref_close, ref_date, now, session, phase,
     return out
 
 
-def _today_blank(event: Optional[dict], state: str) -> dict:
+def today_mode(now: datetime) -> dict:
+    """{"mode", "day", "half_day"} — `drop10_tab.mode_for`, the ONE clock. `day`
+    = the session the 📅 read is about (today in live / after_close, the last
+    closed session in closed)."""
+    from chart_maps import drop10_tab as D10
+    mode, day, _tape, half = D10.mode_for(KL._et(now))
+    return {"mode": mode, "day": day.isoformat(), "half_day": bool(half)}
+
+
+def today_sort_label(mode: Optional[str], data_pre: bool = False) -> str:
+    return TODAY_SORT_LABEL if (mode in (MODE_LIVE, MODE_AFTER) or data_pre) else LAST_SORT_LABEL
+
+
+def last_session_read(closes: dict, trading_days: list, day) -> dict:
+    """The last closed session's close against the BENCH-calendar day before it
+    (PURE). No gap bridging — the `event_returns` rule."""
+    iso = _iso(day)
+    days = sorted(str(d)[:10] for d in (trading_days or []))
+    closes = closes if isinstance(closes, dict) else {}
+    i = bisect_left(days, iso)
+    prev = days[i - 1] if 0 < i <= len(days) else None
+    return {"date": iso, "prev_date": prev,
+            "close": _r(closes.get(iso), 4), "prev_close": _r(closes.get(prev), 4) if prev else None,
+            "move_pct": event_returns(closes, days, {iso: None})[iso]}
+
+
+def _today_blank(event: Optional[dict], state: str, *, mode: Optional[str] = None,
+                 day: Optional[str] = None, for_today: bool = False) -> dict:
     ev = event if isinstance(event, dict) else None
     return {"event_day": ev is not None, "tier": (ev or {}).get("tier"),
             "labels": list((ev or {}).get("labels") or []), "state": state,
             "move_pct": None, "holding": None, "print": None, "prev_close": None,
-            "basis": None, "tape": None, "as_of_et": None}
+            "basis": None, "tape": None, "as_of_et": None,
+            "mode": mode, "day": day, "for_today": bool(for_today)}
+
+
+def _last_session_read(raw: Optional[dict], *, ref_close, ref_date,
+                       last: Optional[dict]) -> dict:
+    """The closed-mode read: the last session's close vs the one before it, off
+    the closed bars, only when the cached last bar IS that session and the
+    snapshot agrees it is final (`KL.verify_last`). Never a tier, never today."""
+    lst = last if isinstance(last, dict) else {}
+    d = lst.get("date")
+
+    def _blank(state):
+        return _today_blank(None, state, mode=MODE_CLOSED, day=d, for_today=False)
+    if d is None or str(ref_date or "")[:10] != d:
+        return _blank("stale")
+    stale, ok = KL.verify_last(ref_close, ref_date, KL.row_or_none(raw))
+    if stale:
+        return _blank("stale")
+    if not ok:
+        return _blank("no_print")
+    mv = _f(lst.get("move_pct"))
+    if mv is None:
+        return _blank("no_print")
+    out = _blank("read")
+    out.update(move_pct=mv, holding=held(mv), print=_r(lst.get("close"), 4),
+               prev_close=_r(lst.get("prev_close"), 4), basis=LAST_BASIS)
+    return out
 
 
 def today_read(raw: Optional[dict], *, ref_close, ref_date, now, session, phase,
-               event: Optional[dict]) -> dict:
-    """TodayRead. `basis == "last_close"` is NEVER a read — a name with no
-    print today is `no_print`, never "holding +0.00%"."""
-    if not isinstance(event, dict):
-        return _today_blank(None, "no_event")
+               event: Optional[dict], mode: Optional[str] = None,
+               last: Optional[dict] = None) -> dict:
+    """TodayRead, on EVERY session (2026-10-07). `basis == "last_close"` is
+    NEVER a read — a name with no print is `no_print`, never "+0.00%".
+    live = today's print (`KL.anchor_read`); after_close = the snapshot day
+    bar's regular-session close (never the after-hours print); closed = the
+    last closed session (dated, `for_today` False) — except a T1/T2 day's
+    pre-market, which keeps its live pre-market read."""
+    m = mode or today_mode(now)["mode"]
+    ev = event if isinstance(event, dict) else None
+    if m == MODE_CLOSED and not (phase == "pre" and ev is not None):
+        return _last_session_read(raw, ref_close=ref_close, ref_date=ref_date, last=last)
+    day = _iso(session)
+
+    def _blank(state):
+        return _today_blank(ev, state, mode=m, day=day, for_today=True)
     if phase is None:
-        return _today_blank(event, "not_open")
+        return _blank("not_open")
     row = KL.row_or_none(raw)
     if row is None:
-        return _today_blank(event, "no_print")
+        return _blank("no_print")
     stale, ok = KL.verify_last(ref_close, ref_date, row)
     if stale:
-        return _today_blank(event, "stale")
+        return _blank("stale")
     if not ok:
-        return _today_blank(event, "no_print")
-    px, basis, tape = KL.anchor_read(row, now, session, ref_close)
-    if px is None or basis not in ("live", "day_close"):
-        return _today_blank(event, "no_print")
+        return _blank("no_print")
+    if m == MODE_AFTER:
+        from chart_maps import drop10_tab as D10
+        dbar = D10.day_from_snapshot(raw, session)
+        px, basis, tape = _pos((dbar or {}).get("last")), "day_close", None
+        if px is None:
+            return _blank("no_print")
+    else:
+        px, basis, tape = KL.anchor_read(row, now, session, ref_close)
+        if px is None or basis not in ("live", "day_close"):
+            return _blank("no_print")
+        if basis == "day_close" and phase == "rth":
+            basis = DAY_BAR_BASIS      # the day bar is still forming — not a close
     mv = pct_ret(px, ref_close)
     if mv is None:
-        return _today_blank(event, "no_print")
-    if basis == "day_close" and phase == "rth":
-        basis = DAY_BAR_BASIS          # the day bar is still forming — not a close
-    out = _today_blank(event, "read")
+        return _blank("no_print")
+    out = _blank("read")
     out.update(move_pct=mv, holding=held(mv), print=_r(px, 4), prev_close=_r(ref_close, 4),
                basis=basis, tape=tape if basis == "live" else None,
                as_of_et=_print_as_of(row) if basis == "live" else None)
     return out
+
+
+# ---------------------------------------------------------------------------
+# 🚀 sales + EPS growth (PURE) — the latest quarter vs the same quarter a year earlier
+# ---------------------------------------------------------------------------
+def _yoy_base(series, min_base) -> tuple:
+    """(pct, base_state, base) — `qoq._seq_pct` is the engine, slot 0 vs
+    slot `qoq.YOY_GAP` of the newest-first series."""
+    s = list(series) if isinstance(series, (list, tuple)) else []
+    cur = qoq._f(s[0]) if s else None
+    base = qoq._f(s[qoq.YOY_GAP]) if len(s) > qoq.YOY_GAP else None
+    pct, state = qoq._seq_pct(cur, base, min_base)
+    return pct, state, base
+
+
+_BASE_WORD = {qoq.BASE_OK: "ok", qoq.BASE_NON_POSITIVE: "non_positive",
+              qoq.BASE_TOO_SMALL: "too_small", qoq.BASE_UNKNOWN: "unknown"}
+
+
+def _as_of_day(v) -> Optional[str]:
+    if isinstance(v, datetime):
+        return KL._et(v if v.tzinfo else v.replace(tzinfo=timezone.utc)).date().isoformat()
+    x = _pos(v)
+    if x is None:
+        return None
+    try:
+        return datetime.fromtimestamp(x, tz=KL.ET).date().isoformat()
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def growth_read(f: Optional[dict]) -> dict:
+    """GrowthRead off one `research.decision_snapshot` row. A leg is RANKED
+    only off a material year-ago base: EPS `EPS_MIN_BASE` (via `qoq._seq_pct`)
+    and the stored figure agreeing with its own series; sales `bonde._rev_base`
+    ("ok" = at or over `REV_MIN_BASE`). A year-ago loss or a base too small is
+    shown blank. Quarters not four apart (`qoq.period_ok` False) -> nothing."""
+    out = {"state": "no_figures", "period": None, "year_ago_period": None, "source": None,
+           "sales_yoy_pct": None, "sales_stored_pct": None, "sales_base": "unknown",
+           "sales_year_ago": None, "sales_ranked": False,
+           "eps_yoy_pct": None, "eps_stored_pct": None, "eps_base": "unknown",
+           "eps_year_ago": None, "eps_agrees": None, "eps_ranked": False,
+           "score": None, "legs": 0, "as_of": None}
+    if not isinstance(f, dict):
+        return out
+    src = f.get("_source")
+    periods = f.get("q_period_series") if isinstance(f.get("q_period_series"), list) else None
+    ya = qoq.HEADLINE_PAIR[1]
+    out.update(source=src if isinstance(src, str) else None,
+               period=qoq.period_label(periods[0], src) if periods else None,
+               year_ago_period=(qoq.period_label(periods[ya], src)
+                                if periods and len(periods) > ya else None),
+               as_of=_as_of_day(f.get("cached_at")))
+    if qoq.period_ok(periods) is False:
+        out["state"] = "period_mismatch"
+        return out
+    # sales: the spine's figure first, canslim's parallel one as the fallback (🔥 Hottest)
+    sales = f.get("sales") if isinstance(f.get("sales"), dict) else {}
+    s_st = _r(sales.get("growth_yoy_pct"))
+    if s_st is None:
+        s_st = _r(f.get("rev_growth_q_pct"))
+    rb = SB._rev_base({"fundamentals": f})
+    s_base = rb.get("base_state") if rb.get("base_state") in (
+        "ok", "non_positive", "too_small", "unknown") else "unknown"
+    s_v = None if s_base in ("non_positive", "too_small") else s_st
+    out.update(sales_stored_pct=s_st, sales_base=s_base, sales_year_ago=_f(rb.get("base_rev")),
+               sales_yoy_pct=s_v, sales_ranked=bool(s_base == "ok" and s_v is not None))
+    # EPS: the stored figure, ranked only when its year-ago base is material AND
+    # its own quarterly series agrees with it
+    e_st = _r(f.get("q_eps_growth_pct"))
+    pct, st, b = _yoy_base(f.get("eps_q_series"), EPS_MIN_BASE)
+    e_base = _BASE_WORD.get(st, "unknown")
+    e_v = None if e_base in ("non_positive", "too_small") else e_st
+    agrees = (bool(abs(e_st - pct) <= PCT_AGREE_TOL)
+              if (e_base == "ok" and e_st is not None and pct is not None) else None)
+    out.update(eps_stored_pct=e_st, eps_base=e_base, eps_year_ago=_f(b), eps_yoy_pct=e_v,
+               eps_agrees=agrees, eps_ranked=bool(e_base == "ok" and agrees is True))
+    if not (s_st is None and e_st is None and s_base == "unknown" and e_base == "unknown"):
+        out["state"] = "read"
+    return out
+
+
+def score_growth(growths: list) -> None:
+    """IN PLACE: `score` / `legs` off `qoq.score_board` (the breakouts board's
+    equal-weight percentile blend) over the RANKED legs only."""
+    growths = [g for g in (growths or []) if isinstance(g, dict)]
+    tmp = [{"i": g.get("eps_yoy_pct") if g.get("eps_ranked") else None,
+            "g": g.get("sales_yoy_pct") if g.get("sales_ranked") else None} for g in growths]
+    qoq.score_board(tmp, income_key="i", growth_key="g", out_key="s")
+    for g, t in zip(growths, tmp):
+        g["score"], g["legs"] = _f(t["s"]), int(t["qoq_legs"])
 
 
 def tile_filter(res: dict) -> dict:
@@ -743,8 +959,29 @@ def order_key(row: dict, sort: str) -> tuple:
     if sort == SORT_TODAY:
         td = res.get("today") or {}
         mv = _f(td.get("move_pct"))
-        return (0 if td.get("state") == "read" and mv is not None else 1, -(mv or 0.0), sym)
-    return _tier_key(res.get("t1")) + (sym,)
+        return ((0 if td.get("state") == "read" and mv is not None else 1, -(mv or 0.0))
+                + _tier_key(res.get("t1")) + (sym,))          # ties: the T1 hold rate
+    if sort == SORT_GROWTH:
+        g = res.get("growth") or {}
+        sc = _f(g.get("score"))
+        return ((sc is None, not bool(g.get("eps_ranked")), -(sc or 0.0))
+                + _tier_key(res.get("t1")) + (sym,))
+    return _tier_key(res.get("t1")) + (sym,)          # SORT_T1, "default" and unknown keys
+
+
+def resolve_sort(sort, *, mode, n_read, n_growth) -> tuple:
+    """(effective key, sort_unavailable | None). `default` RESOLVES per request:
+    today's move once the session (live / after the close) has a print, else
+    the T1 hold rate. The served key is always an explicit one."""
+    req = sort if sort in TAB_SORTS else DEFAULT_SORT_KEY
+    dflt = SORT_TODAY if (mode in (MODE_LIVE, MODE_AFTER) and int(n_read or 0) > 0) else SORT_T1
+    if req == DEFAULT_SORT_KEY:
+        return dflt, None
+    if req == SORT_TODAY and not int(n_read or 0):
+        return SORT_T1, TODAY_SORT_NO_READ
+    if req == SORT_GROWTH and not int(n_growth or 0):
+        return dflt, GROWTH_SORT_UNAVAILABLE
+    return req, None
 
 
 # ---------------------------------------------------------------------------
@@ -856,6 +1093,24 @@ def rules_block() -> dict:
         f"'SPY fell' = {BENCH}'s own close-to-close on that day below zero.",
         (f"{EOD_MARK} = the app's accumulation day on the last session: up close, close in the "
          f"upper half of the range, volume above its {VOL_AVG_BARS}-session average."),
+        (f"{TODAY_MARK} Today's move = the price against the prior session's close: live in "
+         "market hours, the regular-session close after it, and before the open, overnight "
+         "and on weekends the last session's close against the one before it, labelled with "
+         "its date (closed bars, checked against the snapshot). On a T1/T2 day the card also "
+         "says T1/T2, and its pre-market print is read live. The same "
+         f"{HOLD_MAX_DROP_PCT:g}% line colours it."),
+        ("Default order: today's move, biggest gain first, once the session has a print "
+         f"(market hours and after the close); before that, {MARK} T1 hold rate. A name with "
+         "no print sorts last; ties go to the T1 hold rate. The "
+         f"{TODAY_MARK} line counts every name read, before the boxes and the liquidity "
+         "floor."),
+        (f"{GROWTH_MARK} Sales + EPS growth = the latest reported quarter against the same "
+         f"quarter a year earlier. Never ranked: a year-ago EPS under ${EPS_MIN_BASE:.2f} or "
+         f"a year-ago loss, a year-ago revenue under ${REV_MIN_BASE / 1e6:g}M or at or under "
+         "zero (both shown blank), quarters not a year apart on file, and an EPS figure that "
+         "disagrees with its own quarterly series (shown, not ranked). Ranked by each leg's "
+         "percentile averaged — the breakouts board's blend — names with an EPS leg first. "
+         "UNMEASURED — an order, not a forecast."),
         ((f"{PRE_MARK} = a fresh pre-market print above the prior close on at least "
           f"{PM_RVOL_MIN:g}× the name's own pre-market volume by the same minute, over at "
           f"least {PM_BASELINE_MIN_SESSIONS} cached sessions. 04:00–09:30 ET only.")
@@ -867,7 +1122,9 @@ def rules_block() -> dict:
             "hold_rate_min_pct": float(HOLD_RATE_MIN_PCT),
             "window_days": int(HOLD_WINDOW_DAYS), "t2_excludes_t1": bool(T2_EXCLUDES_T1_DAYS),
             "pre_rvol_min": float(PM_RVOL_MIN), "pre_min_sessions": int(PM_BASELINE_MIN_SESSIONS),
-            "vol_avg_bars": int(VOL_AVG_BARS), "benchmark": BENCH, "lines": lines}
+            "vol_avg_bars": int(VOL_AVG_BARS), "benchmark": BENCH,
+            "eps_min_base": float(EPS_MIN_BASE), "rev_min_base": float(REV_MIN_BASE),
+            "lines": lines}
 
 
 def box_notes(study: Optional[dict] = None) -> dict:
@@ -1026,10 +1283,11 @@ def _events_error(past) -> Optional[str]:
 
 
 def build(universe_name: str, session: date, *, universe_fn=None, frames_fn=None,
-          events_fn=None, calendar_fn=None) -> dict:
-    """The closed-bar half. ONE `bulk_cached_frames(syms + [BENCH])`, ONE
-    `past_events`, ONE `get_macro_calendar()` (warm thread only). Raises only
-    when frames come back empty for a non-empty universe."""
+          events_fn=None, calendar_fn=None, fund_fn=None) -> dict:
+    """The closed-bar half. ONE `bulk_cached_frames(syms + [BENCH, EW_BENCH])`,
+    ONE `past_events`, ONE `get_macro_calendar()`, ONE
+    `research.decision_snapshot(syms)` (warm thread only). Raises only when
+    frames come back empty for a non-empty universe."""
     from supply_demand import quick_bounce as QB
     ukey = _ukey(universe_name)
     if universe_fn is None:
@@ -1046,7 +1304,7 @@ def build(universe_name: str, session: date, *, universe_fn=None, frames_fn=None
     if frames_fn is None:
         from sepa import prices
         frames_fn = prices.bulk_cached_frames
-    frames = frames_fn(syms + ([BENCH] if BENCH not in seen else [])) or {}
+    frames = frames_fn(syms + [b for b in (BENCH, EW_BENCH) if b not in seen]) or {}
     if syms and not frames:
         raise RuntimeError(f"resiliency tab: the price-cache read returned no frames for "
                            f"{len(syms):,} names — not memoising an empty read")
@@ -1120,13 +1378,47 @@ def build(universe_name: str, session: date, *, universe_fn=None, frames_fn=None
         except Exception as exc:                                # noqa: BLE001
             log.debug("resiliency tab: %s build failed: %s", sym, type(exc).__name__)
             continue
+
+    # the equal-weight benchmark (the market line's second number)
+    ew = {"symbol": EW_BENCH, "ref_close": None, "ref_date": None, "last_session": None}
+    try:
+        edf = frames.get(EW_BENCH)
+        closed_e = KL.closed_frame(edf, session) if edf is not None else None
+        if closed_e is not None and len(closed_e):
+            e_closes = closes_by_day(closed_e)
+            e_last = KL._norm_index(closed_e)[-1].date().isoformat()
+            ew.update(ref_close=_f(closed_e["close"].iloc[-1]), ref_date=e_last,
+                      last_session=last_session_read(e_closes, trading_days, need))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("resiliency tab: %s read failed: %s", EW_BENCH, type(exc).__name__)
+
+    # 🚀 the latest quarter's sales + EPS growth — ONE projected Mongo read, here
+    # in the warm thread only (never on a request)
+    fund_error = None
+    try:
+        if fund_fn is None:
+            from sepa import research
+            fund_fn = research.decision_snapshot
+        fund = fund_fn(syms) or {}
+        if not isinstance(fund, dict):
+            fund = {}
+    except Exception as exc:                                    # noqa: BLE001
+        fund, fund_error = {}, type(exc).__name__               # never the text (keys)
+    for sym, rd in reads.items():
+        rd["growth"] = growth_read(fund.get(sym))
+    score_growth([rd["growth"] for rd in reads.values()])
+
     now_ts = time.time()
     return {"syms": syms, "reads": reads, "events_summary": events_summary,
             "session_events": session_events, "next_t1": next_t1,
             "sessions": sessions,
             "bench": {"rets": bench_rets,
                       "ref_close": bench_closes[trading_days[-1]] if trading_days else None,
-                      "ref_date": trading_days[-1] if trading_days else None},
+                      "ref_date": trading_days[-1] if trading_days else None,
+                      "last_session": last_session_read(bench_closes, trading_days, need)},
+            "ew": ew,
+            "fund_summary": {"available": bool(fund) and fund_error is None, "n": len(fund),
+                             "error": fund_error},
             "last_closed": trading_days[-1] if trading_days else None,
             "built_ts": now_ts,
             "built_at": datetime.fromtimestamp(now_ts, tz=KL.ET).isoformat(timespec="seconds"),
@@ -1159,7 +1451,8 @@ def _closed_read(closed, sessions, bench_rets, bench_closes, trading_days, *, ne
             "ref_close": _f(closed["close"].iloc[-1]), "ref_date": last_day.isoformat(),
             "adv50": _f(qb.avg_dollar_vol(closed)),
             "avg_vol_session": MB.avg_volume_before(closed, session),
-            "stale_note": stale_note}
+            "stale_note": stale_note,
+            "last_session": last_session_read(closes, trading_days, need)}
 
 
 # ---------------------------------------------------------------------------
@@ -1345,7 +1638,8 @@ def pm_cached_or_warm(syms, session: date, *, sync: bool = False, coll=None) -> 
 # ---------------------------------------------------------------------------
 COUNT_KEYS = ("scanned", "no_bars", "stale", "rated_t1", "partial_t1", "t1_pass",
               "rated_t2", "partial_t2", "t2_pass", "eod_read", "eod_pass",
-              "pre_read", "pre_pass", "pre_no_baseline", "eod_session")
+              "pre_read", "pre_pass", "pre_no_baseline", "eod_session",
+              "today_read", "today_up", "today_stale", "growth_ranked", "growth_eps_ranked")
 
 
 def _session_bar(raw: Optional[dict], session: date) -> Optional[dict]:
@@ -1378,8 +1672,12 @@ def rank(entry: dict, raw: dict, pm: Optional[dict], *, now: datetime, sort: str
     sev = entry.get("session_events") or {}
     event = ({"tier": sev.get("tier"), "labels": list(sev.get("t1") or []) + list(sev.get("t2") or [])}
              if sev.get("tier") in (1, 2) else None)
+    tm = today_mode(now_et)
+    t_mode = tm["mode"]
+    data_pre = ph == "pre" and event is not None
     counts = {k: 0 for k in COUNT_KEYS}
-    today_c = {"read": 0, "holding": 0, "down": 0, "no_print": 0}
+    today_c = {"read": 0, "holding": 0, "down": 0, "no_print": 0, "stale": 0, "up": 0}
+    moves: list = []
     reads = entry.get("reads") or {}
     pool: list = []
     for sym in entry.get("syms") or []:
@@ -1395,9 +1693,12 @@ def rank(entry: dict, raw: dict, pm: Optional[dict], *, now: datetime, sort: str
         if stale_s or rd.get("stale_note"):
             counts["stale"] += 1
         tr = today_read(r_raw, ref_close=rd.get("ref_close"), ref_date=rd.get("ref_date"),
-                        now=now_et, session=session, phase=ph, event=event)
+                        now=now_et, session=session, phase=ph, event=event, mode=t_mode,
+                        last=rd.get("last_session"))
         if rd.get("stale_note") and tr["state"] == "read":
-            tr = _today_blank(event, "stale")
+            tr = _today_blank(event if tr.get("for_today") else None, "stale",
+                              mode=tr.get("mode"), day=tr.get("day"),
+                              for_today=bool(tr.get("for_today")))
         pr = pre_read(r_raw, ref_close=rd.get("ref_close"), ref_date=rd.get("ref_date"),
                       now=now_et, session=session, phase=ph, baseline=pm_by.get(sym),
                       baseline_state="warming" if pm_state == "warming" else pm_state)
@@ -1410,7 +1711,9 @@ def rank(entry: dict, raw: dict, pm: Optional[dict], *, now: datetime, sort: str
                 eod = eod_read(bar, rd.get("ref_close"), rd.get("avg_vol_session"),
                                date_iso=session.isoformat(), source="session")
                 counts["eod_session"] += 1
+        gr = rd.get("growth") if isinstance(rd.get("growth"), dict) else growth_read(None)
         res = {"t1": rd.get("t1"), "t2": rd.get("t2"), "today": tr, "eod": eod, "pre": pr,
+               "growth": gr,
                "sigma_pct": rd.get("sigma_pct"), "beta": rd.get("beta"), "adv50": rd.get("adv50")}
         tf = tile_filter(res)
         for k in ("t1", "t2"):
@@ -1423,38 +1726,56 @@ def rank(entry: dict, raw: dict, pm: Optional[dict], *, now: datetime, sort: str
         counts["pre_read"] += int(pr.get("state") == "read")
         counts["pre_pass"] += int(tf["pre"] is True)
         counts["pre_no_baseline"] += int(pr.get("state") == "no_baseline")
-        if event is not None:
-            if tr["state"] == "read":
-                today_c["read"] += 1
-                today_c["holding" if tr["holding"] else "down"] += 1
-            elif tr["state"] == "no_print":
-                today_c["no_print"] += 1
+        # 📅 counts on EVERY session (2026-10-07), the whole pool before the boxes
+        if tr["state"] == "read":
+            today_c["read"] += 1
+            today_c["holding" if tr["holding"] else "down"] += 1
+            mv = _f(tr.get("move_pct"))
+            if mv is not None:
+                moves.append(mv)
+                today_c["up"] += int(mv > 0)
+        elif tr["state"] == "no_print":
+            today_c["no_print"] += 1
+        elif tr["state"] == "stale":
+            today_c["stale"] += 1
+        counts["growth_ranked"] += int(_f(gr.get("score")) is not None)
+        counts["growth_eps_ranked"] += int(bool(gr.get("eps_ranked")))
         pool.append({"symbol": sym, "ref_close": rd.get("ref_close"), "adv50": rd.get("adv50"),
                      "resiliency": res, "res_filter": tf})
+    counts["today_read"] = today_c["read"]
+    counts["today_up"] = today_c["up"]
+    counts["today_stale"] = today_c["stale"]
     filters = filters_block([r["res_filter"] for r in pool], act, pool=len(pool), mode=md,
                             study=study_block())
     rows = [r for r in pool if DMT.passes(r["res_filter"], act, md)]
-    sort_unavailable = None
-    eff = sort if sort in TAB_SORTS else DEFAULT_SORT_KEY
-    if eff == SORT_TODAY and event is None:
-        sort_unavailable = TODAY_SORT_UNAVAILABLE
-        eff = DEFAULT_SORT_KEY
+    eff, sort_unavailable = resolve_sort(sort, mode=t_mode, n_read=today_c["read"],
+                                         n_growth=counts["growth_ranked"])
     rows.sort(key=lambda r: order_key(r, eff))
-    # today summary (the benchmark's own read)
-    if event is not None:
-        b = entry.get("bench") or {}
-        spy = today_read(raw.get(BENCH), ref_close=b.get("ref_close"), ref_date=b.get("ref_date"),
-                         now=now_et, session=session, phase=ph, event=event)
-        today = {"event_day": True, "session": session.isoformat(),
-                 "t1": list(sev.get("t1") or []), "t2": list(sev.get("t2") or []),
-                 "tier": int(sev["tier"]),
-                 "spy_move_pct": spy.get("move_pct") if spy["state"] == "read" else None,
-                 "spy_tape": spy.get("tape"), "spy_as_of_et": spy.get("as_of_et"),
-                 "spy_basis": spy.get("basis") if spy["state"] == "read" else None,
-                 **today_c}
-    else:
-        today = {"event_day": False, "session": session.isoformat(),
-                 "next_t1": copy.deepcopy(entry.get("next_t1"))}
+    # today summary (the benchmarks' own reads) — ALWAYS the same keys
+    b = entry.get("bench") or {}
+    spy = today_read(raw.get(BENCH), ref_close=b.get("ref_close"), ref_date=b.get("ref_date"),
+                     now=now_et, session=session, phase=ph, event=event, mode=t_mode,
+                     last=b.get("last_session"))
+    ew = entry.get("ew") or {}
+    rsp = today_read(raw.get(EW_BENCH), ref_close=ew.get("ref_close"),
+                     ref_date=ew.get("ref_date"), now=now_et, session=session, phase=ph,
+                     event=event, mode=t_mode, last=ew.get("last_session"))
+    spy_ok = spy["state"] == "read"
+    today = {"event_day": event is not None, "session": session.isoformat(),
+             "t1": list(sev.get("t1") or []) if event is not None else [],
+             "t2": list(sev.get("t2") or []) if event is not None else [],
+             "tier": int(sev["tier"]) if event is not None else None,
+             "next_t1": copy.deepcopy(entry.get("next_t1")),
+             "mode": t_mode,
+             "day": session.isoformat() if (t_mode != MODE_CLOSED or data_pre) else tm["day"],
+             "data_pre": bool(data_pre), "half_day": bool(tm["half_day"]),
+             "spy_move_pct": spy.get("move_pct") if spy_ok else None,
+             "spy_tape": spy.get("tape") if spy_ok else None,
+             "spy_as_of_et": spy.get("as_of_et") if spy_ok else None,
+             "spy_basis": spy.get("basis") if spy_ok else None,
+             "rsp_move_pct": rsp.get("move_pct") if rsp["state"] == "read" else None,
+             "median_move_pct": _r(statistics.median(moves)) if moves else None,
+             **today_c}
     return rows, counts, filters, today, sort_unavailable
 
 
@@ -1480,12 +1801,92 @@ def tile_badges(r: dict, active=(), *, event_day: bool = False) -> list:
                                                 rate=float(t1.get("rate_pct") or 0.0)),
                     "tone": "good" if tf.get("t1") is True else "muted"})
     td = res.get("today") or {}
-    if event_day and td.get("state") == "read" and td.get("tier") in (1, 2):
-        fmt = TODAY_HOLD_FMT if td.get("holding") else TODAY_DOWN_FMT
-        out.append({"text": fmt.format(tier=int(td["tier"]), move=float(td["move_pct"])),
-                    "tone": "good" if td.get("holding") else "warn"})
+    mv = _f(td.get("move_pct"))
+    # `event_day` is kept for the call sites; the 📅 pill reads on EVERY session (2026-10-07)
+    if td.get("state") == "read" and mv is not None:
+        if td.get("tier") in (1, 2) and td.get("for_today"):
+            fmt = TODAY_HOLD_FMT if td.get("holding") else TODAY_DOWN_FMT
+            text = fmt.format(tier=int(td["tier"]), move=mv)
+        elif td.get("basis") == LAST_BASIS:
+            text = TODAY_LAST_FMT.format(day=KL._day_mmdd(td.get("day"), weekday=True), move=mv)
+        else:
+            text = TODAY_PLAIN_FMT.format(move=mv)
+        out.append({"text": text, "tone": "good" if td.get("holding") else "warn"})
     out.extend(filter_badges(tf, active))
+    out.append({"text": growth_chip(res.get("growth")), "tone": "muted"})
     return out
+
+
+def _gp(v) -> str:
+    x = _f(v)
+    return "—" if x is None else f"{x:+,.1f}%"
+
+
+def _usd(x) -> str:
+    v = _f(x)
+    if v is None:
+        return "—"
+    return f"{'-' if v < 0 else ''}${abs(v):,.2f}"
+
+
+def growth_chip(g: Optional[dict]) -> str:
+    g = g if isinstance(g, dict) else growth_read(None)
+    if g.get("state") == "no_figures":
+        tail = GROWTH_NO_FIGURES
+    elif g.get("state") == "period_mismatch":
+        tail = GROWTH_MISMATCH
+    else:
+        tail = g.get("period") or GROWTH_PERIOD_UNKNOWN
+    return GROWTH_CHIP_FMT.format(sales=_gp(g.get("sales_yoy_pct")),
+                                  eps=_gp(g.get("eps_yoy_pct")), period=tail)
+
+
+def _growth_stat(g: Optional[dict]) -> str:
+    g = g if isinstance(g, dict) else growth_read(None)
+    st = g.get("state")
+    if st == "no_figures":
+        return GROWTH_NO_FIGURES
+    if st == "period_mismatch":
+        return ("the latest quarter and the year-ago quarter on file are not four quarters "
+                "apart — not read")
+    p, ya = g.get("period"), g.get("year_ago_period")
+    head = f"{p} vs {ya}" if (p and ya) else (p or ya or GROWTH_PERIOD_UNKNOWN)
+    parts = [head]
+    # sales
+    sb, ss, sv = g.get("sales_base"), _f(g.get("sales_stored_pct")), _f(g.get("sales_yoy_pct"))
+    if sb == "non_positive":
+        parts.append("sales: year-ago revenue at or under $0"
+                     + (f" — the stored {ss:+.2f}% is a sign flip, not growth" if ss is not None else ""))
+    elif sb == "too_small":
+        parts.append(f"sales: year-ago revenue under ${REV_MIN_BASE / 1e6:g}M"
+                     + (f" — the stored {ss:+.2f}% is arithmetic, not ranked" if ss is not None else ""))
+    elif sv is None:
+        parts.append("sales —")
+    elif g.get("sales_ranked"):
+        parts.append(f"sales {sv:+.2f}%")
+    else:
+        parts.append(f"sales {sv:+.2f}% (not ranked — no quarterly series on file to check its base)")
+    # EPS
+    eb, es, ev = g.get("eps_base"), _f(g.get("eps_stored_pct")), _f(g.get("eps_yoy_pct"))
+    b = g.get("eps_year_ago")
+    if eb == "non_positive":
+        parts.append(f"EPS: the year-ago quarter lost money or broke even ({_usd(b)})"
+                     + (f" — the stored {es:+.2f}% is a sign flip, not growth" if es is not None else ""))
+    elif eb == "too_small":
+        parts.append(f"EPS: year-ago EPS {_usd(b)} is under the {_usd(EPS_MIN_BASE)} floor"
+                     + (f" — the stored {es:+.2f}% is arithmetic, not ranked" if es is not None else ""))
+    elif ev is None:
+        parts.append("EPS —")
+    elif g.get("eps_agrees") is False:
+        parts.append(f"EPS {ev:+.2f}% (not ranked — the stored figure and its own quarterly "
+                     "series disagree)")
+    elif g.get("eps_ranked"):
+        parts.append(f"EPS {ev:+.2f}% (year-ago {_usd(b)})")
+    else:
+        parts.append(f"EPS {ev:+.2f}% (not ranked — no quarterly series on file to check its base)")
+    if g.get("as_of"):
+        parts.append(f"figures cached {g['as_of']}")
+    return " · ".join(parts)
 
 
 def _tier_stat(st, tier: int) -> str:
@@ -1522,9 +1923,13 @@ def _eod_stat(e: dict) -> str:
 _TODAY_TEXT = {"no_print": "no print today yet — not read",
                "stale": "daily bars behind — not read",
                "not_open": "the session has not opened"}
+_TODAY_TEXT_BY_MODE = {(MODE_AFTER, "no_print"): "no trade in today's session — not read"}
 
 
 def _today_stat(td: dict) -> str:
+    by_mode = _TODAY_TEXT_BY_MODE.get((td.get("mode"), td.get("state")))
+    if by_mode:
+        return by_mode
     if td.get("state") == "read":
         if td.get("basis") == "live":
             when = f"{_TAPE_WORD.get(td.get('tape'), 'live')} {td.get('as_of_et') or ''} ET".replace("  ", " ")
@@ -1542,8 +1947,9 @@ def tile_stats(r: dict, *, event_day: bool = False) -> list:
            {"k": "T2 held", "v": _tier_stat(res.get("t2"), 2)},
            {"k": "EOD tape", "v": _eod_stat(res.get("eod") or {})},
            {"k": "Pre-market", "v": str((res.get("pre") or {}).get("text") or "not read")}]
-    if event_day:
-        out.append({"k": "Today", "v": _today_stat(res.get("today") or {})})
+    td = res.get("today") or {}
+    if td.get("for_today"):          # was `event_day`: the session's own read, every session
+        out.append({"k": "Today", "v": _today_stat(td)})
     t1 = res.get("t1") if isinstance(res.get("t1"), dict) else {}
     w = t1.get("worst")
     if isinstance(w, dict):
@@ -1558,6 +1964,7 @@ def tile_stats(r: dict, *, event_day: bool = False) -> list:
     out.append({"k": "σ · β",
                 "v": f"{'—' if sg is None else f'{sg:.1f}%/day'} · "
                      f"β {'—' if bt is None else f'{bt:.2f}'}"})
+    out.append({"k": GROWTH_STAT_KEY, "v": _growth_stat(res.get("growth"))})
     return out
 
 
@@ -1646,6 +2053,10 @@ def today_line(today: dict) -> Optional[str]:
         if t.get("t2"):
             parts.append(f"{_labels_txt(t['t2'])} (T2)")
         txt = f"{TODAY_MARK} {t.get('session')} is a T{t.get('tier')} data day — {'; '.join(parts)}."
+        if t.get("mode") == MODE_CLOSED and not t.get("data_pre"):
+            # 00:00–04:00 ET on a data day: the 📅 reads are the LAST session's —
+            # never printed as this data day's (2026-10-07)
+            return txt + f" {_TODAY_TEXT['not_open'][0].upper()}{_TODAY_TEXT['not_open'][1:]}."
         spy = _f(t.get("spy_move_pct"))
         if spy is not None:
             when = _TAPE_WORD.get(t.get("spy_tape"), DAY_BAR_WORD if t.get("spy_basis") ==
@@ -1663,6 +2074,39 @@ def today_line(today: dict) -> Optional[str]:
     if isinstance(nx, dict) and nx.get("date"):
         txt += f" Next T1: {nx.get('label')} {nx.get('date')}."
     return txt
+
+
+def market_line(today: Optional[dict]) -> Optional[str]:
+    """The served market-context line: SPY, RSP, the median name and n up of n
+    read — every universe name read, before the boxes and the floor. The word
+    down / up / flat comes ONLY from the median's sign."""
+    t = today if isinstance(today, dict) else {}
+    m = t.get("mode")
+    if not m:
+        return None
+    if m == MODE_LIVE:
+        when = MARKET_LIVE_WHEN + (f" {t['spy_as_of_et']} ET" if t.get("spy_as_of_et") else "")
+    elif m == MODE_AFTER:
+        from chart_maps import drop10_tab as D10
+        close = MB.HALF_DAY_CLOSE_ET if t.get("half_day") else D10.ZE_CLOSE
+        when = MARKET_AFTER_WHEN_FMT.format(close=f"{close:%H:%M}")
+    elif t.get("data_pre"):
+        when = MARKET_PRE_WHEN
+    else:
+        when = MARKET_LAST_WHEN_FMT.format(day=KL._day_mmdd(t.get("day"), weekday=True))
+    if not int(t.get("read") or 0):
+        return MARKET_EMPTY_FMT.format(when=when)
+    med = _f(t.get("median_move_pct"))
+    if med is None:
+        return MARKET_EMPTY_FMT.format(when=when)
+
+    def _px(v):
+        return _pct_txt(v) if _f(v) is not None else NO_PRINT_WORD
+    word = "down" if med < 0 else ("up" if med > 0 else "flat")
+    return MARKET_LINE_FMT.format(when=when, bench=BENCH, spy=_px(t.get("spy_move_pct")),
+                                  ew=EW_BENCH, rsp=_px(t.get("rsp_move_pct")),
+                                  med=f"{med:+.2f}%", word=word, up=_n(t.get("up")),
+                                  n=_n(t.get("read")))
 
 
 def events_line(entry: Optional[dict]) -> str:
@@ -1691,6 +2135,7 @@ def _block(state: str, *, now: datetime, sort: str, header: str, entry: Optional
     return {"state": state, "session": session.isoformat(), "phase": KL.phase(now_et, session),
             "market_closed": _market_closed(now_et), "sort": sort, "header": header,
             "today_line": today_line(today) if today else None,
+            "market_line": market_line(today) if today else None,
             "events_line": events_line(entry) if entry else None,
             "rules": rules_block(),
             "events": copy.deepcopy((entry or {}).get("events_summary")) if entry else None,
@@ -1719,8 +2164,12 @@ def ready_block(counts: dict, *, entry: dict, now: datetime, sort: str, filters:
                   today=today, header=header_text(counts, entry=entry, ph=ph, pm_state=pm_state))
 
 
-def served_sorts() -> list:
-    return [{"key": DEFAULT_SORT_KEY, "label": DEFAULT_SORT_LABEL},
-            {"key": SORT_T2, "label": T2_SORT_LABEL},
-            {"key": SORT_DOWN, "label": DOWN_SORT_LABEL},
-            {"key": SORT_TODAY, "label": TODAY_SORT_LABEL}]
+def served_sorts(resolved: str = SORT_T1, *, today_label: str = TODAY_SORT_LABEL) -> list:
+    """`default` FIRST, labelled with what it resolved to (the generic Sort
+    select shows the URL's `default`), then the five explicit keys."""
+    labels = {SORT_TODAY: today_label, SORT_T1: T1_SORT_LABEL, SORT_T2: T2_SORT_LABEL,
+              SORT_DOWN: DOWN_SORT_LABEL, SORT_GROWTH: GROWTH_SORT_LABEL}
+    head = labels.get(resolved, T1_SORT_LABEL) + DEFAULT_LABEL_SUFFIX
+    return ([{"key": DEFAULT_SORT_KEY, "label": head}]
+            + [{"key": k, "label": labels[k]}
+               for k in (SORT_TODAY, SORT_T1, SORT_T2, SORT_DOWN, SORT_GROWTH)])

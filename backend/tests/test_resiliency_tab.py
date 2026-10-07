@@ -146,7 +146,7 @@ def _entry(frames=None, *, session=SESSION, events=None, cal=CAL):
     return R.build("full", session, universe_fn=lambda u: [s for s in fr if s != "SPY"],
                    frames_fn=lambda syms: {s: fr[s] for s in syms if s in fr},
                    events_fn=lambda a, b: (events if events is not None else _events()),
-                   calendar_fn=lambda: cal)
+                   calendar_fn=lambda: cal, fund_fn=lambda syms: {})
 
 
 @pytest.fixture
@@ -419,7 +419,9 @@ def test_today_read_holding_on_an_event_session():
 
 def test_NEG_today_read_never_says_holding_without_a_print():
     kw = dict(ref_close=100.0, ref_date=LAST, session=SESSION)
-    assert R.today_read(_rth(100.4, ref=100.0), now=NOW, phase="rth", event=None, **kw)["state"] == "no_event"
+    # 2026-10-07: a non-data day READS too (no tier, for_today) — the old no_event pin
+    nd = R.today_read(_rth(100.4, ref=100.0), now=NOW, phase="rth", event=None, **kw)
+    assert nd["state"] == "read" and nd["tier"] is None and nd["for_today"] is True
     # pre phase, only yesterday's close in the row -> anchor basis last_close -> no_print
     row = {"prev_day_close": 100.0}
     t = R.today_read(row, now=PRE, phase="pre", event=EV, **kw)
@@ -465,7 +467,7 @@ def test_order_key_all_four_sorts():
     assert order("default") == ["B", "D", "A", "C"]                 # rated first, rate, down rate
     assert order("res_t2") == ["C", "A", "D", "B"]
     assert order("res_down") == ["D", "A", "B", "C"]                # C unrated goes last
-    assert order("res_today") == ["C", "B", "A", "D"]               # reads first, A/D unread by symbol
+    assert order("res_today") == ["C", "B", "D", "A"]               # reads first, A/D unread by T1 hold rate
     assert order("bogus") == order("default")
 
 
@@ -539,17 +541,22 @@ def test_NEG_rank_never_mutates_the_memo_and_never_reads_the_calendar(monkeypatc
     assert e == before
 
 
-def test_NEG_non_event_day_no_today_badge_and_res_today_unavailable():
+def test_non_event_day_reads_today_and_res_today_orders_by_it():
+    """2026-10-07 rewrite of the old non-event-day pin: an ordinary session READS
+    (no tier), `res_today` is never unavailable, the pill is the plain one."""
     e = _entry(cal={"macro": [{"date": "2026-10-02", "kind": "jobs", "tier": 1,
                                "label": "Jobs report (NFP)"}]})
     rows, counts, filters, today, su = R.rank(e, SNAPS, None, now=NOW, sort="res_today")
-    assert today == {"event_day": False, "session": "2026-09-30",
-                     "next_t1": {"date": "2026-10-02", "label": "Jobs report (NFP)"}}
-    assert su == R.TODAY_SORT_UNAVAILABLE
-    assert all(r["resiliency"]["today"]["state"] == "no_event" for r in rows)
-    for r in rows:
-        assert not any(b["text"].startswith(R.TODAY_MARK) for b in R.tile_badges(r))
-        assert not any(s["k"] == "Today" for s in R.tile_stats(r))
+    assert today["event_day"] is False and today["session"] == "2026-09-30"
+    assert today["next_t1"] == {"date": "2026-10-02", "label": "Jobs report (NFP)"}
+    assert today["mode"] == R.MODE_LIVE and today["tier"] is None
+    assert su is None
+    reads = [r for r in rows if r["resiliency"]["today"]["state"] == "read"]
+    assert reads and all(r["resiliency"]["today"]["tier"] is None for r in reads)
+    for r in reads:
+        pill = [b["text"] for b in R.tile_badges(r) if b["text"].startswith(R.TODAY_MARK)]
+        assert len(pill) == 1 and pill[0].startswith("\U0001F4C5 today · ")
+        assert any(s["k"] == "Today" for s in R.tile_stats(r))
     assert R.today_line(today) == ("\U0001F4C5 2026-09-30 has no T1 or T2 print. "
                                    "Next T1: Jobs report (NFP) 2026-10-02.")
 
@@ -580,7 +587,7 @@ def test_NEG_a_raising_events_fn_is_an_error_class_not_a_crash():
         raise ConnectionError("https://api.stlouisfed.org/fred/x?api_key=SECRET")
     e = R.build("full", SESSION, universe_fn=lambda u: ["QUIET"],
                 frames_fn=lambda syms: {s: fr[s] for s in syms if s in fr},
-                events_fn=boom, calendar_fn=lambda: CAL)
+                events_fn=boom, calendar_fn=lambda: CAL, fund_fn=lambda syms: {})
     assert e["events_error"] == "ConnectionError" and "SECRET" not in json.dumps(e, default=str)
 
 
@@ -591,7 +598,7 @@ def test_NEG_calendar_failure_leaves_no_event_and_never_raises():
         raise TimeoutError("slow")
     e = R.build("full", SESSION, universe_fn=lambda u: ["QUIET"],
                 frames_fn=lambda syms: {s: fr[s] for s in syms if s in fr},
-                events_fn=lambda a, b: _events(), calendar_fn=boom)
+                events_fn=lambda a, b: _events(), calendar_fn=boom, fund_fn=lambda syms: {})
     assert e["session_events"]["tier"] is None and e["next_t1"] is None
 
 
@@ -769,9 +776,10 @@ def test_tile_words_badges_stats_why():
     assert b[0] == {"text": "\U0001F6E1️ T1 held 8/8 (100%)", "tone": "good"}
     assert b[1] == {"text": "\U0001F4C5 T1 today · holding +0.20%", "tone": "good"}
     assert b[2] == {"text": "\U0001F6E1️ Held on T1", "tone": "good", "res_filter": "t1"}
+    assert b[3] == {"text": "Sales — · EPS — YoY (no quarterly figures on file)", "tone": "muted"}
     ks = [s["k"] for s in R.tile_stats(q, event_day=True)]
     assert ks == ["T1 held", "T2 held", "EOD tape", "Pre-market", "Today", "T1 worst",
-                  "Last T1", "σ · β"]
+                  "Last T1", "σ · β", "Growth"]
     assert R.why_text(q).startswith("Held 8 of 8 T1 days (100%), 4 of 4 when SPY fell")
     rows_all, *_ = R.rank(e, SNAPS, None, now=NOW, sort="default")
     d = next(r for r in rows_all if r["symbol"] == "DROPR")
@@ -994,13 +1002,14 @@ def res_board(monkeypatch, _clean):
                           universe_fn=lambda u: [s for s in fr if s != "SPY"],
                           frames_fn=lambda syms: {s: fr[s] for s in syms if s in fr},
                           events_fn=lambda a, b: state["events"] or _events(),
-                          calendar_fn=lambda: state["cal"])
+                          calendar_fn=lambda: state["cal"], fund_fn=lambda syms: {})
 
     monkeypatch.setattr(R, "build", fake_build)
     monkeypatch.setattr(B, "datetime", _Fixed)
     monkeypatch.setattr(B, "_bulk_snaps", _snaps)
     monkeypatch.setattr(B, "_finish", _finish_spy)
     monkeypatch.setattr(scanner, "load_latest", lambda *a, **k: {"all_results": []})
+    monkeypatch.setattr(scanner, "load_latest_shared", lambda *a, **k: {"all_results": []})
     monkeypatch.setattr(B, "_attach_bars", _bars)
     monkeypatch.setattr(B, "attach_explosive", lambda tiles: 0)
     monkeypatch.setattr(B, "attach_velocity", lambda tiles, **k: 0)
@@ -1022,6 +1031,7 @@ def res_board(monkeypatch, _clean):
 
 
 BOARD_KEYS = {"state", "session", "phase", "market_closed", "sort", "header", "today_line",
+              "market_line",
               "events_line", "rules", "events", "today", "counts", "filters", "study", "note",
               "measured", "built_at"}
 COUNT_KEYS_SPEC = {"scanned", "no_bars", "stale", "rated_t1", "partial_t1", "t1_pass",
@@ -1032,9 +1042,11 @@ COUNT_KEYS_SPEC = {"scanned", "no_bars", "stale", "rated_t1", "partial_t1", "t1_
 def test_board_payload_shape_and_sorts(res_board):
     res_board["seed"]()
     a = B.board(tab="resiliency", limit=24)
-    assert a["tab"] == "resiliency" and a["sort"] == "default"
-    assert a["sorts"] == R.served_sorts()
-    assert [s["key"] for s in a["sorts"]] == ["default", "res_t2", "res_down", "res_today"]
+    assert a["tab"] == "resiliency" and a["sort"] == "res_today"       # default resolved (RTH, reads)
+    assert a["sorts"] == R.served_sorts(R.SORT_TODAY)
+    assert [s["key"] for s in a["sorts"]] == ["default", "res_today", "res_t1", "res_t2",
+                                              "res_down", "res_growth"]
+    assert a["sorts"][0]["label"] == "\U0001F4C5 Today's move (default)"
     assert [t["symbol"] for t in a["tiles"]] == ["ACCUM", "QUIET", "DROPR", "HOLEY"]  # THIN floored
     rb = a["resiliency_board"]
     assert set(rb) == BOARD_KEYS and rb["state"] == "ready"
@@ -1047,10 +1059,11 @@ def test_board_payload_shape_and_sorts(res_board):
     assert rb["measured"] is False and rb["note"] == a["note"]
     t = a["tiles"][1]
     assert t["symbol"] == "QUIET" and set(t["resiliency"]) == {
-        "t1", "t2", "today", "eod", "pre", "sigma_pct", "beta", "adv50"}
+        "t1", "t2", "today", "eod", "pre", "growth", "sigma_pct", "beta", "adv50"}
     assert set(t["res_filter"]) == set(R.FILTER_KEYS) and "enterable" not in t
     assert t["badges"][0]["text"].startswith("\U0001F6E1️ T1 held")
     assert len(res_board["snap_calls"]) == 1 and "SPY" in res_board["snap_calls"][0]
+    assert "RSP" in res_board["snap_calls"][0]
     json.dumps(a, allow_nan=False)
     b = B.board(tab="resiliency", sort="res_t2", limit=24)
     assert b["sort"] == "res_t2" and b["resiliency_board"]["sort"] == "res_t2"
@@ -1100,7 +1113,7 @@ def test_board_res_filters_any_and_all(res_board):
 def test_NEG_tab_scoped_sorts_and_other_tabs_ignore_res(res_board, monkeypatch):
     res_board["seed"]()
     bogus = B.board(tab="resiliency", sort="volume", limit=24)
-    assert bogus["sort"] == "default"
+    assert bogus["sort"] == "res_today"                 # the resolved default (RTH, reads)
     seen = []
     monkeypatch.setattr(B, "ath_tiles", lambda *a, **k: seen.append(a[4]) or {"tiles": []})
     out = B.board(tab="ath", sort="res_t2", res="t1")
@@ -1126,6 +1139,7 @@ def test_board_warming_and_error(monkeypatch, _clean):
     monkeypatch.setattr(R, "build", lambda u, s, **k: built)
     out = B.resiliency_tiles(24, 130, "full", now=NOW, sort="res_t2")
     assert out["tiles"] == [] and out["warming"] is True and out["note"] == R.WARMING_NOTE
+    assert out["res_sort"] == "res_t2" and [s["key"] for s in out["res_sorts"]][0] == "default"
     wb = out["resiliency_board"]
     assert wb["state"] == "warming" and wb["counts"] is None and set(wb) == BOARD_KEYS
     R._memo.clear(); R._warming.clear()

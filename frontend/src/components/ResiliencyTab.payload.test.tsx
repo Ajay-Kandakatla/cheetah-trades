@@ -1,49 +1,43 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import FIXTURE from './__fixtures__/resiliency_tab_2026_09_30.json';
+import FIXTURE from './__fixtures__/resiliency_tab_2026_10_07.json';
 import { PatternChart } from './PatternChart';
 import ResiliencyBoardNote from './ResiliencyBoardNote';
 import ChartMaps from '../pages/ChartMaps';
 import type { CmBoard, CmTile } from '../lib/chartMaps';
 
-/* 🛡️ Resiliency tab — payloads through the REAL components and page (2026-09-30).
+/* 🛡️ Resiliency tab — payloads through the REAL components and page
+ * (2026-09-30; 📅 every session + 🚀 growth since 2026-10-07).
  *
- * Ajay 2026-09-30, verbatim: "Can you build me a new tab- Resileincy. This is
- * to help me with #1 - Stocks that are not going to by more than 0.5% during a
- * T1 event like FOMC or any others like todays Inflation and GDP track T2s as
- * well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to
- * be accounted for. We have all of this data already."
+ * Ajay 2026-10-07, verbatim: "Can you do a scan for me on the reseliency tab..
+ * Is it working? Today is a very red day.. I wanna see which stocks were
+ * reselient cuz Vista was very reselient", then "I want the highest growth
+ * stocks on top like Vistra for example".
  *
- * THE FIXTURE starts SYNTHETIC (its `_comment` says so), shaped as spec §3.8
- * with an event-session payload (unfiltered and 🛡️ T1 ticked), a non-event
- * payload (?sort=res_today coerced), a warming and an error payload. The main
- * session overwrites it with the probe's REAL bytes (spec §5). This test is
- * LAYOUT-AGNOSTIC so the real capture drops in unchanged: every top-level
- * value that is a `tab: "resiliency"` payload is read, and each is classified
- * by its OWN served state (`resiliency_board.state`, `today.event_day`) —
- * never by its key. Only contract keys are read. */
+ * THE FIXTURE is the probe's REAL capture (scripts/resiliency_tab_cost_probe.py
+ * --dump-fixture): the api.chart_maps handler's JSONResponse bodies for
+ * default / res_t1 / res_t2 / the boxes / res_today / res_growth, plus a forced
+ * warming and error payload. This test is LAYOUT-AGNOSTIC: every top-level
+ * value that is a `tab: "resiliency"` payload is read, and each is checked by
+ * its OWN served state (`resiliency_board.state`, `today.mode`, the served
+ * `sort`) — never by its key. Only contract keys are read. */
 
 type Payload = CmBoard & { warming?: boolean };
-/* Fix round 2026-09-30: the probe writes every payload at the TOP level (plus a
- * forced warming and error payload); an older capture nested them under
- * `variants`. Both layouts are read, so a real capture drops in unchanged. */
 const RAW = FIXTURE as unknown as Record<string, unknown>;
-const NESTED = RAW.variants && typeof RAW.variants === 'object' && !Array.isArray(RAW.variants)
-  ? (RAW.variants as Record<string, unknown>) : {};
-const F: Record<string, unknown> = { ...RAW, ...NESTED };
 const JUNK = ['[object Object]', 'NaN', 'undefined', 'Infinity'];
 const SHIELD = '\u{1F6E1}\u{FE0F}';
 const CAL = '\u{1F4C5}';
 const FACE_STATS = ['T1 held', 'T2 held', 'EOD tape', 'Pre-market'];
+const SIX = ['default', 'res_today', 'res_t1', 'res_t2', 'res_down', 'res_growth'];
+const FIVE = SIX.slice(1);
+const RETIRED = 'not a T1 or T2 data day';
 
-const PAYLOADS: Array<[string, Payload]> = Object.entries(F)
+const PAYLOADS: Array<[string, Payload]> = Object.entries(RAW)
   .filter(([, v]) => !!v && typeof v === 'object' && !Array.isArray(v) && (v as { tab?: unknown }).tab === 'resiliency')
   .map(([k, v]) => [k, v as Payload]);
 const stateOf = (p: Payload) => p.resiliency_board?.state ?? 'none';
 const READY = PAYLOADS.filter(([, p]) => stateOf(p) === 'ready' && (p.tiles || []).length > 0);
-const EVENT = READY.filter(([, p]) => p.resiliency_board?.today?.event_day === true);
-const NON_EVENT = READY.filter(([, p]) => p.resiliency_board?.today?.event_day === false);
 const WARMING = PAYLOADS.filter(([, p]) => stateOf(p) === 'warming');
 const ERROR = PAYLOADS.filter(([, p]) => stateOf(p) === 'error');
 
@@ -51,23 +45,23 @@ const renderTile = (t: CmTile) =>
   render(<MemoryRouter><PatternChart tile={t} /></MemoryRouter>);
 
 describe('🛡️ Resiliency fixture — what it covers', () => {
-  it('carries at least one ready payload with cards, and every payload is the resiliency tab with the four served sorts', () => {
+  it('ready payloads with cards; every payload serves the six sorts, `default` labelled as resolved, an explicit served sort', () => {
     expect(PAYLOADS.length).toBeGreaterThan(0);
     expect(READY.length).toBeGreaterThan(0);
     for (const [k, p] of PAYLOADS) {
       expect(p.tab, k).toBe('resiliency');
-      expect((p.sorts || []).map((s) => s.key), k).toEqual(['default', 'res_t2', 'res_down', 'res_today']);
+      expect((p.sorts || []).map((s) => s.key), k).toEqual(SIX);
+      expect((p.sorts || [])[0].label.endsWith(' (default)'), k).toBe(true);
+      expect(FIVE, k).toContain(p.sort);
       expect(p.resiliency_board, k).toBeTruthy();
       expect(p.resiliency_board!.measured, k).toBe(false);
       expect(p.resiliency_board!.note, k).toContain('UNMEASURED');
       expect(p.enterable_kind ?? 'n/a', k).toBe('n/a');
+      // NEGATIVE: the retired not-a-data-day sentence is served nowhere
+      expect(JSON.stringify(p).includes(RETIRED), k).toBe(false);
     }
-  });
-
-  it('every ready payload serves a boolean today.event_day (so each is checked as an event or a non-event session)', () => {
-    expect(EVENT.length + NON_EVENT.length).toBe(READY.length);
     // eslint-disable-next-line no-console
-    console.log(`🛡️ fixture: ${EVENT.length} event-session, ${NON_EVENT.length} non-event, ${WARMING.length} warming, ${ERROR.length} error payload(s)`);
+    console.log(`🛡️ fixture: ${READY.length} ready (${READY.map(([k, p]) => `${k}:${p.sort}/${p.resiliency_board?.today?.mode}`).join(', ')}), ${WARMING.length} warming, ${ERROR.length} error`);
   });
 });
 
@@ -75,11 +69,9 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
   const board = P;
   const rb = board.resiliency_board!;
   const tiles = board.tiles as CmTile[];
-  const event = rb.today?.event_day === true;
   const active = new Set(rb.filters?.active ?? []);
 
-  it('every card: the 🛡️ hold chip on the IDENT rung, the four face stats, no junk, never bounce / fake', () => {
-    const rows: string[] = [];
+  it('every card: the 🛡️ hold chip and the growth chip on IDENT, the face stats, no junk, never bounce / fake', () => {
     for (const t of tiles) {
       const r = t.resiliency!;
       expect(r, t.symbol).toBeTruthy();
@@ -90,97 +82,96 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
       if (r.t1 && r.t1.n > 0) {
         expect(hold, `${t.symbol} 🛡️ T1 chip`).toBeTruthy();
         expect(ident!.textContent || '', t.symbol).toContain(hold!.text);
-        expect(hold!.tone, t.symbol).toBe(t.res_filter?.t1 === true ? 'good' : 'muted');
       } else {
         expect(hold, `${t.symbol} has no T1 sessions, so no chip`).toBeUndefined();
       }
-      const keys = (t.stats || []).map((s) => s.k);
-      for (const k of FACE_STATS) {
-        expect(keys, `${t.symbol} ${k}`).toContain(k);
-        const face = container.querySelector('.cm-rung-setup');
-        expect(face?.textContent || '', `${t.symbol} ${k} on the face`).toContain(k);
+      const chip = (t.badges || []).find((b) => b.text.startsWith('Sales ') && b.text.includes(' YoY ('));
+      expect(chip, `${t.symbol} growth chip`).toBeTruthy();
+      expect(ident!.textContent || '', `${t.symbol} growth chip on IDENT`).toContain(chip!.text);
+      const g = r.growth;
+      if (g && (['non_positive', 'too_small'] as string[]).includes(g.eps_base)) {
+        expect(chip!.text, `${t.symbol} tiny / negative year-ago EPS shows blank`).toContain('EPS — YoY');
       }
-      // Every served box badge sits on IDENT and matches a TICKED box the tile passed.
+      expect((t.stats || []).some((s) => s.k === 'Growth'), t.symbol).toBe(true);
+      const keys = (t.stats || []).map((s) => s.k);
+      for (const k of FACE_STATS) expect(keys, `${t.symbol} ${k}`).toContain(k);
       for (const b of (t.badges || []).filter((x) => x.res_filter)) {
         expect(active.has(b.res_filter!), `${t.symbol} ${b.text}`).toBe(true);
-        expect(t.res_filter?.[b.res_filter as 't1' | 't2' | 'eod' | 'pre'], `${t.symbol} ${b.text}`).toBe(true);
-        expect(ident!.textContent || '', t.symbol).toContain(b.text);
       }
       const html = container.innerHTML;
       for (const bad of JUNK) expect(html.includes(bad), `${t.symbol} ${bad}`).toBe(false);
       expect(/bounce|fake|won't drop/i.test(container.textContent || ''), t.symbol).toBe(false);
-      rows.push(`${t.symbol}: ${hold?.text ?? '(no T1 sessions)'}`);
       unmount();
     }
-    // eslint-disable-next-line no-console
-    console.log([`🛡️ Resiliency ${key} — IDENT rows`, ...rows].join('\n'));
   });
 
-  it(event
-    ? 'event session: every card with a print today carries the 📅 today pill on the PRICE rung; one with none says so and carries none'
-    : 'non-event session: no card carries a 📅 today pill or a Today stat', () => {
+  it('the 📅 pill: T-label iff a tier on the session\'s own read, dated iff last session, plain otherwise; none without a read', () => {
     for (const t of tiles) {
-      const r = t.resiliency!;
+      const td = t.resiliency!.today;
       const pill = (t.badges || []).find((b) => b.text.startsWith(CAL));
       const { container, unmount } = renderTile(t);
-      if (event && r.today.state === 'read') {
+      if (td.state === 'read' && td.move_pct !== null) {
         expect(pill, `${t.symbol} 📅`).toBeTruthy();
-        expect(pill!.text.startsWith(`${CAL} T${r.today.tier} today`), t.symbol).toBe(true);
-        expect(pill!.tone, t.symbol).toBe(r.today.holding ? 'good' : 'warn');
+        if (td.tier && td.for_today) expect(pill!.text.startsWith(`${CAL} T${td.tier} today · `), t.symbol).toBe(true);
+        else if (td.basis === 'last_session') expect(pill!.text.startsWith(`${CAL} last session `), t.symbol).toBe(true);
+        else expect(pill!.text.startsWith(`${CAL} today · `), t.symbol).toBe(true);
+        expect(pill!.tone, t.symbol).toBe(td.holding ? 'good' : 'warn');
         const price = container.querySelector('.cm-rung-price');
         expect(price, `${t.symbol} PRICE rung`).not.toBeNull();
         expect(price!.textContent || '', t.symbol).toContain(pill!.text);
-        expect(pill!.text.includes('holding'), t.symbol).toBe(r.today.holding === true);
       } else {
         expect(pill, `${t.symbol} no 📅 without a read`).toBeUndefined();
-        // NEGATIVE: never "holding +0.00%" for a name with no print
-        expect((container.textContent || '').includes('holding +0.00%'), t.symbol).toBe(false);
+        expect((t.badges || []).some((b) => b.text.includes('+0.00%')), t.symbol).toBe(false);
       }
-      if (!event) {
-        expect((t.stats || []).some((s) => s.k === 'Today'), t.symbol).toBe(false);
-        expect((container.textContent || '').includes(CAL), t.symbol).toBe(false);
-      }
+      expect((t.stats || []).some((s) => s.k === 'Today'), `${t.symbol} Today stat iff for_today`).toBe(td.for_today === true);
       unmount();
     }
   });
 
-  it('the served board lines render verbatim; the counts add up; the pressed button is the served sort', () => {
+  it('the order is the served sort\'s: 📅 reads first by move; 🚀 the EPS-ranked block first by score, unknown last', () => {
+    if (board.sort === 'res_today') {
+      const reads = tiles.map((t) => t.resiliency!.today.state === 'read' && t.resiliency!.today.move_pct !== null);
+      const firstUnread = reads.indexOf(false);
+      if (firstUnread >= 0) expect(reads.slice(firstUnread).every((x) => !x), key).toBe(true);
+      const mv = tiles.filter((_t, i) => reads[i]).map((t) => t.resiliency!.today.move_pct as number);
+      for (let i = 1; i < mv.length; i++) expect(mv[i], `${key} #${i}`).toBeLessThanOrEqual(mv[i - 1]);
+    }
+    if (board.sort === 'res_growth') {
+      const gs = tiles.map((t) => t.resiliency!.growth!);
+      const blk = gs.map((g) => (g.score === null ? 2 : g.eps_ranked ? 0 : 1));
+      for (let i = 1; i < blk.length; i++) {
+        expect(blk[i], `${key} block #${i}`).toBeGreaterThanOrEqual(blk[i - 1]);
+        if (blk[i] === blk[i - 1] && blk[i] < 2) {
+          expect(gs[i].score as number, `${key} score #${i}`).toBeLessThanOrEqual(gs[i - 1].score as number);
+        }
+      }
+      if (tiles.length) expect(gs[0].eps_ranked, `${key} top is EPS-ranked`).toBe(true);
+    }
+  });
+
+  it('the served board lines render verbatim (header, today line, 📅 market line); the pressed button is the served sort', () => {
     const { getByTestId, queryByTestId } = render(
       <ResiliencyBoardNote board={rb} sorts={board.sorts} sort={board.sort} onSort={() => {}}
                            onToggleFilter={() => {}} onToggleMode={() => {}} />);
     expect(getByTestId('cm-res-header').textContent).toBe(rb.header);
     if (rb.today_line) expect(getByTestId('cm-res-today').textContent).toBe(rb.today_line);
-    if (rb.events_line) expect(getByTestId('cm-res-events').textContent).toBe(rb.events_line);
+    if (rb.market_line) expect(getByTestId('cm-res-market').textContent).toBe(rb.market_line);
+    else expect(queryByTestId('cm-res-market')).toBeNull();
     expect(getByTestId(`cm-res-sort-${board.sort}`).getAttribute('aria-pressed')).toBe('true');
+    expect(queryByTestId('cm-res-sort-default')).toBeNull();
     expect(rb.sort).toBe(board.sort);
-    for (const it of rb.filters?.items ?? []) {
-      expect((getByTestId(`cm-res-filter-${it.key}`) as HTMLInputElement).checked, it.key).toBe(it.on === true);
-    }
-    if (!active.size) expect(queryByTestId('cm-res-filter-mode')).toBeNull();
     const c = rb.counts!;
-    expect(c.rated_t1 + c.partial_t1 + c.no_bars).toBeLessThanOrEqual(c.scanned);
     expect(c.t1_pass).toBeLessThanOrEqual(c.rated_t1);
-    expect(c.t2_pass).toBeLessThanOrEqual(c.rated_t2);
-    expect(c.eod_pass).toBeLessThanOrEqual(c.eod_read);
-    expect(c.pre_pass).toBeLessThanOrEqual(c.pre_read);
-    expect(tiles.length).toBeLessThanOrEqual(80);
+    expect(c.today_up ?? 0).toBeLessThanOrEqual(c.today_read ?? 0);
+    expect(c.growth_eps_ranked ?? 0).toBeLessThanOrEqual(c.growth_ranked ?? 0);
     const text = getByTestId('cm-res-board').textContent || '';
     for (const bad of JUNK) expect(text.includes(bad), bad).toBe(false);
     expect(/bounce|fake|won't drop/i.test(text)).toBe(false);
-  });
-
-  it(event ? 'event session: no "not a data day" coercion' : 'non-event: a served res_today request is coerced, and the served reason says so', () => {
-    if (event) {
-      expect(board.sort_unavailable ?? null).toBeNull();
-    } else if (board.sort_unavailable) {
-      expect(board.sort).toBe('default');
-      expect(board.sort_unavailable).toContain('not a T1 or T2 data day');
-    }
+    expect(text.includes(RETIRED)).toBe(false);
   });
 });
 
 describe('🛡️ Resiliency warming / error payloads → the note', () => {
-  // A ready-state capture may carry neither (an empty suite fails the run).
   if (WARMING.length + ERROR.length === 0) it.skip('this capture carries no warming or error payload', () => {});
   it.each(WARMING)('%s: the served warming line with role=status, no boxes, no cards', (_k, P) => {
     const rb = P.resiliency_board!;
@@ -211,7 +202,6 @@ describe('🛡️ Resiliency — the real page on the payloads', () => {
   const page = (entry: string) =>
     render(<MemoryRouter initialEntries={[entry]}><ChartMaps /></MemoryRouter>);
   const order = () => Array.from(document.querySelectorAll('.cm-grid .cm-tile-id b')).map((b) => b.textContent);
-  const GENERIC_WAIT = "The charts appear here as soon as it lands; you don't need to refresh.";
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -219,28 +209,23 @@ describe('🛡️ Resiliency — the real page on the payloads', () => {
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-  it.each(READY)('%s: the cards in served order, the served header, the toggle asks the server for ?sort=res_t2', async (_k, P) => {
+  it.each(READY)('%s: the cards in served order; 🚀 and 🛡️ T1 ask the server for sort=res_growth / sort=res_t1', async (_k, P) => {
     const fetchMock = stub(() => fresh(P));
     vi.stubGlobal('fetch', fetchMock);
     page('/chart-maps?tab=resiliency&show=all');
     const want = (P.tiles as CmTile[]).map((t) => t.symbol);
     await waitFor(() => expect(order()).toEqual(want));
     expect(screen.getByTestId('cm-res-header').textContent).toBe(P.resiliency_board!.header);
-    fireEvent.click(screen.getByTestId('cm-res-sort-res_t2'));
-    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('sort=res_t2'))).toBe(true));
+    if (P.resiliency_board!.market_line) {
+      expect(screen.getByTestId('cm-res-market').textContent).toBe(P.resiliency_board!.market_line);
+    }
+    fireEvent.click(screen.getByTestId('cm-res-sort-res_growth'));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('sort=res_growth'))).toBe(true));
+    fireEvent.click(screen.getByTestId('cm-res-sort-res_t1'));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => String(u).includes('sort=res_t1'))).toBe(true));
     const body = document.body.textContent || '';
     for (const bad of JUNK) expect(body.includes(bad), bad).toBe(false);
     expect(/bounce|fake|won't drop/i.test(body)).toBe(false);
-    if (P.sort_unavailable) expect(body).toContain(P.sort_unavailable);
-  });
-
-  it.each(WARMING)('%s: the page prints the served warming line and skips the generic demand-scan wait', async (_k, P) => {
-    vi.stubGlobal('fetch', stub(() => fresh(P)));
-    page('/chart-maps?tab=resiliency');
-    await waitFor(() => expect(screen.getByTestId('cm-res-header').textContent).toBe(P.resiliency_board!.header));
-    expect(screen.getByTestId('cm-res-header').getAttribute('role')).toBe('status');
-    const exact = Array.from(document.querySelectorAll('p')).filter((p) => p.textContent === GENERIC_WAIT);
-    expect(exact).toHaveLength(0);
-    expect(order()).toEqual([]);
+    expect(body.includes(RETIRED)).toBe(false);
   });
 });

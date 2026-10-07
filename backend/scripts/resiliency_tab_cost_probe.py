@@ -18,13 +18,15 @@ It times the stages the tab runs: the memo build (ONE `bulk_cached_frames`
 read + ONE `past_events` + ONE macro-calendar read + the closed half per
 name), the pre-market baseline aggregation (ONE `intraday_cache` aggregate +
 ONE find), ONE universe snapshot (the board's fan-out), and the per-request
-rank for each of the four sorts. It prints the counts, the hand-check names
+rank for `default` and each tab sort (2026-10-07: with the key `default`
+resolved to, the 📅 market line, the fundamentals coverage and the WATCH names'
+Tradeable position, 📅 pill and growth chip). It prints the counts, the hand-check names
 (a utility, a staple, NVDA, MU, SPY) with their event-day closes, and the
 count identity `scanned == rated + partial + no_bars`.
 
 `--dump-fixture PATH` calls the REAL `api.chart_maps` handler with explicit
-arguments for five variants (default, sort=res_t2, res=t1,eod,
-res=t1,eod&res_mode=all, sort=res_today) and writes each `JSONResponse.body`
+arguments for seven variants (default, sort=res_t1, sort=res_t2, res=t1,eod,
+res=t1,eod&res_mode=all, sort=res_today, sort=res_growth — 2026-10-07) and writes each `JSONResponse.body`
 (parsed) into one JSON file — the frontend payload test's fixture. A
 JSONResponse that serialized proves the payload is NaN-free. Every payload
 sits at the TOP LEVEL of the file (the FE test reads every top-level value
@@ -60,10 +62,13 @@ WRITE_METHODS = ("insert_one", "insert_many", "update_one", "update_many", "repl
                  "find_one_and_delete", "bulk_write", "create_index", "create_indexes",
                  "drop", "drop_index", "drop_indexes", "rename")
 ATTEMPTED: list = []
-VARIANTS = (("default", {}), ("res_t2", {"sort": "res_t2"}),
+VARIANTS = (("default", {}), ("res_t1", {"sort": "res_t1"}), ("res_t2", {"sort": "res_t2"}),
             ("t1_eod_any", {"res": "t1,eod"}),
             ("t1_eod_all", {"res": "t1,eod", "res_mode": "all"}),
-            ("res_today", {"sort": "res_today"}))
+            ("res_today", {"sort": "res_today"}), ("res_growth", {"sort": "res_growth"}))
+# 2026-10-07: his example (VST), the tiny / negative year-ago EPS bases (PBF, CRI),
+# a material +4,671% base (TWLO), a mega cap and the benchmark
+WATCH = ("VST", "PBF", "CRI", "TWLO", "NVDA", "SPY")
 
 
 def block_writes() -> None:
@@ -199,7 +204,8 @@ def main(argv=None) -> dict:
                                           if v["sessions"] >= R.PM_BASELINE_MIN_SESSIONS)}
 
     t2 = time.perf_counter()
-    raw = B._bulk_snaps_fanout(list(entry["syms"]) + [R.BENCH])
+    syms = list(entry["syms"])
+    raw = B._bulk_snaps_fanout(syms + [s for s in (R.BENCH, R.EW_BENCH) if s not in set(syms)])
     out["s_snapshot_fanout"] = round(time.perf_counter() - t2, 2)
     out["n_snap"] = len(raw)
     spy = raw.get(R.BENCH) or {}
@@ -210,11 +216,36 @@ def main(argv=None) -> dict:
     for srt in ("default",) + R.TAB_SORTS:
         t3 = time.perf_counter()
         rows, counts, filters, today, su = R.rank(entry, raw, pm, now=now, sort=srt)
+        resolved = R.resolve_sort(srt, mode=today.get("mode"), n_read=today.get("read"),
+                                  n_growth=counts.get("growth_ranked"))
+        tradeable = [r for r in rows if B.passes_liquidity(r.get("adv50"), "ok")]
+        pos = {r["symbol"]: i + 1 for i, r in enumerate(tradeable)}
+        watch = {}
+        for w in WATCH:
+            r = next((x for x in rows if x["symbol"] == w), None)
+            if r is None:
+                watch[w] = None
+                continue
+            badges = R.tile_badges(r)
+            watch[w] = {"tradeable_pos": pos.get(w),
+                        "pill": next((b["text"] for b in badges
+                                      if b["text"].startswith(R.TODAY_MARK)), None),
+                        "growth_chip": R.growth_chip(r["resiliency"].get("growth")),
+                        "move_pct": (r["resiliency"].get("today") or {}).get("move_pct")}
         ranks[srt] = {"s": round(time.perf_counter() - t3, 3), "sort_unavailable": su,
-                      "top": [r["symbol"] for r in rows[:15]]}
+                      "resolved": list(resolved), "n_tradeable": len(tradeable),
+                      "top": [r["symbol"] for r in rows[:15]],
+                      "top_tradeable": [
+                          {"symbol": r["symbol"],
+                           "move_pct": (r["resiliency"].get("today") or {}).get("move_pct"),
+                           "chip": R.growth_chip(r["resiliency"].get("growth"))}
+                          for r in tradeable[:15]],
+                      "watch": watch}
     out["ranks"] = ranks
     out["counts"] = counts
     out["today"] = today
+    out["market_line"] = R.market_line(today)
+    out["fund_summary"] = entry.get("fund_summary")
     out["identity_scanned_eq_rated_partial_no_bars"] = (
         counts["scanned"] == counts["rated_t1"] + counts["partial_t1"] + counts["no_bars"])
     out["filters_pass"] = {i["key"]: i["pass"] for i in filters["items"]}

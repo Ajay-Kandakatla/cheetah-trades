@@ -29,7 +29,13 @@ const TRUTH: Record<Key, Set<string>> = {
   t1: new Set(['AAA', 'BBB']), t2: new Set(['AAA']), eod: new Set(['AAA', 'CCC']), pre: new Set(['CCC']),
 };
 const ALL = ['AAA', 'BBB', 'CCC', 'DDD'];
-const UNAVAILABLE = 'Today is not a T1 or T2 data day — the board is in T1 hold-rate order.';
+// 2026-10-07: the server RESOLVES `default` and serves six sorts (default first,
+// then the five explicit keys); "not a T1 or T2 data day" is never served again.
+const FIVE = ['res_today', 'res_t1', 'res_t2', 'res_down', 'res_growth'];
+const SIX = [{ key: 'default', label: '\u{1F4C5} Today\'s move (default)' },
+  { key: 'res_today', label: '\u{1F4C5} Today\'s move' }, { key: 'res_t1', label: '\u{1F6E1}\u{FE0F} T1 hold rate' },
+  { key: 'res_t2', label: '\u{1F6E1}\u{FE0F} T2 hold rate' }, { key: 'res_down', label: '\u{1F6E1}\u{FE0F} T1 on SPY-down days' },
+  { key: 'res_growth', label: '\u{1F680} Sales + EPS growth' }];
 const BASE = (FIXTURE as unknown as Record<string, Board>).non_event;
 const qs = (url: string) => new URLSearchParams(url.slice(url.indexOf('?') + 1));
 
@@ -64,9 +70,9 @@ function serve(url: string, echo = true): Board {
                  line: active.length ? `Filters on — ${surv.length} of ${all.length} shown.` : null,
                  note: 'Ticked boxes narrow the board.', measured: false };
   const want = q.get('sort') || 'default';
-  const sort = want === 'res_today' ? 'default' : (['res_t2', 'res_down'].includes(want) ? want : 'default');
-  b.sort = sort; rb.sort = sort;
-  b.sort_unavailable = want === 'res_today' ? UNAVAILABLE : null;
+  const sort = FIVE.includes(want) ? want : 'res_today';
+  b.sort = sort; rb.sort = sort; b.sorts = SIX;
+  b.sort_unavailable = null;
   b.tiles = surv;
   return b;
 }
@@ -202,19 +208,35 @@ describe('🛡️ Resiliency toggle + warming on the page', () => {
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-  it('📅 asks for ?sort=res_today; on a non-data day the served default is pressed and the served reason prints', async () => {
+  it('📅 asks for ?sort=res_today and res_today is pressed; the bare URL serves the resolved res_today pressed', async () => {
     vi.stubGlobal('fetch', stub((url) => serve(url)));
     page('/chart-maps?tab=resiliency&show=all');
     await waitFor(() => expect(order()).toEqual(ALL));
+    // the URL carries no sort; the server resolved default -> res_today and that button is lit
+    await waitFor(() => expect(screen.getByTestId('cm-res-sort-res_today').getAttribute('aria-pressed')).toBe('true'));
+    expect(screen.queryByTestId('cm-res-sort-default')).toBeNull();
     fireEvent.click(screen.getByTestId('cm-res-sort-res_down'));
     await waitFor(() => expect(qs(lastBoardCall()).get('sort')).toBe('res_down'));
     await waitFor(() => expect(screen.getByTestId('cm-res-sort-res_down').getAttribute('aria-pressed')).toBe('true'));
     fireEvent.click(screen.getByTestId('cm-res-sort-res_today'));
     await waitFor(() => expect(qs(lastBoardCall()).get('sort')).toBe('res_today'));
-    await waitFor(() => expect(document.body.textContent || '').toContain(UNAVAILABLE));
-    // NEGATIVE: the URL asked for res_today, the SERVED sort is default — default is lit
-    expect(screen.getByTestId('cm-res-sort-default').getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByTestId('cm-res-sort-res_today').getAttribute('aria-pressed')).toBe('false');
+    await waitFor(() => expect(screen.getByTestId('cm-res-sort-res_today').getAttribute('aria-pressed')).toBe('true'));
+    // NEGATIVE: the retired not-a-data-day sentence never prints
+    expect(document.body.textContent || '').not.toContain('not a T1 or T2 data day');
+  });
+
+  it('🛡️ T1 writes ?sort=res_t1 (never deletes sort) and 🚀 writes ?sort=res_growth', async () => {
+    vi.stubGlobal('fetch', stub((url) => serve(url)));
+    page('/chart-maps?tab=resiliency&show=all');
+    await waitFor(() => expect(order()).toEqual(ALL));
+    fireEvent.click(screen.getByTestId('cm-res-sort-res_t1'));
+    await waitFor(() => expect(urlParam('sort')).toBe('res_t1'));
+    await waitFor(() => expect(qs(lastBoardCall()).get('sort')).toBe('res_t1'));
+    await waitFor(() => expect(screen.getByTestId('cm-res-sort-res_t1').getAttribute('aria-pressed')).toBe('true'));
+    fireEvent.click(screen.getByTestId('cm-res-sort-res_growth'));
+    await waitFor(() => expect(urlParam('sort')).toBe('res_growth'));
+    await waitFor(() => expect(qs(lastBoardCall()).get('sort')).toBe('res_growth'));
+    await waitFor(() => expect(screen.getByTestId('cm-res-sort-res_growth').getAttribute('aria-pressed')).toBe('true'));
   });
 
   it('the sort and the boxes compose: sort=res_t2 + res=t1 ride together', async () => {

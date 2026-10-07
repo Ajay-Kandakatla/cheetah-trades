@@ -15,10 +15,14 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import ResiliencyBoardNote, { ResiliencySortToggle } from './ResiliencyBoardNote';
 import type { CmResiliencyBoard, CmSort } from '../lib/chartMaps';
 
+// 2026-10-07: six served entries — `default` (resolved, for the generic select)
+// first, then the five explicit keys the toggle draws.
 const SORTS: CmSort[] = [
-  { key: 'default', label: 'S-default' }, { key: 'res_t2', label: 'S-t2' },
-  { key: 'res_down', label: 'S-down' }, { key: 'res_today', label: 'S-today' },
+  { key: 'default', label: 'S-default' }, { key: 'res_today', label: 'S-today' },
+  { key: 'res_t1', label: 'S-t1' }, { key: 'res_t2', label: 'S-t2' },
+  { key: 'res_down', label: 'S-down' }, { key: 'res_growth', label: 'S-growth' },
 ];
+const FIVE = ['res_today', 'res_t1', 'res_t2', 'res_down', 'res_growth'];
 const item = (key: string, on = false, pass = 3) =>
   ({ key, label: `L-${key}`, on, pass, fail: 1, no_read: 0, hidden: on ? 1 : 0, note: `N-${key}` });
 const filters = (active: string[] = [], mode = 'any') => ({
@@ -192,29 +196,38 @@ describe('ResiliencyBoardNote — the boxes', () => {
 });
 
 describe('ResiliencySortToggle — labels served, pressed = served sort', () => {
-  it('four buttons with the served labels; the served sort is pressed; a click asks for that key', () => {
+  it('five buttons with the served labels in order; the served sort is pressed; a click asks for that key', () => {
     const onSort = vi.fn();
     render(<ResiliencySortToggle sorts={SORTS} sort="res_down" onSort={onSort} />);
-    expect(['default', 'res_t2', 'res_down', 'res_today'].map((k) => screen.getByTestId(`cm-res-sort-${k}`).textContent))
-      .toEqual(['S-default', 'S-t2', 'S-down', 'S-today']);
+    const btns = screen.getByTestId('cm-res-toggle').querySelectorAll('button');
+    expect([...btns].map((x) => x.textContent)).toEqual(['S-today', 'S-t1', 'S-t2', 'S-down', 'S-growth']);
+    expect([...btns].map((x) => x.getAttribute('data-testid'))).toEqual(FIVE.map((k) => `cm-res-sort-${k}`));
     expect(screen.getByTestId('cm-res-sort-res_down').getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByTestId('cm-res-sort-default').getAttribute('aria-pressed')).toBe('false');
-    fireEvent.click(screen.getByTestId('cm-res-sort-res_today'));
-    expect(onSort).toHaveBeenCalledWith('res_today');
+    fireEvent.click(screen.getByTestId('cm-res-sort-res_t1'));
+    expect(onSort).toHaveBeenCalledWith('res_t1');
+    fireEvent.click(screen.getByTestId('cm-res-sort-res_growth'));
+    expect(onSort).toHaveBeenCalledWith('res_growth');
+  });
+
+  it('NEGATIVE: `default` is never a button, even when served', () => {
+    render(<ResiliencySortToggle sorts={SORTS} sort="default" onSort={() => {}} />);
+    expect(screen.queryByTestId('cm-res-sort-default')).toBeNull();
+    for (const k of FIVE) expect(screen.getByTestId(`cm-res-sort-${k}`).getAttribute('aria-pressed')).toBe('false');
   });
 
   it('pressed follows the SERVED sort even when the page (URL) asked for another', () => {
-    // The page passes data.sort; a coerced res_today comes back as default.
-    render(<ResiliencyBoardNote board={board({ sort: 'default' })} sorts={SORTS} sort="default" onSort={() => {}} />);
-    expect(screen.getByTestId('cm-res-sort-default').getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByTestId('cm-res-sort-res_today').getAttribute('aria-pressed')).toBe('false');
+    // The URL says default; the server resolved it to res_today and served that.
+    render(<ResiliencyBoardNote board={board({ sort: 'res_today' })} sorts={SORTS} sort="res_today" onSort={() => {}} />);
+    expect(screen.getByTestId('cm-res-sort-res_today').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByTestId('cm-res-sort-res_t1').getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('NEGATIVE: the toggle is hidden when any one served sort key is missing, or the sorts are malformed', () => {
-    for (const s of [SORTS.slice(0, 3), SORTS.slice(1), [], null, undefined,
-                     [...SORTS.slice(0, 3), { key: 'res_today', label: '  ' }],
+  it('NEGATIVE: the toggle is hidden when any one of the five keys is missing or blank, or the sorts are malformed', () => {
+    const without = (k: string) => SORTS.filter((x) => x.key !== k);
+    for (const s of [...FIVE.map(without), [], null, undefined,
+                     [...without('res_growth'), { key: 'res_growth', label: '  ' }],
                      [{ key: 'default', label: 'a' }, { key: 'slipping', label: 'b' }]] as Array<CmSort[] | null | undefined>) {
-      const { container } = render(<ResiliencySortToggle sorts={s} sort="default" onSort={() => {}} />);
+      const { container } = render(<ResiliencySortToggle sorts={s} sort="res_today" onSort={() => {}} />);
       expect(container.innerHTML).toBe('');
       cleanup();
     }
@@ -222,8 +235,33 @@ describe('ResiliencySortToggle — labels served, pressed = served sort', () => 
 
   it('NEGATIVE: an unknown served sort presses nothing', () => {
     render(<ResiliencySortToggle sorts={SORTS} sort="slipping" onSort={() => {}} />);
-    for (const k of ['default', 'res_t2', 'res_down', 'res_today']) {
+    for (const k of FIVE) {
       expect(screen.getByTestId(`cm-res-sort-${k}`).getAttribute('aria-pressed')).toBe('false');
     }
+  });
+});
+
+describe('ResiliencyBoardNote — the 📅 market line (2026-10-07)', () => {
+  const LINE = '\u{1F4C5} Today\'s close (16:00 ET): SPY -0.20% · RSP -0.63% · median name -0.84% (down) · 864 of 2,729 names read are up.';
+
+  it('prints the served market line verbatim, right after the today line', () => {
+    mount(board({ market_line: LINE }));
+    const m = screen.getByTestId('cm-res-market');
+    expect(m.textContent).toBe(LINE);
+    expect(screen.getByTestId('cm-res-today').nextElementSibling).toBe(m);
+  });
+
+  it('NEGATIVE: an absent / blank / non-string market line renders no node', () => {
+    for (const v of [undefined, null, '', '   ', 7, { a: 1 }, ['x']]) {
+      mount(board({ market_line: v }));
+      expect(screen.queryByTestId('cm-res-market')).toBeNull();
+      cleanup();
+    }
+  });
+
+  it('NEGATIVE: no NaN / undefined / bounce / fake in the rendered note', () => {
+    const { container } = mount(board({ market_line: LINE }));
+    const t = container.textContent || '';
+    for (const w of ['NaN', 'undefined', 'bounce', 'fake']) expect(t.toLowerCase().includes(w.toLowerCase()), w).toBe(false);
   });
 });

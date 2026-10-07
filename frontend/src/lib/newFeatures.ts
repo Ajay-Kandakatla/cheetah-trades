@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-07 (red day): "Can you do a scan for me on the reseliency tab.. …" then "I want the highest
+  // growth stocks on top like Vistra for example". The 0.5% line, $0.10 EPS floor and $1M revenue floor are
+  // resiliency_tab.HOLD_MAX_DROP_PCT / EPS_MIN_BASE (= qoq.MIN_EPS_BASE) / REV_MIN_BASE (= bonde.MIN_MATERIAL_BASE_REV)
+  // = HIS CALLs — change them there and here.
+  { id: 'chart-maps-resiliency-today-growth-2026-10-07', addedAt: '2026-10-07', route: '/chart-maps?tab=resiliency',
+    label: '📅 🛡️ Resiliency: today\'s move on every session, biggest gainers first, and 🚀 sales + EPS growth. You said: “Can you do a scan for me on the reseliency tab.. Is it working? Today is a very red day.. I wanna see which stocks were reselient cuz Vista was very reselient” then “I want the highest growth stocks on top like Vistra for example”. Every card now shows 📅 its move against the prior close on every session — live in market hours, the 4 pm close after it, and the last session (dated) before the open, overnight and on weekends; on a T1/T2 day it still says T1/T2 and whether it is holding. Once the session has a print the board opens with today\'s biggest gainers first (before the open: T1 hold rate). A line above the grid prints SPY, RSP, the median name and how many names are up. Each card shows its latest quarter\'s sales and EPS growth year over year, and 🚀 Sales + EPS growth orders by both — a year-ago EPS under $0.10, a year-ago loss or a year-ago revenue under $1M is shown blank and never ranked. UNMEASURED — these are orders, not forecasts; the MEASURED lines on this tab are about data days only. Display only.' },
   // Ajay 2026-10-07: "First today there was an FOMC event why is it not in our new tab in
   // chart maps. I want us to pull dynamic dates". Tiers are macro_calendar.FED_KIND_TIERS
   // (HIS CALL) — change them there and here.

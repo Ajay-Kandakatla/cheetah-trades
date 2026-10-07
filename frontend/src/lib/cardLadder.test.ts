@@ -690,6 +690,56 @@ describe('cardLadder — 🛡️ Resiliency tab (2026-09-30)', () => {
   });
 });
 
+describe('cardLadder — 🛡️ Resiliency 📅 every session + 🚀 growth (2026-10-07)', () => {
+  // Ajay 2026-10-07: "I want the highest growth stocks on top like Vistra for
+  // example". The 📅 pill now reads on every session (resiliency_tab.
+  // TODAY_PLAIN_FMT / TODAY_LAST_FMT → PRICE) and every card carries the growth
+  // chip (GROWTH_CHIP_PREFIX 'Sales ' → IDENT) and a `Growth` fold stat.
+  const PLAIN = '\u{1F4C5} today · +4.53%';
+  const LAST = '\u{1F4C5} last session Wed 10-07 · +1.20%';
+  const VST = 'Sales -5.5% · EPS -6.2% YoY (FY2026 Q2)';
+  const NONE = 'Sales — · EPS — YoY (no quarterly figures on file)';
+
+  it('the plain / dated 📅 pills route to PRICE, whole; never a fold warning', () => {
+    for (const t of [PLAIN, LAST]) {
+      const l = cardLadder(bare({ badges: [{ text: t, tone: 'warn' }] }));
+      expect(texts(l.price), t).toEqual([t]);
+      expect(texts(l.setup.badges), t).toEqual([]);
+      expect(l.moreWarn.map((b) => b.text), t).not.toContain(t);
+    }
+  });
+
+  it('the growth chip routes to IDENT; the Growth stat folds into READS', () => {
+    for (const t of [VST, NONE]) {
+      const l = cardLadder(bare({ badges: [{ text: t, tone: 'muted' }] }));
+      expect(texts(l.ident), t).toEqual([t]);
+      expect(l.price, t).toEqual([]);
+    }
+    const l = cardLadder(bare({ stats: [{ k: 'T1 held', v: '8/8 · 100%' },
+                                        { k: 'Growth', v: 'FY2026 Q2 vs FY2025 Q2 · sales -5.48%' }] }));
+    expect(foldTexts(l, 'reads')).toEqual(['Growth']);
+    expect(l.setup.stats.map((s) => s.k)).toEqual(['T1 held']);
+  });
+
+  it('NEGATIVE: a bare 📅 today / 📅 last session (no move) stays out of PRICE', () => {
+    for (const t of ['\u{1F4C5} today', '\u{1F4C5} last session', '\u{1F4C5} todays']) {
+      const l = cardLadder(bare({ badges: [{ text: t, tone: 'good' }] }));
+      expect(texts(l.price), t).toEqual([]);
+    }
+  });
+
+  it('NEGATIVE: the 🟢 Bonde Sales chip stays IDENT, a 📉 fallen Sales stat is untouched, the 🚀 supply-break badge stays PRICE', () => {
+    const bonde = '\u{1F7E2} Sales accelerating +41%';
+    expect(texts(cardLadder(bare({ badges: [{ text: bonde, tone: 'good' }] })).ident)).toEqual([bonde]);
+    const fallen = cardLadder(bare({ stats: [{ k: 'Sales', v: 'Sales +12% YoY' }] }));
+    expect(fallen.setup.stats.map((s) => s.k)).toEqual(['Sales']);
+    const rocket = '\u{1F680} Broke supply 101.20';
+    const r = cardLadder(bare({ badges: [{ text: rocket, tone: 'good' }] }));
+    expect(texts(r.price)).toEqual([rocket]);
+    expect(texts(r.ident)).toEqual([]);
+  });
+});
+
 describe('cardLadder — 📉 Down 40%+ tab pill (2026-10-02)', () => {
   // Ajay 2026-10-02: "Can you build me a tab in chart maps about stocks that
   // dropped more than 40% lowers …". The tab serves one 📉 pill per tile

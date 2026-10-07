@@ -222,13 +222,17 @@ export function dmCapSortNext(served: string | null | undefined): string {
  *  toggle's labels are taken from the SERVED `sorts`, never typed here. */
 export const ATH_SORT_SLIPPING = 'slipping';
 
-/** 🛡️ Resiliency tab (2026-09-30): the three tab-scoped served sort keys
- *  (chart_maps/resiliency_tab.SORT_T2 / SORT_DOWN / SORT_TODAY); `default` is
- *  🛡️ T1 hold rate. The toggle's labels are taken from the SERVED `sorts`,
- *  never typed here. */
+/** 🛡️ Resiliency tab (2026-09-30, five keys since 2026-10-07): the tab-scoped
+ *  served sort keys (chart_maps/resiliency_tab.SORT_T1 / SORT_T2 / SORT_DOWN /
+ *  SORT_TODAY / SORT_GROWTH). `default` RESOLVES per request on the server
+ *  (📅 today's move once the session has a print, else 🛡️ T1 hold rate) and is
+ *  never a toggle button. The toggle's labels are taken from the SERVED
+ *  `sorts`, never typed here. */
+export const RES_SORT_T1 = 'res_t1';
 export const RES_SORT_T2 = 'res_t2';
 export const RES_SORT_DOWN = 'res_down';
 export const RES_SORT_TODAY = 'res_today';
+export const RES_SORT_GROWTH = 'res_growth';
 
 /** 📉 Down 40%+ tab (2026-10-02): the two tab-scoped served sort keys
  *  (chart_maps/fallen_tab.SORT_DEPTH / SORT_SALES) and the depth-view param
@@ -316,7 +320,7 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   },
   resiliency: {
     label: '\u{1F6E1}\u{FE0F} Resiliency',
-    blurb: 'Names that held up on the market-moving data days, and names whose last session\'s tape is bullish on real volume. Ajay 2026-09-30: "Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already." THE DATA DAYS are the app\'s own macro calendar: T1 = the jobs report, CPI, Core PCE and the FOMC decision; T2 = retail sales, JOLTS, ADP, jobless claims, GDP and PPI, and a day with any T1 print counts as T1 only. Their dates are FRED\'s own release dates and the Fed\'s FOMC calendar; ISM and Fed-speaker remarks have no dated history here and are not counted. EACH CARD shows on how many of the last year\'s T1 days the name closed down no more than the served limit from the prior close, the same for the days SPY fell, its worst T1 day, the same for T2, its typical daily move and beta so a naturally quiet name reads as one, the last session\'s tape (change, where it closed in its range, volume against its 50-day average) and, before the open, its pre-market move (the pre-market volume check is OFF until its two volume sources are reconciled, so the \u{1F305} box passes none for now). ON A T1 OR T2 DAY every card also shows today\'s move against the prior close, live, and whether it is holding. THE BOXES narrow the board: a name passing ANY ticked box shows, with a badge for each; tick "must match all" to need every one. THE TOGGLE orders by T1 hold rate, T2 hold rate, T1 hold rate on the days SPY fell, or today\'s move. The line above the grid prints every number the boxes use. UNMEASURED until the study lands \u2014 holding on past data days is not proven to predict the next one. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
+    blurb: 'Names that held up on the market-moving data days, and names whose last session\'s tape is bullish on real volume. Ajay 2026-09-30: "Can you build me a new tab- Resileincy. This is to help me with #1 - Stocks that are not going to by more than 0.5% during a T1 event like FOMC or any others like todays Inflation and GDP track T2s as well. #3 - Tape is positive and bullish EOD or Pre market. but volume has to be accounted for. We have all of this data already." THE DATA DAYS are the app\'s own macro calendar: T1 = the jobs report, CPI, Core PCE and the FOMC decision; T2 = retail sales, JOLTS, ADP, jobless claims, GDP and PPI, and a day with any T1 print counts as T1 only. Their dates are FRED\'s own release dates and the Fed\'s FOMC calendar; ISM and Fed-speaker remarks have no dated history here and are not counted. EACH CARD shows on how many of the last year\'s T1 days the name closed down no more than the served limit from the prior close, the same for the days SPY fell, its worst T1 day, the same for T2, its typical daily move and beta so a naturally quiet name reads as one, the last session\'s tape (change, where it closed in its range, volume against its 50-day average) and, before the open, its pre-market move (the pre-market volume check is OFF until its two volume sources are reconciled, so the \u{1F305} box passes none for now). EVERY SESSION each card shows \u{1F4C5} its move against the prior close \u2014 live in market hours, the regular-session close after it, and before the open, overnight and on weekends the last session\'s close, labelled with its date; on a T1 or T2 day it also says T1 or T2 and whether it is holding. Ajay 2026-10-07: "I want the highest growth stocks on top like Vistra for example" \u2014 so once the session has a print the board opens with today\'s biggest gainers first (before that, T1 hold rate). Each card also shows its latest quarter\'s sales and EPS growth against the same quarter a year earlier. THE BOXES narrow the board: a name passing ANY ticked box shows, with a badge for each; tick "must match all" to need every one. THE TOGGLE orders by today\'s move, T1 hold rate, T2 hold rate, T1 hold rate on the days SPY fell, or \u{1F680} sales + EPS growth (a tiny or negative year-ago base is never ranked). The line above the grid prints every number the boxes use. UNMEASURED until the study lands \u2014 holding on past data days is not proven to predict the next one. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.',
   },
   ath: {
     label: '\u{1F3D4}\u{FE0F} ATH',
@@ -837,10 +841,15 @@ export type CmResiliencyBoard = {
   sort: string;
   header: string;
   today_line: string | null;
+  /** 📅 The served market-context line (2026-10-07): SPY, RSP, the median name,
+   *  n up of n read. Printed verbatim; null while warming. */
+  market_line?: string | null;
   events_line: string | null;
   rules: {
     hold_max_drop_pct: number; hold_rate_min_pct: number; window_days: number; t2_excludes_t1: boolean;
     pre_rvol_min: number; pre_min_sessions: number; vol_avg_bars: number; benchmark: string;
+    /** 🚀 the year-ago floors (2026-10-07): qoq.MIN_EPS_BASE / bonde.MIN_MATERIAL_BASE_REV. */
+    eps_min_base?: number; rev_min_base?: number;
     lines: string[];
   } | null;
   events: {
@@ -855,10 +864,16 @@ export type CmResiliencyBoard = {
   } | null;
   today: {
     event_day: boolean; session: string;
-    t1?: string[]; t2?: string[];
+    t1?: string[]; t2?: string[]; tier?: 1 | 2 | null;
+    /** 2026-10-07: the 📅 clock (drop10_tab.mode_for) — live / after_close /
+     *  closed — and the session the read is about. */
+    mode?: 'live' | 'after_close' | 'closed' | null; day?: string | null;
+    data_pre?: boolean; half_day?: boolean;
     spy_move_pct?: number | null; spy_as_of_et?: string | null;
-    spy_basis?: 'live' | 'day_bar' | 'day_close' | null;
-    read?: number; holding?: number; down?: number; no_print?: number;
+    spy_tape?: 'premarket' | 'rth' | 'afterhours' | null;
+    spy_basis?: 'live' | 'day_bar' | 'day_close' | 'last_session' | null;
+    rsp_move_pct?: number | null; median_move_pct?: number | null;
+    read?: number; holding?: number; down?: number; no_print?: number; stale?: number; up?: number;
     next_t1?: { date: string; label: string } | null;
   } | null;
   counts: {
@@ -867,6 +882,8 @@ export type CmResiliencyBoard = {
     rated_t2: number; partial_t2: number; t2_pass: number;
     eod_read: number; eod_pass: number; pre_read: number; pre_pass: number;
     no_turnover: number; dropped_thin: number; shown: number;
+    today_read?: number; today_up?: number; today_stale?: number;
+    growth_ranked?: number; growth_eps_ranked?: number;
   } | null;
   /** The Dual Momentum filters shape exactly (dual_momentum_tab.filters_block),
    *  keys = resiliency_tab.FILTER_KEYS. */
@@ -907,15 +924,34 @@ export type CmResTierStats = {
   last: { date: string; labels: string[]; ret_pct: number; held: boolean; spy_ret_pct: number | null } | null;
 };
 
-/** 📅 Today's move on a T1/T2 session (resiliency_tab.today_read). A name with
- *  no print today is `no_print`, never "holding +0.00%". */
+/** 📅 The move against the prior close (resiliency_tab.today_read), on EVERY
+ *  session since 2026-10-07. A name with no print is `no_print`, never
+ *  "+0.00%". `for_today` = the session's own read (live / after the close / a
+ *  data day's pre-market); false = the last closed session (basis
+ *  `last_session`, dated by `day`). */
 export type CmResTodayRead = {
   event_day: boolean; tier: 1 | 2 | null; labels: string[];
   state: 'read' | 'no_print' | 'stale' | 'not_open' | 'no_event' | string;
   move_pct: number | null; holding: boolean | null; print: number | null; prev_close: number | null;
   /** `day_bar` = no fresh print during RTH: the snapshot's still-forming day
    *  bar, labelled intraday; `day_close` only after the close (2026-09-30). */
-  basis: 'live' | 'day_bar' | 'day_close' | null; tape: 'premarket' | 'rth' | 'afterhours' | null; as_of_et: string | null;
+  basis: 'live' | 'day_bar' | 'day_close' | 'last_session' | null; tape: 'premarket' | 'rth' | 'afterhours' | null; as_of_et: string | null;
+  mode?: 'live' | 'after_close' | 'closed' | null; day?: string | null; for_today?: boolean;
+};
+
+/** 🚀 The latest quarter's sales + EPS growth against the same quarter a year
+ *  earlier (resiliency_tab.growth_read, 2026-10-07). A leg is ranked only off
+ *  a material year-ago base; `score` = qoq.score_board's blend. UNMEASURED. */
+export type CmResGrowthRead = {
+  state: 'read' | 'no_figures' | 'period_mismatch' | string;
+  period: string | null; year_ago_period: string | null; source: string | null;
+  sales_yoy_pct: number | null; sales_stored_pct: number | null;
+  sales_base: 'ok' | 'non_positive' | 'too_small' | 'unknown' | string;
+  sales_year_ago: number | null; sales_ranked: boolean;
+  eps_yoy_pct: number | null; eps_stored_pct: number | null;
+  eps_base: 'ok' | 'non_positive' | 'too_small' | 'unknown' | string;
+  eps_year_ago: number | null; eps_agrees: boolean | null; eps_ranked: boolean;
+  score: number | null; legs: number; as_of: string | null;
 };
 
 /** 📈 The EOD tape read — the app's accumulation day (resiliency_tab.eod_read). */
@@ -942,6 +978,7 @@ export type CmResPreRead = {
 export type CmResiliencyRead = {
   t1: CmResTierStats | null; t2: CmResTierStats | null;
   today: CmResTodayRead; eod: CmResEodRead; pre: CmResPreRead;
+  growth?: CmResGrowthRead;
   sigma_pct: number | null; beta: number | null; adv50: number | null;
 };
 

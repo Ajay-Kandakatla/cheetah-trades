@@ -93,7 +93,8 @@ SPY-down days · `res_today` 📅 Today's move (reads first, biggest move first;
 
 ## Payload (`GET /chart-maps?tab=resiliency[&sort=][&res=t1,eod][&res_mode=all][&min_tier=]`)
 
-Top level: the generic `board()` keys + `sort`, `sorts` (4), `note`, `sort_unavailable`, `matched`, `warming` (only
+Top level: the generic `board()` keys + `sort`, `sorts` (4; 6 since 2026-10-07 — see the 2026-10-07 section for the
+resolved `sort`, `market_line` and `growth`), `note`, `sort_unavailable`, `matched`, `warming` (only
 while warming), `resiliency_board`, `tiles`.
 
 `resiliency_board` = `{state: ready|warming|error, session, phase: pre|rth|close|null, market_closed:
@@ -283,3 +284,127 @@ cards shown is 1.62%/day.
 3. **"day bar (intraday)" during RTH.** A card (and SPY in the 📅 line) with no fresh print is priced off the
    snapshot's day bar; during RTH (`KL.phase == "rth"`) that bar is still forming, so `today.basis` is served as
    `day_bar` and reads "day bar (intraday)"; "day close" only once the phase is `close`. `today.spy_basis` is served.
+
+## 2026-10-07 — 📅 today on every session, biggest gainers first, 🚀 Sales + EPS growth
+
+Ajay 2026-10-07, a red day, verbatim: *"Can you do a scan for me on the reseliency tab.. Is it working? Today is a
+very red day.. I wanna see which stocks were reselient cuz Vista was very reselient"* (Vista = VST, Vistra), then,
+after being told 📅 only read on T1/T2 data days: *"I want the highest growth stocks on top like Vistra for
+example"*. Branch `feat/resiliency-today-every-session-2026-10-07`.
+
+**UNMEASURED — these are orders, not forecasts.** The MEASURED T1/T2/EOD lines above are about data days only and are
+byte-identical (pinned against a golden captured from origin/main before the edit). The green-on-a-red-day study
+(NO_SIGNAL, above) is not served.
+
+### The 📅 clock — one function (`today_read`) on the 🔻 tab's clock (`drop10_tab.mode_for`)
+
+| mode | when (ET) | 📅 read | pill |
+|---|---|---|---|
+| `live` | 09:30–16:00 | today's print (`KL.anchor_read`, unchanged) vs the verified prior close | `📅 today · +x.xx%` (T1/T2 day: `📅 T1 today · holding …`, unchanged bytes) |
+| `after_close` | 16:00–20:00 (half day: from 13:00) | the snapshot day bar's regular-session close (`drop10_tab.day_from_snapshot`) — never the after-hours print, on data days too | same words, stat `… · day close` |
+| `closed` | pre-market on an ordinary day, overnight, weekend, holiday | the LAST closed session's close vs the one before it off the closed bars, only when the cached last bar is that session and `KL.verify_last` says it is final | `📅 last session Wed 10-07 · +x.xx%` — never "today", never a tier, no `Today` stat |
+| data-day pre-market | 04:00–09:30 on a T1/T2 day | the live pre-market print (unchanged) | `📅 T1 today · …` |
+
+No print / no trade in today's session / bars behind / a partial cached bar → not read, no pill, never `+0.00%`.
+00:00–04:00 and after 20:00 before a data day, the data-day sentence prints "The session has not opened." instead of
+the last session's numbers.
+
+### Default order
+
+`default` RESOLVES per request (`resiliency_tab.resolve_sort`): `res_today` (biggest gain first; no read last; ties by
+the T1 hold rate) when the mode is live / after_close and at least one name has a read, else `res_t1` (the old T1
+order). The served `sort` is the resolved explicit key; `sorts` = six entries, `default` first labelled
+"<resolved> (default)" for the generic Sort select; the toggle draws the five explicit keys. `?sort=res_t1` keeps the
+T1 order reachable. `TODAY_SORT_UNAVAILABLE` ("not a T1 or T2 data day") is gone — a guard test greps for it.
+`res_today` with zero reads → T1 order + `TODAY_SORT_NO_READ`; `res_growth` with nothing ranked → the default
+resolution + `GROWTH_SORT_UNAVAILABLE`.
+
+### 🚀 Sales + EPS growth
+
+Per card chip `Sales {s} · EPS {e} YoY ({period})` (IDENT rung) + a `Growth` fold sentence, built ONCE per memo build
+in the warm thread from `research.decision_snapshot` (the same projected Mongo read 🔥 Hottest and 🚀 breakouts use —
+no request-path read). Sales = `sales.growth_yoy_pct`, falling back to `rev_growth_q_pct` (the Hottest precedent);
+EPS = `q_eps_growth_pct` (latest quarter vs the same quarter a year earlier). Quarters not four apart
+(`qoq.period_ok` False) → both blank. A leg RANKS only off a material year-ago base: EPS `qoq.MIN_EPS_BASE` ($0.10)
+through `qoq._seq_pct`, and the stored figure must agree with its own quarterly series (±0.011, a 2-dp tolerance);
+sales `bonde._rev_base` (`MIN_MATERIAL_BASE_REV` $1M). A year-ago loss or a base under the floor shows blank. The 🚀
+order = `qoq.score_board` (equal-weight percentile blend, a one-leg name scored on that leg), names with a ranked EPS
+leg first, unknown last.
+
+**Data-spine finding (not fixed here):** 116 snapshot names' stored `q_eps_growth_pct` disagrees with
+`qoq.yoy_pct(eps_q_series)` (e.g. AAON +26.32% stored vs +257.89% from the series; AMCR +1,483.33% vs +380.00%) —
+shown, NOT ranked, the fold says "disagree". Research cache age p50 9.8 d / max 16 d: the fold says "figures cached
+{date}".
+
+### Market line (served `market_line`)
+
+`📅 {when}: SPY {x} · RSP {y} · median name {m} ({down|up|flat}) · {up} of {n} names read are up.` — every universe name
+read, before the boxes and the floor; the word comes only from the median's sign. RSP = `rotation.tracker.BENCHMARK`,
+read off the same ONE snapshot fan-out and the memo's frames.
+
+### Also
+
+`resiliency_tiles` now reads `scanner.load_latest_shared()` (READ-ONLY, one parse per scan write) instead of
+parsing the full scan file per request.
+
+### Real capture (throwaway container, `block_writes()`, branch tree read-only)
+
+Wed 2026-10-07 16:03 ET (`after_close`; not a data day — next T1 CPI 10-14). Re-run:
+`scripts/resiliency_tab_cost_probe.py --dump-fixture` under `scripts.resiliency_study.block_writes()`.
+Attempted writes: `create_index` only. Memo build 44.4 s cold (2,736 names, 2,736 reads); per-request rank 0.15–0.20 s;
+fundamentals `decision_snapshot` 2,610 names; 🚀 ranked 2,226, EPS-ranked 1,448.
+
+**Market line (served):** `📅 Today's close (16:00 ET): SPY -0.24% · RSP -0.81% · median name -1.06% (down) · 708 of
+2,729 names read are up.` (his intraday read was SPY −0.2 / RSP −0.63 / median −0.84 / 864 of 2,729 — the close was
+weaker). 7 names no print, 0 stale.
+
+**Default** → `sort = res_today`, `sort_unavailable` null; reads first, moves non-increasing; no `T1 today` pill.
+Tradeable top 15: PENG +13.08 · AVBP +11.93 · PRME +11.43 · BRZE +8.05 · EVH +7.81 · PSIX +7.72 · BKV +7.39 · NWE +7.33 ·
+BKH +7.21 · CCOI +6.77 · JANX +6.73 · VSTM +6.65 · GKOS +6.55 · PGNY +6.33 · BCRX +5.66.
+**VST** `📅 today · +3.88%` — **#38 of 2,268 Tradeable** names; chip `Sales -5.5% · EPS -6.2% YoY (FY2026 Q2)` (#1,100 on 🚀).
+
+**🚀 `res_growth`** top 10 (all EPS-ranked, score non-increasing): MU `Sales +345.7% · EPS +1,368.5% YoY (FY2026 Q3)` ·
+DBRG `Sales — · EPS +1,050.0%` (year-ago revenue ≤ 0, scored on its EPS leg alone) · LPG · BHF · INSW · HCC · KLIC · TER ·
+CRDO · VSEC. PBF `Sales +56.2% · EPS — YoY (FY2026 Q2)` (#1,335) and CRI `Sales +5.2% · EPS — YoY (FY2027 Q2)` (#1,656)
+never reach the EPS block; TWLO (+4,671.4% off $0.14) #65; NVDA #28.
+
+**`res_t1`** top 24 == the live origin/main default top 24 (GET at 16:05 ET), symbol for symbol: SLAB AES TXNM CCO NEE
+BNTX SPY SMH …
+
+The FE fixture `frontend/src/components/__fixtures__/resiliency_tab_2026_10_07.json` is this capture TRIMMED (6
+payloads, the first 8 tiles each in served order, bars / curves to their last 30 points); the 13.6 MB original stayed
+in the session scratchpad.
+
+### HIS CALL (shipped defaults)
+
+1. "Highest growth" = today's move: the default order is today's biggest gain first whenever the session has a print
+   (data days included); fundamentals are the opt-in 🚀 order (VST by fundamentals is negative).
+2. Before a session read (pre-market, after 20:00, weekends, holidays) the default stays 🛡️ T1 hold rate, though the
+   pill shows the last session's move.
+3. After 16:00 the 📅 read is the 16:00 close, not the after-hours print — on T1/T2 days too (16:05–20:00 used to follow
+   AH prints).
+4. Ordinary-day pre-market 📅 = the last session (dated), not the live pre-market print (🌅 still shows it).
+5. The 0.5% hold line colours every day's pill (green at or above −0.5%, amber below).
+6. EPS materiality = `qoq.MIN_EPS_BASE` ($0.10) applied to the YEAR-AGO quarter; sales = `bonde.MIN_MATERIAL_BASE_REV`
+   ($1M).
+7. A stored EPS YoY that disagrees with its own series is shown, not ranked (fixing the spine is separate).
+8. 🚀 rank = `qoq.score_board` blend, EPS-ranked block first.
+9. Market line population = every universe name read (his "864 of 2,729" framing).
+10. ETF / no-filing cards read `no quarterly figures on file` rather than hiding the chip.
+11. (executor) The data-day sentence before 04:00 / after 20:00 says "The session has not opened." rather than print
+    the last session's numbers as the data day's.
+
+### Payload deltas
+
+`sort` ∈ `res_today | res_t1 | res_t2 | res_down | res_growth` (never `default` from this tab); `sorts` = 6;
+`resiliency_board.market_line`; `today` = always `{event_day, session, t1, t2, tier, next_t1, mode, day, data_pre,
+half_day, spy_move_pct, spy_tape, spy_as_of_et, spy_basis, rsp_move_pct, median_move_pct, up, read, holding, down,
+no_print, stale}`; `counts` += `today_read, today_up, today_stale, growth_ranked, growth_eps_ranked`; `rules` += 3
+lines + `eps_min_base`, `rev_min_base`; tile `resiliency.today` += `mode, day, for_today` (basis `last_session`),
+`resiliency.growth` (GrowthRead); badges + the growth chip (last); stats + `Growth` (last).
+
+Tests: `backend/tests/test_resiliency_today_growth_2026_10_07.py` (31), predicted pins in `test_resiliency_tab.py`;
+FE `ResiliencyBoardNote.test.tsx`, `cardLadder.test.ts`, `ResiliencyTab.payload.test.tsx` (the real capture
+`__fixtures__/resiliency_tab_2026_10_07.json`), `ChartMapsResiliency.test.tsx`; contracts. Mutation spot-checks
+(bytecode off): the event gate, `EPS_MIN_BASE`, the after-close branch and re-serving the retired sentence each fail
+the new tests.
