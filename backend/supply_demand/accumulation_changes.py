@@ -13,6 +13,13 @@ the two most recent quarters:
     new buyers    funds present this quarter, absent last
     exits         funds present last quarter, gone this one
 
+(2026-10-06) The snapshot comparison that feeds the Sunday push is SHARE-based:
+each fund's share change, valued at ONE common price (today's). Dollars from
+two pictures fetched at different prices move with the price — VST read
+-$1.16B "distributing" while the same funds net bought +481,960 shares. See
+share_map / compare_maps. Funds joining or leaving the top-10 list are LIST
+changes, not proven buys or exits.
+
 WHY GROUPING BY QUARTER IS THE WHOLE POINT
 ------------------------------------------
 The provider returns a MIX. Measured 2026-08-16, every sampled ticker mixed two
@@ -164,8 +171,14 @@ def compare_quarters(holders: list) -> dict:
 
 
 def is_significant(cmp: dict) -> bool:
-    """Worth telling someone about? PURE."""
-    if not cmp.get("comparable"):
+    """Worth telling someone about? PURE.
+
+    Only a SHARE-basis comparison can qualify (2026-10-06): a dollar difference
+    between two pictures fetched at different prices moves with the price, so
+    it never decides a push. The $ floor reads the share change valued at the
+    one common price; with no price, the % floor alone decides.
+    """
+    if not cmp.get("comparable") or cmp.get("basis") != "shares":
         return False
     net = abs(_num(cmp.get("net_change_usd")) or 0.0)
     pct = abs(_num(cmp.get("net_change_pct")) or 0.0)
@@ -176,6 +189,8 @@ def holder_map(holders: list) -> dict:
     """{fund name: position $} across the WHOLE payload, quarter-agnostic. PURE.
 
     Deliberately not grouped by quarter — see compare_to_snapshot for why.
+    Kept for the snapshot's `holders` field (display only). The FLOW is never
+    read off these dollars — see share_map.
     """
     out: dict = {}
     for h in holders or []:
@@ -186,14 +201,73 @@ def holder_map(holders: list) -> dict:
     return out
 
 
-def compare_maps(before: dict, after: dict) -> dict:
-    """Same-fund flow between two holder maps. PURE.
+def share_map(holders: list) -> dict:
+    """{fund name: shares held, or None when the row carries no share count}. PURE.
 
-    The headline is computed ONLY over funds present in both, so it measures
-    positions changing rather than the holder list reshuffling. Entrants and
-    exits carry their own dollars and are never folded in.
+    THE BASIS OF EVERY FLOW FIGURE (2026-10-06). The provider values each
+    holder's position at the price on the day WE fetched it, not at the filing
+    date, so two pictures fetched at different prices differ in dollars even
+    when no fund traded a share. VST read -$1.16B "distributing" across 8 funds
+    that had net BOUGHT +481,960 shares — Vanguard's position was unchanged to
+    the share yet its value fell $3.391B -> $3.174B on the price alone.
+
+    A missing share count stays None (unknown). It is never rebuilt from the
+    dollar value — that would put the price back into the comparison.
     """
-    both = sorted(set(before) & set(after))
+    out: dict = {}
+    for h in holders or []:
+        name = h.get("holder")
+        if not name:
+            continue
+        sh = _num(h.get("shares"))
+        out[name] = sh if (sh is not None and sh >= 0) else None
+    return out
+
+
+def snapshot_price(holders: list) -> Optional[float]:
+    """The ONE price a holder picture was valued at: median value / shares. PURE.
+
+    Every row in one payload is valued at the same fetch-time price, so this is
+    that price recovered from the rows themselves (VST 2026-09-12: $148.38 on
+    all ten). None when no row has both a positive value and a positive share
+    count — then no dollar figure is printed, only shares.
+    """
+    px = sorted(v / sh for v, sh in
+                ((_num(h.get("value")), _num(h.get("shares"))) for h in holders or [])
+                if v is not None and sh is not None and v > 0 and sh > 0)
+    if not px:
+        return None
+    m = len(px) // 2
+    return px[m] if len(px) % 2 else (px[m - 1] + px[m]) / 2.0
+
+
+def _usd(shares: Optional[float], price: Optional[float]) -> Optional[float]:
+    if shares is None or price is None:
+        return None
+    return round(shares * price, 2)
+
+
+def compare_maps(before: dict, after: dict, price: Optional[float] = None) -> dict:
+    """Same-fund SHARE flow between two {fund: shares} maps. PURE.
+
+    The headline is computed ONLY over funds present in both AND carrying a
+    share count in both, so it measures positions changing rather than the
+    holder list reshuffling or the price moving. Every dollar figure is that
+    share change valued at ONE common price (`price`, today's snapshot price),
+    so a price move with no shares traded reads exactly zero.
+
+    A fund in both maps whose share count is missing on either side is counted
+    in `unknown_funds` — never compared, never valued in dollars.
+
+    Funds that joined or left the provider's top-10 list are reported
+    separately (valued at the same common price) and never folded in. They are
+    LIST changes, not proven buys or exits: a fund can drop out of the top 10
+    without selling a share.
+    """
+    common = set(before) & set(after)
+    both = sorted(k for k in common
+                  if before[k] is not None and after[k] is not None)
+    unknown = sorted(common - set(both))
     entrants = sorted(set(after) - set(before))
     leavers = sorted(set(before) - set(after))
 
@@ -202,17 +276,33 @@ def compare_maps(before: dict, after: dict) -> dict:
     net = now - base
     pct = (net / base * 100.0) if base else None
 
+    def _list_usd(names, side):
+        vals = [side[k] for k in names]
+        if not vals or any(v is None for v in vals):
+            return None if vals else 0.0
+        return _usd(sum(vals), price)
+
     return {
+        "basis": "shares",
         "overlap_funds": len(both),
-        "prev_value": round(base, 2),
-        "new_value": round(now, 2),
-        "net_change_usd": round(net, 2),
+        "unknown_funds": unknown,
+        "price": round(price, 4) if price is not None else None,
+        "prev_shares": round(base, 2),
+        "new_shares": round(now, 2),
+        "net_change_shares": round(net, 2),
         "net_change_pct": round(pct, 2) if pct is not None else None,
+        # Both sides at the SAME price — the dollar size of the share change.
+        "prev_value": _usd(base, price),
+        "new_value": _usd(now, price),
+        "net_change_usd": _usd(net, price),
         "direction": "accumulating" if net > 0 else ("distributing" if net < 0 else "flat"),
+        # Top-10 LIST changes, never in the flow figure.
         "new_buyers": entrants,
-        "new_buyer_usd": round(sum(after[k] for k in entrants), 2),
+        "new_buyer_usd": _list_usd(entrants, after),
         "exits": leavers,
-        "exit_usd": round(sum(before[k] for k in leavers), 2),
+        "exit_usd": _list_usd(leavers, before),
+        "list_change_note": ("joined / left the provider's top-10 holder list — "
+                             "not proven buys or exits"),
     }
 
 
@@ -231,6 +321,9 @@ def take_snapshot(symbol: str, payload: dict) -> Optional[dict]:
     not for NVDA, not for anything. The comparison must be against a picture we
     stored ourselves, which is why this exists and why the first sweep can only
     establish a baseline.
+
+    `shares` is what a later comparison reads (2026-10-06). Snapshots banked
+    before that carry dollars only and cannot be compared — see share_map.
     """
     coll = _snapshots()
     if coll is None:
@@ -242,12 +335,15 @@ def take_snapshot(symbol: str, payload: dict) -> Optional[dict]:
     # against nothing — zero overlap, or worse, a fabricated 100% outflow.
     if not payload.get("holders") or not per.get("dominant"):
         return None
+    holders = payload.get("holders") or []
     doc = {
         "symbol": symbol.upper(),
         "taken_at": datetime.now(timezone.utc),
         "dominant_quarter": per.get("dominant"),
-        "holders": holder_map(payload.get("holders") or []),
-        "n_holders": len((payload.get("holders") or [])),
+        "holders": holder_map(holders),
+        "shares": share_map(holders),
+        "price": snapshot_price(holders),
+        "n_holders": len(holders),
     }
     try:
         coll.insert_one(dict(doc))
@@ -261,9 +357,20 @@ def take_snapshot(symbol: str, payload: dict) -> Optional[dict]:
     return doc
 
 
+def _prior_share_map(prior: dict) -> dict:
+    """The stored picture's {fund: shares}. A snapshot banked before shares
+    were stored (pre-2026-10-06, dollars only) maps every fund to None —
+    unknown, never rebuilt from its dollars."""
+    sh = prior.get("shares")
+    if isinstance(sh, dict):
+        return {k: (_num(v) if _num(v) is not None and _num(v) >= 0 else None)
+                for k, v in sh.items()}
+    return {k: None for k in (prior.get("holders") or {})}
+
+
 def compare_to_snapshot(symbol: str, payload: dict) -> dict:
     """Compare today's holders against our most recent snapshot from an EARLIER
-    reporting quarter."""
+    reporting quarter — on SHARES, valued at today's snapshot price."""
     coll = _snapshots()
     per = (payload.get("period") or {})
     now_q = per.get("dominant")
@@ -283,13 +390,26 @@ def compare_to_snapshot(symbol: str, payload: dict) -> dict:
                            "comparisons begin at the next 13F roll"),
                 "new_quarter": now_q}
 
-    d = compare_maps(prior.get("holders") or {}, holder_map(payload.get("holders") or []))
+    holders = payload.get("holders") or []
+    d = compare_maps(_prior_share_map(prior), share_map(holders),
+                     snapshot_price(holders))
     if d["overlap_funds"] < MIN_OVERLAP_FUNDS:
+        if d["unknown_funds"] and not isinstance(prior.get("shares"), dict):
+            reason = (f"the {prior.get('dominant_quarter')} snapshot predates share "
+                      f"counts (dollars only) — dollars carry the price on the day "
+                      f"they were fetched, so they cannot measure a flow; "
+                      f"comparisons resume at the next 13F roll")
+        elif d["unknown_funds"]:
+            reason = (f"only {d['overlap_funds']} fund(s) carry a share count in both "
+                      f"pictures ({len(d['unknown_funds'])} unknown) — too thin to "
+                      f"compare")
+        else:
+            reason = (f"only {d['overlap_funds']} fund(s) appear in both "
+                      f"pictures — the provider returns a top-N list, so a "
+                      f"thin overlap is a sampling artifact, not a flow")
         return {"comparable": False, **d,
                 "prev_quarter": prior.get("dominant_quarter"), "new_quarter": now_q,
-                "reason": (f"only {d['overlap_funds']} fund(s) appear in both "
-                           f"pictures — the provider returns a top-N list, so a "
-                           f"thin overlap is a sampling artifact, not a flow")}
+                "reason": reason}
 
     return {
         "comparable": True,
@@ -298,11 +418,12 @@ def compare_to_snapshot(symbol: str, payload: dict) -> dict:
         "prev_taken_at": prior.get("taken_at").isoformat()
                          if hasattr(prior.get("taken_at"), "isoformat") else None,
         **d,
-        "caveat": (f"Measured across the {d['overlap_funds']} fund(s) present in both "
-                   f"our {prior.get('dominant_quarter')} snapshot and today's "
-                   f"{now_q} data. Entrants and exits are listed separately and are "
-                   f"NOT in that figure — a fund 'leaving' may simply have dropped "
-                   f"out of the provider's top-N list. 13F lags up to 45 days."),
+        "caveat": (f"Share change across the {d['overlap_funds']} fund(s) present in "
+                   f"both our {prior.get('dominant_quarter')} snapshot and today's "
+                   f"{now_q} data, valued at today's price — a price move alone "
+                   f"reads zero. Funds that joined or left the provider's top-10 "
+                   f"list are listed separately and are NOT in that figure; a fund "
+                   f"leaving the list may not have sold. 13F lags up to 45 days."),
     }
 
 
@@ -399,8 +520,11 @@ def sweep(symbols: Optional[list] = None, *, notify: bool = False,
                 continue                     # already recorded this quarter
             db.accumulation_changes.insert_one({
                 **key,
+                "basis": cmp.get("basis"),
+                "net_change_shares": cmp.get("net_change_shares"),
                 "net_change_usd": cmp.get("net_change_usd"),
                 "net_change_pct": cmp.get("net_change_pct"),
+                "price": cmp.get("price"),
                 "direction": cmp.get("direction"),
                 "new_buyers": cmp.get("new_buyers"),
                 "exits": cmp.get("exits"),
@@ -431,17 +555,40 @@ def _fmt_usd(v: Optional[float]) -> str:
     return f"{sign}${a:,.0f}"
 
 
+def _fmt_shares(v: Optional[float]) -> str:
+    v = _num(v)
+    if v is None:
+        return ""
+    a = abs(v)
+    sign = "+" if v >= 0 else "-"
+    if a >= 1e6:
+        return f"{sign}{a/1e6:.1f}M sh"
+    if a >= 1e3:
+        return f"{sign}{a/1e3:.0f}K sh"
+    return f"{sign}{a:,.0f} sh"
+
+
 def alert_line(cmp: dict) -> str:
     """One phone-sized line. PURE — so the wording is testable."""
-    arrow = "🟢" if cmp.get("direction") == "accumulating" else "🔴"
+    direction = cmp.get("direction")
+    arrow = ("🟢" if direction == "accumulating"
+             else "🔴" if direction == "distributing" else "⚪")
     pct = cmp.get("net_change_pct")
     pct_s = f" ({pct:+.0f}%)" if pct is not None else ""
-    bits = [f"{arrow} {cmp.get('symbol')} {_fmt_usd(cmp.get('net_change_usd'))}{pct_s}"]
+    usd = cmp.get("net_change_usd")
+    head = f"{arrow} {cmp.get('symbol')}"
+    if usd is not None:
+        head += f" {_fmt_usd(usd)}"
+    sh = _fmt_shares(cmp.get("net_change_shares"))
+    if sh:
+        head += f" {sh}"
+    bits = [head + pct_s]
     nb, ex = cmp.get("new_buyers") or [], cmp.get("exits") or []
+    # Top-10 LIST changes — a fund leaving the list may not have sold.
     if nb:
-        bits.append(f"{len(nb)} new")
+        bits.append(f"{len(nb)} joined top-10")
     if ex:
-        bits.append(f"{len(ex)} out")
+        bits.append(f"{len(ex)} left top-10")
     bits.append(f"{cmp.get('prev_quarter')}→{cmp.get('new_quarter')}")
     return " · ".join(bits)
 

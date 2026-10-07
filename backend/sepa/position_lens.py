@@ -315,18 +315,9 @@ def evaluate(symbol: str, entry: float, *,
     # Cross-module triggers — keep the SEPA card, supply/demand panel,
     # and options pulse in lockstep with the Position Lens verdict.
 
-    if whales_signal and whales_signal["signal"] == "distributing":
-        n_sell = whales_signal.get("n_selling", 0)
-        n_buy  = whales_signal.get("n_buying", 0)
-        top    = whales_signal.get("top_sell") or "—"
-        # Distribution alone = TIGHTEN (lagging signal). Stacked with another
-        # bearish signal it escalates to REDUCE via the tighten-count rule below.
-        triggers.append({
-            "rule":    "institutional_distribution",
-            "verdict": "TIGHTEN_STOP",
-            "msg":     (f"Hedge funds DISTRIBUTING ({n_sell} selling vs {n_buy} buying, "
-                        f"per 13F). Top exit: {top}."),
-        })
+    whales_trigger = _whales_distribution_trigger(whales_signal)
+    if whales_trigger:
+        triggers.append(whales_trigger)
 
     if chaikin_signal and chaikin_signal.get("score") is not None:
         sc = chaikin_signal["score"]
@@ -464,6 +455,30 @@ def evaluate(symbol: str, entry: float, *,
 # ---------------------------------------------------------------------------
 # Action generation per verdict
 # ---------------------------------------------------------------------------
+def _whales_distribution_trigger(whales_signal: Optional[dict]) -> Optional[dict]:
+    """The 13F distribution trigger, or None. PURE.
+
+    `top_sell` is the holder with the deepest share TRIM (`pct_change` below
+    -10%) among the provider's top holders — it is still holding, so the text
+    says seller / trim, never "exit" (2026-10-06). A fund that sold out is not
+    in the list at all. The read counts funds by their share change, so a
+    price move cannot produce it.
+    """
+    if not whales_signal or whales_signal.get("signal") != "distributing":
+        return None
+    n_sell = whales_signal.get("n_selling", 0)
+    n_buy  = whales_signal.get("n_buying", 0)
+    top    = whales_signal.get("top_sell") or "—"
+    # Distribution alone = TIGHTEN (lagging signal). Stacked with another
+    # bearish signal it escalates to REDUCE via the tighten-count rule below.
+    return {
+        "rule":    "institutional_distribution",
+        "verdict": "TIGHTEN_STOP",
+        "msg":     (f"Hedge funds DISTRIBUTING ({n_sell} selling vs {n_buy} buying, "
+                    f"per 13F). Top seller (trim): {top}."),
+    }
+
+
 def _actions_for_verdict(*, verdict: str, triggers: list[dict],
                          entry: float, last: float, stop_used: float,
                          r_multiple: Optional[float], breakeven_rule: bool,

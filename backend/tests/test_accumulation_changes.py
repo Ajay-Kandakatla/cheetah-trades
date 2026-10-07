@@ -66,7 +66,7 @@ def test_a_mixed_payload_is_never_summed_across_quarters():
 
 def test_comparison_names_new_buyers_and_exits():
     c = ac.compare_maps({"Stayer": 100, "Leaver": 50},
-                        {"Stayer": 120, "Joiner": 80})
+                        {"Stayer": 120, "Joiner": 80}, 1.0)
     assert c["new_buyers"] == ["Joiner"] and c["exits"] == ["Leaver"]
     # entrant/exit dollars are reported, never folded into the flow figure
     assert c["new_buyer_usd"] == 80 and c["exit_usd"] == 50
@@ -93,7 +93,7 @@ def test_no_dated_holdings_is_not_comparable():
 
 
 def test_a_zero_prior_book_does_not_divide_by_zero():
-    c = ac.compare_maps({"A": 0, "B": 0, "C": 0}, {"A": 500, "B": 0, "C": 0})
+    c = ac.compare_maps({"A": 0, "B": 0, "C": 0}, {"A": 500, "B": 0, "C": 0}, 1.0)
     assert c["net_change_pct"] is None
     assert c["net_change_usd"] == 500
 
@@ -111,17 +111,17 @@ def test_a_thin_overlap_is_refused():
 # significance
 # ---------------------------------------------------------------------------
 def test_big_dollar_move_is_significant():
-    assert ac.is_significant({"comparable": True, "net_change_usd": 60_000_000,
+    assert ac.is_significant({"comparable": True, "basis": "shares", "net_change_usd": 60_000_000,
                               "net_change_pct": 2.0}) is True
 
 
 def test_big_percentage_move_on_a_small_book_is_significant():
-    assert ac.is_significant({"comparable": True, "net_change_usd": 5_000_000,
+    assert ac.is_significant({"comparable": True, "basis": "shares", "net_change_usd": 5_000_000,
                               "net_change_pct": 40.0}) is True
 
 
 def test_rounding_noise_is_not_significant():
-    assert ac.is_significant({"comparable": True, "net_change_usd": 1_000_000,
+    assert ac.is_significant({"comparable": True, "basis": "shares", "net_change_usd": 1_000_000,
                               "net_change_pct": 1.5}) is False
 
 
@@ -132,7 +132,7 @@ def test_a_non_comparable_ticker_is_never_significant():
 
 def test_a_large_OUTFLOW_is_significant_too():
     """Money leaving is as much a change as money arriving."""
-    assert ac.is_significant({"comparable": True, "net_change_usd": -90_000_000,
+    assert ac.is_significant({"comparable": True, "basis": "shares", "net_change_usd": -90_000_000,
                               "net_change_pct": -30.0}) is True
 
 
@@ -147,7 +147,7 @@ def test_alert_line_is_phone_sized_and_carries_the_quarters():
         "prev_quarter": "2026-03-31", "new_quarter": "2026-06-30",
     })
     assert "NVDA" in line and "+$2.1B" in line and "+34%" in line
-    assert "2 new" in line and "1 out" in line
+    assert "2 joined top-10" in line and "1 left top-10" in line
     assert "2026-03-31→2026-06-30" in line
     assert len(line) < 120
 
