@@ -35,14 +35,38 @@ type FundEntry = {
   their_top_trims?: Move[];
 };
 
+/** A curated fund left OUT of quarter P (2026-10-06): it has no filing for
+ * P (or none for P-1 to compare against), so its old moves are never shown
+ * as this quarter's buying/selling. */
+export type StaleFund = {
+  fund: string;
+  latest_quarter: string | null;
+  reason: string;
+};
+
 type Payload = {
   symbol: string;
   quarter: string | null;
   sellers: FundEntry[];
   buyers: FundEntry[];
   n_funds_checked: number;
+  n_funds_current?: number;
+  stale_funds?: StaleFund[];
   note?: string;
 };
+
+/** "Not filed for Q2 2026: Greenlight (last Q4 2023) · Pershing Sq (13F-NT)"
+ * — or null when every fund filed. */
+export function staleFundsText(stale: StaleFund[] | undefined | null,
+                               quarter: string | null | undefined): string | null {
+  if (!stale?.length) return null;
+  const parts = stale.map((s) => {
+    if (s.reason.includes('13F-NT')) return `${s.fund} (13F-NT)`;
+    if (s.reason.includes('compare against')) return `${s.fund} (no prior quarter)`;
+    return s.latest_quarter ? `${s.fund} (last ${s.latest_quarter})` : `${s.fund} (none on file)`;
+  });
+  return `Not filed for ${quarter || 'this quarter'}: ${parts.join(' · ')}`;
+}
 
 const C = { green: '#10b981', red: '#ef4444', muted: '#94a3b8', sub: '#8a93a6' };
 
@@ -181,6 +205,13 @@ export function GiantsRotationModal({ symbol, onClose }: { symbol: string; onClo
                 </div>
                 {data.buyers.map((e, i) => <FundCard key={i} e={e} symbol={symbol} />)}
               </section>
+            )}
+
+            {staleFundsText(data.stale_funds, data.quarter) && (
+              <p className="mono" style={{ fontSize: '0.7rem', color: C.sub, marginTop: 8 }}
+                 title={(data.stale_funds || []).map((s) => `${s.fund}: ${s.reason}`).join('\n')}>
+                {staleFundsText(data.stale_funds, data.quarter)} — left out, not mixed in.
+              </p>
             )}
 
             <p className="mono" style={{ fontSize: '0.7rem', color: C.sub, marginTop: 8 }}>

@@ -17,7 +17,7 @@ import { useGiantsFlows, type GiantsFlowRow } from '../hooks/useGiantsFlows';
 import { useSort } from '../lib/useSort';
 import { fmtDeltaUSD } from '../lib/fundTiers';
 import { InfoButton } from './InfoButton';
-import { GiantsRotationModal } from './GiantsRotationModal';
+import { GiantsRotationModal, staleFundsText } from './GiantsRotationModal';
 import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
@@ -164,9 +164,18 @@ export function GiantsFlowBoard() {
         </span>
         <span className="top-picks__meta mono">
           {doc?.latest_quarter ? `${doc.latest_quarter} filings` : ''}
-          {doc?.n_funds_with_data != null ? ` · ${doc.n_funds_with_data}/${doc.n_funds} funds` : ''}
+          {doc?.n_funds_current != null
+            ? ` · ${doc.n_funds_current}/${doc.n_funds} funds`
+            : doc?.n_funds_with_data != null ? ` · ${doc.n_funds_with_data}/${doc.n_funds} funds` : ''}
         </span>
       </div>
+
+      {doc && staleFundsText(doc.stale_funds, doc.latest_quarter) && (
+        <p className="mono" style={{ fontSize: '0.7rem', color: C.sub, margin: '2px 0 6px' }}
+           title={(doc.stale_funds || []).map((s) => `${s.fund}: ${s.reason}`).join('\n')}>
+          {staleFundsText(doc.stale_funds, doc.latest_quarter)}
+        </p>
+      )}
 
       {doc?.refreshing && (
         <p className="mono" style={{ fontSize: '0.74rem', color: C.amber }}>

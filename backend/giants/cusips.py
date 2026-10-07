@@ -153,10 +153,31 @@ def get_maps(force: bool = False) -> Tuple[Dict[str, str], Dict[str, str]]:
     return cus, names
 
 
+# NSCC marks a RETIRED CUSIP by appending "ZZZZ" to the symbol in the FTD
+# files: Honeywell's pre-spin CUSIP 438516106 reads "HONZZZZ" while the
+# live HON line trades as 438516205. That placeholder is not a listed
+# symbol and must never reach a board as a ticker (2026-10-06).
+_RETIRED_SUFFIX = "ZZZZ"
+
+
+def _sanitize_ftd_symbol(t: str, cus_map: Dict[str, str]) -> Optional[str]:
+    """A retired-CUSIP placeholder → its base symbol ONLY when that base is
+    itself live in the map under another CUSIP (HONZZZZ → HON: the old and
+    new Honeywell lines then net as one ticker); otherwise None."""
+    if not t.endswith(_RETIRED_SUFFIX):
+        return t
+    base = t[: -len(_RETIRED_SUFFIX)]
+    if base and base in cus_map.values():
+        return base
+    return None
+
+
 def resolve(cusip: str, issuer_name: str,
             cus_map: Dict[str, str], name_map: Dict[str, str]) -> Optional[str]:
     """Ticker for a 13F row, or None (caller shows the raw issuer name)."""
     t = cus_map.get((cusip or "").upper())
     if t:
-        return t
+        t = _sanitize_ftd_symbol(t, cus_map)
+        if t:
+            return t
     return name_map.get(normalize_issuer(issuer_name)) or None

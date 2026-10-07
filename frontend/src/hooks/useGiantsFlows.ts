@@ -62,6 +62,9 @@ export type GiantsFlowsDoc = {
   funds: GiantsFundRow[];
   n_funds: number;
   n_funds_with_data?: number;
+  /** funds with filings for the board's quarter AND the one before (2026-10-06) */
+  n_funds_current?: number;
+  stale_funds?: { fund: string; latest_quarter: string | null; reason: string }[];
   refreshing?: boolean;
   refresh_progress?: { done: number; of: number } | null;
   disclaimer?: string;
