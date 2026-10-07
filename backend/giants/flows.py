@@ -23,7 +23,9 @@ Filing hygiene (2026-10-06, docs/giants_13f_dedupe_units_2026_10_06.md):
 ONE canonical portfolio per (fund, period) (edgar.canonical_filings), VALUE
 units normalized per filing (normalize_value_units), and quarter P = the
 dominant latest period — funds without filings for P and P-1 are named in
-`stale_funds`, never mixed in.
+`stale_funds`, never mixed in. A fund whose retired CUSIP turned into a live
+one (a spin / reverse split, FTD "…ZZZZ") made no trade: that fund/ticker is
+named in `cusip_changes`, never valued as an exit (split_cusip_changes).
 
 Persisted: `giants_flows` Mongo doc (_id "latest"), rebuilt by
 `python -m giants.refresh` (cron, daily — cheap when no new filings) or the
@@ -271,6 +273,51 @@ def fund_diff(cur: dict, prev: dict) -> List[dict]:
 def _attach_tickers(rows: List[dict], cus_map: dict, name_map: dict) -> None:
     for r in rows:
         r["ticker"] = cusips.resolve(r["cusip"], r["name"], cus_map, name_map)
+        r["retired_cusip"] = cusips.is_retired(r["cusip"], cus_map)
+
+
+CUSIP_CHANGE_NOTE = "CUSIP change / corporate action, not a decision"
+
+
+def split_cusip_changes(rows: List[dict], fund: Optional[dict] = None
+                        ) -> Tuple[List[dict], List[dict]]:
+    """(rows with CUSIP changes removed, the changes named).
+
+    Honeywell's Q2-2026 spin retired CUSIP 438516106 (FTD "HONZZZZ") for
+    438516205 HON + 43849R105 HONA: every holder "exited" the old line and
+    opened the new one without a trade (Primecap 488,200 old → 244,100 HON).
+    Netted as one HON row, the value CHANGE read as a −100% exit (Wellington
+    −$2.45B while still holding 5.85M HON). Without the conversion ratio
+    the fund's real decision cannot be separated, so when ONE fund's rows
+    for a ticker pair an exit of a retired CUSIP with a position in a live
+    CUSIP of that ticker, the whole fund/ticker leaves the flows and is
+    listed instead. Plain exits of a retired line (nothing held after) stay
+    real exits; ADR/ordinary pairs (no retired CUSIP) still net as before.
+    Needs rows from _attach_tickers."""
+    by_t: Dict[str, List[dict]] = {}
+    for r in rows:
+        if r.get("ticker"):
+            by_t.setdefault(r["ticker"], []).append(r)
+    changed = {}
+    for t, rs in by_t.items():
+        old = [r for r in rs if r.get("retired_cusip") and r["action"] == "exit"]
+        live = [r for r in rs if not r.get("retired_cusip")
+                and (r.get("shares_now") or 0) > 0]
+        if old and live:
+            changed[t] = {
+                "fund": (fund or {}).get("short"),
+                "tier": (fund or {}).get("tier"),
+                "ticker": t, "name": live[0]["name"],
+                "value_prev": sum(r["value_prev"] for r in rs),
+                "value_now": sum(r["value_now"] for r in rs),
+                "cusips_retired": sorted(r["cusip"] for r in old),
+                "cusips_live": sorted(r["cusip"] for r in live),
+                "note": CUSIP_CHANGE_NOTE,
+            }
+    if not changed:
+        return rows, []
+    return ([r for r in rows if r.get("ticker") not in changed],
+            sorted(changed.values(), key=lambda c: -c["value_prev"]))
 
 
 def _net_by_ticker(rows: List[dict]) -> List[dict]:
@@ -310,20 +357,25 @@ def refresh_status() -> dict:
         return dict(_REFRESH)
 
 
-def _fund_filings(cik: int, quarters: int, network: bool
+def _fund_filings(cik: int, quarters: int, network: bool,
+                  prior_notice: Optional[List[str]] = None
                   ) -> Tuple[List[dict], List[str]]:
     """(canonical parsed filings newest first, 13F-NT notice periods).
 
     Every path resolves ONE portfolio per period (edgar.canonical_filings):
     the network path fetches the original AND its amendments, the cache-only
-    and fallback paths read edgar.cached_filings (canonical by default)."""
+    and fallback paths read edgar.cached_filings (canonical by default).
+    Notices come only from the submissions index, so the cache-only and
+    fallback paths carry `prior_notice` (the last rebuild's) forward — an
+    empty list there would turn Pershing's "13F-NT" into "not filed"."""
     if not network:
-        return edgar.cached_filings(cik)[: quarters + 1], []
+        return edgar.cached_filings(cik)[: quarters + 1], list(prior_notice or [])
     try:
         idx = edgar.filing_index(cik, max_n=quarters + 1)
     except Exception as exc:
         log.warning("submissions fetch failed cik=%s: %s", cik, exc)
-        return edgar.cached_filings(cik)[: quarters + 1], []
+        return (edgar.cached_filings(cik)[: quarters + 1],
+                list(prior_notice or []))
     docs = []
     for f in idx["filings"]:
         doc = edgar.fetch_holdings(cik, f)
@@ -367,11 +419,14 @@ def rebuild(quarters: int = _QUARTERS, network: bool = True) -> dict:
     # quarter → ticker → aggregate slot;  fund summaries collected as we go
     agg: Dict[str, Dict[str, dict]] = {}
     unmapped: Dict[str, Dict[str, float]] = {}
+    changes: Dict[str, List[dict]] = {}
     fund_rows, stale_funds = [], []
     try:
+        prior_notices = _notice_periods_by_cik()
         all_docs, notices = [], []
         for fund in funds:
-            docs, notice = _fund_filings(fund["cik"], quarters, network)
+            docs, notice = _fund_filings(fund["cik"], quarters, network,
+                                         prior_notices.get(fund["cik"]))
             all_docs.append(docs)
             notices.append(notice)
             with _LOCK:
@@ -392,6 +447,8 @@ def rebuild(quarters: int = _QUARTERS, network: bool = True) -> dict:
                 q = quarter_label(cur["period"])
                 raw = fund_diff(cur, prev)
                 _attach_tickers(raw, cus_map, name_map)
+                raw, cx = split_cusip_changes(raw, fund)
+                changes.setdefault(q, []).extend(cx)
                 rows = _net_by_ticker(raw)
                 diffs_by_q[q] = rows
                 slot_q = agg.setdefault(q, {})
@@ -421,6 +478,7 @@ def rebuild(quarters: int = _QUARTERS, network: bool = True) -> dict:
                             "style": fund["style"], "usd": d,
                             "action": r["action"],
                             "pct_change_shares": r["pct_change_shares"],
+                            "value_units": cur.get("value_units"),
                         })
             latest = docs[0] if docs else None
             current = latest_q is not None and latest_q in diffs_by_q
@@ -450,7 +508,8 @@ def rebuild(quarters: int = _QUARTERS, network: bool = True) -> dict:
             _REFRESH.update(running=False, error=str(exc))
         raise
     doc = _shape_doc(agg, unmapped, fund_rows, latest_q=latest_q,
-                     stale_funds=stale_funds)
+                     stale_funds=stale_funds,
+                     cusip_changes=changes.get(latest_q) if latest_q else None)
     coll = _coll()
     if coll is not None:
         try:
@@ -479,7 +538,8 @@ def _sort_quarters(qs) -> List[str]:
 
 
 def _shape_doc(agg, unmapped, fund_rows, latest_q: Optional[str] = None,
-               stale_funds: Optional[List[dict]] = None) -> dict:
+               stale_funds: Optional[List[dict]] = None,
+               cusip_changes: Optional[List[dict]] = None) -> dict:
     quarters = _sort_quarters(agg.keys())          # oldest → newest
     if latest_q is None or latest_q not in agg:
         latest_q = quarters[-1] if quarters else None
@@ -533,6 +593,8 @@ def _shape_doc(agg, unmapped, fund_rows, latest_q: Optional[str] = None,
         "n_funds_with_data": sum(1 for f in fund_rows if f["n_quarters_cached"]),
         "n_funds_current": sum(1 for f in fund_rows if f.get("current")),
         "stale_funds": list(stale_funds or []),
+        "cusip_changes": sorted(cusip_changes or [],
+                                key=lambda c: -c["value_prev"]),
         "params": {
             "min_count_move_usd": _MIN_COUNT_MOVE_USD,
             "quarters_fetched": _QUARTERS,
@@ -652,10 +714,12 @@ def symbol_rotation(symbol: str) -> dict:
         for slot, c, p in zip(pairs, curs, prevs):
             slot[1], slot[2] = c, p
 
-    sellers, buyers = [], []
+    sellers, buyers, changes = [], [], []
     for fund, cur, prev in pairs:
         raw = fund_diff(cur, prev)
         _attach_tickers(raw, cus_map, name_map)
+        raw, cx = split_cusip_changes(raw, fund)
+        changes.extend(c for c in cx if c["ticker"] == sym)
         rows = _net_by_ticker(raw)
         mine = [r for r in rows if r["ticker"] == sym
                 and abs(r["delta_usd"]) >= _MIN_ROTATION_MOVE_USD]
@@ -691,6 +755,7 @@ def symbol_rotation(symbol: str) -> dict:
         "n_funds_checked": len(funds),
         "n_funds_current": len(pairs),
         "stale_funds": stale,
+        "cusip_changes": sorted(changes, key=lambda c: -c["value_prev"]),
         "note": ("Rotation = the SAME fund's biggest adds/trims in the SAME "
                  "quarterly filing — where the money actually moved. "
                  "Quarterly data, 45-day lag, longs only."),

@@ -17,6 +17,8 @@ export type GiantMove = {
   usd: number;
   action: 'new' | 'add' | 'trim' | 'exit';
   pct_change_shares: number | null;
+  /** 'undetermined' = the filing's VALUE unit could not be read (2026-10-06) */
+  value_units?: string | null;
 };
 
 export type GiantsFlowRow = {

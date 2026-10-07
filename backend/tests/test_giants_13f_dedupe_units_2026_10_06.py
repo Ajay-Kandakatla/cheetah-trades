@@ -8,7 +8,10 @@ Four defects, each pinned with the case that broke live and the negatives:
   2. VALUE reported in thousands (T. Rowe) is detected and scaled; dollar,
      thin and ambiguous filings are never scaled
   3. quarter P = the dominant latest period; stale funds are named, not mixed
-  4. FTD retired-CUSIP placeholders (HONZZZZ) never reach a board as a ticker
+  4. FTD retired-CUSIP placeholders (HONZZZZ) never reach a board as a ticker,
+     and a retired → live CUSIP change is named, never valued as an exit
+  + critic round: 13F-NT notices carried forward on cache-only rebuilds; an
+    untagged amendment cover is stored as UNKNOWN (never re-fetched)
 """
 import os
 import sys
@@ -334,9 +337,12 @@ class TestDominantQuarter(unittest.TestCase):
 
 
 class _Patched(unittest.TestCase):
+    WORLD = staticmethod(world)
+    CUS_MAP = {"VST": "VST"}
+
     def setUp(self):
-        coll = FakeColl(world())
-        maps = ({"VST": "VST"}, {})
+        coll = FakeColl(self.WORLD())
+        maps = (dict(self.CUS_MAP), {})
         self._p = [mock.patch.object(edgar, "_coll", return_value=coll),
                    mock.patch.object(flows, "_coll", return_value=None),
                    mock.patch.object(flows.cusips, "get_maps", return_value=maps),
@@ -346,7 +352,7 @@ class _Patched(unittest.TestCase):
             p.start()
 
     def tearDown(self):
-        for p in self._p:
+        for p in reversed(self._p):
             p.stop()
 
 
@@ -381,6 +387,10 @@ class TestSymbolRotation(_Patched):
         self.assertEqual(r["n_funds_current"], 3)
         for e in r["sellers"] + r["buyers"]:
             self.assertEqual(e["quarter"], "Q2 2026")
+
+    def test_no_retired_cusip_no_changes_listed(self):
+        # NEGATIVE: an ordinary quarter lists no CUSIP change
+        self.assertEqual(flows.symbol_rotation("VST")["cusip_changes"], [])
 
     def test_notice_reason(self):
         with mock.patch.object(flows, "_notice_periods_by_cik",
@@ -442,15 +452,203 @@ class TestRetiredCusipSymbol(unittest.TestCase):
         self.assertEqual(cusips.resolve("595112103", "", cus, {}), "MU")
         self.assertEqual(cusips.resolve("X1", "", cus, {}), "BACPRB")
 
-    def test_old_and_new_honeywell_lines_net_to_one_row(self):
-        cur = doc(1, Q2, [("438516205", "HONEYWELL INTL INC", 1_308_875_964, 5_845_806)])
-        prev = doc(1, Q1, [("438516106", "HONEYWELL INTL INC", 3_760_080_475, 16_635_316)])
+    def test_honeywell_cusip_change_is_named_not_an_exit(self):
+        # Critic 2026-10-06: netting the retired HONZZZZ line into HON read
+        # Wellington's spin conversion as "exit -100% -$2.45B" while it still
+        # held 5.85M HON. The fund/ticker now leaves the flows, named.
+        cur = doc(1, Q2, [("438516205", "HONEYWELL INTL INC", 1_308_875_964, 5_845_806),
+                          ("595112103", "MICRON", 50_000_000, 100_000)])
+        prev = doc(1, Q1, [("438516106", "HONEYWELL INTL INC", 3_760_080_475, 16_635_316),
+                           ("595112103", "MICRON", 20_000_000, 40_000)])
+        cus = dict(self.CUS, **{"595112103": "MU"})
+        raw = flows.fund_diff(cur, prev)
+        flows._attach_tickers(raw, cus, {})
+        kept, changes = flows.split_cusip_changes(raw, {"short": "Wellington", "tier": "S"})
+        rows = flows._net_by_ticker(kept)
+        # NEGATIVE: no HON row at all — neither an exit nor a "new"
+        self.assertEqual([r["ticker"] for r in rows], ["MU"])
+        self.assertNotIn("HONZZZZ", [r["ticker"] for r in raw])
+        self.assertEqual(len(changes), 1)
+        c = changes[0]
+        self.assertEqual((c["fund"], c["ticker"], c["note"]),
+                         ("Wellington", "HON", flows.CUSIP_CHANGE_NOTE))
+        self.assertEqual(c["cusips_retired"], ["438516106"])
+        self.assertEqual(c["cusips_live"], ["438516205"])
+        self.assertEqual(c["value_prev"], 3_760_080_475)
+
+    def test_plain_exit_of_retired_line_stays_a_real_exit(self):
+        # NEGATIVE: holding NOTHING after is a real exit, not a CUSIP change
+        cur = doc(1, Q2, [])
+        prev = doc(1, Q1, [("438516106", "HONEYWELL INTL INC", 110_000_000, 488_200)])
         raw = flows.fund_diff(cur, prev)
         flows._attach_tickers(raw, self.CUS, {})
-        rows = flows._net_by_ticker(raw)
-        self.assertEqual([r["ticker"] for r in rows], ["HON"])
-        self.assertNotIn("HONZZZZ", [r["ticker"] for r in raw])
+        kept, changes = flows.split_cusip_changes(raw)
+        self.assertEqual(changes, [])
+        self.assertEqual([(r["ticker"], r["action"]) for r in kept], [("HON", "exit")])
 
+    def test_adr_and_ordinary_pair_still_nets(self):
+        # NEGATIVE: no retired CUSIP → no CUSIP-change split (AZN ADR → ord)
+        cus = {"046353108": "AZN", "G0593M107": "AZN"}
+        cur = doc(1, Q2, [("G0593M107", "ASTRAZENECA", 3_400_000_000, 20_000_000)])
+        prev = doc(1, Q1, [("046353108", "ASTRAZENECA", 3_600_000_000, 50_000_000)])
+        raw = flows.fund_diff(cur, prev)
+        flows._attach_tickers(raw, cus, {})
+        kept, changes = flows.split_cusip_changes(raw)
+        self.assertEqual(changes, [])
+        self.assertEqual(len(flows._net_by_ticker(kept)), 1)
+
+    def test_is_retired(self):
+        self.assertTrue(cusips.is_retired("438516106", self.CUS))
+        self.assertTrue(cusips.is_retired("438516106".lower(), self.CUS))
+        # NEGATIVE
+        self.assertFalse(cusips.is_retired("438516205", self.CUS))
+        self.assertFalse(cusips.is_retired("NOPE", self.CUS))
+        self.assertFalse(cusips.is_retired("", self.CUS))
+
+
+HON_CUS = {"VST": "VST", "438516106": "HONZZZZ", "438516205": "HON",
+           "43849R105": "HONA"}
+
+
+def hon_world():
+    old = lambda sh: ("438516106", "HONEYWELL INTL INC", sh * 226, sh)  # noqa: E731
+    new = lambda sh: ("438516205", "HONEYWELL INTL INC", sh * 224, sh)  # noqa: E731
+    return [
+        # Wellington-like: old line → HON (no trade we can value)
+        priced(1, Q2, [new(5_845_806)]), priced(1, Q1, [old(16_635_316)]),
+        # Citadel: never held the old line, bought HON — a REAL new buy
+        priced(1423053, Q2, [new(150_000)]), priced(1423053, Q1, []),
+        # T. Rowe (thousands): sold its whole old line, holds nothing — real exit
+        priced(80255, Q2, [], scale=0.001),
+        priced(80255, Q1, [("438516106", "HONEYWELL INTL INC",
+                            int(1_000_000 * 226 / 1000), 1_000_000)], scale=0.001),
+    ]
+
+
+class TestHoneywellCusipChange(_Patched):
+    WORLD = staticmethod(hon_world)
+    CUS_MAP = HON_CUS
+
+    def test_rotation_names_the_change_and_keeps_real_moves(self):
+        r = flows.symbol_rotation("HON")
+        sellers = {e["fund"]: e for e in r["sellers"]}
+        buyers = {e["fund"]: e for e in r["buyers"]}
+        # NEGATIVE: Wellington-like conversion is not a seller (nor a buyer)
+        self.assertNotIn("One", sellers)
+        self.assertNotIn("One", buyers)
+        self.assertEqual([(c["fund"], c["ticker"]) for c in r["cusip_changes"]],
+                         [("One", "HON")])
+        # real moves survive: Citadel's new buy, T. Rowe's full exit
+        self.assertEqual(buyers["Citadel"]["action"], "new")
+        self.assertEqual(sellers["T. Rowe Price"]["action"], "exit")
+        self.assertAlmostEqual(sellers["T. Rowe Price"]["delta_usd"], -226e6, delta=1e6)
+
+    def test_rebuild_drops_the_false_exit_and_lists_the_change(self):
+        d = flows.rebuild(network=False)
+        hon = [r for r in d["rows_in"] + d["rows_out"] if r["ticker"] == "HON"]
+        self.assertEqual(len(hon), 1)
+        # NEGATIVE: the conversion's -$3.76B never reaches the HON row
+        self.assertEqual({s["fund"] for s in hon[0]["sellers"]}, {"T. Rowe Price"})
+        self.assertGreater(hon[0]["net_usd"], -300e6)
+        self.assertEqual([(c["fund"], c["ticker"]) for c in d["cusip_changes"]],
+                         [("One", "HON")])
+        fr = {f["fund"]: f for f in d["funds"]}
+        self.assertNotIn("HON", [m["ticker"] for m in
+                                 fr["One"]["top_adds"] + fr["One"]["top_trims"]])
+        # the buyer/seller entries carry the filing's VALUE unit
+        self.assertEqual(hon[0]["sellers"][0]["value_units"], flows.UNITS_THOUSANDS)
+        self.assertEqual(hon[0]["buyers"][0]["value_units"], flows.UNITS_DOLLARS)
+
+
+# --- critic 2026-10-06: notice carry-forward + amendment sentinel ---------------
+
+class TestNoticeCarryForward(_Patched):
+    PRIOR = {"_id": "latest", "funds": [{"cik": 1336528, "notice_periods": [Q2]}]}
+
+    def test_cache_only_rebuild_keeps_the_13f_nt(self):
+        with mock.patch.object(flows, "_coll", return_value=FakeColl([self.PRIOR])):
+            d = flows.rebuild(network=False)
+        s = [x for x in d["stale_funds"] if x["fund"] == "Pershing Sq"][0]
+        self.assertIn("13F-NT", s["reason"])
+        fr = {f["fund"]: f for f in d["funds"]}
+        self.assertEqual(fr["Pershing Sq"]["notice_periods"], [Q2])
+        # NEGATIVE: funds without a prior notice get none invented
+        self.assertEqual(fr["Greenlight"]["notice_periods"], [])
+
+    def test_fallback_path_carries_prior_notice(self):
+        with mock.patch.object(edgar, "filing_index", side_effect=RuntimeError("503")):
+            _, notice = flows._fund_filings(1336528, 5, network=True, prior_notice=[Q2])
+        self.assertEqual(notice, [Q2])
+
+    def test_fresh_index_wins_over_prior(self):
+        # NEGATIVE: a successful submissions read is the truth, not the old doc
+        with mock.patch.object(edgar, "filing_index",
+                               return_value={"filings": [], "notice_periods": []}):
+            _, notice = flows._fund_filings(1336528, 5, network=True, prior_notice=[Q2])
+        self.assertEqual(notice, [])
+
+
+def _resp(text):
+    r = mock.Mock()
+    r.text = text
+    return r
+
+
+class TestAmendmentSentinel(unittest.TestCase):
+    INDEX = '{"directory": {"item": [{"name": "primary_doc.xml"}, {"name": "info.xml"}]}}'
+
+    def test_read_cover_without_tag_is_unknown(self):
+        with mock.patch.object(edgar, "_get", side_effect=[
+                _resp(self.INDEX), _resp("<coverPage><isAmendment>true</isAmendment></coverPage>")]):
+            self.assertEqual(edgar._fetch_amendment_type(1, "a-1"), edgar.AMEND_UNKNOWN)
+        with mock.patch.object(edgar, "_get",
+                               return_value=_resp('{"directory": {"item": []}}')):
+            self.assertEqual(edgar._fetch_amendment_type(1, "a-1"), edgar.AMEND_UNKNOWN)
+
+    def test_tagged_cover_still_typed(self):
+        with mock.patch.object(edgar, "_get", side_effect=[
+                _resp(self.INDEX), _resp("<amendmentType>RESTATEMENT</amendmentType>")]):
+            self.assertEqual(edgar._fetch_amendment_type(1, "a-1"), edgar.AMEND_RESTATEMENT)
+
+    def test_unknown_is_stored_and_never_refetched(self):
+        cached = doc(1, Q2, [("A", "AAA", 1, 1)], form="13F-HR/A", acc="a1")
+        coll = FakeColl([cached])
+        with mock.patch.object(edgar, "_coll", return_value=coll), \
+                mock.patch.object(edgar, "_fetch_amendment_type",
+                                  return_value=edgar.AMEND_UNKNOWN):
+            edgar.fetch_holdings(1, {"accession": "a1", "period": Q2,
+                                     "filed": Q2, "form": "13F-HR/A"})
+        self.assertEqual(coll.updates[0][1],
+                         {"$set": {"amendment_type": edgar.AMEND_UNKNOWN}})
+        # NEGATIVE: the next refresh reads the stored sentinel, no fetch
+        stored = dict(cached, amendment_type=edgar.AMEND_UNKNOWN)
+        with mock.patch.object(edgar, "_coll", return_value=FakeColl([stored])), \
+                mock.patch.object(edgar, "_fetch_amendment_type") as f:
+            edgar.fetch_holdings(1, {"accession": "a1", "period": Q2,
+                                     "filed": Q2, "form": "13F-HR/A"})
+        f.assert_not_called()
+
+    def test_failed_read_is_not_stored(self):
+        # NEGATIVE: a network failure must leave the key off (retry later)
+        cached = doc(1, Q2, [("A", "AAA", 1, 1)], form="13F-HR/A", acc="a1")
+        coll = FakeColl([cached])
+        with mock.patch.object(edgar, "_coll", return_value=coll), \
+                mock.patch.object(edgar, "_fetch_amendment_type",
+                                  side_effect=RuntimeError("timeout")):
+            got = edgar.fetch_holdings(1, {"accession": "a1", "period": Q2,
+                                           "filed": Q2, "form": "13F-HR/A"})
+        self.assertEqual(coll.updates, [])
+        self.assertIsNone(got.get("amendment_type"))
+
+    def test_unknown_amendment_never_replaces_or_merges(self):
+        # NEGATIVE
+        orig = doc(1, Q2, [("A", "AAA", 100, 10)], filed="2026-08-14")
+        unk = doc(1, Q2, [("Z", "ZZZ", 5, 1)], form="13F-HR/A", filed="2026-09-02",
+                  atype=edgar.AMEND_UNKNOWN, acc="unk")
+        c = edgar.canonical_filings([orig, unk])[0]
+        self.assertEqual([h["cusip"] for h in c["holdings"]], ["A"])
+        self.assertEqual(c["amendments_unresolved"], ["unk"])
+        self.assertIsNone(edgar.canonical_period([unk]))
 
 if __name__ == "__main__":
     unittest.main()

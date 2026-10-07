@@ -160,10 +160,18 @@ def get_maps(force: bool = False) -> Tuple[Dict[str, str], Dict[str, str]]:
 _RETIRED_SUFFIX = "ZZZZ"
 
 
+def is_retired(cusip: str, cus_map: Dict[str, str]) -> bool:
+    """True when the CUSIP is an NSCC retired line (FTD symbol ends ZZZZ)."""
+    return (cus_map.get((cusip or "").upper()) or "").endswith(_RETIRED_SUFFIX)
+
+
 def _sanitize_ftd_symbol(t: str, cus_map: Dict[str, str]) -> Optional[str]:
     """A retired-CUSIP placeholder → its base symbol ONLY when that base is
-    itself live in the map under another CUSIP (HONZZZZ → HON: the old and
-    new Honeywell lines then net as one ticker); otherwise None."""
+    itself live in the map under another CUSIP (HONZZZZ → HON); otherwise
+    None. The base is an IDENTITY for grouping, not a license to net: a fund
+    that "exits" the retired line and holds the live one made a CUSIP change
+    (spin / reverse split), not a trade — flows.split_cusip_changes takes
+    those out of every flow and names them instead."""
     if not t.endswith(_RETIRED_SUFFIX):
         return t
     base = t[: -len(_RETIRED_SUFFIX)]

@@ -7,7 +7,9 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
-import { GiantsRotationModal, staleFundsText, type StaleFund } from './GiantsRotationModal';
+import {
+  GiantsRotationModal, UnitsTag, cusipChangesText, staleFundsText, type StaleFund,
+} from './GiantsRotationModal';
 
 const STALE: StaleFund[] = [
   { fund: 'Pershing Sq', latest_quarter: 'Q1 2026',
@@ -59,5 +61,64 @@ describe('GiantsRotationModal', () => {
     render(<GiantsRotationModal symbol="VST" onClose={() => {}} />);
     expect(await screen.findByText('Q2 2026 filings')).toBeTruthy();
     expect(screen.queryByText(/Not filed for/)).toBeNull();
+  });
+});
+
+/* Critic round 2026-10-06: a retired → live CUSIP change (Honeywell's spin)
+ * is named, never an exit; an undetermined VALUE unit carries a muted mark. */
+describe('UnitsTag', () => {
+  afterEach(() => cleanup());
+
+  it('marks an undetermined VALUE unit', () => {
+    render(<UnitsTag units="undetermined" />);
+    expect(screen.getByText('units?')).toBeTruthy();
+  });
+
+  it('NEGATIVE: no mark for dollars, thousands (already scaled) or missing', () => {
+    for (const u of ['dollars', 'thousands', null, undefined]) {
+      render(<UnitsTag units={u} />);
+      expect(screen.queryByText('units?')).toBeNull();
+      cleanup();
+    }
+  });
+});
+
+describe('cusipChangesText', () => {
+  it('names every fund with the note', () => {
+    expect(cusipChangesText([
+      { fund: 'Wellington', ticker: 'HON', note: 'CUSIP change / corporate action, not a decision' },
+      { fund: 'Primecap', ticker: 'HON', note: 'CUSIP change / corporate action, not a decision' },
+    ])).toBe('CUSIP change / corporate action, not a decision: Wellington · Primecap');
+  });
+
+  it('NEGATIVE: nothing when there are no changes', () => {
+    expect(cusipChangesText([])).toBeNull();
+    expect(cusipChangesText(undefined)).toBeNull();
+  });
+});
+
+describe('GiantsRotationModal — CUSIP change + units', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+  const hon = {
+    symbol: 'HON', quarter: 'Q2 2026', n_funds_checked: 38, n_funds_current: 34, stale_funds: [],
+    sellers: [{ fund: 'Trian', name: 'Trian Fund Mgmt', tier: 'A', style: 'activist', manager: '',
+                quarter: 'Q2 2026', delta_usd: -5_000_000, action: 'trim', pct_change_shares: -10,
+                position_now_usd: 45_000_000, value_units: 'undetermined', their_top_adds: [] }],
+    buyers: [{ fund: 'Citadel', name: 'Citadel Advisors LLC', tier: 'S', style: 'quant', manager: '',
+               quarter: 'Q2 2026', delta_usd: 34_100_000, action: 'new', pct_change_shares: null,
+               position_now_usd: 34_100_000, value_units: 'dollars', their_top_trims: [] }],
+    cusip_changes: [{ fund: 'Wellington', ticker: 'HON',
+                      note: 'CUSIP change / corporate action, not a decision' }],
+  };
+
+  it('lists the CUSIP change and marks only the undetermined filer', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(hon) })));
+    render(<GiantsRotationModal symbol="HON" onClose={() => {}} />);
+    expect(await screen.findByText(/CUSIP change \/ corporate action, not a decision: Wellington/)).toBeTruthy();
+    // exactly one mark: Trian (undetermined), NEGATIVE: not Citadel (dollars)
+    expect(screen.getAllByText('units?')).toHaveLength(1);
+    // NEGATIVE: the changed fund is not presented as a seller
+    expect(screen.queryByText(/fully exited HON/)).toBeNull();
   });
 });

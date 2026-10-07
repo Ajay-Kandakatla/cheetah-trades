@@ -129,6 +129,10 @@ def recent_13f_filings(cik: int, max_n: int = 6) -> List[dict]:
 
 AMEND_RESTATEMENT = "RESTATEMENT"
 AMEND_NEW_HOLDINGS = "NEW HOLDINGS"
+# Stored when the cover page WAS read and carries neither tag (or the filing
+# has no primary_doc): without it the daily refresh re-fetched index.json +
+# primary_doc for that /A forever. Treated as unknown by canonical_period.
+AMEND_UNKNOWN = "UNKNOWN"
 
 
 def _parse_cover(raw_xml: str) -> Optional[str]:
@@ -142,15 +146,20 @@ def _parse_cover(raw_xml: str) -> Optional[str]:
     return t if t in (AMEND_RESTATEMENT, AMEND_NEW_HOLDINGS) else None
 
 
-def _fetch_amendment_type(cik: int, accession: str) -> Optional[str]:
+def _fetch_amendment_type(cik: int, accession: str) -> str:
+    """The amendment's type after a SUCCESSFUL read: RESTATEMENT, NEW
+    HOLDINGS, or AMEND_UNKNOWN when nothing on file says which. A failed
+    fetch raises (the caller stores nothing, so the next refresh retries)."""
     acc_nodash = accession.replace("-", "")
     base = _BASE_ARCHIVES.format(cik=int(cik), acc_nodash=acc_nodash)
     d = json.loads(_get(base + "/index.json").text, strict=False)
     items = [it.get("name", "") for it in d.get("directory", {}).get("item", [])]
     for n in items:
         if n.lower().endswith(".xml") and "primary_doc" in n.lower():
-            return _parse_cover(_get(base + "/" + n, accept="application/xml").text)
-    return None
+            return (_parse_cover(_get(base + "/" + n,
+                                      accept="application/xml").text)
+                    or AMEND_UNKNOWN)
+    return AMEND_UNKNOWN
 
 
 # --- Information-table parse ------------------------------------------------
@@ -227,10 +236,10 @@ def fetch_holdings(cik: int, filing: dict) -> Optional[dict]:
     Returns {cik, period, filed, accession, form, amendment_type, holdings,
     n_positions, n_option_rows_excluded, total_value} or None on fetch/parse
     failure. `amendment_type` is read off the cover page for 13F-HR/A
-    filings (None for originals, and for an amendment whose cover page could
-    not be read — then the key is left OFF the cache so the next refresh
-    retries). Cached /A docs from before 2026-10-06 lack it and are
-    backfilled here.
+    filings (None for originals; AMEND_UNKNOWN when the page was read but
+    names no type — stored, never re-fetched; when the read FAILED the key
+    is left OFF the cache so the next refresh retries). Cached /A docs from
+    before 2026-10-06 lack it and are backfilled here.
     """
     cik = int(cik)
     accession = filing["accession"]
@@ -328,7 +337,8 @@ def canonical_period(docs: List[dict]) -> Optional[dict]:
       - RESTATEMENT  → replaces everything filed before it for the period.
       - NEW HOLDINGS → MERGED into the portfolio it amends; never the whole
                        portfolio (JANA Q1-2026 /A = 1 position).
-      - amendment of UNKNOWN type (cover page not read yet) → ignored while
+      - amendment of UNKNOWN type (cover page not read yet, or read and
+        untagged = AMEND_UNKNOWN) → ignored while
         a complete portfolio exists (recorded in `amendments_unresolved`);
         with nothing to stand on, the period has NO canonical filing — a
         partial book diffed as a whole one invents exits.

@@ -17,7 +17,7 @@ import { useGiantsFlows, type GiantsFlowRow } from '../hooks/useGiantsFlows';
 import { useSort } from '../lib/useSort';
 import { fmtDeltaUSD } from '../lib/fundTiers';
 import { InfoButton } from './InfoButton';
-import { GiantsRotationModal, staleFundsText } from './GiantsRotationModal';
+import { GiantsRotationModal, UnitsTag, staleFundsText } from './GiantsRotationModal';
 import { TickerCell } from './TickerCell';
 
 const C = { green: '#10b981', red: '#ef4444', amber: '#f59e0b', muted: '#94a3b8', sub: '#8a93a6' };
@@ -108,7 +108,7 @@ function FlowTable({ rows, direction, onPick }: {
                     <span style={{ color: C.red }}>{r.n_selling}▼</span>
                   </td>
                   <td style={{ padding: '5px 8px', color: C.muted, fontSize: '0.76rem' }}>
-                    {lead ? <>{lead.fund} <b style={{ color: lead.usd >= 0 ? C.green : C.red }}>{fmtDeltaUSD(lead.usd)}</b></> : '—'}
+                    {lead ? <>{lead.fund}<UnitsTag units={lead.value_units} /> <b style={{ color: lead.usd >= 0 ? C.green : C.red }}>{fmtDeltaUSD(lead.usd)}</b></> : '—'}
                   </td>
                   <td style={{ padding: '5px 8px' }}><Sparkline timeline={r.timeline || []} /></td>
                 </tr>

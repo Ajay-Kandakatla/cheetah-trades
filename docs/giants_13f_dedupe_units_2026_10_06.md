@@ -75,9 +75,24 @@ marks a RETIRED CUSIP by appending `ZZZZ`: Honeywell's pre-spin CUSIP
 "exited" HONZZZZ (−$7.1B) and opened a "new" HON position (+$2.7B).
 
 **Fix.** `cusips.resolve` maps a `…ZZZZ` placeholder to its base symbol only
-when that base is live in the map under another CUSIP (HONZZZZ → HON, so the
-two Honeywell lines net as one row); otherwise it is unmapped and shown by
-issuer name. Ordinary symbols (incl. preferreds like BACPRB) are untouched.
+when that base is live in the map under another CUSIP (HONZZZZ → HON, used
+as an IDENTITY only); otherwise it is unmapped and shown by issuer name.
+Ordinary symbols (incl. preferreds like BACPRB) are untouched.
+
+**Corrected in the critic round (same day).** The first version NETTED the
+old and new Honeywell lines into one HON row. That broke the Δshares × price
+convention: the spin retired 438516106 for 438516205 HON + 43849R105 HONA
+(Primecap: 488,200 old → 244,100 HON + 244,100 HONA, no trade), so the row
+carried the VALUE change and read as "exit −100%" — Wellington −$2.45B while
+still holding 5.85M HON, 12 such sellers, HON −$4.65B on the money-out list.
+Now `flows.split_cusip_changes`: when ONE fund's rows for a ticker pair an
+exit of a retired (`…ZZZZ`) CUSIP with a position in a live CUSIP of that
+ticker, the fund/ticker leaves every flow (aggregate, per-fund top moves,
+rotation) and is listed in `cusip_changes` as "CUSIP change / corporate
+action, not a decision" — the conversion ratio is not in the filing, so the
+real decision cannot be separated. A fund that held the retired line and
+nothing after is still a real exit; ADR/ordinary pairs (no retired CUSIP)
+still net as before.
 
 ## Live evidence (read-only probe, 2026-10-06, branch code vs main)
 
@@ -100,5 +115,32 @@ Money-out top 5 (rebuild, network path):
 | 4 | META −$8.18B | MSFT −$18.04B (T. Rowe −$11.17B now counted) |
 | 5 | HONZZZZ −$7.12B | META −$9.41B |
 
-Honeywell: before HONZZZZ −$7.12B + HON +$2.71B (bogus "new"); after one
-HON row −$4.65B.
+Honeywell: on main HONZZZZ −$7.12B + HON +$2.71B (bogus "new"); the first
+branch version one HON row −$4.65B (12 false exits); now (critic round, cache
+probe) no HON row in the top 40 — the HON rotation shows only the two real
+exits (RenTech −$84.8M, Point72 −$10.2M) and names 12 CUSIP changes
+(Wellington, Capital Research, FMR, T. Rowe, Two Sigma, AQR, D.E. Shaw,
+Citadel, Primecap, Soros, Millennium, Dodge & Cox). Top-5 money-out is
+unchanged (MU, MRVL, SNDK, MSFT, META).
+
+## Critic round (2026-10-06): two small hygiene fixes + one surface mark
+
+- **13F-NT carried forward.** Notices come only from the submissions index,
+  so a cache-only rebuild (or a failed submissions fetch) saved
+  `notice_periods = []` and Pershing read "not filed for Q2 2026" instead of
+  "13F-NT". `_fund_filings` now carries the last rebuild's notices on those
+  paths; a successful index read still replaces them. (The doc on main has
+  no `notice_periods` yet, so the first NETWORK rebuild seeds them.)
+- **Untagged amendment cover stored as `UNKNOWN`.** An /A whose cover page
+  was read but names neither RESTATEMENT nor NEW HOLDINGS (or has no
+  primary_doc) never got `amendment_type`, so every daily refresh re-fetched
+  index.json + primary_doc for it. `edgar.AMEND_UNKNOWN` is now stored and
+  treated as unknown (never replaces or merges); a FAILED read still stores
+  nothing so it is retried.
+- **`units?` mark.** A filing whose VALUE unit is `undetermined` (Trian,
+  Scion, Greenlight today) shows a muted `units?` tag next to the fund in the
+  rotation modal and the board's top buyer/seller cell.
+
+Not fixed (his call): Honeywell's spin also shows as HONA "new" +$3.43B from
+10 funds — a distribution received, not a buy. Nothing in the 13F links the
+HONA line to the retired HON line, so it is left as filed.

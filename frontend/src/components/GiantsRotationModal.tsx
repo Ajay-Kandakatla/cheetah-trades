@@ -31,6 +31,8 @@ type FundEntry = {
   action: string;
   pct_change_shares: number | null;
   position_now_usd: number;
+  /** 'undetermined' = the filing's VALUE unit (dollars vs thousands) could not be read */
+  value_units?: string | null;
   their_top_adds?: Move[];
   their_top_trims?: Move[];
 };
@@ -44,6 +46,14 @@ export type StaleFund = {
   reason: string;
 };
 
+/** A fund whose retired CUSIP became a live one (spin / reverse split) — no
+ * trade we can value, so it is named instead of shown as an exit (2026-10-06). */
+export type CusipChange = {
+  fund: string | null;
+  ticker: string;
+  note: string;
+};
+
 type Payload = {
   symbol: string;
   quarter: string | null;
@@ -52,8 +62,28 @@ type Payload = {
   n_funds_checked: number;
   n_funds_current?: number;
   stale_funds?: StaleFund[];
+  cusip_changes?: CusipChange[];
   note?: string;
 };
+
+/** Muted "units?" mark: the filing's VALUE unit could not be determined, so
+ * its dollar figures are as filed (a thousands filer would read 1000x small). */
+export function UnitsTag({ units }: { units?: string | null }) {
+  if (units !== 'undetermined') return null;
+  return (
+    <span style={{ color: '#8a93a6', fontSize: '0.68rem', border: '1px solid #8a93a655',
+                   borderRadius: 5, padding: '0 4px', marginLeft: 4 }}
+          title="This filing's VALUE unit (dollars vs thousands) could not be determined — $ shown as filed">
+      units?
+    </span>
+  );
+}
+
+/** "CUSIP change / corporate action, not a decision: Wellington · Primecap" — or null. */
+export function cusipChangesText(changes: CusipChange[] | undefined | null): string | null {
+  if (!changes?.length) return null;
+  return `${changes[0].note}: ${changes.map((c) => c.fund || '?').join(' · ')}`;
+}
 
 /** "Not filed for Q2 2026: Greenlight (last Q4 2023) · Pershing Sq (13F-NT)"
  * — or null when every fund filed. */
@@ -105,6 +135,7 @@ function FundCard({ e, symbol }: { e: FundEntry; symbol: string }) {
                   marginBottom: 8 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
         <b>{TIER_EMOJI[e.tier]} {e.fund}</b>
+        <UnitsTag units={e.value_units} />
         {e.manager && <span style={{ color: C.sub, fontSize: '0.74rem' }}>{e.manager}</span>}
         {e.style === 'quant' && (
           <span style={{ color: C.sub, fontSize: '0.7rem', border: `1px solid ${C.sub}55`,
@@ -205,6 +236,12 @@ export function GiantsRotationModal({ symbol, onClose }: { symbol: string; onClo
                 </div>
                 {data.buyers.map((e, i) => <FundCard key={i} e={e} symbol={symbol} />)}
               </section>
+            )}
+
+            {cusipChangesText(data.cusip_changes) && (
+              <p className="mono" style={{ fontSize: '0.7rem', color: C.sub, marginTop: 8 }}>
+                {symbol} — {cusipChangesText(data.cusip_changes)}. Left out of the flows.
+              </p>
             )}
 
             {staleFundsText(data.stale_funds, data.quarter) && (
