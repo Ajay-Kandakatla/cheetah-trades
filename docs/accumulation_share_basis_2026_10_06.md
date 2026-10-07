@@ -45,4 +45,30 @@ fund's 13F `pct_change` (implied prior price agreed within 1% across funds on
 1,029 of 1,341 tickers) flips 358 "distributing" reads and 191 "accumulating"
 reads, and changes 416 push decisions. VST -> +481,494 sh, accumulating.
 
+## Follow-up (critic, 2026-10-06): splits, legacy rows, lens wiring
+
+**Splits.** A raw share comparison straddles a split: prior {A 1M, B 2M, C 3M},
+the same funds after a 10-for-1 with zero trading, read **+900%
+"accumulating"** (`🟢 SPLT +$810M +54.0M sh`); a 1-for-10 reverse split read
+**-90% "distributing"** — a false sell signal on a held small cap.
+`compare_to_snapshot` now looks up splits (same Massive
+`/v3/reference/splits` client as `portfolio/corporate_actions.py`) from the
+earlier of the prior picture's quarter end and the day it was banked. Any split
+in that window -> `comparable: false` with the split named, and the flow
+figures blanked (`direction: "unknown"`). A failed lookup -> `comparable:
+false`, "split status unknown". No ratio is applied: whether each 13F count is
+pre- or post-split depends on the filing quarter end vs the split date and on
+whether the provider adjusted it, so a ratio can itself manufacture a -90%.
+Live (read-only probe): NVDA 2024-06-10, AVGO 2024-07-15, SMCI 2024-10-01 all
+returned as 10-for-1; VST none. At least **139 of 4,033** whales-cache tickers
+split since 2026-03-31 (103 reverse) — first 1,000 market-wide rows only.
+
+**Legacy rows.** `recent()` tags rows with no `basis` as `basis:
+"dollars_legacy"` plus a note. Live: DASH +$7.58B, ATEX +$146M, AVGO -$108.7B
+are now all tagged.
+
+**Position lens.** A test drives `evaluate()` end to end: a "distributing"
+whales read appends one TIGHTEN_STOP trigger reading "Top seller (trim)", never
+"exit".
+
 Tests: `backend/tests/test_accumulation_share_basis_2026_10_06.py`.

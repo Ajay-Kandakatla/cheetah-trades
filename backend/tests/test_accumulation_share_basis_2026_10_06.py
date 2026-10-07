@@ -183,6 +183,7 @@ def test_share_bearing_snapshot_compares_on_shares(monkeypatch):
              "taken_at": datetime(2026, 8, 23, tzinfo=timezone.utc),
              "holders": dict(VST_PRIOR_USD), "shares": _vst_prior_shares()}
     monkeypatch.setattr(ac, "_snapshots", lambda: _SnapColl([prior]))
+    monkeypatch.setattr(ac, "_splits_since", lambda s, since: [])      # no split
     c = ac.compare_to_snapshot("VST", _payload(_vst_now_holders()))
     assert c["comparable"] is True and c["basis"] == "shares"
     assert c["direction"] == "accumulating"
@@ -306,3 +307,176 @@ def test_position_lens_no_trigger_unless_distributing():
     assert pl._whales_distribution_trigger(None) is None
     assert pl._whales_distribution_trigger({"signal": "balanced"}) is None
     assert pl._whales_distribution_trigger({"signal": "accumulating"}) is None
+
+
+def test_position_lens_evaluate_carries_the_trim_wording(monkeypatch):
+    """evaluate() itself must append the 13F trigger — not just the helper.
+    NEGATIVE: the text never says 'exit' for a fund that is still holding."""
+    import pymongo
+    from sepa import scanner, prices
+    from supply_demand import whales as whales_mod, accumulation as acc_mod
+
+    monkeypatch.setattr(scanner, "load_latest", lambda: {"all_results": [
+        {"symbol": "XYZ", "last_close": 100.0, "stage": {"stage": 2},
+         "trade_plan": {}, "sell_signals": {}}]})
+    monkeypatch.setattr(prices, "load_prices", lambda *a, **k: None)
+    monkeypatch.setattr(whales_mod, "get_whales", lambda s: {"moves": {
+        "net_signal": "distributing", "n_buying": 1, "n_selling": 5,
+        "notable_sells": [{"holder": "FMR, LLC", "pct_change": -0.31}]}})
+    monkeypatch.setattr(acc_mod, "get_accumulation_scores", lambda syms: {})
+
+    def _no_mongo(*a, **k):
+        raise RuntimeError("no mongo in tests")
+    monkeypatch.setattr(pymongo, "MongoClient", _no_mongo)
+    monkeypatch.setattr(pl, "_market_posture",
+                        lambda: {"posture": "constructive", "drivers": []})
+
+    out = pl.evaluate("XYZ", 95.0)
+    t = [x for x in out["triggers"] if x["rule"] == "institutional_distribution"]
+    assert len(t) == 1 and t[0]["verdict"] == "TIGHTEN_STOP"
+    assert "Top seller (trim): FMR, LLC" in t[0]["msg"]
+    assert "exit" not in t[0]["msg"].lower()
+    assert out["verdict"] == "TIGHTEN_STOP"
+
+
+# ---------------------------------------------------------------------------
+# splits — raw share counts straddle them (critic 2026-10-06)
+# ---------------------------------------------------------------------------
+SPLIT_PRIOR = {"A": 1_000_000.0, "B": 2_000_000.0, "C": 3_000_000.0}
+
+
+def _split_case(monkeypatch, ratio, splits):
+    """The same three funds, zero trading, the share counts scaled by `ratio`
+    and valued at the post-split price."""
+    prior = {"symbol": "SPLT", "dominant_quarter": "2026-03-31",
+             "taken_at": datetime(2026, 8, 23, tzinfo=timezone.utc),
+             "shares": dict(SPLIT_PRIOR)}
+    monkeypatch.setattr(ac, "_snapshots", lambda: _SnapColl([prior]))
+    seen = {}
+
+    def _fake(sym, since):
+        seen["since"] = since
+        return splits
+    monkeypatch.setattr(ac, "_splits_since", _fake, raising=False)
+    px = 15.0 / ratio
+    now = [{"holder": k, "shares": v * ratio, "value": v * ratio * px,
+            "date_reported": "2026-06-30"} for k, v in SPLIT_PRIOR.items()]
+    c = ac.compare_to_snapshot("SPLT", _payload(now))
+    c["symbol"] = "SPLT"
+    return c, seen
+
+
+def test_a_forward_split_with_no_trading_is_not_a_flow(monkeypatch):
+    """REGRESSION: 10-for-1, nobody traded — read +900% 'accumulating'."""
+    c, seen = _split_case(monkeypatch, 10.0, [
+        {"execution_date": "2026-07-15", "split_from": 1.0, "split_to": 10.0}])
+    assert c["comparable"] is False and ac.is_significant(c) is False
+    assert "split on 2026-07-15 (10-for-1)" in c["reason"]
+    # NEGATIVE: the split ratio never leaks out as a flow figure
+    assert c["net_change_pct"] is None and c["net_change_shares"] is None
+    assert c["net_change_usd"] is None and c["direction"] == "unknown"
+    assert seen["since"] == "2026-03-31"          # from the prior quarter end
+
+
+def test_a_reverse_split_never_reads_as_a_sell_off(monkeypatch):
+    """NEGATIVE: 1-for-10 on a small cap read -90% 'distributing' — a false
+    sell signal. Not comparable, not significant, no red line."""
+    c, _ = _split_case(monkeypatch, 0.1, [
+        {"execution_date": "2026-07-15", "split_from": 10.0, "split_to": 1.0}])
+    assert c["comparable"] is False and ac.is_significant(c) is False
+    assert "1-for-10" in c["reason"]
+    assert c["direction"] != "distributing"
+    assert "🔴" not in ac.alert_line(c)
+
+
+def test_a_failed_split_lookup_never_falls_back_to_unadjusted_shares(monkeypatch):
+    """NEGATIVE: lookup failure = split status unknown, not 'no split'."""
+    c, _ = _split_case(monkeypatch, 10.0, None)
+    assert c["comparable"] is False and ac.is_significant(c) is False
+    assert "split status unknown" in c["reason"]
+    assert c["net_change_pct"] is None
+
+
+def test_no_split_since_the_prior_picture_still_compares(monkeypatch):
+    c, _ = _split_case(monkeypatch, 1.0, [])
+    assert c["comparable"] is True and c["net_change_shares"] == 0
+    assert c["direction"] == "flat"
+
+
+def test_split_window_starts_at_the_earlier_of_quarter_end_and_bank_day():
+    ts = datetime(2026, 8, 23, tzinfo=timezone.utc)
+    assert ac._split_window_start({"dominant_quarter": "2026-03-31", "taken_at": ts}) == "2026-03-31"
+    assert ac._split_window_start({"dominant_quarter": "2026-09-30", "taken_at": ts}) == "2026-08-23"
+    assert ac._split_window_start({"taken_at": ts}) == "2026-08-23"
+    assert ac._split_window_start({}) is None
+
+
+def test_split_lookup_tells_failure_from_no_splits(monkeypatch):
+    from portfolio import corporate_actions as ca
+    replies = {}
+    monkeypatch.setattr(ca, "_massive_get", lambda path, params: replies["r"])
+    replies["r"] = {}                                       # no key / non-200
+    assert ac._splits_since("X", "2026-03-31") is None
+    replies["r"] = {"status": "ERROR"}
+    assert ac._splits_since("X", "2026-03-31") is None
+    replies["r"] = {"status": "OK", "results": []}
+    assert ac._splits_since("X", "2026-03-31") == []
+    replies["r"] = {"status": "OK"}                         # empty page, no key
+    assert ac._splits_since("X", "2026-03-31") == []
+    replies["r"] = {"status": "OK", "results": [
+        {"execution_date": "2026-07-15", "split_from": 1, "split_to": 10},
+        {"execution_date": "2026-07-16", "split_from": 1, "split_to": 1}]}
+    assert ac._splits_since("X", "2026-03-31") == [
+        {"execution_date": "2026-07-15", "split_from": 1.0, "split_to": 10.0}]
+
+    def _boom(*a, **k):
+        raise RuntimeError("down")
+    monkeypatch.setattr(ca, "_massive_get", _boom)
+    assert ac._splits_since("X", "2026-03-31") is None
+
+
+def test_a_dollars_only_snapshot_spends_no_split_lookup(monkeypatch):
+    """Already not comparable — no Massive call for it."""
+    legacy = {"symbol": "VST", "dominant_quarter": "2026-03-31",
+              "holders": dict(VST_PRIOR_USD)}
+    monkeypatch.setattr(ac, "_snapshots", lambda: _SnapColl([legacy]))
+
+    def _never(*a, **k):
+        raise AssertionError("split lookup on a non-comparable pair")
+    monkeypatch.setattr(ac, "_splits_since", _never)
+    assert ac.compare_to_snapshot("VST", _payload(_vst_now_holders()))["comparable"] is False
+
+
+# ---------------------------------------------------------------------------
+# recent() — legacy dollar rows are labelled
+# ---------------------------------------------------------------------------
+def test_recent_tags_rows_without_a_basis_as_legacy_dollars(monkeypatch):
+    rows = [
+        {"symbol": "AVGO", "net_change_usd": -108.7e9, "direction": "distributing",
+         "detected_at": datetime(2026, 8, 30, tzinfo=timezone.utc)},
+        {"symbol": "VST", "basis": "shares", "net_change_shares": 481_494.0,
+         "detected_at": datetime(2026, 10, 11, tzinfo=timezone.utc)},
+    ]
+
+    class _Cur:
+        def __init__(self, r):
+            self.r = r
+
+        def sort(self, *a):
+            return self
+
+        def limit(self, n):
+            return [dict(x) for x in self.r]
+
+    class _DB:
+        class accumulation_changes:
+            @staticmethod
+            def find(*a, **k):
+                return _Cur(rows)
+
+    monkeypatch.setattr(ac, "_db", lambda: _DB())
+    out = {r["symbol"]: r for r in ac.recent()}
+    assert out["AVGO"]["basis"] == "dollars_legacy"
+    assert "not a measured flow" in out["AVGO"]["legacy_note"]
+    # NEGATIVE: a share-basis row is never relabelled
+    assert out["VST"]["basis"] == "shares" and "legacy_note" not in out["VST"]

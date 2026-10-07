@@ -368,9 +368,57 @@ def _prior_share_map(prior: dict) -> dict:
     return {k: None for k in (prior.get("holders") or {})}
 
 
+def _splits_since(symbol: str, since_iso: str) -> Optional[list]:
+    """Every split of `symbol` executed on or after `since_iso`, or None when
+    the lookup failed. Same Massive /v3/reference/splits endpoint and client as
+    portfolio.corporate_actions — but a failure must stay distinguishable from
+    "no splits" here, and fetch_splits returns [] for both."""
+    try:
+        from portfolio import corporate_actions as ca
+        data = ca._massive_get("/v3/reference/splits", {
+            "ticker": symbol.upper(), "execution_date.gte": since_iso,
+            "order": "asc", "limit": 50})
+    except Exception as exc:
+        log.warning("accumulation: split lookup failed for %s: %s", symbol, exc)
+        return None
+    # _massive_get answers {} on no key / non-200 / network error.
+    if not isinstance(data, dict) or not data or (
+            "results" not in data and str(data.get("status") or "").upper() != "OK"):
+        return None
+    out = []
+    for r in data.get("results") or []:
+        f, t = _num(r.get("split_from")), _num(r.get("split_to"))
+        if f and t and f > 0 and t > 0 and f != t:
+            out.append({"execution_date": r.get("execution_date"),
+                        "split_from": f, "split_to": t})
+    return out
+
+
+def _split_window_start(prior: dict) -> Optional[str]:
+    """The earliest date the prior picture's share counts can describe: its
+    quarter end, or the day we banked it if that is earlier. ISO date."""
+    days = []
+    q = str(prior.get("dominant_quarter") or "")[:10]
+    if len(q) == 10 and q[4] == "-":
+        days.append(q)
+    ts = prior.get("taken_at")
+    if hasattr(ts, "date"):
+        days.append(ts.date().isoformat())
+    return min(days) if days else None
+
+
 def compare_to_snapshot(symbol: str, payload: dict) -> dict:
     """Compare today's holders against our most recent snapshot from an EARLIER
-    reporting quarter — on SHARES, valued at today's snapshot price."""
+    reporting quarter — on SHARES, valued at today's snapshot price.
+
+    SPLITS (2026-10-06). Raw share counts straddle a split: a 10:1 split with
+    no trading read +900% "accumulating", a 1:10 reverse split -90%
+    "distributing". Whether each side's 13F count is pre- or post-split depends
+    on the filing quarter end vs the split date and on whether the provider
+    adjusted it, so no ratio is applied: a split since the prior picture's
+    quarter end makes the pair not comparable, and so does a failed split
+    lookup. Never compared on unadjusted shares.
+    """
     coll = _snapshots()
     per = (payload.get("period") or {})
     now_q = per.get("dominant")
@@ -410,6 +458,26 @@ def compare_to_snapshot(symbol: str, payload: dict) -> dict:
         return {"comparable": False, **d,
                 "prev_quarter": prior.get("dominant_quarter"), "new_quarter": now_q,
                 "reason": reason}
+
+    since = _split_window_start(prior)
+    splits = _splits_since(symbol, since) if since else None
+    if splits is None or splits:
+        reason = ("split status unknown — the split lookup failed, and share counts "
+                  "that straddle a split cannot be compared"
+                  if splits is None else
+                  f"split on {splits[-1].get('execution_date')} "
+                  f"({splits[-1]['split_to']:g}-for-{splits[-1]['split_from']:g}) "
+                  f"since the {prior.get('dominant_quarter')} snapshot — the two "
+                  f"share counts may sit on different sides of it; comparisons "
+                  f"resume once both pictures post-date it")
+        # The raw flow across a split is the split ratio (+900% / -90%), not
+        # money moving — never handed to a caller, even marked not comparable.
+        blank = {k: None for k in ("prev_shares", "new_shares", "net_change_shares",
+                                   "net_change_pct", "prev_value", "new_value",
+                                   "net_change_usd")}
+        return {"comparable": False, **d, **blank, "direction": "unknown",
+                "prev_quarter": prior.get("dominant_quarter"), "new_quarter": now_q,
+                "splits": splits, "reason": reason}
 
     return {
         "comparable": True,
@@ -647,6 +715,15 @@ def recent(limit: int = 50) -> list:
     for r in rows:
         ts = r.get("detected_at")
         r["detected_at"] = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+        # Rows recorded before 2026-10-06 carry no basis: they are dollar
+        # differences of two pictures at two prices (DASH +$7.58B, AVGO
+        # -$108.7B) — price drift, not flow. Tagged so no reader takes them for
+        # the share-based rows beside them.
+        if not r.get("basis"):
+            r["basis"] = "dollars_legacy"
+            r["legacy_note"] = ("recorded before 2026-10-06 on dollar values "
+                                "fetched at two different prices — moves with "
+                                "the price, not a measured flow")
     return rows
 
 
