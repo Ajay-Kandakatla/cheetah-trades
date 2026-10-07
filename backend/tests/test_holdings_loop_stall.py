@@ -61,6 +61,7 @@ def fake(monkeypatch):
     Q._cache.clear()
     Q._cache_set_at.clear()
     Q._yf_miss_at.clear()
+    Q._ever_priced.clear()
     massive = {"priced": {}, "asked": []}
 
     def bulk_live_prices(syms):
@@ -75,6 +76,7 @@ def fake(monkeypatch):
     Q._cache.clear()
     Q._cache_set_at.clear()
     Q._yf_miss_at.clear()
+    Q._ever_priced.clear()
 
 
 def _expire_cache():
@@ -162,14 +164,48 @@ def test_mixed_batch_only_asks_eligible(fake):
     assert fake.yf.asked[-1] == ["AAPL"]
 
 
-def test_negative_whole_batch_failure_marks_every_name(fake, monkeypatch):
+def _boom_yf():
     class _Boom:
-        asked = []
+        def __init__(self):
+            self.asked = []
 
         def Tickers(self, joined):
+            self.asked.append(joined.split())
             raise RuntimeError("Too Many Requests")
 
-    monkeypatch.setitem(sys.modules, "yfinance", _Boom())
+    return _Boom()
+
+
+def test_negative_whole_batch_failure_marks_nothing(fake, monkeypatch):
+    boom = _boom_yf()
+    monkeypatch.setitem(sys.modules, "yfinance", boom)
     assert Q.fetch_quotes(["AAPL", "MSFT"]) == {}
-    assert set(Q._yf_miss_at) == {"AAPL", "MSFT"}
-    assert all(time.time() - v < 5 for v in Q._yf_miss_at.values())
+    assert Q._yf_miss_at == {}, "a throttle is not a per-ticker miss"
+    Q.fetch_quotes(["AAPL", "MSFT"])
+    assert len(boom.asked) == 2, "re-asked on the next refresh"
+
+
+def test_negative_ever_priced_ticker_never_barred_or_blanked(fake):
+    """Critic 2026-10-06: Massive down + one empty Yahoo answer must not
+    blank a held stock for 15 min (manual rows have no broker fallback)."""
+    fake.massive["priced"]["MU"] = 100.0
+    assert Q.fetch_quotes(["MU"])["MU"]["last"] == 100.0
+    fake.massive["priced"].clear()          # Massive outage
+    fake.yf.prices["MU"] = None             # Yahoo hiccup
+    _expire_cache()
+    assert Q.fetch_quotes(["MU"])["MU"]["last"] == 100.0, "last good quote kept"
+    assert "MU" not in Q._yf_miss_at
+    fake.yf.prices["MU"] = 101.0            # Yahoo recovers next poll
+    assert Q.fetch_quotes(["MU"])["MU"]["last"] == 101.0
+    assert fake.yf.asked == [["MU"], ["MU"]]
+
+
+def test_negative_ever_priced_ticker_raising_is_reasked(fake):
+    fake.massive["priced"]["JUNK"] = 5.0
+    Q.fetch_quotes(["JUNK"])
+    fake.massive["priced"].clear()
+    _expire_cache()
+    assert Q.fetch_quotes(["JUNK"])["JUNK"]["last"] == 5.0
+    _expire_cache()
+    Q.fetch_quotes(["JUNK"])
+    assert fake.yf.asked == [["JUNK"], ["JUNK"]]

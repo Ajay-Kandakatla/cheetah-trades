@@ -12,9 +12,10 @@
 
 - `GET /portfolio`, `GET /portfolio/holdings` and `POST /portfolio/holdings/refresh` are now plain `def`. FastAPI runs them in its threadpool, so the event loop keeps serving.
 - `portfolio/quotes.py`:
-  - A ticker yfinance could not price (an exception or no price) is not asked again for `_MISS_TTL` (900 s).
+  - A ticker that has **never** priced in this process is not asked again for `_MISS_TTL` (900 s) after yfinance fails on it alone (an exception or no price).
   - A `$`-prefixed position never goes to yfinance.
   - Massive is still asked on every refresh, so a real ticker recovers as soon as Massive prices it.
-- A holding that has no live quote falls back to the broker's own price, as before.
+  - Critic fix: a ticker that has ever priced is never barred. An empty yfinance answer never overwrites its last good quote; the quote is left stale, so the next refresh asks again. A whole-batch failure (a Yahoo throttle) marks nothing.
+- Only Plaid rows fall back to the broker's price when no live quote exists. Manual rows, `build_summary`, `snapshots` and the desk report show no price. That is why a held ticker must never be barred.
 
 **Tests:** `backend/tests/test_holdings_loop_stall.py`.

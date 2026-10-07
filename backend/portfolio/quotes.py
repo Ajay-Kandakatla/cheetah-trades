@@ -24,14 +24,17 @@ from threading import Lock
 log = logging.getLogger("portfolio.quotes")
 
 _CACHE_TTL = 60  # seconds
-# A ticker yfinance could not price is not asked again for this long
-# (2026-10-06). Holdings like `$RESTRICTED.STOCK.UNITS` were re-asked on every
-# 60 s poll and each miss cost yfinance's full retry path, 5-19 s. Massive is
-# still asked every refresh, so a real ticker recovers as soon as it prices.
+# A ticker that has NEVER priced, and that yfinance failed on its own, is not
+# asked again for this long (2026-10-06). Holdings like `$RESTRICTED.STOCK.UNITS`
+# were re-asked on every 60 s poll, and each miss cost yfinance's full retry
+# path, 5-19 s. A ticker that has ever priced is never barred: a Massive outage
+# plus one Yahoo hiccup must not blank a held stock for 15 min (critic
+# 2026-10-06). Massive is still asked on every refresh.
 _MISS_TTL = 900  # seconds
 _cache: dict[str, dict] = {}   # ticker -> quote
 _cache_set_at: dict[str, float] = {}
 _yf_miss_at: dict[str, float] = {}   # ticker -> when yfinance last failed it
+_ever_priced: set[str] = set()       # tickers either source has priced
 _lock = Lock()
 
 
@@ -86,6 +89,8 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
                 with _lock:
                     _cache[t] = quote
                     _cache_set_at[t] = time.time()
+                    _ever_priced.add(t)
+                    _yf_miss_at.pop(t, None)
                 priced.add(t)
         except Exception as exc:
             log.debug("massive portfolio quotes failed: %s", exc)
@@ -93,6 +98,7 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
         with _lock:
             remaining = [t for t in stale if t not in priced and _yf_eligible(t)]
         if remaining:
+            missed: list[str] = []
             try:
                 import yfinance as yf
                 data = yf.Tickers(" ".join(remaining))
@@ -100,6 +106,7 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
                     try:
                         tk = data.tickers.get(t)
                         if tk is None:
+                            missed.append(t)
                             continue
                         fi = tk.fast_info
                         last = float(fi.get("last_price") or fi.get("lastPrice") or 0) or None
@@ -113,17 +120,27 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
                             "as_of":          int(time.time()),
                         }
                         with _lock:
+                            if last is not None:
+                                _ever_priced.add(t)
+                                _yf_miss_at.pop(t, None)
+                            elif (_cache.get(t) or {}).get("last") is not None:
+                                # Keep the last good quote (left stale, so the
+                                # next refresh asks again) over an empty answer.
+                                missed.append(t)
+                                continue
+                            else:
+                                missed.append(t)
                             _cache[t] = quote
                             _cache_set_at[t] = time.time()
                     except Exception as exc:
+                        missed.append(t)
                         log.debug("yfinance fast_info failed for %s: %s", t, exc)
             except Exception as exc:
+                # A whole-batch failure (a Yahoo throttle) marks nothing.
                 log.warning("yfinance batch fetch failed: %s", exc)
             with _lock:
-                for t in remaining:
-                    if _fresh(t) and _cache.get(t, {}).get("last") is not None:
-                        _yf_miss_at.pop(t, None)
-                    else:
+                for t in missed:
+                    if t not in _ever_priced:
                         _yf_miss_at[t] = time.time()
 
     with _lock:
