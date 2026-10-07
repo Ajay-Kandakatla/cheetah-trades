@@ -38,7 +38,10 @@ services:
     depends_on:
       - mongo
     ports:
-      - "8000:8000"
+      # Loopback only (2026-10-06): the site reaches the api over the compose
+      # network (nginx -> api:8000); a LAN-wide publish let anyone on the same
+      # Wi-Fi call the api with a forged X-User-Email.
+      - "127.0.0.1:8000:8000"
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   cron:
