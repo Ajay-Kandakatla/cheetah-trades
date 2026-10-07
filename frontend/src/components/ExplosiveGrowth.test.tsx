@@ -66,6 +66,13 @@ function mount() {
   return render(<MemoryRouter><ExplosiveGrowth /></MemoryRouter>);
 }
 
+/** The Debt <select> — found by its "show everything (N)" option. */
+const debtSelect = () => Array.from(document.querySelectorAll('select'))
+  .find((el) => Array.from(el.options).some((o) => o.value === 'all'
+    && (o.textContent ?? '').startsWith('show everything'))) as HTMLSelectElement;
+const pickDebt = (v: 'debt-free' | 'net cash' | 'modest' | 'all') =>
+  fireEvent.change(debtSelect(), { target: { value: v } });
+
 describe('ExplosiveGrowth board', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -930,10 +937,11 @@ describe('💎 the capital-quality chips and column', () => {
   /* ── the count on a chip is the count of what a click DOES ───────────── */
   it('REGRESSION: a chip counts the rows ON SCREEN, not the whole served board', async () => {
     /* The served `hides_n` is measured over every row the backend graded. By
-     * the time the chips are drawn the board has already applied `debtTier`,
-     * which ships ON at "net cash" — and the rows it removes are the levered
-     * ones, i.e. exactly the rows that fail `net_cash`. Served counts promised
-     * to hide a row that was not on the board, and a click moved nothing. */
+     * the time the chips are drawn the board has already applied `debtTier`
+     * — picked here at "net cash" (it opens at show everything since
+     * 2026-10-07) — and the rows it removes are the levered ones, i.e. exactly
+     * the rows that fail `net_cash`. Served counts promised to hide a row that
+     * was not on the board, and a click moved nothing. */
     const GOOD = row({ symbol: 'GOOD', sales_growth_pct: 150, cash: 100e6, debt: 1e6,
       cash_minus_debt: 99e6,
       capital_quality: cq({
@@ -952,8 +960,9 @@ describe('💎 the capital-quality chips and column', () => {
     stubQ(rows, summary);
     mount();
     await screen.findByTestId('eg-qchips');
+    pickDebt('net cash');
 
-    // the default debt tier already took BAAD — the only row that fails it
+    // the picked debt tier already took BAAD — the only row that fails it
     expect(tickers()).toEqual(['GOOD']);
     const chip = screen.getByTestId('eg-qchip-net_cash');
     expect(chip.textContent).toBe('Holds more cash than debt (0)');
@@ -982,11 +991,33 @@ describe('💎 the capital-quality chips and column', () => {
       }) as unknown as GrowthRow['capital_quality'] });
     stubQ([GOOD, BAAD], cqSummary([GOOD, BAAD]));
     mount();
-    const note = await screen.findByTestId('eg-qnote');
+    await screen.findByTestId('eg-qnote');
+    pickDebt('net cash');
+    const note = screen.getByTestId('eg-qnote');
     // "1 of 2 fail nothing" under a one-row table describes a population he
     // cannot see. It says which set it counted, and counts the drawn one.
     expect(note.textContent).toContain('graded 1 of 2 rows on screen');
     expect(note.textContent).toContain('1 of 1 fail nothing');
+  });
+
+  it('Ajay 2026-10-07 "default this to show everything": the Debt filter opens at show everything', async () => {
+    const GOOD = row({ symbol: 'GOOD', sales_growth_pct: 150, cash: 100e6, debt: 1e6,
+      cash_minus_debt: 99e6 });
+    const BAAD = row({ symbol: 'BAAD', sales_growth_pct: 140, cash: 10e6, debt: 100e6,
+      cash_minus_debt: -90e6 });
+    stubQ([GOOD, BAAD], cqSummary([GOOD, BAAD]));
+    mount();
+    await screen.findByTestId('eg-qchips');
+    const sel = debtSelect();
+    expect(sel.value).toBe('all');
+    expect(sel.selectedOptions[0].textContent).toBe('show everything (2)');
+    // NEGATIVE: on first paint a levered row is never hidden by the debt filter
+    expect(tickers()).toEqual(['GOOD', 'BAAD']);
+    // the tiers are still a pick away
+    pickDebt('net cash');
+    expect(tickers()).toEqual(['GOOD']);
+    pickDebt('all');
+    expect(tickers()).toEqual(['GOOD', 'BAAD']);
   });
 
   it('NEGATIVE: a chip never hides a row that could not answer its question', async () => {

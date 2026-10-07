@@ -294,16 +294,18 @@ export function ExplosiveGrowth() {
   const [onlyBuyable, setOnlyBuyable] = useState(false);
   const [onlyDemand, setOnlyDemand] = useState(false);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
-  // Ajay 2026-09-14: "I do not want them to have any debt." Defaulted ON
-  // at the widest tier that is still honestly debt-light, because a
-  // literal debt===0 filter returns ZERO of 29 rows — see balanceRead.ts.
-  const [debtTier, setDebtTier] = useState<DebtTier | null>('net cash');
+  // Ajay 2026-09-14: "I do not want them to have any debt." The tiers stay
+  // relative to the company's own cash (a literal debt===0 filter returns
+  // ZERO of 29 rows — see balanceRead.ts). Ajay 2026-10-07: "can you default
+  // this to show everything" — so it opens at null (every row) and the debt
+  // tiers are a pick, not the default.
+  const [debtTier, setDebtTier] = useState<DebtTier | null>(null);
   const [sector, setSector] = useState<string | null>(null);
   /* 💎 Ajay 2026-09-22: "quality like very less capital and hi ROI".
    *
-   * EMPTY — every quality chip ships OFF, and unlike `debtTier` above there is
-   * no honest default to open at. `debtTier` could open at "net cash" because
-   * that tier still holds most of the board; here the measurement on the live
+   * EMPTY — every quality chip ships OFF (as `debtTier` above now does too,
+   * 2026-10-07). `debtTier` once opened at "net cash" because that tier still
+   * held most of the board; here the measurement on the live
    * board 2026-09-22 was that stacking the definitional cuts leaves 2 of 21
    * names (NVDA, TER) and that only 3 of 21 fail nothing at all. Every one of
    * these questions is a real cut, so any default ON hides rows on first paint
@@ -391,10 +393,10 @@ export function ExplosiveGrowth() {
   );
   const qStats = useMemo(() => componentStats(cqs), [cqs]);
   /* 💎 The chip counts are counted over the rows ACTUALLY BEING DRAWN, not off
-   * the served whole-board summary. By this line the debt tier (ON by default
-   * at "net cash"), the enterable cut, the sector picker and the demand /
-   * buyable checkboxes have all already run, and they OVERLAP this read: the
-   * default debt tier takes the levered names, which are the same rows that
+   * the served whole-board summary. By this line the debt tier (when picked;
+   * it opens at show everything since 2026-10-07), the enterable cut, the sector picker and the demand /
+   * buyable checkboxes have all already run, and they OVERLAP this read: a
+   * picked debt tier takes the levered names, which are the same rows that
    * fail `net_cash`. Served counts would have promised to hide rows that were
    * no longer on the board, and a click would have moved nothing — the
    * `debtTier` lesson at line 285 with a number attached. The verdicts are

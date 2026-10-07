@@ -60,10 +60,11 @@ Measured on the live board 2026-09-22:
 A gate that hides 19 of 21 is not a filter, it is a blindfold. The file next
 door already learned the same lesson: `ExplosiveGrowth.tsx` records that a
 literal `debt === 0` filter returned **zero of 29 rows**, which is why
-`debtTier` defaults to the widest honestly debt-light tier ("net cash") rather
-than the strictest one.
+`debtTier` defaulted to the widest honestly debt-light tier ("net cash") rather
+than the strictest one. Since 2026-10-07 it opens at **show everything**
+(Ajay: "can you default this to show everything"); the debt tiers are a pick.
 
-`debtTier` could default ON because its widest tier still holds most of the
+`debtTier` could once default ON because its widest tier still held most of the
 board. **Nothing here has an equivalent**: every one of these six questions is a
 real cut, so any default ON hides rows on first paint. So:
 
@@ -82,9 +83,9 @@ switching one on is on its face.
 **That count is measured over the rows ON SCREEN, not over the whole served
 board.** The served `hides_n` is computed across every row the backend graded,
 and by the time the chips are drawn the page has already applied `debtTier`
-(ON by default at `net cash`), the enterable cut, the sector picker and the
-demand / buyable checkboxes. Those filters OVERLAP this read: the default debt
-tier removes the levered names, which are the same rows that fail `net_cash`. On
+(when picked — it opened ON at `net cash` until 2026-10-07), the enterable cut,
+the sector picker and the demand / buyable checkboxes. Those filters OVERLAP
+this read: a picked debt tier removes the levered names, which are the same rows that fail `net_cash`. On
 the live board that made `net_cash` a `(10)` chip that hid nothing and moved
 nothing when clicked — the `debtTier` lesson (`ExplosiveGrowth.tsx:285`, a
 literal `debt === 0` returning zero of 29 rows) repeated with a number attached.
