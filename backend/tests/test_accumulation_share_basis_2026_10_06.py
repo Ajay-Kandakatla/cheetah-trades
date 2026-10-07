@@ -480,3 +480,13 @@ def test_recent_tags_rows_without_a_basis_as_legacy_dollars(monkeypatch):
     assert "not a measured flow" in out["AVGO"]["legacy_note"]
     # NEGATIVE: a share-basis row is never relabelled
     assert out["VST"]["basis"] == "shares" and "legacy_note" not in out["VST"]
+
+
+def test_cli_entry_installs_log_redaction():
+    """The Sunday cron runs `python -m supply_demand.accumulation_changes`; a
+    CLI has no app startup, so it must install the redaction filter itself
+    before the split lookup can log a requests exception carrying the key."""
+    src = (Path(__file__).resolve().parents[1] / "supply_demand" / "accumulation_changes.py").read_text()
+    main = src[src.index('if __name__ == "__main__":'):]
+    assert "install_redaction()" in main
+    assert main.index("install_redaction()") < main.index("sweep(notify=True)")

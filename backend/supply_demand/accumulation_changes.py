@@ -767,6 +767,14 @@ def bank_baselines(symbols: Optional[list] = None, *, limit: int = 4000) -> dict
 
 if __name__ == "__main__":                                   # pragma: no cover
     import json
+    # A CLI process has no app startup, so the root redaction filter would not
+    # be installed — and the split lookup logs a requests exception whose text
+    # carries the Massive key (2026-10-07).
+    try:
+        from observability.logsetup import install_redaction
+        install_redaction()
+    except Exception:                                       # noqa: BLE001
+        pass
     # Bank broadly first (cheap, cache-only), then alert on the narrow scope.
     print(json.dumps({"baselines": bank_baselines(),
                       "sweep": sweep(notify=True)}, indent=2, default=str))
