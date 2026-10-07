@@ -159,6 +159,7 @@ MARKET_LAST_WHEN_FMT = "Last session ({day} close)"
 MARKET_LINE_FMT = (TODAY_MARK + " {when}: {bench} {spy} · {ew} {rsp} · median name {med} ({word}) · "
                    "{up} of {n} names read are up.")
 MARKET_EMPTY_FMT = TODAY_MARK + " {when}: no name has a print to read yet."
+MARKET_STALE_FMT = TODAY_MARK + " {when}: {stale_text} ({n} names)."   # every unread name stale
 NO_PRINT_WORD = "no print"
 EVENT_SOURCES = ("FRED release dates", "Federal Reserve FOMC calendar")
 MODE_ANY, MODE_ALL = DMT.MODE_ANY, DMT.MODE_ALL
@@ -775,6 +776,24 @@ def _last_session_read(raw: Optional[dict], *, ref_close, ref_date,
     return out
 
 
+def official_prev_close(raw: Optional[dict], ref_close, session) -> Optional[float]:
+    """The prior close a live / after-close session move is measured against
+    (2026-10-07 critic: NNBR cached 10-06 close 4.025 vs the snapshot's
+    official 4.04 -> the card said -0.12%, the real move was -0.50%). The
+    snapshot's `prev_day_close` when its day bar is dated the session
+    (`drop10_tab.day_from_snapshot` — never an un-rolled overnight snapshot)
+    and it agrees with the cached close within `drop10_tab.PREV_CLOSE_TOL_PCT`;
+    else the cached close (a split or a bad print is never the base)."""
+    from chart_maps import drop10_tab as D10
+    ref = _pos(ref_close)
+    pdc = _pos((D10.day_from_snapshot(raw, session) or {}).get("prev_close"))
+    if ref is None or pdc is None:
+        return ref
+    if abs(pdc / ref - 1.0) * 100.0 > D10.PREV_CLOSE_TOL_PCT:
+        return ref
+    return pdc
+
+
 def today_read(raw: Optional[dict], *, ref_close, ref_date, now, session, phase,
                event: Optional[dict], mode: Optional[str] = None,
                last: Optional[dict] = None) -> dict:
@@ -814,11 +833,14 @@ def today_read(raw: Optional[dict], *, ref_close, ref_date, now, session, phase,
             return _blank("no_print")
         if basis == "day_close" and phase == "rth":
             basis = DAY_BAR_BASIS      # the day bar is still forming — not a close
-    mv = pct_ret(px, ref_close)
+    # live / after_close: the official prior close; a data day's pre-market keeps ref_close
+    prev = official_prev_close(raw, ref_close, session) if m in (MODE_LIVE, MODE_AFTER) \
+        else ref_close
+    mv = pct_ret(px, prev)
     if mv is None:
         return _blank("no_print")
     out = _blank("read")
-    out.update(move_pct=mv, holding=held(mv), print=_r(px, 4), prev_close=_r(ref_close, 4),
+    out.update(move_pct=mv, holding=held(mv), print=_r(px, 4), prev_close=_r(prev, 4),
                basis=basis, tape=tape if basis == "live" else None,
                as_of_et=_print_as_of(row) if basis == "live" else None)
     return out
@@ -1774,6 +1796,7 @@ def rank(entry: dict, raw: dict, pm: Optional[dict], *, now: datetime, sort: str
              "spy_as_of_et": spy.get("as_of_et") if spy_ok else None,
              "spy_basis": spy.get("basis") if spy_ok else None,
              "rsp_move_pct": rsp.get("move_pct") if rsp["state"] == "read" else None,
+             "spy_state": spy["state"], "rsp_state": rsp["state"],
              "median_move_pct": _r(statistics.median(moves)) if moves else None,
              **today_c}
     return rows, counts, filters, today, sort_unavailable
@@ -2094,17 +2117,23 @@ def market_line(today: Optional[dict]) -> Optional[str]:
         when = MARKET_PRE_WHEN
     else:
         when = MARKET_LAST_WHEN_FMT.format(day=KL._day_mmdd(t.get("day"), weekday=True))
+    stale_text = _TODAY_TEXT["stale"]
     if not int(t.get("read") or 0):
+        if int(t.get("stale") or 0):        # host sleep: the cached bars are behind, not "no print"
+            return MARKET_STALE_FMT.format(when=when, stale_text=stale_text, n=_n(t.get("stale")))
         return MARKET_EMPTY_FMT.format(when=when)
     med = _f(t.get("median_move_pct"))
     if med is None:
         return MARKET_EMPTY_FMT.format(when=when)
 
-    def _px(v):
-        return _pct_txt(v) if _f(v) is not None else NO_PRINT_WORD
+    def _px(v, state):
+        if _f(v) is not None:
+            return _pct_txt(v)
+        return stale_text if state == "stale" else NO_PRINT_WORD
     word = "down" if med < 0 else ("up" if med > 0 else "flat")
-    return MARKET_LINE_FMT.format(when=when, bench=BENCH, spy=_px(t.get("spy_move_pct")),
-                                  ew=EW_BENCH, rsp=_px(t.get("rsp_move_pct")),
+    return MARKET_LINE_FMT.format(when=when, bench=BENCH,
+                                  spy=_px(t.get("spy_move_pct"), t.get("spy_state")),
+                                  ew=EW_BENCH, rsp=_px(t.get("rsp_move_pct"), t.get("rsp_state")),
                                   med=f"{med:+.2f}%", word=word, up=_n(t.get("up")),
                                   n=_n(t.get("read")))
 

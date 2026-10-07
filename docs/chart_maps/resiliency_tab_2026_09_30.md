@@ -69,9 +69,18 @@ The ask numbers #1 and #3 — **was there a #2?** (his call #20).
 - "SPY fell" = SPY's own event-day close-to-close < 0 (the `down_*` subset and the 🛡️ T1 on SPY-down days order).
 - σ = sample stdev of the last 50 daily % returns; β = cov/var against SPY over the last `KL.YEAR_BARS` (252) returns;
   both None unless every return in the window is read.
-- 📅 Today (a T1/T2 session only): `KL.anchor_read` against the verified prior close (`KL.verify_last`); basis
-  `last_close` is NEVER a read — no print today = `no_print`, never "holding +0.00%". A stale cache (the snapshot's
-  prior close disagrees, or the cached bars end before the prior market day) = `stale`.
+- 📅 Today (every session since 2026-10-07 — live / after the close / the last session when closed; see the
+  2026-10-07 section): `KL.anchor_read` (after the close: the snapshot day bar's regular-session close) against the
+  verified prior close (`KL.verify_last`); basis `last_close` is NEVER a read — no print today = `no_print`, never
+  "holding +0.00%". A stale cache (the snapshot's prior close disagrees, or the cached bars end before the prior
+  market day) = `stale`. **Official prior close (2026-10-07 critic fix)**: in live and after-close reads the move is
+  measured against the snapshot's `prev_day_close` when that snapshot's day bar is dated the session
+  (`drop10_tab.day_from_snapshot`) and it agrees with the cached close within `drop10_tab.PREV_CLOSE_TOL_PCT` (1%,
+  imported); otherwise against the cached close (`resiliency_tab.official_prev_close`). Real case: NNBR's cached
+  10-06 close 4.025 vs the official 4.04 — the card said -0.12%, the real move was -0.50%; `verify_last` passed
+  because 4.025 is within half a cent of the day's close. `KL.verify_last` itself is unchanged (other tabs use it);
+  closed mode (`last_session`) and a data day's pre-market keep the cached closes; the MEASURED study lines are
+  byte-identical (golden test).
 - The data days are `macro_calendar.past_events` (FRED per-release dates + the Fed's FOMC calendar; see
   `docs/sepa/macro_event_overlay.md` "2026-09-30 — past_events"). Today's events come from `get_macro_calendar()` —
   read ONLY in the background build, never on a request.
@@ -80,16 +89,20 @@ The ask numbers #1 and #3 — **was there a #2?** (his call #20).
 
 `board.resiliency_tiles` (the 🏔️ ATH memo pattern): `resiliency_tab.cached_or_warm` (key = session ISO + universe;
 stale-while-revalidate; a failed build is served as `error` and retried every `FAIL_RETRY_SEC` = 5 min) → ONE
-`_bulk_snaps_fanout(syms + [SPY])` → in the `pre` phase `pm_cached_or_warm` (ONE `intraday_cache` aggregate + ONE
+`_bulk_snaps_fanout(syms + [SPY, RSP])` (the turnover rows from `scanner.load_latest_shared()`, read-only, one
+parse per scan write) → in the `pre` phase `pm_cached_or_warm` (ONE `intraday_cache` aggregate + ONE
 find on the shared price-cache client's database — never `daytrading.data._get_mongo_coll`, which writes an index on
 every call) → `rank` (counts over the whole pool, then the boxes via `dual_momentum_tab.passes` / `parse_mode`, then
 `order_key`) → the liquidity floor (`passes_liquidity`, turnover = scan row else `quick_bounce.avg_dollar_vol`) → the
 first `LIMIT_MAX × TAPE_POOL_MULT` (240) → `_finish`. `resiliency_tab` never imports `board`.
 
-Sorts (tab-scoped, exactly these four served; any other key on this tab → `default`): `default` 🛡️ T1 hold rate
-(rated first, rate, SPY-down rate, the smaller worst day, symbol) · `res_t2` 🛡️ T2 hold rate · `res_down` 🛡️ T1 on
-SPY-down days · `res_today` 📅 Today's move (reads first, biggest move first; on a non-event session
-`sort_unavailable` = "Today is not a T1 or T2 data day — the board is in T1 hold-rate order.").
+Sorts (tab-scoped, since 2026-10-07: five tab sorts plus `default`; any other key on this tab → `default`):
+`res_today` 📅 Today's move (reads first, biggest gain first) · `res_t1` 🛡️ T1 hold rate (rated first, rate, SPY-down
+rate, the smaller worst day, symbol) · `res_t2` 🛡️ T2 hold rate · `res_down` 🛡️ T1 on SPY-down days · `res_growth`
+🚀 Sales + EPS growth. `default` is RESOLVED per request (`resolve_sort`): `res_today` when the session is live or
+after the close and at least one name has a print, else `res_t1`; the served `sort` is always the explicit key. An
+ordinary (non-data) day gets NO `sort_unavailable`; it is set only when an explicit `res_today` has no read
+(`TODAY_SORT_NO_READ` → T1 order) or an explicit `res_growth` has nothing ranked (`GROWTH_SORT_UNAVAILABLE`).
 
 ## Payload (`GET /chart-maps?tab=resiliency[&sort=][&res=t1,eod][&res_mode=all][&min_tier=]`)
 
@@ -408,3 +421,18 @@ FE `ResiliencyBoardNote.test.tsx`, `cardLadder.test.ts`, `ResiliencyTab.payload.
 `__fixtures__/resiliency_tab_2026_10_07.json`), `ChartMapsResiliency.test.tsx`; contracts. Mutation spot-checks
 (bytecode off): the event gate, `EPS_MIN_BASE`, the after-close branch and re-serving the retired sentence each fail
 the new tests.
+
+### Critic fixes 2026-10-07 (same branch)
+
+- **Official prior close** for live / after-close moves — `official_prev_close` (rule in "What each box reads" →
+  📅 Today): the snapshot's `prev_day_close` when its day bar is dated the session and within
+  `drop10_tab.PREV_CLOSE_TOL_PCT` of the cached close, else the cached close; `prev_close` serves that value.
+  Closed mode and a data day's pre-market unchanged; MEASURED lines golden.
+- **Market line with the bars behind** (host sleep, closed mode): `today` now serves `spy_state` / `rsp_state`; a
+  stale benchmark prints `daily bars behind — not read` (the existing stale wording), never `no print`; with no read
+  and stale names the line is `📅 {when}: daily bars behind — not read ({n} names).` (`MARKET_STALE_FMT`), never
+  "no name has a print to read yet". `today.stale` is the stale count.
+- Tests: `backend/tests/test_resiliency_critic_fixes_2026_10_07.py` (12) — also the sales-without-a-revenue-series
+  NEG (never `sales_ranked`, no score when EPS is unranked) and `rank()`'s median + `up` (> 0 only) on a skewed pool;
+  FE payload test gains a synthetic closed-mode payload (`last_session` dated pill). Revert checks in a scratch copy:
+  nine mutations, each fails its test.

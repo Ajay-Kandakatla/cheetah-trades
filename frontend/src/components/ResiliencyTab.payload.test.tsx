@@ -21,7 +21,9 @@ import type { CmBoard, CmTile } from '../lib/chartMaps';
  * warming and error payload. This test is LAYOUT-AGNOSTIC: every top-level
  * value that is a `tab: "resiliency"` payload is read, and each is checked by
  * its OWN served state (`resiliency_board.state`, `today.mode`, the served
- * `sort`) — never by its key. Only contract keys are read. */
+ * `sort`) — never by its key. Only contract keys are read. One SYNTHETIC
+ * closed-mode payload (built below from the captured res_t1 one) joins them so
+ * the dated `last_session` pill branch runs (critic 2026-10-07). */
 
 type Payload = CmBoard & { warming?: boolean };
 const RAW = FIXTURE as unknown as Record<string, unknown>;
@@ -33,9 +35,48 @@ const SIX = ['default', 'res_today', 'res_t1', 'res_t2', 'res_down', 'res_growth
 const FIVE = SIX.slice(1);
 const RETIRED = 'not a T1 or T2 data day';
 
-const PAYLOADS: Array<[string, Payload]> = Object.entries(RAW)
+const CAPTURED: Array<[string, Payload]> = Object.entries(RAW)
   .filter(([, v]) => !!v && typeof v === 'object' && !Array.isArray(v) && (v as { tab?: unknown }).tab === 'resiliency')
   .map(([k, v]) => [k, v as Payload]);
+
+/* SYNTHETIC closed-mode payload (critic 2026-10-07): the capture was taken after
+ * the close, so the dated `last_session` pill branch never ran. Built from the
+ * captured res_t1 payload by the backend's closed-mode words: today.mode
+ * 'closed', every read `basis: 'last_session'` + `for_today: false` (no Today
+ * stat), the 📅 badge `📅 last session Tue 10-06 · ±x.xx%`, one card stale (no
+ * pill), served sort res_t1 with `default` labelled '🛡️ T1 hold rate (default)'. */
+const LAST_DAY = '2026-10-06';
+const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+function closedPayload(): [string, Payload] | null {
+  const src = CAPTURED.find(([, p]) => p.sort === 'res_t1' && (p.tiles || []).length > 1);
+  if (!src) return null;
+  const p = JSON.parse(JSON.stringify(src[1])) as Payload;
+  const rb = p.resiliency_board!;
+  p.sort = 'res_t1';
+  rb.sort = 'res_t1';
+  p.sorts = (p.sorts || []).map((s) => (s.key === 'default' ? { ...s, label: `${SHIELD} T1 hold rate (default)` } : s));
+  rb.today = { ...rb.today!, mode: 'closed', day: LAST_DAY, data_pre: false, spy_basis: 'last_session' };
+  rb.market_line = `${CAL} Last session (Tue 10-06 close): SPY +0.40% · RSP +0.10% · median name +0.25% (up) · 2 of 3 names read are up.`;
+  (p.tiles as CmTile[]).forEach((t, i) => {
+    const r = t.resiliency!;
+    const stale = i === 1;
+    const mv = i === 0 ? 2.5 : i % 3 === 0 ? -1.25 : 0.4;
+    r.today = {
+      ...r.today, mode: 'closed', day: LAST_DAY, for_today: false, tier: null, event_day: false, labels: [],
+      tape: null, as_of_et: null,
+      ...(stale
+        ? { state: 'stale', move_pct: null, holding: null, print: null, prev_close: null, basis: null }
+        : { state: 'read', move_pct: mv, holding: mv >= -0.5, print: 50, prev_close: 49, basis: 'last_session' }),
+    } as typeof r.today;
+    const rest = (t.badges || []).filter((b) => !b.text.startsWith(CAL));
+    const pill = stale ? [] : [{ text: `${CAL} last session Tue 10-06 · ${signed(mv)}`, tone: mv >= -0.5 ? 'good' : 'warn' }];
+    t.badges = [...rest.slice(0, 1), ...pill, ...rest.slice(1)] as typeof t.badges;
+    t.stats = (t.stats || []).filter((st) => st.k !== 'Today');
+  });
+  return ['synthetic_closed_last_session', p];
+}
+const SYNTH = closedPayload();
+const PAYLOADS: Array<[string, Payload]> = SYNTH ? [...CAPTURED, SYNTH] : CAPTURED;
 const stateOf = (p: Payload) => p.resiliency_board?.state ?? 'none';
 const READY = PAYLOADS.filter(([, p]) => stateOf(p) === 'ready' && (p.tiles || []).length > 0);
 const WARMING = PAYLOADS.filter(([, p]) => stateOf(p) === 'warming');
@@ -62,6 +103,30 @@ describe('🛡️ Resiliency fixture — what it covers', () => {
     }
     // eslint-disable-next-line no-console
     console.log(`🛡️ fixture: ${READY.length} ready (${READY.map(([k, p]) => `${k}:${p.sort}/${p.resiliency_board?.today?.mode}`).join(', ')}), ${WARMING.length} warming, ${ERROR.length} error`);
+  });
+});
+
+describe('🛡️ Resiliency synthetic closed-mode payload — the dated last-session branch', () => {
+  it('is built and served: mode closed, res_t1, every read dated `last session`, none says today, no Today stat', () => {
+    expect(SYNTH, 'the capture carries a res_t1 payload to build from').not.toBeNull();
+    const [k, P] = SYNTH!;
+    expect(READY.map(([key]) => key)).toContain(k);
+    expect(P.resiliency_board!.today!.mode).toBe('closed');
+    expect(P.sort).toBe('res_t1');
+    expect((P.sorts || [])[0].label).toBe(`${SHIELD} T1 hold rate (default)`);
+    const tiles = P.tiles as CmTile[];
+    const reads = tiles.filter((t) => t.resiliency!.today.basis === 'last_session');
+    expect(reads.length).toBeGreaterThan(0);
+    for (const t of tiles) {
+      const td = t.resiliency!.today;
+      expect(td.for_today, t.symbol).toBe(false);
+      const pills = (t.badges || []).filter((b) => b.text.startsWith(CAL));
+      // NEGATIVE: a closed-mode card never says today; a stale card has no pill
+      for (const b of pills) expect(b.text.startsWith(`${CAL} today`) || b.text.includes(' T1 today'), t.symbol).toBe(false);
+      if (td.state !== 'read') expect(pills, t.symbol).toEqual([]);
+      else expect(pills.map((b) => b.text), t.symbol).toEqual([expect.stringMatching(/^\u{1F4C5} last session Tue 10-06 · [+-]\d+\.\d{2}%$/u)]);
+      expect((t.stats || []).some((st) => st.k === 'Today'), t.symbol).toBe(false);
+    }
   });
 });
 
