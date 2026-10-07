@@ -233,13 +233,21 @@ async def _fetch_windows(FH, windows) -> list:
     resolved off the module on each call so a test can monkeypatch it.
     """
     out = []
-    for frm, to in windows:
-        try:
-            got = await FH.ipo_calendar(frm, to)
-        except Exception as exc:
-            out.append((frm, to, None, exc))
-        else:
-            out.append((frm, to, got, None))
+    try:
+        for frm, to in windows:
+            try:
+                got = await FH.ipo_calendar(frm, to)
+            except Exception as exc:
+                out.append((frm, to, None, exc))
+            else:
+                out.append((frm, to, got, None))
+    finally:
+        closer = getattr(FH, "aclose_loop_client", None)
+        if closer is not None:
+            try:
+                await closer()
+            except Exception as exc:
+                log.debug("chart-maps ipo: closing the loop's finnhub client failed: %s", exc)
     return out
 
 

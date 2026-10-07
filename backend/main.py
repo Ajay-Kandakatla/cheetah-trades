@@ -36,6 +36,9 @@ from fastapi.responses import JSONResponse, StreamingResponse, PlainTextResponse
 # router-registration block, before the original line-1771 import) can
 # use the user-email dependency without a NameError at module load.
 from auth import current_user_email  # noqa: E402  -- intentional early import
+# Connection hygiene (2026-10-06): Yahoo connections close after every transfer.
+import http_hygiene  # noqa: E402
+http_hygiene.install_yfinance_no_reuse()
 
 from cheetah_data import (
     CHEETAH_STOCKS,
@@ -290,7 +293,7 @@ async def _rest_fetch_once(sym: str) -> None:
     if not _finnhub_poller_enabled():
         return
     if _rest_client is None:
-        _rest_client = httpx.AsyncClient(timeout=10)
+        _rest_client = httpx.AsyncClient(timeout=10, limits=http_hygiene.NO_KEEPALIVE)
     try:
         from sepa import symbols as _sym
         resp = await _rest_client.get(
@@ -394,7 +397,7 @@ async def finnhub_ws_consumer() -> None:
 async def finnhub_rest_poller() -> None:
     if not FINNHUB_API_KEY:
         return
-    client = httpx.AsyncClient(timeout=10)
+    client = httpx.AsyncClient(timeout=10, limits=http_hygiene.NO_KEEPALIVE)
     while True:
         try:
             # Only REST-poll a bounded slice (WS streams live prices for the
@@ -1154,7 +1157,7 @@ async def symbol_search(
 
     global _rest_client
     if _rest_client is None:
-        _rest_client = httpx.AsyncClient(timeout=10)
+        _rest_client = httpx.AsyncClient(timeout=10, limits=http_hygiene.NO_KEEPALIVE)
     try:
         r = await _rest_client.get(
             "https://finnhub.io/api/v1/search",
@@ -1831,7 +1834,7 @@ async def _company_profile(sym: str) -> dict:
         return {}
     global _rest_client
     if _rest_client is None:
-        _rest_client = httpx.AsyncClient(timeout=10)
+        _rest_client = httpx.AsyncClient(timeout=10, limits=http_hygiene.NO_KEEPALIVE)
     try:
         # Finnhub keys profiles by the LIVE ticker: profile2?symbol=SQ returns
         # {} while XYZ returns "Block Inc". The cache stays keyed by what the

@@ -29,6 +29,8 @@ from typing import Optional
 
 import httpx
 
+from http_hygiene import NO_KEEPALIVE
+
 from . import cache as _cache
 
 log = logging.getLogger("finnhub_client.client")
@@ -103,6 +105,9 @@ _bucket = _TokenBucket(_BUCKET_CAPACITY, _BUCKET_RATE_PER_SEC)
 #
 # Keyed WEAKLY on the loop: when a short-lived loop is collected its client
 # goes with it, so the map cannot grow with the number of board builds.
+# No keep-alive (2026-10-06): each client closes its connection after every
+# response (http_hygiene.NO_KEEPALIVE), so Finnhub never closes an idle socket
+# first. Short-lived loops call aclose_loop_client() before the loop closes.
 _http_by_loop: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
 
 
@@ -110,9 +115,18 @@ async def _get_http() -> httpx.AsyncClient:
     loop = asyncio.get_event_loop()
     client = _http_by_loop.get(loop)
     if client is None:
-        client = httpx.AsyncClient(timeout=10)
+        client = httpx.AsyncClient(timeout=10, limits=NO_KEEPALIVE)
         _http_by_loop[loop] = client
     return client
+
+
+async def aclose_loop_client() -> None:
+    """Close and forget THIS event loop's client. Call it before closing a
+    short-lived loop (chart_maps/ipo.calendar); a no-op when none exists."""
+    loop = asyncio.get_event_loop()          # same lookup _get_http() uses
+    c = _http_by_loop.pop(loop, None)
+    if c is not None:
+        await c.aclose()
 
 
 def is_configured() -> bool:

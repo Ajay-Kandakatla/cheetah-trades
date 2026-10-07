@@ -135,6 +135,9 @@ export const CATEGORIES: CategoryDef[] = [
   // Admin-only category — only visible to ADMIN_EMAILS.
   { key: 'user_signin',            label: 'New user signed in',     emoji: '👋', group: 'admin',
     detail: 'One-time push when a new email signs in for the first time. Fires exactly once per user. Visible only to admins.' },
+  // 🩺 2026-10-06 — Ajay approved the Docker watchdog push (ops/docker_watchdog.py).
+  { key: 'ops_alert',              label: 'Docker / host watch',    emoji: '🩺', group: 'admin',
+    detail: 'Pushes from the Mac\'s Docker watchdog: the network forwarder at 2,000+ open flows or +500 in 24 h, Docker\'s backend down / back / restarted, the Mac on battery under 20% and 10%. While Docker is down the push waits and the Mac shows a notification. Visible only to admins.' },
 ];
 
 const GROUP_LABELS: Record<CategoryDef['group'], string> = {
@@ -432,12 +435,13 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
       price_alert: true, key_level_alert: true,
       med_catalyst: true,
+      ops_alert: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

@@ -135,6 +135,7 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
 
   // ── admin / system ────────────────────────────────────────────────────────
   user_signin:         { emoji: '👋', label: 'New user',                group: 'admin' },
+  ops_alert:           { emoji: '🩺', label: 'Docker / host watch',     group: 'admin' },
   product_launch:      { emoji: '🚀', label: 'Product launch',          group: 'system' },
   generic:             { emoji: '📣', label: 'Notification',            group: 'system' },
 };

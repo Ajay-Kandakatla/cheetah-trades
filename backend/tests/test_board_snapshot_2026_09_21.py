@@ -350,7 +350,8 @@ def test_NEGATIVE_a_live_row_cannot_stand_in_for_a_raw_one():
 def test_http_is_one_keep_alive_session_per_thread():
     a, b = P._http(), P._http()
     assert a is b, "a new Session per call is a new handshake per call"
-    assert a.get_adapter("https://api.massive.com") is not None
+    assert isinstance(a, P._Pooled)
+    assert P._new_session().get_adapter("https://api.massive.com") is not None
 
     other: list = []
     t = threading.Thread(target=lambda: other.append(P._http()))

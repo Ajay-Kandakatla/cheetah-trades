@@ -102,7 +102,10 @@ class NoSendPathTest(unittest.TestCase):
                           "earnings_reaction", "board_arrival",
                           "price_alert", "key_level_alert",
                           # WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
-                          "med_catalyst"})
+                          "med_catalyst",
+                          # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
+                          "ops_alert",
+                          })
 
     def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):
         """NEGATIVE — no kind reaches his phone from this package by accident.

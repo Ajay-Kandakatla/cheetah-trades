@@ -84,6 +84,16 @@ describe('kind registry', () => {
     expect(kindLabel('')).toBe('📣 Notification');
     expect(kindText(undefined)).toBe('Notification');
   });
+
+  it('🩺 ops_alert is an admin kind with a plain label', () => {
+    expect(ALERT_KINDS.ops_alert.group).toBe('admin');
+    expect(kindLabel('ops_alert')).toMatch(/^\S+ /);
+    expect(kindLabel('ops_alert')).toBe('🩺 Docker / host watch');
+    // NEGATIVE: the house words never reach a label he reads
+    for (const w of ['boun' + 'ce', 'fa' + 'ke']) {
+      expect(kindLabel('ops_alert').toLowerCase()).not.toContain(w);
+    }
+  });
 });
 
 describe('ET clock', () => {

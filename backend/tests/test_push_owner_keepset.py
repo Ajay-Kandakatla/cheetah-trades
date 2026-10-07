@@ -42,11 +42,18 @@ def test_keep_set_is_the_2026_09_21_nine():
     routine to scan for … amd trails or other medi cal nws … and add right
     setup and alerts". ON for the owner because he asked for alerts (the
     key_level_alert precedent); False in default_prefs for everyone else. HIS
-    CALL #1 turns it off."""
+    CALL #1 turns it off.
+
+    WIDENED 2026-10-06 — 🩺 `ops_alert` (Docker watchdog, admin-only). Ajay
+    approved a host watchdog that pushes him when Docker's forwarder count
+    passes 2,000 or Docker's backend dies (paraphrase, not his words). Host
+    health, not a trading kind; only push.hooks.ADMIN_EMAIL is ever targeted.
+    Without it here a re-registering phone would mute it."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
-        "board_arrival", "price_alert", "key_level_alert", "med_catalyst"})
+        "board_arrival", "price_alert", "key_level_alert", "med_catalyst",
+        "ops_alert"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices

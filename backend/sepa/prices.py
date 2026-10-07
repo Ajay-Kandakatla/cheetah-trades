@@ -18,6 +18,7 @@ import os
 from massive_keys import stocks_key
 import threading
 import time
+import weakref
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -671,20 +672,134 @@ _SNAP_CHUNK = 250  # Massive allows up to 250 tickers per snapshot call
 # most of a per-tile call. The Session is thread-local because bulk_snapshot
 # runs inside ThreadPoolExecutor workers (chart_maps.board._attach_bars) and
 # requests' Session is not documented as thread-safe.
+#
+# Recycled sessions (2026-10-06). Docker Desktop's gvisor forwarder never
+# retires a flow the REMOTE side closes first, and an idle keep-alive socket is
+# exactly that: the provider times it out and the forwarder keeps the entry
+# forever (~14,750 after 10.5 days, 2026-10-05). So WE close the session first
+# (see backend/http_hygiene.py for the rule):
+#   IDLE_RECYCLE_SEC  a session idle this long is closed — above the 15 s
+#                     live_feed poller cadence (keeps the keep-alive gain),
+#                     below typical 60-75 s provider idle timeouts.
+#   MAX_AGE_SEC       a busy session is recycled after 10 min — under
+#                     server-side keep-alive request / time limits.
+#   REAP_EVERY_SEC    one daemon reaper closes idle sessions, so a thread that
+#                     stops calling still sends our FIN within 20 + 5 = 25 s.
+IDLE_RECYCLE_SEC = 20.0
+MAX_AGE_SEC = 600.0
+REAP_EVERY_SEC = 5.0
+_now = time.monotonic     # tests monkeypatch prices._now
 _HTTP = threading.local()
+_POOLS: list = []
+_POOLS_LOCK = threading.Lock()
+_REAPER_LOCK = threading.Lock()
+_REAPER_STARTED = False
 
 
-def _http():
-    """The calling thread's keep-alive `requests.Session` (created lazily)."""
+def _new_session():
+    """A keep-alive `requests.Session` with a 4x16 HTTPS pool."""
     import requests as _req
     from requests.adapters import HTTPAdapter
 
-    sess = getattr(_HTTP, "session", None)
-    if sess is None:
-        sess = _req.Session()
-        sess.mount("https://", HTTPAdapter(pool_connections=4, pool_maxsize=16))
-        _HTTP.session = sess
+    sess = _req.Session()
+    sess.mount("https://", HTTPAdapter(pool_connections=4, pool_maxsize=16))
     return sess
+
+
+class _Pooled:
+    """One thread's recycled keep-alive Session. Only .get() is supported."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.sess = None
+        self.born = 0.0
+        self.last = 0.0
+        self.owner = weakref.ref(threading.current_thread())
+
+    def _stale(self, now) -> bool:
+        return self.sess is not None and (now - self.last >= IDLE_RECYCLE_SEC
+                                          or now - self.born >= MAX_AGE_SEC)
+
+    def _close(self) -> None:
+        s, self.sess = self.sess, None
+        if s is not None:
+            try:
+                s.close()
+            except Exception as exc:
+                log.debug("prices._http: close failed: %s", exc)
+
+    def get(self, url, **kw):
+        if kw.get("stream"):
+            raise ValueError("prices._http() sessions are recycled; stream=True is not supported")
+        with self.lock:
+            now = _now()
+            if self._stale(now):
+                self._close()
+            if self.sess is None:
+                self.sess, self.born = _new_session(), now
+            try:
+                return self.sess.get(url, **kw)
+            except Exception:
+                self._close()            # a failed connection is not reused
+                raise
+            finally:
+                self.last = _now()
+
+
+def _reap_once(now=None) -> int:
+    """Close every stale pool whose lock is free (busy pools are skipped, never
+    waited on). Drop pools whose owner thread is gone once they are closed.
+    Returns how many sessions it closed."""
+    if now is None:
+        now = _now()
+    closed = 0
+    with _POOLS_LOCK:
+        for p in list(_POOLS):
+            if not p.lock.acquire(blocking=False):
+                continue
+            try:
+                if p._stale(now):
+                    p._close()
+                    closed += 1
+                t = p.owner()
+                if p.sess is None and (t is None or not t.is_alive()):
+                    _POOLS.remove(p)
+            finally:
+                p.lock.release()
+    return closed
+
+
+def _reaper_loop() -> None:
+    while True:
+        time.sleep(REAP_EVERY_SEC)
+        try:
+            _reap_once()
+        except Exception as exc:
+            log.debug("prices._http reaper: %s", exc)
+
+
+def _ensure_reaper() -> None:
+    """Start ONE daemon thread 'prices-http-reaper' (lazily, guarded by
+    _REAPER_LOCK + _REAPER_STARTED) that sleeps REAP_EVERY_SEC then calls
+    _reap_once() forever; exceptions are logged at DEBUG and swallowed."""
+    global _REAPER_STARTED
+    with _REAPER_LOCK:
+        if _REAPER_STARTED:
+            return
+        t = threading.Thread(target=_reaper_loop, name="prices-http-reaper", daemon=True)
+        t.start()
+        _REAPER_STARTED = True
+
+
+def _http() -> _Pooled:
+    """The calling thread's recycled keep-alive session (created lazily)."""
+    p = getattr(_HTTP, "pooled", None)
+    if p is None:
+        p = _HTTP.pooled = _Pooled()
+        with _POOLS_LOCK:
+            _POOLS.append(p)
+        _ensure_reaper()
+    return p
 
 
 def with_today_bar(df, symbol: str, snap: Optional[dict] = None):

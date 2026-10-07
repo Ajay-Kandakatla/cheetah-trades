@@ -92,6 +92,8 @@ export type NotificationPrefs = {
   house_scrape_failed?: boolean;
   house_stagnant?:      boolean;
   user_signin?: boolean;
+  // 🩺 admin-only: pushes from the Mac's Docker watchdog (ops/docker_watchdog.py, 2026-10-06).
+  ops_alert?: boolean;
   quiet_hours_enabled?: boolean;
   quiet_hours_start?: string;
   quiet_hours_end?: string;

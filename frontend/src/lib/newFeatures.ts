@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // 2026-10-06, after the 2026-10-05 Docker crash: Ajay approved locking the api
+  // port to this Mac, fixing the connection leak, and a watchdog that pushes him.
+  // The numbers are ops/docker_watchdog.py's constants (FORWARDER_ALERT_AT,
+  // GROWTH_ALERT, BATTERY_LEVELS, RESTART_*) — change them there and here.
+  { id: 'ops-docker-watch-2026-10-06', addedAt: '2026-10-06', route: '/notifications',
+    label: '🩺 Docker / host watch. After the 2026-10-05 Docker crash: a watchdog on the Mac checks Docker every 2 minutes and pushes you when its network forwarder holds 2,000+ open flows or grows 500+ in 24 h, when Docker\'s backend goes down, comes back or restarts, and when the Mac is on battery under 20% and 10%. If Docker\'s backend is gone it reopens Docker Desktop (at most once per 15 min, 3 times a day; `touch ~/.cheetah/watchdog/paused` stops that). The api\'s port 8000 now answers only this Mac. The leak behind the forwarder growth is fixed: Cheetah now closes idle provider connections itself. Admin only; nothing here trades. YOUR CALLS: auto-restart, quiet hours, the thresholds.' },
   // Ajay 2026-10-03: "I would like to know about stocks that falled intraday
   // more than 10% new tab please." The 10 is drop10_tab.THRESHOLD_PCT
   // (contract-pinned) — if he changes it, change this label.

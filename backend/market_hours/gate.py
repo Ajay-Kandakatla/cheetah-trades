@@ -67,6 +67,9 @@ PERSONAL_KINDS: frozenset[str] = frozenset({
     # ("Anytime POTUS does new investments show me those"). It ships OFF in
     # push.subs.default_prefs; he flips it on at /notifications.
     "potus_investment",
+    # 🩺 Docker watchdog (ops/docker_watchdog.py, 2026-10-06): host health, not
+    # price-driven: Docker dying on a Saturday must still reach him.
+    "ops_alert",
 })
 
 # The market kinds his phone actually carries (push/subs.default_prefs keep-set

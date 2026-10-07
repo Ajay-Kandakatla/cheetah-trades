@@ -909,3 +909,9 @@ __all__ = ["router", "gather", "gather_payload", "parse_kinds", "breakout_kinds"
            "served_items", "lead_symbol", "lead_token", "item_url", "ITEM_KINDS",
            "ITEM_URL_BY_KIND", "DEFAULT_ITEM_URL", "tape_items_for_legacy",
            "tape_recon_want", "TAPE_WINDOW_BEFORE_SEC", "TAPE_WINDOW_AFTER_SEC"]
+
+
+# 🩺 /admin/ops/alert (push/ops_api.py, 2026-10-06) rides on this router so main.py needs no
+# edit; FastAPI copies nested routes when main.py includes this router.
+from push.ops_api import router as _ops_router  # noqa: E402
+router.include_router(_ops_router)

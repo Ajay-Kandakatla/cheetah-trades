@@ -81,6 +81,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   todo_reminder:             '📌 Todo reminders',
   todo_daily_digest:         '📋 Todo daily digest',
   user_signin:               '👋 New user sign-in',
+  ops_alert:                 '🩺 Docker / host watch',
 };
 
 /** Friendly display name with a defensive fallback. Backend's

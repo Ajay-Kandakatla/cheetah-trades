@@ -159,6 +159,30 @@ def notify_leaderboard_breakout(*, broke_out: list[dict], today_et: str) -> dict
 # because we don't want accidental privilege escalation via misconfig.
 ADMIN_EMAIL = "ajaykandakatla@gmail.com"
 
+# 🩺 ops_alert (2026-10-06): the CLOSED set of conditions the Mac's Docker
+# watchdog (ops/docker_watchdog.py, its CONDITIONS) may report. Anything else is
+# refused before a device is touched.
+OPS_CONDITIONS: frozenset = frozenset({
+    "forwarder_high", "forwarder_growth", "docker_down", "docker_restored",
+    "backend_restarted", "battery_low", "watchdog_error", "test"})
+
+
+def notify_ops(condition: str, title: str, body: str) -> dict:
+    """🩺 ops_alert (2026-10-06): one push from the Mac's Docker watchdog to the
+    admin's devices only. Pre-checks targets so an alert held by quiet hours (or
+    muted) writes NO push_history row; the watchdog retries it later."""
+    if condition not in OPS_CONDITIONS:
+        raise ValueError(f"unknown ops condition {condition!r}")
+    from push import subs
+    if not subs.list_subscriptions(filter_kind="ops_alert", user_email=ADMIN_EMAIL):
+        held = subs.list_subscriptions(filter_kind="ops_alert", user_email=ADMIN_EMAIL,
+                                       honor_quiet_hours=False)
+        return {"sent": 0, "failed": 0, "total_targets": 0,
+                "skipped": "quiet_hours" if held else "no_target"}
+    payload = {"title": title, "body": body, "tag": f"ops-{condition}",
+               "url": "/alerts", "kind": "ops_alert", "condition": condition}
+    return sender.send_to_user(ADMIN_EMAIL, payload, kind="ops_alert")
+
 
 def notify_new_user(email: str) -> dict:
     """One-time admin push when a brand-new user signs in.

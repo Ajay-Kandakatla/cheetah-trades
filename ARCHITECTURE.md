@@ -565,6 +565,8 @@ Foreground-tab fallback:
 
 **Auto-subscribe on permission grant:** `<NotificationsPage>` checks if `Notification.permission === 'granted'` but `subscriptions[email].endpoint == null` and re-subscribes silently (handles the case where a user granted permission once but lost the subscription — common after browser data clear).
 
+**🩺 `ops_alert` (2026-10-06):** the host watchdog (`ops/docker_watchdog.py`, launchd every 2 min) POSTs `{"condition", "title", "body"}` to `http://127.0.0.1:8000/admin/ops/alert` (`push/ops_api.py`, mounted inside `push.recent.router`). The route is strict primary admin (`push.hooks.ADMIN_EMAIL`) and answers 404 to everyone else; the body is a closed set (8 conditions in `push.hooks.OPS_CONDITIONS`, title ≤ 80, body ≤ 280, no other keys, so the caller cannot pick the kind or the recipient); at most 6 accepted requests per condition per hour. `push.hooks.notify_ops` sends to the admin's devices only. `ops_alert` is a personal kind (`market_hours.gate.PERSONAL_KINDS`, rings on weekends and holidays), in `OWNER_KEEP_SET`, and quiet hours are honoured: a held alert writes no push_history row and the watchdog retries every 15 min for 24 h.
+
 ### 9i. Authentication path on every request
 
 ```

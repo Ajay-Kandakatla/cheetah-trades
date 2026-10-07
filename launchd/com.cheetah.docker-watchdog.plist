@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Cheetah Docker watchdog (2026-10-06)
+  Every 2 minutes: Docker's backend processes, its network forwarder count,
+  the Mac's battery -> an ops_alert web push (and a Mac notification while
+  the api is unreachable). One run per launch; no KeepAlive.
+  Runbook: ops/README.md
+
+  Install:
+    mkdir -p ~/.cheetah/watchdog
+    chmod 700 ~/.cheetah/watchdog
+    cp launchd/com.cheetah.docker-watchdog.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.cheetah.docker-watchdog.plist
+
+  Uninstall:
+    launchctl bootout gui/$(id -u)/com.cheetah.docker-watchdog
+    rm ~/Library/LaunchAgents/com.cheetah.docker-watchdog.plist
+
+  Note: the script runs from the deploy worktree (cheetah-deploy), so it
+  exists only after a main deploy; a deploy does not reload this job.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cheetah.docker-watchdog</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/ajay/clinet-test/cheetah-deploy/ops/docker_watchdog.py</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>120</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/ajay/.cheetah/watchdog</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>LC_ALL</key>
+        <string>C</string>
+        <key>PYTHONDONTWRITEBYTECODE</key>
+        <string>1</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/ajay/.cheetah/watchdog/launchd.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/ajay/.cheetah/watchdog/launchd.err.log</string>
+</dict>
+</plist>

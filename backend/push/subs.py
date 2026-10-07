@@ -377,6 +377,10 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # (market_hours.gate). UNMEASURED: every push says "not a buy signal" /
     # "not a sell signal"; setup: pending study.
     "med_catalyst",
+    # 🩺 ops_alert (ops/docker_watchdog.py -> /admin/ops/alert). 2026-10-06, Ajay
+    # approved the watchdog push; without this a re-registering phone mutes it.
+    # Host health, not a trading kind: it widens nothing any gate requires.
+    "ops_alert",
 })
 
 
@@ -599,6 +603,8 @@ def default_prefs() -> dict:
         "house_stagnant":       True, # 📉 N+ days with no view movement — consider price drop
         "user_signin": True,          # admin-only: ping when a NEW user signs in
                                       # for the first time (fires once per email)
+        "ops_alert": True,            # admin-only: the Mac's Docker watchdog (ops/docker_watchdog.py,
+                                      # 2026-10-06). Only push.hooks.ADMIN_EMAIL is ever targeted.
         # ── `minervini_flashcards` removed 2026-09-20 — see RETIRED_2026_09_20
         # at the top of this file ("they are spamming too much"). The module
         # behind it (`backend/flashcards/`) was deleted the same day.

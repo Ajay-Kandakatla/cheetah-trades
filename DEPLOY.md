@@ -313,6 +313,27 @@ docker compose up -d api cron
 
 ---
 
+## Host safety (2026-10-06)
+
+After the 2026-10-05 Docker crash (backend killed; the network forwarder had
+leaked about 14,750 flows):
+
+- **The api publishes on `127.0.0.1:8000` only** (dev compose: `127.0.0.1:8001`).
+  Before, `8000:8000` listened on every interface and the api trusts the
+  `X-User-Email` header, so anyone on the same Wi-Fi could call it as any user.
+- Host tools reach it at `http://127.0.0.1:8000`, **not `localhost`**: macOS tries
+  IPv6 `::1` first, and nothing listens there after the lock.
+- The site is unaffected: nginx reaches the api over the compose network, not
+  through the host port.
+- **Docker watchdog**: `ops/docker_watchdog.py` under launchd every 2 minutes
+  pushes `ops_alert` when the forwarder holds 2,000+ flows or grows 500+ in 24 h,
+  when Docker's backend goes down / comes back / restarts, and on low battery.
+  Install and runbook: `ops/README.md` (also `launchd/README.md`).
+- **A main deploy does not install or reload the launchd job.** It does refresh the
+  script in `cheetah-deploy`, which is where the plist points.
+
+---
+
 ## 9. Troubleshooting
 
 | Symptom | Where to look | Likely cause |

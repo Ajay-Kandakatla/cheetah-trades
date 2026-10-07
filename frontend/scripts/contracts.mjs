@@ -6414,6 +6414,39 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: 'ops_alert is wired end to end (2026-10-06)',
+    file: 'src/pages/Notifications.tsx',
+    // 🩺 Ajay approved the Docker watchdog push on 2026-10-06 (ops/docker_watchdog.py
+    // → POST /admin/ops/alert → push.hooks.notify_ops). A kind missing from
+    // default_prefs targets ZERO devices; outside OWNER_KEEP_SET a re-registered
+    // phone mutes it; outside PERSONAL_KINDS a Saturday Docker crash is dropped.
+    checks: (src) => {
+      const errs = [];
+      const subs = read('../backend/push/subs.py');
+      const dm = subs.match(/["']ops_alert["']\s*:\s*(True|False)/);
+      if (!dm) errs.push('push/subs.py default_prefs must list ops_alert');
+      else if (dm[1] !== 'True') errs.push('ops_alert must ship ON (True) in push/subs.py default_prefs');
+      if (!keepSet(subs).includes('ops_alert')) {
+        errs.push('ops_alert must sit in push/subs.OWNER_KEEP_SET — prefs_for() would mute it on re-registration');
+      }
+      const personal = pyFrozenSet(read('../backend/market_hours/gate.py'), 'PERSONAL_KINDS');
+      if (!personal || !personal.includes('ops_alert')) {
+        errs.push('ops_alert must be in market_hours/gate.PERSONAL_KINDS — host health rings on closed days');
+      }
+      const row = src.match(/\{\s*key:\s*'ops_alert'[^}]*\}/);
+      if (!row) errs.push("Notifications.tsx CATEGORIES lacks key: 'ops_alert'");
+      else if (!/group:\s*'admin'/.test(row[0])) errs.push("the ops_alert row must sit in group 'admin'");
+      if (!/^\s*ops_alert:/m.test(read('src/lib/alertKinds.ts'))) errs.push('alertKinds.ts must register ops_alert');
+      if (!/ops_alert\?: boolean/.test(read('src/hooks/useNotificationPrefs.ts'))) {
+        errs.push('NotificationPrefs must carry ops_alert or the toggle cannot be stored');
+      }
+      if (!/id: 'ops-docker-watch-2026-10-06'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push("newFeatures.ts lacks the 'ops-docker-watch-2026-10-06' ✨ entry");
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;
