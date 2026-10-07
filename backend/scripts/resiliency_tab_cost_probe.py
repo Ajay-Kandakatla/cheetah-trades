@@ -39,6 +39,16 @@ handler with the memo FORCED (in this process only, restored after):
 Imports ONLY `chart_maps.resiliency_tab`, `chart_maps.board`,
 `chart_maps.api` and `sepa.prices` (+ pymongo to block writes) — never the
 key-levels engine directly (the display-only import guard scans scripts/).
+2026-10-07 b (🚀 two legs first + every gap says why): it also prints the
+memo's `growth_coverage`, the served `growth_line` and fold, the SNDK and DBRG
+GrowthReads with their chips, the top 15 of `res_growth` with their legs, the
+acceptance names (stale / ETF / disagreement), the count of growth chips that
+contain a dash (must be 0) and the identity `sum(classes) == scanned − no_bars`.
+`--dump-fixture` also writes `_sndk_tile` — SNDK's served badges + stats built
+by `tile_badges` / `tile_stats` from its `rank()` row (it sits past the 80-tile
+cut on 🚀) with its last 30 cached bars — and serves every variant off ONE
+universe snapshot (memoised in this process) so the dump costs one fan-out.
+
 Not a study of edge: a timing and a count, no placebo applies.
 """
 from __future__ import annotations
@@ -68,7 +78,16 @@ VARIANTS = (("default", {}), ("res_t1", {"sort": "res_t1"}), ("res_t2", {"sort":
             ("res_today", {"sort": "res_today"}), ("res_growth", {"sort": "res_growth"}))
 # 2026-10-07: his example (VST), the tiny / negative year-ago EPS bases (PBF, CRI),
 # a material +4,671% base (TWLO), a mega cap and the benchmark
-WATCH = ("VST", "PBF", "CRI", "TWLO", "NVDA", "SPY")
+WATCH = ("VST", "PBF", "CRI", "TWLO", "NVDA", "SPY", "SNDK", "DBRG")
+# 2026-10-07 b acceptance names (SPEC §5 V3)
+ACCEPT = {"stale": ("AIQ", "MRX", "GLIBA", "SE", "ASML", "DOX"),
+          "etf": ("SPY", "QQQ", "DRAM"),
+          "disagree": ("BAC", "JPM", "GS")}
+GREAD_KEYS = ("state", "gap", "bars", "period", "year_ago_period", "source", "latest_idx",
+              "expected_idx", "sales_yoy_pct", "sales_stored_pct", "sales_series_pct",
+              "sales_base", "sales_reason", "sales_ranked", "sales_agrees", "eps_yoy_pct",
+              "eps_stored_pct", "eps_series_pct", "eps_base", "eps_reason", "eps_ranked",
+              "eps_year_ago_ni", "score", "legs", "as_of")
 
 
 def block_writes() -> None:
@@ -108,9 +127,46 @@ def _hand(entry: dict, frames: dict) -> dict:
     return out
 
 
+def _sndk_tile(sym: str, now: datetime) -> dict:
+    """SNDK's card as the board builds it (badges + stats from its rank() row),
+    with its last 30 cached bars — it sits past the 80-tile cut on 🚀."""
+    from chart_maps import board as B
+    from chart_maps import resiliency_tab as R
+    from sepa import prices
+    got = R.cached_or_warm("full", now=now, sync=True)
+    entry = got["entry"]
+    raw = B._bulk_snaps_fanout([sym, R.BENCH, R.EW_BENCH])
+    rows, *_ = R.rank(entry, raw, None, now=now, sort=R.SORT_GROWTH)
+    r = next((x for x in rows if x["symbol"] == sym), None)
+    if r is None:
+        return {"symbol": sym, "missing": True}
+    df = (prices.bulk_cached_frames([sym]) or {}).get(sym)
+    bars = []
+    if df is not None:
+        for ts, b in df.tail(30).iterrows():
+            bars.append({"t": ts.date().isoformat(), "o": float(b["open"]), "h": float(b["high"]),
+                         "l": float(b["low"]), "c": float(b["close"]), "v": float(b["volume"])})
+    return {"symbol": sym, "theme": None, "href": f"/sepa/{sym}", "last_close": r.get("ref_close"),
+            "bands": [], "markers": [], "lines": [], "bars": bars,
+            "badges": R.tile_badges(r), "stats": R.tile_stats(r), "why": R.why_text(r),
+            "resiliency": r["resiliency"], "res_filter": dict(r["res_filter"])}
+
+
 def dump_fixture(path: str, now: datetime) -> dict:
     from chart_maps import api
+    from chart_maps import board as B
     variants = {}
+    # ONE universe snapshot for every variant (this process only) — the Massive
+    # snapshot is the probe's only network read; seven fan-outs bought nothing
+    real_fan = B._bulk_snaps_fanout
+    memo: dict = {}
+
+    def _fan_once(symbols):
+        key = "u" if len(list(symbols or [])) > 50 else ",".join(sorted(symbols or []))
+        if key not in memo:
+            memo[key] = real_fan(symbols)
+        return memo[key]
+    B._bulk_snaps_fanout = _fan_once
     for name, kw in VARIANTS:
         args = {"tab": "resiliency", "limit": 80, "days": 130, "universe": "full",
                 "min_tier": "ok", "sort": kw.get("sort", "default"),
@@ -132,6 +188,8 @@ def dump_fixture(path: str, now: datetime) -> dict:
            "_captured_at": now.isoformat(timespec="seconds"),
            "_args": {k: v["args"] for k, v in variants.items()}}
     doc.update({k: v["payload"] for k, v in variants.items()})
+    doc["_sndk_tile"] = _sndk_tile("SNDK", now)
+    B._bulk_snaps_fanout = real_fan
     Path(path).write_text(json.dumps(doc, ensure_ascii=False, allow_nan=False), encoding="utf-8")
     return {k: v["s"] for k, v in variants.items()}
 
@@ -235,6 +293,12 @@ def main(argv=None) -> dict:
         ranks[srt] = {"s": round(time.perf_counter() - t3, 3), "sort_unavailable": su,
                       "resolved": list(resolved), "n_tradeable": len(tradeable),
                       "top": [r["symbol"] for r in rows[:15]],
+                      "top_legs": [
+                          {"symbol": r["symbol"],
+                           "legs": (r["resiliency"].get("growth") or {}).get("legs"),
+                           "score": (r["resiliency"].get("growth") or {}).get("score"),
+                           "eps_ranked": (r["resiliency"].get("growth") or {}).get("eps_ranked")}
+                          for r in tradeable[:15]],
                       "top_tradeable": [
                           {"symbol": r["symbol"],
                            "move_pct": (r["resiliency"].get("today") or {}).get("move_pct"),
@@ -249,6 +313,30 @@ def main(argv=None) -> dict:
     out["identity_scanned_eq_rated_partial_no_bars"] = (
         counts["scanned"] == counts["rated_t1"] + counts["partial_t1"] + counts["no_bars"])
     out["filters_pass"] = {i["key"]: i["pass"] for i in filters["items"]}
+
+    # 🚀 growth coverage (2026-10-07 b)
+    cov = entry.get("growth_coverage") or {}
+    out["growth_coverage"] = cov
+    out["growth_line"] = R.growth_line(cov)
+    out["growth_gaps"] = R.growth_gaps_block(cov)
+    out["identity_classes_eq_scanned_minus_no_bars"] = (
+        sum((cov.get("classes") or {}).values()) == counts["scanned"] - counts["no_bars"])
+    greads = {s: (rd.get("growth") or {}) for s, rd in (entry.get("reads") or {}).items()}
+    out["growth_chips_with_dash"] = sorted(s for s, g in greads.items() if "—" in R.growth_chip(g))
+    out["growth_named"] = {s: ({k: greads[s].get(k) for k in GREAD_KEYS}
+                               | {"chip": R.growth_chip(greads[s]), "stat": R._growth_stat(greads[s])}
+                               if s in greads else None)
+                           for s in ("SNDK", "DBRG", "MU", "VST")}
+    out["growth_accept"] = {grp: {s: ({"gap": greads[s].get("gap"), "score": greads[s].get("score"),
+                                       "sales_reason": greads[s].get("sales_reason"),
+                                       "chip": R.growth_chip(greads[s])} if s in greads else None)
+                                  for s in names} for grp, names in ACCEPT.items()}
+    g_rows, *_ = R.rank(entry, raw, pm, now=now, sort=R.SORT_GROWTH)
+    lg = [int((r["resiliency"]["growth"] or {}).get("legs") or 0)
+          if (r["resiliency"]["growth"] or {}).get("score") is not None else 0 for r in g_rows]
+    out["growth_order_legs_non_increasing"] = all(a >= b for a, b in zip(lg, lg[1:]))
+    out["growth_sndk_position"] = next((i + 1 for i, r in enumerate(g_rows)
+                                        if r["symbol"] == "SNDK"), None)
 
     frames = prices.bulk_cached_frames([s for s in NAMED])
     out["named"] = _hand(entry, frames)

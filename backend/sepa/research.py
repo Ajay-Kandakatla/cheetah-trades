@@ -46,6 +46,12 @@ log = logging.getLogger("sepa.research")
 # than absent, and it leaves a full week of margin after a missed run.
 CACHE_TTL_SEC = 16 * 24 * 3600
 
+# The SEPA 200-day MA + the 20-bar ADR need it: a symbol with fewer closed
+# daily bars gets NO research blob (`compute_research` returns None). Named
+# 2026-10-07 b so the 🛡️ growth read can say "new listing, N bars" with the
+# same number instead of a retyped literal. The value did not change.
+MIN_RESEARCH_BARS = 220
+
 
 # ---------------------------------------------------------------------------
 # Mongo cache
@@ -239,7 +245,7 @@ def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict
     price history. Skipped fields stay None so the hot scan can fill them.
     """
     df = prices.load_prices(symbol)
-    if df is None or len(df) < 220:
+    if df is None or len(df) < MIN_RESEARCH_BARS:
         return None
 
     liq = adr.liquidity_check(df)

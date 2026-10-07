@@ -234,3 +234,26 @@ scripts/qoq_negative_base.py      the base problem + the persistence placebo
 scripts/qoq_seasonality.py        the seasonality decomposition + mitigations
 scripts/qoq_board_composition.py  what the board becomes with the gate off
 ```
+
+## 2026-10-07 b — the backfill can no longer create a vintage mix
+
+Ajay 2026-10-07: *"no #s for SNDK … make sure you do a sanity chcek fo missing data pieces over all."* Four defects
+in `qoq.backfill`, MEASURED by code read:
+
+- (a) the series-only `$set` never recomputed `rev_growth_q_pct` / `q_eps_growth_pct` / `sales`, so a doc could carry v1
+  series beside a vX-era % (SNDK: stored sales % None while its own series computes +371.59%);
+- (b) `if m.get(k)` passed a list of all Nones;
+- (c) `todo[:limit]` sliced an unsorted `find()`, so `--all --limit 700` re-fetched the same first 700 every week;
+- (d) the projection omitted `fundamentals.q_period_series`, so `_series_missing` was True for EVERY doc and the
+  nightly "missing-only" job was really `--all` over the first 900 in natural order.
+
+Fix (`sepa/qoq.py`): `BACKFILL_PROJ` carries the period keys, `_source` and both stored %; `backfill_skip_reason`
+refuses a write onto a yfinance doc (`yfinance_doc`), onto a new latest quarter (`new_latest_quarter`), or one that
+would leave a stored % disagreeing with the new series (`rev_pct_would_disagree` / `eps_pct_would_disagree`,
+`pct_agrees` within `PCT_AGREE_TOL`); `sets` iterates `SERIES_KEYS` and drops all-None lists (`_has_values`); the
+walk is `_rotate(sorted(todo), limit, period_sec=ROTATE_DAY_SEC | ROTATE_WEEK_SEC, now)` — a deterministic window
+that covers every doc in ceil(n/limit) runs. The Sunday research refresh stays the ONE writer of the % fields
+(re-deriving them here would move CANSLIM C mid-week). The return adds `skipped: {reason: n}`. `cached_at` is still
+never written. No crontab change: the 04:40 job's `attempted` falls from 900 to the true missing count, so it makes
+fewer Massive calls; the Saturday `--all --limit 700` now rotates. Tests:
+`backend/tests/test_qoq_backfill_vintage_2026_10_07.py` (its fake collection APPLIES the projection).

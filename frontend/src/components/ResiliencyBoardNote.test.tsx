@@ -265,3 +265,52 @@ describe('ResiliencyBoardNote — the 📅 market line (2026-10-07)', () => {
     for (const w of ['NaN', 'undefined', 'bounce', 'fake']) expect(t.toLowerCase().includes(w.toLowerCase()), w).toBe(false);
   });
 });
+
+/* 🚀 growth coverage (2026-10-07 b). Ajay: "yes please also no #s for SNDK can
+ * you do a deep analysis of data and make sure you do a sanity chcek fo missing
+ * data pieces over all." The line and the fold are SERVED (only on the 🚀
+ * order) and printed verbatim; the component does no maths. */
+describe('ResiliencyBoardNote — the 🚀 growth coverage line + fold (2026-10-07 b)', () => {
+  const GAPS = { summary: 'G-summary', lines: ['G-1 — SNDK, CSCO', 'G-2 — SPY'] };
+
+  it('prints the served growth line verbatim after the market line, and the fold summary + lines', () => {
+    mount(board({ market_line: 'M-served', growth_line: 'GL-served', growth_gaps: GAPS }));
+    const line = screen.getByTestId('cm-res-growth');
+    expect(line.textContent).toBe('GL-served');
+    const market = screen.getByTestId('cm-res-market');
+    expect(market.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const fold = screen.getByTestId('cm-res-growth-gaps');
+    expect(fold.tagName).toBe('DETAILS');
+    expect(fold.querySelector('summary')!.textContent).toBe('G-summary');
+    expect(screen.getAllByTestId('cm-res-growth-gap').map((p) => p.textContent)).toEqual(GAPS.lines);
+  });
+
+  it.each([[undefined], [null], [''], ['   '], [42]])('NEGATIVE: growth_line %s renders no line', (v) => {
+    mount(board({ growth_line: v, growth_gaps: GAPS }));
+    expect(screen.queryByTestId('cm-res-growth')).toBeNull();
+    expect(screen.getByTestId('cm-res-growth-gaps')).toBeTruthy();       // the fold stands on its own
+  });
+
+  it.each([
+    ['absent', undefined], ['null', null], ['a string', 'x'], ['an array', ['a']],
+    ['lines not an array', { summary: 'S', lines: 'a' }], ['summary missing', { lines: ['a'] }],
+    ['blank summary', { summary: ' ', lines: ['a'] }], ['no string lines', { summary: 'S', lines: [1, null] }],
+  ])('NEGATIVE: growth_gaps %s renders no fold', (_k, v) => {
+    mount(board({ growth_line: 'GL', growth_gaps: v }));
+    expect(screen.queryByTestId('cm-res-growth-gaps')).toBeNull();
+    expect(screen.queryAllByTestId('cm-res-growth-gap')).toEqual([]);
+    expect(screen.getByTestId('cm-res-growth').textContent).toBe('GL');
+  });
+
+  it('NEGATIVE: a served line whose numbers disagree with counts is still printed verbatim (no maths)', () => {
+    const odd = '🚀 Growth on file: 9 both legs · 0 one leg · of 3';
+    mount(board({ growth_line: odd, counts: { scanned: 3, growth_ranked: 1 } }));
+    expect(screen.getByTestId('cm-res-growth').textContent).toBe(odd);
+  });
+
+  it('NEGATIVE: neither renders when the block carries none (every non-🚀 sort)', () => {
+    mount(board({ market_line: 'M-served' }));
+    expect(screen.queryByTestId('cm-res-growth')).toBeNull();
+    expect(screen.queryByTestId('cm-res-growth-gaps')).toBeNull();
+  });
+});

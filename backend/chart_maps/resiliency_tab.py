@@ -55,6 +55,20 @@ leg only off a material year-ago base (`qoq.MIN_EPS_BASE` through
 `qoq._seq_pct`; `bonde._rev_base`). Both are ORDERS, UNMEASURED — the MEASURED
 lines on this tab are about data days only.
 
+🚀 TWO LEGS FIRST + EVERY GAP SAYS WHY (2026-10-07 b). Ajay, on "say if you
+want DBRG-style one-leg names out of the top block": "yes please also no #s
+for SNDK can you do a deep analysis of data and make sure you do a sanity
+chcek fo missing data pieces over all." The 🚀 order is now BOTH ranked legs,
+then one (an EPS leg before a sales leg), then none. Every leg that does not
+rank carries a reason code and the chip says it in words (yr-ago loss, ETF/fund,
+new listing, a filing a year past due...) — never a bare dash; a figure shown
+but not ranked carries `NOT_RANKED_MARK`. His rule #7 (a stored figure must
+agree with its own quarterly series) now covers the sales leg too
+(`SALES_AGREE_REQUIRED`), an ETF never ranks, and a latest filing
+`STALE_FILING_QUARTERS` or more behind the quarter now due never ranks — HIS
+CALL defaults, one constant each. On the 🚀 order a served coverage line and a
+fold count every gap class over the memo's cards (`growth_coverage`).
+
 DISPLAY ONLY and UNMEASURED: nothing here gates a scan, pushes a phone, sizes
 a position or enters a lane. The persistence study is
 `backend/scripts/resiliency_study.py`; its verdict literal lives in
@@ -74,6 +88,7 @@ from typing import Optional
 
 import macro_calendar
 from chart_maps import dual_momentum_tab as DMT
+from observability import period_freshness as PF
 from rotation import tracker as RT
 from sepa import bonde as SB
 from sepa import breakout_audit, qoq, universe
@@ -151,7 +166,24 @@ GROWTH_PERIOD_UNKNOWN = "quarter not on file"
 GROWTH_STAT_KEY = "Growth"
 EPS_MIN_BASE = qoq.MIN_EPS_BASE           # $0.10 (import) — HIS CALL: applied to the YEAR-AGO quarter
 REV_MIN_BASE = SB.MIN_MATERIAL_BASE_REV   # $1,000,000 (import)
-PCT_AGREE_TOL = 0.011         # 2-dp representation tolerance (stored % vs its own series), NOT a rule
+PCT_AGREE_TOL = qoq.PCT_AGREE_TOL                 # import — one home (2-dp representation, NOT a rule)
+# 2026-10-07 b — 🚀 two legs first + every gap says why (SPEC 2026-10-07)
+PCT_AGREE_TOL_1DP = 0.05 + PCT_AGREE_TOL          # a 1-dp stored figure (sales.growth_yoy_pct) — representation, NOT a rule
+SALES_AGREE_REQUIRED = True                       # HIS CALL 1 (2026-10-07 b): his rule #7 applied to the sales leg
+STALE_FILING_QUARTERS = qoq.YOY_GAP               # HIS CALL 2: a latest quarter this many behind the expected one never ranks
+NOT_RANKED_MARK = "*"
+GROWTH_CHIP_NONE_FMT = GROWTH_CHIP_PREFIX + "· EPS: {reason}"   # "Sales · EPS: ETF/fund, no filings"
+GROWTH_GAP_TOP = 5                                # names printed per gap line — display, NOT a rule
+PENDING_REASONS = ("stored_missing", "stored_disagrees", "no_series")
+RULE_REASONS = ("year_ago_loss", "year_ago_too_small")
+GAP_ORDER = ("etf", "new_listing", "not_researched", "no_filings", "stale_filings",
+             "period_gap", "year_ago_missing")
+GAP_LABEL = {"etf": "ETF/fund", "new_listing": "new listing", "not_researched": "not researched",
+             "no_filings": "no quarterly figures", "stale_filings": "a year past due",
+             "period_gap": "quarters not a year apart", "year_ago_missing": "year-ago quarter missing"}
+PENDING_LABEL = "pending refresh"
+BY_RULE_LABEL = "blank by rule"
+GROWTH_GAPS_SUMMARY = "Why a card has no ranked growth — most-traded names first"
 MARKET_LIVE_WHEN = "Today, live"
 MARKET_PRE_WHEN = "Pre-market today, live"
 MARKET_AFTER_WHEN_FMT = "Today's close ({close} ET)"
@@ -875,55 +907,230 @@ def _as_of_day(v) -> Optional[str]:
         return None
 
 
-def growth_read(f: Optional[dict]) -> dict:
+def _growth_blank() -> dict:
+    return {"state": "no_doc", "period": None, "year_ago_period": None, "source": None,
+            "sales_yoy_pct": None, "sales_stored_pct": None, "sales_base": "unknown",
+            "sales_year_ago": None, "sales_ranked": False,
+            "eps_yoy_pct": None, "eps_stored_pct": None, "eps_base": "unknown",
+            "eps_year_ago": None, "eps_agrees": None, "eps_ranked": False,
+            "score": None, "legs": 0, "as_of": None,
+            # 2026-10-07 b
+            "sales_series_pct": None, "eps_series_pct": None, "sales_agrees": None,
+            "sales_reason": "no_doc", "eps_reason": "no_doc", "eps_year_ago_ni": None,
+            "sales_latest": None,
+            "latest_idx": None, "expected_idx": None, "etf": False,
+            "gap": None, "bars": None}
+
+
+def _card_state(out: dict, state: str) -> dict:
+    """A card-level state copies into both legs (neither ranks)."""
+    out.update(state=state, sales_reason=state, eps_reason=state,
+               sales_ranked=False, eps_ranked=False, sales_yoy_pct=None, eps_yoy_pct=None)
+    return out
+
+
+def expected_quarter_idx(today: date) -> int:
+    """`y*4 + (q-1)` of the quarter whose filings are due by `today`
+    (`period_freshness.expected_13f_quarter` — the 13F cadence, one home)."""
+    y, q = PF.quarter_of(PF.expected_13f_quarter(today))
+    return int(y) * 4 + (int(q) - 1)
+
+
+def growth_read(f: Optional[dict], *, today: Optional[date] = None,
+                is_etf: bool = False) -> dict:
     """GrowthRead off one `research.decision_snapshot` row. A leg is RANKED
-    only off a material year-ago base: EPS `EPS_MIN_BASE` (via `qoq._seq_pct`)
-    and the stored figure agreeing with its own series; sales `bonde._rev_base`
-    ("ok" = at or over `REV_MIN_BASE`). A year-ago loss or a base too small is
-    shown blank. Quarters not four apart (`qoq.period_ok` False) -> nothing."""
-    out = {"state": "no_figures", "period": None, "year_ago_period": None, "source": None,
-           "sales_yoy_pct": None, "sales_stored_pct": None, "sales_base": "unknown",
-           "sales_year_ago": None, "sales_ranked": False,
-           "eps_yoy_pct": None, "eps_stored_pct": None, "eps_base": "unknown",
-           "eps_year_ago": None, "eps_agrees": None, "eps_ranked": False,
-           "score": None, "legs": 0, "as_of": None}
-    if not isinstance(f, dict):
-        return out
-    src = f.get("_source")
-    periods = f.get("q_period_series") if isinstance(f.get("q_period_series"), list) else None
-    ya = qoq.HEADLINE_PAIR[1]
-    out.update(source=src if isinstance(src, str) else None,
-               period=qoq.period_label(periods[0], src) if periods else None,
-               year_ago_period=(qoq.period_label(periods[ya], src)
-                                if periods and len(periods) > ya else None),
-               as_of=_as_of_day(f.get("cached_at")))
+    only off a material year-ago base — EPS `EPS_MIN_BASE` (via `qoq._seq_pct`),
+    sales `bonde._rev_base` ("ok" = at or over `REV_MIN_BASE`) — AND a stored
+    figure that agrees with the company's own quarterly series (his rule #7;
+    the sales leg obeys it while `SALES_AGREE_REQUIRED`). Every leg that does
+    not rank carries a reason code (2026-10-07 b), so no surface prints a bare
+    dash. Card-level states: etf / no_doc / period_mismatch / stale_filings /
+    no_figures. PURE."""
+    out = _growth_blank()
+    out["etf"] = bool(is_etf)
+    has_doc = isinstance(f, dict)
+    if has_doc:
+        src = f.get("_source")
+        periods = f.get("q_period_series") if isinstance(f.get("q_period_series"), list) else None
+        ya = qoq.HEADLINE_PAIR[1]
+        out.update(source=src if isinstance(src, str) else None,
+                   period=qoq.period_label(periods[0], src) if periods else None,
+                   year_ago_period=(qoq.period_label(periods[ya], src)
+                                    if periods and len(periods) > ya else None),
+                   as_of=_as_of_day(f.get("cached_at")))
+    # 1. an ETF / fund files no company financials — never ranked, even with figures
+    if is_etf:
+        return _card_state(out, "etf")
+    # 2. no research document
+    if not has_doc:
+        return _card_state(out, "no_doc")
+    # 3. quarters not four apart on file
     if qoq.period_ok(periods) is False:
-        out["state"] = "period_mismatch"
-        return out
-    # sales: the spine's figure first, canslim's parallel one as the fallback (🔥 Hottest)
+        return _card_state(out, "period_mismatch")
+    # 4. a latest filing a year or more behind the quarter now due (recycled ticker / provider gap)
+    li = qoq._int_or_none(periods[0]) if periods else None
+    out["latest_idx"] = li
+    if today is not None:
+        ei = expected_quarter_idx(today)
+        out["expected_idx"] = ei
+        if li is not None and ei - li >= STALE_FILING_QUARTERS:
+            return _card_state(out, "stale_filings")
+    # 5. sales — the 2-dp spine figure first, canslim's 1-dp one as the fallback
     sales = f.get("sales") if isinstance(f.get("sales"), dict) else {}
-    s_st = _r(sales.get("growth_yoy_pct"))
+    s_st, tol = _r(f.get("rev_growth_q_pct")), PCT_AGREE_TOL
     if s_st is None:
-        s_st = _r(f.get("rev_growth_q_pct"))
+        s_st, tol = _r(sales.get("growth_yoy_pct")), PCT_AGREE_TOL_1DP
+    rev = f.get("rev_q_series") if isinstance(f.get("rev_q_series"), list) else []
+    s_ser = qoq.yoy_pct(rev)
     rb = SB._rev_base({"fundamentals": f})
     s_base = rb.get("base_state") if rb.get("base_state") in (
         "ok", "non_positive", "too_small", "unknown") else "unknown"
-    s_v = None if s_base in ("non_positive", "too_small") else s_st
+    s_v, s_rk, s_why, s_ag = None, False, "not_filed", None
+    if s_base == "non_positive":
+        s_why = "year_ago_loss"
+    elif s_base == "too_small":
+        s_why = "year_ago_too_small"
+    elif s_base == "unknown":
+        slot0 = _f(rev[0]) if rev else None
+        slot4 = _f(rev[qoq.YOY_GAP]) if len(rev) > qoq.YOY_GAP else None
+        if s_st is not None:
+            s_v, s_why = s_st, "no_series"
+        elif slot0 is not None and slot4 is None:
+            s_why = "year_ago_missing"
+    else:                                                   # base ok
+        if s_st is None and s_ser is not None:
+            s_v, s_why = s_ser, "stored_missing"
+        elif s_st is not None and s_ser is not None:
+            s_ag = qoq.pct_agrees(s_st, s_ser, tol)
+            s_v = s_st
+            if s_ag is True:
+                s_why, s_rk = None, True
+            else:
+                s_why, s_rk = "stored_disagrees", not SALES_AGREE_REQUIRED
+        elif s_st is not None:
+            s_v, s_why = s_st, "no_series"
     out.update(sales_stored_pct=s_st, sales_base=s_base, sales_year_ago=_f(rb.get("base_rev")),
-               sales_yoy_pct=s_v, sales_ranked=bool(s_base == "ok" and s_v is not None))
-    # EPS: the stored figure, ranked only when its year-ago base is material AND
-    # its own quarterly series agrees with it
+               sales_latest=_f(rb.get("latest_rev")),
+               sales_yoy_pct=s_v, sales_ranked=bool(s_rk), sales_series_pct=s_ser,
+               sales_agrees=s_ag, sales_reason=s_why)
+    # 6. EPS — ranked only when its year-ago base is material AND its own series agrees
     e_st = _r(f.get("q_eps_growth_pct"))
-    pct, st, b = _yoy_base(f.get("eps_q_series"), EPS_MIN_BASE)
+    eps = f.get("eps_q_series") if isinstance(f.get("eps_q_series"), list) else []
+    pct, st, b = _yoy_base(eps, EPS_MIN_BASE)
     e_base = _BASE_WORD.get(st, "unknown")
-    e_v = None if e_base in ("non_positive", "too_small") else e_st
-    agrees = (bool(abs(e_st - pct) <= PCT_AGREE_TOL)
-              if (e_base == "ok" and e_st is not None and pct is not None) else None)
+    e_v, e_rk, e_why, agrees, ni_ya = None, False, "not_filed", None, None
+    if e_base == "non_positive":
+        e_why = "year_ago_loss"
+    elif e_base == "too_small":
+        e_why = "year_ago_too_small"
+    elif e_base == "unknown":
+        ni = f.get("ni_q_series") if isinstance(f.get("ni_q_series"), list) else []
+        ni_b = _f(ni[qoq.YOY_GAP]) if len(ni) > qoq.YOY_GAP else None
+        e0 = _f(eps[0]) if eps else None
+        if ni_b is not None and ni_b <= 0:
+            e_why, ni_ya = "year_ago_loss", ni_b            # DISPLAY ONLY — never a %, never ranked
+        elif e_st is not None:
+            e_v, e_why = e_st, "no_series"
+        elif e0 is not None:
+            e_why = "year_ago_missing"
+    else:                                                   # base ok
+        if e_st is None and pct is not None:
+            e_v, e_why = pct, "stored_missing"
+        elif e_st is not None and pct is not None:
+            agrees = qoq.pct_agrees(e_st, pct, PCT_AGREE_TOL)
+            e_v = e_st
+            if agrees is True:
+                e_why, e_rk = None, True
+            else:
+                e_why = "stored_disagrees"
+        elif e_st is not None:
+            e_v, e_why = e_st, "no_series"
     out.update(eps_stored_pct=e_st, eps_base=e_base, eps_year_ago=_f(b), eps_yoy_pct=e_v,
-               eps_agrees=agrees, eps_ranked=bool(e_base == "ok" and agrees is True))
-    if not (s_st is None and e_st is None and s_base == "unknown" and e_base == "unknown"):
-        out["state"] = "read"
+               eps_agrees=agrees, eps_ranked=bool(e_rk), eps_series_pct=pct,
+               eps_reason=e_why, eps_year_ago_ni=ni_ya)
+    # 7. card state
+    figure = s_v is not None or e_v is not None
+    out["state"] = ("read" if figure or s_why != "not_filed" or e_why != "not_filed"
+                    else "no_figures")
     return out
+
+
+def coverage_class(g: Optional[dict], *, bars, min_bars) -> str:
+    """The ONE gap class of a card's GrowthRead (first match wins). PURE."""
+    g = g if isinstance(g, dict) else {}
+    legs = int(g.get("legs") or 0) if _f(g.get("score")) is not None else 0
+    st = g.get("state")
+    if legs >= 2:
+        return "two_legs"
+    if legs == 1:
+        return "one_leg"
+    if st == "etf":
+        return "etf"
+    if st == "no_doc":
+        return "new_listing" if (bars is not None and int(bars) < int(min_bars)) else "not_researched"
+    if st == "period_mismatch":
+        return "period_gap"
+    if st == "stale_filings":
+        return "stale_filings"
+    why = (g.get("sales_reason"), g.get("eps_reason"))
+    if any(w in PENDING_REASONS for w in why):
+        return "pending"
+    if any(w in RULE_REASONS for w in why):
+        return "by_rule"
+    if "year_ago_missing" in why:
+        return "year_ago_missing"
+    return "no_filings"
+
+
+COVERAGE_CLASSES = ("two_legs", "one_leg", "pending", "by_rule") + GAP_ORDER
+
+
+def _pending_legs(g: dict) -> int:
+    n = 0
+    for leg in ("sales", "eps"):
+        if g.get(leg + "_reason") in PENDING_REASONS and not g.get(leg + "_ranked"):
+            n += 1
+    return n
+
+
+def _by_adv(items: list) -> list:
+    """[(sym, adv50)] -> symbols, adv50 desc (None last), then symbol."""
+    return [s for s, _a in sorted(items, key=lambda t: (_f(t[1]) is None, -(_f(t[1]) or 0.0), t[0]))]
+
+
+def growth_coverage(reads, *, min_bars, ttl_days) -> dict:
+    """What growth is on file across the memo's cards, by gap class. `reads` =
+    {sym: closed read with "growth" + "adv50"}. Identity: sum(classes) == n ==
+    len(reads). PURE."""
+    items = list(reads.items()) if isinstance(reads, dict) else []
+    classes = {k: 0 for k in COVERAGE_CLASSES}
+    members: dict = {k: [] for k in COVERAGE_CLASSES}
+    pend: list = []
+    plegs = n_doc = 0
+    asofs: dict = {}
+    for sym, rd in items:
+        rd = rd if isinstance(rd, dict) else {}
+        g = rd.get("growth") if isinstance(rd.get("growth"), dict) else {}
+        cls = g.get("gap") or coverage_class(g, bars=rd.get("bars"), min_bars=min_bars)
+        if cls not in classes:
+            cls = "no_filings"
+        classes[cls] += 1
+        members[cls].append((sym, rd.get("adv50")))
+        pl = _pending_legs(g)
+        plegs += pl
+        if pl:
+            pend.append((sym, rd.get("adv50")))
+        if g.get("state") != "no_doc" and not (g.get("state") == "etf" and not g.get("as_of")):
+            n_doc += 1
+        a = g.get("as_of")
+        if a:
+            asofs[a] = asofs.get(a, 0) + 1
+    asof = max(sorted(asofs), key=lambda k: asofs[k]) if asofs else None
+    return {"n": len(items), "classes": classes,
+            "top": {k: _by_adv(v)[:GROWTH_GAP_TOP] for k, v in members.items() if v},
+            "pending_legs": plegs, "pending_top": _by_adv(pend)[:GROWTH_GAP_TOP],
+            "asof": asof, "asof_n": int(asofs.get(asof, 0)) if asof else 0,
+            "n_doc": n_doc, "min_bars": int(min_bars), "ttl_days": int(ttl_days)}
 
 
 def score_growth(growths: list) -> None:
@@ -984,9 +1191,13 @@ def order_key(row: dict, sort: str) -> tuple:
         return ((0 if td.get("state") == "read" and mv is not None else 1, -(mv or 0.0))
                 + _tier_key(res.get("t1")) + (sym,))          # ties: the T1 hold rate
     if sort == SORT_GROWTH:
+        # his YES (2026-10-07 b): BOTH ranked legs first, then one ranked leg (an
+        # EPS leg before a sales leg — shipped #8 kept), then none
         g = res.get("growth") or {}
         sc = _f(g.get("score"))
-        return ((sc is None, not bool(g.get("eps_ranked")), -(sc or 0.0))
+        legs = int(g.get("legs") or 0) if sc is not None else 0
+        block = 0 if legs >= 2 else (1 if legs == 1 else 2)
+        return ((block, not bool(g.get("eps_ranked")), -(sc or 0.0))
                 + _tier_key(res.get("t1")) + (sym,))
     return _tier_key(res.get("t1")) + (sym,)          # SORT_T1, "default" and unknown keys
 
@@ -1100,6 +1311,19 @@ def note_text(study: Optional[dict] = None) -> str:
 # ---------------------------------------------------------------------------
 # rules + box notes (served; the FE prints them verbatim)
 # ---------------------------------------------------------------------------
+def growth_rule_line() -> str:
+    """The 🚀 rule, built from the constants at call time (2026-10-07 b)."""
+    return (f"{GROWTH_MARK} Sales + EPS growth = the latest reported quarter against the same "
+            "quarter a year earlier. Order: names ranked on BOTH legs first, then one leg (an "
+            "EPS leg before a sales leg), then none; within a block each leg's percentile is "
+            "averaged — the breakouts board's blend. Never ranked: a year-ago EPS under "
+            f"${EPS_MIN_BASE:.2f} or a year-ago loss, a year-ago revenue under "
+            f"${REV_MIN_BASE / 1e6:g}M or at or under zero, quarters not a year apart on file, "
+            f"a latest filing {STALE_FILING_QUARTERS} or more quarters past due, an ETF/fund, "
+            "and a stored figure that is missing or disagrees with its own quarterly series "
+            f"(shown with {NOT_RANKED_MARK}). UNMEASURED — an order, not a forecast.")
+
+
 def rules_block() -> dict:
     lines = [
         (f"Held = the close on a data day no more than {HOLD_MAX_DROP_PCT:g}% under the prior "
@@ -1126,13 +1350,7 @@ def rules_block() -> dict:
          "no print sorts last; ties go to the T1 hold rate. The "
          f"{TODAY_MARK} line counts every name read, before the boxes and the liquidity "
          "floor."),
-        (f"{GROWTH_MARK} Sales + EPS growth = the latest reported quarter against the same "
-         f"quarter a year earlier. Never ranked: a year-ago EPS under ${EPS_MIN_BASE:.2f} or "
-         f"a year-ago loss, a year-ago revenue under ${REV_MIN_BASE / 1e6:g}M or at or under "
-         "zero (both shown blank), quarters not a year apart on file, and an EPS figure that "
-         "disagrees with its own quarterly series (shown, not ranked). Ranked by each leg's "
-         "percentile averaged — the breakouts board's blend — names with an EPS leg first. "
-         "UNMEASURED — an order, not a forecast."),
+        growth_rule_line(),
         ((f"{PRE_MARK} = a fresh pre-market print above the prior close on at least "
           f"{PM_RVOL_MIN:g}× the name's own pre-market volume by the same minute, over at "
           f"least {PM_BASELINE_MIN_SESSIONS} cached sessions. 04:00–09:30 ET only.")
@@ -1146,6 +1364,8 @@ def rules_block() -> dict:
             "pre_rvol_min": float(PM_RVOL_MIN), "pre_min_sessions": int(PM_BASELINE_MIN_SESSIONS),
             "vol_avg_bars": int(VOL_AVG_BARS), "benchmark": BENCH,
             "eps_min_base": float(EPS_MIN_BASE), "rev_min_base": float(REV_MIN_BASE),
+            "stale_filing_quarters": int(STALE_FILING_QUARTERS),
+            "sales_agree_required": bool(SALES_AGREE_REQUIRED),
             "lines": lines}
 
 
@@ -1304,8 +1524,34 @@ def _events_error(past) -> Optional[str]:
     return ", ".join(reasons) if reasons else "no FRED release answered"
 
 
+def _etf_set(syms) -> set:
+    """Every ETF / fund the app already knows — the static ETF universe, the RS
+    anchors, the pinned demand ETFs and the etf_info cache (ONE projected read,
+    never a fetch). Each source fails to set() on its own."""
+    out: set = set()
+    try:
+        out |= {str(s).upper() for s in (universe.fetch_etf_universe() or [])}
+    except Exception:                                           # noqa: BLE001
+        pass
+    try:
+        out |= {str(s).upper() for s in universe.RS_ANCHORS}
+    except Exception:                                           # noqa: BLE001
+        pass
+    try:
+        from supply_demand import demand_reentry as D
+        out |= {str(s).upper() for s in D.PINNED_ETFS}
+    except Exception:                                           # noqa: BLE001
+        pass
+    try:
+        from sepa import etf_info
+        out |= set(etf_info.cached_etf_set(syms) or ())
+    except Exception:                                           # noqa: BLE001
+        pass
+    return out
+
+
 def build(universe_name: str, session: date, *, universe_fn=None, frames_fn=None,
-          events_fn=None, calendar_fn=None, fund_fn=None) -> dict:
+          events_fn=None, calendar_fn=None, fund_fn=None, etf_fn=None) -> dict:
     """The closed-bar half. ONE `bulk_cached_frames(syms + [BENCH, EW_BENCH])`,
     ONE `past_events`, ONE `get_macro_calendar()`, ONE
     `research.decision_snapshot(syms)` (warm thread only). Raises only when
@@ -1426,9 +1672,22 @@ def build(universe_name: str, session: date, *, universe_fn=None, frames_fn=None
             fund = {}
     except Exception as exc:                                    # noqa: BLE001
         fund, fund_error = {}, type(exc).__name__               # never the text (keys)
+    from sepa import research as _research               # lazy (hermetic suite)
+    try:
+        etfs = set((etf_fn or _etf_set)(list(reads)) or ())
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("resiliency tab: ETF set unavailable: %s", type(exc).__name__)
+        etfs = set()
     for sym, rd in reads.items():
-        rd["growth"] = growth_read(fund.get(sym))
+        rd["growth"] = growth_read(fund.get(sym), today=session, is_etf=sym in etfs)
     score_growth([rd["growth"] for rd in reads.values()])
+    min_bars = int(_research.MIN_RESEARCH_BARS)
+    ttl_days = int(_research.CACHE_TTL_SEC // 86400)
+    for rd in reads.values():
+        g = rd["growth"]
+        g["gap"] = coverage_class(g, bars=rd.get("bars"), min_bars=min_bars)
+        g["bars"] = rd.get("bars")
+    growth_cov = growth_coverage(reads, min_bars=min_bars, ttl_days=ttl_days)
 
     now_ts = time.time()
     return {"syms": syms, "reads": reads, "events_summary": events_summary,
@@ -1441,6 +1700,7 @@ def build(universe_name: str, session: date, *, universe_fn=None, frames_fn=None
             "ew": ew,
             "fund_summary": {"available": bool(fund) and fund_error is None, "n": len(fund),
                              "error": fund_error},
+            "growth_coverage": growth_cov,
             "last_closed": trading_days[-1] if trading_days else None,
             "built_ts": now_ts,
             "built_at": datetime.fromtimestamp(now_ts, tz=KL.ET).isoformat(timespec="seconds"),
@@ -1468,7 +1728,8 @@ def _closed_read(closed, sessions, bench_rets, bench_closes, trading_days, *, ne
         stale_note = (f"cached bars end {last_day.isoformat()}; the last session is "
                       f"{need.isoformat()}")
         eod = {**eod, "state": "stale", "bullish": None}
-    return {"t1": t1, "t2": t2, "sigma_pct": sigma_pct(closes, trading_days),
+    return {"t1": t1, "t2": t2, "bars": int(len(closed)),
+            "sigma_pct": sigma_pct(closes, trading_days),
             "beta": beta(closes, bench_closes, trading_days), "eod": eod,
             "ref_close": _f(closed["close"].iloc[-1]), "ref_date": last_day.isoformat(),
             "adv50": _f(qb.avg_dollar_vol(closed)),
@@ -1852,64 +2113,185 @@ def _usd(x) -> str:
     return f"{'-' if v < 0 else ''}${abs(v):,.2f}"
 
 
+def _research_limits() -> tuple:
+    """(MIN_RESEARCH_BARS, TTL days) from `sepa.research` — one home, lazy."""
+    from sepa import research as _research
+    return int(_research.MIN_RESEARCH_BARS), int(_research.CACHE_TTL_SEC // 86400)
+
+
+def _usd_short(x) -> str:
+    """$8.97B / $1.90B / $23.0M / $512.0K / $900 — sign first ("-$23.0M")."""
+    v = _f(x)
+    if v is None:
+        return "n/a"
+    from decimal import ROUND_HALF_UP, Decimal
+    a, sg = Decimal(repr(abs(v))), ("-" if v < 0 else "")
+
+    def _q(x: Decimal, dp: str) -> str:                     # half-up: $8.965B -> $8.97B
+        return f"{x.quantize(Decimal(dp), rounding=ROUND_HALF_UP):,}"
+    if a >= Decimal("1e9"):
+        return f"{sg}${_q(a / Decimal('1e9'), '0.01')}B"
+    if a >= Decimal("1e6"):
+        return f"{sg}${_q(a / Decimal('1e6'), '0.1')}M"
+    if a >= Decimal("1e3"):
+        return f"{sg}${_q(a / Decimal('1e3'), '0.1')}K"
+    return f"{sg}${_q(a, '1')}"
+
+
+def _cal_label(idx) -> Optional[str]:
+    """'Q2 2026' for a calendar quarter index (y*4 + q-1)."""
+    return qoq.period_label(idx, "yfinance")
+
+
+def _pct1(v: float) -> str:
+    """'+19.3%' from 19.25 — 1 dp, half away from zero (a 2-dp stored figure
+    never prints its banker's-rounded neighbour)."""
+    from decimal import ROUND_HALF_UP, Decimal
+    d = Decimal(repr(float(v))).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+    return f"{d:+,}%"
+
+
+def _leg_token(g: dict, leg: str) -> str:
+    """One leg of the chip — a figure (`*` when shown, not ranked) or a reason
+    in at most three words. NEVER a bare dash."""
+    v = _f(g.get(leg + "_yoy_pct"))
+    why = g.get(leg + "_reason")
+    if v is not None:
+        return _pct1(v) + ("" if g.get(leg + "_ranked") else NOT_RANKED_MARK)
+    if why == "year_ago_loss":
+        return "yr-ago loss"
+    if why == "year_ago_too_small":
+        return (f"yr-ago <${EPS_MIN_BASE:.2f}" if leg == "eps"
+                else f"yr-ago <${REV_MIN_BASE / 1e6:g}M")
+    if why == "year_ago_missing":
+        return "yr-ago n/a"
+    return "not filed"
+
+
+def _card_reason(g: dict) -> Optional[str]:
+    """The chip reason for a card-level state, or None for a read."""
+    st = g.get("state")
+    if st == "etf":
+        return "ETF/fund, no filings"
+    if st == "no_doc":
+        min_bars, ttl = _research_limits()
+        gap = g.get("gap")
+        if gap == "new_listing" and g.get("bars") is not None:
+            return f"new listing, {int(g['bars']):,} bars, not researched"
+        if gap == "not_researched":
+            return f"not researched in {ttl} days"
+        return "no research on file"
+    if st == "no_figures":
+        return GROWTH_NO_FIGURES
+    if st == "stale_filings":
+        return f"latest filing {g.get('period') or GROWTH_PERIOD_UNKNOWN}, a year or more past due"
+    if st == "period_mismatch":
+        return GROWTH_MISMATCH
+    return None
+
+
 def growth_chip(g: Optional[dict]) -> str:
+    """The IDENT chip. Starts with GROWTH_CHIP_PREFIX; never contains a dash
+    placeholder (2026-10-07 b)."""
     g = g if isinstance(g, dict) else growth_read(None)
-    if g.get("state") == "no_figures":
-        tail = GROWTH_NO_FIGURES
-    elif g.get("state") == "period_mismatch":
-        tail = GROWTH_MISMATCH
-    else:
-        tail = g.get("period") or GROWTH_PERIOD_UNKNOWN
-    return GROWTH_CHIP_FMT.format(sales=_gp(g.get("sales_yoy_pct")),
-                                  eps=_gp(g.get("eps_yoy_pct")), period=tail)
+    why = _card_reason(g)
+    if why is not None:
+        return GROWTH_CHIP_NONE_FMT.format(reason=why)
+    return GROWTH_CHIP_FMT.format(sales=_leg_token(g, "sales"), eps=_leg_token(g, "eps"),
+                                  period=g.get("period") or GROWTH_PERIOD_UNKNOWN)
+
+
+YEAR_AGO_MISSING_TEXT = "the year-ago quarter is not on file (a spin-off, an IPO's first year, or a filing hole)"
+REFRESH_TEXT = "it ranks once a research refresh stores it"
+
+
+def _sales_clause(g: dict) -> str:
+    why = g.get("sales_reason")
+    ss, sv, ser = _f(g.get("sales_stored_pct")), _f(g.get("sales_yoy_pct")), _f(g.get("sales_series_pct"))
+    if why == "year_ago_loss":
+        return ("sales: year-ago revenue at or under $0"
+                + (f" — the stored {ss:+.2f}% is a sign flip, not growth" if ss is not None else ""))
+    if why == "year_ago_too_small":
+        return (f"sales: year-ago revenue under ${REV_MIN_BASE / 1e6:g}M"
+                + (f" — the stored {ss:+.2f}% is arithmetic, not ranked" if ss is not None else ""))
+    if why == "stored_missing" and ser is not None:
+        base = _usd_short(g.get("sales_year_ago"))
+        latest = _f(g.get("sales_latest"))
+        amt = (f" ({_usd_short(latest)} vs {base} a year earlier)" if latest is not None
+               else f" (year-ago {base})")
+        return (f"sales {ser:+.2f}% from its own quarterly filings{amt} — not ranked: the "
+                f"stored figure is missing; {REFRESH_TEXT}")
+    if why == "stored_disagrees" and ss is not None and ser is not None:
+        tail = ("ranked on the stored figure (the agreement check is off)" if g.get("sales_ranked")
+                else "not ranked until they agree (a research refresh realigns them)")
+        return f"sales {ss:+.2f}% stored vs {ser:+.2f}% from its own quarterly filings — {tail}"
+    if why == "no_series" and sv is not None:
+        return f"sales {sv:+.2f}% (not ranked — no quarterly series on file to check its base)"
+    if why == "year_ago_missing":
+        return "sales: " + YEAR_AGO_MISSING_TEXT
+    if sv is not None and g.get("sales_ranked"):
+        return f"sales {sv:+.2f}%"
+    return "sales: no figure on file"
+
+
+def _eps_clause(g: dict) -> str:
+    why = g.get("eps_reason")
+    es, ev, ser = _f(g.get("eps_stored_pct")), _f(g.get("eps_yoy_pct")), _f(g.get("eps_series_pct"))
+    b = g.get("eps_year_ago")
+    if why == "year_ago_loss" and g.get("eps_year_ago_ni") is not None and g.get("eps_base") == "unknown":
+        return (f"EPS: the year-ago quarter lost money (net income "
+                f"{_usd_short(g.get('eps_year_ago_ni'))}; its EPS is not on file) — never ranked")
+    if why == "year_ago_loss":
+        return (f"EPS: the year-ago quarter lost money or broke even ({_usd(b)})"
+                + (f" — the stored {es:+.2f}% is a sign flip, not growth" if es is not None else ""))
+    if why == "year_ago_too_small":
+        return (f"EPS: year-ago EPS {_usd(b)} is under the {_usd(EPS_MIN_BASE)} floor"
+                + (f" — the stored {es:+.2f}% is arithmetic, not ranked" if es is not None else ""))
+    if why == "stored_missing" and ser is not None:
+        return (f"EPS {ser:+.2f}% from its own quarterly filings (year-ago {_usd(b)}) — not "
+                f"ranked: the stored figure is missing; {REFRESH_TEXT}")
+    if why == "stored_disagrees" and ev is not None:
+        return (f"EPS {ev:+.2f}% (not ranked — the stored figure and its own quarterly series "
+                "disagree" + (f": series {ser:+.2f}%" if ser is not None else "") + ")")
+    if why == "no_series" and ev is not None:
+        return f"EPS {ev:+.2f}% (not ranked — no quarterly series on file to check its base)"
+    if why == "year_ago_missing":
+        return "EPS: " + YEAR_AGO_MISSING_TEXT
+    if ev is not None and g.get("eps_ranked"):
+        return f"EPS {ev:+.2f}% (year-ago {_usd(b)})"
+    return "EPS: no figure on file"
 
 
 def _growth_stat(g: Optional[dict]) -> str:
     g = g if isinstance(g, dict) else growth_read(None)
     st = g.get("state")
+    tail = [f"figures cached {g['as_of']}"] if g.get("as_of") else []
+    if st == "etf":
+        return " · ".join(["ETF/fund — no company filings; never ranked"] + tail)
+    if st == "no_doc":
+        min_bars, ttl = _research_limits()
+        if g.get("gap") == "new_listing" and g.get("bars") is not None:
+            return (f"new listing — {int(g['bars']):,} daily bars, fewer than the {min_bars} "
+                    "research needs (a new listing, a spin-off or a rename not yet spliced); "
+                    "not researched")
+        if g.get("gap") == "not_researched":
+            return f"not researched — no research stored in the last {ttl} days"
+        return "no research on file"
     if st == "no_figures":
-        return GROWTH_NO_FIGURES
+        return " · ".join([GROWTH_NO_FIGURES] + tail)
     if st == "period_mismatch":
-        return ("the latest quarter and the year-ago quarter on file are not four quarters "
-                "apart — not read")
+        return " · ".join(["the latest quarter and the year-ago quarter on file are not four "
+                           "quarters apart — not read"] + tail)
+    if st == "stale_filings":
+        li, ei = g.get("latest_idx"), g.get("expected_idx")
+        n = (int(ei) - int(li)) if (li is not None and ei is not None) else None
+        return " · ".join([f"latest filing {g.get('period') or GROWTH_PERIOD_UNKNOWN} is "
+                           f"{n if n is not None else 'many'} quarters behind the quarter now "
+                           f"due ({_cal_label(ei) or GROWTH_PERIOD_UNKNOWN}) — a recycled "
+                           "ticker or a provider gap; never ranked"] + tail)
     p, ya = g.get("period"), g.get("year_ago_period")
     head = f"{p} vs {ya}" if (p and ya) else (p or ya or GROWTH_PERIOD_UNKNOWN)
-    parts = [head]
-    # sales
-    sb, ss, sv = g.get("sales_base"), _f(g.get("sales_stored_pct")), _f(g.get("sales_yoy_pct"))
-    if sb == "non_positive":
-        parts.append("sales: year-ago revenue at or under $0"
-                     + (f" — the stored {ss:+.2f}% is a sign flip, not growth" if ss is not None else ""))
-    elif sb == "too_small":
-        parts.append(f"sales: year-ago revenue under ${REV_MIN_BASE / 1e6:g}M"
-                     + (f" — the stored {ss:+.2f}% is arithmetic, not ranked" if ss is not None else ""))
-    elif sv is None:
-        parts.append("sales —")
-    elif g.get("sales_ranked"):
-        parts.append(f"sales {sv:+.2f}%")
-    else:
-        parts.append(f"sales {sv:+.2f}% (not ranked — no quarterly series on file to check its base)")
-    # EPS
-    eb, es, ev = g.get("eps_base"), _f(g.get("eps_stored_pct")), _f(g.get("eps_yoy_pct"))
-    b = g.get("eps_year_ago")
-    if eb == "non_positive":
-        parts.append(f"EPS: the year-ago quarter lost money or broke even ({_usd(b)})"
-                     + (f" — the stored {es:+.2f}% is a sign flip, not growth" if es is not None else ""))
-    elif eb == "too_small":
-        parts.append(f"EPS: year-ago EPS {_usd(b)} is under the {_usd(EPS_MIN_BASE)} floor"
-                     + (f" — the stored {es:+.2f}% is arithmetic, not ranked" if es is not None else ""))
-    elif ev is None:
-        parts.append("EPS —")
-    elif g.get("eps_agrees") is False:
-        parts.append(f"EPS {ev:+.2f}% (not ranked — the stored figure and its own quarterly "
-                     "series disagree)")
-    elif g.get("eps_ranked"):
-        parts.append(f"EPS {ev:+.2f}% (year-ago {_usd(b)})")
-    else:
-        parts.append(f"EPS {ev:+.2f}% (not ranked — no quarterly series on file to check its base)")
-    if g.get("as_of"):
-        parts.append(f"figures cached {g['as_of']}")
-    return " · ".join(parts)
+    return " · ".join([head, _sales_clause(g), _eps_clause(g)] + tail)
 
 
 def _tier_stat(st, tier: int) -> str:
@@ -2156,11 +2538,70 @@ def _market_closed(now_et: datetime) -> Optional[str]:
         return None
 
 
+def _gap_why(cls: str, cov: dict) -> str:
+    """Why a gap class has no ranked growth — built from the constants."""
+    return {
+        "pending": ("the stored figure is missing or disagrees with the company's own quarterly "
+                    f"filings on file — shown with {NOT_RANKED_MARK}, ranked once a research "
+                    "refresh stores it"),
+        "by_rule": ("the year-ago quarter lost money, or its EPS is under "
+                    f"${EPS_MIN_BASE:.2f} / its revenue under ${REV_MIN_BASE / 1e6:g}M — "
+                    "never ranked"),
+        "etf": "an ETF or fund files no company financials",
+        "new_listing": (f"fewer than {int(cov.get('min_bars') or 0):,} daily bars (a new listing, "
+                        "a spin-off or a rename not yet spliced) — research has not run"),
+        "not_researched": f"no research stored in the last {int(cov.get('ttl_days') or 0)} days",
+        "no_filings": "neither provider has quarterly figures on file (often a foreign filer)",
+        "stale_filings": ("the latest quarter on file is a year or more past due — a recycled "
+                          "ticker or a provider gap; never ranked"),
+        "period_gap": ("the latest quarter and the year-ago quarter on file are not four "
+                       "quarters apart"),
+        "year_ago_missing": YEAR_AGO_MISSING_TEXT,
+    }[cls]
+
+
+def growth_line(cov: Optional[dict]) -> Optional[str]:
+    """The served 🚀 coverage line (every number served; the FE composes none)."""
+    if not isinstance(cov, dict) or not isinstance(cov.get("classes"), dict):
+        return None
+    c = cov["classes"]
+    none = sum(int(c.get(k) or 0) for k in GAP_ORDER)
+    bits = [f"{_n(c.get(k))} {GAP_LABEL[k]}" for k in GAP_ORDER if int(c.get(k) or 0)]
+    gaps = f" ({', '.join(bits)})" if bits else ""
+    asof = (f"most figures cached {cov['asof']}" if cov.get("asof")
+            else "no figures cached")
+    return (f"{GROWTH_MARK} Growth on file: {_n(c.get('two_legs'))} both legs · "
+            f"{_n(c.get('one_leg'))} one leg · {_n(c.get('pending'))} {PENDING_LABEL} · "
+            f"{_n(c.get('by_rule'))} {BY_RULE_LABEL} · no figure {_n(none)}{gaps} · of "
+            f"{_n(cov.get('n'))} · {_n(cov.get('pending_legs'))} figures marked "
+            f"{NOT_RANKED_MARK} wait on a research refresh · {asof}.")
+
+
+def growth_gaps_block(cov: Optional[dict]) -> Optional[dict]:
+    """The fold under the line: one line per gap class with any name, the
+    most-traded names first (adv50 desc, at most GROWTH_GAP_TOP)."""
+    if not isinstance(cov, dict) or not isinstance(cov.get("classes"), dict):
+        return None
+    c, top = cov["classes"], cov.get("top") or {}
+    labels = {"pending": PENDING_LABEL, "by_rule": BY_RULE_LABEL, **GAP_LABEL}
+    lines = []
+    for k in ("pending", "by_rule") + GAP_ORDER:
+        n = int(c.get(k) or 0)
+        if not n:
+            continue
+        names = [str(x) for x in (top.get(k) or [])][:GROWTH_GAP_TOP]
+        more = f" +{n - len(names):,} more" if n > len(names) else ""
+        lines.append(f"{labels[k]} ({n:,}): {_gap_why(k, cov)} — {', '.join(names)}{more}")
+    return {"summary": GROWTH_GAPS_SUMMARY, "lines": lines}
+
+
 def _block(state: str, *, now: datetime, sort: str, header: str, entry: Optional[dict] = None,
            counts=None, filters=None, today=None) -> dict:
     now_et = KL._et(now)
     session = session_for(now_et)
     study = study_block()
+    cov = (entry or {}).get("growth_coverage") if (entry and state == "ready") else None
+    cov = cov if isinstance(cov, dict) else None
     return {"state": state, "session": session.isoformat(), "phase": KL.phase(now_et, session),
             "market_closed": _market_closed(now_et), "sort": sort, "header": header,
             "today_line": today_line(today) if today else None,
@@ -2171,6 +2612,11 @@ def _block(state: str, *, now: datetime, sort: str, header: str, entry: Optional
             "today": today, "counts": dict(counts) if counts is not None else None,
             "filters": filters, "study": study, "note": note_text(study),
             "measured": MEASURED,
+            # 🚀 coverage (2026-10-07 b) — the line + fold only on the 🚀 order (Rule #5)
+            "growth_coverage": copy.deepcopy(cov) if cov is not None else None,
+            "growth_line": growth_line(cov) if (cov is not None and sort == SORT_GROWTH) else None,
+            "growth_gaps": (growth_gaps_block(cov) if (cov is not None and sort == SORT_GROWTH)
+                            else None),
             "built_at": None if not entry else str(entry.get("built_at"))}
 
 

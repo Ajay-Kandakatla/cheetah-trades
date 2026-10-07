@@ -90,6 +90,16 @@ QUARTERS_NEEDED = 2
 MIN_EPS_BASE = 0.10          # dollars per share
 MIN_REV_BASE = 1_000.0       # dollars of revenue in the prior quarter
 
+# 2026-10-07 b — the vintage guard (see `backfill`). None of these is a rule.
+PCT_AGREE_TOL = 0.011            # 2-dp representation tolerance (a stored % vs its own series) — NOT a rule
+ROTATE_DAY_SEC = 24 * 3600       # cadence of the 04:40 daily backfill line (crontab) — NOT a rule
+ROTATE_WEEK_SEC = 7 * 24 * 3600  # cadence of the Saturday --all line — NOT a rule
+BACKFILL_PROJ = {"symbol": 1, "fundamentals._source": 1, "fundamentals.q_period_series": 1,
+                 "fundamentals.rev_q_series": 1, "fundamentals.eps_q_series": 1,
+                 "fundamentals.ni_q_series": 1, "fundamentals.rev_growth_q_pct": 1,
+                 "fundamentals.q_eps_growth_pct": 1}
+SERIES_KEYS = ("q_period_series", "rev_q_series", "eps_q_series", "ni_q_series")
+
 # A same-sign move of at least this size at the SAME point in the calendar last
 # year marks the row as a seasonal echo — "this is what it does every year".
 # 10% is where the measured transition medians separate (+5.3% Q1->Q2 against
@@ -750,10 +760,87 @@ def _series_missing(doc: dict) -> bool:
                    for k in ("rev_q_series", "eps_q_series", "ni_q_series"))
 
 
+# 2026-10-07 b — THE VINTAGE GUARD. MEASURED (SPEC §1.1, four defects by code
+# read): the series-only `$set` never recomputed the stored % fields, so a doc
+# could carry v1 series beside a vX-era % that no longer describes them (SNDK:
+# stored sales % None, its own series +371.59%; JPM stored 27.69 vs 17.89). The
+# Sunday refresh stays the ONE writer of the % fields — re-deriving them here
+# would move CANSLIM C and scanner inputs mid-week. So a backfill now REFUSES
+# any write that would leave the stored % disagreeing with the new series, any
+# write onto a new latest quarter, and any splice into a yfinance doc (calendar
+# keys: fiscal Massive rows would mislabel it — ASML 'Q4 2015').
+# The projection now carries `q_period_series` (before, `_series_missing` saw no
+# period keys on ANY doc, so the "missing-only" nightly job re-fetched the first
+# 900 docs every night), and the walk rotates deterministically instead of
+# slicing the same unsorted head of `find()` every run.
+def pct_agrees(stored, series_pct, tol: float = PCT_AGREE_TOL) -> Optional[bool]:
+    """True / False when BOTH are numbers; None when either is missing."""
+    try:
+        if stored is None or series_pct is None:
+            return None
+        a, b = float(stored), float(series_pct)
+    except (TypeError, ValueError):
+        return None
+    if a != a or b != b:                                     # NaN
+        return None
+    return abs(a - b) <= tol
+
+
+def _has_values(v) -> bool:
+    """A non-empty list with at least one non-None slot."""
+    return isinstance(v, list) and any(x is not None for x in v)
+
+
+def _pct_would_disagree(stored, new) -> bool:
+    if (stored is None) != (new is None):
+        return True
+    return pct_agrees(stored, new) is False
+
+
+def backfill_skip_reason(f: dict, m: dict) -> Optional[str]:
+    """None = backfill may `$set` m's series onto stored fundamentals `f`.
+
+    Order of checks:
+      "yfinance_doc"            f["_source"] == "yfinance" (calendar keys; never
+                                splice fiscal Massive rows in — ASML 'Q4 2015')
+      "new_latest_quarter"      both period lists keyed and int(old[0]) != int(new[0])
+      "rev_pct_would_disagree"  (stored rev % is None) != (yoy_pct(m rev) is None),
+                                or pct_agrees(...) is False
+      "eps_pct_would_disagree"  the same for q_eps_growth_pct vs yoy_pct(m eps)
+    """
+    f = f if isinstance(f, dict) else {}
+    m = m if isinstance(m, dict) else {}
+    if str(f.get("_source") or "") == "yfinance":
+        return "yfinance_doc"
+    old_p, new_p = f.get("q_period_series"), m.get("q_period_series")
+    if isinstance(old_p, list) and old_p and isinstance(new_p, list) and new_p:
+        o0, n0 = _int_or_none(old_p[0]), _int_or_none(new_p[0])
+        if o0 is not None and n0 is not None and o0 != n0:
+            return "new_latest_quarter"
+    if _pct_would_disagree(f.get("rev_growth_q_pct"), yoy_pct(m.get("rev_q_series"))):
+        return "rev_pct_would_disagree"
+    if _pct_would_disagree(f.get("q_eps_growth_pct"), yoy_pct(m.get("eps_q_series"))):
+        return "eps_pct_would_disagree"
+    return None
+
+
+def _rotate(todo: list, limit: int, *, period_sec: int, now: float) -> list:
+    """sorted(todo); when limit and len > limit: start =
+    (int(now // period_sec) * limit) % len, the wrapped slice of length
+    `limit`. limit 0 → everything, sorted. The same `now` → the same window."""
+    out = sorted(todo)
+    n = len(out)
+    if not limit or n <= limit:
+        return out
+    start = (int(now // period_sec) * int(limit)) % n
+    return [out[(start + i) % n] for i in range(int(limit))]
+
+
 def backfill(symbols: Optional[list] = None, *, limit: int = 0,
-             only_missing: bool = True) -> dict:
+             only_missing: bool = True, now: Optional[float] = None) -> dict:
     """Fetch and store the quarterly series for `symbols` (default: everything
     cached). Returns counts. Safe to re-run; safe to interrupt."""
+    import time as _time
     from concurrent.futures import ThreadPoolExecutor
     from sepa import canslim, research
 
@@ -766,47 +853,52 @@ def backfill(symbols: Optional[list] = None, *, limit: int = 0,
         q = {"symbol": {"$in": want}}
     else:
         q = {}
-    docs = list(coll.find(q, {"symbol": 1, "fundamentals.rev_q_series": 1,
-                              "fundamentals.eps_q_series": 1,
-                              "fundamentals.ni_q_series": 1}))
-    todo = [d["symbol"] for d in docs if (_series_missing(d) or not only_missing)]
-    if limit:
-        todo = todo[:limit]
+    docs = list(coll.find(q, BACKFILL_PROJ))
+    stored = {d.get("symbol"): ((d.get("fundamentals") or {}) if isinstance(d, dict) else {})
+              for d in docs if isinstance(d, dict) and d.get("symbol")}
+    todo = _rotate([d["symbol"] for d in docs if (_series_missing(d) or not only_missing)],
+                   limit,
+                   period_sec=ROTATE_DAY_SEC if only_missing else ROTATE_WEEK_SEC,
+                   now=_time.time() if now is None else now)
 
-    filled = failed = 0
-
-    def one(sym: str) -> bool:
+    def one(sym: str) -> str:
         try:
             m = canslim._fetch_massive_financials(sym)
         except Exception as exc:                            # noqa: BLE001
-            log.debug("qoq.backfill(%s) fetch failed: %s", sym, exc)
-            return False
+            log.debug("qoq.backfill(%s) fetch failed: %s", sym, type(exc).__name__)
+            return "failed"
         if not m:
-            return False
-        sets = {f"fundamentals.{k}": m.get(k)
-                for k in ("q_period_series", "rev_q_series", "eps_q_series",
-                          "ni_q_series")
-                if m.get(k)}
+            return "failed"
+        sets = {f"fundamentals.{k}": m[k] for k in SERIES_KEYS if _has_values(m.get(k))}
         if not sets:
-            return False
+            return "failed"
+        why = backfill_skip_reason(stored.get(sym) or {}, m)
+        if why is not None:
+            return f"skip:{why}"
         try:
-            # `$set` of the three keys ONLY — `cached_at` is left alone so a
-            # backfill can never make stale fundamentals look fresh.
+            # `$set` of the series keys ONLY — `cached_at` and every % field
+            # are left alone so a backfill can never make stale fundamentals
+            # look fresh, nor rewrite a figure the Sunday refresh owns.
             coll.update_one({"symbol": sym}, {"$set": sets})
-            return True
+            return "filled"
         except Exception as exc:                            # noqa: BLE001
-            log.debug("qoq.backfill(%s) write failed: %s", sym, exc)
-            return False
+            log.debug("qoq.backfill(%s) write failed: %s", sym, type(exc).__name__)
+            return "failed"
 
+    filled = failed = 0
+    skipped: dict = {}
     with ThreadPoolExecutor(max_workers=MAX_BACKFILL_WORKERS) as pool:
-        for ok in pool.map(one, todo):
-            if ok:
+        for res in pool.map(one, todo):
+            if res == "filled":
                 filled += 1
+            elif res.startswith("skip:"):
+                k = res[len("skip:"):]
+                skipped[k] = skipped.get(k, 0) + 1
             else:
                 failed += 1
 
     return {"ok": True, "considered": len(docs), "attempted": len(todo),
-            "filled": filled, "failed": failed}
+            "filled": filled, "failed": failed, "skipped": skipped}
 
 
 # --------------------------------------------------------------------------

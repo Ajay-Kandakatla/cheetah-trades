@@ -182,6 +182,17 @@ RENAMES: dict[str, tuple[str, str, str]] = {
              "3.45. Consecutive sessions, -2.8% overnight, no split. The live "
              "iShares IWV/IWC holdings (as of 2026-09-28) list HUCK. Verified "
              "2026-09-29 against Massive live."),
+    # --- 2026-10-07 missing-data audit (docs/sepa/missing_data_audit_2026_10_07.md)
+    "MODG": ("CALY", "2026-01-16",
+             "Topgolf Callaway Brands renamed Callaway Golf Company, MODG -> "
+             "CALY. Same composite FIGI BBG000CPCVY1 and same CIK 0000837465 on "
+             "both Massive reference records; MODG inactive, delisted_utc "
+             "2026-01-16. CALY first Massive bar 2026-01-16 open 14.81 (the "
+             "cached CALY frame before that is a DIFFERENT security, a $50 fund, "
+             "to 2025-09-30, then a hole). Yahoo's continuous series under CALY: "
+             "2026-01-15 close 14.68 -> 2026-01-16 open 14.81, consecutive "
+             "sessions, +0.9% overnight, no split. Verified 2026-10-07 "
+             "(scratchpad data_audit fates_evidence / modg_yf)."),
 }
 
 # Reverse index, built once. A current symbol can have more than one former name
@@ -396,6 +407,27 @@ DELISTED: dict[str, str] = {
             "~0.4M before, delisted_utc 2026-09-24 (CIK 0001583107) — "
             "acquired by Zymeworks for $17.00 cash + a non-tradeable CVR, "
             "closed 2026-09-23 (GlobeNewswire 2026-09-23).",
+    # --- 2026-10-07 missing-data audit (docs/sepa/missing_data_audit_2026_10_07.md).
+    # Verified against Massive live 2026-10-07: reference shows an inactive
+    # record with delisted_utc, the cached daily bars stop, and a by-CIK search
+    # (active=true) returns NO successor. An acquirer that keeps its own series
+    # is not a splice.
+    "DBRG": "DigitalBridge Group. Inactive Massive record, delisted_utc "
+            "2026-10-01 (CIK 0001679688, FIGI BBG00DM1FMT8); last cached bar "
+            "2026-09-29, pinned $15.98-16.00; no active ticker under its CIK. "
+            "Was #2 on the 🛡️ 🚀 growth order on a dead name.",
+    "QRVO": "Qorvo. Inactive Massive record, delisted_utc 2026-10-06 (CIK "
+            "0001604778, FIGI BBG007TJF1N7); last cached bar 2026-10-02 on 8.3M "
+            "shares vs ~1.4M average; no active ticker under its CIK.",
+    "GBTG": "Global Business Travel Group. Inactive Massive record, "
+            "delisted_utc 2026-09-30 (CIK 0001820872); last cached bar "
+            "2026-09-28, pinned $9.47-9.50, 3.9M shares vs ~1.7M average; no "
+            "active ticker under its CIK. Watch-only on 2026-09-29; the "
+            "delisting has since landed.",
+    "PSKY": "Paramount Skydance Class B. Inactive Massive record, delisted_utc "
+            "2026-10-06 (CIK 0002041610, FIGI BBG01VS5NK99); last cached bar "
+            "2026-10-05 on 31.7M shares vs ~17.9M average; a by-CIK search "
+            "(active=true) returns no successor under the same CIK.",
 }
 
 

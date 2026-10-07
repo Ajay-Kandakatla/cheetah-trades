@@ -401,9 +401,11 @@ in the session scratchpad.
 6. EPS materiality = `qoq.MIN_EPS_BASE` ($0.10) applied to the YEAR-AGO quarter; sales = `bonde.MIN_MATERIAL_BASE_REV`
    ($1M).
 7. A stored EPS YoY that disagrees with its own series is shown, not ranked (fixing the spine is separate).
-8. 🚀 rank = `qoq.score_board` blend, EPS-ranked block first.
+8. 🚀 rank = `qoq.score_board` blend, EPS-ranked block first. **Amended 2026-10-07 b (his YES):** both ranked legs first, then one
+   ranked leg (an EPS leg before a sales leg — the EPS-first rule kept inside the one-leg block), then none.
 9. Market line population = every universe name read (his "864 of 2,729" framing).
-10. ETF / no-filing cards read `no quarterly figures on file` rather than hiding the chip.
+10. ETF / no-filing cards read `no quarterly figures on file` rather than hiding the chip. **Amended 2026-10-07 b:** an ETF now reads
+    `Sales · EPS: ETF/fund, no filings`; a doc with no figures still reads `no quarterly figures on file`.
 11. (executor) The data-day sentence before 04:00 / after 20:00 says "The session has not opened." rather than print
     the last session's numbers as the data day's.
 
@@ -436,3 +438,87 @@ the new tests.
   NEG (never `sales_ranked`, no score when EPS is unranked) and `rank()`'s median + `up` (> 0 only) on a skewed pool;
   FE payload test gains a synthetic closed-mode payload (`last_session` dated pill). Revert checks in a scratch copy:
   nine mutations, each fails its test.
+
+## 2026-10-07 b — 🚀 two legs first + every growth gap says why
+
+Ajay, 2026-10-07, replying to "say if you want DBRG-style one-leg names out of the top block": *"yes please also no #s
+for SNDK can you do a deep analysis of data and make sure you do a sanity chcek fo missing data pieces over all."*
+The universe-wide audit behind this section is `docs/sepa/missing_data_audit_2026_10_07.md`.
+
+### Order (`order_key`, `SORT_GROWTH`)
+
+`(block, not eps_ranked, -score) + T1 tie-break + symbol`, where `block` = 0 for legs ≥ 2, 1 for one ranked leg, 2 for
+none (`legs` counts only when `score` is not None). DBRG (EPS only, score 99.4, sales base −$3.2M) was #2 before; it is
+now DELISTED (`sepa/symbols.py`) and, had it stayed, would sit in block 1.
+
+### Reason codes (`growth_read`, PURE; `today=` the build session, `is_etf=`)
+
+Card states: `read`, `no_doc` (was `no_figures` for a missing doc), `no_figures`, `period_mismatch`,
+`stale_filings`, `etf`. Per leg (`sales_reason` / `eps_reason`; None = ranked): `stored_missing`, `stored_disagrees`,
+`no_series` (all three = PENDING, shown with `*`), `year_ago_loss`, `year_ago_too_small` (BY RULE), `year_ago_missing`,
+`not_filed`, or the card state copied in. Evaluation order: ETF → no doc → `qoq.period_ok` False → a latest index
+`STALE_FILING_QUARTERS` (= `qoq.YOY_GAP`, 4) or more behind `period_freshness.expected_13f_quarter(today)` (8105 = Q2
+2026 on 10-07) → sales → EPS. Sales compares `rev_growth_q_pct` (2 dp, `PCT_AGREE_TOL`) first and falls back to
+`sales.growth_yoy_pct` (1 dp, `PCT_AGREE_TOL_1DP` = 0.05 + `PCT_AGREE_TOL`) against `qoq.yoy_pct(rev_q_series)`.
+EPS keeps `_yoy_base(eps_q_series, EPS_MIN_BASE)`; a base `unknown` with `ni_q_series[YOY_GAP] <= 0` is
+`year_ago_loss` (DISPLAY ONLY — `eps_year_ago_ni`, never a %, never ranked). Executor ordering inside an unknown EPS
+base: the NI loss first, then a stored figure (`no_series`), then `year_ago_missing`.
+
+`coverage_class` (first match): two_legs, one_leg, etf, new_listing (no doc and bars < `research.MIN_RESEARCH_BARS`)
+/ not_researched, period_gap, stale_filings, pending, by_rule, year_ago_missing, no_filings.
+
+### Words (served; the FE composes none)
+
+- Chip: `Sales {s} · EPS {e} YoY ({period})` with `+x.x%` (half away from zero), `+x.x%*` (shown, not ranked),
+  `yr-ago loss`, `yr-ago <$0.10`, `yr-ago <$1M`, `yr-ago n/a`, `not filed`; card states use
+  `GROWTH_CHIP_NONE_FMT` = `Sales · EPS: {reason}` (`ETF/fund, no filings`, `new listing, {bars} bars, not
+  researched`, `not researched in 16 days`, `no research on file`, `no quarterly figures on file`, `latest filing
+  {period}, a year or more past due`, `quarters not a year apart on file`). **No chip contains `—`.**
+- Fold (`_growth_stat`): one clause per leg with the exact reason; money via `_usd_short` (`$8.97B`, `-$23.0M`).
+- Board (`_block`): `growth_coverage` on every ready block; `growth_line` + `growth_gaps` only when the served sort is
+  `res_growth` (Rule #5), None while warming / on error.
+- Rules: `growth_rule_line()` from the constants; `rules` += `stale_filing_quarters`, `sales_agree_required`.
+
+### HIS CALL (shipped defaults, one constant each)
+
+1. `SALES_AGREE_REQUIRED = True` — his rule #7 on the sales leg. Until the H1 heal, 151 stored sales figures that
+   disagree with their own series (JPM 27.69 vs 17.89, BAC 19.25 vs 3.67, GS…) are shown with `*`, not ranked.
+2. An ETF never ranks; `STALE_FILING_QUARTERS = qoq.YOY_GAP` (AIQ-class recycled tickers, MRX, GLIBA, SE, ASML, DOX).
+   A stricter one-cadence cut would also unrank OPCH, HUBG, PI — his number.
+3. The SNDK class (stored % missing, own filings support one) is shown with `*`, not ranked, until a research refresh
+   stores it (H1). The alternative — rank the series figure now — changes shipped #7.
+4. Inside the one-leg block an EPS-only leg sorts before a sales-only leg (shipped #8 kept).
+
+### Real capture (V3, 2026-10-07 19:01 ET, throwaway container, branch tree read-only, `block_writes()`)
+
+`scripts/resiliency_tab_cost_probe.py --dump-fixture` (MEASURED; the FE fixture `__fixtures__/resiliency_tab_2026_10_07.json`
+was regenerated from it, same trim as before + `_sndk_tile`):
+
+- Universe 2,732 (2,736 − DBRG/QRVO/GBTG/PSKY), 0 no-bar; identity `sum(classes) == scanned − no_bars` **True**;
+  growth chips containing `—`: **0**; `res_growth` legs non-increasing: **True**.
+- Served line: `🚀 Growth on file: 1,342 both legs · 821 one leg · 109 pending refresh · 105 blank by rule · no
+  figure 355 (43 ETF/fund, 61 new listing, 57 not researched, 144 no quarterly figures, 7 a year past due, 31 quarters
+  not a year apart, 12 year-ago quarter missing) · of 2,732 · 357 figures marked * wait on a research refresh · most
+  figures cached 2026-09-27.`
+- SNDK: chip `Sales +371.6%* · EPS yr-ago loss YoY (FY2026 Q4)`, gap `pending`, `sales_series_pct` 371.59,
+  `eps_year_ago_ni` −23,000,000; position 2,190 of 2,732 on 🚀. DBRG: absent (DELISTED landed).
+- Stale: MRX / GLIBA / SE / ASML / DOX `stale_filings`, score None. AIQ reads `etf` (it is in `PINNED_ETFS`, and the ETF
+  check runs first), score None. ETF: SPY, QQQ, DRAM `etf`. Disagreement: BAC / JPM / GS `sales_reason
+  stored_disagrees` (JPM and GS keep their EPS leg → one-leg; BAC's EPS also disagrees → pending).
+- Top 15 Tradeable on 🚀: MU, LPG, BHF, INSW, HCC, KLIC, TER, CRDO, VSEC, PARR, TECK, PLTR, SM, AVGO, ALAB — every one
+  two-leg. `counts.growth_ranked` 2,163, `growth_eps_ranked` 1,443.
+
+### Payload deltas
+
+`resiliency_board` += `growth_coverage` (`n, classes, top, pending_legs, pending_top, asof, asof_n, n_doc, min_bars,
+ttl_days`), `growth_line`, `growth_gaps` (`summary`, `lines`); `rules` += `stale_filing_quarters`,
+`sales_agree_required`; `resiliency.growth` += `sales_series_pct, eps_series_pct, sales_agrees, sales_latest,
+sales_reason, eps_reason, eps_year_ago_ni, latest_idx, expected_idx, etf, gap, bars`. `COUNT_KEYS` unchanged.
+
+Tests: `backend/tests/test_resiliency_growth_sanity_2026_10_07.py`, `backend/tests/test_qoq_backfill_vintage_2026_10_07.py`;
+predicted pins in `test_resiliency_today_growth_2026_10_07.py`, `test_resiliency_tab.py` (`BOARD_KEYS` +3),
+`test_breakout_qoq_rank.py`, `test_russell_universe_refresh_2026_09_29.py` (GBTG left the live list); FE
+`ResiliencyBoardNote.test.tsx`, `ResiliencyTab.payload.test.tsx` (`_sndk_tile`), contracts (`growth_line` served iff
+read). Mutation spot-checks in a scratch copy (V2): the old order tuple, `SALES_AGREE_REQUIRED = False`,
+`STALE_FILING_QUARTERS = 99`, dropping `q_period_series` from `BACKFILL_PROJ`, removing `backfill_skip_reason`,
+`PCT_AGREE_TOL_1DP = PCT_AGREE_TOL` — each turns a named test red.

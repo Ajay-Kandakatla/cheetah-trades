@@ -186,6 +186,30 @@ def etf_data_for(symbol: str) -> Optional[dict]:
     return payload
 
 
+def cached_etf_set(symbols) -> set[str]:
+    """Symbols whose etf_info_cache doc says payload.is_etf — ONE projected find,
+    TTL ignored (being a fund does not expire), never a network fetch. set() on
+    any failure. (2026-10-07 b: the 🛡️ growth read never ranks an ETF; `is_etf`
+    can FETCH, so it is never used in bulk.)"""
+    try:
+        want = sorted({str(s).upper() for s in (symbols or []) if s})
+        if not want:
+            return set()
+        coll = _coll()
+        if coll is None:
+            return set()
+        out: set[str] = set()
+        for d in coll.find({"_id": {"$in": want}, "payload.is_etf": True},
+                           {"_id": 1, "payload.is_etf": 1}):
+            p = (d or {}).get("payload") or {}
+            if isinstance(p, dict) and p.get("is_etf") is True and d.get("_id"):
+                out.add(str(d["_id"]))
+        return out
+    except Exception as exc:                                # noqa: BLE001
+        log.debug("etf_info.cached_etf_set failed: %s", type(exc).__name__)
+        return set()
+
+
 def is_etf(symbol: str) -> bool:
     """Cheap classifier — uses cache when available."""
     data = etf_data_for(symbol)

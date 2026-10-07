@@ -30,6 +30,13 @@
  * in the rules fold with the rule lines, the data-days line and the study
  * sentences — every one printed once, all of them in the DOM.
  *
+ * 🚀 GROWTH COVERAGE (2026-10-07 b — "make sure you do a sanity chcek fo
+ * missing data pieces over all"): after the market line it prints the served
+ * `growth_line` and, under it, a fold of the served `growth_gaps` lines (the
+ * most-traded names in each gap). The server serves both ONLY on the 🚀 order;
+ * this component composes no count of its own and renders nothing for an
+ * absent or malformed block.
+ *
  * Renders NOTHING for an absent or malformed block. While the memo warms the
  * header is the served warming line with role="status" and no box renders.
  */
@@ -97,6 +104,12 @@ export default function ResiliencyBoardNote({ board, sorts, sort, onSort, onTogg
   const todayLine = text(b.today_line);
   const marketLine = text(b.market_line);
   const eventsLine = text(b.events_line);
+  const growthLine = text(b.growth_line);
+  const gaps = obj(b.growth_gaps);
+  const gapSummary = gaps ? text(gaps.summary) : null;
+  const gapLines = gaps && Array.isArray(gaps.lines)
+    ? (gaps.lines as unknown[]).filter((l): l is string => !!text(l)) : [];
+  const showGaps = !!gapSummary && gapLines.length > 0;
   const note = text(b.note);
   const rules = obj(b.rules);
   const ruleLines = rules && Array.isArray(rules.lines)
@@ -127,6 +140,15 @@ export default function ResiliencyBoardNote({ board, sorts, sort, onSort, onTogg
          role={state === 'warming' ? 'status' : undefined}>{header}</p>
       {todayLine ? <p className="cm-note" data-testid="cm-res-today">{todayLine}</p> : null}
       {marketLine ? <p className="cm-note" data-testid="cm-res-market">{marketLine}</p> : null}
+      {growthLine ? <p className="cm-note" data-testid="cm-res-growth">{growthLine}</p> : null}
+      {showGaps ? (
+        <details className="cm-note cm-dim" data-testid="cm-res-growth-gaps">
+          <summary>{gapSummary}</summary>
+          {gapLines.map((l, i) => (
+            <p key={`g-${i}`} className="cm-note cm-dim" data-testid="cm-res-growth-gap">{l}</p>
+          ))}
+        </details>
+      ) : null}
       {note && note !== header ? <p className="cm-note" data-testid="cm-res-note">{note}</p> : null}
       {hasFold ? (
         <details className="cm-note cm-dim" data-testid="cm-res-rules">

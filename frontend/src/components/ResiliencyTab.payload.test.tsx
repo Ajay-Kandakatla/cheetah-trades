@@ -150,12 +150,14 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
       } else {
         expect(hold, `${t.symbol} has no T1 sessions, so no chip`).toBeUndefined();
       }
-      const chip = (t.badges || []).find((b) => b.text.startsWith('Sales ') && b.text.includes(' YoY ('));
+      const chip = (t.badges || []).find((b) => b.text.startsWith('Sales '));
       expect(chip, `${t.symbol} growth chip`).toBeTruthy();
       expect(ident!.textContent || '', `${t.symbol} growth chip on IDENT`).toContain(chip!.text);
+      // 2026-10-07 b: a blank leg says WHY — never a bare dash
+      expect(chip!.text.includes('\u2014'), `${t.symbol} chip has no dash: ${chip!.text}`).toBe(false);
       const g = r.growth;
       if (g && (['non_positive', 'too_small'] as string[]).includes(g.eps_base)) {
-        expect(chip!.text, `${t.symbol} tiny / negative year-ago EPS shows blank`).toContain('EPS — YoY');
+        expect(chip!.text, `${t.symbol} tiny / negative year-ago EPS says why`).toContain('EPS yr-ago');
       }
       expect((t.stats || []).some((s) => s.k === 'Growth'), t.symbol).toBe(true);
       const keys = (t.stats || []).map((s) => s.k);
@@ -193,7 +195,7 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
     }
   });
 
-  it('the order is the served sort\'s: 📅 reads first by move; 🚀 the EPS-ranked block first by score, unknown last', () => {
+  it('the order is the served sort\'s: 📅 reads first by move; 🚀 both legs, then one (EPS leg first), then none', () => {
     if (board.sort === 'res_today') {
       const reads = tiles.map((t) => t.resiliency!.today.state === 'read' && t.resiliency!.today.move_pct !== null);
       const firstUnread = reads.indexOf(false);
@@ -202,15 +204,19 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
       for (let i = 1; i < mv.length; i++) expect(mv[i], `${key} #${i}`).toBeLessThanOrEqual(mv[i - 1]);
     }
     if (board.sort === 'res_growth') {
+      // his YES (2026-10-07 b): 2 legs -> 1 leg -> none; inside the one-leg block
+      // an EPS leg sorts before a sales leg; score non-increasing inside each
       const gs = tiles.map((t) => t.resiliency!.growth!);
-      const blk = gs.map((g) => (g.score === null ? 2 : g.eps_ranked ? 0 : 1));
-      for (let i = 1; i < blk.length; i++) {
-        expect(blk[i], `${key} block #${i}`).toBeGreaterThanOrEqual(blk[i - 1]);
-        if (blk[i] === blk[i - 1] && blk[i] < 2) {
+      const legs = gs.map((g) => (g.score === null ? 0 : g.legs >= 2 ? 2 : 1));
+      const sub = gs.map((g) => (g.eps_ranked ? 0 : 1));
+      for (let i = 1; i < legs.length; i++) {
+        expect(legs[i], `${key} legs #${i}`).toBeLessThanOrEqual(legs[i - 1]);
+        if (legs[i] === legs[i - 1] && legs[i] === 1) expect(sub[i], `${key} EPS leg first #${i}`).toBeGreaterThanOrEqual(sub[i - 1]);
+        if (legs[i] === legs[i - 1] && legs[i] > 0 && sub[i] === sub[i - 1]) {
           expect(gs[i].score as number, `${key} score #${i}`).toBeLessThanOrEqual(gs[i - 1].score as number);
         }
       }
-      if (tiles.length) expect(gs[0].eps_ranked, `${key} top is EPS-ranked`).toBe(true);
+      if (tiles.length) expect(gs[0].legs, `${key} top ranks on both legs`).toBe(2);
     }
   });
 
@@ -222,6 +228,17 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
     if (rb.today_line) expect(getByTestId('cm-res-today').textContent).toBe(rb.today_line);
     if (rb.market_line) expect(getByTestId('cm-res-market').textContent).toBe(rb.market_line);
     else expect(queryByTestId('cm-res-market')).toBeNull();
+    // 🚀 coverage (2026-10-07 b): served — and printed — only on the 🚀 order
+    if (board.sort === 'res_growth') {
+      expect(rb.growth_line, `${key} serves the growth line`).toBeTruthy();
+      expect(getByTestId('cm-res-growth').textContent).toBe(rb.growth_line);
+      expect(rb.growth_gaps?.lines.length ?? 0).toBeGreaterThan(0);
+      expect(getByTestId('cm-res-growth-gaps').querySelector('summary')!.textContent).toBe(rb.growth_gaps!.summary);
+    } else {
+      expect(rb.growth_line ?? null, `${key} no growth line off the 🚀 order`).toBeNull();
+      expect(queryByTestId('cm-res-growth')).toBeNull();
+      expect(queryByTestId('cm-res-growth-gaps')).toBeNull();
+    }
     expect(getByTestId(`cm-res-sort-${board.sort}`).getAttribute('aria-pressed')).toBe('true');
     expect(queryByTestId('cm-res-sort-default')).toBeNull();
     expect(rb.sort).toBe(board.sort);
@@ -233,6 +250,27 @@ describe.each(READY)('🛡️ Resiliency payload %s → real components', (key, 
     for (const bad of JUNK) expect(text.includes(bad), bad).toBe(false);
     expect(/bounce|fake|won't drop/i.test(text)).toBe(false);
     expect(text.includes(RETIRED)).toBe(false);
+  });
+});
+
+/* SNDK (2026-10-07 b — "no #s for SNDK"): its served card, captured by the probe
+ * (`_sndk_tile`, built by tile_badges / tile_stats from its rank() row — it sits
+ * past the 80-tile cut on 🚀), through the REAL tile component. */
+describe('🛡️ Resiliency — SNDK\'s served card (2026-10-07 b)', () => {
+  const T = RAW._sndk_tile as CmTile | undefined;
+  it('IDENT carries the served growth chip with its sales figure and why EPS is blank', () => {
+    expect(T, 'the capture carries _sndk_tile').toBeTruthy();
+    const chip = (T!.badges || []).find((b) => b.text.startsWith('Sales '));
+    expect(chip, 'SNDK growth chip').toBeTruthy();
+    expect(chip!.text).toContain('+371.6%');
+    expect(chip!.text).toContain('yr-ago loss');
+    expect(chip!.text.includes('\u2014')).toBe(false);
+    const { container, unmount } = renderTile(T!);
+    expect(container.querySelector('.cm-tile-ident')!.textContent || '').toContain(chip!.text);
+    const growth = (T!.stats || []).find((st) => st.k === 'Growth');
+    expect(growth?.v || '').toContain('$1.90B');
+    for (const bad of JUNK) expect(container.innerHTML.includes(bad), bad).toBe(false);
+    unmount();
   });
 });
 

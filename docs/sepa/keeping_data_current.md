@@ -154,3 +154,29 @@ Live 2026-08-16: all three green — holders 100% at Q1-or-newer, EDGAR filings
 **Not advice.** 13F is filed up to 45 days after quarter end, so "money moved
 in" describes a position built up to four and a half months ago. Context for a
 setup, never a trigger. The Auto-Pilot engine never reads any of this.
+
+## 5. The 2026-10-07 heal runbook (H0–H5) — after the missing-data audit
+
+Why: the 10-04 Sunday research refresh never wrote a doc (INFERRED: host sleep), so 2,572 docs date from 09-27 and
+the series backfill had mixed vintages (`docs/sepa/missing_data_audit_2026_10_07.md`). Run AFTER the deploy
+(`./deploy-cheetah-main.sh api cron frontend`), outside RTH, not during the Sunday 20:00 job. `<scratch>` = the
+session scratchpad's `data_audit` folder; every command is the throwaway container with `--env-file` and the
+`cheetah-deploy` tree mounted read-only.
+
+- **H0 selector** (read-only, `block_writes()`): `heal_select.py` builds the 🛡️ memo and keeps non-ETF cards with
+  bars ≥ `research.MIN_RESEARCH_BARS` and a PENDING leg, a gap in {not_researched, no_filings, period_gap,
+  year_ago_missing, stale_filings}, a yfinance doc labelled past the quarter now due, or an earnings report after
+  the cached figures. Dry-run on the branch 2026-10-07: **527 names** (pending legs 267, no_filings 144,
+  not_researched 57, period_gap 31, yfinance label 12, year_ago_missing 12, stale 7, reported after cache 5; a name can
+  carry several). Writes `heal_symbols.txt` (adv50 desc, SNDK first) and `earnings_symbols.txt` (127: 38 in-scan
+  `next_date` None, 89 liquid board names with no doc, XE).
+- **H1 research heal**: `python -m sepa.cli research-refresh --symbols "$(paste -sd, /out/heal_symbols.txt)" --workers 4`
+  — the Sunday job's code path; ≤ 4 Massive calls a name → **≤ 2,108 Massive calls** (+ ~3 yfinance a name).
+- **H2 CALY splice**: `python -c "from sepa import prices; prices.load_prices('CALY', force=True)"` (1–2 Massive calls),
+  then `python -m sepa.cli research-refresh --symbols CALY --workers 1`.
+- **H3 earnings one-off** (yfinance only): `python -c "from sepa import earnings_watch as E; print(E.refresh(symbols=open('/out/earnings_symbols.txt').read().split(), max_workers=2))"`.
+- **H4 caps**: `python -m sepa.cap_warm` (the Saturday 08:10 job that slept; yfinance).
+- **H5 13F**: `python -m sepa.warm_whales --workers 4` (the Sunday 06:00 job, stale-only by default; yfinance).
+
+Afterwards: SNDK's chip should read `Sales +371.6% · EPS yr-ago loss YoY (Q2 2026)` (one leg), and the served 🚀
+line's pending count should fall toward 0 for the healed names.

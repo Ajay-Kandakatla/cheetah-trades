@@ -5490,6 +5490,15 @@ const CONTRACTS = [
         const pricePre = /const PRICE_PREFIX = \[([\s\S]*?)\];/.exec(lad);
         if (!/^GROWTH_CHIP_PREFIX = "Sales "/m.test(rt)) errs.push('resiliency_tab.py must define GROWTH_CHIP_PREFIX = "Sales "');
         if (!identPre || !identPre[1].includes("'Sales '")) errs.push("cardLadder IDENT_PREFIX must carry 'Sales ' (resiliency_tab.GROWTH_CHIP_PREFIX)");
+        // 🚀 coverage line (2026-10-07 b): served iff the note prints it — a served
+        // line nobody reads, or a reader for a line nobody serves, is a silent gap.
+        {
+          const note = read('src/components/ResiliencyBoardNote.tsx');
+          const serves = rt.includes('"growth_line"');
+          const reads = /\bb\.growth_line\b/.test(note);
+          if (serves !== reads) errs.push(`resiliency_tab.py serves "growth_line" (${serves}) iff ResiliencyBoardNote.tsx reads b.growth_line (${reads})`);
+          if (serves && !/\bb\.growth_gaps\b/.test(note)) errs.push('ResiliencyBoardNote.tsx must print the served growth_gaps fold');
+        }
         if (!/^TODAY_PLAIN_FMT = TODAY_MARK \+ " today · /m.test(rt)) errs.push('resiliency_tab.py TODAY_PLAIN_FMT must start TODAY_MARK + " today · "');
         if (!/^TODAY_LAST_FMT = TODAY_MARK \+ " last session /m.test(rt)) errs.push('resiliency_tab.py TODAY_LAST_FMT must start TODAY_MARK + " last session "');
         if (!pricePre || !pricePre[1].includes("'\\u{1F4C5} today · '") || !pricePre[1].includes("'\\u{1F4C5} last session '")) {

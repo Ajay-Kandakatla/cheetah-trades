@@ -850,6 +850,10 @@ export type CmResiliencyBoard = {
     pre_rvol_min: number; pre_min_sessions: number; vol_avg_bars: number; benchmark: string;
     /** 🚀 the year-ago floors (2026-10-07): qoq.MIN_EPS_BASE / bonde.MIN_MATERIAL_BASE_REV. */
     eps_min_base?: number; rev_min_base?: number;
+    /** 2026-10-07 b: HIS CALL defaults — a latest filing this many quarters
+     *  behind the one now due never ranks; the sales leg must agree with its
+     *  own series (his rule #7). */
+    stale_filing_quarters?: number; sales_agree_required?: boolean;
     lines: string[];
   } | null;
   events: {
@@ -895,6 +899,12 @@ export type CmResiliencyBoard = {
   } | null;
   note: string;
   measured: boolean;
+  /** 🚀 coverage (2026-10-07 b): the served line + fold, printed verbatim and
+   *  ONLY on the 🚀 order (null on every other sort and while warming);
+   *  `growth_coverage` = the served counts behind them (the FE does no maths). */
+  growth_line?: string | null;
+  growth_gaps?: { summary: string; lines: string[] } | null;
+  growth_coverage?: Record<string, unknown> | null;
   built_at: string | null;
 };
 
@@ -943,7 +953,9 @@ export type CmResTodayRead = {
  *  earlier (resiliency_tab.growth_read, 2026-10-07). A leg is ranked only off
  *  a material year-ago base; `score` = qoq.score_board's blend. UNMEASURED. */
 export type CmResGrowthRead = {
-  state: 'read' | 'no_figures' | 'period_mismatch' | string;
+  /** 2026-10-07 b: `no_doc` (no research stored) replaced `no_figures` for a
+   *  missing doc; `etf` and `stale_filings` never rank. */
+  state: 'read' | 'no_doc' | 'no_figures' | 'period_mismatch' | 'stale_filings' | 'etf' | string;
   period: string | null; year_ago_period: string | null; source: string | null;
   sales_yoy_pct: number | null; sales_stored_pct: number | null;
   sales_base: 'ok' | 'non_positive' | 'too_small' | 'unknown' | string;
@@ -952,6 +964,19 @@ export type CmResGrowthRead = {
   eps_base: 'ok' | 'non_positive' | 'too_small' | 'unknown' | string;
   eps_year_ago: number | null; eps_agrees: boolean | null; eps_ranked: boolean;
   score: number | null; legs: number; as_of: string | null;
+  /** 2026-10-07 b: every leg that does not rank says why (null = ranked):
+   *  stored_missing / stored_disagrees / no_series (shown with *, pending a
+   *  research refresh), year_ago_loss / year_ago_too_small (by rule),
+   *  year_ago_missing, not_filed, or the card state copied into both legs. */
+  sales_series_pct?: number | null; eps_series_pct?: number | null;
+  sales_agrees?: boolean | null; sales_latest?: number | null;
+  sales_reason?: string | null; eps_reason?: string | null;
+  eps_year_ago_ni?: number | null;
+  latest_idx?: number | null; expected_idx?: number | null; etf?: boolean;
+  /** the card's coverage class (two_legs / one_leg / pending / by_rule / etf /
+   *  new_listing / not_researched / no_filings / stale_filings / period_gap /
+   *  year_ago_missing) and its closed-bar count. */
+  gap?: string | null; bars?: number | null;
 };
 
 /** 📈 The EOD tape read — the app's accumulation day (resiliency_tab.eod_read). */

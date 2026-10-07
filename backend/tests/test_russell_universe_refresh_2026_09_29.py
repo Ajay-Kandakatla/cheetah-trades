@@ -581,7 +581,10 @@ def test_load_universe_drops_the_dead_and_maps_the_rename():
     assert U._resolve_fates(["HUCK", "DOMO"]) == ["HUCK"], "collapses, no dup"
 
 
-@pytest.mark.parametrize("sym", ["HUCK", "ZYME", "VSCO", "VSXY", "GBTG", "GETY"])
+# GBTG left this list 2026-10-07: its delisting landed (delisted_utc 2026-09-30, no
+# same-CIK successor) and it is now in DELISTED — pinned in
+# test_resiliency_growth_sanity_2026_10_07.py.
+@pytest.mark.parametrize("sym", ["HUCK", "ZYME", "VSCO", "VSXY", "GETY"])
 def test_NEGATIVE_live_and_his_call_names_are_untouched(sym):
     assert not S.is_delisted(sym)
     assert sym not in S.RENAMES

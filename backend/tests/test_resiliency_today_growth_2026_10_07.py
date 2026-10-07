@@ -82,12 +82,15 @@ def _fund(*, sales=None, rev=None, eps_pct=None, eps=None, periods=PER, src="mas
 
 VST = _fund(sales=-5.48, eps_pct=-6.17, eps=[0.76, 1.0, 1.0, 1.0, 0.81, 1.0],
             rev_q=[4.0e9, 4.1e9, 4.1e9, 4.1e9, 4.232e9, 4.0e9])
+# 2026-10-07 b: the sales leg now obeys his rule #7 (the stored % must agree with
+# its own series), so the year-ago revenue of these fixtures is the one their
+# stored % implies (it was rounded before: TWLO 12.15%, PBF 56.25%, CRI -9.09%).
 TWLO = _fund(sales=12.0, eps_pct=4671.43, eps=[6.68, 1, 1, 1, 0.14, 1],
-             rev_q=[1.2e9, 1, 1, 1, 1.07e9, 1])
+             rev_q=[1.2e9, 1, 1, 1, 1.2e9 / 1.12, 1])
 PBF = _fund(sales=56.23, eps_pct=15180.0, eps=[7.54, 1, 1, 1, -0.05, 1],
-            rev_q=[9.0e9, 1, 1, 1, 5.76e9, 1])
+            rev_q=[9.0e9, 1, 1, 1, 9.0e9 / 1.5623, 1])
 CRI = _fund(sales=-10.0, eps_pct=28600.0, eps=[2.87, 1, 1, 1, 0.01, 1],
-            rev_q=[6.0e8, 1, 1, 1, 6.6e8, 1])
+            rev_q=[6.0e8, 1, 1, 1, 6.0e8 / 0.9, 1])
 GROWER = _fund(sales=30.0, eps_pct=40.0, eps=[0.70, 1, 1, 1, 0.50, 1],
                rev_q=[1.3e8, 1, 1, 1, 1.0e8, 1])
 AAON = _fund(sales=20.0, eps_pct=26.32, eps=[0.68, 1, 1, 1, 0.19, 1],
@@ -388,8 +391,9 @@ def test_NEG_tiny_or_negative_year_ago_eps_never_tops_growth():
     by = {r["symbol"]: r["resiliency"]["growth"] for r in rows}
     assert by["PBF"]["eps_base"] == "non_positive" and by["CRI"]["eps_base"] == "too_small"
     assert not by["PBF"]["eps_ranked"] and not by["CRI"]["eps_ranked"]
-    assert R.growth_chip(by["PBF"]) == "Sales +56.2% · EPS — YoY (FY2026 Q2)"
-    assert "EPS — YoY" in R.growth_chip(by["CRI"])
+    # 2026-10-07 b: a blank leg says WHY, never a bare dash
+    assert R.growth_chip(by["PBF"]) == "Sales +56.2% · EPS yr-ago loss YoY (FY2026 Q2)"
+    assert "EPS yr-ago <$0.10 YoY" in R.growth_chip(by["CRI"])
     assert "sign flip" in R._growth_stat(by["PBF"]) and "-$0.05" in R._growth_stat(by["PBF"])
     assert "under the $0.10 floor" in R._growth_stat(by["CRI"])
     # the floor is EPS_MIN_BASE: without it CRI's $0.01 base would rank
@@ -400,9 +404,9 @@ def test_NEG_tiny_or_negative_year_ago_eps_never_tops_growth():
 def test_NEG_year_ago_revenue_at_or_under_zero_or_under_1m_is_blank_unranked():
     neg = R.growth_read(_fund(sales=900.0, eps_pct=None, rev_q=[5e6, 1, 1, 1, -3e6, 1]))
     small = R.growth_read(_fund(sales=9000.0, eps_pct=None, rev_q=[5.5e6, 1, 1, 1, 6.1e4, 1]))
-    for g, word in ((neg, "non_positive"), (small, "too_small")):
+    for g, word, tok in ((neg, "non_positive", "yr-ago loss"), (small, "too_small", "yr-ago <$1M")):
         assert g["sales_base"] == word and g["sales_yoy_pct"] is None and not g["sales_ranked"]
-        assert R.growth_chip(g).startswith("Sales — · ")
+        assert R.growth_chip(g).startswith(f"Sales {tok} · ")       # 2026-10-07 b: never "—"
     assert "sign flip" in R._growth_stat(neg) and "under $1M" in R._growth_stat(small)
 
 
@@ -416,14 +420,15 @@ def test_NEG_period_mismatch_blanks_both():
     g = R.growth_read(_fund(sales=10.0, eps_pct=10.0, eps=[1.1, 1, 1, 1, 1.0, 1],
                             periods=[8105, 8104, 8103, 8102, 8100, 8099, 8098, 8097]))
     assert g["state"] == "period_mismatch" and g["sales_yoy_pct"] is None and g["eps_yoy_pct"] is None
-    assert R.growth_chip(g) == "Sales — · EPS — YoY (quarters not a year apart on file)"
+    assert R.growth_chip(g) == "Sales · EPS: quarters not a year apart on file"   # 2026-10-07 b
     assert not g["sales_ranked"] and not g["eps_ranked"]
 
 
 def test_NEG_no_figures_sorts_last_and_an_all_unknown_pool_is_unavailable():
-    g = R.growth_read(None)
-    assert R.growth_chip(g) == "Sales — · EPS — YoY (no quarterly figures on file)"
-    assert R._growth_stat(g) == R.GROWTH_NO_FIGURES
+    g = R.growth_read(None)                                      # 2026-10-07 b: state no_doc
+    assert g["state"] == "no_doc"
+    assert R.growth_chip(g) == "Sales · EPS: no research on file"
+    assert R._growth_stat(g) == "no research on file"
     rows = _growth_rows({"NONE": None, "VST": VST})
     order = [r["symbol"] for r in sorted(rows, key=lambda r: R.order_key(r, "res_growth"))]
     assert order == ["VST", "NONE"]
@@ -485,7 +490,7 @@ def test_NEG_fund_fn_raising_is_named_never_its_text():
     e = _entry(cal=NO_CAL, fund_fn=boom)
     assert e["fund_summary"] == {"available": False, "n": 0, "error": "ConnectionError"}
     assert "SECRET" not in json.dumps(e, default=str)
-    assert all(rd["growth"]["state"] == "no_figures" for rd in e["reads"].values())
+    assert all(rd["growth"]["state"] == "no_doc" for rd in e["reads"].values())   # 2026-10-07 b
 
 
 def test_NEG_build_reads_fundamentals_rank_and_the_request_never_do(res_board, monkeypatch):

@@ -776,7 +776,8 @@ def test_tile_words_badges_stats_why():
     assert b[0] == {"text": "\U0001F6E1️ T1 held 8/8 (100%)", "tone": "good"}
     assert b[1] == {"text": "\U0001F4C5 T1 today · holding +0.20%", "tone": "good"}
     assert b[2] == {"text": "\U0001F6E1️ Held on T1", "tone": "good", "res_filter": "t1"}
-    assert b[3] == {"text": "Sales — · EPS — YoY (no quarterly figures on file)", "tone": "muted"}
+    # 2026-10-07 b: no research doc on a name with a full history says so, never "—"
+    assert b[3] == {"text": "Sales · EPS: not researched in 16 days", "tone": "muted"}
     ks = [s["k"] for s in R.tile_stats(q, event_day=True)]
     assert ks == ["T1 held", "T2 held", "EOD tape", "Pre-market", "Today", "T1 worst",
                   "Last T1", "σ · β", "Growth"]
@@ -1033,7 +1034,9 @@ def res_board(monkeypatch, _clean):
 BOARD_KEYS = {"state", "session", "phase", "market_closed", "sort", "header", "today_line",
               "market_line",
               "events_line", "rules", "events", "today", "counts", "filters", "study", "note",
-              "measured", "built_at"}
+              "measured", "built_at",
+              # 2026-10-07 b: 🚀 coverage (the line + fold are None off the 🚀 order)
+              "growth_coverage", "growth_line", "growth_gaps"}
 COUNT_KEYS_SPEC = {"scanned", "no_bars", "stale", "rated_t1", "partial_t1", "t1_pass",
                    "rated_t2", "partial_t2", "t2_pass", "eod_read", "eod_pass", "pre_read",
                    "pre_pass", "no_turnover", "dropped_thin", "shown"}
