@@ -15,7 +15,7 @@ Signals scored (each adds points; SEPA candidacy is the gate):
   • CMF inflow            (+1)  Chaikin money flow positive
   • Insider cluster buy   (+2)  >=2 insiders bought (SEC Form 4)
   • Whales accumulating   (+2)  many funds increasing (13F whale moves)
-  • 13D activist          (+2)  SC 13D/G filed (5%+ stake)
+  • 13D activist          (+2)  SC 13D / SCHEDULE 13D filed (passive 13G not counted)
   • Political disclosure  (+1)  on the curated POTUS/Gov list
   • Market-resilient      (+3)  holding up (green today, or up on the month and not
                                 cratering) WHILE the Market Gauge reads weak — i.e.
@@ -33,6 +33,7 @@ import time
 
 from . import history, scanner as sepa_scanner
 from . import pullback_ma, leaderboard, political_disclosures, market_gauge
+from supply_demand.whales_13d import count_activist_13d   # pure helper, no I/O
 
 log = logging.getLogger("sepa.confluence")
 
@@ -63,9 +64,9 @@ def _whale_and_13d(db):
     except Exception as exc:
         log.debug("confluence whale read failed: %s", exc)
     try:
-        for d in db.whales13d_cache.find({}, {"ticker": 1, "payload.filings.bucket": 1}):
+        for d in db.whales13d_cache.find({}, {"ticker": 1, "payload.filings.form": 1}):
             fl = ((d.get("payload") or {}).get("filings")) or []
-            f13 = sum(1 for f in fl if f.get("bucket") == "form13")
+            f13 = count_activist_13d(fl)       # 13D family only — a 13G is passive
             if f13:
                 form13[(d.get("ticker") or "").upper()] = f13
     except Exception as exc:

@@ -155,7 +155,7 @@ export function MoneyMovement() {
                 title={`${r.ticker} · ${r.signals.join(', ')}`}
               >
                 <span className="mm-sec__t">{r.ticker}</span>
-                {r.n_form13 > 0 && <span className="mm-sig mm-sig--activist" title="SC 13D/G activist filings">🏛 {r.n_form13}×13D</span>}
+                {r.n_form13 > 0 && <span className="mm-sig mm-sig--activist" title="13D filings (SC 13D / SCHEDULE 13D, + amendments) — 5%+ stake with active intent. Passive 13G not counted.">🏛 {r.n_form13}×13D</span>}
                 {r.insider_cluster && <span className="mm-sig mm-sig--insider" title="Insider cluster buy (≥2 insiders)">👥 cluster</span>}
                 {r.n_funds_buying >= 10 && <span className="mm-sig mm-sig--coord" title="Coordinated multi-fund accumulation">🌊 {r.n_funds_buying}</span>}
                 {r.is_sepa && <span className="mm-tag mm-tag--sepa">SEPA</span>}

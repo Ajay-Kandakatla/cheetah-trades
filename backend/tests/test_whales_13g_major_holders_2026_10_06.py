@@ -197,3 +197,137 @@ def test_NEGATIVE_null_survives_into_get_whales_payload(monkeypatch):
     assert "n_new" in p["moves"] and "n_sold_out" in p["moves"]
     assert p["moves"]["n_new"] is None and p["moves"]["n_sold_out"] is None
     assert p["moves"]["n_new"] != 0
+
+
+# --- 4. Boards that say "activist" count only the 13D family ----------------
+# Critic probe 2026-10-06: of 20 form13 filings on 20 liquid names, 18 were
+# passive SCHEDULE 13G / 13G/A. Before the rename fix they never reached the
+# boards; they must not now score as "activist" (SMCI: 6 x 13G = 240 points).
+
+from sepa import confluence as cf                       # noqa: E402
+from sepa import money_movement as mm                   # noqa: E402
+
+
+@pytest.mark.parametrize("form", ["SC 13D", "SC 13D/A", "SCHEDULE 13D", "SCHEDULE 13D/A"])
+def test_13d_family_is_activist(form):
+    assert whales_13d.is_activist_13d(form) is True
+
+
+@pytest.mark.parametrize("form", ["SC 13G", "SC 13G/A", "SCHEDULE 13G", "SCHEDULE 13G/A",
+                                  "SCHEDULE 13E3", "4", "144", "", None])
+def test_NEGATIVE_13g_and_others_are_not_activist(form):
+    assert whales_13d.is_activist_13d(form) is False
+
+
+def test_count_activist_13d_skips_13g_and_formless_rows():
+    fl = [{"bucket": "form13", "form": "SCHEDULE 13G"},
+          {"bucket": "form13", "form": "SCHEDULE 13G/A"},
+          {"bucket": "form13", "form": "SCHEDULE 13D/A"},
+          {"bucket": "form13"},                         # no form -> cannot tell, not counted
+          {"bucket": "form4", "form": "4"}]
+    assert whales_13d.count_activist_13d(fl) == 1
+    assert whales_13d.count_activist_13d(None) == 0
+
+
+class _ProjColl:
+    """Fake Mongo collection that honours the projection the caller asks for,
+    so a board that forgets to project ``payload.filings.form`` sees no forms."""
+    def __init__(self, docs):
+        self._docs, self.projections = docs, []
+
+    def find(self, q=None, proj=None):
+        self.projections.append(proj or {})
+        keep = set((proj or {}).keys())
+        for d in self._docs:
+            fl = []
+            for f in d["payload"]["filings"]:
+                fl.append({k: v for k, v in f.items() if f"payload.filings.{k}" in keep})
+            yield {"ticker": d["ticker"], "payload": {"filings": fl}}
+
+
+def _d13(ticker, *forms):
+    return {"ticker": ticker,
+            "payload": {"filings": [{"bucket": whales_13d._form_bucket(f), "form": f} for f in forms]}}
+
+
+def _mm_setup(monkeypatch, d13_docs, allr):
+    coll = _ProjColl(d13_docs)
+
+    class _DB:
+        whales_cache = _ProjColl([])
+        whales13d_cache = coll
+    monkeypatch.setattr(mm.history, "_get_db", lambda: _DB())
+    monkeypatch.setattr(mm.sepa_scanner, "load_latest", lambda: {"generated_at": 1, "all_results": allr})
+    monkeypatch.setattr(mm.pullback_ma, "load_latest_pullback", lambda: {"rows": []})
+    mm._CACHE.update(at=0.0, data=None)
+    return coll
+
+
+def test_money_movement_13d_scores_and_13g_does_not(monkeypatch):
+    allr = [{"symbol": "ACT", "name": "Act"}, {"symbol": "SMCI", "name": "Smci"},
+            {"symbol": "INS", "name": "Ins", "insider": {"cluster_buy": True}}]
+    coll = _mm_setup(monkeypatch, [
+        _d13("ACT", "SCHEDULE 13D/A"),
+        _d13("SMCI", *(["SCHEDULE 13G"] * 3 + ["SCHEDULE 13G/A"] * 3)),
+    ], allr)
+    rows = {r["ticker"]: r for r in mm.compute()["sec_moves"]}
+    assert rows["ACT"]["n_form13"] == 1 and "activist_13d" in rows["ACT"]["signals"]
+    assert rows["ACT"]["score"] == 40
+    # NEGATIVE: six passive 13Gs are not an activist stake and earn no row/score.
+    assert "SMCI" not in rows
+    # NEGATIVE: an insider cluster is not outranked by passive filings.
+    assert rows["INS"]["signals"] == ["insider_cluster"]
+    assert "payload.filings.form" in coll.projections[0]
+
+
+def test_NEGATIVE_money_movement_13g_only_ticker_with_cluster_gets_no_activist(monkeypatch):
+    allr = [{"symbol": "SMCI", "name": "Smci", "insider": {"cluster_buy": True}}]
+    _mm_setup(monkeypatch, [_d13("SMCI", "SCHEDULE 13G", "SC 13G/A")], allr)
+    r = mm.compute()["sec_moves"][0]
+    assert r["ticker"] == "SMCI" and r["n_form13"] == 0
+    assert "activist_13d" not in r["signals"] and r["score"] == 30
+
+
+def _cf_setup(monkeypatch, d13_docs, allr):
+    coll = _ProjColl(d13_docs)
+    monkeypatch.setattr(cf.sepa_scanner, "load_latest", lambda: {"generated_at": 1, "all_results": allr})
+    monkeypatch.setattr(cf.leaderboard, "leaderboard", lambda n=300: {"leaders": []})
+    monkeypatch.setattr(cf.pullback_ma, "load_latest_pullback", lambda: {"rows": []})
+    monkeypatch.setattr(cf.market_gauge, "get_gauge",
+                        lambda force=False: {"state": "constructive", "score": 75})
+
+    class _DB:
+        whales_cache = _ProjColl([])
+        whales13d_cache = coll
+    monkeypatch.setattr(cf.history, "_get_db", lambda: _DB())
+    cf._CACHE.update(at=0.0, data=None)
+    return coll
+
+
+def test_confluence_13d_counts_13g_does_not(monkeypatch):
+    def rec(s):
+        return {"symbol": s, "name": s, "is_candidate": True, "score": 80,
+                "is_buyable": True, "rating": "STRONG_BUY"}
+    coll = _cf_setup(monkeypatch, [_d13("ACT", "SC 13D"),
+                                   _d13("PAS", "SCHEDULE 13G", "SCHEDULE 13G/A")],
+                     [rec("ACT"), rec("PAS")])
+    rows = {r["symbol"]: r for r in cf.compute(top_n=10)["rows"]}
+    assert "13D activist" in rows["ACT"]["matches"]
+    # NEGATIVE: passive 13G never earns the +2 "13D activist" credit.
+    assert "13D activist" not in rows["PAS"]["matches"]
+    assert rows["ACT"]["confluence_score"] - rows["PAS"]["confluence_score"] == cf.WEIGHTS["activist_13d"]
+    assert "payload.filings.form" in coll.projections[0]
+
+
+# --- 5. No-primary-doc fallback link points at the filing itself ------------
+
+def test_accession_link_without_primary_doc_is_the_filing_index():
+    u = whales_13d._accession_to_url("0001692819", "0001193125-26-123456", None)
+    assert u == "https://www.sec.gov/Archives/edgar/data/1692819/000119312526123456/"
+    # NEGATIVE: never the type=SC+13 browse filter (it cannot list SCHEDULE 13… filings).
+    assert "browse-edgar" not in u and "type=SC" not in u
+
+
+def test_NEGATIVE_accession_link_with_primary_doc_unchanged():
+    u = whales_13d._accession_to_url("0001692819", "0001193125-26-123456", "x.htm")
+    assert u == "https://www.sec.gov/Archives/edgar/data/1692819/000119312526123456/x.htm"

@@ -24,6 +24,7 @@ vi.mock('../hooks/useSupplyDemand', () => ({
 import { WhalesFlowModal } from './WhalesFlowModal';
 import { Whales13DModal } from './Whales13DModal';
 import { NodeThesisPanel } from './NodeThesisPanel';
+import { MoneyMovement } from './MoneyMovement';
 
 const mover = (holder: string, pc: number) => ({ holder, pct_change: pc, type: 'other', value: 1e9, pct_held: 0.01 });
 
@@ -106,7 +107,11 @@ describe('Whales13DModal — both 13D/G naming generations', () => {
     render(<Whales13DModal symbol="VST" onClose={() => {}} />);
     await waitFor(() => expect(document.body.textContent).toContain('SCHEDULE 13G'));
     const txt = document.body.textContent || '';
-    expect(txt).toContain('5% ownership threshold');
+    expect(txt).toContain('5% holder filings');
+    // NEGATIVE: most of these are passive 13G/A — the header must not call
+    // them activist plays or claim a fund "crossed 5%".
+    expect(txt).not.toContain('activist plays');
+    expect(txt).not.toContain('crossed 5%');
     expect(txt).toContain('📑 SCHEDULE 13G');
     expect(txt).toContain('📜 SCHEDULE 13D/A');
     expect(txt).toContain('📑 SC 13G/A');
@@ -152,5 +157,33 @@ describe('NodeThesisPanel — major holders line', () => {
     whalesState.data = whalesPayload({ major: {} });
     renderPanel();
     expect(document.querySelector('.ntp-major')).toBeNull();
+  });
+});
+
+describe('MoneyMovement — the 13D chip counts 13D only', () => {
+  const payload = (n13: number) => ({
+    sections: { hedge_fund: [], institutional: [], whales: [] }, section_labels: {},
+    sec_moves: [{ ticker: 'ACT', name: 'Act', n_form13: n13, n_form4: 0, insider_cluster: n13 === 0,
+                  n_funds_buying: 0, signals: [], score: 40, is_sepa: false, is_pullback: false }],
+    political: { potus_family: [], us_gov: [] }, not_wired: [],
+    tickers_covered: 1, funds_total: 0, generated_at: 1,
+  });
+
+  it('labels the chip as 13D filings, passive 13G not counted', async () => {
+    stubFetch(payload(1));
+    render(<MemoryRouter><MoneyMovement /></MemoryRouter>);
+    await waitFor(() => expect(document.querySelector('.mm-sig--activist')).not.toBeNull());
+    const chip = document.querySelector('.mm-sig--activist')!;
+    expect(chip.textContent).toContain('1×13D');
+    expect(chip.getAttribute('title')).toContain('Passive 13G not counted');
+    // NEGATIVE: the old title lumped 13G in with "activist".
+    expect(chip.getAttribute('title')).not.toContain('13D/G activist');
+  });
+
+  it('NEGATIVE: a 0 count renders no 13D chip', async () => {
+    stubFetch(payload(0));
+    render(<MemoryRouter><MoneyMovement /></MemoryRouter>);
+    await waitFor(() => expect(document.body.textContent).toContain('ACT'));
+    expect(document.querySelector('.mm-sig--activist')).toBeNull();
   });
 });

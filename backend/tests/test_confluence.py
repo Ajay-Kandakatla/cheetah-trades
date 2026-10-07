@@ -44,7 +44,7 @@ def test_scores_ranks_and_lists_matches(monkeypatch):
            leaders=[{"symbol": "AAA", "persistence_pct": 80, "appearances": 8, "current_rank": 2}],
            pullback_syms={"AAA"},
            whale_docs=[{"ticker": "AAA", "payload": {"moves": {"n_buying": 12}}}],
-           d13_docs=[{"ticker": "AAA", "payload": {"filings": [{"bucket": "form13"}]}}])
+           d13_docs=[{"ticker": "AAA", "payload": {"filings": [{"bucket": "form13", "form": "SCHEDULE 13D"}]}}])
     o = cf.compute(top_n=5)
     syms = [r["symbol"] for r in o["rows"]]
     assert "CCC" not in syms                          # is_candidate False -> excluded

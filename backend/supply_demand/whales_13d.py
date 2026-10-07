@@ -54,12 +54,16 @@ _USER_AGENT = os.getenv(
 # cached docs carried one; VST had 6 since 2025, all missed). Both
 # naming generations are accepted; the old names still appear on
 # pre-2025 filings inside the window.
-_FORMS_13_DG = (
-    "SC 13D", "SC 13D/A",
-    "SC 13G", "SC 13G/A",
-    "SCHEDULE 13D", "SCHEDULE 13D/A",
-    "SCHEDULE 13G", "SCHEDULE 13G/A",
-)
+#
+# 13D vs 13G (2026-10-06): 13D is the active-intent filing; 13G is the
+# PASSIVE 5% filing (index funds, quarterly 13G/A since the 2024 SEC rule,
+# some reporting a drop BELOW 5%). Both stay in the "form13" bucket the
+# drill-in lists, but the boards that call a filing "activist" (Money
+# Movement, Top Confluence) count only the 13D family via
+# count_activist_13d() — a 13G is not an activist stake.
+_FORMS_13D = ("SC 13D", "SC 13D/A", "SCHEDULE 13D", "SCHEDULE 13D/A")
+_FORMS_13G = ("SC 13G", "SC 13G/A", "SCHEDULE 13G", "SCHEDULE 13G/A")
+_FORMS_13_DG = _FORMS_13D + _FORMS_13G
 _FORMS_TRACKED = (
     "4", "4/A",
     "144",
@@ -74,6 +78,21 @@ def _form_bucket(form: str) -> str | None:
     if form in _FORMS_13_DG:
         return "form13"
     return None
+
+
+def is_activist_13d(form) -> bool:
+    """True only for the 13D family (SC 13D / SCHEDULE 13D, + "/A")."""
+    return isinstance(form, str) and form.strip().upper() in _FORMS_13D
+
+
+def count_activist_13d(filings) -> int:
+    """# of 13D-family filings in a cached payload's ``filings`` list.
+
+    Passive 13G / 13G/A are NOT counted, and a filing with no ``form``
+    (cannot be told apart) is not counted either.
+    """
+    return sum(1 for f in (filings or [])
+               if isinstance(f, dict) and is_activist_13d(f.get("form")))
 
 
 # --- Mongo cache ---------------------------------------------------------
@@ -228,9 +247,12 @@ def _accession_to_url(cik: str, accession: str, primary_doc: str | None) -> str:
             f"https://www.sec.gov/Archives/edgar/data/"
             f"{cik_no_pad}/{acc_no_dashes}/{primary_doc}"
         )
+    # No primary doc: link the filing's own index. (The old browse link
+    # filtered type=SC+13, a prefix match that never lists a "SCHEDULE 13…"
+    # filing — it pointed at a list without the filing in it.)
     return (
-        f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany"
-        f"&CIK={cik}&type=SC+13&dateb=&owner=include&count=40"
+        f"https://www.sec.gov/Archives/edgar/data/"
+        f"{cik_no_pad}/{acc_no_dashes}/"
     )
 
 
@@ -338,7 +360,8 @@ def get_13d(ticker: str, days: int = 120, force: bool = False) -> dict:
         "source": "SEC EDGAR submissions API",
         "disclaimer": (
             "Form 4 = insider trades (2-day lag). Form 144 = insider "
-            "pre-sale notice. SC 13D/G = 5% ownership threshold crossings. "
+            "pre-sale notice. 13D / 13G = 5%+ holder filings (13D active intent, "
+            "13G passive; an amendment can report a drop below 5%). "
             "Filer names and trade details are on the cover page of each "
             "linked filing — open the link to verify."
         ),

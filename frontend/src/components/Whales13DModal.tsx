@@ -3,7 +3,7 @@
  * Triggered by the "📋 SEC activity" chip on SepaCandidateCard. Sections:
  *   - 4   / 4-A   — insider trades (2-day lag, fires constantly)
  *   - 144         — insider pre-sale notice (planned restricted sale)
- *   - SC 13D/G    — fund crossed 5% ownership (rare, high-signal)
+ *   - 13D / 13G   — 5% holder filings (13D active intent, 13G passive)
  *
  * Filer name and trade details live on the cover page of each filing;
  * the modal renders deep links to SEC.gov so the user can verify.
@@ -77,8 +77,8 @@ const BUCKET_HEADERS: Record<Exclude<Bucket, null>, { emoji: string; title: stri
   },
   form13: {
     emoji: '📜',
-    title: '5% ownership threshold · SC 13D / 13G',
-    subtitle: 'Outside fund crossed 5% ownership. Rare but high-signal (activist plays, anchors).',
+    title: '5% holder filings · 13D / 13G',
+    subtitle: 'A holder at or near 5%. 13D = active intent; 13G = passive (index funds) — a 13G/A can report a drop below 5%.',
   },
 };
 
@@ -142,7 +142,7 @@ export function Whales13DModal({ symbol, onClose, windowDays = 120 }: Props) {
             </h2>
             {n > 0 && (
               <p style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.3rem 0 0', opacity: 0.9, fontFamily: '"SF Mono", Menlo, monospace' }}>
-                {(data?.n_form4   ?? 0)} Form 4 · {(data?.n_form144 ?? 0)} Form 144 · {(data?.n_form13 ?? 0)} SC 13D/G
+                {(data?.n_form4   ?? 0)} Form 4 · {(data?.n_form144 ?? 0)} Form 144 · {(data?.n_form13 ?? 0)} 13D/G
               </p>
             )}
             <p style={{ fontSize: '0.74rem', color: 'var(--cm-slate)', margin: '0.25rem 0 0', opacity: 0.75 }}>
@@ -261,7 +261,7 @@ export function Whales13DModal({ symbol, onClose, windowDays = 120 }: Props) {
           lineHeight: 1.45,
         }}>
           <p style={{ margin: 0 }}>
-            <strong>What this is:</strong> {data?.disclaimer || 'SC 13D/G — required SEC filings within 10 days of crossing 5% beneficial ownership of a class of shares. Source: SEC EDGAR.'}
+            <strong>What this is:</strong> {data?.disclaimer || '13D / 13G — SEC filings by holders of 5%+ of a class of shares (13D active intent, 13G passive; amendments can report a drop below 5%). Source: SEC EDGAR.'}
           </p>
           <p style={{ margin: '0.4rem 0 0' }}>
             <strong>Filer name + % owned</strong> are on the linked cover page.

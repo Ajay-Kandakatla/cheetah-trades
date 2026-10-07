@@ -740,13 +740,13 @@ export function SepaCandidatePage() {
                     `Recent filings in lookback window:\n` +
                     `  ${whales13d.n_form4} Form 4 (insider trades)\n` +
                     `  ${whales13d.n_form144} Form 144 (insider pre-sale notice)\n` +
-                    `  ${whales13d.n_form13} SC 13D/G (5% ownership threshold)\n\n` +
+                    `  ${whales13d.n_form13} 13D/13G (5% holder filings)\n\n` +
                     `Latest: ${whales13d.latest_form} on ${whales13d.latest_date}`
                   }
                 >
                   📋 SEC · {whales13d.n_filings}
                   {whales13d.n_form13 > 0 && (
-                    <span style={{ marginLeft: 4, opacity: 0.85 }}>· {whales13d.n_form13}×13D</span>
+                    <span style={{ marginLeft: 4, opacity: 0.85 }}>· {whales13d.n_form13}×13D/G</span>
                   )}
                   <span style={{ fontSize: '0.7em', opacity: 0.6, marginLeft: 3 }}>↗</span>
                 </span>

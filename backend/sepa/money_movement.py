@@ -25,6 +25,7 @@ import time
 
 from . import history, scanner as sepa_scanner
 from . import pullback_ma
+from supply_demand.whales_13d import count_activist_13d   # pure helper, no I/O
 
 log = logging.getLogger("sepa.money_movement")
 
@@ -87,14 +88,18 @@ def _empty(t0, reason=None):
 
 
 def _sec_moves(db, by_sym, ticker_nbuying, sepa_syms, pullback_syms, top=SEC_TOP):
-    """Big / coordinated SEC moves: 13D/G activist stakes + insider Form-4
-    clusters + coordinated multi-fund accumulation — all from data we cache."""
+    """Big / coordinated SEC moves: 13D activist stakes + insider Form-4
+    clusters + coordinated multi-fund accumulation — all from data we cache.
+
+    Only the 13D family counts as "activist" (2026-10-06): passive 13G /
+    13G/A filings share the "form13" bucket but are not activist stakes."""
     form13, form4 = {}, {}
     try:
-        for d in db.whales13d_cache.find({}, {"ticker": 1, "payload.filings.bucket": 1}):
+        for d in db.whales13d_cache.find({}, {"ticker": 1, "payload.filings.bucket": 1,
+                                              "payload.filings.form": 1}):
             tkr = (d.get("ticker") or "").upper()
             fl = ((d.get("payload") or {}).get("filings")) or []
-            f13 = sum(1 for f in fl if f.get("bucket") == "form13")
+            f13 = count_activist_13d(fl)
             f4 = sum(1 for f in fl if f.get("bucket") == "form4")
             if f13 or f4:
                 form13[tkr], form4[tkr] = f13, f4

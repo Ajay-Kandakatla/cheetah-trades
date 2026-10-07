@@ -117,7 +117,8 @@ def _wd(ticker, n_buying):
 
 
 def _d13(ticker, n13, n4=0):
-    fl = [{"bucket": "form13"} for _ in range(n13)] + [{"bucket": "form4"} for _ in range(n4)]
+    fl = ([{"bucket": "form13", "form": "SCHEDULE 13D"} for _ in range(n13)]
+          + [{"bucket": "form4", "form": "4"} for _ in range(n4)])
     return {"ticker": ticker, "payload": {"filings": fl}}
 
 
