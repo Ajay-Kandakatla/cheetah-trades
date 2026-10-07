@@ -143,8 +143,12 @@ def build_summary(user_email: str) -> dict:
     return summary
 
 
+# Plain `def` (2026-10-06): the quote fetch and the Plaid/Mongo reads below are
+# blocking calls, so FastAPI must run these routes in its threadpool. As
+# `async def` they ran on the event loop and the Portfolio page's 60 s poll
+# froze every request on the site for 5-19 s.
 @router.get("/portfolio")
-async def portfolio_get(user_email: str = Depends(current_user_email)):
+def portfolio_get(user_email: str = Depends(current_user_email)):
     return JSONResponse(build_summary(user_email))
 
 
@@ -580,7 +584,7 @@ async def portfolio_betas_get(user_email: str = Depends(current_user_email)):
 
 
 @router.get("/portfolio/holdings")
-async def portfolio_holdings_get(
+def portfolio_holdings_get(
     refresh: bool = Query(False),
     user_email: str = Depends(current_user_email),
 ):
@@ -634,7 +638,7 @@ async def portfolio_holdings_get(
 
 
 @router.post("/portfolio/holdings/refresh")
-async def portfolio_holdings_refresh(user_email: str = Depends(current_user_email)):
+def portfolio_holdings_refresh(user_email: str = Depends(current_user_email)):
     """Force a re-pull from Plaid. Used by the page's ↻ button when
     the user wants the freshest possible numbers."""
     e = _require_portfolio_access(user_email)

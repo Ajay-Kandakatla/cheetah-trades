@@ -24,13 +24,28 @@ from threading import Lock
 log = logging.getLogger("portfolio.quotes")
 
 _CACHE_TTL = 60  # seconds
+# A ticker yfinance could not price is not asked again for this long
+# (2026-10-06). Holdings like `$RESTRICTED.STOCK.UNITS` were re-asked on every
+# 60 s poll and each miss cost yfinance's full retry path, 5-19 s. Massive is
+# still asked every refresh, so a real ticker recovers as soon as it prices.
+_MISS_TTL = 900  # seconds
 _cache: dict[str, dict] = {}   # ticker -> quote
 _cache_set_at: dict[str, float] = {}
+_yf_miss_at: dict[str, float] = {}   # ticker -> when yfinance last failed it
 _lock = Lock()
 
 
 def _fresh(t: str) -> bool:
     return (time.time() - _cache_set_at.get(t, 0)) < _CACHE_TTL
+
+
+def _yf_eligible(t: str) -> bool:
+    """A broker's non-ticker position (Fidelity's `$RESTRICTED.STOCK.UNITS`,
+    `$BTC.LP.IDX.2055.H`) never goes to yfinance, and neither does a ticker it
+    missed within `_MISS_TTL`."""
+    if t.startswith("$"):
+        return False
+    return (time.time() - _yf_miss_at.get(t, 0)) >= _MISS_TTL
 
 
 def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
@@ -75,7 +90,8 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
         except Exception as exc:
             log.debug("massive portfolio quotes failed: %s", exc)
 
-        remaining = [t for t in stale if t not in priced]
+        with _lock:
+            remaining = [t for t in stale if t not in priced and _yf_eligible(t)]
         if remaining:
             try:
                 import yfinance as yf
@@ -103,6 +119,12 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
                         log.debug("yfinance fast_info failed for %s: %s", t, exc)
             except Exception as exc:
                 log.warning("yfinance batch fetch failed: %s", exc)
+            with _lock:
+                for t in remaining:
+                    if _fresh(t) and _cache.get(t, {}).get("last") is not None:
+                        _yf_miss_at.pop(t, None)
+                    else:
+                        _yf_miss_at[t] = time.time()
 
     with _lock:
         for t in tickers:
