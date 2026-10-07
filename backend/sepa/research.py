@@ -169,6 +169,8 @@ DECISION_FIELDS = (
     # sequential quarter-over-quarter read (sepa/qoq.py, 2026-09-12). Small
     # arrays (<=8 floats each); they ride the same single projected query.
     "fundamentals.q_period_series",
+    # 2026-10-07 c — the period END dates beside the keys (`qoq.ends_year_apart`).
+    "fundamentals.q_end_series",
     "fundamentals.rev_q_series",
     "fundamentals.eps_q_series",
     "fundamentals.ni_q_series",
@@ -209,6 +211,7 @@ def decision_snapshot(symbols: list[str],
                 "y_eps_growth_pct": f.get("y_eps_growth_pct"),
                 "earnings_quality": f.get("earnings_quality"),
                 "q_period_series": f.get("q_period_series"),
+                "q_end_series": f.get("q_end_series"),
                 "rev_q_series": f.get("rev_q_series"),
                 "eps_q_series": f.get("eps_q_series"),
                 "ni_q_series": f.get("ni_q_series"),

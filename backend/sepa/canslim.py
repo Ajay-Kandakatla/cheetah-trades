@@ -158,6 +158,7 @@ def _from_hybrid(symbol: str) -> dict:
         # quarter" for a single name (0 of 250 board rows had a series). Keeping
         # them costs one small array per symbol and no extra API call.
         "q_period_series": m.get("q_period_series"),
+        "q_end_series": m.get("q_end_series"),
         "rev_q_series": m.get("rev_q_series"),
         "eps_q_series": m.get("eps_q_series"),
         "ni_q_series":  m.get("ni_q_series"),
@@ -302,6 +303,10 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         # integer per report, `fiscal_year * 4 + (quarter - 1)`, lets `sepa.qoq`
         # REFUSE a pair instead of silently mislabelling it.
         "q_period_series": [_period_index(q) if q else None for q in q_results],
+        # PERIOD END DATES, parallel to the keys (2026-10-07 c). The labels can be
+        # four apart while the quarters are not a year apart (CRDO 455 days, KLIC
+        # 273 — a relabelled fiscal year); `qoq.ends_year_apart` reads these.
+        "q_end_series": [_end_day(q) for q in q_results],
         "rev_q_series": [_income_value(q, "revenues") for q in q_results],
         "eps_q_series": [_income_value(q, "diluted_earnings_per_share") for q in q_results],
         "ni_q_series":  [_income_value(q, "net_income_loss") for q in q_results],
@@ -311,6 +316,14 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         "duplicate_periods": _align_stats["duplicate_periods"],
         "reordered": _align_stats["reordered"],
     }
+
+
+def _end_day(report) -> Optional[str]:
+    """'2026-07-26' — the report's period end date, or None (a hole, no date)."""
+    if not isinstance(report, dict):
+        return None
+    d = str(report.get("end_date") or "")[:10]
+    return d if len(d) == 10 else None
 
 
 def _period_index(report: dict) -> Optional[int]:
@@ -433,6 +446,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "rev_growth_q_pct":   m.get("rev_growth_q_pct"),
         "inst_ownership_pct": inst,
         "q_period_series": m.get("q_period_series"),
+        "q_end_series": m.get("q_end_series"),
         "rev_q_series": m.get("rev_q_series"),
         "eps_q_series": m.get("eps_q_series"),
         "ni_q_series":  m.get("ni_q_series"),
@@ -496,6 +510,7 @@ def _from_yfinance(symbol: str) -> dict:
         # consumer that has to tell "this path has no series" from "this key
         # does not exist" is a consumer that will one day guess wrong.
         "q_period_series": _q_periods_yf(t),
+        "q_end_series": None,           # calendar keys ARE derived from the dates
         "rev_q_series": rev_s,
         "eps_q_series": eps_s,
         "ni_q_series":  ni_s,
@@ -516,7 +531,7 @@ def _empty() -> dict:
     return {
         "q_eps_growth_pct": None, "y_eps_growth_pct": None,
         "rev_growth_q_pct": None, "inst_ownership_pct": None,
-        "q_period_series": None,
+        "q_period_series": None, "q_end_series": None,
         "rev_q_series": None, "eps_q_series": None, "ni_q_series": None,
         "sales": sales.compute([]),
         "earnings_quality": earnings_quality.compute([], [], []),

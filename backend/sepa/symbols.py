@@ -427,7 +427,10 @@ DELISTED: dict[str, str] = {
     "PSKY": "Paramount Skydance Class B. Inactive Massive record, delisted_utc "
             "2026-10-06 (CIK 0002041610, FIGI BBG01VS5NK99); last cached bar "
             "2026-10-05 on 31.7M shares vs ~17.9M average; a by-CIK search "
-            "(active=true) returns no successor under the same CIK.",
+            "(active=true) returns no successor under the same CIK. HIS CALL 12: "
+            "WBD's bars stop the same day (merger close, a new holdco gets a NEW "
+            "CIK); a by-name search 'Paramount' (active=true, 2026-10-07) lists "
+            "only PZG (Paramount Gold Nevada) — any successor is not spliced.",
 }
 
 

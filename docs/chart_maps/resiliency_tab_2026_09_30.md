@@ -481,8 +481,9 @@ base: the NI loss first, then a stored figure (`no_series`), then `year_ago_miss
 
 ### HIS CALL (shipped defaults, one constant each)
 
-1. `SALES_AGREE_REQUIRED = True` — his rule #7 on the sales leg. Until the H1 heal, 151 stored sales figures that
-   disagree with their own series (JPM 27.69 vs 17.89, BAC 19.25 vs 3.67, GS…) are shown with `*`, not ranked.
+1. `SALES_AGREE_REQUIRED = True` — his rule #7 on the sales leg. 151 stored sales figures that disagree with their
+   own series (JPM 27.69 vs 17.89, BAC 19.25 vs 3.67, GS…) are shown with `*`, not ranked. (2026-10-07 c: in 141 of
+   them the STORED figure is the one that matches the filing — see below.)
 2. An ETF never ranks; `STALE_FILING_QUARTERS = qoq.YOY_GAP` (AIQ-class recycled tickers, MRX, GLIBA, SE, ASML, DOX).
    A stricter one-cadence cut would also unrank OPCH, HUBG, PI — his number.
 3. The SNDK class (stored % missing, own filings support one) is shown with `*`, not ranked, until a research refresh
@@ -505,8 +506,8 @@ was regenerated from it, same trim as before + `_sndk_tile`):
 - Stale: MRX / GLIBA / SE / ASML / DOX `stale_filings`, score None. AIQ reads `etf` (it is in `PINNED_ETFS`, and the ETF
   check runs first), score None. ETF: SPY, QQQ, DRAM `etf`. Disagreement: BAC / JPM / GS `sales_reason
   stored_disagrees` (JPM and GS keep their EPS leg → one-leg; BAC's EPS also disagrees → pending).
-- Top 15 Tradeable on 🚀: MU, LPG, BHF, INSW, HCC, KLIC, TER, CRDO, VSEC, PARR, TECK, PLTR, SM, AVGO, ALAB — every one
-  two-leg. `counts.growth_ranked` 2,163, `growth_eps_ranked` 1,443.
+- Top 15 Tradeable on 🚀: MU, LPG, BHF, INSW, HCC, KLIC, TER, CRDO, VSEC, PARR, TECK, PLTR, SM, AVGO, ALAB — all on two
+  ranked legs, but NOT all clean: KLIC (#6) and CRDO (#8) compare quarters 273 and 455 days apart (2026-10-07 c below). `counts.growth_ranked` 2,163, `growth_eps_ranked` 1,443.
 
 ### Payload deltas
 
@@ -522,3 +523,57 @@ predicted pins in `test_resiliency_today_growth_2026_10_07.py`, `test_resiliency
 read). Mutation spot-checks in a scratch copy (V2): the old order tuple, `SALES_AGREE_REQUIRED = False`,
 `STALE_FILING_QUARTERS = 99`, dropping `q_period_series` from `BACKFILL_PROJ`, removing `backfill_skip_reason`,
 `PCT_AGREE_TOL_1DP = PCT_AGREE_TOL` — each turns a named test red.
+
+## 2026-10-07 c — critic round (8 findings, each with a test that fails without it)
+
+Tests: `backend/tests/test_resiliency_growth_critic_2026_10_07.py`; predicted pins `test_resiliency_today_growth_2026_10_07.py`
+(sales token), `test_qoq_backfill_vintage_2026_10_07.py` (the backfill `$set` may carry `q_end_series`). Real-data
+re-verification: `<scratch>/data_audit/fix_c/verify_c.py` (throwaway container, `block_writes()`, 0 Massive calls,
+the raw vX snapshot mounted read-only). All MEASURED 2026-10-07 after the close unless marked.
+
+1. **Labels four apart, quarters not a year apart.** `qoq.period_ok` compared fiscal LABELS only. Matching each doc's
+   `rev_q_series[0]` and `[4]` to the raw vX rows by value (2,007 docs matched): **8** compare quarters that are not a
+   year apart — CRDO 455 days (two-leg 96.6, #8; chip +181.7%, the true year-ago quarter gives +114.7%), KLIC 273 (#6;
+   the true year-ago EPS is −$0.06, a loss), CAKE 728, MCFT 184, FUBO 273, NCMI 280, NRIX 90, XERS 90. Fix: canslim
+   stores `q_end_series` (each report's `end_date`, parallel to the aligned keys); `research.decision_snapshot` serves
+   it; `qoq.backfill` / `qoq.realign` move it WITH the keys; `qoq.period_ok(periods, ends=)` is False when
+   `qoq.ends_year_apart` is False — `YEAR_DAYS` (365) ± `capital_returns.SAME_QUARTER_DAYS` (45, the existing
+   nearest-quarter rounding, reused by name; on this data every good pair sits at 364–371 days and every bad one ≥ 90
+   days off, so the window choice moves nothing). Only the 🛡️ 🚀 growth read passes `ends`; every other caller gets the
+   label-only answer unchanged. **Until a refresh stores the end dates the 8 still rank** (served today: KLIC #6, CRDO
+   #8) — they are in the H1 list. Simulated with the reconstructed end dates: two-leg 1,342 → **1,338**, one-leg 821
+   → **817**, quarters-not-a-year-apart 31 → **39**; CRDO → #1,896, KLIC → #1,829; the new top 15: MU, LPG, BHF, INSW,
+   HCC, TER, VSEC, PARR, TECK, PLTR, SM, AVGO, ALAB, REPX, MPC (all two-leg).
+2. **"Disagrees with the company's own filings" was false for 141 of 151.** Against the raw vX `revenues` rows the
+   STORED figure matches the filing in 141 cases and the v1 series in 7 (DDOG, NKE, CPRT, LEN, MKC, SCI, AAON); 2
+   neither (BRK-B, DPZ), 1 no vX row (FERG). BAC: stored 19.25 = vX 19.25; the v1 series reads 3.67 off gross revenue.
+   The clause now reads `sales +19.25% stored vs +3.67% from the quarterly series on file — the stored figure and the
+   quarterly series disagree; not ranked until they agree`; the pending fold no longer says "filings" and no longer
+   promises a refresh "realigns them". The ranking gate is unchanged. The 141 are HELD OUT of H1 (a refresh recomputes
+   the % from v1 and would rank BAC at +3.7%) — **HIS CALL**: v1 `revenue` for banks and energy names.
+3. **"No quarterly figures" split.** 141 of the 144 cards were yfinance-fallback docs with empty series (86 of them have
+   Massive quarterly filings in the vX snapshot — SEI, FOUR, MOG-A, HEI-A, PJT, YOU, FIGR; 55 do not — VIK, ONON, AU,
+   mostly foreign). No doc records `_massive_error`, so the served read cannot tell the two apart: a `_source ==
+   "yfinance"` doc with no figure is the new gap `massive_unused` — chip `Sales · EPS: Massive not used at research
+   time, pending refresh`, fold "the research run fell back to yfinance, which had none; Massive's quarterly figures
+   were not used on that run — pending a research refresh (a domestic filer usually fills; a foreign filer may stay
+   empty)". The remaining 3 (VIAV, BNL, AX — hybrid docs whose latest slots are empty) keep "no quarterly figures";
+   "neither provider" is gone from every text.
+4. **A year-ago revenue at or under $0 is not a loss.** The sales token is `yr-ago rev ≤$0` (`SALES_NO_REV_TOKEN`);
+   `yr-ago loss` stays EPS-only. OKLO: `Sales yr-ago rev ≤$0 · EPS yr-ago loss YoY (FY2026 Q2)`; APLD (−$33.3M, a
+   derived-Q4 artifact) reads the same. The by-rule fold says "lost money or had no revenue".
+5. **`_etf_set` → `etf_info.cached_etf_set` had no test** (a mutation to `pass` kept all 164 green). Two tests now:
+   the cache's ETF is in the set, and `build()` without `etf_fn` reads it and the card is `etf`.
+6. **QoQ-rank lag** documented in `docs/sepa/breakout_qoq_rank.md` (HIS CALL).
+7. **PSKY = HIS CALL 12** in its `DELISTED` evidence. One Massive reference search by name (`Paramount`, active=true):
+   only PZG (Paramount Gold Nevada) — no successor listed under that name. WBD's bars stop the same day; any successor
+   is not spliced.
+8. **SNDK's expected chip after H1** is `Sales +371.6% · EPS yr-ago loss YoY (FY2026 Q4)` — its fiscal label when
+   Massive serves the refresh (only the yfinance fallback reads `Q2 2026`).
+
+Served line after this round (MEASURED, the branch memo, before any refresh): `🚀 Growth on file: 1,342 both legs ·
+821 one leg · 109 pending refresh · 105 blank by rule · no figure 355 (43 ETF/fund, 61 new listing, 57 not researched,
+141 Massive not used at research time, 3 no quarterly figures, 7 a year past due, 31 quarters not a year apart, 12
+year-ago quarter missing) · of 2,732 · 357 figures marked * wait on a research refresh · most figures cached
+2026-09-27.` Identity True, 0 chips with `—`. SNDK: `Sales +371.6%* · EPS yr-ago loss YoY (FY2026 Q4)`, pending.
+DBRG absent. `growth_coverage.classes` += `massive_unused`; `growth` += `massive_unused` (bool).

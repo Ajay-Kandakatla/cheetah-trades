@@ -99,6 +99,10 @@ BACKFILL_PROJ = {"symbol": 1, "fundamentals._source": 1, "fundamentals.q_period_
                  "fundamentals.ni_q_series": 1, "fundamentals.rev_growth_q_pct": 1,
                  "fundamentals.q_eps_growth_pct": 1}
 SERIES_KEYS = ("q_period_series", "rev_q_series", "eps_q_series", "ni_q_series")
+# 2026-10-07 c — the period END dates, parallel to `q_period_series`
+# (`ends_year_apart`). Written WITH the period keys every time, so the two lists
+# can never drift apart: a backfill or realign that moves the keys moves them.
+END_SERIES_KEY = "q_end_series"
 
 # A same-sign move of at least this size at the SAME point in the calendar last
 # year marks the row as a seasonal echo — "this is what it does every year".
@@ -281,8 +285,51 @@ PRIOR_PAIR = (1, 5)         # the quarter before vs ITS year-ago
 YOY_PAIRS = (HEADLINE_PAIR, PRIOR_PAIR)
 
 
-def period_ok(periods, pairs=YOY_PAIRS):
+# 2026-10-07 c — THE END-DATE CHECK (critic, MEASURED). The fiscal LABELS can be
+# four apart while the quarters are not a year apart: the provider relabelled a
+# fiscal year, so CRDO's "year-ago" slot ended 2025-05-03 against 2026-08-01
+# (455 days), KLIC's 2025-10-04 against 2026-07-04 (273 days), CAKE 728 days.
+# 8 of 2,010 matched docs (CRDO, KLIC, CAKE, MCFT, FUBO, NCMI, NRIX, XERS).
+# A quarter and its year-ago self end one year apart, within the nearest-quarter
+# rounding `capital_returns.SAME_QUARTER_DAYS` (45, definitional, reused by
+# name; a 52/53-week year moves by 7). A pair a whole quarter off misses by ~91.
+YEAR_DAYS = 365                  # days in a year — definitional, NOT a rule
+
+
+def _iso_day(v):
+    from datetime import date as _date
+    try:
+        return _date.fromisoformat(str(v)[:10]) if v else None
+    except (TypeError, ValueError):
+        return None
+
+
+def ends_year_apart(ends, pair=HEADLINE_PAIR) -> Optional[bool]:
+    """Do slots `pair` of the stored period END DATES sit one year apart?
+
+    True / False when both dates parse; None when either is missing (a doc
+    written before `q_end_series` existed, a yfinance doc, a hole) — never a
+    guess. Window: `YEAR_DAYS` ± `capital_returns.SAME_QUARTER_DAYS`.
+    """
+    from sepa.capital_returns import SAME_QUARTER_DAYS
+    if not isinstance(ends, (list, tuple)):
+        return None
+    i, j = pair
+    if len(ends) <= max(i, j):
+        return None
+    a, b = _iso_day(ends[i]), _iso_day(ends[j])
+    if a is None or b is None:
+        return None
+    return abs((a - b).days - YEAR_DAYS) <= SAME_QUARTER_DAYS
+
+
+def period_ok(periods, pairs=YOY_PAIRS, ends=None):
     """THE tri-state a surface serves: True / False / None.
+
+    `ends` (2026-10-07 c, optional): the parallel `q_end_series`. When given
+    and the headline pair's end dates are NOT a year apart (`ends_year_apart`
+    False) the answer is False whatever the labels say. Without it every
+    caller gets exactly the label-only answer it always got.
 
     None means UNVERIFIABLE — no keys on file, an unkeyed slot 0, too few
     quarters to reach the headline pair at all, or a year-ago slot that is None
@@ -313,6 +360,8 @@ def period_ok(periods, pairs=YOY_PAIRS):
     `sepa.qoq._adjacent` bites through here too (growth board E1 does).
     """
     pairs = tuple(pairs)
+    if pairs and ends is not None and ends_year_apart(ends, pairs[0]) is False:
+        return False                    # labels four apart, quarters not a year apart
     if not periods or not pairs:
         return None
     p = list(periods)
@@ -872,6 +921,11 @@ def backfill(symbols: Optional[list] = None, *, limit: int = 0,
         sets = {f"fundamentals.{k}": m[k] for k in SERIES_KEYS if _has_values(m.get(k))}
         if not sets:
             return "failed"
+        if "fundamentals.q_period_series" in sets:
+            # the end dates ride WITH the keys (None when the fetch has none) —
+            # never a stale list beside new keys
+            ends = m.get(END_SERIES_KEY)
+            sets[f"fundamentals.{END_SERIES_KEY}"] = ends if _has_values(ends) else None
         why = backfill_skip_reason(stored.get(sym) or {}, m)
         if why is not None:
             return f"skip:{why}"
@@ -936,7 +990,8 @@ def realign(symbols: Optional[list] = None, *, limit: int = 0,
         q = {"symbol": {"$in": [str(s).upper() for s in symbols]}}
     proj = {"symbol": 1, "fundamentals.q_period_series": 1,
             "fundamentals.rev_q_series": 1, "fundamentals.eps_q_series": 1,
-            "fundamentals.ni_q_series": 1, "fundamentals.sales": 1}
+            "fundamentals.ni_q_series": 1, "fundamentals.sales": 1,
+            f"fundamentals.{END_SERIES_KEY}": 1}
     docs = list(coll.find(q, proj))
     considered = len(docs)
     if limit:
@@ -957,7 +1012,8 @@ def realign(symbols: Optional[list] = None, *, limit: int = 0,
         a = align_series(periods,
                          rev_q_series=f.get("rev_q_series"),
                          eps_q_series=f.get("eps_q_series"),
-                         ni_q_series=f.get("ni_q_series"))
+                         ni_q_series=f.get("ni_q_series"),
+                         q_end_series=f.get(END_SERIES_KEY))
         if a["duplicate_periods"]:
             out["duplicate_periods"] += 1
         if a["reordered"]:
@@ -990,6 +1046,9 @@ def realign(symbols: Optional[list] = None, *, limit: int = 0,
             "fundamentals.rev_q_series": a["rev_q_series"],
             "fundamentals.eps_q_series": a["eps_q_series"],
             "fundamentals.ni_q_series": a["ni_q_series"],
+            # the end dates move with the keys; a doc without them keeps None
+            f"fundamentals.{END_SERIES_KEY}": (a[END_SERIES_KEY]
+                                              if _has_values(f.get(END_SERIES_KEY)) else None),
             "fundamentals.q_eps_growth_pct": q_eps,
             "fundamentals.rev_growth_q_pct": rev_g,
             "fundamentals.sales": sales_new,

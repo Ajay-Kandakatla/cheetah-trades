@@ -169,14 +169,26 @@ session scratchpad's `data_audit` folder; every command is the throwaway contain
   the cached figures. Dry-run on the branch 2026-10-07: **527 names** (pending legs 267, no_filings 144,
   not_researched 57, period_gap 31, yfinance label 12, year_ago_missing 12, stale 7, reported after cache 5; a name can
   carry several). Writes `heal_symbols.txt` (adv50 desc, SNDK first) and `earnings_symbols.txt` (127: 38 in-scan
-  `next_date` None, 89 liquid board names with no doc, XE).
-- **H1 research heal**: `python -m sepa.cli research-refresh --symbols "$(paste -sd, /out/heal_symbols.txt)" --workers 4`
-  — the Sunday job's code path; ≤ 4 Massive calls a name → **≤ 2,108 Massive calls** (+ ~3 yfinance a name).
+  `next_date` None, 89 liquid board names with no doc, XE). **Superseded 2026-10-07 c** by `fix_c/heal_select_c.py`
+  (dry run: **394 names**, ≤ **1,576** Massive calls — 141 held out, `massive_unused` 141, the 8 end-date
+  mismatches added; writes `fix_c/heal_symbols_c.txt`).
+- **H1 research heal**: `python -m sepa.cli research-refresh --symbols "$(paste -sd, /out/fix_c/heal_symbols_c.txt)" --workers 4`
+  — the Sunday job's code path; ≤ 4 Massive calls a name (+ ~3 yfinance a name). **2026-10-07 c (critic, MEASURED):**
+  the list comes from `fix_c/heal_select_c.py`, which counts the new `massive_unused` gap and HOLDS OUT the 141 names
+  whose stored sales figure MATCHES the vX filing revenue while the v1 series does not (`fix_c/heal_hold_sd.txt`,
+  from `fix_c/crit_sd_dump.py`: BAC stored 19.25 = vX 19.25, v1 series 3.67 off gross revenue $49.4B vs the 10-Q's
+  $31.6B; JPM 27.69 vs 17.89; GS 39.46 vs 22.91; CVX, GE, NEE…). A refresh recomputes `rev_growth_q_pct` from v1
+  (`canslim.py` `_compute_q_rev_growth`), so it would overwrite a figure that matches the filing with v1's revenue
+  line and rank it. **HIS CALL before H1**: whether v1 `revenue` is right for banks and energy names. The 7 where the
+  SERIES matches the filing (DDOG, NKE, CPRT, LEN, MKC, SCI, AAON) stay in H1.
 - **H2 CALY splice**: `python -c "from sepa import prices; prices.load_prices('CALY', force=True)"` (1–2 Massive calls),
   then `python -m sepa.cli research-refresh --symbols CALY --workers 1`.
 - **H3 earnings one-off** (yfinance only): `python -c "from sepa import earnings_watch as E; print(E.refresh(symbols=open('/out/earnings_symbols.txt').read().split(), max_workers=2))"`.
 - **H4 caps**: `python -m sepa.cap_warm` (the Saturday 08:10 job that slept; yfinance).
 - **H5 13F**: `python -m sepa.warm_whales --workers 4` (the Sunday 06:00 job, stale-only by default; yfinance).
 
-Afterwards: SNDK's chip should read `Sales +371.6% · EPS yr-ago loss YoY (Q2 2026)` (one leg), and the served 🚀
-line's pending count should fall toward 0 for the healed names.
+Afterwards: SNDK's chip should read `Sales +371.6% · EPS yr-ago loss YoY (FY2026 Q4)` (one leg) — its fiscal label
+when Massive serves the refresh; only the yfinance fallback labels it calendar `Q2 2026`. The served 🚀 line's pending
+count should fall toward 0 for the healed names (not the 141 held out above), and a refreshed doc carries
+`q_end_series`, so the 8 mislabelled pairs (CRDO, KLIC, CAKE, MCFT, FUBO, NCMI, NRIX, XERS) move to "quarters not a
+year apart".

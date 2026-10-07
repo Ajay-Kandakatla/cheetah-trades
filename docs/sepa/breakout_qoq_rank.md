@@ -257,3 +257,18 @@ that covers every doc in ceil(n/limit) runs. The Sunday research refresh stays t
 never written. No crontab change: the 04:40 job's `attempted` falls from 900 to the true missing count, so it makes
 fewer Massive calls; the Saturday `--all --limit 700` now rotates. Tests:
 `backend/tests/test_qoq_backfill_vintage_2026_10_07.py` (its fake collection APPLIES the projection).
+
+## 2026-10-07 c — critic round: the lag the vintage guard creates, and the end dates
+
+- **A new print reaches the QoQ rank only after the Sunday research refresh** (`skip:new_latest_quarter`). Before the
+  b fix the 04:40 job (in effect `--all` over the first 900 docs) and the Saturday `--all 700` wrote a new latest
+  quarter's series mid-week, and the Breakouts QoQ rank read them that day (with stale % fields beside them — the
+  vintage mix). Now no backfill writes a new quarter, so a Tuesday print shows on the QoQ rank from the Sunday 20:00
+  refresh. Earnings season starts the week of 2026-10-12. **HIS CALL**: keep the lag (one writer, no vintage mix), or
+  allow `new_latest_quarter` writes for the QoQ-series readers only.
+- **Period end dates** (`q_end_series`, parallel to `q_period_series`): `canslim._fetch_massive_financials` stores each
+  report's `end_date`; `qoq.backfill` writes them WITH the keys (None when the fetch has none — never a stale list beside
+  new keys); `qoq.realign` moves them with the keys. `qoq.period_ok(..., ends=)` refuses a headline pair whose end dates
+  are not `YEAR_DAYS` ± `capital_returns.SAME_QUARTER_DAYS` apart (`qoq.ends_year_apart`); callers that pass no `ends`
+  get the label-only answer unchanged. Today only the 🛡️ 🚀 growth read passes them. Tests:
+  `backend/tests/test_resiliency_growth_critic_2026_10_07.py`.

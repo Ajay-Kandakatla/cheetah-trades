@@ -404,7 +404,7 @@ def test_NEG_tiny_or_negative_year_ago_eps_never_tops_growth():
 def test_NEG_year_ago_revenue_at_or_under_zero_or_under_1m_is_blank_unranked():
     neg = R.growth_read(_fund(sales=900.0, eps_pct=None, rev_q=[5e6, 1, 1, 1, -3e6, 1]))
     small = R.growth_read(_fund(sales=9000.0, eps_pct=None, rev_q=[5.5e6, 1, 1, 1, 6.1e4, 1]))
-    for g, word, tok in ((neg, "non_positive", "yr-ago loss"), (small, "too_small", "yr-ago <$1M")):
+    for g, word, tok in ((neg, "non_positive", "yr-ago rev ≤$0"), (small, "too_small", "yr-ago <$1M")):
         assert g["sales_base"] == word and g["sales_yoy_pct"] is None and not g["sales_ranked"]
         assert R.growth_chip(g).startswith(f"Sales {tok} · ")       # 2026-10-07 b: never "—"
     assert "sign flip" in R._growth_stat(neg) and "under $1M" in R._growth_stat(small)

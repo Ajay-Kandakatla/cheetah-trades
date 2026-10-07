@@ -974,9 +974,12 @@ export type CmResGrowthRead = {
   eps_year_ago_ni?: number | null;
   latest_idx?: number | null; expected_idx?: number | null; etf?: boolean;
   /** the card's coverage class (two_legs / one_leg / pending / by_rule / etf /
-   *  new_listing / not_researched / no_filings / stale_filings / period_gap /
-   *  year_ago_missing) and its closed-bar count. */
+   *  new_listing / not_researched / massive_unused / no_filings / stale_filings /
+   *  period_gap / year_ago_missing) and its closed-bar count. */
   gap?: string | null; bars?: number | null;
+  /** 2026-10-07 c: a yfinance-fallback doc with no figure (Massive's quarters
+   *  were not used on that research run) — `gap` massive_unused. */
+  massive_unused?: boolean;
 };
 
 /** 📈 The EOD tape read — the app's accumulation day (resiliency_tab.eod_read). */

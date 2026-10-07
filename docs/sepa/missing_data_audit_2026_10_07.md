@@ -31,8 +31,9 @@ Massive v1, CIK 0002023554 (quarterly):
 - **Honest answer:** sales **+371.6%** YoY (FY2026 Q4 $8.97B vs FY2025 Q4 $1.90B); EPS — the year-ago quarter **lost
   money** (−$0.16 / −$23M), so under his rule it never ranks. SNDK is a ONE-leg name: under his YES it sits in the
   one-leg block, not the 🚀 top block (position 2,190 of 2,732 today, pending its refresh).
-- Today's chip (MEASURED, V3): `Sales +371.6%* · EPS yr-ago loss YoY (FY2026 Q4)`. After the H1 heal (yfinance
-  fallback path): `Sales +371.6% · EPS yr-ago loss YoY (Q2 2026)`.
+- Today's chip (MEASURED, V3): `Sales +371.6%* · EPS yr-ago loss YoY (FY2026 Q4)`. After the H1 heal (INFERRED):
+  `Sales +371.6% · EPS yr-ago loss YoY (FY2026 Q4)` when Massive serves the refresh (its fiscal label); only the
+  yfinance fallback path would read `(Q2 2026)`.
 - Why the doc was never rewritten: 0 research docs are dated 10-04 or 10-05; the 10-04 Sunday refresh never wrote
   (INFERRED: host sleep — pmset DarkWake 17:00–21:52 CDT; not a proven network outage). `--only-if-stale` logged
   "97% healthy" on 10-05 and 10-06. The 09-27 batch crosses the 16-day TTL on ~10-13 20:14 ET.
@@ -45,7 +46,7 @@ scored (2,219 sales-ranked, 1,448 EPS-ranked); **1,441 on both legs, 785 on one*
 | Cause | n (liquid) | Examples (by $/day) | Class |
 |---|---|---|---|
 | Stored sales % None, own series has it | 54 (54) | SNDK, CSCO, KLAC, JNJ, HD, PG, MS | defect, vintage mix |
-| Stored sales % disagrees with own series | 151 (151) | JPM 27.69 vs 17.89, BRK-B, GS, BAC 19.25 vs 3.67, NU 5.82 vs 55.40 | defect, was RANKED on the stale number |
+| Stored sales % disagrees with own series | 151 (151) | JPM 27.69 vs 17.89, BRK-B, GS, BAC 19.25 vs 3.67, NU 5.82 vs 55.40 | was ranked on the stored number; in 141 the STORED figure matches the vX filing revenue, in 7 the series does (2026-10-07 c) |
 | Stored EPS % None, series has it | 61–66 | BRK-B, CSCO, KLAC, NU, MS, MDB | defect, vintage |
 | Stored EPS % disagrees (shown, not ranked) | 89–111 | MSFT, LITE, WDC, NFLX −88.87 vs +11.11, SMCI | defect, vintage |
 | EPS slot None but year-ago NI ≤ 0 | 25 | SNDK, SE, VTRS, KOD, XMTR | display: "year-ago loss" |
@@ -99,8 +100,23 @@ Two-leg 1,342 sits in the spec's INFERRED range (1,300–1,441): the agreement r
 
 `docs/sepa/keeping_data_current.md` §5: H0 selects **527** names (dry run), H1 refreshes them through the Sunday code
 path (**≤ 2,108 Massive calls**), H2 splices CALY, H3–H5 re-run the earnings, caps and 13F jobs that slept.
-INFERRED after H1: SNDK one-leg (sales ranked), the 205 vintage-mixed sales legs back in the ranking; the spec's
-simulation puts two-leg at ~1,554.
+INFERRED after H1: SNDK one-leg (sales ranked). **Corrected 2026-10-07 c:** NOT "the 205 vintage-mixed sales legs back
+in the ranking" — 141 of the 151 disagreements are HELD OUT of H1 (their stored figure matches the filing; a refresh
+would replace it with v1 `revenue` and rank it — BAC +3.7%), pending HIS CALL on v1 revenue for banks and energy
+names. The revised H0 (`fix_c/heal_select_c.py`) selects **394** names (≤ 1,576 Massive calls), including the 8
+mislabelled pairs so their docs gain `q_end_series`. The spec's ~1,554 two-leg simulation no longer applies.
+
+## 2026-10-07 c — critic corrections (MEASURED)
+
+- **8 ranked pairs are not a year apart** although their labels are four apart (CRDO 455 days, KLIC 273, CAKE 728,
+  MCFT, FUBO, NCMI, NRIX, XERS). The "top 15 all two-leg" capture was not all clean: KLIC #6 and CRDO #8. Fixed in code
+  (period end dates, `qoq.ends_year_apart`), effective per name once a refresh stores `q_end_series`.
+- **The 151 sales disagreements**: stored matches the filing 141, the series 7, neither 2, no vX row 1
+  (`fix_c/crit_sd_dump.py`). Text no longer calls the series "the filings".
+- **The 144 "no quarterly figures"**: 141 are yfinance-fallback docs with empty series (86 with Massive filings on file,
+  55 without) → new gap `massive_unused`; 3 stay.
+- **59 sales legs read "yr-ago loss"**: 57 had a year-ago revenue of exactly $0 → now `yr-ago rev ≤$0`.
+- PSKY's DELISTED entry is HIS CALL 12; the QoQ-rank lag is documented (HIS CALL).
 
 ## HIS CALL (open)
 

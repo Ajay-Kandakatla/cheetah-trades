@@ -161,6 +161,7 @@ GROWTH_SORT_UNAVAILABLE = ("No sales or EPS figures are on file for these names 
 GROWTH_CHIP_PREFIX = "Sales "             # == cardLadder IDENT_PREFIX entry (contract)
 GROWTH_CHIP_FMT = "Sales {sales} · EPS {eps} YoY ({period})"
 GROWTH_NO_FIGURES = "no quarterly figures on file"
+GROWTH_MASSIVE_UNUSED = "Massive not used at research time, pending refresh"   # 2026-10-07 c
 GROWTH_MISMATCH = "quarters not a year apart on file"
 GROWTH_PERIOD_UNKNOWN = "quarter not on file"
 GROWTH_STAT_KEY = "Growth"
@@ -172,13 +173,15 @@ PCT_AGREE_TOL_1DP = 0.05 + PCT_AGREE_TOL          # a 1-dp stored figure (sales.
 SALES_AGREE_REQUIRED = True                       # HIS CALL 1 (2026-10-07 b): his rule #7 applied to the sales leg
 STALE_FILING_QUARTERS = qoq.YOY_GAP               # HIS CALL 2: a latest quarter this many behind the expected one never ranks
 NOT_RANKED_MARK = "*"
+SALES_NO_REV_TOKEN = "yr-ago rev ≤$0"            # the sales leg on a non-positive base (never "loss")
 GROWTH_CHIP_NONE_FMT = GROWTH_CHIP_PREFIX + "· EPS: {reason}"   # "Sales · EPS: ETF/fund, no filings"
 GROWTH_GAP_TOP = 5                                # names printed per gap line — display, NOT a rule
 PENDING_REASONS = ("stored_missing", "stored_disagrees", "no_series")
 RULE_REASONS = ("year_ago_loss", "year_ago_too_small")
-GAP_ORDER = ("etf", "new_listing", "not_researched", "no_filings", "stale_filings",
-             "period_gap", "year_ago_missing")
+GAP_ORDER = ("etf", "new_listing", "not_researched", "massive_unused", "no_filings",
+             "stale_filings", "period_gap", "year_ago_missing")
 GAP_LABEL = {"etf": "ETF/fund", "new_listing": "new listing", "not_researched": "not researched",
+             "massive_unused": "Massive not used at research time",
              "no_filings": "no quarterly figures", "stale_filings": "a year past due",
              "period_gap": "quarters not a year apart", "year_ago_missing": "year-ago quarter missing"}
 PENDING_LABEL = "pending refresh"
@@ -919,7 +922,7 @@ def _growth_blank() -> dict:
             "sales_reason": "no_doc", "eps_reason": "no_doc", "eps_year_ago_ni": None,
             "sales_latest": None,
             "latest_idx": None, "expected_idx": None, "etf": False,
-            "gap": None, "bars": None}
+            "gap": None, "bars": None, "massive_unused": False}
 
 
 def _card_state(out: dict, state: str) -> dict:
@@ -964,8 +967,11 @@ def growth_read(f: Optional[dict], *, today: Optional[date] = None,
     # 2. no research document
     if not has_doc:
         return _card_state(out, "no_doc")
-    # 3. quarters not four apart on file
-    if qoq.period_ok(periods) is False:
+    # 3. quarters not four apart on file — the labels, AND (2026-10-07 c) the
+    #    stored period end dates when the doc carries them (`qoq.ends_year_apart`:
+    #    CRDO's labels are four apart, its quarters 455 days)
+    ends = f.get(qoq.END_SERIES_KEY) if isinstance(f.get(qoq.END_SERIES_KEY), list) else None
+    if qoq.period_ok(periods, ends=ends) is False:
         return _card_state(out, "period_mismatch")
     # 4. a latest filing a year or more behind the quarter now due (recycled ticker / provider gap)
     li = qoq._int_or_none(periods[0]) if periods else None
@@ -1052,6 +1058,13 @@ def growth_read(f: Optional[dict], *, today: Optional[date] = None,
     figure = s_v is not None or e_v is not None
     out["state"] = ("read" if figure or s_why != "not_filed" or e_why != "not_filed"
                     else "no_figures")
+    # 2026-10-07 c — WHICH "no figures" (critic, MEASURED: 89 of 144 such cards
+    # have Massive quarterly filings since 2025-06). A doc whose research run
+    # fell back to yfinance (`canslim._from_hybrid`: Massive answered no EPS
+    # figure, or failed) never stored Massive's quarters — a refresh can fill
+    # it. Only a doc where Massive's own answer was stored and empty is
+    # "neither provider".
+    out["massive_unused"] = bool(out["state"] == "no_figures" and src == "yfinance")
     return out
 
 
@@ -1079,6 +1092,8 @@ def coverage_class(g: Optional[dict], *, bars, min_bars) -> str:
         return "by_rule"
     if "year_ago_missing" in why:
         return "year_ago_missing"
+    if g.get("massive_unused"):
+        return "massive_unused"
     return "no_filings"
 
 
@@ -2159,7 +2174,9 @@ def _leg_token(g: dict, leg: str) -> str:
     if v is not None:
         return _pct1(v) + ("" if g.get(leg + "_ranked") else NOT_RANKED_MARK)
     if why == "year_ago_loss":
-        return "yr-ago loss"
+        # revenue at or under $0 is not a loss (57 of 59 such sales legs read
+        # exactly $0 — pre-revenue names; 2026-10-07 c)
+        return "yr-ago loss" if leg == "eps" else SALES_NO_REV_TOKEN
     if why == "year_ago_too_small":
         return (f"yr-ago <${EPS_MIN_BASE:.2f}" if leg == "eps"
                 else f"yr-ago <${REV_MIN_BASE / 1e6:g}M")
@@ -2182,7 +2199,7 @@ def _card_reason(g: dict) -> Optional[str]:
             return f"not researched in {ttl} days"
         return "no research on file"
     if st == "no_figures":
-        return GROWTH_NO_FIGURES
+        return GROWTH_MASSIVE_UNUSED if g.get("massive_unused") else GROWTH_NO_FIGURES
     if st == "stale_filings":
         return f"latest filing {g.get('period') or GROWTH_PERIOD_UNKNOWN}, a year or more past due"
     if st == "period_mismatch":
@@ -2201,6 +2218,10 @@ def growth_chip(g: Optional[dict]) -> str:
                                   period=g.get("period") or GROWTH_PERIOD_UNKNOWN)
 
 
+MASSIVE_UNUSED_TEXT = ("the research run fell back to yfinance, which had none; Massive's quarterly "
+                       "figures were not used on that run — pending a research refresh (a domestic "
+                       "filer usually fills; a foreign filer may stay empty)")
+SERIES_WORDS = "the quarterly series on file"        # never "the filings" (2026-10-07 c)
 YEAR_AGO_MISSING_TEXT = "the year-ago quarter is not on file (a spin-off, an IPO's first year, or a filing hole)"
 REFRESH_TEXT = "it ranks once a research refresh stores it"
 
@@ -2219,12 +2240,13 @@ def _sales_clause(g: dict) -> str:
         latest = _f(g.get("sales_latest"))
         amt = (f" ({_usd_short(latest)} vs {base} a year earlier)" if latest is not None
                else f" (year-ago {base})")
-        return (f"sales {ser:+.2f}% from its own quarterly filings{amt} — not ranked: the "
+        return (f"sales {ser:+.2f}% from {SERIES_WORDS}{amt} — not ranked: the "
                 f"stored figure is missing; {REFRESH_TEXT}")
     if why == "stored_disagrees" and ss is not None and ser is not None:
         tail = ("ranked on the stored figure (the agreement check is off)" if g.get("sales_ranked")
-                else "not ranked until they agree (a research refresh realigns them)")
-        return f"sales {ss:+.2f}% stored vs {ser:+.2f}% from its own quarterly filings — {tail}"
+                else "not ranked until they agree")
+        return (f"sales {ss:+.2f}% stored vs {ser:+.2f}% from {SERIES_WORDS} — the stored "
+                f"figure and the quarterly series disagree; {tail}")
     if why == "no_series" and sv is not None:
         return f"sales {sv:+.2f}% (not ranked — no quarterly series on file to check its base)"
     if why == "year_ago_missing":
@@ -2248,7 +2270,7 @@ def _eps_clause(g: dict) -> str:
         return (f"EPS: year-ago EPS {_usd(b)} is under the {_usd(EPS_MIN_BASE)} floor"
                 + (f" — the stored {es:+.2f}% is arithmetic, not ranked" if es is not None else ""))
     if why == "stored_missing" and ser is not None:
-        return (f"EPS {ser:+.2f}% from its own quarterly filings (year-ago {_usd(b)}) — not "
+        return (f"EPS {ser:+.2f}% from {SERIES_WORDS} (year-ago {_usd(b)}) — not "
                 f"ranked: the stored figure is missing; {REFRESH_TEXT}")
     if why == "stored_disagrees" and ev is not None:
         return (f"EPS {ev:+.2f}% (not ranked — the stored figure and its own quarterly series "
@@ -2278,6 +2300,8 @@ def _growth_stat(g: Optional[dict]) -> str:
             return f"not researched — no research stored in the last {ttl} days"
         return "no research on file"
     if st == "no_figures":
+        if g.get("massive_unused"):
+            return " · ".join([GROWTH_NO_FIGURES + " — " + MASSIVE_UNUSED_TEXT] + tail)
         return " · ".join([GROWTH_NO_FIGURES] + tail)
     if st == "period_mismatch":
         return " · ".join(["the latest quarter and the year-ago quarter on file are not four "
@@ -2541,17 +2565,19 @@ def _market_closed(now_et: datetime) -> Optional[str]:
 def _gap_why(cls: str, cov: dict) -> str:
     """Why a gap class has no ranked growth — built from the constants."""
     return {
-        "pending": ("the stored figure is missing or disagrees with the company's own quarterly "
-                    f"filings on file — shown with {NOT_RANKED_MARK}, ranked once a research "
-                    "refresh stores it"),
-        "by_rule": ("the year-ago quarter lost money, or its EPS is under "
+        "pending": ("the stored figure is missing, or it and the quarterly series on file "
+                    f"disagree — shown with {NOT_RANKED_MARK}, not ranked until a research "
+                    "refresh stores a figure that agrees"),
+        "by_rule": ("the year-ago quarter lost money or had no revenue, or its EPS is under "
                     f"${EPS_MIN_BASE:.2f} / its revenue under ${REV_MIN_BASE / 1e6:g}M — "
                     "never ranked"),
         "etf": "an ETF or fund files no company financials",
         "new_listing": (f"fewer than {int(cov.get('min_bars') or 0):,} daily bars (a new listing, "
                         "a spin-off or a rename not yet spliced) — research has not run"),
         "not_researched": f"no research stored in the last {int(cov.get('ttl_days') or 0)} days",
-        "no_filings": "neither provider has quarterly figures on file (often a foreign filer)",
+        "massive_unused": MASSIVE_UNUSED_TEXT,
+        "no_filings": ("the stored research has no quarterly figures from Massive or yfinance "
+                       "(often a foreign filer)"),
         "stale_filings": ("the latest quarter on file is a year or more past due — a recycled "
                           "ticker or a provider gap; never ranked"),
         "period_gap": ("the latest quarter and the year-ago quarter on file are not four "

@@ -136,7 +136,9 @@ def test_agreeing_doc_is_written_with_series_keys_only(wire):
     assert out["filled"] == 1 and out["skipped"] == {}
     (flt, upd), = coll.updates
     keys = set(upd["$set"])
-    assert keys <= {f"fundamentals.{k}" for k in qoq.SERIES_KEYS}
+    # 2026-10-07 c: the period end dates ride WITH the keys (predicted pin)
+    assert keys <= ({f"fundamentals.{k}" for k in qoq.SERIES_KEYS}
+                    | {f"fundamentals.{qoq.END_SERIES_KEY}"})
     assert not any("cached_at" in k or "pct" in k or k.endswith(".sales") for k in keys)
 
 
