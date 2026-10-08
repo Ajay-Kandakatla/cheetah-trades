@@ -190,8 +190,10 @@ session scratchpad's `data_audit` folder; every command is the throwaway contain
 - **H6 revenue-line heal (2026-10-08, supersedes the H1 hold-out)**: after `./deploy-cheetah-main.sh api cron frontend`
   (cron runs the Sunday refresh — it must carry the new helper; deadline Sun 2026-10-11 20:00), outside RTH. Selector
   (read-only, `block_writes()`): `bank_rev/heal_rev_select.py` → the 141 held out (`fix_c/heal_hold_sd.txt`) first,
-  then the 261 bank-style filers with a research doc, adv50 desc (dry run 2026-10-08: **402 names, ≤ 1,608 Massive
-  calls**). Then `python -m sepa.cli research-refresh --symbols "$(paste -sd, /out/heal_rev_symbols_141.txt)" --workers 4`
+  then the 261 bank-style filers with a research doc, adv50 desc (dry run 2026-10-08: **402 names, ≤ 2,010 Massive
+  calls** = 5 × n: up to 2 quarterly-income asks (the re-ask by CIK when the ticker answer is short,
+  `massive_fundamentals.fetch_statement`) + 1 balance + 2 annual per name; the 4 × n the dry-run stub gave skipped the
+  re-asks because it served no annual / balance rows). Then `python -m sepa.cli research-refresh --symbols "$(paste -sd, /out/heal_rev_symbols_141.txt)" --workers 4`
   and the same for `heal_rev_symbols_rest.txt`. Post-heal: every healed doc has `fundamentals.rev_line`; the 141's 🛡️
   statuses = `revenue_lines_2026_10_08.md` (107 ranked, 34 `*`); `python scripts/revenue_line_audit.py --held
   --financial` → 0 mismatches on ranked names.

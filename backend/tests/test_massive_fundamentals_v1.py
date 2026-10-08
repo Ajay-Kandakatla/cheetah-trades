@@ -1116,7 +1116,7 @@ def test_line_words_and_ledgers_are_well_formed():
     for cik, (tk, kind, note) in MF.REVENUE_LINE_HOLD.items():
         assert re.fullmatch(r"\d{10}", cik) and tk
         assert kind in (MF.HOLD_UNVERIFIED, MF.HOLD_HIS_CALL) and isinstance(note, str) and note
-    assert len(MF.REVENUE_LINE_PICKS) == 6 and len(MF.REVENUE_LINE_HOLD) == 34
+    assert len(MF.REVENUE_LINE_PICKS) == 8 and len(MF.REVENUE_LINE_HOLD) == 39   # + C CACC; + 4 BDCs, CBSH (critic round 2)
     # every fixture name's CIK is the ledger's CIK for that ticker
     tick = {v[0]: k for k, v in {**MF.REVENUE_LINE_PICKS, **MF.REVENUE_LINE_HOLD}.items()}
     for sym, d in FX.items():
@@ -1178,8 +1178,7 @@ def test_NEGATIVE_a_pick_ticker_on_ANOTHER_CIK_takes_the_default_rule():
     row = dict(_pair("RKT")[0], cik="0000123456")
     v, line, note = MF.revenue_line(row)
     assert line == MF.LINE_NET_OF_INTEREST and note is None
-    assert v == pytest.approx(row["revenue"] - row["cost_of_revenue"]
-                              + (MF._value(row.get("other_income_expense")) or 0.0))
+    assert v == pytest.approx(row["revenue"] - row["cost_of_revenue"])   # the rule adds no other income
 
 
 def test_NEGATIVE_the_CVS_pick_on_a_financial_shaped_row_is_default_plus_a_note():
@@ -1196,8 +1195,7 @@ def test_NEGATIVE_hold_names_keep_their_value_and_carry_the_note():
     nu = _pair("NU")[0]
     v, line, note = MF.revenue_line(nu)
     assert line == MF.LINE_NET_OF_INTEREST and note == MF.NOTE_FOREIGN_FILER
-    assert v == pytest.approx(nu["revenue"] - nu["cost_of_revenue"]
-                              + (MF._value(nu.get("other_income_expense")) or 0.0))
+    assert v == pytest.approx(nu["revenue"] - nu["cost_of_revenue"])     # the rule adds no other income
     cvx = _pair("CVX")[0]
     v, line, note = MF.revenue_line(cvx)
     assert (v, line, note) == (cvx["revenue"], MF.LINE_REVENUE, MF.NOTE_SUBLINE_CALL)

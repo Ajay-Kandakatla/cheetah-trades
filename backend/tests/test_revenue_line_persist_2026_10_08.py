@@ -171,13 +171,33 @@ def test_NEGATIVE_a_legacy_doc_snapshots_None_lines(monkeypatch):
 
 
 # ═════════════════════════════════════════════ qoq backfill / realign
+def _project(doc: dict, proj) -> dict:
+    if not proj:
+        return doc
+    out = {"_id": doc["_id"]} if "_id" in doc else {}
+    for path, on in proj.items():
+        if not on:
+            continue
+        head, _, tail = path.partition(".")
+        if head not in doc:
+            continue
+        if not tail:
+            out[head] = doc[head]
+        elif isinstance(doc[head], dict) and tail in doc[head]:
+            out.setdefault(head, {})[tail] = doc[head][tail]
+    return out
+
+
 class FakeColl:
     def __init__(self, docs):
         self.docs = {d["symbol"]: copy.deepcopy(d) for d in docs}
         self.updates: list = []
 
     def find(self, q=None, proj=None):
-        return [copy.deepcopy(d) for d in self.docs.values()]
+        """Honours an inclusion projection like Mongo (critic round 2): a key the
+        caller's projection leaves out is NOT read back, so a dropped
+        `fundamentals.rev_line_series` in qoq.realign fails a test."""
+        return [_project(copy.deepcopy(d), proj) for d in self.docs.values()]
 
     def update_one(self, flt, upd):
         self.updates.append((flt, upd))
@@ -273,3 +293,18 @@ def test_NEGATIVE_realign_never_adds_a_line_series_to_a_doc_without_one(wire):
     qoq.realign(["R"])
     (_, upd), = coll.updates
     assert "fundamentals.rev_line_series" not in upd["$set"]
+
+
+def test_NEGATIVE_realign_reads_the_line_series_through_its_projection(wire):
+    """Fails if `fundamentals.rev_line_series` leaves qoq.realign's projection:
+    the series would then silently stop moving with the keys."""
+    per = [8105, 8104, 8102, 8101, 8100]
+    d = _doc("R", q_period_series=per, rev_q_series=[5.0, 4.0, 3.0, 2.0, 1.0],
+             eps_q_series=[5.0, 4.0, 3.0, 2.0, 1.0], ni_q_series=[1.0] * 5,
+             rev_line_series=["a", "b", "c", "d", "e"], rev_line_note="never projected")
+    coll = wire([d], {})
+    assert _project(copy.deepcopy(d), {"fundamentals.q_period_series": 1}) == {
+        "fundamentals": {"q_period_series": per}}
+    qoq.realign(["R"])
+    (_, upd), = coll.updates
+    assert upd["$set"]["fundamentals.rev_line_series"] == ["a", "b", None, "c", "d", "e"]

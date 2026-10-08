@@ -6,6 +6,12 @@ Every string comes from the REAL builders (`resiliency_tab.growth_read`,
 (Q2-2026 10-Q: 31,558 / 27,443 M), SOFI held (NOTE_NO_NII), CVX his call, one
 undetermined bank quarter, plus a legacy doc. Hermetic, no network, no Mongo.
 
+UND (critic round 2, 2026-10-08) is the doc production WRITES: BAC's real rows
+with the STT 2024-06-30 shape (cost_of_revenue 0.0) on the latest quarter,
+through `canslim._fetch_massive_financials` — `rev_line` is the newest filed
+line (net), the hole sits in `rev_line_series[0]`. A hand-built
+`rev_line="undetermined"` doc is a shape production never writes.
+
     cd backend && PYTHONPATH=. python scripts/resiliency_revenue_line_fixture.py \
         > ../frontend/src/components/__fixtures__/resiliency_revenue_line_2026_10_08.json
 """
@@ -41,15 +47,20 @@ DOCS = {
     "CVX": (_fund(rev_pct=51.43, rev=[67199e6, 1, 1, 1, 44375e6, 1],
                   rev_line=MF.LINE_REVENUE, rev_line_note=MF.NOTE_SUBLINE_CALL,
                   rev_line_mixed=0), 7e9),
-    "UND": (_fund(rev=[None, 1, 1, 1, 3.0e9, 1], rev_line=MF.LINE_UNDETERMINED,
-                  rev_line_note=None, rev_line_mixed=0), 1e9),
+    "UND": (None, 1e9),                                   # built end-to-end in `_und()`
     "VST": (_fund(rev_pct=-5.48, eps_pct=-6.17, rev=[4.0e9, 4.1e9, 4.1e9, 4.1e9, 4.232e9, 4.0e9],
                   eps=[0.76, 1.0, 1.0, 1.0, 0.81, 1.0]), 3e9),
 }
 
 
+def _und() -> dict:
+    from tests.test_revenue_line_critic_2026_10_08 import stt_shaped_undetermined
+    return stt_shaped_undetermined(0, eps=False)
+
+
 def build() -> dict:
-    reads = {s: {"growth": R.growth_read(f, today=TODAY), "adv50": adv, "bars": 400}
+    reads = {s: {"growth": R.growth_read(f if f is not None else _und(), today=TODAY),
+                 "adv50": adv, "bars": 400}
              for s, (f, adv) in DOCS.items()}
     R.score_growth([r["growth"] for r in reads.values()])
     cov = R.growth_coverage(reads, min_bars=100, ttl_days=16)

@@ -981,9 +981,11 @@ export type CmResGrowthRead = {
    *  were not used on that research run) — `gap` massive_unused. */
   massive_unused?: boolean;
   /** 2026-10-08: WHICH revenue line the sales leg is on (massive_fundamentals
-   *  LINE_CODES: revenue / net_of_interest / revenue_plus_other /
-   *  revenue_plus_interest / undetermined), its served words, and the hold
-   *  note. Sales reasons line_unverified / line_mixed (shown with *, never
+   *  LINE_CODES: revenue / net_of_interest / net_of_interest_plus_other /
+   *  revenue_plus_other / revenue_plus_interest / undetermined), its served
+   *  words, and the hold note — or, when the latest or year-ago quarter is a
+   *  hole, the hole words (the hole is read per slot; `sales_line` stays the
+   *  newest filed line). Sales reasons line_unverified / line_mixed (shown with *, never
    *  ranked) → coverage class `revenue_line`. Null on a legacy doc. Served
    *  strings — the FE composes nothing from them. */
   sales_line?: string | null;

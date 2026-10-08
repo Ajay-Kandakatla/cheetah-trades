@@ -164,9 +164,27 @@ one rotation rebuild, 2026-09-14). It is a per-symbol read on the ticker page.
 
 `longterm` reads annual rows through `massive_fundamentals`, so semantic change 7
 (the revenue line per v1 statement template) applies to them: a financial-template
-annual row's `revenues` is revenue − cost_of_revenue + other_income_expense (the
-10-K's "total revenue, net of interest expense"), not v1's gross revenue. Without it
+annual row's `revenues` is revenue − cost_of_revenue (the 10-K's "total revenue,
+net of interest expense"; C's pick adds other income, 0.0 on its annual rows), not
+v1's gross revenue. Without it
 the Sunday warm would have moved ~120 of 400 Financial Services names' operating
 margin onto gross revenue (MEASURED on the code-path dry run, `lt_dry.py`). The
-with-fix move of the opm / sales-CAGR scores is UNMEASURED; annual-row template
-behaviour is INFERRED until the annual probe (SPEC 2026-10-08 §5.3).
+with-fix move of the opm / sales-CAGR scores is UNMEASURED.
+
+Annual rows, MEASURED 2026-10-08 (3 Massive calls, `critic_regr/annual_probe.py`;
+SEC companyfacts): BAC, JPM and C annual rows ARE the financial template (no
+`interest_expense` / `research_development` key; `other_income_expense` 0.0 on all
+nine). The net line vs the 10-K:
+
+| name | FY2025 | FY2024 | FY2023 |
+|---|---|---|---|
+| BAC | 113.097 B = 10-K | 105.856 B = FY2025 10-K comparative (originally filed 101.887 B, +3.9 %) | 102.769 B = FY2025 10-K comparative (originally 98.581 B, +4.2 %) |
+| JPM | 182.447 B = 10-K | 177.556 B = 10-K | 158.104 B = 10-K |
+| C   | 85.225 B = 10-K | 80.722 B = FY2025 10-K comparative (originally filed 81.139 B, −0.5 %) | 78.066 B = FY2025 10-K comparative (originally 78.462 B, −0.5 %) |
+
+So every annual figure equals the latest 10-K's own (restated) column — the same
+restated basis as the quarterly year-ago (BAC 27,443 M vs 26,463 M as first
+filed). C's 0.0 annual other income is NOT a missing addend: its restated
+comparatives already reproduce without it. Sales CAGR is therefore on the latest
+filing's basis: BAC FY2023→FY2025 2-year CAGR 4.90 % restated vs 7.11 % on the
+originally filed FY2023 10-K; C 4.48 % vs 4.22 % (arithmetic on the levels above).

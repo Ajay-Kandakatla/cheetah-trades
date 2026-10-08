@@ -76,12 +76,16 @@ SEVEN SEMANTIC CHANGES — READ BEFORE TRUSTING AN OLD NUMBER
    `research_development` (MEASURED 2026-10-07: 380 of 1,409 rows, 38 of 141
    names, constant per name), an insurer row lacks only `research_development`,
    and every other row carries both zero-filled. Financial template →
-   revenue − cost_of_revenue + other_income_expense (C Q2-2026: 24,262 + 504 =
-   24,766 M = the 10-Q); every other template → v1 `revenue` as before. Six
-   names the verifier reproduced at % AND both levels take a CIK-keyed pick
-   (`REVENUE_LINE_PICKS`), 34 more keep their value but carry a hold note
-   (`REVENUE_LINE_HOLD`, shown with * on 🛡️). A financial-template quarter
-   with no cost line is a HOLE (`LINE_UNDETERMINED`) — never gross revenue.
+   revenue − cost_of_revenue (BAC 49,393 − 17,835 = 31,558 M; SF Q2-2026
+   1,638.8 − 188.0 = 1,450.8 M = the 10-Q's RevenuesNetOfInterestExpense);
+   every other template → v1 `revenue` as before. Other income is NOT part of
+   the rule (2026-10-08 critic: adding it put SF ~10 % low at both levels); C,
+   the one name whose 10-Q total carries it (24,262 + 504 = 24,766 M), takes a
+   CIK-keyed pick `net_of_interest_plus_other`. Eight names reproduced at % AND
+   both levels take a pick (`REVENUE_LINE_PICKS`), 39 more keep their value but
+   carry a hold note (`REVENUE_LINE_HOLD`, shown with * on 🛡️). A
+   financial-template quarter with no cost line is a HOLE (`LINE_UNDETERMINED`)
+   — never gross revenue.
    See `revenue_line` and docs/sepa/revenue_lines_2026_10_08.md.
 
 FAIL LOUDLY
@@ -185,17 +189,22 @@ FIN_TEMPLATE_ABSENT_KEYS = ("interest_expense", "research_development")   # BOTH
 INS_TEMPLATE_ABSENT_KEY = "research_development"                          # missing alone = insurance template (60 rows, 6 names)
 
 LINE_REVENUE = "revenue"                       # v1 `revenue` as served
-LINE_NET_OF_INTEREST = "net_of_interest"       # revenue − cost_of_revenue + other_income_expense (financial template)
+LINE_NET_OF_INTEREST = "net_of_interest"       # revenue − cost_of_revenue (financial template rule)
+LINE_NET_PLUS_OTHER = "net_of_interest_plus_other"  # revenue − cost_of_revenue + other_income_expense (pick: C)
 LINE_PLUS_OTHER = "revenue_plus_other"         # revenue + other_income_expense (pick)
 LINE_PLUS_INTEREST = "revenue_plus_interest"   # revenue + interest_income (pick)
 LINE_UNDETERMINED = "undetermined"             # financial-template quarter with no cost line → hole
-LINE_CODES = (LINE_REVENUE, LINE_NET_OF_INTEREST, LINE_PLUS_OTHER, LINE_PLUS_INTEREST, LINE_UNDETERMINED)
+LINE_CODES = (LINE_REVENUE, LINE_NET_OF_INTEREST, LINE_NET_PLUS_OTHER, LINE_PLUS_OTHER,
+              LINE_PLUS_INTEREST, LINE_UNDETERMINED)
+NET_LINES = (LINE_NET_OF_INTEREST, LINE_NET_PLUS_OTHER)   # the lines that net out interest expense
 LINE_WORDS = {
     LINE_REVENUE: "revenue",
     LINE_NET_OF_INTEREST: "total revenue net of interest expense",
+    LINE_NET_PLUS_OTHER: "total revenue net of interest expense, other income included",
     LINE_PLUS_OTHER: "revenue + other income",
     LINE_PLUS_INTEREST: "revenue + interest income",
-    LINE_UNDETERMINED: "no revenue line this quarter (the provider's bank-template row has no interest-expense line to net)",
+    LINE_UNDETERMINED: ("no revenue line for a quarter compared (the provider's bank-template row "
+                        "has no interest-expense line to net)"),
 }
 HOLD_UNVERIFIED, HOLD_HIS_CALL = "unverified", "his_call"
 
@@ -216,9 +225,12 @@ NOTE_SUBLINE_CALL = ("the provider carries a sub-line of the 10-Q (sales before 
 NOTE_PICK_SHAPE_CHANGED = "the per-name revenue pick no longer matches the provider's row shape — re-check it"
 
 # CIK (v1 `cik`, 10-digit string) -> (ticker, template it was measured on, line). Reproduced at % AND both
-# quarter levels by the verifier (critic_table.json) and the R-file table (ta_match_table.json), Q2-2026.
+# quarter levels by the verifier (critic_table.json) and the R-file table (ta_match_table.json), Q2-2026;
+# C and CACC by the 2026-10-08 critic round (SEC companyfacts, same accession).
 # HIS CALL home: a pick is promoted / retired HERE (docs/sepa/revenue_lines_2026_10_08.md).
 REVENUE_LINE_PICKS = {
+    "0000831001": ("C",    TEMPLATE_FINANCIAL, LINE_NET_PLUS_OTHER), # 24,262 + 504 = 24,766 / 21,649 + 19 = 21,668 M 'Total revenues, net of interest expense'
+    "0000885550": ("CACC", TEMPLATE_FINANCIAL, LINE_REVENUE),        # 587.4 / 583.8 M = SEC Revenues (a lender: the 10-Q headlines gross)
     "0001805284": ("RKT",  TEMPLATE_FINANCIAL, LINE_REVENUE),        # 'Total revenue, net' 2,784 / 1,451 M = v1 revenue
     "0001397911": ("LPLA", TEMPLATE_FINANCIAL, LINE_PLUS_OTHER),     # 5,038.2 + 148.4 = 5,186.6 M 'Total net revenues'
     "0000064803": ("CVS",  TEMPLATE_STANDARD,  LINE_PLUS_INTEREST),  # 105,455 + 641 = 106,096 M 'Total revenues'
@@ -248,6 +260,14 @@ REVENUE_LINE_HOLD = {
     "0000935703": ("DLTR", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
     "0001801368": ("MP",   HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
     "0001020214": ("CERS", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    # BDCs (financial template; the 10-Q headlines gross investment income, which neither v1 line is) — 2026-10-08 critic
+    "0001287750": ("ARCC", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001422183": ("FSK",  HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001396440": ("MAIN", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001655888": ("OBDC", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    # §5.3 census 2026-10-08: v1 Q2-26 revenue 603,989 M is 12.8 M over SEC interest + noninterest income (591,159);
+    # the net rule reads +14.69 % vs the 10-Q's NII + noninterest income +11.92 % (plain +12.33) — no line reproduces it
+    "0000022356": ("CBSH", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
     "0000765880": ("DOC",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
     "0000751364": ("NNN",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
     "0001571283": ("REXR", HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
@@ -328,8 +348,8 @@ def revenue_line(row: dict, *, cik: Optional[str] = None) -> tuple:
     """(value, line_code, note) for ONE v1 income row. PURE.
 
     The line follows the row's template (semantic change 7): financial →
-    revenue − cost_of_revenue + other_income_expense; insurance / standard →
-    v1 `revenue`. A CIK in `REVENUE_LINE_PICKS` takes its pick ONLY on the
+    revenue − cost_of_revenue (other income is NOT added — only C's pick
+    adds it); insurance / standard → v1 `revenue`. A CIK in `REVENUE_LINE_PICKS` takes its pick ONLY on the
     template it was measured on — on any other shape the pick is ignored and
     the note says so (shown *, never silent). A financial-template quarter with
     no revenue or no cost line is `LINE_UNDETERMINED` with value None — NEVER
@@ -351,10 +371,12 @@ def revenue_line(row: dict, *, cik: Optional[str] = None) -> tuple:
     value: Optional[float]
     if line == LINE_REVENUE:
         value = rev
-    elif line == LINE_NET_OF_INTEREST:
+    elif line in NET_LINES:
         cor = _value(row.get("cost_of_revenue"))
         if rev is None or cor is None:
             value, line = None, LINE_UNDETERMINED
+        elif line == LINE_NET_OF_INTEREST:
+            value = _value(rev - cor)
         else:
             value = _value(rev - cor + (_value(row.get("other_income_expense")) or 0.0))
     elif line == LINE_PLUS_OTHER:

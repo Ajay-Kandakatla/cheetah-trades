@@ -50,7 +50,7 @@ snapshot of the whole vX feed is being saved to
 
 | Statement | vX key | v1 key | Note |
 |---|---|---|---|
-| income | `revenues` | per template (2026-10-08): financial = `revenue − cost_of_revenue + other_income_expense`; insurance / standard = `revenue`; CIK picks + hold ledger | see 7 |
+| income | `revenues` | per template (2026-10-08): financial = `revenue − cost_of_revenue`; insurance / standard = `revenue`; CIK picks (C adds `other_income_expense`) + hold ledger | see 7 |
 | income | `diluted_earnings_per_share` | `diluted_earnings_per_share` | split-adjusted on v1; **quarterly Q4 re-derived** as annual − (Q1+Q2+Q3) in canslim — see 5 |
 | income | `basic_earnings_per_share` | `basic_earnings_per_share` | |
 | income | `net_income_loss` | `consolidated_net_income_loss` | incl. minority share, as vX |
@@ -143,15 +143,19 @@ a methodology choice left for Ajay.
    income) and `cost_of_revenue` is total interest expense: BAC Q2-2026 reads
    49,393 M against the 10-Q's "Total revenue, net of interest expense"
    31,558 M (49,393 − 17,835). `revenue_line(row)` therefore returns
-   `revenue − cost_of_revenue + other_income_expense` there (C Q2-2026: 24,262
-   + 504 = 24,766 M = the 10-Q) and v1 `revenue` everywhere else — an
+   `revenue − cost_of_revenue` there (SF Q2-2026: 1,638.8 − 188.0 = 1,450.8 M =
+   the 10-Q's RevenuesNetOfInterestExpense; adding SF's −143.9 M of other
+   income put it ~10 % low at both levels — critic round 2) and v1 `revenue`
+   everywhere else — an
    insurer's cost line is claims, never netted (TRV 12,153 M, not 12,153 −
-   7,708). Six names the verifier reproduced at % AND both levels take a
-   CIK-keyed, template-checked pick (`REVENUE_LINE_PICKS`: RKT revenue, LPLA
-   revenue + other income, CVS BRO O HPE revenue + interest income); a pick on
+   7,708). Eight names reproduced at % AND both levels take a
+   CIK-keyed, template-checked pick (`REVENUE_LINE_PICKS`: C net + other income
+   24,262 + 504 = 24,766 M, RKT and CACC revenue, LPLA revenue + other income,
+   CVS BRO O HPE revenue + interest income); a pick on
    a row of another shape is ignored and says so (`NOTE_PICK_SHAPE_CHANGED`).
-   34 more keep their value but carry a note (`REVENUE_LINE_HOLD`: 26
-   unverified, 8 his call) so 🛡️ shows them with `*`. A financial-template
+   39 more keep their value but carry a note (`REVENUE_LINE_HOLD`: 31
+   unverified — incl. the BDCs ARCC FSK MAIN OBDC and CBSH from the §5.3
+   census — 8 his call) so 🛡️ shows them with `*`. A financial-template
    quarter with no cost line is a HOLE (`LINE_UNDETERMINED`, the `revenues`
    cell absent) — never gross revenue (1 row today: STT 2024-06-30). Each
    report carries `revenue_line` / `revenue_line_note`; the cell shape stays

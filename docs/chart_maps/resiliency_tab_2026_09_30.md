@@ -587,11 +587,12 @@ STORED figure matches the filing"). Corrected, MEASURED on the R-file face of ea
 for 68 of 139.
 
 - The line is chosen in ONE place, `massive_fundamentals.revenue_line` (semantic change 7): financial template →
-  revenue − cost_of_revenue + other_income_expense; other templates → v1 `revenue`; 6 CIK picks; a 34-name hold
-  ledger. It rides to the doc as `fundamentals.rev_line`, `rev_line_series`, `rev_line_note`, `rev_line_mixed`
+  revenue − cost_of_revenue (2026-10-08 critic round 2: other income is NOT added; C's CIK pick adds it); other
+  templates → v1 `revenue`; 8 CIK picks; a 39-name hold ledger. It rides to the doc as `fundamentals.rev_line`, `rev_line_series`, `rev_line_note`, `rev_line_mixed`
   (`canslim._one_revenue_line`; `research.DECISION_FIELDS`).
 - `growth_read` (sales step, after the rule reasons, which keep priority): a ledger note or an `undetermined`
-  line → `sales_reason = "line_unverified"`, shown with `*`, **never ranked — even when the stored figure agrees
+  latest / year-ago slot (read PER SLOT from `rev_line_series` — `rev_line` is the newest FILED slot's line and is
+  never `undetermined` on a written doc; 2026-10-08 critic round 2) → `sales_reason = "line_unverified"`, shown with `*`, **never ranked — even when the stored figure agrees
   with its series**; a mixed series whose year-ago slot is holed → `line_mixed`. New keys `sales_line`,
   `sales_line_words`, `sales_line_note`. A legacy doc (no `rev_line*`) reads exactly as before.
 - Coverage class `revenue_line` (`REVENUE_LINE_CLASS`, after `by_rule`); the 🚀 line adds
@@ -608,3 +609,16 @@ for 68 of 139.
   the monthly audit cron line (H5). See `docs/sepa/revenue_lines_2026_10_08.md`.
 - Tests: `tests/test_resiliency_revenue_line_2026_10_08.py`, `frontend/src/components/ResiliencyRevenueLine.test.tsx`
   (fixture built by `backend/scripts/resiliency_revenue_line_fixture.py` from the real builders).
+
+### 2026-10-08 b — critic round 2 (the hole is read per slot)
+
+The `undetermined` branch could never fire: `canslim._one_revenue_line` takes `rev_line` from the newest slot with a
+value, and a hole has none. A bank quarter with no cost line at slot 0 read `Sales not filed` / "sales: no figure on
+file"; at slot 4 `Sales yr-ago n/a` / "the year-ago quarter is not on file (a spin-off, an IPO's first year, …)" —
+both false reasons (no gross revenue leaked; no gate moved). Now `growth_read` reads `rev_line_series[0]` and
+`rev_line_series[4]`: either one `undetermined` → `line_unverified`, chip `Sales line n/a`, fold "sales: not ranked —
+no revenue line for a quarter compared (the provider's bank-template row has no interest-expense line to net)". A hole
+in a MIDDLE slot does not hold the leg. Reach today 0 on slots 0/4 (STT 2024-06-30 sits in slot 8). Tests:
+`tests/test_revenue_line_critic_2026_10_08.py` (real BAC rows with the STT shape → `canslim._fetch_massive_financials`
+→ `growth_read`, slot 0 and slot 4; the old hand-built `rev_line="undetermined"` doc is gone); the FE fixture is
+rebuilt from the same production-shaped doc (`ResiliencyRevenueLine.test.tsx`).

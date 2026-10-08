@@ -45,6 +45,15 @@ describe('🚀 revenue line (2026-10-08)', () => {
     expect(chip('UND').startsWith('Sales line n/a · ')).toBe(true);
   });
 
+  it('NEGATIVE: an undetermined quarter (production shape, critic round 2) says the hole, never "not filed"', () => {
+    // the doc the heal writes: rev_line is the newest FILED line, the hole lives per slot
+    expect(tile('UND').growth.sales_line).toBe('net_of_interest');
+    expect(tile('UND').growth.sales_reason).toBe('line_unverified');
+    expect(fold('UND')).toContain('sales: not ranked — no revenue line for a quarter compared');
+    expect(fold('UND')).not.toContain('no figure on file · EPS');
+    expect(chip('UND').split(' · ')[0]).toBe('Sales line n/a');   // the sales token, never 'Sales not filed'
+  });
+
   it('NEGATIVE: the ranked BAC chip carries no * and no line words; a legacy doc has no line', () => {
     expect(chip('BAC')).not.toContain('*');
     expect(chip('BAC')).not.toContain('interest');

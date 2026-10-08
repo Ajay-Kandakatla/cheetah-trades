@@ -1030,18 +1030,23 @@ def growth_read(f: Optional[dict], *, today: Optional[date] = None,
     # 5b. the revenue line (2026-10-08) — after the rule reasons, which keep priority.
     #     A held line (a ledger note) or an undetermined one NEVER ranks, even when
     #     the stored figure agrees with its series; a legacy doc (no rev_line*) is untouched.
+    #     `rev_line` is the newest FILED slot's line, so it is never "undetermined" on a
+    #     written doc — the hole lives in `rev_line_series` (2026-10-08 critic): the latest
+    #     or the year-ago slot on LINE_UNDETERMINED is read here, per slot.
     line, note, mixed = f.get("rev_line"), f.get("rev_line_note"), f.get("rev_line_mixed")
     line = line if isinstance(line, str) and line else None
     note = note if isinstance(note, str) and note else None
+    l_ser = f.get("rev_line_series") if isinstance(f.get("rev_line_series"), list) else []
+    undet = line == MF.LINE_UNDETERMINED or any(
+        len(l_ser) > i and l_ser[i] == MF.LINE_UNDETERMINED for i in (0, qoq.YOY_GAP))
     if s_why not in RULE_REASONS:
-        if note or line == MF.LINE_UNDETERMINED:
+        if note or undet:
             s_why, s_rk = "line_unverified", False
             s_v = s_st if s_st is not None else s_ser
         elif mixed and not (len(rev) > qoq.YOY_GAP and _f(rev[qoq.YOY_GAP]) is not None):
             s_why, s_rk, s_v = "line_mixed", False, None
     out.update(sales_line=line, sales_line_words=MF.LINE_WORDS.get(line) if line else None,
-               sales_line_note=note or (MF.LINE_WORDS[MF.LINE_UNDETERMINED]
-                                        if line == MF.LINE_UNDETERMINED else None))
+               sales_line_note=note or (MF.LINE_WORDS[MF.LINE_UNDETERMINED] if undet else None))
     out.update(sales_stored_pct=s_st, sales_base=s_base, sales_year_ago=_f(rb.get("base_rev")),
                sales_latest=_f(rb.get("latest_rev")),
                sales_yoy_pct=s_v, sales_ranked=bool(s_rk), sales_series_pct=s_ser,

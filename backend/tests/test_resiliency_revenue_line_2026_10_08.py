@@ -38,9 +38,10 @@ def _cvx():
 
 
 def _undetermined():
-    f = _fund(rev=[None, 1, 1, 1, 3.0e9, 1])
-    f.update(rev_line=MF.LINE_UNDETERMINED, rev_line_note=None, rev_line_mixed=0)
-    return f
+    """The doc production WRITES for a bank quarter with no cost line (critic round 2):
+    real rows through canslim, the hole in `rev_line_series[0]`, `rev_line` net."""
+    from tests.test_revenue_line_critic_2026_10_08 import stt_shaped_undetermined
+    return stt_shaped_undetermined(0, eps=False)
 
 
 def _stat(g):
@@ -75,7 +76,9 @@ def test_his_call_subline_says_pending_a_decision():
 
 
 def test_undetermined_quarter_token_is_line_na_with_the_hole_words():
-    g, chip = _chip(_undetermined(), today=TODAY)
+    f = _undetermined()
+    assert f["rev_line"] != MF.LINE_UNDETERMINED          # production never writes it there
+    g, chip = _chip(f, today=TODAY)
     assert g["sales_reason"] == "line_unverified" and g["sales_yoy_pct"] is None
     assert chip.startswith("Sales line n/a · ")
     assert ("sales: not ranked — " + MF.LINE_WORDS[MF.LINE_UNDETERMINED]) in _stat(g)

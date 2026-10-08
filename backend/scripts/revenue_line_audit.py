@@ -1,8 +1,8 @@
 """Revenue-line audit — the durability tripwire for semantic change 7 (2026-10-08).
 
 WHAT IT CHECKS. `massive_fundamentals.revenue_line` picks each quarter's revenue
-line by v1's statement template (banks: revenue − cost_of_revenue + other
-income). This script reads the research docs that line produced and checks the
+line by v1's statement template (banks: revenue − cost_of_revenue; C's pick
+adds other income). This script reads the research docs that line produced and checks the
 latest quarter and its year-ago quarter against SEC companyfacts XBRL — the
 10-Q's own tags, the year-ago value from the SAME accession (the comparative
 column), never a separately filed number. It prints a table and SUGGESTED
@@ -11,6 +11,17 @@ first). 0 Massive calls.
 
     python scripts/revenue_line_audit.py --held --financial [--out /out/audit.json]
     python scripts/revenue_line_audit.py --symbols BAC,JPM,C
+
+EXPECTED-NET NAMES (2026-10-08 critic). `--financial` audits every name the
+ledger CSV (`docs/sepa/revenue_lines_2026_10_08.csv`, `spec_status` rule / pick
+on a net line) EXPECTS on a net line — NOT only the docs whose stored
+`rev_line` is net today, or a provider change that put BAC back on gross
+revenue (`rev_line` = revenue) would never be audited — plus every doc on a net
+line now. On an expected-net name only a NET tag counts (`NET_TAGS`, plus the
+CSV's own face concept for that name, e.g. BAC/C/SCHW tag their net total as
+`Revenues`): a broker's SEC `Revenues` is the GROSS figure (JEF PIPR RJF SF,
+MEASURED), so "any tag" would pass a gross regression as a match. A name whose
+stored line is not the expected one is flagged `line_drift`.
 
 VERDICTS. match = some audited tag reproduces the stored % within
 `AUDIT_PCT_TOL` pp OR both quarter levels within `AUDIT_LEVEL_TOL` — the
@@ -49,6 +60,11 @@ AUDIT_EXTRA_SLEEP = 0.06    # s, on top of giants.edgar's 0.15 s → ≤ 5 req/s
 DAYS_PER_MONTH = 30.44      # definitional: a "3-month" fact is one whose span rounds to 3 months
 CF_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 DOC_FIELDS = ("rev_q_series", "q_end_series", "rev_growth_q_pct", "rev_line", "rev_line_note")
+NET_TAGS = ("RevenuesNetOfInterestExpense", SUM_TAG)   # the only tags an expected-net name may match on
+EXPECTED_CSV = Path(__file__).resolve().parents[2] / "docs" / "sepa" / "revenue_lines_2026_10_08.csv"
+EXPECTED_STATUSES = ("rule", "pick")
+CSV_CONCEPT_TAG = {"us-gaap:RevenuesNetOfInterestExpense": "RevenuesNetOfInterestExpense",
+                   "us-gaap:Revenues": "Revenues", "NII+NoninterestIncome": SUM_TAG}
 
 
 def _day(v) -> Optional[date]:
@@ -126,11 +142,14 @@ def _near(a, b) -> bool:
     return b != 0 and abs(a - b) <= AUDIT_LEVEL_TOL * abs(b)
 
 
-def verdict(cur, ya, pct, pairs: dict) -> dict:
+def verdict(cur, ya, pct, pairs: dict, accept=None) -> dict:
     """{"verdict": "match" | "mismatch" | "unchecked", "tag", "sec_pct"}. PURE.
-    No SEC pair (or no stored figure) → "unchecked", never "mismatch"."""
+    No SEC pair (or no stored figure) → "unchecked", never "mismatch".
+    `accept` (an expected-net name): only these tags count — a pair SEC has
+    on another tag can neither match nor mismatch."""
     pairs = pairs if isinstance(pairs, dict) else {}
-    order = [t for t in AUDIT_TAGS + (SUM_TAG,) if t in pairs]
+    order = [t for t in AUDIT_TAGS + (SUM_TAG,) if t in pairs
+             and (accept is None or t in accept)]
     if not order or (pct is None and (cur is None or ya is None)):
         return {"verdict": "unchecked", "tag": None, "sec_pct": None}
     for t in order:
@@ -149,13 +168,40 @@ def _ledger_ciks() -> dict:
     return {v[0]: k for k, v in {**MF.REVENUE_LINE_PICKS, **MF.REVENUE_LINE_HOLD}.items()}
 
 
-def _select(coll, *, symbols, held, financial) -> list:
+def expected_net(path=EXPECTED_CSV) -> dict:
+    """{symbol: (expected line, face tag or None)} — the CSV rows on a net line
+    whose `spec_status` is rule / pick. {} when the file is absent. PURE read."""
+    import csv
+    from sepa import massive_fundamentals as MF
+    p = Path(path)
+    if not p.is_file():
+        return {}
+    out = {}
+    with p.open(newline="") as fh:
+        for r in csv.DictReader(fh):
+            if r.get("spec_line") in MF.NET_LINES and r.get("spec_status") in EXPECTED_STATUSES:
+                out[str(r["symbol"]).upper()] = (r["spec_line"], CSV_CONCEPT_TAG.get(r.get("sec_line_concept") or ""))
+    return out
+
+
+def accept_tags(symbol: str, rev_line, expected: dict):
+    """The tags `verdict` may match on: `NET_TAGS` (+ the CSV face tag) for an
+    expected-net name or a doc on a net line, else None (any tag). PURE."""
+    from sepa import massive_fundamentals as MF
+    e = (expected or {}).get(symbol)
+    if e is None and rev_line not in MF.NET_LINES:
+        return None
+    return NET_TAGS + ((e[1],) if e and e[1] and e[1] not in NET_TAGS else ())
+
+
+def _select(coll, *, symbols, held, financial, expected=None) -> list:
     want = set(s.upper() for s in (symbols or []))
     if held:
         want |= set(_ledger_ciks())
     if financial:
         from sepa import massive_fundamentals as MF
-        for d in coll.find({"fundamentals.rev_line": MF.LINE_NET_OF_INTEREST}, {"symbol": 1}):
+        want |= set(expected or {})
+        for d in coll.find({"fundamentals.rev_line": {"$in": list(MF.NET_LINES)}}, {"symbol": 1}):
             if d.get("symbol"):
                 want.add(str(d["symbol"]).upper())
     return sorted(want)
@@ -171,7 +217,7 @@ def _fetch_facts(cik: str) -> Optional[dict]:
         return None
 
 
-def audit(symbols: list, *, coll, cik_of, fetch=_fetch_facts) -> list:
+def audit(symbols: list, *, coll, cik_of, fetch=_fetch_facts, expected=None) -> list:
     proj = {"symbol": 1, **{f"fundamentals.{k}": 1 for k in DOC_FIELDS}}
     docs = {d["symbol"]: (d.get("fundamentals") or {})
             for d in coll.find({"symbol": {"$in": list(symbols)}}, proj) if d.get("symbol")}
@@ -186,8 +232,13 @@ def audit(symbols: list, *, coll, cik_of, fetch=_fetch_facts) -> list:
         cik = cik_of(s)
         facts = fetch(cik) if (cik and end and ya_end) else None
         pairs = sec_quarter_pair(facts or {}, end, ya_end) if facts else {}
-        v = verdict(cur, ya, f.get("rev_growth_q_pct"), pairs)
+        acc = accept_tags(s, f.get("rev_line"), expected or {})
+        v = verdict(cur, ya, f.get("rev_growth_q_pct"), pairs, accept=acc)
+        exp_line = ((expected or {}).get(s) or (None,))[0]
         rows.append({"symbol": s, "cik": cik, "rev_line": f.get("rev_line"),
+                     "expected_line": exp_line,
+                     "line_drift": bool(exp_line and f and f.get("rev_line") != exp_line),
+                     "accept": list(acc) if acc else None,
                      "rev_line_note": f.get("rev_line_note"), "end": end, "year_ago_end": ya_end,
                      "cur": cur, "year_ago": ya, "pct": f.get("rev_growth_q_pct"),
                      "doc": bool(f), **v,
@@ -200,6 +251,10 @@ def suggestions(rows: list) -> list:
     out = []
     for r in rows:
         held = bool(r.get("rev_line_note"))
+        if r.get("line_drift"):
+            out.append(f"{r['symbol']}: stored line {r['rev_line']} is not the expected "
+                       f"{r['expected_line']} — the provider's row shape changed; re-check "
+                       "massive_fundamentals.row_template before any refresh ranks it")
         if r["verdict"] == "mismatch" and not held:
             out.append(f"{r['symbol']} (CIK {r['cik']}): ranked line {r['rev_line']} does not "
                        f"reproduce SEC {r['tag']} {r['sec_pct']} vs stored {r['pct']} — check the "
@@ -217,16 +272,23 @@ def main(argv=None) -> int:
     ap.add_argument("--symbols", default="")
     ap.add_argument("--held", action="store_true", help="every ticker in the picks + hold ledger")
     ap.add_argument("--financial", action="store_true",
-                    help="every doc whose rev_line is net_of_interest")
+                    help="every name the ledger CSV expects on a net line, plus every doc on one")
+    ap.add_argument("--expected", default=str(EXPECTED_CSV),
+                    help="the ledger CSV (docs/sepa/revenue_lines_2026_10_08.csv)")
     ap.add_argument("--out", default="")
     a = ap.parse_args(argv)
+    expected = expected_net(a.expected)
+    if a.financial and not expected:
+        print(f"--financial needs the ledger CSV ({a.expected}): mount the repo, or pass --expected",
+              file=sys.stderr)
+        return 2
     from sepa import research
     coll = research._get_cache()
     if coll is None:
         print("no research cache", file=sys.stderr)
         return 1
     syms = _select(coll, symbols=[s.strip() for s in a.symbols.split(",") if s.strip()],
-                   held=a.held, financial=a.financial)
+                   held=a.held, financial=a.financial, expected=expected)
     led = _ledger_ciks()
 
     def cik_of(s):
@@ -234,10 +296,12 @@ def main(argv=None) -> int:
             return led[s]
         from supply_demand import whales_13d
         return whales_13d._ticker_to_cik(s)
-    rows = audit(syms, coll=coll, cik_of=cik_of)
+    rows = audit(syms, coll=coll, cik_of=cik_of, expected=expected)
     counts: dict = {}
     for r in rows:
         counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
+        if r.get("line_drift"):
+            counts["line_drift"] = counts.get("line_drift", 0) + 1
         print(f"{r['symbol']:6} {str(r['rev_line']):16} {r['verdict']:9} stored "
               f"{r['pct']} sec {r['sec_pct']} ({r['tag']})")
     sugg = suggestions(rows)

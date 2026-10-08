@@ -78,7 +78,7 @@ class _Coll:
         if "symbol" in q:
             return [d for d in self.docs if d["symbol"] in q["symbol"]["$in"]]
         return [d for d in self.docs if (d.get("fundamentals") or {}).get("rev_line")
-                == q["fundamentals.rev_line"]]
+                in q["fundamentals.rev_line"]["$in"]]
 
 
 def test_audit_end_to_end_with_stubbed_sec_and_zero_massive():

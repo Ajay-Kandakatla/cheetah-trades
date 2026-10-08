@@ -351,18 +351,18 @@
     },
     {
      "k": "Growth",
-     "v": "FY2026 Q2 vs FY2025 Q2 · sales: not ranked — no revenue line this quarter (the provider's bank-template row has no interest-expense line to net) · EPS: no figure on file · figures cached 2026-09-29"
+     "v": "FY2026 Q2 vs FY2025 Q2 · sales: not ranked — no revenue line for a quarter compared (the provider's bank-template row has no interest-expense line to net) · EPS: no figure on file · figures cached 2026-09-29"
     }
    ],
    "growth": {
     "state": "read",
     "period": "FY2026 Q2",
     "year_ago_period": "FY2025 Q2",
-    "source": "hybrid",
+    "source": "massive",
     "sales_yoy_pct": null,
     "sales_stored_pct": null,
     "sales_base": "unknown",
-    "sales_year_ago": 3000000000.0,
+    "sales_year_ago": 27443000000.0,
     "sales_ranked": false,
     "eps_yoy_pct": null,
     "eps_stored_pct": null,
@@ -386,9 +386,9 @@
     "gap": null,
     "bars": null,
     "massive_unused": false,
-    "sales_line": "undetermined",
-    "sales_line_words": "no revenue line this quarter (the provider's bank-template row has no interest-expense line to net)",
-    "sales_line_note": "no revenue line this quarter (the provider's bank-template row has no interest-expense line to net)"
+    "sales_line": "net_of_interest",
+    "sales_line_words": "total revenue net of interest expense",
+    "sales_line_note": "no revenue line for a quarter compared (the provider's bank-template row has no interest-expense line to net)"
    }
   },
   {

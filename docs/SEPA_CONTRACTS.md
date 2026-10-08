@@ -1393,9 +1393,10 @@ to default — never the other way around.
   **2026-10-08: the revenue line follows v1's statement template** (semantic
   change 7): a financial-template row (banks, brokers, card lenders — no
   `interest_expense` / `research_development` key) reads revenue −
-  cost_of_revenue + other income = the 10-Q's total net revenue (BAC Q2-2026
-  31,558 M, not v1's gross 49,393 M); every other row keeps v1 `revenue`; 6 CIK
-  picks + a 34-name hold ledger (shown `*` on 🛡️). Same formulas, same
+  cost_of_revenue = the 10-Q's total net revenue (BAC Q2-2026
+  31,558 M, not v1's gross 49,393 M); every other row keeps v1 `revenue`; 8 CIK
+  picks (C adds other income) + a 39-name hold ledger (shown `*` on 🛡️;
+  critic round 2 2026-10-08: no other income in the rule, CACC pick, BDC/CBSH holds). Same formulas, same
   thresholds (sales 5 / 25 / 100 locked); filing-correct input moves 13 held
   banks fail → pass on the Bonde pillar (MEASURED dry run). Contract:
   `test_revenue_line_contract_2026_10_08`; record
