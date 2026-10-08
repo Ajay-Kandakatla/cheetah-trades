@@ -1116,7 +1116,7 @@ def test_line_words_and_ledgers_are_well_formed():
     for cik, (tk, kind, note) in MF.REVENUE_LINE_HOLD.items():
         assert re.fullmatch(r"\d{10}", cik) and tk
         assert kind in (MF.HOLD_UNVERIFIED, MF.HOLD_HIS_CALL) and isinstance(note, str) and note
-    assert len(MF.REVENUE_LINE_PICKS) == 8 and len(MF.REVENUE_LINE_HOLD) == 39   # + C CACC; + 4 BDCs, CBSH (critic round 2)
+    assert len(MF.REVENUE_LINE_PICKS) == 8 and len(MF.REVENUE_LINE_HOLD) == 43   # + C CACC; + 4 BDCs, CBSH (critic round 2); + 4 post-heal audit banks
     # every fixture name's CIK is the ledger's CIK for that ticker
     tick = {v[0]: k for k, v in {**MF.REVENUE_LINE_PICKS, **MF.REVENUE_LINE_HOLD}.items()}
     for sym, d in FX.items():
@@ -1215,3 +1215,15 @@ def test_SOURCE_GUARD_only_the_helper_reads_the_revenue_line_inputs():
     offenders = [rel for rel, src in _live_modules()
                  if pat.search(src) and rel != "sepa/massive_fundamentals.py"]
     assert offenders == [], offenders
+
+
+def test_post_heal_audit_banks_are_held_never_ranked_2026_10_08():
+    """The post-heal SEC audit (2026-10-08) found four bank-template names ranked on a figure their
+    10-Q contradicts. They are held (shown with *, never ranked) until a cross-check clears them."""
+    held = {v[0]: (k, v[1], v[2]) for k, v in MF.REVENUE_LINE_HOLD.items()}
+    for sym, cik in (("BHRB", "0001964333"), ("CWBC", "0001127371"),
+                     ("HWBK", "0000893847"), ("SACH", "0001682220")):
+        assert sym in held, sym
+        assert held[sym][0] == cik and held[sym][1] == MF.HOLD_UNVERIFIED
+        assert held[sym][2] == MF.NOTE_NO_MATCHING_LINE
+        assert cik not in MF.REVENUE_LINE_PICKS            # NEGATIVE: never also a pick

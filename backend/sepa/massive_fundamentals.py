@@ -268,6 +268,13 @@ REVENUE_LINE_HOLD = {
     # §5.3 census 2026-10-08: v1 Q2-26 revenue 603,989 M is 12.8 M over SEC interest + noninterest income (591,159);
     # the net rule reads +14.69 % vs the 10-Q's NII + noninterest income +11.92 % (plain +12.33) — no line reproduces it
     "0000022356": ("CBSH", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    # Post-heal SEC audit 2026-10-08 (scripts/revenue_line_audit.py --held --financial, after the 402-name
+    # refresh): the net rule ranked these four on a figure SEC NII + noninterest income contradicts —
+    # BHRB +24.69 vs +22.71, CWBC +36.27 vs +37.22, HWBK +16.40 vs +14.97, SACH -53.29 vs -44.37 (%).
+    "0001964333": ("BHRB", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001127371": ("CWBC", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0000893847": ("HWBK", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001682220": ("SACH", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
     "0000765880": ("DOC",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
     "0000751364": ("NNN",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
     "0001571283": ("REXR", HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
