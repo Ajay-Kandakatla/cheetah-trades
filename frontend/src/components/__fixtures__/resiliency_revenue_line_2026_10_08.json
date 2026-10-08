@@ -1,0 +1,466 @@
+{
+ "_about": "built by backend/scripts/resiliency_revenue_line_fixture.py (2026-10-08)",
+ "resiliency_board": {
+  "state": "ready",
+  "session": "2026-10-08",
+  "phase": null,
+  "market_closed": null,
+  "sort": "res_growth",
+  "header": "fixture header (not under test)",
+  "today_line": null,
+  "market_line": null,
+  "events_line": "Data days: FRED's own release dates (jobs report, CPI, Core PCE, GDP, retail sales, JOLTS, ADP, jobless claims, PPI) and the Fed's FOMC calendar. ISM and Fed-speaker remarks have no dated history here and are not counted.",
+  "rules": {
+   "hold_max_drop_pct": 0.5,
+   "hold_rate_min_pct": 75.0,
+   "window_days": 365,
+   "t2_excludes_t1": true,
+   "pre_rvol_min": 1.5,
+   "pre_min_sessions": 5,
+   "vol_avg_bars": 50,
+   "benchmark": "SPY",
+   "eps_min_base": 0.1,
+   "rev_min_base": 1000000.0,
+   "stale_filing_quarters": 4,
+   "sales_agree_required": true,
+   "lines": [
+    "Held = the close on a data day no more than 0.5% under the prior session's close (prior close to that day's close — an intraday dip that recovers counts as held). Down-only, absolute, not against SPY: your call.",
+    "🛡️ box = a close on every T1 (or T2) day of the last 365 days and held on at least 75% of them. A name missing a close is not rated and a ticked box hides it.",
+    "T1 = the jobs report, CPI, Core PCE and the FOMC decision; T2 = retail sales, JOLTS, ADP, jobless claims, GDP and PPI — a day with any T1 print counts as T1 only.",
+    "'SPY fell' = SPY's own close-to-close on that day below zero.",
+    "📈 = the app's accumulation day on the last session: up close, close in the upper half of the range, volume above its 50-session average.",
+    "📅 Today's move = the price against the prior session's close: live in market hours, the regular-session close after it, and before the open, overnight and on weekends the last session's close against the one before it, labelled with its date (closed bars, checked against the snapshot). On a T1/T2 day the card also says T1/T2, and its pre-market print is read live. The same 0.5% line colours it.",
+    "Default order: today's move, biggest gain first, once the session has a print (market hours and after the close); before that, 🛡️ T1 hold rate. A name with no print sorts last; ties go to the T1 hold rate. The 📅 line counts every name read, before the boxes and the liquidity floor.",
+    "🚀 Sales + EPS growth = the latest reported quarter against the same quarter a year earlier. Order: names ranked on BOTH legs first, then one leg (an EPS leg before a sales leg), then none; within a block each leg's percentile is averaged — the breakouts board's blend. Never ranked: a year-ago EPS under $0.10 or a year-ago loss, a year-ago revenue under $1M or at or under zero, quarters not a year apart on file, a latest filing 4 or more quarters past due, an ETF/fund, and a stored figure that is missing or disagrees with its own quarterly series (shown with *). UNMEASURED — an order, not a forecast.",
+    "🌅 box is OFF: volume check off until the two volume sources are reconciled (pre-market volume not compared — the snapshot's pre-market shares read higher than the 1-minute bars the usual volume is built from; your call) — it passes none; the pre-market move still shows 04:00–09:30 ET."
+   ]
+  },
+  "events": null,
+  "today": null,
+  "counts": null,
+  "filters": null,
+  "study": {
+   "status": "measured",
+   "run_date": "2026-10-01",
+   "t1": {
+    "verdict": "no_signal",
+    "text": "MEASURED 2026-10-01: names that held on at least 75% of the last year's T1 days held on the next one +4.3pp more often than other rated names grouped only by volatility quintile and beta tercile, and +2.9pp more often on the next ordinary day; the data-day edge beyond ordinary days is +1.5pp [-4.5, +7.2], 42 data days — NO_SIGNAL: the box can't be told apart from an ordinary day."
+   },
+   "t2": {
+    "verdict": "inverted",
+    "text": "MEASURED 2026-10-01: names that held on at least 75% of the last year's T2 days held on the next one +1.4pp more often than other rated names grouped only by volatility quintile and beta tercile, and +4.8pp more often on the next ordinary day; the data-day edge beyond ordinary days is -3.3pp [-5.8, -1.0], 66 data days — INVERTED: the box holds worse on data days than on ordinary days — a weaker hold, not a sell read."
+   },
+   "eod": {
+    "verdict": "no_signal",
+    "text": "MEASURED 2026-10-01: a volume-confirmed up close led the next session by +0.05pp against the same up close on lighter volume [-0.01, +0.09] — NO_SIGNAL."
+   },
+   "pre": {
+    "verdict": "unmeasured",
+    "text": "UNMEASURED — pre-market volume history is the intraday cache: ≤31 sessions, patchy — too short to measure"
+   }
+  },
+  "note": "🛡️ MEASURED 2026-10-01: names that held on at least 75% of the last year's T1 days held on the next one +4.3pp more often than other rated names grouped only by volatility quintile and beta tercile, and +2.9pp more often on the next ordinary day; the data-day edge beyond ordinary days is +1.5pp [-4.5, +7.2], 42 data days — NO_SIGNAL: the box can't be told apart from an ordinary day. The EOD tape read is the app's own accumulation day; the pre-market volume check off until the two volume sources are reconciled. 📅 Today's move and 🚀 sales + EPS growth are orders, UNMEASURED — the MEASURED lines here are about data days only. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "measured": false,
+  "growth_coverage": {
+   "n": 5,
+   "classes": {
+    "two_legs": 2,
+    "one_leg": 0,
+    "pending": 0,
+    "by_rule": 0,
+    "revenue_line": 3,
+    "etf": 0,
+    "new_listing": 0,
+    "not_researched": 0,
+    "massive_unused": 0,
+    "no_filings": 0,
+    "stale_filings": 0,
+    "period_gap": 0,
+    "year_ago_missing": 0
+   },
+   "top": {
+    "two_legs": [
+     "BAC",
+     "VST"
+    ],
+    "revenue_line": [
+     "CVX",
+     "SOFI",
+     "UND"
+    ]
+   },
+   "pending_legs": 0,
+   "pending_top": [],
+   "asof": "2026-09-29",
+   "asof_n": 5,
+   "n_doc": 5,
+   "min_bars": 100,
+   "ttl_days": 16
+  },
+  "growth_line": "🚀 Growth on file: 2 both legs · 0 one leg · 0 pending refresh · 0 blank by rule · 3 revenue line not the 10-Q's · no figure 0 · of 5 · 0 figures marked * wait on a research refresh · most figures cached 2026-09-29.",
+  "growth_gaps": {
+   "summary": "Why a card has no ranked growth — most-traded names first",
+   "lines": [
+    "revenue line not the 10-Q's (3): the provider's revenue line is not the one the 10-Q headlines, or which line ranks is pending a decision — shown with *, never ranked; a research refresh does not change it — CVX, SOFI, UND"
+   ]
+  },
+  "built_at": "2026-10-08T00:30:00+00:00"
+ },
+ "tiles": [
+  {
+   "symbol": "BAC",
+   "badges": [
+    {
+     "text": "Sales +15.0% · EPS +10.0% YoY (FY2026 Q2)",
+     "tone": "muted"
+    }
+   ],
+   "stats": [
+    {
+     "k": "T1 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "T2 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "EOD tape",
+     "v": "no closed bar to read"
+    },
+    {
+     "k": "Pre-market",
+     "v": "not read"
+    },
+    {
+     "k": "σ · β",
+     "v": "— · β —"
+    },
+    {
+     "k": "Growth",
+     "v": "FY2026 Q2 vs FY2025 Q2 · sales +14.99% (total revenue net of interest expense) · EPS +10.00% (year-ago $1.00) · figures cached 2026-09-29"
+    }
+   ],
+   "growth": {
+    "state": "read",
+    "period": "FY2026 Q2",
+    "year_ago_period": "FY2025 Q2",
+    "source": "hybrid",
+    "sales_yoy_pct": 14.99,
+    "sales_stored_pct": 14.99,
+    "sales_base": "ok",
+    "sales_year_ago": 27443000000.0,
+    "sales_ranked": true,
+    "eps_yoy_pct": 10.0,
+    "eps_stored_pct": 10.0,
+    "eps_base": "ok",
+    "eps_year_ago": 1.0,
+    "eps_agrees": true,
+    "eps_ranked": true,
+    "score": 100.0,
+    "legs": 2,
+    "as_of": "2026-09-29",
+    "sales_series_pct": 14.99,
+    "eps_series_pct": 10.0,
+    "sales_agrees": true,
+    "sales_reason": null,
+    "eps_reason": null,
+    "eps_year_ago_ni": null,
+    "sales_latest": 31558000000.0,
+    "latest_idx": 8105,
+    "expected_idx": 8105,
+    "etf": false,
+    "gap": null,
+    "bars": null,
+    "massive_unused": false,
+    "sales_line": "net_of_interest",
+    "sales_line_words": "total revenue net of interest expense",
+    "sales_line_note": null
+   }
+  },
+  {
+   "symbol": "SOFI",
+   "badges": [
+    {
+     "text": "Sales +27.4%* · EPS not filed YoY (FY2026 Q2)",
+     "tone": "muted"
+    }
+   ],
+   "stats": [
+    {
+     "k": "T1 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "T2 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "EOD tape",
+     "v": "no closed bar to read"
+    },
+    {
+     "k": "Pre-market",
+     "v": "not read"
+    },
+    {
+     "k": "σ · β",
+     "v": "— · β —"
+    },
+    {
+     "k": "Growth",
+     "v": "FY2026 Q2 vs FY2025 Q2 · sales +27.35% on the provider's revenue — not ranked: the provider has no net-interest-income line, so its revenue is a fee sub-line, not the 10-Q's total net revenue · EPS: no figure on file · figures cached 2026-09-29"
+    }
+   ],
+   "growth": {
+    "state": "read",
+    "period": "FY2026 Q2",
+    "year_ago_period": "FY2025 Q2",
+    "source": "hybrid",
+    "sales_yoy_pct": 27.35,
+    "sales_stored_pct": 27.35,
+    "sales_base": "ok",
+    "sales_year_ago": 337107000.0,
+    "sales_ranked": false,
+    "eps_yoy_pct": null,
+    "eps_stored_pct": null,
+    "eps_base": "unknown",
+    "eps_year_ago": null,
+    "eps_agrees": null,
+    "eps_ranked": false,
+    "score": null,
+    "legs": 0,
+    "as_of": "2026-09-29",
+    "sales_series_pct": 27.35,
+    "eps_series_pct": null,
+    "sales_agrees": true,
+    "sales_reason": "line_unverified",
+    "eps_reason": "not_filed",
+    "eps_year_ago_ni": null,
+    "sales_latest": 429298000.0,
+    "latest_idx": 8105,
+    "expected_idx": 8105,
+    "etf": false,
+    "gap": null,
+    "bars": null,
+    "massive_unused": false,
+    "sales_line": "revenue",
+    "sales_line_words": "revenue",
+    "sales_line_note": "the provider has no net-interest-income line, so its revenue is a fee sub-line, not the 10-Q's total net revenue"
+   }
+  },
+  {
+   "symbol": "CVX",
+   "badges": [
+    {
+     "text": "Sales +51.4%* · EPS not filed YoY (FY2026 Q2)",
+     "tone": "muted"
+    }
+   ],
+   "stats": [
+    {
+     "k": "T1 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "T2 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "EOD tape",
+     "v": "no closed bar to read"
+    },
+    {
+     "k": "Pre-market",
+     "v": "not read"
+    },
+    {
+     "k": "σ · β",
+     "v": "— · β —"
+    },
+    {
+     "k": "Growth",
+     "v": "FY2026 Q2 vs FY2025 Q2 · sales +51.43% on the provider's revenue — not ranked: the provider carries a sub-line of the 10-Q (sales before other income, or one segment); which line ranks is pending a decision · EPS: no figure on file · figures cached 2026-09-29"
+    }
+   ],
+   "growth": {
+    "state": "read",
+    "period": "FY2026 Q2",
+    "year_ago_period": "FY2025 Q2",
+    "source": "hybrid",
+    "sales_yoy_pct": 51.43,
+    "sales_stored_pct": 51.43,
+    "sales_base": "ok",
+    "sales_year_ago": 44375000000.0,
+    "sales_ranked": false,
+    "eps_yoy_pct": null,
+    "eps_stored_pct": null,
+    "eps_base": "unknown",
+    "eps_year_ago": null,
+    "eps_agrees": null,
+    "eps_ranked": false,
+    "score": null,
+    "legs": 0,
+    "as_of": "2026-09-29",
+    "sales_series_pct": 51.43,
+    "eps_series_pct": null,
+    "sales_agrees": true,
+    "sales_reason": "line_unverified",
+    "eps_reason": "not_filed",
+    "eps_year_ago_ni": null,
+    "sales_latest": 67199000000.0,
+    "latest_idx": 8105,
+    "expected_idx": 8105,
+    "etf": false,
+    "gap": null,
+    "bars": null,
+    "massive_unused": false,
+    "sales_line": "revenue",
+    "sales_line_words": "revenue",
+    "sales_line_note": "the provider carries a sub-line of the 10-Q (sales before other income, or one segment); which line ranks is pending a decision"
+   }
+  },
+  {
+   "symbol": "UND",
+   "badges": [
+    {
+     "text": "Sales line n/a · EPS not filed YoY (FY2026 Q2)",
+     "tone": "muted"
+    }
+   ],
+   "stats": [
+    {
+     "k": "T1 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "T2 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "EOD tape",
+     "v": "no closed bar to read"
+    },
+    {
+     "k": "Pre-market",
+     "v": "not read"
+    },
+    {
+     "k": "σ · β",
+     "v": "— · β —"
+    },
+    {
+     "k": "Growth",
+     "v": "FY2026 Q2 vs FY2025 Q2 · sales: not ranked — no revenue line this quarter (the provider's bank-template row has no interest-expense line to net) · EPS: no figure on file · figures cached 2026-09-29"
+    }
+   ],
+   "growth": {
+    "state": "read",
+    "period": "FY2026 Q2",
+    "year_ago_period": "FY2025 Q2",
+    "source": "hybrid",
+    "sales_yoy_pct": null,
+    "sales_stored_pct": null,
+    "sales_base": "unknown",
+    "sales_year_ago": 3000000000.0,
+    "sales_ranked": false,
+    "eps_yoy_pct": null,
+    "eps_stored_pct": null,
+    "eps_base": "unknown",
+    "eps_year_ago": null,
+    "eps_agrees": null,
+    "eps_ranked": false,
+    "score": null,
+    "legs": 0,
+    "as_of": "2026-09-29",
+    "sales_series_pct": null,
+    "eps_series_pct": null,
+    "sales_agrees": null,
+    "sales_reason": "line_unverified",
+    "eps_reason": "not_filed",
+    "eps_year_ago_ni": null,
+    "sales_latest": null,
+    "latest_idx": 8105,
+    "expected_idx": 8105,
+    "etf": false,
+    "gap": null,
+    "bars": null,
+    "massive_unused": false,
+    "sales_line": "undetermined",
+    "sales_line_words": "no revenue line this quarter (the provider's bank-template row has no interest-expense line to net)",
+    "sales_line_note": "no revenue line this quarter (the provider's bank-template row has no interest-expense line to net)"
+   }
+  },
+  {
+   "symbol": "VST",
+   "badges": [
+    {
+     "text": "Sales -5.5% · EPS -6.2% YoY (FY2026 Q2)",
+     "tone": "muted"
+    }
+   ],
+   "stats": [
+    {
+     "k": "T1 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "T2 held",
+     "v": "— (the data-day history could not be read)"
+    },
+    {
+     "k": "EOD tape",
+     "v": "no closed bar to read"
+    },
+    {
+     "k": "Pre-market",
+     "v": "not read"
+    },
+    {
+     "k": "σ · β",
+     "v": "— · β —"
+    },
+    {
+     "k": "Growth",
+     "v": "FY2026 Q2 vs FY2025 Q2 · sales -5.48% · EPS -6.17% (year-ago $0.81) · figures cached 2026-09-29"
+    }
+   ],
+   "growth": {
+    "state": "read",
+    "period": "FY2026 Q2",
+    "year_ago_period": "FY2025 Q2",
+    "source": "hybrid",
+    "sales_yoy_pct": -5.48,
+    "sales_stored_pct": -5.48,
+    "sales_base": "ok",
+    "sales_year_ago": 4232000000.0,
+    "sales_ranked": true,
+    "eps_yoy_pct": -6.17,
+    "eps_stored_pct": -6.17,
+    "eps_base": "ok",
+    "eps_year_ago": 0.81,
+    "eps_agrees": true,
+    "eps_ranked": true,
+    "score": 0.0,
+    "legs": 2,
+    "as_of": "2026-09-29",
+    "sales_series_pct": -5.48,
+    "eps_series_pct": -6.17,
+    "sales_agrees": true,
+    "sales_reason": null,
+    "eps_reason": null,
+    "eps_year_ago_ni": null,
+    "sales_latest": 4000000000.0,
+    "latest_idx": 8105,
+    "expected_idx": 8105,
+    "etf": false,
+    "gap": null,
+    "bars": null,
+    "massive_unused": false,
+    "sales_line": null,
+    "sales_line_words": null,
+    "sales_line_note": null
+   }
+  }
+ ]
+}

@@ -51,6 +51,14 @@ Input: newest-first **quarterly revenue series** (8 quarters, from the same
 Massive financials fetch `canslim` already does — v1 income statements since
 2026-09-30, `docs/sepa/massive_fundamentals_v1.md` — no extra API call). Needs ≥ 5
 quarters for one YoY comparison, else `score = None` (we never invent a score).
+Since 2026-10-08 the series is **the revenue line the helper chooses per v1
+statement template** (`massive_fundamentals.revenue_line`): a bank / broker /
+card lender's revenue net of interest expense plus other income (the 10-Q's
+total net revenue — BAC Q2-2026 +14.99 %, where v1's gross revenue read +3.67 %),
+v1 `revenue` for every other template. A series never mixes two lines
+(`canslim._one_revenue_line` holes the odd slot). The 5 / 25 / 100 tiers are
+unchanged; 21 of the 141 held-out names change tier against a no-fix refresh
+(MEASURED, dry run 2026-10-08).
 
 - `growth_yoy_pct` = (rev[0] − rev[4]) / |rev[4]| × 100
 - `accelerating` = latest YoY > prior-quarter's YoY (and > 0)

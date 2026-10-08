@@ -1427,3 +1427,21 @@ def test_SOURCE_GUARD_the_attribution_guard_sweeps_its_own_file():
     text = Path(__file__).read_text(encoding="utf-8")
     bad = _attribution_violations(text, "backend/tests/test_sepa_contracts.py")
     assert not bad, "\n".join(bad)
+
+
+def test_revenue_line_contract_2026_10_08():
+    """The revenue line follows v1's statement template (2026-10-08): a
+    financial-template row (no interest_expense, no research_development key)
+    ranks on revenue − cost_of_revenue + other income; every other row keeps
+    v1 revenue. Real BAC / MCD rows from the 2026-10-07 pull. The sales tiers
+    are untouched."""
+    import json as _json
+    from sepa import massive_fundamentals as MF, sales
+    assert MF.FIN_TEMPLATE_ABSENT_KEYS == ("interest_expense", "research_development")
+    fx = _json.loads((Path(__file__).resolve().parent / "fixtures"
+                      / "revenue_line_rows_2026_10_08.json").read_text())["names"]
+    bac = [r for r in fx["BAC"]["rows"] if r["period_end"] == "2026-06-30"][0]
+    assert MF.revenue_line(bac)[:2] == (31558000000.0, MF.LINE_NET_OF_INTEREST)
+    mcd = [r for r in fx["MCD"]["rows"] if r["period_end"] == "2026-06-30"][0]
+    assert MF.revenue_line(mcd) == (mcd["revenue"], MF.LINE_REVENUE, None)
+    assert (sales.SALES_FLOOR_PCT, sales.SALES_PREFERRED_PCT, sales.SALES_EXPLOSIVE_PCT) == (5.0, 25.0, 100.0)

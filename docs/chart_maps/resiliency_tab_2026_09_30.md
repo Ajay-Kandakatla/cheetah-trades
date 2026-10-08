@@ -577,3 +577,34 @@ Served line after this round (MEASURED, the branch memo, before any refresh): `�
 year-ago quarter missing) · of 2,732 · 357 figures marked * wait on a research refresh · most figures cached
 2026-09-27.` Identity True, 0 chips with `—`. SNDK: `Sales +371.6%* · EPS yr-ago loss YoY (FY2026 Q4)`, pending.
 DBRG absent. `growth_coverage.classes` += `massive_unused`; `growth` += `massive_unused` (bool).
+
+## 2026-10-08 — the revenue line: banks rank on the 10-Q's net revenue
+
+Ajay 2026-10-08, asked "Want those ranked?" about the 141 held-out names: *"update them please"*. **Supersedes** the
+"HIS CALL: v1 `revenue` for banks and energy names" above (the 141 held out of H1, and HIS CALL 1's "141 of them the
+STORED figure matches the filing"). Corrected, MEASURED on the R-file face of each latest 10-Q
+(`docs/sepa/revenue_lines_2026_10_08.csv`): the stored figure matches the 10-Q for **62 of 139**, plain v1 `revenue`
+for 68 of 139.
+
+- The line is chosen in ONE place, `massive_fundamentals.revenue_line` (semantic change 7): financial template →
+  revenue − cost_of_revenue + other_income_expense; other templates → v1 `revenue`; 6 CIK picks; a 34-name hold
+  ledger. It rides to the doc as `fundamentals.rev_line`, `rev_line_series`, `rev_line_note`, `rev_line_mixed`
+  (`canslim._one_revenue_line`; `research.DECISION_FIELDS`).
+- `growth_read` (sales step, after the rule reasons, which keep priority): a ledger note or an `undetermined`
+  line → `sales_reason = "line_unverified"`, shown with `*`, **never ranked — even when the stored figure agrees
+  with its series**; a mixed series whose year-ago slot is holed → `line_mixed`. New keys `sales_line`,
+  `sales_line_words`, `sales_line_note`. A legacy doc (no `rev_line*`) reads exactly as before.
+- Coverage class `revenue_line` (`REVENUE_LINE_CLASS`, after `by_rule`); the 🚀 line adds
+  `· n revenue line not the 10-Q's` ONLY when n > 0 (the 0-count line is byte-identical); the fold adds
+  `revenue line not the 10-Q's (n): …` names by adv50. Chip unchanged (`+27.4%*`, or `line n/a` with no figure);
+  the line words live in the Growth stat only (`sales +14.99% (total revenue net of interest expense)`).
+- Dry run on the real v1 rows (0 Massive calls, branch tree, `block_writes()`): **107 of 141 rank, all 107 match the
+  10-Q** (99 on % and both levels; CI PAYX CNC STZ MOH EVR on % only; CB, YUM on levels only); **0 ranked on a figure
+  the 10-Q contradicts**; 34 `line_unverified` each with its ledger note; `rev_growth_q_pct == yoy_pct(rev_q_series)`
+  151 of 151. BAC 19.25 → **14.99**, JPM 27.69, GS 39.46, C 14.30, NEE 4.69 → 12.45, GE 24.73 → 21.10; SOFI +27.35*
+  and CVX +51.43* held with their reasons.
+- HIS CALLs (shipped defaults): the 8 sub-line names stay `*` (H1); the 7 revenue + interest-income picks and PGR not
+  promoted (H2); the rule applies universe-wide (H3); a bank quarter with no interest-expense line is a hole (H4);
+  the monthly audit cron line (H5). See `docs/sepa/revenue_lines_2026_10_08.md`.
+- Tests: `tests/test_resiliency_revenue_line_2026_10_08.py`, `frontend/src/components/ResiliencyRevenueLine.test.tsx`
+  (fixture built by `backend/scripts/resiliency_revenue_line_fixture.py` from the real builders).

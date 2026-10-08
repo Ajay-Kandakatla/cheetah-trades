@@ -25,8 +25,8 @@ below is the migration's record — every vX key a live module reads, and the v1
 key it now comes from. A key that is not in the map is never produced, so a
 consumer reading an unmapped key gets None (unknown), never a zero.
 
-SIX SEMANTIC CHANGES — READ BEFORE TRUSTING AN OLD NUMBER
-─────────────────────────────────────────────────────────
+SEVEN SEMANTIC CHANGES — READ BEFORE TRUSTING AN OLD NUMBER
+───────────────────────────────────────────────────────────
 1. v1 ZERO-FILLS ABSENT LINES. A line the filing does not have comes back as
    0.0, never null (and now and then the key is missing outright — ARR's FY2020
    annual row has no `revenue`). Measured 2026-09-30: ARR
@@ -66,6 +66,23 @@ SIX SEMANTIC CHANGES — READ BEFORE TRUSTING AN OLD NUMBER
    INCOME statement is the spine and the others attach to its periods — see
    `_attach`. `tickers=` can span two companies (MU) or come back short for a
    renamed ticker (SGI) — see `fetch_statement`.
+
+7. THE REVENUE LINE FOLLOWS v1's STATEMENT TEMPLATE (2026-10-08). v1 serves a
+   bank's `revenue` GROSS — interest income plus noninterest income — with
+   total interest expense as `cost_of_revenue`: BAC Q2-2026 reads 49,393 M
+   against the 10-Q's "Total revenue, net of interest expense" 31,558 M
+   (49,393 − 17,835). The template is told apart by KEY PRESENCE, never by a
+   zero: a bank/broker/lender row carries neither `interest_expense` nor
+   `research_development` (MEASURED 2026-10-07: 380 of 1,409 rows, 38 of 141
+   names, constant per name), an insurer row lacks only `research_development`,
+   and every other row carries both zero-filled. Financial template →
+   revenue − cost_of_revenue + other_income_expense (C Q2-2026: 24,262 + 504 =
+   24,766 M = the 10-Q); every other template → v1 `revenue` as before. Six
+   names the verifier reproduced at % AND both levels take a CIK-keyed pick
+   (`REVENUE_LINE_PICKS`), 34 more keep their value but carry a hold note
+   (`REVENUE_LINE_HOLD`, shown with * on 🛡️). A financial-template quarter
+   with no cost line is a HOLE (`LINE_UNDETERMINED`) — never gross revenue.
+   See `revenue_line` and docs/sepa/revenue_lines_2026_10_08.md.
 
 FAIL LOUDLY
 ───────────
@@ -113,6 +130,8 @@ ENDPOINTS = {
 #                           AVERAGE, which is what vX carried)
 FIELD_MAP = {
     INCOME: {
+        # the STANDARD-template line; `revenue_line` chooses per row template
+        # since 2026-10-08 (semantic change 7)
         "revenues": "revenue",
         "diluted_earnings_per_share": "diluted_earnings_per_share",
         "basic_earnings_per_share": "basic_earnings_per_share",
@@ -157,6 +176,93 @@ DERIVED = {
             "noncontrolling_interest",
         ),
     },
+}
+
+# ─────────────────────────────── semantic change 7: the revenue line (2026-10-08)
+TEMPLATE_FINANCIAL, TEMPLATE_INSURANCE, TEMPLATE_STANDARD = "financial", "insurance", "standard"
+FIN_TEMPLATE_ABSENT_KEYS = ("interest_expense", "research_development")   # BOTH missing = financial template.
+#   MEASURED 2026-10-07: 380 of 1,409 rows (38 of 141 names) — missing, never zero-filled; standard rows carry both as 0.0.
+INS_TEMPLATE_ABSENT_KEY = "research_development"                          # missing alone = insurance template (60 rows, 6 names)
+
+LINE_REVENUE = "revenue"                       # v1 `revenue` as served
+LINE_NET_OF_INTEREST = "net_of_interest"       # revenue − cost_of_revenue + other_income_expense (financial template)
+LINE_PLUS_OTHER = "revenue_plus_other"         # revenue + other_income_expense (pick)
+LINE_PLUS_INTEREST = "revenue_plus_interest"   # revenue + interest_income (pick)
+LINE_UNDETERMINED = "undetermined"             # financial-template quarter with no cost line → hole
+LINE_CODES = (LINE_REVENUE, LINE_NET_OF_INTEREST, LINE_PLUS_OTHER, LINE_PLUS_INTEREST, LINE_UNDETERMINED)
+LINE_WORDS = {
+    LINE_REVENUE: "revenue",
+    LINE_NET_OF_INTEREST: "total revenue net of interest expense",
+    LINE_PLUS_OTHER: "revenue + other income",
+    LINE_PLUS_INTEREST: "revenue + interest income",
+    LINE_UNDETERMINED: "no revenue line this quarter (the provider's bank-template row has no interest-expense line to net)",
+}
+HOLD_UNVERIFIED, HOLD_HIS_CALL = "unverified", "his_call"
+
+NOTE_NO_NII = ("the provider has no net-interest-income line, so its revenue is a fee sub-line, "
+               "not the 10-Q's total net revenue")
+NOTE_DROPS_INCOME = ("the provider's revenue leaves out income the 10-Q's total includes "
+                     "(investment, trading, interest or retirement-services income)")
+NOTE_LEASE_DEPRECIATION = ("the 10-Q's total net revenue is after operating-lease depreciation, "
+                           "which the provider does not carry")
+NOTE_FOREIGN_FILER = ("a foreign filer (IFRS, 6-K/20-F): the SEC has no quarterly XBRL to check "
+                      "the provider's line against")
+NOTE_NO_REVENUE_LINE = "the 10-Q prints no revenue line (interest income and net interest income instead)"
+NOTE_NO_MATCHING_LINE = "the provider's revenue matches no line on the 10-Q's income statement"
+NOTE_PICK_UNCONFIRMED = ("the 10-Q's total adds interest income to revenue; a revenue + interest-income "
+                         "pick is measured but not yet cross-checked")
+NOTE_SUBLINE_CALL = ("the provider carries a sub-line of the 10-Q (sales before other income, or one segment); "
+                     "which line ranks is pending a decision")
+NOTE_PICK_SHAPE_CHANGED = "the per-name revenue pick no longer matches the provider's row shape — re-check it"
+
+# CIK (v1 `cik`, 10-digit string) -> (ticker, template it was measured on, line). Reproduced at % AND both
+# quarter levels by the verifier (critic_table.json) and the R-file table (ta_match_table.json), Q2-2026.
+# HIS CALL home: a pick is promoted / retired HERE (docs/sepa/revenue_lines_2026_10_08.md).
+REVENUE_LINE_PICKS = {
+    "0001805284": ("RKT",  TEMPLATE_FINANCIAL, LINE_REVENUE),        # 'Total revenue, net' 2,784 / 1,451 M = v1 revenue
+    "0001397911": ("LPLA", TEMPLATE_FINANCIAL, LINE_PLUS_OTHER),     # 5,038.2 + 148.4 = 5,186.6 M 'Total net revenues'
+    "0000064803": ("CVS",  TEMPLATE_STANDARD,  LINE_PLUS_INTEREST),  # 105,455 + 641 = 106,096 M 'Total revenues'
+    "0000079282": ("BRO",  TEMPLATE_STANDARD,  LINE_PLUS_INTEREST),  # 1,654 + 22 = 1,676 M 'Total revenues'
+    "0000726728": ("O",    TEMPLATE_STANDARD,  LINE_PLUS_INTEREST),  # 1,426.5 + 120.5 = 1,547.0 vs 1,547.7 M 'Total revenue'
+    "0001645590": ("HPE",  TEMPLATE_STANDARD,  LINE_PLUS_INTEREST),  # 12,021 + 192 = 12,213 M 'Total net revenue'
+}
+# CIK -> (ticker, kind, note). The VALUE is unchanged (template rule / plain); 🛡️ shows it with * and the note.
+# HIS CALL home: an entry leaves the ledger only on his decision or a cross-check.
+REVENUE_LINE_HOLD = {
+    "0001818874": ("SOFI", HOLD_UNVERIFIED, NOTE_NO_NII),
+    "0001381197": ("IBKR", HOLD_UNVERIFIED, NOTE_NO_NII),
+    "0001393818": ("BX",   HOLD_UNVERIFIED, NOTE_DROPS_INCOME),
+    "0001858681": ("APO",  HOLD_UNVERIFIED, NOTE_DROPS_INCOME),
+    "0001592386": ("VIRT", HOLD_UNVERIFIED, NOTE_DROPS_INCOME),
+    "0001820953": ("AFRM", HOLD_UNVERIFIED, NOTE_DROPS_INCOME),
+    "0000766704": ("WELL", HOLD_UNVERIFIED, NOTE_DROPS_INCOME),
+    "0000040729": ("ALLY", HOLD_UNVERIFIED, NOTE_LEASE_DEPRECIATION),
+    "0001691493": ("NU",   HOLD_UNVERIFIED, NOTE_FOREIGN_FILER),
+    "0001043219": ("NLY",  HOLD_UNVERIFIED, NOTE_NO_REVENUE_LINE),
+    "0000821189": ("EOG",  HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0000895126": ("EXE",  HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001792580": ("OVV",  HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001623925": ("AM",   HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001311370": ("LAZ",  HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0000895417": ("ELS",  HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0000935703": ("DLTR", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001801368": ("MP",   HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0001020214": ("CERS", HOLD_UNVERIFIED, NOTE_NO_MATCHING_LINE),
+    "0000765880": ("DOC",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0000751364": ("NNN",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0001571283": ("REXR", HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0001465128": ("STWD", HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0000912593": ("SUI",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0000740260": ("VTR",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0001567094": ("CNH",  HOLD_UNVERIFIED, NOTE_PICK_UNCONFIRMED),
+    "0000093410": ("CVX",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0001090012": ("DVN",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0000315852": ("RRC",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0001520006": ("MTDR", HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0001841666": ("APA",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0000091440": ("SNA",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0000927066": ("DVA",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
+    "0001045450": ("EPR",  HOLD_HIS_CALL,   NOTE_SUBLINE_CALL),
 }
 
 # Retries: a 429 or 5xx is the provider saying "not now"; a 410 is it saying
@@ -205,6 +311,61 @@ def _value(v) -> Optional[float]:
 
 def _cell(v: Optional[float]) -> Optional[dict]:
     return None if v is None else {"value": v}
+
+
+def row_template(row: dict) -> str:
+    """The v1 statement template of ONE income row, by KEY PRESENCE only —
+    a zero-filled key is present (standard), a missing one is not. PURE."""
+    row = row if isinstance(row, dict) else {}
+    if all(k not in row for k in FIN_TEMPLATE_ABSENT_KEYS):
+        return TEMPLATE_FINANCIAL
+    if INS_TEMPLATE_ABSENT_KEY not in row:
+        return TEMPLATE_INSURANCE
+    return TEMPLATE_STANDARD
+
+
+def revenue_line(row: dict, *, cik: Optional[str] = None) -> tuple:
+    """(value, line_code, note) for ONE v1 income row. PURE.
+
+    The line follows the row's template (semantic change 7): financial →
+    revenue − cost_of_revenue + other_income_expense; insurance / standard →
+    v1 `revenue`. A CIK in `REVENUE_LINE_PICKS` takes its pick ONLY on the
+    template it was measured on — on any other shape the pick is ignored and
+    the note says so (shown *, never silent). A financial-template quarter with
+    no revenue or no cost line is `LINE_UNDETERMINED` with value None — NEVER
+    gross revenue. `note` is the hold ledger's note when the CIK is on it.
+    """
+    row = row if isinstance(row, dict) else {}
+    cik = cik or row.get("cik")
+    cik = str(cik) if cik else None
+    tmpl = row_template(row)
+    rev = _value(row.get("revenue"))
+    note = None
+    pick = REVENUE_LINE_PICKS.get(cik) if cik else None
+    if pick is not None and pick[1] != tmpl:
+        note, pick = NOTE_PICK_SHAPE_CHANGED, None
+    if pick is not None:
+        line = pick[2]
+    else:
+        line = LINE_NET_OF_INTEREST if tmpl == TEMPLATE_FINANCIAL else LINE_REVENUE
+    value: Optional[float]
+    if line == LINE_REVENUE:
+        value = rev
+    elif line == LINE_NET_OF_INTEREST:
+        cor = _value(row.get("cost_of_revenue"))
+        if rev is None or cor is None:
+            value, line = None, LINE_UNDETERMINED
+        else:
+            value = _value(rev - cor + (_value(row.get("other_income_expense")) or 0.0))
+    elif line == LINE_PLUS_OTHER:
+        value = None if rev is None else _value(rev + (_value(row.get("other_income_expense")) or 0.0))
+    elif line == LINE_PLUS_INTEREST:
+        value = None if rev is None else _value(rev + (_value(row.get("interest_income")) or 0.0))
+    else:                                                   # pragma: no cover — LINE_CODES is closed
+        value, line = None, LINE_UNDETERMINED
+    if note is None and cik in REVENUE_LINE_HOLD:
+        note = REVENUE_LINE_HOLD[cik][2]
+    return value, line, note
 
 
 def _get(url: str, params: dict, key: str, *, symbol: str, endpoint: str,
@@ -442,7 +603,7 @@ def _attach(spine: dict, rows: list, timeframe: str) -> dict:
 
 
 def to_vx_report(label: tuple, parts: dict, timeframe: str,
-                 statements: Iterable[str] = ()) -> dict:
+                 statements: Iterable[str] = (), *, symbol: str = "") -> dict:
     """One vX-shaped report from the v1 rows of one fiscal period.
 
     `parts` maps statement -> the v1 row for this period; the SPINE row's
@@ -450,12 +611,18 @@ def to_vx_report(label: tuple, parts: dict, timeframe: str,
     this period comes back as an EMPTY block, never a zeroed one. Only mapped
     lines are emitted, and an absent line is OMITTED rather than written as a
     zero — the vX convention every consumer already handles.
+
+    The INCOME block's `revenues` is the line `revenue_line` chooses for the
+    row's template (semantic change 7); the report says which in
+    `revenue_line` / `revenue_line_note` (only when INCOME is in `parts`).
+    `symbol` is the caller's ticker, carried for provenance only.
     """
     fy, fq = label
     statements = tuple(statements)
     spine_st = statements[0] if statements else next(iter(parts))
     meta = parts.get(spine_st) or next(iter(parts.values()))
     fin = {st: {} for st in statements}
+    line_meta: dict = {}
     for statement, row in parts.items():
         blob = {}
         for vx_key, v1_key in FIELD_MAP[statement].items():
@@ -473,6 +640,12 @@ def to_vx_report(label: tuple, parts: dict, timeframe: str,
             c = _cell(_value(total))
             if c is not None:
                 blob[vx_key] = c
+        if statement == INCOME:
+            v, line, note = revenue_line(row, cik=meta.get("cik"))
+            blob.pop("revenues", None)
+            if v is not None:
+                blob["revenues"] = _cell(v)
+            line_meta = {"revenue_line": line, "revenue_line_note": note}
         fin[statement] = blob
     # The most recent filing that carried ANY of this period's statements.
     filed = max((str(r.get("filing_date")) for r in parts.values()
@@ -491,6 +664,7 @@ def to_vx_report(label: tuple, parts: dict, timeframe: str,
         "cik": meta.get("cik"),
         "tickers": meta.get("tickers"),
         "source": "massive_v1",
+        **line_meta,
         "financials": fin,
     }
 
@@ -546,7 +720,7 @@ def fetch_reports(symbol: str, *, timeframe: str, limit: int,
                                      timeout=timeout, cik=cik, since=since)
         for lab, r in _attach(spine, other, timeframe).items():
             parts[lab][statement] = r
-    return [to_vx_report(lab, parts[lab], timeframe, statements) for lab in labels]
+    return [to_vx_report(lab, parts[lab], timeframe, statements, symbol=sym) for lab in labels]
 
 
 def derive_q4_eps(quarterly: list, annual: list) -> list:

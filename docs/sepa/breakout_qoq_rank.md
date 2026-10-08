@@ -272,3 +272,15 @@ fewer Massive calls; the Saturday `--all --limit 700` now rotates. Tests:
   are not `YEAR_DAYS` ± `capital_returns.SAME_QUARTER_DAYS` apart (`qoq.ends_year_apart`); callers that pass no `ends`
   get the label-only answer unchanged. Today only the 🛡️ 🚀 growth read passes them. Tests:
   `backend/tests/test_resiliency_growth_critic_2026_10_07.py`.
+
+## 2026-10-08 — bank QoQ is on the net revenue line
+
+The quarterly revenue series is now the line `massive_fundamentals.revenue_line`
+picks per v1 statement template, so a bank's sequential QoQ is on its total
+revenue net of interest expense, not v1's gross revenue. The line rides beside
+the series (`fundamentals.rev_line*`, `qoq.LINE_KEYS` — NOT in `SERIES_KEYS`):
+`backfill` writes it with `rev_q_series` and refuses a write whose line differs
+from the stored one (`rev_line_changed`); `realign` moves `rev_line_series` with
+the keys. MEASURED on the code-path dry run (gross-profit proxy, 2026-10-07):
+Breakouts top-250 of 2,030 gains EBC and AGM, loses STT and CDNS; 167 rank moves
+(6 by 10+).

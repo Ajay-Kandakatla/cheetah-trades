@@ -408,7 +408,10 @@ provider re-hits).
     (2026-09-30; the vX financials endpoint sunsets 2026-10-09). A provider
     outage raises `FinancialsUnavailable` and surfaces as a named reason — never
     as "no filings", never as zeros. Field map + semantic changes:
-    `docs/sepa/massive_fundamentals_v1.md`.
+    `docs/sepa/massive_fundamentals_v1.md`. Since 2026-10-08 the revenue line
+    follows v1's statement template (banks: revenue net of interest expense
+    plus other income — the 10-Q's total net revenue); the line rides on the
+    research doc as `fundamentals.rev_line*` — `docs/sepa/revenue_lines_2026_10_08.md`.
     Costs ~1-2s per symbol (so 20-30 min on Russell 1000).
   - **Hot** (`scanner.scan_universe_fast`) — runs on demand or daily. Joins
     cached research with today's prices and recomputes only the price-derived

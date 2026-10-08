@@ -50,7 +50,7 @@ snapshot of the whole vX feed is being saved to
 
 | Statement | vX key | v1 key | Note |
 |---|---|---|---|
-| income | `revenues` | `revenue` | |
+| income | `revenues` | per template (2026-10-08): financial = `revenue − cost_of_revenue + other_income_expense`; insurance / standard = `revenue`; CIK picks + hold ledger | see 7 |
 | income | `diluted_earnings_per_share` | `diluted_earnings_per_share` | split-adjusted on v1; **quarterly Q4 re-derived** as annual − (Q1+Q2+Q3) in canslim — see 5 |
 | income | `basic_earnings_per_share` | `basic_earnings_per_share` | |
 | income | `net_income_loss` | `consolidated_net_income_loss` | incl. minority share, as vX |
@@ -80,7 +80,7 @@ dropped. v1 also carries a capex line (`purchase_of_property_plant_and_equipment
 that vX lacked; `capital_returns` still takes capex from yfinance — switching is
 a methodology choice left for Ajay.
 
-## Six semantic changes
+## Seven semantic changes
 
 1. **v1 zero-fills absent lines.** A line the filing lacks is almost always
    `0.0`, never null (and occasionally the key is missing outright — ARR, DX and
@@ -131,6 +131,36 @@ a methodology choice left for Ajay.
    its CIK holds 12): the company is the CIK that filed the newest period, and
    the statement is re-asked by `cik=` whenever the ticker answer spans CIKs
    or is short.
+
+7. **The revenue line follows v1's statement template (2026-10-08).** v1 serves
+   three income-statement templates, told apart by KEY PRESENCE (a missing key
+   is not a zero-filled one): **financial** (banks, brokers, card lenders —
+   neither `interest_expense` nor `research_development` present; MEASURED
+   2026-10-07: 380 of 1,409 rows, 38 of 141 names, constant per name),
+   **insurance** (`research_development` missing only; 60 rows, 6 names) and
+   **standard** (both present, zero-filled; 969 rows, 97 names). On the
+   financial template `revenue` is GROSS (interest income + noninterest
+   income) and `cost_of_revenue` is total interest expense: BAC Q2-2026 reads
+   49,393 M against the 10-Q's "Total revenue, net of interest expense"
+   31,558 M (49,393 − 17,835). `revenue_line(row)` therefore returns
+   `revenue − cost_of_revenue + other_income_expense` there (C Q2-2026: 24,262
+   + 504 = 24,766 M = the 10-Q) and v1 `revenue` everywhere else — an
+   insurer's cost line is claims, never netted (TRV 12,153 M, not 12,153 −
+   7,708). Six names the verifier reproduced at % AND both levels take a
+   CIK-keyed, template-checked pick (`REVENUE_LINE_PICKS`: RKT revenue, LPLA
+   revenue + other income, CVS BRO O HPE revenue + interest income); a pick on
+   a row of another shape is ignored and says so (`NOTE_PICK_SHAPE_CHANGED`).
+   34 more keep their value but carry a note (`REVENUE_LINE_HOLD`: 26
+   unverified, 8 his call) so 🛡️ shows them with `*`. A financial-template
+   quarter with no cost line is a HOLE (`LINE_UNDETERMINED`, the `revenues`
+   cell absent) — never gross revenue (1 row today: STT 2024-06-30). Each
+   report carries `revenue_line` / `revenue_line_note`; the cell shape stays
+   `{"value": v}`. Quarterly AND annual rows, one engine. The class-wide REIT
+   rule (revenue + interest income) was REFUTED (AMT 4.65→5.12, EQIX
+   16.36→15.29) and is not in the code. Full record:
+   `docs/sepa/revenue_lines_2026_10_08.md`; tests
+   `tests/test_massive_fundamentals_v1.py` (the `inc()` fixture now zero-fills
+   the standard keys — without that every fixture row read as a bank row).
 
 ## Failing loudly
 

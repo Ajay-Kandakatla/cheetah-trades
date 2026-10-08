@@ -200,3 +200,12 @@ frontend/src/components/ExplosiveGrowth.tsx
 frontend/src/pages/Breakouts.tsx
 frontend/src/hooks/useBreakoutBoard.ts
 ```
+
+## 2026-10-08 — bank TTM revenue is the net line
+
+`board_metrics` reads quarterly rows through `massive_fundamentals`, so a bank's
+TTM revenue now sums the net line (revenue − cost_of_revenue + other income —
+semantic change 7), not v1's gross revenue. Banks' ratios are still refused
+(`non_operating_sector`, capital_returns.py). The six revenue-line picks move
+HPE / CVS asset turnover and capex intensity by their interest-income line
+(+1.6 % / +0.6 % revenue).

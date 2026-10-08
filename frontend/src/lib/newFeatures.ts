@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-08, asked "Want those ranked?" about the 141 held-out names: "update them please". The per-name
+  // revenue-line picks and the hold ledger are massive_fundamentals.REVENUE_LINE_PICKS / REVENUE_LINE_HOLD = HIS-CALL
+  // homes — change them there and here.
+  { id: 'chart-maps-resiliency-revenue-line-2026-10-08', addedAt: '2026-10-08', route: '/chart-maps?tab=resiliency&sort=res_growth',
+    label: '🛡️ 🚀 Banks, brokers and card lenders now rank on the 10-Q\'s net revenue (revenue less interest expense, plus other income) — Q2 2026: BAC +15.0%, JPM +27.7%, GS +39.5%. Names whose provider line is not the 10-Q\'s still show * and the fold says why. You said: “update them please”.' },
   // Ajay 2026-10-07 (b): "yes please also no #s for SNDK can you do a deep analysis of data and make sure you do a
   // sanity chcek fo missing data pieces over all." The $0.10 / $1M floors and the 4-quarter stale cut are
   // resiliency_tab.EPS_MIN_BASE (= qoq.MIN_EPS_BASE) / REV_MIN_BASE (= bonde.MIN_MATERIAL_BASE_REV) /

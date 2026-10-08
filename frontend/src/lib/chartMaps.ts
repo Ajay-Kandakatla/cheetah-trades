@@ -973,13 +973,22 @@ export type CmResGrowthRead = {
   sales_reason?: string | null; eps_reason?: string | null;
   eps_year_ago_ni?: number | null;
   latest_idx?: number | null; expected_idx?: number | null; etf?: boolean;
-  /** the card's coverage class (two_legs / one_leg / pending / by_rule / etf /
+  /** the card's coverage class (two_legs / one_leg / pending / by_rule / revenue_line / etf /
    *  new_listing / not_researched / massive_unused / no_filings / stale_filings /
    *  period_gap / year_ago_missing) and its closed-bar count. */
   gap?: string | null; bars?: number | null;
   /** 2026-10-07 c: a yfinance-fallback doc with no figure (Massive's quarters
    *  were not used on that research run) — `gap` massive_unused. */
   massive_unused?: boolean;
+  /** 2026-10-08: WHICH revenue line the sales leg is on (massive_fundamentals
+   *  LINE_CODES: revenue / net_of_interest / revenue_plus_other /
+   *  revenue_plus_interest / undetermined), its served words, and the hold
+   *  note. Sales reasons line_unverified / line_mixed (shown with *, never
+   *  ranked) → coverage class `revenue_line`. Null on a legacy doc. Served
+   *  strings — the FE composes nothing from them. */
+  sales_line?: string | null;
+  sales_line_words?: string | null;
+  sales_line_note?: string | null;
 };
 
 /** 📈 The EOD tape read — the app's accumulation day (resiliency_tab.eod_read). */

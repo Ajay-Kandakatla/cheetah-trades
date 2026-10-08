@@ -180,6 +180,12 @@ DECISION_FIELDS = (
     # a year off on NVDA-class fiscal years. sepa/qoq.period_label takes this
     # value; without it every consumer of this snapshot had to guess.
     "fundamentals._source",
+    # 2026-10-08 — WHICH revenue line `rev_q_series` is on (`canslim._one_revenue_line`;
+    # `massive_fundamentals.revenue_line`). 🛡️ growth_read shows a held line with *.
+    "fundamentals.rev_line",
+    "fundamentals.rev_line_series",
+    "fundamentals.rev_line_note",
+    "fundamentals.rev_line_mixed",
 )
 
 
@@ -218,6 +224,11 @@ def decision_snapshot(symbols: list[str],
                 # "massive" | "yfinance" | None (a legacy document written
                 # before the key existed) — never defaulted to a provider.
                 "_source": f.get("_source"),
+                # None on a legacy document (written before 2026-10-08)
+                "rev_line": f.get("rev_line"),
+                "rev_line_series": f.get("rev_line_series"),
+                "rev_line_note": f.get("rev_line_note"),
+                "rev_line_mixed": f.get("rev_line_mixed"),
                 "cached_at": doc.get("cached_at"),
             }
         return out

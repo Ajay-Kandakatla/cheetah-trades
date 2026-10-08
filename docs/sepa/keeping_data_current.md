@@ -187,6 +187,15 @@ session scratchpad's `data_audit` folder; every command is the throwaway contain
 - **H4 caps**: `python -m sepa.cap_warm` (the Saturday 08:10 job that slept; yfinance).
 - **H5 13F**: `python -m sepa.warm_whales --workers 4` (the Sunday 06:00 job, stale-only by default; yfinance).
 
+- **H6 revenue-line heal (2026-10-08, supersedes the H1 hold-out)**: after `./deploy-cheetah-main.sh api cron frontend`
+  (cron runs the Sunday refresh — it must carry the new helper; deadline Sun 2026-10-11 20:00), outside RTH. Selector
+  (read-only, `block_writes()`): `bank_rev/heal_rev_select.py` → the 141 held out (`fix_c/heal_hold_sd.txt`) first,
+  then the 261 bank-style filers with a research doc, adv50 desc (dry run 2026-10-08: **402 names, ≤ 1,608 Massive
+  calls**). Then `python -m sepa.cli research-refresh --symbols "$(paste -sd, /out/heal_rev_symbols_141.txt)" --workers 4`
+  and the same for `heal_rev_symbols_rest.txt`. Post-heal: every healed doc has `fundamentals.rev_line`; the 141's 🛡️
+  statuses = `revenue_lines_2026_10_08.md` (107 ranked, 34 `*`); `python scripts/revenue_line_audit.py --held
+  --financial` → 0 mismatches on ranked names.
+
 Afterwards: SNDK's chip should read `Sales +371.6% · EPS yr-ago loss YoY (FY2026 Q4)` (one leg) — its fiscal label
 when Massive serves the refresh; only the yfinance fallback labels it calendar `Q2 2026`. The served 🚀 line's pending
 count should fall toward 0 for the healed names (not the 141 held out above), and a refreshed doc carries

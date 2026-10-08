@@ -1390,6 +1390,16 @@ to default — never the other way around.
   Rock-Tenn), omitted quarters (CRWV, ORCL, ASO) and garbage derived-Q4 share
   counts. Every moved number and its cause:
   `docs/sepa/massive_fundamentals_v1.md` § "Old vs new".
+  **2026-10-08: the revenue line follows v1's statement template** (semantic
+  change 7): a financial-template row (banks, brokers, card lenders — no
+  `interest_expense` / `research_development` key) reads revenue −
+  cost_of_revenue + other income = the 10-Q's total net revenue (BAC Q2-2026
+  31,558 M, not v1's gross 49,393 M); every other row keeps v1 `revenue`; 6 CIK
+  picks + a 34-name hold ledger (shown `*` on 🛡️). Same formulas, same
+  thresholds (sales 5 / 25 / 100 locked); filing-correct input moves 13 held
+  banks fail → pass on the Bonde pillar (MEASURED dry run). Contract:
+  `test_revenue_line_contract_2026_10_08`; record
+  `docs/sepa/revenue_lines_2026_10_08.md`.
 * **Adding optional new fields** to `CandidateRow` that the formula
   doesn't read. Frontend can surface them as chips, but the SCORE
   calculation must not change.

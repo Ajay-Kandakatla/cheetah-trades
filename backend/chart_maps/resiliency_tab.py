@@ -92,6 +92,7 @@ from observability import period_freshness as PF
 from rotation import tracker as RT
 from sepa import bonde as SB
 from sepa import breakout_audit, qoq, universe
+from sepa import massive_fundamentals as MF
 from sepa import volume as V
 from supply_demand import key_levels as KL
 from supply_demand import momentum_burst as MB
@@ -184,6 +185,15 @@ GAP_LABEL = {"etf": "ETF/fund", "new_listing": "new listing", "not_researched": 
              "massive_unused": "Massive not used at research time",
              "no_filings": "no quarterly figures", "stale_filings": "a year past due",
              "period_gap": "quarters not a year apart", "year_ago_missing": "year-ago quarter missing"}
+# 2026-10-08 — the revenue line (SPEC §3.3): a held / undetermined line is shown with *, never ranked
+LINE_REASONS = ("line_unverified", "line_mixed")
+REVENUE_LINE_CLASS = "revenue_line"
+REVENUE_LINE_LABEL = "revenue line not the 10-Q's"
+REVENUE_LINE_WHY = ("the provider's revenue line is not the one the 10-Q headlines, or which line "
+                    f"ranks is pending a decision — shown with {NOT_RANKED_MARK}, never ranked; a "
+                    "research refresh does not change it")
+SALES_LINE_MIXED_TEXT = ("sales: the year-ago quarter sits on a different revenue line on file "
+                         "— not compared")
 PENDING_LABEL = "pending refresh"
 BY_RULE_LABEL = "blank by rule"
 GROWTH_GAPS_SUMMARY = "Why a card has no ranked growth — most-traded names first"
@@ -922,7 +932,9 @@ def _growth_blank() -> dict:
             "sales_reason": "no_doc", "eps_reason": "no_doc", "eps_year_ago_ni": None,
             "sales_latest": None,
             "latest_idx": None, "expected_idx": None, "etf": False,
-            "gap": None, "bars": None, "massive_unused": False}
+            "gap": None, "bars": None, "massive_unused": False,
+            # 2026-10-08 — which revenue line the sales leg is on
+            "sales_line": None, "sales_line_words": None, "sales_line_note": None}
 
 
 def _card_state(out: dict, state: str) -> dict:
@@ -1015,6 +1027,21 @@ def growth_read(f: Optional[dict], *, today: Optional[date] = None,
                 s_why, s_rk = "stored_disagrees", not SALES_AGREE_REQUIRED
         elif s_st is not None:
             s_v, s_why = s_st, "no_series"
+    # 5b. the revenue line (2026-10-08) — after the rule reasons, which keep priority.
+    #     A held line (a ledger note) or an undetermined one NEVER ranks, even when
+    #     the stored figure agrees with its series; a legacy doc (no rev_line*) is untouched.
+    line, note, mixed = f.get("rev_line"), f.get("rev_line_note"), f.get("rev_line_mixed")
+    line = line if isinstance(line, str) and line else None
+    note = note if isinstance(note, str) and note else None
+    if s_why not in RULE_REASONS:
+        if note or line == MF.LINE_UNDETERMINED:
+            s_why, s_rk = "line_unverified", False
+            s_v = s_st if s_st is not None else s_ser
+        elif mixed and not (len(rev) > qoq.YOY_GAP and _f(rev[qoq.YOY_GAP]) is not None):
+            s_why, s_rk, s_v = "line_mixed", False, None
+    out.update(sales_line=line, sales_line_words=MF.LINE_WORDS.get(line) if line else None,
+               sales_line_note=note or (MF.LINE_WORDS[MF.LINE_UNDETERMINED]
+                                        if line == MF.LINE_UNDETERMINED else None))
     out.update(sales_stored_pct=s_st, sales_base=s_base, sales_year_ago=_f(rb.get("base_rev")),
                sales_latest=_f(rb.get("latest_rev")),
                sales_yoy_pct=s_v, sales_ranked=bool(s_rk), sales_series_pct=s_ser,
@@ -1090,6 +1117,8 @@ def coverage_class(g: Optional[dict], *, bars, min_bars) -> str:
         return "pending"
     if any(w in RULE_REASONS for w in why):
         return "by_rule"
+    if any(w in LINE_REASONS for w in why):
+        return REVENUE_LINE_CLASS
     if "year_ago_missing" in why:
         return "year_ago_missing"
     if g.get("massive_unused"):
@@ -1097,7 +1126,7 @@ def coverage_class(g: Optional[dict], *, bars, min_bars) -> str:
     return "no_filings"
 
 
-COVERAGE_CLASSES = ("two_legs", "one_leg", "pending", "by_rule") + GAP_ORDER
+COVERAGE_CLASSES = ("two_legs", "one_leg", "pending", "by_rule", REVENUE_LINE_CLASS) + GAP_ORDER
 
 
 def _pending_legs(g: dict) -> int:
@@ -2182,6 +2211,8 @@ def _leg_token(g: dict, leg: str) -> str:
                 else f"yr-ago <${REV_MIN_BASE / 1e6:g}M")
     if why == "year_ago_missing":
         return "yr-ago n/a"
+    if why in LINE_REASONS:
+        return "line n/a"
     return "not filed"
 
 
@@ -2229,6 +2260,13 @@ REFRESH_TEXT = "it ranks once a research refresh stores it"
 def _sales_clause(g: dict) -> str:
     why = g.get("sales_reason")
     ss, sv, ser = _f(g.get("sales_stored_pct")), _f(g.get("sales_yoy_pct")), _f(g.get("sales_series_pct"))
+    words, note = g.get("sales_line_words"), g.get("sales_line_note")
+    if why == "line_unverified":
+        if sv is not None:
+            return f"sales {sv:+.2f}% on the provider's {words or 'revenue'} — not ranked: {note}"
+        return f"sales: not ranked — {note}"
+    if why == "line_mixed":
+        return SALES_LINE_MIXED_TEXT
     if why == "year_ago_loss":
         return ("sales: year-ago revenue at or under $0"
                 + (f" — the stored {ss:+.2f}% is a sign flip, not growth" if ss is not None else ""))
@@ -2252,6 +2290,9 @@ def _sales_clause(g: dict) -> str:
     if why == "year_ago_missing":
         return "sales: " + YEAR_AGO_MISSING_TEXT
     if sv is not None and g.get("sales_ranked"):
+        line = g.get("sales_line")
+        if line not in (None, MF.LINE_REVENUE) and words:
+            return f"sales {sv:+.2f}% ({words})"
         return f"sales {sv:+.2f}%"
     return "sales: no figure on file"
 
@@ -2583,6 +2624,7 @@ def _gap_why(cls: str, cov: dict) -> str:
         "period_gap": ("the latest quarter and the year-ago quarter on file are not four "
                        "quarters apart"),
         "year_ago_missing": YEAR_AGO_MISSING_TEXT,
+        REVENUE_LINE_CLASS: REVENUE_LINE_WHY,
     }[cls]
 
 
@@ -2596,9 +2638,11 @@ def growth_line(cov: Optional[dict]) -> Optional[str]:
     gaps = f" ({', '.join(bits)})" if bits else ""
     asof = (f"most figures cached {cov['asof']}" if cov.get("asof")
             else "no figures cached")
+    n_line = int(c.get(REVENUE_LINE_CLASS) or 0)
+    line_seg = f" · {_n(n_line)} {REVENUE_LINE_LABEL}" if n_line > 0 else ""
     return (f"{GROWTH_MARK} Growth on file: {_n(c.get('two_legs'))} both legs · "
             f"{_n(c.get('one_leg'))} one leg · {_n(c.get('pending'))} {PENDING_LABEL} · "
-            f"{_n(c.get('by_rule'))} {BY_RULE_LABEL} · no figure {_n(none)}{gaps} · of "
+            f"{_n(c.get('by_rule'))} {BY_RULE_LABEL}{line_seg} · no figure {_n(none)}{gaps} · of "
             f"{_n(cov.get('n'))} · {_n(cov.get('pending_legs'))} figures marked "
             f"{NOT_RANKED_MARK} wait on a research refresh · {asof}.")
 
@@ -2609,9 +2653,10 @@ def growth_gaps_block(cov: Optional[dict]) -> Optional[dict]:
     if not isinstance(cov, dict) or not isinstance(cov.get("classes"), dict):
         return None
     c, top = cov["classes"], cov.get("top") or {}
-    labels = {"pending": PENDING_LABEL, "by_rule": BY_RULE_LABEL, **GAP_LABEL}
+    labels = {"pending": PENDING_LABEL, "by_rule": BY_RULE_LABEL,
+              REVENUE_LINE_CLASS: REVENUE_LINE_LABEL, **GAP_LABEL}
     lines = []
-    for k in ("pending", "by_rule") + GAP_ORDER:
+    for k in ("pending", "by_rule", REVENUE_LINE_CLASS) + GAP_ORDER:
         n = int(c.get(k) or 0)
         if not n:
             continue

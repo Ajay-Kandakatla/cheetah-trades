@@ -160,6 +160,8 @@ def _from_hybrid(symbol: str) -> dict:
         "q_period_series": m.get("q_period_series"),
         "q_end_series": m.get("q_end_series"),
         "rev_q_series": m.get("rev_q_series"),
+        # which revenue line the series is on (2026-10-08, `_one_revenue_line`)
+        **{k: m.get(k) for k in REV_LINE_KEYS},
         "eps_q_series": m.get("eps_q_series"),
         "ni_q_series":  m.get("ni_q_series"),
         "sales": sales.compute(_head8(m.get("rev_q_series")), m.get("q_eps_growth_pct")),
@@ -278,10 +280,21 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
     q_results, _unlabelled_dropped, _align_stats = qoq.align_reports(
         q_results, _period_index)
 
+    # THE REVENUE LINE (2026-10-08). `massive_fundamentals.revenue_line` picks
+    # each quarter's line by v1's statement template; it rides on every report.
+    # One series never mixes two lines: a slot on another line than the newest
+    # figure's is a HOLE, so the % and the series can never disagree.
+    lines = [q.get("revenue_line") if isinstance(q, dict) else None for q in q_results]
+    rev = [_income_value(q, "revenues") for q in q_results]
+    rev, rev_line_mixed, rev_line = _one_revenue_line(rev, lines)
+    rev_line_note = next((q.get("revenue_line_note") for q in q_results
+                          if isinstance(q, dict) and q.get("revenue_line_note")), None)
+
     return {
         "q_eps_growth_pct": _compute_q_eps_growth(q_results),
         "y_eps_growth_pct": _compute_y_eps_growth(a_results),
-        "rev_growth_q_pct": _compute_q_rev_growth(q_results),
+        # same arithmetic as `_compute_q_rev_growth`, on the line-guarded series
+        "rev_growth_q_pct": qoq.yoy_pct(rev),
         # Newest-first quarterly series (index 0 = latest filed quarter). These
         # feed the Sales Confidence score AND the Minervini Ch.8 earnings-quality
         # score (sepa/earnings_quality.py): revenue + EPS + net income give the
@@ -307,7 +320,12 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         # four apart while the quarters are not a year apart (CRDO 455 days, KLIC
         # 273 — a relabelled fiscal year); `qoq.ends_year_apart` reads these.
         "q_end_series": [_end_day(q) for q in q_results],
-        "rev_q_series": [_income_value(q, "revenues") for q in q_results],
+        "rev_q_series": rev,
+        # provenance of the revenue line (2026-10-08) — see `_one_revenue_line`
+        "rev_line": rev_line,
+        "rev_line_series": lines,
+        "rev_line_note": rev_line_note,
+        "rev_line_mixed": rev_line_mixed,
         "eps_q_series": [_income_value(q, "diluted_earnings_per_share") for q in q_results],
         "ni_q_series":  [_income_value(q, "net_income_loss") for q in q_results],
         "inv_q_series": [_balance_value(q, "inventory") for q in q_results],
@@ -316,6 +334,32 @@ def _fetch_massive_financials(symbol: str) -> Optional[dict]:
         "duplicate_periods": _align_stats["duplicate_periods"],
         "reordered": _align_stats["reordered"],
     }
+
+
+REV_LINE_KEYS = ("rev_line", "rev_line_series", "rev_line_note", "rev_line_mixed")
+
+
+def _one_revenue_line(rev: list, lines: list) -> tuple:
+    """`(rev', n_holed, ref)` — one revenue series on ONE line. PURE.
+
+    `ref` = the line of the newest slot whose value is not None; any value
+    whose line is a code and differs from `ref` becomes None (counted). Lines
+    all None (legacy vX-shaped reports) → no-op. The newest line wins.
+    """
+    rev = list(rev or [])
+    lines = list(lines or [])
+    ref = next((ln for v, ln in zip(rev, lines) if v is not None and ln), None)
+    if ref is None:
+        return rev, 0, None
+    out, holed = [], 0
+    for i, v in enumerate(rev):
+        ln = lines[i] if i < len(lines) else None
+        if v is not None and isinstance(ln, str) and ln and ln != ref:
+            out.append(None)
+            holed += 1
+        else:
+            out.append(v)
+    return out, holed, ref
 
 
 def _end_day(report) -> Optional[str]:
@@ -448,6 +492,7 @@ def _from_massive(symbol: str, strict: bool = True) -> dict:
         "q_period_series": m.get("q_period_series"),
         "q_end_series": m.get("q_end_series"),
         "rev_q_series": m.get("rev_q_series"),
+        **{k: m.get(k) for k in REV_LINE_KEYS},
         "eps_q_series": m.get("eps_q_series"),
         "ni_q_series":  m.get("ni_q_series"),
         "sales": sales.compute(_head8(m.get("rev_q_series")), q),

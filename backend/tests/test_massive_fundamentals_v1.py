@@ -35,7 +35,24 @@ def inc(fy, fq, end, filed, *, timeframe="quarterly", cik="0001045810", **kw):
            "preferred_stock_dividends_declared": 0.0, "noncontrolling_interest": 0.0,
            "operating_income": 0.0, "gross_profit": 0.0,
            "income_before_income_taxes": 0.0, "income_taxes": 0.0,
-           "diluted_shares_outstanding": 0.0, "basic_shares_outstanding": 0.0}
+           "diluted_shares_outstanding": 0.0, "basic_shares_outstanding": 0.0,
+           # 2026-10-08 — the STANDARD template's keys, zero-filled as on live
+           # MCD/NEE rows. Without them every row here would read as v1's
+           # FINANCIAL template (both keys missing) and lose its revenue line.
+           "interest_expense": 0.0, "research_development": 0.0,
+           "cost_of_revenue": 0.0, "interest_income": 0.0,
+           "depreciation_depletion_amortization": 0.0, "other_income_expense": 0.0}
+    row.update(kw)
+    return row
+
+
+def fin_inc(fy, fq, end, filed, *, timeframe="quarterly", cik="0000070858", **kw):
+    """A FINANCIAL-template v1 income row (banks/brokers/lenders): no
+    `interest_expense`, no `research_development` key at all."""
+    row = inc(fy, fq, end, filed, timeframe=timeframe, cik=cik)
+    for k in ("interest_expense", "research_development", "interest_income",
+              "depreciation_depletion_amortization"):
+        row.pop(k, None)
     row.update(kw)
     return row
 
@@ -1020,3 +1037,183 @@ def test_NEGATIVE_a_padded_ask_is_short_only_against_what_the_caller_wants(fake)
     MF.fetch_reports("AAPL", timeframe="annual", limit=12,
                      statements=(MF.INCOME,), key=KEY)
     assert len(fake.calls) == 1 and fake.calls[0]["params"]["limit"] == 24
+
+
+# ═════════════════════════════════════════════ 2026-10-08: the revenue line per template
+import json as _json
+
+FIXTURE = pathlib.Path(__file__).resolve().parent / "fixtures" / "revenue_line_rows_2026_10_08.json"
+FX = _json.loads(FIXTURE.read_text())["names"]
+LEVEL_TOL = 0.002          # the 2026-10-07 measurement's representation tolerance (0.2 %)
+PCT_TOL = 0.10             # pp — same measurement; NOT a rule
+RANKED = ("BAC JPM C GS SCHW STT OMF LPLA RKT CVS BRO O HPE NEE MCD EQIX CB AIG "
+          "MS CFG HWC AMT TRV").split()
+
+
+def _pair(sym):
+    rows = FX[sym]["rows"]
+    by_end = {r["period_end"]: r for r in rows}
+    return by_end[FX[sym]["latest_end"]], by_end[FX[sym]["year_ago_end"]]
+
+
+def _near(a, b, tol=LEVEL_TOL):
+    return a is not None and b is not None and abs(a - b) <= tol * abs(b)
+
+
+@pytest.mark.parametrize("sym", RANKED)
+def test_the_mapped_revenue_line_reproduces_the_10Q_on_real_rows(sym):
+    """Real v1 rows (2026-10-07 pull) vs the 10-Q face (R-file) / SEC
+    companyfacts (non-held): both quarter levels within 0.2 %, and the YoY
+    within 0.10 pp OR on levels (CB 0.16 pp, $1 M rounding — §1.4)."""
+    cur, ya = _pair(sym)
+    sec = FX[sym]["sec"]
+    v0, l0, n0 = MF.revenue_line(cur)
+    v4, l4, n4 = MF.revenue_line(ya)
+    assert n0 is None and n4 is None and l0 == l4 and l0 != MF.LINE_UNDETERMINED
+    assert _near(v0, sec["cur"]) and _near(v4, sec["year_ago"]), (sym, v0, v4, sec)
+    pct = round((v0 - v4) / abs(v4) * 100, 2)
+    assert abs(pct - sec["pct"]) <= PCT_TOL or (_near(v0, sec["cur"]) and _near(v4, sec["year_ago"]))
+
+
+@pytest.mark.parametrize("sym,cur,ya,pct", [
+    ("BAC", 31558e6, 27443e6, 14.99), ("C", 24766e6, 21668e6, 14.30),
+    ("LPLA", 5186623e3, 3835025e3, 35.24), ("RKT", 2784e6, 1451e6, 91.87),
+    ("CVS", 106096e6, 98915e6, 7.26), ("MS", 21348e6, 16792e6, 27.13),
+    ("CFG", 2283e6, 2037e6, 12.08), ("HWC", 401362e3, 375483e3, 6.89)])
+def test_named_names_land_on_the_10Q_figure(sym, cur, ya, pct):
+    a, b = (MF.revenue_line(r)[0] for r in _pair(sym))
+    assert _near(a, cur) and _near(b, ya)
+    assert round((a - b) / abs(b) * 100, 2) == pytest.approx(pct, abs=PCT_TOL)
+
+
+def test_BAC_through_fetch_reports_is_the_net_line_with_provenance(fake):
+    cur, ya = _pair("BAC")
+    fake.tables[("income-statements", "quarterly")] = [cur, ya]
+    r0, r4 = MF.fetch_reports("BAC", timeframe="quarterly", limit=2,
+                              statements=(MF.INCOME,), key=KEY)
+    assert r0["financials"]["income_statement"]["revenues"] == {"value": 31558000000.0}
+    assert r4["financials"]["income_statement"]["revenues"] == {"value": 27443000000.0}
+    assert r0["revenue_line"] == MF.LINE_NET_OF_INTEREST and r0["revenue_line_note"] is None
+
+
+def test_report_level_keys_only_when_the_income_statement_is_read():
+    row = _pair("MCD")[0]
+    r = MF.to_vx_report((2026, 2), {MF.INCOME: row}, "quarterly", (MF.INCOME,))
+    assert r["revenue_line"] == MF.LINE_REVENUE and "revenue_line_note" in r
+    assert r["financials"]["income_statement"]["revenues"] == {"value": row["revenue"]}
+    b = MF.to_vx_report((2026, 2), {MF.BALANCE: bal(2026, 2, "2026-06-30", "2026-08-01")},
+                        "quarterly", (MF.BALANCE,))
+    assert "revenue_line" not in b and "revenue_line_note" not in b
+
+
+def test_line_words_and_ledgers_are_well_formed():
+    assert set(MF.LINE_WORDS) == set(MF.LINE_CODES)
+    assert not set(MF.REVENUE_LINE_PICKS) & set(MF.REVENUE_LINE_HOLD)
+    for cik, (tk, tmpl, line) in MF.REVENUE_LINE_PICKS.items():
+        assert re.fullmatch(r"\d{10}", cik) and tk
+        assert tmpl in (MF.TEMPLATE_FINANCIAL, MF.TEMPLATE_INSURANCE, MF.TEMPLATE_STANDARD)
+        assert line in MF.LINE_CODES and line != MF.LINE_UNDETERMINED
+    for cik, (tk, kind, note) in MF.REVENUE_LINE_HOLD.items():
+        assert re.fullmatch(r"\d{10}", cik) and tk
+        assert kind in (MF.HOLD_UNVERIFIED, MF.HOLD_HIS_CALL) and isinstance(note, str) and note
+    assert len(MF.REVENUE_LINE_PICKS) == 6 and len(MF.REVENUE_LINE_HOLD) == 34
+    # every fixture name's CIK is the ledger's CIK for that ticker
+    tick = {v[0]: k for k, v in {**MF.REVENUE_LINE_PICKS, **MF.REVENUE_LINE_HOLD}.items()}
+    for sym, d in FX.items():
+        if sym in tick:
+            assert tick[sym] == d["cik"], sym
+
+
+def test_template_is_read_from_KEY_PRESENCE():
+    assert MF.FIN_TEMPLATE_ABSENT_KEYS == ("interest_expense", "research_development")
+    assert MF.row_template(_pair("BAC")[0]) == MF.TEMPLATE_FINANCIAL
+    assert MF.row_template(_pair("TRV")[0]) == MF.TEMPLATE_INSURANCE
+    assert MF.row_template(_pair("MCD")[0]) == MF.TEMPLATE_STANDARD
+    # zero-filled is PRESENT
+    assert MF.row_template({"interest_expense": 0.0, "research_development": 0.0}) == MF.TEMPLATE_STANDARD
+
+
+# ───────────────────────────── NEGATIVES
+@pytest.mark.parametrize("sym", ["MCD", "NEE"])
+def test_NEGATIVE_a_standard_row_keeps_v1_revenue(sym):
+    for row in _pair(sym):
+        v, line, note = MF.revenue_line(row)
+        assert (v, line, note) == (row["revenue"], MF.LINE_REVENUE, None)
+
+
+def test_NEGATIVE_an_insurer_is_plain_revenue_never_revenue_minus_cost_TRV():
+    cur = _pair("TRV")[0]
+    assert cur["cost_of_revenue"] == 7708000000.0
+    v, line, _ = MF.revenue_line(cur)
+    assert v == 12153000000.0 and line == MF.LINE_REVENUE
+    assert v != cur["revenue"] - cur["cost_of_revenue"]
+
+
+def test_NEGATIVE_STT_2024_bank_row_without_a_cost_line_is_a_HOLE_never_gross(fake):
+    stt = [r for r in FX["STT"]["rows"] if r["period_end"] == "2024-06-30"][0]
+    assert stt["cost_of_revenue"] == 0.0 and stt["revenue"] > 0
+    assert MF.revenue_line(stt) == (None, MF.LINE_UNDETERMINED, None)
+    fake.tables[("income-statements", "quarterly")] = [stt]
+    [r] = MF.fetch_reports("STT", timeframe="quarterly", limit=1,
+                           statements=(MF.INCOME,), key=KEY)
+    assert "revenues" not in r["financials"]["income_statement"]
+    assert r["revenue_line"] == MF.LINE_UNDETERMINED
+
+
+def test_NEGATIVE_a_bank_row_with_revenue_zero_is_undetermined():
+    row = fin_inc(2026, 2, "2026-06-30", "2026-08-01", revenue=0.0, cost_of_revenue=5e9)
+    assert MF.revenue_line(row) == (None, MF.LINE_UNDETERMINED, None)
+
+
+@pytest.mark.parametrize("sym", ["AMT", "EQIX"])
+def test_NEGATIVE_the_refuted_REIT_rule_never_appears(sym):
+    """revenue + interest income breaks AMT (4.65→5.12) and EQIX (16.36→15.29)."""
+    for row in _pair(sym):
+        v, line, note = MF.revenue_line(row)
+        assert (v, line, note) == (row["revenue"], MF.LINE_REVENUE, None)
+
+
+def test_NEGATIVE_a_pick_ticker_on_ANOTHER_CIK_takes_the_default_rule():
+    """Recycled tickers (RKT carried Rock-Tenn): the pick is keyed by CIK."""
+    row = dict(_pair("RKT")[0], cik="0000123456")
+    v, line, note = MF.revenue_line(row)
+    assert line == MF.LINE_NET_OF_INTEREST and note is None
+    assert v == pytest.approx(row["revenue"] - row["cost_of_revenue"]
+                              + (MF._value(row.get("other_income_expense")) or 0.0))
+
+
+def test_NEGATIVE_the_CVS_pick_on_a_financial_shaped_row_is_default_plus_a_note():
+    cvs = _pair("CVS")[0]
+    row = {k: v for k, v in cvs.items() if k not in MF.FIN_TEMPLATE_ABSENT_KEYS}
+    v, line, note = MF.revenue_line(row)
+    assert line == MF.LINE_NET_OF_INTEREST and note == MF.NOTE_PICK_SHAPE_CHANGED
+    assert v != 106096000000.0
+
+
+def test_NEGATIVE_hold_names_keep_their_value_and_carry_the_note():
+    v, line, note = MF.revenue_line(_pair("SOFI")[0])
+    assert (v, line, note) == (_pair("SOFI")[0]["revenue"], MF.LINE_REVENUE, MF.NOTE_NO_NII)
+    nu = _pair("NU")[0]
+    v, line, note = MF.revenue_line(nu)
+    assert line == MF.LINE_NET_OF_INTEREST and note == MF.NOTE_FOREIGN_FILER
+    assert v == pytest.approx(nu["revenue"] - nu["cost_of_revenue"]
+                              + (MF._value(nu.get("other_income_expense")) or 0.0))
+    cvx = _pair("CVX")[0]
+    v, line, note = MF.revenue_line(cvx)
+    assert (v, line, note) == (cvx["revenue"], MF.LINE_REVENUE, MF.NOTE_SUBLINE_CALL)
+    assert MF.REVENUE_LINE_HOLD[cvx["cik"]][1] == MF.HOLD_HIS_CALL
+
+
+def test_NEGATIVE_the_inc_fixture_is_the_standard_template_the_trap_cannot_return():
+    assert MF.row_template(inc(2026, 2, "2026-06-30", "2026-08-01")) == MF.TEMPLATE_STANDARD
+    assert MF.row_template(NVDA_Q2_27) == MF.TEMPLATE_STANDARD
+    assert MF.row_template(fin_inc(2026, 2, "2026-06-30", "2026-08-01")) == MF.TEMPLATE_FINANCIAL
+
+
+def test_SOURCE_GUARD_only_the_helper_reads_the_revenue_line_inputs():
+    """One engine: no live module but the helper names the lines the
+    template rule combines (0 offenders 2026-10-08)."""
+    pat = re.compile(r"""["'](cost_of_revenue|other_income_expense|interest_income)["']""")
+    offenders = [rel for rel, src in _live_modules()
+                 if pat.search(src) and rel != "sepa/massive_fundamentals.py"]
+    assert offenders == [], offenders

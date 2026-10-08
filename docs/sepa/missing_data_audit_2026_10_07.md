@@ -46,7 +46,7 @@ scored (2,219 sales-ranked, 1,448 EPS-ranked); **1,441 on both legs, 785 on one*
 | Cause | n (liquid) | Examples (by $/day) | Class |
 |---|---|---|---|
 | Stored sales % None, own series has it | 54 (54) | SNDK, CSCO, KLAC, JNJ, HD, PG, MS | defect, vintage mix |
-| Stored sales % disagrees with own series | 151 (151) | JPM 27.69 vs 17.89, BRK-B, GS, BAC 19.25 vs 3.67, NU 5.82 vs 55.40 | was ranked on the stored number; in 141 the STORED figure matches the vX filing revenue, in 7 the series does (2026-10-07 c) |
+| Stored sales % disagrees with own series | 151 (151) | JPM 27.69 vs 17.89, BRK-B, GS, BAC 19.25 vs 3.67, NU 5.82 vs 55.40 | was ranked on the stored number; in 141 the STORED figure matches the vX filing revenue, in 7 the series does (2026-10-07 c) — **corrected 2026-10-08: against the 10-Q's face line the stored % matches 62 of 139, plain v1 68 of 139** (`revenue_lines_2026_10_08.md`) |
 | Stored EPS % None, series has it | 61–66 | BRK-B, CSCO, KLAC, NU, MS, MDB | defect, vintage |
 | Stored EPS % disagrees (shown, not ranked) | 89–111 | MSFT, LITE, WDC, NFLX −88.87 vs +11.11, SMCI | defect, vintage |
 | EPS slot None but year-ago NI ≤ 0 | 25 | SNDK, SE, VTRS, KOD, XMTR | display: "year-ago loss" |
@@ -113,6 +113,9 @@ mislabelled pairs so their docs gain `q_end_series`. The spec's ~1,554 two-leg s
   (period end dates, `qoq.ends_year_apart`), effective per name once a refresh stores `q_end_series`.
 - **The 151 sales disagreements**: stored matches the filing 141, the series 7, neither 2, no vX row 1
   (`fix_c/crit_sd_dump.py`). Text no longer calls the series "the filings".
+  **Corrected 2026-10-08:** "matches the filing" there meant the vX `revenues` row, not the 10-Q. Against each latest
+  10-Q's face line (R-file) the stored % matches **62 of 139** and plain v1 `revenue` 68 of 139; the template rule
+  (`massive_fundamentals.revenue_line`) ranks 107 and all 107 match. Heal = H6 in `keeping_data_current.md` §5.
 - **The 144 "no quarterly figures"**: 141 are yfinance-fallback docs with empty series (86 with Massive filings on file,
   55 without) → new gap `massive_unused`; 3 stay.
 - **59 sales legs read "yr-ago loss"**: 57 had a year-ago revenue of exactly $0 → now `yr-ago rev ≤$0`.

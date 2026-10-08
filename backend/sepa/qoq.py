@@ -97,12 +97,16 @@ ROTATE_WEEK_SEC = 7 * 24 * 3600  # cadence of the Saturday --all line — NOT a 
 BACKFILL_PROJ = {"symbol": 1, "fundamentals._source": 1, "fundamentals.q_period_series": 1,
                  "fundamentals.rev_q_series": 1, "fundamentals.eps_q_series": 1,
                  "fundamentals.ni_q_series": 1, "fundamentals.rev_growth_q_pct": 1,
-                 "fundamentals.q_eps_growth_pct": 1}
+                 "fundamentals.q_eps_growth_pct": 1, "fundamentals.rev_line": 1}
 SERIES_KEYS = ("q_period_series", "rev_q_series", "eps_q_series", "ni_q_series")
 # 2026-10-07 c — the period END dates, parallel to `q_period_series`
 # (`ends_year_apart`). Written WITH the period keys every time, so the two lists
 # can never drift apart: a backfill or realign that moves the keys moves them.
 END_SERIES_KEY = "q_end_series"
+# 2026-10-08 — WHICH revenue line `rev_q_series` is on (`canslim._one_revenue_line`).
+# They ride WITH `rev_q_series`, never alone, and are NOT series keys
+# (`SERIES_KEYS` is pinned; a string list is not a value series).
+LINE_KEYS = ("rev_line", "rev_line_series", "rev_line_note", "rev_line_mixed")
 
 # A same-sign move of at least this size at the SAME point in the calendar last
 # year marks the row as a seasonal echo — "this is what it does every year".
@@ -853,6 +857,8 @@ def backfill_skip_reason(f: dict, m: dict) -> Optional[str]:
       "yfinance_doc"            f["_source"] == "yfinance" (calendar keys; never
                                 splice fiscal Massive rows in — ASML 'Q4 2015')
       "new_latest_quarter"      both period lists keyed and int(old[0]) != int(new[0])
+      "rev_line_changed"        (2026-10-08) stored `rev_line` and m's `rev_line` both
+                                set and different — the Sunday refresh owns a line change
       "rev_pct_would_disagree"  (stored rev % is None) != (yoy_pct(m rev) is None),
                                 or pct_agrees(...) is False
       "eps_pct_would_disagree"  the same for q_eps_growth_pct vs yoy_pct(m eps)
@@ -866,6 +872,9 @@ def backfill_skip_reason(f: dict, m: dict) -> Optional[str]:
         o0, n0 = _int_or_none(old_p[0]), _int_or_none(new_p[0])
         if o0 is not None and n0 is not None and o0 != n0:
             return "new_latest_quarter"
+    old_l, new_l = f.get("rev_line"), m.get("rev_line")
+    if old_l and new_l and old_l != new_l:
+        return "rev_line_changed"
     if _pct_would_disagree(f.get("rev_growth_q_pct"), yoy_pct(m.get("rev_q_series"))):
         return "rev_pct_would_disagree"
     if _pct_would_disagree(f.get("q_eps_growth_pct"), yoy_pct(m.get("eps_q_series"))):
@@ -926,6 +935,12 @@ def backfill(symbols: Optional[list] = None, *, limit: int = 0,
             # never a stale list beside new keys
             ends = m.get(END_SERIES_KEY)
             sets[f"fundamentals.{END_SERIES_KEY}"] = ends if _has_values(ends) else None
+        if "fundamentals.rev_q_series" in sets:
+            # the revenue line rides WITH the revenue series (2026-10-08); only
+            # the keys the fetch carries (value may be None)
+            for k in LINE_KEYS:
+                if k in m:
+                    sets[f"fundamentals.{k}"] = m[k]
         why = backfill_skip_reason(stored.get(sym) or {}, m)
         if why is not None:
             return f"skip:{why}"
@@ -991,7 +1006,7 @@ def realign(symbols: Optional[list] = None, *, limit: int = 0,
     proj = {"symbol": 1, "fundamentals.q_period_series": 1,
             "fundamentals.rev_q_series": 1, "fundamentals.eps_q_series": 1,
             "fundamentals.ni_q_series": 1, "fundamentals.sales": 1,
-            f"fundamentals.{END_SERIES_KEY}": 1}
+            f"fundamentals.{END_SERIES_KEY}": 1, "fundamentals.rev_line_series": 1}
     docs = list(coll.find(q, proj))
     considered = len(docs)
     if limit:
@@ -1013,7 +1028,8 @@ def realign(symbols: Optional[list] = None, *, limit: int = 0,
                          rev_q_series=f.get("rev_q_series"),
                          eps_q_series=f.get("eps_q_series"),
                          ni_q_series=f.get("ni_q_series"),
-                         q_end_series=f.get(END_SERIES_KEY))
+                         q_end_series=f.get(END_SERIES_KEY),
+                         rev_line_series=f.get("rev_line_series"))
         if a["duplicate_periods"]:
             out["duplicate_periods"] += 1
         if a["reordered"]:
@@ -1056,6 +1072,9 @@ def realign(symbols: Optional[list] = None, *, limit: int = 0,
             "fundamentals.prior_hole": ph,
             "fundamentals.realigned_at": _time.time(),
         }
+        if isinstance(f.get("rev_line_series"), list):
+            # the revenue line moves with the keys (2026-10-08); a doc without it stays without
+            sets["fundamentals.rev_line_series"] = a["rev_line_series"]
         try:
             # `cached_at` is NOT in `sets` and never will be.
             coll.update_one({"symbol": d.get("symbol")}, {"$set": sets})

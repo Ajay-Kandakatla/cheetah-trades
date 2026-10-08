@@ -159,3 +159,14 @@ one rotation rebuild, 2026-09-14). It is a per-symbol read on the ticker page.
 - **The study.** Does the score predict forward returns, against a
   sector-matched placebo? Until that exists with a CI, `SCORE_IS_MEASURED`
   stays `False` and the tab makes no forward claim.
+
+## 2026-10-08 — bank annual revenue is the net line
+
+`longterm` reads annual rows through `massive_fundamentals`, so semantic change 7
+(the revenue line per v1 statement template) applies to them: a financial-template
+annual row's `revenues` is revenue − cost_of_revenue + other_income_expense (the
+10-K's "total revenue, net of interest expense"), not v1's gross revenue. Without it
+the Sunday warm would have moved ~120 of 400 Financial Services names' operating
+margin onto gross revenue (MEASURED on the code-path dry run, `lt_dry.py`). The
+with-fix move of the opm / sales-CAGR scores is UNMEASURED; annual-row template
+behaviour is INFERRED until the annual probe (SPEC 2026-10-08 §5.3).
