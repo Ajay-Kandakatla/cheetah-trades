@@ -68,6 +68,30 @@ function mockFetch(payload: any, ok = true) {
   return spy;
 }
 
+/* A fetch double whose queued answers go ONLY to `/chart-maps/support`.
+ *
+ * The tab is not the only `fetch` caller in its tree: the bounce-room read (a
+ * 30 s module cache), the 🩳 short-interest batch (flushed by a REAL 60 ms
+ * timer) and the growth / promo tag reads all share the global. A double that
+ * answers by CALL ORDER hands a deferred response to whichever of them asks
+ * first. Under load the short-interest flush landed between the first read and
+ * the switch and took the switch's answer (2026-10-07/08: "expected '3 months'
+ * to be '1 year'"); run alone, the bounce-room POST took it. Every other URL
+ * gets an empty 200, whatever order or cache state it arrives in.
+ * Returns the support URLs asked, in order. */
+function supportFetch(...answers: Promise<unknown>[]) {
+  const asked: string[] = [];
+  vi.stubGlobal('fetch', vi.fn((url: string) => {
+    if (!String(url).includes('/chart-maps/support')) {
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) });
+    }
+    asked.push(String(url));
+    return answers.shift()
+      ?? Promise.reject(new Error(`unexpected support read #${asked.length}: ${url}`));
+  }));
+  return asked;
+}
+
 const noop = () => {};
 const noop2 = () => {};
 
@@ -113,13 +137,12 @@ describe('SupportLevels', () => {
     let resolve1y: any;
     const p6 = new Promise((r) => { resolve6m = r; });
     const p1 = new Promise((r) => { resolve1y = r; });
-    const spy = vi.fn().mockReturnValueOnce(p6).mockReturnValueOnce(p1);
-    vi.stubGlobal('fetch', spy);
+    const asked = supportFetch(p6, p1);
     const { container, rerender } = render(
       <SupportLevels symbol="DHI" window="6m" onSymbol={noop} onWindow={noop} />);
     rerender(
       <SupportLevels symbol="DHI" window="1y" onSymbol={noop} onWindow={noop} />);
-    expect(spy).toHaveBeenCalledTimes(2);
+    expect(asked).toHaveLength(2);
     resolve1y({ ok: true, status: 200, json: async () => (
       { ...PAYLOAD, window: '1y', window_label: '1 year' }) });
     const chip = () => container.querySelector('.sl-zoom')?.textContent;
@@ -134,10 +157,9 @@ describe('SupportLevels', () => {
     // The old behavior showed NOTHING during a switch (loading note was
     // gated on !data), so a 5s cold window read as a dead dropdown.
     let resolveNext: any;
-    const spy = vi.fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => PAYLOAD })
-      .mockReturnValueOnce(new Promise((r) => { resolveNext = r; }));
-    vi.stubGlobal('fetch', spy);
+    const asked = supportFetch(
+      Promise.resolve({ ok: true, status: 200, json: async () => PAYLOAD }),
+      new Promise((r) => { resolveNext = r; }));
     const { container, rerender } = render(
       <SupportLevels symbol="DHI" window="3m" onSymbol={noop} onWindow={noop} />);
     const chip = () => container.querySelector('.sl-zoom')?.textContent;
@@ -151,6 +173,8 @@ describe('SupportLevels', () => {
       { ...PAYLOAD, window: '1y', window_label: '1 year' }) });
     await waitFor(() => expect(chip()).toBe('1 year'));
     expect(screen.queryByText(/updating the view/)).toBeNull();
+    // one read per view: the switch was a refetch, not a second answer
+    expect(asked).toHaveLength(2);
   });
 
   it('links a pre-configured TradingView chart carrying the CURRENT timeframe', async () => {
