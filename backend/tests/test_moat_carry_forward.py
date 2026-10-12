@@ -624,8 +624,11 @@ def test_coverage_census_counts():
          "moat_status": "weird"},
     ]
     r = cov.census(docs, now=now, since=now - 2 * day, ttl_sec=16 * day)
-    assert r["all"] == {"docs": 6, "moat_present": 3, "moat_null": 3, "moat_null_pct": 50.0}
+    assert r["all"] == {"docs": 6, "moat_present": 3, "moat_scored": 2, "moat_null": 3,
+                        "moat_null_pct": 50.0, "moat_scored_pct": 33.3}
     assert r["fresh"]["docs"] == 4 and r["fresh"]["moat_present"] == 2
+    assert r["fresh"]["moat_scored"] == 2
+    assert r["stale"]["moat_scored"] == 0          # the tier-0 dict is present, NOT scored
     assert r["stale"]["docs"] == 2 and r["stale"]["moat_present"] == 1
     assert r["refreshed_since"]["docs"] == 4
     assert r["present_unknown_tier0"] == 1 and r["present_zero_inputs"] == 1
@@ -635,4 +638,15 @@ def test_coverage_census_counts():
 
 def test_coverage_census_empty():
     r = _census_mod().census([], now=T0, since=T0, ttl_sec=1)
-    assert r["all"] == {"docs": 0, "moat_present": 0, "moat_null": 0, "moat_null_pct": None}
+    assert r["all"] == {"docs": 0, "moat_present": 0, "moat_scored": 0, "moat_null": 0,
+                        "moat_null_pct": None, "moat_scored_pct": None}
+
+
+def test_coverage_census_tier_shapes_that_must_not_count_as_scored():
+    r = _census_mod().census([
+        {"cached_at": T0, "moat": {"tier": "3"}},          # string tier
+        {"cached_at": T0, "moat": {"tier": None}},
+        {"cached_at": T0, "moat": {}},
+        {"cached_at": T0, "moat": {"tier": 1}},
+    ], now=T0, since=T0, ttl_sec=10)
+    assert r["all"]["moat_present"] == 4 and r["all"]["moat_scored"] == 1

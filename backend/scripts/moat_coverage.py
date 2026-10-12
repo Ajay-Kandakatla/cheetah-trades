@@ -39,7 +39,7 @@ def census(docs, *, now: float, since: float, ttl_sec: int) -> dict:
     """Coverage counts over research docs (PURE — feed it `coll.find({},
     PROJECTION)`). A moat counts as present only when it is a dict."""
     fresh_cut = now - ttl_sec
-    groups = {k: {"docs": 0, "moat_present": 0} for k in (
+    groups = {k: {"docs": 0, "moat_present": 0, "moat_scored": 0} for k in (
         "all", "fresh", "stale", "refreshed_since", "not_refreshed_since")}
     statuses = {"ok": 0, "no_data": 0, "fetch_failed": 0, "legacy_unset": 0}
     age = {"le_7d": 0, "le_16d": 0, "gt_16d": 0, "unstamped": 0}
@@ -54,9 +54,13 @@ def census(docs, *, now: float, since: float, ttl_sec: int) -> dict:
         keys = ["all",
                 "fresh" if cached >= fresh_cut else "stale",
                 "refreshed_since" if cached >= since else "not_refreshed_since"]
+        # "present" includes tier 0 (UNKNOWN: no score) — "scored" is tier >= 1,
+        # the honest coverage number (an ETF or a Yahoo 404 is present, unscored)
+        scored = has and isinstance(moat.get("tier"), (int, float)) and moat["tier"] >= 1
         for k in keys:
             groups[k]["docs"] += 1
             groups[k]["moat_present"] += int(has)
+            groups[k]["moat_scored"] += int(scored)
         st = d.get("moat_status")
         statuses[st if st in statuses else "legacy_unset"] += 1
         if not has:
@@ -79,7 +83,8 @@ def census(docs, *, now: float, since: float, ttl_sec: int) -> dict:
     for k, g in groups.items():
         null = g["docs"] - g["moat_present"]
         # `fresh` is what the boards serve (get_all_research TTL filter)
-        out[k] = {**g, "moat_null": null, "moat_null_pct": _pct(null, g["docs"])}
+        out[k] = {**g, "moat_null": null, "moat_null_pct": _pct(null, g["docs"]),
+                  "moat_scored_pct": _pct(g["moat_scored"], g["docs"])}
     out["present_unknown_tier0"] = unknown_tier0
     out["present_zero_inputs"] = zero_inputs
     out["moat_status"] = statuses          # written from 2026-10-11 on

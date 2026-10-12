@@ -103,9 +103,36 @@ docker run -d --name moat-backfill --network cheetah-market-app_default -e MONGO
 
 It needs no API key (yfinance). Re-running the same command (after `docker rm moat-backfill`) resumes the pass.
 
-## After
+## After (backfill 2026-10-11 23:21 → 00:19 ET)
 
-_Filled in after the 2026-10-11 backfill run — see below._
+`python -m sepa.cli moat-backfill` (null mode): **3,438 names read
+(5 smoke + 3,433), 0 rate-limit waits, 0 failures, 57 min** at 1 read/s.
+
+Census 2026-10-12 00:30 ET, served (fresh) blobs, 3,906:
+
+| | before | after |
+|---|---:|---:|
+| moat null | 3,424 (87.7%) | **0 (0.0%)** |
+| moat present | 482 | 3,906 |
+| moat **scored** (tier ≥ 1) | ~454 (11.6%)¹ | **3,412 (87.4%)** |
+| tier 0 "no data" | ~28¹ | 494 |
+
+¹ The census did not split tiers before the run; "before scored" is counted
+from the 481 fresh blobs the backfill did not touch (their moat is unchanged).
+
+**The 494 tier-0 are not throttle damage**:
+- 408 have 0 of 6 inputs. They are ETFs and funds (SPY, QQQ, IWM, XLV… —
+  `quoteType ETF`, no ROE or margins) and **38 names Yahoo 404s on the
+  fundamentals request** ("Quote not found": TMHC, VSCO, CPRX, KW, XOMA,
+  SNBR, THR…). The 404s still failed on a re-read 10 minutes later.
+- 86 have inputs and score 0 — e.g. Ford (ROE −18%, gross margin 7%, FCF
+  negative, net debt/EBITDA 18×) and CIFR. `compute_moat` labels ANY score
+  of 0 "UNKNOWN" (tier 0), so the chip reads "no data" although the data is
+  there. That label rule is pre-existing and was not changed here (a
+  filter-visible change — his call).
+
+A 404'd name that later scores keeps its moat through the next 404:
+`lost_inputs` never lets a 0-of-6 read replace a moat that had inputs.
 
 ## Tests
 
