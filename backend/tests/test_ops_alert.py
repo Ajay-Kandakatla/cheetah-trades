@@ -28,8 +28,9 @@ ROOT = Path(__file__).resolve().parents[2]
 BANNED = ("boun" + "ce", "fa" + "ke")
 LABOR_DAY = datetime(2026, 9, 7, 10, 0, tzinfo=gate._ET)
 SATURDAY = datetime(2026, 9, 5, 10, 0, tzinfo=gate._ET)
-EIGHT = {"forwarder_high", "forwarder_growth", "docker_down", "docker_restored",
-         "backend_restarted", "battery_low", "watchdog_error", "test"}
+NINE = {"forwarder_high", "forwarder_growth", "docker_down", "docker_restored",
+         "backend_restarted", "battery_low", "watchdog_error", "test",
+         "cron_drift_busy"}                  # 2026-10-11 cron re-sync
 GOOD = {"condition": "docker_down", "title": "🛑 Docker is down", "body": "Docker's backend is not running."}
 
 
@@ -92,7 +93,7 @@ def test_O4_NEGATIVE_not_a_disabled_kind():
 
 
 def test_O5_closed_condition_set():
-    assert hooks.OPS_CONDITIONS == frozenset(EIGHT)
+    assert hooks.OPS_CONDITIONS == frozenset(NINE)
 
 
 # --------------------------------------------------------------------------- notify_ops

@@ -10,13 +10,35 @@ sockets that a provider closed became permanent entries. Nothing told Ajay.
 What it watches, each run:
   * Docker's backend processes (``/bin/ps``) and the api's ``/health``;
   * the forwarder count in Docker's own ``monitor.log`` (high, and growth);
-  * the Mac's battery (``/usr/bin/pmset``) — a sleeping Mac stops every scan.
+  * the Mac's battery (``/usr/bin/pmset``) — a sleeping Mac stops every scan;
+  * how long the Mac slept (wall clock minus ``CLOCK_UPTIME_RAW``, the boot-relative
+    clock that does not advance during sleep) since the cron container started.
+    Not ``time.monotonic()``: on the host's Python 3.9 it restarts near 0 in every
+    new process, and launchd starts a new process every run.
 
 What it does: queues an alert, POSTs it to the api's ``/admin/ops/alert``
 (loopback only), retries every RETRY_SEC for up to PENDING_TTL_SEC, and shows a
 local macOS notification on the first failed try. When both backend processes
 are gone AND the api is down it may run ``open -a Docker`` (guarded: config flag,
-pause file, a 15-minute gap, 3 per day). It never kills anything.
+pause file, a 15-minute gap, 3 per day).
+
+Cron re-sync (2026-10-11). While the Mac sleeps Docker's VM is paused, and
+supercronic's timers (Go monotonic) do not advance, so every pending cron job
+fires late by the total pause since its timer was armed (measured 2026-10-11:
+22.4 h of pause, Monday's whole weekday schedule ~21.5 h late). Once the summed
+sleep since the cron container started reaches CRON_RESYNC_AT_SEC, and ``docker
+top`` shows only docker-init + supercronic (no job running), it runs ``docker
+restart -t 120 cheetah-market-app-cron-1``, which re-arms every timer from the
+wall clock (guarded: config flag ``cron_resync``, the pause file, a 10-minute
+gap, 12 per day, and never within 3 s either side of a wall-clock minute, when
+the per-minute jobs start). A running job is never interrupted: it waits, and
+after CRON_BUSY_ALERT_SEC of waiting it sends one ``cron_drift_busy`` alert.
+
+It never kills anything: it sends no signal itself, and the one container it
+restarts is restarted only while no cron job runs. ``-t 120`` overrides the
+container's 1 s stop timeout: Docker sends SIGTERM, tini (docker-init) forwards
+it to supercronic, and supercronic stops scheduling and waits for any job that
+slipped in to finish before it exits; SIGKILL comes only after 120 s.
 
 Standard library only; must run under the host's /usr/bin/python3 (3.9.6).
 Runbook: ops/README.md. Tests: backend/tests/test_docker_watchdog.py.
@@ -61,6 +83,16 @@ DOWN_CHECKS_TO_ACT = 2
 RESTART_MIN_GAP_SEC = 900
 RESTART_MAX_PER_DAY = 3
 RETRY_SEC = 900                     # 4 tries/h < the server's 6/h cap
+CRON_RESYNC_AT_SEC = 120            # summed sleep since cron started that triggers a re-sync
+CRON_SLEEP_JITTER_SEC = 5           # per-run wall-minus-monotonic noise; not sleep
+CRON_BUSY_ALERT_SEC = 1800          # a job has kept cron busy this long -> one alert
+CRON_RESYNC_MIN_GAP_SEC = 600
+CRON_RESYNC_MAX_PER_DAY = 12
+CRON_STOP_GRACE_SEC = 120           # `docker restart -t`: SIGTERM, then SIGKILL after this
+CRON_RESTART_TIMEOUT_SEC = 150      # the CLI call; > CRON_STOP_GRACE_SEC
+CRON_EDGE_LEAD_SEC = 3              # no restart in second 57..59 of a minute ...
+CRON_EDGE_TRAIL_SEC = 3             # ... or 0..3 (per-minute jobs start at :00)
+CRON_CMD_MAX = 80                   # the running command, clipped, in the busy alert
 PENDING_TTL_SEC = 24 * 3600
 PENDING_MAX = 20
 BATTERY_LEVELS = (20, 10)
@@ -73,8 +105,11 @@ BODY_MAX = 280
 
 CONDITIONS = frozenset({
     "forwarder_high", "forwarder_growth", "docker_down", "docker_restored",
-    "backend_restarted", "battery_low", "watchdog_error", "test"})
-ALLOWED_BINARIES = frozenset({"/bin/ps", "/usr/bin/pmset", "/usr/bin/osascript", "/usr/bin/open"})
+    "backend_restarted", "battery_low", "watchdog_error", "cron_drift_busy", "test"})
+DOCKER_CLI = "/usr/local/bin/docker"
+CRON_CONTAINER = "cheetah-market-app-cron-1"
+ALLOWED_BINARIES = frozenset({"/bin/ps", "/usr/bin/pmset", "/usr/bin/osascript", "/usr/bin/open",
+                              DOCKER_CLI})
 
 DEFAULT_API_BASE = "http://127.0.0.1:8000"   # not localhost: IPv6-first, refused after the lock
 ALERT_PATH = "/admin/ops/alert"
@@ -83,7 +118,9 @@ STATE_DIR = os.path.expanduser("~/.cheetah/watchdog")
 
 STATE_VERSION = 1
 _DAY = 24 * 3600
-_CONFIG_KEYS = ("admin_email", "api_base", "auto_restart", "docker_log_dir")
+_CONFIG_KEYS = ("admin_email", "api_base", "auto_restart", "cron_resync", "docker_log_dir")
+_CONFIG_BOOLS = ("auto_restart", "cron_resync")
+_CRON_IDLE_PROCS = ("docker-init", "supercronic")
 _BACKEND_NAME = "com.docker.backend"
 _UI_MARK = "/Docker Desktop.app/Contents/MacOS/Docker Desktop"
 
@@ -206,11 +243,48 @@ def parse_pmset(text: str) -> dict:
     return {"on_ac": on_ac, "percent": pct}
 
 
+def parse_cron_inspect(text: str) -> dict:
+    """``docker inspect -f '{{.State.StartedAt}} {{.State.Running}}'`` -> {started_at, running}."""
+    parts = (text or "").split()
+    if len(parts) != 2 or parts[1] not in ("true", "false") or "T" not in parts[0]:
+        return {"started_at": None, "running": None, "error": "unparsed"}
+    return {"started_at": parts[0], "running": parts[1] == "true", "error": None}
+
+
+def parse_docker_top(text: str) -> Optional[List[str]]:
+    """``docker top <c> -o pid,args`` -> the args of each process, or None when no
+    process line is there (an empty list is not proof the scheduler is idle)."""
+    procs = []  # type: List[str]
+    for i, line in enumerate((text or "").splitlines()):
+        parts = line.split(None, 1)
+        if i == 0 and parts and parts[0] == "PID":
+            continue                    # the header
+        if len(parts) < 2 or not parts[0].isdigit():
+            continue
+        procs.append(parts[1].strip())
+    return procs or None
+
+
+def cron_busy_procs(procs: List[str]) -> List[str]:
+    """Every process that is not the idle scheduler (docker-init / supercronic)."""
+    busy = []
+    for args in procs:
+        argv = args.split()
+        if not argv or os.path.basename(argv[0]) not in _CRON_IDLE_PROCS:
+            busy.append(args)
+    return busy
+
+
 # ---------------------------------------------------------------------------
 # Messages
 # ---------------------------------------------------------------------------
 def _clip(s: str, n: int) -> str:
     return s if len(s) <= n else s[:n - 1] + "\u2026"
+
+
+def _dur(sec) -> str:
+    sec = float(sec or 0)
+    return f"{sec / 3600.0:.1f} h" if sec >= 3600 else f"{int(round(sec / 60.0))} min"
 
 
 def _hhmm(ts: Optional[float]) -> str:
@@ -263,8 +337,15 @@ def compose(condition: str, facts: dict) -> Tuple[str, str]:
                 "alerts stop. Plug it in.")
     elif condition == "watchdog_error":
         title = "\u26A0\uFE0F Docker watchdog is blind"
-        body = (f"{f.get('reason') or 'The watchdog hit an error'}. It cannot see the forwarder "
-                "count until this is fixed (see ops/README.md).")
+        impact = f.get("impact") or ("It cannot see the forwarder count until this is fixed "
+                                     "(see ops/README.md).")
+        body = f"{f.get('reason') or 'The watchdog hit an error'}. {impact}"
+    elif condition == "cron_drift_busy":
+        title = f"\u23F0 Cron jobs {_dur(f.get('drift'))} late"
+        body = (f"The Mac slept, so every cron job (alerts, exits, scans) fires about "
+                f"{_dur(f.get('drift'))} late. The watchdog re-syncs cron only while no job runs; "
+                f"one has run {_dur(f.get('waited'))}: {f.get('cmd') or '?'}. It keeps trying "
+                "every 2 min (ops/README.md).")
     elif condition == "test":
         title = "\U0001FA7A Ops alert test"
         body = "Test from the Docker watchdog: ops alerts reach this device."
@@ -292,7 +373,23 @@ def default_state() -> dict:
         "error_alerted_at": {},     # watchdog_error reason key -> epoch
         "crash_notified_at": None,
         "pending": [],
+        # cron re-sync (2026-10-11); a version-1 file without these keys loads with
+        # these defaults, so STATE_VERSION stays 1
+        "last_wall": None,          # previous run's time.time() ...
+        "last_mono": None,          # ... and CLOCK_UPTIME_RAW (stops while the Mac sleeps)
+        "cron_started_at": None,    # the cron container's State.StartedAt last seen
+        "cron_sleep_acc_sec": 0.0,  # summed sleep since that start
+        "cron_busy_since": None,    # first run that found a job running with drift due
+        "cron_busy_alerted": False,
+        "cron_resyncs": [],         # epochs of `docker restart` attempts (the caps)
+        "cron_last_resync": None,   # {"ts", "drift_sec"} of the last successful one
+        "cron_last_decision": None,
+        "cron_logged_at": {},       # log-once key -> epoch
     }
+
+
+def _num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
 def _coerce_state(raw) -> Optional[dict]:
@@ -305,6 +402,25 @@ def _coerce_state(raw) -> Optional[dict]:
     d = default_state()["down"]
     d.update({k: v for k, v in (st.get("down") or {}).items() if k in d})
     st["down"] = d
+    for k in ("last_wall", "last_mono", "cron_busy_since"):
+        if st[k] is not None and not _num(st[k]):
+            st[k] = None
+    if not _num(st["cron_sleep_acc_sec"]) or st["cron_sleep_acc_sec"] < 0:
+        st["cron_sleep_acc_sec"] = 0.0
+    st["cron_sleep_acc_sec"] = float(st["cron_sleep_acc_sec"])
+    if st["cron_started_at"] is not None and not isinstance(st["cron_started_at"], str):
+        st["cron_started_at"] = None
+    if not isinstance(st["cron_resyncs"], list):
+        st["cron_resyncs"] = []
+    st["cron_resyncs"] = [t for t in st["cron_resyncs"] if _num(t)]
+    if not isinstance(st["error_alerted_at"], dict):    # a hand-edited null crashed _error_once
+        st["error_alerted_at"] = {}
+    if not isinstance(st["cron_logged_at"], dict):
+        st["cron_logged_at"] = {}
+    st["cron_logged_at"] = {k: v for k, v in st["cron_logged_at"].items() if _num(v)}
+    lr = st["cron_last_resync"]
+    if lr is not None and not (isinstance(lr, dict) and _num(lr.get("ts"))):
+        st["cron_last_resync"] = None
     return st
 
 
@@ -345,7 +461,7 @@ def log_line(state_dir: str, level: str, msg: str, **extra) -> None:
 def load_config(state_dir: str) -> Tuple[dict, List[str]]:
     """config.json merged over the defaults -> (cfg, notes to log)."""
     cfg = {"admin_email": None, "api_base": DEFAULT_API_BASE, "auto_restart": True,
-           "docker_log_dir": DOCKER_LOG_DIR, "state_dir": state_dir}
+           "cron_resync": True, "docker_log_dir": DOCKER_LOG_DIR, "state_dir": state_dir}
     notes = []  # type: List[str]
     path = os.path.join(state_dir, "config.json")
     if not os.path.exists(path):
@@ -363,10 +479,10 @@ def load_config(state_dir: str) -> Tuple[dict, List[str]]:
         if k not in _CONFIG_KEYS:
             notes.append(f"config.json: unknown key {k!r} ignored")
             continue
-        if k == "auto_restart" and not isinstance(v, bool):
-            notes.append("config.json: auto_restart must be true/false; kept the default")
+        if k in _CONFIG_BOOLS and not isinstance(v, bool):
+            notes.append(f"config.json: {k} must be true/false; kept the default")
             continue
-        if k != "auto_restart" and not isinstance(v, str):
+        if k not in _CONFIG_BOOLS and not isinstance(v, str):
             notes.append(f"config.json: {k} must be a string; kept the default")
             continue
         cfg[k] = os.path.expanduser(v) if k == "docker_log_dir" else v
@@ -387,11 +503,14 @@ def _queue(st: dict, condition: str, facts: dict, now: float) -> None:
                           "last_try_at": None, "tries": 0})
 
 
-def _error_once(st: dict, key: str, reason: str, now: float) -> None:
+def _error_once(st: dict, key: str, reason: str, now: float, impact: Optional[str] = None) -> None:
     last = st["error_alerted_at"].get(key)
     if last is None or now - last >= WATCHDOG_ERROR_REPEAT_SEC:
         st["error_alerted_at"][key] = now
-        _queue(st, "watchdog_error", {"reason": reason}, now)
+        facts = {"reason": reason}
+        if impact:
+            facts["impact"] = impact
+        _queue(st, "watchdog_error", facts, now)
 
 
 def _restart_block(st: dict, cfg: dict, paused: bool, now: float) -> Optional[str]:
@@ -416,8 +535,144 @@ def _reset_forwarder(st: dict) -> None:
     st["growth_alerted_at"] = None
 
 
+def _log_once(st: dict, actions: List[dict], key: str, msg: str, now: float, **extra) -> None:
+    """A log action at most once per WATCHDOG_ERROR_REPEAT_SEC per key (no push)."""
+    last = st["cron_logged_at"].get(key)
+    if last is None or now - last >= WATCHDOG_ERROR_REPEAT_SEC:
+        st["cron_logged_at"][key] = now
+        actions.append(dict({"type": "log", "msg": msg}, **extra))
+
+
+def _cron_account(st: dict, obs: dict, now: float, actions: List[dict]) -> None:
+    """Add this interval's sleep to cron_sleep_acc_sec. A new cron container
+    (deploy, manual or Docker restart) starts the drift over at this interval's
+    sleep (deploy, then the lid closes: that night's drift counts) and re-arms the
+    busy alert. An unknown clock (``mono`` None) counts as 0 sleep."""
+    mono = obs.get("mono")
+    slept_now = 0.0
+    if _num(mono):
+        lw, lm = st["last_wall"], st["last_mono"]
+        if lw is not None and lm is not None:
+            if mono < lm or now < lw:
+                # a reboot (monotonic restarts near 0) or the wall clock set back:
+                # this interval says nothing about sleep, so only the baseline moves
+                actions.append({"type": "log", "msg": "clock re-baselined",
+                                "reason": "monotonic went back" if mono < lm else "wall clock went back"})
+            else:
+                slept = (now - lw) - (mono - lm)
+                if slept > CRON_SLEEP_JITTER_SEC:
+                    slept_now = float(slept)
+                    st["cron_sleep_acc_sec"] = float(st["cron_sleep_acc_sec"]) + slept_now
+        st["last_wall"], st["last_mono"] = now, float(mono)
+    cron = obs.get("cron") or {}
+    started = cron.get("started_at")
+    if cron.get("error") is None and isinstance(started, str) and started:
+        if st["cron_started_at"] != started:
+            if st["cron_started_at"] is not None:
+                actions.append({"type": "log", "msg": "cron container restarted; drift reset",
+                                "from": st["cron_started_at"], "to": started,
+                                "dropped_sec": round(st["cron_sleep_acc_sec"] - slept_now),
+                                "kept_sec": round(slept_now)})
+            st["cron_started_at"] = started
+            st["cron_sleep_acc_sec"] = slept_now
+            st["cron_busy_since"] = None
+            st["cron_busy_alerted"] = False
+            st["pending"] = [p for p in st["pending"] if p.get("condition") != "cron_drift_busy"]
+
+
+def _cron_pre(st: dict, obs: dict, cfg: dict, now: float) -> Optional[str]:
+    """The cron decision when it is settled before ``docker top``; None = look at top."""
+    cron = obs.get("cron") or {}
+    if cron.get("error") is not None or not cron.get("started_at"):
+        return "no_cron"
+    if cron.get("running") is not True:
+        return "not_running"
+    if st["cron_sleep_acc_sec"] < CRON_RESYNC_AT_SEC:
+        return "in_sync"
+    if cfg.get("cron_resync", True) is False:
+        return "off"
+    if obs.get("paused"):
+        return "paused"
+    recent = [t for t in st["cron_resyncs"] if now - t < _DAY]
+    if len(recent) >= CRON_RESYNC_MAX_PER_DAY:
+        return "cap"
+    if recent and now - max(recent) < CRON_RESYNC_MIN_GAP_SEC:
+        return "gap"
+    return None
+
+
+def _cron_evaluate(st: dict, obs: dict, cfg: dict, now: float, actions: List[dict]) -> None:
+    _cron_account(st, obs, now, actions)
+    cron = obs.get("cron") or {}
+    decision = _cron_pre(st, obs, cfg, now)
+    if decision in ("no_cron", "not_running"):
+        _log_once(st, actions, decision, "cron container not usable; no re-sync", now,
+                  error=cron.get("error") or decision)
+    top = cron.get("top") or {}
+    if decision is None:
+        procs = top.get("procs")
+        if top.get("error") is not None or not procs:
+            decision = "no_top"
+            _log_once(st, actions, "no_top", "docker top unusable; no re-sync", now,
+                      error=top.get("error") or "no process lines")
+        else:
+            busy = cron_busy_procs(procs)
+            if busy:
+                decision = "busy"
+                if st["cron_busy_since"] is None:
+                    st["cron_busy_since"] = now
+                waited = now - st["cron_busy_since"]
+                if waited > CRON_BUSY_ALERT_SEC and not st["cron_busy_alerted"]:
+                    st["cron_busy_alerted"] = True
+                    _queue(st, "cron_drift_busy", {"drift": st["cron_sleep_acc_sec"],
+                                                   "waited": waited,
+                                                   "cmd": _clip(busy[0], CRON_CMD_MAX)}, now)
+            else:
+                decision = "resync"
+                st["cron_resyncs"] = [t for t in st["cron_resyncs"] if now - t < _DAY] + [now]
+                actions.append({"type": "cron_resync",
+                                "drift_sec": round(st["cron_sleep_acc_sec"], 1)})
+    if decision != "busy":
+        st["cron_busy_since"] = None
+    st["cron_last_decision"] = decision
+
+
+def cron_wants_top(state: Optional[dict], obs: dict, now: float, cfg: dict) -> bool:
+    """True when this run's cron decision needs ``docker top`` (pure; state untouched)."""
+    st = _coerce_state(copy.deepcopy(state)) if state is not None else None
+    st = st or default_state()
+    _cron_account(st, obs, now, [])
+    return _cron_pre(st, obs, cfg, now) is None
+
+
+def record_cron_deferred(state: dict, now: float) -> dict:
+    """The restart was skipped (minute edge): the attempt does not count toward the
+    gap or the cap, and the drift stays for the next run."""
+    state["cron_resyncs"] = [t for t in state["cron_resyncs"] if t != now]
+    state["cron_last_decision"] = "edge"
+    return state
+
+
+def record_cron_resync(state: dict, ok: bool, drift_sec: float, started_at: Optional[str],
+                       error: Optional[str], now: float) -> dict:
+    """After ``docker restart``: success zeroes the drift and re-arms the busy alert;
+    a failure keeps the drift (the next allowed run tries again) and alerts once."""
+    if ok:
+        state["cron_sleep_acc_sec"] = 0.0
+        state["cron_started_at"] = started_at
+        state["cron_last_resync"] = {"ts": now, "drift_sec": round(float(drift_sec), 1)}
+        state["cron_busy_since"] = None
+        state["cron_busy_alerted"] = False
+        state["pending"] = [p for p in state["pending"] if p.get("condition") != "cron_drift_busy"]
+    else:
+        _error_once(state, "cron_resync", f"Cron re-sync failed ({error or 'unknown error'})", now,
+                    impact=f"Cron jobs still fire about {_dur(drift_sec)} late; it retries in "
+                           f"{CRON_RESYNC_MIN_GAP_SEC // 60} min (see ops/README.md).")
+    return state
+
+
 def evaluate(state: Optional[dict], obs: dict, now: float, cfg: dict) -> Tuple[dict, List[dict]]:
-    """(new state, actions). Pure: no I/O; actions are push / restart / log dicts."""
+    """(new state, actions). Pure: no I/O; actions are push / restart / cron_resync / log dicts."""
     actions = []  # type: List[dict]
     st = _coerce_state(copy.deepcopy(state)) if state is not None else None
     if st is None:
@@ -547,6 +802,9 @@ def evaluate(state: Optional[dict], obs: dict, now: float, cfg: dict) -> Tuple[d
     elif bat.get("on_ac") is True:
         st["battery_fired"] = []
 
+    # -- cron drift (2026-10-11) -----------------------------------------------
+    _cron_evaluate(st, obs, cfg, now, actions)
+
     # -- pending queue --------------------------------------------------------
     kept = []
     for p in st["pending"]:
@@ -609,6 +867,63 @@ def restart_docker() -> None:
     _run(["/usr/bin/open", "-a", "Docker"], timeout=30)
 
 
+def inspect_cron() -> dict:
+    """The cron container's State.StartedAt / Running. Never raises."""
+    try:
+        r = _run([DOCKER_CLI, "inspect", "-f", "{{.State.StartedAt}} {{.State.Running}}",
+                  CRON_CONTAINER])
+    except Exception as exc:
+        return {"started_at": None, "running": None, "error": f"inspect {type(exc).__name__}"}
+    if r.returncode != 0:
+        missing = "no such" in (r.stderr or "").lower()
+        return {"started_at": None, "running": None,
+                "error": "missing" if missing else f"inspect exit {r.returncode}"}
+    return parse_cron_inspect(r.stdout)
+
+
+def top_cron() -> dict:
+    """The cron container's processes (``docker top``). Never raises."""
+    try:
+        r = _run([DOCKER_CLI, "top", CRON_CONTAINER, "-o", "pid,args"])
+    except Exception as exc:
+        return {"procs": None, "error": f"top {type(exc).__name__}"}
+    if r.returncode != 0:
+        return {"procs": None, "error": f"top exit {r.returncode}"}
+    return {"procs": parse_docker_top(r.stdout), "error": None}
+
+
+def cron_minute_edge(wall: float) -> bool:
+    """True in second 57..59 or 0..3 of a wall-clock minute: a per-minute job may be
+    starting, so no restart now."""
+    sec = int(wall) % 60
+    return sec >= 60 - CRON_EDGE_LEAD_SEC or sec <= CRON_EDGE_TRAIL_SEC
+
+
+def cron_edge_wait(wall: float) -> float:
+    """Seconds to wait in-process until second CRON_EDGE_TRAIL_SEC + 1 when ``wall`` is
+    in the minute edge (at most 7 s), else 0. launchd keeps every run on about the same
+    second, so deferring to the next run could skip for ~25 min after a wake."""
+    if not cron_minute_edge(wall):
+        return 0.0
+    sec = int(wall) % 60
+    target = CRON_EDGE_TRAIL_SEC + 1
+    return float((60 - sec + target) if sec > CRON_EDGE_TRAIL_SEC else (target - sec))
+
+
+_sleep = time.sleep                 # patched by the tests
+
+
+def restart_cron() -> None:
+    """Re-arm supercronic's timers: restart the (idle) cron container. ``-t`` gives a
+    job that slipped in CRON_STOP_GRACE_SEC after SIGTERM (supercronic waits for it)
+    instead of the container's 1 s. Raises on failure."""
+    r = _run([DOCKER_CLI, "restart", "-t", str(CRON_STOP_GRACE_SEC), CRON_CONTAINER],
+             timeout=CRON_RESTART_TIMEOUT_SEC)
+    if r.returncode != 0:
+        raise RuntimeError(f"docker restart exit {r.returncode}: "
+                           f"{_clip((r.stderr or '').strip(), 120)}")
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):   # noqa: D401
         return None                     # the admin header never follows a redirect
@@ -640,8 +955,19 @@ def _api_ok(api_base: str, opener=None) -> bool:
         return False
 
 
+def uptime_raw() -> Optional[float]:
+    """Seconds since boot, not counting sleep (macOS CLOCK_UPTIME_RAW); None when the
+    clock is unavailable. Never ``time.monotonic()``: on Python 3.9 it restarts near 0
+    in every new process."""
+    try:
+        return float(time.clock_gettime(time.CLOCK_UPTIME_RAW))
+    except (AttributeError, OSError):
+        return None
+
+
 def observe(cfg: dict, now: float) -> dict:
     """One look at the host. Each step's failure lands in an error field."""
+    mono = uptime_raw()                 # first, next to the caller's ``now``
     docker = {"main": [], "services": [], "ui": False, "error": None}  # type: dict
     try:
         r = _run(["/bin/ps", "-axo", "pid=,lstart=,args="])
@@ -665,8 +991,24 @@ def observe(cfg: dict, now: float) -> dict:
     api_base = cfg.get("api_base") or DEFAULT_API_BASE
     api_ok = _api_ok(api_base) if _is_loopback_base(api_base) else False
     state_dir = cfg.get("state_dir") or STATE_DIR
+    try:
+        cron = inspect_cron()
+    except Exception as exc:
+        cron = {"started_at": None, "running": None, "error": f"inspect {type(exc).__name__}"}
     return {"docker": docker, "forwarder": forwarder, "battery": battery,
-            "api_ok": api_ok, "paused": os.path.exists(os.path.join(state_dir, "paused"))}
+            "api_ok": api_ok, "paused": os.path.exists(os.path.join(state_dir, "paused")),
+            "mono": mono, "cron": cron}
+
+
+def _add_cron_top(state: Optional[dict], obs: dict, now: float, cfg: dict, top_fn) -> None:
+    """``docker top`` only when the drift is due and nothing else blocks a re-sync."""
+    if not cron_wants_top(state, obs, now, cfg):
+        return
+    try:
+        top = top_fn()
+    except Exception as exc:
+        top = {"procs": None, "error": f"top {type(exc).__name__}"}
+    obs["cron"] = dict(obs.get("cron") or {}, top=top)
 
 
 def deliver(item: dict, cfg: dict, opener=None) -> dict:
@@ -722,13 +1064,16 @@ def _ensure_dir(state_dir: str) -> None:
 
 
 def run_once(cfg: dict, now: float, *, observe_fn=None, deliver_fn=None, notify_fn=None,
-             restart_fn=None, state_dir: Optional[str] = None) -> int:
+             restart_fn=None, state_dir: Optional[str] = None, cron_top_fn=None,
+             cron_restart_fn=None, cron_inspect_fn=None, clock_fn=None) -> int:
     """One full run. Exit: 0 ok, 1 an alert still pending, 2 Docker's log unreadable,
     3 unexpected (traceback logged, a local notification at most once per 24 h)."""
     observe_fn = observe_fn or observe
     deliver_fn = deliver_fn or deliver
     notify_fn = notify_fn or notify_local
     restart_fn = restart_fn or restart_docker
+    cron_fns = (cron_top_fn or top_cron, cron_restart_fn or restart_cron,
+                cron_inspect_fn or inspect_cron, clock_fn or time.time)
     state_dir = state_dir or cfg.get("state_dir") or STATE_DIR
     _ensure_dir(state_dir)
     fd = os.open(os.path.join(state_dir, "lock"), os.O_RDWR | os.O_CREAT, 0o600)
@@ -739,7 +1084,8 @@ def run_once(cfg: dict, now: float, *, observe_fn=None, deliver_fn=None, notify_
             log_line(state_dir, "info", "another run holds the lock; exiting")
             return 0
         try:
-            return _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_dir)
+            return _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_dir,
+                               cron_fns)
         except Exception:
             log_line(state_dir, "error", "unexpected exception", tb=traceback.format_exc())
             try:
@@ -761,9 +1107,12 @@ def run_once(cfg: dict, now: float, *, observe_fn=None, deliver_fn=None, notify_
             os.close(fd)
 
 
-def _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_dir) -> int:
+def _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_dir,
+                cron_fns=(top_cron, restart_cron, inspect_cron, time.time)) -> int:
+    cron_top_fn, cron_restart_fn, cron_inspect_fn, clock_fn = cron_fns
     state = load_state(state_dir)
     obs = observe_fn(cfg, now)
+    _add_cron_top(state, obs, now, cfg, cron_top_fn)
     state, actions = evaluate(state, obs, now, cfg)
     for a in actions:
         if a["type"] == "restart":
@@ -772,6 +1121,32 @@ def _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_d
                 log_line(state_dir, "warning", "opened Docker Desktop")
             except Exception as exc:
                 log_line(state_dir, "error", "restart failed", error=type(exc).__name__)
+        elif a["type"] == "cron_resync":
+            # the wall clock NOW, not the run's start: observe can take seconds
+            wait = cron_edge_wait(clock_fn())
+            if wait:
+                _sleep(wait)
+            if cron_minute_edge(clock_fn()):
+                state = record_cron_deferred(state, now)
+                continue
+            err = None  # type: Optional[str]
+            try:
+                cron_restart_fn()
+            except Exception as exc:
+                err = str(exc) or type(exc).__name__
+            started = None  # type: Optional[str]
+            if err is None:
+                try:
+                    started = (cron_inspect_fn() or {}).get("started_at")
+                except Exception:
+                    started = None      # the next run stores it (acc is 0 either way)
+            state = record_cron_resync(state, err is None, a["drift_sec"], started, err, now)
+            if err is None:
+                log_line(state_dir, "warning", "cron_resynced", drift_sec=a["drift_sec"],
+                         drift_h=round(a["drift_sec"] / 3600.0, 2), started_at=started)
+            else:
+                log_line(state_dir, "error", "cron resync failed", drift_sec=a["drift_sec"],
+                         error=_clip(err, 200))
         elif a["type"] == "push":
             try:
                 res = deliver_fn(a, cfg)
@@ -799,18 +1174,32 @@ def _run_locked(cfg, now, observe_fn, deliver_fn, notify_fn, restart_fn, state_d
              main=len(d.get("main") or []), services=len(d.get("services") or []),
              ps_error=d.get("error"), api_ok=obs.get("api_ok"),
              forwarder=(obs.get("forwarder") or {}).get("count"),
+             cron_drift_sec=round(state["cron_sleep_acc_sec"]), cron=state["cron_last_decision"],
              pending=len(state["pending"]), actions=[a["type"] for a in actions])
     return code
 
 
-def dry_run(cfg: dict, now: float, observe_fn=None, state_dir: Optional[str] = None) -> dict:
-    """Observe + evaluate only: no push, restart, notification or state write."""
+def _cron_summary(st: dict, now: float) -> dict:
+    return {"started_at": st["cron_started_at"],
+            "sleep_acc_sec": round(st["cron_sleep_acc_sec"], 1),
+            "resync_at_sec": CRON_RESYNC_AT_SEC,
+            "decision": st["cron_last_decision"],
+            "busy_since": st["cron_busy_since"], "busy_alerted": st["cron_busy_alerted"],
+            "resyncs_24h": len([t for t in st["cron_resyncs"] if now - t < _DAY]),
+            "last_resync": st["cron_last_resync"]}
+
+
+def dry_run(cfg: dict, now: float, observe_fn=None, state_dir: Optional[str] = None,
+            cron_top_fn=None) -> dict:
+    """Observe + evaluate only: no push, restart, notification or state write
+    (``docker top`` is a read and runs when the drift is due)."""
     observe_fn = observe_fn or observe
     state_dir = state_dir or cfg.get("state_dir") or STATE_DIR
     state = load_state(state_dir) if os.path.isdir(state_dir) else None
     obs = observe_fn(cfg, now)
-    _st, actions = evaluate(state, obs, now, cfg)
-    return {"obs": obs, "actions": actions}
+    _add_cron_top(state, obs, now, cfg, cron_top_fn or top_cron)
+    st, actions = evaluate(state, obs, now, cfg)
+    return {"obs": obs, "actions": actions, "cron": _cron_summary(st, now)}
 
 
 def status(state_dir: str) -> dict:
@@ -822,6 +1211,7 @@ def status(state_dir: str) -> dict:
             "down": st["down"], "restarts_24h": len([t for t in st["restarts"]
                                                       if time.time() - t < _DAY]),
             "battery_fired": st["battery_fired"],
+            "cron": _cron_summary(st, time.time()),
             "pending": [{"id": p["id"], "tries": p.get("tries", 0)} for p in st["pending"]],
             "paused": os.path.exists(os.path.join(state_dir, "paused"))}
 
@@ -829,9 +1219,11 @@ def status(state_dir: str) -> dict:
 def main(argv: Optional[List[str]] = None, deliver_fn=None) -> int:
     ap = argparse.ArgumentParser(description="Cheetah Docker watchdog (one run; see ops/README.md).")
     ap.add_argument("--dry-run", action="store_true",
-                    help="observe and evaluate, print JSON; no push, restart or state write")
+                    help="observe and evaluate, print JSON (with the cron drift); no push, "
+                         "restart or state write")
     ap.add_argument("--test-push", action="store_true", help="send the 'test' ops alert now")
-    ap.add_argument("--status", action="store_true", help="print a state summary as JSON")
+    ap.add_argument("--status", action="store_true",
+                    help="print a state summary as JSON (with the cron drift)")
     ap.add_argument("--state-dir", default=None, help=f"state directory (default {STATE_DIR})")
     args = ap.parse_args(argv)
     state_dir = os.path.expanduser(args.state_dir) if args.state_dir else STATE_DIR

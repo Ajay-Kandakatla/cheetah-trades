@@ -161,10 +161,11 @@ ADMIN_EMAIL = "ajaykandakatla@gmail.com"
 
 # 🩺 ops_alert (2026-10-06): the CLOSED set of conditions the Mac's Docker
 # watchdog (ops/docker_watchdog.py, its CONDITIONS) may report. Anything else is
-# refused before a device is touched.
+# refused before a device is touched. cron_drift_busy (2026-10-11): the cron
+# re-sync after a Mac sleep is waiting on a running job.
 OPS_CONDITIONS: frozenset = frozenset({
     "forwarder_high", "forwarder_growth", "docker_down", "docker_restored",
-    "backend_restarted", "battery_low", "watchdog_error", "test"})
+    "backend_restarted", "battery_low", "watchdog_error", "cron_drift_busy", "test"})
 
 
 def notify_ops(condition: str, title: str, body: str) -> dict:

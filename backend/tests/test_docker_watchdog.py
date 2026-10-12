@@ -629,7 +629,7 @@ def test_W42_dry_run_has_no_side_effects(tmp_path, monkeypatch):
         monkeypatch.setattr(wd, name, lambda *a, **k: (_ for _ in ()).throw(AssertionError(name)))
     out = wd.dry_run(CFG, NOW, observe_fn=lambda c, n: obs(**GONE, on_ac=False, percent=5),
                      state_dir=str(tmp_path))
-    assert set(out) == {"obs", "actions"}
+    assert set(out) == {"obs", "actions", "cron"}          # 2026-10-11: + the cron drift
     json.dumps(out, default=str)
     assert list(tmp_path.iterdir()) == []
 
@@ -674,10 +674,11 @@ def test_config_unknown_keys_and_bad_types_keep_defaults(tmp_path):
 def test_W43_every_condition_fits_and_reads_clean():
     assert wd.CONDITIONS == frozenset({
         "forwarder_high", "forwarder_growth", "docker_down", "docker_restored",
-        "backend_restarted", "battery_low", "watchdog_error", "test"})
+        "backend_restarted", "battery_low", "watchdog_error", "cron_drift_busy", "test"})
     big = {"n": 999_999, "g": 999_999, "h": 99_999, "k": 99_999, "since": NOW, "m": 99_999,
            "t0": NOW, "t1": NOW, "t": NOW, "p": 100, "level": 20,
-           "reason": "r" * 400, "outcome": "o" * 400}
+           "reason": "r" * 400, "outcome": "o" * 400,
+           "drift": 9e9, "waited": 9e9, "cmd": "c" * 400}
     for c in sorted(wd.CONDITIONS):
         for facts in (big, dict(big, variant="services"), {}):
             title, body = wd.compose(c, facts)
@@ -747,7 +748,7 @@ def test_W45_source_safety():
     with pytest.raises(ValueError):
         wd._run([])
     assert wd.ALLOWED_BINARIES == frozenset({"/bin/ps", "/usr/bin/pmset", "/usr/bin/osascript",
-                                             "/usr/bin/open"})
+                                             "/usr/bin/open", "/usr/local/bin/docker"})
 
 
 def test_W46_python_3_9_guard():
@@ -821,3 +822,636 @@ def test_W49_NEG_services_gone_while_the_api_answers_is_a_watchdog_error_never_d
     assert "docker_down" not in conds(st)
     assert conds(st) == ["watchdog_error"], "once a day, not every run"
     assert "forwarder count is not being watched" in st["pending"][0]["body"]
+
+
+# --------------------------------------------------------------------------- cron re-sync 2026-10-11
+# The Mac sleeps -> Docker's VM pauses -> supercronic's monotonic timers stop, so
+# every pending job fires late by the summed pause (measured 2026-10-11: 22.4 h).
+# The watchdog sums host sleep (wall minus monotonic) since the cron container
+# started and restarts that container only while no job runs.
+STARTED = "2026-10-08T23:26:34.123456789Z"
+IDLE = ["/sbin/docker-init -- supercronic /app/crontab", "supercronic /app/crontab"]
+JOB = "/bin/sh -c cd /app && python -m supply_demand.zone_edge"
+BUSY = IDLE + [JOB, "python -m supply_demand.zone_edge"]
+TOP_SAMPLE = """\
+PID                 COMMAND
+81252               /sbin/docker-init -- supercronic /app/crontab
+81277               supercronic /app/crontab
+"""
+
+
+def cobs(mono, *, started=STARTED, running=True, cerr=None, procs=IDLE, top_err=None, **kw):
+    o = obs(**kw)
+    o["mono"] = mono
+    o["cron"] = {"started_at": None if cerr else started, "running": None if cerr else running,
+                 "error": cerr}
+    if procs is not None or top_err is not None:
+        o["cron"]["top"] = {"procs": procs, "error": top_err}
+    return o
+
+
+def resyncs(acts):
+    return [a for a in acts if a["type"] == "cron_resync"]
+
+
+def slept_state(acc, *, started=STARTED, t=NOW, mono=1000.0):
+    """A state that already carries ``acc`` seconds of drift on the current cron."""
+    st = wd.default_state()
+    st.update(last_wall=t, last_mono=mono, cron_started_at=started, cron_sleep_acc_sec=float(acc))
+    return st
+
+
+def test_C1_sleep_accumulates_across_runs():
+    st, a = wd.evaluate(None, cobs(1000.0, procs=BUSY), NOW, CFG)
+    assert st["cron_sleep_acc_sec"] == 0.0 and st["cron_started_at"] == STARTED
+    # 120 s of awake time + 60 s asleep: wall moves 180, monotonic 120
+    st, a = wd.evaluate(st, cobs(1120.0, procs=BUSY), NOW + 180, CFG)
+    assert st["cron_sleep_acc_sec"] == pytest.approx(60.0)
+    assert st["cron_last_decision"] == "in_sync" and resyncs(a) == []
+    st, a = wd.evaluate(st, cobs(1240.0, procs=BUSY), NOW + 180 + 210, CFG)
+    assert st["cron_sleep_acc_sec"] == pytest.approx(150.0)
+    assert st["cron_last_decision"] == "busy" and resyncs(a) == []
+
+
+def test_C2_measured_case_22_4_h_drift_resyncs_once():
+    wall_h, mono_h = 74.6, 52.2                                   # 2026-10-11, cron started 10-08
+    st, _ = wd.evaluate(None, cobs(0.0), NOW, CFG)
+    st, a = wd.evaluate(st, cobs(mono_h * 3600), NOW + wall_h * 3600, CFG)
+    assert [round(r["drift_sec"] / 3600.0, 1) for r in resyncs(a)] == [22.4]
+    assert st["cron_last_decision"] == "resync"
+    assert conds(st) == [], "no push for a resync"
+
+
+def test_C3_NEGATIVE_small_jitter_is_ignored():
+    st, _ = wd.evaluate(None, cobs(0.0), NOW, CFG)
+    t, m = NOW, 0.0
+    for _ in range(200):                                          # 200 runs, 5 s off each
+        t, m = t + 125.0, m + 120.0
+        st, a = wd.evaluate(st, cobs(m), t, CFG)
+        assert resyncs(a) == []
+    assert st["cron_sleep_acc_sec"] == 0.0
+    st, _ = wd.evaluate(st, cobs(m + 120.0), t + 126.0, CFG)
+    assert st["cron_sleep_acc_sec"] == pytest.approx(6.0), "past the tolerance it counts"
+
+
+def test_C4_NEGATIVE_reboot_or_wall_clock_back_rebaselines_without_action():
+    st = slept_state(50, mono=500_000.0)
+    st, a = wd.evaluate(st, cobs(30.0), NOW + 9 * 3600, CFG)       # monotonic restarted
+    assert st["cron_sleep_acc_sec"] == 50.0 and resyncs(a) == []
+    assert any(x.get("msg") == "clock re-baselined" for x in a)
+    assert (st["last_wall"], st["last_mono"]) == (NOW + 9 * 3600, 30.0)
+    st, a = wd.evaluate(st, cobs(150.0), NOW + 8 * 3600, CFG)      # wall clock set back
+    assert st["cron_sleep_acc_sec"] == 50.0 and resyncs(a) == []
+    assert any(x.get("reason") == "wall clock went back" for x in a)
+
+
+def test_C5_NEGATIVE_a_new_cron_container_resets_the_drift():
+    st = slept_state(5000)
+    # verifier 2026-10-11: the reset keeps this interval's sleep (C31); awake here, so 0
+    st, a = wd.evaluate(st, cobs(1000.0 + 3720, started="2026-10-12T02:13:42.197244003Z"),
+                        NOW + 3720, CFG)                           # awake 3,720 s, new start
+    assert st["cron_sleep_acc_sec"] == 0.0 and resyncs(a) == []
+    assert st["cron_started_at"] == "2026-10-12T02:13:42.197244003Z"
+    assert any(x.get("msg") == "cron container restarted; drift reset" for x in a)
+
+
+def test_C6_NEGATIVE_under_the_line_never_resyncs_or_reads_top():
+    st = slept_state(wd.CRON_RESYNC_AT_SEC - 10)
+    o = cobs(1120.0, procs=None)
+    assert wd.cron_wants_top(st, o, NOW + 120 + 9, CFG) is False
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 129, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "in_sync"
+    o = cobs(1240.0, procs=None)
+    assert wd.cron_wants_top(st, o, NOW + 129 + 130, CFG) is True, "119 + 10 >= 120"
+
+
+def test_C7_idle_and_due_gives_exactly_one_restart_action():
+    st = slept_state(wd.CRON_RESYNC_AT_SEC)
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert resyncs(a) == [{"type": "cron_resync", "drift_sec": 120.0}]
+    assert st["cron_resyncs"] == [NOW + 120]
+    assert [x["type"] for x in a].count("restart") == 0, "Docker itself is never touched"
+
+
+def test_C8_busy_cron_never_restarts_and_alerts_once_after_1800_s():
+    st = slept_state(8 * 3600)
+    t, m = NOW, 1000.0
+    alerts = []
+    for _ in range(40):                                           # 40 runs x 120 s = 80 min
+        t, m = t + 120, m + 120
+        st, a = wd.evaluate(st, cobs(m, procs=BUSY), t, CFG)
+        assert resyncs(a) == []
+        alerts.append(conds(st).count("cron_drift_busy"))
+    # run i waits 120 * (i - 1) s; the first wait past 1,800 s is run 17 (1,920 s)
+    assert alerts.index(1) == 16 and alerts[:16] == [0] * 16
+    assert alerts[-1] == 1, "ONE alert, not one per run"
+    body = [p for p in st["pending"] if p["condition"] == "cron_drift_busy"][0]
+    assert "8.0 h" in body["title"] and "supply_demand.zone_edge" in body["body"]
+    # job done -> one restart; success re-arms the alert and drops the stale pending one
+    t, m = t + 120, m + 120
+    st, a = wd.evaluate(st, cobs(m), t, CFG)
+    assert len(resyncs(a)) == 1 and st["cron_busy_since"] is None
+    st = wd.record_cron_resync(st, True, resyncs(a)[0]["drift_sec"], "2026-10-12T00:00:00Z",
+                               None, t)
+    assert st["cron_busy_alerted"] is False and conds(st) == []
+
+
+def test_C9_NEGATIVE_busy_alert_not_rearmed_without_a_resync():
+    st = slept_state(3600)
+    st.update(cron_busy_alerted=True)                     # alerted in an earlier episode
+    for i in range(1, 40):
+        st, a = wd.evaluate(st, cobs(1000.0 + i * 120, procs=BUSY), NOW + i * 120, CFG)
+        assert resyncs(a) == []
+    assert st["cron_busy_since"] == NOW + 120 and "cron_drift_busy" not in conds(st)
+
+
+def test_C10_NEGATIVE_config_off_never_resyncs_or_reads_top():
+    cfg = dict(CFG, cron_resync=False)
+    st = slept_state(10 * 3600)
+    for i in range(1, 20):
+        o = cobs(1000.0 + i * 120)
+        assert wd.cron_wants_top(st, o, NOW + i * 120, cfg) is False
+        st, a = wd.evaluate(st, o, NOW + i * 120, cfg)
+        assert resyncs(a) == []
+    assert st["cron_last_decision"] == "off" and "cron_drift_busy" not in conds(st)
+
+
+def test_C11_NEGATIVE_pause_file_never_resyncs():
+    st = slept_state(10 * 3600)
+    for i in range(1, 20):
+        o = cobs(1000.0 + i * 120, paused=True)
+        assert wd.cron_wants_top(st, o, NOW + i * 120, CFG) is False
+        st, a = wd.evaluate(st, o, NOW + i * 120, CFG)
+        assert resyncs(a) == []
+    assert st["cron_last_decision"] == "paused"
+
+
+def test_C12_NEGATIVE_min_gap_and_daily_cap():
+    st = slept_state(3600)
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert len(resyncs(a)) == 1                                    # restart "failed": acc kept
+    t = NOW + 120
+    st, a = wd.evaluate(st, cobs(1120.0 + 599), t + 599, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "gap"
+    st, a = wd.evaluate(st, cobs(1120.0 + 600), t + 600, CFG)
+    assert len(resyncs(a)) == 1
+    st = slept_state(3600)
+    st["cron_resyncs"] = [NOW - 86000 + i * 700 for i in range(wd.CRON_RESYNC_MAX_PER_DAY)]
+    st, a = wd.evaluate(st, cobs(1120.0), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "cap"
+    st, a = wd.evaluate(st, cobs(1120.0 + 400), NOW + 520, CFG)    # the oldest rolled off
+    assert len(resyncs(a)) == 1
+
+
+@pytest.mark.parametrize("kw", [dict(cerr="missing"), dict(cerr="inspect exit 1"),
+                                dict(cerr="inspect TimeoutExpired"), dict(running=False),
+                                dict(started=None), dict(procs=None, top_err="top exit 1"),
+                                dict(procs=[])])
+def test_C13_NEGATIVE_docker_cli_trouble_means_no_action_and_one_log(kw):
+    st = slept_state(10 * 3600)
+    logs = []
+    for i in range(1, 6):
+        st, a = wd.evaluate(st, cobs(1000.0 + i * 120, **kw), NOW + i * 120, CFG)
+        assert resyncs(a) == [] and "cron_drift_busy" not in conds(st)
+        logs += [x for x in a if x["type"] == "log" and "re-sync" in x.get("msg", "")]
+    assert len(logs) == 1, "logged once, not every run"
+    assert conds(st) == [], "no push for it"
+
+
+def test_C14_inspect_and_top_never_raise(monkeypatch):
+    class R:
+        def __init__(self, rc, out="", err=""):
+            self.returncode, self.stdout, self.stderr = rc, out, err
+    seen = []
+
+    def run(argv, timeout=20):
+        seen.append(argv)
+        return R(1, "", "Error response from daemon: No such object: cheetah-market-app-cron-1")
+    monkeypatch.setattr(wd, "_run", run)
+    assert wd.inspect_cron()["error"] == "missing"
+    assert wd.top_cron() == {"procs": None, "error": "top exit 1"}
+    monkeypatch.setattr(wd, "_run", lambda argv, timeout=20: R(1, "", "Cannot connect"))
+    assert wd.inspect_cron()["error"] == "inspect exit 1"
+
+    def boom(argv, timeout=20):
+        raise subprocess.TimeoutExpired(argv, timeout)
+    monkeypatch.setattr(wd, "_run", boom)
+    assert wd.inspect_cron()["error"] == "inspect TimeoutExpired"
+    assert wd.top_cron()["error"] == "top TimeoutExpired"
+    monkeypatch.setattr(wd, "_run", lambda argv, timeout=20: R(0, STARTED + " true\n"))
+    assert wd.inspect_cron() == {"started_at": STARTED, "running": True, "error": None}
+    monkeypatch.setattr(wd, "_run", lambda argv, timeout=20: R(0, TOP_SAMPLE))
+    assert wd.top_cron() == {"procs": IDLE, "error": None}
+    assert seen[0] == ["/usr/local/bin/docker", "inspect", "-f",
+                       "{{.State.StartedAt}} {{.State.Running}}", "cheetah-market-app-cron-1"]
+    assert seen[1] == ["/usr/local/bin/docker", "top", "cheetah-market-app-cron-1", "-o", "pid,args"]
+
+
+def test_C15_parsers():
+    assert wd.parse_docker_top(TOP_SAMPLE) == IDLE
+    assert wd.cron_busy_procs(IDLE) == []
+    assert wd.cron_busy_procs(BUSY) == [JOB, "python -m supply_demand.zone_edge"]
+    assert wd.parse_docker_top("PID   COMMAND\n") is None, "NEG: no lines is not idle"
+    assert wd.parse_docker_top("") is None and wd.parse_docker_top(None) is None
+    assert wd.cron_busy_procs(["[python] <defunct>", "/usr/bin/supercronicX x"]) == \
+        ["[python] <defunct>", "/usr/bin/supercronicX x"]
+    assert wd.parse_cron_inspect("2026-10-12T02:13:42.1Z false") == \
+        {"started_at": "2026-10-12T02:13:42.1Z", "running": False, "error": None}
+    for junk in ("", "true", "<no value> true", "2026-10-12T02:13:42Z maybe", "a b c"):
+        assert wd.parse_cron_inspect(junk)["error"] == "unparsed", junk
+
+
+def _cron_kw(tmp_path, obs_fn, *, restart=None, inspect=None, top=None):
+    calls = {"top": 0, "restart": 0, "inspect": 0}
+
+    def top_fn():
+        calls["top"] += 1
+        return top() if top else {"procs": IDLE, "error": None}
+
+    def restart_fn():
+        calls["restart"] += 1
+        if restart:
+            restart()
+
+    def inspect_fn():
+        calls["inspect"] += 1
+        return inspect() if inspect else {"started_at": "2026-10-12T03:00:00.5Z", "running": True,
+                                          "error": None}
+    d = StubDeliver()
+    kw = dict(observe_fn=obs_fn, deliver_fn=d, notify_fn=Rec(), restart_fn=Rec(),
+              state_dir=str(tmp_path), cron_top_fn=top_fn, cron_restart_fn=restart_fn,
+              cron_inspect_fn=inspect_fn,
+              clock_fn=lambda: NOW + 30)       # second 30: clear of the minute edge (C30)
+    return kw, calls, d
+
+
+def test_C16_run_once_resync_success_zeroes_drift_logs_and_pushes_nothing(tmp_path):
+    wd.save_state(str(tmp_path), slept_state(8 * 3600))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None))
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert calls == {"top": 1, "restart": 1, "inspect": 1}
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_sleep_acc_sec"] == 0.0
+    assert st["cron_started_at"] == "2026-10-12T03:00:00.5Z"
+    assert st["cron_last_resync"] == {"ts": NOW + 120, "drift_sec": 28800.0}
+    assert d.calls == [], "no push on success"
+    lines = [json.loads(x) for x in (tmp_path / "watchdog.log").read_text().splitlines()]
+    hit = [x for x in lines if x["msg"] == "cron_resynced"]
+    assert len(hit) == 1 and hit[0]["drift_sec"] == 28800.0 and hit[0]["drift_h"] == 8.0
+    # the next run sees the new container and stays in sync: no second restart
+    kw2, calls2, _ = _cron_kw(tmp_path, lambda c, n: cobs(1240.0, procs=None,
+                                                         started="2026-10-12T03:00:00.5Z"))
+    assert wd.run_once(CFG, NOW + 240, **kw2) == 0
+    assert calls2 == {"top": 0, "restart": 0, "inspect": 0}
+
+
+def test_C17_NEGATIVE_restart_failure_keeps_drift_and_alerts_once(tmp_path):
+    wd.save_state(str(tmp_path), slept_state(3 * 3600))
+
+    def fail():
+        raise RuntimeError("docker restart exit 1: daemon not ready")
+    d = StubDeliver()
+    t, m = NOW, 1000.0
+    for _ in range(4):                                             # every 10 min, 4 failures
+        t, m = t + 600, m + 600
+        kw, calls, _d = _cron_kw(tmp_path, lambda c, n, m=m: cobs(m, procs=None), restart=fail)
+        kw["deliver_fn"] = d
+        wd.run_once(CFG, t, **kw)
+        assert calls["restart"] == 1 and calls["inspect"] == 0
+        st = wd.load_state(str(tmp_path))
+        assert st["cron_sleep_acc_sec"] == 3 * 3600, "drift kept for the next try"
+        assert st["cron_last_resync"] is None
+    assert [c["condition"] for c in d.calls] == ["watchdog_error"], "one alert for 4 failures"
+    assert "Cron re-sync failed" in d.calls[0]["body"]
+    assert (tmp_path / "watchdog.log").read_text().count('"cron resync failed"') == 4
+
+
+def test_C17b_restart_failure_alert_text_and_once_a_day():
+    st = slept_state(3 * 3600)
+    st = wd.record_cron_resync(st, False, 3 * 3600, None, "TimeoutExpired", NOW)
+    st = wd.record_cron_resync(st, False, 3 * 3600, None, "TimeoutExpired", NOW + 600)
+    assert conds(st) == ["watchdog_error"]
+    body = st["pending"][0]["body"]
+    assert "Cron re-sync failed (TimeoutExpired)" in body and "3.0 h late" in body
+    assert "forwarder" not in body
+    assert st["cron_sleep_acc_sec"] == 3 * 3600
+    st = wd.record_cron_resync(st, False, 3 * 3600, None, "x", NOW + 86400)
+    assert conds(st) == ["watchdog_error", "watchdog_error"]
+
+
+def test_C18_NEGATIVE_run_once_never_calls_docker_when_inspect_failed(tmp_path):
+    wd.save_state(str(tmp_path), slept_state(9 * 3600))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, cerr="missing", procs=None))
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert calls == {"top": 0, "restart": 0, "inspect": 0} and d.calls == []
+    kw, calls, _ = _cron_kw(tmp_path, lambda c, n: cobs(1240.0, procs=None),
+                            top=lambda: (_ for _ in ()).throw(OSError("gone")))
+    assert wd.run_once(CFG, NOW + 240, **kw) == 0
+    assert calls["top"] == 1 and calls["restart"] == 0
+    kw, calls, _ = _cron_kw(tmp_path, lambda c, n: cobs(1360.0, procs=None),
+                            top=lambda: {"procs": BUSY, "error": None})
+    assert wd.run_once(CFG, NOW + 360, **kw) == 0
+    assert calls["top"] == 1 and calls["restart"] == 0, "a running job is never interrupted"
+
+
+def test_C19_old_v1_state_json_loads(tmp_path):
+    live = {"alerted_at": None, "alerted_count": None, "battery_fired": [],
+            "crash_notified_at": None,
+            "down": {"alerted": False, "attempts": 0, "checks": 0, "since": None, "variant": None},
+            "error_alerted_at": {}, "growth_alerted_at": None, "last_count": 57,
+            "pending": [], "restarts": [], "run_id": "9696:1791079009",
+            "samples": [[NOW - 600, 55], [NOW, 57]], "services_start": 1791079009.0, "version": 1}
+    (tmp_path / "state.json").write_text(json.dumps(live))
+    st = wd.load_state(str(tmp_path))
+    assert st is not None and st["last_count"] == 57 and st["samples"] == live["samples"]
+    assert st["cron_sleep_acc_sec"] == 0.0 and st["last_mono"] is None
+    assert st["cron_started_at"] is None and st["cron_resyncs"] == []
+    st, a = wd.evaluate(st, cobs(1000.0), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_started_at"] == STARTED
+    bad = dict(live, cron_sleep_acc_sec="lots", last_mono="x", cron_started_at=5,
+               cron_resyncs=["a", NOW], cron_last_resync={"ts": "x"}, cron_busy_since=[1])
+    (tmp_path / "state.json").write_text(json.dumps(bad))
+    st = wd.load_state(str(tmp_path))
+    assert (st["cron_sleep_acc_sec"], st["last_mono"], st["cron_started_at"]) == (0.0, None, None)
+    assert st["cron_resyncs"] == [NOW] and st["cron_last_resync"] is None
+    assert st["cron_busy_since"] is None
+    assert wd.STATE_VERSION == 1
+
+
+def test_C20_restart_argv_is_exact_and_never_a_shell(monkeypatch):
+    seen = []
+
+    def spy(argv, **kw):
+        seen.append((argv, kw))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    monkeypatch.setattr(subprocess, "run", spy)
+    wd.restart_cron()
+    argv, kw = seen[0]
+    assert argv == ["/usr/local/bin/docker", "restart", "-t", "120", "cheetah-market-app-cron-1"]
+    assert kw["timeout"] == 150 and kw["timeout"] > wd.CRON_STOP_GRACE_SEC and "shell" not in kw
+    monkeypatch.setattr(subprocess, "run",
+                        lambda argv, **kw: subprocess.CompletedProcess(argv, 1, "", "no daemon"))
+    with pytest.raises(RuntimeError):
+        wd.restart_cron()
+
+
+def test_C21_dry_run_and_status_show_the_drift(tmp_path, monkeypatch):
+    wd.save_state(str(tmp_path), slept_state(5 * 3600))
+    for name in ("restart_cron", "save_state", "deliver"):
+        monkeypatch.setattr(wd, name, lambda *a, **k: (_ for _ in ()).throw(AssertionError(name)))
+    out = wd.dry_run(CFG, NOW + 120, observe_fn=lambda c, n: cobs(1120.0, procs=None),
+                     state_dir=str(tmp_path), cron_top_fn=lambda: {"procs": IDLE, "error": None})
+    assert resyncs(out["actions"]) == [{"type": "cron_resync", "drift_sec": 18000.0}]
+    assert out["cron"]["sleep_acc_sec"] == 18000.0 and out["cron"]["decision"] == "resync"
+    assert out["cron"]["resync_at_sec"] == wd.CRON_RESYNC_AT_SEC
+    json.dumps(out, default=str)
+    s = wd.status(str(tmp_path))
+    assert s["cron"]["sleep_acc_sec"] == 18000.0 and s["cron"]["started_at"] == STARTED
+    assert set(s["cron"]) == {"started_at", "sleep_acc_sec", "resync_at_sec", "decision",
+                              "busy_since", "busy_alerted", "resyncs_24h", "last_resync"}
+
+
+def test_C22_config_cron_resync_key(tmp_path):
+    (tmp_path / "config.json").write_text(json.dumps({"cron_resync": False}))
+    cfg, notes = wd.load_config(str(tmp_path))
+    assert cfg["cron_resync"] is False and notes == []
+    (tmp_path / "config.json").write_text(json.dumps({"cron_resync": "no"}))
+    cfg, notes = wd.load_config(str(tmp_path))
+    assert cfg["cron_resync"] is True and notes == ["config.json: cron_resync must be true/false; "
+                                                     "kept the default"]
+    assert wd.load_config(str(tmp_path / "none"))[0]["cron_resync"] is True
+
+
+def test_C23_NEGATIVE_obs_without_cron_fields_changes_nothing():
+    st, a = wd.evaluate(slept_state(9 * 3600), obs(), NOW + 120, CFG)
+    assert resyncs(a) == [] and st["cron_sleep_acc_sec"] == 9 * 3600
+    assert (st["last_wall"], st["last_mono"]) == (NOW, 1000.0), "no monotonic -> no baseline move"
+
+
+def test_C24_compose_cron_drift_busy_and_watchdog_error_default():
+    t, b = wd.compose("cron_drift_busy", {"drift": 22.4 * 3600, "waited": 1900, "cmd": JOB})
+    assert "22.4 h" in t and "22.4 h" in b and "32 min" in b and "zone_edge" in b
+    assert len(t) <= wd.TITLE_MAX and len(b) <= wd.BODY_MAX
+    _, b = wd.compose("watchdog_error", {"reason": "x"})
+    assert b == "x. It cannot see the forwarder count until this is fixed (see ops/README.md)."
+
+
+def test_C25_server_accepts_every_watchdog_condition():
+    src = (ROOT / "backend" / "push" / "hooks.py").read_text()
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", None) == "OPS_CONDITIONS":
+            server = {e.value for e in node.value.args[0].elts}
+            break
+    else:
+        raise AssertionError("OPS_CONDITIONS not found")
+    assert server == set(wd.CONDITIONS)
+
+
+def test_C26_cron_constants_are_the_reviewed_values():
+    assert (wd.CRON_RESYNC_AT_SEC, wd.CRON_SLEEP_JITTER_SEC, wd.CRON_BUSY_ALERT_SEC,
+            wd.CRON_RESYNC_MIN_GAP_SEC, wd.CRON_RESYNC_MAX_PER_DAY, wd.CRON_RESTART_TIMEOUT_SEC,
+            wd.CRON_CMD_MAX) == (120, 5, 1800, 600, 12, 150, 80)
+    assert (wd.CRON_STOP_GRACE_SEC, wd.CRON_EDGE_LEAD_SEC, wd.CRON_EDGE_TRAIL_SEC) == (120, 3, 3)
+    assert (wd.DOCKER_CLI, wd.CRON_CONTAINER) == ("/usr/local/bin/docker",
+                                                  "cheetah-market-app-cron-1")
+
+
+# --------------------------------------------------------------------------- verifier 2026-10-11
+# 1 time.monotonic() restarts near 0 in every launchd process on Python 3.9 -> the
+#   boot-relative CLOCK_UPTIME_RAW; 2 `docker restart -t 120` + no restart at a
+#   minute edge; 3 a new StartedAt keeps this interval's sleep; 4 ... and re-arms
+#   the busy alert; 5 null cron_resyncs / cron_logged_at in state.json.
+def _quiet_observe(monkeypatch):
+    def no_run(argv, timeout=20):
+        raise OSError("no subprocess in tests")
+    monkeypatch.setattr(wd, "_run", no_run)
+    monkeypatch.setattr(wd, "read_forwarder", lambda d: {"count": None, "ts": None,
+                                                         "source": None, "error": "missing"})
+    monkeypatch.setattr(wd, "_api_ok", lambda base, opener=None: True)
+    monkeypatch.setattr(wd, "inspect_cron", lambda: {"started_at": STARTED, "running": True,
+                                                     "error": None})
+
+
+def test_C27_observe_reads_clock_uptime_raw_never_monotonic(monkeypatch, tmp_path):
+    _quiet_observe(monkeypatch)
+    monkeypatch.setattr(wd.time, "CLOCK_UPTIME_RAW", 8, raising=False)
+    seen = []
+
+    def gettime(clk):
+        seen.append(clk)
+        return 189_720.5
+    monkeypatch.setattr(wd.time, "clock_gettime", gettime)
+    monkeypatch.setattr(wd.time, "monotonic",
+                        lambda: (_ for _ in ()).throw(AssertionError("time.monotonic used")))
+    o = wd.observe(dict(CFG, state_dir=str(tmp_path)), NOW)
+    assert o["mono"] == 189_720.5 and seen == [8]
+    tree = ast.parse(WD_PATH.read_text())
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.Attribute)
+                and n.attr == "monotonic"], "NEG: no time.monotonic() anywhere"
+
+
+def test_C27b_NEGATIVE_unavailable_uptime_clock_gives_mono_none(monkeypatch, tmp_path):
+    _quiet_observe(monkeypatch)
+    monkeypatch.setattr(wd.time, "CLOCK_UPTIME_RAW", 8, raising=False)
+    monkeypatch.setattr(wd.time, "clock_gettime",
+                        lambda clk: (_ for _ in ()).throw(OSError(22, "EINVAL")))
+    assert wd.uptime_raw() is None
+    assert wd.observe(dict(CFG, state_dir=str(tmp_path)), NOW)["mono"] is None
+    monkeypatch.delattr(wd.time, "CLOCK_UPTIME_RAW", raising=False)      # Linux / old Python
+    monkeypatch.setattr(wd.time, "clock_gettime", lambda clk: 5.0)
+    assert wd.uptime_raw() is None
+
+
+@pytest.mark.parametrize("bad", [None, "x", True])
+def test_C28_NEGATIVE_mono_none_never_accumulates(bad):
+    st = slept_state(100)
+    for i in range(1, 300):                                # 10 h of wall, clock unknown
+        o = cobs(bad, procs=None)
+        assert wd.cron_wants_top(st, o, NOW + i * 120 + 3600, CFG) is False
+        st, a = wd.evaluate(st, cobs(bad), NOW + i * 120 + 3600, CFG)
+        assert resyncs(a) == []
+    assert st["cron_sleep_acc_sec"] == 100.0 and st["cron_last_decision"] == "in_sync"
+
+
+def test_C29_minute_edge_seconds():
+    base = NOW - NOW % 60
+    skip = [s for s in range(60) if wd.cron_minute_edge(base + s + 0.9)]
+    assert skip == [0, 1, 2, 3, 57, 58, 59]
+    assert wd.cron_minute_edge(base + 4) is False and wd.cron_minute_edge(base + 56.99) is False
+
+
+def test_C30_NEGATIVE_minute_edge_defers_the_restart_and_the_next_run_does_it(tmp_path, monkeypatch):
+    assert NOW % 60 == 0
+    wd.save_state(str(tmp_path), slept_state(8 * 3600))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None))
+    kw["clock_fn"] = lambda: NOW + 120 + 58                 # second 58, a stuck clock
+    slept = []
+    monkeypatch.setattr(wd, "_sleep", slept.append)
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert slept == [6.0], "waited in-process for second 4 before deferring"
+    assert calls == {"top": 1, "restart": 0, "inspect": 0}, "no restart at :58"
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_resyncs"] == [], "a deferred try does not count toward gap / cap"
+    assert st["cron_sleep_acc_sec"] == 8 * 3600 and st["cron_last_decision"] == "edge"
+    assert d.calls == []
+    runs = [json.loads(x) for x in (tmp_path / "watchdog.log").read_text().splitlines()
+            if '"run"' in x]
+    assert runs[-1]["cron"] == "edge"
+    kw, calls, _ = _cron_kw(tmp_path, lambda c, n: cobs(1240.0, procs=None))
+    kw["clock_fn"] = lambda: NOW + 240 + 2                  # second 2: still skipped
+    wd.run_once(CFG, NOW + 240, **kw)
+    assert calls["restart"] == 0
+    kw, calls, _ = _cron_kw(tmp_path, lambda c, n: cobs(1360.0, procs=None))
+    kw["clock_fn"] = lambda: NOW + 360 + 4                  # second 4: restart
+    wd.run_once(CFG, NOW + 360, **kw)
+    assert calls["restart"] == 1
+    assert wd.load_state(str(tmp_path))["cron_sleep_acc_sec"] == 0.0
+
+
+def test_C31_deploy_then_8_h_sleep_resyncs_once_when_idle():
+    st, _ = wd.evaluate(None, cobs(1000.0), NOW, CFG)             # old container, in sync
+    new = "2026-10-12T02:13:42.197244003Z"                        # deploy at +60, lid at +90
+    t = NOW + 8 * 3600 + 120
+    st, a = wd.evaluate(st, cobs(1120.0, started=new), t, CFG)    # wall +8 h 2 min, uptime +2 min
+    assert st["cron_started_at"] == new
+    assert st["cron_sleep_acc_sec"] == pytest.approx(8 * 3600)
+    assert [round(r["drift_sec"]) for r in resyncs(a)] == [8 * 3600]
+    hit = [x for x in a if x.get("msg") == "cron container restarted; drift reset"]
+    assert hit and hit[0]["kept_sec"] == 8 * 3600 and hit[0]["dropped_sec"] == 0
+    st = wd.record_cron_resync(st, True, resyncs(a)[0]["drift_sec"], "2026-10-12T10:16:00Z",
+                               None, t)
+    st, a = wd.evaluate(st, cobs(1240.0, started="2026-10-12T10:16:00Z"), t + 120, CFG)
+    assert resyncs(a) == [], "one re-sync, not two"
+
+
+def test_C31b_NEGATIVE_deploy_then_sleep_with_a_job_running_waits():
+    st, _ = wd.evaluate(None, cobs(1000.0), NOW, CFG)
+    st, a = wd.evaluate(st, cobs(1120.0, started="2026-10-12T02:13:42Z", procs=BUSY),
+                        NOW + 8 * 3600 + 120, CFG)
+    assert resyncs(a) == [] and st["cron_last_decision"] == "busy"
+    assert st["cron_sleep_acc_sec"] == pytest.approx(8 * 3600)
+
+
+def test_C32_new_started_at_rearms_the_busy_alert_and_drops_the_pending_one():
+    st = slept_state(3600)
+    st["cron_busy_alerted"] = True
+    st["cron_busy_since"] = NOW - 4000
+    wd._queue(st, "cron_drift_busy", {"drift": 3600, "waited": 1900, "cmd": JOB}, NOW - 100)
+    wd._queue(st, "watchdog_error", {"reason": "other"}, NOW - 100)
+    same, _ = wd.evaluate(copy_state(st), cobs(1120.0, procs=BUSY), NOW + 120, CFG)
+    assert same["cron_busy_alerted"] is True, "NEG: same container keeps the latch"
+    assert conds(same) == ["cron_drift_busy", "watchdog_error"]
+    st, _ = wd.evaluate(st, cobs(1120.0, started="2026-10-12T02:13:42Z", procs=BUSY),
+                        NOW + 120, CFG)
+    assert st["cron_busy_alerted"] is False and conds(st) == ["watchdog_error"]
+    assert st["cron_busy_since"] is None or st["cron_busy_since"] == NOW + 120
+
+
+def copy_state(st):
+    return json.loads(json.dumps(st))
+
+
+@pytest.mark.parametrize("bad", [dict(cron_resyncs=None), dict(cron_logged_at=None),
+                                 dict(cron_resyncs=None, cron_logged_at=None),
+                                 dict(cron_resyncs="x", cron_logged_at=[1]),
+                                 dict(cron_logged_at={"no_top": "x", "paused": NOW})])
+def test_C33_NEGATIVE_null_or_wrong_cron_lists_in_state_json_never_crash(tmp_path, bad):
+    raw = dict(slept_state(9 * 3600), **bad)
+    (tmp_path / "state.json").write_text(json.dumps(raw))
+    st = wd.load_state(str(tmp_path))
+    assert isinstance(st["cron_resyncs"], list) and isinstance(st["cron_logged_at"], dict)
+    assert all(isinstance(v, float) for v in st["cron_logged_at"].values())
+    tops = [lambda: {"procs": None, "error": "top exit 1"},      # no_top -> _log_once
+            lambda: {"procs": IDLE, "error": None}]               # resync -> cron_resyncs
+    for i, top in enumerate(tops, 1):
+        kwr, calls, _ = _cron_kw(tmp_path, lambda c, n, i=i: cobs(1000.0 + i * 120, procs=None),
+                                 top=top)
+        assert wd.run_once(CFG, NOW + i * 120, **kwr) == 0, "exit 3 = crashed"
+        assert calls["top"] == 1
+    assert calls["restart"] == 1
+    assert "unexpected exception" not in (tmp_path / "watchdog.log").read_text()
+
+
+# ── C34: the minute edge waits in-process instead of skipping the run ─────
+# (critic 2026-10-11: launchd keeps each run on ~the same second, so "retry next run"
+#  could skip ~12 runs / ~25 min after a wake.)
+
+def test_C34_edge_wait_seconds():
+    base = NOW - NOW % 60
+    waits = {s: wd.cron_edge_wait(base + s + 0.2) for s in (56, 57, 58, 59, 0, 1, 3, 4, 30)}
+    assert waits == {56: 0.0, 57: 7.0, 58: 6.0, 59: 5.0, 0: 4.0, 1: 3.0, 3: 1.0, 4: 0.0, 30: 0.0}
+    assert max(wd.cron_edge_wait(base + s) for s in range(60)) <= 7.0
+
+
+def test_C34b_edge_wait_then_restart_in_the_same_run(tmp_path, monkeypatch):
+    wd.save_state(str(tmp_path), slept_state(8 * 3600))
+    kw, calls, d = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None))
+    clock = {"t": NOW + 120 + 58}                           # second 58 ...
+    slept = []
+
+    def fake_sleep(sec):
+        slept.append(sec)
+        clock["t"] += sec                                   # ... then second 4
+    monkeypatch.setattr(wd, "_sleep", fake_sleep)
+    kw["clock_fn"] = lambda: clock["t"]
+    assert wd.run_once(CFG, NOW + 120, **kw) == 0
+    assert slept == [6.0] and calls["restart"] == 1
+    st = wd.load_state(str(tmp_path))
+    assert st["cron_sleep_acc_sec"] == 0.0 and st["cron_last_decision"] != "edge"
+
+
+def test_C34c_NEGATIVE_clear_second_never_sleeps(tmp_path, monkeypatch):
+    wd.save_state(str(tmp_path), slept_state(8 * 3600))
+    kw, calls, _ = _cron_kw(tmp_path, lambda c, n: cobs(1120.0, procs=None))
+    slept = []
+    monkeypatch.setattr(wd, "_sleep", slept.append)
+    wd.run_once(CFG, NOW + 120, **kw)                       # helper clock: second 30
+    assert slept == [] and calls["restart"] == 1
+
+
+def test_C35_NEGATIVE_null_error_alerted_at_loads(tmp_path):
+    st = wd.default_state()
+    st["error_alerted_at"] = None
+    (tmp_path / "state.json").write_text(json.dumps(st))
+    got = wd.load_state(str(tmp_path))
+    assert got is not None and got["error_alerted_at"] == {}

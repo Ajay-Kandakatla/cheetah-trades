@@ -25,6 +25,7 @@ Docker's backend dies, so the next one is not found by accident.
 | The api answers | `GET http://127.0.0.1:8000/health` (5 s) | part of `docker_down` / `docker_restored` |
 | Forwarder count | tail of `~/Library/Containers/com.docker.docker/Data/log/host/monitor.log` (and the newest rotated `monitor.log.*`) | `forwarder_high`, `forwarder_growth` |
 | Battery | `/usr/bin/pmset -g batt` | `battery_low` |
+| Cron drift after a sleep | wall clock minus `CLOCK_UPTIME_RAW`; `docker inspect` / `docker top` of `cheetah-market-app-cron-1` | `cron_drift_busy` (and a `docker restart` of the cron container, below) |
 | Its own blind spots | the above failing | `watchdog_error` |
 
 Every alert is a web push of kind `ops_alert` (🩺 Docker / host watch on
@@ -47,6 +48,12 @@ watchdog shows a macOS notification on the first failed try and retries every
 | `RESTART_MIN_GAP_SEC` / `RESTART_MAX_PER_DAY` | 15 min / 3 | guards on `open -a Docker` |
 | `RETRY_SEC` / `PENDING_TTL_SEC` / `PENDING_MAX` | 15 min / 24 h / 20 | the delivery queue |
 | `BATTERY_LEVELS` | 20%, 10% | once each per discharge, re-armed on AC |
+| `CRON_RESYNC_AT_SEC` | 120 | summed sleep since the cron container started that triggers a re-sync |
+| `CRON_SLEEP_JITTER_SEC` | 5 | per-run wall-minus-uptime noise, not counted |
+| `CRON_BUSY_ALERT_SEC` | 30 min | a job keeps cron busy this long → one `cron_drift_busy` |
+| `CRON_RESYNC_MIN_GAP_SEC` / `CRON_RESYNC_MAX_PER_DAY` | 10 min / 12 | guards on `docker restart cheetah-market-app-cron-1` |
+| `CRON_STOP_GRACE_SEC` / `CRON_RESTART_TIMEOUT_SEC` | 120 s / 150 s | `docker restart -t 120` (SIGTERM, SIGKILL only after 120 s) / the CLI call's timeout |
+| `CRON_EDGE_LEAD_SEC` / `CRON_EDGE_TRAIL_SEC` | 3 / 3 | no restart in second 57–59 or 0–3 of a minute (per-minute jobs start at :00) |
 
 Docker down rules:
 
@@ -58,13 +65,80 @@ Docker down rules:
   Docker Desktop; no restart.
 - Back: once `/health` answers again, one `docker_restored` with the minutes down.
 
+## Cron re-sync after a sleep (2026-10-11)
+
+While the Mac sleeps, Docker's VM is paused. supercronic (the cron container)
+waits on Go monotonic timers, which do not move while the VM is paused, so
+**every pending cron job fires late by the total pause** since its timer was
+armed. Measured 2026-10-11: cron up 74.6 h of wall time but 52.2 h of VM time
+(22.4 h paused); the hourly 11:00 job fired at 21:42 and Monday's whole weekday
+schedule (zone_edge, SEPA alerts, the exit engine, the desk report) was due
+~21.5 h late. `docker restart cheetah-market-app-cron-1` re-arms every timer
+from the wall clock.
+
+What the watchdog does, each run:
+
+1. Sleep: it saves `time.time()` and `time.clock_gettime(CLOCK_UPTIME_RAW)`
+   (seconds since boot, not counting sleep). Next run, `slept = wall delta −
+   uptime delta`; more than `CRON_SLEEP_JITTER_SEC` (5 s) is added to
+   `cron_sleep_acc_sec` in `state.json`. Not `time.monotonic()`: on the host's
+   Python 3.9.6 it restarts near 0 in every new process (measured 0.0056 s), and
+   launchd starts a new process every run, so every awake run would count ~120 s
+   as sleep. Measured 2026-10-11: 52.70 h of uptime vs 75.10 h of wall time since
+   boot = the real 22.4 h pause. Uptime or wall going backwards (a reboot, a clock
+   change) only moves the baseline; an unavailable clock counts as 0 sleep.
+2. Identity: `docker inspect` gives the cron container's `State.StartedAt`. A new
+   value (a deploy, a manual or Docker restart) starts the drift over at this
+   interval's sleep (a deploy, then the lid closes: that night still counts),
+   re-arms the busy alert and drops a pending `cron_drift_busy`.
+3. When the drift is at least `CRON_RESYNC_AT_SEC` (120 s): `docker top` must
+   show only `docker-init` and `supercronic`. If a job is running it waits (it
+   never interrupts a job) and, after `CRON_BUSY_ALERT_SEC` (30 min) of waiting,
+   sends ONE `cron_drift_busy` push naming the drift and the running command; it
+   re-arms after a successful re-sync or a new cron `StartedAt`.
+4. Idle: `docker restart -t 120 cheetah-market-app-cron-1` (150 s timeout), never
+   in second 57–59 or 0–3 of a wall-clock minute (read just before the restart;
+   inside that window it waits in-process until second 4, at most 7 s, because
+   launchd keeps each run on about the same second; if the clock still reads the
+   edge it defers to the next run, not counted toward the caps). `-t 120` overrides
+   the container's 1 s stop timeout: Docker sends SIGTERM, tini forwards it to
+   supercronic, which stops scheduling and waits for a running job before it
+   exits (supercronic README: SIGTERM is a graceful shutdown; main.go
+   `wg.Wait()` after the signal; jobs run via `exec.Command` in their own
+   process group, so the job itself gets no signal). At most one
+   per `CRON_RESYNC_MIN_GAP_SEC` (10 min) and `CRON_RESYNC_MAX_PER_DAY` (12) per
+   24 h. Success: drift back to 0, the new `StartedAt` stored, no push (it happens
+   at every wake). Failure: logged, one `watchdog_error` a day, the drift is kept
+   and the next allowed run tries again.
+
+Docker CLI trouble (the container missing or stopped, `docker` failing, an
+unreadable `docker top`): no action, one log line a day per reason, no push.
+
+Turn it off: `"cron_resync": false` in `config.json`, or the `paused` flag file
+(which also stops `open -a Docker`).
+
+Reading the log:
+
+```bash
+grep -E 'cron_resynced|cron resync failed|drift reset' ~/.cheetah/watchdog/watchdog.log | tail -5
+```
+
+- `"msg": "cron_resynced", "drift_sec": 80640.0, "drift_h": 22.4, "started_at": "…"`:
+  the cron container was restarted after 22.4 h of summed sleep.
+- `"msg": "cron container restarted; drift reset"`: someone else restarted it
+  (deploy or by hand); `dropped_sec` is the drift that restart cleared,
+  `kept_sec` the sleep of that same interval, which still counts.
+- every `"msg": "run"` line carries `cron_drift_sec` and `cron` (the decision:
+  `in_sync`, `busy`, `resync`, `edge` (skipped at a minute boundary), `off`,
+  `paused`, `gap`, `cap`, `no_cron`, `not_running`, `no_top`).
+
 ## Files in `~/.cheetah/watchdog/` (mode 700)
 
 | File | What |
 |---|---|
 | `state.json` | counters, samples, the pending queue (written atomically) |
 | `config.json` | optional settings, see below |
-| `paused` | flag file: while it exists the watchdog never restarts Docker (alerts still go out) |
+| `paused` | flag file: while it exists the watchdog never restarts Docker or the cron container (alerts still go out) |
 | `watchdog.log` | JSON lines, rotated to `watchdog.log.1` past 1 MB |
 | `lock` | one run at a time |
 | `launchd.out.log` / `launchd.err.log` | launchd's stdout / stderr |
@@ -80,12 +154,13 @@ Docker down rules:
 | `admin_email` | none | sent as `X-User-Email`; without it no push is attempted |
 | `api_base` | `http://127.0.0.1:8000` | must be `http://127.0.0.1:` or `http://[::1]:`; anything else is refused |
 | `auto_restart` | `true` | `false` = never run `open -a Docker` |
+| `cron_resync` | `true` | `false` = never restart the cron container after a sleep |
 | `docker_log_dir` | Docker's `log/host` dir | where `monitor.log` lives |
 
 Unknown keys are ignored and logged. Use `127.0.0.1`, never `localhost`: after
 the 2026-10-06 port lock the api answers on IPv4 loopback only.
 
-## Pause and unpause auto-restart
+## Pause and unpause auto-restart (Docker and the cron re-sync)
 
 ```bash
 touch ~/.cheetah/watchdog/paused
@@ -109,10 +184,11 @@ rm ~/.cheetah/watchdog/paused
 /usr/bin/python3 /Users/ajay/clinet-test/cheetah-deploy/ops/docker_watchdog.py --status
 ```
 
-- `--dry-run` observes and evaluates and prints `{"obs", "actions"}`. No push,
-  restart, notification or state write.
+- `--dry-run` observes and evaluates and prints `{"obs", "actions", "cron"}`
+  (`cron` = the drift, the decision, re-syncs in 24 h). No push, restart,
+  notification or state write; `docker top` (a read) runs when the drift is due.
 - `--test-push` sends the `test` alert now ("🩺 Ops alert test"); exit 0 when delivered.
-- `--status` prints a state summary.
+- `--status` prints a state summary, with the same `cron` block.
 - `--state-dir PATH` uses another state directory.
 
 ## Exit codes
