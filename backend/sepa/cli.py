@@ -71,7 +71,31 @@ def main() -> int:
     s_research.add_argument("--workers", type=int, default=6)
     s_research.add_argument("--only-if-stale", action="store_true",
                             help="Skip unless the cache is thin or about to "
-                                 "cross the TTL — the nightly catch-up guard")
+                                 "cross the TTL — the nightly catch-up guard. "
+                                 "A skip still resumes an unfinished weekly "
+                                 "moat pass.")
+    s_research.add_argument("--skip-moat-pass", action="store_true",
+                            help="Do not run the sequential moat pass after "
+                                 "the threaded refresh (moats are carried)")
+    s_research.add_argument("--moat-max-minutes", type=float, default=240.0,
+                            help="Time budget for the moat pass; an unfinished "
+                                 "pass resumes on the next run")
+
+    s_moat = sub.add_parser(
+        "moat-backfill",
+        help="Moat-only backfill: sequential yfinance reads with 429 backoff "
+             "and a resumable pass. Touches only the moat fields.",
+    )
+    s_moat.add_argument("--mode", choices=("null", "refresh"), default="null",
+                        help="null = names with no moat (default); refresh = "
+                             "also re-read every moat, oldest first")
+    s_moat.add_argument("--symbols", type=str, default=None)
+    s_moat.add_argument("--restart", action="store_true",
+                        help="Start a new pass instead of resuming")
+    s_moat.add_argument("--interval", type=float, default=None,
+                        help="Seconds between two Yahoo reads (default 1.0)")
+    s_moat.add_argument("--max-minutes", type=float, default=None)
+    s_moat.add_argument("--limit", type=int, default=None)
 
     sub.add_parser("research-status", help="Print research cache freshness")
     sub.add_parser("scan-context",
@@ -252,12 +276,20 @@ def main() -> int:
         return 0
 
     if args.cmd == "research-refresh":
-        from . import research
+        from . import research, moat_backfill
         from .universe import load_universe
+        # Moat reads leave the 6-thread refresh (2026-10-11: ~1,300 Yahoo 429s
+        # blanked 87.7% of moats) for ONE sequential pass afterwards. An ad hoc
+        # --symbols run stays threaded (breaker + carry-forward protect it).
+        moat_pass = not (args.no_canslim or args.skip_moat_pass or args.symbols)
         if getattr(args, "only_if_stale", False):
             run, why = research.needs_refresh()
             if not run:
                 log.info("research-refresh skipped: %s", why)
+                if moat_pass:
+                    moat_backfill.run_default(
+                        mode="refresh", resume_only=True,
+                        max_minutes=args.moat_max_minutes)
                 return 0
             log.info("research-refresh catch-up firing: %s", why)
         syms = args.symbols.split(",") if args.symbols else load_universe(args.mode)
@@ -265,11 +297,28 @@ def main() -> int:
             syms,
             max_workers=args.workers,
             with_canslim=not args.no_canslim,
+            with_moat=not moat_pass,
         )
         log.info("RESEARCH DONE — refreshed=%d failed=%d in %.1fs",
                  len(result["refreshed"]), len(result["failed"]),
                  result["duration_sec"])
+        if moat_pass:
+            moat_backfill.run_default(
+                mode="refresh", symbols=result["refreshed"], restart=True,
+                max_minutes=args.moat_max_minutes)
         return 0
+
+    if args.cmd == "moat-backfill":
+        from . import moat_backfill
+        kw = {"mode": args.mode, "restart": args.restart,
+              "max_minutes": args.max_minutes, "limit": args.limit}
+        if args.symbols:
+            kw["symbols"] = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+        if args.interval is not None:
+            kw["interval_sec"] = args.interval
+        res = moat_backfill.run_default(**kw)
+        log.info("MOAT BACKFILL %s", json.dumps(res))
+        return 0 if res.get("status") in ("done", "budget", "nothing_to_resume") else 2
 
     if args.cmd == "scan-context":
         from . import context_refresh

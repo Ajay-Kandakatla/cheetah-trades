@@ -94,9 +94,10 @@ def find_peers(target_symbol: str, limit: int = DEFAULT_PEER_LIMIT) -> dict:
     target_row = by_symbol.get(target_symbol)
     target_moat = (target_row or {}).get("moat")
     if not target_moat:
+        # live read; a Yahoo 429 falls back to the research blob's moat
         try:
-            from sepa import moat as moat_mod
-            target_moat = moat_mod.compute_moat(target_symbol)
+            from sepa import research as research_mod
+            target_moat = research_mod.moat_live_or_cached(target_symbol)
         except Exception as exc:
             log.debug("fresh moat compute failed for %s: %s", target_symbol, exc)
 

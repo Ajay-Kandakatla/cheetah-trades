@@ -21,6 +21,7 @@ import { PositionSignal } from './PositionSignal';
 import { resolveOwnedEntry } from '../lib/ownedEntry';
 import { PivotMeter } from './PivotMeter';
 import { pivotTiming } from '../lib/pivotTiming';
+import { moatAsOfLine } from '../lib/moatAge';
 // Multi-day volume-trend mini histogram — the accumulation/distribution
 // footprint over the last ~20 sessions. Pairs with the PivotMeter's single-day
 // relvol gauge; shown on every card (volume is Ajay's primary indicator).
@@ -1271,7 +1272,7 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
                 'sepa-flag--muted'
               }`}
               title={
-                row.moat.tier === 0
+                (row.moat.tier === 0
                   ? (`No moat data — yfinance is missing fundamentals (ROE/margins/FCF) for ${row.symbol}. ` +
                      `Common for ADRs, recent IPOs, or stocks with no analyst coverage. ` +
                      `Tap to see what data IS available.`)
@@ -1280,7 +1281,9 @@ export function SepaCandidateCard({ row, soir, whalesFlow, whales13d, livePrice,
                      `${row.moat.narrative}` +
                      (row.moat.is_partial
                        ? `\n\n⚠ Partial data — scored from ${row.moat.data_completeness}/6 underlying metrics. Score may understate true moat.`
-                       : ''))
+                       : ''))) +
+                // when Yahoo was read — a failed read keeps the last good moat
+                (moatAsOfLine(row.moat.as_of) ? `\n\n${moatAsOfLine(row.moat.as_of)}` : '')
               }
               style={{ cursor: 'pointer', opacity: row.moat.tier === 0 ? 0.7 : 1 }}
             >

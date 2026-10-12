@@ -1045,11 +1045,11 @@ def scan_universe(symbols: Optional[List[str]] = None,
                                 rec["score_notes"] = (rec.get("score_notes") or []) + eq_notes
                     except Exception as exc:
                         log.warning("fundamentals failed for %s: %s", rec["symbol"], exc)
-                    # Buffett moat — same yfinance.info call as canslim, so cheap.
+                    # Buffett moat (yfinance .info). A Yahoo 429 falls back to
+                    # the research blob's moat instead of dropping the chip.
                     try:
-                        from sepa import moat as _moat
                         rec["moat"] = await asyncio.to_thread(
-                            _moat.compute_moat, rec["symbol"],
+                            research_mod.moat_live_or_cached, rec["symbol"],
                         )
                     except Exception as exc:
                         log.warning("moat failed for %s: %s", rec["symbol"], exc)
@@ -1299,7 +1299,8 @@ def _hot_recompute(symbol: str, df, rs_map: dict, blob: dict,
     mvp_info, mvp_exhaustion, mvp_read = _mvp_context(df, bc, sells)
     adr_value = blob.get("adr_baseline")
     fundamentals = blob.get("fundamentals")
-    moat = blob.get("moat")
+    # with its read date attached (a carried-forward moat shows its age)
+    moat = research_mod.with_moat_as_of(blob)
 
     score = 0.0
     score += SCORE_WEIGHTS["trend_template"] * (tr.passed / 8.0)

@@ -237,26 +237,130 @@ def decision_snapshot(symbols: list[str],
         return {}
 
 
-def _put_research(symbol: str, payload: dict) -> None:
+def _put_research(symbol: str, payload: dict, *, keep: tuple = ()) -> None:
+    """Upsert the blob. Keys in `keep` are left OUT of the $set, so the stored
+    value survives untouched (the moat carry-forward: a concurrent
+    `moat_backfill` write between our read and this write must win)."""
     coll = _get_cache()
     if coll is None:
         return
     try:
         payload["symbol"] = symbol.upper()
         payload["cached_at"] = int(time.time())
-        coll.update_one({"symbol": symbol.upper()}, {"$set": payload}, upsert=True)
+        doc = {k: v for k, v in payload.items() if k not in keep}
+        coll.update_one({"symbol": symbol.upper()}, {"$set": doc}, upsert=True)
     except Exception as exc:
         log.warning("research cache write failed for %s: %s", symbol, exc)
 
 
 # ---------------------------------------------------------------------------
+# Moat carry-forward (2026-10-11)
+# ---------------------------------------------------------------------------
+# A Yahoo 429 used to come back from compute_moat as None — the same value as
+# "no fundamentals" — and the $set above wrote `moat: null` over last week's
+# good moat: 87.7% of served blobs had none on 2026-10-11. Now:
+#   moat_status  "ok" (scored) | "no_data" (Yahoo answered, empty .info)
+#                | "fetch_failed" (could not read — the old moat is KEPT)
+#   moat_as_of   epoch seconds the stored moat VALUE was read (≠ cached_at)
+#   moat_failed_at  epoch seconds of the last failed read
+MOAT_STATUSES = ("ok", "no_data", "fetch_failed")
+
+
+def _previous_moat(symbol: str) -> dict:
+    """The stored moat fields for `symbol` ({} when no doc / no Mongo)."""
+    coll = _get_cache()
+    if coll is None:
+        return {}
+    try:
+        return coll.find_one(
+            {"symbol": symbol.upper()},
+            {"moat": 1, "moat_as_of": 1, "cached_at": 1}) or {}
+    except Exception as exc:
+        log.warning("research: previous moat read failed for %s: %s", symbol, exc)
+        return {}
+
+
+def _moat_fields(symbol: str, moat: Optional[dict], status: Optional[str],
+                 now: int) -> tuple[dict, tuple]:
+    """(fields for the returned blob, keys to keep OUT of the $set).
+
+    status "ok"/"no_data": a real answer — write it, stamped now (except a
+    0-of-6 read over a moat that had inputs: treated as fetch_failed).
+    status "fetch_failed" / None (not attempted): carry the previous moat in
+    the RETURNED blob but never $set it, so the stored value stays. A legacy
+    moat (stored before moat_as_of existed) gets moat_as_of = the cached_at
+    it was written with, so its age becomes visible instead of resetting.
+    """
+    prev = None
+    if status == "ok" and not (moat or {}).get("data_completeness"):
+        # a 0-of-6 read over a moat that had inputs is a swallowed HTTP
+        # error, not a company that lost its financials (moat.lost_inputs)
+        prev = _previous_moat(symbol)
+        if moat_mod.lost_inputs(moat, prev.get("moat")):
+            status = "fetch_failed"
+    if status in ("ok", "no_data"):
+        as_of = (moat or {}).get("as_of") or now
+        return {"moat": moat, "moat_as_of": as_of, "moat_status": status}, ()
+
+    if prev is None:
+        prev = _previous_moat(symbol)
+    prev_moat = prev.get("moat") if isinstance(prev.get("moat"), dict) else None
+    fields: dict = {"moat": prev_moat, "moat_as_of": prev.get("moat_as_of")}
+    keep = ["moat", "moat_as_of"]
+    if prev_moat is not None and not prev.get("moat_as_of") and prev.get("cached_at"):
+        fields["moat_as_of"] = int(prev["cached_at"])
+        keep.remove("moat_as_of")
+        # the returned copy carries the stamp too; the stored dict is not
+        # touched (a dotted $set fails if a backfill nulled it meanwhile) —
+        # with_moat_as_of() re-attaches it on every read
+        fields["moat"] = {**prev_moat, "as_of": fields["moat_as_of"]}
+    if status == "fetch_failed":
+        fields["moat_status"] = "fetch_failed"
+        fields["moat_failed_at"] = now
+    return fields, tuple(keep)
+
+
+def with_moat_as_of(blob: Optional[dict]) -> Optional[dict]:
+    """The blob's moat with `as_of` filled in when the dict itself lacks it,
+    so every surface that prints a moat can print its age. None when no moat.
+
+    Source of the date: `moat_as_of`; else, on a legacy blob (written before
+    2026-10-11, when every refresh rewrote the moat with the blob), its
+    `cached_at` — new code stamps `moat_as_of` whenever a moat is stored, so
+    a moat without one was written together with that cached_at.
+    """
+    blob = blob or {}
+    moat = blob.get("moat")
+    if not isinstance(moat, dict):
+        return None
+    if moat.get("as_of"):
+        return moat
+    as_of = blob.get("moat_as_of") or blob.get("cached_at")
+    return {**moat, "as_of": int(as_of)} if as_of else moat
+
+
+def moat_live_or_cached(symbol: str) -> Optional[dict]:
+    """A live moat read, or the research blob's moat when Yahoo cannot be
+    read — for the scanner top-20 enrichment and the moat-peers target.
+    None only when Yahoo answered with no data, or nothing is cached."""
+    try:
+        return moat_mod.compute_moat(symbol)
+    except Exception as exc:
+        log.info("moat live read failed for %s (%s) — using cached", symbol, exc)
+    return with_moat_as_of(_previous_moat(symbol))
+
+
+# ---------------------------------------------------------------------------
 # Per-symbol research compute
 # ---------------------------------------------------------------------------
-def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict]:
+def compute_research(symbol: str, *, with_canslim: bool = True,
+                     with_moat: bool = True) -> Optional[dict]:
     """Run all the slow analyses for one symbol and persist to cache.
 
     Returns the full research blob, or None when the symbol has no usable
     price history. Skipped fields stay None so the hot scan can fill them.
+    The moat is the exception: a failed or skipped moat read (`with_moat`
+    False, or `with_canslim` False) KEEPS the stored moat — see `_moat_fields`.
     """
     df = prices.load_prices(symbol)
     if df is None or len(df) < MIN_RESEARCH_BARS:
@@ -272,17 +376,26 @@ def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict
 
     fundamentals = None
     moat = None
+    moat_status: Optional[str] = None      # None = not attempted → carry
     if with_canslim:
         try:
             fundamentals = canslim.fundamentals_for(symbol)
         except Exception as exc:
             log.warning("canslim failed for %s: %s", symbol, exc)
-        # Buffett-style economic moat — uses yfinance .info same as canslim,
-        # so we already paid the network cost. Cheap to add.
+    if with_canslim and with_moat:
+        # Buffett-style economic moat (yfinance .info). Any exception —
+        # a 429, a transport error, or a scoring bug — is "could not read",
+        # never "no moat": the stored moat is carried forward.
         try:
             moat = moat_mod.compute_moat(symbol)
+            moat_status = "ok" if moat else "no_data"
+        except moat_mod.MoatFetchError as exc:
+            moat_status = "fetch_failed"
+            (log.debug if exc.rate_limited else log.warning)(
+                "moat: kept cached value for %s: %s", symbol, exc)
         except Exception as exc:
-            log.warning("moat failed for %s: %s", symbol, exc)
+            moat_status = "fetch_failed"
+            log.warning("moat failed for %s (kept cached value): %s", symbol, exc)
 
     try:
         ipo_info = ipo_age_for(symbol)
@@ -296,14 +409,15 @@ def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict
         "base_count": bc,
         "stage_snapshot": stg,
         "fundamentals": fundamentals,
-        "moat": moat,
         "liquidity": liq,
         "adr_baseline": adr_value,
         "ipo_age": ipo_info,
         "bars_seen": int(len(df)),
         "last_bar_date": df.index[-1].isoformat() if hasattr(df.index[-1], "isoformat") else str(df.index[-1]),
     }
-    _put_research(symbol, payload)
+    moat_fields, keep = _moat_fields(symbol, moat, moat_status, int(time.time()))
+    payload.update(moat_fields)
+    _put_research(symbol, payload, keep=keep)
     return payload
 
 
@@ -311,16 +425,21 @@ def compute_research(symbol: str, *, with_canslim: bool = True) -> Optional[dict
 # Batch refresh — Sunday cron entry point
 # ---------------------------------------------------------------------------
 def refresh_universe(symbols: list[str], *, max_workers: int = 6,
-                     with_canslim: bool = True) -> dict:
+                     with_canslim: bool = True, with_moat: bool = True) -> dict:
     """Refresh research for every symbol in the universe.
 
     Heavy operation — designed for the weekend cron slot. Uses a thread pool
     since each symbol is I/O-bound (provider fetch + Mongo write) plus a small
     CPU slice for VCP detection.
+
+    `with_moat=False` keeps every stored moat (carry-forward) and leaves the
+    Yahoo reads to the sequential `moat_backfill` pass — the CLI does this,
+    because six threads of .info reads drew ~1,300 429s on 2026-10-11.
     """
     t0 = time.time()
     refreshed: list[str] = []
     failed: list[str] = []
+    moat_counts: dict[str, int] = {}
 
     # Warm the company-name cache once up front
     try:
@@ -328,30 +447,36 @@ def refresh_universe(symbols: list[str], *, max_workers: int = 6,
     except Exception as exc:
         log.warning("company_names bulk_warm failed: %s", exc)
 
-    def _one(sym: str) -> tuple[str, bool]:
+    def _one(sym: str) -> tuple[str, bool, Optional[str]]:
         try:
-            res = compute_research(sym, with_canslim=with_canslim)
-            return sym, res is not None
+            res = compute_research(sym, with_canslim=with_canslim,
+                                   with_moat=with_moat)
+            return sym, res is not None, (res or {}).get("moat_status")
         except Exception as exc:
             log.warning("research compute failed for %s: %s", sym, exc)
-            return sym, False
+            return sym, False, None
 
     log.info("research: refreshing %d symbols (workers=%d)", len(symbols), max_workers)
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        for sym, ok in ex.map(_one, symbols):
+        for sym, ok, mst in ex.map(_one, symbols):
             (refreshed if ok else failed).append(sym)
+            if ok:
+                key = mst or "carried"
+                moat_counts[key] = moat_counts.get(key, 0) + 1
             if (len(refreshed) + len(failed)) % 50 == 0:
                 log.info("research: %d/%d done (%.1fs elapsed)",
                          len(refreshed) + len(failed), len(symbols), time.time() - t0)
 
     duration = round(time.time() - t0, 2)
-    log.info("research: DONE — refreshed=%d failed=%d in %ss",
-             len(refreshed), len(failed), duration)
+    log.info("research: DONE — refreshed=%d failed=%d in %ss moat=%s",
+             len(refreshed), len(failed), duration, moat_counts)
     return {
         "refreshed": refreshed,
         "failed": failed,
         "total": len(symbols),
         "duration_sec": duration,
+        # ok / no_data / fetch_failed (moat kept) / carried (not attempted)
+        "moat": moat_counts,
     }
 
 

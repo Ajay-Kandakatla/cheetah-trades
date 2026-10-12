@@ -22,6 +22,10 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // 2026-10-11: the weekly research refresh's Yahoo 429s were written as "no moat". Pacing knobs live in
+  // sepa/moat_backfill.py (transport, not trading thresholds); docs/sepa/moat_carry_forward.md has the census.
+  { id: 'sepa-moat-carry-forward-2026-10-11', addedAt: '2026-10-11', route: '/sepa',
+    label: '🏰 Moat chips stop going blank when Yahoo throttles. On Oct 11 the weekly refresh hit Yahoo\'s rate limit and wrote "no moat" over last week\'s value — 87.7% of researched names (3,424 of 3,906) had no 🏰 chip. A failed read now KEEPS the last good moat, the chip tooltip says when it was read ("Moat data as of Oct 4, 2026 (7d old)"), and moat reads run one at a time with backoff after the refresh instead of six at once. Display only — nothing gates, alerts or buys on the moat.' },
   // Ajay 2026-10-08, asked "Want those ranked?" about the 141 held-out names: "update them please". The per-name
   // revenue-line picks and the hold ledger are massive_fundamentals.REVENUE_LINE_PICKS / REVENUE_LINE_HOLD = HIS-CALL
   // homes — change them there and here.

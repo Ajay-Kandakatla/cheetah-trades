@@ -259,7 +259,9 @@ CandidateRow = {
 contract version):
 
 - `fundamentals` — CANSLIM C+A+I checks (gated behind `with_catalyst=True`)
-- `moat` — Buffett-style economic moat score
+- `moat` — Buffett-style economic moat score. Carries `as_of` (epoch seconds of
+  the Yahoo read) since 2026-10-11: a failed read KEEPS the last good moat, so
+  it can be older than the row (docs/sepa/moat_carry_forward.md)
 - `catalyst` — earnings catalyst summary (book Ch.6 "Categories, Industry
   Groups, and Catalysts," p.95-116). Note: catalyst is a surfaced signal, not a
   scored gate.

@@ -39,19 +39,107 @@ Tier labels (matches Morningstar/Buffett convention):
 Free-tier safe: yfinance only. Returns conservative None values when data
 is missing rather than guessing. Cache 30d in Mongo (fundamentals are
 slow-moving so this is plenty).
+
+Could-not-read is NOT no-moat (2026-10-11). The weekly research refresh hit
+Yahoo 429s on ~1,300 names and this function returned None for every one —
+the same value as "Yahoo has no fundamentals for this company" — so the
+refresh wrote `moat: null` over last week's good value and 87.7% of served
+blobs went blank. A failed READ now raises `MoatFetchError`; only an empty
+`.info` (Yahoo answered, nothing there) returns None. Callers keep the cached
+value on the error (`research.compute_research` carry-forward,
+`research.moat_live_or_cached`), and `moat_backfill` refills the gaps
+sequentially with backoff. See docs/sepa/moat_carry_forward.md.
 """
 from __future__ import annotations
 
 import logging
 import math
+import os
+import threading
+import time
 from typing import Optional
 from . import symbols
 
 log = logging.getLogger("sepa.moat")
 
+# After a Yahoo 429, every compute_moat(breaker=True) in this PROCESS skips
+# Yahoo for this long and raises MoatFetchError(rate_limited=True) at once —
+# hammering a throttled endpoint only extends the throttle. An engineering
+# knob for the transport, not a trading threshold; the sequential backfill
+# (breaker=False) does its own backoff instead.
+RATE_LIMIT_COOLDOWN_SEC = float(os.getenv("MOAT_RATE_LIMIT_COOLDOWN_SEC", "600"))
 
-def compute_moat(symbol: str) -> Optional[dict]:
-    """Return a moat snapshot for `symbol`. None if no usable data.
+_breaker_lock = threading.Lock()
+_breaker_until = 0.0          # time.monotonic() deadline; 0 = closed
+
+
+class MoatFetchError(RuntimeError):
+    """Yahoo could not be READ for `symbol` — 429, transport, or parse.
+
+    Never means "this company has no moat": a caller holding an older moat
+    must keep it. `rate_limited` is True for a 429 (or the cooldown breaker),
+    which a backfill should back off on; anything else is a per-name failure.
+    """
+
+    def __init__(self, symbol: str, cause: object, *, rate_limited: bool = False):
+        self.symbol = symbol
+        self.cause = cause
+        self.rate_limited = rate_limited
+        super().__init__(f"moat fetch failed for {symbol}: {cause}")
+
+
+def _is_rate_limit(exc: BaseException) -> bool:
+    """True for yfinance's YFRateLimitError (raised on HTTP 429 / a
+    'Too Many Requests' crumb) — matched by class name and message so a
+    yfinance upgrade that moves the class keeps working."""
+    if type(exc).__name__ == "YFRateLimitError":
+        return True
+    msg = str(exc)
+    return "Too Many Requests" in msg or "Rate limited" in msg
+
+
+def rate_limit_cooling() -> bool:
+    """True while the 429 breaker is open in this process."""
+    with _breaker_lock:
+        return time.monotonic() < _breaker_until
+
+
+def _trip_breaker() -> None:
+    global _breaker_until
+    with _breaker_lock:
+        _breaker_until = time.monotonic() + RATE_LIMIT_COOLDOWN_SEC
+
+
+def reset_breaker() -> None:
+    """Close the breaker (tests; a fresh backfill run)."""
+    global _breaker_until
+    with _breaker_lock:
+        _breaker_until = 0.0
+
+
+def lost_inputs(new: Optional[dict], prev: Optional[dict]) -> bool:
+    """True when `new` was scored from 0 of the 6 inputs but `prev` had some.
+
+    yfinance swallows a non-429 HTTP error on the fundamentals request
+    (quoteSummary) and still returns the price quote, so `.info` comes back
+    non-empty with no ROE / margins / FCF — a read failure that looks like
+    data. A company does not lose all its financials in a week: such a read
+    never replaces a moat that had inputs (callers treat it as fetch_failed).
+    """
+    if not isinstance(new, dict) or new.get("data_completeness"):
+        return False
+    if not isinstance(prev, dict):
+        return False
+    return bool(prev.get("data_completeness") or (prev.get("tier") or 0) >= 1)
+
+
+def compute_moat(symbol: str, *, breaker: bool = True) -> Optional[dict]:
+    """Return a moat snapshot for `symbol`. None if Yahoo answered with no data.
+
+    Raises `MoatFetchError` when Yahoo could not be read (429, transport,
+    parse) — the caller keeps whatever moat it already has. With `breaker`
+    (default) a 429 opens a process-wide cooldown and calls inside it raise
+    `MoatFetchError(rate_limited=True)` without touching Yahoo.
 
     Output shape:
       {
@@ -67,14 +155,18 @@ def compute_moat(symbol: str) -> Optional[dict]:
         },
         "narrative":  "Plain-English single-line description",
         "data_source": "yfinance",
+        "as_of":      epoch seconds this snapshot was read from Yahoo,
       }
     """
+    if breaker and rate_limit_cooling():
+        raise MoatFetchError(symbol, "Yahoo 429 cooldown", rate_limited=True)
     try:
-        import yfinance as yf
         info = symbols.yf_ticker(symbol).info or {}
     except Exception as exc:
-        log.warning("moat: yfinance failed for %s: %s", symbol, exc)
-        return None
+        rate_limited = _is_rate_limit(exc)
+        if rate_limited:
+            _trip_breaker()
+        raise MoatFetchError(symbol, exc, rate_limited=rate_limited) from exc
 
     # Soft gate — try to score even if regularMarketPrice is missing,
     # since some ADRs/foreign listings have fundamentals but no live
@@ -206,6 +298,9 @@ def compute_moat(symbol: str) -> Optional[dict]:
         "data_source":       "yfinance",
         "data_completeness": data_completeness,   # 0-6: how many metrics had data
         "is_partial":        is_partial,
+        # When Yahoo was read — travels with the dict into scan rows and the
+        # card tooltip, so a carried-forward moat shows its age.
+        "as_of":             int(time.time()),
     }
 
 

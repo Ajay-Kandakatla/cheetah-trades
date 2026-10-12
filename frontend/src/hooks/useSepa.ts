@@ -341,6 +341,9 @@ export type SepaCandidate = {
     narrative: string;
     data_completeness?: number;   // 0-6, how many metrics had data
     is_partial?: boolean;         // true when <4 of 6 metrics had data
+    /** Epoch SECONDS the moat was read from Yahoo. A failed read keeps the
+     *  last good moat (2026-10-11), so this can be older than the card. */
+    as_of?: number | null;
   };
   is_candidate: boolean;
   /** Minervini "Trend Template is a qualifier" (book p.79) — wider tier
