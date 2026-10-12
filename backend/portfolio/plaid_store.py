@@ -308,6 +308,39 @@ def get_cached_holdings(owner_email: str, max_age_sec: int = 3600) -> Optional[d
     }
 
 
+def tickers_from_holdings(resp: dict) -> list[str]:
+    """Distinct tickers in one Plaid holdings response, in holding order. PURE.
+
+    Plaid holdings carry a ``security_id``, never a ticker — the ticker lives on
+    the matching ``securities[]`` row. Reading ``holding["symbol"]`` finds
+    nothing. Cash equivalents (SPAXX, FDRXX: ``is_cash_equivalent`` or type
+    ``cash``) are not positions anyone watches and are skipped. Anything else
+    Plaid tags with a ticker is returned as-is — callers decide what is
+    ticker-shaped (Fidelity's non-listed positions ride as pseudo-symbols such
+    as ``RESTRICTED.STOCK.UNITS``).
+    """
+    sec_by_id = {s.get("security_id"): s for s in (resp or {}).get("securities") or []
+                 if isinstance(s, dict) and s.get("security_id")}
+    out: list[str] = []
+    for h in (resp or {}).get("holdings") or []:
+        sec = sec_by_id.get((h or {}).get("security_id")) or {}
+        if sec.get("is_cash_equivalent") or str(sec.get("type") or "").lower() == "cash":
+            continue
+        sym = str(sec.get("ticker_symbol") or "").upper().strip()
+        if sym and sym not in out:
+            out.append(sym)
+    return out
+
+
+def held_tickers(owner_email: str) -> Optional[list[str]]:
+    """Tickers in the owner's last Plaid holdings picture, whatever its age —
+    the same cache the /portfolio page reads. None when the store is
+    unreachable, so a caller can tell "Plaid down" from "holds nothing"."""
+    if _get_db() is None:
+        return None
+    return tickers_from_holdings(get_cached_holdings(owner_email, max_age_sec=0) or {})
+
+
 # --------------------------------------------------------------------------
 # portfolio_position_meta — user-typed entry / stop / target / notes
 # --------------------------------------------------------------------------

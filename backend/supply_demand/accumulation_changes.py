@@ -31,6 +31,13 @@ Q2 delta is not a comparison, it is a category error.
 So every number here is scoped to one quarter, and a ticker whose funds have not
 yet rolled reports `comparable: false` rather than a confident wrong answer.
 
+WHO GETS ASKED ABOUT (2026-10-11)
+---------------------------------
+The Sunday push covers the house owner's names only: the Plaid -> Fidelity
+holdings (keyed by security_id, joined to securities[] for the ticker) ∪ the
+manual holdings ∪ the /watchlist Mongo list ∪ the SEPA file watchlist, minus
+cash and Fidelity's non-ticker positions. See _alert_symbols.
+
 NOT A SIGNAL
 ------------
 13F is filed up to 45 days after quarter end, so "money moved in" describes a
@@ -40,6 +47,7 @@ for a setup, never a trigger. The engine never reads this.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -518,17 +526,28 @@ def for_symbol(symbol: str, *, snapshot: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # scope + sweep
 # ---------------------------------------------------------------------------
+# A listed US ticker: 1-5 letters, optionally a class suffix (BRK.B, MOG-A).
+# Fidelity's non-listed positions have no 13F and never match: `$`-prefixed in
+# its CSV (`$RESTRICTED.STOCK.UNITS`), dotted pseudo-symbols on the Plaid feed
+# (`RESTRICTED.STOCK.UNITS`, `BTC.LP.IDX.2055.H`).
+_TICKER_SHAPE = re.compile(r"^[A-Z]{1,5}(?:[.-][A-Z]{1,2})?$")
+
+
 def _alert_symbols(email: Optional[str] = None) -> list:
-    """Holdings + watchlist. Deliberately small — see ALERT_SCOPE."""
-    syms: list = []
-    seen = set()
+    """Holdings + watchlist for the house owner. Deliberately small — see
+    ALERT_SCOPE.
 
-    def _add(s):
-        s = (s or "").upper().strip()
-        if s and s not in seen:
-            seen.add(s)
-            syms.append(s)
+    Union of four sources, each read on its own so one being down never empties
+    the rest, with the count per source logged at INFO:
 
+        plaid           the live Plaid -> Fidelity book (portfolio_holdings_cache)
+        manual          the manual holdings store (portfolio_holdings)
+        watchlist       the Mongo watchlist behind /watchlist (household-wide)
+        sepa_watchlist  the SEPA file watchlist
+
+    Until 2026-10-11 only `manual` and `sepa_watchlist` were read — one row
+    (WULX) and an empty file — so the push watched nothing he held.
+    """
     # list_holdings REQUIRES an email — calling it bare raises TypeError, which
     # the except below swallowed into a silent empty scope.
     if not email:
@@ -537,18 +556,54 @@ def _alert_symbols(email: Optional[str] = None) -> list:
             email = HOUSE_OWNER_EMAILS[0] if HOUSE_OWNER_EMAILS else None
         except Exception:
             email = None
-    try:
+    if not email:
+        log.warning("accumulation: no house owner email — holdings sources skipped")
+
+    def _plaid():
+        from portfolio import plaid_store
+        held = plaid_store.held_tickers(email) if email else []
+        if held is None:
+            raise RuntimeError("plaid holdings store unreachable")
+        return held
+
+    def _manual():
         from portfolio import store as pstore
-        for h in (pstore.list_holdings(email) if email else []):
-            _add(h.get("ticker") or h.get("symbol"))
-    except Exception as exc:
-        log.debug("accumulation: portfolio unavailable: %s", exc)
-    try:
+        return [h.get("ticker") or h.get("symbol")
+                for h in (pstore.list_holdings(email) if email else [])]
+
+    def _watchlist():
+        from watchlist import store as wstore
+        return [r.get("ticker") for r in wstore.list_entries() or []]
+
+    def _sepa_watchlist():
         from sepa import scanner
-        for w in scanner.load_watchlist() or []:
-            _add(w.get("symbol"))
-    except Exception as exc:
-        log.debug("accumulation: watchlist unavailable: %s", exc)
+        return [w.get("symbol") for w in scanner.load_watchlist() or []]
+
+    syms: list = []
+    seen = set()
+    counts: dict = {}
+    skipped = 0
+    for name, read in (("plaid", _plaid), ("manual", _manual),
+                       ("watchlist", _watchlist), ("sepa_watchlist", _sepa_watchlist)):
+        try:
+            raw = list(read() or [])
+        except Exception as exc:
+            log.warning("accumulation: %s source unavailable: %s", name, exc)
+            counts[name] = "down"
+            continue
+        n = 0
+        for s in raw:
+            s = str(s or "").upper().strip()
+            if not _TICKER_SHAPE.match(s):
+                skipped += bool(s)
+                continue
+            n += 1
+            if s not in seen:
+                seen.add(s)
+                syms.append(s)
+        counts[name] = n
+    log.info("accumulation: alert scope %d symbol(s) — %s; %d non-ticker skipped",
+             len(syms), " ".join(f"{k}={v}" for k, v in counts.items()), skipped)
     return syms
 
 
