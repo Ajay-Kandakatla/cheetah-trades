@@ -430,3 +430,72 @@ this board refused them off the same filed quarter**. They are held out of
 Bonde's tiers and listed under it.
 
 Full reconciliation: `docs/sepa/data_spine_audit_2026_09_20.md`.
+
+## ✨ Arrivals on the payload — 2026-10-12
+
+Ajay: *"In the eplosive growth there are 7 new one can you gave me special
+emphasis wiht a tag or something in the chart map pages top ..."*, then *"I saw
+an alert for 7 in explosive growth"*.
+
+**The 7 was not a count of arrivals.** `sepa/board_arrival.py` pushes at most
+`growth.alerts.MAX_INDIVIDUAL` singles (4) and folds the rest into ONE digest
+(*"✨ 7 new on 🚀 Explosive Growth"*). 11 names arrived that Sunday
+(`/alerts/status` → `passes["board_arrival:growth"].counts =
+{rows: 11, individual: 4, digest: 7}`). The surfaces therefore show the served
+`arrivals_n`, never a typed number.
+
+**Keys.** `GET /growth/board` and `GET /growth/tags` both add:
+
+| key | type | meaning |
+|---|---|---|
+| `arrivals` | `[{symbol, first_seen, liquid, refused, warnings}]` | names on the board that arrived inside the window, in the board's own row order (sales growth desc, symbol asc) |
+| `arrivals_n` | int | `len(arrivals)` |
+| `new_days` | int | `tracker.NEW_GROWTH_DAYS` (30) |
+| `arrivals_note` | str | the honesty line (below) |
+
+`/growth/board` rows also carry `is_new: bool` and `first_seen: ISO | null`
+(the `sepa/bonde.py` precedent). The `/growth/tags` `tags` map is unchanged —
+the strip rides the fetch every chip-bearing Chart Maps tab already makes.
+
+**One read, one rule.** `growth/arrivals.py` reads the existing `growth_seen`
+ledger through `tracker.arrivals_map()` — ONE projected find, `{SYM:
+first_seen}`, floor `max(tracking_since, now − 30 d)`, STRICT `>` so the first
+cohort is never new. `tracker.newly_found()` is now `set(arrivals_map())`, so
+the push and the payload can never disagree about who is new
+(`test_first_seen.py`'s identity pin still holds). `liquid` and `warnings` are
+the row's own served fields, passed through, never re-derived; `refused` (a ⛔
+warning) moved into `arrivals.refused()` and `/growth/tags` calls it — one
+home. Attached at READ time; only the ledger read sits under try/except, so a
+Mongo hiccup leaves rows unmarked and `arrivals == []`, never a 500 on the
+board or on the chip map. `growth.api` imports the module at top level; the
+import graph `growth.api → growth.arrivals → sepa.board_arrival → growth.alerts`
+is a DAG, pinned by a fresh-interpreter subprocess test in every import order.
+It sorts nothing, filters nothing, gates nothing, pushes nothing (Rule #10).
+
+**The honesty line** is built only from `arrivals.ARRIVALS_MEASURED`, pinned
+field-for-field to cell `G100_ARRIVE` of the 2026-09-21 replay
+(`docs/research/board_growth_2026_09_21.md`,
+`backend/scripts/board_growth_replay.py`) by `tests/test_growth_arrivals.py`,
+plus `NOT_A_RECOMMENDATION["growth"]` — and deliberately NOT
+`board_arrival.NOT_BACKTESTED`, whose "never been measured forward" would sit
+beside "MEASURED 2026-09-21" on the same screen's arrivals (a negative test
+pins its absence). It
+prints BOTH reads: the median lift vs the scored universe (+3.69 / +5.58 /
++8.93 pp at 21 / 63 / 126 sessions — every interval, on both clusterings,
+spans zero) AND the momentum-matched control (median excess +1.37 / −1.10 /
+−6.38 pp; its interval is on the MEAN and symbol-clustered only — no
+date-clustered interval exists for that read). "Negative at N of 3 horizons" is
+computed from the dict. Every number goes through `_sgn()` (real minus, per
+number), never a sentence-wide replace. A re-run that clears zero or flips a
+control sign fails the pins by design, so the wording is revisited.
+
+**`arrivals_n` is not what the push rang** — except by coincidence on the first
+Sunday. The push rings each name ONCE (`board_arrival_state` dedupe) on the
+morning it arrives; `arrivals_n` counts every name inside the 30-day window.
+Next Sunday, 3 new names ring 3 and the strip reads 14; a name that leaves and
+re-arrives inside 30 days is `is_new` but never re-rings. Nothing pins the two
+equal; the surfaces say "in the last N days".
+
+**Manual rebuild.** `POST /growth/refresh` stamps the ledger, then attaches: a
+name screened for the first time by that click is `is_new` immediately — the
+existing ledger rule, unchanged.

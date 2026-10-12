@@ -517,6 +517,9 @@ def test_no_served_module_imports_the_research_artifact():
         # that the "since the report" column and the Bonde steady label quote.
         "backend/tests/test_since_report.py",
         "backend/tests/test_bonde_steady_label.py",
+        # Pins growth/arrivals.py's ARRIVALS_MEASURED (cell G100_ARRIVE, lift
+        # AND momentum control) field-for-field; the served module never reads it.
+        "backend/tests/test_growth_arrivals.py",
         # The frontend contract runner names the artifact only to FORBID it:
         # its two 2026-09-21 blocks fail if since_report.py or bonde.py ever
         # reads the file instead of carrying pinned constants. A guard that

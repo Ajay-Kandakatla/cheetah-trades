@@ -13,6 +13,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from . import alerts as A
+from . import arrivals as _arr
 from . import tracker as T
 
 log = logging.getLogger("growth.api")
@@ -180,6 +181,16 @@ def _payload(doc: dict) -> dict:
         cq = _cq.attach(rows)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("growth: capital_quality attach failed: %s", exc)
+    # ✨ Arrivals (Ajay 2026-10-12, "I saw an alert for 7 in explosive growth"),
+    # attached at READ time from the ONE ledger the push reads. Only the ledger
+    # read sits under try/except: a Mongo hiccup leaves the rows unmarked and
+    # `arrivals == []`, never takes the tab down. `summary()` touches no db.
+    # It sorts nothing, filters nothing and gates nothing (Rule #10).
+    arr = []
+    try:
+        arr = _arr.attach(rows)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: arrivals attach failed: %s", exc)
     # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
     # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
     # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks
@@ -196,6 +207,7 @@ def _payload(doc: dict) -> dict:
         "earnings_fresh_summary": ef or None,
         "since_report_summary": srs,
         "capital_quality_summary": cq,
+        **_arr.summary(arr),
         "built_at": (doc.get("built_at").isoformat()
                      if hasattr(doc.get("built_at"), "isoformat")
                      else doc.get("built_at")),
@@ -250,9 +262,17 @@ async def growth_tags():
             # True when the trading engine will refuse it (sub-$2 or a known
             # sub-$700M cap) — the chip must not make such a name look clean
             # just because its sales are good.
-            "refused": any(str(w).startswith("⛔") for w in (r.get("warnings") or [])),
+            "refused": _arr.refused(r),
         }
-    return JSONResponse(_scrub({"n": len(tags), "tags": tags}))
+    # ✨ Arrivals ride the map every chip-bearing Chart Maps tab already fetches
+    # once per page, so the strip costs no extra request there. Same guard as
+    # `_payload`: a failing ledger read can never take the chip map down.
+    arr = []
+    try:
+        arr = _arr.attach(rows)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: arrivals attach failed: %s", exc)
+    return JSONResponse(_scrub({"n": len(tags), "tags": tags, **_arr.summary(arr)}))
 
 
 @router.get("/growth/at-demand")

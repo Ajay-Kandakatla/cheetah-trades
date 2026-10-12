@@ -13951,3 +13951,12 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
   .mc-row { grid-template-columns: minmax(0, 1fr); }
   .mc-row__moves, .mc-row__tail { grid-column: 1; }
 }
+
+/* ✨ Growth arrivals strip on the Chart Maps top + the 🚀 board's NEW tag and
+   focused row (2026-10-12). Gold = the Bonde NEW palette (.bd-new). */
+.cm-badge-new { color: var(--gold, #c9a227); background: rgba(201,162,39,0.12); border: 1px solid rgba(201,162,39,0.45); }
+.cm-arrivals-strip { margin: 0.25rem 0 0.35rem; }          /* compact: one summary line when closed */
+.cm-arrivals-strip > summary.cm-study-head { padding: 0.15rem 0.4rem; }
+.cm-arrivals { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin: 0.25rem 0; }
+.cm-arrivals > a.cm-badge { text-decoration: none; }
+.cm-row-focus > td { background: rgba(201,162,39,0.10); box-shadow: inset 2px 0 0 var(--gold, #c9a227); }

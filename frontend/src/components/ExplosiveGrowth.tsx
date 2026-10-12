@@ -14,7 +14,8 @@
  *
  * The backend owns every number (growth/tracker.py). Nothing here re-screens.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { balanceRead, passesDebtFilter,
          type DebtTier } from '../lib/balanceRead';
 import { API } from '../lib/apiBase';
@@ -39,6 +40,9 @@ import { metricCells } from '../lib/boardMetrics';
 import { SINCE_REPORT_HEAD, sinceReportCell, sinceReportCoverage,
          type SinceReport, type SinceReportSummary } from '../lib/sinceReport';
 import { CapitalQualityChips, CapitalQualityHidden, CapitalQualityNote } from './CapitalQualityChips';
+import { FOCUS_PARAM, STAGE_LABEL, hiddenArrivals, parseFocus,
+         type GrowthArrival, type HideStage, type StageCode } from '../lib/growthArrivals';
+import { StudyNote } from './StudyNote';
 import { QUALITY_HEAD, componentKeys, componentStats, gradeCell, partitionCapital,
          readOf as capitalReadOf, visibleComponentCounts, visibleCounts,
          type CapitalQuality, type CapitalQualitySummary } from '../lib/capitalQuality';
@@ -100,6 +104,12 @@ export type GrowthRow = {
   // if one is ever rendered it must not look clean.
   period_mismatch?: boolean;
   base_negative?: boolean;
+  /* ✨ Arrivals (Ajay 2026-10-12: "special emphasis wiht a tag ... also in the
+   * explosive growth too"). SERVED by growth/arrivals.py off the one
+   * `growth_seen` ledger — a LIST EVENT, never a signal; it sorts, filters and
+   * gates nothing. The tag renders only when both are present. */
+  is_new?: boolean;
+  first_seen?: string | null;
 };
 export type GrowthIndustry = {
   group: string; n: number;
@@ -146,6 +156,13 @@ export type GrowthPayload = {
      NOT-MEASURED sentence. Served whole — no number and no clause of that
      sentence is composed here. */
   capital_quality_summary?: CapitalQualitySummary | null;
+  /* ✨ The arrivals read, served whole (growth/arrivals.summary): the list in
+   * board order, its count, the window and the measured honesty line. No
+   * number in that line is composed here. */
+  arrivals?: GrowthArrival[];
+  arrivals_n?: number;
+  arrivals_note?: string | null;
+  new_days?: number | null;
   disclaimer?: string;
 };
 
@@ -270,6 +287,43 @@ function demandCell(z?: GrowthZone): { text: string; tone: string; title: string
  * Renders nothing outside Bonde's three published tiers (GrowthChip pattern) —
  * "weak", "declining", "unknown" and null are silence, not a chip.
  */
+export type StagedFilterOpts = {
+  onlyBuyable: boolean; onlyDemand: boolean;
+  sector: string | null; debtTier: DebtTier | null;
+};
+export type StagedFilter = {
+  rows: GrowthRow[];
+  kept: ReadonlyMap<StageCode, ReadonlySet<string>>;
+};
+
+/** The board's four local filters, in the board's own order, each predicate
+ *  MOVED verbatim from the old single `sortedRows` memo (2026-10-12 split).
+ *  `kept` holds an entry ONLY for a stage that is ON — an OFF stage drops
+ *  nothing and must never be blamed for hiding a row. Pure: the input array is
+ *  never mutated, and nothing here sorts. */
+export function stagedFilter(rows: readonly GrowthRow[], o: StagedFilterOpts): StagedFilter {
+  let r = [...rows];
+  const kept = new Map<StageCode, ReadonlySet<string>>();
+  if (o.onlyBuyable) {
+    r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
+    kept.set('refused', new Set(r.map((x) => x.symbol)));
+  }
+  if (o.onlyDemand) {
+    r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
+    kept.set('demand', new Set(r.map((x) => x.symbol)));
+  }
+  if (o.sector) {
+    r = r.filter((x) => (x.sector || '(unmapped)') === o.sector);
+    kept.set('sector', new Set(r.map((x) => x.symbol)));
+  }
+  if (o.debtTier) {
+    const tier = o.debtTier;
+    r = r.filter((x) => passesDebtFilter(x, tier));
+    kept.set('debt', new Set(r.map((x) => x.symbol)));
+  }
+  return { rows: r, kept };
+}
+
 const BONDE_TIERS = new Set(['explosive', 'strong', 'steady']);
 
 export function BondeTierChip({ tier, className = 'cm-badge' }:
@@ -326,6 +380,22 @@ export function ExplosiveGrowth() {
   // growth and you had to hunt for them.
   const [sortKey, setSortKey] = useState<GrowthSortKey>(DEFAULT_SORT);
   const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_DIR);
+  /* ✨ ?focus=SYM (the Chart Maps strip's chip link) — with the 08:08 push's
+   * existing `&symbol=SYM` as the fallback, so that deep link lands on its row
+   * too. `focus` wins when both are present. It highlights and scrolls; it
+   * never sorts, filters or un-hides. */
+  const [params] = useSearchParams();
+  const focus = parseFocus(params.get(FOCUS_PARAM) ?? params.get('symbol'));
+  const scrolledFor = useRef<string | null>(null);
+  useEffect(() => { if (!focus) scrolledFor.current = null; }, [focus]);
+  /** Scroll the focused row into view ONCE per focus value — a re-render, a
+   *  sort or a filter toggle that remounts the row never scrolls again. jsdom
+   *  has no scrollIntoView, hence the optional call. */
+  const focusRef = useCallback((el: HTMLTableRowElement | null) => {
+    if (!el || !focus || scrolledFor.current === focus) return;
+    scrolledFor.current = focus;
+    el.scrollIntoView?.({ block: 'center' });
+  }, [focus]);
 
   /** A new column opens at its interesting end; the live column flips. */
   const clickSort = useCallback((k: GrowthSortKey) => {
@@ -353,17 +423,21 @@ export function ExplosiveGrowth() {
 
   useEffect(() => { void load(false); }, [load]);
 
+  /* The four local filters, staged (2026-10-12): the predicates live in
+   * `stagedFilter` above, and each ON stage reports what it kept so the ✨
+   * hidden line can say which control dropped a new name — never re-typed. */
+  const staged = useMemo(
+    () => stagedFilter(data?.rows ?? [], { onlyBuyable, onlyDemand, sector, debtTier }),
+    [data, onlyBuyable, onlyDemand, sector, debtTier],
+  );
+  // Sort LAST, on the filtered set: every row the screen returned is in this
+  // payload (29 of a 300 cap), so unlike the 🔥 Hottest board this is a
+  // complete ordering and needs no round-trip.
+  // (`r` = the FILTERED rows; contracts.mjs pins `sortRows(r, sortKey, sortDir)`.)
   const sortedRows = useMemo(() => {
-    let r = data?.rows ?? [];
-    if (onlyBuyable) r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
-    if (onlyDemand) r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
-    if (sector) r = r.filter((x) => (x.sector || '(unmapped)') === sector);
-    if (debtTier) r = r.filter((x) => passesDebtFilter(x, debtTier));
-    // Sort LAST, on the filtered set: every row the screen returned is in this
-    // payload (29 of a 300 cap), so unlike the 🔥 Hottest board this is a
-    // complete ordering and needs no round-trip.
+    const r = staged.rows;
     return sortRows(r, sortKey, sortDir);
-  }, [data, onlyBuyable, onlyDemand, sector, debtTier, sortKey, sortDir]);
+  }, [staged.rows, sortKey, sortDir]);
 
   /* 🧨 This board renders its own table and was skipped by the 🚀 growth
    * contract on purpose (it IS the growth list) — the explosive read is a
@@ -417,6 +491,40 @@ export function ExplosiveGrowth() {
     return { free: n('debt-free'), netCash: n('net cash'),
              modest: n('modest'), levered: n('levered'), na: n('n/a') };
   }, [data]);
+
+  /* ✨ "N new hidden by …" — each NEW name the drawn table lacks, blamed on the
+   * FIRST of his controls that dropped it, in the board's own order. Built from
+   * the sets the filters themselves produced (stagedFilter.kept, the enterable
+   * partition, the quality partition); no predicate is re-typed. Only stages
+   * that are ON appear, so an OFF control is never blamed. */
+  const stages: HideStage[] = [...staged.kept].map(([code, kept]) => (
+    { code, label: STAGE_LABEL[code], kept }));
+  if (enterableOnly && kind !== 'n/a') {
+    stages.push({ code: 'enterable', label: STAGE_LABEL.enterable,
+                  kept: new Set(part.rows.map((r) => r.symbol)) });
+  }
+  if (quality.size > 0) {
+    stages.push({ code: 'quality', label: STAGE_LABEL.quality,
+                  kept: new Set(qpart.rows.map((r) => r.symbol)) });
+  }
+  const newSymbols = (data?.rows ?? [])
+    .filter((r) => r.is_new === true && r.first_seen).map((r) => r.symbol);
+  const hid = hiddenArrivals(newSymbols, stages);
+  const hidByCode: { code: StageCode; label: string; n: number }[] = [];
+  for (const h of hid) {
+    const e = hidByCode.find((x) => x.code === h.code);
+    if (e) e.n += 1; else hidByCode.push({ code: h.code, label: h.label, n: 1 });
+  }
+  const clearStage = (code: StageCode) => {
+    if (code === 'refused') setOnlyBuyable(false);
+    else if (code === 'demand') setOnlyDemand(false);
+    else if (code === 'sector') setSector(null);
+    else if (code === 'debt') setDebtTier(null);
+    else if (code === 'enterable') setEnterableOnly(false);
+    else if (code === 'quality') clearQuality();
+  };
+  const focusMiss = !!focus && !(data?.rows ?? []).some((r) => r.symbol === focus);
+  const arrivalsN = typeof data?.arrivals_n === 'number' ? data.arrivals_n : 0;
 
   if (loading) return <div className="eg-note">loading the growth board…</div>;
   if (err) return <div className="eg-note eg-err">⛔ {err}</div>;
@@ -483,6 +591,15 @@ export function ExplosiveGrowth() {
         the broker. {data?.disclaimer}
         {data?.built_at && <> Built {String(data.built_at).slice(0, 16).replace('T', ' ')} UTC.</>}
       </div>
+
+      {/* ✨ Arrivals (Ajay 2026-10-12). FOLDED: the headline carries only the
+          served count and window; the served measured note sits under the
+          fold verbatim. Nothing when nothing arrived. */}
+      {arrivalsN > 0 && (
+        <StudyNote id="growth-arrivals-board" testId="growth-arrivals-line"
+                   headline={`✨ ${arrivalsN} arrived in the last ${data?.new_days} days`}
+                   body={data?.arrivals_note ?? null} />
+      )}
 
       {/* 📣 "Just reported" (Ajay 2026-09-17). THIS BOARD'S OWN honesty line —
           it never borrows, and is never borrowed by, another board's measured
@@ -624,6 +741,29 @@ export function ExplosiveGrowth() {
                      onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
+      {/* ✨ The new names his own controls are hiding, and which control —
+          each reason is its one-click un-hide. The verdicts never move. */}
+      {hid.length > 0 && (
+        <div className="cm-hidden-count" data-testid="growth-new-hidden">
+          ✨ {hid.length} new hidden (
+          {hidByCode.map((h, i) => (
+            <span key={h.code}>
+              {i > 0 ? ' · ' : ''}
+              <button type="button" className="cm-hidden-reason" data-reason={h.code}
+                      onClick={() => clearStage(h.code)}>
+                {h.n} {h.label}
+              </button>
+            </span>
+          ))}
+          )
+          {focus && hid.some((h) => h.symbol === focus) ? ` · ${focus} is one of them` : ''}
+        </div>
+      )}
+      {focusMiss && (
+        <div className="cm-hidden-count" data-testid="growth-focus-miss">
+          ✨ {focus} is not on this board today.
+        </div>
+      )}
       {/* 💎 What the quality chips took away — drawn the whole time one is on,
           even at zero hidden, and it always prints how many rows are SHOWING
           so an empty table is a stated count and never a blank board. Each
@@ -759,9 +899,19 @@ export function ExplosiveGrowth() {
               const warns = [...(r.warnings ?? []), ...legFlags(r)];
               const per = periodCell(r);
               return (
-                <tr key={r.symbol}>
+                <tr key={r.symbol} data-testid={`growth-row-${r.symbol}`}
+                    className={r.symbol === focus ? 'cm-row-focus' : undefined}
+                    ref={r.symbol === focus ? focusRef : undefined}>
                   <td>
                     <TickerLink ticker={r.symbol} fromLabel="Explosive Growth" />
+                    {/* ✨ the arrival tag — a LIST EVENT, not an entry. Only
+                        when the ledger served both the flag and the date. */}
+                    {r.is_new === true && typeof r.first_seen === 'string' && r.first_seen ? (
+                      <span className="cm-badge cm-badge-new" data-testid={`growth-new-${r.symbol}`}
+                            title={`First appeared on this board ${r.first_seen.slice(0, 10)} — an arrival on a list, not an entry`}>
+                        ✨ NEW · {r.first_seen.slice(5, 10)}
+                      </span>
+                    ) : null}
                     {/* 🎪 the promo-circuit origin label. This board is
                         where a curated promo add is least obvious, so the row
                         says where the name came from. Renders nothing for a

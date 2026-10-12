@@ -536,29 +536,40 @@ def _record_seen(rows: list, db=None) -> None:
         log.warning("growth.tracker: first-seen write failed: %s", exc)
 
 
-def newly_found(days: int = NEW_GROWTH_DAYS, db=None) -> set:
-    """Symbols that ARRIVED on the board within `days`.
+def arrivals_map(days: int = NEW_GROWTH_DAYS, db=None) -> dict:
+    """{SYM: first_seen ISO} for names that ARRIVED on the board within `days`.
 
-    A name present at the very first build is NOT new — it is merely the first
-    thing we ever saw, which is a different statement. Returns an empty set
-    until tracking has actually observed an arrival."""
+    ONE projected find over the ledger (the meta find_one + one find), so the
+    payload's ✨ arrivals and `newly_found` can never disagree — they are the
+    same read. Floor = max(tracking_since, now - days), STRICT `>`: a name
+    present at the very first build is NOT new — it is merely the first thing
+    we ever saw, which is a different statement. {} without a db, {} until
+    tracking has actually observed an arrival, {} on any error."""
     db = db if db is not None else _db()
     if db is None:
-        return set()
+        return {}
     try:
         coll = db[SEEN_COLL]
         meta = coll.find_one({"_id": "__meta__"}) or {}
         since = meta.get("tracking_since")
         if not since:
-            return set()
+            return {}
         cut = (datetime.now(timezone.utc) - timedelta(days=int(days))).isoformat()
         floor = max(str(since), cut)
-        return {str(d["_id"]).upper()
+        return {str(d["_id"]).upper(): d.get("first_seen")
                 for d in coll.find({"_id": {"$ne": "__meta__"},
-                                    "first_seen": {"$gt": floor}}, {"_id": 1})}
+                                    "first_seen": {"$gt": floor}},
+                                   {"_id": 1, "first_seen": 1})
+                if d.get("first_seen")}
     except Exception as exc:                                   # noqa: BLE001
         log.warning("growth.tracker: newly-found read failed: %s", exc)
-        return set()
+        return {}
+
+
+def newly_found(days: int = NEW_GROWTH_DAYS, db=None) -> set:
+    """Symbols that ARRIVED on the board within `days` — the keys of
+    `arrivals_map` (one read, one rule)."""
+    return set(arrivals_map(days=days, db=db))
 
 
 def build(limit: int = MAX_ROWS) -> dict:

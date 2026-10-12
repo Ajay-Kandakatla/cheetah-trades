@@ -22,6 +22,12 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-12: "In the eplosive growth there are 7 new one can you gave me special emphasis wiht a tag or
+  // something in the chart map pages top and then a link to the repective tabs with new ticker and also in the
+  // explosive growth too" + "I saw an alert for 7 in explosive growth". The 30-day window is
+  // growth.tracker.NEW_GROWTH_DAYS (HIS CALL — it also sets what the push counts as new).
+  { id: 'chart-maps-growth-arrivals-2026-10-12', addedAt: '2026-10-12', route: '/chart-maps?tab=growth',
+    label: '✨ New names on 🚀 Explosive Growth, flagged everywhere. You said: “In the eplosive growth there are 7 new one can you gave me special emphasis wiht a tag or something in the chart map pages top and then a link to the repective tabs with new ticker and also in the explosive growth too.” The top of every Chart Maps tab now has one folded line “✨ N new on 🚀 Explosive Growth (last 30 days)” — open it for a chip per new name; a chip opens the 🚀 board scrolled to that row, highlighted. On the board each new row carries a ✨ NEW · date pill, and if a filter you have on hides a new name, a line says how many and gives a one-click un-hide per filter. The 7 you got was the push: it rings a few names one by one, then folds the rest into one digest — the strip counts every name on the board that arrived in the window. The measured read from the 2026-09-21 replay is printed under the line: arrivals lean ahead of the scored universe but every interval spans zero — a list event, not a signal. Display only: sorts, filters, gates and pushes nothing.' },
   // 2026-10-11: the weekly research refresh's Yahoo 429s were written as "no moat". Pacing knobs live in
   // sepa/moat_backfill.py (transport, not trading thresholds); docs/sepa/moat_carry_forward.md has the census.
   { id: 'sepa-moat-carry-forward-2026-10-11', addedAt: '2026-10-11', route: '/sepa',

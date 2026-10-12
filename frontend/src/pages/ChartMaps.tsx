@@ -65,6 +65,7 @@ import { SupportLevels } from '../components/SupportLevels';
 import { SignalLabBoard } from '../components/SignalLabBoard';
 import { HottestSectors } from '../components/HottestSectors';
 import { ExplosiveGrowth } from '../components/ExplosiveGrowth';
+import GrowthArrivalsStrip from '../components/GrowthArrivalsStrip';
 import GntBoard from '../components/GntBoard';
 import BondeBoard from '../components/BondeBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
@@ -977,6 +978,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * board is read against the same rotation backdrop (Ajay 2026-08-31:
         * "make sure this scan you did today to be on top of the chart maps"). */}
       <HotSectors />
+
+      {/* ✨ Names that arrived on 🚀 Explosive Growth (Ajay 2026-10-12: "special
+        * emphasis wiht a tag or something in the chart map pages top"). One
+        * folded line; renders nothing when nothing arrived. */}
+      <GrowthArrivalsStrip />
 
       {/* Each tab is a real LINK (Ajay 2026-09-24: "add Command clicks to the
         * Tabs in chart maps so I can open new tabs.. Of that specific
