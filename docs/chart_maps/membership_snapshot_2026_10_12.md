@@ -123,12 +123,18 @@ class) **0.25 ms / 0.46 ms**; `find_one` over `growth_board` **0.27 ms /
 0.41 ms**; the projected find over `chart_maps_membership` (absent before
 deploy) 0.12 ms / 0.54 ms. The added read is sub-millisecond.
 
-Write: NOT measured pre-deploy (probes never write to Mongo). After deploy the
-main session reads the debug line `membership: wrote <tab> n=<n> in <X> ms` on
-the first default page load and records X here: _pending_.
+Write: NOT captured. The api logs at INFO and `membership: wrote <tab> n=<n>
+in <X> ms` is a DEBUG line, so the first default page loads after the
+2026-10-13 deploy (3225bc3f) left no number; probes never write to Mongo, so
+it was not measured by hand either. What IS known: the upsert is one document
+of ≤160 symbols per build, and the tab wall times after deploy (zones 0.13 s,
+gabbar 1.2 s, amd 9.9 s, undervalue 38 s, ipo 10.7 s — the builds themselves)
+are unchanged in kind from before it.
 
-`/growth/tags` wall time before / after (curl `-w %{time_total}`, 5 runs each,
-also measures the `to_thread` move): _pending, post-deploy_.
+`/growth/tags` wall time after deploy (curl `-w %{time_total}`, 5 runs, loopback,
+2026-10-13 ~05:45 CT): **2.9 / 3.2 / 2.9 / 2.9 / 2.9 ms** — the served payload is
+the cached board, so this is the `to_thread` round-trip plus the ledger and
+membership reads; a before-number was not taken.
 
 ## What it is not
 
