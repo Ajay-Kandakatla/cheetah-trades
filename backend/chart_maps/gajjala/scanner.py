@@ -152,9 +152,10 @@ def scan_rows(rows: dict, now, session, *, types: Optional[dict] = None) -> dict
                     qualifiers.append(r)
         if in_ah and band:
             # K9 carry + K10 prefilter: EVERY row of the snapshot, not only qualifiers (spec C4)
-            # reg_close = `day.c`, read as the 16:00 close. UNVERIFIED in after-hours (step 0's AH probe not yet
-            # run): if Massive's day.c follows the after-hours prints, every move reads ~0 and both lists stay empty
-            # silently — `ah_close_eq_last` / `ah_rows` makes that visible in the funnel.
+            # reg_close = `day.c` = the regular-session close. MEASURED 2026-10-13 17:07 ET (step 0, after-hours
+            # probe + the 16:01–17:06 pass funnels, docs/gajjala/data_plan_2026_10_13.md): Massive freezes the day
+            # bar at the close (AAPL day.c 341.27 vs after-hours last 340.63; day.h/l = the RTH 1-min extremes) while
+            # lastTrade keeps printing — `ah_close_eq_last` / `ah_rows` stay in the funnel as the tripwire.
             reg_close = r["day_c"]
             if reg_close and reg_close > 0:
                 counts["ah_rows"] += 1
