@@ -18,14 +18,22 @@ especially LUDP. A LUDP halt means the stock moved >5% in <5 minutes — that's
 the parabolic phase signature.
 
 Cached 60 seconds during market hours.
+
+"Today" is the ET date (2026-10-13). It was the UTC date, so from 20:00 EDT /
+19:00 EST every one of the session's halts vanished (the feed stamps HaltDate
+on the ET clock). `get_halts_for_date(d)` reads one PAST session from the same
+feed (`&haltdate=MMDDYYYY`, measured 2026-10-13: 10/09 → 72 items, every one
+dated 10/09) — the Gajjala's tab backfills its 30-session halt history with it. A dated read
+whose items are not ALL dated that session (or that has none) is a failed read ({}), never "no halts".
 """
 from __future__ import annotations
 
 import logging
 import re
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -35,6 +43,8 @@ _CACHE_TTL_SEC = 60
 _cache: dict = {"data": None, "ts": 0.0}
 
 _HALT_FEED_URL = "https://www.nasdaqtrader.com/rss.aspx?feed=tradehalts"
+_HEADERS = {"User-Agent": "Mozilla/5.0 cheetah-frenzy-radar"}
+_ET = ZoneInfo("America/New_York")
 
 # Reasons that signal a parabolic move in progress (vs e.g. corporate action)
 PARABOLIC_REASONS = {"LUDP", "T1", "T6"}
@@ -71,35 +81,17 @@ def _parse_halts_xml(xml: str) -> list[dict]:
     return halts
 
 
-def get_today_halts(force: bool = False) -> dict:
-    """Return today's halts, grouped by ticker."""
-    now = time.time()
-    if not force and _cache["data"] is not None and (now - _cache["ts"]) < _CACHE_TTL_SEC:
-        out = dict(_cache["data"])
-        out["cached"] = True
-        out["cache_age_sec"] = round(now - _cache["ts"])
-        return out
+def _now_et() -> datetime:
+    """The ET wall clock — the clock NASDAQ stamps HaltDate with."""
+    return datetime.now(_ET)
 
-    raw_halts: list[dict] = []
-    try:
-        r = requests.get(
-            _HALT_FEED_URL,
-            headers={"User-Agent": "Mozilla/5.0 cheetah-frenzy-radar"},
-            timeout=8,
-        )
-        if r.status_code == 200:
-            raw_halts = _parse_halts_xml(r.text)
-    except Exception as exc:
-        log.warning("halts feed fetch failed: %s", exc)
 
-    # Group by ticker, count halts per ticker today
-    today_iso = datetime.now(timezone.utc).date().isoformat()
-    today_short = datetime.now(timezone.utc).strftime("%m/%d/%Y")
-
+def _group_by_ticker(raw_halts: list[dict], day: date) -> dict:
+    """{ticker: {ticker, name, halts[], n_halts, n_parabolic_halts, reasons[]}} for the halts dated `day`."""
+    day_short = day.strftime("%m/%d/%Y")                # NASDAQ uses MM/DD/YYYY format
     by_ticker: dict[str, dict] = {}
     for h in raw_halts:
-        # NASDAQ uses MM/DD/YYYY format
-        if h.get("halt_date") != today_short:
+        if h.get("halt_date") != day_short:
             continue
         t = h["ticker"]
         if t not in by_ticker:
@@ -126,12 +118,40 @@ def get_today_halts(force: bool = False) -> dict:
     # Convert sets to lists for JSON
     for v in by_ticker.values():
         v["reasons"] = sorted(v["reasons"])
+    return by_ticker
+
+
+def get_today_halts(force: bool = False) -> dict:
+    """Return today's (ET) halts, grouped by ticker."""
+    now = time.time()
+    if not force and _cache["data"] is not None and (now - _cache["ts"]) < _CACHE_TTL_SEC:
+        out = dict(_cache["data"])
+        out["cached"] = True
+        out["cache_age_sec"] = round(now - _cache["ts"])
+        return out
+
+    raw_halts: list[dict] = []
+    try:
+        r = requests.get(
+            _HALT_FEED_URL,
+            headers=_HEADERS,
+            timeout=8,
+        )
+        if r.status_code == 200:
+            raw_halts = _parse_halts_xml(r.text)
+    except Exception as exc:
+        log.warning("halts feed fetch failed: %s", exc)
+
+    # Group by ticker, count halts per ticker today — the ET date (was UTC: empty after 20:00 EDT / 19:00 EST)
+    today = _now_et().date()
+    by_ticker = _group_by_ticker(raw_halts, today)
 
     payload = {
         "as_of": datetime.now(timezone.utc).isoformat(),
-        "session_date": today_iso,
+        "session_date": today.isoformat(),
         "by_ticker": by_ticker,
         "n_total": len(by_ticker),
+        "n_halts": sum(v["n_halts"] for v in by_ticker.values()),
         "n_with_parabolic": sum(1 for v in by_ticker.values() if v["n_parabolic_halts"] > 0),
         "cached": False,
         "cache_age_sec": 0,
@@ -141,10 +161,42 @@ def get_today_halts(force: bool = False) -> dict:
     return payload
 
 
+def get_halts_for_date(d: date) -> dict:
+    """One past session's halts, grouped by ticker — the same feed with `&haltdate=MMDDYYYY`, the same parser,
+    filtered to `d`. NOT cached (a nightly backfill reads each date once). {} (never a raise) = the read FAILED:
+    a non-200, a transport error, an empty body, or ANY item dated another day (2026-10-13 review: a 200 carrying
+    only 10/09's items, asked as 10/08, used to come back as "no halts on 10/08" and was marked read for good — a
+    feed that ignores `&haltdate` or a truncated body must never pass for a halt-free session)."""
+    url = _HALT_FEED_URL + "&haltdate=" + d.strftime("%m%d%Y")
+    try:
+        r = requests.get(url, headers=_HEADERS, timeout=8)
+    except Exception as exc:
+        log.warning("halts feed fetch failed for %s: %s", d, exc)
+        return {}
+    if r.status_code != 200:
+        log.warning("halts feed for %s -> HTTP %s", d, r.status_code)
+        return {}
+    raw = _parse_halts_xml(r.text)
+    day_short = d.strftime("%m/%d/%Y")
+    if not raw or any(h.get("halt_date") != day_short for h in raw):
+        log.warning("halts feed for %s: %d items, not all dated %s — treated as a failed read",
+                    d, len(raw), day_short)
+        return {}
+    by_ticker = _group_by_ticker(raw, d)
+    return {
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "session_date": d.isoformat(),
+        "by_ticker": by_ticker,
+        "n_total": len(by_ticker),
+        "n_halts": sum(v["n_halts"] for v in by_ticker.values()),
+        "n_with_parabolic": sum(1 for v in by_ticker.values() if v["n_parabolic_halts"] > 0),
+    }
+
+
 def get_ticker_halts(ticker: str) -> Optional[dict]:
     """Get halt summary for one ticker today."""
     h = get_today_halts()
     return h["by_ticker"].get(ticker.upper())
 
 
-__all__ = ["get_today_halts", "get_ticker_halts", "PARABOLIC_REASONS"]
+__all__ = ["get_today_halts", "get_ticker_halts", "get_halts_for_date", "PARABOLIC_REASONS"]

@@ -334,3 +334,42 @@ def test_this_change_did_not_touch_the_floor_or_its_fail_closed_comparison():
             "NAN": float("nan")}
     out = ZS.big_cap_universe(["BIG", "EDGE", "SMALL", "UNK", "BAD", "NAN", "GONE"], caps)
     assert out == ["BIG", "EDGE"]
+
+
+# ── a Yahoo 429 is a marker, never a 7-day tombstone (2026-10-13) ───────────
+def test_NEGATIVE_a_429_writes_only_the_rl_marker_never_as_of_or_nulls():
+    """DECISIONS R1-11: one throttled second must not blank a float for a week.
+    The warm's write is ONLY `rl_until` — no `as_of`, no share fields."""
+    from sepa import volume_movers as VM
+    coll = FakeColl([])
+    res = CW.warm(["RLX"], coll=coll, loader=_loader(10.0),
+                  status_fetcher=lambda s: (None, "rate_limited"), pause_sec=0)
+    assert res["failed"] == 1 and res["no_data"] == 0
+    doc = coll.docs["RLX"]
+    assert set(doc) == {"_id", "rl_until"}, doc
+    assert doc["rl_until"] > 0
+    assert "as_of" not in doc and "float_shares" not in doc
+    assert VM._rl_marker_sec() > 0
+
+
+def test_a_no_data_answer_still_writes_the_7_day_tombstone():
+    """The unchanged half: Yahoo had nothing (not a 429) → the null row + as_of."""
+    coll = FakeColl([])
+    res = CW.warm(["ETFX"], coll=coll, loader=_loader(10.0),
+                  status_fetcher=lambda s: (None, "no_data"), pause_sec=0)
+    assert res["no_data"] == 1
+    doc = coll.docs["ETFX"]
+    assert doc["as_of"] > 0 and doc["float_shares"] is None
+
+
+def test_the_default_warm_reads_the_status_fetch_not_the_bare_values(monkeypatch):
+    from sepa import volume_movers as VM
+    calls = []
+
+    def status(sym):
+        calls.append(sym)
+        return None, "rate_limited"
+    monkeypatch.setattr(VM, "_fetch_shares_status", status)
+    coll = FakeColl([])
+    CW.warm(["DEF"], coll=coll, loader=_loader(10.0), pause_sec=0)
+    assert calls == ["DEF"] and "as_of" not in coll.docs["DEF"]

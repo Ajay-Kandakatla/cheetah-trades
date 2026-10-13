@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 from massive_keys import stocks_key
+import threading
 import time
 from datetime import datetime, date, timedelta, time as dtime
 from typing import Optional
@@ -46,6 +47,26 @@ _FETCH_TIMEOUT_SEC = 6          # was 20 — fail fast; Massive answers in <1s w
 def _cb_is_open(now: float) -> bool:
     """True while the breaker is tripped — skip the network call entirely."""
     return now < _CB["open_until"]
+
+
+# Did THIS thread's last `_fetch_massive_minute` fail at the provider (no key, breaker open, raised, the 429 cap,
+# non-200)? A None from the loader otherwise reads the same as "no bars that day" (2026-10-13: the Gajjala bar
+# pass counted throttled names as "no bar today"). Thread-local, so a worker pool never reads a neighbour's call.
+_LAST_FETCH = threading.local()
+
+
+def last_fetch_failed() -> bool:
+    """True when this thread's most recent minute fetch gave up on the provider (not an empty 200)."""
+    return bool(getattr(_LAST_FETCH, "failed", False))
+
+
+def clear_fetch_failed() -> None:
+    _LAST_FETCH.failed = False
+
+
+def _provider_failed():
+    _LAST_FETCH.failed = True
+    return None
 
 
 def _cb_record(ok: bool, now: float) -> None:
@@ -89,18 +110,20 @@ def _classify_session(ts_utc: pd.Timestamp) -> str:
 def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Optional[pd.DataFrame]:
     """Fetch 1-minute bars from Massive for a date range, inclusive."""
     import requests
+    _LAST_FETCH.failed = False
     key = stocks_key()
     if not key:
         log.error("MASSIVE_API_KEY missing — cannot fetch intraday bars")
-        return None
+        return _provider_failed()
     if _cb_is_open(time.time()):
         log.debug("massive intraday: circuit open, skipping fetch for %s", symbol)
-        return None
+        return _provider_failed()
     url = f"{BASE_URL}/v2/aggs/ticker/{symbol.upper()}/range/1/minute/{from_date}/{to_date}"
     rows = []
     next_url = url
     next_params = {"adjusted": "true", "sort": "asc", "limit": 50000, "apiKey": key}
     page = 0
+    n_429 = 0                       # consecutive 429s on the current page
     while next_url:
         try:
             r = requests.get(next_url, params=next_params, timeout=_FETCH_TIMEOUT_SEC)
@@ -108,14 +131,25 @@ def _fetch_massive_minute(symbol: str, from_date: date, to_date: date) -> Option
             from sepa.prices import _scrub_key
             log.warning("massive intraday fetch failed for %s: %s", symbol, _scrub_key(exc))
             _cb_record(False, time.time())
-            return None
+            return _provider_failed()
         if r.status_code == 429:
+            # Capped (2026-10-13): the bare `continue` retried forever, so a
+            # persistent 429 hung the calling thread (a cron pass or a request
+            # worker). After `_CB_TRIP_AFTER` consecutive 429s it counts as one
+            # provider failure toward the breaker — the existing constant, no
+            # new number — and the fetch gives up.
+            n_429 += 1
+            if n_429 >= _CB_TRIP_AFTER:
+                log.warning("massive intraday %s -> HTTP 429 x%d, giving up", symbol, n_429)
+                _cb_record(False, time.time())
+                return _provider_failed()
             time.sleep(2)
             continue
+        n_429 = 0
         if r.status_code != 200:
             log.warning("massive intraday %s -> HTTP %s: %s", symbol, r.status_code, r.text[:200])
             _cb_record(False, time.time())
-            return None
+            return _provider_failed()
         body = r.json() or {}
         rows.extend(body.get("results") or [])
         next_url_field = body.get("next_url")
@@ -184,6 +218,12 @@ def _mongo_put_day(symbol: str, day: date, df: pd.DataFrame) -> None:
         log.warning("mongo intraday write failed: %s", exc)
 
 
+def _today_et() -> date:
+    """Today's date on the ET wall clock — the trading session's own date."""
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo("America/New_York")).date()
+
+
 def load_intraday(symbol: str, day: date, force: bool = False,
                   include_premarket: bool = True,
                   include_afterhours: bool = False) -> Optional[pd.DataFrame]:
@@ -192,7 +232,10 @@ def load_intraday(symbol: str, day: date, force: bool = False,
     Cache rule: completed days are cached forever. Today's bars are always
     re-fetched (force=True is implied for `day == today`).
     """
-    today = datetime.utcnow().date()
+    # The ET session date (2026-10-13). `utcnow().date()` rolled to "tomorrow"
+    # at 20:00 EDT / 19:00 EST, so a 19:00–20:00 EST fetch of the live session
+    # read as a COMPLETED day and its partial bars were cached forever.
+    today = _today_et()
     is_today = day == today
 
     if not force and not is_today:

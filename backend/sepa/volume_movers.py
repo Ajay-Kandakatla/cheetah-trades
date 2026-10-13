@@ -47,44 +47,134 @@ def _shares_coll():
         return None
 
 
-def _fetch_shares_yf(symbol: str):
+def _fetch_shares_status(symbol: str):
+    """-> (vals | None, status) with status "ok" | "no_data" | "rate_limited" | "error".
+
+    The yfinance read `_fetch_shares_yf` always did, plus WHY it came back empty
+    (2026-10-13, Gajjala's tab). A Yahoo 429 is matched by the moat module's
+    own detector (`sepa.moat._is_rate_limit`) — one definition app-wide."""
     try:
-        import yfinance as yf
+        import yfinance as yf                      # noqa: F401
         info = symbols.yf_ticker(symbol).info or {}
+    except Exception as exc:                       # noqa: BLE001
+        try:
+            from sepa.moat import _is_rate_limit
+            limited = _is_rate_limit(exc)
+        except Exception:                          # noqa: BLE001
+            limited = False
+        if limited:
+            log.debug("shares fetch rate-limited for %s: %s", symbol, exc)
+            return None, "rate_limited"
+        log.debug("shares fetch failed for %s: %s", symbol, exc)
+        return None, "error"
+    try:
         so = info.get("sharesOutstanding") or info.get("impliedSharesOutstanding")
         fl = info.get("floatShares")
         mc = info.get("marketCap")
         if not so and not fl:
-            return None
+            return None, "no_data"
         return {
             "shares_outstanding": int(so) if so else None,
             "float_shares":       int(fl) if fl else None,
             "market_cap":         int(mc) if mc else None,
-        }
+        }, "ok"
     except Exception as exc:                       # noqa: BLE001
-        log.debug("shares fetch failed for %s: %s", symbol, exc)
-        return None
+        log.debug("shares parse failed for %s: %s", symbol, exc)
+        return None, "error"
 
 
-def shares_for(symbol: str):
-    """Cached shares-outstanding / float / market-cap for one symbol (weekly TTL).
-    Soft-fails to None — the board still renders, turnover just shows '—'."""
+def _fetch_shares_yf(symbol: str):
+    """The values only (None on any miss) — unchanged for `sepa/cap_warm.py`,
+    which imports this name and catches per symbol."""
+    return _fetch_shares_status(symbol)[0]
+
+
+# The module's own fetch hook. A caller that swaps `_fetch_shares_yf` for its
+# own fetcher (tests, an injected warm) is honoured by `shares_status`; such a
+# fetcher carries no status, so its None reads as "no_data" (the old contract).
+_DEFAULT_FETCH_YF = _fetch_shares_yf
+
+# One Yahoo 429 used to land here as a miss and write the 7-day null tombstone
+# below — a float blanked for a WEEK by one throttled second (the moat bug of
+# 2026-10-11, same class). A 429 now writes only a short "rate limited until"
+# marker, the house first back-off step; the marker is also the stampede guard
+# the tombstone was (no second fetch while it stands).
+def _rl_marker_sec() -> float:
+    from sepa.moat_backfill import BACKOFF_START_SEC
+    return float(BACKOFF_START_SEC)
+
+
+_SHARE_KEYS = ("shares_outstanding", "float_shares", "market_cap")
+
+
+def _vals(doc) -> dict:
+    return {k: (doc or {}).get(k) for k in _SHARE_KEYS}
+
+
+def _dated(vals: dict, as_of) -> dict:
+    """`vals` + the row's `as_of` (epoch s) — `shares_status` callers can tell a
+    week-old "stale_served" value from a fresh one (2026-10-13 review: the
+    Gajjala float chip read every served row as fresh). `shares_for` strips it."""
+    return dict(vals, as_of=as_of)
+
+
+def shares_status(symbol: str, *, fetch: bool = True):
+    """-> (vals | None, status). The cache read + fetch behind `shares_for`, with
+    the reason spelled out (2026-10-13):
+
+      "cached"        fresh row (≤ 7 days) with values      — no fetch
+      "tombstone"     fresh all-null row (ETF / no data)    — no fetch
+      "stale_served"  a 429 marker stands; the expired row's values are served
+      "rl_marker"     a 429 marker stands and there is nothing to serve
+      "missing" / "stale"   fetch=False and no fresh row    — nothing fetched
+      "fetched"       Yahoo answered; row written (cap derived, as before)
+      "no_data" / "error"   Yahoo had nothing / failed      — 7-day tombstone (unchanged)
+      "rate_limited"  Yahoo 429 — ONLY `rl_until` is written (never the share
+                      fields, never `as_of`); the expired values, if any, are served
+
+    Served `vals` carry the row's `as_of` (epoch s; the fetch time on
+    "fetched") so a caller can age them; `shares_for` drops that key.
+    """
     sym = (symbol or "").upper().strip()
     if not sym:
-        return None
+        return None, "missing"
     coll = _shares_coll()
     now = int(time.time())
+    doc = None
     if coll is not None:
         try:
             doc = coll.find_one({"_id": sym})
-            if doc and (now - int(doc.get("as_of", 0))) < _SHARES_TTL_SEC:
-                vals = {k: doc.get(k) for k in ("shares_outstanding", "float_shares", "market_cap")}
-                # Fresh tombstone (all null) → name has no float (ETF/unknown);
-                # honor it so we don't re-hit yfinance every card render.
-                return vals if any(v is not None for v in vals.values()) else None
         except Exception:
-            pass
-    fetched = _fetch_shares_yf(sym)
+            doc = None
+    stale = None
+    if doc:
+        vals = _vals(doc)
+        has = any(v is not None for v in vals.values())
+        if (now - int(doc.get("as_of", 0) or 0)) < _SHARES_TTL_SEC:
+            # Fresh tombstone (all null) → name has no float (ETF/unknown);
+            # honor it so we don't re-hit yfinance every card render.
+            return (_dated(vals, doc.get("as_of")), "cached") if has else (None, "tombstone")
+        stale = _dated(vals, doc.get("as_of")) if has else None
+        try:
+            rl_until = float(doc.get("rl_until") or 0)
+        except (TypeError, ValueError):
+            rl_until = 0.0
+        if rl_until > now:
+            return (stale, "stale_served") if stale else (None, "rl_marker")
+    if not fetch:
+        return None, ("stale" if stale else "missing")
+    if _fetch_shares_yf is not _DEFAULT_FETCH_YF:
+        fetched = _fetch_shares_yf(sym)
+        status = "ok" if fetched else "no_data"
+    else:
+        fetched, status = _fetch_shares_status(sym)
+    if status == "rate_limited":
+        if coll is not None:
+            try:
+                coll.update_one({"_id": sym}, {"$set": {"rl_until": now + _rl_marker_sec()}}, upsert=True)
+            except Exception:
+                pass
+        return stale, "rate_limited"
     if coll is not None:
         # Cache the result — INCLUDING a null tombstone on a miss — so a burst of
         # card renders for the same symbol doesn't stampede yfinance.
@@ -104,7 +194,15 @@ def shares_for(symbol: str):
             coll.update_one({"_id": sym}, {"$set": {**payload, "as_of": now}}, upsert=True)
         except Exception:
             pass
-    return fetched
+    return (_dated(fetched, now), "fetched") if fetched else (None, status)
+
+
+def shares_for(symbol: str):
+    """Cached shares-outstanding / float / market-cap for one symbol (weekly TTL).
+    Soft-fails to None — the board still renders, turnover just shows '—'.
+    During a Yahoo 429 marker the expired values are served instead of None."""
+    vals = shares_status(symbol)[0]
+    return {k: v for k, v in vals.items() if k != "as_of"} if vals else vals
 
 
 # Server-side sorts — all computable from the scan alone (turnover is a column

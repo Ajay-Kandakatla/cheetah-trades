@@ -229,6 +229,7 @@ def needs_cap(row: Optional[dict]) -> bool:
 # --------------------------------------------------------------------------
 def warm(universe: Optional[Iterable[str]] = None, *, coll=None,
          loader: Optional[Callable] = None, fetcher: Optional[Callable] = None,
+         status_fetcher: Optional[Callable] = None,
          max_workers: int = DEFAULT_WORKERS, batch_size: int = BATCH_SIZE,
          pause_sec: float = BATCH_PAUSE_SEC, budget_sec: float = DEFAULT_BUDGET_SEC,
          refresh_stale: bool = False, limit: Optional[int] = None) -> dict:
@@ -242,6 +243,13 @@ def warm(universe: Optional[Iterable[str]] = None, *, coll=None,
       3. No row at all -> fetch shares once, then derive if the fetch still
          brought no cap back.
 
+    A Yahoo 429 (2026-10-13, DECISIONS R1-11 "7-day blank float on one Yahoo
+    429"): the default fetch carries a status (`volume_movers._fetch_shares_status`),
+    and a "rate_limited" answer writes ONLY the short `rl_until` marker the
+    `shares_status` reader honours — never the share fields, never `as_of`. It
+    used to land as an all-null row stamped `as_of`, a 7-day tombstone for one
+    throttled second. An injected `fetcher` carries no status (the old contract).
+
     Never raises: a symbol that fails is counted and skipped."""
     t0 = time.time()
     if universe is None:
@@ -254,8 +262,8 @@ def warm(universe: Optional[Iterable[str]] = None, *, coll=None,
     if coll is None:
         from sepa import volume_movers as vm
         coll = vm._shares_coll()
-    if fetcher is None:
-        from sepa.volume_movers import _fetch_shares_yf as fetcher
+    if fetcher is None and status_fetcher is None:
+        from sepa.volume_movers import _fetch_shares_status as status_fetcher
 
     res = {"universe": len(syms), "already": 0, "derived": 0, "fetched": 0,
            "no_data": 0, "failed": 0, "timed_out": False, "seconds": 0.0}
@@ -285,8 +293,14 @@ def warm(universe: Optional[Iterable[str]] = None, *, coll=None,
             if row is not None and (row.get("shares_outstanding") or row.get("float_shares")):
                 fields = cap_fields(sym, row, loader)
                 return sym, fields, ("derived" if fields else "no_data")
-            fetched = fetcher(sym)
+            if status_fetcher is not None:
+                fetched, status = status_fetcher(sym)
+            else:
+                fetched, status = fetcher(sym), None
             now = int(time.time())
+            if status == "rate_limited":
+                from sepa.volume_movers import _rl_marker_sec
+                return sym, {"rl_until": now + _rl_marker_sec()}, "failed"
             payload = dict(fetched or {k: None for k in _SHARES_KEYS})
             payload["as_of"] = now
             extra = cap_fields(sym, fetched, loader) if fetched else {}
