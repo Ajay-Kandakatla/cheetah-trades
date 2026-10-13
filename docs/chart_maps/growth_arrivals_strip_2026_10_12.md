@@ -27,17 +27,17 @@ measured number is typed in the frontend.
 Each chip is a real link: `?tab=growth&focus=SYM` built by `arrivalHref` on top of
 `tabSearch` (keeps universe/window/etc., drops `pattern`). A plain click routes in
 place; ⌘/Ctrl/middle-click is left to the browser (new tab).
+Since 2026-10-12 every chip and `all 🚀 →` also carry `show=all` (#5, below).
 
 ## Where it mounts
 `frontend/src/pages/ChartMaps.tsx`: after `<HotSectors />`, before
-`.cm-tabs-sentinel` — so above the pinned tab strip, on every tab.
+`.cm-tabs-sentinel` — so above the pinned tab strip, on every tab EXCEPT `?tab=growth`
+(2026-10-12, #3).
 
-## Folded by default
-`StudyNote id="growth-arrivals"`, no `defaultOpen`: first paint is ONE line on every
-tab. His open/closed choice is remembered in localStorage
-(`cm.study.open.growth-arrivals`; a blocked store just forgets). Because the id is
-fixed, a fold he closed stays closed when the next cohort arrives — the headline count
-still updates.
+## Fold (superseded 2026-10-12 — see "Open rule (#7)" below)
+`StudyNote id="growth-arrivals"`, still no `defaultOpen`. As first shipped the strip was
+folded on first paint and a fold stayed closed when the next cohort arrived; since his
+2026-10-12 "yes" it opens for a first visit and re-opens on a newer batch.
 
 Nothing arrived (or `/growth/tags` is down, or an older API without `arrivals`) →
 the strip renders nothing at all: no box, no "0 new".
@@ -47,14 +47,13 @@ the strip renders nothing at all: no box, no "0 new".
 the one in-flight promise.
 - Every tab that already mounts a `GrowthChip` (tile tabs via `PatternChart`, …):
   **zero extra requests** — the strip shares the same fetch.
-- `?tab=growth`: the 🚀 board mounts no `GrowthChip`, so the strip's call is the
-  **one** `/growth/tags` request on that tab (it made none before).
+- `?tab=growth`: the strip is not mounted there (2026-10-12, #3) and the 🚀 board mounts
+  no `GrowthChip`, so that tab makes **zero** `/growth/tags` requests.
 Pinned in `ChartMapsGrowthArrivals.test.tsx`.
 
-## Why the chips do not link to "the respective tabs"
-No per-tab membership is stored: `chart_maps/board.py` computes every tab per
-request. Answering "which tabs is PGEN on" would rebuild ~20 tabs per page load (the
-65 s AMD failure). Chips link to the 🚀 board focused on the name instead.
+## Links to "the respective tabs" (superseded 2026-10-12)
+As first shipped no per-tab membership was stored, so chips linked to the 🚀 board only.
+His 2026-10-12 "yes" built the stored snapshot; see "Also on (#8)" below.
 
 ## Files
 - `frontend/src/lib/growthArrivals.ts` — pure: `FOCUS_PARAM`, `arrivalHref`,
@@ -64,6 +63,9 @@ request. Answering "which tabs is PGEN on" would rebuild ~20 tabs per page load 
   never counted).
 - `frontend/src/hooks/useGrowthTags.ts` — `fetchGrowthPayload`, `useGrowthArrivals`.
 - `frontend/src/components/GrowthArrivalsStrip.tsx`.
+- `frontend/src/lib/growthArrivalsFresh.ts` (2026-10-12) — pure: `newestFirstSeen`,
+  `withShowAll`, `tabGlyph`, `alsoOnLinks`.
+- `frontend/src/components/StudyNote.tsx` — optional `freshKey` prop (2026-10-12).
 - CSS: `.cm-badge-new`, `.cm-arrivals-strip`, `.cm-arrivals`, `.cm-row-focus`.
 
 ## Tests
@@ -74,11 +76,82 @@ pp-CI literal / admin email in source), `src/pages/ChartMapsGrowthArrivals.test.
 (mount order on zones + amd, nothing without arrivals, chip → focused 🚀 board,
 request budget).
 
-## HIS CALL (not decided here)
-1. Cross-tab membership links — needs a stored per-tab symbol snapshot.
-2. A "✨ new only" filter toggle.
-3. Whether the strip shows on `?tab=growth` too (built: every tab).
-4. The 30-day window (`NEW_GROWTH_DAYS`) — unchanged.
-5. Whether a chip link should carry `&show=all`.
-6. Whether `?focus=` should auto-un-hide the focused name.
-7. Open by default / re-open on a new cohort (built: folded).
+## His answers (2026-10-12 — one word, "yes", to the eight questions)
+Closed list (spec `arrivals-calls/spec.md`):
+1. Cross-tab membership links — **BUILT** (below, "Also on").
+2. A "✨ new only" filter toggle — **BUILT** on the 🚀 board
+   (`docs/growth/board_new_only_and_focus_2026_10_12.md`).
+3. Strip on `?tab=growth` — **BUILT: hidden there.** `ChartMaps.tsx` mounts
+   `{tab !== GROWTH_TAB && <GrowthArrivalsStrip />}`; the rows' ✨ pills and the board's
+   own arrivals line carry it. Every other tab keeps the strip.
+4. The 30-day window (`growth.tracker.NEW_GROWTH_DAYS`) — **KEPT**, no change.
+5. Chip links carry `&show=all` — **BUILT** (below).
+6. `?focus=` draws a filtered-out name anyway — **BUILT** on the 🚀 board (same doc as 2).
+7. Open by default / re-open on a new batch — **BUILT** (below).
+
+### Open rule (#7) — `StudyNote freshKey`
+`<StudyNote id="growth-arrivals" freshKey={newestFirstSeen(arrivals)}>` — the key is the
+newest SERVED `first_seen` (`frontend/src/lib/growthArrivalsFresh.ts`).
+- never folded (no `cm.study.open.growth-arrivals`) → **open** on first paint;
+- he opened it → open;
+- he folded it → stays folded while the served batch is the one he folded on
+  (`cm.study.fresh.growth-arrivals` = the key stored at his fold), and **re-opens** when a
+  newer `first_seen` is served — also while the page is mounted (`freshKey` is an effect
+  dependency; a refetch of the same batch is the same string → no-op);
+- storage blocked / throwing / absent → open (no memory), renders the same;
+- no arrivals → nothing renders.
+- A viewer who folded before this shipped has no stored key → it re-opens ONCE; his next
+  fold stores the stamp. The strip and the board's line keep separate memories
+  (`growth-arrivals` vs `growth-arrivals-board`).
+- Without `freshKey` every other StudyNote behaves exactly as before.
+
+### `show=all` on every chip (#5)
+Every chip href and `all 🚀 →` go through `withShowAll`, which sets the page's own 🎯
+override (`ChartMaps.tsx`: `enterableOnly = params.get('show') !== 'all'`), so an arrival
+the enterable cut would hide (a BLOCKED read) is drawn on landing. Nothing is persisted —
+the 🎯 state lives in the URL only, so his default is untouched by construction.
+**Scope, stated truthfully:** `tabSearch` copies every param, so after a chip landing
+`show=all` rides on EVERY later tab click in that browser tab until he toggles 🎯 back on
+(which deletes it). Scoping it to the growth visit is HIS CALL (spec §7.5 — it would also
+drop a `show=all` he set by hand on zones before visiting growth). Pinned by the
+`[C5] DOCUMENTED SCOPE` test, which flips loudly if that is ever built.
+
+### Also on (#8) — per-tab links under each chip
+The arrivals now carry a served `also_on[]` (backend `chart_maps/membership.py`, see
+`docs/chart_maps/membership_snapshot_2026_10_12.md`). `alsoOnLinks` turns it into small
+links under the chip (`span.cm-arrival-also`, `data-testid=cm-growth-also-SYM`):
+- only tabs on the page (`CM_TABS`), in the page's tab order; `growth`, `supply` and
+  anything unknown drop; malformed / absent / empty `also_on` → no links, chip unchanged;
+- text = the tab label's leading emoji (the full label when it has none);
+- href = `?` + `tabSearch(params, tab)` — **no `focus`**: no other tab honours it, so the
+  link lands on the tab without a highlight (HIS CALL spec §7.10);
+- hover = `<label> · in the served top {limit} as of <YYYY-MM-DD HH:MM>` — membership is the
+  SERVED top `limit` of that tab (80 on a page load), so a name ranked 81st reads as
+  absent; "as of" prefers the memo's own `source_as_of`, falling back to the snapshot's
+  `built_at`; no served `limit` → "in the served list"; when the server marks the
+  snapshot `stale === true` the title adds "stale: older than this tab's cache window
+  (<TTL constant name>)". The frontend judges nothing — it reads the served flag.
+- Rule #5: 11 chips × up to 22 tab links is dense — kept under the fold, glyph-only with
+  the full label on hover; a per-row drawer is where it belongs if he wants more.
+
+### Tests (2026-10-12 additions)
+- `src/components/StudyNote.test.tsx` — freshKey: open with no memory; same key folded;
+  newer key re-opens and the fold re-stores it; [C7] prop changes to a newer key while
+  mounted → opens; NEGATIVE: older served key, pre-stamp folder re-opens once, non-string
+  stored key, throwing / absent storage → open, no `freshKey` → today's rule, separate ids.
+- `src/lib/growthArrivalsFresh.test.ts` — `newestFirstSeen`, `withShowAll`, `tabGlyph`,
+  `alsoOnLinks` (order, labels, no focus, "served top 80" / "served list", source-as-of
+  preference, stale only when `=== true`, drops growth/supply/unknown/dupes, malformed).
+- `src/components/GrowthArrivalsStrip.test.tsx` — open first paint, fold persists for the
+  same batch, newer batch re-opens, `show=all` on all 12 hrefs and never duplicated,
+  per-tab links (order, glyph, title, stale marker, routing), NEGATIVE malformed `also_on`.
+- `src/pages/ChartMapsGrowthArrivals.test.tsx` — strip on zones / amd / bonde (open);
+  `?tab=growth` → no strip and ZERO `/growth/tags` calls; chip → `show=all` landing draws a
+  BLOCKED arrival; NEGATIVE: nothing persisted; NEGATIVE: without `show=all` the BLOCKED
+  row stays hidden; [C5] scope pin.
+
+## HIS CALL (still open, from the 2026-10-12 spec)
+- §7.5 scope `show=all` to the growth visit (side effect above).
+- §7.7 one-time re-open for pre-ship folders; separate strip / board-line memories.
+- §7.10 a `?symbol=` highlight on the tile boards so the per-tab links land on the name.
+- §7.11 a style for `cm-arrival-also` (none shipped; hook only).

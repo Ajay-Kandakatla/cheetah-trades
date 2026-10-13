@@ -1415,8 +1415,19 @@ const CONTRACTS = [
         if (!/REFUSE/i.test(meta[0])) {
           errs.push('the blurb must say the trading engine still refuses sub-$2 / sub-$700M names');
         }
-        if (!/NOTHING HERE IS BACKTESTED|never been measured forward/i.test(meta[0])) {
-          errs.push('the blurb must say the 100/100 screen is unmeasured — it is a discovery list');
+        // 2026-10-13 (Ajay "yes" to rewording): the 100/100 screen WAS measured
+        // on 2026-09-21 (cell G100 of board_growth_measured.json) — the blurb
+        // says so, quotes NO number (the board's served MEASURED line does), and
+        // never again calls the screen unmeasured.
+        if (!/MEASURED 2026-09-21[\s\S]{0,160}?a lean, not a finding/.test(meta[0])) {
+          errs.push('the blurb must say the 100/100 screen was MEASURED 2026-09-21 — a lean, not a finding');
+        }
+        if (/NOTHING HERE IS BACKTESTED|never been measured forward/i.test(meta[0])) {
+          errs.push('the blurb must not call the 100/100 screen unmeasured — it was measured 2026-09-21');
+        }
+        const measuredSentence = /MEASURED 2026-09-21[^.]*\./.exec(meta[0]);
+        if (measuredSentence && /\d+(?:\.\d+)?\s?(?:pp|%)|\bCI\b/.test(measuredSentence[0].replace('100/100', ''))) {
+          errs.push('the blurb must not retype a measured number — the board serves them');
         }
       }
 
@@ -1632,8 +1643,11 @@ const CONTRACTS = [
       if (!/NO MARKET-CAP FLOOR/i.test(d)) errs.push('must say the board has no cap floor');
       if (!/5% of room|5% of the room|at least 5%/.test(d)) errs.push('must say the standing room gate still applies');
       if (!/intact/.test(d)) errs.push('must name the one measured gate');
-      if (!/NOTHING HERE IS BACKTESTED|never been measured forward/i.test(d)) {
-        errs.push('must say the screen is unmeasured');
+      if (!/MEASURED 2026-09-21/.test(d) || !/a lean, not a finding/.test(d)) {
+        errs.push('must say the 100/100 screen was MEASURED 2026-09-21 — a lean, not a finding (2026-10-13)');
+      }
+      if (/NOTHING HERE IS BACKTESTED|never been measured forward/i.test(d)) {
+        errs.push('must not call the screen unmeasured — it was measured 2026-09-21');
       }
       const prefs = read('src/hooks/useNotificationPrefs.ts');
       if (!/growth_demand_alert\?: boolean/.test(prefs)) {
@@ -3399,8 +3413,11 @@ const CONTRACTS = [
       if (!/INVERTED/.test(d) || !/(?:\\u2212|[−-])\s?3\.11\s*pp/.test(d)) {
         errs.push("the entry must carry Bonde's measured INVERTED record (-3.11pp) — the board's own number rides with its push");
       }
-      if (!/100\/100 screen[\s\S]{0,60}?never been measured forward/.test(d)) {
-        errs.push('the entry must say the 100/100 growth screen has never been measured forward');
+      if (!/100\/100 screen[\s\S]{0,80}?measured 2026-09-21[\s\S]{0,40}?a lean, not a finding/.test(d)) {
+        errs.push('the entry must say the 100/100 growth screen was measured 2026-09-21 as a lean, not a finding (2026-10-13)');
+      }
+      if (/never been measured forward|NOTHING HERE IS BACKTESTED/i.test(d)) {
+        errs.push('the entry must not call the 100/100 screen unmeasured — it was measured 2026-09-21');
       }
       if (!/17:42/.test(d) || !/08:08/.test(d)) errs.push('the entry must name both passes: 17:42 ET (Bonde) and 08:08 ET (growth)');
       if (!/Not a recommendation/i.test(d)) errs.push('the entry must say it is not a recommendation');
@@ -6490,6 +6507,62 @@ const CONTRACTS = [
       }
       if (!/id: 'ops-docker-watch-2026-10-06'/.test(read('src/lib/newFeatures.ts'))) {
         errs.push("newFeatures.ts lacks the 'ops-docker-watch-2026-10-06' ✨ entry");
+      }
+      return errs;
+    },
+  },
+  {
+    name: '✨ growth arrivals his-calls (2026-10-13): strip off on ?tab=growth, show=all on every chip, focus exemption, ✨ new only, per-tab links, membership hook',
+    file: 'src/components/GrowthArrivalsStrip.tsx',
+    // Ajay 2026-10-12 answered "yes" to the eight his-call questions after the
+    // ✨ arrivals strip shipped (97b48ff4). Each pin below is one of them; the
+    // 30-day window (#4) is KEPT and pinned on the backend (NEW_GROWTH_DAYS).
+    checks: (src) => {
+      const errs = [];
+      // #5 every chip href carries the growth tab's own show=all override.
+      if (!/withShowAll\(arrivalHref\(/.test(src)) errs.push('every strip chip href must go through withShowAll(arrivalHref(…)) — a BLOCKED arrival is drawn on landing');
+      const fresh = read('src/lib/growthArrivalsFresh.ts');
+      if (!/export function withShowAll/.test(fresh) || !/q\.set\('show', 'all'\)/.test(fresh)) {
+        errs.push("growthArrivalsFresh.withShowAll must set show=all — the real param ChartMaps.tsx reads for the 🎯 cut");
+      }
+      // #3 the strip is gone on the growth tab (the rows carry the pills there).
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab !== GROWTH_TAB && <GrowthArrivalsStrip \/>/.test(page)) {
+        errs.push('ChartMaps.tsx must mount <GrowthArrivalsStrip /> only when tab !== GROWTH_TAB');
+      }
+      // #7 open-on-fresh-batch rides on StudyNote's own store, not a parallel one.
+      if (!/freshKey=\{newestFirstSeen\(arrivals\)\}/.test(src)) errs.push('the strip must pass freshKey={newestFirstSeen(arrivals)} to StudyNote');
+      const note = read('src/components/StudyNote.tsx');
+      if (!/freshKey\?: string \| null/.test(note) || !/cm\.study\.fresh\./.test(note)) {
+        errs.push('StudyNote must take freshKey and keep the folded-at batch under cm.study.fresh.<id>');
+      }
+      // #8 per-tab links render off SERVED also_on only; nothing is computed here.
+      if (!/alsoOnLinks\(a, params\)/.test(src) || !/cm-arrival-also/.test(src)) errs.push('the strip must render alsoOnLinks(a, params) under each chip (class cm-arrival-also)');
+      const board = read('src/components/ExplosiveGrowth.tsx');
+      // #2 ✨ new only is a filter with its own hidden-count line …
+      if (!/data-testid="growth-new-only"/.test(board) || !/data-testid="growth-new-only-hidden"/.test(board)) {
+        errs.push('ExplosiveGrowth must carry the ✨ new only checkbox AND its hidden-count line');
+      }
+      // … and #6 the focused row is drawn with a marker, never by flipping a filter.
+      if (!/data-testid="growth-focus-exempt"/.test(board) || !/cm-row-exempt/.test(board)) {
+        errs.push('ExplosiveGrowth must draw the focused-but-hidden row with cm-row-exempt and the growth-focus-exempt marker');
+      }
+      if (!/freshKey=\{newestFirstSeen\(/.test(board)) errs.push("the board's own arrivals line must follow the same open rule (freshKey)");
+      const css = read('src/styles.css');
+      for (const cls of ['.cm-row-exempt', '.cm-arrival-also']) {
+        if (!css.includes(cls)) errs.push(`styles.css lacks ${cls}`);
+      }
+      // #8 backend: the membership hook sits AFTER out["tab"] and calls attach_also_on in both growth bodies.
+      const bp = read('../backend/chart_maps/board.py');
+      if (!/out\["tab"\] = t\n[\s\S]{0,600}?_MB\.record_board\(t, out, request=\{/.test(bp)) {
+        errs.push('chart_maps/board.py must call membership.record_board(t, out, request={…}) right after out["tab"] = t');
+      }
+      const api = read('../backend/growth/api.py');
+      if ((api.match(/_mem\.attach_also_on\(arr\)/g) || []).length !== 2) errs.push('growth/api.py must call _mem.attach_also_on(arr) in BOTH sync bodies (board + tags)');
+      // #4 kept.
+      if (!/NEW_GROWTH_DAYS = 30\b/.test(read('../backend/growth/tracker.py'))) errs.push('tracker.NEW_GROWTH_DAYS must stay 30 (his "yes" = keep)');
+      if (!/id: 'chart-maps-growth-arrivals-his-calls-2026-10-13'/.test(read('src/lib/newFeatures.ts'))) {
+        errs.push("newFeatures.ts lacks the 'chart-maps-growth-arrivals-his-calls-2026-10-13' ✨ entry");
       }
       return errs;
     },

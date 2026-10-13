@@ -49,10 +49,13 @@ WHAT NEVER FIRES
 
 WHAT THE PUSH SAYS ABOUT ITSELF
   Bonde's own thesis is MEASURED INVERTED (−3.11pp vs a date-matched
-  placebo, 2026-09-13) and the Growth board's 100/100 screen has never been
-  measured forward. Both facts ride on every body, read from the serving
-  module (`bonde.measured_verdict()["headline"]`) rather than retyped. An
-  arrival is a LIST EVENT, not an entry — the body says so in words.
+  placebo, 2026-09-13) and the Growth board's 100/100 screen measured
+  2026-09-21 — a lean, not a finding (`growth.screen_measured`, cell G100).
+  Both facts ride on every body, read from the serving modules
+  (`bonde.measured_verdict()["headline"]`, `screen_measured.screen_clause()`)
+  rather than retyped. An arrival is a LIST EVENT, not an entry — the body
+  says so in words, and on a growth body that sentence comes BEFORE the
+  measured clause so a truncating phone drops the clause, never it.
 
 SLOTS: Bonde 17:42 ET (right after the 17:40 `sepa.bonde show` that stamps
 `first_seen`), growth 08:08 ET, weekdays. `SLOTS_ET` is what `alert_status`
@@ -72,6 +75,9 @@ from zoneinfo import ZoneInfo
 from growth.alerts import OWNER, MAX_INDIVIDUAL, _db as _growth_db
 from supply_demand import demand_alerts as DA
 from sepa import first_seen as FS
+# A LEAF (imports nothing from the repo), so no cycle: growth.arrivals imports
+# THIS module, and both read the screen's measured record from one place.
+from growth.screen_measured import screen_clause
 
 # `sepa.bonde` and `growth.tracker` are imported LAZILY inside bonde_rows() /
 # growth_rows() / message() ON PURPOSE: `alert_status` and `rules_info` import
@@ -93,8 +99,10 @@ LABEL = {"bonde": "📈 Bonde", "growth": "🚀 Explosive Growth"}
 TAB_URL = {"bonde": "/chart-maps?tab=bonde", "growth": "/chart-maps?tab=growth"}
 SLOTS_ET = {"bonde": "17:42", "growth": "08:08"}   # the crontab minutes, in one place
 
-NOT_BACKTESTED = ("NOTHING HERE IS BACKTESTED: the 100/100 screen has never "
-                  "been measured forward.")
+# The growth push's measured clause (2026-10-12): the 100/100 screen WAS
+# measured on 2026-09-21 (cell G100). Built from the pinned constant, never
+# retyped; replaces the old sentence that called the screen unmeasured.
+SCREEN_MEASURED_CLAUSE = screen_clause()
 NOT_A_RECOMMENDATION = {
     "bonde": "An arrival on his screen, not an entry — not a recommendation.",
     "growth": "An arrival on a list, not an entry — not a recommendation.",
@@ -298,9 +306,13 @@ def message(item: dict) -> dict:
             parts.append("prior quarter sales %s" % _pct(prior))
         for w in (row.get("warnings") or []):
             parts.append(str(w))
-        parts.append(NOT_BACKTESTED)
 
     parts.append(NOT_A_RECOMMENDATION[board])
+    # Growth only, and LAST: "not a recommendation" is said before the
+    # measured clause, so a phone that truncates the body loses the clause,
+    # never the recommendation sentence. Bonde's order is unchanged.
+    if board == "growth":
+        parts.append(SCREEN_MEASURED_CLAUSE)
     url = "%s&symbol=%s" % (TAB_URL[board], sym)
     return {"title": title, "body": " · ".join(parts), "ticker": sym,
             "tickers": [sym], "url": url, "kind": KIND,
@@ -323,7 +335,7 @@ def digest_message(board: str, items: list) -> dict:
         from sepa import bonde                                 # lazy — see the docstring
         tail = bonde.measured_verdict()["headline"]
     else:
-        tail = NOT_BACKTESTED
+        tail = SCREEN_MEASURED_CLAUSE
     return {"title": "✨ %d new on %s" % (len(items), LABEL[board]),
             "body": body + " · " + tail, "ticker": None, "tickers": syms,
             "url": TAB_URL[board], "kind": KIND,

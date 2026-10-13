@@ -512,7 +512,8 @@ def default_prefs() -> dict:
         # Fires once per (board, symbol) when a name ARRIVES on a board.
         # A MARKET kind — both boards are built from closed bars.
         # NOT MEASURED as an entry: Bonde's rule measured INVERTED (−3.11pp)
-        # and the 100/100 growth screen has never been measured forward.
+        # and the 100/100 growth screen measured 2026-09-21 as a lean, not a
+        # finding (growth/screen_measured.py).
         "board_arrival": True,
         # 💎 A balance sheet IMPROVED on a fresh quarter (growth/quality_alerts.py,
         # Ajay 2026-09-22: "Filter and have alerts and new look out for such

@@ -40,8 +40,9 @@ import { metricCells } from '../lib/boardMetrics';
 import { SINCE_REPORT_HEAD, sinceReportCell, sinceReportCoverage,
          type SinceReport, type SinceReportSummary } from '../lib/sinceReport';
 import { CapitalQualityChips, CapitalQualityHidden, CapitalQualityNote } from './CapitalQualityChips';
-import { FOCUS_PARAM, STAGE_LABEL, hiddenArrivals, parseFocus,
+import { FOCUS_PARAM, STAGE_LABEL, hiddenArrivals, newOnlyHiddenLine, newRowCounts, parseFocus,
          type GrowthArrival, type HideStage, type StageCode } from '../lib/growthArrivals';
+import { newestFirstSeen } from '../lib/growthArrivalsFresh';
 import { StudyNote } from './StudyNote';
 import { QUALITY_HEAD, componentKeys, componentStats, gradeCell, partitionCapital,
          readOf as capitalReadOf, visibleComponentCounts, visibleCounts,
@@ -164,6 +165,10 @@ export type GrowthPayload = {
   arrivals_note?: string | null;
   new_days?: number | null;
   disclaimer?: string;
+  /* MEASURED 2026-09-21 (his #1 "yes"): the 100/100 screen's own forward
+   * record, SERVED whole by growth/screen_measured.py — headline above the
+   * fold, the numbers under it. Not one number of it is typed in this file. */
+  screen_measured?: { headline: string; body: string } | null;
 };
 
 /** A missing number prints an em-dash. NEVER a zero — a blank fundamental and
@@ -290,10 +295,16 @@ function demandCell(z?: GrowthZone): { text: string; tone: string; title: string
 export type StagedFilterOpts = {
   onlyBuyable: boolean; onlyDemand: boolean;
   sector: string | null; debtTier: DebtTier | null;
+  /** ✨ new only (2026-10-12, his #2). Absent = OFF, like every sibling. */
+  onlyNew?: boolean;
 };
 export type StagedFilter = {
   rows: GrowthRow[];
   kept: ReadonlyMap<StageCode, ReadonlySet<string>>;
+  /** HOW MANY each ON stage dropped, from the ARRAY lengths before and after
+   *  it — never from `kept` set sizes, which undercount a duplicated symbol.
+   *  `kept` answers WHICH (attribution); this answers how many. */
+  dropped: ReadonlyMap<StageCode, number>;
 };
 
 /** The board's four local filters, in the board's own order, each predicate
@@ -304,24 +315,42 @@ export type StagedFilter = {
 export function stagedFilter(rows: readonly GrowthRow[], o: StagedFilterOpts): StagedFilter {
   let r = [...rows];
   const kept = new Map<StageCode, ReadonlySet<string>>();
+  const dropped = new Map<StageCode, number>();
+  let before = r.length;
   if (o.onlyBuyable) {
+    before = r.length;
     r = r.filter((x) => !(x.warnings ?? []).some((w) => w.startsWith('⛔')));
     kept.set('refused', new Set(r.map((x) => x.symbol)));
+    dropped.set('refused', before - r.length);
   }
   if (o.onlyDemand) {
+    before = r.length;
     r = r.filter((x) => x.zone?.in_band && x.zone?.intact);
     kept.set('demand', new Set(r.map((x) => x.symbol)));
+    dropped.set('demand', before - r.length);
   }
   if (o.sector) {
+    before = r.length;
     r = r.filter((x) => (x.sector || '(unmapped)') === o.sector);
     kept.set('sector', new Set(r.map((x) => x.symbol)));
+    dropped.set('sector', before - r.length);
   }
   if (o.debtTier) {
     const tier = o.debtTier;
+    before = r.length;
     r = r.filter((x) => passesDebtFilter(x, tier));
     kept.set('debt', new Set(r.map((x) => x.symbol)));
+    dropped.set('debt', before - r.length);
   }
-  return { rows: r, kept };
+  /* ✨ new only — the SERVED flag and nothing else: a row whose `is_new` is
+   * missing (an older payload) is NOT new, and the count line says so. */
+  if (o.onlyNew) {
+    before = r.length;
+    r = r.filter((x) => x.is_new === true);
+    kept.set('new', new Set(r.map((x) => x.symbol)));
+    dropped.set('new', before - r.length);
+  }
+  return { rows: r, kept, dropped };
 }
 
 const BONDE_TIERS = new Set(['explosive', 'strong', 'steady']);
@@ -347,6 +376,10 @@ export function ExplosiveGrowth() {
   const [busy, setBusy] = useState(false);
   const [onlyBuyable, setOnlyBuyable] = useState(false);
   const [onlyDemand, setOnlyDemand] = useState(false);
+  /* ✨ new only (Ajay 2026-10-12, his #2 "yes"). OFF by default and plain
+   * state like its siblings — no URL param, no localStorage. It keeps rows the
+   * ledger served as new; it sorts nothing and moves no other control. */
+  const [onlyNew, setOnlyNew] = useState(false);
   const [explosiveFirst, setExplosiveFirst] = useState(false);
   // Ajay 2026-09-14: "I do not want them to have any debt." The tiers stay
   // relative to the company's own cash (a literal debt===0 filter returns
@@ -383,7 +416,9 @@ export function ExplosiveGrowth() {
   /* ✨ ?focus=SYM (the Chart Maps strip's chip link) — with the 08:08 push's
    * existing `&symbol=SYM` as the fallback, so that deep link lands on its row
    * too. `focus` wins when both are present. It highlights and scrolls; it
-   * never sorts, filters or un-hides. */
+   * never sorts and never changes a filter. When his ON filters would hide the
+   * focused row, that ONE row is drawn anyway, on top, marked (his #6 "yes",
+   * 2026-10-12) — see the exemption block below. */
   const [params] = useSearchParams();
   const focus = parseFocus(params.get(FOCUS_PARAM) ?? params.get('symbol'));
   const scrolledFor = useRef<string | null>(null);
@@ -427,8 +462,8 @@ export function ExplosiveGrowth() {
    * `stagedFilter` above, and each ON stage reports what it kept so the ✨
    * hidden line can say which control dropped a new name — never re-typed. */
   const staged = useMemo(
-    () => stagedFilter(data?.rows ?? [], { onlyBuyable, onlyDemand, sector, debtTier }),
-    [data, onlyBuyable, onlyDemand, sector, debtTier],
+    () => stagedFilter(data?.rows ?? [], { onlyBuyable, onlyDemand, sector, debtTier, onlyNew }),
+    [data, onlyBuyable, onlyDemand, sector, debtTier, onlyNew],
   );
   // Sort LAST, on the filtered set: every row the screen returned is in this
   // payload (29 of a 300 cap), so unlike the 🔥 Hottest board this is a
@@ -465,6 +500,29 @@ export function ExplosiveGrowth() {
     () => partitionCapital(part.rows, (r) => capitalReadOf(r), quality, qKeys),
     [part.rows, quality, qKeys],
   );
+  /* ✨ The focus exemption (his #6 "yes", 2026-10-12). When ?focus= names a
+   * row his ON filters hide, that ONE row is drawn on top, marked — and no
+   * filter is changed or persisted. The counts every line prints come from the
+   * SAME two engines run once more over the rows WITHOUT the focus row, so the
+   * exempt row is never double-counted and every per-reason / per-key number
+   * stays the engine's own (no arithmetic on its output). Hooks are called
+   * unconditionally; the second partition is enabled only while a focus row
+   * exists, so the no-focus path costs one inert pass. */
+  const focusRow = focus ? (data?.rows ?? []).find((r) => r.symbol === focus) ?? null : null;
+  const rowsSansFocus = useMemo(
+    () => (focusRow ? rows.filter((r) => r.symbol !== focus) : rows),
+    [rows, focusRow, focus],
+  );
+  const partSans = useEnterablePartition(rowsSansFocus, (r) => r.symbol, room.map,
+                                         enterableOnly && !!focusRow);
+  const qpartSans = useMemo(
+    () => partitionCapital(partSans.rows, (r) => capitalReadOf(r), quality, qKeys),
+    [partSans.rows, quality, qKeys],
+  );
+  const focusHidden = !!focusRow && !qpart.rows.some((r) => r.symbol === focus);
+  const drawn = focusHidden && focusRow ? [focusRow, ...qpart.rows] : qpart.rows;
+  const partShown = focusHidden ? partSans : part;
+  const qpartShown = focusHidden ? qpartSans : qpart;
   const qStats = useMemo(() => componentStats(cqs), [cqs]);
   /* 💎 The chip counts are counted over the rows ACTUALLY BEING DRAWN, not off
    * the served whole-board summary. By this line the debt tier (when picked;
@@ -509,7 +567,12 @@ export function ExplosiveGrowth() {
   }
   const newSymbols = (data?.rows ?? [])
     .filter((r) => r.is_new === true && r.first_seen).map((r) => r.symbol);
-  const hid = hiddenArrivals(newSymbols, stages);
+  /* The exempt row is DRAWN, so it is not "hidden": the ✨ line leaves it out
+   * and the marker line names the control instead. Attribution = the FIRST
+   * stage that dropped it, the same rule the ✨ line uses. */
+  const hid = hiddenArrivals(newSymbols.filter((x) => !(focusHidden && x === focus)), stages);
+  const exempt = focusHidden && focus ? (hiddenArrivals([focus], stages)[0] ?? null) : null;
+  const newCounts = newRowCounts(data?.rows ?? []);
   const hidByCode: { code: StageCode; label: string; n: number }[] = [];
   for (const h of hid) {
     const e = hidByCode.find((x) => x.code === h.code);
@@ -520,6 +583,7 @@ export function ExplosiveGrowth() {
     else if (code === 'demand') setOnlyDemand(false);
     else if (code === 'sector') setSector(null);
     else if (code === 'debt') setDebtTier(null);
+    else if (code === 'new') setOnlyNew(false);
     else if (code === 'enterable') setEnterableOnly(false);
     else if (code === 'quality') clearQuality();
   };
@@ -549,6 +613,15 @@ export function ExplosiveGrowth() {
             <input type="checkbox" checked={onlyBuyable}
                    onChange={(e) => setOnlyBuyable(e.target.checked)} />
             hide what the engine refuses ({blockedN})
+          </label>
+          {/* Always drawn (spec §0 #2): on an older payload with no arrival read
+              it reads (0), and when ON its count line says every row it hid
+              carries no arrival read and counts as not new. */}
+          <label className="eg-chk"
+                 title="Keeps only the names the ledger serves as new arrivals. Sorts nothing and changes no other control.">
+            <input type="checkbox" checked={onlyNew} data-testid="growth-new-only"
+                   onChange={(e) => setOnlyNew(e.target.checked)} />
+            {STAGE_LABEL.new} ({newCounts.newN})
           </label>
           {/* Ajay 2026-09-14: "I do not want them to have any debt." A literal
               zero-debt test empties this board (0 of 29 qualify), so the tiers
@@ -592,13 +665,23 @@ export function ExplosiveGrowth() {
         {data?.built_at && <> Built {String(data.built_at).slice(0, 16).replace('T', ' ')} UTC.</>}
       </div>
 
+      {/* MEASURED 2026-09-21 — the 100/100 screen's own forward record (his #1
+          "yes"). FOLDED; headline and body are SERVED verbatim. Nothing when
+          an older payload carries no read. */}
+      {data?.screen_measured?.headline && data.screen_measured.body ? (
+        <StudyNote id="growth-screen-measured" testId="growth-screen-measured"
+                   headline={data.screen_measured.headline}
+                   body={data.screen_measured.body} />
+      ) : null}
+
       {/* ✨ Arrivals (Ajay 2026-10-12). FOLDED: the headline carries only the
           served count and window; the served measured note sits under the
           fold verbatim. Nothing when nothing arrived. */}
       {arrivalsN > 0 && (
         <StudyNote id="growth-arrivals-board" testId="growth-arrivals-line"
                    headline={`✨ ${arrivalsN} arrived in the last ${data?.new_days} days`}
-                   body={data?.arrivals_note ?? null} />
+                   body={data?.arrivals_note ?? null}
+                   freshKey={newestFirstSeen(data?.arrivals ?? [])} />
       )}
 
       {/* 📣 "Just reported" (Ajay 2026-09-17). THIS BOARD'S OWN honesty line —
@@ -619,8 +702,9 @@ export function ExplosiveGrowth() {
             <> Most recent report on this board: <b>{ernote.most_recent.symbol},
               {' '}{ernote.most_recent.reported_on}</b> ({ernote.most_recent.days_ago} days ago).</>
           )}
-          {' '}A calendar fact only: it changes no order, no filter and no gate, and the
-          {' '}100%/100% screen itself has never been measured forward.
+          {' '}A calendar fact only: it changes no order, no filter and no gate; the
+          {' '}100%/100% screen itself was measured 2026-09-21 — see the MEASURED line on
+          {' '}this board.
         </div>
       )}
 
@@ -735,9 +819,9 @@ export function ExplosiveGrowth() {
       </div>
 
       {enterableOnly && kind !== 'n/a' ? (
-        <HiddenCount hidden={part.hidden} unread={part.unread}
-                     hiddenByReason={part.hiddenByReason} enabled kind={kind}
-                     reasons={part.reasons} unhidden={part.unhidden}
+        <HiddenCount hidden={partShown.hidden} unread={partShown.unread}
+                     hiddenByReason={partShown.hiddenByReason} enabled kind={kind}
+                     reasons={partShown.reasons} unhidden={partShown.unhidden}
                      onToggleReason={toggleReason} unhideCount={ignoreReasons.size}
                      onShowAll={() => setEnterableOnly(false)} />
       ) : null}
@@ -756,7 +840,23 @@ export function ExplosiveGrowth() {
             </span>
           ))}
           )
-          {focus && hid.some((h) => h.symbol === focus) ? ` · ${focus} is one of them` : ''}
+        </div>
+      )}
+      {/* ✨ new only — how many rows it took, ALWAYS while it is on (even at 0),
+          from the stage's own array lengths. A row with no arrival read counts
+          as not new, and the line says how many. */}
+      {onlyNew && (
+        <div className="cm-hidden-count" data-testid="growth-new-only-hidden">
+          {newOnlyHiddenLine(staged.dropped.get('new') ?? 0, newCounts.unreadN, data?.new_days)}
+          {' · '}
+          <button type="button" className="cm-hidden-count-btn" onClick={() => setOnlyNew(false)}>
+            show all
+          </button>
+        </div>
+      )}
+      {focusHidden && (
+        <div className="cm-hidden-count" data-testid="growth-focus-exempt">
+          ✨ {focus} shown because you opened it from ✨ — hidden by {exempt ? exempt.label : 'a filter'}
         </div>
       )}
       {focusMiss && (
@@ -768,9 +868,9 @@ export function ExplosiveGrowth() {
           even at zero hidden, and it always prints how many rows are SHOWING
           so an empty table is a stated count and never a blank board. Each
           entry in the breakdown is the un-hide button for that one question. */}
-      <CapitalQualityHidden summary={cqs} shown={qpart.rows.length}
-                            hidden={qpart.hidden} unread={qpart.unread}
-                            hiddenByKey={qpart.hiddenByKey} active={quality}
+      <CapitalQualityHidden summary={cqs} shown={qpartShown.rows.length}
+                            hidden={qpartShown.hidden} unread={qpartShown.unread}
+                            hiddenByKey={qpartShown.hiddenByKey} active={quality}
                             onToggle={toggleQuality} onClear={clearQuality} />
       {/* 🪜 No row on this list came back with a band read — say so once, the
           way the 🎯 n/a tabs do, instead of showing no chip anywhere and
@@ -894,13 +994,16 @@ export function ExplosiveGrowth() {
             </tr>
           </thead>
           <tbody>
-            {qpart.rows.map((r) => {
+            {drawn.map((r) => {
               const d = demandCell(r.zone);
               const warns = [...(r.warnings ?? []), ...legFlags(r)];
               const per = periodCell(r);
+              const isExempt = focusHidden && r.symbol === focus;
               return (
                 <tr key={r.symbol} data-testid={`growth-row-${r.symbol}`}
-                    className={r.symbol === focus ? 'cm-row-focus' : undefined}
+                    className={isExempt ? 'cm-row-focus cm-row-exempt'
+                               : r.symbol === focus ? 'cm-row-focus' : undefined}
+                    data-exempt={isExempt ? 'true' : undefined}
                     ref={r.symbol === focus ? focusRef : undefined}>
                   <td>
                     <TickerLink ticker={r.symbol} fromLabel="Explosive Growth" />
@@ -1021,7 +1124,7 @@ export function ExplosiveGrowth() {
                 table rendered no rows AND no message. It reads the list that is
                 actually drawn now, so an empty table always says so, with the
                 count line above it saying which filter took what. */}
-            {qpart.rows.length === 0 && (
+            {drawn.length === 0 && (
               <tr><td colSpan={18} className="eg-dim">
                 nothing matches the current filters.
               </td></tr>

@@ -29,7 +29,7 @@ other kind starts muted for him and untouched for everyone else.
 | `demand_alert` 🧲 | same-day arrival at a tested band | ~52%, a coin flip |
 | `position_alert` 💼 | stop / supply on stocks he owns | n/a — it reports his own book |
 | `potus_investment` 🏛️ | federal-stake headline | HEURISTIC, no measured record |
-| `growth_demand_alert` 🚀 | 100/100 growth name at demand | the screen has never been measured forward |
+| `growth_demand_alert` 🚀 | 100/100 growth name at demand | the screen measured 2026-09-21 as a lean, not a finding (cell G100; reworded 2026-10-12) |
 | `earnings_reaction` 📣 | beat + institutional buying | NOT MEASURED |
 | `board_arrival` ✨ | new name on 📈 Bonde / 🚀 Explosive Growth | Bonde's rule measured INVERTED (−3.11pp) |
 

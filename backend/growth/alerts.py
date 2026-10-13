@@ -59,7 +59,9 @@ ONE PUSH PER SYMBOL PER BAND PER DAY.
 ENTERABLE read (2026-09-15): recorded on the row after every gate; BLOCKED
 here is a divergence, counted skipped_not_enterable.
 
-NOTHING HERE IS BACKTESTED. The 100/100 screen has never been measured forward.
+THE 100/100 SCREEN WAS MEASURED 2026-09-21 (growth/screen_measured.py, cell
+G100): a lean, not a finding. This kind's demand gate is still the only thing
+here that measured as a gate.
 """
 from __future__ import annotations
 

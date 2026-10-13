@@ -65,6 +65,13 @@ async def bonde_board(
             board = SR.attach_bonde(board)
         except Exception as exc:                                # noqa: BLE001
             log.warning("bonde: since_report unavailable: %s", exc)
+        # 🗂️ Tab membership snapshot (Ajay 2026-10-12, #8): ONE upsert of the
+        # placed sections; never reorders, never raises into the board.
+        try:
+            from chart_maps import membership as _MB
+            _MB.record_bonde(board)
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("bonde: membership snapshot skipped: %s", exc)
         return board
 
     return JSONResponse(_scrub(await asyncio.to_thread(_run)))

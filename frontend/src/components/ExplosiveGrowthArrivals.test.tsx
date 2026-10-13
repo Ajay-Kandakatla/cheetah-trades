@@ -228,7 +228,10 @@ describe('✨ NEW tag on a row', () => {
     stub([row({ symbol: 'AXTI' })]);
     mount();
     await screen.findByText('AXTI');
-    expect(screen.queryByText(/✨/)).toBeNull();
+    /* The only ✨ left is the always-drawn "✨ new only (0)" control (refix
+     * 2026-10-13, spec §0 #2) — no tag, no line. */
+    expect(screen.queryByText(/✨ NEW/)).toBeNull();
+    expect(screen.getAllByText(/✨/).map((el) => el.textContent)).toEqual(['✨ new only (0)']);
     expect(screen.queryByTestId('growth-arrivals-line')).toBeNull();
     expect(screen.queryByTestId('growth-new-hidden')).toBeNull();
     expect(screen.queryByTestId('growth-focus-miss')).toBeNull();
@@ -302,12 +305,15 @@ describe('?focus= highlights and scrolls once', () => {
     fireEvent.click(box);
     fireEvent.click(box);
     fireEvent.click(screen.getByRole('button', { name: /Sales YoY/ }));
-    // a filter that REMOVES the focused row and brings it back remounts it
+    // a filter that would REMOVE the focused row: since #6 (2026-10-12) the
+    // focused row stays DRAWN, exempt and marked; it never scrolls again
     fireEvent.click(screen.getByRole('button', { name: 'Healthcare' }));
-    await waitFor(() => expect(screen.queryByTestId('growth-row-AXTI')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('growth-row-AXTI').className)
+      .toBe('cm-row-focus cm-row-exempt'));
+    expect(screen.getByTestId('growth-focus-exempt')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Healthcare' }));
-    await screen.findByTestId('growth-row-AXTI');
-    expect(screen.getByTestId('growth-row-AXTI').className).toBe('cm-row-focus');
+    await waitFor(() => expect(screen.getByTestId('growth-row-AXTI').className).toBe('cm-row-focus'));
+    expect(screen.queryByTestId('growth-focus-exempt')).toBeNull();
     expect(scroll).toHaveBeenCalledTimes(1);
   });
 
@@ -400,14 +406,16 @@ describe('✨ N new hidden by his controls', () => {
     expect(screen.queryByTestId('growth-new-hidden')).toBeNull();
   });
 
-  it('?focus= on the hidden row → the line says the focused name is one of them', async () => {
+  it('?focus= on the hidden row → it is DRAWN (exempt, #6), so the ✨ line no longer counts it', async () => {
     stub([MGNX, PGEN, AXTI]);
     mount('/chart-maps?tab=growth&focus=MGNX');
     await waitFor(() => expect(tickers()).toHaveLength(3));
     fireEvent.click(screen.getByRole('checkbox', { name: /hide what the engine refuses/ }));
-    expect((await screen.findByTestId('growth-new-hidden')).textContent)
-      .toBe('✨ 1 new hidden (1 hide what the engine refuses) · MGNX is one of them');
-    expect(screen.queryByTestId('growth-focus-miss')).toBeNull();   // it IS on the board
+    expect((await screen.findByTestId('growth-focus-exempt')).textContent)
+      .toBe('✨ MGNX shown because you opened it from ✨ — hidden by hide what the engine refuses');
+    expect(screen.queryByTestId('growth-new-hidden')).toBeNull();     // MGNX was the only hidden arrival
+    expect(screen.queryByTestId('growth-focus-miss')).toBeNull();     // it IS on the board
+    expect(document.body.textContent).not.toContain('one of them');
   });
 
   it('NEGATIVE: focus on a DRAWN name never claims it is hidden', async () => {
@@ -621,5 +629,589 @@ describe('wording and source pins', () => {
     const src = await readSource('src/components/ExplosiveGrowth.tsx');
     expect(src).not.toContain('@gmail');
     expect(src).not.toContain('ajaykandakatla');
+  });
+});
+
+/* ══ 2026-10-12 his-call package P2 (board-fe): #2 ✨ new only, #6 the focus
+ * exemption, #7 the board line's open rule, #1 the MEASURED wording. ═══════ */
+
+const PREV_PP_LITERALS = ['+8.6pp', '+8.6pp'];
+
+/** The committed component's pp-literal count, read from `git show HEAD:` —
+ *  so the guard is "does not grow" against what is actually on the branch.
+ *  Falls back to the pin above when git is not reachable (a tarball CI). */
+async function headPpCount(): Promise<number> {
+  try {
+    const cp: any = await import(/* @vite-ignore */ ('node:' + 'child_process'));
+    const out: string = (cp.default || cp).execSync(
+      'git show HEAD:frontend/src/components/ExplosiveGrowth.tsx',
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return (out.match(/[+−-]?\d+(?:\.\d+)?\s*pp\b/g) ?? []).length;
+  } catch {
+    return PREV_PP_LITERALS.length;
+  }
+}
+
+const NEW_ON: StagedFilterOpts = { ...ALL_OFF, onlyNew: true };
+
+/** An in-memory Storage (the StudyNote tests' shape): the runner's global
+ *  `localStorage` is not a reliable jsdom store, so every test that reads or
+ *  asserts on storage installs its own. */
+function memStore(init: Record<string, string> = {}) {
+  const m = new Map<string, string>(Object.entries(init));
+  return {
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null),
+    setItem: (k: string, v: string) => { m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+    clear: () => m.clear(),
+    key: (i: number) => Array.from(m.keys())[i] ?? null,
+    get length() { return m.size; },
+    _m: m,
+  };
+}
+
+describe('#2 stagedFilter — ✨ new only (pure)', () => {
+  const MIX: GrowthRow[] = [
+    row({ symbol: 'NEW1', is_new: true, first_seen: STAMP }),
+    row({ symbol: 'OLD1', is_new: false, first_seen: TRACKING_SINCE }),
+    row({ symbol: 'NOREAD' }),                                  // older payload: no is_new
+    row({ symbol: 'NEW2', is_new: true, first_seen: STAMP }),
+  ];
+
+  it('ON keeps only is_new === true, in input order, and records a `new` kept + dropped entry', () => {
+    const got = stagedFilter(MIX, NEW_ON);
+    expect(syms(got.rows)).toEqual(['NEW1', 'NEW2']);
+    expect([...got.kept.keys()]).toEqual(['new']);
+    expect([...got.kept.get('new')!]).toEqual(['NEW1', 'NEW2']);
+    expect(got.dropped.get('new')).toBe(2);
+  });
+
+  it('NEGATIVE: a row with is_new undefined (older payload) is dropped as NOT new', () => {
+    expect(syms(stagedFilter(MIX, NEW_ON).rows)).not.toContain('NOREAD');
+  });
+
+  it('NEGATIVE: OFF (absent or false) → no `new` kept, no `new` dropped, rows untouched', () => {
+    for (const o of [ALL_OFF, { ...ALL_OFF, onlyNew: false }]) {
+      const got = stagedFilter(MIX, o);
+      expect(got.rows).toEqual(MIX);
+      expect(got.kept.has('new')).toBe(false);
+      expect(got.dropped.has('new')).toBe(false);
+      expect(got.dropped.size).toBe(0);
+    }
+  });
+
+  it('NEGATIVE: the input array is never mutated', () => {
+    const input = Object.freeze([...MIX]) as readonly GrowthRow[];
+    stagedFilter(input, NEW_ON);
+    expect(syms(input)).toEqual(['NEW1', 'OLD1', 'NOREAD', 'NEW2']);
+  });
+
+  it('runs AFTER debt: kept keys in board order with every stage ON', () => {
+    const rows = SIX.map((r) => ({ ...r, is_new: r.symbol === 'ESUR' }));
+    const got = stagedFilter(rows, { ...ALL_ON, onlyNew: true });
+    expect([...got.kept.keys()]).toEqual(['refused', 'demand', 'sector', 'debt', 'new']);
+    expect(syms(got.rows)).toEqual(['ESUR']);
+  });
+
+  it('[C10] dropped = before.length − after.length per ON stage, absent for OFF stages', () => {
+    const rows = SIX.map((r) => ({ ...r, is_new: r.symbol === 'ESUR' }));
+    const got = stagedFilter(rows, { ...ALL_ON, onlyNew: true });
+    expect(Object.fromEntries(got.dropped)).toEqual(
+      { refused: 1, demand: 1, sector: 1, debt: 1, new: 1 });
+    const one = stagedFilter(rows, { ...ALL_OFF, sector: 'Technology' });
+    expect([...one.dropped.keys()]).toEqual(['sector']);
+    expect(one.dropped.get('sector')).toBe(1);
+  });
+
+  it('[C10] NEGATIVE: a DUPLICATED symbol is counted twice by dropped, where kept set sizes would say once', () => {
+    const dup: GrowthRow[] = [
+      row({ symbol: 'DUPX', is_new: false }), row({ symbol: 'DUPX', is_new: false }),
+      row({ symbol: 'NEWY', is_new: true, first_seen: STAMP }),
+    ];
+    const got = stagedFilter(dup, { ...ALL_OFF, onlyBuyable: true, onlyNew: true });
+    const setDiff = got.kept.get('refused')!.size - got.kept.get('new')!.size;
+    expect(setDiff).toBe(1);                       // the undercount C10 names
+    expect(got.dropped.get('new')).toBe(2);        // the array truth
+    expect(got.dropped.get('refused')).toBe(0);
+  });
+});
+
+/* ── #2 rendered ─────────────────────────────────────────────────────────── */
+
+describe('#2 ✨ new only checkbox on the board', () => {
+  const N1 = row({ symbol: 'NWA', is_new: true, first_seen: STAMP, sales_growth_pct: 150 });
+  const N2 = row({ symbol: 'NWB', is_new: true, first_seen: STAMP, sales_growth_pct: 350 });
+  const O1 = row({ symbol: 'OLA', is_new: false, first_seen: TRACKING_SINCE, sales_growth_pct: 250 });
+  const O2 = row({ symbol: 'OLB', is_new: false, first_seen: TRACKING_SINCE, sales_growth_pct: 450 });
+  const U1 = row({ symbol: 'UNR', sales_growth_pct: 120 });       // no arrival read
+  const box = () => screen.getByTestId('growth-new-only') as HTMLInputElement;
+
+  it('OFF on first paint, label carries the served new count, every row drawn', async () => {
+    stub([N1, N2, O1, O2], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    expect(box().checked).toBe(false);
+    expect(box().closest('label')!.textContent).toBe('✨ new only (2)');
+    expect(screen.queryByTestId('growth-new-only-hidden')).toBeNull();
+  });
+
+  it('ON → only is_new === true rows; the line says how many it hid and over which window', async () => {
+    stub([N1, N2, O1, O2], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    fireEvent.click(box());
+    await waitFor(() => expect(tickers().sort()).toEqual(['NWA', 'NWB']));
+    const line = screen.getByTestId('growth-new-only-hidden');
+    expect(line.className).toBe('cm-hidden-count');
+    expect(line.textContent).toBe('✨ new only: 2 hidden (not new in the last 30 days) · show all');
+  });
+
+  it('a row with no arrival read is hidden as NOT new, and the line says so', async () => {
+    stub([N1, O1, U1], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(3));
+    fireEvent.click(box());
+    await waitFor(() => expect(tickers()).toEqual(['NWA']));
+    expect(screen.getByTestId('growth-new-only-hidden').textContent).toBe(
+      '✨ new only: 2 hidden (not new in the last 30 days) · 1 row carries no arrival read and counts as not new · show all');
+  });
+
+  it('`show all` unticks the box and every row returns', async () => {
+    stub([N1, N2, O1, O2], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    fireEvent.click(box());
+    await waitFor(() => expect(tickers()).toHaveLength(2));
+    fireEvent.click(screen.getByTestId('growth-new-only-hidden').querySelector('button')!);
+    expect(box().checked).toBe(false);
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    expect(screen.queryByTestId('growth-new-only-hidden')).toBeNull();
+  });
+
+  it('NEGATIVE: ON never produces the "N new hidden" line (it never drops a new name)', async () => {
+    stub([N1, N2, O1, O2], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    fireEvent.click(box());
+    await screen.findByTestId('growth-new-only-hidden');
+    expect(screen.queryByTestId('growth-new-hidden')).toBeNull();
+    expect(document.querySelector('button[data-reason="new"]')).toBeNull();
+  });
+
+  it('NEGATIVE: it sorts nothing — the drawn order equals the unfiltered order with the old rows removed', async () => {
+    stub([N1, O1, N2, O2], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    const without = tickers().filter((t) => t === 'NWA' || t === 'NWB');
+    fireEvent.click(box());
+    await waitFor(() => expect(tickers()).toHaveLength(2));
+    expect(tickers()).toEqual(without);
+  });
+
+  it('NEGATIVE: ticking it changes no other checkbox and no select', async () => {
+    stub([N1, N2, O1, O2], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(4));
+    const others = () => Array.from(document.querySelectorAll('input[type="checkbox"]'))
+      .filter((el) => el !== box()).map((el) => (el as HTMLInputElement).checked);
+    const selects = () => Array.from(document.querySelectorAll('select')).map((el) => el.value);
+    const before = [others(), selects()];
+    fireEvent.click(box());
+    await screen.findByTestId('growth-new-only-hidden');
+    expect([others(), selects()]).toEqual(before);
+  });
+
+  it('NEGATIVE: new_days missing → the window clause is omitted, never "undefined"', async () => {
+    stub([N1, O1]);
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(2));
+    fireEvent.click(box());
+    const t = (await screen.findByTestId('growth-new-only-hidden')).textContent!;
+    expect(t).toBe('✨ new only: 1 hidden (not new) · show all');
+    expect(t).not.toContain('undefined');
+    expect(t).not.toContain('null');
+  });
+
+  it('NEGATIVE: an older payload with no arrival read on any row → the control is STILL drawn, OFF, reading (0)', async () => {
+    stub([row({ symbol: 'AXTI' }), row({ symbol: 'BBBB' })], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(2));
+    expect(box().checked).toBe(false);
+    expect(box().closest('label')!.textContent).toBe('✨ new only (0)');
+    expect(screen.queryByTestId('growth-new-only-hidden')).toBeNull();
+  });
+
+  it('NEGATIVE: all-old payload, ON → every row hidden and the line says ALL of them carry no arrival read', async () => {
+    stub([row({ symbol: 'AXTI' }), row({ symbol: 'BBBB' }), row({ symbol: 'CCCC' })], { new_days: 30 });
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(3));
+    fireEvent.click(box());
+    await waitFor(() => expect(tickers()).toHaveLength(0));
+    expect(screen.getByTestId('growth-new-only-hidden').textContent).toBe(
+      '✨ new only: 3 hidden (not new in the last 30 days) · 3 rows carry no arrival read and count as not new · show all');
+    expect(screen.queryByTestId('growth-new-hidden')).toBeNull();
+  });
+
+  it('NEGATIVE: all-old payload, ON then `show all` → every row returns and the line goes', async () => {
+    stub([row({ symbol: 'AXTI' }), row({ symbol: 'BBBB' })]);
+    mount();
+    await waitFor(() => expect(tickers()).toHaveLength(2));
+    fireEvent.click(box());
+    await waitFor(() => expect(tickers()).toHaveLength(0));
+    fireEvent.click(screen.getByTestId('growth-new-only-hidden').querySelector('button')!);
+    expect(box().checked).toBe(false);
+    await waitFor(() => expect(tickers()).toHaveLength(2));
+    expect(screen.queryByTestId('growth-new-only-hidden')).toBeNull();
+  });
+});
+
+/* ── #6 the focus exemption ─────────────────────────────────────────────── */
+
+/** The enterable HiddenCount line (the only `N hidden` line that is not ✨/💎). */
+const enterLine = () => Array.from(document.querySelectorAll('div.cm-hidden-count'))
+  .find((el) => /^\d+ hidden/.test(el.textContent ?? '')) as HTMLElement | undefined;
+const enterHidden = () => Number((enterLine()?.textContent ?? '').match(/^(\d+) hidden/)![1]);
+const chipN = (code: string) => {
+  const b = enterLine()?.querySelector(`button[data-reason="${code}"]`);
+  return b ? Number((b.textContent ?? '').match(/^(\d+)/)![1]) : 0;
+};
+const allChipN = () => Array.from(enterLine()?.querySelectorAll('button[data-reason]') ?? [])
+  .reduce((s, b) => s + Number((b.textContent ?? '0').match(/^(\d+)/)?.[1] ?? 0), 0);
+
+describe('#6 ?focus= draws a row his filters hide — ONE row, marked, no filter written', () => {
+  const MGNX = row({ symbol: 'MGNX', sector: 'Healthcare', warnings: [REFUSE],
+                     is_new: true, first_seen: STAMP, sales_growth_pct: 90 });
+  const RFX2 = row({ symbol: 'RFXB', warnings: [REFUSE], is_new: true, first_seen: STAMP, sales_growth_pct: 80 });
+  const OLDR = row({ symbol: 'OLDR', warnings: [REFUSE], is_new: false, first_seen: TRACKING_SINCE, sales_growth_pct: 70 });
+  const PGEN = row({ symbol: 'PGEN', is_new: true, first_seen: STAMP, sales_growth_pct: 300 });
+  const AXTI = row({ symbol: 'AXTI', is_new: false, first_seen: TRACKING_SINCE, sales_growth_pct: 200 });
+  const ROWS = [MGNX, RFX2, OLDR, PGEN, AXTI];
+  const refuses = () => screen.getByRole('checkbox', { name: /hide what the engine refuses/ }) as HTMLInputElement;
+
+  it('"hide what the engine refuses" ON → MGNX drawn FIRST, exempt, marked; the other refused rows stay hidden', async () => {
+    stub(ROWS);
+    mount('/chart-maps?tab=growth&focus=MGNX');
+    await waitFor(() => expect(tickers()).toHaveLength(5));
+    fireEvent.click(refuses());
+    await waitFor(() => expect(tickers()).toEqual(['MGNX', 'PGEN', 'AXTI']));
+    const tr = screen.getByTestId('growth-row-MGNX');
+    expect(tr.className).toBe('cm-row-focus cm-row-exempt');
+    expect(tr.getAttribute('data-exempt')).toBe('true');
+    expect(screen.getByTestId('growth-focus-exempt').textContent)
+      .toBe('✨ MGNX shown because you opened it from ✨ — hidden by hide what the engine refuses');
+    expect(screen.getByTestId('growth-focus-exempt').className).toBe('cm-hidden-count');
+    expect(refuses().checked).toBe(true);                              // the box is NOT flipped
+    // the ✨ line counts the OTHER hidden arrival only — MGNX is drawn
+    expect(screen.getByTestId('growth-new-hidden').textContent)
+      .toBe('✨ 1 new hidden (1 hide what the engine refuses)');
+    expect(document.querySelectorAll('[data-exempt="true"]')).toHaveLength(1);
+  });
+
+  it('sector filter → the marker names the sector filter', async () => {
+    stub(ROWS);
+    mount('/chart-maps?tab=growth&focus=MGNX');
+    await waitFor(() => expect(tickers()).toHaveLength(5));
+    fireEvent.click(screen.getByRole('button', { name: 'Technology' }));
+    await waitFor(() => expect(tickers()[0]).toBe('MGNX'));
+    expect(screen.getByTestId('growth-focus-exempt').textContent)
+      .toBe('✨ MGNX shown because you opened it from ✨ — hidden by sector filter');
+    expect(tickers()).toHaveLength(5);                                 // every other row is Technology
+    expect(tickers().filter((t) => t === 'MGNX')).toHaveLength(1);     // drawn once, never duplicated
+    expect(screen.getByRole('button', { name: /clear filter \(Technology\)/ })).toBeTruthy();  // filter still ON
+  });
+
+  it('✨ new only ON + a focus on an INCUMBENT (?symbol= from an old push) → drawn, "hidden by ✨ new only"', async () => {
+    stub(ROWS, { new_days: 30 });
+    mount('/chart-maps?tab=growth&symbol=AXTI');
+    await waitFor(() => expect(tickers()).toHaveLength(5));
+    fireEvent.click(screen.getByTestId('growth-new-only'));
+    await waitFor(() => expect(tickers()[0]).toBe('AXTI'));
+    expect(screen.getByTestId('growth-focus-exempt').textContent)
+      .toBe('✨ AXTI shown because you opened it from ✨ — hidden by ✨ new only');
+    expect(tickers().sort()).toEqual(['AXTI', 'MGNX', 'PGEN', 'RFXB']);
+    // the new-only count line is the stage's own drop count — AXTI included (it WAS dropped)
+    expect(screen.getByTestId('growth-new-only-hidden').textContent)
+      .toContain('2 hidden');
+  });
+
+  /* The enterable stage: three BLOCKED rows, two under one reason. */
+  const ROOM = {
+    as_of: '2026-10-12T11:00:00-04:00', pending: 0,
+    rows: Object.fromEntries([
+      ['MGNX', 'proximity', 'not at band'], ['PGEN', 'proximity', 'not at band'],
+      ['RFXB', 'room', 'no room'],
+    ].map(([s, code, short]) => [s, {
+      symbol: s, coverage: 'store', print: 10, fresh: true, room: { state: 'CLEAR' },
+      enterable: { kind: 'demand', verdict: 'BLOCKED', reasons: [code], reason_short: [short],
+                   reason_text: ['x'], measured: { status: 'pending' } } }]).concat([
+      ['AXTI', { symbol: 'AXTI', coverage: 'store', print: 61, fresh: true, room: { state: 'CLEAR' },
+                 enterable: { kind: 'demand', verdict: 'READY', reasons: [], reason_short: [],
+                              reason_text: [], measured: { status: 'pending' } } }],
+      ['OLDR', { symbol: 'OLDR', coverage: 'store', print: 61, fresh: true, room: { state: 'CLEAR' },
+                 enterable: { kind: 'demand', verdict: 'READY', reasons: [], reason_short: [],
+                              reason_text: [], measured: { status: 'pending' } } }],
+    ])),
+  };
+  const mountEnter = (path: string, set = vi.fn()) => {
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <EnterableFilterProvider enterableOnly kind="demand" setEnterableOnly={set}>
+          <ExplosiveGrowth />
+        </EnterableFilterProvider>
+      </MemoryRouter>);
+    return set;
+  };
+
+  it('[C3] enterable stage: marker names "enterable only"; HiddenCount is exactly ONE lower; chips stay the engine\'s own', async () => {
+    stub(ROWS, {}, ROOM);
+    mountEnter('/chart-maps?tab=growth');
+    await waitFor(() => expect(enterLine()).toBeTruthy());
+    await waitFor(() => expect(enterHidden()).toBe(3));
+    const base = { hidden: enterHidden(), prox: chipN('proximity'), room: chipN('room') };
+    expect(base).toEqual({ hidden: 3, prox: 2, room: 1 });
+    expect(allChipN()).toBe(base.hidden);                       // the invariant, no focus
+    cleanup(); _resetBounceRoomCache();
+
+    stub(ROWS, {}, ROOM);
+    const set = mountEnter('/chart-maps?tab=growth&focus=MGNX');
+    await screen.findByTestId('growth-focus-exempt');
+    await waitFor(() => expect(enterHidden()).toBe(2));
+    expect(screen.getByTestId('growth-focus-exempt').textContent)
+      .toBe('✨ MGNX shown because you opened it from ✨ — hidden by enterable only');
+    expect(tickers()[0]).toBe('MGNX');
+    expect(chipN('proximity')).toBe(base.prox - 1);             // MGNX's reason, one lower
+    expect(chipN('room')).toBe(base.room);                      // the other reason untouched
+    expect(allChipN()).toBe(enterHidden());                     // sum(reasons[].hidden) === hidden
+    expect(tickers()).not.toContain('PGEN');                    // every other blocked row stays hidden
+    expect(tickers()).not.toContain('RFXB');
+    expect(set).not.toHaveBeenCalled();                         // no filter setter fired
+  });
+
+  it('[C3] quality stage: the 💎 hidden line and its per-key count are exactly ONE lower', async () => {
+    const fail = { grade: 'none', passed: 0, failed: 1, unknown: 0, answered: 1, rank_key: 0,
+                   components: { net_cash: { verdict: 'fail', why: 'cash <= debt' } } };
+    const pass = { grade: 'all', passed: 1, failed: 0, unknown: 0, answered: 1, rank_key: 1,
+                   components: { net_cash: { verdict: 'pass', why: 'cash > debt' } } };
+    const q = (r: GrowthRow, read: unknown) => ({ ...r, warnings: [], capital_quality: read as GrowthRow['capital_quality'] });
+    const QROWS = [q(MGNX, fail), q(RFX2, fail), q(PGEN, pass), q(AXTI, pass)];
+    const summary = {
+      n: 4, grades: { all: 2, none: 2 }, measured: false, measured_note: 'NOT MEASURED',
+      components: [{ key: 'net_cash', kind: 'definitional', label: 'net cash',
+                     pass_n: 2, fail_n: 2, unknown_n: 0, hides_n: 2 }],
+    };
+    stub(QROWS, { capital_quality_summary: summary });
+    mount('/chart-maps?tab=growth');
+    fireEvent.click(await screen.findByTestId('eg-qchip-net_cash'));
+    await waitFor(() => expect(tickers()).toEqual(['PGEN', 'AXTI']));
+    const baseKey = screen.getByTestId('eg-qhidden-net_cash').textContent;
+    expect(baseKey).toMatch(/^2 /);
+    expect(screen.getByTestId('eg-qhidden').textContent).toContain('2 showing');
+    cleanup();
+
+    stub(QROWS, { capital_quality_summary: summary });
+    mount('/chart-maps?tab=growth&focus=MGNX');
+    fireEvent.click(await screen.findByTestId('eg-qchip-net_cash'));
+    await waitFor(() => expect(tickers()).toEqual(['MGNX', 'PGEN', 'AXTI']));
+    expect(screen.getByTestId('growth-focus-exempt').textContent)
+      .toBe('✨ MGNX shown because you opened it from ✨ — hidden by quality chips');
+    expect(screen.getByTestId('eg-qhidden-net_cash').textContent).toMatch(/^1 /);
+    expect(screen.getByTestId('eg-qhidden').textContent).toContain('2 showing');
+    expect(tickers()).not.toContain('RFXB');
+  });
+
+  it('NEGATIVE: focus on a DRAWN row → no marker, no duplicate, counts identical to no focus', async () => {
+    stub(ROWS, {}, ROOM);
+    mountEnter('/chart-maps?tab=growth');
+    await waitFor(() => expect(enterHidden()).toBe(3));
+    const noFocus = { line: enterLine()!.textContent, rows: tickers() };
+    cleanup(); _resetBounceRoomCache();
+
+    stub(ROWS, {}, ROOM);
+    mountEnter('/chart-maps?tab=growth&focus=AXTI');
+    await waitFor(() => expect(enterHidden()).toBe(3));
+    expect(screen.queryByTestId('growth-focus-exempt')).toBeNull();
+    expect(document.querySelector('[data-exempt]')).toBeNull();
+    expect(screen.getByTestId('growth-row-AXTI').className).toBe('cm-row-focus');
+    expect(enterLine()!.textContent).toBe(noFocus.line);
+    expect(tickers()).toEqual(noFocus.rows);
+  });
+
+  it('NEGATIVE: ?focus=NOPE with a filter ON → the miss line only, nothing exempt', async () => {
+    stub(ROWS);
+    mount('/chart-maps?tab=growth&focus=NOPE');
+    await waitFor(() => expect(tickers()).toHaveLength(5));
+    fireEvent.click(refuses());
+    await waitFor(() => expect(tickers()).toEqual(['PGEN', 'AXTI']));
+    expect(screen.getByTestId('growth-focus-miss').textContent).toBe('✨ NOPE is not on this board today.');
+    expect(screen.queryByTestId('growth-focus-exempt')).toBeNull();
+    expect(screen.getByTestId('growth-new-hidden').textContent)
+      .toBe('✨ 2 new hidden (2 hide what the engine refuses)');
+  });
+
+  it('NEGATIVE: landing on an exempt focus writes no localStorage key and fires no filter setter', async () => {
+    const store = memStore();
+    vi.stubGlobal('localStorage', store);
+    stub(ROWS, {}, ROOM);
+    const set = mountEnter('/chart-maps?tab=growth&focus=MGNX');
+    await screen.findByTestId('growth-focus-exempt');
+    expect(set).not.toHaveBeenCalled();
+    expect([...store._m.keys()]).toEqual([]);
+    for (const el of Array.from(document.querySelectorAll('input[type="checkbox"]'))) {
+      expect((el as HTMLInputElement).checked).toBe(false);       // every local box still at its default
+    }
+    expect(Array.from(document.querySelectorAll('select')).map((el) => el.value)).toEqual(['all']);
+  });
+
+  it('NEGATIVE: unfocus (no param) with the filter ON → the refused rows simply stay hidden', async () => {
+    stub(ROWS);
+    mount('/chart-maps?tab=growth');
+    await waitFor(() => expect(tickers()).toHaveLength(5));
+    fireEvent.click(refuses());
+    await waitFor(() => expect(tickers()).toEqual(['PGEN', 'AXTI']));
+    expect(screen.queryByTestId('growth-focus-exempt')).toBeNull();
+  });
+});
+
+/* ── #7 the board's arrivals line opens on a fresh batch ─────────────────── */
+
+describe('#7 the board arrivals line follows the strip\'s open rule (freshKey)', () => {
+  const ROWS = [row({ symbol: 'PGEN', is_new: true, first_seen: STAMP })];
+  const NEWER = '2026-10-19T02:29:05+00:00';
+  const extra = (stamp: string) => ({
+    arrivals_n: 1, new_days: 30, arrivals_note: 'SERVED NOTE',
+    arrivals: [{ symbol: 'PGEN', first_seen: stamp }, { symbol: 'OLDX', first_seen: '2026-10-01T00:00:00+00:00' }],
+  });
+  const det = () => screen.getByTestId('growth-arrivals-line') as HTMLDetailsElement;
+  const fold = () => { const el = det(); el.open = false; fireEvent(el, new Event('toggle')); };
+  beforeEach(() => { vi.stubGlobal('localStorage', memStore()); });
+
+  it('opens on first paint for a viewer who never folded it', async () => {
+    stub(ROWS, extra(STAMP));
+    mount();
+    await screen.findByTestId('growth-arrivals-line');
+    await waitFor(() => expect(det().open).toBe(true));
+  });
+
+  it('NEGATIVE: same batch after his fold → stays folded on the next visit', async () => {
+    stub(ROWS, extra(STAMP));
+    mount();
+    await waitFor(() => expect(det().open).toBe(true));
+    fold();
+    cleanup();
+    stub(ROWS, extra(STAMP));
+    mount();
+    await screen.findByTestId('growth-arrivals-line');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(det().open).toBe(false);
+  });
+
+  it('a NEWER batch (newest served first_seen later than at his fold) re-opens it', async () => {
+    stub(ROWS, extra(STAMP));
+    mount();
+    await waitFor(() => expect(det().open).toBe(true));
+    fold();
+    cleanup();
+    stub(ROWS, extra(NEWER));
+    mount();
+    await screen.findByTestId('growth-arrivals-line');
+    await waitFor(() => expect(det().open).toBe(true));
+  });
+
+  it('NEGATIVE: no served arrivals list (older payload) → today\'s folded first paint', async () => {
+    stub(ROWS, { arrivals_n: 1, new_days: 30, arrivals_note: 'SERVED NOTE' });
+    mount();
+    await screen.findByTestId('growth-arrivals-line');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(det().open).toBe(false);
+  });
+
+  it('NEGATIVE: a throwing localStorage with a served batch → opens and the board renders', async () => {
+    const boom = () => { throw new Error('blocked'); };
+    vi.stubGlobal('localStorage', { getItem: boom, setItem: boom, removeItem: boom,
+                                    clear: () => {}, key: () => null, length: 0 });
+    stub(ROWS, extra(STAMP));
+    mount();
+    await screen.findByTestId('growth-arrivals-line');
+    await waitFor(() => expect(det().open).toBe(true));
+    expect(tickers()).toEqual(['PGEN']);
+    expect(() => fold()).not.toThrow();
+  });
+
+  it('source: the board line passes freshKey = newestFirstSeen(served arrivals) — never a typed stamp', async () => {
+    const src = await readSource('src/components/ExplosiveGrowth.tsx');
+    expect(src).toMatch(/freshKey=\{newestFirstSeen\(data\?\.arrivals \?\? \[\]\)\}/);
+    expect(src).toMatch(/from '\.\.\/lib\/growthArrivalsFresh'/);
+  });
+});
+
+/* ── #1 the MEASURED wording on the board ───────────────────────────────── */
+
+describe('#1 MEASURED 2026-09-21 — served fold + reworded 📣 note', () => {
+  const ROWS = [row({ symbol: 'PGEN' })];
+  const SM = { headline: 'SERVED HEADLINE 2026-09-21', body: 'SERVED BODY with +9.99pp that the FE never types' };
+  const ER = { earnings_fresh_summary: { window_days: 7, n: 1, n_fresh: 1, n_known: 1, n_unknown: 0,
+                                         as_of: '2026-10-12', most_recent: null } };
+
+  it('growth-screen-measured renders the SERVED headline and body verbatim, folded', async () => {
+    stub(ROWS, { screen_measured: SM });
+    mount();
+    const el = await screen.findByTestId('growth-screen-measured');
+    expect(el.tagName).toBe('DETAILS');
+    expect(el.querySelector('summary')!.textContent).toContain(SM.headline);
+    expect(Array.from(el.querySelectorAll('p')).some((p) => p.textContent === SM.body)).toBe(true);
+    expect((el as HTMLDetailsElement).open).toBe(false);
+  });
+
+  it('NEGATIVE: payload without screen_measured → no fold, the board still renders', async () => {
+    stub(ROWS);
+    mount();
+    await screen.findByText('PGEN');
+    expect(screen.queryByTestId('growth-screen-measured')).toBeNull();
+  });
+
+  it('NEGATIVE: screen_measured with an empty body (or null) → no fold', async () => {
+    for (const sm of [{ headline: 'H', body: '' }, null]) {
+      stub(ROWS, { screen_measured: sm });
+      mount();
+      await screen.findByText('PGEN');
+      expect(screen.queryByTestId('growth-screen-measured')).toBeNull();
+      cleanup();
+    }
+  });
+
+  it('the 📣 note says "measured 2026-09-21" and NEVER "never been measured"', async () => {
+    stub(ROWS, ER);
+    mount();
+    await screen.findByText('PGEN');
+    const note = document.querySelector('.eg-ernote')!;
+    expect(note.textContent).toContain('measured 2026-09-21');
+    expect(note.textContent).not.toMatch(/never been measured/i);
+    expect(note.textContent).not.toMatch(/BACKTESTED/);
+  });
+
+  it('NEGATIVE: the component source never says the screen is unmeasured', async () => {
+    const src = await readSource('src/components/ExplosiveGrowth.tsx');
+    expect(src).not.toMatch(/never been measured/i);
+    expect(src).not.toMatch(/NOTHING HERE IS BACKTESTED/);
+  });
+
+  it('NEGATIVE: the pp-literal count in the component does not grow (vs git HEAD)', async () => {
+    const src = await readSource('src/components/ExplosiveGrowth.tsx');
+    const now = (src.match(/[+−-]?\d+(?:\.\d+)?\s*pp\b/g) ?? []).length;
+    expect(now).toBeLessThanOrEqual(await headPpCount());
+    expect(now).toBeLessThanOrEqual(PREV_PP_LITERALS.length);
+  });
+
+  it('NEGATIVE: no "bounce" anywhere on the board with every new control on', async () => {
+    stub([row({ symbol: 'PGEN', is_new: true, first_seen: STAMP }),
+          row({ symbol: 'MGNX', warnings: [REFUSE], is_new: true, first_seen: STAMP })],
+         { screen_measured: SM, new_days: 30, arrivals_n: 2, arrivals_note: 'N',
+           arrivals: [{ symbol: 'PGEN', first_seen: STAMP }] });
+    mount('/chart-maps?tab=growth&focus=MGNX');
+    await screen.findByTestId('growth-screen-measured');
+    fireEvent.click(screen.getByRole('checkbox', { name: /hide what the engine refuses/ }));
+    fireEvent.click(screen.getByTestId('growth-new-only'));
+    await screen.findByTestId('growth-focus-exempt');
+    expect((document.body.textContent ?? '').toLowerCase()).not.toContain('bounce');
   });
 });

@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-12, one word — "yes" — to the eight his-call questions after the ✨ arrivals strip shipped.
+  // #4 (the 30-day window) = KEEP: growth.tracker.NEW_GROWTH_DAYS stays 30 and still sets what the push counts as new.
+  // The measured wording comes from growth/screen_measured.py (cell G100 of the 2026-09-21 replay) — never retyped here.
+  { id: 'chart-maps-growth-arrivals-his-calls-2026-10-13', addedAt: '2026-10-13', route: '/chart-maps?tab=growth',
+    label: '✨ New-name follow-ups, all seven of your "yes" answers. On 🚀 Explosive Growth: a ✨ new only box (off by default; when on, a line says how many it hid); a name you open from a ✨ chip is drawn even if one of your filters hides it, marked "shown because you opened it from ✨ — hidden by …", with your filters left exactly as they were; and a folded MEASURED 2026-09-21 line now carries the 100/100 screen\'s own forward record. The top line on the other Chart Maps tabs is gone on 🚀 itself (the rows carry the pills there), opens the first time you see it and re-opens when a new batch lands after you folded it, and every chip now lands with blocked names shown for that visit — your 🎯 setting is not changed. Under each chip, small links to the other Chart Maps tabs that name is on right now (hover for the as-of; dimmed when older than that tab\'s own refresh). Every line that still said the 100/100 screen "has never been measured forward" now says it was measured 2026-09-21 — a lean, not a finding — including the push body. The 30-day "new" window is kept. Nothing here sorts, filters, gates or pushes differently.' },
   // Ajay 2026-10-12: "In the eplosive growth there are 7 new one can you gave me special emphasis wiht a tag or
   // something in the chart map pages top and then a link to the repective tabs with new ticker and also in the
   // explosive growth too" + "I saw an alert for 7 in explosive growth". The 30-day window is

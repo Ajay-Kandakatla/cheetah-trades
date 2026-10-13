@@ -66,6 +66,7 @@ import { SignalLabBoard } from '../components/SignalLabBoard';
 import { HottestSectors } from '../components/HottestSectors';
 import { ExplosiveGrowth } from '../components/ExplosiveGrowth';
 import GrowthArrivalsStrip from '../components/GrowthArrivalsStrip';
+import { GROWTH_TAB } from '../lib/growthArrivals';
 import GntBoard from '../components/GntBoard';
 import BondeBoard from '../components/BondeBoard';
 import { OvernightGappers } from '../components/OvernightGappers';
@@ -981,8 +982,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
 
       {/* ✨ Names that arrived on 🚀 Explosive Growth (Ajay 2026-10-12: "special
         * emphasis wiht a tag or something in the chart map pages top"). One
-        * folded line; renders nothing when nothing arrived. */}
-      <GrowthArrivalsStrip />
+        * line; renders nothing when nothing arrived. NOT on ?tab=growth (his
+        * "yes" to "Hide the top line when you're already on 🚀 Explosive
+        * Growth?"): the rows' ✨ pills and the board's own arrivals line carry
+        * it there, and the page makes no /growth/tags call on that tab. */}
+      {tab !== GROWTH_TAB && <GrowthArrivalsStrip />}
 
       {/* Each tab is a real LINK (Ajay 2026-09-24: "add Command clicks to the
         * Tabs in chart maps so I can open new tabs.. Of that specific

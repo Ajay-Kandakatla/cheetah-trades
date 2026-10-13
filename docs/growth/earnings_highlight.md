@@ -23,7 +23,8 @@ There is **no measurement anywhere in this repo** that a just-reported grower
 outperforms. The nearest prior is the **8-K event study, 2026-09-01**: 8-Ks give
 small caps volatility, not direction, and there was **no chase edge after a +20%
 day-0 pop**. So the badge claims nothing, the tooltip says so in capitals, and the
-100%/100% screen it sits on has itself never been measured forward.
+100%/100% screen it sits on measured 2026-09-21 as a lean, not a finding (cell
+G100, `growth/screen_measured.py`; reworded 2026-10-12).
 
 ---
 
@@ -253,8 +254,9 @@ already-dense tab:
 > **{window_days} days** (calendar read {as_of}). {n_unknown} names have **no
 > report date on file** — that is unknown, not "did not report". Most recent report
 > on this board: **{most_recent.symbol}, {reported_on}** ({days_ago} days ago). A
-> calendar fact only: it changes no order, no filter and no gate, and the
-> 100%/100% screen itself has never been measured forward.
+> calendar fact only: it changes no order, no filter and no gate; the
+> 100%/100% screen itself was measured 2026-09-21 — see the MEASURED line on
+> this board.
 
 This is **this board's own** honesty line. It must not borrow, and must not be
 borrowed by, any other board's measured-verdict banner.
@@ -331,8 +333,11 @@ actually holding.
 
 ## NOT MEASURED
 
-* The 100%/100% growth screen has **never been measured forward** — the served
-  `disclaimer` says so on the board itself.
+* The 100%/100% growth screen **measured 2026-09-21 as a lean, not a finding**
+  (cell G100; reworded 2026-10-12 — it had said "never been measured forward",
+  which became false once the replay ran). The served `disclaimer` carries the
+  clause from `growth/screen_measured.py`, and the board's MEASURED fold the
+  full line.
 * The "just reported" badge has **no prior at all**. The nearest study, the **8-K
   event study of 2026-09-01**, measured **no chase edge** after a fresh print, and
   found 8-Ks give small caps volatility rather than direction.

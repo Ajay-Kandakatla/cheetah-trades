@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ChartMaps } from './ChartMaps';
 import { _resetGrowthTagsCache } from '../hooks/useGrowthTags';
+import { _resetBounceRoomCache } from '../hooks/useBounceRoom';
 
 /* ✨ Growth arrivals strip on the REAL Chart Maps page (2026-10-12).
  * Ajay: "special emphasis wiht a tag or something in the chart map pages top
@@ -11,7 +12,14 @@ import { _resetGrowthTagsCache } from '../hooks/useGrowthTags';
  *   - a page with no served arrivals mounts nothing new;
  *   - a chip lands on 🚀 Explosive Growth focused on the name;
  *   - request budget: ONE /growth/tags call per page — shared with the
- *     GrowthChips on a tile tab, the strip's own on ?tab=growth. */
+ *     GrowthChips on a tile tab.
+ * His 2026-10-12 "yes" answers:
+ *   - #3 NOT on ?tab=growth (the board carries it) → ZERO /growth/tags calls;
+ *   - #7 open on first paint for a viewer who never folded it;
+ *   - #5 a chip lands with show=all, so a BLOCKED arrival is drawn; nothing is
+ *     persisted (the state lives in the URL only) and — the documented scope
+ *     [C5] — show=all rides on every later tab click until 🎯 is toggled. */
+import { tabSearch } from '../lib/chartMaps';
 
 const TRACK = vi.hoisted(() => ({ trackFeature: vi.fn() }));
 vi.mock('../lib/usageTracker', () => ({ trackFeature: TRACK.trackFeature }));
@@ -53,16 +61,30 @@ const GROWTH_BOARD = {
   disclaimer: 'Discovery list, NOT a signal.',
 };
 
-function stub(tags: unknown) {
+/* PGEN reads BLOCKED on the 🎯 enterable engine; MGNX has no read. */
+const ROOM_BLOCKED = {
+  as_of: '2026-10-12T11:00:00-04:00', pending: 0,
+  rows: {
+    PGEN: { symbol: 'PGEN', coverage: 'store', print: 20, fresh: true, room: { state: 'CLEAR' },
+            enterable: { kind: 'demand', verdict: 'BLOCKED', reasons: ['proximity'],
+                         reason_short: ['not at band'], reason_text: ['far above the band'],
+                         measured: { status: 'pending' } } },
+  },
+};
+
+function stub(tags: unknown, room: unknown = { rows: {}, pending: 0 }) {
   return vi.fn(async (u: RequestInfo | URL) => {
     const url = String(u);
     let body: unknown = {};
     if (url.includes('/growth/tags')) body = tags;
+    else if (url.includes('/supply-demand/bounce-room')) body = room;
     else if (url.includes('/growth/board')) body = GROWTH_BOARD;
     else if (url.includes('/chart-maps?')) {
       const tab = new URL(url, 'http://x').searchParams.get('tab');
       body = tab === 'zones' ? ZONES : { tab, count: 0, tiles: [] };
     }
+    /* the 📈 Bonde board's own read: an outage (its error state), not a payload */
+    if (url.includes('/bonde/')) return { ok: false, status: 503, json: async () => ({}) } as unknown as Response;
     return { ok: true, status: 200, json: async () => body } as unknown as Response;
   });
 }
@@ -75,25 +97,40 @@ function Where() {
 const draw = (entry: string) =>
   render(<MemoryRouter initialEntries={[entry]}><ChartMaps /><Where /></MemoryRouter>);
 
+const memStore = () => {
+  const m = new Map<string, string>();
+  return {
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null),
+    setItem: (k: string, v: string) => { m.set(k, String(v)); },
+    removeItem: (k: string) => { m.delete(k); },
+    clear: () => m.clear(), key: () => null, get length() { return m.size; }, _m: m,
+  };
+};
+let store = memStore();
+
 beforeEach(() => {
   _resetGrowthTagsCache();
+  _resetBounceRoomCache();
+  store = memStore();
+  vi.stubGlobal('localStorage', store);
   TRACK.trackFeature.mockClear();
 });
 afterEach(() => {
   _resetGrowthTagsCache();
+  _resetBounceRoomCache();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe('Chart Maps top — ✨ growth arrivals strip', () => {
-  it.each(['zones', 'amd'])('mounts above the pinned tab strip on ?tab=%s', async (tab) => {
+  it.each(['zones', 'amd', 'bonde'])('mounts above the pinned tab strip on ?tab=%s, OPEN for a first visit', async (tab) => {
     vi.stubGlobal('fetch', stub(TAGS_WITH));
     draw(`/chart-maps?tab=${tab}`);
     const strip = await screen.findByTestId('cm-growth-arrivals');
     const bar = screen.getByTestId('cm-tabs-bar');
     expect(strip.compareDocumentPosition(bar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(strip).getByText('✨ 2 new on 🚀 Explosive Growth (last 30 days)')).toBeTruthy();
-    expect((strip as HTMLDetailsElement).open).toBe(false);
+    await waitFor(() => expect((strip as HTMLDetailsElement).open).toBe(true));
   });
 
   it('NEGATIVE: no served arrivals → nothing mounts, the page is unchanged', async () => {
@@ -107,8 +144,8 @@ describe('Chart Maps top — ✨ growth arrivals strip', () => {
     expect(container.textContent ?? '').not.toMatch(/new on 🚀/);
   });
 
-  it('a chip click lands on 🚀 Explosive Growth focused on the name, and the board mounts', async () => {
-    const f = stub(TAGS_WITH);
+  it('a chip click lands on 🚀 Explosive Growth focused on the name with show=all, and a BLOCKED arrival is DRAWN', async () => {
+    const f = stub(TAGS_WITH, ROOM_BLOCKED);
     vi.stubGlobal('fetch', f);
     draw('/chart-maps?tab=zones');
     const strip = (await screen.findByTestId('cm-growth-arrivals')) as HTMLDetailsElement;
@@ -117,10 +154,63 @@ describe('Chart Maps top — ✨ growth arrivals strip', () => {
     const q = new URLSearchParams(screen.getByTestId('where').textContent!.slice(1));
     expect(q.get('tab')).toBe('growth');
     expect(q.get('focus')).toBe('PGEN');
+    expect(q.get('show')).toBe('all');
     await waitFor(() =>
       expect(f.mock.calls.some(([u]) => String(u).includes('/growth/board'))).toBe(true));
     await waitFor(() => expect(document.querySelector('table')).not.toBeNull());
+    await waitFor(() =>
+      expect(f.mock.calls.some(([u]) => String(u).includes('/supply-demand/bounce-room'))).toBe(true));
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
     expect(within(document.querySelector('table')!).getAllByText('PGEN').length).toBeGreaterThan(0);
+    /* #3: the strip is gone on the growth tab once he lands */
+    expect(screen.queryByTestId('cm-growth-arrivals')).toBeNull();
+  });
+
+  it('NEGATIVE: the landing persists nothing — no show/enterable key in localStorage; the URL is the only state', async () => {
+    vi.stubGlobal('fetch', stub(TAGS_WITH, ROOM_BLOCKED));
+    draw('/chart-maps?tab=zones');
+    await screen.findByTestId('cm-growth-arrivals');
+    act(() => { fireEvent.click(screen.getByTestId('cm-growth-arrival-PGEN'), { button: 0 }); });
+    await waitFor(() => expect(document.querySelector('table')).not.toBeNull());
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    for (const [k, v] of store._m) {
+      expect(k).not.toMatch(/show|enterable/i);
+      expect(v).not.toBe('all');
+    }
+    expect(new URLSearchParams(screen.getByTestId('where').textContent!.slice(1)).get('show')).toBe('all');
+  });
+
+  it('show=all is what draws it: ?tab=growth&show=all (no focus) draws the BLOCKED row', async () => {
+    vi.stubGlobal('fetch', stub(TAGS_WITH, ROOM_BLOCKED));
+    draw('/chart-maps?tab=growth&show=all');
+    await waitFor(() => expect(document.querySelector('table')).not.toBeNull());
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    expect(within(document.querySelector('table')!).getAllByText('PGEN').length).toBeGreaterThan(0);
+  });
+
+  it('NEGATIVE: without show=all the BLOCKED row stays hidden (today\'s 🎯 rule)', async () => {
+    const f = stub(TAGS_WITH, ROOM_BLOCKED);
+    vi.stubGlobal('fetch', f);
+    draw('/chart-maps?tab=growth');
+    await waitFor(() => expect(document.querySelector('table')).not.toBeNull());
+    await waitFor(() =>
+      expect(f.mock.calls.some(([u]) => String(u).includes('/supply-demand/bounce-room'))).toBe(true));
+    await waitFor(() =>
+      expect(within(document.querySelector('table')!).queryAllByText('PGEN')).toHaveLength(0));
+    expect(within(document.querySelector('table')!).getAllByText('MGNX').length).toBeGreaterThan(0);
+  });
+
+  it('[C5] DOCUMENTED SCOPE: after a chip landing, show=all rides on the next tab click (zones)', async () => {
+    vi.stubGlobal('fetch', stub(TAGS_WITH));
+    draw('/chart-maps?tab=zones');
+    await screen.findByTestId('cm-growth-arrivals');
+    act(() => { fireEvent.click(screen.getByTestId('cm-growth-arrival-PGEN'), { button: 0 }); });
+    const landed = new URLSearchParams(screen.getByTestId('where').textContent!.slice(1));
+    expect(landed.get('show')).toBe('all');
+    /* the page's own tab address carries it — flips loudly if HIS CALL §7.5 is built */
+    expect(new URLSearchParams(tabSearch(landed, 'zones')).get('show')).toBe('all');
+    const zonesTab = screen.getByTestId('cm-tabs-bar').querySelector('a[href*="tab=zones"]')!;
+    expect(new URLSearchParams(zonesTab.getAttribute('href')!.replace(/^\?/, '')).get('show')).toBe('all');
   });
 
   it('request budget on ?tab=zones: ONE /growth/tags call, with the strip and without', async () => {
@@ -138,13 +228,14 @@ describe('Chart Maps top — ✨ growth arrivals strip', () => {
     }
   });
 
-  it('request budget on ?tab=growth: exactly ONE /growth/tags call (the strip\'s)', async () => {
+  it('#3 ?tab=growth: NO strip and ZERO /growth/tags calls', async () => {
     const f = stub(TAGS_WITH);
     vi.stubGlobal('fetch', f);
     draw('/chart-maps?tab=growth');
-    await screen.findByTestId('cm-growth-arrivals');
     await waitFor(() => expect(document.querySelector('table')).not.toBeNull());
     await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
-    expect(tagCalls(f)).toBe(1);
+    expect(screen.queryByTestId('cm-growth-arrivals')).toBeNull();
+    expect(document.querySelector('.cm-arrivals-strip')).toBeNull();
+    expect(tagCalls(f)).toBe(0);
   });
 });

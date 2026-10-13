@@ -281,15 +281,17 @@ class PayloadTest(unittest.TestCase):
         """NEGATIVE — exactly the old eight keys plus three read-time joins
         (`earnings_fresh_summary` 2026-09-17, `since_report_summary`
         2026-09-21, `capital_quality_summary` 2026-09-22) and the four
-        new-arrivals keys (2026-10-12). Nothing else may creep into this
-        payload."""
+        new-arrivals keys (2026-10-12), plus `screen_measured` (2026-10-12,
+        the 100/100 screen's measured record for the board's fold). Nothing
+        else may creep into this payload."""
         out = GA._payload({"rows": _rows()})
         self.assertEqual(
             set(out),
             {"rows", "n", "max_rows", "capped", "groups", "built_at", "screen",
              "disclaimer", "earnings_fresh_summary", "since_report_summary",
              "capital_quality_summary",
-             "arrivals", "arrivals_n", "new_days", "arrivals_note"})
+             "arrivals", "arrivals_n", "new_days", "arrivals_note",
+             "screen_measured"})
 
 
 # ------------------------------------------------------- refresh_board_calendar

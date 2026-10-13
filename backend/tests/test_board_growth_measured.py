@@ -525,8 +525,27 @@ def test_no_served_module_imports_the_research_artifact():
         # reads the file instead of carrying pinned constants. A guard that
         # names the thing it guards is not a read of it.
         "frontend/scripts/contracts.mjs",
+        # Tests, not served modules: the arrivals FE test names the artifact
+        # only in a NEGATIVE needle list (ExplosiveGrowth.tsx must not contain
+        # it); the screen test pins screen_measured.py against it and asserts
+        # the served module never names it.
+        "frontend/src/components/ExplosiveGrowthArrivals.test.tsx",
+        "backend/tests/test_screen_measured.py",
     }
     assert set(hits) <= allowed, f"a served module reads the research artifact: {hits}"
+    for path in allowed:
+        assert (
+            "/tests/" in path
+            or path.endswith((".test.ts", ".test.tsx"))
+            or path.startswith(("backend/scripts/", "frontend/scripts/"))
+        ), f"allow-list entry is a served module, not a test or script: {path}"
+
+
+def test_the_allow_list_guard_still_fails_on_a_served_module():
+    """NEGATIVE: the subset check above rejects a served path."""
+    allowed = {"backend/tests/test_screen_measured.py"}
+    assert not ({"backend/growth/screen_measured.py"} <= allowed)
+    assert not ({"frontend/src/components/ExplosiveGrowth.tsx"} <= allowed)
 
 
 def test_the_artifact_lists_its_own_limits(art, doc):

@@ -13960,3 +13960,7 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .cm-arrivals { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin: 0.25rem 0; }
 .cm-arrivals > a.cm-badge { text-decoration: none; }
 .cm-row-focus > td { background: rgba(201,162,39,0.10); box-shadow: inset 2px 0 0 var(--gold, #c9a227); }
+.cm-row-exempt > td { outline: 1px dashed rgba(201,162,39,0.6); outline-offset: -1px; }   /* #6: drawn past a filter he has ON — the marker line says which */
+.cm-arrival-also { display: inline-flex; gap: 0.15rem; margin: 0 0.35rem 0 -0.15rem; vertical-align: middle; }  /* #8: per-tab links under a chip */
+.cm-arrival-also > a.cm-badge { font-size: 0.72em; padding: 0 0.3rem; text-decoration: none; }
+.cm-arrival-also > a[data-stale="true"] { opacity: 0.55; text-decoration: underline dotted; }   /* past the tab's own TTL — the title says the as-of */

@@ -35,7 +35,8 @@ import pytest
 
 from growth import arrivals as AR
 from growth import tracker as T
-from sepa.board_arrival import NOT_BACKTESTED, NOT_A_RECOMMENDATION
+from growth.screen_measured import screen_clause
+from sepa.board_arrival import NOT_A_RECOMMENDATION
 
 ROOT = Path(__file__).resolve().parents[2]
 BACKEND = ROOT / "backend"
@@ -200,11 +201,14 @@ def test_the_line_carries_the_not_a_recommendation_constant_verbatim(line):
 
 
 def test_NEGATIVE_the_line_never_says_unmeasured_beside_MEASURED(line):
-    """The push's NOT_BACKTESTED ("never been measured forward") contradicts a
-    line that opens "MEASURED 2026-09-21" on the same screen's arrivals."""
-    assert NOT_BACKTESTED not in line
+    """No never-measured claim beside a line that opens "MEASURED 2026-09-21"
+    (the old push constant said "never been measured forward"; renamed
+    2026-10-12 to `SCREEN_MEASURED_CLAUSE`). And the two cells are never
+    concatenated: the screen clause (G100, one interval clears zero) next to
+    this line (G100_ARRIVE, "No lift interval clears zero") would contradict."""
     assert "never been measured" not in line.lower()
     assert "nothing here is backtested" not in line.lower()
+    assert screen_clause() not in line
 
 
 def test_the_line_is_one_string():
@@ -464,6 +468,12 @@ def test_without_mongo_the_payload_simply_has_no_arrivals():
 
 # ─────────────────────────────────────────────────── 6. /growth/tags
 def _tags_body(GA) -> dict:
+    """The handler's sync body (2026-10-12: GET /growth/tags runs it under
+    asyncio.to_thread). Round-tripped through JSON like the response."""
+    return json.loads(json.dumps(GA._tags_payload(), allow_nan=False))
+
+
+def _tags_via_handler(GA) -> dict:
     # A private loop, never asyncio.run(): that would leave the thread's loop
     # unset and break later tests that call get_event_loop().
     loop = asyncio.new_event_loop()
@@ -531,6 +541,16 @@ def test_NEGATIVE_a_raising_attach_never_takes_the_chip_map_down(monkeypatch):
     assert body["arrivals"] == [] and body["arrivals_n"] == 0
 
 
+def test_the_handler_serves_exactly_the_sync_body(monkeypatch):
+    """The to_thread move changed WHERE the body runs, not what it returns."""
+    from growth import api as GA
+    _board(monkeypatch)
+    db = ledger(60, MGNX=1, PGEN=1)
+    real = AR.attach
+    monkeypatch.setattr(AR, "attach", lambda rows: real(rows, db=db))
+    assert _tags_via_handler(GA) == _tags_body(GA)
+
+
 def test_NEGATIVE_api_has_no_inline_copy_of_the_refused_rule():
     src = (BACKEND / "growth" / "api.py").read_text()
     assert 'startswith("⛔")' not in src
@@ -539,7 +559,9 @@ def test_NEGATIVE_api_has_no_inline_copy_of_the_refused_rule():
 
 # ───────────────────────────────────────── 7. import graph + Rule #10 guard
 @pytest.mark.parametrize("first", ["", "import sepa.board_arrival; ",
-                                   "import growth.arrivals; ", "import growth.alerts; "])
+                                   "import growth.arrivals; ", "import growth.alerts; ",
+                                   "import growth.screen_measured; ",
+                                   "import sepa.board_arrival; import growth.screen_measured; "])
 def test_growth_api_imports_cleanly_in_a_fresh_interpreter(first):
     """The cycle pin. If board_arrival ever imports growth.api this fails —
     do not 'fix' it by moving the import into a try."""

@@ -117,3 +117,134 @@ describe('StudyNote — the verdict stays, the justification folds', () => {
     expect(el.className).toContain('cm-study');
   });
 });
+
+/* #7 (2026-10-12, his "yes" to "Open the top line by default, or when a new
+ * batch arrives?"): `freshKey` = the newest served stamp of what the note
+ * folds. Open for a viewer who never folded it; re-open when the key is newer
+ * than the one stored at his last fold; otherwise his fold is kept. */
+describe('StudyNote — freshKey (open on a new batch)', () => {
+  const mem = (init: Record<string, unknown> = {}) => {
+    const m = new Map<string, unknown>(Object.entries(init));
+    return {
+      getItem: (k: string) => (m.has(k) ? m.get(k) : null),
+      setItem: (k: string, v: string) => { m.set(k, String(v)); },
+      removeItem: (k: string) => { m.delete(k); },
+      clear: () => m.clear(),
+      key: () => null,
+      get length() { return m.size; },
+      _m: m,
+    };
+  };
+  const OLD = '2026-10-05T02:29:05+00:00';
+  const NEW = '2026-10-12T02:29:05+00:00';
+  const note = (fk: string | null | undefined, id = 'f') => (
+    <StudyNote id={id} headline={HEAD} body={BODY} testId="study" freshKey={fk} />
+  );
+  const det = () => screen.getByTestId('study') as HTMLDetailsElement;
+  const fold = () => { const el = det(); el.open = false; fireEvent(el, new Event('toggle')); };
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('no memory → OPEN on first paint', () => {
+    vi.stubGlobal('localStorage', mem());
+    render(note(NEW));
+    expect(det().open).toBe(true);
+  });
+
+  it('folded with the SAME key → stays folded', () => {
+    vi.stubGlobal('localStorage', mem({ 'cm.study.open.f': '0', 'cm.study.fresh.f': NEW }));
+    render(note(NEW));
+    expect(det().open).toBe(false);
+  });
+
+  it('NEGATIVE: folded with a NEWER stored key than served (older batch) → stays folded', () => {
+    vi.stubGlobal('localStorage', mem({ 'cm.study.open.f': '0', 'cm.study.fresh.f': NEW }));
+    render(note(OLD));
+    expect(det().open).toBe(false);
+  });
+
+  it('folded with an OLDER key → re-opens; folding again stores the new key', () => {
+    const store = mem({ 'cm.study.open.f': '0', 'cm.study.fresh.f': OLD });
+    vi.stubGlobal('localStorage', store);
+    const { unmount } = render(note(NEW));
+    expect(det().open).toBe(true);
+    fold();
+    expect(store._m.get('cm.study.open.f')).toBe('0');
+    expect(store._m.get('cm.study.fresh.f')).toBe(NEW);
+    unmount();
+    render(note(NEW));
+    expect(det().open).toBe(false);
+  });
+
+  it('[C7] folded while mounted, then the PROP changes to a newer key → opens without a remount', () => {
+    vi.stubGlobal('localStorage', mem());
+    const { rerender } = render(note(OLD));
+    expect(det().open).toBe(true);
+    fold();
+    expect(det().open).toBe(false);
+    rerender(note(OLD));                 // a refetch of the same batch: no-op
+    expect(det().open).toBe(false);
+    rerender(note(NEW));
+    expect(det().open).toBe(true);
+  });
+
+  it('a remembered OPEN stays open whatever the key', () => {
+    vi.stubGlobal('localStorage', mem({ 'cm.study.open.f': '1', 'cm.study.fresh.f': NEW }));
+    render(note(OLD));
+    expect(det().open).toBe(true);
+  });
+
+  it('NEGATIVE: a folder from before the stamp existed (no fresh key stored) re-opens once', () => {
+    vi.stubGlobal('localStorage', mem({ 'cm.study.open.f': '0' }));
+    render(note(NEW));
+    expect(det().open).toBe(true);
+  });
+
+  it('NEGATIVE: a non-string stored key is treated as absent → open', () => {
+    vi.stubGlobal('localStorage', mem({ 'cm.study.open.f': '0', 'cm.study.fresh.f': 12345 }));
+    render(note(NEW));
+    expect(det().open).toBe(true);
+  });
+
+  it('NEGATIVE: throwing storage with a freshKey → OPEN, folds without throwing', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => { throw new Error('blocked'); },
+      setItem: () => { throw new Error('blocked'); },
+      removeItem: () => {}, clear: () => {}, key: () => null, length: 0,
+    });
+    expect(() => render(note(NEW))).not.toThrow();
+    expect(det().open).toBe(true);
+    expect(() => fold()).not.toThrow();
+    expect(det().open).toBe(false);
+  });
+
+  it('NEGATIVE: NO storage at all with a freshKey → OPEN', () => {
+    vi.stubGlobal('localStorage', undefined);
+    render(note(NEW));
+    expect(det().open).toBe(true);
+  });
+
+  it.each([[undefined], [null], ['']])(
+    'NEGATIVE: freshKey %s → today\'s rule (folded, remembered fold honoured, no fresh key written)',
+    (fk) => {
+      const store = mem();
+      vi.stubGlobal('localStorage', store);
+      const { unmount } = render(note(fk as string | null | undefined));
+      expect(det().open).toBe(false);
+      const el = det();
+      el.open = true;
+      fireEvent(el, new Event('toggle'));
+      expect(store._m.get('cm.study.open.f')).toBe('1');
+      expect(store._m.has('cm.study.fresh.f')).toBe(false);
+      unmount();
+      render(note(fk as string | null | undefined));
+      expect(det().open).toBe(true);
+    },
+  );
+
+  it('NEGATIVE: ids keep separate memories (the strip vs the board line)', () => {
+    vi.stubGlobal('localStorage', mem({ 'cm.study.open.a': '0', 'cm.study.fresh.a': NEW }));
+    render(<>{note(NEW, 'a')}<StudyNote id="b" headline={HEAD} body={BODY} testId="study-b" freshKey={NEW} /></>);
+    expect(det().open).toBe(false);
+    expect((screen.getByTestId('study-b') as HTMLDetailsElement).open).toBe(true);
+  });
+});

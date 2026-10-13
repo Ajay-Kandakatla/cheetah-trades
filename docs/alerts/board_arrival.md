@@ -110,11 +110,17 @@ rather than retyped:
   *"MEASURED 2026-09-13 AND THIS BOARD'S OWN THESIS IS INVERTED"* (−3.11pp
   over 21 sessions against a date-matched placebo, 95% CI −5.28 to −1.16;
   the sales gate alone separated nothing).
-* **Growth** — *"NOTHING HERE IS BACKTESTED: the 100/100 screen has never been
-  measured forward."*
+* **Growth** — `SCREEN_MEASURED_CLAUSE` (= `growth.screen_measured.screen_clause()`,
+  2026-10-12): the 100/100 screen MEASURED 2026-09-21 (cell G100) — median lift
+  per horizon, how many of the six intervals clear zero, the momentum-matched
+  median count — "a lean, not a finding". It replaced `NOT_BACKTESTED` ("the
+  100/100 screen has never been measured forward"), false once the replay ran.
 
-and both end on *"An arrival on his screen / on a list, not an entry — not a
-recommendation."* The body also carries the ⛔ engine-refusal warnings verbatim
+Both carry *"An arrival on his screen / on a list, not an entry — not a
+recommendation."* Bonde ends on it; on growth it comes BEFORE the measured
+clause (the clause is the last part), so a phone that truncates the body loses
+the clause, never the recommendation sentence. The growth digest's tail is the
+clause alone. The body also carries the ⛔ engine-refusal warnings verbatim
 on the growth side, and on Bonde the pair mark when the YoY pair is not four
 fiscal quarters apart (`growth claim withheld …`) or unverifiable (`pair
 unverified — no period keys on file`).

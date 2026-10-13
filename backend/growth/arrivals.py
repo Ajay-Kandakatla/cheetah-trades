@@ -13,9 +13,14 @@ second ledger, no recompute from `built_at`. Sorts nothing, filters nothing,
 gates nothing, pushes nothing (Rule #10). The honesty line is built ONLY from
 `ARRIVALS_MEASURED` (pinned field-for-field to the 2026-09-21 replay by
 `tests/test_growth_arrivals.py`) plus `sepa.board_arrival.NOT_A_RECOMMENDATION`.
-`board_arrival.NOT_BACKTESTED` ("the 100/100 screen has never been measured
-forward") is deliberately NOT appended: this line opens "MEASURED 2026-09-21"
-on that very screen's arrivals, and the two sentences side by side contradict.
+
+Two cells of the SAME replay, two sentences, never concatenated (2026-10-12):
+this line is cell G100_ARRIVE (names ARRIVING on the 100/100 screen, where
+every lift interval spans zero); `growth.screen_measured.screen_line()` is
+cell G100 (every member, where the 126-day date-clustered interval clears
+zero). Glued together, "no lift interval clears zero" would read as a claim
+about the whole screen, which is false. The board serves the two side by
+side under their own headlines; this line never carries the screen clause.
 """
 from __future__ import annotations
 
@@ -26,6 +31,9 @@ from growth import tracker as T
 # `growth.alerts`, never `growth.api`, so `growth.api -> growth.arrivals ->
 # sepa.board_arrival` is a DAG (pinned by a subprocess test).
 from sepa.board_arrival import NOT_A_RECOMMENDATION
+# The signed-number helper lives in the LEAF `growth.screen_measured` (moved
+# 2026-10-12, same body) so both measured lines print numbers one way.
+from growth.screen_measured import sgn as _sgn
 
 log = logging.getLogger("growth.arrivals")
 
@@ -59,15 +67,6 @@ ARRIVALS_MEASURED = {
                  "ci_symbol": (-11.90, 24.00)},
     },
 }
-
-
-def _sgn(v, d: int = 2) -> str:
-    """'+3.69' / '−0.22' — always signed, with a REAL minus (U+2212).
-
-    The `sepa/bonde.py` helper, copied (it is private there). Applied per
-    NUMBER only — never a sentence-wide replace, which would eat the hyphens
-    in '2026-09-21', 'point-in-time' and 'symbol-clustered'."""
-    return ("%s%%.%df" % ("+" if v >= 0 else "−", d)) % abs(v)
 
 
 def refused(row: dict) -> bool:

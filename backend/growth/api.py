@@ -6,6 +6,7 @@ that the weekly cron built. POST /growth/refresh rebuilds it on demand (his
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 
@@ -14,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 from . import alerts as A
 from . import arrivals as _arr
+from . import screen_measured as _sm
 from . import tracker as T
 
 log = logging.getLogger("growth.api")
@@ -191,6 +193,16 @@ def _payload(doc: dict) -> dict:
         arr = _arr.attach(rows)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("growth: arrivals attach failed: %s", exc)
+    # 🔗 Which other Chart Maps tabs each arrival is ALSO on (his-call #8,
+    # 2026-10-12), from ONE read of the per-tab membership snapshot. Its own
+    # try/except: a missing module, a cold collection or a Mongo hiccup leaves
+    # `also_on` off the arrivals and never takes the tab down (Rule #10: it
+    # sorts, filters and gates nothing).
+    try:
+        from chart_maps import membership as _mem
+        _mem.attach_also_on(arr)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: membership attach failed: %s", exc)
     # The screen caps at MAX_ROWS BEFORE the browser sees anything, and it caps
     # by SALES GROWTH. That matters now the board sorts client-side (2026-09-12,
     # Ajay: "sort this by demand intact"): at the cap, a demand sort ranks
@@ -218,18 +230,38 @@ def _payload(doc: dict) -> dict:
             "cap_floor": T.MIN_CAP_USD,
             "universe_mode": T.UNIVERSE_MODE,
         },
-        # Said on the board itself, not only in a doc nobody opens.
+        # Said on the board itself, not only in a doc nobody opens. The
+        # measured clause is SERVED from growth.screen_measured (2026-10-12:
+        # the 100/100 screen was measured 2026-09-21, cell G100) — never
+        # retyped here.
         "disclaimer": (
-            "Discovery list, NOT a signal. The 100%/100% screen has never been "
-            "measured forward. No market-cap floor here (your call) — rows the "
-            "trading engine will refuse to buy say so in their own warnings."
+            "Discovery list, NOT a signal. " + _sm.screen_clause() + " No "
+            "market-cap floor here (your call) — rows the trading engine will "
+            "refuse to buy say so in their own warnings."
         ),
+        # The full measured record for the board's own fold (the clause above
+        # is the short form). Cell G100 = every member; the arrivals line is
+        # cell G100_ARRIVE — two cells, served apart, never concatenated.
+        "screen_measured": {
+            "headline": _sm.screen_headline(),
+            "body": _sm.screen_line(),
+            "run_date": _sm.SCREEN_MEASURED["run_date"],
+            "cell": _sm.SCREEN_MEASURED["cell"],
+            "doc": _sm.SCREEN_MEASURED["doc"],
+        },
     })
+
+
+def _board_payload() -> dict:
+    """The sync body of GET /growth/board — Mongo reads included — so the
+    handler can run it OFF the event loop (2026-10-12; the 09-30 HTTP 524 was
+    a blocked loop)."""
+    return _payload(T.board() or {})
 
 
 @router.get("/growth/board")
 async def growth_board():
-    return JSONResponse(_payload(T.board() or {}))
+    return JSONResponse(await asyncio.to_thread(_board_payload))
 
 
 @router.post("/growth/refresh")
@@ -238,8 +270,7 @@ async def growth_refresh(limit: int = Query(T.MAX_ROWS, ge=1, le=1000)):
     return JSONResponse(_payload(T.build(limit=limit)))
 
 
-@router.get("/growth/tags")
-async def growth_tags():
+def _tags_payload() -> dict:
     """The board as a SYMBOL -> tag map, for the 🚀 chip on every other board.
 
     Ajay 2026-09-11: "I am hoping this new list will be considerd in all chart
@@ -249,7 +280,11 @@ async def growth_tags():
 
     Deliberately tiny: symbol -> {sales, eps, refused}. The chip is a POINTER to
     the growth board, not a second copy of it, so the boards can never drift
-    into disagreeing about what qualifies."""
+    into disagreeing about what qualifies.
+
+    The sync body of GET /growth/tags (two Mongo reads: the board doc and the
+    ledger, plus the membership snapshot) — run under `asyncio.to_thread` by
+    the handler, never on the event loop."""
     rows = (T.board() or {}).get("rows") or []
     tags = {}
     for r in rows:
@@ -272,7 +307,20 @@ async def growth_tags():
         arr = _arr.attach(rows)
     except Exception as exc:                                    # noqa: BLE001
         log.debug("growth: arrivals attach failed: %s", exc)
-    return JSONResponse(_scrub({"n": len(tags), "tags": tags, **_arr.summary(arr)}))
+    # 🔗 Same per-tab membership read and same guard as `_payload`.
+    try:
+        from chart_maps import membership as _mem
+        _mem.attach_also_on(arr)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("growth: membership attach failed: %s", exc)
+    return _scrub({"n": len(tags), "tags": tags, **_arr.summary(arr)})
+
+
+@router.get("/growth/tags")
+async def growth_tags():
+    """The 🚀 chip map + ✨ arrivals for every Chart Maps tab — see
+    `_tags_payload`. Off the event loop (the `chart_maps/api.py` pattern)."""
+    return JSONResponse(await asyncio.to_thread(_tags_payload))
 
 
 @router.get("/growth/at-demand")

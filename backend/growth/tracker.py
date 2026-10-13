@@ -38,8 +38,8 @@ THE DEMAND TRIGGER is the one gate that measured: the band floor never pierced
 DISPLAY FLAG only — the 2026-09-04 ICT study measured +0.03R over 6,004 signals
 against placebo, so nothing here may gate on one.
 
-NOTHING ON THIS BOARD IS BACKTESTED. The 100/100 screen has never been measured
-forward. It is a discovery list.
+THE 100/100 SCREEN WAS MEASURED 2026-09-21 (growth/screen_measured.py, cell
+G100): a lean, not a finding. It is a discovery list.
 """
 from __future__ import annotations
 

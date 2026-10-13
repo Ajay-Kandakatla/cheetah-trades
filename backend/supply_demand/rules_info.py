@@ -16,6 +16,7 @@ from trading import risk_rules as RR
 from trading import safety_floor as SFL
 from growth import alerts as GA
 from growth import tracker as GT
+from growth import screen_measured as SM
 from trading import auto_entry as AE
 from trading import zone_edge_entry as ZEE
 from trading import zero_dte_lane as ZDL
@@ -506,8 +507,8 @@ def sections() -> dict:
             "never as an empty one.",
         ],
         "stops": [
-            "Nothing on this board is a stop or a size. It is a discovery list: the "
-            "100/100 screen has never been measured forward.",
+            "Nothing on this board is a stop or a size. It is a discovery list. "
+            + SM.screen_clause(),
         ],
         "alerts": [
             "\U0001F680 %s fires when a board name is inside a tested demand band whose "
@@ -520,7 +521,9 @@ def sections() -> dict:
             "A name the engine will refuse still alerts, labelled \u26D4 — the board has no "
             "cap floor, so silence would hide it.",
         ],
-        "note": "Owner screen, no book. Not backtested.",
+        "note": "Owner screen, no book. Measured %s in a point-in-time replay (%s) "
+                "\u2014 a lean, not a finding." % (SM.SCREEN_MEASURED["run_date"],
+                                                    SM.SCREEN_MEASURED["doc"]),
     }
 
     bounce = [

@@ -7307,6 +7307,24 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     if studies is True:
         _attach_studies(out, days)
     out["tab"] = t
+    # 🗂️ Tab membership snapshot (Ajay 2026-10-12, #8): ONE upsert of this
+    # tab's served symbols, only for the DEFAULT page request (the rule lives
+    # in `chart_maps/membership.is_default_request`, read off this signature).
+    # Every parameter is passed by name; a failure never breaks the board.
+    try:
+        from chart_maps import membership as _MB
+        _MB.record_board(t, out, request={
+            "tab": tab, "limit": limit, "days": days, "universe": universe,
+            "themes_first": themes_first, "pattern": pattern, "source": source,
+            "minervini_only": minervini_only, "sort": sort,
+            "min_tier": min_tier, "level": level,
+            "touching_only": touching_only, "phase": phase, "target": target,
+            "bias": bias, "micro": micro, "min_room": min_room,
+            "studies": studies, "levels": levels, "grades": grades,
+            "flight": flight, "dm": dm, "dm_mode": dm_mode, "uv": uv,
+            "res": res, "res_mode": res_mode, "depth": depth})
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart maps: membership snapshot skipped: %s", exc)
     out["count"] = len(out.get("tiles") or [])
     # Say so in the payload: these are studies, not signals, and the frontend
     # prints the note under the ledger rather than leaving it to the docstring.

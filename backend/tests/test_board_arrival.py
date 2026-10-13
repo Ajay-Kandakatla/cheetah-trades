@@ -196,7 +196,7 @@ def test_a_growth_arrival_carries_every_warning_verbatim_and_the_honesty_line(se
     assert payload["title"] == "✨ New on 🚀 Explosive Growth — WXYZ (sales +212%, qEPS +140%)"
     for w in warns:
         assert w in payload["body"]
-    assert BA.NOT_BACKTESTED in payload["body"]
+    assert BA.SCREEN_MEASURED_CLAUSE in payload["body"]
     assert "prior quarter sales +96%" in payload["body"]
     assert payload["url"] == "/chart-maps?tab=growth&symbol=WXYZ"
     assert "growth|WXYZ" in coll.docs
@@ -238,12 +238,47 @@ def test_six_arrivals_ring_four_singles_then_one_digest_in_body_order(sender):
     assert coll.docs["bonde|FF"]["digest"] is True
 
 
-def test_a_growth_digest_tail_is_the_not_backtested_line(sender):
+def test_a_growth_digest_tail_is_the_screen_measured_clause(sender):
     syms = ["A1", "B2", "C3", "D4", "E5"]
     BA.run("growth", now=NOW, coll=seeded(), items=[item("growth", s) for s in syms])
     dig = sender.calls[-1][1]
     assert dig["title"] == "✨ 1 new on 🚀 Explosive Growth"
-    assert dig["body"] == "E5 (sales +212%) · " + BA.NOT_BACKTESTED
+    assert dig["body"] == "E5 (sales +212%) · " + BA.SCREEN_MEASURED_CLAUSE
+
+
+# ─────────── 2026-10-12: the measured clause replaces "never measured" [C4]
+def test_the_growth_body_says_not_a_recommendation_BEFORE_the_measured_clause():
+    """A phone that truncates the body loses the clause, never the
+    recommendation sentence: the clause is the LAST part of a growth body."""
+    body = BA.message(item("growth", "WXYZ", warnings=["⛔ under the $2 price floor"]))["body"]
+    rec = BA.NOT_A_RECOMMENDATION["growth"]
+    assert body.index(rec) < body.index(BA.SCREEN_MEASURED_CLAUSE)
+    assert body.split(" · ")[-1] == BA.SCREEN_MEASURED_CLAUSE
+    assert body.endswith(rec + " · " + BA.SCREEN_MEASURED_CLAUSE)
+
+
+def test_NEGATIVE_the_bonde_body_order_is_unchanged_and_carries_no_growth_clause():
+    body = BA.message(item("bonde", "ABCD"))["body"]
+    assert body.index(VERDICT) < body.index(BA.NOT_A_RECOMMENDATION["bonde"])
+    assert body.split(" · ")[-1] == BA.NOT_A_RECOMMENDATION["bonde"]
+    assert BA.SCREEN_MEASURED_CLAUSE not in body
+
+
+def test_NEGATIVE_the_growth_digest_carries_no_recommendation_sentence(sender):
+    """The digest never carried NOT_A_RECOMMENDATION for either board; the
+    reword adds none (rejected half of C4)."""
+    dig = BA.digest_message("growth", [item("growth", "E5")])
+    assert dig["body"].endswith(" · " + BA.SCREEN_MEASURED_CLAUSE)
+    for rec in BA.NOT_A_RECOMMENDATION.values():
+        assert rec not in dig["body"]
+
+
+def test_NEGATIVE_no_growth_body_says_the_screen_was_never_measured():
+    assert not hasattr(BA, "NOT_BACKTESTED")
+    for m in (BA.message(item("growth", "WXYZ")),
+              BA.digest_message("growth", [item("growth", "E5")])):
+        assert "never been measured" not in m["body"].lower()
+        assert "nothing here is backtested" not in m["body"].lower()
 
 
 def test_a_wet_pass_records_its_result_under_the_board_scoped_kind(monkeypatch, sender):

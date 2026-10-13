@@ -51,6 +51,7 @@ vi.mock('../lib/pushSubscribe', () => ({
 }));
 
 import NotificationsPage, { CATEGORIES, PRESETS } from './Notifications';
+import { TAB_META } from '../lib/chartMaps';
 
 const RETIRED = ['minervini_flashcards', 'vb_workout', 'vb_supplement', 'vb_education'];
 const KEEP_SET = ['hot_pullback_alert', 'pattern_alert', 'demand_alert', 'position_alert',
@@ -121,7 +122,7 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
       'one push per name per board',
       'a name that leaves a board and comes back is not rung again',
       'never the first cohort', 'ARRIVAL ON A LIST, NOT AN ENTRY',
-      'INVERTED', '3.11pp', 'has never been measured forward',
+      'INVERTED', '3.11pp', 'measured 2026-09-21',
       '17:42 ET', '08:08 ET', 'Not a recommendation']) {
       expect(d).toContain(phrase);
     }
@@ -136,5 +137,69 @@ describe('Notifications · the 2026-09-20 keep-set', () => {
       expect((ess.pref as any)[off]).toBe(false);
     }
     expect(ess.detail).toContain('2026-09-20 keep-set');
+  });
+});
+
+/* 2026-10-12 (#1): the 100/100 growth screen WAS measured on 2026-09-21
+   (backend growth/screen_measured.py, cell G100) — a lean, not a finding.
+   The two notification details and the Chart Maps growth blurb used to say
+   it had "never been measured forward"; that is now false. These surfaces
+   say "measured 2026-09-21" and point at the board for the numbers — they
+   type NO number themselves (the board's MEASURED line owns them). */
+describe('Notifications · the 100/100 screen was measured 2026-09-21', () => {
+  const growth = () => CATEGORIES.find((c) => c.key === 'growth_demand_alert')!.detail;
+  const arrival = () => CATEGORIES.find((c) => c.key === 'board_arrival')!.detail;
+  const blurb = () => TAB_META.growth.blurb;
+  const STALE = ['never been measured', 'BACKTESTED'];
+
+  it('the \u{1F680} detail says measured 2026-09-21, a lean, and points at the board', () => {
+    const d = growth();
+    for (const phrase of ['THE 100/100 SCREEN WAS MEASURED 2026-09-21', 'a lean, not a finding',
+      'board carries the numbers', 'Treat it as a watchlist ping']) {
+      expect(d).toContain(phrase);
+    }
+  });
+
+  it('the \u2728 detail says measured 2026-09-21 as a lean, and is still not a recommendation', () => {
+    const d = arrival();
+    expect(d).toContain('the 100/100 screen behind Explosive Growth measured 2026-09-21 as a lean, not a finding');
+    expect(d).toContain('(the board carries the numbers)');
+    expect(d).toMatch(/measured 2026-09-21[^.]*\. Not a recommendation\.$/);
+  });
+
+  it('the growth blurb says MEASURED 2026-09-21 and keeps the cap-floor and REFUSE lines', () => {
+    const b = blurb();
+    for (const phrase of ['MEASURED 2026-09-21', 'a lean, not a finding', 'its own MEASURED line',
+      'NO MARKET-CAP FLOOR', 'REFUSE', 'It is a discovery list, not a buy signal.']) {
+      expect(b).toContain(phrase);
+    }
+  });
+
+  it('NEGATIVE: no surface still says "never been measured" or "BACKTESTED"', () => {
+    for (const s of [growth(), arrival(), blurb()]) {
+      for (const bad of STALE) expect(s.toLowerCase()).not.toContain(bad.toLowerCase());
+    }
+  });
+
+  it('NEGATIVE: the new sentences type no number but the date (the board owns the numbers)', () => {
+    const sentences = [
+      growth().match(/THE 100\/100 SCREEN WAS MEASURED 2026-09-21[^.]*\./)?.[0],
+      arrival().match(/the 100\/100 screen behind Explosive Growth measured 2026-09-21[^.]*\./)?.[0],
+      blurb().match(/MEASURED 2026-09-21:[^.]*\./)?.[0],
+    ];
+    for (const s of sentences) {
+      expect(s).toBeTruthy();
+      const rest = s!.replace('2026-09-21', '').replace(/100\/100/g, '');
+      expect(rest).not.toMatch(/\d/);
+      expect(rest).not.toMatch(/pp\b|%|\bCI\b/);
+    }
+  });
+
+  it('NEGATIVE: the rendered page carries the new wording and none of the stale', () => {
+    const { container } = draw();
+    const text = container.textContent ?? '';
+    expect(text).toContain('THE 100/100 SCREEN WAS MEASURED 2026-09-21');
+    expect(text).toContain('measured 2026-09-21 as a lean, not a finding');
+    for (const bad of STALE) expect(text).not.toContain(bad);
   });
 });

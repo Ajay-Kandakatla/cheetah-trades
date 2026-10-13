@@ -232,8 +232,9 @@ on screen today.
 
 ## Known limits
 
-1. **Nothing here is backtested.** The 100/100 screen has never been measured
-   forward. It is a discovery list; the board and the push both say so.
+1. **The screen measured 2026-09-21 as a lean, not a finding** (cell G100,
+   see "MEASURED 2026-09-21 (cell G100)" below). It is a discovery list; the
+   board, the push and the S&D rules panel all serve that clause from one module.
 2. **The data is up to a week old.** Fundamentals come from the weekly research
    cache, so a fresh print can be missing. A blank renders as an em-dash, never
    as a zero.
@@ -477,9 +478,11 @@ field-for-field to cell `G100_ARRIVE` of the 2026-09-21 replay
 (`docs/research/board_growth_2026_09_21.md`,
 `backend/scripts/board_growth_replay.py`) by `tests/test_growth_arrivals.py`,
 plus `NOT_A_RECOMMENDATION["growth"]` — and deliberately NOT
-`board_arrival.NOT_BACKTESTED`, whose "never been measured forward" would sit
-beside "MEASURED 2026-09-21" on the same screen's arrivals (a negative test
-pins its absence). It
+`board_arrival.SCREEN_MEASURED_CLAUSE` (the push's clause for cell G100, the
+whole screen). The two cells are served apart and never concatenated: on G100
+the 126-day date-clustered interval clears zero, on G100_ARRIVE none does, so
+glued together "no lift interval clears zero" would misdescribe the screen (a
+negative test pins `screen_clause() not in honesty_line()`). It
 prints BOTH reads: the median lift vs the scored universe (+3.69 / +5.58 /
 +8.93 pp at 21 / 63 / 126 sessions — every interval, on both clusterings,
 spans zero) AND the momentum-matched control (median excess +1.37 / −1.10 /
@@ -499,3 +502,57 @@ equal; the surfaces say "in the last N days".
 **Manual rebuild.** `POST /growth/refresh` stamps the ledger, then attaches: a
 name screened for the first time by that click is `is_new` immediately — the
 existing ledger rule, unchanged.
+
+## MEASURED 2026-09-21 (cell G100) — the screen itself (2026-10-12)
+
+Ajay's his-call #1 (2026-10-12, "Reword those outdated 'never measured'
+lines?" → yes). The 2026-09-21 point-in-time replay
+(`backend/scripts/board_growth_replay.py`, write-up
+`docs/research/board_growth_2026_09_21.md`) measured the 100/100 screen over
+every member (cell `G100`), not only its arrivals (`G100_ARRIVE`). Every
+surface that said the screen "has never been measured forward" now serves what
+was measured instead.
+
+**One source.** `backend/growth/screen_measured.py` — a LEAF module (imports
+nothing from the repo) holding `SCREEN_MEASURED`, pinned field-for-field to
+the replay's JSON artifact by `tests/test_screen_measured.py` (lift: n,
+symbols, dates, median, symbol- and date-clustered CIs; momentum control: n,
+mean, median, symbol-clustered CI; panel dates). This doc quotes no numbers;
+the module and the artifact are the record.
+
+**Computed, never typed.** Which lift intervals clear zero (`clears_zero` =
+low end above zero), the "N of 6" count and its verb, and the count of
+negative momentum-matched medians all come from the constant. On G100 one
+interval clears zero (126 days, date-clustered) while its symbol-clustered
+twin does not, so no G100 sentence may say "every interval spans zero" —
+banned by a negative test. The control's interval is on the MEAN and
+symbol-clustered only; the MEDIAN rides beside it.
+
+**Three served forms.**
+
+| Form | Function | Where |
+|---|---|---|
+| short clause | `screen_clause()` | push body + digest tail (`board_arrival.SCREEN_MEASURED_CLAUSE`), board `disclaimer`, S&D rules panel growth "stops" line |
+| full line | `screen_line()` | `/growth/board` → `screen_measured.body` (the board's fold) |
+| headline | `screen_headline()` | `/growth/board` → `screen_measured.headline` (date only, no measured number) |
+| panel note | `SCREEN_MEASURED["run_date"]` + `["doc"]` | S&D rules panel growth `note` (refix 2026-10-13: was "Not backtested.", false by the same logic as the stops line; now "Owner screen, no book. Measured <date> in a point-in-time replay (<doc>) — a lean, not a finding.", no number typed) |
+
+**Push order.** A growth push body now reads `… warnings · not a
+recommendation · MEASURED clause` — the recommendation sentence comes BEFORE
+the clause, so a phone that truncates the body drops the clause, never that
+sentence. Bonde's body order is unchanged. The digest tail is the clause alone
+(the digest never carried a recommendation sentence for either board; none
+added).
+
+**Lengths (facts, not pins).** The clause is 176 characters; the sentence it
+replaced (`NOT_BACKTESTED`, deleted) was 79. The only length pin is relational:
+the clause is shorter than the full line.
+
+**Loop hygiene (same change).** `GET /growth/board` and `GET /growth/tags` now
+run their sync bodies (`_board_payload`, `_tags_payload` — Mongo reads
+included) under `asyncio.to_thread`, the `chart_maps/api.py` pattern; both
+bodies also carry the guarded `chart_maps.membership.attach_also_on` read for
+the ✨ arrivals' per-tab links. `POST /growth/refresh` and `/growth/at-demand`
+are untouched.
+
+Rule #10: nothing here sorts, filters, gates or pushes anything new.

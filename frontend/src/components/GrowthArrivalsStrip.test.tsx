@@ -10,7 +10,11 @@ import {
  * are 7 new one can you gave me special emphasis wiht a tag or something in
  * the chart map pages top". The "7" was the push's digest spill; the strip
  * shows the SERVED arrivals_n. Pinned here:
- *   - folded on first paint (one line), remembered per id;
+ *   - 2026-10-12 #7: OPEN on first paint for a viewer who never folded it,
+ *     folded after his fold for the same batch, re-opened by a newer batch
+ *     (StudyNote freshKey = newest served first_seen);
+ *   - 2026-10-12 #5: every chip href and `all 🚀 →` carry show=all;
+ *   - 2026-10-12 #8: per-tab links from the served also_on[];
  *   - chips in SERVED order with SERVED glyphs, linking to ?tab=growth&focus=;
  *   - the note verbatim; nothing at all when nothing arrived or on an outage;
  *   - one /growth/tags fetch shared with every GrowthChip. */
@@ -83,14 +87,69 @@ describe('GrowthArrivalsStrip', () => {
     vi.unstubAllGlobals();
   });
 
-  it('first paint is FOLDED: one headline with the served count, chips hidden', async () => {
+  it('#7 first paint with no memory is OPEN: the served headline and the chips', async () => {
     stub();
     draw();
     const det = (await screen.findByTestId('cm-growth-arrivals')) as HTMLDetailsElement;
     expect(det.tagName).toBe('DETAILS');
-    expect(det.open).toBe(false);
+    await waitFor(() => expect(det.open).toBe(true));
     expect(screen.getByText('✨ 11 new on 🚀 Explosive Growth (last 30 days)')).toBeVisible();
-    expect(screen.getByTestId('cm-growth-arrivals-chips')).not.toBeVisible();
+    expect(screen.getByTestId('cm-growth-arrivals-chips')).toBeVisible();
+  });
+
+  it('#7 folded for the SAME batch → stays folded on the next mount', async () => {
+    const store = memStore();
+    vi.stubGlobal('localStorage', store);
+    stub();
+    const { unmount } = draw();
+    const det = (await screen.findByTestId('cm-growth-arrivals')) as HTMLDetailsElement;
+    await waitFor(() => expect(det.open).toBe(true));
+    act(() => { det.open = false; fireEvent(det, new Event('toggle')); });
+    expect(store._m.get('cm.study.open.growth-arrivals')).toBe('0');
+    expect(store._m.get('cm.study.fresh.growth-arrivals')).toBe(STAMP);
+    unmount();
+    _resetGrowthTagsCache();
+    stub();
+    draw();
+    const again = (await screen.findByTestId('cm-growth-arrivals')) as HTMLDetailsElement;
+    await act(async () => { await fetchGrowthPayload(); });
+    expect(again.open).toBe(false);
+    expect(screen.getByText('✨ 11 new on 🚀 Explosive Growth (last 30 days)')).toBeVisible();
+  });
+
+  it('#7 folded on an OLDER batch → a newer served first_seen re-opens it', async () => {
+    vi.stubGlobal('localStorage', memStore({
+      'cm.study.open.growth-arrivals': '0',
+      'cm.study.fresh.growth-arrivals': '2026-10-05T02:29:05.000000+00:00',
+    }));
+    stub();
+    draw();
+    const det = (await screen.findByTestId('cm-growth-arrivals')) as HTMLDetailsElement;
+    await waitFor(() => expect(det.open).toBe(true));
+  });
+
+  it('#5 every chip href and all 🚀 → carry show=all', async () => {
+    stub();
+    draw('/chart-maps?tab=zones&universe=full');
+    await openStrip();
+    const hrefs = [
+      ...screen.getAllByTestId(/^cm-growth-arrival-[A-Z]+$/),
+      screen.getByTestId('cm-growth-arrivals-all'),
+    ].map((a) => a.getAttribute('href')!);
+    expect(hrefs).toHaveLength(12);
+    for (const h of hrefs) {
+      const q = new URLSearchParams(h.slice(1));
+      expect(q.getAll('show')).toEqual(['all']);
+      expect(q.get('tab')).toBe('growth');
+    }
+  });
+
+  it('NEGATIVE #5: a page already on show=all never gets a duplicated param', async () => {
+    stub();
+    draw('/chart-maps?tab=zones&show=all');
+    await openStrip();
+    const q = new URLSearchParams(screen.getByTestId('cm-growth-arrival-PGEN').getAttribute('href')!.slice(1));
+    expect(q.getAll('show')).toEqual(['all']);
   });
 
   it('opened: one chip per served arrival, in SERVED order, with served glyphs', async () => {
@@ -187,7 +246,7 @@ describe('GrowthArrivalsStrip', () => {
     await waitFor(() => expect(det.open).toBe(true));
   });
 
-  it('NEGATIVE: a throwing localStorage still renders the folded strip', async () => {
+  it('NEGATIVE: a throwing localStorage still renders the strip — OPEN (no memory)', async () => {
     vi.stubGlobal('localStorage', {
       getItem: () => { throw new Error('blocked'); },
       setItem: () => { throw new Error('blocked'); },
@@ -195,7 +254,7 @@ describe('GrowthArrivalsStrip', () => {
     stub();
     draw();
     const det = (await screen.findByTestId('cm-growth-arrivals')) as HTMLDetailsElement;
-    expect(det.open).toBe(false);
+    await waitFor(() => expect(det.open).toBe(true));
     await openStrip();
     expect(screen.getAllByTestId(/^cm-growth-arrival-[A-Z]+$/)).toHaveLength(11);
   });
@@ -218,6 +277,63 @@ describe('GrowthArrivalsStrip', () => {
     draw();
     await act(async () => { await fetchGrowthPayload(); });
     expect(screen.queryByTestId('cm-growth-arrivals')).toBeNull();
+  });
+
+  it('#8 per-tab links under a chip: served order by tab, glyph text, served as-of on hover', async () => {
+    const withAlso = ARRIVALS.map((a) => (a.symbol === 'PGEN' ? {
+      ...a,
+      also_on: [
+        { tab: 'bonde', built_at: '2026-10-12T13:00:00+00:00', source_as_of: null, ttl_name: null, limit: null, stale: null },
+        { tab: 'ath', built_at: '2026-10-12T14:05:33+00:00', source_as_of: '2026-10-12T09:41:07-04:00',
+          ttl_name: 'chart_maps.ath_tab.MEMO_TTL_SEC', limit: 80, stale: true },
+        { tab: 'zones', built_at: '2026-10-12T14:00:00+00:00', source_as_of: null, ttl_name: null, limit: 80, stale: null },
+        { tab: 'growth', built_at: '2026-10-12T14:00:00+00:00', limit: 80 },
+      ],
+    } : a));
+    stub({ ...PAYLOAD, arrivals: withAlso });
+    draw('/chart-maps?tab=amd&universe=full');
+    await openStrip();
+    const box = screen.getByTestId('cm-growth-also-PGEN');
+    expect(box.className).toBe('cm-arrival-also');
+    const links = Array.from(box.querySelectorAll('a'));
+    expect(links.map((l) => new URLSearchParams(l.getAttribute('href')!.slice(1)).get('tab')))
+      .toEqual(['zones', 'ath', 'bonde']);
+    expect(links.map((l) => l.textContent)).toEqual(['Back in Demand', '🏔️', '📈']);
+    const ath = screen.getByTestId('cm-growth-also-PGEN-ath');
+    expect(ath.getAttribute('title')).toBe(
+      "🏔️ ATH · in the served top 80 as of 2026-10-12 09:41 · stale: older than this tab's cache window (chart_maps.ath_tab.MEMO_TTL_SEC)");
+    expect(ath.getAttribute('data-stale')).toBe('true');
+    expect(screen.getByTestId('cm-growth-also-PGEN-bonde').getAttribute('title'))
+      .toBe('📈 Bonde · in the served list as of 2026-10-12 13:00');
+    for (const l of links) {
+      const q = new URLSearchParams(l.getAttribute('href')!.slice(1));
+      expect(q.has('focus')).toBe(false);
+      expect(q.get('universe')).toBe('full');
+    }
+    /* the chip itself is unchanged */
+    const chip = screen.getByTestId('cm-growth-arrival-PGEN');
+    expect(chip.textContent).toBe('PGEN');
+    expect(new URLSearchParams(chip.getAttribute('href')!.slice(1)).get('focus')).toBe('PGEN');
+    /* a plain click on a per-tab link routes in place */
+    act(() => { fireEvent.click(ath, { button: 0 }); });
+    expect(new URLSearchParams(screen.getByTestId('where').textContent!.slice(1)).get('tab')).toBe('ath');
+  });
+
+  it.each([
+    ['absent', undefined],
+    ['empty', []],
+    ['not an array', { zones: true }],
+    ['junk entries', [null, 3, 'zones', { tab: 'nope' }, { tab: 'growth' }, { tab: 'supply' }]],
+  ])('NEGATIVE #8: also_on %s → no links, chip unchanged', async (_n, also_on) => {
+    const arr = ARRIVALS.map((a) => (a.symbol === 'PGEN' ? { ...a, also_on } : a));
+    stub({ ...PAYLOAD, arrivals: arr });
+    draw();
+    await openStrip();
+    expect(screen.queryByTestId('cm-growth-also-PGEN')).toBeNull();
+    expect(document.querySelectorAll('.cm-arrival-also')).toHaveLength(0);
+    const chip = screen.getByTestId('cm-growth-arrival-PGEN');
+    expect(chip.textContent).toBe('PGEN');
+    expect(screen.getAllByTestId(/^cm-growth-arrival-[A-Z]+$/)).toHaveLength(11);
   });
 
   it('NEGATIVE: no rendered text says "bounce"', async () => {

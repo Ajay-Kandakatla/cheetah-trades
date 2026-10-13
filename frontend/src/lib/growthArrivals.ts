@@ -20,6 +20,22 @@ export type GrowthArrival = {
   liquid?: boolean;
   refused?: boolean;
   warnings?: string[];
+  /** #8 (2026-10-12): the other Chart Maps tabs whose latest SERVED top-N
+   *  snapshot carries this name. Served by chart_maps/membership.py; nothing
+   *  here composes it. */
+  also_on?: AlsoOn[];
+};
+
+/** One served membership entry: the tab, its as-of stamps, its staleness read
+ *  (null when the tab has no cache constant to judge by) and the served list
+ *  size the membership was read from. */
+export type AlsoOn = {
+  tab: string;
+  built_at?: string | null;
+  source_as_of?: string | null;
+  stale?: boolean | null;
+  ttl_name?: string | null;
+  limit?: number | null;
 };
 
 /** The URL key a strip chip hands the 🚀 board: which row to scroll to. */
@@ -68,17 +84,45 @@ export function arrivalTitle(a: GrowthArrival): string {
   return `${head} · ${w.length ? w.join(' · ') : 'no warnings'}`;
 }
 
-/** The 🚀 board's six hide stages, in the board's own order. The labels name
- *  HIS controls, never a verdict. Typed ONCE here; the board reads them. */
-export type StageCode = 'refused' | 'demand' | 'sector' | 'debt' | 'enterable' | 'quality';
+/** The 🚀 board's seven hide stages, in the board's own order. The labels name
+ *  HIS controls, never a verdict. Typed ONCE here; the board reads them.
+ *  `new` (2026-10-12, his #2 "yes"): the ✨ new only checkbox — it keeps only
+ *  rows the ledger SERVED as `is_new === true`, so it never drops a new name. */
+export type StageCode = 'refused' | 'demand' | 'sector' | 'debt' | 'new' | 'enterable' | 'quality';
 export const STAGE_LABEL: Readonly<Record<StageCode, string>> = Object.freeze({
   refused: 'hide what the engine refuses',
   demand: 'at demand, floor intact',
   sector: 'sector filter',
   debt: 'debt filter',
+  new: '✨ new only',
   enterable: 'enterable only',
   quality: 'quality chips',
 });
+
+/** The ✨ new only counts, off the SERVED flag only. `newN` = rows served as
+ *  `is_new === true` (what the checkbox keeps); `unreadN` = rows that carry no
+ *  boolean `is_new` at all (an older payload) — the filter counts them as NOT
+ *  new, and the hidden line says so rather than letting them vanish silently. */
+export function newRowCounts(rows: readonly { is_new?: unknown }[]): { newN: number; unreadN: number } {
+  let newN = 0;
+  let unreadN = 0;
+  for (const r of rows || []) {
+    if (r?.is_new === true) newN += 1;
+    if (typeof r?.is_new !== 'boolean') unreadN += 1;
+  }
+  return { newN, unreadN };
+}
+
+/** The ✨ new only count line. `hidden` is the stage's own drop count (array
+ *  lengths, never set sizes); `days` the SERVED `new_days` window — omitted when
+ *  the payload carries none. */
+export function newOnlyHiddenLine(hidden: number, unreadN: number, days: number | null | undefined): string {
+  const win = typeof days === 'number' && Number.isFinite(days) ? ` in the last ${days} days` : '';
+  const unread = unreadN > 0
+    ? ` · ${unreadN} ${unreadN === 1 ? 'row carries' : 'rows carry'} no arrival read and count${unreadN === 1 ? 's' : ''} as not new`
+    : '';
+  return `✨ new only: ${hidden} hidden (not new${win})${unread}`;
+}
 
 /** One stage that is ON, with the symbols that survived it. An OFF stage is
  *  simply absent — it dropped nothing and can never be blamed. */

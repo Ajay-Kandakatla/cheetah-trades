@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   FOCUS_PARAM, GROWTH_TAB, STAGE_LABEL, arrivalGlyph, arrivalHref, arrivalTitle,
-  arrivalsHeadline, hiddenArrivals, parseFocus, type HideStage,
+  arrivalsHeadline, hiddenArrivals, newOnlyHiddenLine, newRowCounts, parseFocus, type HideStage,
 } from './growthArrivals';
 
 /* ✨ growthArrivals — the pure half of the Chart Maps strip (2026-10-12).
@@ -92,8 +92,9 @@ describe('arrivalGlyph / arrivalTitle', () => {
 });
 
 describe('STAGE_LABEL', () => {
-  it('has exactly the six stage codes, in board order', () => {
-    expect(Object.keys(STAGE_LABEL)).toEqual(['refused', 'demand', 'sector', 'debt', 'enterable', 'quality']);
+  it('has exactly the seven stage codes, in board order (✨ new only after debt, 2026-10-12)', () => {
+    expect(Object.keys(STAGE_LABEL)).toEqual(['refused', 'demand', 'sector', 'debt', 'new', 'enterable', 'quality']);
+    expect(STAGE_LABEL.new).toBe('✨ new only');
     expect(STAGE_LABEL.refused).toBe('hide what the engine refuses');
     expect(STAGE_LABEL.enterable).toBe('enterable only');
   });
@@ -146,5 +147,49 @@ describe('source guards', () => {
     expect(src).not.toMatch(/\bCI\b/);
     expect(src).not.toContain('@gmail');
     expect(src).not.toContain('ajaykandakatla');
+  });
+});
+
+/* ── #2 ✨ new only (2026-10-12) ─────────────────────────────────────────── */
+
+describe('newRowCounts', () => {
+  it('newN counts is_new === true; unreadN counts rows with no boolean is_new', () => {
+    expect(newRowCounts([{ is_new: true }, { is_new: false }, {}, { is_new: true }]))
+      .toEqual({ newN: 2, unreadN: 1 });
+  });
+
+  it('NEGATIVE: truthy non-booleans are neither new nor read ("true", 1, null)', () => {
+    expect(newRowCounts([{ is_new: 'true' }, { is_new: 1 }, { is_new: null }]))
+      .toEqual({ newN: 0, unreadN: 3 });
+  });
+
+  it('NEGATIVE: empty / nullish input → zeros, never throws', () => {
+    expect(newRowCounts([])).toEqual({ newN: 0, unreadN: 0 });
+    expect(newRowCounts(undefined as unknown as [])).toEqual({ newN: 0, unreadN: 0 });
+  });
+});
+
+describe('newOnlyHiddenLine', () => {
+  it('names the served window', () => {
+    expect(newOnlyHiddenLine(16, 0, 30)).toBe('✨ new only: 16 hidden (not new in the last 30 days)');
+  });
+
+  it('adds the unread clause only when some rows carry no arrival read (singular + plural)', () => {
+    expect(newOnlyHiddenLine(3, 1, 30)).toBe(
+      '✨ new only: 3 hidden (not new in the last 30 days) · 1 row carries no arrival read and counts as not new');
+    expect(newOnlyHiddenLine(3, 2, 30)).toBe(
+      '✨ new only: 3 hidden (not new in the last 30 days) · 2 rows carry no arrival read and count as not new');
+  });
+
+  it('NEGATIVE: days null / undefined / NaN → the window is omitted, never "null days"', () => {
+    for (const d of [null, undefined, Number.NaN]) {
+      const t = newOnlyHiddenLine(0, 0, d);
+      expect(t).toBe('✨ new only: 0 hidden (not new)');
+      expect(t).not.toMatch(/null|undefined|NaN/);
+    }
+  });
+
+  it('NEGATIVE: unreadN 0 → no unread clause', () => {
+    expect(newOnlyHiddenLine(5, 0, 30)).not.toContain('arrival read');
   });
 });
