@@ -102,3 +102,43 @@ export function volumePaneLayout(height: number, padY: number, hasVolume: boolea
   const volTop = volBot - Math.round(height * VOL_PANE_FRAC);
   return { priceH: volTop - VOL_PANE_GAP + padY, volTop, volBot };
 }
+
+/** 📊 The backend's served average (2026-10-13): the same 50-bar simple mean,
+ *  computed over the FULL frame the tile was cut from and joined to the
+ *  tile's bars by stamp (chart_maps/board.py `_vol_avg`). A tile that shows
+ *  120 bars therefore has a value from its first bar, not its 50th. */
+export type ServedVolAvg = { period: number; label: string; values: (number | null)[] };
+
+export type PaneAverage = {
+  values: (number | null)[];
+  /** True when the line is the backend's full-frame average. */
+  served: boolean;
+  /** The window the line is over — what `volumeSmaTitle` names. */
+  win: number;
+};
+
+/** The ONE choice point between the served average and the fallback.
+ *
+ *  Served wins when it is exactly the average this pane would draw: an
+ *  object whose period is his 50 and whose `values` line up one-to-one with
+ *  the bars. Anything else — absent, a different period, a length mismatch,
+ *  no two finite values side by side — falls back to `volumeSma` over the
+ *  bars in hand, exactly as the pane drew before. A line with no adjacent
+ *  pair (one point, or [5, null, 5, null, …]) draws no segment, and winning
+ *  with it would also switch off the fallback's flat line and leave the title
+ *  naming the wrong reason. A served value that is not a finite, non-negative
+ *  number is a gap. */
+export function paneVolumeAverage(vols: ReadonlyArray<number | null | undefined>,
+                                  served?: ServedVolAvg | null): PaneAverage {
+  const list = Array.isArray(vols) ? vols : [];
+  const sv = served && typeof served === 'object' ? served : null;
+  if (sv && sv.period === VOLUME_SMA_LEN && Array.isArray(sv.values)
+      && sv.values.length === list.length) {
+    const values = sv.values.map((v) => (fin(v) && v >= 0 ? v : null));
+    if (values.some((v, i) => v != null && values[i + 1] != null)) {
+      return { values, served: true, win: VOLUME_SMA_LEN };
+    }
+  }
+  const win = volumeSmaWindow(list.length);
+  return { values: volumeSma(list, win), served: false, win };
+}

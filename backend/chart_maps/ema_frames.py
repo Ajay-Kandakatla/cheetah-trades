@@ -357,6 +357,16 @@ def build(symbol: str, frame: str = DEFAULT_FRAME, *,
         "why": _why(fr, reason, forming, dates[-1]),
         "theme": _theme(sym),
     }
+    # 📊 The served 50-bar volume average (2026-10-13), in THIS frame's bars —
+    # fifty weeks on the weekly tile, fifty months on the monthly one — off the
+    # whole resampled frame already in hand. Date-only stamps, so the board's
+    # default key matches `_frame_to_bars` here. Soft-fails to the frontend's
+    # own average.
+    try:
+        from . import board as _board
+        _board._vol_avg(tile, rs)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("ema-frames: volume average for %s failed: %s", sym, exc)
     return {"symbol": sym, "frame": fr, "tile": tile,
             "periods": len(bars), "completed_periods": completed,
             "forming": ({"date": dates[-1], "frame": fr,

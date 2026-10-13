@@ -245,6 +245,15 @@ def _ma_curves(tile: dict, df, *, stamp=None) -> None:
     bars = tile.get("bars") or []
     if not bars:
         return
+    # 📊 The served 50-bar volume average (2026-10-13) rides the SAME frame and
+    # the SAME key as the MAs, so every MA call site serves it with no new one.
+    # FIRST, before the "already on this tile" return below: a tile whose MAs
+    # some earlier pass drew must still get its volume line. Its own guard,
+    # because a volume read that throws must not cost the tile its MAs.
+    try:
+        _vol_avg(tile, df, stamp=stamp)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: volume average failed: %s", exc)
     have = {(c or {}).get("tone") for c in (tile.get("curves") or [])}
     if any(tone in have for tone, _l, _p, _k in MA_SPECS):
         return          # already on this tile
@@ -269,6 +278,90 @@ def _ma_curves(tile: dict, df, *, stamp=None) -> None:
         curves.append({"tone": tone, "label": label, "values": vals})
     if curves:
         tile["curves"] = list(tile.get("curves") or []) + curves
+
+
+# ---------------------------------------------------------------------------
+# 📊 volume average — 50-bar simple mean, served over the FULL frame (2026-10-13)
+# ---------------------------------------------------------------------------
+# Ajay 2026-10-13: green / red volume under every chart plus "a thin 50-bar
+# simple volume average (TOS VolumeAvg default)". The pane shipped computing
+# that average in the browser over the bars the tile SHOWS — so a 120-bar tile
+# spent its first 49 bars warming up, and an intraday tile drew no line at all
+# until fifty bars of today existed. The backend holds the whole frame, so it
+# serves the true average here and the frontend draws it (its own SMA stays as
+# the fallback for tiles no backend builder touches).
+#
+# A DRAWING. Nothing reads it: no ordering, no filter, no gate, no alert.
+VOL_AVG_PERIOD = 50                     # Ajay's number (DECISIONS 2026-10-13) — the TOS VolumeAvg default
+VOL_AVG_LABEL = "50-bar avg volume"
+
+
+def _vol_avg_series(df, *, stamp=None) -> Optional[dict]:
+    """`{"dates": [...], "values": [value|None, ...]}` — the SIMPLE mean of the
+    current and prior `VOL_AVG_PERIOD - 1` volumes, or None.
+
+    The `_ma_series` rule, unchanged: computed on the frame it is HANDED, and
+    that must be the untailed one; the by-stamp join in `_vol_avg` cuts it to
+    the window afterwards. `stamp` is the caller's key, exactly as there.
+
+    WARM-UP IS A GAP. The first `period - 1` bars are None, and so is every
+    window that holds a volume that is missing, non-finite or negative — a hole
+    in the data is a hole in the line, never a dip. That is the frontend
+    fallback's own rule (lib/volumePane.ts `volumeSma`), so the served line and
+    the fallback can never disagree about what counts. A zero volume is a real
+    number and counts as zero.
+
+    PURE. pandas over a frame the caller already holds.
+    """
+    if df is None or getattr(df, "empty", True):
+        return None
+    if "volume" not in getattr(df, "columns", []):
+        return None
+    vol = df["volume"].astype(float)
+    # NaN, ±inf and negatives all become NaN; `rolling(n)` then needs n real
+    # observations, so any window that touches one comes out NaN → None.
+    vol = vol.where((vol >= 0) & (vol != float("inf")))
+    n = int(len(vol))
+    _stamp = stamp or _row_date
+    dates = [_stamp(ts) for ts in df.index]
+    if n < VOL_AVG_PERIOD:
+        return {"dates": dates, "values": [None] * n}
+    vals = [_num(v) for v in vol.rolling(VOL_AVG_PERIOD).mean().tolist()]
+    for i in range(VOL_AVG_PERIOD - 1):
+        vals[i] = None
+    return {"dates": dates, "values": vals}
+
+
+def _vol_avg(tile: dict, df, *, stamp=None) -> None:
+    """Attach `tile["vol_avg"] = {"period", "label", "values"}`, in place.
+
+    BY STAMP, NOT BY POSITION — the `_ma_curves` join: a bar the frame lacks
+    gets None, never its neighbour's value. Omitted when every value is None
+    (a frame shorter than 50 bars, a window of nothing but warm-up): an
+    all-null line is a claim the average exists, and the frontend's fallback
+    says what it can instead.
+
+    IDEMPOTENT. A served average is never recomputed by a second pass; a stale
+    `vol_avg: None` is overwritten. Soft-fails: a drawing never empties a tile.
+    """
+    bars = tile.get("bars") or []
+    if not bars or tile.get("vol_avg"):
+        return
+    try:
+        ser = _vol_avg_series(df, stamp=stamp)
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("chart-maps: volume-average series failed: %s", exc)
+        return
+    if not ser:
+        return
+    by_date = {d: i for i, d in enumerate(ser.get("dates") or [])}
+    col = ser.get("values") or []
+    vals = [(col[by_date[str(b.get("t"))]] if str(b.get("t")) in by_date else None)
+            for b in bars]
+    if not any(v is not None for v in vals):
+        return
+    tile["vol_avg"] = {"period": VOL_AVG_PERIOD, "label": VOL_AVG_LABEL,
+                       "values": vals}
 
 
 def _snap_for(snaps: Optional[dict], sym: str) -> Optional[dict]:

@@ -42,8 +42,9 @@ import {
   amdRaidMarks, occupiedFromMarkers, RAID_R, sanitizeAmdRaids,
 } from '../lib/amdRaids';
 import {
-  VOLUME_SMA_COLOR, VOLUME_SMA_LEN, volumeColor, volumePaneLayout, volumeSma, volumeSmaTitle, volumeSmaWindow,
+  VOLUME_SMA_COLOR, VOLUME_SMA_LEN, paneVolumeAverage, volumeColor, volumePaneLayout, volumeSmaTitle,
 } from '../lib/volumePane';
+import type { ServedVolAvg } from '../lib/volumePane';
 
 const W = 620;
 const PAD_Y = 10;
@@ -547,9 +548,20 @@ export const PatternChart = memo(function PatternChart(
               markers, so BUY / SELL tags and AMD circles paint on top of it. */}
           {hasVol ? (() => {
             const paneH = pane.volBot - pane.volTop;
-            const yV = (v: number) => pane.volBot - (v / volMax) * paneH;
-            const win = volumeSmaWindow(bars.length);
-            const sma = volumeSma(vols, win);
+            // The backend's full-frame 50-bar average when the tile carries
+            // one (chart_maps/board.py `_vol_avg`), else the same SMA over the
+            // bars in hand. A full-frame average can sit above every bar the
+            // window shows (a quiet stretch after a loud one), so with a served
+            // line the scale also fits the line; the fallback never can, and
+            // its scale is the tallest bar exactly as before.
+            const avg = paneVolumeAverage(
+              vols, (tile as CmTile & { vol_avg?: ServedVolAvg | null }).vol_avg);
+            const sma = avg.values;
+            const win = avg.win;
+            const top = avg.served
+              ? sma.reduce<number>((m, v) => (v != null && v > m ? v : m), volMax)
+              : volMax;
+            const yV = (v: number) => pane.volBot - (v / top) * paneH;
             const segs: string[] = [];
             let cur: string[] = [];
             sma.forEach((v, i) => {
@@ -566,13 +578,18 @@ export const PatternChart = memo(function PatternChart(
             // how many bars it is over. With a full window (>= 50 bars) a gap
             // that leaves one lone valid point draws NOTHING: a flat line
             // there would claim a full-window average across the whole pane.
-            const flat = !segs.length && bars.length < VOLUME_SMA_LEN
+            const flat = !segs.length && !avg.served && bars.length < VOLUME_SMA_LEN
               ? sma.find((v) => v != null) ?? null : null;
             const title = volumeSmaTitle(win, bars.length);
+            // The corner label prints `top`; when a served line lifted it
+            // above every bar the title names both, so the two never disagree.
+            const scale = top > volMax
+              ? `scale top ${shortVol(top)} · tallest bar ${shortVol(volMax)}`
+              : `tallest bar ${shortVol(volMax)}`;
             // No line drawn → the pane's title does not name an average.
             const paneTitle = segs.length || flat != null
-              ? `${title} · tallest bar ${shortVol(volMax)}`
-              : `volume · tallest bar ${shortVol(volMax)} · average not drawn (a bar in the window has no volume)`;
+              ? `${title} · ${scale}`
+              : `volume · ${scale} · average not drawn (a bar in the window has no volume)`;
             return (
               <g className="pc-vol-pane">
                 <title>{paneTitle}</title>
@@ -606,7 +623,7 @@ export const PatternChart = memo(function PatternChart(
                   </path>
                 ) : null}
                 <text x={3} y={pane.volTop + 7} fontSize="9" className="pc-vol-max"
-                      fill="var(--text-muted, #7c869b)" opacity={0.85}>{shortVol(volMax)}</text>
+                      fill="var(--text-muted, #7c869b)" opacity={0.85}>{shortVol(top)}</text>
               </g>
             );
           })() : null}
