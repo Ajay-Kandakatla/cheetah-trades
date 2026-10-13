@@ -1,5 +1,9 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import type { DayBars, DaySignal } from '../hooks/useDayTrading';
+import {
+  VOLUME_SMA_COLOR, VOLUME_SMA_LEN, volumeColor, volumePaneLayout, volumeSma, volumeSmaTitle,
+  volumeSmaWindow,
+} from '../lib/volumePane';
 
 type Props = {
   data: DayBars;
@@ -53,9 +57,17 @@ export function IntradayChart({ data, signals = [], height = 420 }: Props) {
     return data.bars.slice(zoom.start, zoom.end + 1);
   }, [data.bars, zoom]);
 
+  /* 📊 The 50-bar volume average runs over the FULL frame, then is sliced
+   * with the zoom — a zoomed view does not restart the warm-up. */
+  const volSma = useMemo(() => {
+    const vols = data.bars.map((b) => volOf(b.v));
+    return volumeSma(vols, volumeSmaWindow(data.bars.length));
+  }, [data.bars]);
+
   const { plot } = useMemo(
-    () => computePlot({ ...data, bars: visibleBars }, signals, width, height, zoom?.start ?? 0),
-    [data, visibleBars, signals, width, height, zoom],
+    () => computePlot({ ...data, bars: visibleBars }, signals, width, height, zoom?.start ?? 0,
+                      volSma, data.bars.length),
+    [data, visibleBars, signals, width, height, zoom, volSma],
   );
 
   const xToIdx = useCallback((px: number): number => {
@@ -120,6 +132,12 @@ export function IntradayChart({ data, signals = [], height = 420 }: Props) {
   }
 
   const hoveredBar = hover != null ? visibleBars[hover.idx] : null;
+  // A pointer down in the volume pane is not on a price — no price pill there.
+  const overPrice = hover != null && hover.y <= plot.padT + plot.plotH;
+  const vol = plot.vol;
+  // Shading, the drag overlay and the vertical crosshair run down through the
+  // volume pane, so a column reads in its session.
+  const fullBot = vol ? vol.bot : plot.padT + plot.plotH;
   const hoveredSignal = hover != null
     ? signals.find((s) => visibleBars[hover.idx]?.ts === s.entry_ts)
     : undefined;
@@ -169,8 +187,39 @@ export function IntradayChart({ data, signals = [], height = 420 }: Props) {
         ))}
         {/* RTH session shading */}
         {plot.rthBands.map((b, i) => (
-          <rect key={i} x={b.x1} y={plot.padT} width={b.x2 - b.x1} height={plot.plotH} className="day-chart__rth-band" />
+          <rect key={i} x={b.x1} y={plot.padT} width={b.x2 - b.x1} height={fullBot - plot.padT} className="day-chart__rth-band" />
         ))}
+        {/* 📊 volume pane (2026-10-13) — the bottom ~22%: one column per bar,
+            green when the close is at or above the open (the candle above it),
+            red otherwise, plus the thin grey 50-bar simple average. Bars with
+            no `v` draw no pane. Display only. */}
+        {vol && (
+          <g className="day-chart__vol-pane">
+            <title>{vol.paneTitle}</title>
+            <line x1={plot.padL} x2={width - plot.padR} y1={vol.top - 2} y2={vol.top - 2}
+                  stroke="var(--rule, #2a2f3a)" strokeWidth={0.6} opacity={0.55} />
+            {vol.cols.map((c) => (
+              <rect key={`vol-${c.i}`} className="day-chart__vol" data-vol={c.v}
+                    x={c.x} y={c.y} width={c.w} height={c.h} fill={c.fill}
+                    opacity={hover != null && hover.idx !== c.i ? 0.82 : 1} />
+            ))}
+            {vol.segs.map((d, si) => (
+              <path key={`vsma-${si}`} className="day-chart__vol-sma" d={d} fill="none"
+                    stroke={VOLUME_SMA_COLOR} strokeWidth={1}>
+                <title>{vol.title}</title>
+              </path>
+            ))}
+            {vol.flatY != null && (
+              <path className="day-chart__vol-sma day-chart__vol-sma-flat"
+                    d={`M${plot.padL},${vol.flatY} L${width - plot.padR},${vol.flatY}`} fill="none"
+                    stroke={VOLUME_SMA_COLOR} strokeWidth={1} strokeDasharray="3,3">
+                <title>{vol.title}</title>
+              </path>
+            )}
+            <text x={plot.padL - 6} y={vol.top + 7} textAnchor="end"
+                  className="day-chart__vol-max day-chart__yLabel mono">{fmtVol(vol.max)}</text>
+          </g>
+        )}
         {/* ORB */}
         {plot.orb && (
           <>
@@ -212,7 +261,7 @@ export function IntradayChart({ data, signals = [], height = 420 }: Props) {
 
         {/* Drag-to-zoom overlay */}
         {dragRect && (
-          <rect x={dragRect.x} y={plot.padT} width={dragRect.w} height={plot.plotH} className="day-chart__drag" />
+          <rect x={dragRect.x} y={plot.padT} width={dragRect.w} height={fullBot - plot.padT} className="day-chart__drag" />
         )}
 
         {/* Crosshair */}
@@ -220,13 +269,17 @@ export function IntradayChart({ data, signals = [], height = 420 }: Props) {
           <>
             <line x1={plot.padL + (hover.idx / Math.max(1, visibleBars.length - 1)) * plot.plotW}
                   x2={plot.padL + (hover.idx / Math.max(1, visibleBars.length - 1)) * plot.plotW}
-                  y1={plot.padT} y2={plot.padT + plot.plotH} className="day-chart__crosshair" />
+                  y1={plot.padT} y2={fullBot} className="day-chart__crosshair" />
             <line x1={plot.padL} x2={width - plot.padR} y1={hover.y} y2={hover.y} className="day-chart__crosshair" />
-            {/* y-axis hover label */}
-            <rect x={plot.padL - 50} y={hover.y - 9} width={50} height={18} className="day-chart__hover-pill" />
-            <text x={plot.padL - 6} y={hover.y + 4} textAnchor="end" className="day-chart__hover-y mono">
-              {plot.priceAt(hover.y).toFixed(2)}
-            </text>
+            {/* y-axis hover label — over the price pane only */}
+            {overPrice && (
+              <>
+                <rect x={plot.padL - 50} y={hover.y - 9} width={50} height={18} className="day-chart__hover-pill" />
+                <text x={plot.padL - 6} y={hover.y + 4} textAnchor="end" className="day-chart__hover-y mono">
+                  {plot.priceAt(hover.y).toFixed(2)}
+                </text>
+              </>
+            )}
           </>
         )}
       </svg>
@@ -279,7 +332,8 @@ export function IntradayChart({ data, signals = [], height = 420 }: Props) {
   );
 }
 
-function fmtVol(v: number): string {
+function fmtVol(v: number | null | undefined): string {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return '—';
   if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
   if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
   return v.toFixed(0);
@@ -287,15 +341,33 @@ function fmtVol(v: number): string {
 
 // --- plot computation -------------------------------------------------------
 
+/** A usable volume: a finite number >= 0, else null (never a fake zero). */
+function volOf(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null;
+}
+
 type PlotBar = { cx: number; yH: number; yL: number; yTop: number; yBottom: number; up: boolean };
+type VolCol = { i: number; v: number; x: number; w: number; y: number; h: number; fill: string };
+type VolPane = {
+  top: number; bot: number; max: number; cols: VolCol[]; segs: string[];
+  flatY: number | null; title: string; paneTitle: string;
+};
 type PlotSignal = { cx: number; cy: number; yStop: number; yTarget: number; side: 'long'|'short'; entry: number; stop: number; target: number };
 
-function computePlot(data: DayBars, signals: DaySignal[], width: number, height: number, _idxOffset: number) {
+function computePlot(data: DayBars, signals: DaySignal[], width: number, height: number,
+                            idxOffset: number, fullSma: ReadonlyArray<number | null> = [],
+                            fullLen: number = data.bars.length) {
   const padL = 60, padR = 100, padT = 14, padB = 30;
   const plotW = width - padL - padR;
-  const plotH = height - padT - padB;
   const bars = data.bars;
   if (!bars.length) return { plot: null };
+  /* 📊 The volume pane takes the bottom of the chart when any visible bar
+   * carries a positive `v`; the price mapping runs on the shorter pane. With
+   * no volume the price pane keeps the whole height, exactly as before. */
+  const vols = bars.map((b) => volOf(b.v));
+  const volMax = vols.reduce<number>((m, v) => (v != null && v > m ? v : m), 0);
+  const pane = volumePaneLayout(height, padB, volMax > 0);
+  const plotH = pane.priceH - padT - padB;
 
   let lo = Infinity, hi = -Infinity;
   for (const b of bars) { if (b.l < lo) lo = b.l; if (b.h > hi) hi = b.h; }
@@ -375,7 +447,46 @@ function computePlot(data: DayBars, signals: DaySignal[], width: number, height:
     });
   }
 
+  let vol: VolPane | null = null;
+  if (volMax > 0) {
+    const paneH = pane.volBot - pane.volTop;
+    const yV = (v: number) => pane.volBot - (v / volMax) * paneH;
+    const cols: VolCol[] = [];
+    bars.forEach((b, i) => {
+      const v = vols[i];
+      const fill = volumeColor(b.o, b.c);
+      if (v == null || v <= 0 || !fill) return;
+      const y = yV(v);
+      cols.push({ i, v, x: xOf(i) - candleW / 2, w: candleW, y, h: Math.max(pane.volBot - y, 0.6), fill });
+    });
+    const off = Math.max(0, Math.floor(idxOffset) || 0);
+    const segs: string[] = [];
+    let cur: string[] = [];
+    bars.forEach((_, i) => {
+      const a = fullSma[off + i];
+      if (typeof a !== 'number' || !Number.isFinite(a)) {
+        if (cur.length > 1) segs.push('M' + cur.join(' L'));
+        cur = [];
+        return;
+      }
+      cur.push(`${xOf(i).toFixed(1)},${yV(Math.min(a, volMax)).toFixed(1)}`);
+    });
+    if (cur.length > 1) segs.push('M' + cur.join(' L'));
+    // Fewer bars than the window in the whole frame: the average exists at
+    // ONE bar only, drawn flat and dashed with a title that says so. With a
+    // full window a lone valid point draws nothing.
+    const win = volumeSmaWindow(fullLen);
+    const lone = fullSma.find((a) => typeof a === 'number' && Number.isFinite(a));
+    const flatY = !segs.length && fullLen < VOLUME_SMA_LEN && typeof lone === 'number'
+      ? yV(Math.min(lone, volMax)) : null;
+    const title = volumeSmaTitle(win, fullLen);
+    const paneTitle = segs.length || flatY != null
+      ? `${title} · tallest bar ${fmtVol(volMax)}`
+      : `volume · tallest bar ${fmtVol(volMax)} · average not drawn (a bar in the window has no volume)`;
+    vol = { top: pane.volTop, bot: pane.volBot, max: volMax, cols, segs, flatY, title, paneTitle };
+  }
+
   return {
-    plot: { padL, padR, padT, plotH, plotW, bars: plotBars, signals: plotSignals, yTicks, xTicks, rthBands, orb, pre, vwapPath, candleW, priceAt },
+    plot: { padL, padR, padT, plotH, plotW, bars: plotBars, signals: plotSignals, yTicks, xTicks, rthBands, orb, pre, vwapPath, candleW, priceAt, vol },
   };
 }

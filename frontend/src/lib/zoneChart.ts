@@ -15,6 +15,7 @@
  */
 import type { Plan, Zone, ZoneMapPayload } from './zonePlan';
 import { padStrip } from './zonePad';
+import { VOL_DOWN, VOL_UP, volumeColor, volumeSma, volumeSmaWindow } from './volumePane';
 
 /** One bar as the backend sends it. `open/high/low/volume` were added
  *  2026-08-16; a payload cached before that has only `date` + `close`. */
@@ -68,8 +69,9 @@ export function toCandles(series: SeriesBar[] | undefined | null): Candle[] {
   return out;
 }
 
-export const VOL_UP = 'rgba(34,197,94,0.38)';
-export const VOL_DOWN = 'rgba(239,68,68,0.38)';
+// The colours live in lib/volumePane.ts since 2026-10-13 (every chart reads
+// the same green/red); re-exported so existing imports keep working.
+export { VOL_UP, VOL_DOWN };
 
 /** Volume histogram, coloured by the bar's own direction.
  *
@@ -86,8 +88,37 @@ export function toVolumeBars(series: SeriesBar[] | undefined | null): VolumeBar[
     prevTime = b.date;
     if (!ok(b.volume) || b.volume <= 0) continue;
     const open = ok(b.open) ? b.open : b.close;
-    out.push({ time: b.date, value: b.volume, color: b.close >= open ? VOL_UP : VOL_DOWN });
+    out.push({ time: b.date, value: b.volume, color: volumeColor(open, b.close) as string });
   }
+  return out;
+}
+
+export type VolumeSmaPoint = { time: string; value: number };
+
+/** The 50-bar volume average as a line series (Ajay 2026-10-13, "green and
+ *  red volume" + the thin VolumeAvg line).
+ *
+ *  Walks the SAME bars toCandles keeps (ascending, unique, finite close) so a
+ *  point always sits under its candle. A missing or negative volume is a hole
+ *  — every window that holds it is null and simply not plotted — rather than a
+ *  zero that would drag the average to the floor. Warm-up bars are not plotted
+ *  either. Fewer than 50 bars → the window is every bar there is. */
+export function toVolumeSma(series: SeriesBar[] | undefined | null): VolumeSmaPoint[] {
+  if (!Array.isArray(series)) return [];
+  const times: string[] = [];
+  const vals: (number | null)[] = [];
+  let prevTime = '';
+  for (const b of series) {
+    if (!b || typeof b.date !== 'string' || !b.date || b.date <= prevTime) continue;
+    if (!ok(b.close)) continue;
+    prevTime = b.date;
+    times.push(b.date);
+    vals.push(ok(b.volume) && b.volume >= 0 ? b.volume : null);
+  }
+  if (!vals.some((v) => v != null && v > 0)) return [];
+  const sma = volumeSma(vals, volumeSmaWindow(vals.length));
+  const out: VolumeSmaPoint[] = [];
+  sma.forEach((v, i) => { if (v != null) out.push({ time: times[i], value: v }); });
   return out;
 }
 

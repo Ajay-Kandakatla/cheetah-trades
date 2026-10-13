@@ -22,6 +22,10 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-13: "show me volume on our charts please thats missing I wanna see it like green and red volume".
+  // Colours, the 50 and the pane share live in lib/volumePane.ts (VOL_UP/VOL_DOWN, VOLUME_SMA_LEN, VOL_PANE_FRAC).
+  { id: 'chart-volume-pane-2026-10-13', addedAt: '2026-10-13', route: '/chart-maps',
+    label: '📊 Volume on every chart. Green/red bars by candle + a thin 50-bar average, so a sudden demand bar is obvious.' },
   // Ajay 2026-10-12, one word — "yes" — to the eight his-call questions after the ✨ arrivals strip shipped.
   // #4 (the 30-day window) = KEEP: growth.tracker.NEW_GROWTH_DAYS stays 30 and still sets what the push counts as new.
   // The measured wording comes from growth/screen_measured.py (cell G100 of the 2026-09-21 replay) — never retyped here.

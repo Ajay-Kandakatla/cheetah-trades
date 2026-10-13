@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fixture from '../components/__fixtures__/amd_raids_orcl_2026_09_24.json';
 import {
   amdRaidMarks, MARK_RE, occupiedFromMarkers, panelAlign, RAID_OFFSET, RAID_R, RAID_ROW,
-  raidRadius, sanitizeAmdRaids, type AmdRaidGeom, type AmdRaidsBlock,
+  raidOffset, raidRadius, raidRow, sanitizeAmdRaids, type AmdRaidGeom, type AmdRaidsBlock,
 } from './amdRaids';
 import type { CmBar } from './chartMaps';
 
@@ -284,5 +284,67 @@ describe('panelAlign / raidRadius', () => {
     expect(raidRadius('3·2')).toBeGreaterThan(RAID_R);
     expect(raidRadius('12·3')).toBeGreaterThan(raidRadius('3·2'));
     expect(raidRadius('')).toBe(RAID_R);
+  });
+});
+
+describe('📊 raid rows scale with the price pane (2026-10-13)', () => {
+  const bars = mkBars(60);
+  const one = sanitizeAmdRaids({ raids: [lowRow(bars[10].t, '1'), lowRow(bars[11].t, '2')],
+    draw_dirs: ['bullish'] })!;
+
+  it('the steps are the old 8 / 11 times the scale', () => {
+    expect(raidOffset(0.75)).toBeCloseTo(RAID_OFFSET * 0.75, 9);
+    expect(raidRow(0.75)).toBeCloseTo(RAID_ROW * 0.75, 9);
+    const marks = amdRaidMarks(one, bars, flatGeom({ minGapBars: 3, rowScale: 0.75 }));
+    expect(marks.map((m) => m.row)).toEqual([0, 1]);
+    // the offset is floored at radius + 1 so a circle never sits on its wick
+    expect(marks[0].y).toBeCloseTo(100 + Math.max(RAID_OFFSET * 0.75, RAID_R + 1), 9);
+    expect(marks[1].y - marks[0].y).toBeCloseTo(RAID_ROW * 0.75, 9);
+  });
+
+  it('a low whose unscaled row 1 runs past the bottom keeps its side when scaled', () => {
+    const geom = { minGapBars: 3, lowY: () => 108, highY: () => 60, bottom: 124.8 };
+    const flat1 = amdRaidMarks(one, bars, flatGeom(geom));
+    expect(flat1[1].side).toBe('above');                  // 108 + 8 + 11 = 127 > 124.8
+    const scaled = amdRaidMarks(one, bars, flatGeom({ ...geom, rowScale: 144 / 190 }));
+    expect(scaled.map((m) => m.side)).toEqual(['below', 'below']);
+  });
+
+  it('NEGATIVE — missing / NaN / zero / negative scale is 1 (the old steps exactly)', () => {
+    for (const bad of [undefined, NaN, 0, -2, Infinity, '0.5' as any]) {
+      expect(raidOffset(bad)).toBe(RAID_OFFSET);
+      expect(raidRow(bad)).toBe(RAID_ROW);
+      const [m] = amdRaidMarks(one, bars, flatGeom({ rowScale: bad }));
+      expect(m.y).toBe(100 + RAID_OFFSET);
+    }
+  });
+});
+
+
+// Critic 2026-10-13: the volume pane scales the offset but not the radius, so
+// without a floor a 7-unit re-sweep circle sat on its own low wick. The floor
+// keeps the full-tile clearance whatever the scale.
+describe('amdRaidMarks — offset floor under a volume pane', () => {
+  const scaled = 144 / 190;
+  it('keeps every below-circle clear of its wick at the 190-tile scale', () => {
+    const marks = amdRaidMarks(block(), BARS, flatGeom({ minGapBars: 1, rowScale: scaled, bottom: 124.8 }));
+    const below = marks.filter((m) => m.side === 'below');
+    expect(below.length).toBeGreaterThan(0);
+    for (const m of below) {
+      expect(m.y - m.r).toBeGreaterThanOrEqual(100 + 1 - 1e-9);
+    }
+  });
+  it('the floor never pushes a circle out of the usable range', () => {
+    const marks = amdRaidMarks(block(), BARS, flatGeom({ minGapBars: 1, rowScale: scaled, bottom: 124.8 }));
+    for (const m of marks) {
+      expect(m.y).toBeLessThanOrEqual(124.8);
+      expect(m.y).toBeGreaterThanOrEqual(flatGeom().top);
+    }
+  });
+  it('NEGATIVE — with rowScale 1 the floor changes nothing for a 1-char mark', () => {
+    const marks = amdRaidMarks(block(), BARS, flatGeom({ minGapBars: 1, rowScale: 1 }));
+    const one = marks.find((m) => m.side === 'below' && m.mark.length <= 2 && m.row === 0);
+    expect(one).toBeDefined();
+    expect(one!.y).toBeCloseTo(100 + RAID_OFFSET, 6);
   });
 });

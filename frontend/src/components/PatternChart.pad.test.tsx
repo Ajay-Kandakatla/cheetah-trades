@@ -3,6 +3,7 @@ import { cleanup, render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from './PatternChart';
 import { barDomain, clipBands, yFor, type CmBand, type CmLine, type CmTile } from '../lib/chartMaps';
+import { volumePaneLayout } from '../lib/volumePane';
 
 /* 🧱 The served 1% pad on the chart tile (Ajay 2026-09-30: "if the demand zone
  * or key level is 133, it holding at 132"). The drawn band keeps its edges; the
@@ -10,7 +11,9 @@ import { barDomain, clipBands, yFor, type CmBand, type CmLine, type CmTile } fro
  * with a served pad_price gets a faint fuchsia strip. The ladder's PLAN rung
  * prints "pad to …" only when the pad is served. Nothing here is computed. */
 
-const H = 190;
+// 📊 The volume pane (2026-10-13) takes the bottom of the tile when the bars
+// carry `v`; the price mapping runs on the price pane's own height.
+const H = volumePaneLayout(190, 10, true).priceH;
 const PAD_Y = 10;   // PatternChart's own plot padding
 
 const bars = Array.from({ length: 30 }, (_, i) => ({

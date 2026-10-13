@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PatternChart } from '../components/PatternChart';
 import { barDomain, yFor, type CmBar, type CmTile } from '../lib/chartMaps';
+import { volumePaneLayout } from '../lib/volumePane';
 import { NEW_FEATURES } from '../lib/newFeatures';
 
 /* Deep Demand — the 2nd and 3rd level of support (Ajay 2026-09-16).
@@ -122,8 +123,10 @@ describe('a 3-level Deep Demand tile, through the REAL PatternChart', () => {
       // And drawn at its OWN prices, not squeezed to the edge of the view —
       // the failure mode when the drawn window is too short to hold the
       // oldest crossed band (what widened `_bars.days` on the server).
-      expect(yTop).toBeCloseTo(yFor(src.hi, domain, 190, 10), 4);
-      expect(yTop + h).toBeCloseTo(yFor(src.lo, domain, 190, 10), 4);
+      // 📊 the price mapping runs on the price pane above the volume (2026-10-13)
+      const priceH = volumePaneLayout(190, 10, true).priceH;
+      expect(yTop).toBeCloseTo(yFor(src.hi, domain, priceH, 10), 4);
+      expect(yTop + h).toBeCloseTo(yFor(src.lo, domain, priceH, 10), 4);
     }
   });
 

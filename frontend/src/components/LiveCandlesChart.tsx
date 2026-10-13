@@ -14,6 +14,7 @@ import {
 import { API } from '../lib/apiBase';
 import { useLiveQuote } from '../hooks/useLiveQuote';
 import { EMA_FAST, EMA_SLOW, emaSeries, emaStep } from '../lib/ema';
+import { VOLUME_SMA_COLOR, volumeColor, volumeSma, volumeSmaWindow } from '../lib/volumePane';
 
 const UP = '#22c55e';
 const DOWN = '#ef4444';
@@ -25,6 +26,30 @@ const EMA_SLOW_COLOR = '#60a5fa';   // 21 — blue, the slow line
 export type ChartInterval = 'D' | '1m';
 
 type Candle = CandlestickData & { volume?: number };
+
+/** Volume columns, each coloured by its own candle (Ajay 2026-10-13: "green
+ *  and red volume"). Pure so the shaping is testable without a canvas. A bar
+ *  whose open/close is not a number gets no colour of its own — the series
+ *  default — rather than a side it never printed. */
+export function liveVolumeBars(bars: Candle[]): { time: Candle['time']; value: number; color?: string }[] {
+  return bars.map((b) => {
+    const color = volumeColor(b.open, b.close);
+    return color
+      ? { time: b.time, value: b.volume ?? 0, color }
+      : { time: b.time, value: b.volume ?? 0 };
+  });
+}
+
+/** The 50-bar volume average for the same bars (every bar when there are
+ *  fewer). Warm-up and any window with a missing volume are left out, so the
+ *  line starts where the average is real — the EMA lines' rule below. */
+export function liveVolumeSma(bars: Candle[]): { time: Candle['time']; value: number }[] {
+  const vals = bars.map((b) => (typeof b.volume === 'number' && Number.isFinite(b.volume)
+    && b.volume >= 0 ? b.volume : null));
+  if (!vals.some((v) => v != null && v > 0)) return [];
+  const sma = volumeSma(vals, volumeSmaWindow(vals.length));
+  return bars.flatMap((b, i) => (sma[i] == null ? [] : [{ time: b.time, value: sma[i] as number }]));
+}
 
 async function fetchBars(symbol: string, interval: ChartInterval): Promise<Candle[]> {
   // Throws on HTTP failure so the caller can show a retry state — a silent []
@@ -83,6 +108,12 @@ export function LiveCandlesChart({ symbol, interval }: { symbol: string; interva
     });
     const vol = chart.addHistogramSeries({ priceScaleId: '', priceFormat: { type: 'volume' } });
     vol.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+    // 📊 The 50-bar volume average (2026-10-13), thin, on the volume's own ''
+    // scale so it reads against the columns and never against price.
+    const volAvg = chart.addLineSeries({
+      priceScaleId: '', color: VOLUME_SMA_COLOR, lineWidth: 1, priceLineVisible: false,
+      lastValueVisible: false, crosshairMarkerVisible: false, title: '',
+    });
     // 9/21 EMA overlay (Ajay 2026-08-24: the trend/context layer his zone
     // entries were missing). Drawn on every interval — 1m for the intraday
     // read, D for swing context — from the same bars as the candles.
@@ -109,10 +140,8 @@ export function LiveCandlesChart({ symbol, interval }: { symbol: string; interva
         if (!alive) return;
         if (!bars.length) { setState('empty'); return; }
         candle.setData(bars);
-        vol.setData(bars.map((b) => ({
-          time: b.time, value: b.volume ?? 0,
-          color: b.close >= b.open ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)',
-        })));
+        vol.setData(liveVolumeBars(bars));
+        volAvg.setData(liveVolumeSma(bars));
         lastBarRef.current = bars[bars.length - 1];
         const closes = bars.map((b) => b.close);
         const fast = emaSeries(closes, EMA_FAST);
@@ -176,6 +205,13 @@ export function LiveCandlesChart({ symbol, interval }: { symbol: string; interva
     };
     lastBarRef.current = updated;
     candle.update(updated);
+    // The live tick can flip the candle from red to green; its volume column
+    // flips with it. The volume itself is the bar's last served number — the
+    // SSE quote carries price, not size.
+    const volColor = volumeColor(updated.open, updated.close);
+    if (volRef.current && volColor) {
+      volRef.current.update({ time: last.time, value: last.volume ?? 0, color: volColor });
+    }
     // Extend the EMA lines through the ticking candle: the last point is
     // "what the EMA is if this bar closed here", anchored on the PREVIOUS
     // bar's EMA so repeated ticks never compound (emaStep is not cumulative).

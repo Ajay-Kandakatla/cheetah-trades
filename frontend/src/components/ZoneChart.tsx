@@ -29,12 +29,13 @@ import {
 } from 'lightweight-charts';
 import {
   DEMAND, NEUTRAL, SUPPLY, TARGET_C, bandsFor, gutterBars, hasOhlc, hasVolume,
-  hoverRow, planGutterPx, planLines, toCandles, toVolumeBars,
+  hoverRow, planGutterPx, planLines, toCandles, toVolumeBars, toVolumeSma,
   type Candle, type HoverRow, type SeriesBar,
 } from '../lib/zoneChart';
 import { ZoneBandsPrimitive } from './zoneBandsPrimitive';
 import { PlanLabelsPrimitive } from './planLabelsPrimitive';
 import type { ZoneMapPayload } from '../lib/zonePlan';
+import { VOLUME_SMA_COLOR } from '../lib/volumePane';
 
 const UP = '#22c55e';
 const DOWN = '#ef4444';
@@ -55,6 +56,7 @@ export function ZoneChart({ data, height = 340 }:
   const series = (data.series || []) as SeriesBar[];
   const candles = toCandles(series);
   const volumes = toVolumeBars(series);
+  const volSma = toVolumeSma(series);
   const ohlc = hasOhlc(series);
   const withVol = hasVolume(series);
   const bands = bandsFor(data);
@@ -132,6 +134,17 @@ export function ZoneChart({ data, height = 340 }:
       });
       vol.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
       vol.setData(volumes);
+      // 📊 The 50-bar volume average (2026-10-13) on the SAME '' scale as the
+      // columns, so a bar towering over the line is the "sudden demand" he
+      // asked to see. Thin, grey-white, no chip and no rule — same reason as
+      // the histogram's own flags above.
+      if (volSma.length) {
+        const avg = chart.addLineSeries({
+          priceScaleId: '', color: VOLUME_SMA_COLOR, lineWidth: 1,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        });
+        avg.setData(volSma.map((p) => ({ time: p.time as Time, value: p.value })));
+      }
     }
 
     // Bands attach to the PRICE series, so they follow its scale exactly.

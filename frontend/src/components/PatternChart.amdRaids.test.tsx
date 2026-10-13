@@ -4,7 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import fixture from './__fixtures__/amd_raids_orcl_2026_09_24.json';
 import { PatternChart } from './PatternChart';
 import { barDomain, yFor, type CmTile } from '../lib/chartMaps';
-import { RAID_ROW } from '../lib/amdRaids';
+import { volumePaneLayout } from '../lib/volumePane';
+import { raidRow } from '../lib/amdRaids';
 
 /* 🌀 Numbered AMD raid circles on the Support tile (Ajay 2026-09-24: "Show
  * all the possible raids, past ones too and todays too."). The fixture is
@@ -13,7 +14,9 @@ import { RAID_ROW } from '../lib/amdRaids';
  * today's provisional reclaimed read. */
 
 const TILE = (fixture as any).tile as CmTile;
-const H = 190;
+// 📊 The volume pane (2026-10-13) takes the bottom of the tile when the bars
+// carry `v`; the price mapping runs on the price pane's own height.
+const H = volumePaneLayout(190, 10, true).priceH;
 const PAD_Y = 10;
 
 const draw = (tile: CmTile) =>
@@ -63,11 +66,46 @@ describe('PatternChart — AMD raid circles', () => {
   });
 
   it('an amd_a on a raid bar moves that circle to row 1', () => {
+    // 📊 The row step shrinks with the price pane (2026-10-13), so on the
+    // default tile row 1 under the lowest low still fits below the candle.
     const plain = draw(TILE);
     const y0 = circleY('3');
     plain.unmount();
     draw({ ...TILE, markers: [{ date: '2026-09-01', kind: 'amd_a', label: 'A' }] });
-    expect(circleY('3')).toBeCloseTo(y0 + RAID_ROW, 6);
+    expect(circleY('3')).toBeCloseTo(y0 + raidRow(H / 190), 6);
+    expect(circleY('3')).toBeGreaterThan(y0);
+  });
+
+  it('📊 height 190 with the volume pane: every circle keeps the side it had before the pane', () => {
+    const raw = (TILE as any).amd_raids;
+    const dateOf = new Map<string, string>();
+    for (const r of [...(raw.raids || []), ...(raw.today || [])]) if (r.mark) dateOf.set(r.mark, r.date);
+    const domain = barDomain(TILE.bars, TILE.bands, TILE.lines, 6, TILE.curves);
+    const noV = TILE.bars.map((b) => { const { v: _v, ...rest } = b as any; return rest; });
+    const sides = (bars: CmTile['bars'], h: number) => {
+      const out: Record<string, string> = {};
+      for (const m of marks()) {
+        const i = bars.findIndex((b) => b.t.slice(0, 10) === dateOf.get(m!));
+        expect(i).toBeGreaterThanOrEqual(0);
+        const y = circleY(m!);
+        expect(y).toBeLessThan(h - PAD_Y);   // never down in the volume pane
+        out[m!] = y > yFor(bars[i].l, domain, h, PAD_Y) ? 'below'
+          : y < yFor(bars[i].h, domain, h, PAD_Y) ? 'above' : 'on';
+      }
+      return out;
+    };
+    for (const markers of [[], [{ date: '2026-09-01', kind: 'amd_a', label: 'A' }]]) {
+      const before = render(<MemoryRouter><PatternChart tile={{ ...TILE, bars: noV, markers } as CmTile} height={190} /></MemoryRouter>);
+      expect(document.querySelector('g.pc-vol-pane')).toBeNull();
+      const want = sides(noV, 190);
+      before.unmount();
+      const after = render(<MemoryRouter><PatternChart tile={{ ...TILE, markers } as CmTile} height={190} /></MemoryRouter>);
+      expect(document.querySelector('g.pc-vol-pane')).not.toBeNull();
+      expect(sides(TILE.bars, H)).toEqual(want);
+      // the four closed low raids sit below their candles; today's 4 above
+      expect(want).toEqual({ '1·2': 'below', '1·3': 'below', 2: 'below', 3: 'below', 4: 'above' });
+      after.unmount();
+    }
   });
 
   it('a "?" today mark (sweeping) draws the dashed ring at reduced opacity', () => {

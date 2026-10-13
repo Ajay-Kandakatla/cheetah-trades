@@ -17,7 +17,7 @@ import {
   bandAt, barDomain, barIndexAt, barWidth, clipBands, curveLabels, dropCollidingTicks,
   gutterWidth, hoverLines, lineLabels, markerIndex, offDomainBands, priceAt,
   timeTicks,
-  priceTicks, pxText, themeLabel, toneColor, tooltipPos, xFor, yFor,
+  priceTicks, pxText, shortVol, themeLabel, toneColor, tooltipPos, xFor, yFor,
   type CmBadge, type CmStat, type CmTile,
 } from '../lib/chartMaps';
 import {
@@ -41,6 +41,9 @@ import { AmdRaidsChip } from './AmdRaidsChip';
 import {
   amdRaidMarks, occupiedFromMarkers, RAID_R, sanitizeAmdRaids,
 } from '../lib/amdRaids';
+import {
+  VOLUME_SMA_COLOR, VOLUME_SMA_LEN, volumeColor, volumePaneLayout, volumeSma, volumeSmaTitle, volumeSmaWindow,
+} from '../lib/volumePane';
 
 const W = 620;
 const PAD_Y = 10;
@@ -141,7 +144,19 @@ export const PatternChart = memo(function PatternChart(
 
   if (!bars.length) return null;
 
-  const H = height;
+  /* 📊 The volume pane (Ajay 2026-10-13: "show me volume on our charts ...
+   * green and red volume"). The bottom ~22% of the tile holds the columns;
+   * the PRICE mapping (every yFor / priceAt / tick / label below) runs on
+   * `H` = the price pane's own height, so bands, lines, markers and the
+   * extended-hours shading all keep their mapping, just in a shorter pane.
+   * A tile whose bars carry no positive `v` keeps the whole height — it draws
+   * exactly as it did before. `SVG_H` is the drawing's real height. */
+  const SVG_H = height;
+  const vols = bars.map((b) => (Number.isFinite(b.v) && b.v >= 0 ? b.v : null));
+  const volMax = vols.reduce<number>((m, v) => (v != null && v > m ? v : m), 0);
+  const hasVol = volMax > 0;
+  const pane = volumePaneLayout(SVG_H, PAD_Y, hasVol);
+  const H = pane.priceH;
   const domain = barDomain(bars, tile.bands, tile.lines, 6, tile.curves);
   const bands = clipBands(tile.bands || [], domain);
   /* The BOARD bands that fell outside the plot. Only the board ones: they are
@@ -179,8 +194,9 @@ export const PatternChart = memo(function PatternChart(
    * past raids on CLOSED bars, today's provisional read off the live print —
    * and filterTile drops it with the AMD family. The circles and the chip's
    * list read the SAME sanitized array, so they cannot disagree. Row spacing
-   * is 11 viewBox units, so two circles on one row need that many units of
-   * bars between them. Display only. */
+   * is RAID_ROW (11) scaled by the price pane's share of the tile (raidRow),
+   * so two circles on one row need that many units of bars between them.
+   * Display only. */
   const raids = sanitizeAmdRaids((tile as any).amd_raids);
   const raidMarks = amdRaidMarks(raids, bars, {
     minGapBars: Math.max(1, Math.ceil(11 / (plotW / Math.max(bars.length, 1)))),
@@ -190,6 +206,8 @@ export const PatternChart = memo(function PatternChart(
     // clear of the squeeze dot row at H - PAD_Y - 2
     bottom: H - PAD_Y - 4 - RAID_R,
     occupied: occupiedFromMarkers(tile.markers || [], bars),
+    // 📊 the rows shrink with the price pane, so a circle keeps its side
+    rowScale: H / SVG_H,
   });
 
   /* Hover readout. `hover` stays null on touch devices and whenever the
@@ -198,14 +216,15 @@ export const PatternChart = memo(function PatternChart(
   const hx = hover ? Math.min(hover.x, plotW) : 0;
   const hIdx = hover ? barIndexAt(hx, bars.length, W, padR) : -1;
   const hBar = hIdx >= 0 ? bars[hIdx] : null;
-  const hPrice = hover ? priceAt(hover.y, domain, H, PAD_Y) : null;
+  // A pointer in the volume pane is not on a price — no price chip there.
+  const hPrice = hover && (!hasVol || hover.y <= H) ? priceAt(hover.y, domain, H, PAD_Y) : null;
   const hBand = hPrice != null ? bandAt(hPrice, bands) : null;
   const tipLines = hoverLines(hBar);
   const TIP_W = 104;
   const TIP_H = tipLines.length * 11 + 8;
   const tip = hover
     ? tooltipPos(xFor(Math.max(hIdx, 0), bars.length, W, padR), hover.y,
-                 TIP_W, TIP_H, plotW, H)
+                 TIP_W, TIP_H, plotW, SVG_H)
     : null;
 
   // State carries the page's search too — resolveBack prefers state, and a
@@ -419,7 +438,7 @@ export const PatternChart = memo(function PatternChart(
           </div>
         ) : null}
 
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="cm-svg" role="img"
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${SVG_H}`} className="cm-svg" role="img"
              onMouseMove={onMove} onMouseLeave={onLeave}
              aria-label={`${tile.symbol} daily chart, ${bars.length} bars`}>
           {/* price scale — drawn FIRST so bands, candles and plan lines all sit
@@ -519,6 +538,78 @@ export const PatternChart = memo(function PatternChart(
               </g>
             );
           })}
+
+          {/* 📊 volume pane (2026-10-13) — one column per bar, green when the
+              close is at or above the open (the candle above it), red
+              otherwise, scaled to the window's biggest bar; the thin grey line
+              is the 50-bar simple average, so a column towering over it is the
+              sudden demand he asked to see. Display only. Drawn BEFORE the
+              markers, so BUY / SELL tags and AMD circles paint on top of it. */}
+          {hasVol ? (() => {
+            const paneH = pane.volBot - pane.volTop;
+            const yV = (v: number) => pane.volBot - (v / volMax) * paneH;
+            const win = volumeSmaWindow(bars.length);
+            const sma = volumeSma(vols, win);
+            const segs: string[] = [];
+            let cur: string[] = [];
+            sma.forEach((v, i) => {
+              if (v == null) {
+                if (cur.length > 1) segs.push(cur.join(' L'));
+                cur = [];
+                return;
+              }
+              cur.push(`${xFor(i, bars.length, W, padR)},${yV(v)}`);
+            });
+            if (cur.length > 1) segs.push(cur.join(' L'));
+            // Fewer bars than the window: the average exists at ONE bar only,
+            // so it is drawn flat across the pane — dashed, and its title says
+            // how many bars it is over. With a full window (>= 50 bars) a gap
+            // that leaves one lone valid point draws NOTHING: a flat line
+            // there would claim a full-window average across the whole pane.
+            const flat = !segs.length && bars.length < VOLUME_SMA_LEN
+              ? sma.find((v) => v != null) ?? null : null;
+            const title = volumeSmaTitle(win, bars.length);
+            // No line drawn → the pane's title does not name an average.
+            const paneTitle = segs.length || flat != null
+              ? `${title} · tallest bar ${shortVol(volMax)}`
+              : `volume · tallest bar ${shortVol(volMax)} · average not drawn (a bar in the window has no volume)`;
+            return (
+              <g className="pc-vol-pane">
+                <title>{paneTitle}</title>
+                <line x1={0} y1={pane.volTop - 2} x2={plotW} y2={pane.volTop - 2}
+                      stroke="var(--rule, #2a2f3a)" strokeWidth={0.6} opacity={0.55} />
+                {bars.map((b, i) => {
+                  const v = vols[i];
+                  const fill = volumeColor(b.o, b.c);
+                  if (v == null || v <= 0 || !fill) return null;
+                  const x = xFor(i, bars.length, W, padR);
+                  const w = Math.max(bw * 0.64, 1.4);
+                  const y = yV(v);
+                  return (
+                    <rect key={`vol-${b.t}-${i}`} className="pc-vol" data-vol={v}
+                          x={x - w / 2} y={y} width={w} height={Math.max(pane.volBot - y, 0.6)}
+                          fill={fill}
+                          opacity={(hIdx >= 0 && hIdx !== i ? 0.82 : 1) * (b.s ? 0.7 : 1)} />
+                  );
+                })}
+                {segs.map((d, si) => (
+                  <path key={`vsma-${si}`} className="pc-vol-sma" d={`M${d}`} fill="none"
+                        stroke={VOLUME_SMA_COLOR} strokeWidth={1}>
+                    <title>{title}</title>
+                  </path>
+                ))}
+                {flat != null ? (
+                  <path className="pc-vol-sma pc-vol-sma-flat"
+                        d={`M0,${yV(flat)} L${plotW},${yV(flat)}`} fill="none"
+                        stroke={VOLUME_SMA_COLOR} strokeWidth={1} strokeDasharray="3,3">
+                    <title>{title}</title>
+                  </path>
+                ) : null}
+                <text x={3} y={pane.volTop + 7} fontSize="9" className="pc-vol-max"
+                      fill="var(--text-muted, #7c869b)" opacity={0.85}>{shortVol(volMax)}</text>
+              </g>
+            );
+          })() : null}
 
           {/* dated confirmation marker — joined by DATE, never by index.
               buy/sell markers render as candle-anchored tags (the GainzAlgo
@@ -696,13 +787,15 @@ export const PatternChart = memo(function PatternChart(
             ));
           })}
 
-          {/* extended-hours shading (live frame only) */}
+          {/* extended-hours shading (live frame only) — down through the
+              volume pane too, so a thin overnight column reads as overnight */}
           {extSpans.map((sp) => {
             const x0 = xFor(sp.from, bars.length, W, padR) - bw / 2;
             const x1 = xFor(sp.to, bars.length, W, padR) + bw / 2;
             return (
               <rect key={`ext-${sp.from}`} className="pc-ext"
-                    x={x0} y={PAD_Y} width={Math.max(x1 - x0, 1)} height={H - 2 * PAD_Y}
+                    x={x0} y={PAD_Y} width={Math.max(x1 - x0, 1)}
+                    height={(hasVol ? pane.volBot : H - PAD_Y) - PAD_Y}
                     fill="var(--ink, #e7e7e7)" opacity={0.06} />
             );
           })}
@@ -749,7 +842,7 @@ export const PatternChart = memo(function PatternChart(
             // left edge — keep every label inside the plot.
             <text key={`tk-${t.i}`}
                   x={Math.max(xFor(t.i, bars.length, W, padR), t.label.length * 2.2)}
-                  y={H - 2}
+                  y={SVG_H - 2}
                   fontSize="8.5" fill="var(--text-muted, #7c869b)"
                   textAnchor="middle">{t.label}</text>
           ))}
@@ -759,25 +852,31 @@ export const PatternChart = memo(function PatternChart(
               The price chip in the gutter is the point — it answers "what
               price is my cursor on" for EVERY pixel, not just the handful of
               levels that earned a printed label. */}
-          {hover && hPrice != null ? (
+          {hover ? (
             <g pointerEvents="none">
               <line x1={0} y1={hover.y} x2={plotW} y2={hover.y}
                     stroke="var(--text-muted, #94a3b8)" strokeWidth={0.7}
                     strokeDasharray="2,3" opacity={0.75} />
               {hIdx >= 0 ? (
                 <line x1={xFor(hIdx, bars.length, W, padR)} y1={PAD_Y}
-                      x2={xFor(hIdx, bars.length, W, padR)} y2={H - PAD_Y}
+                      x2={xFor(hIdx, bars.length, W, padR)}
+                      y2={hasVol ? pane.volBot : H - PAD_Y}
                       stroke="var(--text-muted, #94a3b8)" strokeWidth={0.7}
                       strokeDasharray="2,3" opacity={0.6} />
               ) : null}
 
-              {/* price chip, in the gutter, sitting on the crosshair */}
-              <rect x={plotW + 1} y={hover.y - 6.5} width={padR - 2} height={13}
-                    rx={2.5} fill="var(--ink, #e7e7e7)" />
-              <text x={plotW + 4} y={hover.y + 3.2} fontSize="9.5"
-                    fontWeight={700} fill="var(--bg-sunken, #0f1115)">
-                {hPrice.toFixed(2)}
-              </text>
+              {/* price chip, in the gutter, sitting on the crosshair — only
+                  over the price pane; the HUD names the volume */}
+              {hPrice != null ? (
+                <>
+                  <rect x={plotW + 1} y={hover.y - 6.5} width={padR - 2} height={13}
+                        rx={2.5} fill="var(--ink, #e7e7e7)" />
+                  <text x={plotW + 4} y={hover.y + 3.2} fontSize="9.5"
+                        fontWeight={700} fill="var(--bg-sunken, #0f1115)">
+                    {hPrice.toFixed(2)}
+                  </text>
+                </>
+              ) : null}
 
               {/* which level the cursor is standing on, if any */}
               {hBand ? (

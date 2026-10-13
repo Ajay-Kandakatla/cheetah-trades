@@ -261,6 +261,18 @@ export const RAID_ROW = 11;
 /** Rows tried per side before the other side is tried. */
 export const RAID_ROWS = 3;
 
+/** 📊 The two vertical steps scaled to the price pane (2026-10-13). The volume
+ *  pane shrinks the price pane of a tile whose bars carry `v`; the candles
+ *  move closer together but a fixed 8 / 11-unit step does not, so on the
+ *  default 190-unit tile a circle that used to fit below its candle ran out
+ *  of rows and flipped above. `scale` = price-pane height / tile height —
+ *  1 for a tile without volume, so that tile draws exactly as before. A
+ *  missing, non-finite or non-positive scale is 1. */
+const rowScale = (scale?: number): number =>
+  typeof scale === 'number' && Number.isFinite(scale) && scale > 0 ? scale : 1;
+export function raidOffset(scale?: number): number { return RAID_OFFSET * rowScale(scale); }
+export function raidRow(scale?: number): number { return RAID_ROW * rowScale(scale); }
+
 /** Wider marks ("3·2", "12·3") get a wider circle so the digits stay inside. */
 export function raidRadius(mark: string): number {
   const len = (mark || '').length;
@@ -323,6 +335,8 @@ export type AmdRaidGeom = {
   top: number;
   bottom: number;
   occupied: Occupied[];
+  /** Price-pane height / tile height (see raidOffset). Omitted = 1. */
+  rowScale?: number;
 };
 
 /** One numbered circle per drawn raid: in-view closed rows with a mark, plus
@@ -355,14 +369,22 @@ export function amdRaidMarks(
   const taken: { i: number; side: RaidSide; row: number }[] =
     (geom.occupied || []).map((o) => ({ i: o.i, side: o.side, row: 0 }));
   const out: AmdRaidMark[] = [];
+  const offScaled = raidOffset(geom.rowScale);
+  const step = raidRow(geom.rowScale);
   for (const c of cands) {
     const sides: RaidSide[] = c.dir === 'bullish' ? ['below', 'above'] : ['above', 'below'];
+    // The volume pane shrinks the price pane, and the offset scales with it —
+    // but the circle's radius does not. Floor the offset at radius + 1 so a
+    // circle never sits on its own wick (critic 2026-10-13: a 7-unit re-sweep
+    // circle overlapped its low). A bigger floor flips the 1-char circles
+    // above their candle on the default tile, which is worse than a tight gap.
+    const off = Math.max(offScaled, raidRadius(c.mark) + 1);
     let placed: AmdRaidMark | null = null;
     for (const side of sides) {
       for (let row = 0; row < RAID_ROWS && !placed; row++) {
         const y = side === 'below'
-          ? geom.lowY(c.i) + RAID_OFFSET + row * RAID_ROW
-          : geom.highY(c.i) - RAID_OFFSET - row * RAID_ROW;
+          ? geom.lowY(c.i) + off + row * step
+          : geom.highY(c.i) - off - row * step;
         if (!Number.isFinite(y) || y > geom.bottom || y < geom.top) continue;
         if (taken.some((t) => t.side === side && t.row === row && Math.abs(t.i - c.i) < gap)) {
           continue;

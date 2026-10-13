@@ -1,0 +1,10 @@
+# 📊 Volume pane on every chart (2026-10-13)
+
+Four charts: Chart Maps tiles (`PatternChart.tsx`), `LiveCandlesChart.tsx`, `ZoneChart.tsx`, and the Day-trading / Scalping `IntradayChart.tsx`.
+
+Ajay: "show me volume on our charts please ... green and red volume". A bar is green when close >= open (a doji is green), red otherwise — the candle above it — plus a thin grey 50-bar simple average of volume.
+- Chart Maps tiles (`PatternChart.tsx`): the bottom 22% of the SVG; the price mapping runs on the shorter price pane. Bars without `v` (or all-zero) draw no pane. Fewer than 50 bars: the average is over every bar there is, drawn flat and dashed, and its title says so.
+- Chart Maps tiles, continued: the pane draws BEFORE the markers, so BUY / SELL tags and AMD circles paint on top of it. With 50 or more bars a gap that leaves one lone average point draws no line at all (the flat dashed fallback is only for a chart with fewer than 50 bars), and the pane's title then names no average. The AMD raid circle steps (`raidOffset` / `raidRow` in `lib/amdRaids.ts`, the old 8 / 11 units) scale by price-pane height / tile height, so on the default 190-unit tile every circle keeps the side of its candle it had before the pane; a tile without volume scales by 1.
+- `IntradayChart.tsx` (Day-trading and Scalping pages, SVG): the same pane at the bottom ~22% (`volumePaneLayout` with the chart's 30-unit bottom pad), green / red by candle, the 50-bar average computed over the FULL frame and sliced with the zoom (a zoomed view does not restart the warm-up; the line is clamped to the pane). The RTH shading, drag overlay and vertical crosshair run down through the pane; the price pill shows only over the price pane; the tooltip reads `V —` for a bar without volume instead of throwing.
+- `LiveCandlesChart.tsx` and `ZoneChart.tsx`: the histogram uses the shared 0.7-alpha colours, and the average is a line series on the volume's own `''` scale.
+- One home: `frontend/src/lib/volumePane.ts` (`volumeColor`, `volumeSma` — null during warm-up and across a missing volume, never zero — `VOLUME_SMA_LEN`, `VOL_PANE_FRAC`). Display only: nothing gates, alerts or ranks on it.
