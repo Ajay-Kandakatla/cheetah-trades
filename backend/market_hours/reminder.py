@@ -11,8 +11,10 @@ gain. The NYSE adds/changes maybe one holiday per year — a 30-second
 yearly maintenance task is cheaper than the dependency.
 
 When this module is wrong, the worst case is one accidental ping on
-a closed day — the body still reads correctly. Update HOLIDAYS_2026
-+ HOLIDAYS_2027 as new dates publish.
+a closed day — the body still reads correctly. Covers 2025-2027
+(HOLIDAYS_2025 | HOLIDAYS_2026 | HOLIDAYS_2027); 2025 is here because
+the 250-session backtests (scripts/gajjala_study.py) walk back into it.
+Add the next year as new dates publish.
 """
 from __future__ import annotations
 
@@ -25,8 +27,22 @@ log = logging.getLogger("market_hours.reminder")
 # US market holidays — full closures only (NYSE + NASDAQ).
 # Update yearly. See https://www.nyse.com/markets/hours-calendars for
 # the canonical list. Includes weekends-observed dates (e.g. Jul 4 2026
-# is Saturday → observed Friday Jul 3).
+# is Saturday → observed Friday Jul 3). 2025 also carries the one-off
+# Jan 9 closure (National Day of Mourning for President Carter).
 # ============================================================================
+HOLIDAYS_2025: set[str] = {
+    "2025-01-01",  # New Year's Day
+    "2025-01-09",  # National Day of Mourning (President Carter)
+    "2025-01-20",  # MLK Jr Day
+    "2025-02-17",  # Presidents Day
+    "2025-04-18",  # Good Friday
+    "2025-05-26",  # Memorial Day
+    "2025-06-19",  # Juneteenth
+    "2025-07-04",  # Independence Day
+    "2025-09-01",  # Labor Day
+    "2025-11-27",  # Thanksgiving
+    "2025-12-25",  # Christmas
+}
 HOLIDAYS_2026: set[str] = {
     "2026-01-01",  # New Year's Day
     "2026-01-19",  # MLK Jr Day
@@ -52,7 +68,7 @@ HOLIDAYS_2027: set[str] = {
     "2027-12-24",  # Christmas (observed; Dec 25 is Sat)
 }
 
-ALL_HOLIDAYS: set[str] = HOLIDAYS_2026 | HOLIDAYS_2027
+ALL_HOLIDAYS: set[str] = HOLIDAYS_2025 | HOLIDAYS_2026 | HOLIDAYS_2027
 
 
 def _now_et() -> datetime:

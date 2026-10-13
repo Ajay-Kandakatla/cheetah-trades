@@ -428,7 +428,10 @@ def frame_for(symbol: str, tf: str = DEFAULT_TF, *,
 LIVE_REFRESH_SEC = 30
 
 # NYSE half days — 13:00 ET close, extended session ends 17:00 ET.
-HALF_DAYS = {"2026-11-27", "2026-12-24", "2027-11-26", "2027-12-23"}
+# 2025's three added 2026-10-13: the Gajjala study's 250-session window reaches
+# back past them, and without them a 14:05 bar on 2025-11-28 read as RTH.
+HALF_DAYS = {"2025-07-03", "2025-11-28", "2025-12-24",
+             "2026-11-27", "2026-12-24", "2027-11-26", "2027-12-23"}
 
 
 def _is_holiday(et) -> bool:
