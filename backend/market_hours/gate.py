@@ -110,6 +110,12 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # holidays (the routine checks closed_reason BEFORE claiming, so the event
     # stays pending and rings on the next trading morning).
     "med_catalyst",
+    # 🚩 a Gajjala setup read A+ (chart_maps/gajjala/alerts.py, 2026-10-13) —
+    # read off live 5-minute bars, so a MARKET kind: silent on weekends and
+    # NYSE holidays (the pass also checks closed_reason BEFORE any claim). Its
+    # push windows (09:45–16:00, 16:00–20:00 ET; never 09:30–09:45, never
+    # pre-market) live in alerts.window_reason — this set is about the DAY.
+    "gajjala_setup",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

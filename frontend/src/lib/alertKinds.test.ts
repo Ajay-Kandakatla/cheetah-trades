@@ -57,6 +57,22 @@ describe('kind registry', () => {
     expect(kindEmoji('some_future_kind')).toBe('📣');
   });
 
+  /* 🚩 2026-10-13 — gajjala_setup (DECISIONS "Pushes: YES — owner-only kind
+   * gajjala_setup"). It ships in SHADOW, but the day it goes live its history
+   * rows must read as a label, never as the raw id. */
+  it('labels the 🚩 gajjala_setup kind, not its raw id', () => {
+    expect(ALERT_KINDS.gajjala_setup).toEqual({ emoji: '🚩', label: 'Gajjala A+ setup', group: 'trading' });
+    expect(kindLabel('gajjala_setup')).toBe('🚩 Gajjala A+ setup');
+    expect(kindText('gajjala_setup')).toBe('Gajjala A+ setup');
+    expect(kindEmoji('gajjala_setup')).toBe('🚩');
+  });
+
+  it('NEGATIVE: the 🚩 kind is not a zone or breakout kind and its label never says "bounce"', () => {
+    expect(ZONE_KINDS).not.toContain('gajjala_setup');
+    expect(BREAKOUT_KINDS).not.toContain('gajjala_setup');
+    expect(ALERT_KINDS.gajjala_setup.label).not.toMatch(/bounce/i);
+  });
+
   /* 🔑 2026-09-25 — Ajay: "I wanna know when key levels are broken for a
    * stock." The push kind ships OFF, but the day he turns it on its history
    * rows must read as a label, never as the raw id. */

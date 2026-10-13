@@ -128,7 +128,10 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
     # the owner, through OWNER_KEEP_SET (his answer).
     # 🧬 med_catalyst (2026-09-29) likewise: OFF in default_prefs, ON for the
     # owner through OWNER_KEEP_SET (spec HIS CALL #1).
-    assert off == {QA.KIND, "key_level_alert", "med_catalyst"}, "another kind quietly shipped muted: %s" % sorted(off)
+    # 🚩 gajjala_setup (2026-10-13) likewise: OFF in default_prefs, ON for the
+    # owner through OWNER_KEEP_SET (DECISIONS "Pushes: YES — owner-only").
+    assert off == {QA.KIND, "key_level_alert", "med_catalyst", "gajjala_setup"}, \
+        "another kind quietly shipped muted: %s" % sorted(off)
 
 
 def test_NEGATIVE_the_kind_is_not_in_the_owner_keep_set():
@@ -149,6 +152,8 @@ def test_NEGATIVE_the_keep_set_itself_did_not_move():
         "med_catalyst",
         # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
         "ops_alert",
+        # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; OFF in default_prefs, ON for the owner via the keep-set; SHADOW first).
+        "gajjala_setup",
     })
 
 

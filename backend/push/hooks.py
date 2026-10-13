@@ -244,3 +244,13 @@ def notify_med_catalyst(*, owner: str, payload: dict) -> dict:
     apply at the sender. UNMEASURED — the payload says "not a buy signal" /
     "not a sell signal"; no entry, stop or target is ever sent."""
     return sender.send_to_user(owner, payload, kind="med_catalyst")
+
+
+def notify_gajjala_setup(*, owner: str, payload: dict) -> dict:
+    """🚩 gajjala_setup (chart_maps/gajjala/alerts.py, 2026-10-13). DECISIONS:
+    "Pushes: YES — owner-only kind gajjala_setup, A+ triggers only". Owner-scoped
+    (send_to_user) under its own pref kind, so the closed-day drop, quiet hours
+    and the /notifications toggle all apply at the sender. Called only when
+    GAJJALA_PUSH_MODE is "live" — in shadow the pass records and never gets here.
+    UNMEASURED — every body ends "his setup, not a buy signal"; never a trade."""
+    return sender.send_to_user(owner, payload, kind="gajjala_setup")

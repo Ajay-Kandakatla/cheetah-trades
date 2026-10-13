@@ -63,6 +63,11 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // a $2+ name trading $5M+/day, while the news is still fresh. ON for the
   // owner (keep-set), off for everyone else. UNMEASURED — setup: pending study.
   med_catalyst:        { emoji: '🧬', label: 'Medical catalyst',        group: 'trading' },
+  // 🚩 chart_maps/gajjala (2026-10-13) — a Goverdhan Gajjala setup read A+ on
+  // his scanner's names (every rule met, the entry bar closed). ON for the
+  // owner (keep-set), off for everyone else; SHADOW first — recorded on
+  // /alerts, nothing sent until GAJJALA_PUSH_MODE is flipped. UNMEASURED.
+  gajjala_setup:       { emoji: '🚩', label: 'Gajjala A+ setup',        group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },

@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-13: "Now can you build a new tab and build sub tabs for it with multiple strategies." The scanner
+  // numbers below are pinned to backend chart_maps/gajjala/constants.py by the contracts; pushes are SHADOW
+  // (GAJJALA_PUSH_MODE, DECISIONS Round A) — recorded on /alerts, nothing sent until the study reads.
+  { id: 'chart-maps-gajjala-2026-10-13', addedAt: '2026-10-13', route: '/chart-maps?tab=gajjala',
+    label: "\u{1F6A9} Gajjala's tab on Chart Maps \u2014 Goverdhan Gajjala's five 5-minute setups (\u{1F6A9} Bull Flag \u00B7 \u{1F48B} EMA Kiss & Fly \u00B7 \u2796 Horizontal Fade \u00B7 \u{1F300} Intraday VCP \u00B7 \u{1F3BE} Reversal Squeeze) over HIS scanner on the whole US market \u2014 common stock and ADRs, $0.10\u2013$100, 1M+ shares, up 25%+ \u2014 every 5 minutes from 04:00 to 20:00 ET, plus \u2600\uFE0F Premarket, \u{1F319} Post-market and \u{1F4D3} his Playbook with timestamps. A+ = every rule met and the entry bar closed; A+ alerts are recorded on /alerts in shadow \u2014 nothing rings your phone until the study reads and you switch it on. Numbers he never gave are yours (K1\u2013K10). UNMEASURED. You said: \u201cName the Tab Gajjala's he has multiple strategies..around this. He is volume and price action based traded with short squeeze. He also has premarket and post market analysis.\u201d and \u201cImplement his full stategy do not assume anything.\u201d" },
   // Ajay 2026-10-13: "show me volume on our charts please thats missing I wanna see it like green and red volume".
   // Colours, the 50 and the pane share live in lib/volumePane.ts (VOL_UP/VOL_DOWN, VOLUME_SMA_LEN, VOL_PANE_FRAC).
   { id: 'chart-volume-pane-2026-10-13', addedAt: '2026-10-13', route: '/chart-maps',

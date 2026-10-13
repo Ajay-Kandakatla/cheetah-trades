@@ -22,6 +22,10 @@ never ran". This module keeps the last pass's counters per kind:
                      the 🔑 hook on the zone_edge minute
   med_catalyst       written here by catalysts.medical.routine (2026-09-29),
                      the 🧬 hook on the promo_live 5-minute line
+  gajjala_setup      written here by chart_maps.gajjala.run (2026-10-13), the
+                     🚩 5-minute pass on its own crontab line (SHADOW first);
+                     its served pass also carries `shadow_items`, today's
+                     shadow A+ rows read from `gajjala_alerts` (2026-10-13 E3)
 
 ``alert_pass_latest`` collection: {_id: kind, as_of: ET iso, date: YYYY-MM-DD,
 counts: {...ints}, reason?: str}. One doc per kind, replaced every pass.
@@ -81,7 +85,13 @@ KEY_LEVEL_KIND = "key_level_alert"
 # pass doc. Its kind ships ON for the owner only (OWNER_KEEP_SET). The module
 # is NOT imported here: this file stays a module-level leaf.
 MED_KIND = "med_catalyst"
-PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND) + DAILY_PASS_KINDS
+# 🚩 gajjala_setup (chart_maps/gajjala/run.py, 2026-10-13) has its OWN crontab
+# line (`1-56/5 4-20 * * 1-5 … chart_maps.gajjala.run`) and records its own
+# pass doc. It ships in SHADOW: the counts carry `shadow_mode` / `shadow` /
+# `shadow_session` (the medical keys) so the page says "shadow — not sent".
+GAJJALA_KIND = "gajjala_setup"
+PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
+              GAJJALA_KIND) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -99,6 +109,9 @@ CADENCE_SEC[KEY_LEVEL_KIND] = CADENCE_SEC[ZONE_EDGE_KIND]
 # `*/5 4-19 * * 1-5`), so its cadence IS that line's: 300 s. The source guard in
 # test_alert_status derives it from the crontab's minute field.
 CADENCE_SEC[MED_KIND] = 300
+# 🚩 its own line, minute field `1-56/5` → 300 s (pinned to the crontab by
+# test_alert_status, like the zone passes).
+CADENCE_SEC[GAJJALA_KIND] = 300
 
 # The cap floor is READ from demand_alerts.MIN_CAP_USD at request time, never
 # retyped (review 2026-09-14, finding 6: this said "$1B+" for four days after
@@ -324,9 +337,92 @@ def _daily(kind: str, pass_doc: dict, schedule: dict) -> dict:
     return dict(pass_doc, cadence_sec=None, schedule=schedule.get(kind))
 
 
-def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] = None) -> dict:
+def _finite(x) -> Optional[float]:
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return None
+    return v if v == v and not math.isinf(v) else None
+
+
+def _gajjala_alerts_coll():
+    """The `gajjala_alerts` ledger through the gajjala store (its collection
+    name, never retyped). A fresh store, not the module default: a test run
+    without Mongo must not cache a None handle into the shared default.
+    LAZY: `chart_maps.gajjala.alerts` imports the medical package, so only the
+    store is touched here (test_alert_status pins the leaf)."""
+    try:
+        from chart_maps.gajjala import store as GS
+        return GS.GajjalaStore().alerts_coll()
+    except Exception as exc:
+        log.warning("alert_status: no gajjala_alerts handle: %s", exc)
+        return None
+
+
+def read_gajjala_shadow(coll=None, now: Optional[datetime] = None) -> list:
+    """🚩 Today's shadow A+ records, newest first (2026-10-13, E3).
+
+    Ajay round A (DECISIONS): "every A+ is RECORDED to the alerts ledger and
+    shown on /alerts as shadow — not sent". The pass doc only carries COUNTS
+    (the medical precedent), so this lists the items behind them: the
+    `gajjala_alerts` docs chart_maps.gajjala.alerts.run_pass claimed under the
+    SHADOW: key — `state == "shadow"`, the same query its shadow_session count
+    runs, so the list and the "N A+ recorded today" chip agree. Only rows of
+    the ET day of `now` (the session `date` the pass stamped): yesterday's
+    shadow rows never read as today's. A live claim (`claimed` / `pushed` /
+    `no_target` / `failed`) is never listed here — what rang is in
+    push_history and the list below. A refused A+ (`{key}#{state}`) is never
+    a shadow row either.
+
+    Each item: {date, symbol, setup, at (claimed_at, ET iso), entry_bar_t,
+    frame, trigger, stop, risk_pct, text, url, note}. `text` is the push's own
+    item line (`would_push.items[0].text`, composed by alerts.compose — the one
+    wording engine; the page never recomposes it); `url` is the deep link the
+    push would have opened (`/chart-maps?tab=gajjala&sub=<setup>&focus=<SYM>`),
+    an internal path or None. A Mongo read, nothing parsed or scanned; never
+    raises — a dead ledger is [] ."""
+    now = now or datetime.now(ET)
+    et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
+    day = et.date().isoformat()
+    try:
+        if coll is None:
+            coll = _gajjala_alerts_coll()
+        if coll is None:
+            return []
+        docs = list(coll.find({"date": day, "state": "shadow"}))
+    except Exception as exc:
+        log.warning("alert_status: gajjala shadow read failed: %s", exc)
+        return []
+    out = []
+    for d in docs:
+        if not isinstance(d, dict) or d.get("state") != "shadow" or str(d.get("date") or "") != day:
+            continue
+        wp = d.get("would_push") if isinstance(d.get("would_push"), dict) else {}
+        items = wp.get("items") if isinstance(wp.get("items"), list) else []
+        first = items[0] if items and isinstance(items[0], dict) else {}
+        text = first.get("text") if isinstance(first.get("text"), str) else wp.get("title")
+        url = wp.get("url")
+        if not (isinstance(url, str) and url.startswith("/") and not url.startswith("//")):
+            url = None
+        at = d.get("claimed_at")
+        at = at.isoformat() if hasattr(at, "isoformat") else (str(at) if at else None)
+        out.append({"date": day, "symbol": str(d.get("symbol") or "").upper() or None,
+                    "setup": d.get("setup") or None, "at": at,
+                    "entry_bar_t": d.get("entry_bar_t") or None, "frame": d.get("frame") or None,
+                    "trigger": _finite(d.get("trigger")), "stop": _finite(d.get("stop")),
+                    "risk_pct": _finite(d.get("risk_pct")),
+                    "text": text if isinstance(text, str) and text else None, "url": url,
+                    "note": d.get("note") if isinstance(d.get("note"), str) else None})
+    out.sort(key=lambda r: (r["at"] or "", r["symbol"] or "", r["setup"] or ""), reverse=True)
+    return out
+
+
+def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] = None,
+                   gajjala_coll=None) -> dict:
     """GET /alerts/status. Every input is injectable for tests; the route passes
-    none. Never raises — a dead Mongo is three empty passes, not a 500."""
+    none. Never raises — a dead Mongo is three empty passes, not a 500.
+    The 🚩 pass also carries `shadow_items` (read_gajjala_shadow) — today's
+    shadow A+ records, listed under its strip on the page."""
     from . import zone_edge as ZE                 # lazy: zone_edge's siblings import this module
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
@@ -343,6 +439,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         "demand_alert":      _with_cadence("demand_alert", read_pass("demand_alert", pass_coll)),
         KEY_LEVEL_KIND:      _with_cadence(KEY_LEVEL_KIND, read_pass(KEY_LEVEL_KIND, pass_coll)),
         MED_KIND:            _with_cadence(MED_KIND, read_pass(MED_KIND, pass_coll)),
+        GAJJALA_KIND:        dict(_with_cadence(GAJJALA_KIND, read_pass(GAJJALA_KIND, pass_coll)),
+                                  shadow_items=read_gajjala_shadow(gajjala_coll, et)),
     }
     for kind in DAILY_PASS_KINDS:
         passes[kind] = _daily(kind, read_pass(kind, pass_coll), sched)
@@ -355,7 +453,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
-           "read_pass", "read_zone_edge", "gate_payload",
+           "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

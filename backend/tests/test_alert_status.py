@@ -167,8 +167,9 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     # records its own pass doc (its kind ships OFF — same reason as 💎).
     # NINE since 2026-09-29: 🧬 med_catalyst rides promo_live's 5-minute line
     # and records its own pass doc.
+    # TEN since 2026-10-13: 🚩 gajjala_setup — its own 5-minute line, its own pass doc (SHADOW first).
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
-                                "key_level_alert", "med_catalyst",
+                                "key_level_alert", "med_catalyst", "gajjala_setup",
                                 "earnings_reaction", "board_arrival:bonde",
                                 "board_arrival:growth", "capital_quality_upgrade"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
@@ -299,9 +300,11 @@ def test_cadence_sec_matches_the_crontab():
                               "zone_bounce_alert": seconds(minute_field("supply_demand.zone_bounce_alerts")),
                               "demand_alert": seconds(minute_field("supply_demand.demand_alerts")),
                               "key_level_alert": seconds(minute_field("supply_demand.zone_edge")),
-                              "med_catalyst": seconds(minute_field("catalysts.promo_live"))}
+                              "med_catalyst": seconds(minute_field("catalysts.promo_live")),
+                              # 🚩 2026-10-13: its own line (`1-56/5`), exactly one
+                              "gajjala_setup": seconds(minute_field("chart_maps.gajjala.run"))}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
-                              "key_level_alert": 60, "med_catalyst": 300}
+                              "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300}
     assert not [ln for ln in lines if "key_level_alerts" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the key-level pass has no crontab line of its own"
     assert not [ln for ln in lines if "catalysts.medical" in ln and not ln.lstrip().startswith("#")], \
@@ -371,10 +374,11 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
     """NEGATIVE: `CADENCE_SEC` is what the page measures RTH staleness against.
     A daily pass must never appear in it (test_cadence_sec_matches_the_crontab
     compares it to the crontab's minute fields)."""
+    # 🚩 2026-10-13: gajjala_setup is a 5-minute INTRADAY pass (its own crontab line), not a daily one.
     assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert", "key_level_alert",
-                                   "med_catalyst"}
+                                   "med_catalyst", "gajjala_setup"}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
-                              "key_level_alert": 60, "med_catalyst": 300}
+                              "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300}
 
 
 # ── 🔑 key_level_alert (2026-09-25) ─────────────────────────────────────────
@@ -415,3 +419,100 @@ def test_alert_status_stays_a_leaf_it_never_imports_the_medical_package():
     import re
     src = (ROOT / "backend/supply_demand/alert_status.py").read_text()
     assert not re.search(r"^\s*(from|import)\s+catalysts", src, re.M)
+
+
+# ── 🚩 gajjala_setup shadow items (2026-10-13, E3) ──────────────────────────
+# Ajay round A: "every A+ is RECORDED to the alerts ledger and shown on /alerts
+# as shadow — not sent". The pass doc carries counts only; `shadow_items` lists
+# the ledger rows behind them.
+class LedgerColl:
+    def __init__(self, docs=()):
+        self.docs = {d["_id"]: dict(d) for d in docs}
+        self.queries = []
+
+    def find(self, q):
+        self.queries.append(dict(q))
+        return [dict(d) for d in self.docs.values() if all(d.get(k) == v for k, v in q.items())]
+
+
+class BrokenLedger:
+    def find(self, q):
+        raise RuntimeError("mongo down")
+
+
+def _gg(sym, setup, *, day="2026-09-03", state="shadow", mode="shadow", claimed="2026-09-03T09:51:12-04:00",
+        key=None, **kw):
+    url = f"/chart-maps?tab=gajjala&sub={setup}&focus={sym}"
+    _id = key or f"SHADOW:GG:{day}|{sym}|{setup}"
+    doc = {"_id": _id, "date": day, "symbol": sym, "setup": setup, "mode": mode, "state": state,
+           "entry_bar_t": f"{day} 09:50", "frame": "5m", "trigger": 11.0, "stop": 10.8125, "risk_pct": 1.7045,
+           "kind": "gajjala_setup", "claimed_at": claimed}
+    if state == "shadow":
+        doc.update(note="shadow — not sent",
+                   would_push={"title": f"🚩 {sym} · Bull Flag A+", "url": url,
+                               "items": [{"symbol": sym, "text": f"{sym} · 🚩 Bull Flag A+ · broke 11.00 · stop 10.81 (−1.7%)"}]})
+    doc.update(kw)
+    return doc
+
+
+def test_gajjala_shadow_items_list_todays_shadow_rows_newest_first_with_the_push_link():
+    c = LedgerColl([_gg("GGA", "bull_flag"),
+                    _gg("GGB", "kiss_fly", claimed="2026-09-03T09:56:40-04:00")])
+    items = AS.read_gajjala_shadow(c, NOW)
+    assert c.queries == [{"date": "2026-09-03", "state": "shadow"}], "the same query as alerts.shadow_session_count"
+    assert [i["symbol"] for i in items] == ["GGB", "GGA"]
+    a = items[1]
+    assert a["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"
+    assert a["text"] == "GGA · 🚩 Bull Flag A+ · broke 11.00 · stop 10.81 (−1.7%)"
+    assert a["note"] == "shadow — not sent" and a["at"] == "2026-09-03T09:51:12-04:00"
+    assert a["trigger"] == 11.0 and a["stop"] == 10.8125 and a["setup"] == "bull_flag" and a["date"] == "2026-09-03"
+    json.dumps(items, allow_nan=False)
+
+
+def test_NEGATIVE_a_live_pushed_row_and_a_refused_row_are_never_listed_as_shadow():
+    c = LedgerColl([_gg("GGA", "bull_flag"),
+                    _gg("LIVE", "bull_flag", state="pushed", mode="live", key="GG:2026-09-03|LIVE|bull_flag"),
+                    _gg("LIVE", "kiss_fly", state="claimed", mode="live", key="GG:2026-09-03|LIVE|kiss_fly"),
+                    _gg("HELD", "bull_flag", state="suppressed_window",
+                        key="GG:2026-09-03|HELD|bull_flag#suppressed_window")])
+    items = AS.read_gajjala_shadow(c, NOW)
+    assert [i["symbol"] for i in items] == ["GGA"]
+
+
+def test_NEGATIVE_yesterdays_shadow_rows_do_not_appear_under_today():
+    c = LedgerColl([_gg("OLD", "bull_flag", day="2026-09-02", claimed="2026-09-02T15:00:00-04:00"),
+                    _gg("NEW", "bull_flag")])
+    assert [i["symbol"] for i in AS.read_gajjala_shadow(c, NOW)] == ["NEW"]
+    # the ET day decides: 23:30 ET on the 2nd is still the 2nd even though UTC says the 3rd
+    late = datetime(2026, 9, 3, 3, 30, tzinfo=ZoneInfo("UTC"))
+    assert [i["symbol"] for i in AS.read_gajjala_shadow(c, late)] == ["OLD"]
+
+
+def test_NEGATIVE_a_dead_or_missing_ledger_is_an_empty_list_never_a_500():
+    assert AS.read_gajjala_shadow(BrokenLedger(), NOW) == []
+    assert AS.read_gajjala_shadow(None, NOW) == []                   # no Mongo in tests
+    bad = LedgerColl([_gg("NAN", "bull_flag", trigger=float("nan"), would_push={"url": "https://evil.example/x"})])
+    item = AS.read_gajjala_shadow(bad, NOW)[0]
+    assert item["trigger"] is None and item["url"] is None and item["text"] is None
+    json.dumps(item, allow_nan=False)
+
+
+def test_status_payload_carries_shadow_items_on_the_gajjala_pass_only():
+    c = LedgerColl([_gg("GGA", "bull_flag")])
+    p = AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=NOW, gajjala_coll=c)
+    assert [i["symbol"] for i in p["passes"]["gajjala_setup"]["shadow_items"]] == ["GGA"]
+    assert p["passes"]["gajjala_setup"]["cadence_sec"] == 300
+    # NEGATIVE: the medical pass keeps its counts-only shape (its rendering is unchanged)
+    assert p["passes"]["med_catalyst"] == {"as_of": None, "date": None, "counts": {}, "cadence_sec": 300}
+    assert all("shadow_items" not in v for k, v in p["passes"].items() if k != "gajjala_setup")
+    assert AS.status_payload(pass_coll=FakeColl(), latest_coll=FakeColl(), now=NOW,
+                             gajjala_coll=BrokenLedger())["passes"]["gajjala_setup"]["shadow_items"] == []
+
+
+def test_the_shadow_reader_never_imports_the_gajjala_alerts_module():
+    """chart_maps.gajjala.alerts imports the medical package at module level;
+    this module stays a leaf, so only the gajjala store is touched (lazily)."""
+    src = (ROOT / "backend/supply_demand/alert_status.py").read_text()
+    import re
+    assert not re.search(r"^\s*(from|import)\s+chart_maps\.gajjala(\.alerts\b|\s+import\s+.*\balerts\b)", src, re.M)
+    assert "from chart_maps.gajjala import store as GS" in src.split("def read_gajjala_shadow")[0]

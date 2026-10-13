@@ -1,0 +1,63 @@
+/* 🚩 Gajjala's tab (2026-10-13) — the board strip, the card extras and the
+   📓 Playbook panel. Tiles, chips, notes and the sub strip reuse the house
+   cm-* / cat-* rules; only what is new to this tab lives here. */
+
+.gg-board { display: flex; flex-direction: column; gap: 0.45rem; }
+
+.gg-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  font-size: 0.82rem; padding: 0.35rem 0.6rem;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+  background: var(--bg-surface, transparent);
+}
+.gg-strip-text { font-weight: 600; }
+.gg-muted { color: var(--ink-subtle, #94a3b8); font-size: 0.78rem; }
+
+.gg-first15 {
+  font-size: 0.82rem; padding: 0.3rem 0.6rem; border-radius: 6px;
+  border: 1px solid var(--gold-hairline, rgba(184, 147, 90, 0.35));
+  background: var(--gold-faint, rgba(184, 147, 90, 0.12));
+}
+
+.gg-subs { flex-wrap: wrap; }
+
+.gg-card { border-radius: 8px; }
+.gg-card.gg-focus { outline: 2px solid var(--gold, #c9a227); outline-offset: 2px; }
+.gg-row-head { font-weight: 600; padding: 0.3rem 0; }
+
+.gg-extras { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.3rem 0.1rem 0.5rem; font-size: 0.78rem; }
+.gg-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.gg-state {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px; font-weight: 600;
+  border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.gg-state-aplus, .gg-state-triggered { color: var(--positive, #22c55e); border-color: var(--positive, #22c55e); }
+.gg-state-stopped { color: var(--negative, #ef4444); border-color: var(--negative, #ef4444); }
+.gg-state-partial { color: var(--ink-muted, #94a3b8); }
+.gg-variant {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px;
+  border: 1px dashed var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.gg-plan { font-variant-numeric: tabular-nums; }
+.gg-criteria { list-style: none; margin: 0; padding: 0; }
+.gg-criteria li { line-height: 1.35; }
+.gg-criteria .gg-ok { color: var(--positive, #22c55e); }
+.gg-criteria .gg-miss { color: var(--negative, #ef4444); }
+.gg-criteria .gg-unjudged { color: var(--ink-subtle, #94a3b8); }
+.gg-chip-row { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.gg-line { margin: 0; }
+
+.gg-recap ul { margin: 0.2rem 0 0; padding-left: 1.1rem; font-size: 0.8rem; }
+
+.gg-playbook { display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.84rem; }
+.gg-pb-h { margin: 0.2rem 0; font-size: 0.92rem; }
+.gg-pb-items { margin: 0; padding-left: 1.1rem; }
+.gg-pb-items li { margin: 0.15rem 0; line-height: 1.4; }
+.gg-pb-pill {
+  display: inline-block; margin-right: 0.35rem; padding: 0 0.4rem; border-radius: 999px;
+  font-size: 0.72rem; border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22));
+}
+.gg-pb-ts { margin-left: 0.4rem; color: var(--ink-subtle, #94a3b8); font-size: 0.74rem; white-space: nowrap; }
+.gg-pb-sources { border-collapse: collapse; font-size: 0.8rem; width: 100%; }
+.gg-pb-sources td { padding: 0.2rem 0.4rem; border-top: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); vertical-align: top; }
+@media (max-width: 640px) { .gg-pb-sources td { display: block; border-top: 0; } }

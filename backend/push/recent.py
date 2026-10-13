@@ -122,6 +122,10 @@ ITEM_URL_BY_KIND = {
     "supply_break_alert":   DEFAULT_ITEM_URL,
     "key_level_alert":      "/chart-maps?tab=support&symbol={sym}",
     "med_catalyst":         "/sepa/{sym}?tab=catalyst",
+    # 🚩 2026-10-13 — the Gajjala's tab, the sub resolved by the endpoint from
+    # the day's claim (chart_maps/gajjala/tab.resolve_sub); the single push's
+    # url carries the sub itself (alerts.compose).
+    "gajjala_setup":        "/chart-maps?tab=gajjala&focus={sym}",
     "juggernaut_watchlist": DEFAULT_ITEM_URL,
     "leaderboard_breakout": DEFAULT_ITEM_URL,
     "accumulation_change":  DEFAULT_ITEM_URL,

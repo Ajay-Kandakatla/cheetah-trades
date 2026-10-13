@@ -86,6 +86,12 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # moves a line on every board above, and every HIS CALL behind
                 # it is a one-constant flip the panel has to name.
                 "zone_pad",
+                # 🚩 GAJJALA'S (2026-10-13) — Goverdhan Gajjala's five 5-minute
+                # setups on his scanner. Its own section because every number
+                # is either his (cited) or Ajay's K1–K10 answer, the pushes are
+                # in SHADOW, and nothing here is measured. BEFORE "fallen" so
+                # the fallen / drop10 / short_interest tail pins stay put.
+                "gajjala",
                 # 📉 DOWN 40%+ (2026-10-02) — the Chart Maps list of names far
                 # under their 52-week high. Its own section because it is
                 # UNMEASURED, gates nothing, and its listing line, its held-out
@@ -815,6 +821,12 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: zone pad lines unavailable: %s", exc)
 
+    # ── 🚩 Gajjala's ───────────────────────────────────────
+    try:
+        out["gajjala"] = _gajjala_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: gajjala section unavailable: %s", exc)
+
     # ── 📉 Down 40%+ ───────────────────────────────────────
     try:
         out["fallen"] = _fallen_section()
@@ -842,6 +854,154 @@ def _short_interest_section() -> dict:
     LAZILY, like the ⚡ and 📉 sections."""
     from short_interest import read as SR
     return SR.rules_section()
+
+
+# ── 🚩 Gajjala's (2026-10-13) ──────────────────────────────────────────────
+# Every number below is read from chart_maps.gajjala.constants (GC) or the
+# daytrading session clock — the section source holds no numeric literal (a
+# test walks its AST). A constant still None (an unanswered HIS CALL) prints
+# "waiting for your number (Hn)", never "None".
+_GG_SEC_PER_MIN = 60                                    # a unit, not a rule
+_GG_PCT = 100                                           # a unit, not a rule
+_GG_TYPE_WORDS = {"CS": "common stock", "ADRC": "ADRs"}  # Massive reference type codes → words
+
+
+def _gg_v(name: str, fmt: str = "%g") -> str:
+    from chart_maps.gajjala import constants as GC
+    val = getattr(GC, name, None)
+    if val is None:
+        h = next((h for h, names in GC.PLACEHOLDERS.items() if name in names), "?")
+        return "waiting for your number (%s)" % h
+    return val if isinstance(val, str) else fmt % val
+
+
+def _gg_n(name: str) -> str:
+    from chart_maps.gajjala import constants as GC
+    val = getattr(GC, name, None)
+    return "{:,}".format(int(val)) if isinstance(val, (int, float)) else _gg_v(name)
+
+
+def _gg_hhmm(t) -> str:
+    return t.strftime("%H:%M")
+
+
+def _gg_label(key: str) -> str:
+    from chart_maps.gajjala import constants as GC
+    return {k: "%s %s" % (e, lb) for k, e, lb in GC.SUBS}.get(key, key)
+
+
+def _gajjala_section() -> dict:
+    """🚩 Gajjala's — every number read from `chart_maps.gajjala.constants` (GC)
+    and `daytrading.data`'s session clock, never typed here. Imported LAZILY,
+    like the 📉 section: the panel must not load the tab to list the others."""
+    from datetime import date as _date, datetime as _dt, timedelta as _td
+    from chart_maps.gajjala import constants as GC
+    from chart_maps.gajjala import tab as GT
+    from daytrading import data as DTD
+
+    tf5, tf15 = GT.TFS
+    e9, e21 = GC.EMA_FAST, GC.EMA_SLOW
+    push_open = _gg_hhmm((_dt.combine(_date.min, DTD.ET_RTH_OPEN)
+                          + _td(minutes=GC.NO_TRADE_AFTER_OPEN_MIN)).time())
+    rth_close = _gg_hhmm(DTD.ET_RTH_CLOSE)
+    ah_close = _gg_hhmm(DTD.ET_AFTERHOURS_CLOSE)
+    cadence = GC.PASS_CADENCE_SEC // _GG_SEC_PER_MIN
+    types = (" and ".join(_GG_TYPE_WORDS.get(t, t) for t in sorted(GC.SCAN_INSTRUMENT_TYPES, reverse=True))
+             if GC.SCAN_INSTRUMENT_TYPES else "every instrument type")
+    levels = " / ".join("$%g" % x for x in GC.PSY_LEVELS)
+    depth = " and ".join(_gg_label(k) for k in GC.K3_DEPTH_SETUPS)
+    long_flag = ("longer, up to %s bars = “long flag”, listed, never A+; longer still = invalid"
+                 % _gg_v("K4_BF_LONG_FLAG_MAX", "%d") if GC.K4_BF_LONG_FLAG_MAX is not None
+                 else "longer = invalid")
+    kf_honor = ("every pullback bar closes at or above the %d EMA, " % e9 if GC.KF_HONOR_ALL_PULLBACK_CLOSES else "")
+    kf_near = ("; no kiss but everything else = “near-kiss”, listed, never A+" if GC.KF_ALLOW_NO_TOUCH else "")
+    hf_trig = ("the base's high" if GC.HF_TRIGGER == "base_high" else "the prior bar's high")
+    vcp_b = ("; exactly one of those two missed = “%s — imperfect”, listed, never pushed" % GC.VCP_B_GRADE
+             if GC.VCP_B_READS else "")
+    rule = GC.K8_FAIL_EVENT_RULE
+    fail_rule = ("a separate, earlier sell-off" if rule == "distinct" else
+                 "the same drop may count" if rule == "same_ok" else _gg_v("K8_FAIL_EVENT_RULE"))
+    if GC.GAJJALA_PUSH_MODE == "live":
+        push = ("📲 %s (ON for the owner — mute at /notifications): A+ only — every rule met and the entry bar "
+                "closed; %s–%s and %s–%s ET; never the first %d minutes; silent on closed days; once per name, "
+                "setup and session; every A+ is its own push."
+                % (GC.PUSH_KIND, push_open, rth_close, rth_close, ah_close, GC.NO_TRADE_AFTER_OPEN_MIN))
+    else:
+        push = ("📲 %s is in SHADOW: every A+ — every rule met and the entry bar closed — is recorded on /alerts "
+                "as “shadow — not sent”; nothing reaches a phone until the %d-session study reads and you flip it "
+                "to live. When live: %s–%s and %s–%s ET, never the first %d minutes, silent on closed days, once "
+                "per name, setup and session, every A+ its own push."
+                % (GC.PUSH_KIND, GC.STUDY_SESSIONS, push_open, rth_close, rth_close, ah_close,
+                   GC.NO_TRADE_AFTER_OPEN_MIN))
+    return {
+        "title": "%s — Goverdhan Gajjala's five setups on his scanner" % GC.TAB_LABEL,
+        "emoji": {k: e for k, e, _lb in GC.SUBS}[GC.DEFAULT_SUB],
+        "picks": [
+            "Scanner (his numbers): price $%s–$%s, %s+ shares traded today, up %s%%+ on the prior regular close — "
+            "over %s only (yours: ETFs, warrants, units, rights and OTC out; a new listing with no type yet is "
+            "listed “%s”); one Massive snapshot every %d minutes %s–%s ET. Stays listed %d sessions after it last "
+            "qualified — a Cheetah default (yours, not his). The strip counts runners ≥%s%% and ≥%s%%; quiet when "
+            "the best is under %s%% (his read)."
+            % (_gg_v("SCAN_MIN_PRICE", "%.2f"), _gg_v("SCAN_MAX_PRICE"), _gg_n("SCAN_MIN_VOLUME"),
+               _gg_v("SCAN_MIN_CHANGE_PCT"), types, GC.SCAN_UNKNOWN_TYPE_LABEL, cadence, GC.PASS_OPEN_ET,
+               ah_close, GC.STAY_LISTED_SESSIONS, _gg_v("SA_BIG_RUNNER_PCT"), _gg_v("SA_RUNNER_PCT"),
+               _gg_v("SA_QUIET_BEST_PCT")),
+            "Demand bar: close ≥ open +%s%% and range ≥ %s× the prior %s bars' average; volume rising bar to bar, "
+            "no step over %s×. Pullback: lows no deeper than %s of the last demand bar's range under its high (%s "
+            "only), volume ≤ %s× the leg's mean."
+            % (_gg_v("K1_BODY_GAIN_PCT"), _gg_v("K1_RANGE_MULT"), _gg_v("K1_RANGE_LOOKBACK", "%d"),
+               _gg_v("K2_MAX_VOL_STEP"), _gg_v("K3_DEPTH_FRAC"), depth, _gg_v("K3_VOL_FRAC")),
+            "%s: ≥%s demand bars, then a %s–%s bar quiet pullback (%s); entry over the pullback bar's high, stop "
+            "its low."
+            % (_gg_label("bull_flag"), _gg_v("BF_LEG_MIN_BARS", "%d"), _gg_v("K4_BF_PULL_MIN", "%d"),
+               _gg_v("K4_BF_PULL_MAX", "%d"), long_flag),
+            "%s: ≥%s demand bar(s), uptrend (%d EMA over the %d, both above their value %s bars back), a pullback "
+            "of at most %s bars where %sone bar kisses it (low within %s%%) and closes above it, on the pullback "
+            "volume above%s; entry over the kiss bar's high."
+            % (_gg_label("kiss_fly"), _gg_v("KF_LEG_MIN_BARS", "%d"), e9, e21, _gg_v("K5_SLOPE_BARS", "%d"),
+               _gg_v("K4_KF_PULL_MAX", "%d"), kf_honor, _gg_v("K5_KISS_TOL_PCT"), kf_near),
+            "%s (%s bars first, %s fallback): ≥%s demand bars, a %s–%s bar base no wider than %s%% of the price, "
+            "%d and %d EMA within %s%%, second-half volume under %s× the first half; entry over %s, stop the prior "
+            "bar's low."
+            % (_gg_label("horizontal_fade"), tf15, tf5, _gg_v("HF_LEG_MIN_BARS", "%d"), _gg_v("K4_HF_BASE_MIN", "%d"),
+               _gg_v("K4_HF_BASE_MAX", "%d"), _gg_v("K6_TIGHT_PCT"), e9, e21, _gg_v("K6_MERGE_PCT"),
+               _gg_v("K6_SELL_DECAY"), hf_trig),
+            "%s: ≥%s demand bar(s), ≥%s contractions each ≤ %s× the one before, every cycle low ≥ the %d EMA −%s%%, "
+            "higher lows, pivots confirmed by %s closed bars each side%s; entry over the last cycle's high, stop "
+            "its low."
+            % (_gg_label("intraday_vcp"), _gg_v("VCP_LEG_MIN_BARS", "%d"), _gg_v("K4_VCP_MIN_CYCLES", "%d"),
+               _gg_v("K7_CONTRACTION"), e21, _gg_v("K7_EMA21_TOL_PCT"), _gg_v("VCP_PIVOT_WINDOW", "%d"), vcp_b),
+            "%s (float ≤ %s): a drop ≥%s%% off a bar's high back within %s%% inside %s bars, AND a failed try at "
+            "today's high (within %s%%, then %s%% under it; %s), then a quiet base of ≥%s bar(s) at the top on the "
+            "pullback volume above; entry over the top, stop the base low. 🎾 squeeze-history chip: last %s "
+            "sessions, ≥%s%% range or a halt — a chip, not a rule."
+            % (_gg_label("reversal_squeeze"), _gg_n("K8_MAX_FLOAT"), _gg_v("K8_DROP_PCT"),
+               _gg_v("K8_RECOVER_PCT"), _gg_v("K8_RECOVER_BARS", "%d"), _gg_v("K8_FAIL_NEAR_PCT"),
+               _gg_v("K8_FAIL_DROP_PCT"), fail_rule, _gg_v("RS_BASE_MIN_BARS", "%d"),
+               _gg_v("K8_HISTORY_SESSIONS", "%d"), _gg_v("K8_HISTORY_RANGE_PCT")),
+            "☀️ premarket: %s+ shares before %s + yesterday's after-hours movers up %s%%+ at the last after-hours "
+            "pass. 🌙 after-hours: regular close in the top %g%% of the day's range, %s+ after-hours shares, up "
+            "%s%%+ on the close."
+            % (_gg_n("K9_PM_MIN_VOLUME"), _gg_hhmm(DTD.ET_RTH_OPEN), _gg_v("K9_AH_CARRY_PCT"),
+               GC.K10_CLOSE_TOP_FRAC * _GG_PCT, _gg_n("K10_AH_MIN_VOLUME"), _gg_v("K10_AH_MIN_GAIN_PCT")),
+        ],
+        "stops": [
+            "Entry = the break of the prior bar's high (VCP: the last cycle's high; squeeze: the top of the "
+            "squeeze-back); stop = that bar's low (VCP: the last cycle's low; squeeze: the base low). Never the "
+            "first %d minutes after the open (his) — rows carry ⏳. Exits are his discretion — 📓 Playbook — never "
+            "computed." % GC.NO_TRADE_AFTER_OPEN_MIN,
+            "🧱 %s chip when a level sits within %s%% above the price — his profit-taking / climax levels, not an "
+            "entry; the %s%% band is a Cheetah default (yours, not his)."
+            % (levels, _gg_v("PSY_NEAR_PCT"), _gg_v("PSY_NEAR_PCT")),
+            "Chips, never rules: more than %d red closes in a row (his “red flag”), stopped earlier today on the "
+            "same setup (he mostly passes), ⏸ halts today, float and 🔄 float rotation."
+            % GC.RED_CLOSES_WAIT,
+        ],
+        "alerts": [push],
+        "note": ("Goverdhan Gajjala's five setups as he described them (IBD webinar, Feb 2024; TraderLion "
+                 "podcast, Jan 2024). Numbers he never gave are Ajay's (K1–K10, 2026-10-13). UNMEASURED — no "
+                 "study here says these setups win. Not advice."),
+    }
 
 
 def _fallen_section() -> dict:

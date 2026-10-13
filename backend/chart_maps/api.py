@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from . import board as board_mod
 from . import ema_frames as ema_frames_mod
 from . import support as support_mod
+from .gajjala import constants as gajjala_consts
 
 log = logging.getLogger("chart_maps.api")
 router = APIRouter(tags=["chart-maps"])
@@ -370,6 +371,53 @@ async def chart_maps_ema_frames(
         return ema_frames_mod.build(
             symbol if isinstance(symbol, str) else "",
             frame if isinstance(frame, str) else ema_frames_mod.DEFAULT_FRAME)
+
+    return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.get("/chart-maps/gajjala")
+async def chart_maps_gajjala(
+    sub: str = Query("", description="bull_flag (default) | kiss_fly | horizontal_fade | intraday_vcp | "
+                                     "reversal_squeeze | premarket | postmarket | playbook. EMPTY with a `focus` "
+                                     "symbol = the server picks the sub the push or the read meant (the served "
+                                     "`sub` is authoritative); an unknown value serves the default, never an error."),
+    tf: str = Query("", description="5m | 15m — the tile bars (default 5m; 15m for the Horizontal Fade)."),
+    focus: str = Query("", description="a symbol to deep-link to (the push url carries it)."),
+    sort: str = Query("", description="☀️ Premarket only: volume (default, his ToS sort) | change."),
+    limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
+):
+    """🚩 Gajjala's tab (2026-10-13) — Goverdhan Gajjala's five 5-minute setups over his scanner, ☀️ Premarket,
+    🌙 Post-market and 📓 his Playbook. Ajay: "Name the Tab Gajjala's he has multiple strategies..around this."
+
+    Served from Mongo ONLY: the 5-minute cron pass (`chart_maps.gajjala.run`) scans, loads bars and runs the
+    detectors; this route reads what it stored (`gajjala.tab.build`) and adds ONE live fan-out for the shown tiles'
+    now-line, the Support-route pattern. Never scans, never fetches a bar. UNMEASURED; nothing here trades.
+
+    Every argument is coerced: a direct call (container smoke test) receives the `Query` OBJECT itself.
+    """
+    from rotation.api import _scrub
+    from .gajjala import tab as GT
+    GC = gajjala_consts
+
+    def _run():
+        lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
+        out = GT.build(sub if isinstance(sub, str) else "",
+                       tf=tf if isinstance(tf, str) else "",
+                       focus=focus if isinstance(focus, str) else "",
+                       sort=sort if isinstance(sort, str) else "",
+                       limit=max(1, min(lim, GC.TILE_LIMIT_MAX)))
+        tiles = out.get("tiles") or []
+        if tiles:
+            try:
+                live = board_mod._live_snapshot(tiles)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/gajjala: live snapshot failed: %s", exc)
+                live = {}
+            try:
+                board_mod.attach_live_now(tiles, out, live=live)
+            except Exception as exc:                        # pragma: no cover
+                log.debug("chart-maps/gajjala: live now-line failed: %s", exc)
+        return _scrub(out)
 
     return JSONResponse(await asyncio.to_thread(_run))
 

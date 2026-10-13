@@ -66,6 +66,12 @@ export type NotificationPrefs = {
      him via the owner keep-set; False in default_prefs for anyone else.
      UNMEASURED — setup: pending study. */
   med_catalyst?: boolean;
+  /* 🚩 A Goverdhan Gajjala setup read A+ — every rule met and the entry bar
+     closed (chart_maps/gajjala, DECISIONS 2026-10-13 "Pushes: YES"). ON for
+     him via the owner keep-set; False in default_prefs for anyone else.
+     SHADOW first: recorded on /alerts, nothing sent until the switch is
+     flipped. UNMEASURED. */
+  gajjala_setup?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

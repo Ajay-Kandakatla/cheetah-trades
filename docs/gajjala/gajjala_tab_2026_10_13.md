@@ -1,0 +1,119 @@
+# 🚩 Gajjala's tab — the method, the endpoint, the 📓 Playbook and the ℹ️ panel (WP5a, 2026-10-13)
+
+Ajay 2026-10-13: *"Name the Tab Gajjala's he has multiple strategies..around this. He is volume and price action based
+traded with short squeeze. He also has premarket and post market analysis."* and *"Implement his full stategy do not assume
+anything."*
+
+**UNMEASURED.** Nothing on this tab is a measured edge. His own 2023 numbers give −0.11% per trade for the full year and
++0.76% for the second half (computed from HIS TraderSync figures, `verified_rules.json`); on 2024-10-11 he wrote that he no
+longer sees his setups for long stretches and their probability "drastically reduced". Nothing here trades, enters a lane or
+sizes a position. Not SEPA: no other method's gate, import or citation (source guard).
+
+Binding order used: DECISIONS "ROUND A/B/C ANSWERS" > FIRST_HAND (his words) > BUILD_SPEC §3/§4 > STRATEGY_SPEC deltas.
+
+## Sources
+| Key | What | Used for |
+|---|---|---|
+| S8 | IBD Northern Virginia webinar, `CI7mNvEQyms` (FIRST_HAND Part 1) | his words, timestamps |
+| S9 | TraderLion podcast, `10pHBNVi4Jc` (FIRST_HAND Part 2; 1:54:46–2:02:40 is HERE, not S8) | his words, timestamps |
+| S11 | his X posts | 0.25% start risk, red closes, "mostly pass", $0.10 floor, decay |
+| S1 | the substack link Ajay gave — a THIRD-PARTY write-up | nothing is taken from it; its claims that his own words contradict are listed |
+| S1–S18 | the verified set (`backend/chart_maps/gajjala/verified_rules.json`, WP7) | the 📓 sources table + "Contradicted / not used" |
+
+The FIRST_HAND notes are committed as `backend/tests/fixtures/gajjala/first_hand_2026_10_13.md` (byte copy) so the tests
+can prove every served quote is his.
+
+## The five setups (5-minute bars; the Fade 15-minute first) and his common rule
+"good demand, very shallow pullback with low volume … if it takes the previous highs — enter; stop loss would be the low of
+the base" (S8 34:45). Entry = the break of the prior bar's high; stop = that bar's / the base's low.
+
+| Sub | His words | Numbers (all in `constants.py`) |
+|---|---|---|
+| 🚩 Bull Flag | S8 21:45–24:37, S9 1:59:24 | leg ≥ `BF_LEG_MIN_BARS` (his 2); pullback `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX`; up to `K4_BF_LONG_FLAG_MAX` = "long flag" (K4a, never A+) |
+| 💋 EMA Kiss & Fly | S8 31:33–32:41, S9 1:55:28 | `K5_*`; every pullback close ≥ 9 EMA (K5a); ≤ `K4_KF_PULL_MAX`; no kiss = "near-kiss" (never A+) |
+| ➖ Horizontal Fade | S8 32:49–33:50, 1:20:08, S9 1:56:08 (1:57:33 is HIS Fade line, not a VCP rule) | `K6_*`, base `K4_HF_BASE_MIN`–`MAX`, trigger = the base high (round C) |
+| 🌀 Intraday VCP | S8 33:50–34:37 | `K7_*`, ≥ `K4_VCP_MIN_CYCLES`; one miss of two = "B — imperfect" (round C, never pushed) |
+| 🎾 Reversal Squeeze | S8 35:02–35:56, 36:12; S9 2:00:32–2:02:40 | `K8_*`, H1 2/8, H2 distinct, H4 ≥1 bar; float ≤ `K8_MAX_FLOAT` |
+| ☀️ Premarket | S8 13:21–14:34, 1:21:56, 1:23:30 | K9 — WP2 `context.premarket_list` |
+| 🌙 Post-market | S8 1:26:48, 59:24, S9 1:16:13 | K10 — WP2 `context.postmarket_confirm` (rows stored by the pass) |
+| 📓 Playbook | everything above + management, risk, avoids | text only |
+
+H1–H5 are answered (DECISIONS round C) and written in `constants.py`; any constant set back to None prints "waiting for your
+number (Hn)" on the ℹ️ panel, the knob table and the board's `awaiting[]` — never "None".
+
+## States (served label; every one says UNMEASURED)
+`aplus` "A+ — every rule met, entry bar closed" · `triggered` "triggered n bars ago" · `forming` (ready: "the next bar over
+X") · `partial` ("partial — missed: …", or "broke — not A+ · missed: …" / "· not judgeable: 9 EMA warming up", HIS CALL 21) ·
+`stopped` · `invalid` / `none` = counted, never tiled. Variant / grade pills: "long flag", "near-kiss", "B — imperfect".
+
+## Endpoint — `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=`
+`chart_maps/api.py` → `chart_maps/gajjala/tab.py:build()`. **Reads Mongo only** (never scans, never fetches a bar); the route
+adds ONE live fan-out for the shown tiles' now-line (`board._live_snapshot` + `attach_live_now`, the Support pattern) and
+`_scrub`s NaN. Every argument is coerced (a direct call receives `Query` objects).
+
+- **Session**: today ET from `PASS_OPEN_ET` on a market day; before it or on a closed day, the last market day ("last
+  session YYYY-MM-DD", `refresh_sec` 0). In window (`PASS_OPEN_ET`–`PASS_CLOSE_ET`) `refresh_sec` = `PASS_CADENCE_SEC`.
+  Tape = `scanner.pass_tape_session` (the pass's own clock). `first15` = 09:30 ≤ now < 09:30 + `NO_TRADE_AFTER_OPEN_MIN`.
+- **Pass**: the session's newest `gajjala_passes` doc. `warming` = in window, none this session; `stale` = in window and
+  older than `STALE_AFTER_SEC` (900 s, the /alerts rule).
+- **Sub resolution** (push deep links): an explicit known sub wins; unknown → `bull_flag`; empty sub + `focus` → today's
+  newest `gajjala_alerts` claim for that name in state `pushed` or `shadow` (ids `GG:` / `SHADOW:GG:{date}|SYM|setup`) →
+  else the setup whose read ranks best → else ☀️ / 🌙 when listed there → else the default. Served as `sub_resolved_from`.
+- **Order** (setup subs): aplus 0 · triggered 1 · forming-ready 2 · forming 3 · partial 4 · stopped 5; A+/triggered/stopped
+  newest entry bar first; ready forming by (trigger − last)/last; forming by bars to go; partial by fewest misses then biggest
+  change; ties by symbol. ☀️ by volume (his ToS sort) or `sort=change`, the carry after today's names; 🌙 by after-hours gain.
+- **Chips** (strings only): float / shares out (+ suspect), 🔄 rotation, ⏸ halts, 🧱 $1/$5/$10 within `PSY_NEAR_PCT`
+  (Cheetah default), red closes > `RED_CLOSES_WAIT` (R2-5, chip only), "stopped earlier today (entered HH:MM, stopped)" (R2-6), "flag #k today",
+  "type unknown", outside-RTH limit-orders line, 🎾 squeeze history (🎾 only). WP2's engines are reused
+  (`context.psych_chips`, `red_closes_chip`, `rotation`, `premarket_list`, `unchecked_text`).
+- **🌙 recap** (R2-7 yes): today's reads in aplus / triggered / stopped — states only, no win/loss maths.
+- **Push block**: `GAJJALA_PUSH_MODE` "shadow" → "Pushes are in SHADOW — … nothing reaches your phone until the
+  `STUDY_SESSIONS`-session study reads and you flip it to live."
+
+### What the pass must store for this board (WP4 interface)
+| Where | Field | Read by |
+|---|---|---|
+| `gajjala_reads` | `setups{setup: Read}`, `tile{bars5,bars15,curves5,curves15,vol_avg5,vol_avg15}`, `ctx{float, rotation, halts, psych, float_suspect, squeeze_history}` | tiles + chips |
+| `gajjala_reads` | `stopped_today{setup: entry_bar_t}` (kept across passes) | "stopped earlier today" chip |
+| `gajjala_passes` | `strip`, `status`, `premarket.pm_levels{SYM: lv}` | strip; ☀️ 1-minute premarket volume |
+| `gajjala_passes` | `postmarket{rows: postmarket_confirm rows, unchecked_n}` | 🌙 list + unchecked line |
+Missing fields degrade to "nothing printed", never an error (☀️ falls back to the scanner's own premarket number).
+
+## 📓 Playbook (`chart_maps/gajjala/playbook.py`)
+Sections: Who he is · The scanner · Chart · Routine · What every setup shares · the five setups · Entry · Risk (his
+discretion — NOT computed; 0.25% = his OWN starting risk; the S8 1:47:23 "5% to 10%" basis is ambiguous) · His stats (quoted)
+· **Not built** (R2-14 + R2-8 journal: text only, each would need Ajay's numbers) — plus `management`, `avoids`,
+`contradicted` (the verified set's contradicted rules + F4VS's "require a catalyst"), `knobs` (built FROM constants with
+"Ajay 2026-10-13" / "Cheetah default"), `sources`. Every item is `{text, ts, source ∈ S8|S9, verbatim}`; GG's b-word quotes
+are served as "[reverses]" / "[reversal]" / "[reversing]". The one other trader's name served is his own S8 9:45
+self-description, verbatim.
+
+## ℹ️ panel — `rules_info.SECTION_KEYS` "gajjala" (right before "fallen")
+Picks: scanner + listing (Cheetah default) + strip; K1–K3; one line per setup; ☀️/🌙. Stops: entry/stop + ⏳ first 15
+minutes; 🧱 psych (Cheetah default band); chips-never-rules. Alerts: the SHADOW line. Built from `constants.py` and the
+`daytrading.data` session clock — the section source carries no numeric literal (AST test).
+
+### 2026-10-13 — five served-payload fixes (WP5a minors)
+- **Frame per card.** With no `tf` in the URL each card draws the frame its own read was taken on (`read.frame`, else the
+  sub default) — a ➖ Fade that fell back to a 5-minute read now serves 5-minute bars, not the 15-minute ones. Each tile
+  carries the frame it served as `tile.tf`; the payload's `tf` stays the sub default (15m on ➖, else 5m). On an explicit
+  `tf` (the toggle), and on the empty-frame fallback, an A+ marker whose stamp is not one of the served bars is dropped —
+  the read, its BUY/STOP lines and `entry_bar_t` are still served.
+- **Quiet line** built from `SA_QUIET_BEST_PCT` ("best runner under 40%"), his S8 44:37 words kept as a quoted aside; the
+  09:30 open is `daytrading.data.ET_RTH_OPEN`, imported, never retyped.
+- **Knob table = ℹ️ panel**: K10 renders "top 30% of the day's range" (`K10_CLOSE_TOP_FRAC` × 100, "%g%%") and the scanner
+  floor "$0.10" ("%.2f"), exactly as `rules_info` prints them; a test holds the two surfaces together.
+- **Counts**: a read held by an unanswered placeholder (or carrying an "awaiting" reason) counts in `awaiting_answer`,
+  never also in `none`.
+- **Badge**: from the last pass (`PASS_CLOSE_ET`) to midnight on a session day the label is "today" and the badge "closed"
+  (not "closed · last session"). The R2-6 chip reads "stopped earlier today on this setup (entered HH:MM, stopped)" —
+  `stopped_today` holds the ENTRY bar's stamp, not the stop's.
+
+## Tests
+`backend/tests/test_gajjala_tab.py` · `test_gajjala_playbook.py` · `test_rules_info_gajjala.py` ·
+`test_gajjala_source_guard.py` (no other method's import / served name except his verbatim line; no b-word anywhere in
+`chart_maps/gajjala/*.py`).
+
+## HIS CALLs still open
+None introduced here. Display-only defaults kept as the spec wrote them: R2-3 halts = chip only (`HALT_CALM_BARS` off), R2-4
+after-hours exhaustion = shown only (`AH_EXHAUSTION_MAX_PCT` off), R2-9 house chips kept, R2-10 "[reverses]" brackets.

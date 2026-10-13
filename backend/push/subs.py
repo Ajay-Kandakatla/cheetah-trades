@@ -377,6 +377,14 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # (market_hours.gate). UNMEASURED: every push says "not a buy signal" /
     # "not a sell signal"; setup: pending study.
     "med_catalyst",
+    # 🚩 gajjala_setup (chart_maps/gajjala/alerts.py, 2026-10-13). WIDENED
+    # 2026-10-13 — DECISIONS "Pushes: YES — owner-only kind gajjala_setup, A+
+    # triggers only … pref toggle in push/subs.py". ON for the owner (the
+    # med_catalyst precedent: False in default_prefs, in this set). It ships in
+    # SHADOW (constants.GAJJALA_PUSH_MODE): every A+ is recorded on /alerts and
+    # NOTHING is sent until Ajay flips it to "live" after the 250-session study.
+    # A MARKET kind (market_hours.gate). UNMEASURED: "his setup, not a buy signal".
+    "gajjala_setup",
     # 🩺 ops_alert (ops/docker_watchdog.py -> /admin/ops/alert). 2026-10-06, Ajay
     # approved the watchdog push; without this a re-registering phone mutes it.
     # Host health, not a trading kind: it widens nothing any gate requires.
@@ -566,6 +574,14 @@ def default_prefs() -> dict:
         #
         # A MARKET kind (market_hours.gate). NOT MEASURED: setup: pending study.
         "med_catalyst": False,
+        # 🚩 A Goverdhan Gajjala setup read A+ on his scanner's names — every
+        # rule met and the 5-minute (Fade: 15-minute) entry bar closed above its
+        # trigger (chart_maps/gajjala/alerts.py, DECISIONS 2026-10-13 "Pushes:
+        # YES"). OFF for everyone else; ON for HIS devices through
+        # OWNER_KEEP_SET — his already-registered phones are flipped by
+        # scripts/owner_prefs_apply.py at deploy (a data write). SHADOW until he
+        # flips GAJJALA_PUSH_MODE: recorded, not sent. A MARKET kind. UNMEASURED.
+        "gajjala_setup": False,
         "morning_brief": True,       # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

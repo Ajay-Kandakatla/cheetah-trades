@@ -1043,6 +1043,69 @@ def extended_print(snap: Optional[dict]) -> Optional[dict]:
     return {"price": px, "epoch": epoch, "date": et.date().isoformat(),
             "session": trade_session(et)}
 
+def _snapshot_row(item: dict) -> dict:
+    """One Massive snapshot `tickers[]` item -> the row every caller reads.
+
+    Extracted 2026-10-13 from `bulk_snapshot` (byte-identical output, pinned in
+    tests/test_prices_market_snapshot.py) so the whole-market call
+    `market_snapshot` maps an item through the SAME code — two mappers for one
+    payload would drift the first time Massive adds a field. PURE."""
+    day = item.get("day") or {}
+    # Use the start-of-day timestamp from `day.t`; fall back to today-ET.
+    # IMPORTANT (2026-05-27): normalize in US/Eastern, not UTC.
+    # Calling .normalize() directly on a UTC Timestamp truncates to
+    # midnight UTC, which rolls over to "tomorrow" any time after
+    # 8 PM ET (= midnight UTC). That bug appended future-dated bars
+    # every evening and silently broke VCP / Kell detectors that
+    # read the tail of the series. Convert to America/New_York
+    # before normalizing so a bar timestamped at any point during
+    # the May 27 ET session always stores as 2026-05-27.
+    day_t = day.get("t")
+    if day_t:
+        bar_date = (
+            pd.Timestamp(day_t, unit="ms", tz="UTC")
+            .tz_convert("America/New_York")
+            .normalize()
+            .tz_localize(None)
+        )
+    else:
+        bar_date = (
+            pd.Timestamp.now(tz="America/New_York")
+            .normalize()
+            .tz_localize(None)
+        )
+    # Extended-hours surface (2026-05-26): expose lastTrade +
+    # prevDay so the frontend can render pre-market / after-hours
+    # prints with a session badge. Display-only — SEPA scoring
+    # still uses `close` (the regular-session close).
+    last_trade = item.get("lastTrade") or {}
+    prev_day = item.get("prevDay") or {}
+    # Massive's latest minute bar (2026-09-30, the 🛡️ Resiliency tab's
+    # pre-market volume): `av` = the day's accumulated shares so far,
+    # `t` = that minute's stamp in MILLISECONDS (lastTrade.t is ns).
+    # Pre-open the `day` bar is all zeros (probe 2026-09-30), so this is
+    # the only pre-market volume the snapshot carries. Additive — never
+    # read by the SEPA scorer.
+    mn = item.get("min") or {}
+    return {
+        "open":             day.get("o"),
+        "high":             day.get("h"),
+        "low":              day.get("l"),
+        "close":            day.get("c"),
+        "volume":           day.get("v"),
+        "vwap":             day.get("vw"),
+        "date":             bar_date,
+        "change_pct":       item.get("todaysChangePerc"),
+        # Extended-hours fields (additive — never read by SEPA scorer)
+        "last_trade_price": last_trade.get("p"),
+        "last_trade_ts_ms": last_trade.get("t"),
+        "prev_day_close":   prev_day.get("c"),
+        "todays_change":    item.get("todaysChange"),
+        "min_av":           mn.get("av"),
+        "min_t_ms":         mn.get("t"),
+    }
+
+
 def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
     """Fetch today's OHLCV snapshot for up to N tickers in one Massive call.
 
@@ -1088,65 +1151,110 @@ def bulk_snapshot(syms: list[str]) -> dict[str, dict]:
                 sym = asked.get(sym, sym)
                 if not sym:
                     continue
-                day = item.get("day") or {}
-                # Use the start-of-day timestamp from `day.t`; fall back to today-ET.
-                # IMPORTANT (2026-05-27): normalize in US/Eastern, not UTC.
-                # Calling .normalize() directly on a UTC Timestamp truncates to
-                # midnight UTC, which rolls over to "tomorrow" any time after
-                # 8 PM ET (= midnight UTC). That bug appended future-dated bars
-                # every evening and silently broke VCP / Kell detectors that
-                # read the tail of the series. Convert to America/New_York
-                # before normalizing so a bar timestamped at any point during
-                # the May 27 ET session always stores as 2026-05-27.
-                day_t = day.get("t")
-                if day_t:
-                    bar_date = (
-                        pd.Timestamp(day_t, unit="ms", tz="UTC")
-                        .tz_convert("America/New_York")
-                        .normalize()
-                        .tz_localize(None)
-                    )
-                else:
-                    bar_date = (
-                        pd.Timestamp.now(tz="America/New_York")
-                        .normalize()
-                        .tz_localize(None)
-                    )
-                # Extended-hours surface (2026-05-26): expose lastTrade +
-                # prevDay so the frontend can render pre-market / after-hours
-                # prints with a session badge. Display-only — SEPA scoring
-                # still uses `close` (the regular-session close).
-                last_trade = item.get("lastTrade") or {}
-                prev_day = item.get("prevDay") or {}
-                # Massive's latest minute bar (2026-09-30, the 🛡️ Resiliency tab's
-                # pre-market volume): `av` = the day's accumulated shares so far,
-                # `t` = that minute's stamp in MILLISECONDS (lastTrade.t is ns).
-                # Pre-open the `day` bar is all zeros (probe 2026-09-30), so this is
-                # the only pre-market volume the snapshot carries. Additive — never
-                # read by the SEPA scorer.
-                mn = item.get("min") or {}
-                result[sym] = {
-                    "open":             day.get("o"),
-                    "high":             day.get("h"),
-                    "low":              day.get("l"),
-                    "close":            day.get("c"),
-                    "volume":           day.get("v"),
-                    "vwap":             day.get("vw"),
-                    "date":             bar_date,
-                    "change_pct":       item.get("todaysChangePerc"),
-                    # Extended-hours fields (additive — never read by SEPA scorer)
-                    "last_trade_price": last_trade.get("p"),
-                    "last_trade_ts_ms": last_trade.get("t"),
-                    "prev_day_close":   prev_day.get("c"),
-                    "todays_change":    item.get("todaysChange"),
-                    "min_av":           mn.get("av"),
-                    "min_t_ms":         mn.get("t"),
-                }
+                result[sym] = _snapshot_row(item)
         except Exception as exc:
             log.warning("bulk_snapshot: chunk failed: %s", _scrub_key(exc))
 
     log.info("bulk_snapshot: fetched %d/%d symbols", len(result), len(wire))
     return result
+
+
+# ---------------------------------------------------------------------------
+# Whole-market snapshot (2026-10-13, the Gajjala's tab)
+# ---------------------------------------------------------------------------
+_MARKET_SNAPSHOT_URL = "https://api.massive.com/v2/snapshot/locale/us/markets/stocks/tickers"
+
+
+def market_snapshot_with_meta(include_otc: bool = False) -> tuple[dict, dict]:
+    """(rows, meta) for EVERY US stock Massive lists — ONE call, no `tickers`.
+
+    Measured 2026-10-13 08:23 / 08:38 ET: HTTP 200 in 0.49–0.56 s, ~5.7 MB
+    decoded, 13,268 tickers — against 54 calls of `_SNAP_CHUNK` through
+    `bulk_snapshot`. Each item goes through `_snapshot_row` (the bulk mapper),
+    keyed in our dash spelling (`symbols.for_yahoo`: BRK.B → BRK-B).
+
+    `meta = {http, wall_s, bytes, n}` (+ `error` on a failure). A non-200, a
+    transport error or no key returns `({}, meta)` and never raises; the
+    exception text goes through `_scrub_key` (the URL carries the key)."""
+    meta: dict = {"http": None, "wall_s": None, "bytes": 0, "n": 0}
+    key = stocks_key()
+    if not key:
+        meta["error"] = "no stocks key"
+        return {}, meta
+    t0 = time.perf_counter()
+    try:
+        r = _http().get(_MARKET_SNAPSHOT_URL,
+                        params={"apiKey": key, "include_otc": "true" if include_otc else "false"},
+                        timeout=30)
+        meta["http"] = r.status_code
+        meta["wall_s"] = round(time.perf_counter() - t0, 3)
+        if r.status_code != 200:
+            meta["error"] = f"HTTP {r.status_code}"
+            log.warning("market_snapshot: HTTP %s", r.status_code)
+            return {}, meta
+        try:
+            meta["bytes"] = len(r.content or b"")
+        except Exception:                                       # noqa: BLE001
+            meta["bytes"] = 0
+        rows: dict[str, dict] = {}
+        for item in (r.json() or {}).get("tickers") or []:
+            if not isinstance(item, dict):
+                continue
+            sym = symbols.for_yahoo((item.get("ticker") or "").strip().upper())
+            if sym:
+                rows[sym] = _snapshot_row(item)
+        meta["n"] = len(rows)
+        return rows, meta
+    except Exception as exc:                                    # noqa: BLE001
+        meta["wall_s"] = round(time.perf_counter() - t0, 3)
+        meta["error"] = _scrub_key(exc)
+        log.warning("market_snapshot: failed: %s", _scrub_key(exc))
+        return {}, meta
+
+
+def market_snapshot(include_otc: bool = False) -> dict:
+    """`market_snapshot_with_meta(...)[0]` — the rows only."""
+    return market_snapshot_with_meta(include_otc=include_otc)[0]
+
+
+def closed_daily_frame(symbol: str, *, now=None, period: str = "1y") -> Optional[pd.DataFrame]:
+    """Daily bars dated BEFORE today (ET) — and NOTHING is written to any cache.
+
+    For off-universe small caps (the Gajjala's 🎾 squeeze-history chip):
+    `load_prices` on a cache miss stores the fetch — today's PARTIAL bar
+    included — under the 20 h TTL, and every daily reader then sees a
+    half-session as a closed day. Here the cached frame is used only when it
+    already holds the last MARKET day before today (a stale cache would hide the
+    recent sessions the chip counts); otherwise `_fetch` and drop the copy.
+    "Last market day" is the house calendar's `prev_market_day` — `BDay`
+    ignores holidays, so on the session after a weekday holiday the cache
+    never held the "last weekday" and every call re-fetched.
+    `now` (ET clock, injectable) decides "today". None on no data."""
+    try:
+        et_now = pd.Timestamp.now(tz="America/New_York") if now is None else pd.Timestamp(now)
+        if et_now.tzinfo is not None:                           # a naive `now` is read as ET
+            et_now = et_now.tz_convert("America/New_York").tz_localize(None)
+        today = et_now.normalize()
+        from catalysts.medical.reaction import prev_market_day
+        last_session = pd.Timestamp(prev_market_day(today.date()))
+        df = _mongo_get(symbol)
+        if df is None:
+            df = _parquet_get(symbol)
+        if df is None or df.empty or pd.Timestamp(df.index.max()).normalize() < last_session:
+            df = _fetch(symbol, period)
+        if df is None or df.empty:
+            return None
+        df = _drop_phantom_tail(_cut_foreign_head(df, symbol))
+        if df is None or df.empty:
+            return None
+        idx = pd.DatetimeIndex(df.index)
+        if idx.tz is not None:
+            idx = idx.tz_convert("America/New_York").tz_localize(None)
+        out = df[idx.normalize() < today]
+        return out if not out.empty else None
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("closed_daily_frame %s: %s", symbol, _scrub_key(exc))
+        return None
 
 
 def patch_latest_closes(syms: list[str]) -> dict:

@@ -75,6 +75,7 @@ import HoldingsBoard from '../components/HoldingsBoard';
 import EmaFramesBoard from '../components/EmaFramesBoard';
 import PotusBoard from '../components/PotusBoard';
 import NewsTabBoard from '../components/NewsTabBoard';
+import GajjalaBoard from '../components/GajjalaBoard';
 import IpoUpcomingStrip from '../components/IpoUpcomingStrip';
 import KeyLevelsBoardNote from '../components/KeyLevelsBoardNote';
 import DualMomentumBoardNote from '../components/DualMomentumBoardNote';
@@ -1493,6 +1494,14 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
          * already has them) and moves its sub-tab URL param to `sub` so it
          * cannot fight Chart Maps' own `tab`. */
         <CatalystsBoard embedded />
+      ) : tab === 'gajjala' ? (
+        /* 🚩 Gajjala's (Ajay 2026-10-13: "Name the Tab Gajjala's he has
+           multiple strategies..around this"). His five 5-minute setups plus
+           ☀️ / 🌙 / 📓 as sub-tabs, one read-only endpoint
+           (GET /chart-maps/gajjala) the 5-minute cron pass fills — no
+           universe pass here, so the board controls and the grid are
+           skipped. Must sit BEFORE the SupportLevels fallback below. */
+        <GajjalaBoard />
       ) : tab === 'news' ? (
         /* 📰 News (Ajay 2026-09-24: "give me a bullish market or bearsish
            market … pull Macro calendar that has T1 and T2 tier events … which

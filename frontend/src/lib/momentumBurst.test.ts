@@ -136,7 +136,7 @@ describe('BURST_EXEMPT — every non-board tab, with a written reason', () => {
   it('keys == the Chart Maps tabs that are not tile boards', () => {
     const nonBoard = CM_TABS.filter((t) => !isBoardTab(t)).sort();
     expect(Object.keys(BURST_EXEMPT).sort()).toEqual(nonBoard);
-    expect(nonBoard).toHaveLength(15);
+    expect(nonBoard).toHaveLength(16);   // +gajjala 2026-10-13 (its own endpoint and sub-tabs)
   });
 
   it('NEGATIVE: no board tab is exempt — every tile board gets the pin', () => {

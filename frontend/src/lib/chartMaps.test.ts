@@ -25,7 +25,10 @@ import {
   ROOM_TABS, parseMinRoom,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
   DM_SORT_NEAREST, ATH_SORT_SLIPPING,
+  GAJJALA_OWN_PARAMS, tabSearch,
 } from './chartMaps';
+import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM, parseGgTf } from './gajjala';
+import { parseTf } from './supportLevels';
 
 const bar = (t: string, o: number, h: number, l: number, c: number): CmBar =>
   ({ t, o, h, l, c, v: 1_000 });
@@ -786,6 +789,9 @@ describe('the Earnings Flow tab', () => {
        // 🔻 Down 10%+ today 2026-10-05 — right after Down 40%+, its daily
        // cousin, mid-pack for the same no-usage-yet reason.
        'drop10',
+       // 🚩 Gajjala's 2026-10-13 — right after Down 10%+ today, mid-pack for
+       // the same no-usage-yet reason (gajjala spec §7 #18, his call).
+       'gajjala',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -905,7 +911,9 @@ describe('the Support Levels tab', () => {
     // no universe pass, so the board loader and its controls are skipped.
     // 2026-09-24: `news` is the fifteenth — one composed /chart-maps/news
     // read (gauge, T1/T2 macro, sector rows, headlines), no tiles.
-    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
+    // 2026-10-13: `gajjala` is the sixteenth — its own GET /chart-maps/gajjala
+    // read (5-/15-minute setups the cron pass stores), with its own sub-tabs.
+    expect(nonBoard).toEqual(['hot_pullback', 'patterns', 'holdings', 'gajjala', 'ema_frames', 'bonde', 'session', 'signals', 'hot_sectors', 'news', 'growth', 'gnt', 'potus', 'catalysts', 'overnight', 'support']);
     for (const t of CM_TABS.filter((x) => !nonBoard.includes(x))) {
       expect(isBoardTab(t)).toBe(true);
     }
@@ -1801,7 +1809,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(36);   // +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(37);   // +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2308,7 +2316,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala')).toEqual(CM_TABS_6D3AD93);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2561,5 +2569,110 @@ describe('the 📉 Down 40%+ tab', () => {
     const q = boardQuery({ tab: 'fallen', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching',
                            dmFilters: 'amd', dmMode: 'all', resFilters: 't1', resMode: 'all', uvView: 'peers' });
     for (const k of ['min_room', 'levels', 'grades', 'phase', 'dm=', 'dm_mode', 'res=', 'res_mode', 'uv=']) expect(q).not.toContain(k);
+  });
+});
+
+// ── 🚩 Gajjala's (Ajay 2026-10-13: "Now can you build a new tab and build sub
+// tabs for it with multiple strategies. Name the Tab Gajjala's"). A non-board
+// tab with its own endpoint; slot right after 🔻 Down 10%+ today.
+describe("🚩 Gajjala's tab registry", () => {
+  it("sits once, right after 'drop10' and before 'ema_frames'", () => {
+    expect(CM_TABS.filter((t) => t === 'gajjala')).toHaveLength(1);
+    expect(CM_TABS.indexOf('gajjala')).toBe(CM_TABS.indexOf('drop10') + 1);
+    expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+    expect(CM_TABS[CM_TABS.length - 1]).toBe('winners');
+  });
+
+  it('is NOT a board tab (its own GET /chart-maps/gajjala, no universe pass)', () => {
+    expect(isBoardTab('gajjala')).toBe(false);
+    expect(parseTab('gajjala')).toBe('gajjala');
+    expect(parseTab(' GAJJALA ')).toBe('gajjala');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab', () => {
+    for (const raw of ["gajjala's", 'gajala', 'gg', 'gajjalas']) expect(parseTab(raw)).toBe(DEFAULT_TAB);
+  });
+
+  it('TAB_META: label "Gajjala\'s" with no emoji, an UNMEASURED blurb that quotes his ask, never bounce', () => {
+    const m = TAB_META.gajjala;
+    expect(m.label).toBe("Gajjala's");
+    expect(/\p{Extended_Pictographic}/u.test(m.label)).toBe(false);
+    expect(m.blurb).toContain('UNMEASURED');
+    expect(m.blurb).toContain("Name the Tab Gajjala's he has multiple strategies..around this.");
+    expect(m.blurb).toContain('Implement his full stategy do not assume anything.');
+    expect(m.blurb).not.toMatch(/bounce|fake/i);
+    // DECISIONS Round A: pushes are SHADOW — the blurb must not promise a ring.
+    expect(m.blurb).toMatch(/shadow/);
+    expect(m.blurb).not.toMatch(/your phone rings/i);
+    expect(splitBlurb(m.blurb).head).toContain('UNMEASURED');
+  });
+
+  it('NEGATIVE: the A+ line says the entry bar TRADED through the trigger, never that it closed through it', () => {
+    // detectors count a break on the bar's HIGH (his "right at the break", S8);
+    // no close above the trigger is required (review 2026-10-13, WP4 cross-WP).
+    const m = TAB_META.gajjala;
+    expect(m.blurb).toContain('the entry bar traded through the trigger and closed');
+    expect(m.blurb).not.toMatch(/closed (through|above) (the|its) trigger/);
+  });
+
+  it("the 21 EMA has its own tone, colour and label priority (≠ the 9 EMA's blue)", () => {
+    expect(toneColor('ema21')).not.toBe(toneColor('ema9'));
+    expect(toneColor('ema21')).toBe('var(--cm-amberlt, #f59e0b)');
+    expect(toneColor('ema21')).not.toBe(toneColor('neutral'));
+  });
+
+  it('NEGATIVE: 🎯 ENTERABLE_KIND does not carry gajjala (the 📉 / 🔻 precedent)', () => {
+    expect(Object.prototype.hasOwnProperty.call(ENTERABLE_KIND, 'gajjala')).toBe(false);
+  });
+});
+
+/* 🚩 Gajjala's reads `sub` / `tf` / `sort` with its own meanings. Each case
+ * below was a demonstrated carry (review 2026-10-13): a value set on one side
+ * of the switch silently changed the board on the other. */
+describe('tabSearch — gajjala drops its own params at the border (2026-10-13)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+
+  it('the three params are the ones lib/gajjala reads', () => {
+    expect([...GAJJALA_OWN_PARAMS]).toEqual([GG_SUB_PARAM, GG_TF_PARAM, GG_SORT_PARAM]);
+  });
+
+  it('NEGATIVE: Support tf=15m → gajjala sends no tf (his 5-minute setups are not redrawn on 15m bars)', () => {
+    const next = sw('tab=support&symbol=AAPL&window=1y&tf=15m', 'gajjala');
+    expect(next.get('tab')).toBe('gajjala');
+    expect(next.has('tf')).toBe(false);
+    expect(parseGgTf(next.get('tf'))).toBeNull();
+    expect(next.get('symbol')).toBe('AAPL');
+    expect(next.get('window')).toBe('1y');
+  });
+
+  it('NEGATIVE: gajjala tf=5m → support opens on Daily, not the 24-hour frame', () => {
+    const next = sw('tab=gajjala&sub=bull_flag&tf=5m', 'support');
+    expect(next.has('tf')).toBe(false);
+    expect(next.has('sub')).toBe(false);
+    expect(parseTf(next.get('tf'))).toBe('daily');
+    // the carry it replaces: the same value read by Support WAS the 24h frame
+    expect(parseTf('5m')).toBe('24h');
+  });
+
+  it('NEGATIVE: gajjala sub=premarket&sort=change → Back in Demand carries neither', () => {
+    const next = sw('tab=gajjala&sub=premarket&sort=change&universe=full', 'zones');
+    expect(next.get('tab')).toBe('zones');
+    expect(next.has('sub')).toBe(false);
+    expect(next.has('sort')).toBe(false);
+    expect(next.get('universe')).toBe('full');
+  });
+
+  it('a click on gajjala while ON gajjala keeps sub / tf / sort', () => {
+    const next = sw('tab=gajjala&sub=premarket&tf=15m&sort=change', 'gajjala');
+    expect(next.get('sub')).toBe('premarket');
+    expect(next.get('tf')).toBe('15m');
+    expect(next.get('sort')).toBe('change');
+  });
+
+  it('NEGATIVE: a switch between two other tabs still carries tf / sort (the old behaviour, untouched)', () => {
+    const next = sw('tab=zones&sort=room&tf=15m', 'support');
+    expect(next.get('sort')).toBe('room');
+    expect(next.get('tf')).toBe('15m');
   });
 });

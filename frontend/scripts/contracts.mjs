@@ -1580,6 +1580,7 @@ const CONTRACTS = [
         potus: 'src/components/PotusBoard.tsx',
         ema_frames: 'src/components/EmaFramesBoard.tsx',
         news: 'src/components/NewsTabBoard.tsx',
+        gajjala: 'src/components/GajjalaBoard.tsx',
       };
       /* A tab whose rows are not TICKERS has nothing for the chip to read.
        * Exempt only in writing, the NO_TOGGLE way below: the file must SAY so,
@@ -2168,6 +2169,7 @@ const CONTRACTS = [
         growth: 'src/components/ExplosiveGrowth.tsx',
         ema_frames: 'src/components/EmaFramesBoard.tsx',
         news: 'src/components/NewsTabBoard.tsx',
+        gajjala: 'src/components/GajjalaBoard.tsx',
       };
       /* Same written-exemption rule as the growth contract: a tab with no
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
@@ -2229,6 +2231,10 @@ const CONTRACTS = [
         //           served order, macro releases by date, headlines by time.
         //           None carries a 🧨 read, so there is nothing to rank by.
         news: /no read on this board to rank by/,
+        //   gajjala (2026-10-13) — his setup state (A+ → forming → partial)
+        //           orders this board; a 🧨 daily S&D ordering would rank his
+        //           5-minute setups by a read he does not use (HIS CALL 19).
+        gajjala: /his setup state orders this board/,
       };
       for (const t of nonBoard) {
         const file = RENDERER[t];
@@ -5786,6 +5792,203 @@ const CONTRACTS = [
     },
   },
   {
+    name: "🚩 Gajjala's tab (2026-10-13): mounted after 🔻, label = constants.TAB_LABEL, subs = constants.SUBS, scanner numbers = constants, four house chips, NO 🧨 toggle in writing, UNMEASURED, shadow pushes said, never bounce",
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-10-13: "Now can you build a new tab and build sub tabs for it
+    // with multiple strategies. Name the Tab Gajjala's …" and "Implement his
+    // full stategy do not assume anything." Any of these links lost silently
+    // drops the tab, its label or sub strip drifting from the backend
+    // constants, a scanner number typed twice and wrong, a house chip, the
+    // written NO_TOGGLE reason, or the shadow-push truth on the surfaces he
+    // reads (DECISIONS Round A: nothing rings until the study reads).
+    checks: (src) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\'/g, "'");
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('gajjala')) {
+        errs.push("CM_TABS must carry 'gajjala'");
+      } else {
+        if (tabs.filter((t) => t === 'gajjala').length !== 1) errs.push("CM_TABS lists 'gajjala' more than once");
+        if (tabs.indexOf('gajjala') !== tabs.indexOf('drop10') + 1) errs.push("CM_TABS: 'gajjala' must sit right after 'drop10'");
+        if (tabs.indexOf('ema_frames') !== tabs.indexOf('gajjala') + 1) errs.push("CM_TABS: 'ema_frames' must follow 'gajjala'");
+      }
+      if (!/&& t !== 'gajjala'/.test(src)) errs.push("isBoardTab must return false for 'gajjala' — it has its own endpoint");
+      if (/\n  gajjala: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry gajjala (🎯 n/a, the 📉 / 🔻 precedent)');
+
+      let gc = '';
+      try { gc = read('../backend/chart_maps/gajjala/constants.py'); } catch { errs.push('backend/chart_maps/gajjala/constants.py is missing (WP1)'); }
+      const num = (name) => { const m = new RegExp(`^${name} = ([0-9_.]+)`, 'm').exec(gc); return m ? Number(m[1].replace(/_/g, '')) : null; };
+      const label = /^TAB_LABEL = "([^"]*)"/m.exec(gc);
+      if (gc && !label) errs.push('constants.py lost TAB_LABEL = "<label>"');
+      const lo = num('SCAN_MIN_PRICE'), hi = num('SCAN_MAX_PRICE'), vol = num('SCAN_MIN_VOLUME'), chg = num('SCAN_MIN_CHANGE_PCT');
+      if (gc && [lo, hi, vol, chg].some((x) => x == null || !Number.isFinite(x))) errs.push('constants.py lost a SCAN_* number (MIN_PRICE / MAX_PRICE / MIN_VOLUME / MIN_CHANGE_PCT)');
+      const money = (x) => (x < 1 ? x.toFixed(2) : String(x));
+      const scanBits = gc && lo != null && hi != null && vol != null && chg != null
+        ? [`$${money(lo)}–$${money(hi)}`, `${vol / 1e6}M+`, `up ${chg}%+`] : [];
+      // The other numbers the blurb / ✨ entry print, read from constants.py too
+      // (review 2026-10-13: they matched by luck, unpinned). STAY_LISTED_SESSIONS
+      // is Ajay's number (CHEETAH_DEFAULTS; GG said "a couple of days", S9
+      // 1:17:32), so the sentence carrying it must say so — never read as his.
+      const stay = num('STAY_LISTED_SESSIONS'), first = num('NO_TRADE_AFTER_OPEN_MIN'), cad = num('PASS_CADENCE_SEC');
+      const openEt = /^PASS_OPEN_ET = "([0-9:]+)"/m.exec(gc);
+      const psyM = /^PSY_LEVELS = \(([^)]*)\)/m.exec(gc);
+      const psy = psyM ? psyM[1].split(',').map((x) => x.trim()).filter(Boolean).map(Number) : [];
+      if (gc && [stay, first, cad].some((x) => x == null || !Number.isFinite(x))) errs.push('constants.py lost STAY_LISTED_SESSIONS / NO_TRADE_AFTER_OPEN_MIN / PASS_CADENCE_SEC');
+      if (gc && (!openEt || !psy.length || psy.some((x) => !Number.isFinite(x)))) errs.push('constants.py lost PASS_OPEN_ET = "HH:MM" / PSY_LEVELS = (…)');
+      const stayCheetah = /^CHEETAH_DEFAULTS = \(([^)]*)\)/m.exec(gc);
+      if (gc && !(stayCheetah && /"STAY_LISTED_SESSIONS"/.test(stayCheetah[1]))) errs.push('constants.CHEETAH_DEFAULTS must carry STAY_LISTED_SESSIONS (Ajay round A: his number, not GG\'s)');
+      const psyText = psy.map((x) => `$${money(x)}`).join(' / ');
+      const stayText = `stays listed ${stay} sessions (Cheetah default, not his)`;
+      const cadText = cad != null ? `every ${cad / 60} minutes` : '';
+      // Any of these numbers PRINTED in a sentence must be the constant's; the
+      // blurb must print all of them (`need`), the ✨ entry only those it uses.
+      const numberChecks = (where, text, need) => {
+        const out = [];
+        for (const m of text.matchAll(/(\d+) sessions?/g)) {
+          if (Number(m[1]) !== stay) out.push(`${where} says "${m[0]}" — constants.STAY_LISTED_SESSIONS is ${stay}`);
+        }
+        if (/\d+ sessions?/.test(text) && !text.includes(stayText)) out.push(`${where} must say "${stayText}" — the stay is Ajay's number, not GG's`);
+        for (const m of text.matchAll(/first[- ](\d+)[- ]minutes/g)) {
+          if (Number(m[1]) !== first) out.push(`${where} says "${m[0]}" — constants.NO_TRADE_AFTER_OPEN_MIN is ${first}`);
+        }
+        for (const m of text.matchAll(/every (\d+) minutes/g)) {
+          if (cad != null && Number(m[1]) !== cad / 60) out.push(`${where} says "${m[0]}" — constants.PASS_CADENCE_SEC is ${cad}`);
+        }
+        for (const m of text.matchAll(/from (\d\d:\d\d) to/g)) {
+          if (openEt && m[1] !== openEt[1]) out.push(`${where} says "${m[0]}" — constants.PASS_OPEN_ET is ${openEt[1]}`);
+        }
+        for (const m of text.matchAll(/\$\d+(?:\.\d+)? \/ \$\d+(?:\.\d+)?(?: \/ \$\d+(?:\.\d+)?)*/g)) {
+          if (m[0] !== psyText) out.push(`${where} says "${m[0]}" — constants.PSY_LEVELS is ${psyText}`);
+        }
+        if (need && gc) {
+          for (const b of [stayText, psyText, `first-${first}-minutes`, cadText, `from ${openEt ? openEt[1] : '?'} to`]) {
+            if (!text.includes(b)) out.push(`${where} must state "${b}" as constants.py has it`);
+          }
+        }
+        return out;
+      };
+      let modeSrc = gc;
+      if (!/^GAJJALA_PUSH_MODE = "/m.test(modeSrc)) { try { modeSrc = read('../backend/chart_maps/gajjala/alerts.py'); } catch { modeSrc = ''; } }
+      const modeM = /^GAJJALA_PUSH_MODE = "([a-z]+)"/m.exec(modeSrc);
+      const shadow = !modeM || modeM[1] === 'shadow';
+      const HIS = [
+        "Name the Tab Gajjala's he has multiple strategies..around this.",
+        'Implement his full stategy do not assume anything.',
+      ];
+
+      const meta = /\n  gajjala: \{\n    label: "([^"]*)",\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.gajjala (label + blurb) is missing');
+      } else {
+        if (label && meta[1] !== label[1]) errs.push(`TAB_META.gajjala.label "${meta[1]}" must equal constants.TAB_LABEL "${label[1]}"`);
+        const blurb = unesc(meta[2]);
+        if (!blurb.includes('UNMEASURED')) errs.push('the TAB_META.gajjala blurb must say UNMEASURED');
+        for (const h of HIS) if (!blurb.includes(h)) errs.push(`the TAB_META.gajjala blurb must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (/bounce|fake/i.test(blurb)) errs.push('the TAB_META.gajjala blurb says "bounce"/"fake"');
+        for (const b of scanBits) if (!blurb.includes(b)) errs.push(`the TAB_META.gajjala blurb must state the scanner as constants.py has it: "${b}"`);
+        errs.push(...numberChecks('the TAB_META.gajjala blurb', blurb, true));
+        if (shadow && !/shadow/i.test(blurb)) errs.push('pushes are SHADOW (GAJJALA_PUSH_MODE) — the TAB_META.gajjala blurb must say so');
+        if (shadow && /phone rings on every/i.test(blurb)) errs.push('the TAB_META.gajjala blurb promises a ring while pushes are shadow');
+      }
+
+      const page = read('src/pages/ChartMaps.tsx');
+      const at = page.indexOf("tab === 'gajjala' ? (");
+      const fb = page.indexOf('!isBoardTab(tab) ? (');
+      if (at < 0 || !/<GajjalaBoard \/>/.test(page)) errs.push("ChartMaps.tsx must mount tab === 'gajjala' ? (<GajjalaBoard />)");
+      else if (fb >= 0 && at > fb) errs.push('the gajjala mount must sit BEFORE the SupportLevels fallback (!isBoardTab)');
+
+      const board = read('src/components/GajjalaBoard.tsx');
+      for (const c of ['GrowthChip', 'ShortInterestChip', 'ExplosiveChip', 'EnterableChip', 'PatternChart']) {
+        if (!new RegExp(`<${c}\\s`).test(board)) errs.push(`GajjalaBoard must render <${c}>`);
+      }
+      if (/<ExplosiveFirstToggle\s/.test(board)) errs.push('GajjalaBoard mounts <ExplosiveFirstToggle> — his setup state orders this board (NO_TOGGLE)');
+      if (!/useBounceRoom\(/.test(board)) errs.push('GajjalaBoard must read the 🧨 / 🎯 chips from ONE page-level useBounceRoom map');
+      if (!/<RulesInfo section=/.test(board)) errs.push('GajjalaBoard must mount the ℹ️ <RulesInfo section="gajjala" />');
+      const lib = read('src/lib/gajjala.ts');
+      let css = '';
+      try { css = read('src/styles/gajjala.css'); } catch { errs.push('src/styles/gajjala.css is missing'); }
+      for (const [f, t] of [['GajjalaBoard.tsx', board.replace(/useBounceRoom|BounceRoom|bounceRoom/g, '')], ['lib/gajjala.ts', lib], ['styles/gajjala.css', css]]) {
+        if (/bounce|fake/i.test(t)) errs.push(`${f} says bounce / fake — surfaces he reads say reversal`);
+      }
+
+      // GG_SUBS == constants.SUBS, key / emoji / label, in order.
+      const subsTs = /export const GG_SUBS[^=]*=\s*\[([\s\S]*?)\n\];/.exec(lib);
+      const ts = subsTs ? [...subsTs[1].matchAll(/\{ key: '([a-z_]+)', emoji: '([^']+)', label: '([^']+)' \}/g)].map((m) => [m[1], unesc(m[2]), m[3]]) : [];
+      const subsPy = /^SUBS = \(([\s\S]*?)\)\n/m.exec(gc);
+      const py = subsPy ? [...subsPy[1].matchAll(/\(\s*"([a-z_]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g)].map((m) => [m[1], m[2], m[3]]) : [];
+      if (!ts.length) errs.push('lib/gajjala.ts GG_SUBS not found');
+      if (gc && !py.length) errs.push('constants.py lost SUBS = (("key", "emoji", "label"), …)');
+      if (ts.length && py.length && JSON.stringify(ts) !== JSON.stringify(py)) {
+        errs.push(`lib/gajjala.ts GG_SUBS ${JSON.stringify(ts)} != constants.SUBS ${JSON.stringify(py)}`);
+      }
+
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-gajjala-2026-10-13'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-gajjala-2026-10-13'");
+      } else {
+        const entry = unesc(nf.slice(idAt, nf.indexOf('" },', idAt) + 4));
+        if (!entry.includes("route: '/chart-maps?tab=gajjala'")) errs.push("the 🚩 ✨ entry must route to '/chart-maps?tab=gajjala'");
+        if (!entry.includes('UNMEASURED')) errs.push('the 🚩 ✨ entry must say UNMEASURED');
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🚩 ✨ entry must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (/bounce|fake/i.test(entry)) errs.push('the 🚩 ✨ entry says "bounce"/"fake"');
+        for (const b of scanBits.slice(0, 1).concat(scanBits.slice(1).map((x) => x.replace(/^up /, '')))) {
+          if (!entry.includes(b.replace(/M\+$/, 'M+'))) errs.push(`the 🚩 ✨ entry must state the scanner as constants.py has it: "${b}"`);
+        }
+        errs.push(...numberChecks('the 🚩 ✨ entry', entry, false));
+        if (shadow && !/shadow/i.test(entry)) errs.push('pushes are SHADOW (GAJJALA_PUSH_MODE) — the 🚩 ✨ entry must say so');
+        if (shadow && /phone rings on every/i.test(entry)) errs.push('the 🚩 ✨ entry promises a ring while pushes are shadow');
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🚩 gajjala_setup push kind (2026-10-13): declared in every registry, default off + owner keep-set coherent, MARKET kind, /alerts row, shadow said, never bounce',
+    file: 'src/lib/alertKinds.ts',
+    // DECISIONS 2026-10-13: owner-only kind `gajjala_setup`, A+ only, pref in
+    // push/subs.py, wrapper in push/hooks.py, keep-set + /alerts row — and
+    // SHADOW first (GAJJALA_PUSH_MODE): recorded, nothing sent. A kind missing
+    // from any registry sends to zero devices in silence (memory
+    // cheetah_push_silent_drops) or renders a raw id on the bell. This block
+    // passes once WP4 lands its half.
+    checks: (src) => {
+      const errs = [];
+      if (!/\bgajjala_setup:/.test(src)) errs.push('alertKinds.ts must register gajjala_setup or the bell renders a raw id');
+      if (!/gajjala_setup\?: boolean/.test(read('src/hooks/useNotificationPrefs.ts'))) errs.push('NotificationPrefs must carry gajjala_setup?: boolean');
+      const notif = read('src/pages/Notifications.tsx');
+      const nm = notif.match(/key: 'gajjala_setup'[\s\S]*?\},\n/);
+      if (!nm) errs.push('gajjala_setup must be listed on the Notifications page — a kind the page cannot show cannot be muted');
+      const d = nm ? nm[0] : '';
+      if (nm && !/NOT MEASURED|UNMEASURED/.test(d)) errs.push('the gajjala_setup Notifications entry must say NOT MEASURED / UNMEASURED');
+      if (nm && /bounce/i.test(d)) errs.push('the gajjala_setup Notifications entry says "bounce"');
+      const subs = read('../backend/push/subs.py');
+      const dm = subs.match(/["']gajjala_setup["']\s*:\s*(True|False)/);
+      if (!dm) errs.push('push/subs.py default_prefs must list "gajjala_setup"');
+      if (dm && dm[1] !== 'False') errs.push('gajjala_setup must be False in push/subs.py default_prefs — everyone else starts off');
+      const gate = read('../backend/market_hours/gate.py');
+      if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes('gajjala_setup')) errs.push('market_hours/gate.py must treat gajjala_setup as a MARKET kind (silent on closed days)');
+      if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes('gajjala_setup')) errs.push('gajjala_setup must NOT be a PERSONAL kind');
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      if (keepSet(subs).includes('gajjala_setup')) {
+        if (nm && !d.includes('ON FOR YOUR PHONE')) errs.push('gajjala_setup is in OWNER_KEEP_SET — the Notifications entry must say ON FOR YOUR PHONE');
+        if (!/gajjala_setup:\s*true/.test(ess)) errs.push('gajjala_setup is in OWNER_KEEP_SET — Essentials must carry gajjala_setup: true');
+      } else {
+        if (nm && !d.includes('OFF BY DEFAULT')) errs.push('gajjala_setup is NOT in OWNER_KEEP_SET — the Notifications entry must say OFF BY DEFAULT');
+        if (!/gajjala_setup:\s*false/.test(ess)) errs.push('gajjala_setup is NOT in OWNER_KEEP_SET — Essentials must carry gajjala_setup: false');
+      }
+      if (!/key: 'gajjala_setup'/.test(read('src/pages/Alerts.tsx'))) errs.push("Alerts.tsx PASSES must carry key: 'gajjala_setup'");
+      let mode = '';
+      for (const f of ['../backend/chart_maps/gajjala/constants.py', '../backend/chart_maps/gajjala/alerts.py']) {
+        try { const m = /^GAJJALA_PUSH_MODE = "([a-z]+)"/m.exec(read(f)); if (m) { mode = m[1]; break; } } catch { /* WP1 / WP4 not landed */ }
+      }
+      if (!mode) errs.push('GAJJALA_PUSH_MODE = "shadow" | "live" not found in chart_maps/gajjala/constants.py or alerts.py');
+      if (mode === 'shadow' && nm && !/shadow/i.test(d)) errs.push('GAJJALA_PUSH_MODE is "shadow" — the Notifications entry must say nothing is sent yet (shadow)');
+      return errs;
+    },
+  },
+  {
     name: '🔥 Hottest: every column reachable, multi-sort, ⓘ Quality (2026-09-28)',
     file: 'src/components/HottestSectors.tsx',
     // Ajay 2026-09-28: "Can you fix the horizontal columns hiding and also can
@@ -6399,6 +6602,7 @@ const CONTRACTS = [
         ema_frames: 'src/components/EmaFramesBoard.tsx',
         news: 'src/components/NewsTabBoard.tsx',
         growth: 'src/components/ExplosiveGrowth.tsx',
+        gajjala: 'src/components/GajjalaBoard.tsx',
       };
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.

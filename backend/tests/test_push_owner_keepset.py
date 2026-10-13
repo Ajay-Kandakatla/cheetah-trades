@@ -48,12 +48,19 @@ def test_keep_set_is_the_2026_09_21_nine():
     approved a host watchdog that pushes him when Docker's forwarder count
     passes 2,000 or Docker's backend dies (paraphrase, not his words). Host
     health, not a trading kind; only push.hooks.ADMIN_EMAIL is ever targeted.
-    Without it here a re-registering phone would mute it."""
+    Without it here a re-registering phone would mute it.
+
+    WIDENED 2026-10-13 — 🚩 `gajjala_setup` (DECISIONS "Pushes: YES —
+    owner-only kind gajjala_setup, A+ triggers only"). ON for the owner, False
+    in default_prefs; it ships in SHADOW (GAJJALA_PUSH_MODE), so nothing is sent
+    until he flips it."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
         "board_arrival", "price_alert", "key_level_alert", "med_catalyst",
-        "ops_alert"})
+        "ops_alert",
+        # WIDENED 2026-10-13 — 🚩 gajjala_setup (owner-only, SHADOW first)
+        "gajjala_setup"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices

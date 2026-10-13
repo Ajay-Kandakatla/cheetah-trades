@@ -25,8 +25,9 @@ import type { CmUndervalueView } from './undervalueView';
 import type { CmFallenBoard, CmFallenRead } from './fallen';
 import type { CmDrop10Board, CmDrop10Read } from './drop10';
 import type { BondePick } from './bondePicks';
+import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM } from './gajjala';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'gajjala';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -118,6 +119,12 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // 40%+, its daily cousin — TAB ORDER IS EARNED; tabUsageKey counts it from
   // the first open and the next re-cut moves it on the evidence.
   'drop10',
+  // 🚩 Gajjala's (Ajay 2026-10-13: "Now can you build a new tab and build sub
+  // tabs for it with multiple strategies. Name the Tab Gajjala's"). Right
+  // after 🔻 Down 10%+ today, before 〰️ 9 EMA · W/M — TAB ORDER IS EARNED;
+  // tabUsageKey counts it from the first open and the next re-cut moves it on
+  // the evidence. Label and slot are his call (gajjala spec §7 #18).
+  'gajjala',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -288,7 +295,13 @@ export function isBoardTab(t: CmTab): boolean {
     // gauge, the T1/T2 macro rows, the sector table and the headlines. No
     // universe pass and no tiles, so the board loader and its controls are
     // skipped and NewsTabBoard draws it.
-    && t !== 'news';
+    && t !== 'news'
+    // 🚩 Gajjala's (2026-10-13) is its own read-only endpoint,
+    // GET /chart-maps/gajjala, filled by a 5-minute cron pass over HIS scanner
+    // on 5- and 15-minute bars — not a /chart-maps universe pass, so the board
+    // loader and its daily sort / tier / room controls are skipped and
+    // GajjalaBoard draws it with its own sub-tabs.
+    && t !== 'gajjala';
 }
 
 export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
@@ -317,6 +330,17 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   drop10: {
     label: '\u{1F53B} Down 10%+ today',
     blurb: 'Stocks whose session low fell 10% or more under the prior close. Ajay 2026-10-03: "I would like to know about stocks that falled intraday more than 10% new tab please." THE LIST is every stock in the universe whose low this session sat at or past that line under the prior session\'s close \u2014 the ones still that far down and the ones that came back above it (reclaimed), both listed and labelled. In market hours it is LIVE (today\'s snapshot, re-read about every minute); after 16:00 ET it is today\'s regular session; before the open, overnight and on weekends it is the last closed session. ETFs, delisted names and drops the data cannot be trusted on (a split, a bad print, a decimal shift) are left out, counted and named under the grid. EACH CARD shows the low and where the print is now, the gap against the move after the open, the volume against its 50-day normal (projected to a full session during the day), what its sector ETF, its theme and RSP did, the demand band, and \u{1F4A5} what is on file from the session before through today, labelled possible. UNMEASURED \u2014 nothing here gates, pushes or trades. Not advice.',
+  },
+  // 🚩 Gajjala's (Ajay 2026-10-13). Every number on the BOARD is served — the
+  // K1–K10 knobs and every count ride in the ℹ️ Rules and the served lines.
+  // The four scanner numbers in this blurb are pinned to constants.py
+  // (SCAN_MIN_PRICE / SCAN_MAX_PRICE / SCAN_MIN_VOLUME / SCAN_MIN_CHANGE_PCT)
+  // by the contracts, so they cannot drift from the scan. Label = backend
+  // chart_maps/gajjala/constants.TAB_LABEL (contract-pinned). UNMEASURED: no
+  // study here says his setups win on this universe (WP6 is the study).
+  gajjala: {
+    label: "Gajjala's",
+    blurb: 'Goverdhan Gajjala\u2019s five 5-minute setups over HIS scanner on the whole US market, with \u2600\uFE0F Premarket, \u{1F319} Post-market and \u{1F4D3} his Playbook \u2014 UNMEASURED, his rules as he described them, not a forecast. Ajay 2026-10-13: "Name the Tab Gajjala\'s he has multiple strategies..around this. He is volume and price action based traded with short squeeze. He also has premarket and post market analysis." and "Implement his full stategy do not assume anything." THE LIST is his scanner, run on one whole-market snapshot every 5 minutes from 04:00 to 20:00 ET on trading days: common stock and ADRs priced $0.10\u2013$100 with 1M+ shares traded today and up 25%+ on the prior regular close. A name stays listed 2 sessions (Cheetah default, not his) after it last qualified. THE SUB-TABS are his five setups \u2014 \u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, \u2796 Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze \u2014 each read on CLOSED 5-minute bars (the Fade on 15-minute first) with his 9 and 21 EMAs, plus the premarket movers, the after-hours movers and the Playbook: his own words with the video and timestamp they came from, what he avoids, and the exits he takes by hand (never computed here). EACH CARD shows the setup\u2019s state \u2014 A+ when every rule is met and the entry bar traded through the trigger and closed \u2014 the trigger, the stop and the risk, every criterion ticked or crossed with its number, and the float, the float rotation, halts, the $1 / $5 / $10 levels just above, and the \u23F3 first-15-minutes line (he does not trade the open). Numbers he never gave are Ajay\u2019s (K1\u2013K10, 2026-10-13). A+ alerts are recorded on /alerts in shadow \u2014 nothing rings a phone until the study reads. UNMEASURED \u2014 nothing here trades or enters a lane. Not advice.',
   },
   resiliency: {
     label: '\u{1F6E1}\u{FE0F} Resiliency',
@@ -566,6 +590,11 @@ export type CmLineTone = 'buy' | 'stop' | 'target' | 'now' | 'neutral'
   // SEPA gate both read the 200-day SMA, so the drawn line is the same number
   // as the gate that put the name on the board.
   | 'ema9' | 'sma20' | 'sma200'
+  // 🚩 Gajjala's tab (2026-10-13): his 21 EMA (GG S8 25:36 "this is the 9 EMA,
+  // this is the 21 EMA"). It rides ONLY his 5-/15-minute tiles, served by
+  // chart_maps/gajjala — never the global ledger, which carries Ajay's three
+  // MAs and no 21 (lib/chartOverlays.ts).
+  | 'ema21'
   // 🔑 Key levels (2026-09-25), Ajay: "With check box give it a brigh color in
   // the chart. I wanna know when key levels are broken for a stock." Two tones,
   // one family: `key` = a frozen prior-period RTH high/low, `key_broken` = the
@@ -1635,10 +1664,24 @@ export function parseTab(raw: string | null | undefined): CmTab {
  *  Never mutates `params` — it is React Router's live object. */
 export function tabSearch(params: URLSearchParams, t: CmTab): string {
   const next = new URLSearchParams(params);
+  const from = params.get('tab');
   next.set('tab', t);
   next.delete('pattern');
+  // 🚩 Gajjala's reads `sub` / `tf` / `sort` with its OWN meanings (his eight
+  // sub-tabs, 5m | 15m, the ☀️ / 🌙 orders). Carried across the switch they
+  // mean something else on the other side: a Support `tf=15m` drew his 5-minute
+  // setups on 15-minute bars, his `tf=5m` opened Support on the 24-hour frame
+  // (TF_ALIAS), his `sort=change` reached Back in Demand. Crossing INTO or OUT
+  // OF gajjala drops all three; a click on the tab it is already on keeps them.
+  if (from !== t && (from === 'gajjala' || t === 'gajjala')) {
+    for (const k of GAJJALA_OWN_PARAMS) next.delete(k);
+  }
   return next.toString();
 }
+
+/** The params 🚩 Gajjala's reads with its own meanings — imported from
+ *  lib/gajjala (which takes only TYPES from this module, so no runtime cycle). */
+export const GAJJALA_OWN_PARAMS: ReadonlyArray<string> = [GG_SUB_PARAM, GG_TF_PARAM, GG_SORT_PARAM];
 
 /** True for the ONE click the strip handles itself: an unmodified primary
  *  button. Every other click — ⌘ (mac), Ctrl (windows/linux), ⇧ (new window),
@@ -2346,6 +2389,8 @@ const TONE_PRIORITY: Record<CmLineTone, number> = {
   // `layoutLabels` drops a 1 that cannot fit; the coloured LINE still draws,
   // which is the part he asked for — only its text yields.
   ema9: 1, sma20: 1, sma200: 1,
+  // 🚩 his 21 EMA (2026-10-13) yields like the other MAs.
+  ema21: 1,
   // His own numbers on his own chart are never dropped for a study label.
   cost: 3, ownstop: 3,
   // 🔑 Key levels (2026-09-25) sit at 1 with the MAs: a key label yields to
@@ -2727,6 +2772,8 @@ export function toneColor(tone: CmLineTone): string {
   if (tone === 'ema9') return 'var(--cm-vcp, #2563eb)';
   if (tone === 'sma20') return 'var(--cm-mint, #6ee7b7)';
   if (tone === 'sma200') return 'var(--gold, #c9a227)';
+  // 🚩 Gajjala's 21 EMA (2026-10-13): amber, so it never reads as the blue 9.
+  if (tone === 'ema21') return 'var(--cm-amberlt, #f59e0b)';
   // 🔑 Key levels (2026-09-25): the bright fuchsia he asked for ("give it a
   // brigh color"), the same token its checkbox swatch shows. Broken or not,
   // one colour — the dash is what says "through it".

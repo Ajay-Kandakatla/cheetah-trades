@@ -107,6 +107,18 @@ export const CATEGORIES: CategoryDef[] = [
       + 'WHAT NEVER FIRES: Phase 2 results, mixed results including every secondary-endpoint miss, pulled or revoked approvals, filings, PDUFA dates, adcom votes, conference data, scheduled readouts, deals and offerings — all of them still list on Chart Maps \u25B8 Catalysts \u25B8 \u{1F9EC} Medical. '
       + 'Negative events end "not a sell signal", positive ones "not a buy signal". '
       + 'NOT MEASURED: events are sorted by fixed word rules and nobody has measured what a stock does after one on your universe — setup: pending study. Not a recommendation.' },
+  /* 🚩 chart_maps/gajjala (2026-10-13, DECISIONS "Pushes: YES — owner-only kind
+     gajjala_setup, A+ triggers only"). ON for him: in backend
+     push/subs.OWNER_KEEP_SET and False in default_prefs for everyone else. It
+     ships in SHADOW (backend constants.GAJJALA_PUSH_MODE) — the entry says so,
+     and the contracts.mjs 🚩 block re-reads the mode and the keep-set. */
+  { key: 'gajjala_setup', label: 'Gajjala A+ setup (his five setups)', emoji: '🚩', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — you said "Pushes: YES" for his setups (2026-10-13); everyone else starts off. '
+      + 'SHADOW FIRST: nothing is sent yet. Every A+ is recorded on /alerts as "shadow — not sent" until the study of his setups reads and you flip the switch to live. '
+      + 'WHAT FIRES: an A+ — every rule of one of Goverdhan Gajjala\u2019s five setups (\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, \u2796 Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze) met and the 5-minute (or 15-minute Fade) entry bar traded above its trigger (the break — his \u201CI\u2019ll enter right at the break\u201D, S8) and that bar has closed — the bar may close back under the trigger, a close above it is not required — on a name his scanner listed. '
+      + '09:45–16:00 and 16:00–20:00 ET (13:00 and 17:00 on NYSE half days), never 09:30–09:45 (his first 15 minutes), never pre-market, silent on closed days, once per name, setup and session, every A+ its own push. '
+      + 'WHAT NEVER FIRES: a long flag, a near-kiss, a "B — imperfect" VCP, a break that missed a rule, or an A+ found late (its entry bar closed more than one 5-minute pass ago) — those stay on Chart Maps \u25B8 Gajjala\u2019s. '
+      + 'NOT MEASURED: his rules as he described them; no study here says they win. Not a recommendation.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -435,13 +447,14 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ setups (2026-10-13, shadow first). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
       price_alert: true, key_level_alert: true,
       med_catalyst: true,
       ops_alert: true,
+      gajjala_setup: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

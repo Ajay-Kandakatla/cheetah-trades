@@ -102,6 +102,14 @@ def test_med_catalyst_is_a_market_kind_2026_09_29(no_override):
     assert gate.should_drop_kind("med_catalyst", TUESDAY) is None
 
 
+def test_gajjala_setup_is_a_market_kind(no_override):
+    """🚩 2026-10-13: read off live 5-minute bars — silent on weekends and holidays (DECISIONS "silent on closed days")."""
+    assert "gajjala_setup" in gate.MARKET_ALERT_KINDS and "gajjala_setup" not in gate.PERSONAL_KINDS
+    assert gate.should_drop_kind("gajjala_setup", LABOR_DAY) == "holiday 2026-09-07"
+    assert gate.should_drop_kind("gajjala_setup", SATURDAY) == "weekend"
+    assert gate.should_drop_kind("gajjala_setup", TUESDAY) is None
+
+
 def test_the_three_phone_kinds_are_market_kinds():
     assert {"pivot_alert", "position_alert", "todo_reminder"} & (
         gate.MARKET_ALERT_KINDS | gate.PERSONAL_KINDS) == {"pivot_alert", "position_alert", "todo_reminder"}

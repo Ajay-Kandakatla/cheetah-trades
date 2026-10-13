@@ -103,6 +103,8 @@ class NoSendPathTest(unittest.TestCase):
                           "price_alert", "key_level_alert",
                           # WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
                           "med_catalyst",
+                          # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; SHADOW first) — this path never touches it either.
+                          "gajjala_setup",
                           # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
                           "ops_alert",
                           })

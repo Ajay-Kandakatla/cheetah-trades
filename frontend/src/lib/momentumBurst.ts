@@ -134,4 +134,5 @@ export const BURST_EXEMPT: Record<string, string> = {
   catalysts: ROW_BOARD,
   overnight: ROW_BOARD,
   gnt: ROW_BOARD,
+  gajjala: 'his setup state orders this board (A+ \u2192 forming \u2192 partial); the \u26A1 burst is a daily-volume read',
 };

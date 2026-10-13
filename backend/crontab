@@ -1232,3 +1232,20 @@
 # not ship this line).
 40     7     *    *    1-5  /usr/local/bin/python -m short_interest.client warm-si
 40     18    *    *    1-5  /usr/local/bin/python -m short_interest.client warm-si
+
+# ── 🚩 Gajjala's tab (chart_maps/gajjala/run.py, 2026-10-13) ────────────────────
+# His scanner on ONE whole-market Massive snapshot every 5 minutes, 04:01–20:01 ET
+# on trading days (the module refuses outside 04:00–20:05, so the 20:06–20:56
+# ticks of the hour field exit at once): today's qualifiers + the 2-session carry,
+# closed 5/15-minute bars from the 1-minute cache, five detectors, the owner-only
+# gajjala_setup push gate for A+ (09:45–16:00, 16:00–20:00 ET) — in SHADOW until
+# Ajay flips constants.GAJJALA_PUSH_MODE: recorded on /alerts, nothing sent.
+# Minute 1 so the bucket that closed at :00 / :05 has settled.
+# supply_demand.alert_status.CADENCE_SEC["gajjala_setup"] is pinned to this line.
+#
+# THIS FILE IS NOT THE LIVE CRONTAB — installing it is an ops step (the host file
+# is bind-mounted into the cron container; a deploy does not ship these lines,
+# and the image must carry chart_maps.gajjala BEFORE the crontab names it).
+1-56/5 4-20  *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run
+# 20:15 ET — float (shares_cache, 7-day) + 30-session halt-history backfill + 🎾 squeeze-history warm.
+15     20    *    *    1-5  /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly

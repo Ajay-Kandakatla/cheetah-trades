@@ -1,0 +1,161 @@
+"""Every number the Gajjala tab uses — other modules IMPORT these, never retype one.
+
+Provenance tag on every line:
+  GG <src> <ts>   = his own words (FIRST_HAND_ibd_webinar.md; S8 = IBD webinar CI7mNvEQyms, S9 = TraderLion podcast
+                    10pHBNVi4Jc; X = his post on X, by id)
+  Ajay K# / H#    = Ajay's answer 2026-10-13 (DECISIONS.md, binding — the ROUND A/B/C answers override the first round)
+  Cheetah default = Ajay's number, NOT Gajjala's — the ℹ️ panel labels it so (DECISIONS round A)
+  TRANSPORT       = pacing only — no list, read or push depends on it
+H1–H5 were placeholders (None) until Ajay answered on 2026-10-13; every one is filled. The only None values left are
+the OFF switches in OFF_BY_DEFAULT (an unanswered display option whose default is "off", never a missing number).
+"""
+from orderflow.signals import EMA_FAST, EMA_SLOW          # 9 / 21 — GG S8 25:36, S9 24:42 (one definition)
+
+# scanner — GG S8 19:12–19:51, S9 22:10 (verbatim), Ajay's round-A floor
+SCAN_MIN_PRICE = 0.10                    # GG X 1753094531757838340 (2024-02-01) "brought the scanner to show me 0.1$ and above" — his latest; 0.50 in S8 19:12 (Ajay round A)
+SCAN_MAX_PRICE = 100.0                   # GG S8 19:12 "anything from 50 cents to $100"
+SCAN_MIN_VOLUME = 1_000_000              # GG S8 19:12 + S8 1:32:02 "minimum 1 million"
+SCAN_MIN_CHANGE_PCT = 25.0               # GG S8 19:51 "at least minimum 25% change" vs the previous day
+SCAN_INCLUDE_OTC = False                 # Ajay round A "OTC off" (also the Massive default)
+SCAN_INSTRUMENT_TYPES = frozenset({"CS", "ADRC"})   # Ajay round A: common stock + ADRs; ETFs, warrants, units, rights OUT
+SCAN_UNKNOWN_TYPE_POLICY = "list"        # Ajay round A: a symbol with no reference type yet (new listing) is listed
+SCAN_UNKNOWN_TYPE_POLICIES = ("list", "drop")
+SCAN_UNKNOWN_TYPE = "unknown"            # the `type` a row carries when the reference map has no entry
+SCAN_UNKNOWN_TYPE_LABEL = "type unknown"  # Ajay round A wording
+STAY_LISTED_SESSIONS = 2                 # Cheetah default (Ajay, not GG — he says "a couple of days", S9 1:17:32)
+NO_TRADE_AFTER_OPEN_MIN = 15             # GG S8 14:41 "I don't take trades for the first 15 minutes"
+
+# instrument-type reference map (Massive /v3/reference/tickers, all types, paginated, once per trading day)
+TYPES_PAGE_LIMIT = 1000                  # TRANSPORT — Massive's largest page
+TYPES_MAX_PAGES = 15                     # TRANSPORT — "≤ 15 calls/day" (STRATEGY_SPEC D-TYPES); a cut map is flagged incomplete
+
+# K1 demand bar
+K1_BODY_GAIN_PCT = 3.0                   # Ajay K1: close >= open * 1.03
+K1_RANGE_MULT = 1.5                      # Ajay K1: range >= 1.5x the prior bars' average range
+K1_RANGE_LOOKBACK = 20                   # Ajay K1: prior 20 bars
+# K2 volume shape on the leg
+K2_MAX_VOL_STEP = 5.0                    # Ajay K2: no bar > 5x the previous demand bar
+K2_CHECK_FIRST_BAR = False               # Ajay round C (R1-5): the step check stays WITHIN the leg
+# K3 pullback
+K3_DEPTH_FRAC = 0.50                     # Ajay K3: lows >= last demand high - 0.50 x its range
+K3_VOL_FRAC = 0.50                       # Ajay K3: pullback volume <= 0.50 x the demand bars' mean
+K3_DEPTH_SETUPS = ("bull_flag", "kiss_fly")   # Ajay round C: the depth floor binds the Bull Flag and Kiss & Fly ONLY
+# K4 pullback / base lengths
+K4_BF_PULL_MIN = 1                       # Ajay K4: Bull Flag 1-3 bars
+K4_BF_PULL_MAX = 3                       # Ajay K4 / K4a: 1-3 bars = A+ (pushable)
+K4_BF_LONG_FLAG_MAX = 5                  # Ajay K4a: 4-5 bars = listed "long flag", never A+, never pushed; > 5 invalid
+K4_KF_PULL_MAX = 9                       # Ajay K5a: Kiss & Fly pullback <= 9 bars (round A raised K4's 8)
+K4_HF_BASE_MIN = 6                       # Ajay K4: Horizontal Fade base 6-24 bars
+K4_HF_BASE_MAX = 24                      # Ajay K4
+K4_VCP_MIN_CYCLES = 2                    # Ajay K4 / K7: >= 2 contractions
+# K5 kiss & fly
+K5_KISS_TOL_PCT = 0.5                    # Ajay K5: kiss = low <= EMA9 x 1.005 (or crosses it) and close > EMA9
+K5_SLOPE_BARS = 3                        # Ajay K5: both EMAs above their value 3 bars earlier
+KF_HONOR_ALL_PULLBACK_CLOSES = True      # Ajay K5a: EVERY pullback bar must CLOSE >= EMA9 ("honors the 9 EMA")
+KF_ALLOW_NO_TOUCH = True                 # Ajay K5a: no kiss but K3 + uptrend pass -> LISTED "near-kiss", never A+, never pushed
+KF_NO_TOUCH_VARIANT = "near_kiss"        # Ajay K5a wording ("near-kiss") — the Read `variant`
+# K6 horizontal fade
+K6_MERGE_PCT = 0.5                       # Ajay K6: |EMA9 - EMA21| <= 0.5% of close
+K6_TIGHT_PCT = 8.0                       # Ajay K6: base high - base low <= 8% of close
+K6_SELL_DECAY = 0.70                     # Ajay K6: second-half volume < 0.70 x first-half
+HF_TRIGGER = "base_high"                 # Ajay round C: trigger = the BASE's high (GG "takes the new highs"); stop = prior bar's low
+HF_TRIGGERS = ("prior_bar", "base_high")
+# K7 intraday VCP
+K7_CONTRACTION = 0.75                    # Ajay K7: each cycle's range <= 0.75 x the previous
+K7_EMA21_TOL_PCT = 0.5                   # Ajay K7: each cycle low >= EMA21 x 0.995
+VCP_B_READS = True                       # Ajay round C: exactly one of {K7 contraction, K7 21-EMA hold} false -> "B — imperfect", listed, never pushed
+VCP_B_GRADE = "B"                        # Ajay round C wording ("B — imperfect")
+# K8 reversal squeeze
+K8_MAX_FLOAT = 10_000_000                # Ajay K8: float <= 10,000,000
+K8_DROP_PCT = 8.0                        # Ajay K8: tennis ball = a drop >= 8% from a bar's high
+K8_RECOVER_PCT = 2.0                     # Ajay K8: recovered to within 2% of the pre-drop level
+K8_RECOVER_BARS = 3                      # Ajay K8: within 3 bars
+K8_HISTORY_SESSIONS = 30                 # Ajay K8: squeeze-history chip over the last 30 sessions
+K8_HISTORY_RANGE_PCT = 50.0              # Ajay K8: (high - low)/low >= 50% OR a halt that day
+FLOAT_SUSPECT_POLICY = "ineligible"      # spec default (R1-9b not answered): a float on file > shares out -> unknown -> ineligible
+FLOAT_SUSPECT_POLICIES = ("ineligible", "shares_out")
+# K9 premarket / K10 post-market
+K9_PM_MIN_VOLUME = 1_000_000             # Ajay K9: accumulated premarket volume >= 1,000,000
+K9_AH_CARRY_PCT = 10.0                   # Ajay K9: prior-day after-hours move >= 10% vs the regular close
+K10_CLOSE_TOP_FRAC = 0.30                # Ajay K10: regular close in the top 30% of the day's range
+K10_AH_MIN_VOLUME = 250_000              # Ajay K10: after-hours volume >= 250,000
+K10_AH_MIN_GAIN_PCT = 5.0                # Ajay K10: after-hours gain >= 5% vs the regular close
+
+# leg minimums he stated
+BF_LEG_MIN_BARS = 2                      # GG S9 1:59:24 "at least two big green bars"
+KF_LEG_MIN_BARS = 1                      # GG S8 31:33 "only two green bars or one green bar"
+
+# ── formerly NEW HIS-CALL placeholders H1–H5 — answered by Ajay 2026-10-13 (DECISIONS round C) ─────────────────────
+HF_LEG_MIN_BARS = 2                      # Ajay H3 — Fade "left side strong" (GG S8 32:49)
+VCP_LEG_MIN_BARS = 1                     # Ajay H3 — VCP "left side good demand" (GG S8 33:50)
+VCP_PIVOT_WINDOW = 2                     # Ajay H5 — closed bars each side confirming a cycle pivot
+K8_FAIL_NEAR_PCT = 2.0                   # Ajay H1 — attempt high within 2% of today's high so far (premarket included)
+K8_FAIL_DROP_PCT = 8.0                   # Ajay H1 — a later low 8% under the attempt bar's high = failed
+K8_FAIL_EVENT_RULE = "distinct"          # Ajay H2 — the failed attempt's sell-off ends before the tennis ball's reference bar
+RS_BASE_MIN_BARS = 1                     # Ajay H4 — squeeze quiet-base minimum bars (no maximum)
+PLACEHOLDERS = {"H1": ("K8_FAIL_NEAR_PCT", "K8_FAIL_DROP_PCT"), "H2": ("K8_FAIL_EVENT_RULE",),
+                "H3": ("HF_LEG_MIN_BARS", "VCP_LEG_MIN_BARS"), "H4": ("RS_BASE_MIN_BARS",),
+                "H5": ("VCP_PIVOT_WINDOW",)}
+PLACEHOLDER_BY_SETUP = {"horizontal_fade": ("H3",), "intraday_vcp": ("H3", "H5"),
+                        "reversal_squeeze": ("H1", "H2", "H4")}
+K8_FAIL_EVENT_RULES = ("distinct", "same_ok")
+
+# situational awareness — GG S8 43:39–44:37 (DECISIONS hard-coded)
+SA_BIG_RUNNER_PCT = 100.0                # GG S8 43:39 "a couple of 100%+ runners" on a good day
+SA_RUNNER_PCT = 80.0                     # GG S8 43:39 "a bunch of 90+ / 80+ runners"
+SA_QUIET_BEST_PCT = 40.0                 # GG S8 44:37 bad day: "maximum runners would be 30%–40%" -> quiet below 40
+# psychological levels — GG S9 1:09:11, 1:21:19, 1:39:13 (his sell / climax levels)
+PSY_LEVELS = (1.0, 5.0, 10.0)            # GG S9 1:09:11, 1:21:19, 1:39:13
+PSY_NEAR_PCT = 5.0                       # Cheetah default (Ajay, not GG): chip when a level is within 5% above price
+
+# red closes — display chip only (Ajay round C, R2-5)
+RED_CLOSES_WAIT = 3                      # GG X 1733882105204011109 "more than 3 red closes is red flag to me"
+RED_CLOSES_MODE = "chip"                 # Ajay round C: chip only — never a criterion
+RED_CLOSES_MODES = ("chip", "criterion", "off")
+RED_CLOSE_DEF = "close_below_open"       # Ajay round C: red = close < open
+
+# OFF switches — an unanswered display option whose default is OFF (spec R2-3 / R2-4). None = off; NOT placeholders.
+HALT_CALM_BARS = None                    # spec default (R2-3 not answered): halts are a chip only, no push suppression
+AH_EXHAUSTION_MAX_PCT = None             # spec default (R2-4 not answered): show the regular-session gain only
+OFF_BY_DEFAULT = ("HALT_CALM_BARS", "AH_EXHAUSTION_MAX_PCT")
+
+# labels the ℹ️ panel must say are Ajay's, not Gajjala's (DECISIONS round A)
+CHEETAH_DEFAULTS = ("STAY_LISTED_SESSIONS", "PSY_NEAR_PCT")
+
+# push — DECISIONS round A: SHADOW first; every A+ is its own record, once per (symbol, setup, ET day)
+PUSH_KIND = "gajjala_setup"
+GAJJALA_PUSH_MODE = "shadow"             # Ajay round A: record + show on /alerts as "shadow — not sent" until the WP6 study reads and HE flips it
+PUSH_MODES = ("shadow", "live")
+
+# WP6 study — Ajay round C (exits reported side by side; placebo = same-session scanner names with no setup)
+STUDY_SESSIONS = 250                     # Ajay round C: the last 250 sessions
+STUDY_TIME_EXIT_MIN = 60                 # Ajay round C: stop-or-60-min exit
+STUDY_BE_AFTER_R = 1.0                   # Ajay round C: breakeven after +1R, then the first 5-min close under the 9 EMA
+STUDY_EXIT_RULES = ("session", "time60", "trail9")   # stop-or-16:00 · stop-or-60-min · breakeven-then-9-EMA
+
+# TRANSPORT (spec H6 — veto only)
+PASS_CADENCE_SEC = 300                   # TRANSPORT — DECISIONS "every 5 min"
+PASS_OPEN_ET = "04:00"                   # TRANSPORT — DECISIONS 04:00–20:00 ET
+PASS_CLOSE_ET = "20:05"                  # TRANSPORT — admits the 20:01 pass that closes the 19:55-20:00 bar
+PASS_BUDGET_SEC = 240                    # TRANSPORT
+LEASE_SEC = 280                          # TRANSPORT
+LEASE_MIN_GAP_SEC = PASS_BUDGET_SEC      # derived: no second pass inside the first one's budget
+BAR_SETTLE_SEC = 30                      # TRANSPORT — a bucket counts as closed 30 s after its right label
+STALE_AFTER_SEC = max(300, 3 * PASS_CADENCE_SEC)   # TRANSPORT — = frontend pages/Alerts.tsx staleAfterSec (FE test pins equality)
+FLOAT_MAX_NEW_PER_PASS = 8               # TRANSPORT — Yahoo fetches per pass; Massive shares-out fills the gap at once
+DAILY_MAX_NEW_PER_PASS = 8               # TRANSPORT — 🎾 history chip in-pass; the rest at nightly
+AH_CONFIRM_MAX_PER_PASS = 150            # TRANSPORT — rotation queue; the unchecked count is served
+TILE_LIMIT_DEFAULT = 24                  # TRANSPORT — = chart_maps.board.LIMIT_DEFAULT (test pins equality)
+TILE_LIMIT_MAX = 80                      # TRANSPORT — = chart_maps.board.LIMIT_MAX (test pins equality)
+# Mongo retention (spec §3.1.6)
+LEDGER_TTL_DAYS = 30                     # TRANSPORT — gajjala_scan / _ah_carry / _post / _passes / _daily
+READS_TTL_DAYS = 14                      # TRANSPORT — gajjala_reads (tile bars are the bulk)
+
+# sub-tabs (DECISIONS order) — key, emoji, label
+SETUPS = ("bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze")
+SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
+        ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
+        ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),
+        ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"))
+DEFAULT_SUB = "bull_flag"
+TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18

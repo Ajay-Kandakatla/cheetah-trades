@@ -1,0 +1,3460 @@
+{
+ "schema": "gajjala.verified_rules/2",
+ "as_of": "2026-10-13",
+ "built_from": "STRATEGY_SPEC.md §1.1 sources, §1.3 load-bearing rules (status codes verbatim in status_raw), timestamps and quotes matched to FIRST_HAND_ibd_webinar.md; hand-maintained since the WP7 refix of 2026-10-13 (the one-off builder is retired; tests/test_gajjala_verified_rules.py is the guard)",
+ "status_labels": {
+  "confirmed_first_hand": "his words",
+  "confirmed_multi_source": "2+ sources",
+  "single_source": "1 source",
+  "contradicted": "sources disagree",
+  "unsupported": "no source"
+ },
+ "status_rule": "a mixed verifier code (e.g. 'FH† / SS†') is served at its weaker part, except that a 'CX' part filed as its own contradicted rule does not weaken the rest (HF4 'FH / CX' keeps FH; its 30-minute claim is rule T6); † = his_call",
+ "via_labels": {
+  "spec": "cited by STRATEGY_SPEC §1.3",
+  "first_hand_notes": "matched to a FIRST_HAND line",
+  "wp7": "attributed by WP7 from the captured source, re-read for this file (listed in docs/gajjala/sources_2026_10_13.md)"
+ },
+ "upstream_totals": {
+  "rules": 300,
+  "topics": 33,
+  "confirmed_first_hand": 113,
+  "confirmed_multi_source": 72,
+  "single_source": 88,
+  "contradicted": 20,
+  "unsupported": 7,
+  "his_call": 202,
+  "note": "the verifier's full set (STRATEGY_SPEC §1.2); not reproduced here"
+ },
+ "totals": {
+  "rules": 107,
+  "confirmed_first_hand": 55,
+  "confirmed_multi_source": 23,
+  "single_source": 19,
+  "contradicted": 8,
+  "unsupported": 2,
+  "his_call": 68
+ },
+ "stats_inputs": {
+  "full_year": {
+   "win": 0.31,
+   "loss": 0.68,
+   "avg_win_pct": 8.55,
+   "avg_loss_pct": 4.06
+  },
+  "h2": {
+   "win": 0.28,
+   "loss": 0.72,
+   "avg_win_pct": 13.0,
+   "avg_loss_pct": 4.0
+  }
+ },
+ "expectancy_full_year_pct": -0.11,
+ "expectancy_h2_pct": 0.76,
+ "decay": {
+  "quote": "I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.",
+  "date": "2024-10-11",
+  "url": "https://x.com/i/status/1844811275412627921"
+ },
+ "sources": [
+  {
+   "key": "S1",
+   "title": "Goverdhan Gajjala: a deep dive (Retail Traders Repository / F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-a-deep-dive-into",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not on page; comment thread to 2024-09-11",
+   "note": "the link Ajay gave — F4VS's write-up of his masterclass, not GG speaking"
+  },
+  {
+   "key": "S2",
+   "title": "Goverdhan Gajjala: question and answer (F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-question-and-answer",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured",
+   "note": "relays GG answers in the third person"
+  },
+  {
+   "key": "S3",
+   "title": "Bull flag breakout pullback setup (F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/bull-flag-breakout-pullback-setup",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured"
+  },
+  {
+   "key": "S4",
+   "title": "EMA kiss and fly setup (F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-ema-kiss-and-fly-setup",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured"
+  },
+  {
+   "key": "S5",
+   "title": "Horizontal fade (F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-horizontal-fade",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured"
+  },
+  {
+   "key": "S6",
+   "title": "Intraday VCP (F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-intraday-vcp",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured"
+  },
+  {
+   "key": "S7",
+   "title": "Reversal squeeze (F4VS)",
+   "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-reversal-squeeze",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured"
+  },
+  {
+   "key": "S8",
+   "title": "Goverdhan Gajjala – Trading Webinar (Northern Virginia IBD Meetup)",
+   "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "date": "2024-03-12 meetup (content late Feb 2024)",
+   "video_id": "CI7mNvEQyms",
+   "duration": "1:50:36",
+   "also": [
+    "https://www.youtube.com/watch?v=cl0zCrzZMyU"
+   ],
+   "note": "auto-captions; transcript pasted by Ajay 2026-10-13; cl0zCrzZMyU is a re-upload of the same talk"
+  },
+  {
+   "key": "S9",
+   "title": "+805% Trading Champion of 2023 Reveals His Powerful Day Trading Setups (TraderLion, R. Moglen)",
+   "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "date": "Jan 2024",
+   "video_id": "10pHBNVi4Jc",
+   "duration": "2:18:55",
+   "also": [
+    "https://www.youtube.com/watch?v=NeQCitPJ2jY"
+   ],
+   "note": "auto-captions; transcript pasted by Ajay 2026-10-13; NeQCitPJ2jY is a clip of it"
+  },
+  {
+   "key": "S10",
+   "title": "Momentum Access Day Trading Masterclass (17 videos)",
+   "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+   "kind": "first-hand video",
+   "first_hand": true,
+   "date": "2024, before 2024-05-15",
+   "note": "caption tracks read: Setup 1/2/4, Stop Losses, Managing Open Trades, Tools; Setup 5 + routines partly"
+  },
+  {
+   "key": "S11",
+   "title": "GG's posts on X (@gov_gajjala; the API now returns screen_name gov123459v, same account)",
+   "url": "https://x.com/gov_gajjala",
+   "kind": "first-hand text",
+   "first_hand": true,
+   "date": "2023-12-08 … 2024-10-18 (decoded from the post ids)",
+   "note": "each rule cites the post id"
+  },
+  {
+   "key": "S12",
+   "title": "Business Insider (four articles; BI Japan is a translation, not independent)",
+   "url": "https://www.businessinsider.com/top-chart-indicators-trader-volatile-stocks-high-returns-in-2023-2024-1",
+   "urls": [
+    "https://www.businessinsider.com/top-chart-indicators-trader-volatile-stocks-high-returns-in-2023-2024-1",
+    "https://www.businessinsider.com/how-to-trade-stocks-volatile-small-cap-penny-day-trader-2024-2",
+    "https://www.businessinsider.com/pattern-day-trader-how-to-trade-chart-signals-stocks-reversals-2024-7",
+    "https://www.businessinsider.com/stock-trader-shares-easy-chart-pattern-he-trades-2024-8"
+   ],
+   "kind": "third-party reporter",
+   "first_hand": false,
+   "date": "2024-01 / 2024-02 / 2024-07 / 2024-08",
+   "note": "each rule cites the article it comes from"
+  },
+  {
+   "key": "S13",
+   "title": "United States Investing Championship 2023 final results (BusinessWire)",
+   "url": "https://www.businesswire.com/news/home/20240126217806/en/United-States-Investing-Championship-2023-Final-Results",
+   "kind": "primary (contest)",
+   "first_hand": false,
+   "date": "2024-01-26"
+  },
+  {
+   "key": "S14",
+   "title": "TraderLion — 2023 US Investing Champion",
+   "url": "https://traderlion.com/investing-champions/2023-us-investing-champion/",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "archive 2025-02-11"
+  },
+  {
+   "key": "S15",
+   "title": "Momentum Access (his business site, archived)",
+   "url": "https://web.archive.org/web/20240428151551/https://www.momentumaccess.com/",
+   "kind": "his business site",
+   "first_hand": false,
+   "date": "archive 2024-04-28"
+  },
+  {
+   "key": "S16",
+   "title": "F4VS posts on X",
+   "url": "https://x.com/NF4VS/status/1803187312114741455",
+   "urls": [
+    "https://x.com/NF4VS/status/1803187312114741455",
+    "https://x.com/NF4VS/status/1826273097843986879"
+   ],
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "2024-06-18, 2024-08-21"
+  },
+  {
+   "key": "S17",
+   "title": "Dollar Wisdom (YouTube)",
+   "url": "https://www.youtube.com/watch?v=uG8CzABsIPM",
+   "kind": "third-party",
+   "first_hand": false,
+   "date": "not captured",
+   "note": "contradicted by his own words — never implemented"
+  },
+  {
+   "key": "S18",
+   "title": "Chart images attached to his posts",
+   "url": "https://pbs.twimg.com/media/GEBNJmvWsAAmP47.jpg?name=orig",
+   "urls": [
+    "https://pbs.twimg.com/media/GEBNJmvWsAAmP47.jpg?name=orig",
+    "https://pbs.twimg.com/media/GF_DfDrbIAAMwcM.jpg?name=orig"
+   ],
+   "kind": "screenshots",
+   "first_hand": true,
+   "date": "with their posts",
+   "note": "GEBNJmvWsAAmP47 = his ToS scan; GF_DfDrbIAAMwcM = Zendoo panels (their titles are Zendoo's, NOT his thresholds); also GFUdFecbQAAG_8C (TraderSync hours), GJpcNx4acAAsqej (CGC), GC9dndrXsAAxRK3 (ABVC), GFs5NpBasAA1VuC (NVIV)"
+  }
+ ],
+ "topics": [
+  {
+   "key": "universe",
+   "topic": "Universe / scanner",
+   "verified": [
+    {
+     "id": "U1",
+     "rule": "His ToS \"Small Caps Volatile Scan\": scan in All Stocks; Last ≤ $100; Volume ≥ 1,000,000; % change vs the prior close ≥ +25%; show 50. No float, cap, short-interest, RVOL or relative-strength filter.",
+     "numbers": "price ≤ $100 · volume ≥ 1,000,000 · change ≥ +25% vs prior close",
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1747481497030808002",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1747481497030808002"
+      },
+      {
+       "key": "S18",
+       "url": "https://pbs.twimg.com/media/GEBNJmvWsAAmP47.jpg?name=orig",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "19:12–19:51"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "22:10"
+      },
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/how-to-trade-stocks-volatile-small-cap-penny-day-trader-2024-2",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [
+      "the price of the stock anything from 50 cents to $100 … volume should be minimum 1 million volume and then percentage change from the previous day at least minimum 25% change"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "19:12–19:51"
+      }
+     ],
+     "used_by": [
+      "SCAN_MAX_PRICE",
+      "SCAN_MIN_VOLUME",
+      "SCAN_MIN_CHANGE_PCT"
+     ]
+    },
+    {
+     "id": "U2",
+     "rule": "Price FLOOR: $0.50 in every source dated on or before 2024-01-17; on 2024-02-01 he lowered it to $0.10.",
+     "numbers": "$0.10 (his latest, 2024-02-01)",
+     "status": "contradicted",
+     "status_raw": "CX†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1753094531757838340",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1753094531757838340"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "19:12–19:51"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "22:10"
+      }
+     ],
+     "quotes": [
+      "There’s no fixed lower amount, Nazmi. I saw PHUN (0.2$ stock) ran good the other day and I couldn’t see it as my scanner was screening 0.5$ and above. So, I brought the scanner to show me 0.1$ and above"
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1753094531757838340"
+      }
+     ],
+     "contradiction": "the two videos say 50 cents; his later post says $0.10 — DECISIONS 2026-10-13 uses his latest, $0.10",
+     "used_by": [
+      "SCAN_MIN_PRICE"
+     ]
+    },
+    {
+     "id": "U3",
+     "rule": "Premarket: exactly two scanners — the Zendoo live YouTube scanner and his custom ToS premarket scan (≥ 1M volume, ≥ +25% since the last close; no price band stated for it).",
+     "numbers": "premarket volume ≥ 1,000,000 · ≥ +25% since last close",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1756337327780364324",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1756337327780364324"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "K9_PM_MIN_VOLUME",
+      "SCAN_MIN_CHANGE_PCT"
+     ]
+    },
+    {
+     "id": "U4",
+     "rule": "ToS built-ins always open: Pre-Market Movers sorted by volume; % Gainers (after the open) sorted by % change; no thresholds.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:21:56"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1750684442627019262",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1750684442627019262"
+      }
+     ],
+     "quotes": [
+      "ThinkorSwim has this pre-market movers scanner … I sort by volume"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "1:21:56"
+      }
+     ],
+     "contradiction": "Business Insider's \">25% premarket\" on the default scanner is a conflation of his two scanners"
+    },
+    {
+     "id": "U5",
+     "rule": "Volume: 1M is a floor, \"the more the better\"; it must SUSTAIN and INCREASE (one 1M bar then a fade = not interested); no RVOL multiple anywhere.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:23:30"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:32:02"
+      }
+     ],
+     "quotes": [
+      "the minimum is 1 million volume in my scanner … the more the better",
+      "the volume is sustaining and it's increasing … this gradual increase in volume catches my attention"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "1:32:02"
+      },
+      {
+       "key": "S8",
+       "ts": "1:23:30"
+      }
+     ],
+     "used_by": [
+      "SCAN_MIN_VOLUME"
+     ]
+    },
+    {
+     "id": "U6",
+     "rule": "Float: \"the lower the float the better\"; GG gives NO cutoff; he reads it from the ToS \"Shares\" column (generally shares outstanding). The \"<10M float\" / \">20% SI\" labels are Zendoo panel titles, not his.",
+     "numbers": null,
+     "status": "unsupported",
+     "status_raw": "UN† (number)",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "21:04"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:44:09"
+      },
+      {
+       "key": "S18",
+       "url": "https://pbs.twimg.com/media/GF_DfDrbIAAMwcM.jpg?name=orig",
+       "first_hand": true,
+       "via": "spec"
+      }
+     ],
+     "quotes": [
+      "the reversal squeeze happens only in the low float stocks, the lower the float the better"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "21:04"
+      }
+     ],
+     "note": "status is about the NUMBER: no source gives a float cutoff"
+    },
+    {
+     "id": "U7",
+     "rule": "Float rotation: examples only (PO ~1–2M float, ~4M shares in the first 5-min bar; BS 624K float, 60M volume — watched, not traded).",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:02:01"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:26:55"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "U8",
+     "rule": "Catalyst: a \"must\", but never researched; 100% technical → no news/catalyst gate (F4VS's \"require a catalyst\" is wrong as a filter).",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1756337327780364324",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1756337327780364324"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1747679296334737567",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1747679296334737567"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "12:00"
+      }
+     ],
+     "quotes": [
+      "I'm a 100% technical trader … I don't look at the news much … I just trade the price and volume action"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "12:00"
+      }
+     ]
+    },
+    {
+     "id": "U9",
+     "rule": "Long only, stocks only, intraday; no shorts, options or futures; no overnight holds in low floats; no leverage on small caps.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "10:19"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:24:56"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1733178876023521301",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1733178876023521301"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1748019538564673626",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1748019538564673626"
+      }
+     ],
+     "quotes": [
+      "I only do long side trading, I don't short."
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "10:19"
+      }
+     ]
+    },
+    {
+     "id": "U10",
+     "rule": "Short interest: no threshold and no short-interest filter in ANY source.",
+     "numbers": null,
+     "status": "unsupported",
+     "status_raw": "UN†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S18",
+       "url": "https://pbs.twimg.com/media/GEBNJmvWsAAmP47.jpg?name=orig",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S18",
+       "url": "https://pbs.twimg.com/media/GF_DfDrbIAAMwcM.jpg?name=orig",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S14",
+       "url": "https://traderlion.com/investing-champions/2023-us-investing-champion/",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "U11",
+     "rule": "Past runners and 2nd-day plays are watched; daily wicks / prior violent moves are \"simply added confluence … not a requirement\"; no relative strength.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1733232050076070099",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1733232050076070099"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1762030512359841834",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1762030512359841834"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1757260276976775382",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1757260276976775382"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "U12",
+     "rule": "Mid-day new names are ignored if notable names formed earlier.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S2",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-question-and-answer",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "tension with S9 25:39 \"YouTube scanner will show me what's new\""
+    },
+    {
+     "id": "U13",
+     "rule": "Scan output ~20/10/5 names (F4VS) vs 5–8 a day (Business Insider) — not a gate.",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S2",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-question-and-answer",
+       "first_hand": false,
+       "via": "wp7"
+      },
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/how-to-trade-stocks-volatile-small-cap-penny-day-trader-2024-2",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/pattern-day-trader-how-to-trade-chart-signals-stocks-reversals-2024-7",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "F4VS's Q&A (S2) says ~20 on the scan, 10 watchable, 5 very good; Business Insider says five to eight a day; GG gives no count"
+    },
+    {
+     "id": "U14",
+     "rule": "Watchlist 12–15 names, 4–5 active (1–2 in poor markets), up to 18 charts.",
+     "numbers": "12–15 listed · 4–5 active · 18 charts",
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "25:49"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:26:03"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    }
+   ]
+  },
+  {
+   "key": "routine",
+   "topic": "Routine",
+   "verified": [
+    {
+     "id": "R1",
+     "rule": "His day starts 06:30 CT = 07:30 ET; he scans until the open, then builds watchlists.",
+     "numbers": "06:30 CT / 07:30 ET",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1756337327780364324",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1756337327780364324"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "R1b",
+     "rule": "\"Prepare 30 minutes before the open\" (F4VS) — not his schedule; not encoded.",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S1",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-a-deep-dive-into",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "his own post: the day begins at 06:30 CT and he scans until the open"
+    },
+    {
+     "id": "R2",
+     "rule": "Prior-day after-hours movers stay on the morning watchlist; focus lists 1/2/3; \"whatever is very active and close to my setups I'll have in top priority monitor\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "13:54"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "23:37"
+      }
+     ],
+     "quotes": [
+      "there will be some stocks which make after hours moves from the past day, I'll keep them as well"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "13:54"
+      }
+     ]
+    },
+    {
+     "id": "R3",
+     "rule": "Watchlist admission = \"increasing gradual volume, and slow pullbacks\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1756337327780364324",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1756337327780364324"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "R4",
+     "rule": "\"I usually don't take trades for the first 15 minutes after the market opens\" (his 2023 data says the whole first HOUR is his worst).",
+     "numbers": "15 minutes",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "14:41"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1743027058916180319",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1743027058916180319"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1753343067846058314",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1753343067846058314"
+      }
+     ],
+     "quotes": [
+      "I usually wait for the first 15 mins after the market open."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1743027058916180319"
+      }
+     ],
+     "used_by": [
+      "NO_TRADE_AFTER_OPEN_MIN"
+     ]
+    },
+    {
+     "id": "R5",
+     "rule": "Very little premarket trading; outside regular hours: limit orders only, less size.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:16:35"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:17:07"
+      }
+     ],
+     "quotes": [
+      "limit orders only … slippage … I trade with less size after and pre-market"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "1:16:35"
+      }
+     ]
+    },
+    {
+     "id": "R6",
+     "rule": "A huge premarket sell-off: not watched actively; he re-engages only if demand returns after the open and a setup forms.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1753836073623429131",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1753836073623429131"
+      }
+     ],
+     "quotes": [
+      "If there’s huge sell off, I don’t watch it actively and if the demand picks up after or later market opens, I’ll see how the price and volume unfolds and enter if there’s a setup. Else no trade."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1753836073623429131"
+      }
+     ]
+    },
+    {
+     "id": "R7",
+     "rule": "Watches into the close; trades the last two hours when an after-hours move is building.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:26:48"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "R8",
+     "rule": "Post-market: a per-trade journal written AT ENTRY (ticker, risk, setup grade, discipline grade, patience grade, then how he sold); evening review; screenshots of every trade AND misreads into Google Slides; weekly analysis.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1750748542761619650",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1750748542761619650"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "15:57–17:03"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "R9",
+     "rule": "Weekend: ToS OnDemand replays of the BIG movers he traded or missed (video only those; screenshots of all), Camtasia, Drive; a weekly game plan.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1751228915115508016",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1751228915115508016"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1751275515242012811",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1751275515242012811"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "scope: the masterclass says \"all trades\"; his later X reply and the webinar say big movers only"
+    },
+    {
+     "id": "R10",
+     "rule": "After a big run: \"a couple of days\" of noise, then it fades; after a 1,000%+ runner he watches \"the next one two weeks\"; he demotes a name to a low-priority third-monitor list when there is no setup all day + volume drying + a slow fall (the host coined \"graveyard\"; GG agreed).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "FH† / SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:17:13"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:09:48"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:18:22"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "STAY_LISTED_SESSIONS"
+     ],
+     "note": "the 2-session stay-listed number on the tab is Ajay's (DECISIONS), not GG's"
+    },
+    {
+     "id": "R11",
+     "rule": "Meditation is a PRE-market habit when nothing is moving.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "13:21–14:34"
+      }
+     ],
+     "quotes": [
+      "if there is no action I'll go meditate"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "13:21–14:34"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "market",
+   "topic": "Market conditions",
+   "verified": [
+    {
+     "id": "M1",
+     "rule": "Situational awareness = counting the day's runners: a good day = \"four five\" at 100%+ (a 400%, a 300%) + a bunch at 80–90%+; a bad day = best runners 30–40%, the rest 10–20% → trade light or not at all; 40–100% is undefined.",
+     "numbers": "100%+ · 80%+ · best < 40% = quiet",
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "43:39–44:37"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1748003797849256202",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1748003797849256202"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1745498244598087786",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1745498244598087786"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "SA_BIG_RUNNER_PCT",
+      "SA_RUNNER_PCT",
+      "SA_QUIET_BEST_PCT"
+     ]
+    },
+    {
+     "id": "M2",
+     "rule": "SPY/QQQ do not filter his small-cap trading (bottom-up).",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S2",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-question-and-answer",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1745498244598087786",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1745498244598087786"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "M3",
+     "rule": "Pop & Drop: several names failing to hold breakouts → smaller size until the market picks up (no numbers).",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1760876336258941369",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1760876336258941369"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "M4",
+     "rule": "A+ setups: 1–2 a week in bad markets, ~1 a day in good ones.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:29:04"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1752064145522819343",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1752064145522819343"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "M5",
+     "rule": "Decay, 2024-10-11: his setups stopped appearing for long stretches and worked far less often.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1844811275412627921",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1844811275412627921"
+      }
+     ],
+     "quotes": [
+      "I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1844811275412627921"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "timeframes",
+   "topic": "Timeframes / indicators",
+   "verified": [
+    {
+     "id": "T1",
+     "rule": "5-minute primary, 15-minute secondary; 1/2/3/10-minute tried and rejected.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1755102332264788124",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1755102332264788124"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1752766102591963535",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1752766102591963535"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:40:07"
+      }
+     ],
+     "quotes": [
+      "I tried 1 minute 3 minute 5 minute 15 minutes … I concluded on the five minute"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "1:40:07"
+      }
+     ]
+    },
+    {
+     "id": "T2",
+     "rule": "Only indicators: the 9 EMA and 21 EMA on the close; \"my chart has nothing else\" (no VWAP, ADR or level 2).",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1760885043839615139",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1760885043839615139"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1733359576479564010",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1733359576479564010"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "24:42"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1751275647664578869",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1751275647664578869"
+      }
+     ],
+     "quotes": [
+      "Always the 9 EMA and 21 EMA.",
+      "I don't use level2 at all"
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1760885043839615139"
+      },
+      {
+       "key": "S11",
+       "post_id": "1751275647664578869"
+      }
+     ],
+     "used_by": [
+      "EMA_FAST",
+      "EMA_SLOW"
+     ]
+    },
+    {
+     "id": "T3",
+     "rule": "The EMAs run through the shaded pre-market bars on two of his ToS screenshots (RVSN, VCIG) — a visual reading, never said in words.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH (screens)",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "note": "a reading of his ToS screenshots — the images carry no webinar timestamp (S8 25:36 only names the two EMAs), so no ts is filed"
+    },
+    {
+     "id": "T4",
+     "rule": "VolumeAvg length 50 on one of his layouts (RVSN) vs 5 on another (VCIG) — a pane default, not a stated rule.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "note": "the tab's 50-bar volume average is Ajay's choice (DECISIONS); a reading of his ToS screenshots — the images carry no webinar timestamp (S8 25:36 only names the two EMAs), so no ts is filed"
+    },
+    {
+     "id": "T5",
+     "rule": "His charts are in Central Time (+1 h → ET).",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1756337327780364324",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1756337327780364324"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "36:12"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "T6",
+     "rule": "F4VS's \"Horizontal Fade 30m / Kiss & Fly 5–15m / Bull Flag 5m (and 1m)\" — GG names only 5m and 15m, shows zero 30m examples and rejects 1m.",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S2",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-question-and-answer",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S3",
+       "url": "https://retailtradersrepository.substack.com/p/bull-flag-breakout-pullback-setup",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S5",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-horizontal-fade",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:40:07"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:21:40"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "third-party frames vs his own \"five and 15 minutes\""
+    },
+    {
+     "id": "T7",
+     "rule": "Daily chart: draws support/resistance, checks squeeze history; \"when the daily and the intraday have the congruence … the probability is always high\"; no numbers.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "52:57–53:31"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:19:34"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:46:49"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "T8",
+     "rule": "Psychological $1 / $5 / $10 = profit-taking / climax levels (sold TPST into $10; expected a climax stall at $5).",
+     "numbers": "$1 · $5 · $10",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:09:14"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:39:05"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "PSY_LEVELS"
+     ],
+     "note": "the 5% 'near' band on the chip is Ajay's number, not GG's"
+    },
+    {
+     "id": "T8b",
+     "rule": "Psychological levels as ENTRY triggers — he called the 5.05 entry FOMO (\"I shouldn't have taken this trade\") and the 1.04 entry \"not the perfect execution\".",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:11:33"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:21:04"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "entries at $1 / $5 were his own named mistakes"
+    },
+    {
+     "id": "T9",
+     "rule": "Most profitable hours in 2023: 11 AM and 5 PM ET; the first hour was the worst; \"one year of data is a small sample size\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1753343067846058314",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1753343067846058314"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "T10",
+     "rule": "OHLC bars, not candles (habit) — display only.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1763940027804041462",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1763940027804041462"
+      }
+     ],
+     "quotes": [
+      "This is how I learnt when I started trading. I'm more comfortable with this approach. Old habits :)"
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1763940027804041462"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "core",
+   "topic": "Common core (most setups, not all)",
+   "verified": [
+    {
+     "id": "C1",
+     "rule": "\"most of all these setups have the same criteria: good demand, very shallow pullback with low volume and very constructive action … if it takes this previous highs enter and stop loss would be of the base\" — the very next sentence introduces the Reversal Squeeze as a different structure.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "34:43"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "59:27"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "a single shared stop disagrees with his per-setup stops"
+    },
+    {
+     "id": "C2",
+     "rule": "\"My style and playbooks all revolve around the same pillar: … price compression after a big advance.\"",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1756337327780364324",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1756337327780364324"
+      }
+     ],
+     "quotes": [
+      "My style and playbooks all revolve around the same pillar: I’m interested in stocks that show a price compression after a big advance."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1756337327780364324"
+      }
+     ]
+    },
+    {
+     "id": "C3",
+     "rule": "Volume dries up at the entries of all his setups and picks up if the setup works.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1749776653008445933",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1749776653008445933"
+      }
+     ],
+     "quotes": [
+      "The volume will dry up during the entries of all my setups and it picks up if the setup works."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1749776653008445933"
+      }
+     ]
+    },
+    {
+     "id": "C4",
+     "rule": "Pullback volume is judged RELATIVE to the advance bars (\"considerably low compared to these green bars\"), not as a bar-by-bar decline.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "32:03"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    }
+   ]
+  },
+  {
+   "key": "bull_flag",
+   "topic": "🚩 Bull Flag",
+   "verified": [
+    {
+     "id": "BF1",
+     "rule": "Pole: at least 2 big green bars (3 is better), price and volume rising gradually.",
+     "numbers": "≥ 2 demand bars",
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:59:22"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "21:45"
+      }
+     ],
+     "quotes": [
+      "at least two big green bars (three is good) with a good price increase"
+     ],
+     "quote_src": [
+      {
+       "key": "S9",
+       "ts": "1:59:22"
+      }
+     ],
+     "used_by": [
+      "BF_LEG_MIN_BARS"
+     ]
+    },
+    {
+     "id": "BF2",
+     "rule": "Flag: sideways or very shallow near the top of the last green bar, on lower volume.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "21:45–24:37"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:59:24"
+      }
+     ],
+     "quotes": [
+      "almost sideways or very shallow pullback with less volume compared to the left side"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "21:45–24:37"
+      }
+     ],
+     "used_by": [
+      "K3_DEPTH_FRAC",
+      "K3_VOL_FRAC"
+     ],
+     "note": "the 0.50 depth / 0.50 volume numbers are Ajay's (K3)"
+    },
+    {
+     "id": "BF3",
+     "rule": "Flag length: \"usually … two to three bars\", BUT his own valid masterclass example \"took five bars to the side\"; the F4VS examples ZYNE and NXTP took 5 and 4 pullback bars.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "21:45–24:37"
+      },
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S3",
+       "url": "https://retailtradersrepository.substack.com/p/bull-flag-breakout-pullback-setup",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [
+      "the pullback is one bar, usually two to three bars"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "21:45–24:37"
+      }
+     ],
+     "used_by": [
+      "K4_BF_PULL_MIN",
+      "K4_BF_PULL_MAX",
+      "K4_BF_LONG_FLAG_MAX"
+     ],
+     "note": "1–3 = A+, 4–5 = 'long flag' (listed, never pushed) is Ajay's K4a"
+    },
+    {
+     "id": "BF4",
+     "rule": "Volume step: \"twice, thrice\" the previous candle is fine, ~10× = climax / invalid; 3–10× is never stated; the baseline is the PREVIOUS candle.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S3",
+       "url": "https://retailtradersrepository.substack.com/p/bull-flag-breakout-pullback-setup",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "K2_MAX_VOL_STEP",
+      "K2_CHECK_FIRST_BAR"
+     ],
+     "note": "the 5× cap is Ajay's (K2)"
+    },
+    {
+     "id": "BF5",
+     "rule": "Invalid: one big candle (NVCT); two sudden bars + a first pullback that gives back too much (RKDA); heavy pullback volume; a downtrend.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S3",
+       "url": "https://retailtradersrepository.substack.com/p/bull-flag-breakout-pullback-setup",
+       "first_hand": false,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "BF6",
+     "rule": "Uptrend with the 9/21 EMAs rising.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "BF7",
+     "rule": "Entry = the high of the pullback bar, stop = its low; careful variant = the higher of two close highs / the lower of the two pullback lows.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:59:24"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "21:45–24:37"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "54:24"
+      }
+     ],
+     "quotes": [
+      "entry at the top of the pullback bar, exit [stop] at the bottom of it"
+     ],
+     "quote_src": [
+      {
+       "key": "S9",
+       "ts": "1:59:24"
+      }
+     ],
+     "contradiction": "anchor: Business Insider's NXTP fill entered at $2.40 through the pole high $2.39 with the stop $2.01 at the flag low (S12 2024-02)"
+    },
+    {
+     "id": "BF8",
+     "rule": "The fastest setup: it happens within ~10 minutes and takes off.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "21:45–24:37"
+      }
+     ],
+     "quotes": [
+      "it happens within 10 minutes and takes off, this is the fastest"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "21:45–24:37"
+      }
+     ]
+    },
+    {
+     "id": "BF9",
+     "rule": "Reclaiming the highs within 2 bars = extra strength (ICCT).",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "58:27"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "BF10",
+     "rule": "Takes the 1st and 2nd flag, usually skips the 3rd (Business Insider only).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/how-to-trade-stocks-volatile-small-cap-penny-day-trader-2024-2",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "BF11",
+     "rule": "A low-volume flag (PXMD ~200K) → reduced size.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:36:58"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "BF12",
+     "rule": "Bull Flag and Kiss & Fly have his highest win rate (no numbers).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1764352540743798991",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1764352540743798991"
+      }
+     ],
+     "quotes": [
+      "Setups 1 and 2 (bull flag and EMA kiss and fly)"
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1764352540743798991"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "kiss_fly",
+   "topic": "💋 EMA Kiss & Fly",
+   "verified": [
+    {
+     "id": "KF1",
+     "rule": "Four points: good demand (the left side can be just 1–2 green bars), an organic pullback, low pullback volume, price kisses and HONORS the 9 EMA, often repeatedly (\"touch and go\").",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:55:28"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "31:33"
+      }
+     ],
+     "quotes": [
+      "only two green bars or one green bar … it waits more and honors the 9 EMA whenever it pulls back"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "31:33"
+      }
+     ],
+     "used_by": [
+      "KF_LEG_MIN_BARS",
+      "K5_KISS_TOL_PCT",
+      "KF_HONOR_ALL_PULLBACK_CLOSES"
+     ]
+    },
+    {
+     "id": "KF2",
+     "rule": "Entry = the high of the kiss bar, stop below the low of the previous bar; careful: the prior highs if close, the pullback low as the stop.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "31:33–32:41"
+      },
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "KF3",
+     "rule": "\"≥ 2 EMA [reversals]\" (Business Insider) — he took NEXI as an A+ with ZERO touches.",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/top-chart-indicators-trader-volatile-stocks-high-returns-in-2023-2024-1",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1752509866852462684",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1752509866852462684"
+      }
+     ],
+     "quotes": [
+      "the fact that price didn't even touch the EMA let me think that it might have a very explosive move"
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1752509866852462684"
+      }
+     ],
+     "contradiction": "BI's two-touch minimum vs his own zero-touch A+",
+     "used_by": [
+      "KF_ALLOW_NO_TOUCH"
+     ]
+    },
+    {
+     "id": "KF4",
+     "rule": "His HKD example has 9 sideways low-volume pullback bars he counted himself.",
+     "numbers": "9 bars",
+     "status": "single_source",
+     "status_raw": "SS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "K4_KF_PULL_MAX"
+     ],
+     "note": "the ≤ 9-bar limit is Ajay's (K5a)"
+    },
+    {
+     "id": "KF5",
+     "rule": "~30 minutes to decide vs 10–15 for the Bull Flag (descriptive).",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    }
+   ]
+  },
+  {
+   "key": "horizontal_fade",
+   "topic": "➖ Horizontal Fade",
+   "verified": [
+    {
+     "id": "HF1",
+     "rule": "Good demand, less selling than buying; sideways around the top of the highest price action or a small dip on low red volume; selling decreases gradually; honors the 9 EMA, then drifts onto the 21 EMA as volume nearly dries; \"by the end … the 9 EMA, 21 EMA almost meet\", then momentum starts.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "32:49–33:50"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:20:08"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:56:08"
+      }
+     ],
+     "quotes": [
+      "when the 9 EMA and 21 EMA merge around that area then slowly the momentum starts"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "32:49–33:50"
+      }
+     ],
+     "used_by": [
+      "K6_MERGE_PCT",
+      "K6_TIGHT_PCT",
+      "K6_SELL_DECAY",
+      "HF_LEG_MIN_BARS"
+     ]
+    },
+    {
+     "id": "HF2",
+     "rule": "A larger, longer base — \"not something that happens very often\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:20:08"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "K4_HF_BASE_MIN",
+      "K4_HF_BASE_MAX"
+     ],
+     "note": "the 6–24-bar base length is Ajay's (K4)"
+    },
+    {
+     "id": "HF3",
+     "rule": "Entry \"once you see it takes the new highs … this would be my entry\" / \"enter it at the top of this price action\"; stop \"the low of this one\" / \"below the previous bar\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "33:27"
+      },
+      {
+       "key": "S5",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-horizontal-fade",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "HF_TRIGGER"
+     ]
+    },
+    {
+     "id": "HF4",
+     "rule": "5-minute and 15-minute (\"looks even better in 15min\"); a 30-minute frame is unsupported.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH / CX",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "32:49–33:50"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:56:08"
+      }
+     ],
+     "quotes": [
+      "If I flip to 15 minutes it looks even better."
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "32:49–33:50"
+      }
+     ],
+     "contradiction": "F4VS's 30-minute Fade (see T6)"
+    },
+    {
+     "id": "HF5",
+     "rule": "Invalid: an impatient early entry (BWV 2022-05-09).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S5",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-horizontal-fade",
+       "first_hand": false,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "HF6",
+     "rule": "The lowest-volume bar right before the move — said about the strong-demand slow fader (this setup), \"like a vcp characteristics too\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:57:33"
+      }
+     ],
+     "quotes": [
+      "volume completely dried out and the price is not going down … then it makes a big move"
+     ],
+     "quote_src": [
+      {
+       "key": "S9",
+       "ts": "1:57:33"
+      }
+     ],
+     "note": "STRATEGY_SPEC §1.4 attribution fix: this is Horizontal Fade, not Intraday VCP"
+    }
+   ]
+  },
+  {
+   "key": "intraday_vcp",
+   "topic": "🌀 Intraday VCP",
+   "verified": [
+    {
+     "id": "VCP1",
+     "rule": "Left-side demand (\"even one bar is fine\"); the pullback on LOW volume (\"This is a must\"); support at the 21 EMA, not the 9 (\"this is not a strong momentum setup\"); higher lows; each cycle shrinks in price AND volume volatility.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "33:50–34:37"
+      }
+     ],
+     "quotes": [
+      "it honors the 21 EMA when it pulls back with less volume … in each cycle it honors the 21 EMA and the volatility contracts in each cycle"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "33:50–34:37"
+      }
+     ],
+     "used_by": [
+      "VCP_LEG_MIN_BARS",
+      "K7_CONTRACTION",
+      "K7_EMA21_TOL_PCT",
+      "K4_VCP_MIN_CYCLES"
+     ]
+    },
+    {
+     "id": "VCP2",
+     "rule": "Entry at the \"top of the previous cycle highs\" when it is \"almost very calm and silent\", stop \"the bottom of it\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "33:50–34:37"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "VCP3",
+     "rule": "His own examples tolerate imperfection: \"Not completely honors the 21 EMA … but it does these higher lows\" (valid); \"expanded in the volatility in the second cycle … but still it took off\"; \"Not a perfect one but, good to include it in the playbooks\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1753525024026218742",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1753525024026218742"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "VCP_B_READS"
+     ],
+     "note": "the 'B — imperfect' listed read is Ajay's answer (never pushed)"
+    },
+    {
+     "id": "VCP4",
+     "rule": "Invalid: heavy selling after the main bar (LQR), a sharp drop with no higher lows (AYLA), sideways chop with no prior uptrend.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S6",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-intraday-vcp",
+       "first_hand": false,
+       "via": "wp7"
+      },
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "VCP5",
+     "rule": "Base-on-base = higher probability; a big runner that goes sideways on less volume and forms another base has a high chance of an even bigger move.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "55:18–57:49"
+      },
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [
+      "if it moves sideways with less volume and forms another base, high chance it has an even bigger move"
+     ],
+     "quote_src": [
+      {
+       "key": "S9",
+       "ts": "55:18–57:49"
+      }
+     ]
+    },
+    {
+     "id": "VCP6",
+     "rule": "Business Insider's \"21-day EMA\" = the 21-PERIOD EMA on the 5-minute chart (reporter mislabel).",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/stock-trader-shares-easy-chart-pattern-he-trades-2024-8",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "33:50–34:37"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "'21-day' vs his 21-period EMA on 5-minute bars"
+    }
+   ]
+  },
+  {
+   "key": "reversal_squeeze",
+   "topic": "🎾 Reversal Squeeze",
+   "verified": [
+    {
+     "id": "RS1",
+     "rule": "Low float only (\"the lower the float the better\"); GG gives no number — \"<10M\" is Business Insider's own sentence.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "MS† / SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "21:04"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "2:01:46"
+      },
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/pattern-day-trader-how-to-trade-chart-signals-stocks-reversals-2024-7",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "K8_MAX_FLOAT"
+     ],
+     "note": "the 10,000,000 cap on the tab is Ajay's (K8)"
+    },
+    {
+     "id": "RS2",
+     "rule": "Strong demand; drops snap straight back (\"like a ball under the water\", \"tennis ball action\"); it has tried to squeeze in earlier bars and been sold; this time the sell-off is big and the recovery quick.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "2:01:42–2:02:40"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "35:02"
+      }
+     ],
+     "quotes": [
+      "whenever there is a drop it tries to squeeze up, whenever it hits the ground it [reverses] hard",
+      "this time the sell-off was big and the [reversal] was quick"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "35:02"
+      },
+      {
+       "key": "S9",
+       "ts": "2:01:42–2:02:40"
+      }
+     ],
+     "used_by": [
+      "K8_DROP_PCT",
+      "K8_RECOVER_PCT",
+      "K8_RECOVER_BARS",
+      "K8_FAIL_NEAR_PCT",
+      "K8_FAIL_DROP_PCT",
+      "K8_FAIL_EVENT_RULE"
+     ],
+     "note": "the 8% / 2% / 3-bar numbers and the failed-attempt rule are Ajay's (K8, H1, H2)"
+    },
+    {
+     "id": "RS3",
+     "rule": "Typical session: sells off at the open, reverses, goes sideways at the top as volume fades, then explosive.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "35:02–35:56"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "36:12–38:18"
+      }
+     ],
+     "quotes": [
+      "at the morning open it tried to sell off completely and then bumps up and waits and then makes explosive move"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "35:02–35:56"
+      }
+     ]
+    },
+    {
+     "id": "RS4",
+     "rule": "Entry = takes the highs after the quiet base; stop = the base low.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "34:43"
+      },
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/pattern-day-trader-how-to-trade-chart-signals-stocks-reversals-2024-7",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "RS_BASE_MIN_BARS"
+     ]
+    },
+    {
+     "id": "RS5",
+     "rule": "Tends to squeeze into the close or after hours.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "59:24"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:26:55"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:16:13"
+      }
+     ],
+     "quotes": [
+      "most of the stocks make a big move after hours"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "59:24"
+      }
+     ]
+    },
+    {
+     "id": "RS6",
+     "rule": "Invalid (F4VS): a spike-and-decline too violent (SNES), a steady fade (SASI), no demand after the open (SGD).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S7",
+       "url": "https://retailtradersrepository.substack.com/p/goverdhan-gajjala-reversal-squeeze",
+       "first_hand": false,
+       "via": "wp7"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "RS7",
+     "rule": "An undercut of the base is acceptable (answer to a leading question).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "2:01:46"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "RS8",
+     "rule": "Shorts are forced to buy — no short-interest number anywhere.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "2:01:46"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:01:02"
+      }
+     ],
+     "quotes": [
+      "when it squeezes, all the short sellers have to convert to buyers"
+     ],
+     "quote_src": [
+      {
+       "key": "S9",
+       "ts": "2:01:46"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "traits",
+   "topic": "Traits that are NOT setups (chips / Playbook, never entries)",
+   "verified": [
+    {
+     "id": "X1",
+     "rule": "Next-day / multi-day mover: \"this is not kind of setup but … a characteristics\" — previous-day strength + a big after-hours move; next day he enters only if a setup forms; his on-screen example was a failed one.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "2:02:50–2:03:23"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "X2",
+     "rule": "Halts: a halt-up = \"too much of demand in the short very short time\", typical of low float; he does not ENTER while it is halting up and down — \"when it's clean, when it's calmer, then I enter\"; once IN a trade a halt-up raises his confidence.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "30:55"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "55:56"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "2:00:32"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "X3",
+     "rule": "Confluence: 2–3 setups in one chart (e.g. a daily reversal + an intraday bull flag) = \"the certainty of the move is higher\"; no weight, no count rule.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:58:15–1:59:18"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "X4",
+     "rule": "After-hours squeeze: holds strength into the close → the after-hours run is \"much smoother, the volume will be low, but … the magnitude … huge\"; exhaustion: \"when the intraday action is so big … it won't run that big in after hours\"; he lost twice going big after hours expecting a repeat.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "MS† / SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:16:04"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:09:14"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:45:50"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "X5",
+     "rule": "\"Classic momentum breakout\" (CGC, 2024-03-27): gradual push, contraction on lower volume around the 9 EMA, breakout on good volume; entry 7.3, stop the prior-bar low 7.1 — NOT one of the five.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1772832725969596865",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1772832725969596865"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "X6",
+     "rule": "Red flags before entry: \"more than 3 red closes is red flag to me => wait more\"; a big-volume bar closing at half its range = selling; demand immediately sold = wait.",
+     "numbers": "> 3 red closes",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1733882105204011109",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1733882105204011109"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "used_by": [
+      "RED_CLOSES_WAIT"
+     ]
+    },
+    {
+     "id": "X7",
+     "rule": "After a stop-out on a big high-volume seller: \"Mostly pass and wait more\"; no re-entry on the next bar, \"at least like couple of bars\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1750567382777491875",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1750567382777491875"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:17:21"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    }
+   ]
+  },
+  {
+   "key": "management",
+   "topic": "Entry / stops / exits / risk — his discretion, NOT computed",
+   "verified": [
+    {
+     "id": "E1",
+     "rule": "Enters \"right at the break\" intrabar by default; sometimes waits for the bar close; \"no hard rule, will depend on the strength and candle size\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:41:15"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1760531938690179101",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1760531938690179101"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1752637425095196911",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1752637425095196911"
+      }
+     ],
+     "quotes": [
+      "No hard rule, will depend on the strength and candle size."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1752637425095196911"
+      }
+     ]
+    },
+    {
+     "id": "E2",
+     "rule": "Market orders in regular hours (entries and stops); limit orders only outside regular hours.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:00:03"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:16:47"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "E3",
+     "rule": "The stop is known before entry; \"almost all my setups will have low of the prior bar as the stop loss\"; he exits before the stop on hesitation; a breakout back into its range = out.",
+     "numbers": null,
+     "status": "confirmed_multi_source",
+     "status_raw": "MS / FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "32:27"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1749835712273211717",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1749835712273211717"
+      }
+     ],
+     "quotes": [
+      "most of my exits [stops] are below the low of the previous bar, always"
+     ],
+     "quote_src": [
+      {
+       "key": "S8",
+       "ts": "32:27"
+      }
+     ]
+    },
+    {
+     "id": "E4",
+     "rule": "Breakeven once it moves; add the second half at ~zero risk.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "MS† / SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "39:03"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "35:24"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "E5",
+     "rule": "Partials of 1/3 or 1/2 into strength after ~15 min / 3 bars when strong; trail along the 9 EMA (the 21 on Kiss & Fly \"maybe\"); in drawdowns take half off immediately.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "24:46–26:40"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "49:49"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "E6",
+     "rule": "Base counting: the 3rd base → climax, peel early; the 4th base → out (one example); counter-rule: 100% then a quiet sideways base → a bigger leg.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "FH† / SS†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "40:54–41:18"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:00:37"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "55:18–57:49"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "E7",
+     "rule": "No fixed targets (\"sometimes 3:1, sometimes 10:1\").",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1752499844911132881",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1752499844911132881"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "E8",
+     "rule": "Risk: he STARTS at 0.25% of the account per trade (his own starting risk) and moves it with MONTHLY performance; progressive exposure; raise only on a cushion that survives 2 losers; a −10% / −15% drawdown → the next five trades ≤ −5% together; A+ up to double; all-in only on an obvious A+ with a cushion.",
+     "numbers": "0.25% start · −10/−15% drawdown → next five ≤ −5%",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S10",
+       "url": "https://drive.google.com/drive/folders/1URKRAy5xuwH7sJTf271oCbeGAR2hABoJ",
+       "first_hand": true,
+       "via": "spec"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1752341525118554174",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1752341525118554174"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "44:06"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "1:47:23"
+      },
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "wp7",
+       "ts": "33:57–34:23"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "the \"5% to 10%, then 2.5%, 2%\" figure at S8 1:47:23 has an AMBIGUOUS basis (position vs risk) — never presented as a risk %; the spec's \"B+ = 2% risk 'medium size'\" clause is NOT carried: at S9 33:57–34:23 he puts a medium-size position at \"10 20%\" of the account — a position share, not a risk %, so that basis is AMBIGUOUS too"
+    },
+    {
+     "id": "E9",
+     "rule": "Business Insider's \"exit a loser within five minutes\" is a reporter's line; his own 2023 numbers say losers average ~10 minutes.",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS† / FH",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S12",
+       "url": "https://www.businessinsider.com/top-chart-indicators-trader-volatile-stocks-high-returns-in-2023-2024-1",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:12:47"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1733178876023521301",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1733178876023521301"
+      }
+     ],
+     "quotes": [
+      "My avg hold time is 1hr for winners and 10 mins for losers."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1733178876023521301"
+      }
+     ]
+    },
+    {
+     "id": "E10",
+     "rule": "Dollar Wisdom's \"exit everything on a close below the 21 EMA, 3 setups\" — never implemented.",
+     "numbers": null,
+     "status": "contradicted",
+     "status_raw": "CX",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S17",
+       "url": "https://www.youtube.com/watch?v=uG8CzABsIPM",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": [],
+     "contradiction": "not in any first-hand source; his exits are discretionary (E5)"
+    }
+   ]
+  },
+  {
+   "key": "stats",
+   "topic": "His stats (quoted — not ours)",
+   "verified": [
+    {
+     "id": "ST1",
+     "rule": "2023 USIC +805.1%, stock accounts under $1,000,000.",
+     "numbers": "+805.1%",
+     "status": "confirmed_multi_source",
+     "status_raw": "MS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S13",
+       "url": "https://www.businesswire.com/news/home/20240126217806/en/United-States-Investing-Championship-2023-Final-Results",
+       "first_hand": false,
+       "via": "spec"
+      },
+      {
+       "key": "S14",
+       "url": "https://traderlion.com/investing-champions/2023-us-investing-champion/",
+       "first_hand": false,
+       "via": "spec"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "ST2",
+     "rule": "2023 full year: 745 trades, win 31% / loss 68%, average winner +8.55%, average loser −4.06% → expectancy 0.31 × 8.55 − 0.68 × 4.06 = −0.11% per trade.",
+     "numbers": "win 0.31 · loss 0.68 · +8.55% · −4.06% · expectancy −0.11%",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "37:43"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "ST3",
+     "rule": "2nd half of 2023: 165 trades, win 28%, average winner ~+13%, average loser ~−4% → 0.28 × 13 − 0.72 × 4 = +0.76% per trade. The 805% came from SIZE (all-in on A+), not per-trade edge — never quote 805% as a setup's expectancy.",
+     "numbers": "win 0.28 · loss 0.72 · +13% · −4% · expectancy +0.76%",
+     "status": "confirmed_first_hand",
+     "status_raw": "FH†",
+     "his_call": true,
+     "sources": [
+      {
+       "key": "S9",
+       "url": "https://www.youtube.com/watch?v=10pHBNVi4Jc",
+       "first_hand": true,
+       "via": "spec",
+       "ts": "38:38"
+      }
+     ],
+     "quotes": [],
+     "quote_src": []
+    },
+    {
+     "id": "ST4",
+     "rule": "Holds: winners ~40–60 minutes, losers ~10 minutes.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S8",
+       "url": "https://www.youtube.com/watch?v=CI7mNvEQyms",
+       "first_hand": true,
+       "via": "first_hand_notes",
+       "ts": "1:12:47"
+      },
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1750639112967561461",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1750639112967561461"
+      }
+     ],
+     "quotes": [
+      "My average hold time of winners is ~40 mins"
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1750639112967561461"
+      }
+     ]
+    },
+    {
+     "id": "ST5",
+     "rule": "Q1 2024 +35.02% (a promotional post).",
+     "numbers": null,
+     "status": "single_source",
+     "status_raw": "SS",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1773728333148360918",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1773728333148360918"
+      }
+     ],
+     "quotes": [
+      "2024 Q1 returns: +35,02%."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1773728333148360918"
+      }
+     ]
+    },
+    {
+     "id": "ST6",
+     "rule": "Stopped teaching on 2024-05-15.",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1789341189818261940",
+       "first_hand": true,
+       "via": "wp7",
+       "post_id": "1789341189818261940"
+      }
+     ],
+     "quotes": [
+      "I’ll be stop teaching at Momentum Access from May 15th due to health issues."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1789341189818261940"
+      }
+     ]
+    },
+    {
+     "id": "ST7",
+     "rule": "October 2024: year-to-date \"only in double digits\", trading \"almost none\".",
+     "numbers": null,
+     "status": "confirmed_first_hand",
+     "status_raw": "FH",
+     "his_call": false,
+     "sources": [
+      {
+       "key": "S11",
+       "url": "https://x.com/i/status/1844811275412627921",
+       "first_hand": true,
+       "via": "spec",
+       "post_id": "1844811275412627921"
+      }
+     ],
+     "quotes": [
+      "Overall YTD is +ve but only in double digits."
+     ],
+     "quote_src": [
+      {
+       "key": "S11",
+       "post_id": "1844811275412627921"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

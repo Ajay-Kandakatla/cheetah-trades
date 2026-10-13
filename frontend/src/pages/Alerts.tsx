@@ -42,7 +42,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TickerChips } from '../components/TickerChips';
-import { AlertItems, type AlertItem } from '../components/AlertItems';
+import { AlertItems, splitAtSymbol, type AlertItem } from '../components/AlertItems';
 import { API } from '../lib/apiBase';
 import { useAlertHistory, foldedCount, MAX_LIMIT, type AlertRow } from '../hooks/useAlertHistory';
 import {
@@ -68,6 +68,17 @@ export type PassStatus = {
    *  `cadence_sec: null` and a `schedule` string like "17:42 ET, trading
    *  days"). An older API omits it → 'once a trading day'. */
   schedule?: string | null;
+  /** 🚩 gajjala_setup only (2026-10-13 E3): today's shadow A+ records, newest
+   *  first (backend alert_status.read_gajjala_shadow). An older API omits it. */
+  shadow_items?: GgShadowItem[] | null;
+};
+/** One shadow A+ as the ledger recorded it. `text` is the push's own item
+ *  line (alerts.compose) — printed, never recomposed; `url` is the deep link
+ *  the push would have opened; `at` is when the shadow claim was written (ET). */
+export type GgShadowItem = {
+  date: string | null; symbol: string | null; setup?: string | null; at?: string | null;
+  entry_bar_t?: string | null; frame?: string | null; trigger?: number | null; stop?: number | null;
+  risk_pct?: number | null; text?: string | null; url?: string | null; note?: string | null;
 };
 export type AlertsGate = {
   min_room_pct: number;
@@ -108,6 +119,10 @@ const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
   /* 🧬 med_catalyst (2026-09-29) rides promo_live's every-5-minutes crontab
    * line (04:00–19:55 ET on trading days); backend CADENCE_SEC says 300. */
   { key: 'med_catalyst',      label: '🧬 Medical catalysts',       fallbackCadenceSec: 300 },
+  /* 🚩 gajjala_setup (2026-10-13) — its own every-5-minutes crontab line
+   * (04:01–20:01 ET on trading days); backend CADENCE_SEC says 300. It ships in
+   * SHADOW: the row says "shadow — not sent" (gajjalaChipText below). */
+  { key: 'gajjala_setup',     label: '🚩 Gajjala A+ setups',       fallbackCadenceSec: 300 },
 ];
 
 /* The once-a-day passes (2026-09-20). They are NOT part of the three-pass
@@ -253,6 +268,32 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
     default: return null;
   }
 }
+/* 🚩 gajjala_setup (2026-10-13) reuses the medical shadow counters
+ * (`shadow_mode` / `shadow` / `shadow_session`) — the words are its own, so a
+ * 🚩 row never wears the 🧬 emoji. Its refusals name why an A+ stayed quiet:
+ * pre-market, his first 15 minutes, outside his push windows (no typed times:
+ * a half day ends 17:00, not 20:00), a closed day, an A+ found late (its entry
+ * bar closed more than one pass ago), or one already recorded today. */
+function gajjalaChipText(key: string, n: number): string | null {
+  switch (key) {
+    case 'shadow_mode':          return '🚩 shadow — not sent (nothing reaches your phone yet)';
+    case 'shadow':               return `🚩 shadow — not sent: ${n} A+ recorded this pass`;
+    case 'shadow_session':       return `🚩 shadow — not sent: ${n} A+ recorded today`;
+    case 'suppressed_premarket': return `${n} A+ held: pre-market`;
+    case 'suppressed_first15':   return `${n} A+ held: first 15 minutes`;
+    case 'suppressed_window':    return `${n} A+ held: outside his push windows`;
+    case 'suppressed_closed':    return `${n} A+ held: market closed`;
+    case 'suppressed_halt':      return `${n} A+ held: just resumed from a halt`;
+    case 'suppressed_exhausted': return `${n} A+ held: after-hours, regular session too extended`;
+    case 'late':                 return `${n} A+ found late (bar older than one pass), not sent`;
+    case 'claimed_before':       return `${n} A+ already recorded today`;
+    case 'not_aplus_variant':    return `${n} listed variant, never sent`;
+    default: return null;
+  }
+}
+const GAJJALA_KEYS = ['shadow_mode', 'shadow', 'shadow_session', 'suppressed_premarket', 'suppressed_first15',
+                      'suppressed_window', 'suppressed_closed', 'suppressed_halt', 'suppressed_exhausted', 'late',
+                      'claimed_before', 'not_aplus_variant'];
 const SKIP_KEYS = ['skipped_room', 'skipped_proximity', 'skipped_direction', 'skipped_knife',
                    'skipped_mood', 'skipped_floor', 'skipped_not_enterable', 'skipped_cap', 'unknown_cap',
                    'stale_print', 'unknown_prev', 'unknown_room',
@@ -484,14 +525,17 @@ function PassStrip({ pass, meta, status, gate, today }: {
   const headline = HEADLINE
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
-  const skips = SKIP_KEYS
+  const gg = meta.key === 'gajjala_setup';
+  const chipKeys = gg ? GAJJALA_KEYS : SKIP_KEYS;
+  const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
     .filter(([, n]) => n > 0);
   const extra = Object.entries(counts)
-    .filter(([k, v]) => v != null && !HEADLINE_KEYS.includes(k) && !SKIP_KEYS.includes(k))
+    .filter(([k, v]) => v != null && !HEADLINE_KEYS.includes(k) && !chipKeys.includes(k))
     .map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`)
     .join(' · ');
   return (
+    <>
     <div data-testid={`pass-${meta.key}`} style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', padding: '0.3rem 0' }}
          title={extra ? `Also counted: ${extra}` : undefined}>
       <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: '11rem' }}>{meta.label}</span>
@@ -502,7 +546,60 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
       {skips.map(([k, n]) => (
-        <span key={k} className="mono" style={SKIP_CHIP}>{skipChipText(k, n, gate) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+      ))}
+    </div>
+    {/* 🚩 only: the per-item shadow list sits under its own strip. */}
+    {gg ? <GajjalaShadowList items={pass?.shadow_items} today={today} /> : null}
+    </>
+  );
+}
+
+/* 🚩 Today's shadow A+ list (2026-10-13 E3). Ajay round A: "every A+ is
+ * RECORDED to the alerts ledger and shown on /alerts as shadow — not sent".
+ * The pass strip above it only counts; this lists each record: ET time ·
+ * the push's own line (symbol · setup · trigger · stop) · "shadow — not
+ * sent". The symbol links to the tile the push would have opened
+ * (/chart-maps?tab=gajjala&sub=<setup>&focus=<SYM>). Only rows of `today`
+ * (the ET day) — the server already serves today only; this is the second
+ * lock, so a page left open past midnight never shows yesterday as today.
+ * Nothing here sends: it reads what the shadow pass recorded. */
+const GG_SHADOW_NOTE_FALLBACK = 'shadow — not sent';
+
+function ggShadowTime(it: GgShadowItem): string {
+  const t = etFromIso(it.at);
+  if (t) return t;
+  const bar = typeof it.entry_bar_t === 'string' ? it.entry_bar_t.slice(11, 16) : '';
+  return /^\d\d:\d\d$/.test(bar) ? `${bar} ET` : '—';
+}
+
+function GgShadowLine({ it }: { it: GgShadowItem }) {
+  const sym = (it.symbol || '').trim();
+  const text = (typeof it.text === 'string' && it.text.trim()) ? it.text
+    : [sym, it.trigger != null ? `trigger ${it.trigger}` : '', it.stop != null ? `stop ${it.stop}` : '']
+      .filter(Boolean).join(' · ');
+  const url = typeof it.url === 'string' && it.url.startsWith('/') && !it.url.startsWith('//') ? it.url : null;
+  if (!sym || !url) return <span>{text}</span>;
+  const link = <Link to={url} className="tk-link alert-tk" data-testid={`gg-shadow-tk-${sym}`}>{sym}</Link>;
+  const parts = splitAtSymbol(text, sym);
+  return <span>{parts ? <>{parts[0]}{link}{parts[2]}</> : <>{link}{' '}{text}</>}</span>;
+}
+
+export function GajjalaShadowList({ items, today }: { items: GgShadowItem[] | null | undefined; today: string }) {
+  const rows = (Array.isArray(items) ? items : []).filter((it) => it && it.date === today);
+  if (!rows.length) return null;
+  return (
+    <div data-testid="gg-shadow-list" style={{ margin: '0 0 0.35rem 0.6rem', paddingLeft: '0.6rem', borderLeft: '2px solid rgba(217,119,6,0.3)' }}>
+      <div className="mono" style={{ fontSize: '0.62rem', color: DIM, marginBottom: 2 }}>
+        🚩 A+ today · recorded, not sent · {rows.length}
+      </div>
+      {rows.map((it, i) => (
+        <div key={`${it.symbol}-${it.setup}-${i}`} data-testid="gg-shadow-row"
+             style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.76rem', lineHeight: 1.45 }}>
+          <span className="mono" style={{ color: GOLD, fontWeight: 700, whiteSpace: 'nowrap' }}>{ggShadowTime(it)}</span>
+          <GgShadowLine it={it} />
+          <span className="mono" style={SKIP_CHIP}>{(typeof it.note === 'string' && it.note.trim()) || GG_SHADOW_NOTE_FALLBACK}</span>
+        </div>
       ))}
     </div>
   );

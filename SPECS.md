@@ -499,6 +499,68 @@ edge (`PAD_FLOOR_HELD = False`, his call). Payloads gain `pad_lo` / `pad_pct` / 
 never a moved edge. UNMEASURED (`zone_pad_measured.py`, pending). Full rule, sites, phone-gate
 statement, sell-timing list and HIS CALLs: `docs/supply_demand/zone_pad_2026_09_30.md`.
 
+### Chart Maps — Gajjala's tab — `chart_maps/gajjala/` (2026-10-13)
+Goverdhan Gajjala's five intraday setups over HIS scanner on the whole US market (Ajay: *"Implement his full stategy do
+not assume anything."*). Long setups only. **UNMEASURED** — nothing here trades, sizes or enters a lane; not SEPA (no
+other method's gate, import or citation — `test_gajjala_source_guard.py`). Every number lives in `constants.py` and is
+imported, never retyped; tags as the file writes them: **GG** = his own words (S8 IBD webinar, S9 TraderLion podcast, X
+posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `verified_rules.json`), **Ajay** = his
+2026-10-13 answers (DECISIONS rounds A/B/C), **Cheetah default** = Ajay's number, not GG's (the ℹ️ panel says so),
+**spec default** = an unanswered display option shipped OFF, **TRANSPORT** = pacing only.
+- **Sub-tabs** (`SUBS`, default `DEFAULT_SUB` = `bull_flag`): 🚩 Bull Flag · 💋 EMA Kiss & Fly · ➖ Horizontal Fade · 🌀
+  Intraday VCP · 🎾 Reversal Squeeze · ☀️ Premarket · 🌙 Post-market · 📓 Playbook (his words with timestamps, text only).
+  Charts are closed 5-minute bars (the Fade reads 15-minute first) resampled from the 1-minute cache, with the 9/21 EMA
+  (`EMA_FAST` 9 / `EMA_SLOW` 21, imported from `orderflow.signals` — GG S8 25:36, S9 24:42).
+- **Scanner** (one whole-market Massive snapshot per pass): `SCAN_MIN_PRICE` 0.10 (GG X 2024-02-01, his latest — Ajay
+  round A) to `SCAN_MAX_PRICE` 100.0 (GG S8 19:12), `SCAN_MIN_VOLUME` 1,000,000 (GG S8 19:12), `SCAN_MIN_CHANGE_PCT` 25.0
+  vs the prior close (GG S8 19:51); `SCAN_INSTRUMENT_TYPES` CS + ADRC, `SCAN_INCLUDE_OTC` False,
+  `SCAN_UNKNOWN_TYPE_POLICY` "list" ("type unknown") — Ajay; `STAY_LISTED_SESSIONS` 2 (Cheetah default);
+  `NO_TRADE_AFTER_OPEN_MIN` 15 (GG S8 14:41). Strip: `SA_BIG_RUNNER_PCT` 100 / `SA_RUNNER_PCT` 80 / `SA_QUIET_BEST_PCT` 40
+  (GG S8 43:39–44:37).
+- **Setup knobs** (all Ajay K1–K10 / H1–H5 unless tagged): K1 demand bar `K1_BODY_GAIN_PCT` 3.0, `K1_RANGE_MULT` 1.5 over
+  `K1_RANGE_LOOKBACK` 20; K2 `K2_MAX_VOL_STEP` 5.0 within the leg (`K2_CHECK_FIRST_BAR` False); K3 `K3_DEPTH_FRAC` 0.50 /
+  `K3_VOL_FRAC` 0.50, the depth floor on `K3_DEPTH_SETUPS` (Bull Flag, Kiss & Fly) only. Legs: `BF_LEG_MIN_BARS` 2 (GG S9
+  1:59:24), `KF_LEG_MIN_BARS` 1 (GG S8 31:33), `HF_LEG_MIN_BARS` 2, `VCP_LEG_MIN_BARS` 1. Bull Flag pullback
+  `K4_BF_PULL_MIN`–`K4_BF_PULL_MAX` 1–3; Kiss & Fly `K5_KISS_TOL_PCT` 0.5, `K5_SLOPE_BARS` 3, ≤ `K4_KF_PULL_MAX` 9, every
+  pullback close ≥ 9 EMA (`KF_HONOR_ALL_PULLBACK_CLOSES`); Fade base `K4_HF_BASE_MIN`–`K4_HF_BASE_MAX` 6–24, `K6_MERGE_PCT`
+  0.5, `K6_TIGHT_PCT` 8.0, `K6_SELL_DECAY` 0.70, trigger `HF_TRIGGER` "base_high"; VCP ≥ `K4_VCP_MIN_CYCLES` 2,
+  `K7_CONTRACTION` 0.75, `K7_EMA21_TOL_PCT` 0.5, `VCP_PIVOT_WINDOW` 2; Reversal Squeeze `K8_MAX_FLOAT` 10,000,000,
+  `K8_DROP_PCT` 8.0, `K8_RECOVER_PCT` 2.0 in `K8_RECOVER_BARS` 3, failed attempt `K8_FAIL_NEAR_PCT` 2.0 /
+  `K8_FAIL_DROP_PCT` 8.0 / `K8_FAIL_EVENT_RULE` "distinct", `RS_BASE_MIN_BARS` 1, history chip `K8_HISTORY_SESSIONS` 30 /
+  `K8_HISTORY_RANGE_PCT` 50.0, `FLOAT_SUSPECT_POLICY` "ineligible" (spec default); ☀️ K9 `K9_PM_MIN_VOLUME` 1,000,000,
+  `K9_AH_CARRY_PCT` 10.0; 🌙 K10 `K10_CLOSE_TOP_FRAC` 0.30, `K10_AH_MIN_VOLUME` 250,000, `K10_AH_MIN_GAIN_PCT` 5.0.
+  Entry = the entry bar's high trades above the trigger on a CLOSED bar; stop = the trigger bar's low (the bar before the entry bar) / the base's low.
+- **Reads**: **A+** = every rule met and the entry bar closed — the only pushable state. Listed, never A+, never pushed:
+  **"long flag"** (Bull Flag pullback past `K4_BF_PULL_MAX`, up to `K4_BF_LONG_FLAG_MAX` 5; more = invalid),
+  **"near-kiss"** (`KF_NO_TOUCH_VARIANT`, `KF_ALLOW_NO_TOUCH` True: K3 + uptrend pass, no bar kissed the 9 EMA),
+  **"B — imperfect"** (`VCP_B_GRADE`, `VCP_B_READS` True: exactly one of the K7 contraction / 21-EMA hold missed).
+  Other states: triggered · forming · partial · stopped; invalid / none are counted, never tiled. Chips are display only:
+  🧱 `PSY_LEVELS` $1/$5/$10 (GG S9) within `PSY_NEAR_PCT` 5.0 (Cheetah default); red closes > `RED_CLOSES_WAIT` 3 (GG X),
+  `RED_CLOSES_MODE` "chip" (Ajay — never a criterion); halts and after-hours exhaustion OFF (`HALT_CALM_BARS`,
+  `AH_EXHAUSTION_MAX_PCT` None — spec default).
+- **Push** `gajjala_setup` (`PUSH_KIND`, owner-only, default pref False): `GAJJALA_PUSH_MODE` "shadow" (Ajay round A).
+  The full gate runs every pass; each A+ is claimed once per (symbol, setup, ET day) and recorded in `gajjala_alerts` as
+  "shadow — not sent" on /alerts — **nothing is sent**. Only the exact string "live" sends; Ajay flips it himself after
+  the `STUDY_SESSIONS` 250-session study (`scripts/gajjala_study.py`, exits stop-or-16:00 · stop-or-`STUDY_TIME_EXIT_MIN`
+  60-min · breakeven after `STUDY_BE_AFTER_R` 1.0R then the first 5-min close under the 9 EMA; placebo = same-session
+  scanner names with no setup) reads. Status today: NOT RUN. When live (`alerts._closes`, no typed times): `ET_RTH_OPEN` +
+  `NO_TRADE_AFTER_OPEN_MIN` up to `rth_close_time()`, then up to `ET_AFTERHOURS_CLOSE` (`HALF_DAY_AH_CLOSE` on
+  `HALF_DAYS`), never the first `NO_TRADE_AFTER_OPEN_MIN`, closed days silent.
+- **Cron** (`backend/crontab`; the host copy is a separate install step — a deploy does not ship it):
+  `1-56/5 4-20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` (the pass, `PASS_CADENCE_SEC`
+  300, `PASS_OPEN_ET` 04:00–`PASS_CLOSE_ET` 20:05, TRANSPORT) and
+  `15 20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` (float, halt history, 🎾 history).
+- **Endpoint** `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=` (`limit` `TILE_LIMIT_DEFAULT` 24, max
+  `TILE_LIMIT_MAX` 80) → `tab.build()`: reads Mongo only (`gajjala_reads`, `gajjala_passes`, `gajjala_alerts`) plus one
+  live fan-out for the shown tiles' now-line; never scans or fetches a bar on the request. `stale` after `STALE_AFTER_SEC`
+  900. ℹ️ panel: `rules_info` section "gajjala", built from `constants.py`.
+- **Not built** (📓 Playbook text only, each would need Ajay's numbers): exits / partials / breakeven-and-add are never
+  computed (his discretion), sizing and the drawdown brake, a trades-per-day cap, a confluence score, the post-market
+  journal (R2-8: not now).
+- **Docs**: `docs/gajjala/gajjala_tab_2026_10_13.md` (tab, endpoint, Playbook, ℹ️), `push_2026_10_13.md`,
+  `study_2026_10_13.md`, `detectors_2026_10_13.md`, `context_reads_2026_10_13.md`, `data_plan_2026_10_13.md`,
+  `sources_2026_10_13.md`, `frontend_2026_10_13.md`, `volume_avg_backend_2026_10_13.md`.
+
 ---
 
 ## 4. Live Data Layer
@@ -667,6 +729,8 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `30 8  * * 1-5` | `/usr/local/bin/python -m sepa.cli brief` | Morning brief (08:30 ET) |
 | `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
+| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger. § 3 "Chart Maps — Gajjala's tab". |
+| `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm. |
 
 **Two operational gotchas (load-bearing):**
 1. The crontab MUST use the absolute python path (`/usr/local/bin/python`).
