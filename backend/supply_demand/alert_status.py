@@ -433,7 +433,7 @@ def read_gajjala_shadow(coll=None, now: Optional[datetime] = None) -> list:
         url = wp.get("url")
         if not (isinstance(url, str) and url.startswith("/") and not url.startswith("//")):
             url = None
-        at = d.get("claimed_at")
+        at = d.get("at") or d.get("claimed_at")                 # the pass clock first; the claim's wall clock as fallback
         at = at.isoformat() if hasattr(at, "isoformat") else (str(at) if at else None)
         out.append({"date": day, "symbol": str(d.get("symbol") or "").upper() or None,
                     "setup": d.get("setup") or None, "at": at,

@@ -358,12 +358,16 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
         from supply_demand.demand_alerts import claim_key as _claim
         if mode == "shadow":
             sk = shadow_key(session, sym, setup)
-            if not _claim(coll, sk, dict(base, state="shadow", would_push=payload, note=SHADOW_NOTE)):
+            # `at` = the PASS clock (claimed_at is the house helper's wall clock — a replayed or late pass must not
+            # stamp a shadow row with the time it was replayed)
+            if not _claim(coll, sk, dict(base, state="shadow", would_push=payload, note=SHADOW_NOTE,
+                                        at=now.isoformat())):
                 counts["claimed_before"] += 1
                 continue
             counts["shadow"] += 1                               # the sender is NEVER called in shadow
             continue
-        if _exists(coll, shadow_key(session, sym, setup)) or not _claim(coll, key, dict(base, state="claimed")):
+        if _exists(coll, shadow_key(session, sym, setup)) or not _claim(coll, key, dict(base, state="claimed",
+                                                                                      at=now.isoformat())):
             counts["claimed_before"] += 1
             continue
         try:
