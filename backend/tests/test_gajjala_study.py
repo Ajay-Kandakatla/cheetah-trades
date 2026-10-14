@@ -819,3 +819,410 @@ def test_a_short_walk_is_flagged_and_exits_non_zero(tmp_path):
     assert S.main(argv + ["--allow-short"]) == 0
     full = S.run(end=date.fromisoformat(TODAY), sessions=1, start=None, cache=cache, rules=("session",), draws=50)
     assert full["sessions"]["short"] is False                        # NEGATIVE a complete walk is not short
+
+
+# ── method v2 (2026-10-14, pre-registered before run 2): the run-1 critic's B1 / M1 / M2 / M3 / m1 / m2 ──────────────
+def _ev(fill="10:20", risk_pct=4.52, trigger=10.0, window="rth", symbol="EV", setup="bull_flag", entry="10:25"):
+    return {"session": TODAY, "window": window, "setup": setup, "symbol": symbol, "entry_bar_t": f"{TODAY} {entry}",
+            "fill_t": f"{TODAY} {fill}", "risk_pct": risk_pct, "trigger": trigger,
+            "stop": trigger * (1 - (risk_pct or 4.52) / 100)}
+
+
+def test_v2_placebo_stop_is_risk_matched_never_the_bar_low():
+    res = run(zigzag_day())
+    assert res["setup_free"] is True and res["pool"] and res["pool_ctx"] is not None
+    rows, cnt = S.sample_placebo_v2([_ev(fill="11:01")], res["pool"], {"TEST": res["pool_ctx"]})
+    assert rows and cnt["placebo_match_hour"] == 1
+    for r in rows:
+        assert r["stop"] == pytest.approx(r["trigger"] * (1 - 4.52 / 100))      # trigger × (1 − event risk_pct)
+        assert r["stop"] != r["bar_low"] and r["risk_pct"] == pytest.approx(4.52)   # NEGATIVE never the bar's low
+        assert r["matched_risk_pct"] == pytest.approx(4.52)
+    v1 = S.placebo_pool("TEST", TODAY, *_zig_frames())
+    assert v1 and all(r["stop"] == r["bar_low"] for r in v1)                      # v1 (run 1) stays reproducible
+    no_rp = dict(_ev(fill="11:01"), risk_pct=None, trigger=10.0, stop=9.0)        # NEGATIVE missing risk_pct → recomputed
+    rows2, _ = S.sample_placebo_v2([no_rp], res["pool"], {"TEST": res["pool_ctx"]})
+    assert all(r["stop"] == pytest.approx(r["trigger"] * 0.9) for r in rows2)
+
+
+def _zig_frames():
+    from chart_maps.gajjala.bars import build_frames
+    today = S.day_minutes(zigzag_day(), TODAY)
+    everything = S.utc_naive(S.session_bounds(TODAY)["ah_close"]) + pd.Timedelta(days=1)
+    f5 = build_frames("TEST", date.fromisoformat(TODAY), everything, prev_day(), today).f5
+    q = S.qualification_minute(today, PREV_CLOSE)
+    return f5, today, q, S.ema_exit_map(f5)
+
+
+def _path_day():
+    """One tape for every name: the 10:00 minute breaks 10.00, a rise to 10.40, a slide to 9.70 by 10:40, flat to the
+    close. At a 5% stop (9.50) it ends −0.6R / −3%; at a 2% stop (9.80, the bar's low) it is stopped: −1R / −2%."""
+    rows = [(9.96, 10.05, 9.96, 10.02), (10.02, 10.1, 10.0, 10.08), (10.08, 10.15, 10.05, 10.12),
+            (10.12, 10.2, 10.1, 10.15), (10.15, 10.2, 10.12, 10.18)]
+    rows += [(10.18 + i * 0.01, 10.2 + i * 0.01, 10.17 + i * 0.01, 10.19 + i * 0.01) for i in range(20)]   # ≤ 10.40
+    rows += [(10.39 - i * 0.035, 10.39 - i * 0.035, 10.355 - i * 0.035, 10.355 - i * 0.035) for i in range(20)]
+    rows = [tuple(min(x, 10.4) for x in r) for r in rows]
+    rows += [(9.7, 9.7, 9.7, 9.7)] * (6 * 60 - len(rows))
+    return mins_df(rows, "10:00")
+
+
+def _cands(today, n=5, low=9.8, hhmm="10:00"):
+    t = S.utc_naive(_bt(hhmm))
+    bucket = today[(today.index >= t) & (today.index < t + pd.Timedelta(minutes=5))]
+    rows = [tuple(map(float, r)) + (1.0,) for r in bucket[["open", "high", "low", "close"]].itertuples(index=False)]
+    lab = t + pd.Timedelta(minutes=5)
+    return [{"symbol": f"P{i}", "session": TODAY, "bar_t": f"{TODAY} {hhmm}", "entry_bar_t": S.et_of(lab).strftime(
+        "%Y-%m-%d %H:%M"), "trigger": 10.0, "bar_low": low, "window": "rth", "break_t": f"{TODAY} {hhmm}",
+        "break_ts": t, "entry_label": lab, "entry_low": float(bucket["low"].min()), "rows": rows} for i in range(n)]
+
+
+def _event_on(today, risk_pct=5.0):
+    trigger = 10.0
+    stop = trigger * (1 - risk_pct / 100)
+    fill = S.utc_naive(_bt("10:00"))
+    rec = {"session": TODAY, "window": "rth", "setup": "bull_flag", "symbol": "EV", "entry_bar_t": f"{TODAY} 10:05",
+           "fill_t": f"{TODAY} 10:00", "risk_pct": risk_pct, "trigger": trigger, "stop": stop}
+    rec = S._flat(rec, S.trade_outcomes(today, fill, trigger, stop, TODAY, "rth", {}, "aplus"), trigger)
+    rec.update(S.push_outcomes(today, S.utc_naive(_bt("10:05")), stop, TODAY, "rth", {}))
+    return rec
+
+
+def test_v2_tighter_placebo_stops_read_zero_delta_where_v1_reads_an_edge():
+    """The run-1 artefact in miniature: event and placebo trade the SAME tape; only the placebo's stop is tighter (its
+    bar's low, 2% vs the event's 5%). v1 manufactures +0.4R of 'edge' (and −1% in return); v2 reads 0."""
+    today = _path_day()
+    ev = _event_on(today)
+    assert ev["r_session"] == pytest.approx(-0.6) and ev["pct_session"] == pytest.approx(-3.0)
+    cands = _cands(today)
+    ctx = {c["symbol"]: {"today": today, "ema_exit": {}} for c in cands}
+    pool_v1 = [S.placebo_trade(c, today, {}, c["bar_low"], push=False) for c in cands]
+    pl_v1, _ = S.sample_placebo([ev], {(TODAY, "rth"): pool_v1})
+    pl_v2, cnt = S.sample_placebo_v2([ev], cands, ctx)
+    assert len(pl_v2) == 5 and cnt["placebo_match_hour"] == 1
+    c1 = S.compare([ev], pl_v1, "session", method="v1", draws=50)
+    c2 = S.compare([ev], pl_v2, "session", method="v2", draws=50)
+    assert c1["delta_mean_r"] == pytest.approx(0.4) and c1["delta_mean_pct"] == pytest.approx(-1.0)   # NEGATIVE v1
+    assert c2["delta_mean_r"] == pytest.approx(0.0, abs=1e-9) and c2["delta_trim_r"] == pytest.approx(0.0, abs=1e-9)
+    assert c2["delta_mean_pct"] == pytest.approx(0.0, abs=1e-9)
+    for rule in GC.STUDY_EXIT_RULES:
+        assert S.compare([ev], pl_v2, rule, method="v2", draws=50)["delta_mean_r"] == pytest.approx(0.0, abs=1e-9)
+        assert S.compare([ev], pl_v2, rule, fill="push", method="v2", draws=50)["delta_mean_r"] == \
+            pytest.approx(0.0, abs=1e-9)
+
+
+def test_push_fill_is_the_first_minute_open_at_or_after_pass_plus_settle():
+    e = [x for x in run(flag_day())["events"] if x["setup"] == "bull_flag"][0]
+    assert e["pass_t"] == f"{TODAY} 10:15" and e["push_status"] == "ok"
+    assert e["push_fill_t"] == f"{TODAY} 10:16" and e["push_fill_px"] == 11.15       # 10:15:30 → the 10:16 open
+    assert e["r_push_session"] == pytest.approx((11.75 - 11.15) / (11.15 - STOP))     # risk from the fill, same stop
+    assert e["push_risk_pct"] == pytest.approx((11.15 - STOP) / 11.15 * 100)
+    assert e["pct_session"] == pytest.approx((11.75 / TRIGGER - 1) * 100)
+    L = S.utc_naive(_bt("10:00"))
+    m = mins_df([(10.0, 10.1, 9.9, 10.0), (10.2, 10.3, 10.1, 10.2)], "10:00")
+    assert S.push_fill(m, L, END) == ("ok", L + S.ONE_MIN, 10.2)                    # NEGATIVE the minute AT the pass
+    assert S.push_fill(m, L + S.ONE_MIN * 5, END)[0] == "fill_minute_missing"        # NEGATIVE no minute left
+    assert S.push_fill(m, L, L + S.ONE_MIN)[0] == "after_session_end"
+
+
+def _v2_cache(tmp_path, test_day):
+    cache = S.Cache(tmp_path, offline=True)
+    _grouped(cache, PRIOR, {"TEST": {"c": PREV_CLOSE}, "ZIG": {"c": PREV_CLOSE}})
+    _grouped(cache, TODAY, {"TEST": {"h": 11.9, "l": 9.9, "v": 3e6}, "ZIG": {"h": 11.0, "l": 9.9, "v": 7e6}})
+    for sym, df in (("TEST", test_day), ("ZIG", zigzag_day())):
+        _put_day(cache, sym, TODAY, df)
+        _put_day(cache, sym, PRIOR, prev_day())
+    return cache
+
+
+def test_negative_a_push_fill_under_the_stop_is_dropped_and_counted(tmp_path):
+    bad = flag_day(after=[(11.2, 11.25, 10.5, 10.6, 90_000)] + [quiet(10.6)] * 60)   # 10:16 opens 10.50 < 10.8125
+    res = S.run(end=date.fromisoformat(TODAY), sessions=1, start=None, cache=_v2_cache(tmp_path, bad),
+                rules=GC.STUDY_EXIT_RULES, draws=50)
+    e = [x for x in res["events"] if x["setup"] == "bull_flag"][0]
+    assert e["push_status"] == "under_stop" and e["r_push_session"] is None and e["r_session"] == -1.0
+    assert res["counts"]["push_fill_under_stop"] == 1
+    rep = res["report"]
+    assert rep["by_setup"]["bull_flag"]["session"]["events"]["n"] == 1                  # the trigger fill keeps it
+    assert rep["by_setup_push"]["bull_flag"]["session"]["events"]["n"] == 0             # the push fill drops it
+    assert rep["push_status"]["bull_flag"] == {"under_stop": 1}
+    md = S.render_md(res, GC.STUDY_EXIT_RULES)
+    assert "under the stop (dropped) 1" in md and "| push |" in md and "(flip row)" in md
+
+
+def test_v2_run_draws_hour_matched_risk_matched_placebo_and_v1_reproduces_run_1(tmp_path):
+    cache = _v2_cache(tmp_path, flag_day())
+    v2 = S.run(end=date.fromisoformat(TODAY), sessions=1, start=None, cache=cache, rules=("session",), draws=50)
+    assert v2["method"] == "v2" and v2["placebo"] and all(p["symbol"] == "ZIG" for p in v2["placebo"])
+    ev = {e["setup"]: e for e in v2["events"]}
+    for p in v2["placebo"]:
+        assert p["stop"] == pytest.approx(p["trigger"] * (1 - ev[p["setup"]]["risk_pct"] / 100))
+        assert p["time_match"] in ("hour", "fallback") and "rows" not in p and "break_ts" not in p
+    c = v2["counts"]
+    assert c["placebo_match_hour"] >= 1
+    assert sum(c.get(k, 0) for k in ("placebo_match_hour", "placebo_match_fallback", "placebo_missing")) == \
+        len(v2["events"])
+    v1 = S.run(end=date.fromisoformat(TODAY), sessions=1, start=None, cache=cache, rules=("session",), draws=50,
+               method="v1")
+    assert v1["placebo"] and all(p["stop"] == p["bar_low"] for p in v1["placebo"])     # NEGATIVE run 1's stop
+    assert "by_setup_push" not in v1["report"] and v1["report"]["flip_fill"] == "trigger"
+    assert "by_setup_push" in v2["report"] and v2["report"]["flip_fill"] == "push"
+    with pytest.raises(ValueError):
+        S.run(end=date.fromisoformat(TODAY), sessions=1, start=None, cache=cache, rules=("session",), method="v3")
+
+
+def test_hour_bucket_matching_with_counted_fallbacks():
+    today = mins_df([(10.02, 10.05, 10.0, 10.02)] * 390, "09:30")
+    def cand(hhmm, window="rth", sym=None):
+        c = _cands(today, n=1, hhmm=hhmm)[0]
+        return dict(c, symbol=sym or f"C{hhmm}", window=window)
+    c10, c11, c13, ah10 = cand("10:05"), cand("11:10"), cand("13:00"), cand("10:10", window="ah", sym="AH")
+    ctx = {c["symbol"]: {"today": today, "ema_exit": {}} for c in (c10, c11, c13, ah10)}
+    ev = _ev(fill="10:20")
+    rows, cnt = S.sample_placebo_v2([ev], [c10, c11, c13, ah10], ctx)
+    assert [r["symbol"] for r in rows] == ["C10:05"] and cnt == {"placebo_match_hour": 1, "placebo_push_ok": 1}
+    rows, cnt = S.sample_placebo_v2([ev], [c11, c13, ah10], ctx)                    # hour 10 empty → ±60 min
+    assert [(r["symbol"], r["time_match"]) for r in rows] == [("C11:10", "fallback")]
+    assert cnt["placebo_match_fallback"] == 1
+    rows, cnt = S.sample_placebo_v2([ev], [c13, ah10], ctx)                         # NEGATIVE 160 min away, other window
+    assert rows == [] and cnt == {"placebo_missing": 1}
+
+
+def test_trimmed_winsorized_median_columns_and_the_v2_verdict_reads_the_trimmed_delta():
+    vals = list(range(1, 100)) + [1000]
+    assert S.trim_mean(vals) == pytest.approx(50.5) and S.winsor_mean(vals) == pytest.approx(50.5)
+    assert np.mean(vals) == pytest.approx(59.5)
+    lop = list(range(1, 99)) + [1000]                                               # n = 99: g = 0.99 row per tail
+    assert S.trim_mean(lop) == pytest.approx((0.01 * 1 + sum(range(2, 99)) + 0.01 * 1000) / (99 - 2 * 0.99))
+    assert S.trim_mean(lop) < np.mean(lop) - 9                                      # NEGATIVE n < 100 still trims
+    rng = np.random.default_rng(5)
+    ev = [{"session": f"d{d}", "symbol": f"E{d}_{k}", "setup": "bull_flag", "r_session": float(rng.normal(1.0, 0.3)),
+           "exit_session": "x", "mfe_session": 1.0, "pct_session": 1.0} for d in range(40) for k in range(10)]
+    ev[7]["r_session"] = -1e4                                                       # one catastrophic tail row
+    pl = [{"session": f"d{d}", "symbol": f"P{d}_{k}", "setup": "bull_flag", "r_session": float(rng.normal(0.0, 0.3)),
+           "exit_session": "stop", "mfe_session": 0.0, "pct_session": 0.0} for d in range(40) for k in range(10)]
+    for x in ev + pl:                                                               # the push fill: no edge at all
+        x.update(r_push_session=float(rng.normal(0.0, 0.3)), exit_push_session="x", mfe_push_session=0.0,
+                 pct_push_session=0.0)
+    v2 = S.compare(ev, pl, "session", method="v2", draws=400)
+    v1 = S.compare(ev, pl, "session", method="v1", draws=400)
+    assert set(v2["events"]) >= {"trim_mean_r", "winsor_mean_r", "median_r", "mean_pct", "trim_mean_pct"}
+    assert set(v2) >= {"delta_trim_r", "delta_trim_ci_date", "delta_trim_ci_symbol", "delta_winsor_r",
+                       "delta_median_r", "delta_mean_pct", "delta_pct_ci_date", "delta_trim_pct"}
+    assert v2["verdict_on"] == "trim_mean" and v2["verdict"] == v2["verdict_trim"] == "measured_edge"
+    assert v2["delta_trim_ci_date"][0] > 0 and v2["delta_trim_ci_symbol"][0] > 0
+    assert v1["verdict"] == v2["verdict_mean"] == "no_signal"                       # NEGATIVE the mean is tail-driven
+    rep = S.build_report(ev, pl, ("session",), method="v2", draws=200)
+    assert rep["by_setup"]["bull_flag"]["session"]["verdict"] == "measured_edge"    # trigger row, comparison only
+    assert rep["flip"]["bull_flag"]["session"] == rep["by_setup_push"]["bull_flag"]["session"]["verdict"] \
+        == "no_signal"                                                               # the flip reads the PUSH row
+    assert "verdict rule" in S.render_md({"report": rep, "method": "v2"}, ("session",))
+
+
+def test_main_writes_the_method_and_the_preregistered_rule_into_meta(tmp_path):
+    base = ["--cache", str(tmp_path / "c"), "--offline", "--force", "--draws", "50", "--allow-short"]
+    assert S.main(base + ["--out", str(tmp_path / "o")]) == 0
+    meta = json.loads((tmp_path / "o" / "report.json").read_text())["meta"]
+    assert meta["method"] == "v2" and meta["verdict_rule"] == S.VERDICT_RULE["v2"] and meta["flip_fill"] == "push"
+    assert "TRIMMED" in meta["verdict_rule"] and meta["method_v2"]["trim_frac"] == S.STUDY_TRIM_FRAC
+    assert "ungated structure" in meta["reversal_squeeze_rows"]
+    assert S.main(base + ["--out", str(tmp_path / "o1"), "--method", "v1"]) == 0
+    meta1 = json.loads((tmp_path / "o1" / "report.json").read_text())["meta"]
+    assert meta1["method"] == "v1" and meta1["verdict_rule"] == S.VERDICT_RULE["v1"]
+    md = (tmp_path / "o" / "report.md").read_text()
+    assert S.RS_ROW_LABEL in md and "ungated structure" in md                       # m2 label on the 🎾 rows
+
+
+def test_v2_method_numbers_stay_out_of_his_constants():
+    assert (S.STUDY_TRIM_FRAC, S.STUDY_PLACEBO_FALLBACK_MIN, S.DEFAULT_METHOD) == (0.01, 60, "v2")
+    assert not any(n.startswith(("STUDY_TRIM", "STUDY_PLACEBO")) for n in dir(GC))
+    assert (GC.K3_VOL_FRAC, GC.K6_TIGHT_PCT, GC.K4_HF_BASE_MIN) == (0.50, 8.0, 6)    # his numbers untouched
+
+
+def _hf_day(base_n=3, wide=True, tail=20):
+    """A 2-bar demand leg, then a TIGHT base of `base_n` bars; `wide` then prints a bar that stretches the base past
+    K6_TIGHT_PCT of price."""
+    bars = [quiet(10.0)] * 4 + [D1, D2] + [quiet(10.95)] * base_n
+    if wide:
+        bars += [(10.95, 11.0, 9.9, 10.0, 100_000)] + [quiet(10.0)] * tail
+    return day(TODAY, "09:30", bars)
+
+
+def test_hf_replay_reports_the_longest_base_and_the_first_failing_rule():
+    best, diag = EX.replay_day_full("HF", TODAY, prev_day(), _hf_day())
+    assert best["horizontal_fade"]["reason"] == f"base 0 of {GC.K4_HF_BASE_MIN} bars"      # run 1's hidden symptom
+    d = diag["horizontal_fade"]
+    assert (d["longest"], d["longest_unit"], d["first_fail"]) == (3, "base bars", "k6_tight")
+    assert d["longest_at"] == f"{TODAY} 10:15" and d["longest_state"] == "forming"
+    assert EX.replay_day("HF", TODAY, prev_day(), _hf_day()).keys() == best.keys()       # old API unchanged
+    _b, alive = EX.replay_day_full("HF", TODAY, prev_day(), _hf_day(base_n=5, wide=False))
+    assert alive["horizontal_fade"]["longest"] == 5 and alive["horizontal_fade"]["first_fail"] == ""   # NEGATIVE
+
+
+def test_examples_rows_and_table_carry_the_longest_structure_columns(tmp_path):
+    cache = S.Cache(tmp_path, offline=True)
+    _put_day(cache, "HFX", TODAY, _hf_day())
+    _put_day(cache, "HFX", PRIOR, prev_day())
+    _daily(cache, "HFX", TODAY, PRIOR, PREV_CLOSE)
+    ex = ({"ticker": "HFX", "date": TODAY, "setup": "horizontal_fade", "label": "valid", "frame": "5m"},)
+    rows = EX.replay_examples(cache, ex)
+    shipped = [r for r in rows if r["setting"] == "shipped"][0]
+    assert (shipped["longest"], shipped["first_fail"], shipped["best_state"]) == (3, "k6_tight", "forming")
+    md = EX.render_md(rows)
+    assert "longest reached" in md and "3 base bars (5m) @" in md and "| k6_tight |" in md
+    unverified = EX.render_md([dict(shipped, status="date unverified", longest=None, first_fail=None)])
+    assert "| — | — |" in unverified                                                  # NEGATIVE no replay → no claim
+
+
+def test_first_failing_rule_names_an_invalid_reason():
+    assert EX.first_failing_rule({"state": "invalid", "reason": "base wider than 8% of price"}) == "k6_tight"
+    assert EX.first_failing_rule({"state": "partial", "missed": ["k2", "k3_vol"]}) == "k2"
+    assert EX.first_failing_rule({"state": "forming", "missed": []}) is None
+    assert EX.first_failing_rule({"state": "invalid", "reason": "something new"}) == "invalid: something new"
+
+
+# ── critic round 2 (2026-10-14): an equal trim on both sides, the push row = what the push sends, mutant pins ──────
+def _tail_rows(prefix, n_per_day, days, tail_every, rng):
+    out = []
+    for d in range(days):
+        for k in range(n_per_day):
+            r = -1.0 if rng.random() < 0.7 else float(rng.exponential(1.5))
+            if (d * n_per_day + k) % tail_every == 0:
+                r = 40.0
+            out.append({"session": f"d{d}", "symbol": f"{prefix}{d}_{k}", "setup": "kiss_fly", "r_session": r,
+                        "exit_session": "x", "mfe_session": 0.0, "pct_session": r, "r_push_session": r,
+                        "exit_push_session": "x", "mfe_push_session": 0.0, "pct_push_session": r})
+    return out
+
+
+def _floor_trim(vals, frac=S.STUDY_TRIM_FRAC):
+    a = np.sort(np.asarray(vals, dtype=float))
+    k = int(np.floor(len(a) * frac + 1e-9))
+    return float(a[k:len(a) - k].mean())
+
+
+def test_the_trim_cuts_the_same_share_from_both_sides_whatever_their_n():
+    """71 events against 50 placebo rows each, drawn from the SAME generator: the trimmed Δ must read the mean Δ, not
+    +0.37R of edge from cutting 35 placebo rows a tail and none on the event side (critic round 2)."""
+    rng = np.random.default_rng(1)
+    ev, pl = _tail_rows("E", 1, 71, 24, rng), _tail_rows("P", 50, 71, 24, rng)
+    c = S.compare(ev, pl, "session", fill="push", method="v2", draws=200)
+    assert abs(c["delta_trim_r"]) < 0.1 and abs(c["delta_trim_r"] - c["delta_mean_r"]) < 0.05
+    ev_r, pl_r = [x["r_session"] for x in ev], [x["r_session"] for x in pl]
+    assert _floor_trim(ev_r) - _floor_trim(pl_r) > 0.3                              # NEGATIVE the whole-row floor
+    rep = [dict(x, symbol=f"{x['symbol']}_{j}") for x in ev for j in range(50)]     # the events × 50: same shape
+    c2 = S.compare(ev, rep, "session", fill="push", method="v2", draws=50)
+    assert c2["delta_trim_r"] == pytest.approx(0.0, abs=1e-9) and c2["delta_winsor_r"] == pytest.approx(0.0, abs=1e-9)
+    assert S.trim_mean(ev_r) == pytest.approx(S.trim_mean(ev_r * 50))
+    assert S.winsor_mean(ev_r) == pytest.approx(S.winsor_mean(ev_r * 50))
+    assert S.trim_mean([7.0]) == pytest.approx(7.0) and S.trim_mean([]) is None and S.winsor_mean([3.0, 5.0]) == pytest.approx(4.0)
+    assert "FRACTIONAL" in S.VERDICT_RULE["v2"]
+
+
+def test_a_non_aplus_event_is_off_the_push_row_and_kept_on_the_trigger_row():
+    k = 4 + 4
+    stopped = [(10.875, 10.9, 10.85, 10.9, 50_000), (10.9, 11.25, 10.85, 11.2, 50_000),
+               (11.2, 11.2, 10.8, 10.82, 50_000), (10.82, 10.85, 10.82, 10.85, 50_000),
+               (10.85, 10.9, 10.85, 10.9, 50_000)]
+    ambiguous = [(10.875, 10.9, 10.85, 10.9, 50_000), (10.9, 11.25, 10.8, 11.2, 50_000)] + \
+        [(11.2, 11.2, 11.2, 11.2, 50_000)] * 3
+    for mins, cls in ((stopped, "stopped_in_bar"), (ambiguous, "ambiguous")):
+        e = [x for x in run(flag_day(custom={k: mins}))["events"] if x["setup"] == "bull_flag"][0]
+        assert e["entry_class"] == cls and e["push_status"] == S.NOT_APLUS
+        assert e["r_session"] == pytest.approx(-1.0)                                # the trigger row keeps it
+        assert all(e[f"r_push_{r}"] is None for r in GC.STUDY_EXIT_RULES) and e["push_fill_t"] is None
+        rep = S.build_report([e], [], ("session",), method="v2", draws=20)
+        assert rep["by_setup"]["bull_flag"]["session"]["events"]["n"] == 1
+        assert rep["by_setup_push"]["bull_flag"]["session"]["events"]["n"] == 0
+    ok = [x for x in run(flag_day())["events"] if x["setup"] == "bull_flag"][0]
+    assert ok["entry_class"] == "aplus" and ok["push_status"] == "ok"               # NEGATIVE an A+ stays on it
+
+
+def test_a_placebo_row_that_did_not_break_cleanly_is_off_the_push_row():
+    flat = [(9.7, 9.7, 9.7, 9.7)] * 120
+    after = [(10.0, 10.0, 9.4, 9.45)] + [(9.7, 9.7, 9.7, 9.7)] * 3                   # under 9.50 AFTER the break
+    for first, rest, cls in (((9.96, 10.05, 9.96, 10.02), after, "break"),
+                             ((9.96, 10.05, 9.4, 10.0), [(10.0, 10.0, 10.0, 10.0)] * 4, "ambiguous")):
+        today = mins_df([first] + rest + flat, "10:00")
+        c = _cands(today, n=1)[0]
+        row = S.placebo_trade(c, today, {}, 9.5)
+        assert row["entry_class"] == cls and row["push_status"] == S.NOT_APLUS
+        assert row["r_session"] == pytest.approx(-1.0) and row["r_push_session"] is None
+    today = _path_day()
+    clean = S.placebo_trade(_cands(today, n=1)[0], today, {}, 9.5)
+    assert clean["entry_class"] == "break" and clean["push_status"] == "ok"          # NEGATIVE a clean break stays
+    assert clean["r_push_session"] is not None
+
+
+def test_a_push_fill_opening_exactly_at_the_stop_is_under_the_stop():
+    L = S.utc_naive(_bt("10:05"))
+    today = mins_df([(9.5, 9.6, 9.5, 9.55)] + [(9.6, 9.6, 9.6, 9.6)] * 30, "10:06")
+    rec = S.push_outcomes(today, L, 9.5, TODAY, "rth", {})
+    assert rec["push_status"] == "under_stop" and rec["r_push_session"] is None
+    above = mins_df([(9.51, 9.6, 9.51, 9.55)] + [(9.6, 9.6, 9.6, 9.6)] * 30, "10:06")
+    assert S.push_outcomes(above, L, 9.5, TODAY, "rth", {})["push_status"] == "ok"   # NEGATIVE one tick above
+
+
+def test_a_fill_minute_that_pierces_the_stop_is_minus_one_r_on_the_push_row():
+    L = S.utc_naive(_bt("10:05"))
+    today = mins_df([(10.0, 10.1, 9.4, 9.6)] + [(10.2, 10.2, 10.2, 10.2)] * 60, "10:06")
+    rec = S.push_outcomes(today, L, 9.5, TODAY, "rth", {})
+    assert rec["push_fill_px"] == 10.0 and rec["push_fill_t"] == f"{TODAY} 10:06"
+    assert all(rec[f"r_push_{r}"] == pytest.approx(-1.0) and rec[f"exit_push_{r}"] == "stop"
+               for r in GC.STUDY_EXIT_RULES)
+    held = mins_df([(10.0, 10.1, 9.6, 9.8)] + [(10.2, 10.2, 10.2, 10.2)] * 60, "10:06")
+    assert S.push_outcomes(held, L, 9.5, TODAY, "rth", {})["r_push_session"] > 0     # NEGATIVE the low held
+
+
+def test_a_candidate_stopped_before_its_break_is_never_drawn_and_the_run_survives():
+    today = mins_df([(9.96, 9.98, 9.4, 9.6), (9.6, 10.05, 9.6, 10.02)] + [(10.0, 10.0, 10.0, 10.0)] * 120, "10:00")
+    c = _cands(today, n=1)[0]
+    assert S.placebo_trade(c, today, {}, 9.5) is None                               # the stop printed first
+    rows, cnt = S.sample_placebo_v2([_ev(fill="10:02", risk_pct=5.0)], [c], {c["symbol"]: {"today": today,
+                                                                                           "ema_exit": {}}})
+    assert rows == [] and cnt == {"placebo_missing": 1}
+    rows, cnt = S.sample_placebo_v2([_ev(fill="10:02", risk_pct=8.0)], [c], {c["symbol"]: {"today": today,
+                                                                                           "ema_exit": {}}})
+    assert len(rows) == 1 and cnt["placebo_match_hour"] == 1                        # NEGATIVE a wider stop held
+
+
+def _rd(s_t, bars, at, state="forming", missed=None, reason=""):
+    return {"leg": {"s_t": s_t}, "base": {"bars": bars}, "frame": "5m", "as_of_bar_t": at, "state": state,
+            "missed": missed or [], "reason": reason, "ready": False, "broke": state in ("aplus", "triggered")}
+
+
+def _longest(passes):
+    L = EX.Longest()
+    for reads in passes:
+        L.next_pass()
+        for r in reads:
+            L.see("horizontal_fade", r)
+    return L.result()["horizontal_fade"]
+
+
+def test_longest_says_superseded_never_alive_when_a_new_leg_replaced_the_structure():
+    a, b = "2026-10-13 10:00", "2026-10-13 10:30"
+    sup = _longest([[_rd(a, 3, "10:20")], [_rd(b, 2, "10:35")], [_rd(b, 2, "10:40")]])
+    assert (sup["longest"], sup["longest_at"], sup["first_fail"], sup["longest_end"]) == (3, "10:20", "", "superseded")
+    alive = _longest([[_rd(a, 3, "10:20")], [_rd(a, 3, "10:25")]])
+    assert alive["longest_end"] == "alive_at_close"                                 # NEGATIVE read at the last pass
+    tie_fail = _longest([[_rd(a, 3, "10:20")], [_rd(b, 3, "10:45")],
+                         [_rd(b, 3, "10:50", state="invalid", reason="base wider than 8% of price")]])
+    assert (tie_fail["longest_at"], tie_fail["first_fail"], tie_fail["longest_end"]) == ("10:45", "k6_tight", None)
+    tie_late = _longest([[_rd(a, 3, "10:20")], [_rd(b, 3, "10:45")]])
+    assert (tie_late["longest_at"], tie_late["longest_end"]) == ("10:45", "alive_at_close")   # the LATEST on a tie
+    broke = _longest([[_rd(a, 3, "10:20")], [_rd(a, 3, "10:25", state="aplus")], [_rd(b, 1, "10:40")]])
+    assert broke["longest_end"] == "broke"
+    row = {"ticker": "X", "date": TODAY, "his_label": "valid", "setting": "shipped", "setup": "horizontal_fade",
+           "best_state": "forming", "entry_bar_t": None, "trigger": None, "stop": None, "missed": "", "longest": 3,
+           "longest_unit": "base bars", "longest_frame": "5m", "longest_at": "10:20", "status": "replayed",
+           "reason": "", "float_gate": ""}
+    md = EX.render_md([dict(row, first_fail="", longest_end="superseded"),
+                       dict(row, first_fail="", longest_end="alive_at_close")])
+    assert "none (superseded by a new leg)" in md and "none (alive at the close)" in md
+    assert "alive at the close / broke" not in md
+
+
+def test_hf_replay_end_of_the_longest_structure():
+    _b, d = EX.replay_day_full("HF", TODAY, prev_day(), _hf_day())
+    assert d["horizontal_fade"]["first_fail"] == "k6_tight" and d["horizontal_fade"]["longest_end"] is None
+    _b, alive = EX.replay_day_full("HF", TODAY, prev_day(), _hf_day(base_n=5, wide=False))
+    assert alive["horizontal_fade"]["longest_end"] == "alive_at_close"

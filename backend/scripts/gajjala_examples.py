@@ -6,6 +6,9 @@ pass only the bars closed by then exist). For each example and each setting it p
 that session (aplus > triggered > stopped > broke-not-A+ > forming-ready > forming > partial > invalid > none), the
 entry bar, trigger / stop, and the rules missed at that nearest-miss pass. The shipped constants are one setting; each
 Round-1 alternative (STRATEGY_SPEC §7 R1-4 … R1-8) is another, applied by patching `constants` for the replay only.
+Since 2026-10-14 (run-1 critic M3) each row also carries the LONGEST base / pullback / cycle count a live structure
+reached that session and the FIRST rule that failed there (`Longest`), because the best-state order hides how far a
+base got (every Horizontal Fade row of run 1 read "base 0 of 6 bars").
 
 EVENT SEEDS, NOT LABELS FOR A BACKTEST. A dozen hand-picked charts say whether our reading of his words matches his own
 reading of his own chart — they say nothing about whether the setup pays. That is gajjala_study.py's job.
@@ -27,6 +30,7 @@ import argparse
 import contextlib
 import json
 import logging
+import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -123,24 +127,126 @@ def state_key(read: dict) -> str:
     return st if st in STATE_RANK else "none"
 
 
+# Run-1 critic M3 (2026-10-14): the best-state order ranks forming above partial / invalid, so a Fade whose base
+# reached 3 of 6 and then failed printed "base 0 of 6 bars". The replay now also reports, per setup, the LONGEST base /
+# pullback / cycle count any live structure reached that session and the FIRST rule that failed at that point.
+COUNT_UNIT = {"bull_flag": "pullback bars", "kiss_fly": "pullback bars", "horizontal_fade": "base bars",
+              "intraday_vcp": "cycles", "reversal_squeeze": "base bars"}
+# An `invalid` read names its failure only in prose — the rule key each detector reason belongs to.
+INVALID_RULE = (("stopped before the break", "entry"), ("pullback longer than", "k4"), ("base longer than", "k4"),
+                ("pulled back more than half", "k3_depth"), ("base sank below half", "k3_depth"),
+                ("did not honor it", "k5a_honor"), ("base wider than", "k6_tight"),
+                ("no pullback in the last cycle", "k4_cycles"), ("lower low", "k7_higher_lows"),
+                ("cycle low under the 21 EMA", "k7_ema21"))
+DEAD_STATES = ("none", "invalid")
+BROKE_STATES = ("aplus", "triggered", "stopped", "broke_not_aplus")
+# How a structure with NO failing rule ended (critic round 2, 2026-10-14): it broke; its last read was the session's
+# final pass (alive at the close); or a new leg replaced it before the close without a rule failing (superseded).
+END_TEXT = {"broke": "none (broke)", "alive_at_close": "none (alive at the close)",
+            "superseded": "none (superseded by a new leg)"}
+
+
+def read_count(setup: str, r: dict) -> Optional[int]:
+    """The structure's length on one read: the VCP's cycle count (its k4_cycles criterion), else the base / pullback
+    bars. None = no structure (no leg)."""
+    if not r.get("leg"):
+        return None
+    if setup == "intraday_vcp":
+        c = next((c for c in r.get("criteria") or [] if c.get("key") == "k4_cycles"), None)
+        m = re.match(r"\s*(\d+)", str((c or {}).get("value") or ""))
+        return int(m.group(1)) if m else 0
+    return int((r.get("base") or {}).get("bars") or 0)
+
+
+def first_failing_rule(r: dict) -> Optional[str]:
+    """The first missed rule of a read (criteria order); for an `invalid` read the rule its reason names."""
+    if r.get("missed"):
+        return r["missed"][0]
+    if r.get("state") == "invalid":
+        why = str(r.get("reason") or "")
+        return next((k for frag, k in INVALID_RULE if frag in why), f"invalid: {why}" if why else "invalid")
+    return None
+
+
+class Longest:
+    """Per setup: every structure (frame, leg start) seen at a pass; the longest count any LIVE read of it reached
+    (first pass to reach it), and the first rule that failed at that read or at a later read of the same structure.
+    `next_pass()` once per pass lets `result` say how a structure with no failing rule ended (`END_TEXT`)."""
+
+    def __init__(self):
+        self.structs: dict = {}
+        self.n_pass = 0
+
+    def next_pass(self) -> None:
+        self.n_pass += 1
+
+    def see(self, setup: str, r: dict) -> None:
+        cnt = read_count(setup, r)
+        if cnt is None:
+            return
+        key = (setup, r.get("frame"), (r.get("leg") or {}).get("s_t"))
+        alive = r.get("state") not in DEAD_STATES
+        fail = first_failing_rule(r)
+        st = self.structs.get(key)
+        if alive and (st is None or cnt > st["count"]):
+            broke = st["broke"] if st is not None else False
+            st = self.structs[key] = {"count": cnt, "at": r.get("as_of_bar_t"), "frame": r.get("frame"),
+                                      "fail": fail, "state": state_key(r), "broke": broke}
+        elif st is None:
+            st = self.structs[key] = {"count": 0, "at": r.get("as_of_bar_t"), "frame": r.get("frame"), "fail": fail,
+                                      "state": state_key(r), "broke": False}
+        elif st["fail"] is None and fail:
+            st["fail"] = fail
+        st["broke"] = st["broke"] or state_key(r) in BROKE_STATES
+        st["last_pass"] = self.n_pass
+
+    def _end(self, st: dict) -> Optional[str]:
+        if st["fail"]:
+            return None
+        if st["broke"]:
+            return "broke"
+        return "alive_at_close" if st.get("last_pass") == self.n_pass else "superseded"
+
+    def result(self) -> dict:
+        """Per setup the structure with the highest count; on a tie the one with a recorded failing rule, then the
+        LATEST seen (a first-seen structure that a new leg replaced never wins a tie by arriving first)."""
+        out: dict = {}
+        best: dict = {}
+        for (setup, _f, _s), st in self.structs.items():            # insertion order = first seen
+            rank = (st["count"], st["fail"] is not None)
+            if setup not in best or rank >= best[setup]:
+                best[setup] = rank
+                out[setup] = {"longest": st["count"], "longest_unit": COUNT_UNIT.get(setup, "bars"),
+                              "longest_at": st["at"], "longest_frame": st["frame"], "first_fail": st["fail"] or "",
+                              "longest_state": st["state"], "longest_end": self._end(st)}
+        return out
+
+
 def replay_day(symbol: str, session, raw_prev, raw_today, *, setups=GC.SETUPS) -> dict:
-    """{setup: best read of the session} on the 5-minute pass grid from the first bar (no q gate — his chart, not his
-    scanner, picked the name). The best read keeps the FIRST pass that reached its rank."""
+    """{setup: best read of the session} — see `replay_day_full`."""
+    return replay_day_full(symbol, session, raw_prev, raw_today, setups=setups)[0]
+
+
+def replay_day_full(symbol: str, session, raw_prev, raw_today, *, setups=GC.SETUPS) -> tuple:
+    """({setup: best read of the session}, {setup: longest-structure diagnostics}) on the 5-minute pass grid from the
+    first bar (no q gate — his chart, not his scanner, picked the name). The best read keeps the FIRST pass that
+    reached its rank; the diagnostics are `Longest.result()`."""
     d = S._as_date(session)
     today = S.day_minutes(raw_today, d)
     if today is None or len(today) == 0:
-        return {}
+        return {}, {}
     prev = raw_prev
     if prev is not None and len(prev) and "session" in prev.columns:
         prev = prev[prev["session"].isin(S.LIVE_SESSIONS)]
     everything = S.utc_naive(S.session_bounds(d)["ah_close"]) + pd.Timedelta(days=1)
     fr = build_frames(symbol, d, everything, prev, today)
     if fr is None:
-        return {}
+        return {}, {}
     f5, f15 = fr.f5, fr.f15
     lab5, lab15 = f5.df.index, f15.df.index
     ctx = {"symbol": symbol, "float_read": S.STUDY_FLOAT}
     best: dict = {}
+    longest = Longest()
     last_n = None
     first_minute = today.index[0]
     for L in S.pass_grid(d, first_minute - S.ONE_MIN):
@@ -148,14 +254,16 @@ def replay_day(symbol: str, session, raw_prev, raw_today, *, setups=GC.SETUPS) -
         if n5 == 0 or (n5, n15) == last_n:
             continue
         last_n = (n5, n15)
+        longest.next_pass()
         frames = {"5m": S.prefix_frame(f5, n5), "15m": S.prefix_frame(f15, n15) if n15 else None}
         for setup, r in D.read_all(frames, ctx).items():
             if setup not in setups:
                 continue
+            longest.see(setup, r)
             k = STATE_RANK.index(state_key(r))
             if setup not in best or k < best[setup][0]:
                 best[setup] = (k, r)
-    return {s: r for s, (_k, r) in best.items()}
+    return {s: r for s, (_k, r) in best.items()}, longest.result()
 
 
 def _bars_for(cache, ticker: str, d: date) -> tuple:
@@ -175,9 +283,14 @@ def _bars_for(cache, ticker: str, d: date) -> tuple:
     return None, None, None, None, tried
 
 
-def _row(ex: dict, setting: str, setup: str, r: Optional[dict], *, status: str, sym: Optional[str] = None) -> dict:
+def _row(ex: dict, setting: str, setup: str, r: Optional[dict], *, status: str, sym: Optional[str] = None,
+         diag: Optional[dict] = None) -> dict:
     r = r or {}
+    g = diag or {}
     return {"ticker": ex["ticker"], "symbol": sym, "date": ex["date"], "his_setup": ex["setup"],
+            "longest": g.get("longest"), "longest_unit": g.get("longest_unit"), "longest_at": g.get("longest_at"),
+            "longest_frame": g.get("longest_frame"), "first_fail": g.get("first_fail"),
+            "longest_end": g.get("longest_end"),
             "his_label": ex["label"], "his_frame": ex["frame"], "status": status, "setting": setting, "setup": setup,
             "best_state": state_key(r) if r else None, "frame": r.get("frame"), "entry_bar_t": r.get("entry_bar_t"),
             "as_of_bar_t": r.get("as_of_bar_t"), "trigger": r.get("trigger"), "stop": r.get("stop"),
@@ -207,23 +320,33 @@ def replay_examples(cache, examples=EXAMPLES, settings=SETTINGS) -> list:
             if not moved:
                 continue
             with patched(cfg["overrides"]):
-                best = replay_day(sym, d, raw_prev, raw_today, setups=tuple(moved))
+                best, diag = replay_day_full(sym, d, raw_prev, raw_today, setups=tuple(moved))
             for s in moved:
-                rows.append(_row(ex, name, s, best.get(s), sym=sym, status="replayed"))
+                rows.append(_row(ex, name, s, best.get(s), sym=sym, status="replayed", diag=diag.get(s)))
     return rows
+
+
+def _longest_cell(r: dict) -> str:
+    if r.get("longest") is None:
+        return "—"
+    at = f" @ {r['longest_at']}" if r.get("longest_at") else ""
+    fr = f" ({r['longest_frame']})" if r.get("longest_frame") else ""
+    return f"{r['longest']} {r['longest_unit']}{fr}{at}"
 
 
 def render_md(rows: list) -> str:
     head = ("| ticker | date | his label | setting | setup | our best state | entry bar | trigger | stop | "
-            "missed (nearest miss) | note |")
-    out = [head, "|" + "---|" * 11]
+            "missed (nearest miss) | longest reached | first failing rule there | note |")
+    out = [head, "|" + "---|" * 13]
     for r in rows:
         note = r["status"] if r["status"] != "replayed" else (r["reason"] or "")
         if r["float_gate"]:
             note = (note + " · float gate not applied").strip(" ·")
+        ff = r.get("first_fail")
+        ff = "—" if ff is None else (ff or END_TEXT.get(r.get("longest_end"), "none"))
         out.append(f"| {r['ticker']} | {r['date']} | {r['his_label']} | {r['setting']} | {r['setup']} | "
                    f"{r['best_state'] or '—'} | {r['entry_bar_t'] or '—'} | {r['trigger'] or '—'} | "
-                   f"{r['stop'] or '—'} | {r['missed'] or '—'} | {note} |")
+                   f"{r['stop'] or '—'} | {r['missed'] or '—'} | {_longest_cell(r)} | {ff} | {note} |")
     return "\n".join(out)
 
 
