@@ -891,8 +891,9 @@ def test_24_rules_panel_section_is_last_and_built_from_the_constants(monkeypatch
 
 
 def test_25_fallen_is_the_last_tab_and_not_a_demand_tab():
-    # 2026-10-05: 🔻 drop10 appended right after fallen
-    assert "fallen" in BOARD.TABS and BOARD.TABS[-2:] == ("fallen", "drop10")
+    # 2026-10-05: 🔻 drop10 appended right after fallen; 2026-10-14: 🎢 high_beta
+    # joined right after drop10
+    assert "fallen" in BOARD.TABS and BOARD.TABS[-3:] == ("fallen", "drop10", "high_beta")
     from supply_demand import enterable as EN
     assert "fallen" not in EN.KIND_BY_TAB                          # 🎯 n/a (HIS CALL #18)
 

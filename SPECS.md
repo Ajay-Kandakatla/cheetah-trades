@@ -561,6 +561,49 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   `study_2026_10_13.md`, `detectors_2026_10_13.md`, `context_reads_2026_10_13.md`, `data_plan_2026_10_13.md`,
   `sources_2026_10_13.md`, `frontend_2026_10_13.md`, `volume_avg_backend_2026_10_13.md`.
 
+### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
+Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
+sure you do a full scan."*, *"in the High Beta tab.I wanna able to sort my most volatile stocks"*). **UNMEASURED** —
+nothing here gates a scan, sizes a position or enters a lane; it is read by the two tape kinds'
+watch lists (🎢 watches it, 🗺️ subtracts it) and the Chart Maps membership snapshot (the ✨ arrivals "also on" links). Tab key
+`TAB_KEY` "high_beta", label `TAB_LABEL` "🎢 High Beta", slot right after 🔻 Down 10%+. Every number is a named
+constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS K1–K4, K3a), **MINE** = AMENDMENTS §8.
+- **Universe**: `full` ∪ the Nasdaq-100 (`universe.fetch_nasdaq100()`, Wikipedia; [] or an exception → no QQQ badge, the
+  `qqq` box OFF with the reason, passes no name). ETFs (`INCLUDE_ETFS` = `drop10_tab.INCLUDE_ETFS` False) and delisted
+  names counted, never rated. NBIS + IREN sit in the static layers of `full` (test-pinned).
+- **β**: the house `sepa/beta.py` (cov/var of daily log returns vs SPY over `BETA_LOOKBACK` 252) through the pure
+  `beta.beta_from_frame`, bars strictly before the session; β None → `short_history`, counted, never listed. 🛡️ keeps
+  its own β (his call to unify).
+- **Categories** (Ajay K1 "give me all 3 categories"; the list = the union, each name badged): `B15_MIN` 1.5, `B20_MIN`
+  2.0, `TOP_PCT` 20 (ceil of the rated count, ties at the cut included — MINE). Boxes `FILTER_KEYS` b15 · b20 · top20 ·
+  qqq · d5 (`DOWN_CHIP_PCT` 5, Ajay K2), the Dual Momentum chip pattern: ANY by default, `hb_mode=all` = must match all.
+- **Today's move**: the 🔻 clock (`drop10_tab.mode_for`: live / after_close / closed); prior close = 🛡️'s
+  `official_prev_close` (snapshot `prev_day_close` within `drop10_tab.PREV_CLOSE_TOL_PCT` 1% of the cached close);
+  held out (`suspect`) beyond it or on the price layer's `GLITCH_RATIO` 5× guard; `no_print` / `no_snapshot` / `stale`
+  are never a zero move.
+- **View** (AMENDMENTS A1): `rows` = a compact row for EVERY listed name (dense table) + `tiles` for the top
+  `board.LIMIT_MAX` 80; default = the names red today, `hb_all=1` includes green (sorted after red).
+- **Orders** (served, tab-scoped, `TAB_SORTS`): `hb_swing` 🎢 β × today's drop (the default — MINE, his "you pick"),
+  `hb_drop` 📉 today's drop, `hb_vol` 🌊 most volatile first by σ (`SIGMA_BARS` = `resiliency_tab.VOL_AVG_BARS` 50 daily %
+  returns, Ajay K3a — window his open call). `default` and any other key → `hb_swing`.
+- **Memo**: the 🔻 pattern (memo + warm thread, `LIVE_TTL_SEC` / `CLOSED_TTL_SEC` / `BASE_TTL_SEC`, `FAIL_RETRY_SEC`); one
+  `bulk_cached_frames` per session, one snapshot fan-out over the listed names; no cron, no Mongo store, nothing scans on
+  the request.
+- **Endpoints**: `GET /chart-maps?tab=high_beta[&sort=hb_swing|hb_drop|hb_vol][&hb=][&hb_mode=][&hb_all=1]` (block `high_beta_board`) and
+  `GET /chart-maps/high-beta/watch` (the 🎢 tape-burst watch list, biggest drop first, the house `safety_floor.MIN_SHARE_PRICE` $2 floor, uncapped).
+  ℹ️ panel: `rules_info` section "high_beta" (before "gajjala"), built from the constants.
+- **Study** ("look at historically"): `scripts/high_beta_study.py`, prereg
+  `docs/research/high_beta_2026_10_14_prereg.md`, literal `high_beta_measured.py` (`{"state": "unmeasured"}` until pasted).
+  Status today: NOT RUN. Its verdict changes only the served study line.
+- **Tape bursts** (Ajay: *"I need a tape burst notification specific for High Beta stocks from the reselinet separately
+  and also other tape bursts from the Chart Maps page"*): `orderflow/tape_burst_kinds.py`, kinds `tape_burst_highbeta`
+  (the tab's names, `HIGHBETA_MAX_SYMBOLS` 150) and `tape_burst_chartmaps` (every Chart Maps tab's served names minus
+  ⚡ zone names and the 🎢 list, round-robin, `CHARTMAPS_MAX_SYMBOLS` 150). Owner-only, LIVE, ON for him
+  (`OWNER_KEEP_SET`); the `tape.BURST_*` rule; location-free; `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET` every 5 min;
+  a High-Beta name's burst rings as 🎢 even at a zone; one `_id` = one /alerts row (`tape_burst_events` ↔
+  `trade_flash_events`). UNMEASURED.
+- **Docs**: `docs/chart_maps/high_beta_tab_2026_10_14.md`, `docs/alerts/tape_burst_kinds_2026_10_14.md`.
+
 ---
 
 ## 4. Live Data Layer
@@ -731,6 +774,7 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
 | `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger. § 3 "Chart Maps — Gajjala's tab". |
 | `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm. |
+| `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab". |
 
 **Two operational gotchas (load-bearing):**
 1. The crontab MUST use the absolute python path (`/usr/local/bin/python`).

@@ -1589,7 +1589,7 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2175,7 +2175,7 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4718,7 +4718,7 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t)).sort();
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5447,7 +5447,8 @@ const CONTRACTS = [
         errs.push("ChartMaps.tsx must render <ResiliencyBoardNote board={data?.resiliency_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleResFilter} onToggleMode={toggleResMode} /> on tab === 'resiliency'");
       }
       if (!/data\?\.warming && tab === 'resiliency' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the resiliency tab — its warming line is served');
-      if (!/tab !== 'resiliency'\);/.test(page)) errs.push('the demand-scan progress poll must skip the resiliency tab');
+      // 2026-10-14: 🎢 high_beta is APPENDED after this one (BUILD_SPEC §3.8 WP3) — the pin allows exactly that tail.
+      if (!/tab !== 'resiliency'(?:\s*&& tab !== 'high_beta')?\);/.test(page)) errs.push('the demand-scan progress poll must skip the resiliency tab');
       if (/res_filter\s*[?.]/.test(page)) errs.push('ChartMaps.tsx reads tile.res_filter — the server decides every box and serves the badges');
 
       const lib = read('src/lib/resiliencyFilters.ts');
@@ -5653,7 +5654,8 @@ const CONTRACTS = [
         errs.push("ChartMaps.tsx must render <FallenBoardNote board={data?.fallen_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onDepth={setFallenDepth} /> on tab === 'fallen'");
       }
       if (!/data\?\.warming && tab === 'fallen' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the fallen tab — its warming line is served');
-      if (!/tab !== 'fallen' && tab !== 'resiliency'\);/.test(page)) errs.push('the demand-scan progress poll must skip the fallen tab');
+      // 2026-10-14: 🎢 high_beta is APPENDED after 'resiliency' (BUILD_SPEC §3.8 WP3) — the pin allows exactly that tail.
+      if (!/tab !== 'fallen' && tab !== 'resiliency'(?:\s*&& tab !== 'high_beta')?\);/.test(page)) errs.push('the demand-scan progress poll must skip the fallen tab');
       if (!/\|\| tab === 'fallen' \|\| tab === 'quick_bounce'\) && \(\s*<div className="cm-rules"/.test(page)) errs.push('the ℹ️ Rules mount must include the fallen tab (section "fallen")');
       if (!/<FallenCardExtras tile=\{t\} legend=\{data\?\.fallen_board\?\.pick_legend \?\? null\} \/>/.test(page)) errs.push('the grid must wrap each fallen card with <FallenCardExtras tile={t} legend={data?.fallen_board?.pick_legend ?? null} />');
       if (!/const fallenDepth = tab === 'fallen' \?/.test(page)) errs.push("ChartMaps.tsx must read ?depth= on the fallen tab only");
@@ -5792,7 +5794,7 @@ const CONTRACTS = [
     },
   },
   {
-    name: "🚩 Gajjala's tab (2026-10-13): mounted after 🔻, label = constants.TAB_LABEL, subs = constants.SUBS, scanner numbers = constants, four house chips, NO 🧨 toggle in writing, UNMEASURED, shadow pushes said, never bounce",
+    name: "🚩 Gajjala's tab (2026-10-13): mounted after 🎢, label = constants.TAB_LABEL, subs = constants.SUBS, scanner numbers = constants, four house chips, NO 🧨 toggle in writing, UNMEASURED, shadow pushes said, never bounce",
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-10-13: "Now can you build a new tab and build sub tabs for it
     // with multiple strategies. Name the Tab Gajjala's …" and "Implement his
@@ -5811,7 +5813,8 @@ const CONTRACTS = [
         errs.push("CM_TABS must carry 'gajjala'");
       } else {
         if (tabs.filter((t) => t === 'gajjala').length !== 1) errs.push("CM_TABS lists 'gajjala' more than once");
-        if (tabs.indexOf('gajjala') !== tabs.indexOf('drop10') + 1) errs.push("CM_TABS: 'gajjala' must sit right after 'drop10'");
+        // 2026-10-14: 🎢 high_beta took the slot right after 🔻 (A13); 🚩 follows it.
+        if (tabs.indexOf('gajjala') !== tabs.indexOf('high_beta') + 1) errs.push("CM_TABS: 'gajjala' must sit right after 'high_beta'");
         if (tabs.indexOf('ema_frames') !== tabs.indexOf('gajjala') + 1) errs.push("CM_TABS: 'ema_frames' must follow 'gajjala'");
       }
       if (!/&& t !== 'gajjala'/.test(src)) errs.push("isBoardTab must return false for 'gajjala' — it has its own endpoint");
@@ -6607,7 +6610,7 @@ const CONTRACTS = [
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10)$/.test(t));
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -6768,6 +6771,296 @@ const CONTRACTS = [
       if (!/id: 'chart-maps-growth-arrivals-his-calls-2026-10-13'/.test(read('src/lib/newFeatures.ts'))) {
         errs.push("newFeatures.ts lacks the 'chart-maps-growth-arrivals-his-calls-2026-10-13' ✨ entry");
       }
+      return errs;
+    },
+  },
+  {
+    name: '🎢 High Beta tab (2026-10-14): mounted right after 🔻, label = high_beta_tab.TAB_LABEL, filter keys / box labels / sorts = the backend constants, the four numbers in the blurb + ✨ = the constants, UNMEASURED, the FE composes nothing, never bounce',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-10-14: "Can you create a new tab for High Beta stocks" (after
+    // "I think Resielient and high beta will not go hand in hand"), and the
+    // cut "give me all 3 categories" — β ≥ 1.5, β ≥ 2.0, top 20% — plus the
+    // down 5%+ box. Any of these links lost silently drops the tab, lets a
+    // label or a box key drift from the backend constant, retypes one of HIS
+    // four numbers wrong in a sentence he reads, or lets the FE compose a
+    // number or a verdict the server owns (BUILD_SPEC §3.8, WP4 (a)).
+    checks: (src) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\U([0-9A-Fa-f]{8})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\'/g, "'").replace(/\\"/g, '"');
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('high_beta')) {
+        errs.push("CM_TABS must carry 'high_beta'");
+      } else {
+        if (tabs.filter((t) => t === 'high_beta').length !== 1) errs.push("CM_TABS lists 'high_beta' more than once");
+        if (tabs.indexOf('high_beta') !== tabs.indexOf('drop10') + 1) errs.push("CM_TABS: 'high_beta' must sit right after 'drop10'");
+      }
+      if (/\n  high_beta: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry high_beta (🎯 n/a, the 🔻 precedent)');
+
+      let hb = '';
+      try { hb = read('../backend/chart_maps/high_beta_tab.py'); } catch { errs.push('backend/chart_maps/high_beta_tab.py is missing (WP1)'); }
+      const num = (name) => { const m = new RegExp(`^${name} = ([0-9_.]+)`, 'm').exec(hb); return m ? Number(m[1].replace(/_/g, '')) : null; };
+      const B15 = num('B15_MIN'), B20 = num('B20_MIN'), TOP = num('TOP_PCT'), DOWN = num('DOWN_CHIP_PCT');
+      if (hb && [B15, B20, TOP, DOWN].some((x) => x == null || !Number.isFinite(x))) errs.push('high_beta_tab.py lost B15_MIN / B20_MIN / TOP_PCT / DOWN_CHIP_PCT = <number>');
+      if (hb && !/^MARK = "([^"]*)"/m.test(hb)) errs.push('high_beta_tab.py lost MARK = "<emoji>"');
+      // Every top-level string / number constant of the module, so a label built from MARK, DROP_MARK, … renders.
+      const consts = {};
+      for (const m of hb.matchAll(/^([A-Z][A-Z_0-9]*) = "([^"]*)"/gm)) consts[m[1]] = unesc(m[2]);
+      for (const m of hb.matchAll(/^([A-Z][A-Z_0-9]*) = ([0-9][0-9_]*(?:\.[0-9]+)?)\b/gm)) consts[m[1]] = Number(m[2].replace(/_/g, ''));
+      // A python f-string body rendered with the module's own constants:
+      // {NAME}, {NAME:.1f}, {NAME:g}. An unknown name renders as "?NAME" and fails the compare.
+      const pyF = (body) => unesc(body).replace(/\{([A-Z_0-9]+)(?::([^}]*))?\}/g, (_m, n, spec) => {
+        const v = consts[n];
+        if (v == null) return `?${n}`;
+        if (spec && /^\.\d+f$/.test(spec) && typeof v === 'number') return v.toFixed(Number(spec.slice(1, -1)));
+        return typeof v === 'number' ? String(v) : v;
+      });
+      const pyStr = (q) => (q.f ? pyF(q.body) : unesc(q.body));
+      const labelM = /^TAB_LABEL = (f?)"([^"]*)"/m.exec(hb);
+      const pyLabel = labelM ? pyStr({ f: !!labelM[1], body: labelM[2] }) : null;
+      if (hb && !labelM) errs.push('high_beta_tab.py lost TAB_LABEL = f"{MARK} High Beta"');
+      if (pyLabel && pyLabel !== '\u{1F3A2} High Beta') errs.push(`high_beta_tab.TAB_LABEL renders "${pyLabel}" — the tab is "🎢 High Beta" (A13, his call to change)`);
+
+      // The four numbers in a sentence he reads must be the constants' — present, and never another value.
+      const numberChecks = (where, text) => {
+        const out = [];
+        if (B15 == null || B20 == null || TOP == null || DOWN == null) return out;
+        for (const need of [B15.toFixed(1), B20.toFixed(1), `${TOP}%`, `${DOWN}%`]) {
+          if (!text.includes(need)) out.push(`${where} must state ${need} as high_beta_tab.py has it`);
+        }
+        for (const m of text.matchAll(/β\s*(?:≥|>=)\s*(\d+(?:\.\d+)?)/g)) {
+          if (![B15, B20].includes(Number(m[1]))) out.push(`${where} says "${m[0]}" — B15_MIN is ${B15}, B20_MIN is ${B20}`);
+        }
+        for (const m of text.matchAll(/\b[Tt]op (\d+(?:\.\d+)?)\s?%/g)) {
+          if (Number(m[1]) !== TOP) out.push(`${where} says "${m[0]}" — TOP_PCT is ${TOP}`);
+        }
+        return out;
+      };
+      const HIS = ['Can you create a new tab for High Beta stocks'];
+
+      const meta = /\n  high_beta: \{\n    label: (['"])((?:(?!\1)[^\\]|\\.)*)\1,\n    blurb: (['"])((?:(?!\3)[^\\]|\\.)*)\3,/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.high_beta (label + blurb) is missing');
+      } else {
+        if (unesc(meta[2]) !== '\u{1F3A2} High Beta') errs.push(`TAB_META.high_beta.label "${unesc(meta[2])}" must be "🎢 High Beta"`);
+        if (pyLabel && unesc(meta[2]) !== pyLabel) errs.push(`TAB_META.high_beta.label "${unesc(meta[2])}" must equal high_beta_tab.TAB_LABEL "${pyLabel}"`);
+        const blurb = unesc(meta[4]);
+        if (!blurb.includes('UNMEASURED')) errs.push('the TAB_META.high_beta blurb must say UNMEASURED');
+        for (const h of HIS) if (!blurb.includes(h)) errs.push(`the TAB_META.high_beta blurb must quote his ask verbatim: "${h}"`);
+        if (/bounce|fake/i.test(blurb)) errs.push('the TAB_META.high_beta blurb says "bounce"/"fake"');
+        errs.push(...numberChecks('the TAB_META.high_beta blurb', blurb));
+      }
+
+      // Box keys, box labels, sort keys: the FE copies are pinned to the module's.
+      let lib = '';
+      try { lib = read('src/lib/highBeta.ts'); } catch { errs.push('src/lib/highBeta.ts is missing (WP3)'); }
+      const pyKeysM = /^FILTER_KEYS = \(([^)]*)\)/m.exec(hb);
+      const pyKeys = pyKeysM ? [...pyKeysM[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]) : [];
+      if (hb && !pyKeys.length) errs.push('high_beta_tab.py lost FILTER_KEYS = ("b15", …)');
+      const tsKeysM = /export const HB_FILTER_KEYS\s*=\s*\[([^\]]*)\]\s*as const/.exec(lib);
+      const tsKeys = tsKeysM ? [...tsKeysM[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]) : [];
+      if (lib && !tsKeys.length) errs.push("lib/highBeta.ts lost export const HB_FILTER_KEYS = [...] as const");
+      if (pyKeys.length && tsKeys.length && pyKeys.join(',') !== tsKeys.join(',')) {
+        errs.push(`lib/highBeta.ts HB_FILTER_KEYS [${tsKeys.join(', ')}] != high_beta_tab.FILTER_KEYS [${pyKeys.join(', ')}]`);
+      }
+      const labsAt = hb.search(/^FILTER_LABELS = \{/m);
+      const labsSrc = labsAt >= 0 ? hb.slice(labsAt, labsAt + 1200) : '';
+      const pyLabels = {};
+      for (const m of labsSrc.matchAll(/"([a-z0-9_]+)":\s*(f?)"((?:[^"\\]|\\.)*)"/g)) {
+        if (pyKeys.includes(m[1]) && !(m[1] in pyLabels)) pyLabels[m[1]] = pyStr({ f: !!m[2], body: m[3] });
+      }
+      if (hb && pyKeys.length && Object.keys(pyLabels).length !== pyKeys.length) errs.push(`high_beta_tab.FILTER_LABELS must carry one label per FILTER_KEYS key (found ${Object.keys(pyLabels).join(', ') || 'none'})`);
+      const ladder = read('src/lib/cardLadder.ts');
+      const ie = /const IDENT_EXACT = new Set\(\[([^\]]*)\]\)/.exec(ladder);
+      const ident = new Set(ie ? [...ie[1].matchAll(/'((?:[^'\\]|\\.)+)'/g)].map((m) => unesc(m[1])) : []);
+      for (const [k, v] of Object.entries(pyLabels)) {
+        if (v.includes('?')) errs.push(`high_beta_tab.FILTER_LABELS["${k}"] names a constant this contract cannot render: "${v}"`);
+        else if (!ident.has(v)) errs.push(`cardLadder IDENT_EXACT must carry the served box badge "${v}" (high_beta_tab.FILTER_LABELS["${k}"]) — it sits on the identity line`);
+      }
+      // Sort keys: HB_SORT_DROP is the FE's (BUILD_SPEC §3.8); every HB_SORT_* the FE exports must be the module's SORT_*.
+      const pySorts = Object.fromEntries([...hb.matchAll(/^(SORT_[A-Z_]+) = "([a-z_]+)"/gm)].map((m) => [m[1], m[2]]));
+      if (hb && !pySorts.SORT_DROP) errs.push('high_beta_tab.py lost SORT_DROP = "hb_drop"');
+      if (lib && !/export const HB_SORT_DROP = '[a-z_]+';/.test(lib)) errs.push("lib/highBeta.ts must export HB_SORT_DROP = '<high_beta_tab.SORT_DROP>'");
+      for (const m of lib.matchAll(/export const HB_(SORT_[A-Z_]+) = '([a-z_]+)';/g)) {
+        if (hb && pySorts[m[1]] !== m[2]) errs.push(`lib/highBeta.ts HB_${m[1]} = '${m[2]}' != high_beta_tab.${m[1]} = ${pySorts[m[1]] ? `"${pySorts[m[1]]}"` : '(absent)'}`);
+      }
+
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'high_beta' && <HighBetaBoardNote board=\{data\?\.high_beta_board \?\? null\}/.test(page)) {
+        errs.push("ChartMaps.tsx must render <HighBetaBoardNote board={data?.high_beta_board ?? null} …/> on tab === 'high_beta'");
+      }
+      if (!/data\?\.warming && tab === 'high_beta' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the high_beta tab — its warming line is served');
+      if (!/&& tab !== 'high_beta'/.test(page)) errs.push('the demand-scan progress poll must skip the high_beta tab');
+      if (!/\|\| tab === 'high_beta' \|\|[^\n]*\) && \(/.test(page)) errs.push('the ℹ️ Rules mount must include the high_beta tab (section "high_beta")');
+      if (!/const hbEvery = tab === 'high_beta' \? drop10RefreshMs\(data\?\.high_beta_board\) : null;/.test(page)) errs.push('ChartMaps.tsx must re-read the live high_beta board on the SERVED cadence (drop10RefreshMs)');
+
+      let note = '';
+      try { note = read('src/components/HighBetaBoardNote.tsx'); } catch { errs.push('src/components/HighBetaBoardNote.tsx is missing (WP3)'); }
+      for (const [f, t] of [['HighBetaBoardNote.tsx', note], ['lib/highBeta.ts', lib]]) {
+        if (!t) continue;
+        if (/bounce|fake/i.test(t)) errs.push(`${f} says bounce / fake — surfaces he reads say reversal`);
+        const code = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+        if (/toFixed|UNMEASURED|Math\./.test(code)) errs.push(`${f} composes wording or does maths — every sentence and number is printed as served`);
+      }
+
+      const board = read('../backend/chart_maps/board.py');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      if (!tabsPy || !/"high_beta"/.test(tabsPy[1])) errs.push('board.py TABS must carry "high_beta"');
+      if (!/elif t == "high_beta":/.test(board)) errs.push('board.py lacks the elif t == "high_beta": dispatch');
+      if (!/\(t == "high_beta" and sort in _HB\.TAB_SORTS\)/.test(board)) errs.push('board.py must honour the tab-scoped high_beta sorts on this tab only');
+      if (hb) {
+        if (!hb.includes('UNMEASURED')) errs.push('high_beta_tab.py must say UNMEASURED');
+        // The guard list itself names the banned words; comments are never served.
+        const served = hb.replace(/^FORBIDDEN_WORDS = \([\s\S]*?\)\s*(#[^\n]*)?$/m, '').replace(/#[^\n]*/g, '').replace(/quick_bounce/g, '');
+        if (/bounc|fake/i.test(served)) errs.push('high_beta_tab.py says "bounce"/"fake"');
+      }
+
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-high-beta-2026-10-14'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-high-beta-2026-10-14' (WP5)");
+      } else {
+        const next = nf.indexOf('{ id: ', idAt + 4);
+        const entry = unesc(nf.slice(idAt, next < 0 ? undefined : next));
+        if (!entry.includes("route: '/chart-maps?tab=high_beta'")) errs.push("the 🎢 ✨ entry must route to '/chart-maps?tab=high_beta'");
+        if (!entry.includes('UNMEASURED')) errs.push('the 🎢 ✨ entry must say UNMEASURED');
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🎢 ✨ entry must quote his ask verbatim: "${h}"`);
+        if (/bounce|fake/i.test(entry)) errs.push('the 🎢 ✨ entry says "bounce"/"fake"');
+        errs.push(...numberChecks('the 🎢 ✨ entry', entry));
+      }
+      return errs;
+    },
+  },
+  {
+    name: '🎢 🗺️ tape-burst kinds (2026-10-14): in every registry, owner keep-set ON + default_prefs False, MARKET kinds, LIVE (never shadow), the burst numbers = tape.py, caps = tape_burst_kinds.py, window = trade_flash, own /alerts strip + chips, per-ticker tape links, never bounce',
+    file: 'src/lib/alertKinds.ts',
+    // Ajay 2026-10-14: "I need a tape burst notification specific for High
+    // Beta stocks from the reselinet separately and also other tape bursts
+    // from the Chart Maps page"; asked which names: "High-Beta tab names + all
+    // Chart Maps names". A kind missing from any registry sends to zero devices
+    // in silence (memory cheetah_push_silent_drops) or renders a raw id; a
+    // number typed on the Notifications page drifts from the engine the way the
+    // cap floor did (review 2026-09-14 F5). ⚡ trade_flash stays OUT of the
+    // keep-set — his 2026-09-08 "Also kill the tape burst" (BUILD_SPEC §7 #7).
+    checks: (src) => {
+      const errs = [];
+      const KINDS = ['tape_burst_highbeta', 'tape_burst_chartmaps'];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const prefsTs = read('src/hooks/useNotificationPrefs.ts');
+      const subs = read('../backend/push/subs.py');
+      const keep = keepSet(subs);
+      const gate = read('../backend/market_hours/gate.py');
+      const market = pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || [];
+      const personal = pyFrozenSet(gate, 'PERSONAL_KINDS') || [];
+      const recent = read('../backend/push/recent.py');
+      const itemBlock = (/^ITEM_URL_BY_KIND = \{([\s\S]*?)\n\}/m.exec(recent) || [])[1] || '';
+      let status = '';
+      try { status = read('../backend/supply_demand/alert_status.py'); } catch { errs.push('backend/supply_demand/alert_status.py is unreadable'); }
+      const notif = read('src/pages/Notifications.tsx');
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      const alerts = read('src/pages/Alerts.tsx');
+      const passesBlock = (/const PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      const tapeBlock = (/export const TAPE_PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      const chipsLine = (/KIND_CHIPS: string\[\] = \[([^\]]*)\]/.exec(alerts) || [])[1] || '';
+      if (!tapeBlock) errs.push('Alerts.tsx lost export const TAPE_PASSES = [...] — the tape passes get their own strip');
+
+      // The numbers the rows type, read from the engines.
+      const tape = read('../backend/orderflow/tape.py');
+      const tnum = (name) => { const m = new RegExp(`^${name} = ([0-9_.]+)`, 'm').exec(tape); return m ? Number(m[1].replace(/_/g, '')) : null; };
+      const win = tnum('BURST_WINDOW_SEC'), dollars = tnum('BURST_MIN_DOLLARS'), oneSided = tnum('BURST_ONE_SIDED'), trades = tnum('BURST_MIN_TRADES');
+      if ([win, dollars, oneSided, trades].some((x) => x == null || !Number.isFinite(x))) errs.push('orderflow/tape.py lost a BURST_* constant (WINDOW_SEC / MIN_DOLLARS / ONE_SIDED / MIN_TRADES)');
+      let tbk = '';
+      try { tbk = read('../backend/orderflow/tape_burst_kinds.py'); } catch { errs.push('backend/orderflow/tape_burst_kinds.py is missing (WP2)'); }
+      const cap = (name) => { const m = new RegExp(`^${name} = ([0-9_]+)`, 'm').exec(tbk); return m ? Number(m[1].replace(/_/g, '')) : null; };
+      const CAPS = { tape_burst_highbeta: cap('HIGHBETA_MAX_SYMBOLS'), tape_burst_chartmaps: cap('CHARTMAPS_MAX_SYMBOLS') };
+      if (tbk && Object.values(CAPS).some((x) => x == null)) errs.push('tape_burst_kinds.py lost HIGHBETA_MAX_SYMBOLS / CHARTMAPS_MAX_SYMBOLS = <int>');
+      if (tbk && /bounc|fake/i.test(tbk.replace(/#[^\n]*/g, ''))) errs.push('tape_burst_kinds.py says "bounce"/"fake"');
+      const tf = read('../backend/orderflow/trade_flash.py');
+      const dt = (name) => { const m = new RegExp(`^${name} = dtime\\((\\d+),\\s*(\\d+)\\)`, 'm').exec(tf); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : null; };
+      const open = dt('WATCH_OPEN_ET'), close = dt('WATCH_CLOSE_ET');
+      if (!open || !close) errs.push('trade_flash.py must name the window WATCH_OPEN_ET = dtime(9, 32) / WATCH_CLOSE_ET = dtime(16, 0) (WP2)');
+      // The house share-price floor the 🎢 watch list (board.high_beta_watch) and
+      // scan_kind's `under_floor` apply — typed as "$2" on both rows (2026-10-14 fix).
+      let floor = null;
+      try {
+        const m = /^MIN_SHARE_PRICE = ([0-9.]+)/m.exec(read('../backend/trading/safety_floor.py'));
+        floor = m ? Number(m[1]) : null;
+      } catch { /* reported below */ }
+      if (floor == null || !Number.isFinite(floor)) errs.push('trading/safety_floor.py lost MIN_SHARE_PRICE = <number>');
+      const floorText = floor == null ? null : `$${Number.isInteger(floor) ? floor : floor.toFixed(2)}`;
+      const cronLines = cronCommands(read('../backend/crontab')).filter((l) => /sepa\.cli trade-flash-watch/.test(l));
+      if (cronLines.length !== 1) errs.push(`the crontab must carry exactly one sepa.cli trade-flash-watch line (found ${cronLines.length}) — the two kinds ride it`);
+      const stepM = cronLines.length === 1 ? /^\S*\/(\d+)\s/.exec(cronLines[0].trim()) : null;
+      const step = stepM ? Number(stepM[1]) : null;
+
+      for (const k of KINDS) {
+        if (!new RegExp(`^\\s*${k}:\\s*\\{[^}]*group: 'tape'`, 'm').test(src)) errs.push(`alertKinds.ts must register ${k} in the 'tape' group — else the bell renders a raw id`);
+        const def = (new RegExp(`^\\s*${k}:\\s*\\{[^}]*\\}`, 'm').exec(src) || [''])[0];
+        if (/bounce|shadow/i.test(def.replace(k, ''))) errs.push(`the ${k} label says bounce / shadow`);
+        if (!new RegExp(`\\b${k}\\?: boolean`).test(prefsTs)) errs.push(`NotificationPrefs (hooks/useNotificationPrefs.ts) must carry ${k}?: boolean`);
+        const dm = new RegExp(`["']${k}["']\\s*:\\s*(True|False)`).exec(subs);
+        if (!dm) errs.push(`push/subs.py default_prefs must list "${k}"`);
+        else if (dm[1] !== 'False') errs.push(`${k} must be False in push/subs.py default_prefs — owner-only, everyone else starts off`);
+        if (!keep.includes(k)) errs.push(`${k} must be in push/subs.OWNER_KEEP_SET — ON for him (his K4 answer, A12)`);
+        if (!market.includes(k)) errs.push(`market_hours/gate.py must treat ${k} as a MARKET kind (silent on closed days)`);
+        if (personal.includes(k)) errs.push(`${k} must NOT be a PERSONAL kind`);
+        const iu = new RegExp(`["']${k}["']\\s*:\\s*([^,\\n]+)`).exec(itemBlock);
+        if (!iu) errs.push(`push/recent.ITEM_URL_BY_KIND must carry ${k} — every ticker of a push is its own link on /alerts`);
+        else if (/^["']/.test(iu[1].trim()) && !/^["']\/sepa\/\{sym\}\?tab=tape/.test(iu[1].trim())) errs.push(`push/recent.ITEM_URL_BY_KIND["${k}"] must open the ticker's tape (/sepa/{sym}?tab=tape…), got ${iu[1].trim()}`);
+        if (status && !new RegExp(`["']${k}["']`).test(status)) errs.push(`supply_demand/alert_status.py must record the ${k} pass (PASS_KINDS / CADENCE_SEC)`);
+        if (!new RegExp(`key: '${k}'`).test(tapeBlock)) errs.push(`Alerts.tsx TAPE_PASSES must carry key: '${k}'`);
+        if (new RegExp(`'${k}'`).test(passesBlock)) errs.push(`Alerts.tsx PASSES must NOT carry ${k} — it would join "all N passes" and read stale outside its window`);
+        if (!new RegExp(`'${k}'`).test(chipsLine)) errs.push(`Alerts.tsx KIND_CHIPS must carry '${k}'`);
+        if (!new RegExp(`${k}:\\s*true`).test(ess)) errs.push(`Essentials must carry ${k}: true — it is in OWNER_KEEP_SET`);
+
+        const nm = notif.match(new RegExp(`key: '${k}'[\\s\\S]*?' \\},\\n`));
+        if (!nm) { errs.push(`${k} must be listed on the Notifications page — a kind the page cannot show cannot be muted`); continue; }
+        const d = unesc(nm[0]);
+        for (const need of ['ON FOR YOUR PHONE', 'rings live', 'UNMEASURED', 'every burst listed on /alerts']) {
+          if (!d.includes(need)) errs.push(`the ${k} Notifications entry must say "${need}"`);
+        }
+        if (/shadow/i.test(d)) errs.push(`the ${k} Notifications entry says "shadow" — the kind rings live`);
+        if (/every burst is sent|nothing is held back/i.test(d)) errs.push(`the ${k} Notifications entry says every burst is sent — the house floor, the poll budget and the cold first poll hold some back`);
+        if (!d.includes('NOT READ:')) errs.push(`the ${k} Notifications entry must carry its NOT READ: sentence (what never reaches the push)`);
+        if (floorText) {
+          if (!d.includes(`house share-price floor (${floorText})`)) errs.push(`the ${k} entry must state "house share-price floor (${floorText})" as trading/safety_floor.MIN_SHARE_PRICE has it`);
+          for (const m of d.matchAll(/share-price floor \(\$([0-9.]+)\)/g)) if (Number(m[1]) !== floor) errs.push(`the ${k} entry says "${m[0]}" — safety_floor.MIN_SHARE_PRICE is ${floor}`);
+        }
+        if (/OFF BY DEFAULT/.test(d)) errs.push(`the ${k} Notifications entry says OFF BY DEFAULT while the keep-set carries it`);
+        if (/boun|fake/i.test(d)) errs.push(`the ${k} Notifications entry says "bounce"/"fake"`);
+        if (win != null && dollars != null && oneSided != null && trades != null) {
+          for (const need of [`${win}-second window`, `$${dollars / 1000}K or more`, `${Math.round(oneSided * 100)}% or more of it on one side`, `${trades}+ regular prints`]) {
+            if (!d.includes(need)) errs.push(`the ${k} Notifications entry must state "${need}" as orderflow/tape.py has it`);
+          }
+          for (const m of d.matchAll(/(\d+)-second/g)) if (Number(m[1]) !== win) errs.push(`the ${k} entry says "${m[0]}" — tape.BURST_WINDOW_SEC is ${win}`);
+          for (const m of d.matchAll(/\$(\d+)K/g)) if (Number(m[1]) * 1000 !== dollars) errs.push(`the ${k} entry says "${m[0]}" — tape.BURST_MIN_DOLLARS is ${dollars}`);
+          for (const m of d.matchAll(/(\d+)\+ regular prints/g)) if (Number(m[1]) !== trades) errs.push(`the ${k} entry says "${m[0]}" — tape.BURST_MIN_TRADES is ${trades}`);
+        }
+        if (CAPS[k] != null) {
+          if (!d.includes(`up to ${CAPS[k]} names`)) errs.push(`the ${k} entry must state "up to ${CAPS[k]} names" as tape_burst_kinds.py has it`);
+          for (const m of d.matchAll(/up to (\d+) names/g)) if (Number(m[1]) !== CAPS[k]) errs.push(`the ${k} entry says "${m[0]}" — tape_burst_kinds caps it at ${CAPS[k]}`);
+        }
+        if (open && close && !d.includes(`${open}–${close} ET`)) errs.push(`the ${k} entry must state "${open}–${close} ET" (trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET)`);
+        if (step != null && !d.includes(`Every ${step} minutes`)) errs.push(`the ${k} entry must say "Every ${step} minutes" — the trade-flash-watch line's minute step`);
+      }
+      if (keep.includes('trade_flash')) errs.push('⚡ trade_flash must stay OUT of OWNER_KEEP_SET — his 2026-09-08 "Also kill the tape burst"');
+      if (/shadow/i.test(tapeBlock)) errs.push('the TAPE_PASSES labels say shadow — both kinds ring live');
+      const chipFn = (/export function tapeBurstChipText[\s\S]*?\n\}/.exec(alerts) || [''])[0];
+      if (!chipFn) errs.push('Alerts.tsx lost tapeBurstChipText — the tape counters would render as raw keys');
+      if (/shadow|bounce/i.test(chipFn)) errs.push('tapeBurstChipText says shadow / bounce');
+      if (/sent as ⚡/.test(chipFn)) errs.push('tapeBurstChipText says "sent as ⚡" — ⚡ trade flash is muted on his phone; it is "recorded" (A4)');
+      // The chip keys must be the counters tape_burst_kinds._served emits:
+      // `claimed_zone` is never served (a dead chip with the A5-contradicting
+      // words), `at_zone` / `under_floor` are; the re-sightings stay off the row.
+      if (/case 'claimed_zone'/.test(chipFn)) errs.push('tapeBurstChipText words claimed_zone — tape_burst_kinds never serves it (the served key is at_zone, A5)');
+      for (const key of ['at_zone', 'under_floor']) {
+        if (!new RegExp(`case '${key}'`).test(chipFn)) errs.push(`tapeBurstChipText must word ${key} — tape_burst_kinds serves it`);
+        if (tbk && !new RegExp(`"${key}"`).test(tbk)) errs.push(`tape_burst_kinds.py no longer serves "${key}" — the /alerts chip would be dead`);
+      }
+      if (!/const TAPE_HIDDEN_KEYS = \[[^\]]*'dup_same'[^\]]*'dup_earlier'/.test(alerts)) errs.push("Alerts.tsx must keep TAPE_HIDDEN_KEYS = ['dup_same', 'dup_earlier'] — re-sightings are not fresh (A3)");
       return errs;
     },
   },

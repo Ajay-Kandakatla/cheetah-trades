@@ -65,6 +65,27 @@ def _beta(stock_lr: "pd.Series", bench_lr: "pd.Series",
     return cov / var_b
 
 
+def log_returns(df) -> Optional["pd.Series"]:
+    """Public alias of ``_log_returns`` — the one log-return definition."""
+    return _log_returns(df)
+
+
+def beta_from_frame(df, bench_lr, lookback: int = BETA_LOOKBACK) -> Optional[float]:
+    """The canonical beta (2dp) from a closed-bar frame already in hand — no
+    load, no cache, no network. PURE. Added 2026-10-14 for the 🎢 High Beta tab,
+    which reads every frame in ONE ``prices.bulk_cached_frames`` call instead of
+    ``betas_for`` (whose per-name ``load_prices`` fetches on a cache miss).
+    Same ``_log_returns`` + ``_beta`` as ``beta_for`` — one engine."""
+    try:
+        b = _beta(_log_returns(df), bench_lr, lookback)
+    except Exception as exc:                      # noqa: BLE001
+        log.debug("beta_from_frame failed: %s", exc)
+        return None
+    if b is None or not np.isfinite(b):
+        return None
+    return round(float(b), 2)
+
+
 def _spy_log_returns():
     """SPY's daily log-return series, loaded once per day."""
     today = _today_iso()

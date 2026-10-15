@@ -26,8 +26,10 @@ import type { CmFallenBoard, CmFallenRead } from './fallen';
 import type { CmDrop10Board, CmDrop10Read } from './drop10';
 import type { BondePick } from './bondePicks';
 import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM } from './gajjala';
+import { HB_ALL_ON, HB_ALL_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, HB_OWN_PARAMS, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL } from './highBeta';
+import type { CmHbTileFilter, CmHighBetaBoard, CmHighBetaRead, CmHighBetaRow } from './highBeta';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'gajjala';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -119,6 +121,14 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // 40%+, its daily cousin — TAB ORDER IS EARNED; tabUsageKey counts it from
   // the first open and the next re-cut moves it on the evidence.
   'drop10',
+  // 🎢 High Beta (Ajay 2026-10-14: "Can you create a new tab for High Beta
+  // stocks", after "Can you build me a category or filter for High Beta
+  // stocks in Resilient and make a scan there were all down today especially
+  // a qqq series."). Right after 🔻 Down 10%+ today, before 🚩 Gajjala's —
+  // TAB ORDER IS EARNED; tabUsageKey counts it from the first open and the
+  // next re-cut moves it on the evidence. Label and slot are his call
+  // (high_beta spec §7 #1).
+  'high_beta',
   // 🚩 Gajjala's (Ajay 2026-10-13: "Now can you build a new tab and build sub
   // tabs for it with multiple strategies. Name the Tab Gajjala's"). Right
   // after 🔻 Down 10%+ today, before 〰️ 9 EMA · W/M — TAB ORDER IS EARNED;
@@ -257,6 +267,13 @@ export const DROP10_SORT_NOW = 'drop10_now';
 export const DROP10_SORT_RECLAIM = 'drop10_reclaim';
 export const DROP10_SORT_RVOL = 'drop10_rvol';
 
+/** 🎢 High Beta (2026-10-14): the three tab-scoped served sort keys
+ *  (chart_maps/high_beta_tab.SORT_SWING / SORT_DROP / SORT_VOL — β × today's
+ *  drop, 📉 today's drop, and his "sort my most volatile stocks" by σ). The
+ *  server resolves `default` to the first. Defined in lib/highBeta; labels
+ *  are SERVED. */
+export { HB_SORT_SWING, HB_SORT_DROP, HB_SORT_VOL };
+
 /** usage/track key for one tab open (landing or click). Read back from Mongo
  *  `usage_stats` as `feature:chart-maps:tab:<tab>` (count + weekday/hour
  *  buckets) to re-cut CM_TABS from measured use. */
@@ -330,6 +347,18 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   drop10: {
     label: '\u{1F53B} Down 10%+ today',
     blurb: 'Stocks whose session low fell 10% or more under the prior close. Ajay 2026-10-03: "I would like to know about stocks that falled intraday more than 10% new tab please." THE LIST is every stock in the universe whose low this session sat at or past that line under the prior session\'s close \u2014 the ones still that far down and the ones that came back above it (reclaimed), both listed and labelled. In market hours it is LIVE (today\'s snapshot, re-read about every minute); after 16:00 ET it is today\'s regular session; before the open, overnight and on weekends it is the last closed session. ETFs, delisted names and drops the data cannot be trusted on (a split, a bad print, a decimal shift) are left out, counted and named under the grid. EACH CARD shows the low and where the print is now, the gap against the move after the open, the volume against its 50-day normal (projected to a full session during the day), what its sector ETF, its theme and RSP did, the demand band, and \u{1F4A5} what is on file from the session before through today, labelled possible. UNMEASURED \u2014 nothing here gates, pushes or trades. Not advice.',
+  },
+  // 🎢 High Beta (Ajay 2026-10-14). Every number on the BOARD is served — the
+  // counts, the top-20% cut, today's moves and every table cell ride in the
+  // payload. The four numbers in this blurb (β 1.5 / 2.0, top 20%, down 5%)
+  // are his, pinned to high_beta_tab.B15_MIN / B20_MIN / TOP_PCT /
+  // DOWN_CHIP_PCT by the contracts. His sentence about how much a name may
+  // come back is NOT quoted: it carries a word this app never serves.
+  // UNMEASURED: no study here says what a High-Beta stock does after a down
+  // day (the pre-registered study is the one that may say).
+  high_beta: {
+    label: '\u{1F3A2} High Beta',
+    blurb: 'Stocks whose 1-year beta against SPY puts them in a High-Beta category, with today\u2019s move \u2014 UNMEASURED, an order and not a forecast. Ajay 2026-10-14: "Can you build me a category or filter for High Beta stocks in Resilient and make a scan there were all down today especially a qqq series. Can you please make sure you do a full scan." then "Can you create a new tab for High Beta stocks" and "in the High Beta tab.I wanna able to sort my most volatile stocks". THE LIST is the full universe plus the Nasdaq-100, every stock rated by the app\u2019s own beta (sepa/beta.py, daily log returns against SPY before this session) and listed when it sits in at least one of three categories \u2014 \u03B2 \u2265 1.5, \u03B2 \u2265 2.0, or the top 20% of the rated stocks by \u03B2 \u2014 each name badged with every category it is in, and a QQQ badge on the Nasdaq-100 members. By default only the names RED today are listed; \u201Cinclude green names\u201D adds the up and flat ones after them. Today\u2019s move is against the official prior close: LIVE in market hours, today\u2019s regular session after 16:00 ET, the last closed session before the open and on weekends. THE TABLE above the charts lists every name; the charts are the top of the same order. THREE ORDERS: \u03B2 \u00D7 today\u2019s drop (the default), today\u2019s drop, and most volatile first by \u03C3 (the spread of its recent daily returns). THE BOXES: \u03B2 \u2265 1.5 \u00B7 \u03B2 \u2265 2.0 \u00B7 top 20% \u00B7 QQQ \u00B7 down 5%+ today. ETFs, delisted names and names without a year of history are left out and counted. UNMEASURED \u2014 no study in this app says what a High-Beta stock does in the sessions after a down day; the order is an order, not a forecast. Nothing here gates a scan, sizes a position or enters a lane; the \u{1F3A2} tape-burst push watches these names for bursts of prints. Not advice.',
   },
   // 🚩 Gajjala's (Ajay 2026-10-13). Every number on the BOARD is served — the
   // K1–K10 knobs and every count ride in the ℹ️ Rules and the served lines.
@@ -1193,6 +1222,12 @@ export type CmTile = {
    *  the volume vs normal and the 💥 one-session read — every sentence SERVED
    *  (chart_maps/drop10_tab.tile_block). Absent on every other tab. */
   drop10?: CmDrop10Read | null;
+  /** 🎢 High Beta tab only (2026-10-14): β, the categories, the QQQ flag, σ,
+   *  β × drop and today's read (chart_maps/high_beta_tab.tile_block). Absent
+   *  on every other tab. UNMEASURED. */
+  high_beta?: CmHighBetaRead | null;
+  /** 🎢 High Beta tab only: the five boxes' per-tile read, server-decided. */
+  hb_filter?: CmHbTileFilter | null;
   /** 📉 Down 40%+ tab only (2026-10-02): Bonde's pick legs exactly as the 📈
    *  Bonde tab serves them (sepa/bonde_picks), drawn by BondePickChips. */
   pick?: BondePick | null;
@@ -1578,6 +1613,14 @@ export type CmBoard = {
    *  / count line / 💥 sources / held-out names / live refresh cadence
    *  Drop10BoardNote prints. Absent on every other tab. */
   drop10_board?: CmDrop10Board | null;
+  /** 🎢 High Beta tab only (2026-10-14): the served header / market line /
+   *  QQQ line / order line / count line / boxes / note / table of every listed
+   *  name HighBetaBoardNote prints. Absent on every other tab. */
+  high_beta_board?: CmHighBetaBoard | null;
+  /** 🎢 High Beta tab only (A1): a compact row for EVERY listed name left
+   *  after the view, the boxes and the floor, in the served order — the
+   *  table above the charts. Absent on every other tab. */
+  rows?: CmHighBetaRow[] | null;
   /** 💎 Under Value only (2026-09-29): the served 💎/🏷️ toggle — labels,
    *  the served view, and (🏷️ vs peers only) the header / note / counts
    *  UndervalueViewNote prints. Absent on every other tab. */
@@ -1675,6 +1718,12 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
   // OF gajjala drops all three; a click on the tab it is already on keeps them.
   if (from !== t && (from === 'gajjala' || t === 'gajjala')) {
     for (const k of GAJJALA_OWN_PARAMS) next.delete(k);
+  }
+  // 🎢 High Beta's boxes / mode / green switch (`hb`, `hb_mode`, `hb_all`)
+  // mean nothing anywhere else — dropped crossing into or out of the tab, the
+  // same border rule; a click on the tab it is already on keeps them.
+  if (from !== t && (from === 'high_beta' || t === 'high_beta')) {
+    for (const k of HB_OWN_PARAMS) next.delete(k);
   }
   return next.toString();
 }
@@ -2183,6 +2232,9 @@ export function boardQuery(p: {
   dmMode?: string;
   resFilters?: string;
   resMode?: string;
+  hbFilters?: string;
+  hbMode?: string;
+  hbAll?: boolean;
   uvView?: string;
   fallenDepth?: string;
 }): string {
@@ -2241,6 +2293,12 @@ export function boardQuery(p: {
   // server default, so only "must match all" rides (the DM precedent).
   if (p.tab === 'resiliency' && p.resFilters) q.set(RES_FILTER_PARAM, p.resFilters);
   if (p.tab === 'resiliency' && p.resMode === DM_MODE_ALL) q.set(RES_MODE_PARAM, DM_MODE_ALL);
+  // 🎢 High Beta boxes (Ajay 2026-10-14: "give me all 3 categories") — only on
+  // that tab, only when a box is ticked; ANY is the server default, so only
+  // "must match all" rides; green names (A1) ride only when asked for.
+  if (p.tab === 'high_beta' && p.hbFilters) q.set(HB_FILTER_PARAM, p.hbFilters);
+  if (p.tab === 'high_beta' && p.hbMode === DM_MODE_ALL) q.set(HB_MODE_PARAM, DM_MODE_ALL);
+  if (p.tab === 'high_beta' && p.hbAll === true) q.set(HB_ALL_PARAM, HB_ALL_ON);
   // 📉 Down 40%+ depth view (Ajay 2026-10-02: "stocks that dropped more than
   // 40% lowers …") — only on that tab, and only when the caller picked a
   // served step that is not the served default (fallen.depthToSend).

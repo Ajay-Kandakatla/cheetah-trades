@@ -25,8 +25,9 @@ import {
   ROOM_TABS, parseMinRoom,
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
   DM_SORT_NEAREST, ATH_SORT_SLIPPING,
-  GAJJALA_OWN_PARAMS, tabSearch,
+  GAJJALA_OWN_PARAMS, tabSearch, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL,
 } from './chartMaps';
+import { HB_OWN_PARAMS } from './highBeta';
 import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM, parseGgTf } from './gajjala';
 import { parseTf } from './supportLevels';
 
@@ -789,6 +790,9 @@ describe('the Earnings Flow tab', () => {
        // 🔻 Down 10%+ today 2026-10-05 — right after Down 40%+, its daily
        // cousin, mid-pack for the same no-usage-yet reason.
        'drop10',
+       // 🎢 High Beta 2026-10-14 — right after Down 10%+ today, before
+       // Gajjala's, mid-pack for the same no-usage-yet reason (his call).
+       'high_beta',
        // 🚩 Gajjala's 2026-10-13 — right after Down 10%+ today, mid-pack for
        // the same no-usage-yet reason (gajjala spec §7 #18, his call).
        'gajjala',
@@ -1809,7 +1813,7 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(37);   // +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    expect(CM_TABS).toHaveLength(38);   // +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2316,7 +2320,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta')).toEqual(CM_TABS_6D3AD93);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2576,9 +2580,9 @@ describe('the 📉 Down 40%+ tab', () => {
 // tabs for it with multiple strategies. Name the Tab Gajjala's"). A non-board
 // tab with its own endpoint; slot right after 🔻 Down 10%+ today.
 describe("🚩 Gajjala's tab registry", () => {
-  it("sits once, right after 'drop10' and before 'ema_frames'", () => {
+  it("sits once, right after 'high_beta' (2026-10-14; was 'drop10') and before 'ema_frames'", () => {
     expect(CM_TABS.filter((t) => t === 'gajjala')).toHaveLength(1);
-    expect(CM_TABS.indexOf('gajjala')).toBe(CM_TABS.indexOf('drop10') + 1);
+    expect(CM_TABS.indexOf('gajjala')).toBe(CM_TABS.indexOf('high_beta') + 1);
     expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('gajjala') + 1);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS[CM_TABS.length - 1]).toBe('winners');
@@ -2674,5 +2678,129 @@ describe('tabSearch — gajjala drops its own params at the border (2026-10-13)'
     const next = sw('tab=zones&sort=room&tf=15m', 'support');
     expect(next.get('sort')).toBe('room');
     expect(next.get('tf')).toBe('15m');
+  });
+});
+
+// ── 🎢 High Beta (Ajay 2026-10-14: "Can you create a new tab for High Beta
+// stocks"). A tile board off the dispatcher; slot right after 🔻 Down 10%+
+// today, before 🚩 Gajjala's. UNMEASURED.
+describe('🎢 High Beta tab registry (2026-10-14)', () => {
+  it("sits once, right after 'drop10' and right before 'gajjala'", () => {
+    expect(CM_TABS.filter((t) => t === 'high_beta')).toHaveLength(1);
+    expect(CM_TABS.indexOf('high_beta')).toBe(CM_TABS.indexOf('drop10') + 1);
+    expect(CM_TABS.indexOf('gajjala')).toBe(CM_TABS.indexOf('high_beta') + 1);
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+  });
+
+  it('is a board tab (GET /chart-maps?tab=high_beta) and parses', () => {
+    expect(isBoardTab('high_beta')).toBe(true);
+    expect(parseTab('high_beta')).toBe('high_beta');
+    expect(parseTab(' HIGH_BETA ')).toBe('high_beta');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab', () => {
+    for (const raw of ['high-beta', 'highbeta', 'high beta', 'beta', 'hb']) expect(parseTab(raw)).toBe(DEFAULT_TAB);
+  });
+
+  it('TAB_META: "🎢 High Beta" (no VS16), an UNMEASURED head, quotes his asks, never bounce or a forecast word', () => {
+    const m = TAB_META.high_beta;
+    expect(m.label).toBe('\u{1F3A2} High Beta');
+    expect(m.label.includes('️')).toBe(false);
+    expect(splitBlurb(m.blurb).head).toContain('UNMEASURED');
+    expect(m.blurb).toContain('Can you create a new tab for High Beta stocks');
+    expect(m.blurb).toContain('Can you please make sure you do a full scan.');
+    expect(m.blurb).toContain('in the High Beta tab.I wanna able to sort my most volatile stocks');
+    expect(m.blurb).not.toMatch(/bounce|fake|rebound|poised|will reverse|expected to|likely to|potential to|predict/i);
+    // his four numbers, as the contract-pinned constants render them
+    for (const n of ['β ≥ 1.5', 'β ≥ 2.0', 'top 20%', 'down 5%+ today']) expect(m.blurb).toContain(n);
+  });
+
+  it('NEGATIVE: 🎯 ENTERABLE_KIND does not carry high_beta (the 🔻 precedent)', () => {
+    expect(Object.prototype.hasOwnProperty.call(ENTERABLE_KIND, 'high_beta')).toBe(false);
+  });
+
+  it('the tab-scoped sort keys', () => {
+    expect(HB_SORT_SWING).toBe('hb_swing');
+    expect(HB_SORT_DROP).toBe('hb_drop');
+    expect(HB_SORT_VOL).toBe('hb_vol');
+  });
+});
+
+describe('boardQuery — 🎢 High Beta boxes, mode and green switch ride only on their tab', () => {
+  const get = (q: string, k: string) => new URLSearchParams(q).get(k);
+
+  it('hb rides on high_beta when a box is ticked; hb_mode only when ALL; hb_all=1 only when on', () => {
+    const q = boardQuery({ tab: 'high_beta', hbFilters: 'b20,d5', hbMode: 'all', hbAll: true, sort: 'hb_vol' });
+    expect(get(q, 'tab')).toBe('high_beta');
+    expect(get(q, 'hb')).toBe('b20,d5');
+    expect(get(q, 'hb_mode')).toBe('all');
+    expect(get(q, 'hb_all')).toBe('1');
+  });
+
+  it('NEGATIVE: nothing ticked, mode ANY and green off leave the URL clean', () => {
+    for (const q of [boardQuery({ tab: 'high_beta' }),
+                     boardQuery({ tab: 'high_beta', hbFilters: '', hbMode: 'any', hbAll: false })]) {
+      for (const k of ['hb=', 'hb_mode', 'hb_all']) expect(q).not.toContain(k);
+    }
+  });
+
+  it('NEGATIVE: hb / hb_mode / hb_all never ride on resiliency, drop10, dual_momentum or zones', () => {
+    for (const tab of ['resiliency', 'drop10', 'dual_momentum', 'zones', 'fallen'] as const) {
+      const q = boardQuery({ tab, hbFilters: 'b15', hbMode: 'all', hbAll: true });
+      for (const k of ['hb=', 'hb_mode', 'hb_all']) expect(q, `${tab} ${k}`).not.toContain(k);
+    }
+  });
+
+  it('NEGATIVE: the other tabs\' boxes and the room floor never ride on high_beta', () => {
+    const q = boardQuery({ tab: 'high_beta', minRoom: 5, levels: '3', grades: 'x', phase: 'approaching',
+                           dmFilters: 'amd', dmMode: 'all', resFilters: 't1', resMode: 'all', uvView: 'peers',
+                           fallenDepth: '60' });
+    for (const k of ['min_room', 'levels', 'grades', 'phase', 'dm=', 'dm_mode', 'res=', 'res_mode', 'uv=', 'depth=']) {
+      expect(q, k).not.toContain(k);
+    }
+  });
+});
+
+describe('tabSearch — high_beta drops its own params at the border (2026-10-14)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+
+  it('the three params are the ones lib/highBeta reads', () => {
+    expect([...HB_OWN_PARAMS]).toEqual(['hb', 'hb_mode', 'hb_all']);
+  });
+
+  it('the tab param round-trips: high_beta → drop10 → high_beta lands back on high_beta, universe kept', () => {
+    const a = sw('tab=high_beta&universe=full', 'drop10');
+    expect(a.get('tab')).toBe('drop10');
+    const b = sw(a.toString(), 'high_beta');
+    expect(b.get('tab')).toBe('high_beta');
+    expect(parseTab(b.get('tab'))).toBe('high_beta');
+    expect(b.get('universe')).toBe('full');
+  });
+
+  it('NEGATIVE: leaving high_beta drops hb / hb_mode / hb_all (they mean nothing on 🛡️ Resiliency)', () => {
+    const next = sw('tab=high_beta&hb=b20,d5&hb_mode=all&hb_all=1&res=t1&universe=full', 'resiliency');
+    for (const k of HB_OWN_PARAMS) expect(next.has(k), k).toBe(false);
+    expect(next.get('res')).toBe('t1');
+    expect(next.get('universe')).toBe('full');
+  });
+
+  it('NEGATIVE: entering high_beta drops a stale hb carried on another tab\'s address', () => {
+    const next = sw('tab=zones&hb=qqq&hb_all=1&sort=room', 'high_beta');
+    expect(next.has('hb')).toBe(false);
+    expect(next.has('hb_all')).toBe(false);
+    expect(next.get('sort')).toBe('room');
+  });
+
+  it('a click on high_beta while ON high_beta keeps hb / hb_mode / hb_all', () => {
+    const next = sw('tab=high_beta&hb=b15&hb_mode=all&hb_all=1&sort=hb_vol', 'high_beta');
+    expect(next.get('hb')).toBe('b15');
+    expect(next.get('hb_mode')).toBe('all');
+    expect(next.get('hb_all')).toBe('1');
+    expect(next.get('sort')).toBe('hb_vol');
+  });
+
+  it('NEGATIVE: a switch between two other tabs keeps an hb param untouched (no reach beyond the border)', () => {
+    const next = sw('tab=zones&hb=b15', 'drop10');
+    expect(next.get('hb')).toBe('b15');
   });
 });

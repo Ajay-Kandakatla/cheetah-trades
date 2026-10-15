@@ -106,7 +106,11 @@ const IDENT_PREFIX = ['\u{1F7E2} Sales', '\u{1F4C9} Sales', '❔ Sales data miss
   // YoY (FY2026 Q2)`, resiliency_tab.GROWTH_CHIP_PREFIX, pinned by contract) —
   // what the business IS, so the identity line. It never starts with 🚀
   // (that prefix is the supply-break PRICE badge).
-  'Sales '];
+  'Sales ',
+  // 🎢 High Beta (2026-10-14): the served category pill (`🎢 β 2.34 · ≥1.5 ·
+  // ≥2.0 · top 20% · QQQ`, high_beta_tab.tile_badges) — what the name IS on
+  // this board, so the identity line.
+  '\u{1F3A2} \u03B2 '];
 /** The 🏎️ Dual Momentum filter-box badges (2026-09-29, Ajay: "How can I see
  *  all of these? at the same time?") — served per ticked box a shown leader
  *  passes, text = the box's own label (dual_momentum_tab.FILTER_LABELS,
@@ -118,7 +122,12 @@ const IDENT_EXACT = new Set(['\u{1F300} AMD raided', '\u{1F4CD} Near demand zone
   // 🛡️ Resiliency filter-box badges (2026-09-30) — resiliency_tab.FILTER_LABELS,
   // pinned equal by contract; same WHY-it-is-here role as the 🏎️ boxes.
   '\u{1F6E1}\u{FE0F} Held on T1', '\u{1F6E1}\u{FE0F} Held on T2',
-  '\u{1F4C8} Bullish tape EOD', '\u{1F305} Bullish tape pre-market']);
+  '\u{1F4C8} Bullish tape EOD', '\u{1F305} Bullish tape pre-market',
+  // 🎢 High Beta filter-box badges (2026-10-14) — high_beta_tab.FILTER_LABELS,
+  // pinned equal by contract; the same WHY-it-is-here role. Exact match: the
+  // 📉 box badge never captures another 📉 pill.
+  '\u{1F3A2} \u03B2 \u2265 1.5', '\u{1F3A2} \u03B2 \u2265 2.0', '\u{1F3A2} Top 20% by \u03B2',
+  'QQQ \u00B7 Nasdaq-100', '\u{1F4C9} Down 5%+ today']);
 
 const ENTRY_EXACT = new Set([
   'Buyable', 'Setup ready', 'Qualifier', 'Buyable then', 'SEPA qualifier', 'Target hit', 'Backtested',
@@ -208,6 +217,11 @@ const FOLD_KEYS: Record<string, FoldGroup> = {
   'T1 worst': 'reads', 'Last T1': 'reads', 'σ · β': 'reads',
   // 🚀 (2026-10-07): the growth fold sentence (resiliency_tab.GROWTH_STAT_KEY).
   Growth: 'reads',
+  // 🎢 High Beta (2026-10-14): NO entry. β / Today / β × drop / σ all stay on
+  // the face — his K3a "σ is a column beside β on every card" (DECISIONS,
+  // which outranks BUILD_SPEC §3.8's fold). The σ key is the served
+  // high_beta_tab.STAT_SIGMA (window from SIGMA_BARS, still his call); a key
+  // typed here would silently stop matching the day the window changes.
 };
 
 const TONE_RANK: Record<string, number> = { warn: 0, good: 1, muted: 2 };

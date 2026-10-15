@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ChartMaps } from './ChartMaps';
 import { CM_TABS, TAB_META } from '../lib/chartMaps';
 import { BAND_STRUCTURE_NA_TEXT } from '../lib/bandStructure';
+import HB_FIXTURE from '../components/__fixtures__/high_beta_board_2026_10_14.json';
+import { _resetRulesInfoCache } from '../hooks/useRulesInfo';
 
 /* ChartMaps — the /chart-maps study board.
  *
@@ -1641,5 +1643,196 @@ describe('ChartMaps — every tab is a link you can ⌘-click', () => {
     draw('/chart-maps?tab=winners&pattern=cup_handle');
     expect(screen.getByRole('tab', { name: 'Strong VCP' }).getAttribute('href'))
       .not.toContain('pattern');
+  });
+});
+
+
+/* 🎢 High Beta on the real page (Ajay 2026-10-14: "Can you create a new tab for
+ * High Beta stocks" … "in the High Beta tab.I wanna able to sort my most
+ * volatile stocks"). The fake server answers from the CAPTURED fixture
+ * (high_beta_board_2026_10_14.json = real BOARD.board(tab='high_beta', limit=2)
+ * returns over WP1's test doubles): the `vol` capture for sort=hb_vol, the
+ * `all` capture for hb_all=1, else `default` — the server decides, the page
+ * only asks. */
+describe('ChartMaps — the 🎢 High Beta tab (2026-10-14)', () => {
+  type HbRow = { symbol: string; red: boolean; thin: boolean; sigma_pct: number | null };
+  type HbPayload = Record<string, unknown> & {
+    tiles: Array<Record<string, unknown> & { symbol: string }>;
+    rows: HbRow[];
+    high_beta_board: Record<string, unknown> & { view: Record<string, unknown> };
+  };
+  const HF = HB_FIXTURE as unknown as { default: HbPayload; all: HbPayload; vol: HbPayload; warming: HbPayload };
+  const hbQs = (url: string) => new URLSearchParams(url.slice(url.indexOf('?') + 1));
+  const RULES = { sections: { high_beta: { title: 'R-high-beta', emoji: '\u{1F3A2}', picks: ['P-1'], stops: ['S-1'], alerts: ['A-1'], note: 'N' } } };
+
+  function serveHb(url: string, live = false): HbPayload {
+    const q = hbQs(url);
+    if (q.get('tab') !== 'high_beta') return { tab: q.get('tab'), tiles: [], note: 'other tab' } as unknown as HbPayload;
+    const pick = q.get('hb_all') === '1' ? HF.all : q.get('sort') === 'hb_vol' ? HF.vol : HF.default;
+    const b = JSON.parse(JSON.stringify(pick)) as HbPayload;
+    if (live) { b.high_beta_board.mode = 'live'; b.high_beta_board.refresh_sec = 30; }
+    return b;
+  }
+  function hbStub(make: (url: string) => unknown) {
+    return vi.fn(async (u: RequestInfo | URL) => {
+      const url = String(u);
+      if (url.includes('/chart-maps?')) return { ok: true, json: async () => make(url) } as unknown as Response;
+      if (url.includes('/supply-demand/rules')) return { ok: true, json: async () => RULES } as unknown as Response;
+      return { ok: true, json: async () => ({}) } as unknown as Response;
+    });
+  }
+  const allCalls = () => vi.mocked(fetch as never as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+  const boardCalls = () => allCalls().filter((u) => u.includes('/chart-maps?'));
+  const lastBoardCall = () => boardCalls()[boardCalls().length - 1];
+  function Loc() {
+    const l = useLocation();
+    return <div data-testid="loc">{l.search}</div>;
+  }
+  const page = (entry: string) => render(<MemoryRouter initialEntries={[entry]}><ChartMaps /><Loc /></MemoryRouter>);
+  const urlParam = (k: string) => new URLSearchParams(screen.getByTestId('loc').textContent || '').get(k);
+  const tileOrder = () => Array.from(document.querySelectorAll('.cm-grid .cm-tile-id b')).map((b) => b.textContent);
+  const rowOrder = () => Array.from(document.querySelectorAll('[data-testid^="cm-hb-row-"]'))
+    .map((el) => (el.getAttribute('data-testid') || '').replace('cm-hb-row-', ''));
+  const RED = HF.default.rows.map((r) => r.symbol);
+  const CHARTS = HF.default.tiles.map((t) => t.symbol);
+
+  beforeEach(() => {
+    _resetRulesInfoCache();
+    try { window.localStorage.clear(); } catch { /* no store in this runner */ }
+  });
+
+  it('?tab=high_beta asks for tab=high_beta; on the CAPTURED payload a table row for EVERY served name, charts only for the served tiles', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => serveHb(url)));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    expect(hbQs(boardCalls()[0]).get('tab')).toBe('high_beta');
+    expect(RED.length).toBeGreaterThan(CHARTS.length);
+    // the charts follow the served row order; a thin name is a row, never a chart
+    expect(CHARTS).toEqual(HF.default.rows.filter((r) => !r.thin).map((r) => r.symbol).slice(0, CHARTS.length));
+    await waitFor(() => expect(tileOrder()).toEqual(CHARTS));
+    expect(screen.getByTestId('cm-hb-header').textContent).toBe(HF.default.high_beta_board.header);
+    expect(screen.getByTestId('cm-hb-sort-hb_swing').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByTestId('cm-drop10-board')).toBeNull();
+    // the first request asks for neither the green names nor a box
+    for (const k of ['hb', 'hb_mode', 'hb_all']) expect(hbQs(boardCalls()[0]).has(k), k).toBe(false);
+  });
+
+  it('the green switch writes ?hb_all=1, the request carries it, the served green rows follow the red ones', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => serveHb(url)));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    fireEvent.click(screen.getByTestId('cm-hb-green'));
+    await waitFor(() => expect(urlParam('hb_all')).toBe('1'));
+    await waitFor(() => expect(hbQs(lastBoardCall()).get('hb_all')).toBe('1'));
+    await waitFor(() => expect(rowOrder()).toEqual(HF.all.rows.map((r) => r.symbol)));
+    expect(HF.all.rows.length).toBeGreaterThan(RED.length);
+    expect(screen.getByTestId('cm-hb-view').textContent).toBe(HF.all.high_beta_board.view_line);
+    fireEvent.click(screen.getByTestId('cm-hb-green'));
+    await waitFor(() => expect(urlParam('hb_all')).toBeNull());
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+  });
+
+  it('the σ sort: ?sort=hb_vol rides, the served σ order is drawn largest first', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => serveHb(url)));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    fireEvent.click(screen.getByTestId('cm-hb-sort-hb_vol'));
+    await waitFor(() => expect(urlParam('sort')).toBe('hb_vol'));
+    await waitFor(() => expect(hbQs(lastBoardCall()).get('sort')).toBe('hb_vol'));
+    await waitFor(() => expect(screen.getByTestId('cm-hb-sort-hb_vol').getAttribute('aria-pressed')).toBe('true'));
+    const sig = rowOrder().map((s) => HF.vol.rows.find((r) => r.symbol === s)!.sigma_pct as number);
+    expect(sig.length).toBe(HF.vol.rows.length);
+    for (let i = 1; i < sig.length; i += 1) expect(sig[i - 1]).toBeGreaterThanOrEqual(sig[i]);
+    fireEvent.click(screen.getByTestId('cm-hb-sort-hb_swing'));
+    await waitFor(() => expect(urlParam('sort')).toBe('hb_swing'));
+    await waitFor(() => expect(screen.getByTestId('cm-hb-sort-hb_swing').getAttribute('aria-pressed')).toBe('true'));
+  });
+
+  it('a box click writes ?hb=d5 and the request carries it; the mode switch writes hb_mode=all', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => {
+      const b = serveHb(url);
+      const q = hbQs(url);
+      const f = (b.high_beta_board as { filters?: { items: Array<{ key: string; on: boolean }> } }).filters;
+      const on = new Set((q.get('hb') || '').split(','));
+      if (f) for (const i of f.items) i.on = on.has(i.key);
+      return b;
+    }));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    fireEvent.click(screen.getByTestId('cm-hb-filter-d5'));
+    await waitFor(() => expect(urlParam('hb')).toBe('d5'));
+    await waitFor(() => expect(hbQs(lastBoardCall()).get('hb')).toBe('d5'));
+    await waitFor(() => expect(screen.getByTestId('cm-hb-filter-mode')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('cm-hb-filter-mode'));
+    await waitFor(() => expect(urlParam('hb_mode')).toBe('all'));
+    await waitFor(() => expect(hbQs(lastBoardCall()).get('hb_mode')).toBe('all'));
+  });
+
+  it('NEGATIVE: while the memo warms only the served warming line shows — the demand-scan counter is never polled', async () => {
+    vi.stubGlobal('fetch', hbStub(() => JSON.parse(JSON.stringify(HF.warming))));
+    page('/chart-maps?tab=high_beta');
+    const h = HF.warming.high_beta_board as Record<string, string>;
+    await waitFor(() => expect(screen.getByTestId('cm-hb-header').textContent).toBe(h.header));
+    expect(screen.getByTestId('cm-hb-header').getAttribute('role')).toBe('status');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(allCalls().some((u) => u.includes('/supply-demand/demand-reentry/progress'))).toBe(false);
+    expect(screen.queryByTestId('cm-hb-table')).toBeNull();
+    expect(tileOrder()).toEqual([]);
+  });
+
+  it('the ℹ️ Rules pill mounts for section "high_beta" on this tab', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => serveHb(url)));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(screen.getAllByTestId('rules-info-pill')).toHaveLength(1));
+    fireEvent.click(screen.getByTestId('rules-info-pill'));
+    await waitFor(() => expect(screen.getByTestId('rules-info-panel').textContent || '').toContain('R-high-beta'));
+  });
+
+  it('re-reads on the SERVED cadence only while the board is live', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.stubGlobal('fetch', hbStub((url) => serveHb(url, true)));
+      page('/chart-maps?tab=high_beta');
+      await waitFor(() => expect(rowOrder()).toEqual(RED));
+      const before = boardCalls().length;
+      await vi.advanceTimersByTimeAsync(31_000);
+      expect(boardCalls().length).toBeGreaterThan(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('NEGATIVE: a closed (not live) board is not re-read on the 30 s clock', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      vi.stubGlobal('fetch', hbStub((url) => serveHb(url)));
+      page('/chart-maps?tab=high_beta');
+      await waitFor(() => expect(rowOrder()).toEqual(RED));
+      const before = boardCalls().length;
+      await vi.advanceTimersByTimeAsync(31_000);
+      expect(boardCalls().length).toBe(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('NEGATIVE: another tab never renders the 🎢 note, and a stale ?hb never rides there', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => serveHb(url)));
+    page('/chart-maps?tab=drop10&hb=b20&hb_all=1');
+    await waitFor(() => expect(boardCalls().length).toBeGreaterThan(0));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByTestId('cm-hb-board')).toBeNull();
+    for (const k of ['hb', 'hb_mode', 'hb_all']) expect(hbQs(lastBoardCall()).has(k), k).toBe(false);
+  });
+
+  it('the tab strip carries 🎢 High Beta right after 🔻, and its href drops nothing it should keep', () => {
+    page('/chart-maps?tab=drop10&universe=full');
+    const tab = screen.getByRole('tab', { name: TAB_META.high_beta.label });
+    const q = new URLSearchParams((tab.getAttribute('href') || '').replace(/^\?/, ''));
+    expect(q.get('tab')).toBe('high_beta');
+    expect(q.get('universe')).toBe('full');
+    const labels = screen.getAllByRole('tab').map((t) => t.textContent || '');
+    const i = labels.findIndex((l) => l.includes(TAB_META.drop10.label));
+    expect(labels[i + 1]).toContain(TAB_META.high_beta.label);
   });
 });

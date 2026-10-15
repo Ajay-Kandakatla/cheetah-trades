@@ -86,6 +86,13 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # moves a line on every board above, and every HIS CALL behind
                 # it is a one-constant flip the panel has to name.
                 "zone_pad",
+                # 🎢 HIGH BETA (2026-10-14) — every High-Beta stock and today's
+                # move, plus the two owner-only tape-burst kinds that watch it
+                # and the Chart Maps names. Its own section because the order
+                # is UNMEASURED until the study reads, and the two kinds RING
+                # (live, not shadow). BEFORE "gajjala" so the gajjala / fallen /
+                # drop10 / short_interest pins stay put.
+                "high_beta",
                 # 🚩 GAJJALA'S (2026-10-13) — Goverdhan Gajjala's five 5-minute
                 # setups on his scanner. Its own section because every number
                 # is either his (cited) or Ajay's K1–K10 answer, the pushes are
@@ -821,6 +828,12 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: zone pad lines unavailable: %s", exc)
 
+    # ── 🎢 High Beta ───────────────────────────────────────
+    try:
+        out["high_beta"] = _high_beta_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: high beta section unavailable: %s", exc)
+
     # ── 🚩 Gajjala's ───────────────────────────────────────
     try:
         out["gajjala"] = _gajjala_section()
@@ -854,6 +867,142 @@ def _short_interest_section() -> dict:
     LAZILY, like the ⚡ and 📉 sections."""
     from short_interest import read as SR
     return SR.rules_section()
+
+
+# ── 🎢 High Beta (2026-10-14) ──────────────────────────────────────────────
+# Every number below is read from chart_maps.high_beta_tab (HB), the 🔻 / 🛡️
+# modules it reuses (D10, RES), orderflow.tape / trade_flash / tape_burst_kinds
+# and alert_status — the section source holds no numeric literal (a test walks
+# its AST). Whether a kind is ON is read from push.subs.owner_prefs() (the
+# keep-set default his devices get), never claimed.
+_HB_SEC_PER_MIN = 60                                    # a unit, not a rule
+_HB_PCT = 100                                           # a unit, not a rule
+
+
+def _hb_hhmm(t) -> str:
+    return t.strftime("%H:%M")
+
+
+def _hb_study() -> tuple:
+    """(measured, text) from the tab's own study block — the served line, never
+    retyped. A missing or malformed block reads as not measured."""
+    from chart_maps import high_beta_tab as HB
+    blk = HB.study_block()
+    if isinstance(blk, dict):
+        return blk.get("status") == "measured", blk.get("text") or ""
+    return False, blk if isinstance(blk, str) else ""
+
+
+def _hb_tape_lines() -> list:
+    """The two owner-only tape-burst kinds (2026-10-14). Ajay: "I need a tape
+    burst notification specific for High Beta stocks from the reselinet
+    separately and also other tape bursts from the Chart Maps page". The burst
+    rule is the ⚡ trade-flash rule (orderflow.tape), the window and auction
+    crosses are trade_flash's, the caps and marks are tape_burst_kinds'."""
+    from orderflow import tape as TP
+    from orderflow import tape_burst_kinds as TBK
+    from orderflow import trade_flash as TF
+    from push import subs
+    from . import alert_status as AS
+
+    prefs = subs.owner_prefs()
+
+    def on(kind) -> str:
+        return ("ON for you by default, owner-only — mute at /notifications" if prefs.get(kind) is True
+                else "owner-only, ships OFF — the toggle is at /notifications")
+
+    def every(kind) -> str:
+        return ("every %d min %s–%s ET on trading days, silent on closed days"
+                % (AS.CADENCE_SEC[kind] // _HB_SEC_PER_MIN, _hb_hhmm(TF.WATCH_OPEN_ET),
+                   _hb_hhmm(TF.WATCH_CLOSE_ET)))
+
+    crosses = " / ".join(sorted(TF.AUCTION_CROSS_ET))
+    rule = ("a %d-second window with %s+ traded, %s+ of it on one side and %d+ prints (the ⚡ trade-flash rule); "
+            "the auction crosses (%s ET), average-price and busted prints are left out, and a name whose last print "
+            "is under the house $%g share-price floor is skipped"
+            % (TP.BURST_WINDOW_SEC, TF.fmt_dollars(TP.BURST_MIN_DOLLARS), "%g%%" % (TP.BURST_ONE_SIDED * _HB_PCT),
+               TP.BURST_MIN_TRADES, crosses, TBK._price_floor()))
+    hb, cm = TBK.KIND_HIGHBETA, TBK.KIND_CHARTMAPS
+    return [
+        "%s %s (%s): the names on this tab, biggest drop first, up to %d — a burst anywhere in the day's range, "
+        "at a demand or supply zone too. Burst = %s. Polled %s; one push per poll, every burst listed on /alerts with a "
+        "link to its tape. The first poll after a cold start can watch nothing: the list warms on the server and "
+        "the next poll reads it."
+        % (TBK.HB_MARK, hb, on(hb), TBK.HIGHBETA_MAX_SYMBOLS, rule, every(hb)),
+        "%s %s (%s): the names served on every Chart Maps tab opened today or the last session, minus the zone "
+        "names ⚡ trade flash watches and minus the %s list, taken round-robin by each tab's rank, up to %d. "
+        "Same burst rule, polled %s."
+        % (TBK.CM_MARK, cm, on(cm), TBK.HB_MARK, TBK.CHARTMAPS_MAX_SYMBOLS, every(cm)),
+        "One burst = one /alerts row (one id per symbol and print second): a burst on a High-Beta name rings as "
+        "%s, at a zone or not; a zone burst on any other name stays ⚡ trade flash (muted on your phone, still "
+        "listed on /alerts). UNMEASURED — a description of prints, not a signal. Not advice." % TBK.HB_MARK,
+    ]
+
+
+def _high_beta_section() -> dict:
+    """🎢 High Beta — every number read from `chart_maps.high_beta_tab` (HB) and
+    the 🔻 / 🛡️ modules it reuses, never typed here. Imported LAZILY, like the
+    📉 section: the panel must not load the tab to list the others."""
+    from chart_maps import drop10_tab as D10
+    from chart_maps import dual_momentum_tab as DMT
+    from chart_maps import high_beta_tab as HB
+    from daytrading import data as DTD
+
+    labels = HB.FILTER_LABELS
+    cats = " · ".join(labels[k] for k in HB.CAT_KEYS)
+    held = ("ETFs and delisted names" if not HB.INCLUDE_ETFS else "Delisted names")
+    rth_close = _hb_hhmm(DTD.ET_RTH_CLOSE)
+    served = HB.served_sorts()
+    orders = "Orders: %s. %s" % (" · ".join(s["label"] for s in served),
+                                 " ".join(HB.order_line(s["key"]) for s in served))
+    measured, study = _hb_study()
+    try:
+        alerts = _hb_tape_lines()
+    except Exception as exc:                          # pragma: no cover - import shim
+        log.warning("rules_info: high beta tape lines unavailable: %s", exc)
+        alerts = ["The tape-burst rules could not be read this build — /notifications lists both kinds."]
+    picks = [
+        "Scanned: every stock in the full universe plus the Nasdaq-100 (its Wikipedia list — members carry a QQQ "
+        "badge and the %s box keeps only them; when the list cannot be read there is no badge and the box passes "
+        "no name). %s are counted, never rated." % (labels["qqq"], held),
+        "β = cov/var of the last %d daily log returns against %s before this session (sepa/beta.py, the app's "
+        "one-year beta; never today's bar). A name with fewer than %d returns on file has no β — counted, never "
+        "listed." % (HB.BETA_LOOKBACK, HB.BENCH, HB.BETA_LOOKBACK),
+        "Three categories, each name badged with every one it is in; the tab lists the union: %s (the top %g%% of "
+        "the rated stocks by β, ties at the cut included). Ticked boxes match ANY by default; “%s” keeps only "
+        "the names passing every ticked box." % (cats, HB.TOP_PCT, DMT.MODE_ALL_LABEL),
+        "Today's move = the print against the official prior close: the exchange's prior-day close when it sits "
+        "within %s of the cached daily close, else the cached close. In regular hours the live snapshot "
+        "(re-read about every %d seconds); after %s ET the regular-session close; before the open, overnight, "
+        "weekends and holidays the last closed session. Held out and named, not read: a live prior close more "
+        "than %s off the cached one, or a %g× or larger move (the price layer's own guard). No print today reads "
+        "“no print”, never a zero move."
+        % (_pct(D10.PREV_CLOSE_TOL_PCT), HB.LIVE_TTL_SEC, rth_close, _pct(D10.PREV_CLOSE_TOL_PCT),
+           D10.GLITCH_RATIO),
+        "Default view: the names red today; “%s” lists every High-Beta name, the green ones after the red. %s: "
+        "today's move %g%% or more under the official prior close."
+        % (HB.VIEW_LABEL, labels["d5"], HB.DOWN_CHIP_PCT),
+        orders,
+        "%s beside β on every row and card: the sample stdev of the last %d daily %% returns — the σ the 🛡️ "
+        "cards print. 🛡️ rates its own β on %% returns, so one name can print two β values."
+        % (HB.STAT_SIGMA, HB.SIGMA_BARS),
+    ]
+    if study:
+        picks.append(study)
+    note = _DISCLAIMER if measured else (
+        "UNMEASURED — no study here says what a High-Beta stock does in the sessions after a down day; every "
+        "order above is an order, not a forecast. Nothing here gates a scan, sizes a position or enters a lane. "
+        + _DISCLAIMER)
+    return {
+        "title": "%s — β ≥ %.1f, β ≥ %.1f or the top %g%% by β, with today's move"
+                 % (HB.TAB_LABEL, HB.B15_MIN, HB.B20_MIN, HB.TOP_PCT),
+        "emoji": HB.MARK,
+        "picks": picks,
+        "stops": ["No stop, no target, no size: a list and its reads. The demand band on each card is the demand "
+                  "engine's own."],
+        "alerts": alerts,
+        "note": note,
+    }
 
 
 # ── 🚩 Gajjala's (2026-10-13) ──────────────────────────────────────────────

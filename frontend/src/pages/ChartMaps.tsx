@@ -87,6 +87,8 @@ import FallenCardExtras from '../components/FallenCardExtras';
 import Drop10BoardNote from '../components/Drop10BoardNote';
 import Drop10CardExtras from '../components/Drop10CardExtras';
 import { drop10RefreshMs } from '../lib/drop10';
+import HighBetaBoardNote from '../components/HighBetaBoardNote';
+import { HB_ALL_PARAM, HB_ALL_ON, HB_FILTER_PARAM, HB_MODE_PARAM, hbFiltersParam, parseHbAll, parseHbFilters, parseHbMode, type HbFilterKey } from '../lib/highBeta';
 import { depthToSend } from '../lib/fallen';
 import { RES_FILTER_PARAM, RES_MODE_PARAM, parseResFilters, parseResMode, resFiltersParam, type ResFilterKey } from '../lib/resiliencyFilters';
 import UndervalueViewNote from '../components/UndervalueViewNote';
@@ -537,6 +539,43 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     }, { replace: true });
   }, [setParams]);
 
+  /* 🎢 High Beta boxes (Ajay 2026-10-14: "give me all 3 categories").
+   * Copies of the 🛡️ handlers on `?hb=` / `?hb_mode=`, plus the green-names
+   * switch on `?hb_all=1` (AMENDMENTS A1: red only by default). The ticked
+   * set lives in the URL only, rides to the server on this tab only, and
+   * every control's checked state is the SERVED one, never this parse. */
+  const hbSel = useMemo(() => parseHbFilters(params.get(HB_FILTER_PARAM)), [params]);
+  const hbSpec = tab === 'high_beta' ? (hbFiltersParam(hbSel) ?? undefined) : undefined;
+  const toggleHbFilter = useCallback((key: string) => {
+    setParams((prev) => {
+      const sel = parseHbFilters(prev.get(HB_FILTER_PARAM));
+      if (sel.has(key as HbFilterKey)) sel.delete(key as HbFilterKey); else sel.add(key as HbFilterKey);
+      const spec = hbFiltersParam(sel);
+      const next = new URLSearchParams(prev);
+      if (spec) next.set(HB_FILTER_PARAM, spec); else next.delete(HB_FILTER_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+  const hbModeSpec = tab === 'high_beta' && parseHbMode(params.get(HB_MODE_PARAM)) === DM_MODE_ALL
+    ? DM_MODE_ALL : undefined;
+  const toggleHbMode = useCallback(() => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (parseHbMode(prev.get(HB_MODE_PARAM)) === DM_MODE_ALL) next.delete(HB_MODE_PARAM);
+      else next.set(HB_MODE_PARAM, DM_MODE_ALL);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+  const hbAll = tab === 'high_beta' && parseHbAll(params.get(HB_ALL_PARAM));
+  const toggleHbAll = useCallback(() => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (parseHbAll(prev.get(HB_ALL_PARAM))) next.delete(HB_ALL_PARAM);
+      else next.set(HB_ALL_PARAM, HB_ALL_ON);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+
   /* 🏷️ Under Value vs peers (Ajay 2026-09-29: "Use the same tab actually").
    * The view lives in the URL as `?uv=peers` and rides on the undervalue tab
    * only; absent = the 💎 view (server default). The PRESSED toggle button is
@@ -674,6 +713,9 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            dmMode: dmModeSpec,
                            resFilters: resSpec,
                            resMode: resModeSpec,
+                           hbFilters: hbSpec,
+                           hbMode: hbModeSpec,
+                           hbAll,
                            uvView, fallenDepth });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
@@ -693,7 +735,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, uvView, fallenDepth, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, hbSpec, hbModeSpec, hbAll, uvView, fallenDepth, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -743,6 +785,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     }, drop10Every);
     return () => window.clearInterval(t);
   }, [drop10Every, load]);
+  /* 🎢 High Beta reads today's move LIVE in market hours too: the same helper
+   * on its own served cadence (high_beta_board.refresh_sec). */
+  const hbEvery = tab === 'high_beta' ? drop10RefreshMs(data?.high_beta_board) : null;
+  useEffect(() => {
+    if (!hbEvery) return;
+    const t = window.setInterval(() => {
+      if (!document.hidden) void load();
+    }, hbEvery);
+    return () => window.clearInterval(t);
+  }, [hbEvery, load]);
 
   /* The demand scan's live counter, polled faster than the board itself. The
    * board key is the universe the SERVER resolved (`universe_key`) — asking
@@ -752,7 +804,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // polling the demand counter for it would report a permanent idle.
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
-      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'drop10' && tab !== 'fallen' && tab !== 'resiliency');
+      && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'drop10' && tab !== 'fallen' && tab !== 'resiliency'
+      && tab !== 'high_beta');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -1107,6 +1160,14 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * sort buttons (pressed = the served `sort`). It also carries the
         * warming line, so the generic demand counter is skipped. */}
       {tab === 'drop10' && <Drop10BoardNote board={data?.drop10_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} />}
+      {/* 🎢 High Beta (2026-10-14): the served header, market / QQQ / order /
+        * count / categories lines, the UNMEASURED note, the held-out names,
+        * the served sort buttons (pressed = the served `sort`, a click through
+        * `setSortParam`), the five boxes (`?hb=` / `?hb_mode=`), the green
+        * switch (`?hb_all=1`) and the table of EVERY listed name above the
+        * charts (A1). It also carries the warming line, so the generic demand
+        * counter is skipped. */}
+      {tab === 'high_beta' && <HighBetaBoardNote board={data?.high_beta_board ?? null} rows={data?.rows} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleHbFilter} onToggleMode={toggleHbMode} onToggleGreen={toggleHbAll} />}
       {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
         * toggle — labels served, pressed = the served view, a click through
         * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
@@ -1115,7 +1176,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
         * a rule section; the zones tab is the "in demand" board. */}
-      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'breaking' || tab === 'drop10' || tab === 'fallen' || tab === 'quick_bounce') && (
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'high_beta' || tab === 'breaking' || tab === 'drop10' || tab === 'fallen' || tab === 'quick_bounce') && (
         <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
           <RulesInfo section={tab === 'zones' ? 'in_demand' : tab === 'breaking' ? 'alerts' : tab} />
         </div>
@@ -1798,6 +1859,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       : data?.warming && tab === 'fallen' ? null
       /* 🔻 Down 10%+ today warms its own memo — Drop10BoardNote prints its warming line. */
       : data?.warming && tab === 'drop10' ? null
+      /* 🎢 High Beta warms its own memo — HighBetaBoardNote prints its warming line. */
+      : data?.warming && tab === 'high_beta' ? null
       /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
        * scan) — its served warming line is printed by DualMomentumBoardNote. */
       : data?.warming && tab !== 'key_levels' ? (

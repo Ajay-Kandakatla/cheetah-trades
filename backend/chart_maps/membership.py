@@ -54,6 +54,7 @@ MEMO_BLOCK_KEY = {
     "resiliency": "resiliency_board",
     "fallen": "fallen_board",
     "drop10": "drop10_board",
+    "high_beta": "high_beta_board",
 }
 # Memo tabs whose TTL is ONE module constant, read by name at call time.
 _MEMO_TTL_MODULE = {
@@ -168,6 +169,14 @@ def ttl_for_tab(tab: str, out: dict) -> Tuple[Optional[int], Optional[str]]:
                 return (None, None)
             name = ("LIVE_TTL_SEC" if mode == D10.MODE_LIVE else "CLOSED_TTL_SEC")
             return (int(D10.ttl_for(mode)), "chart_maps.drop10_tab.%s" % name)
+        if tab == "high_beta":
+            # 🎢 (2026-10-14): the 🔻 mode-dependent TTL, read off its own module
+            from chart_maps import high_beta_tab as HB
+            mode = ((out or {}).get(MEMO_BLOCK_KEY["high_beta"]) or {}).get("mode")
+            if not mode:
+                return (None, None)
+            name = ("LIVE_TTL_SEC" if mode == HB.MODE_LIVE else "CLOSED_TTL_SEC")
+            return (int(HB.ttl_for(mode)), "chart_maps.high_beta_tab.%s" % name)
     except Exception as exc:                                   # noqa: BLE001
         log.debug("membership: ttl for %s unavailable: %s", tab, exc)
     return (None, None)

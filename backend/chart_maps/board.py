@@ -55,7 +55,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency", "fallen", "drop10")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency", "fallen", "drop10", "high_beta")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -4728,6 +4728,174 @@ def drop10_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                                             min_tier_label=tier_label,
                                             stale=bool(got.get("stale")))}
 
+def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                    universe: str = "full", themes_first: bool = False,
+                    sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                    ctx: Optional[dict] = None, now: Optional[datetime] = None,
+                    hb_filters: Optional[str] = None, hb_mode: Optional[str] = None,
+                    hb_all: bool = False) -> dict:
+    """🎢 High Beta — every High-Beta stock of the full universe ∪ the
+    Nasdaq-100 in his three categories, with today's move.
+
+    Ajay 2026-10-14: *"Can you create a new tab for High Beta stocks"* and
+    *"in the High Beta tab.I wanna able to sort my most volatile stocks"*.
+
+    The whole read (β, σ, categories, today's move) is memoised in
+    `chart_maps.high_beta_tab` by a background thread (the 🔻 shape). This
+    orders it, applies the red-only view (`hb_all` lists every name), the
+    ticked boxes and the liquidity floor; `rows` carries a compact row for
+    EVERY name left, the charts are the first `limit + BAR_BUFFER` of them
+    (ONE `_bulk_snaps` + ONE `zone_store.load_latest`). Memo rows are never
+    mutated: every tile is built from a deep copy.
+
+    UNMEASURED and display only — an order, not a signal.
+    """
+    import copy
+    from chart_maps import dual_momentum_tab as DMT
+    from chart_maps import high_beta_tab as HB
+    from supply_demand import enterable as EN
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    green = hb_all is True
+    got = HB.cached_or_warm(universe, now=now_et)
+    if got["state"] == "warming":
+        return {"tiles": [], "rows": [], "warming": True, "note": HB.WARMING_NOTE,
+                "high_beta_board": HB.warming_block(now=now_et, sort=sort, include_green=green)}
+    if got["state"] == "error":
+        return {"tiles": [], "rows": [], "note": HB.error_note(got.get("reason")),
+                "high_beta_board": HB.error_block(got.get("reason"), now=now_et, sort=sort,
+                                                  include_green=green)}
+    entry = got["entry"]                                    # READ-ONLY (the memo's)
+    active = HB.parse_filters(hb_filters)
+    mode = HB.parse_mode(hb_mode)
+    rows, counts, filters = HB.rank(entry, sort=sort, active=active, mode=mode,
+                                    include_green=green)
+
+    # 1 — the liquidity floor on the 50 closed sessions before this one. It
+    # cuts the CHART pool only: `rows` keeps EVERY name in the view (A1 / his
+    # K2 "every red name"), a name under the floor flagged `thin`.
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    qqq_ok = HB.qqq_available(entry)
+    kept, compact, no_turnover, dropped_thin = [], [], 0, 0
+    for r in rows:
+        m = {"avg_turnover": r.get("adv50"), "liquidity_tier": liquidity_tier(r.get("adv50"))}
+        thin = not passes_liquidity(m.get("avg_turnover"), min_tier)
+        compact.append(HB.compact_row(r, qqq_available=qqq_ok, thin=thin))
+        if thin:
+            dropped_thin += 1
+            no_turnover += int(floor_on and m.get("avg_turnover") is None)
+            continue
+        kept.append((r, m))
+
+    # 2 — the pool, deep-copied, and the tile skeletons
+    pool = [(copy.deepcopy(r), m) for r, m in kept[:limit + BAR_BUFFER]]
+    tiles = []
+    by_sym: dict = {}
+    for i, (r, m) in enumerate(pool):
+        sym = r["symbol"]
+        tiles.append({"symbol": sym, "theme": _theme(sym), "href": _href(sym),
+                      "last_close": HB.last_print(r), "bars": [], "bands": [], "lines": [],
+                      "markers": [],
+                      "badges": HB.tile_badges(r, active),
+                      "stats": HB.tile_stats(r),
+                      "high_beta": HB.tile_block(r, qqq_available=qqq_ok),
+                      "hb_filter": dict(r.get("hb_filter") or {}),
+                      **published_metrics(m), "_m": dict(m),
+                      "_score": float(len(pool) - i)})
+        by_sym[sym] = r
+
+    # 3 — ONE snapshot over the pool, ONE zone read, the 🏎️ DM zone block
+    syms = [t["symbol"] for t in tiles]
+    raw = _bulk_snaps(syms) if syms else {}
+    if ctx is not None:
+        ctx.update(snaps=raw, now=now_et)
+    try:
+        from supply_demand import zone_store
+        _day, docs = zone_store.load_latest(syms) if syms else (None, {})
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("high_beta_tiles: zone_store read failed: %s", exc)
+        docs = {}
+    docs = docs if isinstance(docs, dict) else {}
+    live = _live_from_snaps(tiles, raw)
+    attach_enterable(tiles, kind=EN.KIND_DEMAND, live=live, docs=docs)
+    for t in tiles:
+        sym = t["symbol"]
+        doc = docs.get(sym) or {}
+        zone = DMT.zone_read(_explosive_px(t), doc, t.get("enterable"),
+                             prev_close=by_sym[sym].get("prev_close"))
+        dem = zone.get("demand")
+        if isinstance(dem, dict):
+            t["bands"].append({"kind": "demand", "lo": float(dem["lo"]),
+                               "hi": float(dem["hi"]), "label": "demand",
+                               **LP.pad_fields(dem)})
+            room = zone.get("room") or {}
+            if _num(room.get("target_lo")) is not None and _num(room.get("target_hi")) is not None:
+                t["bands"].append({"kind": "supply", "lo": float(room["target_lo"]),
+                                   "hi": float(room["target_hi"]), "label": "first lid"})
+            t["_bars"] = {"days": _zone_window(_stored_band(doc, dem), days)}
+        t["badges"].append(DMT.zone_badge(zone, _dist_badge))
+        t["stats"].extend(DMT.zone_stats(zone))
+        t["why"] = HB.why_text(by_sym[sym], DMT.zone_text(zone))
+        t["high_beta"]["zone"] = zone
+
+    out, meta = (_finish(tiles, limit, themes_first, days, sort, min_tier=min_tier, snaps=raw)
+                 if tiles else ([], {"dropped_thin": 0, "sort_unavailable": None}))
+    for t in out:
+        t["name"] = _name_for(t["symbol"])
+    counts.update(no_turnover=no_turnover,
+                  dropped_thin=dropped_thin - no_turnover + int(meta.get("dropped_thin") or 0),
+                  shown=len(out), rows=len(compact))
+    tier_label = {"deep": f"Deep · ≥${int(LIQ_DEEP_USD / 1e6)}M/day",
+                  "ok": f"Tradeable · ≥${int(LIQ_OK_USD / 1e6)}M/day",
+                  "thin": f"Thin · ≥${int(LIQ_THIN_USD / 1e6)}M/day",
+                  "any": "no floor"}.get(min_tier, min_tier)
+    if out:
+        note = HB.note_text()
+    elif int((entry.get("counts") or {}).get("listed") or 0) == 0:
+        note = HB.EMPTY_NOTE
+    else:
+        note = HB.EMPTY_VIEW_NOTE
+    return {"tiles": out, "rows": compact, "sort_unavailable": meta.get("sort_unavailable"),
+            "matched": len(kept), "note": note,
+            "high_beta_board": HB.ready_block(counts, entry=entry, sort=sort,
+                                              min_tier_label=tier_label, filters=filters,
+                                              include_green=green,
+                                              stale=bool(got.get("stale")), charts=len(out))}
+
+
+def high_beta_watch(*, now: Optional[datetime] = None) -> dict:
+    """The 🎢 tape-burst watch list, served over HTTP to the cron process
+    (`GET /chart-maps/high-beta/watch`). Read off the tab's memo ONLY: a cold
+    memo answers `warming` (the ONE warm thread starts server-side; a second
+    GET while it runs starts nothing). Every listed name, red and green,
+    biggest drop first, above the house $2 share-price floor
+    (`trading.safety_floor.MIN_SHARE_PRICE`) — NO cap (the kind owns its cap)."""
+    from chart_maps import high_beta_tab as HB
+    from trading.safety_floor import MIN_SHARE_PRICE
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    got = HB.cached_or_warm("full", now=now_et)
+    if got["state"] != "ready":
+        return {"state": got["state"], "warming": got["state"] == "warming",
+                "reason": got.get("reason"), "as_of": None, "symbols": []}
+    entry = got["entry"]
+    rows, _counts, _filters = HB.rank(entry, sort=HB.SORT_DROP, active=(), include_green=True)
+    syms, under = [], 0
+    for r in rows:
+        px = HB.last_print(r)
+        if px is None or px < MIN_SHARE_PRICE:
+            under += 1
+            continue
+        td = r.get("today") or {}
+        syms.append({"symbol": r["symbol"], "beta": r.get("beta"),
+                     "cats": list(r.get("cats") or []), "move_pct": td.get("move_pct"),
+                     "state": td.get("state")})
+    return {"state": "ready", "warming": False, "reason": None,
+            "session": entry.get("session"), "mode": entry.get("mode"),
+            "as_of": entry.get("as_of"), "built_at": entry.get("built_at"),
+            "stale": bool(got.get("stale")), "price_floor": MIN_SHARE_PRICE,
+            "n_listed": len(rows), "n_under_floor": under, "symbols": syms}
+
+
 def _bonde_gate(snap: Optional[dict]) -> tuple[str, Optional[dict]]:
     """("pass"|"fail"|"unknown", sales_block) for one symbol's sales snapshot."""
     sales = (snap or {}).get("sales") or None
@@ -7215,7 +7383,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           flight: Optional[str] = None, dm: Optional[str] = None,
           dm_mode: Optional[str] = None, uv: Optional[str] = None,
           res: Optional[str] = None, res_mode: Optional[str] = None,
-          depth: Optional[str] = None) -> dict:
+          depth: Optional[str] = None, hb: Optional[str] = None,
+          hb_mode: Optional[str] = None, hb_all: bool = False) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -7248,6 +7417,13 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     "40" | "50" | "60" | "70" over the listed names (`fallen_tab.parse_depth`:
     anything else serves the default, never below the threshold). Every other
     tab ignores it.
+
+    `hb` (2026-10-14) reaches ONLY the 🎢 high_beta tab — the boxes, a comma
+    list "b15,b20,top20,qqq,d5" (unknown tokens ignored), and `hb_mode` how
+    they combine: "all" = every ticked box, anything else = ANY (the default,
+    the `dm` machinery). `hb_all` (`is True` only) lists the green and unread
+    names too; the default view is the red names (his ask: "all down today").
+    Every other tab ignores all three.
 
     `uv` (2026-09-29) reaches ONLY the undervalue tab — `peers` = the 🏷️
     vs-peers view, anything else = the 💎 view (default, unchanged). Every
@@ -7282,12 +7458,16 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # 🔻 `drop10_now` / `drop10_reclaim` / `drop10_rvol` are the Down 10%+
     # today tab's (2026-10-05), the same precedent.
     from chart_maps import drop10_tab as _D10
+    # 🎢 `hb_swing` / `hb_drop` / `hb_vol` are the High Beta tab's (2026-10-14),
+    # the same precedent.
+    from chart_maps import high_beta_tab as _HB
     srt = sort if (sort in SORTS
                    or (t == "dual_momentum" and sort in _DMT.TAB_SORTS)
                    or (t == "ath" and sort == _ATH.SORT_SLIPPING)
                    or (t == "resiliency" and sort in _RES.TAB_SORTS)
                    or (t == "fallen" and sort in _FAL.TAB_SORTS)
-                   or (t == "drop10" and sort in _D10.TAB_SORTS)) else DEFAULT_SORT
+                   or (t == "drop10" and sort in _D10.TAB_SORTS)
+                   or (t == "high_beta" and sort in _HB.TAB_SORTS)) else DEFAULT_SORT
     if t == "resiliency" and srt not in _RES.TAB_SORTS:
         # only the tab's own five served orders (the ATH precedent: no generic
         # metric sort is offered, so none may silently reorder the board)
@@ -7298,6 +7478,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     if t == "drop10" and srt not in _D10.TAB_SORTS:
         # only the tab's own four served orders (the resiliency precedent)
         srt = DEFAULT_SORT
+    if t == "high_beta":
+        # only the tab's own three served orders; `default` resolves to
+        # β × today's drop and the served `sort` is that explicit key
+        srt = _HB.resolve_sort(srt)
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
     # Out-of-band slot for a builder that already fetched the raw live rows for
@@ -7326,6 +7510,11 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                            depth=depth if isinstance(depth, str) else None)
     elif t == "drop10":
         out = drop10_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx)
+    elif t == "high_beta":
+        out = high_beta_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx,
+                              hb_filters=hb if isinstance(hb, str) else None,
+                              hb_mode=hb_mode if isinstance(hb_mode, str) else None,
+                              hb_all=hb_all is True)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -7415,7 +7604,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
             "bias": bias, "micro": micro, "min_room": min_room,
             "studies": studies, "levels": levels, "grades": grades,
             "flight": flight, "dm": dm, "dm_mode": dm_mode, "uv": uv,
-            "res": res, "res_mode": res_mode, "depth": depth})
+            "res": res, "res_mode": res_mode, "depth": depth,
+            "hb": hb, "hb_mode": hb_mode, "hb_all": hb_all})
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart maps: membership snapshot skipped: %s", exc)
     out["count"] = len(out.get("tiles") or [])
@@ -7480,6 +7670,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     if t == "drop10":
         # 🔻 / 📉 / 🔄 / 📊 — exactly these four served keys.
         out["sorts"] = _D10.served_sorts()
+    if t == "high_beta":
+        # 🎢 / 📉 / 🌊 — exactly these three served keys.
+        out["sorts"] = _HB.served_sorts()
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier

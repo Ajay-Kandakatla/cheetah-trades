@@ -28,7 +28,8 @@ async def chart_maps(
                                         "deep_demand | gabbar | zero_dte | "
                                         "earnings | winners | keltner | amd | "
                                         "ipo | key_levels | dual_momentum | "
-                                        "ath | resiliency | fallen | drop10"),
+                                        "ath | resiliency | fallen | drop10 | "
+                                        "high_beta"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("full",
@@ -120,6 +121,22 @@ async def chart_maps(
     res_mode: str = Query("", description="resiliency tab only — how the ticked res boxes "
                                            "combine: 'all' = every ticked box must pass; absent "
                                            "or anything else = any ticked box (the default)."),
+    hb: str = Query("", description="high_beta tab only — comma list of boxes "
+                                     "b15,b20,top20,qqq,d5; a name passing ANY ticked one shows "
+                                     "(hb_mode=all: every ticked one must pass). Unknown tokens "
+                                     "are ignored; empty = no box. Ajay 2026-10-14: 'Can you "
+                                     "build me a category or filter for High Beta stocks in "
+                                     "Resilient and make a scan there were all down today "
+                                     "especially a qqq series. Can you please make sure you do a "
+                                     "full scan.' — then 'give me all 3 categories'."),
+    hb_mode: str = Query("", description="high_beta tab only — how the ticked hb boxes "
+                                          "combine: 'all' = every ticked box must pass; absent "
+                                          "or anything else = any ticked box (the default)."),
+    hb_all: bool = Query(False, description="high_beta tab only — true lists every High-Beta "
+                                            "name (green and unread after the red ones); "
+                                            "default false = the red names only. Ajay "
+                                            "2026-10-14: 'Can you create a new tab for High "
+                                            "Beta stocks'."),
     min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
                           description="liquidity floor by 50-day avg $ volume: "
                                       "deep (>=$50M) | ok (>=$10M, default) | "
@@ -184,12 +201,27 @@ async def chart_maps(
             res=(res if isinstance(res, str) and res.strip() else None),
             res_mode=(res_mode if isinstance(res_mode, str) and res_mode.strip() else None),
             depth=(depth if isinstance(depth, str) and depth.strip() else None),
+            hb=(hb if isinstance(hb, str) and hb.strip() else None),
+            hb_mode=(hb_mode if isinstance(hb_mode, str) and hb_mode.strip() else None),
+            hb_all=hb_all is True,
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),
         )
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.get("/chart-maps/high-beta/watch")
+async def chart_maps_high_beta_watch():
+    """🎢 The High-Beta tape-burst watch list (Ajay 2026-10-14: "High-Beta tab
+    names + all Chart Maps names"), read by the cron process over HTTP.
+
+    Read off the tab's memo ONLY (`board.high_beta_watch`): a cold memo answers
+    `{"warming": true, "symbols": []}` and starts the ONE warm thread here, in
+    the api process; a second GET while it runs starts nothing. Never scans on
+    the request path beyond that memo. Display data — gates nothing."""
+    return JSONResponse(await asyncio.to_thread(board_mod.high_beta_watch))
 
 
 @router.get("/chart-maps/support")

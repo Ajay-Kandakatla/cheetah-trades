@@ -823,3 +823,64 @@ describe('cardLadder — the served pad under the buy zone', () => {
     expect(zones).toBeGreaterThan(0);
   });
 });
+
+describe('cardLadder — 🎢 High Beta tab (2026-10-14)', () => {
+  // Ajay 2026-10-14: "Can you create a new tab for High Beta stocks". The tab
+  // serves a 🎢 category pill (IDENT), the 📅 today pill (PRICE, the 🛡️
+  // literal) and one badge per ticked box passed (IDENT, exact labels =
+  // high_beta_tab.FILTER_LABELS); σ stays on the face beside β (K3a).
+  const PILL = '\u{1F3A2} β 2.34 · ≥1.5 · ≥2.0 · top 20% · QQQ';
+  const BOXES = ['\u{1F3A2} β ≥ 1.5', '\u{1F3A2} β ≥ 2.0', '\u{1F3A2} Top 20% by β',
+    'QQQ · Nasdaq-100', '\u{1F4C9} Down 5%+ today'];
+  const TODAY = '\u{1F4C5} today · -7.42%';
+  const hbTile = (over: Partial<CmTile> = {}): CmTile => bare({
+    symbol: 'NBIS',
+    badges: [{ text: PILL, tone: 'muted' }, { text: TODAY, tone: 'warn' }, { text: BOXES[4], tone: 'good' }],
+    stats: [{ k: 'β', v: '2.34' }, { k: 'Today', v: '−7.42% vs 52.10' },
+            { k: 'β × drop', v: '17.36' }, { k: 'σ (50d)', v: '4.12%' }],
+    ...over,
+  });
+
+  it('the category pill and every box badge route to IDENT; the 📅 today pill to PRICE', () => {
+    const l = cardLadder(hbTile());
+    expect(texts(l.ident)).toEqual([PILL, BOXES[4]]);
+    expect(texts(l.price)).toEqual([TODAY]);
+    expect(texts(l.setup.badges)).toEqual([]);
+    for (const t of BOXES) expect(texts(cardLadder(bare({ badges: [{ text: t, tone: 'good' }] })).ident), t).toEqual([t]);
+  });
+
+  it('β / Today / β × drop / σ all stay on the face (K3a: σ beside β on every card); READS stays empty', () => {
+    const l = cardLadder(hbTile());
+    expect(l.setup.stats.map((s) => s.k)).toEqual(['β', 'Today', 'β × drop', 'σ (50d)']);
+    expect(l.setup.stats.map((s) => s.v)).toEqual(['2.34', '−7.42% vs 52.10', '17.36', '4.12%']);
+    expect(foldTexts(l, 'reads')).toEqual([]);
+  });
+
+  it('NEGATIVE: a changed σ window (another served key) still lands on the face, never in a fold', () => {
+    // high_beta_tab.STAT_SIGMA = f"σ ({SIGMA_BARS}d)" — the window is his call.
+    for (const k of ['σ (20d)', 'σ (100d)']) {
+      const l = cardLadder(hbTile({ stats: [{ k: 'β', v: '2.34' }, { k, v: '4.12%' }] }));
+      expect(l.setup.stats.map((s) => s.k), k).toEqual(['β', k]);
+      expect(foldTexts(l, 'reads'), k).toEqual([]);
+    }
+  });
+
+  it('NEGATIVE: near-miss labels never reach IDENT (a box label with a suffix, another 📉 pill, no β)', () => {
+    for (const t of ['\u{1F4C9} Down 5%+ today (x)', '\u{1F4C9} Down 6%+ today', 'QQQ', '\u{1F3A2} High Beta',
+                     '\u{1F3A2} Top 25% by β']) {
+      const l = cardLadder(bare({ badges: [{ text: t, tone: 'good' }] }));
+      expect(texts(l.ident), t).toEqual([]);
+    }
+    // the 📉 Down 40%+ distance pill keeps its PRICE rung
+    const fallen = '\u{1F4C9} 63.18% below the 52-week high';
+    expect(texts(cardLadder(bare({ badges: [{ text: fallen, tone: 'warn' }] })).price)).toEqual([fallen]);
+  });
+
+  it('NEGATIVE: no NaN / undefined / [object Object] anywhere on a High Beta ladder', () => {
+    for (const s of allStrings(cardLadder(hbTile()))) {
+      expect(s.includes('NaN'), s).toBe(false);
+      expect(s.includes('undefined'), s).toBe(false);
+      expect(s.includes('[object Object]'), s).toBe(false);
+    }
+  });
+});
