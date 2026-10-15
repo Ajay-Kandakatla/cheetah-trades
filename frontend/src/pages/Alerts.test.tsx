@@ -14,7 +14,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import {
-  AlertsPage, KIND_CHIPS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, sessionLine, skipsToday,
+  AlertsPage, GAJJALA_POTENTIAL_KEYS, GG_POTENTIAL_HELD_ROW, KIND_CHIPS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText,
+  capFloorPhrase, ggPotentialChipText, ggPotentialRowWord, passHealth, sessionLine, skipsToday,
   staleAfterSec, tapeBurstChipText, tapeWindow,
 } from './Alerts';
 import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
@@ -35,8 +36,9 @@ const ROWS = [
     body: 'Low 161.90 at 09:33 ET, +6.1% off it.' },
 ];
 
-/* All six intraday passes fresh at 11:00 ET (🔑 key levels joined 2026-09-25, 🧬 medical catalysts 2026-09-29,
- * 🚩 Gajjala A+ setups 2026-10-13 — its own 5-minute line, SHADOW counters as chart_maps/gajjala/run.py records them). demand_alert carries no cadence_sec on
+/* All seven intraday passes fresh at 11:00 ET (🔑 key levels joined 2026-09-25, 🧬 medical catalysts 2026-09-29,
+ * 🚩 Gajjala A+ setups 2026-10-13 — its own 5-minute line, SHADOW counters as chart_maps/gajjala/run.py records them;
+ * 🧠 Gajjala potentials 2026-10-15 — rides the 🚩 line, LIVE counters as potential.run_pass records them). demand_alert carries no cadence_sec on
  * purpose (an older API) — the fallback must fill it. */
 const STATUS_LIVE = {
   in_session: true, now_et: '2026-09-05T11:00:00-04:00',
@@ -60,6 +62,9 @@ const STATUS_LIVE = {
     gajjala_setup: { as_of: '2026-09-05T10:56:30-04:00', date: '2026-09-05', cadence_sec: 300,
       counts: { candidates: 7, listed: 7, qualifiers: 4, aplus: 1, pushed: 0, shadow: 1, shadow_mode: 1, shadow_session: 2,
                 suppressed_first15: 0, late: 0 } },
+    gajjala_potential: { as_of: '2026-09-05T10:56:31-04:00', date: '2026-09-05', cadence_sec: 300,
+      counts: { potential: 3, armed: 1, building: 2, new: 1, tracked_today: 4, pushed: 1, claimed_before: 0, muted: 0,
+                outside_hours: 0, closed_day: 0, stale_tape: 0, no_target: 0, failed: 0, dry: 0, graveyard: 0 } },
   },
   disclaimer: 'Configured price-structure alerts. Not advice.',
 };
@@ -80,6 +85,7 @@ const STATUS_STALE = {
     key_level_alert: { as_of: '2026-09-05T14:29:40-04:00', date: '2026-09-05', cadence_sec: 60, counts: { scope: 13, pushed: 0 } },
     med_catalyst: { as_of: '2026-09-05T14:28:30-04:00', date: '2026-09-05', cadence_sec: 300, counts: { roster: 362, pushed: 0 } },
     gajjala_setup: { as_of: '2026-09-05T14:26:30-04:00', date: '2026-09-05', cadence_sec: 300, counts: { candidates: 7, pushed: 0 } },
+    gajjala_potential: { as_of: '2026-09-05T14:26:31-04:00', date: '2026-09-05', cadence_sec: 300, counts: { potential: 0, pushed: 0 } },
   },
 };
 
@@ -97,6 +103,7 @@ const STATUS_REASON = {
     key_level_alert: { as_of: '2026-09-05T09:35:40-04:00', date: '2026-09-05', cadence_sec: 60, counts: { scope: 13, pushed: 0 } },
     med_catalyst: { as_of: '2026-09-05T09:35:30-04:00', date: '2026-09-05', cadence_sec: 300, counts: { roster: 362, pushed: 0 } },
     gajjala_setup: { as_of: '2026-09-05T09:31:30-04:00', date: '2026-09-05', cadence_sec: 300, counts: { candidates: 0, pushed: 0 } },
+    gajjala_potential: { as_of: '2026-09-05T09:31:31-04:00', date: '2026-09-05', cadence_sec: 300, counts: { potential: 0, pushed: 0 } },
   },
 };
 
@@ -398,7 +405,7 @@ describe('Alerts page — the status strip', () => {
     // demand_alert sent no cadence_sec → the crontab fallback.
     expect(within(screen.getByTestId('pass-demand_alert')).getByText('· every 5 min')).toBeInTheDocument();
     // All six fresh → the header may say so.
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 6 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
     expect(screen.getByText(/Gate: room ≥ 5% to the first band overhead · print ≤ 1% above the demand band/)).toBeInTheDocument();
     // The cap floor comes from the payload (review 2026-09-14 F5): "$700M+", never a figure typed in the page.
     expect(screen.getByText(/the phone gets \$700M\+ names that pass, once per band per day/)).toBeInTheDocument();
@@ -425,7 +432,7 @@ describe('Alerts page — the status strip', () => {
     const da = await screen.findByTestId('pass-demand_alert');
     expect(within(da).getByText('no pass yet today')).toBeInTheDocument();
     expect(within(da).queryByText(/last pass/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 6 passes not reporting on cadence');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 7 passes not reporting on cadence');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
     expect(screen.queryByText(/reported within cadence/)).not.toBeInTheDocument();
   });
 
@@ -434,7 +441,7 @@ describe('Alerts page — the status strip', () => {
     draw();
     const ze = await screen.findByTestId('pass-zone_edge');
     expect(within(ze).getByText('stale — last pass 10:02 ET, expected every minute')).toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 6 passes not reporting on cadence');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 7 passes not reporting on cadence');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
     // NEGATIVE: the fresh 5-minute passes are not called stale, and nothing says "running".
     expect(within(screen.getByTestId('pass-zone_bounce_alert')).getByText('last pass 14:29 ET')).toBeInTheDocument();
     expect(screen.queryByText(/passes running/)).not.toBeInTheDocument();
@@ -453,7 +460,7 @@ describe('Alerts page — the status strip', () => {
     expect(within(zb).getByText('⚠ zone store empty for today')).toBeInTheDocument();
     expect(within(screen.getByTestId('pass-demand_alert')).getByText('⚠ board empty or warming')).toBeInTheDocument();
     // The unstamped pass cannot be verified against its cadence → the header does not vouch for it.
-    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 6 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 7 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
   });
 
   it('in_session false: never "live" / "in session" / "session open"; a pass stored on ANOTHER day is named as such', async () => {
@@ -745,7 +752,7 @@ describe('Alerts page — the once-a-day passes', () => {
     expect(screen.getAllByText('no pass recorded')).toHaveLength(DAILY.length);
     // The intraday-pass sentence speaks for the INTRADAY passes only.
     expect(screen.getByTestId('session-line'))
-      .toHaveTextContent('Session open — all 6 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);
+      .toHaveTextContent('Session open — all 7 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
   });
 
   it('NEGATIVE: would_skip_room is never folded into the room aggregate', async () => {
@@ -965,7 +972,7 @@ describe('Alerts page — the 🔑 key-levels pass (2026-09-25)', () => {
     // 🧬 2026-09-29: the medical-catalysts row follows the 🔑 row (the 🔑 reason chip is also a pass-* id).
     const strips = ids.filter((x) => x !== 'pass-reason');
     expect(strips.indexOf('pass-med_catalyst')).toBe(strips.indexOf('pass-key_level_alert') + 1);
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 6 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
   });
 
   it('the header scopes the room/proximity gate to the three zone passes; 🔑 is said not to go through it', async () => {
@@ -993,7 +1000,7 @@ describe('Alerts page — the 🔑 key-levels pass (2026-09-25)', () => {
     const kl = await screen.findByTestId('pass-key_level_alert');
     expect(within(kl).getByText('no pass yet today')).toBeInTheDocument();
     expect(within(kl).queryByText(/last pass/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 6 passes not reporting on cadence');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open (clock) — ⚠ 1 of 7 passes not reporting on cadence');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
     expect(screen.queryByText(/reported within cadence/)).not.toBeInTheDocument();
     // The rest of the page still loads.
     expect(await screen.findAllByTestId('alert-row')).toHaveLength(3);
@@ -1005,7 +1012,7 @@ describe('Alerts page — the 🔑 key-levels pass (2026-09-25)', () => {
     draw();
     const kl = await screen.findByTestId('pass-key_level_alert');
     expect(within(kl).getByText('stale — last pass 10:50 ET, expected every minute')).toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 6 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 7 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
   });
 
   it('NEGATIVE: yesterday\'s 🔑 reason is not shown under today\'s "no pass yet today"', async () => {
@@ -1020,10 +1027,10 @@ describe('Alerts page — the 🔑 key-levels pass (2026-09-25)', () => {
   it('sessionLine counts the passes and NEGATIVE: never types "three"', () => {
     const today = '2026-09-05';
     const all = { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, key_level_alert: KEY_PASS_FRESH } } as never;
-    expect(sessionLine(all, today)).toBe('Session open — all 6 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);
+    expect(sessionLine(all, today)).toBe('Session open — all 7 passes reported within cadence.' /* 5 → 6: 🚩 gajjala_setup joined 2026-10-13 */);  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
     const { key_level_alert: _gone, ...three } = STATUS_LIVE.passes;
     const missing = { ...STATUS_LIVE, passes: three } as never;
-    expect(sessionLine(missing, today)).toMatch(/⚠ 1 of 6 passes/);  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(sessionLine(missing, today)).toMatch(/⚠ 1 of 7 passes/);  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
     const closed = { ...STATUS_LIVE, in_session: false } as never;
     for (const line of [sessionLine(all, today), sessionLine(missing, today), sessionLine(closed, today)]) {
       expect(line).not.toMatch(/three/i);
@@ -1081,7 +1088,7 @@ describe('Alerts page — the 🧬 medical-catalysts pass (2026-09-29)', () => {
     const mc = await screen.findByTestId('pass-med_catalyst');
     expect(within(mc).getByText('no pass yet today')).toBeInTheDocument();
     expect(within(mc).queryByText(/last pass/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 6 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 7 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
     expect(await screen.findAllByTestId('alert-row')).toHaveLength(3);
   });
 
@@ -1134,7 +1141,7 @@ describe('Alerts page — the 🧬 medical-catalysts pass (2026-09-29)', () => {
     draw();
     const mc = await screen.findByTestId('pass-med_catalyst');
     expect(within(mc).getByText('stale — last pass 10:40 ET, expected every 5 min')).toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 6 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 7 passes');  // 5 → 6: 🚩 gajjala_setup joined 2026-10-13 · 6 → 7: 🧠 gajjala_potential joined 2026-10-15
   });
 });
 
@@ -1154,7 +1161,7 @@ describe('Alerts page — the 🚩 Gajjala A+ setups pass (2026-10-13)', () => {
     expect(within(gg).getByText('🚩 Gajjala A+ setups')).toBeInTheDocument();
     expect(within(gg).getByText('last pass 10:56 ET')).toBeInTheDocument();
     expect(within(gg).getByText('· every 5 min')).toBeInTheDocument();
-    expect(within(gg).getByText('🚩 shadow — not sent (nothing reaches your phone yet)')).toBeInTheDocument();
+    expect(within(gg).getByText('🚩 shadow — not sent (no A+ reaches your phone yet)')).toBeInTheDocument();  /* WIDENED 2026-10-15 — W20: narrowed to A+, the 🧠 row rings live */
     expect(within(gg).getByText('🚩 shadow — not sent: 1 A+ recorded this pass')).toBeInTheDocument();
     expect(within(gg).getByText('🚩 shadow — not sent: 2 A+ recorded today')).toBeInTheDocument();
     expect(within(gg).getByText('candidates 7')).toBeInTheDocument();
@@ -1215,7 +1222,7 @@ describe('Alerts page — the 🚩 Gajjala A+ setups pass (2026-10-13)', () => {
     draw();
     const gg = await screen.findByTestId('pass-gajjala_setup');
     expect(within(gg).getByText('no pass yet today')).toBeInTheDocument();
-    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 6 passes');
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 7 passes');  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
   });
 
   it('NEGATIVE: a 🚩 pass silent for 20 minutes mid-session reads STALE on the 5-minute clock', async () => {
@@ -1496,9 +1503,10 @@ describe('Alerts page — the 🎢 🗺️ tape-burst passes (2026-10-14)', () =
     expect(within(hb).queryByText(/dup_trade_flash|dup_kind|no_tape/)).not.toBeInTheDocument();
     // the six intraday passes are unchanged and still come first, in order
     const ids = screen.getAllByTestId(/^pass-/).map((el) => el.getAttribute('data-testid')).filter((x) => x !== 'pass-reason');
-    expect(ids.slice(0, 8)).toEqual(['pass-zone_edge', 'pass-zone_bounce_alert', 'pass-demand_alert', 'pass-key_level_alert',
-      'pass-med_catalyst', 'pass-gajjala_setup', 'pass-tape_burst_highbeta', 'pass-tape_burst_chartmaps']);
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 6 passes reported within cadence.');
+    /* WIDENED 2026-10-15 — 🧠 gajjala_potential joined the intraday PASSES right after 🚩 (8 → 9 ids) */
+    expect(ids.slice(0, 9)).toEqual(['pass-zone_edge', 'pass-zone_bounce_alert', 'pass-demand_alert', 'pass-key_level_alert',
+      'pass-med_catalyst', 'pass-gajjala_setup', 'pass-gajjala_potential', 'pass-tape_burst_highbeta', 'pass-tape_burst_chartmaps']);
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.');  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
   });
 
   it('NEGATIVE: the two tape rows never say "shadow" — both kinds ring live — even when a counter is named so', async () => {
@@ -1521,12 +1529,13 @@ describe('Alerts page — the 🎢 🗺️ tape-burst passes (2026-10-14)', () =
     }));
     draw();
     const gg = await screen.findByTestId('pass-gajjala_setup');
-    expect(within(gg).getByText('🚩 shadow — not sent (nothing reaches your phone yet)')).toBeInTheDocument();
+    expect(within(gg).getByText('🚩 shadow — not sent (no A+ reaches your phone yet)')).toBeInTheDocument();  /* WIDENED 2026-10-15 — W20: narrowed to A+, the 🧠 row rings live */
     expect(within(screen.getByTestId('pass-zone_edge')).getByText('14 skipped: room < 5%')).toBeInTheDocument();
     expect(within(screen.getByTestId('pass-tape_burst_highbeta')).getByText('stale — last pass 10:20 ET, expected every 5 min')).toBeInTheDocument();
     // … and the header line still speaks for the six only.
-    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 6 passes reported within cadence.');
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.');  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
     expect(screen.getByTestId('session-line').textContent).not.toMatch(/of 8/);
+    expect(screen.getByTestId('session-line').textContent).not.toMatch(/of 9/);  // 2026-10-15: 7 intraday + 2 tape
   });
 
   it('outside the SERVED window a pass is never stale: after the close and pre-market both say so, in muted words', async () => {
@@ -1667,7 +1676,267 @@ describe('tape-burst helpers (2026-10-14)', () => {
     expect(TAPE_PASSES.map((m) => [m.key, m.fallbackCadenceSec])).toEqual([['tape_burst_highbeta', 300], ['tape_burst_chartmaps', 300]]);
     const today = '2026-09-05';
     const deadTape = { ...STATUS_TAPE, passes: { ...STATUS_TAPE.passes, tape_burst_highbeta: undefined, tape_burst_chartmaps: undefined } };
-    expect(sessionLine(deadTape as never, today)).toBe('Session open — all 6 passes reported within cadence.');
+    expect(sessionLine(deadTape as never, today)).toBe('Session open — all 7 passes reported within cadence.');  /* 6 → 7: 🧠 gajjala_potential joined 2026-10-15 */
     expect(passHealth(STATUS_TAPE.passes.tape_burst_highbeta, STATUS_TAPE, today, 300).health).toBe('fresh');
+  });
+});
+
+/* ── 2026-10-15: the 🧠 Gajjala potentials pass ─────────────────────────────
+ *
+ * Ajay, three messages: "In Gajjalas setup I wanna find potential stocks …
+ * create a potential category in this section.", "In all the sub tab and add a
+ * track and alert to show me new potential is added everyday." and "Give me an
+ * alert all continous tracker on these specifically when I get alert I will
+ * jump on to ride the wave". A NEW kind, LIVE, owner-only. It rides the 🚩
+ * pass's 5-minute line and records its own pass doc (alert_status
+ * GAJJALA_POTENTIAL_KIND), so its row sits right after 🚩 and the header counts
+ * 7 passes. The list under the row is each tracker doc as alert_status serves
+ * it (`passes.gajjala_potential.potential_items`, today only, newest first).
+ * Never "shadow" on this row; never the b-word.
+ */
+const BW = 'boun' + 'ce';
+const potItem = (sym: string, setup: string, at: string, extra: Record<string, unknown> = {}) => ({
+  date: '2026-09-05', symbol: sym, setup, at, kind: 'armed',
+  text: `${sym} · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.81`,
+  url: `/chart-maps?tab=gajjala&sub=${setup}&focus=${sym}`, push_state: 'pushed', push_at: at, held: null, ...extra,
+});
+const withPot = (items: unknown[] | undefined, counts?: Record<string, number>, over: Record<string, unknown> = {}) => ({
+  ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+    gajjala_potential: { ...STATUS_LIVE.passes.gajjala_potential, ...(counts ? { counts } : {}),
+                         ...(items ? { potential_items: items } : {}), ...over } },
+});
+
+describe('Alerts page — the 🧠 Gajjala potentials pass (2026-10-15)', () => {
+  it('renders the row right after 🚩 with its label, stamp, "every 5 min" and the W19 chip words', async () => {
+    stubFetch({ rows: ROWS }, STATUS_LIVE);
+    draw();
+    const gp = await screen.findByTestId('pass-gajjala_potential');
+    expect(within(gp).getByText('🧠 Gajjala potentials')).toBeInTheDocument();
+    expect(within(gp).getByText('last pass 10:56 ET')).toBeInTheDocument();
+    expect(within(gp).getByText('· every 5 min')).toBeInTheDocument();
+    expect(within(gp).getByText('🧠 4 potentials today')).toBeInTheDocument();
+    expect(within(gp).getByText('1 new this pass')).toBeInTheDocument();
+    expect(within(gp).getByText('1 trigger armed')).toBeInTheDocument();
+    expect(within(gp).getByText('2 building')).toBeInTheDocument();
+    expect(within(gp).getByText('pushes delivered 1')).toBeInTheDocument();
+    const strips = screen.getAllByTestId(/^pass-/).map((el) => el.getAttribute('data-testid')).filter((x) => x !== 'pass-reason');
+    expect(strips.indexOf('pass-gajjala_potential')).toBe(strips.indexOf('pass-gajjala_setup') + 1);
+    // NEGATIVE: never "push calls" (a no-device send is its own chip), never a raw id, zero counters wear no chip.
+    expect(within(gp).queryByText(/push calls/)).not.toBeInTheDocument();
+    expect(within(gp).queryByText('gajjala_potential')).not.toBeInTheDocument();
+    expect(within(gp).queryByText(/tracked_today|no_target|stale_tape/)).not.toBeInTheDocument();
+    expect(within(gp).queryByText(/^0 /)).not.toBeInTheDocument();
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.');
+  });
+
+  it('every held / refused counter reads in his words; no_target names quiet hours', async () => {
+    stubFetch({ rows: ROWS }, withPot(undefined, { muted: 2, outside_hours: 1, closed_day: 3, stale_tape: 4,
+      claimed_before: 1, no_target: 2, failed: 1, graveyard: 5, joined: 6 }));
+    draw();
+    const gp = await screen.findByTestId('pass-gajjala_potential');
+    for (const t of ['2 held: his first 15 minutes', '1 held: outside the push hours', '3 held: market closed',
+                     '4 waiting: no print in the last bar', '1 already claimed this session',
+                     '2 no device took it (toggle off, quiet hours or none registered)', '1 send failed',
+                     '5 moved to the graveyard', '6 joined mid-session: tracking, not ringing']) {
+      expect(within(gp).getByText(t)).toBeInTheDocument();
+    }
+    // NEGATIVE: the 🚩 A+ words never leak onto the 🧠 row
+    expect(within(gp).queryByText(/A\+ already recorded today|A\+ held/)).not.toBeInTheDocument();
+  });
+
+  it('chip helper: the W19 words exactly; an unknown counter returns null (it falls through to the hover title)', () => {
+    expect(ggPotentialChipText('tracked_today', 3)).toBe('🧠 3 potentials today');
+    expect(ggPotentialChipText('new', 2)).toBe('2 new this pass');
+    expect(ggPotentialChipText('armed', 1)).toBe('1 trigger armed');
+    expect(ggPotentialChipText('building', 4)).toBe('4 building');
+    expect(ggPotentialChipText('muted', 1)).toBe('1 held: his first 15 minutes');
+    expect(ggPotentialChipText('outside_hours', 1)).toBe('1 held: outside the push hours');
+    expect(ggPotentialChipText('closed_day', 1)).toBe('1 held: market closed');
+    expect(ggPotentialChipText('stale_tape', 1)).toBe('1 waiting: no print in the last bar');
+    expect(ggPotentialChipText('claimed_before', 1)).toBe('1 already claimed this session');
+    expect(ggPotentialChipText('no_target', 1)).toBe('1 no device took it (toggle off, quiet hours or none registered)');
+    expect(ggPotentialChipText('failed', 1)).toBe('1 send failed');
+    expect(ggPotentialChipText('graveyard', 1)).toBe('1 moved to the graveyard');
+    // the pass counts D9's join under COUNT_KEYS 'joined' (fix round 2026-10-15); the held REASON is not a counter
+    expect(ggPotentialChipText('joined', 2)).toBe('2 joined mid-session: tracking, not ringing');
+    expect(ggPotentialChipText('joined_midsession', 2)).toBeNull();
+    expect(GAJJALA_POTENTIAL_KEYS).toContain('joined');
+    expect(GAJJALA_POTENTIAL_KEYS).not.toContain('joined_midsession');
+    for (const k of ['potential', 'dry', 'pushed', 'shadow_mode', 'some_future_counter']) expect(ggPotentialChipText(k, 1)).toBeNull();
+    for (const k of GAJJALA_POTENTIAL_KEYS) {
+      const w = ggPotentialChipText(k, 2) ?? '';
+      expect(w).not.toBe('');
+      expect(w.toLowerCase()).not.toMatch(new RegExp(`shadow|${BW}|fake`));
+    }
+  });
+
+  it('lists each potential under the 🧠 strip: ET time · the push line · what the push did, the symbol linking to its tile', async () => {
+    stubFetch({ rows: ROWS }, withPot([
+      potItem('PTB', 'kiss_fly', '2026-09-05T10:51:12-04:00',
+              { kind: 'building', text: 'PTB · 💋 EMA Kiss & Fly · building · trigger 4.20', push_state: 'no_target' }),
+      potItem('PTA', 'bull_flag', '2026-09-05T09:51:12-04:00'),
+    ]));
+    const { container } = draw();
+    const list = await screen.findByTestId('gg-pot-list');
+    expect(list).toHaveTextContent('🧠 Potentials today · 2');
+    const rows = within(list).getAllByTestId('gg-pot-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('10:51 ET');
+    expect(rows[0]).toHaveTextContent('PTB · 💋 EMA Kiss & Fly · building · trigger 4.20');
+    expect(within(rows[0]).getByText('no device took it')).toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent('09:51 ET');
+    expect(rows[1]).toHaveTextContent('PTA · 🚩 Bull Flag · trigger armed · trigger 11.00 · stop 10.81');
+    expect(within(rows[1]).getByText('📲 sent')).toBeInTheDocument();
+    expect(within(rows[0]).getByTestId('gg-pot-tk-PTB').getAttribute('href')).toBe('/chart-maps?tab=gajjala&sub=kiss_fly&focus=PTB');
+    expect(within(rows[1]).getByRole('link', { name: 'PTA' }).getAttribute('href')).toBe('/chart-maps?tab=gajjala&sub=bull_flag&focus=PTA');
+    // directly under the 🧠 strip; the 🚩 shadow list is not drawn from it
+    expect(screen.getByTestId('pass-gajjala_potential').nextElementSibling).toBe(list);
+    expect(screen.queryByTestId('gg-shadow-list')).toBeNull();
+    expect(container.querySelectorAll('a a')).toHaveLength(0);
+  });
+
+  it('row words: every push state, every held reason (claim_error, D9 joined), and "not sent yet"', () => {
+    const w = (extra: Record<string, unknown>) => ggPotentialRowWord(potItem('X', 'bull_flag', '2026-09-05T10:00:00-04:00', extra) as never);
+    expect(w({ push_state: 'pushed' })).toBe('📲 sent');
+    expect(w({ push_state: 'no_target' })).toBe('no device took it');
+    expect(w({ push_state: 'failed' })).toBe('send failed');
+    expect(w({ push_state: 'claimed' })).toBe('sending');
+    expect(w({ push_state: null, held: 'claim_error' })).toBe('held: store error — retrying next pass');
+    expect(w({ push_state: null, held: 'muted' })).toBe('held: his first 15 minutes');
+    expect(w({ push_state: null, held: 'outside_hours' })).toBe('held: outside the push hours');
+    expect(w({ push_state: null, held: 'closed_day' })).toBe('held: market closed');
+    expect(w({ push_state: null, held: 'stale_tape' })).toBe('held: no print in the last 5-minute bar');
+    expect(w({ push_state: null, held: 'joined_midsession' })).toBe('joined mid-session: tracking, not ringing');
+    expect(w({ push_state: null, held: null })).toBe('not sent yet');
+    // NEGATIVE: an unknown held reason still prints in words, never dropped, never the raw key
+    expect(w({ push_state: null, held: 'some_new_hold' })).toBe('held: some new hold');
+    // NEGATIVE: a settled push outranks an older hold — a sent potential never reads "held"
+    expect(w({ push_state: 'pushed', held: 'muted' })).toBe('📲 sent');
+    // every backend HELD_WORDS reason (potential.py) + D9 has a row word
+    expect(Object.keys(GG_POTENTIAL_HELD_ROW).sort())
+      .toEqual(['claim_error', 'closed_day', 'joined_midsession', 'muted', 'outside_hours', 'stale_tape']);
+  });
+
+  it('a held claim_error and a D9 mid-session join render their words on the page', async () => {
+    stubFetch({ rows: ROWS }, withPot([
+      potItem('PTC', 'bull_flag', '2026-09-05T10:51:12-04:00', { push_state: null, held: 'claim_error' }),
+      potItem('PTJ', 'kiss_fly', '2026-09-05T10:06:12-04:00', { push_state: null, held: 'joined_midsession' }),
+    ]));
+    draw();
+    const rows = await screen.findAllByTestId('gg-pot-row');
+    expect(within(rows[0]).getByText('held: store error — retrying next pass')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('joined mid-session: tracking, not ringing')).toBeInTheDocument();
+    expect(rows[1].textContent || '').not.toMatch(/📲 sent/);
+  });
+
+  it('NEGATIVE: yesterday\'s potentials do not appear under today; only yesterday\'s → no list', async () => {
+    stubFetch({ rows: ROWS }, withPot([
+      potItem('OLD', 'bull_flag', '2026-09-04T15:00:00-04:00', { date: '2026-09-04' }),
+      potItem('NEW', 'bull_flag', '2026-09-05T09:51:12-04:00')]));
+    const first = draw();
+    const list = await screen.findByTestId('gg-pot-list');
+    expect(within(list).getAllByTestId('gg-pot-row')).toHaveLength(1);
+    expect(within(list).queryByText(/OLD/)).toBeNull();
+    expect(list).toHaveTextContent('🧠 Potentials today · 1');
+    first.unmount();
+    _resetAlertHistoryCache();
+    stubFetch({ rows: ROWS }, withPot([potItem('OLD', 'bull_flag', '2026-09-04T15:00:00-04:00', { date: '2026-09-04' })]));
+    draw();
+    await screen.findByTestId('pass-gajjala_potential');
+    await flush();
+    expect(screen.queryByTestId('gg-pot-list')).toBeNull();
+  });
+
+  it('NEGATIVE: a "//" or outside url never becomes a link; the line still prints', async () => {
+    stubFetch({ rows: ROWS }, withPot([
+      potItem('PTA', 'bull_flag', '2026-09-05T09:51:12-04:00', { url: '//evil.example/x' }),
+      potItem('PTB', 'bull_flag', '2026-09-05T09:41:12-04:00', { url: 'https://evil.example/x' })]));
+    draw();
+    const rows = await screen.findAllByTestId('gg-pot-row');
+    for (const r of rows) expect(within(r).queryByRole('link')).toBeNull();
+    expect(rows[0]).toHaveTextContent('PTA · 🚩 Bull Flag · trigger armed');
+    expect(screen.queryByTestId('gg-pot-tk-PTA')).toBeNull();
+  });
+
+  it('NEGATIVE: a pass with no potential_items (an older API) renders no list', async () => {
+    stubFetch({ rows: ROWS }, STATUS_LIVE);
+    draw();
+    await screen.findByTestId('pass-gajjala_potential');
+    expect(screen.queryByTestId('gg-pot-list')).toBeNull();
+  });
+
+  it('NEGATIVE: the 🧠 row and list never say shadow or the b-word, even when a counter is named so', async () => {
+    stubFetch({ rows: ROWS }, withPot([potItem('PTA', 'bull_flag', '2026-09-05T09:51:12-04:00', { push_state: null, held: 'muted' })],
+      { tracked_today: 1, pushed: 0, shadow_mode: 1, shadow: 2, shadow_session: 3 }));
+    draw();
+    const gp = await screen.findByTestId('pass-gajjala_potential');
+    const list = screen.getByTestId('gg-pot-list');
+    const txt = `${gp.textContent} | ${list.textContent}`;
+    expect(txt).not.toMatch(/shadow/i);
+    expect(txt.toLowerCase()).not.toContain(BW);
+    expect(txt).not.toMatch(/🚩 shadow|not sent:|would have pushed/);
+  });
+
+  it('NEGATIVE: the 🚩 row and its shadow list are unchanged beside it — and nothing on the page says "nothing reaches your phone"', async () => {
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes,
+      gajjala_setup: { ...STATUS_LIVE.passes.gajjala_setup, shadow_items: [ggItem('GGA', 'bull_flag', '2026-09-05T09:51:12-04:00')],
+                       potential_items: [potItem('LEAK', 'bull_flag', '2026-09-05T09:51:12-04:00')] },
+      gajjala_potential: { ...STATUS_LIVE.passes.gajjala_potential,
+                           potential_items: [potItem('PTA', 'bull_flag', '2026-09-05T09:51:12-04:00')] } } });
+    const { container } = draw();
+    const gg = await screen.findByTestId('pass-gajjala_setup');
+    expect(within(gg).getByText('🚩 shadow — not sent (no A+ reaches your phone yet)')).toBeInTheDocument();
+    expect(within(gg).getByText('🚩 shadow — not sent: 1 A+ recorded this pass')).toBeInTheDocument();
+    const shadow = screen.getByTestId('gg-shadow-list');
+    expect(gg.nextElementSibling).toBe(shadow);
+    expect(within(shadow).getAllByTestId('gg-shadow-row')).toHaveLength(1);
+    expect(within(shadow).queryByTestId('gg-pot-row')).toBeNull();
+    // potential_items on the 🚩 doc never render: the list belongs to the 🧠 row only
+    expect(screen.getAllByTestId('gg-pot-list')).toHaveLength(1);
+    expect(screen.queryByText(/LEAK/)).toBeNull();
+    expect(container.textContent || '').not.toMatch(/nothing reaches your phone/i);
+  });
+
+  it('NEGATIVE: a missing 🧠 doc says "no pass yet today" and the header does not vouch for it; 20 silent minutes read STALE', async () => {
+    const { gajjala_potential: _gone, ...six } = STATUS_LIVE.passes;
+    const today = '2026-09-05';
+    expect(sessionLine({ ...STATUS_LIVE, passes: six } as never, today)).toMatch(/⚠ 1 of 7 passes/);
+    stubFetch({ rows: ROWS }, withPot(undefined, undefined, { as_of: '2026-09-05T10:40:00-04:00' }));
+    draw();
+    const gp = await screen.findByTestId('pass-gajjala_potential');
+    expect(within(gp).getByText('stale — last pass 10:40 ET, expected every 5 min')).toBeInTheDocument();
+    expect(screen.getByTestId('session-line')).toHaveTextContent('⚠ 1 of 7 passes');
+  });
+
+  it('an older API with no cadence_sec still reads "every 5 min" (it rides the 🚩 5-minute line)', async () => {
+    const { cadence_sec: _drop, ...noCadence } = STATUS_LIVE.passes.gajjala_potential;
+    stubFetch({ rows: ROWS }, { ...STATUS_LIVE, passes: { ...STATUS_LIVE.passes, gajjala_potential: noCadence } });
+    draw();
+    const gp = await screen.findByTestId('pass-gajjala_potential');
+    expect(within(gp).getByText('· every 5 min')).toBeInTheDocument();
+  });
+
+  it('the kind chip sits AFTER the two tape kinds (D4), the tape order is untouched, and it narrows the feed', async () => {
+    expect(KIND_CHIPS.indexOf('gajjala_potential')).toBe(KIND_CHIPS.indexOf('tape_burst_chartmaps') + 1);
+    expect(KIND_CHIPS.indexOf('tape_burst_highbeta')).toBe(KIND_CHIPS.indexOf('trade_flash') + 1);
+    expect(KIND_CHIPS.filter((k) => k === 'gajjala_potential')).toHaveLength(1);
+    const fn = stubFetch({ rows: [] }, STATUS_LIVE);
+    draw();
+    await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: '🧠 Gajjala potential' }));
+    await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('gajjala_potential'));
+  });
+
+  it('a 🧠 push row in the feed reads its label, never the raw id', async () => {
+    const row = { _id: 'gp1', ts: T('2026-09-05T14:10:00Z'), ts_iso: '2026-09-05T14:10:00+00:00',
+      kind: 'gajjala_potential', ticker: 'PTA', title: '🧠 PTA · 🚩 Bull Flag — trigger armed · UNMEASURED',
+      url: '/chart-maps?tab=gajjala&sub=bull_flag&focus=PTA', source: 'push', sent: 1, failed: 0, total: 1,
+      body: 'trigger 11.00 · stop 10.81 (−1.7%) · a potential, not an entry; GG enters on the reclaim of the highs' };
+    stubFetch({ rows: [row] }, STATUS_LIVE);
+    draw();
+    const r = (await screen.findAllByTestId('alert-row'))[0];
+    expect(within(r).getByText('🧠 Gajjala potential')).toBeInTheDocument();
+    expect(within(r).queryByText('gajjala_potential')).toBeNull();
+    expect(r).toHaveTextContent('delivered to 1/1 device');
   });
 });

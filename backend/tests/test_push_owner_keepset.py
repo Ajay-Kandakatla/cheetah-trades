@@ -59,7 +59,12 @@ def test_keep_set_is_the_2026_09_21_nine():
     Ajay: "I need a tape burst notification specific for High Beta stocks from
     the reselinet separately and also other tape bursts from the Chart Maps
     page"; asked which names: "High-Beta tab names + all Chart Maps names".
-    Owner-only, LIVE, False in default_prefs. `trade_flash` stays OUT."""
+    Owner-only, LIVE, False in default_prefs. `trade_flash` stays OUT.
+
+    WIDENED 2026-10-15 — 🧠 `gajjala_potential`. Ajay: "Give me an alert all
+    continous tracker on these specifically when I get alert I will jump on to
+    ride the wave". DECISIONS4: a NEW kind, LIVE, owner-only, ON for his
+    devices; False in default_prefs."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
@@ -67,6 +72,8 @@ def test_keep_set_is_the_2026_09_21_nine():
         "ops_alert",
         # WIDENED 2026-10-13 — 🚩 gajjala_setup (owner-only, SHADOW first)
         "gajjala_setup",
+        # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
+        "gajjala_potential",
         # WIDENED 2026-10-14 — 🎢 / 🗺️ tape-burst kinds (owner-only, LIVE)
         "tape_burst_highbeta", "tape_burst_chartmaps"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):

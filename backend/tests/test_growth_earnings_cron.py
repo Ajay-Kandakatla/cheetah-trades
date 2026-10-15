@@ -105,6 +105,8 @@ class NoSendPathTest(unittest.TestCase):
                           "med_catalyst",
                           # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; SHADOW first) — this path never touches it either.
                           "gajjala_setup",
+                          # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only) — this path never touches it either.
+                          "gajjala_potential",
                           # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
                           "ops_alert",
                           # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (his K4 "High-Beta tab names + all Chart Maps names"; owner-only, LIVE) — this path never touches them either.

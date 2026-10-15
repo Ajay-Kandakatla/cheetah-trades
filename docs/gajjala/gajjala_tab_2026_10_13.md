@@ -67,7 +67,7 @@ adds ONE live fan-out for the shown tiles' now-line (`board._live_snapshot` + `a
   "type unknown", outside-RTH limit-orders line, 🎾 squeeze history (🎾 only). WP2's engines are reused
   (`context.psych_chips`, `red_closes_chip`, `rotation`, `premarket_list`, `unchecked_text`).
 - **🌙 recap** (R2-7 yes): today's reads in aplus / triggered / stopped — states only, no win/loss maths.
-- **Push block**: `GAJJALA_PUSH_MODE` "shadow" → "Pushes are in SHADOW — … nothing reaches your phone until the
+- **Push block**: `GAJJALA_PUSH_MODE` "shadow" → "A+ pushes are in SHADOW — … no A+ reaches your phone until the
   `STUDY_SESSIONS`-session study reads and you flip it to live."
 
 ### What the pass must store for this board (WP4 interface)

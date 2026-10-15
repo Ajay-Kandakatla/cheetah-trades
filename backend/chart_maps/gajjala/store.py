@@ -10,6 +10,15 @@ Collections
   gajjala_halts     _id "{date}|{SYM}"         halts per session (live + 30-session backfill)              none
   gajjala_daily     _id "{date}|{SYM}"         squeeze history + the float read of the session             TTL 30 d
   gajjala_state     _id "lease" | "float_backoff" | "types"                                                 —
+  gajjala_potentials _id "{date}|{SYM}|{setup}"  🧠 the potential tracker (2026-10-15) — first sighting + path    none
+
+🧠 gajjala_potentials (Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me new potential is
+added everyday." / "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
+ride the wave"). Written ONLY by potential.track() inside the 5-minute pass, KEPT (the study's data spine, the
+`gajjala_alerts` / `gajjala_halts` ledger pattern — HIS CALL P7). Every write here is an `update_one`: track() makes one
+upsert with DISJOINT `$setOnInsert` / `$set` key sets and never names `push` / `held` / `graveyard_on`; the claim, the
+hold and the graveyard mark are guarded updates (`push` / `graveyard_on` absent), and the settle is a dotted `$set` of
+`push.*` only — so two overlapping passes can never wipe a claim. No whole-doc replace on this collection.
 
 Every handle is injectable (`GajjalaStore(colls={...})`) — the tests pass in-memory stand-ins and tests/conftest.py
 refuses a real MongoClient. Module-level functions delegate to one default store, so callers may hand either the
@@ -36,7 +45,9 @@ ALERTS = "gajjala_alerts"
 HALTS = "gajjala_halts"
 DAILY = "gajjala_daily"
 STATE = "gajjala_state"
-ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE)
+POTENTIALS = "gajjala_potentials"            # 🧠 the potential tracker (2026-10-15) — kept, no TTL
+JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
+ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS)
 # retention per collection (None = kept): the TTL index reads `at`
 TTL_DAYS = {SCAN: GC.LEDGER_TTL_DAYS, AH_CARRY: GC.LEDGER_TTL_DAYS, POST: GC.LEDGER_TTL_DAYS,
             PASSES: GC.LEDGER_TTL_DAYS, DAILY: GC.LEDGER_TTL_DAYS, READS: GC.READS_TTL_DAYS}
@@ -68,8 +79,13 @@ def key(session, sym: str) -> str:
     return f"{_iso(session)}|{(sym or '').upper()}"
 
 
+def potential_key(session, sym: str, setup: str) -> str:
+    """`"{date}|{SYM}|{setup}"` — the 🧠 tracker doc id (one per session, symbol and setup — K3)."""
+    return f"{key(session, sym)}|{setup}"
+
+
 class GajjalaStore:
-    """The nine collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
+    """The ten collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
 
     def __init__(self, colls: Optional[dict] = None):
         self._injected = dict(colls or {})
@@ -93,7 +109,7 @@ class GajjalaStore:
                 days = TTL_DAYS.get(name)
                 if days:
                     c.create_index([("at", 1)], expireAfterSeconds=int(days * _DAY_SEC))
-                if name in (SCAN, POST, READS, HALTS, DAILY):
+                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS):
                     c.create_index([("date", 1), ("symbol", 1)])
                     c.create_index([("symbol", 1), ("date", -1)])
                 if name == ALERTS:
@@ -201,6 +217,20 @@ class GajjalaStore:
     def passes(self, session) -> list:
         return [d for d in self._find(PASSES, {"date": _iso(session)}) if d.get("_id") != "latest"]
 
+    def recent_passes(self, session, since: datetime, until: datetime) -> Optional[list]:
+        """The session's pass docs stamped `since` … `until` (both inclusive), projected to {at, potential} — the 🧠
+        join rule's previous-pass read (potential._previous_pass_ran_gate), never the whole pass bodies. The "latest"
+        pointer is excluded. None on a read fault or a missing handle ([] = none on file) — the caller fails closed."""
+        c = self.coll(PASSES)
+        if c is None:
+            return None
+        q = {"date": _iso(session), "_id": {"$ne": "latest"}, "at": {"$gte": _utc(since), "$lte": _utc(until)}}
+        try:
+            return list(c.find(q, {"at": 1, "potential": 1}))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: recent pass read failed: %s", exc)
+            return None
+
     # ── gajjala_reads ──────────────────────────────────────────────────────────────────────────────────────────
     def upsert_read(self, session, sym: str, doc: dict, *, now: Optional[datetime] = None) -> None:
         now = _utc(now)
@@ -276,6 +306,95 @@ class GajjalaStore:
     def alerts_coll(self):
         return self.coll(ALERTS)
 
+    # ── gajjala_potentials (🧠 the tracker, 2026-10-15 — written ONLY by potential.track / run_pass) ─────────────
+    def potentials(self, session) -> Optional[list]:
+        """Every tracker doc of the session (`date` = the ET session) — None on a READ FAULT (no handle, or the find
+        raised), [] only when nothing is on file. An unreadable tracker is never an empty one: read as [], the gate saw
+        every joined doc (D9) as a first sighting, would have rung them all in one burst and replaced their timelines
+        (final critic 2026-10-15). potential.run_pass skips the gate on None; count_potentials and tab.py soften it."""
+        c = self.coll(POTENTIALS)
+        if c is None:
+            return None
+        try:
+            return list(c.find({"date": _iso(session)}))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: read failed on %s: %s", POTENTIALS, exc)
+            return None
+
+    def get_potential(self, session, sym: str, setup: str) -> Optional[dict]:
+        return self._find_one(POTENTIALS, {"_id": potential_key(session, sym, setup)})
+
+    def potential_docs_for_symbol(self, sym: str) -> list:
+        """Every tracker doc of `sym`, any session (the graveyard mark reads them)."""
+        return self._find(POTENTIALS, {"symbol": (sym or "").upper()})
+
+    def count_potentials(self, session) -> int:
+        """Tracker docs of the session (len of a find — the FakeColl has no count_documents). 0 on any failure."""
+        docs = self.potentials(session)
+        return len(docs) if docs is not None else 0
+
+    def upsert_potential(self, _id: str, insert_fields: dict, set_fields: dict) -> bool:
+        """THE track write: one upsert, `$setOnInsert` (identity + first_*) and `$set` (last / path / prices) — two
+        disjoint key sets (Mongo refuses a path in both). Never names push / held / graveyard_on. False on failure."""
+        c = self.coll(POTENTIALS)
+        if c is None:
+            return False
+        clash = set(insert_fields or {}) & set(set_fields or {})
+        banned = {"push", "held", "graveyard_on"} & (set(insert_fields or {}) | set(set_fields or {}))
+        if clash or banned:
+            log.warning("gajjala.store: refused potential write %s (clash %s, banned %s)", _id, clash, banned)
+            return False
+        upd = {}
+        if insert_fields:
+            upd["$setOnInsert"] = dict(insert_fields)
+        if set_fields:
+            upd["$set"] = dict(set_fields)
+        if not upd:
+            return False
+        try:
+            c.update_one({"_id": _id}, upd, upsert=True)
+            return True
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: potential write failed for %s: %s", _id, exc)
+            return False
+
+    def hold_potential(self, _id: str, held: list) -> bool:
+        """`held` lands only on a doc that was never claimed (`push` absent). True when a doc matched."""
+        return self._guarded_set(_id, {"push": {"$exists": False}}, {"held": list(held or [])}) == "matched"
+
+    def claim_potential_push(self, _id: str, fields: dict) -> str:
+        """The once-per-(date, symbol, setup) claim: `push` set only where it is absent AND the doc was not first seen
+        by a join pass (`first_seen_mode` ≠ JOINED_MODE — absent on a pre-build doc matches; the second guard of D9,
+        final critic 2026-10-15: the gate's own check is the first).
+        -> "claimed" (this pass owns the send) | "taken" (no claimable doc matched) | "error" (store fault)."""
+        res = self._guarded_set(_id, {"push": {"$exists": False}, "first_seen_mode": {"$ne": JOINED_MODE}},
+                                {"push": dict(fields or {})})
+        return {"matched": "claimed", "unmatched": "taken"}.get(res, "error")
+
+    def settle_potential_push(self, _id: str, fields: dict) -> bool:
+        """The send's outcome: a dotted `$set` of push.state / push.result / push.at_et ONLY — never a whole `push`."""
+        sets = {f"push.{k}": v for k, v in (fields or {}).items() if k in ("state", "result", "at_et")}
+        if not sets:
+            return False
+        return self._guarded_set(_id, {"push": {"$exists": True}}, sets) == "matched"
+
+    def mark_potential_graveyard(self, _id: str, day, state_path: list) -> bool:
+        """`graveyard_on` + the path entry, once (guarded on `graveyard_on` absent). True when a doc matched."""
+        return self._guarded_set(_id, {"graveyard_on": {"$exists": False}},
+                                 {"graveyard_on": _iso(day), "state_path": list(state_path or [])}) == "matched"
+
+    def _guarded_set(self, _id: str, guard: dict, sets: dict) -> str:
+        """"matched" | "unmatched" | "error" — an `update_one({_id, **guard}, {$set})`, never an upsert."""
+        c = self.coll(POTENTIALS)
+        if c is None:
+            return "error"
+        try:
+            res = c.update_one(dict({"_id": _id}, **guard), {"$set": sets})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: guarded potential update failed for %s: %s", _id, exc)
+            return "error"
+        return "matched" if int(getattr(res, "matched_count", 0) or 0) > 0 else "unmatched"
+
     # ── plumbing ───────────────────────────────────────────────────────────────────────────────────────────────
     def _find(self, name: str, q: dict) -> list:
         c = self.coll(name)
@@ -337,8 +456,10 @@ def _delegate(name: str):
 
 for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_checks", "scan_docs",
               "qualified_symbols", "replace_ah_carry", "ah_carry", "upsert_post", "post_docs", "record_pass",
-              "latest_pass", "passes", "upsert_read", "reads", "get_read", "upsert_halt", "halts", "halt_dates",
+              "latest_pass", "passes", "recent_passes", "upsert_read", "reads", "get_read", "upsert_halt", "halts", "halt_dates",
               "halt_sessions", "get_daily", "upsert_daily", "get_state", "set_state", "claim_lease",
-              "release_lease", "types_map", "set_types_map", "alerts_coll", "coll"):
+              "release_lease", "types_map", "set_types_map", "alerts_coll", "coll", "potentials", "get_potential",
+              "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",
+              "claim_potential_push", "settle_potential_push", "mark_potential_graveyard"):
     globals()[_name] = _delegate(_name)
 del _name

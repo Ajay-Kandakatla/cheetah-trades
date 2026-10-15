@@ -146,6 +146,34 @@ describe('the two tape-burst kinds (2026-10-14)', () => {
   });
 });
 
+/* 🧠 2026-10-15 — Ajay: "Give me an alert all continous tracker on these
+ * specifically when I get alert I will jump on to ride the wave". A NEW
+ * owner-only kind, LIVE; its /alerts rows, the kind chip and the bell must read
+ * as a label, never as the raw id. UNMEASURED — a potential, not an entry. */
+describe('the 🧠 gajjala_potential kind (2026-10-15)', () => {
+  it('labels 🧠 gajjala_potential in the trading group', () => {
+    expect(ALERT_KINDS.gajjala_potential).toEqual({ emoji: '🧠', label: 'Gajjala potential', group: 'trading' });
+    expect(kindLabel('gajjala_potential')).toBe('🧠 Gajjala potential');
+    expect(kindText('gajjala_potential')).toBe('Gajjala potential');
+    expect(kindEmoji('gajjala_potential')).toBe('🧠');
+  });
+
+  it('NEGATIVE: not a zone or breakout kind; the 🚩 A+ kind beside it is unchanged', () => {
+    expect(ZONE_KINDS).not.toContain('gajjala_potential');
+    expect(BREAKOUT_KINDS).not.toContain('gajjala_potential');
+    expect(ZONE_KINDS).toHaveLength(3);
+    expect(ALERT_KINDS.gajjala_setup).toEqual({ emoji: '🚩', label: 'Gajjala A+ setup', group: 'trading' });
+    // sits right after 🚩 in the registry (the one appended line at the anchor)
+    const keys = Object.keys(ALERT_KINDS);
+    expect(keys.indexOf('gajjala_potential')).toBe(keys.indexOf('gajjala_setup') + 1);
+  });
+
+  it('NEGATIVE: the label never says the b-word, fake, shadow, "potential to" or a forecast word', () => {
+    const l = kindLabel('gajjala_potential').toLowerCase();
+    for (const w of ['boun' + 'ce', 'fa' + 'ke', 'shadow', 'potential to', 'will ', 'signal', 'buy']) expect(l).not.toContain(w);
+  });
+});
+
 describe('ET clock', () => {
   it('formats a UTC epoch in ET and says so', () => {
     // 14:42 UTC in September = 10:42 EDT.

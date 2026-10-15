@@ -88,7 +88,10 @@ def make_deps(*, rows=None, http=200, load=None, raise_for=(), clock=None):
                  status_lookup=lambda sym, fetch=True: (None, "missing"), massive_lookup=lambda sym: 5_000_000,
                  fetch_splits=lambda sym, since: [], fetch_types=lambda: ({s: "CS" for s in rows}, True, 1),
                  daily_loader=lambda sym, now=None: None, send=send, owner="owner@example.com", record_status=status, sleep=lambda s: None,
-                 clock=clock or (lambda: 0.0))
+                 clock=clock or (lambda: 0.0),
+                 # 🧠 2026-10-15 — the potential gate's sender and /alerts row, recorders (fields on `d`)
+                 send_potential=Rec({"sent": 1, "failed": 0, "total_targets": 1}),
+                 record_potential_status=Rec(True))
     return d, snapshot, send, status
 
 
@@ -160,6 +163,7 @@ def test_NEGATIVE_a_second_concurrent_run_skips_on_the_lease():
     deps, snapshot, *_ = make_deps()
     out = RUN.run_pass(NOW + timedelta(seconds=20), store=st, deps=deps)
     assert out["ran"] is False and "lease" in out["reason"] and snapshot.calls == []
+    assert deps.send_potential.calls == [] and deps.record_potential_status.calls == []
 
 
 def test_NEGATIVE_a_released_lease_still_blocks_inside_the_min_gap():
@@ -179,6 +183,7 @@ def test_NEGATIVE_outside_the_window_exits_without_a_snapshot_call(now):
     deps, snapshot, send, status = make_deps()
     out = RUN.run_pass(now, store=fake_store(), deps=deps)
     assert out["ran"] is False and snapshot.calls == [] and status.calls == [] and send.calls == []
+    assert deps.send_potential.calls == [] and deps.record_potential_status.calls == []
 
 
 @pytest.mark.parametrize("now", [at(4, 1), at(20, 1), at(20, 5)])
@@ -221,6 +226,7 @@ def test_NEGATIVE_dry_run_calls_no_writer_and_no_sender(live):
     assert all(c.writes == 0 for c in real._injected.values()), {n: c.writes for n, c in real._injected.items()}
     assert st.writes                                                 # the writes it WOULD have made, recorded
     assert deps.status and deps.status[0]["candidates"] == 1        # the /alerts row went to the recorder
+    assert deps.sent_potential == [] and len(deps.status_potential) == 1   # 🧠 recorders only
 
 
 def test_dry_deps_never_refine_floats_and_never_cache_minutes():
@@ -337,3 +343,157 @@ def test_exactly_one_crontab_line_each_through_the_gate():
     n = nightly[0].split()
     assert (n[0], n[1], n[4]) == ("15", "20", "1-5")
     assert not [ln for ln in lines if "chart_maps.gajjala" in ln and "market_hours.gate" not in ln]
+
+
+
+# ── 🧠 potentials (BUILD_SPEC4 §3.8 + AMENDMENTS4 D1 / D2 / D9, 2026-10-15) ──────────────────────────────────────────
+# Ajay 2026-10-15: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to ride
+# the wave". The fixture day truncated BEFORE the break bar: at 10:31 the 10:30 bar (P1) has closed — the bull flag is
+# forming with a one-bar pullback (trigger armed); at 10:36 P2 has closed (still forming); at 10:41 it broke (A+).
+T1, T2 = at(10, 31), at(10, 36)
+
+
+def _seeded():
+    """A store that already tracked one potential this session (a pass ran earlier) — the D9 join rule stays out."""
+    from chart_maps.gajjala import store as ST
+    st = fake_store()
+    assert st.upsert_potential(ST.potential_key(S, "SEED", "kiss_fly"),
+                               {"date": S.isoformat(), "symbol": "SEED", "setup": "kiss_fly"}, {"at": at(4, 6)})
+    return st
+
+
+def test_end_to_end_a_forming_flag_rings_one_potential_push():
+    from chart_maps.gajjala import store as ST
+    st = _seeded()
+    deps, _snap, send, _status = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert out["ran"] and out["status"] == "ok" and out["errors"] == []
+    pot = out["potential"]
+    sent = [p for (_o, p), _k in deps.send_potential.calls]
+    # one push per (symbol, setup) forming with its sideways part begun — the flag, plus any other setup the same
+    # bars read as a potential (K3 / HIS CALL P6); each its own push, never twice
+    assert pot["new"] == pot["potential"] == pot["pushed"] == len(sent) >= 1
+    assert len({p["tag"] for p in sent}) == len(sent)
+    flag = [p for p in sent if p["url"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA"]
+    assert len(flag) == 1 and flag[0]["kind"] == "gajjala_potential"
+    assert flag[0]["title"] == "🧠 GGA · 🚩 Bull Flag — trigger armed · UNMEASURED"
+    assert {o for (o, _p), _k in deps.send_potential.calls} == {"owner@example.com"}
+    docs = [d for d in st.coll(ST.POTENTIALS).docs.values() if d.get("symbol") == "GGA"]
+    assert len(docs) == len(sent) and all(d["push"]["state"] == "pushed" for d in docs)
+    bf = st.get_potential(S, "GGA", "bull_flag")
+    assert bf["first_seen_et"] == "10:31" and bf["first_kind"] == "armed" and bf["first_px"] == FX.P1[3]
+    assert bf["first_tells"]["float_text"] and bf["first_tells"]["float_shares"] == 5_000_000
+    assert send.calls == []                                          # the A+ sender: nothing (no A+, and shadow)
+    assert len(deps.record_potential_status.calls) == 1
+    (counts, _now, reason), _ = deps.record_potential_status.calls[0]
+    assert counts["pushed"] == len(sent) and reason is None
+    assert st.latest_pass()["potential"]["pushed"] == len(sent)
+
+
+def test_NEGATIVE_D9_a_mid_session_first_pass_joins_and_never_rings():
+    st = fake_store()
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert deps.send_potential.calls == [] and out["potential"]["joined"] >= 1 and out["potential"]["pushed"] == 0
+    doc = st.get_potential(S, "GGA", "bull_flag")
+    assert doc["first_seen_mode"] == "joined" and [h["reason"] for h in doc["held"]] == ["joined_midsession"]
+
+
+def test_D9_an_unbroken_pass_chain_with_nothing_forming_lets_the_first_sighting_ring():
+    """Fix round 1 (2026-10-15): the 10:26 pass ran the 🧠 gate (nothing listed, nothing forming) and _finish wrote its
+    pass doc with a `potential` block; the 10:31 pass is the next link of the chain — a normal first sighting (K3)."""
+    st = fake_store()
+    quiet, *_ = make_deps(rows={"NOPE": snap_row(1.0, 0.95, when=at(10, 25))})
+    first = RUN.run_pass(at(10, 26), store=st, deps=quiet)
+    assert first["ran"] and first["potential"]["potential"] == 0 and isinstance(st.latest_pass()["potential"], dict)
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert out["potential"]["joined"] == 0 and out["potential"]["pushed"] == len(deps.send_potential.calls) >= 1
+    assert st.get_potential(S, "GGA", "bull_flag")["first_seen_mode"] == "normal"
+
+
+def test_NEGATIVE_D9_a_gap_in_the_pass_chain_joins_and_never_rings():
+    """The gate ran at 07:56 (nothing forming), then no pass until 10:31 (a host sleep): the 10:31 pass joins."""
+    st = fake_store()
+    quiet, *_ = make_deps(rows={"NOPE": snap_row(1.0, 0.95, when=at(7, 55))})
+    assert RUN.run_pass(at(7, 56), store=st, deps=quiet)["ran"]
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert deps.send_potential.calls == [] and out["potential"]["joined"] >= 1 and out["potential"]["pushed"] == 0
+    assert st.get_potential(S, "GGA", "bull_flag")["first_seen_mode"] == "joined"
+
+
+def test_D2_a_name_that_stops_qualifying_follows_the_bars_not_the_stored_row():
+    st = _seeded()
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    RUN.run_pass(T1, store=st, deps=deps)
+    deps2, *_ = make_deps(rows={"NOPE": snap_row(1.0, 0.95, when=at(10, 35))})    # GGA did not qualify at T2
+    out = RUN.run_pass(T2, store=st, deps=deps2)
+    assert "GGA" not in out["qualifiers"] and out["n_read"] == 1
+    doc = st.get_potential(S, "GGA", "bull_flag")
+    assert doc["first_px"] == FX.P1[3] and doc["last"]["px"] == FX.P2[3] != 11.2
+    assert doc["move_pct"] == round((FX.P2[3] / FX.P1[3] - 1) * 100, 2) != 0
+    assert len(deps2.send_potential.calls) == 0                     # rang once at T1, never twice (K3)
+
+
+def test_NEGATIVE_D1_a_raising_potential_gate_never_silences_the_pass(monkeypatch):
+    from chart_maps.gajjala import potential as PT
+    monkeypatch.setattr(PT, "run_pass", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("pot down")))
+    st = _seeded()
+    deps, _snap, _send, status = make_deps()
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert "potential" in out["errors"] and out["potential"] == {} and out["status"] == "ok"
+    latest = st.latest_pass()
+    assert latest["strip"] and latest["counts"] and latest["alerts"]["aplus"] >= 1
+    (_c, _n, reason), _ = status.calls[0]
+    assert reason is None                                            # the 🚩 row is not marked by the 🧠 failure
+    (pc, _n2, preason), _ = deps.record_potential_status.calls[0]
+    assert pc == {} and preason == "pass error: potential"
+
+
+def test_NEGATIVE_D1_a_raising_a_plus_gate_still_runs_the_potential_gate(monkeypatch):
+    from chart_maps.gajjala import alerts as AL
+    monkeypatch.setattr(AL, "run_pass", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("A+ down")))
+    st = _seeded()
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert "alerts" in out["errors"] and out["status"] == "error"
+    assert out["potential"]["pushed"] == len(deps.send_potential.calls) >= 1
+    assert st.latest_pass()["strip"] is not None
+    (_pc, _n, preason), _ = deps.record_potential_status.calls[0]
+    assert preason is None
+
+
+def test_NEGATIVE_the_dry_run_records_no_potential_write_and_sends_nothing(live):
+    real = fake_store()
+    st = RUN.dry_store(real)
+    deps = RUN.dry_deps()
+    base, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    for k in ("snapshot", "load_day", "halts", "status_lookup", "massive_lookup", "fetch_splits", "fetch_types",
+              "daily_loader"):
+        setattr(deps, k, getattr(base, k))
+    out = RUN.run_pass(T1, store=st, deps=deps, dry=True)
+    assert out["potential"]["potential"] >= 1
+    assert [w for w in st.writes if w[0] == "gajjala_potentials"] == []
+    assert deps.sent_potential == [] and real.coll("gajjala_potentials").writes == 0
+
+
+def test_the_pass_reads_the_same_ctx_the_read_doc_stores(monkeypatch):
+    from chart_maps.gajjala import potential as PT
+    seen = {}
+    real = PT.run_pass
+
+    def spy(*a, **k):
+        seen.update(k)
+        return real(*a, **k)
+    monkeypatch.setattr(PT, "run_pass", spy)
+    st = _seeded()
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    RUN.run_pass(T1, store=st, deps=deps)
+    assert seen["ctx"]["GGA"] == st.get_read(S, "GGA")["ctx"]
+    assert seen["send"] is deps.send_potential and seen["tape"] == "rth" and seen["live_rows"]["GGA"]["price"] == 11.2
+
+
+def test_NEGATIVE_no_crontab_line_names_potential():
+    lines = [ln for ln in (ROOT / "crontab").read_text().splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    assert not [ln for ln in lines if "potential" in ln]

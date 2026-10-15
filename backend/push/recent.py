@@ -126,6 +126,11 @@ ITEM_URL_BY_KIND = {
     # the day's claim (chart_maps/gajjala/tab.resolve_sub); the single push's
     # url carries the sub itself (alerts.compose).
     "gajjala_setup":        "/chart-maps?tab=gajjala&focus={sym}",
+    # 🧠 2026-10-15 — Ajay: "Give me an alert all continous tracker on these
+    # specifically …". The sub is resolved by the endpoint from today's pushed
+    # potential (chart_maps/gajjala/tab.resolve_sub, focus_potential); the
+    # single push's url carries the sub itself (potential.deep_link).
+    "gajjala_potential":    "/chart-maps?tab=gajjala&focus={sym}",
     # 🎢 / 🗺️ 2026-10-14 — the Tape tab, back-linked to Chart Maps
     # (orderflow/tape_burst_kinds.URL_FMT, pinned by test_tape_burst_kinds).
     "tape_burst_highbeta":  "/sepa/{sym}?tab=tape&from=chart-maps",

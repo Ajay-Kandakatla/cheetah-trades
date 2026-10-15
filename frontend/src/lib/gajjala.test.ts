@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GG_DEFAULT_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SUBS, GG_VARIANT_LABEL,
-  changeText, chipText, criteriaText, gradeText, ggQuery, ggRefreshMs, parseGgSub, parseGgTf,
-  playbookItem, riskText, variantText,
+  GG_DEFAULT_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SUBS, GG_VARIANT_LABEL,
+  changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
+  playbookItem, riskText, variantText, watchParts,
 } from './gajjala';
 
 /* tsc-safe source read (the HottestSectors.width.test precedent): the app's
@@ -100,12 +100,26 @@ describe('print helpers', () => {
 });
 
 describe('GG_SUBS / GG_OUTER_CHIPS', () => {
-  it('eight subs in DECISIONS order, labels his', () => {
+  // WIDENED 2026-10-15 — Ajay "So create a potential category in this section": 🧠 Potential is the NINTH sub,
+  // LAST (BUILD_SPEC4 §3.1, HIS CALL P8); the other eight keep their DECISIONS order.
+  it('nine subs in DECISIONS order, 🧠 Potential last, labels his', () => {
     expect(GG_SUBS.map((s) => s.key)).toEqual(['bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp',
-      'reversal_squeeze', 'premarket', 'postmarket', 'playbook']);
+      'reversal_squeeze', 'premarket', 'postmarket', 'playbook', 'potential']);
     expect(GG_SUBS.map((s) => `${s.emoji} ${s.label}`).join(' · ')).toBe(
       '\u{1F6A9} Bull Flag · \u{1F48B} EMA Kiss & Fly · ➖ Horizontal Fade · \u{1F300} Intraday VCP · '
-      + '\u{1F3BE} Reversal Squeeze · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook');
+      + '\u{1F3BE} Reversal Squeeze · ☀️ Premarket · \u{1F319} Post-market · \u{1F4D3} Playbook · \u{1F9E0} Potential');
+    expect(parseGgSub('potential')).toBe('potential');
+    expect(parseGgSub(' Potential ')).toBe('potential');
+  });
+  it('GG_SETUPS == backend constants.SETUPS; NEGATIVE ☀️ / 🌙 / 📓 / 🧠 are not setups', async () => {
+    const py = await readSource('../backend/chart_maps/gajjala/constants.py');
+    const m = /^SETUPS = \(([^)]*)\)/m.exec(py);
+    expect(m, 'constants.SETUPS').toBeTruthy();
+    expect([...m![1].matchAll(/"([a-z_]+)"/g)].map((x) => x[1])).toEqual([...GG_SETUPS]);
+    for (const s of GG_SETUPS) expect(isGgSetup(s)).toBe(true);
+    for (const s of ['premarket', 'postmarket', 'playbook', 'potential', '', null, undefined, 'Bull_Flag']) {
+      expect(isGgSetup(s), String(s)).toBe(false);
+    }
   });
   it('== backend constants.SUBS (key / emoji / label, in order)', async () => {
     const py = await readSource('../backend/chart_maps/gajjala/constants.py');
@@ -122,5 +136,27 @@ describe('GG_SUBS / GG_OUTER_CHIPS', () => {
     expect(src).not.toMatch(/bounce/i);
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     expect(code).not.toMatch(/1_000_000|\b0\.10\b|\b25(\.0)?\b|K8_|K1_/);
+  });
+});
+
+/* 🧠 Potential plumbing (2026-10-15) — Ajay: "In all the sub tab and add a track and alert to show me new potential
+ * is added everyday." The served links and the 👀 watch line; the negatives keep a foreign link off the tab. */
+describe('ggHref / watchParts', () => {
+  it('ggHref passes a same-origin path; NEGATIVE protocol-relative, absolute, junk → null', () => {
+    expect(ggHref('/chart-maps?tab=gajjala&sub=bull_flag&focus=AAA')).toBe('/chart-maps?tab=gajjala&sub=bull_flag&focus=AAA');
+    for (const v of ['//evil.example/x', 'https://evil.example/x', 'javascript:alert(1)', '', null, undefined, 3, {}]) {
+      expect(ggHref(v), String(v)).toBeNull();
+    }
+  });
+  it('watchParts cuts the served trailing names so they can be links', () => {
+    const w = { text: '👀 On his watch list, no structure yet — (S8 13:21–14:34): PMX, CARY',
+                symbols: [{ symbol: 'PMX', href: '/x' }, { symbol: 'CARY', href: '/y' }] };
+    expect(watchParts(w)).toEqual({ lead: '👀 On his watch list, no structure yet — (S8 13:21–14:34): ', trailing: true });
+  });
+  it('NEGATIVE: names not at the end → the text is kept whole; empty / missing → null', () => {
+    const w = { text: '👀 PMX, CARY are on his list', symbols: [{ symbol: 'PMX', href: '/x' }, { symbol: 'CARY', href: '/y' }] };
+    expect(watchParts(w)).toEqual({ lead: w.text, trailing: false });
+    expect(watchParts({ text: '👀 nothing', symbols: [] })).toEqual({ lead: '👀 nothing', trailing: false });
+    for (const v of [null, undefined, { text: '', symbols: [] }, { text: '   ', symbols: [] }]) expect(watchParts(v as any)).toBeNull();
   });
 });

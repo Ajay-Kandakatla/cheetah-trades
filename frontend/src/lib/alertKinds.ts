@@ -79,6 +79,10 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // owner (keep-set), off for everyone else; SHADOW first — recorded on
   // /alerts, nothing sent until GAJJALA_PUSH_MODE is flipped. UNMEASURED.
   gajjala_setup:       { emoji: '🚩', label: 'Gajjala A+ setup',        group: 'trading' },
+  // 🧠 2026-10-15 — Ajay: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to ride the wave".
+  // A Gajjala setup read still forming (sideways part begun, reclaim not printed). LIVE, owner-only (keep-set).
+  // UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs.
+  gajjala_potential:   { emoji: '🧠', label: 'Gajjala potential',       group: 'trading' },
   sepa_new_candidate:  { emoji: '🆕', label: 'New SEPA candidate',      group: 'trading' },
   morning_brief:       { emoji: '🌅', label: 'Morning brief',           group: 'trading' },
   market_hours_reminder: { emoji: '🔔', label: 'Market reminder',       group: 'trading' },

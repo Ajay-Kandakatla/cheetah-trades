@@ -61,3 +61,42 @@
 .gg-pb-sources { border-collapse: collapse; font-size: 0.8rem; width: 100%; }
 .gg-pb-sources td { padding: 0.2rem 0.4rem; border-top: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); vertical-align: top; }
 @media (max-width: 640px) { .gg-pb-sources td { display: block; border-top: 0; } }
+
+/* 🧠 Potential strip, 📈 Track and 👀 watch line (2026-10-15, BUILD_SPEC4 §3.11) — Ajay: "create a potential
+   category in this section" / "add a track and alert to show me new potential is added everyday". A compact
+   strip inside the sub, never a second card grid. Every string in these boxes is served. */
+.gg-push-potential { border-left: 3px solid var(--gold, #c9a227); }
+.gg-potential {
+  display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; padding: 0.35rem 0.6rem;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+  background: var(--bg-surface, transparent);
+}
+.gg-pot-head summary { cursor: pointer; font-weight: 600; }
+.gg-pot-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.gg-pot-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; width: 100%; text-align: left;
+  font: inherit; color: inherit; background: transparent; cursor: pointer;
+  border: 0; border-radius: 4px; padding: 0.15rem 0.25rem;
+}
+.gg-pot-row:hover, .gg-pot-row:focus-visible { background: var(--gold-faint, rgba(184, 147, 90, 0.12)); }
+.gg-pot-kind { font-variant-numeric: tabular-nums; }
+.gg-pot-kind-armed { font-weight: 600; color: var(--positive, #22c55e); }
+.gg-pot-kind-building { color: var(--ink-muted, #94a3b8); }
+.gg-pot-tile .gg-pot-kind {
+  display: inline-block; padding: 0.08rem 0.45rem; border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.gg-pot-tile, .gg-pot-tells { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+.gg-pot-again { color: var(--ink-subtle, #94a3b8); }
+
+.gg-track {
+  display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; padding: 0.35rem 0.6rem;
+  border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 6px;
+}
+.gg-track-block summary { cursor: pointer; font-weight: 600; }
+.gg-track-rows { list-style: none; margin: 0.2rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.gg-track-row { line-height: 1.4; overflow-wrap: anywhere; }
+.gg-track-text { font-variant-numeric: tabular-nums; }
+.gg-timeline summary { cursor: pointer; color: var(--ink-subtle, #94a3b8); font-size: 0.76rem; }
+.gg-timeline ol { margin: 0.1rem 0 0; padding-left: 1.2rem; font-size: 0.76rem; }
+.gg-watch { font-size: 0.8rem; overflow-wrap: anywhere; }

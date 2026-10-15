@@ -57,8 +57,8 @@ describe('Notifications · 🎢 🗺️ tape-burst kinds', () => {
       expect(cat(k)[0].label).toBe(ALERT_KINDS[k].label);
     }
     const keys = CATEGORIES.map((c) => c.key as string);
-    expect(keys.indexOf('tape_burst_highbeta')).toBe(keys.indexOf('gajjala_setup') + 1);
-    expect(keys.indexOf('tape_burst_chartmaps')).toBe(keys.indexOf('gajjala_setup') + 2);
+    expect(keys.indexOf('tape_burst_highbeta')).toBe(keys.indexOf('gajjala_setup') + 2);  /* WIDENED 2026-10-15 — 🧠 gajjala_potential sits right after 🚩 */
+    expect(keys.indexOf('tape_burst_chartmaps')).toBe(keys.indexOf('gajjala_setup') + 3);  /* WIDENED 2026-10-15 — 🧠 gajjala_potential sits right after 🚩 */
     render(<MemoryRouter><NotificationsPage /></MemoryRouter>);
     expect(screen.getByText('Tape burst — High Beta')).toBeTruthy();
     expect(screen.getByText('Tape burst — Chart Maps')).toBeTruthy();

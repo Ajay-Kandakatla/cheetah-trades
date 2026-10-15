@@ -49,7 +49,9 @@ def test_pins_against_the_house_engines():
 
 
 def test_subs_and_setups():
-    assert tuple(k for k, _e, _l in GC.SUBS) == GC.SETUPS + ("premarket", "postmarket", "playbook")
+    # WIDENED 2026-10-15 — 🧠 Potential appended LAST (Ajay msg 1 "create a potential category"; nothing else moves)
+    assert tuple(k for k, _e, _l in GC.SUBS) == GC.SETUPS + ("premarket", "postmarket", "playbook", "potential")
+    assert GC.SUBS[-1] == ("potential", "🧠", "Potential") and GC.POTENTIAL_SUB == GC.SUBS[-1][0]
     assert GC.DEFAULT_SUB in GC.SETUPS
     assert set(GC.PLACEHOLDER_BY_SETUP) <= set(GC.SETUPS)
     assert {h for hs in GC.PLACEHOLDER_BY_SETUP.values() for h in hs} <= set(GC.PLACEHOLDERS)
@@ -161,3 +163,37 @@ def test_NEGATIVE_a_reverted_placeholder_would_fail_the_guard(monkeypatch, name)
     monkeypatch.setattr(GC, name, None)
     with pytest.raises(AssertionError):
         test_no_placeholder_left_until_ajay_answers()
+
+
+# ── 🧠 potential (DECISIONS4 K1–K3, 2026-10-15) ───────────────────────────────────────────────────────────────────────
+def test_decisions4_values():
+    """Ajay 2026-10-15: "In Gajjalas setup I wanna find potential stocks …" — K1 forming, K3 one push a session. The
+    three POTENTIAL_* gates are MINE (Cheetah defaults, not GG) and listed so; the A+ kind stays shadow."""
+    assert GC.POTENTIAL_STATE == "forming" and GC.POTENTIAL_KINDS == ("armed", "building")
+    assert GC.POTENTIAL_PUSH_KIND == "gajjala_potential" and GC.POTENTIAL_PUSH_KIND != GC.PUSH_KIND
+    assert (GC.POTENTIAL_NEEDS_BASE, GC.POTENTIAL_DEFER_REFUSED, GC.POTENTIAL_FRESH_TAPE) == (True, True, True)
+    assert GC.PASS_MINUTE_OFFSET == 1
+    assert GC.GAJJALA_PUSH_MODE == "shadow"
+    assert {"POTENTIAL_NEEDS_BASE", "POTENTIAL_FRESH_TAPE", "POTENTIAL_DEFER_REFUSED"} <= set(GC.CHEETAH_DEFAULTS)
+    assert {"STAY_LISTED_SESSIONS", "PSY_NEAR_PCT"} <= set(GC.CHEETAH_DEFAULTS)
+
+
+def test_NEGATIVE_no_potential_mode_switch_and_no_new_rule_number():
+    """DECISIONS4: LIVE, no POTENTIAL_PUSH_MODE (a mode constant invites a silent shadow); the only new number is the
+    TRANSPORT pass-minute offset."""
+    names = {n for n, _v, _ln in _assigns()}
+    assert "POTENTIAL_PUSH_MODE" not in names
+    new_numeric = {n for n, v, _ln in _assigns() if n.startswith(("POTENTIAL_", "PASS_MINUTE")) and _is_numeric(v)}
+    assert new_numeric == {"PASS_MINUTE_OFFSET"}
+    assert _comment(dict((n, ln) for n, _v, ln in _assigns())["PASS_MINUTE_OFFSET"]).startswith("TRANSPORT")
+
+
+def test_NEGATIVE_a_potential_default_filed_as_ggs_fails_the_label_guard(monkeypatch):
+    """The CHEETAH_DEFAULTS guard bites on the new names: a POTENTIAL_* gate commented as GG's would fail it."""
+    import sys
+    ln = {n: ln for n, _v, ln in _assigns()}["POTENTIAL_FRESH_TAPE"]
+    fake = list(LINES)
+    fake[ln - 1] = "POTENTIAL_FRESH_TAPE = True                  # GG S8 1:40:56 he waits for a print"
+    monkeypatch.setattr(sys.modules[__name__], "LINES", fake)
+    with pytest.raises(AssertionError):
+        test_NEGATIVE_cheetah_defaults_are_labelled_ajays_not_ggs()

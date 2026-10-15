@@ -369,7 +369,9 @@ def test_item_urls_match_each_kinds_single_push_url():
     # 🎢 / 🗺️ 2026-10-14 tape kinds joined (10 → 12) — the Tape tab, back-linked to Chart Maps.
     assert R.item_url("tape_burst_highbeta", "NVDA") == "/sepa/NVDA?tab=tape&from=chart-maps"
     assert R.item_url("tape_burst_chartmaps", "NVDA") == "/sepa/NVDA?tab=tape&from=chart-maps"
-    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 12
+    # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only): 12 → 13 — the Gajjala's tab; the endpoint resolves the sub from focus (tab.resolve_sub, focus_potential).
+    assert R.item_url("gajjala_potential", "NVDA") == "/chart-maps?tab=gajjala&focus=NVDA"
+    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 13
 
 
 # ---------------------------------------------------------------------------

@@ -185,8 +185,12 @@ def test_ensure_indexes_ttl_per_spec_and_idempotent():
     assert ttl[ST.READS][0] == GC.READS_TTL_DAYS * 86400 == 14 * 86400
     for n in (ST.SCAN, ST.AH_CARRY, ST.POST, ST.PASSES, ST.DAILY):
         assert ttl[n][0] == GC.LEDGER_TTL_DAYS * 86400 == 30 * 86400
-    for n in (ST.ALERTS, ST.HALTS, ST.STATE):                     # ledgers kept
+    # WIDENED 2026-10-15 — 🧠 gajjala_potentials joins the KEPT ledgers (the study's data spine, HIS CALL P7)
+    for n in (ST.ALERTS, ST.HALTS, ST.STATE, ST.POTENTIALS):      # ledgers kept
         assert ttl[n] == []
+    assert ST.POTENTIALS not in ST.TTL_DAYS
+    idx = [spec for spec, _kw in st.coll(ST.POTENTIALS).indexes]
+    assert (("date", 1), ("symbol", 1)) in idx and (("symbol", 1), ("date", -1)) in idx
 
 
 def test_record_qualifiers_returns_only_new_and_accumulates():
@@ -237,6 +241,38 @@ def test_record_pass_writes_the_pass_and_latest():
     assert set(st.coll(ST.PASSES).docs) == {"2026-10-13|10:01", "latest"}
     assert st.latest_pass()["pass_id"] == "2026-10-13|10:01"
     assert [p["_id"] for p in st.passes(S)] == ["2026-10-13|10:01"]
+
+
+class _ProjSpy(FakeColl):
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.finds = []
+
+    def find(self, q=None, projection=None):
+        self.finds.append((q, projection))
+        return super().find(q, projection)
+
+
+def test_recent_passes_reads_only_the_window_projected_and_never_latest():
+    """🧠 2026-10-15 D9 join rule: the previous-pass read is a windowed, projected find (finding LOW 5)."""
+    spy = _ProjSpy()
+    st = fake_store(**{ST.PASSES: spy})
+    for m in (41, 51, 56):
+        st.record_pass(S, NOW.replace(minute=m) - timedelta(hours=1), {"status": "ok", "potential": {"pushed": 0}})
+    st.record_pass(S, NOW, {"status": "ok"})
+    docs = st.recent_passes(S, NOW - timedelta(minutes=10), NOW - timedelta(minutes=4))
+    assert sorted(d["_id"] for d in docs) == ["2026-10-13|09:51", "2026-10-13|09:56"]
+    q, proj = spy.finds[-1]
+    assert proj == {"at": 1, "potential": 1} and q["_id"] == {"$ne": "latest"} and q["date"] == "2026-10-13"
+
+
+def test_NEGATIVE_recent_passes_is_none_on_a_read_fault_and_empty_when_none_on_file():
+    assert fake_store(**{ST.PASSES: FakeColl(fail=True)}).recent_passes(S, NOW - timedelta(minutes=10), NOW) is None
+    assert fake_store().recent_passes(S, NOW - timedelta(minutes=10), NOW) == []
+    st = fake_store()
+    st.record_pass(S, NOW - timedelta(hours=3), {"status": "ok", "potential": {}})
+    assert st.recent_passes(S, NOW - timedelta(minutes=10), NOW) == []          # outside the window
+    assert st.recent_passes(date(2026, 10, 12), NOW - timedelta(hours=4), NOW) == []   # another session
 
 
 def test_reads_post_daily_halts_roundtrip():
@@ -323,3 +359,125 @@ def test_NEGATIVE_no_gate_modules_imported(mod):
             for n in names:
                 assert not any(n == b or n.startswith(b + ".") for b in banned), (mod, n)
     assert "is_candidate" not in src and "Minervini" not in src and "Bonde" not in src
+
+
+
+# ── 🧠 gajjala_potentials (2026-10-15) — guarded writes only ─────────────────────────────────────────────────────────
+PID = "2026-10-13|AAA|bull_flag"
+
+
+def _pot_store():
+    st = fake_store()
+    assert st.upsert_potential(PID, {"date": "2026-10-13", "symbol": "AAA", "setup": "bull_flag"},
+                               {"last": {"state": "forming"}, "at": NOW})
+    return st
+
+
+def test_potential_key_and_reads():
+    st = _pot_store()
+    assert ST.potential_key(S, "aaa", "bull_flag") == PID
+    assert st.get_potential(S, "AAA", "bull_flag")["symbol"] == "AAA"
+    assert [d["_id"] for d in st.potentials(S)] == [PID] and st.count_potentials(S) == 1
+    assert [d["_id"] for d in st.potential_docs_for_symbol("aaa")] == [PID]
+    assert st.count_potentials(date(2026, 10, 12)) == 0
+
+
+def test_claim_is_claimed_then_taken_and_error_on_a_fault():
+    st = _pot_store()
+    assert st.claim_potential_push(PID, {"state": "claimed"}) == "claimed"
+    assert st.claim_potential_push(PID, {"state": "claimed", "at_et": "10:06"}) == "taken"
+    assert st.get_potential(S, "AAA", "bull_flag")["push"] == {"state": "claimed"}
+    assert st.claim_potential_push("2026-10-13|ZZZ|bull_flag", {"state": "claimed"}) == "taken"   # no doc
+    assert fake_store(**{ST.POTENTIALS: FakeColl(fail=True)}).claim_potential_push(PID, {}) == "error"
+    assert ST.GajjalaStore(colls={n: None for n in ST.ALL}).claim_potential_push(PID, {}) == "error"
+
+
+def test_NEGATIVE_hold_never_lands_on_a_claimed_doc():
+    st = _pot_store()
+    assert st.hold_potential(PID, [{"at_et": "09:36", "reason": "muted"}]) is True
+    st.claim_potential_push(PID, {"state": "claimed"})
+    before = copy.deepcopy(st.coll(ST.POTENTIALS).docs[PID])
+    assert st.hold_potential(PID, [{"at_et": "09:41", "reason": "stale_tape"}]) is False
+    assert st.coll(ST.POTENTIALS).docs[PID] == before
+
+
+def test_settle_sets_the_dotted_push_fields_only():
+    st = _pot_store()
+    st.claim_potential_push(PID, {"state": "claimed", "at": "x", "kind_at_push": "armed"})
+    assert st.settle_potential_push(PID, {"state": "pushed", "result": {"sent": 1}, "at_et": "10:06",
+                                          "kind_at_push": "IGNORED", "at": "IGNORED"}) is True
+    push = st.get_potential(S, "AAA", "bull_flag")["push"]
+    assert push == {"state": "pushed", "at": "x", "kind_at_push": "armed", "result": {"sent": 1}, "at_et": "10:06"}
+
+
+def test_NEGATIVE_settle_never_creates_a_push_on_an_unclaimed_doc():
+    st = _pot_store()
+    assert st.settle_potential_push(PID, {"state": "pushed"}) is False
+    assert "push" not in st.get_potential(S, "AAA", "bull_flag")
+
+
+def test_NEGATIVE_graveyard_marks_once():
+    st = _pot_store()
+    assert st.mark_potential_graveyard(PID, S, [{"state": "graveyard"}]) is True
+    assert st.mark_potential_graveyard(PID, date(2026, 10, 14), [{"state": "graveyard"}, {"state": "graveyard"}]) \
+        is False
+    doc = st.get_potential(S, "AAA", "bull_flag")
+    assert doc["graveyard_on"] == "2026-10-13" and doc["state_path"] == [{"state": "graveyard"}]
+
+
+def test_NEGATIVE_upsert_refuses_a_clash_or_a_guarded_field():
+    st = fake_store()
+    assert st.upsert_potential(PID, {"a": 1}, {"a": 2}) is False
+    for banned in ("push", "held", "graveyard_on"):
+        assert st.upsert_potential(PID, {}, {banned: 1}) is False
+        assert st.upsert_potential(PID, {banned: 1}, {"x": 1}) is False
+    assert st.coll(ST.POTENTIALS).docs == {}
+
+
+def test_NEGATIVE_there_is_no_whole_doc_potential_writer():
+    assert not hasattr(ST.GajjalaStore, "put_potential") and not hasattr(ST, "put_potential")
+    import inspect
+    for name in ("upsert_potential", "hold_potential", "claim_potential_push", "settle_potential_push",
+                 "mark_potential_graveyard", "_guarded_set"):
+        assert "replace_one" not in inspect.getsource(getattr(ST.GajjalaStore, name)), name
+
+
+def test_NEGATIVE_a_failing_potentials_coll_answers_its_soft_values():
+    st = fake_store(**{ST.POTENTIALS: FakeColl(fail=True)})
+    assert st.potentials(S) is None and st.get_potential(S, "AAA", "bull_flag") is None   # None, not []: 2026-10-15
+    assert st.count_potentials(S) == 0 and st.potential_docs_for_symbol("AAA") == []
+    assert st.upsert_potential(PID, {"a": 1}, {"b": 2}) is False
+    assert st.hold_potential(PID, []) is False and st.settle_potential_push(PID, {"state": "x"}) is False
+    assert st.mark_potential_graveyard(PID, S, []) is False and st.claim_potential_push(PID, {}) == "error"
+
+
+def test_potential_module_delegates(monkeypatch):
+    fake = _pot_store()
+    monkeypatch.setattr(ST, "_DEFAULT", fake)
+    assert ST.count_potentials(S) == 1 and ST.get_potential(S, "AAA", "bull_flag")["_id"] == PID
+
+
+# ── final critic 2026-10-15: an unreadable tracker is not an empty one ───────────────────────────────────────────
+def test_potentials_is_an_empty_list_when_nothing_is_on_file_and_None_on_a_read_fault():
+    assert fake_store().potentials(S) == []
+    assert fake_store(**{ST.POTENTIALS: FakeColl(fail=True)}).potentials(S) is None
+    dead = ST.GajjalaStore(colls={n: None for n in ST.ALL})
+    assert dead.potentials(S) is None and dead.count_potentials(S) == 0
+
+
+def test_NEGATIVE_the_claim_never_lands_on_a_joined_doc_and_still_lands_on_a_normal_or_pre_build_doc():
+    """D9's second guard: `first_seen_mode: joined` is never claimable even with `push` absent; a `normal` doc and a doc
+    from before this build (no `first_seen_mode` at all) claim as before."""
+    from chart_maps.gajjala import potential as PT
+    assert ST.JOINED_MODE == PT.FIRST_SEEN_MODES[1]
+    joined = {"_id": "2026-10-13|JJJ|bull_flag", "date": S.isoformat(), "symbol": "JJJ", "setup": "bull_flag",
+              "first_seen_mode": "joined"}
+    normal = {"_id": "2026-10-13|NNN|bull_flag", "date": S.isoformat(), "symbol": "NNN", "setup": "bull_flag",
+              "first_seen_mode": "normal"}
+    old = {"_id": "2026-10-13|OOO|bull_flag", "date": S.isoformat(), "symbol": "OOO", "setup": "bull_flag"}
+    st = fake_store(**{ST.POTENTIALS: FakeColl([joined, normal, old])})
+    assert st.claim_potential_push(joined["_id"], {"state": "claimed"}) == "taken"
+    assert "push" not in st.get_potential(S, "JJJ", "bull_flag")
+    assert st.claim_potential_push(normal["_id"], {"state": "claimed"}) == "claimed"
+    assert st.claim_potential_push(old["_id"], {"state": "claimed"}) == "claimed"
+    assert st.claim_potential_push(joined["_id"], {"state": "claimed"}) == "taken"       # still, on a second try

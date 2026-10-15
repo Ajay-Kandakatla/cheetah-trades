@@ -6,8 +6,15 @@ ONE pass, every 5 minutes 04:01–20:01 ET on trading days (minute 1, so the buc
   the ledger → the listed set (today + STAY_LISTED_SESSIONS carry) → float chain steps 1–2 (cache, Massive) → 🎾 squeeze
   history for new names (bounded) → closed 5/15-minute frames (budgeted) → the five detectors → the paced Yahoo float
   refinement (🎾-alive names first) and a 🎾 re-read for every float that changed → ☀️ premarket levels / 🌙 K10 confirm
-  (rotation) → `gajjala_reads` → the push gate (alerts.run_pass: SHADOW until Ajay flips GAJJALA_PUSH_MODE) → the pass doc
-  + the /alerts row (supply_demand.alert_status, kind gajjala_setup) → lease released.
+  (rotation) → `gajjala_reads` → the push gate (alerts.run_pass: SHADOW until Ajay flips GAJJALA_PUSH_MODE) → 🧠 potentials
+  (potential.run_pass: the tracker + the LIVE gajjala_potential push) → the pass doc + the /alerts rows
+  (supply_demand.alert_status, kinds gajjala_setup and gajjala_potential) → lease released.
+
+🧠 2026-10-15 (Ajay: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
+ride the wave"). The potential gate rides THIS pass — no crontab line of its own (a deploy never ships the crontab). The
+A+ gate and the potential gate each run in their own try (AMENDMENTS4 D1): one raising never silences the other, and
+each /alerts row carries its own reason. The pass runs 04:01–20:01; the potential window is 04:00–20:00 ET with
+09:30–09:45 muted (potential.window_reason) — so the ringing passes are 04:01 … 19:56 minus the three muted ones.
 
 The module refuses to run outside PASS_OPEN_ET–PASS_CLOSE_ET on a market day (exit 0, no snapshot call): the crontab hour
 field 4-20 also fires 20:06–20:56, and those ticks must do nothing.
@@ -99,6 +106,12 @@ def _record_status(counts: dict, now: datetime, reason: Optional[str] = None) ->
     return AS.record_pass(AS.GAJJALA_KIND, counts, now, reason=reason)
 
 
+def _record_potential_status(counts: dict, now: datetime, reason: Optional[str] = None) -> bool:
+    """The 🧠 /alerts row — its kind string from constants (no dependency on alert_status's own constant)."""
+    from supply_demand import alert_status as AS
+    return AS.record_pass(GC.POTENTIAL_PUSH_KIND, counts, now, reason=reason)
+
+
 @dataclass
 class Deps:
     snapshot: Callable = _snapshot                 # () -> (rows, meta)
@@ -113,6 +126,8 @@ class Deps:
     send: Optional[Callable] = None                # (owner, payload) -> result (None = push.hooks.notify_gajjala_setup)
     owner: Optional[str] = None                    # None = portfolio.alerts._resolve_owner() at send time
     record_status: Callable = _record_status       # (counts, now, reason) -> bool — the /alerts row
+    send_potential: Optional[Callable] = None      # 🧠 (owner, payload) -> result (None = push.hooks.notify_gajjala_potential)
+    record_potential_status: Callable = _record_potential_status   # 🧠 (counts, now, reason) -> bool — its /alerts row
     sleep: Callable = time.sleep
     refine_floats: bool = True                     # the Yahoo step (off in a dry run)
     clock: Callable = time.monotonic               # the budget clock
@@ -196,6 +211,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
     from . import context as CX
     from . import scanner as SC
     from . import alerts as AL
+    from . import potential as PT
     from . import store as ST
 
     deps = deps or Deps()
@@ -301,6 +317,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
 
         # the read docs the board serves
         alert_ctx: dict = {}
+        pot_ctx: dict = {}
         for s, fr in frames.items():
             row = row_by.get(s) or {}
             fr_read = floats.get(s)
@@ -323,9 +340,16 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                                         "listed": listed.get(s), "stopped_today": stopped}, now=now)
             alert_ctx[s] = {"float_text": (fr_read or {}).get("text"), "price": row.get("price"),
                             "last_halt_resume_et": ctx["last_halt_resume_et"], "reg_gain_pct": ctx["reg_gain_pct"]}
+            pot_ctx[s] = ctx                                    # 🧠 the SAME dict the read doc stores (tab reads it)
 
-        alerts = AL.run_pass(reads, frames, now, session, store=st, send=deps.send, owner=deps.owner, dry=dry,
-                             ctx=alert_ctx)
+        al_failed = False
+        try:
+            alerts = AL.run_pass(reads, frames, now, session, store=st, send=deps.send, owner=deps.owner, dry=dry,
+                                 ctx=alert_ctx)
+        except Exception:                                       # noqa: BLE001 — D1: never silences the 🧠 gate
+            log.exception("gajjala pass: the A+ gate failed")
+            alerts, al_failed = {}, True
+            out["errors"].append("alerts")
         out.update({"tape_session": result.get("tape_session"), "counts": result["counts"],
                     "strip": result["strip"], "n_listed": len(names), "n_read": len(reads), "bars": bar_stats,
                     "alerts": alerts, "floats": yahoo, "status": "ok" if good else "failed",
@@ -333,6 +357,20 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
                     "premarket": {"pm_levels": pm_levels}, "postmarket": post,
                     "aplus": sorted(f"{s}:{k}" for s, rs in reads.items() for k, r in rs.items()
                                     if (r or {}).get("state") == "aplus")})
+        if al_failed:
+            out["status"] = "error"
+
+        # 🧠 potentials — AFTER the pass summary, in its OWN try (AMENDMENTS4 D1). D2: the price is the 5-minute
+        # frame's latest close first, else THIS pass's row (a qualifier or the live snapshot) — never the stored row.
+        live_rows = {s: (q_rows.get(s) or _row_from_snapshot(s, rows.get(s), session_iso)) for s in frames}
+        try:
+            out["potential"] = PT.run_pass(reads, frames, now, session, store=st, ctx=pot_ctx, rows=row_by,
+                                           send=deps.send_potential, owner=deps.owner, dry=dry,
+                                           tape=result.get("tape_session"), live_rows=live_rows)
+        except Exception:                                       # noqa: BLE001
+            log.exception("gajjala pass: the potential gate failed")
+            out["errors"].append("potential")
+            out["potential"] = {}
     except Exception as exc:                                    # noqa: BLE001
         log.exception("gajjala pass failed")
         out["errors"].append(type(exc).__name__)
@@ -346,7 +384,7 @@ def run_pass(now: Optional[datetime] = None, *, store=None, deps: Optional[Deps]
 def _finish(st, now: datetime, session: date, out: dict, deps: Deps) -> None:
     """The pass doc (the board's as_of / strip / ☀️ / 🌙), the /alerts row, the lease — each best-effort."""
     body = {k: out.get(k) for k in ("tape_session", "counts", "strip", "n_listed", "n_read", "bars", "alerts",
-                                    "status", "errors", "wall_s", "premarket", "postmarket", "ah_carry")}
+                                    "status", "errors", "wall_s", "premarket", "postmarket", "ah_carry", "potential")}
     body["snapshot_meta"] = out.get("snapshot")
     body["types_meta"] = out.get("types_meta")
     try:
@@ -363,6 +401,19 @@ def _finish(st, now: datetime, session: date, out: dict, deps: Deps) -> None:
         deps.record_status(counts, now, reason)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala pass: /alerts row failed: %s", exc)
+    # 🧠 its own row and its own reason: a failed A+ gate never marks it, a failed potential gate always does (D1)
+    errs = out.get("errors") or []
+    if "potential" in errs:
+        pot_reason = "pass error: potential"
+    elif "potential" in out:
+        pot_reason = ("snapshot failed — listed names read off the stored scan" if out.get("status") == "failed"
+                      else None)
+    else:
+        pot_reason = reason
+    try:
+        deps.record_potential_status(dict(out.get("potential") or {}), now, pot_reason)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala pass: /alerts potential row failed: %s", exc)
     try:
         st.release_lease(now)
     except Exception as exc:                                    # noqa: BLE001
@@ -374,10 +425,16 @@ def dry_deps() -> Deps:
     """Every writer and sender a recorder (the store side is `dry_store`)."""
     sent: list = []
     status: list = []
+    sent_potential: list = []
+    status_potential: list = []
     d = Deps(load_day=_dry_load_day, status_lookup=_dry_status_lookup, refine_floats=False,
              send=lambda owner, payload: (sent.append(payload), {"sent": 0, "failed": 0, "total_targets": 0})[1],
-             record_status=lambda counts, now, reason=None: (status.append(counts), False)[1])
+             record_status=lambda counts, now, reason=None: (status.append(counts), False)[1],
+             send_potential=lambda owner, payload: (sent_potential.append(payload),
+                                                    {"sent": 0, "failed": 0, "total_targets": 0})[1],
+             record_potential_status=lambda counts, now, reason=None: (status_potential.append(counts), False)[1])
     d.sent, d.status = sent, status                             # type: ignore[attr-defined]
+    d.sent_potential, d.status_potential = sent_potential, status_potential   # type: ignore[attr-defined]
     return d
 
 

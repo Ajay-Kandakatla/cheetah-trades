@@ -463,6 +463,9 @@ def test_push_block_says_shadow_and_flips_with_the_constant(monkeypatch):
     assert GC.GAJJALA_PUSH_MODE == "shadow"
     assert out["push"]["mode"] == "shadow" and "SHADOW" in out["push"]["text"]
     assert str(GC.STUDY_SESSIONS) in out["push"]["text"]
+    # WIDENED 2026-10-15 — 🧠 rings live, so the A+ shadow line names A+
+    assert "A+ pushes are in SHADOW" in out["push"]["text"] and "no A+ reaches your phone" in out["push"]["text"]
+    assert "nothing reaches" not in out["push"]["text"]                 # NEGATIVE: never the absolute claim
     monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")
     live = GT.build("bull_flag", now=NOW, store=store_with())["push"]
     assert live["mode"] == "live" and "SHADOW" not in live["text"]

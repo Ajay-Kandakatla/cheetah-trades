@@ -72,6 +72,14 @@ export type NotificationPrefs = {
      SHADOW first: recorded on /alerts, nothing sent until the switch is
      flipped. UNMEASURED. */
   gajjala_setup?: boolean;
+  /* 🧠 A Goverdhan Gajjala setup read still FORMING — the demand leg in, the
+     quiet sideways part begun ("building") or complete ("trigger armed"), the
+     reclaim of the highs not printed (chart_maps/gajjala/potential.py,
+     2026-10-15: "Give me an alert all continous tracker on these specifically
+     when I get alert I will jump on to ride the wave"). ON for him via the
+     owner keep-set; False in default_prefs for anyone else. LIVE (never
+     shadow). UNMEASURED — a potential, not an entry. */
+  gajjala_potential?: boolean;
   /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's
      range (orderflow/tape_burst_kinds.py, 2026-10-14: "I need a tape burst
      notification specific for High Beta stocks from the reselinet

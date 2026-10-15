@@ -484,7 +484,8 @@ def test_item_urls_for_both_kinds_match_the_builder():
     for k in TBK.KINDS:
         assert R.item_url(k, "NBIS") == TBK.tape_url("NBIS") == "/sepa/NBIS?tab=tape&from=chart-maps"
         assert R.ITEM_URL_BY_KIND[k] == TBK.URL_FMT
-    assert len(R.ITEM_KINDS) == 12
+    # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only): 12 → 13.
+    assert len(R.ITEM_KINDS) == 13
     assert "?tab=tape&from=chart-maps" in (ROOT / "backend/orderflow/tape_burst_kinds.py").read_text()
 
 

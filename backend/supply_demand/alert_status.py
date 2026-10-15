@@ -26,6 +26,11 @@ never ran". This module keeps the last pass's counters per kind:
                      🚩 5-minute pass on its own crontab line (SHADOW first);
                      its served pass also carries `shadow_items`, today's
                      shadow A+ rows read from `gajjala_alerts` (2026-10-13 E3)
+  gajjala_potential  written here by chart_maps.gajjala.run (2026-10-15), the
+                     🧠 LIVE kind riding the same 5-minute pass (no crontab line
+                     of its own); its served pass also carries
+                     `potential_items`, today's tracker docs read from
+                     `gajjala_potentials` (read_gajjala_potentials)
   tape_burst_highbeta / tape_burst_chartmaps
                      written here by orderflow.tape_burst_kinds.run_all
                      (2026-10-14), the 🎢 / 🗺️ kinds riding the
@@ -60,7 +65,7 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -102,8 +107,16 @@ GAJJALA_KIND = "gajjala_setup"
 # module-level leaf (test_tape_burst_kinds pins them equal to
 # tape_burst_kinds.KINDS).
 TAPE_KINDS = ("tape_burst_highbeta", "tape_burst_chartmaps")
+# 🧠 gajjala_potential (chart_maps/gajjala/potential.py, 2026-10-15). Ajay: "Give
+# me an alert all continous tracker on these specifically when I get alert I
+# will jump on to ride the wave" — a NEW kind, LIVE, owner-only (DECISIONS4). It
+# rides the 🚩 pass (`chart_maps.gajjala.run`, no crontab line of its own — the
+# key_level precedent) and records its own pass doc. Typed, not imported: this
+# file stays a module-level leaf (test_gajjala_potential_kind pins it equal to
+# constants.POTENTIAL_PUSH_KIND).
+GAJJALA_POTENTIAL_KIND = "gajjala_potential"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
-              GAJJALA_KIND) + TAPE_KINDS + DAILY_PASS_KINDS
+              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND) + TAPE_KINDS + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -124,6 +137,9 @@ CADENCE_SEC[MED_KIND] = 300
 # 🚩 its own line, minute field `1-56/5` → 300 s (pinned to the crontab by
 # test_alert_status, like the zone passes).
 CADENCE_SEC[GAJJALA_KIND] = 300
+# 🧠 rides that same `1-56/5` line (run.run_pass calls potential.run_pass) →
+# 300 s (the crontab source guard derives it from that line's minute field).
+CADENCE_SEC[GAJJALA_POTENTIAL_KIND] = 300
 # 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
 # guard derives it from that line's minute field).
 CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
@@ -446,12 +462,102 @@ def read_gajjala_shadow(coll=None, now: Optional[datetime] = None) -> list:
     return out
 
 
+def _gajjala_potentials_coll():
+    """The `gajjala_potentials` tracker through the gajjala store (its collection
+    name `store.POTENTIALS`, never retyped). A fresh store, the
+    `_gajjala_alerts_coll` pattern: a test run without Mongo must not cache a
+    None handle into the shared default. LAZY — only the store is touched
+    (test_alert_status pins the leaf)."""
+    try:
+        from chart_maps.gajjala import store as GS
+        return GS.GajjalaStore().coll(GS.POTENTIALS)
+    except Exception as exc:
+        log.warning("alert_status: no gajjala_potentials handle: %s", exc)
+        return None
+
+
+def _et_iso(x) -> Optional[str]:
+    """A datetime (UTC or ET) or an ISO string -> an ET ISO string; anything
+    unreadable -> None (never a guessed stamp)."""
+    if x is None or x == "":
+        return None
+    try:
+        if isinstance(x, str):
+            x = datetime.fromisoformat(x)
+        if not isinstance(x, datetime):
+            return None
+        if x.tzinfo is None:
+            x = x.replace(tzinfo=timezone.utc)  # the tracker stamps the pass clock in UTC
+        return x.astimezone(ET).isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+_POT_PUSH_STATES = ("pushed", "no_target", "failed", "claimed")
+
+
+def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
+    """🧠 Today's potentials, newest first sighting first (2026-10-15).
+
+    Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me
+    new potential is added everyday." and "Give me an alert all continous
+    tracker on these specifically when I get alert I will jump on to ride the
+    wave". The pass doc carries COUNTS only (the 🚩 precedent), so this lists
+    the tracker docs behind them — `gajjala_potentials`, written ONLY by
+    chart_maps.gajjala.potential.track() inside the 5-minute pass. Only docs of
+    the ET day of `now` (the session `date` the pass stamped): yesterday's
+    potentials never read as today's.
+
+    Each item: {date, symbol, setup, at (first_seen as ET iso), kind
+    (first_kind), text (doc.line — composed by potential.line, never
+    recomposed here), url (doc.url when an internal path, else None),
+    push_state ("pushed" | "no_target" | "failed" | "claimed" | None),
+    push_at (ET iso | None), held (the LAST `held` reason | None)}. A Mongo
+    read, nothing scanned; never raises — a dead tracker is []."""
+    now = now or datetime.now(ET)
+    et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
+    day = et.date().isoformat()
+    try:
+        if coll is None:
+            coll = _gajjala_potentials_coll()
+        if coll is None:
+            return []
+        docs = list(coll.find({"date": day}))
+    except Exception as exc:
+        log.warning("alert_status: gajjala potentials read failed: %s", exc)
+        return []
+    out = []
+    for d in docs:
+        if not isinstance(d, dict) or str(d.get("date") or "") != day:
+            continue
+        url = d.get("url")
+        if not (isinstance(url, str) and url.startswith("/") and not url.startswith("//")):
+            url = None
+        push = d.get("push") if isinstance(d.get("push"), dict) else {}
+        state = push.get("state") if push.get("state") in _POT_PUSH_STATES else None
+        held = d.get("held") if isinstance(d.get("held"), list) else []
+        last_held = held[-1] if held and isinstance(held[-1], dict) else {}
+        reason = last_held.get("reason")
+        text = d.get("line")
+        first_kind = d.get("first_kind")
+        out.append({"date": day, "symbol": str(d.get("symbol") or "").upper() or None,
+                    "setup": d.get("setup") or None, "at": _et_iso(d.get("first_seen")),
+                    "kind": first_kind if isinstance(first_kind, str) and first_kind else None,
+                    "text": text if isinstance(text, str) and text else None, "url": url,
+                    "push_state": state, "push_at": _et_iso(push.get("at")) if push else None,
+                    "held": reason if isinstance(reason, str) and reason else None})
+    out.sort(key=lambda r: (r["at"] or "", r["symbol"] or "", r["setup"] or ""), reverse=True)
+    return out
+
+
 def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] = None,
-                   gajjala_coll=None) -> dict:
+                   gajjala_coll=None, potential_coll=None) -> dict:
     """GET /alerts/status. Every input is injectable for tests; the route passes
     none. Never raises — a dead Mongo is three empty passes, not a 500.
     The 🚩 pass also carries `shadow_items` (read_gajjala_shadow) — today's
-    shadow A+ records, listed under its strip on the page."""
+    shadow A+ records, listed under its strip on the page. The 🧠 pass
+    (2026-10-15) carries `potential_items` (read_gajjala_potentials) — today's
+    tracker docs, listed under its strip."""
     from . import zone_edge as ZE                 # lazy: zone_edge's siblings import this module
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
@@ -470,6 +576,9 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         MED_KIND:            _with_cadence(MED_KIND, read_pass(MED_KIND, pass_coll)),
         GAJJALA_KIND:        dict(_with_cadence(GAJJALA_KIND, read_pass(GAJJALA_KIND, pass_coll)),
                                   shadow_items=read_gajjala_shadow(gajjala_coll, et)),
+        GAJJALA_POTENTIAL_KIND: dict(_with_cadence(GAJJALA_POTENTIAL_KIND,
+                                                   read_pass(GAJJALA_POTENTIAL_KIND, pass_coll)),
+                                     potential_items=read_gajjala_potentials(potential_coll, et)),
     }
     window = tape_window()
     for kind in TAPE_KINDS:
@@ -485,7 +594,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "TAPE_KINDS", "tape_window", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND", "TAPE_KINDS", "tape_window", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
+           "read_gajjala_potentials",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

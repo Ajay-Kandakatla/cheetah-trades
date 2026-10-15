@@ -254,3 +254,15 @@ def notify_gajjala_setup(*, owner: str, payload: dict) -> dict:
     GAJJALA_PUSH_MODE is "live" — in shadow the pass records and never gets here.
     UNMEASURED — every body ends "his setup, not a buy signal"; never a trade."""
     return sender.send_to_user(owner, payload, kind="gajjala_setup")
+
+
+def notify_gajjala_potential(*, owner: str, payload: dict) -> dict:
+    """🧠 gajjala_potential (chart_maps/gajjala/potential.py, 2026-10-15). Ajay:
+    "Give me an alert all continous tracker on these specifically when I get
+    alert I will jump on to ride the wave". DECISIONS4: a NEW kind, LIVE (not
+    shadow), owner-only. Owner-scoped (send_to_user) under its own pref kind, so
+    the closed-day drop, quiet hours and the /notifications toggle all apply at
+    the sender. The pass (potential.run_pass) calls it once per (date, symbol,
+    setup) — the tracker doc's claim is the dedupe. UNMEASURED — every body ends
+    "a potential, not an entry; GG enters on the reclaim of the highs"."""
+    return sender.send_to_user(owner, payload, kind="gajjala_potential")

@@ -55,10 +55,16 @@ describe('Notifications · 🚩 gajjala_setup', () => {
 
   it('the detail says ON FOR YOUR PHONE, SHADOW (nothing sent yet), and NOT MEASURED', () => {
     const d = gg()[0].detail;
-    for (const phrase of ['ON FOR YOUR PHONE', 'everyone else starts off', 'SHADOW FIRST', 'nothing is sent yet',
+    for (const phrase of ['ON FOR YOUR PHONE', 'everyone else starts off', 'SHADOW FIRST', 'no A+ is sent yet' /* WIDENED 2026-10-15 — W20: narrowed to A+, 🧠 rings live */,
       'shadow — not sent', 'NOT MEASURED', 'Not a recommendation']) {
       expect(d).toContain(phrase);
     }
+  });
+
+  it('NEGATIVE (2026-10-15 W20): the 🚩 detail never says nothing is sent — the 🧠 potential kind rings live', () => {
+    const d = gg()[0].detail;
+    expect(d).not.toContain('nothing is sent');
+    expect(d).not.toMatch(/nothing (rings|reaches|is sent)/i);
   });
 
   it('WHAT FIRES carries the windows and the once-a-day rule in words', () => {

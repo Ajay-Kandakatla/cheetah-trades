@@ -206,7 +206,8 @@ def test_the_contracts_parser_reads_the_real_set():
         "the Essentials preset contract demands price_alert: true from this read"
     # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; SHADOW first): 12 → 13.
     # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (his K4 "High-Beta tab names + all Chart Maps names"; owner-only, LIVE): 13 → 15.
-    assert len(parsed) == 15     # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set). WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
+    # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only): 15 → 16.
+    assert len(parsed) == 16     # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set). WIDENED 2026-09-29 — 🧬 med_catalyst ("…and add right setup and alerts"; spec: OFF in default_prefs, ON for the owner via the keep-set, the key_level_alert precedent; HIS CALL #1).
 
 
 def test_NEGATIVE_a_comment_above_the_definition_hijacks_the_parser():

@@ -71,6 +71,10 @@ def test_push_line_says_shadow_and_follows_the_constant(sec, monkeypatch):
     a = " ".join(sec["alerts"])
     assert GC.GAJJALA_PUSH_MODE == "shadow"
     assert "SHADOW" in a and "shadow — not sent" in a and "%d-session" % GC.STUDY_SESSIONS in a
+    # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …";
+    # LIVE, owner-only): the A+ shadow line is NARROWED to A+ (BUILD_SPEC4 W20) — a live 🧠 line sits beside it.
+    assert "no A+ reaches a phone until" in a
+    assert not re.search(r"nothing (rings|reaches|is sent)", a, re.I), "NEGATIVE: the 🧠 kind rings live"
     assert "09:45–16:00 and 16:00–20:00 ET" in a and "never the first %d minutes" % GC.NO_TRADE_AFTER_OPEN_MIN in a
     monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")
     live = " ".join(RI._gajjala_section()["alerts"])
@@ -163,3 +167,78 @@ def test_the_section_survives_a_broken_constant(monkeypatch):
     monkeypatch.setattr(RI, "_gajjala_section", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     secs = RI.sections()
     assert "gajjala" not in secs and "fallen" in secs and "short_interest" in secs
+
+
+# ── 🧠 gajjala_potential (2026-10-15, BUILD_SPEC4 W16 / W20) ───────────────────────────────────────────────────
+# Ajay 2026-10-15: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
+# ride the wave". The two lines come from the ONE engine (potential.rules_lines()); rules_info never retypes them.
+
+def _pot_lines(sec: dict) -> tuple:
+    a = [x for x in sec["alerts"] if x.startswith("🧠")]
+    b = [x for x in sec["alerts"] if GC.POTENTIAL_PUSH_KIND in x]
+    assert len(a) == 1 and len(b) == 1, sec["alerts"]
+    return a[0], b[0]
+
+
+def test_potential_lines_ride_the_alerts_and_the_picks_stay_eight(sec):
+    from chart_maps.gajjala import potential as PT
+    assert len(sec["picks"]) == 8                                    # the 🧠 lines never take a pick slot
+    assert sec["alerts"][1:] == [str(x) for x in PT.rules_lines()]   # built by the engine, not retyped
+    a, b = _pot_lines(sec)
+    assert "🧠" in a and GC.POTENTIAL_PUSH_KIND in b
+    assert sec["alerts"][0].startswith("📲 %s" % GC.PUSH_KIND)       # the A+ line stays first
+
+
+def test_potential_defaults_line_names_three_cheetah_defaults_never_no_rule(sec):
+    a, _b = _pot_lines(sec)
+    assert a.count("Cheetah default, not his") == 3
+    assert "No rule of its own" not in " ".join(sec["alerts"])
+
+
+def test_NEGATIVE_potential_lines_never_say_shadow_in_either_mode(sec, monkeypatch):
+    for line in _pot_lines(sec):
+        assert "SHADOW" not in line and "shadow" not in line.lower()
+    monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")
+    live = RI._gajjala_section()
+    assert "SHADOW" not in " ".join(live["alerts"])
+    for line in _pot_lines(live):
+        assert "SHADOW" not in line
+
+
+def test_mutating_the_mute_moves_the_potential_line(monkeypatch):
+    before = _pot_lines(RI._gajjala_section())[1]
+    assert "09:30–09:50" not in before and "09:30–09:45" in before
+    monkeypatch.setattr(GC, "NO_TRADE_AFTER_OPEN_MIN", 20)
+    after = _pot_lines(RI._gajjala_section())[1]
+    assert "09:30–09:50" in after and "09:30–09:45" not in after
+
+
+def test_the_fresh_print_gate_is_visible_and_flips_with_its_constant(monkeypatch):
+    a = _pot_lines(RI._gajjala_section())[0]
+    assert GC.POTENTIAL_FRESH_TAPE is True and "does not wait" not in a
+    monkeypatch.setattr(GC, "POTENTIAL_FRESH_TAPE", False)
+    flipped = _pot_lines(RI._gajjala_section())[0]
+    assert "does not wait" in flipped and flipped.count("Cheetah default, not his") == 3
+
+
+def test_NEGATIVE_potential_lines_carry_no_forecast_word(sec):
+    from chart_maps.high_beta_tab import FORBIDDEN_WORDS          # the house forecast list (test-only import)
+    for line in _pot_lines(sec):
+        low = line.lower()
+        assert not [w for w in FORBIDDEN_WORDS if w in low], line
+        assert not re.search("b" + "ounc", line, re.I)
+
+
+def test_NEGATIVE_a_missing_potential_module_leaves_only_the_a_plus_line(monkeypatch):
+    """The import is LAZY and guarded: no potential module → no 🧠 lines, the section still renders."""
+    import builtins
+    real = builtins.__import__
+
+    def fake(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "chart_maps.gajjala" and fromlist and "potential" in fromlist:
+            raise ImportError("no potential module")
+        return real(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", fake)
+    sec = RI._gajjala_section()
+    assert len(sec["alerts"]) == 1 and sec["alerts"][0].startswith("📲 %s" % GC.PUSH_KIND)

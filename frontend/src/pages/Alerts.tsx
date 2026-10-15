@@ -71,6 +71,9 @@ export type PassStatus = {
   /** 🚩 gajjala_setup only (2026-10-13 E3): today's shadow A+ records, newest
    *  first (backend alert_status.read_gajjala_shadow). An older API omits it. */
   shadow_items?: GgShadowItem[] | null;
+  /** 🧠 gajjala_potential only (2026-10-15): today's tracker docs, newest first
+   *  (backend alert_status.read_gajjala_potentials). An older API omits it. */
+  potential_items?: GgPotentialItem[] | null;
   /** 🎢 🗺️ the two tape-burst passes only (2026-10-14): the clock their cron
    *  arm self-gates on, "HH:MM" ET, built from trade_flash.WATCH_OPEN_ET /
    *  WATCH_CLOSE_ET. An older API omits it → the pass is never judged stale. */
@@ -83,6 +86,15 @@ export type GgShadowItem = {
   date: string | null; symbol: string | null; setup?: string | null; at?: string | null;
   entry_bar_t?: string | null; frame?: string | null; trigger?: number | null; stop?: number | null;
   risk_pct?: number | null; text?: string | null; url?: string | null; note?: string | null;
+};
+/** One 🧠 potential as the tracker recorded it (alert_status PotItem). `text`
+ *  is the push's own line (potential.line) — printed, never recomposed; `url`
+ *  the tab deep link; `at` the first sighting (ET ISO); `push_state` what the
+ *  claim settled to (null = never claimed); `held` the LAST hold reason. */
+export type GgPotentialItem = {
+  date: string | null; symbol: string | null; setup?: string | null; at?: string | null;
+  kind?: string | null; text?: string | null; url?: string | null;
+  push_state?: string | null; push_at?: string | null; held?: string | null;
 };
 export type AlertsGate = {
   min_room_pct: number;
@@ -127,6 +139,13 @@ const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
    * (04:01–20:01 ET on trading days); backend CADENCE_SEC says 300. It ships in
    * SHADOW: the row says "shadow — not sent" (gajjalaChipText below). */
   { key: 'gajjala_setup',     label: '🚩 Gajjala A+ setups',       fallbackCadenceSec: 300 },
+  /* 🧠 gajjala_potential (2026-10-15). Ajay: "Give me an alert all continous
+   * tracker on these specifically when I get alert I will jump on to ride the
+   * wave". It rides the 🚩 pass's 5-minute line (chart_maps/gajjala/run.py →
+   * potential.run_pass) and records its OWN pass doc — the key_level precedent:
+   * rides another pass, own row, so the header reads "all 7 passes". LIVE: this
+   * row never says shadow (ggPotentialChipText below). */
+  { key: 'gajjala_potential', label: '🧠 Gajjala potentials',      fallbackCadenceSec: 300 },
 ];
 
 /* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
@@ -309,7 +328,8 @@ function skipChipText(key: string, n: number, gate: AlertsStatus['gate']): strin
  * bar closed more than one pass ago), or one already recorded today. */
 function gajjalaChipText(key: string, n: number): string | null {
   switch (key) {
-    case 'shadow_mode':          return '🚩 shadow — not sent (nothing reaches your phone yet)';
+    /* 2026-10-15 W20: narrowed to A+ — the 🧠 row right under it rings live. */
+    case 'shadow_mode':          return '🚩 shadow — not sent (no A+ reaches your phone yet)';
     case 'shadow':               return `🚩 shadow — not sent: ${n} A+ recorded this pass`;
     case 'shadow_session':       return `🚩 shadow — not sent: ${n} A+ recorded today`;
     case 'suppressed_premarket': return `${n} A+ held: pre-market`;
@@ -344,6 +364,47 @@ export function tapeBurstChipText(key: string, n: number): string | null {
 }
 const TAPE_CHIP_KEYS = ['dup_trade_flash', 'at_zone', 'dup_kind', 'no_tape', 'under_floor', 'skipped_budget', 'tabs_old'];
 const TAPE_HIDDEN_KEYS = ['dup_same', 'dup_earlier'];
+/* 🧠 gajjala_potential counters (potential.COUNT_KEYS, 2026-10-15) → words
+ * (BUILD_SPEC4 W19). The kind is LIVE: no word here says shadow. `pushed` is a
+ * send that reached at least one device (sent > 0) — the headline says
+ * "pushes delivered"; a send no device took is its own `no_target` chip.
+ * `claimed_before` counts only a re-read doc that already carries a push.
+ * `potential` (= armed + building) and `dry` stay in the hover title. */
+export function ggPotentialChipText(key: string, n: number): string | null {
+  switch (key) {
+    case 'tracked_today':     return `🧠 ${n} potentials today`;
+    case 'new':               return `${n} new this pass`;
+    case 'armed':             return `${n} trigger armed`;
+    case 'building':          return `${n} building`;
+    case 'muted':             return `${n} held: his first 15 minutes`;
+    case 'outside_hours':     return `${n} held: outside the push hours`;
+    case 'closed_day':        return `${n} held: market closed`;
+    case 'stale_tape':        return `${n} waiting: no print in the last bar`;
+    /* AMENDMENTS4 D9 (a Cheetah default, not his): a potential first seen by
+     * a join pass is tracked, never rung. The counter is potential.COUNT_KEYS'
+     * `joined` (the held REASON is `joined_midsession`, a row word below). */
+    case 'joined':            return `${n} joined mid-session: tracking, not ringing`;
+    case 'claimed_before':    return `${n} already claimed this session`;
+    case 'no_target':         return `${n} no device took it (toggle off, quiet hours or none registered)`;
+    case 'failed':            return `${n} send failed`;
+    case 'graveyard':         return `${n} moved to the graveyard`;
+    default: return null;
+  }
+}
+export const GAJJALA_POTENTIAL_KEYS = ['tracked_today', 'new', 'armed', 'building', 'muted', 'outside_hours',
+                                       'closed_day', 'stale_tape', 'joined', 'claimed_before',
+                                       'no_target', 'failed', 'graveyard'];
+/* Every `held` reason of backend potential.HELD_WORDS (RULE_HELD + STORE_HELD)
+ * plus D9's `joined_midsession` → the 🧠 list row's status word. A reason this
+ * page does not know still prints, as "held: <its words>" — never dropped. */
+export const GG_POTENTIAL_HELD_ROW: Record<string, string> = {
+  muted:             'held: his first 15 minutes',
+  outside_hours:     'held: outside the push hours',
+  closed_day:        'held: market closed',
+  stale_tape:        'held: no print in the last 5-minute bar',
+  claim_error:       'held: store error — retrying next pass',
+  joined_midsession: 'joined mid-session: tracking, not ringing',
+};
 const GAJJALA_KEYS = ['shadow_mode', 'shadow', 'shadow_session', 'suppressed_premarket', 'suppressed_first15',
                       'suppressed_window', 'suppressed_closed', 'suppressed_halt', 'suppressed_exhausted', 'late',
                       'claimed_before', 'not_aplus_variant'];
@@ -370,6 +431,13 @@ const HEADLINE_TAPE: { key: string; label: string; title?: string }[] = [
   { key: 'candidates', label: 'candidates' },
   { key: 'pushed', label: 'pushes delivered',
     title: 'Pushes that reached at least one device. A push that reached none (phone muted or not registered) is still listed below with every burst.' },
+];
+
+/* 🧠 On the potential row `pushed` is a send that reached a device (§3.6:
+ * sent > 0 → pushed; total_targets 0 → no_target, its own chip). */
+const HEADLINE_POTENTIAL: { key: string; label: string; title?: string }[] = [
+  { key: 'pushed', label: 'pushes delivered',
+    title: 'Pushes that reached at least one device. A push no device took (toggle off, quiet hours or none registered) has its own chip; every potential is listed below.' },
 ];
 
 /* No cap floor in the fallback on purpose: the figure is served, never typed. */
@@ -418,7 +486,7 @@ const DAY_CHOICES: { days: number; label: string; window: string; sinceOffset: n
   { days: 5,  label: '5 days',    window: 'in the last 5 days',  sinceOffset: 4 },
   { days: 30, label: '30 days',   window: 'in the last 30 days', sinceOffset: 29 },
 ];
-export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
+export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
 const ALL = 'all';
 /** Typing "AVGO" is one query, not four (review 2026-09-05). Enter / blur commit at once. */
 export const TICKER_DEBOUNCE_MS = 300;
@@ -593,16 +661,19 @@ function PassStrip({ pass, meta, status, gate, today }: {
     tone = MUTED;
     if (win.open && win.close) when = `${when} — outside its ${win.open}–${win.close} ET window`;
   }
-  const headline = (tape ? HEADLINE_TAPE : HEADLINE)
+  const ggp = meta.key === 'gajjala_potential';
+  const headlineDefs = tape ? HEADLINE_TAPE : ggp ? HEADLINE_POTENTIAL : HEADLINE;
+  const headline = headlineDefs
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
+  const headlineKeys = headlineDefs.map((h) => h.key);
   const gg = meta.key === 'gajjala_setup';
-  const chipKeys = gg ? GAJJALA_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
+  const chipKeys = gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
     .filter(([, n]) => n > 0);
   const extra = Object.entries(counts)
-    .filter(([k, v]) => v != null && !HEADLINE_KEYS.includes(k) && !chipKeys.includes(k)
+    .filter(([k, v]) => v != null && !headlineKeys.includes(k) && !chipKeys.includes(k)
       && !(tape && TAPE_HIDDEN_KEYS.includes(k)))
     .map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`)
     .join(' · ');
@@ -618,11 +689,13 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
       {skips.map(([k, n]) => (
-        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : ggp ? ggPotentialChipText(k, n) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
       ))}
     </div>
     {/* 🚩 only: the per-item shadow list sits under its own strip. */}
     {gg ? <GajjalaShadowList items={pass?.shadow_items} today={today} /> : null}
+    {/* 🧠 only: today's potentials, each with what its push did. */}
+    {ggp ? <GgPotentialList items={pass?.potential_items} today={today} /> : null}
     </>
   );
 }
@@ -671,6 +744,57 @@ export function GajjalaShadowList({ items, today }: { items: GgShadowItem[] | nu
           <span className="mono" style={{ color: GOLD, fontWeight: 700, whiteSpace: 'nowrap' }}>{ggShadowTime(it)}</span>
           <GgShadowLine it={it} />
           <span className="mono" style={SKIP_CHIP}>{(typeof it.note === 'string' && it.note.trim()) || GG_SHADOW_NOTE_FALLBACK}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* 🧠 Today's potentials (2026-10-15). Ajay: "In all the sub tab and add a
+ * track and alert to show me new potential is added everyday." The strip above
+ * counts; this lists each tracker doc as alert_status serves it: first-seen
+ * time (ET) · the push's own line (symbol · setup · kind · trigger · stop) ·
+ * what its push did. The symbol links to the tab's tile (doc.url, only a
+ * same-site "/" path, never "//"). Only rows of `today` (the ET day) — the
+ * server serves today only; this is the second lock. Nothing here sends.
+ * Never "shadow": the kind rings live. */
+export function ggPotentialRowWord(it: GgPotentialItem): string {
+  switch (it.push_state) {
+    case 'pushed':    return '📲 sent';
+    case 'no_target': return 'no device took it';
+    case 'failed':    return 'send failed';
+    case 'claimed':   return 'sending';
+    default: break;
+  }
+  const r = typeof it.held === 'string' ? it.held.trim() : '';
+  if (r) return GG_POTENTIAL_HELD_ROW[r] ?? `held: ${r.replace(/_/g, ' ')}`;
+  return 'not sent yet';
+}
+
+function GgPotentialLine({ it }: { it: GgPotentialItem }) {
+  const sym = (it.symbol || '').trim();
+  const text = (typeof it.text === 'string' && it.text.trim()) ? it.text : sym;
+  const url = typeof it.url === 'string' && it.url.startsWith('/') && !it.url.startsWith('//') ? it.url : null;
+  if (!sym || !url) return <span>{text}</span>;
+  const link = <Link to={url} className="tk-link alert-tk" data-testid={`gg-pot-tk-${sym}`}>{sym}</Link>;
+  const parts = splitAtSymbol(text, sym);
+  return <span>{parts ? <>{parts[0]}{link}{parts[2]}</> : <>{link}{' '}{text}</>}</span>;
+}
+
+export function GgPotentialList({ items, today }: { items: GgPotentialItem[] | null | undefined; today: string }) {
+  const rows = (Array.isArray(items) ? items : []).filter((it) => it && it.date === today);
+  if (!rows.length) return null;
+  return (
+    <div data-testid="gg-pot-list" style={{ margin: '0 0 0.35rem 0.6rem', paddingLeft: '0.6rem', borderLeft: '2px solid rgba(212,175,55,0.3)' }}>
+      <div className="mono" style={{ fontSize: '0.62rem', color: DIM, marginBottom: 2 }}>
+        🧠 Potentials today · {rows.length}
+      </div>
+      {rows.map((it, i) => (
+        <div key={`${it.symbol}-${it.setup}-${i}`} data-testid="gg-pot-row"
+             style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.76rem', lineHeight: 1.45 }}>
+          <span className="mono" style={{ color: GOLD, fontWeight: 700, whiteSpace: 'nowrap' }}>{etFromIso(it.at) || '—'}</span>
+          <GgPotentialLine it={it} />
+          <span className="mono" style={it.push_state === 'pushed' ? SMALL_CHIP : SKIP_CHIP}>{ggPotentialRowWord(it)}</span>
         </div>
       ))}
     </div>

@@ -7371,6 +7371,230 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🧠 gajjala_potential (2026-10-15): in every registry, owner keep-set ON + default_prefs False, MARKET kind, LIVE (never shadow), /alerts row after 🚩, times = data.py + NO_TRADE_AFTER_OPEN_MIN + the gajjala.run step, Cheetah defaults said iff True, the A+ shadow copy narrowed to A+, ✨ entry quotes all three asks, never the b-word',
+    file: 'src/lib/alertKinds.ts',
+    // Ajay 2026-10-15, three messages: "In Gajjalas setup I wanna find
+    // potential stocks this shows me what has happened I am trying to setup for
+    // this tab to act like Gajjalas brain. So create a potential category in
+    // this section.", "In all the sub tab and add a track and alert to show me
+    // new potential is added everyday." and "Give me an alert all continous
+    // tracker on these specifically when I get alert I will jump on to ride the
+    // wave". He ACTS on this push (real money): a kind missing from a registry
+    // sends to zero devices in silence (memory cheetah_push_silent_drops); a
+    // time typed on a surface drifts from the clock that gates it; and once 🧠
+    // rings live, any A+ sentence that says "nothing rings / reaches / is sent"
+    // tells him the opposite of what his phone does (BUILD_SPEC4 Revision 1,
+    // finding 1). The tape-burst block above is the template (a LIVE owner-only
+    // kind). UNMEASURED — a potential, not an entry.
+    checks: (src) => {
+      const errs = [];
+      const K = 'gajjala_potential';
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const NOTHING = /nothing (rings|reaches|is sent)/i;
+      const B_WORD = /boun|fake/i;
+      const HIS = [
+        'In Gajjalas setup I wanna find potential stocks this shows me what has happened I am trying to setup for this tab to act like Gajjalas brain. So create a potential category in this section.',
+        'In all the sub tab and add a track and alert to show me new potential is added everyday.',
+        'Give me an alert all continous tracker on these specifically when I get alert I will jump on to ride the wave',
+      ];
+      const pyBody = (pySrc, def) => {
+        const at = pySrc.indexOf(`\ndef ${def}(`);
+        if (at < 0) return null;
+        const end = pySrc.indexOf('\ndef ', at + 5);
+        return pySrc.slice(at, end < 0 ? undefined : end).replace(/#[^\n]*/g, '');
+      };
+      const tsNoComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+
+      // ── the clock the copy prints, read from the engines ──
+      const prefsTs = read('src/hooks/useNotificationPrefs.ts');
+      const subs = read('../backend/push/subs.py');
+      const keep = keepSet(subs);
+      const gate = read('../backend/market_hours/gate.py');
+      let gc = '';
+      try { gc = read('../backend/chart_maps/gajjala/constants.py'); } catch { errs.push('backend/chart_maps/gajjala/constants.py is unreadable'); }
+      const data = read('../backend/daytrading/data.py');
+      const hm = (name) => { const m = new RegExp(`^${name} = dtime\\((\\d+),\\s*(\\d+)\\)`, 'm').exec(data); return m ? [Number(m[1]), Number(m[2])] : null; };
+      const fmt = ([h, m]) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      const pre = hm('ET_PREMARKET_OPEN'), rthT = hm('ET_RTH_OPEN'), ah = hm('ET_AFTERHOURS_CLOSE');
+      if (!pre || !rthT || !ah) errs.push('daytrading/data.py lost ET_PREMARKET_OPEN / ET_RTH_OPEN / ET_AFTERHOURS_CLOSE = dtime(h, m)');
+      const nm = /^NO_TRADE_AFTER_OPEN_MIN = (\d+)/m.exec(gc);
+      const N = nm ? Number(nm[1]) : null;
+      if (gc && N == null) errs.push('constants.py lost NO_TRADE_AFTER_OPEN_MIN = <int>');
+      const open = pre ? fmt(pre) : null, close = ah ? fmt(ah) : null, rth = rthT ? fmt(rthT) : null;
+      const mute = rthT && N != null ? fmt([Math.floor((rthT[0] * 60 + rthT[1] + N) / 60), (rthT[0] * 60 + rthT[1] + N) % 60]) : null;
+      const runLines = cronCommands(read('../backend/crontab')).filter((l) => /chart_maps\.gajjala\.run\b/.test(l));
+      if (runLines.length !== 1) errs.push(`the crontab must carry exactly one chart_maps.gajjala.run line (found ${runLines.length}) — the 🧠 pushes ride it`);
+      const stepM = runLines.length === 1 ? /^\S*\/(\d+)\s/.exec(runLines[0].trim()) : null;
+      const step = stepM ? Number(stepM[1]) : null;
+      if (runLines.length === 1 && step == null) errs.push('the chart_maps.gajjala.run crontab line has no minute step (*/N or a-b/N)');
+      if (cronCommands(read('../backend/crontab')).some((l) => /potential/i.test(l))) errs.push('the crontab names a potential job — 🧠 rides the gajjala.run pass, NO new crontab line (a deploy does not ship the crontab)');
+      const TIMES = [open, close, rth, mute].filter(Boolean);
+      const timeChecks = (where, text) => {
+        const out = [];
+        if (open && close && !text.includes(`${open}–${close} ET`)) out.push(`${where} must print "${open}–${close} ET" (data.py ET_PREMARKET_OPEN / ET_AFTERHOURS_CLOSE)`);
+        if (rth && mute && !text.includes(`${rth}–${mute}`)) out.push(`${where} must print "${rth}–${mute}" (data.py ET_RTH_OPEN + constants.NO_TRADE_AFTER_OPEN_MIN)`);
+        if (N != null && !text.includes(`his first ${N} minutes`)) out.push(`${where} must say "his first ${N} minutes" (constants.NO_TRADE_AFTER_OPEN_MIN)`);
+        if (step != null && !new RegExp(`[Ee]very ${step} minutes`).test(text)) out.push(`${where} must say "every ${step} minutes" — the gajjala.run crontab step`);
+        for (const m of text.matchAll(/\b(\d\d:\d\d)\b/g)) if (TIMES.length === 4 && !TIMES.includes(m[1])) out.push(`${where} prints "${m[1]}" — not one of ${TIMES.join(' / ')} (data.py + NO_TRADE_AFTER_OPEN_MIN)`);
+        for (const m of text.matchAll(/[Ee]very (\d+) minutes/g)) if (step != null && Number(m[1]) !== step) out.push(`${where} says "${m[0]}" — the gajjala.run crontab step is ${step}`);
+        for (const m of text.matchAll(/first (\d+) minutes/g)) if (N != null && Number(m[1]) !== N) out.push(`${where} says "${m[0]}" — constants.NO_TRADE_AFTER_OPEN_MIN is ${N}`);
+        return out;
+      };
+      let forbidden = [];
+      try {
+        const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py'));
+        forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+      } catch { /* reported below */ }
+      if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…) — the house forecast list (AMENDMENTS4 D6)');
+      const forecastChecks = (where, text) => forbidden.filter((w) => text.toLowerCase().includes(w.toLowerCase())).map((w) => `${where} says "${w}" (high_beta_tab.FORBIDDEN_WORDS — no forecast words)`);
+
+      // ── constants.py ──
+      if (gc && !/^POTENTIAL_PUSH_KIND = "gajjala_potential"/m.test(gc)) errs.push('constants.py must name POTENTIAL_PUSH_KIND = "gajjala_potential"');
+      const subsPy = /^SUBS = \(([\s\S]*?)\)\n/m.exec(gc);
+      const py = subsPy ? [...subsPy[1].matchAll(/\(\s*"([a-z_]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g)].map((m) => [m[1], m[2], m[3]]) : [];
+      if (gc && JSON.stringify(py[py.length - 1] || null) !== JSON.stringify(['potential', '🧠', 'Potential'])) errs.push('constants.SUBS must END with ("potential", "🧠", "Potential") — nothing else on the tab moves (HIS CALL P8)');
+      const cd = /^CHEETAH_DEFAULTS = \(([^)]*)\)/m.exec(gc);
+      const DEFAULTS = ['POTENTIAL_NEEDS_BASE', 'POTENTIAL_FRESH_TAPE', 'POTENTIAL_DEFER_REFUSED'];
+      for (const d of DEFAULTS) if (gc && !(cd && new RegExp(`"${d}"`).test(cd[1]))) errs.push(`constants.CHEETAH_DEFAULTS must carry "${d}" — a Cheetah default, not his (Revision 1, finding 2)`);
+      const flag = (name) => { const m = new RegExp(`^${name} = (True|False)\\b`, 'm').exec(gc); return m ? m[1] === 'True' : null; };
+      const FLAGS = Object.fromEntries(DEFAULTS.map((d) => [d, flag(d)]));
+      for (const d of DEFAULTS) if (gc && FLAGS[d] == null) errs.push(`constants.py lost ${d} = True | False`);
+
+      // ── registries ──
+      const def = (new RegExp(`^\\s*${K}:\\s*\\{[^}]*\\}`, 'm').exec(src) || [''])[0];
+      if (!def) errs.push(`alertKinds.ts must register ${K} — else the bell renders a raw id`);
+      else {
+        if (!/group: 'trading'/.test(def)) errs.push(`alertKinds.ts must put ${K} in the 'trading' group`);
+        if (/shadow|boun/i.test(def.replace(K, ''))) errs.push(`the ${K} label says shadow / the b-word`);
+      }
+      if (!new RegExp(`\\b${K}\\?: boolean`).test(prefsTs)) errs.push(`NotificationPrefs (hooks/useNotificationPrefs.ts) must carry ${K}?: boolean`);
+      const dm = new RegExp(`["']${K}["']\\s*:\\s*(True|False)`).exec(subs);
+      if (!dm) errs.push(`push/subs.py default_prefs must list "${K}"`);
+      else if (dm[1] !== 'False') errs.push(`${K} must be False in push/subs.py default_prefs — owner-only, everyone else starts off`);
+      if (!keep.includes(K)) errs.push(`${K} must be in push/subs.OWNER_KEEP_SET — ON for his devices (DECISIONS4)`);
+      if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes(K)) errs.push(`market_hours/gate.py must treat ${K} as a MARKET kind (silent on closed days)`);
+      if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes(K)) errs.push(`${K} must NOT be a PERSONAL kind`);
+      const hooks = read('../backend/push/hooks.py');
+      if (!/def notify_gajjala_potential\(/.test(hooks) || !new RegExp(`kind="${K}"`).test(hooks)) errs.push(`push/hooks.py must carry notify_gajjala_potential → send_to_user(…, kind="${K}")`);
+      const itemBlock = (/^ITEM_URL_BY_KIND = \{([\s\S]*?)\n\}/m.exec(read('../backend/push/recent.py')) || [])[1] || '';
+      const iu = new RegExp(`["']${K}["']\\s*:\\s*["']([^"']+)["']`).exec(itemBlock);
+      if (!iu) errs.push(`push/recent.ITEM_URL_BY_KIND must carry ${K} — every ticker of a push is its own link on /alerts`);
+      else if (iu[1] !== '/chart-maps?tab=gajjala&focus={sym}') errs.push(`push/recent.ITEM_URL_BY_KIND["${K}"] must be /chart-maps?tab=gajjala&focus={sym} (App.tsx has only /chart-maps), got ${iu[1]}`);
+      let status = '';
+      try { status = read('../backend/supply_demand/alert_status.py'); } catch { errs.push('backend/supply_demand/alert_status.py is unreadable'); }
+      if (status && !new RegExp(`["']${K}["']`).test(status)) errs.push(`supply_demand/alert_status.py must name ${K} (its own /alerts pass row)`);
+
+      // ── /alerts ──
+      const alerts = read('src/pages/Alerts.tsx');
+      const passesBlock = (/const PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      const passKeys = [...passesBlock.matchAll(/key: '([a-z_]+)'/g)].map((m) => m[1]);
+      if (!passKeys.includes(K)) errs.push(`Alerts.tsx PASSES must carry key: '${K}'`);
+      else if (passKeys.indexOf(K) !== passKeys.indexOf('gajjala_setup') + 1) errs.push(`Alerts.tsx PASSES must list '${K}' right after 'gajjala_setup'`);
+      const chips = ((/KIND_CHIPS: string\[\] = \[([^\]]*)\]/.exec(alerts) || [])[1] || '').match(/'[a-z_]+'/g) || [];
+      const ci = chips.indexOf(`'${K}'`);
+      if (ci < 0) errs.push(`Alerts.tsx KIND_CHIPS must carry '${K}'`);
+      else if (ci < chips.indexOf("'tape_burst_highbeta'") || ci < chips.indexOf("'tape_burst_chartmaps'")) errs.push(`Alerts.tsx KIND_CHIPS must list '${K}' AFTER the two tape kinds (AMENDMENTS4 D4)`);
+      const potChip = (/export function ggPotentialChipText[\s\S]*?\n\}/.exec(alerts) || [''])[0];
+      if (!potChip) errs.push('Alerts.tsx lost ggPotentialChipText — the 🧠 counters would render as raw keys');
+      if (/shadow|boun/i.test(tsNoComments(potChip))) errs.push('ggPotentialChipText says shadow / the b-word — the kind rings live');
+      let pt = '';
+      try { pt = read('../backend/chart_maps/gajjala/potential.py'); } catch { errs.push('backend/chart_maps/gajjala/potential.py is unreadable'); }
+      const hwAt = pt.search(/^HELD_WORDS = \{/m);
+      const hwEnd = hwAt < 0 ? -1 : pt.search(/^RULE_HELD = /m);
+      const heldKeys = hwAt < 0 || hwEnd < hwAt ? [] : [...pt.slice(hwAt, hwEnd).matchAll(/"([a-z_]+)"\s*:/g)].map((m) => m[1]);
+      if (pt && !heldKeys.length) errs.push('potential.py lost HELD_WORDS = {…} (followed by RULE_HELD)');
+      const rowMap = (/export const GG_POTENTIAL_HELD_ROW[^=]*=\s*\{([\s\S]*?)\n\};/.exec(alerts) || [])[1] || '';
+      const rowKeys = [...rowMap.matchAll(/^\s*([a-z_]+):\s*'/gm)].map((m) => m[1]);
+      for (const k of heldKeys) if (!rowKeys.includes(k)) errs.push(`Alerts.tsx GG_POTENTIAL_HELD_ROW must word potential.HELD_WORDS["${k}"] — a held 🧠 row would print a raw reason`);
+
+      // ── Notifications ──
+      const notif = read('src/pages/Notifications.tsx');
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      if (!new RegExp(`${K}:\\s*true`).test(ess)) errs.push(`Essentials must carry ${K}: true — it is in OWNER_KEEP_SET`);
+      const nmE = notif.match(new RegExp(`key: '${K}'[\\s\\S]*?' \\},\\n`));
+      if (!nmE) errs.push(`${K} must be listed on the Notifications page — a kind the page cannot show cannot be muted`);
+      else {
+        const d = unesc(nmE[0]);
+        const where = `the ${K} Notifications entry`;
+        for (const need of ['ON FOR YOUR PHONE', 'rings live', 'UNMEASURED', HIS[2]]) if (!d.includes(need)) errs.push(`${where} must say "${need.slice(0, 60)}"`);
+        if (/shadow/i.test(d)) errs.push(`${where} says "shadow" — the kind rings live (A+ are "recorded under 🚩, never sent")`);
+        if (/OFF BY DEFAULT/.test(d)) errs.push(`${where} says OFF BY DEFAULT while the keep-set carries it`);
+        if (B_WORD.test(d)) errs.push(`${where} says the b-word / "fake"`);
+        if (/potential to\b/i.test(d)) errs.push(`${where} says "potential to" — the copy says "a potential"`);
+        errs.push(...timeChecks(where, d), ...forecastChecks(where, d));
+        const SENT = {
+          POTENTIAL_NEEDS_BASE: /needing at least one sideways bar[^.]*/,
+          POTENTIAL_DEFER_REFUSED: /rings on the next pass if it is still a potential[^.;]*/,
+          POTENTIAL_FRESH_TAPE: /waits for its next print[^.]*/,
+        };
+        for (const [c, re] of Object.entries(SENT)) {
+          const m = re.exec(d);
+          if (FLAGS[c] === true && !m) errs.push(`${c} is True — ${where} must carry its sentence (${re.source.slice(0, 40)}…)`);
+          if (FLAGS[c] === false && m) errs.push(`${c} is False — ${where} still carries its sentence "${m[0].slice(0, 50)}…"`);
+          if (m && !m[0].includes('Cheetah default, not his')) errs.push(`${where}: the ${c} sentence must carry "Cheetah default, not his"`);
+        }
+      }
+
+      // ── the tab ──
+      const board = read('src/components/GajjalaBoard.tsx');
+      for (const id of ['gg-potential', 'gg-track']) if (!new RegExp(`data-testid="${id}"`).test(board)) errs.push(`GajjalaBoard must mount data-testid="${id}"`);
+
+      // ── ✨ entry ──
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-gajjala-potential-2026-10-15'");
+      if (idAt < 0) errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-gajjala-potential-2026-10-15'");
+      else {
+        const entry = unesc(nf.slice(idAt, nf.indexOf("' },", idAt) + 4));
+        const where = 'the 🧠 ✨ entry';
+        if (!entry.includes("route: '/chart-maps?tab=gajjala&sub=potential'")) errs.push(`${where} must route to '/chart-maps?tab=gajjala&sub=potential'`);
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`${where} must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (!entry.includes('UNMEASURED')) errs.push(`${where} must say UNMEASURED`);
+        if (!/A\+[^.]*shadow/.test(entry)) errs.push(`${where} must say the A+ alerts stay in shadow`);
+        if (Object.values(FLAGS).some((v) => v === true) && !entry.includes('Cheetah defaults, not his')) errs.push(`${where} must say the POTENTIAL_* conditions are Cheetah defaults, not his`);
+        if (B_WORD.test(entry)) errs.push(`${where} says the b-word / "fake"`);
+        if (NOTHING.test(entry)) errs.push(`${where} says nothing rings / reaches / is sent — 🧠 rings live`);
+        errs.push(...timeChecks(where, entry), ...forecastChecks(where, entry));
+      }
+
+      // ── Revision 1: no A+ sentence may say NOTHING rings while 🧠 rings live ──
+      if (keep.includes(K)) {
+        const cm = read('src/lib/chartMaps.ts');
+        const meta = /\n  gajjala: \{\n    label: "([^"]*)",\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(cm);
+        if (!meta) errs.push('TAB_META.gajjala (label + blurb) is missing');
+        else {
+          const blurb = unesc(meta[2]);
+          const where = 'the TAB_META.gajjala blurb';
+          if (NOTHING.test(blurb)) errs.push(`${where} says "${NOTHING.exec(blurb)[0]}" — 🧠 potentials ring his phone live (W21: "no A+ rings a phone")`);
+          if (!blurb.includes('🧠 Potential sub-tab')) errs.push(`${where} must name the 🧠 Potential sub-tab`);
+          if (!/rings your phone live/.test(blurb)) errs.push(`${where} must say a potential rings your phone live`);
+          if (open && close && !blurb.includes(`${open}–${close} ET`)) errs.push(`${where} must print "${open}–${close} ET" (data.py ET_PREMARKET_OPEN / ET_AFTERHOURS_CLOSE)`);
+          if (B_WORD.test(blurb)) errs.push(`${where} says the b-word / "fake"`);
+          errs.push(...forecastChecks(where, blurb));
+        }
+        const tabPy = read('../backend/chart_maps/gajjala/tab.py');
+        const pb = pyBody(tabPy, 'push_block');
+        if (pb == null) errs.push('chart_maps/gajjala/tab.py lost def push_block(');
+        else if (NOTHING.test(pb)) errs.push(`tab.push_block says "${NOTHING.exec(pb)[0]}" — narrow it to A+ (W20)`);
+        const ri = pyBody(read('../backend/supply_demand/rules_info.py'), '_gajjala_section');
+        if (ri == null) errs.push('supply_demand/rules_info.py lost def _gajjala_section(');
+        else if (NOTHING.test(ri)) errs.push(`rules_info._gajjala_section says "${NOTHING.exec(ri)[0]}" — narrow it to A+ (W20)`);
+        const gcf = (/function gajjalaChipText[\s\S]*?\n\}/.exec(alerts) || [''])[0];
+        if (!gcf) errs.push('Alerts.tsx lost gajjalaChipText');
+        else if (NOTHING.test(tsNoComments(gcf))) errs.push(`Alerts.tsx gajjalaChipText says "${NOTHING.exec(tsNoComments(gcf))[0]}" — narrow it to A+ (W20)`);
+        const setupE = notif.match(/key: 'gajjala_setup'[\s\S]*?' \},\n/);
+        if (!setupE) errs.push('the 🚩 gajjala_setup Notifications entry is missing');
+        else if (NOTHING.test(unesc(setupE[0]))) errs.push(`the 🚩 gajjala_setup Notifications entry says "${NOTHING.exec(unesc(setupE[0]))[0]}" — narrow it to A+ (W20)`);
+        const oldAt = nf.indexOf("id: 'chart-maps-gajjala-2026-10-13'");
+        if (oldAt >= 0) {
+          const old = unesc(nf.slice(oldAt, nf.indexOf('" },', oldAt) + 4));
+          if (NOTHING.test(old)) errs.push(`the 🚩 2026-10-13 ✨ entry says "${NOTHING.exec(old)[0]}" — narrow it to A+ (AMENDMENTS4 D7)`);
+        }
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

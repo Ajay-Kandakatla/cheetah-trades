@@ -24,9 +24,22 @@
  * S&D ordering would rank his 5-minute setups by a read he does not use.
  *
  * UNMEASURED. Nothing here trades, enters a lane or sizes a position.
+ *
+ * 🧠 Potential + 📈 Track (2026-10-15, BUILD_SPEC4 §3.11). Ajay: "In Gajjalas
+ * setup I wanna find potential stocks this shows me what has happened I am
+ * trying to setup for this tab to act like Gajjalas brain. So create a
+ * potential category in this section." and "In all the sub tab and add a track
+ * and alert to show me new potential is added everyday." Each setup sub draws
+ * a compact 🧠 strip above its grid (a row click sets `focus`, so the existing
+ * once-per-value scroll lands on that tile — no sixth card grid, Rule #5); the
+ * ninth sub 🧠 Potential draws the 📈 Track (today open, the session before
+ * folded, a timeline per row), the 👀 watch line, then the roll-up tiles. The
+ * live 🧠 push line sits under the A+ shadow line. Every word and number of
+ * those surfaces is SERVED (potential.py / tab.py); the FE types none. A
+ * potential, not an entry. UNMEASURED.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
@@ -41,9 +54,10 @@ import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
 import {
   GG_OUTER_CHIPS, GG_SORT_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
-  changeText, chipText, criteriaText, gradeText, ggQuery, ggRefreshMs, parseGgSub, parseGgTf,
-  playbookItem, riskText, variantText,
-  type GgBoard, type GgPlaybook, type GgPlaybookItem, type GgRead, type GgSub, type GgTf, type GgTile,
+  changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
+  playbookItem, riskText, variantText, watchParts,
+  type GgBoard, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
+  type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRow, type GgWatch,
 } from '../lib/gajjala';
 import '../styles/gajjala.css';
 
@@ -179,6 +193,9 @@ export default function GajjalaBoard() {
         </div>
       ) : null}
       {board?.push?.text ? <div className="cm-note" data-testid="gg-push">{board.push.text}</div> : null}
+      {board?.push_potential?.text ? (
+        <div className="cm-note gg-push-potential" data-testid="gg-push-potential">{board.push_potential.text}</div>
+      ) : null}
 
       {/* (2) ⏳ his first 15 minutes (S8 14:41). */}
       {session?.first15 && session.first15_text ? (
@@ -227,6 +244,13 @@ export default function GajjalaBoard() {
               </button>
             ))}
           </div>
+          {/* (5b) 🧠 this setup's own potentials — setup subs only; nothing on an older API. */}
+          {isGgSetup(activeSub) && board.potential ? (
+            <PotentialStrip strip={board.potential} onPick={(sym) => setParam(FOCUS_PARAM, sym)} />
+          ) : null}
+          {/* (5c) 🧠 sub: the 📈 Track and the 👀 watch line above the roll-up tiles. */}
+          {activeSub === 'potential' && board.track ? <TrackPanel track={board.track} /> : null}
+          {activeSub === 'potential' && board.watch ? <WatchLine watch={board.watch} /> : null}
           {board.postmarket?.unchecked_text ? (
             <div className="cm-note" data-testid="gg-unchecked">{board.postmarket.unchecked_text}</div>
           ) : null}
@@ -378,6 +402,136 @@ function CardExtras({ read, board, sub }: { read: GgRead | null; board: GgBoard;
         </div>
       ) : null}
       {lines.map((l, i) => <div key={`${i}-${l}`} className="cm-note gg-line">{l}</div>)}
+      {read.potential?.text ? (
+        <div className="gg-pot-tile" data-testid="gg-pot-tile">
+          <span className={`gg-pot-kind gg-pot-kind-${read.potential.kind}`} data-testid="gg-pot-kind">
+            {read.potential.text}
+          </span>
+          <Tells tells={read.potential.tells} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** GG's tells as muted badges, each with his cited words on hover — display only. */
+function Tells({ tells }: { tells: GgTell[] | null | undefined }) {
+  const shown = (tells || []).filter((t) => t && typeof t.text === 'string' && t.text.trim());
+  if (!shown.length) return null;
+  return (
+    <span className="gg-pot-tells" data-testid="gg-pot-tells">
+      {shown.map((t) => (
+        <span key={`${t.key}-${t.text}`} className="cm-badge cm-badge-muted" data-tell={t.key}
+              title={t.cite || undefined}>{t.text}</span>
+      ))}
+    </span>
+  );
+}
+
+/** 🧠 a setup sub's strip: the served title, the served definition folded, one
+ *  row per served potential in the SERVED order. A row click writes `focus`. */
+function PotentialStrip({ strip, onPick }: { strip: GgPotentialStrip; onPick: (sym: string) => void }) {
+  const rows = (strip.rows || []).filter((r) => r && typeof r.symbol === 'string' && r.symbol);
+  return (
+    <div className="gg-potential" data-testid="gg-potential">
+      <details className="gg-pot-head">
+        <summary data-testid="gg-potential-title">{strip.title}</summary>
+        {strip.text ? <div className="cm-note" data-testid="gg-potential-text">{strip.text}</div> : null}
+      </details>
+      {rows.length ? (
+        <ul className="gg-pot-rows">
+          {rows.map((r) => {
+            const againTold = (r.tells || []).some((t) => t?.key === 'again');
+            return (
+              <li key={`${r.symbol}-${r.setup}`}>
+                <button type="button" className={`gg-pot-row gg-pot-row-${r.kind}`}
+                        data-testid={`gg-potential-row-${r.symbol}`} onClick={() => onPick(r.symbol)}>
+                  <span className={`gg-pot-kind gg-pot-kind-${r.kind}`}>{r.text}</span>
+                  {/* "↻" only when no served ↻ tell already says it — no chip printed twice. */}
+                  {r.again && !againTold ? <span className="gg-pot-again" data-testid="gg-pot-again">↻</span> : null}
+                  <Tells tells={r.tells} />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : strip.empty_text ? (
+        <div className="cm-note" data-testid="gg-potential-empty">{strip.empty_text}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function TrackRows({ block }: { block: GgTrackBlock }) {
+  const rows = (block.rows || []).filter((r): r is GgTrackRow => !!r && typeof r.text === 'string');
+  return (
+    <>
+      <ul className="gg-track-rows">
+        {rows.map((r) => {
+          const id = `${r.symbol}-${r.setup}`;
+          const href = ggHref(r.href);
+          const tl = (r.timeline || []).filter((e) => e && typeof e.text === 'string' && e.text.trim());
+          return (
+            <li key={id} className="gg-track-row" data-testid={`gg-track-row-${id}`}>
+              {href ? <Link to={href} className="gg-track-text">{r.text}</Link> : <span className="gg-track-text">{r.text}</span>}
+              {r.vs_trigger_text ? <span className="gg-muted"> · {r.vs_trigger_text}</span> : null}
+              {r.push_text ? <span className="gg-track-push" data-testid={`gg-track-push-${id}`}> · {r.push_text}</span> : null}
+              {tl.length ? (
+                <details className="gg-timeline" data-testid={`gg-track-timeline-${id}`}>
+                  <summary>timeline</summary>
+                  <ol>{tl.map((e, i) => <li key={`${i}-${e.text}`}>{e.text}</li>)}</ol>
+                </details>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      {typeof block.more_n === 'number' && block.more_n > 0 ? (
+        <div className="gg-muted" data-testid="gg-track-more">+{block.more_n} more</div>
+      ) : null}
+    </>
+  );
+}
+
+/** 📈 Track — today's first sightings open, the session before folded; states
+ *  and prices only, as served. UNMEASURED line always last. */
+function TrackPanel({ track }: { track: GgTrack }) {
+  const today = track.today;
+  const yday = track.yesterday;
+  const todayRows = today?.rows?.length ? today : null;
+  return (
+    <section className="gg-track" data-testid="gg-track">
+      <details open className="gg-track-block" data-testid="gg-track-today">
+        <summary data-testid="gg-track-title">{track.title}</summary>
+        {todayRows ? <TrackRows block={todayRows} /> : track.empty_today ? (
+          <div className="cm-note" data-testid="gg-track-empty">{track.empty_today}</div>
+        ) : null}
+      </details>
+      {yday ? (
+        <details className="gg-track-block" data-testid="gg-track-yesterday">
+          <summary>{yday.title || yday.date || ''}</summary>
+          {yday.rows?.length ? <TrackRows block={yday} /> : null}
+        </details>
+      ) : null}
+      {track.unmeasured ? <div className="gg-muted" data-testid="gg-track-unmeasured">{track.unmeasured}</div> : null}
+    </section>
+  );
+}
+
+/** 👀 the served watch line; its served names become in-tab links. */
+function WatchLine({ watch }: { watch: GgWatch }) {
+  const parts = watchParts(watch);
+  if (!parts) return null;
+  const links = (watch.symbols || []).filter((s) => s && typeof s.symbol === 'string' && ggHref(s.href));
+  return (
+    <div className="gg-watch" data-testid="gg-watch">
+      {parts.lead}{!parts.trailing && links.length ? ' ' : ''}
+      {links.map((s, i) => (
+        <span key={s.symbol}>
+          {i ? ', ' : ''}
+          <Link to={ggHref(s.href)!} data-testid={`gg-watch-tk-${s.symbol}`}>{s.symbol}</Link>
+        </span>
+      ))}
     </div>
   );
 }

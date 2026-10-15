@@ -116,6 +116,13 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # push windows (09:45–16:00, 16:00–20:00 ET; never 09:30–09:45, never
     # pre-market) live in alerts.window_reason — this set is about the DAY.
     "gajjala_setup",
+    # 🧠 a Gajjala setup read is a potential (chart_maps/gajjala/potential.py,
+    # 2026-10-15, Ajay: "Give me an alert all continous tracker on these
+    # specifically …") — read off live 5-minute bars, so a MARKET kind: silent
+    # on weekends and NYSE holidays (the pass also checks closed_reason BEFORE
+    # any claim). Its hour window (04:00–20:00 ET, never his first 15 minutes
+    # after the open) lives in potential.window_reason — this set is the DAY.
+    "gajjala_potential",
     # 🎢 / 🗺️ tape bursts (orderflow/tape_burst_kinds.py, 2026-10-14) — read
     # off the live tape, so MARKET kinds: silent on weekends and NYSE holidays
     # (the cli's market-day gate already skips the pass; this drops at the

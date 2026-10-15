@@ -16,6 +16,15 @@ carried after-hours movers after today's names. 🌙 = after-hours gain first, p
 
 NOT SEPA. Nothing here imports or cites another method's gate; the tile link is the house ticker page. UNMEASURED:
 no study here says these setups win; nothing here trades, enters a lane or sizes a position.
+
+🧠 POTENTIAL · 📈 TRACK (2026-10-15, BUILD_SPEC4 §3.9 / WP-B). Ajay, three messages verbatim: "In Gajjalas setup I
+wanna find potential stocks this shows me what has happened I am trying to setup for this tab to act like Gajjalas
+brain. So create a potential category in this section." / "In all the sub tab and add a track and alert to show me new
+potential is added everyday." / "Give me an alert all continous tracker on these specifically when I get alert I will
+jump on to ride the wave". Every setup sub serves a `potential` strip (its own forming reads that `potential.py` calls a
+potential); the 🧠 Potential sub rolls them up (one tile per symbol), with the 📈 Track (today's first sightings and the
+last session's, read from the tracker docs the pass wrote) and the 👀 watch line. Every rule, word and order comes from
+`potential.py` (the ONE engine) — this module re-derives none and types no number. UNMEASURED.
 """
 from __future__ import annotations
 
@@ -25,6 +34,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from chart_maps.gajjala import constants as GC
+from chart_maps.gajjala import potential as PT                # 🧠 the ONE potential engine (it imports tab lazily)
 from daytrading.data import ET_RTH_OPEN as _RTH_OPEN          # the house session clock, never retyped
 
 log = logging.getLogger("chart_maps.gajjala.tab")
@@ -255,9 +265,17 @@ def push_block() -> dict:
         text = ("📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first "
                 f"{GC.NO_TRADE_AFTER_OPEN_MIN} minutes, never pre-market, once per name, setup and day. {UNMEASURED}.")
     else:
-        text = ("Pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; nothing reaches "
+        # NARROWED to A+ 2026-10-15 (BUILD_SPEC4 W20): 🧠 potentials ring live right under this line
+        # (`push_potential`), so the shadow sentence names A+ instead of saying nothing reaches a phone.
+        text = ("A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches "
                 f"your phone until the {GC.STUDY_SESSIONS}-session study reads and you flip it to live. {UNMEASURED}.")
     return {"mode": mode, "text": text}
+
+
+def push_potential_block(session: date) -> dict:
+    """🧠 the LIVE potential push line (BUILD_SPEC4 W15, 2026-10-15 msg 3 "Give me an alert … I will jump on to ride
+    the wave"): served beside `push` on every sub; the words are potential.push_note's."""
+    return {"mode": "live", "text": PT.push_note(session)}
 
 
 def board_note() -> str:
@@ -698,11 +716,40 @@ def recap(reads: list) -> dict:
 
 
 # ── sub resolution (C9 deep links) ────────────────────────────────────────────────────────────────────────────────
+def _pushed_potential_setup(potentials, sym: str, day: str) -> Optional[str]:
+    """🧠 step of resolve_sub (BUILD_SPEC4 §3.9 (d), 2026-10-15): the setup of the session's newest PUSHED tracker
+    doc of `sym` (tie → SETUPS order). The push-history link carries no setup (push.recent.item_url), so this opens
+    the sub that rang. Held / unpushed docs and other sessions never count. Never raises."""
+    try:
+        order = {s: i for i, s in enumerate(GC.SETUPS)}
+        hits = []
+        for d in potentials or []:
+            push = d.get("push") if isinstance(d, dict) else None
+            if not isinstance(push, dict) or push.get("state") != "pushed":
+                continue
+            if str(d.get("symbol") or "").upper() != sym or d.get("date") != day or d.get("setup") not in order:
+                continue
+            at = push.get("at")
+            if isinstance(at, str):
+                try:
+                    at = datetime.fromisoformat(at)
+                except ValueError:
+                    at = None
+            when = _et(at).isoformat() if isinstance(at, datetime) else ""
+            hits.append((when, -order[d["setup"]], d["setup"]))
+        return max(hits)[2] if hits else None
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: potential focus read failed: %s", exc)
+        return None
+
+
 def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, listed: dict,
-                pm_syms: set, post_syms: set) -> tuple:
+                pm_syms: set, post_syms: set, potentials: Optional[list] = None) -> tuple:
     """(sub, resolved_from). An explicit known sub wins; an unknown one → DEFAULT_SUB (fail open). Empty sub + a
-    focus symbol → the setup of today's newest pushed (or shadow-recorded) claim, else the best-ranked read's setup,
-    else ☀️ / 🌙 when the name is on that list, else the default."""
+    focus symbol → the setup of today's newest pushed (or shadow-recorded) claim, else (2026-10-15) the setup of
+    today's newest PUSHED 🧠 potential ("focus_potential"; `potentials` = the tracker docs `build` already read, None →
+    store.potentials(session), a failure → none), else the best-ranked read's setup, else ☀️ / 🌙 when the name is
+    on that list, else the default."""
     s = (sub or "").strip().lower()
     if s:
         return (s, "param") if s in SUB_KEYS else (GC.DEFAULT_SUB, "default")
@@ -720,6 +767,15 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
         setup = str(newest.get("_id")).rsplit("|", 1)[-1]
         if setup in GC.SETUPS:
             return setup, "focus_alert"
+    if potentials is None:
+        try:
+            potentials = store.potentials(session) or []            # None = a read fault (2026-10-15): soft here
+        except Exception as exc:                                    # noqa: BLE001
+            log.warning("gajjala tab: potentials read failed: %s", exc)
+            potentials = []
+    pot_setup = _pushed_potential_setup(potentials, sym, day)
+    if pot_setup:
+        return pot_setup, "focus_potential"
     doc = reads_by.get(sym)
     if doc:
         best = None
@@ -739,6 +795,233 @@ def resolve_sub(sub: str, focus: str, *, store, session: date, reads_by: dict, l
     if sym in post_syms:
         return "postmarket", "focus_list"
     return GC.DEFAULT_SUB, "default"
+
+
+# ── 🧠 potential · 📈 track (BUILD_SPEC4 §3.9, 2026-10-15) ──────────────────────────────────────────────────────────
+# Ajay 2026-10-15: "In Gajjalas setup I wanna find potential stocks … So create a potential category in this section."
+# / "In all the sub tab and add a track and alert to show me new potential is added everyday." Every rule, word and
+# order below is potential.py's (potential_kind / tell_values / tells / order_key / row_text / state_word / HELD_WORDS);
+# this section only assembles the served shapes. No number is typed here.
+WATCH_HEAD = ("👀 On his watch list, no structure yet — “if it's making some noise in pre-market I put them in my watch "
+              "list … after hours moves from the past day, I'll keep them as well” (S8 13:21–14:34): ")    # W14
+TRACK_UNMEASURED = ("UNMEASURED — what each potential did after it was first seen, recorded pass by pass; not a "
+                    "forecast. No study has read this record yet.")                                        # W13b
+PUSH_TEXT = {"no_target": "📲 no device took it (toggle off, quiet hours or none registered)",
+             "failed": "📲 send failed",
+             "claimed": "📲 sending"}           # W19's /alerts word for a claimed doc (a pass died before the settle)
+
+
+def _soft(what: str, fn, *a, default=None, **kw):
+    """D1 on the read path: a raising 🧠 potential / 📈 track piece logs and serves `default`; it never takes down the
+    A+ board of any sub."""
+    try:
+        return fn(*a, **kw)
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: %s failed: %s", what, exc)
+        return default
+
+
+def _safe_list(fn, *a) -> list:
+    """A store read that may be missing (an older store) or fail: [] — the documented "no data" answer."""
+    try:
+        out = fn(*a)
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: potential read failed: %s", exc)
+        return []
+    return [d for d in out or [] if isinstance(d, dict)]
+
+
+def _setup_label(setup: str) -> str:
+    e, label = SUB_META.get(setup, ("🧠", setup))
+    return f"{e} {label}"
+
+
+def _potential_reads(reads_by: dict, scan_by: dict, *, trackers: dict, trackers_prev: set, ah_prev, prev_scan_by: dict,
+                     setup: Optional[str] = None) -> list:
+    """Every (symbol, setup) potential of the board's listed reads — `setup` given: that setup only — as
+    [(order_key, PotRow, read_doc, read)] in potential.order_key order (one order everywhere). `trackers` =
+    {(SYM, setup): today's tracker doc} (first_seen_et); `trackers_prev` = {(SYM, setup)} of the session before (↻)."""
+    out = []
+    for sym, doc in reads_by.items():
+        setups = doc.get("setups") if isinstance(doc.get("setups"), dict) else {}
+        kinds = {s: PT.potential_kind(setups.get(s)) for s in GC.SETUPS}
+        also = [s for s in GC.SETUPS if kinds[s]]
+        for s in GC.SETUPS:
+            kind = kinds[s]
+            if not kind or (setup is not None and s != setup):
+                continue
+            read = setups.get(s) or {}
+            again = (sym, s) in trackers_prev
+            values = PT.tell_values(sym, s, ctx=doc.get("ctx"), scan_row=(scan_by.get(sym) or {}).get("last"),
+                                    ah_prev=ah_prev, prev_scan=prev_scan_by.get(sym), also=also, again=again)
+            tdoc = trackers.get((sym, s)) or {}
+            first = tdoc.get("first_seen_et") if isinstance(tdoc.get("first_seen_et"), str) else None
+            reason = read.get("reason") if isinstance(read.get("reason"), str) and read.get("reason") else None
+            row = {"symbol": sym, "setup": s, "kind": kind, "kind_label": PT.KIND_LABEL[kind],
+                   "trigger": _f(read.get("trigger")), "stop": _f(read.get("stop")), "risk_pct": _f(read.get("risk_pct")),
+                   "reason": reason, "first_seen_et": first, "again": again, "tells": PT.tells(values),
+                   "href": PT.deep_link(sym, s), "text": PT.row_text(sym, s, read, kind, first)}
+            out.append((PT.order_key(kind, values, s, sym), row, doc, read))
+    out.sort(key=lambda x: x[0])
+    return out
+
+
+def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_window: bool) -> dict:
+    """§3.9 (a) — the 🧠 strip of one setup sub (W6 title, W7 text, W8 empty), ALL of its potentials (a compact list,
+    never cut by `limit`)."""
+    rows = [p[1] for p in pots]
+    a = sum(1 for r in rows if r["kind"] == GC.POTENTIAL_KINDS[0])
+    b = sum(1 for r in rows if r["kind"] == GC.POTENTIAL_KINDS[1])
+    concept, ts = PT.CONCEPT
+    defaults = PT.defaults_sentence()
+    text = ("Forming, not triggered: the demand leg is in and the quiet sideways part has started (“building”) or is "
+            "complete (“trigger armed”); the reclaim of the highs has not printed. "
+            f"His words: “{concept}” ({ts}). " + (f"{defaults} " if defaults else "") + "A potential, not an entry.")
+    e, label = SUB_META[setup]
+    empty = None
+    if not rows:
+        empty = (f"No {e} {label} forming right now — the next pass is at most {GC.PASS_CADENCE_SEC // 60} minutes "
+                 "away." if in_window else f"No {e} {label} was forming at the last pass ({sess['label']}).")
+    return {"title": f"🧠 Potential — {a} trigger armed · {b} building · {today_n} first seen {sess['label']} · "
+                     f"{UNMEASURED}",
+            "text": text, "counts": {"armed": a, "building": b, "today": today_n}, "rows": rows, "empty_text": empty}
+
+
+def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, sess: dict, listed: dict,
+                     halts_by: dict) -> list:
+    """§3.9 (b) — one tile per SYMBOL: the existing `setup_tile` card of its PRIMARY potential (the first by
+    potential.order_key), with `gajjala.potential` (W12) and the 🧩 other setups forming on it (GG S9 1:59:01)."""
+    by_sym: dict = {}
+    for p in pots:
+        by_sym.setdefault(p[1]["symbol"], []).append(p)
+    tiles = []
+    for sym, items in sorted(by_sym.items(), key=lambda kv: kv[1][0][0]):
+        _k, row, doc, read = items[0]
+        setup = row["setup"]
+        daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
+        tile = setup_tile(doc, setup, tile_tf(read, tf_ask, "5m"), scan_row=scan_row(sym), sess=sess,
+                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily)
+        first = row["first_seen_et"]
+        tile["gajjala"]["potential"] = {
+            "kind": row["kind"], "kind_label": row["kind_label"], "setup": setup, "setup_label": _setup_label(setup),
+            "first_seen_et": first, "again": row["again"], "tells": row["tells"],
+            "also": [{"setup": p[1]["setup"], "label": _setup_label(p[1]["setup"])} for p in items[1:]],
+            "text": f"🧠 {row['kind_label']} · {_setup_label(setup)}" + (f" · first seen {first} ET" if first else "")}
+        tiles.append(tile)
+    return tiles
+
+
+def _track_row(doc: dict) -> dict:
+    """One 📈 Track row from a tracker doc (W13) — the doc's own prices (the pass wrote them, AMENDMENTS4 D2: the
+    5-minute frame's closed close first), never recomputed here; states and prices only, no win/loss maths."""
+    sym = str(doc.get("symbol") or "").upper()
+    setup = str(doc.get("setup") or "")
+    last = doc.get("last") if isinstance(doc.get("last"), dict) else {}
+    path = [e for e in doc.get("state_path") or [] if isinstance(e, dict)]
+    grave = doc.get("graveyard_on") if isinstance(doc.get("graveyard_on"), str) else None
+    if last:
+        last_state, last_kind = last.get("state"), last.get("kind")
+    else:
+        last_state, last_kind = (path[-1].get("state"), path[-1].get("kind")) if path else (None, None)
+    last_text = PT.state_word(last_state, last_kind)
+    p0, p1, t0 = _f(doc.get("first_px")), _f(last.get("px")), _f(doc.get("first_trigger"))
+    m, v = _f(doc.get("move_pct")), _f(doc.get("vs_trigger_pct"))
+    move_text = f"{_px(p0)} → {_px(p1)} ({m:+.1f}%) since first seen" if m is not None and p0 and p1 else None
+    vs_text = f"{v:+.1f}% vs the trigger at first sight ({_px(t0)})" if v is not None and t0 else None
+    push = doc.get("push") if isinstance(doc.get("push"), dict) else None
+    push_text = None
+    if push:
+        ps = push.get("state")
+        if ps == "pushed":
+            push_text = "📲 sent" + (f" {push['at_et']} ET" if isinstance(push.get("at_et"), str) else "")
+        else:
+            push_text = PUSH_TEXT.get(ps)
+    else:
+        held = [h.get("reason") for h in doc.get("held") or [] if isinstance(h, dict) and h.get("reason") in PT.HELD_WORDS]
+        if not held and doc.get("first_seen_mode") == PT.FIRST_SEEN_MODES[1]:
+            held = [PT.JOIN_HELD[0]]                                # D9: a joined doc whose hold write was lost
+        if held:
+            push_text = f"held: {PT.HELD_WORDS[held[-1]]}"
+    timeline = []
+    for e in path:
+        at_et = e.get("at_et") if isinstance(e.get("at_et"), str) else None
+        word = PT.state_word(e.get("state"), e.get("kind"), on=grave if e.get("state") == "graveyard" else None)
+        timeline.append({"at_et": at_et, "text": f"{at_et} {word}" if at_et else word})
+    first = doc.get("first_seen_et") if isinstance(doc.get("first_seen_et"), str) else None
+    fk = doc.get("first_kind")
+    fkl = PT.KIND_LABEL.get(fk)
+    bits = [f"{sym} · {_setup_label(setup)}", (f"first seen {first} ET" + (f" {fkl}" if fkl else "")) if first else fkl,
+            f"now {last_text}", move_text]
+    url = doc.get("url")
+    href = url if isinstance(url, str) and url.startswith("/") and not url.startswith("//") else PT.deep_link(sym, setup)
+    return {"symbol": sym, "setup": setup, "setup_label": _setup_label(setup), "first_seen_et": first,
+            "first_kind": fk, "first_kind_label": fkl, "first_px": p0, "first_trigger": t0,
+            "first_stop": _f(doc.get("first_stop")), "last_state": last_state, "last_state_text": last_text,
+            "last_px": p1, "move_pct": m, "move_text": move_text, "vs_trigger_pct": v, "vs_trigger_text": vs_text,
+            "push_text": push_text, "graveyard_on": grave, "timeline": timeline,
+            "text": " · ".join(b for b in bits if b), "href": href}
+
+
+def _first_seen_key(doc: dict) -> str:
+    v = doc.get("first_seen")
+    if isinstance(v, str):
+        try:
+            v = datetime.fromisoformat(v)
+        except ValueError:
+            v = None
+    return _et(v).isoformat() if isinstance(v, datetime) else str(doc.get("first_seen_et") or "")
+
+
+def _capped(rows: list) -> dict:
+    out = {"rows": rows[:GC.TILE_LIMIT_MAX]}
+    if len(rows) > GC.TILE_LIMIT_MAX:
+        out["more_n"] = len(rows) - GC.TILE_LIMIT_MAX
+    return out
+
+
+def _track_block(today_docs: list, prev_docs: list, *, session: date, prev: date, sess: dict) -> dict:
+    """§3.9 (b) `track` — today's first sightings newest first, the session before chronological (no outcome
+    ranking), each row's timeline in potential.state_word's words; rows capped at TILE_LIMIT_MAX (`more_n`)."""
+    order = {s: i for i, s in enumerate(GC.SETUPS)}
+
+    def tie(d):
+        return (str(d.get("symbol") or ""), order.get(d.get("setup"), len(order)))
+    today = sorted(today_docs, key=tie)
+    today = sorted(today, key=_first_seen_key, reverse=True)
+    yday = sorted(sorted(prev_docs, key=tie), key=_first_seen_key)
+    n = len(today)
+    first, last = PT.pass_times(session)
+    return {"title": f"📈 Track — {n} potentials first seen {sess['label']} · {UNMEASURED}",
+            "unmeasured": TRACK_UNMEASURED,
+            "empty_today": (f"No potential first seen yet this session — the pass runs every "
+                            f"{GC.PASS_CADENCE_SEC // 60} minutes from {first} to {last} ET."),
+            "today": dict({"date": session.isoformat(), "label": sess["label"], "n": n,
+                           "armed_n": sum(1 for d in today if d.get("first_kind") == GC.POTENTIAL_KINDS[0]),
+                           "building_n": sum(1 for d in today if d.get("first_kind") == GC.POTENTIAL_KINDS[1]),
+                           "pushed_n": sum(1 for d in today if isinstance(d.get("push"), dict)
+                                           and d["push"].get("state") == "pushed")},
+                          **_capped([_track_row(d) for d in today])),
+            "yesterday": dict({"date": prev.isoformat(),
+                               "title": (f"Last session ({prev.isoformat()}) — {len(yday)} potentials and how each "
+                                         "ended: states and prices only, no win/loss maths"),
+                               "n": len(yday)}, **_capped([_track_row(d) for d in yday]))}
+
+
+def _watch_block(pm_rows: list, post_list: list, exclude: set) -> Optional[dict]:
+    """W14 — ☀️ / 🌙 list names with NO structure yet (GG S8 13:21–14:34): `exclude` = every name with a potential
+    in any setup PLUS every name whose read shows a card in any setup sub (a TILE_STATES read — A+, triggered,
+    partial, stopped, forming), so the line's own words "no structure yet" stay true. Display only: never pushed,
+    never tracked (HIS CALL P9). None when there is none."""
+    syms, seen = [], set(exclude)
+    for rows, sub in ((pm_rows, "premarket"), (post_list, "postmarket")):
+        for r in rows or []:
+            sym = str((r or {}).get("symbol") or "").upper()
+            if sym and sym not in seen:
+                seen.add(sym)
+                syms.append({"symbol": sym, "href": f"/chart-maps?tab=gajjala&sub={sub}&focus={sym}"})
+    if not syms:
+        return None
+    return {"text": WATCH_HEAD + ", ".join(s["symbol"] for s in syms), "symbols": syms}
 
 
 # ── the payload ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -788,9 +1071,30 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         log.warning("gajjala tab: premarket list failed: %s", exc)
         pm_rows = []
     post_list, unchecked = postmarket_rows(spass)
+    # 🧠 the tracker + the previous session's tells, read ONCE and BEFORE resolve_sub (BUILD_SPEC4 WP-B)
+    prev = _prev_market_day(session)
+    pot_docs = [d for d in _safe_list(st.potentials, session) if d.get("symbol") and d.get("setup")]
+    pot_prev = [d for d in _safe_list(st.potentials, prev) if d.get("symbol") and d.get("setup")]
+    pot_ok = True                       # D1 on the read path: a raising potential layer never silences the A+ board
+    try:
+        trackers_today = {(str(d["symbol"]).upper(), d["setup"]): d for d in pot_docs}
+        trackers_prev = {(str(d["symbol"]).upper(), d["setup"]) for d in pot_prev}
+        try:
+            ah_prev = st.ah_carry(prev)
+        except Exception as exc:                                    # noqa: BLE001
+            log.warning("gajjala tab: carry read failed: %s", exc)
+            ah_prev = None
+        prev_scan_by = {str(d["symbol"]).upper(): d for d in _safe_list(st.scan_docs, [prev]) if d.get("symbol")}
+        pots = _potential_reads(reads_by, scan_by, trackers=trackers_today, trackers_prev=trackers_prev,
+                                ah_prev=ah_prev, prev_scan_by=prev_scan_by)
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: potential assembly failed: %s", exc)
+        pot_ok, trackers_today, pots = False, {}, []
+    pot_syms = {p[1]["symbol"] for p in pots}
     sub_k, resolved = resolve_sub(sub, focus, store=st, session=session, reads_by=reads_by, listed=listed,
                                   pm_syms={str(r.get("symbol")).upper() for r in pm_rows},
-                                  post_syms={str(r.get("symbol")).upper() for r in post_list})
+                                  post_syms={str(r.get("symbol")).upper() for r in post_list},
+                                  potentials=pot_docs)
     tf_ask = (tf or "").strip().lower() if isinstance(tf, str) else ""
     tf_ask = tf_ask if tf_ask in TFS else ""                        # no / unknown tf → each card its read's frame
     tf_k = tf_ask or ("15m" if sub_k == "horizontal_fade" else "5m")
@@ -803,6 +1107,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     per_setup: dict = {}
     counts_by: dict = {}
     n_tiles: dict = {}
+    tile_syms: set = set()                                          # names with a card in any setup sub (W14)
     for setup in GC.SETUPS:
         tiles, c = [], {k: 0 for k in COUNT_STATES}
         c["awaiting_answer"] = 0
@@ -819,6 +1124,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                 continue
             if state in TILE_STATES:
                 n_tiles[setup] = n_tiles.get(setup, 0) + 1
+                tile_syms.add(sym)
                 if setup == sub_k:                                      # only the shown sub builds its cards
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k), scan_row=_row(sym), sess=sess,
@@ -830,7 +1136,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     subs = []
     for key, e, label in GC.SUBS:
         n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
-             else len(post_list) if key == "postmarket" else None)
+             else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
         subs.append({"key": key, "emoji": e, "label": label, "count": n})
 
     if sub_k in per_setup:
@@ -843,6 +1149,7 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
            "strip": _strip_block(spass),
            "counts": counts, "tiles": [], "graveyard_today": [], "note": board_note(),
            "empty_note": None, "rules_section": "gajjala", "push": push_block(),
+           "push_potential": _soft("potential push line", push_potential_block, session),
            "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a]}
     try:
         out["graveyard_today"] = SC.graveyard_today(st, session)
@@ -857,6 +1164,20 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         out["empty_note"] = (f"No {e} {label} on his list right now — the next pass is at most "
                              f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else
                              f"No {e} {label} on the {sess['label']} list.")
+        today_n = sum(1 for (_s, setup) in trackers_today if setup == sub_k)
+        out["potential"] = _soft("potential strip", _potential_strip, sub_k,
+                                 [p for p in pots if p[1]["setup"] == sub_k], today_n, sess=sess,
+                                 in_window=in_window) if pot_ok else None
+    elif sub_k == GC.POTENTIAL_SUB:
+        out["tiles"] = (_soft("potential tiles", _potential_tiles, pots, st=st, session=session, tf_ask=tf_ask,
+                              scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, default=[])
+                        if pot_ok else [])[:lim]
+        out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
+                             sess=sess) if pot_ok else None
+        out["watch"] = _soft("potential watch line", _watch_block, pm_rows, post_list, pot_syms | tile_syms)
+        out["empty_note"] = ("Nothing forming on his list right now — the next pass is at most "
+                             f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else
+                             f"Nothing was forming at the last pass ({sess['label']}).")
     elif sub_k == "premarket":
         tiles = []
         for r in pm_rows:                                           # the engine's order (today's, then the carry)
@@ -885,4 +1206,5 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 
 
 __all__ = ["build", "resolve_sub", "order_key", "state_label", "strip_text", "session_for", "first15",
-           "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block", "board_note"]
+           "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
+           "push_potential_block", "board_note"]

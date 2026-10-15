@@ -14,12 +14,21 @@
  * is pinned key / emoji / label against backend constants.SUBS by the
  * contracts, so the two can never drift. Display only: nothing here gates,
  * pushes or trades. UNMEASURED.
+ *
+ * 🧠 Potential + 📈 Track (2026-10-15). Ajay: "In Gajjalas setup I wanna find
+ * potential stocks this shows me what has happened I am trying to setup for
+ * this tab to act like Gajjalas brain. So create a potential category in this
+ * section." then "In all the sub tab and add a track and alert to show me new
+ * potential is added everyday." The server decides what a potential is (the
+ * detectors' own forming read, potential.py) and words every row, title, tell
+ * and timeline entry; this module only types that payload (BUILD_SPEC4 §3.9)
+ * and adds the ninth fallback sub, LAST. No threshold, no rule word.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
-export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook';
+export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential';
 export type GgTf = '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
@@ -41,8 +50,15 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
   { key: 'premarket', emoji: '☀️', label: 'Premarket' },
   { key: 'postmarket', emoji: '\u{1F319}', label: 'Post-market' },
   { key: 'playbook', emoji: '\u{1F4D3}', label: 'Playbook' },
+  { key: 'potential', emoji: '\u{1F9E0}', label: 'Potential' },
 ];
 const SUB_KEYS = new Set<string>(GG_SUBS.map((s) => s.key));
+
+/** The five setup subs (== backend constants.SETUPS, test-pinned) — the only
+ *  subs that carry a 🧠 strip (☀️ / 🌙 / 📓 / 🧠 never do, BUILD_SPEC4 §3.9 (c)). */
+export const GG_SETUPS: ReadonlyArray<GgSetup> = ['bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp', 'reversal_squeeze'];
+const SETUP_KEYS = new Set<string>(GG_SETUPS);
+export const isGgSetup = (s: unknown): s is GgSetup => typeof s === 'string' && SETUP_KEYS.has(s);
 
 /** 📋 The chips the card's head row prints, so PatternChart skips its own
  *  copies (the EmaFramesBoard precedent — no chip printed twice). */
@@ -107,7 +123,84 @@ export type GgRead = {
   listed?: { since?: string | null; last_qualified?: string | null; day_n?: number | null; text?: string | null } | null;
   premarket?: { text?: string | null; carry_text?: string | null; off_pm_high_text?: string | null } | null;
   postmarket?: { text?: string | null; checked_text?: string | null; exhaustion_text?: string | null } | null;
+  /** 🧠 sub tiles only: why this card is on the roll-up (§3.9 (b), W12). */
+  potential?: GgPotentialTile | null;
 };
+
+/* ---- 🧠 Potential + 📈 Track (2026-10-15, BUILD_SPEC4 §3.9) — every string SERVED. ---- */
+export type GgPotentialKind = 'armed' | 'building';
+/** One of GG's tells — a badge, never a gate; `cite` = his timestamped words. */
+export type GgTell = { key: string; text: string; cite?: string | null };
+/** One row of a setup sub's 🧠 strip; `text` is the whole served line (W9). */
+export type GgPotentialRow = {
+  symbol: string;
+  setup: GgSetup | string;
+  kind: GgPotentialKind | string;
+  kind_label: string;
+  trigger?: number | null;
+  stop?: number | null;
+  risk_pct?: number | null;
+  reason?: string | null;
+  first_seen_et?: string | null;
+  again?: boolean;
+  tells?: GgTell[];
+  href?: string | null;
+  text: string;
+};
+export type GgPotentialStrip = {
+  title: string;
+  text?: string | null;
+  counts?: { armed?: number; building?: number; today?: number } | null;
+  rows: GgPotentialRow[];
+  empty_text?: string | null;
+};
+export type GgPotentialTile = {
+  kind: GgPotentialKind | string;
+  kind_label: string;
+  setup: GgSetup | string;
+  setup_label?: string | null;
+  first_seen_et?: string | null;
+  again?: boolean;
+  tells?: GgTell[];
+  also?: { setup: string; label: string }[];
+  text: string;
+};
+export type GgTrackRow = {
+  symbol: string;
+  setup: GgSetup | string;
+  setup_label?: string | null;
+  first_seen_et?: string | null;
+  first_kind?: GgPotentialKind | string | null;
+  first_kind_label?: string | null;
+  first_px?: number | null;
+  first_trigger?: number | null;
+  first_stop?: number | null;
+  last_state?: string | null;
+  last_state_text?: string | null;
+  last_px?: number | null;
+  move_pct?: number | null;
+  move_text?: string | null;
+  vs_trigger_pct?: number | null;
+  vs_trigger_text?: string | null;
+  /** "📲 sent 09:21 ET" / "held: …" — incl. AMENDMENTS4 D9's "held: joined mid-session: tracking, not ringing". */
+  push_text?: string | null;
+  graveyard_on?: string | null;
+  timeline?: { at_et?: string | null; text: string }[];
+  text: string;
+  href?: string | null;
+};
+export type GgTrackBlock = { date?: string; label?: string; title?: string | null; n?: number;
+                             armed_n?: number; building_n?: number; pushed_n?: number;
+                             rows: GgTrackRow[]; more_n?: number | null };
+export type GgTrack = {
+  title: string;
+  unmeasured?: string | null;
+  empty_today?: string | null;
+  today?: GgTrackBlock | null;
+  yesterday?: GgTrackBlock | null;
+};
+/** 👀 ☀️ / 🌙 names with no potential in any setup — display only, never pushed. */
+export type GgWatch = { text: string; symbols: { symbol: string; href: string }[] };
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
 export type GgVolAvg = ServedVolAvg;
@@ -169,6 +262,13 @@ export type GgBoard = {
     recap?: { title?: string | null; rows?: { symbol: string; text: string }[] } | null;
   } | null;
   playbook?: GgPlaybook | null;
+  /** 🧠 strip — setup subs only; absent on ☀️ / 🌙 / 📓 / 🧠 and on an older API. */
+  potential?: GgPotentialStrip | null;
+  /** 📈 Track + 👀 watch line — the 🧠 sub only. */
+  track?: GgTrack | null;
+  watch?: GgWatch | null;
+  /** The LIVE 🧠 push line, printed under the (A+, shadow) `push` line. */
+  push_potential?: { mode?: string | null; text?: string | null } | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the
@@ -260,4 +360,20 @@ export function playbookItem(it: GgPlaybookItem): { text: string; tag: string | 
   const pill = (typeof it.status_label === 'string' && it.status_label.trim()) ? it.status_label
     : (typeof it.status === 'string' && it.status.trim()) ? it.status : null;
   return { text: it.text, tag: tags.length ? tags.join(' · ') : null, pill };
+}
+
+/** A served in-app link, or null — only a same-origin path ("/…", never "//…"). */
+export function ggHref(v: unknown): string | null {
+  return typeof v === 'string' && v.startsWith('/') && !v.startsWith('//') ? v : null;
+}
+
+/** The 👀 watch line split so its trailing served names become links: when the
+ *  served text ends with ": " + the served symbols joined by ", ", `lead` is the
+ *  text before them; else `lead` is the whole text (the names are not cut). */
+export function watchParts(w: GgWatch | null | undefined): { lead: string; trailing: boolean } | null {
+  if (!w || typeof w.text !== 'string' || !w.text.trim()) return null;
+  const syms = (w.symbols || []).map((s) => s?.symbol).filter((s): s is string => typeof s === 'string' && !!s);
+  const tail = syms.length ? `: ${syms.join(', ')}` : '';
+  if (tail && w.text.endsWith(tail)) return { lead: `${w.text.slice(0, w.text.length - tail.length)}: `, trailing: true };
+  return { lead: w.text, trailing: false };
 }

@@ -385,6 +385,15 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # NOTHING is sent until Ajay flips it to "live" after the 250-session study.
     # A MARKET kind (market_hours.gate). UNMEASURED: "his setup, not a buy signal".
     "gajjala_setup",
+    # 🧠 gajjala_potential (chart_maps/gajjala/potential.py, 2026-10-15). WIDENED
+    # 2026-10-15 — Ajay: "Give me an alert all continous tracker on these
+    # specifically when I get alert I will jump on to ride the wave". DECISIONS4:
+    # a NEW kind, LIVE (not shadow), owner-only, ON for his devices (the
+    # med_catalyst precedent: False in default_prefs, in this set). One push per
+    # (date, symbol, setup) the first time a read is a potential (forming, the
+    # trigger not printed). A MARKET kind (market_hours.gate). UNMEASURED — "a
+    # potential, not an entry; GG enters on the reclaim of the highs".
+    "gajjala_potential",
     # 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (orderflow/
     # tape_burst_kinds.py, 2026-10-14). WIDENED 2026-10-14 — Ajay: "I need a
     # tape burst notification specific for High Beta stocks from the reselinet
@@ -594,6 +603,15 @@ def default_prefs() -> dict:
         # scripts/owner_prefs_apply.py at deploy (a data write). SHADOW until he
         # flips GAJJALA_PUSH_MODE: recorded, not sent. A MARKET kind. UNMEASURED.
         "gajjala_setup": False,
+        # 🧠 A Goverdhan Gajjala setup read is a POTENTIAL on his scanner's names
+        # — still forming, the quiet sideways part begun or complete, the reclaim
+        # of the highs not printed (chart_maps/gajjala/potential.py, Ajay
+        # 2026-10-15: "Give me an alert all continous tracker on these
+        # specifically when I get alert I will jump on to ride the wave"). OFF
+        # for everyone else; ON for HIS devices through OWNER_KEEP_SET — his
+        # already-registered phones are flipped by scripts/owner_prefs_apply.py
+        # at deploy (a data write). LIVE, not shadow. A MARKET kind. UNMEASURED.
+        "gajjala_potential": False,
         # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
         # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
         # Chart Maps tab name off the zone boards (orderflow/

@@ -1062,6 +1062,21 @@ def _gg_label(key: str) -> str:
     return {k: "%s %s" % (e, lb) for k, e, lb in GC.SUBS}.get(key, key)
 
 
+def _gg_potential_lines() -> list:
+    """🧠 gajjala_potential (2026-10-15) — Ajay: "Give me an alert all continous
+    tracker on these specifically when I get alert I will jump on to ride the
+    wave". The two lines are composed by the ONE engine,
+    `chart_maps.gajjala.potential.rules_lines()` (every number a constant or the
+    session clock), never retyped here. LAZY, like the section itself; a module
+    that is not on the path yet (or fails) answers no lines rather than a guess."""
+    try:
+        from chart_maps.gajjala import potential as PT
+    except ImportError as exc:                     # pragma: no cover - import shim
+        log.warning("rules_info: gajjala potential lines unavailable: %s", exc)
+        return []
+    return [str(x) for x in PT.rules_lines()]
+
+
 def _gajjala_section() -> dict:
     """🚩 Gajjala's — every number read from `chart_maps.gajjala.constants` (GC)
     and `daytrading.data`'s session clock, never typed here. Imported LAZILY,
@@ -1100,7 +1115,7 @@ def _gajjala_section() -> dict:
                 % (GC.PUSH_KIND, push_open, rth_close, rth_close, ah_close, GC.NO_TRADE_AFTER_OPEN_MIN))
     else:
         push = ("📲 %s is in SHADOW: every A+ — every rule met and the entry bar closed — is recorded on /alerts "
-                "as “shadow — not sent”; nothing reaches a phone until the %d-session study reads and you flip it "
+                "as “shadow — not sent”; no A+ reaches a phone until the %d-session study reads and you flip it "
                 "to live. When live: %s–%s and %s–%s ET, never the first %d minutes, silent on closed days, once "
                 "per name, setup and session, every A+ its own push."
                 % (GC.PUSH_KIND, GC.STUDY_SESSIONS, push_open, rth_close, rth_close, ah_close,
@@ -1169,7 +1184,7 @@ def _gajjala_section() -> dict:
             "same setup (he mostly passes), ⏸ halts today, float and 🔄 float rotation."
             % GC.RED_CLOSES_WAIT,
         ],
-        "alerts": [push],
+        "alerts": [push] + _gg_potential_lines(),
         "note": ("Goverdhan Gajjala's five setups as he described them (IBD webinar, Feb 2024; TraderLion "
                  "podcast, Jan 2024). Numbers he never gave are Ajay's (K1–K10, 2026-10-13). UNMEASURED — no "
                  "study here says these setups win. Not advice."),

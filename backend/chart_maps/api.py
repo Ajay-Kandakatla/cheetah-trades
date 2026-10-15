@@ -418,8 +418,8 @@ async def chart_maps_ema_frames(
 @router.get("/chart-maps/gajjala")
 async def chart_maps_gajjala(
     sub: str = Query("", description="bull_flag (default) | kiss_fly | horizontal_fade | intraday_vcp | "
-                                     "reversal_squeeze | premarket | postmarket | playbook. EMPTY with a `focus` "
-                                     "symbol = the server picks the sub the push or the read meant (the served "
+                                     "reversal_squeeze | premarket | postmarket | playbook | potential. EMPTY with "
+                                     "a `focus` symbol = the server picks the sub the push or the read meant (the served "
                                      "`sub` is authoritative); an unknown value serves the default, never an error."),
     tf: str = Query("", description="5m | 15m — the tile bars (default 5m; 15m for the Horizontal Fade)."),
     focus: str = Query("", description="a symbol to deep-link to (the push url carries it)."),

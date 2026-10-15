@@ -575,6 +575,27 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
 - **Docs**: `docs/gajjala/gajjala_tab_2026_10_13.md` (tab, endpoint, Playbook, ℹ️), `push_2026_10_13.md`,
   `study_2026_10_13.md`, `detectors_2026_10_13.md`, `context_reads_2026_10_13.md`, `data_plan_2026_10_13.md`,
   `sources_2026_10_13.md`, `frontend_2026_10_13.md`, `volume_avg_backend_2026_10_13.md`.
+- **🧠 Potential · 📈 Track · 🔔 `gajjala_potential`** (2026-10-15, `chart_maps/gajjala/potential.py`). Ajay: *"In
+  Gajjalas setup I wanna find potential stocks … So create a potential category in this section."*, *"In all the sub tab
+  and add a track and alert to show me new potential is added everyday."*, *"Give me an alert all continous tracker on
+  these specifically when I get alert I will jump on to ride the wave"*. **UNMEASURED — a potential, not an entry; GG
+  enters on the reclaim of the highs.** Potential (his K1) = a setup read in state `POTENTIAL_STATE` `forming` (the
+  detectors' own K-criteria decide forming vs partial — no new detector, no score); `ready` True = "trigger armed",
+  else "building"; `partial` / `aplus` / `triggered` never. Three conditions on top are Cheetah defaults, not his
+  (`CHEETAH_DEFAULTS`, HIS CALLS P0–P2): `POTENTIAL_NEEDS_BASE` (≥ 1 sideways bar), `POTENTIAL_FRESH_TAPE` (a print in
+  the 5-minute bar that just closed, `alerts.MAX_ENTRY_AGE_SEC` reused), `POTENTIAL_DEFER_REFUSED` (a held first
+  sighting rings at the next pass while still forming); the join rule (AMENDMENTS4 D9, HIS CALL P12, no constant) tracks
+  but never rings what a mid-session restart finds already forming. GG's tells (float, 🔄 rotation, ⏸ halts, 🌙
+  after-hours mover, 📅 prior-day listing, 🧩 another setup) are badges and order, never gates. Surfaces: a 🧠 strip in
+  every setup sub, and the sub `POTENTIAL_SUB` (last in `SUBS`) = roll-up + 📈 Track + 👀 watch line. Tracker: Mongo
+  `gajjala_potentials` (`store.POTENTIALS`, kept for the later study), one doc per (session, symbol, setup) stamped on
+  the pass clock, written only by the existing 5-minute pass (`run.run_pass` → `PT.run_pass`, own try/except). Push
+  `POTENTIAL_PUSH_KIND` `gajjala_potential`: LIVE, owner-only (`OWNER_KEEP_SET`, default pref False), MARKET kind (silent
+  on closed days), one push per (date, symbol, setup) — K3, no cap — on the pass clock `ET_PREMARKET_OPEN`–
+  `ET_AFTERHOURS_CLOSE` (04:00–20:00 ET, the half-day close on `HALF_DAYS`), never `ET_RTH_OPEN` + `NO_TRADE_AFTER_OPEN_MIN`
+  (09:30–09:45, K2); `/alerts` 🧠 pass row + today's list, `/notifications` toggle, ℹ️ lines. No new crontab line.
+  The A+ kind stays SHADOW, its copy narrowed to "no A+ reaches your phone". Contracts: `scripts/contracts.mjs` "🧠
+  gajjala_potential (2026-10-15)". Doc: `docs/chart_maps/gajjala_potential_2026_10_15.md`.
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
@@ -829,7 +850,7 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `30 8  * * 1-5` | `/usr/local/bin/python -m sepa.cli brief` | Morning brief (08:30 ET) |
 | `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
-| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger. § 3 "Chart Maps — Gajjala's tab". |
+| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger + 🧠 gajjala_potential pushes (LIVE). § 3 "Chart Maps — Gajjala's tab". |
 | `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm. |
 | `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab". |
 

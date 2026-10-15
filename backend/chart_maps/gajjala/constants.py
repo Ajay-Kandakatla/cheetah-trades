@@ -120,12 +120,25 @@ AH_EXHAUSTION_MAX_PCT = None             # spec default (R2-4 not answered): sho
 OFF_BY_DEFAULT = ("HALT_CALM_BARS", "AH_EXHAUSTION_MAX_PCT")
 
 # labels the ℹ️ panel must say are Ajay's, not Gajjala's (DECISIONS round A)
-CHEETAH_DEFAULTS = ("STAY_LISTED_SESSIONS", "PSY_NEAR_PCT")
+CHEETAH_DEFAULTS = ("STAY_LISTED_SESSIONS", "PSY_NEAR_PCT", "POTENTIAL_NEEDS_BASE", "POTENTIAL_FRESH_TAPE",
+                    "POTENTIAL_DEFER_REFUSED")
 
 # push — DECISIONS round A: SHADOW first; every A+ is its own record, once per (symbol, setup, ET day)
 PUSH_KIND = "gajjala_setup"
 GAJJALA_PUSH_MODE = "shadow"             # Ajay round A: record + show on /alerts as "shadow — not sent" until the WP6 study reads and HE flips it
 PUSH_MODES = ("shadow", "live")
+
+# 🧠 potential · 📈 track · 🔔 gajjala_potential (Ajay 2026-10-15, DECISIONS4 K1–K3) — NO new number. A potential is the
+# detectors' own forming read (the setup's K-criteria above decide forming vs partial); THREE conditions sit on top and
+# are MINE — Cheetah defaults, not GG: in CHEETAH_DEFAULTS and served so on the ℹ️ panel, the strip and Notifications.
+POTENTIAL_SUB = "potential"                  # Ajay 2026-10-15 msg 1 "create a potential category" (DECISIONS4: one new sub)
+POTENTIAL_STATE = "forming"                  # Ajay K1 2026-10-15 "Structure forming, any gate still open"
+POTENTIAL_KINDS = ("armed", "building")      # Ajay K1: ready True = "trigger armed"; not ready = "building"
+POTENTIAL_PUSH_KIND = "gajjala_potential"    # Ajay 2026-10-15 msg 3 — NEW kind, LIVE, owner-only (DECISIONS4)
+POTENTIAL_NEEDS_BASE = True                  # Cheetah default (MINE, not GG — HIS CALL P0): ≥1 sideways bar; DECISIONS4 "first two clauses present"
+POTENTIAL_DEFER_REFUSED = True               # Cheetah default (MINE, not GG — HIS CALL P1): a first sighting held by the mute / no fresh print rings at the next eligible pass while still a potential
+POTENTIAL_FRESH_TAPE = True                  # Cheetah default (MINE, not GG — HIS CALL P2): ring only when the 5-minute bar that just closed printed (alerts.MAX_ENTRY_AGE_SEC)
+PASS_MINUTE_OFFSET = 1                       # TRANSPORT — = the crontab minute field "1-56/5" of chart_maps.gajjala.run (test pins it)
 
 # WP6 study — Ajay round C (exits reported side by side; placebo = same-session scanner names with no setup)
 STUDY_SESSIONS = 250                     # Ajay round C: the last 250 sessions
@@ -151,11 +164,12 @@ TILE_LIMIT_MAX = 80                      # TRANSPORT — = chart_maps.board.LIMI
 LEDGER_TTL_DAYS = 30                     # TRANSPORT — gajjala_scan / _ah_carry / _post / _passes / _daily
 READS_TTL_DAYS = 14                      # TRANSPORT — gajjala_reads (tile bars are the bulk)
 
-# sub-tabs (DECISIONS order) — key, emoji, label
+# sub-tabs (DECISIONS order) — key, emoji, label. 🧠 Potential (Ajay 2026-10-15 msg 1) is LAST; nothing else moves (HIS CALL P8)
 SETUPS = ("bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze")
 SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),
-        ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"))
+        ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
+        ("potential", "🧠", "Potential"))
 DEFAULT_SUB = "bull_flag"
 TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18
