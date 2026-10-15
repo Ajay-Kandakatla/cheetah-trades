@@ -842,8 +842,9 @@ def qqq_available(entry: dict) -> bool:
 
 
 def compact_row(r: dict, *, qqq_available: bool, thin: bool = False) -> dict:
-    """The A1 row (EVERY name in the view, under the liquidity floor too —
-    `thin` True, no chart): no chart, no zone. `qqq` None = the Nasdaq-100
+    """The A1 row (EVERY name in the view, under the liquidity floor too):
+    no chart, no zone. `thin` = under the HOUSE floor (board.DEFAULT_MIN_TIER,
+    absolute); whether the name gets a chart is the ACTIVE floor's call. `qqq` None = the Nasdaq-100
     list was not read. `text` = the card's own stat values (tile_stats), so a
     name reads the same in the table and on its card; `red` = is_red."""
     td = r.get("today") or {}
@@ -1004,11 +1005,11 @@ def count_line(counts: dict, *, min_tier_label: str, need_date) -> str:
         # The tab's default since 2026-10-14 (Ajay: "default to all"): nothing is cut
         # by liquidity; a thin name is charted too and keeps its flag in the table.
         text = (f"Showing {_n(c.get('shown'))} charts of {_n(c.get('rows'))} names — "
-                "no liquidity floor (thin names charted too, flagged thin in the table)")
+                "no liquidity floor (thin names charted too)")
     else:
         text = (f"Showing {_n(c.get('shown'))} charts of {_n(c.get('rows'))} names — "
                 f"{_n(c.get('dropped_thin'))} under the liquidity floor ({min_tier_label}), "
-                "listed in the table as thin, no chart")
+                "listed in the table, no chart")
     if int(c.get("no_turnover") or 0):
         text += f", {_n(c.get('no_turnover'))} with no turnover to check"
     text += (f". Not rated: {_n(c.get('etf'))} ETFs, {_n(c.get('delisted'))} delisted, "

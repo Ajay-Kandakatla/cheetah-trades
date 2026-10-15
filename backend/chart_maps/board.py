@@ -4790,9 +4790,13 @@ def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     kept, compact, no_turnover, dropped_thin = [], [], 0, 0
     for r in rows:
         m = {"avg_turnover": r.get("adv50"), "liquidity_tier": liquidity_tier(r.get("adv50"))}
-        thin = not passes_liquidity(m.get("avg_turnover"), min_tier)
+        # `thin` on the row = under the HOUSE floor (DEFAULT_MIN_TIER, absolute, informational);
+        # `cut` = under the ACTIVE floor (no chart). Since 2026-10-14 the tab opens with "any",
+        # so nothing is cut by default and a thin name is charted AND still flagged.
+        thin = not passes_liquidity(m.get("avg_turnover"), DEFAULT_MIN_TIER)
+        cut = not passes_liquidity(m.get("avg_turnover"), min_tier)
         compact.append(HB.compact_row(r, qqq_available=qqq_ok, thin=thin))
-        if thin:
+        if cut:
             dropped_thin += 1
             no_turnover += int(floor_on and m.get("avg_turnover") is None)
             continue

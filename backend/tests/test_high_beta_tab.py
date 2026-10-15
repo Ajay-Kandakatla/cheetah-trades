@@ -632,7 +632,7 @@ def test_13_board_ready_envelope_rows_and_tiles(hb_board):
     assert set(syms) <= {r["symbol"] for r in rows}                      # rows ⊇ tiles
     c = b["counts"]
     assert c["dropped_thin"] == 1 and c["shown"] == 3 and c["rows"] == 4
-    assert "listed in the table as thin, no chart" in b["count_line"]
+    assert "1 under the liquidity floor (Tradeable · ≥$10M/day), listed in the table, no chart" in b["count_line"]
     assert b["header"].startswith("\U0001F3A2 4 red of 5 High-Beta names · charts for the top 3")
     assert "Red names only" in b["view_line"] and b["view"]["on"] is False
     assert len(hb_board["snap_calls"]) == 1 and set(hb_board["snap_calls"][0]) == set(syms)
@@ -665,7 +665,7 @@ def test_13b_rows_cover_every_listed_name_beyond_the_chart_limit(hb_board):
     assert len(out["tiles"]) == 1 and len(out["rows"]) == 5           # AAA BBB CCC DDD THIN
     assert out["tiles"][0]["symbol"] == out["rows"][0]["symbol"]
     assert out["rows"][-1]["symbol"] == "DDD"                          # green after the red
-    assert not any(r["thin"] for r in out["rows"])                      # no floor = none thin
+    assert [r["symbol"] for r in out["rows"] if r["thin"]] == ["THIN"]  # the flag is the HOUSE floor (absolute), the chart cut is the active one
     assert out["high_beta_board"]["view"]["on"] is True
 
 
@@ -850,6 +850,8 @@ def test_16_the_high_beta_tab_opens_with_no_liquidity_floor(hb_board):
     assert out["min_tier"] == "any"
     syms = [t["symbol"] for t in out["tiles"]]
     assert "THIN" in syms, "with no floor the thin name gets a chart too"
+    assert [r["symbol"] for r in out["rows"] if r["thin"]] == ["THIN"]   # the flag is the HOUSE floor, absolute
+    assert [t["symbol"] for t in out["tiles"]] == ["AAA", "THIN", "BBB", "CCC"]
     # NEGATIVE: an explicit floor still applies, and the other tabs' default is untouched
     out_ok = BOARD.board(tab="high_beta", limit=24, min_tier="ok")
     assert out_ok["min_tier"] == "ok" and "THIN" not in [t["symbol"] for t in out_ok["tiles"]]
