@@ -112,6 +112,40 @@ describe('kind registry', () => {
   });
 });
 
+/* 🎢 🗺️ 2026-10-14 — Ajay: "I need a tape burst notification specific for High
+ * Beta stocks from the reselinet separately and also other tape bursts from the
+ * Chart Maps page". Two owner-only LIVE kinds; their /alerts rows and the bell
+ * must read as labels, never as the raw ids. */
+describe('the two tape-burst kinds (2026-10-14)', () => {
+  it('labels 🎢 tape_burst_highbeta and 🗺️ tape_burst_chartmaps in their own tape group', () => {
+    expect(ALERT_KINDS.tape_burst_highbeta).toEqual({ emoji: '\u{1F3A2}', label: 'Tape burst — High Beta', group: 'tape' });
+    expect(ALERT_KINDS.tape_burst_chartmaps).toEqual({ emoji: '\u{1F5FA}\u{FE0F}', label: 'Tape burst — Chart Maps', group: 'tape' });
+    expect(kindLabel('tape_burst_highbeta')).toBe('🎢 Tape burst — High Beta');
+    expect(kindLabel('tape_burst_chartmaps')).toBe('🗺️ Tape burst — Chart Maps');
+    expect(kindText('tape_burst_highbeta')).toBe('Tape burst — High Beta');
+    expect(kindText('tape_burst_chartmaps')).toBe('Tape burst — Chart Maps');
+    expect(kindEmoji('tape_burst_highbeta')).toBe('🎢');
+    expect(kindEmoji('tape_burst_chartmaps')).toBe('🗺️');
+  });
+
+  it('NEGATIVE: neither is a zone or breakout kind, and ⚡ trade_flash keeps its own zone label', () => {
+    for (const k of ['tape_burst_highbeta', 'tape_burst_chartmaps']) {
+      expect(ZONE_KINDS).not.toContain(k);
+      expect(BREAKOUT_KINDS).not.toContain(k);
+      expect(ALERT_KINDS[k].group).not.toBe('zones');
+    }
+    expect(ZONE_KINDS).toHaveLength(3);
+    expect(ALERT_KINDS.trade_flash).toEqual({ emoji: '⚡', label: 'Trade flash at a zone', group: 'zones' });
+  });
+
+  it('NEGATIVE: the labels never say bounce, fake, shadow or a forecast word', () => {
+    for (const k of ['tape_burst_highbeta', 'tape_burst_chartmaps']) {
+      const l = kindLabel(k).toLowerCase();
+      for (const w of ['boun' + 'ce', 'fa' + 'ke', 'shadow', 'reversal', 'will ', 'signal']) expect(l).not.toContain(w);
+    }
+  });
+});
+
 describe('ET clock', () => {
   it('formats a UTC epoch in ET and says so', () => {
     // 14:42 UTC in September = 10:42 EDT.

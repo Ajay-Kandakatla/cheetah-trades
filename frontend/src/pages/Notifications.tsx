@@ -119,6 +119,33 @@ export const CATEGORIES: CategoryDef[] = [
       + '09:45–16:00 and 16:00–20:00 ET (13:00 and 17:00 on NYSE half days), never 09:30–09:45 (his first 15 minutes), never pre-market, silent on closed days, once per name, setup and session, every A+ its own push. '
       + 'WHAT NEVER FIRES: a long flag, a near-kiss, a "B — imperfect" VCP, a break that missed a rule, or an A+ found late (its entry bar closed more than one 5-minute pass ago) — those stay on Chart Maps \u25B8 Gajjala\u2019s. '
       + 'NOT MEASURED: his rules as he described them; no study here says they win. Not a recommendation.' },
+  /* 🎢 🗺️ orderflow/tape_burst_kinds.py (2026-10-14). Ajay: "I need a tape
+     burst notification specific for High Beta stocks from the reselinet
+     separately and also other tape bursts from the Chart Maps page". Two
+     owner-only kinds, ON for him: in backend push/subs.OWNER_KEEP_SET and False
+     in default_prefs for everyone else (the med_catalyst precedent). They ring
+     LIVE — nothing about them is shadow. The burst numbers are pinned by the
+     contracts.mjs tape-burst block to orderflow/tape.py, the 150s to
+     tape_burst_kinds.py, the window to trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET,
+     the $2 to trading/safety_floor.MIN_SHARE_PRICE. "Rings live" is not "every
+     burst is sent": the NOT READ sentence names what never reaches the push
+     (cold first poll, the house floor, the poll budget, ⚡'s own record). */
+  { key: 'tape_burst_highbeta', label: 'Tape burst \u2014 High Beta', emoji: '\u{1F3A2}', group: 'trading',
+    detail: 'ON FOR YOUR PHONE \u2014 you said: "I need a tape burst notification specific for High Beta stocks from the reselinet separately and also other tape bursts from the Chart Maps page"; everyone else starts off. It rings live \u2014 nothing is held for a later switch-on. '
+      + 'WHAT IT WATCHES: every name on Chart Maps \u25B8 \u{1F3A2} High Beta, biggest drop today first, up to 150 names. '
+      + 'NOT READ: the first poll after a cold start can watch nothing; names under the house share-price floor ($2) are not read; names the poll\u2019s time budget cuts are not read that poll; a burst \u26A1 trade flash already recorded is not sent again. '
+      + 'WHAT FIRES: the same burst rule as \u26A1 trade flash \u2014 inside a 10-second window, $250K or more traded, 75% or more of it on one side, across 15+ regular prints (auction crosses, average-price and busted prints are left out) \u2014 anywhere in the day\u2019s range, no zone needed. '
+      + 'A burst on a High-Beta name rings here even at a zone (\u26A1 trade flash is muted on your phone since 2026-09-08); each burst is one row on /alerts, never two. '
+      + 'Every 5 minutes, 09:32\u201316:00 ET on trading days, silent on closed days; one push per poll, every burst listed on /alerts with each ticker linked to its tape. '
+      + 'UNMEASURED \u2014 a description of prints, not a signal. Not advice.' },
+  { key: 'tape_burst_chartmaps', label: 'Tape burst \u2014 Chart Maps', emoji: '\u{1F5FA}\uFE0F', group: 'trading',
+    detail: 'ON FOR YOUR PHONE \u2014 the same ask: "I need a tape burst notification specific for High Beta stocks from the reselinet separately and also other tape bursts from the Chart Maps page"; everyone else starts off. It rings live \u2014 nothing is held for a later switch-on. '
+      + 'NOT READ: names under the house share-price floor ($2) are not read; names the poll\u2019s time budget cuts are not read that poll. '
+      + 'WHAT IT WATCHES: the names the Chart Maps tabs served at their last load (today or the last session), a few from each tab in turn, up to 150 names \u2014 minus the names \u26A1 trade flash already watches at their zones and the names on the \u{1F3A2} High-Beta list (those ring as \u{1F3A2}). '
+      + 'WHAT FIRES: the same burst rule as \u26A1 trade flash \u2014 inside a 10-second window, $250K or more traded, 75% or more of it on one side, across 15+ regular prints (auction crosses, average-price and busted prints are left out) \u2014 anywhere in the day\u2019s range, no zone needed. '
+      + 'A burst already recorded by \u26A1 trade flash or \u{1F3A2} High Beta is not sent again; each burst is one row on /alerts, never two. '
+      + 'Every 5 minutes, 09:32\u201316:00 ET on trading days, silent on closed days; one push per poll, every burst listed on /alerts with each ticker linked to its tape. '
+      + 'UNMEASURED \u2014 a description of prints, not a signal. Not advice.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -447,7 +474,7 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ setups (2026-10-13, shadow first). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ setups (2026-10-13, shadow first), and 🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
@@ -455,6 +482,7 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
       med_catalyst: true,
       ops_alert: true,
       gajjala_setup: true,
+      tape_burst_highbeta: true, tape_burst_chartmaps: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

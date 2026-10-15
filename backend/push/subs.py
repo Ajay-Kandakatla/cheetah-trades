@@ -385,6 +385,18 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # NOTHING is sent until Ajay flips it to "live" after the 250-session study.
     # A MARKET kind (market_hours.gate). UNMEASURED: "his setup, not a buy signal".
     "gajjala_setup",
+    # 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (orderflow/
+    # tape_burst_kinds.py, 2026-10-14). WIDENED 2026-10-14 — Ajay: "I need a
+    # tape burst notification specific for High Beta stocks from the reselinet
+    # separately and also other tape bursts from the Chart Maps page", and
+    # asked which names: "High-Beta tab names + all Chart Maps names". ON for
+    # the owner, LIVE (the med_catalyst precedent: False in default_prefs, in
+    # this set). His registered phones are flipped by
+    # scripts/owner_prefs_apply.py at deploy. `trade_flash` stays OUT (his
+    # 2026-09-08 "kill the tape burst"). MARKET kinds. UNMEASURED — a
+    # description of prints.
+    "tape_burst_highbeta",
+    "tape_burst_chartmaps",
     # 🩺 ops_alert (ops/docker_watchdog.py -> /admin/ops/alert). 2026-10-06, Ajay
     # approved the watchdog push; without this a re-registering phone mutes it.
     # Host health, not a trading kind: it widens nothing any gate requires.
@@ -582,6 +594,15 @@ def default_prefs() -> dict:
         # scripts/owner_prefs_apply.py at deploy (a data write). SHADOW until he
         # flips GAJJALA_PUSH_MODE: recorded, not sent. A MARKET kind. UNMEASURED.
         "gajjala_setup": False,
+        # 🎢 / 🗺️ A tape burst (trade_flash's rule: 10 s, >= $250k, >= 75%
+        # one-sided, >= 15 regular prints) on a High Beta tab name, or on a
+        # Chart Maps tab name off the zone boards (orderflow/
+        # tape_burst_kinds.py, Ajay 2026-10-14). OFF for everyone else; ON for
+        # HIS devices through OWNER_KEEP_SET (owner-only — send_to_user targets
+        # him alone). It must still be here: a kind missing from default_prefs
+        # targets ZERO devices and renders no toggle. MARKET kinds. UNMEASURED.
+        "tape_burst_highbeta": False,
+        "tape_burst_chartmaps": False,
         "morning_brief": True,       # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

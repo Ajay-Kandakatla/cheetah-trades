@@ -19,7 +19,7 @@
  */
 
 export type AlertKindGroup =
-  | 'zones' | 'trading' | 'breakout' | 'setup' | 'learning' | 'household' | 'admin' | 'system';
+  | 'zones' | 'tape' | 'trading' | 'breakout' | 'setup' | 'learning' | 'household' | 'admin' | 'system';
 
 export type AlertKindDef = {
   emoji: string;
@@ -48,6 +48,17 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // with the zones for the history list, but NOT in ZONE_KINDS: it is not
   // one of the three kinds that pass through alert_gates.py.
   key_level_alert:     { emoji: '🔑', label: 'Key level closed through', group: 'zones' },
+
+  // ── tape bursts off the zones (2026-10-14) ────────────────────────────────
+  // Ajay 2026-10-14: "I need a tape burst notification specific for High Beta
+  // stocks from the reselinet separately and also other tape bursts from the
+  // Chart Maps page". Two owner-only kinds, LIVE (they ring, nothing shadow),
+  // read off the same burst rule as ⚡ trade_flash (orderflow/tape.find_bursts)
+  // but anywhere in the day's range, not only at a zone
+  // (orderflow/tape_burst_kinds.py). Their own group: neither is a zone kind
+  // and neither passes alert_gates.py. UNMEASURED — a description of prints.
+  tape_burst_highbeta: { emoji: '🎢', label: 'Tape burst — High Beta',  group: 'tape' },
+  tape_burst_chartmaps:{ emoji: '🗺️', label: 'Tape burst — Chart Maps', group: 'tape' },
 
   // ── trading ───────────────────────────────────────────────────────────────
   pivot_alert:         { emoji: '🎯', label: 'Pivot / buy zone',        group: 'trading' },

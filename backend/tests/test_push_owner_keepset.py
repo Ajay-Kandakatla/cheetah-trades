@@ -53,14 +53,22 @@ def test_keep_set_is_the_2026_09_21_nine():
     WIDENED 2026-10-13 — 🚩 `gajjala_setup` (DECISIONS "Pushes: YES —
     owner-only kind gajjala_setup, A+ triggers only"). ON for the owner, False
     in default_prefs; it ships in SHADOW (GAJJALA_PUSH_MODE), so nothing is sent
-    until he flips it."""
+    until he flips it.
+
+    WIDENED 2026-10-14 — 🎢 `tape_burst_highbeta` + 🗺️ `tape_burst_chartmaps`.
+    Ajay: "I need a tape burst notification specific for High Beta stocks from
+    the reselinet separately and also other tape bursts from the Chart Maps
+    page"; asked which names: "High-Beta tab names + all Chart Maps names".
+    Owner-only, LIVE, False in default_prefs. `trade_flash` stays OUT."""
     assert subs.OWNER_KEEP_SET == frozenset({
         "hot_pullback_alert", "pattern_alert", "demand_alert", "position_alert",
         "potus_investment", "growth_demand_alert", "earnings_reaction",
         "board_arrival", "price_alert", "key_level_alert", "med_catalyst",
         "ops_alert",
         # WIDENED 2026-10-13 — 🚩 gajjala_setup (owner-only, SHADOW first)
-        "gajjala_setup"})
+        "gajjala_setup",
+        # WIDENED 2026-10-14 — 🎢 / 🗺️ tape-burst kinds (owner-only, LIVE)
+        "tape_burst_highbeta", "tape_burst_chartmaps"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices

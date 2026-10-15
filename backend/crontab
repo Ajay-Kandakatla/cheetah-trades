@@ -217,6 +217,11 @@
 # refuses to run outside 9:32-16:00 ET, so the wide cron window is harmless.
 # Tail-only tape fetches (~1 request/name/poll) keep this light on the shared
 # key.
+# 2026-10-14: the SAME line also runs the two owner-only tape-burst kinds
+# (orderflow/tape_burst_kinds.py) after the zone pass — 🎢 tape_burst_highbeta
+# (the High Beta tab's names, cap 150) and 🗺️ tape_burst_chartmaps (the Chart
+# Maps tabs' names minus the zone + High-Beta names, cap 150). No line of their
+# own; `--kinds` / `--dry-run` are for manual runs only.
 2-57/5 9-15  *    *    1-5  /usr/local/bin/python -m sepa.cli trade-flash-watch
 #
 # ── 0DTE ledger (Ajay 2026-08-24) ────────────────────────────────────────────

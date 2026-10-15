@@ -194,11 +194,19 @@ def main() -> int:
              "discrepancy (run post-close after the fast-scan).",
     )
 
-    sub.add_parser(
+    s_tf = sub.add_parser(
         "trade-flash-watch",
         help="Poll the demand/supply-board names for zone-tied tape bursts and "
-             "push new ones (RTH only; one consolidated push per cycle).",
+             "push new ones (RTH only; one consolidated push per cycle). Since "
+             "2026-10-14 the same pass runs the 🎢 High-Beta and 🗺️ Chart Maps "
+             "tape-burst kinds (orderflow/tape_burst_kinds.py).",
     )
+    s_tf.add_argument("--kinds", type=str, default="all",
+                      help="Tape-burst kinds after the zone pass: 'all' (default) or a "
+                           "comma list of tape_burst_highbeta,tape_burst_chartmaps")
+    s_tf.add_argument("--dry-run", action="store_true",
+                      help="No Mongo write, no push, the clock gate bypassed: prints "
+                           "both watch lists and what would be pushed")
 
     sub.add_parser(
         "zero-dte-record",
@@ -492,7 +500,11 @@ def main() -> int:
 
     if args.cmd == "trade-flash-watch":
         from orderflow import trade_flash
-        r = trade_flash.run_watch()
+        r = trade_flash.run_watch(kinds=args.kinds, dry_run=args.dry_run)
+        if args.dry_run:
+            # A manual check: nothing was written or pushed, so nothing beats.
+            print(json.dumps(r, indent=2, default=str))
+            return 0
         # A quiet tape produces zero events, so the events collection cannot
         # prove this job ran — the heartbeat is that proof. Same plumbing as
         # the alerts engine; read by health_audit.check_trade_flash_heartbeat
@@ -501,6 +513,11 @@ def main() -> int:
         try:
             from observability import engine_heartbeat
             engine_heartbeat.beat("trade_flash")
+            # 2026-10-14: each tape-burst kind that actually ran beats under
+            # its own name (health_audit reads one heartbeat per kind).
+            for kind, res in ((r or {}).get("kinds") or {}).items():
+                if isinstance(res, dict) and res.get("ran"):
+                    engine_heartbeat.beat(kind)
         except Exception:
             pass
         log.info("TRADE-FLASH watch: %s", r)

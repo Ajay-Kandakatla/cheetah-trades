@@ -26,6 +26,12 @@ never ran". This module keeps the last pass's counters per kind:
                      🚩 5-minute pass on its own crontab line (SHADOW first);
                      its served pass also carries `shadow_items`, today's
                      shadow A+ rows read from `gajjala_alerts` (2026-10-13 E3)
+  tape_burst_highbeta / tape_burst_chartmaps
+                     written here by orderflow.tape_burst_kinds.run_all
+                     (2026-10-14), the 🎢 / 🗺️ kinds riding the
+                     `sepa.cli trade-flash-watch` line; each served pass also
+                     carries `window` {open, close} (HH:MM ET, built from
+                     trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET)
 
 ``alert_pass_latest`` collection: {_id: kind, as_of: ET iso, date: YYYY-MM-DD,
 counts: {...ints}, reason?: str}. One doc per kind, replaced every pass.
@@ -90,8 +96,14 @@ MED_KIND = "med_catalyst"
 # pass doc. It ships in SHADOW: the counts carry `shadow_mode` / `shadow` /
 # `shadow_session` (the medical keys) so the page says "shadow — not sent".
 GAJJALA_KIND = "gajjala_setup"
+# 🎢 / 🗺️ the two tape-burst kinds (orderflow/tape_burst_kinds.py, 2026-10-14)
+# ride `sepa.cli trade-flash-watch` (`2-57/5 9-15 * * 1-5`) — no line of their
+# own — and record their own pass docs. Typed, not imported: this file stays a
+# module-level leaf (test_tape_burst_kinds pins them equal to
+# tape_burst_kinds.KINDS).
+TAPE_KINDS = ("tape_burst_highbeta", "tape_burst_chartmaps")
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
-              GAJJALA_KIND) + DAILY_PASS_KINDS
+              GAJJALA_KIND) + TAPE_KINDS + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -112,6 +124,9 @@ CADENCE_SEC[MED_KIND] = 300
 # 🚩 its own line, minute field `1-56/5` → 300 s (pinned to the crontab by
 # test_alert_status, like the zone passes).
 CADENCE_SEC[GAJJALA_KIND] = 300
+# 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
+# guard derives it from that line's minute field).
+CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
 
 # The cap floor is READ from demand_alerts.MIN_CAP_USD at request time, never
 # retyped (review 2026-09-14, finding 6: this said "$1B+" for four days after
@@ -332,6 +347,20 @@ def schedule_map() -> dict:
     return out
 
 
+def tape_window() -> Optional[dict]:
+    """{open, close} 'HH:MM' ET of the tape-burst passes, READ from
+    orderflow.trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET (never typed). LAZY:
+    this module stays a module-level leaf. None when the module cannot be
+    read — the page then judges no window rather than a guessed one."""
+    try:
+        from orderflow import trade_flash as TF
+        return {"open": TF.WATCH_OPEN_ET.strftime("%H:%M"),
+                "close": TF.WATCH_CLOSE_ET.strftime("%H:%M")}
+    except Exception as exc:                      # pragma: no cover - import shim
+        log.warning("alert_status: trade_flash window unavailable: %s", exc)
+        return None
+
+
 def _daily(kind: str, pass_doc: dict, schedule: dict) -> dict:
     """A once-a-day pass: no cadence to be stale against, a schedule instead."""
     return dict(pass_doc, cadence_sec=None, schedule=schedule.get(kind))
@@ -442,6 +471,9 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
         GAJJALA_KIND:        dict(_with_cadence(GAJJALA_KIND, read_pass(GAJJALA_KIND, pass_coll)),
                                   shadow_items=read_gajjala_shadow(gajjala_coll, et)),
     }
+    window = tape_window()
+    for kind in TAPE_KINDS:
+        passes[kind] = dict(_with_cadence(kind, read_pass(kind, pass_coll)), window=window)
     for kind in DAILY_PASS_KINDS:
         passes[kind] = _daily(kind, read_pass(kind, pass_coll), sched)
     return {
@@ -453,7 +485,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "TAPE_KINDS", "tape_window", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "status_payload", "clean_counts", "DISCLAIMER_TEMPLATE", "disclaimer", "cap_floor_txt"]

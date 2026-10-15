@@ -168,8 +168,10 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
     # NINE since 2026-09-29: 🧬 med_catalyst rides promo_live's 5-minute line
     # and records its own pass doc.
     # TEN since 2026-10-13: 🚩 gajjala_setup — its own 5-minute line, its own pass doc (SHADOW first).
+    # TWELVE since 2026-10-14: 🎢 / 🗺️ the two tape-burst kinds ride trade-flash-watch, own pass docs.
     assert set(p["passes"]) == {"zone_edge", "zone_bounce_alert", "demand_alert",
                                 "key_level_alert", "med_catalyst", "gajjala_setup",
+                                "tape_burst_highbeta", "tape_burst_chartmaps",
                                 "earnings_reaction", "board_arrival:bonde",
                                 "board_arrival:growth", "capital_quality_upgrade"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
@@ -302,9 +304,15 @@ def test_cadence_sec_matches_the_crontab():
                               "key_level_alert": seconds(minute_field("supply_demand.zone_edge")),
                               "med_catalyst": seconds(minute_field("catalysts.promo_live")),
                               # 🚩 2026-10-13: its own line (`1-56/5`), exactly one
-                              "gajjala_setup": seconds(minute_field("chart_maps.gajjala.run"))}
+                              "gajjala_setup": seconds(minute_field("chart_maps.gajjala.run")),
+                              # 🎢 / 🗺️ 2026-10-14: both ride the ONE trade-flash-watch line (`2-57/5`)
+                              "tape_burst_highbeta": seconds(minute_field("sepa.cli trade-flash-watch")),
+                              "tape_burst_chartmaps": seconds(minute_field("sepa.cli trade-flash-watch"))}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
-                              "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300}
+                              "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
+                              "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300}
+    assert not [ln for ln in lines if "tape_burst" in ln and not ln.lstrip().startswith("#")], \
+        "NEGATIVE: the tape-burst kinds have no crontab line of their own (they ride trade-flash-watch)"
     assert not [ln for ln in lines if "key_level_alerts" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the key-level pass has no crontab line of its own"
     assert not [ln for ln in lines if "catalysts.medical" in ln and not ln.lstrip().startswith("#")], \
@@ -375,10 +383,13 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
     A daily pass must never appear in it (test_cadence_sec_matches_the_crontab
     compares it to the crontab's minute fields)."""
     # 🚩 2026-10-13: gajjala_setup is a 5-minute INTRADAY pass (its own crontab line), not a daily one.
+    # 🎢 / 🗺️ 2026-10-14: the two tape-burst kinds are 5-minute INTRADAY passes on the trade-flash line.
     assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert", "key_level_alert",
-                                   "med_catalyst", "gajjala_setup"}
+                                   "med_catalyst", "gajjala_setup",
+                                   "tape_burst_highbeta", "tape_burst_chartmaps"}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
-                              "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300}
+                              "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
+                              "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300}
 
 
 # ── 🔑 key_level_alert (2026-09-25) ─────────────────────────────────────────

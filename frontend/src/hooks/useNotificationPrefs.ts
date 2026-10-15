@@ -72,6 +72,17 @@ export type NotificationPrefs = {
      SHADOW first: recorded on /alerts, nothing sent until the switch is
      flipped. UNMEASURED. */
   gajjala_setup?: boolean;
+  /* 🎢 A tape burst on a Chart Maps ▸ High Beta name, anywhere in the day's
+     range (orderflow/tape_burst_kinds.py, 2026-10-14: "I need a tape burst
+     notification specific for High Beta stocks from the reselinet
+     separately …"). ON for him via the owner keep-set; False in default_prefs
+     for anyone else. LIVE (never shadow). UNMEASURED. */
+  tape_burst_highbeta?: boolean;
+  /* 🗺️ A tape burst on a name the Chart Maps tabs served (minus the zone and
+     High-Beta names), same ask, 2026-10-14: "… and also other tape bursts from
+     the Chart Maps page". ON for him via the owner keep-set; False in
+     default_prefs for anyone else. LIVE (never shadow). UNMEASURED. */
+  tape_burst_chartmaps?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;

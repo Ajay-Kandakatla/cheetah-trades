@@ -107,6 +107,8 @@ class NoSendPathTest(unittest.TestCase):
                           "gajjala_setup",
                           # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
                           "ops_alert",
+                          # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (his K4 "High-Beta tab names + all Chart Maps names"; owner-only, LIVE) — this path never touches them either.
+                          "tape_burst_highbeta", "tape_burst_chartmaps",
                           })
 
     def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):

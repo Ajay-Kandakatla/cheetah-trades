@@ -126,6 +126,10 @@ ITEM_URL_BY_KIND = {
     # the day's claim (chart_maps/gajjala/tab.resolve_sub); the single push's
     # url carries the sub itself (alerts.compose).
     "gajjala_setup":        "/chart-maps?tab=gajjala&focus={sym}",
+    # 🎢 / 🗺️ 2026-10-14 — the Tape tab, back-linked to Chart Maps
+    # (orderflow/tape_burst_kinds.URL_FMT, pinned by test_tape_burst_kinds).
+    "tape_burst_highbeta":  "/sepa/{sym}?tab=tape&from=chart-maps",
+    "tape_burst_chartmaps": "/sepa/{sym}?tab=tape&from=chart-maps",
     "juggernaut_watchlist": DEFAULT_ITEM_URL,
     "leaderboard_breakout": DEFAULT_ITEM_URL,
     "accumulation_change":  DEFAULT_ITEM_URL,

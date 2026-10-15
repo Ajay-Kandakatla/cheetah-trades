@@ -130,7 +130,11 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
     # owner through OWNER_KEEP_SET (spec HIS CALL #1).
     # 🚩 gajjala_setup (2026-10-13) likewise: OFF in default_prefs, ON for the
     # owner through OWNER_KEEP_SET (DECISIONS "Pushes: YES — owner-only").
-    assert off == {QA.KIND, "key_level_alert", "med_catalyst", "gajjala_setup"}, \
+    # 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (WIDENED 2026-10-14)
+    # likewise: OFF in default_prefs, ON for the owner through OWNER_KEEP_SET
+    # (his K4 "High-Beta tab names + all Chart Maps names").
+    assert off == {QA.KIND, "key_level_alert", "med_catalyst", "gajjala_setup",
+                   "tape_burst_highbeta", "tape_burst_chartmaps"}, \
         "another kind quietly shipped muted: %s" % sorted(off)
 
 
@@ -154,6 +158,8 @@ def test_NEGATIVE_the_keep_set_itself_did_not_move():
         "ops_alert",
         # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; OFF in default_prefs, ON for the owner via the keep-set; SHADOW first).
         "gajjala_setup",
+        # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (Ajay: "I need a tape burst notification specific for High Beta stocks …", K4 "High-Beta tab names + all Chart Maps names"; OFF in default_prefs, ON for the owner via the keep-set; LIVE).
+        "tape_burst_highbeta", "tape_burst_chartmaps",
     })
 
 

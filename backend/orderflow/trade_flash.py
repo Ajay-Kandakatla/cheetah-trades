@@ -42,7 +42,7 @@ from __future__ import annotations
 import logging
 import os
 import time as _time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as dtime, timedelta, timezone
 from typing import Optional
 
 log = logging.getLogger("orderflow.trade_flash")
@@ -78,6 +78,19 @@ AUCTION_CROSS_ET = frozenset({"09:30:00", "16:00:00"})
 # capped here as a hard backstop so a future board change cannot silently turn
 # this into a 500-symbol sweep of the shared API key.
 MAX_SYMBOLS = 60
+
+# The watch window, ET. Named 2026-10-14 so the two tape-burst kinds that ride
+# this pass (orderflow/tape_burst_kinds.py) and the /alerts window read ONE
+# clock — the same values the literals in run_watch carried (9*60+32, 16*60),
+# and the window his 2026-10-14 answer set for both kinds (DECISIONS K4:
+# every 5 min, 09:32–16:00 ET).
+WATCH_OPEN_ET = dtime(9, 32)      # Ajay 2026-10-14
+WATCH_CLOSE_ET = dtime(16, 0)     # Ajay 2026-10-14
+
+# The zone kind's push title (unchanged words, now a format so the two tape
+# kinds can pass their own through the same record_and_push).
+ZONE_TITLE_FMT = "⚡ Tape burst at a zone — {lead}"
+MORE_FMT = " +{n} more"
 
 
 def _owner_email() -> str:
@@ -182,10 +195,15 @@ def tape_url(sym: str) -> str:
     return f"/sepa/{sym}?tab=tape&from=supply-demand"
 
 
+def fmt_dollars(m) -> str:
+    """$1.8M / $560K — the one money format of every tape-burst line. PURE."""
+    m = m or 0
+    return f"${m/1e6:.1f}M" if m >= 1e6 else f"${m/1e3:.0f}K"
+
+
 def headline(ev: dict) -> str:
     """One push line per event. Names the meaning, not just the numbers. PURE."""
-    m = ev.get("dollars") or 0
-    amt = f"${m/1e6:.1f}M" if m >= 1e6 else f"${m/1e3:.0f}K"
+    amt = fmt_dollars(ev.get("dollars"))
     what = ("buyers stepping in AT the demand zone"
             if ev.get("board") == "demand" and ev.get("side") == "buy" else
             "sellers hitting the demand zone" if ev.get("board") == "demand" else
@@ -330,53 +348,152 @@ def board_bands() -> list:
     return dedup[:MAX_SYMBOLS]
 
 
-def scan_events() -> list:
-    """One poll: tail tape for every board name -> zone-tied burst events."""
+def bursts_from_tail(df) -> Optional[list]:
+    """A tail frame -> its bursts through the `tape` engine (tick_rule_sides +
+    find_bursts). None when the frame is too thin to read (find_bursts' own
+    15-print floor) or the engine fails. Shared with tape_burst_kinds — one
+    burst rule for every kind."""
     from .tape import tick_rule_sides, find_bursts
 
+    if df is None or len(df) < 15:              # find_bursts' own floor
+        return None
+    sided = df.copy()
+    sided["side"] = tick_rule_sides(sided["price"].tolist())
+    try:
+        return find_bursts(sided)
+    except Exception as exc:
+        log.debug("trade_flash bursts failed: %s", exc)
+        return None
+
+
+def scan_events(*, bands=None, tails=None) -> list:
+    """One poll: tail tape for every board name -> zone-tied burst events.
+
+    `bands` defaults to board_bands(); `tails`, when a dict, is filled
+    symbol -> tail frame (None for no answer) so the tape-burst kinds reuse
+    the fetch instead of reading the same tape twice (2026-10-14)."""
     day = _now_et().strftime("%Y-%m-%d")
     events = []
-    for sym, board, band in board_bands():
+    for sym, board, band in (board_bands() if bands is None else bands):
         df = fetch_recent_trades(sym)
-        if df is None or len(df) < 15:          # find_bursts' own floor
-            continue
-        sided = df.copy()
-        sided["side"] = tick_rule_sides(sided["price"].tolist())
-        try:
-            bursts = find_bursts(sided)
-        except Exception as exc:
-            log.debug("trade_flash bursts %s failed: %s", sym, exc)
+        if tails is not None:
+            tails[sym] = df
+        bursts = bursts_from_tail(df)
+        if bursts is None:
             continue
         events.extend(build_events(sym, board, band, bursts, day))
     return events
 
 
-def record_and_push(events: list) -> dict:
+def _find_ids(coll, ids: list) -> dict:
+    """{_id: doc} for the ids already stored, ONE `$in` read. Never raises — a
+    failed read answers {} (nothing known), which leaves the caller's
+    `$setOnInsert` dedupe as the backstop."""
+    if not ids:
+        return {}
+    try:
+        cur = coll.find({"_id": {"$in": list(ids)}},
+                        {"_id": 1, "kind": 1, "recorded_at": 1})
+        return {d["_id"]: d for d in (cur or []) if isinstance(d, dict) and "_id" in d}
+    except Exception as exc:
+        log.debug("trade_flash id read failed: %s", exc)
+        return {}
+
+
+def _is_fresh(doc: dict, fresh_since) -> bool:
+    """Recorded during THIS poll (at or after `fresh_since`, epoch s)? A doc an
+    earlier poll wrote is a re-sighting inside the LOOKBACK_MIN overlap."""
+    if fresh_since is None:
+        return True
+    try:
+        return int(doc.get("recorded_at") or 0) >= int(fresh_since)
+    except (TypeError, ValueError):
+        return False
+
+
+def record_and_push(events: list, *, kind: str = "trade_flash",
+                    coll_name: str = EVENTS_COLL,
+                    title_fmt: str = ZONE_TITLE_FMT, headline_fn=None,
+                    url_fn=None, precheck_colls: tuple = (),
+                    fresh_since: Optional[int] = None,
+                    dry_run: bool = False) -> dict:
     """Insert unseen events; ONE consolidated push for whatever is new.
 
     Batched because five names bursting in one poll must be one notification,
     not five — a spammy kind is how kinds get retired from the phone.
+
+    Parameterized 2026-10-14 for the two tape-burst kinds; the defaults ARE
+    the zone kind (same collection, title, lines, url, kind). An `_id` found
+    in any `precheck_colls` collection is skipped (`dup_precheck`, of which
+    `dup_precheck_fresh` were written during this poll). An `_id` already in
+    `coll_name` is split by the stored doc's `kind` (a doc with none is this
+    kind — the zone collection never stored one): `dup_same` (this kind,
+    re-seen inside the LOOKBACK_MIN overlap), `dup_kind` (another kind,
+    written during this poll), `dup_earlier` (another kind, an earlier
+    poll). `dry_run`: no write, no push — `would_push` is what would be new.
     """
+    headline_fn = headline_fn or headline
+    url_fn = url_fn or tape_url
+    counts = {"dup_precheck": 0, "dup_precheck_fresh": 0, "dup_same": 0,
+              "dup_kind": 0, "dup_earlier": 0}
     db = _db()
     if db is None:
+        if dry_run:
+            return {"ok": False, "reason": "no mongo", "new": 0, "dry_run": True,
+                    "would_push": len(events), **counts}
         return {"ok": False, "reason": "no mongo", "new": 0}
-    coll = db[EVENTS_COLL]
-    fresh = []
-    for ev in events:
-        try:
-            res = coll.update_one({"_id": ev["_id"]}, {"$setOnInsert": ev}, upsert=True)
-            if res.upserted_id is not None:
-                fresh.append(ev)
-        except Exception as exc:
-            log.debug("trade_flash write failed: %s", exc)
+    todo = list(events)
+    for name in precheck_colls or ():
+        known = _find_ids(db[name], [ev["_id"] for ev in todo])
+        if not known:
+            continue
+        keep = []
+        for ev in todo:
+            doc = known.get(ev["_id"])
+            if doc is None:
+                keep.append(ev)
+                continue
+            counts["dup_precheck"] += 1
+            if _is_fresh(doc, fresh_since):
+                counts["dup_precheck_fresh"] += 1
+        todo = keep
+    coll = db[coll_name]
+    fresh, existing = [], []
+    if dry_run:
+        known = _find_ids(coll, [ev["_id"] for ev in todo])
+        for ev in todo:
+            (existing if ev["_id"] in known else fresh).append(ev)
+    else:
+        for ev in todo:
+            try:
+                res = coll.update_one({"_id": ev["_id"]}, {"$setOnInsert": ev}, upsert=True)
+                if res.upserted_id is not None:
+                    fresh.append(ev)
+                else:
+                    existing.append(ev)
+            except Exception as exc:
+                log.debug("trade_flash write failed: %s", exc)
+        known = _find_ids(coll, [ev["_id"] for ev in existing]) if existing else {}
+    for ev in existing:
+        doc = known.get(ev["_id"]) or {}
+        if (doc.get("kind") or kind) == kind:
+            counts["dup_same"] += 1
+        elif _is_fresh(doc, fresh_since):
+            counts["dup_kind"] += 1
+        else:
+            counts["dup_earlier"] += 1
+    fresh_ids = [ev["_id"] for ev in fresh]
+    if dry_run:
+        return {"ok": True, "new": 0, "pushed": False, "dry_run": True,
+                "would_push": len(fresh), "fresh_ids": fresh_ids, **counts}
     if not fresh:
-        return {"ok": True, "new": 0, "pushed": False}
+        return {"ok": True, "new": 0, "pushed": False, "fresh_ids": [], **counts}
 
     fresh.sort(key=lambda e: -(e.get("dollars") or 0))
     lead = fresh[0]
-    title = f"⚡ Tape burst at a zone — {lead['symbol']}" + (
-        f" +{len(fresh) - 1} more" if len(fresh) > 1 else "")
-    lines = [headline(e) for e in fresh]
+    title = title_fmt.format(lead=lead["symbol"]) + (
+        MORE_FMT.format(n=len(fresh) - 1) if len(fresh) > 1 else "")
+    lines = [headline_fn(e) for e in fresh]
     body = "\n".join(lines[:PUSH_BODY_LINES])
     # EVERY burst, in body order (2026-09-29, Ajay on "CRWV +7 more": "I am
     # unable to see the other that are hiddedn her"). Log-only: push.sender
@@ -387,14 +504,15 @@ def record_and_push(events: list) -> dict:
         from push import sender
         r = sender.send_to_user(_owner_email(), {
             "title": title, "body": body,
-            "url": tape_url(lead["symbol"]),
-            "kind": "trade_flash",
+            "url": url_fn(lead["symbol"]),
+            "kind": kind,
             "items": items,
-        }, kind="trade_flash")
+        }, kind=kind)
         pushed = bool(r and r.get("sent"))
     except Exception as exc:
-        log.warning("trade_flash push failed: %s", exc)
-    return {"ok": True, "new": len(fresh), "pushed": pushed}
+        log.warning("%s push failed: %s", kind, exc)
+    return {"ok": True, "new": len(fresh), "pushed": pushed,
+            "fresh_ids": fresh_ids, **counts}
 
 
 def today_events(limit: int = 50) -> dict:
@@ -406,17 +524,100 @@ def today_events(limit: int = 50) -> dict:
     day = _now_et().strftime("%Y-%m-%d")
     rows = list(db[EVENTS_COLL].find({"et_date": day}, {"recorded_at": 0})
                 .sort("time_et", -1).limit(limit))
+    # 2026-10-14: a High-Beta name's burst AT a zone rings as 🎢 and is stored
+    # in tape_burst_events, not here (A5) — the strip, the ⚡ badges and the
+    # topping board's sell evidence still see it: those docs carry the same
+    # board / zone_lo / zone_hi / at_zone. Merged by `_id`; a failed read
+    # leaves the zone docs exactly as before.
+    try:
+        from .tape_burst_kinds import EVENTS_COLL as TAPE_KINDS_COLL
+        more = list(db[TAPE_KINDS_COLL].find(
+            {"et_date": day, "at_zone": {"$exists": True}}, {"recorded_at": 0})
+            .sort("time_et", -1).limit(limit))
+    except Exception as exc:
+        log.debug("trade_flash: tape_burst_events read failed: %s", exc)
+        more = []
+    if more:
+        seen = {r.get("_id") for r in rows}
+        rows += [r for r in more if r.get("_id") not in seen]
+        rows.sort(key=lambda r: r.get("time_et") or "", reverse=True)
+        rows = rows[:limit]
     return {"events": rows, "n": len(rows),
             "symbols": sorted({r["symbol"] for r in rows})}
 
 
-def run_watch() -> dict:
-    """Cron entry. RTH only — bursts on a closed tape are stale news."""
+def in_window(now) -> bool:
+    """Weekday and WATCH_OPEN_ET <= now < WATCH_CLOSE_ET (minute resolution,
+    the same test the literals made). PURE."""
+    hm = (now.hour, now.minute)
+    return (now.weekday() <= 4
+            and (WATCH_OPEN_ET.hour, WATCH_OPEN_ET.minute) <= hm
+            < (WATCH_CLOSE_ET.hour, WATCH_CLOSE_ET.minute))
+
+
+def run_watch(*, kinds=None, dry_run: bool = False) -> dict:
+    """Cron entry. RTH only — bursts on a closed tape are stale news.
+
+    2026-10-14: the same pass then runs the two tape-burst kinds
+    (orderflow/tape_burst_kinds.py — Ajay: "I need a tape burst notification
+    specific for High Beta stocks … and also other tape bursts from the Chart
+    Maps page"). Order: the zone scan; the High-Beta watch list is read; the
+    zone push FIRST, minus the High-Beta names (their bursts, at a zone or
+    not, ring as 🎢 — trade_flash is muted on his phone since 2026-09-08 —
+    and the zone pass also skips any `_id` already in tape_burst_events);
+    then the kinds; then any held-back zone burst the 🎢 kind did not store
+    is recorded as ⚡ after all. A failure anywhere in the kinds never touches
+    the zone result. `kinds`: "all" / a comma list (default all). `dry_run`: no write,
+    no push, the clock gate bypassed (a manual check of both watch lists).
+    """
     now = _now_et()
-    mins = now.hour * 60 + now.minute
-    if now.weekday() > 4 or not (9 * 60 + 32 <= mins < 16 * 60):
+    if not dry_run and not in_window(now):
         return {"ok": True, "skipped": "market closed"}
-    events = scan_events()
-    result = record_and_push(events)
+    poll_ts = int(_time.time())
+    bands = board_bands()
+    tails: dict = {}
+    events = scan_events(bands=bands, tails=tails)
+    TBK = plan = None
+    try:
+        from . import tape_burst_kinds as TBK
+        plan = TBK.prepare(kinds)
+    except Exception as exc:
+        log.warning("tape-burst kinds: prepare failed: %s", exc)
+        TBK = plan = None
+    deferred = TBK.deferred_symbols(plan) if plan is not None else frozenset()
+    zone_events = [e for e in events if e["symbol"] not in deferred]
+    held_back = [e for e in events if e["symbol"] in deferred]
+    result = record_and_push(
+        zone_events,
+        precheck_colls=(TBK.EVENTS_COLL,) if TBK is not None else (),
+        fresh_since=poll_ts, dry_run=dry_run)
+    result.pop("fresh_ids", None)
+    if deferred:
+        result["deferred_highbeta"] = len(events) - len(zone_events)
     log.info("TRADE-FLASH: %d candidate, %s", len(events), result)
+    if plan is None:
+        result["kinds_error"] = "prepare failed"
+        return result
+    hb_ran = False
+    try:
+        result["kinds"] = TBK.run_all(zone_bands=bands, tails=tails, now=now,
+                                      plan=plan, fresh_since=poll_ts,
+                                      dry_run=dry_run)
+        hb_ran = TBK.KIND_HIGHBETA in (result["kinds"] or {})
+    except Exception as exc:
+        log.warning("tape-burst kinds failed: %s", exc)
+        result["kinds_error"] = type(exc).__name__
+    # A held-back zone burst is never lost: whatever the 🎢
+    # kind did not store (it failed, or a name was cut under the price floor)
+    # lands here as ⚡ — muted on his phone, but on /alerts and the zone
+    # boards. The precheck skips every `_id` the 🎢 kind holds, so on a normal
+    # poll this is one `$in` read and no write. A dry run only checks when the
+    # 🎢 kind did not run (its own dry run wrote nothing to skip against).
+    if held_back and (not hb_ran or not dry_run):
+        net = record_and_push(held_back, precheck_colls=(TBK.EVENTS_COLL,),
+                              fresh_since=poll_ts, dry_run=dry_run)
+        result["deferred_unclaimed"] = int(
+            (net.get("would_push") if dry_run else net.get("new")) or 0)
+        if net.get("pushed"):
+            result["deferred_pushed"] = True
     return result

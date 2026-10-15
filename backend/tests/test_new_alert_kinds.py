@@ -68,6 +68,8 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
         "ops_alert",
         # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; OFF in default_prefs, ON for the owner via the keep-set; SHADOW first).
         "gajjala_setup",
+        # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps ("I need a tape burst notification specific for High Beta stocks …"; answer "High-Beta tab names + all Chart Maps names"; OFF in default_prefs, ON for the owner via the keep-set, LIVE).
+        "tape_burst_highbeta", "tape_burst_chartmaps",
     })
 
 

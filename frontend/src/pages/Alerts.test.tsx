@@ -13,7 +13,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { AlertsPage, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, sessionLine, skipsToday, staleAfterSec } from './Alerts';
+import {
+  AlertsPage, KIND_CHIPS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText, capFloorPhrase, passHealth, sessionLine, skipsToday,
+  staleAfterSec, tapeBurstChipText, tapeWindow,
+} from './Alerts';
 import { _resetAlertHistoryCache } from '../hooks/useAlertHistory';
 import { startOfEtDay } from '../lib/alertKinds';
 
@@ -1434,5 +1437,237 @@ describe('Alerts page — the 🚩 shadow A+ list (2026-10-13 E3)', () => {
     const row = (await screen.findAllByTestId('gg-shadow-row'))[0];
     expect(within(row).queryByRole('link')).toBeNull();
     expect(row).toHaveTextContent('GGA · 🚩 Bull Flag A+ · broke 11.00');
+  });
+});
+
+
+/* ── 2026-10-14: the two tape-burst passes, their own strip ────────────────
+ *
+ * Ajay: "I need a tape burst notification specific for High Beta stocks from
+ * the reselinet separately and also other tape bursts from the Chart Maps page".
+ * Both kinds ride the trade-flash-watch line (every 5 min, 09:32–16:00 ET, the
+ * window SERVED by alert_status from trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET).
+ * They sit in their own strip so the six intraday passes and the "all 6 passes"
+ * line stay exactly as they were. Both are LIVE — no row ever says shadow.
+ */
+const TAPE_WIN = { open: '09:32', close: '16:00' };
+const tapePass = (as_of: string, counts: Record<string, number> = {}, extra: Record<string, unknown> = {}) => ({
+  as_of, date: as_of.slice(0, 10), cadence_sec: 300, window: TAPE_WIN, counts, ...extra,
+});
+const STATUS_TAPE = {
+  ...STATUS_LIVE,
+  passes: {
+    ...STATUS_LIVE.passes,
+    tape_burst_highbeta: tapePass('2026-09-05T10:57:40-04:00',
+      { watched: 150, fetched: 146, no_tape: 4, candidates: 3, new: 2, pushed: 1, dup_trade_flash: 1, dup_kind: 0, skipped_budget: 0 }),
+    tape_burst_chartmaps: tapePass('2026-09-05T10:57:55-04:00',
+      { watched: 150, fetched: 150, candidates: 1, new: 1, pushed: 1, dup_kind: 1, tabs_read: 22, tabs_old: 2, skipped_budget: 3 }),
+  },
+};
+const withTape = (over: Record<string, unknown>, top: Record<string, unknown> = {}) => ({
+  ...STATUS_TAPE, ...top, passes: { ...STATUS_TAPE.passes, ...over },
+});
+const tapeText = () => ['pass-tape_burst_highbeta', 'pass-tape_burst_chartmaps']
+  .map((id) => screen.getByTestId(id).textContent ?? '').join(' | ');
+
+describe('Alerts page — the 🎢 🗺️ tape-burst passes (2026-10-14)', () => {
+  it('renders both rows in their own strip, after the six intraday passes, with stamp, cadence and counters', async () => {
+    stubFetch({ rows: ROWS }, STATUS_TAPE);
+    draw();
+    const hb = await screen.findByTestId('pass-tape_burst_highbeta');
+    const cm = screen.getByTestId('pass-tape_burst_chartmaps');
+    const strip = screen.getByTestId('tape-passes');
+    expect(within(strip).getByTestId('pass-tape_burst_highbeta')).toBe(hb);
+    expect(within(strip).getByTestId('pass-tape_burst_chartmaps')).toBe(cm);
+    expect(within(hb).getByText('🎢 High-Beta tape bursts')).toBeInTheDocument();
+    expect(within(cm).getByText('🗺️ Chart Maps tape bursts')).toBeInTheDocument();
+    expect(within(hb).getByText('last pass 10:57 ET')).toBeInTheDocument();
+    expect(within(hb).getByText('· every 5 min')).toBeInTheDocument();
+    expect(within(hb).getByText('candidates 3')).toBeInTheDocument();
+    expect(within(hb).getByText('pushes delivered 1')).toBeInTheDocument();
+    expect(within(hb).queryByText(/push calls/)).not.toBeInTheDocument();
+    expect(within(hb).getByText('1 recorded as ⚡ trade flash (muted on your phone)')).toBeInTheDocument();
+    expect(within(hb).getByText('4 names with no regular prints in the window')).toBeInTheDocument();
+    expect(within(cm).getByText('1 already sent by the other tape kind')).toBeInTheDocument();
+    expect(within(cm).getByText('2 Chart Maps tabs not opened since the last session — not watched')).toBeInTheDocument();
+    expect(within(cm).getByText('3 names not read (poll time budget)')).toBeInTheDocument();
+    // NEGATIVE: zero counters wear no chip; raw counter keys never render.
+    expect(within(hb).queryByText(/^0 /)).not.toBeInTheDocument();
+    expect(within(hb).queryByText(/dup_trade_flash|dup_kind|no_tape/)).not.toBeInTheDocument();
+    // the six intraday passes are unchanged and still come first, in order
+    const ids = screen.getAllByTestId(/^pass-/).map((el) => el.getAttribute('data-testid')).filter((x) => x !== 'pass-reason');
+    expect(ids.slice(0, 8)).toEqual(['pass-zone_edge', 'pass-zone_bounce_alert', 'pass-demand_alert', 'pass-key_level_alert',
+      'pass-med_catalyst', 'pass-gajjala_setup', 'pass-tape_burst_highbeta', 'pass-tape_burst_chartmaps']);
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 6 passes reported within cadence.');
+  });
+
+  it('NEGATIVE: the two tape rows never say "shadow" — both kinds ring live — even when a counter is named so', async () => {
+    stubFetch({ rows: ROWS }, withTape({
+      tape_burst_highbeta: tapePass('2026-09-05T10:57:40-04:00', { candidates: 2, pushed: 1, shadow_mode: 1, shadow: 2, shadow_session: 3 }),
+    }));
+    draw();
+    await screen.findByTestId('pass-tape_burst_highbeta');
+    expect(tapeText()).not.toMatch(/shadow/i);
+    expect(screen.getByTestId('tape-passes-head').textContent).not.toMatch(/shadow/i);
+    expect(screen.getByTestId('tape-passes-head').textContent).toMatch(/ring your phone/);
+    // and none of the 🚩 / 🧬 shadow words leak onto them
+    expect(tapeText()).not.toMatch(/🚩|🧬|not sent|would have pushed/);
+  });
+
+  it('NEGATIVE: the six existing pass rows are unchanged — the 🚩 row keeps its own shadow words, the tape kinds never join "N passes"', async () => {
+    stubFetch({ rows: ROWS }, withTape({
+      // a dead tape cron mid-window: stale on its own row …
+      tape_burst_highbeta: tapePass('2026-09-05T10:20:00-04:00', { candidates: 0 }),
+    }));
+    draw();
+    const gg = await screen.findByTestId('pass-gajjala_setup');
+    expect(within(gg).getByText('🚩 shadow — not sent (nothing reaches your phone yet)')).toBeInTheDocument();
+    expect(within(screen.getByTestId('pass-zone_edge')).getByText('14 skipped: room < 5%')).toBeInTheDocument();
+    expect(within(screen.getByTestId('pass-tape_burst_highbeta')).getByText('stale — last pass 10:20 ET, expected every 5 min')).toBeInTheDocument();
+    // … and the header line still speaks for the six only.
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 6 passes reported within cadence.');
+    expect(screen.getByTestId('session-line').textContent).not.toMatch(/of 8/);
+  });
+
+  it('outside the SERVED window a pass is never stale: after the close and pre-market both say so, in muted words', async () => {
+    // 16:30 ET: zone_edge's clock is still open (04:00–20:00); the tape arm stopped at 16:00.
+    stubFetch({ rows: ROWS }, withTape({
+      tape_burst_highbeta: tapePass('2026-09-05T15:57:40-04:00', { candidates: 0 }),
+      tape_burst_chartmaps: tapePass('2026-09-05T15:57:55-04:00', { candidates: 0 }),
+    }, { now_et: '2026-09-05T16:30:00-04:00' }));
+    draw();
+    const hb = await screen.findByTestId('pass-tape_burst_highbeta');
+    expect(within(hb).getByText('last pass 15:57 ET — outside its 09:32–16:00 ET window')).toBeInTheDocument();
+    expect(tapeText()).not.toMatch(/stale/);
+  });
+
+  it('NEGATIVE: pre-market with only yesterday\'s pass reads "outside its window", never an amber alarm', async () => {
+    stubFetch({ rows: ROWS }, withTape({
+      tape_burst_highbeta: tapePass('2026-09-04T15:57:40-04:00', { candidates: 0 }),
+      tape_burst_chartmaps: tapePass('2026-09-04T15:57:55-04:00', { candidates: 0 }),
+    }, { now_et: '2026-09-05T08:10:00-04:00' }));
+    draw();
+    const hb = await screen.findByTestId('pass-tape_burst_highbeta');
+    expect(within(hb).getByText('last pass 2026-09-04 15:57 ET — no pass yet today — outside its 09:32–16:00 ET window')).toBeInTheDocument();
+    expect(tapeText()).not.toMatch(/stale/);
+  });
+
+  it('NEGATIVE: an older API with no window is never judged stale (it cannot be), even 30 minutes silent mid-session', async () => {
+    const { window: _w, ...noWin } = tapePass('2026-09-05T10:30:00-04:00', { candidates: 0 });
+    stubFetch({ rows: ROWS }, withTape({ tape_burst_highbeta: noWin }));
+    draw();
+    const hb = await screen.findByTestId('pass-tape_burst_highbeta');
+    expect(within(hb).getByText('last pass 10:30 ET')).toBeInTheDocument();
+    expect(within(hb).queryByText(/stale|outside its/)).not.toBeInTheDocument();
+  });
+
+  it('the kind chips carry both kinds right after ⚡ trade flash and narrow the feed to one', async () => {
+    expect(KIND_CHIPS.indexOf('tape_burst_highbeta')).toBe(KIND_CHIPS.indexOf('trade_flash') + 1);
+    expect(KIND_CHIPS.indexOf('tape_burst_chartmaps')).toBe(KIND_CHIPS.indexOf('trade_flash') + 2);
+    expect(KIND_CHIPS.filter((k) => k.startsWith('tape_burst_'))).toHaveLength(2);
+    const fn = stubFetch({ rows: [] }, STATUS_TAPE);
+    draw();
+    await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: '🎢 Tape burst — High Beta' }));
+    await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('tape_burst_highbeta'));
+    fireEvent.click(screen.getByRole('button', { name: '🗺️ Tape burst — Chart Maps' }));
+    await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('tape_burst_highbeta,tape_burst_chartmaps'));
+  });
+
+  it('a 🎢 push row lists every burst, each ticker its own link to /sepa/{sym}?tab=tape', async () => {
+    const hbLine = (s: string) => `${s} 10:41:20 — $1.2M sell burst · β 2.41 · -7.42% today`;
+    const syms = ['NBIS', 'IREN', 'CRWV'];
+    const row = {
+      _id: 'hb1', ts: T('2026-09-05T14:42:00Z'), ts_iso: '2026-09-05T14:42:00+00:00',
+      kind: 'tape_burst_highbeta', ticker: null, tickers: [], source: 'push', sent: 1, failed: 0, total: 1,
+      title: '🎢 High-Beta tape burst — NBIS +2 more', url: '/sepa/NBIS?tab=tape&from=chart-maps',
+      body: syms.slice(0, 2).map(hbLine).join('\n'),
+      items: syms.map((s, i) => ({ symbol: s, text: hbLine(s), url: `/sepa/${s}?tab=tape&from=chart-maps`, pushed: i < 2 })),
+      items_not_stored: 0,
+    };
+    stubFetch({ rows: [row] }, STATUS_TAPE);
+    draw();
+    const rows = await screen.findAllByTestId('alert-row');
+    expect(within(rows[0]).getByText('🎢 Tape burst — High Beta')).toBeInTheDocument();
+    const links = within(rows[0]).getAllByRole('link', { name: /^(NBIS|IREN|CRWV)$/ });
+    expect(links).toHaveLength(3);
+    for (const a of links) expect(a.getAttribute('href')).toMatch(/^\/sepa\/(NBIS|IREN|CRWV)\?tab=tape(&|$)/);
+    // NEGATIVE: never the S&D supply tab, never the raw kind id
+    for (const a of links) expect(a.getAttribute('href')).not.toMatch(/tab=supply/);
+    expect(within(rows[0]).queryByText('tape_burst_highbeta')).not.toBeInTheDocument();
+  });
+});
+
+describe('tape-burst helpers (2026-10-14)', () => {
+  const st = (now: string, in_session = true) => ({ in_session, now_et: `2026-09-05T${now}:00-04:00` });
+  const p = { as_of: null, date: null, counts: {}, window: TAPE_WIN };
+
+  it('tapeWindow: inside from the open up to (not at) the close, on the server clock', () => {
+    expect(tapeWindow(p, st('09:32')).inside).toBe(true);
+    expect(tapeWindow(p, st('15:59')).inside).toBe(true);
+    expect(tapeWindow(p, st('12:00'))).toEqual({ open: '09:32', close: '16:00', inside: true });
+  });
+
+  it('NEGATIVE tapeWindow: 09:31, 16:00, a closed session, no window, a malformed window → outside', () => {
+    expect(tapeWindow(p, st('09:31')).inside).toBe(false);
+    expect(tapeWindow(p, st('16:00')).inside).toBe(false);
+    expect(tapeWindow(p, st('11:00', false)).inside).toBe(false);
+    expect(tapeWindow({ ...p, window: null }, st('11:00'))).toEqual({ open: null, close: null, inside: false });
+    expect(tapeWindow({ ...p, window: { open: '9:32', close: '16:00' } }, st('11:00')).inside).toBe(false);
+    expect(tapeWindow(undefined, st('11:00')).inside).toBe(false);
+    expect(tapeWindow(p, null).inside).toBe(false);
+  });
+
+  it('chip words: ⚡ is "recorded" and muted, a 🎢 zone burst is sent as 🎢; unknown counters fall through', () => {
+    expect(tapeBurstChipText('dup_trade_flash', 2)).toBe('2 recorded as ⚡ trade flash (muted on your phone)');
+    expect(tapeBurstChipText('at_zone', 1)).toBe('1 at a zone — sent as 🎢 (not ⚡)');
+    expect(tapeBurstChipText('under_floor', 4)).toBe('4 names under the house share-price floor — not read');
+    expect(tapeBurstChipText('dup_kind', 1)).toBe('1 already sent by the other tape kind');
+    expect(tapeBurstChipText('tabs_old', 3)).toBe('3 Chart Maps tabs not opened since the last session — not watched');
+    expect(tapeBurstChipText('watched', 150)).toBeNull();
+    expect(tapeBurstChipText('dup_trade_flash', 1)).not.toMatch(/sent as/);
+    expect(tapeBurstChipText('at_zone', 1)).not.toMatch(/sent as ⚡/);
+  });
+
+  it('NEGATIVE chip words: claimed_zone (never served) and the re-sighting counters render no words', () => {
+    for (const k of ['claimed_zone', 'dup_same', 'dup_earlier']) expect(tapeBurstChipText(k, 2)).toBeNull();
+  });
+
+  it('a row shows at_zone + under_floor in words; dup_same / dup_earlier never reach the row or its hover title; pushed says delivered', async () => {
+    stubFetch({ rows: ROWS }, withTape({
+      tape_burst_highbeta: tapePass('2026-09-05T10:57:40-04:00',
+        { watched: 150, candidates: 2, new: 2, pushed: 0, at_zone: 1, under_floor: 3, dup_same: 5, dup_earlier: 2,
+          watch_http_fail: 0, claimed_zone: 4 }),
+    }));
+    draw();
+    const hb = await screen.findByTestId('pass-tape_burst_highbeta');
+    expect(within(hb).getByText('1 at a zone — sent as 🎢 (not ⚡)')).toBeInTheDocument();
+    expect(within(hb).getByText('3 names under the house share-price floor — not read')).toBeInTheDocument();
+    const pushed = within(hb).getByText('pushes delivered 0');
+    expect(pushed.getAttribute('title')).toMatch(/^Pushes that reached at least one device/);
+    // NEGATIVE: never the zone-pass "push calls" tooltip that counts a muted send
+    expect(pushed.getAttribute('title')).not.toMatch(/nobody targeted|muted kind still counts/);
+    const title = hb.getAttribute('title') ?? '';
+    expect(title).not.toMatch(/dup same|dup earlier/);
+    expect(hb.textContent).not.toMatch(/dup same|dup earlier|recorded as ⚡ trade flash/);
+    // a stray claimed_zone counter is a raw key in the hover title only, never chip words
+    expect(hb.textContent).not.toMatch(/claimed/);
+    expect(title).toContain('watched 150');
+  });
+
+  it('NEGATIVE: the six intraday rows keep "push calls" and their own hover title (dup counters there untouched)', async () => {
+    stubFetch({ rows: ROWS }, STATUS_TAPE);
+    draw();
+    const ze = await screen.findByTestId('pass-zone_edge');
+    expect(within(ze).getByText('push calls 2').getAttribute('title')).toMatch(/nobody targeted/);
+    expect(within(ze).queryByText(/pushes delivered/)).not.toBeInTheDocument();
+  });
+
+  it('TAPE_PASSES is exactly the two kinds on the 5-minute fallback, and sessionLine ignores them', () => {
+    expect(TAPE_PASSES.map((m) => [m.key, m.fallbackCadenceSec])).toEqual([['tape_burst_highbeta', 300], ['tape_burst_chartmaps', 300]]);
+    const today = '2026-09-05';
+    const deadTape = { ...STATUS_TAPE, passes: { ...STATUS_TAPE.passes, tape_burst_highbeta: undefined, tape_burst_chartmaps: undefined } };
+    expect(sessionLine(deadTape as never, today)).toBe('Session open — all 6 passes reported within cadence.');
+    expect(passHealth(STATUS_TAPE.passes.tape_burst_highbeta, STATUS_TAPE, today, 300).health).toBe('fresh');
   });
 });

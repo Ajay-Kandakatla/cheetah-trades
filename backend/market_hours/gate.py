@@ -116,6 +116,11 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # push windows (09:45–16:00, 16:00–20:00 ET; never 09:30–09:45, never
     # pre-market) live in alerts.window_reason — this set is about the DAY.
     "gajjala_setup",
+    # 🎢 / 🗺️ tape bursts (orderflow/tape_burst_kinds.py, 2026-10-14) — read
+    # off the live tape, so MARKET kinds: silent on weekends and NYSE holidays
+    # (the cli's market-day gate already skips the pass; this drops at the
+    # sender too).
+    "tape_burst_highbeta", "tape_burst_chartmaps",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

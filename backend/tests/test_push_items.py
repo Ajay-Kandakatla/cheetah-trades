@@ -366,7 +366,10 @@ def test_item_urls_match_each_kinds_single_push_url():
     assert R.item_url("morning_brief", "NVDA") == R.item_url(None, "NVDA") == "/sepa/NVDA?tab=supply"
     # 🚩 2026-10-13: gajjala_setup joined (9 → 10) — the Gajjala's tab; the endpoint resolves the sub from focus.
     assert R.item_url("gajjala_setup", "NVDA") == "/chart-maps?tab=gajjala&focus=NVDA"
-    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 10
+    # 🎢 / 🗺️ 2026-10-14 tape kinds joined (10 → 12) — the Tape tab, back-linked to Chart Maps.
+    assert R.item_url("tape_burst_highbeta", "NVDA") == "/sepa/NVDA?tab=tape&from=chart-maps"
+    assert R.item_url("tape_burst_chartmaps", "NVDA") == "/sepa/NVDA?tab=tape&from=chart-maps"
+    assert R.ITEM_KINDS == frozenset(R.ITEM_URL_BY_KIND) and len(R.ITEM_KINDS) == 12
 
 
 # ---------------------------------------------------------------------------

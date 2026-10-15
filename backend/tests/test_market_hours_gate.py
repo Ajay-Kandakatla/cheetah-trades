@@ -110,6 +110,15 @@ def test_gajjala_setup_is_a_market_kind(no_override):
     assert gate.should_drop_kind("gajjala_setup", TUESDAY) is None
 
 
+@pytest.mark.parametrize("kind", ["tape_burst_highbeta", "tape_burst_chartmaps"])
+def test_the_tape_burst_kinds_are_market_kinds_2026_10_14(no_override, kind):
+    """🎢 / 🗺️ read off the live tape — silent on weekends and holidays."""
+    assert kind in gate.MARKET_ALERT_KINDS and kind not in gate.PERSONAL_KINDS
+    assert gate.should_drop_kind(kind, LABOR_DAY) == "holiday 2026-09-07"
+    assert gate.should_drop_kind(kind, SATURDAY) == "weekend"
+    assert gate.should_drop_kind(kind, TUESDAY) is None
+
+
 def test_the_three_phone_kinds_are_market_kinds():
     assert {"pivot_alert", "position_alert", "todo_reminder"} & (
         gate.MARKET_ALERT_KINDS | gate.PERSONAL_KINDS) == {"pivot_alert", "position_alert", "todo_reminder"}

@@ -71,6 +71,10 @@ export type PassStatus = {
   /** 🚩 gajjala_setup only (2026-10-13 E3): today's shadow A+ records, newest
    *  first (backend alert_status.read_gajjala_shadow). An older API omits it. */
   shadow_items?: GgShadowItem[] | null;
+  /** 🎢 🗺️ the two tape-burst passes only (2026-10-14): the clock their cron
+   *  arm self-gates on, "HH:MM" ET, built from trade_flash.WATCH_OPEN_ET /
+   *  WATCH_CLOSE_ET. An older API omits it → the pass is never judged stale. */
+  window?: { open?: string | null; close?: string | null } | null;
 };
 /** One shadow A+ as the ledger recorded it. `text` is the push's own item
  *  line (alerts.compose) — printed, never recomposed; `url` is the deep link
@@ -124,6 +128,35 @@ const PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
    * SHADOW: the row says "shadow — not sent" (gajjalaChipText below). */
   { key: 'gajjala_setup',     label: '🚩 Gajjala A+ setups',       fallbackCadenceSec: 300 },
 ];
+
+/* 🎢 🗺️ The two tape-burst passes (2026-10-14). Ajay: "I need a tape burst
+ * notification specific for High Beta stocks from the reselinet separately and
+ * also other tape bursts from the Chart Maps page". Both ride the
+ * trade-flash-watch crontab line (every 5 minutes), whose arm self-gates to
+ * 09:32–16:00 ET — so they get their OWN strip: inside PASSES they would read
+ * "⚠ 2 of 8 passes" every pre-market and after 16:05 on zone_edge's 04:00–20:00
+ * clock, and the "all N passes" line would vouch for a window they never run
+ * in. They are judged stale only while `now_et` sits inside the SERVED window.
+ * Both kinds are LIVE: nothing on these rows says shadow. */
+export const TAPE_PASSES: { key: string; label: string; fallbackCadenceSec: number }[] = [
+  { key: 'tape_burst_highbeta',  label: '🎢 High-Beta tape bursts',  fallbackCadenceSec: 300 },
+  { key: 'tape_burst_chartmaps', label: '🗺️ Chart Maps tape bursts', fallbackCadenceSec: 300 },
+];
+const TAPE_KEYS_SET = new Set(TAPE_PASSES.map((m) => m.key));
+
+/** Where a tape pass's own clock stands: the served window and whether the
+ *  SERVER's now (`now_et`, an ET ISO stamp — its HH:MM is the ET wall clock)
+ *  sits inside it on a session day. No window served → `inside: false`, so an
+ *  older API never paints a stale row it cannot judge. */
+export function tapeWindow(pass: PassStatus | undefined, status: Pick<AlertsStatus, 'in_session' | 'now_et'> | null):
+    { open: string | null; close: string | null; inside: boolean } {
+  const hhmm = (x: unknown) => (typeof x === 'string' && /^\d\d:\d\d$/.test(x.trim()) ? x.trim() : null);
+  const open = hhmm(pass?.window?.open);
+  const close = hhmm(pass?.window?.close);
+  const now = typeof status?.now_et === 'string' ? status.now_et.slice(11, 16) : '';
+  const inside = !!(status?.in_session && open && close && /^\d\d:\d\d$/.test(now) && now >= open && now < close);
+  return { open, close, inside };
+}
 
 /* The once-a-day passes (2026-09-20). They are NOT part of the three-pass
  * cadence health read above — `sessionLine` still speaks for the intraday
@@ -291,6 +324,26 @@ function gajjalaChipText(key: string, n: number): string | null {
     default: return null;
   }
 }
+/* 🎢 🗺️ tape-burst counters (orderflow/tape_burst_kinds._served) → words. Every
+ * count is a FRESH burst (AMENDMENTS A3); the ⚡ zone kind is muted on his phone
+ * since 2026-09-08, so a burst it recorded is "recorded", never "sent" (A4). A
+ * High-Beta name's burst AT a zone rings as 🎢 (A5) — `at_zone` says so. The
+ * re-sighting counters (`dup_same`, `dup_earlier`) are not fresh and never show
+ * on these rows, not even in the hover title (TAPE_HIDDEN_KEYS). */
+export function tapeBurstChipText(key: string, n: number): string | null {
+  switch (key) {
+    case 'dup_trade_flash': return `${n} recorded as ⚡ trade flash (muted on your phone)`;
+    case 'at_zone':         return `${n} at a zone — sent as 🎢 (not ⚡)`;
+    case 'dup_kind':        return `${n} already sent by the other tape kind`;
+    case 'no_tape':         return `${n} names with no regular prints in the window`;
+    case 'under_floor':     return `${n} names under the house share-price floor — not read`;
+    case 'skipped_budget':  return `${n} names not read (poll time budget)`;
+    case 'tabs_old':        return `${n} Chart Maps tabs not opened since the last session — not watched`;
+    default: return null;
+  }
+}
+const TAPE_CHIP_KEYS = ['dup_trade_flash', 'at_zone', 'dup_kind', 'no_tape', 'under_floor', 'skipped_budget', 'tabs_old'];
+const TAPE_HIDDEN_KEYS = ['dup_same', 'dup_earlier'];
 const GAJJALA_KEYS = ['shadow_mode', 'shadow', 'shadow_session', 'suppressed_premarket', 'suppressed_first15',
                       'suppressed_window', 'suppressed_closed', 'suppressed_halt', 'suppressed_exhausted', 'late',
                       'claimed_before', 'not_aplus_variant'];
@@ -309,6 +362,15 @@ const HEADLINE: { key: string; label: string; title?: string }[] = [
     title: 'Sends the pass made: delivered, or nobody targeted (a muted kind still counts). Each row below says how many devices it reached.' },
 ];
 const HEADLINE_KEYS = HEADLINE.map((h) => h.key);
+/* 🎢 🗺️ On the tape rows `pushed` is NOT a call count: it is 1 when the poll's
+ * one push reached at least one device (trade_flash.record_and_push → sender
+ * `sent` > 0). A muted or unregistered phone reads 0 while the push row (and
+ * every burst on it) is still listed below — so the label says "delivered". */
+const HEADLINE_TAPE: { key: string; label: string; title?: string }[] = [
+  { key: 'candidates', label: 'candidates' },
+  { key: 'pushed', label: 'pushes delivered',
+    title: 'Pushes that reached at least one device. A push that reached none (phone muted or not registered) is still listed below with every burst.' },
+];
 
 /* No cap floor in the fallback on purpose: the figure is served, never typed. */
 const GATE_FALLBACK: AlertsGate = { min_room_pct: 5.0, max_above_demand_pct: 1.0 };
@@ -356,7 +418,7 @@ const DAY_CHOICES: { days: number; label: string; window: string; sinceOffset: n
   { days: 5,  label: '5 days',    window: 'in the last 5 days',  sinceOffset: 4 },
   { days: 30, label: '30 days',   window: 'in the last 30 days', sinceOffset: 29 },
 ];
-const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
+export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
 const ALL = 'all';
 /** Typing "AVGO" is one query, not four (review 2026-09-05). Enter / blur commit at once. */
 export const TICKER_DEBOUNCE_MS = 300;
@@ -501,7 +563,11 @@ function PassStrip({ pass, meta, status, gate, today }: {
   const stamp = etFromIso(pass?.as_of);
   const day = passDay(pass);
   const cadence = cadenceOf(pass, meta);
-  const { health } = status ? passHealth(pass, status, today, cadence) : { health: 'none' as PassHealth };
+  // 🎢 🗺️ a tape pass is judged on its OWN window, never zone_edge's clock.
+  const tape = TAPE_KEYS_SET.has(meta.key);
+  const win = tape ? tapeWindow(pass, status) : null;
+  const judgeOn = status && win ? { ...status, in_session: win.inside } : status;
+  const { health } = judgeOn ? passHealth(pass, judgeOn, today, cadence) : { health: 'none' as PassHealth };
   let when: string;
   let tone = MUTED;
   switch (health) {
@@ -522,16 +588,22 @@ function PassStrip({ pass, meta, status, gate, today }: {
     default:
       when = 'no pass yet today';
   }
-  const headline = HEADLINE
+  if (win && !win.inside) {
+    // Outside its window a missing or old stamp is the schedule, not a stall.
+    tone = MUTED;
+    if (win.open && win.close) when = `${when} — outside its ${win.open}–${win.close} ET window`;
+  }
+  const headline = (tape ? HEADLINE_TAPE : HEADLINE)
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
   const gg = meta.key === 'gajjala_setup';
-  const chipKeys = gg ? GAJJALA_KEYS : SKIP_KEYS;
+  const chipKeys = gg ? GAJJALA_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
     .filter(([, n]) => n > 0);
   const extra = Object.entries(counts)
-    .filter(([k, v]) => v != null && !HEADLINE_KEYS.includes(k) && !chipKeys.includes(k))
+    .filter(([k, v]) => v != null && !HEADLINE_KEYS.includes(k) && !chipKeys.includes(k)
+      && !(tape && TAPE_HIDDEN_KEYS.includes(k)))
     .map(([k, v]) => `${k.replace(/_/g, ' ')} ${v}`)
     .join(' · ');
   return (
@@ -546,7 +618,7 @@ function PassStrip({ pass, meta, status, gate, today }: {
       {pass?.reason && day === today ? <span className="mono" style={REASON_CHIP} data-testid="pass-reason">⚠ {pass.reason}</span> : null}
       {headline.map((h) => <span key={h.key} className="mono" style={SMALL_CHIP} title={h.title}>{h.text}</span>)}
       {skips.map(([k, n]) => (
-        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
+        <span key={k} className="mono" style={SKIP_CHIP}>{(gg ? gajjalaChipText(k, n) : tape ? tapeBurstChipText(k, n) : skipChipText(k, n, gate)) ?? `${n} ${k.replace(/_/g, ' ')}`}</span>
       ))}
     </div>
     {/* 🚩 only: the per-item shadow list sits under its own strip. */}
@@ -800,6 +872,13 @@ export function AlertsPage() {
         {PASSES.map((meta) => (
           <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
         ))}
+        {/* ── 🎢 🗺️ the two tape-burst passes (2026-10-14) — own strip, own window ── */}
+        <div style={{ ...EYEBROW, marginTop: '0.55rem' }} data-testid="tape-passes-head">🎢 🗺️ Tape-burst passes · they ring your phone · judged only inside their own window</div>
+        <div data-testid="tape-passes">
+          {TAPE_PASSES.map((meta) => (
+            <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
+          ))}
+        </div>
         {/* ── the once-a-day passes ── */}
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }}>🗓️ Daily passes</div>
         {DAILY_PASSES.map((meta) => (

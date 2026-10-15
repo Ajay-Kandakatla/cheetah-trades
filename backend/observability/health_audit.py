@@ -365,8 +365,9 @@ def check_demand_scan_fresh():
         return _fail("demand_scan", "data", WARN, f"check error: {exc}")
 
 
-def check_trade_flash_heartbeat():
-    """The 5-minute trade-flash watch is actually ticking during the session.
+def _heartbeat_check(name: str, words: str):
+    """One 5-minute watch on the trade-flash line is actually ticking during
+    the session (the body check_trade_flash_heartbeat always had, by name).
 
     A quiet tape legitimately produces ZERO events, so the events collection
     cannot prove the job ran — the cli stamps an engine_heartbeat instead
@@ -379,23 +380,39 @@ def check_trade_flash_heartbeat():
                       and (et.hour, et.minute) >= (9, 45)
                       and et.hour < 16)
         if not in_session:
-            return _ok("trade_flash", "engine", "market closed — not expected to tick")
+            return _ok(name, "engine", "market closed — not expected to tick")
         db = _mongo_db()
         if db is None:
-            return _fail("trade_flash", "engine", WARN, "Mongo unavailable")
-        doc = db.engine_heartbeat.find_one({"name": "trade_flash"})
+            return _fail(name, "engine", WARN, "Mongo unavailable")
+        doc = db.engine_heartbeat.find_one({"name": name})
         if not doc or not doc.get("ts"):
-            return _fail("trade_flash", "engine", WARN,
-                         "no trade-flash heartbeat ever recorded")
+            return _fail(name, "engine", WARN,
+                         f"no {words} heartbeat ever recorded")
         age_min = (time.time() - float(doc["ts"])) / 60.0
         if age_min > 20:
-            return _fail("trade_flash", "engine", WARN,
-                         f"trade-flash watch last ticked {age_min:.0f}m ago "
+            return _fail(name, "engine", WARN,
+                         f"{words} watch last ticked {age_min:.0f}m ago "
                          f"(runs every 5m in session)", round(age_min, 1))
-        return _ok("trade_flash", "engine", f"ticked {age_min:.0f}m ago",
+        return _ok(name, "engine", f"ticked {age_min:.0f}m ago",
                    round(age_min, 1))
     except Exception as exc:
-        return _fail("trade_flash", "engine", WARN, f"check error: {exc}")
+        return _fail(name, "engine", WARN, f"check error: {exc}")
+
+
+def check_trade_flash_heartbeat():
+    """The 5-minute trade-flash watch is actually ticking during the session."""
+    return _heartbeat_check("trade_flash", "trade-flash")
+
+
+def check_tape_burst_highbeta_heartbeat():
+    """🎢 2026-10-14: the High-Beta tape-burst kind rides the trade-flash line
+    and beats under its own name only when its pass ran."""
+    return _heartbeat_check("tape_burst_highbeta", "High-Beta tape-burst")
+
+
+def check_tape_burst_chartmaps_heartbeat():
+    """🗺️ 2026-10-14: the Chart Maps tape-burst kind, same line, own beat."""
+    return _heartbeat_check("tape_burst_chartmaps", "Chart Maps tape-burst")
 
 
 def check_zero_dte_ledger():
@@ -491,6 +508,8 @@ CHECKS = [
     # added the day the pullback artifact was found 96h stale with the audit
     # WARNing into a void (Ajay: "some scans failed silently").
     check_demand_scan_fresh, check_trade_flash_heartbeat,
+    # 2026-10-14: the two tape-burst kinds on the trade-flash line.
+    check_tape_burst_highbeta_heartbeat, check_tape_burst_chartmaps_heartbeat,
     check_zero_dte_ledger, check_research_cache_age,
     # 2026-09-06: VIX frames + IV read + rotation map, refreshed by the scans.
     check_scan_context,
