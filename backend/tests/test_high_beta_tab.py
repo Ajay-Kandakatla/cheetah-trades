@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import ast
 import math
+import time
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -807,3 +808,30 @@ def test_15c_his_numbers_are_named_and_tagged():
     assert HB.SIGMA_BARS == 50 and HB.BETA_LOOKBACK == BETA.BETA_LOOKBACK
     assert HB.FILTER_LABELS["d5"] == "\U0001F4C9 Down 5%+ today"
     assert HB.TAB_LABEL == "\U0001F3A2 High Beta"
+
+
+# ---------------------------------------------------------------------------
+# 2026-10-14 late: a fresh memo entry built BEFORE the 🔗 map landed is rebuilt as
+# soon as the map exists — the closed-hours TTL (30 min) must not hold a tagless board
+# ---------------------------------------------------------------------------
+def test_15_a_tagless_entry_is_rebuilt_when_the_levered_map_lands(monkeypatch):
+    HB._memo.clear(); HB._failures.clear()
+    mode, session, _t, _h = HB.mode_for(NOW_NIGHT)
+    key = (mode, session.isoformat(), HB._ukey("full"))
+    entry = {"rows": [], "built_ts": time.time(), "levered": {"state": "missing"}}
+    with HB._lock:
+        HB._memo[key] = entry
+    # the map is still missing -> the fresh entry is served as is
+    monkeypatch.setattr(HB.LE, "load", lambda **kw: {"state": "missing"})
+    got = HB.cached_or_warm("full", now=NOW_NIGHT)
+    assert got["state"] == "ready" and got["entry"] is entry and got["stale"] is False
+    # the map landed -> the same fresh entry is no longer fresh; a sync call rebuilds
+    monkeypatch.setattr(HB.LE, "load", lambda **kw: {"state": "ready", "as_of": session.isoformat()})
+    rebuilt = {"rows": [], "built_ts": time.time(), "levered": {"state": "ready"}}
+    monkeypatch.setattr(HB, "build", lambda ukey, now, **kw: rebuilt)
+    got = HB.cached_or_warm("full", now=NOW_NIGHT, sync=True)
+    assert got["entry"] is rebuilt and got["entry"]["levered"]["state"] == "ready"
+    # NEGATIVE: an entry that already carries a map is never rebuilt early
+    got = HB.cached_or_warm("full", now=NOW_NIGHT)
+    assert got["entry"] is rebuilt and got["stale"] is False
+    HB._memo.clear()

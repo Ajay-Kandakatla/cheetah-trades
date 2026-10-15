@@ -633,6 +633,20 @@ def _warm(key: tuple, universe_key: str, now: datetime) -> None:
     _spawn(_work, f"high-beta-tab-{key[1]}-{key[2]}")
 
 
+def _levered_landed_since(entry: dict, now: datetime) -> bool:
+    """True when the entry was built without a 🔗 map (state missing / error) and
+    `sepa.levered_etf.load` now has one — the closed-hours TTL (30 min) must not
+    hold a tagless board after the day's first reference read lands (2026-10-14)."""
+    st = ((entry or {}).get("levered") or {}).get("state")
+    if st in ("ready", "stale"):
+        return False
+    try:
+        lev = LE.load(now=now)
+    except Exception:                                           # noqa: BLE001
+        return False
+    return isinstance(lev, dict) and lev.get("state") in ("ready", "stale") and bool(lev.get("as_of"))
+
+
 def cached_or_warm(universe_key, *, now: datetime, sync: bool = False) -> dict:
     """{"state": "ready"|"warming"|"error", "entry", "reason", "stale"}. A
     fresh exact entry -> ready. `sync=True` builds inline. Otherwise ONE
@@ -644,6 +658,8 @@ def cached_or_warm(universe_key, *, now: datetime, sync: bool = False) -> dict:
     with _lock:
         entry = _memo.get(key)
     fresh = entry is not None and (time.time() - float(entry.get("built_ts") or 0)) < ttl_for(mode)
+    if fresh and _levered_landed_since(entry, now):
+        fresh = False                       # the 🔗 map arrived after this entry was built: rebuild, don't wait out the TTL
     if fresh:
         return {"state": "ready", "entry": entry, "reason": None, "stale": False}
     if sync:

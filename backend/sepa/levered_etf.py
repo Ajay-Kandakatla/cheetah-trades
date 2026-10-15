@@ -741,7 +741,9 @@ def load(*, now: Optional[datetime] = None, db=None, ensure: bool = True) -> dic
         val = _state("error", reason=_scrub(exc) or type(exc).__name__)
     if ensure and (doc is None or doc.get("as_of") != today_iso):
         ensure_async(now=now, db=d, as_of=(doc or {}).get("as_of") if read_ok else _UNSET)
-    if memo_ok:
+    # memoise only a map that exists: a "missing" / "error" read pinned for MAP_MEMO_SEC
+    # (per uvicorn worker) hid the first map of the day for 10 minutes on 2026-10-14
+    if memo_ok and val.get("state") in ("ready", "stale"):
         with _memo_lock:
             _memo["v"] = {"day": today_iso, "ts": time.time(), "val": val}
     return val

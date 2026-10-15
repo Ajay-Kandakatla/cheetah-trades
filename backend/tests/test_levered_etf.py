@@ -676,3 +676,37 @@ def test_11_cli_dry_run_prints_counts_and_his_lines_never_the_key(monkeypatch, c
     assert rc == 0 and '"tagged": 31' in txt
     assert "IREN \U0001F517 2× IRE · IREX · IREG +1" in txt and "VST \U0001F517 2× VSTL" in txt
     assert KEY not in txt and KEY not in out.read_text()
+
+
+# ---------------------------------------------------------------------------
+# 2026-10-14 late: the "missing" state must never be memoised — the first map of the
+# day was hidden for MAP_MEMO_SEC per worker on the live api
+# ---------------------------------------------------------------------------
+class _FakeColl:
+    def __init__(self):
+        self.doc = None
+
+    def find_one(self, q):
+        return self.doc
+
+
+class _FakeDb(dict):
+    pass
+
+
+def test_NEG_a_missing_map_is_not_memoised_and_the_next_load_sees_the_doc(monkeypatch):
+    LE._reset_for_tests()
+    coll = _FakeColl()
+    db = _FakeDb({LE.COLL: coll})
+    monkeypatch.setattr(LE, "_db", lambda d=None: db)
+    monkeypatch.setattr(LE, "ensure_async", lambda **kw: None)
+    first = LE.load(now=None)
+    assert first["state"] == "missing"
+    assert not LE._memo.get("v"), "a missing read must not be pinned for MAP_MEMO_SEC"
+    coll.doc = {"_id": LE.DOC_ID, "as_of": LE._et_today(None).isoformat(),
+                "rows": [{"etf": "IREX", "underlying": "IREN", "factor": 2.0, "direction": "long",
+                          "name": "Tradr 2X Long IREN Daily ETF"}], "complete": True}
+    second = LE.load(now=None)
+    assert second["state"] == "ready" and second["as_of"] == coll.doc["as_of"]
+    assert LE._memo.get("v") and LE._memo["v"]["val"]["state"] == "ready"
+    LE._reset_for_tests()
