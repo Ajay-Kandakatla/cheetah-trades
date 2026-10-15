@@ -13973,3 +13973,24 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .cm-arrival-also { display: inline-flex; gap: 0.15rem; margin: 0 0.35rem 0 -0.15rem; vertical-align: middle; }  /* #8: per-tab links under a chip */
 .cm-arrival-also > a.cm-badge { font-size: 0.72em; padding: 0 0.3rem; text-decoration: none; }
 .cm-arrival-also > a[data-stale="true"] { opacity: 0.55; text-decoration: underline dotted; }   /* past the tab's own TTL — the title says the as-of */
+
+/* 🧭 macro rows under the SPY / QQQ cards (2026-10-15): TLT · UUP · GLD, one
+ * compact line each, opening in place to the same card. MINE sizes. No tone
+ * colours on the moves: a colour reads as a verdict (the strip header's rule). */
+.iz-macro { list-style: none; margin: 0.45rem 0 0; padding: 0.35rem 0 0; border-top: 1px solid rgba(148, 163, 184, 0.18); }
+.iz-macro-row { margin: 0; padding: 0; }
+.iz-macro-toggle {
+  display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: baseline; width: 100%;
+  background: transparent; border: 0; padding: 0.25rem 0.1rem; margin: 0; color: inherit;
+  font: inherit; font-size: 0.78rem; font-variant-numeric: tabular-nums; text-align: left; cursor: pointer;
+}
+.iz-macro-toggle:hover, .iz-macro-toggle[aria-expanded="true"] { background: rgba(148, 163, 184, 0.08); }
+.iz-macro-label { color: var(--cm-slate, #94a3b8); }
+.iz-macro-where { color: var(--cm-slate, #94a3b8); margin-left: auto; }
+.iz-macro-pending { color: var(--cm-slate, #94a3b8); }
+.iz-macro-through { color: var(--cm-slate, #94a3b8); }
+.iz-macro-card { margin: 0.4rem 0 0.6rem; }
+.iz-macro-px, .iz-macro-move { white-space: nowrap; }
+@media (max-width: 760px) {
+  .iz-macro-where { flex-basis: 100%; margin-left: 0; }
+}

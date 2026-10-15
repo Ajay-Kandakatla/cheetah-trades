@@ -108,7 +108,7 @@ Per symbol the job records **which source the board set came from**:
 | source | meaning |
 |---|---|
 | `zone_store` | the overnight store had the doc — the normal path |
-| `computed` | no store doc, so `zone_store.build_doc` drew the bands from `sepa.prices.load_prices` — same engine, same geometry, same closed-bar rule |
+| `computed` | no store doc, so `zone_store.build_doc` drew the bands from the symbol's own frame — same engine, same geometry, same closed-bar rule (SPY / QQQ: `sepa.prices.load_prices`; since 2026-10-15 any symbol without a store doc reads a fresh `closed_daily_frame(use_cache=False)`, see below) |
 | `unavailable` | nothing readable. The symbol is **stored with a reason**, never silently dropped and never faked |
 
 **Stored shape** (one document per ET session date, collection `index_zones`,
@@ -117,7 +117,8 @@ retention `zone_store.KEEP_DAYS`):
 ```
 {_id: "2026-09-16", date: "2026-09-16", computed_at: <ISO>,
  source: "index_zones",
- indexes: {"SPY": <entry>, "QQQ": <entry>}}
+ indexes: {"SPY": <entry>, "QQQ": <entry>,
+           "TLT": <entry>, "UUP": <entry>, "GLD": <entry>}}
 
 <entry> = <board read>
         + {resolutions: {"board": <read>, "fine": <read>},
@@ -131,9 +132,14 @@ retention `zone_store.KEEP_DAYS`):
 `dist_pct` from the stored close. `room_pct` is the ceiling's distance,
 `drop_pct` the floor's.
 
+`indexes` lists **five** since 2026-10-15 (`index_zones.STRIP_SYMBOLS`: SPY,
+QQQ, then TLT / UUP / GLD). A doc written before that lists two.
+
 **Served payload** (`index_zones.PAYLOAD_KEYS`):
 `date`, `as_of`, `indexes`, `stale_days`, `stale_sessions`,
-`default_resolution`, `note`.
+`default_resolution`, `note`. Since 2026-10-15 every served entry also carries
+`progress`, a **serve-time** overlay in its own key (never stored, never merged
+into a stored or a live key) — see the 2026-10-15 section.
 
 ## The basis rules
 
@@ -222,5 +228,151 @@ entry read, no target, no advice. The user-facing word for a turn is
 
 Configured price-structure method, **not** a book method — no Minervini cites.
 
+## 2026-10-15 — US bonds, US dollar and gold beside SPY · QQQ
+
+Ajay, 2026-10-15: *"how can.I check us bonds and us dollar and gold can you
+add them to the SPY and QQQ please? I wanna see their progress"*
+
+### The three instruments — ETF proxies (MINE, his to swap)
+
+Every bar in this app is a Massive US-listed security, so the dollar index
+(DXY) and Treasury yields (US10Y / ^TNX) themselves have **no bars** and no
+zones. The strip uses ETF proxies, one tuple, `index_zones.MACRO`:
+
+| symbol | stands for (label) | alternative |
+|---|---|---|
+| **TLT** | US bonds (20y+) | IEF (7–10y) |
+| **UUP** | US dollar | USDU |
+| **GLD** | Gold | IAU |
+
+`INDEXES` stays `("SPY", "QQQ")` — the two cards. The overnight job warms
+`STRIP_SYMBOLS = INDEXES + MACRO_SYMBOLS`. House precedent for two of them:
+`rotation/tracker.py` `HAVEN_PROXY` already reads GLD and TLT. Swapping a proxy
+is one edit to `MACRO` (the FE mirrors it under a `?raw` pin) and the
+disclaimer renames itself — it is built from the constants.
+
+### The overnight path
+
+- **Same job, no crontab line.** The existing `15 4 * * 1-5 … market_hours.gate
+  supply_demand.index_zones` warms all five because `warm()`'s default list grew.
+  **A deploy must include `cron`** (`./deploy-cheetah-main.sh api frontend cron`):
+  the cron worker runs the image it was created from, so without it the 04:15
+  job keeps writing SPY / QQQ only and the rows fall back to "not stored yet".
+- **Source `computed`.** TLT / UUP / GLD are not in the `full` universe, so
+  `zone_store` never warms them. They take the existing fallback:
+  `zone_store.build_doc` with board geometry (`zone_geom()`) and the fine set
+  (`_fine_compute`) off ONE frame, closed bars, today dropped. They are not added
+  to `zone_store`, because that would grow the universe the 09:33 zone pass and
+  the demand boards read. Expected log line:
+  `sources={'zone_store': 2, 'computed': 3, 'unavailable': 0}`.
+- **Cost.** Three fresh 2y fetches on every run plus two or three `build_doc`
+  passes over ~500 bars: **≈ 2–6 s, estimated** (the job ran < 1 s on
+  2026-10-14). The first hand-run measures it; quote that, not this estimate.
+- **The fresh, never-cached frame.** A symbol with no zone_store doc is read by
+  `prices.closed_daily_frame(sym, now=now, period="2y", use_cache=False)`. It
+  never READS the shared `price_cache` and never WRITES it. Why not the others:
+  - `load_prices(sym, period="2y")`: an in-session fetch (a late job, a hand-run)
+    caches today's unfinished bar under the 20 h `CACHE_TTL_SEC`; the next 04:15
+    run drops only bars dated today, so it would store that partial bar as the
+    prior close. TLT / UUP / GLD are not in `full`, so the 16:30 final-close
+    patch never repairs it.
+  - `load_prices(…, force=True)`: one fresh fetch, but it WRITES the shared
+    cache with `cached_at` = 04:15, and rotation's 17:10 warm and 17:20 history
+    read GLD / TLT out of that cache under the same TTL — they would lose each
+    day's close (or, after a 10:00 hand-run, keep a 10:00 print as the close).
+  - `closed_daily_frame` with the cache: it accepts a cached frame that holds
+    the last session, and an intraday-written bar does.
+  A failed fetch stores the symbol `available: false` ("nothing stored for it")
+  for the day; the cached frame is never a fallback. SPY / QQQ keep
+  `load_prices` (they are in `full`; their cache gets the 16:30 close).
+
+### `progress` — the serve-time read
+
+Served on **every** entry (SPY / QQQ included; the page draws it only on the
+macro rows), built by `with_progress` after `with_live`. Never raises: a failure
+serves every number `None`, `today_state` `unavailable`, every text "—".
+
+| key | value |
+|---|---|
+| `through` | the last stored closed bar's date (= `as_of` on a healthy doc) |
+| `ret_5d` / `ret_21d` | `rotation.tracker.trailing_return(bars, WINDOW_FAST / WINDOW_SHORT)` over the STORED closed bars (the candles the chart draws), 2 dp; `None` with too few bars or a non-positive base |
+| `today_pct` | the strip's own live print (pre- and after-hours included) against `resiliency_tab.official_prev_close` — the snapshot's prior close when its day bar is dated the session and agrees within `drop10_tab.PREV_CLOSE_TOL_PCT`, else the stored close — 2 dp |
+| `today_prev_close` | that base, 2 dp |
+| `today_state` | below |
+| `windows` | `{"ret_5d": RT.WINDOW_FAST, "ret_21d": RT.WINDOW_SHORT}` — the page prints "5d" / "21d" from these |
+| `text` | `{today, ret_5d, ret_21d}` via `high_beta_tab.leg_text` ("+1.3%" / "−0.3%" / "—") |
+| `note` | the today sentence + the legs sentence, built from the numbers |
+
+| `today_state` | when | number |
+|---|---|---|
+| `read` | the stored close IS the prior session's close and a print dated today matches the shown `live_px` | the move |
+| `no_session` | today is not a market day (`market_hours.reminder.is_market_day`) | `None` |
+| `basis_behind` | `as_of` is not `key_levels.prev_market_day(today)` — the overnight job has not stored that close; "today" would be a multi-day move | `None` |
+| `no_print` | no row, no positive print, a print that is not the one the row shows, or a last trade not dated today | `None` |
+| `unavailable` | nothing stored for the symbol | `None` |
+
+An unread state is **never** `0.0` and never "+0.0%". `live_chg_pct` keeps its
+meaning (ungated, vs the stored close) and is never drawn on a macro row; only
+the gated `today_pct` is.
+
+**Rounding.** `progress_read` is the ONE rounding point: every number is 2 dp
+of the RAW move, every text is 1 dp (`leg_text`, HALF_UP) of the RAW move,
+never of the 2 dp number — a raw 1.2496 serves `1.25` and prints "+1.2%"
+(a double round would print "+1.3%"). The today move uses the UNROUNDED print.
+
+**One fetch.** The board hands the strip both the prints AND the
+bulk_live_prices rows it already fetched (only the strip's symbols — a tile's
+row never reaches it); the warming branch and the route take one `live_rows`
+fetch, and the prints and the today read come off the same rows.
+
+**The header's date.** The strip header's `as_of`, `stale_sessions` and note
+are measured on **SPY / QQQ only** (`basis_date` over `INDEXES` first, all
+reads only when neither is readable), so fresher macro rows never hide a stale
+SPY / QQQ header and one stale macro row never ages a fresh one.
+
+### The rows on the page
+
+SPY and QQQ keep their cards unchanged. Under them sits one compact row per
+macro symbol, in his order (bonds, dollar, gold): symbol · label · live print ·
+today · 5d · 21d · the band it stands in or how far the nearest band is. Every
+number is served; the page does no arithmetic on a move. A row whose own date
+(`progress.through`, else `as_of`) differs from the header's prints
+`through {date}` on the row itself (e.g. UUP's stale cache). Tapping a row
+expands it in place to the SAME chart and zone ladder SPY and QQQ have, with
+the served `progress.note` as its first line (a touch screen has no hover
+title); one row is open at a time and the open one rides `?iz_open=SYM`, which
+survives a reload and is dropped when leaving the zones tab.
+
+**Before the first run** the stored doc has no macro entry, so the served
+`indexes` lacks TLT / UUP / GLD (`served()` never warms and never invents an
+entry). The row says it is not stored yet and computes overnight with SPY and
+QQQ — never a zero, never blank.
+
+### HIS CALLs (defaults shipped)
+
+1. The proxies TLT / UUP / GLD and their labels (alternatives above).
+2. Today counts pre-market and after-hours prints (the move of the price the
+   row shows); the alternative is regular-session only.
+3. Today is "—" with a reason on weekends / holidays and until the overnight job
+   stores the prior close; the alternative is showing the last session's move.
+4. 5d / 21d end at the last STORED closed session; in market hours today stays
+   in Today.
+5. The row's band phrase reads the fine set (the strip's default resolution).
+6. Rows open collapsed, one at a time, param `iz_open`, dropped off the zones tab.
+7. SPY and QQQ show no progress line although it is served for them.
+8. Title "🧭 SPY · QQQ · macro zones"; the disclaimer wording is built from
+   `MACRO`.
+9. The percent band geometry is not retuned for UUP's low volatility.
+10. One hand-run fill before the deploy vs waiting for the first 04:15 run.
+11. The 2026-10-15 04:15 doc was missing — investigate separately, or not.
+12. Today's reason inline in the collapsed row (default: hover title + the
+    opened row's first line).
+13. The throwaway API for the hand-run (default: the no-drain launcher).
+
+Context only — it gates nothing, alerts nothing, enters no lane, and measures
+nothing. Not advice.
+
 **Tests:** `backend/tests/test_index_zones_2026_09_16.py`,
+`backend/tests/test_index_zones_macro_2026_10_15.py`,
+`backend/tests/test_prices_market_snapshot.py` (`use_cache=False`),
 `backend/tests/test_chart_maps.py`.

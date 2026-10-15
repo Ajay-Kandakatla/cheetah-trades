@@ -2493,11 +2493,11 @@ def test_zone_tiles_lead_with_which_way_it_got_here(prices, reentry_stub, monkey
     # `bulk_live_prices` directly, where this spy could not see it.
     #
     # 2026-09-16: the builder's fetch now also carries the PINNED index strip's
-    # symbols (SPY / QQQ, supply_demand.index_zones.INDEXES). That is the
+    # symbols (the strip's symbols, index_zones.STRIP_SYMBOLS). That is the
     # point — the strip rides this call rather than opening a third one — so
     # the count stays at two and only the first list grows.
     from supply_demand import index_zones as _IZ
-    assert calls == [sorted(["BNCE", "FALL", "NOLIVE"] + list(_IZ.INDEXES)),
+    assert calls == [sorted(["BNCE", "FALL", "NOLIVE"] + list(_IZ.STRIP_SYMBOLS)),
                      ["BNCE", "FALL", "NOLIVE"]], \
         "one fetch per builder, one for the overlays — never one per overlay"
     by = {t["symbol"]: t for t in out["tiles"]}

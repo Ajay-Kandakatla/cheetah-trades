@@ -723,29 +723,36 @@ def _index_symbols() -> list:
     fetch instead of adding a second provider call per request."""
     try:
         from supply_demand import index_zones as IZ
-        return list(IZ.INDEXES)
+        return list(IZ.STRIP_SYMBOLS)
     except Exception:                                          # noqa: BLE001
         return []
 
 
-def _index_strip(live: Optional[dict] = None) -> dict:
-    """`index_zones.PAYLOAD_KEYS` for the pinned strip — the two index reads at
-    BOTH resolutions (board / fine) with their closed-bar chart bars.
+def _index_strip(live: Optional[dict] = None, rows: Optional[dict] = None) -> dict:
+    """`index_zones.PAYLOAD_KEYS` for the pinned strip — the strip's reads
+    (SPY / QQQ + the macro rows, `index_zones.STRIP_SYMBOLS`) at BOTH
+    resolutions (board / fine) with their closed-bar chart bars and the
+    serve-time `progress` overlay.
 
     `live` is the board's own {SYMBOL: print} map when it already fetched one
-    (the strip's symbols ride that fetch); passing it — even all-None after a
-    tape outage — stops index_zones going back to the provider. None (the
-    warming branch, which has no rows and therefore no fetch) lets it take one
-    bulk snapshot of two symbols.
+    (the strip's symbols ride that fetch), and `rows` the bulk_live_prices
+    rows that fetch returned (the today read needs the row, not just the
+    print); only the strip's own symbols are handed on — a tile's row never
+    reaches the strip. Passing `live` — even all-None after a tape outage —
+    stops index_zones going back to the provider. None (the warming branch,
+    which has no rows and therefore no fetch) lets it take one bulk snapshot
+    of the strip's symbols.
 
     NEVER raises: a failure to read the index doc must not take the board
     down, so the empty shape with a reason is the worst case.
     """
     try:
         from supply_demand import index_zones as IZ
-        prints = ({s: (live or {}).get(s) for s in IZ.INDEXES}
+        prints = ({s: (live or {}).get(s) for s in IZ.STRIP_SYMBOLS}
                   if live is not None else None)
-        return IZ.served(live=prints)
+        strip_rows = ({s: r for s, r in (rows or {}).items() if s in IZ.STRIP_SYMBOLS}
+                      if live is not None else None)
+        return IZ.served(live=prints, rows=strip_rows)
     except Exception as exc:                                   # noqa: BLE001
         log.debug("chart maps: index strip unavailable: %s", exc)
         note = "Index structure is unavailable right now."
@@ -3196,7 +3203,7 @@ def zone_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     return {"tiles": out, **meta,
             "gex_as_of": gex_as_of,
             # Pinned, never filtered / ordered / gated by the controls above.
-            "index_zones": _index_strip(live),
+            "index_zones": _index_strip(live, live_rows),
             "phase": ("approaching" if phase == "approaching" else "reached"),
             "target": ("order_block" if target == "order_block" else "zone"),
             "matched": matched,

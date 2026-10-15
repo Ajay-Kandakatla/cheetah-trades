@@ -183,3 +183,38 @@ def test_NEGATIVE_closed_daily_frame_fetch_raising_is_none(monkeypatch):
     monkeypatch.setattr(P, "_parquet_get", lambda s: None)
     monkeypatch.setattr(P, "_fetch", lambda sym, period: (_ for _ in ()).throw(RuntimeError("apiKey=SECRET")))
     assert P.closed_daily_frame("AAA", now=NOW) is None
+
+
+# ── closed_daily_frame(use_cache=False) — index_zones' macro rows (2026-10-15) ──────────────────────────────
+def test_closed_daily_frame_use_cache_false_always_fetches(monkeypatch):
+    monkeypatch.setattr(P, "_mongo_get", lambda s: pytest.fail("use_cache=False read the mongo cache"))
+    monkeypatch.setattr(P, "_parquet_get", lambda s: pytest.fail("use_cache=False read the parquet cache"))
+    monkeypatch.setattr(P, "_fetch", lambda sym, period: _daily("2026-10-13", 10))
+    out = P.closed_daily_frame("AAA", now=NOW, use_cache=False)
+    assert out.index.max() == pd.Timestamp("2026-10-12") and len(out) == 9
+
+
+def test_NEGATIVE_closed_daily_frame_use_cache_false_never_writes(monkeypatch):
+    def _boom(*a, **k):
+        raise AssertionError("closed_daily_frame must never write a cache")
+    monkeypatch.setattr(P, "_mongo_put", _boom)
+    monkeypatch.setattr(P, "_parquet_put", _boom)
+    monkeypatch.setattr(P, "_fetch", lambda sym, period: _daily("2026-10-13", 6))
+    out = P.closed_daily_frame("AAA", now=NOW, use_cache=False)
+    assert len(out) == 5 and out.index.max() < pd.Timestamp("2026-10-13")
+
+
+def test_NEGATIVE_closed_daily_frame_use_cache_false_never_falls_back_to_the_cache(monkeypatch):
+    seen = []
+    monkeypatch.setattr(P, "_mongo_get", lambda s: seen.append(s) or _daily("2026-10-13"))
+    monkeypatch.setattr(P, "_parquet_get", lambda s: seen.append(s) or _daily("2026-10-13"))
+    monkeypatch.setattr(P, "_fetch", lambda sym, period: None)
+    assert P.closed_daily_frame("AAA", now=NOW, use_cache=False) is None
+    assert seen == [], "a failed fresh fetch is None, never the cached frame"
+    assert P.closed_daily_frame("AAA", now=NOW) is not None, "the default still reads the fresh cache"
+
+
+def test_NEGATIVE_closed_daily_frame_use_cache_false_fetch_raising_is_none(monkeypatch):
+    monkeypatch.setattr(P, "_mongo_get", lambda s: _daily("2026-10-13"))
+    monkeypatch.setattr(P, "_fetch", lambda sym, period: (_ for _ in ()).throw(RuntimeError("apiKey=SECRET")))
+    assert P.closed_daily_frame("AAA", now=NOW, use_cache=False) is None

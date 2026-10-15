@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // 2026-10-15 — Ajay: "how can.I check us bonds and us dollar and gold can you add them to the SPY and QQQ please? I
+  // wanna see their progress". The three rows are backend supply_demand/index_zones.MACRO (TLT / UUP / GLD, ETF proxies —
+  // MINE), mirrored by IndexZones.IZ_MACRO (?raw-pinned). The moves are served: 5d / 21d = rotation/tracker.py
+  // WINDOW_FAST / WINDOW_SHORT (RT), the text is chart_maps/high_beta_tab.leg_text off the raw move. Pinned by
+  // scripts/contracts.mjs ("🧭 macro rows"). YOUR CALLS = BUILD_SPEC3 §7. Newest first (the ✨ convention; no contract pins a position).
+  { id: 'index-zones-macro-2026-10-15', addedAt: '2026-10-15', route: '/chart-maps?tab=zones',
+    label: '🧭 Bonds, dollar, gold under SPY/QQQ on Back in Demand. You asked: “how can.I check us bonds and us dollar and gold can you add them to the SPY and QQQ please? I wanna see their progress”. TLT (bonds 20y+), UUP (dollar), GLD (gold): price, today, 5d, 21d, band. Tap: same chart, open on reload; SPY/QQQ same. ETF PROXIES, my pick (no index bars); IEF/USDU/IAU on your word. Bands overnight, closed bars (“not stored yet” before run 1). Today = live print, ext. hours, vs prior close (official when the snapshot carries it); — until the job stores it and on closed days (tap for why). 5d/21d end at the last stored close (“through” if older). Context only: gates, alerts, enters nothing. Not advice.' },
   // 2026-10-14 b (shipped 2026-10-15 ET) — Ajay 2026-10-14: "Can you add sort function on the headers and also 5 day and
   // 21 days columns to show how they were reacting in price like hot sectors and also add sales tab make it like hot
   // sector with some important metrics like EPS, QUAlity and other colums that show the strength of the stock".

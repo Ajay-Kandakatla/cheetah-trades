@@ -52,9 +52,27 @@
  * no lane. Every structural S/D read this app measured this month came back
  * null (band_structure no_signal, deep_levels no_signal, enterable no_signal),
  * so no copy here may read as a forecast.
+ *
+ * 2026-10-15 — MACRO ROWS. Ajay, verbatim: "how can.I check us bonds and us
+ * dollar and gold can you add them to the SPY and QQQ please? I wanna see their
+ * progress". Three compact rows under the SPY / QQQ cards — TLT for US bonds
+ * (20y+), UUP for the US dollar, GLD for gold. They are ETF PROXIES (MINE):
+ * every bar in this app is a US-listed security, so the dollar index and
+ * Treasury yields themselves have no bars; the ONE list is index_zones.MACRO
+ * and IZ_MACRO below mirrors it (a ?raw test pins the two). Each row prints the
+ * live print, the served today / 5d / 21d texts (index_zones.progress_read —
+ * this file does no arithmetic on a move), and where the print stands in the
+ * stored bands. A row opens, one at a time, to the SAME IndexCard SPY and QQQ
+ * draw, via `?iz_open=` so the open row survives a reload. Default: all
+ * collapsed. The SPY / QQQ cards are unchanged but for one tweak — the name is
+ * printed only when it differs from the symbol (UUP has no name). The strip
+ * header's date and age stay measured on SPY / QQQ; a row whose own bars stop
+ * on another session prints `through {date}` on itself.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
+import { IZ_OPEN_PARAM } from '../lib/chartMaps';
 import type {
   CmBand, CmBar, CmIndexZoneBand, CmIndexZoneEdge, CmIndexZoneRead,
   CmIndexZoneResolution, CmIndexZones, CmTile,
@@ -68,6 +86,16 @@ import { StudyNote } from './StudyNote';
  *  backend's own list is index_zones.INDEXES; a third index is one edit on
  *  each side. */
 export const INDEX_ZONE_SYMBOLS = ['SPY', 'QQQ'] as const;
+
+/** The three macro rows (2026-10-15), in his order: bonds, dollar, gold. ETF
+ *  proxies, MINE. The backend's ONE list is index_zones.MACRO; this mirrors it
+ *  and IndexZones.macro.test.tsx pins the two equal through a ?raw read of the
+ *  Python source, order included. */
+export const IZ_MACRO = [
+  { symbol: 'TLT', label: 'US bonds (20y+)' },
+  { symbol: 'UUP', label: 'US dollar' },
+  { symbol: 'GLD', label: 'Gold' },
+] as const;
 
 /** The two geometries the backend serves. Both are EXISTING settings in this
  *  app, named after the module that owns each. */
@@ -302,6 +330,93 @@ export function izTile(read: CmIndexZoneRead, view: CmIndexZoneResolution): CmTi
   };
 }
 
+/* ── macro rows (2026-10-15) ─────────────────────────────────────────────── */
+
+export type IzMacroState = 'read' | 'pending' | 'loading' | 'error' | 'unavailable';
+export type IzMoveKey = 'today' | 'ret_5d' | 'ret_21d';
+
+/** The `?iz_open=` value, read: the upper-cased symbol when it names a macro
+ *  row, else null. SPY / QQQ / anything else / empty opens nothing. */
+export function izMacroOpen(raw: string | null | undefined): string | null {
+  const v = typeof raw === 'string' ? raw.trim().toUpperCase() : '';
+  return IZ_MACRO.some((m) => m.symbol === v) ? v : null;
+}
+
+/** The SERVED text of one move ("+1.9%" / "−0.4%" / "—"), or an em dash when
+ *  none was served. Never formatted here: the backend renders it off the raw
+ *  value, and a page that re-rounds the 2 dp number can disagree with it. */
+export function izProgressText(read: CmIndexZoneRead | null | undefined, key: IzMoveKey): string {
+  const t = read?.progress?.text?.[key];
+  return typeof t === 'string' && t ? t : '—';
+}
+
+/** "5d" / "21d" from the SERVED window lengths, or '' when none was served. */
+export function izWindowLabel(read: CmIndexZoneRead | null | undefined,
+                              key: 'ret_5d' | 'ret_21d'): string {
+  const n = izNum(read?.progress?.windows?.[key]);
+  return n == null ? '' : `${n}d`;
+}
+
+/** Which of five facts a row is showing. `phase` is the strip's: a symbol
+ *  missing from a doc that was read is PENDING (the nightly job has not
+ *  written it), which is not the same as a request in flight or one that
+ *  failed. */
+export function izMacroState(read: CmIndexZoneRead | null | undefined, phase: IzPhase): IzMacroState {
+  if (read && typeof read === 'object') return read.available === false ? 'unavailable' : 'read';
+  if (phase === 'loading') return 'loading';
+  if (phase === 'error') return 'error';
+  return 'pending';
+}
+
+function izKindWord(kind: unknown): string {
+  return kind === 'supply' ? 'supply ' : kind === 'demand' ? 'demand ' : '';
+}
+
+/** Where the row's price stands, in one phrase, read ONLY off served fields on
+ *  the set the card opens on (`view`) — this measures nothing. The live
+ *  overlay when there is a print, else the stored close against its nearest
+ *  band. */
+export function izMacroWhere(read: CmIndexZoneRead, view: CmIndexZoneResolution): string {
+  const src = izLiveSource(read, view);
+  if (izNum(src.live_px) != null) {
+    const d = izDist(src.live_dist_pct);
+    if (src.live_in_band) {
+      return `live: in the ${izKindWord(src.live_in_band.kind)}band ${izRange(src.live_in_band)}`;
+    }
+    if (src.live_side === 'above') return `live: above every stored band, ${d} from the nearest band`;
+    if (src.live_side === 'below') return `live: below every stored band, ${d} from the nearest band`;
+    if (src.live_side === 'between') return `live: between two stored bands, ${d} from the nearest band`;
+  }
+  const ref = izCloseRef(read.as_of);
+  if (view.in_band) {
+    return `at ${ref}: inside a ${izKindWord(view.in_band.kind)}band ${izRange(view.in_band)}`;
+  }
+  const up = view.ceiling || null;
+  const dn = view.floor || null;
+  const du = izNum(up?.dist_pct);
+  const dd = izNum(dn?.dist_pct);
+  const kindOf = (k: unknown) => (izKindWord(k) ? ` (${izKindWord(k).trim()})` : '');
+  if (up && du != null && (dd == null || !dn || Math.abs(du) <= Math.abs(dd))) {
+    return `at ${ref}: nearest band ${izDist(du)} above${kindOf(up.kind)}`;
+  }
+  if (dn && dd != null) return `at ${ref}: nearest band ${izDist(dd)} below${kindOf(dn.kind)}`;
+  return `at ${ref}: no stored band`;
+}
+
+/** "through 2026-09-01" when this row's own closed bars stop on a different
+ *  session from the strip header's, else null. The header dates SPY / QQQ;
+ *  without this cell one stale row would print its band phrase and its 5d /
+ *  21d with no date of their own. */
+export function izMacroThrough(read: CmIndexZoneRead | null | undefined,
+                               stripAsOf: string | null | undefined): string | null {
+  if (!read || typeof read !== 'object') return null;
+  const through = read.progress?.through;
+  const own = typeof through === 'string' && through ? through
+    : typeof read.as_of === 'string' && read.as_of ? read.as_of : null;
+  if (!own || typeof stripAsOf !== 'string' || !stripAsOf || own === stripAsOf) return null;
+  return `through ${own}`;
+}
+
 /* ── the strip's own fetch ───────────────────────────────────────────────── */
 
 /* F1, 2026-09-16: the board's `load()` only setData()s on success, so a 500
@@ -485,7 +600,8 @@ function IndexCard(
     <div className="iz-card" data-testid={`index-zone-${symbol}`}>
       <div className="iz-head">
         <strong className="iz-sym">{symbol}</strong>
-        {doc.name ? <span className="iz-name">{String(doc.name)}</span> : null}
+        {doc.name && String(doc.name) !== symbol
+          ? <span className="iz-name">{String(doc.name)}</span> : null}
       </div>
       <p className="iz-basis" data-testid={`index-zone-basis-${symbol}`}>{izBasis(doc)}</p>
       {live ? (
@@ -551,6 +667,84 @@ function IndexCard(
   );
 }
 
+/** One macro row: a toggle carrying the served numbers, and — when it is the
+ *  open one — the SAME IndexCard the SPY / QQQ cards are, with the served note
+ *  over it so a touch screen can read why a cell is blank. */
+function MacroRow(
+  { symbol, label, read, phase, payloadDefault, stripAsOf, open, onToggle }:
+  { symbol: string; label: string; read?: CmIndexZoneRead | null; phase: IzPhase;
+    payloadDefault: string | null; stripAsOf?: string | null; open: boolean;
+    onToggle: (sym: string) => void },
+) {
+  const state = izMacroState(read, phase);
+  const doc = state === 'read' || state === 'unavailable' ? (read as CmIndexZoneRead) : null;
+  const rawNote = doc?.progress?.note;
+  const note = typeof rawNote === 'string' && rawNote ? rawNote : null;
+  let body: ReactNode;
+  if (state === 'read' && doc) {
+    const view = izView(doc, izDefaultRes(doc, payloadDefault));
+    const px = izNum(doc.live_px);
+    const through = izMacroThrough(doc, stripAsOf);
+    const w5 = izWindowLabel(doc, 'ret_5d');
+    const w21 = izWindowLabel(doc, 'ret_21d');
+    body = (
+      <>
+        <span className="iz-macro-px" data-testid={`index-macro-px-${symbol}`}>
+          {px != null ? `${izPrice(px)} live` : `${izPrice(doc.close)} close`}
+        </span>
+        <span className="iz-macro-move" data-testid={`index-macro-today-${symbol}`}>
+          {`today ${izProgressText(doc, 'today')}`}
+        </span>
+        <span className="iz-macro-move" data-testid={`index-macro-5d-${symbol}`}>
+          {[w5, izProgressText(doc, 'ret_5d')].filter(Boolean).join(' ')}
+        </span>
+        <span className="iz-macro-move" data-testid={`index-macro-21d-${symbol}`}>
+          {[w21, izProgressText(doc, 'ret_21d')].filter(Boolean).join(' ')}
+        </span>
+        {through ? (
+          <span className="iz-macro-through" data-testid={`index-macro-through-${symbol}`}>
+            {through}
+          </span>
+        ) : null}
+        <span className="iz-macro-where" data-testid={`index-macro-where-${symbol}`}>
+          {izMacroWhere(doc, view)}
+        </span>
+      </>
+    );
+  } else {
+    const text = state === 'loading'
+      ? `Reading the stored structure for ${symbol}…`
+      : state === 'error'
+        ? `Could not load ${symbol} — a request failure, not an empty store.`
+        : state === 'unavailable'
+          ? `${label} — no stored structure: ${String(doc?.reason || 'no reason was served')}`
+          : `${label} — not stored yet. It computes overnight with SPY and QQQ; the nightly job has not written it.`;
+    body = (
+      <span className="iz-macro-pending" data-testid={`index-macro-${state}-${symbol}`}>{text}</span>
+    );
+  }
+  return (
+    <li className="iz-macro-row" data-testid={`index-macro-${symbol}`} data-state={state}
+        data-open={open ? 'true' : 'false'} title={note ?? ''}>
+      <button type="button" className="iz-macro-toggle" aria-expanded={open}
+              aria-controls={`index-macro-card-${symbol}`}
+              data-testid={`index-macro-toggle-${symbol}`}
+              onClick={() => onToggle(symbol)}>
+        <strong className="iz-sym">{symbol}</strong>
+        <span className="iz-macro-label" data-testid={`index-macro-label-${symbol}`}>{label}</span>
+        {body}
+      </button>
+      {open ? (
+        <div className="iz-macro-card" id={`index-macro-card-${symbol}`}
+             data-testid={`index-macro-card-${symbol}`}>
+          {note ? <p className="iz-dim" data-testid={`index-macro-note-${symbol}`}>{note}</p> : null}
+          <IndexCard symbol={symbol} read={read} phase={phase} payloadDefault={payloadDefault} />
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 /** The pinned strip. `data` is the board payload's `index_zones` key; absent,
  *  null or malformed sends the strip to its OWN request for the stored doc,
  *  and only when that comes back empty does it draw placeholders. Never
@@ -559,6 +753,17 @@ export default function IndexZones({ data }: { data?: CmIndexZones | null }) {
   const fromBoard = data && typeof data === 'object' && data.indexes
     && typeof data.indexes === 'object' ? data : null;
   const [fallback, setFallback] = useState<IzFallback | null>(null);
+  // ONE open macro row, in the URL so it survives a reload. Written with the
+  // functional updater so every other param on the page rides along, and with
+  // replace so a row click is not a history entry.
+  const [params, setParams] = useSearchParams();
+  const openSym = izMacroOpen(params.get(IZ_OPEN_PARAM));
+  const onToggle = (sym: string) => setParams((prev) => {
+    const next = new URLSearchParams(prev);
+    if (izMacroOpen(next.get(IZ_OPEN_PARAM)) === sym) next.delete(IZ_OPEN_PARAM);
+    else next.set(IZ_OPEN_PARAM, sym);
+    return next;
+  }, { replace: true });
 
   // Only when the board gave us nothing usable. A board that answered keeps
   // this strip on ONE payload — no second request, no chance of two sessions
@@ -587,10 +792,10 @@ export default function IndexZones({ data }: { data?: CmIndexZones | null }) {
       ? ` · stored ${days} calendar day${days === 1 ? '' : 's'} ago`
       : '';
   return (
-    <section className="iz" role="complementary" aria-label="SPY and QQQ zones"
+    <section className="iz" role="complementary" aria-label="SPY, QQQ and macro zones"
              data-testid="index-zones">
       <div className="iz-strip-head">
-        <span className="iz-strip-title">🧭 SPY · QQQ zones</span>
+        <span className="iz-strip-title">🧭 SPY · QQQ · macro zones</span>
         <em className="iz-strip-sub">
           supply and demand bands, computed overnight from closed daily bars
           {doc?.date ? ` · stored ${doc.date}` : ''}
@@ -605,6 +810,14 @@ export default function IndexZones({ data }: { data?: CmIndexZones | null }) {
                      payloadDefault={doc?.default_resolution ?? null} />
         ))}
       </div>
+      <ul className="iz-macro" data-testid="index-macro" aria-label="US bonds, US dollar and gold">
+        {IZ_MACRO.map((m) => (
+          <MacroRow key={m.symbol} symbol={m.symbol} label={m.label} read={indexes[m.symbol]}
+                    phase={phase} payloadDefault={doc?.default_resolution ?? null}
+                    stripAsOf={doc?.as_of ?? null} open={openSym === m.symbol}
+                    onToggle={onToggle} />
+        ))}
+      </ul>
     </section>
   );
 }

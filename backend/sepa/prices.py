@@ -1217,7 +1217,8 @@ def market_snapshot(include_otc: bool = False) -> dict:
     return market_snapshot_with_meta(include_otc=include_otc)[0]
 
 
-def closed_daily_frame(symbol: str, *, now=None, period: str = "1y") -> Optional[pd.DataFrame]:
+def closed_daily_frame(symbol: str, *, now=None, period: str = "1y",
+                       use_cache: bool = True) -> Optional[pd.DataFrame]:
     """Daily bars dated BEFORE today (ET) — and NOTHING is written to any cache.
 
     For off-universe small caps (the Gajjala's 🎾 squeeze-history chip):
@@ -1229,18 +1230,29 @@ def closed_daily_frame(symbol: str, *, now=None, period: str = "1y") -> Optional
     "Last market day" is the house calendar's `prev_market_day` — `BDay`
     ignores holidays, so on the session after a weekday holiday the cache
     never held the "last weekday" and every call re-fetched.
-    `now` (ET clock, injectable) decides "today". None on no data."""
+    `now` (ET clock, injectable) decides "today". None on no data.
+
+    `use_cache=False` (2026-10-15, supply_demand.index_zones for TLT / UUP /
+    GLD): skip the cache READ too and always `_fetch`. The default accepts a
+    cached frame that holds the last market day, and an intraday-written cache
+    bar (an in-session `load_prices` fetch) does hold it — so `use_cache=False`
+    is the only setting an unfinished cached bar cannot reach. Nothing is
+    written on either setting, and a failed fetch is None, never a cache
+    fallback."""
     try:
         et_now = pd.Timestamp.now(tz="America/New_York") if now is None else pd.Timestamp(now)
         if et_now.tzinfo is not None:                           # a naive `now` is read as ET
             et_now = et_now.tz_convert("America/New_York").tz_localize(None)
         today = et_now.normalize()
-        from catalysts.medical.reaction import prev_market_day
-        last_session = pd.Timestamp(prev_market_day(today.date()))
-        df = _mongo_get(symbol)
-        if df is None:
-            df = _parquet_get(symbol)
-        if df is None or df.empty or pd.Timestamp(df.index.max()).normalize() < last_session:
+        if use_cache:
+            from catalysts.medical.reaction import prev_market_day
+            last_session = pd.Timestamp(prev_market_day(today.date()))
+            df = _mongo_get(symbol)
+            if df is None:
+                df = _parquet_get(symbol)
+            if df is None or df.empty or pd.Timestamp(df.index.max()).normalize() < last_session:
+                df = _fetch(symbol, period)
+        else:
             df = _fetch(symbol, period)
         if df is None or df.empty:
             return None

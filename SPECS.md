@@ -499,6 +499,21 @@ edge (`PAD_FLOOR_HELD = False`, his call). Payloads gain `pad_lo` / `pad_pct` / 
 never a moved edge. UNMEASURED (`zone_pad_measured.py`, pending). Full rule, sites, phone-gate
 statement, sell-timing list and HIS CALLs: `docs/supply_demand/zone_pad_2026_09_30.md`.
 
+### Supply/Demand index zones — supply_demand/index_zones.py (2026-09-16; macro rows 2026-10-15)
+The 🧭 strip pinned on Chart Maps ▸ Back in Demand. `INDEXES = ("SPY", "QQQ")` (the cards) and, since
+2026-10-15 (*"how can.I check us bonds and us dollar and gold … I wanna see their progress"*), `MACRO` =
+TLT "US bonds (20y+)" / UUP "US dollar" / GLD "Gold" — ETF PROXIES, MINE, his to swap; `STRIP_SYMBOLS =
+INDEXES + MACRO_SYMBOLS`. The 04:15 ET weekday job (`python -m supply_demand.index_zones`, no new cron line;
+deploy needs `cron`) stores one doc per day: board + fine resolutions and closed-bar `bars` per symbol.
+Sources: `zone_store` (SPY/QQQ) | `computed` (TLT/UUP/GLD — not in `full`; `zone_store.build_doc` off a FRESH
+`prices.closed_daily_frame(…, use_cache=False)` that never reads or writes the shared price cache) |
+`unavailable` (stored with a reason). Every served entry gains a serve-time `progress` (5d / 21d =
+`rotation.tracker.trailing_return` over the stored bars; today = live print vs `official_prev_close`, read only
+when the stored close is the prior session's; text = `high_beta_tab.leg_text` of the raw move). Served by
+`GET /supply-demand/index-zones` and attached to the zones board (`board._index_strip`, riding the board's one
+live fetch); the header's `as_of` is measured on SPY/QQQ. Context only — gates nothing, alerts nothing, not
+advice. Full contract: `docs/supply_demand/index_zones.md`.
+
 ### Chart Maps — Gajjala's tab — `chart_maps/gajjala/` (2026-10-13)
 Goverdhan Gajjala's five intraday setups over HIS scanner on the whole US market (Ajay: *"Implement his full stategy do
 not assume anything."*). Long setups only. **UNMEASURED** — nothing here trades, sizes or enters a lane; not SEPA (no

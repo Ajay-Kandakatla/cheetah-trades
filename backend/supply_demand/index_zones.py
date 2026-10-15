@@ -92,8 +92,9 @@ made for it.
 `zone_store` warms at 04:05 ET on weekdays and carries SPY, QQQ and IWM with
 EVERY band uncapped (max_zones=None) in BOARD geometry, on closed bars with
 today's bar dropped. This module READS that store for the board set; when it
-has no doc for a symbol it falls back to `zone_store.build_doc` on
-`sepa.prices.load_prices` — same engine, same geometry, same closed-bar rule —
+has no doc for a symbol it falls back to `zone_store.build_doc` on the
+symbol's own frame (a fresh `sepa.prices.closed_daily_frame` read since
+2026-10-15, see below) — same engine, same geometry, same closed-bar rule —
 and records which source it used:
 
     source: "zone_store" | "computed" | "unavailable"
@@ -114,7 +115,9 @@ STORED SHAPE (one doc per ET session date)
 ------------------------------------------
     {_id: "2026-09-16", date: "2026-09-16", computed_at: <ISO>,
      source: "index_zones",
-     indexes: {"SPY": <index entry>, "QQQ": <index entry>}}
+     indexes: {"SPY": <index entry>, "QQQ": <index entry>,
+               "TLT": <index entry>, "UUP": <index entry>,
+               "GLD": <index entry>}}          # STRIP_SYMBOLS, 2026-10-15
 
     <index entry> = <board read> + {resolutions: {"board": <read>,
                                                   "fine": <read>},
@@ -122,6 +125,33 @@ STORED SHAPE (one doc per ET session date)
 
 Cron: after `zone_store` finishes its 04:05 ET warm (240s budget), weekdays.
 `python -m supply_demand.index_zones` warms and reports.
+
+2026-10-15 — US BONDS, US DOLLAR, GOLD
+--------------------------------------
+Ajay 2026-10-15: *"how can.I check us bonds and us dollar and gold can you add
+them to the SPY and QQQ please? I wanna see their progress"*.
+
+`MACRO` = TLT (US bonds, 20y+), UUP (US dollar), GLD (gold) — ETF PROXIES, and
+MINE: every bar in this app is a Massive US-listed security, so the dollar
+index and Treasury yields themselves have no bars. HIS to swap; the tuple is
+the ONE list. `INDEXES` stays SPY / QQQ (the two cards); the overnight job
+warms `STRIP_SYMBOLS = INDEXES + MACRO_SYMBOLS`.
+
+The three are not in `full`, so `zone_store` never warms them: they take the
+EXISTING fallback above (`source: "computed"`) — `zone_store.build_doc` with
+board geometry and the fine set off ONE frame. That frame is read FRESH
+(`prices.closed_daily_frame(..., use_cache=False)`): never from the shared
+price cache (an in-session fetch caches an unfinished bar under the 20 h TTL,
+which the next 04:15 run would store as the prior close) and never written
+back (rotation reads GLD / TLT out of that cache at 17:10 / 17:20).
+
+`progress` is a SERVE-TIME overlay on every entry (`with_progress`, its own
+key): 5d / 21d = `rotation.tracker.trailing_return` over the STORED closed
+bars (WINDOW_FAST / WINDOW_SHORT), today = the strip's own live print against
+`resiliency_tab.official_prev_close`, read ONLY when the stored close IS the
+prior session's close (else `today_state` says why and the number is None).
+Numbers are 2 dp of the raw move; text is `high_beta_tab.leg_text` of the RAW
+move, never of the 2 dp number. Context only — it gates nothing.
 
 Configured price-structure method, NOT a book method, no Minervini cites.
 Context only — not a buy signal, not advice.
@@ -139,6 +169,23 @@ ET = ZoneInfo("America/New_York")
 
 # His two. A named constant so a third index is one edit, not a rewrite.
 INDEXES = ("SPY", "QQQ")
+# 2026-10-15 — "how can.I check us bonds and us dollar and gold can you add them to the SPY and QQQ please? I wanna
+# see their progress". ETF PROXIES (MINE): every bar in this app is a Massive US-listed security, so the dollar index
+# and Treasury yields themselves have no bars. HIS to swap — this tuple is the ONE list (FE mirrors it, ?raw-pinned).
+MACRO = (
+    ("TLT", "US bonds (20y+)"),
+    ("UUP", "US dollar"),
+    ("GLD", "Gold"),
+)
+MACRO_SYMBOLS = tuple(sym for sym, _label in MACRO)
+MACRO_LABELS = dict(MACRO)
+# What the overnight job warms and the board's live fetch carries. SPY/QQQ first (the cards), then the rows.
+STRIP_SYMBOLS = INDEXES + MACRO_SYMBOLS
+# The serve-time progress overlay (2026-10-15). Its own key, never merged into a stored or a LIVE key.
+PROGRESS_KEY = "progress"
+PROGRESS_KEYS = ("through", "ret_5d", "ret_21d", "today_pct", "today_prev_close",
+                 "today_state", "windows", "text", "note")
+TODAY_STATES = ("read", "no_session", "basis_behind", "no_print", "unavailable")
 COLLECTION = "index_zones"
 # What wrote the day doc. The PER-SYMBOL source (zone_store | computed |
 # unavailable) lives on each read; this is the job tag.
@@ -181,9 +228,34 @@ INDEX_KEYS = READ_KEYS + ("resolutions", "bars", "bars_basis")
 PAYLOAD_KEYS = ("date", "as_of", "indexes", "stale_days", "stale_sessions",
                 "default_resolution", "note")
 
-DISCLAIMER = ("Index structure drawn on closed bars — context for where SPY "
-              "and QQQ are standing. It gates nothing, is not a signal and is "
-              "not advice.")
+def _and(items) -> str:
+    """"A" / "A and B" / "A, B and C" over ANY iterable (a generator included); "" for none."""
+    items = [str(x) for x in items]
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+# BUILT from the constants (2026-10-15), so a swapped proxy renames itself here.
+DISCLAIMER = (f"Structure drawn on closed bars — context for where {_and(INDEXES)} are standing, and for "
+              f"{_and(label for _s, label in MACRO)} through the ETF proxies {_and(MACRO_SYMBOLS)}. "
+              "It gates nothing, is not a signal and is not advice.")
+
+# The progress note's sentences, keyed by TODAY_STATES (MINE wording, 2026-10-15).
+# Built from the numbers; no verdict, no forecast word.
+TODAY_NOTES = {
+    "read": "Today: the live print {px} against the {as_of} close {base}.",
+    "no_session": "Today is not read: {session} is not a market session.",
+    "basis_behind": ("Today is not read: the stored close is {as_of}, not the {prev} session — "
+                     "the overnight job has not stored that close yet."),
+    "no_print": "Today is not read: no print dated {session} yet.",
+    "unavailable": "Today is not read: nothing is stored for this symbol.",
+}
+LEGS_NOTE = "{f}d and {s}d: the last {f} and {s} closed sessions through the {through} close."
+LEGS_NOTE_NO_BARS = "{f}d and {s}d are not read: the stored doc carries no closed bars."
+PROGRESS_UNREAD_NOTE = "Progress is unavailable right now."
 
 
 # ---------------------------------------------------------------------------
@@ -203,13 +275,21 @@ def _r2(v) -> Optional[float]:
     return None if f is None else round(f, 2)
 
 
-def _pct(delta: float, base: float) -> Optional[float]:
-    """`delta` as a percentage of `base`, 2dp. None when base is unusable."""
+def _pct_raw(delta, base) -> Optional[float]:
+    """`delta` as a percentage of `base`, UNROUNDED. None when either is
+    non-finite or base is not positive (2026-10-15: the progress read rounds
+    ONCE, at `progress_read`, so it needs the raw value)."""
     b = _num(base)
     d = _num(delta)
     if b is None or d is None or b <= 0:
         return None
-    return round(d / b * 100.0, 2)
+    return d / b * 100.0
+
+
+def _pct(delta: float, base: float) -> Optional[float]:
+    """`delta` as a percentage of `base`, 2dp. None when base is unusable."""
+    r = _pct_raw(delta, base)
+    return None if r is None else round(r, 2)
 
 
 def _today_et(now: Optional[datetime] = None) -> date:
@@ -667,7 +747,7 @@ def _entry(read: dict, resolutions: dict, bars: list) -> dict:
     return out
 
 
-def warm(symbols: Iterable[str] = INDEXES, *, coll=None,
+def warm(symbols: Iterable[str] = STRIP_SYMBOLS, *, coll=None,
          store_docs: Optional[dict] = None, loader: Optional[Callable] = None,
          today: Optional[date] = None, now: Optional[datetime] = None,
          namer: Optional[Callable] = None) -> dict:
@@ -679,13 +759,22 @@ def warm(symbols: Iterable[str] = INDEXES, *, coll=None,
 
     Board set, preference order per symbol:
       1. the `zone_store` doc (it already warms at 04:05 ET with every band)
-      2. `zone_store.build_doc` on `sepa.prices.load_prices` — the SAME engine
-         and geometry, so a fallback band is the same band
+      2. `zone_store.build_doc` on the symbol's frame — the SAME engine and
+         geometry, so a fallback band is the same band
       3. stored `unavailable` with a reason — never dropped, never faked
 
     Fine set: always computed here from the same frame, through the same
     `zone_store.build_doc` (so it is slimmed, dated and closed-bar exactly like
     the board doc) with `_fine_compute` — price_zones module defaults.
+
+    The default loader (2026-10-15): a symbol zone_store warmed (SPY / QQQ, in
+    `full`) reads `prices.load_prices(sym, period="2y")` — its cache carries
+    the 16:30 final close. Any other symbol (TLT / UUP / GLD) reads
+    `prices.closed_daily_frame(sym, now=now, period="2y", use_cache=False)`:
+    one FRESH fetch, never the shared cache (an unfinished in-session bar
+    cached under the 20 h TTL would be stored as the prior close) and never a
+    cache write (rotation reads GLD / TLT from that cache). A failed fetch is
+    None -> the symbol is stored unavailable; the cache is never a fallback.
 
     Every input is injectable; the cron passes none.
     """
@@ -705,7 +794,13 @@ def warm(symbols: Iterable[str] = INDEXES, *, coll=None,
         from sepa import prices
 
         def loader(sym):
-            return prices.load_prices(sym, period="2y")
+            # A symbol zone_store warmed is in `full`: its cached frame carries the
+            # 16:30 final close. Any other symbol is read FRESH, never from the shared
+            # cache (an in-session fetch caches an unfinished bar under the 20 h TTL),
+            # and nothing is written back (rotation reads GLD/TLT from that cache).
+            if store_docs.get(sym):
+                return prices.load_prices(sym, period="2y")
+            return prices.closed_daily_frame(sym, now=now, period="2y", use_cache=False)
 
     reads: dict = {}
     counts = {"zone_store": 0, "computed": 0, "unavailable": 0}
@@ -809,18 +904,203 @@ def load_latest(coll=None, today: Optional[date] = None
     return (d if isinstance(d, str) else None), idx
 
 
-def live_prints(symbols: Iterable[str] = INDEXES) -> dict:
-    """{SYMBOL: live print} through the SAME bulk snapshot the demand boards
-    use (`demand_reentry._live_snapshots` / `_snapshot_print`), so the strip
-    and the tiles can never disagree about the tape. {} on any failure — the
-    closed-bar read then stands on its own."""
+def live_rows(symbols: Iterable[str] = STRIP_SYMBOLS) -> dict:
+    """{SYM: bulk_live_prices row} via demand_reentry._live_snapshots; {} on any failure.
+
+    The ROWS, not just the prints (2026-10-15): the today read needs the
+    row's prior close and last-trade stamp, and taking both off the same rows
+    is what keeps the print and the move about one price."""
     try:
         from supply_demand import demand_reentry as D
-        snaps = D._live_snapshots(list(symbols)) or {}
-        return {k: D._snapshot_print(v) for k, v in snaps.items()}
+        return D._live_snapshots(list(symbols)) or {}
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("index_zones: live rows unavailable: %s", exc)
+        return {}
+
+
+def _prints(rows: dict) -> dict:
+    """{SYM: demand_reentry._snapshot_print(row)} — the print with_live overlays.
+    {} on any failure."""
+    if not rows:
+        return {}
+    try:
+        from supply_demand import demand_reentry as D
+        return {k: D._snapshot_print(v) for k, v in rows.items()}
     except Exception as exc:                                    # noqa: BLE001
         log.debug("index_zones: live prints unavailable: %s", exc)
         return {}
+
+
+def live_prints(symbols: Iterable[str] = STRIP_SYMBOLS) -> dict:
+    """{SYMBOL: live print} through the SAME bulk snapshot the demand boards
+    use (`demand_reentry._live_snapshots` / `_snapshot_print`), so the strip
+    and the tiles can never disagree about the tape. {} on any failure — the
+    closed-bar read then stands on its own. Unchanged contract:
+    `_prints(live_rows(symbols))`."""
+    try:
+        return _prints(live_rows(symbols))
+    except Exception as exc:                                    # noqa: BLE001
+        log.debug("index_zones: live prints unavailable: %s", exc)
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# progress — the SERVE-TIME overlay (2026-10-15)
+# ---------------------------------------------------------------------------
+def closed_moves(bars) -> dict:
+    """{"through", "ret_5d", "ret_21d"} off the STORED closed bars (the candles the chart draws).
+    rotation.tracker.trailing_return(bars, RT.WINDOW_FAST / RT.WINDOW_SHORT), RAW (unrounded): progress_read is the ONE
+    rounding point, and it builds the text from these raw values (Revision 1, finding 5).
+    through = bars[-1]["t"] (a str) or None. A list with fewer than n+1 closes → that leg None."""
+    from rotation import tracker as RT
+
+    b = bars if isinstance(bars, list) else []
+    last = b[-1] if b and isinstance(b[-1], dict) else {}
+    t = last.get("t")
+    return {"through": t if isinstance(t, str) and t else None,
+            "ret_5d": RT.trailing_return(b, RT.WINDOW_FAST),
+            "ret_21d": RT.trailing_return(b, RT.WINDOW_SHORT)}
+
+
+def _snapshot_view(row) -> Optional[dict]:
+    """A bulk_live_prices row in the raw bulk_snapshot spelling day_from_snapshot reads:
+    dict(row) with "close" set from "price" when absent (prices.py:1518 renames exactly that key).
+    The row has no min_t_ms, so day_from_snapshot dates it by last_trade_ts_ms (its own fallback). None for no row."""
+    if not isinstance(row, dict):
+        return None
+    out = dict(row)
+    if "close" not in out:
+        out["close"] = out.get("price")
+    return out
+
+
+def _day_blank(state: str) -> dict:
+    return {"today_pct": None, "today_prev_close": None, "today_state": state}
+
+
+def _prev_market_day(d: date) -> date:
+    """The market day before `d` on the house NYSE calendar
+    (`market_hours.reminder.is_market_day`), walking back one day at a time —
+    the `key_levels.prev_market_day` rule WITHOUT importing the display-only
+    `supply_demand.key_levels` (its import guard, `tests/test_key_levels.py`,
+    names every importer; `orderflow/tape_burst_kinds._prev_market_day` is the
+    precedent). Bounded so a broken calendar can never spin."""
+    from market_hours.reminder import is_market_day
+    x = d - timedelta(days=1)
+    for _ in range(100):
+        if is_market_day(datetime(x.year, x.month, x.day)):
+            return x
+        x -= timedelta(days=1)
+    return x
+
+
+def day_move(read: dict, row: Optional[dict], *, session: date) -> dict:
+    """{"today_pct", "today_prev_close", "today_state"}, the numbers RAW. `read` is the entry AFTER with_live.
+
+    In order, each exit leaving both numbers None (never 0.0):
+      unavailable   nothing stored for the symbol
+      no_session    `session` is not a market day (market_hours.reminder)
+      basis_behind  the stored close is not the prior session's close
+                    (the key_levels.prev_market_day rule on the market_hours calendar) — "today" would be a multi-day move
+      no_print      no row, no positive print, a print that is not the one the
+                    read shows (`live_px`), or a last trade not dated `session`
+      read          print vs `resiliency_tab.official_prev_close` (the
+                    snapshot's prior close when it agrees, else the stored close)
+    """
+    if not isinstance(read, dict) or not read.get("available"):
+        return _day_blank("unavailable")
+    from market_hours.reminder import is_market_day
+    if not is_market_day(datetime(session.year, session.month, session.day)):
+        return _day_blank("no_session")
+    if read.get("as_of") != _prev_market_day(session).isoformat():
+        return _day_blank("basis_behind")
+    if row is None:
+        return _day_blank("no_print")
+    from supply_demand import demand_reentry as D
+    px = _num(D._snapshot_print(row))
+    shown = read.get("live_px")
+    if px is None or px <= 0 or shown is None or _r2(px) != shown:
+        return _day_blank("no_print")
+    from sepa import prices
+    ext = prices.extended_print(row)
+    if ext is None or ext.get("date") != session.isoformat():
+        return _day_blank("no_print")
+    from chart_maps import resiliency_tab as RES
+    base = _num(RES.official_prev_close(_snapshot_view(row), read.get("close"), session))
+    pct = None if base is None else _pct_raw(px - base, base)
+    if base is None or pct is None:
+        return _day_blank("no_print")
+    return {"today_pct": pct, "today_prev_close": base, "today_state": "read"}
+
+
+def _move_text(v) -> str:
+    """`chart_maps.high_beta_tab.leg_text` — "+1.3%" / "−0.3%" / "—", 1 dp
+    HALF_UP. Imported lazily so the cron's warm never pays the import."""
+    from chart_maps.high_beta_tab import leg_text
+    return leg_text(v)
+
+
+def _progress_note(entry: dict, dm: dict, mv: dict, session: date) -> str:
+    from rotation import tracker as RT
+
+    state = dm["today_state"]
+    fmt = {"px": _money(entry.get("live_px")), "base": _money(dm["today_prev_close"]),
+           "as_of": entry.get("as_of") or "undated", "session": session.isoformat(),
+           "prev": ""}
+    if state == "basis_behind":
+        fmt["prev"] = _prev_market_day(session).isoformat()
+    today = TODAY_NOTES[state].format(**fmt)
+    f, s = RT.WINDOW_FAST, RT.WINDOW_SHORT
+    legs = (LEGS_NOTE.format(f=f, s=s, through=mv["through"]) if mv["through"]
+            else LEGS_NOTE_NO_BARS.format(f=f, s=s))
+    return today + " " + legs
+
+
+def progress_read(entry: dict, row: Optional[dict], *, session: date) -> dict:
+    """PROGRESS_KEYS exactly. The ONE rounding point: every number is `_r2`
+    of the raw move, every text is `_move_text` of the RAW move — never of the
+    2 dp number (1.2496 serves 1.25 and prints "+1.2%")."""
+    from rotation import tracker as RT
+
+    mv = closed_moves(entry.get("bars"))
+    dm = day_move(entry, row, session=session)
+    return {"through": mv["through"],
+            "ret_5d": _r2(mv["ret_5d"]), "ret_21d": _r2(mv["ret_21d"]),
+            "today_pct": _r2(dm["today_pct"]),
+            "today_prev_close": _r2(dm["today_prev_close"]),
+            "today_state": dm["today_state"],
+            "windows": {"ret_5d": RT.WINDOW_FAST, "ret_21d": RT.WINDOW_SHORT},
+            "text": {"today": _move_text(dm["today_pct"]),
+                     "ret_5d": _move_text(mv["ret_5d"]),
+                     "ret_21d": _move_text(mv["ret_21d"])},
+            "note": _progress_note(entry, dm, mv, session)}
+
+
+def _progress_unread() -> dict:
+    """The progress shape when the read itself failed: every number None,
+    today_state "unavailable", every text "—"."""
+    return {"through": None, "ret_5d": None, "ret_21d": None,
+            "today_pct": None, "today_prev_close": None,
+            "today_state": "unavailable", "windows": None,
+            "text": {"today": "—", "ret_5d": "—", "ret_21d": "—"},
+            "note": PROGRESS_UNREAD_NOTE}
+
+
+def with_progress(entry: dict, row: Optional[dict], *, session: date) -> dict:
+    """A COPY of the entry + {PROGRESS_KEY: progress_read(...)}. Never raises: on any exception it logs a warning
+    and serves _progress_unread() (all numbers None, today_state "unavailable", text all "—",
+    note "Progress is unavailable right now."). It touches no other key, and not `resolutions`."""
+    if not isinstance(entry, dict):
+        return entry
+    out = dict(entry)
+    try:
+        prog = progress_read(entry, row, session=session)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("index_zones: progress unavailable for %s: %s",
+                    entry.get("symbol"), exc)
+        prog = _progress_unread()
+    out[PROGRESS_KEY] = prog
+    return out
 
 
 def basis_date(reads: dict) -> Optional[str]:
@@ -828,6 +1108,8 @@ def basis_date(reads: dict) -> Optional[str]:
     the available reads. None when nothing readable is stored.
 
     This — not the doc day — is what staleness is measured on (B1).
+    `served` hands it the SPY / QQQ reads first (2026-10-15), so a macro row
+    never moves the header's date.
     """
     stamps = [r.get("as_of") for r in (reads or {}).values()
               if isinstance(r, dict) and r.get("available")
@@ -844,19 +1126,29 @@ def empty_payload(note: Optional[str] = None) -> dict:
                              + DISCLAIMER)}
 
 
-def served(live: Optional[dict] = None, coll=None,
-           today: Optional[date] = None) -> dict:
+def served(live: Optional[dict] = None, coll=None, today: Optional[date] = None,
+           rows: Optional[dict] = None) -> dict:
     """The payload both the endpoint and the zones board serve: PAYLOAD_KEYS.
 
     `date` is the day the JOB ran; `as_of` is the session the BANDS are drawn
     from, and `stale_days` / `stale_sessions` / `note` are measured on `as_of`.
+    Since 2026-10-15 `as_of` is measured on SPY / QQQ (INDEXES) when either is
+    readable — the header dates the index cards, as before the macro rows; a
+    macro row whose own bars stop elsewhere says so on its own row.
+
+    `live` / `rows` are the board's own prints and bulk_live_prices rows (it
+    already fetched them); handed, nothing is fetched. With `live` None, ONE
+    `live_rows` fetch feeds both the prints and the today read, so the two are
+    always about the same price. Every entry gains `progress` (serve-time,
+    `with_progress`).
 
     READ ONLY — it never calls `warm()`. A cold store returns the empty shape
     with the reason in `note`, never a 500 and never an empty page with no
     explanation.
     """
     day, reads = load_latest(coll=coll, today=today)
-    basis = basis_date(reads)
+    basis = (basis_date({s: r for s, r in reads.items() if s in INDEXES})
+             or basis_date(reads))
     if reads and basis is None:
         # The job ran and stored something, but nothing in it is readable. Say
         # that, rather than dating unreadable structure with the job day.
@@ -866,9 +1158,13 @@ def served(live: Optional[dict] = None, coll=None,
     else:
         st = staleness(basis, today=today, stored_date=day)
     if live is None:
-        live = live_prints(reads.keys() or INDEXES) if reads else {}
-    live = live or {}
-    out = {sym: with_live(r, live.get(sym)) for sym, r in reads.items()}
+        if rows is None:
+            rows = live_rows(list(reads.keys()) or STRIP_SYMBOLS) if reads else {}
+        live = _prints(rows)
+    live, rows = live or {}, rows or {}
+    session = today or _today_et()
+    out = {sym: with_progress(with_live(r, live.get(sym)), rows.get(sym), session=session)
+           for sym, r in reads.items()}
     return {"date": day, "as_of": basis, "indexes": out,
             "stale_days": st["stale_days"], "stale_sessions": st["stale_sessions"],
             "default_resolution": DEFAULT_RESOLUTION, "note": st["note"]}

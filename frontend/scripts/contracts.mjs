@@ -2907,6 +2907,73 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🧭 macro rows — TLT / UUP / GLD beside SPY · QQQ, served numbers only (2026-10-15)',
+    file: 'src/components/IndexZones.tsx',
+    // Ajay 2026-10-15, verbatim: "how can.I check us bonds and us dollar and
+    // gold can you add them to the SPY and QQQ please? I wanna see their
+    // progress". Three compact rows under the SPY / QQQ cards, each opening the
+    // SAME card in place via ?iz_open=. Every move is SERVED (number + text,
+    // index_zones.progress_read); the page formats none. Copy checks run on the
+    // comment-stripped, whitespace-flattened source, as the 🧭 block above.
+    checks(src) {
+      const errs = [];
+      const flat = src
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
+        .replace(/\s+/g, ' ');
+      for (const [needle, why] of [
+        ['export const IZ_MACRO', 'IZ_MACRO (the mirror of index_zones.MACRO) is gone'],
+        ['IZ_OPEN_PARAM', 'the open row is no longer keyed on IZ_OPEN_PARAM'],
+        ['useSearchParams', 'the open row must live in the URL (useSearchParams)'],
+        ['index-macro-', 'the macro rows have no testIds'],
+        ['aria-expanded', 'the row toggle must carry aria-expanded'],
+        ['izMacroThrough', 'izMacroThrough is gone — one stale row would print with no date of its own'],
+        ['index-macro-through-', 'the per-row "through {date}" cell is gone'],
+        ['index-macro-note-', 'the opened row no longer draws the served note'],
+        ['🧭 SPY · QQQ · macro zones', 'the strip title must be "🧭 SPY · QQQ · macro zones"'],
+        ['aria-label="SPY, QQQ and macro zones"', 'the strip aria-label must be "SPY, QQQ and macro zones"'],
+        ['computes overnight with SPY and QQQ', 'the pending row must say it computes overnight with SPY and QQQ'],
+      ]) {
+        if (!flat.includes(needle)) errs.push(why);
+      }
+      // The open row is the SAME card, not a second renderer.
+      if (!/iz-macro-card[\s\S]{0,600}<IndexCard /.test(flat))
+        errs.push('the opened macro row must mount <IndexCard inside iz-macro-card');
+      // No arithmetic on a move: the served text is printed as is.
+      if (/(today_pct|ret_5d|ret_21d)[^\n]{0,60}(toFixed|\*\s*100)/.test(src))
+        errs.push('a move is being formatted on the page — print the served progress.text');
+      if (/\bedge\b/i.test(flat))
+        errs.push('the strip copy says "edge" — the row says "nearest band"');
+      if (/\bbounce\b/i.test(src))
+        errs.push('house rule: the word is "reversal", never "bounce"');
+
+      let feats = '';
+      try {
+        feats = read('src/lib/newFeatures.ts');
+      } catch {
+        return [...errs, 'src/lib/newFeatures.ts is missing'];
+      }
+      const id = 'index-zones-macro-2026-10-15';
+      const start = feats.indexOf(`id: '${id}'`);
+      if (start < 0) return [...errs, `the ${id} ✨ entry is missing`];
+      const next = feats.indexOf("{ id: '", start + 1);
+      const entry = feats.slice(start, next > start ? next : undefined);
+      const lm = /label: '([^']*)'/.exec(entry);
+      if (!lm) return [...errs, `the ${id} ✨ entry has no single-quoted label`];
+      const label = lm[1];
+      const ask = 'how can.I check us bonds and us dollar and gold can you add them to the SPY and QQQ please? I wanna see their progress';
+      if (!label.includes(ask)) errs.push('the ✨ label must quote the ask verbatim');
+      for (const w of ['TLT', 'UUP', 'GLD', 'PROXIES', 'official when the snapshot carries it']) {
+        if (!label.includes(w)) errs.push(`the ✨ label must say "${w}"`);
+      }
+      if (label.includes('against the official prior close'))
+        errs.push('the ✨ label must not say "against the official prior close" — it is official only when the snapshot carries it');
+      if (/\bbounce\b/i.test(entry)) errs.push('house rule: the ✨ entry says "bounce"');
+      if (label.length > 700) errs.push(`the ✨ label is ${label.length} chars — AMENDMENTS3 C3 caps it at 700`);
+      return errs;
+    },
+  },
+  {
     name: 'the ⌘K ticker ✨ card claims no edge and never says "bounce" (2026-09-18)',
     file: 'src/lib/newFeatures.ts',
     // Ajay 2026-09-18, verbatim: "can you make global search help find ickers
@@ -7087,7 +7154,7 @@ const CONTRACTS = [
         errs.push("ChartMaps.tsx: the \"Sort the board\" select must be gated by tab !== 'high_beta' && (data?.sorts || []).length > 0");
       }
 
-      // (7) The ✨ entry: first, dated, routed, his ask verbatim, UNMEASURED, no bounce / fake / forecast word,
+      // (7) The ✨ entry: present, dated, routed, his ask verbatim, UNMEASURED, no bounce / fake / forecast word,
       // and every number it types is the engine's.
       const ID = 'chart-maps-high-beta-table-2026-10-15';
       const ASK = 'Can you add sort function on the headers and also 5 day and 21 days columns to show how they were reacting in price like hot sectors and also add sales tab make it like hot sector with some important metrics like EPS, QUAlity and other colums that show the strength of the stock';
@@ -7109,9 +7176,7 @@ const CONTRACTS = [
       if (hb && !/^BASE_TTL_SEC(?:, \w+)* = D10\.BASE_TTL_SEC\b/m.test(hb)) errs.push('high_beta_tab.BASE_TTL_SEC must be drop10_tab.BASE_TTL_SEC');
       if (!/^REL_FALLBACK = RT\.BENCHMARK_FALLBACK\b/m.test(hb)) errs.push('high_beta_tab.REL_FALLBACK must be RT.BENCHMARK_FALLBACK');
 
-      const nfAt = nf.indexOf('export const NEW_FEATURES: NewFeature[] = [');
-      const firstId = nfAt >= 0 ? (/\{ id: '([^']+)'/.exec(nf.slice(nfAt)) || [])[1] : null;
-      if (firstId !== ID) errs.push(`the FIRST NEW_FEATURES entry must be '${ID}' (got '${firstId}')`);
+      // Position is NOT pinned (2026-10-15): the ✨ list is newest-first, so a later feature sits above this one.
       const idAt = nf.indexOf(`{ id: '${ID}'`);
       let entry;
       if (idAt >= 0) {

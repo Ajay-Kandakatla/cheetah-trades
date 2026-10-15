@@ -1298,6 +1298,16 @@ export type CmLidBreak = {
  * by index_zones.with_live(); they say where price is standing and never move
  * a band. A read built at 04:20 and the same read at 15:00 carry identical
  * stored keys — that is the whole point of the split.
+ *
+ * MACRO ROWS (2026-10-15). Ajay, verbatim: "how can.I check us bonds and us
+ * dollar and gold can you add them to the SPY and QQQ please? I wanna see their
+ * progress". `indexes` now also carries TLT / UUP / GLD (index_zones.MACRO, ETF
+ * proxies — MINE), stored by the same overnight job with the same read shape.
+ * The strip draws them as compact rows under the SPY / QQQ cards, each one
+ * opening the same card (`?iz_open=`, IZ_OPEN_PARAM). Every entry also carries
+ * a serve-time `progress` key (index_zones.progress_read): the today / 5d / 21d
+ * moves, served as numbers AND as text — the page prints the served text and
+ * does no arithmetic on a move.
  */
 export type CmIndexZoneBand = {
   kind: 'supply' | 'demand';
@@ -1398,11 +1408,45 @@ export type CmIndexZoneRead = {
   live_side?: 'above' | 'below' | 'in' | 'between' | null;
   /** The backend's own label for what the live number is. Printed verbatim. */
   price_basis?: string | null;
+  /** False when the overnight job stored nothing usable for the symbol;
+   *  `reason` then says why (index_zones._unavailable). */
+  available?: boolean | null;
+  reason?: string | null;
+  /** The serve-time progress overlay (2026-10-15, index_zones.PROGRESS_KEY).
+   *  Its own key, never merged into a stored or a live key. */
+  progress?: CmIndexZoneProgress | null;
+};
+
+/** index_zones.TODAY_STATES — why `today_pct` is or is not read. */
+export type CmIndexZoneTodayState = 'read' | 'no_session' | 'basis_behind' | 'no_print' | 'unavailable';
+
+/** index_zones.PROGRESS_KEYS (2026-10-15). `ret_5d` / `ret_21d` are closed
+ *  sessions through `through` (rotation.tracker.trailing_return over the
+ *  windows in `windows`); `today_pct` is the live print against the prior
+ *  close, gated by `today_state`. `text` is the backend's own rendering of each
+ *  move (high_beta_tab.leg_text, off the RAW value) — the page prints it as is
+ *  and never formats a move itself. `note` is the plain sentence saying what
+ *  each number is, or why it is not read. */
+export type CmIndexZoneProgress = {
+  through?: string | null;
+  ret_5d?: number | null;
+  ret_21d?: number | null;
+  today_pct?: number | null;
+  today_prev_close?: number | null;
+  today_state?: CmIndexZoneTodayState | null;
+  windows?: { ret_5d?: number | null; ret_21d?: number | null } | null;
+  text?: { today?: string | null; ret_5d?: string | null; ret_21d?: string | null } | null;
+  note?: string | null;
 };
 
 export type CmIndexZones = {
   /** The stored day. */
   date?: string | null;
+  /** The session the BANDS are drawn from (index_zones.basis_date). Since
+   *  2026-10-15 it is measured on SPY / QQQ when either is readable, so a macro
+   *  row never moves it; the header's age is measured on it, and a macro row
+   *  whose own bars stop elsewhere prints `through {date}` itself. */
+  as_of?: string | null;
   indexes?: Record<string, CmIndexZoneRead | null | undefined> | null;
   /** CALENDAR days since the stored day — NOT sessions. A Friday doc read on
    *  Monday is 3 calendar days and 1 session old, and printing the 3 beside the
@@ -1419,6 +1463,11 @@ export type CmIndexZones = {
   default_resolution?: string | null;
   note?: string | null;
 };
+
+/** The URL param naming the ONE open macro row on the 🧭 strip (2026-10-15,
+ *  MINE). It lives on the zones tab only — tabSearch drops it on the way to
+ *  any other tab. */
+export const IZ_OPEN_PARAM = 'iz_open';
 
 export type CmBoard = {
   tab: CmTab;
@@ -1731,6 +1780,12 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
     const srt = next.get('sort');
     if (srt && srt.startsWith('hb_')) next.delete('sort');
   }
+  // 🧭 `iz_open` (the open macro row on the strip, 2026-10-15) lives on zones
+  // only. Keyed on the DESTINATION, never on `from`: zones is DEFAULT_TAB, so a
+  // bare `/chart-maps?iz_open=GLD` has no `tab` at all, and a `from === 'zones'`
+  // rule would carry the param to vcp. A click on zones keeps it; a click on any
+  // other tab drops it, a hand-typed stray included.
+  if (t !== 'zones') next.delete(IZ_OPEN_PARAM);
   return next.toString();
 }
 

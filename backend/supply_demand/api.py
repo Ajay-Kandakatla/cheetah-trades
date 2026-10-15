@@ -347,6 +347,18 @@ async def get_index_zones():
     close, `live_in_band`, `live_side`, `price_basis`) on the entry and on each
     resolution. A snapshot never overwrites a stored number.
 
+    2026-10-15 (*"how can.I check us bonds and us dollar and gold can you add
+    them to the SPY and QQQ please? I wanna see their progress"*): `indexes`
+    also carries TLT / UUP / GLD (`index_zones.MACRO`, ETF proxies), and every
+    entry gains `progress`, a SERVE-TIME overlay in its own key:
+    `{through, ret_5d, ret_21d, today_pct, today_prev_close, today_state,
+    windows, text, note}`. 5d / 21d = `rotation.tracker.trailing_return` over
+    the stored closed bars; today = the live print vs the official prior close,
+    read ONLY when the stored close is the prior session's (`today_state`
+    "read"; otherwise no_session / basis_behind / no_print / unavailable with
+    the number None, never 0). The header's `as_of` is measured on SPY / QQQ.
+    Context only.
+
     Configured price-structure context, NOT a book method. It gates nothing,
     alerts nothing and claims no edge — see docs/supply_demand/index_zones.md.
     """

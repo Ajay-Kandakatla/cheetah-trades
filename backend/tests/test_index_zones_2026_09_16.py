@@ -328,7 +328,7 @@ def test_a_read_is_identical_at_0420_and_at_1500():
 # ---------------------------------------------------------------------------
 def test_warm_prefers_the_zone_store_and_records_the_source_per_symbol():
     coll = FakeColl()
-    res = IZ.warm(coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
+    res = IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
                   loader=lambda s: None, today=date(2026, 9, 16),
                   namer=lambda s: f"{s} Trust")
     assert res["written"] is True and coll.writes == 1
@@ -353,7 +353,7 @@ def test_warm_falls_back_to_computing_the_bands_and_says_so(monkeypatch):
 
     monkeypatch.setattr(ZS, "build_doc", fake_build)
     coll = FakeColl()
-    res = IZ.warm(coll=coll, store_docs={"SPY": spy_doc()},
+    res = IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc()},
                   loader=lambda s: f"frame:{s}", today=date(2026, 9, 16),
                   namer=lambda s: s)
     idx = coll.docs["2026-09-16"]["indexes"]
@@ -371,7 +371,7 @@ def test_NEGATIVE_a_symbol_that_cannot_be_read_is_stored_unavailable_with_a_reas
         raise RuntimeError("no bars")
 
     coll = FakeColl()
-    res = IZ.warm(coll=coll, store_docs={"SPY": spy_doc()}, loader=boom,
+    res = IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc()}, loader=boom,
                   today=date(2026, 9, 16), namer=lambda s: s)
     idx = coll.docs["2026-09-16"]["indexes"]
     assert set(idx) == set(IZ.INDEXES), "the symbol is PRESENT, not dropped"
@@ -382,7 +382,7 @@ def test_NEGATIVE_a_symbol_that_cannot_be_read_is_stored_unavailable_with_a_reas
 
 
 def test_NEGATIVE_a_broken_collection_never_raises_out_of_warm():
-    res = IZ.warm(coll=BrokenColl(), store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
+    res = IZ.warm(symbols=IZ.INDEXES, coll=BrokenColl(), store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
                   loader=lambda s: None, today=date(2026, 9, 16),
                   namer=lambda s: s)
     assert res["written"] is False
@@ -400,7 +400,7 @@ def test_the_module_runs_as_a_cron_entrypoint_like_zone_store():
 # ---------------------------------------------------------------------------
 def test_load_latest_and_served_read_the_stored_doc_and_never_warm():
     coll = FakeColl()
-    IZ.warm(coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
+    IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
             loader=lambda s: None, today=date(2026, 9, 16), namer=lambda s: s)
     day, reads = IZ.load_latest(coll=coll, today=date(2026, 9, 16))
     assert day == "2026-09-16" and set(reads) == set(IZ.INDEXES)
@@ -578,10 +578,11 @@ def test_the_strip_rides_the_boards_existing_live_fetch(board_stub, monkeypatch)
     # The board makes its own decorator fetch over the finished tiles; what
     # matters is that the STRIP adds none — its symbols appear in exactly one
     # call, the row fetch the bounce gate and the room floor already make.
-    idx_calls = [c for c in calls if set(IZ.INDEXES) <= set(c)]
+    idx_calls = [c for c in calls if set(IZ.STRIP_SYMBOLS) <= set(c)]
     assert len(idx_calls) == 1, f"the strip cost an extra fetch: {calls}"
-    assert set(got["live"]) == set(IZ.INDEXES), \
+    assert set(got["live"]) == set(IZ.STRIP_SYMBOLS), \
         "the strip is handed the prints, it does not go back to the provider"
+    assert set(got["rows"]) <= set(IZ.STRIP_SYMBOLS)
 
 
 # ---------------------------------------------------------------------------
@@ -703,7 +704,7 @@ def _frame(n=300, end="2026-09-16", base=100.0):
 def _warm_frames(coll=None, today=date(2026, 9, 16)):
     frames = {"SPY": _frame(), "QQQ": _frame(base=140.0)}
     coll = coll or FakeColl()
-    res = IZ.warm(coll=coll, store_docs={}, loader=lambda s: frames[s],
+    res = IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={}, loader=lambda s: frames[s],
                   today=today, namer=lambda s: s)
     return coll, res
 
@@ -770,7 +771,7 @@ def test_NEGATIVE_no_frame_means_no_bars_and_an_honest_read_not_a_fake_one():
     """A provider outage costs the chart and the fine set. It must not cost the
     board read (the store already has it) and must never fake a bar."""
     coll = FakeColl()
-    IZ.warm(coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
+    IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
             loader=lambda s: None, today=date(2026, 9, 16), namer=lambda s: s)
     entry = coll.docs["2026-09-16"]["indexes"]["SPY"]
     assert entry["bars"] == [] and entry["bars_basis"] == IZ.BARS_BASIS
@@ -786,7 +787,7 @@ def test_NEGATIVE_a_raising_loader_never_takes_the_job_down():
         raise RuntimeError("provider down")
 
     coll = FakeColl()
-    res = IZ.warm(coll=coll, store_docs={"SPY": spy_doc()}, loader=boom,
+    res = IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc()}, loader=boom,
                   today=date(2026, 9, 16), namer=lambda s: s)
     idx = coll.docs["2026-09-16"]["indexes"]
     assert set(idx) == set(IZ.INDEXES)
@@ -825,6 +826,7 @@ def test_NEGATIVE_serving_never_recomputes_a_band_or_touches_a_frame(monkeypatch
     monkeypatch.setattr(price_zones, "compute", boom)
     monkeypatch.setattr(ZS, "build_doc", boom)
     monkeypatch.setattr(IZ, "live_prints", lambda *a, **kw: {})
+    monkeypatch.setattr(IZ, "live_rows", lambda *a, **kw: {})
     out = IZ.served(coll=coll, today=date(2026, 9, 16))
     assert out["indexes"]["SPY"]["resolutions"]["fine"]["bands"]
 
@@ -840,14 +842,14 @@ def test_B1_staleness_is_measured_on_the_band_basis_not_the_job_day():
     coll = FakeColl()
     stale = _doc("SPY", 757.39, 5.86, 779.37, SPY_BANDS,
                  as_of="2026-09-09", stored="2026-09-16")
-    IZ.warm(coll=coll, store_docs={"SPY": stale, "QQQ": qqq_doc()},
+    IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": stale, "QQQ": qqq_doc()},
             loader=lambda s: None, today=date(2026, 9, 16), namer=lambda s: s)
     out = IZ.served(live={}, coll=coll, today=date(2026, 9, 16))
     assert out["date"] == "2026-09-16", "the job day is still reported"
     assert out["as_of"] == "2026-09-16", "the freshest available read is the basis"
     # now the WHOLE store is a week behind
     coll2 = FakeColl()
-    IZ.warm(coll=coll2, store_docs={"SPY": stale, "QQQ": _doc(
+    IZ.warm(symbols=IZ.INDEXES, coll=coll2, store_docs={"SPY": stale, "QQQ": _doc(
         "QQQ", 704.54, 7.76, 748.65, QQQ_BANDS, as_of="2026-09-09",
         stored="2026-09-16")}, loader=lambda s: None,
         today=date(2026, 9, 16), namer=lambda s: s)
@@ -863,7 +865,7 @@ def test_B2_stale_sessions_is_served_beside_stale_days():
     """The page prints the word 'session'. The number under it has to be
     sessions, not calendar days, and both are served so nothing infers."""
     coll = FakeColl()
-    IZ.warm(coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
+    IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": spy_doc(), "QQQ": qqq_doc()},
             loader=lambda s: None, today=date(2026, 9, 16), namer=lambda s: s)
     out = IZ.served(live={}, coll=coll, today=date(2026, 9, 20))   # Sunday
     assert out["stale_days"] == 4 and out["stale_sessions"] == 2
@@ -873,7 +875,7 @@ def test_B2_stale_sessions_is_served_beside_stale_days():
 
 def test_NEGATIVE_a_stored_doc_with_nothing_readable_says_so(monkeypatch):
     coll = FakeColl()
-    IZ.warm(coll=coll, store_docs={"SPY": {}, "QQQ": {}}, loader=lambda s: None,
+    IZ.warm(symbols=IZ.INDEXES, coll=coll, store_docs={"SPY": {}, "QQQ": {}}, loader=lambda s: None,
             today=date(2026, 9, 16), namer=lambda s: s)
     out = IZ.served(live={}, coll=coll, today=date(2026, 9, 16))
     assert out["as_of"] is None and out["date"] == "2026-09-16"
@@ -998,6 +1000,7 @@ def test_the_zones_board_pins_both_resolutions_and_the_bars(board_stub, monkeypa
     coll, _res = _warm_frames()
     monkeypatch.setattr(IZ, "_coll", lambda c=None: c if c is not None else coll)
     monkeypatch.setattr(IZ, "live_prints", lambda *a, **kw: {})
+    monkeypatch.setattr(IZ, "live_rows", lambda *a, **kw: {})
     monkeypatch.setattr(IZ, "_today_et", lambda now=None: date(2026, 9, 16))
     from chart_maps import board as B
     out = B.board("zones", limit=5, min_tier="any")

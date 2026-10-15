@@ -2918,3 +2918,49 @@ describe('tabSearch — an hb_* header sort never leaves the 🎢 tab (2026-10-1
     expect(sw('tab=zones&sort=room', 'high_beta').get('sort')).toBe('room');
   });
 });
+
+import { IZ_OPEN_PARAM } from './chartMaps';
+
+describe('tabSearch — 🧭 iz_open lives on the zones tab only (2026-10-15)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+  it('the param is named iz_open', () => {
+    expect(IZ_OPEN_PARAM).toBe('iz_open');
+  });
+  it('drops iz_open leaving zones, including the bare DEFAULT_TAB url (no tab param)', () => {
+    expect(DEFAULT_TAB).toBe('zones');
+    expect(sw('tab=zones&iz_open=GLD', 'vcp').has(IZ_OPEN_PARAM)).toBe(false);
+    expect(sw('iz_open=GLD', 'vcp').has(IZ_OPEN_PARAM)).toBe(false);
+  });
+  it('keeps iz_open on a click on zones', () => {
+    expect(sw('iz_open=GLD', 'zones').get(IZ_OPEN_PARAM)).toBe('GLD');
+    expect(sw('tab=zones&iz_open=GLD', 'zones').get(IZ_OPEN_PARAM)).toBe('GLD');
+  });
+  it('drops a hand-typed stray on another tab', () => {
+    expect(sw('tab=vcp&iz_open=GLD', 'ict').has(IZ_OPEN_PARAM)).toBe(false);
+  });
+  it('NEGATIVE: universe / symbol survive every one of these', () => {
+    for (const [q, t] of [
+      ['tab=zones&iz_open=GLD&universe=full&symbol=AAPL', 'vcp'],
+      ['iz_open=GLD&universe=full&symbol=AAPL', 'vcp'],
+      ['iz_open=GLD&universe=full&symbol=AAPL', 'zones'],
+      ['tab=zones&iz_open=GLD&universe=full&symbol=AAPL', 'zones'],
+      ['tab=vcp&iz_open=GLD&universe=full&symbol=AAPL', 'ict'],
+    ] as Array<[string, CmTab]>) {
+      const out = sw(q, t);
+      expect(out.get('universe')).toBe('full');
+      expect(out.get('symbol')).toBe('AAPL');
+      expect(out.get('tab')).toBe(t);
+    }
+  });
+  it('NEGATIVE: the gajjala / high_beta border rules are unchanged by it', () => {
+    const g = sw('tab=gajjala&sub=premarket&sort=change&iz_open=GLD', 'zones');
+    expect(g.has('sub')).toBe(false);
+    expect(g.has('sort')).toBe(false);
+    expect(g.get(IZ_OPEN_PARAM)).toBe('GLD');
+    const h = sw('tab=high_beta&hb_mode=all&iz_open=GLD', 'zones');
+    for (const k of HB_OWN_PARAMS) expect(h.has(k)).toBe(false);
+    expect(h.get(IZ_OPEN_PARAM)).toBe('GLD');
+    expect(sw('tab=zones&iz_open=GLD&tf=15m', 'gajjala').has('tf')).toBe(false);
+    expect(sw('tab=zones&iz_open=GLD&tf=15m', 'gajjala').has(IZ_OPEN_PARAM)).toBe(false);
+  });
+});
