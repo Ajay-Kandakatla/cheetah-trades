@@ -171,6 +171,16 @@ Measured warm: **0.23s** for 24 VCP tiles, **0.15s** for 24 winners.
   frame, non-trading confirmation date, frame without OHLC, `vcp: null`,
   `tightness: null` (<2 contractions), `entry_setup: null`, `plan: null`, the
   `warming` envelope, an unavailable ledger, and NaN/Inf coercion.
+  Runs green ALONE as well as inside the suite (2026-10-14): the file
+  pre-imports every module `board()` imports lazily on each call (the sort-key
+  tab modules, `ath_history` through `ath_tab`, `deep_demand`) BEFORE its
+  fixtures stub `sys.modules["sepa.prices"]` / `["supply_demand.demand_reentry"]`,
+  so those modules bind the REAL loader and constants exactly as they do when
+  an earlier file imported them first. Standalone it used to fail 16 tests
+  (`prices.CACHE_TTL_SEC` off the fake, `MIN_TOUCHES` off the stub). A tab
+  added to `board()`'s sort-key preamble is added to that import list too;
+  `test_lazy_importers_are_pre_cached_against_the_real_loaders` guards it and
+  `test_a_fresh_import_under_the_fakes_still_breaks` keeps the hazard visible.
 - `backend/tests/test_demand_reentry.py` — theme-universe layering, dedupe of a
   name in both the index and a roster, a failing theme layer, and a regression
   that plain `sp1500` is unchanged.

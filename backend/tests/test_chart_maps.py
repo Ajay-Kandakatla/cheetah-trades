@@ -25,6 +25,33 @@ from chart_maps import board as B  # noqa: E402
 # ITS import time, and the supply tab imports into_supply lazily — a stubbed
 # demand_reentry without the constants would break that import mid-test.
 import supply_demand.into_supply  # noqa: E402,F401
+# The same hazard, one level wider (2026-10-14). board() imports the sort-key
+# tab modules LAZILY on every call, and deep_demand_tiles imports deep_demand
+# the same way; each of those binds `sepa.prices` or a demand_reentry constant
+# at ITS import time. Inside the full suite earlier files have already imported
+# them, so the lazy import returns the cached module. Standalone, the first
+# lazy import ran under this file's fakes: ath_history reads
+# prices.CACHE_TTL_SEC (AttributeError), deep_demand imports MIN_TOUCHES from
+# demand_reentry (ImportError), and a module that merely binds `prices` would
+# keep the FIRST test's fake for the rest of the process. Importing them here,
+# before any fixture stubs sys.modules, makes the standalone run identical to
+# the full suite. The list mirrors board()'s sort-key preamble (the
+# `from chart_maps import <tab> as _X` lines) — add a tab there, add it here;
+# `test_lazy_importers_are_pre_cached_against_the_real_loaders` guards it.
+from sepa import prices as _REAL_PRICES  # noqa: E402
+from supply_demand import demand_reentry as _REAL_REENTRY  # noqa: E402
+import chart_maps.dual_momentum_tab  # noqa: E402,F401
+import chart_maps.ath_tab  # noqa: E402,F401  — pulls chart_maps.ath_history
+import chart_maps.resiliency_tab  # noqa: E402,F401
+import chart_maps.fallen_tab  # noqa: E402,F401
+import chart_maps.drop10_tab  # noqa: E402,F401
+import chart_maps.high_beta_tab  # noqa: E402,F401
+import supply_demand.deep_demand  # noqa: E402,F401
+import supply_demand.deep_demand_wording  # noqa: E402,F401
+
+# The lazily-imported modules that bind `sepa.prices` at module level.
+_LAZY_PRICE_BINDERS = ("chart_maps.ath_history", "chart_maps.fallen_tab",
+                       "chart_maps.drop10_tab", "chart_maps.high_beta_tab")
 
 
 # ---------------------------------------------------------------------------
@@ -296,6 +323,50 @@ def reentry_stub(monkeypatch):
     import supply_demand
     monkeypatch.setattr(supply_demand, "demand_reentry", _D(), raising=False)
     return payload
+
+
+# ---------------------------------------------------------------------------
+# import order: the lazy importers are pre-cached against the REAL loaders
+# ---------------------------------------------------------------------------
+def test_lazy_importers_are_pre_cached_against_the_real_loaders(prices, reentry_stub):
+    """With this file's fakes INSTALLED, every served module board() imports
+    lazily is already in sys.modules and bound to the real `sepa.prices` /
+    demand_reentry — never to this test's fake. That is the full-suite state;
+    the pre-imports at the top of this file reproduce it standalone. Drop one
+    of them and this fails before the vcp / deep_demand tests do."""
+    import types
+    assert sys.modules["sepa.prices"] is not _REAL_PRICES            # the fakes are live
+    assert sys.modules["supply_demand.demand_reentry"] is not _REAL_REENTRY
+    for name in _LAZY_PRICE_BINDERS:
+        mod = sys.modules[name]
+        assert isinstance(mod, types.ModuleType), name
+        assert mod.prices is _REAL_PRICES, name
+    ah = sys.modules["chart_maps.ath_history"]
+    assert ah.REFETCH_MIN_AGE_SEC == _REAL_PRICES.CACHE_TTL_SEC
+    dd = sys.modules["supply_demand.deep_demand"]
+    assert isinstance(dd, types.ModuleType)
+    assert dd.MIN_TOUCHES == _REAL_REENTRY.MIN_TOUCHES
+    assert dd.MIN_ZONE_STRENGTH == _REAL_REENTRY.MIN_ZONE_STRENGTH
+
+
+def test_a_fresh_import_under_the_fakes_still_breaks(prices, reentry_stub):
+    """NEGATIVE — the hazard the pre-imports exist for, kept visible. Executing
+    a FRESH copy of each importer under this file's fakes fails exactly the way
+    the standalone run did before 2026-10-14: ath_history reads
+    prices.CACHE_TTL_SEC off the fake, deep_demand imports MIN_TOUCHES from the
+    stubbed demand_reentry. The fakes stay minimal on purpose — a fake that let
+    the import SUCCEED would bind the served module to one test's dead store
+    for the rest of the process. The fresh copy never enters sys.modules; the
+    cached module is untouched."""
+    import importlib.util
+    for name, err in (("chart_maps.ath_history", AttributeError),
+                      ("supply_demand.deep_demand", ImportError)):
+        cached = sys.modules[name]
+        spec = importlib.util.find_spec(name)
+        fresh = importlib.util.module_from_spec(spec)
+        with pytest.raises(err):
+            spec.loader.exec_module(fresh)
+        assert sys.modules[name] is cached, name
 
 
 def test_zones_tab_draws_the_band_and_the_whole_plan(prices, reentry_stub):
