@@ -1707,8 +1707,11 @@ describe('ChartMaps — the 🎢 High Beta tab (2026-10-14)', () => {
     await waitFor(() => expect(rowOrder()).toEqual(RED));
     expect(hbQs(boardCalls()[0]).get('tab')).toBe('high_beta');
     expect(RED.length).toBeGreaterThan(CHARTS.length);
-    // the charts follow the served row order; a thin name is a row, never a chart
-    expect(CHARTS).toEqual(HF.default.rows.filter((r) => !r.thin).map((r) => r.symbol).slice(0, CHARTS.length));
+    // the charts follow the served row order (an in-order subsequence of the
+    // rows; a thin name is a row, never a chart — unless the capture asked for
+    // min_tier=any, which the 2026-10-14 b recapture does: then the first N rows)
+    const anyTier = (HF.default as Record<string, unknown>).min_tier === 'any';
+    expect(CHARTS).toEqual(HF.default.rows.filter((r) => anyTier || !r.thin).map((r) => r.symbol).slice(0, CHARTS.length));
     await waitFor(() => expect(tileOrder()).toEqual(CHARTS));
     expect(screen.getByTestId('cm-hb-header').textContent).toBe(HF.default.high_beta_board.header);
     expect(screen.getByTestId('cm-hb-sort-hb_swing').getAttribute('aria-pressed')).toBe('true');
@@ -1823,6 +1826,181 @@ describe('ChartMaps — the 🎢 High Beta tab (2026-10-14)', () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByTestId('cm-hb-board')).toBeNull();
     for (const k of ['hb', 'hb_mode', 'hb_all']) expect(hbQs(lastBoardCall()).has(k), k).toBe(false);
+  });
+
+  /* 2026-10-14 b — header sorts + the Price | Sales view (Ajay: "Can you add
+   * sort function on the headers and also 5 day and 21 days columns to show
+   * how they were reacting in price like hot sectors and also add sales tab
+   * make it like hot sector"). The fake server answers sort=hb_ret_5d&hb_dir=asc
+   * from the CAPTURED `ret5_asc`; the two variants the capture does not hold
+   * (5 days opened desc, β × drop flipped asc) are the captured payloads with
+   * only `sort_dir` / `sort_preset` (+ the 5-days row order reversed) changed —
+   * this block pins the PAGE (URL, fetches), the server owns the order. */
+  type HbSortPayload = HbPayload & { high_beta_board: HbPayload['high_beta_board'] & { sort?: string; sort_dir?: string; sort_preset?: string | null } };
+  const HS = HB_FIXTURE as unknown as { default: HbSortPayload; ret5_asc: HbSortPayload };
+  const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+  function serveSort(url: string): HbPayload {
+    const q = hbQs(url);
+    if (q.get('tab') !== 'high_beta') return serveHb(url);
+    const sort = q.get('sort');
+    const dir = q.get('hb_dir');
+    if (sort === 'hb_ret_5d' && dir === 'asc') return clone(HS.ret5_asc);
+    if (sort === 'hb_ret_5d') {
+      const b = clone(HS.ret5_asc);
+      b.high_beta_board.sort_dir = 'desc';
+      b.rows = [...b.rows].reverse();
+      b.tiles = [...b.tiles].reverse();
+      return b;
+    }
+    if ((sort === 'hb_swing' || !sort) && dir === 'asc') {
+      const b = clone(HS.default);
+      b.high_beta_board.sort_dir = 'asc';
+      b.high_beta_board.sort_preset = null;
+      return b;
+    }
+    return serveHb(url);
+  }
+  const settle = () => new Promise((r) => setTimeout(r, 60));
+
+  it('the recaptured fixture carries what this block reads (served column sorts, the ret5_asc variant, views)', () => {
+    const t = HS.default.high_beta_board.table as { columns: Array<{ key: string; sort: string | null; first: string | null }>; sales_columns: Array<{ key: string }>; views: Array<{ key: string }> };
+    const col = (k: string) => t.columns.find((c) => c.key === k)!;
+    expect(col('ret_5d')).toMatchObject({ sort: 'hb_ret_5d', first: 'desc' });
+    expect(col('swing')).toMatchObject({ sort: 'hb_swing', first: 'desc' });
+    expect(t.sales_columns.map((c) => c.key)).toContain('sales_yoy');
+    expect(t.views.map((v) => v.key)).toEqual(['price', 'sales']);
+    expect(HS.ret5_asc.high_beta_board.sort_dir).toBe('asc');
+    expect(HS.ret5_asc.high_beta_board.sort_preset).toBeNull();
+    expect(HS.default.high_beta_board.sort_preset).toBe('hb_swing');
+  });
+
+  it('a header tap is ONE URL update and ONE board fetch; a second tap flips; the charts follow the served order', async () => {
+    vi.stubGlobal('fetch', hbStub(serveSort));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    await settle();
+    const n0 = boardCalls().length;
+    // a new column opens in its served first direction: sort only, no hb_dir
+    fireEvent.click(screen.getByTestId('cm-hb-sort-head-ret_5d'));
+    await waitFor(() => expect(urlParam('sort')).toBe('hb_ret_5d'));
+    expect(urlParam('hb_dir')).toBeNull();
+    await waitFor(() => expect(boardCalls().length).toBe(n0 + 1));
+    await settle();
+    expect(boardCalls().length).toBe(n0 + 1);
+    expect(hbQs(lastBoardCall()).get('sort')).toBe('hb_ret_5d');
+    expect(hbQs(lastBoardCall()).has('hb_dir')).toBe(false);
+    // the active column flips: sort AND hb_dir land in ONE update, ONE fetch
+    const n1 = boardCalls().length;
+    fireEvent.click(screen.getByTestId('cm-hb-sort-head-ret_5d'));
+    await waitFor(() => expect(urlParam('hb_dir')).toBe('asc'));
+    expect(urlParam('sort')).toBe('hb_ret_5d');
+    await waitFor(() => expect(boardCalls().length).toBe(n1 + 1));
+    await settle();
+    expect(boardCalls().length).toBe(n1 + 1);
+    const q = hbQs(lastBoardCall());
+    expect([q.get('sort'), q.get('hb_dir')]).toEqual(['hb_ret_5d', 'asc']);
+    // the served order is drawn as served — rows AND the chart cards
+    await waitFor(() => expect(rowOrder()).toEqual(HS.ret5_asc.rows.map((r) => r.symbol)));
+    await waitFor(() => expect(tileOrder()).toEqual(HS.ret5_asc.tiles.map((t) => t.symbol)));
+    // NEGATIVE: no preset button is pressed on a header sort
+    for (const k of ['hb_swing', 'hb_drop', 'hb_vol']) {
+      expect(screen.getByTestId(`cm-hb-sort-${k}`).getAttribute('aria-pressed'), k).toBe('false');
+    }
+  });
+
+  it('flipping β × drop then tapping it back to its first direction leaves NO sort and NO hb_dir (the default request)', async () => {
+    vi.stubGlobal('fetch', hbStub(serveSort));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    fireEvent.click(screen.getByTestId('cm-hb-sort-head-swing'));
+    await waitFor(() => expect(urlParam('hb_dir')).toBe('asc'));
+    expect(urlParam('sort')).toBe('hb_swing');
+    await waitFor(() => expect(hbQs(lastBoardCall()).get('hb_dir')).toBe('asc'));
+    await waitFor(() => expect(screen.getByTestId('cm-hb-sort-hb_swing').getAttribute('aria-pressed')).toBe('false'));
+    fireEvent.click(screen.getByTestId('cm-hb-sort-head-swing'));
+    await waitFor(() => expect(urlParam('hb_dir')).toBeNull());
+    expect(urlParam('sort')).toBeNull();
+    await waitFor(() => expect(hbQs(lastBoardCall()).has('hb_dir')).toBe(false));
+    const last = hbQs(lastBoardCall());
+    expect(last.has('sort')).toBe(false);
+    await waitFor(() => expect(screen.getByTestId('cm-hb-sort-hb_swing').getAttribute('aria-pressed')).toBe('true'));
+  });
+
+  it('a preset button clears ?hb_dir (that key in its own first direction)', async () => {
+    vi.stubGlobal('fetch', hbStub(serveSort));
+    page('/chart-maps?tab=high_beta&sort=hb_ret_5d&hb_dir=asc');
+    await waitFor(() => expect(rowOrder()).toEqual(HS.ret5_asc.rows.map((r) => r.symbol)));
+    expect(hbQs(boardCalls()[0]).get('hb_dir')).toBe('asc');
+    fireEvent.click(screen.getByTestId('cm-hb-sort-hb_vol'));
+    await waitFor(() => expect(urlParam('sort')).toBe('hb_vol'));
+    expect(urlParam('hb_dir')).toBeNull();
+    await waitFor(() => expect(hbQs(lastBoardCall()).get('sort')).toBe('hb_vol'));
+    expect(hbQs(lastBoardCall()).has('hb_dir')).toBe(false);
+  });
+
+  it('the view toggle writes ?hb_view=sales and fires NO fetch; back to Price deletes it', async () => {
+    vi.stubGlobal('fetch', hbStub(serveSort));
+    page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    await settle();
+    const n0 = boardCalls().length;
+    expect(screen.getByTestId('cm-hb-view-price').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByTestId('cm-hb-col-sales_yoy')).toBeNull();
+    fireEvent.click(screen.getByTestId('cm-hb-view-sales'));
+    await waitFor(() => expect(urlParam('hb_view')).toBe('sales'));
+    await waitFor(() => expect(screen.getByTestId('cm-hb-col-sales_yoy')).toBeInTheDocument());
+    expect(screen.getByTestId('cm-hb-view-sales').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByTestId('cm-hb-col-ret_5d')).toBeNull();
+    await settle();
+    // NEGATIVE: the switch is FE-only — no fetch, and hb_view never rides
+    expect(boardCalls().length).toBe(n0);
+    expect(boardCalls().some((u) => hbQs(u).has('hb_view'))).toBe(false);
+    expect(rowOrder()).toEqual(RED);
+    fireEvent.click(screen.getByTestId('cm-hb-view-price'));
+    await waitFor(() => expect(urlParam('hb_view')).toBeNull());
+    await waitFor(() => expect(screen.getByTestId('cm-hb-col-ret_5d')).toBeInTheDocument());
+    await settle();
+    expect(boardCalls().length).toBe(n0);
+  });
+
+  it('an initial ?hb_view=sales renders the Sales heads (served labels), and the request carries no hb_view', async () => {
+    vi.stubGlobal('fetch', hbStub(serveSort));
+    page('/chart-maps?tab=high_beta&hb_view=sales');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    const sales = (HS.default.high_beta_board.table as { sales_columns: Array<{ key: string; label: string }> }).sales_columns;
+    for (const c of sales) {
+      expect(screen.getByTestId(`cm-hb-col-${c.key}`).textContent || '', c.key).toContain(c.label);
+    }
+    expect(screen.queryByTestId('cm-hb-col-ret_5d')).toBeNull();
+    expect(screen.getByTestId('cm-hb-view-sales').getAttribute('aria-pressed')).toBe('true');
+    expect(hbQs(boardCalls()[0]).has('hb_view')).toBe(false);
+  });
+
+  it('NEGATIVE: the generic "Sort the board" select is absent on 🎢 and present on zones', async () => {
+    vi.stubGlobal('fetch', hbStub((url) => {
+      const q = hbQs(url);
+      if (q.get('tab') === 'high_beta') return serveSort(url);
+      return { tab: q.get('tab'), tiles: [], note: 'other tab',
+               sorts: [{ key: 'default', label: 'Default' }, { key: 'rs', label: 'RS' }], sort: 'default' };
+    }));
+    const a = page('/chart-maps?tab=high_beta');
+    await waitFor(() => expect(rowOrder()).toEqual(RED));
+    expect((HS.default as unknown as { sorts: unknown[] }).sorts.length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText('Sort the board')).toBeNull();
+    a.unmount();
+    page('/chart-maps?tab=zones');
+    await waitFor(() => expect(screen.getByLabelText('Sort the board')).toBeInTheDocument());
+  });
+
+  it('NEGATIVE: a stale ?hb_dir / ?hb_view never ride to another tab', async () => {
+    vi.stubGlobal('fetch', hbStub(serveSort));
+    page('/chart-maps?tab=drop10&hb_dir=asc&hb_view=sales&sort=hb_ret_5d');
+    await waitFor(() => expect(boardCalls().length).toBeGreaterThan(0));
+    await settle();
+    for (const u of boardCalls()) {
+      expect(hbQs(u).has('hb_dir'), u).toBe(false);
+      expect(hbQs(u).has('hb_view'), u).toBe(false);
+    }
   });
 
   it('the tab strip carries 🎢 High Beta right after 🔻, and its href drops nothing it should keep', () => {

@@ -27,6 +27,7 @@
  */
 import { DM_MODE_ALL, DM_MODE_ANY, parseDmMode } from './dmFilters';
 import type { CmDmFilters, DmMode } from './dmFilters';
+import type { HsQualityInfo } from '../components/HottestQualityInfo';
 
 export const HB_FILTER_PARAM = 'hb';
 export const HB_FILTER_KEYS = ['b15', 'b20', 'top20', 'qqq', 'd5'] as const;
@@ -44,11 +45,70 @@ export const HB_SORT_SWING = 'hb_swing';
 export const HB_SORT_DROP = 'hb_drop';
 export const HB_SORT_VOL = 'hb_vol';
 
+/* ── 2026-10-14 b — header sorts and the Price | Sales view ────────────────
+ * Ajay 2026-10-14, verbatim: "Can you add sort function on the headers and
+ * also 5 day and 21 days columns to show how they were reacting in price like
+ * hot sectors and also add sales tab make it like hot sector with some
+ * important metrics like EPS, QUAlity and other colums that show the strength
+ * of the stock".
+ *
+ * Every column of both views sorts on a header tap (K4): its first tap opens
+ * the column in its SERVED first direction (`table.columns[].first`), a tap on
+ * the active column flips it. The order is the SERVER's
+ * (high_beta_tab.order_rows) — the URL carries `sort` (the column's served
+ * key) and `hb_dir` ONLY when the direction differs from that column's first,
+ * so the default page sends neither. `hb_view` is FE-only URL state (the
+ * table shows the same rows either way) and never rides to the server.
+ * The four names below equal high_beta_tab.DIR_PARAM / DIRS /
+ * TABLE_VIEW_PARAM / VIEW_PRICE / VIEW_SALES (pinned by a ?raw test). */
+export const HB_DIR_PARAM = 'hb_dir';
+export const HB_VIEW_PARAM = 'hb_view';
+export const HB_VIEW_PRICE = 'price';
+export const HB_VIEW_SALES = 'sales';
+export type HbDir = 'asc' | 'desc';
+export type HbView = typeof HB_VIEW_PRICE | typeof HB_VIEW_SALES;
+
+/** `?hb_dir=` -> 'asc' | 'desc' (any case / spacing); anything else -> null
+ *  (the server then opens the column in its own first direction). */
+export function parseHbDir(v: string | null | undefined): HbDir | null {
+  if (typeof v !== 'string') return null;
+  const s = v.trim().toLowerCase();
+  return s === 'asc' || s === 'desc' ? s : null;
+}
+
+/** `?hb_view=` -> 'sales' only for sales (any case / spacing); anything else
+ *  -> 'price' (the default view). */
+export function parseHbView(v: string | null | undefined): HbView {
+  return typeof v === 'string' && v.trim().toLowerCase() === HB_VIEW_SALES ? HB_VIEW_SALES : HB_VIEW_PRICE;
+}
+
+/** What a tap on a column head asks for. A column with no served `sort` (or
+ *  no readable served `first`) is not a sort head -> null. A column that is
+ *  not the active sort -> its key in its first direction. The active column
+ *  -> the flip of the served direction (`board.sort_dir`; unreadable = the
+ *  column's first, the server's own resolution). `dir` is null whenever it
+ *  equals the column's first, so the URL then carries no `hb_dir`. */
+export function hbHeaderNext(
+  col: { sort?: string | null; first?: string | null },
+  board: { sort?: string | null; sort_dir?: string | null } | null,
+): { sort: string; dir: HbDir | null } | null {
+  const sort = typeof col?.sort === 'string' && col.sort ? col.sort : null;
+  const first = parseHbDir(col?.first);
+  if (!sort || !first) return null;
+  if (!board || board.sort !== sort) return { sort, dir: null };
+  const now = parseHbDir(board.sort_dir) ?? first;
+  const flip: HbDir = now === 'desc' ? 'asc' : 'desc';
+  return { sort, dir: flip === first ? null : flip };
+}
+
 /** The params this tab reads with its own meanings — dropped by
  *  chartMaps.tabSearch when a switch crosses into or out of high_beta (the
  *  🚩 Gajjala's precedent), so a ticked 🎢 box never rides to another tab's
- *  address and back. */
-export const HB_OWN_PARAMS: ReadonlyArray<string> = [HB_FILTER_PARAM, HB_MODE_PARAM, HB_ALL_PARAM];
+ *  address and back. 2026-10-14 b: + `hb_dir` and `hb_view` (a 🎢 column
+ *  direction or the Sales view mean nothing on another tab). */
+export const HB_OWN_PARAMS: ReadonlyArray<string> = [
+  HB_FILTER_PARAM, HB_MODE_PARAM, HB_ALL_PARAM, HB_DIR_PARAM, HB_VIEW_PARAM,
+];
 
 const KNOWN: ReadonlySet<string> = new Set(HB_FILTER_KEYS);
 
@@ -182,15 +242,58 @@ export type CmHighBetaRow = {
   /** Under the liquidity floor: a row, never a chart (the count line says so). */
   thin: boolean;
   red: boolean;
-  text: { beta?: string; sigma?: string; today?: string; swing?: string } | null;
+  text: {
+    beta?: string; sigma?: string; today?: string; swing?: string;
+    /** 2026-10-14 b — the served text of the 5 / 21-day legs and RS ("—" = not read). */
+    ret_5d?: string; ret_21d?: string; rel_5d?: string; rel_21d?: string; rs_spy_63d?: string;
+  } | null;
   /** 🔗 the stock's leveraged ETFs ([] when none / the map is not ready). */
   levered?: CmLeveredItem[];
   levered_chip?: CmLeveredChip | null;
+  /** 2026-10-14 b (K2) — the stock's own 5 / 21-session % move and the same
+   *  minus the served `rel` bench (RSP, SPY fallback), in pp; null = not read
+   *  (a raw move never lands in a vs column). */
+  ret_5d?: number | null;
+  ret_21d?: number | null;
+  rel_5d?: number | null;
+  rel_21d?: number | null;
+  /** K3 — the 63-session move minus SPY's, in pp; null = not read. */
+  rs_spy_63d?: number | null;
+  /** The 🔥 Hottest fundamentals (HOT._fundamentals_row values unchanged);
+   *  null when the research cache was not read this build. */
+  fund?: CmHighBetaFund | null;
 };
 
-/** The served column heads, in the served order (high_beta_tab.TABLE_COLUMNS).
- *  Keys the table knows: symbol · levered · beta · sigma · cats · qqq · today · swing. */
-export type CmHighBetaColumn = { key: string; label: string; title?: string | null };
+/** `rows[].fund` — EXACTLY high_beta_tab.FUND_ROW_KEYS (the 14 keys of
+ *  HOT._fundamentals_row the Sales view prints). A LOCAL structural type
+ *  (AMENDMENTS2 B4: no import from components/HottestSectors); each key is
+ *  typed as 🔥 Hottest's own row types it, so a fund row is assignable to the
+ *  Hottest fundamentals cell's row with no cast. */
+export type CmHighBetaFund = {
+  sales_yoy: number | null;
+  sales_prior_yoy: number | null;
+  sales_accelerating: boolean | null;
+  sales_tier: string | null;
+  period_ok: boolean | null;
+  q_eps_yoy: number | null;
+  net_margin: number | null;
+  margin_expanding: boolean | null;
+  eq_score: number | null;
+  eq_tier: string | null;
+  code_33: boolean | null;
+  inventory_flag: boolean | null;
+  next_earnings: string | null;
+  earnings_when: string | null;
+};
+
+/** The served column heads, in the served order (high_beta_tab.TABLE_COLUMNS
+ *  for Price, SALES_COLUMNS for Sales). `sort` = the column's served sort key
+ *  (null = not a sort head), `first` = the direction its first tap opens in
+ *  (2026-10-14 b). */
+export type CmHighBetaColumn = {
+  key: string; label: string; title?: string | null;
+  sort?: string | null; first?: HbDir | null;
+};
 
 /** `high_beta_board.table` (high_beta_tab.table_block; null unless ready):
  *  the heads of the dense table and the served category / QQQ badge words
@@ -199,6 +302,26 @@ export type CmHighBetaTable = {
   columns: CmHighBetaColumn[];
   cat_labels: Record<string, string>;
   qqq_label: string;
+  /** 2026-10-14 b (K1) — the Sales view's heads, the served view labels and
+   *  the URL param the switch writes (FE-only). */
+  sales_columns?: CmHighBetaColumn[];
+  views?: { key: HbView; label: string }[];
+  view_param?: string;
+};
+
+/** `high_beta_board.fundamentals` (high_beta_tab.fundamentals_block; null
+ *  unless ready). `line` and `note` are printed as served; `quality_info` is
+ *  the ⓘ Quality explainer (the 🔥 Hottest sheet's payload). */
+export type CmHighBetaFundamentals = {
+  state: 'ready' | 'not_read' | string;
+  n: number | null;
+  of: number | null;
+  n_earnings: number | null;
+  as_of: { oldest: string; newest: string; n: number } | null;
+  quality_info: HsQualityInfo | null;
+  reason: string | null;
+  line: string;
+  note: string;
 };
 
 /** `high_beta_board.view` (A1): the "include green names" switch — `on` = the
@@ -238,4 +361,12 @@ export type CmHighBetaBoard = {
   table: CmHighBetaTable | null;
   /** 🔗 the leveraged-ETF map's state + served line (null unless ready). */
   levered?: CmLeveredBoard | null;
+  /** 2026-10-14 b — the resolved direction of `sort`; the preset key when the
+   *  active (sort, dir) is a preset in its first direction, else null; the
+   *  served 5 / 21-day header line (SPY's and RSP's own legs); the Sales
+   *  view's fundamentals block. */
+  sort_dir?: HbDir | string;
+  sort_preset?: string | null;
+  returns_line?: string | null;
+  fundamentals?: CmHighBetaFundamentals | null;
 };

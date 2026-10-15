@@ -26,7 +26,7 @@ import type { CmFallenBoard, CmFallenRead } from './fallen';
 import type { CmDrop10Board, CmDrop10Read } from './drop10';
 import type { BondePick } from './bondePicks';
 import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM } from './gajjala';
-import { HB_ALL_ON, HB_ALL_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, HB_OWN_PARAMS, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL } from './highBeta';
+import { HB_ALL_ON, HB_ALL_PARAM, HB_DIR_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, HB_OWN_PARAMS, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL } from './highBeta';
 import type { CmHbTileFilter, CmHighBetaBoard, CmHighBetaRead, CmHighBetaRow } from './highBeta';
 
 export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala';
@@ -1719,11 +1719,17 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
   if (from !== t && (from === 'gajjala' || t === 'gajjala')) {
     for (const k of GAJJALA_OWN_PARAMS) next.delete(k);
   }
-  // 🎢 High Beta's boxes / mode / green switch (`hb`, `hb_mode`, `hb_all`)
+  // 🎢 High Beta's boxes / mode / green switch (`hb`, `hb_mode`, `hb_all`),
+  // and since 2026-10-14 b its column direction / view (`hb_dir`, `hb_view`),
   // mean nothing anywhere else — dropped crossing into or out of the tab, the
   // same border rule; a click on the tab it is already on keeps them.
   if (from !== t && (from === 'high_beta' || t === 'high_beta')) {
     for (const k of HB_OWN_PARAMS) next.delete(k);
+    // A header sort (`sort=hb_*`) is a 🎢 column: on any other tab board() serves
+    // its default order but the membership snapshot sees a non-default request
+    // and skips the write (final critic 2026-10-15). Dropped at the border too.
+    const srt = next.get('sort');
+    if (srt && srt.startsWith('hb_')) next.delete('sort');
   }
   return next.toString();
 }
@@ -2244,6 +2250,9 @@ export function boardQuery(p: {
   hbFilters?: string;
   hbMode?: string;
   hbAll?: boolean;
+  /** 🎢 2026-10-14 b — the active column's direction; sent only when it
+   *  differs from that column's served first (the caller decides). */
+  hbDir?: string;
   uvView?: string;
   fallenDepth?: string;
 }): string {
@@ -2308,6 +2317,11 @@ export function boardQuery(p: {
   if (p.tab === 'high_beta' && p.hbFilters) q.set(HB_FILTER_PARAM, p.hbFilters);
   if (p.tab === 'high_beta' && p.hbMode === DM_MODE_ALL) q.set(HB_MODE_PARAM, DM_MODE_ALL);
   if (p.tab === 'high_beta' && p.hbAll === true) q.set(HB_ALL_PARAM, HB_ALL_ON);
+  // 🎢 header sorts (Ajay 2026-10-14: "Can you add sort function on the
+  // headers …", build "2026-10-14 b") — the direction rides on high_beta only.
+  // The Price | Sales view (`hb_view`) is FE-only and NEVER enters a board
+  // query: both views print the same served rows.
+  if (p.tab === 'high_beta' && p.hbDir) q.set(HB_DIR_PARAM, p.hbDir);
   // 📉 Down 40%+ depth view (Ajay 2026-10-02: "stocks that dropped more than
   // 40% lowers …") — only on that tab, and only when the caller picked a
   // served step that is not the served default (fallen.depthToSend).

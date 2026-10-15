@@ -24,7 +24,7 @@
    "union": 4
   },
   "categories_line": "Each name carries every category it is in. β = cov/var of 252 daily log returns against SPY before this session (sepa/beta.py). Top 20% = the 1 highest of 4 rated stocks (ties at β 3.80 included). Not rated: 0 with under 253 sessions of history (no β).",
-  "count_line": "Showing 4 charts of 4 names — 0 under the liquidity floor (no floor), listed in the table as thin, no chart. Not rated: 0 ETFs, 0 delisted, 0 whose cached bars end before 2026-10-01, 0 with no cached bars. Not read today: 0 no print, 0 no snapshot answer (asked twice), 0 held out (named below — check the chart).",
+  "count_line": "Showing 4 charts of 4 names — no liquidity floor (thin names charted too). Not rated: 0 ETFs, 0 delisted, 0 whose cached bars end before 2026-10-01, 0 with no cached bars. Not read today: 0 no print, 0 no snapshot answer (asked twice), 0 held out (named below — check the chart).",
   "counts": {
    "b15": 4,
    "b20": 3,
@@ -50,6 +50,8 @@
    "scanned": 4,
    "short_history": 0,
    "shown": 4,
+   "sort_missing": 0,
+   "sort_present": 4,
    "stale": 0,
    "suspect": 0,
    "today_stale": 0,
@@ -129,6 +131,17 @@
    "pool": 4,
    "shown": null
   },
+  "fundamentals": {
+   "as_of": null,
+   "line": "Sales view — the research cache answered nothing this build (no row came back for any listed name); the Sales columns stay blank, never zero, until the next refresh reads it.",
+   "n": 0,
+   "n_earnings": 0,
+   "note": "Display only — UNMEASURED on this tab: nothing here ranks a name as better, or gates, sizes or alerts on Sales, EPS, margin, Quality or RS. Quality is a description (ⓘ), not a tested edge. Not advice.",
+   "of": 4,
+   "quality_info": null,
+   "reason": "no row came back for any listed name",
+   "state": "not_read"
+  },
   "header": "🎢 4 red of 4 High-Beta names · charts for the top 4 — 4 rated of 4 scanned (the full universe + the Nasdaq-100). β ≥ 1.5: 4 · β ≥ 2.0: 3 · top 20% (β ≥ 3.80): 1. 4 of 4 read are red, the last closed session (2026-10-02); 3 down 5%+.",
   "levered": {
    "age_days": 0,
@@ -156,8 +169,11 @@
   },
   "qqq_line": "QQQ −1.50% the last session · 1 of 1 Nasdaq-100 names are on this list, 1 red.",
   "refresh_sec": null,
+  "returns_line": "5 and 21 days = closed sessions through the Fri 10-02 close, the Today column's session included: SPY +3.8% / +0.5% · RSP +4.0% / +0.7%. “vs RSP” = the stock's move minus RSP's over the same sessions, in percentage points.",
   "session": "2026-10-02",
   "sort": "hb_swing",
+  "sort_dir": "desc",
+  "sort_preset": "hb_swing",
   "stale": false,
   "state": "ready",
   "study": {
@@ -180,39 +196,174 @@
    },
    "columns": [
     {
+     "first": "asc",
      "key": "symbol",
-     "label": "Symbol"
+     "label": "Symbol",
+     "sort": "hb_symbol",
+     "title": null
     },
     {
+     "first": "desc",
      "key": "levered",
-     "label": "Leveraged ETFs"
+     "label": "Leveraged ETFs",
+     "sort": "hb_levered",
+     "title": null
     },
     {
+     "first": "asc",
      "key": "today",
-     "label": "Today"
+     "label": "Today",
+     "sort": "hb_drop",
+     "title": null
     },
     {
+     "first": "desc",
+     "key": "ret_5d",
+     "label": "5 days",
+     "sort": "hb_ret_5d",
+     "title": "The stock's own % move over the last 5 closed sessions — the line above names the close they end on"
+    },
+    {
+     "first": "desc",
+     "key": "rel_5d",
+     "label": "5 days vs RSP",
+     "sort": "hb_rel_5d",
+     "title": "The 5-session move minus RSP's over the same sessions, in percentage points"
+    },
+    {
+     "first": "desc",
+     "key": "ret_21d",
+     "label": "21 days",
+     "sort": "hb_ret_21d",
+     "title": "The stock's own % move over the last 21 closed sessions — the line above names the close they end on"
+    },
+    {
+     "first": "desc",
+     "key": "rel_21d",
+     "label": "21 days vs RSP",
+     "sort": "hb_rel_21d",
+     "title": "The 21-session move minus RSP's over the same sessions, in percentage points"
+    },
+    {
+     "first": "desc",
      "key": "beta",
-     "label": "β"
+     "label": "β",
+     "sort": "hb_beta",
+     "title": null
     },
     {
+     "first": "desc",
      "key": "swing",
-     "label": "β × drop"
+     "label": "β × drop",
+     "sort": "hb_swing",
+     "title": null
     },
     {
+     "first": "desc",
      "key": "sigma",
-     "label": "σ (50d)"
+     "label": "σ (50d)",
+     "sort": "hb_vol",
+     "title": null
     },
     {
+     "first": "desc",
      "key": "cats",
-     "label": "🎢"
+     "label": "🎢",
+     "sort": "hb_cats",
+     "title": null
     },
     {
+     "first": "desc",
      "key": "qqq",
-     "label": "QQQ"
+     "label": "QQQ",
+     "sort": "hb_qqq",
+     "title": null
     }
    ],
-   "qqq_label": "QQQ"
+   "qqq_label": "QQQ",
+   "sales_columns": [
+    {
+     "first": "asc",
+     "key": "symbol",
+     "label": "Symbol",
+     "sort": "hb_symbol",
+     "title": null
+    },
+    {
+     "first": "desc",
+     "key": "levered",
+     "label": "Leveraged ETFs",
+     "sort": "hb_levered",
+     "title": null
+    },
+    {
+     "first": "asc",
+     "key": "today",
+     "label": "Today",
+     "sort": "hb_drop",
+     "title": null
+    },
+    {
+     "first": "desc",
+     "key": "sales_yoy",
+     "label": "Sales YoY",
+     "sort": "hb_sales_yoy",
+     "title": null
+    },
+    {
+     "first": "desc",
+     "key": "sales_tier",
+     "label": "Sales trend",
+     "sort": "hb_sales_tier",
+     "title": "ranks explosive › strong › steady › weak › declining"
+    },
+    {
+     "first": "desc",
+     "key": "q_eps_yoy",
+     "label": "Q EPS",
+     "sort": "hb_q_eps_yoy",
+     "title": null
+    },
+    {
+     "first": "desc",
+     "key": "net_margin",
+     "label": "Margin",
+     "sort": "hb_net_margin",
+     "title": null
+    },
+    {
+     "first": "desc",
+     "key": "eq_score",
+     "label": "Quality",
+     "sort": "hb_eq_score",
+     "title": "Minervini Ch.8 earnings quality · 🎯 Code 33 · ⚠️ inventory vs sales"
+    },
+    {
+     "first": "asc",
+     "key": "next_earnings",
+     "label": "Next ER",
+     "sort": "hb_next_earnings",
+     "title": "ascending = who reports soonest"
+    },
+    {
+     "first": "desc",
+     "key": "rs_spy_63d",
+     "label": "RS vs SPY (63d)",
+     "sort": "hb_rs_spy_63d",
+     "title": "The stock's 63-session move minus SPY's to the same close, in percentage points. UNMEASURED."
+    }
+   ],
+   "view_param": "hb_view",
+   "views": [
+    {
+     "key": "price",
+     "label": "Price"
+    },
+    {
+     "key": "sales",
+     "label": "Sales"
+    }
+   ]
   },
   "view": {
    "label": "include green names",
@@ -230,6 +381,7 @@
     "b20",
     "top20"
    ],
+   "fund": null,
    "levered": [
     {
      "direction": "long",
@@ -296,12 +448,22 @@
    "prev_close": 127.1514,
    "qqq": false,
    "red": true,
+   "rel_21d": -2.21,
+   "rel_5d": 7.25,
+   "ret_21d": -1.5,
+   "ret_5d": 11.24,
+   "rs_spy_63d": -0.16,
    "sigma_pct": 3.7,
    "state": "read",
    "swing": 26.6,
    "symbol": "IREN",
    "text": {
     "beta": "3.80",
+    "rel_21d": "−2.2 pp",
+    "rel_5d": "+7.3 pp",
+    "ret_21d": "−1.5%",
+    "ret_5d": "+11.2%",
+    "rs_spy_63d": "−0.2 pp",
     "sigma": "3.70%",
     "swing": "26.60",
     "today": "−7.00% vs 127.15"
@@ -315,6 +477,7 @@
     "b15",
     "b20"
    ],
+   "fund": null,
    "levered": [
     {
      "direction": "long",
@@ -381,12 +544,22 @@
    "prev_close": 124.7628,
    "qqq": true,
    "red": true,
+   "rel_21d": -1.6,
+   "rel_5d": 6.86,
+   "ret_21d": -0.89,
+   "ret_5d": 10.85,
+   "rs_spy_63d": 0.26,
    "sigma_pct": 3.41,
    "state": "read",
    "swing": 21.0,
    "symbol": "NBIS",
    "text": {
     "beta": "3.50",
+    "rel_21d": "−1.6 pp",
+    "rel_5d": "+6.9 pp",
+    "ret_21d": "−0.9%",
+    "ret_5d": "+10.8%",
+    "rs_spy_63d": "+0.3 pp",
     "sigma": "3.41%",
     "swing": "21.00",
     "today": "−6.00% vs 124.76"
@@ -400,18 +573,29 @@
     "b15",
     "b20"
    ],
+   "fund": null,
    "levered": [],
    "levered_chip": null,
    "move_pct": -5.0,
    "prev_close": 113.4765,
    "qqq": false,
    "red": true,
+   "rel_21d": -2.79,
+   "rel_5d": 0.4,
+   "ret_21d": -2.08,
+   "ret_5d": 4.39,
+   "rs_spy_63d": -1.95,
    "sigma_pct": 1.95,
    "state": "read",
    "swing": 10.0,
    "symbol": "AAA",
    "text": {
     "beta": "2.00",
+    "rel_21d": "−2.8 pp",
+    "rel_5d": "+0.4 pp",
+    "ret_21d": "−2.1%",
+    "ret_5d": "+4.4%",
+    "rs_spy_63d": "−1.9 pp",
     "sigma": "1.95%",
     "swing": "10.00",
     "today": "−5.00% vs 113.48"
@@ -424,6 +608,7 @@
    "cats": [
     "b15"
    ],
+   "fund": null,
    "levered": [
     {
      "direction": "long",
@@ -455,12 +640,22 @@
    "prev_close": 110.0851,
    "qqq": false,
    "red": true,
+   "rel_21d": -0.43,
+   "rel_5d": 1.29,
+   "ret_21d": 0.28,
+   "ret_5d": 5.28,
+   "rs_spy_63d": 0.12,
    "sigma_pct": 1.48,
    "state": "read",
    "swing": 3.04,
    "symbol": "VST",
    "text": {
     "beta": "1.52",
+    "rel_21d": "−0.4 pp",
+    "rel_5d": "+1.3 pp",
+    "ret_21d": "+0.3%",
+    "ret_5d": "+5.3%",
+    "rs_spy_63d": "+0.1 pp",
     "sigma": "1.48%",
     "swing": "3.04",
     "today": "−2.00% vs 110.09"

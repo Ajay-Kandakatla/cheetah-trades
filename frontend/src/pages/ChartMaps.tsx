@@ -88,7 +88,7 @@ import Drop10BoardNote from '../components/Drop10BoardNote';
 import Drop10CardExtras from '../components/Drop10CardExtras';
 import { drop10RefreshMs } from '../lib/drop10';
 import HighBetaBoardNote from '../components/HighBetaBoardNote';
-import { HB_ALL_PARAM, HB_ALL_ON, HB_FILTER_PARAM, HB_MODE_PARAM, hbFiltersParam, parseHbAll, parseHbFilters, parseHbMode, type HbFilterKey } from '../lib/highBeta';
+import { HB_ALL_PARAM, HB_ALL_ON, HB_DIR_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, HB_SORT_SWING, HB_VIEW_PARAM, HB_VIEW_SALES, hbFiltersParam, parseHbAll, parseHbDir, parseHbFilters, parseHbMode, parseHbView, type HbDir, type HbFilterKey, type HbView } from '../lib/highBeta';
 import { depthToSend } from '../lib/fallen';
 import { RES_FILTER_PARAM, RES_MODE_PARAM, parseResFilters, parseResMode, resFiltersParam, type ResFilterKey } from '../lib/resiliencyFilters';
 import UndervalueViewNote from '../components/UndervalueViewNote';
@@ -347,12 +347,16 @@ export function ChartMaps() {
   /* ONE sort setter for the page (2026-09-29): the Sort select and the
    * 🏎️ Dual Momentum toggle both write `?sort=` through it, so the two
    * controls can never write the param two different ways. The default key
-   * is removed rather than written, as the select always did. */
+   * is removed rather than written, as the select always did.
+   * 2026-10-14 b (Ajay: "Can you add sort function on the headers"): it also
+   * drops `?hb_dir=` — a 🎢 preset button (or another tab's select) asks for
+   * that key in its own first direction, never a flipped header's. */
   const setSortParam = useCallback((key: string) => {
     setParams((p) => {
       const n = new URLSearchParams(p);
       if (key === DEFAULT_SORT) n.delete('sort');
       else n.set('sort', key);
+      n.delete(HB_DIR_PARAM);
       return n;
     }, { replace: true });
   }, [setParams]);
@@ -575,6 +579,33 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       return next;
     }, { replace: true });
   }, [setParams]);
+  /* 🎢 header sorts + the Price | Sales view (2026-10-14 b; Ajay: "Can you
+   * add sort function on the headers and also 5 day and 21 days columns ...
+   * and also add sales tab make it like hot sector"). A header tap is ONE
+   * URL write (so ONE board fetch): `sort` = the served column key, `hb_dir`
+   * only when it differs from that column's served first direction (dir
+   * null = deleted). β × drop in its first direction is the default page, so
+   * both are deleted — the default request stays the default request (the
+   * membership snapshot rule). The direction rides to the server on this
+   * tab only. `hb_view` is FE-only: the same served rows, other columns, so
+   * it never enters boardQuery and a switch fires no fetch. */
+  const hbDir = tab === 'high_beta' ? (parseHbDir(params.get(HB_DIR_PARAM)) ?? undefined) : undefined;
+  const setHbSort = useCallback((key: string, dir: HbDir | null) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (key === HB_SORT_SWING && !dir) next.delete('sort'); else next.set('sort', key);
+      if (dir) next.set(HB_DIR_PARAM, dir); else next.delete(HB_DIR_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
+  const hbView = parseHbView(params.get(HB_VIEW_PARAM));
+  const setHbView = useCallback((v: HbView) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (v === HB_VIEW_SALES) next.set(HB_VIEW_PARAM, HB_VIEW_SALES); else next.delete(HB_VIEW_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
   /* 🏷️ Under Value vs peers (Ajay 2026-09-29: "Use the same tab actually").
    * The view lives in the URL as `?uv=peers` and rides on the undervalue tab
@@ -716,6 +747,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            hbFilters: hbSpec,
                            hbMode: hbModeSpec,
                            hbAll,
+                           hbDir,
                            uvView, fallenDepth });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
@@ -735,7 +767,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, hbSpec, hbModeSpec, hbAll, uvView, fallenDepth, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, hbSpec, hbModeSpec, hbAll, hbDir, uvView, fallenDepth, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -1166,8 +1198,10 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * `setSortParam`), the five boxes (`?hb=` / `?hb_mode=`), the green
         * switch (`?hb_all=1`) and the table of EVERY listed name above the
         * charts (A1). It also carries the warming line, so the generic demand
-        * counter is skipped. */}
-      {tab === 'high_beta' && <HighBetaBoardNote board={data?.high_beta_board ?? null} rows={data?.rows} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleHbFilter} onToggleMode={toggleHbMode} onToggleGreen={toggleHbAll} />}
+        * counter is skipped. 2026-10-14 b: the Price | Sales switch
+        * (`?hb_view=`, FE-only) and the header sorts (`setHbSort`: served
+        * column key + `?hb_dir=`; the 80 charts follow the served order). */}
+      {tab === 'high_beta' && <HighBetaBoardNote board={data?.high_beta_board ?? null} rows={data?.rows} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleHbFilter} onToggleMode={toggleHbMode} onToggleGreen={toggleHbAll} view={hbView} onView={setHbView} onHeaderSort={setHbSort} />}
       {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
         * toggle — labels served, pressed = the served view, a click through
         * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
@@ -1702,7 +1736,11 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
             </select>
           </label>
         )}
-        {tab !== 'winners' && (data?.sorts || []).length > 0 && (
+        {/* 2026-10-14 b (HIS CALL #4, "Can you add sort function on the
+          * headers"): no generic Sort select on 🎢 — its three buttons and the
+          * column headers own the order, and a header key is not one of the
+          * served `sorts` (the select would show a non-option). */}
+        {tab !== 'winners' && tab !== 'high_beta' && (data?.sorts || []).length > 0 && (
           <label className="cm-ctl">
             Sort
             <select

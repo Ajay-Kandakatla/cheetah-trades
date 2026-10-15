@@ -125,7 +125,7 @@ def _build(frames, now, *, universe=None, qqq=("AAA",), snaps=None, snap_calls=N
 
 @pytest.fixture(autouse=True)
 def _clean(monkeypatch):
-    for m in (HB._memo, HB._base_memo, HB._failures):
+    for m in (HB._memo, HB._base_memo, HB._failures, HB._fund_memo):     # _fund_memo: 2026-10-14 b
         m.clear()
     HB._warming.clear()
     spawned = []
@@ -596,11 +596,15 @@ def hb_board(monkeypatch):
 _BOARD_KEYS = {"state", "mode", "session", "as_of", "built_at", "base_built_at", "stale",
                "measured", "refresh_sec", "sort", "header", "market_line", "qqq_line",
                "order_line", "view_line", "count_line", "categories_line", "categories", "qqq",
-               "filters", "view", "table", "note", "study", "counts", "suspects", "levered"}
+               "filters", "view", "table", "note", "study", "counts", "suspects", "levered",
+               # 2026-10-14 b (header sorts, 5 / 21 days, the Sales view)
+               "sort_dir", "sort_preset", "returns_line", "fundamentals"}
 _TILE_HB_KEYS = {"beta", "cats", "qqq", "sigma_pct", "swing", "today", "adv50", "zone",
                  "levered", "levered_chip"}
 _ROW_KEYS = {"symbol", "beta", "cats", "qqq", "move_pct", "state", "swing", "sigma_pct",
-             "prev_close", "basis", "thin", "red", "text", "levered", "levered_chip"}
+             "prev_close", "basis", "thin", "red", "text", "levered", "levered_chip",
+             # 2026-10-14 b
+             "ret_5d", "ret_21d", "rel_5d", "rel_21d", "rs_spy_63d", "fund"}
 
 
 def test_13_board_ready_envelope_rows_and_tiles(hb_board):
@@ -642,8 +646,14 @@ def test_13_board_ready_envelope_rows_and_tiles(hb_board):
     assert {c["label"] for c in tb["columns"]} >= {"β", "Today", "β × drop", HB.STAT_SIGMA}
     assert tb["cat_labels"] == HB.CAT_SHORT and tb["qqq_label"] == HB.QQQ_ETF
     by = {s["k"]: s["v"] for s in t["stats"]}
+    r0 = rows[0]
+    pct = lambda v: f"{v:+.1f}%".replace("-", "−")              # noqa: E731  (🔥 Hottest's 1 dp)
+    pp = lambda v: f"{v:+.1f} pp".replace("-", "−")             # noqa: E731
     assert rows[0]["text"] == {"beta": by["β"], "today": by["Today"], "swing": by["β × drop"],
-                               "sigma": by[HB.STAT_SIGMA]}
+                               "sigma": by[HB.STAT_SIGMA],
+                               "ret_5d": pct(r0["ret_5d"]), "ret_21d": pct(r0["ret_21d"]),
+                               "rel_5d": pp(r0["rel_5d"]), "rel_21d": pp(r0["rel_21d"]),
+                               "rs_spy_63d": pp(r0["rs_spy_63d"])}
     assert all(r["red"] is True for r in rows)
 
 

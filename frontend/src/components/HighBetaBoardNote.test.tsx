@@ -67,16 +67,20 @@ describe('HighBetaBoardNote — served lines verbatim', () => {
     expect(rowSyms()).toEqual(ROWS.map((r) => r.symbol));
   });
 
-  it('the pending study prints the served UNMEASURED line once (the study text equals the note)', () => {
+  // 2026-10-14 b: the recaptured fixture carries the 10-14 MEASURED study (the
+  // served note IS the study line), so the pin follows the capture.
+  it('the served study line prints once (the study text equals the note)', () => {
     draw(BOARD);
-    expect(BOARD.study!.status).toBe('unmeasured');
-    expect(screen.getByTestId('cm-hb-note').textContent).toContain('UNMEASURED');
+    expect(BOARD.study!.status).toBe('measured');
+    expect(BOARD.note).toBe(BOARD.study!.text);
+    expect(screen.getByTestId('cm-hb-note').textContent).toBe(BOARD.study!.text);
     expect(screen.queryByTestId('cm-hb-study')).toBeNull();
   });
 
-  it('NEGATIVE: a board with no measured line still says UNMEASURED — never a bare MEASURED claim', () => {
+  it('NEGATIVE: a board whose served note is UNMEASURED still says UNMEASURED — never a bare MEASURED claim', () => {
     const b = clone(BOARD);
     b.study = null;
+    b.note = '🎢 UNMEASURED — S-note-line. Not advice.';
     draw(b);
     const all = screen.getByTestId('cm-hb-board').textContent || '';
     expect(all).toContain('UNMEASURED');
@@ -164,8 +168,9 @@ describe('HighBetaBoardNote — sort buttons and boxes', () => {
 
   it('NEGATIVE: a served sort missing its label renders no button; the URL never decides pressed', () => {
     const sorts = [{ key: 'hb_swing', label: '' }, { key: 'hb_drop', label: 'D' }, { key: 'hb_vol' } as CmSort];
-    const b = clone(BOARD);
+    const b = clone(BOARD) as CmHighBetaBoard & { sort_preset?: string | null };
     b.sort = 'hb_drop';
+    delete b.sort_preset;               // a board that serves no sort_preset: the served sort decides
     draw(b, { sorts, sort: 'hb_swing' });
     expect(screen.queryByTestId('cm-hb-sort-hb_swing')).toBeNull();
     expect(screen.queryByTestId('cm-hb-sort-hb_vol')).toBeNull();
@@ -203,9 +208,11 @@ describe('HighBetaBoardNote — the table of every listed name (A1)', () => {
     draw(BOARD);
     const served = ROWS.map((r) => r.symbol);
     const charts = F.default.tiles.map((t) => t.symbol);
-    // the charts are the served rows' order minus the thin (under-the-floor) names
-    expect(charts).toEqual(ROWS.filter((r) => !r.thin).map((r) => r.symbol).slice(0, charts.length));
-    expect(ROWS.some((r) => r.thin && !charts.includes(r.symbol))).toBe(true);
+    // 2026-10-14 b: the recapture runs with no liquidity floor (min_tier "any"), so
+    // the charts are the FIRST served rows (AMENDMENTS2 B5) — a thin name charts too.
+    expect((F.default as unknown as { min_tier: string }).min_tier).toBe('any');
+    expect(charts).toEqual(served.slice(0, charts.length));
+    expect(ROWS.some((r) => r.thin)).toBe(true);
     expect(served.length).toBeGreaterThan(charts.length);
     expect(rowSyms()).toEqual(served);
   });

@@ -915,6 +915,85 @@ function AmdGroupCell({ s }: { s?: HsAmdSummary | null }) {
   );
 }
 
+/** 🎢 2026-10-14 b — the six fundamentals cells of a NAME row, one renderer.
+ *
+ *  Ajay 2026-10-14: "also add sales tab make it like hot sector with some
+ *  important metrics like EPS, QUAlity and other colums that show the strength
+ *  of the stock". The 🎢 High Beta Sales view prints these SAME cells, so they
+ *  moved here VERBATIM out of NameRow (same classes, titles, marks and words —
+ *  pinned byte-for-byte by HottestSectors.fundcell.test.tsx against a capture
+ *  taken before the move). Never a second formula: a 🎢 cell and a 🔥 cell for
+ *  the same name read the same served numbers through the same function.
+ *
+ *  `testId` lands on the `<td>` only when the caller passes one, so 🔥 Hottest's
+ *  DOM is unchanged. GroupFundCells (sector / industry medians) is separate on
+ *  purpose — a median row has no pair mark, flags or report date. */
+export const HS_FUND_KEYS = ['sales_yoy', 'sales_tier', 'q_eps_yoy', 'net_margin', 'eq_score',
+                             'next_earnings'] as const;
+export type HsFundKey = typeof HS_FUND_KEYS[number];
+/** The 14 per-name fundamentals `rotation/hottest.py::_fundamentals_row` serves
+ *  (= the backend's FUND_ROW_KEYS), and nothing else the cells could read. */
+export type HsFundRow = Pick<HsName, 'sales_yoy' | 'sales_prior_yoy' | 'sales_accelerating'
+  | 'sales_tier' | 'period_ok' | 'q_eps_yoy' | 'net_margin' | 'margin_expanding' | 'eq_score'
+  | 'eq_tier' | 'code_33' | 'inventory_flag' | 'next_earnings' | 'earnings_when'>;
+
+export function HsFundCell({ k, r, symbol, info, testId }: {
+  k: HsFundKey; r: HsFundRow; symbol: string; info?: HsQualityInfo | null; testId?: string;
+}) {
+  const tid = testId ? { 'data-testid': testId } : {};
+  switch (k) {
+    case 'sales_yoy':
+      return (
+        <td className={`mono hs-num ${tone(r.sales_yoy)}`} title={
+          r.sales_prior_yoy != null ? `prior quarter ${pct(r.sales_prior_yoy)}` : undefined} {...tid}>
+          {pct(r.sales_yoy)}{r.sales_accelerating ? ' ⚡' : ''}
+        </td>
+      );
+    case 'sales_tier': {
+      const pm = periodMark(r.period_ok);
+      return (
+        <td className="hs-tier" title={r.sales_tier || 'no filed quarterly series from our provider'} {...tid}>
+          {tierChip(r.sales_tier)} {r.sales_tier || '—'}
+          {/* The pair mark rides the tier it qualifies — same three states and
+              same words as 📈 Bonde (periodMark owns both). `false` = checked
+              and not four quarters apart; `null` = no period keys to check it
+              with. A tick is never printed for a row that checked out, and the
+              mark rides the em-dash too when the tier itself was withheld. */}
+          {pm && (
+            <span className={pm.cls} data-testid={`hs-pair-${symbol}`}
+                  title={pm.title}>{pm.text}</span>
+          )}
+        </td>
+      );
+    }
+    case 'q_eps_yoy':
+      return <td className={`mono hs-num ${tone(r.q_eps_yoy)}`} {...tid}>{pct(r.q_eps_yoy, 0)}</td>;
+    case 'net_margin':
+      return (
+        <td className={`mono hs-num ${tone(r.net_margin)}`} {...tid}>
+          {pct(r.net_margin)}{r.margin_expanding ? ' ↑' : ''}
+        </td>
+      );
+    case 'eq_score':
+      /* The hover names the tier in the SERVED explainer's words ("Red
+         flag"), the raw key only when no explainer came back. */
+      return (
+        <td className="mono hs-num" title={tierLabel(r.eq_tier, info)} {...tid}>
+          {typeof r.eq_score === 'number' ? r.eq_score.toFixed(0) : '—'}
+          {r.code_33 ? ' 🎯' : ''}{r.inventory_flag ? ' ⚠️' : ''}
+        </td>
+      );
+    case 'next_earnings':
+      return (
+        <td className="hs-er" {...tid}>
+          {r.next_earnings || '—'}{r.earnings_when ? ` ${r.earnings_when}` : ''}
+        </td>
+      );
+    default:
+      return null;
+  }
+}
+
 function NameRow({ r, read, study, bandStudy, d1 }: {
   r: HsName; read?: BounceRoomRow | null; study?: ExplosiveStudy | null;
   bandStudy?: BandStructureStudy | null;
@@ -950,7 +1029,6 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
     openTickerWithModifier(e, nav, loc, r.symbol, 'Hottest sectors');
   };
 
-  const pm = periodMark(r.period_ok);
   /* 🌀 The served AMD state. Colourless on purpose — the tone that rides in
      the payload is the 🌀 AMD tab's, and the served refusal sentence is on the
      hover. Drawn only when the server served the block. */
@@ -1001,35 +1079,9 @@ function NameRow({ r, read, study, bandStudy, d1 }: {
         <td className={`hs-amd ${amdToneClass(amd.tone)}`} title={amd.title}>{amd.text}</td>
       ) : null}
       <LegCells r={r} d1={d1} />
-      <td className={`mono hs-num ${tone(r.sales_yoy)}`} title={
-        r.sales_prior_yoy != null ? `prior quarter ${pct(r.sales_prior_yoy)}` : undefined}>
-        {pct(r.sales_yoy)}{r.sales_accelerating ? ' ⚡' : ''}
-      </td>
-      <td className="hs-tier" title={r.sales_tier || 'no filed quarterly series from our provider'}>
-        {tierChip(r.sales_tier)} {r.sales_tier || '—'}
-        {/* The pair mark rides the tier it qualifies — same three states and
-            same words as 📈 Bonde (periodMark owns both). `false` = checked
-            and not four quarters apart; `null` = no period keys to check it
-            with. A tick is never printed for a row that checked out, and the
-            mark rides the em-dash too when the tier itself was withheld. */}
-        {pm && (
-          <span className={pm.cls} data-testid={`hs-pair-${r.symbol}`}
-                title={pm.title}>{pm.text}</span>
-        )}
-      </td>
-      <td className={`mono hs-num ${tone(r.q_eps_yoy)}`}>{pct(r.q_eps_yoy, 0)}</td>
-      <td className={`mono hs-num ${tone(r.net_margin)}`}>
-        {pct(r.net_margin)}{r.margin_expanding ? ' ↑' : ''}
-      </td>
-      {/* The hover names the tier in the SERVED explainer's words ("Red
-          flag"), the raw key only when no explainer came back. */}
-      <td className="mono hs-num" title={tierLabel(r.eq_tier, d1?.quality_info)}>
-        {typeof r.eq_score === 'number' ? r.eq_score.toFixed(0) : '—'}
-        {r.code_33 ? ' 🎯' : ''}{r.inventory_flag ? ' ⚠️' : ''}
-      </td>
-      <td className="hs-er">
-        {r.next_earnings || '—'}{r.earnings_when ? ` ${r.earnings_when}` : ''}
-      </td>
+      {HS_FUND_KEYS.map((k) => (
+        <HsFundCell key={k} k={k} r={r} symbol={r.symbol} info={d1?.quality_info} />
+      ))}
     </tr>
   );
 }

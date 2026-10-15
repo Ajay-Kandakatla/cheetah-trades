@@ -583,6 +583,14 @@ constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS 
   are never a zero move.
 - **View** (AMENDMENTS A1): `rows` = a compact row for EVERY listed name (dense table) + `tiles` for the top
   `board.LIMIT_MAX` 80; default = the names red today, `hb_all=1` includes green (sorted after red).
+  2026-10-14 b (Ajay: *"Can you add sort function on the headers and also 5 day and 21 days columns to show how they
+  were reacting in price like hot sectors and also add sales tab make it like hot sector with some important metrics
+  like EPS, QUAlity and other colums that show the strength of the stock"*; K1): a **Price | Sales** switch above the
+  table — `?hb_view=sales` (`TABLE_VIEW_PARAM`), FE-ONLY URL state, never sent to the server, no refetch; the same
+  names and the same `hb_all` switch in both. The server serves both column sets every time: `table.columns` =
+  `TABLE_COLUMNS` (Symbol, 🔗, Today, 5 days, 5 days vs RSP, 21 days, 21 days vs RSP, β, β × drop, σ, 🎢, QQQ),
+  `table.sales_columns` = `SALES_COLUMNS` (Symbol, 🔗, Today, the six 🔥 columns, RS vs SPY (63d)), each column
+  `{key, label, title, sort, first}`, plus `table.views` / `table.view_param`. The table never sorts rows itself.
 - **Liquidity floor** (Ajay 2026-10-14, the Liquidity menu screenshot: *"Give me all option and default to all in this
   please"*): the tab opens with **No floor** — `board.TAB_DEFAULT_MIN_TIER = {"high_beta": "any"}`, resolved by
   `board.default_min_tier(tab)` in `board()`, the API (`min_tier` omitted) and the FE (`defaultMinTier(tab)`); the four
@@ -591,10 +599,39 @@ constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS 
 - **Orders** (served, tab-scoped, `TAB_SORTS`): `hb_swing` 🎢 β × today's drop (the default — MINE, his "you pick"),
   `hb_drop` 📉 today's drop, `hb_vol` 🌊 most volatile first by σ (`SIGMA_BARS` = `resiliency_tab.VOL_AVG_BARS` 50 daily %
   returns, Ajay K3a — window his open call). `default` and any other key → `hb_swing`.
+  **Header sorts (2026-10-14 b, K4):** every column of both views sorts on a header tap — first tap = the column's
+  first direction, tap again flips. `HEADER_SORTS` (sort key → column, first direction) is the ONE table;
+  `TAB_SORTS = tuple(HEADER_SORTS)` with the three presets first (they stay and become their columns' sorts: β × drop
+  desc, Today asc, σ desc). New param `hb_dir` (`DIR_PARAM`, `asc`|`desc`; absent / blank / junk → the column's first
+  direction, never a 4xx). A preset in its own first direction runs the old `sort_key` verbatim (golden-tested);
+  every other (key, direction) runs 🔥 Hottest's engine (`HOT._sorter` + `HOT._rank_names`: missing LAST both ways,
+  exact ties A→Z). First directions: Today asc, Symbol A→Z, Next ER soonest first, every other column highest first
+  (🔗 by the number of tagged funds, AMENDMENTS2 B3). The top-80 chart cards follow the active sort (the server
+  order). Served on the block: `sort_dir`, `sort_preset` (the preset key iff the active order is one, else null) and
+  the order line naming the column and how it runs. `out["sorts"]` stays the three presets; the generic Sort select
+  is hidden on 🎢 (his call).
+- **5 / 21 days** (2026-10-14 b, K2 "Both (4 columns)"): the stock's own `LEG_FAST` 5 / `LEG_SHORT` 21-session %
+  move (= `rotation/tracker.py` `WINDOW_FAST` / `WINDOW_SHORT`, via `RT.trailing_return`, rounded 2 dp like
+  `member_stats`) AND the same minus RSP's (`RT.traction_row`, percentage points; SPY when RSP has no read — the
+  tracker's `BENCHMARK_FALLBACK` rule; blank when neither — a raw move never lands in a vs column). Closed bars:
+  the windows END at the last CLOSED session — live = through the prior close (today stays in Today), after-close /
+  closed = the session's own close. Each listed name keeps its last `TAIL_BARS` 64 closes from the frames the base
+  already reads (zero new fetch). SPY's and RSP's own 5 / 21 print once in `returns_line`. Cells print
+  `LEG_TEXT_DP` 1 decimal like 🔥 Hottest (AMENDMENTS2 B8); the sort reads the 2-dp number. DISPLAY only.
+- **Sales view** (2026-10-14 b, K1 + K3): the 🔥 Hottest fundamentals columns — Sales YoY, Sales trend, Q EPS, Margin,
+  Quality ⓘ, Next ER — through Hottest's own functions, never a second formula: ONE `HOT._decision_map` + ONE
+  `HOT._earnings_map` over the listed names, rows via `HOT._fundamentals_row` (served `rows[].fund` = exactly
+  `FUND_ROW_KEYS`), ⓘ via `HOT._quality_info` (served as a copy, `group_rows` None), memoised `FUND_TTL_SEC`
+  (= `BASE_TTL_SEC`, MINE) in `_fund_memo`, read by `build()` AFTER `_base_for` (the base build does not grow). A
+  failed / empty read is never memoised: `fundamentals.state = "not_read"`, the Sales cells blank, never zero. The
+  FE draws each cell with 🔥's own `HsFundCell` (exported from `HottestSectors.tsx`). Plus **RS vs SPY (63d)**
+  (K3): the `RS_WINDOW` 63-session move (= `tracker.WINDOW_MED`) minus SPY's to the same close, in percentage
+  points — not a ratio or a percentile. **UNMEASURED** on this tab (`FUND_NOTE`): nothing ranks, gates, sizes or
+  alerts on Sales, EPS, margin, Quality or RS.
 - **Memo**: the 🔻 pattern (memo + warm thread, `LIVE_TTL_SEC` / `CLOSED_TTL_SEC` / `BASE_TTL_SEC`, `FAIL_RETRY_SEC`); one
   `bulk_cached_frames` per session, one snapshot fan-out over the listed names; no cron, no Mongo store, nothing scans on
   the request.
-- **Endpoints**: `GET /chart-maps?tab=high_beta[&sort=hb_swing|hb_drop|hb_vol][&hb=][&hb_mode=][&hb_all=1]` (block `high_beta_board`) and
+- **Endpoints**: `GET /chart-maps?tab=high_beta[&sort=hb_swing|hb_drop|hb_vol|<any HEADER_SORTS key>][&hb_dir=asc|desc][&hb=][&hb_mode=][&hb_all=1]` (block `high_beta_board`; `hb_view` is FE-only) and
   `GET /chart-maps/high-beta/watch` (the 🎢 tape-burst watch list, biggest drop first, the house `safety_floor.MIN_SHARE_PRICE` $2 floor, uncapped).
   ℹ️ panel: `rules_info` section "high_beta" (before "gajjala"), built from the constants.
 - **Study** ("look at historically"): `scripts/high_beta_study.py`, prereg

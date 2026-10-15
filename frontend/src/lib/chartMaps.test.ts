@@ -2764,8 +2764,8 @@ describe('boardQuery — 🎢 High Beta boxes, mode and green switch ride only o
 describe('tabSearch — high_beta drops its own params at the border (2026-10-14)', () => {
   const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
 
-  it('the three params are the ones lib/highBeta reads', () => {
-    expect([...HB_OWN_PARAMS]).toEqual(['hb', 'hb_mode', 'hb_all']);
+  it('the five params are the ones lib/highBeta reads (2026-10-14 b: + hb_dir, hb_view)', () => {
+    expect([...HB_OWN_PARAMS]).toEqual(['hb', 'hb_mode', 'hb_all', 'hb_dir', 'hb_view']);
   });
 
   it('the tab param round-trips: high_beta → drop10 → high_beta lands back on high_beta, universe kept', () => {
@@ -2806,6 +2806,67 @@ describe('tabSearch — high_beta drops its own params at the border (2026-10-14
 });
 
 // ---------------------------------------------------------------------------
+// 2026-10-14 b — 🎢 header sorts + the Price | Sales view. Ajay 2026-10-14:
+// "Can you add sort function on the headers and also 5 day and 21 days columns
+// ... and also add sales tab make it like hot sector ...". `hb_dir` rides to
+// the server on high_beta only; `hb_view` is FE-only and never rides at all.
+// ---------------------------------------------------------------------------
+describe('boardQuery — 🎢 hb_dir rides on high_beta only; hb_view never (2026-10-14 b)', () => {
+  const get = (q: string, k: string) => new URLSearchParams(q).get(k);
+
+  it('hb_dir rides beside the sort on high_beta', () => {
+    const q = boardQuery({ tab: 'high_beta', sort: 'hb_ret_5d', hbDir: 'asc' });
+    expect(get(q, 'hb_dir')).toBe('asc');
+    expect(get(q, 'sort')).toBe('hb_ret_5d');
+  });
+
+  it('NEGATIVE: no direction asked -> no hb_dir (the default page sends none)', () => {
+    for (const q of [boardQuery({ tab: 'high_beta' }), boardQuery({ tab: 'high_beta', hbDir: '' })]) {
+      expect(q).not.toContain('hb_dir');
+    }
+  });
+
+  it('NEGATIVE: hb_dir never rides on zones, drop10, resiliency, dual_momentum or fallen', () => {
+    for (const tab of ['zones', 'drop10', 'resiliency', 'dual_momentum', 'fallen'] as const) {
+      expect(boardQuery({ tab, hbDir: 'asc' }), tab).not.toContain('hb_dir');
+    }
+  });
+
+  it('NEGATIVE: hb_view is never in a board query, on any tab (the view is FE-only)', () => {
+    for (const tab of ['high_beta', 'zones', 'drop10'] as const) {
+      const q = boardQuery({ tab, hbDir: 'desc', hbAll: true, ...({ hbView: 'sales' } as object) } as never);
+      expect(q, tab).not.toContain('hb_view');
+      expect(q, tab).not.toContain('sales');
+    }
+  });
+});
+
+describe('tabSearch — hb_dir / hb_view drop at the high_beta border (2026-10-14 b)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+
+  it('NEGATIVE: leaving high_beta drops hb_dir and hb_view', () => {
+    const next = sw('tab=high_beta&sort=hb_ret_5d&hb_dir=asc&hb_view=sales&universe=full', 'zones');
+    expect(next.has('hb_dir')).toBe(false);
+    expect(next.has('hb_view')).toBe(false);
+    expect(next.get('universe')).toBe('full');
+  });
+
+  it('NEGATIVE: entering high_beta drops a stale hb_dir / hb_view carried on another tab', () => {
+    const next = sw('tab=drop10&hb_dir=asc&hb_view=sales&sort=drop10_rvol', 'high_beta');
+    expect(next.has('hb_dir')).toBe(false);
+    expect(next.has('hb_view')).toBe(false);
+    expect(next.get('tab')).toBe('high_beta');
+  });
+
+  it('a click on high_beta while ON high_beta keeps hb_dir and hb_view', () => {
+    const next = sw('tab=high_beta&sort=hb_eq_score&hb_dir=asc&hb_view=sales', 'high_beta');
+    expect(next.get('hb_dir')).toBe('asc');
+    expect(next.get('hb_view')).toBe('sales');
+    expect(next.get('sort')).toBe('hb_eq_score');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 2026-10-14 — the 🎢 tab's liquidity floor defaults to "No floor" (his screenshot ask)
 // ---------------------------------------------------------------------------
 import * as CMx from './chartMaps';
@@ -2838,5 +2899,22 @@ describe('per-tab liquidity default (🎢 = any)', () => {
     expect(m).not.toBeNull();
     const pairs = Object.fromEntries([...(m![1].matchAll(/"([a-z_0-9]+)":\s*"([a-z]+)"/g))].map((x) => [x[1], x[2]]));
     expect(pairs).toEqual(CMx.TAB_DEFAULT_MIN_TIER);
+  });
+});
+
+
+describe('tabSearch — an hb_* header sort never leaves the 🎢 tab (2026-10-15)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+  it('drops sort=hb_* crossing out of high_beta, keeps it on a same-tab click', () => {
+    const out = sw('tab=high_beta&sort=hb_ret_5d&hb_dir=asc', 'zones');
+    expect(out.get('sort')).toBeNull();
+    expect(out.get('hb_dir')).toBeNull();
+    const same = sw('tab=high_beta&sort=hb_ret_5d&hb_dir=asc', 'high_beta');
+    expect(same.get('sort')).toBe('hb_ret_5d');
+    expect(same.get('hb_dir')).toBe('asc');
+  });
+  it('NEGATIVE: a non-hb sort still crosses, and crossing INTO high_beta keeps the generic sort for board() to resolve', () => {
+    expect(sw('tab=high_beta&sort=default', 'zones').get('sort')).toBe('default');
+    expect(sw('tab=zones&sort=room', 'high_beta').get('sort')).toBe('room');
   });
 });

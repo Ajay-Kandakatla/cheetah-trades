@@ -120,10 +120,13 @@ def test_02_the_card_badge_stat_and_the_table_reach_the_payload(lev_board):
     rows = {r["symbol"]: r for r in out["rows"]}
     assert rows["VST"]["levered_chip"]["text"] == "\U0001F517 2× VSTL"
     b = out["high_beta_board"]
-    assert b["table"]["columns"][1] == {"key": "levered", "label": LE.STAT_KEY}
+    lev_col = b["table"]["columns"][1]                    # 2026-10-14 b: + title/sort/first (B1/B3)
+    assert (lev_col["key"], lev_col["label"]) == ("levered", LE.STAT_KEY)
+    assert lev_col["sort"] == HB.SORT_LEVERED == "hb_levered"
     assert b["levered"]["state"] == "ready" and b["levered"]["n_on"] == 3 and b["levered"]["legend"]
     # compact_row.text reads the stats BY KEY: the appended stat changes no cell
-    assert set(rows["IREN"]["text"]) == {"beta", "today", "swing", "sigma"}
+    assert set(rows["IREN"]["text"]) == {"beta", "today", "swing", "sigma",
+                                         "ret_5d", "ret_21d", "rel_5d", "rel_21d", "rs_spy_63d"}
 
 
 def test_03_NEG_a_name_with_no_fund_has_no_badge_no_stat_no_chip(lev_board):
@@ -167,7 +170,9 @@ def test_06_NEG_the_tag_never_changes_the_order_the_filters_or_the_watch_list(mo
     with_map = _entry(lambda **k: lev)
     HB._base_memo.clear()
     without = _entry(lambda **k: {"state": "missing", "reason": "not read yet"})
-    for sort in HB.TAB_SORTS:
+    # 2026-10-14 b (B3): the 🔗 header now sorts on the tag count, so its own key is the one
+    # order the tag moves; the three presets and every other header sort stay untouched by it
+    for sort in [k for k in HB.TAB_SORTS if k != HB.SORT_LEVERED]:
         for act in ((), ("b20",), ("qqq", "d5")):
             a, ca, fa = HB.rank(with_map, sort=sort, active=act, include_green=True)
             b, cb, fb = HB.rank(without, sort=sort, active=act, include_green=True)

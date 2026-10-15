@@ -1,0 +1,534 @@
+{
+ "real": [
+  {
+   "symbol": "MU",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +196.3%\">+345.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"explosive\">🚀 explosive</td>",
+    "<td class=\"mono hs-num hs-up\">+1368%</td>",
+    "<td class=\"mono hs-num hs-up\">+68.1% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-09-30</td>"
+   ]
+  },
+  {
+   "symbol": "AVGO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +47.9%\">+85.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+215%</td>",
+    "<td class=\"mono hs-num hs-up\">+44.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-12-09 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "ALAB",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +93.4%\">+104.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"explosive\">🚀 explosive</td>",
+    "<td class=\"mono hs-num hs-up\">+186%</td>",
+    "<td class=\"mono hs-num hs-up\">+39.0% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-11-03</td>"
+   ]
+  },
+  {
+   "symbol": "EOG",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +22.1%\">+57.4% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+109%</td>",
+    "<td class=\"mono hs-num hs-up\">+31.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">87 🎯</td>",
+    "<td class=\"hs-er\">2026-11-05 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "VLO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +7.0%\">+48.8% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+454%</td>",
+    "<td class=\"mono hs-num hs-up\">+9.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">86 🎯</td>",
+    "<td class=\"hs-er\">2026-10-22</td>"
+   ]
+  },
+  {
+   "symbol": "FANG",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +4.7%\">+51.2% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+179%</td>",
+    "<td class=\"mono hs-num hs-up\">+36.9% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">86 🎯</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "IMO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter -0.6%\">+43.0% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+143%</td>",
+    "<td class=\"mono hs-num hs-up\">+13.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">85 🎯</td>",
+    "<td class=\"hs-er\">2026-10-30</td>"
+   ]
+  },
+  {
+   "symbol": "CVX",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +2.1%\">+56.3% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+321%</td>",
+    "<td class=\"mono hs-num hs-up\">+17.4% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">70</td>",
+    "<td class=\"hs-er\">2026-10-30 BMO</td>"
+   ]
+  },
+  {
+   "symbol": "XOM",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +2.4%\">+42.3% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+112%</td>",
+    "<td class=\"mono hs-num hs-up\">+12.8% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">68</td>",
+    "<td class=\"hs-er\">2026-10-30</td>"
+   ]
+  },
+  {
+   "symbol": "EOG",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +22.1%\">+57.4% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+109%</td>",
+    "<td class=\"mono hs-num hs-up\">+31.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">87 🎯</td>",
+    "<td class=\"hs-er\">2026-11-05 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "FANG",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +4.7%\">+51.2% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+179%</td>",
+    "<td class=\"mono hs-num hs-up\">+36.9% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">86 🎯</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "MUR",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +9.0%\">+35.9% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+894%</td>",
+    "<td class=\"mono hs-num hs-up\">+28.4% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">85 🎯</td>",
+    "<td class=\"hs-er\">2026-11-04</td>"
+   ]
+  },
+  {
+   "symbol": "MU",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +196.3%\">+345.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"explosive\">🚀 explosive</td>",
+    "<td class=\"mono hs-num hs-up\">+1368%</td>",
+    "<td class=\"mono hs-num hs-up\">+68.1% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-09-30</td>"
+   ]
+  },
+  {
+   "symbol": "AVGO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +47.9%\">+85.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+215%</td>",
+    "<td class=\"mono hs-num hs-up\">+44.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-12-09 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "ALAB",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +93.4%\">+104.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"explosive\">🚀 explosive</td>",
+    "<td class=\"mono hs-num hs-up\">+186%</td>",
+    "<td class=\"mono hs-num hs-up\">+39.0% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-11-03</td>"
+   ]
+  },
+  {
+   "symbol": "FN",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +39.3%\">+44.6% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+58%</td>",
+    "<td class=\"mono hs-num hs-up\">+10.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">87 🎯</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "BHE",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +7.2%\">+17.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+1733%</td>",
+    "<td class=\"mono hs-num hs-up\">+2.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">78</td>",
+    "<td class=\"hs-er\">2026-11-03 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "FLEX",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +16.9%\">+20.6% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+52%</td>",
+    "<td class=\"mono hs-num hs-up\">+3.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">73</td>",
+    "<td class=\"hs-er\">2026-10-28</td>"
+   ]
+  },
+  {
+   "symbol": "AES",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +8.7%\">+19.9% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+500%</td>",
+    "<td class=\"mono hs-num hs-up\">+11.3% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">72</td>",
+    "<td class=\"hs-er\">2026-11-04 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "SRE",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter -6.9%\">+3.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+70%</td>",
+    "<td class=\"mono hs-num hs-up\">+33.7% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">70</td>",
+    "<td class=\"hs-er\">2026-11-04</td>"
+   ]
+  },
+  {
+   "symbol": "AVA",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter -7.6%\">+0.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+153%</td>",
+    "<td class=\"mono hs-num hs-up\">+8.5% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Red flag\">47 ⚠️</td>",
+    "<td class=\"hs-er\">2026-11-04 BMO</td>"
+   ]
+  },
+  {
+   "symbol": "SR",
+   "cells": [
+    "<td class=\"mono hs-num hs-dn\" title=\"prior quarter -3.0%\">-0.4%</td>",
+    "<td class=\"hs-tier\" title=\"declining\">🔻 declining</td>",
+    "<td class=\"mono hs-num hs-up\">+1131%</td>",
+    "<td class=\"mono hs-num hs-up\">+50.3% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">62</td>",
+    "<td class=\"hs-er\">2026-11-13</td>"
+   ]
+  },
+  {
+   "symbol": "OGS",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +3.6%\">+5.1% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+40%</td>",
+    "<td class=\"mono hs-num hs-up\">+14.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">58</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "ATO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +0.6%\">+4.8% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+23%</td>",
+    "<td class=\"mono hs-num hs-up\">+27.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">58</td>",
+    "<td class=\"hs-er\">2026-11-04 AMC</td>"
+   ]
+  }
+ ],
+ "edge": [
+  {
+   "symbol": "MU",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +196.3%\">+345.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"explosive\">🚀 explosive<span class=\"bd-pair-warn\" data-testid=\"hs-pair-MU\" title=\"This name’s newest quarter and its “year-ago” slot are NOT four fiscal quarters apart, so the growth percentage compares two different quarters. The 🚀 growth board refuses the same row.\">⚠ pair</span></td>",
+    "<td class=\"mono hs-num hs-up\">+1368%</td>",
+    "<td class=\"mono hs-num hs-up\">+68.1% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-09-30</td>"
+   ]
+  },
+  {
+   "symbol": "AVGO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +47.9%\">+85.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong<span class=\"bd-unverified\" data-testid=\"hs-pair-AVGO\" title=\"no fiscal-period keys on file — the pair could not be checked\">unverified</span></td>",
+    "<td class=\"mono hs-num hs-up\">+215%</td>",
+    "<td class=\"mono hs-num hs-up\">+44.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-12-09 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "ALAB",
+   "cells": [
+    "<td class=\"mono hs-num hs-flat\">—</td>",
+    "<td class=\"hs-tier\" title=\"no filed quarterly series from our provider\"> —<span class=\"bd-unverified\" data-testid=\"hs-pair-ALAB\" title=\"no fiscal-period keys on file — the pair could not be checked\">unverified</span></td>",
+    "<td class=\"mono hs-num hs-flat\">—</td>",
+    "<td class=\"mono hs-num hs-flat\">—</td>",
+    "<td class=\"mono hs-num\">—</td>",
+    "<td class=\"hs-er\">—</td>"
+   ]
+  },
+  {
+   "symbol": "EOG",
+   "cells": [
+    "<td class=\"mono hs-num hs-dn\" title=\"prior quarter +22.1%\">-12.3% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"declining\">🔻 declining</td>",
+    "<td class=\"mono hs-num hs-flat\">+0%</td>",
+    "<td class=\"mono hs-num hs-dn\">-3.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"not_a_served_tier\">0 🎯 ⚠️</td>",
+    "<td class=\"hs-er\">2026-11-05 BMO</td>"
+   ]
+  },
+  {
+   "symbol": "VLO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +7.0%\">+48.8% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+454%</td>",
+    "<td class=\"mono hs-num hs-up\">+9.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">86 🎯</td>",
+    "<td class=\"hs-er\">2026-11-03</td>"
+   ]
+  },
+  {
+   "symbol": "FANG",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +4.7%\">+51.2% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+179%</td>",
+    "<td class=\"mono hs-num hs-up\">+36.9% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">86 🎯</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "IMO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter -0.6%\">+43.0% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+143%</td>",
+    "<td class=\"mono hs-num hs-up\">+13.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">85 🎯</td>",
+    "<td class=\"hs-er\">2026-10-30</td>"
+   ]
+  },
+  {
+   "symbol": "CVX",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +2.1%\">+56.3% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+321%</td>",
+    "<td class=\"mono hs-num hs-up\">+17.4% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">70</td>",
+    "<td class=\"hs-er\">2026-10-30 BMO</td>"
+   ]
+  },
+  {
+   "symbol": "XOM",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +2.4%\">+42.3% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+112%</td>",
+    "<td class=\"mono hs-num hs-up\">+12.8% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">68</td>",
+    "<td class=\"hs-er\">2026-10-30</td>"
+   ]
+  },
+  {
+   "symbol": "EOG",
+   "cells": [
+    "<td class=\"mono hs-num hs-dn\" title=\"prior quarter +22.1%\">-12.3% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"declining\">🔻 declining</td>",
+    "<td class=\"mono hs-num hs-flat\">+0%</td>",
+    "<td class=\"mono hs-num hs-dn\">-3.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"not_a_served_tier\">0 🎯 ⚠️</td>",
+    "<td class=\"hs-er\">2026-11-05 BMO</td>"
+   ]
+  },
+  {
+   "symbol": "FANG",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +4.7%\">+51.2% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+179%</td>",
+    "<td class=\"mono hs-num hs-up\">+36.9% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">86 🎯</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "MUR",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +9.0%\">+35.9% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+894%</td>",
+    "<td class=\"mono hs-num hs-up\">+28.4% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">85 🎯</td>",
+    "<td class=\"hs-er\">2026-11-04</td>"
+   ]
+  },
+  {
+   "symbol": "MU",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +196.3%\">+345.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"explosive\">🚀 explosive<span class=\"bd-pair-warn\" data-testid=\"hs-pair-MU\" title=\"This name’s newest quarter and its “year-ago” slot are NOT four fiscal quarters apart, so the growth percentage compares two different quarters. The 🚀 growth board refuses the same row.\">⚠ pair</span></td>",
+    "<td class=\"mono hs-num hs-up\">+1368%</td>",
+    "<td class=\"mono hs-num hs-up\">+68.1% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-09-30</td>"
+   ]
+  },
+  {
+   "symbol": "AVGO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +47.9%\">+85.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong<span class=\"bd-unverified\" data-testid=\"hs-pair-AVGO\" title=\"no fiscal-period keys on file — the pair could not be checked\">unverified</span></td>",
+    "<td class=\"mono hs-num hs-up\">+215%</td>",
+    "<td class=\"mono hs-num hs-up\">+44.2% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">90 🎯</td>",
+    "<td class=\"hs-er\">2026-12-09 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "ALAB",
+   "cells": [
+    "<td class=\"mono hs-num hs-flat\">—</td>",
+    "<td class=\"hs-tier\" title=\"no filed quarterly series from our provider\"> —<span class=\"bd-unverified\" data-testid=\"hs-pair-ALAB\" title=\"no fiscal-period keys on file — the pair could not be checked\">unverified</span></td>",
+    "<td class=\"mono hs-num hs-flat\">—</td>",
+    "<td class=\"mono hs-num hs-flat\">—</td>",
+    "<td class=\"mono hs-num\">—</td>",
+    "<td class=\"hs-er\">—</td>"
+   ]
+  },
+  {
+   "symbol": "FN",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +39.3%\">+44.6% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"strong\">💪 strong</td>",
+    "<td class=\"mono hs-num hs-up\">+58%</td>",
+    "<td class=\"mono hs-num hs-up\">+10.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"🎯 Code 33\">87 🎯</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "BHE",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +7.2%\">+17.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+1733%</td>",
+    "<td class=\"mono hs-num hs-up\">+2.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">78</td>",
+    "<td class=\"hs-er\">2026-11-03 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "FLEX",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +16.9%\">+20.6% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+52%</td>",
+    "<td class=\"mono hs-num hs-up\">+3.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">73</td>",
+    "<td class=\"hs-er\">2026-10-28</td>"
+   ]
+  },
+  {
+   "symbol": "AES",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +8.7%\">+19.9% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+500%</td>",
+    "<td class=\"mono hs-num hs-up\">+11.3% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">72</td>",
+    "<td class=\"hs-er\">2026-11-04 AMC</td>"
+   ]
+  },
+  {
+   "symbol": "SRE",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter -6.9%\">+3.7% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+70%</td>",
+    "<td class=\"mono hs-num hs-up\">+33.7% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">70</td>",
+    "<td class=\"hs-er\">2026-11-04</td>"
+   ]
+  },
+  {
+   "symbol": "AVA",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter -7.6%\">+0.5% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+153%</td>",
+    "<td class=\"mono hs-num hs-up\">+8.5% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Red flag\">47 ⚠️</td>",
+    "<td class=\"hs-er\">2026-11-04 BMO</td>"
+   ]
+  },
+  {
+   "symbol": "SR",
+   "cells": [
+    "<td class=\"mono hs-num hs-dn\" title=\"prior quarter -3.0%\">-0.4%</td>",
+    "<td class=\"hs-tier\" title=\"declining\">🔻 declining</td>",
+    "<td class=\"mono hs-num hs-up\">+1131%</td>",
+    "<td class=\"mono hs-num hs-up\">+50.3% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">62</td>",
+    "<td class=\"hs-er\">2026-11-13</td>"
+   ]
+  },
+  {
+   "symbol": "OGS",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +3.6%\">+5.1% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"steady\">➖ steady</td>",
+    "<td class=\"mono hs-num hs-up\">+40%</td>",
+    "<td class=\"mono hs-num hs-up\">+14.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">58</td>",
+    "<td class=\"hs-er\">2026-11-02</td>"
+   ]
+  },
+  {
+   "symbol": "ATO",
+   "cells": [
+    "<td class=\"mono hs-num hs-up\" title=\"prior quarter +0.6%\">+4.8% ⚡</td>",
+    "<td class=\"hs-tier\" title=\"weak\">🐌 weak</td>",
+    "<td class=\"mono hs-num hs-up\">+23%</td>",
+    "<td class=\"mono hs-num hs-up\">+27.6% ↑</td>",
+    "<td class=\"mono hs-num\" title=\"Accelerating\">58</td>",
+    "<td class=\"hs-er\">2026-11-04 AMC</td>"
+   ]
+  }
+ ]
+}

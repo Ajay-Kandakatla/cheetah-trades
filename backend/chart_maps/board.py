@@ -4743,7 +4743,7 @@ def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                     sort: str = DEFAULT_SORT, min_tier: Optional[str] = None, *,
                     ctx: Optional[dict] = None, now: Optional[datetime] = None,
                     hb_filters: Optional[str] = None, hb_mode: Optional[str] = None,
-                    hb_all: bool = False) -> dict:
+                    hb_all: bool = False, hb_dir: Optional[str] = None) -> dict:
     """🎢 High Beta — every High-Beta stock of the full universe ∪ the
     Nasdaq-100 in his three categories, with today's move.
 
@@ -4758,6 +4758,14 @@ def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     (ONE `_bulk_snaps` + ONE `zone_store.load_latest`). Memo rows are never
     mutated: every tile is built from a deep copy.
 
+    2026-10-14 b — header sorts. Ajay 2026-10-14: *"Can you add sort function
+    on the headers and also 5 day and 21 days columns ..."*. `sort` is any
+    `HB.TAB_SORTS` key (one per sortable column) and `hb_dir` its direction
+    ("asc" | "desc"; None / junk = the column's own first direction, resolved
+    by `HB.resolve_dir`). `HB.rank` orders every row; the charts are the top of
+    that SAME order (tiles keep the rank order through `_score`), so the cards
+    follow the header the reader tapped.
+
     UNMEASURED and display only — an order, not a signal.
     """
     min_tier = min_tier or default_min_tier("high_beta")  # the tab opens with no floor (Ajay 2026-10-14)
@@ -4771,16 +4779,17 @@ def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
     got = HB.cached_or_warm(universe, now=now_et)
     if got["state"] == "warming":
         return {"tiles": [], "rows": [], "warming": True, "note": HB.WARMING_NOTE,
-                "high_beta_board": HB.warming_block(now=now_et, sort=sort, include_green=green)}
+                "high_beta_board": HB.warming_block(now=now_et, sort=sort, include_green=green,
+                                                    direction=hb_dir)}
     if got["state"] == "error":
         return {"tiles": [], "rows": [], "note": HB.error_note(got.get("reason")),
                 "high_beta_board": HB.error_block(got.get("reason"), now=now_et, sort=sort,
-                                                  include_green=green)}
+                                                  include_green=green, direction=hb_dir)}
     entry = got["entry"]                                    # READ-ONLY (the memo's)
     active = HB.parse_filters(hb_filters)
     mode = HB.parse_mode(hb_mode)
-    rows, counts, filters = HB.rank(entry, sort=sort, active=active, mode=mode,
-                                    include_green=green)
+    rows, counts, filters = HB.rank(entry, sort=sort, direction=hb_dir, active=active,
+                                    mode=mode, include_green=green)
 
     # 1 — the liquidity floor on the 50 closed sessions before this one. It
     # cuts the CHART pool only: `rows` keeps EVERY name in the view (A1 / his
@@ -4875,7 +4884,8 @@ def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
             "high_beta_board": HB.ready_block(counts, entry=entry, sort=sort,
                                               min_tier_label=tier_label, filters=filters,
                                               include_green=green,
-                                              stale=bool(got.get("stale")), charts=len(out))}
+                                              stale=bool(got.get("stale")), charts=len(out),
+                                              direction=hb_dir)}
 
 
 def high_beta_watch(*, now: Optional[datetime] = None) -> dict:
@@ -7399,7 +7409,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           dm_mode: Optional[str] = None, uv: Optional[str] = None,
           res: Optional[str] = None, res_mode: Optional[str] = None,
           depth: Optional[str] = None, hb: Optional[str] = None,
-          hb_mode: Optional[str] = None, hb_all: bool = False) -> dict:
+          hb_mode: Optional[str] = None, hb_all: bool = False,
+          hb_dir: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -7440,6 +7451,12 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     names too; the default view is the red names (his ask: "all down today").
     Every other tab ignores all three.
 
+    `hb_dir` (2026-10-14 b) reaches ONLY the 🎢 high_beta tab — the direction
+    of the active header sort, "asc" | "desc"; None (the default) or junk =
+    that column's own first direction. Ajay 2026-10-14: "Can you add sort
+    function on the headers and also 5 day and 21 days columns to show how they
+    were reacting in price like hot sectors ...". Every other tab ignores it.
+
     `uv` (2026-09-29) reaches ONLY the undervalue tab — `peers` = the 🏷️
     vs-peers view, anything else = the 💎 view (default, unchanged). Every
     other tab ignores it and carries no `undervalue_view` key.
@@ -7475,7 +7492,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # today tab's (2026-10-05), the same precedent.
     from chart_maps import drop10_tab as _D10
     # 🎢 `hb_swing` / `hb_drop` / `hb_vol` are the High Beta tab's (2026-10-14),
-    # the same precedent.
+    # the same precedent; since 2026-10-14 b `_HB.TAB_SORTS` also holds one key
+    # per sortable table column (the header sorts).
     from chart_maps import high_beta_tab as _HB
     srt = sort if (sort in SORTS
                    or (t == "dual_momentum" and sort in _DMT.TAB_SORTS)
@@ -7495,8 +7513,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         # only the tab's own four served orders (the resiliency precedent)
         srt = DEFAULT_SORT
     if t == "high_beta":
-        # only the tab's own three served orders; `default` resolves to
-        # β × today's drop and the served `sort` is that explicit key
+        # only the tab's own orders (the three presets + the header sorts,
+        # 2026-10-14 b); `default` resolves to β × today's drop and the served
+        # `sort` is that explicit key
         srt = _HB.resolve_sort(srt)
     tier = min_tier if min_tier in LIQ_TIERS else DEFAULT_MIN_TIER
 
@@ -7530,7 +7549,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         out = high_beta_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx,
                               hb_filters=hb if isinstance(hb, str) else None,
                               hb_mode=hb_mode if isinstance(hb_mode, str) else None,
-                              hb_all=hb_all is True)
+                              hb_all=hb_all is True,
+                              hb_dir=hb_dir if isinstance(hb_dir, str) else None)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -7621,7 +7641,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
             "studies": studies, "levels": levels, "grades": grades,
             "flight": flight, "dm": dm, "dm_mode": dm_mode, "uv": uv,
             "res": res, "res_mode": res_mode, "depth": depth,
-            "hb": hb, "hb_mode": hb_mode, "hb_all": hb_all})
+            "hb": hb, "hb_mode": hb_mode, "hb_all": hb_all, "hb_dir": hb_dir})
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart maps: membership snapshot skipped: %s", exc)
     out["count"] = len(out.get("tiles") or [])
@@ -7687,7 +7707,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         # 🔻 / 📉 / 🔄 / 📊 — exactly these four served keys.
         out["sorts"] = _D10.served_sorts()
     if t == "high_beta":
-        # 🎢 / 📉 / 🌊 — exactly these three served keys.
+        # 🎢 / 📉 / 🌊 — exactly these three served keys (the preset buttons; the
+        # header sorts are served on `high_beta_board.table`, 2026-10-14 b).
         out["sorts"] = _HB.served_sorts()
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.

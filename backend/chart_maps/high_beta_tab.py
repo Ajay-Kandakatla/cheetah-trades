@@ -35,6 +35,28 @@ compact row for every listed name in the view; the charts are the top of it.
 THREE ORDERS: β × today's drop (default), today's drop, σ (most volatile
 first). An order, not a forecast.
 
+2026-10-14 b — HEADER SORTS, 5 / 21 DAYS, THE SALES VIEW. Ajay, verbatim: "Can
+you add sort function on the headers and also 5 day and 21 days columns to show
+how they were reacting in price like hot sectors and also add sales tab make it
+like hot sector with some important metrics like EPS, QUAlity and other colums
+that show the strength of the stock".
+  * Every column of both views sorts on the SERVER (`HEADER_SORTS`, `hb_dir`
+    asc|desc, absent = the column's own first direction). The three presets in
+    their first direction run `sort_key` verbatim; every other (key, direction)
+    runs 🔥 Hottest's engine (`HOT._sorter` + `HOT._rank_names`: missing last
+    both ways, ties A→Z). The charts are the top of the same order.
+  * 5 / 21 days (and RS vs SPY over 63) = the `rotation.tracker` engine
+    (`RT.trailing_return`, `RT.traction_row`) over closed bars the base already
+    reads: live -> through the prior close (today stays in Today); after the
+    close / closed -> through the session's own close. "vs RSP" = the stock's
+    move minus RSP's (SPY when RSP has no read, the tracker rule).
+  * Sales view = the 🔥 Hottest functions verbatim (`HOT._decision_map`,
+    `HOT._earnings_map`, `HOT._fundamentals_row`, `HOT._quality_info`), read in
+    the warm thread AFTER the base (the base build does not grow), memoised
+    `FUND_TTL_SEC`; a failed or empty read is never memoised and serves blank
+    cells, never zero.
+  Display only — UNMEASURED on this tab; nothing gates, sizes or alerts on them.
+
 THE MEMO. The 🔻 shape: a per-session base (β, σ, prior close, categories)
 memoised for `BASE_TTL_SEC`, the live half rebuilt per `LIVE_TTL_SEC` /
 `CLOSED_TTL_SEC` (cache freshness, never rules) by ONE background thread per
@@ -60,6 +82,7 @@ from typing import Optional
 from chart_maps import drop10_tab as D10
 from chart_maps import dual_momentum_tab as DMT
 from chart_maps import resiliency_tab as RES
+from rotation import hottest as HOT
 from rotation import tracker as RT
 from sepa import beta as BETA
 from sepa import levered_etf as LE
@@ -102,7 +125,8 @@ DEFAULT_SORT = "default"                 # == board.DEFAULT_SORT (test-pinned; n
 SORT_SWING = "hb_swing"
 SORT_DROP = "hb_drop"
 SORT_VOL = "hb_vol"
-TAB_SORTS = (SORT_SWING, SORT_DROP, SORT_VOL)
+# TAB_SORTS (every header sort, the three presets first) is assembled below
+# TABLE_COLUMNS, beside HEADER_SORTS (2026-10-14 b).
 SWING_SORT_LABEL = f"{MARK} β × today's drop"
 DROP_SORT_LABEL = f"{DROP_MARK} Today's drop"
 VOL_SORT_LABEL = f"{VOL_MARK} Most volatile (σ {SIGMA_BARS}d)"
@@ -126,14 +150,91 @@ STAT_BETA, STAT_TODAY, STAT_SWING = "β", "Today", "β × drop"
 # equivalents like IRE for IREN, VSTL for VST"): the leveraged-ETF column sits
 # right after Symbol (position = HIS CALL #8); its head is LE.STAT_KEY, the
 # card's fold stat key.
-TABLE_COLUMNS = (("symbol", "Symbol"), ("levered", LE.STAT_KEY), ("today", STAT_TODAY), ("beta", STAT_BETA),
-                 ("swing", STAT_SWING), ("sigma", STAT_SIGMA), ("cats", MARK),
+# 2026-10-14 b — header sorts, 5 / 21 days, the Sales view. Ajay 2026-10-14: "Can you add sort function on the headers
+# and also 5 day and 21 days columns ... and also add sales tab make it like hot sector ..."
+LEG_FAST = RT.WINDOW_FAST                # Ajay 2026-10-14 ("5 day") — the 🔥 tracker's own window
+LEG_SHORT = RT.WINDOW_SHORT              # Ajay 2026-10-14 ("21 days")
+RS_WINDOW = RT.WINDOW_MED                # Ajay 2026-10-14 (K3 "RS vs SPY (63-day)")
+RS_BENCH = BENCH                         # Ajay 2026-10-14 (K3) — SPY
+REL_FALLBACK = RT.BENCHMARK_FALLBACK     # house (tracker): SPY when RSP has no read for the window
+TAIL_BARS = RS_WINDOW + 1                # derived — the closes a RS_WINDOW-session window needs
+FUND_TTL_SEC = BASE_TTL_SEC              # MINE — cache freshness, not a rule (research cache refreshes weekly)
+LEG_TEXT_DP = 1                          # MINE — 🔥 Hottest's pct() prints 1 dp
+DIR_PARAM = "hb_dir"
+DIRS = ("desc", "asc")
+TABLE_VIEW_PARAM = "hb_view"
+VIEW_PRICE = "price"
+VIEW_SALES = "sales"
+VIEW_LABELS = {VIEW_PRICE: "Price", VIEW_SALES: "Sales"}     # MINE wording
+FUND_READY, FUND_NOT_READ = "ready", "not_read"
+FUND_ROW_KEYS = ("sales_yoy", "sales_prior_yoy", "sales_accelerating", "sales_tier", "period_ok", "q_eps_yoy",
+                 "net_margin", "margin_expanding", "eq_score", "eq_tier", "code_33", "inventory_flag",
+                 "next_earnings", "earnings_when")
+SORT_SYMBOL = "hb_symbol"
+SORT_LEVERED = "hb_levered"
+SORT_BETA = "hb_beta"
+SORT_CATS = "hb_cats"
+SORT_QQQ = "hb_qqq"
+SORT_RET_5D = "hb_ret_5d"
+SORT_REL_5D = "hb_rel_5d"
+SORT_RET_21D = "hb_ret_21d"
+SORT_REL_21D = "hb_rel_21d"
+SORT_SALES_YOY = "hb_sales_yoy"
+SORT_SALES_TIER = "hb_sales_tier"
+SORT_Q_EPS = "hb_q_eps_yoy"
+SORT_MARGIN = "hb_net_margin"
+SORT_QUALITY = "hb_eq_score"
+SORT_NEXT_ER = "hb_next_earnings"
+SORT_RS = "hb_rs_spy_63d"
+# sort key -> (column key, first direction). The three presets first, in their old order (K4: they stay and
+# become their columns' header sorts). First directions: Today asc (= 📉 hb_drop), Symbol asc, Next ER asc
+# (Hottest: who reports soonest), every other column desc. # MINE / K4
+HEADER_SORTS = {SORT_SWING: ("swing", "desc"), SORT_DROP: ("today", "asc"), SORT_VOL: ("sigma", "desc"),
+                SORT_SYMBOL: ("symbol", "asc"), SORT_LEVERED: ("levered", "desc"),
+                SORT_RET_5D: ("ret_5d", "desc"), SORT_REL_5D: ("rel_5d", "desc"),
+                SORT_RET_21D: ("ret_21d", "desc"), SORT_REL_21D: ("rel_21d", "desc"),
+                SORT_BETA: ("beta", "desc"), SORT_CATS: ("cats", "desc"), SORT_QQQ: ("qqq", "desc"),
+                SORT_SALES_YOY: ("sales_yoy", "desc"), SORT_SALES_TIER: ("sales_tier", "desc"),
+                SORT_Q_EPS: ("q_eps_yoy", "desc"), SORT_MARGIN: ("net_margin", "desc"),
+                SORT_QUALITY: ("eq_score", "desc"), SORT_NEXT_ER: ("next_earnings", "asc"),
+                SORT_RS: ("rs_spy_63d", "desc")}
+PRESET_DIRS = {SORT_SWING: "desc", SORT_DROP: "asc", SORT_VOL: "desc"}
+TAB_SORTS = tuple(HEADER_SORTS)          # replaces the 3-tuple; presets first
+COLUMN_SORT = {col: key for key, (col, _d) in HEADER_SORTS.items()}
+REL_LABEL_FMT = "{n} days vs {rel}"
+RS_LABEL = f"RS vs {RS_BENCH} ({RS_WINDOW}d)"
+TABLE_COLUMNS = (("symbol", "Symbol"), ("levered", LE.STAT_KEY), ("today", STAT_TODAY),
+                 ("ret_5d", f"{LEG_FAST} days"), ("rel_5d", REL_LABEL_FMT.format(n=LEG_FAST, rel=EW_BENCH)),
+                 ("ret_21d", f"{LEG_SHORT} days"), ("rel_21d", REL_LABEL_FMT.format(n=LEG_SHORT, rel=EW_BENCH)),
+                 ("beta", STAT_BETA), ("swing", STAT_SWING), ("sigma", STAT_SIGMA), ("cats", MARK),
                  ("qqq", QQQ_ETF))
+# The Sales view (K1): the six 🔥 Hottest fundamentals columns, labels == HS_COLS byte for byte, then K3's RS.
+SALES_COLUMNS = (("symbol", "Symbol"), ("levered", LE.STAT_KEY), ("today", STAT_TODAY),
+                 ("sales_yoy", "Sales YoY"), ("sales_tier", "Sales trend"), ("q_eps_yoy", "Q EPS"),
+                 ("net_margin", "Margin"), ("eq_score", "Quality"), ("next_earnings", "Next ER"),
+                 ("rs_spy_63d", RS_LABEL))
+REL_WINDOWS = {"rel_5d": LEG_FAST, "rel_21d": LEG_SHORT}
+REL_TITLE_FMT = "The {n}-session move minus {rel}'s over the same sessions, in percentage points"
+COLUMN_TITLES = {
+    "ret_5d": (f"The stock's own % move over the last {LEG_FAST} closed sessions — the line above names "
+               "the close they end on"),
+    "ret_21d": (f"The stock's own % move over the last {LEG_SHORT} closed sessions — the line above names "
+                "the close they end on"),
+    "rel_5d": REL_TITLE_FMT.format(n=LEG_FAST, rel=EW_BENCH),
+    "rel_21d": REL_TITLE_FMT.format(n=LEG_SHORT, rel=EW_BENCH),
+    # the three 🔥 HS_COLS titles, byte for byte (contract-pinned)
+    "sales_tier": "ranks explosive › strong › steady › weak › declining",
+    "eq_score": "Minervini Ch.8 earnings quality · \U0001F3AF Code 33 · ⚠️ inventory vs sales",
+    "next_earnings": "ascending = who reports soonest",
+    "rs_spy_63d": (f"The stock's {RS_WINDOW}-session move minus {RS_BENCH}'s to the same close, in "
+                   "percentage points. UNMEASURED."),
+}
 
 _MINUS = "−"
 
 _memo: dict = {}                # (mode, session_iso, ukey) -> entry
 _base_memo: dict = {}           # (session_iso, ukey) -> {"ts", "base"}
+_fund_memo: dict = {}           # (session_iso, ukey) -> {"ts", "fund"}  (2026-10-14 b; a READY read only)
 _warming: set = set()
 _failures: dict = {}            # key -> (ts, reason)
 _lock = threading.Lock()
@@ -174,6 +275,53 @@ FILTERS_NOTE_ALL = ("Ticked boxes narrow the list — every ticked box must pass
 FILTERS_NOTE_ANY = ("Ticked boxes narrow the list — a name passing ANY ticked box shows, with a "
                     "badge for each ticked box it passes; tick “must match all” to need "
                     "every one. They sort nothing, push nothing, gate nothing and enter no lane.")
+
+# 2026-10-14 b — the header-sort order line (a preset in its first direction keeps
+# its old line verbatim, `order_line`), the 5 / 21 days line and the Sales line.
+ORDER_FMT = "Order: {what}, {how}."
+ORDER_MISSING_FMT = " {n} with no value sit last."
+ORDER_NONE = " No name in view has a value for it this build, so the list is A→Z."
+ORDER_WHAT = {SORT_SWING: "β × today's drop", SORT_DROP: "today's move", SORT_VOL: f"σ ({SIGMA_BARS}d)",
+              SORT_SYMBOL: "the ticker", SORT_LEVERED: "the number of leveraged ETFs tagged",
+              SORT_BETA: "β",
+              SORT_RET_5D: f"the {LEG_FAST}-day move", SORT_REL_5D: f"the {LEG_FAST}-day move vs {{rel}}",
+              SORT_RET_21D: f"the {LEG_SHORT}-day move", SORT_REL_21D: f"the {LEG_SHORT}-day move vs {{rel}}",
+              SORT_CATS: f"the number of {MARK} categories", SORT_QQQ: "Nasdaq-100 membership",
+              SORT_SALES_YOY: "Sales YoY", SORT_SALES_TIER: "the sales trend",
+              SORT_Q_EPS: "Q EPS (the latest quarter's EPS growth)", SORT_MARGIN: "net margin",
+              SORT_QUALITY: "the Quality score", SORT_NEXT_ER: "the next earnings date",
+              SORT_RS: RS_LABEL}
+ORDER_HOW = {"desc": "highest first", "asc": "lowest first"}
+ORDER_HOW_BY = {SORT_SYMBOL: {"asc": "A→Z", "desc": "Z→A"},
+                SORT_NEXT_ER: {"asc": "soonest first", "desc": "latest first"},
+                SORT_SALES_TIER: {"desc": "explosive first", "asc": "declining first"},
+                SORT_QQQ: {"desc": "members first", "asc": "members last"},
+                SORT_CATS: {"desc": "most first", "asc": "fewest first"},
+                SORT_LEVERED: {"desc": "most first", "asc": "fewest first"},
+                SORT_SWING: {"desc": "largest first over the red names",
+                             "asc": "smallest first over the red names"},
+                SORT_VOL: {"desc": "most volatile first", "asc": "least volatile first"}}
+RETURNS_FMT = ("{fast} and {short} days = closed sessions through the {day} close{tail}: "
+               "{spy} {s1} / {s2} · {rsp} {r1} / {r2}.")
+RETURNS_TAIL_LIVE = " — today's live move is the Today column, not inside them"
+RETURNS_TAIL_CLOSED = ", the Today column's session included"
+REL_NOTE_FMT = " “vs {rel}” = the stock's move minus {rel}'s over the same sessions, in percentage points."
+REL_FALLBACK_NOTE = (f" {EW_BENCH} had no read for these sessions, so the vs columns are against "
+                     f"{REL_FALLBACK}.")
+REL_NONE_NOTE = (f" Neither {EW_BENCH} nor {REL_FALLBACK} was read for these sessions — the vs columns "
+                 "are blank.")
+NOT_READ_TEXT = "not read"
+FUND_EMPTY_REASON = "no row came back for any listed name"
+FUND_LINE_FMT = ("Sales view — the \U0001F525 Hottest numbers, read from the research cache at most once "
+                 "every {mins} minutes{cached} for {n} of {of} names; next earnings dates for {n_e}. "
+                 "RS vs {rs} = the stock's {w}-session move minus {rs}'s, to the same close as the "
+                 "{fast} and {short} days.")
+FUND_CACHED_FMT = " (figures cached {oldest} to {newest})"
+FUND_NOT_READ_FMT = ("Sales view — the research cache answered nothing this build ({reason}); the "
+                     "Sales columns stay blank, never zero, until the next refresh reads it.")
+FUND_NOTE = ("Display only — UNMEASURED on this tab: nothing here ranks a name as better, or gates, "
+             "sizes or alerts on Sales, EPS, margin, Quality or RS. Quality is a description (ⓘ), "
+             "not a tested edge. Not advice.")
 
 
 # ---------------------------------------------------------------------------
@@ -281,11 +429,20 @@ def rate_one(sym: str, df, *, session: date, bench_lr, trading_days, etf_set,
     b = BETA.beta_from_frame(past, bench_lr)
     if b is None:
         return "short_history", None
-    sg = RES.sigma_pct(RES.closes_by_day(past), trading_days)
+    closes = RES.closes_by_day(past)
+    sg = RES.sigma_pct(closes, trading_days)
+    # 2026-10-14 b: the last TAIL_BARS closed closes ride on the base row (no new
+    # fetch — the σ read above already built them) for the 5 / 21 / 63 legs.
     return "rated", {"symbol": sym, "beta": float(b), "sigma_pct": sg,
                      "prev_close": base["prev_close"], "prev_date": base["prev_date"],
                      "adv50": base.get("adv50"), "bar": base.get("bar"),
-                     "n_bars": base.get("n_bars")}
+                     "n_bars": base.get("n_bars"), "tail": close_tail(closes)}
+
+
+def close_tail(closes: dict) -> list:
+    """The last `TAIL_BARS` closes of a {iso: close} map, oldest first. PURE."""
+    c = closes if isinstance(closes, dict) else {}
+    return [c[d] for d in sorted(c)][-TAIL_BARS:]
 
 
 def categories(rated: dict) -> tuple:
@@ -380,9 +537,23 @@ def build_base(universe_key, session: date, *, universe_fn=None, frames_fn=None,
             bench[b] = D10.base_read(frames.get(b), session)
         except Exception:                                       # noqa: BLE001
             bench[b] = None
+    # 2026-10-14 b: SPY's and RSP's closed tails for the 5 / 21 / 63 legs — only
+    # when the bench's own last closed bar is the prior session (a stale bench
+    # is no read; the tracker's RSP -> SPY fallback then applies).
+    need_prev = KL.prev_market_day(session).isoformat()
+    bench_tail = {}
+    for b in (BENCH, EW_BENCH):
+        bt = None
+        try:
+            if bench.get(b) is not None and bench[b].get("prev_date") == need_prev:
+                bt = close_tail(RES.closes_by_day(zone_store.drop_today(frames.get(b), session)))
+        except Exception:                                       # noqa: BLE001
+            bt = None
+        bench_tail[b] = bt or None
     del frames
     now_ts = time.time()
     return {"session": session.isoformat(), "ukey": ukey, "rows": rows, "bench": bench,
+            "bench_tail": bench_tail,
             "counts": counts, "categories": cblock, "qqq": qblock,
             "built_ts": now_ts,
             "built_at": datetime.fromtimestamp(now_ts, tz=KL.ET).isoformat(timespec="seconds")}
@@ -399,6 +570,145 @@ def _base_for(key: tuple, universe_key, session: date, **fns) -> dict:
             _base_memo.pop(k, None)
         _base_memo[key] = {"ts": time.time(), "base": base}
     return base
+
+
+# ---------------------------------------------------------------------------
+# the Sales view's fundamentals (2026-10-14 b) — 🔥 Hottest's functions, read in
+# the warm thread AFTER the base (the base build never grows), memoised
+# ---------------------------------------------------------------------------
+def _fund_source(symbols) -> tuple:
+    """(decisions, earnings) — the ONE injection point (tests monkeypatch it).
+    Hottest's own readers: ONE projected research-cache read + ONE earnings
+    calendar read, each returning {} on any failure."""
+    return HOT._decision_map(symbols), HOT._earnings_map(symbols)
+
+
+def _fund_empty(of: int, reason) -> dict:
+    return {"state": FUND_NOT_READ, "rows": {}, "n": 0, "of": int(of), "n_earnings": 0,
+            "as_of": None, "quality_info": None, "reason": reason}
+
+
+def fund_read(symbols, *, fund_fn=None) -> dict:
+    """Never raises. Rows are `HOT._fundamentals_row` verbatim (the same
+    numbers 🔥 Hottest prints); `state` is ready only when the research cache
+    answered for at least one name."""
+    syms = sorted({str(s).strip().upper() for s in (symbols or ()) if str(s or "").strip()})
+    try:
+        dec, earn = (fund_fn or _fund_source)(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("high_beta tab: fundamentals read failed: %s", type(exc).__name__)
+        return _fund_empty(len(syms), _safe_reason(exc))
+    dec = dec if isinstance(dec, dict) else {}
+    earn = earn if isinstance(earn, dict) else {}
+    n = sum(1 for s in syms if s in dec)
+    if not n:
+        return _fund_empty(len(syms), FUND_EMPTY_REASON)
+    rows = {}
+    for s in syms:
+        try:
+            rows[s] = HOT._fundamentals_row(s, dec.get(s), earn.get(s))
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("high_beta tab: %s fundamentals row failed: %s", s, exc)
+    return {"state": FUND_READY, "rows": rows, "n": n, "of": len(syms),
+            "n_earnings": sum(1 for s in syms if s in earn),
+            "as_of": HOT._as_of_range(dec), "quality_info": HOT._quality_info(dec), "reason": None}
+
+
+def _fund_for(key: tuple, symbols, *, fund_fn=None) -> dict:
+    """The memoised read: served while fresh (< FUND_TTL_SEC) AND it holds every
+    asked name; otherwise re-read. Only a READY read is memoised — a failed or
+    empty read is tried again on the next build."""
+    want = {str(s).strip().upper() for s in (symbols or ())}
+    with _lock:
+        held = _fund_memo.get(key)
+    if (held is not None and (time.time() - held["ts"]) < FUND_TTL_SEC
+            and want <= set((held["fund"].get("rows") or {}))):
+        return held["fund"]
+    fund = fund_read(sorted(want), fund_fn=fund_fn)
+    if fund.get("state") == FUND_READY:
+        with _lock:
+            for k in [k for k in _fund_memo if k[0] < key[0]]:
+                _fund_memo.pop(k, None)
+            _fund_memo[key] = {"ts": time.time(), "fund": fund}
+    return fund
+
+
+def fund_row(full) -> Optional[dict]:
+    """The served `fund` object: exactly FUND_ROW_KEYS, values unchanged. PURE."""
+    if not isinstance(full, dict):
+        return None
+    return {k: full.get(k) for k in FUND_ROW_KEYS}
+
+
+# ---------------------------------------------------------------------------
+# 5 / 21 days and RS (2026-10-14 b) — the rotation.tracker engine (PURE)
+# ---------------------------------------------------------------------------
+def leg_bars(tail, td, mode: str) -> Optional[list]:
+    """The tracker's bar list for one name. Live: the closed tail (through the
+    prior close — today's live move stays in Today). After the close / closed:
+    the tail + the session's own print, only when today is READ; else None."""
+    if not tail:
+        return None
+    bars = [{"c": float(c)} for c in tail]
+    if mode == MODE_LIVE:
+        return bars
+    t = td if isinstance(td, dict) else {}
+    p = _pos(t.get("print"))
+    if t.get("state") == "read" and p is not None:
+        return bars + [{"c": p}]
+    return None
+
+
+def window_moves(bars) -> dict:
+    """{"ret_5d", "ret_21d", "ret_63d"}: `RT.trailing_return` rounded 2 dp
+    (the `member_stats` rule); None when the engine says None."""
+    out = {}
+    for key, n in (("ret_5d", LEG_FAST), ("ret_21d", LEG_SHORT), ("ret_63d", RS_WINDOW)):
+        v = RT.trailing_return(bars, n) if bars else None
+        out[key] = None if v is None else round(v, 2)
+    return out
+
+
+def bench_legs(base: dict, bench_today: dict, mode: str, session_iso: str) -> dict:
+    """SPY's and RSP's own legs to the same close as every row, which bench the
+    vs columns use (RSP, else SPY — the tracker rule — else none) and whether
+    RS vs SPY can be read."""
+    bt = (base or {}).get("bench_tail") or {}
+    bt_today = bench_today or {}
+    moves = {}
+    for b in (BENCH, EW_BENCH):
+        td = (bt_today.get(b) or (None, None))[0]
+        moves[b] = window_moves(leg_bars(bt.get(b), td, mode))
+
+    def _both(m):
+        return m.get("ret_5d") is not None and m.get("ret_21d") is not None
+    rel = EW_BENCH if _both(moves[EW_BENCH]) else (REL_FALLBACK if _both(moves.get(REL_FALLBACK) or {})
+                                                   else None)
+    if mode == MODE_LIVE:
+        bench = (base or {}).get("bench") or {}
+        end = next((bench[b]["prev_date"] for b in (BENCH, EW_BENCH)
+                    if isinstance(bench.get(b), dict) and bench[b].get("prev_date")),
+                   KL.prev_market_day(date.fromisoformat(session_iso)).isoformat())
+    else:
+        end = session_iso
+    return {"end": end, "mode": mode,
+            "through": "prior_close" if mode == MODE_LIVE else "session_close",
+            BENCH: moves[BENCH], EW_BENCH: moves[EW_BENCH], "rel": rel,
+            "rs": RS_BENCH if (moves.get(RS_BENCH) or {}).get("ret_63d") is not None else None}
+
+
+def row_legs(sym: str, tail, td, mode: str, legs: dict) -> dict:
+    """One row's 5 / 21 days, the same vs the rel bench, and RS vs SPY (63).
+    A side missing -> None; a raw move NEVER lands in a vs column."""
+    stat = window_moves(leg_bars(tail, td, mode))
+    lg = legs or {}
+    rel = (RT.traction_row(sym, stat, None, lg.get(lg["rel"]))
+           if lg.get("rel") and isinstance(lg.get(lg["rel"]), dict) else {})
+    rs = (RT.traction_row(sym, stat, None, lg.get(RS_BENCH))
+          if lg.get("rs") and isinstance(lg.get(RS_BENCH), dict) else {})
+    return {"ret_5d": stat["ret_5d"], "ret_21d": stat["ret_21d"],
+            "rel_5d": rel.get("rel_5d"), "rel_21d": rel.get("rel_21d"),
+            "rs_spy_63d": rs.get("rel_63d")}
 
 
 # ---------------------------------------------------------------------------
@@ -485,11 +795,14 @@ def _levered_state(now: datetime, levered_fn=None) -> dict:
         return {"state": "error", "reason": _safe_reason(exc)}
 
 
-def build_live(base: dict, now: datetime, *, snap_fn=None, levered_fn=None) -> dict:
+def build_live(base: dict, now: datetime, *, snap_fn=None, levered_fn=None, fund=None) -> dict:
     """ONE snapshot over the listed names + SPY / RSP / QQQ (live / after the
     close only), missing names asked ONCE more. Base rows are copied, never
     mutated. Each row carries its 🔗 leveraged-ETF items + chip (display
-    only: they sort, filter and gate nothing)."""
+    only: they filter and gate nothing; since 2026-10-14 b the 🔗 header sorts
+    on their count). 2026-10-14 b: each row also carries its 5 / 21 days, the
+    same vs RSP, RS vs SPY (63) and — when `fund` is READY — its 🔥 Hottest
+    fundamentals (`fund`, else None)."""
     mode, session, _tape, half = mode_for(now)
     s_iso = session.isoformat()
     listed = sorted((base.get("rows") or {}))
@@ -519,12 +832,24 @@ def build_live(base: dict, now: datetime, *, snap_fn=None, levered_fn=None) -> d
     as_ofs: list = []
     lev = _levered_state(now, levered_fn)
     n_lev = 0
+    # the bench reads first (they read `snaps` only): the legs need them
+    bench_today = {}
+    for bsym in benches:
+        td, ms = today_read((base.get("bench") or {}).get(bsym), snaps.get(bsym), mode=mode,
+                            session=session, answered=(mode == MODE_CLOSED or bsym in snaps))
+        bench_today[bsym] = (td, ms)
+    legs = bench_legs(base, bench_today, mode, s_iso)
+    fund = fund if isinstance(fund, dict) else {}
+    fund_ready = fund.get("state") == FUND_READY
+    fund_rows = fund.get("rows") or {}
     for s in listed:
         b = base["rows"][s]
         td, ms = today_read(b, snaps.get(s), mode=mode, session=session,
                             answered=(mode == MODE_CLOSED or s in snaps))
-        r = {k: v for k, v in b.items() if k != "bar"}
+        r = {k: v for k, v in b.items() if k not in ("bar", "tail")}
         r["today"] = td
+        r.update(row_legs(s, b.get("tail"), td, mode, legs))
+        r["fund"] = fund_row(fund_rows.get(s)) if fund_ready else None
         r["swing"] = swing(r.get("beta"), td.get("move_pct"))
         r["hb_filter"] = tile_filter(r, qqq_available=qqq_ok)
         full = LE.items_for(lev, s)
@@ -550,11 +875,6 @@ def build_live(base: dict, now: datetime, *, snap_fn=None, levered_fn=None) -> d
             suspects.append({"symbol": s, "reason": td.get("reason"), "print": td.get("print"),
                              "prev_close": td.get("prev_close")})
 
-    bench_today = {}
-    for bsym in benches:
-        td, ms = today_read((base.get("bench") or {}).get(bsym), snaps.get(bsym), mode=mode,
-                            session=session, answered=(mode == MODE_CLOSED or bsym in snaps))
-        bench_today[bsym] = (td, ms)
     spy_td, spy_ms = bench_today[BENCH]
     summary = {"mode": mode, "day": s_iso, "half_day": bool(half),
                "read": counts["read"], "up": counts["up"], "red": counts["red"],
@@ -577,18 +897,25 @@ def build_live(base: dict, now: datetime, *, snap_fn=None, levered_fn=None) -> d
             "half_day": bool(half), "built_ts": now_ts,
             "built_at": datetime.fromtimestamp(now_ts, tz=KL.ET).isoformat(timespec="seconds"),
             "base_built_at": base.get("built_at"), "ukey": base.get("ukey"),
-            "levered": LE.status_block(lev, n_on=n_lev, listed=len(listed))}
+            "levered": LE.status_block(lev, n_on=n_lev, listed=len(listed)),
+            "legs": legs,
+            "fundamentals": {"state": fund.get("state") or FUND_NOT_READ,
+                             **{k: fund.get(k) for k in ("n", "of", "n_earnings", "as_of",
+                                                         "quality_info", "reason")}}}
 
 
 def build(universe_key, now: datetime, *, universe_fn=None, frames_fn=None, qqq_fn=None,
-          etf_fn=None, is_delisted=None, snap_fn=None, levered_fn=None) -> dict:
-    """The memo's entry: the session's base (memoised) + today's read."""
+          etf_fn=None, is_delisted=None, snap_fn=None, levered_fn=None, fund_fn=None) -> dict:
+    """The memo's entry: the session's base (memoised) + the Sales view's
+    fundamentals (memoised apart, read AFTER the base — 2026-10-14 b) + today's
+    read."""
     _mode, session, _t, _h = mode_for(now)
     ukey = _ukey(universe_key)
     base = _base_for((session.isoformat(), ukey), ukey, session, universe_fn=universe_fn,
                      frames_fn=frames_fn, qqq_fn=qqq_fn, etf_fn=etf_fn,
                      is_delisted=is_delisted)
-    return build_live(base, now, snap_fn=snap_fn, levered_fn=levered_fn)
+    fund = _fund_for((session.isoformat(), ukey), sorted(base.get("rows") or {}), fund_fn=fund_fn)
+    return build_live(base, now, snap_fn=snap_fn, levered_fn=levered_fn, fund=fund)
 
 
 # ---------------------------------------------------------------------------
@@ -695,7 +1022,21 @@ def cached_or_warm(universe_key, *, now: datetime, sync: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 def resolve_sort(sort) -> str:
     """The served key: `default` (and any unknown key) -> β × today's drop."""
-    return sort if sort in TAB_SORTS else SORT_SWING
+    return sort if isinstance(sort, str) and sort in TAB_SORTS else SORT_SWING
+
+
+def resolve_dir(sort, direction) -> str:
+    """`hb_dir` -> "asc" | "desc"; absent / blank / junk -> the key's own first
+    direction (never an error)."""
+    d = direction.strip().lower() if isinstance(direction, str) else None
+    return d if d in DIRS else HEADER_SORTS[resolve_sort(sort)][1]
+
+
+def preset_for(sort, direction) -> Optional[str]:
+    """The preset button that is ON: a preset key in its own first direction,
+    else None (a flipped preset or any other header sort)."""
+    srt = resolve_sort(sort)
+    return srt if (srt in PRESET_DIRS and resolve_dir(srt, direction) == PRESET_DIRS[srt]) else None
 
 
 def parse_filters(spec) -> tuple:
@@ -716,6 +1057,50 @@ def _bucket(r: dict) -> int:
     if td.get("state") != "read" or mv is None:
         return 2
     return 0 if mv < 0 else 1
+
+
+def sort_fields(r: dict, *, qqq_available: bool) -> dict:
+    """The value each header sort reads, by column key (§3.0). PURE. Missing =
+    None (or a NaN, which `HOT._sort_value` drops) — it sorts last both ways."""
+    r = r if isinstance(r, dict) else {}
+    td = r.get("today") or {}
+    fund = r.get("fund") if isinstance(r.get("fund"), dict) else {}
+    lev = r.get("levered")
+    out = {"symbol": str(r.get("symbol") or ""),
+           "levered": float(len(lev)) if isinstance(lev, list) and lev else None,
+           "today": td.get("move_pct") if td.get("state") == "read" else None,
+           "swing": r.get("swing") if is_red(r) else None,
+           "sigma": r.get("sigma_pct"), "beta": r.get("beta"),
+           "cats": float(len(r.get("cats") or [])),
+           "qqq": (1.0 if r.get("qqq") else 0.0) if qqq_available else None}
+    for k in ("ret_5d", "rel_5d", "ret_21d", "rel_21d", "rs_spy_63d"):
+        out[k] = r.get(k)
+    for k in ("sales_yoy", "sales_tier", "q_eps_yoy", "net_margin", "eq_score", "next_earnings"):
+        out[k] = fund.get(k)
+    return out
+
+
+def _present(fields: dict, col: str) -> bool:
+    if col == "symbol":
+        return True
+    return HOT._sort_value(fields, col)[0] == 1
+
+
+def order_rows(rows: list, sort, direction=None, *, qqq_available: bool) -> None:
+    """Sort the LIST in place (never the memo's dict). A preset in its own first
+    direction runs `sort_key` verbatim; Symbol sorts on the ticker; every other
+    (key, direction) is 🔥 Hottest's engine — missing last both ways, exact
+    ties A→Z."""
+    srt = resolve_sort(sort)
+    d = resolve_dir(srt, direction)
+    if srt in PRESET_DIRS and d == PRESET_DIRS[srt]:
+        rows.sort(key=sort_key(srt))
+        return
+    if srt == SORT_SYMBOL:
+        rows.sort(key=lambda r: str(r.get("symbol") or ""), reverse=(d == "desc"))
+        return
+    by = HOT._sorter(HEADER_SORTS[srt][0], d)
+    HOT._rank_names(rows, lambda r: by(sort_fields(r, qqq_available=qqq_available)))
 
 
 def sort_key(sort: str):
@@ -816,13 +1201,15 @@ def filters_block(tfs, active, *, pool: int, mode, qqq: dict) -> dict:
             "measured": False}
 
 
-def rank(entry: dict, *, sort: str, active=(), mode=DMT.MODE_ANY,
+def rank(entry: dict, *, sort: str, direction=None, active=(), mode=DMT.MODE_ANY,
          include_green: bool = False) -> tuple:
     """(rows in the asked order after the view + the ticked boxes, counts,
-    filters block). Rows are the memo's own dicts — READ-ONLY."""
+    filters block). Rows are the memo's own dicts — READ-ONLY. `direction` =
+    `hb_dir` (2026-10-14 b; None = the key's first direction)."""
     srt = resolve_sort(sort)
     every = list((entry.get("rows") or {}).values())
-    every.sort(key=sort_key(srt))
+    q_ok = qqq_available(entry)
+    order_rows(every, srt, direction, qqq_available=q_ok)
     view = every if include_green else [r for r in every if is_red(r)]
     act = parse_filters(",".join(active)) if not isinstance(active, str) else parse_filters(active)
     filters = filters_block([r.get("hb_filter") for r in view], act, pool=len(view), mode=mode,
@@ -830,8 +1217,11 @@ def rank(entry: dict, *, sort: str, active=(), mode=DMT.MODE_ANY,
     kept = [r for r in view if DMT.passes(r.get("hb_filter"), act, mode)]
     counts = {k: 0 for k in COUNT_KEYS}
     counts.update({k: v for k, v in (entry.get("counts") or {}).items() if k in counts})
+    col = HEADER_SORTS[srt][0]
+    present = sum(1 for r in kept if _present(sort_fields(r, qqq_available=q_ok), col))
     counts.update(in_view=len(view), hidden_by_view=len(every) - len(view),
-                  hidden_by_filters=len(view) - len(kept))
+                  hidden_by_filters=len(view) - len(kept),
+                  sort_present=present, sort_missing=len(kept) - present)
     return kept, counts, filters
 
 
@@ -857,13 +1247,61 @@ def compact_row(r: dict, *, qqq_available: bool, thin: bool = False) -> dict:
             "thin": thin is True, "red": is_red(r),
             "levered": [dict(x) for x in (r.get("levered") or [])],
             "levered_chip": copy.deepcopy(r.get("levered_chip")),
+            "ret_5d": r.get("ret_5d"), "ret_21d": r.get("ret_21d"),
+            "rel_5d": r.get("rel_5d"), "rel_21d": r.get("rel_21d"),
+            "rs_spy_63d": r.get("rs_spy_63d"),
+            "fund": dict(r["fund"]) if isinstance(r.get("fund"), dict) else None,
             "text": {"beta": st[STAT_BETA], "today": st[STAT_TODAY], "swing": st[STAT_SWING],
-                     "sigma": st[STAT_SIGMA]}}
+                     "sigma": st[STAT_SIGMA],
+                     "ret_5d": leg_text(r.get("ret_5d")), "ret_21d": leg_text(r.get("ret_21d")),
+                     "rel_5d": pp_text(r.get("rel_5d")), "rel_21d": pp_text(r.get("rel_21d")),
+                     "rs_spy_63d": pp_text(r.get("rs_spy_63d"))}}
 
 
-def table_block() -> dict:
-    """`high_beta_board.table` (A1): the served heads and the badge words."""
-    return {"columns": [{"key": k, "label": lbl} for k, lbl in TABLE_COLUMNS],
+def _fixed(x: float, dp: int = LEG_TEXT_DP) -> str:
+    """Round the way JS `toFixed` does — HALF_UP on the exact binary value — so a
+    cell prints the same digits here and on 🔥 Hottest (Python's f-format is
+    half-even: 1.25 → "1.2" there, "1.3" on Hottest; final critic 2026-10-15)."""
+    from decimal import Decimal, ROUND_HALF_UP
+    q = Decimal(1).scaleb(-dp)
+    d = Decimal(x).quantize(q, rounding=ROUND_HALF_UP)
+    if d == 0:
+        d = abs(d)                                   # never "-0.0"
+    return f"{d:+.{dp}f}"
+
+
+def leg_text(v) -> str:
+    """An own move: "+12.3%" (LEG_TEXT_DP, like 🔥 Hottest's pct()); "—" unread."""
+    x = _f(v)
+    return _m(f"{_fixed(x)}%") if x is not None else "—"
+
+
+def pp_text(v) -> str:
+    """A vs / RS difference in percentage points: "+4.1 pp"; "—" unread."""
+    x = _f(v)
+    return _m(f"{_fixed(x)} pp") if x is not None else "—"
+
+
+def _column(key: str, label: str, rel: str) -> dict:
+    title = COLUMN_TITLES.get(key)
+    if key in REL_WINDOWS:
+        label = REL_LABEL_FMT.format(n=REL_WINDOWS[key], rel=rel)
+        title = REL_TITLE_FMT.format(n=REL_WINDOWS[key], rel=rel)
+    srt = COLUMN_SORT.get(key)
+    return {"key": key, "label": label, "title": title, "sort": srt,
+            "first": HEADER_SORTS[srt][1] if srt else None}
+
+
+def table_block(legs: Optional[dict] = None) -> dict:
+    """`high_beta_board.table` (A1): the served heads and the badge words.
+    2026-10-14 b: each column names its header sort + first direction; the
+    Sales view's columns ride beside the Price view's (the FE switch is
+    URL-only, `hb_view`); the vs heads name the bench actually used."""
+    rel = (legs or {}).get("rel") or EW_BENCH
+    return {"columns": [_column(k, lbl, rel) for k, lbl in TABLE_COLUMNS],
+            "sales_columns": [_column(k, lbl, rel) for k, lbl in SALES_COLUMNS],
+            "views": [{"key": v, "label": VIEW_LABELS[v]} for v in (VIEW_PRICE, VIEW_SALES)],
+            "view_param": TABLE_VIEW_PARAM,
             "cat_labels": dict(CAT_SHORT), "qqq_label": QQQ_ETF}
 
 
@@ -975,8 +1413,24 @@ def market_line(summary: dict) -> Optional[str]:
     return (line + " Over the High-Beta list.") if line else None
 
 
-def order_line(sort: str) -> str:
+def order_line(sort: str, direction=None, counts: Optional[dict] = None,
+               rel: Optional[str] = None) -> str:
+    """The served order line. A preset in its own first direction keeps its
+    old line verbatim; any other header sort (2026-10-14 b) says what it
+    orders on, which way, and how many names have no value (they sit last)."""
     srt = resolve_sort(sort)
+    d = resolve_dir(srt, direction)
+    if not (srt in PRESET_DIRS and d == PRESET_DIRS[srt]):
+        what = ORDER_WHAT[srt].format(rel=rel or EW_BENCH)
+        how = (ORDER_HOW_BY.get(srt) or ORDER_HOW).get(d) or ORDER_HOW[d]
+        text = ORDER_FMT.format(what=what, how=how)
+        c = counts if isinstance(counts, dict) else {}
+        missing, present = int(c.get("sort_missing") or 0), c.get("sort_present")
+        if missing > 0:
+            text += ORDER_MISSING_FMT.format(n=_n(missing))
+        if present is not None and int(present) == 0 and missing > 0:
+            text += ORDER_NONE
+        return text
     if srt == SORT_DROP:
         return ("Order: today's drop, deepest first; names up or flat follow (smallest move "
                 "first); names with no read last.")
@@ -985,6 +1439,62 @@ def order_line(sort: str) -> str:
                 "returns; a name with no σ sits last.")
     return ("Order: β × today's drop, largest first, over the red names; names up or flat today "
             "follow (smallest move first); names with no read last.")
+
+
+def returns_line(legs: Optional[dict]) -> Optional[str]:
+    """SPY's and RSP's own 5 / 21 days, the close the windows end on, and which
+    bench the vs columns use (2026-10-14 b). None without legs."""
+    if not isinstance(legs, dict) or not legs.get("end"):
+        return None
+    spy = legs.get(BENCH) or {}
+    rsp = legs.get(EW_BENCH) or {}
+    tail = RETURNS_TAIL_LIVE if legs.get("through") == "prior_close" else RETURNS_TAIL_CLOSED
+
+    def _t(v):
+        return leg_text(v) if _f(v) is not None else NOT_READ_TEXT
+    text = RETURNS_FMT.format(fast=LEG_FAST, short=LEG_SHORT,
+                              day=KL._day_mmdd(legs.get("end"), weekday=True), tail=tail,
+                              spy=BENCH, s1=_t(spy.get("ret_5d")), s2=_t(spy.get("ret_21d")),
+                              rsp=EW_BENCH, r1=_t(rsp.get("ret_5d")), r2=_t(rsp.get("ret_21d")))
+    rel = legs.get("rel")
+    if rel:
+        text += REL_NOTE_FMT.format(rel=rel)
+        if rel != EW_BENCH:
+            text += REL_FALLBACK_NOTE
+    else:
+        text += REL_NONE_NOTE
+    return text
+
+
+def fundamentals_block(entry: Optional[dict]) -> Optional[dict]:
+    """`high_beta_board.fundamentals` (2026-10-14 b): the Sales view's state,
+    coverage, the ⓘ Quality explainer (a COPY, group-row text dropped — 🎢 has
+    no group rows; the memo's dict is never touched) and the served words."""
+    if not isinstance(entry, dict):
+        return None
+    f = entry.get("fundamentals") if isinstance(entry.get("fundamentals"), dict) else {}
+    ready = f.get("state") == FUND_READY
+    qi = f.get("quality_info") if ready else None
+    if isinstance(qi, dict):
+        qi = copy.deepcopy(qi)
+        qi["group_rows"] = None
+    else:
+        qi = None
+    as_of = f.get("as_of") if (ready and isinstance(f.get("as_of"), dict)) else None
+    if ready:
+        cached = (FUND_CACHED_FMT.format(oldest=as_of.get("oldest"), newest=as_of.get("newest"))
+                  if as_of else "")
+        line = FUND_LINE_FMT.format(mins=int(FUND_TTL_SEC // 60), cached=cached, n=_n(f.get("n")),
+                                    of=_n(f.get("of")), n_e=_n(f.get("n_earnings")), rs=RS_BENCH,
+                                    w=RS_WINDOW, fast=LEG_FAST, short=LEG_SHORT)
+    else:
+        line = FUND_NOT_READ_FMT.format(reason=f.get("reason") or "not read yet")
+    return {"state": FUND_READY if ready else FUND_NOT_READ,
+            "n": int(f.get("n") or 0), "of": int(f.get("of") or 0),
+            "n_earnings": int(f.get("n_earnings") or 0),
+            "as_of": dict(as_of) if as_of else None, "quality_info": qi,
+            "reason": None if ready else (f.get("reason") or None),
+            "line": line, "note": FUND_NOTE}
 
 
 def view_line(include_green: bool, counts: dict) -> str:
@@ -1145,11 +1655,13 @@ def last_print(r: dict) -> Optional[float]:
 def _block(state: str, *, mode: str, session_iso: str, sort: str, header: str,
            entry: Optional[dict] = None, counts: Optional[dict] = None, stale: bool = False,
            min_tier_label: Optional[str] = None, filters: Optional[dict] = None,
-           include_green: bool = False) -> dict:
+           include_green: bool = False, direction=None) -> dict:
     ready = state == "ready" and entry is not None
     need = KL.prev_market_day(date.fromisoformat(session_iso)).isoformat()
     e = entry or {}
     study = study_block()
+    legs = e.get("legs") if ready else None
+    rel = (legs or {}).get("rel") if isinstance(legs, dict) else None
     return {"state": state, "mode": mode, "session": session_iso,
             "as_of": e.get("as_of") if ready else None,
             "built_at": e.get("built_at") if ready else None,
@@ -1158,9 +1670,12 @@ def _block(state: str, *, mode: str, session_iso: str, sort: str, header: str,
             "measured": study["status"] == "measured",
             "refresh_sec": LIVE_TTL_SEC if mode == MODE_LIVE else None,
             "sort": resolve_sort(sort), "header": header,
+            "sort_dir": resolve_dir(sort, direction), "sort_preset": preset_for(sort, direction),
+            "returns_line": returns_line(legs) if ready else None,
+            "fundamentals": fundamentals_block(e) if ready else None,
             "market_line": market_line(e.get("summary")) if ready else None,
             "qqq_line": qqq_line(e.get("qqq"), e.get("summary"), e.get("rows")) if ready else None,
-            "order_line": order_line(sort),
+            "order_line": order_line(sort, direction, counts if ready else None, rel),
             "view_line": view_line(include_green, counts) if ready else None,
             "count_line": (count_line(counts, min_tier_label=min_tier_label or "—",
                                       need_date=need) if ready else None),
@@ -1170,7 +1685,7 @@ def _block(state: str, *, mode: str, session_iso: str, sort: str, header: str,
                      "note": filter_note("qqq", e.get("qqq") or {})} if ready else None),
             "filters": filters if ready else None,
             "view": {"param": VIEW_PARAM, "on": bool(include_green), "label": VIEW_LABEL},
-            "table": table_block() if ready else None,
+            "table": table_block(legs) if ready else None,
             "levered": dict(e.get("levered") or {}) if ready else None,
             "note": study["text"], "study": study,
             "counts": dict(counts) if ready else None,
@@ -1178,7 +1693,8 @@ def _block(state: str, *, mode: str, session_iso: str, sort: str, header: str,
 
 
 def ready_block(counts: dict, *, entry: dict, sort: str, min_tier_label: str, filters: dict,
-                include_green: bool = False, stale: bool = False, charts: int = 0) -> dict:
+                include_green: bool = False, stale: bool = False, charts: int = 0,
+                direction=None) -> dict:
     return _block("ready", mode=str(entry.get("mode")), session_iso=str(entry["session"]),
                   sort=sort, header=header_text(counts, entry.get("categories"),
                                                 mode=entry.get("mode"),
@@ -1187,16 +1703,18 @@ def ready_block(counts: dict, *, entry: dict, sort: str, min_tier_label: str, fi
                                                 half_day=bool(entry.get("half_day")),
                                                 charts=charts),
                   entry=entry, counts=counts, stale=stale, min_tier_label=min_tier_label,
-                  filters=filters, include_green=include_green)
+                  filters=filters, include_green=include_green, direction=direction)
 
 
-def warming_block(*, now: datetime, sort: str, include_green: bool = False) -> dict:
+def warming_block(*, now: datetime, sort: str, include_green: bool = False,
+                  direction=None) -> dict:
     mode, session, _t, _h = mode_for(now)
     return _block("warming", mode=mode, session_iso=session.isoformat(), sort=sort,
-                  header=WARMING_NOTE, include_green=include_green)
+                  header=WARMING_NOTE, include_green=include_green, direction=direction)
 
 
-def error_block(reason, *, now: datetime, sort: str, include_green: bool = False) -> dict:
+def error_block(reason, *, now: datetime, sort: str, include_green: bool = False,
+                direction=None) -> dict:
     mode, session, _t, _h = mode_for(now)
     return _block("error", mode=mode, session_iso=session.isoformat(), sort=sort,
-                  header=error_note(reason), include_green=include_green)
+                  header=error_note(reason), include_green=include_green, direction=direction)

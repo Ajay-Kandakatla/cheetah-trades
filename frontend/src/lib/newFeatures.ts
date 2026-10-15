@@ -22,6 +22,16 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // 2026-10-14 b (shipped 2026-10-15 ET) — Ajay 2026-10-14: "Can you add sort function on the headers and also 5 day and
+  // 21 days columns to show how they were reacting in price like hot sectors and also add sales tab make it like hot
+  // sector with some important metrics like EPS, QUAlity and other colums that show the strength of the stock".
+  // The 5 / 21 / 63 are high_beta_tab.LEG_FAST / LEG_SHORT / RS_WINDOW (= rotation/tracker.py WINDOW_FAST / WINDOW_SHORT
+  // / WINDOW_MED), the 80 board.LIMIT_MAX, the 1 decimal high_beta_tab.LEG_TEXT_DP, the hour FUND_TTL_SEC (=
+  // drop10_tab.BASE_TTL_SEC), RSP / SPY tracker.BENCHMARK / BENCHMARK_FALLBACK — all pinned by scripts/contracts.mjs
+  // ("🎢 header sorts + Sales view"); change them there and here. YOUR CALLS = BUILD_SPEC2 §7 (minus #3, AMENDMENTS2 B3:
+  // 🔗 sorts) + B8's 1 decimal.
+  { id: 'chart-maps-high-beta-table-2026-10-15', addedAt: '2026-10-15', route: '/chart-maps?tab=high_beta',
+    label: '🎢 High Beta table: tap any header to sort (tap again to flip) — up to 80 charts follow the same order. Price adds 5 days and 21 days: each stock’s own move and the same against RSP, with SPY’s and RSP’s own in the line above. A Price | Sales switch keeps the same names and shows the 🔥 Hottest numbers — Sales YoY, Sales trend, Q EPS, Margin, Quality ⓘ, Next ER — plus RS vs SPY over 63 sessions. You said: “Can you add sort function on the headers and also 5 day and 21 days columns to show how they were reacting in price like hot sectors and also add sales tab make it like hot sector with some important metrics like EPS, QUAlity and other colums that show the strength of the stock”. Display only, UNMEASURED on this tab — not advice. YOUR CALLS: 5 days, 21 days and RS end at the last closed session (in market hours they run through yesterday’s close; today stays in Today); first tap = Today deepest drop first, Symbol A→Z, Next ER soonest first, every other column highest first; 🔗 sorts by how many leveraged ETFs are tagged; the Sort dropdown is hidden on 🎢 (the three buttons and the headers own the order); column order (Price: Symbol, 🔗, Today, 5 days, 5 days vs RSP, 21 days, 21 days vs RSP, β, β × drop, σ, 🎢, QQQ; Sales: Symbol, 🔗, Today, the six 🔥 columns, RS vs SPY last); the active sort stays when you switch Price ⇄ Sales; RS vs SPY = the 63-session move minus SPY’s in percentage points, not a ratio or a percentile; Sales numbers re-read at most once an hour, a failed read waits for the next refresh, the research cache’s off-until-restart latch is left as is; the Quality header keeps 🔥’s Minervini hover on a non-SEPA tab; Next ER prints a past date as 🔥 does; the cards get no new stat; one sort key (no shift-click tie-breaks); cells print 1 decimal like 🔥 Hottest (the order reads the finer number).' },
   // Ajay 2026-10-14: "Can you add a short tag on these stocks for their Leverage equivalents like IRE for IREN, VSTL for
   // VST". The 3 is backend sepa/levered_etf.SHOW_MAX, the 7 STALE_DAYS, the 1× MIN_FACTOR_EXCLUSIVE — change them there
   // and here. The map is DATA (the Massive reference list), never typed: IRE is filed as ETS, VSTL as ETF.

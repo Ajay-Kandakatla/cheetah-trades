@@ -6934,6 +6934,248 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🎢 header sorts + Sales view (2026-10-14 b): Sales heads / titles = 🔥 HS_COLS byte for byte, HS_FUND_KEYS = the Sales fund keys = FUND_SORTS ∪ {sales_tier, next_earnings}, HsFundCell reads only FUND_ROW_KEYS, every served column key is drawable (?raw mirror), the Hottest table recipe + CSS rules, no client sort, no Sort select on 🎢, the ✨ entry = the constants',
+    file: 'src/components/HighBetaBoardNote.tsx',
+    // 2026-10-14 b — Ajay 2026-10-14: "Can you add sort function on the headers
+    // and also 5 day and 21 days columns to show how they were reacting in price
+    // like hot sectors and also add sales tab make it like hot sector with some
+    // important metrics like EPS, QUAlity and other colums that show the strength
+    // of the stock". K1: the Sales view = the 🔥 Hottest columns through Hottest's
+    // own functions, never a second formula — so a head, a title or a cell that
+    // drifts from 🔥 is a second engine in disguise. B2 (AMENDMENTS2): a served
+    // column key the FE does not know is silently not drawn; this mirrors the
+    // HighBetaBoardNote.sales.test.tsx ?raw pin so the pre-commit hook catches it
+    // too. The ✨ numbers are the tracker's windows (BUILD_SPEC2 §4 M2).
+    // Each pure checker below is ALSO run on mutated inputs (NEGATIVE): a
+    // checker that stops catching its own drift fails this contract.
+    checks: (note) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\U([0-9A-Fa-f]{8})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\'/g, "'").replace(/\\"/g, '"');
+      const strip = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const hb = tryRead('../backend/chart_maps/high_beta_tab.py');
+      const hot = tryRead('../backend/rotation/hottest.py');
+      const tracker = tryRead('../backend/rotation/tracker.py');
+      const d10 = tryRead('../backend/chart_maps/drop10_tab.py');
+      const boardPy = tryRead('../backend/chart_maps/board.py');
+      const hs = tryRead('src/components/HottestSectors.tsx');
+      const page = tryRead('src/pages/ChartMaps.tsx');
+      const css = tryRead('src/styles.css');
+      const nf = tryRead('src/lib/newFeatures.ts');
+
+      // A top-level python assignment that may span lines: from "NAME = " to the
+      // first following line that does not start with whitespace.
+      const pyBlock = (src, name) => {
+        const m = new RegExp(`^${name} = `, 'm').exec(src);
+        if (!m) return null;
+        const rest = src.slice(m.index).split('\n');
+        const out = [rest[0]];
+        for (const l of rest.slice(1)) { if (/^\s/.test(l)) out.push(l); else break; }
+        return out.join('\n');
+      };
+      const pyStrs = (block) => (block ? [...block.matchAll(/"([^"]*)"/g)].map((m) => unesc(m[1])) : []);
+      const pyPairs = (name) => {
+        const b = pyBlock(hb, name);
+        if (!b) { errs.push(`high_beta_tab.py lost ${name} = (("key", label), …)`); return []; }
+        const keys = [...b.matchAll(/\("([a-z0-9_]+)",\s*/g)].map((m) => m[1]);
+        if (!keys.length) errs.push(`high_beta_tab.${name}: no ("key", label) pair parsed — this pin cannot read it`);
+        const lits = Object.fromEntries([...b.matchAll(/\("([a-z0-9_]+)",\s*"((?:[^"\\]|\\.)*)"\)/g)].map((m) => [m[1], unesc(m[2])]));
+        return keys.map((k) => ({ key: k, label: k in lits ? lits[k] : null }));
+      };
+      const tableCols = pyPairs('TABLE_COLUMNS');
+      const salesCols = pyPairs('SALES_COLUMNS');
+      const fundRowKeys = pyStrs(pyBlock(hb, 'FUND_ROW_KEYS'));
+      if (hb && fundRowKeys.length !== 14) errs.push(`high_beta_tab.FUND_ROW_KEYS must carry the 14 HOT._fundamentals_row keys (parsed ${fundRowKeys.length})`);
+      const fundSorts = pyStrs(pyBlock(hot, 'FUND_SORTS'));
+      if (hot && !fundSorts.length) errs.push('rotation/hottest.py lost FUND_SORTS = (…)');
+      const titlesBlock = pyBlock(hb, 'COLUMN_TITLES') || '';
+      const pyTitle = (k) => { const m = new RegExp(`"${k}":\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(titlesBlock); return m ? unesc(m[1]) : null; };
+
+      // 🔥 HS_COLS (key, label, title) and HS_FUND_KEYS, read from HottestSectors.tsx.
+      const hsAt = hs.indexOf('export const HS_COLS: HsCol[] = [');
+      const hsBody = hsAt >= 0 ? hs.slice(hsAt, hs.indexOf('\n];', hsAt)) : '';
+      if (hs && !hsBody) errs.push('HottestSectors.tsx lost export const HS_COLS: HsCol[] = [ … ];');
+      const hsCols = [...hsBody.matchAll(/\{[^{}]*\}/g)].map((m) => {
+        const g = (f) => { const x = new RegExp(`${f}: '((?:[^'\\\\]|\\\\.)*)'`).exec(m[0]); return x ? unesc(x[1]) : null; };
+        return { key: g('key'), label: g('label'), title: g('title') };
+      }).filter((c) => c.key);
+      const hsFundM = /export const HS_FUND_KEYS = \[([^\]]*)\] as const;/.exec(hs);
+      const hsFund = hsFundM ? [...hsFundM[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]) : [];
+      if (hs && hsFund.length !== 6) errs.push(`HottestSectors.tsx must export const HS_FUND_KEYS = [the six fund keys] as const (parsed ${hsFund.length})`);
+
+      // (1) Sales heads + the three titles = HS_COLS byte for byte.
+      const FUND_SET = new Set(hsFund);
+      const salesFund = salesCols.filter((c) => FUND_SET.has(c.key));
+      for (const c of salesFund) {
+        const h = hsCols.find((x) => x.key === c.key);
+        if (!h) { errs.push(`HS_COLS has no '${c.key}' column`); continue; }
+        if (c.label == null) errs.push(`high_beta_tab.SALES_COLUMNS "${c.key}" label is not a string literal — this pin cannot read it`);
+        else if (c.label !== h.label) errs.push(`high_beta_tab.SALES_COLUMNS "${c.key}" head "${c.label}" != 🔥 HS_COLS "${h.label}"`);
+        if (h.title != null && pyTitle(c.key) !== h.title) errs.push(`high_beta_tab.COLUMN_TITLES["${c.key}"] "${pyTitle(c.key)}" != 🔥 HS_COLS title "${h.title}"`);
+      }
+      for (const k of ['sales_tier', 'eq_score', 'next_earnings']) {
+        if (hsCols.length && !hsCols.find((x) => x.key === k && x.title)) errs.push(`🔥 HS_COLS '${k}' lost its title — the 🎢 copy has nothing to equal`);
+      }
+
+      // (2) HS_FUND_KEYS = the Sales fund keys in order (contiguous) = HS_COLS minus the legs = FUND_SORTS ∪ {tier, ER}.
+      const salesKeys = salesCols.map((c) => c.key);
+      const at = salesKeys.indexOf(hsFund[0]);
+      if (hsFund.length && salesKeys.slice(at, at + hsFund.length).join(',') !== hsFund.join(',')) {
+        errs.push(`high_beta_tab.SALES_COLUMNS must carry HS_FUND_KEYS [${hsFund.join(', ')}] contiguous and in order (got [${salesKeys.join(', ')}])`);
+      }
+      const hsMinusLegs = hsCols.map((c) => c.key).filter((k) => !/^rel_\d+d$/.test(k));
+      if (hsCols.length && hsMinusLegs.join(',') !== hsFund.join(',')) errs.push(`HS_FUND_KEYS [${hsFund.join(', ')}] != HS_COLS minus rel_* [${hsMinusLegs.join(', ')}]`);
+      const want = new Set([...fundSorts, 'sales_tier', 'next_earnings']);
+      if (fundSorts.length && (want.size !== FUND_SET.size || [...want].some((k) => !FUND_SET.has(k)))) {
+        errs.push(`HS_FUND_KEYS {${hsFund.join(', ')}} != hottest.FUND_SORTS ∪ {sales_tier, next_earnings} {${[...want].join(', ')}}`);
+      }
+
+      // (3) HsFundCell reads only FUND_ROW_KEYS; HsFundRow picks exactly them.
+      const cellAt = hs.indexOf('export function HsFundCell(');
+      const cellEnd = cellAt >= 0 ? hs.indexOf('\n}\n', cellAt) : -1;
+      const cellBody = cellAt >= 0 && cellEnd > cellAt ? strip(hs.slice(cellAt, cellEnd)) : '';
+      if (hs && !cellBody) errs.push('HottestSectors.tsx lost export function HsFundCell(…) { … }');
+      const reads = [...new Set([...cellBody.matchAll(/(?<![\w.])r\.([a-z0-9_]+)/g)].map((m) => m[1]))];
+      if (cellBody && !reads.length) errs.push('HsFundCell reads no r.<key> — this pin cannot see its fields');
+      const fundRowErrors = (rd, keys) => rd.filter((k) => !keys.includes(k)).map((k) => `HsFundCell reads r.${k} — not in high_beta_tab.FUND_ROW_KEYS (the 🎢 row would print it blank)`);
+      if (fundRowKeys.length) errs.push(...fundRowErrors(reads, fundRowKeys));
+      const pickM = /export type HsFundRow = Pick<HsName,([^>]*)>/.exec(hs);
+      const pick = pickM ? [...pickM[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]) : [];
+      if (hs && !pick.length) errs.push("HottestSectors.tsx lost export type HsFundRow = Pick<HsName, '…'>");
+      if (pick.length && fundRowKeys.length && (pick.length !== fundRowKeys.length || pick.some((k) => !fundRowKeys.includes(k)))) {
+        errs.push(`HsFundRow picks {${pick.join(', ')}} != high_beta_tab.FUND_ROW_KEYS {${fundRowKeys.join(', ')}}`);
+      }
+
+      // (4) B2 mirror: every served TABLE_COLUMNS / SALES_COLUMNS key ∈ HighBetaBoardNote COLUMN_KEYS.
+      const code = strip(note);
+      const setLits = (name, depth = 0) => {
+        if (name === 'HS_FUND_KEYS') return /import \{[^}]*\bHS_FUND_KEYS\b[^}]*\} from '\.\/HottestSectors'/.test(note) ? hsFund : null;
+        if (depth > 3) return null;
+        const m = new RegExp(`(?:export )?const ${name}\\b[^=]*= new Set(?:<[^>]*>)?\\(([\\s\\S]*?)\\);`).exec(code);
+        if (!m) return null;
+        const body = m[1];
+        const out = [...body.matchAll(/'([a-z0-9_]+)'/g)].map((x) => x[1]);
+        for (const s of body.matchAll(/(?:\.\.\.)?\b([A-Z][A-Z0-9_]+)\b/g)) {
+          const sub = setLits(s[1], depth + 1);
+          if (sub == null) return null;
+          out.push(...sub);
+        }
+        return out;
+      };
+      const colKeys = setLits('COLUMN_KEYS');
+      if (colKeys == null) errs.push('HighBetaBoardNote.tsx: export const COLUMN_KEYS = new Set([…]) could not be resolved (a spread of an unknown set) — this pin cannot read it');
+      const colKeyErrors = (served, known) => served.filter((k) => !known.includes(k)).map((k) => `high_beta_tab serves column "${k}" — not in HighBetaBoardNote COLUMN_KEYS, so the table silently drops it`);
+      const servedKeys = [...new Set([...tableCols, ...salesCols].map((c) => c.key))];
+      if (colKeys) errs.push(...colKeyErrors(servedKeys, colKeys));
+
+      // (5) The 🔥 table recipe, and the table never sorts rows itself.
+      if (!/import \{[^}]*\bHsFundCell\b[^}]*\} from '\.\/HottestSectors'/.test(note)) errs.push("HighBetaBoardNote.tsx must import { HsFundCell } from './HottestSectors' — one cell renderer");
+      if (!/import \{[^}]*\buseHScrollCue\b[^}]*\} from '\.\.\/hooks\/useHScrollCue'/.test(note)) errs.push("HighBetaBoardNote.tsx must import { useHScrollCue } from '../hooks/useHScrollCue'");
+      for (const cls of ['hs-scrollwrap', 'hs-scroll', 'hs-table', 'hs-sym', 'hs-sort', 'is-sorted', 'cm-hb-scroll']) {
+        if (!new RegExp(`(?<![\\w-])${cls}(?![\\w-])`).test(code)) errs.push(`HighBetaBoardNote.tsx must use the ${cls} class (the 🔥 Hottest header recipe)`);
+      }
+      if (/\.(?:sort|toSorted)\(/.test(code)) errs.push('HighBetaBoardNote.tsx calls .sort( / .toSorted( — the server owns the order (the cards follow it)');
+      const used = [...new Set([...code.matchAll(/(?<![\w-])(hs-[a-z][a-z0-9-]*|cm-hb-scroll)(?![\w-])/g)].map((m) => m[1]))];
+      const cssErrors = (classes, sheet) => classes.filter((c) => !new RegExp(`\\.${c}(?![\\w-])`).test(sheet)).map((c) => `HighBetaBoardNote.tsx uses .${c} but styles.css has no rule for it`);
+      errs.push(...cssErrors(used, css));
+
+      // (6) The generic Sort select is not on 🎢 (BUILD_SPEC2 §7 his call: buttons + headers own the order).
+      if (!/tab !== 'high_beta' && \(data\?\.sorts \|\| \[\]\)\.length > 0 && \(\s*<label className="cm-ctl">\s*Sort\s*<select\s*aria-label="Sort the board"/.test(page)) {
+        errs.push("ChartMaps.tsx: the \"Sort the board\" select must be gated by tab !== 'high_beta' && (data?.sorts || []).length > 0");
+      }
+
+      // (7) The ✨ entry: first, dated, routed, his ask verbatim, UNMEASURED, no bounce / fake / forecast word,
+      // and every number it types is the engine's.
+      const ID = 'chart-maps-high-beta-table-2026-10-15';
+      const ASK = 'Can you add sort function on the headers and also 5 day and 21 days columns to show how they were reacting in price like hot sectors and also add sales tab make it like hot sector with some important metrics like EPS, QUAlity and other colums that show the strength of the stock';
+      const tnum = (name) => { const m = new RegExp(`^${name} = (\\d+)\\b`, 'm').exec(tracker); return m ? Number(m[1]) : null; };
+      const tstr = (name) => { const m = new RegExp(`^${name} = "([A-Z]+)"`, 'm').exec(tracker); return m ? m[1] : null; };
+      const lim = /^LIMIT_MAX = (\d+)\b/m.exec(boardPy);
+      const dp = /^LEG_TEXT_DP = (\d+)\b/m.exec(hb);
+      const ttlM = /^BASE_TTL_SEC = (\d+)(?: \* (\d+))?\s/m.exec(d10);
+      const T = { fast: tnum('WINDOW_FAST'), short: tnum('WINDOW_SHORT'), med: tnum('WINDOW_MED'),
+                  rsp: tstr('BENCHMARK'), spy: tstr('BENCHMARK_FALLBACK'), limit: lim ? Number(lim[1]) : null,
+                  dp: dp ? Number(dp[1]) : null, ttl: ttlM ? Number(ttlM[1]) * Number(ttlM[2] || 1) : null,
+                  forbidden: pyStrs(pyBlock(hb, 'FORBIDDEN_WORDS')) };
+      for (const [k, v] of Object.entries(T)) if (v == null || (Array.isArray(v) && !v.length)) errs.push(`✨ pin: could not read ${k} from the engines (tracker WINDOW_* / BENCHMARK*, board.LIMIT_MAX, high_beta_tab.LEG_TEXT_DP / FORBIDDEN_WORDS, drop10_tab.BASE_TTL_SEC)`);
+      // The tab's legs ARE the tracker's windows, and its Sales memo IS the base TTL.
+      for (const [name, src] of [['LEG_FAST', 'WINDOW_FAST'], ['LEG_SHORT', 'WINDOW_SHORT'], ['RS_WINDOW', 'WINDOW_MED']]) {
+        if (hb && !new RegExp(`^${name} = RT\\.${src}\\b`, 'm').test(hb)) errs.push(`high_beta_tab.${name} must be RT.${src} (the 🔥 tracker's own window)`);
+      }
+      if (hb && !/^FUND_TTL_SEC = BASE_TTL_SEC\b/m.test(hb)) errs.push('high_beta_tab.FUND_TTL_SEC must be BASE_TTL_SEC (the ✨ says "at most once an hour")');
+      if (hb && !/^BASE_TTL_SEC(?:, \w+)* = D10\.BASE_TTL_SEC\b/m.test(hb)) errs.push('high_beta_tab.BASE_TTL_SEC must be drop10_tab.BASE_TTL_SEC');
+      if (!/^REL_FALLBACK = RT\.BENCHMARK_FALLBACK\b/m.test(hb)) errs.push('high_beta_tab.REL_FALLBACK must be RT.BENCHMARK_FALLBACK');
+
+      const nfAt = nf.indexOf('export const NEW_FEATURES: NewFeature[] = [');
+      const firstId = nfAt >= 0 ? (/\{ id: '([^']+)'/.exec(nf.slice(nfAt)) || [])[1] : null;
+      if (firstId !== ID) errs.push(`the FIRST NEW_FEATURES entry must be '${ID}' (got '${firstId}')`);
+      const idAt = nf.indexOf(`{ id: '${ID}'`);
+      let entry;
+      if (idAt >= 0) {
+        const nextAt = nf.indexOf('{ id: ', idAt + 4);
+        const raw = nf.slice(idAt, nextAt < 0 ? nf.indexOf('\n];', idAt) : nextAt);
+        const g = (f) => { const m = new RegExp(`${f}: (['"])((?:(?!\\1)[^\\\\]|\\\\.)*)\\1`).exec(raw); return m ? unesc(m[2]) : null; };
+        entry = { id: ID, addedAt: g('addedAt'), route: g('route'), label: g('label') || '' };
+      }
+      const entryErrors = (e, t) => {
+        if (!e) return [`newFeatures.ts lacks the ✨ entry id: '${ID}'`];
+        const out = [];
+        if (e.addedAt !== '2026-10-15') out.push(`the ✨ entry addedAt '${e.addedAt}' must be '2026-10-15' (the ET ship date)`);
+        if (e.route !== '/chart-maps?tab=high_beta') out.push(`the ✨ entry must route to '/chart-maps?tab=high_beta' (got '${e.route}')`);
+        const d = e.label;
+        if (!d.includes(`“${ASK}”`)) out.push('the ✨ entry must quote his ask verbatim, in “ ”');
+        if (!d.includes('UNMEASURED')) out.push('the ✨ entry must say UNMEASURED');
+        if (!/not advice/i.test(d)) out.push('the ✨ entry must say not advice');
+        if (/bounc|fake/i.test(d)) out.push('the ✨ entry says "bounce"/"fake" — surfaces he reads say reversal');
+        for (const w of t.forbidden) if (d.toLowerCase().includes(w.toLowerCase())) out.push(`the ✨ entry says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        const mine = d.split('You said:')[0];
+        const wins = [t.fast, t.short, t.med];
+        for (const need of [`${t.fast} days`, `${t.short} days`, `${t.med} sessions`, `${t.limit} charts`, `against ${t.rsp}`, `RS vs ${t.spy}`]) {
+          if (!mine.includes(need)) out.push(`the ✨ entry must state "${need}" before "You said:" (the engines' value)`);
+        }
+        for (const m of d.matchAll(/\b(\d+)[ -](?:days?|sessions?)\b|\b(\d+)d\b/g)) {
+          if (!wins.includes(Number(m[1] || m[2]))) out.push(`the ✨ entry says "${m[0]}" — the windows are tracker WINDOW_FAST/SHORT/MED ${wins.join(' / ')}`);
+        }
+        for (const m of d.matchAll(/\b(\d+) charts\b/g)) if (Number(m[1]) !== t.limit) out.push(`the ✨ entry says "${m[0]}" — board.LIMIT_MAX is ${t.limit}`);
+        for (const m of d.matchAll(/\b(\d+) decimals?\b/g)) if (Number(m[1]) !== t.dp) out.push(`the ✨ entry says "${m[0]}" — high_beta_tab.LEG_TEXT_DP is ${t.dp}`);
+        if (/once an hour/.test(d) && t.ttl !== 3600) out.push(`the ✨ entry says "once an hour" — drop10_tab.BASE_TTL_SEC is ${t.ttl} s`);
+        for (const m of d.matchAll(/\b(\d+) minutes\b/g)) if (Number(m[1]) * 60 !== t.ttl) out.push(`the ✨ entry says "${m[0]}" — FUND_TTL_SEC is ${t.ttl} s`);
+        return out;
+      };
+      errs.push(...entryErrors(entry, T));
+
+      // NEGATIVE self-tests: each checker must catch its own drift.
+      if (entry && !errs.length) {
+        const swap = (from, to) => ({ ...entry, label: entry.label.replace(from, to) });
+        const muts = [
+          ['21 days → 20 days', swap(`${T.short} days`, '20 days')],
+          ['63 sessions → 60 sessions', swap(`${T.med} sessions`, '60 sessions')],
+          ['80 charts → 50 charts', swap(`${T.limit} charts`, '50 charts')],
+          ['1 decimal → 2 decimals', swap(`${T.dp} decimal`, '2 decimals')],
+          ['once an hour → 15 minutes', swap('once an hour', 'once every 15 minutes')],
+          ['UNMEASURED dropped', { ...entry, label: entry.label.replace('UNMEASURED', 'measured') }],
+          ['ask edited', { ...entry, label: entry.label.replace('QUAlity', 'Quality') }],
+          ['a bounce', { ...entry, label: `${entry.label} A bounce.` }],
+          ['a forecast word', { ...entry, label: `${entry.label} Names likely to run.` }],
+          ['route', { ...entry, route: '/chart-maps' }],
+          ['addedAt', { ...entry, addedAt: '2026-10-14' }],
+        ];
+        for (const [what, bad] of muts) {
+          if (bad.label === entry.label && bad.route === entry.route && bad.addedAt === entry.addedAt) errs.push(`self-test: the "${what}" mutation did not apply — the ✨ label moved`);
+          else if (!entryErrors(bad, T).length) errs.push(`self-test: the ✨ checker missed "${what}"`);
+        }
+        if (entryErrors(undefined, T).length !== 1) errs.push('self-test: a missing ✨ entry is not reported');
+        if (colKeys && !colKeyErrors([...servedKeys, 'zz_new_col'], colKeys).length) errs.push('self-test: a served column key outside COLUMN_KEYS was not caught');
+        if (!fundRowErrors([...reads, 'zz_new_field'], fundRowKeys).length) errs.push('self-test: an HsFundCell read outside FUND_ROW_KEYS was not caught');
+        if (!cssErrors(['hs-zz-norule'], css).length) errs.push('self-test: a class with no styles.css rule was not caught');
+      }
+      return errs;
+    },
+  },
+  {
     name: '🎢 🗺️ tape-burst kinds (2026-10-14): in every registry, owner keep-set ON + default_prefs False, MARKET kinds, LIVE (never shadow), the burst numbers = tape.py, caps = tape_burst_kinds.py, window = trade_flash, own /alerts strip + chips, per-ticker tape links, never bounce',
     file: 'src/lib/alertKinds.ts',
     // Ajay 2026-10-14: "I need a tape burst notification specific for High

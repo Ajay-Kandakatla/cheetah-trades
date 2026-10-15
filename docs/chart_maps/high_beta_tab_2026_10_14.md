@@ -10,7 +10,7 @@ His knob answers: "give me all 3 categories" (the cut), "a lot of AI stocks are 
 
 The first message says "bounce back". Every served string (the tab blurb, the ✨ entry, the Notifications rows, every `.py` string literal) quotes the other sentences and leaves that one out; only this doc quotes it in full. A wording test walks the AST of `high_beta_tab.py` and of the ℹ️ section.
 
-URL: `https://pounce.ajaykandakatla.dev/chart-maps?tab=high_beta[&sort=hb_swing|hb_drop|hb_vol][&hb=b15,b20,top20,qqq,d5][&hb_mode=all][&hb_all=1]`
+URL: `https://pounce.ajaykandakatla.dev/chart-maps?tab=high_beta[&sort=hb_swing|hb_drop|hb_vol|<any header sort key>][&hb_dir=asc|desc][&hb=b15,b20,top20,qqq,d5][&hb_mode=all][&hb_all=1][&hb_view=sales]` (`hb_view` is FE-only URL state, never sent to the server)
 
 **Status: UNMEASURED.** Display only. Nothing here gates a scan, sizes a position or enters a lane, and nothing gates on it. It is read by the two tape kinds' watch lists (🎢 watches it, 🗺️ subtracts it from its own) and by the Chart Maps membership snapshot (`chart_maps/membership.py`, the ✨ arrivals "also on" links). The tape pushes describe prints, not this order.
 
@@ -70,6 +70,54 @@ Two more boxes: `qqq` (above) and `d5` = 📉 Down 5%+ today, today's move ≤ �
 
 β × drop is an order, not a forecast (AMENDMENTS A2: β × drop, never drop ÷ β). The default is MY pick (spec §7 #4). The 50-session σ window is his open call (DECISIONS K3a). Any other sort key on this tab (and `default`) → `hb_swing`, and `hb_drop` / `hb_vol` on any other tab → `default` (the 🔻 precedent).
 
+## Header sorts (2026-10-14 b)
+
+**Ask (Ajay 2026-10-14, verbatim):** "Can you add sort function on the headers and also 5 day and 21 days columns to show how they were reacting in price like hot sectors and also add sales tab make it like hot sector with some important metrics like EPS, QUAlity and other colums that show the strength of the stock"
+
+His knob answers (DECISIONS2): **K1** a Price | Sales toggle inside 🎢 (same names, same `hb_all` switch; Sales = the 🔥 Hottest fundamentals columns through Hottest's own functions). **K2** "Both (4 columns)": own 5 / 21-day move AND the same vs RSP; SPY's and RSP's own once in a header line. **K3** the strength column on Sales = "RS vs SPY (63-day)" only. **K4** every column of both views sorts on a header tap (first tap = the column's first direction, tap again flips, like 🔥); the top-80 chart cards follow the active (server) sort; the three presets stay and become their columns' header sorts.
+
+One server-side engine with two paths. A preset (`hb_swing` / `hb_drop` / `hb_vol`) in its own first direction runs the old `sort_key` verbatim — byte-identical orders, golden-tested on the old fixture's captured orders. Every other (key, direction) runs 🔥 Hottest's engine: `HOT._rank_names(rows, lambda r: HOT._sorter(col, dir)(sort_fields(r)))` — missing values LAST in both directions, exact ties A→Z, a NaN dropped by `HOT._num` (sorts as missing). The direction rides `hb_dir` (`DIR_PARAM`; `asc` | `desc`; absent, blank or junk → the column's first direction, never a 4xx). The FE sends `hb_dir` only when it differs from the column's first direction and drops `sort` for β × drop desc, so the default page request stays the default (`membership.is_default_request` True — the 2026-10-14 trap). The cards follow because `board.high_beta_tiles` builds the tiles in `rank` order; `out["sorts"]` stays the three presets.
+
+| sort key | column | first | value read |
+|---|---|---|---|
+| `hb_swing` | β × drop | desc | `swing`, red names only (preset: legacy `sort_key` when desc) |
+| `hb_drop` | Today | **asc** | today's move when read (preset: legacy when asc) |
+| `hb_vol` | σ | desc | `sigma_pct` (preset: legacy when desc) |
+| `hb_symbol` | Symbol | **asc** | the ticker, A→Z / Z→A |
+| `hb_levered` | 🔗 | desc | the number of tagged leveraged ETFs; untagged = missing (AMENDMENTS2 B3) |
+| `hb_ret_5d` / `hb_rel_5d` | 5 days / 5 days vs RSP | desc | the row legs |
+| `hb_ret_21d` / `hb_rel_21d` | 21 days / 21 days vs RSP | desc | the row legs |
+| `hb_beta` | β | desc | `beta` |
+| `hb_cats` | 🎢 | desc | the number of categories |
+| `hb_qqq` | QQQ | desc | member 1 / not 0 / None when the Nasdaq-100 list was not read |
+| `hb_sales_yoy` | Sales YoY | desc | `fund.sales_yoy` |
+| `hb_sales_tier` | Sales trend | desc | `fund.sales_tier` (🔥 `TIER_RANK` via `_sort_value`) |
+| `hb_q_eps_yoy` | Q EPS | desc | `fund.q_eps_yoy` |
+| `hb_net_margin` | Margin | desc | `fund.net_margin` |
+| `hb_eq_score` | Quality | desc | `fund.eq_score` |
+| `hb_next_earnings` | Next ER | **asc** | `fund.next_earnings` (🔥's date rule; asc = soonest) |
+| `hb_rs_spy_63d` | RS vs SPY (63d) | desc | the row legs |
+
+`TAB_SORTS = tuple(HEADER_SORTS)`, the three presets first in their old order. The block serves `sort_dir`, `sort_preset` (the preset key iff the active order is a preset in its first direction, else null) and an order line naming the column and how it runs ("Order: the 5-day move, lowest first." + how many with no value sit last). A flipped preset is NOT the exact mirror of the preset: the presets keep `sort_key`'s ties (−β, then symbol, the red / green / unread buckets), every other order ties A→Z. The header UX is 🔥's (`button.hs-sort`, `th.is-sorted`, `aria-sort`, the sticky first column, `useHScrollCue`'s "more columns →"); the table never sorts rows itself.
+
+## 5 days / 21 days
+
+- **Formula:** the tracker engine, never a port. Own move = `RT.trailing_return(bars, n)` (percent, `bars[-(n+1)]` close → `bars[-1]` close) for n = `LEG_FAST` 5 / `LEG_SHORT` 21 / `RS_WINDOW` 63 (= `rotation/tracker.py` `WINDOW_FAST` / `WINDOW_SHORT` / `WINDOW_MED`), rounded 2 dp (the `member_stats` rule). "vs RSP" = `RT.traction_row` — the stock's move minus the bench's over the same sessions, in percentage points; None when either side is missing, so a raw move never lands in a vs column. RS vs SPY = the same against SPY over 63 sessions.
+- **Closed bars, three modes:** the windows END at the last CLOSED session. `live` (RTH) → through the prior close; today's live move stays in the Today column, and the served line says so. `after_close` / `closed` → the session's own close (= the Today print) is the last bar.
+- **No new fetch:** each listed name keeps its last `TAIL_BARS` 64 closes (`close_tail`) from the frames the base build already reads (the closes dict `rate_one` builds for σ). SPY and RSP keep theirs only when their prior date is the prior market day.
+- **The bench rule:** vs columns use RSP (`EW_BENCH`, the 🔥 basis). When RSP has no read for the windows they use SPY (`REL_FALLBACK` = `tracker.BENCHMARK_FALLBACK`, the tracker's own rule) and the labels say "vs SPY"; when neither was read the vs columns are blank. `returns_line` prints SPY's and RSP's own 5 / 21, the close they end on and which bench the vs columns use.
+- **Precision:** cells print `LEG_TEXT_DP` 1 decimal ("+12.3%", "+4.1 pp"), like 🔥 Hottest's `pct()` (AMENDMENTS2 B8); the served numbers and the sort stay the tracker's 2-dp values.
+- DISPLAY only: nothing gates, sizes or alerts on them. Compare 🎢 and 🔥 5-day numbers only in closed mode (🔥's come from the rotation snapshot built after 16:30).
+
+## Sales view
+
+- **Toggle:** `?hb_view=sales` (`TABLE_VIEW_PARAM`, `VIEW_PRICE` / `VIEW_SALES`, labels "Price" / "Sales"). FE-only: it never reaches `board()`, a switch fires no fetch, and the active sort survives the switch. The server serves both column sets every time (`table.columns`, `table.sales_columns`, `table.views`).
+- **Columns:** Symbol, 🔗, Today, Sales YoY, Sales trend, Q EPS, Margin, Quality ⓘ, Next ER (the six heads and three titles = 🔥 `HS_COLS` byte for byte, contract-pinned), then RS vs SPY (63d).
+- **Hottest's functions, one read per build:** ONE `HOT._decision_map` + ONE `HOT._earnings_map` over the listed names (~600), rows via `HOT._fundamentals_row` (the YoY pair guard blanks Sales YoY / Q EPS on a mismatched pair and keeps the tier), served as `rows[].fund` with exactly `FUND_ROW_KEYS`; the ⓘ explainer via `HOT._quality_info`, served as a copy with `group_rows` None (🎢 has no group rows; the memo's dict is never touched). The FE draws every cell with 🔥's own `HsFundCell`, exported from `HottestSectors.tsx` (golden: 🔥's DOM unchanged).
+- **Memo:** `_fund_memo[(session, universe)]`, `FUND_TTL_SEC` = `BASE_TTL_SEC` 1 h (MINE — cache freshness, not a rule), read by `build()` AFTER `_base_for` — the 8 s base build does not grow. A newly listed name forces a re-read.
+- **not_read:** a failed or empty read is never memoised; the block serves `fundamentals.state = "not_read"` with the reason, and the Sales cells stay blank — never zero, never "—" invented — until the next refresh (60 s live / 30 min closed). The research cache's "disabled until restart" latch (`sepa/research.py`) is left as is (his call).
+- **UNMEASURED** (`FUND_NOTE`): Quality is a description (ⓘ), not a tested edge; nothing ranks a name as better, or gates, sizes or alerts on Sales, EPS, margin, Quality or RS. Not advice.
+
 ## Memo and cost
 
 - The 🔻 memo pattern verbatim: an in-process memo keyed by (mode, session, universe), stale-while-revalidate, one warm thread per key, a `FAIL_RETRY_SEC` back-off, and a late older-session build dropped. There is no cron and no Mongo store. The request path never parses or scans; a cold read answers `warming`.
@@ -106,6 +154,18 @@ Pre-registered in `docs/research/high_beta_2026_10_14_prereg.md` before any outc
 | `PREV_CLOSE_TOL_PCT` | 1% | house data guard (🔻) |
 | memo TTLs | 60 s live / 30 min closed / 1 h base | house cache freshness (🔻), not rules |
 | top-20 = ceil, ties included; study draws / seed / horizons / block; `SESSIONS_MAX` 250 | — | MINE (AMENDMENTS §8) |
+| `LEG_FAST` / `LEG_SHORT` | 5 / 21 sessions (= `tracker.WINDOW_FAST` / `WINDOW_SHORT`) | Ajay 2026-10-14 (the ask, K2) |
+| `RS_WINDOW` | 63 sessions (= `tracker.WINDOW_MED`) | Ajay 2026-10-14 (K3) |
+| `RS_BENCH` SPY · vs bench RSP (`EW_BENCH`) | — | Ajay 2026-10-14 (K3, K2) |
+| `REL_FALLBACK` SPY | — | house (the tracker's fallback rule) |
+| `TAIL_BARS` | 64 = `RS_WINDOW` + 1 | derived |
+| `FUND_TTL_SEC` | 3600 s (= `BASE_TTL_SEC`) | MINE — cache freshness, not a rule |
+| research staleness | 16 d (`research.CACHE_TTL_SEC`, through `HOT._decision_map`) | house |
+| `LEG_TEXT_DP` | 1 decimal; own "%", vs / RS " pp" | MINE (= 🔥 `pct()`, AMENDMENTS2 B8) |
+| first directions | Today asc, Symbol asc, Next ER asc, every other column desc | MINE / K4 |
+| 🎢 / QQQ / 🔗 ordinals | category count / member 1, not 0, unread None / tagged-fund count | MINE |
+| column order | Price and Sales, as listed above | MINE (his call) |
+| view labels | "Price" / "Sales" | MINE wording |
 
 ## His calls (open)
 
@@ -118,6 +178,23 @@ Pre-registered in `docs/research/high_beta_2026_10_14_prereg.md` before any outc
 7. Today's move against the official prior close (🛡️'s rule) with 🔻's 1% hold-out.
 8. The study design: the 3-session horizon primary; primary = all sessions, SPY-red-only line beside it; β terciles; the bootstrap.
 
+2026-10-14 b (header sorts · 5 / 21 days · Sales view), defaults shipped as listed:
+
+9. 5 days, 21 days and RS end at the last CLOSED session (in market hours through yesterday's close, today stays in Today) — vs ending at today's live print.
+10. First tap: Today deepest drop first (= 📉 `hb_drop`), Symbol A→Z, Next ER soonest first (🔥), every other column highest first.
+11. The generic "Sort" dropdown is hidden on 🎢 (the three buttons and the headers own the order).
+12. Column order: Price = Symbol, 🔗, Today, 5 days, 5 days vs RSP, 21 days, 21 days vs RSP, β, β × drop, σ, 🎢, QQQ; Sales = Symbol, 🔗, Today, the six 🔥 columns, RS vs SPY (63d) last.
+13. The active sort survives the Price ⇄ Sales switch (the order line names it).
+14. RS vs SPY = the 63-session move minus SPY's, in percentage points (the house `rel_` rule) — not a ratio, an RS line or a percentile; UNMEASURED.
+15. Sales numbers re-read hourly; a failed read waits for the next refresh (≤ 30 min closed); the research cache's "disabled until restart" latch is left as is.
+16. The Quality header keeps 🔥's "Minervini Ch.8" hover on a non-SEPA tab (the SEPA-scope rule).
+17. Next ER prints a past date as 🔥 does (no past-date guard).
+18. The cards get no new stat (5 / 21 days and the fundamentals live in the table).
+19. One sort key (no 🔥 shift-click tie-breaks on 🎢).
+20. Cells print 1 decimal like 🔥 Hottest, while the sort reads the 2-dp number (AMENDMENTS2 B8).
+
+(The 🔗 column sorts — by the number of tagged funds — because K4 said every column; it is not a his-call any more, AMENDMENTS2 B3.)
+
 ## Files
 
 - `backend/chart_maps/high_beta_tab.py`, `backend/chart_maps/high_beta_measured.py`, `backend/sepa/beta.py` (`beta_from_frame`, `log_returns`)
@@ -125,5 +202,7 @@ Pre-registered in `docs/research/high_beta_2026_10_14_prereg.md` before any outc
 - `backend/scripts/high_beta_study.py`, `docs/research/high_beta_2026_10_14_prereg.md`
 - `rules_info._high_beta_section`, `backend/tests/test_rules_info_high_beta.py`, `backend/tests/test_high_beta_tab.py`, `backend/tests/test_high_beta_study.py`
 - FE: `lib/highBeta.ts`, `components/HighBetaBoardNote.tsx`, `lib/chartMaps.ts` (`CM_TABS`, `TAB_META.high_beta`, `boardQuery`), `pages/ChartMaps.tsx`, `lib/cardLadder.ts`
+- 2026-10-14 b: `backend/chart_maps/high_beta_tab.py` (`HEADER_SORTS`, `TABLE_COLUMNS` / `SALES_COLUMNS`, `sort_fields` / `order_rows`, the legs, `fund_read` / `_fund_for`, `returns_line`, `fundamentals_block`, `table_block`), `board.high_beta_tiles` / `board.board` (`hb_dir`), `chart_maps/api.py` (`hb_dir`); tests `backend/tests/test_high_beta_table_2026_10_14.py`, `backend/tests/test_high_beta_board_sort.py` (+ pin updates in `test_high_beta_tab.py`, `test_high_beta_levered.py`)
+- 2026-10-14 b FE: `components/HottestSectors.tsx` (`HS_FUND_KEYS`, `HsFundRow`, `HsFundCell`) + `HottestSectors.fundcell.test.tsx` + `__fixtures__/hottest_fund_cells_golden_2026_10_14.json`; `components/HighBetaBoardNote.tsx` (`COLUMN_KEYS`, the header sorts, the view toggle) + `HighBetaBoardNote.sales.test.tsx`; `lib/highBeta.ts` (`HB_DIR_PARAM`, `HB_VIEW_PARAM`, `parseHbDir`, `parseHbView`, `hbHeaderNext`); `lib/chartMaps.ts` (`boardQuery` `hbDir`); `pages/ChartMaps.tsx`; `styles.css` (`.cm-hb-scroll`, the 🎢 `.hs-sym` override); `scripts/contracts.mjs` ("🎢 header sorts + Sales view"); `lib/newFeatures.ts` (`chart-maps-high-beta-table-2026-10-15`); fixture `__fixtures__/high_beta_board_2026_10_14.json` recaptured
 
 Deploy `api frontend` (and `cron` for the tape kinds).

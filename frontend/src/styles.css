@@ -12347,6 +12347,15 @@ a.pcw__acct:hover, .pcw__acct-link:hover { text-decoration: underline; }
 .hs-sortclear:hover { color: var(--ink); text-decoration: underline; }
 /* The Quality header: its sort button and the ⓘ, side by side. */
 .hs-thwrap { display: inline-flex; align-items: center; gap: 4px; }
+/* 🎢 High Beta table on the 🔥 Hottest recipe (2026-10-14 b). Ajay 2026-10-14:
+ * "Can you add sort function on the headers and also 5 day and 21 days columns
+ * to show how they were reacting in price like hot sectors and also add sales
+ * tab make it like hot sector ...". The box keeps the table's old 28rem cap so
+ * the charts stay one scroll away (house, unchanged). */
+.hs-scroll.cm-hb-scroll { max-height: 28rem; }
+/* 🎢 (2026-10-14 b, same ask): the sticky first column is a ticker, not
+ * Hottest's Sector / Name cell, so the global 190px floor does not apply. */
+.hs-table.cm-hb-table th.hs-sym, .hs-table.cm-hb-table td.hs-sym { min-width: 0; }
 /* ⓘ Quality — the served explainer's body. */
 .hs-qi p { margin: 0 0 8px; }
 .hs-qi ul { margin: 0 0 8px 16px; padding: 0; }

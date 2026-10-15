@@ -137,6 +137,12 @@ async def chart_maps(
                                             "default false = the red names only. Ajay "
                                             "2026-10-14: 'Can you create a new tab for High "
                                             "Beta stocks'."),
+    hb_dir: str = Query("", description="high_beta tab only — the direction of the active "
+                                         "column sort: asc | desc; absent = that column's "
+                                         "own first direction (Today and Next ER open "
+                                         "lowest/soonest first, Symbol A→Z, every other "
+                                         "column highest first). Ajay 2026-10-14: 'Can you "
+                                         "add sort function on the headers …'."),
     min_tier: Optional[str] = Query(None,
                                     description="liquidity floor by 50-day avg $ volume: "
                                                 "deep (>=$50M) | ok (>=$10M, the default) | "
@@ -205,6 +211,7 @@ async def chart_maps(
             hb=(hb if isinstance(hb, str) and hb.strip() else None),
             hb_mode=(hb_mode if isinstance(hb_mode, str) and hb_mode.strip() else None),
             hb_all=hb_all is True,
+            hb_dir=(hb_dir if isinstance(hb_dir, str) and hb_dir.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),
