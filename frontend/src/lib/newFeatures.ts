@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-14: "Can you add a short tag on these stocks for their Leverage equivalents like IRE for IREN, VSTL for
+  // VST". The 3 is backend sepa/levered_etf.SHOW_MAX, the 7 STALE_DAYS, the 1× MIN_FACTOR_EXCLUSIVE — change them there
+  // and here. The map is DATA (the Massive reference list), never typed: IRE is filed as ETS, VSTL as ETF.
+  { id: 'chart-maps-high-beta-levered-2026-10-14', addedAt: '2026-10-14', route: '/chart-maps?tab=high_beta',
+    label: '🔗 Leveraged-ETF tags on 🎢 High Beta. You said: “Can you add a short tag on these stocks for their Leverage equivalents like IRE for IREN, VSTL for VST”. Both resolve: IREN shows 🔗 2× IRE · IREX · IREG +1 and VST 🔗 2× VSTL — in the table each ticker opens its own page (tape tab); on the card the full list sits under ▸ more. Read from the Massive reference list each trading day: a fund is tagged only when its name states the leverage (above 1×), the direction and the stock, and it traded on the last session; long first, then leverage, then the most traded. Not tagged: funds whose name states no direction (Corgi’s “2x Daily”, incl. IREC) and 1× inverse funds. Tags hide if the list is over 7 days old. Display only — not advice. YOUR CALLS: Corgi, shorts, 1× inverse, the 3-ticker cap, the 7 days.' },
   // Ajay 2026-10-14: "I need a tape burst notification specific for High Beta stocks from the reselinet separately
   // and also other tape bursts from the Chart Maps page" + K4 "High-Beta tab names + all Chart Maps names". The burst
   // numbers are orderflow/tape.py BURST_* , the caps tape_burst_kinds.HIGHBETA_MAX_SYMBOLS / CHARTMAPS_MAX_SYMBOLS, the

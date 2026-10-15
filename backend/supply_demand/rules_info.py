@@ -939,6 +939,23 @@ def _hb_tape_lines() -> list:
     ]
 
 
+def _hb_levered_line() -> str:
+    """🔗 Leveraged-ETF tags (2026-10-14). Ajay: "Can you add a short tag on these
+    stocks for their Leverage equivalents like IRE for IREN, VSTL for VST". Every
+    number and word list is read from sepa.levered_etf (LE), never typed here."""
+    from sepa import levered_etf as LE
+    shorts = ("short / inverse funds after the long ones" if LE.INCLUDE_SHORTS else "long funds only")
+    return ("%s Leveraged-ETF tags: each name lists the single-stock leveraged ETFs that track it, from the "
+            "Massive reference list of active %s funds read once each trading day. A fund is tagged only when its "
+            "name states the leverage (above %g×), the direction and the stock — its ticker beside Long / Short / "
+            "Bull / Bear, else its exact company name — and it traded on the last session; a crypto coin's symbol "
+            "or name (%s) never reads as a stock; any other fund is counted, never guessed. Long first, then leverage, then the most traded; %s. The chip shows %d "
+            "tickers, then +n; every tag hides when the list is over %d days old. Display only — the tags sort, "
+            "filter and gate nothing."
+            % (LE.MARK, " + ".join(LE.FUND_TYPES), LE.MIN_FACTOR_EXCLUSIVE, ", ".join(sorted(LE.COIN_SYMBOLS)),
+               shorts, LE.SHOW_MAX, LE.STALE_DAYS))
+
+
 def _high_beta_section() -> dict:
     """🎢 High Beta — every number read from `chart_maps.high_beta_tab` (HB) and
     the 🔻 / 🛡️ modules it reuses, never typed here. Imported LAZILY, like the
@@ -987,6 +1004,12 @@ def _high_beta_section() -> dict:
         "cards print. 🛡️ rates its own β on %% returns, so one name can print two β values."
         % (HB.STAT_SIGMA, HB.SIGMA_BARS),
     ]
+    # 🔗 rides on the σ line (also "on every row and card"): the panel keeps <= 8 picks per section.
+    try:
+        lev_line = _hb_levered_line()
+        picks.append(" ".join((picks.pop(), lev_line)))
+    except Exception as exc:                          # noqa: BLE001 — the panel keeps every other line
+        log.debug("rules_info: high beta levered line unavailable: %s", exc)
     if study:
         picks.append(study)
     note = _DISCLAIMER if measured else (

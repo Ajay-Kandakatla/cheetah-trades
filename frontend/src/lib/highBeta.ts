@@ -105,6 +105,42 @@ export type CmHighBetaToday = {
   reason: string | null;
 };
 
+/* ── 🔗 leveraged-ETF tags (2026-10-14, sepa/levered_etf.py) ────────────────
+ * Ajay: "Can you add a short tag on these stocks for their Leverage
+ * equivalents like IRE for IREN, VSTL for VST". The map, the order, the chip
+ * text, its parts, the "+n" title and the board line are ALL served; the FE
+ * prints the parts and composes nothing. */
+
+/** One tagged fund (levered_etf.for_symbol): served in the served order. */
+export type CmLeveredItem = { etf: string; factor: number; direction: 'long' | 'short' | string };
+
+/** One piece of the served chip: a text run (`title` on the "+n" run = the
+ *  funds not shown) or an `etf` ticker (`title` = the fund's name). */
+export type CmLeveredPart = { text?: string; etf?: string; title?: string | null };
+
+/** levered_etf.chip — `text` = the parts joined (server-side). */
+export type CmLeveredChip = {
+  text: string;
+  parts: CmLeveredPart[];
+  shown: string[];
+  more: number;
+  rest: string | null;
+};
+
+/** `high_beta_board.levered` (levered_etf.status_block). `line` is printed
+ *  as served; `legend` is the title on every table chip. */
+export type CmLeveredBoard = {
+  state: 'ready' | 'stale' | 'missing' | 'error' | string;
+  as_of: string | null;
+  age_days: number | null;
+  grouped_day: string | null;
+  n_etfs: number | null;
+  n_underlyings: number | null;
+  n_on: number;
+  line: string | null;
+  legend: string | null;
+};
+
 /** `tile.high_beta` (high_beta_tab.tile_block + the board's `zone`). */
 export type CmHighBetaRead = {
   beta: number;
@@ -115,6 +151,8 @@ export type CmHighBetaRead = {
   today: CmHighBetaToday;
   adv50: number | null;
   zone?: Record<string, unknown> | null;
+  levered?: CmLeveredItem[];
+  levered_chip?: CmLeveredChip | null;
 };
 
 /** `tile.hb_filter`: true passes, false fails, null = not read (an unread
@@ -145,10 +183,13 @@ export type CmHighBetaRow = {
   thin: boolean;
   red: boolean;
   text: { beta?: string; sigma?: string; today?: string; swing?: string } | null;
+  /** 🔗 the stock's leveraged ETFs ([] when none / the map is not ready). */
+  levered?: CmLeveredItem[];
+  levered_chip?: CmLeveredChip | null;
 };
 
 /** The served column heads, in the served order (high_beta_tab.TABLE_COLUMNS).
- *  Keys the table knows: symbol · beta · sigma · cats · qqq · today · swing. */
+ *  Keys the table knows: symbol · levered · beta · sigma · cats · qqq · today · swing. */
 export type CmHighBetaColumn = { key: string; label: string; title?: string | null };
 
 /** `high_beta_board.table` (high_beta_tab.table_block; null unless ready):
@@ -195,4 +236,6 @@ export type CmHighBetaBoard = {
   suspects: { n: number; head: string; lines: string[] } | null;
   view: CmHighBetaView | null;
   table: CmHighBetaTable | null;
+  /** 🔗 the leveraged-ETF map's state + served line (null unless ready). */
+  levered?: CmLeveredBoard | null;
 };

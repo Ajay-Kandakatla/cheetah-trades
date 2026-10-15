@@ -66,7 +66,36 @@ const cell = (served: unknown): string => (typeof served === 'string' ? served :
 
 /** The column keys the table knows how to draw; a served key outside this set
  *  is skipped (a cell the component cannot fill is not drawn blank). */
-const COLUMN_KEYS: ReadonlySet<string> = new Set(['symbol', 'beta', 'sigma', 'cats', 'qqq', 'today', 'swing']);
+const COLUMN_KEYS: ReadonlySet<string> = new Set(['symbol', 'levered', 'beta', 'sigma', 'cats', 'qqq', 'today', 'swing']);
+
+/** 🔗 (2026-10-14, "Can you add a short tag on these stocks for their Leverage
+ *  equivalents like IRE for IREN, VSTL for VST"): the SERVED chip parts
+ *  (sepa/levered_etf.chip), printed in order — an `etf` part is a link to its
+ *  own page (/sepa/{etf}, tape tab; the route serves ETFs), a text part is a
+ *  span (its served `title` on the "+n" run). Composes nothing: no factor, no
+ *  "+", no join. A missing / malformed chip, or one with no drawable part,
+ *  renders nothing. */
+function LeveredChip({ chip, symbol, legend }: { chip: unknown; symbol: string; legend: string | null }) {
+  const c = obj(chip);
+  if (!c || !Array.isArray(c.parts)) return null;
+  const parts = (c.parts as unknown[]).map(obj)
+    .filter((p): p is Record<string, unknown> => !!p && (!!text(p.etf) || typeof p.text === 'string'));
+  if (!parts.some((p) => !!text(p.etf))) return null;
+  return (
+    <span className="cm-badge cm-badge-muted" title={legend ?? undefined} data-testid={`cm-hb-lev-${symbol}`}>
+      {parts.map((p, i) => {
+        const etf = text(p.etf);
+        if (etf) {
+          return (
+            <TickerLink key={`e-${i}`} ticker={etf} tab="tape" fromLabel="High Beta" showWatchlist={false}
+                        title={text(p.title) ?? undefined} />
+          );
+        }
+        return <span key={`t-${i}`} title={text(p.title) ?? undefined}>{String(p.text)}</span>;
+      })}
+    </span>
+  );
+}
 
 type Props = {
   board: CmHighBetaBoard | null | undefined;
@@ -82,8 +111,8 @@ type Props = {
 
 type Row = Record<string, unknown> & { symbol: string };
 
-function HighBetaTable({ table, rows: raw, greenOn }: {
-  table: Record<string, unknown>; rows: unknown; greenOn: boolean;
+function HighBetaTable({ table, rows: raw, greenOn, legend }: {
+  table: Record<string, unknown>; rows: unknown; greenOn: boolean; legend: string | null;
 }) {
   const columns = (Array.isArray(table.columns) ? table.columns as unknown[] : [])
     .map(obj)
@@ -136,6 +165,8 @@ function HighBetaTable({ table, rows: raw, greenOn }: {
                   let body: ReactNode = null;
                   if (key === 'symbol') {
                     body = <TickerLink ticker={r.symbol} fromLabel="High Beta" showWatchlist={false} />;
+                  } else if (key === 'levered') {
+                    body = <LeveredChip chip={r.levered_chip} symbol={r.symbol} legend={legend} />;
                   } else if (key === 'beta') body = cell(t.beta);
                   else if (key === 'sigma') body = cell(t.sigma);
                   else if (key === 'swing') body = cell(t.swing);
@@ -201,6 +232,9 @@ export default function HighBetaBoardNote({ board, rows, sorts, sort, onSort, on
   const viewLabel = view ? text(view.label) : null;
   const greenOn = view?.on === true;
   const table = ready ? obj(b.table) : null;
+  const lev = ready ? obj(b.levered) : null;
+  const levLine = lev ? text(lev.line) : null;
+  const levLegend = lev && lev.state === 'ready' ? text(lev.legend) : null;
   return (
     <div data-testid="cm-hb-board" data-state={state}
          data-mode={typeof b.mode === 'string' ? b.mode : undefined}>
@@ -241,6 +275,7 @@ export default function HighBetaBoardNote({ board, rows, sorts, sort, onSort, on
       ))}
       {counts ? <p className="cm-note cm-dim" data-testid="cm-hb-counts">{counts}</p> : null}
       {catsLine ? <p className="cm-note cm-dim" data-testid="cm-hb-categories">{catsLine}</p> : null}
+      {levLine ? <p className="cm-note cm-dim" data-testid="cm-hb-levered">{levLine}</p> : null}
       {note && note !== header ? <p className="cm-note cm-dim" data-testid="cm-hb-note">{note}</p> : null}
       {showStudy ? <p className="cm-note cm-dim" data-testid="cm-hb-study">{studyText}</p> : null}
       {susN > 0 && susHead ? (
@@ -251,7 +286,7 @@ export default function HighBetaBoardNote({ board, rows, sorts, sort, onSort, on
           ))}
         </details>
       ) : null}
-      {table ? <HighBetaTable table={table} rows={rows} greenOn={greenOn} /> : null}
+      {table ? <HighBetaTable table={table} rows={rows} greenOn={greenOn} legend={levLegend} /> : null}
     </div>
   );
 }

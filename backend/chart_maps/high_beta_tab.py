@@ -48,6 +48,7 @@ gates a scan, sizes a position or enters a lane.
 """
 from __future__ import annotations
 
+import copy
 import logging
 import math
 import statistics
@@ -61,6 +62,7 @@ from chart_maps import dual_momentum_tab as DMT
 from chart_maps import resiliency_tab as RES
 from rotation import tracker as RT
 from sepa import beta as BETA
+from sepa import levered_etf as LE
 from sepa import prices, universe
 
 log = logging.getLogger("chart_maps.high_beta_tab")
@@ -120,7 +122,11 @@ STAT_BETA, STAT_TODAY, STAT_SWING = "β", "Today", "β × drop"
 # The A1 dense table: (column key, served head) in display order. The heads are
 # the card's own stat keys, so the table and the card name a number the same
 # way; the FE prints them verbatim and composes none.
-TABLE_COLUMNS = (("symbol", "Symbol"), ("today", STAT_TODAY), ("beta", STAT_BETA),
+# 🔗 (2026-10-14, "Can you add a short tag on these stocks for their Leverage
+# equivalents like IRE for IREN, VSTL for VST"): the leveraged-ETF column sits
+# right after Symbol (position = HIS CALL #8); its head is LE.STAT_KEY, the
+# card's fold stat key.
+TABLE_COLUMNS = (("symbol", "Symbol"), ("levered", LE.STAT_KEY), ("today", STAT_TODAY), ("beta", STAT_BETA),
                  ("swing", STAT_SWING), ("sigma", STAT_SIGMA), ("cats", MARK),
                  ("qqq", QQQ_ETF))
 
@@ -468,10 +474,22 @@ def tile_filter(r: dict, *, qqq_available: bool) -> dict:
 # ---------------------------------------------------------------------------
 # the live half
 # ---------------------------------------------------------------------------
-def build_live(base: dict, now: datetime, *, snap_fn=None) -> dict:
+def _levered_state(now: datetime, levered_fn=None) -> dict:
+    """The 🔗 map (sepa.levered_etf.load: ONE Mongo doc read, memoised; the
+    day's reference refresh runs on its own thread, never here). A raise ->
+    the `error` state — the board builds, no tag."""
+    try:
+        lev = (levered_fn or LE.load)(now=now)
+        return lev if isinstance(lev, dict) else {"state": "error", "reason": "no map"}
+    except Exception as exc:                                    # noqa: BLE001
+        return {"state": "error", "reason": _safe_reason(exc)}
+
+
+def build_live(base: dict, now: datetime, *, snap_fn=None, levered_fn=None) -> dict:
     """ONE snapshot over the listed names + SPY / RSP / QQQ (live / after the
     close only), missing names asked ONCE more. Base rows are copied, never
-    mutated."""
+    mutated. Each row carries its 🔗 leveraged-ETF items + chip (display
+    only: they sort, filter and gate nothing)."""
     mode, session, _tape, half = mode_for(now)
     s_iso = session.isoformat()
     listed = sorted((base.get("rows") or {}))
@@ -499,6 +517,8 @@ def build_live(base: dict, now: datetime, *, snap_fn=None) -> dict:
     suspects: list = []
     moves: list = []
     as_ofs: list = []
+    lev = _levered_state(now, levered_fn)
+    n_lev = 0
     for s in listed:
         b = base["rows"][s]
         td, ms = today_read(b, snaps.get(s), mode=mode, session=session,
@@ -507,6 +527,11 @@ def build_live(base: dict, now: datetime, *, snap_fn=None) -> dict:
         r["today"] = td
         r["swing"] = swing(r.get("beta"), td.get("move_pct"))
         r["hb_filter"] = tile_filter(r, qqq_available=qqq_ok)
+        full = LE.items_for(lev, s)
+        r["levered"] = [{"etf": x["etf"], "factor": float(x.get("factor") or 0),
+                         "direction": x.get("direction")} for x in full]
+        r["levered_chip"] = LE.chip(full)
+        n_lev += int(bool(full))
         rows[s] = r
         st = td["state"]
         if st == "read":
@@ -551,18 +576,19 @@ def build_live(base: dict, now: datetime, *, snap_fn=None) -> dict:
             "suspects": suspects, "mode": mode, "session": s_iso, "as_of": as_of,
             "half_day": bool(half), "built_ts": now_ts,
             "built_at": datetime.fromtimestamp(now_ts, tz=KL.ET).isoformat(timespec="seconds"),
-            "base_built_at": base.get("built_at"), "ukey": base.get("ukey")}
+            "base_built_at": base.get("built_at"), "ukey": base.get("ukey"),
+            "levered": LE.status_block(lev, n_on=n_lev, listed=len(listed))}
 
 
 def build(universe_key, now: datetime, *, universe_fn=None, frames_fn=None, qqq_fn=None,
-          etf_fn=None, is_delisted=None, snap_fn=None) -> dict:
+          etf_fn=None, is_delisted=None, snap_fn=None, levered_fn=None) -> dict:
     """The memo's entry: the session's base (memoised) + today's read."""
     _mode, session, _t, _h = mode_for(now)
     ukey = _ukey(universe_key)
     base = _base_for((session.isoformat(), ukey), ukey, session, universe_fn=universe_fn,
                      frames_fn=frames_fn, qqq_fn=qqq_fn, etf_fn=etf_fn,
                      is_delisted=is_delisted)
-    return build_live(base, now, snap_fn=snap_fn)
+    return build_live(base, now, snap_fn=snap_fn, levered_fn=levered_fn)
 
 
 # ---------------------------------------------------------------------------
@@ -812,6 +838,8 @@ def compact_row(r: dict, *, qqq_available: bool, thin: bool = False) -> dict:
             "swing": r.get("swing"), "sigma_pct": r.get("sigma_pct"),
             "prev_close": td.get("prev_close") or r.get("prev_close"), "basis": td.get("basis"),
             "thin": thin is True, "red": is_red(r),
+            "levered": [dict(x) for x in (r.get("levered") or [])],
+            "levered_chip": copy.deepcopy(r.get("levered_chip")),
             "text": {"beta": st[STAT_BETA], "today": st[STAT_TODAY], "swing": st[STAT_SWING],
                      "sigma": st[STAT_SIGMA]}}
 
@@ -1015,6 +1043,9 @@ def tile_badges(r: dict, active=()) -> list:
     """① the category pill (IDENT) ② the today pill (PRICE; absent unread)
     ③ one badge per ticked box the name passes. The board adds the zone."""
     out = [{"text": category_pill(r), "tone": "muted"}]
+    lc = r.get("levered_chip")
+    if isinstance(lc, dict) and lc.get("text"):
+        out.append({"text": str(lc["text"]), "tone": "muted", "levered": True})
     td = r.get("today") or {}
     if td.get("state") == "read":
         mv = float(td["move_pct"])
@@ -1040,10 +1071,14 @@ def tile_stats(r: dict) -> list:
     else:
         sw_txt = f"{float(sw):.2f}"
     sg = _f(r.get("sigma_pct"))
-    return [{"k": STAT_BETA, "v": f"{float(r['beta']):.2f}"},
-            {"k": STAT_TODAY, "v": today_text(td)},
-            {"k": STAT_SWING, "v": sw_txt},
-            {"k": STAT_SIGMA, "v": f"{sg:.2f}%" if sg is not None else "—"}]
+    out = [{"k": STAT_BETA, "v": f"{float(r['beta']):.2f}"},
+           {"k": STAT_TODAY, "v": today_text(td)},
+           {"k": STAT_SWING, "v": sw_txt},
+           {"k": STAT_SIGMA, "v": f"{sg:.2f}%" if sg is not None else "—"}]
+    lv = LE.stat_value(r.get("levered"))
+    if lv:
+        out.append({"k": LE.STAT_KEY, "v": lv})
+    return out
 
 
 def tile_marker(r: dict) -> Optional[dict]:
@@ -1068,7 +1103,9 @@ def tile_block(r: dict, *, qqq_available: bool) -> dict:
             "qqq": bool(r.get("qqq")) if qqq_available else None,
             "sigma_pct": r.get("sigma_pct"),
             "swing": r.get("swing"), "today": dict(r.get("today") or {}),
-            "adv50": r.get("adv50")}
+            "adv50": r.get("adv50"),
+            "levered": [dict(x) for x in (r.get("levered") or [])],
+            "levered_chip": copy.deepcopy(r.get("levered_chip"))}
 
 
 def last_print(r: dict) -> Optional[float]:
@@ -1108,6 +1145,7 @@ def _block(state: str, *, mode: str, session_iso: str, sort: str, header: str,
             "filters": filters if ready else None,
             "view": {"param": VIEW_PARAM, "on": bool(include_green), "label": VIEW_LABEL},
             "table": table_block() if ready else None,
+            "levered": dict(e.get("levered") or {}) if ready else None,
             "note": study["text"], "study": study,
             "counts": dict(counts) if ready else None,
             "suspects": suspects_block(e.get("suspects")) if ready else None}

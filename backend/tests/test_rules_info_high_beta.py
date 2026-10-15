@@ -20,6 +20,7 @@ from daytrading import data as DTD
 from orderflow import tape as TP
 from orderflow import tape_burst_kinds as TBK
 from orderflow import trade_flash as TF
+from sepa import levered_etf as LE
 from supply_demand import alert_status as AS
 from supply_demand import rules_info as RI
 
@@ -179,7 +180,7 @@ def test_every_number_in_the_text_is_a_constant_value(sec):
             if float(x).is_integer():
                 allowed.add("%d" % x)
 
-    for mod in (HB, TBK, TP):
+    for mod in (HB, TBK, TP, LE):
         for name in dir(mod):
             v = getattr(mod, name)
             for x in (v if isinstance(v, (tuple, list, frozenset)) else (v,)):
@@ -270,3 +271,35 @@ def test_negative_broken_tape_lines_keep_the_picks(monkeypatch):
     assert s["picks"] and s["alerts"] and all(isinstance(x, str) and x for x in s["alerts"])
     assert TBK.KIND_HIGHBETA not in " ".join(s["alerts"])
     assert "/notifications" in " ".join(s["alerts"])
+
+
+# ── 🔗 leveraged-ETF tags (2026-10-14) ───────────────────────────────────────────────────────────────────────────
+def test_the_levered_line_states_every_number_from_its_constant(sec):
+    pick = next(p for p in sec["picks"] if LE.MARK + " Leveraged-ETF tags" in p)
+    line = pick[pick.index(LE.MARK):]
+    assert pick.startswith("%s beside β on every row and card" % HB.STAT_SIGMA)     # rides on the σ line
+    assert " + ".join(LE.FUND_TYPES) in line and "ETS" in line                  # IRE is ETS
+    assert "above %g×" % LE.MIN_FACTOR_EXCLUSIVE in line
+    assert "The chip shows %d tickers, then +n" % LE.SHOW_MAX in line
+    assert "over %d days old" % LE.STALE_DAYS in line
+    assert ", ".join(sorted(LE.COIN_SYMBOLS)) in line and "LINK" in line          # coin block, read not typed
+    assert ("short / inverse funds after the long ones" in line) is LE.INCLUDE_SHORTS
+    assert "never guessed" in line and "gate nothing" in line
+
+
+@pytest.mark.parametrize("name,val,want", [("SHOW_MAX", 5, "The chip shows 5 tickers"),
+                                           ("STALE_DAYS", 3, "over 3 days old"),
+                                           ("INCLUDE_SHORTS", False, "long funds only")])
+def test_mutating_a_levered_constant_moves_the_line(monkeypatch, name, val, want):
+    monkeypatch.setattr(LE, name, val)
+    assert want in RI._hb_levered_line()
+
+
+def test_negative_a_levered_import_failure_keeps_the_section(monkeypatch):
+    before = RI._high_beta_section()
+    monkeypatch.setattr(RI, "_hb_levered_line", lambda: (_ for _ in ()).throw(ImportError("sepa.levered_etf")))
+    s = RI._high_beta_section()
+    assert len(s["picks"]) == len(before["picks"])
+    assert not any(LE.MARK in p for p in s["picks"])
+    assert any(p.startswith(HB.STAT_SIGMA) for p in s["picks"])
+    assert "high_beta" in RI.sections() and s["stops"] and s["alerts"]

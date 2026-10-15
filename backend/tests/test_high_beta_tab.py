@@ -595,10 +595,11 @@ def hb_board(monkeypatch):
 _BOARD_KEYS = {"state", "mode", "session", "as_of", "built_at", "base_built_at", "stale",
                "measured", "refresh_sec", "sort", "header", "market_line", "qqq_line",
                "order_line", "view_line", "count_line", "categories_line", "categories", "qqq",
-               "filters", "view", "table", "note", "study", "counts", "suspects"}
-_TILE_HB_KEYS = {"beta", "cats", "qqq", "sigma_pct", "swing", "today", "adv50", "zone"}
+               "filters", "view", "table", "note", "study", "counts", "suspects", "levered"}
+_TILE_HB_KEYS = {"beta", "cats", "qqq", "sigma_pct", "swing", "today", "adv50", "zone",
+                 "levered", "levered_chip"}
 _ROW_KEYS = {"symbol", "beta", "cats", "qqq", "move_pct", "state", "swing", "sigma_pct",
-             "prev_close", "basis", "thin", "red", "text"}
+             "prev_close", "basis", "thin", "red", "text", "levered", "levered_chip"}
 
 
 def test_13_board_ready_envelope_rows_and_tiles(hb_board):

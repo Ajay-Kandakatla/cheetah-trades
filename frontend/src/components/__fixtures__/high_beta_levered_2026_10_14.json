@@ -1,0 +1,834 @@
+{
+ "high_beta_board": {
+  "as_of": "2026-10-02",
+  "categories": {
+   "b15": {
+    "label": "🎢 β ≥ 1.5",
+    "min_beta": 1.5,
+    "n": 4
+   },
+   "b20": {
+    "label": "🎢 β ≥ 2.0",
+    "min_beta": 2.0,
+    "n": 3
+   },
+   "rated": 4,
+   "top20": {
+    "cut_beta": 3.8,
+    "k": 1,
+    "label": "🎢 Top 20% by β",
+    "n": 1,
+    "of": 4,
+    "pct": 20.0
+   },
+   "union": 4
+  },
+  "categories_line": "Each name carries every category it is in. β = cov/var of 252 daily log returns against SPY before this session (sepa/beta.py). Top 20% = the 1 highest of 4 rated stocks (ties at β 3.80 included). Not rated: 0 with under 253 sessions of history (no β).",
+  "count_line": "Showing 4 charts of 4 names — 0 under the liquidity floor (no floor), listed in the table as thin, no chart. Not rated: 0 ETFs, 0 delisted, 0 whose cached bars end before 2026-10-01, 0 with no cached bars. Not read today: 0 no print, 0 no snapshot answer (asked twice), 0 held out (named below — check the chart).",
+  "counts": {
+   "b15": 4,
+   "b20": 3,
+   "delisted": 0,
+   "down5": 3,
+   "dropped_thin": 0,
+   "etf": 0,
+   "flat": 0,
+   "hidden_by_filters": 0,
+   "hidden_by_view": 0,
+   "in_view": 4,
+   "listed": 4,
+   "ndx_added": 0,
+   "no_bars": 0,
+   "no_print": 0,
+   "no_snapshot": 0,
+   "no_turnover": 0,
+   "qqq": 1,
+   "rated": 4,
+   "read": 4,
+   "red": 4,
+   "rows": 4,
+   "scanned": 4,
+   "short_history": 0,
+   "shown": 4,
+   "stale": 0,
+   "suspect": 0,
+   "today_stale": 0,
+   "top20": 1,
+   "up": 0
+  },
+  "filters": {
+   "active": [],
+   "hidden": 0,
+   "items": [
+    {
+     "fail": 0,
+     "hidden": 0,
+     "key": "b15",
+     "label": "🎢 β ≥ 1.5",
+     "no_read": 0,
+     "note": "β ≥ 1.5 — the app's 1-year beta against SPY. UNMEASURED.",
+     "on": false,
+     "pass": 4
+    },
+    {
+     "fail": 1,
+     "hidden": 0,
+     "key": "b20",
+     "label": "🎢 β ≥ 2.0",
+     "no_read": 0,
+     "note": "β ≥ 2.0 — the app's 1-year beta against SPY. UNMEASURED.",
+     "on": false,
+     "pass": 3
+    },
+    {
+     "fail": 3,
+     "hidden": 0,
+     "key": "top20",
+     "label": "🎢 Top 20% by β",
+     "no_read": 0,
+     "note": "The top 20% of every rated stock by β (ties at the cut included). UNMEASURED.",
+     "on": false,
+     "pass": 1
+    },
+    {
+     "fail": 3,
+     "hidden": 0,
+     "key": "qqq",
+     "label": "QQQ · Nasdaq-100",
+     "no_read": 0,
+     "note": "Nasdaq-100 member (Wikipedia list, source unknown).",
+     "on": false,
+     "pass": 1
+    },
+    {
+     "fail": 1,
+     "hidden": 0,
+     "key": "d5",
+     "label": "📉 Down 5%+ today",
+     "no_read": 0,
+     "note": "Today's move 5% or more under the official prior close. UNMEASURED.",
+     "on": false,
+     "pass": 3
+    }
+   ],
+   "keys": [
+    "b15",
+    "b20",
+    "top20",
+    "qqq",
+    "d5"
+   ],
+   "line": null,
+   "measured": false,
+   "mode": "any",
+   "mode_all_label": "must match all",
+   "mode_param": "hb_mode",
+   "note": "Ticked boxes narrow the list — a name passing ANY ticked box shows, with a badge for each ticked box it passes; tick “must match all” to need every one. They sort nothing, push nothing, gate nothing and enter no lane.",
+   "passed_all": null,
+   "passed_any": null,
+   "pool": 4,
+   "shown": null
+  },
+  "header": "🎢 4 red of 4 High-Beta names · charts for the top 4 — 4 rated of 4 scanned (the full universe + the Nasdaq-100). β ≥ 1.5: 4 · β ≥ 2.0: 3 · top 20% (β ≥ 3.80): 1. 4 of 4 read are red, the last closed session (2026-10-02); 3 down 5%+.",
+  "levered": {
+   "age_days": 0,
+   "as_of": "2026-10-05",
+   "grouped_day": "2026-10-02",
+   "legend": "Leveraged ETFs that track this stock (Massive reference list as of 10-05): long first, then leverage, then the most traded on 10-02. Daily-reset funds — over more than one session they do not deliver the stated multiple of the stock's move. Display only — not advice.",
+   "line": "🔗 Leveraged-ETF tags: 3 of these 4 names have a single-stock leveraged ETF — 31 funds on 14 stocks in the Massive reference list as of 10-05, each traded on 10-02. Tagged only when the fund's name states the leverage (above 1×), the direction and the stock; not tagged: 5 with no direction in the name, 2 1× inverse, 11 index, sector, coin, unclear or untraded funds — counted, never guessed. Display only — not advice.",
+   "n_etfs": 31,
+   "n_on": 3,
+   "n_underlyings": 14,
+   "state": "ready"
+  },
+  "market_line": "📅 Last session (Fri 10-02 close): SPY -1.00% · RSP -0.80% · median name -5.50% (down) · 0 of 4 names read are up. Over the High-Beta list.",
+  "measured": true,
+  "mode": "closed",
+  "note": "🎢 MEASURED 2026-10-14 (as of 2026-10-14, prereg 80c5f516, survivors-only cohort): names with β ≥ 1.5 that closed 5%+ down closed +0.16 pp against same-β names that did not, over the next 3 sessions — CI [-0.45, +0.82], 244 sessions: no difference this study can separate from zero. SPY-red days only: +0.33 pp, CI [-0.46, +1.15] (no difference this study can separate from zero). Their 3-session low sat -6.20% under that close on average. β × today's drop stays an order, not a forecast.",
+  "order_line": "Order: β × today's drop, largest first, over the red names; names up or flat today follow (smallest move first); names with no read last.",
+  "qqq": {
+   "age_days": null,
+   "available": true,
+   "error": null,
+   "n": 1,
+   "note": "Nasdaq-100 member (Wikipedia list, source unknown).",
+   "source": null
+  },
+  "qqq_line": "QQQ −1.50% the last session · 1 of 1 Nasdaq-100 names are on this list, 1 red.",
+  "refresh_sec": null,
+  "session": "2026-10-02",
+  "sort": "hb_swing",
+  "stale": false,
+  "state": "ready",
+  "study": {
+   "prereg": "docs/research/high_beta_2026_10_14_prereg.md",
+   "script": "backend/scripts/high_beta_study.py",
+   "status": "measured",
+   "text": "🎢 MEASURED 2026-10-14 (as of 2026-10-14, prereg 80c5f516, survivors-only cohort): names with β ≥ 1.5 that closed 5%+ down closed +0.16 pp against same-β names that did not, over the next 3 sessions — CI [-0.45, +0.82], 244 sessions: no difference this study can separate from zero. SPY-red days only: +0.33 pp, CI [-0.46, +1.15] (no difference this study can separate from zero). Their 3-session low sat -6.20% under that close on average. β × today's drop stays an order, not a forecast.",
+   "verdict": "no_signal"
+  },
+  "suspects": {
+   "head": "0 names held out — today's move may be a data artifact (a split, a bad print, a decimal shift). A real move can look the same; check the chart.",
+   "lines": [],
+   "n": 0
+  },
+  "table": {
+   "cat_labels": {
+    "b15": "≥1.5",
+    "b20": "≥2.0",
+    "top20": "top 20%"
+   },
+   "columns": [
+    {
+     "key": "symbol",
+     "label": "Symbol"
+    },
+    {
+     "key": "levered",
+     "label": "Leveraged ETFs"
+    },
+    {
+     "key": "today",
+     "label": "Today"
+    },
+    {
+     "key": "beta",
+     "label": "β"
+    },
+    {
+     "key": "swing",
+     "label": "β × drop"
+    },
+    {
+     "key": "sigma",
+     "label": "σ (50d)"
+    },
+    {
+     "key": "cats",
+     "label": "🎢"
+    },
+    {
+     "key": "qqq",
+     "label": "QQQ"
+    }
+   ],
+   "qqq_label": "QQQ"
+  },
+  "view": {
+   "label": "include green names",
+   "on": true,
+   "param": "hb_all"
+  },
+  "view_line": "Every High-Beta name is listed — 4 red, 0 up, 0 flat, the rest not read today."
+ },
+ "rows": [
+  {
+   "basis": "last_session",
+   "beta": 3.8,
+   "cats": [
+    "b15",
+    "b20",
+    "top20"
+   ],
+   "levered": [
+    {
+     "direction": "long",
+     "etf": "IRE",
+     "factor": 2.0
+    },
+    {
+     "direction": "long",
+     "etf": "IREX",
+     "factor": 2.0
+    },
+    {
+     "direction": "long",
+     "etf": "IREG",
+     "factor": 2.0
+    },
+    {
+     "direction": "short",
+     "etf": "IREZ",
+     "factor": 2.0
+    }
+   ],
+   "levered_chip": {
+    "more": 1,
+    "parts": [
+     {
+      "text": "🔗 "
+     },
+     {
+      "text": "2× "
+     },
+     {
+      "etf": "IRE",
+      "title": "Defiance Daily Target 2X Long IREN ETF"
+     },
+     {
+      "text": " · "
+     },
+     {
+      "etf": "IREX",
+      "title": "Tradr 2X Long IREN Daily ETF"
+     },
+     {
+      "text": " · "
+     },
+     {
+      "etf": "IREG",
+      "title": "Leverage Shares 2X Long IREN Daily ETF"
+     },
+     {
+      "text": " +1",
+      "title": "IREZ −2×"
+     }
+    ],
+    "rest": "IREZ −2×",
+    "shown": [
+     "IRE",
+     "IREX",
+     "IREG"
+    ],
+    "text": "🔗 2× IRE · IREX · IREG +1"
+   },
+   "move_pct": -7.0,
+   "prev_close": 127.1514,
+   "qqq": false,
+   "red": true,
+   "sigma_pct": 3.7,
+   "state": "read",
+   "swing": 26.6,
+   "symbol": "IREN",
+   "text": {
+    "beta": "3.80",
+    "sigma": "3.70%",
+    "swing": "26.60",
+    "today": "−7.00% vs 127.15"
+   },
+   "thin": false
+  },
+  {
+   "basis": "last_session",
+   "beta": 3.5,
+   "cats": [
+    "b15",
+    "b20"
+   ],
+   "levered": [
+    {
+     "direction": "long",
+     "etf": "NBIL",
+     "factor": 2.0
+    },
+    {
+     "direction": "long",
+     "etf": "NBIG",
+     "factor": 2.0
+    },
+    {
+     "direction": "long",
+     "etf": "NEBX",
+     "factor": 2.0
+    },
+    {
+     "direction": "short",
+     "etf": "NBIZ",
+     "factor": 2.0
+    }
+   ],
+   "levered_chip": {
+    "more": 1,
+    "parts": [
+     {
+      "text": "🔗 "
+     },
+     {
+      "text": "2× "
+     },
+     {
+      "etf": "NBIL",
+      "title": "GraniteShares 2x Long NBIS Daily ETF"
+     },
+     {
+      "text": " · "
+     },
+     {
+      "etf": "NBIG",
+      "title": "Leverage Shares 2X Long NBIS Daily ETF"
+     },
+     {
+      "text": " · "
+     },
+     {
+      "etf": "NEBX",
+      "title": "Tradr 2X Long NBIS Daily ETF"
+     },
+     {
+      "text": " +1",
+      "title": "NBIZ −2×"
+     }
+    ],
+    "rest": "NBIZ −2×",
+    "shown": [
+     "NBIL",
+     "NBIG",
+     "NEBX"
+    ],
+    "text": "🔗 2× NBIL · NBIG · NEBX +1"
+   },
+   "move_pct": -6.0,
+   "prev_close": 124.7628,
+   "qqq": true,
+   "red": true,
+   "sigma_pct": 3.41,
+   "state": "read",
+   "swing": 21.0,
+   "symbol": "NBIS",
+   "text": {
+    "beta": "3.50",
+    "sigma": "3.41%",
+    "swing": "21.00",
+    "today": "−6.00% vs 124.76"
+   },
+   "thin": false
+  },
+  {
+   "basis": "last_session",
+   "beta": 2.0,
+   "cats": [
+    "b15",
+    "b20"
+   ],
+   "levered": [],
+   "levered_chip": null,
+   "move_pct": -5.0,
+   "prev_close": 113.4765,
+   "qqq": false,
+   "red": true,
+   "sigma_pct": 1.95,
+   "state": "read",
+   "swing": 10.0,
+   "symbol": "AAA",
+   "text": {
+    "beta": "2.00",
+    "sigma": "1.95%",
+    "swing": "10.00",
+    "today": "−5.00% vs 113.48"
+   },
+   "thin": false
+  },
+  {
+   "basis": "last_session",
+   "beta": 1.52,
+   "cats": [
+    "b15"
+   ],
+   "levered": [
+    {
+     "direction": "long",
+     "etf": "VSTL",
+     "factor": 2.0
+    }
+   ],
+   "levered_chip": {
+    "more": 0,
+    "parts": [
+     {
+      "text": "🔗 "
+     },
+     {
+      "text": "2× "
+     },
+     {
+      "etf": "VSTL",
+      "title": "Defiance Daily Target 2X Long VST ETF"
+     }
+    ],
+    "rest": null,
+    "shown": [
+     "VSTL"
+    ],
+    "text": "🔗 2× VSTL"
+   },
+   "move_pct": -2.0,
+   "prev_close": 110.0851,
+   "qqq": false,
+   "red": true,
+   "sigma_pct": 1.48,
+   "state": "read",
+   "swing": 3.04,
+   "symbol": "VST",
+   "text": {
+    "beta": "1.52",
+    "sigma": "1.48%",
+    "swing": "3.04",
+    "today": "−2.00% vs 110.09"
+   },
+   "thin": false
+  }
+ ],
+ "source": "tests/test_high_beta_levered.py::_fe_payload (real functions over tests/fixtures/levered_etf_reference_2026_10_14.json)",
+ "tiles": [
+  {
+   "badges": [
+    {
+     "text": "🎢 β 3.80 · ≥1.5 · ≥2.0 · top 20%",
+     "tone": "muted"
+    },
+    {
+     "levered": true,
+     "text": "🔗 2× IRE · IREX · IREG +1",
+     "tone": "muted"
+    },
+    {
+     "text": "📅 last session Fri 10-02 · -7.00%",
+     "tone": "warn"
+    },
+    {
+     "text": "→ no demand band — no stored bands for this name",
+     "tone": "muted"
+    }
+   ],
+   "high_beta": {
+    "levered": [
+     {
+      "direction": "long",
+      "etf": "IRE",
+      "factor": 2.0
+     },
+     {
+      "direction": "long",
+      "etf": "IREX",
+      "factor": 2.0
+     },
+     {
+      "direction": "long",
+      "etf": "IREG",
+      "factor": 2.0
+     },
+     {
+      "direction": "short",
+      "etf": "IREZ",
+      "factor": 2.0
+     }
+    ],
+    "levered_chip": {
+     "more": 1,
+     "parts": [
+      {
+       "text": "🔗 "
+      },
+      {
+       "text": "2× "
+      },
+      {
+       "etf": "IRE",
+       "title": "Defiance Daily Target 2X Long IREN ETF"
+      },
+      {
+       "text": " · "
+      },
+      {
+       "etf": "IREX",
+       "title": "Tradr 2X Long IREN Daily ETF"
+      },
+      {
+       "text": " · "
+      },
+      {
+       "etf": "IREG",
+       "title": "Leverage Shares 2X Long IREN Daily ETF"
+      },
+      {
+       "text": " +1",
+       "title": "IREZ −2×"
+      }
+     ],
+     "rest": "IREZ −2×",
+     "shown": [
+      "IRE",
+      "IREX",
+      "IREG"
+     ],
+     "text": "🔗 2× IRE · IREX · IREG +1"
+    }
+   },
+   "stats": [
+    {
+     "k": "β",
+     "v": "3.80"
+    },
+    {
+     "k": "Today",
+     "v": "−7.00% vs 127.15"
+    },
+    {
+     "k": "β × drop",
+     "v": "26.60"
+    },
+    {
+     "k": "σ (50d)",
+     "v": "3.70%"
+    },
+    {
+     "k": "Leveraged ETFs",
+     "v": "IRE 2× · IREX 2× · IREG 2× · IREZ −2×"
+    },
+    {
+     "k": "Room",
+     "v": "—"
+    },
+    {
+     "k": "Band",
+     "v": "—"
+    }
+   ],
+   "symbol": "IREN"
+  },
+  {
+   "badges": [
+    {
+     "text": "🎢 β 3.50 · ≥1.5 · ≥2.0 · QQQ",
+     "tone": "muted"
+    },
+    {
+     "levered": true,
+     "text": "🔗 2× NBIL · NBIG · NEBX +1",
+     "tone": "muted"
+    },
+    {
+     "text": "📅 last session Fri 10-02 · -6.00%",
+     "tone": "warn"
+    },
+    {
+     "text": "→ no demand band — no stored bands for this name",
+     "tone": "muted"
+    }
+   ],
+   "high_beta": {
+    "levered": [
+     {
+      "direction": "long",
+      "etf": "NBIL",
+      "factor": 2.0
+     },
+     {
+      "direction": "long",
+      "etf": "NBIG",
+      "factor": 2.0
+     },
+     {
+      "direction": "long",
+      "etf": "NEBX",
+      "factor": 2.0
+     },
+     {
+      "direction": "short",
+      "etf": "NBIZ",
+      "factor": 2.0
+     }
+    ],
+    "levered_chip": {
+     "more": 1,
+     "parts": [
+      {
+       "text": "🔗 "
+      },
+      {
+       "text": "2× "
+      },
+      {
+       "etf": "NBIL",
+       "title": "GraniteShares 2x Long NBIS Daily ETF"
+      },
+      {
+       "text": " · "
+      },
+      {
+       "etf": "NBIG",
+       "title": "Leverage Shares 2X Long NBIS Daily ETF"
+      },
+      {
+       "text": " · "
+      },
+      {
+       "etf": "NEBX",
+       "title": "Tradr 2X Long NBIS Daily ETF"
+      },
+      {
+       "text": " +1",
+       "title": "NBIZ −2×"
+      }
+     ],
+     "rest": "NBIZ −2×",
+     "shown": [
+      "NBIL",
+      "NBIG",
+      "NEBX"
+     ],
+     "text": "🔗 2× NBIL · NBIG · NEBX +1"
+    }
+   },
+   "stats": [
+    {
+     "k": "β",
+     "v": "3.50"
+    },
+    {
+     "k": "Today",
+     "v": "−6.00% vs 124.76"
+    },
+    {
+     "k": "β × drop",
+     "v": "21.00"
+    },
+    {
+     "k": "σ (50d)",
+     "v": "3.41%"
+    },
+    {
+     "k": "Leveraged ETFs",
+     "v": "NBIL 2× · NBIG 2× · NEBX 2× · NBIZ −2×"
+    },
+    {
+     "k": "Room",
+     "v": "—"
+    },
+    {
+     "k": "Band",
+     "v": "—"
+    }
+   ],
+   "symbol": "NBIS"
+  },
+  {
+   "badges": [
+    {
+     "text": "🎢 β 2.00 · ≥1.5 · ≥2.0",
+     "tone": "muted"
+    },
+    {
+     "text": "📅 last session Fri 10-02 · -5.00%",
+     "tone": "warn"
+    },
+    {
+     "text": "→ no demand band — no stored bands for this name",
+     "tone": "muted"
+    }
+   ],
+   "high_beta": {
+    "levered": [],
+    "levered_chip": null
+   },
+   "stats": [
+    {
+     "k": "β",
+     "v": "2.00"
+    },
+    {
+     "k": "Today",
+     "v": "−5.00% vs 113.48"
+    },
+    {
+     "k": "β × drop",
+     "v": "10.00"
+    },
+    {
+     "k": "σ (50d)",
+     "v": "1.95%"
+    },
+    {
+     "k": "Room",
+     "v": "—"
+    },
+    {
+     "k": "Band",
+     "v": "—"
+    }
+   ],
+   "symbol": "AAA"
+  },
+  {
+   "badges": [
+    {
+     "text": "🎢 β 1.52 · ≥1.5",
+     "tone": "muted"
+    },
+    {
+     "levered": true,
+     "text": "🔗 2× VSTL",
+     "tone": "muted"
+    },
+    {
+     "text": "📅 last session Fri 10-02 · -2.00%",
+     "tone": "warn"
+    },
+    {
+     "text": "→ no demand band — no stored bands for this name",
+     "tone": "muted"
+    }
+   ],
+   "high_beta": {
+    "levered": [
+     {
+      "direction": "long",
+      "etf": "VSTL",
+      "factor": 2.0
+     }
+    ],
+    "levered_chip": {
+     "more": 0,
+     "parts": [
+      {
+       "text": "🔗 "
+      },
+      {
+       "text": "2× "
+      },
+      {
+       "etf": "VSTL",
+       "title": "Defiance Daily Target 2X Long VST ETF"
+      }
+     ],
+     "rest": null,
+     "shown": [
+      "VSTL"
+     ],
+     "text": "🔗 2× VSTL"
+    }
+   },
+   "stats": [
+    {
+     "k": "β",
+     "v": "1.52"
+    },
+    {
+     "k": "Today",
+     "v": "−2.00% vs 110.09"
+    },
+    {
+     "k": "β × drop",
+     "v": "3.04"
+    },
+    {
+     "k": "σ (50d)",
+     "v": "1.48%"
+    },
+    {
+     "k": "Leveraged ETFs",
+     "v": "VSTL 2×"
+    },
+    {
+     "k": "Room",
+     "v": "—"
+    },
+    {
+     "k": "Band",
+     "v": "—"
+    }
+   ],
+   "symbol": "VST"
+  }
+ ]
+}

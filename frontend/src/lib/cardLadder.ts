@@ -110,7 +110,13 @@ const IDENT_PREFIX = ['\u{1F7E2} Sales', '\u{1F4C9} Sales', '❔ Sales data miss
   // 🎢 High Beta (2026-10-14): the served category pill (`🎢 β 2.34 · ≥1.5 ·
   // ≥2.0 · top 20% · QQQ`, high_beta_tab.tile_badges) — what the name IS on
   // this board, so the identity line.
-  '\u{1F3A2} \u03B2 '];
+  '\u{1F3A2} \u03B2 ',
+  // 🔗 (2026-10-14, Ajay: "Can you add a short tag on these stocks for their
+  // Leverage equivalents like IRE for IREN, VSTL for VST"): the served
+  // leveraged-ETF chip (`🔗 2× IRE · IREX · IREG +1`, levered_etf.chip, MARK
+  // + " ") — what trades ON the name, so the identity line. Never ⚡ / 🔻:
+  // those are PRICE_AFTER rungs.
+  '\u{1F517} '];
 /** The 🏎️ Dual Momentum filter-box badges (2026-09-29, Ajay: "How can I see
  *  all of these? at the same time?") — served per ticked box a shown leader
  *  passes, text = the box's own label (dual_momentum_tab.FILTER_LABELS,
@@ -217,6 +223,9 @@ const FOLD_KEYS: Record<string, FoldGroup> = {
   'T1 worst': 'reads', 'Last T1': 'reads', 'σ · β': 'reads',
   // 🚀 (2026-10-07): the growth fold sentence (resiliency_tab.GROWTH_STAT_KEY).
   Growth: 'reads',
+  // 🔗 (2026-10-14): the full leveraged-ETF list (levered_etf.STAT_KEY) sits
+  // under ▸ more; the chip on the identity line carries the first three.
+  'Leveraged ETFs': 'reads',
   // 🎢 High Beta (2026-10-14): NO entry. β / Today / β × drop / σ all stay on
   // the face — his K3a "σ is a column beside β on every card" (DECISIONS,
   // which outranks BUILD_SPEC §3.8's fold). The σ key is the served

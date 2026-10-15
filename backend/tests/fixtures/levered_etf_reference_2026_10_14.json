@@ -1,0 +1,612 @@
+{
+ "as_of": "2026-10-14",
+ "funds": [
+  {
+   "name": "T-Rex 2X Long Apple Daily Target ETF",
+   "ticker": "AAPX",
+   "type": "ETF"
+  },
+  {
+   "name": "Corgi AMD 2x Daily ETF",
+   "ticker": "AMDC",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Shares ETF Trust Direxion Daily AMD Bear 1X ETF",
+   "ticker": "AMDD",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares 2x Long AMD Daily ETF",
+   "ticker": "AMDL",
+   "type": "ETF"
+  },
+  {
+   "name": "2x Bitcoin ETF",
+   "ticker": "BITX",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Shares ETF Trust Direxion Daily BRKB Bull 2X ETF",
+   "ticker": "BRKU",
+   "type": "ETF"
+  },
+  {
+   "name": "T-Rex 2X Long Bitcoin Daily Target ETF",
+   "ticker": "BTCL",
+   "type": "ETF"
+  },
+  {
+   "name": "Leverage Shares 2X Long BULL Daily ETF",
+   "ticker": "BULG",
+   "type": "ETF"
+  },
+  {
+   "name": "T-REX 2X Inverse CRWV Daily Target ETF",
+   "ticker": "CORD",
+   "type": "ETF"
+  },
+  {
+   "name": "Leverage Shares 2X Long CRWV Daily ETF",
+   "ticker": "CRWG",
+   "type": "ETF"
+  },
+  {
+   "name": "Leverage Shares 2X Long ETN Daily ETF",
+   "ticker": "ETNG",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Daily Financial Bull 3x ETF",
+   "ticker": "FAS",
+   "type": "ETF"
+  },
+  {
+   "name": "T-Rex 2X Long Alphabet Daily Target ETF",
+   "ticker": "GOOX",
+   "type": "ETF"
+  },
+  {
+   "name": "Corgi IREN 2x Daily ETF",
+   "ticker": "IREC",
+   "type": "ETF"
+  },
+  {
+   "name": "Leverage Shares 2X Long IREN Daily ETF",
+   "ticker": "IREG",
+   "type": "ETF"
+  },
+  {
+   "name": "Tradr 2X Long IREN Daily ETF",
+   "ticker": "IREX",
+   "type": "ETF"
+  },
+  {
+   "name": "Tradr 2X Short IREN Daily ETF",
+   "ticker": "IREZ",
+   "type": "ETF"
+  },
+  {
+   "name": "Corgi NBIS 2x Daily ETF",
+   "ticker": "NBIC",
+   "type": "ETF"
+  },
+  {
+   "name": "Leverage Shares 2X Long NBIS Daily ETF",
+   "ticker": "NBIG",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares 2x Long NBIS Daily ETF",
+   "ticker": "NBIL",
+   "type": "ETF"
+  },
+  {
+   "name": "Tradr 2X Short NBIS Daily ETF",
+   "ticker": "NBIZ",
+   "type": "ETF"
+  },
+  {
+   "name": "Tradr 2X Long NBIS Daily ETF",
+   "ticker": "NEBX",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares ETF Trust GraniteShares 2x Long NVDA Daily ETF",
+   "ticker": "NVDL",
+   "type": "ETF"
+  },
+  {
+   "name": "T-Rex 2X Inverse NVIDIA Daily Target ETF",
+   "ticker": "NVDQ",
+   "type": "ETF"
+  },
+  {
+   "name": "T-Rex 2X Long NVIDIA Daily Target ETF",
+   "ticker": "NVDX",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares 2x Long P Daily ETF",
+   "ticker": "PUL",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Daily Magnificent 7 Bull 2X ETF",
+   "ticker": "QQQU",
+   "type": "ETF"
+  },
+  {
+   "name": "Tradr 2X Long SK hynix Daily ETF",
+   "ticker": "SKHA",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares 2x Long SK Hynix Daily ETF",
+   "ticker": "SKUU",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Daily Semiconductor Bull 3X ETF",
+   "ticker": "SOXL",
+   "type": "ETF"
+  },
+  {
+   "name": "Defiance Daily 2X Space ETF",
+   "ticker": "SPCL",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Daily Technology Bull 3x ETF",
+   "ticker": "TECL",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares ETF Trust GraniteShares 2x Short TSLA Daily ETF",
+   "ticker": "TSDD",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares 1.25x Long TSLA  Daily ETF",
+   "ticker": "TSL",
+   "type": "ETF"
+  },
+  {
+   "name": "Leverage Shares 2X Long TSLA Daily ETF",
+   "ticker": "TSLG",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Shares ETF Trust Direxion Daily TSLA Bull 2X ETF",
+   "ticker": "TSLL",
+   "type": "ETF"
+  },
+  {
+   "name": "Investment Managers Series Trust II Tradr 2X Short TSLA Daily ETF",
+   "ticker": "TSLQ",
+   "type": "ETF"
+  },
+  {
+   "name": "GraniteShares ETF Trust GraniteShares 2x Long TSLA Daily ETF",
+   "ticker": "TSLR",
+   "type": "ETF"
+  },
+  {
+   "name": "Direxion Shares ETF Trust Direxion Daily TSLA Bear 1X ETF",
+   "ticker": "TSLS",
+   "type": "ETF"
+  },
+  {
+   "name": "T-REX 2X Long Tesla Daily Target ETF",
+   "ticker": "TSLT",
+   "type": "ETF"
+  },
+  {
+   "name": "T-Rex 2X Inverse Tesla Daily Target ETF",
+   "ticker": "TSLZ",
+   "type": "ETF"
+  },
+  {
+   "name": "21Shares 2x Long Sui ETF",
+   "ticker": "TXXS",
+   "type": "ETF"
+  },
+  {
+   "name": "DIREXION DAILY GOLD BULL 2X ETF",
+   "ticker": "UGLD",
+   "type": "ETF"
+  },
+  {
+   "name": "Tradr 2X Long U Daily ETF",
+   "ticker": "UNX",
+   "type": "ETF"
+  },
+  {
+   "name": "Defiance Daily Target 2X Long VST ETF",
+   "ticker": "VSTL",
+   "type": "ETF"
+  },
+  {
+   "name": "Defiance Daily Target 2X Long IREN ETF",
+   "ticker": "IRE",
+   "type": "ETS"
+  },
+  {
+   "name": "Direxion Daily SpaceX Bull 2X ETF",
+   "ticker": "LOFF",
+   "type": "ETS"
+  },
+  {
+   "name": "T-REX 2X Long SPCX Daily Target ETF",
+   "ticker": "SPAX",
+   "type": "ETS"
+  },
+  {
+   "name": "MicroSectors FANG+ Index -3X Inverse Leveraged ETNs due January 8, 2038",
+   "ticker": "FNGD",
+   "type": "ETN"
+  }
+ ],
+ "grouped": {
+  "AAPX": [
+   58355.441835,
+   42.5703,
+   42.14
+  ],
+  "AMDC": [
+   2795.176144,
+   25.3014,
+   24.4724
+  ],
+  "AMDD": [
+   233934.247877,
+   23.6738,
+   23.98
+  ],
+  "AMDL": [
+   2059301.491336,
+   70.1273,
+   68.01
+  ],
+  "BITX": [
+   8408021.035345,
+   18.8016,
+   18.61
+  ],
+  "BRKU": [
+   106176.760558,
+   24.296,
+   24.5476
+  ],
+  "BTCL": [
+   38885.823346,
+   19.0769,
+   18.935
+  ],
+  "BULG": [
+   19037.305922,
+   22.1698,
+   22.0805
+  ],
+  "CORD": [
+   31280452.523444,
+   4.5396,
+   4.62
+  ],
+  "CRWG": [
+   15988371.622626,
+   10.1948,
+   9.86
+  ],
+  "ETNG": [
+   7408.623809,
+   12.6043,
+   12.2889
+  ],
+  "FAS": [
+   483154.707079,
+   146.8008,
+   148.58
+  ],
+  "FNGD": [
+   527014.570963,
+   24.0482,
+   24.58
+  ],
+  "GOOX": [
+   83231.330238,
+   73.9228,
+   71.39
+  ],
+  "IRE": [
+   36474314.956547,
+   5.1363,
+   4.85
+  ],
+  "IREC": [
+   10309.155,
+   11.3165,
+   10.7749
+  ],
+  "IREG": [
+   2294805.770334,
+   4.3622,
+   4.07
+  ],
+  "IREX": [
+   4802684.854641,
+   7.6201,
+   7.16
+  ],
+  "IREZ": [
+   3727137.168633,
+   15.7044,
+   16.26
+  ],
+  "LOFF": [
+   1917637.815719,
+   17.0787,
+   16.83
+  ],
+  "NBIC": [
+   79527.407134,
+   12.5102,
+   12.3104
+  ],
+  "NBIG": [
+   5424973.153012,
+   11.079,
+   10.87
+  ],
+  "NBIL": [
+   9090772.338804,
+   16.1881,
+   15.81
+  ],
+  "NBIZ": [
+   1355501.236147,
+   30.1256,
+   30.48
+  ],
+  "NEBX": [
+   3582938.716493,
+   16.5989,
+   16.15
+  ],
+  "NVDL": [
+   8569086.425238,
+   34.6995,
+   34.32
+  ],
+  "NVDQ": [
+   8816155.677347,
+   8.5478,
+   8.59
+  ],
+  "NVDX": [
+   3159628.414675,
+   19.4295,
+   19.31
+  ],
+  "PUL": [
+   7741.773,
+   74.7285,
+   69.8538
+  ],
+  "QQQU": [
+   43352.716799,
+   64.3868,
+   63.96
+  ],
+  "SKHA": [
+   9923.487954,
+   23.8374,
+   22.8431
+  ],
+  "SKUU": [
+   2888106.602815,
+   18.3735,
+   17.7
+  ],
+  "SOXL": [
+   107400985.775657,
+   114.3805,
+   110.54
+  ],
+  "SPAX": [
+   1843190.834332,
+   10.3096,
+   10.21
+  ],
+  "SPCL": [
+   65897.589375,
+   15.8461,
+   15.3211
+  ],
+  "TECL": [
+   824946.471362,
+   216.8805,
+   211.68
+  ],
+  "TSDD": [
+   3629947.553009,
+   7.5381,
+   7.5
+  ],
+  "TSL": [
+   181179.006555,
+   13.7641,
+   13.8
+  ],
+  "TSLG": [
+   56903233.981007,
+   4.7603,
+   4.79
+  ],
+  "TSLL": [
+   58874338.449052,
+   9.5406,
+   9.58
+  ],
+  "TSLQ": [
+   4072808.961262,
+   17.9166,
+   17.93
+  ],
+  "TSLR": [
+   857591.888313,
+   16.604,
+   16.64
+  ],
+  "TSLS": [
+   85458.58692,
+   55.2675,
+   55.22
+  ],
+  "TSLT": [
+   1387193.345991,
+   13.3636,
+   13.4
+  ],
+  "TSLZ": [
+   1879751.645484,
+   11.3201,
+   11.31
+  ],
+  "TXXS": [
+   7042.228495,
+   35.2664,
+   35.3078
+  ],
+  "UGLD": [
+   523643.135472,
+   19.0049,
+   19.21
+  ],
+  "UNX": [
+   18366.054468,
+   23.5278,
+   22.0005
+  ],
+  "VSTL": [
+   266468.801297,
+   23.9903,
+   23.34
+  ]
+ },
+ "grouped_day": "2026-10-14",
+ "missing_from_probe": [],
+ "source": "Massive /v3/reference/tickers (market=stocks, active=true, by type) + /v2/aggs/grouped/locale/us/market/stocks/2026-10-14 \u2014 planner probe 2026-10-14 ~22:30 ET",
+ "stocks": [
+  {
+   "name": "Apple Inc.",
+   "ticker": "AAPL",
+   "type": "CS"
+  },
+  {
+   "name": "American Bitcoin Corp. Class A Common Stock",
+   "ticker": "ABTC",
+   "type": "CS"
+  },
+  {
+   "name": "American Financial Group, Inc.",
+   "ticker": "AFG",
+   "type": "CS"
+  },
+  {
+   "name": "Advanced Micro Devices",
+   "ticker": "AMD",
+   "type": "CS"
+  },
+  {
+   "name": "BERKSHIRE HATHAWAY Class B",
+   "ticker": "BRK.B",
+   "type": "CS"
+  },
+  {
+   "name": "Webull Corporation Class A Ordinary Shares",
+   "ticker": "BULL",
+   "type": "CS"
+  },
+  {
+   "name": "CoreWeave, Inc. Class A Common Stock",
+   "ticker": "CRWV",
+   "type": "CS"
+  },
+  {
+   "name": "Eaton Corporation, plc Ordinary Shares",
+   "ticker": "ETN",
+   "type": "CS"
+  },
+  {
+   "name": "Gold.com, Inc.",
+   "ticker": "GOLD",
+   "type": "CS"
+  },
+  {
+   "name": "Alphabet Inc. Class C Capital Stock",
+   "ticker": "GOOG",
+   "type": "CS"
+  },
+  {
+   "name": "Alphabet Inc. Class A Common Stock",
+   "ticker": "GOOGL",
+   "type": "CS"
+  },
+  {
+   "name": "IREN Limited Ordinary Shares",
+   "ticker": "IREN",
+   "type": "CS"
+  },
+  {
+   "name": "Nebius Group N.V. Class A Ordinary Shares",
+   "ticker": "NBIS",
+   "type": "CS"
+  },
+  {
+   "name": "Nvidia Corp",
+   "ticker": "NVDA",
+   "type": "CS"
+  },
+  {
+   "name": "Everpure, Inc.",
+   "ticker": "P",
+   "type": "CS"
+  },
+  {
+   "name": "PAR Technology Corp.",
+   "ticker": "PAR",
+   "type": "CS"
+  },
+  {
+   "name": "Space Exploration Technologies Corp. Class A Common Stock",
+   "ticker": "SPCX",
+   "type": "CS"
+  },
+  {
+   "name": "Sui Group Holdings Limited Common Stock",
+   "ticker": "SUIG",
+   "type": "CS"
+  },
+  {
+   "name": "Tesla, Inc. Common Stock",
+   "ticker": "TSLA",
+   "type": "CS"
+  },
+  {
+   "name": "Unity Software Inc.",
+   "ticker": "U",
+   "type": "CS"
+  },
+  {
+   "name": "Vistra Corp.",
+   "ticker": "VST",
+   "type": "CS"
+  },
+  {
+   "name": "SK hynix Inc. American Depositary Shares",
+   "ticker": "SKHY",
+   "type": "ADRC"
+  }
+ ]
+}

@@ -884,3 +884,48 @@ describe('cardLadder — 🎢 High Beta tab (2026-10-14)', () => {
     }
   });
 });
+
+describe('cardLadder — 🔗 leveraged-ETF chip on the 🎢 card (2026-10-14)', () => {
+  // Ajay 2026-10-14: "Can you add a short tag on these stocks for their
+  // Leverage equivalents like IRE for IREN, VSTL for VST". The served chip
+  // (levered_etf.chip) is badges[1] on the card; the full list is the
+  // `Leveraged ETFs` stat (levered_etf.STAT_KEY) under ▸ more.
+  const PILL = '\u{1F3A2} β 3.80 · ≥1.5 · ≥2.0 · top 20%';
+  const LEV = '\u{1F517} 2× IRE · IREX · IREG +1';
+  const TODAY = '\u{1F4C5} last session Fri 10-02 · -7.00%';
+  const tile = (over: Partial<CmTile> = {}): CmTile => bare({
+    symbol: 'IREN',
+    badges: [{ text: PILL, tone: 'muted' }, { text: LEV, tone: 'muted' }, { text: TODAY, tone: 'warn' }],
+    stats: [{ k: 'β', v: '3.80' }, { k: 'Leveraged ETFs', v: 'IRE 2× · IREX 2× · IREG 2× · IREZ −2×' }],
+    ...over,
+  });
+
+  it('the chip rides the identity line after the 🎢 pill; the today pill stays PRICE', () => {
+    const l = cardLadder(tile());
+    expect(texts(l.ident)).toEqual([PILL, LEV]);
+    expect(texts(l.price)).toEqual([TODAY]);
+    expect(texts(cardLadder(bare({ badges: [{ text: '\u{1F517} −2× XXXX', tone: 'muted' }] })).ident))
+      .toEqual(['\u{1F517} −2× XXXX']);
+  });
+
+  it('the full list folds under reads; β stays on the face', () => {
+    const l = cardLadder(tile());
+    expect(foldTexts(l, 'reads')).toEqual(['Leveraged ETFs']);
+    expect(l.setup.stats.map((s) => s.k)).toEqual(['β']);
+  });
+
+  it('NEGATIVE: no rung is stolen — ⚡ tape burst and 🔻 stay price-after, a bare 🔗 word is not IDENT', () => {
+    for (const t of ['⚡ Tape burst 10:31 · $1.2M', '\u{1F53B} 12.40% under the prior close']) {
+      const l = cardLadder(bare({ badges: [{ text: t, tone: 'warn' }] }));
+      expect(texts(l.ident), t).toEqual([]);
+      expect(texts(l.priceAfter), t).toEqual([t]);
+    }
+    expect(texts(cardLadder(bare({ badges: [{ text: '\u{1F517}link', tone: 'muted' }] })).ident)).toEqual([]);
+  });
+
+  it('NEGATIVE: a card with no chip has no 🔗 anywhere and nothing folded', () => {
+    const l = cardLadder(tile({ badges: [{ text: PILL, tone: 'muted' }], stats: [{ k: 'β', v: '3.80' }] }));
+    expect(allStrings(l).some((s) => s.includes('\u{1F517}'))).toBe(false);
+    expect(foldTexts(l, 'reads')).toEqual([]);
+  });
+});
