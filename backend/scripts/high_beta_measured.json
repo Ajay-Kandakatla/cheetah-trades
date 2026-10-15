@@ -1,0 +1,328 @@
+{
+ "study": "high_beta_2026_10_14",
+ "script": "backend/scripts/high_beta_study.py",
+ "prereg": "docs/research/high_beta_2026_10_14_prereg.md",
+ "prereg_commit": "80c5f516",
+ "smoke": false,
+ "run_date": "2026-10-14",
+ "as_of": "2026-10-14",
+ "universe_n": 2699,
+ "nasdaq100": {
+  "available": true,
+  "n": 101,
+  "source": "cache",
+  "age_days": 3.0,
+  "error": null
+ },
+ "definitions": {
+  "B15_MIN": 1.5,
+  "B20_MIN": 2.0,
+  "TOP_PCT": 20.0,
+  "DOWN_CHIP_PCT": 5.0,
+  "BETA_LOOKBACK": 252,
+  "SIGMA_BARS": 50,
+  "BENCH": "SPY",
+  "MIN_BUCKET_N": 30,
+  "SESSIONS_MAX": 250,
+  "HORIZONS": [
+   1,
+   3,
+   5
+  ],
+  "PRIMARY_H": 3,
+  "BLOCK_LEN": 5,
+  "LEAVE_OUT_TOP": 5,
+  "BETA_BINS": 3,
+  "SIGMA_BINS": 3,
+  "CI_PCT": 95.0,
+  "draws": 2000,
+  "seed": 20261014,
+  "shuffle_draws": 200,
+  "cohort": "survivors-only (today's list)",
+  "refuse_window_et": "09:00\u201316:30",
+  "universe": "full \u222a nasdaq100 \u2212 ETFs \u2212 delisted"
+ },
+ "primary": {
+  "horizon": 3,
+  "verdict": "no_signal",
+  "contrast_pp": 0.16,
+  "ci": [
+   -0.45,
+   0.82
+  ],
+  "ci_session_only": [
+   -0.39,
+   0.77
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12998,
+  "n_placebo": 121851,
+  "cohort_mean_pct": 0.76,
+  "placebo_mean_pct": 0.27,
+  "mae_mean_pct": -6.2,
+  "drawdown_share_pct": 52.7,
+  "shuffle_pct": 4.0,
+  "shuffle_mean_pp": 0.0,
+  "shuffle_band": [
+   -0.15,
+   0.17
+  ]
+ },
+ "h1": {
+  "horizon": 1,
+  "verdict": "no_signal",
+  "contrast_pp": 0.1,
+  "ci": [
+   -0.17,
+   0.36
+  ],
+  "ci_session_only": [
+   -0.12,
+   0.31
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12998,
+  "n_placebo": 121853,
+  "cohort_mean_pct": 0.45,
+  "placebo_mean_pct": 0.08,
+  "mae_mean_pct": -3.34,
+  "drawdown_share_pct": 28.7
+ },
+ "h5": {
+  "horizon": 5,
+  "verdict": "no_signal",
+  "contrast_pp": 0.31,
+  "ci": [
+   -0.41,
+   1.1
+  ],
+  "ci_session_only": [
+   -0.35,
+   1.02
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12998,
+  "n_placebo": 121848,
+  "cohort_mean_pct": 1.33,
+  "placebo_mean_pct": 0.39,
+  "mae_mean_pct": -7.9,
+  "drawdown_share_pct": 61.72
+ },
+ "mfe3": {
+  "verdict": "separates",
+  "contrast_pp": 1.43,
+  "ci": [
+   0.91,
+   1.95
+  ],
+  "ci_session_only": [
+   1.01,
+   1.86
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12998,
+  "n_placebo": 121851,
+  "cohort_mean_pct": 7.82,
+  "placebo_mean_pct": 5.68,
+  "mae_mean_pct": -6.2,
+  "drawdown_share_pct": 52.7
+ },
+ "mae3": {
+  "verdict": "inverted",
+  "contrast_pp": -0.92,
+  "ci": [
+   -1.23,
+   -0.58
+  ],
+  "ci_session_only": [
+   -1.17,
+   -0.61
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12998,
+  "n_placebo": 121851,
+  "cohort_mean_pct": -6.2,
+  "placebo_mean_pct": -5.03,
+  "mae_mean_pct": -6.2,
+  "drawdown_share_pct": 52.7
+ },
+ "spy_red": {
+  "verdict": "no_signal",
+  "contrast_pp": 0.33,
+  "ci": [
+   -0.46,
+   1.15
+  ],
+  "ci_session_only": [
+   -0.36,
+   1.09
+  ],
+  "n_sessions": 115,
+  "n_cohort": 9746,
+  "n_placebo": 53951,
+  "cohort_mean_pct": 1.48,
+  "placebo_mean_pct": 0.72,
+  "mae_mean_pct": -5.7,
+  "drawdown_share_pct": 49.86
+ },
+ "spy_green": {
+  "verdict": "no_signal",
+  "contrast_pp": -0.36,
+  "ci": [
+   -1.18,
+   0.5
+  ],
+  "ci_session_only": [
+   -1.0,
+   0.3
+  ],
+  "n_sessions": 129,
+  "n_cohort": 3252,
+  "n_placebo": 67900,
+  "cohort_mean_pct": -1.37,
+  "placebo_mean_pct": -0.09,
+  "mae_mean_pct": -7.67,
+  "drawdown_share_pct": 61.22
+ },
+ "b20": {
+  "verdict": "no_signal",
+  "contrast_pp": 0.09,
+  "ci": [
+   -0.73,
+   0.99
+  ],
+  "ci_session_only": [
+   -0.66,
+   0.89
+  ],
+  "n_sessions": 240,
+  "n_cohort": 7801,
+  "n_placebo": 51571,
+  "cohort_mean_pct": 0.76,
+  "placebo_mean_pct": 0.21,
+  "mae_mean_pct": -6.63,
+  "drawdown_share_pct": 56.66
+ },
+ "top20": {
+  "verdict": "no_signal",
+  "contrast_pp": 0.19,
+  "ci": [
+   -0.44,
+   0.85
+  ],
+  "ci_session_only": [
+   -0.38,
+   0.8
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12568,
+  "n_placebo": 114051,
+  "cohort_mean_pct": 0.86,
+  "placebo_mean_pct": 0.28,
+  "mae_mean_pct": -6.23,
+  "drawdown_share_pct": 52.95
+ },
+ "sigma_matched": {
+  "verdict": "no_signal",
+  "contrast_pp": 0.18,
+  "ci": [
+   -0.42,
+   0.79
+  ],
+  "ci_session_only": [
+   -0.32,
+   0.71
+  ],
+  "n_sessions": 244,
+  "n_cohort": 12998,
+  "n_placebo": 121851,
+  "cohort_mean_pct": 0.76,
+  "placebo_mean_pct": 0.27,
+  "mae_mean_pct": -6.2,
+  "drawdown_share_pct": 52.7
+ },
+ "leave_top5": {
+  "verdict": "no_signal",
+  "contrast_pp": -0.22,
+  "ci": [
+   -0.74,
+   0.33
+  ],
+  "ci_session_only": [
+   -0.69,
+   0.29
+  ],
+  "n_sessions": 239,
+  "n_cohort": 12172,
+  "n_placebo": 119924,
+  "cohort_mean_pct": 0.12,
+  "placebo_mean_pct": 0.23,
+  "mae_mean_pct": -6.46,
+  "drawdown_share_pct": 53.85,
+  "dropped": [
+   "2025-12-17",
+   "2026-03-30",
+   "2026-07-16",
+   "2026-07-28",
+   "2026-07-29"
+  ]
+ },
+ "first_half": {
+  "verdict": "no_signal",
+  "contrast_pp": 0.41,
+  "ci": [
+   -0.39,
+   1.26
+  ],
+  "ci_session_only": [
+   -0.26,
+   1.17
+  ],
+  "n_sessions": 122,
+  "n_cohort": 5457,
+  "n_placebo": 50780,
+  "cohort_mean_pct": 1.26,
+  "placebo_mean_pct": 0.42,
+  "mae_mean_pct": -6.4,
+  "drawdown_share_pct": 52.63
+ },
+ "second_half": {
+  "verdict": "no_signal",
+  "contrast_pp": -0.02,
+  "ci": [
+   -0.93,
+   0.95
+  ],
+  "ci_session_only": [
+   -0.85,
+   0.89
+  ],
+  "n_sessions": 122,
+  "n_cohort": 7541,
+  "n_placebo": 71071,
+  "cohort_mean_pct": 0.4,
+  "placebo_mean_pct": 0.16,
+  "mae_mean_pct": -6.05,
+  "drawdown_share_pct": 52.75
+ },
+ "n_sessions_window": 244,
+ "first_session": "2025-10-17",
+ "last_session": "2026-10-07",
+ "n_names_with_bars": 2699,
+ "n_rows": 626934,
+ "n_hb_rows": 134852,
+ "first_bar": "2024-10-14",
+ "last_bar": "2026-10-14",
+ "limits": [
+  "survivors-only cohort: the universe is today's full \u222a Nasdaq-100 list \u2014 names that left it are absent from both groups",
+  "two-year price cache: the first session needs a full year of \u03b2 window behind it, so about one year of sessions exists",
+  "the 1-, 3- and 5-session windows of adjacent sessions overlap; the moving-block bootstrap keeps runs of sessions together but does not remove the overlap",
+  "MFE is mechanically larger for volatile names \u2014 reported, never the verdict",
+  "no stop exists in this read: the drawdown line is the share whose 3-session low printed a further cut% under the close, a proxy, not a stop-out rate",
+  "close-to-close returns on the cached daily bars; no intraday entry is modelled"
+ ],
+ "runtime_sec": 66.5,
+ "attempted_writes": [
+  "price_cache.create_index"
+ ]
+}

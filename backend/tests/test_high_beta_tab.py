@@ -166,10 +166,27 @@ def test_01b_NEG_the_guard_catches_a_planted_word(tmp_path):
     assert "rebound" in words and "bounce" not in words
 
 
-def test_01c_served_words_say_unmeasured_and_quote_the_order():
+def test_01c_served_words_say_unmeasured_and_quote_the_order(monkeypatch):
     assert "UNMEASURED" in HB.NOTE_PENDING and "largest β × today's drop first" in HB.NOTE_PENDING
     assert f"{HB.BETA_LOOKBACK} daily log returns" in HB.NOTE_PENDING
+    # the placeholder literal (before the study ran) serves the UNMEASURED note verbatim …
+    from chart_maps import high_beta_measured as HBM
+    monkeypatch.setattr(HBM, "MEASURED", {"state": "unmeasured"})
     assert HB.study_block()["status"] == "unmeasured" and HB.note_text() == HB.NOTE_PENDING
+
+
+def test_01d_the_measured_literal_serves_the_study_line_not_the_placeholder():
+    # 2026-10-14: the study ran (prereg 80c5f516) and the literal was pasted; the served line
+    # carries its verdict + CI, never a forecast word, and the placeholder note is gone
+    from chart_maps import high_beta_measured as HBM
+    m = HBM.load()
+    assert m.get("status") == "measured" and m["prereg_commit"] == "80c5f516"
+    sb = HB.study_block()
+    assert sb["status"] == "measured" and HB.note_text() == sb["text"] != HB.NOTE_PENDING
+    assert "MEASURED" in sb["text"] and "80c5f516" in sb["text"]
+    assert f"{m['primary']['contrast_pp']:+.2f} pp" in sb["text"]
+    assert "an order, not a forecast" in sb["text"]
+    assert not any(w in sb["text"].lower() for w in HB.FORBIDDEN_WORDS)
 
 
 # --------------------------------------------------------------------------
@@ -590,8 +607,11 @@ def test_13_board_ready_envelope_rows_and_tiles(hb_board):
     assert out["tab"] == "high_beta" and out["sort"] == HB.SORT_SWING
     assert out["sorts"] == HB.served_sorts() and len(out["sorts"]) == 3
     b = out["high_beta_board"]
-    assert set(b) == _BOARD_KEYS and b["state"] == "ready" and b["measured"] is False
-    assert b["note"] == HB.NOTE_PENDING and b["refresh_sec"] is None
+    # `measured` follows the literal (False before the study ran, True since 2026-10-14) and the
+    # note is whatever study_block serves for that state
+    assert set(b) == _BOARD_KEYS and b["state"] == "ready"
+    assert b["measured"] is (HB.study_block()["status"] == "measured")
+    assert b["note"] == HB.note_text() and b["refresh_sec"] is None
     syms = [t["symbol"] for t in out["tiles"]]
     assert syms == ["AAA", "BBB", "CCC"]                 # red only, swing order, THIN under the floor
     t = out["tiles"][0]
