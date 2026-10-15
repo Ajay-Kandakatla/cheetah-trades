@@ -137,11 +137,12 @@ async def chart_maps(
                                             "default false = the red names only. Ajay "
                                             "2026-10-14: 'Can you create a new tab for High "
                                             "Beta stocks'."),
-    min_tier: str = Query(board_mod.DEFAULT_MIN_TIER,
-                          description="liquidity floor by 50-day avg $ volume: "
-                                      "deep (>=$50M) | ok (>=$10M, default) | "
-                                      "thin (>=$2M) | any. Same scale as the "
-                                      "Back in Demand tiers."),
+    min_tier: Optional[str] = Query(None,
+                                    description="liquidity floor by 50-day avg $ volume: "
+                                                "deep (>=$50M) | ok (>=$10M, the default) | "
+                                                "thin (>=$2M) | any (the 🎢 high_beta default, "
+                                                "Ajay 2026-10-14). Same scale as the Back in "
+                                                "Demand tiers."),
     sort: str = Query(board_mod.DEFAULT_SORT,
                       description="theme (default) | volume | rvol | turnover | "
                                   "avg_turnover | conviction | rs | change. Applied "
@@ -185,7 +186,7 @@ async def chart_maps(
             themes_first=themes_first if isinstance(themes_first, bool) else board_mod.THEMES_FIRST_DEFAULT,
             pattern=pattern if isinstance(pattern, str) else None,
             sort=sort if isinstance(sort, str) else board_mod.DEFAULT_SORT,
-            min_tier=min_tier if isinstance(min_tier, str) else board_mod.DEFAULT_MIN_TIER,
+            min_tier=min_tier if isinstance(min_tier, str) and min_tier else board_mod.default_min_tier(tab),
             level=level if isinstance(level, str) else "all",
             levels=levels if isinstance(levels, str) else "all",
             touching_only=touching_only if isinstance(touching_only, bool) else False,

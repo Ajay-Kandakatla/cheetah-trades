@@ -2804,3 +2804,39 @@ describe('tabSearch — high_beta drops its own params at the border (2026-10-14
     expect(next.get('hb')).toBe('b15');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 2026-10-14 — the 🎢 tab's liquidity floor defaults to "No floor" (his screenshot ask)
+// ---------------------------------------------------------------------------
+import * as CMx from './chartMaps';
+
+describe('per-tab liquidity default (🎢 = any)', () => {
+  it('high_beta defaults to any, every other tab to the house default', () => {
+    expect(CMx.defaultMinTier('high_beta')).toBe('any');
+    expect(CMx.parseTier(null, 'high_beta')).toBe('any');
+    expect(CMx.parseTier('', 'high_beta')).toBe('any');
+    expect(CMx.parseTier('ok', 'high_beta')).toBe('ok');
+    expect(CMx.defaultMinTier('zones')).toBe(CMx.DEFAULT_MIN_TIER);
+    expect(CMx.parseTier(null, 'drop10')).toBe('ok');
+    expect(CMx.parseTier(null)).toBe('ok');
+  });
+  it('the query omits the tab default and sends an explicit floor on 🎢', () => {
+    const q1 = CMx.boardQuery({ tab: 'high_beta', minTier: 'any' } as never);
+    expect(String(q1)).not.toContain('min_tier');
+    const q2 = CMx.boardQuery({ tab: 'high_beta', minTier: 'ok' } as never);
+    expect(String(q2)).toContain('min_tier=ok');
+    // NEGATIVE: on another tab "any" is NOT the default, so it is sent; "ok" is not
+    const q3 = CMx.boardQuery({ tab: 'zones', minTier: 'any' } as never);
+    expect(String(q3)).toContain('min_tier=any');
+    const q4 = CMx.boardQuery({ tab: 'zones', minTier: 'ok' } as never);
+    expect(String(q4)).not.toContain('min_tier');
+  });
+  it('pins the per-tab defaults to the backend literal', async () => {
+    // Vite `?raw` (typed by src/test/vite-raw.d.ts): the backend file read at transform time
+    const { default: src } = await import('../../../backend/chart_maps/board.py?raw');
+    const m = src.match(/TAB_DEFAULT_MIN_TIER = \{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    const pairs = Object.fromEntries([...(m![1].matchAll(/"([a-z_0-9]+)":\s*"([a-z]+)"/g))].map((x) => [x[1], x[2]]));
+    expect(pairs).toEqual(CMx.TAB_DEFAULT_MIN_TIER);
+  });
+});

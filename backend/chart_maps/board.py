@@ -1030,6 +1030,16 @@ LIQ_TIERS = {"deep": LIQ_DEEP_USD, "ok": LIQ_OK_USD, "thin": LIQ_THIN_USD,
 # of a $1.5M/day base is teaching him a pattern he cannot actually trade.
 DEFAULT_MIN_TIER = "ok"
 
+# Per-tab default floor. 🎢 High Beta: Ajay 2026-10-14, a screenshot of the Liquidity
+# menu — "Give me all option and default to all in this please" — so every High-Beta
+# name gets a chart; the $10M floor is one click away. Every other tab keeps "ok".
+TAB_DEFAULT_MIN_TIER = {"high_beta": "any"}
+
+
+def default_min_tier(tab: Optional[str]) -> str:
+    """The floor a tab applies when the caller names none."""
+    return TAB_DEFAULT_MIN_TIER.get(tab or "", DEFAULT_MIN_TIER)
+
 
 def liquidity_tier(avg_dollar_vol: Optional[float]) -> Optional[str]:
     """Which tier this turnover sits in. PURE. Same scale as Back in Demand."""
@@ -4730,7 +4740,7 @@ def drop10_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
 def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
                     universe: str = "full", themes_first: bool = False,
-                    sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                    sort: str = DEFAULT_SORT, min_tier: Optional[str] = None, *,
                     ctx: Optional[dict] = None, now: Optional[datetime] = None,
                     hb_filters: Optional[str] = None, hb_mode: Optional[str] = None,
                     hb_all: bool = False) -> dict:
@@ -4750,6 +4760,7 @@ def high_beta_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
 
     UNMEASURED and display only — an order, not a signal.
     """
+    min_tier = min_tier or default_min_tier("high_beta")  # the tab opens with no floor (Ajay 2026-10-14)
     import copy
     from chart_maps import dual_momentum_tab as DMT
     from chart_maps import high_beta_tab as HB
@@ -7375,7 +7386,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           universe: str = "full", themes_first: bool = THEMES_FIRST_DEFAULT,
           pattern: Optional[str] = None, source: str = "pattern",
           minervini_only: bool = False, sort: str = DEFAULT_SORT,
-          min_tier: str = DEFAULT_MIN_TIER, level: str = "all",
+          min_tier: Optional[str] = None, level: str = "all",
           touching_only: bool = False, phase: str = "",
           target: str = "zone", bias: str = "all", micro: str = "60m",
           min_room: Optional[float] = None, studies: bool = False,
@@ -7434,6 +7445,7 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     `minervini_only` narrows the pattern winners to those that were SEPA
     qualifiers at observation time.
     """
+    min_tier = min_tier or default_min_tier(tab)       # None -> the tab's own default (🎢 = "any")
     t = tab if tab in TABS else TABS[0]
     limit = max(1, min(int(limit or LIMIT_DEFAULT), LIMIT_MAX))
     days = max(BARS_FLOOR, min(int(days or BARS_DEFAULT), BARS_MAX))

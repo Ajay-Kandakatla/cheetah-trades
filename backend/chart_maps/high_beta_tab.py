@@ -995,11 +995,20 @@ def view_line(include_green: bool, counts: dict) -> str:
             f"hidden; tick “{VIEW_LABEL}” to list them.")
 
 
+NO_FLOOR_LABELS = ("no floor", "any")          # board.py's label for min_tier "any"
+
+
 def count_line(counts: dict, *, min_tier_label: str, need_date) -> str:
     c = counts or {}
-    text = (f"Showing {_n(c.get('shown'))} charts of {_n(c.get('rows'))} names — "
-            f"{_n(c.get('dropped_thin'))} under the liquidity floor ({min_tier_label}), "
-            "listed in the table as thin, no chart")
+    if not int(c.get("dropped_thin") or 0) and str(min_tier_label).strip().lower() in NO_FLOOR_LABELS:
+        # The tab's default since 2026-10-14 (Ajay: "default to all"): nothing is cut
+        # by liquidity; a thin name is charted too and keeps its flag in the table.
+        text = (f"Showing {_n(c.get('shown'))} charts of {_n(c.get('rows'))} names — "
+                "no liquidity floor (thin names charted too, flagged thin in the table)")
+    else:
+        text = (f"Showing {_n(c.get('shown'))} charts of {_n(c.get('rows'))} names — "
+                f"{_n(c.get('dropped_thin'))} under the liquidity floor ({min_tier_label}), "
+                "listed in the table as thin, no chart")
     if int(c.get("no_turnover") or 0):
         text += f", {_n(c.get('no_turnover'))} with no turnover to check"
     text += (f". Not rated: {_n(c.get('etf'))} ETFs, {_n(c.get('delisted'))} delisted, "

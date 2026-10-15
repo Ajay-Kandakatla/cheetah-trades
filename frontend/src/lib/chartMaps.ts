@@ -2178,9 +2178,18 @@ export const THEMES_FIRST_DEFAULT = false;
  *  teaching a pattern he cannot actually trade. */
 export const DEFAULT_MIN_TIER = 'ok';
 
-export function parseTier(raw: string | null | undefined): string {
+/** Matches board.TAB_DEFAULT_MIN_TIER. 🎢 High Beta: Ajay 2026-10-14 (a screenshot of
+ *  the Liquidity menu) — "Give me all option and default to all in this please" —
+ *  every High-Beta name gets a chart; the $10M floor is one click away. */
+export const TAB_DEFAULT_MIN_TIER: Record<string, string> = { high_beta: 'any' };
+
+export function defaultMinTier(tab?: string | null): string {
+  return (tab && TAB_DEFAULT_MIN_TIER[tab]) || DEFAULT_MIN_TIER;
+}
+
+export function parseTier(raw: string | null | undefined, tab?: string | null): string {
   const v = (raw || '').trim();
-  return v || DEFAULT_MIN_TIER;
+  return v || defaultMinTier(tab);
 }
 
 /** A sort the backend actually offers, or the default. The board advertises its
@@ -2342,7 +2351,8 @@ export function boardQuery(p: {
   // would reorder the ~24 tiles theme priority already chose — "highest
   // volume" would silently mean "highest volume among those 24".
   if (p.sort && p.sort !== DEFAULT_SORT) q.set('sort', p.sort);
-  if (p.minTier && p.minTier !== DEFAULT_MIN_TIER) q.set('min_tier', p.minTier);
+  // The tab's own default is the server's too, so it is never sent (🎢 = 'any').
+  if (p.minTier && p.minTier !== defaultMinTier(p.tab)) q.set('min_tier', p.minTier);
   // Winners-only params. `pattern` is meaningless for the zone ledger — zone
   // re-entries have no chart-pattern name — so it is dropped there rather than
   // sent and silently ignored.

@@ -195,6 +195,21 @@ def test_every_signature_parameter_off_default_skips_the_write(name):
     assert db.coll.writes == 0
 
 
+def test_min_tier_follows_the_tab_default_2026_10_14():
+    """`min_tier` None = the tab's own default (board.default_min_tier); 🎢 High Beta
+    opens with "any" (Ajay 2026-10-14), every other tab with DEFAULT_MIN_TIER."""
+    assert M.is_default_request(**_req(tab="zones", min_tier=None)) is True
+    assert M.is_default_request(**_req(tab="zones", min_tier=B.DEFAULT_MIN_TIER)) is True
+    assert M.is_default_request(**_req(tab="high_beta", min_tier="any")) is True
+    # NEGATIVE: a floor the reader chose is a filtered view on either tab
+    assert M.is_default_request(**_req(tab="zones", min_tier="any")) is False
+    assert M.is_default_request(**_req(tab="high_beta", min_tier=B.DEFAULT_MIN_TIER)) is False
+    db = FakeDB()
+    assert M.record_board("high_beta", {"tiles": _tiles("AAA")},
+                          request=_req(tab="high_beta", min_tier="any"), db=db) is True
+    assert db.coll.writes == 1
+
+
 def test_C1_REPLAY_the_page_zones_query_writes():
     """The page sends limit=80 and min_room=5 explicitly on the room tabs."""
     db = FakeDB()

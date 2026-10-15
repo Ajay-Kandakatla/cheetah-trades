@@ -605,7 +605,7 @@ _ROW_KEYS = {"symbol", "beta", "cats", "qqq", "move_pct", "state", "swing", "sig
 
 def test_13_board_ready_envelope_rows_and_tiles(hb_board):
     assert BOARD.TABS[-1] == "high_beta" and BOARD.TABS[-2] == "drop10"
-    out = BOARD.board(tab="high_beta", limit=24)
+    out = BOARD.board(tab="high_beta", limit=24, min_tier="ok")   # the floor pins THIN out (test_16 covers the tab default)
     assert out["tab"] == "high_beta" and out["sort"] == HB.SORT_SWING
     assert out["sorts"] == HB.served_sorts() and len(out["sorts"]) == 3
     b = out["high_beta_board"]
@@ -699,7 +699,7 @@ def test_13h_NEG_compact_row_and_tile_block_qqq_flag():
 
 
 def test_13c_ticked_boxes_and_all_mode_reach_the_tab(hb_board):
-    out = BOARD.board(tab="high_beta", limit=24, hb="b20,d5", hb_mode="all")
+    out = BOARD.board(tab="high_beta", limit=24, hb="b20,d5", hb_mode="all", min_tier="ok")   # floor on: THIN out
     assert [t["symbol"] for t in out["tiles"]] == ["AAA", "BBB"]
     f = out["high_beta_board"]["filters"]
     assert f["active"] == ["b20", "d5"] and f["mode"] == "all" and f["line"]
@@ -710,7 +710,7 @@ def test_13c_ticked_boxes_and_all_mode_reach_the_tab(hb_board):
 def test_13d_membership_hook_still_writes_for_the_default_request(hb_board):
     BOARD.board(tab="high_beta", limit=BOARD.LIMIT_MAX)
     doc = hb_board["db"].coll.docs.get("high_beta")
-    assert doc and doc["symbols"] == ["AAA", "BBB", "CCC"]
+    assert doc and doc["symbols"] == ["AAA", "THIN", "BBB", "CCC"]      # the default request = no floor (2026-10-14)
     assert doc["ttl_name"] == "chart_maps.high_beta_tab.CLOSED_TTL_SEC"
     BOARD.board(tab="high_beta", limit=BOARD.LIMIT_MAX, hb="b20")
     BOARD.board(tab="high_beta", limit=BOARD.LIMIT_MAX, hb_all=True)
@@ -743,7 +743,7 @@ def test_13f_api_threads_the_three_params_and_serves_the_watch_route():
                  "hb_all=hb_all is True", '@router.get("/chart-maps/high-beta/watch")',
                  "board_mod.high_beta_watch"):
         assert need in src, need
-    assert "bounce" not in src[src.index("hb: str = Query"):src.index("min_tier: str = Query")]
+    assert "bounce" not in src[src.index("hb: str = Query"):src.index("min_tier: Optional[str] = Query")]
 
 
 # --------------------------------------------------------------------------
@@ -835,3 +835,50 @@ def test_15_a_tagless_entry_is_rebuilt_when_the_levered_map_lands(monkeypatch):
     got = HB.cached_or_warm("full", now=NOW_NIGHT)
     assert got["entry"] is rebuilt and got["stale"] is False
     HB._memo.clear()
+
+
+# ---------------------------------------------------------------------------
+# 2026-10-14 — the 🎢 tab's liquidity floor defaults to "any" (his screenshot ask:
+# "Give me all option and default to all in this please"); other tabs keep "ok"
+# ---------------------------------------------------------------------------
+def test_16_the_high_beta_tab_opens_with_no_liquidity_floor(hb_board):
+    assert BOARD.default_min_tier("high_beta") == "any"
+    assert BOARD.default_min_tier("zones") == BOARD.DEFAULT_MIN_TIER == "ok"
+    assert BOARD.default_min_tier(None) == "ok"
+    assert BOARD.TAB_DEFAULT_MIN_TIER == {"high_beta": "any"}
+    out = BOARD.board(tab="high_beta", limit=24)                  # no floor named -> the tab's own default
+    assert out["min_tier"] == "any"
+    syms = [t["symbol"] for t in out["tiles"]]
+    assert "THIN" in syms, "with no floor the thin name gets a chart too"
+    # NEGATIVE: an explicit floor still applies, and the other tabs' default is untouched
+    out_ok = BOARD.board(tab="high_beta", limit=24, min_tier="ok")
+    assert out_ok["min_tier"] == "ok" and "THIN" not in [t["symbol"] for t in out_ok["tiles"]]
+    out_z = BOARD.board(tab="zones", limit=24)
+    assert out_z["min_tier"] == "ok"                                   # every other tab keeps the house floor
+    # the membership writer rule follows the tab: the tab's own default is THE default request,
+    # a floor the reader chose is a filtered view (NEGATIVE), None still means "the default"
+    import inspect as _inspect
+    sig = {n: p.default for n, p in _inspect.signature(BOARD.board).parameters.items()}
+    base = dict(sig, limit=BOARD.LIMIT_MAX)
+    assert MEM.is_default_request(**dict(base, tab="high_beta", min_tier="any")) is True
+    assert MEM.is_default_request(**dict(base, tab="high_beta", min_tier=None)) is True
+    assert MEM.is_default_request(**dict(base, tab="high_beta", min_tier="ok")) is False
+    assert MEM.is_default_request(**dict(base, tab="zones", min_tier="ok")) is True
+    assert MEM.is_default_request(**dict(base, tab="zones", min_tier="any")) is False
+    assert MEM.is_default_request(**dict(base, tab="zones", min_tier="thin")) is False
+
+
+def test_17_count_line_says_no_floor_only_when_nothing_is_cut():
+    c = {"shown": 80, "rows": 568, "dropped_thin": 0, "etf": 0, "delisted": 0, "stale": 0, "no_bars": 0,
+         "no_print": 0, "no_snapshot": 0, "suspect": 0}
+    off = HB.count_line(c, min_tier_label="no floor", need_date="2026-10-14")
+    assert off.startswith("Showing 80 charts of 568 names — no liquidity floor")
+    assert "under the liquidity floor" not in off and "bounce" not in off
+    # NEGATIVE: a chosen floor keeps the count sentence, and so does a no-floor label with a cut (never lie)
+    on = HB.count_line({**c, "dropped_thin": 84}, min_tier_label="Tradeable · ≥$10M/day", need_date="2026-10-14")
+    assert "84 under the liquidity floor (Tradeable · ≥$10M/day)" in on
+    odd = HB.count_line({**c, "dropped_thin": 1}, min_tier_label="no floor", need_date="2026-10-14")
+    assert "1 under the liquidity floor (no floor)" in odd
+    # a direct call of the tile builder opens with the tab's default too
+    import inspect as _inspect
+    assert _inspect.signature(BOARD.high_beta_tiles).parameters["min_tier"].default is None

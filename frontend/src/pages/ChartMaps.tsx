@@ -30,7 +30,7 @@ import { PatternChart } from '../components/PatternChart';
 import { PatternsBoard } from './PatternsPage';
 import { InfoButton } from '../components/InfoButton';
 import {
-  CM_TABS, DEFAULT_MIN_TIER, DEFAULT_SORT, ENTERABLE_KIND, TAB_META, THEMES_FIRST_DEFAULT,
+  CM_TABS, DEFAULT_SORT, ENTERABLE_KIND, TAB_META, THEMES_FIRST_DEFAULT, defaultMinTier,
   quickBounceStudyText, quickBouncePersistenceText, tabUsageKey, breakingPassText, lidBreakStudyText, sessionNoteText,
   WINNER_SOURCES, boardQuery, isBoardTab, ROOM_TABS, DEFAULT_MIN_ROOM, parseMinRoom,
   parseGrades, gradesParam,
@@ -293,7 +293,7 @@ export function ChartMaps() {
   const days = Number(params.get('days')) || undefined;
   const minerviniOnly = params.get('minervini') === 'true';
   const sort = parseSort(params.get('sort'));
-  const minTier = parseTier(params.get('min_tier'));
+  const minTier = parseTier(params.get('min_tier'), tab);
   /* Support tab. Both live in the URL so a level read is shareable and a
    * refresh does not drop you back on an empty search box. */
   const supportSymbol = normalizeSymbol(params.get('symbol'));
@@ -1724,7 +1724,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
               value={minTier}
               onChange={(e) => setParams((p) => {
                 const n = new URLSearchParams(p);
-                if (e.target.value === DEFAULT_MIN_TIER) n.delete('min_tier');
+                if (e.target.value === defaultMinTier(tab)) n.delete('min_tier');
                 else n.set('min_tier', e.target.value);
                 return n;
               }, { replace: true })}

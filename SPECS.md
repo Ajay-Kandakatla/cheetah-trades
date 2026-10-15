@@ -583,6 +583,11 @@ constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS 
   are never a zero move.
 - **View** (AMENDMENTS A1): `rows` = a compact row for EVERY listed name (dense table) + `tiles` for the top
   `board.LIMIT_MAX` 80; default = the names red today, `hb_all=1` includes green (sorted after red).
+- **Liquidity floor** (Ajay 2026-10-14, the Liquidity menu screenshot: *"Give me all option and default to all in this
+  please"*): the tab opens with **No floor** — `board.TAB_DEFAULT_MIN_TIER = {"high_beta": "any"}`, resolved by
+  `board.default_min_tier(tab)` in `board()`, the API (`min_tier` omitted) and the FE (`defaultMinTier(tab)`); the four
+  options stay in the menu, an explicit `min_tier` applies, every other tab keeps `DEFAULT_MIN_TIER` "ok".
+  `membership.is_default_request`: the tab's own default (or None) = the default request; a chosen floor writes nothing.
 - **Orders** (served, tab-scoped, `TAB_SORTS`): `hb_swing` 🎢 β × today's drop (the default — MINE, his "you pick"),
   `hb_drop` 📉 today's drop, `hb_vol` 🌊 most volatile first by σ (`SIGMA_BARS` = `resiliency_tab.VOL_AVG_BARS` 50 daily %
   returns, Ajay K3a — window his open call). `default` and any other key → `hb_swing`.

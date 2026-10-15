@@ -130,6 +130,12 @@ def is_default_request(**request) -> bool:
         elif k == "studies":
             if v is not False:
                 return False
+        elif k == "min_tier":
+            # Per-tab floor (🎢 High Beta opens with "any", Ajay 2026-10-14): None
+            # means "the tab's own default", and that default IS the page request.
+            # A floor the reader chose is a filtered view and writes nothing.
+            if v is not None and v != B.default_min_tier(request.get("tab")):
+                return False
         elif k == "min_room":
             if v is None:
                 continue
