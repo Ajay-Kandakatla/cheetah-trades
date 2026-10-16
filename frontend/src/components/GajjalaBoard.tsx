@@ -34,7 +34,7 @@
  * once-per-value scroll lands on that tile — no sixth card grid, Rule #5); the
  * ninth sub 🧠 Potential draws the 📈 Track (today open, the session before
  * folded, a timeline per row), the 👀 watch line, then the roll-up tiles. The
- * live 🧠 push line sits under the A+ shadow line. Every word and number of
+ * live 🧠 push line sits under the A+ line (LIVE since 2026-10-16). Every word and number of
  * those surfaces is SERVED (potential.py / tab.py); the FE types none. A
  * potential, not an entry. UNMEASURED.
  *
@@ -69,6 +69,16 @@
  * param; a sub click drops it). The server grades every alert by GG's trade
  * math and words every cell, count, label and %; this panel types no word and
  * no number. A ledger of the alerts as sent, not a study. UNMEASURED.
+ *
+ * 🎯 A+ entry live (2026-10-16, DECISIONS10). Ajay: "can you add liver tracker
+ * for Gajjala's entry." and "Dont understand the question I amlooking for Entry
+ * of his stocks from all 5 tabs. When every they satisfy all his criteria.. LIke
+ * for some he says we need to make sure EMA is kissed you alert me when that
+ * happens 5 mins track of it when there are potentials and also look for new
+ * potentials". A 🧠 Track row prints the SERVED entry_text when its entry rang;
+ * the 🏁 panel prints the SERVED entries_text line right under the shadow line
+ * (AMENDMENTS10 F3 — the live A+ entries on their own line, never pooled with
+ * the 🧠 %); this file types no entry word. UNMEASURED.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -674,6 +684,7 @@ function TrackRows({ block }: { block: GgTrackBlock }) {
               {href ? <Link to={href} className="gg-track-text">{r.text}</Link> : <span className="gg-track-text">{r.text}</span>}
               {r.vs_trigger_text ? <span className="gg-muted"> · {r.vs_trigger_text}</span> : null}
               {r.push_text ? <span className="gg-track-push" data-testid={`gg-track-push-${id}`}> · {r.push_text}</span> : null}
+              {r.entry_text ? <span className="gg-track-push gg-track-entry" data-testid={`gg-track-entry-${id}`}> · {r.entry_text}</span> : null}
               {tl.length ? (
                 <details className="gg-timeline" data-testid={`gg-track-timeline-${id}`}>
                   <summary>timeline</summary>
@@ -758,7 +769,7 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
   }
 }
 
-/** 🏁 Track record (2026-10-16) — the served title, the served day picker, the served counts / A+ shadow / today
+/** 🏁 Track record (2026-10-16) — the served title, the served day picker, the served counts / A+ shadow / 🎯 entries / today
  *  lines, one table per served day (served heads, served rows), the served more / empty lines, the served rule folded
  *  and the served honesty line last. The panel types no word, no number and no percent sign; no tiles, no room POST.
  *  An older API (no `track_record` block) → the served empty note only. */
@@ -785,6 +796,7 @@ function TrackRecordPanel({ tr, emptyNote, onSpan }: {
       {tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
       {tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
       {tr.shadow_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-shadow">{tr.shadow_text}</div> : null}
+      {tr.entries_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-entries">{tr.entries_text}</div> : null}
       {tr.today_text ? <div className="cm-note" data-testid="gg-tr-today">{tr.today_text}</div> : null}
       {(tr.days || []).map((d) => (
         <div key={d.date} className="gg-tr-day">

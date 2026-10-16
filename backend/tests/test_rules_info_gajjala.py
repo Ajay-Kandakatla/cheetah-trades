@@ -67,15 +67,21 @@ def test_one_line_per_setup_with_its_numbers(sec):
     assert "Cheetah default" in t                                   # stays-listed + psych band are Ajay's
 
 
-def test_push_line_says_shadow_and_follows_the_constant(sec, monkeypatch):
+def test_push_line_is_live_by_default_and_shadow_on_a_flip_back(sec, monkeypatch):
+    # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the shipped line is the
+    # live one; the shadow line is pinned on an explicit flip back (one word).
     a = " ".join(sec["alerts"])
-    assert GC.GAJJALA_PUSH_MODE == "shadow"
-    assert "SHADOW" in a and "shadow — not sent" in a and "%d-session" % GC.STUDY_SESSIONS in a
-    # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …";
-    # LIVE, owner-only): the A+ shadow line is NARROWED to A+ (BUILD_SPEC4 W20) — a live 🧠 line sits beside it.
-    assert "no A+ reaches a phone until" in a
+    assert GC.GAJJALA_PUSH_MODE == "live"
+    assert "SHADOW" not in a and "ON for the owner" in a and "every A+ is its own push" in a
     assert not re.search(r"nothing (rings|reaches|is sent)", a, re.I), "NEGATIVE: the 🧠 kind rings live"
     assert "09:45–16:00 and 16:00–20:00 ET" in a and "never the first %d minutes" % GC.NO_TRADE_AFTER_OPEN_MIN in a
+    monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "shadow")
+    sh = " ".join(RI._gajjala_section()["alerts"])
+    # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …";
+    # LIVE, owner-only): the A+ shadow line is NARROWED to A+ (BUILD_SPEC4 W20) — a live 🧠 line sits beside it.
+    assert "SHADOW" in sh and "shadow — not sent" in sh and "%d-session" % GC.STUDY_SESSIONS in sh
+    assert "no A+ reaches a phone until" in sh
+    assert not re.search(r"nothing (rings|reaches|is sent)", sh, re.I), "NEGATIVE: the 🧠 kind rings live"
     monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")
     live = " ".join(RI._gajjala_section()["alerts"])
     assert "SHADOW" not in live and "ON for the owner" in live
@@ -99,10 +105,15 @@ MUTATIONS = [
     ("PASS_CADENCE_SEC", 600, "every 10 minutes"), ("SA_QUIET_BEST_PCT", 35.0, "under 35%"),
     ("EMA_FAST", 8, "8 EMA over the"), ("STUDY_SESSIONS", 200, "200-session study"),
 ]
+# WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — STUDY_SESSIONS is printed by
+# the SHADOW push line only, so its mutation runs on an explicit flip back (same assertion, the branch that prints it)
+SHADOW_ONLY = {"STUDY_SESSIONS"}
 
 
 @pytest.mark.parametrize("name,val,want", MUTATIONS, ids=[m[0] for m in MUTATIONS])
 def test_mutating_a_constant_moves_the_text(monkeypatch, name, val, want):
+    if name in SHADOW_ONLY:
+        monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "shadow")
     before = _text(RI._gajjala_section())
     assert want not in before
     monkeypatch.setattr(GC, name, val)

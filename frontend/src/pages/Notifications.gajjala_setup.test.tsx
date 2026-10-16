@@ -3,9 +3,12 @@
  * DECISIONS: "Pushes: YES — owner-only kind gajjala_setup, A+ triggers only …
  * 09:45–16:00 and 16:00–20:00 ET, never 09:30–09:45 … silent on closed days,
  * once per (symbol, setup, session); pref toggle in push/subs.py". Round A: SHADOW
- * first — recorded on /alerts, nothing sent until the switch is flipped. The page
+ * first — recorded on /alerts, nothing sent until the switch is flipped.
+ * WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that
+ * happens", DECISIONS10 D1; default_prefs stays False — AMENDMENTS10 F1). The page
  * must say ON FOR YOUR PHONE (the kind is in the backend owner keep-set), say it
- * is shadow, say when it fires and when it never does, and say NOT MEASURED. The
+ * is LIVE since 2026-10-16 (his call), say when it fires and when it never does,
+ * and say NOT MEASURED. The
  * keep-set ↔ page coherence against backend/push/subs.py and the mode against
  * constants.GAJJALA_PUSH_MODE are the contracts.mjs 🚩 block. */
 import { render, screen } from '@testing-library/react';
@@ -53,11 +56,25 @@ describe('Notifications · 🚩 gajjala_setup', () => {
     expect(screen.getByText('Gajjala A+ setup (his five setups)')).toBeTruthy();
   });
 
-  it('the detail says ON FOR YOUR PHONE, SHADOW (nothing sent yet), and NOT MEASURED', () => {
+  // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — DECISIONS10 D1; the phrase
+  // list follows AMENDMENTS10 F1 ("everyone else starts off" stays), F4 (refusals counted on the pass row), F5 (the words
+  // of his rules) and F9 (numbers first).
+  it('the detail says ON FOR YOUR PHONE, LIVE SINCE 2026-10-16 (his call), and NOT MEASURED', () => {
     const d = gg()[0].detail;
-    for (const phrase of ['ON FOR YOUR PHONE', 'everyone else starts off', 'SHADOW FIRST', 'no A+ is sent yet' /* WIDENED 2026-10-15 — W20: narrowed to A+, 🧠 rings live */,
-      'shadow — not sent', 'NOT MEASURED', 'Not a recommendation']) {
+    for (const phrase of ['ON FOR YOUR PHONE', 'everyone else starts off', 'LIVE SINCE 2026-10-16', 'every A+ entry in the window is its own push',
+      'mute it here', 'you alert me when that happens', 'shadow — not sent', 'kissed and honored the 9 EMA', 'the time the 🧠 potential rang',
+      'The push leads with the trigger and the stop', 'in the words of his rules (🎾: 2+ sources, no first-hand entry rule on file)',
+      "counted on that pass's /alerts row, never rung", 'on their own 🎯 line', 'NOT MEASURED', 'the 2026-10-14 study', 'Not a recommendation']) {
       expect(d).toContain(phrase);
+    }
+  });
+
+  it('NEGATIVE (2026-10-16): the 🚩 detail no longer says shadow first / nothing sent yet, and never the reverted wording', () => {
+    const d = gg()[0].detail;
+    for (const gone of ['SHADOW FIRST', 'no A+ is sent yet', 'until the study of his setups reads',
+      'only your phone is ever sent one' /* F1: reverted — "everyone else starts off" stays */,
+      'listed on /alerts, never rung' /* F4 */, 'entry in his words' /* F5 */, 'no study here says they win']) {
+      expect(d).not.toContain(gone);
     }
   });
 
@@ -101,7 +118,15 @@ describe('Notifications · 🚩 gajjala_setup', () => {
   it('the Essentials preset carries gajjala_setup: true and names it', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     expect((ess.pref as any).gajjala_setup).toBe(true);
-    expect(ess.detail).toContain('🚩 Gajjala A+ setups (2026-10-13, shadow first)');
+    // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
+    expect(ess.detail).toContain('🚩 Gajjala A+ entries (2026-10-13, live since 2026-10-16)');
+    expect(ess.detail).not.toContain('shadow first');
+  });
+
+  it('the 🧠 potential entry no longer says the A+ are never sent (2026-10-16)', () => {
+    const d = CATEGORIES.find((c) => (c.key as string) === 'gajjala_potential')!.detail;
+    expect(d).not.toMatch(/A\+[^.]*never sent/);
+    expect(d).toContain('ring under 🚩 as an A+ entry since 2026-10-16');
   });
 
   it('NEGATIVE: Trading-only turns it on and Household-only leaves it off (a trading kind)', () => {

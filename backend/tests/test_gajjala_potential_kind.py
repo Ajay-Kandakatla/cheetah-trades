@@ -60,10 +60,12 @@ def test_owner_prefs_apply_turns_it_on_from_the_keep_set_itself():
     assert KIND in S.on_kinds() and KIND not in S.off_kinds()
 
 
-def test_NEGATIVE_the_a_plus_kind_is_still_in_the_keep_set_and_still_shadow():
+def test_the_a_plus_kind_is_in_the_keep_set_and_live_since_2026_10_16():
+    # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"). default_prefs STAYS False for everyone
+    # else (AMENDMENTS10 F1 — "everyone else starts off"); his devices ride OWNER_KEEP_SET.
     from chart_maps.gajjala import constants as GC
     assert "gajjala_setup" in subs.OWNER_KEEP_SET and subs.default_prefs()["gajjala_setup"] is False
-    assert GC.GAJJALA_PUSH_MODE == "shadow", "this build never flips the A+ kind"
+    assert GC.GAJJALA_PUSH_MODE == "live"
 
 
 def test_NEGATIVE_trade_flash_stays_out_of_the_keep_set():

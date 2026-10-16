@@ -18,6 +18,11 @@ one definition), stored in `gajjala_alerts` with state "shadow" and the payload 
 250-session study reads. Any other value is treated as shadow (fail closed). A live claim also checks the shadow key,
 so a flip mid-session never rings an A+ the shadow already recorded that day.
 
+LIVE SINCE 2026-10-16 (Ajay: "you alert me when that happens" — DECISIONS10 D1). The shadow branch stays: a flip back is
+one word. The A+ entry body leads with the trigger and the stop (AMENDMENTS10 F9 — numbers first on the lock screen), then
+the setup's entry in the words of his rules (ENTRY_WORDS) and, when today's 🧠 potential of the same (symbol, setup) rang,
+the time it rang (DECISIONS10 D2).
+
 LEDGER (`gajjala_alerts`). `GG:{date}|{SYM}|{setup}` (live) / `SHADOW:GG:…` (shadow) = the once-a-day claim. An A+
 that does not ring for a window, a late bar, a halt or exhaustion is recorded under `{key}#{state}` — it never
 consumes the day's claim, so a fresh A+ later the same day still can.
@@ -27,6 +32,7 @@ UNMEASURED. Every body ends "UNMEASURED — his setup, not a buy signal". Nothin
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, time as dtime, timedelta
 from typing import Callable, Optional
 from zoneinfo import ZoneInfo
@@ -57,6 +63,20 @@ SETUP_META = {k: (e, label) for k, e, label in GC.SUBS}
 UNMEASURED_TAIL = "UNMEASURED — his setup, not a buy signal"
 AH_TAG = "after-hrs · he uses limit orders and less size outside RTH (S8 1:16:35)"
 SHADOW_NOTE = "shadow — not sent"
+# 🎯 the setup's entry in GG's own words (Ajay 2026-10-16: "LIke for some he says we need to make sure EMA is kissed you
+# alert me when that happens") — ONE clause per setup in the A+ entry body: what the detector checked before the A+
+# and the level it broke, in verified_rules.json's words (rule ids on each line; status in docs/gajjala/entry_live_2026_10_16.md).
+# {fast} / {slow} = orderflow.signals EMA_FAST / EMA_SLOW, filled at CALL time. Never typed elsewhere — the FE never composes them.
+# AMENDMENTS10 F5: bull_flag drops "after the pole", horizontal_fade says "quiet sideways" (K6_TIGHT is Ajay's number, not GG's words).
+ENTRY_WORDS = {
+    "bull_flag": "Quiet shallow flag; entry = the top of the pullback bar",  # BF2 (S8 21:45–24:37 "very shallow pullback with less volume"), BF7 (S9 1:59:24 "entry at the top of the pullback bar")
+    "kiss_fly": "Kissed and honored the {fast} EMA; entry = the kiss bar's high",  # KF1 (S8 31:33 "honors the 9 EMA whenever it pulls back"), KF2 (S8 31:33–32:41 entry = the high of the kiss bar); detectors.kiss + k5a_honor
+    "horizontal_fade": "{fast} and {slow} EMA merged on a quiet sideways base; entry = the new highs",  # HF1 (S8 32:49–33:50 "when the 9 EMA and 21 EMA merge"), HF3 (S8 33:27 "takes the new highs … this would be my entry"); HF_TRIGGER base_high
+    "intraday_vcp": "Each cycle tighter, holding the {slow} EMA; entry = the top of the previous cycle highs",  # VCP1 (S8 33:50–34:37 "honors the 21 EMA … the volatility contracts in each cycle"), VCP2 (S8 33:50–34:37 "top of the previous cycle highs")
+    "reversal_squeeze": "Tennis-ball reversal after a failed try at the highs; entry = the highs after the quiet base",  # no first-hand entry rule on file: RS2 (2+ sources, S8 35:02 "tennis ball action"), RS4 (2+ sources, S8 34:43, no quote) — the detector criteria k8_tennis / k8_failed / k8_base_len in plain words
+}
+POTENTIAL_RANG_TEXT = "🧠 potential rang {at} ET"      # DECISIONS10 D2 — only when today's 🧠 potential of the same key RANG
+_HHMM = re.compile(r"\d\d:\d\d")
 # A+ that never ring: the state each refusal is recorded (and counted) as.
 WINDOW_STATES = ("suppressed_premarket", "suppressed_first15", "suppressed_window")
 COUNT_KEYS = ("aplus", "pushed", "shadow", "shadow_mode", "shadow_session", "suppressed_premarket",
@@ -210,8 +230,36 @@ def _px(x) -> str:
     return tab_px(x)
 
 
-def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=None) -> dict:
-    """The device payload of one A+. Every number is the read's own (trigger / stop / risk_pct / entry bar)."""
+def entry_words(setup: str) -> str:
+    """DECISIONS10 D2 — the setup's entry in GG's words, the EMA lengths from the constants at CALL time; "" for an
+    unknown setup (the clause is left out — never a guessed word)."""
+    t = ENTRY_WORDS.get(setup) if isinstance(setup, str) else None
+    return t.format(fast=GC.EMA_FAST, slow=GC.EMA_SLOW) if isinstance(t, str) else ""
+
+
+def potential_rang_at(store, session, sym: str, setup: str) -> Optional[str]:
+    """DECISIONS10 D2 — "HH:MM" when today's 🧠 potential of (sym, setup) RANG (`push.state` "pushed" and a "HH:MM"
+    `push.at_et`), else None. Its own try: a read fault is no clause, never a skipped push. One find_one, only for an A+
+    that passed every refusal and the dry gate."""
+    if store is None:
+        return None
+    try:
+        doc = store.get_potential(session, (sym or "").upper(), setup)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala alerts: potential read failed for %s %s: %s", sym, setup, type(exc).__name__)
+        return None
+    push = doc.get("push") if isinstance(doc, dict) else None
+    if not isinstance(push, dict) or push.get("state") != "pushed":
+        return None
+    at = push.get("at_et")
+    return at if isinstance(at, str) and _HHMM.fullmatch(at) else None
+
+
+def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=None,
+            potential_at_et: Optional[str] = None) -> dict:
+    """The device payload of one A+ entry. Every number is the read's own (trigger / stop / risk_pct / entry bar).
+    Body (AMENDMENTS10 F9 — numbers first): broke T on the bar · stop · the setup's entry words · 🧠 potential rang
+    HH:MM ET (only with a well-formed `potential_at_et`) · float · after-hrs line · UNMEASURED; empty bits dropped."""
     ctx = tile_ctx or {}
     sym = (sym or "").upper()
     setup = read.get("setup") or ""
@@ -223,11 +271,15 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     stop_bit = f"stop {_px(read.get('stop'))}" + (f" (−{float(risk):.1f}%)" if isinstance(risk, (int, float)) else "")
     float_text = ctx.get("float_text") or ""
     tape_tag = AH_TAG if (session is not None and is_after_hours_bar(read.get("entry_bar_t"), session, frame)) else ""
-    bits = [f"Broke {_px(read.get('trigger'))} on the {frame} bar closing {hhmm} ET", stop_bit, float_text, tape_tag,
-            UNMEASURED_TAIL]
+    words = entry_words(setup)
+    broke = f"broke {_px(read.get('trigger'))} on the {frame} bar closing {hhmm} ET"
+    pot = (POTENTIAL_RANG_TEXT.format(at=potential_at_et)
+           if isinstance(potential_at_et, str) and _HHMM.fullmatch(potential_at_et) else "")
+    bits = [broke, stop_bit, words, pot, float_text, tape_tag, UNMEASURED_TAIL]
     body = " · ".join(b for b in bits if b)
-    line = f"{sym} · {emoji} {label} A+ · broke {_px(read.get('trigger'))} · {stop_bit}"
-    return {"title": f"{emoji} {sym} · {label} A+", "body": body, "tag": f"gg-{setup}-{sym}",
+    head = f"{sym} · {emoji} {label} A+ entry"
+    line = " · ".join(b for b in (head, f"broke {_px(read.get('trigger'))}", stop_bit, words) if b)
+    return {"title": f"{emoji} {sym} · {label} A+ entry", "body": body, "tag": f"gg-{setup}-{sym}",
             "url": f"/chart-maps?tab=gajjala&sub={setup}&focus={sym}", "kind": KIND, "ticker": sym,
             "items": [{"symbol": sym, "text": line}]}
 
@@ -354,7 +406,8 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
         if dry:
             counts["dry"] += 1
             continue
-        payload = compose(r, sym, ctx.get(sym), session=session)
+        pot_at = potential_rang_at(store, session, sym, setup)  # DECISIONS10 D2: after every refusal and the dry gate
+        payload = compose(r, sym, ctx.get(sym), session=session, potential_at_et=pot_at)
         from supply_demand.demand_alerts import claim_key as _claim
         if mode == "shadow":
             sk = shadow_key(session, sym, setup)
@@ -388,4 +441,4 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
 
 __all__ = ["KIND", "push_mode", "claim_key", "shadow_key", "bar_close_et", "window_reason", "is_after_hours_bar",
            "pushable", "is_fresh", "MAX_ENTRY_AGE_SEC", "extra_suppression", "compose", "run_pass", "shadow_session_count", "COUNT_KEYS",
-           "SHADOW_NOTE"]
+           "SHADOW_NOTE", "ENTRY_WORDS", "entry_words", "potential_rang_at", "POTENTIAL_RANG_TEXT"]

@@ -152,12 +152,14 @@ describe('Notifications · 🧠 gajjala_potential', () => {
     expect(detail().split('Cheetah default, not his').length - 1).toBe(rows.filter(([n]) => boolConst(gc, n)).length);
   });
 
-  it('WHAT NEVER FIRES names the A+ (recorded, never sent), a partial, the long flag, the near-kiss, the B VCP and a second sighting', () => {
+  // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — an A+ rings under 🚩 now.
+  it('WHAT NEVER FIRES names the A+ (rings under 🚩 since 2026-10-16), a partial, the long flag, the near-kiss, the B VCP and a second sighting', () => {
     const d = detail();
-    for (const phrase of ['WHAT NEVER FIRES', 'a read that already broke', 'recorded under \u{1F6A9}, never sent',
+    for (const phrase of ['WHAT NEVER FIRES', 'a read that already broke', 'ring under \u{1F6A9} as an A+ entry since 2026-10-16',
       'a partial (a rule failed)', 'a long flag', 'a near-kiss', '"B — imperfect" VCP', 'a second sighting the same session']) {
       expect(d).toContain(phrase);
     }
+    expect(d).not.toContain('never sent');
   });
 
   it('NEGATIVE: never "shadow", never the b-word, never OFF BY DEFAULT, never "potential to" or a buy / forecast word', () => {
@@ -175,9 +177,11 @@ describe('Notifications · 🧠 gajjala_potential', () => {
     const ess = PRESETS.find((p) => p.id === 'essentials')!;
     expect((ess.pref as any).gajjala_potential).toBe(true);
     expect(ess.detail).toContain('🧠 Gajjala potentials (2026-10-15, live)');
-    // NEGATIVE: the 🚩 line beside it is untouched — still shadow first
+    // NEGATIVE: the 🚩 line beside it keeps its own words — WIDENED 2026-10-16: Ajay flipped the A+ kind live
+    // ("you alert me when that happens"), so it reads live since 2026-10-16, never "shadow first".
     expect((ess.pref as any).gajjala_setup).toBe(true);
-    expect(ess.detail).toContain('🚩 Gajjala A+ setups (2026-10-13, shadow first)');
+    expect(ess.detail).toContain('🚩 Gajjala A+ entries (2026-10-13, live since 2026-10-16)');
+    expect(ess.detail).not.toContain('shadow first');
   });
 
   it('NEGATIVE: Trading-only turns it on, Household-only leaves it off (a trading kind)', () => {

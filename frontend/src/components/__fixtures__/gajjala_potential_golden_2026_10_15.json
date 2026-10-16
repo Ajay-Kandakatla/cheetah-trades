@@ -132,8 +132,8 @@
     "title": "🧠 Potential — 1 trigger armed · 1 building · 2 first seen today · UNMEASURED"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -1335,8 +1335,8 @@
     "warming": false
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -2934,6 +2934,7 @@
      "pushed_n": 5,
      "rows": [
       {
+       "entry_text": "🎯 entry sent 10:36 ET",
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
        "first_px": 11.4,
@@ -2962,6 +2963,7 @@
        "vs_trigger_text": "+82.4% vs the trigger at first sight (6.25)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.9,
@@ -2990,6 +2992,7 @@
        "vs_trigger_text": "+4.2% vs the trigger at first sight (10.94)"
       },
       {
+       "entry_text": null,
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
        "first_px": 10.9,
@@ -3018,6 +3021,7 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.9,
@@ -3046,6 +3050,7 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.9,
@@ -3078,6 +3083,7 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.9,
@@ -3113,6 +3119,7 @@
      "n": 2,
      "rows": [
       {
+       "entry_text": null,
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
        "first_px": 10.9,
@@ -3145,6 +3152,7 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.9,

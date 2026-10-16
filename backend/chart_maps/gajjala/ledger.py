@@ -19,7 +19,9 @@ here (the frontend prints them).
 
 Rows (D1): every 🧠 potential push that RANG (`push.state` "pushed"; joined / muted / never-pushed potentials are not
 rows) — the live line, the headline % — and every A+ `gajjala_alerts` SHADOW claim (never sent: its own line, never in
-the %) or live A+ claim. The grader is PURE: 1-minute bars in, a dict out; every price compare is in
+the %) + every live A+ entry (a `GG:` claim in state pushed, since 2026-10-16) on the live line, counted on its own 🎯
+line (counts["entry"], `entries_text`), never pooled into the 🧠 % (AMENDMENTS10 F3: an A+ exists only once the trade
+survived its entry bar). The grader is PURE: 1-minute bars in, a dict out; every price compare is in
 `Decimal(repr(x))` (1.85 + 0.10 is 1.9500000000000002 in binary floats — a float compare misses an equal high).
 
 Writes: ONLY `grade_step` (the 20:15 ET nightly's LAST step) writes, into gajjala_ledger. `today_read` (the 🏁 GET's
@@ -244,7 +246,8 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
     r_pct, thin, plan, price_at_alert, plan_source, first_seen_et, url} | None when the doc is not a row (D1).
 
     🧠 "potential": a push that RANG (`push.state` "pushed") on a doc not first seen by a join pass. 🚩 "aplus": a
-    `SHADOW:` claim in state "shadow" (line shadow) or a live claim (`GG:…`, no `#`) in state "pushed" (line live).
+    `SHADOW:` claim in state "shadow" (line shadow, never sent …) + every live A+ entry (a `GG:` claim in state pushed,
+    no `#`, since 2026-10-16) on the live line — served_block counts it on its own 🎯 line, never in the 🧠 % (F3).
     Alert time (E3) = `push.at` / `at` → else `claimed_at` → else None (the row is "no alert time", never counted)."""
     from . import alerts as AL
     from . import potential as PT
@@ -810,14 +813,20 @@ def today_read(now: Optional[datetime] = None, *, span: str = "", store=None, lo
 # ── the served block (§3.7, §3.10 W1–W15) ─────────────────────────────────────────────────────────────────────────
 TITLE = "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED"        # W1
 RULE_LABEL = "ⓘ how each alert is graded"                                                               # W2a
+# W3 — WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens"); AMENDMENTS10 F3: the live
+# A+ entries sit on their own 🎯 line, never pooled with the 🧠 % (an A+ exists only once its trade survived the entry bar)
 HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n "
-           "early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups "
-           "read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change "
-           "that.")                                                                                       # W3
+           "early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on "
+           "their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. "
+           "The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo "
+           "(docs/gajjala/study_2026_10_13.md); this record does not change that.")                       # W3
 HEADS = (("symbol", "Ticker"), ("setup", "Setup"), ("at", "Alert"), ("kind", "Kind"),
          ("plan", "Trigger → fill · stop"), ("same", "Same session"), ("next", "Through next session"))  # W11
 KIND_TEXT = {("potential", "live"): "🧠 live", ("aplus", "shadow"): "A+ shadow — never sent",
-             ("aplus", "live"): "A+ live"}                                                                # W7
+             ("aplus", "live"): "🎯 A+ entry"}                                         # W7 · E7 (DECISIONS10 D3)
+# MINE (AMENDMENTS10 F3): the count buckets — the headline % (🧠 pushes only) · the A+ shadow line · the 🎯 live A+ entries
+COUNT_LINES = ("live", "shadow", "entry")
+ENTRIES_HEAD = "🎯 A+ entries sent (their own line, not pooled with the 🧠 %)"            # AMENDMENTS10 F3
 NO_PLAN_TEXT = "no trigger or stop on the alert"                                                         # W9
 NO_RISK_TEXT = "trigger = stop on the alert — no risk to size"                                           # E4
 NO_TIME_TEXT = "no alert time"                                                                           # E3
@@ -1012,10 +1021,29 @@ def _counts_text(c: dict, h: str, provisional: bool) -> str:
     return f"Through next session: {_wl(c)} · {c['no_entry']} no entry · {c['flat']} flat" + _extras(c, h)  # W4n
 
 
-def _shadow_text(cs: dict, cn: dict) -> str:
-    return (f"A+ shadow (never sent, not in the %): same session {_wl(cs)} · {cs['no_entry']} no entry · "
+def _line_text(head: str, cs: dict, cn: dict) -> str:
+    return (f"{head}: same session {_wl(cs)} · {cs['no_entry']} no entry · "
             f"{cs['open']} open{_extras(cs, 'same')}; through next session {_wl(cn)} · {cn['flat']} flat"
-            f"{_extras(cn, 'next')}")                                                                   # W5
+            f"{_extras(cn, 'next')}")
+
+
+def _shadow_text(cs: dict, cn: dict) -> str:
+    return _line_text("A+ shadow (never sent, not in the %)", cs, cn)                                 # W5
+
+
+def _entries_text(cs: dict, cn: dict) -> str:
+    """AMENDMENTS10 F3 — the live A+ entries' own line (the shadow line's template, its own head)."""
+    return _line_text(ENTRIES_HEAD, cs, cn)
+
+
+def _count_line(row: dict) -> str:
+    """AMENDMENTS10 F3 — which counts a row feeds: a live A+ entry → "entry" (its own 🎯 line), a shadow A+ → "shadow",
+    a 🧠 push → "live" (the headline %). `row["line"]` itself is unchanged (a pushed `GG:` claim is still line live)."""
+    if row.get("line") == LINES[1]:
+        return COUNT_LINES[1]
+    if row.get("kind") == KINDS[1]:
+        return COUNT_LINES[2]
+    return COUNT_LINES[0]
 
 
 def _empty_text(span_k: str, sessions: list) -> str:
@@ -1031,8 +1059,10 @@ def _empty_text(span_k: str, sessions: list) -> str:
 def served_block(store, session: date, now: datetime, *, span: str = "", is_today: bool = False,
                  today: Optional[dict] = None) -> dict:
     """The 🏁 sub's served block (§3.8 shape; W1–W15). Mongo reads only; `today` = today_read's dict (provisional same
-    cells for today's rows). Counts are per column, the LIVE line only (the shadow line separately); no entry / no plan /
-    no risk / no alert time / thin R / pending / split are listed, never in the %. Raises LedgerReadError on a read
+    cells for today's rows). Counts are per column: the headline (`counts["live"]`, `counts_text`) = the 🧠 pushes only;
+    the shadow A+ line (`counts["shadow"]`, `shadow_text`) and the live A+ entries (`counts["entry"]`, `entries_text`,
+    AMENDMENTS10 F3 — never pooled into the 🧠 %) separately; no entry / no plan / no risk / no alert time / thin R /
+    pending / split are listed, never in the %. Raises LedgerReadError on a read
     fault (the tab softens it into TRACK_RECORD_FAULT)."""
     from . import alerts as AL
     now = _aware(now)
@@ -1046,7 +1076,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     stored = {d.get("_id"): d for d in stored_l if isinstance(d, dict)}
     grades_today = (today or {}).get("grades") or {} if isinstance(today, dict) else {}
     s_iso = session.isoformat()
-    counts = {ln: {h: _counts_blank(h) for h in GC.LEDGER_HORIZONS} for ln in LINES}
+    counts = {ln: {h: _counts_blank(h) for h in GC.LEDGER_HORIZONS} for ln in COUNT_LINES}
     any_prov = False
     built = []
     for row in rows:
@@ -1060,13 +1090,13 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                 g, prov = grades_today[row["id"]], True
             gs[h] = g
             cells[h] = _cell(row, h, g, prov, now, session, is_today)
-            c = counts[row["line"]][h]
+            c = counts[_count_line(row)][h]
             st = cells[h]["state"]
             if row.get("thin") and st in ("win", "loss", "open", "flat", "no_entry"):
                 c["thin"] += 1
             elif st in c:
                 c[st] += 1
-            if prov and row["line"] == LINES[0]:
+            if prov and _count_line(row) == COUNT_LINES[0]:
                 any_prov = True
         plan_text, fill_px = _plan_text(row, gs.get("same"), gs.get("next"))
         e, label = AL.SETUP_META.get(row["setup"], ("", row["setup"]))
@@ -1085,10 +1115,11 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "trigger": row.get("trigger"), "stop": row.get("stop"), "fill_px": fill_px,
                       "plan_text": plan_text, "note": note, "href": row.get("url"),
                       "same": cells["same"], "next": cells["next"]})
-    for ln in LINES:
+    for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
             counts[ln][h]["pct"] = _win_pct(counts[ln][h])
     has_shadow = any(r["line"] == LINES[1] for r in rows)
+    has_entry = any(_count_line(r) == COUNT_LINES[2] for r in rows)
     # E1: a row needs today's read when its same session is today (yesterday's after-close alert too) — on a span that
     # reads today at all ("yesterday" never does: today_read answers None there)
     reads_today = is_today and span_k != GC.LEDGER_SPANS[1]
@@ -1125,6 +1156,8 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             "counts_text": {"same": _counts_text(counts["live"]["same"], "same", any_prov),
                             "next": _counts_text(counts["live"]["next"], "next", False)},
             "shadow_text": _shadow_text(counts["shadow"]["same"], counts["shadow"]["next"]) if has_shadow else None,
+            "entries_text": (_entries_text(counts["entry"]["same"], counts["entry"]["next"]) if has_entry
+                             else None),                                                       # AMENDMENTS10 F3
             "today_text": today_text, "days": days,
             "more_text": f"+{extra} more rows — the counts above cover all {len(built)}" if extra > 0 else None,  # W14
             "empty_text": None if built else _empty_text(span_k, sessions), "grade_at_et": at}
@@ -1133,4 +1166,4 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
 __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES", "LedgerReadError", "ledger_id",
            "plan_of", "rang_of", "alert_of", "rows_for", "count_today", "session_bounds", "fill_window",
            "bars_from_frame", "grade", "grade_step", "today_read", "served_block", "rule_text", "TITLE", "RULE_LABEL",
-           "HONESTY", "HEADS", "KIND_TEXT"]
+           "HONESTY", "HEADS", "KIND_TEXT", "COUNT_LINES", "ENTRIES_HEAD"]

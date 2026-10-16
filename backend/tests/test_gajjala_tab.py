@@ -422,6 +422,14 @@ def test_postmarket_orders_by_ah_gain_and_serves_unchecked_and_recap():
     assert rows[0]["text"] == "🚩 Bull Flag A+ at 10:25 — broke 4.12, stop 3.95"
     assert "then stopped" in rows[1]["text"] and "UNMEASURED" in pm["recap"]["title"]
     assert out["subs"][[k for k, _e, _l in GC.SUBS].index("postmarket")]["count"] == 2
+    # DECISIONS10 D7b (2026-10-16, "same place as other Gajjala rows"): each recap row links its setup card — the A+
+    # push url, served; the text is unchanged
+    from chart_maps.gajjala import potential as PT
+    assert rows[0]["href"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=PFAI"
+    assert rows[1]["href"] == "/chart-maps?tab=gajjala&sub=reversal_squeeze&focus=STOP"
+    assert all(r["href"] == PT.deep_link(r["symbol"], r["setup"]) for r in rows)
+    assert all(set(r) == {"symbol", "setup", "text", "href"} for r in rows)
+    assert "FORM" not in {r["symbol"] for r in rows}                    # NEGATIVE: a forming read is never a row
 
 
 def test_postmarket_unchecked_zero_or_junk_prints_nothing():
@@ -460,17 +468,21 @@ def test_no_awaiting_when_every_placeholder_is_answered():
     assert GT.build("bull_flag", now=NOW, store=store_with())["awaiting"] == []
 
 
-def test_push_block_says_shadow_and_flips_with_the_constant(monkeypatch):
+def test_push_block_says_live_and_flips_with_the_constant(monkeypatch):
+    # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the shipped block is the
+    # live branch; the shadow branch stays (a flip back is one word), so it is pinned through the monkeypatch below
     out = GT.build("bull_flag", now=NOW, store=store_with())
-    assert GC.GAJJALA_PUSH_MODE == "shadow"
-    assert out["push"]["mode"] == "shadow" and "SHADOW" in out["push"]["text"]
-    assert str(GC.STUDY_SESSIONS) in out["push"]["text"]
+    assert GC.GAJJALA_PUSH_MODE == "live"
+    text = out["push"]["text"]
+    assert out["push"]["mode"] == "live" and text.startswith("📲 Every A+ rings your phone")
+    assert "never the first %d minutes" % GC.NO_TRADE_AFTER_OPEN_MIN in text and "never pre-market" in text
+    assert "UNMEASURED" in text and "SHADOW" not in text                # NEGATIVE: no shadow word on the live line
+    monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "shadow")
+    sh = GT.build("bull_flag", now=NOW, store=store_with())["push"]
+    assert sh["mode"] == "shadow" and "SHADOW" in sh["text"]
     # WIDENED 2026-10-15 — 🧠 rings live, so the A+ shadow line names A+
-    assert "A+ pushes are in SHADOW" in out["push"]["text"] and "no A+ reaches your phone" in out["push"]["text"]
-    assert "nothing reaches" not in out["push"]["text"]                 # NEGATIVE: never the absolute claim
-    monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")
-    live = GT.build("bull_flag", now=NOW, store=store_with())["push"]
-    assert live["mode"] == "live" and "SHADOW" not in live["text"]
+    assert "A+ pushes are in SHADOW" in sh["text"] and str(GC.STUDY_SESSIONS) in sh["text"]
+    assert "nothing reaches" not in sh["text"]                          # NEGATIVE: never the absolute claim
 
 
 def test_playbook_sub_serves_the_playbook_and_no_tiles():

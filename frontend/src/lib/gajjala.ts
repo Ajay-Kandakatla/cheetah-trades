@@ -209,6 +209,9 @@ export type GgTrackRow = {
   vs_trigger_text?: string | null;
   /** "📲 sent 09:21 ET" / "held: …" — incl. AMENDMENTS4 D9's "held: joined mid-session: tracking, not ringing". */
   push_text?: string | null;
+  /** "🎯 entry sent 10:36 ET" — 🎯 served by tab._track_row — the FE composes none (2026-10-16, DECISIONS10 D4);
+   *  null when no live A+ entry rang for this (symbol, setup, session). */
+  entry_text?: string | null;
   graveyard_on?: string | null;
   timeline?: { at_et?: string | null; text: string }[];
   text: string;
@@ -241,7 +244,10 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
 export type GgTrDay = { date: string; label: string; rows: GgTrRow[]; more_n?: number | null };
 export type GgTrackRecord = { title: string; rule_label?: string | null; rule_text?: string | null; honesty?: string | null; span: string;
   spans: { key: string; label: string }[]; heads: { key: string; label: string }[];
-  counts_text: { same: string; next: string }; shadow_text?: string | null; today_text?: string | null;
+  counts_text: { same: string; next: string }; shadow_text?: string | null;
+  /** 🎯 the live A+ entries' own line (ledger.served_block, AMENDMENTS10 F3 — never pooled with the 🧠 %); served,
+   *  null when no live A+ entry is on the span (2026-10-16). */
+  entries_text?: string | null; today_text?: string | null;
   days: GgTrDay[]; more_text?: string | null; empty_text?: string | null; grade_at_et?: string | null };
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
@@ -313,7 +319,7 @@ export type GgBoard = {
   /** 📈 Track + 👀 watch line — the 🧠 sub only. */
   track?: GgTrack | null;
   watch?: GgWatch | null;
-  /** The LIVE 🧠 push line, printed under the (A+, shadow) `push` line. */
+  /** The LIVE 🧠 push line, printed under the A+ `push` line (LIVE since 2026-10-16). */
   push_potential?: { mode?: string | null; text?: string | null } | null;
   /** 🔄 the served as-of / scanning line (every sub); absent on an older API. */
   scan?: GgScan | null;

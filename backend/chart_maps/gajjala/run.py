@@ -6,7 +6,7 @@ ONE pass, every 5 minutes 04:01–20:01 ET on trading days (minute 1, so the buc
   the ledger → the listed set (today + STAY_LISTED_SESSIONS carry) → float chain steps 1–2 (cache, Massive) → 🎾 squeeze
   history for new names (bounded) → closed 5/15-minute frames (budgeted) → the five detectors → the paced Yahoo float
   refinement (🎾-alive names first) and a 🎾 re-read for every float that changed → ☀️ premarket levels / 🌙 K10 confirm
-  (rotation) → `gajjala_reads` → the push gate (alerts.run_pass: SHADOW until Ajay flips GAJJALA_PUSH_MODE) → 🧠 potentials
+  (rotation) → `gajjala_reads` → the push gate (alerts.run_pass: LIVE since 2026-10-16 — Ajay's call; GAJJALA_PUSH_MODE) → 🧠 potentials
   (potential.run_pass: the tracker + the LIVE gajjala_potential push) → the pass doc + the /alerts rows
   (supply_demand.alert_status, kinds gajjala_setup and gajjala_potential) → lease released.
 
@@ -24,6 +24,9 @@ through and every write is captured, the sender and the /alerts row are recorder
 1-minute cache write, the float chain reads the cache and Massive only (no Yahoo, no 429 marker). Nothing reaches Mongo or
 a phone. `--json` prints the pass summary; `--now ISO` replays a clock (a naive stamp is ET, the house rule);
 `--symbols A,B` narrows the names read (in a dry run they are read even when not listed — a hand check).
+AMENDMENTS10 F7 (2026-10-16, the A+ kind is LIVE): a `--now` replay without `--dry-run` refuses (one log line, exit 2) —
+a replayed clock on the real store would ring the real sender. The cron line never passes `--now`; an `--on-demand`
+pass runs both push gates dry whatever the clock (K2), so it is not refused.
 
 🔄 2026-10-15 — the on-open pass (Ajay: "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if
 there are any enterable stocks on the top which I see in potential i guess"; DECISIONS5 K2/K4, C1–C7, AMENDMENTS5).
@@ -612,6 +615,11 @@ def main(argv=None) -> int:
     if not in_window(_utc(now)):                                # C6: the window check stays first (on-open too)
         log.info("gajjala pass: outside %s–%s ET on a market day — nothing to do", GC.PASS_OPEN_ET, GC.PASS_CLOSE_ET)
         return 0
+    # AMENDMENTS10 F7: a --now replay that is not --dry-run refuses. --on-demand is exempt because the on-open pass is
+    # dry by construction: run_pass sets push_dry = bool(dry or on_demand), so it never sends, claims or records (K2).
+    if args.now and not args.dry_run and not args.on_demand:
+        log.warning("gajjala pass: a --now replay rings the real sender unless --dry-run; refusing")
+        return 2
     if args.dry_run:
         if args.on_demand:
             out = run_on_demand(now, store=dry_store(), deps=dry_deps())

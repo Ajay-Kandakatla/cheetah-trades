@@ -975,7 +975,8 @@ def _post_extra(d: dict) -> dict:
 
 def recap(reads: list) -> dict:
     """🌙 today's A+ recap (DECISIONS R2-7): which reads went A+ / triggered / stopped — states only, no win/loss
-    maths. Ordered by the entry bar."""
+    maths. Ordered by the entry bar; each row links its setup card (DECISIONS10 D7b — rendered in commit 2):
+    `href` = potential.deep_link(sym, setup), the A+ push url."""
     rows = []
     for doc in reads:
         sym = (doc.get("symbol") or "").upper()
@@ -990,7 +991,8 @@ def recap(reads: list) -> dict:
                          f", stop {_px(r.get('stop'))}"))
     rows.sort()
     return {"title": f"Today's A+ recap — states only, no win/loss maths · {UNMEASURED}",
-            "rows": [{"symbol": sym, "setup": setup, "text": text} for _t, sym, setup, text in rows]}
+            "rows": [{"symbol": sym, "setup": setup, "text": text, "href": PT.deep_link(sym, setup)}
+                     for _t, sym, setup, text in rows]}
 
 
 # ── sub resolution (C9 deep links) ────────────────────────────────────────────────────────────────────────────────
@@ -1085,6 +1087,7 @@ WATCH_HEAD = ("👀 On his watch list, no structure yet — “if it's making so
 TRACK_UNMEASURED = ("UNMEASURED — what each potential did after it was first seen, recorded pass by pass; not a "
                     "forecast. No study has read this record yet.")                                        # W13b
 TRACK_RECORD_FAULT = "🏁 The alert record could not be read this time — the next re-read tries again."    # W16
+ENTRY_SENT_TEXT = "🎯 entry sent {at} ET"                                                     # DECISIONS10 D4 (E6)
 PUSH_TEXT = {"no_target": "📲 no device took it (toggle off, quiet hours or none registered)",
              "failed": "📲 send failed",
              "claimed": "📲 sending"}           # W19's /alerts word for a claimed doc (a pass died before the settle)
@@ -1190,11 +1193,15 @@ def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, se
     return tiles
 
 
-def _track_row(doc: dict) -> dict:
+def _track_row(doc: dict, entries: Optional[dict] = None) -> dict:
     """One 📈 Track row from a tracker doc (W13) — the doc's own prices (the pass wrote them, AMENDMENTS4 D2: the
-    5-minute frame's closed close first), never recomputed here; states and prices only, no win/loss maths."""
+    5-minute frame's closed close first), never recomputed here; states and prices only, no win/loss maths — and the
+    🎯 entry that rang (DECISIONS10 D4): `entries` = _entry_times' {(date_iso, SYM, setup): "HH:MM"}; `entry_text` is
+    always served, None when no live A+ entry of the row's key rang."""
     sym = str(doc.get("symbol") or "").upper()
     setup = str(doc.get("setup") or "")
+    entry_at = (entries or {}).get((str(doc.get("date") or ""), sym, setup))
+    entry_text = ENTRY_SENT_TEXT.format(at=entry_at) if entry_at else None
     last = doc.get("last") if isinstance(doc.get("last"), dict) else {}
     path = [e for e in doc.get("state_path") or [] if isinstance(e, dict)]
     grave = doc.get("graveyard_on") if isinstance(doc.get("graveyard_on"), str) else None
@@ -1237,7 +1244,7 @@ def _track_row(doc: dict) -> dict:
             "first_kind": fk, "first_kind_label": fkl, "first_px": p0, "first_trigger": t0,
             "first_stop": _f(doc.get("first_stop")), "last_state": last_state, "last_state_text": last_text,
             "last_px": p1, "move_pct": m, "move_text": move_text, "vs_trigger_pct": v, "vs_trigger_text": vs_text,
-            "push_text": push_text, "graveyard_on": grave, "timeline": timeline,
+            "push_text": push_text, "entry_text": entry_text, "graveyard_on": grave, "timeline": timeline,
             "text": " · ".join(b for b in bits if b), "href": href}
 
 
@@ -1258,9 +1265,11 @@ def _capped(rows: list) -> dict:
     return out
 
 
-def _track_block(today_docs: list, prev_docs: list, *, session: date, prev: date, sess: dict) -> dict:
+def _track_block(today_docs: list, prev_docs: list, *, session: date, prev: date, sess: dict,
+                 entries: Optional[dict] = None) -> dict:
     """§3.9 (b) `track` — today's first sightings newest first, the session before chronological (no outcome
-    ranking), each row's timeline in potential.state_word's words; rows capped at TILE_LIMIT_MAX (`more_n`)."""
+    ranking), each row's timeline in potential.state_word's words; rows capped at TILE_LIMIT_MAX (`more_n`).
+    `entries` = _entry_times' answer, handed to every row (DECISIONS10 D4)."""
     order = {s: i for i, s in enumerate(GC.SETUPS)}
 
     def tie(d):
@@ -1279,11 +1288,11 @@ def _track_block(today_docs: list, prev_docs: list, *, session: date, prev: date
                            "building_n": sum(1 for d in today if d.get("first_kind") == GC.POTENTIAL_KINDS[1]),
                            "pushed_n": sum(1 for d in today if isinstance(d.get("push"), dict)
                                            and d["push"].get("state") == "pushed")},
-                          **_capped([_track_row(d) for d in today])),
+                          **_capped([_track_row(d, entries=entries) for d in today])),
             "yesterday": dict({"date": prev.isoformat(),
                                "title": (f"Last session ({prev.isoformat()}) — {len(yday)} potentials and how each "
                                          "ended: states and prices only, no win/loss maths"),
-                               "n": len(yday)}, **_capped([_track_row(d) for d in yday]))}
+                               "n": len(yday)}, **_capped([_track_row(d, entries=entries) for d in yday]))}
 
 
 def _watch_block(pm_rows: list, post_list: list, exclude: set) -> Optional[dict]:
@@ -1326,6 +1335,25 @@ def _ledger():
     except Exception as exc:                                        # noqa: BLE001
         log.warning("gajjala tab: ledger import failed: %s", exc)
         return None
+
+
+def _entry_times(st, sessions) -> dict:
+    """DECISIONS10 D4 — {(date_iso, SYM, setup): "HH:MM"} of the live A+ entries that RANG on these sessions: ONE read
+    (store.alert_rows — the ledger's own) classified by ledger.alert_of (line "live" = a `GG:` claim in state pushed;
+    shadow / refusals / claimed / failed / no_target are never entries). A read fault / no handle / no ledger → {}.
+    Each doc in its own try (AMENDMENTS10 F8): one malformed doc never blanks the others."""
+    LG = _ledger()
+    docs = st.alert_rows(sessions) if LG is not None else None
+    out = {}
+    for d in docs or []:
+        try:
+            a = LG.alert_of(d, LG.KINDS[1])
+        except Exception as exc:                                    # noqa: BLE001
+            log.warning("gajjala tab: an A+ entry doc could not be read: %s", type(exc).__name__)
+            continue
+        if a and a.get("line") == LG.LINES[0] and a.get("at_et"):
+            out[(a["date"], a["symbol"], a["setup"])] = a["at_et"]
+    return out
 
 
 def _ledger_count(st, session: date) -> Optional[int]:
@@ -1493,8 +1521,9 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                               scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, pass_at=pass_at,
                               default=[])
                         if pot_ok else [])[:lim]
+        entries = _soft("A+ entry read", _entry_times, st, [session, prev], default={}) or {}   # D4: ONE read
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
-                             sess=sess) if pot_ok else None
+                             sess=sess, entries=entries) if pot_ok else None
         out["watch"] = _soft("potential watch line", _watch_block, pm_rows, post_list, pot_syms | tile_syms)
         out["empty_note"] = ("Nothing forming on his list right now — the next pass is at most "
                              f"{GC.PASS_CADENCE_SEC // 60} minutes away." if in_window else
@@ -1535,4 +1564,5 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 
 __all__ = ["build", "resolve_sub", "order_key", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
-           "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT"]
+           "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
+           "ENTRY_SENT_TEXT"]

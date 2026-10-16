@@ -572,6 +572,105 @@ def test_NEGATIVE_no_shadow_row_means_no_shadow_line_and_no_graded_entry_reads_s
     assert b["counts"]["live"]["same"]["pct"] is None
 
 
+# ── 🎯 live A+ entries (DECISIONS10 D3 as modified by AMENDMENTS10 F3, 2026-10-16) ─────────────────────────────────
+# Ajay 2026-10-16: "you alert me when that happens". A pushed `GG:` claim is a live row ("🎯 A+ entry") counted on its
+# OWN line — never pooled into the 🧠 headline % (an A+ exists only once the trade survived its entry bar, F3). The
+# existing NEGATIVES stay: a shadow win never moves the live % (test_NEGATIVE_an_aplus_shadow_win_never_moves_the_live_
+# pct_and_shows_on_its_own_line) and failed / no_target / claimed / `#…` docs are never rows
+# (test_NEGATIVE_aplus_refusals_and_unsent_claims_are_not_rows).
+def _entry_store(with_entry=True):
+    pot = pot_doc("AAA", "bull_flag", D15, et(D15, 11, 0), 10.0, 9.0)
+    ent = aplus_doc("PMI", "bull_flag", D15, et(D15, 10, 36), 2.0, 1.9, state="pushed", prefix="")
+    led = [_graded(row_of(pot), _g("loss"))]
+    if with_entry:
+        led.append(_graded(row_of(ent, "aplus"), _g("win")))
+    return store_with([pot], [ent] if with_entry else [], led)
+
+
+def test_a_live_aplus_entry_sits_on_its_own_entry_line_never_in_the_headline_pct():
+    b = LG.served_block(_entry_store(), D16, NOW_1225, span="yesterday", is_today=True)
+    rows = {r["symbol"]: r for r in b["days"][0]["rows"]}
+    e = rows["PMI"]
+    assert (e["kind"], e["line"], e["kind_text"]) == ("aplus", "live", "🎯 A+ entry")
+    assert e["kind_text"] == LG.KIND_TEXT[("aplus", "live")] == "🎯 A+ entry"
+    assert e["href"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI"
+    assert b["counts"]["entry"]["same"]["win"] == 1 and b["counts"]["entry"]["same"]["pct"] == 100
+    assert (b["counts"]["live"]["same"]["win"], b["counts"]["live"]["same"]["loss"]) == (0, 1)
+    assert b["entries_text"].startswith("🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session "
+                                        "1 win · 0 losses · 100% won")
+    assert "; through next session " in b["entries_text"]
+    assert b["shadow_text"] is None                          # a live entry is not the shadow line
+    _assert_clean(b)
+
+
+def test_NEGATIVE_an_aplus_entry_never_moves_the_headline_pct():
+    """F3: the 🧠 % must not move when an A+ row is added — the same store without the entry serves the same
+    counts.live and counts_text, byte for byte."""
+    with_e = LG.served_block(_entry_store(True), D16, NOW_1225, span="yesterday", is_today=True)
+    without = LG.served_block(_entry_store(False), D16, NOW_1225, span="yesterday", is_today=True)
+    assert with_e["counts"]["live"] == without["counts"]["live"]
+    assert with_e["counts_text"] == without["counts_text"]
+    assert with_e["counts"]["live"]["same"]["pct"] == 0 == without["counts"]["live"]["same"]["pct"]
+    assert without["entries_text"] is None and without["counts"]["entry"]["same"]["win"] == 0
+    assert without["counts"]["entry"]["same"]["pct"] is None
+
+
+def test_NEGATIVE_a_shadow_aplus_never_feeds_the_entry_line():
+    sh = row_of(aplus_doc("PMI", "bull_flag", D15, et(D15, 10, 36), 2.0, 1.9), "aplus")
+    st = store_with([], [aplus_doc("PMI", "bull_flag", D15, et(D15, 10, 36), 2.0, 1.9)], [_graded(sh, _g("win"))])
+    b = LG.served_block(st, D16, NOW_1225, span="yesterday", is_today=True)
+    assert b["entries_text"] is None and b["counts"]["entry"]["same"]["win"] == 0
+    assert b["counts"]["shadow"]["same"]["win"] == 1 and b["shadow_text"]
+
+
+@pytest.mark.parametrize("suffix,state", [("", "failed"), ("", "no_target"), ("", "claimed"),
+                                          ("#suppressed_premarket", "suppressed_premarket")])
+def test_NEGATIVE_an_unsent_live_claim_is_no_entry_row_and_no_entries_text(suffix, state):
+    doc = aplus_doc("PMI", "bull_flag", D15, et(D15, 10, 36), 2.0, 1.9, state="pushed", prefix="")
+    doc.update(_id=doc["_id"] + suffix, state=state)
+    b = LG.served_block(store_with([], [doc], []), D16, NOW_1225, span="yesterday", is_today=True)
+    assert b["entries_text"] is None and b["days"] == [] and b["counts"]["entry"]["same"]["win"] == 0
+
+
+def test_NEGATIVE_a_provisional_entry_never_marks_the_headline_today_not_final():
+    """F3: `counts_text` is the 🧠 pushes only — a provisional grade on a live A+ entry never stamps "today not final"
+    on the headline."""
+    st = store_with([], [aplus_doc("XLAB", "horizontal_fade", D16, HF_AT, 1.81, 1.70, state="pushed", prefix="")])
+    today = LG.today_read(NOW_1225, span="today", store=st, load_frames=lambda s, d: (xlab_bars(), False),
+                          clock=lambda: 0.0)
+    b = LG.served_block(st, D16, NOW_1225, span="today", is_today=True, today=today)
+    (r,) = b["days"][0]["rows"]
+    assert r["kind_text"] == "🎯 A+ entry" and r["same"]["provisional"] is True and r["same"]["state"] == "win"
+    assert b["counts"]["entry"]["same"]["win"] == 1 and b["counts"]["live"]["same"]["win"] == 0
+    assert "today not final" not in b["counts_text"]["same"] and b["entries_text"].startswith("🎯 A+ entries sent")
+
+
+F3_HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n "
+              "early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on "
+              "their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry "
+              "bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo "
+              "(docs/gajjala/study_2026_10_13.md); this record does not change that.")
+
+
+def test_honesty_has_no_never_sent_lie():
+    from chart_maps.high_beta_tab import FORBIDDEN_WORDS
+    assert LG.HONESTY == F3_HONESTY
+    assert "The A+ line was never sent" not in LG.HONESTY                       # NEGATIVE: false since the flip
+    assert "A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes" in LG.HONESTY
+    assert "A+ entries sent live count like the 🧠 pushes" not in LG.HONESTY    # NEGATIVE: F3 withdrew the pooling
+    assert not B_WORD.search(LG.HONESTY) and "fake" not in LG.HONESTY.lower()
+    assert not [w for w in FORBIDDEN_WORDS if w in LG.HONESTY.lower()]
+    assert "15" not in LG.HONESTY and "09:45" not in LG.HONESTY                 # the 🏁 contracts read ledger.py code
+    assert "study_2026_10_13.md" in LG.HONESTY and "NULL" in LG.HONESTY
+
+
+def test_kind_text_is_one_literal_line_the_contracts_read():
+    src = Path(LG.__file__).read_text(encoding="utf-8")
+    assert '("aplus", "live"): "🎯 A+ entry"' in src
+    assert LG.KIND_TEXT == {("potential", "live"): "🧠 live", ("aplus", "shadow"): "A+ shadow — never sent",
+                            ("aplus", "live"): "🎯 A+ entry"}
+
+
 def test_win_pct_rounds_half_up():
     pots, led = [], []
     for i in range(8):

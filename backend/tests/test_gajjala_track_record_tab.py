@@ -19,7 +19,8 @@ triggers); a pushed potential with no plan; one whose trigger never trades.
 
 GOLDEN: `GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_track_record_tab.py -k golden` writes the FE fixture
 (frontend/src/components/__fixtures__/gajjala_track_record_golden_2026_10_16.json); without the env the test proves the
-file IS the served payload, byte for byte.
+file IS the served payload, byte for byte. The golden's own store (golden_store) adds ONE live A+ entry (XLAB 🌀 at
+09:45 ET, 2026-10-16 polish) so its served `entries_text` is real; the shared `store` fixture never carries it.
 """
 from __future__ import annotations
 
@@ -52,9 +53,13 @@ RECIPE = "GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_track_record_tab
 B_WORD = re.compile("b" + "ounc", re.I)
 NAMES = re.compile(r"\bSEPA\b|minervini|bonde|\bTLSW\b|\bTTLAC\b", re.I)
 W1 = "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED"
+# WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — W3 is the AMENDMENTS10 F3 text
+# (the live A+ entries on their own 🎯 line, never pooled with the 🧠 %)
 W3 = ("A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. "
-      "The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — "
-      "no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.")
+      "A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 "
+      "line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 "
+      "study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this "
+      "record does not change that.")
 
 
 @pytest.fixture(autouse=True)
@@ -318,6 +323,38 @@ def test_NEGATIVE_the_shadow_line_never_moves_the_live_percentage(store):
     assert c["win"] == 2 and c["pct"] == 100 and c["no_plan"] == 1 and c["no_entry"] == 1
 
 
+def live_entry_doc(d, sym, setup, at, *, trigger, stop, price):
+    """A live A+ claim as alerts.py's live branch leaves it (state pushed on the plain `GG:` id, 2026-10-16)."""
+    from chart_maps.gajjala import alerts as AL
+    return {"_id": AL.claim_key(d, sym, setup), "date": d.isoformat(), "symbol": sym, "setup": setup, "mode": "live",
+            "entry_bar_t": at.astimezone(ET).strftime("%Y-%m-%d %H:%M"), "frame": "5m", "trigger": trigger,
+            "stop": stop, "risk_pct": round((trigger - stop) / trigger * 100, 2), "price": price, "kind": GC.PUSH_KIND,
+            "state": "pushed", "result": {"sent": 1, "failed": 0, "total_targets": 1, "skipped": 0},
+            "at": at.astimezone(UTC).isoformat()}
+
+
+def test_a_live_aplus_entry_row_on_the_tab():
+    """DECISIONS10 D3 / AMENDMENTS10 F3 on a COPY of the fixture store (the shared `store` fixture's counts are pinned
+    above): one pushed `GG:` claim is a "🎯 A+ entry" row, counted under counts["entry"] and `entries_text`, and the
+    🧠 headline counts are byte-for-byte the fixture's (NEGATIVE: the % never moves)."""
+    base = board(ledger_store(), "today")["track_record"]
+    st = ledger_store()
+    doc = live_entry_doc(D16, "PMI", "kiss_fly", _et(D16, 10, 56), trigger=2.40, stop=2.20, price=2.35)
+    st.coll(ST.ALERTS).docs[doc["_id"]] = doc
+    tr = board(st, "today")["track_record"]
+    r = _rows(tr)["2026-10-16|PMI|kiss_fly|aplus"]
+    assert (r["line"], r["kind_text"], r["at_text"]) == ("live", "🎯 A+ entry", "10:56 ET")
+    assert r["href"] == "/chart-maps?tab=gajjala&sub=kiss_fly&focus=PMI"
+    assert r["same"]["state"] == "no_entry"                     # the flat 2.10 tape never trades its 2.40 trigger
+    assert tr["counts"]["entry"]["same"]["no_entry"] == 1
+    assert tr["counts"]["live"] == base["counts"]["live"] and tr["counts_text"] == base["counts_text"]
+    assert tr["entries_text"].startswith("🎯 A+ entries sent (their own line, not pooled with the 🧠 %)")
+    assert base["entries_text"] is None                         # NEGATIVE: the fixture has no live entry
+    assert tr["shadow_text"] == base["shadow_text"]             # the shadow line is untouched
+    shadow = [x for x in _rows(tr).values() if x["line"] == "shadow"]
+    assert {x["symbol"] for x in shadow} == {"PMI", "TGL", "HCAI"}   # the PMI bull_flag shadow row stays shadow
+
+
 def test_NEGATIVE_joined_and_unsent_potentials_are_not_rows(store):
     syms = {r["symbol"] for d in board(store, "all")["track_record"]["days"] for r in d["rows"]}
     assert "JOIN" not in syms and "NOTG" not in syms
@@ -517,8 +554,23 @@ def test_NEGATIVE_no_none_nan_forecast_word_sepa_name_or_b_word_in_any_span(stor
 
 
 # ── GOLDEN: the FE fixture IS the served payload ─────────────────────────────────────────────────────────────────
+def golden_entry_doc() -> dict:
+    """The ONE live A+ entry the 🏁 golden carries (2026-10-16 polish, AMENDMENTS10 F3) — on the golden's OWN fresh store,
+    never the shared `store` fixture (its counts are pinned above). XLAB 🌀 on the 🧠 push's own plan (trigger 1.85 /
+    stop 1.75): the 09:40 5m bar closed 1.8801 on the REAL 10-16 tape, the A+ rang at 09:45 ET; graded like the shadow
+    rows (today_read on the tape — no stored ledger doc): fill 1.85 on 09:46, +1R 1.95 on 09:47 before any stop = WIN."""
+    return live_entry_doc(D16, "XLAB", "intraday_vcp", _et(D16, 9, 45), trigger=1.85, stop=1.75, price=1.8801)
+
+
+def golden_store():
+    st = ledger_store()                             # a fresh instance — never the module `store` fixture
+    doc = golden_entry_doc()
+    st.coll(ST.ALERTS).docs[doc["_id"]] = doc
+    return st
+
+
 def golden_payload() -> str:
-    st = ledger_store()
+    st = golden_store()
     boards = {}
     for span in ("today", "5d", "yesterday"):
         LG._TODAY_MEMO.clear()
@@ -541,3 +593,26 @@ def test_golden_fixture_is_the_served_payload():
     assert boards["today"]["track_record"]["today_text"] and boards["yesterday"]["track_record"]["today_text"] is None
     for span in ("today", "5d"):                    # the after-close AHX row is read on 10-16's open, never held out
         assert "not read on this open" not in boards[span]["track_record"]["today_text"], span
+    # 2026-10-16 polish: the golden's live A+ entry is a real served 🎯 line + row (AMENDMENTS10 F3)
+    for span in ("today", "5d"):
+        tr = boards[span]["track_record"]
+        assert tr["entries_text"].startswith("🎯 A+ entries sent"), span
+        assert tr["counts"]["entry"]["same"]["win"] == 1, span
+        r = _rows(tr)["2026-10-16|XLAB|intraday_vcp|aplus"]
+        assert (r["kind_text"], r["line"], r["same"]["state"]) == ("🎯 A+ entry", "live", "win"), span
+    assert boards["yesterday"]["track_record"]["entries_text"] is None          # NEGATIVE: no entry on 10-15
+
+
+def test_NEGATIVE_the_golden_entry_never_moves_the_headline_counts():
+    """F3 NEGATIVE on the golden recipe: with vs without its live A+ entry, the 🧠 headline (counts["live"],
+    counts_text) is byte-for-byte the same on every span — the entry rides its own 🎯 line only."""
+    with_e, without = golden_store(), ledger_store()
+    for span in ("today", "5d", "yesterday"):
+        LG._TODAY_MEMO.clear()
+        LG._TODAY_SPLIT.clear()
+        a = board(with_e, span)["track_record"]
+        LG._TODAY_MEMO.clear()
+        LG._TODAY_SPLIT.clear()
+        b = board(without, span)["track_record"]
+        assert a["counts"]["live"] == b["counts"]["live"] and a["counts_text"] == b["counts_text"], span
+        assert b["entries_text"] is None, span

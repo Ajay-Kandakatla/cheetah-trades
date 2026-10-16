@@ -92,7 +92,7 @@ def test_decisions_round_a_b_c_values():
     assert GC.SCAN_MIN_PRICE == 0.10 and GC.SCAN_MAX_PRICE == 100.0
     assert GC.SCAN_INSTRUMENT_TYPES == frozenset({"CS", "ADRC"}) and GC.SCAN_INCLUDE_OTC is False
     assert GC.SCAN_UNKNOWN_TYPE_POLICY == "list" and GC.SCAN_UNKNOWN_TYPE_LABEL == "type unknown"
-    assert GC.GAJJALA_PUSH_MODE == "shadow" and GC.GAJJALA_PUSH_MODE in GC.PUSH_MODES
+    assert GC.GAJJALA_PUSH_MODE == "live" and GC.GAJJALA_PUSH_MODE in GC.PUSH_MODES  # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
     assert GC.PUSH_KIND == "gajjala_setup"
     assert (GC.K4_BF_PULL_MIN, GC.K4_BF_PULL_MAX, GC.K4_BF_LONG_FLAG_MAX) == (1, 3, 5)
     assert GC.K4_KF_PULL_MAX == 9 and GC.KF_HONOR_ALL_PULLBACK_CLOSES is True
@@ -173,14 +173,41 @@ def test_NEGATIVE_a_reverted_placeholder_would_fail_the_guard(monkeypatch, name)
 # ── 🧠 potential (DECISIONS4 K1–K3, 2026-10-15) ───────────────────────────────────────────────────────────────────────
 def test_decisions4_values():
     """Ajay 2026-10-15: "In Gajjalas setup I wanna find potential stocks …" — K1 forming, K3 one push a session. The
-    three POTENTIAL_* gates are MINE (Cheetah defaults, not GG) and listed so; the A+ kind stays shadow."""
+    three POTENTIAL_* gates are MINE (Cheetah defaults, not GG) and listed so; the A+ kind went live 2026-10-16 (Ajay)."""
     assert GC.POTENTIAL_STATE == "forming" and GC.POTENTIAL_KINDS == ("armed", "building")
     assert GC.POTENTIAL_PUSH_KIND == "gajjala_potential" and GC.POTENTIAL_PUSH_KIND != GC.PUSH_KIND
     assert (GC.POTENTIAL_NEEDS_BASE, GC.POTENTIAL_DEFER_REFUSED, GC.POTENTIAL_FRESH_TAPE) == (True, True, True)
     assert GC.PASS_MINUTE_OFFSET == 1
-    assert GC.GAJJALA_PUSH_MODE == "shadow"
+    assert GC.GAJJALA_PUSH_MODE == "live"  # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens")
     assert {"POTENTIAL_NEEDS_BASE", "POTENTIAL_FRESH_TAPE", "POTENTIAL_DEFER_REFUSED"} <= set(GC.CHEETAH_DEFAULTS)
     assert {"STAY_LISTED_SESSIONS", "PSY_NEAR_PCT"} <= set(GC.CHEETAH_DEFAULTS)
+
+
+
+def test_the_push_mode_line_is_tagged_his():
+    """DECISIONS10 D1 (2026-10-16): the "live" line carries his words — the comment STARTS "Ajay 2026-10-16". NEGATIVE:
+    an untagged or MINE-tagged line fails (the flip is his call, not mine)."""
+    ln = dict((n, ln) for n, _v, ln in _assigns())["GAJJALA_PUSH_MODE"]
+    real = LINES[ln - 1]
+    assert _push_mode_tag_ok(real), real
+    assert _comment(ln).startswith("Ajay 2026-10-16") and "you alert me when that happens" in _comment(ln)
+    # 2026-10-16 polish: the NEGATIVES run the same check on MUTATED copies of the REAL source line (never typed lines)
+    code, _sep, _c = real.partition("#")
+    for bad in (code.rstrip(),                                                   # untagged
+                _mutate_line(real, "# Ajay 2026-10-16", "# MINE"),               # MINE-tagged
+                _mutate_line(real, "# Ajay 2026-10-16", "# Cheetah default"),    # filed as a Cheetah default
+                _mutate_line(real, "you alert me when that happens", "sure")):   # his words gone
+        assert bad != real and not _push_mode_tag_ok(bad), bad
+
+
+def _push_mode_tag_ok(line: str) -> bool:
+    c = line.split("#", 1)[1].strip() if "#" in line else ""
+    return c.startswith("Ajay 2026-10-16") and "you alert me when that happens" in c
+
+
+def _mutate_line(line: str, old: str, new: str) -> str:
+    assert line.count(old) == 1, old
+    return line.replace(old, new)
 
 
 def test_NEGATIVE_no_potential_mode_switch_and_no_new_rule_number():

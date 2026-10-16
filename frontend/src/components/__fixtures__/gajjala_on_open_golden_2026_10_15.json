@@ -59,8 +59,8 @@
     "title": "🧠 Potential — 0 trigger armed · 0 building · 1 first seen today · UNMEASURED"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -1850,8 +1850,8 @@
     "title": "📓 Goverdhan Gajjala — his playbook, in his words"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -2002,8 +2002,8 @@
     "warming": false
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -2360,6 +2360,7 @@
      "pushed_n": 0,
      "rows": [
       {
+       "entry_text": null,
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
        "first_px": 10.875,
@@ -2388,6 +2389,7 @@
        "vs_trigger_text": "-0.8% vs the trigger at first sight (10.97)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.875,
@@ -2416,6 +2418,7 @@
        "vs_trigger_text": "-0.8% vs the trigger at first sight (10.97)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.875,
@@ -2444,6 +2447,7 @@
        "vs_trigger_text": "-1.1% vs the trigger at first sight (11.00)"
       },
       {
+       "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
        "first_px": 10.875,

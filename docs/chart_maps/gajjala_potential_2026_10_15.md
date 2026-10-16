@@ -3,6 +3,9 @@
 **UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs.** Nobody has measured potentials;
 the study of his A+ setups read NULL (2026-10-14, `docs/gajjala/study_2026_10_13.md`).
 
+> UPDATE 2026-10-16 (evening): A+ entries went live 2026-10-16; the 🧠 Track row shows "🎯 entry sent HH:MM ET"; the 🏁 ledger counts live A+ entries as "🎯 A+ entry" on their own 🎯 line (not pooled into the 🧠 %), shadow-period rows stay on the shadow line. Ajay's call ("you alert me when that happens"), not a measurement —
+> docs/gajjala/entry_live_2026_10_16.md. This 🧠 kind, its window and its gate are unchanged.
+
 ## The ask (Ajay 2026-10-15, verbatim)
 
 1. "In Gajjalas setup I wanna find potential stocks this shows me what has happened I am trying to setup for this tab
@@ -20,6 +23,8 @@ His knob answers (AskUserQuestion 2026-10-15):
 
 He will act on this alert: a NEW kind, LIVE (not shadow), owner-only, ON for his devices. The A+ kind
 `gajjala_setup` stays SHADOW, untouched.
+
+> UPDATE 2026-10-16 (evening): A+ entries went live 2026-10-16; the 🧠 Track row shows "🎯 entry sent HH:MM ET"; the 🏁 ledger counts live A+ entries as "🎯 A+ entry" on their own 🎯 line (not pooled into the 🧠 %), shadow-period rows stay on the shadow line.
 
 ## What a potential is (`potential.potential_kind`)
 

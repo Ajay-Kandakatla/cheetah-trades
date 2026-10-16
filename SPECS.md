@@ -553,14 +553,38 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   🧱 `PSY_LEVELS` $1/$5/$10 (GG S9) within `PSY_NEAR_PCT` 5.0 (Cheetah default); red closes > `RED_CLOSES_WAIT` 3 (GG X),
   `RED_CLOSES_MODE` "chip" (Ajay — never a criterion); halts and after-hours exhaustion OFF (`HALT_CALM_BARS`,
   `AH_EXHAUSTION_MAX_PCT` None — spec default).
-- **Push** `gajjala_setup` (`PUSH_KIND`, owner-only, default pref False): `GAJJALA_PUSH_MODE` "shadow" (Ajay round A).
-  The full gate runs every pass; each A+ is claimed once per (symbol, setup, ET day) and recorded in `gajjala_alerts` as
-  "shadow — not sent" on /alerts — **nothing is sent**. Only the exact string "live" sends; Ajay flips it himself after
-  the `STUDY_SESSIONS` 250-session study (`scripts/gajjala_study.py`, exits stop-or-16:00 · stop-or-`STUDY_TIME_EXIT_MIN`
-  60-min · breakeven after `STUDY_BE_AFTER_R` 1.0R then the first 5-min close under the 9 EMA; placebo = same-session
-  scanner names with no setup) reads. Status today: NOT RUN. When live (`alerts._closes`, no typed times): `ET_RTH_OPEN` +
-  `NO_TRADE_AFTER_OPEN_MIN` up to `rth_close_time()`, then up to `ET_AFTERHOURS_CLOSE` (`HALF_DAY_AH_CLOSE` on
-  `HALF_DAYS`), never the first `NO_TRADE_AFTER_OPEN_MIN`, closed days silent.
+- **Push** `gajjala_setup` (`PUSH_KIND`, owner-only — `hooks.notify_gajjala_setup` → `send_to_user(owner)`; default
+  pref False for everyone else, owner keep-set ON: his devices through `OWNER_KEEP_SET` + `scripts/owner_prefs_apply.py`
+  — the 🧠 / 🎚️ precedent, AMENDMENTS10 F1): `GAJJALA_PUSH_MODE` **"live"** since 2026-10-16 (`# Ajay 2026-10-16`:
+  *"you alert me when that happens"*) — his call, not a measurement; "shadow" 2026-10-13…16 (Ajay round A), when each
+  A+ was recorded in `gajjala_alerts` as "shadow — not sent" on /alerts (those rows stay listed that way). The full gate
+  runs every pass; each A+ entry is claimed once per (symbol, setup, ET day) under `GG:{date}|{SYM}|{setup}` and sent —
+  every A+ its own push; refusals are recorded `{key}#{state}` and never consume the day's claim. Only the exact string
+  "live" sends (any other value runs as shadow — a flip back is one word); a live claim checks the `SHADOW:` twin first,
+  so an A+ recorded in shadow earlier that day never rings (no double ring across the flip). The on-open / dry pass
+  never claims or sends; a `--now` replay that is not `--dry-run` refuses (F7). The `STUDY_SESSIONS` 250-session study
+  (`scripts/gajjala_study.py`, exits stop-or-16:00 · stop-or-`STUDY_TIME_EXIT_MIN` 60-min · breakeven after
+  `STUDY_BE_AFTER_R` 1.0R then the first 5-min close under the 9 EMA; placebo = same-session scanner names with no
+  setup) read **NULL** 2026-10-14 (`docs/gajjala/study_2026_10_13.md`) — UNMEASURED. Window (`alerts._closes`, no typed
+  times): `ET_RTH_OPEN` + `NO_TRADE_AFTER_OPEN_MIN` up to `rth_close_time()`, then up to `ET_AFTERHOURS_CLOSE`
+  (`HALF_DAY_AH_CLOSE` on `HALF_DAYS`), never the first `NO_TRADE_AFTER_OPEN_MIN`, never pre-market, closed days silent.
+- **🎯 A+ entry LIVE** (2026-10-16, Ajay's call — *"you alert me when that happens"*). Ajay: *"can you add liver tracker
+  for Gajjala's entry."* and *"Dont understand the question I amlooking for Entry of his stocks from all 5 tabs. When
+  every they satisfy all his criteria.. LIke for some he says we need to make sure EMA is kissed you alert me when that
+  happens 5 mins track of it when there are potentials and also look for new potentials"*. All five setups; title
+  "{emoji} {SYM} · {label} A+ entry"; body numbers first (AMENDMENTS10 F9) "broke {T} on the {frame} bar closing {HH:MM}
+  ET · stop {S} (−{r}%) · {ENTRY} · 🧠 potential rang {HH:MM} ET · {float} · [after-hrs line] · UNMEASURED — his setup,
+  not a buy signal". `{ENTRY}` = `alerts.ENTRY_WORDS[setup]` via `entry_words()`: one clause per setup in the words of
+  his rules in `verified_rules.json` (each line cites its rule ids; 🎾 has no first-hand entry rule on file — RS2 / RS4
+  are 2+ sources), EMA lengths from `EMA_FAST` / `EMA_SLOW` at call time, never typed, never composed by the FE. The 🧠
+  clause only when today's 🧠 potential of the same (symbol, setup) RANG (`alerts.potential_rang_at`, read after every
+  refusal and the dry gate, own try — a read fault = no clause, never a skipped push). 📈 Track rows serve `entry_text`
+  "🎯 entry sent HH:MM ET" (`tab.ENTRY_SENT_TEXT`, `tab._entry_times` = one `store.alert_rows` read per 🧠 build
+  classified by `ledger.alert_of`; pushed `GG:` claims only). 🏁: a pushed `GG:` doc is line live, `KIND_TEXT` "🎯 A+
+  entry", counted under `counts["entry"]` and served as `entries_text` — its own 🎯 line, never pooled into the 🧠
+  headline % (an A+ exists only once the trade survived its entry bar, AMENDMENTS10 F3). UNMEASURED — the 2026-10-14
+  study read NULL. Contracts "🎯 Gajjala entry live (2026-10-16)"; ✨ `chart-maps-gajjala-entry-live-2026-10-16`; HIS
+  CALLS Q1–Q11 + deploy order: `docs/gajjala/entry_live_2026_10_16.md`.
 - **Cron** (`backend/crontab`; the host copy is a separate install step — a deploy does not ship it):
   `1-56/5 4-20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` (the pass, `PASS_CADENCE_SEC`
   300, `PASS_OPEN_ET` 04:00–`PASS_CLOSE_ET` 20:05, TRANSPORT) and
@@ -575,7 +599,8 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   journal (R2-8: not now).
 - **Docs**: `docs/gajjala/gajjala_tab_2026_10_13.md` (tab, endpoint, Playbook, ℹ️), `push_2026_10_13.md`,
   `study_2026_10_13.md`, `detectors_2026_10_13.md`, `context_reads_2026_10_13.md`, `data_plan_2026_10_13.md`,
-  `sources_2026_10_13.md`, `frontend_2026_10_13.md`, `volume_avg_backend_2026_10_13.md`.
+  `sources_2026_10_13.md`, `frontend_2026_10_13.md`, `volume_avg_backend_2026_10_13.md`, `entry_live_2026_10_16.md`
+  (🎯 A+ entry LIVE, 2026-10-16).
 - **🧠 Potential · 📈 Track · 🔔 `gajjala_potential`** (2026-10-15, `chart_maps/gajjala/potential.py`). Ajay: *"In
   Gajjalas setup I wanna find potential stocks … So create a potential category in this section."*, *"In all the sub tab
   and add a track and alert to show me new potential is added everyday."*, *"Give me an alert all continous tracker on
@@ -595,7 +620,7 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   on closed days), one push per (date, symbol, setup) — K3, no cap — on the pass clock `ET_PREMARKET_OPEN`–
   `ET_AFTERHOURS_CLOSE` (04:00–20:00 ET, the half-day close on `HALF_DAYS`), never `ET_RTH_OPEN` + `NO_TRADE_AFTER_OPEN_MIN`
   (09:30–09:45, K2); `/alerts` 🧠 pass row + today's list, `/notifications` toggle, ℹ️ lines. No new crontab line.
-  The A+ kind stays SHADOW, its copy narrowed to "no A+ reaches your phone". Contracts: `scripts/contracts.mjs` "🧠
+  The A+ kind stays SHADOW, its copy narrowed to "no A+ reaches your phone" (until 2026-10-16 — now LIVE, see 🎯). Contracts: `scripts/contracts.mjs` "🧠
   gajjala_potential (2026-10-15)". Doc: `docs/chart_maps/gajjala_potential_2026_10_15.md`.
 - **🔄 Scan on open · 🎯 A+ banner** (2026-10-15, `chart_maps/gajjala/on_demand.py`). Ajay: *"When ever I open
   Gajjala's intiate a new scan of stocks.  In that moment and if there are any enterable stocks on the top which I see
@@ -640,7 +665,9 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   own stamp.
 - **Rows** (D1): every 🧠 `gajjala_potentials` doc whose push RANG (`push.state` "pushed"; joined / muted / never-pushed
   are not rows) = the live line and the headline %; every A+ `gajjala_alerts` claim in state shadow = a separate "A+
-  shadow — never sent" line, counted on its own, never in the %. Counted per alert (XLAB on 10-16 = two rows).
+  shadow — never sent" line, counted on its own, never in the %; + every live A+ entry (`GG:` state pushed, since
+  2026-10-16) on the live line, kind "🎯 A+ entry", counted on its own 🎯 line (`counts["entry"]`, `entries_text`) —
+  never pooled into the 🧠 headline % (AMENDMENTS10 F3). Counted per alert (XLAB on 10-16 = two rows).
 - **Storage** Mongo `gajjala_ledger` (`store.LEDGER`, `_id` `"{date}|{SYM}|{setup}|{kind}"`, kept, no TTL; top-level keys
   `store.LEDGER_KEYS` only) — written ONLY by `ledger.grade_step` through `store.upsert_ledger`.
 - **Nightly grade** (`nightly.STEPS` … `"grade"` LAST, own try — its failure never stops a step): rides the EXISTING
@@ -1054,7 +1081,7 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `30 8  * * 1-5` | `/usr/local/bin/python -m sepa.cli brief` | Morning brief (08:30 ET) |
 | `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
-| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger + 🧠 gajjala_potential pushes (LIVE). An owner opening the tab may add one on-open pass as an api-spawned subprocess (push gates dry; the cron waits ≤ 45 s for it, never refused). § 3 "Chart Maps — Gajjala's tab". |
+| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, `gajjala_setup` A+ entry push (LIVE since 2026-10-16) + 🧠 gajjala_potential pushes (LIVE). An owner opening the tab may add one on-open pass as an api-spawned subprocess (push gates dry; the cron waits ≤ 45 s for it, never refused). § 3 "Chart Maps — Gajjala's tab". |
 | `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm + 🏁 track-record grade (2026-10-16, last step; same line, no new crontab entry). |
 | `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`), and 🎚️ `tape_control` (2026-10-16). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab", § 3 "Tape — 🎚️ buyers in control on pinned names". |
 

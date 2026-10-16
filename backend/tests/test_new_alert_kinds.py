@@ -66,7 +66,7 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
         "med_catalyst",
         # WIDENED 2026-10-06 — 🩺 ops_alert (Ajay approved "Fix code + add watchdog": the Docker / host watch pushes him; admin-only kind, ON for the owner via the keep-set).
         "ops_alert",
-        # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; OFF in default_prefs, ON for the owner via the keep-set; SHADOW first).
+        # WIDENED 2026-10-13 — 🚩 gajjala_setup (DECISIONS "Pushes: YES — owner-only kind gajjala_setup"; OFF in default_prefs, ON for the owner via the keep-set; SHADOW first). WIDENED 2026-10-16 — LIVE ("you alert me when that happens"); default_prefs stays False (AMENDMENTS10 F1, DECISIONS10 D1's True withdrawn).
         "gajjala_setup",
         # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
         "gajjala_potential",

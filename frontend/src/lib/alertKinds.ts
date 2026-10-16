@@ -82,8 +82,8 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   med_catalyst:        { emoji: '🧬', label: 'Medical catalyst',        group: 'trading' },
   // 🚩 chart_maps/gajjala (2026-10-13) — a Goverdhan Gajjala setup read A+ on
   // his scanner's names (every rule met, the entry bar closed). ON for the
-  // owner (keep-set), off for everyone else; SHADOW first — recorded on
-  // /alerts, nothing sent until GAJJALA_PUSH_MODE is flipped. UNMEASURED.
+  // owner (keep-set), off for everyone else; shipped SHADOW 2026-10-13, LIVE
+  // since 2026-10-16 (Ajay's call — GAJJALA_PUSH_MODE "live"). UNMEASURED.
   gajjala_setup:       { emoji: '🚩', label: 'Gajjala A+ setup',        group: 'trading' },
   // 🧠 2026-10-15 — Ajay: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to ride the wave".
   // A Gajjala setup read still forming (sideways part begun, reclaim not printed). LIVE, owner-only (keep-set).

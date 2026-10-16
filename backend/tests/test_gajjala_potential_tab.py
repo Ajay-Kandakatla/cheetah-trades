@@ -432,7 +432,10 @@ def test_every_sub_serves_the_live_potential_push_line_under_the_narrowed_a_plus
     for k, _e, _l in GC.SUBS:
         out = build(k, store)
         assert out["push_potential"] == {"mode": "live", "text": PT.push_note(S)}, k
-        assert "no A+ reaches your phone" in out["push"]["text"] and "nothing reaches" not in out["push"]["text"]
+        # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the A+ line above the
+        # 🧠 line is the live one now (tab.push_block's live branch); the shadow branch is pinned in test_gajjala_tab
+        assert out["push"]["mode"] == "live" and out["push"]["text"].startswith("📲 Every A+ rings your phone"), k
+        assert "no A+ reaches your phone" not in out["push"]["text"] and "nothing reaches" not in out["push"]["text"]
 
 
 def test_route_serves_the_potential_sub(store, monkeypatch):
@@ -554,9 +557,127 @@ def test_negative_an_explicit_sub_still_wins():
     assert (out["sub"], out["sub_resolved_from"]) == ("intraday_vcp", "param")
 
 
+# ── 🎯 the A+ entry that rang, on its 🧠 Track row (DECISIONS10 D4, 2026-10-16) ──────────────────────────────────────
+# Ajay 2026-10-16: "… you alert me when that happens 5 mins track of it when there are potentials and also look for new
+# potentials". A Track row serves `entry_text` = tab.ENTRY_SENT_TEXT when a live A+ claim (`GG:` id, state pushed) of
+# its own (date, symbol, setup) rang — ONE store.alert_rows read per 🧠 build, classified by ledger.alert_of.
+ENTRY_AT = at(10, 36)                            # five minutes after DDD's 🧠 push rang (10:31)
+
+
+def entry_doc(d=S, sym="DDD", setup="reversal_squeeze", *, state="pushed", prefix="", suffix="", when=None):
+    """An A+ claim as alerts.py leaves it: live = the plain `GG:` id in state pushed (2026-10-16)."""
+    _id = f"{prefix}GG:{d.isoformat()}|{sym}|{setup}{suffix}"
+    return {"_id": _id, "date": d.isoformat(), "symbol": sym, "setup": setup, "state": state,
+            "at": (when or ENTRY_AT).isoformat(), "mode": "live", "kind": GC.PUSH_KIND, "trigger": 4.12, "stop": 3.95}
+
+
+def seed(st, *docs):
+    for d in docs:
+        st.coll(ST.ALERTS).docs[d["_id"]] = d
+    return st
+
+
+def track_rows(out, day="today"):
+    return {(r["symbol"], r["setup"]): r for r in out["track"][day]["rows"]}
+
+
+def test_a_pushed_entry_shows_on_its_track_row_and_no_other():
+    st = seed(day_store(), entry_doc())
+    rows = track_rows(build(GC.POTENTIAL_SUB, st))
+    assert rows[("DDD", "reversal_squeeze")]["entry_text"] == "🎯 entry sent 10:36 ET"
+    assert rows[("DDD", "reversal_squeeze")]["entry_text"] == GT.ENTRY_SENT_TEXT.format(at="10:36")
+    assert rows[("DDD", "reversal_squeeze")]["push_text"] == "📲 sent 10:31 ET"          # the 🧠 push is unchanged
+    assert all(r["entry_text"] is None for k, r in rows.items() if k != ("DDD", "reversal_squeeze"))
+    y = build(GC.POTENTIAL_SUB, st)["track"]["yesterday"]["rows"]
+    assert y and all("entry_text" in r and r["entry_text"] is None for r in y)          # the key is always served
+
+
+@pytest.mark.parametrize("doc", [
+    entry_doc(state="shadow", prefix="SHADOW:"),                          # recorded in shadow, never sent
+    entry_doc(state="suppressed_premarket", suffix="#suppressed_premarket"),  # a refusal
+    entry_doc(state="pushed", suffix="#suppressed_premarket"),            # a refusal id hand-marked pushed
+    entry_doc(state="failed"), entry_doc(state="no_target"), entry_doc(state="claimed"),
+    entry_doc(setup="bull_flag"),                                         # another setup of the same name
+    entry_doc(d=PREV),                                                    # the same key, the session before
+], ids=["shadow", "refusal", "refusal_marked_pushed", "failed", "no_target", "claimed", "other_setup", "prev_day"])
+def test_NEGATIVE_only_a_pushed_live_claim_of_the_rows_own_key_is_an_entry(doc):
+    rows = track_rows(build(GC.POTENTIAL_SUB, seed(day_store(), doc)))
+    assert rows[("DDD", "reversal_squeeze")]["entry_text"] is None
+    assert all(r["entry_text"] is None for r in rows.values())
+
+
+def test_a_pushed_entry_of_the_previous_session_shows_on_its_yesterday_row():
+    st = seed(day_store(), entry_doc(d=PREV, sym="AAA", setup="bull_flag", when=at(9, 41, PREV)))
+    out = build(GC.POTENTIAL_SUB, st)
+    y = track_rows(out, "yesterday")
+    assert y[("AAA", "bull_flag")]["entry_text"] == "🎯 entry sent 09:41 ET"
+    assert y[("ZZZ", "kiss_fly")]["entry_text"] is None
+    assert track_rows(out)[("AAA", "bull_flag")]["entry_text"] is None    # NEGATIVE: today's row is another key
+
+
+@pytest.mark.parametrize("bad", ["raises", "none"])
+def test_NEGATIVE_an_alert_rows_fault_serves_the_track_without_entries(monkeypatch, bad):
+    st = seed(day_store(), entry_doc())
+    if bad == "raises":
+        monkeypatch.setattr(st, "alert_rows", _boom)
+    else:
+        monkeypatch.setattr(st, "alert_rows", lambda sessions: None)
+    out = build(GC.POTENTIAL_SUB, st)
+    assert out["track"] is not None and out["track"]["today"]["n"] == 6
+    assert all(r["entry_text"] is None for day in ("today", "yesterday") for r in out["track"][day]["rows"])
+    assert [t["symbol"] for t in out["tiles"]][:2] == ["DDD", "AAA"]     # the rest of the 🧠 board serves
+
+
+def test_NEGATIVE_one_malformed_entry_doc_never_blanks_the_others(monkeypatch):
+    """AMENDMENTS10 F8: each alert_of in its own try — a doc that raises is skipped, the other row keeps its text."""
+    from chart_maps.gajjala import ledger as LG
+    st = seed(day_store(), entry_doc(), entry_doc(sym="AAA", setup="bull_flag", when=at(10, 41)))
+    real = LG.alert_of
+
+    def flaky(doc, kind):
+        if doc.get("symbol") == "AAA":
+            raise TypeError("malformed")
+        return real(doc, kind)
+    monkeypatch.setattr(LG, "alert_of", flaky)
+    rows = track_rows(build(GC.POTENTIAL_SUB, st))
+    assert rows[("DDD", "reversal_squeeze")]["entry_text"] == "🎯 entry sent 10:36 ET"
+    assert rows[("AAA", "bull_flag")]["entry_text"] is None
+    monkeypatch.setattr(LG, "alert_of", real)                              # control: both rang
+    rows = track_rows(build(GC.POTENTIAL_SUB, st))
+    assert rows[("AAA", "bull_flag")]["entry_text"] == "🎯 entry sent 10:41 ET"
+
+
+def test_one_alert_rows_read_per_potential_build_and_none_on_another_sub(monkeypatch):
+    st = seed(day_store(), entry_doc())
+    real, calls = st.alert_rows, []
+
+    def counting(sessions):
+        calls.append(list(sessions))
+        return real(sessions)
+    monkeypatch.setattr(st, "alert_rows", counting)
+    out = build(GC.POTENTIAL_SUB, st)
+    assert calls == [[S, PREV]]
+    assert track_rows(out)[("DDD", "reversal_squeeze")]["entry_text"] == "🎯 entry sent 10:36 ET"
+    for k, _e, _l in GC.SUBS:                       # NEGATIVE: no other sub reads it (🏁 reads its own rows_for)
+        if k in (GC.POTENTIAL_SUB, GC.LEDGER_SUB):
+            continue
+        calls.clear()
+        build(k, st)
+        assert calls == [], k
+
+
+def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():
+    doc = {"symbol": "DDD", "setup": "reversal_squeeze", "date": S.isoformat(), "push": {"state": "pushed"}}
+    assert GT._track_row(doc)["entry_text"] is None
+    assert GT._track_row(doc, entries={})["entry_text"] is None
+    assert GT._track_row(doc, entries={(S.isoformat(), "DDD", "bull_flag"): "10:36"})["entry_text"] is None
+    assert GT._track_row(doc, entries={(S.isoformat(), "DDD", "reversal_squeeze"): "10:36"})["entry_text"] == (
+        "🎯 entry sent 10:36 ET")
+
+
 # ── GOLDEN: the FE fixture IS the served payload ─────────────────────────────────────────────────────────────────
 def golden_payload() -> str:
-    st = day_store()
+    st = seed(day_store(), entry_doc())             # DECISIONS10 D4: the DDD 🎾 entry rang 10:36 (the FE pins it)
     doc = {"_recipe": RECIPE, "boards": {"potential": build(GC.POTENTIAL_SUB, st), "bull_flag": build("bull_flag", st)}}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 
@@ -570,3 +691,7 @@ def test_golden_fixture_is_the_served_payload():
     assert GOLDEN.read_text(encoding="utf-8") == text, f"the golden fixture drifted — run: {RECIPE}"
     boards = json.loads(text)["boards"]
     assert boards["potential"]["track"]["today"]["rows"] and boards["bull_flag"]["potential"]["rows"]
+    rows = boards["potential"]["track"]["today"]["rows"]
+    assert all("entry_text" in r for r in rows)
+    assert [r["entry_text"] for r in rows].count("🎯 entry sent 10:36 ET") == 1
+    assert any(r["entry_text"] == "🎯 entry sent 10:36 ET" for r in rows)

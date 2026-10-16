@@ -2614,8 +2614,11 @@ describe("🚩 Gajjala's tab registry", () => {
     expect(m.blurb).toContain("Name the Tab Gajjala's he has multiple strategies..around this.");
     expect(m.blurb).toContain('Implement his full stategy do not assume anything.');
     expect(m.blurb).not.toMatch(/bounce|fake/i);
-    // DECISIONS Round A: pushes are SHADOW — the blurb must not promise a ring.
-    expect(m.blurb).toMatch(/shadow/);
+    // DECISIONS Round A: pushes were SHADOW — the blurb must not promise a ring.
+    // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens", DECISIONS10 D1) —
+    // the blurb now states the live entry push with its window; it must no longer claim that no A+ rings a phone.
+    expect(m.blurb).toContain('A+ entry rings your phone live since 2026-10-16');
+    expect(m.blurb).not.toMatch(/no A\+ rings a phone/);
     expect(m.blurb).not.toMatch(/your phone rings/i);
     expect(splitBlurb(m.blurb).head).toContain('UNMEASURED');
   });

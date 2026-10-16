@@ -68,9 +68,10 @@ export type NotificationPrefs = {
   med_catalyst?: boolean;
   /* 🚩 A Goverdhan Gajjala setup read A+ — every rule met and the entry bar
      closed (chart_maps/gajjala, DECISIONS 2026-10-13 "Pushes: YES"). ON for
-     him via the owner keep-set; False in default_prefs for anyone else.
-     SHADOW first: recorded on /alerts, nothing sent until the switch is
-     flipped. UNMEASURED. */
+     him via the owner keep-set; False in default_prefs for anyone else
+     (AMENDMENTS10 F1 — everyone else starts off). Shipped SHADOW 2026-10-13;
+     LIVE since 2026-10-16 (Ajay's call): every A+ entry in the window is its
+     own push. UNMEASURED. */
   gajjala_setup?: boolean;
   /* 🧠 A Goverdhan Gajjala setup read still FORMING — the demand leg in, the
      quiet sideways part begun ("building") or complete ("trigger armed"), the

@@ -7,6 +7,12 @@ Spec: `BUILD_SPEC9.md` + `AMENDMENTS9.md` E1–E10 + `DECISIONS9.md` (scratchpad
 `frontend/scripts/contracts.mjs` "🏁 Gajjala track record (2026-10-16)". SPECS: "### Chart Maps — 🏁 Gajjala's Track
 record". **UNMEASURED — a ledger of the alerts as sent, not a backtest and not a study. Not SEPA.**
 
+> UPDATE 2026-10-16 (evening): A+ entries went live 2026-10-16; the 🧠 Track row shows "🎯 entry sent HH:MM ET"; the 🏁 ledger counts live A+
+> entries as "🎯 A+ entry" on their own 🎯 line (`counts["entry"]`, `entries_text` — not pooled into the 🧠 %, AMENDMENTS10
+> F3), shadow-period rows stay on the shadow line. Ajay's call ("you alert me when that happens"), not a
+> measurement — docs/gajjala/entry_live_2026_10_16.md. The quoted words below are the 2026-10-16 morning build; W3 and
+> W7 changed (see the note under the served-words table).
+
 ## The ask (Ajay, verbatim, 2026-10-16 ~11:20 ET)
 
 > "also can you track all Gajjals stocks and keep a new tab to show wins vs losses. To see a percentage and the ticker.
@@ -45,6 +51,7 @@ What the alerts on file look like (read-only, 2026-10-16):
   never counted. **4 more** had R under 0.5% of the trigger → "thin R": graded, kept out of the headline %.
 - The 2026-10-13 A+ shadow docs carry only `claimed_at` (no `at`) → the E3 fallback: alert time = `at` → else
   `claimed_at` → else the row is "no alert time" (not counted).
+  > UPDATE 2026-10-16 (evening): a live A+ claim (since 2026-10-16) carries `at` (written with the claim).
 
 ## The rule (served as `rule_text`, verbatim from `ledger.rule_text()`)
 
@@ -68,6 +75,9 @@ Every number in it is read from a constant: 09:45 = `LEDGER_FILL_FROM_ET` (built
 - 🧠 live: every `gajjala_potentials` doc whose push RANG (`push.state` "pushed"). Joined / muted / never-pushed potentials
   are not rows — they never reached his phone. These rows are the headline %.
 - A+ shadow: every `gajjala_alerts` claim in state shadow ("A+ shadow — never sent") — its own counts line, never in the %.
+  > UPDATE 2026-10-16 (evening): A+ entries went live 2026-10-16; the 🧠 Track row shows "🎯 entry sent HH:MM ET"; the 🏁 ledger counts live A+
+  > entries as "🎯 A+ entry" on their own 🎯 line (`counts["entry"]`, `entries_text` — not pooled into the 🧠 %, AMENDMENTS10
+  > F3), shadow-period rows stay on the shadow line.
 - One row per alert (`_id` `"{date}|{SYM}|{setup}|{kind}"`): XLAB = 3 rows over two days.
 
 ## The served words (verbatim from `ledger.py` / `tab.py`)
@@ -96,6 +106,17 @@ Every number in it is read from a constant: 09:45 = `LEDGER_FILL_FROM_ET` (built
 | W15 | `empty_text` | `No Gajjala alert has rung yet this session.` · `No Gajjala alert rang on {date}.` · `No Gajjala alert rang in the last 5 sessions.` · `No Gajjala alert on file yet.` |
 | W16 | `tab.TRACK_RECORD_FAULT` | `🏁 The alert record could not be read this time — the next re-read tries again.` |
 
+> UPDATE 2026-10-16 (evening): A+ entries went live 2026-10-16; the 🧠 Track row shows "🎯 entry sent HH:MM ET"; the 🏁 ledger counts live A+
+> entries as "🎯 A+ entry" on their own 🎯 line (`counts["entry"]`, `entries_text` — not pooled into the 🧠 %, AMENDMENTS10
+> F3), shadow-period rows stay on the shadow line. W3 `HONESTY` is now: `A ledger of the alerts as sent,
+> graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never
+> sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+
+> exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a
+> matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.` W5 `shadow_text` is unchanged
+> (still true for the shadow-period rows). W7 `KIND_TEXT` is now `🧠 live` · `A+ shadow — never sent` · `🎯 A+ entry`.
+> New: `entries_text` = `🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session … ; through next
+> session …` (null when the span has no live A+ row).
+
 ## The state words (cells, `ledger._cell`)
 
 | State | Cell text | Small text |
@@ -112,8 +133,9 @@ Every number in it is read from a constant: 09:45 = `LEDGER_FILL_FROM_ET` (built
 | `pending` | `not graded yet` / `not read yet` / `after today's close` / `after {Dow MM-DD}'s close` | `graded nightly at 20:15 ET` / `graded tonight 20:15 ET` / `graded {Dow MM-DD} 20:15 ET` |
 | provisional (today's read) | `WIN · best {B} so far` · `LOSS · best {B} so far` · `open · best {B} so far` · `no entry yet` | `+1R at {when} · not final` · `stop at {when} · not final` · `close {C} so far` · `not final` |
 
-Counted in the %: `win` and `loss` only, live line only. Listed, never counted: no entry, open / flat, no plan, no risk,
-no alert time, thin R, pending, split.
+Counted in the %: `win` and `loss` only, live line only, 🧠 rows only — live A+ entries are counted on their own 🎯
+line (counts["entry"], AMENDMENTS10 F3). Listed, never counted: no entry, open / flat, no plan, no risk, no alert time,
+thin R, pending, split.
 
 ## The split guard
 
@@ -191,6 +213,10 @@ docker rm -f cheetah-tmp-gl-api
   (b) a 2R / 3R target; (c) lead with the best % and show win / loss second.
 - Q1 Scope: the 🧠 pushes that reached his phone are the rows and the %; A+ is a separate "shadow — never sent" line
   (DEFAULT). Alternatives: drop the shadow line; count every first sighting (muted / joined) too.
+  > UPDATE 2026-10-16 (evening): A+ entries went live 2026-10-16; the 🧠 Track row shows "🎯 entry sent HH:MM ET"; the 🏁 ledger counts live A+
+  > entries as "🎯 A+ entry" on their own 🎯 line (`counts["entry"]`, `entries_text` — not pooled into the 🧠 %, AMENDMENTS10
+  > F3), shadow-period rows stay on the shadow line. Pool vs own line = HIS CALL Q4 of
+  > docs/gajjala/entry_live_2026_10_16.md.
 - Q2 The "today so far" read: on opening 🏁, one 1-minute fetch per name alerted today (≤ 60, 15 s budget, 5-minute
   memo, never written) — the only Gajjala GET that fetches bars (DEFAULT). Alternatives: grade inside the 5-minute pass
   from the bars it already loaded; no live read (graded at 20:15 only); extend it to yesterday's next-session column.

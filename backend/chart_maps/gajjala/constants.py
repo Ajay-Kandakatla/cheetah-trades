@@ -125,9 +125,10 @@ OFF_BY_DEFAULT = ("HALT_CALM_BARS", "AH_EXHAUSTION_MAX_PCT")
 CHEETAH_DEFAULTS = ("STAY_LISTED_SESSIONS", "PSY_NEAR_PCT", "POTENTIAL_NEEDS_BASE", "POTENTIAL_FRESH_TAPE",
                     "POTENTIAL_DEFER_REFUSED")
 
-# push — DECISIONS round A: SHADOW first; every A+ is its own record, once per (symbol, setup, ET day)
+# push — DECISIONS round A shipped SHADOW (2026-10-13 … 16); Ajay flipped it LIVE 2026-10-16 — his call, not a measurement
+# (the 2026-10-14 study read NULL, docs/gajjala/study_2026_10_13.md). Every A+ entry is its own push, once per (symbol, setup, ET day)
 PUSH_KIND = "gajjala_setup"
-GAJJALA_PUSH_MODE = "shadow"             # Ajay round A: record + show on /alerts as "shadow — not sent" until the WP6 study reads and HE flips it
+GAJJALA_PUSH_MODE = "live"               # Ajay 2026-10-16 ("you alert me when that happens" — the entry of his stocks from all 5 tabs when they satisfy all his criteria; DECISIONS10 D1); "shadow" 2026-10-13…16 (round A)
 PUSH_MODES = ("shadow", "live")
 
 # 🧠 potential · 📈 track · 🔔 gajjala_potential (Ajay 2026-10-15, DECISIONS4 K1–K3) — NO new number. A potential is the

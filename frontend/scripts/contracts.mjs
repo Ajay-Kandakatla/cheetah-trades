@@ -6021,7 +6021,8 @@ const CONTRACTS = [
     },
   },
   {
-    name: '🚩 gajjala_setup push kind (2026-10-13): declared in every registry, default off + owner keep-set coherent, MARKET kind, /alerts row, shadow said, never bounce',
+    // WIDENED 2026-10-16 — Ajay flipped the A+ kind live ("you alert me when that happens", DECISIONS10 D1); default_prefs stays False (AMENDMENTS10 F1).
+    name: '🚩 gajjala_setup push kind (2026-10-13; LIVE since 2026-10-16): declared in every registry, default off (AMENDMENTS10 F1) + owner keep-set coherent, MARKET kind, /alerts row, the mode said, never the b-word',
     file: 'src/lib/alertKinds.ts',
     // DECISIONS 2026-10-13: owner-only kind `gajjala_setup`, A+ only, pref in
     // push/subs.py, wrapper in push/hooks.py, keep-set + /alerts row — and
@@ -7733,7 +7734,9 @@ const CONTRACTS = [
         if (!entry.includes("route: '/chart-maps?tab=gajjala&sub=potential'")) errs.push(`${where} must route to '/chart-maps?tab=gajjala&sub=potential'`);
         for (const h of HIS) if (!entry.includes(h)) errs.push(`${where} must quote his ask verbatim: "${h.slice(0, 40)}…"`);
         if (!entry.includes('UNMEASURED')) errs.push(`${where} must say UNMEASURED`);
-        if (!/A\+[^.]*shadow/.test(entry)) errs.push(`${where} must say the A+ alerts stay in shadow`);
+        // WIDENED 2026-10-16 — Ajay flipped the A+ kind live ("you alert me when that happens", DECISIONS10 D1)
+        if (!entry.includes('A+ entries went live 2026-10-16')) errs.push(`${where} must say the A+ entries went live 2026-10-16`);
+        if (/A\+ alerts stay[^.]*shadow/.test(entry)) errs.push(`${where} still says the A+ alerts stay in shadow`);
         if (Object.values(FLAGS).some((v) => v === true) && !entry.includes('Cheetah defaults, not his')) errs.push(`${where} must say the POTENTIAL_* conditions are Cheetah defaults, not his`);
         if (B_WORD.test(entry)) errs.push(`${where} says the b-word / "fake"`);
         if (NOTHING.test(entry)) errs.push(`${where} says nothing rings / reaches / is sent — 🧠 rings live`);
@@ -8469,10 +8472,9 @@ const CONTRACTS = [
 
       // 6. ✨ — FIRST, routes to the sub, both paragraphs verbatim, UNMEASURED + shadow, every number = a pinned constant.
       const nf = tryRead('src/lib/newFeatures.ts');
-      const arr = nf.indexOf('export const NEW_FEATURES');
-      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
+      // WIDENED 2026-10-16 — 🎯 Gajjala entry live took the first ✨ slot the same day; this entry must be PRESENT (the newest feature is first).
       const ID = 'chart-maps-gajjala-track-record-2026-10-16';
-      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      if (!nf.includes(`id: '${ID}'`)) errs.push(`the ✨ entry '${ID}' is missing from NEW_FEATURES`);
       const idAt = nf.indexOf(`id: '${ID}'`);
       if (idAt < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
       else {
@@ -8482,6 +8484,8 @@ const CONTRACTS = [
         for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🏁 ✨ entry must quote his ask verbatim: "${h.slice(0, 40)}…"`);
         if (!entry.includes('UNMEASURED')) errs.push('the 🏁 ✨ entry must say UNMEASURED');
         if (!/shadow/.test(entry)) errs.push('the 🏁 ✨ entry must say the A+ line is shadow (never sent)');
+        // WIDENED 2026-10-16 — Ajay flipped the A+ kind live ("you alert me when that happens", DECISIONS10 D1) — the shadow-period rows stay; the live entries are said too.
+        if (!entry.includes('A+ entries went live 2026-10-16')) errs.push('the 🏁 ✨ entry must say the A+ entries went live 2026-10-16');
         if (B_WORD.test(entry)) errs.push('the 🏁 ✨ entry says bounce / fake');
         let forbidden = [];
         try {
@@ -8507,6 +8511,183 @@ const CONTRACTS = [
       const specs = tryRead('../SPECS.md');
       if (specs && !specs.includes("### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)")) errs.push("SPECS.md lacks \"### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)\"");
       if (!exists('../docs/gajjala/track_record_2026_10_16.md')) errs.push('docs/gajjala/track_record_2026_10_16.md is missing');
+      return errs;
+    },
+  },
+  {
+    name: '🎯 Gajjala entry live (2026-10-16): GAJJALA_PUSH_MODE "live" by his call, default_prefs False (AMENDMENTS10 F1, owner keep-set ON), ENTRY_WORDS = SETUPS each citing a verified_rules id of its topic, the 🧠 clause read after the dry gate, every surface says live + UNMEASURED, the FE composes no entry word, ✨ first + his words verbatim',
+    file: 'src/lib/newFeatures.ts',
+    // Ajay 2026-10-16: "can you add liver tracker for Gajjala's entry." and "Dont understand the question I amlooking for
+    // Entry of his stocks from all 5 tabs. When every they satisfy all his criteria.. LIke for some he says we need to
+    // make sure EMA is kissed you alert me when that happens 5 mins track of it when there are potentials and also look
+    // for new potentials". DECISIONS10 D1–D11 + AMENDMENTS10 F1–F11. He ACTS on this push (real money). UNMEASURED — the
+    // 2026-10-14 study read NULL; the flip is his call, not a measurement. A flip back to "shadow" reverts this block and
+    // the WIDENED pins together. F1: default_prefs stays False (everyone else starts off; his devices ride OWNER_KEEP_SET).
+    // F3: the live A+ entries are counted on their own 🎯 line, never pooled with the 🧠 %. F5: the entry clause is in the
+    // words of his rules, and the 🎾 "2+ sources" label is verified_rules.json's own status label. F9: numbers first.
+    checks: (nf) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const B_WORD = /boun|fake/i;
+      const HIS = [
+        "can you add liver tracker for Gajjala's entry.",
+        'Dont understand the question I amlooking for Entry of his stocks from all 5 tabs. When every they satisfy all his criteria.. LIke for some he says we need to make sure EMA is kissed you alert me when that happens 5 mins track of it when there are potentials and also look for new potentials',
+      ];
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py');
+      const al = tryRead('../backend/chart_maps/gajjala/alerts.py');
+      const subs = tryRead('../backend/push/subs.py');
+      const data = tryRead('../backend/daytrading/data.py');
+      const sig = tryRead('../backend/orderflow/signals.py');
+      let vr = {};
+      try { vr = JSON.parse(tryRead('../backend/chart_maps/gajjala/verified_rules.json') || '{}'); } catch { errs.push('verified_rules.json does not parse'); }
+      // F5: the 🎾 clause's "(🎾: 2+ sources, no first-hand entry rule on file)" — the label is verified_rules.json's own.
+      const MULTI = ((vr.status_labels || {}).confirmed_multi_source) || '';
+      if (!MULTI) errs.push('verified_rules.json lost status_labels.confirmed_multi_source (the "2+ sources" label)');
+      const RS_NOTE = MULTI ? `(🎾: ${MULTI}, no first-hand entry rule on file)` : null;
+      let forbidden = [];
+      try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
+      if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+      const words = (where, t) => [...(B_WORD.test(t) ? [`${where} says the b-word / "fake"`] : []),
+        ...forbidden.filter((w) => t.toLowerCase().includes(w.toLowerCase())).map((w) => `${where} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`)];
+      const hm = (name) => { const m = new RegExp(`^${name} = dtime\\((\\d+),\\s*(\\d+)\\)`, 'm').exec(data); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+      const fmt = (x) => `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
+      const N = Number((/^NO_TRADE_AFTER_OPEN_MIN = (\d+)/m.exec(gc) || [])[1]);
+      const rthO = hm('ET_RTH_OPEN'), rthC = hm('ET_RTH_CLOSE'), ahC = hm('ET_AFTERHOURS_CLOSE');
+      const ok = rthO != null && rthC != null && ahC != null && Number.isFinite(N);
+      if (!ok) errs.push('daytrading/data.py ET_RTH_OPEN / ET_RTH_CLOSE / ET_AFTERHOURS_CLOSE or constants.NO_TRADE_AFTER_OPEN_MIN unreadable');
+      const WINDOW = ok ? `${fmt(rthO + N)}–${fmt(rthC)} and ${fmt(rthC)}–${fmt(ahC)} ET` : null;
+      const TIMES = ok ? [fmt(rthO + N), fmt(rthC), fmt(ahC)] : [];
+      const FAST = Number((/^EMA_FAST = (\d+)/m.exec(sig) || [])[1]);
+      const CAD = Number((/^PASS_CADENCE_SEC = (\d+)/m.exec(gc) || [])[1]) / 60;
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+
+      // 1. the mode — his call, his words tagged on the line
+      if (!/^GAJJALA_PUSH_MODE = "live"\s+# Ajay 2026-10-16\b/m.test(gc)) errs.push('constants.py must carry GAJJALA_PUSH_MODE = "live"  # Ajay 2026-10-16 (…) — DECISIONS10 D1');
+      // 2. prefs: in the keep-set (his devices ON), default_prefs False for everyone else (AMENDMENTS10 F1)
+      if (!keepSet(subs).includes('gajjala_setup')) errs.push('gajjala_setup must stay in push/subs.OWNER_KEEP_SET');
+      const dm = subs.match(/["']gajjala_setup["']\s*:\s*(True|False)/);
+      if (!dm || dm[1] !== 'False') errs.push('gajjala_setup must stay False in push/subs.py default_prefs — everyone else starts off (F1); his devices ride OWNER_KEEP_SET');
+      // 3. ENTRY_WORDS: keys == SETUPS, no digit, each line cites ≥1 verified_rules id of its own topic; the words' assumptions hold
+      const setups = [...((/^SETUPS = \(([^)]*)\)/m.exec(gc) || ['', ''])[1]).matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
+      const ew = /^ENTRY_WORDS = \{\n([\s\S]*?)\n\}/m.exec(al);
+      if (!ew) errs.push('alerts.py lost ENTRY_WORDS = {…} (one clause per setup, GG\'s words)');
+      else {
+        const lines = ew[1].split('\n').filter((l) => /^\s+"[a-z_]+":/.test(l));
+        const keys = lines.map((l) => /^\s+"([a-z_]+)":/.exec(l)[1]);
+        if (JSON.stringify(keys) !== JSON.stringify(setups)) errs.push(`ENTRY_WORDS keys ${JSON.stringify(keys)} != constants.SETUPS ${JSON.stringify(setups)}`);
+        const topicOf = new Map((vr.topics || []).flatMap((t) => (t.verified || []).map((r) => [r.id, t.key])));
+        for (const l of lines) {
+          const k = /^\s+"([a-z_]+)":/.exec(l)[1];
+          const val = (/:\s*"((?:[^"\\]|\\.)*)"/.exec(l) || [])[1] || '';
+          const cmt = l.slice(l.indexOf(val) + val.length);
+          if (!val.trim()) errs.push(`ENTRY_WORDS["${k}"] is empty`);
+          if (/\d/.test(val)) errs.push(`ENTRY_WORDS["${k}"] types a number — use {fast} / {slow} (orderflow.signals EMA_FAST / EMA_SLOW)`);
+          errs.push(...words(`ENTRY_WORDS["${k}"]`, val));
+          const cited = [...cmt.matchAll(/\b((?:BF|KF|HF|VCP|RS)\d+)\b/g)].map((m) => m[1]);
+          if (!cited.length) errs.push(`ENTRY_WORDS["${k}"] cites no verified_rules.json id on its line`);
+          for (const id of cited) if (topicOf.get(id) !== k) errs.push(`ENTRY_WORDS["${k}"] cites ${id} — not a rule of the ${k} topic in verified_rules.json`);
+        }
+      }
+      if (!/^KF_HONOR_ALL_PULLBACK_CLOSES = True\b/m.test(gc)) errs.push('ENTRY_WORDS["kiss_fly"] says "honored" — it assumes KF_HONOR_ALL_PULLBACK_CLOSES = True; revisit the words');
+      if (!/^HF_TRIGGER = "base_high"/m.test(gc)) errs.push('ENTRY_WORDS["horizontal_fade"] says "the new highs" — it assumes HF_TRIGGER = "base_high"; revisit the words');
+      // 4. compose / run_pass (F9: numbers first — compose CONTAINS entry_words(, it does not lead with it)
+      const cp = pyBody(al, 'compose'), rp = pyBody(al, 'run_pass');
+      if (!cp || !/A\+ entry"/.test(cp)) errs.push('alerts.compose: the title must end "A+ entry" (DECISIONS10 D2)');
+      if (!cp || !/entry_words\(/.test(cp) || !/UNMEASURED_TAIL/.test(cp)) errs.push('alerts.compose must contain entry_words( and end with UNMEASURED_TAIL (AMENDMENTS10 F9)');
+      if (!rp) errs.push('alerts.py lost def run_pass(');
+      else {
+        const dryAt = rp.indexOf('if dry:'), potAt = rp.indexOf('potential_rang_at(');
+        if (potAt < 0) errs.push('alerts.run_pass must read the 🧠 potential through potential_rang_at( (DECISIONS10 D2)');
+        else if (dryAt < 0 || potAt < dryAt) errs.push('alerts.run_pass reads the 🧠 potential before the dry gate — an open / dry pass must read nothing');
+      }
+      // 5. Notifications
+      const notif = tryRead('src/pages/Notifications.tsx');
+      if (/SHADOW FIRST/.test(notif)) errs.push('Notifications.tsx still says "SHADOW FIRST" — the A+ kind is live since 2026-10-16');
+      const ne = notif.match(/key: 'gajjala_setup'[\s\S]*?' \},\n/);
+      if (!ne) errs.push('the 🚩 gajjala_setup Notifications entry is missing');
+      else {
+        const d = unesc(ne[0]);
+        for (const need of ['ON FOR YOUR PHONE', 'everyone else starts off', 'LIVE SINCE 2026-10-16', 'every A+ entry in the window is its own push', 'you alert me when that happens', 'NOT MEASURED', 'the 2026-10-14 study']) if (!d.includes(need)) errs.push(`the 🚩 Notifications entry must say "${need}"`);
+        if (d.includes('only your phone is ever sent one')) errs.push('the 🚩 Notifications entry says "only your phone is ever sent one" — F1 keeps "everyone else starts off"');
+        if (/entry in his words/.test(d)) errs.push('the 🚩 Notifications entry says "in his words" — F5: "in the words of his rules"');
+        if (RS_NOTE && !d.includes(RS_NOTE)) errs.push(`the 🚩 Notifications entry must say "${RS_NOTE}" (F5, verified_rules.json status_labels)`);
+        for (const m of d.matchAll(/\b(\d+) EMA\b/g)) if (Number(m[1]) !== FAST) errs.push(`the 🚩 Notifications entry says "${m[0]}" — orderflow.signals.EMA_FAST is ${FAST}`);
+        if (WINDOW && !d.includes(WINDOW)) errs.push(`the 🚩 Notifications entry must print "${WINDOW}"`);
+        errs.push(...words('the 🚩 Notifications entry', d));
+      }
+      const pe = notif.match(/key: 'gajjala_potential'[\s\S]*?' \},\n/);
+      if (pe && /A\+[^.]*never sent/.test(unesc(pe[0]))) errs.push('the 🧠 Notifications entry still says the A+ are never sent');
+      // 6. the tab blurb
+      const cm = tryRead('src/lib/chartMaps.ts');
+      const meta = /\n  gajjala: \{\n    label: "([^"]*)",\n    blurb: '((?:[^'\\]|\\.)*)',/.exec(cm);
+      if (!meta) errs.push('TAB_META.gajjala blurb is missing');
+      else {
+        const b = unesc(meta[2]);
+        if (/no A\+ rings a phone/.test(b)) errs.push('the TAB_META.gajjala blurb still says no A+ rings a phone');
+        if (!b.includes('A+ entry rings your phone live since 2026-10-16')) errs.push('the TAB_META.gajjala blurb must say "A+ entry rings your phone live since 2026-10-16"');
+        if (WINDOW && !b.includes(WINDOW)) errs.push(`the TAB_META.gajjala blurb must print "${WINDOW}"`);
+      }
+      // 7. ✨ — FIRST, routed, both messages verbatim, every number a constant; the older 🚩 / 🧠 / 🏁 entries say it went live
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
+      const ID = 'chart-maps-gajjala-entry-live-2026-10-16';
+      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      const at = nf.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
+      else {
+        // the entry ends at its own `" },` (a double-quoted label — the 🚩 2026-10-13 house pattern), never the next entry's comment
+        const end = nf.indexOf('" },', at);
+        const e = unesc(nf.slice(at, end < 0 ? undefined : end + 4));
+        if (!e.includes("route: '/chart-maps?tab=gajjala'")) errs.push("the 🎯 ✨ entry must route to '/chart-maps?tab=gajjala'");
+        for (const h of HIS) if (!e.includes(h)) errs.push(`the 🎯 ✨ entry must quote him verbatim: "${h.slice(0, 40)}…"`);
+        for (const need of ['UNMEASURED', 'the 2026-10-14 study read no edge', 'your call', 'never pre-market', 'on their own 🎯 line', "counted on that pass's /alerts row, never rung"]) if (!e.includes(need)) errs.push(`the 🎯 ✨ entry must say "${need}"`);
+        if (RS_NOTE && !e.includes(RS_NOTE)) errs.push(`the 🎯 ✨ entry must say "${RS_NOTE}" (F5, verified_rules.json status_labels)`);
+        errs.push(...words('the 🎯 ✨ entry', e));
+        let label = e.slice(Math.max(0, e.indexOf('label: ')));
+        for (const h of HIS) label = label.split(h).join(' ');
+        if (RS_NOTE) label = label.split(RS_NOTE).join(' ');
+        if (WINDOW && !label.includes(WINDOW)) errs.push(`the 🎯 ✨ entry must print "${WINDOW}"`);
+        for (const m of label.matchAll(/\b(\d\d:\d\d)\b/g)) if (!TIMES.includes(m[1])) errs.push(`the 🎯 ✨ entry prints "${m[1]}" — not one of ${TIMES.join(' / ')}`);
+        for (const m of label.matchAll(/first (\d+) minutes/g)) if (Number(m[1]) !== N) errs.push(`the 🎯 ✨ entry says "${m[0]}" — NO_TRADE_AFTER_OPEN_MIN is ${N}`);
+        for (const m of label.matchAll(/every (\d+) minutes/g)) if (Number(m[1]) !== CAD) errs.push(`the 🎯 ✨ entry says "${m[0]}" — PASS_CADENCE_SEC is ${CAD * 60}`);
+        for (const m of label.matchAll(/\b(\d+) EMA\b/g)) if (Number(m[1]) !== FAST) errs.push(`the 🎯 ✨ entry says "${m[0]}" — orderflow.signals.EMA_FAST is ${FAST}`);
+        const left = label.replace(/\b\d\d:\d\d\b|first \d+ minutes|every \d+ minutes|\b\d+ EMA\b|\b\d{4}-\d\d-\d\d\b/g, ' ');
+        const stray = /[^\s]*\d[^\s]*/.exec(left);
+        if (stray) errs.push(`the 🎯 ✨ entry prints "${stray[0]}" — no constant pins it`);
+      }
+      for (const [id, close] of [['chart-maps-gajjala-2026-10-13', '" },'], ['chart-maps-gajjala-potential-2026-10-15', "' },"], ['chart-maps-gajjala-track-record-2026-10-16', "' },"]]) {
+        const a = nf.indexOf(`id: '${id}'`);
+        if (a < 0) { errs.push(`newFeatures.ts lost '${id}'`); continue; }
+        const old = unesc(nf.slice(a, nf.indexOf(close, a) + close.length));
+        if (!old.includes('A+ entries went live 2026-10-16')) errs.push(`the older ✨ entry '${id}' must say "A+ entries went live 2026-10-16" — an old entry must not lie`);
+      }
+      // 8. the FE composes no entry word
+      const board = tryRead('src/components/GajjalaBoard.tsx');
+      if (!board.includes('data-testid={`gg-track-entry-${id}`}') || !/r\.entry_text/.test(board)) errs.push('GajjalaBoard TrackRows must render the served r.entry_text (data-testid gg-track-entry-{id})');
+      if (/entry sent/.test(board.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, ''))) errs.push('GajjalaBoard types "entry sent" — tab.py serves those words');
+      if (!board.includes('data-testid="gg-tr-entries"') || !/tr\.entries_text/.test(board)) errs.push('GajjalaBoard TrackRecordPanel must render the served tr.entries_text (data-testid gg-tr-entries) — F3');
+      // 9. the backend's served words
+      const tab = tryRead('../backend/chart_maps/gajjala/tab.py');
+      if (!tab.includes('ENTRY_SENT_TEXT = "🎯 entry sent {at} ET"')) errs.push('tab.py must carry ENTRY_SENT_TEXT = "🎯 entry sent {at} ET" (DECISIONS10 D4)');
+      const tr = pyBody(tab, '_track_row');
+      if (!tr || !tr.includes('"entry_text"')) errs.push('tab._track_row must serve "entry_text"');
+      const lg = tryRead('../backend/chart_maps/gajjala/ledger.py');
+      if (/The A\+ line was never sent/.test(lg)) errs.push('ledger.HONESTY still says the A+ line was never sent');
+      if (!lg.includes('("aplus", "live"): "🎯 A+ entry"')) errs.push('ledger.KIND_TEXT[("aplus", "live")] must be "🎯 A+ entry"');
+      if (!lg.includes('"entry"')) errs.push('ledger.served_block must count live A+ entries under counts["entry"] (F3)');
+      // sharpened 2026-10-16 (fix round 1): "entry" alone is vacuous — ledger.py already carries it elsewhere; pin what only F3 adds
+      if (!lg.includes('COUNT_LINES = ("live", "shadow", "entry")')) errs.push('ledger.COUNT_LINES must be ("live", "shadow", "entry") — live A+ entries are their own count line, never pooled into the 🧠 % (F3)');
+      const sb = pyBody(lg, 'served_block');
+      if (!sb || !sb.includes('counts["entry"]') || !sb.includes('"entries_text"')) errs.push('ledger.served_block must read counts["entry"] and serve "entries_text" (F3)');
+      // 10. SPECS + the doc
+      const specs = tryRead('../SPECS.md');
+      if (!specs.includes('- **🎯 A+ entry LIVE** (2026-10-16')) errs.push('SPECS.md lacks the "- **🎯 A+ entry LIVE** (2026-10-16" bullet');
+      if (specs.includes('**nothing is sent**')) errs.push('SPECS.md still says "**nothing is sent**" for gajjala_setup');
+      const doc = exists('../docs/gajjala/entry_live_2026_10_16.md') ? read('../docs/gajjala/entry_live_2026_10_16.md') : '';
+      if (!doc) errs.push('docs/gajjala/entry_live_2026_10_16.md is missing');
+      else for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'UNMEASURED', 'study_2026_10_13.md']) if (!doc.includes(need)) errs.push(`docs/gajjala/entry_live_2026_10_16.md must carry "${need}"`);
       return errs;
     },
   },

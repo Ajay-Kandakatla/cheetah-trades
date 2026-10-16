@@ -110,15 +110,20 @@ export const CATEGORIES: CategoryDef[] = [
   /* 🚩 chart_maps/gajjala (2026-10-13, DECISIONS "Pushes: YES — owner-only kind
      gajjala_setup, A+ triggers only"). ON for him: in backend
      push/subs.OWNER_KEEP_SET and False in default_prefs for everyone else. It
-     ships in SHADOW (backend constants.GAJJALA_PUSH_MODE) — the entry says so,
-     and the contracts.mjs 🚩 block re-reads the mode and the keep-set. */
+     shipped in SHADOW (backend constants.GAJJALA_PUSH_MODE) and is LIVE since
+     2026-10-16 (Ajay: "you alert me when that happens" — DECISIONS10 D1, his
+     call; the 2026-10-14 study read NULL). The contracts.mjs 🚩 block re-reads
+     the mode and the keep-set; the 🎯 block pins it (AMENDMENTS10 F1 / F4 / F5 / F9:
+     everyone else starts off, refusals are counted on the pass row, the entry words
+     are his rules' words, numbers first). */
   { key: 'gajjala_setup', label: 'Gajjala A+ setup (his five setups)', emoji: '🚩', group: 'trading',
-    detail: 'ON FOR YOUR PHONE — you said "Pushes: YES" for his setups (2026-10-13); everyone else starts off. '
-      + 'SHADOW FIRST: no A+ is sent yet. Every A+ is recorded on /alerts as "shadow — not sent" until the study of his setups reads and you flip the switch to live. '
-      + 'WHAT FIRES: an A+ — every rule of one of Goverdhan Gajjala\u2019s five setups (\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, \u2796 Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze) met and the 5-minute (or 15-minute Fade) entry bar traded above its trigger (the break — his \u201CI\u2019ll enter right at the break\u201D, S8) and that bar has closed — the bar may close back under the trigger, a close above it is not required — on a name his scanner listed. '
+    detail: 'ON FOR YOUR PHONE — you said "Pushes: YES" for his setups (2026-10-13) and "you alert me when that happens" (2026-10-16); everyone else starts off. '
+      + 'LIVE SINCE 2026-10-16, your call: every A+ entry in the window is its own push; mute it here. A+ found before the switch were recorded on /alerts as "shadow — not sent" and stay listed that way; the \u{1F3C1} Track record counts the entries that were sent on their own \u{1F3AF} line, never pooled with the \u{1F9E0} alerts. '
+      + 'WHAT FIRES: an A+ entry — every rule of one of Goverdhan Gajjala\u2019s five setups (\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, \u2796 Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze) met and the 5-minute (or 15-minute Fade) entry bar traded above its trigger (the break — his \u201CI\u2019ll enter right at the break\u201D, S8) and that bar has closed — the bar may close back under the trigger, a close above it is not required — on a name his scanner listed; the \u{1F48B} Kiss & Fly only after the pullback kissed and honored the 9 EMA. '
+      + 'The push leads with the trigger and the stop, then the setup\u2019s entry in the words of his rules (\u{1F3BE}: 2+ sources, no first-hand entry rule on file), the time the \u{1F9E0} potential rang when one did, and the float. '
       + '09:45–16:00 and 16:00–20:00 ET (13:00 and 17:00 on NYSE half days), never 09:30–09:45 (his first 15 minutes), never pre-market, silent on closed days, once per name, setup and session, every A+ its own push. '
-      + 'WHAT NEVER FIRES: a long flag, a near-kiss, a "B — imperfect" VCP, a break that missed a rule, or an A+ found late (its entry bar closed more than one 5-minute pass ago) — those stay on Chart Maps \u25B8 Gajjala\u2019s. '
-      + 'NOT MEASURED: his rules as he described them; no study here says they win. Not a recommendation.' },
+      + 'WHAT NEVER FIRES: a long flag, a near-kiss, a "B — imperfect" VCP, a break that missed a rule, an A+ found late (its entry bar closed more than one 5-minute pass ago), an A+ in his first 15 minutes or pre-market (counted on that pass\'s /alerts row, never rung), or an open of the tab — those stay on Chart Maps \u25B8 Gajjala\u2019s. '
+      + 'NOT MEASURED: his rules as he described them; the 2026-10-14 study of his setups read no edge. Not a recommendation.' },
   /* 🧠 chart_maps/gajjala/potential.py (2026-10-15). Ajay: "Give me an alert
      all continous tracker on these specifically when I get alert I will jump on
      to ride the wave". A NEW kind, LIVE, owner-only: in backend
@@ -133,7 +138,7 @@ export const CATEGORIES: CategoryDef[] = [
     detail: 'ON FOR YOUR PHONE — you said: "Give me an alert all continous tracker on these specifically when I get alert I will jump on to ride the wave"; everyone else starts off. It rings live — there is no later switch to flip. '
       + 'WHAT FIRES: the first time a name his scanner listed is a potential in one of Goverdhan Gajjala’s five setups (\u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, ➖ Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze): the read is forming, the demand leg is in, the quiet sideways part has started ("building") or is complete ("trigger armed"), and the reclaim of the highs has not printed (needing at least one sideways bar is a Cheetah default, not his). The push says which, with the trigger and stop the read carries, the float and the float rotation. '
       + 'Once per name, setup and session, every one its own push, every one listed on /alerts with its ticker linked to the tab. Every 5 minutes, 04:00–20:00 ET on trading days (earlier on NYSE half days), never 09:30–09:45 (his first 15 minutes) — a name first seen in them rings on the next pass if it is still a potential (a Cheetah default, not his); silent on closed days. A name with no print in the 5-minute bar that just closed waits for its next print (a Cheetah default, not his). '
-      + 'WHAT NEVER FIRES: a read that already broke (A+ — those stay recorded under \u{1F6A9}, never sent), a partial (a rule failed), a long flag, a near-kiss, a "B — imperfect" VCP, a second sighting the same session. '
+      + 'WHAT NEVER FIRES: a read that already broke (A+ — those ring under \u{1F6A9} as an A+ entry since 2026-10-16), a partial (a rule failed), a long flag, a near-kiss, a "B — imperfect" VCP, a second sighting the same session. '
       + 'UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs. The study of his A+ setups read no edge (2026-10-14); nobody has measured potentials. Not a recommendation.' },
   /* 🎢 🗺️ orderflow/tape_burst_kinds.py (2026-10-14). Ajay: "I need a tape
      burst notification specific for High Beta stocks from the reselinet
@@ -505,7 +510,7 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ setups (2026-10-13, shadow first), and 🧠 Gajjala potentials (2026-10-15, live), and 🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live), and 🎚️ buyers in control on the tape for your pinned names (2026-10-16, it rings live). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ entries (2026-10-13, live since 2026-10-16), and 🧠 Gajjala potentials (2026-10-15, live), and 🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live), and 🎚️ buyers in control on the tape for your pinned names (2026-10-16, it rings live). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,

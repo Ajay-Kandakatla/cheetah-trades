@@ -52,8 +52,9 @@ def test_keep_set_is_the_2026_09_21_nine():
 
     WIDENED 2026-10-13 — 🚩 `gajjala_setup` (DECISIONS "Pushes: YES —
     owner-only kind gajjala_setup, A+ triggers only"). ON for the owner, False
-    in default_prefs; it ships in SHADOW (GAJJALA_PUSH_MODE), so nothing is sent
-    until he flips it.
+    in default_prefs; it shipped in SHADOW (GAJJALA_PUSH_MODE). WIDENED
+    2026-10-16 — LIVE (Ajay: "you alert me when that happens"); default_prefs
+    stays False for everyone else (AMENDMENTS10 F1), ON for him via this set.
 
     WIDENED 2026-10-14 — 🎢 `tape_burst_highbeta` + 🗺️ `tape_burst_chartmaps`.
     Ajay: "I need a tape burst notification specific for High Beta stocks from
@@ -70,7 +71,7 @@ def test_keep_set_is_the_2026_09_21_nine():
         "potus_investment", "growth_demand_alert", "earnings_reaction",
         "board_arrival", "price_alert", "key_level_alert", "med_catalyst",
         "ops_alert",
-        # WIDENED 2026-10-13 — 🚩 gajjala_setup (owner-only, SHADOW first)
+        # WIDENED 2026-10-13 — 🚩 gajjala_setup (owner-only, SHADOW first); WIDENED 2026-10-16 — LIVE ("you alert me when that happens"); default_prefs stays False (AMENDMENTS10 F1)
         "gajjala_setup",
         # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
         "gajjala_potential",

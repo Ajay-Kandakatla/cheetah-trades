@@ -380,9 +380,10 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # 🚩 gajjala_setup (chart_maps/gajjala/alerts.py, 2026-10-13). WIDENED
     # 2026-10-13 — DECISIONS "Pushes: YES — owner-only kind gajjala_setup, A+
     # triggers only … pref toggle in push/subs.py". ON for the owner (the
-    # med_catalyst precedent: False in default_prefs, in this set). It ships in
-    # SHADOW (constants.GAJJALA_PUSH_MODE): every A+ is recorded on /alerts and
-    # NOTHING is sent until Ajay flips it to "live" after the 250-session study.
+    # med_catalyst precedent: False in default_prefs, in this set). WIDENED
+    # 2026-10-16 — LIVE (Ajay: "you alert me when that happens"): every A+
+    # entry in the window rings his phone. The study read NULL (2026-10-14) —
+    # his call.
     # A MARKET kind (market_hours.gate). UNMEASURED: "his setup, not a buy signal".
     "gajjala_setup",
     # 🧠 gajjala_potential (chart_maps/gajjala/potential.py, 2026-10-15). WIDENED
@@ -602,12 +603,15 @@ def default_prefs() -> dict:
         # A MARKET kind (market_hours.gate). NOT MEASURED: setup: pending study.
         "med_catalyst": False,
         # 🚩 A Goverdhan Gajjala setup read A+ on his scanner's names — every
-        # rule met and the 5-minute (Fade: 15-minute) entry bar closed above its
-        # trigger (chart_maps/gajjala/alerts.py, DECISIONS 2026-10-13 "Pushes:
-        # YES"). OFF for everyone else; ON for HIS devices through
-        # OWNER_KEEP_SET — his already-registered phones are flipped by
-        # scripts/owner_prefs_apply.py at deploy (a data write). SHADOW until he
-        # flips GAJJALA_PUSH_MODE: recorded, not sent. A MARKET kind. UNMEASURED.
+        # rule met and the entry bar traded through the trigger and closed
+        # (chart_maps/gajjala/alerts.py, DECISIONS 2026-10-13 "Pushes: YES").
+        # LIVE since 2026-10-16 (Ajay: "you alert me when that happens"); False
+        # for everyone else — the 🧠 / 🎚️ precedent ("everyone else starts
+        # off"); ON for HIS devices through OWNER_KEEP_SET +
+        # scripts/owner_prefs_apply.py (his 4 devices already read True on the
+        # 16:21 ET dry run). The send is owner-only
+        # (hooks.notify_gajjala_setup → send_to_user(owner)). AMENDMENTS10 F1
+        # (DECISIONS10 D1's True withdrawn). A MARKET kind. UNMEASURED.
         "gajjala_setup": False,
         # 🧠 A Goverdhan Gajjala setup read is a POTENTIAL on his scanner's names
         # — still forming, the quiet sideways part begun or complete, the reclaim

@@ -34,8 +34,8 @@
     "warming_text": "warming — no pass this session yet (the first runs just after 04:00 ET); the reads shown are older"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -140,6 +140,33 @@
    "tiles": [],
    "track_record": {
     "counts": {
+     "entry": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 1,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 0,
+       "thin": 0,
+       "win": 1
+      }
+     },
      "live": {
       "next": {
        "flat": 0,
@@ -376,6 +403,40 @@
         "trigger": null
        },
        {
+        "at_et": "09:45",
+        "at_text": "09:45 ET",
+        "date": "2026-10-16",
+        "fill_px": 1.85,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+        "id": "2026-10-16|XLAB|intraday_vcp|aplus",
+        "key": "2026-10-16-XLAB-intraday_vcp-aplus",
+        "kind": "aplus",
+        "kind_text": "🎯 A+ entry",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.85 → fill 1.85 at 09:46 · stop 1.75 · +1R 1.95",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "win",
+         "sub_text": "+1R at 09:47 · not final",
+         "text": "WIN · best +107.6% so far"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 1.75,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.85
+       },
+       {
         "at_et": "09:01",
         "at_text": "09:01 ET",
         "date": "2026-10-16",
@@ -522,6 +583,7 @@
      }
     ],
     "empty_text": null,
+    "entries_text": "🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session 1 win · 0 losses · 100% won · 0 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
     "grade_at_et": "20:15",
     "heads": [
      {
@@ -553,7 +615,7 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
     "more_text": null,
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
@@ -614,8 +676,8 @@
     "warming_text": "warming — no pass this session yet (the first runs just after 04:00 ET); the reads shown are older"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -720,6 +782,33 @@
    "tiles": [],
    "track_record": {
     "counts": {
+     "entry": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 1,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 0,
+       "thin": 0,
+       "win": 1
+      }
+     },
      "live": {
       "next": {
        "flat": 0,
@@ -956,6 +1045,40 @@
         "trigger": null
        },
        {
+        "at_et": "09:45",
+        "at_text": "09:45 ET",
+        "date": "2026-10-16",
+        "fill_px": 1.85,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+        "id": "2026-10-16|XLAB|intraday_vcp|aplus",
+        "key": "2026-10-16-XLAB-intraday_vcp-aplus",
+        "kind": "aplus",
+        "kind_text": "🎯 A+ entry",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.85 → fill 1.85 at 09:46 · stop 1.75 · +1R 1.95",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "win",
+         "sub_text": "+1R at 09:47 · not final",
+         "text": "WIN · best +107.6% so far"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 1.75,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.85
+       },
+       {
         "at_et": "09:01",
         "at_text": "09:01 ET",
         "date": "2026-10-16",
@@ -1027,6 +1150,7 @@
      }
     ],
     "empty_text": null,
+    "entries_text": "🎯 A+ entries sent (their own line, not pooled with the 🧠 %): same session 1 win · 0 losses · 100% won · 0 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 1 not graded yet",
     "grade_at_et": "20:15",
     "heads": [
      {
@@ -1058,7 +1182,7 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
     "more_text": null,
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
@@ -1119,8 +1243,8 @@
     "warming_text": "warming — no pass this session yet (the first runs just after 04:00 ET); the reads shown are older"
    },
    "push": {
-    "mode": "shadow",
-    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+    "mode": "live",
+    "text": "📲 Every A+ rings your phone — every rule met and the entry bar closed; never the first 15 minutes, never pre-market, once per name, setup and day. UNMEASURED."
    },
    "push_potential": {
     "mode": "live",
@@ -1225,6 +1349,33 @@
    "tiles": [],
    "track_record": {
     "counts": {
+     "entry": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 0,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     },
      "live": {
       "next": {
        "flat": 0,
@@ -1362,6 +1513,7 @@
      }
     ],
     "empty_text": null,
+    "entries_text": null,
     "grade_at_et": "20:15",
     "heads": [
      {
@@ -1393,7 +1545,7 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
     "more_text": null,
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",

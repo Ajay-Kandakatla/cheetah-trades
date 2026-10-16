@@ -228,6 +228,9 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
       expect(a.getAttribute('href')).toBe(r.href);
       if (r.vs_trigger_text) expect(row.textContent).toContain(r.vs_trigger_text);
       if (r.push_text) expect(within(row).getByTestId(`gg-track-push-${id}`).textContent).toBe(` · ${r.push_text}`);
+      // 🎯 the SERVED entry_text (tab._track_row, DECISIONS10 D4) — printed as served, or no span at all
+      if (r.entry_text) expect(within(row).getByTestId(`gg-track-entry-${id}`).textContent).toBe(` · ${r.entry_text}`);
+      else expect(within(row).queryByTestId(`gg-track-entry-${id}`)).toBeNull();
       const tl = within(row).getByTestId(`gg-track-timeline-${id}`);
       expect(tl.tagName).toBe('DETAILS');
       expect([...tl.querySelectorAll('li')].map((li) => li.textContent)).toEqual(r.timeline.map((e: any) => e.text));
@@ -243,8 +246,12 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
 
     expect(screen.getByTestId('gg-push').textContent).toBe(GOLD.potential.push.text);
     expect(screen.getByTestId('gg-push-potential').textContent).toBe(GOLD.potential.push_potential.text);
-    // the A+ line says A+ stays shadow, the 🧠 line says live — never "nothing reaches"
-    expect(screen.getByTestId('gg-push').textContent).toMatch(/A\+ pushes are in SHADOW/);
+    // WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the A+ line says every A+
+    // rings, the 🧠 line says live — never "nothing reaches"
+    expect(screen.getByTestId('gg-push').textContent).toMatch(/Every A\+ rings your phone/);
+    expect(screen.getByTestId('gg-push').textContent).not.toMatch(/SHADOW/);
+    // the golden carries one live A+ entry that rang (backend tests/test_gajjala_potential_tab.py golden_payload)
+    expect([...tr.today.rows, ...tr.yesterday.rows].some((r: any) => r.entry_text === '🎯 entry sent 10:36 ET')).toBe(true);
     expect(container.textContent).not.toMatch(/nothing (rings|reaches|is sent)/i);
     // NEGATIVE: no 🧠 strip on the 🧠 sub itself
     expect(screen.queryByTestId('gg-potential')).toBeNull();
@@ -347,11 +354,60 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
     const rows = [...tr.today.rows, ...tr.yesterday.rows];
     numbersServed(screen.getByTestId('gg-track').textContent || '',
       [tr.title, tr.unmeasured, tr.empty_today, tr.yesterday.title,
-       ...rows.flatMap((x: any) => [x.text, x.vs_trigger_text, x.push_text, ...x.timeline.map((e: any) => e.text)])]);
+       ...rows.flatMap((x: any) => [x.text, x.vs_trigger_text, x.push_text, x.entry_text, ...x.timeline.map((e: any) => e.text)])]);
     numbersServed(screen.getByTestId('gg-watch').textContent || '', [GOLD.potential.watch.text]);
     for (const t of GOLD.potential.tiles) {
       const el = screen.getByTestId(`gg-tile-${t.symbol}`).querySelector('.gg-pot-tile')!;
       numbersServed(el.textContent || '', [t.gajjala.potential.text, ...(t.gajjala.potential.tells || []).map((x: any) => x.text)]);
+    }
+  });
+
+  it('NEGATIVE (2026-10-16): a Track row whose served entry_text is empty, null or absent prints no 🎯 entry span', async () => {
+    const b = clone(GOLD.potential);
+    const rows = b.track.today.rows;
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const blanks: any[] = ['', null, undefined];
+    rows.forEach((r: any, i: number) => {
+      const v = blanks[i % blanks.length];
+      if (v === undefined) delete r.entry_text; else r.entry_text = v;
+    });
+    b.track.yesterday = null;
+    stubFetch(() => clone(b));
+    const { container } = mount('tab=gajjala&sub=potential');
+    await loaded(container);
+    expect(screen.getAllByTestId(/^gg-track-row-/).length).toBe(rows.length);
+    expect(screen.queryAllByTestId(/^gg-track-entry-/)).toHaveLength(0);
+    expect(container.textContent).not.toContain('entry sent');
+    expect(container.textContent).not.toMatch(BANNED);
+  });
+
+  it('🏁 the SERVED entries_text line sits right under the shadow line; null / empty / absent → no line (AMENDMENTS10 F3)', async () => {
+    const TR: any = await readJsonIfPresent('src/components/__fixtures__/gajjala_track_record_golden_2026_10_16.json');
+    expect(TR, 'the 🏁 golden is missing').toBeTruthy();
+    const base = TR.boards['5d'];
+    // 2026-10-16 polish: the 🏁 golden carries ONE live A+ entry (backend golden_store) — the line is the SERVED string
+    const served = base.track_record.entries_text;
+    expect(typeof served === 'string' && served.startsWith('🎯 A+ entries sent'), String(served)).toBe(true);
+    expect(base.track_record.shadow_text, 'the golden serves the shadow line too').toBeTruthy();
+    const b = clone(base);
+    stubFetch(() => clone(b));
+    let r = mount('tab=gajjala&sub=track_record&span=5d');
+    await loaded(r.container);
+    const line = screen.getByTestId('gg-tr-entries');
+    expect(line.textContent).toBe(served);
+    expect(screen.getByTestId('gg-tr-shadow').nextElementSibling).toBe(line);
+    r.unmount();
+    vi.unstubAllGlobals();
+    for (const v of ['', null, undefined]) {
+      const n = clone(base);
+      if (v === undefined) delete n.track_record.entries_text; else n.track_record.entries_text = v;
+      stubFetch(() => clone(n));
+      r = mount('tab=gajjala&sub=track_record&span=5d');
+      await loaded(r.container);
+      expect(screen.queryByTestId('gg-tr-entries'), String(v)).toBeNull();
+      expect(r.container.textContent).not.toMatch(BANNED);
+      r.unmount();
+      vi.unstubAllGlobals();
     }
   });
 

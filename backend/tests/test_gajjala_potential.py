@@ -538,14 +538,16 @@ def test_no_target_when_no_device_takes_it():
     assert out["no_target"] == 1 and doc_of(st)["push"]["state"] == "no_target"
 
 
-def test_NEGATIVE_the_a_plus_kind_stays_shadow_and_its_ledger_stays_empty(no_ab_sender):
+def test_NEGATIVE_the_potential_pass_never_touches_the_a_plus_kind_or_its_ledger(no_ab_sender):
+    # WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the mode clause is dropped (the A+ kind is live);
+    # the potential pass still never writes the A+ ledger nor calls the A+ sender (the AST guard below unchanged)
     st = fake_store()
     seed(st)
     send = Rec(OK_SEND)
     reads = {"AAA": {k: r for k, r in one_per_setup().items()}, "BBB": {"bull_flag": D.bull_flag(FX.bf_aplus())}}
     out = go(st, at(10, 6), reads, send=send)
     assert out["pushed"] == len(send.calls) == 5                            # one push per (name, setup) — K3
-    assert GC.GAJJALA_PUSH_MODE == "shadow" and st.alerts_coll().docs == {} and no_ab_sender.calls == []
+    assert st.alerts_coll().docs == {} and no_ab_sender.calls == []
     tree = ast.parse(SRC)
     docs = {id(n.body[0].value) for n in ast.walk(tree)
             if isinstance(n, (ast.Module, ast.FunctionDef)) and n.body and isinstance(n.body[0], ast.Expr)}

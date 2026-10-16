@@ -4,7 +4,9 @@ The REAL scanner, bars resampler and detectors run on fixture data: one snapshot
 sessions of 1-minute bars expanded from the Bull Flag A+ fixture (tests/fixtures/gajjala/detector_frames.py), so the
 pass goes qualifier → listed → closed 5-minute frames → A+ → the push gate. Every provider and writer is injected; the
 store is the in-memory FakeColl set (tests/conftest.py refuses a real MongoClient). Negatives: a second concurrent
-run, a dry run that writes, an out-of-window tick that calls the snapshot, a shadow pass that rings.
+run, a dry run that writes, an out-of-window tick that calls the snapshot, a shadow pass that rings, a --now replay
+that is not dry (AMENDMENTS10 F7). LIVE since 2026-10-16 (Ajay's call): the shipped pass rings each A+ once; the shadow
+branch is pinned by the `shadow` fixture.
 """
 from __future__ import annotations
 
@@ -105,6 +107,13 @@ def live(monkeypatch):
     monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "live")
 
 
+# WIDENED 2026-10-16: Ajay flipped the A+ kind live ("you alert me when that happens") — the shadow branch stays (a flip back is one
+# word), so its test pins it instead of riding the shipped default
+@pytest.fixture
+def shadow(monkeypatch):
+    monkeypatch.setattr(GC, "GAJJALA_PUSH_MODE", "shadow")
+
+
 # ── end to end ────────────────────────────────────────────────────────────────────────────────────────────────────
 def test_end_to_end_qualifier_to_aplus_to_one_push(live):
     st = fake_store()
@@ -129,7 +138,23 @@ def test_end_to_end_qualifier_to_aplus_to_one_push(live):
     assert st.get_state("lease")["status"] == "done"
 
 
-def test_NEGATIVE_the_shipped_shadow_pass_never_rings():
+def test_the_shipped_pass_rings_each_aplus_once():
+    """DECISIONS10 D1 — no fixture: the shipped mode rings every A+ of the pass exactly once, through the injected
+    sender (make_deps: send= / owner= — never alerts._owner() or push.hooks), and each title is the A+ entry."""
+    st = fake_store()
+    deps, _snap, send, _status = make_deps()
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert "GGA:bull_flag" in out["aplus"]
+    assert out["alerts"]["pushed"] == len(out["aplus"]) == len(send.calls) >= 1
+    assert out["alerts"]["shadow"] == 0 and out["alerts"]["shadow_mode"] == 0
+    assert all(a[0] == "owner@example.com" and a[1]["title"].endswith("A+ entry") for a, _k in send.calls)
+    assert "GG:2026-10-13|GGA|bull_flag" in st.alerts_coll().docs
+    assert not any(k.startswith("SHADOW:") for k in st.alerts_coll().docs)
+    again = RUN.run_pass(NOW + timedelta(seconds=GC.PASS_CADENCE_SEC), store=st, deps=deps)   # NEGATIVE: no second ring
+    assert (again.get("alerts") or {}).get("pushed", 0) == 0 and len(send.calls) == out["alerts"]["pushed"]
+
+
+def test_NEGATIVE_a_shadow_pass_never_rings(shadow):
     st = fake_store()
     deps, _snap, send, status = make_deps()
     out = RUN.run_pass(NOW, store=st, deps=deps)
@@ -383,7 +408,7 @@ def test_end_to_end_a_forming_flag_rings_one_potential_push():
     bf = st.get_potential(S, "GGA", "bull_flag")
     assert bf["first_seen_et"] == "10:31" and bf["first_kind"] == "armed" and bf["first_px"] == FX.P1[3]
     assert bf["first_tells"]["float_text"] and bf["first_tells"]["float_shares"] == 5_000_000
-    assert send.calls == []                                          # the A+ sender: nothing (no A+, and shadow)
+    assert send.calls == []                                          # the A+ sender: nothing (no A+ in this fixture)
     assert len(deps.record_potential_status.calls) == 1
     (counts, _now, reason), _ = deps.record_potential_status.calls[0]
     assert counts["pushed"] == len(sent) and reason is None
@@ -985,7 +1010,10 @@ def test_the_cron_log_line_carries_the_lease(monkeypatch, caplog):
     monkeypatch.setattr(RUN, "run_pass", lambda now, **k: {"status": "ok", "lease": {"why": "taken_over"}})
     monkeypatch.setattr(ST, "default", lambda: fake_store())
     caplog.set_level(logging.INFO, logger="chart_maps.gajjala.run")
-    assert RUN.main(["--now", "2026-10-13T10:41"]) == 0
+    # AMENDMENTS10 F7: a non-dry `--now` replay now refuses (exit 2) — the cron line itself never passes --now, so the
+    # log line is pinned on the cron's own invocation (no --now; the window check pinned open for the test)
+    monkeypatch.setattr(RUN, "in_window", lambda *_a, **_k: True)
+    assert RUN.main([]) == 0
     msg = [r.getMessage() for r in caplog.records if r.getMessage().startswith("gajjala pass:")]
     assert msg and "taken_over" in msg[0] and "on-open" not in msg[0]
 
@@ -1000,3 +1028,29 @@ def test_run_on_demand_is_run_pass_with_on_demand_and_no_yahoo(monkeypatch):
 def test_NEGATIVE_no_crontab_line_names_the_on_open_pass():
     lines = [ln for ln in (ROOT / "crontab").read_text().splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     assert not [ln for ln in lines if re.search(r"on_demand|on.demand|on.open|gajjala\.scan", ln)]
+
+
+# ── AMENDMENTS10 F7: a manual --now replay that is not dry refuses to run (it would ring the real sender) ───────────
+def test_NEGATIVE_a_non_dry_now_replay_refuses_and_never_builds_a_pass(monkeypatch, caplog):
+    monkeypatch.setattr(RUN, "run_pass", lambda *a, **k: pytest.fail("a non-dry --now replay must never run a pass"))
+    monkeypatch.setattr(ST, "default", lambda: pytest.fail("a non-dry --now replay must never open the real store"))
+    caplog.set_level(logging.INFO, logger="chart_maps.gajjala.run")
+    assert RUN.main(["--now", "2026-10-13T10:41"]) == 2
+    assert RUN.main(["--now", "2026-10-13T10:41", "--json"]) == 2
+    msgs = [r.getMessage() for r in caplog.records if "refusing" in r.getMessage()]
+    assert len(msgs) == 2 and all("--dry-run" in m for m in msgs)
+
+
+def test_a_dry_now_replay_still_runs(monkeypatch):
+    seen = []
+    monkeypatch.setattr(RUN, "run_pass", lambda now, **k: (seen.append(k.get("dry")), {"status": "ok"})[1])
+    monkeypatch.setattr(RUN, "dry_store", lambda *a, **k: None)
+    assert RUN.main(["--dry-run", "--now", "2026-10-13T10:41"]) == 0 and seen == [True]
+
+
+def test_the_cron_invocation_without_now_is_not_refused(monkeypatch):
+    seen = []
+    monkeypatch.setattr(RUN, "in_window", lambda *_a, **_k: True)
+    monkeypatch.setattr(RUN, "run_pass", lambda now, **k: (seen.append(now), {"status": "ok"})[1])
+    monkeypatch.setattr(ST, "default", lambda: fake_store())
+    assert RUN.main([]) == 0 and seen == [None]
