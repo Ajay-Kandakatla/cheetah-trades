@@ -260,3 +260,23 @@ reason: "why was my phone quiet" is the first question the day it is switched on
 
 Note the split: on this kind `pushed` counts deliveries and `muted` counts "nobody targeted",
 where the zone passes count both as `pushed`. Full rules: [`../notifications/key_level_alert.md`](../notifications/key_level_alert.md).
+
+## 10. 🎚️ Buyers in control — pinned names (2026-10-16)
+
+Ajay: *"I wwant you to alert me when the Buyers are winning in tape for IREN today."* A 🎚️ row
+(`TAPE_CONTROL_PASS`, `data-testid="tape-control"`) sits under the 🎢 🗺️ TAPE strip. It is judged
+inside its served `window` (09:32–16:00 ET), every 5 min (`CADENCE_SEC["tape_control"]` 300). It is
+not one of the intraday passes, so the header's pass count is unchanged. `passes.tape_control`
+carries the pass counts plus `pins[]` and `note` from `alert_status.read_tape_control` →
+`orderflow/tape_control.status_block`. Every counter rides the hover title; the row has no chips.
+
+Under the row, each of today's pins prints:
+- its symbol, linked to its served `url` (`/sepa/IREN?tab=tape&from=alerts`) only when that is a
+  same-site path;
+- its served `text`, verbatim — "no read yet today", "sellers in control for the session since
+  HH:MM ET · …", "buyers in control since HH:MM ET · … · rang HH:MM ET", "… (reached no device)",
+  "pin ended at the close of …".
+
+Then the pass `note` (UNMEASURED; sides by the tick rule, which can differ from the Tape tab's
+quote-rule read). The FE composes no pin sentence. Full rules:
+[`../alerts/tape_control_2026_10_16.md`](../alerts/tape_control_2026_10_16.md).

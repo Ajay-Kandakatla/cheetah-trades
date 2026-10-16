@@ -46,6 +46,7 @@ Both kinds:
 
 - On the **existing** `2-57/5 9-15 * * 1-5 … sepa.cli trade-flash-watch` crontab line, in the same process, after the zone pass. There is NO new crontab line: the host-mounted crontab is not shipped by a deploy. The comment block over that line says it carries both kinds.
 - The `cron` service must be redeployed to carry the code.
+- The same trade-flash line also carries 🎚️ `tape_control` since 2026-10-16 ([`tape_control_2026_10_16.md`](tape_control_2026_10_16.md)).
 - `--kinds` (default `all`) and `--dry-run` (no write, no push, clock gate bypassed; prints both watch lists and the candidates).
 - An exception in the kinds never touches the zone pass or its push (`kinds_error`).
 - Per poll: `FETCH_WORKERS = 4` and a `KINDS_BUDGET_SEC = 200` wall budget for both kinds (MINE, AMENDMENTS §8). Names not reached are counted `skipped_budget`.

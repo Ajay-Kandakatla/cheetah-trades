@@ -181,6 +181,12 @@ down; WAIT tracked, not scored). Entry = last tape price at scan time.
 Gross close-to-close, no costs, never pruned. `GET /orderflow/ledger/accuracy`
 reports per-verdict hit rates with n — **read the n before the %**.
 
+## Consumers
+
+- 🎚️ `tape_control` (2026-10-16, `orderflow/tape_control.py`, owner-only push for pinned names, IREN first): reads
+  check 3 (`signals.delta_check`) over `analyze_tape` with the **tick rule** (no NBBO pull), every 5 min, 09:32–16:00
+  ET, on the trade-flash cron line. UNMEASURED. Rules: [`../alerts/tape_control_2026_10_16.md`](../alerts/tape_control_2026_10_16.md).
+
 ## Honesty caveats (also shown in the UI)
 
 1. Tick rule ≈ 75–80% of the quote rule — delta is an estimate.

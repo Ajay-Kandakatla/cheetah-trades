@@ -701,6 +701,66 @@ constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS 
   `trade_flash_events`). UNMEASURED.
 - **Docs**: `docs/chart_maps/high_beta_tab_2026_10_14.md`, `docs/alerts/tape_burst_kinds_2026_10_14.md`.
 
+### Tape — 🎚️ buyers in control on pinned names — orderflow/tape_control.py (2026-10-16)
+Ajay 2026-10-16, two messages: *"Can you add a watcher tape for IREN please."* then *"I wwant you to alert me when the
+Buyers are winning in tape for IREN today."* One owner-only LIVE push kind `tape_control` (🎚️, `MARK`). LIVE since
+12:19 ET 2026-10-16 (main `b2a0604b`). **UNMEASURED** — no study measures this check alone; the Tape verdict's forward
+ledger (`GET /orderflow/ledger/accuracy`) grades the five-check verdict, not check 3 (`UNMEASURED_NOTE`). Not advice.
+- **The rule = the Tape tab's check 3, BY CALL**: `signals.delta_check` over `tape.analyze_tape(trades)["delta"]` — the
+  session's cumulative delta `> 0` AND the last `tape.LATE_WINDOW_MIN` (30) minutes' delta `>= 0`, REGULAR prints only
+  (`tape.split_by_kind(...)["flow"]`), pre-market counted (the pull is the ET day 04:00–20:00). No quotes are passed, so
+  sides are the **tick rule** (`RULE_WORD`); the Tape tab classifies against the NBBO where it can, so the two reads can
+  differ — every push ends with `RULE_TAIL` "tick rule (the Tape tab's quote-rule read can differ)". No new tape math, no
+  new provider. One `tape.fetch_trades(sym, day, max_429=MAX_429)` per active pin per poll (`MAX_429 = 3  # MINE`; the
+  default `max_429=None` keeps every other caller unchanged). "Today" = the ET day of the poll clock, never the container's.
+- **WATCH** = `{"IREN": "2026-10-16"}  # Ajay 2026-10-16` — symbol → the LAST session (inclusive) it is read and rings;
+  `None` = standing. An expired pin is never fetched; when no pin is active the pass records `REASON_NO_PIN`.
+- **Where it runs**: the EXISTING `2-57/5 9-15 * * 1-5 … sepa.cli trade-flash-watch` line (no crontab line of its own).
+  `sepa/cli.py` calls `tape_control.run_pass` AFTER `trade_flash.run_watch` and its heartbeats, in its own try
+  (AMENDMENTS7 A1 — `trade_flash.py` is not edited; a fault here never touches the zone or burst passes), and beats
+  `engine_heartbeat` `tape_control` only when the pass returns `ran: True` (`ran` = no active pin, or ≥ 1 good read —
+  A5). `--kinds` selects it (`tape_control.selected`); `--dry-run` reads and writes nothing. `run_pass` self-gates on
+  `trade_flash.in_window` (09:32–16:00 ET); `MARKET_ALERT_KINDS` keeps it silent on closed days. No tape read STARTS
+  later than `START_BY_SEC` (= `tape_burst_kinds.KINDS_BUDGET_SEC`, 200 s) into the poll (a `budget` fault, `skipped_budget`).
+- **State machine** — pure `decide(prev_state, read)`; a read fault (None: `FAULT_WORDS` no_prints / no_regular /
+  truncated / rate_limited / error / budget / no_mongo) is never a False:
+
+  | prev `in_control` | read | ring | after |
+  |---|---|---|---|
+  | none (no doc today) / None (faults only) | fault | no | unchanged, `faults` +1 |
+  | none / None | True | **YES** — the day's first read rings; W2 ends " · first read today" (A6) | in control, `since` = the read |
+  | none / None | False | no | not in control (armed) |
+  | False (armed) | True | **YES** (the flip) | in control, `since` = the read |
+  | False | False / fault | no | unchanged (a fault never re-arms twice) |
+  | True (holding) | True | **no** — except the A3 retry: the last ring reached no device and `push_attempts < MAX_PUSH_ATTEMPTS` (2, MINE) | holding |
+  | True | False | no — RE-ARM; delivery bookkeeping reset | not in control |
+  | True | fault | **no, and NOT re-armed** | holding, `faults` +1 |
+
+  A3: the state is CLAIMED before the send (optimistic `rev`; a lost claim = `lost_race`, no ring; a `DuplicateKeyError`
+  on the first upsert = `lost_race`, A9) and PATCHED after it with the outcome: `sent ≥ 1` → `rang`; else
+  `push_attempts` +1, `not_pushed_reason` ∈ no_device / not_sent / no_mongo / insert_failed / error
+  (`NOT_PUSHED_WORDS`); at the cap `exhausted` and the /alerts text says "rang twice to no device — check Notifications".
+- **Collections**: `tape_control_state` (`STATE_COLL`, `_id` `SYM:day`, one doc per pin per ET day: `rev`, `in_control`,
+  `since`, `last_read`, `faults`, `last_fault`, `rings[]`, `rang`, `push_attempts`, `not_pushed_reason`, `exhausted`,
+  `first_read`); `tape_control_events` (`EVENTS_COLL`, its own — a `trade_flash.event_id` ring id can collide with a
+  burst window second in `tape_burst_events`); one ring = one event through `trade_flash.record_and_push` →
+  `sender.send_to_user(owner)`; `alert_pass_latest` `_id "tape_control"` (`COUNT_KEYS`).
+- **/alerts row**: `GET /alerts/status` → `passes.tape_control` = the pass counts + `cadence_sec` 300 + `window` +
+  `pins[]` (`symbol`, `date`, `until`, `active`, `state` waiting / no_read / in_control / not_in_control / expired, served
+  `text`, `url` `/sepa/{SYM}?tab=tape&from=alerts`, `rang`) + `note` (`alert_status.read_tape_control` →
+  `tape_control.status_block`; `alert_status` stays a leaf — lazy import). The page draws a 🎚️ row
+  (`TAPE_CONTROL_PASS`, `data-testid="tape-control"`) under the 🎢 🗺️ TAPE strip, judged inside the served window, NOT
+  one of the intraday `PASSES`; it prints each of today's pins' `text` and the `note` verbatim and composes no pin
+  sentence. Push tap → `/sepa/IREN?tab=tape&from=alerts` (`push/recent.ITEM_URL_BY_KIND`).
+- **Keep-set**: in `push/subs.OWNER_KEEP_SET` (owner-only, LIVE), `default_prefs` False for everyone; his 4 devices
+  flipped `None → True` by `scripts.owner_prefs_apply --apply` at deploy (authorised by "alert me"). ℹ️ rules line
+  `rules_info._tape_control_lines` (the 🔔 section's alerts list), built from the constants; Notifications toggle;
+  `health_audit.check_tape_control_heartbeat`.
+- **HIS CALLS** Q1–Q13 (tick vs quote rule, the definition, the edges, when it rings, the window, expiry, sellers taking
+  over, an editable pin list, thin tape, a ring that reached no device, the start guard, the tap, the first read):
+  `docs/alerts/tape_control_2026_10_16.md`. Each ships with its default.
+- **Docs**: `docs/alerts/tape_control_2026_10_16.md`.
+
 ### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)
 A doji after a test of the prior low, in a downtrend (Ajay: *"create me a new tab for Doji candle after a sweep. For any
 stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks"*). **MEASURED 2026-10-16** (one pre-registered outcome run — `scripts/doji_sweep_study.py`, prereg
@@ -906,7 +966,7 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
 | `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger + 🧠 gajjala_potential pushes (LIVE). An owner opening the tab may add one on-open pass as an api-spawned subprocess (push gates dry; the cron waits ≤ 45 s for it, never refused). § 3 "Chart Maps — Gajjala's tab". |
 | `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm. |
-| `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab". |
+| `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`), and 🎚️ `tape_control` (2026-10-16). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab", § 3 "Tape — 🎚️ buyers in control on pinned names". |
 
 **Two operational gotchas (load-bearing):**
 1. The crontab MUST use the absolute python path (`/usr/local/bin/python`).
