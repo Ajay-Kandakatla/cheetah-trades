@@ -5,8 +5,10 @@ For any stocks after a down trend. May be from all chart maps especially on the
 60% 70% down stocks" — and K1: "I heard but do some research and back test
 please on accuracy".
 
-`doji_sweep_tab.study_block()` reads MEASURED lazily. Until the study runs the
-literal is the placeholder and every served line says UNMEASURED.
+`doji_sweep_tab.study_block()` reads MEASURED lazily. The one pre-registered
+outcome run (2026-10-16, head 2845fe24) is pasted below; the served line says
+MEASURED. The placeholder `{"state": "unmeasured"}` is what this literal was
+before the run (load() still falls back to it for a non-dict).
 
 HOW IT CHANGES (never by hand-typing numbers):
   1. the prereg docs/research/doji_sweep_study_2026_10_16.md is committed;
@@ -136,7 +138,269 @@ def literal_cell_keys(key: str) -> tuple:
     return LITERAL_VERDICT_CELL_KEYS if key in VERDICT_CELLS else LITERAL_CELL_KEYS
 
 
-MEASURED = {"state": "unmeasured"}
+MEASURED = {
+    "status": "measured",
+    "schema": 1,
+    "script": "backend/scripts/doji_sweep_study.py",
+    "artifact": "backend/scripts/doji_sweep_measured.json",
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "prereg_commit": "2845fe2458bdead69d1db1c2b96245e80f4d6b06",
+    "prereg_blob": "77cd374b966631fbb95bc9e60231e912bff76c3b",
+    "run_date": "2026-10-16",
+    "as_of": "2026-10-15",
+    "first_session": "2025-10-10",
+    "last_session": "2026-10-15",
+    "cohort": "survivors-only",
+    "cost_round_trip_pct": 0.5,
+    "confirm_sessions": 5,
+    "block_sessions": 10,
+    "primary": {
+        "role": "verdict",
+        "verdict": "no_signal",
+        "ci_pct": 98.33,
+        "p_holm": 0.129,
+        "horizon": 10,
+        "entry": "next_open",
+        "n_events": 145,
+        "n_dates": 98,
+        "n_symbols": 102,
+        "n_detected": 168,
+        "n_blocks": 24,
+        "n_placebo": 770,
+        "n_unmatched": 14,
+        "placebo_short_pool": 13,
+        "event_median_pct": -2.9,
+        "placebo_median_pct": 0.2,
+        "median_diff_pp": -3.1,
+        "ci_block": [
+            -7.62,
+            2.4
+        ],
+        "ci_symbol": [
+            -7.51,
+            1.9
+        ],
+        "robust": True,
+        "adj_event_median_pct": -3.32,
+        "adj_placebo_median_pct": 0.54,
+        "adj_median_diff_pp": -3.85,
+        "adj_ci_block": [
+            -7.23,
+            0.72
+        ],
+        "adj_ci_symbol": [
+            -6.41,
+            0.68
+        ],
+        "event_mean_pct": -0.63,
+        "placebo_mean_pct": 1.72,
+        "ci_mean_block": [
+            -6.55,
+            2.46
+        ],
+        "net_mean_pct": -1.13,
+        "confirm_pct": 46.36,
+        "placebo_confirm_pct": 47.68,
+        "ci_confirm_block": [
+            -11.78,
+            8.4
+        ],
+        "stop_pct": 78.62,
+        "placebo_stop_pct": 66.76
+    },
+    "cells": {
+        "any_read": {
+            "role": "verdict",
+            "verdict": "axes_disagree",
+            "ci_pct": 97.5,
+            "p_holm": 0.612,
+            "n_events": 2802,
+            "n_dates": 242,
+            "median_diff_pp": -0.38,
+            "ci_block": [
+                -1.48,
+                0.82
+            ],
+            "ci_symbol": [
+                -0.74,
+                -0.02
+            ],
+            "adj_median_diff_pp": -0.5,
+            "adj_ci_block": [
+                -1.75,
+                0.68
+            ],
+            "adj_ci_symbol": [
+                -0.89,
+                -0.13
+            ]
+        },
+        "test_no_doji": {
+            "role": "verdict",
+            "verdict": "no_signal",
+            "ci_pct": 95.0,
+            "p_holm": 0.832,
+            "n_events": 2563,
+            "n_dates": 241,
+            "median_diff_pp": 0.96,
+            "ci_block": [
+                -2.12,
+                4.13
+            ],
+            "ci_symbol": [
+                -0.87,
+                2.97
+            ],
+            "adj_median_diff_pp": 0.17,
+            "adj_ci_block": [
+                -2.07,
+                2.88
+            ],
+            "adj_ci_symbol": [
+                -1.09,
+                2.0
+            ]
+        },
+        "w52_70": {
+            "role": "exploratory — no verdict",
+            "n_events": 53,
+            "n_dates": 47,
+            "median_diff_pp": -1.36,
+            "ci_block": [
+                -5.94,
+                3.7
+            ],
+            "ci_symbol": [
+                -7.17,
+                4.59
+            ],
+            "adj_median_diff_pp": -1.98,
+            "adj_ci_block": [
+                -5.84,
+                1.35
+            ],
+            "adj_ci_symbol": [
+                -6.92,
+                2.98
+            ]
+        },
+        "ath_60": {
+            "role": "exploratory — no verdict",
+            "n_events": 1027,
+            "n_dates": 235,
+            "median_diff_pp": -0.41,
+            "ci_block": [
+                -1.7,
+                0.81
+            ],
+            "ci_symbol": [
+                -1.19,
+                0.16
+            ],
+            "adj_median_diff_pp": -0.73,
+            "adj_ci_block": [
+                -1.75,
+                0.28
+            ],
+            "adj_ci_symbol": [
+                -1.25,
+                -0.11
+            ]
+        },
+        "mas": {
+            "role": "exploratory — no verdict",
+            "n_events": 2359,
+            "n_dates": 241,
+            "median_diff_pp": -0.46,
+            "ci_block": [
+                -1.55,
+                0.84
+            ],
+            "ci_symbol": [
+                -0.8,
+                -0.09
+            ],
+            "adj_median_diff_pp": -0.47,
+            "adj_ci_block": [
+                -1.67,
+                0.66
+            ],
+            "adj_ci_symbol": [
+                -0.88,
+                -0.12
+            ]
+        },
+        "doji10": {
+            "role": "exploratory — no verdict",
+            "n_events": 5578,
+            "n_dates": 242,
+            "median_diff_pp": -0.31,
+            "ci_block": [
+                -1.39,
+                0.84
+            ],
+            "ci_symbol": [
+                -0.56,
+                -0.04
+            ],
+            "adj_median_diff_pp": -0.34,
+            "adj_ci_block": [
+                -1.41,
+                0.65
+            ],
+            "adj_ci_symbol": [
+                -0.6,
+                -0.09
+            ]
+        },
+        "undercut_reclaimed": {
+            "role": "exploratory — no verdict",
+            "n_events": 237,
+            "n_dates": 126,
+            "median_diff_pp": -1.34,
+            "ci_block": [
+                -2.94,
+                0.48
+            ],
+            "ci_symbol": [
+                -2.62,
+                0.21
+            ],
+            "adj_median_diff_pp": -0.52,
+            "adj_ci_block": [
+                -1.91,
+                0.95
+            ],
+            "adj_ci_symbol": [
+                -1.77,
+                0.88
+            ]
+        },
+        "swing_sweep": {
+            "role": "exploratory — no verdict",
+            "n_events": 2386,
+            "n_dates": 242,
+            "median_diff_pp": -0.44,
+            "ci_block": [
+                -1.62,
+                0.97
+            ],
+            "ci_symbol": [
+                -0.86,
+                -0.07
+            ],
+            "adj_median_diff_pp": -0.29,
+            "adj_ci_block": [
+                -1.35,
+                0.86
+            ],
+            "adj_ci_symbol": [
+                -0.76,
+                0.13
+            ]
+        }
+    }
+}
 
 
 def load() -> dict:

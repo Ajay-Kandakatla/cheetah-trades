@@ -258,3 +258,22 @@ curl -s -H "X-User-Email: ajaykandakatla@gmail.com" http://127.0.0.1:8000/patter
 
 Expected: `True False <N>` with N above 0 — its own key, never inside the 📐 candles, and holding records. `True False 0`
 after such a run means the ledger is dead (the cron container was not redeployed); the key alone proves nothing.
+
+
+## Result (2026-10-16)
+
+The one pre-registered outcome run (head `2845fe2458bdead69d1db1c2b96245e80f4d6b06`, prereg blob `77cd374b966631fbb95bc9e60231e912bff76c3b`, events
+2025-10-10 → 2026-10-15, survivors-only):
+
+| cell | verdict | net of SPY (pp) | CI by 10-session block | CI by name | CI level (%) | Holm p |
+|---|---|---|---|---|---|---|
+| primary (60%+ under the 52-week high) | `no_signal` | -3.85 | [-7.23, 0.72] | [-6.41, 0.68] | 98.33 | 0.129 |
+| any downtrend read | `axes_disagree` | -0.5 | [-1.75, 0.68] | [-0.89, -0.13] | 97.5 | 0.612 |
+| control: a test without a doji | `no_signal` | 0.17 | [-2.07, 2.88] | [-1.09, 2.0] | 95.0 | 0.832 |
+
+No edge in any of the three. The served header line (verbatim):
+
+> 🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.
+
+Full per-cell tables: `docs/research/doji_sweep_study_2026_10_16_results.md`. Artifact:
+`backend/scripts/doji_sweep_measured.json`. The tab stays a scanner, not an entry.

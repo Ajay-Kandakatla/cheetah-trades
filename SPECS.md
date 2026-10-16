@@ -703,8 +703,10 @@ constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS 
 
 ### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)
 A doji after a test of the prior low, in a downtrend (Ajay: *"create me a new tab for Doji candle after a sweep. For any
-stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks"*). **UNMEASURED** until the
-pre-registered study reads (`scripts/doji_sweep_study.py`, prereg `docs/research/doji_sweep_study_2026_10_16.md`); the served
+stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks"*). **MEASURED 2026-10-16** (one pre-registered outcome run — `scripts/doji_sweep_study.py`, prereg
+`docs/research/doji_sweep_study_2026_10_16.md`, artifact `scripts/doji_sweep_measured.json`, results
+`docs/research/doji_sweep_study_2026_10_16_results.md`): primary no_signal, the control no_signal, the any-read cell's
+two bootstrap axes disagree — no edge; the served
 line changes only through `chart_maps/doji_sweep_measured.py`. Tab key `TAB_KEY` "doji_sweep", label `TAB_LABEL` "🕯️ Doji
 Sweep", slot right after 🚩 Gajjala's (Chart Maps tab order: … 🎢 High Beta · 🚩 Gajjala's · 🕯️ Doji Sweep · 〰️ 9 EMA ·
 W/M …; `board.TABS` appends it last); block `doji_sweep_board`; a memo tab (`membership.MEMO_BLOCK_KEY`).

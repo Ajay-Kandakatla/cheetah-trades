@@ -41,7 +41,8 @@ tab's shape) and a request only filters and orders the held rows.
 WRITES NOTHING. `ledger_fires()` hands the fired candles to the 17:20
 `patterns.history` run, which records them in its own bucket.
 
-UNMEASURED until doji_sweep_measured.MEASURED carries the study. Display only —
+MEASURED 2026-10-16 — the served line comes from doji_sweep_measured.MEASURED (the one pre-registered
+outcome run; re-running needs a new pre-registration). Display only —
 nothing here gates a scan, pushes a phone, sizes a position or enters a lane.
 
 HIS CALL (2026-10-16; the other open calls are tagged on their constants —

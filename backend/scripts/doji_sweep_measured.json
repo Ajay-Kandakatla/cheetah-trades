@@ -1,0 +1,3278 @@
+{
+ "study": "doji_sweep_2026_10_16",
+ "schema": 1,
+ "script": "backend/scripts/doji_sweep_study.py",
+ "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+ "prereg_commit": "2845fe2458bdead69d1db1c2b96245e80f4d6b06",
+ "prereg_blob": "77cd374b966631fbb95bc9e60231e912bff76c3b",
+ "smoke": false,
+ "count_only": false,
+ "run_date": "2026-10-16",
+ "as_of": "2026-10-15",
+ "universe_n": 2699,
+ "n_names_with_bars": 2699,
+ "n_names_eligible": 2623,
+ "first_session": "2025-10-10",
+ "last_session": "2026-10-15",
+ "n_sessions": 255,
+ "ath_basis": {
+  "history": 2219,
+  "frame": 1,
+  "cut_frame_only": 403
+ },
+ "definitions": {
+  "DOJI_BODY_PCT": 0.05,
+  "DOJI_BODY_WIDE_PCT": 0.1,
+  "SWEEP_TEST_PCT": 5.0,
+  "TEST_ROUND_DP": 2,
+  "SWEEP_REF_SESSIONS": 20,
+  "SWEEP_REF_MIN_AGE": 4,
+  "DOWN_PCT": 60.0,
+  "DEPTH_CHIPS": [
+   40,
+   60,
+   70
+  ],
+  "SMA_FAST": 50,
+  "SMA_SLOW": 200,
+  "YEAR_BARS": 252,
+  "SMALL_WICK_PCT": 0.15,
+  "LONG_LEG_BARS": 10,
+  "VOL_AVG_BARS": 50,
+  "VOL_QUIET_X": 1.0,
+  "VOL_HEAVY_X": 1.5,
+  "GLITCH_RATIO": 5.0,
+  "PRIMARY_READ": "w52",
+  "SWING_WINDOW": 3,
+  "SWEEP_LOOKBACK": 60,
+  "LIQ_FLOOR_USD": 10000000.0,
+  "HORIZONS": [
+   5,
+   10,
+   20
+  ],
+  "PRIMARY_H": 10,
+  "CONFIRM_SESSIONS": 5,
+  "PLACEBO_K": 5,
+  "PLACEBO_GAP": 20,
+  "COOLDOWN": 10,
+  "COST_ROUND_TRIP_PCT": 0.5,
+  "CI_PCT": 95.0,
+  "ALPHA": 0.05,
+  "BLOCK_SESSIONS": 10,
+  "MIN_CELL_EVENTS": 100,
+  "MIN_CELL_DATES": 30,
+  "VERDICT_CELLS": [
+   "primary",
+   "any_read",
+   "test_no_doji"
+  ],
+  "PREDECLARED_TOO_SMALL": [
+   "w52_70"
+  ],
+  "CELLS": [
+   "primary",
+   "any_read",
+   "test_no_doji",
+   "w52_40",
+   "w52_70",
+   "ath_60",
+   "mas",
+   "mas_only",
+   "doji10",
+   "above",
+   "undercut",
+   "undercut_reclaimed",
+   "undercut_closed_under",
+   "undercut_deep",
+   "swing_sweep",
+   "dragonfly",
+   "gravestone",
+   "long_legged",
+   "plain",
+   "vol_quiet",
+   "vol_heavy",
+   "doji_no_test",
+   "independent",
+   "all_liquidity",
+   "from_close",
+   "confirm_entry",
+   "test_no_doji_fire_pool"
+  ],
+  "BENCH": "SPY",
+  "UNIVERSE": "full \u2212 ETFs \u2212 delisted (today's list)",
+  "ROLL_AT": "20:00",
+  "draws": 2000,
+  "seed": 20261016,
+  "refuse_window_et": "09:00\u201316:30",
+  "cohort": "survivors-only (today's list)"
+ },
+ "primary": {
+  "label": "Primary \u2014 60%+ under the 52-week high",
+  "definition": "a body under 5% of the range, the low within 5% either side of the prior 20-session low (set 4+ sessions before), the $10M/day floor, 60%+ under the 52-week high (his \"60% 70%\"); next open, 10 sessions, net of SPY",
+  "role": "verdict",
+  "verdict": "no_signal",
+  "ci_pct": 98.33,
+  "p_holm": 0.129,
+  "horizon": 10,
+  "entry": "next_open",
+  "n_events": 145,
+  "n_dates": 98,
+  "n_symbols": 102,
+  "n_detected": 168,
+  "n_blocks": 24,
+  "n_placebo": 770,
+  "n_unmatched": 14,
+  "placebo_short_pool": 13,
+  "event_median_pct": -2.9,
+  "placebo_median_pct": 0.2,
+  "median_diff_pp": -3.1,
+  "ci_block": [
+   -7.62,
+   2.4
+  ],
+  "ci_date": [
+   -6.98,
+   1.5
+  ],
+  "ci_symbol": [
+   -7.51,
+   1.9
+  ],
+  "robust": true,
+  "adj_event_median_pct": -3.32,
+  "adj_placebo_median_pct": 0.54,
+  "adj_median_diff_pp": -3.85,
+  "adj_ci_block": [
+   -7.23,
+   0.72
+  ],
+  "adj_ci_symbol": [
+   -6.41,
+   0.68
+  ],
+  "event_mean_pct": -0.63,
+  "placebo_mean_pct": 1.72,
+  "mean_diff_pp": -2.36,
+  "ci_mean_block": [
+   -6.55,
+   2.46
+  ],
+  "net_mean_pct": -1.13,
+  "confirm_pct": 46.36,
+  "placebo_confirm_pct": 47.68,
+  "confirm_diff_pp": -1.32,
+  "ci_confirm_block": [
+   -11.78,
+   8.4
+  ],
+  "stop_pct": 78.62,
+  "placebo_stop_pct": 66.76,
+  "mfe_median_pct": 6.7,
+  "mae_median_pct": -9.27,
+  "by_horizon": {
+   "5": {
+    "n_events": 151,
+    "event_median_pct": -0.91,
+    "placebo_median_pct": 0.0,
+    "median_diff_pp": -0.91,
+    "ci_block": [
+     -4.06,
+     2.11
+    ],
+    "adj_median_diff_pp": 0.03,
+    "adj_ci_block": [
+     -2.29,
+     2.28
+    ]
+   },
+   "10": {
+    "n_events": 145,
+    "event_median_pct": -2.9,
+    "placebo_median_pct": 0.2,
+    "median_diff_pp": -3.1,
+    "ci_block": [
+     -7.62,
+     2.4
+    ],
+    "adj_median_diff_pp": -3.85,
+    "adj_ci_block": [
+     -7.23,
+     0.72
+    ]
+   },
+   "20": {
+    "n_events": 134,
+    "event_median_pct": 0.86,
+    "placebo_median_pct": 0.41,
+    "median_diff_pp": 0.45,
+    "ci_block": [
+     -7.53,
+     8.14
+    ],
+    "adj_median_diff_pp": -0.79,
+    "adj_ci_block": [
+     -6.92,
+     6.84
+    ]
+   }
+  }
+ },
+ "cells": {
+  "primary": {
+   "label": "Primary \u2014 60%+ under the 52-week high",
+   "definition": "a body under 5% of the range, the low within 5% either side of the prior 20-session low (set 4+ sessions before), the $10M/day floor, 60%+ under the 52-week high (his \"60% 70%\"); next open, 10 sessions, net of SPY",
+   "role": "verdict",
+   "verdict": "no_signal",
+   "ci_pct": 98.33,
+   "p_holm": 0.129,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 145,
+   "n_dates": 98,
+   "n_symbols": 102,
+   "n_detected": 168,
+   "n_blocks": 24,
+   "n_placebo": 770,
+   "n_unmatched": 14,
+   "placebo_short_pool": 13,
+   "event_median_pct": -2.9,
+   "placebo_median_pct": 0.2,
+   "median_diff_pp": -3.1,
+   "ci_block": [
+    -7.62,
+    2.4
+   ],
+   "ci_date": [
+    -6.98,
+    1.5
+   ],
+   "ci_symbol": [
+    -7.51,
+    1.9
+   ],
+   "robust": true,
+   "adj_event_median_pct": -3.32,
+   "adj_placebo_median_pct": 0.54,
+   "adj_median_diff_pp": -3.85,
+   "adj_ci_block": [
+    -7.23,
+    0.72
+   ],
+   "adj_ci_symbol": [
+    -6.41,
+    0.68
+   ],
+   "event_mean_pct": -0.63,
+   "placebo_mean_pct": 1.72,
+   "mean_diff_pp": -2.36,
+   "ci_mean_block": [
+    -6.55,
+    2.46
+   ],
+   "net_mean_pct": -1.13,
+   "confirm_pct": 46.36,
+   "placebo_confirm_pct": 47.68,
+   "confirm_diff_pp": -1.32,
+   "ci_confirm_block": [
+    -11.78,
+    8.4
+   ],
+   "stop_pct": 78.62,
+   "placebo_stop_pct": 66.76,
+   "mfe_median_pct": 6.7,
+   "mae_median_pct": -9.27,
+   "by_horizon": {
+    "5": {
+     "n_events": 151,
+     "event_median_pct": -0.91,
+     "placebo_median_pct": 0.0,
+     "median_diff_pp": -0.91,
+     "ci_block": [
+      -4.06,
+      2.11
+     ],
+     "adj_median_diff_pp": 0.03,
+     "adj_ci_block": [
+      -2.29,
+      2.28
+     ]
+    },
+    "10": {
+     "n_events": 145,
+     "event_median_pct": -2.9,
+     "placebo_median_pct": 0.2,
+     "median_diff_pp": -3.1,
+     "ci_block": [
+      -7.62,
+      2.4
+     ],
+     "adj_median_diff_pp": -3.85,
+     "adj_ci_block": [
+      -7.23,
+      0.72
+     ]
+    },
+    "20": {
+     "n_events": 134,
+     "event_median_pct": 0.86,
+     "placebo_median_pct": 0.41,
+     "median_diff_pp": 0.45,
+     "ci_block": [
+      -7.53,
+      8.14
+     ],
+     "adj_median_diff_pp": -0.79,
+     "adj_ci_block": [
+      -6.92,
+      6.84
+     ]
+    }
+   }
+  },
+  "any_read": {
+   "label": "Any downtrend read (the tab's default view)",
+   "definition": "a body under 5% of the range, the low within 5% either side of the prior 20-session low (set 4+ sessions before), the $10M/day floor, any of 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day",
+   "role": "verdict",
+   "verdict": "axes_disagree",
+   "ci_pct": 97.5,
+   "p_holm": 0.612,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 2802,
+   "n_dates": 242,
+   "n_symbols": 1218,
+   "n_detected": 3111,
+   "n_blocks": 25,
+   "n_placebo": 14895,
+   "n_unmatched": 132,
+   "placebo_short_pool": 121,
+   "event_median_pct": 0.0,
+   "placebo_median_pct": 0.38,
+   "median_diff_pp": -0.38,
+   "ci_block": [
+    -1.48,
+    0.82
+   ],
+   "ci_date": [
+    -0.82,
+    0.12
+   ],
+   "ci_symbol": [
+    -0.74,
+    -0.02
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.57,
+   "adj_placebo_median_pct": -0.07,
+   "adj_median_diff_pp": -0.5,
+   "adj_ci_block": [
+    -1.75,
+    0.68
+   ],
+   "adj_ci_symbol": [
+    -0.89,
+    -0.13
+   ],
+   "event_mean_pct": 0.47,
+   "placebo_mean_pct": 0.8,
+   "mean_diff_pp": -0.33,
+   "ci_mean_block": [
+    -1.83,
+    1.11
+   ],
+   "net_mean_pct": -0.03,
+   "confirm_pct": 47.28,
+   "placebo_confirm_pct": 45.29,
+   "confirm_diff_pp": 1.99,
+   "ci_confirm_block": [
+    -1.97,
+    6.07
+   ],
+   "stop_pct": 69.49,
+   "placebo_stop_pct": 65.69,
+   "mfe_median_pct": 4.27,
+   "mae_median_pct": -4.2,
+   "by_horizon": {
+    "5": {
+     "n_events": 2885,
+     "event_median_pct": -0.03,
+     "placebo_median_pct": 0.25,
+     "median_diff_pp": -0.28,
+     "ci_block": [
+      -0.86,
+      0.33
+     ],
+     "adj_median_diff_pp": -0.36,
+     "adj_ci_block": [
+      -0.88,
+      0.21
+     ]
+    },
+    "10": {
+     "n_events": 2802,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.38,
+     "median_diff_pp": -0.38,
+     "ci_block": [
+      -1.48,
+      0.82
+     ],
+     "adj_median_diff_pp": -0.5,
+     "adj_ci_block": [
+      -1.75,
+      0.68
+     ]
+    },
+    "20": {
+     "n_events": 2613,
+     "event_median_pct": 0.52,
+     "placebo_median_pct": 0.64,
+     "median_diff_pp": -0.12,
+     "ci_block": [
+      -1.85,
+      1.41
+     ],
+     "adj_median_diff_pp": -0.33,
+     "adj_ci_block": [
+      -2.76,
+      1.64
+     ]
+    }
+   }
+  },
+  "test_no_doji": {
+   "label": "The control \u2014 a test of the low without a doji",
+   "definition": "a body of 10% of the range or more, the same test, floor and 52-week read as the primary, against its own matched days",
+   "role": "verdict",
+   "verdict": "no_signal",
+   "ci_pct": 95.0,
+   "p_holm": 0.832,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 2563,
+   "n_dates": 241,
+   "n_symbols": 226,
+   "n_detected": 3580,
+   "n_blocks": 25,
+   "n_placebo": 13595,
+   "n_unmatched": 861,
+   "placebo_short_pool": 616,
+   "event_median_pct": -0.66,
+   "placebo_median_pct": -1.62,
+   "median_diff_pp": 0.96,
+   "ci_block": [
+    -2.12,
+    4.13
+   ],
+   "ci_date": [
+    -0.58,
+    2.62
+   ],
+   "ci_symbol": [
+    -0.87,
+    2.97
+   ],
+   "robust": true,
+   "adj_event_median_pct": -1.63,
+   "adj_placebo_median_pct": -1.81,
+   "adj_median_diff_pp": 0.17,
+   "adj_ci_block": [
+    -2.07,
+    2.88
+   ],
+   "adj_ci_symbol": [
+    -1.09,
+    2.0
+   ],
+   "event_mean_pct": 0.81,
+   "placebo_mean_pct": 0.41,
+   "mean_diff_pp": 0.4,
+   "ci_mean_block": [
+    -2.75,
+    3.89
+   ],
+   "net_mean_pct": 0.31,
+   "confirm_pct": 37.16,
+   "placebo_confirm_pct": 41.41,
+   "confirm_diff_pp": -4.25,
+   "ci_confirm_block": [
+    -8.85,
+    0.26
+   ],
+   "stop_pct": 74.76,
+   "placebo_stop_pct": 72.88,
+   "mfe_median_pct": 8.41,
+   "mae_median_pct": -8.74,
+   "by_horizon": {
+    "5": {
+     "n_events": 2656,
+     "event_median_pct": -0.6,
+     "placebo_median_pct": -0.93,
+     "median_diff_pp": 0.33,
+     "ci_block": [
+      -1.33,
+      2.01
+     ],
+     "adj_median_diff_pp": 0.26,
+     "adj_ci_block": [
+      -1.22,
+      1.48
+     ]
+    },
+    "10": {
+     "n_events": 2563,
+     "event_median_pct": -0.66,
+     "placebo_median_pct": -1.62,
+     "median_diff_pp": 0.96,
+     "ci_block": [
+      -2.12,
+      4.13
+     ],
+     "adj_median_diff_pp": 0.17,
+     "adj_ci_block": [
+      -2.07,
+      2.88
+     ]
+    },
+    "20": {
+     "n_events": 2389,
+     "event_median_pct": 0.31,
+     "placebo_median_pct": -3.18,
+     "median_diff_pp": 3.49,
+     "ci_block": [
+      -2.33,
+      8.57
+     ],
+     "adj_median_diff_pp": 2.36,
+     "adj_ci_block": [
+      -2.01,
+      5.81
+     ]
+    }
+   }
+  },
+  "w52_40": {
+   "label": "40%+ under the 52-week high",
+   "definition": "any_read and 40%+ under the 52-week high",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 643,
+   "n_dates": 211,
+   "n_symbols": 402,
+   "n_detected": 709,
+   "n_blocks": 25,
+   "n_placebo": 3355,
+   "n_unmatched": 38,
+   "placebo_short_pool": 34,
+   "event_median_pct": -0.38,
+   "placebo_median_pct": -0.38,
+   "median_diff_pp": -0.01,
+   "ci_block": [
+    -1.73,
+    1.89
+   ],
+   "ci_date": [
+    -1.1,
+    1.54
+   ],
+   "ci_symbol": [
+    -0.93,
+    1.3
+   ],
+   "robust": true,
+   "adj_event_median_pct": -1.1,
+   "adj_placebo_median_pct": -1.01,
+   "adj_median_diff_pp": -0.09,
+   "adj_ci_block": [
+    -1.45,
+    1.65
+   ],
+   "adj_ci_symbol": [
+    -1.1,
+    1.03
+   ],
+   "event_mean_pct": 0.76,
+   "placebo_mean_pct": 0.15,
+   "mean_diff_pp": 0.62,
+   "ci_mean_block": [
+    -1.38,
+    2.72
+   ],
+   "net_mean_pct": 0.26,
+   "confirm_pct": 45.68,
+   "placebo_confirm_pct": 44.43,
+   "confirm_diff_pp": 1.24,
+   "ci_confirm_block": [
+    -4.26,
+    6.57
+   ],
+   "stop_pct": 72.94,
+   "placebo_stop_pct": 68.55,
+   "mfe_median_pct": 6.42,
+   "mae_median_pct": -6.5,
+   "by_horizon": {
+    "5": {
+     "n_events": 659,
+     "event_median_pct": -0.19,
+     "placebo_median_pct": -0.14,
+     "median_diff_pp": -0.04,
+     "ci_block": [
+      -0.84,
+      0.82
+     ],
+     "adj_median_diff_pp": 0.24,
+     "adj_ci_block": [
+      -0.7,
+      1.25
+     ]
+    },
+    "10": {
+     "n_events": 643,
+     "event_median_pct": -0.38,
+     "placebo_median_pct": -0.38,
+     "median_diff_pp": -0.01,
+     "ci_block": [
+      -1.73,
+      1.89
+     ],
+     "adj_median_diff_pp": -0.09,
+     "adj_ci_block": [
+      -1.45,
+      1.65
+     ]
+    },
+    "20": {
+     "n_events": 599,
+     "event_median_pct": 0.24,
+     "placebo_median_pct": -1.34,
+     "median_diff_pp": 1.58,
+     "ci_block": [
+      -1.01,
+      4.78
+     ],
+     "adj_median_diff_pp": 1.7,
+     "adj_ci_block": [
+      -0.55,
+      4.08
+     ]
+    }
+   }
+  },
+  "w52_70": {
+   "label": "70%+ under the 52-week high (pre-declared too small)",
+   "definition": "any_read and 70%+ under the 52-week high",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 53,
+   "n_dates": 47,
+   "n_symbols": 40,
+   "n_detected": 58,
+   "n_blocks": 22,
+   "n_placebo": 275,
+   "n_unmatched": 3,
+   "placebo_short_pool": 3,
+   "event_median_pct": -2.9,
+   "placebo_median_pct": -1.54,
+   "median_diff_pp": -1.36,
+   "ci_block": [
+    -5.94,
+    3.7
+   ],
+   "ci_date": [
+    -6.3,
+    4.04
+   ],
+   "ci_symbol": [
+    -7.17,
+    4.59
+   ],
+   "robust": true,
+   "adj_event_median_pct": -3.35,
+   "adj_placebo_median_pct": -1.37,
+   "adj_median_diff_pp": -1.98,
+   "adj_ci_block": [
+    -5.84,
+    1.35
+   ],
+   "adj_ci_symbol": [
+    -6.92,
+    2.98
+   ],
+   "event_mean_pct": 0.06,
+   "placebo_mean_pct": -0.53,
+   "mean_diff_pp": 0.59,
+   "ci_mean_block": [
+    -3.78,
+    4.61
+   ],
+   "net_mean_pct": -0.44,
+   "confirm_pct": 42.59,
+   "placebo_confirm_pct": 40.0,
+   "confirm_diff_pp": 2.59,
+   "ci_confirm_block": [
+    -14.18,
+    18.04
+   ],
+   "stop_pct": 83.02,
+   "placebo_stop_pct": 71.7,
+   "mfe_median_pct": 7.66,
+   "mae_median_pct": -9.42,
+   "by_horizon": {
+    "5": {
+     "n_events": 54,
+     "event_median_pct": -0.86,
+     "placebo_median_pct": -1.17,
+     "median_diff_pp": 0.31,
+     "ci_block": [
+      -2.24,
+      3.22
+     ],
+     "adj_median_diff_pp": 0.81,
+     "adj_ci_block": [
+      -1.4,
+      3.48
+     ]
+    },
+    "10": {
+     "n_events": 53,
+     "event_median_pct": -2.9,
+     "placebo_median_pct": -1.54,
+     "median_diff_pp": -1.36,
+     "ci_block": [
+      -5.94,
+      3.7
+     ],
+     "adj_median_diff_pp": -1.98,
+     "adj_ci_block": [
+      -5.84,
+      1.35
+     ]
+    },
+    "20": {
+     "n_events": 49,
+     "event_median_pct": 2.18,
+     "placebo_median_pct": -2.78,
+     "median_diff_pp": 4.96,
+     "ci_block": [
+      -2.28,
+      14.73
+     ],
+     "adj_median_diff_pp": 3.06,
+     "adj_ci_block": [
+      -2.96,
+      13.12
+     ]
+    }
+   }
+  },
+  "ath_60": {
+   "label": "60%+ under the all-time high",
+   "definition": "any_read and the all-time-high read",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 1027,
+   "n_dates": 235,
+   "n_symbols": 448,
+   "n_detected": 1145,
+   "n_blocks": 25,
+   "n_placebo": 5420,
+   "n_unmatched": 61,
+   "placebo_short_pool": 50,
+   "event_median_pct": 0.0,
+   "placebo_median_pct": 0.41,
+   "median_diff_pp": -0.41,
+   "ci_block": [
+    -1.7,
+    0.81
+   ],
+   "ci_date": [
+    -1.06,
+    0.24
+   ],
+   "ci_symbol": [
+    -1.19,
+    0.16
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.47,
+   "adj_placebo_median_pct": 0.25,
+   "adj_median_diff_pp": -0.73,
+   "adj_ci_block": [
+    -1.75,
+    0.28
+   ],
+   "adj_ci_symbol": [
+    -1.25,
+    -0.11
+   ],
+   "event_mean_pct": 0.62,
+   "placebo_mean_pct": 1.0,
+   "mean_diff_pp": -0.38,
+   "ci_mean_block": [
+    -2.08,
+    1.17
+   ],
+   "net_mean_pct": 0.12,
+   "confirm_pct": 48.1,
+   "placebo_confirm_pct": 46.09,
+   "confirm_diff_pp": 2.01,
+   "ci_confirm_block": [
+    -2.08,
+    6.37
+   ],
+   "stop_pct": 69.62,
+   "placebo_stop_pct": 65.59,
+   "mfe_median_pct": 5.33,
+   "mae_median_pct": -5.21,
+   "by_horizon": {
+    "5": {
+     "n_events": 1054,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.28,
+     "median_diff_pp": -0.28,
+     "ci_block": [
+      -0.91,
+      0.38
+     ],
+     "adj_median_diff_pp": -0.31,
+     "adj_ci_block": [
+      -0.95,
+      0.29
+     ]
+    },
+    "10": {
+     "n_events": 1027,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.41,
+     "median_diff_pp": -0.41,
+     "ci_block": [
+      -1.7,
+      0.81
+     ],
+     "adj_median_diff_pp": -0.73,
+     "adj_ci_block": [
+      -1.75,
+      0.28
+     ]
+    },
+    "20": {
+     "n_events": 950,
+     "event_median_pct": 0.52,
+     "placebo_median_pct": 0.79,
+     "median_diff_pp": -0.27,
+     "ci_block": [
+      -1.88,
+      1.2
+     ],
+     "adj_median_diff_pp": -0.68,
+     "adj_ci_block": [
+      -2.26,
+      0.97
+     ]
+    }
+   }
+  },
+  "mas": {
+   "label": "Below the 50- and 200-day",
+   "definition": "any_read and the averages read",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 2359,
+   "n_dates": 241,
+   "n_symbols": 1104,
+   "n_detected": 2624,
+   "n_blocks": 25,
+   "n_placebo": 12525,
+   "n_unmatched": 119,
+   "placebo_short_pool": 113,
+   "event_median_pct": -0.04,
+   "placebo_median_pct": 0.42,
+   "median_diff_pp": -0.46,
+   "ci_block": [
+    -1.55,
+    0.84
+   ],
+   "ci_date": [
+    -0.89,
+    0.11
+   ],
+   "ci_symbol": [
+    -0.8,
+    -0.09
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.63,
+   "adj_placebo_median_pct": -0.16,
+   "adj_median_diff_pp": -0.47,
+   "adj_ci_block": [
+    -1.67,
+    0.66
+   ],
+   "adj_ci_symbol": [
+    -0.88,
+    -0.12
+   ],
+   "event_mean_pct": 0.42,
+   "placebo_mean_pct": 0.82,
+   "mean_diff_pp": -0.4,
+   "ci_mean_block": [
+    -1.66,
+    0.93
+   ],
+   "net_mean_pct": -0.08,
+   "confirm_pct": 46.95,
+   "placebo_confirm_pct": 45.22,
+   "confirm_diff_pp": 1.74,
+   "ci_confirm_block": [
+    -2.16,
+    5.43
+   ],
+   "stop_pct": 70.62,
+   "placebo_stop_pct": 65.71,
+   "mfe_median_pct": 4.23,
+   "mae_median_pct": -4.2,
+   "by_horizon": {
+    "5": {
+     "n_events": 2430,
+     "event_median_pct": -0.12,
+     "placebo_median_pct": 0.24,
+     "median_diff_pp": -0.36,
+     "ci_block": [
+      -0.91,
+      0.33
+     ],
+     "adj_median_diff_pp": -0.38,
+     "adj_ci_block": [
+      -0.84,
+      0.16
+     ]
+    },
+    "10": {
+     "n_events": 2359,
+     "event_median_pct": -0.04,
+     "placebo_median_pct": 0.42,
+     "median_diff_pp": -0.46,
+     "ci_block": [
+      -1.55,
+      0.84
+     ],
+     "adj_median_diff_pp": -0.47,
+     "adj_ci_block": [
+      -1.67,
+      0.66
+     ]
+    },
+    "20": {
+     "n_events": 2204,
+     "event_median_pct": 0.56,
+     "placebo_median_pct": 0.68,
+     "median_diff_pp": -0.12,
+     "ci_block": [
+      -1.8,
+      1.37
+     ],
+     "adj_median_diff_pp": -0.37,
+     "adj_ci_block": [
+      -2.5,
+      1.5
+     ]
+    }
+   }
+  },
+  "mas_only": {
+   "label": "Below the averages only",
+   "definition": "any_read whose ONLY read is the averages",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 1775,
+   "n_dates": 238,
+   "n_symbols": 815,
+   "n_detected": 1966,
+   "n_blocks": 25,
+   "n_placebo": 9475,
+   "n_unmatched": 71,
+   "placebo_short_pool": 71,
+   "event_median_pct": -0.02,
+   "placebo_median_pct": 0.35,
+   "median_diff_pp": -0.37,
+   "ci_block": [
+    -1.45,
+    0.88
+   ],
+   "ci_date": [
+    -0.8,
+    0.13
+   ],
+   "ci_symbol": [
+    -0.73,
+    0.01
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.63,
+   "adj_placebo_median_pct": -0.23,
+   "adj_median_diff_pp": -0.4,
+   "adj_ci_block": [
+    -1.59,
+    0.9
+   ],
+   "adj_ci_symbol": [
+    -0.85,
+    -0.02
+   ],
+   "event_mean_pct": 0.38,
+   "placebo_mean_pct": 0.68,
+   "mean_diff_pp": -0.3,
+   "ci_mean_block": [
+    -1.65,
+    0.94
+   ],
+   "net_mean_pct": -0.12,
+   "confirm_pct": 46.81,
+   "placebo_confirm_pct": 44.83,
+   "confirm_diff_pp": 1.98,
+   "ci_confirm_block": [
+    -2.16,
+    5.92
+   ],
+   "stop_pct": 69.41,
+   "placebo_stop_pct": 65.75,
+   "mfe_median_pct": 3.89,
+   "mae_median_pct": -3.84,
+   "by_horizon": {
+    "5": {
+     "n_events": 1831,
+     "event_median_pct": -0.08,
+     "placebo_median_pct": 0.23,
+     "median_diff_pp": -0.3,
+     "ci_block": [
+      -0.9,
+      0.28
+     ],
+     "adj_median_diff_pp": -0.37,
+     "adj_ci_block": [
+      -0.83,
+      0.21
+     ]
+    },
+    "10": {
+     "n_events": 1775,
+     "event_median_pct": -0.02,
+     "placebo_median_pct": 0.35,
+     "median_diff_pp": -0.37,
+     "ci_block": [
+      -1.45,
+      0.88
+     ],
+     "adj_median_diff_pp": -0.4,
+     "adj_ci_block": [
+      -1.59,
+      0.9
+     ]
+    },
+    "20": {
+     "n_events": 1663,
+     "event_median_pct": 0.53,
+     "placebo_median_pct": 0.56,
+     "median_diff_pp": -0.03,
+     "ci_block": [
+      -1.78,
+      1.37
+     ],
+     "adj_median_diff_pp": -0.22,
+     "adj_ci_block": [
+      -2.56,
+      1.99
+     ]
+    }
+   }
+  },
+  "doji10": {
+   "label": "Body under 10%",
+   "definition": "the any_read rule at a body under 10% of the range",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 5578,
+   "n_dates": 242,
+   "n_symbols": 1534,
+   "n_detected": 6208,
+   "n_blocks": 25,
+   "n_placebo": 29815,
+   "n_unmatched": 245,
+   "placebo_short_pool": 236,
+   "event_median_pct": 0.0,
+   "placebo_median_pct": 0.31,
+   "median_diff_pp": -0.31,
+   "ci_block": [
+    -1.39,
+    0.84
+   ],
+   "ci_date": [
+    -0.7,
+    0.11
+   ],
+   "ci_symbol": [
+    -0.56,
+    -0.04
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.56,
+   "adj_placebo_median_pct": -0.23,
+   "adj_median_diff_pp": -0.34,
+   "adj_ci_block": [
+    -1.41,
+    0.65
+   ],
+   "adj_ci_symbol": [
+    -0.6,
+    -0.09
+   ],
+   "event_mean_pct": 0.44,
+   "placebo_mean_pct": 0.8,
+   "mean_diff_pp": -0.36,
+   "ci_mean_block": [
+    -1.65,
+    0.84
+   ],
+   "net_mean_pct": -0.06,
+   "confirm_pct": 47.28,
+   "placebo_confirm_pct": 45.74,
+   "confirm_diff_pp": 1.54,
+   "ci_confirm_block": [
+    -2.44,
+    5.46
+   ],
+   "stop_pct": 70.06,
+   "placebo_stop_pct": 65.81,
+   "mfe_median_pct": 4.29,
+   "mae_median_pct": -4.41,
+   "by_horizon": {
+    "5": {
+     "n_events": 5762,
+     "event_median_pct": -0.07,
+     "placebo_median_pct": 0.24,
+     "median_diff_pp": -0.32,
+     "ci_block": [
+      -0.86,
+      0.22
+     ],
+     "adj_median_diff_pp": -0.36,
+     "adj_ci_block": [
+      -0.8,
+      0.1
+     ]
+    },
+    "10": {
+     "n_events": 5578,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.31,
+     "median_diff_pp": -0.31,
+     "ci_block": [
+      -1.39,
+      0.84
+     ],
+     "adj_median_diff_pp": -0.34,
+     "adj_ci_block": [
+      -1.41,
+      0.65
+     ]
+    },
+    "20": {
+     "n_events": 5201,
+     "event_median_pct": 0.54,
+     "placebo_median_pct": 0.58,
+     "median_diff_pp": -0.04,
+     "ci_block": [
+      -1.78,
+      1.46
+     ],
+     "adj_median_diff_pp": -0.17,
+     "adj_ci_block": [
+      -2.14,
+      1.49
+     ]
+    }
+   }
+  },
+  "above": {
+   "label": "Low at or above the prior low",
+   "definition": "any_read and the low at or above the prior low (0 \u2026 +5%)",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 2517,
+   "n_dates": 242,
+   "n_symbols": 1148,
+   "n_detected": 2793,
+   "n_blocks": 25,
+   "n_placebo": 13415,
+   "n_unmatched": 110,
+   "placebo_short_pool": 105,
+   "event_median_pct": 0.0,
+   "placebo_median_pct": 0.36,
+   "median_diff_pp": -0.36,
+   "ci_block": [
+    -1.38,
+    0.67
+   ],
+   "ci_date": [
+    -0.72,
+    0.08
+   ],
+   "ci_symbol": [
+    -0.72,
+    -0.06
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.6,
+   "adj_placebo_median_pct": -0.09,
+   "adj_median_diff_pp": -0.51,
+   "adj_ci_block": [
+    -1.61,
+    0.63
+   ],
+   "adj_ci_symbol": [
+    -0.87,
+    -0.17
+   ],
+   "event_mean_pct": 0.41,
+   "placebo_mean_pct": 0.81,
+   "mean_diff_pp": -0.4,
+   "ci_mean_block": [
+    -1.76,
+    0.91
+   ],
+   "net_mean_pct": -0.09,
+   "confirm_pct": 46.94,
+   "placebo_confirm_pct": 45.2,
+   "confirm_diff_pp": 1.74,
+   "ci_confirm_block": [
+    -2.11,
+    5.67
+   ],
+   "stop_pct": 70.12,
+   "placebo_stop_pct": 65.92,
+   "mfe_median_pct": 4.2,
+   "mae_median_pct": -4.15,
+   "by_horizon": {
+    "5": {
+     "n_events": 2597,
+     "event_median_pct": -0.02,
+     "placebo_median_pct": 0.23,
+     "median_diff_pp": -0.24,
+     "ci_block": [
+      -0.78,
+      0.19
+     ],
+     "adj_median_diff_pp": -0.35,
+     "adj_ci_block": [
+      -0.79,
+      0.15
+     ]
+    },
+    "10": {
+     "n_events": 2517,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.36,
+     "median_diff_pp": -0.36,
+     "ci_block": [
+      -1.38,
+      0.67
+     ],
+     "adj_median_diff_pp": -0.51,
+     "adj_ci_block": [
+      -1.61,
+      0.63
+     ]
+    },
+    "20": {
+     "n_events": 2362,
+     "event_median_pct": 0.5,
+     "placebo_median_pct": 0.64,
+     "median_diff_pp": -0.14,
+     "ci_block": [
+      -1.63,
+      1.11
+     ],
+     "adj_median_diff_pp": -0.47,
+     "adj_ci_block": [
+      -2.49,
+      1.43
+     ]
+    }
+   }
+  },
+  "undercut": {
+   "label": "Undercut the prior low",
+   "definition": "any_read and the low under the prior low (\u22125% \u2026 0)",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 285,
+   "n_dates": 136,
+   "n_symbols": 267,
+   "n_detected": 318,
+   "n_blocks": 25,
+   "n_placebo": 1480,
+   "n_unmatched": 22,
+   "placebo_short_pool": 16,
+   "event_median_pct": -0.13,
+   "placebo_median_pct": 0.48,
+   "median_diff_pp": -0.62,
+   "ci_block": [
+    -2.36,
+    1.26
+   ],
+   "ci_date": [
+    -2.11,
+    0.79
+   ],
+   "ci_symbol": [
+    -2.02,
+    0.81
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.23,
+   "adj_placebo_median_pct": 0.0,
+   "adj_median_diff_pp": -0.23,
+   "adj_ci_block": [
+    -1.41,
+    1.07
+   ],
+   "adj_ci_symbol": [
+    -1.4,
+    1.03
+   ],
+   "event_mean_pct": 0.97,
+   "placebo_mean_pct": 0.64,
+   "mean_diff_pp": 0.33,
+   "ci_mean_block": [
+    -1.3,
+    2.02
+   ],
+   "net_mean_pct": 0.47,
+   "confirm_pct": 50.35,
+   "placebo_confirm_pct": 46.11,
+   "confirm_diff_pp": 4.24,
+   "ci_confirm_block": [
+    -2.18,
+    9.94
+   ],
+   "stop_pct": 63.86,
+   "placebo_stop_pct": 63.65,
+   "mfe_median_pct": 5.1,
+   "mae_median_pct": -5.21,
+   "by_horizon": {
+    "5": {
+     "n_events": 288,
+     "event_median_pct": -0.14,
+     "placebo_median_pct": 0.39,
+     "median_diff_pp": -0.53,
+     "ci_block": [
+      -1.66,
+      0.65
+     ],
+     "adj_median_diff_pp": -0.49,
+     "adj_ci_block": [
+      -1.53,
+      0.68
+     ]
+    },
+    "10": {
+     "n_events": 285,
+     "event_median_pct": -0.13,
+     "placebo_median_pct": 0.48,
+     "median_diff_pp": -0.62,
+     "ci_block": [
+      -2.36,
+      1.26
+     ],
+     "adj_median_diff_pp": -0.23,
+     "adj_ci_block": [
+      -1.41,
+      1.07
+     ]
+    },
+    "20": {
+     "n_events": 251,
+     "event_median_pct": 0.84,
+     "placebo_median_pct": 0.64,
+     "median_diff_pp": 0.21,
+     "ci_block": [
+      -2.13,
+      3.03
+     ],
+     "adj_median_diff_pp": 1.58,
+     "adj_ci_block": [
+      -1.59,
+      3.57
+     ]
+    }
+   }
+  },
+  "undercut_reclaimed": {
+   "label": "Undercut and reclaimed",
+   "definition": "any_read, the low under the prior low and the close back above it",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 237,
+   "n_dates": 126,
+   "n_symbols": 228,
+   "n_detected": 262,
+   "n_blocks": 25,
+   "n_placebo": 1235,
+   "n_unmatched": 15,
+   "placebo_short_pool": 14,
+   "event_median_pct": -0.85,
+   "placebo_median_pct": 0.49,
+   "median_diff_pp": -1.34,
+   "ci_block": [
+    -2.94,
+    0.48
+   ],
+   "ci_date": [
+    -2.6,
+    0.2
+   ],
+   "ci_symbol": [
+    -2.62,
+    0.21
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.56,
+   "adj_placebo_median_pct": -0.03,
+   "adj_median_diff_pp": -0.52,
+   "adj_ci_block": [
+    -1.91,
+    0.95
+   ],
+   "adj_ci_symbol": [
+    -1.77,
+    0.88
+   ],
+   "event_mean_pct": 0.46,
+   "placebo_mean_pct": 0.62,
+   "mean_diff_pp": -0.16,
+   "ci_mean_block": [
+    -1.86,
+    1.61
+   ],
+   "net_mean_pct": -0.04,
+   "confirm_pct": 51.46,
+   "placebo_confirm_pct": 47.11,
+   "confirm_diff_pp": 4.35,
+   "ci_confirm_block": [
+    -2.18,
+    10.2
+   ],
+   "stop_pct": 64.56,
+   "placebo_stop_pct": 62.87,
+   "mfe_median_pct": 4.68,
+   "mae_median_pct": -5.62,
+   "by_horizon": {
+    "5": {
+     "n_events": 239,
+     "event_median_pct": -0.63,
+     "placebo_median_pct": 0.56,
+     "median_diff_pp": -1.19,
+     "ci_block": [
+      -2.12,
+      0.23
+     ],
+     "adj_median_diff_pp": -1.0,
+     "adj_ci_block": [
+      -2.07,
+      0.5
+     ]
+    },
+    "10": {
+     "n_events": 237,
+     "event_median_pct": -0.85,
+     "placebo_median_pct": 0.49,
+     "median_diff_pp": -1.34,
+     "ci_block": [
+      -2.94,
+      0.48
+     ],
+     "adj_median_diff_pp": -0.52,
+     "adj_ci_block": [
+      -1.91,
+      0.95
+     ]
+    },
+    "20": {
+     "n_events": 208,
+     "event_median_pct": 0.88,
+     "placebo_median_pct": 0.72,
+     "median_diff_pp": 0.16,
+     "ci_block": [
+      -2.5,
+      4.06
+     ],
+     "adj_median_diff_pp": 2.22,
+     "adj_ci_block": [
+      -1.52,
+      4.35
+     ]
+    }
+   }
+  },
+  "undercut_closed_under": {
+   "label": "Undercut, closed under",
+   "definition": "any_read, the low under the prior low and the close not above it",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 48,
+   "n_dates": 40,
+   "n_symbols": 47,
+   "n_detected": 56,
+   "n_blocks": 22,
+   "n_placebo": 245,
+   "n_unmatched": 7,
+   "placebo_short_pool": 2,
+   "event_median_pct": 2.62,
+   "placebo_median_pct": 0.4,
+   "median_diff_pp": 2.22,
+   "ci_block": [
+    -0.86,
+    4.05
+   ],
+   "ci_date": [
+    -0.48,
+    4.17
+   ],
+   "ci_symbol": [
+    -0.47,
+    4.11
+   ],
+   "robust": true,
+   "adj_event_median_pct": 2.3,
+   "adj_placebo_median_pct": 0.42,
+   "adj_median_diff_pp": 1.88,
+   "adj_ci_block": [
+    -1.79,
+    4.46
+   ],
+   "adj_ci_symbol": [
+    -1.66,
+    4.58
+   ],
+   "event_mean_pct": 3.47,
+   "placebo_mean_pct": 0.75,
+   "mean_diff_pp": 2.73,
+   "ci_mean_block": [
+    -0.68,
+    6.72
+   ],
+   "net_mean_pct": 2.97,
+   "confirm_pct": 44.9,
+   "placebo_confirm_pct": 41.22,
+   "confirm_diff_pp": 3.67,
+   "ci_confirm_block": [
+    -7.92,
+    17.08
+   ],
+   "stop_pct": 60.42,
+   "placebo_stop_pct": 67.5,
+   "mfe_median_pct": 6.64,
+   "mae_median_pct": -3.72,
+   "by_horizon": {
+    "5": {
+     "n_events": 49,
+     "event_median_pct": 1.41,
+     "placebo_median_pct": -0.01,
+     "median_diff_pp": 1.42,
+     "ci_block": [
+      -0.39,
+      3.65
+     ],
+     "adj_median_diff_pp": 2.18,
+     "adj_ci_block": [
+      -0.84,
+      4.36
+     ]
+    },
+    "10": {
+     "n_events": 48,
+     "event_median_pct": 2.62,
+     "placebo_median_pct": 0.4,
+     "median_diff_pp": 2.22,
+     "ci_block": [
+      -0.86,
+      4.05
+     ],
+     "adj_median_diff_pp": 1.88,
+     "adj_ci_block": [
+      -1.79,
+      4.46
+     ]
+    },
+    "20": {
+     "n_events": 43,
+     "event_median_pct": 0.42,
+     "placebo_median_pct": 0.52,
+     "median_diff_pp": -0.1,
+     "ci_block": [
+      -2.87,
+      3.25
+     ],
+     "adj_median_diff_pp": -1.13,
+     "adj_ci_block": [
+      -3.16,
+      2.99
+     ]
+    }
+   }
+  },
+  "undercut_deep": {
+   "label": "Undercut by more than 5% (outside his test)",
+   "definition": "a doji (5%), the prior low 4+ sessions old, the low more than 5% under it, any read, the floor",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 35,
+   "n_dates": 31,
+   "n_symbols": 35,
+   "n_detected": 42,
+   "n_blocks": 17,
+   "n_placebo": 195,
+   "n_unmatched": 3,
+   "placebo_short_pool": 3,
+   "event_median_pct": 0.44,
+   "placebo_median_pct": 2.42,
+   "median_diff_pp": -1.98,
+   "ci_block": [
+    -7.63,
+    1.51
+   ],
+   "ci_date": [
+    -6.6,
+    1.17
+   ],
+   "ci_symbol": [
+    -6.66,
+    0.25
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.27,
+   "adj_placebo_median_pct": 1.53,
+   "adj_median_diff_pp": -1.8,
+   "adj_ci_block": [
+    -4.44,
+    1.33
+   ],
+   "adj_ci_symbol": [
+    -4.37,
+    0.87
+   ],
+   "event_mean_pct": 3.88,
+   "placebo_mean_pct": 1.77,
+   "mean_diff_pp": 2.11,
+   "ci_mean_block": [
+    -3.85,
+    10.96
+   ],
+   "net_mean_pct": 3.38,
+   "confirm_pct": 43.24,
+   "placebo_confirm_pct": 46.49,
+   "confirm_diff_pp": -3.24,
+   "ci_confirm_block": [
+    -22.44,
+    16.11
+   ],
+   "stop_pct": 54.29,
+   "placebo_stop_pct": 57.14,
+   "mfe_median_pct": 7.24,
+   "mae_median_pct": -7.52,
+   "by_horizon": {
+    "5": {
+     "n_events": 37,
+     "event_median_pct": -0.48,
+     "placebo_median_pct": 0.9,
+     "median_diff_pp": -1.39,
+     "ci_block": [
+      -3.71,
+      1.31
+     ],
+     "adj_median_diff_pp": -0.29,
+     "adj_ci_block": [
+      -3.28,
+      2.24
+     ]
+    },
+    "10": {
+     "n_events": 35,
+     "event_median_pct": 0.44,
+     "placebo_median_pct": 2.42,
+     "median_diff_pp": -1.98,
+     "ci_block": [
+      -7.63,
+      1.51
+     ],
+     "adj_median_diff_pp": -1.8,
+     "adj_ci_block": [
+      -4.44,
+      1.33
+     ]
+    },
+    "20": {
+     "n_events": 34,
+     "event_median_pct": 0.8,
+     "placebo_median_pct": 0.45,
+     "median_diff_pp": 0.35,
+     "ci_block": [
+      -9.03,
+      7.37
+     ],
+     "adj_median_diff_pp": 1.2,
+     "adj_ci_block": [
+      -5.32,
+      7.27
+     ]
+    }
+   }
+  },
+  "swing_sweep": {
+   "label": "The smc swing-low sweep (Q4)",
+   "definition": "a doji (5%), any read, the floor, and a sell-side sweep of a swing low (window 3, lookback 60) on the candle",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 2386,
+   "n_dates": 242,
+   "n_symbols": 1174,
+   "n_detected": 2634,
+   "n_blocks": 25,
+   "n_placebo": 12540,
+   "n_unmatched": 126,
+   "placebo_short_pool": 116,
+   "event_median_pct": -0.26,
+   "placebo_median_pct": 0.18,
+   "median_diff_pp": -0.44,
+   "ci_block": [
+    -1.62,
+    0.97
+   ],
+   "ci_date": [
+    -1.02,
+    0.07
+   ],
+   "ci_symbol": [
+    -0.86,
+    -0.07
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.63,
+   "adj_placebo_median_pct": -0.34,
+   "adj_median_diff_pp": -0.29,
+   "adj_ci_block": [
+    -1.35,
+    0.86
+   ],
+   "adj_ci_symbol": [
+    -0.76,
+    0.13
+   ],
+   "event_mean_pct": 0.51,
+   "placebo_mean_pct": 0.74,
+   "mean_diff_pp": -0.23,
+   "ci_mean_block": [
+    -1.68,
+    1.31
+   ],
+   "net_mean_pct": 0.01,
+   "confirm_pct": 48.57,
+   "placebo_confirm_pct": 45.21,
+   "confirm_diff_pp": 3.36,
+   "ci_confirm_block": [
+    -0.08,
+    6.69
+   ],
+   "stop_pct": 68.73,
+   "placebo_stop_pct": 67.43,
+   "mfe_median_pct": 4.74,
+   "mae_median_pct": -5.04,
+   "by_horizon": {
+    "5": {
+     "n_events": 2452,
+     "event_median_pct": -0.21,
+     "placebo_median_pct": 0.09,
+     "median_diff_pp": -0.3,
+     "ci_block": [
+      -1.04,
+      0.4
+     ],
+     "adj_median_diff_pp": -0.19,
+     "adj_ci_block": [
+      -0.82,
+      0.46
+     ]
+    },
+    "10": {
+     "n_events": 2386,
+     "event_median_pct": -0.26,
+     "placebo_median_pct": 0.18,
+     "median_diff_pp": -0.44,
+     "ci_block": [
+      -1.62,
+      0.97
+     ],
+     "adj_median_diff_pp": -0.29,
+     "adj_ci_block": [
+      -1.35,
+      0.86
+     ]
+    },
+    "20": {
+     "n_events": 2202,
+     "event_median_pct": 0.81,
+     "placebo_median_pct": 0.36,
+     "median_diff_pp": 0.45,
+     "ci_block": [
+      -1.53,
+      2.48
+     ],
+     "adj_median_diff_pp": 0.24,
+     "adj_ci_block": [
+      -1.61,
+      2.19
+     ]
+    }
+   }
+  },
+  "dragonfly": {
+   "label": "Dragonfly doji",
+   "definition": "any_read and the dragonfly shape",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 184,
+   "n_dates": 110,
+   "n_symbols": 170,
+   "n_detected": 217,
+   "n_blocks": 25,
+   "n_placebo": 1035,
+   "n_unmatched": 10,
+   "placebo_short_pool": 11,
+   "event_median_pct": -0.41,
+   "placebo_median_pct": 0.16,
+   "median_diff_pp": -0.58,
+   "ci_block": [
+    -2.38,
+    1.47
+   ],
+   "ci_date": [
+    -2.0,
+    0.73
+   ],
+   "ci_symbol": [
+    -2.08,
+    0.68
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.24,
+   "adj_placebo_median_pct": -0.04,
+   "adj_median_diff_pp": -0.2,
+   "adj_ci_block": [
+    -1.31,
+    0.85
+   ],
+   "adj_ci_symbol": [
+    -1.49,
+    1.15
+   ],
+   "event_mean_pct": 0.18,
+   "placebo_mean_pct": 0.61,
+   "mean_diff_pp": -0.43,
+   "ci_mean_block": [
+    -2.9,
+    2.07
+   ],
+   "net_mean_pct": -0.32,
+   "confirm_pct": 62.83,
+   "placebo_confirm_pct": 47.64,
+   "confirm_diff_pp": 15.18,
+   "ci_confirm_block": [
+    8.0,
+    23.18
+   ],
+   "stop_pct": 53.26,
+   "placebo_stop_pct": 66.85,
+   "mfe_median_pct": 4.67,
+   "mae_median_pct": -5.14,
+   "by_horizon": {
+    "5": {
+     "n_events": 191,
+     "event_median_pct": -0.35,
+     "placebo_median_pct": 0.0,
+     "median_diff_pp": -0.35,
+     "ci_block": [
+      -1.62,
+      0.75
+     ],
+     "adj_median_diff_pp": -0.2,
+     "adj_ci_block": [
+      -1.57,
+      0.76
+     ]
+    },
+    "10": {
+     "n_events": 184,
+     "event_median_pct": -0.41,
+     "placebo_median_pct": 0.16,
+     "median_diff_pp": -0.58,
+     "ci_block": [
+      -2.38,
+      1.47
+     ],
+     "adj_median_diff_pp": -0.2,
+     "adj_ci_block": [
+      -1.31,
+      0.85
+     ]
+    },
+    "20": {
+     "n_events": 163,
+     "event_median_pct": 0.52,
+     "placebo_median_pct": 0.07,
+     "median_diff_pp": 0.45,
+     "ci_block": [
+      -2.49,
+      1.75
+     ],
+     "adj_median_diff_pp": 0.19,
+     "adj_ci_block": [
+      -2.99,
+      2.65
+     ]
+    }
+   }
+  },
+  "gravestone": {
+   "label": "Gravestone doji",
+   "definition": "any_read and the gravestone shape",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 255,
+   "n_dates": 128,
+   "n_symbols": 226,
+   "n_detected": 283,
+   "n_blocks": 25,
+   "n_placebo": 1340,
+   "n_unmatched": 15,
+   "placebo_short_pool": 12,
+   "event_median_pct": -0.3,
+   "placebo_median_pct": 0.39,
+   "median_diff_pp": -0.68,
+   "ci_block": [
+    -2.11,
+    0.1
+   ],
+   "ci_date": [
+    -1.74,
+    -0.01
+   ],
+   "ci_symbol": [
+    -1.89,
+    0.0
+   ],
+   "robust": true,
+   "adj_event_median_pct": -1.28,
+   "adj_placebo_median_pct": 0.56,
+   "adj_median_diff_pp": -1.83,
+   "adj_ci_block": [
+    -3.18,
+    -0.32
+   ],
+   "adj_ci_symbol": [
+    -2.61,
+    -0.75
+   ],
+   "event_mean_pct": -0.81,
+   "placebo_mean_pct": 1.08,
+   "mean_diff_pp": -1.89,
+   "ci_mean_block": [
+    -3.68,
+    -0.34
+   ],
+   "net_mean_pct": -1.31,
+   "confirm_pct": 30.77,
+   "placebo_confirm_pct": 43.08,
+   "confirm_diff_pp": -12.31,
+   "ci_confirm_block": [
+    -18.1,
+    -6.56
+   ],
+   "stop_pct": 81.96,
+   "placebo_stop_pct": 66.35,
+   "mfe_median_pct": 3.4,
+   "mae_median_pct": -4.14,
+   "by_horizon": {
+    "5": {
+     "n_events": 260,
+     "event_median_pct": -0.57,
+     "placebo_median_pct": 0.16,
+     "median_diff_pp": -0.72,
+     "ci_block": [
+      -1.57,
+      -0.17
+     ],
+     "adj_median_diff_pp": -1.02,
+     "adj_ci_block": [
+      -1.63,
+      -0.4
+     ]
+    },
+    "10": {
+     "n_events": 255,
+     "event_median_pct": -0.3,
+     "placebo_median_pct": 0.39,
+     "median_diff_pp": -0.68,
+     "ci_block": [
+      -2.11,
+      0.1
+     ],
+     "adj_median_diff_pp": -1.83,
+     "adj_ci_block": [
+      -3.18,
+      -0.32
+     ]
+    },
+    "20": {
+     "n_events": 247,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.5,
+     "median_diff_pp": -0.5,
+     "ci_block": [
+      -2.87,
+      1.18
+     ],
+     "adj_median_diff_pp": -1.47,
+     "adj_ci_block": [
+      -4.21,
+      0.15
+     ]
+    }
+   }
+  },
+  "long_legged": {
+   "label": "Long-legged doji",
+   "definition": "any_read and the long-legged shape",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 576,
+   "n_dates": 189,
+   "n_symbols": 467,
+   "n_detected": 638,
+   "n_blocks": 25,
+   "n_placebo": 3065,
+   "n_unmatched": 25,
+   "placebo_short_pool": 21,
+   "event_median_pct": -0.11,
+   "placebo_median_pct": 0.33,
+   "median_diff_pp": -0.44,
+   "ci_block": [
+    -1.97,
+    1.0
+   ],
+   "ci_date": [
+    -1.31,
+    0.48
+   ],
+   "ci_symbol": [
+    -1.24,
+    0.36
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.82,
+   "adj_placebo_median_pct": -0.12,
+   "adj_median_diff_pp": -0.7,
+   "adj_ci_block": [
+    -2.25,
+    0.42
+   ],
+   "adj_ci_symbol": [
+    -1.51,
+    -0.02
+   ],
+   "event_mean_pct": 0.44,
+   "placebo_mean_pct": 0.36,
+   "mean_diff_pp": 0.08,
+   "ci_mean_block": [
+    -1.46,
+    1.64
+   ],
+   "net_mean_pct": -0.06,
+   "confirm_pct": 44.01,
+   "placebo_confirm_pct": 45.43,
+   "confirm_diff_pp": -1.42,
+   "ci_confirm_block": [
+    -6.79,
+    3.99
+   ],
+   "stop_pct": 64.24,
+   "placebo_stop_pct": 64.06,
+   "mfe_median_pct": 4.07,
+   "mae_median_pct": -4.48,
+   "by_horizon": {
+    "5": {
+     "n_events": 593,
+     "event_median_pct": -0.31,
+     "placebo_median_pct": 0.32,
+     "median_diff_pp": -0.63,
+     "ci_block": [
+      -1.26,
+      -0.05
+     ],
+     "adj_median_diff_pp": -0.88,
+     "adj_ci_block": [
+      -1.34,
+      -0.03
+     ]
+    },
+    "10": {
+     "n_events": 576,
+     "event_median_pct": -0.11,
+     "placebo_median_pct": 0.33,
+     "median_diff_pp": -0.44,
+     "ci_block": [
+      -1.97,
+      1.0
+     ],
+     "adj_median_diff_pp": -0.7,
+     "adj_ci_block": [
+      -2.25,
+      0.42
+     ]
+    },
+    "20": {
+     "n_events": 535,
+     "event_median_pct": 0.19,
+     "placebo_median_pct": 0.17,
+     "median_diff_pp": 0.02,
+     "ci_block": [
+      -1.57,
+      1.65
+     ],
+     "adj_median_diff_pp": -0.06,
+     "adj_ci_block": [
+      -2.02,
+      1.68
+     ]
+    }
+   }
+  },
+  "plain": {
+   "label": "Plain doji",
+   "definition": "any_read and no named shape",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 1787,
+   "n_dates": 239,
+   "n_symbols": 981,
+   "n_detected": 1973,
+   "n_blocks": 25,
+   "n_placebo": 9455,
+   "n_unmatched": 82,
+   "placebo_short_pool": 77,
+   "event_median_pct": 0.13,
+   "placebo_median_pct": 0.4,
+   "median_diff_pp": -0.27,
+   "ci_block": [
+    -1.27,
+    1.1
+   ],
+   "ci_date": [
+    -0.75,
+    0.23
+   ],
+   "ci_symbol": [
+    -0.62,
+    0.1
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.46,
+   "adj_placebo_median_pct": -0.19,
+   "adj_median_diff_pp": -0.26,
+   "adj_ci_block": [
+    -1.33,
+    0.98
+   ],
+   "adj_ci_symbol": [
+    -0.69,
+    0.12
+   ],
+   "event_mean_pct": 0.69,
+   "placebo_mean_pct": 0.92,
+   "mean_diff_pp": -0.23,
+   "ci_mean_block": [
+    -1.57,
+    1.07
+   ],
+   "net_mean_pct": 0.19,
+   "confirm_pct": 49.05,
+   "placebo_confirm_pct": 45.31,
+   "confirm_diff_pp": 3.74,
+   "ci_confirm_block": [
+    0.02,
+    7.81
+   ],
+   "stop_pct": 71.07,
+   "placebo_stop_pct": 66.0,
+   "mfe_median_pct": 4.47,
+   "mae_median_pct": -4.1,
+   "by_horizon": {
+    "5": {
+     "n_events": 1841,
+     "event_median_pct": 0.19,
+     "placebo_median_pct": 0.24,
+     "median_diff_pp": -0.06,
+     "ci_block": [
+      -0.7,
+      0.52
+     ],
+     "adj_median_diff_pp": -0.07,
+     "adj_ci_block": [
+      -0.62,
+      0.46
+     ]
+    },
+    "10": {
+     "n_events": 1787,
+     "event_median_pct": 0.13,
+     "placebo_median_pct": 0.4,
+     "median_diff_pp": -0.27,
+     "ci_block": [
+      -1.27,
+      1.1
+     ],
+     "adj_median_diff_pp": -0.26,
+     "adj_ci_block": [
+      -1.33,
+      0.98
+     ]
+    },
+    "20": {
+     "n_events": 1668,
+     "event_median_pct": 0.68,
+     "placebo_median_pct": 0.91,
+     "median_diff_pp": -0.23,
+     "ci_block": [
+      -1.67,
+      1.36
+     ],
+     "adj_median_diff_pp": -0.09,
+     "adj_ci_block": [
+      -2.32,
+      1.79
+     ]
+    }
+   }
+  },
+  "vol_quiet": {
+   "label": "Quiet volume",
+   "definition": "any_read and volume at or under 1\u00d7 the 50-day average",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 1862,
+   "n_dates": 241,
+   "n_symbols": 1005,
+   "n_detected": 2066,
+   "n_blocks": 25,
+   "n_placebo": 9900,
+   "n_unmatched": 86,
+   "placebo_short_pool": 69,
+   "event_median_pct": 0.04,
+   "placebo_median_pct": 0.3,
+   "median_diff_pp": -0.26,
+   "ci_block": [
+    -1.44,
+    0.94
+   ],
+   "ci_date": [
+    -0.76,
+    0.21
+   ],
+   "ci_symbol": [
+    -0.66,
+    0.12
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.63,
+   "adj_placebo_median_pct": -0.09,
+   "adj_median_diff_pp": -0.54,
+   "adj_ci_block": [
+    -1.6,
+    0.49
+   ],
+   "adj_ci_symbol": [
+    -1.02,
+    -0.16
+   ],
+   "event_mean_pct": 0.52,
+   "placebo_mean_pct": 0.71,
+   "mean_diff_pp": -0.2,
+   "ci_mean_block": [
+    -1.74,
+    1.34
+   ],
+   "net_mean_pct": 0.02,
+   "confirm_pct": 47.0,
+   "placebo_confirm_pct": 44.86,
+   "confirm_diff_pp": 2.14,
+   "ci_confirm_block": [
+    -1.41,
+    5.8
+   ],
+   "stop_pct": 71.0,
+   "placebo_stop_pct": 66.31,
+   "mfe_median_pct": 4.29,
+   "mae_median_pct": -4.35,
+   "by_horizon": {
+    "5": {
+     "n_events": 1915,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.17,
+     "median_diff_pp": -0.17,
+     "ci_block": [
+      -0.75,
+      0.31
+     ],
+     "adj_median_diff_pp": -0.28,
+     "adj_ci_block": [
+      -0.72,
+      0.23
+     ]
+    },
+    "10": {
+     "n_events": 1862,
+     "event_median_pct": 0.04,
+     "placebo_median_pct": 0.3,
+     "median_diff_pp": -0.26,
+     "ci_block": [
+      -1.44,
+      0.94
+     ],
+     "adj_median_diff_pp": -0.54,
+     "adj_ci_block": [
+      -1.6,
+      0.49
+     ]
+    },
+    "20": {
+     "n_events": 1754,
+     "event_median_pct": 0.53,
+     "placebo_median_pct": 0.64,
+     "median_diff_pp": -0.11,
+     "ci_block": [
+      -1.91,
+      1.3
+     ],
+     "adj_median_diff_pp": -0.66,
+     "adj_ci_block": [
+      -2.61,
+      1.18
+     ]
+    }
+   }
+  },
+  "vol_heavy": {
+   "label": "Heavy volume",
+   "definition": "any_read and volume at 1.5\u00d7 the 50-day average or more",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 251,
+   "n_dates": 126,
+   "n_symbols": 226,
+   "n_detected": 277,
+   "n_blocks": 25,
+   "n_placebo": 1325,
+   "n_unmatched": 12,
+   "placebo_short_pool": 11,
+   "event_median_pct": -0.08,
+   "placebo_median_pct": 0.35,
+   "median_diff_pp": -0.43,
+   "ci_block": [
+    -1.32,
+    1.21
+   ],
+   "ci_date": [
+    -1.19,
+    1.04
+   ],
+   "ci_symbol": [
+    -1.2,
+    0.76
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.51,
+   "adj_placebo_median_pct": -0.23,
+   "adj_median_diff_pp": -0.27,
+   "adj_ci_block": [
+    -2.06,
+    1.57
+   ],
+   "adj_ci_symbol": [
+    -1.38,
+    0.73
+   ],
+   "event_mean_pct": -0.05,
+   "placebo_mean_pct": 0.74,
+   "mean_diff_pp": -0.78,
+   "ci_mean_block": [
+    -2.7,
+    0.85
+   ],
+   "net_mean_pct": -0.55,
+   "confirm_pct": 49.61,
+   "placebo_confirm_pct": 44.65,
+   "confirm_diff_pp": 4.96,
+   "ci_confirm_block": [
+    -2.14,
+    11.4
+   ],
+   "stop_pct": 63.75,
+   "placebo_stop_pct": 65.1,
+   "mfe_median_pct": 4.48,
+   "mae_median_pct": -3.81,
+   "by_horizon": {
+    "5": {
+     "n_events": 258,
+     "event_median_pct": 0.09,
+     "placebo_median_pct": 0.27,
+     "median_diff_pp": -0.17,
+     "ci_block": [
+      -1.09,
+      0.85
+     ],
+     "adj_median_diff_pp": -0.09,
+     "adj_ci_block": [
+      -1.24,
+      1.06
+     ]
+    },
+    "10": {
+     "n_events": 251,
+     "event_median_pct": -0.08,
+     "placebo_median_pct": 0.35,
+     "median_diff_pp": -0.43,
+     "ci_block": [
+      -1.32,
+      1.21
+     ],
+     "adj_median_diff_pp": -0.27,
+     "adj_ci_block": [
+      -2.06,
+      1.57
+     ]
+    },
+    "20": {
+     "n_events": 224,
+     "event_median_pct": 1.44,
+     "placebo_median_pct": 0.99,
+     "median_diff_pp": 0.44,
+     "ci_block": [
+      -1.36,
+      1.94
+     ],
+     "adj_median_diff_pp": 0.9,
+     "adj_ci_block": [
+      -1.93,
+      3.35
+     ]
+    }
+   }
+  },
+  "doji_no_test": {
+   "label": "A doji, no test",
+   "definition": "a doji (5%), the prior low 4+ sessions old, the low more than 5% above it, any read, the floor",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 4486,
+   "n_dates": 242,
+   "n_symbols": 1232,
+   "n_detected": 4912,
+   "n_blocks": 25,
+   "n_placebo": 23120,
+   "n_unmatched": 288,
+   "placebo_short_pool": 268,
+   "event_median_pct": -0.26,
+   "placebo_median_pct": -0.41,
+   "median_diff_pp": 0.15,
+   "ci_block": [
+    -0.88,
+    1.26
+   ],
+   "ci_date": [
+    -0.38,
+    0.67
+   ],
+   "ci_symbol": [
+    -0.28,
+    0.55
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.73,
+   "adj_placebo_median_pct": -1.01,
+   "adj_median_diff_pp": 0.28,
+   "adj_ci_block": [
+    -0.69,
+    1.25
+   ],
+   "adj_ci_symbol": [
+    -0.2,
+    0.7
+   ],
+   "event_mean_pct": 0.29,
+   "placebo_mean_pct": 0.11,
+   "mean_diff_pp": 0.18,
+   "ci_mean_block": [
+    -1.01,
+    1.38
+   ],
+   "net_mean_pct": -0.21,
+   "confirm_pct": 43.86,
+   "placebo_confirm_pct": 44.08,
+   "confirm_diff_pp": -0.23,
+   "ci_confirm_block": [
+    -2.83,
+    2.44
+   ],
+   "stop_pct": 73.29,
+   "placebo_stop_pct": 69.02,
+   "mfe_median_pct": 6.15,
+   "mae_median_pct": -6.12,
+   "by_horizon": {
+    "5": {
+     "n_events": 4549,
+     "event_median_pct": -0.28,
+     "placebo_median_pct": -0.31,
+     "median_diff_pp": 0.03,
+     "ci_block": [
+      -0.51,
+      0.67
+     ],
+     "adj_median_diff_pp": 0.11,
+     "adj_ci_block": [
+      -0.39,
+      0.54
+     ]
+    },
+    "10": {
+     "n_events": 4486,
+     "event_median_pct": -0.26,
+     "placebo_median_pct": -0.41,
+     "median_diff_pp": 0.15,
+     "ci_block": [
+      -0.88,
+      1.26
+     ],
+     "adj_median_diff_pp": 0.28,
+     "adj_ci_block": [
+      -0.69,
+      1.25
+     ]
+    },
+    "20": {
+     "n_events": 4367,
+     "event_median_pct": 0.13,
+     "placebo_median_pct": -0.59,
+     "median_diff_pp": 0.72,
+     "ci_block": [
+      -1.31,
+      2.67
+     ],
+     "adj_median_diff_pp": 0.6,
+     "adj_ci_block": [
+      -1.08,
+      2.29
+     ]
+    }
+   }
+  },
+  "independent": {
+   "label": "One per name per 10 sessions",
+   "definition": "any_read, greedy in date order: an event within 10 sessions after a kept one of the same name is dropped",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 2317,
+   "n_dates": 240,
+   "n_symbols": 1215,
+   "n_detected": 2568,
+   "n_blocks": 25,
+   "n_placebo": 12300,
+   "n_unmatched": 108,
+   "placebo_short_pool": 103,
+   "event_median_pct": -0.12,
+   "placebo_median_pct": 0.43,
+   "median_diff_pp": -0.55,
+   "ci_block": [
+    -1.62,
+    0.58
+   ],
+   "ci_date": [
+    -0.98,
+    -0.09
+   ],
+   "ci_symbol": [
+    -0.84,
+    -0.19
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.66,
+   "adj_placebo_median_pct": -0.08,
+   "adj_median_diff_pp": -0.58,
+   "adj_ci_block": [
+    -1.73,
+    0.48
+   ],
+   "adj_ci_symbol": [
+    -0.98,
+    -0.24
+   ],
+   "event_mean_pct": 0.45,
+   "placebo_mean_pct": 0.82,
+   "mean_diff_pp": -0.37,
+   "ci_mean_block": [
+    -1.69,
+    0.91
+   ],
+   "net_mean_pct": -0.05,
+   "confirm_pct": 47.63,
+   "placebo_confirm_pct": 45.68,
+   "confirm_diff_pp": 1.95,
+   "ci_confirm_block": [
+    -1.36,
+    5.26
+   ],
+   "stop_pct": 70.35,
+   "placebo_stop_pct": 65.51,
+   "mfe_median_pct": 4.35,
+   "mae_median_pct": -4.39,
+   "by_horizon": {
+    "5": {
+     "n_events": 2385,
+     "event_median_pct": -0.08,
+     "placebo_median_pct": 0.3,
+     "median_diff_pp": -0.38,
+     "ci_block": [
+      -0.91,
+      0.19
+     ],
+     "adj_median_diff_pp": -0.37,
+     "adj_ci_block": [
+      -0.86,
+      0.19
+     ]
+    },
+    "10": {
+     "n_events": 2317,
+     "event_median_pct": -0.12,
+     "placebo_median_pct": 0.43,
+     "median_diff_pp": -0.55,
+     "ci_block": [
+      -1.62,
+      0.58
+     ],
+     "adj_median_diff_pp": -0.58,
+     "adj_ci_block": [
+      -1.73,
+      0.48
+     ]
+    },
+    "20": {
+     "n_events": 2165,
+     "event_median_pct": 0.42,
+     "placebo_median_pct": 0.78,
+     "median_diff_pp": -0.36,
+     "ci_block": [
+      -1.86,
+      1.14
+     ],
+     "adj_median_diff_pp": -0.42,
+     "adj_ci_block": [
+      -2.3,
+      1.51
+     ]
+    }
+   }
+  },
+  "all_liquidity": {
+   "label": "No liquidity floor",
+   "definition": "the any_read rule without the floor (placebos without it too)",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 3612,
+   "n_dates": 242,
+   "n_symbols": 1515,
+   "n_detected": 3996,
+   "n_blocks": 25,
+   "n_placebo": 19210,
+   "n_unmatched": 154,
+   "placebo_short_pool": 148,
+   "event_median_pct": 0.07,
+   "placebo_median_pct": 0.36,
+   "median_diff_pp": -0.3,
+   "ci_block": [
+    -1.2,
+    0.8
+   ],
+   "ci_date": [
+    -0.69,
+    0.13
+   ],
+   "ci_symbol": [
+    -0.58,
+    -0.04
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.52,
+   "adj_placebo_median_pct": -0.18,
+   "adj_median_diff_pp": -0.34,
+   "adj_ci_block": [
+    -1.39,
+    0.7
+   ],
+   "adj_ci_symbol": [
+    -0.63,
+    -0.04
+   ],
+   "event_mean_pct": 0.66,
+   "placebo_mean_pct": 0.8,
+   "mean_diff_pp": -0.14,
+   "ci_mean_block": [
+    -1.44,
+    1.12
+   ],
+   "net_mean_pct": 0.16,
+   "confirm_pct": 47.22,
+   "placebo_confirm_pct": 45.61,
+   "confirm_diff_pp": 1.61,
+   "ci_confirm_block": [
+    -1.5,
+    4.99
+   ],
+   "stop_pct": 68.58,
+   "placebo_stop_pct": 65.36,
+   "mfe_median_pct": 4.57,
+   "mae_median_pct": -4.27,
+   "by_horizon": {
+    "5": {
+     "n_events": 3719,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.18,
+     "median_diff_pp": -0.18,
+     "ci_block": [
+      -0.74,
+      0.34
+     ],
+     "adj_median_diff_pp": -0.2,
+     "adj_ci_block": [
+      -0.65,
+      0.28
+     ]
+    },
+    "10": {
+     "n_events": 3612,
+     "event_median_pct": 0.07,
+     "placebo_median_pct": 0.36,
+     "median_diff_pp": -0.3,
+     "ci_block": [
+      -1.2,
+      0.8
+     ],
+     "adj_median_diff_pp": -0.34,
+     "adj_ci_block": [
+      -1.39,
+      0.7
+     ]
+    },
+    "20": {
+     "n_events": 3387,
+     "event_median_pct": 0.69,
+     "placebo_median_pct": 0.96,
+     "median_diff_pp": -0.27,
+     "ci_block": [
+      -1.7,
+      1.15
+     ],
+     "adj_median_diff_pp": -0.24,
+     "adj_ci_block": [
+      -2.19,
+      1.4
+     ]
+    }
+   }
+  },
+  "from_close": {
+   "label": "Entry at the doji close",
+   "definition": "any_read; the return from the doji's own close",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "close",
+   "n_events": 2802,
+   "n_dates": 242,
+   "n_symbols": 1218,
+   "n_detected": 3111,
+   "n_blocks": 25,
+   "n_placebo": 14895,
+   "n_unmatched": 132,
+   "placebo_short_pool": 121,
+   "event_median_pct": 0.05,
+   "placebo_median_pct": 0.42,
+   "median_diff_pp": -0.37,
+   "ci_block": [
+    -1.45,
+    0.89
+   ],
+   "ci_date": [
+    -0.73,
+    0.11
+   ],
+   "ci_symbol": [
+    -0.65,
+    -0.01
+   ],
+   "robust": false,
+   "adj_event_median_pct": -0.66,
+   "adj_placebo_median_pct": -0.06,
+   "adj_median_diff_pp": -0.6,
+   "adj_ci_block": [
+    -1.49,
+    0.59
+   ],
+   "adj_ci_symbol": [
+    -0.9,
+    -0.21
+   ],
+   "event_mean_pct": 0.52,
+   "placebo_mean_pct": 0.89,
+   "mean_diff_pp": -0.37,
+   "ci_mean_block": [
+    -1.73,
+    0.99
+   ],
+   "net_mean_pct": 0.02,
+   "confirm_pct": 47.28,
+   "placebo_confirm_pct": 45.29,
+   "confirm_diff_pp": 1.99,
+   "ci_confirm_block": [
+    -1.66,
+    5.62
+   ],
+   "stop_pct": 69.49,
+   "placebo_stop_pct": 65.69,
+   "mfe_median_pct": 4.49,
+   "mae_median_pct": -4.25,
+   "by_horizon": {
+    "5": {
+     "n_events": 2885,
+     "event_median_pct": 0.0,
+     "placebo_median_pct": 0.28,
+     "median_diff_pp": -0.28,
+     "ci_block": [
+      -0.8,
+      0.35
+     ],
+     "adj_median_diff_pp": -0.37,
+     "adj_ci_block": [
+      -0.86,
+      0.14
+     ]
+    },
+    "10": {
+     "n_events": 2802,
+     "event_median_pct": 0.05,
+     "placebo_median_pct": 0.42,
+     "median_diff_pp": -0.37,
+     "ci_block": [
+      -1.45,
+      0.89
+     ],
+     "adj_median_diff_pp": -0.6,
+     "adj_ci_block": [
+      -1.49,
+      0.59
+     ]
+    },
+    "20": {
+     "n_events": 2613,
+     "event_median_pct": 0.53,
+     "placebo_median_pct": 0.72,
+     "median_diff_pp": -0.19,
+     "ci_block": [
+      -1.66,
+      1.12
+     ],
+     "adj_median_diff_pp": -0.33,
+     "adj_ci_block": [
+      -2.17,
+      1.46
+     ]
+    }
+   }
+  },
+  "confirm_entry": {
+   "label": "Entry at the confirming close",
+   "definition": "any_read events that closed above the doji's high within 5 sessions; the return from that close (placebos conditioned the same way)",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "confirm",
+   "n_events": 1182,
+   "n_dates": 235,
+   "n_symbols": 775,
+   "n_detected": 1420,
+   "n_blocks": 25,
+   "n_placebo": 3101,
+   "n_unmatched": 173,
+   "placebo_short_pool": 53,
+   "event_median_pct": 0.28,
+   "placebo_median_pct": 0.7,
+   "median_diff_pp": -0.42,
+   "ci_block": [
+    -1.85,
+    0.61
+   ],
+   "ci_date": [
+    -1.13,
+    0.27
+   ],
+   "ci_symbol": [
+    -1.01,
+    0.22
+   ],
+   "robust": true,
+   "adj_event_median_pct": -0.52,
+   "adj_placebo_median_pct": -0.21,
+   "adj_median_diff_pp": -0.31,
+   "adj_ci_block": [
+    -1.61,
+    0.9
+   ],
+   "adj_ci_symbol": [
+    -0.86,
+    0.3
+   ],
+   "event_mean_pct": 0.19,
+   "placebo_mean_pct": 0.78,
+   "mean_diff_pp": -0.59,
+   "ci_mean_block": [
+    -2.05,
+    0.75
+   ],
+   "net_mean_pct": -0.31,
+   "confirm_pct": 100.0,
+   "placebo_confirm_pct": 100.0,
+   "confirm_diff_pp": 0.0,
+   "ci_confirm_block": [
+    0.0,
+    0.0
+   ],
+   "stop_pct": 45.18,
+   "placebo_stop_pct": 36.61,
+   "mfe_median_pct": 4.23,
+   "mae_median_pct": -4.22,
+   "by_horizon": {
+    "5": {
+     "n_events": 1228,
+     "event_median_pct": 0.12,
+     "placebo_median_pct": 0.53,
+     "median_diff_pp": -0.41,
+     "ci_block": [
+      -1.08,
+      0.25
+     ],
+     "adj_median_diff_pp": -0.17,
+     "adj_ci_block": [
+      -0.94,
+      0.49
+     ]
+    },
+    "10": {
+     "n_events": 1182,
+     "event_median_pct": 0.28,
+     "placebo_median_pct": 0.7,
+     "median_diff_pp": -0.42,
+     "ci_block": [
+      -1.85,
+      0.61
+     ],
+     "adj_median_diff_pp": -0.31,
+     "adj_ci_block": [
+      -1.61,
+      0.9
+     ]
+    },
+    "20": {
+     "n_events": 1089,
+     "event_median_pct": 0.72,
+     "placebo_median_pct": 0.62,
+     "median_diff_pp": 0.1,
+     "ci_block": [
+      -2.3,
+      1.67
+     ],
+     "adj_median_diff_pp": -0.23,
+     "adj_ci_block": [
+      -2.87,
+      1.96
+     ]
+    }
+   }
+  },
+  "test_no_doji_fire_pool": {
+   "label": "The control against the primary's pool (a sensitivity)",
+   "definition": "the test_no_doji events, their matched days drawn from the primary's pool rule (the fire-based exclusions only, without the control's own-event exclusion) \u2014 numbers only, never compared with the primary as a verdict",
+   "role": "exploratory \u2014 no verdict",
+   "verdict": null,
+   "ci_pct": 95.0,
+   "p_holm": null,
+   "horizon": 10,
+   "entry": "next_open",
+   "n_events": 3057,
+   "n_dates": 241,
+   "n_symbols": 260,
+   "n_detected": 3580,
+   "n_blocks": 25,
+   "n_placebo": 16225,
+   "n_unmatched": 335,
+   "placebo_short_pool": 216,
+   "event_median_pct": -0.85,
+   "placebo_median_pct": 0.0,
+   "median_diff_pp": -0.85,
+   "ci_block": [
+    -3.89,
+    2.55
+   ],
+   "ci_date": [
+    -2.34,
+    0.58
+   ],
+   "ci_symbol": [
+    -2.03,
+    0.22
+   ],
+   "robust": false,
+   "adj_event_median_pct": -1.7,
+   "adj_placebo_median_pct": -0.74,
+   "adj_median_diff_pp": -0.95,
+   "adj_ci_block": [
+    -3.15,
+    1.61
+   ],
+   "adj_ci_symbol": [
+    -1.85,
+    -0.13
+   ],
+   "event_mean_pct": 0.61,
+   "placebo_mean_pct": 1.6,
+   "mean_diff_pp": -0.99,
+   "ci_mean_block": [
+    -4.14,
+    2.28
+   ],
+   "net_mean_pct": 0.11,
+   "confirm_pct": 37.49,
+   "placebo_confirm_pct": 44.74,
+   "confirm_diff_pp": -7.25,
+   "ci_confirm_block": [
+    -12.18,
+    -2.42
+   ],
+   "stop_pct": 74.45,
+   "placebo_stop_pct": 68.38,
+   "mfe_median_pct": 8.25,
+   "mae_median_pct": -8.53,
+   "by_horizon": {
+    "5": {
+     "n_events": 3166,
+     "event_median_pct": -0.54,
+     "placebo_median_pct": 0.32,
+     "median_diff_pp": -0.87,
+     "ci_block": [
+      -2.42,
+      0.75
+     ],
+     "adj_median_diff_pp": -0.72,
+     "adj_ci_block": [
+      -2.16,
+      0.58
+     ]
+    },
+    "10": {
+     "n_events": 3057,
+     "event_median_pct": -0.85,
+     "placebo_median_pct": 0.0,
+     "median_diff_pp": -0.85,
+     "ci_block": [
+      -3.89,
+      2.55
+     ],
+     "adj_median_diff_pp": -0.95,
+     "adj_ci_block": [
+      -3.15,
+      1.61
+     ]
+    },
+    "20": {
+     "n_events": 2837,
+     "event_median_pct": 0.13,
+     "placebo_median_pct": -0.12,
+     "median_diff_pp": 0.25,
+     "ci_block": [
+      -5.14,
+      4.97
+     ],
+     "adj_median_diff_pp": -0.43,
+     "adj_ci_block": [
+      -4.5,
+      3.25
+     ]
+    }
+   }
+  }
+ },
+ "baselines": {
+  "all_days": {
+   "w52": {
+    "n_days": 22654,
+    "n_dates": 242,
+    "median_pct": -0.6,
+    "mean_pct": 0.92
+   },
+   "ath": {
+    "n_days": 115023,
+    "n_dates": 244,
+    "median_pct": -0.04,
+    "mean_pct": 0.74
+   },
+   "mas": {
+    "n_days": 153386,
+    "n_dates": 245,
+    "median_pct": 0.06,
+    "mean_pct": 0.52
+   },
+   "any": {
+    "n_days": 215494,
+    "n_dates": 245,
+    "median_pct": 0.04,
+    "mean_pct": 0.57
+   }
+  }
+ },
+ "limits": [
+  "survivors-only: the universe is today's list \u2014 deep-drawdown names that delisted are absent; absolute returns are biased up, and the same-name matched days only partly cancel it",
+  "the two-year price cache gives about one year of evaluable sessions (a 252-session window first) \u2014 one market regime",
+  "adjacent events' outcome windows overlap; the session-block and the by-name resampling keep them together, they do not remove the overlap",
+  "the all-time high before the stored high's month is the frame's running max \u2014 a lower bound, so a name may be missed, never falsely included; the misses are not random \u2014 a name that later set a new all-time high (the later big runners) gets only the frame read, so it is under-included in the ath and any_read cells",
+  "next-open entries assume the open print; close-to-close daily bars, no intraday fill is modelled",
+  "the sizing probe says about 90% of his tests never undercut the prior low \u2014 the undercut cells are thin"
+ ],
+ "runtime_sec": 78.8,
+ "phase_sec": {
+  "read": 3.2,
+  "features": 19.8,
+  "events": 6.5,
+  "placebo": 0.7,
+  "outcomes": 2.6,
+  "bootstrap": 45.8
+ },
+ "attempted_writes": [
+  "price_cache.create_index"
+ ],
+ "provider_calls": 0,
+ "git": {
+  "head": "2845fe2458bdead69d1db1c2b96245e80f4d6b06",
+  "porcelain_empty": true,
+  "script_blob": "43b0e5924745b8d5c30868734ffce273bf7284b2",
+  "detector_blob": "c340b3c7e782b53f688a72ce65c94b925eeeea9e",
+  "measured_blob": "0fe7213b27a9f5ef75afc0a08ff9b14e162119a2",
+  "prereg_blob": "77cd374b966631fbb95bc9e60231e912bff76c3b",
+  "source": "attested"
+ }
+}

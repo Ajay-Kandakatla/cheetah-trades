@@ -29,11 +29,16 @@ import pandas as pd
 import pytest
 
 from chart_maps import board as B
+from chart_maps import doji_sweep_measured as DSM
 from chart_maps import doji_sweep_tab as DJ
 from chart_maps import membership as M
 from chart_maps.high_beta_tab import FORBIDDEN_WORDS
 
 _BW = "b" + "ounc"                                     # the b-word stem, never spelled in this file
+# WP-R 2026-10-16: the primary's served verdict words (W31 "no_signal") and the strings the
+# measured line must never carry.
+PRIMARY_WORDS = "no difference this study can separate from zero"
+STALE_STRINGS = ("UNMEASURED", "until the study lands", "until it lands", _BW)
 ET = ZoneInfo("America/New_York")
 BACKEND = Path(__file__).resolve().parents[1]
 ROOT = BACKEND.parent
@@ -231,7 +236,10 @@ def test_dispatch_serves_the_ready_board_with_one_snapshot(dj_board):
     assert out["tab"] == "doji_sweep" and out["sort"] == "default"
     assert out["sorts"] == DJ.served_sorts()
     db = out["doji_sweep_board"]
-    assert db["state"] == "ready" and db["measured"] is False and db["study"]["status"] == "unmeasured"
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert db["state"] == "ready" and db["measured"] is True and db["study"]["status"] == "measured"
+    assert db["study"]["text"] == DJ.study_block()["text"] and PRIMARY_WORDS in db["study"]["text"]
+    assert "MEASURED" in db["study"]["text"] and "UNMEASURED" not in db["study"]["text"]
     assert db["session"] == SESSION.isoformat() and db["as_of"] == LAST
     c = db["counts"]
     assert c["scanned"] == sum(c[s] for s in DJ.STATUSES) == 8
@@ -360,7 +368,9 @@ def test_warming_then_error_envelopes(dj_board):
     assert out["tiles"] == [] and out["warming"] is True and out["note"] == DJ.WARMING_NOTE
     wb = out["doji_sweep_board"]
     assert wb["state"] == "warming" and wb["header"] == DJ.WARMING_NOTE
-    assert wb["counts"] is None and wb["count_line"] is None and wb["study"]["status"] == "unmeasured"
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert wb["counts"] is None and wb["count_line"] is None and wb["study"]["status"] == "measured"
+    assert wb["study"]["text"] == DJ.study_block()["text"]
     assert len(dj_board["spawned"]) == 1                          # ONE background build, never inline
     key = (SESSION.isoformat(), "full")
     with DJ._lock:
@@ -370,6 +380,25 @@ def test_warming_then_error_envelopes(dj_board):
     assert "warming" not in err and err["tiles"] == [] and err["note"] == DJ.error_note("boom")
     assert err["doji_sweep_board"]["state"] == "error"
     assert err["doji_sweep_board"]["header"] == DJ.error_note("boom")
+
+
+def test_NEG_the_placeholder_path_still_serves_unmeasured_envelopes(dj_board, monkeypatch):
+    monkeypatch.setattr(DSM, "MEASURED", {"state": "unmeasured"})
+    out = B.board(tab="doji_sweep", limit=24)                     # cold memo, no seed
+    wb = out["doji_sweep_board"]
+    assert wb["state"] == "warming" and wb["study"]["status"] == "unmeasured"
+    assert wb["study"]["text"] == DJ.NOTE_PENDING and "UNMEASURED" in wb["study"]["text"]
+    _seed_golden(dj_board)
+    db = B.board(tab="doji_sweep", limit=24, min_tier="any")["doji_sweep_board"]
+    assert db["state"] == "ready" and db["measured"] is False and db["study"]["status"] == "unmeasured"
+    assert db["study"]["text"] == DJ.NOTE_PENDING
+
+
+def test_NEG_the_measured_envelope_never_says_a_stale_string(dj_board):
+    _seed_golden(dj_board)
+    low = B.board(tab="doji_sweep", limit=24, min_tier="any")["doji_sweep_board"]["study"]["text"].lower()
+    for w in STALE_STRINGS:
+        assert w.lower() not in low, w
 
 
 def test_NEG_the_memo_rows_are_never_mutated_by_a_request(dj_board):

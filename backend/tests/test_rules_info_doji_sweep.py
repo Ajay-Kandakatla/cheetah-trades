@@ -14,6 +14,7 @@ import inspect
 
 import pytest
 
+from chart_maps import doji_sweep_measured as DSM
 from chart_maps import doji_sweep_tab as DJ
 from chart_maps import fallen_tab as FAL
 from chart_maps.high_beta_tab import FORBIDDEN_WORDS
@@ -24,6 +25,10 @@ from supply_demand import rules_info as RI
 
 
 _BW = "b" + "ounc"                                     # the b-word stem, never spelled in this file
+# WP-R 2026-10-16: the primary's served verdict words (W31 "no_signal") and the strings the
+# measured line must never carry.
+PRIMARY_WORDS = "no difference this study can separate from zero"
+STALE_STRINGS = ("UNMEASURED", "until the study lands", "until it lands", _BW)
 
 def _text(sec: dict) -> str:
     return " ".join([sec["title"]] + sec["picks"] + sec["stops"] + sec["alerts"] + [sec["note"]])
@@ -61,7 +66,10 @@ def test_every_served_order_line_sort_label_and_the_study_line_is_on_the_panel(s
     for s in served:
         assert s["label"] in picks and DJ.order_line(s["key"]) in picks, s
     assert sec["picks"][-1] == DJ.study_block()["text"]
-    assert "UNMEASURED" in sec["picks"][-1]
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert DJ.study_block()["status"] == "measured"
+    assert "MEASURED" in sec["picks"][-1] and "UNMEASURED" not in sec["picks"][-1]
+    assert PRIMARY_WORDS in sec["picks"][-1]
 
 
 def test_the_sources_and_his_words_are_named(sec):
@@ -146,10 +154,25 @@ def test_NEG_no_b_word_and_no_forecast_word(sec):
     assert _BW not in src
 
 
-def test_the_note_says_unmeasured_until_the_study_lands(sec, monkeypatch):
-    assert sec["note"].startswith("UNMEASURED") and sec["note"].endswith(RI._DISCLAIMER)
+def test_the_note_is_the_disclaimer_once_measured(sec, monkeypatch):
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert DJ.is_measured() is True and sec["note"] == RI._DISCLAIMER
     monkeypatch.setattr(DJ, "is_measured", lambda: True)
     assert RI._doji_sweep_section()["note"] == RI._DISCLAIMER
+
+
+def test_NEG_the_placeholder_path_still_says_unmeasured(monkeypatch):
+    monkeypatch.setattr(DSM, "MEASURED", {"state": "unmeasured"})
+    s = RI._doji_sweep_section()
+    assert s["note"].startswith("UNMEASURED") and s["note"].endswith(RI._DISCLAIMER)
+    assert s["picks"][-1] == DJ.NOTE_PENDING and "UNMEASURED" in s["picks"][-1]
+
+
+def test_NEG_the_measured_panel_never_says_a_stale_string(sec):
+    for line in (sec["picks"][-1], sec["note"]):
+        low = line.lower()
+        for w in STALE_STRINGS:
+            assert w.lower() not in low, w
 
 
 def test_NEG_a_broken_section_never_breaks_the_panel(monkeypatch):

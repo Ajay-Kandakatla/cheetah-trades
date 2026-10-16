@@ -1257,7 +1257,8 @@ def _doji_sweep_section() -> dict:
     Ajay 2026-10-16: "create me a new tab for Doji candle after a sweep. For any
     stocks after a down trend. May be from all chart maps especially on the 60%
     70% down stocks" — then "Within 5% either side counts as a test".
-    UNMEASURED until doji_sweep_measured carries the pre-registered study."""
+    MEASURED 2026-10-16 — the served line comes from doji_sweep_measured.MEASURED (the one
+    pre-registered outcome run; re-running needs a new pre-registration)."""
     from chart_maps import doji_sweep_tab as DJ
     from chart_maps import fallen_tab as FAL
     from patterns import candles_daily as CD

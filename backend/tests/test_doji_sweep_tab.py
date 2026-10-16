@@ -927,13 +927,16 @@ def test_103_board_envelopes():
     rows, counts, f = DJ.rank(e, sort=DJ.SORT_TEST, active=(), body=5)
     b = DJ.ready_block(counts, entry=e, sort=DJ.SORT_TEST, body=5, filters=f, min_tier_label="Ok")
     assert b["state"] == "ready" and b["as_of"] == LAST and b["count_line"] and b["counts"]
-    assert b["study"]["status"] == "unmeasured" and b["measured"] is False
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert b["study"]["status"] == "measured" and b["measured"] is True
+    assert b["study"]["text"] == DJ.study_block()["text"] and PRIMARY_WORDS in b["study"]["text"]
     assert b["suspects"]["n"] == 1 and b["filter_param"] == "dj" and b["test_pct"] == 5.0
     assert b["reads_legend"] == list(DJ.READS_LEGEND) and b["order_line"] == DJ.order_line(DJ.SORT_TEST)
     w = DJ.warming_block(now=NOW, sort=DJ.DEFAULT_SORT, body=5, active=("mas",))
     assert w["state"] == "warming" and w["header"] == DJ.WARMING_NOTE
     assert w["counts"] is None and w["count_line"] is None and w["suspects"] is None and w["as_of"] is None
-    assert w["session"] == SESSION.isoformat() and w["study"]["text"] == DJ.NOTE_PENDING
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert w["session"] == SESSION.isoformat() and w["study"]["text"] == DJ.study_block()["text"]
     er = DJ.error_block("boom", now=NOW, sort=DJ.DEFAULT_SORT, body=5, active=())
     assert er["state"] == "error" and "boom" in er["header"]
     for blk in (b, w, er):
@@ -978,12 +981,34 @@ def _literal():
             "cells": {k: _cell(k) for k in DSM.SERVED_CELLS}}
 
 
-def test_110_study_block_placeholder_is_unmeasured():
+# WP-R 2026-10-16: the served words of the primary's verdict (W31 "no_signal") and the strings
+# the measured line must never carry.
+PRIMARY_WORDS = "no difference this study can separate from zero"
+STALE_STRINGS = ("UNMEASURED", "until the study lands", "until it lands", "b" + "ounc")
+
+
+def test_110_study_block_is_the_measured_line():
+    s = DJ.study_block()
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert s["status"] == "measured" and s["verdict"] == "no_signal" and s["text"] != DJ.NOTE_PENDING
+    assert "MEASURED" in s["text"] and "UNMEASURED" not in s["text"] and PRIMARY_WORDS in s["text"]
+    assert s["prereg"] == DJ.PREREG_PATH and s["script"] == DJ.SCRIPT_PATH
+    assert DJ.is_measured() is True
+
+
+def test_110_NEG_the_placeholder_path_still_serves_unmeasured(monkeypatch):
+    monkeypatch.setattr(DSM, "MEASURED", {"state": "unmeasured"})
     s = DJ.study_block()
     assert s["status"] == "unmeasured" and s["text"] == DJ.NOTE_PENDING and s["verdict"] is None
     assert "UNMEASURED" in s["text"] and CD.BULKOWSKI_CANDLE["doji"] in s["text"] and CD.CAVEAT in s["text"]
     assert s["prereg"] == DJ.PREREG_PATH and s["script"] == DJ.SCRIPT_PATH
     assert DJ.is_measured() is False
+
+
+def test_110_NEG_the_measured_line_never_says_a_stale_string():
+    low = DJ.study_block()["text"].lower()
+    for w in STALE_STRINGS:
+        assert w.lower() not in low, w
 
 
 def test_111_study_block_measured_literal(monkeypatch):
@@ -1024,8 +1049,9 @@ def test_112_NEG_a_malformed_literal_serves_the_unmeasured_block(monkeypatch):
     assert DJ.study_block()["status"] == "unmeasured"
 
 
-def test_113_dsm_placeholder_and_schema():
-    assert DSM.MEASURED == {"state": "unmeasured"}
+def test_113_dsm_measured_literal_and_schema():
+    # WP-R 2026-10-16: the study ran (one outcome run, head 2845fe24) — the pin moved from the placeholder to the measured line
+    assert DSM.MEASURED["status"] == "measured" and DSM.MEASURED["primary"]["verdict"] == "no_signal"
     got = DSM.load()
     assert got == DSM.MEASURED and got is not DSM.MEASURED
     from scripts.explosive_study import MIN_BUCKET_N
@@ -1040,6 +1066,14 @@ def test_113_dsm_placeholder_and_schema():
     assert set(DJ._verdict_words()) == set(DSM.VERDICTS) == set(DJ.CONTRAST_WORDS)
     assert "git" in DSM.ARTIFACT_KEYS and "placebo_short_pool" in DSM.CELL_KEYS     # B12 / B1
     assert "ci_block" in DSM.CELL_KEYS and "adj_median_diff_pp" in DSM.CELL_KEYS    # B2
+
+
+def test_113_NEG_the_placeholder_and_a_non_dict_load_as_unmeasured(monkeypatch):
+    monkeypatch.setattr(DSM, "MEASURED", {"state": "unmeasured"})
+    got = DSM.load()
+    assert got == {"state": "unmeasured"} and got is not DSM.MEASURED
+    monkeypatch.setattr(DSM, "MEASURED", "junk")
+    assert DSM.load() == {"state": "unmeasured"}
 
 
 # --------------------------------------------------------------------------

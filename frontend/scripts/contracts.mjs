@@ -7759,7 +7759,11 @@ const CONTRACTS = [
         for (const w of forbidden) if (entry.toLowerCase().includes(w.toLowerCase())) errs.push(`${where} says "${w}" (high_beta_tab.FORBIDDEN_WORDS — no forecast words)`);
         if (NOTHING.test(entry)) errs.push(`${where} says "${NOTHING.exec(entry)[0]}" — say what does not ring (A13)`);
       }
-    name: '🕯️ Doji Sweep tab (2026-10-16): mounted right after 🚩, label = doji_sweep_tab.TAB_LABEL, chip keys / sorts / params = the backend constants, every number in the blurb + ✨ = the constants, UNMEASURED, the ledger kind registered in its own bucket, the FE composes nothing, never the b-word',
+      return errs;
+    },
+  },
+  {
+    name: '🕯️ Doji Sweep tab (2026-10-16): mounted right after 🚩, label = doji_sweep_tab.TAB_LABEL, chip keys / sorts / params = the backend constants, every number in the blurb + ✨ = the constants, the MEASURED line served (WP-R 2026-10-16), the ledger kind registered in its own bucket, the FE composes nothing, never the b-word',
     file: 'src/lib/chartMaps.ts',
     // Ajay 2026-10-16: "create me a new tab for Doji candle after a sweep. For
     // any stocks after a down trend. May be from all chart maps especially on
@@ -7970,7 +7974,8 @@ const CONTRACTS = [
         const entry = unesc(nf.slice(idAt, end < 0 ? undefined : end + 4));
         if (!entry.includes("route: '/chart-maps?tab=doji_sweep'")) errs.push("the 🕯️ ✨ entry must route to '/chart-maps?tab=doji_sweep'");
         for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🕯️ ✨ entry must quote his ask verbatim: "${h}"`);
-        if (!entry.includes('UNMEASURED')) errs.push('the 🕯️ ✨ entry must say UNMEASURED');
+        if (!entry.includes('MEASURED — no edge this study can separate from zero')) errs.push('the 🕯️ ✨ entry must say "MEASURED — no edge this study can separate from zero" (WP-R 2026-10-16: the study ran)');
+        if (entry.includes('UNMEASURED') || entry.includes('until it lands')) errs.push('the 🕯️ ✨ entry still says UNMEASURED / "until it lands" — the study ran 2026-10-16 (WP-R)');
         if (!entry.includes('Pushes nothing')) errs.push('the 🕯️ ✨ entry must say "Pushes nothing" (AMENDMENTS6 B3 — the tab is out of the 🗺️ watch)');
         errs.push(...words('the 🕯️ ✨ entry', strip(entry, HIS)));
         if (CHIPS.length === 3 && WIDE != null) {

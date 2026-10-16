@@ -142,7 +142,7 @@
     "shown": null
    },
    "header": "🕯️ 5 of 8 names printed a doji on 2026-10-15 — a body under 10% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 5 tests · 2 undercut the low.",
-   "measured": false,
+   "measured": true,
    "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
    "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
    "reads_legend": [
@@ -160,9 +160,9 @@
    "study": {
     "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
     "script": "backend/scripts/doji_sweep_study.py",
-    "status": "unmeasured",
-    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
-    "verdict": null
+    "status": "measured",
+    "text": "🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.",
+    "verdict": "no_signal"
    },
    "suspects": {
     "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
@@ -981,7 +981,7 @@
     "shown": null
    },
    "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
-   "measured": false,
+   "measured": true,
    "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
    "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
    "reads_legend": [
@@ -999,9 +999,9 @@
    "study": {
     "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
     "script": "backend/scripts/doji_sweep_study.py",
-    "status": "unmeasured",
-    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
-    "verdict": null
+    "status": "measured",
+    "text": "🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.",
+    "verdict": "no_signal"
    },
    "suspects": {
     "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
@@ -1672,7 +1672,7 @@
     "shown": 1
    },
    "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
-   "measured": false,
+   "measured": true,
    "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
    "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
    "reads_legend": [
@@ -1690,9 +1690,9 @@
    "study": {
     "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
     "script": "backend/scripts/doji_sweep_study.py",
-    "status": "unmeasured",
-    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
-    "verdict": null
+    "status": "measured",
+    "text": "🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.",
+    "verdict": "no_signal"
    },
    "suspects": {
     "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
@@ -2065,7 +2065,7 @@
     "shown": null
    },
    "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
-   "measured": false,
+   "measured": true,
    "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
    "order_line": "Order: the low closest to the prior 20-session low first (either side), then the deepest under the 52-week high.",
    "reads_legend": [
@@ -2083,9 +2083,9 @@
    "study": {
     "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
     "script": "backend/scripts/doji_sweep_study.py",
-    "status": "unmeasured",
-    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
-    "verdict": null
+    "status": "measured",
+    "text": "🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.",
+    "verdict": "no_signal"
    },
    "suspects": {
     "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
@@ -2756,7 +2756,7 @@
     "shown": 2
    },
    "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
-   "measured": false,
+   "measured": true,
    "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
    "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
    "reads_legend": [
@@ -2774,9 +2774,9 @@
    "study": {
     "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
     "script": "backend/scripts/doji_sweep_study.py",
-    "status": "unmeasured",
-    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
-    "verdict": null
+    "status": "measured",
+    "text": "🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.",
+    "verdict": "no_signal"
    },
    "suspects": {
     "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
@@ -3127,7 +3127,7 @@
     "shown": null
    },
    "header": "🕯️ Reading every name's last closed daily candle from the cached bars — the charts appear here as soon as it lands; you don't need to refresh.",
-   "measured": false,
+   "measured": true,
    "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
    "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
    "reads_legend": [
@@ -3145,9 +3145,9 @@
    "study": {
     "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
     "script": "backend/scripts/doji_sweep_study.py",
-    "status": "unmeasured",
-    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
-    "verdict": null
+    "status": "measured",
+    "text": "🕯️ MEASURED 2026-10-16 (prereg 2845fe2458bdead69d1db1c2b96245e80f4d6b06, survivors-only, candles 2025-10-10 to 2026-10-15): 145 dojis testing the prior low 60%+ under the 52-week high, on 98 sessions across 102 names. Bought at the next open and held 10 sessions, net of SPY over the same sessions: median −3.32% against +0.54% on 770 matched days of the same names in the same downtrend (13 with a short placebo pool, 14 with none) — −3.85 pp (before SPY −3.10 pp), 98.33% CI by 10-session block [−7.23, +0.72], by name [−6.41, +0.68]: no difference this study can separate from zero. Any downtrend read: 2,802 dojis, −0.50 pp, 97.5% CI [−1.75, +0.68] / [−0.89, −0.13]: no verdict — the session-block CI and the by-name CI disagree (AMENDMENTS6: a verdict needs both). The control — a test of the low without a doji, against its own matched days: 2,563 tests, +0.17 pp, 95% CI [−2.07, +2.88] / [−1.09, +2.00]: the tests without a doji show no difference from their matched days that this study can separate from zero. Under the 52-week high by 70%+: 53 dojis on 47 sessions — too few to read (pre-declared). Verdicts are Holm-corrected across these three pre-registered reads (Holm p 0.129 / 0.612 / 0.832); every other cell is exploratory — no verdict. Closed above the doji's high within 5 sessions before closing under its low 46% vs 48% (difference CI by block [−11.78, +8.40] pp); closed under its low within 10 sessions 79% vs 67%. Mean −0.63% (before SPY) against +1.72% on the matched days (difference CI by block [−6.55, +2.46] pp), before costs; −1.13% after a 0.5% round trip. Not advice.",
+    "verdict": "no_signal"
    },
    "suspects": null,
    "test_pct": 5.0,
