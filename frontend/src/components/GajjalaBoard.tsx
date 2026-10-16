@@ -37,6 +37,26 @@
  * live 🧠 push line sits under the A+ shadow line. Every word and number of
  * those surfaces is SERVED (potential.py / tab.py); the FE types none. A
  * potential, not an entry. UNMEASURED.
+ *
+ * 🔄 Scan on open + 🎯 A+ line (2026-10-15, BUILD_SPEC5 §3.8). Ajay: "When
+ * ever I open Gajjala's intiate a new scan of stocks.  In that moment and if
+ * there are any enterable stocks on the top which I see in potential i guess".
+ * Mounting this board (opening the tab, or switching into tab=gajjala — the
+ * ChartMaps ternary remounts it) POSTs GG_SCAN_PATH ONCE, for the house owner
+ * only (`is_admin === true`; anyone else sees the cron read and never POSTs).
+ * The server answers at once (started / reused / waiting / closed / refused)
+ * and sets the poll plan; the board re-reads the EXISTING GET on that plan
+ * until the served pass.at advances on a board read AFTER the POST answered
+ * (2026-10-16 fix round 1 — a board one re-read old never ends the scan; the
+ * last step re-reads before it gives up), and the board it had stays on screen
+ * under the served "scanning…" line meanwhile — never a blank board (2026-10-16
+ * fix round 2: a poll step never starts a GET over one still in flight, and a
+ * 🔄 answered "reused" for a pass newer than the board on screen re-reads ONCE,
+ * the served line showing until that read lands). An open
+ * rings no device: both push gates run dry on an on-open pass. The 🎯 line is
+ * A+ only — the served rows of the latest pass (the server picks them; the FE
+ * filters nothing and composes no word) — on every sub, right under the sub
+ * strip, so on 🧠 Potential it leads the 📈 Track. UNMEASURED.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -48,15 +68,16 @@ import { ExplosiveChip } from './ExplosiveChip';
 import { EnterableChip } from './EnterableChip';
 import { RulesInfo } from './RulesInfo';
 import { useBounceRoom } from '../hooks/useBounceRoom';
+import { useCurrentUser } from '../hooks/useUser';
 import { outerChipsFor } from '../lib/outerChips';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
 import {
-  GG_OUTER_CHIPS, GG_SORT_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
+  GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
-  playbookItem, riskText, variantText, watchParts,
-  type GgBoard, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
+  ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
+  type GgBoard, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRow, type GgWatch,
 } from '../lib/gajjala';
 import '../styles/gajjala.css';
@@ -82,10 +103,20 @@ export default function GajjalaBoard() {
   const [loading, setLoading] = useState(false);
   const [tick, setTick] = useState(0);
   const seq = useRef(0);
+  /* The `seq` of the GET whose answer is the board on screen — the 🔄 poll judges "landed" only on a board read
+   * AFTER the scan POST answered (a board one re-read old must never end the scan it asked for). */
+  const [boardSeq, setBoardSeq] = useState(0);
   /* The request the URL write-back below would trigger again: when the server
    * resolves a `focus` deep link to a sub, the URL adopts it with `replace` —
    * the board already in hand IS that sub's board, so no second fetch. */
   const adoptedKey = useRef<string | null>(null);
+  /* The `seq` of the GET still in flight (null = none). A 🔄 poll step never starts a GET over it — a newer GET
+   * supersedes the older one, so a GET slower than the served poll would never land and the board would stay blank
+   * for the whole wait (2026-10-16 fix round 2). */
+  const inFlight = useRef<number | null>(null);
+  /* The board last applied — read by startScan after its await and by a GET's settle step (a closure would hold the
+   * board of an older render). */
+  const boardRef = useRef<GgBoard | null>(null);
 
   const reqKey = ggQuery({ sub: urlSub, tf, focus, sort });
 
@@ -94,6 +125,7 @@ export default function GajjalaBoard() {
     adoptedKey.current = null;
     let alive = true;
     const my = ++seq.current;
+    inFlight.current = my;
     setLoading(true);
     fetch(`${API}/chart-maps/gajjala?${reqKey}`, { credentials: 'include', cache: 'no-store' })
       .then(async (r) => {
@@ -102,7 +134,9 @@ export default function GajjalaBoard() {
       })
       .then((b) => {
         if (!alive || my !== seq.current) return;
+        boardRef.current = b;
         setBoard(b);
+        setBoardSeq(my);
         setErr(null);
         // The SERVED sub is authoritative: an absent `sub` (a `focus` deep
         // link) or an unknown one is written back with `replace`.
@@ -116,7 +150,10 @@ export default function GajjalaBoard() {
         }
       })
       .catch((e) => { if (alive && my === seq.current) setErr(String(e?.message ?? e)); })
-      .finally(() => { if (alive && my === seq.current) setLoading(false); });
+      .finally(() => {
+        if (alive && my === seq.current) setLoading(false);
+        if (inFlight.current === my) { inFlight.current = null; settleReused(); }
+      });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reqKey, tick]);
@@ -128,6 +165,99 @@ export default function GajjalaBoard() {
     const id = window.setInterval(() => setTick((n) => n + 1), every);
     return () => window.clearInterval(id);
   }, [every]);
+
+  /* 🔄 scan on open (2026-10-15). ONE POST per mount, owner only; the poll is a
+   * chain of setTimeouts on the SERVED plan (never a second setInterval), each
+   * step a re-read of the existing GET above (`tick`). */
+  const { user } = useCurrentUser();
+  const isOwner = user?.is_admin === true;
+  const [scanResp, setScanResp] = useState<GgScanResponse | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const scanAsked = useRef(false);
+  const scanPosting = useRef(false);
+  const scanTimer = useRef<number | null>(null);
+  const scanUntil = useRef(0);
+  /* seq.current when the POST answered: only a GET started after it may show the awaited pass. */
+  const scanFromSeq = useRef(0);
+  const mounted = useRef(true);
+  /* A 🔄 answered "reused" for a pass newer than the board on screen: ONE re-read, the served line meanwhile
+   * (2026-10-16 fix round 2 — the board re-reads on the served cadence only, so it could lag a whole cadence).
+   * Settled right after the POST answers, and again as each GET finishes (never while one is in flight). */
+  const reusedWant = useRef<{ at: string; issued: boolean } | null>(null);
+  const [reusedText, setReusedText] = useState<string | null>(null);
+  const settleReused = () => {
+    const want = reusedWant.current;
+    if (!want || !mounted.current || inFlight.current != null) return;
+    if (want.issued || boardRef.current?.pass?.at === want.at) {
+      reusedWant.current = null;
+      setReusedText(null);
+      return;
+    }
+    want.issued = true;
+    setTick((n) => n + 1);
+  };
+  const clearScanTimer = () => {
+    if (scanTimer.current != null) { window.clearTimeout(scanTimer.current); scanTimer.current = null; }
+  };
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; clearScanTimer(); };
+  }, []);
+  const stopScan = () => { clearScanTimer(); setScanning(false); };
+  const startScan = async () => {
+    if (scanning || scanPosting.current) return;
+    scanPosting.current = true;
+    let resp: GgScanResponse | null = null;
+    try {
+      const r = await fetch(`${API}${GG_SCAN_PATH}`, { method: 'POST', credentials: 'include', cache: 'no-store' });
+      if (!r.ok) return;
+      resp = (await r.json()) as GgScanResponse;
+    } catch {
+      return;
+    } finally {
+      scanPosting.current = false;
+    }
+    if (!mounted.current || !resp || typeof resp !== 'object') return;
+    setScanResp(resp);
+    reusedWant.current = null;
+    setReusedText(null);
+    if (resp.state === 'reused' && typeof resp.latest_at === 'string' && resp.latest_at
+        && boardRef.current?.pass?.at !== resp.latest_at) {
+      reusedWant.current = { at: resp.latest_at, issued: false };
+      setReusedText(typeof resp.text === 'string' && resp.text.trim() ? resp.text : null);
+      settleReused();
+      return;
+    }
+    const plan = ggScanPlan(resp);
+    if (!plan) return;
+    clearScanTimer();
+    scanFromSeq.current = seq.current;
+    setScanning(true);
+    scanUntil.current = Date.now() + plan.untilMs;
+    // Each step re-reads FIRST, then gives up if the served wait-max has passed: an eta equal to the wait-max
+    // (the "waiting for the first cron pass" answer) still gets its one re-read. A step that finds a GET still in
+    // flight starts none — that GET's answer is the re-read, and the board it had stays on screen meanwhile.
+    const arm = (ms: number) => {
+      scanTimer.current = window.setTimeout(() => {
+        scanTimer.current = null;
+        if (!mounted.current) return;
+        if (inFlight.current == null) setTick((n) => n + 1);
+        if (Date.now() >= scanUntil.current) { stopScan(); return; }
+        arm(plan.everyMs);
+      }, ms);
+    };
+    arm(plan.firstMs);
+  };
+  useEffect(() => {
+    if (!isOwner || scanAsked.current) return;
+    scanAsked.current = true;
+    void startScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner]);
+  useEffect(() => {
+    if (scanning && scanResp && boardSeq > scanFromSeq.current && ggScanAdvanced(board, scanResp.latest_at)) stopScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, boardSeq, scanning, scanResp]);
 
   const activeSub: GgSub | null = parseGgSub(board?.sub) ?? urlSub;
   useEffect(() => {
@@ -172,6 +302,10 @@ export default function GajjalaBoard() {
   const pass = board?.pass;
   const strip = board?.strip;
   const servedTf = board?.tf ?? tf ?? '5m';
+  const scan = board?.scan ?? null;
+  const scanOpen = !!scan && scan.state !== 'closed';
+  const asOfServed = scanOpen && typeof scan?.as_of_text === 'string' && scan.as_of_text.trim() ? scan.as_of_text : null;
+  const scanningLine = scan?.state === 'scanning' && scan.scanning_text ? scan.scanning_text : scanResp?.text;
 
   return (
     <div className="gg-board" data-no-toggle={NO_TOGGLE_REASON} data-state={board ? 'loaded' : 'loading'}>
@@ -180,7 +314,14 @@ export default function GajjalaBoard() {
         {strip?.text ? <span className="gg-strip-text" data-testid="gg-strip-text">{strip.text}</span> : null}
         {session?.badge ? <span className="cm-badge cm-badge-muted" data-testid="gg-session-badge">{session.badge}</span> : null}
         {session?.label ? <span className="gg-muted">{session.label}</span> : null}
-        {pass?.as_of_et ? <span className="gg-muted" data-testid="gg-as-of">as of {pass.as_of_et}</span> : null}
+        {asOfServed ? <span className="gg-muted" data-testid="gg-as-of">{asOfServed}</span>
+          : pass?.as_of_et ? <span className="gg-muted" data-testid="gg-as-of">as of {pass.as_of_et}</span> : null}
+        {isOwner && scanOpen && scan?.rescan_label ? (
+          <button type="button" className="gg-rescan" data-testid="gg-rescan" disabled={scanning}
+                  title={scan.rescan_title || undefined} onClick={() => void startScan()}>
+            {scan.rescan_label}
+          </button>
+        ) : null}
       </div>
       {pass?.stale ? (
         <div className="cm-note cm-note-err" data-testid="gg-stale">
@@ -192,6 +333,16 @@ export default function GajjalaBoard() {
           {pass.warming_text || 'warming · no pass this session yet'}
         </div>
       ) : null}
+      {scanning && scanningLine ? (
+        <div className="cm-note gg-scanning" role="status" data-testid="gg-scanning">{scanningLine}</div>
+      ) : null}
+      {!scanning && reusedText ? (
+        <div className="cm-note" role="status" data-testid="gg-scan-reused">{reusedText}</div>
+      ) : null}
+      {scanResp?.state === 'refused' && scanResp.text ? (
+        <div className="cm-note cm-note-err" data-testid="gg-scan-refused">{scanResp.text}</div>
+      ) : null}
+      {scan?.note ? <div className="cm-note" data-testid="gg-scan-note">{scan.note}</div> : null}
       {board?.push?.text ? <div className="cm-note" data-testid="gg-push">{board.push.text}</div> : null}
       {board?.push_potential?.text ? (
         <div className="cm-note gg-push-potential" data-testid="gg-push-potential">{board.push_potential.text}</div>
@@ -213,6 +364,9 @@ export default function GajjalaBoard() {
           </button>
         ))}
       </div>
+
+      {/* (3b) 🎯 the served A+ line — every sub, so on 🧠 Potential it leads the 📈 Track. */}
+      {board?.enterable ? <AplusBanner block={board.enterable} /> : null}
 
       {err ? <div className="cm-note cm-note-err" data-testid="gg-error">Gajjala board: {err}</div> : null}
 
@@ -343,6 +497,32 @@ function CountsLine({ board }: { board: GgBoard }) {
   );
 }
 
+/** 🎯 the served A+ line (2026-10-15): the served title, one link per served row (its served text, its served
+ *  in-app href), else the served quiet line; the served note folded. Reads ONLY `block` — never the S&D room map or
+ *  its chip (C8). The FE filters no row by rule and composes no word. */
+function AplusBanner({ block }: { block: GgEnterable }) {
+  const rows = (block.rows || []).filter((r) => r && typeof r.symbol === 'string' && r.symbol && typeof r.text === 'string');
+  return (
+    <div className="gg-aplus" data-testid="gg-aplus" role="status">
+      {rows.length ? (
+        <>
+          {block.title ? <span className="gg-aplus-title" data-testid="gg-aplus-title">{block.title}</span> : null}
+          {rows.map((r) => {
+            const id = `${r.symbol}-${r.setup}`;
+            const href = ggHref(r.href);
+            return href
+              ? <Link key={id} to={href} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</Link>
+              : <span key={id} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</span>;
+          })}
+        </>
+      ) : block.empty_text ? <span className="gg-aplus-empty" data-testid="gg-aplus-empty">{block.empty_text}</span> : null}
+      {block.note ? (
+        <details className="gg-aplus-note"><summary>ⓘ</summary><span data-testid="gg-aplus-note">{block.note}</span></details>
+      ) : null}
+    </div>
+  );
+}
+
 /** State pill, plan line, criteria checklist and the chip row under a tile. */
 function CardExtras({ read, board, sub }: { read: GgRead | null; board: GgBoard; sub: GgSub | null }) {
   if (!read) return null;
@@ -365,7 +545,7 @@ function CardExtras({ read, board, sub }: { read: GgRead | null; board: GgBoard;
     ...(chips.psych || []).map(chipText),
     changeText(chips.change_pct), vol, listed,
     sub === 'reversal_squeeze' ? chipText(chips.squeeze_history) : null,
-    chipText(chips.red_closes), chipText(chips.stopped_earlier), chipText(chips.flag_k),
+    chipText(chips.red_closes), chipText(chips.stopped_earlier), chipText(chips.read_at), chipText(chips.flag_k),
     chipText(chips.instrument), chipText(chips.session_badge), chipText(chips.outside_rth), first15,
   ];
   const shown = chipRow.filter((x): x is string => !!x);

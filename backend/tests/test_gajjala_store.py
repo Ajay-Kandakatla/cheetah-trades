@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -238,7 +239,9 @@ def test_NEGATIVE_ah_carry_missing_is_none():
 def test_record_pass_writes_the_pass_and_latest():
     st = fake_store()
     st.record_pass(S, NOW, {"status": "ok", "counts": {"rows": 3}})
-    assert set(st.coll(ST.PASSES).docs) == {"2026-10-13|10:01", "latest"}
+    # WIDENED 2026-10-15 — 🔄 scan on open (AMENDMENTS5 A10): a cron pass also moves the cron-only "latest_cron" pointer
+    assert set(st.coll(ST.PASSES).docs) == {"2026-10-13|10:01", "latest", "latest_cron"}
+    assert st.latest_cron_pass()["pass_id"] == "2026-10-13|10:01"
     assert st.latest_pass()["pass_id"] == "2026-10-13|10:01"
     assert [p["_id"] for p in st.passes(S)] == ["2026-10-13|10:01"]
 
@@ -292,17 +295,22 @@ def test_reads_post_daily_halts_roundtrip():
 
 def test_lease_claim_then_held_then_released_then_min_gap():
     st = fake_store()
-    assert st.claim_lease(NOW) is True
-    assert st.claim_lease(NOW + timedelta(seconds=10)) is False          # held
-    st.release_lease(NOW + timedelta(seconds=60))
-    assert st.claim_lease(NOW + timedelta(seconds=GC.LEASE_MIN_GAP_SEC - 1)) is False   # inside the min gap
-    assert st.claim_lease(NOW + timedelta(seconds=GC.LEASE_MIN_GAP_SEC)) is True
+    # WIDENED 2026-10-15 — 🔄 scan on open: claim_lease returns a LeaseClaim (truthy), releases carry the holder's token
+    c = st.claim_lease(NOW)
+    assert bool(c) and c.why == "claimed"
+    held = st.claim_lease(NOW + timedelta(seconds=10))
+    assert not held and held.why == "held"                               # held
+    st.release_lease(NOW + timedelta(seconds=60), c.token)
+    gap = st.claim_lease(NOW + timedelta(seconds=GC.LEASE_MIN_GAP_SEC - 1))
+    assert not gap and gap.why == "gap"                                  # inside the min gap
+    assert bool(st.claim_lease(NOW + timedelta(seconds=GC.LEASE_MIN_GAP_SEC)))
 
 
 def test_NEGATIVE_a_stuck_lease_expires_after_lease_sec():
     st = fake_store()
-    assert st.claim_lease(NOW) is True
-    assert st.claim_lease(NOW + timedelta(seconds=GC.LEASE_SEC)) is True
+    # WIDENED 2026-10-15 — 🔄 scan on open: claim_lease returns a LeaseClaim (truthy), releases carry the holder's token
+    assert bool(st.claim_lease(NOW))
+    assert bool(st.claim_lease(NOW + timedelta(seconds=GC.LEASE_SEC)))
 
 
 def test_types_map_roundtrip():
@@ -319,7 +327,9 @@ def test_NEGATIVE_no_mongo_is_the_documented_none_path():
     st.replace_ah_carry(S, NOW, [_row("AAA")])
     assert st.ah_carry(S) is None and st.reads(S) == [] and st.latest_pass() is None
     assert st.get_state("lease") == {} and st.halt_sessions() == set()
-    assert st.claim_lease(NOW) is True                                    # the medical helper's no-mongo answer
+    # WIDENED 2026-10-15 — 🔄 scan on open: claim_lease returns a LeaseClaim (truthy), releases carry the holder's token
+    c = st.claim_lease(NOW)
+    assert c.ok and c.why == "no_store"                                  # the documented no-mongo answer
 
 
 def test_NEGATIVE_a_failing_collection_never_raises():
@@ -330,7 +340,9 @@ def test_NEGATIVE_a_failing_collection_never_raises():
     st.replace_ah_carry(S, NOW, [_row("AAA")])
     st.record_pass(S, NOW, {"status": "ok"})
     assert st.reads(S) == [] and st.ah_carry(S) is None and st.split_checks(S) == {}
-    assert st.claim_lease(NOW) is False
+    # WIDENED 2026-10-15 — 🔄 scan on open: claim_lease returns a LeaseClaim (truthy), releases carry the holder's token
+    c = st.claim_lease(NOW)
+    assert not c and c.why == "error"
 
 
 def test_module_level_functions_delegate_to_the_default_store(monkeypatch):
@@ -481,3 +493,304 @@ def test_NEGATIVE_the_claim_never_lands_on_a_joined_doc_and_still_lands_on_a_nor
     assert st.claim_potential_push(normal["_id"], {"state": "claimed"}) == "claimed"
     assert st.claim_potential_push(old["_id"], {"state": "claimed"}) == "claimed"
     assert st.claim_potential_push(joined["_id"], {"state": "claimed"}) == "taken"       # still, on a second try
+
+
+# ── 🔄 the split lease (2026-10-15 — DECISIONS5 C1, AMENDMENTS5 A5–A10) ──────────────────────────────────────────────
+# Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if there are any
+# enterable stocks on the top which I see in potential i guess". An open never makes a cron tick skip or refuse.
+CRON, OD = ST.LEASE_CRON, ST.LEASE_ON_DEMAND
+
+
+def _ago(s):
+    return NOW - timedelta(seconds=s)
+
+
+def _lease(st):
+    return st.coll(ST.STATE).docs.get(ST.LEASE_ID)
+
+
+def _put_lease(st, **doc):
+    st.coll(ST.STATE).docs[ST.LEASE_ID] = dict(doc, _id=ST.LEASE_ID)
+
+
+def test_a_cron_claim_carries_its_token_holder_and_the_tick_clock():
+    st = fake_store()
+    c = st.claim_lease(NOW)
+    assert c.ok and c.why == "claimed" and isinstance(c.token, str) and len(c.token) == 32
+    d = _lease(st)
+    assert d["held_by"] == CRON and d["token"] == c.token and d["status"] == "running"
+    assert d["claimed_at"] == d["started_at"] == d["last_cron_started_at"] == NOW
+    assert "od_started_at" not in d
+
+
+def test_A6_a_cron_claim_after_a_wait_stamps_the_gap_with_the_tick_clock():
+    st = fake_store()
+    later = NOW + timedelta(seconds=GC.CRON_WAIT_ON_DEMAND_SEC)
+    c = st.claim_lease(later, source=CRON, cron_start=NOW)
+    d = _lease(st)
+    assert c.ok and d["claimed_at"] == later and d["last_cron_started_at"] == d["started_at"] == NOW
+
+
+def test_C1_an_on_open_claim_skips_the_cron_gap_and_never_moves_it():
+    st = fake_store()
+    c = st.claim_lease(NOW)
+    st.release_lease(NOW + timedelta(seconds=30), c.token)
+    o = st.claim_lease(NOW + timedelta(seconds=60), source=OD)          # inside the 240 s cron gap
+    d = _lease(st)
+    assert o.ok and o.why == "claimed" and o.token != c.token
+    assert d["held_by"] == OD and d["od_started_at"] == NOW + timedelta(seconds=60)
+    assert d["last_cron_started_at"] == NOW                               # C1: the cron gap clock unchanged
+    assert d["started_at"] == NOW                                         # NEGATIVE A9: started_at never written by an open
+
+
+def test_NEGATIVE_A9_an_on_open_claim_on_a_fresh_store_never_writes_started_at():
+    st = fake_store()
+    assert st.claim_lease(NOW, source=OD).ok
+    assert "started_at" not in _lease(st) and "last_cron_started_at" not in _lease(st)
+
+
+@pytest.mark.parametrize("holder,source,why", [(CRON, OD, "held"), (OD, OD, "held"), (OD, CRON, "held_on_demand"),
+                                               (CRON, CRON, "held")])
+def test_NEGATIVE_a_held_lease_refuses_with_its_reason(holder, source, why):
+    st = fake_store()
+    first = st.claim_lease(_ago(300), source=holder)
+    assert first.ok
+    _lease(st)["claimed_at"] = _ago(10)                                   # held, fresh
+    r = st.claim_lease(NOW, source=source)
+    assert not r and r.why == why and r.held_by == holder and r.token is None
+    assert _lease(st)["token"] == first.token                             # nothing overwritten
+
+
+def test_NEGATIVE_a_cron_inside_its_gap_meeting_an_on_open_holder_is_gap_never_a_wait():
+    st = fake_store()
+    _put_lease(st, status="running", held_by=OD, token="od", claimed_at=_ago(5), last_cron_started_at=_ago(100))
+    r = st.claim_lease(NOW, source=CRON)
+    assert not r and r.why == "gap"
+    assert not st.claim_lease(NOW, source=CRON, take_over=True)           # a take-over never skips the gap
+
+
+def test_take_over_replaces_an_on_open_holder_and_its_release_then_does_nothing():
+    st = fake_store()
+    o = st.claim_lease(_ago(20), source=OD)
+    t = st.claim_lease(NOW, source=CRON, take_over=True)
+    assert t.ok and t.why == "taken_over" and t.token != o.token
+    d = _lease(st)
+    assert d["held_by"] == CRON and d["token"] == t.token and d["last_cron_started_at"] == NOW
+    assert st.release_lease(NOW + timedelta(seconds=1), o.token) is False      # NEGATIVE: the old holder frees nothing
+    assert _lease(st)["status"] == "running" and _lease(st)["held_by"] == CRON
+    assert st.release_lease(NOW + timedelta(seconds=2), t.token) is True
+    assert _lease(st)["status"] == "done"
+
+
+def test_NEGATIVE_take_over_never_takes_a_cron_holder():
+    st = fake_store()
+    _put_lease(st, status="running", held_by=CRON, token="c", claimed_at=_ago(5), last_cron_started_at=_ago(300))
+    r = st.claim_lease(NOW, source=CRON, take_over=True)
+    assert not r and r.why == "held" and _lease(st)["token"] == "c"
+
+
+def test_take_over_of_a_free_lease_is_a_plain_claim():
+    st = fake_store()
+    assert st.claim_lease(NOW, source=CRON, take_over=True).why == "claimed"
+
+
+def test_NEGATIVE_a_tokenless_release_never_frees_a_tokened_lease():
+    st = fake_store()
+    c = st.claim_lease(NOW)
+    assert st.release_lease(NOW + timedelta(seconds=1)) is False
+    assert st.release_lease(NOW + timedelta(seconds=1), "not-the-token") is False
+    assert _lease(st)["status"] == "running" and _lease(st)["token"] == c.token
+    _put_lease(st, status="running", claimed_at=NOW, started_at=NOW)     # a legacy (pre-split) lease has no token
+    assert st.release_lease(NOW + timedelta(seconds=1)) is True and _lease(st)["status"] == "done"
+
+
+@pytest.mark.parametrize("source", [CRON, OD])
+def test_a_stale_lease_frees_itself_for_both_sources(source):
+    st = fake_store()
+    _put_lease(st, status="running", held_by=OD if source == CRON else CRON, token="x",
+               claimed_at=_ago(GC.LEASE_SEC), last_cron_started_at=_ago(GC.LEASE_SEC))
+    c = st.claim_lease(NOW, source=source)
+    assert c.ok and c.why == "claimed" and _lease(st)["held_by"] == source
+
+
+def test_legacy_medical_shape_lease_gaps_on_its_started_at():
+    st = fake_store()
+    _put_lease(st, status="done", claimed_at=_ago(100), started_at=_ago(100), pid=1)
+    r = st.claim_lease(NOW)
+    assert not r and r.why == "gap"
+    assert st.claim_lease(NOW, source=OD).ok                              # an open needs only "not held"
+    st2 = fake_store()
+    _put_lease(st2, status="done", claimed_at=_ago(GC.LEASE_MIN_GAP_SEC), started_at=_ago(GC.LEASE_MIN_GAP_SEC))
+    assert st2.claim_lease(NOW).why == "claimed"
+
+
+@pytest.mark.parametrize("source", [CRON, OD])
+def test_NEGATIVE_a_legacy_running_fresh_lease_is_held_for_both(source):
+    st = fake_store()
+    _put_lease(st, status="running", claimed_at=_ago(10), started_at=_ago(10), pid=1)
+    r = st.claim_lease(NOW, source=source)
+    assert not r and r.why in ("held", "gap") and r.held_by in (CRON, None)
+    if source == OD:
+        assert r.why == "held" and r.held_by == CRON
+
+
+def test_lease_state_reads_held_holder_and_stamps():
+    st = fake_store()
+    assert st.lease_state(NOW) == {"held": False, "held_by": None, "holder_started_at": None, "claimed_at": None,
+                                   "started_at": None, "od_started_at": None, "last_cron_started_at": None,
+                                   "status": None, "done_at": None}      # WIDENED 2026-10-16: status + done_at (reuse)
+    st.claim_lease(_ago(10), source=OD)
+    s = st.lease_state(NOW)
+    assert s["held"] is True and s["held_by"] == OD and s["holder_started_at"] == _ago(10) == s["od_started_at"]
+    assert s["started_at"] is None
+    s = st.lease_state(NOW + timedelta(seconds=GC.LEASE_SEC))             # NEGATIVE: a stale holder is not "held"
+    assert s["held"] is False and s["holder_started_at"] is None
+    c = fake_store()
+    c.claim_lease(NOW)
+    s = c.lease_state(NOW + timedelta(seconds=1))
+    assert s["held"] and s["held_by"] == CRON and s["holder_started_at"] == NOW == s["last_cron_started_at"]
+
+
+def test_NEGATIVE_lease_state_is_empty_on_no_handle_or_a_read_fault():
+    assert ST.GajjalaStore(colls={n: None for n in ST.ALL}).lease_state(NOW) == {}
+    assert fake_store(**{ST.STATE: FakeColl(fail=True)}).lease_state(NOW) == {}
+
+
+def test_A5_naive_mongo_stamps_never_break_a_comparison():
+    """The live MongoClient is not tz-aware: stamps come back NAIVE (UTC). Every read-back goes through _utc first."""
+    naive = lambda dt: dt.astimezone(timezone.utc).replace(tzinfo=None)  # noqa: E731
+    st = fake_store()
+    _put_lease(st, status="running", held_by=OD, token="od", claimed_at=naive(_ago(5)),
+               od_started_at=naive(_ago(5)), last_cron_started_at=naive(_ago(300)))
+    r = st.claim_lease(NOW, source=CRON)
+    assert not r and r.why == "held_on_demand"                            # never "error"
+    s = st.lease_state(NOW)
+    assert s["held"] is True and s["held_by"] == OD and s["holder_started_at"].tzinfo is not None
+    t = st.claim_lease(NOW, source=CRON, take_over=True)
+    assert t.ok and t.why == "taken_over"
+    assert ST.lease_free({"status": "running", "claimed_at": naive(_ago(GC.LEASE_SEC))}, NOW) is True
+    assert ST.lease_gap_ok({"last_cron_started_at": naive(_ago(10))}, NOW) is False
+
+
+class _RacyColl(FakeColl):
+    """The holder releases between the claim's attempt (DuplicateKeyError) and its classify read."""
+    def find_one(self, q=None, projection=None):
+        d = self.docs.get(ST.LEASE_ID)
+        if d is not None:
+            d["status"] = "done"
+        return super().find_one(q, projection)
+
+
+def test_NEGATIVE_a_release_between_the_attempt_and_the_read_is_error_never_a_false_held():
+    st = fake_store(**{ST.STATE: _RacyColl()})
+    _put_lease(st, status="running", held_by=OD, token="od", claimed_at=_ago(5), last_cron_started_at=_ago(300))
+    r = st.claim_lease(NOW, source=CRON)
+    assert not r and r.why == "error"
+    assert st.claim_lease(NOW, source=CRON).ok                            # the retry claims (A7)
+
+
+def test_lease_owner_is_reads_the_token():
+    st = fake_store()
+    c = st.claim_lease(NOW, source=OD)
+    assert st.lease_owner_is(c.token) is True
+    assert st.lease_owner_is("someone-else") is False and st.lease_owner_is(None) is False
+    t = st.claim_lease(NOW + timedelta(seconds=GC.CRON_WAIT_ON_DEMAND_SEC), source=CRON, take_over=True)
+    assert st.lease_owner_is(c.token) is False and st.lease_owner_is(t.token) is True
+    assert fake_store(**{ST.STATE: FakeColl(fail=True)}).lease_owner_is(c.token) is False   # fail closed
+    assert ST.GajjalaStore(colls={n: None for n in ST.ALL}).lease_owner_is("x") is True
+    assert fake_store().lease_owner_is("x") is True                     # no lease doc on file: nobody took it over
+
+
+# the FakeColl verdict of lease_query == the python helpers, on a table of lease docs (query and classifier never drift)
+_N = lambda dt: dt.astimezone(timezone.utc).replace(tzinfo=None)         # noqa: E731
+LEASE_TABLE = [
+    {},
+    {"status": "done"},
+    {"status": "done", "held_by": CRON, "last_cron_started_at": _ago(10), "started_at": _ago(10)},
+    {"status": "done", "held_by": CRON, "last_cron_started_at": _ago(300), "started_at": _ago(300)},
+    {"status": "done", "held_by": OD, "od_started_at": _ago(5), "last_cron_started_at": _ago(100)},
+    {"status": "running", "held_by": CRON, "claimed_at": _ago(10), "last_cron_started_at": _ago(10)},
+    {"status": "running", "held_by": CRON, "claimed_at": _ago(GC.LEASE_SEC), "last_cron_started_at": _ago(GC.LEASE_SEC)},
+    {"status": "running", "held_by": OD, "claimed_at": _ago(5), "last_cron_started_at": _ago(300)},
+    {"status": "running", "held_by": OD, "claimed_at": _ago(5), "last_cron_started_at": _ago(100)},
+    {"status": "running", "held_by": OD, "claimed_at": _ago(5)},
+    {"status": "running", "held_by": OD, "claimed_at": _ago(GC.LEASE_SEC + 5), "last_cron_started_at": _ago(100)},
+    {"status": "done", "claimed_at": _ago(100), "started_at": _ago(100)},
+    {"status": "done", "claimed_at": _ago(300), "started_at": _ago(300)},
+    {"status": "running", "claimed_at": _ago(10), "started_at": _ago(10)},
+    {"status": "running", "held_by": OD, "claimed_at": _N(_ago(5)), "last_cron_started_at": _N(_ago(300))},
+    {"status": "done", "last_cron_started_at": None},
+    {"status": "done", "last_cron_started_at": _ago(100), "started_at": _ago(300)},
+]
+MODES = [(CRON, False), (OD, False), (CRON, True)]
+
+
+@pytest.mark.parametrize("i", range(len(LEASE_TABLE)))
+@pytest.mark.parametrize("source,take", MODES)
+def test_the_lease_query_and_the_python_classifier_agree(i, source, take):
+    doc = dict(LEASE_TABLE[i], _id=ST.LEASE_ID)
+    hit = FakeColl([doc]).find_one(ST.lease_query(NOW, source, take_over=take)) is not None
+    assert hit == ST.lease_claimable(doc, NOW, source, take_over=take), (doc, source, take)
+
+
+def test_the_lease_table_exercises_both_verdicts_in_every_mode():
+    for source, take in MODES:
+        vs = {ST.lease_claimable(dict(d, _id=ST.LEASE_ID), NOW, source, take_over=take) for d in LEASE_TABLE}
+        assert vs == {True, False}, (source, take)
+
+
+def test_NEGATIVE_the_lease_query_uses_only_the_operators_the_fake_and_mongo_share():
+    import json
+    for source, take in MODES:
+        ops = set(re.findall(r'"(\$[a-zA-Z]+)"', json.dumps(ST.lease_query(NOW, source, take_over=take), default=str)))
+        assert ops <= {"$or", "$and", "$ne", "$lte", "$exists"}, ops
+
+
+# ── A10 two pointers / C5 the on-open pass doc ──────────────────────────────────────────────────────────────────
+def test_A10_an_on_open_pass_moves_latest_never_latest_cron():
+    st = fake_store()
+    st.record_pass(S, NOW, {"status": "ok"})
+    od_at = NOW + timedelta(seconds=40)
+    st.record_pass(S, od_at, {"status": "ok", "on_demand": True}, hhmm="10:01:40|open", source=OD, latest_if_newer=True)
+    assert set(st.coll(ST.PASSES).docs) == {"2026-10-13|10:01", "2026-10-13|10:01:40|open", "latest", "latest_cron"}
+    assert st.latest_pass()["pass_id"] == "2026-10-13|10:01:40|open" and st.latest_pass()["on_demand"] is True
+    assert st.latest_cron_pass()["pass_id"] == "2026-10-13|10:01"
+    assert [p["_id"] for p in sorted(st.passes(S), key=lambda d: d["_id"])] == ["2026-10-13|10:01",
+                                                                               "2026-10-13|10:01:40|open"]
+
+
+def test_NEGATIVE_latest_if_newer_never_moves_latest_back():
+    st = fake_store()
+    st.record_pass(S, NOW, {"status": "ok"})                              # a cron pass that started later, recorded first
+    st.record_pass(S, NOW - timedelta(seconds=30), {"status": "ok"}, hhmm="10:00:30|open", source=OD,
+                   latest_if_newer=True)
+    assert st.latest_pass()["pass_id"] == "2026-10-13|10:01"
+    assert "2026-10-13|10:00:30|open" in st.coll(ST.PASSES).docs          # its own doc is still written
+    st.coll(ST.PASSES).docs["latest"]["at"] = (NOW - timedelta(minutes=5)).replace(tzinfo=None)   # naive, older
+    st.record_pass(S, NOW - timedelta(seconds=30), {"status": "ok"}, hhmm="10:00:30|open", source=OD,
+                   latest_if_newer=True)
+    assert st.latest_pass()["pass_id"] == "2026-10-13|10:00:30|open"    # older stored latest → replaced
+
+
+def test_NEGATIVE_move_latest_false_writes_the_pass_doc_only():
+    st = fake_store()
+    st.record_pass(S, NOW, {"status": "ok"})
+    st.record_pass(S, NOW + timedelta(seconds=40), {"status": "ok"}, hhmm="10:01:40|open", source=OD,
+                   latest_if_newer=True, move_latest=False)
+    assert st.latest_pass()["pass_id"] == "2026-10-13|10:01" and "2026-10-13|10:01:40|open" in st.coll(ST.PASSES).docs
+
+
+def test_NEGATIVE_recent_passes_never_returns_the_latest_cron_pointer():
+    st = fake_store()
+    st.record_pass(S, NOW - timedelta(minutes=5), {"status": "ok", "potential": {}})
+    docs = st.recent_passes(S, NOW - timedelta(minutes=10), NOW)
+    assert [d["_id"] for d in docs] == ["2026-10-13|09:56"]
+
+
+def test_the_new_lease_and_pointer_reads_delegate(monkeypatch):
+    fake = fake_store()
+    monkeypatch.setattr(ST, "_DEFAULT", fake)
+    c = ST.claim_lease(NOW, source=OD)
+    assert ST.lease_state(NOW)["held_by"] == OD and ST.lease_owner_is(c.token) is True
+    ST.record_pass(S, NOW, {"status": "ok"})
+    assert ST.latest_cron_pass()["pass_id"] == ST.latest_pass()["pass_id"]

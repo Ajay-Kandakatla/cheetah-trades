@@ -3,6 +3,7 @@ import {
   GG_DEFAULT_SUB, GG_GRADE_LABEL, GG_OUTER_CHIPS, GG_SETUPS, GG_SUBS, GG_VARIANT_LABEL,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
   playbookItem, riskText, variantText, watchParts,
+  GG_SCAN_PATH, ggScanAdvanced, ggScanPlan, type GgBoard,
 } from './gajjala';
 
 /* tsc-safe source read (the HottestSectors.width.test precedent): the app's
@@ -158,5 +159,72 @@ describe('ggHref / watchParts', () => {
     expect(watchParts(w)).toEqual({ lead: w.text, trailing: false });
     expect(watchParts({ text: '👀 nothing', symbols: [] })).toEqual({ lead: '👀 nothing', trailing: false });
     for (const v of [null, undefined, { text: '', symbols: [] }, { text: '   ', symbols: [] }]) expect(watchParts(v as any)).toBeNull();
+  });
+});
+
+/* 🔄 scan on open (2026-10-15, BUILD_SPEC5 §3.8). Ajay: "When ever I open Gajjala's intiate a new scan of stocks.  In
+ * that moment and if there are any enterable stocks on the top which I see in potential i guess". The poll plan is the
+ * SERVER's numbers or nothing — a bad number never becomes a timer; "landed" needs a NEW served pass stamp AND no
+ * pass still running. */
+describe('🔄 GG_SCAN_PATH / ggScanPlan / ggScanAdvanced', () => {
+  it('the POST path', () => {
+    expect(GG_SCAN_PATH).toBe('/chart-maps/gajjala/scan');
+  });
+  it('started / waiting → the served plan, eta clamped into [poll, wait_max]', () => {
+    expect(ggScanPlan({ state: 'started', eta_sec: 30, poll_sec: 5, wait_max_sec: 90 }))
+      .toEqual({ firstMs: 30_000, everyMs: 5_000, untilMs: 90_000 });
+    expect(ggScanPlan({ state: 'waiting', eta_sec: 30, poll_sec: 5, wait_max_sec: 90 }))
+      .toEqual({ firstMs: 30_000, everyMs: 5_000, untilMs: 90_000 });
+    expect(ggScanPlan({ state: 'started', eta_sec: 1, poll_sec: 5, wait_max_sec: 90 })!.firstMs).toBe(5_000);
+    expect(ggScanPlan({ state: 'started', eta_sec: 500, poll_sec: 5, wait_max_sec: 90 })!.firstMs).toBe(90_000);
+    expect(ggScanPlan({ state: 'started', eta_sec: 0, poll_sec: 5, wait_max_sec: 90 })!.firstMs).toBe(5_000);
+    expect(ggScanPlan({ state: 'started', poll_sec: 5, wait_max_sec: 90 })!.firstMs).toBe(5_000);
+    expect(ggScanPlan({ state: 'started', eta_sec: null, poll_sec: 0.05, wait_max_sec: 0.3 }))
+      .toEqual({ firstMs: 50, everyMs: 50, untilMs: 300 });
+  });
+  it('NEGATIVE: reused / closed / refused / unknown / null → no plan', () => {
+    for (const state of ['reused', 'closed', 'refused', 'scanning', '']) {
+      expect(ggScanPlan({ state, eta_sec: 30, poll_sec: 5, wait_max_sec: 90 })).toBeNull();
+    }
+    expect(ggScanPlan(null)).toBeNull();
+    expect(ggScanPlan(undefined)).toBeNull();
+  });
+  it('NEGATIVE: NaN / 0 / negative / Infinity / missing / string numbers → no plan', () => {
+    const bad: any[] = [NaN, 0, -5, Infinity, undefined, null, '5'];
+    for (const b of bad) {
+      expect(ggScanPlan({ state: 'started', eta_sec: 30, poll_sec: b, wait_max_sec: 90 })).toBeNull();
+      expect(ggScanPlan({ state: 'started', eta_sec: 30, poll_sec: 5, wait_max_sec: b })).toBeNull();
+    }
+    expect(ggScanPlan({ state: 'started', eta_sec: NaN, poll_sec: 5, wait_max_sec: 90 })).toBeNull();
+    expect(ggScanPlan({ state: 'started', eta_sec: Infinity, poll_sec: 5, wait_max_sec: 90 })).toBeNull();
+    expect(ggScanPlan({ state: 'started', eta_sec: '30' as any, poll_sec: 5, wait_max_sec: 90 })).toBeNull();
+    // a wait-max under the poll step is not a plan
+    expect(ggScanPlan({ state: 'started', eta_sec: 1, poll_sec: 5, wait_max_sec: 2 })).toBeNull();
+  });
+  const b = (at: unknown, state?: string): GgBoard => ({ pass: { at }, scan: state ? { state } : undefined } as any);
+  it('landed: a new served pass.at with no pass running', () => {
+    expect(ggScanAdvanced(b('2026-10-13T14:41:20+00:00', 'idle'), '2026-10-13T14:31:00+00:00')).toBe(true);
+    expect(ggScanAdvanced(b('2026-10-13T14:41:20+00:00'), '2026-10-13T14:31:00+00:00')).toBe(true);
+    expect(ggScanAdvanced(b('2026-10-13T14:41:20+00:00', 'idle'), null)).toBe(true);
+  });
+  it('NEGATIVE: the same stamp, a pass still scanning, or no served pass.at → not landed', () => {
+    expect(ggScanAdvanced(b('2026-10-13T14:31:00+00:00', 'idle'), '2026-10-13T14:31:00+00:00')).toBe(false);
+    expect(ggScanAdvanced(b('2026-10-13T14:41:20+00:00', 'scanning'), '2026-10-13T14:31:00+00:00')).toBe(false);
+    expect(ggScanAdvanced(b(null, 'idle'), '2026-10-13T14:31:00+00:00')).toBe(false);
+    expect(ggScanAdvanced(b(undefined, 'idle'), null)).toBe(false);
+    expect(ggScanAdvanced(b(12345, 'idle'), null)).toBe(false);
+    expect(ggScanAdvanced(null, null)).toBe(false);
+    expect(ggScanAdvanced(undefined, 'x')).toBe(false);
+  });
+  it('NEGATIVE: the three 🔄 source files never say the b-word (incl. its "de-" form) or "fake"', async () => {
+    const bw = 'b' + 'ounce';
+    const banned = new RegExp(`${bw}|fake`, 'i');
+    for (const rel of ['src/lib/gajjala.ts', 'src/styles/gajjala.css']) {
+      expect(await readSource(rel)).not.toMatch(banned);
+    }
+    // the S&D room hook's internal identifier is the one allowed spelling (contracts.mjs 🚩 block)
+    const hook = new RegExp(`use${'B' + 'ounce'}Room|${'B' + 'ounce'}Room|${bw}Room`, 'g');
+    const board = (await readSource('src/components/GajjalaBoard.tsx')).replace(hook, '');
+    expect(board).not.toMatch(banned);
   });
 });

@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-15 (verbatim below). DECISIONS5 K1–K4: A+ only (traded through the trigger, bar closed), an open never
+  // rings (both push gates dry), the 🎯 line on every sub and first in 🧠 Potential, a pass under 60 s old is reused
+  // (constants.ON_DEMAND_REUSE_SEC); the 5 = the gajjala.run crontab step — pinned by scripts/contracts.mjs.
+  { id: 'chart-maps-gajjala-on-open-2026-10-15', addedAt: '2026-10-15', route: '/chart-maps?tab=gajjala&sub=potential',
+    label: "🔄 Gajjala's tab scans when you open it, and 🎯 A+ names sit on top. You said: “When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if there are any enterable stocks on the top which I see in potential i guess”. Opening the tab (or switching to it) runs one pass at once — unless the last one finished under 60 seconds ago, or one is already running, which it waits for; the board you had stays on screen under a “scanning…” line. On top of every sub-tab, first in 🧠 Potential, a 🎯 line lists the A+ names of the latest pass — every rule met, traded through the trigger and the bar closed — each with its trigger, stop and the time it went A+, linked to its card. An open never rings your phone: both alerts stay on the 5-minute pass. Bars are closed 5-minute bars, so an open between passes adds new scanner names and prices, not a newer bar. UNMEASURED — not a recommendation." },
   // Ajay 2026-10-15, three messages (verbatim below). Potential = a read still forming with its sideways part begun
   // (his K1); the 04:00 / 20:00 / 09:30 are daytrading/data.py's clock, the 15 constants.NO_TRADE_AFTER_OPEN_MIN, the 5
   // the gajjala.run crontab step — pinned by scripts/contracts.mjs.

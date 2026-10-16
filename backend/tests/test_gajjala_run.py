@@ -497,3 +497,506 @@ def test_the_pass_reads_the_same_ctx_the_read_doc_stores(monkeypatch):
 def test_NEGATIVE_no_crontab_line_names_potential():
     lines = [ln for ln in (ROOT / "crontab").read_text().splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     assert not [ln for ln in lines if "potential" in ln]
+
+
+# ── 🔄 scan on open (2026-10-15 — DECISIONS5 K2/K4, C1–C7, AMENDMENTS5 A1, A5–A10, A13) ─────────────────────────────
+# Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if there are any
+# enterable stocks on the top which I see in potential i guess". An open never rings a device and never makes a cron
+# tick skip, refuse or delay its gates beyond the bounded wait.
+import copy                                                            # noqa: E402
+import logging                                                         # noqa: E402
+from datetime import timezone                                          # noqa: E402
+
+from chart_maps.gajjala import store as ST                             # noqa: E402
+from tests.test_gajjala_store import FakeColl                          # noqa: E402
+
+POLLS = int(GC.CRON_WAIT_ON_DEMAND_SEC // GC.ON_DEMAND_POLL_SEC)
+
+
+def _u(dt):
+    return RUN._utc(dt)
+
+
+def _lease(st):
+    return st.coll(ST.STATE).docs.get(ST.LEASE_ID)
+
+
+class Sleeps:
+    def __init__(self, on=None):
+        self.calls, self.on = [], on
+
+    def __call__(self, s):
+        self.calls.append(s)
+        if self.on:
+            self.on(len(self.calls))
+
+
+def test_C1_a_cron_tick_waits_for_an_on_open_pass_then_runs():
+    st = fake_store()
+    o = st.claim_lease(_u(NOW - timedelta(seconds=5)), source=ST.LEASE_ON_DEMAND)
+    sleeps = Sleeps(on=lambda n: n == 3 and st.release_lease(_u(NOW), o.token))
+    deps, snapshot, _send, status = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] and out["lease"]["why"] == "claimed" and out.get("reason") is None
+    assert out["lease"]["waited_s"] == 3 * GC.ON_DEMAND_POLL_SEC and sleeps.calls == [GC.ON_DEMAND_POLL_SEC] * 3
+    assert len(snapshot.calls) == 1 and len(status.calls) == 1
+    assert _lease(st)["status"] == "done" and _lease(st)["last_cron_started_at"] == _u(NOW)   # A6: the tick clock
+    assert out["on_demand"] is False and st.latest_cron_pass()["_id"] == "latest_cron"
+
+
+def test_C1_NEGATIVE_a_stuck_on_open_lease_never_refuses_the_cron():
+    st = fake_store()
+    o = st.claim_lease(_u(NOW - timedelta(seconds=5)), source=ST.LEASE_ON_DEMAND)
+    sleeps = Sleeps()
+    deps, snapshot, _send, status = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] and out["lease"]["why"] == "taken_over" and len(sleeps.calls) == POLLS
+    assert out["lease"]["waited_s"] == GC.CRON_WAIT_ON_DEMAND_SEC and len(snapshot.calls) == 1
+    lease = copy.deepcopy(_lease(st))
+    assert lease["status"] == "done" and lease["held_by"] == ST.LEASE_CRON and lease["token"] != o.token
+    assert st.release_lease(_u(NOW + timedelta(minutes=1)), o.token) is False      # the stuck holder frees nothing
+    assert _lease(st) == lease
+
+
+def test_C1_NEGATIVE_a_cron_held_lease_never_makes_a_cron_wait():
+    st = fake_store()
+    assert st.claim_lease(_u(NOW - timedelta(seconds=20)))
+    sleeps = Sleeps()
+    deps, snapshot, *_ = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] is False and out["lease"]["why"] == "held" and out["reason"] == RUN._LEASE_REASON["held"]
+    assert sleeps.calls == [] and snapshot.calls == []
+
+
+def test_C1_NEGATIVE_an_open_never_moves_the_cron_min_gap():
+    st = fake_store()
+    assert RUN.run_pass(at(10, 26), store=st, deps=make_deps()[0])["ran"]
+    dup = RUN.run_pass(at(10, 28), store=st, deps=make_deps()[0])
+    assert dup["ran"] is False and dup["lease"]["why"] == "gap" and "lease" in dup["reason"]   # unchanged guard
+    assert RUN.run_on_demand(at(10, 28), store=st, deps=make_deps()[0])["ran"]
+    assert RUN.run_on_demand(at(10, 30, ss=59), store=st, deps=make_deps()[0])["ran"]
+    assert _lease(st)["last_cron_started_at"] == _u(at(10, 26))
+    out = RUN.run_pass(at(10, 31), store=st, deps=make_deps()[0])
+    assert out["ran"] and out["lease"]["why"] == "claimed"
+
+
+def test_C1_an_on_open_pass_skips_the_gap_but_never_a_held_lease():
+    st = fake_store()
+    assert RUN.run_pass(NOW, store=st, deps=make_deps()[0])["ran"]
+    od = RUN.run_on_demand(NOW + timedelta(seconds=30), store=st, deps=make_deps()[0])
+    assert od["ran"] and od["lease"]["why"] == "claimed" and od["on_demand"] is True
+    for holder in (ST.LEASE_CRON, ST.LEASE_ON_DEMAND):
+        st2 = fake_store()
+        assert st2.claim_lease(_u(NOW), source=holder)
+        sleeps = Sleeps()
+        deps, snapshot, *_ = make_deps()
+        deps.sleep = sleeps
+        out = RUN.run_on_demand(NOW + timedelta(seconds=10), store=st2, deps=deps)
+        assert out["ran"] is False and out["reason"] == RUN._ON_DEMAND_REFUSED and out["lease"]["why"] == "held"
+        assert snapshot.calls == [] and sleeps.calls == []
+
+
+def test_A6_a_late_tick_that_waits_the_full_bound_never_gaps_the_next_on_time_tick():
+    """Measured: cron start offsets max 58.5 s. A tick 58 s late meets a stuck open, waits CRON_WAIT_ON_DEMAND_SEC, takes
+    over — its gap clock is the TICK, so the on-time next tick still claims."""
+    st = fake_store()
+    assert RUN.run_pass(at(10, 26), store=st, deps=make_deps()[0])["ran"]
+    assert st.claim_lease(_u(at(10, 31, ss=50)), source=ST.LEASE_ON_DEMAND)
+    late = RUN.run_pass(at(10, 31, ss=58), store=st, deps=make_deps()[0])
+    assert late["ran"] and late["lease"]["why"] == "taken_over"
+    assert late["lease"]["waited_s"] == GC.CRON_WAIT_ON_DEMAND_SEC
+    assert _lease(st)["last_cron_started_at"] == _u(at(10, 31, ss=58))
+    nxt = RUN.run_pass(at(10, 36), store=st, deps=make_deps()[0])
+    assert nxt["ran"] and nxt["lease"]["why"] == "claimed"               # never "gap"
+
+
+class _ReleaseOnSecondLeaseRead(FakeColl):
+    """The on-open holder releases between the cron's 2nd attempt and its classify read (AMENDMENTS5 A7)."""
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.lease_reads = 0
+
+    def find_one(self, q=None, projection=None):
+        if q == {"_id": ST.LEASE_ID}:
+            self.lease_reads += 1
+            if self.lease_reads == 2:
+                self.docs[ST.LEASE_ID]["status"] = "done"
+        return super().find_one(q, projection)
+
+
+def test_A7_a_release_race_inside_the_wait_retries_and_never_takes_over():
+    coll = _ReleaseOnSecondLeaseRead()
+    st = fake_store(**{ST.STATE: coll})
+    st.claim_lease(_u(NOW - timedelta(seconds=5)), source=ST.LEASE_ON_DEMAND)
+    sleeps = Sleeps()
+    deps, snapshot, *_ = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] and out["lease"]["why"] == "claimed" and len(sleeps.calls) == 2
+    assert len(snapshot.calls) == 1
+
+
+class _ReleaseOnFirstLeaseRead(_ReleaseOnSecondLeaseRead):
+    """The on-open holder releases between the cron's FIRST attempt and its classify read (round-1 finding)."""
+    def find_one(self, q=None, projection=None):
+        if q == {"_id": ST.LEASE_ID}:
+            self.lease_reads += 1
+            if self.lease_reads == 1:
+                self.docs[ST.LEASE_ID]["status"] = "done"
+        return FakeColl.find_one(self, q, projection)
+
+
+def test_C1_NEGATIVE_a_release_race_on_the_first_claim_never_costs_the_tick():
+    coll = _ReleaseOnFirstLeaseRead()
+    st = fake_store(**{ST.STATE: coll})
+    st.claim_lease(_u(NOW - timedelta(seconds=30)), source=ST.LEASE_ON_DEMAND)
+    sleeps = Sleeps()
+    deps, snapshot, *_ = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] and out["lease"]["why"] == "claimed" and out["lease"]["waited_s"] == 0.0
+    assert out.get("reason") is None and sleeps.calls == [] and len(snapshot.calls) == 1
+    assert _lease(st)["held_by"] == ST.LEASE_CRON and _lease(st)["last_cron_started_at"] == _u(NOW)
+
+
+def test_C1_NEGATIVE_a_real_store_fault_is_retried_once_then_refused_without_waiting():
+    st = fake_store(**{ST.STATE: FakeColl(fail=True)})
+    calls = []
+    real = st.claim_lease
+
+    def spy(*a, **k):
+        calls.append(k.get("take_over", False))
+        return real(*a, **k)
+    st.claim_lease = spy
+    sleeps = Sleeps()
+    deps, snapshot, *_ = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] is False and out["lease"]["why"] == "error" and out["reason"] == RUN._LEASE_REASON["error"]
+    assert calls == [False, False] and sleeps.calls == [] and snapshot.calls == []      # one immediate retry, no wait
+
+
+def test_C1_NEGATIVE_a_cron_that_waited_spends_the_wait_out_of_its_own_bar_budget(monkeypatch):
+    from chart_maps.gajjala import bars as B
+    budgets = []
+    real = B.frames_for
+
+    def spy(*a, **k):
+        budgets.append(k["budget_sec"])
+        return real(*a, **k)
+    monkeypatch.setattr(B, "frames_for", spy)
+    clock = {"t": 0.0}
+
+    def tick_sleep(s):
+        clock["t"] += s
+    for release_at in (None, 3):                                          # stuck → take-over; released at the 3rd poll
+        st = fake_store()
+        o = st.claim_lease(_u(NOW - timedelta(seconds=5)), source=ST.LEASE_ON_DEMAND)
+        deps, *_ = make_deps(clock=lambda: clock["t"])
+        deps.sleep = Sleeps(on=lambda n, st=st, o=o, r=release_at: (tick_sleep(GC.ON_DEMAND_POLL_SEC),
+                                                                    r and n == r and st.release_lease(_u(NOW), o.token)))
+        out = RUN.run_pass(NOW, store=st, deps=deps)
+        waited = out["lease"]["waited_s"]
+        assert out["ran"] and waited > 0
+        assert budgets[-1] <= GC.PASS_BUDGET_SEC - waited                # never the full budget after a wait
+        assert waited + budgets[-1] <= GC.PASS_BUDGET_SEC                 # ends inside the tick's original window
+    st = fake_store()
+    assert RUN.run_pass(NOW, store=st, deps=make_deps()[0])["ran"]
+    assert GC.PASS_BUDGET_SEC - 1.0 < budgets[-1] <= GC.PASS_BUDGET_SEC  # positive control: no wait → full budget
+
+
+def test_A5_NEGATIVE_naive_lease_stamps_make_the_cron_wait_and_take_over_never_error():
+    st = fake_store()
+    naive = lambda dt: _u(dt).astimezone(timezone.utc).replace(tzinfo=None)   # noqa: E731
+    st.coll(ST.STATE).docs[ST.LEASE_ID] = {"_id": ST.LEASE_ID, "status": "running", "held_by": ST.LEASE_ON_DEMAND,
+                                           "token": "od", "claimed_at": naive(NOW - timedelta(seconds=5)),
+                                           "od_started_at": naive(NOW - timedelta(seconds=5)),
+                                           "last_cron_started_at": naive(NOW - timedelta(minutes=5))}
+    sleeps = Sleeps()
+    deps, *_ = make_deps()
+    deps.sleep = sleeps
+    out = RUN.run_pass(NOW, store=st, deps=deps)
+    assert out["ran"] and out["lease"]["why"] == "taken_over" and len(sleeps.calls) == POLLS
+
+
+def test_K2_an_on_open_pass_never_sends_never_claims_never_writes_the_tracker_never_records_an_alerts_row(live):
+    st = fake_store()
+    deps, _snap, send, status = make_deps()
+    out = RUN.run_on_demand(NOW, store=st, deps=deps)
+    assert out["ran"] and out["status"] == "ok" and "GGA:bull_flag" in out["aplus"]
+    assert send.calls == [] and deps.send_potential.calls == []
+    assert st.alerts_coll().docs == {}                                    # no claim, no SHADOW: row, no #state row
+    assert status.calls == [] and deps.record_potential_status.calls == []
+    assert out["alerts"]["dry"] >= 1 and out["alerts"]["pushed"] == 0
+    assert st.get_read(S, "GGA")["updated_at"] == _u(NOW)                 # the read IS refreshed
+    assert "2026-10-13|GGA" in st.coll(ST.SCAN).docs
+    ids = [k for k in st.coll(ST.PASSES).docs if k.endswith("|open")]
+    assert ids == ["2026-10-13|10:41:00|open"]
+    doc = st.coll(ST.PASSES).docs[ids[0]]
+    assert doc["on_demand"] is True and doc["bars_through_et"] == "10:40" and doc["lease"]["why"] == "claimed"
+    assert doc["finished_at"] >= doc["at"]
+    assert st.latest_pass()["pass_id"] == ids[0] and st.latest_cron_pass() is None     # A10: the cron pointer untouched
+    assert _lease(st)["status"] == "done" and "started_at" not in _lease(st)             # A9
+
+
+def test_K2_NEGATIVE_an_on_open_forming_flag_never_rings_and_never_tracks(live):
+    st = _seeded()
+    seed = copy.deepcopy(st.coll(ST.POTENTIALS).docs)
+    deps, _snap, send, status = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_on_demand(T1, store=st, deps=deps)
+    assert out["ran"] and out["potential"]["potential"] >= 1 and out["potential"]["dry"] >= 1
+    assert deps.send_potential.calls == [] and send.calls == []
+    assert st.coll(ST.POTENTIALS).docs == seed                            # only SEED: no tracker write
+    assert status.calls == [] and deps.record_potential_status.calls == []
+    assert out["potential"]["tracked_today"] == 1                         # the real (cron-written) count, dry or not
+
+
+def test_C7_an_on_open_pass_never_refines_floats(monkeypatch):
+    from chart_maps.gajjala import context as CX
+    seen = []
+    real = CX.floats_for
+
+    def spy(*a, **k):
+        seen.append(bool(k.get("refine")))
+        return real(*a, **k)
+    monkeypatch.setattr(CX, "floats_for", spy)
+    st = fake_store()
+    deps, *_ = make_deps()
+    deps.refine_floats = True
+    assert RUN.run_on_demand(NOW, store=st, deps=deps)["ran"]
+    assert seen and True not in seen
+    seen.clear()
+    assert RUN.run_pass(NOW + timedelta(seconds=GC.PASS_CADENCE_SEC), store=st, deps=deps)["ran"]
+    assert True in seen                                                   # positive control: the cron refines
+
+
+def test_C2_the_on_open_budget_is_the_short_one_and_an_overrun_keeps_the_last_read(monkeypatch):
+    from chart_maps.gajjala import bars as B
+    budgets = []
+    real = B.frames_for
+
+    def spy(*a, **k):
+        budgets.append(k["budget_sec"])
+        return real(*a, **k)
+    monkeypatch.setattr(B, "frames_for", spy)
+    st = fake_store()
+    assert RUN.run_pass(NOW, store=st, deps=make_deps()[0])["ran"]
+    assert GC.ON_DEMAND_BUDGET_SEC < budgets[-1] <= GC.PASS_BUDGET_SEC
+    cron_id = st.latest_pass()["pass_id"]
+    read = copy.deepcopy(st.get_read(S, "GGA"))
+    assert read["updated_at"] == _u(NOW)
+    ticks = iter([0.0] + [GC.ON_DEMAND_BUDGET_SEC + 1.0] * 50)
+    deps, *_ = make_deps(clock=lambda: next(ticks))
+    out = RUN.run_on_demand(NOW + timedelta(seconds=60), store=st, deps=deps)
+    assert budgets[-1] <= GC.ON_DEMAND_BUDGET_SEC
+    assert out["ran"] and out["bars"]["over_budget"] == 1 and out["n_read"] == 0
+    assert st.get_read(S, "GGA") == read                                  # the name keeps its last cron read
+    assert st.latest_pass()["pass_id"] == cron_id                         # A13: nothing re-read → "latest" stays
+    assert "2026-10-13|10:42:00|open" in st.coll(ST.PASSES).docs          # the open's own doc is still on file
+
+
+def test_C5_a_quiet_mornings_first_sighting_still_rings_on_the_next_cron_after_an_on_open_pass():
+    st = fake_store()
+    quiet, *_ = make_deps(rows={"NOPE": snap_row(1.0, 0.95, when=at(10, 25))})
+    assert RUN.run_pass(at(10, 26), store=st, deps=quiet)["ran"]
+    od, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    o = RUN.run_on_demand(at(10, 30, ss=40), store=st, deps=od)
+    assert o["ran"] and o["potential"]["potential"] >= 1 and o["potential"]["dry"] >= 1
+    assert o["potential"]["joined"] == 0 and od.send_potential.calls == []
+    assert st.coll(ST.POTENTIALS).docs == {}
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert out["ran"] and out["potential"]["joined"] == 0
+    assert out["potential"]["pushed"] == len(deps.send_potential.calls) >= 1
+    bf = st.get_potential(S, "GGA", "bull_flag")
+    assert bf["first_seen_mode"] == "normal" and bf["first_seen_et"] == "10:31"
+
+
+def test_C5_NEGATIVE_an_on_open_join_never_unlocks_the_next_cron():
+    st = fake_store()
+    od, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    o = RUN.run_on_demand(at(10, 30, ss=40), store=st, deps=od)
+    assert o["potential"]["joined"] >= 1 and o["potential"]["tracked_today"] == 0
+    deps, *_ = make_deps(rows={"GGA": snap_row(11.2, 8.0, when=at(10, 30))})
+    out = RUN.run_pass(T1, store=st, deps=deps)
+    assert out["potential"]["joined"] >= 1 and deps.send_potential.calls == []
+
+
+def test_C5_an_on_open_pass_doc_never_overwrites_the_cron_minute_doc():
+    st = fake_store()
+    assert RUN.run_pass(at(10, 31), store=st, deps=make_deps()[0])["ran"]
+    cron = copy.deepcopy(st.coll(ST.PASSES).docs["2026-10-13|10:31"])
+    assert RUN.run_on_demand(at(10, 31, ss=40), store=st, deps=make_deps()[0])["ran"]
+    docs = st.coll(ST.PASSES).docs
+    assert "2026-10-13|10:31:40|open" in docs and docs["2026-10-13|10:31"] == cron
+    assert docs["latest_cron"]["pass_id"] == "2026-10-13|10:31" and docs["latest"]["pass_id"].endswith("|open")
+
+
+@pytest.mark.parametrize("now", [at(3, 59), at(20, 6), at(10, 41, date(2026, 10, 17)), at(10, 41, date(2026, 9, 7))])
+def test_C6_an_on_open_pass_outside_the_window_never_claims(now):
+    st = fake_store()
+    deps, snapshot, *_ = make_deps()
+    out = RUN.run_on_demand(now, store=st, deps=deps)
+    assert out["ran"] is False and snapshot.calls == [] and st.coll(ST.STATE).docs == {}
+
+
+def test_latest_never_moves_back():
+    st = fake_store()
+    assert RUN.run_pass(at(10, 41, ss=30), store=st, deps=make_deps()[0])["ran"]       # started later, recorded first
+    assert RUN.run_on_demand(at(10, 41), store=st, deps=make_deps()[0])["ran"]
+    assert st.latest_pass()["pass_id"] == "2026-10-13|10:41"
+    assert "2026-10-13|10:41:00|open" in st.coll(ST.PASSES).docs
+
+
+def test_A8_a_superseded_on_open_pass_stops_writing_and_the_cron_reads_survive(monkeypatch):
+    st = fake_store()
+    rows = {"GGA": snap_row(11.2, 8.0), "GGB": snap_row(11.2, 8.0)}
+    for s in ("GGA", "GGB"):
+        st.upsert_read(S, s, {"setups": {}, "by": "cron"}, now=_u(NOW + timedelta(minutes=1)))
+    cron_reads = copy.deepcopy(st.coll(ST.READS).docs)
+    written, frozen = [], {}
+    real = st.upsert_read
+
+    def upsert_then_flip(session, sym, doc, *, now=None):
+        written.append(sym)
+        real(session, sym, doc, now=now)
+        _lease(st)["token"] = "the-cron-took-it-over"
+        frozen.update({n: c.writes for n, c in st._injected.items()})
+    monkeypatch.setattr(st, "upsert_read", upsert_then_flip)
+    lease_at_flip = {}
+    real_release = st.release_lease
+
+    def release_spy(now, token=None):
+        lease_at_flip.update(copy.deepcopy(_lease(st)))
+        return real_release(now, token)
+    monkeypatch.setattr(st, "release_lease", release_spy)
+    deps, *_ = make_deps(rows=rows)
+    out = RUN.run_on_demand(NOW, store=st, deps=deps)
+    assert out["superseded"] == 1 and out["status"] == "superseded" and len(written) == 1
+    after = {n: c.writes for n, c in st._injected.items()}
+    # zero writes after the flip — but the token-guarded release attempt (an update_one that matches nothing)
+    assert {n: w for n, w in after.items() if n != ST.STATE} == {n: w for n, w in frozen.items() if n != ST.STATE}
+    assert after[ST.STATE] - frozen[ST.STATE] <= 1
+    other = ({"GGA", "GGB"} - set(written)).pop()
+    assert st.coll(ST.READS).docs[f"2026-10-13|{other}"] == cron_reads[f"2026-10-13|{other}"]
+    assert not [k for k in st.coll(ST.PASSES).docs if k.endswith("|open")] and st.latest_pass() is None
+    assert _lease(st) == lease_at_flip and _lease(st)["status"] == "running"   # the cron's lease is untouched
+
+
+def test_A8_a_failed_owner_read_stops_the_open_and_frees_its_own_lease(monkeypatch):
+    """lease_owner_is fails closed on a read fault: the open stops writing, and its token-guarded release frees its
+    OWN lease — so the next cron claims at once instead of waiting CRON_WAIT_ON_DEMAND_SEC."""
+    st = fake_store()
+    monkeypatch.setattr(st, "lease_owner_is", lambda token: False)       # = the find_one raised
+    deps, *_ = make_deps()
+    out = RUN.run_on_demand(NOW, store=st, deps=deps)
+    assert out["superseded"] == 1 and out["status"] == "superseded"
+    assert _lease(st)["status"] == "done" and _lease(st)["held_by"] == ST.LEASE_ON_DEMAND
+    sleeps = Sleeps()
+    deps, snapshot, *_ = make_deps()
+    deps.sleep = sleeps
+    nxt = RUN.run_pass(NOW + timedelta(seconds=GC.PASS_CADENCE_SEC), store=st, deps=deps)
+    assert nxt["ran"] and nxt["lease"]["why"] == "claimed" and sleeps.calls == []
+
+
+def test_A8_a_superseded_open_that_then_raises_writes_no_error_doc():
+    """Final critic 2026-10-16: the lease flips, then the body raises an ORDINARY exception (not _Superseded) before
+    its last owner check — _finish checks the owner before the pass doc, so no "|open" doc lands."""
+    st = fake_store()
+    deps, *_ = make_deps()
+
+    def flip_then_raise(frames, ctx):
+        _lease(st)["token"] = "the-cron-took-it-over"
+        raise RuntimeError("detector broke")
+    deps.read_all = flip_then_raise
+    out = RUN.run_on_demand(NOW, store=st, deps=deps)
+    assert out["superseded"] == 1 and out["status"] == "superseded" and out["reason"].startswith("superseded")
+    assert not [k for k in st.coll(ST.PASSES).docs if k.endswith("|open")] and st.latest_pass() is None
+    assert _lease(st)["token"] == "the-cron-took-it-over" and _lease(st)["status"] == "running"
+
+
+def test_NEGATIVE_A8_an_open_that_raises_while_it_still_owns_the_lease_writes_its_error_doc():
+    st = fake_store()
+    deps, *_ = make_deps()
+
+    def boom(frames, ctx):
+        raise RuntimeError("detector broke")
+    deps.read_all = boom
+    out = RUN.run_on_demand(NOW, store=st, deps=deps)
+    assert out["status"] == "error" and "superseded" not in out
+    opens = [d for k, d in st.coll(ST.PASSES).docs.items() if k.endswith("|open")]
+    assert len(opens) == 1 and opens[0]["status"] == "error" and _lease(st)["status"] == "done"
+
+
+def test_NEGATIVE_A8_a_cron_pass_never_reads_the_owner_check(monkeypatch):
+    st = fake_store()
+    monkeypatch.setattr(st, "lease_owner_is", lambda *a, **k: pytest.fail("the cron never checks"))
+    assert RUN.run_pass(NOW, store=st, deps=make_deps()[0])["ran"]
+
+
+# ── main --on-demand (AMENDMENTS5 A1: the api spawns `python -m chart_maps.gajjala.run --on-demand`) ─────────────────
+def test_A1_main_on_demand_dry_run_uses_a_dry_store_and_both_gates_dry(monkeypatch, live, caplog):
+    base, snapshot, send, status = make_deps()
+    real = fake_store()
+    seen = {}
+    real_dry_store, real_run = RUN.dry_store, RUN.run_on_demand
+    monkeypatch.setattr(RUN, "dry_deps", lambda: base)
+    monkeypatch.setattr(RUN, "dry_store", lambda *a, **k: real_dry_store(real))
+
+    def spy(now, **k):
+        seen.update(k)
+        return real_run(now, **k)
+    monkeypatch.setattr(RUN, "run_on_demand", spy)
+    caplog.set_level(logging.INFO, logger="chart_maps.gajjala.run")
+    assert RUN.main(["--on-demand", "--dry-run", "--now", "2026-10-13T10:41"]) == 0
+    assert getattr(seen["store"], "dry", False) is True and seen["deps"] is base
+    assert send.calls == [] and base.send_potential.calls == [] and status.calls == []
+    assert base.record_potential_status.calls == [] and len(snapshot.calls) == 1
+    assert all(c.writes == 0 for c in real._injected.values())          # a dry store lands nothing
+    assert seen["store"].writes                                           # … and recorded what it would have written
+    assert any("gajjala on-open pass:" in r.getMessage() and "'lease'" in r.getMessage() for r in caplog.records)
+
+
+def test_A1_NEGATIVE_main_on_demand_outside_the_window_never_runs(monkeypatch):
+    monkeypatch.setattr(RUN, "run_on_demand", lambda *a, **k: pytest.fail("no on-open pass outside the window"))
+    monkeypatch.setattr(RUN, "run_pass", lambda *a, **k: pytest.fail("no pass outside the window"))
+    assert RUN.main(["--on-demand", "--now", "2026-10-13T20:10"]) == 0
+    assert RUN.main(["--on-demand", "--now", "2026-10-17T10:41"]) == 0   # Saturday
+
+
+def test_A1_main_on_demand_uses_the_real_store_and_exits_1_on_an_error(monkeypatch):
+    st = fake_store()
+    monkeypatch.setattr(ST, "default", lambda: st)
+    calls = []
+    monkeypatch.setattr(RUN, "run_pass", lambda *a, **k: pytest.fail("the cron path never runs"))
+    monkeypatch.setattr(RUN, "run_on_demand", lambda now, **k: (calls.append(k), {"status": "ok"})[1])
+    assert RUN.main(["--on-demand", "--now", "2026-10-13T10:41"]) == 0
+    assert calls[0]["store"] is st and isinstance(calls[0]["deps"], RUN.Deps)
+    monkeypatch.setattr(RUN, "run_on_demand", lambda now, **k: {"status": "error"})
+    assert RUN.main(["--on-demand", "--now", "2026-10-13T10:41"]) == 1
+    monkeypatch.setattr(RUN, "run_on_demand", lambda now, **k: {"status": "superseded"})
+    assert RUN.main(["--on-demand", "--now", "2026-10-13T10:41"]) == 0
+
+
+def test_the_cron_log_line_carries_the_lease(monkeypatch, caplog):
+    monkeypatch.setattr(RUN, "run_pass", lambda now, **k: {"status": "ok", "lease": {"why": "taken_over"}})
+    monkeypatch.setattr(ST, "default", lambda: fake_store())
+    caplog.set_level(logging.INFO, logger="chart_maps.gajjala.run")
+    assert RUN.main(["--now", "2026-10-13T10:41"]) == 0
+    msg = [r.getMessage() for r in caplog.records if r.getMessage().startswith("gajjala pass:")]
+    assert msg and "taken_over" in msg[0] and "on-open" not in msg[0]
+
+
+def test_run_on_demand_is_run_pass_with_on_demand_and_no_yahoo(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(RUN, "run_pass", lambda now, **k: (seen.update(k), {"ran": False})[1])
+    RUN.run_on_demand(NOW, store="S")
+    assert seen["on_demand"] is True and seen["store"] == "S" and seen["deps"].refine_floats is False
+
+
+def test_NEGATIVE_no_crontab_line_names_the_on_open_pass():
+    lines = [ln for ln in (ROOT / "crontab").read_text().splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
+    assert not [ln for ln in lines if re.search(r"on_demand|on.demand|on.open|gajjala\.scan", ln)]

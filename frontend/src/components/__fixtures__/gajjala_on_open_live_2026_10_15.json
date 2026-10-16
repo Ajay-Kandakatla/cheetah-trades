@@ -1,0 +1,1698 @@
+{
+ "_recipe": "LIVE capture 2026-10-16 ~06:09-06:11 ET from the branch api (throwaway container cheetah-tmp-ggopen-api on :8001, worktree backend, isolated MONGO_DB=cheetah_ggopen_verify seeded from live): curl -s -X POST -H 'X-User-Email: <owner>' http://127.0.0.1:8001/chart-maps/gajjala/scan (post) ; curl -s -H 'X-User-Email: <owner>' 'http://127.0.0.1:8001/chart-maps/gajjala?sub=potential' and ?sub=bull_flag (boards, after the on-open pass landed). Never hand-edited. Read by GajjalaBoard.scan_live.test.tsx.",
+ "post": {
+  "state": "started",
+  "latest_at": "2026-10-16T10:01:00.779000+00:00",
+  "eta_sec": 5,
+  "poll_sec": 5,
+  "wait_max_sec": 90,
+  "text": "🔄 scanning on open — started 06:08:59 ET; the board below stays until it lands"
+ },
+ "boards": {
+  "potential": {
+   "tab": "gajjala",
+   "sub": "potential",
+   "sub_resolved_from": "param",
+   "tf": "5m",
+   "subs": [
+    {
+     "key": "bull_flag",
+     "emoji": "🚩",
+     "label": "Bull Flag",
+     "count": 1
+    },
+    {
+     "key": "kiss_fly",
+     "emoji": "💋",
+     "label": "EMA Kiss & Fly",
+     "count": 2
+    },
+    {
+     "key": "horizontal_fade",
+     "emoji": "➖",
+     "label": "Horizontal Fade",
+     "count": 1
+    },
+    {
+     "key": "intraday_vcp",
+     "emoji": "🌀",
+     "label": "Intraday VCP",
+     "count": 6
+    },
+    {
+     "key": "reversal_squeeze",
+     "emoji": "🎾",
+     "label": "Reversal Squeeze",
+     "count": 3
+    },
+    {
+     "key": "premarket",
+     "emoji": "☀️",
+     "label": "Premarket",
+     "count": 14
+    },
+    {
+     "key": "postmarket",
+     "emoji": "🌙",
+     "label": "Post-market",
+     "count": 0
+    },
+    {
+     "key": "playbook",
+     "emoji": "📓",
+     "label": "Playbook",
+     "count": null
+    },
+    {
+     "key": "potential",
+     "emoji": "🧠",
+     "label": "Potential",
+     "count": 2
+    }
+   ],
+   "session": {
+    "date": "2026-10-16",
+    "label": "today",
+    "tape": "premarket",
+    "badge": "☀️ pre-market",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "refresh_sec": 300
+   },
+   "pass": {
+    "as_of_et": "06:09 ET",
+    "stale": false,
+    "stale_after_sec": 900,
+    "warming": false,
+    "status": "ok",
+    "at": "2026-10-16T10:09:00.831000+00:00",
+    "on_demand": true
+   },
+   "strip": {
+    "runners_100": 0,
+    "runners_80": 0,
+    "best_change_pct": 77.7778,
+    "best_symbol": "HODO",
+    "quiet": false,
+    "text": "0 runners ≥100% · 0 ≥80% · best HODO +77.8% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+   },
+   "counts": {
+    "aplus": 0,
+    "forming": 9,
+    "partial": 4,
+    "triggered": 0,
+    "stopped": 0,
+    "invalid": 46,
+    "none": 211,
+    "awaiting_answer": 0,
+    "listed": 54
+   },
+   "tiles": [
+    {
+     "symbol": "SXTC",
+     "name": null,
+     "href": "/sepa/SXTC?tab=supply",
+     "tf": "5m",
+     "bars": [
+      {
+       "t": "2026-10-16 04:05",
+       "o": 0.0679,
+       "h": 0.0711,
+       "l": 0.0679,
+       "c": 0.0699,
+       "v": 241349.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:10",
+       "o": 0.0699,
+       "h": 0.071,
+       "l": 0.0679,
+       "c": 0.0679,
+       "v": 355010.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:15",
+       "o": 0.0679,
+       "h": 0.0705,
+       "l": 0.0679,
+       "c": 0.07,
+       "v": 257441.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:20",
+       "o": 0.07,
+       "h": 0.0704,
+       "l": 0.0683,
+       "c": 0.0704,
+       "v": 79663.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:25",
+       "o": 0.0705,
+       "h": 0.0706,
+       "l": 0.0687,
+       "c": 0.0706,
+       "v": 26127.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:30",
+       "o": 0.07,
+       "h": 0.071,
+       "l": 0.07,
+       "c": 0.0709,
+       "v": 30233.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:35",
+       "o": 0.07,
+       "h": 0.0709,
+       "l": 0.0698,
+       "c": 0.0698,
+       "v": 80662.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:40",
+       "o": 0.0698,
+       "h": 0.071,
+       "l": 0.069,
+       "c": 0.071,
+       "v": 68727.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:45",
+       "o": 0.071,
+       "h": 0.0711,
+       "l": 0.0702,
+       "c": 0.0711,
+       "v": 75129.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:50",
+       "o": 0.0711,
+       "h": 0.0711,
+       "l": 0.0709,
+       "c": 0.0711,
+       "v": 45944.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:55",
+       "o": 0.071,
+       "h": 0.0719,
+       "l": 0.071,
+       "c": 0.0711,
+       "v": 78483.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:00",
+       "o": 0.0713,
+       "h": 0.0746,
+       "l": 0.0712,
+       "c": 0.0731,
+       "v": 276235.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:05",
+       "o": 0.0724,
+       "h": 0.073,
+       "l": 0.0715,
+       "c": 0.0715,
+       "v": 102707.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:10",
+       "o": 0.0715,
+       "h": 0.0728,
+       "l": 0.0715,
+       "c": 0.0726,
+       "v": 55932.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:15",
+       "o": 0.0727,
+       "h": 0.0739,
+       "l": 0.072,
+       "c": 0.0735,
+       "v": 166975.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:20",
+       "o": 0.0729,
+       "h": 0.0849,
+       "l": 0.0729,
+       "c": 0.0849,
+       "v": 1633603.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:25",
+       "o": 0.083,
+       "h": 0.0928,
+       "l": 0.0726,
+       "c": 0.076,
+       "v": 13001279.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:30",
+       "o": 0.076,
+       "h": 0.1028,
+       "l": 0.0756,
+       "c": 0.0962,
+       "v": 16422212.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:35",
+       "o": 0.0968,
+       "h": 0.1045,
+       "l": 0.093,
+       "c": 0.0935,
+       "v": 14417270.5,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:40",
+       "o": 0.094,
+       "h": 0.094,
+       "l": 0.0749,
+       "c": 0.0817,
+       "v": 11840432.5,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:45",
+       "o": 0.0805,
+       "h": 0.0921,
+       "l": 0.0805,
+       "c": 0.0883,
+       "v": 7445606.685339,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:50",
+       "o": 0.0883,
+       "h": 0.0972,
+       "l": 0.0873,
+       "c": 0.0949,
+       "v": 7905169.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:55",
+       "o": 0.0949,
+       "h": 0.1005,
+       "l": 0.0893,
+       "c": 0.0914,
+       "v": 7644548.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 06:00",
+       "o": 0.0913,
+       "h": 0.1083,
+       "l": 0.0853,
+       "c": 0.0994,
+       "v": 13632339.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 06:05",
+       "o": 0.1,
+       "h": 0.1,
+       "l": 0.091,
+       "c": 0.0952,
+       "v": 5991131.0,
+       "s": "pre"
+      }
+     ],
+     "vol_avg": {
+      "period": 50,
+      "label": "50-bar avg volume",
+      "values": [
+       278620.40974562,
+       271253.82974562,
+       267103.22458326,
+       260942.7611784,
+       258522.04,
+       257534.96,
+       256564.98,
+       252830.58,
+       250873.08,
+       233242.1,
+       224915.66,
+       227367.6,
+       207652.7,
+       171106.72,
+       154896.44,
+       175925.16,
+       431091.44,
+       756353.58,
+       1042489.59,
+       1277111.74,
+       1423133.6537067802,
+       1578645.6337067802,
+       1730196.51370678,
+       2001613.97370678,
+       2117001.43370678
+      ]
+     },
+     "bands": [],
+     "lines": [
+      {
+       "price": 0.1083,
+       "label": "BUY > 0.1083",
+       "tone": "buy"
+      },
+      {
+       "price": 0.091,
+       "label": "STOP 0.091",
+       "tone": "stop"
+      },
+      {
+       "price": 0.1012,
+       "label": "now · pre",
+       "tone": "now"
+      }
+     ],
+     "markers": [],
+     "stats": [
+      {
+       "k": "Change",
+       "v": "+49.1%"
+      },
+      {
+       "k": "Volume",
+       "v": "37.7M"
+      }
+     ],
+     "why": "",
+     "badges": [],
+     "curves": [
+      {
+       "tone": "ema9",
+       "label": "9 EMA",
+       "values": [
+        0.070866,
+        0.070273,
+        0.070219,
+        0.070255,
+        0.070324,
+        0.070439,
+        0.070311,
+        0.070449,
+        0.070569,
+        0.070665,
+        0.070752,
+        0.071222,
+        0.071277,
+        0.071542,
+        0.071934,
+        0.074527,
+        0.074821,
+        0.079097,
+        0.081978,
+        0.081922,
+        0.083198,
+        0.085538,
+        0.086711,
+        0.089248,
+        0.090439
+       ]
+      },
+      {
+       "tone": "ema21",
+       "label": "21 EMA",
+       "values": [
+        0.071777,
+        0.071424,
+        0.071295,
+        0.071213,
+        0.071158,
+        0.071134,
+        0.071013,
+        0.071012,
+        0.071015,
+        0.071018,
+        0.071026,
+        0.071214,
+        0.07124,
+        0.071364,
+        0.071558,
+        0.072771,
+        0.073065,
+        0.075168,
+        0.076834,
+        0.077277,
+        0.078279,
+        0.07979,
+        0.080845,
+        0.082532,
+        0.083684
+       ]
+      }
+     ],
+     "gajjala": {
+      "setup": "reversal_squeeze",
+      "state": "forming",
+      "frame": "5m",
+      "ready": true,
+      "broke": false,
+      "trigger": 0.1083,
+      "stop": 0.091,
+      "risk_pct": 15.974145891043396,
+      "entry_bar_t": null,
+      "bars_since_entry": null,
+      "criteria": [
+       {
+        "key": "k8_tennis",
+        "label": "≥ 1 tennis ball (8% drop closed back within 2% in 3 bars)",
+        "ok": true,
+        "value": "drop 2026-10-16 05:55 · back 2026-10-16 06:00",
+        "need": "≥ 1"
+       },
+       {
+        "key": "k8_failed",
+        "label": "≥ 1 failed attempt at the highs (distinct)",
+        "ok": true,
+        "value": "2 attempt(s) today",
+        "need": "an earlier try at the highs that was sold"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 base volume ≤ 0.5× the squeeze-back run",
+        "ok": true,
+        "value": "max 5991131",
+        "need": "≤ 6816170"
+       },
+       {
+        "key": "k8_base_len",
+        "label": "quiet base at least 1 bar(s)",
+        "ok": true,
+        "value": "1 bars",
+        "need": "≥ 1"
+       }
+      ],
+      "missed": [],
+      "unjudged": [],
+      "grade": null,
+      "variant": null,
+      "red_closes": 1,
+      "flag_k": null,
+      "reason": "",
+      "state_label": "forming — ready: the next bar over 0.1083 · UNMEASURED",
+      "variant_label": null,
+      "grade_label": null,
+      "chips": {
+       "float": {
+        "shares": 1321418.0,
+        "src": "shares_out_massive",
+        "text": "shares out 1.3M (Massive)",
+        "as_of": "2026-10-16T10:09:00.831208+00:00",
+        "suspect": false
+       },
+       "float_suspect": null,
+       "rotation": "🔄 shares out ×28.5",
+       "halts": null,
+       "psych": [],
+       "change_pct": 49.1279,
+       "volume": 37715423.0,
+       "vol_src": "min_av",
+       "session_badge": "☀️ pre-market",
+       "first15": false,
+       "red_closes": null,
+       "stopped_earlier": null,
+       "flag_k": null,
+       "instrument": null,
+       "outside_rth": "pre-market — he uses limit orders only and less size outside regular hours (S8 1:16:35)",
+       "read_at": null,
+       "squeeze_history": "🎾 squeeze history: 5 of last 30 sessions (≥50% range or a halt)"
+      },
+      "listed": {
+       "since": "2026-10-16",
+       "last_qualified": "2026-10-16",
+       "day_n": 1,
+       "of": 3,
+       "text": "listed day 1/3 · since 2026-10-16"
+      },
+      "potential": {
+       "kind": "armed",
+       "kind_label": "trigger armed",
+       "setup": "reversal_squeeze",
+       "setup_label": "🎾 Reversal Squeeze",
+       "first_seen_et": null,
+       "again": false,
+       "tells": [
+        {
+         "key": "float",
+         "text": "shares out 1.3M (Massive)",
+         "cite": "S8 21:04 “the lower the float the better”"
+        },
+        {
+         "key": "rotation",
+         "text": "🔄 shares out ×28.5",
+         "cite": "S8 1:15:24 “the float is rotating”"
+        },
+        {
+         "key": "also",
+         "text": "🧩 also forming: 🌀 Intraday VCP",
+         "cite": "S9 1:59:01 “two or three setups mixed together … the certainty of the move is higher”"
+        }
+       ],
+       "also": [
+        {
+         "setup": "intraday_vcp",
+         "label": "🌀 Intraday VCP"
+        }
+       ],
+       "text": "🧠 trigger armed · 🎾 Reversal Squeeze"
+      }
+     },
+     "live_price": 0.1012,
+     "live_session": "premarket"
+    },
+    {
+     "symbol": "SNES",
+     "name": null,
+     "href": "/sepa/SNES?tab=supply",
+     "tf": "5m",
+     "bars": [
+      {
+       "t": "2026-10-16 04:05",
+       "o": 0.6771,
+       "h": 0.7104,
+       "l": 0.64,
+       "c": 0.64,
+       "v": 16904.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:10",
+       "o": 0.6399,
+       "h": 0.6499,
+       "l": 0.631,
+       "c": 0.6406,
+       "v": 6074.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:15",
+       "o": 0.641,
+       "h": 0.6516,
+       "l": 0.633,
+       "c": 0.6332,
+       "v": 16133.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:20",
+       "o": 0.6332,
+       "h": 0.6378,
+       "l": 0.633,
+       "c": 0.6378,
+       "v": 56051.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:25",
+       "o": 0.647,
+       "h": 0.6659,
+       "l": 0.645,
+       "c": 0.6659,
+       "v": 24967.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:30",
+       "o": 0.659,
+       "h": 0.6667,
+       "l": 0.659,
+       "c": 0.6667,
+       "v": 1875.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:35",
+       "o": 0.6659,
+       "h": 0.6667,
+       "l": 0.659,
+       "c": 0.659,
+       "v": 5131.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:40",
+       "o": 0.66,
+       "h": 0.66,
+       "l": 0.634,
+       "c": 0.65,
+       "v": 6372.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:45",
+       "o": 0.645,
+       "h": 0.65,
+       "l": 0.64,
+       "c": 0.64,
+       "v": 9423.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:50",
+       "o": 0.6499,
+       "h": 0.65,
+       "l": 0.6408,
+       "c": 0.6408,
+       "v": 4576.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:55",
+       "o": 0.6499,
+       "h": 0.6499,
+       "l": 0.6499,
+       "c": 0.6499,
+       "v": 512.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:00",
+       "o": 0.652,
+       "h": 0.67,
+       "l": 0.641,
+       "c": 0.67,
+       "v": 3341.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:10",
+       "o": 0.6602,
+       "h": 0.6602,
+       "l": 0.6425,
+       "c": 0.6601,
+       "v": 6416.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:15",
+       "o": 0.6601,
+       "h": 0.6601,
+       "l": 0.6601,
+       "c": 0.6601,
+       "v": 209.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:20",
+       "o": 0.66,
+       "h": 0.6601,
+       "l": 0.66,
+       "c": 0.6601,
+       "v": 1432.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:25",
+       "o": 0.66,
+       "h": 0.66,
+       "l": 0.66,
+       "c": 0.66,
+       "v": 232.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:30",
+       "o": 0.66,
+       "h": 0.6651,
+       "l": 0.65,
+       "c": 0.6651,
+       "v": 1985.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:35",
+       "o": 0.6651,
+       "h": 0.6651,
+       "l": 0.6651,
+       "c": 0.6651,
+       "v": 132.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:40",
+       "o": 0.6651,
+       "h": 0.6651,
+       "l": 0.6651,
+       "c": 0.6651,
+       "v": 100.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:45",
+       "o": 0.65,
+       "h": 0.67,
+       "l": 0.64,
+       "c": 0.67,
+       "v": 2692.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:55",
+       "o": 0.67,
+       "h": 0.67,
+       "l": 0.67,
+       "c": 0.67,
+       "v": 1663.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 06:00",
+       "o": 0.67,
+       "h": 0.675,
+       "l": 0.67,
+       "c": 0.675,
+       "v": 2998.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 06:05",
+       "o": 0.675,
+       "h": 0.675,
+       "l": 0.675,
+       "c": 0.675,
+       "v": 1035.0,
+       "s": "pre"
+      }
+     ],
+     "vol_avg": {
+      "period": 50,
+      "label": "50-bar avg volume",
+      "values": [
+       18445.47923894,
+       14216.54107334,
+       14100.585333340001,
+       14916.52533334,
+       14422.869500000003,
+       13853.589500000002,
+       13789.169500000002,
+       13607.049500000001,
+       13325.169500000002,
+       12028.249500000002,
+       11316.449500000002,
+       11054.089500000002,
+       10732.749500000002,
+       10416.1295,
+       10224.5695,
+       10155.3095,
+       10104.2695,
+       10026.4095,
+       9921.4695,
+       9855.369499999999,
+       9787.8895,
+       9715.9895,
+       9695.4695
+      ]
+     },
+     "bands": [],
+     "lines": [
+      {
+       "price": 0.675,
+       "label": "BUY > 0.675",
+       "tone": "buy"
+      },
+      {
+       "price": 0.675,
+       "label": "STOP 0.675",
+       "tone": "stop"
+      },
+      {
+       "price": 0.67,
+       "label": "now · pre",
+       "tone": "now"
+      }
+     ],
+     "markers": [],
+     "stats": [],
+     "why": "1 of 2 cycles",
+     "badges": [],
+     "curves": [
+      {
+       "tone": "ema9",
+       "label": "9 EMA",
+       "values": [
+        0.690942,
+        0.680874,
+        0.671339,
+        0.664631,
+        0.664885,
+        0.665248,
+        0.663998,
+        0.661199,
+        0.656959,
+        0.653727,
+        0.652962,
+        0.656369,
+        0.657115,
+        0.657712,
+        0.65819,
+        0.658552,
+        0.659862,
+        0.660909,
+        0.661747,
+        0.663398,
+        0.664718,
+        0.666775,
+        0.66842
+       ]
+      },
+      {
+       "tone": "ema21",
+       "label": "21 EMA",
+       "values": [
+        0.69559,
+        0.690591,
+        0.685374,
+        0.681049,
+        0.679672,
+        0.678493,
+        0.67672,
+        0.674291,
+        0.671174,
+        0.668413,
+        0.66673,
+        0.667027,
+        0.666397,
+        0.665825,
+        0.665304,
+        0.664822,
+        0.664847,
+        0.66487,
+        0.664891,
+        0.665356,
+        0.665778,
+        0.666616,
+        0.667378
+       ]
+      }
+     ],
+     "gajjala": {
+      "setup": "intraday_vcp",
+      "state": "forming",
+      "frame": "5m",
+      "ready": false,
+      "broke": false,
+      "trigger": 0.675,
+      "stop": 0.675,
+      "risk_pct": 0.0,
+      "entry_bar_t": null,
+      "bars_since_entry": null,
+      "criteria": [
+       {
+        "key": "k4_cycles",
+        "label": "K4 at least 2 contractions",
+        "ok": false,
+        "value": "1 cycles",
+        "need": "≥ 2"
+       },
+       {
+        "key": "k7_ratio",
+        "label": "K7 each cycle's range ≤ 0.75× the previous",
+        "ok": true,
+        "value": "0.00",
+        "need": "≤ 0.75× each"
+       },
+       {
+        "key": "k7_ema21",
+        "label": "K7 each cycle low holds the 21 EMA (−0.5%)",
+        "ok": true,
+        "value": "0.68",
+        "need": "≥ 21 EMA × (1 − 0.5%)"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 pullback volume ≤ 0.5× leg mean",
+        "ok": true,
+        "value": "max 1035",
+        "need": "≤ 1346"
+       }
+      ],
+      "missed": [],
+      "unjudged": [],
+      "grade": null,
+      "variant": null,
+      "red_closes": 0,
+      "flag_k": null,
+      "reason": "1 of 2 cycles",
+      "state_label": "forming — 1 of 2 cycles · UNMEASURED",
+      "variant_label": null,
+      "grade_label": null,
+      "chips": {
+       "float": {
+        "shares": 5423542.0,
+        "src": "shares_out_massive",
+        "text": "shares out 5.4M (Massive)",
+        "as_of": "2026-10-16T10:09:00.831208+00:00",
+        "suspect": false
+       },
+       "float_suspect": null,
+       "rotation": "🔄 shares out ×0.0",
+       "halts": null,
+       "psych": [],
+       "change_pct": null,
+       "volume": null,
+       "vol_src": null,
+       "session_badge": "☀️ pre-market",
+       "first15": false,
+       "red_closes": null,
+       "stopped_earlier": null,
+       "flag_k": null,
+       "instrument": null,
+       "outside_rth": "pre-market — he uses limit orders only and less size outside regular hours (S8 1:16:35)",
+       "read_at": null
+      },
+      "listed": {
+       "since": "2026-10-15",
+       "last_qualified": "2026-10-15",
+       "day_n": 2,
+       "of": 3,
+       "text": "listed day 2/3 · since 2026-10-15"
+      },
+      "potential": {
+       "kind": "building",
+       "kind_label": "building",
+       "setup": "intraday_vcp",
+       "setup_label": "🌀 Intraday VCP",
+       "first_seen_et": null,
+       "again": false,
+       "tells": [
+        {
+         "key": "float",
+         "text": "shares out 5.4M (Massive)",
+         "cite": "S8 21:04 “the lower the float the better”"
+        },
+        {
+         "key": "rotation",
+         "text": "🔄 shares out ×0.0",
+         "cite": "S8 1:15:24 “the float is rotating”"
+        },
+        {
+         "key": "prior_day",
+         "text": "📅 on his scanner 2026-10-15, up to +45%",
+         "cite": "S9 2:02:47 “previous-day strength”"
+        }
+       ],
+       "also": [],
+       "text": "🧠 building · 🌀 Intraday VCP"
+      }
+     },
+     "live_price": 0.67,
+     "live_session": "premarket"
+    }
+   ],
+   "graveyard_today": [
+    "AGMH",
+    "AIIO",
+    "AIXI",
+    "BKYI",
+    "BMBL",
+    "ELOG",
+    "FBGL",
+    "FLYE",
+    "ILAG",
+    "IZM",
+    "JBDI",
+    "JYD",
+    "JZ",
+    "PFAI",
+    "SES",
+    "SMJF",
+    "YFOR",
+    "ZTG"
+   ],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
+   "rules_section": "gajjala",
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "awaiting": [],
+   "scan": {
+    "state": "idle",
+    "on_demand": true,
+    "started_at_et": "06:09",
+    "bars_through_et": "06:05",
+    "as_of_text": "🔄 scanned on open 06:09 ET · bars through 06:05",
+    "scanning_text": null,
+    "text": "🔄 scanned on open 06:09 ET · bars through 06:05",
+    "note": null,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago"
+   },
+   "enterable": {
+    "title": null,
+    "rows": [],
+    "empty_text": "🎯 No A+ right now · scanned on open 06:09 ET · UNMEASURED",
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation."
+   },
+   "graveyard_text": "🪦 moved to the graveyard today: AGMH, AIIO, AIXI, BKYI, BMBL, ELOG, FBGL, FLYE, ILAG, IZM, JBDI, JYD, JZ, PFAI, SES, SMJF, YFOR, ZTG",
+   "track": {
+    "title": "📈 Track — 0 potentials first seen today · UNMEASURED",
+    "unmeasured": "UNMEASURED — what each potential did after it was first seen, recorded pass by pass; not a forecast. No study has read this record yet.",
+    "empty_today": "No potential first seen yet this session — the pass runs every 5 minutes from 04:01 to 19:56 ET.",
+    "today": {
+     "date": "2026-10-16",
+     "label": "today",
+     "n": 0,
+     "armed_n": 0,
+     "building_n": 0,
+     "pushed_n": 0,
+     "rows": []
+    },
+    "yesterday": {
+     "date": "2026-10-15",
+     "title": "Last session (2026-10-15) — 0 potentials and how each ended: states and prices only, no win/loss maths",
+     "n": 0,
+     "rows": []
+    }
+   },
+   "watch": {
+    "text": "👀 On his watch list, no structure yet — “if it's making some noise in pre-market I put them in my watch list … after hours moves from the past day, I'll keep them as well” (S8 13:21–14:34): HODO, RUBI, XXII, TCRT, BDRX, SITC, JBDI, CIGL, AIDX, CHSN, REFR, ACH",
+    "symbols": [
+     {
+      "symbol": "HODO",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=HODO"
+     },
+     {
+      "symbol": "RUBI",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=RUBI"
+     },
+     {
+      "symbol": "XXII",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=XXII"
+     },
+     {
+      "symbol": "TCRT",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=TCRT"
+     },
+     {
+      "symbol": "BDRX",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=BDRX"
+     },
+     {
+      "symbol": "SITC",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=SITC"
+     },
+     {
+      "symbol": "JBDI",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=JBDI"
+     },
+     {
+      "symbol": "CIGL",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=CIGL"
+     },
+     {
+      "symbol": "AIDX",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=AIDX"
+     },
+     {
+      "symbol": "CHSN",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=CHSN"
+     },
+     {
+      "symbol": "REFR",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=REFR"
+     },
+     {
+      "symbol": "ACH",
+      "href": "/chart-maps?tab=gajjala&sub=premarket&focus=ACH"
+     }
+    ]
+   },
+   "tape_session": "premarket"
+  },
+  "bull_flag": {
+   "tab": "gajjala",
+   "sub": "bull_flag",
+   "sub_resolved_from": "param",
+   "tf": "5m",
+   "subs": [
+    {
+     "key": "bull_flag",
+     "emoji": "🚩",
+     "label": "Bull Flag",
+     "count": 1
+    },
+    {
+     "key": "kiss_fly",
+     "emoji": "💋",
+     "label": "EMA Kiss & Fly",
+     "count": 2
+    },
+    {
+     "key": "horizontal_fade",
+     "emoji": "➖",
+     "label": "Horizontal Fade",
+     "count": 1
+    },
+    {
+     "key": "intraday_vcp",
+     "emoji": "🌀",
+     "label": "Intraday VCP",
+     "count": 6
+    },
+    {
+     "key": "reversal_squeeze",
+     "emoji": "🎾",
+     "label": "Reversal Squeeze",
+     "count": 3
+    },
+    {
+     "key": "premarket",
+     "emoji": "☀️",
+     "label": "Premarket",
+     "count": 14
+    },
+    {
+     "key": "postmarket",
+     "emoji": "🌙",
+     "label": "Post-market",
+     "count": 0
+    },
+    {
+     "key": "playbook",
+     "emoji": "📓",
+     "label": "Playbook",
+     "count": null
+    },
+    {
+     "key": "potential",
+     "emoji": "🧠",
+     "label": "Potential",
+     "count": 2
+    }
+   ],
+   "session": {
+    "date": "2026-10-16",
+    "label": "today",
+    "tape": "premarket",
+    "badge": "☀️ pre-market",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "refresh_sec": 300
+   },
+   "pass": {
+    "as_of_et": "06:09 ET",
+    "stale": false,
+    "stale_after_sec": 900,
+    "warming": false,
+    "status": "ok",
+    "at": "2026-10-16T10:09:00.831000+00:00",
+    "on_demand": true
+   },
+   "strip": {
+    "runners_100": 0,
+    "runners_80": 0,
+    "best_change_pct": 77.7778,
+    "best_symbol": "HODO",
+    "quiet": false,
+    "text": "0 runners ≥100% · 0 ≥80% · best HODO +77.8% — not quiet (his quiet line: best runner under 40%, S8 44:37)"
+   },
+   "counts": {
+    "aplus": 0,
+    "forming": 1,
+    "partial": 0,
+    "triggered": 0,
+    "stopped": 0,
+    "invalid": 6,
+    "none": 47,
+    "awaiting_answer": 0,
+    "listed": 54
+   },
+   "tiles": [
+    {
+     "symbol": "RCT",
+     "name": null,
+     "href": "/sepa/RCT?tab=supply",
+     "tf": "5m",
+     "bars": [
+      {
+       "t": "2026-10-16 04:05",
+       "o": 0.091,
+       "h": 0.091,
+       "l": 0.087,
+       "c": 0.09,
+       "v": 15205.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:10",
+       "o": 0.0903,
+       "h": 0.0905,
+       "l": 0.0903,
+       "c": 0.0903,
+       "v": 1868.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:15",
+       "o": 0.0903,
+       "h": 0.0903,
+       "l": 0.0901,
+       "c": 0.0903,
+       "v": 6261.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:20",
+       "o": 0.0915,
+       "h": 0.0915,
+       "l": 0.0915,
+       "c": 0.0915,
+       "v": 24520.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:25",
+       "o": 0.0916,
+       "h": 0.0916,
+       "l": 0.0916,
+       "c": 0.0916,
+       "v": 993.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:30",
+       "o": 0.0903,
+       "h": 0.0903,
+       "l": 0.0903,
+       "c": 0.0903,
+       "v": 9812.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:35",
+       "o": 0.0906,
+       "h": 0.0906,
+       "l": 0.0906,
+       "c": 0.0906,
+       "v": 1661.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:45",
+       "o": 0.0907,
+       "h": 0.0942,
+       "l": 0.0907,
+       "c": 0.0907,
+       "v": 1565.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 04:55",
+       "o": 0.0942,
+       "h": 0.0942,
+       "l": 0.0942,
+       "c": 0.0942,
+       "v": 1118.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:00",
+       "o": 0.0873,
+       "h": 0.0873,
+       "l": 0.0873,
+       "c": 0.0873,
+       "v": 118.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:05",
+       "o": 0.088,
+       "h": 0.0883,
+       "l": 0.088,
+       "c": 0.0883,
+       "v": 5516.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:10",
+       "o": 0.0906,
+       "h": 0.0906,
+       "l": 0.0884,
+       "c": 0.0906,
+       "v": 28977.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:15",
+       "o": 0.0883,
+       "h": 0.0883,
+       "l": 0.0883,
+       "c": 0.0883,
+       "v": 2639.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:20",
+       "o": 0.0883,
+       "h": 0.0883,
+       "l": 0.0883,
+       "c": 0.0883,
+       "v": 5567.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:35",
+       "o": 0.0935,
+       "h": 0.0935,
+       "l": 0.092,
+       "c": 0.0935,
+       "v": 15708.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:40",
+       "o": 0.0991,
+       "h": 0.0991,
+       "l": 0.092,
+       "c": 0.092,
+       "v": 6236.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:45",
+       "o": 0.091,
+       "h": 0.099,
+       "l": 0.091,
+       "c": 0.096,
+       "v": 10870.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:50",
+       "o": 0.096,
+       "h": 0.099,
+       "l": 0.096,
+       "c": 0.0981,
+       "v": 5458.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 05:55",
+       "o": 0.0989,
+       "h": 0.0991,
+       "l": 0.094,
+       "c": 0.094,
+       "v": 46445.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 06:00",
+       "o": 0.092,
+       "h": 0.096,
+       "l": 0.092,
+       "c": 0.096,
+       "v": 5706.0,
+       "s": "pre"
+      },
+      {
+       "t": "2026-10-16 06:05",
+       "o": 0.0912,
+       "h": 0.096,
+       "l": 0.0902,
+       "c": 0.096,
+       "v": 21108.0,
+       "s": "pre"
+      }
+     ],
+     "vol_avg": {
+      "period": 50,
+      "label": "50-bar avg volume",
+      "values": [
+       67365.37762464,
+       62406.07133644,
+       62434.55597244,
+       62901.355972440004,
+       62671.21597244,
+       62753.73597244,
+       62585.79597244,
+       62479.29597244,
+       62374.61597244,
+       61893.29597244,
+       53900.83597244,
+       37028.67597244,
+       27692.09597244,
+       22903.955972440002,
+       16892.21597244,
+       15351.155972440001,
+       14132.13597244,
+       12416.155972440001,
+       12219.21597244,
+       11923.79597244,
+       11963.37597244
+      ]
+     },
+     "bands": [],
+     "lines": [
+      {
+       "price": 0.096,
+       "label": "BUY > 0.096",
+       "tone": "buy"
+      },
+      {
+       "price": 0.0902,
+       "label": "STOP 0.0902",
+       "tone": "stop"
+      },
+      {
+       "price": 0.091,
+       "label": "now · pre",
+       "tone": "now"
+      }
+     ],
+     "markers": [],
+     "stats": [],
+     "why": "waiting for the pullback bar",
+     "badges": [],
+     "curves": [
+      {
+       "tone": "ema9",
+       "label": "9 EMA",
+       "values": [
+        0.092148,
+        0.091778,
+        0.091483,
+        0.091486,
+        0.091509,
+        0.091267,
+        0.091134,
+        0.091047,
+        0.091678,
+        0.090802,
+        0.090302,
+        0.090361,
+        0.089949,
+        0.089619,
+        0.090395,
+        0.090716,
+        0.091773,
+        0.093038,
+        0.093231,
+        0.093785,
+        0.094228
+       ]
+      },
+      {
+       "tone": "ema21",
+       "label": "21 EMA",
+       "values": [
+        0.092761,
+        0.092537,
+        0.092334,
+        0.092258,
+        0.092198,
+        0.092026,
+        0.091896,
+        0.091787,
+        0.092007,
+        0.091579,
+        0.091281,
+        0.091219,
+        0.090953,
+        0.090712,
+        0.090966,
+        0.09106,
+        0.091509,
+        0.092108,
+        0.09228,
+        0.092618,
+        0.092926
+       ]
+      }
+     ],
+     "gajjala": {
+      "setup": "bull_flag",
+      "state": "forming",
+      "frame": "5m",
+      "ready": false,
+      "broke": false,
+      "trigger": 0.096,
+      "stop": 0.0902,
+      "risk_pct": 6.041666666666666,
+      "entry_bar_t": null,
+      "bars_since_entry": null,
+      "criteria": [
+       {
+        "key": "k2",
+        "label": "K2 leg volume rising, each step ≤ 5×",
+        "ok": true,
+        "value": "2 demand bars",
+        "need": "rising, no step above the cap"
+       },
+       {
+        "key": "k3_vol",
+        "label": "K3 pullback volume ≤ 0.5× leg mean",
+        "ok": true,
+        "value": "max — vs cap 6704",
+        "need": "≤ 6704"
+       },
+       {
+        "key": "k4",
+        "label": "K4 pullback 1–3 bars",
+        "ok": false,
+        "value": "0 bars",
+        "need": "1–3"
+       }
+      ],
+      "missed": [],
+      "unjudged": [],
+      "grade": null,
+      "variant": null,
+      "red_closes": 0,
+      "flag_k": 1,
+      "reason": "waiting for the pullback bar",
+      "state_label": "forming — waiting for the pullback bar · UNMEASURED",
+      "variant_label": null,
+      "grade_label": null,
+      "chips": {
+       "float": {
+        "shares": 68380615.0,
+        "src": "shares_out_massive",
+        "text": "shares out 68.4M (Massive)",
+        "as_of": "2026-10-16T10:09:00.831208+00:00",
+        "suspect": false
+       },
+       "float_suspect": null,
+       "rotation": "🔄 shares out ×0.0",
+       "halts": null,
+       "psych": [],
+       "change_pct": null,
+       "volume": null,
+       "vol_src": null,
+       "session_badge": "☀️ pre-market",
+       "first15": false,
+       "red_closes": null,
+       "stopped_earlier": null,
+       "flag_k": "flag #1 today · Business Insider: he plays the first and second, usually skips the third (one third-party source)",
+       "instrument": null,
+       "outside_rth": "pre-market — he uses limit orders only and less size outside regular hours (S8 1:16:35)",
+       "read_at": null
+      },
+      "listed": {
+       "since": "2026-10-14",
+       "last_qualified": "2026-10-14",
+       "day_n": 3,
+       "of": 3,
+       "text": "listed day 3/3 · since 2026-10-14"
+      }
+     },
+     "live_price": 0.091,
+     "live_session": "premarket"
+    }
+   ],
+   "graveyard_today": [
+    "AGMH",
+    "AIIO",
+    "AIXI",
+    "BKYI",
+    "BMBL",
+    "ELOG",
+    "FBGL",
+    "FLYE",
+    "ILAG",
+    "IZM",
+    "JBDI",
+    "JYD",
+    "JZ",
+    "PFAI",
+    "SES",
+    "SMJF",
+    "YFOR",
+    "ZTG"
+   ],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
+   "rules_section": "gajjala",
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "awaiting": [],
+   "scan": {
+    "state": "idle",
+    "on_demand": true,
+    "started_at_et": "06:09",
+    "bars_through_et": "06:05",
+    "as_of_text": "🔄 scanned on open 06:09 ET · bars through 06:05",
+    "scanning_text": null,
+    "text": "🔄 scanned on open 06:09 ET · bars through 06:05",
+    "note": null,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago"
+   },
+   "enterable": {
+    "title": null,
+    "rows": [],
+    "empty_text": "🎯 No A+ right now · scanned on open 06:09 ET · UNMEASURED",
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation."
+   },
+   "graveyard_text": "🪦 moved to the graveyard today: AGMH, AIIO, AIXI, BKYI, BMBL, ELOG, FBGL, FLYE, ILAG, IZM, JBDI, JYD, JZ, PFAI, SES, SMJF, YFOR, ZTG",
+   "potential": {
+    "title": "🧠 Potential — 0 trigger armed · 0 building · 0 first seen today · UNMEASURED",
+    "text": "Forming, not triggered: the demand leg is in and the quiet sideways part has started (“building”) or is complete (“trigger armed”); the reclaim of the highs has not printed. His words: “strong demand, goes sideways at the top of the bars, volume subsides in those bars, and if it reclaims the highs — this is the concept of all the moves” (S9 1:54:53). Needing a sideways bar, waiting for a fresh print and ringing a held first sighting on the next pass are Cheetah defaults, not his (ℹ️ Rules). A potential, not an entry.",
+    "counts": {
+     "armed": 0,
+     "building": 0,
+     "today": 0
+    },
+    "rows": [],
+    "empty_text": "No 🚩 Bull Flag forming right now — the next pass is at most 5 minutes away."
+   },
+   "tape_session": "premarket"
+  }
+ }
+}

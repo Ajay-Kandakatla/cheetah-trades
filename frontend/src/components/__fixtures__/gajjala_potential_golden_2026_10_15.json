@@ -15,10 +15,33 @@
     "triggered": 0
    },
    "empty_note": "No 🚩 Bull Flag on his list right now — the next pass is at most 5 minutes away.",
+   "enterable": {
+    "empty_text": null,
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [
+     {
+      "frame": "5m",
+      "grade_label": null,
+      "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=BBB",
+      "risk_pct": 0.5961251862891207,
+      "setup": "kiss_fly",
+      "setup_label": "💋 EMA Kiss & Fly",
+      "since_et": null,
+      "stop": 10.421875,
+      "symbol": "BBB",
+      "text": "BBB · 💋 EMA Kiss & Fly · trigger 10.48 · stop 10.42 (−0.6%)",
+      "trigger": 10.484375,
+      "variant_label": null
+     }
+    ],
+    "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "pass": {
     "as_of_et": "10:31 ET",
+    "at": "2026-10-13T14:31:00+00:00",
+    "on_demand": false,
     "stale": false,
     "stale_after_sec": 900,
     "status": "ok",
@@ -117,6 +140,18 @@
     "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "last pass 10:31 ET",
+    "bars_through_et": null,
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": "10:31",
+    "state": "idle",
+    "text": "last pass 10:31 ET"
+   },
    "session": {
     "badge": "RTH",
     "date": "2026-10-13",
@@ -353,6 +388,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×1.8",
        "session_badge": "RTH",
@@ -614,6 +650,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×4.5",
        "session_badge": "RTH",
@@ -875,6 +912,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×9.0",
        "session_badge": "RTH",
@@ -1136,6 +1174,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": "4 red closes in a row — he waits (“more than 3 red closes is red flag to me”)",
        "rotation": "🔄 float ×9.0",
        "session_badge": "RTH",
@@ -1257,10 +1296,33 @@
     "triggered": 0
    },
    "empty_note": "Nothing forming on his list right now — the next pass is at most 5 minutes away.",
+   "enterable": {
+    "empty_text": null,
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [
+     {
+      "frame": "5m",
+      "grade_label": null,
+      "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=BBB",
+      "risk_pct": 0.5961251862891207,
+      "setup": "kiss_fly",
+      "setup_label": "💋 EMA Kiss & Fly",
+      "since_et": null,
+      "stop": 10.421875,
+      "symbol": "BBB",
+      "text": "BBB · 💋 EMA Kiss & Fly · trigger 10.48 · stop 10.42 (−0.6%)",
+      "trigger": 10.484375,
+      "variant_label": null
+     }
+    ],
+    "title": "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
+   },
    "graveyard_today": [],
    "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
    "pass": {
     "as_of_et": "10:31 ET",
+    "at": "2026-10-13T14:31:00+00:00",
+    "on_demand": false,
     "stale": false,
     "stale_after_sec": 900,
     "status": "ok",
@@ -1275,6 +1337,18 @@
     "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
    },
    "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "last pass 10:31 ET",
+    "bars_through_et": null,
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": "10:31",
+    "state": "idle",
+    "text": "last pass 10:31 ET"
+   },
    "session": {
     "badge": "RTH",
     "date": "2026-10-13",
@@ -1511,6 +1585,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×3.0",
        "session_badge": "RTH",
@@ -1807,6 +1882,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×1.8",
        "session_badge": "RTH",
@@ -2115,6 +2191,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×4.5",
        "session_badge": "RTH",
@@ -2398,6 +2475,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": "🔄 float ×1.1",
        "session_badge": "RTH",
@@ -2695,6 +2773,7 @@
        "instrument": null,
        "outside_rth": null,
        "psych": [],
+       "read_at": null,
        "red_closes": null,
        "rotation": null,
        "session_badge": "RTH",

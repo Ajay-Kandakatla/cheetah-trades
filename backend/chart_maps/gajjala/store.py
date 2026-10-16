@@ -1,15 +1,20 @@
-"""Gajjala's tab — Mongo storage (spec §3.1.6). Written ONLY by the cron pass / nightly; the endpoint reads.
+"""Gajjala's tab — Mongo storage (spec §3.1.6). Written by the cron pass / nightly and by the owner's on-open pass
+(run.run_on_demand — `python -m chart_maps.gajjala.run --on-demand`, a subprocess the api spawns); the GET endpoint reads.
 
 Collections
   gajjala_scan      _id "{date}|{SYM}"         every scanner qualifier of a session (+ split check)        TTL 30 d on `at`
   gajjala_ah_carry  _id "{date}"               the session's after-hours carry set — REPLACED per AH pass  TTL 30 d
   gajjala_post      _id "{date}|{SYM}"         🌙 K10 confirmations                                         TTL 30 d
-  gajjala_passes    _id "{date}|{HH:MM}" + "latest"   one doc per pass (counts, strip, snapshot meta)      TTL 30 d
+  gajjala_passes    _id "{date}|{HH:MM}" (cron) | "{date}|{HH:MM:SS}|open" (on-open) + "latest" + "latest_cron"
+                    one doc per pass (counts, strip, snapshot meta); "latest" = any pass, "latest_cron" = cron only TTL 30 d
   gajjala_reads     _id "{date}|{SYM}"         detector reads + tile bars                                   TTL 14 d
   gajjala_alerts    _id "GG:{date}|{SYM}|{setup}"   the push ledger (demand_alerts.claim_key docs)         none
   gajjala_halts     _id "{date}|{SYM}"         halts per session (live + 30-session backfill)              none
   gajjala_daily     _id "{date}|{SYM}"         squeeze history + the float read of the session             TTL 30 d
   gajjala_state     _id "lease" | "float_backoff" | "types"                                                 —
+                    lease = {status running|done, held_by cron|on_demand, token (the holder's uuid4 hex), claimed_at,
+                    started_at + last_cron_started_at (CRON claims only — the tick clock, the min-gap clock),
+                    od_started_at (on-open claims only), pid, done_at}
   gajjala_potentials _id "{date}|{SYM}|{setup}"  🧠 the potential tracker (2026-10-15) — first sighting + path    none
 
 🧠 gajjala_potentials (Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me new potential is
@@ -20,6 +25,15 @@ upsert with DISJOINT `$setOnInsert` / `$set` key sets and never names `push` / `
 hold and the graveyard mark are guarded updates (`push` / `graveyard_on` absent), and the settle is a dotted `$set` of
 `push.*` only — so two overlapping passes can never wipe a claim. No whole-doc replace on this collection.
 
+🔄 The split lease (Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if
+there are any enterable stocks on the top which I see in potential i guess" — DECISIONS5 C1, AMENDMENTS5 A5–A10). ONE
+atomic `find_one_and_update` + upsert collision on `_id "lease"` (the medical lease's primitive, not its function): the
+min gap counts CRON starts only (`last_cron_started_at`), an on-open claim needs only "not held" and never writes
+`started_at` (the baked old image gaps against it — A9), a cron may take over an on-open holder (run._claim waits for it
+first), releases carry the holder's token (a holder that was taken over releases nothing), and every stamp read back
+from Mongo goes through `_utc` (the live client is not tz-aware — A5). The cron's pass doc moves "latest" AND
+"latest_cron"; an on-open pass doc moves "latest" only, never backwards in time (A10).
+
 Every handle is injectable (`GajjalaStore(colls={...})`) — the tests pass in-memory stand-ins and tests/conftest.py
 refuses a real MongoClient. Module-level functions delegate to one default store, so callers may hand either the
 module or an instance to `scanner.listed_symbols(store, session)`. Every write soft-fails (logged, never raised): a
@@ -29,7 +43,9 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, datetime, timezone
+import uuid
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from . import constants as GC
@@ -52,6 +68,16 @@ ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTI
 TTL_DAYS = {SCAN: GC.LEDGER_TTL_DAYS, AH_CARRY: GC.LEDGER_TTL_DAYS, POST: GC.LEDGER_TTL_DAYS,
             PASSES: GC.LEDGER_TTL_DAYS, DAILY: GC.LEDGER_TTL_DAYS, READS: GC.READS_TTL_DAYS}
 _DAY_SEC = 86400
+# 🔄 the split lease (2026-10-15) — strings, not numbers
+LEASE_ID = "lease"
+LEASE_CRON = "cron"
+LEASE_ON_DEMAND = "on_demand"
+LEASE_SOURCES = (LEASE_CRON, LEASE_ON_DEMAND)
+LEASE_WHYS = ("claimed", "taken_over", "no_store", "held", "held_on_demand", "gap", "error")
+ON_DEMAND_PASS_SUFFIX = "open"                 # the on-open pass doc id "{date}|{HH:MM:SS}|open" (DECISIONS5 C5)
+LATEST_ID = "latest"
+LATEST_CRON_ID = "latest_cron"                 # AMENDMENTS5 A10: the cron-only pointer (stale + the 🎯 gate read it)
+POINTERS = (LATEST_ID, LATEST_CRON_ID)
 
 
 def _coll(name: str):
@@ -82,6 +108,79 @@ def key(session, sym: str) -> str:
 def potential_key(session, sym: str, setup: str) -> str:
     """`"{date}|{SYM}|{setup}"` — the 🧠 tracker doc id (one per session, symbol and setup — K3)."""
     return f"{key(session, sym)}|{setup}"
+
+
+# ── 🔄 the split lease (2026-10-15, DECISIONS5 C1 + AMENDMENTS5 A5–A9) — pure helpers ───────────────────────────────
+@dataclass(frozen=True)
+class LeaseClaim:
+    """A claim verdict. Truthy only when the lease is now this caller's (`ok`). `why` ∈ LEASE_WHYS: "claimed" /
+    "taken_over" (a cron replaced an on-open holder) / "no_store" (no Mongo handle — the documented "run anyway" answer)
+    on success; "held" / "held_on_demand" (a cron met an on-open holder — run._claim waits) / "gap" (a cron inside
+    LEASE_MIN_GAP_SEC of the last CRON start) / "error" (a store fault, or the holder released between the attempt and
+    the classify read) on refusal. `token` = the new holder's uuid4 hex (release_lease / lease_owner_is take it);
+    `held_by` = the holder when refused."""
+    ok: bool
+    why: str
+    token: Optional[str] = None
+    held_by: Optional[str] = None
+
+    def __bool__(self) -> bool:
+        return bool(self.ok)
+
+
+def _stamp(v) -> Optional[datetime]:
+    """A stamp read back from Mongo → UTC-aware (the live client is NOT tz-aware: naive = UTC, A5); not a datetime → None."""
+    return _utc(v) if isinstance(v, datetime) else None
+
+
+def lease_free(doc: Optional[dict], now: datetime) -> bool:
+    """Nobody holds the lease: no doc, or `status` ≠ "running", or the holder claimed it ≥ LEASE_SEC ago (a crashed
+    holder frees itself). The python twin of `lease_query`'s `free` clause."""
+    if not isinstance(doc, dict) or doc.get("status") != "running":
+        return True
+    claimed = _stamp(doc.get("claimed_at"))
+    return claimed is not None and claimed <= _utc(now) - timedelta(seconds=GC.LEASE_SEC)
+
+
+def lease_gap_ok(doc: Optional[dict], now: datetime) -> bool:
+    """The last CRON start is ≥ LEASE_MIN_GAP_SEC ago (the duplicate-cron guard). The clock is `last_cron_started_at`
+    when on file, else `started_at` (a legacy medical-shape doc — its started_at was always a cron start, and an on-open
+    claim never writes started_at, A9), else none → True. The python twin of `lease_query`'s `gap` clause."""
+    if not isinstance(doc, dict):
+        return True
+    cut = _utc(now) - timedelta(seconds=GC.LEASE_MIN_GAP_SEC)
+    for k in ("last_cron_started_at", "started_at"):
+        if k in doc:
+            v = _stamp(doc.get(k))
+            return v is not None and v <= cut
+    return True
+
+
+def lease_claimable(doc: Optional[dict], now: datetime, source: str, *, take_over: bool = False) -> bool:
+    """What `lease_query(now, source, take_over=)` matches, in python (a test pins the two together on a doc table):
+    on_demand = free (NO gap — C1); cron = (free, or with take_over an on-open holder) AND the gap."""
+    if source == LEASE_ON_DEMAND:
+        return lease_free(doc, now)
+    holder_ok = lease_free(doc, now) or (take_over and isinstance(doc, dict) and doc.get("status") == "running"
+                                         and doc.get("held_by") == LEASE_ON_DEMAND)
+    return bool(holder_ok) and lease_gap_ok(doc, now)
+
+
+def lease_query(now: datetime, source: str, *, take_over: bool = False) -> dict:
+    """The claim's filter on `_id "lease"` — only $or / $and / $ne / $lte / $exists (the FakeColl has no $lt / $gt).
+    on_demand → free only (C1: an open skips the cron gap); cron → holder AND gap, holder = free, or with `take_over`
+    free OR running-and-held-by-on_demand."""
+    now = _utc(now)
+    free = {"$or": [{"status": {"$ne": "running"}},
+                    {"claimed_at": {"$lte": now - timedelta(seconds=GC.LEASE_SEC)}}]}
+    if source == LEASE_ON_DEMAND:
+        return {"_id": LEASE_ID, "$and": [free]}
+    cut = now - timedelta(seconds=GC.LEASE_MIN_GAP_SEC)
+    gap = {"$or": [{"last_cron_started_at": {"$lte": cut}},
+                   {"last_cron_started_at": {"$exists": False}, "started_at": {"$lte": cut}},
+                   {"last_cron_started_at": {"$exists": False}, "started_at": {"$exists": False}}]}
+    holder = free if not take_over else {"$or": [free, {"status": "running", "held_by": LEASE_ON_DEMAND}]}
+    return {"_id": LEASE_ID, "$and": [holder, gap]}
 
 
 class GajjalaStore:
@@ -201,30 +300,56 @@ class GajjalaStore:
         return self._find(POST, {"date": _iso(session)})
 
     # ── gajjala_passes ─────────────────────────────────────────────────────────────────────────────────────────
-    def record_pass(self, session, now: datetime, doc: dict, *, hhmm: Optional[str] = None) -> None:
-        """One doc per pass plus the "latest" pointer (the board's as_of / stale line)."""
+    def record_pass(self, session, now: datetime, doc: dict, *, hhmm: Optional[str] = None,
+                    source: str = LEASE_CRON, latest_if_newer: bool = False, move_latest: bool = True) -> None:
+        """One doc per pass `"{date}|{hhmm}"` (hhmm default = the ET minute; the on-open pass hands
+        "HH:MM:SS|open", so it never overwrites the cron's minute doc — C5) plus the pointers (AMENDMENTS5 A10):
+        "latest" (ANY pass — the board's as_of / "scanned on open" line) when `move_latest`, and "latest_cron" (CRON
+        passes only — the stale line and the 🎯 gate read it, so opens can never hide a dead cron) when `source` is
+        LEASE_CRON. `latest_if_newer` (the on-open path): the stored "latest" is NOT replaced when its `at` is newer
+        than `now` (an on-open pass finishing after a newer cron pass never moves "latest" back; naive → UTC). The
+        cron path keeps today's behaviour (always replaces)."""
         now = _utc(now)
         if hhmm is None:
             from zoneinfo import ZoneInfo
             hhmm = now.astimezone(ZoneInfo("America/New_York")).strftime("%H:%M")
+        pass_id = f"{_iso(session)}|{hhmm}"
         body = dict(doc, date=_iso(session), at=now)
-        self._replace(PASSES, f"{_iso(session)}|{hhmm}", body)
-        self._replace(PASSES, "latest", dict(body, pass_id=f"{_iso(session)}|{hhmm}"))
+        self._replace(PASSES, pass_id, body)
+        if move_latest:
+            stored = self.latest_pass() if latest_if_newer else None
+            at = _stamp((stored or {}).get("at"))
+            if at is None or at <= now:
+                self._replace(PASSES, LATEST_ID, dict(body, pass_id=pass_id))
+        if source == LEASE_CRON:
+            self._replace(PASSES, LATEST_CRON_ID, dict(body, pass_id=pass_id, pointer=LATEST_CRON_ID))
 
     def latest_pass(self) -> Optional[dict]:
-        return self._find_one(PASSES, {"_id": "latest"})
+        """CONTRACT: the "latest" pointer — the newest pass of ANY source (cron or on-open; `on_demand` in the body
+        says which) — or None."""
+        return self._find_one(PASSES, {"_id": LATEST_ID})
+
+    def latest_cron_pass(self) -> Optional[dict]:
+        """CONTRACT (AMENDMENTS5 A10 / A12): the "latest_cron" pointer — the newest CRON pass only (an on-open pass never
+        moves it) — or None (none on file since the split, or a read fault). The stale line, the 🎯 banner's gate and
+        "has the session's first 5-minute pass run" read this one."""
+        return self._find_one(PASSES, {"_id": LATEST_CRON_ID})
 
     def passes(self, session) -> list:
-        return [d for d in self._find(PASSES, {"date": _iso(session)}) if d.get("_id") != "latest"]
+        """The session's pass docs (cron and on-open), never a pointer."""
+        return [d for d in self._find(PASSES, {"date": _iso(session)}) if d.get("_id") not in POINTERS]
 
     def recent_passes(self, session, since: datetime, until: datetime) -> Optional[list]:
         """The session's pass docs stamped `since` … `until` (both inclusive), projected to {at, potential} — the 🧠
         join rule's previous-pass read (potential._previous_pass_ran_gate), never the whole pass bodies. The "latest"
-        pointer is excluded. None on a read fault or a missing handle ([] = none on file) — the caller fails closed."""
+        pointer is excluded, and so is "latest_cron" (2026-10-15: its `pointer` field). None on a read fault or a
+        missing handle ([] = none on file) — the caller fails closed. An on-open pass doc IS included: its potential
+        block was computed dry and still carries `tracked_today` (DECISIONS5 C5)."""
         c = self.coll(PASSES)
         if c is None:
             return None
-        q = {"date": _iso(session), "_id": {"$ne": "latest"}, "at": {"$gte": _utc(since), "$lte": _utc(until)}}
+        q = {"date": _iso(session), "_id": {"$ne": LATEST_ID}, "pointer": {"$exists": False},
+             "at": {"$gte": _utc(since), "$lte": _utc(until)}}
         try:
             return list(c.find(q, {"at": 1, "potential": 1}))
         except Exception as exc:                                # noqa: BLE001
@@ -279,15 +404,126 @@ class GajjalaStore:
     def set_state(self, sid: str, fields: dict) -> None:
         self._upsert(STATE, sid, dict(fields))
 
-    def claim_lease(self, now: datetime) -> bool:
-        """The medical pass's lease, reused (not copied): free + started ≥ LEASE_MIN_GAP_SEC ago."""
-        from catalysts.medical.store import claim_lease as _claim
-        return _claim(self.coll(STATE), _utc(now), lease_sec=GC.LEASE_SEC,
-                      min_gap_sec=GC.LEASE_MIN_GAP_SEC, pid=os.getpid())
+    # ── 🔄 the split lease (2026-10-15; DECISIONS5 C1, AMENDMENTS5 A5–A9) ─────────────────────────────────────────
+    def claim_lease(self, now: datetime, source: str = LEASE_CRON, *, take_over: bool = False,
+                    cron_start: Optional[datetime] = None) -> LeaseClaim:
+        """Claim the pass lease for `source` (LEASE_CRON | LEASE_ON_DEMAND) → LeaseClaim (truthy when held now).
 
-    def release_lease(self, now: datetime) -> None:
-        from catalysts.medical.store import release_lease as _release
-        _release(self.coll(STATE), _utc(now))
+        ONE `find_one_and_update(lease_query(...), $set, upsert=True)` — the medical lease's atomic primitive: a held
+        lease makes the upsert collide on `_id` (DuplicateKeyError), then ONE read classifies the refusal (see
+        LeaseClaim.why). A cron claim writes `started_at` and `last_cron_started_at` = `cron_start` (the TICK clock,
+        before any wait — A6; default `now`); an on-open claim writes `od_started_at` and NEVER `started_at` /
+        `last_cron_started_at` (A9: the old image gaps against started_at; C1: an open never moves the cron gap).
+        `take_over=True` (cron only) also matches a lease an on-open pass holds → why "taken_over". Every stamp read
+        back is UTC-normalised before a comparison (A5). No handle → LeaseClaim(True, "no_store"). Never raises."""
+        c = self.coll(STATE)
+        if c is None:
+            return LeaseClaim(True, "no_store")
+        now = _utc(now)
+        source = source if source in LEASE_SOURCES else LEASE_CRON
+        take_over = bool(take_over) and source == LEASE_CRON
+        token = uuid.uuid4().hex
+        sets = {"status": "running", "held_by": source, "token": token, "claimed_at": now, "pid": os.getpid()}
+        if source == LEASE_CRON:
+            start = _utc(cron_start) if isinstance(cron_start, datetime) else now
+            sets.update({"started_at": start, "last_cron_started_at": start})
+        else:
+            sets["od_started_at"] = now
+        try:
+            from pymongo.errors import DuplicateKeyError
+        except Exception:                                       # pragma: no cover
+            DuplicateKeyError = KeyError                        # noqa: N806
+        try:
+            pre = c.find_one_and_update(lease_query(now, source, take_over=take_over), {"$set": sets}, upsert=True)
+        except DuplicateKeyError:
+            return self._classify_refusal(c, now, source)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: lease claim failed: %s", type(exc).__name__)
+            return LeaseClaim(False, "error")
+        try:
+            # pymongo returns the PRE-image by default; a non-dict (the dry-run recorder) reads as "no prior holder"
+            taken = (take_over and isinstance(pre, dict) and pre.get("status") == "running"
+                     and pre.get("held_by") == LEASE_ON_DEMAND and not lease_free(pre, now))
+        except Exception:                                       # noqa: BLE001
+            taken = False
+        return LeaseClaim(True, "taken_over" if taken else "claimed", token=token)
+
+    def _classify_refusal(self, c, now: datetime, source: str) -> LeaseClaim:
+        try:
+            doc = c.find_one({"_id": LEASE_ID})
+            if not isinstance(doc, dict):
+                return LeaseClaim(False, "error")
+            if not lease_free(doc, now):
+                holder = doc.get("held_by") or LEASE_CRON
+                if source == LEASE_CRON and holder == LEASE_ON_DEMAND:
+                    why = "gap" if not lease_gap_ok(doc, now) else "held_on_demand"
+                    return LeaseClaim(False, why, held_by=holder)
+                return LeaseClaim(False, "held", held_by=holder)
+            if source == LEASE_CRON and not lease_gap_ok(doc, now):
+                return LeaseClaim(False, "gap", held_by=None)
+            return LeaseClaim(False, "error")                   # freed between the attempt and this read (A7 retries)
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: lease read failed: %s", type(exc).__name__)
+            return LeaseClaim(False, "error")
+
+    def release_lease(self, now: datetime, token: Optional[str] = None) -> bool:
+        """Release the lease the caller holds: `update_one({_id: "lease", token: <token>}, $set status done)` — no
+        upsert. A holder that was taken over releases NOTHING (its token no longer matches); a tokenless release only
+        matches a tokenless (legacy) lease, never a tokened one. True when a doc matched. Never raises (False)."""
+        c = self.coll(STATE)
+        if c is None:
+            return False
+        q = {"_id": LEASE_ID, "token": token} if token else {"_id": LEASE_ID, "token": {"$exists": False}}
+        try:
+            res = c.update_one(q, {"$set": {"status": "done", "done_at": _utc(now)}})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: lease release failed: %s", type(exc).__name__)
+            return False
+        return int(getattr(res, "matched_count", 0) or 0) > 0
+
+    def lease_owner_is(self, token: Optional[str]) -> bool:
+        """CONTRACT (AMENDMENTS5 A8, for run_pass's on-open tail): is `token` still the lease holder's? One cheap
+        `find_one`. True when there is no handle, or no lease doc on file (nobody took it over — a dry store reads
+        through and never lands the claim); False when the doc's token differs (a cron took the lease over) or the read
+        FAILED (fail closed: an on-open pass stops writing rather than risk writing over the cron). Never raises."""
+        c = self.coll(STATE)
+        if c is None:
+            return True
+        try:
+            doc = c.find_one({"_id": LEASE_ID})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: lease owner read failed: %s", type(exc).__name__)
+            return False
+        if not isinstance(doc, dict):
+            return True
+        return bool(token) and doc.get("token") == token
+
+    def lease_state(self, now: datetime) -> dict:
+        """CONTRACT (for tab.py / on_demand.py, 2026-10-15): the lease as the board and the trigger see it, Mongo read
+        only. {} on no handle or a read fault. Else {"held": bool (not lease_free — a holder that claimed ≥ LEASE_SEC
+        ago is NOT held), "held_by": "cron" | "on_demand" | None (a running legacy doc with no held_by reads "cron"),
+        "claimed_at", "started_at" (the last CRON start), "od_started_at" (the last on-open start),
+        "last_cron_started_at", "holder_started_at" (the holder's own start: od_started_at for an on-open holder, else
+        started_at; None when not held), "status" (the doc's status), "done_at" (the last release — on_demand.request's
+        reuse check reads an on-open release that moved `latest` nowhere, final critic 2026-10-16)} — every stamp UTC-aware (naive Mongo stamps normalised, A5) or None."""
+        c = self.coll(STATE)
+        if c is None:
+            return {}
+        try:
+            doc = c.find_one({"_id": LEASE_ID})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: lease state read failed: %s", type(exc).__name__)
+            return {}
+        doc = doc if isinstance(doc, dict) else {}
+        held = not lease_free(doc or None, now)
+        held_by = doc.get("held_by") or (LEASE_CRON if doc.get("status") == "running" else None)
+        stamps = {k: _stamp(doc.get(k)) for k in ("claimed_at", "started_at", "od_started_at", "last_cron_started_at")}
+        own = None
+        if held:
+            own = stamps["od_started_at"] if held_by == LEASE_ON_DEMAND else stamps["started_at"]
+            own = own or stamps["claimed_at"]
+        return dict({"held": held, "held_by": held_by, "holder_started_at": own, "status": doc.get("status"),
+                     "done_at": _stamp(doc.get("done_at"))}, **stamps)
 
     def types_map(self) -> dict:
         """The instrument-type reference doc {as_of, types{SYM: type}, complete, ...} or {}."""
@@ -456,7 +692,7 @@ def _delegate(name: str):
 
 for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_checks", "scan_docs",
               "qualified_symbols", "replace_ah_carry", "ah_carry", "upsert_post", "post_docs", "record_pass",
-              "latest_pass", "passes", "recent_passes", "upsert_read", "reads", "get_read", "upsert_halt", "halts", "halt_dates",
+              "latest_pass", "latest_cron_pass", "passes", "recent_passes", "lease_state", "lease_owner_is", "upsert_read", "reads", "get_read", "upsert_halt", "halts", "halt_dates",
               "halt_sessions", "get_daily", "upsert_daily", "get_state", "set_state", "claim_lease",
               "release_lease", "types_map", "set_types_map", "alerts_coll", "coll", "potentials", "get_potential",
               "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",

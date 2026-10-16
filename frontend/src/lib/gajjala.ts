@@ -23,6 +23,16 @@
  * detectors' own forming read, potential.py) and words every row, title, tell
  * and timeline entry; this module only types that payload (BUILD_SPEC4 §3.9)
  * and adds the ninth fallback sub, LAST. No threshold, no rule word.
+ *
+ * 🔄 Scan on open + 🎯 A+ line (2026-10-15, BUILD_SPEC5 §3.8). Ajay: "When ever
+ * I open Gajjala's intiate a new scan of stocks.  In that moment and if there
+ * are any enterable stocks on the top which I see in potential i guess". The
+ * board POSTs GG_SCAN_PATH once per open (owner only); the server answers at
+ * once and sets the poll plan (eta / poll / wait-max seconds) — ggScanPlan only
+ * reads those served numbers, no number typed here. The `scan` and `enterable`
+ * blocks are SERVED sentences (the as-of line, the scanning line, the A+ rows,
+ * the quiet empty line, the note); this module types them and adds nothing. An
+ * open rings no device — both push gates run dry on it. UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
@@ -93,6 +103,8 @@ export type GgChips = {
   red_closes?: GgChipValue;
   /** DECISIONS R2-6: this setup on this name was stopped earlier today. */
   stopped_earlier?: GgChipValue;
+  /** 🔄 2026-10-15 (W7): "read at the HH:MM ET pass" — this card's read is older than the latest pass. */
+  read_at?: GgChipValue;
   /** DECISIONS: a listing with no reference type yet is labelled "type unknown". */
   instrument?: GgChipValue;
   /** Outside regular hours: his limit-orders / less-size line (S8 1:16:35). */
@@ -242,6 +254,10 @@ export type GgBoard = {
   pass?: {
     as_of_et?: string | null; stale?: boolean; stale_after_sec?: number; warming?: boolean;
     stale_text?: string | null; warming_text?: string | null;
+    /** 🔄 2026-10-15: the latest pass's clock (ISO, UTC) — the stamp the scan POST's `latest_at` is compared to. */
+    at?: string | null;
+    /** 🔄 2026-10-15: the latest pass was an on-open pass. */
+    on_demand?: boolean;
   };
   strip?: { runners_100?: number; runners_80?: number; best_change_pct?: number | null;
             best_symbol?: string | null; quiet?: boolean; text?: string | null };
@@ -269,6 +285,10 @@ export type GgBoard = {
   watch?: GgWatch | null;
   /** The LIVE 🧠 push line, printed under the (A+, shadow) `push` line. */
   push_potential?: { mode?: string | null; text?: string | null } | null;
+  /** 🔄 the served as-of / scanning line (every sub); absent on an older API. */
+  scan?: GgScan | null;
+  /** 🎯 the served A+ line (every sub); absent on an older API. */
+  enterable?: GgEnterable | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the
@@ -376,4 +396,69 @@ export function watchParts(w: GgWatch | null | undefined): { lead: string; trail
   const tail = syms.length ? `: ${syms.join(', ')}` : '';
   if (tail && w.text.endsWith(tail)) return { lead: `${w.text.slice(0, w.text.length - tail.length)}: `, trailing: true };
   return { lead: w.text, trailing: false };
+}
+
+/* ---- 🔄 scan on open + 🎯 A+ line (2026-10-15, BUILD_SPEC5 §3.6 / §3.8) — every string SERVED. ---- */
+export const GG_SCAN_PATH = '/chart-maps/gajjala/scan';
+export type GgScanState = 'scanning' | 'idle' | 'closed';
+export type GgScan = {
+  state: GgScanState | string;
+  on_demand?: boolean;
+  started_at_et?: string | null;
+  bars_through_et?: string | null;
+  as_of_text?: string | null;
+  scanning_text?: string | null;
+  text?: string | null;
+  note?: string | null;
+  rescan_label?: string | null;
+  rescan_title?: string | null;
+};
+/** One 🎯 row — `text` is the whole served line (W16); the FE prints it as is. */
+export type GgAplusRow = {
+  symbol: string;
+  setup: GgSetup | string;
+  setup_label?: string | null;
+  frame?: string | null;
+  trigger?: number | null;
+  stop?: number | null;
+  risk_pct?: number | null;
+  since_et?: string | null;
+  variant_label?: string | null;
+  grade_label?: string | null;
+  href?: string | null;
+  text: string;
+};
+export type GgEnterable = { title?: string | null; rows: GgAplusRow[]; empty_text?: string | null; note?: string | null };
+export type GgScanResponse = {
+  state: 'started' | 'reused' | 'waiting' | 'closed' | 'refused' | string;
+  latest_at?: string | null;
+  eta_sec?: number | null;
+  poll_sec?: number | null;
+  wait_max_sec?: number | null;
+  text?: string | null;
+};
+
+const posFin = (x: unknown): x is number => fin(x) && x > 0;
+
+/** The poll plan the SERVER sets: started / waiting with finite positive poll_sec + wait_max_sec → { firstMs =
+ *  clamp(eta_sec ?? poll_sec, poll_sec, wait_max_sec) * 1000, everyMs = poll_sec * 1000, untilMs = wait_max_sec * 1000 };
+ *  anything else (reused / closed / refused / a bad number) → null. Fractions allowed (tests serve small ones). */
+export function ggScanPlan(r: GgScanResponse | null | undefined): { firstMs: number; everyMs: number; untilMs: number } | null {
+  if (!r || (r.state !== 'started' && r.state !== 'waiting')) return null;
+  const poll = r.poll_sec;
+  const max = r.wait_max_sec;
+  if (!posFin(poll) || !posFin(max) || max < poll) return null;
+  const eta = r.eta_sec == null ? poll : r.eta_sec;
+  if (!fin(eta)) return null;
+  const first = Math.min(Math.max(eta, poll), max);
+  return { firstMs: first * 1000, everyMs: poll * 1000, untilMs: max * 1000 };
+}
+
+/** The pass the POST waited for has landed: the served pass.at is a string, differs from the POST's latest_at, and no
+ *  pass is running (scan.state !== 'scanning'). */
+export function ggScanAdvanced(board: GgBoard | null | undefined, latestAt: string | null | undefined): boolean {
+  const at = board?.pass?.at;
+  if (typeof at !== 'string' || !at) return false;
+  if (at === latestAt) return false;
+  return board?.scan?.state !== 'scanning';
 }

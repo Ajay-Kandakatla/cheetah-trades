@@ -1,8 +1,10 @@
 """Chart Maps API — one read-only board endpoint per tab.
 
-Read-only by construction: nothing here starts a scan. The demand tab warms in
-the background and answers `warming: true` immediately, so a page load cannot
-sit behind a multi-minute universe pass.
+Read-only by construction with ONE exception: POST /chart-maps/gajjala/scan
+(owner-only, 2026-10-15) starts one Gajjala pass in a SUBPROCESS and answers at
+once — no GET here ever starts a scan. The demand tab warms in the background
+and answers `warming: true` immediately, so a page load cannot sit behind a
+multi-minute universe pass.
 """
 from __future__ import annotations
 
@@ -10,9 +12,10 @@ import asyncio
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
+from auth import current_user_email
 from . import board as board_mod
 from . import ema_frames as ema_frames_mod
 from . import support as support_mod
@@ -460,6 +463,24 @@ async def chart_maps_gajjala(
         return _scrub(out)
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.post("/chart-maps/gajjala/scan")
+async def chart_maps_gajjala_scan(email: str = Depends(current_user_email)):
+    """🔄 Scan on open (Ajay 2026-10-15, verbatim: "When ever I open Gajjala's intiate a new scan of stocks.  In that
+    moment and if there are any enterable stocks on the top which I see in potential i guess"). OWNER-ONLY — a house
+    owner (auth.is_admin_email, the /auth/me is_admin flag; the POST /todos/llm-runner/run precedent): anyone else
+    gets the stealth 404 and sees the cron read. Answers at once (gajjala.on_demand.request: started | reused |
+    waiting | closed | refused, Mongo reads only); the pass, when one starts, runs in a SUBPROCESS
+    (`python -m chart_maps.gajjala.run --on-demand`) with BOTH push gates dry — an open rings no device. This process
+    never runs the pass. GET /chart-maps/gajjala stays Mongo-only. A direct call (the `Depends` OBJECT as `email`) is
+    a non-owner → 404, never a crash."""
+    from auth import is_admin_email                                  # lazy: tests monkeypatch auth.is_admin_email
+    if not is_admin_email(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    from rotation.api import _scrub
+    from .gajjala import on_demand as OD
+    return JSONResponse(_scrub(await asyncio.to_thread(OD.request)))
 
 
 @router.get("/chart-maps/news")

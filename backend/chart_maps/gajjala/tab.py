@@ -25,6 +25,17 @@ jump on to ride the wave". Every setup sub serves a `potential` strip (its own f
 potential); the 🧠 Potential sub rolls them up (one tile per symbol), with the 📈 Track (today's first sightings and the
 last session's, read from the tracker docs the pass wrote) and the 👀 watch line. Every rule, word and order comes from
 `potential.py` (the ONE engine) — this module re-derives none and types no number. UNMEASURED.
+
+🔄 SCAN ON OPEN · 🎯 A+ (2026-10-15, BUILD_SPEC5 §3.6 / WP-B). Ajay, verbatim: "When ever I open Gajjala's intiate a
+new scan of stocks.  In that moment and if there are any enterable stocks on the top which I see in potential i guess".
+The pass itself runs elsewhere (chart_maps/gajjala/on_demand.py spawns `python -m chart_maps.gajjala.run --on-demand`);
+this module still READS MONGO ONLY and serves two more blocks on every sub: `scan` (the "🔄 scanned on open HH:MM ET ·
+bars through HH:MM" / "last pass HH:MM ET" line, "scanning…" while the pass lease is held — closed bars only, never a
+newer bar) and `enterable` (🎯 the A+ reads of the LATEST pass — the card's own state `aplus`, traded through the trigger
+and the bar closed, DECISIONS5 K1 + AMENDMENTS5 A11 — served only while the 5-minute cron pass is current, A10). `pass`
+gains `at` (one stamp, `pass_stamp`, shared with the POST) and `on_demand`; `pass.stale` reads the CRON pass, so opens
+alone never hide a dead cron (A10). A card whose read is older than the pass shown carries "read at the HH:MM ET pass".
+An open rings no device (both push gates run dry on it, K2). UNMEASURED — not a recommendation.
 """
 from __future__ import annotations
 
@@ -214,22 +225,36 @@ def _session_block(now, session: date, is_today: bool, in_window: bool) -> dict:
             "refresh_sec": GC.PASS_CADENCE_SEC if in_window else 0}
 
 
-def _pass_block(latest: Optional[dict], now, session: date, in_window: bool) -> dict:
-    at = latest.get("at") if isinstance(latest, dict) else None
-    if isinstance(at, datetime) and at.tzinfo is None:
-        at = at.replace(tzinfo=timezone.utc)
+def _pass_block(latest: Optional[dict], now, session: date, in_window: bool, cron: Optional[dict] = None) -> dict:
+    """The `pass` block. `latest` = the pass shown (any source); `cron` = the newest CRON pass (`_cron_ref`). 2026-10-15
+    (AMENDMENTS5 A10): `stale` reads the CRON pass — an on-open pass alone never clears it — and the block gains `at`
+    (`pass_stamp`, the stamp the POST answers with) and `on_demand`. `cron` None with a non-on-open `latest` = the
+    pre-split shape (every pass was a cron pass): judged on `latest`, exactly as before."""
+    at = _at_utc(latest)
     this_session = isinstance(latest, dict) and latest.get("date") == session.isoformat()
     as_of = f"{_et(at).strftime('%H:%M')} ET" if isinstance(at, datetime) else None
     if isinstance(at, datetime) and not this_session:
         as_of = f"{_et(at).strftime('%Y-%m-%d %H:%M')} ET"
-    age = (_et(now) - _et(at)).total_seconds() if isinstance(at, datetime) else None
+    if cron is None and isinstance(latest, dict) and not latest.get("on_demand"):
+        cron = latest
+    c_at = _at_utc(cron)
+    c_this = isinstance(cron, dict) and cron.get("date") == session.isoformat() and c_at is not None
+    age = (_et(now) - _et(c_at)).total_seconds() if c_this else None
     warming = bool(in_window and not this_session)
-    stale = bool(in_window and this_session and age is not None and age > GC.STALE_AFTER_SEC)
+    stale = bool(in_window and this_session and (not c_this or (age is not None and age > GC.STALE_AFTER_SEC)))
     out = {"as_of_et": as_of, "stale": stale, "stale_after_sec": GC.STALE_AFTER_SEC, "warming": warming,
-           "status": (latest or {}).get("status") if isinstance(latest, dict) else None}
-    if stale:
+           "status": (latest or {}).get("status") if isinstance(latest, dict) else None,
+           "at": pass_stamp(latest), "on_demand": bool((latest or {}).get("on_demand")) if isinstance(latest, dict)
+           else False}
+    cad = GC.PASS_CADENCE_SEC // 60
+    if stale and not c_this:
+        out["stale_text"] = f"stale — the {cad}-minute pass has not run this session; it runs every {cad} minutes"
+    elif stale and cron is latest:
         out["stale_text"] = (f"stale — the last pass was {as_of}, {int(age // 60)} min ago; the pass runs every "
-                             f"{GC.PASS_CADENCE_SEC // 60} minutes")
+                             f"{cad} minutes")
+    elif stale:
+        out["stale_text"] = (f"stale — the last {cad}-minute pass was {_et(c_at).strftime('%H:%M')} ET, "
+                             f"{int(age // 60)} min ago; the pass runs every {cad} minutes")
     if warming:
         out["warming_text"] = (f"warming — no pass this session yet (the first runs just after {GC.PASS_OPEN_ET} "
                                "ET); the reads shown are older")
@@ -257,6 +282,236 @@ def _strip_block(latest: Optional[dict]) -> dict:
     return {"runners_100": s.get("runners_100"), "runners_80": s.get("runners_80"),
             "best_change_pct": _f(s.get("best_change_pct")), "best_symbol": s.get("best_symbol"),
             "quiet": s.get("quiet"), "text": strip_text(s)}
+
+
+# ── 🔄 scan on open · 🎯 A+ (2026-10-15, BUILD_SPEC5 §3.6 / §3.7, AMENDMENTS5 A10 / A11 / A13) ─────────────────────
+# Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if there are any
+# enterable stocks on the top which I see in potential i guess". Every served sentence below is composed here (the FE
+# prints what it is given); every number is a constants.py name. His word stays in his quote: the served copy says
+# "A+", the card's own state.
+RESCAN_LABEL = "🔄 scan now"                                                                             # W8
+ENTRY_QUOTE_TS = "1:40:56–1:41:55"                                       # the 📓 Playbook ENTRY item the note slices
+ENTRY_QUOTE_FROM = "I'll enter right at the break"
+
+
+def _at_utc(doc) -> Optional[datetime]:
+    """A pass doc's `at` as an aware UTC datetime (the live Mongo client hands back NAIVE UTC — AMENDMENTS5 A5; a naive
+    stamp read as ET would shift every clock four hours, alerts.bar_close_et's trap), else None."""
+    at = doc.get("at") if isinstance(doc, dict) else None
+    if not isinstance(at, datetime):
+        return None
+    return at.replace(tzinfo=timezone.utc) if at.tzinfo is None else at.astimezone(timezone.utc)
+
+
+def pass_stamp(doc: Optional[dict]) -> Optional[str]:
+    """ONE stamp for a pass doc — the GET's `pass.at` and the POST's `latest_at` (on_demand.request) are this function,
+    so the board can tell "the pass the POST waited for has landed" by string inequality. None when no pass."""
+    at = _at_utc(doc)
+    return at.isoformat() if at is not None else None
+
+
+def _stamp_utc(v) -> Optional[datetime]:
+    if not isinstance(v, datetime):
+        return None
+    return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc)
+
+
+def _cron_ref(st, latest: Optional[dict]) -> Optional[dict]:
+    """The newest CRON pass (AMENDMENTS5 A10): the "latest_cron" pointer; when none is on file (a store from before the
+    split), the shown pass when it is not an on-open pass — before the split every pass was a cron pass. None when no
+    cron pass is known (an on-open pass alone never stands in for it)."""
+    fn = getattr(st, "latest_cron_pass", None)
+    lc = None
+    if callable(fn):
+        try:
+            lc = fn()
+        except Exception as exc:                                    # noqa: BLE001
+            log.warning("gajjala tab: cron pass read failed: %s", exc)
+            lc = None
+    if isinstance(lc, dict):
+        return lc
+    if isinstance(latest, dict) and not latest.get("on_demand"):
+        return latest
+    return None
+
+
+def _entry_quote() -> Optional[str]:
+    """GG's entry sentence, SLICED from the served 📓 Playbook ENTRY item (S8 1:40:56–1:41:55) — never retyped: from
+    "I'll enter right at the break" to the end, the trailing "." dropped. None when the item is not found."""
+    try:
+        from chart_maps.gajjala import playbook as PB
+        for it in PB.ENTRY[1]:
+            text = it.get("text") if isinstance(it, dict) else None
+            if it.get("ts") == ENTRY_QUOTE_TS and isinstance(text, str) and ENTRY_QUOTE_FROM in text:
+                return text[text.index(ENTRY_QUOTE_FROM):].rstrip().rstrip(".")
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: entry quote failed: %s", exc)
+    return None
+
+
+def _when(at: Optional[datetime], session: date, *, sec: bool = False) -> Optional[str]:
+    """"HH:MM" (or "HH:MM:SS") ET of a stamp; "{date} HH:MM" when it is from another session."""
+    if not isinstance(at, datetime):
+        return None
+    e = _et(at)
+    t = e.strftime("%H:%M:%S" if sec else "%H:%M")
+    return t if e.date() == session else f"{e.date().isoformat()} {t}"
+
+
+def scan_block(latest: Optional[dict], lease: dict, now, *, in_window: bool, session: date) -> dict:
+    """§3.6 (b) — the 🔄 line, every sub. state "closed" out of the pass window (C6), "scanning" while the pass lease is
+    held (a lease claimed LEASE_SEC ago is not held — a crashed holder never shows "scanning" forever), else "idle".
+    Closed bars only (C3): the copy says "bars through HH:MM", never a newer bar. Reads its two arguments only."""
+    lease = lease if isinstance(lease, dict) else {}
+    latest = latest if isinstance(latest, dict) else None
+    at = _at_utc(latest)
+    this_session = bool(latest) and latest.get("date") == session.isoformat() and at is not None
+    on_demand = bool((latest or {}).get("on_demand"))
+    bt = (latest or {}).get("bars_through_et")
+    bt = bt if isinstance(bt, str) and bt else None
+    cad = GC.PASS_CADENCE_SEC // 60
+    hhmm = _et(at).strftime("%H:%M") if at is not None else None
+    bars = f" · bars through {bt}" if bt else ""
+    if not in_window:
+        state = "closed"
+        as_of = (f"market closed — last pass {hhmm} ET {_et(at).date().isoformat()}" if at is not None
+                 else "market closed — no pass on file")                                                  # W3
+    else:
+        state = "scanning" if lease.get("held") else "idle"
+        if this_session and on_demand:
+            as_of = f"🔄 scanned on open {hhmm} ET{bars}"                                                   # W1
+        elif this_session:
+            as_of = f"last pass {hhmm} ET{bars}"                                                            # W2
+        elif at is not None:
+            as_of = f"last pass {_et(at).date().isoformat()} {hhmm} ET — none yet this session"            # W2b
+        else:
+            as_of = "no pass on file yet"                                                                   # W2b
+    scanning_text = None
+    started = None
+    if state == "scanning":
+        hstart = _stamp_utc(lease.get("holder_started_at")) or _stamp_utc(lease.get("claimed_at"))
+        started = _when(hstart, session, sec=True)
+        shown = _when(at, session)
+        tail = (f"the board below is the {shown} ET read until it lands" if shown
+                else "the board fills when it lands")
+        when = f" at {started} ET" if started else ""
+        if lease.get("held_by") == "on_demand":
+            scanning_text = f"scanning… a pass started on open{when} — {tail}"                             # W4
+        else:
+            scanning_text = f"scanning… the {cad}-minute pass started{when} — {tail}"                      # W5
+    elif at is not None:
+        started = _when(at, session)
+    note = None
+    n_l, n_r = (latest or {}).get("n_listed"), (latest or {}).get("n_read")
+    if (isinstance(n_l, int) and isinstance(n_r, int) and not isinstance(n_l, bool) and not isinstance(n_r, bool)
+            and 0 <= n_r < n_l):
+        note = f"{n_l - n_r} of {n_l} names kept their last pass read"                                    # W6 (A13)
+    return {"state": state, "on_demand": on_demand, "started_at_et": started, "bars_through_et": bt,
+            "as_of_text": as_of, "scanning_text": scanning_text,
+            "text": scanning_text if scanning_text else as_of, "note": note,
+            "rescan_label": RESCAN_LABEL,
+            "rescan_title": (f"Run one pass now — both push gates run dry, so this pass rings no device; the last "
+                             f"pass is reused when it finished under {GC.ON_DEMAND_REUSE_SEC} s ago")}    # W9 (A13)
+
+
+def _aplus_text(sym: str, setup: str, r: dict, since: Optional[str], extra: list) -> str:
+    """W16 — "{SYM} · {e} {label} · trigger {T} · stop {S} (−r%) · A+ since HH:MM ET" (+ the card's own variant / grade
+    words, + " (15-min bar)")."""
+    bits = [sym, _setup_label(setup)] + [x for x in extra if x]
+    trig, stop, risk = _f(r.get("trigger")), _f(r.get("stop")), _f(r.get("risk_pct"))
+    if trig is not None:
+        bits.append(f"trigger {_px(trig)}")
+    if stop is not None:
+        bits.append(f"stop {_px(stop)}" + (f" (−{abs(risk):.1f}%)" if risk is not None else ""))
+    text = " · ".join(bits)
+    if since:
+        text += f" · A+ since {since} ET"
+    if (r.get("frame") or "5m") == "15m":
+        text += " (15-min bar)"
+    return text
+
+
+def _aplus_note(cad: int) -> str:
+    """W19 (AMENDMENTS5 A11 wording: the banner lists what the cards call A+, while the latest pass reads it A+)."""
+    q = _entry_quote()
+    gg = f" — GG: “{q}” (S8 {ENTRY_QUOTE_TS})" if q else ""
+    return (f"A+ = every rule of the setup met, price traded through the trigger and the bar closed{gg}. Listed while "
+            f"the latest pass reads the card A+ and the {cad}-minute pass is current; an entry that printed earlier and "
+            "a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts "
+            f"stay on the {cad}-minute pass. Closed bars only — an open between passes adds new scanner names, not a "
+            "newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.")
+
+
+def aplus_block(reads_by: dict, latest: Optional[dict], now, *, in_window: bool, scan: dict,
+                cron: Optional[dict] = None, session: Optional[date] = None) -> dict:
+    """§3.6 (c) — the 🎯 banner, every sub (DECISIONS5 K1 / K3, AMENDMENTS5 A10 / A11). Rows = every listed read OF THE
+    LATEST PASS (its `updated_at` is that pass's clock — a name the pass did not re-read keeps an older read and is not
+    listed) whose card state is `aplus`, a variant / grade read included with the card's own words; ordered newest
+    entry bar first, then SETUPS order, then the symbol. NOT listed: triggered (the entry printed earlier, K1), forming
+    / armed potentials, partial, stopped, any read of an older pass. Served only while the newest CRON pass (`cron`) is
+    within STALE_AFTER_SEC (A10: opens alone never stand in for a dead cron) and only inside the pass window (C6)."""
+    from chart_maps.gajjala import alerts as AL                      # bar_close_et: the A+ gate's own clock
+    scan = scan if isinstance(scan, dict) else {}
+    latest = latest if isinstance(latest, dict) else None
+    at = _at_utc(latest)
+    session = session or _et(now).date()
+    cad = GC.PASS_CADENCE_SEC // 60
+    if cron is None and latest is not None and not latest.get("on_demand"):
+        cron = latest                                                # pre-split: every pass was a cron pass
+    c_at = _at_utc(cron)
+    c_age = (_et(now) - _et(c_at)).total_seconds() if c_at is not None else None
+    cron_ok = c_age is not None and c_age <= GC.STALE_AFTER_SEC
+    this_session = latest is not None and at is not None and latest.get("date") == session.isoformat()
+    rows: list = []
+    if in_window and this_session and cron_ok:
+        keyed = []
+        for sym, doc in (reads_by or {}).items():
+            if not isinstance(doc, dict):
+                continue
+            upd = _stamp_utc(doc.get("updated_at"))
+            if upd is None or (at - upd).total_seconds() >= 1:       # a read of an older pass (A11 NEGATIVE)
+                continue
+            setups = doc.get("setups") if isinstance(doc.get("setups"), dict) else {}
+            for setup in GC.SETUPS:
+                r = setups.get(setup)
+                if not isinstance(r, dict) or r.get("state") != "aplus":
+                    continue
+                sym_u = str(sym or doc.get("symbol") or "").upper()
+                close = AL.bar_close_et(r.get("entry_bar_t"))
+                since = close.strftime("%H:%M") if close is not None else None
+                frame = r.get("frame") if r.get("frame") in TFS else "5m"
+                extra = [variant_label(r), grade_label(r)]
+                keyed.append(((order_key({"symbol": sym_u, "gajjala": {"state": "aplus",
+                                                                       "entry_bar_t": r.get("entry_bar_t")}})[:2],
+                               GC.SETUPS.index(setup), sym_u),
+                              {"symbol": sym_u, "setup": setup, "setup_label": _setup_label(setup), "frame": frame,
+                               "trigger": _f(r.get("trigger")), "stop": _f(r.get("stop")),
+                               "risk_pct": _f(r.get("risk_pct")), "since_et": since,
+                               "variant_label": extra[0], "grade_label": extra[1],
+                               "href": PT.deep_link(sym_u, setup),
+                               "text": _aplus_text(sym_u, setup, r, since, extra)}))
+        keyed.sort(key=lambda kv: kv[0])
+        rows = [row for _k, row in keyed]
+    empty = None
+    if not rows:
+        hhmm = _et(at).strftime("%H:%M") if at is not None else None
+        if not in_window:
+            empty = (f"🎯 No A+ · market closed — last pass {hhmm} ET {_et(at).date().isoformat()} · {UNMEASURED}"
+                     if at is not None else f"🎯 No A+ · market closed — no pass on file · {UNMEASURED}")        # W18
+        elif not this_session:
+            empty = f"🎯 No A+ right now · no pass this session yet · {UNMEASURED}"                              # W17b
+        elif not cron_ok:
+            since = _when(c_at, session)
+            empty = ((f"🎯 No A+ shown · the {cad}-minute pass has not run since {since} ET" if since else
+                      f"🎯 No A+ shown · the {cad}-minute pass has not run this session")
+                     + f" — no alert can ring without it; the banner waits for it · {UNMEASURED}")              # W17c
+        elif scan.get("on_demand") or latest.get("on_demand"):
+            empty = f"🎯 No A+ right now · scanned on open {hhmm} ET · {UNMEASURED}"                            # W17
+        else:
+            empty = f"🎯 No A+ right now · last pass {hhmm} ET · {UNMEASURED}"                                  # W17
+    title = (f"🎯 A+ — traded through the trigger and the bar closed (GG's entry) · {len(rows)} · {UNMEASURED}"
+             if rows else None)                                                                                 # W15
+    return {"title": title, "rows": rows, "empty_text": empty, "note": _aplus_note(cad)}
 
 
 def push_block() -> dict:
@@ -451,7 +706,19 @@ def _flag_text(setup: str, read: dict) -> Optional[str]:
             "third-party source)")
 
 
-def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_doc, daily: Optional[dict]) -> dict:
+def _read_at_text(doc: dict, pass_at: Optional[datetime]) -> Optional[str]:
+    """W7 (2026-10-15): "read at the HH:MM ET pass" when the card's read doc is older than the pass shown by ≥ 1 s —
+    a name an on-open pass did not re-read (its budget ran out) or whose bars failed on a pass keeps an earlier read,
+    and says so. None when the read is the shown pass's own (or either stamp is missing)."""
+    upd = _stamp_utc(doc.get("updated_at")) if isinstance(doc, dict) else None
+    pa = _stamp_utc(pass_at)
+    if upd is None or pa is None or (pa - upd).total_seconds() < 1:
+        return None
+    return f"read at the {_et(upd).strftime('%H:%M')} ET pass"
+
+
+def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_doc, daily: Optional[dict],
+           pass_at: Optional[datetime] = None) -> dict:
     ctx = doc.get("ctx") if isinstance(doc.get("ctx"), dict) else {}
     daily = daily or {}
     fr = ctx.get("float") if isinstance(ctx.get("float"), dict) else daily.get("float")
@@ -473,6 +740,7 @@ def _chips(doc: dict, setup: str, read: dict, scan_row: dict, sess: dict, halt_d
         "flag_k": _flag_text(setup, read),
         "instrument": GC.SCAN_UNKNOWN_TYPE_LABEL if scan_row.get("type") == GC.SCAN_UNKNOWN_TYPE else None,
         "outside_rth": OUTSIDE_RTH.get(tape),
+        "read_at": _read_at_text(doc, pass_at),
     }
     if setup == "reversal_squeeze":
         out["squeeze_history"] = _squeeze_text(ctx.get("squeeze_history") or daily.get("squeeze_history"))
@@ -572,9 +840,10 @@ def _on_bars(markers: list, bars: list) -> list:
 
 
 def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, listed: Optional[dict],
-               halt_doc=None, daily=None) -> dict:
+               halt_doc=None, daily=None, pass_at: Optional[datetime] = None) -> dict:
     """One card: bars + 9/21 EMA + served volume average of `tf` (tile_tf), BUY/STOP lines, the A+ marker when its bar
-    is served, and the read in words (state pill, criteria, chips)."""
+    is served, and the read in words (state pill, criteria, chips; `pass_at` = the shown pass's clock → the
+    "read at …" chip, 2026-10-15)."""
     from chart_maps import board as board_mod
     read = dict((doc.get("setups") or {}).get(setup) or {})
     sym = (doc.get("symbol") or "").upper()
@@ -586,7 +855,7 @@ def setup_tile(doc: dict, setup: str, tf: str, *, scan_row: dict, sess: dict, li
             fr = alt
     markers = _on_bars([{"date": read.get("entry_bar_t"), "kind": "buy", "label": "A+"}]
                        if read.get("state") in MARKED_STATES and read.get("entry_bar_t") else [], fr["bars"])
-    chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily)
+    chips = _chips(doc, setup, read, scan_row, sess, halt_doc, daily, pass_at=pass_at)
     stats = [s for s in ({"k": "Change", "v": _pct(scan_row.get("change_pct"))},
                          {"k": "Volume", "v": _compact(scan_row.get("volume"))}) if s["v"]]
     g = {k: read.get(k) for k in ("setup", "state", "frame", "ready", "broke", "trigger", "stop", "risk_pct",
@@ -888,7 +1157,7 @@ def _potential_strip(setup: str, pots: list, today_n: int, *, sess: dict, in_win
 
 
 def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, sess: dict, listed: dict,
-                     halts_by: dict) -> list:
+                     halts_by: dict, pass_at: Optional[datetime] = None) -> list:
     """§3.9 (b) — one tile per SYMBOL: the existing `setup_tile` card of its PRIMARY potential (the first by
     potential.order_key), with `gajjala.potential` (W12) and the 🧩 other setups forming on it (GG S9 1:59:01)."""
     by_sym: dict = {}
@@ -900,7 +1169,7 @@ def _potential_tiles(pots: list, *, st, session: date, tf_ask: str, scan_row, se
         setup = row["setup"]
         daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
         tile = setup_tile(doc, setup, tile_tf(read, tf_ask, "5m"), scan_row=scan_row(sym), sess=sess,
-                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily)
+                          listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily, pass_at=pass_at)
         first = row["first_seen_et"]
         tile["gajjala"]["potential"] = {
             "kind": row["kind"], "kind_label": row["kind_label"], "setup": setup, "setup_label": _setup_label(setup),
@@ -1063,6 +1332,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
     halts_by = {d["symbol"].upper(): d for d in st.halts(session) if d.get("symbol")}
     latest = st.latest_pass()
     spass = session_pass(st, latest, session)
+    # 🔄 / 🎯 (2026-10-15): the shown pass, the newest CRON pass (A10) and the lease — Mongo reads, each soft
+    pass_doc = spass or latest
+    pass_at = _at_utc(pass_doc)
+    cron = _soft("cron pass read", _cron_ref, st, pass_doc, default=None)
+    lease = _soft("lease read", st.lease_state, now, default={}) or {}
     sk = (sort or "").strip().lower() if isinstance(sort, str) else ""
     sk = sk if sk in dict(SORTS_PM) else SORT_PM_DEFAULT
     try:
@@ -1128,7 +1402,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                 if setup == sub_k:                                      # only the shown sub builds its cards
                     daily = st.get_daily(session, sym) if setup == "reversal_squeeze" else None
                     tiles.append(setup_tile(doc, setup, tile_tf(r, tf_ask, tf_k), scan_row=_row(sym), sess=sess,
-                                            listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily))
+                                            listed=listed.get(sym), halt_doc=halts_by.get(sym), daily=daily,
+                                            pass_at=pass_at))
         tiles.sort(key=order_key)
         c["listed"] = len(listed) if listed else len(reads_by)
         per_setup[setup], counts_by[setup] = tiles, c
@@ -1145,12 +1420,16 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         counts = {k: sum(c[k] for c in counts_by.values()) for k in list(COUNT_STATES) + ["awaiting_answer"]}
         counts["listed"] = len(listed) if listed else len(reads_by)
     out = {"tab": "gajjala", "sub": sub_k, "sub_resolved_from": resolved, "tf": tf_k, "subs": subs,
-           "session": sess, "pass": _pass_block(spass or latest, now, session, in_window),
+           "session": sess, "pass": _pass_block(pass_doc, now, session, in_window, cron=cron),
            "strip": _strip_block(spass),
            "counts": counts, "tiles": [], "graveyard_today": [], "note": board_note(),
            "empty_note": None, "rules_section": "gajjala", "push": push_block(),
            "push_potential": _soft("potential push line", push_potential_block, session),
            "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a]}
+    out["scan"] = _soft("scan line", scan_block, pass_doc, lease, now, in_window=in_window, session=session,
+                        default=None)
+    out["enterable"] = _soft("A+ banner", aplus_block, reads_by, pass_doc, now, in_window=in_window,
+                             scan=out["scan"] or {}, cron=cron, session=session, default=None)
     try:
         out["graveyard_today"] = SC.graveyard_today(st, session)
     except Exception as exc:                                        # noqa: BLE001
@@ -1170,7 +1449,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
                                  in_window=in_window) if pot_ok else None
     elif sub_k == GC.POTENTIAL_SUB:
         out["tiles"] = (_soft("potential tiles", _potential_tiles, pots, st=st, session=session, tf_ask=tf_ask,
-                              scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, default=[])
+                              scan_row=_row, sess=sess, listed=listed, halts_by=halts_by, pass_at=pass_at,
+                              default=[])
                         if pot_ok else [])[:lim]
         out["track"] = _soft("potential track", _track_block, pot_docs, pot_prev, session=session, prev=prev,
                              sess=sess) if pot_ok else None
@@ -1207,4 +1487,4 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 
 __all__ = ["build", "resolve_sub", "order_key", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
-           "push_potential_block", "board_note"]
+           "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp"]

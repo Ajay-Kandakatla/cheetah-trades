@@ -100,3 +100,27 @@
 .gg-timeline summary { cursor: pointer; color: var(--ink-subtle, #94a3b8); font-size: 0.76rem; }
 .gg-timeline ol { margin: 0.1rem 0 0; padding-left: 1.2rem; font-size: 0.76rem; }
 .gg-watch { font-size: 0.8rem; overflow-wrap: anywhere; }
+
+/* 🔄 scan on open + 🎯 A+ line (2026-10-15, BUILD_SPEC5 §3.8). Ajay: "When ever I open Gajjala's intiate a new
+   scan of stocks.  In that moment and if there are any enterable stocks on the top which I see in potential i guess".
+   The line, the rows and the note are SERVED; these rules only lay them out. */
+.gg-aplus {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-size: 0.82rem;
+  padding: 0.3rem 0.6rem; border-radius: 6px; border-left: 3px solid var(--gold, #c9a227);
+  background: var(--gold-faint, rgba(184, 147, 90, 0.12)); overflow-wrap: anywhere;
+}
+.gg-aplus-title { font-weight: 600; }
+.gg-aplus-row {
+  display: inline-block; padding: 0.08rem 0.5rem; border-radius: 999px; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--gold-hairline, rgba(184, 147, 90, 0.35)); color: inherit; text-decoration: none;
+}
+a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-faint, rgba(184, 147, 90, 0.12)); }
+.gg-aplus-empty { color: var(--ink-muted, #94a3b8); }
+.gg-aplus-note { display: inline; color: var(--ink-muted, #94a3b8); font-size: 0.76rem; }
+.gg-aplus-note summary { display: inline; cursor: pointer; }
+.gg-scanning { color: var(--ink-muted, #94a3b8); font-style: italic; }
+.gg-rescan {
+  font: inherit; font-size: 0.76rem; padding: 0.05rem 0.45rem; cursor: pointer; color: inherit;
+  background: transparent; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 4px;
+}
+.gg-rescan:disabled { opacity: 0.5; cursor: default; }

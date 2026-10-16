@@ -7595,6 +7595,166 @@ const CONTRACTS = [
       return errs;
     },
   },
+  {
+    name: '🔄 Gajjala scan on open + 🎯 A+ banner (2026-10-15): owner-only POST on mount, gates dry, the cron never refused by an open, closed bars said, A+ only, ✨ entry quotes his ask',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.
+    // In that moment and if there are any enterable stocks on the top which I
+    // see in potential i guess" (two spaces after "stocks." in every verbatim
+    // quote). He ACTS on the 🎯 line (real money). DECISIONS5 K1 (A+ only), K2
+    // (an open rings no device — both push gates dry), K3 (the line on every
+    // sub, first in 🧠 Potential), K4 (a pass under ON_DEMAND_REUSE_SEC old is
+    // reused), C1 (the cron cadence is sacred), C4 (the trigger is its own
+    // owner-only POST; the GET stays Mongo-only; no SSE), C8 (the banner never
+    // borrows S&D's enterable machinery). AMENDMENTS5 A1: the on-open pass runs
+    // in a SUBPROCESS, never a thread in the api; A13: "this pass rings no
+    // device" (the NOTHING pattern below stays banned). BUILD_SPEC5 §4 WP-M, checks
+    // 1–11. UNMEASURED — not a recommendation.
+    checks: (src) => {
+      const errs = [];
+      const HIS = "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if there are any enterable stocks on the top which I see in potential i guess";
+      const NOTHING = /nothing (rings|reaches|is sent)/i;
+      const B_WORD = /boun|fake/i;
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'").replace(/\\"/g, '"');
+      const pyBody = (pySrc, def) => {
+        const at = pySrc.indexOf(`\ndef ${def}(`);
+        if (at < 0) return null;
+        const end = pySrc.indexOf('\ndef ', at + 5);
+        return pySrc.slice(at, end < 0 ? undefined : end).replace(/#[^\n]*/g, '');
+      };
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+
+      // 1. one path, one POST
+      const lib = tryRead('src/lib/gajjala.ts');
+      if (lib && !/^export const GG_SCAN_PATH = '\/chart-maps\/gajjala\/scan';/m.test(lib)) errs.push("lib/gajjala.ts must export GG_SCAN_PATH = '/chart-maps/gajjala/scan'");
+      if (!/\$\{GG_SCAN_PATH\}`\s*,\s*\{[^}]*method: 'POST'/.test(src)) errs.push("GajjalaBoard must fetch `${API}${GG_SCAN_PATH}` with method: 'POST' (C4 — the trigger is its own POST)");
+      // 2. owner-only (Q1 default: the /auth/me is_admin flag, every house owner)
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      const ownerM = /const (\w+) = user\?\.is_admin === true;/.exec(code);
+      if (!ownerM) errs.push('GajjalaBoard must derive the owner flag from user?.is_admin === true in code (owner-only, DECISIONS5 C4)');
+      else if (!new RegExp(`if \\(!${ownerM[1]}\\b[^)]*\\) return;[\\s\\S]{0,120}startScan\\(\\)`).test(code)) errs.push(`GajjalaBoard's mount POST must return early unless ${ownerM[1]} (owner-only, DECISIONS5 C4)`);
+      if (/is_primary_admin/.test(src)) errs.push('GajjalaBoard names is_primary_admin — the owner check is is_admin (Q1 default; his call to narrow)');
+      // 3. no SSE (the GZip trap)
+      if (/EventSource/.test(src)) errs.push('GajjalaBoard opens an EventSource — the board polls the existing GET (C4; GZip buffers streams)');
+      // 4. the mounts, and the 🎯 line leads the 🧠 Track
+      for (const id of ['gg-aplus', 'gg-scanning', 'gg-rescan']) if (!src.includes(`data-testid="${id}"`)) errs.push(`GajjalaBoard must mount data-testid="${id}"`);
+      const tabsAt = src.indexOf('aria-label="Gajjala setups"');
+      const bannerAt = src.indexOf('<AplusBanner');
+      const trackAt = src.indexOf('<TrackPanel');
+      if (tabsAt < 0 || bannerAt < 0 || trackAt < 0) errs.push('GajjalaBoard lost the sub tablist (aria-label="Gajjala setups"), <AplusBanner or <TrackPanel');
+      else if (!(tabsAt < bannerAt && bannerAt < trackAt)) errs.push('<AplusBanner must sit AFTER the sub tablist and BEFORE <TrackPanel — the 🎯 line leads 🧠 Potential (K3)');
+      // 5. the banner reads only its block (C8)
+      const bAt = src.indexOf('function AplusBanner(');
+      const banner = bAt < 0 ? '' : src.slice(bAt, src.indexOf('\n}\n', bAt) + 2);
+      if (!banner) errs.push('GajjalaBoard lost function AplusBanner(');
+      else {
+        const hit = /room|EnterableChip|enterable:|ENTERABLE_KIND/i.exec(banner);
+        if (hit) errs.push(`function AplusBanner names "${hit[0]}" — it reads ONLY its served block, never S&D's enterable machinery (C8)`);
+      }
+      // 6. the route: owner-only POST; the GET never scans
+      const api = tryRead('../backend/chart_maps/api.py');
+      const postAt = api.indexOf('@router.post("/chart-maps/gajjala/scan")');
+      if (api && postAt < 0) errs.push('chart_maps/api.py lost @router.post("/chart-maps/gajjala/scan")');
+      else if (api) {
+        const nxt = api.indexOf('\n@router.', postAt + 5);
+        const post = api.slice(postAt, nxt < 0 ? undefined : nxt);
+        if (!post.includes('is_admin_email(')) errs.push('the POST /chart-maps/gajjala/scan handler must check is_admin_email( (owner-only)');
+        if (!/status_code\s*=\s*404\b/.test(post)) errs.push('the POST /chart-maps/gajjala/scan handler must answer a non-owner 404 (stealth)');
+      }
+      const getAt = api.indexOf('async def chart_maps_gajjala(');
+      if (api && getAt < 0) errs.push('chart_maps/api.py lost async def chart_maps_gajjala(');
+      else if (api) {
+        const nxt = api.indexOf('\n@router.', getAt);
+        const get = api.slice(getAt, nxt < 0 ? undefined : nxt);
+        if (/on_demand/.test(get)) errs.push('GET /chart-maps/gajjala names on_demand — the GET stays Mongo-only (C4); the scan is the POST');
+      }
+      // 7. the numbers: his 60 s, the short budget, the cron's wait limit
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py');
+      const line = (name) => (new RegExp(`^${name} = ([^#\\n]+?)\\s*(#[^\\n]*)?$`, 'm').exec(gc) || null);
+      const num = (name, seen = []) => {
+        const m = line(name);
+        if (!m || seen.includes(name)) return null;
+        const v = m[1].trim();
+        if (/^\d+$/.test(v)) return Number(v);
+        if (/^[A-Z_]+$/.test(v)) return num(v, [...seen, name]);
+        return null;
+      };
+      if (gc) {
+        const reuseL = line('ON_DEMAND_REUSE_SEC');
+        if (!reuseL || reuseL[1].trim() !== '60') errs.push('constants.py must carry ON_DEMAND_REUSE_SEC = 60 (Ajay K4)');
+        else if (!/^# Ajay 2026-10-15/.test(reuseL[2] || '')) errs.push('ON_DEMAND_REUSE_SEC must carry a comment starting "# Ajay 2026-10-15" — his number');
+        const waitL = line('CRON_WAIT_ON_DEMAND_SEC');
+        if (!waitL || waitL[1].trim() !== 'ON_DEMAND_BUDGET_SEC') errs.push('constants.py must derive CRON_WAIT_ON_DEMAND_SEC = ON_DEMAND_BUDGET_SEC (C1: the cron waits at most the on-open budget)');
+        const budget = num('ON_DEMAND_BUDGET_SEC'), passB = num('PASS_BUDGET_SEC'), gap = num('LEASE_MIN_GAP_SEC'), cad = num('PASS_CADENCE_SEC'), wait = num('CRON_WAIT_ON_DEMAND_SEC');
+        if ([budget, passB, gap, cad, wait].some((x) => x == null)) errs.push('constants.py lost ON_DEMAND_BUDGET_SEC / PASS_BUDGET_SEC / LEASE_MIN_GAP_SEC / PASS_CADENCE_SEC / CRON_WAIT_ON_DEMAND_SEC as ints or names');
+        else {
+          if (!(budget < passB)) errs.push(`ON_DEMAND_BUDGET_SEC (${budget}) must be under PASS_BUDGET_SEC (${passB}) — C2: the on-open budget is the short one`);
+          if (!(wait + gap < cad)) errs.push(`CRON_WAIT_ON_DEMAND_SEC + LEASE_MIN_GAP_SEC (${wait} + ${gap}) must be under PASS_CADENCE_SEC (${cad}) — C1: a waiting cron never costs the next tick`);
+        }
+      }
+      // 8. no new crontab line — the open is not a job
+      const cron = cronCommands(tryRead('../backend/crontab'));
+      const runLines = cron.filter((l) => /chart_maps\.gajjala\.run\b/.test(l));
+      if (runLines.length !== 1) errs.push(`the crontab must carry exactly one chart_maps.gajjala.run line (found ${runLines.length})`);
+      const stepM = runLines.length === 1 ? /^\S*\/(\d+)\s/.exec(runLines[0].trim()) : null;
+      const step = stepM ? Number(stepM[1]) : null;
+      if (runLines.length === 1 && step == null) errs.push('the chart_maps.gajjala.run crontab line has no minute step (*/N or a-b/N)');
+      const odCron = cron.find((l) => /on_demand|on.open|gajjala\.scan/.test(l));
+      if (odCron) errs.push(`a crontab line names the on-open scan ("${odCron.trim().slice(0, 60)}") — an open is never a cron job`);
+      // 9. the api spawns a subprocess and runs no pass, sends nothing (A1, K2)
+      const od = tryRead('../backend/chart_maps/gajjala/on_demand.py');
+      if (od) {
+        if (!/subprocess\.Popen\(/.test(od)) errs.push('gajjala/on_demand.py must start the pass with subprocess.Popen( (AMENDMENTS5 A1 — never a thread in the api)');
+        if (!/start_new_session=True/.test(od)) errs.push('gajjala/on_demand.py must spawn with start_new_session=True (A1)');
+        const bad = /threading\.Thread\(|notify_|send_to_user|alert_status|record_status|import pandas|from \. import (bars|detectors|scanner|alerts|potential)/.exec(od);
+        if (bad) errs.push(`gajjala/on_demand.py names "${bad[0]}" — the api process runs no pass and sends nothing (A1, K2)`);
+      }
+      // 10. the served words: never "enterable" / "fresh bar" / the NOTHING pattern (C3, C8, A13)
+      const tab = tryRead('../backend/chart_maps/gajjala/tab.py');
+      for (const def of ['aplus_block', 'scan_block']) {
+        const body = tab ? pyBody(tab, def) : null;
+        if (tab && body == null) errs.push(`chart_maps/gajjala/tab.py lost def ${def}(`);
+        else if (body) {
+          const w = /enterable|fresh bar/i.exec(body);
+          if (w) errs.push(`tab.${def} says "${w[0]}" — the served word is A+ / closed bars (C3, C8)`);
+          if (NOTHING.test(body)) errs.push(`tab.${def} says "${NOTHING.exec(body)[0]}" — the words are "rings no device" (A13)`);
+        }
+      }
+      // 11. the ✨ entry
+      const nf = tryRead('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-gajjala-on-open-2026-10-15'");
+      if (nf && idAt < 0) errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-gajjala-on-open-2026-10-15'");
+      else if (nf) {
+        const end = nf.indexOf('" },', idAt);
+        const entry = unesc(nf.slice(idAt, end < 0 ? undefined : end + 4));
+        const where = 'the 🔄 ✨ entry';
+        const reuse = num('ON_DEMAND_REUSE_SEC');
+        if (!entry.includes("route: '/chart-maps?tab=gajjala&sub=potential'")) errs.push(`${where} must route to '/chart-maps?tab=gajjala&sub=potential'`);
+        if (!entry.includes(HIS)) errs.push(`${where} must quote his ask verbatim (two spaces after "stocks.")`);
+        if (!entry.includes('UNMEASURED')) errs.push(`${where} must say UNMEASURED`);
+        if (!entry.includes('never rings your phone')) errs.push(`${where} must say an open never rings your phone (K2)`);
+        const secs = [...entry.matchAll(/(\d+) seconds/g)].map((m) => Number(m[1]));
+        if (!secs.length) errs.push(`${where} must say the reuse in seconds (constants.ON_DEMAND_REUSE_SEC)`);
+        for (const s of secs) if (s !== reuse) errs.push(`${where} says "${s} seconds" — constants.ON_DEMAND_REUSE_SEC is ${reuse}`);
+        const mins = [...entry.matchAll(/(\d+)-minute/g), ...entry.matchAll(/every (\d+) minutes/g)].map((m) => Number(m[1]));
+        if (!mins.length) errs.push(`${where} must name the ${step}-minute pass (the gajjala.run crontab step)`);
+        for (const n of mins) if (n !== step) errs.push(`${where} says "${n}-minute" — the gajjala.run crontab step is ${step}`);
+        const own = entry.split(HIS).join('');
+        if (/enterable/i.test(own)) errs.push(`${where} says "enterable" outside his quote — the word is A+ (C8)`);
+        if (B_WORD.test(entry)) errs.push(`${where} says the b-word / "fake"`);
+        let forbidden = [];
+        try {
+          const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py'));
+          forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+        } catch { /* reported below */ }
+        if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…) — the house forecast list');
+        for (const w of forbidden) if (entry.toLowerCase().includes(w.toLowerCase())) errs.push(`${where} says "${w}" (high_beta_tab.FORBIDDEN_WORDS — no forecast words)`);
+        if (NOTHING.test(entry)) errs.push(`${where} says "${NOTHING.exec(entry)[0]}" — say what does not ring (A13)`);
+      }
+      return errs;
+    },
+  },
 ];
 
 let failed = 0;

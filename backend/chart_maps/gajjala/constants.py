@@ -160,6 +160,16 @@ DAILY_MAX_NEW_PER_PASS = 8               # TRANSPORT — 🎾 history chip in-pa
 AH_CONFIRM_MAX_PER_PASS = 150            # TRANSPORT — rotation queue; the unchecked count is served
 TILE_LIMIT_DEFAULT = 24                  # TRANSPORT — = chart_maps.board.LIMIT_DEFAULT (test pins equality)
 TILE_LIMIT_MAX = 80                      # TRANSPORT — = chart_maps.board.LIMIT_MAX (test pins equality)
+# 🔄 scan on open (Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.") — DECISIONS5 K4, C1, C2.
+# Pacing only: nothing lists, reads or pushes on these numbers. Measured 2026-10-15 (the live pass docs, read-only):
+# pass wall time p50 5.6 s, p90 11.7 s, p99 18.2 s, max 34.7 s (16:06 ET, 66 names); cron start offset after the tick
+# minute (424 pass docs) p50 0.8 s, 7 starts >= 10 s, max 58.5 s. The cron's gap clock is its TICK clock (AMENDMENTS5
+# A6), so a wait never eats the next tick's gap: a tick 58.5 s late leaves the on-time next tick 241.5 s >= 240 s.
+ON_DEMAND_REUSE_SEC = 60                 # Ajay 2026-10-15 K4 — an open reuses a pass that finished under 60 s ago
+ON_DEMAND_BUDGET_SEC = 45                # TRANSPORT — MINE (HIS CALL Q4): the on-open pass's bar budget (from its start, like PASS_BUDGET_SEC); above the measured max wall 34.7 s (p99 18.2 s), well under the cron's 240 s
+CRON_WAIT_ON_DEMAND_SEC = ON_DEMAND_BUDGET_SEC   # derived — MINE (DECISIONS5 C1): a cron tick waits at most the on-open budget for an on-open pass, then takes the lease over
+ON_DEMAND_POLL_SEC = 5                   # TRANSPORT — MINE (HIS CALL Q4): a waiter (the cron on the lease, the board on the GET) re-checks every 5 s
+ON_DEMAND_WAIT_MAX_SEC = 2 * ON_DEMAND_BUDGET_SEC   # derived — MINE (HIS CALL Q4): the board stops waiting after 90 s (an on-open pass plus its tail, or a typical cron pass); the 5-minute re-read takes over
 # Mongo retention (spec §3.1.6)
 LEDGER_TTL_DAYS = 30                     # TRANSPORT — gajjala_scan / _ah_carry / _post / _passes / _daily
 READS_TTL_DAYS = 14                      # TRANSPORT — gajjala_reads (tile bars are the bulk)

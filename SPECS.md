@@ -596,6 +596,25 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   (09:30–09:45, K2); `/alerts` 🧠 pass row + today's list, `/notifications` toggle, ℹ️ lines. No new crontab line.
   The A+ kind stays SHADOW, its copy narrowed to "no A+ reaches your phone". Contracts: `scripts/contracts.mjs` "🧠
   gajjala_potential (2026-10-15)". Doc: `docs/chart_maps/gajjala_potential_2026_10_15.md`.
+- **🔄 Scan on open · 🎯 A+ banner** (2026-10-15, `chart_maps/gajjala/on_demand.py`). Ajay: *"When ever I open
+  Gajjala's intiate a new scan of stocks.  In that moment and if there are any enterable stocks on the top which I see
+  in potential i guess"*. Mounting the board (opening, or switching into `tab=gajjala`) POSTs `/chart-maps/gajjala/scan`
+  — owner-only (`auth.is_admin_email`, 404 stealth) — which answers at once (started | reused | waiting | closed |
+  refused) and spawns ONE pass as a SUBPROCESS (`python -m chart_maps.gajjala.run --on-demand` → `run.run_on_demand`;
+  the api process runs no pass work, AMENDMENTS5 A1): `ON_DEMAND_BUDGET_SEC` bar budget, no Yahoo, BOTH push gates dry,
+  no /alerts row, pass doc `{date}|{HH:MM:SS}|open` with `on_demand: true` — unless a pass is in flight (waited for),
+  the latest finished under `ON_DEMAND_REUSE_SEC` (60 s, Ajay K4), or the session's first 5-minute pass has not landed
+  (`waiting`, A12). Lease split (`store.claim_lease(now, source)`): the min gap counts cron starts only
+  (`last_cron_started_at`, the tick clock — A6); an on-open claim needs only "not held" and writes `od_started_at`, never
+  `started_at` (A9); a cron tick that finds an on-open pass holding the lease waits ≤ `CRON_WAIT_ON_DEMAND_SEC` (polled
+  every `ON_DEMAND_POLL_SEC`) then takes it over — never refused by an open; releases are token-guarded and a
+  superseded on-open pass stops writing (`lease_owner_is`, A8). GET (still Mongo-only) serves `scan` ("🔄 scanned on
+  open HH:MM ET · bars through HH:MM" / "last pass HH:MM ET", "scanning…" while the lease is held) and `enterable` (🎯
+  every read of the latest pass whose card state is `aplus`, variant / grade reads included with the card's own words,
+  newest entry bar first — A11) on every sub, first in 🧠 Potential; served only while the newest CRON pass
+  (`latest_cron`) is within `STALE_AFTER_SEC` — opens alone never hide a dead cron (A10). Closed bars only. UNMEASURED.
+  Doc: `docs/chart_maps/gajjala_on_open_scan_2026_10_15.md`; contracts "🔄 Gajjala scan on open + 🎯 A+ banner
+  (2026-10-15)".
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
@@ -850,7 +869,7 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `30 8  * * 1-5` | `/usr/local/bin/python -m sepa.cli brief` | Morning brief (08:30 ET) |
 | `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
-| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger + 🧠 gajjala_potential pushes (LIVE). § 3 "Chart Maps — Gajjala's tab". |
+| `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger + 🧠 gajjala_potential pushes (LIVE). An owner opening the tab may add one on-open pass as an api-spawned subprocess (push gates dry; the cron waits ≤ 45 s for it, never refused). § 3 "Chart Maps — Gajjala's tab". |
 | `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm. |
 | `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab". |
 

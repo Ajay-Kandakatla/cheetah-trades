@@ -197,3 +197,51 @@ def test_NEGATIVE_a_potential_default_filed_as_ggs_fails_the_label_guard(monkeyp
     monkeypatch.setattr(sys.modules[__name__], "LINES", fake)
     with pytest.raises(AssertionError):
         test_NEGATIVE_cheetah_defaults_are_labelled_ajays_not_ggs()
+
+
+# ── 🔄 scan on open (DECISIONS5 K4, C1, C2; AMENDMENTS5 A6, A13 — 2026-10-15) ────────────────────────────────────────
+# Ajay 2026-10-15: "When ever I open Gajjala's intiate a new scan of stocks.  In that moment and if there are any
+# enterable stocks on the top which I see in potential i guess".
+def test_on_open_values():
+    assert GC.ON_DEMAND_REUSE_SEC == 60                                   # Ajay K4
+    assert (GC.ON_DEMAND_BUDGET_SEC, GC.ON_DEMAND_POLL_SEC, GC.ON_DEMAND_WAIT_MAX_SEC) == (45, 5, 90)
+    assert GC.CRON_WAIT_ON_DEMAND_SEC == GC.ON_DEMAND_BUDGET_SEC
+    assert GC.ON_DEMAND_WAIT_MAX_SEC == 2 * GC.ON_DEMAND_BUDGET_SEC
+
+
+def test_C1_arithmetic_an_open_never_costs_a_cron_tick():
+    """A cron delayed by the full wait still leaves the next tick its LEASE_MIN_GAP_SEC; the open's budget is the short
+    one; the wait is bounded by it and polls a whole number of times."""
+    assert GC.CRON_WAIT_ON_DEMAND_SEC + GC.LEASE_MIN_GAP_SEC < GC.PASS_CADENCE_SEC
+    assert GC.ON_DEMAND_BUDGET_SEC < GC.PASS_BUDGET_SEC
+    assert GC.CRON_WAIT_ON_DEMAND_SEC <= GC.ON_DEMAND_BUDGET_SEC
+    assert GC.CRON_WAIT_ON_DEMAND_SEC % GC.ON_DEMAND_POLL_SEC == 0
+    assert GC.ON_DEMAND_POLL_SEC <= GC.ON_DEMAND_WAIT_MAX_SEC
+
+
+def test_NEGATIVE_the_C1_guard_bites_when_the_budget_grows(monkeypatch):
+    monkeypatch.setattr(GC, "ON_DEMAND_BUDGET_SEC", 61)
+    monkeypatch.setattr(GC, "CRON_WAIT_ON_DEMAND_SEC", 61)
+    with pytest.raises(AssertionError):
+        test_C1_arithmetic_an_open_never_costs_a_cron_tick()
+
+
+def test_the_on_open_numbers_carry_their_tags():
+    """Ajay's 60 s reuse is tagged his; the rest are MINE behind the house tag (the provenance test needs one of
+    GG / Ajay / Cheetah default / TRANSPORT / derived / spec default first); the budget comment cites the measured
+    wall-time distribution (AMENDMENTS5 A13) and the gap clock the measured cron start offsets (A6)."""
+    lines = {n: ln for n, _v, ln in _assigns()}
+    assert _comment(lines["ON_DEMAND_REUSE_SEC"]).startswith("Ajay 2026-10-15")
+    for n in ("ON_DEMAND_BUDGET_SEC", "CRON_WAIT_ON_DEMAND_SEC", "ON_DEMAND_POLL_SEC", "ON_DEMAND_WAIT_MAX_SEC"):
+        c = _comment(lines[n])
+        assert c.startswith(("TRANSPORT — MINE", "derived — MINE")), (n, c)
+    block = "\n".join(LINES[lines["ON_DEMAND_REUSE_SEC"] - 7: lines["ON_DEMAND_WAIT_MAX_SEC"]])
+    for figure in ("p50 5.6 s", "p90 11.7 s", "p99 18.2 s", "max 34.7 s", "66 names", "max 58.5 s"):
+        assert figure in block, figure
+
+
+def test_NEGATIVE_no_on_open_number_is_filed_as_ggs():
+    lines = {n: ln for n, _v, ln in _assigns()}
+    for n in ("ON_DEMAND_REUSE_SEC", "ON_DEMAND_BUDGET_SEC", "CRON_WAIT_ON_DEMAND_SEC", "ON_DEMAND_POLL_SEC",
+              "ON_DEMAND_WAIT_MAX_SEC"):
+        assert not _comment(lines[n]).startswith("GG"), n
