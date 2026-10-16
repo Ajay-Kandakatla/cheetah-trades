@@ -22,6 +22,15 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-16, three messages (verbatim below; the middle one is his XLAB screenshot pair — the card's "now 2.64"
+  // against the ticker page's "$2.77 … Today · Live"). DECISIONS8 K1–K4 defaults. Every number is a constant: the 30
+  // seconds = CARD_LIVE_MS and the 30 minutes = CARD_LIVE_CLOSED_MS (frontend/src/lib/cardLive.ts, read by
+  // hooks/useCardLive.ts), 04:00–20:00 ET = supply_demand/zone_edge.SESSION_OPEN / SESSION_CLOSE (C7: the snapshot
+  // carries no overnight prints), the 5-minute = ChartMaps.tsx BOARD_REFRESH_MS; the backend cap = sepa/prices._SNAP_CHUNK
+  // (via chart_maps/live_card.cap()); the RTH close at the last trade = live_card.CLOSE_FOLLOWS_PRINT_RTH — pinned by
+  // scripts/contracts.mjs ("🔴 live card overlay"). YOUR CALLS = docs/chart_maps/live_card_2026_10_16.md.
+  { id: 'chart-maps-live-card-2026-10-16', addedAt: '2026-10-16', route: '/chart-maps',
+    label: '🔴 Chart Maps cards are live. You said: “Can you make this chart more live please like when its 24 hour or todays entry”, sent XLAB twice — the card read “now 2.64” while the ticker page read “$2.77 … Today · Live” — and “actual price is this  above but it stale value”. Every Chart Maps card’s today candle and its dashed now line now follow the last print, refreshed every 30 seconds while the tab is on screen — the print the ticker page shows; in market hours the candle closes at the last trade. Pre-market and after hours are included (04:00–20:00 ET, shaded as before; the snapshot carries no overnight prints). When the market is closed the cards re-read once every 30 minutes. The line under the toolbar ends “live · HH:MM:SS ET”, or “last refresh HH:MM ET” when a read fails or the market is closed. The 5-minute board refresh (bands, chips, order) is unchanged. Display only — scans still read closed bars, and nothing is written. Not advice.' },
   // Ajay 2026-10-16 (verbatim below). DECISIONS7 D1–D9, K1–K3 defaults. Every number is a backend constant
   // (tape.LATE_WINDOW_MIN, trade_flash.WATCH_*, the crontab step, tape_control.WATCH) — pinned by scripts/contracts.mjs ("🎚️ tape_control").
   { id: 'alerts-tape-control-2026-10-16', addedAt: '2026-10-16', route: '/alerts',

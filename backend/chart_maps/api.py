@@ -5,14 +5,17 @@ Read-only by construction with ONE exception: POST /chart-maps/gajjala/scan
 once — no GET here ever starts a scan. The demand tab warms in the background
 and answers `warming: true` immediately, so a page load cannot sit behind a
 multi-minute universe pass.
+
+POST /chart-maps/live is a READ — the POST only carries the symbol list; it
+writes nothing (chart_maps/live_card.py).
 """
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from auth import current_user_email
@@ -230,6 +233,24 @@ async def chart_maps(
         )
 
     return JSONResponse(await asyncio.to_thread(_run))
+
+
+@router.post("/chart-maps/live")
+async def chart_maps_live(payload: Any = Body(None)):
+    """🔴 The live card overlay (Ajay 2026-10-16: "actual price is this  above
+    but it stale value"): the cards on screen post their symbols every 30 s and
+    get back each card's today candle + now line, composed by the board's own
+    helpers in chart_maps/live_card.py. One snapshot call, one cached-frames
+    find; nothing is written. Above the snapshot chunk the read is refused
+    whole (413) — never a partial cut."""
+    from . import live_card as LC
+    syms_in = payload.get("symbols") if isinstance(payload, dict) else None
+    if not isinstance(syms_in, list):
+        return JSONResponse({"detail": LC.BAD_BODY_TEXT}, status_code=422)
+    syms = LC.normalize(syms_in)
+    if len(syms) > LC.cap():
+        return JSONResponse({"detail": LC.too_many_text(len(syms), LC.cap())}, status_code=413)
+    return JSONResponse(await asyncio.to_thread(LC.compose, syms))
 
 
 @router.get("/chart-maps/high-beta/watch")

@@ -7510,7 +7510,8 @@ const CONTRACTS = [
       const firstAt = arr.indexOf("{ id: '");
       const firstId = (/^\{ id: '([^']+)'/.exec(arr.slice(firstAt)) || [])[1];
       const ID = 'alerts-tape-control-2026-10-16';
-      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found '${firstId}')`);
+      // WIDENED 2026-10-16 — 🔴 live card overlay took the first ✨ slot the same day; this entry must be PRESENT (the newest feature is first).
+      if (!nf.includes("id: 'alerts-tape-control-2026-10-16'")) errs.push("the ✨ entry 'alerts-tape-control-2026-10-16' is missing from NEW_FEATURES");
       const at = arr.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
       else {
@@ -8156,6 +8157,175 @@ const CONTRACTS = [
       // 14. SPECS.md carries the section.
       const specs = read('../SPECS.md');
       if (!specs.includes('### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)')) errs.push('SPECS.md lacks "### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)"');
+      return errs;
+    },
+  },
+  {
+    name: '🔴 live card overlay (2026-10-16): POST /chart-maps/live + useCardLive — the 30 s / 30 min cadences are the pinned constants, the cap is prices._SNAP_CHUNK by name, the route string is shared, the FE composes no word, the ✨ entry is first and every number in it is a constant, never the b-word',
+    file: 'src/lib/cardLive.ts',
+    // Ajay 2026-10-16: "Can you make this chart more live please like when its
+    // 24 hour or todays entry" and "actual price is this  above but it stale
+    // value" (his XLAB pair: the card's "now 2.64" vs the ticker page's "$2.77
+    // … Today · Live"). Any of these links lost silently brings the stale card
+    // back or makes a sentence he reads lie: a cadence retyped away from the
+    // ticker page's 30 s, a cap typed as a number that drifts from the
+    // snapshot chunk, the route renamed on one side only, a footer word
+    // composed in the client, or the ✨ entry stating a number no constant
+    // holds (BUILD_SPEC8 §4 WP-M, AMENDMENTS8 C7).
+    checks: (src) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\'/g, "'").replace(/\\"/g, '"');
+      const noComments = (t) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+      // TS type declarations carry the served field VALUES as types (session: 'premarket' | …) — never rendered.
+      const noTypes = (t) => t.replace(/export type \w+ = \{[\s\S]*?\};/g, '');
+      const num = (x) => Number(String(x).replace(/_/g, ''));
+      const HIS = [
+        'Can you make this chart more live please like when its 24 hour or todays entry',
+        'actual price is this  above but it stale value',
+      ];
+      const HIS_SHOT = ['now 2.64', '$2.77 … Today · Live'];
+
+      // (a) the cadences: lib/cardLive.ts owns both (the hook imports them), tagged; = the ticker page / the closed TTL.
+      const fastM = /^export const CARD_LIVE_MS = ([0-9_]+);\s*\/\/ MINE\b/m.exec(src);
+      const slowM = /^export const CARD_LIVE_CLOSED_MS = ([0-9_]+) \* 60_000;\s*\/\/ Cheetah default\b/m.exec(src);
+      const FAST = fastM ? num(fastM[1]) : null;
+      const SLOW = slowM ? num(slowM[1]) * 60_000 : null;
+      if (FAST !== 30_000) errs.push(`lib/cardLive.ts must declare CARD_LIVE_MS = 30_000  // MINE (reads ${fastM ? fastM[1] : '(absent)'}) — HIS CALL Q1`);
+      if (SLOW !== 30 * 60_000) errs.push(`lib/cardLive.ts must declare CARD_LIVE_CLOSED_MS = 30 * 60_000  // Cheetah default (reads ${slowM ? slowM[0] : '(absent)'}) — HIS CALL Q5`);
+      let hook = '';
+      try { hook = read('src/hooks/useCardLive.ts'); } catch { errs.push('src/hooks/useCardLive.ts is missing (WP-C)'); }
+      if (hook) {
+        if (!/import \{[^}]*\bnextCadence\b[^}]*\} from '\.\.\/lib\/cardLive';/.test(hook)) errs.push('useCardLive.ts must take its cadence from lib/cardLive (nextCadence), never its own number');
+        if (/\b\d[\d_]*_000\b|\b\d{4,}\b/.test(noComments(hook))) errs.push('useCardLive.ts holds a millisecond literal — the cadences live in lib/cardLive.ts only');
+      }
+      const sp = read('src/components/SessionPrice.tsx');
+      const spM = /setInterval\(load, ([0-9_]+)\)/.exec(sp);
+      if (!spM || num(spM[1]) !== FAST) errs.push(`CARD_LIVE_MS (${FAST}) must equal SessionPrice's poll (${spM ? spM[1] : 'setInterval(load, …) absent'}) — the card follows the ticker page`);
+      const d10 = read('../backend/chart_maps/drop10_tab.py');
+      const ttlM = /^CLOSED_TTL_SEC = (\d+) \* 60\b/m.exec(d10);
+      if (!ttlM || Number(ttlM[1]) * 60 * 1000 !== SLOW) errs.push(`CARD_LIVE_CLOSED_MS (${SLOW}) must equal drop10_tab.CLOSED_TTL_SEC (${ttlM ? `${ttlM[1]} * 60` : 'absent'}) — the closed-hours house value`);
+
+      // (b) the cap: the snapshot chunk, by name, everywhere.
+      const pr = read('../backend/sepa/prices.py');
+      const chunkM = /^_SNAP_CHUNK = (\d+)/m.exec(pr);
+      const CHUNK = chunkM ? Number(chunkM[1]) : null;
+      if (CHUNK == null) errs.push('sepa/prices.py lost _SNAP_CHUNK = <n>');
+      let lc = '';
+      try { lc = read('../backend/chart_maps/live_card.py'); } catch { errs.push('backend/chart_maps/live_card.py is missing (WP-A)'); }
+      if (lc) {
+        if (!/def cap\(\) -> int:[\s\S]{0,200}?return int\(prices\._SNAP_CHUNK\)/.test(lc)) errs.push('live_card.cap() must return int(prices._SNAP_CHUNK) — the cap is the snapshot chunk by name');
+        if (CHUNK != null && new RegExp(`\\b${CHUNK}\\b`).test(lc)) errs.push(`live_card.py types the cap ${CHUNK} — read prices._SNAP_CHUNK instead`);
+        if (/^[A-Z_]*(CAP|CHUNK|MAX)[A-Z_]* = \d/m.test(lc)) errs.push('live_card.py defines its own numeric cap constant — it must be prices._SNAP_CHUNK');
+      }
+      const bd = read('../backend/chart_maps/board.py');
+      const limM = /^LIMIT_MAX = (\d+)/m.exec(bd);
+      if (!limM || CHUNK == null || Number(limM[1]) > CHUNK) errs.push(`board.LIMIT_MAX (${limM ? limM[1] : 'absent'}) must be ≤ prices._SNAP_CHUNK (${CHUNK}) — one live read per board, the FE never splits`);
+      if (CHUNK != null && new RegExp(`\\b${CHUNK}\\b`).test(noComments(src))) errs.push(`lib/cardLive.ts types the cap ${CHUNK} — the server owns it`);
+
+      // (c) the route string, the same on both sides; the POST route refuses whole above the cap.
+      const api = read('../backend/chart_maps/api.py');
+      if (!api.includes('@router.post("/chart-maps/live")')) errs.push('chart_maps/api.py lacks @router.post("/chart-maps/live")');
+      const hAt = api.indexOf('@router.post("/chart-maps/live")');
+      const hEnd = hAt < 0 ? -1 : api.indexOf('\n@router.', hAt + 1);
+      const handler = hAt < 0 ? '' : api.slice(hAt, hEnd < 0 ? undefined : hEnd);
+      if (handler && (!handler.includes('status_code=413') || !handler.includes('live_card'))) errs.push('the /chart-maps/live handler must call live_card and refuse above the cap with status_code=413');
+      if (!/^export const CARD_LIVE_PATH = '\/chart-maps\/live';/m.test(src)) errs.push("lib/cardLive.ts must export CARD_LIVE_PATH = '/chart-maps/live' (the api.py route string)");
+      const page = read('src/pages/ChartMaps.tsx');
+      if (page.includes("'/chart-maps/live'")) errs.push('ChartMaps.tsx types the live route — it goes through CARD_LIVE_PATH in the hook');
+      if (hook && !/fetch\(`\$\{API\}\$\{CARD_LIVE_PATH\}`/.test(hook)) errs.push('useCardLive.ts must POST to `${API}${CARD_LIVE_PATH}`');
+      if (/fetch\(/.test(noComments(src))) errs.push('lib/cardLive.ts fetches — it is the pure half; the hook owns the POST');
+
+      // (d) the FE composes nothing: no footer / label word in the lib, the hook or the page's live slice.
+      const WORDS = /live ·|last refresh|now ·|premarket|afterhours| ET'|' ET/;
+      const sAt = page.indexOf('const liveSyms');
+      const sEnd = page.indexOf('[data?.tiles, cardLive.answer]);', sAt);
+      if (sAt < 0 || sEnd < 0) errs.push('ChartMaps.tsx lost the live slice (const liveSyms … the liveTiles memo)');
+      const slice = sAt < 0 || sEnd < 0 ? '' : page.slice(sAt, sEnd);
+      for (const [f, t] of [['lib/cardLive.ts', src], ['hooks/useCardLive.ts', hook], ['the ChartMaps.tsx live slice', slice]]) {
+        if (!t) continue;
+        const code = unesc(noTypes(noComments(t)));
+        const m = WORDS.exec(code);
+        if (m) errs.push(`${f} composes "${m[0]}" — every footer and label word is served (chart_maps/live_card.py)`);
+      }
+      if ((page.match(/\buseCardLive\(/g) || []).length !== 1) errs.push('ChartMaps.tsx must call useCardLive( exactly once (one live read per board)');
+      const fAt = page.indexOf('const freshness =');
+      const fEnd = fAt < 0 ? -1 : page.indexOf(': null;', fAt);
+      const fresh = fAt < 0 || fEnd < 0 ? '' : page.slice(fAt, fEnd);
+      const inFresh = (fresh.match(/cardLive\.footer/g) || []).length;
+      if (!fresh.includes("[stampPart, throughPart, cardLive.footer].filter(Boolean).join(' \\u00b7 ')")) errs.push('cardLive.footer must join the existing freshness line ([stampPart, throughPart, cardLive.footer]) — no new chrome');
+      if (inFresh !== (page.match(/cardLive\.footer/g) || []).length) errs.push('cardLive.footer is rendered outside the freshness join');
+      if ((page.match(/className="cm-scanstamp"/g) || []).length !== 1) errs.push('ChartMaps.tsx must keep exactly one className="cm-scanstamp"');
+      if (/className="[^"]*live[^"]*"/.test(slice)) errs.push('the live slice adds a class — the footer rides the existing line');
+
+      // (e) K4: the 5-minute board refetch is untouched.
+      const brM = /^const BOARD_REFRESH_MS = (\d+) \* 60_000;/m.exec(page);
+      const BOARD_MIN = brM ? Number(brM[1]) : null;
+      if (BOARD_MIN !== 5) errs.push(`BOARD_REFRESH_MS must stay 5 * 60_000 (reads ${brM ? brM[0] : 'absent'}) — K4, HIS CALL Q4`);
+
+      // (f) the session clock for "04:00–20:00 ET".
+      const ze = read('../backend/supply_demand/zone_edge.py');
+      const hm = (re) => { const m = re.exec(ze); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : null; };
+      const OPEN = hm(/^SESSION_OPEN = dtime\((\d+), (\d+)\)/m);
+      const CLOSE = hm(/^SESSION_CLOSE = dtime\((\d+), (\d+)\)/m);
+      if (!OPEN || !CLOSE) errs.push('zone_edge.py lost SESSION_OPEN / SESSION_CLOSE = dtime(h, m)');
+
+      // (g) the b-word, comments included.
+      for (const [f, t] of [['live_card.py', lc], ['lib/cardLive.ts', src], ['hooks/useCardLive.ts', hook]]) {
+        if (t && /bounc/i.test(t)) errs.push(`${f} says the b-word — reversal`);
+      }
+
+      // (h) the ✨ entry: FIRST, routed, his words verbatim, every number a constant.
+      const nf = read('src/lib/newFeatures.ts');
+      const head = nf.indexOf('export const NEW_FEATURES: NewFeature[] = [');
+      const firstAt = head < 0 ? -1 : nf.indexOf("{ id: '", head);
+      const ID = "{ id: 'chart-maps-live-card-2026-10-16'";
+      if (firstAt < 0 || !nf.startsWith(ID, firstAt)) errs.push("the ✨ entry 'chart-maps-live-card-2026-10-16' must be the FIRST of NEW_FEATURES");
+      const idAt = nf.indexOf(ID);
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-live-card-2026-10-16' (WP-M)");
+      } else {
+        const end = nf.indexOf("' },", idAt);
+        const entry = unesc(nf.slice(idAt, end < 0 ? undefined : end + 4));
+        const lm = /label: '((?:[^'\\]|\\.)*)'/.exec(nf.slice(idAt, end < 0 ? undefined : end + 4));
+        const label = lm ? unesc(lm[1]) : '';
+        if (!/route: '\/chart-maps',/.test(entry)) errs.push("the 🔴 ✨ entry must route to '/chart-maps' (every card, every board tab)");
+        for (const h of [...HIS, ...HIS_SHOT]) if (!label.includes(h)) errs.push(`the 🔴 ✨ entry must quote him verbatim: "${h}"`);
+        let rest = [...HIS, ...HIS_SHOT].reduce((t, q) => t.split(q).join(''), label);
+        if (/bounc|fake/i.test(rest)) errs.push('the 🔴 ✨ entry says the b-word / "fake" — reversal');
+        const hb = read('../backend/chart_maps/high_beta_tab.py');
+        const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(hb);
+        for (const w of fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : []) {
+          if (rest.toLowerCase().includes(w.toLowerCase())) errs.push(`the 🔴 ✨ entry says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        }
+        const closes = /^CLOSE_FOLLOWS_PRINT_RTH = (True|False)\b/m.exec(lc);
+        if (!closes) errs.push('live_card.py lost CLOSE_FOLLOWS_PRINT_RTH = True|False');
+        else if ((closes[1] === 'True') !== rest.includes('closes at the last trade')) errs.push(`the 🔴 ✨ entry must say "closes at the last trade" iff live_card.CLOSE_FOLLOWS_PRINT_RTH (= ${closes[1]})`);
+        if (FAST != null && SLOW != null && BOARD_MIN != null && OPEN && CLOSE) {
+          const needs = [`every ${FAST / 1000} seconds`, `every ${SLOW / 60_000} minutes`, `${OPEN}–${CLOSE} ET`, `${BOARD_MIN}-minute`];
+          for (const n of needs) if (!rest.includes(n)) errs.push(`the 🔴 ✨ entry must state "${n}" as the constants have it`);
+          // Every digit left after his words must sit in one of the four constant phrases, with the constant's value.
+          const checks = [
+            [/every (\d+) seconds/g, (m) => Number(m[1]) === FAST / 1000, `CARD_LIVE_MS is ${FAST / 1000} s`],
+            [/every (\d+) minutes/g, (m) => Number(m[1]) === SLOW / 60_000, `CARD_LIVE_CLOSED_MS is ${SLOW / 60_000} min`],
+            [/(\d+)-minute/g, (m) => Number(m[1]) === BOARD_MIN, `BOARD_REFRESH_MS is ${BOARD_MIN} min`],
+            [/(\d{2}:\d{2})–(\d{2}:\d{2}) ET/g, (m) => m[1] === OPEN && m[2] === CLOSE, `zone_edge is ${OPEN}–${CLOSE} ET`],
+          ];
+          for (const [re, ok, why] of checks) {
+            for (const m of rest.matchAll(re)) if (!ok(m)) errs.push(`the 🔴 ✨ entry says "${m[0]}" — ${why}`);
+            rest = rest.replace(re, '');
+          }
+          const stray = /\d[\d:.,]*/.exec(rest);
+          if (stray) errs.push(`the 🔴 ✨ entry types "${stray[0]}" — no constant holds it`);
+        }
+        if (/\b(forecast|predict|will rise|edge)\b/i.test(rest)) errs.push('the 🔴 ✨ entry claims a forecast / an edge — this build claims none');
+      }
+
+      // (i) SPECS.md carries the section.
+      const specs = read('../SPECS.md');
+      const SEC = '### Chart Maps — 🔴 live today candle + now line on every card — chart_maps/live_card.py (2026-10-16)';
+      if (!specs.includes(SEC)) errs.push(`SPECS.md lacks "${SEC}"`);
       return errs;
     },
   },

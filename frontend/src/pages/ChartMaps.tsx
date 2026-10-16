@@ -42,7 +42,7 @@ import {
   recordLine, scanStamp,
   DEFAULT_ICT_BIAS, DEFAULT_ICT_MICRO, ICT_BIASES, ICT_LEGEND, ICT_MICROS,
   ICT_SOURCE, ictParamRows, ictSource, parseBias, parseMicro,
-  type CmBoard, type CmTab,
+  type CmBoard, type CmTab, type CmTile,
   splitBlurb, FALLEN_DEPTH_PARAM,
 } from '../lib/chartMaps';
 // The room floor's TWO states come from the one shared list (2026-09-17) — the
@@ -123,6 +123,11 @@ import { partitionEnterable, type EnterableRead } from '../lib/enterable';
 import { BAND_STRUCTURE_KIND_NA, BAND_STRUCTURE_NA_TEXT } from '../lib/bandStructure';
 import { StudyNote } from '../components/StudyNote';
 import { trackFeature } from '../lib/usageTracker';
+import { useCardLive } from '../hooks/useCardLive';
+import { cardLiveSymbols, patchTiles } from '../lib/cardLive';
+
+/** Stable empty tile list so the live-patched memo keeps identity with no board. */
+const NO_TILES: CmTile[] = [];
 
 /** Background refetch cadence for a left-open tab. Slower than the 10s
  *  warming poll on purpose — this is drift correction, not live data. */
@@ -872,13 +877,28 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'drop10' && tab !== 'fallen' && tab !== 'resiliency'
       && tab !== 'high_beta' && tab !== 'doji_sweep');
 
+  /* Live cards (2026-10-16). Ajay, three messages:
+   *   "Can you make this chart more live please like when its 24 hour or todays entry"
+   *   (screenshot of the ticker page header: "$2.77 ↑ $1.41 (+103.68%) Today · Live")
+   *   "actual price is this  above but it stale value"
+   * The cards poll; the words are served. Every tile on a board tab re-reads its
+   * today bar and now line from POST /chart-maps/live (hooks/useCardLive) and the
+   * answer is spliced in by lib/cardLive.patchTiles — the last bar and the
+   * tone-now lines only. The 5-min board refetch still owns everything else. */
+  const liveSyms = useMemo(() => cardLiveSymbols(data?.tiles), [data?.tiles]);
+  const cardLive = useCardLive(liveSyms, isBoardTab(tab) && !data?.warming,
+                               { resetKey: data, initialSession: data?.tape_session ?? null });
+  const liveTiles = useMemo(() => patchTiles(data?.tiles || NO_TILES, cardLive.answer),
+                            [data?.tiles, cardLive.answer]);
+
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
-   * at most one poll interval stale. */
+   * at most one poll interval stale. The card poll's served footer word joins
+   * the same line (no new chrome). */
   const stampPart = scanStamp(data?.generated_at ?? data?.scan_generated_at, Date.now());
-  const throughPart = dataThrough(data?.tiles);
-  const freshness = !data?.warming && (stampPart || throughPart)
-    ? [stampPart, throughPart].filter(Boolean).join(' \u00b7 ')
+  const throughPart = dataThrough(liveTiles);
+  const freshness = !data?.warming && (stampPart || throughPart || cardLive.footer)
+    ? [stampPart, throughPart, cardLive.footer].filter(Boolean).join(' \u00b7 ')
     : null;
 
   const setTab = (t: CmTab) => {
@@ -936,7 +956,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const enterableKind = ((data?.tab ?? tab) === tab ? data?.enterable_kind : null)
     ?? ENTERABLE_KIND[tab] ?? 'demand';
 
-  const rawTiles = data?.tiles || [];
+  const rawTiles = liveTiles;
 
   /* 🪜 WHICH KIND OF ROWS THIS TAB HAS, served (board.band_structure_kind →
    * band_structure.kind_for_tab → enterable.KIND_BY_TAB — one map, not a second
@@ -996,9 +1016,22 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   // there is no separate expanded surface, so the rule silently meant "never
   // draw fib" — he reported it as "Non of these are showing up I selected AMD,
   // Fibonacci". Fib draws on the tiles; the checkbox is how he turns it off.
-  const tiles = useMemo(
-    () => rawTiles.map((t) => filterForGrid(filterTile(t, tabHidden), true)),
-    [rawTiles, tabHidden]);
+  /* Per-tile identity (2026-10-16, the live cards): an unchanged raw tile keeps
+   * its filtered tile, so a 30 s live answer re-renders only the cards whose bar
+   * or now line moved (PatternChart is memo). Reset when the hidden set moves. */
+  const gridMemo = useRef<{ hidden: Set<string> | null; map: WeakMap<CmTile, CmTile> }>(
+    { hidden: null, map: new WeakMap() });
+  const tiles = useMemo(() => {
+    const m = gridMemo.current;
+    if (m.hidden !== tabHidden) { m.hidden = tabHidden; m.map = new WeakMap(); }
+    return rawTiles.map((t) => {
+      const hit = m.map.get(t);
+      if (hit) return hit;
+      const f = filterForGrid(filterTile(t, tabHidden), true);
+      m.map.set(t, f);
+      return f;
+    });
+  }, [rawTiles, tabHidden]);
   /* A chip click refetches the WHOLE board and the old tiles keep rendering
    * while it flies (Ajay 2026-09-21: "These chips are not working" — the click
    * did land, the answer took ~60 s and nothing on screen said so). STALE is

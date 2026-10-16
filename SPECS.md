@@ -796,6 +796,47 @@ W/M …; `board.TABS` appends it last); block `doji_sweep_board`; a memo tab (`m
   cell exploratory, the ≥ 70% cell pre-declared too small; `--no-fetch` only, Mongo read-only; survivors-only.
 - **Docs**: `docs/chart_maps/doji_sweep_tab_2026_10_16.md`, `docs/research/doji_sweep_study_2026_10_16.md`.
 
+### Chart Maps — 🔴 live today candle + now line on every card — chart_maps/live_card.py (2026-10-16)
+Every Chart Maps card's today candle and its dashed now line follow the last print (Ajay, three messages: *"Can you make
+this chart more live please like when its 24 hour or todays entry"*, his XLAB screenshot pair — the card's "now 2.64"
+against the ticker page's "$2.77 … Today · Live" — and *"actual price is this  above but it stale value"*). Display
+only: scans, bands, the ledger and the 📐 page still read closed bars (the live-bar overlay trap).
+- **Endpoint**: `POST /chart-maps/live` body `{"symbols": [...]}` (`chart_maps/api.py` → `live_card.compose`, run in a
+  thread). ONE `prices.bulk_snapshot` + ONE `prices.bulk_cached_frames` (a Mongo find, never a fetch). Per symbol the
+  card's last bar is built BY CALL through the board's own chain — `prices.with_today_bar` → `board._norm_frame` →
+  `board._frame_to_bars` → `board._tag_live_bar` (`s: "pre"|"ah"` kept) — and the now block by calling
+  `board.attach_live_now` on a probe tile (`board.now_label`: "now" / "now · pre" / "now · AH"). In RTH the candle closes
+  at the last trade, high/low widened to it (`CLOSE_FOLLOWS_PRINT_RTH`, a print of another day or session never touches
+  the bar). Answer keys: `session` (`zone_edge.session_state`), `as_of`, `footer {live, stale}`, `now_labels`, `cap`,
+  `asked`, `served`, `missing`, `fault`, `faults`, `quotes {SYM: {bar, prev_t, prev_bar, now}}`. One symbol that fails is
+  omitted with a served word (AMENDMENTS8 C2); a snapshot that answers nothing — or every asked symbol faulted — is
+  `fault` with `footer {live: null, stale: null}` (a read that served nothing claims no "live · …" time).
+- **Cap**: `live_card.cap()` = `prices._SNAP_CHUNK` by name (one snapshot call); above it the read is refused whole —
+  413 "up to {cap} symbols per live read — {n} sent", never a partial cut; a non-list body → 422. `board.LIMIT_MAX` ≤ the
+  cap, so the FE never splits.
+- **Nothing written**: no cache writer is imported or called (pytest source guard + writers monkeypatched to raise);
+  `with_today_bar` returns a copy; no auth beyond the house proxy (read-only).
+- **FE cadence** (`hooks/useCardLive.ts`, constants in `lib/cardLive.ts`): `CARD_LIVE_MS` (= `SessionPrice`'s poll, MINE)
+  while the tab is visible; `CARD_LIVE_CLOSED_MS` (= `drop10_tab.CLOSED_TTL_SEC`, Cheetah default) when the session is
+  closed. C1: the pacing session is the BOARD's `tape_session` first, then the last good answer. C3: one tick right after
+  every board refetch (the refetch wins for one tick, then the overlay re-applies at once) — except while closed, where
+  the rest of the closed cadence since the last POST is waited out. `document.hidden` → no POST; none while one is in
+  flight; back to visible after more than a cadence → one POST at once; unmount aborts and drops an in-flight answer. The
+  5-minute `BOARD_REFRESH_MS` refetch is unchanged (bands, chips, order).
+- **Patch rule** (`lib/cardLive.patchTile`, the FE composes no word): a served bar with the tile's last date replaces the
+  last bar; a newer served bar whose `prev_t` is the tile's last date is appended (never a slide — curves and `vol_avg`
+  are index-aligned), and the served `prev_bar` (a closed bar, no `s` tag — C4) replaces the tile's last bar first; an
+  older bar, a tile ending on another session (a Winners window) or an intraday tile → bars unchanged. Tone-`now` lines
+  take the served price and, when their label is one of `now_labels`, the served label (custom wording kept); a tile with
+  no now line gains one only when `add_line`. Unchanged → the same tile object (PatternChart `memo`). The served footer
+  word joins the existing `cm-scanstamp` freshness line ("live · HH:MM:SS ET" / "last refresh HH:MM ET") — no new chrome.
+- **Budget**: one Massive snapshot call + one Mongo find per 30 s per open, visible board tab (≤ the cap); one per 30 min
+  closed. No WS, no SSE, no focus-list change.
+- **Contracts**: `scripts/contracts.mjs` "🔴 live card overlay (2026-10-16)". **Tests**:
+  `backend/tests/test_chart_maps_live_card.py`, `frontend/src/lib/cardLive.test.ts`, `src/hooks/useCardLive.test.tsx`,
+  `src/pages/ChartMapsCardLive.test.tsx`, `src/components/PatternChart.cardLive.test.tsx`.
+- **HIS CALLS**: `docs/chart_maps/live_card_2026_10_16.md` (Q1–Q14 + the builders' a–d).
+
 ---
 
 ## 4. Live Data Layer

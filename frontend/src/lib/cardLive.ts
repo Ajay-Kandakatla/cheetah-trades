@@ -1,0 +1,148 @@
+/* Live card overlay (2026-10-16) — the pure half of the Chart Maps card poll.
+ *
+ * Ajay 2026-10-16: "Can you make this chart more live please like when its 24
+ * hour or todays entry" / "actual price is this  above but it stale value".
+ *
+ * POST /chart-maps/live (backend/chart_maps/live_card.py) answers, per symbol,
+ * the card's today bar and the now-line price + label, composed on the backend
+ * by the board's own helpers. This file only SPLICES that answer into the
+ * board's tiles: it replaces the last bar, appends the first bar of a new
+ * session, and moves the tone-`now` lines. It composes no words and computes
+ * no price — every label and every number it writes is a served one.
+ */
+import type { CmBar, CmLine, CmTapeSession, CmTile } from './chartMaps';
+
+export const CARD_LIVE_MS = 30_000;             // MINE — matches SessionPrice's 30 s poll (K1; HIS CALL Q1)
+export const CARD_LIVE_CLOSED_MS = 30 * 60_000; // Cheetah default — = drop10_tab.CLOSED_TTL_SEC (HIS CALL Q5)
+export const CARD_LIVE_PATH = '/chart-maps/live';
+
+export type CardLiveNow = {
+  price: number; label: string; session: 'premarket' | 'afterhours' | null;
+  add_line: boolean; as_of_epoch: number | null; as_of: string | null;
+};
+/** `prev_bar` (AMENDMENTS8 C4): the closed frame's bar BEFORE `bar`, served as
+ *  a closed bar (no `s` tag). On a new-session append it replaces the card's
+ *  last bar first, so yesterday's extended-hours shading does not carry over. */
+export type CardLiveQuote = {
+  bar: CmBar | null; prev_t: string | null; prev_bar?: CmBar | null; now: CardLiveNow | null;
+};
+export type CardLiveAnswer = {
+  session: CmTapeSession | null; as_of_epoch: number; as_of: string;
+  footer: { live: string | null; stale: string | null }; now_labels: string[]; cap: number; asked: number;
+  served: number; missing: string[]; fault: string | null; quotes: Record<string, CardLiveQuote>;
+};
+
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const isObj = (x: unknown): x is Record<string, unknown> =>
+  typeof x === 'object' && x !== null && !Array.isArray(x);
+
+const pos = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x) && x > 0;
+
+/** The live answer, or null for anything that is not one (a board payload, an
+ *  error body, a half shape). */
+export function parseCardLive(j: unknown): CardLiveAnswer | null {
+  if (!isObj(j)) return null;
+  if (!isObj(j.quotes) || !isObj(j.footer)) return null;
+  if (!Array.isArray(j.now_labels) || !j.now_labels.every((s) => typeof s === 'string')) return null;
+  return j as unknown as CardLiveAnswer;
+}
+
+/** The tickers of the tiles on screen: trimmed, upper-cased, de-duplicated,
+ *  sorted — so the request body (and the hook's key) is stable per board. */
+export function cardLiveSymbols(tiles: { symbol?: string }[] | null | undefined): string[] {
+  const seen = new Set<string>();
+  for (const t of tiles || []) {
+    const s = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+    if (s) seen.add(s);
+  }
+  return Array.from(seen).sort();
+}
+
+/** The poll cadence for a served session: the closed-hours read is slow. */
+export function nextCadence(session: CmTapeSession | null | undefined): number {
+  return session === 'closed' ? CARD_LIVE_CLOSED_MS : CARD_LIVE_MS;
+}
+
+/** A served bar the card may draw: a pure date, positive finite OHLC, a finite
+ *  non-negative volume, and no shading tag other than the board's two. */
+function validBar(b: unknown): b is CmBar {
+  if (!isObj(b)) return false;
+  if (typeof b.t !== 'string' || !DAY_RE.test(b.t)) return false;
+  if (!pos(b.o) || !pos(b.h) || !pos(b.l) || !pos(b.c)) return false;
+  if (typeof b.v !== 'number' || !Number.isFinite(b.v) || b.v < 0) return false;
+  if ('s' in b && b.s !== 'pre' && b.s !== 'ah') return false;
+  return true;
+}
+
+function sameBar(a: CmBar, b: CmBar): boolean {
+  return a.t === b.t && a.o === b.o && a.h === b.h && a.l === b.l && a.c === b.c && a.v === b.v && a.s === b.s;
+}
+
+function validNow(n: unknown): n is CardLiveNow {
+  return isObj(n) && pos(n.price) && typeof n.label === 'string' && n.label.length > 0;
+}
+
+function patchBars(bars: CmBar[], q: CardLiveQuote): CmBar[] {
+  const bar = q.bar;
+  if (!validBar(bar) || !bars.length) return bars;
+  const last = bars[bars.length - 1];
+  if (!last || typeof last.t !== 'string' || !DAY_RE.test(last.t)) return bars;  // intraday tiles never patch
+  if (bar.t === last.t) {
+    return sameBar(last, bar) ? bars : [...bars.slice(0, -1), bar];
+  }
+  if (bar.t > last.t && q.prev_t === last.t) {
+    /* The first print of a new session: append, never drop the first bar —
+     * curves and vol_avg are aligned to bars by index. C4: the served closed
+     * prior bar replaces the card's last bar first when it is that same day. */
+    const prev = q.prev_bar;
+    if (validBar(prev) && prev.t === last.t && !sameBar(last, prev)) {
+      return [...bars.slice(0, -1), prev, bar];
+    }
+    return [...bars, bar];
+  }
+  return bars;  // older, or the tile ends on another session (a Winners window)
+}
+
+function patchLines(lines: CmLine[], now: CardLiveNow | null, nowLabels: readonly string[]): CmLine[] {
+  if (!validNow(now)) return lines;
+  let changed = false;
+  let hasNow = false;
+  const out = lines.map((l) => {
+    if (l.tone !== 'now') return l;
+    hasNow = true;
+    const label = nowLabels.includes(l.label) ? now.label : l.label;  // custom wording kept
+    if (l.price === now.price && l.label === label) return l;
+    changed = true;
+    return { ...l, price: now.price, label };
+  });
+  if (!hasNow && now.add_line) {
+    return [...lines, { price: now.price, label: now.label, tone: 'now' }];
+  }
+  return changed ? out : lines;
+}
+
+/** One tile with the served quote spliced in; the SAME tile when nothing moved. */
+export function patchTile(t: CmTile, q: CardLiveQuote | undefined, nowLabels: readonly string[]): CmTile {
+  if (!q) return t;
+  const bars0 = Array.isArray(t.bars) ? t.bars : [];
+  const lines0 = Array.isArray(t.lines) ? t.lines : [];
+  const bars = patchBars(bars0, q);
+  const lines = patchLines(lines0, q.now, nowLabels);
+  if (bars === bars0 && lines === lines0) return t;
+  return { ...t, bars, lines };
+}
+
+/** Every tile patched with its quote; the SAME array when no tile changed. */
+export function patchTiles(tiles: CmTile[], a: CardLiveAnswer | null): CmTile[] {
+  if (!a) return tiles;
+  let changed = false;
+  const out = tiles.map((t) => {
+    const sym = typeof t?.symbol === 'string' ? t.symbol.trim().toUpperCase() : '';
+    const q = sym && Object.prototype.hasOwnProperty.call(a.quotes, sym) ? a.quotes[sym] : undefined;
+    const p = patchTile(t, q, a.now_labels);
+    if (p !== t) changed = true;
+    return p;
+  });
+  return changed ? out : tiles;
+}
