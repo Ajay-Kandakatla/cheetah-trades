@@ -415,6 +415,11 @@ def check_tape_burst_chartmaps_heartbeat():
     return _heartbeat_check("tape_burst_chartmaps", "Chart Maps tape-burst")
 
 
+def check_tape_control_heartbeat():
+    """🎚️ 2026-10-16: the pinned-name buyers-in-control read, same line, own beat."""
+    return _heartbeat_check("tape_control", "Tape buyers-in-control")
+
+
 def check_zero_dte_ledger():
     """The 0DTE board's ledger froze a run this morning (weekdays)."""
     try:
@@ -510,6 +515,8 @@ CHECKS = [
     check_demand_scan_fresh, check_trade_flash_heartbeat,
     # 2026-10-14: the two tape-burst kinds on the trade-flash line.
     check_tape_burst_highbeta_heartbeat, check_tape_burst_chartmaps_heartbeat,
+    # 2026-10-16: 🎚️ tape_control on the trade-flash line.
+    check_tape_control_heartbeat,
     check_zero_dte_ledger, check_research_cache_age,
     # 2026-09-06: VIX frames + IV read + rotation map, refreshed by the scans.
     check_scan_context,

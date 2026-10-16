@@ -78,6 +78,22 @@ export type PassStatus = {
    *  arm self-gates on, "HH:MM" ET, built from trade_flash.WATCH_OPEN_ET /
    *  WATCH_CLOSE_ET. An older API omits it → the pass is never judged stale. */
   window?: { open?: string | null; close?: string | null } | null;
+  /** 🎚️ tape_control only (2026-10-16): one row per pinned name, served by
+   *  backend alert_status.read_tape_control (tape_control.status_block). Each
+   *  `text` is the backend's own sentence — printed, never recomposed. An older
+   *  API omits it. */
+  pins?: TapeControlPin[] | null;
+  /** 🎚️ tape_control only (2026-10-16): the pass note (UNMEASURED + the
+   *  tick-rule sentence), served by alert_status.read_tape_control. An older
+   *  API omits it. */
+  note?: string | null;
+};
+/** One 🎚️ pinned name as tape_control.status_block serves it. `state` picks
+ *  the tone only; `text` is the words; `url` the Tape tab deep link. */
+export type TapeControlPin = {
+  symbol: string; date: string; until: string | null; active: boolean;
+  state: 'waiting' | 'no_read' | 'in_control' | 'not_in_control' | 'expired';
+  text: string; url: string | null; rang: string[];
 };
 /** One shadow A+ as the ledger recorded it. `text` is the push's own item
  *  line (alerts.compose) — printed, never recomposed; `url` is the deep link
@@ -162,6 +178,13 @@ export const TAPE_PASSES: { key: string; label: string; fallbackCadenceSec: numb
   { key: 'tape_burst_chartmaps', label: '🗺️ Chart Maps tape bursts', fallbackCadenceSec: 300 },
 ];
 const TAPE_KEYS_SET = new Set(TAPE_PASSES.map((m) => m.key));
+/* 🎚️ tape_control (2026-10-16). Ajay: "I wwant you to alert me when the
+ * Buyers are winning in tape for IREN today." It rides the same trade-flash
+ * line (every 5 minutes) and is judged only inside the SERVED window, like the
+ * two tape-burst rows. LIVE — this row never says shadow. NOT in PASSES: the
+ * header's "all 7 passes" speaks for the intraday zone/setup passes only. Its
+ * own row sits under the 🎢 🗺️ strip, with one line per pinned name. */
+export const TAPE_CONTROL_PASS = { key: 'tape_control', label: '🎚️ Buyers in control — pinned names', fallbackCadenceSec: 300 };
 
 /** Where a tape pass's own clock stands: the served window and whether the
  *  SERVER's now (`now_et`, an ET ISO stamp — its HH:MM is the ET wall clock)
@@ -486,7 +509,7 @@ const DAY_CHOICES: { days: number; label: string; window: string; sinceOffset: n
   { days: 5,  label: '5 days',    window: 'in the last 5 days',  sinceOffset: 4 },
   { days: 30, label: '30 days',   window: 'in the last 30 days', sinceOffset: 29 },
 ];
-export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
+export const KIND_CHIPS: string[] = [...ZONE_KINDS, 'trade_flash', 'tape_burst_highbeta', 'tape_burst_chartmaps', 'gajjala_potential', 'tape_control', 'position_alert', 'autopilot', 'pivot_alert', 'promo_alert', 'todo_reminder'];
 const ALL = 'all';
 /** Typing "AVGO" is one query, not four (review 2026-09-05). Enter / blur commit at once. */
 export const TICKER_DEBOUNCE_MS = 300;
@@ -632,7 +655,8 @@ function PassStrip({ pass, meta, status, gate, today }: {
   const day = passDay(pass);
   const cadence = cadenceOf(pass, meta);
   // 🎢 🗺️ a tape pass is judged on its OWN window, never zone_edge's clock.
-  const tape = TAPE_KEYS_SET.has(meta.key);
+  const tc = meta.key === TAPE_CONTROL_PASS.key;
+  const tape = TAPE_KEYS_SET.has(meta.key) || tc;
   const win = tape ? tapeWindow(pass, status) : null;
   const judgeOn = status && win ? { ...status, in_session: win.inside } : status;
   const { health } = judgeOn ? passHealth(pass, judgeOn, today, cadence) : { health: 'none' as PassHealth };
@@ -662,13 +686,14 @@ function PassStrip({ pass, meta, status, gate, today }: {
     if (win.open && win.close) when = `${when} — outside its ${win.open}–${win.close} ET window`;
   }
   const ggp = meta.key === 'gajjala_potential';
-  const headlineDefs = tape ? HEADLINE_TAPE : ggp ? HEADLINE_POTENTIAL : HEADLINE;
+  // 🎚️ no counter chip on its row: every counter rides the hover "Also counted".
+  const headlineDefs: { key: string; label: string; title?: string }[] = tc ? [] : tape ? HEADLINE_TAPE : ggp ? HEADLINE_POTENTIAL : HEADLINE;
   const headline = headlineDefs
     .filter((h) => counts[h.key] != null)
     .map((h) => ({ ...h, text: `${h.label} ${Number(counts[h.key]) || 0}` }));
   const headlineKeys = headlineDefs.map((h) => h.key);
   const gg = meta.key === 'gajjala_setup';
-  const chipKeys = gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
+  const chipKeys: string[] = tc ? [] : gg ? GAJJALA_KEYS : ggp ? GAJJALA_POTENTIAL_KEYS : tape ? TAPE_CHIP_KEYS : SKIP_KEYS;
   const skips = chipKeys
     .map((k) => [k, Number(counts[k]) || 0] as const)
     .filter(([, n]) => n > 0);
@@ -696,6 +721,8 @@ function PassStrip({ pass, meta, status, gate, today }: {
     {gg ? <GajjalaShadowList items={pass?.shadow_items} today={today} /> : null}
     {/* 🧠 only: today's potentials, each with what its push did. */}
     {ggp ? <GgPotentialList items={pass?.potential_items} today={today} /> : null}
+    {/* 🎚️ only: one served line per pinned name, then the served note. */}
+    {tc ? <TapeControlPins pins={pass?.pins} note={pass?.note} today={today} /> : null}
     </>
   );
 }
@@ -797,6 +824,44 @@ export function GgPotentialList({ items, today }: { items: GgPotentialItem[] | n
           <span className="mono" style={it.push_state === 'pushed' ? SMALL_CHIP : SKIP_CHIP}>{ggPotentialRowWord(it)}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* 🎚️ The pinned names under the tape_control row (2026-10-16). Every word is
+ * the backend's (tape_control.pin_text / UNMEASURED_NOTE + RULE_NOTE via
+ * alert_status.read_tape_control): this prints `text` and `note` as served and
+ * types no sentence of its own. `state` picks the tone only. The symbol is a
+ * link only to a same-site "/" path (never "//", never http). Only rows of
+ * `today` (the ET day) — the second lock, so a page left open past midnight
+ * never shows yesterday's read as today's. */
+const TC_LIVE_STATE: TapeControlPin['state'] = 'in_control';
+const TC_LIVE_TONE = '#10b981';   // the ON green of /notifications
+
+export function TapeControlPins({ pins, note, today }: {
+  pins: TapeControlPin[] | null | undefined; note: string | null | undefined; today: string;
+}) {
+  const rows = (Array.isArray(pins) ? pins : []).filter((p) =>
+    !!p && typeof p === 'object' && typeof p.text === 'string' && p.text.trim() !== '' && p.date === today);
+  const noteText = typeof note === 'string' ? note.trim() : '';
+  if (!rows.length && !noteText) return null;
+  return (
+    <div style={{ margin: '0 0 0.35rem 0.6rem', paddingLeft: '0.6rem', borderLeft: '2px solid rgba(212,175,55,0.3)' }}>
+      {rows.map((p, i) => {
+        const sym = typeof p.symbol === 'string' ? p.symbol : '';
+        const url = typeof p.url === 'string' && p.url.startsWith('/') && !p.url.startsWith('//') ? p.url : null;
+        return (
+          <div key={`${sym}-${i}`} data-testid={`tape-control-pin-${sym}`}
+               style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.76rem', lineHeight: 1.45,
+                        color: p.state === TC_LIVE_STATE ? TC_LIVE_TONE : MUTED }}>
+            {url
+              ? <Link to={url} className="tk-link alert-tk mono" data-testid="tape-control-pin-link" style={{ fontWeight: 700 }}>{sym}</Link>
+              : <span className="mono" style={{ fontWeight: 700 }}>{sym}</span>}
+            <span data-testid="tape-control-pin-text">{p.text}</span>
+          </div>
+        );
+      })}
+      {noteText ? <div data-testid="tape-control-note" style={{ fontSize: '0.64rem', color: DIM, marginTop: 2 }}>{note}</div> : null}
     </div>
   );
 }
@@ -1002,6 +1067,10 @@ export function AlertsPage() {
           {TAPE_PASSES.map((meta) => (
             <PassStrip key={meta.key} meta={meta} pass={status?.passes?.[meta.key]} status={status} gate={gate} today={today} />
           ))}
+        </div>
+        {/* ── 🎚️ buyers in control on the pinned names (2026-10-16) — own row, the tape window ── */}
+        <div data-testid="tape-control">
+          <PassStrip meta={TAPE_CONTROL_PASS} pass={status?.passes?.[TAPE_CONTROL_PASS.key]} status={status} gate={gate} today={today} />
         </div>
         {/* ── the once-a-day passes ── */}
         <div style={{ ...EYEBROW, marginTop: '0.55rem' }}>🗓️ Daily passes</div>

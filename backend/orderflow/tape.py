@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 import time
 from datetime import datetime, timedelta
 from typing import Optional
@@ -171,7 +172,19 @@ def _et_zone():
 
 
 # ── Fetch ─────────────────────────────────────────────────────────────────────
-def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
+# Why the last fetch_trades on THIS thread returned None, when it can say
+# (2026-10-16: only "rate_limited", set by the opt-in max_429 cap). Thread-local
+# so a concurrent caller can never read another pull's answer.
+_FETCH_FAULT = threading.local()
+
+
+def last_fetch_fault() -> Optional[str]:
+    """"rate_limited" when this thread's last fetch_trades gave up on 429s
+    (max_429 set), else None."""
+    return getattr(_FETCH_FAULT, "why", None)
+
+
+def fetch_trades(symbol: str, day, *, max_429: Optional[int] = None) -> Optional[pd.DataFrame]:
     """All prints for one ET calendar day (04:00-20:00 ET), ascending.
 
     Returns DataFrame [ts_utc index, price, size, exchange, kind, exec_utc]
@@ -182,9 +195,16 @@ def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
     `exec_utc` is Massive's `participant_timestamp` (when the trade executed);
     the index stays the SIP time, which the window, NBBO merge and resample
     all key on.
+
+    `max_429` (2026-10-16, opt-in, orderflow/tape_control.py only): None keeps
+    the HTTP 429 sleep-and-retry with no cap for every other caller; when set,
+    the (max_429 + 1)-th 429 of this pull returns None and
+    `last_fetch_fault()` answers "rate_limited" on this thread.
     """
     import requests
     from massive_keys import stocks_key
+
+    _FETCH_FAULT.why = None
 
     key = stocks_key()
     if not key:
@@ -203,6 +223,7 @@ def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
     rows: list = []
     truncated = False
     page = 0
+    n_429 = 0
     next_url = url
     while next_url:
         try:
@@ -215,6 +236,11 @@ def fetch_trades(symbol: str, day) -> Optional[pd.DataFrame]:
                 log.warning("tape fetch failed for %s (page %d)", symbol, page)
             return None
         if r.status_code == 429:
+            n_429 += 1
+            if max_429 is not None and n_429 > max_429:
+                log.warning("tape %s -> HTTP 429 x%d: gave up (max_429=%d)", symbol, n_429, max_429)
+                _FETCH_FAULT.why = "rate_limited"
+                return None
             time.sleep(2)
             continue
         if r.status_code != 200:

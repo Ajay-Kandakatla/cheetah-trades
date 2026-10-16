@@ -72,6 +72,8 @@ def test_the_keep_set_is_exactly_what_he_asked_for():
         "gajjala_potential",
         # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps ("I need a tape burst notification specific for High Beta stocks …"; answer "High-Beta tab names + all Chart Maps names"; OFF in default_prefs, ON for the owner via the keep-set, LIVE).
         "tape_burst_highbeta", "tape_burst_chartmaps",
+        # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
+        "tape_control",
     })
 
 

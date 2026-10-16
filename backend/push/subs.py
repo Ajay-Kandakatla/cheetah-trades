@@ -406,6 +406,12 @@ OWNER_KEEP_SET: frozenset = frozenset({
     # description of prints.
     "tape_burst_highbeta",
     "tape_burst_chartmaps",
+    # 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16). WIDENED
+    # 2026-10-16 — Ajay: "I wwant you to alert me when the Buyers are winning in
+    # tape for IREN today." ON for the owner, LIVE (False in default_prefs, in
+    # this set); his phones flipped by scripts/owner_prefs_apply.py at deploy.
+    # A MARKET kind. UNMEASURED.
+    "tape_control",
     # 🩺 ops_alert (ops/docker_watchdog.py -> /admin/ops/alert). 2026-10-06, Ajay
     # approved the watchdog push; without this a re-registering phone mutes it.
     # Host health, not a trading kind: it widens nothing any gate requires.
@@ -621,6 +627,9 @@ def default_prefs() -> dict:
         # targets ZERO devices and renders no toggle. MARKET kinds. UNMEASURED.
         "tape_burst_highbeta": False,
         "tape_burst_chartmaps": False,
+        # 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16): owner-only
+        # (send_to_user targets him alone); it must exist here or zero devices / no toggle.
+        "tape_control": False,
         "morning_brief": True,       # 8:30am post-fast-scan summary
         "todo_reminder": True,        # personal todo list reminders (specific times)
         # Institutional 13F flow changed quarter-over-quarter on a name Ajay

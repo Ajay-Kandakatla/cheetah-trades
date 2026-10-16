@@ -162,6 +162,21 @@ export const CATEGORIES: CategoryDef[] = [
       + 'A burst already recorded by \u26A1 trade flash or \u{1F3A2} High Beta is not sent again; each burst is one row on /alerts, never two. '
       + 'Every 5 minutes, 09:32\u201316:00 ET on trading days, silent on closed days; one push per poll, every burst listed on /alerts with each ticker linked to its tape. '
       + 'UNMEASURED \u2014 a description of prints, not a signal. Not advice.' },
+  /* 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16). Ajay: "Can you add
+     a watcher tape for IREN please." then "I wwant you to alert me when the
+     Buyers are winning in tape for IREN today." One owner-only kind, ON for him
+     (backend push/subs.OWNER_KEEP_SET; False in default_prefs for everyone
+     else). LIVE — never shadow. The 30 minutes is tape.LATE_WINDOW_MIN, the
+     window trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET, the 5 minutes the
+     trade-flash crontab step, IREN and its date tape_control.WATCH — all pinned
+     by the contracts.mjs 🎚️ block. UNMEASURED. */
+  { key: 'tape_control', label: 'Buyers in control on the tape — pinned names', emoji: '\u{1F39A}\uFE0F', group: 'trading',
+    detail: 'ON FOR YOUR PHONE — you said: "I wwant you to alert me when the Buyers are winning in tape for IREN today."; everyone else starts off. It rings live. '
+      + 'WHAT IT WATCHES: IREN — pinned for 2026-10-16, through that session’s close. '
+      + 'WHAT FIRES: the Tape tab’s own buyers-in-control check — the session’s cumulative delta above zero AND the last 30 minutes’ delta at or above zero, regular prints only, pre-market counted, sides by the tick rule (the Tape tab classifies against the quote where it can, so the two can disagree). One push when it turns to buyers in control — the first poll that reads it — never again while it holds (a ring that reached no device is tried once more on the next poll), again only after a poll reads it lost. '
+      + 'NOT READ: a poll that cannot read the tape (no prints, a provider failure, a pull cut off at the page cap, the poll’s time budget) never rings and never re-arms. '
+      + 'Every 5 minutes, 09:32–16:00 ET on trading days, silent on closed days; every ring listed on /alerts with its ticker linked to its tape. '
+      + 'UNMEASURED — the Tape verdict’s forward ledger measures the five-check verdict, not this check alone. Not advice.' },
   { key: 'market_hours_reminder', label: 'Market open / close reminders', emoji: '🔔', group: 'trading',
     detail: '15 min before the bell each weekday — 9:15 AM ET (open) and 3:45 PM ET (close). Skips US market holidays. Open ping routes to /morning brief; close ping routes to /sepa for position management.' },
   // The three volleyball kinds and Minervini learning were retired 2026-09-20
@@ -490,7 +505,7 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
     // the stops on stocks he OWNS counted as "other", he kept those and dropped
     // the todo reminders. Mirrors backend/push/subs.OWNER_KEEP_SET exactly.
     id: 'essentials', label: 'Essentials only', emoji: '🎯',
-    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ setups (2026-10-13, shadow first), and 🧠 Gajjala potentials (2026-10-15, live), and 🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live). Everything else muted.',
+    detail: 'The 2026-09-20 keep-set: 🔥 Hot Pullback, 📐 chart patterns, 🧲 same-day demand arrivals and 💼 stops on stocks you own, plus 🏛️ federal stake, 🚀 explosive growth at demand, 📣 earnings beat, ✨ board arrivals, 🔔 the price alerts you set (2026-09-21), 🔑 a close through a key level on a holding or Signals name (2026-09-25), and 🧬 medical catalysts (2026-09-29), and 🩺 Docker / host watch (2026-10-06), and 🚩 Gajjala A+ setups (2026-10-13, shadow first), and 🧠 Gajjala potentials (2026-10-15, live), and 🎢 / 🗺️ tape bursts on the High Beta and Chart Maps names (2026-10-14, they ring live), and 🎚️ buyers in control on the tape for your pinned names (2026-10-16, it rings live). Everything else muted.',
     pref: {
       hot_pullback_alert: true, pattern_alert: true,
       demand_alert: true, position_alert: true,
@@ -500,6 +515,7 @@ export const PRESETS: { id: string; label: string; emoji: string; detail: string
       gajjala_setup: true,
       gajjala_potential: true,
       tape_burst_highbeta: true, tape_burst_chartmaps: true,
+      tape_control: true,
       potus_investment: true, growth_demand_alert: true,
       earnings_reaction: true, board_arrival: true,
       pivot_alert: false, promo_alert: false,

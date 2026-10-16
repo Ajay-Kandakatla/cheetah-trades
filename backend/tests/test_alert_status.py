@@ -174,6 +174,7 @@ def test_status_payload_contract_shape_gate_numbers_and_in_session_at_request_ti
                                 "key_level_alert", "med_catalyst", "gajjala_setup",
                                 "gajjala_potential",
                                 "tape_burst_highbeta", "tape_burst_chartmaps",
+                                "tape_control",   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — FOURTEEN: rides trade-flash-watch, its own pass doc
                                 "earnings_reaction", "board_arrival:bonde",
                                 "board_arrival:growth", "capital_quality_upgrade"}
     assert set(p["passes"]) == set(AS.PASS_KINDS)
@@ -311,15 +312,20 @@ def test_cadence_sec_matches_the_crontab():
                               "gajjala_potential": seconds(minute_field("chart_maps.gajjala.run")),
                               # 🎢 / 🗺️ 2026-10-14: both ride the ONE trade-flash-watch line (`2-57/5`)
                               "tape_burst_highbeta": seconds(minute_field("sepa.cli trade-flash-watch")),
-                              "tape_burst_chartmaps": seconds(minute_field("sepa.cli trade-flash-watch"))}
+                              "tape_burst_chartmaps": seconds(minute_field("sepa.cli trade-flash-watch")),
+                              # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — rides that same line
+                              "tape_control": seconds(minute_field("sepa.cli trade-flash-watch"))}
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
-                              "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300}
+                              "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
+                              "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
     assert not [ln for ln in lines if "potential" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the 🧠 potential pass has no crontab line of its own (it rides chart_maps.gajjala.run)"
     assert not [ln for ln in lines if "tape_burst" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the tape-burst kinds have no crontab line of their own (they ride trade-flash-watch)"
+    assert not [ln for ln in lines if "tape_control" in ln and not ln.lstrip().startswith("#")], \
+        "NEGATIVE: no crontab line names tape_control (it rides trade-flash-watch)"
     assert not [ln for ln in lines if "key_level_alerts" in ln and not ln.lstrip().startswith("#")], \
         "NEGATIVE: the key-level pass has no crontab line of its own"
     assert not [ln for ln in lines if "catalysts.medical" in ln and not ln.lstrip().startswith("#")], \
@@ -394,11 +400,13 @@ def test_the_cadence_pin_is_UNCHANGED_by_the_daily_passes():
     assert set(AS.CADENCE_SEC) == {"zone_edge", "zone_bounce_alert", "demand_alert", "key_level_alert",
                                    "med_catalyst", "gajjala_setup",
                                    "gajjala_potential",   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
-                                   "tape_burst_highbeta", "tape_burst_chartmaps"}
+                                   "tape_burst_highbeta", "tape_burst_chartmaps",
+                                   "tape_control"}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
     assert AS.CADENCE_SEC == {"zone_edge": 60, "zone_bounce_alert": 300, "demand_alert": 300,
                               "key_level_alert": 60, "med_catalyst": 300, "gajjala_setup": 300,
                               "gajjala_potential": 300,   # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
-                              "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300}
+                              "tape_burst_highbeta": 300, "tape_burst_chartmaps": 300,
+                              "tape_control": 300}   # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
 
 
 # ── 🔑 key_level_alert (2026-09-25) ─────────────────────────────────────────

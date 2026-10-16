@@ -73,6 +73,25 @@ describe('kind registry', () => {
     expect(ALERT_KINDS.gajjala_setup.label).not.toMatch(/bounce/i);
   });
 
+  /* 🎚️ 2026-10-16 — tape_control. Ajay: "I wwant you to alert me when the
+   * Buyers are winning in tape for IREN today." A LIVE owner-only kind; its
+   * history rows must read as a label, never as the raw id. 🎚️ is U+1F39A,
+   * not 🎛️ (U+1F39B, scalp_tape). */
+  it('labels the 🎚️ tape_control kind in the tape group', () => {
+    expect(ALERT_KINDS.tape_control).toEqual({ emoji: '\u{1F39A}\u{FE0F}', label: 'Buyers in control — tape', group: 'tape' });
+    expect(kindLabel('tape_control')).toBe('🎚️ Buyers in control — tape');
+    expect(kindEmoji('tape_control')).not.toBe(kindEmoji('scalp_tape'));
+  });
+
+  it('NEGATIVE: the 🎚️ label never names a reversal word, a sham, or a buy call, and is not a zone kind', () => {
+    const label = ALERT_KINDS.tape_control.label;
+    expect(label).not.toMatch(/boun/i);
+    expect(label).not.toMatch(/fak[e]/i);
+    expect(label).not.toMatch(/\bbuy /i);
+    expect(ZONE_KINDS).not.toContain('tape_control');
+    expect(BREAKOUT_KINDS).not.toContain('tape_control');
+  });
+
   /* 🔑 2026-09-25 — Ajay: "I wanna know when key levels are broken for a
    * stock." The push kind ships OFF, but the day he turns it on its history
    * rows must read as a label, never as the raw id. */

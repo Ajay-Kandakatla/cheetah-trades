@@ -135,9 +135,11 @@ def test_the_kind_ships_OFF_and_is_the_only_one_that_does():
     # (his K4 "High-Beta tab names + all Chart Maps names").
     # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
     # likewise: OFF in default_prefs, ON for the owner through OWNER_KEEP_SET.
+    # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) likewise.
     assert off == {QA.KIND, "key_level_alert", "med_catalyst", "gajjala_setup",
                    "gajjala_potential",
-                   "tape_burst_highbeta", "tape_burst_chartmaps"}, \
+                   "tape_burst_highbeta", "tape_burst_chartmaps",
+                   "tape_control"}, \
         "another kind quietly shipped muted: %s" % sorted(off)
 
 
@@ -165,6 +167,8 @@ def test_NEGATIVE_the_keep_set_itself_did_not_move():
         "gajjala_potential",
         # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (Ajay: "I need a tape burst notification specific for High Beta stocks …", K4 "High-Beta tab names + all Chart Maps names"; OFF in default_prefs, ON for the owner via the keep-set; LIVE).
         "tape_burst_highbeta", "tape_burst_chartmaps",
+        # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
+        "tape_control",
     })
 
 

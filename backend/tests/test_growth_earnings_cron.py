@@ -111,6 +111,8 @@ class NoSendPathTest(unittest.TestCase):
                           "ops_alert",
                           # WIDENED 2026-10-14 — 🎢 tape_burst_highbeta + 🗺️ tape_burst_chartmaps (his K4 "High-Beta tab names + all Chart Maps names"; owner-only, LIVE) — this path never touches them either.
                           "tape_burst_highbeta", "tape_burst_chartmaps",
+                          # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only) — this path never touches it either.
+                          "tape_control",
                           })
 
     def test_the_kinds_under_growth_are_the_two_that_were_asked_for(self):

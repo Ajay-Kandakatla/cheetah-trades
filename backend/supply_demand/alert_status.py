@@ -37,6 +37,11 @@ never ran". This module keeps the last pass's counters per kind:
                      `sepa.cli trade-flash-watch` line; each served pass also
                      carries `window` {open, close} (HH:MM ET, built from
                      trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET)
+  tape_control       written here by orderflow.tape_control.run_pass
+                     (2026-10-16), the 🎚️ LIVE kind riding the same
+                     `sepa.cli trade-flash-watch` line; its served pass also
+                     carries `window`, `pins` and `note` (read_tape_control →
+                     tape_control.status_block — the words are the module's)
 
 ``alert_pass_latest`` collection: {_id: kind, as_of: ET iso, date: YYYY-MM-DD,
 counts: {...ints}, reason?: str}. One doc per kind, replaced every pass.
@@ -115,8 +120,14 @@ TAPE_KINDS = ("tape_burst_highbeta", "tape_burst_chartmaps")
 # file stays a module-level leaf (test_gajjala_potential_kind pins it equal to
 # constants.POTENTIAL_PUSH_KIND).
 GAJJALA_POTENTIAL_KIND = "gajjala_potential"
+# 🎚️ tape_control (orderflow/tape_control.py, 2026-10-16). Ajay: "I wwant you to
+# alert me when the Buyers are winning in tape for IREN today." It rides
+# `sepa.cli trade-flash-watch` (no crontab line of its own) and records its own
+# pass doc. Typed, not imported: this file stays a module-level leaf
+# (test_tape_control_registry pins it equal to tape_control.KIND).
+TAPE_CONTROL_KIND = "tape_control"
 PASS_KINDS = (ZONE_EDGE_KIND, "zone_bounce_alert", "demand_alert", KEY_LEVEL_KIND, MED_KIND,
-              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND) + TAPE_KINDS + DAILY_PASS_KINDS
+              GAJJALA_KIND, GAJJALA_POTENTIAL_KIND) + TAPE_KINDS + (TAPE_CONTROL_KIND,) + DAILY_PASS_KINDS
 
 # How often each cron is scheduled to run in RTH (backend/crontab: zone_edge
 # `* 9-16 * * 1-5`, demand_alerts `3-58/5`, zone_bounce_alerts `4-59/5`).
@@ -143,6 +154,9 @@ CADENCE_SEC[GAJJALA_POTENTIAL_KIND] = 300
 # 🎢 / 🗺️ ride the trade-flash-watch line `2-57/5` → 300 s (the crontab source
 # guard derives it from that line's minute field).
 CADENCE_SEC.update({k: 300 for k in TAPE_KINDS})
+# 🎚️ rides that same `2-57/5` line → 300 s (the crontab source guard derives it
+# from that line's minute field).
+CADENCE_SEC[TAPE_CONTROL_KIND] = 300
 
 # The cap floor is READ from demand_alerts.MIN_CAP_USD at request time, never
 # retyped (review 2026-09-14, finding 6: this said "$1B+" for four days after
@@ -377,6 +391,33 @@ def tape_window() -> Optional[dict]:
         return None
 
 
+def _tape_control_coll():
+    """The 🎚️ `tape_control_state` collection (tape_control.STATE_COLL, never
+    retyped). LAZY: this module stays a module-level leaf. None when Mongo or
+    the module cannot be reached — the pins then read `waiting`."""
+    try:
+        from orderflow import tape_control as TC
+        from portfolio.store import _get_db
+        db = _get_db()
+        return db[TC.STATE_COLL] if db is not None else None
+    except Exception as exc:
+        log.warning("alert_status: no tape_control state handle: %s", exc)
+        return None
+
+
+def read_tape_control(coll=None, now: Optional[datetime] = None) -> dict:
+    """{"pins": [...], "note": str|None} for the 🎚️ pass — tape_control.status_block's
+    served words, never recomposed here. Never raises: any failure is no pins."""
+    try:
+        from orderflow import tape_control as TC
+        now = now or datetime.now(ET)
+        et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
+        return TC.status_block(et, coll=coll if coll is not None else _tape_control_coll())
+    except Exception as exc:
+        log.warning("alert_status: tape_control status unavailable: %s", exc)
+        return {"pins": [], "note": None}
+
+
 def _daily(kind: str, pass_doc: dict, schedule: dict) -> dict:
     """A once-a-day pass: no cadence to be stale against, a schedule instead."""
     return dict(pass_doc, cadence_sec=None, schedule=schedule.get(kind))
@@ -551,13 +592,14 @@ def read_gajjala_potentials(coll=None, now: Optional[datetime] = None) -> list:
 
 
 def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] = None,
-                   gajjala_coll=None, potential_coll=None) -> dict:
+                   gajjala_coll=None, potential_coll=None, tape_control_coll=None) -> dict:
     """GET /alerts/status. Every input is injectable for tests; the route passes
     none. Never raises — a dead Mongo is three empty passes, not a 500.
     The 🚩 pass also carries `shadow_items` (read_gajjala_shadow) — today's
     shadow A+ records, listed under its strip on the page. The 🧠 pass
     (2026-10-15) carries `potential_items` (read_gajjala_potentials) — today's
-    tracker docs, listed under its strip."""
+    tracker docs, listed under its strip. The 🎚️ tape_control pass (2026-10-16)
+    carries `window`, `pins` and `note` (read_tape_control)."""
     from . import zone_edge as ZE                 # lazy: zone_edge's siblings import this module
     now = now or datetime.now(ET)
     et = now.astimezone(ET) if now.tzinfo is not None else now.replace(tzinfo=ET)
@@ -583,6 +625,8 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     window = tape_window()
     for kind in TAPE_KINDS:
         passes[kind] = dict(_with_cadence(kind, read_pass(kind, pass_coll)), window=window)
+    passes[TAPE_CONTROL_KIND] = dict(_with_cadence(TAPE_CONTROL_KIND, read_pass(TAPE_CONTROL_KIND, pass_coll)),
+                                     window=window, **read_tape_control(tape_control_coll, et))
     for kind in DAILY_PASS_KINDS:
         passes[kind] = _daily(kind, read_pass(kind, pass_coll), sched)
     return {
@@ -594,7 +638,7 @@ def status_payload(*, pass_coll=None, latest_coll=None, now: Optional[datetime] 
     }
 
 
-__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND", "TAPE_KINDS", "tape_window", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
+__all__ = ["PASS_COLL", "PASS_KINDS", "KEY_LEVEL_KIND", "MED_KIND", "GAJJALA_KIND", "GAJJALA_POTENTIAL_KIND", "TAPE_KINDS", "TAPE_CONTROL_KIND", "tape_window", "read_tape_control", "DAILY_PASS_KINDS", "CADENCE_SEC", "schedule_map",
            "record_pass", "record_result", "counts_from_result",
            "read_pass", "read_zone_edge", "gate_payload", "read_gajjala_shadow",
            "read_gajjala_potentials",

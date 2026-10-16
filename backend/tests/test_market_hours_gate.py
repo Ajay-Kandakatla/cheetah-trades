@@ -120,7 +120,8 @@ def test_gajjala_potential_is_a_market_kind_2026_10_15(no_override):
     assert gate.should_drop_kind("gajjala_potential", TUESDAY) is None
 
 
-@pytest.mark.parametrize("kind", ["tape_burst_highbeta", "tape_burst_chartmaps"])
+# WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only): the parametrize gains "tape_control".
+@pytest.mark.parametrize("kind", ["tape_burst_highbeta", "tape_burst_chartmaps", "tape_control"])
 def test_the_tape_burst_kinds_are_market_kinds_2026_10_14(no_override, kind):
     """🎢 / 🗺️ read off the live tape — silent on weekends and holidays."""
     assert kind in gate.MARKET_ALERT_KINDS and kind not in gate.PERSONAL_KINDS

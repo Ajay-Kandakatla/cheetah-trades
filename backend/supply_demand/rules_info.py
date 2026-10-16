@@ -433,7 +433,7 @@ def sections() -> dict:
             "Positions: 🎯 position_alert fires once per band per day when a holding nears "
             "the first supply band overhead, and on every Auto-Pilot stop / exit.",
         ],
-        "alerts": _non_zone_push_lines(),
+        "alerts": _non_zone_push_lines() + _tape_control_lines(),
         "note": _DISCLAIMER + " Zone bands come from zone_store (cap ≥ %s, ≥ %d bars)."
                 % (_b(ZS.MIN_CAP_USD), ZS.MIN_BARS),
     }
@@ -880,6 +880,37 @@ def _short_interest_section() -> dict:
     LAZILY, like the ⚡ and 📉 sections."""
     from short_interest import read as SR
     return SR.rules_section()
+
+
+def _tape_control_lines() -> list:
+    """🎚️ tape_control (2026-10-16). Ajay: "I wwant you to alert me when the Buyers are winning in tape
+    for IREN today." Every number is read from orderflow.tape / trade_flash / tape_control and
+    alert_status; no numeric literal and no date in this source (a test walks its AST)."""
+    try:
+        from orderflow import tape as TP
+        from orderflow import tape_control as TC
+        from orderflow import trade_flash as TF
+        from push import subs
+        from . import alert_status as AS
+        on = subs.owner_prefs().get(TC.KIND) is True
+        pins = ", ".join("%s (%s)" % (p["symbol"], "standing" if p["until"] is None
+                                       else "through the close of its pinned session")
+                         for p in TC.pins_for(TC.et_today()) if p["active"])
+        return ["%s %s (%s): %s — one push when the tape turns to buyers in control: the session's cumulative "
+                "delta above zero AND the last %d minutes' delta at or above zero, over the regular prints only "
+                "(pre-market counted — the Tape tab's own check), sides by the %s. It rings on the flip — the "
+                "first poll that reads it — never again while it holds (a ring that reached no device is tried once more, %d tries at most), again only after a poll reads it lost; "
+                "a poll that cannot read the tape never rings and never re-arms. Polled every %d min %s–%s ET "
+                "on trading days, silent on closed days. %s"
+                % (TC.MARK, TC.KIND,
+                   "ON for you by default, owner-only — mute at /notifications" if on
+                   else "owner-only, ships OFF — the toggle is at /notifications",
+                   pins or "no pinned name", TP.LATE_WINDOW_MIN, TC.RULE_WORD, TC.MAX_PUSH_ATTEMPTS,
+                   AS.CADENCE_SEC[TC.KIND] // _HB_SEC_PER_MIN, _hb_hhmm(TF.WATCH_OPEN_ET),
+                   _hb_hhmm(TF.WATCH_CLOSE_ET), TC.UNMEASURED_NOTE)]
+    except Exception as exc:                          # pragma: no cover - import shim
+        log.warning("rules_info: tape_control line unavailable: %s", exc)
+        return []
 
 
 # ── 🎢 High Beta (2026-10-14) ──────────────────────────────────────────────

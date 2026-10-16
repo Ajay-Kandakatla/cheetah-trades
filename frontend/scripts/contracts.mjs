@@ -7379,6 +7379,174 @@ const CONTRACTS = [
     },
   },
   {
+    name: '🎚️ tape_control (2026-10-16): WATCH / KIND / RULE_WORD in tape_control.py, in every registry, owner keep-set ON + default_prefs False, MARKET kind, own /alerts row after the tape strip, chip after 🧠, Notifications + ✨ numbers = tape.LATE_WINDOW_MIN + trade_flash window + the crontab step + WATCH, the FE composes no pin sentence, never the b-word',
+    file: 'src/lib/alertKinds.ts',
+    // Ajay 2026-10-16: "Can you add a watcher tape for IREN please." then "I
+    // wwant you to alert me when the Buyers are winning in tape for IREN
+    // today." He ACTS on this push (real money): a kind missing from a
+    // registry sends to zero devices in silence (memory
+    // cheetah_push_silent_drops); a number or a pinned name typed on a surface
+    // drifts from the constant that drives the pass; a sentence the FE composes
+    // can contradict the read the backend served. The tape-burst block above is
+    // the template (a LIVE owner-only kind). UNMEASURED.
+    checks: (src) => {
+      const errs = [];
+      const K = 'tape_control';
+      const ASK1 = 'Can you add a watcher tape for IREN please.';
+      const ASK2 = 'I wwant you to alert me when the Buyers are winning in tape for IREN today.';
+      const BANNED = /boun|fak[e]/i;
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const pyNoComments = (x) => x.replace(/#[^\n]*/g, '');
+      const tsNoComments = (x) => x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+
+      // 1. the module and its frozen names.
+      let tc = '';
+      try { tc = read('../backend/orderflow/tape_control.py'); } catch { errs.push('backend/orderflow/tape_control.py is unreadable (WP-A)'); return errs; }
+      const watchLine = (/^WATCH = \{[^\n]*$/m.exec(tc) || [''])[0];
+      const watchBody = (/^WATCH = \{([^}\n]*)\}/m.exec(tc) || [])[1];
+      const pins = [];
+      if (watchBody == null) errs.push('tape_control.py must define WATCH = {"SYM": "YYYY-MM-DD" | None} on one line');
+      else {
+        for (const m of watchBody.matchAll(/"([A-Z][A-Z.]{0,5})"\s*:\s*(?:"(\d{4}-\d{2}-\d{2})"|(None))/g)) pins.push({ sym: m[1], until: m[2] || null });
+        const rest = watchBody.replace(/"([A-Z][A-Z.]{0,5})"\s*:\s*(?:"(\d{4}-\d{2}-\d{2})"|(None))/g, '').replace(/[\s,]/g, '');
+        if (!pins.length) errs.push('tape_control.WATCH must hold at least one "SYM": "YYYY-MM-DD" | None pair');
+        if (rest) errs.push(`tape_control.WATCH carries an entry the contracts cannot read: ${rest}`);
+      }
+      if (!/# Ajay 2026-10-16/.test(watchLine)) errs.push('the WATCH = line must carry "# Ajay 2026-10-16" — the pin is his number');
+      if (!/^KIND = "tape_control"/m.test(tc)) errs.push('tape_control.py must define KIND = "tape_control"');
+      if (!/^RULE_WORD = "tick rule"/m.test(tc)) errs.push('tape_control.py must define RULE_WORD = "tick rule" — the surfaces say "tick rule"');
+      if (BANNED.test(pyNoComments(tc))) errs.push('tape_control.py says the b-word or the sham word');
+      const titleLine = (/^TITLE_FMT = [^\n]*/m.exec(tc) || [''])[0];
+      const headlineFn = (/^def headline\([\s\S]*?(?=\n(?:def |[A-Z_]+ = |@)|$(?![\s\S]))/m.exec(tc) || [''])[0];
+      if (!titleLine) errs.push('tape_control.py lost TITLE_FMT');
+      if (!headlineFn) errs.push('tape_control.py lost def headline(ev)');
+      if (/\bbuy\b|\benter/i.test(pyNoComments(titleLine + '\n' + headlineFn))) errs.push('TITLE_FMT / headline say "buy" or "enter" — "buyers" only, it is a read of the tape, not an entry');
+
+      // 2. the numbers the surfaces type, read from the engines.
+      const late = (() => { const m = /^LATE_WINDOW_MIN = (\d+)/m.exec(read('../backend/orderflow/tape.py')); return m ? Number(m[1]) : null; })();
+      if (late == null) errs.push('orderflow/tape.py lost LATE_WINDOW_MIN = <int>');
+      const tf = read('../backend/orderflow/trade_flash.py');
+      const dt = (name) => { const m = new RegExp(`^${name} = dtime\\((\\d+),\\s*(\\d+)\\)`, 'm').exec(tf); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : null; };
+      const open = dt('WATCH_OPEN_ET'), close = dt('WATCH_CLOSE_ET');
+      if (!open || !close) errs.push('trade_flash.py must name the window WATCH_OPEN_ET / WATCH_CLOSE_ET = dtime(H, M)');
+      const cronLines = cronCommands(read('../backend/crontab')).filter((l) => /sepa\.cli trade-flash-watch/.test(l));
+      const stepM = cronLines.length === 1 ? /^\S*\/(\d+)\s/.exec(cronLines[0].trim()) : null;
+      const step = stepM ? Number(stepM[1]) : null;
+      if (step == null) errs.push('the crontab must carry exactly one sepa.cli trade-flash-watch line with a minute step — 🎚️ rides it');
+      // the surface copy must name every pin and its last session (or "standing").
+      const pinErrs = (where, text) => {
+        const out = [];
+        for (const p of pins) {
+          if (!text.includes(p.sym)) out.push(`${where} must name the pinned ${p.sym} (tape_control.WATCH)`);
+          if (p.until ? !text.includes(p.until) : !/standing/.test(text)) out.push(`${where} must state ${p.sym}'s pin as ${p.until || '"standing"'} (tape_control.WATCH)`);
+        }
+        return out;
+      };
+      const numErrs = (where, text) => {
+        const out = [];
+        if (late != null) {
+          if (!text.includes(`last ${late} minutes`)) out.push(`${where} must say "last ${late} minutes" (tape.LATE_WINDOW_MIN)`);
+          for (const m of text.matchAll(/(\d+) minutes’ delta/g)) if (Number(m[1]) !== late) out.push(`${where} says "${m[0]}" — tape.LATE_WINDOW_MIN is ${late}`);
+          for (const m of text.matchAll(/last (\d+) minutes/g)) if (Number(m[1]) !== late) out.push(`${where} says "${m[0]}" — tape.LATE_WINDOW_MIN is ${late}`);
+        }
+        if (open && close && !text.includes(`${open}–${close} ET`)) out.push(`${where} must state "${open}–${close} ET" (trade_flash.WATCH_OPEN_ET / WATCH_CLOSE_ET)`);
+        if (step != null && !text.includes(`Every ${step} minutes`)) out.push(`${where} must say "Every ${step} minutes" — the trade-flash-watch line's minute step`);
+        return out;
+      };
+
+      // 3. every registry.
+      if (!new RegExp(`^\\s*${K}:\\s*\\{[^\\n]*group: 'tape'`, 'm').test(src)) errs.push(`alertKinds.ts must register ${K} in the 'tape' group — else the bell renders a raw id`);
+      const def = (new RegExp(`^\\s*${K}:\\s*\\{[^\\n]*`, 'm').exec(src) || [''])[0];
+      if (/shadow/i.test(def) || BANNED.test(def)) errs.push(`the ${K} label says shadow / a banned word`);
+      if (!new RegExp(`\\b${K}\\?: boolean`).test(read('src/hooks/useNotificationPrefs.ts'))) errs.push(`NotificationPrefs (hooks/useNotificationPrefs.ts) must carry ${K}?: boolean`);
+      const subs = read('../backend/push/subs.py');
+      const dm = new RegExp(`["']${K}["']\\s*:\\s*(True|False)`).exec(subs);
+      if (!dm) errs.push(`push/subs.py default_prefs must list "${K}"`);
+      else if (dm[1] !== 'False') errs.push(`${K} must be False in push/subs.py default_prefs — owner-only, everyone else starts off`);
+      if (!keepSet(subs).includes(K)) errs.push(`${K} must be in push/subs.OWNER_KEEP_SET — "alert me" (DECISIONS7 D6)`);
+      const gate = read('../backend/market_hours/gate.py');
+      if (!(pyFrozenSet(gate, 'MARKET_ALERT_KINDS') || []).includes(K)) errs.push(`market_hours/gate.py must treat ${K} as a MARKET kind (silent on closed days)`);
+      if ((pyFrozenSet(gate, 'PERSONAL_KINDS') || []).includes(K)) errs.push(`${K} must NOT be a PERSONAL kind`);
+      const itemBlock = (/^ITEM_URL_BY_KIND = \{([\s\S]*?)\n\}/m.exec(read('../backend/push/recent.py')) || [])[1] || '';
+      const iu = new RegExp(`["']${K}["']\\s*:\\s*([^,\\n]+)`).exec(pyNoComments(itemBlock));
+      if (!iu) errs.push(`push/recent.ITEM_URL_BY_KIND must carry ${K} — the ticker of a ring is its own link on /alerts`);
+      else if (!/^["']\/sepa\/\{sym\}\?tab=tape/.test(iu[1].trim())) errs.push(`push/recent.ITEM_URL_BY_KIND["${K}"] must open the ticker's tape (/sepa/{sym}?tab=tape…), got ${iu[1].trim()}`);
+      let status = '';
+      try { status = read('../backend/supply_demand/alert_status.py'); } catch { errs.push('backend/supply_demand/alert_status.py is unreadable'); }
+      if (status && !new RegExp(`["']${K}["']`).test(pyNoComments(status))) errs.push(`supply_demand/alert_status.py must record the ${K} pass`);
+      const alerts = read('src/pages/Alerts.tsx');
+      const passesBlock = (/const PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      const tapeBlock = (/export const TAPE_PASSES:[^=]*=\s*\[([\s\S]*?)\n\];/.exec(alerts) || [])[1] || '';
+      if (!/export const TAPE_CONTROL_PASS = \{\s*key: 'tape_control'/.test(alerts)) errs.push("Alerts.tsx must export TAPE_CONTROL_PASS = { key: 'tape_control', … } — its own row");
+      if (new RegExp(`'${K}'`).test(passesBlock)) errs.push(`Alerts.tsx PASSES must NOT carry ${K} — it would join "all N passes" and read stale outside its window`);
+      if (new RegExp(`'${K}'`).test(tapeBlock)) errs.push(`Alerts.tsx TAPE_PASSES must NOT carry ${K} — it has its own row`);
+      const chips = [...((/KIND_CHIPS: string\[\] = \[([^\]]*)\]/.exec(alerts) || [])[1] || '').matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]);
+      if (!chips.includes(K)) errs.push(`Alerts.tsx KIND_CHIPS must carry '${K}'`);
+      else if (chips.indexOf(K) < chips.indexOf('gajjala_potential')) errs.push(`Alerts.tsx KIND_CHIPS lists '${K}' before 'gajjala_potential' — it sits right after it`);
+      const notif = read('src/pages/Notifications.tsx');
+      const ess = notif.slice(notif.indexOf("id: 'essentials'"), notif.indexOf("id: 'trading_only'"));
+      if (!new RegExp(`${K}:\\s*true`).test(ess)) errs.push(`Essentials must carry ${K}: true — it is in OWNER_KEEP_SET`);
+
+      // 4. the Notifications entry.
+      const nm = notif.match(new RegExp(`key: '${K}'[\\s\\S]*?' \\},\\n`));
+      if (!nm) errs.push(`${K} must be listed on the Notifications page — a kind the page cannot show cannot be muted`);
+      else {
+        const d = unesc(nm[0]);
+        const W = `the ${K} Notifications entry`;
+        for (const need of ['ON FOR YOUR PHONE', 'rings live', 'UNMEASURED', 'tick rule', 'NOT READ:', ASK2]) {
+          if (!d.includes(need)) errs.push(`${W} must say "${need}"`);
+        }
+        if (/shadow/i.test(d)) errs.push(`${W} says "shadow" — the kind rings live`);
+        if (/OFF BY DEFAULT/.test(d)) errs.push(`${W} says OFF BY DEFAULT while the keep-set carries it`);
+        if (BANNED.test(d)) errs.push(`${W} says the b-word or the sham word`);
+        if (/buy signal/i.test(d)) errs.push(`${W} says "buy signal" — a read of the tape, not an entry`);
+        errs.push(...pinErrs(W, d), ...numErrs(W, d));
+      }
+
+      // 5. the ✨ entry — FIRST, both verbatim quotes, the same numbers.
+      const nf = read('src/lib/newFeatures.ts');
+      const arr = nf.slice(nf.indexOf('export const NEW_FEATURES'));
+      const firstAt = arr.indexOf("{ id: '");
+      const firstId = (/^\{ id: '([^']+)'/.exec(arr.slice(firstAt)) || [])[1];
+      const ID = 'alerts-tape-control-2026-10-16';
+      if (firstId !== ID) errs.push(`the ✨ entry '${ID}' must be FIRST in NEW_FEATURES (found '${firstId}')`);
+      const at = arr.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the '${ID}' highlight`);
+      else {
+        const nextAt = arr.indexOf("{ id: '", at + 1);
+        const e = unesc(arr.slice(at, nextAt < 0 ? undefined : nextAt));
+        const W = 'the 🎚️ ✨ entry';
+        if (!/route: '\/alerts'/.test(e)) errs.push(`${W} must route to '/alerts'`);
+        for (const need of [ASK1, ASK2, 'tick rule', 'UNMEASURED']) if (!e.includes(need)) errs.push(`${W} must carry "${need}"`);
+        if (BANNED.test(e)) errs.push(`${W} says the b-word or the sham word`);
+        if (/buy signal/i.test(e)) errs.push(`${W} says "buy signal"`);
+        errs.push(...pinErrs(W, e), ...numErrs(W, e));
+      }
+
+      // 6. the FE composes no pin sentence: TapeControlPins prints the served
+      // `text` and `note`, and no string literal or JSX text in it names the read.
+      const COMPOSED = /buyers|sellers|in control|delta|rang|tick rule/i;
+      const composedIn = (fnSrc) => {
+        const body = tsNoComments(fnSrc);
+        const lits = [...body.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*?)\1/g)].map((m) => m[2]);
+        const jsx = [...body.matchAll(/>([^<>{}]*[A-Za-z][^<>{}]*)</g)].map((m) => m[1]);
+        return [...lits, ...jsx].filter((t) => COMPOSED.test(t));
+      };
+      const fn = (/export function TapeControlPins[\s\S]*?\n\}(?=\n)/.exec(alerts) || [''])[0];
+      if (!fn) errs.push('Alerts.tsx lost export function TapeControlPins — the pinned names would not render');
+      else {
+        for (const t of composedIn(fn)) errs.push(`TapeControlPins types "${t}" — every pin word is served by tape_control.pin_text`);
+        if (!/\{p\.text\}/.test(fn)) errs.push('TapeControlPins must render {p.text} — the served pin sentence');
+        if (!/\{note\}/.test(fn)) errs.push('TapeControlPins must render {note} — the served pass note');
+        // self-test: the checker must catch a typed sentence.
+        if (!composedIn(fn.replace('{p.text}', "{'buyers in control'}")).length) errs.push('self-test: a typed "buyers in control" in TapeControlPins was not caught');
+        if (!composedIn(fn.replace('{p.text}', '<b>sellers lead</b>')).length) errs.push('self-test: JSX text naming sellers in TapeControlPins was not caught');
+      }
+      return errs;
+    },
+  },
+  {
     name: '🧠 gajjala_potential (2026-10-15): in every registry, owner keep-set ON + default_prefs False, MARKET kind, LIVE (never shadow), /alerts row after 🚩, times = data.py + NO_TRADE_AFTER_OPEN_MIN + the gajjala.run step, Cheetah defaults said iff True, the A+ shadow copy narrowed to A+, ✨ entry quotes all three asks, never the b-word',
     file: 'src/lib/alertKinds.ts',
     // Ajay 2026-10-15, three messages: "In Gajjalas setup I wanna find

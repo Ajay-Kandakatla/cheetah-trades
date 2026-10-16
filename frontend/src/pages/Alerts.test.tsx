@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import {
-  AlertsPage, GAJJALA_POTENTIAL_KEYS, GG_POTENTIAL_HELD_ROW, KIND_CHIPS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText,
+  AlertsPage, GAJJALA_POTENTIAL_KEYS, GG_POTENTIAL_HELD_ROW, KIND_CHIPS, TAPE_CONTROL_PASS, TAPE_PASSES, TICKER_DEBOUNCE_MS, cadenceText,
   capFloorPhrase, ggPotentialChipText, ggPotentialRowWord, passHealth, sessionLine, skipsToday,
   staleAfterSec, tapeBurstChipText, tapeWindow,
 } from './Alerts';
@@ -1938,5 +1938,177 @@ describe('Alerts page — the 🧠 Gajjala potentials pass (2026-10-15)', () => 
     expect(within(r).getByText('🧠 Gajjala potential')).toBeInTheDocument();
     expect(within(r).queryByText('gajjala_potential')).toBeNull();
     expect(r).toHaveTextContent('delivered to 1/1 device');
+  });
+});
+
+/* ── 🎚️ tape_control (2026-10-16) ─────────────────────────────────────────
+ * Ajay: "I wwant you to alert me when the Buyers are winning in tape for IREN
+ * today." The row rides the trade-flash line, judged on the SERVED window, and
+ * prints each pin's served `text` and the pass `note` verbatim — the FE types
+ * no pin sentence. Every counter rides the hover title; no chip. LIVE: never
+ * shadow. It is NOT one of the intraday PASSES ("all 7 passes" stays). */
+const TC_TEXT = 'buyers in control since 10:12 ET · session delta +4.2% of volume (+512,300 shares), last 30 min +88,100 shares · $41.37 · last print 10:51:58 ET · read 10:57 ET · rang 10:12 ET · tick rule';
+const TC_NOTE = "UNMEASURED — the Tape verdict's forward ledger (GET /orderflow/ledger/accuracy) measures the five-check verdict, not this check alone. Not advice. Sides by the tick rule (the Tape tab's quote-rule read can differ).";
+const tcPin = (over: Record<string, unknown> = {}) => ({
+  symbol: 'IREN', date: '2026-09-05', until: '2026-09-05', active: true, state: 'in_control',
+  text: TC_TEXT, url: '/sepa/IREN?tab=tape&from=alerts', rang: ['10:12'], ...over,
+});
+const tcPass = (as_of: string, extra: Record<string, unknown> = {}) => tapePass(as_of,
+  { pins: 1, active: 1, expired: 0, read: 1, faults: 0, in_control: 1, rang: 1, pushed: 1, lost_race: 0, skipped_budget: 0 },
+  { pins: [tcPin()], note: TC_NOTE, ...extra });
+const withTc = (pass: unknown, top: Record<string, unknown> = {}) => withTape({ tape_control: pass }, top);
+
+describe('🎚️ tape_control row (2026-10-16)', () => {
+  it('renders pass-tape_control inside tape-control, AFTER the tape-passes strip, with its label, stamp and cadence', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00')));
+    draw();
+    const row = await screen.findByTestId('pass-tape_control');
+    const box = screen.getByTestId('tape-control');
+    expect(within(box).getByTestId('pass-tape_control')).toBe(row);
+    // NEGATIVE: not inside the 🎢 🗺️ strip
+    expect(within(screen.getByTestId('tape-passes')).queryByTestId('pass-tape_control')).toBeNull();
+    const strip = screen.getByTestId('tape-passes');
+    expect(strip.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(row).getByText(TAPE_CONTROL_PASS.label)).toBeInTheDocument();
+    expect(within(row).getByText('last pass 10:57 ET')).toBeInTheDocument();
+    expect(within(row).getByText('· every 5 min')).toBeInTheDocument();
+  });
+
+  it('prints pins[0].text and note verbatim, and the symbol links to pins[0].url', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00')));
+    draw();
+    const pin = await screen.findByTestId('tape-control-pin-IREN');
+    expect(within(pin).getByTestId('tape-control-pin-text').textContent).toBe(TC_TEXT);
+    expect(screen.getByTestId('tape-control-note').textContent).toBe(TC_NOTE);
+    const a = within(pin).getByTestId('tape-control-pin-link');
+    expect(a.textContent).toBe('IREN');
+    expect(a.getAttribute('href')).toBe('/sepa/IREN?tab=tape&from=alerts');
+  });
+
+  it('is judged on the served window: stale inside it; outside it muted, "outside its 09:32–16:00 ET window", never stale', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:20:00-04:00')));
+    const v = draw();
+    const row = await screen.findByTestId('pass-tape_control');
+    expect(within(row).getByText('stale — last pass 10:20 ET, expected every 5 min')).toBeInTheDocument();
+    v.unmount();
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T15:57:40-04:00'), { now_et: '2026-09-05T16:30:00-04:00' }));
+    draw();
+    const after = await screen.findByTestId('pass-tape_control');
+    expect(within(after).getByText('last pass 15:57 ET — outside its 09:32–16:00 ET window')).toBeInTheDocument();
+    expect(after.textContent).not.toMatch(/stale/);
+  });
+
+  it('NEGATIVE: the FE composes nothing — served words print as served, whatever the state says', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00', {
+      pins: [tcPin({ text: 'ZZ served words', state: 'not_in_control' })], note: null,
+    })));
+    draw();
+    const pin = await screen.findByTestId('tape-control-pin-IREN');
+    expect(pin.textContent).toBe('IRENZZ served words');
+    const box = screen.getByTestId('tape-control');
+    const typed = (box.textContent ?? '').replace(TAPE_CONTROL_PASS.label, '');
+    expect(typed).not.toMatch(/buyers in control|sellers|delta|tick rule|rang/i);
+    expect(screen.queryByTestId('tape-control-note')).toBeNull();
+  });
+
+  it('NEGATIVE: a pin of another date is not listed; nothing renders when no pin and no note are served', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00', {
+      pins: [tcPin({ date: '2026-09-04', text: 'yesterday words' })], note: null,
+    })));
+    draw();
+    const row = await screen.findByTestId('pass-tape_control');
+    expect(screen.queryByTestId('tape-control-pin-IREN')).toBeNull();
+    expect(screen.getByTestId('tape-control').textContent).not.toContain('yesterday words');
+    expect(row).toBeInTheDocument();
+  });
+
+  it('NEGATIVE: a //evil or an http url is not a link — the symbol prints as plain text', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00', {
+      pins: [tcPin({ symbol: 'IREN', url: '//evil.example/x' }), tcPin({ symbol: 'NBIS', url: 'http://evil.example/y' }),
+             tcPin({ symbol: 'CRWV', url: null })],
+    })));
+    draw();
+    await screen.findByTestId('tape-control-pin-IREN');
+    for (const sym of ['IREN', 'NBIS', 'CRWV']) {
+      const pin = screen.getByTestId(`tape-control-pin-${sym}`);
+      expect(within(pin).queryByTestId('tape-control-pin-link')).toBeNull();
+      expect(within(pin).queryByRole('link')).toBeNull();
+      expect(pin.textContent).toContain(sym);
+    }
+    expect(screen.getByTestId('tape-control').querySelector('a[href*="evil"]')).toBeNull();
+  });
+
+  it('NEGATIVE: no counter chip and no raw counter key renders on the row — counters ride the hover title only', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00')));
+    draw();
+    const row = await screen.findByTestId('pass-tape_control');
+    const txt = row.textContent ?? '';
+    expect(txt).not.toMatch(/pushes delivered|push calls|candidates|skipped_budget|lost_race|in_control|lost race|skipped budget/);
+    expect(txt).not.toMatch(/\bpins 1\b|\bread 1\b|\brang 1\b/);
+    expect(row.getAttribute('title')).toMatch(/^Also counted: /);
+    expect(row.getAttribute('title')).toContain('rang 1');
+    expect(row.getAttribute('title')).toContain('lost race 0');
+  });
+
+  it('NEGATIVE: the row never says shadow or the reversal b-word, even when a counter is named so', async () => {
+    const p = tcPass('2026-09-05T10:57:40-04:00');
+    stubFetch({ rows: ROWS }, withTc({ ...p, counts: { ...p.counts, shadow: 1, shadow_mode: 1 } }));
+    draw();
+    await screen.findByTestId('pass-tape_control');
+    const txt = screen.getByTestId('tape-control').textContent ?? '';
+    expect(txt).not.toMatch(/shadow/i);
+    expect(txt).not.toMatch(/boun/i);
+    expect(txt).not.toMatch(/fak[e]/i);
+  });
+
+  it('the intraday PASSES header still reads "all 7 passes" and the first nine strips are unchanged', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T10:57:40-04:00')));
+    draw();
+    await screen.findByTestId('pass-tape_control');
+    const ids = screen.getAllByTestId(/^pass-/).map((el) => el.getAttribute('data-testid')).filter((x) => x !== 'pass-reason');
+    expect(ids.slice(0, 9)).toEqual(['pass-zone_edge', 'pass-zone_bounce_alert', 'pass-demand_alert', 'pass-key_level_alert',
+      'pass-med_catalyst', 'pass-gajjala_setup', 'pass-gajjala_potential', 'pass-tape_burst_highbeta', 'pass-tape_burst_chartmaps']);
+    expect(ids[9]).toBe('pass-tape_control');
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.');
+    expect(TAPE_PASSES.map((m) => m.key)).not.toContain('tape_control');
+  });
+
+  it('NEGATIVE: a dead 🎚️ pass mid-window never moves the "all 7 passes" header', async () => {
+    stubFetch({ rows: ROWS }, withTc(tcPass('2026-09-05T09:40:00-04:00')));
+    draw();
+    const row = await screen.findByTestId('pass-tape_control');
+    expect(within(row).getByText(/^stale — /)).toBeInTheDocument();
+    expect(screen.getByTestId('session-line')).toHaveTextContent('Session open — all 7 passes reported within cadence.');
+  });
+
+  it('the kind chip sits right after 🧠 gajjala_potential and narrows the feed to kinds=tape_control', async () => {
+    expect(KIND_CHIPS.indexOf('tape_control')).toBe(KIND_CHIPS.indexOf('gajjala_potential') + 1);
+    expect(KIND_CHIPS.indexOf('gajjala_potential')).toBe(KIND_CHIPS.indexOf('tape_burst_chartmaps') + 1);
+    expect(KIND_CHIPS.filter((k) => k === 'tape_control')).toHaveLength(1);
+    const fn = stubFetch({ rows: [] }, withTc(tcPass('2026-09-05T10:57:40-04:00')));
+    draw();
+    await waitFor(() => expect(recentUrls(fn)).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: '🎚️ Buyers in control — tape' }));
+    await waitFor(() => expect(lastRecent(fn).searchParams.get('kinds')).toBe('tape_control'));
+  });
+
+  it('a tape_control push row lists its item with the ticker linked to /sepa/IREN?tab=tape&from=alerts', async () => {
+    const line = "IREN · session delta +4.2% of volume (+512,300 shares), last 30 min +88,100 shares · $41.37 · 10:12 ET · tick rule (the Tape tab's quote-rule read can differ)";
+    const row = {
+      _id: 'tc1', ts: T('2026-09-05T14:12:00Z'), ts_iso: '2026-09-05T14:12:00+00:00',
+      kind: 'tape_control', ticker: 'IREN', tickers: ['IREN'], source: 'push', sent: 1, failed: 0, total: 1,
+      title: '🎚️ IREN — buyers in control on the tape', url: '/sepa/IREN?tab=tape&from=alerts',
+      body: line, items: [{ symbol: 'IREN', text: line, url: '/sepa/IREN?tab=tape&from=alerts', pushed: true }],
+      items_not_stored: 0,
+    };
+    stubFetch({ rows: [row] }, withTc(tcPass('2026-09-05T10:57:40-04:00')));
+    draw();
+    const r = (await screen.findAllByTestId('alert-row'))[0];
+    expect(within(r).getByText('🎚️ Buyers in control — tape')).toBeInTheDocument();
+    const links = within(r).getAllByRole('link', { name: 'IREN' });
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    for (const a of links) expect(a.getAttribute('href')).toBe('/sepa/IREN?tab=tape&from=alerts');
+    // NEGATIVE: never the raw kind id
+    expect(within(r).queryByText('tape_control')).toBeNull();
   });
 });

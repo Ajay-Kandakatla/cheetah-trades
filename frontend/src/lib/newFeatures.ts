@@ -22,6 +22,10 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-16 (verbatim below). DECISIONS7 D1–D9, K1–K3 defaults. Every number is a backend constant
+  // (tape.LATE_WINDOW_MIN, trade_flash.WATCH_*, the crontab step, tape_control.WATCH) — pinned by scripts/contracts.mjs ("🎚️ tape_control").
+  { id: 'alerts-tape-control-2026-10-16', addedAt: '2026-10-16', route: '/alerts',
+    label: '🎚️ Buyers in control on the tape — a phone alert for IREN. You said: “Can you add a watcher tape for IREN please.” and “I wwant you to alert me when the Buyers are winning in tape for IREN today.” Every 5 minutes, 09:32–16:00 ET, it reads IREN’s tape and pushes once when buyers take control — the Tape tab’s own check: the session’s cumulative delta above zero and the last 30 minutes’ at or above zero (regular prints, pre-market counted, sides by the tick rule). Never again while it holds; again only after a poll reads them losing it. A poll that cannot read the tape never rings. IREN is pinned for 2026-10-16, through the close. The 🎚️ row on /alerts says what it read and when it rang; the push opens IREN’s Tape tab. UNMEASURED — a read of the tape, not an entry. Not advice.' },
   // Ajay 2026-10-16 (verbatim below). DECISIONS6 K1–K5: daily candles; any of three downtrend reads, chips narrow; his
   // ±5% test; the house 5% doji; the 20-session / 4-session reference is Turtle Soup's (Cheetah default). Every number is
   // a chart_maps/doji_sweep_tab.py constant — pinned by scripts/contracts.mjs ("🕯️ Doji Sweep tab").

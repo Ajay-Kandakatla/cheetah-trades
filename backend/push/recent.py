@@ -135,6 +135,8 @@ ITEM_URL_BY_KIND = {
     # (orderflow/tape_burst_kinds.URL_FMT, pinned by test_tape_burst_kinds).
     "tape_burst_highbeta":  "/sepa/{sym}?tab=tape&from=chart-maps",
     "tape_burst_chartmaps": "/sepa/{sym}?tab=tape&from=chart-maps",
+    # 🎚️ 2026-10-16 — the Tape tab, back-linked to /alerts (orderflow/tape_control.URL_FMT, pinned by test_tape_control_registry).
+    "tape_control":         "/sepa/{sym}?tab=tape&from=alerts",
     "juggernaut_watchlist": DEFAULT_ITEM_URL,
     "leaderboard_breakout": DEFAULT_ITEM_URL,
     "accumulation_change":  DEFAULT_ITEM_URL,

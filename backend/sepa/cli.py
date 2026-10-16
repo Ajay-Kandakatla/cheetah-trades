@@ -39,6 +39,28 @@ except Exception:
     pass
 
 
+def _tape_control(*, kinds, now, poll_ts, started, dry_run):
+    """🎚️ orderflow/tape_control.py (Ajay 2026-10-16: "I wwant you to alert me when the
+    Buyers are winning in tape for IREN today."). Called by trade-flash-watch AFTER
+    the zone / burst pass and its heartbeats, in its own try: a fault here never
+    touches what ran before it. Same gates as the pass it rides: the market-day
+    gate above; the watch window is run_pass's own (trade_flash.in_window, a dry
+    run bypasses it, like run_watch). None when --kinds does not select it; else
+    run_pass's result. Never raises."""
+    try:
+        from orderflow import tape_control as TC
+    except Exception as exc:
+        log.warning("tape_control: import failed: %s", exc)
+        return {"ran": False, "reason": "import failed (%s)" % type(exc).__name__}
+    try:
+        if not TC.selected(kinds):
+            return None
+        return TC.run_pass(now=now, poll_ts=poll_ts, started=started, dry_run=dry_run)
+    except Exception as exc:
+        log.warning("tape_control failed: %s", exc)
+        return {"ran": False, "reason": "failed (%s)" % type(exc).__name__}
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="sepa.cli")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -199,11 +221,12 @@ def main() -> int:
         help="Poll the demand/supply-board names for zone-tied tape bursts and "
              "push new ones (RTH only; one consolidated push per cycle). Since "
              "2026-10-14 the same pass runs the 🎢 High-Beta and 🗺️ Chart Maps "
-             "tape-burst kinds (orderflow/tape_burst_kinds.py).",
+             "tape-burst kinds (orderflow/tape_burst_kinds.py), and since "
+             "2026-10-16 🎚️ tape_control (orderflow/tape_control.py).",
     )
     s_tf.add_argument("--kinds", type=str, default="all",
                       help="Tape-burst kinds after the zone pass: 'all' (default) or a "
-                           "comma list of tape_burst_highbeta,tape_burst_chartmaps")
+                           "comma list of tape_burst_highbeta,tape_burst_chartmaps,tape_control")
     s_tf.add_argument("--dry-run", action="store_true",
                       help="No Mongo write, no push, the clock gate bypassed: prints "
                            "both watch lists and what would be pushed")
@@ -499,10 +522,17 @@ def main() -> int:
         return 0
 
     if args.cmd == "trade-flash-watch":
+        import time as _time
         from orderflow import trade_flash
+        # 🎚️ the poll's start, read by tape_control's start guard (START_BY_SEC).
+        tc_now, tc_poll_ts, tc_t0 = trade_flash._now_et(), int(_time.time()), _time.monotonic()
         r = trade_flash.run_watch(kinds=args.kinds, dry_run=args.dry_run)
         if args.dry_run:
             # A manual check: nothing was written or pushed, so nothing beats.
+            tc = _tape_control(kinds=args.kinds, now=tc_now, poll_ts=tc_poll_ts,
+                               started=tc_t0, dry_run=True)
+            if tc is not None and isinstance(r, dict):
+                r["tape_control"] = tc
             print(json.dumps(r, indent=2, default=str))
             return 0
         # A quiet tape produces zero events, so the events collection cannot
@@ -520,6 +550,21 @@ def main() -> int:
                     engine_heartbeat.beat(kind)
         except Exception:
             pass
+        # 🎚️ 2026-10-16: tape_control AFTER the beats above, in its own try; it
+        # beats under its own name only when its pass ran (a day of unread
+        # polls beats nothing, so health_audit goes amber).
+        tc = _tape_control(kinds=args.kinds, now=tc_now, poll_ts=tc_poll_ts,
+                           started=tc_t0, dry_run=False)
+        if tc is not None:
+            if isinstance(r, dict):
+                r["tape_control"] = tc
+            try:
+                if isinstance(tc, dict) and tc.get("ran") is True:
+                    from observability import engine_heartbeat
+                    from orderflow import tape_control as TC
+                    engine_heartbeat.beat(TC.KIND)
+            except Exception:
+                pass
         log.info("TRADE-FLASH watch: %s", r)
         return 0
 

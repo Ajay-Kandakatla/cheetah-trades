@@ -59,6 +59,12 @@ export const ALERT_KINDS: Record<string, AlertKindDef> = {
   // and neither passes alert_gates.py. UNMEASURED — a description of prints.
   tape_burst_highbeta: { emoji: '🎢', label: 'Tape burst — High Beta',  group: 'tape' },
   tape_burst_chartmaps:{ emoji: '🗺️', label: 'Tape burst — Chart Maps', group: 'tape' },
+  // 🎚️ orderflow/tape_control.py (2026-10-16) — Ajay: "I wwant you to alert me
+  // when the Buyers are winning in tape for IREN today." One owner-only LIVE
+  // kind: the Tape tab's own buyers-in-control check (session delta > 0 AND the
+  // last 30 min >= 0, tick rule) on the pinned names, rung on the flip.
+  // UNMEASURED — a read of the tape, not an entry.
+  tape_control:        { emoji: '\u{1F39A}\u{FE0F}', label: 'Buyers in control — tape', group: 'tape' },
 
   // ── trading ───────────────────────────────────────────────────────────────
   pivot_alert:         { emoji: '🎯', label: 'Pivot / buy zone',        group: 'trading' },

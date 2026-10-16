@@ -128,6 +128,8 @@ MARKET_ALERT_KINDS: frozenset[str] = frozenset({
     # (the cli's market-day gate already skips the pass; this drops at the
     # sender too).
     "tape_burst_highbeta", "tape_burst_chartmaps",
+    # 🎚️ tape_control (2026-10-16) — read off the live tape: a MARKET kind, silent on weekends and NYSE holidays.
+    "tape_control",
     "stage_out_alert", "sepa_new_candidate", "volume_breakout", "rising_momentum",
     "watchlist_breakout", "juggernaut_watchlist", "leaderboard_breakout",
     "stage_breakdown", "watchlist_stage_breakdown", "accumulation_change",

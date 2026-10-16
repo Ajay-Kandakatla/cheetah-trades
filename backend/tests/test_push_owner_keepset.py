@@ -75,7 +75,9 @@ def test_keep_set_is_the_2026_09_21_nine():
         # WIDENED 2026-10-15 — 🧠 gajjala_potential ("Give me an alert all continous tracker on these specifically …"; LIVE, owner-only)
         "gajjala_potential",
         # WIDENED 2026-10-14 — 🎢 / 🗺️ tape-burst kinds (owner-only, LIVE)
-        "tape_burst_highbeta", "tape_burst_chartmaps"})
+        "tape_burst_highbeta", "tape_burst_chartmaps",
+        # WIDENED 2026-10-16 — 🎚️ tape_control ("I wwant you to alert me when the Buyers are winning in tape for IREN today."; LIVE, owner-only)
+        "tape_control"})
     for gone in ("zone_bounce_alert", "supply_break_alert", "todo_reminder"):
         assert gone not in subs.OWNER_KEEP_SET, gone
     # every kept kind must exist in default_prefs or it sends to ZERO devices

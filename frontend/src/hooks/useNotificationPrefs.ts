@@ -91,6 +91,13 @@ export type NotificationPrefs = {
      the Chart Maps page". ON for him via the owner keep-set; False in
      default_prefs for anyone else. LIVE (never shadow). UNMEASURED. */
   tape_burst_chartmaps?: boolean;
+  /* 🎚️ Buyers in control on the tape for the pinned names — the Tape tab's own
+     check 3 (session delta > 0 AND the last 30 min >= 0, tick rule), rung on
+     the flip (orderflow/tape_control.py, 2026-10-16: "I wwant you to alert me
+     when the Buyers are winning in tape for IREN today."). ON for him via the
+     owner keep-set; False in default_prefs for anyone else. LIVE (never
+     shadow). UNMEASURED. */
+  tape_control?: boolean;
   morning_brief?: boolean;
   todo_reminder?: boolean;
   todo_daily_digest?: boolean;
