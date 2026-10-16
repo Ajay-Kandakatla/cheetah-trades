@@ -7,9 +7,9 @@
  * assume anything."
  *
  * Goverdhan Gajjala's five 5-minute setups over HIS scanner on the whole US
- * market, plus ☀️ Premarket, 🌙 Post-market and 📓 his Playbook — eight sub
- * tabs, one endpoint (GET /chart-maps/gajjala). The cron pass scans, reads and
- * stores; the endpoint reads Mongo and ORDERS; this file draws. Every sentence
+ * market, plus ☀️ Premarket, 🌙 Post-market and 📓 his Playbook (then 🧠
+ * Potential and 🏁 Track record, below) — ten sub tabs, one endpoint
+ * (GET /chart-maps/gajjala). The cron pass scans, reads and stores; the endpoint reads Mongo and ORDERS; this file draws. Every sentence
  * the card prints — the state label, the strip, the criteria, the chips, the
  * quotes — is SERVED; the FE types only structural words. No rule number is
  * typed here, so a changed knob on the server shows up with no FE deploy.
@@ -57,6 +57,18 @@
  * A+ only — the served rows of the latest pass (the server picks them; the FE
  * filters nothing and composes no word) — on every sub, right under the sub
  * strip, so on 🧠 Potential it leads the 📈 Track. UNMEASURED.
+ *
+ * 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.11). Ajay: "also can you track
+ * all Gajjals stocks and keep a new tab to show wins vs losses. To see a
+ * percentage and the ticker." and "We are not looking for winners just in time
+ * but when they got in to our alerts if they made it or not. Like XLAB today
+ * was a winner I made good money on it". The tenth sub, LAST, draws no tiles
+ * (so no room POST): a table per day of the served rows — ticker, setup, alert
+ * time, kind, the plan, the same-session and through-next-session cells — under
+ * the served header counts, with the served day picker (`?span=`, the only new
+ * param; a sub click drops it). The server grades every alert by GG's trade
+ * math and words every cell, count, label and %; this panel types no word and
+ * no number. A ledger of the alerts as sent, not a study. UNMEASURED.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -74,11 +86,12 @@ import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
 import {
-  GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
+  GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
-  type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRow, type GgWatch,
+  type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
+  type GgTrRow, type GgWatch,
 } from '../lib/gajjala';
 import '../styles/gajjala.css';
 
@@ -97,6 +110,7 @@ export default function GajjalaBoard() {
   const tf = parseGgTf(params.get(GG_TF_PARAM));
   const focus = parseFocus(params.get(FOCUS_PARAM));
   const sort = (params.get(GG_SORT_PARAM) || '').trim() || null;
+  const span = (params.get(GG_SPAN_PARAM) || '').trim() || null;
 
   const [board, setBoard] = useState<GgBoard | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -118,7 +132,7 @@ export default function GajjalaBoard() {
    * board of an older render). */
   const boardRef = useRef<GgBoard | null>(null);
 
-  const reqKey = ggQuery({ sub: urlSub, tf, focus, sort });
+  const reqKey = ggQuery({ sub: urlSub, tf, focus, sort, span });
 
   useEffect(() => {
     if (adoptedKey.current === reqKey) { adoptedKey.current = null; return; }
@@ -144,7 +158,7 @@ export default function GajjalaBoard() {
         if (served && served !== params.get(GG_SUB_PARAM)) {
           const next = new URLSearchParams(params);
           next.set(GG_SUB_PARAM, served);
-          const nextKey = ggQuery({ sub: served, tf, focus, sort });
+          const nextKey = ggQuery({ sub: served, tf, focus, sort, span });
           if (nextKey !== reqKey) adoptedKey.current = nextKey;
           setParams(next, { replace: true });
         }
@@ -264,8 +278,9 @@ export default function GajjalaBoard() {
     if (activeSub) trackFeature(`chart-maps:tab:gajjala:${activeSub}`);
   }, [activeSub]);
 
+  // 📓 and 🏁 draw no tiles, so useBounceRoom posts nothing on them.
   const tiles = useMemo<GgTile[]>(
-    () => (activeSub === 'playbook' ? [] : (board?.tiles || [])), [board, activeSub]);
+    () => (activeSub === 'playbook' || activeSub === 'track_record' ? [] : (board?.tiles || [])), [board, activeSub]);
   const shownSymbols = useMemo(() => tiles.map((t) => t.symbol), [tiles]);
   /* ONE room POST (useBounceRoom) for every name on screen — the 🧨 / 🎯 chips read that
    * one map (the EmaFramesBoard precedent; a per-tile fetch is the 2026-09-21
@@ -294,8 +309,8 @@ export default function GajjalaBoard() {
     setParams(next);
   };
   // A sub click keeps `tab=gajjala` (it is what keeps this board mounted) and
-  // drops the ☀️ / 🌙 sort, which belongs to the sub it was picked on.
-  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM]);
+  // drops the ☀️ / 🌙 sort and the 🏁 span, which belong to the sub they were picked on.
+  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM]);
 
   const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null }));
   const session = board?.session;
@@ -372,6 +387,9 @@ export default function GajjalaBoard() {
 
       {activeSub === 'playbook' ? (
         <PlaybookPanel pb={board?.playbook ?? null} />
+      ) : activeSub === 'track_record' ? (
+        <TrackRecordPanel tr={board?.track_record ?? null} emptyNote={board?.empty_note ?? null}
+                          onSpan={(k) => setParam(GG_SPAN_PARAM, k)} />
       ) : board ? (
         <>
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
@@ -694,6 +712,106 @@ function TrackPanel({ track }: { track: GgTrack }) {
         </details>
       ) : null}
       {track.unmeasured ? <div className="gg-muted" data-testid="gg-track-unmeasured">{track.unmeasured}</div> : null}
+    </section>
+  );
+}
+
+/** 🏁 one served cell: its served text, the served small line under it; `state` / `provisional` are CSS hooks only. */
+function TrCell({ cell, testid }: { cell: GgTrCell | null | undefined; testid: string }) {
+  if (!cell) return <td data-testid={testid} className="gg-tr-cell" />;
+  const sub = typeof cell.sub_text === 'string' && cell.sub_text ? cell.sub_text : null;
+  return (
+    <td data-testid={testid} className={`gg-tr-cell gg-tr-${cell.state}${cell.provisional ? ' gg-tr-prov' : ''}`}>
+      {cell.text}{sub ? <small>{sub}</small> : null}
+    </td>
+  );
+}
+
+/** 🏁 one served row, its cells in the SERVED heads' order. */
+/** A served row chip (E1 rang / E4 thin R) prints only when it is a non-empty string — null / absent prints nothing. */
+const trChip = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
+
+function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
+  switch (head) {
+    case 'symbol': {
+      const href = ggHref(row.href);
+      return <td className="gg-tr-sym">{href ? <Link to={href}>{row.symbol}</Link> : row.symbol}</td>;
+    }
+    case 'setup': return <td>{row.setup_label}</td>;
+    case 'at': return <td>{row.at_text}</td>;
+    case 'kind': return (
+      <td>
+        <span className={`gg-tr-kind gg-tr-${row.line}`}>{row.kind_text}</span>
+        {trChip(row.rang_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-rang-${row.key}`}>{row.rang_text}</span> : null}
+        {trChip(row.thin_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-thin-${row.key}`}>{row.thin_text}</span> : null}
+      </td>
+    );
+    case 'plan': return (
+      <td className="gg-tr-plan">
+        {row.plan_text}
+        {row.note ? <span className="gg-muted" data-testid={`gg-tr-note-${row.key}`}>{row.note}</span> : null}
+      </td>
+    );
+    case 'same': return <TrCell cell={row.same} testid={`gg-tr-same-${row.key}`} />;
+    case 'next': return <TrCell cell={row.next} testid={`gg-tr-next-${row.key}`} />;
+    default: return <td />;
+  }
+}
+
+/** 🏁 Track record (2026-10-16) — the served title, the served day picker, the served counts / A+ shadow / today
+ *  lines, one table per served day (served heads, served rows), the served more / empty lines, the served rule folded
+ *  and the served honesty line last. The panel types no word, no number and no percent sign; no tiles, no room POST.
+ *  An older API (no `track_record` block) → the served empty note only. */
+function TrackRecordPanel({ tr, emptyNote, onSpan }: {
+  tr: GgTrackRecord | null; emptyNote: string | null; onSpan: (key: string) => void;
+}) {
+  if (!tr) return emptyNote ? <div className="cm-note" data-testid="gg-tr-empty">{emptyNote}</div> : null;
+  const heads = tr.heads || [];
+  return (
+    <section className="gg-track-record" data-testid="gg-track-record">
+      <h3 className="gg-pb-h" data-testid="gg-tr-title">{tr.title}</h3>
+      {tr.spans?.length ? (
+        <div className="cm-phase" role="tablist">
+          {tr.spans.map((s) => (
+            <button key={s.key} type="button" role="tab" aria-selected={s.key === tr.span}
+                    data-testid={`gg-tr-span-${s.key}`}
+                    className={`cm-phase-btn${s.key === tr.span ? ' cm-phase-on' : ''}`}
+                    onClick={() => onSpan(s.key)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
+      {tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
+      {tr.shadow_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-shadow">{tr.shadow_text}</div> : null}
+      {tr.today_text ? <div className="cm-note" data-testid="gg-tr-today">{tr.today_text}</div> : null}
+      {(tr.days || []).map((d) => (
+        <div key={d.date} className="gg-tr-day">
+          <h4 className="gg-pb-h" data-testid={`gg-tr-day-${d.date}`}>{d.label}</h4>
+          <div className="gg-tr-scroll">
+            <table className="gg-tr-table">
+              <thead><tr>{heads.map((h) => <th key={h.key}>{h.label}</th>)}</tr></thead>
+              <tbody>
+                {(d.rows || []).map((r) => (
+                  <tr key={r.key} data-testid={`gg-tr-row-${r.key}`}>
+                    {heads.map((h) => <TrRowCells key={h.key} row={r} head={h.key} />)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+      {tr.more_text ? <div className="gg-muted" data-testid="gg-tr-more">{tr.more_text}</div> : null}
+      {tr.empty_text ? <div className="cm-note" data-testid="gg-tr-empty">{tr.empty_text}</div> : null}
+      {tr.rule_text ? (
+        <details className="gg-tr-rule" data-testid="gg-tr-rule">
+          {tr.rule_label ? <summary>{tr.rule_label}</summary> : null}
+          {tr.rule_text}
+        </details>
+      ) : null}
+      {tr.honesty ? <div className="gg-muted" data-testid="gg-tr-honesty">{tr.honesty}</div> : null}
     </section>
   );
 }

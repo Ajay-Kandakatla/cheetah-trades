@@ -1,0 +1,1425 @@
+{
+ "_recipe": "GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_track_record_tab.py -k golden",
+ "boards": {
+  "5d": {
+   "awaiting": [],
+   "counts": {
+    "aplus": 0,
+    "awaiting_answer": 0,
+    "forming": 0,
+    "invalid": 0,
+    "listed": 0,
+    "none": 0,
+    "partial": 0,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "empty_note": null,
+   "enterable": {
+    "empty_text": "🎯 No A+ right now · no pass this session yet · UNMEASURED",
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [],
+    "title": null
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": null,
+    "at": null,
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": null,
+    "warming": true,
+    "warming_text": "warming — no pass this session yet (the first runs just after 04:00 ET); the reads shown are older"
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "no pass on file yet",
+    "bars_through_et": null,
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": null,
+    "state": "idle",
+    "text": "no pass on file yet"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-16",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": null,
+    "best_symbol": null,
+    "quiet": null,
+    "runners_100": null,
+    "runners_80": null,
+    "text": null
+   },
+   "sub": "track_record",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 0,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag"
+    },
+    {
+     "count": 0,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly"
+    },
+    {
+     "count": 0,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade"
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP"
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze"
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket"
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market"
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook"
+    },
+    {
+     "count": 0,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential"
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record"
+    }
+   ],
+   "tab": "gajjala",
+   "tf": "5m",
+   "tiles": [],
+   "track_record": {
+    "counts": {
+     "live": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 1,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 5,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 2,
+       "no_plan": 1,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 0,
+       "thin": 0,
+       "win": 3
+      }
+     },
+     "shadow": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 3,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 3,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     }
+    },
+    "counts_text": {
+     "next": "Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 1 no plan · 5 not graded yet",
+     "same": "Same session: 3 wins · 0 losses · 100% won · 2 no entry · 0 open · 1 no plan · today not final"
+    },
+    "days": [
+     {
+      "date": "2026-10-16",
+      "label": "Fri 2026-10-16 · today",
+      "more_n": null,
+      "rows": [
+       {
+        "at_et": "11:06",
+        "at_text": "11:06 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
+        "id": "2026-10-16|HCAI|intraday_vcp|aplus",
+        "key": "2026-10-16-HCAI-intraday_vcp-aplus",
+        "kind": "aplus",
+        "kind_text": "A+ shadow — never sent",
+        "line": "shadow",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 3.30 · stop 3.10",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 3.1,
+        "symbol": "HCAI",
+        "thin_text": null,
+        "trigger": 3.3
+       },
+       {
+        "at_et": "10:46",
+        "at_text": "10:46 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
+        "id": "2026-10-16|TGL|kiss_fly|aplus",
+        "key": "2026-10-16-TGL-kiss_fly-aplus",
+        "kind": "aplus",
+        "kind_text": "A+ shadow — never sent",
+        "line": "shadow",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 5.60 · stop 5.30",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "kiss_fly",
+        "setup_label": "💋 EMA Kiss & Fly",
+        "stop": 5.3,
+        "symbol": "TGL",
+        "thin_text": null,
+        "trigger": 5.6
+       },
+       {
+        "at_et": "10:36",
+        "at_text": "10:36 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
+        "id": "2026-10-16|PMI|bull_flag|aplus",
+        "key": "2026-10-16-PMI-bull_flag-aplus",
+        "kind": "aplus",
+        "kind_text": "A+ shadow — never sent",
+        "line": "shadow",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 2.40 · stop 2.20",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "bull_flag",
+        "setup_label": "🚩 Bull Flag",
+        "stop": 2.2,
+        "symbol": "PMI",
+        "thin_text": null,
+        "trigger": 2.4
+       },
+       {
+        "at_et": "10:12",
+        "at_text": "10:12 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=NOEN",
+        "id": "2026-10-16|NOEN|kiss_fly|potential",
+        "key": "2026-10-16-NOEN-kiss_fly-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 9.99 · stop 9.50",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "kiss_fly",
+        "setup_label": "💋 EMA Kiss & Fly",
+        "stop": 9.5,
+        "symbol": "NOEN",
+        "thin_text": null,
+        "trigger": 9.99
+       },
+       {
+        "at_et": "10:02",
+        "at_text": "10:02 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=NPLN",
+        "id": "2026-10-16|NPLN|bull_flag|potential",
+        "key": "2026-10-16-NPLN-bull_flag-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "no_plan",
+         "sub_text": null,
+         "text": "no plan"
+        },
+        "note": null,
+        "plan_text": "no trigger or stop on the alert",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": false,
+         "state": "no_plan",
+         "sub_text": null,
+         "text": "no plan"
+        },
+        "setup": "bull_flag",
+        "setup_label": "🚩 Bull Flag",
+        "stop": null,
+        "symbol": "NPLN",
+        "thin_text": null,
+        "trigger": null
+       },
+       {
+        "at_et": "09:01",
+        "at_text": "09:01 ET",
+        "date": "2026-10-16",
+        "fill_px": 1.89,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+        "id": "2026-10-16|XLAB|intraday_vcp|potential",
+        "key": "2026-10-16-XLAB-intraday_vcp-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.85 → fill 1.89 at 09:45 · stop 1.75 · +1R 1.99",
+        "rang": "pre",
+        "rang_text": "rang pre",
+        "same": {
+         "provisional": true,
+         "state": "win",
+         "sub_text": "+1R at 09:48 · not final",
+         "text": "WIN · best +103.2% so far"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 1.75,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.85
+       },
+       {
+        "at_et": "08:51",
+        "at_text": "08:51 ET",
+        "date": "2026-10-16",
+        "fill_px": 1.89,
+        "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=XLAB",
+        "id": "2026-10-16|XLAB|horizontal_fade|potential",
+        "key": "2026-10-16-XLAB-horizontal_fade-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.81 → fill 1.89 at 09:45 · stop 1.70 · +1R 2.00",
+        "rang": "pre",
+        "rang_text": "rang pre",
+        "same": {
+         "provisional": true,
+         "state": "win",
+         "sub_text": "+1R at 09:49 · not final",
+         "text": "WIN · best +103.2% so far"
+        },
+        "setup": "horizontal_fade",
+        "setup_label": "➖ Horizontal Fade",
+        "stop": 1.7,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.81
+       }
+      ]
+     },
+     {
+      "date": "2026-10-15",
+      "label": "Thu 2026-10-15",
+      "more_n": null,
+      "rows": [
+       {
+        "at_et": "17:30",
+        "at_text": "17:30 ET",
+        "date": "2026-10-15",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=AHX",
+        "id": "2026-10-15|AHX|horizontal_fade|potential",
+        "key": "2026-10-15-AHX-horizontal_fade-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 6.10 · stop 5.80",
+        "rang": "ah",
+        "rang_text": "rang AH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "horizontal_fade",
+        "setup_label": "➖ Horizontal Fade",
+        "stop": 5.8,
+        "symbol": "AHX",
+        "thin_text": null,
+        "trigger": 6.1
+       },
+       {
+        "at_et": "15:11",
+        "at_text": "15:11 ET",
+        "date": "2026-10-15",
+        "fill_px": 1.22,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+        "id": "2026-10-15|XLAB|intraday_vcp|potential",
+        "key": "2026-10-15-XLAB-intraday_vcp-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded tonight 20:15 ET",
+         "text": "after today's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.22 → fill 1.22 at 15:21 · stop 1.16 · +1R 1.28",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": false,
+         "state": "win",
+         "sub_text": "+1R at 15:22 · close +2.5%",
+         "text": "WIN · best +4.9%"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 1.16,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.22
+       }
+      ]
+     }
+    ],
+    "empty_text": null,
+    "grade_at_et": "20:15",
+    "heads": [
+     {
+      "key": "symbol",
+      "label": "Ticker"
+     },
+     {
+      "key": "setup",
+      "label": "Setup"
+     },
+     {
+      "key": "at",
+      "label": "Alert"
+     },
+     {
+      "key": "kind",
+      "label": "Kind"
+     },
+     {
+      "key": "plan",
+      "label": "Trigger → fill · stop"
+     },
+     {
+      "key": "same",
+      "label": "Same session"
+     },
+     {
+      "key": "next",
+      "label": "Through next session"
+     }
+    ],
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "more_text": null,
+    "rule_label": "ⓘ how each alert is graded",
+    "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
+    "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 3 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 3 not graded yet",
+    "span": "5d",
+    "spans": [
+     {
+      "key": "today",
+      "label": "Today"
+     },
+     {
+      "key": "yesterday",
+      "label": "Yesterday"
+     },
+     {
+      "key": "5d",
+      "label": "Last 5 sessions"
+     },
+     {
+      "key": "all",
+      "label": "All"
+     }
+    ],
+    "title": "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED",
+    "today_text": "Today · through 11:11 ET · not final"
+   }
+  },
+  "today": {
+   "awaiting": [],
+   "counts": {
+    "aplus": 0,
+    "awaiting_answer": 0,
+    "forming": 0,
+    "invalid": 0,
+    "listed": 0,
+    "none": 0,
+    "partial": 0,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "empty_note": null,
+   "enterable": {
+    "empty_text": "🎯 No A+ right now · no pass this session yet · UNMEASURED",
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [],
+    "title": null
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": null,
+    "at": null,
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": null,
+    "warming": true,
+    "warming_text": "warming — no pass this session yet (the first runs just after 04:00 ET); the reads shown are older"
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "no pass on file yet",
+    "bars_through_et": null,
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": null,
+    "state": "idle",
+    "text": "no pass on file yet"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-16",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": null,
+    "best_symbol": null,
+    "quiet": null,
+    "runners_100": null,
+    "runners_80": null,
+    "text": null
+   },
+   "sub": "track_record",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 0,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag"
+    },
+    {
+     "count": 0,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly"
+    },
+    {
+     "count": 0,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade"
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP"
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze"
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket"
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market"
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook"
+    },
+    {
+     "count": 0,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential"
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record"
+    }
+   ],
+   "tab": "gajjala",
+   "tf": "5m",
+   "tiles": [],
+   "track_record": {
+    "counts": {
+     "live": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 1,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 3,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 1,
+       "no_plan": 1,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 0,
+       "thin": 0,
+       "win": 2
+      }
+     },
+     "shadow": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 3,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 3,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     }
+    },
+    "counts_text": {
+     "next": "Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 1 no plan · 3 not graded yet",
+     "same": "Same session: 2 wins · 0 losses · 100% won · 1 no entry · 0 open · 1 no plan · today not final"
+    },
+    "days": [
+     {
+      "date": "2026-10-16",
+      "label": "Fri 2026-10-16 · today",
+      "more_n": null,
+      "rows": [
+       {
+        "at_et": "11:06",
+        "at_text": "11:06 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
+        "id": "2026-10-16|HCAI|intraday_vcp|aplus",
+        "key": "2026-10-16-HCAI-intraday_vcp-aplus",
+        "kind": "aplus",
+        "kind_text": "A+ shadow — never sent",
+        "line": "shadow",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 3.30 · stop 3.10",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 3.1,
+        "symbol": "HCAI",
+        "thin_text": null,
+        "trigger": 3.3
+       },
+       {
+        "at_et": "10:46",
+        "at_text": "10:46 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
+        "id": "2026-10-16|TGL|kiss_fly|aplus",
+        "key": "2026-10-16-TGL-kiss_fly-aplus",
+        "kind": "aplus",
+        "kind_text": "A+ shadow — never sent",
+        "line": "shadow",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 5.60 · stop 5.30",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "kiss_fly",
+        "setup_label": "💋 EMA Kiss & Fly",
+        "stop": 5.3,
+        "symbol": "TGL",
+        "thin_text": null,
+        "trigger": 5.6
+       },
+       {
+        "at_et": "10:36",
+        "at_text": "10:36 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
+        "id": "2026-10-16|PMI|bull_flag|aplus",
+        "key": "2026-10-16-PMI-bull_flag-aplus",
+        "kind": "aplus",
+        "kind_text": "A+ shadow — never sent",
+        "line": "shadow",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 2.40 · stop 2.20",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "bull_flag",
+        "setup_label": "🚩 Bull Flag",
+        "stop": 2.2,
+        "symbol": "PMI",
+        "thin_text": null,
+        "trigger": 2.4
+       },
+       {
+        "at_et": "10:12",
+        "at_text": "10:12 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=NOEN",
+        "id": "2026-10-16|NOEN|kiss_fly|potential",
+        "key": "2026-10-16-NOEN-kiss_fly-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 9.99 · stop 9.50",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": true,
+         "state": "no_entry",
+         "sub_text": "not final",
+         "text": "no entry yet"
+        },
+        "setup": "kiss_fly",
+        "setup_label": "💋 EMA Kiss & Fly",
+        "stop": 9.5,
+        "symbol": "NOEN",
+        "thin_text": null,
+        "trigger": 9.99
+       },
+       {
+        "at_et": "10:02",
+        "at_text": "10:02 ET",
+        "date": "2026-10-16",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=NPLN",
+        "id": "2026-10-16|NPLN|bull_flag|potential",
+        "key": "2026-10-16-NPLN-bull_flag-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "no_plan",
+         "sub_text": null,
+         "text": "no plan"
+        },
+        "note": null,
+        "plan_text": "no trigger or stop on the alert",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": false,
+         "state": "no_plan",
+         "sub_text": null,
+         "text": "no plan"
+        },
+        "setup": "bull_flag",
+        "setup_label": "🚩 Bull Flag",
+        "stop": null,
+        "symbol": "NPLN",
+        "thin_text": null,
+        "trigger": null
+       },
+       {
+        "at_et": "09:01",
+        "at_text": "09:01 ET",
+        "date": "2026-10-16",
+        "fill_px": 1.89,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+        "id": "2026-10-16|XLAB|intraday_vcp|potential",
+        "key": "2026-10-16-XLAB-intraday_vcp-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.85 → fill 1.89 at 09:45 · stop 1.75 · +1R 1.99",
+        "rang": "pre",
+        "rang_text": "rang pre",
+        "same": {
+         "provisional": true,
+         "state": "win",
+         "sub_text": "+1R at 09:48 · not final",
+         "text": "WIN · best +103.2% so far"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 1.75,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.85
+       },
+       {
+        "at_et": "08:51",
+        "at_text": "08:51 ET",
+        "date": "2026-10-16",
+        "fill_px": 1.89,
+        "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=XLAB",
+        "id": "2026-10-16|XLAB|horizontal_fade|potential",
+        "key": "2026-10-16-XLAB-horizontal_fade-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.81 → fill 1.89 at 09:45 · stop 1.70 · +1R 2.00",
+        "rang": "pre",
+        "rang_text": "rang pre",
+        "same": {
+         "provisional": true,
+         "state": "win",
+         "sub_text": "+1R at 09:49 · not final",
+         "text": "WIN · best +103.2% so far"
+        },
+        "setup": "horizontal_fade",
+        "setup_label": "➖ Horizontal Fade",
+        "stop": 1.7,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.81
+       }
+      ]
+     }
+    ],
+    "empty_text": null,
+    "grade_at_et": "20:15",
+    "heads": [
+     {
+      "key": "symbol",
+      "label": "Ticker"
+     },
+     {
+      "key": "setup",
+      "label": "Setup"
+     },
+     {
+      "key": "at",
+      "label": "Alert"
+     },
+     {
+      "key": "kind",
+      "label": "Kind"
+     },
+     {
+      "key": "plan",
+      "label": "Trigger → fill · stop"
+     },
+     {
+      "key": "same",
+      "label": "Same session"
+     },
+     {
+      "key": "next",
+      "label": "Through next session"
+     }
+    ],
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "more_text": null,
+    "rule_label": "ⓘ how each alert is graded",
+    "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
+    "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 3 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 3 not graded yet",
+    "span": "today",
+    "spans": [
+     {
+      "key": "today",
+      "label": "Today"
+     },
+     {
+      "key": "yesterday",
+      "label": "Yesterday"
+     },
+     {
+      "key": "5d",
+      "label": "Last 5 sessions"
+     },
+     {
+      "key": "all",
+      "label": "All"
+     }
+    ],
+    "title": "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED",
+    "today_text": "Today · through 11:11 ET · not final"
+   }
+  },
+  "yesterday": {
+   "awaiting": [],
+   "counts": {
+    "aplus": 0,
+    "awaiting_answer": 0,
+    "forming": 0,
+    "invalid": 0,
+    "listed": 0,
+    "none": 0,
+    "partial": 0,
+    "stopped": 0,
+    "triggered": 0
+   },
+   "empty_note": null,
+   "enterable": {
+    "empty_text": "🎯 No A+ right now · no pass this session yet · UNMEASURED",
+    "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
+    "rows": [],
+    "title": null
+   },
+   "graveyard_today": [],
+   "note": "UNMEASURED — his rules as he described them, not a forecast. He wrote on 2024-10-11: “I do not see my setups for very extended periods and even if I see one, the probability of it working drastically reduced.” Nothing here trades or enters a lane. Not advice.",
+   "pass": {
+    "as_of_et": null,
+    "at": null,
+    "on_demand": false,
+    "stale": false,
+    "stale_after_sec": 900,
+    "status": null,
+    "warming": true,
+    "warming_text": "warming — no pass this session yet (the first runs just after 04:00 ET); the reads shown are older"
+   },
+   "push": {
+    "mode": "shadow",
+    "text": "A+ pushes are in SHADOW — every A+ is recorded on /alerts as “shadow — not sent”; no A+ reaches your phone until the 250-session study reads and you flip it to live. UNMEASURED."
+   },
+   "push_potential": {
+    "mode": "live",
+    "text": "🧠 Potentials ring your phone live — one push per name, setup and session the first time it is a potential, 04:00–20:00 ET on the 5-minute pass (passes from 04:01 to 19:56 ET), never 09:30–09:45 (his first 15 minutes). The first pass after a mid-session deploy (the 📈 Track still empty after 09:45 ET) tracks what is already forming without ringing it (Cheetah default, not his). UNMEASURED — a potential, not an entry; GG enters on the reclaim of the highs."
+   },
+   "rules_section": "gajjala",
+   "scan": {
+    "as_of_text": "no pass on file yet",
+    "bars_through_et": null,
+    "note": null,
+    "on_demand": false,
+    "rescan_label": "🔄 scan now",
+    "rescan_title": "Run one pass now — both push gates run dry, so this pass rings no device; the last pass is reused when it finished under 60 s ago",
+    "scanning_text": null,
+    "started_at_et": null,
+    "state": "idle",
+    "text": "no pass on file yet"
+   },
+   "session": {
+    "badge": "RTH",
+    "date": "2026-10-16",
+    "first15": false,
+    "first15_text": "⏳ first 15 min — he doesn't trade it (S8 14:41)",
+    "label": "today",
+    "refresh_sec": 300,
+    "tape": "rth"
+   },
+   "strip": {
+    "best_change_pct": null,
+    "best_symbol": null,
+    "quiet": null,
+    "runners_100": null,
+    "runners_80": null,
+    "text": null
+   },
+   "sub": "track_record",
+   "sub_resolved_from": "param",
+   "subs": [
+    {
+     "count": 0,
+     "emoji": "🚩",
+     "key": "bull_flag",
+     "label": "Bull Flag"
+    },
+    {
+     "count": 0,
+     "emoji": "💋",
+     "key": "kiss_fly",
+     "label": "EMA Kiss & Fly"
+    },
+    {
+     "count": 0,
+     "emoji": "➖",
+     "key": "horizontal_fade",
+     "label": "Horizontal Fade"
+    },
+    {
+     "count": 0,
+     "emoji": "🌀",
+     "key": "intraday_vcp",
+     "label": "Intraday VCP"
+    },
+    {
+     "count": 0,
+     "emoji": "🎾",
+     "key": "reversal_squeeze",
+     "label": "Reversal Squeeze"
+    },
+    {
+     "count": 0,
+     "emoji": "☀️",
+     "key": "premarket",
+     "label": "Premarket"
+    },
+    {
+     "count": 0,
+     "emoji": "🌙",
+     "key": "postmarket",
+     "label": "Post-market"
+    },
+    {
+     "count": null,
+     "emoji": "📓",
+     "key": "playbook",
+     "label": "Playbook"
+    },
+    {
+     "count": 0,
+     "emoji": "🧠",
+     "key": "potential",
+     "label": "Potential"
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record"
+    }
+   ],
+   "tab": "gajjala",
+   "tf": "5m",
+   "tiles": [],
+   "track_record": {
+    "counts": {
+     "live": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 2,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": 100,
+       "pending": 1,
+       "thin": 0,
+       "win": 1
+      }
+     },
+     "shadow": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 0,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     }
+    },
+    "counts_text": {
+     "next": "Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat · 2 not graded yet",
+     "same": "Same session: 1 win · 0 losses · 100% won · 0 no entry · 0 open · 1 not graded yet"
+    },
+    "days": [
+     {
+      "date": "2026-10-15",
+      "label": "Thu 2026-10-15",
+      "more_n": null,
+      "rows": [
+       {
+        "at_et": "17:30",
+        "at_text": "17:30 ET",
+        "date": "2026-10-15",
+        "fill_px": null,
+        "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=AHX",
+        "id": "2026-10-15|AHX|horizontal_fade|potential",
+        "key": "2026-10-15-AHX-horizontal_fade-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded Mon 10-19 20:15 ET",
+         "text": "after Mon 10-19's close"
+        },
+        "note": null,
+        "plan_text": "trigger 6.10 · stop 5.80",
+        "rang": "ah",
+        "rang_text": "rang AH",
+        "same": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded tonight 20:15 ET",
+         "text": "after today's close"
+        },
+        "setup": "horizontal_fade",
+        "setup_label": "➖ Horizontal Fade",
+        "stop": 5.8,
+        "symbol": "AHX",
+        "thin_text": null,
+        "trigger": 6.1
+       },
+       {
+        "at_et": "15:11",
+        "at_text": "15:11 ET",
+        "date": "2026-10-15",
+        "fill_px": 1.22,
+        "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
+        "id": "2026-10-15|XLAB|intraday_vcp|potential",
+        "key": "2026-10-15-XLAB-intraday_vcp-potential",
+        "kind": "potential",
+        "kind_text": "🧠 live",
+        "line": "live",
+        "next": {
+         "provisional": false,
+         "state": "pending",
+         "sub_text": "graded tonight 20:15 ET",
+         "text": "after today's close"
+        },
+        "note": null,
+        "plan_text": "trigger 1.22 → fill 1.22 at 15:21 · stop 1.16 · +1R 1.28",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "same": {
+         "provisional": false,
+         "state": "win",
+         "sub_text": "+1R at 15:22 · close +2.5%",
+         "text": "WIN · best +4.9%"
+        },
+        "setup": "intraday_vcp",
+        "setup_label": "🌀 Intraday VCP",
+        "stop": 1.16,
+        "symbol": "XLAB",
+        "thin_text": null,
+        "trigger": 1.22
+       }
+      ]
+     }
+    ],
+    "empty_text": null,
+    "grade_at_et": "20:15",
+    "heads": [
+     {
+      "key": "symbol",
+      "label": "Ticker"
+     },
+     {
+      "key": "setup",
+      "label": "Setup"
+     },
+     {
+      "key": "at",
+      "label": "Alert"
+     },
+     {
+      "key": "kind",
+      "label": "Kind"
+     },
+     {
+      "key": "plan",
+      "label": "Trigger → fill · stop"
+     },
+     {
+      "key": "same",
+      "label": "Same session"
+     },
+     {
+      "key": "next",
+      "label": "Through next session"
+     }
+    ],
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "more_text": null,
+    "rule_label": "ⓘ how each alert is graded",
+    "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
+    "shadow_text": null,
+    "span": "yesterday",
+    "spans": [
+     {
+      "key": "today",
+      "label": "Today"
+     },
+     {
+      "key": "yesterday",
+      "label": "Yesterday"
+     },
+     {
+      "key": "5d",
+      "label": "Last 5 sessions"
+     },
+     {
+      "key": "all",
+      "label": "All"
+     }
+    ],
+    "title": "🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED",
+    "today_text": null
+   }
+  }
+ }
+}

@@ -1,0 +1,228 @@
+# 🏁 Gajjala's Track record — every alert that rang, graded by GG's trade math (2026-10-16)
+
+Code: `backend/chart_maps/gajjala/ledger.py` (rows, grader, nightly step, today read, every served string), numbers in
+`backend/chart_maps/gajjala/constants.py` (the `LEDGER_*` block), storage `gajjala_ledger` (`store.py`), the sub in
+`tab.py`, the `span` param in `chart_maps/api.py`, the panel `TrackRecordPanel` in `frontend/src/components/GajjalaBoard.tsx`.
+Spec: `BUILD_SPEC9.md` + `AMENDMENTS9.md` E1–E10 + `DECISIONS9.md` (scratchpad `gg_ledger/`). Contracts:
+`frontend/scripts/contracts.mjs` "🏁 Gajjala track record (2026-10-16)". SPECS: "### Chart Maps — 🏁 Gajjala's Track
+record". **UNMEASURED — a ledger of the alerts as sent, not a backtest and not a study. Not SEPA.**
+
+## The ask (Ajay, verbatim, 2026-10-16 ~11:20 ET)
+
+> "also can you track all Gajjals stocks and keep a new tab to show wins vs losses. To see a percentage and the ticker.
+>
+> We are not looking for winners just in time but when they got in to our alerts if they made it or not. Like XLAB today
+> was a winner I made good money on it"
+
+## His knob answers (verbatim)
+
+| Knob | His answer | What it set |
+|---|---|---|
+| Win rule (~11:25 ET) | **"GG's trade math"** | entry = the alert's trigger; WIN = +1R (trigger − stop) before the stop; never triggered = no entry, listed, not counted; the % = the best move from the fill |
+| Horizon (~11:25 ET) | **"Both columns"** | same session AND through the next session, side by side |
+| Q0 (~13:00 ET) | **"Keep GG's math"** | the stop is a touch (`low ≤ stop`); +1R before the stop; the % shown = best move from the fill |
+| Fill window (~13:10 ET) | **"From 09:45 ET only"** | fills count 09:45–16:00 ET only (09:30 + GG's `NO_TRADE_AFTER_OPEN_MIN`) |
+
+## READ THIS FIRST — XLAB = three alerts, and the fill window decides them
+
+XLAB rang **three** 🧠 alerts, not two (AMENDMENTS9 E2). By the rule as shipped (his four answers, the 09:45 window):
+
+| Alert | Rang | Trigger / stop | Fill | +1R | Same session | Note |
+|---|---|---|---|---|---|---|
+| 2026-10-15 🌀 intraday_vcp | 15:11 ET (regular hours) | 1.22 / 1.16 | 15:21 @ 1.22 (same session) | 1.28 at 15:22 | **WIN** | next-session best ≈ +215% (high 3.8399 on 10-16) |
+| 2026-10-16 ➖ horizontal_fade | 08:51 ET (pre-market) | 1.81 / 1.70 | 09:45 @ 1.89 | 2.00 at 09:49 | **WIN** | the golden: "WIN · best +103.2% so far" on the 11:11 read |
+| 2026-10-16 🌀 intraday_vcp | 09:01 ET (pre-market) | 1.85 / 1.75 | 09:45 @ 1.89 | 1.99 at 09:48 | **WIN** | the golden: "WIN · best +103.2% so far" on the 11:11 read |
+
+Under the other window — "any print 04:00–20:00" (BUILD_SPEC9's first draft) — the two 10-16 alerts would have been two
+**LOSSES**: ➖ filled 08:52 @ 1.85 and was stopped 09:07 (low 1.69 under 1.70); 🌀 filled 09:18 @ 1.85 and was stopped
+09:23 (low 1.75 = the stop, a touch counts). His "From 09:45 ET only" answer is what makes them wins; the stop rule did
+not change.
+
+What the alerts on file look like (read-only, 2026-10-16):
+- **51 of 95** pushes on file rang outside regular hours — 32 after 16:00 on 10-15, 19 before 09:00 on 10-16. Every row
+  carries its own chip: "rang pre" / "rang RTH" / "rang AH".
+- **12 of 95** pushes had trigger = stop → state `no_risk` ("trigger = stop on the alert — no risk to size"), listed,
+  never counted. **4 more** had R under 0.5% of the trigger → "thin R": graded, kept out of the headline %.
+- The 2026-10-13 A+ shadow docs carry only `claimed_at` (no `at`) → the E3 fallback: alert time = `at` → else
+  `claimed_at` → else the row is "no alert time" (not counted).
+
+## The rule (served as `rule_text`, verbatim from `ledger.rule_text()`)
+
+> GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to
+> 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger
+> fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute
+> high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop
+> is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session
+> = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first
+> regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and
+> pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last
+> close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded
+> and kept out of the %.
+
+Every number in it is read from a constant: 09:45 = `LEDGER_FILL_FROM_ET` (built as `ET_RTH_OPEN` +
+`NO_TRADE_AFTER_OPEN_MIN`, never typed), 16:00 = `LEDGER_FILL_TO_ET` / `ET_RTH_CLOSE`, 30 s = `BAR_SETTLE_SEC`, +1R =
+`LEDGER_R_MULT` (`# Ajay 2026-10-16`), 0.5% = `LEDGER_MIN_R_PCT` (`# MINE`, HIS CALL Q16).
+
+## Rows (what is graded)
+
+- 🧠 live: every `gajjala_potentials` doc whose push RANG (`push.state` "pushed"). Joined / muted / never-pushed potentials
+  are not rows — they never reached his phone. These rows are the headline %.
+- A+ shadow: every `gajjala_alerts` claim in state shadow ("A+ shadow — never sent") — its own counts line, never in the %.
+- One row per alert (`_id` `"{date}|{SYM}|{setup}|{kind}"`): XLAB = 3 rows over two days.
+
+## The served words (verbatim from `ledger.py` / `tab.py`)
+
+| # | Where | Exact text (`{…}` computed) |
+|---|---|---|
+| W1 | `TITLE` | `🏁 Track record — every Gajjala alert that rang, graded by GG's trade math · UNMEASURED` |
+| W2a | `RULE_LABEL` | `ⓘ how each alert is graded` |
+| W2 | `rule_text()` | the rule quoted above |
+| W3 | `HONESTY` | `A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. The A+ line was never sent (shadow) and stays out of the %. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.` |
+| W4 | counts, same | `Same session: {w} win(s) · {l} loss(es) · {p}% won · {ne} no entry · {o} open` + ` · {k} no plan` / ` · {k} no risk` / ` · {k} no alert time` / ` · {k} thin R (not in the %)` / ` · {k} not graded yet` (each when > 0) + ` · today not final` (a provisional cell); no win and no loss → `no graded entry yet` in place of `{p}% won` |
+| W4n | counts, next | `Through next session: {w} win(s) · {l} loss(es) · {p}% won · {ne} no entry · {f} flat` + ` · {k} split` and the W4 extras |
+| W5 | `shadow_text` | `A+ shadow (never sent, not in the %): same session {w} win(s) · {l} loss(es) · {p}% won · {ne} no entry · {o} open{extras}; through next session {w} win(s) · {l} loss(es) · {p}% won · {f} flat{extras}` — null when the span has no shadow row |
+| W6 | `today_text` | `Today · through {HH:MM} ET · not final` (+ ` · {k} name(s) not read on this open — graded tonight 20:15 ET`); no read: `Today · not read on this open — graded tonight 20:15 ET` |
+| W7 | `KIND_TEXT` | `🧠 live` · `A+ shadow — never sent` · `A+ live` |
+| W8 | `at_text` | `{HH:MM} ET`, else `no alert time` |
+| E1 | `RANG_TEXT` | `rang pre` · `rang RTH` · `rang AH` |
+| E4 | `THIN_TEXT` | `thin R` |
+| W9 | `plan_text` | filled: `trigger {T} → fill {F} at {when} · stop {S} · +1R {TG}`; not filled: `trigger {T} · stop {S}`; `NO_PLAN_TEXT` `no trigger or stop on the alert`; `NO_RISK_TEXT` `trigger = stop on the alert — no risk to size` |
+| W9b | `note` | `trigger as first seen {first_seen_et} ET (the ring was {at_et} ET)` |
+| W10 | cells | see "The state words" below |
+| W11 | `HEADS` | Ticker · Setup · Alert · Kind · Trigger → fill · stop · Same session · Through next session |
+| W12 | spans | `Today` · `Yesterday` · `Last 5 sessions` · `All` |
+| W13 | day label | `{Dow} {YYYY-MM-DD}` (+ ` · today`) |
+| W14 | `more_text` | `+{k} more rows — the counts above cover all {N}` |
+| W15 | `empty_text` | `No Gajjala alert has rung yet this session.` · `No Gajjala alert rang on {date}.` · `No Gajjala alert rang in the last 5 sessions.` · `No Gajjala alert on file yet.` |
+| W16 | `tab.TRACK_RECORD_FAULT` | `🏁 The alert record could not be read this time — the next re-read tries again.` |
+
+## The state words (cells, `ledger._cell`)
+
+| State | Cell text | Small text |
+|---|---|---|
+| `win` | `WIN · best {B}` | `+1R at {when} · close {C}` |
+| `loss` | `LOSS · best {B}` | `stop at {when} · close {C}` (or `stop in the fill minute {when} · close {C}`) |
+| `open` (same column) | `open · best {B}` | `close {C}` |
+| `flat` (next column) | `flat · best {B}` | `close {C} at the {Dow MM-DD} close` |
+| `no_entry` | `no entry` | `the trigger never traded 09:45–16:00 ET after the alert` |
+| `no_plan` | `no plan` | — |
+| `no_risk` | `no risk` | `trigger = stop on the alert — no risk to size` |
+| `no_time` | `no alert time` | — |
+| `split` | `split` | `split on {date} — not graded` |
+| `pending` | `not graded yet` / `not read yet` / `after today's close` / `after {Dow MM-DD}'s close` | `graded nightly at 20:15 ET` / `graded tonight 20:15 ET` / `graded {Dow MM-DD} 20:15 ET` |
+| provisional (today's read) | `WIN · best {B} so far` · `LOSS · best {B} so far` · `open · best {B} so far` · `no entry yet` | `+1R at {when} · not final` · `stop at {when} · not final` · `close {C} so far` · `not final` |
+
+Counted in the %: `win` and `loss` only, live line only. Listed, never counted: no entry, open / flat, no plan, no risk,
+no alert time, thin R, pending, split.
+
+## The split guard
+
+Prices across a split are not comparable, so no walk crosses one:
+- A split between the alert day and a column's end → that column is `split` ("split on {date} — not graded").
+- An after-close alert (E1) is graded on the next session's bars, so its SAME column is guarded over (alert day, same
+  session]; the today read holds such a name out ("not read on this open — graded tonight") unless the split check
+  answers "no split".
+- A trade already decided (win / loss) in the same session keeps its outcome in the next column, with its best and
+  close kept through the same session (the small text says so).
+- An unread split check leaves the column absent — retried the next night, never graded on rescaled bars.
+
+## Cost
+
+- Nightly (`grade`, the LAST step of the existing 20:15 ET `chart_maps.gajjala.nightly` line — no new crontab line):
+  re-reads the last `LEDGER_GRADE_LOOKBACK_SESSIONS` 10 market days; at most `LEDGER_BACKFILL_MAX_SYMBOL_DAYS` 120
+  symbol-day 1-minute loads a run (completed days come from `intraday_cache`; the rest wait a night as "not graded
+  yet"); one split lookup per name; each row in its own try. A column is written only once its horizon has ended.
+- On open (🏁 only — the one Gajjala GET that fetches bars): at most `LEDGER_TODAY_MAX` 60 names, one
+  `load_intraday(…, force=True)` each, `LEDGER_TODAY_BUDGET_SEC` 15 s from the start, memo `LEDGER_TODAY_MEMO_SEC` 300 s
+  per (session, symbol); never writes. Every other sub stays Mongo-only.
+
+## Verification recipe (no comment lines in any shell block)
+
+Backend, hermetic, the api image:
+
+```bash
+docker run --rm --network none --name cheetah-tmp-pytest-gl-check -v /Users/ajay/clinet-test/wt-ggledger:/repo -w /repo/backend -e PYTHONDONTWRITEBYTECODE=1 cheetah-api:latest python -m pytest -q -p no:cacheprovider tests/test_gajjala_ledger.py tests/test_gajjala_ledger_pins.py tests/test_gajjala_store.py tests/test_gajjala_nightly.py tests/test_gajjala_potential.py tests/test_gajjala_constants.py tests/test_gajjala_tab.py tests/test_gajjala_track_record_tab.py tests/test_gajjala_potential_tab.py tests/test_gajjala_on_open.py tests/test_gajjala_source_guard.py
+```
+
+Frontend:
+
+```bash
+cd /Users/ajay/clinet-test/wt-ggledger/frontend && rtk proxy npx vitest run --reporter=dot && rtk proxy npx tsc --noEmit -p tsconfig.json && rtk proxy node scripts/contracts.mjs
+```
+
+Throwaway api on :8005, the live DB, read-only (the doji recipe with the name `cheetah-tmp-gl-api`, the ggledger mount,
+and the on-open scan stubbed so the preview's mount POST never starts a pass):
+
+```bash
+cd /Users/ajay/clinet-test/cheetah-market-app
+docker rm -f cheetah-tmp-gl-api >/dev/null 2>&1 || true
+docker compose run -d --rm --no-deps --name cheetah-tmp-gl-api -p 127.0.0.1:8005:8000 -e PYTHONDONTWRITEBYTECODE=1 -e MASSIVE_WS_ENABLED=false -e FINNHUB_POLLER_ENABLED=false -e MAC_OUTBOX_POLL_MS=3600000 -v /Users/ajay/clinet-test/wt-ggledger/backend:/app api python -c 'import push.mac_stream as m; m._drain_started = True; import chart_maps.gajjala.on_demand as od; od.request = lambda *a, **k: {"state": "refused", "text": "throwaway api — no scan on open"}; import uvicorn; uvicorn.run("main:app", host="0.0.0.0", port=8000)' >/dev/null
+n=0; until [ $n -ge 24 ]; do code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:8005/health" 2>/dev/null || true); [ "$code" = "200" ] && break; n=$((n+1)); sleep 5; done; echo "health=$code"
+```
+
+Read it (the first call fetches today's 1-minute bars for today's alerted names; the second within 5 minutes is the memo):
+
+```bash
+docker exec cheetah-market-app-mongo-1 mongosh cheetah --quiet --eval 'db.gajjala_ledger.countDocuments({})'
+curl -s -o /tmp/gl_5d.json -w '%{time_total}\n' -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8005/chart-maps/gajjala?sub=track_record&span=5d"
+python3 -c 'import json; b=json.load(open("/tmp/gl_5d.json"))["track_record"]; print(b["counts_text"]); print(b["shadow_text"]); print(b["today_text"]); [print(d["date"], r["symbol"], r["setup"], r["at_text"], r.get("rang_text"), r["plan_text"], "|", r["same"]["text"], "|", r["next"]["text"]) for d in b["days"] for r in d["rows"] if r["symbol"] == "XLAB"]'
+curl -s -o /dev/null -w '%{time_total}\n' -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8005/chart-maps/gajjala?sub=track_record&span=5d"
+docker exec cheetah-market-app-mongo-1 mongosh cheetah --quiet --eval 'db.gajjala_ledger.countDocuments({})'
+docker logs cheetah-tmp-gl-api 2>&1 | grep -i "traceback\|error" | head
+```
+
+Expect the three XLAB rows of READ THIS FIRST (10-16 cells "… so far · not final" until tonight's grade), the ledger
+count unchanged by the GETs.
+
+His surface: the Vite preview `ggledger-frontend-8005` on :5177 (proxy `/api` → `http://localhost:8005` with the owner
+header, `/api/features/*` and `/api/usage/*` bypassed so the preview never marks his ✨ seen) →
+`/chart-maps?tab=gajjala&sub=track_record`: 🏁 chip last, the span buttons, the counts lines, the XLAB rows with their
+"rang pre" / "rang RTH" chips. Cleanup by exact name only:
+
+```bash
+docker rm -f cheetah-tmp-gl-api
+```
+
+## HIS CALLS (each ships with the default shown; nothing here is decided for him)
+
+- **Q0 — answered.** He kept GG's math ("Keep GG's math": touch = stop, +1R before the stop, the % = best move from the
+  fill) AND chose the 09:45 window ("From 09:45 ET only") → **XLAB = 3 WINS** (10-15 🌀 15:11, 10-16 ➖ 08:51, 10-16 🌀
+  09:01). Still open if he wants it: (a) the stop counts only when price trades UNDER it (the detectors' own rule);
+  (b) a 2R / 3R target; (c) lead with the best % and show win / loss second.
+- Q1 Scope: the 🧠 pushes that reached his phone are the rows and the %; A+ is a separate "shadow — never sent" line
+  (DEFAULT). Alternatives: drop the shadow line; count every first sighting (muted / joined) too.
+- Q2 The "today so far" read: on opening 🏁, one 1-minute fetch per name alerted today (≤ 60, 15 s budget, 5-minute
+  memo, never written) — the only Gajjala GET that fetches bars (DEFAULT). Alternatives: grade inside the 5-minute pass
+  from the bars it already loaded; no live read (graded at 20:15 only); extend it to yesterday's next-session column.
+- Q3 A bar opening above the trigger fills at its open (+1R stays trigger − stop) — DEFAULT; vs fill at the trigger always.
+- Q4 Ties: a bar touching both +1R and the stop = LOSS; a stop touched in the fill minute = LOSS; a touch of the stop
+  (≤) = LOSS; a touch of the trigger (≥) fills (DEFAULT); vs "through" on both (> / <).
+- Q5 — answered by "From 09:45 ET only": fills count 09:45–16:00 ET. Open: an alert at or after 16:00 ET uses the NEXT
+  session as its same-session column (DEFAULT, MINE — item (e) below).
+- Q6 Nightly limits: re-reads 10 market days, at most 120 symbol-day loads a night (AMENDMENTS9 E9; the rest wait a
+  night) — MINE.
+- Q7 The name and slot: "🏁 Track record", the LAST (10th) sub — MINE.
+- Q8 "open" / "flat" rows stay out of the % (DEFAULT); vs counted as half / as a loss.
+- Q9 The day picker: Today · Yesterday · Last 5 sessions · All, default **Last 5 sessions** (AMENDMENTS9 E2, so
+  yesterday's XLAB alert sits beside today's) — MINE.
+- Q10 The best % runs through the column's end even after a LOSS (DEFAULT); vs stop at the exit (stored already — a
+  display flip, no re-grade).
+- Q11 After-hours and pre-market prints are inside the next-session walk (DEFAULT); vs regular-session prints only.
+- Q12 A fill after the structure died (the card says invalid) still counts (DEFAULT); vs no entry.
+- Q13 Counted per alert (XLAB = 3 rows over two days, DEFAULT); vs per ticker per day (the first alert only).
+- Q14 A push that reached no device (`no_target`) or failed is not a row (DEFAULT).
+- Q15 The next-session column ends at the next market day's 16:00 ET (DEFAULT); vs a fixed N-minute / N-session window.
+- **Q16 The R floor** (AMENDMENTS9 E4, MINE): R under `LEDGER_MIN_R_PCT` 0.5% of the trigger = "thin R" — graded,
+  shown with the chip, kept out of the headline % (4 of the 95 pushes on file). Alternatives: count them; drop the floor; a
+  different floor.
+
+Carried from the critics (defaults as shipped):
+- (a) A stop touched BEFORE the 09:45 fill does not make the row "no entry" — the walk starts at the fill. His call
+  whether a pre-window stop touch should void the entry.
+- (b) A decided same column (win / loss) is walked again for the next column — the trade is copied, only the best %
+  and the close run on to the next session's end.
+- (c) The counts line has no 'split' key for the same column: a split same column shows on its row only (the next
+  column's counts line carries ` · {k} split`).
+- (d) The 🏁 chip count = today's rows graded so far (`ledger.count_today`); None (no count) on a tracker read fault.
+- (e) After-hours alerts (rang at or after 16:00 ET) use the next session as their same-session column, and the
+  session after that as their next-session column.

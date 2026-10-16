@@ -203,3 +203,50 @@ def test_NEGATIVE_feed_ignoring_haltdate_marks_only_the_real_day(monkeypatch):
     assert (out["halts"]["read"], out["halts"]["failed"]) == (1, 29)
     assert st.get_state(CX.HALT_BACKFILL_STATE_ID)["done"] == ["2026-10-09"]
     assert st.get_daily(T, "AAA")["squeeze_history"]["ledger_complete"] is False
+
+
+# ── 🏁 the grade step (2026-10-16, BUILD_SPEC9 §3.5) — LAST, its own try, picked up by the existing crontab line ────
+def test_the_grade_step_is_last_and_runs_by_default():
+    assert NG.STEPS == ("floats", "halts", "history", "grade")
+
+
+def test_main_with_no_args_runs_grade_because_the_crontab_line_passes_no_steps(monkeypatch):
+    seen = {}
+    st = fake_store()
+    monkeypatch.setattr("chart_maps.gajjala.store.default", lambda: st)
+
+    def fake_run(session, *, store=None, steps=NG.STEPS):
+        seen["steps"] = steps
+        return {"errors": []}
+    monkeypatch.setattr(NG, "run", fake_run)
+    assert NG.main([]) == 0 and "grade" in seen["steps"] and seen["steps"][-1] == "grade"
+
+
+def test_the_grade_step_reports_its_summary_and_reads_through_injected_loaders():
+    from chart_maps.gajjala import ledger as LG
+    st = _store_with_names()
+    calls = []
+    out = _run(st, ledger_load_day=lambda s, d: calls.append((s, d)) or ([], False),
+               ledger_split_lookup=lambda s, a, n: False)
+    assert out["errors"] == [] and out["grade"]["read_fault"] is False and calls == []   # no alert rang: no load
+    assert set(LG.STEP_KEYS) <= set(out["grade"])
+
+
+def test_NEGATIVE_a_raising_grade_step_never_stops_the_other_steps(monkeypatch):
+    from chart_maps.gajjala import ledger as LG
+
+    def boom(*a, **k):
+        raise RuntimeError("ledger exploded")
+    monkeypatch.setattr(LG, "grade_step", boom)
+    out = _run(_store_with_names())
+    assert out["errors"] == ["grade: RuntimeError"]
+    assert out["floats"]["fetched"] == 4 and out["halts"]["read"] == 30 and out["history"]["computed"] == 4
+    assert "grade" not in out
+
+
+def test_NEGATIVE_steps_history_runs_no_grade(monkeypatch):
+    from chart_maps.gajjala import ledger as LG
+    called = []
+    monkeypatch.setattr(LG, "grade_step", lambda *a, **k: called.append(1) or {})
+    out = _run(_store_with_names(), steps=("history",))
+    assert called == [] and "grade" not in out

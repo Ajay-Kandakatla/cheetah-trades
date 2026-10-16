@@ -9,6 +9,8 @@ Provenance tag on every line:
 H1–H5 were placeholders (None) until Ajay answered on 2026-10-13; every one is filled. The only None values left are
 the OFF switches in OFF_BY_DEFAULT (an unanswered display option whose default is "off", never a missing number).
 """
+import datetime as _dt                                    # 🏁 the ledger's fill window (LEDGER_FILL_FROM_ET / _TO_ET)
+
 from orderflow.signals import EMA_FAST, EMA_SLOW          # 9 / 21 — GG S8 25:36, S9 24:42 (one definition)
 
 # scanner — GG S8 19:12–19:51, S9 22:10 (verbatim), Ajay's round-A floor
@@ -174,12 +176,38 @@ ON_DEMAND_WAIT_MAX_SEC = 2 * ON_DEMAND_BUDGET_SEC   # derived — MINE (HIS CALL
 LEDGER_TTL_DAYS = 30                     # TRANSPORT — gajjala_scan / _ah_carry / _post / _passes / _daily
 READS_TTL_DAYS = 14                      # TRANSPORT — gajjala_reads (tile bars are the bulk)
 
-# sub-tabs (DECISIONS order) — key, emoji, label. 🧠 Potential (Ajay 2026-10-15 msg 1) is LAST; nothing else moves (HIS CALL P8)
+# 🏁 Track record (Ajay 2026-10-16: "also can you track all Gajjals stocks and keep a new tab to show wins vs losses. To
+# see a percentage and the ticker." / "We are not looking for winners just in time but when they got in to our alerts if
+# they made it or not. Like XLAB today was a winner I made good money on it") — DECISIONS9 D1–D10 + AMENDMENTS9. Operational
+# accounting of the alerts as sent, graded by GG's trade math (his knob answer) — never a study, never a measured edge.
+# Not LEDGER_TTL_DAYS above (that is the 30-day TTL of gajjala_scan & co.): gajjala_ledger is KEPT, no TTL.
+LEDGER_SUB = "track_record"              # Ajay 2026-10-16 "keep a new tab" — DECISIONS9 D7 (appended LAST to SUBS)
+LEDGER_R_MULT = 1.0                      # Ajay 2026-10-16 ("GG's trade math": +1R before the stop)
+LEDGER_HORIZONS = ("same", "next")       # Ajay 2026-10-16 ("Both columns")
+LEDGER_FILL_FROM_ET = (_dt.datetime(2000, 1, 3, 9, 30) + _dt.timedelta(minutes=NO_TRADE_AFTER_OPEN_MIN)).time()   # Ajay 2026-10-16 ("From 09:45 ET only") = 09:30 (daytrading.data.ET_RTH_OPEN, test pins equality) + NO_TRADE_AFTER_OPEN_MIN — AMENDMENTS9 E1
+LEDGER_FILL_TO_ET = _dt.time(16, 0)      # Cheetah default (regular session) — = daytrading.data.ET_RTH_CLOSE (test pins equality); AMENDMENTS9 E1
+LEDGER_MIN_R_PCT = 0.5                   # Cheetah default (MINE, not GG — AMENDMENTS9 E4; HIS CALL Q16): R < 0.5% of the trigger = "thin R", graded, out of the %
+LEDGER_SPANS = ("today", "yesterday", "5d", "all")   # Cheetah default (MINE, not GG — DECISIONS9 D7 day picker; HIS CALL Q9)
+LEDGER_SPAN_DEFAULT = "5d"               # Cheetah default (MINE, not GG — AMENDMENTS9 E2 "5 sessions"; HIS CALL Q9)
+LEDGER_SPAN_SESSIONS = 5                 # Cheetah default (MINE, not GG — DECISIONS9 D7 "last 5 sessions"; HIS CALL Q9)
+LEDGER_TODAY_MEMO_SEC = PASS_CADENCE_SEC # derived — MINE (DECISIONS9 D5c "memo 5 min"; HIS CALL Q2)
+LEDGER_TODAY_MAX = 60                    # TRANSPORT — MINE (AMENDMENTS9 E8, DECISIONS9 D5c "≤ ~60 names"; HIS CALL Q2): rows read per open
+LEDGER_TODAY_MAX_NAMES = LEDGER_TODAY_MAX   # derived — MINE: the BUILD_SPEC9 §3.1 name of the same cap (one number, AMENDMENTS9 E8)
+LEDGER_TODAY_BUDGET_SEC = 15             # TRANSPORT — MINE (HIS CALL Q2): the open's 1-minute fetch budget, from its start
+LEDGER_GRADE_AT_ET = "20:15"             # TRANSPORT — = the crontab line of chart_maps.gajjala.nightly (contracts pin it)
+LEDGER_GRADE_LOOKBACK_SESSIONS = 10      # TRANSPORT — MINE (DECISIONS9 D6; HIS CALL Q6): the nightly re-reads 10 market days
+LEDGER_BACKFILL_MAX_SYMBOL_DAYS = 120    # TRANSPORT — MINE (AMENDMENTS9 E9; HIS CALL Q6): symbol-day loads per nightly run; the rest "not graded yet", the next night
+LEDGER_GRADE_MAX_LOADS = LEDGER_BACKFILL_MAX_SYMBOL_DAYS   # derived — MINE: the BUILD_SPEC9 §3.1 name of the same cap (one number, AMENDMENTS9 E9)
+LEDGER_ROWS_MAX = 200                    # TRANSPORT — MINE: rows served per span (the counts cover every row)
+LEDGER_GRADE_VERSION = 1                 # TRANSPORT — bump to re-grade the lookback window (the grader changed)
+
+# sub-tabs (DECISIONS order) — key, emoji, label. 🧠 Potential (Ajay 2026-10-15 msg 1) then 🏁 Track record (Ajay
+# 2026-10-16) appended after it (HIS CALL Q7); nothing else moves (HIS CALL P8)
 SETUPS = ("bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp", "reversal_squeeze")
 SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly"),
         ("horizontal_fade", "➖", "Horizontal Fade"), ("intraday_vcp", "🌀", "Intraday VCP"),
         ("reversal_squeeze", "🎾", "Reversal Squeeze"), ("premarket", "☀️", "Premarket"),
         ("postmarket", "🌙", "Post-market"), ("playbook", "📓", "Playbook"),
-        ("potential", "🧠", "Potential"))
+        ("potential", "🧠", "Potential"), ("track_record", "🏁", "Track record"))
 DEFAULT_SUB = "bull_flag"
 TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18

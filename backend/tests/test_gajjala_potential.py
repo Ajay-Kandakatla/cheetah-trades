@@ -1172,3 +1172,33 @@ def test_NEGATIVE_the_claim_itself_refuses_a_joined_doc():
     d = doc_of(st)
     assert "push" not in d and st.claim_potential_push(d["_id"], {"state": "claimed"}) == "taken"
     assert "push" not in doc_of(st) and ST.JOINED_MODE == PT.FIRST_SEEN_MODES[1]
+
+
+# ── 🏁 2026-10-16 (BUILD_SPEC9 §3.9): the claim records the plan the push carried — the Track record's plan ─────────
+def test_a_rung_push_records_the_reads_trigger_stop_and_the_frame_close():
+    st = fake_store()
+    seed(st)
+    r = bf_armed()
+    go(st, at(10, 6), {"AAA": {"bull_flag": r}}, send=Rec(OK_SEND), px=10.93)
+    push = doc_of(st)["push"]
+    assert (push["trigger"], push["stop"], push["px"]) == (PT._num(r["trigger"]), PT._num(r["stop"]), 10.93)
+    assert push["trigger"] is not None and push["stop"] is not None
+
+
+@pytest.mark.parametrize("ret,state", [(OK_SEND, "pushed"), ({"sent": 0, "failed": 0, "total_targets": 0}, "no_target"),
+                                       (RuntimeError("down"), "failed")])
+def test_NEGATIVE_the_settle_never_drops_the_recorded_plan(ret, state):
+    st = fake_store()
+    seed(st)
+    r = bf_armed()
+    go(st, at(10, 6), {"AAA": {"bull_flag": r}}, send=Rec(ret), px=10.93)
+    push = doc_of(st)["push"]
+    assert push["state"] == state
+    assert (push["trigger"], push["stop"], push["px"]) == (PT._num(r["trigger"]), PT._num(r["stop"]), 10.93)
+
+
+def test_NEGATIVE_a_held_first_sighting_records_no_plan_and_no_push():
+    st = fake_store()
+    seed(st)
+    go(st, at(9, 36), {"AAA": {"bull_flag": bf_armed()}}, send=Rec(OK_SEND))          # his first 15 minutes
+    assert "push" not in doc_of(st)

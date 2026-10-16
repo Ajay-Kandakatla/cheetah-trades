@@ -187,9 +187,10 @@ def test_ensure_indexes_ttl_per_spec_and_idempotent():
     for n in (ST.SCAN, ST.AH_CARRY, ST.POST, ST.PASSES, ST.DAILY):
         assert ttl[n][0] == GC.LEDGER_TTL_DAYS * 86400 == 30 * 86400
     # WIDENED 2026-10-15 — 🧠 gajjala_potentials joins the KEPT ledgers (the study's data spine, HIS CALL P7)
-    for n in (ST.ALERTS, ST.HALTS, ST.STATE, ST.POTENTIALS):      # ledgers kept
+    # WIDENED 2026-10-16 — 🏁 gajjala_ledger joins the kept ledgers
+    for n in (ST.ALERTS, ST.HALTS, ST.STATE, ST.POTENTIALS, ST.LEDGER):      # ledgers kept
         assert ttl[n] == []
-    assert ST.POTENTIALS not in ST.TTL_DAYS
+    assert ST.POTENTIALS not in ST.TTL_DAYS and ST.LEDGER not in ST.TTL_DAYS
     idx = [spec for spec, _kw in st.coll(ST.POTENTIALS).indexes]
     assert (("date", 1), ("symbol", 1)) in idx and (("symbol", 1), ("date", -1)) in idx
 
@@ -794,3 +795,84 @@ def test_the_new_lease_and_pointer_reads_delegate(monkeypatch):
     assert ST.lease_state(NOW)["held_by"] == OD and ST.lease_owner_is(c.token) is True
     ST.record_pass(S, NOW, {"status": "ok"})
     assert ST.latest_cron_pass()["pass_id"] == ST.latest_pass()["pass_id"]
+
+
+# ── 🏁 gajjala_ledger (the Track record, 2026-10-16 — BUILD_SPEC9 §3.2) ─────────────────────────────────────────────
+D16 = date(2026, 10, 16)
+
+
+def _pot(sym, d=D16, state="pushed"):
+    return {"_id": ST.potential_key(d, sym, "bull_flag"), "date": d.isoformat(), "symbol": sym, "setup": "bull_flag",
+            "push": {"state": state, "at": "2026-10-16T14:00:00+00:00"}}
+
+
+def test_ledger_is_a_kept_collection_with_the_read_indexes():
+    st = fake_store()
+    assert ST.LEDGER == "gajjala_ledger" and ST.LEDGER in ST.ALL
+    st.ensure_indexes()
+    idx = [spec for spec, _kw in st.coll(ST.LEDGER).indexes]
+    assert (("date", 1), ("symbol", 1)) in idx and (("symbol", 1), ("date", -1)) in idx
+    assert not [kw for spec, kw in st.coll(ST.LEDGER).indexes if kw.get("expireAfterSeconds")]
+
+
+def test_potential_pushes_reads_only_rung_pushes_of_the_sessions():
+    st = fake_store(**{ST.POTENTIALS: FakeColl([_pot("AAA"), _pot("BBB", state="no_target"),
+                                                _pot("OLD", d=date(2026, 10, 9)),
+                                                {"_id": "x", "date": "2026-10-16", "symbol": "NOP"}])})
+    assert [d["symbol"] for d in st.potential_pushes([D16])] == ["AAA"]
+    assert st.potential_pushes([]) == []
+
+
+def test_alert_rows_reads_shadow_and_pushed_only():
+    docs = [{"_id": "SHADOW:GG:2026-10-16|PMI|bull_flag", "date": "2026-10-16", "state": "shadow"},
+            {"_id": "GG:2026-10-16|PMI|bull_flag#late", "date": "2026-10-16", "state": "late"},
+            {"_id": "GG:2026-10-16|TGL|bull_flag", "date": "2026-10-16", "state": "pushed"},
+            {"_id": "GG:2026-10-16|HCAI|bull_flag", "date": "2026-10-16", "state": "claimed"}]
+    st = fake_store(**{ST.ALERTS: FakeColl(docs)})
+    assert sorted(d["_id"] for d in st.alert_rows([D16])) == ["GG:2026-10-16|TGL|bull_flag",
+                                                              "SHADOW:GG:2026-10-16|PMI|bull_flag"]
+
+
+def test_upsert_ledger_then_ledger_docs_and_dates():
+    st = fake_store()
+    assert st.upsert_ledger("2026-10-16|AAA|bull_flag|potential", {"date": "2026-10-16", "symbol": "AAA",
+                                                                   "same": {"outcome": "win"}, "version": 1})
+    assert st.upsert_ledger("2026-10-16|AAA|bull_flag|potential", {"next": {"outcome": "win"}})
+    (doc,) = st.ledger_docs([D16])
+    assert doc["same"] == {"outcome": "win"} and doc["next"] == {"outcome": "win"}     # a next never rewrites same
+    assert st.ledger_dates() == ["2026-10-16"] and st.ledger_docs([date(2026, 10, 15)]) == []
+    assert set(st.coll(ST.LEDGER).docs) == {"2026-10-16|AAA|bull_flag|potential"}
+    assert all(st.coll(n).writes == 0 for n in ST.ALL if n != ST.LEDGER)               # never another collection
+
+
+@pytest.mark.parametrize("bad", [{"push": {}}, {"date": "2026-10-16", "held": True}, {}])
+def test_NEGATIVE_upsert_ledger_refuses_a_key_outside_ledger_keys(bad):
+    st = fake_store()
+    assert st.upsert_ledger("2026-10-16|AAA|bull_flag|potential", bad) is False
+    assert st.coll(ST.LEDGER).writes == 0
+
+
+def test_alert_dates_is_the_union_of_the_rows_own_dates():
+    st = fake_store(**{ST.POTENTIALS: FakeColl([_pot("AAA"), _pot("OLD", d=date(2026, 10, 9)),
+                                                _pot("NT", d=date(2026, 10, 8), state="no_target")]),
+                       ST.ALERTS: FakeColl([{"_id": "SHADOW:GG:2026-10-13|PMI|bull_flag", "date": "2026-10-13",
+                                             "state": "shadow"}])})
+    assert st.alert_dates() == ["2026-10-09", "2026-10-13", "2026-10-16"]
+
+
+@pytest.mark.parametrize("which", [ST.POTENTIALS, ST.ALERTS, ST.LEDGER])
+def test_NEGATIVE_every_ledger_read_is_none_on_a_failing_coll(which):
+    st = fake_store(**{which: FakeColl(fail=True)})
+    reads = {ST.POTENTIALS: [st.potential_pushes([D16]), st.alert_dates()],
+             ST.ALERTS: [st.alert_rows([D16]), st.alert_dates()],
+             ST.LEDGER: [st.ledger_docs([D16]), st.ledger_dates()]}[which]
+    assert reads == [None, None]
+    if which == ST.LEDGER:
+        assert st.upsert_ledger("2026-10-16|AAA|bull_flag|potential", {"date": "2026-10-16"}) is False
+
+
+def test_NEGATIVE_no_handle_reads_none_and_writes_false():
+    st = ST.GajjalaStore(colls={n: None for n in ST.ALL})
+    assert (st.potential_pushes([D16]), st.alert_rows([D16]), st.ledger_docs([D16]), st.ledger_dates(),
+            st.alert_dates()) == (None, None, None, None, None)
+    assert st.upsert_ledger("2026-10-16|AAA|bull_flag|potential", {"date": "2026-10-16"}) is False

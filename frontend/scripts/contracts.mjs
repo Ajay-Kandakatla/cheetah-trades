@@ -7630,7 +7630,13 @@ const CONTRACTS = [
       if (gc && !/^POTENTIAL_PUSH_KIND = "gajjala_potential"/m.test(gc)) errs.push('constants.py must name POTENTIAL_PUSH_KIND = "gajjala_potential"');
       const subsPy = /^SUBS = \(([\s\S]*?)\)\n/m.exec(gc);
       const py = subsPy ? [...subsPy[1].matchAll(/\(\s*"([a-z_]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g)].map((m) => [m[1], m[2], m[3]]) : [];
-      if (gc && JSON.stringify(py[py.length - 1] || null) !== JSON.stringify(['potential', '🧠', 'Potential'])) errs.push('constants.SUBS must END with ("potential", "🧠", "Potential") — nothing else on the tab moves (HIS CALL P8)');
+      // WIDENED 2026-10-16 — 🏁 Track record (Ajay 2026-10-16: "keep a new tab to show wins vs losses") is appended
+      // AFTER 🧠 (BUILD_SPEC9 D7 / AMENDMENTS9 E5, HIS CALL Q7): SUBS ends with the track_record tuple read from
+      // constants.py, 🧠 Potential second to last; nothing else on the tab moves (HIS CALL P8).
+      const trTupM = /\(\s*"(track_record)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)\s*\)\n/.exec(subsPy ? subsPy[0] : '');
+      const trTup = trTupM ? [trTupM[1], trTupM[2], trTupM[3]] : null;
+      if (gc && (!trTup || JSON.stringify(py[py.length - 1] || null) !== JSON.stringify(trTup))) errs.push('constants.SUBS must END with the ("track_record", …) tuple — 🏁 is appended last (2026-10-16, HIS CALL Q7)');
+      if (gc && JSON.stringify(py[py.length - 2] || null) !== JSON.stringify(['potential', '🧠', 'Potential'])) errs.push('constants.SUBS must carry ("potential", "🧠", "Potential") second to last, right before 🏁 — nothing else on the tab moves (HIS CALL P8)');
       const cd = /^CHEETAH_DEFAULTS = \(([^)]*)\)/m.exec(gc);
       const DEFAULTS = ['POTENTIAL_NEEDS_BASE', 'POTENTIAL_FRESH_TAPE', 'POTENTIAL_DEFER_REFUSED'];
       for (const d of DEFAULTS) if (gc && !(cd && new RegExp(`"${d}"`).test(cd[1]))) errs.push(`constants.CHEETAH_DEFAULTS must carry "${d}" — a Cheetah default, not his (Revision 1, finding 2)`);
@@ -8281,7 +8287,8 @@ const CONTRACTS = [
       const head = nf.indexOf('export const NEW_FEATURES: NewFeature[] = [');
       const firstAt = head < 0 ? -1 : nf.indexOf("{ id: '", head);
       const ID = "{ id: 'chart-maps-live-card-2026-10-16'";
-      if (firstAt < 0 || !nf.startsWith(ID, firstAt)) errs.push("the ✨ entry 'chart-maps-live-card-2026-10-16' must be the FIRST of NEW_FEATURES");
+      // WIDENED 2026-10-16 — 🏁 Gajjala track record took the first ✨ slot the same day; this entry must be PRESENT (the newest feature is first).
+      if (!nf.includes("id: 'chart-maps-live-card-2026-10-16'")) errs.push("the ✨ entry 'chart-maps-live-card-2026-10-16' is missing from NEW_FEATURES");
       const idAt = nf.indexOf(ID);
       if (idAt < 0) {
         errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-live-card-2026-10-16' (WP-M)");
@@ -8326,6 +8333,180 @@ const CONTRACTS = [
       const specs = read('../SPECS.md');
       const SEC = '### Chart Maps — 🔴 live today candle + now line on every card — chart_maps/live_card.py (2026-10-16)';
       if (!specs.includes(SEC)) errs.push(`SPECS.md lacks "${SEC}"`);
+      return errs;
+    },
+  },
+  {
+    name: '🏁 Gajjala track record (2026-10-16): the sub LAST, his numbers pinned (+1R, both columns, fills from 09:30 + NO_TRADE_AFTER_OPEN_MIN), the R floor + default span tagged MINE, the grade rides the existing 20:15 nightly line, the GET reads bars on 🏁 only, the FE composes nothing, ✨ first + quotes both paragraphs, never the b-word',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-10-16: "also can you track all Gajjals stocks and keep a new
+    // tab to show wins vs losses. To see a percentage and the ticker." and "We
+    // are not looking for winners just in time but when they got in to our
+    // alerts if they made it or not. Like XLAB today was a winner I made good
+    // money on it". His knob answers: "GG's trade math", "Both columns", "Keep
+    // GG's math", "From 09:45 ET only" (DECISIONS9 + AMENDMENTS9 E1). He made
+    // real money on the alert this grades: a +1R typed apart from the grader, a
+    // 09:45 retyped instead of built from GG's 15 minutes, a second crontab line
+    // a deploy never ships, a bar read on another sub's GET, or a win / loss
+    // word composed in the browser would each tell him a different record than
+    // the one his phone rang for. UNMEASURED — a ledger, never a study.
+    checks: (board) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const B_WORD = /boun|fake/i;
+      const HIS = [
+        'also can you track all Gajjals stocks and keep a new tab to show wins vs losses. To see a percentage and the ticker.',
+        'We are not looking for winners just in time but when they got in to our alerts if they made it or not. Like XLAB today was a winner I made good money on it',
+      ];
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+
+      // 1. constants.py — his numbers tagged his, mine tagged MINE, the 09:45 BUILT from GG's 15 minutes.
+      const gc = tryRead('../backend/chart_maps/gajjala/constants.py');
+      const data = tryRead('../backend/daytrading/data.py');
+      const cline = (name) => new RegExp(`^${name} = ([^\\n]*?)\\s*#\\s*([^\\n]*)$`, 'm').exec(gc);
+      const val = (name) => { const m = cline(name); return m ? m[1].trim() : null; };
+      const tag = (name) => { const m = cline(name); return m ? m[2].trim() : ''; };
+      const AJAY = /^Ajay 2026-10-16\b/;
+      const MINE = /^(?:MINE\b|Cheetah default \(MINE\b)/;
+      if (gc) {
+        if (val('LEDGER_SUB') !== '"track_record"' || !AJAY.test(tag('LEDGER_SUB'))) errs.push('constants.py must carry LEDGER_SUB = "track_record"  # Ajay 2026-10-16 …');
+        if (val('LEDGER_R_MULT') !== '1.0' || !AJAY.test(tag('LEDGER_R_MULT'))) errs.push('constants.py must carry LEDGER_R_MULT = 1.0  # Ajay 2026-10-16 ("GG\'s trade math": +1R before the stop)');
+        if (val('LEDGER_HORIZONS') !== '("same", "next")' || !AJAY.test(tag('LEDGER_HORIZONS'))) errs.push('constants.py must carry LEDGER_HORIZONS = ("same", "next")  # Ajay 2026-10-16 ("Both columns")');
+        const from = val('LEDGER_FILL_FROM_ET');
+        if (from == null || !AJAY.test(tag('LEDGER_FILL_FROM_ET'))) errs.push('constants.py must carry LEDGER_FILL_FROM_ET = …  # Ajay 2026-10-16 ("From 09:45 ET only")');
+        else {
+          if (!/timedelta\(\s*minutes\s*=\s*NO_TRADE_AFTER_OPEN_MIN\s*\)/.test(from)) errs.push('LEDGER_FILL_FROM_ET must be BUILT as 09:30 + timedelta(minutes=NO_TRADE_AFTER_OPEN_MIN) — never a typed 15 or 09:45 (AMENDMENTS9 E1)');
+          if (/time\(\s*9\s*,\s*45\b|minutes\s*=\s*\d/.test(from)) errs.push('LEDGER_FILL_FROM_ET types 09:45 / a minute count — build it from NO_TRADE_AFTER_OPEN_MIN');
+          const base = /datetime\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(from);
+          const rth = /^ET_RTH_OPEN = dtime\((\d+),\s*(\d+)\)/m.exec(data);
+          if (!base || !rth || Number(base[1]) !== Number(rth[1]) || Number(base[2]) !== Number(rth[2])) errs.push('LEDGER_FILL_FROM_ET\'s base must equal daytrading/data.py ET_RTH_OPEN (09:30)');
+        }
+        const to = /^LEDGER_FILL_TO_ET = _dt\.time\((\d+),\s*(\d+)\)/m.exec(gc);
+        const rthC = /^ET_RTH_CLOSE = dtime\((\d+),\s*(\d+)\)/m.exec(data);
+        if (!to || !rthC || to[1] !== rthC[1] || to[2] !== rthC[2] || !/^Cheetah default\b/.test(tag('LEDGER_FILL_TO_ET'))) errs.push('LEDGER_FILL_TO_ET must be _dt.time(h, m) = data.py ET_RTH_CLOSE, tagged # Cheetah default');
+        const rPct = Number(val('LEDGER_MIN_R_PCT'));
+        if (!Number.isFinite(rPct) || rPct <= 0 || !MINE.test(tag('LEDGER_MIN_R_PCT'))) errs.push('constants.py must carry LEDGER_MIN_R_PCT = <number>  # MINE / Cheetah default (MINE … — the thin-R floor is my number, HIS CALL Q16');
+        const sess = Number(val('LEDGER_SPAN_SESSIONS'));
+        const spans = (/^LEDGER_SPANS = \(([^)]*)\)/m.exec(gc) || ['', ''])[1].split(',').map((x) => x.trim().replace(/^"|"$/g, '')).filter(Boolean);
+        const def = (val('LEDGER_SPAN_DEFAULT') || '').replace(/^"|"$/g, '');
+        if (!Number.isInteger(sess) || sess <= 0 || !MINE.test(tag('LEDGER_SPAN_SESSIONS'))) errs.push('constants.py must carry LEDGER_SPAN_SESSIONS = <int>  # Cheetah default (MINE …');
+        if (!spans.includes(def) || def !== `${sess}d` || !MINE.test(tag('LEDGER_SPAN_DEFAULT'))) errs.push(`LEDGER_SPAN_DEFAULT must be "${sess}d" (the last LEDGER_SPAN_SESSIONS sessions, AMENDMENTS9 E2), one of LEDGER_SPANS, tagged # Cheetah default (MINE …`);
+        if (!/^LEDGER_GRADE_AT_ET = "\d\d:\d\d"/m.test(gc)) errs.push('constants.py must carry LEDGER_GRADE_AT_ET = "HH:MM"');
+        // SUBS' last triple is 🏁 and its key is LEDGER_SUB (GG_SUBS == SUBS is the 🚩 block's check — not repeated here).
+        const subsPy = /^SUBS = \(([\s\S]*?)\)\n/m.exec(gc);
+        const py = subsPy ? [...subsPy[1].matchAll(/\(\s*"([a-z_]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)/g)].map((m) => [m[1], m[2], m[3]]) : [];
+        if (JSON.stringify(py[py.length - 1] || null) !== JSON.stringify(['track_record', '🏁', 'Track record'])) errs.push('constants.SUBS must END with ("track_record", "🏁", "Track record")');
+      }
+      const at = (/^LEDGER_GRADE_AT_ET = "(\d\d:\d\d)"/m.exec(gc) || [])[1] || null;
+      const N = Number((/^NO_TRADE_AFTER_OPEN_MIN = (\d+)/m.exec(gc) || [])[1]);
+      const R = Number(val('LEDGER_R_MULT'));
+      const SESS = Number(val('LEDGER_SPAN_SESSIONS'));
+
+      // 2. ledger.py — no script import, never the b-word, no 09:45 / 15 typed in its code, the window read by name.
+      const lg = tryRead('../backend/chart_maps/gajjala/ledger.py');
+      if (lg) {
+        if (/^\s*(?:from|import)\s+scripts\b/m.test(lg)) errs.push('ledger.py imports scripts/ — the runtime never imports the study script');
+        if (/bounc|fake/i.test(lg)) errs.push('ledger.py says bounce / fake');
+        const code = pyCode(lg);
+        if (/\b15\b|09:45|\b9\s*,\s*45\b/.test(code)) errs.push('ledger.py code types 15 / 09:45 — read GC.LEDGER_FILL_FROM_ET (built from NO_TRADE_AFTER_OPEN_MIN)');
+        if (!/GC\.LEDGER_FILL_FROM_ET\b/.test(code)) errs.push('ledger.py must read GC.LEDGER_FILL_FROM_ET for the fill window');
+        if (!/GC\.LEDGER_R_MULT\b/.test(code)) errs.push('ledger.py must read GC.LEDGER_R_MULT for the +1R target');
+      }
+
+      // 3. the grade rides the EXISTING 20:15 nightly line (a deploy never ships the crontab).
+      const cron = cronCommands(tryRead('../backend/crontab'));
+      const nl = cron.filter((l) => /chart_maps\.gajjala\.nightly\b/.test(l));
+      if (nl.length !== 1) errs.push(`the crontab must carry exactly one chart_maps.gajjala.nightly line (found ${nl.length})`);
+      else {
+        if (/--steps/.test(nl[0])) errs.push('the chart_maps.gajjala.nightly line passes --steps — the grade step runs only by default (STEPS)');
+        const mh = /^(\d+)\s+(\d+)\s/.exec(nl[0].trim());
+        if (!mh || !at || `${mh[2].padStart(2, '0')}:${mh[1].padStart(2, '0')}` !== at) errs.push(`the chart_maps.gajjala.nightly line runs at ${mh ? `${mh[2]}:${mh[1]}` : '?'} — constants.LEDGER_GRADE_AT_ET is ${at}`);
+      }
+      if (cron.some((l) => /ledger|track_record|grade_step/.test(l))) errs.push('the crontab names a ledger / track_record / grade job — 🏁 rides the existing nightly line, NO new crontab line');
+      const nightly = tryRead('../backend/chart_maps/gajjala/nightly.py');
+      const steps = /^STEPS = \(([^)]*)\)/m.exec(nightly);
+      const stepList = steps ? [...steps[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]) : [];
+      if (stepList[stepList.length - 1] !== 'grade') errs.push(`nightly.STEPS must end with "grade" (its failure never stops a step) — found ${JSON.stringify(stepList)}`);
+
+      // 4. the GET reads bars on 🏁 only (ledger.today_read behind the LEDGER_SUB test); never on_demand.
+      const api = tryRead('../backend/chart_maps/api.py');
+      const getAt = api.indexOf('async def chart_maps_gajjala(');
+      if (api && getAt < 0) errs.push('chart_maps/api.py lost async def chart_maps_gajjala(');
+      else if (api) {
+        const nxt = api.indexOf('\n@router.', getAt);
+        const get = pyCode(api.slice(getAt, nxt < 0 ? undefined : nxt));
+        if (!/==\s*GC\.LEDGER_SUB\s*:[\s\S]*?today_read\(/.test(get)) errs.push('GET /chart-maps/gajjala must call ledger.today_read( only under `== GC.LEDGER_SUB:` (🏁 only — every other sub stays Mongo-only)');
+        if ((get.match(/today_read\(/g) || []).length !== 1) errs.push('GET /chart-maps/gajjala must call today_read( exactly once');
+        if (/on_demand/.test(get)) errs.push('GET /chart-maps/gajjala names on_demand — the GET never scans');
+        if (!/\bspan\b/.test(get)) errs.push('GET /chart-maps/gajjala lost the span param');
+      }
+
+      // 5. the FE composes nothing: the panel prints served strings only.
+      for (const id of ['gg-track-record', 'gg-tr-counts-same', 'gg-tr-counts-next']) if (!board.includes(`data-testid="${id}"`)) errs.push(`GajjalaBoard must mount data-testid="${id}"`);
+      if (!/<TrackRecordPanel\s/.test(board)) errs.push('GajjalaBoard must mount <TrackRecordPanel …/> on the track_record sub');
+      const fnBody = (name) => {
+        const fa = board.indexOf(`\nfunction ${name}(`);
+        const ca = board.indexOf(`\nconst ${name} = `);
+        if (fa < 0 && ca < 0) return null;
+        const a = fa >= 0 ? fa : ca;
+        const e = board.indexOf(fa >= 0 ? '\n}\n' : ';\n', a + 1);
+        return board.slice(a, e < 0 ? undefined : e);
+      };
+      const panel = ['TrCell', 'trChip', 'TrRowCells', 'TrackRecordPanel'].map((n) => {
+        const b = fnBody(n);
+        if (b == null) errs.push(`GajjalaBoard lost ${n} (the 🏁 panel)`);
+        return b || '';
+      }).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      if (/toFixed|changeText\(|riskText\(|pxText\(|Math\.|%/.test(panel)) errs.push('the 🏁 panel computes or formats a number (toFixed / Math. / a % / a *Text( helper) — every number is served');
+      const literals = [
+        ...[...panel.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]),
+        ...[...panel.matchAll(/>([^<>{}\n]+)</g)].map((m) => m[1]),
+      ].map((s) => s.replace(/\$\{[^}]*\}/g, ' ').replace(/\b(?:gg|cm)-[\w-]*/g, ' ').replace(/\b\w+_text\b/g, ' '));
+      const WORDS = /win|loss|no entry|no plan|rang|thin|through|graded/i;
+      for (const s of literals) if (WORDS.test(s)) errs.push(`the 🏁 panel types "${s.trim()}" — every win / loss / state word is served by ledger.py`);
+
+      // 6. ✨ — FIRST, routes to the sub, both paragraphs verbatim, UNMEASURED + shadow, every number = a pinned constant.
+      const nf = tryRead('src/lib/newFeatures.ts');
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
+      const ID = 'chart-maps-gajjala-track-record-2026-10-16';
+      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      const idAt = nf.indexOf(`id: '${ID}'`);
+      if (idAt < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
+      else {
+        const end = nf.indexOf("' },", idAt);
+        const entry = unesc(nf.slice(idAt, end < 0 ? undefined : end + 1));
+        if (!entry.includes("route: '/chart-maps?tab=gajjala&sub=track_record'")) errs.push("the 🏁 ✨ entry must route to '/chart-maps?tab=gajjala&sub=track_record'");
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🏁 ✨ entry must quote his ask verbatim: "${h.slice(0, 40)}…"`);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🏁 ✨ entry must say UNMEASURED');
+        if (!/shadow/.test(entry)) errs.push('the 🏁 ✨ entry must say the A+ line is shadow (never sent)');
+        if (B_WORD.test(entry)) errs.push('the 🏁 ✨ entry says bounce / fake');
+        let forbidden = [];
+        try {
+          const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py'));
+          forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : [];
+        } catch { /* reported below */ }
+        if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+        for (const w of forbidden) if (entry.toLowerCase().includes(w.toLowerCase())) errs.push(`the 🏁 ✨ entry says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        let label = entry.slice(Math.max(0, entry.indexOf("label: '")));
+        for (const h of HIS) label = label.split(h).join(' ');
+        const seen = { r: 0, t: 0, m: 0, s: 0 };
+        for (const m of label.matchAll(/\+(\d+(?:\.\d+)?)R\b/g)) { seen.r++; if (Number(m[1]) !== R) errs.push(`the 🏁 ✨ entry says "${m[0]}" — constants.LEDGER_R_MULT is ${R}`); }
+        for (const m of label.matchAll(/\b(\d\d:\d\d)\b/g)) { seen.t++; if (m[1] !== at) errs.push(`the 🏁 ✨ entry prints "${m[1]}" — constants.LEDGER_GRADE_AT_ET is ${at}`); }
+        for (const m of label.matchAll(/(\d+) minutes/g)) { seen.m++; if (Number(m[1]) !== N) errs.push(`the 🏁 ✨ entry says "${m[0]}" — constants.NO_TRADE_AFTER_OPEN_MIN is ${N}`); }
+        for (const m of label.matchAll(/(\d+) sessions/g)) { seen.s++; if (Number(m[1]) !== SESS) errs.push(`the 🏁 ✨ entry says "${m[0]}" — constants.LEDGER_SPAN_SESSIONS is ${SESS}`); }
+        for (const [k, w] of [['r', `+${R}R`], ['t', `${at} ET`], ['m', `${N} minutes`], ['s', `${SESS} sessions`]]) if (!seen[k]) errs.push(`the 🏁 ✨ entry must state "${w}" as constants.py has it`);
+        const left = label.replace(/\+\d+(?:\.\d+)?R\b|\b\d\d:\d\d\b|\d+ minutes|\d+ sessions|\b\d{4}-\d\d-\d\d\b/g, ' ');
+        const stray = /[^\s]*\d[^\s]*/.exec(left);
+        if (stray) errs.push(`the 🏁 ✨ entry prints "${stray[0]}" — no constant pins it (numbers only from constants.py)`);
+      }
+
+      // 7. SPECS.md + the doc.
+      const specs = tryRead('../SPECS.md');
+      if (specs && !specs.includes("### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)")) errs.push("SPECS.md lacks \"### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)\"");
+      if (!exists('../docs/gajjala/track_record_2026_10_16.md')) errs.push('docs/gajjala/track_record_2026_10_16.md is missing');
       return errs;
     },
   },

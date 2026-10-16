@@ -16,6 +16,9 @@ Collections
                     started_at + last_cron_started_at (CRON claims only — the tick clock, the min-gap clock),
                     od_started_at (on-open claims only), pid, done_at}
   gajjala_potentials _id "{date}|{SYM}|{setup}"  🧠 the potential tracker (2026-10-15) — first sighting + path    none
+                    the push claim records the trigger / stop / price the push carried (`push.trigger/stop/px`,
+                    2026-10-16) — the 🏁 ledger's plan
+  gajjala_ledger    _id "{date}|{SYM}|{setup}|{kind}"  🏁 the Track record (2026-10-16) — graded nightly          none
 
 🧠 gajjala_potentials (Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me new potential is
 added everyday." / "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
@@ -62,8 +65,12 @@ HALTS = "gajjala_halts"
 DAILY = "gajjala_daily"
 STATE = "gajjala_state"
 POTENTIALS = "gajjala_potentials"            # 🧠 the potential tracker (2026-10-15) — kept, no TTL
+LEDGER = "gajjala_ledger"                      # 🏁 the Track record (2026-10-16) — one doc per rung alert; kept, no TTL
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
-ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS)
+ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER)
+# 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
+LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
+LEDGER_ALERT_STATES = ("shadow", "pushed")     # the A+ rows the ledger reads (ledger.alert_of filters the ids)
 # retention per collection (None = kept): the TTL index reads `at`
 TTL_DAYS = {SCAN: GC.LEDGER_TTL_DAYS, AH_CARRY: GC.LEDGER_TTL_DAYS, POST: GC.LEDGER_TTL_DAYS,
             PASSES: GC.LEDGER_TTL_DAYS, DAILY: GC.LEDGER_TTL_DAYS, READS: GC.READS_TTL_DAYS}
@@ -184,7 +191,7 @@ def lease_query(now: datetime, source: str, *, take_over: bool = False) -> dict:
 
 
 class GajjalaStore:
-    """The ten collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
+    """The eleven collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
 
     def __init__(self, colls: Optional[dict] = None):
         self._injected = dict(colls or {})
@@ -208,7 +215,7 @@ class GajjalaStore:
                 days = TTL_DAYS.get(name)
                 if days:
                     c.create_index([("at", 1)], expireAfterSeconds=int(days * _DAY_SEC))
-                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS):
+                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER):
                     c.create_index([("date", 1), ("symbol", 1)])
                     c.create_index([("symbol", 1), ("date", -1)])
                 if name == ALERTS:
@@ -631,6 +638,74 @@ class GajjalaStore:
             return "error"
         return "matched" if int(getattr(res, "matched_count", 0) or 0) > 0 else "unmatched"
 
+    # ── 🏁 gajjala_ledger (the Track record, 2026-10-16 — written ONLY by ledger.grade_step, the nightly) ───────────
+    def _find_or_none(self, name: str, q: dict) -> Optional[list]:
+        """A find that tells a READ FAULT (None — no handle, or the find raised) from "nothing on file" ([])."""
+        c = self.coll(name)
+        if c is None:
+            return None
+        try:
+            return list(c.find(q))
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: read failed on %s: %s", name, exc)
+            return None
+
+    def potential_pushes(self, sessions: Iterable) -> Optional[list]:
+        """🏁 Every 🧠 tracker doc of these ET sessions whose push RANG (`push.state` "pushed") — the ledger's live rows.
+        None on a read fault / no handle ([] = none on file)."""
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(POTENTIALS, {"date": {"$in": days}, "push.state": "pushed"})
+
+    def alert_rows(self, sessions: Iterable) -> Optional[list]:
+        """🏁 Every A+ ledger doc of these sessions in state shadow / pushed (ledger.alert_of keeps the SHADOW: claims
+        and the live claims, never a `#state` refusal). None on a read fault / no handle."""
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(ALERTS, {"date": {"$in": days}, "state": {"$in": list(LEDGER_ALERT_STATES)}})
+
+    def ledger_docs(self, sessions: Iterable) -> Optional[list]:
+        """🏁 The graded ledger docs of these sessions. None on a read fault / no handle."""
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(LEDGER, {"date": {"$in": days}})
+
+    def ledger_dates(self) -> Optional[list]:
+        """🏁 Every session (ISO date) the ledger holds a graded doc for, sorted. None on a read fault / no handle."""
+        c = self.coll(LEDGER)
+        if c is None:
+            return None
+        try:
+            return sorted({d for d in c.distinct("date") if d})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: ledger dates read failed: %s", exc)
+            return None
+
+    def alert_dates(self) -> Optional[list]:
+        """🏁 AMENDMENTS9 E7 — the distinct alert dates of the rows themselves (pushed 🧠 potentials ∪ A+ shadow / live
+        claims), sorted: the "all" span reads these, never the ledger's own dates alone (a night that failed must not
+        hide a day). None on a read fault on either collection."""
+        pot = self._find_or_none(POTENTIALS, {"push.state": "pushed"})
+        al = self._find_or_none(ALERTS, {"state": {"$in": list(LEDGER_ALERT_STATES)}})
+        if pot is None or al is None:
+            return None
+        return sorted({d.get("date") for d in pot + al if isinstance(d, dict) and isinstance(d.get("date"), str)
+                       and d.get("date")})
+
+    def upsert_ledger(self, _id: str, sets: dict) -> bool:
+        """THE ledger write: one `update_one({_id}, {$set: sets}, upsert=True)` on gajjala_ledger — refused (logged,
+        False) when a top-level key falls outside LEDGER_KEYS; never touches another collection. False on a fault."""
+        bad = set(sets or {}) - LEDGER_KEYS
+        if not sets or bad or not isinstance(_id, str) or not _id:
+            log.warning("gajjala.store: refused ledger write %s (keys outside LEDGER_KEYS: %s)", _id, sorted(bad))
+            return False
+        c = self.coll(LEDGER)
+        if c is None:
+            return False
+        try:
+            c.update_one({"_id": _id}, {"$set": dict(sets)}, upsert=True)
+            return True
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: ledger write failed for %s: %s", _id, exc)
+            return False
+
     # ── plumbing ───────────────────────────────────────────────────────────────────────────────────────────────
     def _find(self, name: str, q: dict) -> list:
         c = self.coll(name)
@@ -696,6 +771,7 @@ for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_c
               "halt_sessions", "get_daily", "upsert_daily", "get_state", "set_state", "claim_lease",
               "release_lease", "types_map", "set_types_map", "alerts_coll", "coll", "potentials", "get_potential",
               "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",
-              "claim_potential_push", "settle_potential_push", "mark_potential_graveyard"):
+              "claim_potential_push", "settle_potential_push", "mark_potential_graveyard", "potential_pushes",
+              "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger"):
     globals()[_name] = _delegate(_name)
 del _name

@@ -615,6 +615,7 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     scanner row} (volume for the order); `live_rows` = {SYM: THIS pass's row} — the price fallback when the 5-minute
     frame has no close (D2: never the stored row). `send(owner, payload)` defaults to
     push.hooks.notify_gajjala_potential. `dry` → the gate runs, nothing is written or sent (counted "dry").
+    The claim records the trigger / stop / price the push carried (`push.trigger/stop/px` — the 🏁 ledger's plan).
     Never touches `gajjala_alerts`, never calls the A+ sender, never reads GAJJALA_PUSH_MODE. -> {COUNT_KEYS: int}."""
     from . import alerts as AL
     send = send or _default_send
@@ -702,8 +703,12 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
             counts["dry"] += 1
             continue
         _id = doc["_id"]
+        # 🏁 2026-10-16 (BUILD_SPEC9 §3.9): the claim records the trigger / stop / price THIS push carries (compose's
+        # own read) — the Track record's plan; the settle's dotted $set never touches them
         claim = store.claim_potential_push(_id, {"state": "claimed", "at": _utc(now).isoformat(),
-                                                 "at_et": _hhmm(now), "kind_at_push": kind})
+                                                 "at_et": _hhmm(now), "kind_at_push": kind,
+                                                 "trigger": _num(r.get("trigger")), "stop": _num(r.get("stop")),
+                                                 "px": px_of(sym)})
         if claim != "claimed":
             again = store.get_potential(session, sym, setup) if claim == "taken" else None
             if isinstance(again, dict) and "push" in again:

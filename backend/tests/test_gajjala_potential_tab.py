@@ -235,7 +235,10 @@ def test_negative_a_raising_potential_engine_never_silences_the_a_plus_board(sto
             assert [t["symbol"] for t in out["tiles"]] == want[k], k
         assert out.get("potential") is None and out["push"]["mode"], k
     bf = build("bull_flag", store)
-    assert bf["tiles"] and bf["counts"]["forming"] and bf["subs"][-1]["count"] == 0
+    # WIDENED 2026-10-16 — 🏁 Track record is now LAST: 🧠 Potential (second to last) counts 0 with its engine down, and
+    # the 🏁 chip counts today's GRADED rows (AMENDMENTS9 E5) — the fixture has no gajjala_ledger doc, so 0 too
+    assert bf["tiles"] and bf["counts"]["forming"] and bf["subs"][-2]["key"] == GC.POTENTIAL_SUB
+    assert bf["subs"][-2]["count"] == 0 and bf["subs"][-1]["key"] == GC.LEDGER_SUB and bf["subs"][-1]["count"] == 0
     p = build(GC.POTENTIAL_SUB, store)
     assert p["tiles"] == [] and p.get("track") is None and p["watch"]["symbols"]
 
@@ -416,8 +419,12 @@ def test_potential_sub_empty_note_in_and_out_of_the_window():
 # ── (c) every sub ────────────────────────────────────────────────────────────────────────────────────────────────
 def test_subs_end_with_potential_and_the_other_eight_keep_their_order(store):
     out = build("bull_flag", store)
-    assert out["subs"][-1] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 5}
-    assert [s["key"] for s in out["subs"][:-1]] == ["bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp",
+    # WIDENED 2026-10-16 — 🏁 Track record appended LAST (Ajay "keep a new tab"); 🧠 Potential is now second to last and
+    # the other eight keep their order
+    assert out["subs"][-2] == {"key": "potential", "emoji": "🧠", "label": "Potential", "count": 5}
+    assert {k: out["subs"][-1][k] for k in ("key", "emoji", "label")} == {"key": "track_record", "emoji": "🏁",
+                                                                          "label": "Track record"}
+    assert [s["key"] for s in out["subs"][:-2]] == ["bull_flag", "kiss_fly", "horizontal_fade", "intraday_vcp",
                                                      "reversal_squeeze", "premarket", "postmarket", "playbook"]
 
 

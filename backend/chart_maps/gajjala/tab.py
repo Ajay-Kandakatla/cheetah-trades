@@ -7,7 +7,9 @@ the frontend types only structural words.
 READS MONGO ONLY. `build()` never scans, never fetches a bar and never calls a provider: the 5-minute cron pass
 (run.py) writes `gajjala_scan` / `_reads` / `_passes` / `_post` / `_ah_carry` / `_alerts` / `_halts` / `_daily`, and
 this module reads them through store.py. The route adds ONE live fan-out for the shown tiles' now-line (the Support
-precedent) and nothing else. A missing collection is the documented "no data" answer, never an error.
+precedent) and, on 🏁 Track record only, ONE 1-minute read of today's alerted names (ledger.today_read, memo
+LEDGER_TODAY_MEMO_SEC, never written) that it hands to `build(today=…)`; nothing else. A missing collection is the
+documented "no data" answer, never an error.
 
 ORDER. Setup sub-tabs list the listed names whose read is aplus / triggered / forming / partial / stopped, ordered by
 his setup state (A+ newest first, then closest to its trigger): BUILD_SPEC §3.4.1 ordering keys, exactly. invalid /
@@ -36,6 +38,13 @@ and the bar closed, DECISIONS5 K1 + AMENDMENTS5 A11 — served only while the 5-
 gains `at` (one stamp, `pass_stamp`, shared with the POST) and `on_demand`; `pass.stale` reads the CRON pass, so opens
 alone never hide a dead cron (A10). A card whose read is older than the pass shown carries "read at the HH:MM ET pass".
 An open rings no device (both push gates run dry on it, K2). UNMEASURED — not a recommendation.
+
+🏁 TRACK RECORD (2026-10-16, BUILD_SPEC9 §3.7 / WP-B). Ajay, verbatim: "also can you track all Gajjals stocks and keep a
+new tab to show wins vs losses. To see a percentage and the ticker." / "We are not looking for winners just in time but
+when they got in to our alerts if they made it or not. Like XLAB today was a winner I made good money on it". The tenth
+sub, LAST: every alert that rang, graded by GG's trade math — ledger.py owns the rows, the grader and every served
+string (`served_block`); this module only routes `?sub=track_record&span=…` to it and serves the chip count
+(`count_today`). Operational accounting of the alerts as sent, not a study — UNMEASURED.
 """
 from __future__ import annotations
 
@@ -1075,6 +1084,7 @@ WATCH_HEAD = ("👀 On his watch list, no structure yet — “if it's making so
               "list … after hours moves from the past day, I'll keep them as well” (S8 13:21–14:34): ")    # W14
 TRACK_UNMEASURED = ("UNMEASURED — what each potential did after it was first seen, recorded pass by pass; not a "
                     "forecast. No study has read this record yet.")                                        # W13b
+TRACK_RECORD_FAULT = "🏁 The alert record could not be read this time — the next re-read tries again."    # W16
 PUSH_TEXT = {"no_target": "📲 no device took it (toggle off, quiet hours or none registered)",
              "failed": "📲 send failed",
              "claimed": "📲 sending"}           # W19's /alerts word for a claimed doc (a pass died before the settle)
@@ -1307,9 +1317,37 @@ def _awaiting(setup: str) -> Optional[dict]:
             "text": f"{e} {label}: waiting for your number ({h}) — it reads nothing until you answer"}
 
 
+def _ledger():
+    """🏁 ledger.py, imported lazily (it imports this module's neighbours); None when it cannot load — the other subs
+    still serve and the 🏁 sub serves TRACK_RECORD_FAULT."""
+    try:
+        from chart_maps.gajjala import ledger as LG
+        return LG
+    except Exception as exc:                                        # noqa: BLE001
+        log.warning("gajjala tab: ledger import failed: %s", exc)
+        return None
+
+
+def _ledger_count(st, session: date) -> Optional[int]:
+    """🏁 chip: ledger.count_today over today's tracker docs and today's ledger docs; None when the ledger cannot load
+    or EITHER read faulted (an unknown count is never served as 0). The tracker is read here with `st.potentials`
+    directly, never through `_safe_list` (which turns a read fault into [] — a chip of 0; critic LOW 2026-10-16)."""
+    LG = _ledger()
+    if LG is None:
+        return None
+    pots = st.potentials(session)
+    if pots is None:
+        return None
+    docs = st.ledger_docs([session])
+    if docs is None:
+        return None
+    return LG.count_today([d for d in pots if isinstance(d, dict) and d.get("symbol") and d.get("setup")], docs)
+
+
 def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT, sort: str = "",
-          now: Optional[datetime] = None, store=None) -> dict:
-    """The served board. Reads Mongo only (BUILD_SPEC §3.4.1)."""
+          span: str = "", now: Optional[datetime] = None, store=None, today: Optional[dict] = None) -> dict:
+    """The served board. Reads Mongo only (BUILD_SPEC §3.4.1). `span` = the 🏁 Track record day picker (ignored on
+    every other sub); `today` = the route's ledger.today_read answer (🏁 only, None = not read on this open)."""
     st = _store(store)
     now = now or _clock()
     session, is_today, in_window = session_for(now)
@@ -1410,8 +1448,11 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 
     subs = []
     for key, e, label in GC.SUBS:
-        n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
-             else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
+        if key == GC.LEDGER_SUB:                # 🏁 today's rows graded so far (ledger.count_today, AMENDMENTS9 E5)
+            n = _soft("track record count", _ledger_count, st, session, default=None)
+        else:
+            n = (n_tiles.get(key, 0) if key in per_setup else len(pm_rows) if key == "premarket"
+                 else len(post_list) if key == "postmarket" else len(pot_syms) if key == GC.POTENTIAL_SUB else None)
         subs.append({"key": key, "emoji": e, "label": label, "count": n})
 
     if sub_k in per_setup:
@@ -1481,10 +1522,17 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         from chart_maps.gajjala import playbook as PB
         out["playbook"] = PB.playbook()
         out["empty_note"] = None
+    elif sub_k == GC.LEDGER_SUB:
+        LG = _ledger()
+        span_s = span if isinstance(span, str) else ""
+        out["track_record"] = (_soft("track record", LG.served_block, st, session, now, span=span_s,
+                                     is_today=is_today, today=today if isinstance(today, dict) else None,
+                                     default=None) if LG else None)
+        out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT      # W16
     _strip_private(out["tiles"])
     return _plain(out)
 
 
 __all__ = ["build", "resolve_sub", "order_key", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
-           "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp"]
+           "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT"]

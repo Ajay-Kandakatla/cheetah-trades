@@ -33,12 +33,22 @@
  * blocks are SERVED sentences (the as-of line, the scanning line, the A+ rows,
  * the quiet empty line, the note); this module types them and adds nothing. An
  * open rings no device — both push gates run dry on it. UNMEASURED.
+ *
+ * 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.11). Ajay: "also can you track
+ * all Gajjals stocks and keep a new tab to show wins vs losses. To see a
+ * percentage and the ticker." and "We are not looking for winners just in time
+ * but when they got in to our alerts if they made it or not. Like XLAB today
+ * was a winner I made good money on it". The tenth sub, LAST: every alert that
+ * rang, graded on the server by GG's trade math (backend chart_maps/gajjala/
+ * ledger.py). This module types that payload and adds the `span` param (the
+ * day picker); every string SERVED; no number typed. A ledger of the alerts
+ * as sent, not a study. UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
 
 export type GgSetup = 'bull_flag' | 'kiss_fly' | 'horizontal_fade' | 'intraday_vcp' | 'reversal_squeeze';
-export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential';
+export type GgSub = GgSetup | 'premarket' | 'postmarket' | 'playbook' | 'potential' | 'track_record';
 export type GgTf = '5m' | '15m';
 export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' | 'invalid' | 'none';
 
@@ -46,6 +56,8 @@ export type GgState = 'aplus' | 'triggered' | 'stopped' | 'forming' | 'partial' 
 export const GG_SUB_PARAM = 'sub';
 export const GG_TF_PARAM = 'tf';
 export const GG_SORT_PARAM = 'sort';
+/** 🏁 the Track record day picker (the served `spans` keys) — rides only when set. */
+export const GG_SPAN_PARAM = 'span';
 export const GG_DEFAULT_SUB: GgSub = 'bull_flag';
 export const GG_TFS: ReadonlyArray<GgTf> = ['5m', '15m'];
 
@@ -61,6 +73,7 @@ export const GG_SUBS: ReadonlyArray<{ key: GgSub; emoji: string; label: string }
   { key: 'postmarket', emoji: '\u{1F319}', label: 'Post-market' },
   { key: 'playbook', emoji: '\u{1F4D3}', label: 'Playbook' },
   { key: 'potential', emoji: '\u{1F9E0}', label: 'Potential' },
+  { key: 'track_record', emoji: '\u{1F3C1}', label: 'Track record' },
 ];
 const SUB_KEYS = new Set<string>(GG_SUBS.map((s) => s.key));
 
@@ -214,6 +227,23 @@ export type GgTrack = {
 /** 👀 ☀️ / 🌙 names with no potential in any setup — display only, never pushed. */
 export type GgWatch = { text: string; symbols: { symbol: string; href: string }[] };
 
+/* ---- 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.8 / §3.11) — every string SERVED; `state` is a CSS hook only. ---- */
+/** `no_risk` = trigger equal to the stop on the alert (AMENDMENTS9 E4) — listed, never counted. `no_time` = no
+ *  alert time on the row (E3) — listed, never graded. */
+export type GgTrState = 'win' | 'loss' | 'open' | 'flat' | 'no_entry' | 'no_plan' | 'no_risk' | 'no_time' | 'pending' | 'split';
+export type GgTrCell = { state: GgTrState | string; text: string; sub_text?: string | null; provisional?: boolean };
+export type GgTrRow = { key: string; id?: string; date: string; symbol: string; setup: string; setup_label: string;
+  kind: string; line: 'live' | 'shadow' | string; kind_text: string; at_et?: string | null; at_text: string;
+  /** E1 served session chip ("rang pre" / "rang RTH" / "rang AH"); E4 served "thin R" chip — null when none. */
+  rang_text?: string | null; thin_text?: string | null;
+  trigger?: number | null; stop?: number | null; fill_px?: number | null; plan_text: string; note?: string | null;
+  href?: string | null; same: GgTrCell; next: GgTrCell };
+export type GgTrDay = { date: string; label: string; rows: GgTrRow[]; more_n?: number | null };
+export type GgTrackRecord = { title: string; rule_label?: string | null; rule_text?: string | null; honesty?: string | null; span: string;
+  spans: { key: string; label: string }[]; heads: { key: string; label: string }[];
+  counts_text: { same: string; next: string }; shadow_text?: string | null; today_text?: string | null;
+  days: GgTrDay[]; more_text?: string | null; empty_text?: string | null; grade_at_et?: string | null };
+
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */
 export type GgVolAvg = ServedVolAvg;
 /** `tf` = the frame this card actually drew (tab.tile_tf / the empty-frame fallback) — it can differ from the
@@ -289,6 +319,8 @@ export type GgBoard = {
   scan?: GgScan | null;
   /** 🎯 the served A+ line (every sub); absent on an older API. */
   enterable?: GgEnterable | null;
+  /** 🏁 the Track record — the track_record sub only; absent on another sub and on an older API. */
+  track_record?: GgTrackRecord | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the
@@ -305,16 +337,17 @@ export function parseGgTf(raw: string | null | undefined): GgTf | null {
   return s === '5m' || s === '15m' ? s : null;
 }
 
-/** The endpoint query. `sub` / `tf` / `focus` / `sort` ride only when set:
- *  an absent `sub` with a `focus` is how the server picks the sub a push
- *  meant (spec §3.4.1). */
+/** The endpoint query. `sub` / `tf` / `focus` / `sort` / `span` ride only when
+ *  set: an absent `sub` with a `focus` is how the server picks the sub a push
+ *  meant (spec §3.4.1); an absent `span` is the server's default span. */
 export function ggQuery(q: { sub?: GgSub | null; tf?: GgTf | null; focus?: string | null;
-                             sort?: string | null; limit?: number | null }): string {
+                             sort?: string | null; span?: string | null; limit?: number | null }): string {
   const p = new URLSearchParams();
   if (q.sub) p.set('sub', q.sub);
   if (q.tf) p.set('tf', q.tf);
   if (q.focus) p.set('focus', q.focus);
   if (q.sort) p.set('sort', q.sort);
+  if (q.span) p.set(GG_SPAN_PARAM, q.span);
   if (typeof q.limit === 'number' && Number.isFinite(q.limit) && q.limit > 0) p.set('limit', String(Math.floor(q.limit)));
   return p.toString();
 }

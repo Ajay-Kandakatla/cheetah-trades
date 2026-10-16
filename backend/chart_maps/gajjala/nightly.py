@@ -1,7 +1,7 @@
 """Gajjala's tab — the 20:15 ET nightly (spec §3.10): float warm, the 30-session halt-history backfill, and the 🎾
 squeeze-history warm for the NEXT session.
 
-    python -m chart_maps.gajjala.nightly [--session YYYY-MM-DD] [--steps floats,halts,history]
+    python -m chart_maps.gajjala.nightly [--session YYYY-MM-DD] [--steps floats,halts,history,grade]
 
 The pass (run.py) computes the bounded in-pass part; this job does the rest once the tape is shut, for tomorrow:
   floats   every name listed tomorrow (qualified today or the session before — scanner.listed_symbols) + tonight's
@@ -14,7 +14,12 @@ The pass (run.py) computes the bounded in-pass part; this job does the rest once
            A failed read is retried the next night; nothing is marked read on a failure — and a read with ZERO
            halts that day counts as failed (probed sessions: 28 to 95; an empty list is a feed miss, not a calm day).
   history  the 🎾 chip for every name above, stored under TOMORROW's date (the session it is shown in).
-Writes only the gajjala_* collections. Read-only on every provider. Idempotent: a second run the same night reads
+  grade    🏁 the Track record (2026-10-16, ledger.grade_step) — LAST, in its own try: every 🧠 push that rang and every
+           A+ shadow / live claim of the last LEDGER_GRADE_LOOKBACK_SESSIONS market days whose column has ended is
+           graded by GG's trade math into gajjala_ledger (same session on the night it ends, next session the night
+           after). The existing 20:15 crontab line runs it — it passes no --steps, so every STEPS entry runs.
+Writes only the gajjala_* collections + the house `intraday_cache` (the loader caches a completed day it fetched);
+one Massive splits call per walked next-session row. Read-only on every other provider. Idempotent: a second run the same night reads
 nothing new (halts) and serves the stored chips (history).
 """
 from __future__ import annotations
@@ -34,7 +39,7 @@ from . import context as CX
 log = logging.getLogger("chart_maps.gajjala.nightly")
 
 ET = ZoneInfo("America/New_York")
-STEPS = ("floats", "halts", "history")
+STEPS = ("floats", "halts", "history", "grade")           # 🏁 grade LAST (2026-10-16): its failure never stops a step
 
 
 def default_session(now: Optional[datetime] = None) -> date:
@@ -105,8 +110,10 @@ def names_for_tomorrow(store, session: date) -> tuple:
 def run(session: Optional[date] = None, *, store=None, now: Optional[datetime] = None, steps=STEPS,
         fetch_halts: Optional[Callable] = None, daily_loader: Optional[Callable] = None,
         status_lookup: Optional[Callable] = None, massive_lookup: Optional[Callable] = None,
-        sleep: Callable = time.sleep) -> dict:
-    """The three steps for `session` (default: today ET / the last market day). -> a summary dict (+ `errors`)."""
+        sleep: Callable = time.sleep, ledger_load_day: Optional[Callable] = None,
+        ledger_split_lookup: Optional[Callable] = None) -> dict:
+    """The four steps for `session` (default: today ET / the last market day). -> a summary dict (+ `errors`).
+    `ledger_load_day` / `ledger_split_lookup` are the 🏁 grade step's injectable loaders (ledger.grade_step)."""
     from catalysts.medical.reaction import next_market_day
 
     from . import store as ST
@@ -143,6 +150,13 @@ def run(session: Optional[date] = None, *, store=None, now: Optional[datetime] =
         except Exception as exc:                                # noqa: BLE001
             log.exception("gajjala nightly: history step failed")
             out["errors"].append(f"history: {type(exc).__name__}")
+    if "grade" in steps:                                         # LAST (the B8 pattern): its failure never stops a step
+        try:
+            from . import ledger as LG
+            out["grade"] = LG.grade_step(store, now, load_day=ledger_load_day, split_lookup=ledger_split_lookup)
+        except Exception as exc:                                # noqa: BLE001
+            log.exception("gajjala nightly: grade step failed")
+            out["errors"].append(f"grade: {type(exc).__name__}")
     return out
 
 

@@ -95,20 +95,31 @@ describe('GajjalaBoard — 🧠 Potential (golden fixture)', () => {
   beforeEach(() => { chartProps.length = 0; });
   afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-  it('9 sub buttons on the golden payload — 🧠 Potential LAST, the other 8 in their served order', async () => {
+  // WIDENED 2026-10-16 — 🏁 Track record is the TENTH sub, LAST (Ajay "keep a new tab", BUILD_SPEC9 §3.11);
+  // 🧠 Potential is btns[8] and keeps its served text.
+  it('10 sub buttons on the golden payload — 🧠 Potential ninth, 🏁 Track record LAST, the other 8 in their served order', async () => {
     stubFetch(from(GOLD, 'potential'));
     const { container } = mount('tab=gajjala&sub=potential');
     await loaded(container);
     const btns = screen.getAllByRole('tab').filter((b) => b.getAttribute('data-testid')?.startsWith('gg-sub-'));
-    expect(btns).toHaveLength(9);
+    expect(btns).toHaveLength(10);
     expect(btns.map((b) => b.getAttribute('data-testid'))).toEqual(GOLD.potential.subs.map((s: any) => `gg-sub-${s.key}`));
     expect(GOLD.potential.subs.map((s: any) => s.key).slice(0, 8)).toEqual(
       ['bull_flag', 'kiss_fly', 'horizontal_fade', 'intraday_vcp', 'reversal_squeeze', 'premarket', 'postmarket', 'playbook']);
+    const pot = btns[8];
+    const servedPot = GOLD.potential.subs[8];
+    expect(servedPot.key).toBe('potential');
+    expect(typeof servedPot.count).toBe('number');
+    expect(pot.textContent).toBe(`${servedPot.emoji} ${servedPot.label} · ${servedPot.count}`);
+    expect(pot.textContent).toMatch(/^\u{1F9E0} Potential/u);
+    expect(pot).toHaveAttribute('aria-selected', 'true');
     const last = btns[btns.length - 1];
     const served = GOLD.potential.subs[GOLD.potential.subs.length - 1];
+    expect(served.key).toBe('track_record');
+    expect(typeof served.count).toBe('number');
     expect(last.textContent).toBe(`${served.emoji} ${served.label} · ${served.count}`);
-    expect(last.textContent).toMatch(/^\u{1F9E0} Potential/u);
-    expect(last).toHaveAttribute('aria-selected', 'true');
+    expect(last.textContent).toMatch(/^\u{1F3C1} Track record/u);
+    expect(last).toHaveAttribute('aria-selected', 'false');
   });
 
   it('setup sub: the 🧠 strip — served title, served definition folded, rows in SERVED order with SERVED text', async () => {

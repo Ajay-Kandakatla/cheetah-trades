@@ -164,6 +164,8 @@ def test_invalid_and_none_reads_are_counted_never_tiled():
     assert c["awaiting_answer"] == 0
     sub = {s["key"]: s["count"] for s in out["subs"]}
     assert sub["bull_flag"] == len(EXPECTED) and sub["kiss_fly"] == 0 and sub["playbook"] is None
+    # WIDENED 2026-10-16 — 🏁 Track record (the tenth sub, LAST) serves an int chip count (ledger.count_today)
+    assert isinstance(sub["track_record"], int) and not isinstance(sub["track_record"], bool)
     assert [s["key"] for s in out["subs"]] == [k for k, _e, _l in GC.SUBS]
 
 
@@ -596,6 +598,11 @@ def test_the_route_never_scans_or_fetches(monkeypatch):
     body = json.loads(run_route(API.chart_maps_gajjala(sub="bull_flag", tf="5m", focus="", sort="",
                                                          limit=3)).body)
     assert [t["symbol"] for t in body["tiles"]] == EXPECTED[:3]
+    # WIDENED 2026-10-16 — every sub EXCEPT 🏁 track_record: 🏁 reads today's 1-minute bars on its own sub only
+    # (ledger.today_read; its own route tests inject the loader — tests/test_gajjala_track_record_tab.py)
+    for k in [k for k, _e, _l in GC.SUBS if k != GC.LEDGER_SUB]:
+        body = json.loads(run_route(API.chart_maps_gajjala(sub=k, tf="", focus="", sort="", limit=3)).body)
+        assert body["sub"] == k, k
 
 
 def test_limit_caps_the_tiles_and_route_limit_bounds_are_the_board_ones():

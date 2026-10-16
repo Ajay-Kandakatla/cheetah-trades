@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import re
+from datetime import date, datetime, time, timedelta
 
 import pytest
 
@@ -50,8 +52,11 @@ def test_pins_against_the_house_engines():
 
 def test_subs_and_setups():
     # WIDENED 2026-10-15 — 🧠 Potential appended LAST (Ajay msg 1 "create a potential category"; nothing else moves)
-    assert tuple(k for k, _e, _l in GC.SUBS) == GC.SETUPS + ("premarket", "postmarket", "playbook", "potential")
-    assert GC.SUBS[-1] == ("potential", "🧠", "Potential") and GC.POTENTIAL_SUB == GC.SUBS[-1][0]
+    # WIDENED 2026-10-16 — 🏁 Track record appended LAST (Ajay "keep a new tab"); 🧠 Potential is now second to last
+    assert tuple(k for k, _e, _l in GC.SUBS) == GC.SETUPS + ("premarket", "postmarket", "playbook", "potential",
+                                                             "track_record")
+    assert GC.SUBS[-1] == ("track_record", "🏁", "Track record") and GC.LEDGER_SUB == GC.SUBS[-1][0]
+    assert GC.SUBS[-2] == ("potential", "🧠", "Potential") and GC.POTENTIAL_SUB == GC.SUBS[-2][0]
     assert GC.DEFAULT_SUB in GC.SETUPS
     assert set(GC.PLACEHOLDER_BY_SETUP) <= set(GC.SETUPS)
     assert {h for hs in GC.PLACEHOLDER_BY_SETUP.values() for h in hs} <= set(GC.PLACEHOLDERS)
@@ -245,3 +250,117 @@ def test_NEGATIVE_no_on_open_number_is_filed_as_ggs():
     for n in ("ON_DEMAND_REUSE_SEC", "ON_DEMAND_BUDGET_SEC", "CRON_WAIT_ON_DEMAND_SEC", "ON_DEMAND_POLL_SEC",
               "ON_DEMAND_WAIT_MAX_SEC"):
         assert not _comment(lines[n]).startswith("GG"), n
+
+
+# ── 🏁 Track record (DECISIONS9 D1–D10 + AMENDMENTS9 E1/E2/E4/E8/E9 — 2026-10-16) ───────────────────────────────────
+# Ajay 2026-10-16: "also can you track all Gajjals stocks and keep a new tab to show wins vs losses. To see a percentage
+# and the ticker." / "We are not looking for winners just in time but when they got in to our alerts if they made it or
+# not. Like XLAB today was a winner I made good money on it"
+CRONTAB = pathlib.Path(__file__).resolve().parents[1] / "crontab"
+LEDGER_HIS = ("LEDGER_SUB", "LEDGER_R_MULT", "LEDGER_HORIZONS", "LEDGER_FILL_FROM_ET")
+LEDGER_MINE = ("LEDGER_MIN_R_PCT", "LEDGER_SPANS", "LEDGER_SPAN_DEFAULT", "LEDGER_SPAN_SESSIONS", "LEDGER_TODAY_MEMO_SEC",
+               "LEDGER_TODAY_MAX", "LEDGER_TODAY_MAX_NAMES", "LEDGER_TODAY_BUDGET_SEC", "LEDGER_GRADE_LOOKBACK_SESSIONS",
+               "LEDGER_BACKFILL_MAX_SYMBOL_DAYS", "LEDGER_GRADE_MAX_LOADS", "LEDGER_ROWS_MAX")
+MINE_TAGS = ("TRANSPORT — MINE", "derived — MINE", "Cheetah default (MINE")
+
+
+def _ledger_lines() -> dict:
+    return {n: ln for n, _v, ln in _assigns() if n.startswith("LEDGER_") and n != "LEDGER_TTL_DAYS"}
+
+
+def _nightly_cron_lines() -> list:
+    return [ln for ln in CRONTAB.read_text(encoding="utf-8").splitlines()
+            if "chart_maps.gajjala.nightly" in ln and not ln.lstrip().startswith("#")]
+
+
+def test_ledger_his_two_numbers_and_the_tags():
+    lines = _ledger_lines()
+    assert GC.LEDGER_R_MULT == 1.0 and GC.LEDGER_HORIZONS == ("same", "next")
+    assert GC.LEDGER_SUB == "track_record"
+    for n in LEDGER_HIS:
+        assert _comment(lines[n]).startswith("Ajay 2026-10-16"), (n, _comment(lines[n]))
+    assert '"GG\'s trade math"' in _comment(lines["LEDGER_R_MULT"]) and '"Both columns"' in _comment(lines["LEDGER_HORIZONS"])
+
+
+def test_ledger_fill_window_is_derived_from_his_15_minutes_and_the_house_clock():
+    """AMENDMENTS9 E1: fills only from 09:45 ET = the house RTH open + NO_TRADE_AFTER_OPEN_MIN (never a retyped 15)."""
+    from daytrading.data import ET_RTH_CLOSE, ET_RTH_OPEN
+    want = (datetime.combine(date(2026, 10, 16), ET_RTH_OPEN) + timedelta(minutes=GC.NO_TRADE_AFTER_OPEN_MIN)).time()
+    assert GC.LEDGER_FILL_FROM_ET == want == time(9, 45)
+    assert GC.LEDGER_FILL_TO_ET == ET_RTH_CLOSE == time(16, 0)
+    src = LINES[_ledger_lines()["LEDGER_FILL_FROM_ET"] - 1].split("#", 1)[0]
+    assert "NO_TRADE_AFTER_OPEN_MIN" in src and not re.search(r"\b(15|45)\b", src), src
+    assert _comment(_ledger_lines()["LEDGER_FILL_TO_ET"]).startswith("Cheetah default")
+
+
+def test_ledger_spans_default_and_the_derived_numbers():
+    assert GC.LEDGER_SPANS == ("today", "yesterday", "5d", "all")
+    assert GC.LEDGER_SPAN_DEFAULT == "5d" and GC.LEDGER_SPAN_DEFAULT in GC.LEDGER_SPANS      # AMENDMENTS9 E2
+    assert GC.LEDGER_SPAN_SESSIONS == 5
+    assert GC.LEDGER_TODAY_MEMO_SEC == GC.PASS_CADENCE_SEC
+    assert GC.LEDGER_MIN_R_PCT == 0.5                                                       # AMENDMENTS9 E4
+    assert GC.LEDGER_TODAY_MAX == 60 and GC.LEDGER_TODAY_MAX_NAMES == GC.LEDGER_TODAY_MAX     # AMENDMENTS9 E8
+    assert GC.LEDGER_BACKFILL_MAX_SYMBOL_DAYS == 120                                        # AMENDMENTS9 E9
+    assert GC.LEDGER_GRADE_MAX_LOADS == GC.LEDGER_BACKFILL_MAX_SYMBOL_DAYS
+    assert (GC.LEDGER_TODAY_BUDGET_SEC, GC.LEDGER_GRADE_LOOKBACK_SESSIONS, GC.LEDGER_ROWS_MAX) == (15, 10, 200)
+    assert GC.LEDGER_GRADE_VERSION == 1
+    assert GC.LEDGER_TTL_DAYS == 30                      # NAME TRAP: the 30-day TTL of gajjala_scan & co. — untouched
+
+
+def test_ledger_aliases_carry_no_second_number():
+    """One number per cap: the BUILD_SPEC9 §3.1 names are bound to the AMENDMENTS9 names, never retyped."""
+    for alias, src in (("LEDGER_TODAY_MAX_NAMES", "LEDGER_TODAY_MAX"),
+                       ("LEDGER_GRADE_MAX_LOADS", "LEDGER_BACKFILL_MAX_SYMBOL_DAYS"),
+                       ("LEDGER_TODAY_MEMO_SEC", "PASS_CADENCE_SEC")):
+        node = {n: v for n, v, _ln in _assigns()}[alias]
+        assert isinstance(node, ast.Name) and node.id == src, alias
+
+
+def test_ledger_grade_at_et_is_the_one_nightly_crontab_line_and_it_carries_no_steps():
+    cron = _nightly_cron_lines()
+    assert len(cron) == 1, cron
+    minute, hour = cron[0].split()[:2]
+    assert f"{int(hour):02d}:{int(minute):02d}" == GC.LEDGER_GRADE_AT_ET
+    assert "--steps" not in cron[0]
+
+
+def test_ledger_mine_numbers_carry_the_mine_tags():
+    lines = _ledger_lines()
+    for n in LEDGER_MINE:
+        c = _comment(lines[n])
+        assert c.startswith(MINE_TAGS), (n, c)
+    for n in ("LEDGER_MIN_R_PCT", "LEDGER_SPANS", "LEDGER_SPAN_DEFAULT", "LEDGER_SPAN_SESSIONS"):
+        assert "not GG" in _comment(lines[n]), n
+
+
+def test_NEGATIVE_no_ledger_comment_is_filed_as_ggs():
+    for n, ln in _ledger_lines().items():
+        assert not _comment(ln).startswith("GG"), n
+
+
+def test_NEGATIVE_the_mine_tag_guard_bites(monkeypatch):
+    import sys
+    ln = _ledger_lines()["LEDGER_MIN_R_PCT"]
+    fake = list(LINES)
+    fake[ln - 1] = "LEDGER_MIN_R_PCT = 0.5                   # GG S8 he skips thin risk"
+    monkeypatch.setattr(sys.modules[__name__], "LINES", fake)
+    with pytest.raises(AssertionError):
+        test_ledger_mine_numbers_carry_the_mine_tags()
+    with pytest.raises(AssertionError):
+        test_NEGATIVE_no_ledger_comment_is_filed_as_ggs()
+
+
+def test_NEGATIVE_a_second_nightly_line_or_a_steps_flag_fails_the_cron_pin(monkeypatch):
+    import sys
+    real = _nightly_cron_lines()[0]
+    monkeypatch.setattr(sys.modules[__name__], "_nightly_cron_lines", lambda: [real + " --steps floats"])
+    with pytest.raises(AssertionError):
+        test_ledger_grade_at_et_is_the_one_nightly_crontab_line_and_it_carries_no_steps()
+    monkeypatch.setattr(sys.modules[__name__], "_nightly_cron_lines", lambda: [real, real])
+    with pytest.raises(AssertionError):
+        test_ledger_grade_at_et_is_the_one_nightly_crontab_line_and_it_carries_no_steps()
+
+
+def test_NEGATIVE_the_constants_import_only_the_stdlib_datetime_besides_the_ema_pair():
+    mods = {a.name for node in ast.walk(TREE) if isinstance(node, ast.Import) for a in node.names}
+    assert mods == {"datetime"}, mods

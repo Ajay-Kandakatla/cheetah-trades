@@ -22,6 +22,13 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-16 (verbatim below). DECISIONS9 D1–D10 + AMENDMENTS9 E1–E10; his knob answers "GG's trade math",
+  // "Both columns", "Keep GG's math", "From 09:45 ET only". +1R = constants.LEDGER_R_MULT, the 15 minutes =
+  // constants.NO_TRADE_AFTER_OPEN_MIN (LEDGER_FILL_FROM_ET is built from it), 20:15 = constants.LEDGER_GRADE_AT_ET (= the
+  // nightly crontab line), the 5 sessions = LEDGER_SPAN_SESSIONS (the default span) — pinned by scripts/contracts.mjs
+  // ("🏁 Gajjala track record"). No XLAB outcome is typed here: the tab serves it.
+  { id: 'chart-maps-gajjala-track-record-2026-10-16', addedAt: '2026-10-16', route: '/chart-maps?tab=gajjala&sub=track_record',
+    label: '🏁 Track record on Gajjala’s tab — every alert that rang, win or loss. You said: “also can you track all Gajjals stocks and keep a new tab to show wins vs losses. To see a percentage and the ticker.” and “We are not looking for winners just in time but when they got in to our alerts if they made it or not. Like XLAB today was a winner I made good money on it”. Every 🧠 alert that rang is graded by GG’s trade math, your answers: the entry is the trigger the alert gave, filled on the first one-minute bar that trades at or through it once regular trading is 15 minutes old; a WIN reaches +1R (the trigger-to-stop distance) before the stop, a LOSS touches the stop first (a touch counts). Two columns side by side — the same session and through the next session — each row with the ticker, its win or loss and the best % from the fill. No entry, no plan and trigger = stop are listed, never counted. The A+ alerts were never sent (shadow) and sit on their own line, outside the %. Graded nightly at 20:15 ET; when you open it, today’s rows show a “today so far” read, not final. Opens on the last 5 sessions (Today, Yesterday and All one tap away). A ledger of the alerts as sent, not a backtest — small n, UNMEASURED; the 2026-10-14 study of the five setups read NULL.' },
   // Ajay 2026-10-16, three messages (verbatim below; the middle one is his XLAB screenshot pair — the card's "now 2.64"
   // against the ticker page's "$2.77 … Today · Live"). DECISIONS8 K1–K4 defaults. Every number is a constant: the 30
   // seconds = CARD_LIVE_MS and the 30 minutes = CARD_LIVE_CLOSED_MS (frontend/src/lib/cardLive.ts, read by

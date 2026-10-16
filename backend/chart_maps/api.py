@@ -451,20 +451,25 @@ async def chart_maps_ema_frames(
 @router.get("/chart-maps/gajjala")
 async def chart_maps_gajjala(
     sub: str = Query("", description="bull_flag (default) | kiss_fly | horizontal_fade | intraday_vcp | "
-                                     "reversal_squeeze | premarket | postmarket | playbook | potential. EMPTY with "
+                                     "reversal_squeeze | premarket | postmarket | playbook | potential | "
+                                     "track_record. EMPTY with "
                                      "a `focus` symbol = the server picks the sub the push or the read meant (the served "
                                      "`sub` is authoritative); an unknown value serves the default, never an error."),
     tf: str = Query("", description="5m | 15m — the tile bars (default 5m; 15m for the Horizontal Fade)."),
     focus: str = Query("", description="a symbol to deep-link to (the push url carries it)."),
     sort: str = Query("", description="☀️ Premarket only: volume (default, his ToS sort) | change."),
     limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
+    span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | all — an unknown "
+                                      "value serves the default."),
 ):
     """🚩 Gajjala's tab (2026-10-13) — Goverdhan Gajjala's five 5-minute setups over his scanner, ☀️ Premarket,
     🌙 Post-market and 📓 his Playbook. Ajay: "Name the Tab Gajjala's he has multiple strategies..around this."
 
     Served from Mongo ONLY: the 5-minute cron pass (`chart_maps.gajjala.run`) scans, loads bars and runs the
     detectors; this route reads what it stored (`gajjala.tab.build`) and adds ONE live fan-out for the shown tiles'
-    now-line, the Support-route pattern. Never scans, never fetches a bar. UNMEASURED; nothing here trades.
+    now-line, the Support-route pattern. Never scans and never fetches a bar — except, on 🏁 Track record only, ONE
+    1-minute read of today's alerted names (ledger.today_read, memo LEDGER_TODAY_MEMO_SEC, never written; Ajay
+    2026-10-16 "keep a new tab to show wins vs losses"). UNMEASURED; nothing here trades.
 
     Every argument is coerced: a direct call (container smoke test) receives the `Query` OBJECT itself.
     """
@@ -474,11 +479,21 @@ async def chart_maps_gajjala(
 
     def _run():
         lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
-        out = GT.build(sub if isinstance(sub, str) else "",
+        sub_s, span_s = (sub if isinstance(sub, str) else ""), (span if isinstance(span, str) else "")
+        today = None
+        if sub_s.strip().lower() == GC.LEDGER_SUB:                   # 🏁 only — every other sub stays Mongo-only
+            try:
+                from .gajjala import ledger as LG
+                today = LG.today_read(None, span=span_s)
+            except Exception as exc:                                # the board serves without it
+                log.debug("chart-maps/gajjala: track-record today read failed: %s", exc)
+                today = None
+        out = GT.build(sub_s,
                        tf=tf if isinstance(tf, str) else "",
                        focus=focus if isinstance(focus, str) else "",
                        sort=sort if isinstance(sort, str) else "",
-                       limit=max(1, min(lim, GC.TILE_LIMIT_MAX)))
+                       limit=max(1, min(lim, GC.TILE_LIMIT_MAX)),
+                       span=span_s, today=today)
         tiles = out.get("tiles") or []
         if tiles:
             try:

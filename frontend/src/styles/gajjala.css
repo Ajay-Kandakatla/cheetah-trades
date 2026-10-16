@@ -124,3 +124,36 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
   background: transparent; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 4px;
 }
 .gg-rescan:disabled { opacity: 0.5; cursor: default; }
+
+/* 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.11). Ajay: "also can you track all Gajjals stocks and keep a new tab to
+   show wins vs losses. To see a percentage and the ticker." / "We are not looking for winners just in time but when
+   they got in to our alerts if they made it or not. Like XLAB today was a winner I made good money on it". One table per
+   served day, the .gg-pb-sources look. Every word, count and percent in it is SERVED; the state classes are CSS hooks. */
+.gg-track-record { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8rem; }
+.gg-tr-scroll { overflow-x: auto; max-width: 100%; }
+.gg-tr-table { border-collapse: collapse; font-size: 0.8rem; width: 100%; font-variant-numeric: tabular-nums; }
+.gg-tr-table th {
+  text-align: left; font-weight: 600; padding: 0.2rem 0.4rem; white-space: nowrap;
+  color: var(--ink-subtle, #94a3b8); border-bottom: 1px solid var(--hairline, rgba(26, 26, 26, 0.12));
+}
+.gg-tr-table td {
+  padding: 0.2rem 0.4rem; border-top: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); vertical-align: top;
+  white-space: nowrap;
+}
+.gg-tr-cell small { display: block; color: var(--ink-subtle, #94a3b8); font-size: 0.72rem; }
+.gg-tr-plan .gg-muted { display: block; }
+.gg-tr-win { color: var(--positive, #22c55e); font-weight: 600; }
+.gg-tr-loss { color: var(--negative, #ef4444); font-weight: 600; }
+.gg-tr-open, .gg-tr-flat, .gg-tr-pending, .gg-tr-no_entry, .gg-tr-no_plan, .gg-tr-no_risk, .gg-tr-no_time, .gg-tr-split {
+  color: var(--ink-subtle, #94a3b8);
+}
+.gg-tr-prov { font-style: italic; }
+.gg-tr-kind { display: inline-block; padding: 0 0.4rem; border-radius: 999px; font-size: 0.74rem; }
+.gg-tr-live { border: 1px solid var(--hairline-strong, rgba(26, 26, 26, 0.22)); }
+.gg-tr-chip {
+  display: inline-block; margin-left: 0.3rem; padding: 0 0.35rem; border-radius: 999px; font-size: 0.7rem;
+  color: var(--ink-subtle, #94a3b8); border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12));
+}
+.gg-tr-shadow { border: 1px dashed var(--hairline-strong, rgba(26, 26, 26, 0.22)); color: var(--ink-subtle, #94a3b8); }
+.gg-tr-rule summary { cursor: pointer; color: var(--ink-subtle, #94a3b8); }
+.gg-tr-rule { font-size: 0.76rem; line-height: 1.4; }

@@ -152,6 +152,12 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential"
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record"
     }
    ],
    "tab": "gajjala",
@@ -1937,6 +1943,12 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential"
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record"
     }
    ],
    "tab": "gajjala",
@@ -2083,6 +2095,12 @@
      "emoji": "🧠",
      "key": "potential",
      "label": "Potential"
+    },
+    {
+     "count": 0,
+     "emoji": "🏁",
+     "key": "track_record",
+     "label": "Track record"
     }
    ],
    "tab": "gajjala",

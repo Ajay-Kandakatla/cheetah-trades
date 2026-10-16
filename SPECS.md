@@ -564,8 +564,9 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
 - **Cron** (`backend/crontab`; the host copy is a separate install step — a deploy does not ship it):
   `1-56/5 4-20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` (the pass, `PASS_CADENCE_SEC`
   300, `PASS_OPEN_ET` 04:00–`PASS_CLOSE_ET` 20:05, TRANSPORT) and
-  `15 20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` (float, halt history, 🎾 history).
-- **Endpoint** `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=` (`limit` `TILE_LIMIT_DEFAULT` 24, max
+  `15 20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` (float, halt history, 🎾 history,
+  🏁 track-record grade — last step, 2026-10-16).
+- **Endpoint** `GET /chart-maps/gajjala?sub=&tf=&focus=&sort=&limit=&span=` (`span` 🏁 only, 2026-10-16) (`limit` `TILE_LIMIT_DEFAULT` 24, max
   `TILE_LIMIT_MAX` 80) → `tab.build()`: reads Mongo only (`gajjala_reads`, `gajjala_passes`, `gajjala_alerts`) plus one
   live fan-out for the shown tiles' now-line; never scans or fetches a bar on the request. `stale` after `STALE_AFTER_SEC`
   900. ℹ️ panel: `rules_info` section "gajjala", built from `constants.py`.
@@ -615,6 +616,54 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   (`latest_cron`) is within `STALE_AFTER_SEC` — opens alone never hide a dead cron (A10). Closed bars only. UNMEASURED.
   Doc: `docs/chart_maps/gajjala_on_open_scan_2026_10_15.md`; contracts "🔄 Gajjala scan on open + 🎯 A+ banner
   (2026-10-15)".
+
+### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
+Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a
+new tab to show wins vs losses. To see a percentage and the ticker."* and *"We are not looking for winners just in time
+but when they got in to our alerts if they made it or not. Like XLAB today was a winner I made good money on it"*. His
+knob answers: **"GG's trade math"**, **"Both columns"**, **"Keep GG's math"**, **"From 09:45 ET only"** (DECISIONS9 +
+AMENDMENTS9). **UNMEASURED — a ledger of the alerts as sent, not a backtest and not a study**; small n; the 2026-10-14
+study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this record does not change that. Not SEPA
+(source guard). Every number in `constants.py`, tagged: his `# Ajay 2026-10-16`, mine `# MINE` / `Cheetah default (MINE`.
+- **Rule** (GG's trade math, his answers): entry = the trigger the alert gave; the fill = the first 1-minute bar that
+  starts `BAR_SETTLE_SEC` 30 s or more after the alert, inside `LEDGER_FILL_FROM_ET`–`LEDGER_FILL_TO_ET` (09:45–16:00 ET —
+  09:45 is BUILT as `ET_RTH_OPEN` + `NO_TRADE_AFTER_OPEN_MIN`, never typed), whose high is at or above the trigger — at
+  the trigger, or at that bar's open on a gap. WIN = a later high reaches the fill + `LEDGER_R_MULT` 1.0 R (R = trigger −
+  stop as the alert gave them) before any low touches the stop. LOSS = the stop is touched first — a touch (`low ≤
+  stop`) counts, a bar printing both = loss, a stop in the fill minute = loss. Two columns (`LEDGER_HORIZONS` "same",
+  "next"): same session = through the regular close of the alert's day (an alert at or after the close: its next
+  regular session); through next session = the same walk to the regular close of the market day after that. The % =
+  best high after the fill vs the fill; the small % = the column's last close vs the fill. Listed, never counted: no
+  entry (the trigger never traded in the window), no plan (no trigger / stop on the alert), no risk (trigger = stop),
+  no alert time (E3: `at` → `claimed_at` → none). `LEDGER_MIN_R_PCT` 0.5 (MINE, HIS CALL Q16): R under 0.5% of the
+  trigger = "thin R" chip, graded, kept out of the %. Row chips "rang pre" / "rang RTH" / "rang AH" from the alert's
+  own stamp.
+- **Rows** (D1): every 🧠 `gajjala_potentials` doc whose push RANG (`push.state` "pushed"; joined / muted / never-pushed
+  are not rows) = the live line and the headline %; every A+ `gajjala_alerts` claim in state shadow = a separate "A+
+  shadow — never sent" line, counted on its own, never in the %. Counted per alert (XLAB on 10-16 = two rows).
+- **Storage** Mongo `gajjala_ledger` (`store.LEDGER`, `_id` `"{date}|{SYM}|{setup}|{kind}"`, kept, no TTL; top-level keys
+  `store.LEDGER_KEYS` only) — written ONLY by `ledger.grade_step` through `store.upsert_ledger`.
+- **Nightly grade** (`nightly.STEPS` … `"grade"` LAST, own try — its failure never stops a step): rides the EXISTING
+  `15 20 * * 1-5 … chart_maps.gajjala.nightly` line (`LEDGER_GRADE_AT_ET` "20:15"; no new crontab line, no `--steps`).
+  Re-reads the last `LEDGER_GRADE_LOOKBACK_SESSIONS` 10 market days; writes a column only once its horizon has ended;
+  at most `LEDGER_BACKFILL_MAX_SYMBOL_DAYS` 120 symbol-day loads a run (the rest "not graded yet", next night); a
+  provider failure / empty day leaves the column absent (retried), never "no entry"; each row in its own try. A decided
+  same column is walked again for the next column's best % (the trade itself copied). Split guard: a split between the
+  alert day and a column's end → that column reads "split — not graded"; a trade already decided in the same session
+  keeps its outcome and its best / close stay the same session's; an unread split check leaves the column for the next
+  night. `LEDGER_GRADE_VERSION` bump re-grades the window.
+- **Today read** (`ledger.today_read`, called by the GET on `sub=track_record` only — the one Gajjala GET that fetches
+  bars): today's rows without a stored same column, one 1-minute `daytrading.data.load_intraday(…, force=True)` per name,
+  at most `LEDGER_TODAY_MAX` 60 names, `LEDGER_TODAY_BUDGET_SEC` 15 s, memo `LEDGER_TODAY_MEMO_SEC` (= `PASS_CADENCE_SEC`),
+  closed minutes only, "through HH:MM" never past the read (E6), its own try (the board serves without it). NEVER
+  WRITES. Cells read "… so far · not final".
+- **Sub** `LEDGER_SUB` `track_record` = 🏁 Track record, LAST in `SUBS` (after 🧠 Potential); chip count = today's rows
+  graded (`ledger.count_today`). `?span=` `LEDGER_SPANS` today · yesterday · 5d · all, default `LEDGER_SPAN_DEFAULT`
+  "5d" (the last `LEDGER_SPAN_SESSIONS` 5 sessions — MINE, HIS CALL Q9); "all" = the alert dates of the rows (E7). Every
+  string served by `ledger.served_block` (title, rule, honesty, counts, cells); the FE (`TrackRecordPanel`) composes
+  nothing; a read fault serves `tab.TRACK_RECORD_FAULT`.
+- **HIS CALLS** Q0–Q16 + the carried items: `docs/gajjala/track_record_2026_10_16.md`. Contracts:
+  `scripts/contracts.mjs` "🏁 Gajjala track record (2026-10-16)". ✨ `chart-maps-gajjala-track-record-2026-10-16`.
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make
@@ -1006,7 +1055,7 @@ is bind-mounted read-only into `/app/crontab`. Container TZ = `America/New_York`
 | `*/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | Position + price alerts during market hours |
 | `0,5,10,15,20,25,30 16 * * 1-5` | `/usr/local/bin/python -m sepa.cli alerts` | First half-hour of 16:xx (post-close) |
 | `1-56/5 4-20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` | Gajjala's tab pass (04:01–20:01 ET, trading days) — scanner, closed 5/15-min bars, five detectors, SHADOW `gajjala_setup` ledger + 🧠 gajjala_potential pushes (LIVE). An owner opening the tab may add one on-open pass as an api-spawned subprocess (push gates dry; the cron waits ≤ 45 s for it, never refused). § 3 "Chart Maps — Gajjala's tab". |
-| `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm. |
+| `15 20 * * 1-5` | `/usr/local/bin/python -m market_hours.gate chart_maps.gajjala.nightly` | 20:15 ET — Gajjala float + halt-history + 🎾 squeeze-history warm + 🏁 track-record grade (2026-10-16, last step; same line, no new crontab entry). |
 | `2-57/5 9-15 * * 1-5` | `/usr/local/bin/python -m sepa.cli trade-flash-watch` | ⚡ Trade Flash zone bursts (self-gates `trade_flash.WATCH_OPEN_ET`–`WATCH_CLOSE_ET`, 09:32–16:00 ET), then — same line, same process, since 2026-10-14 — the 🎢 `tape_burst_highbeta` and 🗺️ `tape_burst_chartmaps` kinds (`--kinds`, `--dry-run`), and 🎚️ `tape_control` (2026-10-16). No new line: the kinds ride this one; deploy `cron` to carry their code. § 3 "Chart Maps — 🎢 High Beta tab", § 3 "Tape — 🎚️ buyers in control on pinned names". |
 
 **Two operational gotchas (load-bearing):**

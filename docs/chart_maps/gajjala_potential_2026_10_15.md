@@ -235,3 +235,5 @@ D2 / D9). Hermetic, in the api image:
 ```bash
 docker run --rm --network none --name cheetah-tmp-pytest-wpa -v /Users/ajay/clinet-test/wt-highbeta:/repo -w /repo/backend -e PYTHONDONTWRITEBYTECODE=1 cheetah-api:latest python -m pytest -q -p no:cacheprovider tests/test_gajjala_potential.py tests/test_gajjala_constants.py tests/test_gajjala_store.py tests/test_gajjala_run.py tests/test_gajjala_source_guard.py tests/test_gajjala_alerts.py
 ```
+
+2026-10-16 — every 🧠 push that rang is now graded win / loss by GG's trade math on the 🏁 Track record sub: `docs/gajjala/track_record_2026_10_16.md`.
