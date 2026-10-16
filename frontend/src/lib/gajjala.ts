@@ -311,7 +311,9 @@ export type GgBoard = {
   push?: { mode?: string | null; text?: string | null } | null;
   postmarket?: {
     unchecked_n?: number; unchecked_text?: string | null;
-    recap?: { title?: string | null; rows?: { symbol: string; text: string }[] } | null;
+    /** 🌙 A+ recap rows — `href` SERVED by tab.recap (= potential.deep_link, the setup card; 2026-10-16, DECISIONS10 D7);
+     *  absent on an older API. The FE guards it with ggHref and composes none. */
+    recap?: { title?: string | null; rows?: { symbol: string; setup?: string | null; text: string; href?: string | null }[] } | null;
   } | null;
   playbook?: GgPlaybook | null;
   /** 🧠 strip — setup subs only; absent on ☀️ / 🌙 / 📓 / 🧠 and on an older API. */

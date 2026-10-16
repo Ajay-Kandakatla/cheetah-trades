@@ -585,6 +585,7 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   headline % (an A+ exists only once the trade survived its entry bar, AMENDMENTS10 F3). UNMEASURED — the 2026-10-14
   study read NULL. Contracts "🎯 Gajjala entry live (2026-10-16)"; ✨ `chart-maps-gajjala-entry-live-2026-10-16`; HIS
   CALLS Q1–Q11 + deploy order: `docs/gajjala/entry_live_2026_10_16.md`.
+  - ☀️/🌙 movers and 🌙 A+ recap rows are router links — same place as other Gajjala rows (his answer; Ajay: *"Also in the after market movers under Gajjala's can you make sure I can click on them."*): a bar-less tile links its served `tile.href` through `withSource` + the back state (the charted tile's target), a recap row its served `href` = `potential.deep_link(sym, setup)` (`tab.recap`), both behind `ggHref`; CardExtras lines stay text; contracts 🎯 check 11.
 - **Cron** (`backend/crontab`; the host copy is a separate install step — a deploy does not ship it):
   `1-56/5 4-20 * * 1-5 /usr/local/bin/python -m market_hours.gate chart_maps.gajjala.run` (the pass, `PASS_CADENCE_SEC`
   300, `PASS_OPEN_ET` 04:00–`PASS_CLOSE_ET` 20:05, TRANSPORT) and

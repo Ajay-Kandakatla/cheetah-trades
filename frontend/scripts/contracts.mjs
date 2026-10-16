@@ -8688,6 +8688,18 @@ const CONTRACTS = [
       const doc = exists('../docs/gajjala/entry_live_2026_10_16.md') ? read('../docs/gajjala/entry_live_2026_10_16.md') : '';
       if (!doc) errs.push('docs/gajjala/entry_live_2026_10_16.md is missing');
       else for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'UNMEASURED', 'study_2026_10_13.md']) if (!doc.includes(need)) errs.push(`docs/gajjala/entry_live_2026_10_16.md must carry "${need}"`);
+      // 11. ☀️ / 🌙 movers clickable (commit 2) — "Also in the after market movers under Gajjala's can you make sure I can click on them." / "Same place as other Gajjala rows"
+      const MOVERS = "Also in the after market movers under Gajjala's can you make sure I can click on them.";
+      if (at >= 0) {
+        const end11 = nf.indexOf('" },', at);
+        if (!unesc(nf.slice(at, end11 < 0 ? undefined : end11 + 4)).includes(MOVERS)) errs.push('the 🎯 ✨ entry must quote the movers line verbatim');
+      }
+      // AMENDMENTS10 F10(b): comments are stripped first — a comment that names an anchor is not a rendered one
+      const boardCode = board.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '');
+      for (const m of boardCode.matchAll(/<a\s[^>]*>/g)) if (!/target="_blank"/.test(m[0])) errs.push(`GajjalaBoard renders an in-app <a> (${m[0].slice(0, 60)}…) — in-app links are router <Link> (no full-page reload)`);
+      if (!board.includes('data-testid={`gg-tile-link-${t.symbol}`}') || !/withSource\(ggHref\(t\.href\)/.test(board)) errs.push('the bar-less ☀️ / 🌙 tile must be a router <Link> through withSource(ggHref(t.href) …) — the charted tile\'s target');
+      if (!board.includes('data-testid={`gg-recap-row-${id}`}') || !/ggHref\(r\.href\)/.test(board)) errs.push('the 🌙 recap rows must link the SERVED href through ggHref');
+      if (!/"href": PT\.deep_link\(sym, setup\)/.test(tab)) errs.push('tab.recap must serve each row\'s href = potential.deep_link(sym, setup)');
       return errs;
     },
   },

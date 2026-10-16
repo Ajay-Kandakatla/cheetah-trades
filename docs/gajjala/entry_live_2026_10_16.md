@@ -165,6 +165,39 @@ pass wears no shadow chip). Hard-coded texts updated: the Notifications 🚩 / �
 - 🧠 potential pushes: 46 (10-15), 59 (10-16). The entry push adds about 4–7 a day on that tape.
 - Nothing in this build measures anything: no number, no CI, no placebo. The 🏁 ledger stays accounting.
 
+## ☀️ / 🌙 movers clickable
+
+Commit 2 (DECISIONS10 D7, BUILD_SPEC10 §4 WP-D). Ajay, 2026-10-16: *"Also in the after market movers under Gajjala's
+can you make sure I can click on them."* — click target: *"Same place as other Gajjala rows (Recommended)"* (his
+answer).
+
+Before: a ☀️ / 🌙 mover WITH bars was a `PatternChart` tile (a router link to `tile.href` = `/sepa/{SYM}?tab=supply`),
+but a mover WITHOUT bars (the usual case for movers — the name is not in `gajjala_reads`) printed a plain anchor, a
+full-page reload and the only non-router in-app link in `GajjalaBoard.tsx`; the 🌙 "Today's A+ recap" rows linked
+nowhere.
+
+Now (`frontend/src/components/GajjalaBoard.tsx`):
+- **Bar-less tile** → a router `<Link>` to `withSource(ggHref(t.href), 'chart-maps', location.search)` with the back
+  state `{from: /chart-maps?<the tab's own query>, label: 'Chart Maps'}` — the `PatternChart.tsx:235-236` glue, so the
+  charted and the bar-less tile land on the same page and ← Back returns to the same ☀️ / 🌙 sub (Ajay 2026-08-25: "back
+  button do not take me to the same place in these tabs"). testid `gg-tile-link-{SYM}`. An href `ggHref` rejects (not
+  an in-app path: `//host`, `https://…`, empty, null) renders the symbol as plain bold text.
+- **🌙 recap row** → a router `<Link to={ggHref(r.href)}>` around the unchanged row text; `href` is SERVED by
+  `tab.recap` = `potential.deep_link(sym, setup)` = `/chart-maps?tab=gajjala&sub={setup}&focus={SYM}` (the A+ push url,
+  what a 🏁 Track-record A+ row links). testid `gg-recap-row-{SYM}-{setup}`. No served href (an older API) or an unsafe
+  one → the row stays text.
+- **CardExtras lines** (the ☀️ / 🌙 served text under a tile) stay text — the tile is the link (D7c).
+- The FE composes no href; `lib/gajjala.ts` recap rows gained `setup?` / `href?`.
+
+Tests: `frontend/src/components/GajjalaBoard.movers_links.test.tsx` (clones of the hand fixture
+`gajjala_board_2026_10_13.json`, never edited; MemoryRouter + a location probe — a plain anchor never moves a
+MemoryRouter, so a landed pathname proves the router link). NEGATIVES: unsafe tile / recap hrefs render text, the
+unmodified fixture renders no recap link, the CardExtras lines carry no link, the 📓 external sources stay
+`target="_blank"` anchors. `GajjalaBoard.test.tsx` (the `gg-recap` text pin) passes untouched. Contracts 🎯 block
+check 11: the ✨ entry quotes the movers line verbatim; no in-app anchor in `GajjalaBoard.tsx` (comments stripped first,
+AMENDMENTS10 F10; only `target="_blank"` anchors allowed); the tile / recap testids + `withSource(ggHref(t.href)` +
+`ggHref(r.href)`; `tab.recap` serves `"href": PT.deep_link(sym, setup)`. HIS CALL Q10 (the back state, MINE).
+
 ## Deploy order (main session, after both commits are on main — DECISIONS10 D10, the LIVE-kind order)
 
 Step 1 — api + frontend, then the owner prefs DRY run:

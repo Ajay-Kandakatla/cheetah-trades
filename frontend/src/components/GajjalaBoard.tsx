@@ -79,9 +79,18 @@
  * the 🏁 panel prints the SERVED entries_text line right under the shadow line
  * (AMENDMENTS10 F3 — the live A+ entries on their own line, never pooled with
  * the 🧠 %); this file types no entry word. UNMEASURED.
+ *
+ * ☀️ / 🌙 movers clickable (2026-10-16, DECISIONS10 D7). Ajay: "Also in the
+ * after market movers under Gajjala's can you make sure I can click on them."
+ * — same place as other Gajjala rows (his answer). A bar-less ☀️ / 🌙 tile is a
+ * router Link to its SERVED tile.href (the charted tile's own target, through
+ * withSource + the back state — no full-page reload); a 🌙 A+ recap row is a
+ * router Link to its SERVED href (the setup card, tab.recap). Both pass ggHref
+ * first — an href that is not an in-app path renders the symbol as text. The
+ * CardExtras lines stay text (the tile is the link). The FE composes no href.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
 import { GrowthChip } from './GrowthChip';
@@ -95,6 +104,7 @@ import { outerChipsFor } from '../lib/outerChips';
 import { FOCUS_PARAM, parseFocus } from '../lib/growthArrivals';
 import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
+import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
   GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM,
   changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, isGgSetup, parseGgSub, parseGgTf,
@@ -116,6 +126,11 @@ const COUNT_WORDS: ReadonlyArray<[string, string]> = [
 
 export default function GajjalaBoard() {
   const [params, setParams] = useSearchParams();
+  /* The back-to-tab glue of PatternChart.tsx:235-236 (Ajay 2026-08-25: "back button do not take me to the same place
+   * in these tabs") — a bar-less ☀️ / 🌙 tile links the same way a charted tile does, state + ?from/from_q. */
+  const location = useLocation();
+  const carryQ = sanitizeSourceQuery(location.search);
+  const backTarget = carryQ ? `/chart-maps?${carryQ}` : '/chart-maps';
   const urlSub = parseGgSub(params.get(GG_SUB_PARAM));
   const tf = parseGgTf(params.get(GG_TF_PARAM));
   const focus = parseFocus(params.get(FOCUS_PARAM));
@@ -440,9 +455,16 @@ export default function GajjalaBoard() {
             <div className="gg-recap" data-testid="gg-recap">
               {board.postmarket.recap.title ? <strong>{board.postmarket.recap.title}</strong> : null}
               <ul>
-                {board.postmarket.recap.rows.map((r) => (
-                  <li key={`${r.symbol}-${r.text}`}><strong>{r.symbol}</strong> {r.text}</li>
-                ))}
+                {board.postmarket.recap.rows.map((r) => {
+                  const href = ggHref(r.href);
+                  const id = `${r.symbol}-${r.setup ?? ''}`;
+                  return (
+                    <li key={`${r.symbol}-${r.text}`} data-testid={`gg-recap-row-${id}`}>
+                      {href ? <Link to={href} className="gg-recap-link"><strong>{r.symbol}</strong> {r.text}</Link>
+                            : <><strong>{r.symbol}</strong> {r.text}</>}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}
@@ -482,7 +504,14 @@ export default function GajjalaBoard() {
                                     tileStudy: null,
                                   })} />
                   ) : (
-                    <div className="gg-row-head"><a href={t.href}>{t.symbol}</a>{t.name ? ` ${t.name}` : ''}</div>
+                    <div className="gg-row-head">
+                      {ggHref(t.href) ? (
+                        <Link to={withSource(ggHref(t.href)!, 'chart-maps', location.search)}
+                              state={{ from: backTarget, label: 'Chart Maps' }}
+                              data-testid={`gg-tile-link-${t.symbol}`}>{t.symbol}</Link>
+                      ) : <strong>{t.symbol}</strong>}
+                      {t.name ? ` ${t.name}` : ''}
+                    </div>
                   )}
                   <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} />
                 </div>
