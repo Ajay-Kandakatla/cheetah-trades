@@ -726,12 +726,18 @@ ALLOWED = {"chart_maps/board.py", "chart_maps/api.py", "supply_demand/key_level_
            # 🔻 Down 10%+ today (2026-10-05): KL.prev_market_day / levels_session /
            # _norm_index for the session dates — display only.
            "chart_maps/drop10_tab.py",
+           # 🕯️ Doji Sweep tab (2026-10-16, WIDENED): display only, reuses the
+           # session / closed-bar / prev_market_day engine for the read day
+           "chart_maps/doji_sweep_tab.py",
            # 🔗 Leveraged-ETF tags (2026-10-14): display only, reuses ET /
            # prev_market_day / _day_mmdd for the read day and the as-of words
            "sepa/levered_etf.py",
            # 🧱 zone-pad study (2026-09-30): a read-only research replay that
            # reuses the key-level break test; never on a push or lane path
-           "scripts/zone_pad_study_2026_09_30.py"}
+           "scripts/zone_pad_study_2026_09_30.py",
+           # 🕯️ Doji Sweep study (2026-10-16, WIDENED): a read-only research replay
+           # that reuses the session / roll / closed-bar engine of the tab it measures
+           "scripts/doji_sweep_study.py"}
 
 
 def test_import_guard_display_only():

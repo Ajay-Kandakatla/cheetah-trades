@@ -55,6 +55,7 @@ MEMO_BLOCK_KEY = {
     "fallen": "fallen_board",
     "drop10": "drop10_board",
     "high_beta": "high_beta_board",
+    "doji_sweep": "doji_sweep_board",      # 🕯️ Doji Sweep (2026-10-16)
 }
 # Memo tabs whose TTL is ONE module constant, read by name at call time.
 _MEMO_TTL_MODULE = {
@@ -63,6 +64,7 @@ _MEMO_TTL_MODULE = {
     "ath": "ath_tab",
     "resiliency": "resiliency_tab",
     "fallen": "fallen_tab",
+    "doji_sweep": "doji_sweep_tab",        # 🕯️ (2026-10-16) — one fixed MEMO_TTL_SEC
 }
 BONDE_TAB = "bonde"
 PROJECTION = {"_id": 1, "symbols": 1, "built_at": 1, "source_as_of": 1,

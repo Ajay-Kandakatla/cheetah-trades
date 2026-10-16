@@ -28,8 +28,10 @@ import type { BondePick } from './bondePicks';
 import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM } from './gajjala';
 import { HB_ALL_ON, HB_ALL_PARAM, HB_DIR_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, HB_OWN_PARAMS, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL } from './highBeta';
 import type { CmHbTileFilter, CmHighBetaBoard, CmHighBetaRead, CmHighBetaRow } from './highBeta';
+import type { CmDojiSweepBoard, CmDojiSweepRead } from './dojiSweep';
+import { DJ_BODY_PARAM, DJ_FILTER_PARAM, DJ_OWN_PARAMS } from './dojiSweep';
 
-export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala';
+export type CmTab = 'bonde' | 'keltner' | 'amd' | 'holdings' | 'vcp' | 'topping' | 'zones' | 'supply' | 'ict' | 'deep_demand' | 'quick_bounce' | 'breaking' | 'session' | 'gabbar' | 'undervalue' | 'support' | 'zero_dte' | 'winners' | 'earnings' | 'overnight' | 'signals' | 'catalysts' | 'hot_pullback' | 'hot_sectors' | 'growth' | 'patterns' | 'gnt' | 'ipo' | 'potus' | 'ema_frames' | 'news' | 'key_levels' | 'dual_momentum' | 'ath' | 'resiliency' | 'fallen' | 'drop10' | 'high_beta' | 'gajjala' | 'doji_sweep';
 // Order = MOST-USED FIRST (Ajay 2026-09-06: "Move most used tabs to the
 // beginning of the list"). Nothing had ever recorded which tab was open —
 // page views log the pathname only, the API keeps no access log — so this
@@ -135,6 +137,12 @@ export const CM_TABS: CmTab[] = ['zones', 'deep_demand', 'quick_bounce', 'breaki
   // tabUsageKey counts it from the first open and the next re-cut moves it on
   // the evidence. Label and slot are his call (gajjala spec §7 #18).
   'gajjala',
+  // 🕯️ Doji Sweep (Ajay 2026-10-16: "create me a new tab for Doji candle after
+  // a sweep. For any stocks after a down trend. May be from all chart maps
+  // especially on the 60% 70% down stocks"). Right after 🚩 Gajjala's, before
+  // 〰️ 9 EMA · W/M — TAB ORDER IS EARNED; tabUsageKey counts it from the first
+  // open. Label and slot are his call (doji spec §7 Q1).
+  'doji_sweep',
   // 〰️ 9 EMA · W/M (Ajay 2026-09-23: "Also a new tab for 9EMA lines on our
   // charts for weekly charts and monthly charts please"). It draws the same
   // names the ⚡ Signals tab runs on, one bar size up, so it sits with the
@@ -370,6 +378,16 @@ export const TAB_META: Record<CmTab, { label: string; blurb: string }> = {
   gajjala: {
     label: "Gajjala's",
     blurb: 'Goverdhan Gajjala\u2019s five 5-minute setups over HIS scanner on the whole US market, with \u2600\uFE0F Premarket, \u{1F319} Post-market and \u{1F4D3} his Playbook \u2014 UNMEASURED, his rules as he described them, not a forecast. Ajay 2026-10-13: "Name the Tab Gajjala\'s he has multiple strategies..around this. He is volume and price action based traded with short squeeze. He also has premarket and post market analysis." and "Implement his full stategy do not assume anything." THE LIST is his scanner, run on one whole-market snapshot every 5 minutes from 04:00 to 20:00 ET on trading days: common stock and ADRs priced $0.10\u2013$100 with 1M+ shares traded today and up 25%+ on the prior regular close. A name stays listed 2 sessions (Cheetah default, not his) after it last qualified. THE SUB-TABS are his five setups \u2014 \u{1F6A9} Bull Flag, \u{1F48B} EMA Kiss & Fly, \u2796 Horizontal Fade, \u{1F300} Intraday VCP, \u{1F3BE} Reversal Squeeze \u2014 each read on CLOSED 5-minute bars (the Fade on 15-minute first) with his 9 and 21 EMAs, plus the premarket movers, the after-hours movers and the Playbook: his own words with the video and timestamp they came from, what he avoids, and the exits he takes by hand (never computed here). EACH CARD shows the setup\u2019s state \u2014 A+ when every rule is met and the entry bar traded through the trigger and closed \u2014 the trigger, the stop and the risk, every criterion ticked or crossed with its number, and the float, the float rotation, halts, the $1 / $5 / $10 levels just above, and the \u23F3 first-15-minutes line (he does not trade the open). Numbers he never gave are Ajay\u2019s (K1\u2013K10, 2026-10-13). A+ alerts are recorded on /alerts in shadow \u2014 no A+ rings a phone until the study reads. The \u{1F9E0} Potential sub-tab rolls up every name still forming in one of the five setups (each setup sub-tab has its own \u{1F9E0} strip), with a \u{1F4C8} Track of what each did after it was first seen; a potential rings your phone live, once per name, setup and session, 04:00\u201320:00 ET, never his first 15 minutes \u2014 UNMEASURED, a potential, not an entry. UNMEASURED \u2014 nothing here trades or enters a lane. Not advice.',
+  },
+  // 🕯️ Doji Sweep (Ajay 2026-10-16). Every number on the BOARD is served; the
+  // numbers in this blurb are pinned to doji_sweep_tab constants by the
+  // contracts. AMENDMENTS6 B14: the blurb opens "a scanner, not an entry" and
+  // never says "until the backtest lands" — the MEASURED / UNMEASURED line
+  // lives in the board header only (the served study line under it). Label =
+  // backend chart_maps/doji_sweep_tab.TAB_LABEL (contract-pinned).
+  doji_sweep: {
+    label: '\u{1F56F}\u{FE0F} Doji Sweep',
+    blurb: '\u{1F56F}\uFE0F a doji on a test of the prior low, after a downtrend \u2014 the measured read is on the board; a scanner, not an entry. Ajay 2026-10-16: "create me a new tab for Doji candle after a sweep. For any stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks" and "Within 5% either side counts as a test". THE LIST is every stock in the Chart Maps universe whose last closed daily candle is a doji \u2014 a body under 5% of the day\u2019s range, the app\u2019s own doji (a switch shows bodies under 10%) \u2014 with its low within 5% either side of the lowest low of the 20 sessions before it, that low at least 4 sessions old (Connors & Raschke\u2019s Turtle Soup, 1995), while in a downtrend: 60% or more under the 52-week high, 60% or more under the all-time high, or closing below both the 50- and 200-day averages. A session\u2019s candle joins after 20:00 ET, when the app counts the day\u2019s bar closed. EACH CARD shows the doji\u2019s shape (dragonfly, gravestone, long-legged or plain) and body, how far its low sat from the prior low and whether it undercut it and closed back above, every downtrend read it meets with its distance, the 50- and 200-day, the volume against its 50-day average and the demand band. THE CHIPS narrow it \u2014 40 / 60 / 70% off the 52-week high, 60% off the all-time high, below the 50- and 200-day, undercut and reclaimed \u2014 and every ticked chip must pass. THE LINE ABOVE THE CARDS says whether the pre-registered backtest has run and what it read, with its placebo and both CIs. Their claims: Bulkowski counts a doji in a downtrend as a 52% reversal, and US-stock studies found candle patterns alone add nothing. Nothing here gates, pushes or trades. Not advice.',
   },
   resiliency: {
     label: '\u{1F6E1}\u{FE0F} Resiliency',
@@ -1226,6 +1244,11 @@ export type CmTile = {
    *  β × drop and today's read (chart_maps/high_beta_tab.tile_block). Absent
    *  on every other tab. UNMEASURED. */
   high_beta?: CmHighBetaRead | null;
+  /** 🕯️ Doji Sweep tab only (2026-10-16): the candle read — shape, body, the
+   *  test of the prior low, the reads met, the averages, volume — served by
+   *  chart_maps/doji_sweep_tab.tile_block (+ `zone`, added by the board).
+   *  Absent on every other tab. UNMEASURED. */
+  doji_sweep?: CmDojiSweepRead | null;
   /** 🎢 High Beta tab only: the five boxes' per-tile read, server-decided. */
   hb_filter?: CmHbTileFilter | null;
   /** 📉 Down 40%+ tab only (2026-10-02): Bonde's pick legs exactly as the 📈
@@ -1666,6 +1689,10 @@ export type CmBoard = {
    *  QQQ line / order line / count line / boxes / note / table of every listed
    *  name HighBetaBoardNote prints. Absent on every other tab. */
   high_beta_board?: CmHighBetaBoard | null;
+  /** 🕯️ Doji Sweep tab only (2026-10-16): the served header / study line /
+   *  order line / count line / body switch / chips / reads legend / held-out
+   *  names DojiSweepBoardNote prints. Absent on every other tab. */
+  doji_sweep_board?: CmDojiSweepBoard | null;
   /** 🎢 High Beta tab only (A1): a compact row for EVERY listed name left
    *  after the view, the boxes and the floor, in the served order — the
    *  table above the charts. Absent on every other tab. */
@@ -1779,6 +1806,15 @@ export function tabSearch(params: URLSearchParams, t: CmTab): string {
     // and skips the write (final critic 2026-10-15). Dropped at the border too.
     const srt = next.get('sort');
     if (srt && srt.startsWith('hb_')) next.delete('sort');
+  }
+  // 🕯️ Doji Sweep's chips / body switch (`dj`, `dj_body`) mean nothing anywhere
+  // else — the 🎢 border rule: dropped crossing into or out of the tab, kept on
+  // a click on the tab it is already on. A doji sort (`sort=doji_*`) on another
+  // tab makes the membership snapshot skip its write, so it is dropped too.
+  if (from !== t && (from === 'doji_sweep' || t === 'doji_sweep')) {
+    for (const k of DJ_OWN_PARAMS) next.delete(k);
+    const srt = next.get('sort');
+    if (srt && srt.startsWith('doji_')) next.delete('sort');
   }
   // 🧭 `iz_open` (the open macro row on the strip, 2026-10-15) lives on zones
   // only. Keyed on the DESTINATION, never on `from`: zones is DEFAULT_TAB, so a
@@ -2310,6 +2346,10 @@ export function boardQuery(p: {
   hbDir?: string;
   uvView?: string;
   fallenDepth?: string;
+  /** 🕯️ 2026-10-16 — the ticked chips (canonical `dj`) and the body step
+   *  (`dj_body`, sent only when it is not the served default). */
+  djFilters?: string;
+  djBody?: string;
 }): string {
   const q = new URLSearchParams({ tab: p.tab });
   // Reaching vs already reached (Ajay 2026-08-31, extended same day to "all
@@ -2381,6 +2421,10 @@ export function boardQuery(p: {
   // 40% lowers …") — only on that tab, and only when the caller picked a
   // served step that is not the served default (fallen.depthToSend).
   if (p.tab === 'fallen' && p.fallenDepth) q.set(FALLEN_DEPTH_PARAM, p.fallenDepth);
+  // 🕯️ Doji Sweep (Ajay 2026-10-16: "Yes, any read; chips narrow") — the chips
+  // and the body switch ride on that tab only.
+  if (p.tab === 'doji_sweep' && p.djFilters) q.set(DJ_FILTER_PARAM, p.djFilters);
+  if (p.tab === 'doji_sweep' && p.djBody) q.set(DJ_BODY_PARAM, p.djBody);
   if (p.limit) q.set('limit', String(p.limit));
   if (p.days) q.set('days', String(p.days));
   // Both demand boards read ONE demand_reentry cache, so the universe

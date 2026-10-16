@@ -22,6 +22,11 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-16 (verbatim below). DECISIONS6 K1–K5: daily candles; any of three downtrend reads, chips narrow; his
+  // ±5% test; the house 5% doji; the 20-session / 4-session reference is Turtle Soup's (Cheetah default). Every number is
+  // a chart_maps/doji_sweep_tab.py constant — pinned by scripts/contracts.mjs ("🕯️ Doji Sweep tab").
+  { id: 'chart-maps-doji-sweep-2026-10-16', addedAt: '2026-10-16', route: '/chart-maps?tab=doji_sweep',
+    label: '🕯️ Doji Sweep — a new Chart Maps tab. You said: “create me a new tab for Doji candle after a sweep. For any stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks”. It lists every stock whose last closed daily candle is a doji (a body under 5% of the day’s range — the app’s own doji; a switch shows under 10%) with its low within 5% either side of the lowest low of the 20 sessions before it (your test; that low at least 4 sessions old — Turtle Soup), in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Each card names the reads it meets and whether the low undercut the prior low and closed back above. Chips narrow it: 40 / 60 / 70% off the 52-week high, off the all-time high, below the averages, undercut and reclaimed. The line on top says what the pre-registered backtest read — UNMEASURED until it lands, then its result with the placebo and both CIs. Pushes nothing. Not advice.' },
   // Ajay 2026-10-15 (verbatim below). DECISIONS5 K1–K4: A+ only (traded through the trigger, bar closed), an open never
   // rings (both push gates dry), the 🎯 line on every sub and first in 🧠 Potential, a pass under 60 s old is reused
   // (constants.ON_DEMAND_REUSE_SEC); the 5 = the gajjala.run crontab step — pinned by scripts/contracts.mjs.

@@ -701,6 +701,39 @@ constant, imported, never retyped; **Ajay** = his 2026-10-14 answers (DECISIONS 
   `trade_flash_events`). UNMEASURED.
 - **Docs**: `docs/chart_maps/high_beta_tab_2026_10_14.md`, `docs/alerts/tape_burst_kinds_2026_10_14.md`.
 
+### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)
+A doji after a test of the prior low, in a downtrend (Ajay: *"create me a new tab for Doji candle after a sweep. For any
+stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks"*). **UNMEASURED** until the
+pre-registered study reads (`scripts/doji_sweep_study.py`, prereg `docs/research/doji_sweep_study_2026_10_16.md`); the served
+line changes only through `chart_maps/doji_sweep_measured.py`. Tab key `TAB_KEY` "doji_sweep", label `TAB_LABEL` "🕯️ Doji
+Sweep", slot right after 🚩 Gajjala's (Chart Maps tab order: … 🎢 High Beta · 🚩 Gajjala's · 🕯️ Doji Sweep · 〰️ 9 EMA ·
+W/M …; `board.TABS` appends it last); block `doji_sweep_board`; a memo tab (`membership.MEMO_BLOCK_KEY`).
+- **Engine**: ONE pure `frame_features()` + `row_statuses()` — the tab reads the last closed bar (`KL.closed_frame`, the
+  20:00 ET roll), the study every bar. Fires on: a doji (body < `DOJI_BODY_PCT` = `scalping/candles.DOJI_BODY_PCT`, strict);
+  the low within `SWEEP_TEST_PCT` (Ajay) either side of the lowest low of the prior `SWEEP_REF_SESSIONS` sessions, that low
+  ≥ `SWEEP_REF_MIN_AGE` sessions old (Turtle Soup, Connors & Raschke 1995); ANY read — ≥ `DOWN_PCT` under the 52-week high
+  (📉 `fallen_tab.closed_read`), ≥ `DOWN_PCT` under the all-time high (🏔️ `ath_tab.closed_read`), close below the
+  `SMA_FAST`- and `SMA_SLOW`-day SMAs.
+- **Board**: ONE `bulk_cached_frames` find + ONE `ath_history.read_many` + ONE `ipo_age.listing_dates_map` in a memo thread
+  (first answer warming; `MEMO_TTL_SEC`); the request path = the body switch (`dj_body` 5 | 10), the chips (`dj`, every ticked
+  chip must pass: 52-week 40 / 60 / 70, all-time 60, below the averages, undercut and reclaimed), three orders (`default`,
+  `doji_test`, `doji_ath`), the house "ok" floor; ONE `_bulk_snaps` + ONE zone read over the shown pool. Writes nothing.
+  The card charts go through the board's shared `_attach_bars → prices.load_prices` path every board tab uses (AMENDMENTS6
+  B10). Counted, never listed: ETFs, delisted, stale bars, < `YEAR_BARS` sessions, scale glitches (named).
+- **No push**: `orderflow/tape_burst_kinds.EXCLUDED_TABS = ("doji_sweep",)` — the tab's names never ride the 🗺️
+  `tape_burst_chartmaps` watch (AMENDMENTS6 B3; his call Q15 to turn it on). No alert kind, no crontab change.
+- **Ledger**: the 17:20 `python -m patterns.history` run records every fired candle of the last `LEDGER_BACKFILL_SESSIONS`
+  closed sessions (`record_doji_sweeps`, kind `doji_sweep`, read `bullish_reversal_setup`, graded on the next
+  `CANDLE_HORIZON` sessions), after the existing kinds; `GET /patterns/accuracy` serves it under its own `doji_sweep` key
+  (headline = the 5% body at or above the floor; `doji_sweep_10pct` and `doji_sweep_thin` sub-blocks, never pooled), never
+  the 📐 page's candles.
+- **Study**: point-in-time over the `full` universe's cached bars with the same engine; matched placebo (same name, same
+  read set, k = 5, never inside an outcome window); every outcome also net of SPY over the same sessions; CIs by
+  `BLOCK_SESSIONS`-session date block (binding) and by name — a verdict word only when both agree; verdicts for exactly
+  three pre-registered cells (≥ 60% under the 52-week high · any read · a test without a doji), Holm-corrected; every other
+  cell exploratory, the ≥ 70% cell pre-declared too small; `--no-fetch` only, Mongo read-only; survivors-only.
+- **Docs**: `docs/chart_maps/doji_sweep_tab_2026_10_16.md`, `docs/research/doji_sweep_study_2026_10_16.md`.
+
 ---
 
 ## 4. Live Data Layer

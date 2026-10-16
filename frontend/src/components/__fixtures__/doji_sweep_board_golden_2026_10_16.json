@@ -1,0 +1,3223 @@
+{
+ "_recipe": "DJ_WRITE_GOLDEN=1 python -m pytest tests/test_doji_sweep_board.py -k golden",
+ "body10": {
+  "band_structure_coverage": {},
+  "band_structure_kind": "n/a",
+  "band_structure_study": {
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "count": 4,
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "doji_sweep_board": {
+   "as_of": "2026-10-15",
+   "body": {
+    "param": "dj_body",
+    "pct": 10,
+    "steps": [
+     {
+      "default": true,
+      "key": "5",
+      "label": "🕯️ Body under 5%",
+      "on": false,
+      "title": "The app's own doji (scalping/candles.py) — the body under 5% of the day's range"
+     },
+     {
+      "default": false,
+      "key": "10",
+      "label": "🕯️ Body under 10%",
+      "on": true,
+      "title": "A looser doji — the body under 10% of the range (PivotBoss, Liberated Stock Trader); the study reads both"
+     }
+    ]
+   },
+   "built_at": "2026-10-16T10:00:00-04:00",
+   "count_line": "Showing 4 — 1 under the liquidity floor (Tradeable · ≥$10M/day). Not listed: 0 whose candle was not a doji (a body of 10% of the range or more), 0 whose low sat more than 5% from the prior 20-session low, 0 whose prior 20-session low was set under 4 sessions before the candle, 0 meeting none of the three downtrend reads, 1 with a one-session close move of 5× or more in the last 252 sessions (named below — check before trusting), 1 ETFs, 0 delisted, 0 with fewer than 252 sessions of history, 1 whose cached bars end before 2026-10-15, 0 with a flat candle today (or an unreadable bar in the 20 sessions before it), 0 with no cached bars.",
+   "counts": {
+    "at_body": 5,
+    "bad_bars": 0,
+    "data_suspect": 1,
+    "delisted": 0,
+    "dropped_thin": 1,
+    "etf": 1,
+    "fired": 5,
+    "fired_earlier": 0,
+    "hidden_by_chips": 0,
+    "no_bars": 0,
+    "no_downtrend": 0,
+    "no_test": 0,
+    "no_turnover": 0,
+    "not_doji": 0,
+    "ref_too_fresh": 0,
+    "scanned": 8,
+    "short_history": 0,
+    "shown": 4,
+    "stale": 1,
+    "undercut": 2,
+    "wider_body": 0
+   },
+   "down_pct": 60.0,
+   "filter_param": "dj",
+   "filters": {
+    "active": [],
+    "hidden": 0,
+    "items": [
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "w52_40",
+      "label": "📉 ≥40% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 40% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 4
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_60",
+      "label": "📉 ≥60% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_70",
+      "label": "📉 ≥70% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 70% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "ath_60",
+      "label": "🏔️ ≥60% off the all-time high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the all-time high — the 🏔️ ATH tab's own read (monthly history to the listing plus the cached daily bars); a name whose history does not reach its listing is read against its high since its first bar, so the true distance is at least this. UNMEASURED.",
+      "on": false,
+      "pass": 4
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "mas",
+      "label": "Below the 50- and 200-day",
+      "no_read": 0,
+      "note": "Closed below both its 50-day and 200-day simple averages. UNMEASURED.",
+      "on": false,
+      "pass": 4
+     },
+     {
+      "fail": 4,
+      "hidden": 0,
+      "key": "reclaimed",
+      "label": "Undercut and reclaimed",
+      "no_read": 0,
+      "note": "The low went under the prior 20-session low and the close came back above it. UNMEASURED.",
+      "on": false,
+      "pass": 1
+     }
+    ],
+    "keys": [
+     "w52_40",
+     "w52_60",
+     "w52_70",
+     "ath_60",
+     "mas",
+     "reclaimed"
+    ],
+    "line": null,
+    "measured": false,
+    "mode": "all",
+    "note": "Ticked chips narrow the list — every ticked chip must pass. They gate nothing, push nothing and enter no lane.",
+    "passed_all": null,
+    "pool": 5,
+    "shown": null
+   },
+   "header": "🕯️ 5 of 8 names printed a doji on 2026-10-15 — a body under 10% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 5 tests · 2 undercut the low.",
+   "measured": false,
+   "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
+   "reads_legend": [
+    "📉 52-week: 60% or more under the highest intraday high of the last 252 closed sessions.",
+    "🏔️ All-time: 60% or more under the all-time high (monthly history to the listing plus the cached daily bars; “high since” when the history is short — the distance is then at least this).",
+    "Averages: the close under both the 50- and 200-day simple averages."
+   ],
+   "ref_min_age": 4,
+   "ref_sessions": 20,
+   "session": "2026-10-16",
+   "sma_fast": 50,
+   "sma_slow": 200,
+   "sort": "default",
+   "state": "ready",
+   "study": {
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "script": "backend/scripts/doji_sweep_study.py",
+    "status": "unmeasured",
+    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
+    "verdict": null
+   },
+   "suspects": {
+    "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
+    "lines": [
+     "GLCH — 1000.00 → 198.33 on 2026-05-27 (0.20× in one session)"
+    ],
+    "n": 1
+   },
+   "test_pct": 5.0,
+   "year_bars": 252
+  },
+  "enterable_kind": "n/a",
+  "enterable_study": {
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "explosive_study": {
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "matched": 4,
+  "min_tier": "ok",
+  "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort": "default",
+  "sort_unavailable": null,
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🕯️ Newest candle, deepest first"
+   },
+   {
+    "key": "doji_test",
+    "label": "📏 Closest to the prior low first"
+   },
+   {
+    "key": "doji_ath",
+    "label": "🏔️ Deepest under the all-time high first"
+   }
+  ],
+  "studies": {
+   "cited": false,
+   "families": [
+    "amd",
+    "fib",
+    "meanrev",
+    "keltner"
+   ],
+   "note": "AMD, Fibonacci, mean reversion and Keltner are chart conventions — uncited, never measured forward, and they gate nothing. Off by default."
+  },
+  "tab": "doji_sweep",
+  "tape_sorts": [
+   "retailimb",
+   "retailpct",
+   "dark"
+  ],
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "tiles": [
+   {
+    "avg_turnover": 116424043.0,
+    "badges": [
+     {
+      "text": "🕯️ Long-legged doji · body 7.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Low 0.50% above the prior 20-session low",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 116424043.0,
+     "ath": {
+      "hi": 401.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 75.18,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.07,
+     "close": 99.56,
+     "date": "2026-10-15",
+     "doji5": false,
+     "lower_wick_pct": 0.465,
+     "pct_below_52w": 71.79,
+     "pct_below_ath": 75.18,
+     "range_atr": 1.12,
+     "reads": [
+      "w52",
+      "ath",
+      "mas"
+     ],
+     "reads_text": "Reads met: 📉 71.79% under the 52-week high · 🏔️ 75.18% under the high since 2025-08-07 · below the 50- and 200-day",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 197.7933,
+     "sma50": 116.424,
+     "test_pct": 0.5,
+     "test_text": "Low 0.50% above the prior 20-session low",
+     "tested": true,
+     "undercut": false,
+     "upper_wick_pct": 0.465,
+     "variant": "long_legged",
+     "variant_text": "Long-legged doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 352.9395,
+      "high_date": "2025-10-15",
+      "pct_below": 71.79
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.56,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/WIDE?tab=supply",
+    "last_close": 99.56,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "WIDE Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Long-legged doji · upper wick 46% · lower wick 46% · range 1.1× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "352.94 · 2025-10-15 · 71.79% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "401.10 · 2025-08-07 · 75.18% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "116.42 / 197.79 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "WIDE",
+    "theme": null,
+    "why": "🕯️ Long-legged doji on 2026-10-15 · Low 0.50% above the prior 20-session low · Reads met: 📉 71.79% under the 52-week high · 🏔️ 75.18% under the high since 2025-08-07 · below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 116426443.0,
+    "badges": [
+     {
+      "text": "🕯️ Dragonfly doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 116426443.0,
+     "ath": {
+      "hi": 401.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 75.15,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.68,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.89,
+     "pct_below_52w": 71.76,
+     "pct_below_ath": 75.15,
+     "range_atr": 2.25,
+     "reads": [
+      "w52",
+      "ath",
+      "mas"
+     ],
+     "reads_text": "Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day",
+     "reclaimed": true,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 197.7939,
+     "sma50": 116.4264,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.09,
+     "variant": "dragonfly",
+     "variant_text": "Dragonfly doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 352.9395,
+      "high_date": "2025-10-15",
+      "pct_below": 71.76
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.68,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/DRAG?tab=supply",
+    "last_close": 99.68,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "DRAG Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Dragonfly doji · upper wick 9% · lower wick 89% · range 2.2× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "352.94 · 2025-10-15 · 71.76% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "401.10 · 2025-08-07 · 75.15% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "116.43 / 197.79 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "DRAG",
+    "theme": null,
+    "why": "🕯️ Dragonfly doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed back above it · Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 105856121.0,
+    "badges": [
+     {
+      "text": "🕯️ Doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Low 1.00% above the prior 20-session low",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 105856121.0,
+     "ath": {
+      "hi": 201.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 50.48,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.592,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.49,
+     "pct_below_52w": 46.18,
+     "pct_below_ath": 50.48,
+     "range_atr": 0.67,
+     "reads": [
+      "mas"
+     ],
+     "reads_text": "Reads met: below the 50- and 200-day",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 132.6931,
+     "sma50": 105.8561,
+     "test_pct": 1.0,
+     "test_text": "Low 1.00% above the prior 20-session low",
+     "tested": true,
+     "undercut": false,
+     "upper_wick_pct": 0.49,
+     "variant": "plain",
+     "variant_text": "Doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 185.0465,
+      "high_date": "2025-10-15",
+      "pct_below": 46.18
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.592,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/PLAN?tab=supply",
+    "last_close": 99.592,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "PLAN Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Doji · upper wick 49% · lower wick 49% · range 0.7× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "185.05 · 2025-10-15 · 46.18% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "201.10 · 2025-08-07 · 50.48% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "105.86 / 132.69 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "PLAN",
+    "theme": null,
+    "why": "🕯️ Doji on 2026-10-15 · Low 1.00% above the prior 20-session low · Reads met: below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 99446144.0,
+    "badges": [
+     {
+      "text": "🕯️ Gravestone doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed under it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 99446144.0,
+     "ath": {
+      "hi": 306.29999999999995,
+      "hi_date": "2015-06",
+      "label": "ATH",
+      "pct_below": 68.61,
+      "proven": true,
+      "since": "2015-03"
+     },
+     "below_mas": false,
+     "body_pct": 0.02,
+     "close": 96.15,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.09,
+     "pct_below_52w": 5.83,
+     "pct_below_ath": 68.61,
+     "range_atr": 0.56,
+     "reads": [
+      "ath"
+     ],
+     "reads_text": "Reads met: 🏔️ 68.61% under the all-time high",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 93.6157,
+     "sma50": 99.4461,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed under it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.89,
+     "variant": "gravestone",
+     "variant_text": "Gravestone doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 102.1,
+      "high_date": "2026-09-03",
+      "pct_below": 5.83
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 96.15,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/GRAV?tab=supply",
+    "last_close": 96.15,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "GRAV Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Gravestone doji · upper wick 89% · lower wick 9% · range 0.6× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "102.10 · 2026-09-03 · 5.83% under"
+     },
+     {
+      "k": "All-time high",
+      "v": "306.30 · 2015-06 · 68.61% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "99.45 / 93.62 · close above the 200-day"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "GRAV",
+    "theme": null,
+    "why": "🕯️ Gravestone doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed under it · Reads met: 🏔️ 68.61% under the all-time high · no demand band — no stored bands for this name"
+   }
+  ]
+ },
+ "default": {
+  "band_structure_coverage": {},
+  "band_structure_kind": "n/a",
+  "band_structure_study": {
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "count": 3,
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "doji_sweep_board": {
+   "as_of": "2026-10-15",
+   "body": {
+    "param": "dj_body",
+    "pct": 5,
+    "steps": [
+     {
+      "default": true,
+      "key": "5",
+      "label": "🕯️ Body under 5%",
+      "on": true,
+      "title": "The app's own doji (scalping/candles.py) — the body under 5% of the day's range"
+     },
+     {
+      "default": false,
+      "key": "10",
+      "label": "🕯️ Body under 10%",
+      "on": false,
+      "title": "A looser doji — the body under 10% of the range (PivotBoss, Liberated Stock Trader); the study reads both"
+     }
+    ]
+   },
+   "built_at": "2026-10-16T10:00:00-04:00",
+   "count_line": "Showing 3 — 1 under the liquidity floor (Tradeable · ≥$10M/day). 1 more have a body from 5% to under 10% (the “🕯️ Body under 10%” switch shows them). Not listed: 0 whose candle was not a doji (a body of 10% of the range or more), 0 whose low sat more than 5% from the prior 20-session low, 0 whose prior 20-session low was set under 4 sessions before the candle, 0 meeting none of the three downtrend reads, 1 with a one-session close move of 5× or more in the last 252 sessions (named below — check before trusting), 1 ETFs, 0 delisted, 0 with fewer than 252 sessions of history, 1 whose cached bars end before 2026-10-15, 0 with a flat candle today (or an unreadable bar in the 20 sessions before it), 0 with no cached bars.",
+   "counts": {
+    "at_body": 4,
+    "bad_bars": 0,
+    "data_suspect": 1,
+    "delisted": 0,
+    "dropped_thin": 1,
+    "etf": 1,
+    "fired": 5,
+    "fired_earlier": 0,
+    "hidden_by_chips": 0,
+    "no_bars": 0,
+    "no_downtrend": 0,
+    "no_test": 0,
+    "no_turnover": 0,
+    "not_doji": 0,
+    "ref_too_fresh": 0,
+    "scanned": 8,
+    "short_history": 0,
+    "shown": 3,
+    "stale": 1,
+    "undercut": 2,
+    "wider_body": 1
+   },
+   "down_pct": 60.0,
+   "filter_param": "dj",
+   "filters": {
+    "active": [],
+    "hidden": 0,
+    "items": [
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "w52_40",
+      "label": "📉 ≥40% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 40% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_60",
+      "label": "📉 ≥60% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_70",
+      "label": "📉 ≥70% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 70% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "ath_60",
+      "label": "🏔️ ≥60% off the all-time high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the all-time high — the 🏔️ ATH tab's own read (monthly history to the listing plus the cached daily bars); a name whose history does not reach its listing is read against its high since its first bar, so the true distance is at least this. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "mas",
+      "label": "Below the 50- and 200-day",
+      "no_read": 0,
+      "note": "Closed below both its 50-day and 200-day simple averages. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 3,
+      "hidden": 0,
+      "key": "reclaimed",
+      "label": "Undercut and reclaimed",
+      "no_read": 0,
+      "note": "The low went under the prior 20-session low and the close came back above it. UNMEASURED.",
+      "on": false,
+      "pass": 1
+     }
+    ],
+    "keys": [
+     "w52_40",
+     "w52_60",
+     "w52_70",
+     "ath_60",
+     "mas",
+     "reclaimed"
+    ],
+    "line": null,
+    "measured": false,
+    "mode": "all",
+    "note": "Ticked chips narrow the list — every ticked chip must pass. They gate nothing, push nothing and enter no lane.",
+    "passed_all": null,
+    "pool": 4,
+    "shown": null
+   },
+   "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
+   "measured": false,
+   "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
+   "reads_legend": [
+    "📉 52-week: 60% or more under the highest intraday high of the last 252 closed sessions.",
+    "🏔️ All-time: 60% or more under the all-time high (monthly history to the listing plus the cached daily bars; “high since” when the history is short — the distance is then at least this).",
+    "Averages: the close under both the 50- and 200-day simple averages."
+   ],
+   "ref_min_age": 4,
+   "ref_sessions": 20,
+   "session": "2026-10-16",
+   "sma_fast": 50,
+   "sma_slow": 200,
+   "sort": "default",
+   "state": "ready",
+   "study": {
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "script": "backend/scripts/doji_sweep_study.py",
+    "status": "unmeasured",
+    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
+    "verdict": null
+   },
+   "suspects": {
+    "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
+    "lines": [
+     "GLCH — 1000.00 → 198.33 on 2026-05-27 (0.20× in one session)"
+    ],
+    "n": 1
+   },
+   "test_pct": 5.0,
+   "year_bars": 252
+  },
+  "enterable_kind": "n/a",
+  "enterable_study": {
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "explosive_study": {
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "matched": 3,
+  "min_tier": "ok",
+  "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort": "default",
+  "sort_unavailable": null,
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🕯️ Newest candle, deepest first"
+   },
+   {
+    "key": "doji_test",
+    "label": "📏 Closest to the prior low first"
+   },
+   {
+    "key": "doji_ath",
+    "label": "🏔️ Deepest under the all-time high first"
+   }
+  ],
+  "studies": {
+   "cited": false,
+   "families": [
+    "amd",
+    "fib",
+    "meanrev",
+    "keltner"
+   ],
+   "note": "AMD, Fibonacci, mean reversion and Keltner are chart conventions — uncited, never measured forward, and they gate nothing. Off by default."
+  },
+  "tab": "doji_sweep",
+  "tape_sorts": [
+   "retailimb",
+   "retailpct",
+   "dark"
+  ],
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "tiles": [
+   {
+    "avg_turnover": 116426443.0,
+    "badges": [
+     {
+      "text": "🕯️ Dragonfly doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 116426443.0,
+     "ath": {
+      "hi": 401.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 75.15,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.68,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.89,
+     "pct_below_52w": 71.76,
+     "pct_below_ath": 75.15,
+     "range_atr": 2.25,
+     "reads": [
+      "w52",
+      "ath",
+      "mas"
+     ],
+     "reads_text": "Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day",
+     "reclaimed": true,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 197.7939,
+     "sma50": 116.4264,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.09,
+     "variant": "dragonfly",
+     "variant_text": "Dragonfly doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 352.9395,
+      "high_date": "2025-10-15",
+      "pct_below": 71.76
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.68,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/DRAG?tab=supply",
+    "last_close": 99.68,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "DRAG Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Dragonfly doji · upper wick 9% · lower wick 89% · range 2.2× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "352.94 · 2025-10-15 · 71.76% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "401.10 · 2025-08-07 · 75.15% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "116.43 / 197.79 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "DRAG",
+    "theme": null,
+    "why": "🕯️ Dragonfly doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed back above it · Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 105856121.0,
+    "badges": [
+     {
+      "text": "🕯️ Doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Low 1.00% above the prior 20-session low",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 105856121.0,
+     "ath": {
+      "hi": 201.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 50.48,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.592,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.49,
+     "pct_below_52w": 46.18,
+     "pct_below_ath": 50.48,
+     "range_atr": 0.67,
+     "reads": [
+      "mas"
+     ],
+     "reads_text": "Reads met: below the 50- and 200-day",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 132.6931,
+     "sma50": 105.8561,
+     "test_pct": 1.0,
+     "test_text": "Low 1.00% above the prior 20-session low",
+     "tested": true,
+     "undercut": false,
+     "upper_wick_pct": 0.49,
+     "variant": "plain",
+     "variant_text": "Doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 185.0465,
+      "high_date": "2025-10-15",
+      "pct_below": 46.18
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.592,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/PLAN?tab=supply",
+    "last_close": 99.592,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "PLAN Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Doji · upper wick 49% · lower wick 49% · range 0.7× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "185.05 · 2025-10-15 · 46.18% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "201.10 · 2025-08-07 · 50.48% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "105.86 / 132.69 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "PLAN",
+    "theme": null,
+    "why": "🕯️ Doji on 2026-10-15 · Low 1.00% above the prior 20-session low · Reads met: below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 99446144.0,
+    "badges": [
+     {
+      "text": "🕯️ Gravestone doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed under it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 99446144.0,
+     "ath": {
+      "hi": 306.29999999999995,
+      "hi_date": "2015-06",
+      "label": "ATH",
+      "pct_below": 68.61,
+      "proven": true,
+      "since": "2015-03"
+     },
+     "below_mas": false,
+     "body_pct": 0.02,
+     "close": 96.15,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.09,
+     "pct_below_52w": 5.83,
+     "pct_below_ath": 68.61,
+     "range_atr": 0.56,
+     "reads": [
+      "ath"
+     ],
+     "reads_text": "Reads met: 🏔️ 68.61% under the all-time high",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 93.6157,
+     "sma50": 99.4461,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed under it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.89,
+     "variant": "gravestone",
+     "variant_text": "Gravestone doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 102.1,
+      "high_date": "2026-09-03",
+      "pct_below": 5.83
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 96.15,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/GRAV?tab=supply",
+    "last_close": 96.15,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "GRAV Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Gravestone doji · upper wick 89% · lower wick 9% · range 0.6× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "102.10 · 2026-09-03 · 5.83% under"
+     },
+     {
+      "k": "All-time high",
+      "v": "306.30 · 2015-06 · 68.61% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "99.45 / 93.62 · close above the 200-day"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "GRAV",
+    "theme": null,
+    "why": "🕯️ Gravestone doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed under it · Reads met: 🏔️ 68.61% under the all-time high · no demand band — no stored bands for this name"
+   }
+  ]
+ },
+ "reclaimed": {
+  "band_structure_coverage": {},
+  "band_structure_kind": "n/a",
+  "band_structure_study": {
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "count": 1,
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "doji_sweep_board": {
+   "as_of": "2026-10-15",
+   "body": {
+    "param": "dj_body",
+    "pct": 5,
+    "steps": [
+     {
+      "default": true,
+      "key": "5",
+      "label": "🕯️ Body under 5%",
+      "on": true,
+      "title": "The app's own doji (scalping/candles.py) — the body under 5% of the day's range"
+     },
+     {
+      "default": false,
+      "key": "10",
+      "label": "🕯️ Body under 10%",
+      "on": false,
+      "title": "A looser doji — the body under 10% of the range (PivotBoss, Liberated Stock Trader); the study reads both"
+     }
+    ]
+   },
+   "built_at": "2026-10-16T10:00:00-04:00",
+   "count_line": "Showing 1 — 0 under the liquidity floor (Tradeable · ≥$10M/day). 3 hidden by the chips you ticked. 1 more have a body from 5% to under 10% (the “🕯️ Body under 10%” switch shows them). Not listed: 0 whose candle was not a doji (a body of 10% of the range or more), 0 whose low sat more than 5% from the prior 20-session low, 0 whose prior 20-session low was set under 4 sessions before the candle, 0 meeting none of the three downtrend reads, 1 with a one-session close move of 5× or more in the last 252 sessions (named below — check before trusting), 1 ETFs, 0 delisted, 0 with fewer than 252 sessions of history, 1 whose cached bars end before 2026-10-15, 0 with a flat candle today (or an unreadable bar in the 20 sessions before it), 0 with no cached bars.",
+   "counts": {
+    "at_body": 4,
+    "bad_bars": 0,
+    "data_suspect": 1,
+    "delisted": 0,
+    "dropped_thin": 0,
+    "etf": 1,
+    "fired": 5,
+    "fired_earlier": 0,
+    "hidden_by_chips": 3,
+    "no_bars": 0,
+    "no_downtrend": 0,
+    "no_test": 0,
+    "no_turnover": 0,
+    "not_doji": 0,
+    "ref_too_fresh": 0,
+    "scanned": 8,
+    "short_history": 0,
+    "shown": 1,
+    "stale": 1,
+    "undercut": 2,
+    "wider_body": 1
+   },
+   "down_pct": 60.0,
+   "filter_param": "dj",
+   "filters": {
+    "active": [
+     "reclaimed"
+    ],
+    "hidden": 3,
+    "items": [
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "w52_40",
+      "label": "📉 ≥40% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 40% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_60",
+      "label": "📉 ≥60% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_70",
+      "label": "📉 ≥70% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 70% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "ath_60",
+      "label": "🏔️ ≥60% off the all-time high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the all-time high — the 🏔️ ATH tab's own read (monthly history to the listing plus the cached daily bars); a name whose history does not reach its listing is read against its high since its first bar, so the true distance is at least this. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "mas",
+      "label": "Below the 50- and 200-day",
+      "no_read": 0,
+      "note": "Closed below both its 50-day and 200-day simple averages. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 3,
+      "hidden": 3,
+      "key": "reclaimed",
+      "label": "Undercut and reclaimed",
+      "no_read": 0,
+      "note": "The low went under the prior 20-session low and the close came back above it. UNMEASURED.",
+      "on": true,
+      "pass": 1
+     }
+    ],
+    "keys": [
+     "w52_40",
+     "w52_60",
+     "w52_70",
+     "ath_60",
+     "mas",
+     "reclaimed"
+    ],
+    "line": "Chips on (every ticked chip must pass) — Undercut and reclaimed: 1 pass, 3 hidden. 1 of 4 pass every ticked chip (each count is over all 4 names at this body).",
+    "measured": false,
+    "mode": "all",
+    "note": "Ticked chips narrow the list — every ticked chip must pass. They gate nothing, push nothing and enter no lane.",
+    "passed_all": 1,
+    "pool": 4,
+    "shown": 1
+   },
+   "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
+   "measured": false,
+   "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
+   "reads_legend": [
+    "📉 52-week: 60% or more under the highest intraday high of the last 252 closed sessions.",
+    "🏔️ All-time: 60% or more under the all-time high (monthly history to the listing plus the cached daily bars; “high since” when the history is short — the distance is then at least this).",
+    "Averages: the close under both the 50- and 200-day simple averages."
+   ],
+   "ref_min_age": 4,
+   "ref_sessions": 20,
+   "session": "2026-10-16",
+   "sma_fast": 50,
+   "sma_slow": 200,
+   "sort": "default",
+   "state": "ready",
+   "study": {
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "script": "backend/scripts/doji_sweep_study.py",
+    "status": "unmeasured",
+    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
+    "verdict": null
+   },
+   "suspects": {
+    "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
+    "lines": [
+     "GLCH — 1000.00 → 198.33 on 2026-05-27 (0.20× in one session)"
+    ],
+    "n": 1
+   },
+   "test_pct": 5.0,
+   "year_bars": 252
+  },
+  "enterable_kind": "n/a",
+  "enterable_study": {
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "explosive_study": {
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "matched": 1,
+  "min_tier": "ok",
+  "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort": "default",
+  "sort_unavailable": null,
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🕯️ Newest candle, deepest first"
+   },
+   {
+    "key": "doji_test",
+    "label": "📏 Closest to the prior low first"
+   },
+   {
+    "key": "doji_ath",
+    "label": "🏔️ Deepest under the all-time high first"
+   }
+  ],
+  "studies": {
+   "cited": false,
+   "families": [
+    "amd",
+    "fib",
+    "meanrev",
+    "keltner"
+   ],
+   "note": "AMD, Fibonacci, mean reversion and Keltner are chart conventions — uncited, never measured forward, and they gate nothing. Off by default."
+  },
+  "tab": "doji_sweep",
+  "tape_sorts": [
+   "retailimb",
+   "retailpct",
+   "dark"
+  ],
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "tiles": [
+   {
+    "avg_turnover": 116426443.0,
+    "badges": [
+     {
+      "text": "🕯️ Dragonfly doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 116426443.0,
+     "ath": {
+      "hi": 401.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 75.15,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.68,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.89,
+     "pct_below_52w": 71.76,
+     "pct_below_ath": 75.15,
+     "range_atr": 2.25,
+     "reads": [
+      "w52",
+      "ath",
+      "mas"
+     ],
+     "reads_text": "Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day",
+     "reclaimed": true,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 197.7939,
+     "sma50": 116.4264,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.09,
+     "variant": "dragonfly",
+     "variant_text": "Dragonfly doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 352.9395,
+      "high_date": "2025-10-15",
+      "pct_below": 71.76
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.68,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/DRAG?tab=supply",
+    "last_close": 99.68,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "DRAG Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Dragonfly doji · upper wick 9% · lower wick 89% · range 2.2× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "352.94 · 2025-10-15 · 71.76% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "401.10 · 2025-08-07 · 75.15% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "116.43 / 197.79 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "DRAG",
+    "theme": null,
+    "why": "🕯️ Dragonfly doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed back above it · Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day · no demand band — no stored bands for this name"
+   }
+  ]
+ },
+ "sort_test": {
+  "band_structure_coverage": {},
+  "band_structure_kind": "n/a",
+  "band_structure_study": {
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "count": 3,
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "doji_sweep_board": {
+   "as_of": "2026-10-15",
+   "body": {
+    "param": "dj_body",
+    "pct": 5,
+    "steps": [
+     {
+      "default": true,
+      "key": "5",
+      "label": "🕯️ Body under 5%",
+      "on": true,
+      "title": "The app's own doji (scalping/candles.py) — the body under 5% of the day's range"
+     },
+     {
+      "default": false,
+      "key": "10",
+      "label": "🕯️ Body under 10%",
+      "on": false,
+      "title": "A looser doji — the body under 10% of the range (PivotBoss, Liberated Stock Trader); the study reads both"
+     }
+    ]
+   },
+   "built_at": "2026-10-16T10:00:00-04:00",
+   "count_line": "Showing 3 — 1 under the liquidity floor (Tradeable · ≥$10M/day). 1 more have a body from 5% to under 10% (the “🕯️ Body under 10%” switch shows them). Not listed: 0 whose candle was not a doji (a body of 10% of the range or more), 0 whose low sat more than 5% from the prior 20-session low, 0 whose prior 20-session low was set under 4 sessions before the candle, 0 meeting none of the three downtrend reads, 1 with a one-session close move of 5× or more in the last 252 sessions (named below — check before trusting), 1 ETFs, 0 delisted, 0 with fewer than 252 sessions of history, 1 whose cached bars end before 2026-10-15, 0 with a flat candle today (or an unreadable bar in the 20 sessions before it), 0 with no cached bars.",
+   "counts": {
+    "at_body": 4,
+    "bad_bars": 0,
+    "data_suspect": 1,
+    "delisted": 0,
+    "dropped_thin": 1,
+    "etf": 1,
+    "fired": 5,
+    "fired_earlier": 0,
+    "hidden_by_chips": 0,
+    "no_bars": 0,
+    "no_downtrend": 0,
+    "no_test": 0,
+    "no_turnover": 0,
+    "not_doji": 0,
+    "ref_too_fresh": 0,
+    "scanned": 8,
+    "short_history": 0,
+    "shown": 3,
+    "stale": 1,
+    "undercut": 2,
+    "wider_body": 1
+   },
+   "down_pct": 60.0,
+   "filter_param": "dj",
+   "filters": {
+    "active": [],
+    "hidden": 0,
+    "items": [
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "w52_40",
+      "label": "📉 ≥40% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 40% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_60",
+      "label": "📉 ≥60% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_70",
+      "label": "📉 ≥70% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 70% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "ath_60",
+      "label": "🏔️ ≥60% off the all-time high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the all-time high — the 🏔️ ATH tab's own read (monthly history to the listing plus the cached daily bars); a name whose history does not reach its listing is read against its high since its first bar, so the true distance is at least this. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "mas",
+      "label": "Below the 50- and 200-day",
+      "no_read": 0,
+      "note": "Closed below both its 50-day and 200-day simple averages. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 3,
+      "hidden": 0,
+      "key": "reclaimed",
+      "label": "Undercut and reclaimed",
+      "no_read": 0,
+      "note": "The low went under the prior 20-session low and the close came back above it. UNMEASURED.",
+      "on": false,
+      "pass": 1
+     }
+    ],
+    "keys": [
+     "w52_40",
+     "w52_60",
+     "w52_70",
+     "ath_60",
+     "mas",
+     "reclaimed"
+    ],
+    "line": null,
+    "measured": false,
+    "mode": "all",
+    "note": "Ticked chips narrow the list — every ticked chip must pass. They gate nothing, push nothing and enter no lane.",
+    "passed_all": null,
+    "pool": 4,
+    "shown": null
+   },
+   "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
+   "measured": false,
+   "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "order_line": "Order: the low closest to the prior 20-session low first (either side), then the deepest under the 52-week high.",
+   "reads_legend": [
+    "📉 52-week: 60% or more under the highest intraday high of the last 252 closed sessions.",
+    "🏔️ All-time: 60% or more under the all-time high (monthly history to the listing plus the cached daily bars; “high since” when the history is short — the distance is then at least this).",
+    "Averages: the close under both the 50- and 200-day simple averages."
+   ],
+   "ref_min_age": 4,
+   "ref_sessions": 20,
+   "session": "2026-10-16",
+   "sma_fast": 50,
+   "sma_slow": 200,
+   "sort": "doji_test",
+   "state": "ready",
+   "study": {
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "script": "backend/scripts/doji_sweep_study.py",
+    "status": "unmeasured",
+    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
+    "verdict": null
+   },
+   "suspects": {
+    "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
+    "lines": [
+     "GLCH — 1000.00 → 198.33 on 2026-05-27 (0.20× in one session)"
+    ],
+    "n": 1
+   },
+   "test_pct": 5.0,
+   "year_bars": 252
+  },
+  "enterable_kind": "n/a",
+  "enterable_study": {
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "explosive_study": {
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "matched": 3,
+  "min_tier": "ok",
+  "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort": "doji_test",
+  "sort_unavailable": null,
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🕯️ Newest candle, deepest first"
+   },
+   {
+    "key": "doji_test",
+    "label": "📏 Closest to the prior low first"
+   },
+   {
+    "key": "doji_ath",
+    "label": "🏔️ Deepest under the all-time high first"
+   }
+  ],
+  "studies": {
+   "cited": false,
+   "families": [
+    "amd",
+    "fib",
+    "meanrev",
+    "keltner"
+   ],
+   "note": "AMD, Fibonacci, mean reversion and Keltner are chart conventions — uncited, never measured forward, and they gate nothing. Off by default."
+  },
+  "tab": "doji_sweep",
+  "tape_sorts": [
+   "retailimb",
+   "retailpct",
+   "dark"
+  ],
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "tiles": [
+   {
+    "avg_turnover": 105856121.0,
+    "badges": [
+     {
+      "text": "🕯️ Doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Low 1.00% above the prior 20-session low",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 105856121.0,
+     "ath": {
+      "hi": 201.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 50.48,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.592,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.49,
+     "pct_below_52w": 46.18,
+     "pct_below_ath": 50.48,
+     "range_atr": 0.67,
+     "reads": [
+      "mas"
+     ],
+     "reads_text": "Reads met: below the 50- and 200-day",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 132.6931,
+     "sma50": 105.8561,
+     "test_pct": 1.0,
+     "test_text": "Low 1.00% above the prior 20-session low",
+     "tested": true,
+     "undercut": false,
+     "upper_wick_pct": 0.49,
+     "variant": "plain",
+     "variant_text": "Doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 185.0465,
+      "high_date": "2025-10-15",
+      "pct_below": 46.18
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.592,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/PLAN?tab=supply",
+    "last_close": 99.592,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "PLAN Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Doji · upper wick 49% · lower wick 49% · range 0.7× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "185.05 · 2025-10-15 · 46.18% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "201.10 · 2025-08-07 · 50.48% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "105.86 / 132.69 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "PLAN",
+    "theme": null,
+    "why": "🕯️ Doji on 2026-10-15 · Low 1.00% above the prior 20-session low · Reads met: below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 116426443.0,
+    "badges": [
+     {
+      "text": "🕯️ Dragonfly doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 116426443.0,
+     "ath": {
+      "hi": 401.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 75.15,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.68,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.89,
+     "pct_below_52w": 71.76,
+     "pct_below_ath": 75.15,
+     "range_atr": 2.25,
+     "reads": [
+      "w52",
+      "ath",
+      "mas"
+     ],
+     "reads_text": "Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day",
+     "reclaimed": true,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 197.7939,
+     "sma50": 116.4264,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.09,
+     "variant": "dragonfly",
+     "variant_text": "Dragonfly doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 352.9395,
+      "high_date": "2025-10-15",
+      "pct_below": 71.76
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.68,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/DRAG?tab=supply",
+    "last_close": 99.68,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "DRAG Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Dragonfly doji · upper wick 9% · lower wick 89% · range 2.2× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "352.94 · 2025-10-15 · 71.76% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "401.10 · 2025-08-07 · 75.15% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "116.43 / 197.79 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "DRAG",
+    "theme": null,
+    "why": "🕯️ Dragonfly doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed back above it · Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day · no demand band — no stored bands for this name"
+   },
+   {
+    "avg_turnover": 99446144.0,
+    "badges": [
+     {
+      "text": "🕯️ Gravestone doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed under it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 99446144.0,
+     "ath": {
+      "hi": 306.29999999999995,
+      "hi_date": "2015-06",
+      "label": "ATH",
+      "pct_below": 68.61,
+      "proven": true,
+      "since": "2015-03"
+     },
+     "below_mas": false,
+     "body_pct": 0.02,
+     "close": 96.15,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.09,
+     "pct_below_52w": 5.83,
+     "pct_below_ath": 68.61,
+     "range_atr": 0.56,
+     "reads": [
+      "ath"
+     ],
+     "reads_text": "Reads met: 🏔️ 68.61% under the all-time high",
+     "reclaimed": false,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 93.6157,
+     "sma50": 99.4461,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed under it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.89,
+     "variant": "gravestone",
+     "variant_text": "Gravestone doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 102.1,
+      "high_date": "2026-09-03",
+      "pct_below": 5.83
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 96.15,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/GRAV?tab=supply",
+    "last_close": 96.15,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "GRAV Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Gravestone doji · upper wick 89% · lower wick 9% · range 0.6× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "102.10 · 2026-09-03 · 5.83% under"
+     },
+     {
+      "k": "All-time high",
+      "v": "306.30 · 2015-06 · 68.61% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "99.45 / 93.62 · close above the 200-day"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "GRAV",
+    "theme": null,
+    "why": "🕯️ Gravestone doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed under it · Reads met: 🏔️ 68.61% under the all-time high · no demand band — no stored bands for this name"
+   }
+  ]
+ },
+ "w52_70": {
+  "band_structure_coverage": {},
+  "band_structure_kind": "n/a",
+  "band_structure_study": {
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "count": 1,
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "doji_sweep_board": {
+   "as_of": "2026-10-15",
+   "body": {
+    "param": "dj_body",
+    "pct": 5,
+    "steps": [
+     {
+      "default": true,
+      "key": "5",
+      "label": "🕯️ Body under 5%",
+      "on": true,
+      "title": "The app's own doji (scalping/candles.py) — the body under 5% of the day's range"
+     },
+     {
+      "default": false,
+      "key": "10",
+      "label": "🕯️ Body under 10%",
+      "on": false,
+      "title": "A looser doji — the body under 10% of the range (PivotBoss, Liberated Stock Trader); the study reads both"
+     }
+    ]
+   },
+   "built_at": "2026-10-16T10:00:00-04:00",
+   "count_line": "Showing 1 — 1 under the liquidity floor (Tradeable · ≥$10M/day). 2 hidden by the chips you ticked. 1 more have a body from 5% to under 10% (the “🕯️ Body under 10%” switch shows them). Not listed: 0 whose candle was not a doji (a body of 10% of the range or more), 0 whose low sat more than 5% from the prior 20-session low, 0 whose prior 20-session low was set under 4 sessions before the candle, 0 meeting none of the three downtrend reads, 1 with a one-session close move of 5× or more in the last 252 sessions (named below — check before trusting), 1 ETFs, 0 delisted, 0 with fewer than 252 sessions of history, 1 whose cached bars end before 2026-10-15, 0 with a flat candle today (or an unreadable bar in the 20 sessions before it), 0 with no cached bars.",
+   "counts": {
+    "at_body": 4,
+    "bad_bars": 0,
+    "data_suspect": 1,
+    "delisted": 0,
+    "dropped_thin": 1,
+    "etf": 1,
+    "fired": 5,
+    "fired_earlier": 0,
+    "hidden_by_chips": 2,
+    "no_bars": 0,
+    "no_downtrend": 0,
+    "no_test": 0,
+    "no_turnover": 0,
+    "not_doji": 0,
+    "ref_too_fresh": 0,
+    "scanned": 8,
+    "short_history": 0,
+    "shown": 1,
+    "stale": 1,
+    "undercut": 2,
+    "wider_body": 1
+   },
+   "down_pct": 60.0,
+   "filter_param": "dj",
+   "filters": {
+    "active": [
+     "w52_70"
+    ],
+    "hidden": 2,
+    "items": [
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "w52_40",
+      "label": "📉 ≥40% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 40% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 2,
+      "hidden": 0,
+      "key": "w52_60",
+      "label": "📉 ≥60% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 2
+     },
+     {
+      "fail": 2,
+      "hidden": 2,
+      "key": "w52_70",
+      "label": "📉 ≥70% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 70% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": true,
+      "pass": 2
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "ath_60",
+      "label": "🏔️ ≥60% off the all-time high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the all-time high — the 🏔️ ATH tab's own read (monthly history to the listing plus the cached daily bars); a name whose history does not reach its listing is read against its high since its first bar, so the true distance is at least this. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 1,
+      "hidden": 0,
+      "key": "mas",
+      "label": "Below the 50- and 200-day",
+      "no_read": 0,
+      "note": "Closed below both its 50-day and 200-day simple averages. UNMEASURED.",
+      "on": false,
+      "pass": 3
+     },
+     {
+      "fail": 3,
+      "hidden": 0,
+      "key": "reclaimed",
+      "label": "Undercut and reclaimed",
+      "no_read": 0,
+      "note": "The low went under the prior 20-session low and the close came back above it. UNMEASURED.",
+      "on": false,
+      "pass": 1
+     }
+    ],
+    "keys": [
+     "w52_40",
+     "w52_60",
+     "w52_70",
+     "ath_60",
+     "mas",
+     "reclaimed"
+    ],
+    "line": "Chips on (every ticked chip must pass) — 📉 ≥70% off the 52-week high: 2 pass, 2 hidden. 2 of 4 pass every ticked chip (each count is over all 4 names at this body).",
+    "measured": false,
+    "mode": "all",
+    "note": "Ticked chips narrow the list — every ticked chip must pass. They gate nothing, push nothing and enter no lane.",
+    "passed_all": 2,
+    "pool": 4,
+    "shown": 2
+   },
+   "header": "🕯️ 4 of 8 names printed a doji on 2026-10-15 — a body under 5% of the day's range — with the low within 5% either side of the lowest low of the 20 sessions before it, in a downtrend: 60%+ under the 52-week high, 60%+ under the all-time high, or below the 50- and 200-day. Sweep: 4 tests · 2 undercut the low.",
+   "measured": false,
+   "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
+   "reads_legend": [
+    "📉 52-week: 60% or more under the highest intraday high of the last 252 closed sessions.",
+    "🏔️ All-time: 60% or more under the all-time high (monthly history to the listing plus the cached daily bars; “high since” when the history is short — the distance is then at least this).",
+    "Averages: the close under both the 50- and 200-day simple averages."
+   ],
+   "ref_min_age": 4,
+   "ref_sessions": 20,
+   "session": "2026-10-16",
+   "sma_fast": 50,
+   "sma_slow": 200,
+   "sort": "default",
+   "state": "ready",
+   "study": {
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "script": "backend/scripts/doji_sweep_study.py",
+    "status": "unmeasured",
+    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
+    "verdict": null
+   },
+   "suspects": {
+    "head": "1 names held out — a one-session close move of 5× or more, the price layer's own split / decimal-shift guard. A real collapse can trip it too; check the chart.",
+    "lines": [
+     "GLCH — 1000.00 → 198.33 on 2026-05-27 (0.20× in one session)"
+    ],
+    "n": 1
+   },
+   "test_pct": 5.0,
+   "year_bars": 252
+  },
+  "enterable_kind": "n/a",
+  "enterable_study": {
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "explosive_study": {
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "matched": 1,
+  "min_tier": "ok",
+  "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+  "sort": "default",
+  "sort_unavailable": null,
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🕯️ Newest candle, deepest first"
+   },
+   {
+    "key": "doji_test",
+    "label": "📏 Closest to the prior low first"
+   },
+   {
+    "key": "doji_ath",
+    "label": "🏔️ Deepest under the all-time high first"
+   }
+  ],
+  "studies": {
+   "cited": false,
+   "families": [
+    "amd",
+    "fib",
+    "meanrev",
+    "keltner"
+   ],
+   "note": "AMD, Fibonacci, mean reversion and Keltner are chart conventions — uncited, never measured forward, and they gate nothing. Off by default."
+  },
+  "tab": "doji_sweep",
+  "tape_sorts": [
+   "retailimb",
+   "retailpct",
+   "dark"
+  ],
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "tiles": [
+   {
+    "avg_turnover": 116426443.0,
+    "badges": [
+     {
+      "text": "🕯️ Dragonfly doji · body 2.0% of the range",
+      "tone": "warn"
+     },
+     {
+      "text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+      "tone": "muted"
+     },
+     {
+      "text": "→ no demand band — no stored bands for this name",
+      "tone": "muted"
+     }
+    ],
+    "bands": [],
+    "bars": [
+     {
+      "c": 1,
+      "h": 1,
+      "l": 1,
+      "o": 1,
+      "t": "2026-10-15",
+      "v": 1
+     }
+    ],
+    "doji_sweep": {
+     "adv50": 116426443.0,
+     "ath": {
+      "hi": 401.1,
+      "hi_date": "2025-08-07",
+      "label": "High since 2025-08-07",
+      "pct_below": 75.15,
+      "proven": false,
+      "since": "2025-08-07"
+     },
+     "below_mas": true,
+     "body_pct": 0.02,
+     "close": 99.68,
+     "date": "2026-10-15",
+     "doji5": true,
+     "lower_wick_pct": 0.89,
+     "pct_below_52w": 71.76,
+     "pct_below_ath": 75.15,
+     "range_atr": 2.25,
+     "reads": [
+      "w52",
+      "ath",
+      "mas"
+     ],
+     "reads_text": "Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day",
+     "reclaimed": true,
+     "ref_age": 8,
+     "ref_date": "2026-10-05",
+     "ref_low": 98.0,
+     "sma200": 197.7939,
+     "sma50": 116.4264,
+     "test_pct": -2.0,
+     "test_text": "Undercut the prior 20-session low by 2.00% · closed back above it",
+     "tested": true,
+     "undercut": true,
+     "upper_wick_pct": 0.09,
+     "variant": "dragonfly",
+     "variant_text": "Dragonfly doji",
+     "vol_ratio": 1.0,
+     "vol_word": "quiet",
+     "w52": {
+      "high": 352.9395,
+      "high_date": "2025-10-15",
+      "pct_below": 71.76
+     },
+     "zone": {
+      "demand": null,
+      "floor": "unknown",
+      "floor_held": false,
+      "floor_state": null,
+      "gate": {
+       "prox_ok": null,
+       "room_ok": null,
+       "verdict": "WATCH"
+      },
+      "print": {
+       "px": 99.68,
+       "source": "scan"
+      },
+      "reason": "no_doc",
+      "room": null,
+      "room_stat": "—",
+      "text": "no demand band — no stored bands for this name"
+     }
+    },
+    "enterable": {
+     "kind": "demand",
+     "verdict": "WATCH"
+    },
+    "href": "/sepa/DRAG?tab=supply",
+    "last_close": 99.68,
+    "lines": [
+     {
+      "label": "prior 20-session low",
+      "price": 98.0,
+      "tone": "neutral"
+     }
+    ],
+    "markers": [
+     {
+      "date": "2026-10-15",
+      "label": "🕯️"
+     }
+    ],
+    "name": "DRAG Inc",
+    "stats": [
+     {
+      "k": "Doji",
+      "v": "Dragonfly doji · upper wick 9% · lower wick 89% · range 2.2× the 14-day ATR"
+     },
+     {
+      "k": "Prior low",
+      "v": "98.00 · 2026-10-05 · 8 sessions before"
+     },
+     {
+      "k": "52w high",
+      "v": "352.94 · 2025-10-15 · 71.76% under"
+     },
+     {
+      "k": "High since 2025-08-07",
+      "v": "401.10 · 2025-08-07 · 75.15% under"
+     },
+     {
+      "k": "50 / 200-day",
+      "v": "116.43 / 197.79 · close below both"
+     },
+     {
+      "k": "Volume",
+      "v": "1.0× the 50-day average · quiet"
+     },
+     {
+      "k": "Room",
+      "v": "—"
+     },
+     {
+      "k": "Band",
+      "v": "—"
+     }
+    ],
+    "symbol": "DRAG",
+    "theme": null,
+    "why": "🕯️ Dragonfly doji on 2026-10-15 · Undercut the prior 20-session low by 2.00% · closed back above it · Reads met: 📉 71.76% under the 52-week high · 🏔️ 75.15% under the high since 2025-08-07 · below the 50- and 200-day · no demand band — no stored bands for this name"
+   }
+  ]
+ },
+ "warming": {
+  "band_structure_coverage": {},
+  "band_structure_kind": "n/a",
+  "band_structure_study": {
+   "body": "Measured on 24,994 episodes in 2025-03-10 -> 2026-08-17, 3,716 names, broad. Neither a thin first lid nor a layered floor survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. reversal episodes only (first per symbol + 20-bar cooldown); bands on CLOSED bars strictly before the print with the board geometry; no costs; one regime 2025-03-10 -> 2026-08-17; every thinness claim was read INSIDE the 2026-09-07 lid-break DISTANCE buckets ≤5%, 5–15%, >15%, which is the study that already found DISTANCE decides — and the only two reads that move here are that same distance (lid_dist_pct +9.35pp, sup1_dist_pct +9.13pp), not structure; survivorship replayed on the cache universe (5,284 names / 37,426 episodes): 32.73% reach +5% before the floor against 34.20% broad, -1.46pp, so no survivorship bias is carrying this null. Re-runnable verbatim: backend/scripts/band_structure_study.py.",
+   "fallback_note": "Ordered by his two asks, in the order he asked them: the ceiling first, then the floor as the tiebreak — a second band closest under the first, then the bigger first band. The ceiling leg has THREE groups, not one scale: a name with nothing PROVEN overhead is UNTESTED rather than thin (fewer than 2 touches up there, so the wall is uncounted, not absent — the stat says which untested band is nearest and whether the print is standing in it), then the names whose first wall can actually be measured, thinnest first, then the ones whose ceiling cannot be read at all. WHICH END THE UNTESTED GROUP BELONGS ON IS AN OPEN QUESTION — it leads today because that is what shipped, and nobody has measured it either way. All of this is a DESCRIPTIVE ordering of what the bands look like, not a claim that a thin ceiling or a layered floor makes a name go up. Because it is lexicographic the ceiling settles nearly every pair and the floor only breaks ties. A name with no band read sorts last, never first.",
+   "headline": "MEASURED 2026-09-16: NO SIGNAL SEPARATES (no lift larger than 2.80pp) — ordered by ceiling thickness, floor layering as the tiebreak",
+   "limits": "Bands are BOARD geometry on CLOSED bars — the live session's own high and low are not in them, and an unproven lid (fewer than 2 touches) is not counted overhead at all, here or anywhere else. A band the engine did not cluster is not a band that is not there. Ordered on the tiles this page is showing: the read keys on the LIVE print, which only exists after the board has been cut to its page size, so this ranks the page rather than the whole universe behind it. This is a board ordering and a stat — it gates no alert, sizes no position and enters no lane."
+  },
+  "count": 0,
+  "disclaimer": "Study board. Past pattern outcomes are a measured sample of what happened, not a forecast — position sizing and stops still decide the result. Not financial advice.",
+  "doji_sweep_board": {
+   "as_of": null,
+   "body": {
+    "param": "dj_body",
+    "pct": 5,
+    "steps": [
+     {
+      "default": true,
+      "key": "5",
+      "label": "🕯️ Body under 5%",
+      "on": true,
+      "title": "The app's own doji (scalping/candles.py) — the body under 5% of the day's range"
+     },
+     {
+      "default": false,
+      "key": "10",
+      "label": "🕯️ Body under 10%",
+      "on": false,
+      "title": "A looser doji — the body under 10% of the range (PivotBoss, Liberated Stock Trader); the study reads both"
+     }
+    ]
+   },
+   "built_at": null,
+   "count_line": null,
+   "counts": null,
+   "down_pct": 60.0,
+   "filter_param": "dj",
+   "filters": {
+    "active": [],
+    "hidden": 0,
+    "items": [
+     {
+      "fail": 0,
+      "hidden": 0,
+      "key": "w52_40",
+      "label": "📉 ≥40% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 40% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 0
+     },
+     {
+      "fail": 0,
+      "hidden": 0,
+      "key": "w52_60",
+      "label": "📉 ≥60% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 0
+     },
+     {
+      "fail": 0,
+      "hidden": 0,
+      "key": "w52_70",
+      "label": "📉 ≥70% off the 52-week high",
+      "no_read": 0,
+      "note": "Closed 70% or more under the 52-week high — the highest intraday high of the last 252 closed sessions, the 📉 Down 40%+ tab's own read. UNMEASURED.",
+      "on": false,
+      "pass": 0
+     },
+     {
+      "fail": 0,
+      "hidden": 0,
+      "key": "ath_60",
+      "label": "🏔️ ≥60% off the all-time high",
+      "no_read": 0,
+      "note": "Closed 60% or more under the all-time high — the 🏔️ ATH tab's own read (monthly history to the listing plus the cached daily bars); a name whose history does not reach its listing is read against its high since its first bar, so the true distance is at least this. UNMEASURED.",
+      "on": false,
+      "pass": 0
+     },
+     {
+      "fail": 0,
+      "hidden": 0,
+      "key": "mas",
+      "label": "Below the 50- and 200-day",
+      "no_read": 0,
+      "note": "Closed below both its 50-day and 200-day simple averages. UNMEASURED.",
+      "on": false,
+      "pass": 0
+     },
+     {
+      "fail": 0,
+      "hidden": 0,
+      "key": "reclaimed",
+      "label": "Undercut and reclaimed",
+      "no_read": 0,
+      "note": "The low went under the prior 20-session low and the close came back above it. UNMEASURED.",
+      "on": false,
+      "pass": 0
+     }
+    ],
+    "keys": [
+     "w52_40",
+     "w52_60",
+     "w52_70",
+     "ath_60",
+     "mas",
+     "reclaimed"
+    ],
+    "line": null,
+    "measured": false,
+    "mode": "all",
+    "note": "Ticked chips narrow the list — every ticked chip must pass. They gate nothing, push nothing and enter no lane.",
+    "passed_all": null,
+    "pool": 0,
+    "shown": null
+   },
+   "header": "🕯️ Reading every name's last closed daily candle from the cached bars — the charts appear here as soon as it lands; you don't need to refresh.",
+   "measured": false,
+   "note": "🕯️ Display only — the list describes the last closed candle, not what comes next. Nothing here gates a scan, pushes a phone, sizes a position or enters a lane. Not advice.",
+   "order_line": "Order: the newest candle first, then the deepest under the 52-week high — an order, not a ranking of setups.",
+   "reads_legend": [
+    "📉 52-week: 60% or more under the highest intraday high of the last 252 closed sessions.",
+    "🏔️ All-time: 60% or more under the all-time high (monthly history to the listing plus the cached daily bars; “high since” when the history is short — the distance is then at least this).",
+    "Averages: the close under both the 50- and 200-day simple averages."
+   ],
+   "ref_min_age": 4,
+   "ref_sessions": 20,
+   "session": "2026-10-16",
+   "sma_fast": 50,
+   "sma_slow": 200,
+   "sort": "default",
+   "state": "warming",
+   "study": {
+    "prereg": "docs/research/doji_sweep_study_2026_10_16.md",
+    "script": "backend/scripts/doji_sweep_study.py",
+    "status": "unmeasured",
+    "text": "🕯️ UNMEASURED — no study in this app has measured what a doji testing its prior 20-session low in a downtrend does next; the pre-registered backtest (docs/research/doji_sweep_study_2026_10_16.md, backend/scripts/doji_sweep_study.py) is the one that may. Their claims: Bulkowski (southern doji): bullish reversal just 52% of the time — a coin flip (overall performance rank 78/103). Bulkowski daily-bar frequencies, hindsight-measured, no costs; academic tests find NO standalone trading value in candle patterns (Marshall 2006; Horton 2009). Context, not a signal.",
+    "verdict": null
+   },
+   "suspects": null,
+   "test_pct": 5.0,
+   "year_bars": 252
+  },
+  "enterable_kind": "n/a",
+  "enterable_study": {
+   "body": "Not one confirmation convention beat the rows that survived to the same bar without firing, so nothing new gates anything. P — enter at the print; the READY read is unchanged",
+   "fallback_note": "Until a trigger measures, ENTERABLE is the rules that already shipped: the two standing push gates, the band floor that has to have held, and the two measured drags from his own 286 pushes. P — enter at the print; the READY read is unchanged",
+   "headline": "MEASURED 2026-09-15: NO ENTRY TRIGGER SEPARATES — the read stays the gates that already shipped",
+   "limits": "This is a READ and a FILTER: it buys nothing, sizes nothing and enters no lane. On the phone every demand push already passes these gates before the read runs, so a BLOCKED verdict there is a bug, not a quiet phone. A floor that cannot be read is UNKNOWN on a board (shown, with the reason) and fails CLOSED on the phone, as it always has. Bands are the board's closed-bar geometry; a tile's band and a push's band can differ, and the row says which print it read."
+  },
+  "explosive_study": {
+   "body": "Measured on 24,922 reversal episodes in 2025-03-10 -> 2026-08-14, 3,585 names, broad. Not one pre-registered feature's top bucket survived the rule of reading on all three out-of-sample splits, so there is no score and the board says so. cohort wider than what pushes: no cap floor; bands = board geometry on closed bars; one regime 2025-03-10 -> 2026-08-14; entry P = close[j], N = open[j+1]; stop booked at the stop through a gap; no costs; episodes = first reversal event per symbol + 20-bar cooldown Re-runnable verbatim: backend/scripts/explosive_study.py.",
+   "fallback_note": "Ranked by floor-held + room instead: the band floor holding (`intact`) and the room to the first proven lid are the two reads that measured on this cohort. A name at the top of this board is the one whose floor has held with the most room overhead — it is not a claim about how explosive the name is.",
+   "headline": "MEASURED 2026-09-15: NO SIGNAL SEPARATES (no lift larger than 2.22pp) — ranked by floor-held + room instead",
+   "limits": "One regime (2025-03-10 -> 2026-08-14) — the three splits are two halves of one tape and a name-disjoint cut of the same tape, never a second cycle. Closed-bar read: the live session's volume is not in it. Survivorship: the full cached universe, dead names included, runs −1.47pp vs the live universe. Stop = the band floor less 0.5%, booked at the stop through a gap, no costs. This is a board ordering and a chip — it gates no alert and enters no lane."
+  },
+  "min_tier": "ok",
+  "note": "🕯️ Reading every name's last closed daily candle from the cached bars — the charts appear here as soon as it lands; you don't need to refresh.",
+  "sort": "default",
+  "sorts": [
+   {
+    "key": "default",
+    "label": "🕯️ Newest candle, deepest first"
+   },
+   {
+    "key": "doji_test",
+    "label": "📏 Closest to the prior low first"
+   },
+   {
+    "key": "doji_ath",
+    "label": "🏔️ Deepest under the all-time high first"
+   }
+  ],
+  "studies": {
+   "cited": false,
+   "families": [
+    "amd",
+    "fib",
+    "meanrev",
+    "keltner"
+   ],
+   "note": "AMD, Fibonacci, mean reversion and Keltner are chart conventions — uncited, never measured forward, and they gate nothing. Off by default."
+  },
+  "tab": "doji_sweep",
+  "tape_sorts": [
+   "retailimb",
+   "retailpct",
+   "dark"
+  ],
+  "tiers": [
+   {
+    "key": "deep",
+    "label": "Deep · ≥$50M/day"
+   },
+   {
+    "key": "ok",
+    "label": "Tradeable · ≥$10M/day"
+   },
+   {
+    "key": "thin",
+    "label": "Thin · ≥$2M/day"
+   },
+   {
+    "key": "any",
+    "label": "No floor (shows illiquid names)"
+   }
+  ],
+  "tiles": [],
+  "warming": true
+ }
+}

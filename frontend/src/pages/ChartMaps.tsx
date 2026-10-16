@@ -90,6 +90,8 @@ import { drop10RefreshMs } from '../lib/drop10';
 import HighBetaBoardNote from '../components/HighBetaBoardNote';
 import { HB_ALL_PARAM, HB_ALL_ON, HB_DIR_PARAM, HB_FILTER_PARAM, HB_MODE_PARAM, HB_SORT_SWING, HB_VIEW_PARAM, HB_VIEW_SALES, hbFiltersParam, parseHbAll, parseHbDir, parseHbFilters, parseHbMode, parseHbView, type HbDir, type HbFilterKey, type HbView } from '../lib/highBeta';
 import { depthToSend } from '../lib/fallen';
+import DojiSweepBoardNote from '../components/DojiSweepBoardNote';
+import { DJ_BODY_PARAM, DJ_FILTER_PARAM, djBodyToSend, djFiltersParam, parseDjFilters, type DjFilterKey } from '../lib/dojiSweep';
 import { RES_FILTER_PARAM, RES_MODE_PARAM, parseResFilters, parseResMode, resFiltersParam, type ResFilterKey } from '../lib/resiliencyFilters';
 import UndervalueViewNote from '../components/UndervalueViewNote';
 import { UV_VIEW_PARAM, UV_VIEW_PSG, parseUvView, uvViewParam } from '../lib/undervalueView';
@@ -598,6 +600,22 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       return next;
     }, { replace: true });
   }, [setParams]);
+  /* 🕯️ Doji Sweep chips (Ajay 2026-10-16, K3: "Yes, any read; chips narrow").
+   * The 🎢 handlers on `?dj=`: the ticked set lives in the URL only, rides to
+   * the server on this tab only, and every box's checked state is the SERVED
+   * one, never this parse. Every ticked chip must pass (no mode switch). */
+  const djSel = useMemo(() => parseDjFilters(params.get(DJ_FILTER_PARAM)), [params]);
+  const djSpec = tab === 'doji_sweep' ? (djFiltersParam(djSel) ?? undefined) : undefined;
+  const toggleDjFilter = useCallback((key: string) => {
+    setParams((prev) => {
+      const sel = parseDjFilters(prev.get(DJ_FILTER_PARAM));
+      if (sel.has(key as DjFilterKey)) sel.delete(key as DjFilterKey); else sel.add(key as DjFilterKey);
+      const spec = djFiltersParam(sel);
+      const next = new URLSearchParams(prev);
+      if (spec) next.set(DJ_FILTER_PARAM, spec); else next.delete(DJ_FILTER_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams]);
   const hbView = parseHbView(params.get(HB_VIEW_PARAM));
   const setHbView = useCallback((v: HbView) => {
     setParams((prev) => {
@@ -627,6 +645,9 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
    * SERVED `on`, never this parse, and a click on the served default deletes
    * the param (fallen.depthToSend). */
   const fallenDepth = tab === 'fallen' ? (params.get(FALLEN_DEPTH_PARAM) || undefined) : undefined;
+  /* 🕯️ Doji Sweep body switch (`?dj_body=`) — the 📉 depth rule: rides on this
+   * tab only, absent = the served default step, pressed = the served `on`. */
+  const djBody = tab === 'doji_sweep' ? (params.get(DJ_BODY_PARAM) || undefined) : undefined;
 
   const DEEP_TAB = tab === 'deep_demand';
   const levelSel = useMemo(() => parseLevels(params.get('levels')), [params]);
@@ -664,6 +685,17 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       return next;
     }, { replace: true });
   }, [setParams, fallenBoard]);
+  /* 🕯️ Doji Sweep: the body setter reads the SERVED steps (dojiSweep.djBodyToSend
+   * — the served default or an unknown step deletes the param). */
+  const djBoard = data?.doji_sweep_board ?? null;
+  const setDjBody = useCallback((key: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const val = djBodyToSend(djBoard, key);
+      if (val) next.set(DJ_BODY_PARAM, val); else next.delete(DJ_BODY_PARAM);
+      return next;
+    }, { replace: true });
+  }, [setParams, djBoard]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -748,7 +780,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
                            hbMode: hbModeSpec,
                            hbAll,
                            hbDir,
-                           uvView, fallenDepth });
+                           uvView, fallenDepth,
+                           djFilters: djSpec, djBody });
     // The three study overlays are computed server-side and cost real time on
     // 60 tiles, so they are requested ONLY while one of their checkboxes is on
     // (Ajay 2026-09-12: default is supply/demand + order blocks alone).
@@ -767,7 +800,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
     } finally {
       if (my === boardSeq.current) setLoading(false);
     }
-  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, hbSpec, hbModeSpec, hbAll, hbDir, uvView, fallenDepth, wantStudies]);
+  }, [tab, days, universe, themesFirst, pattern, source, minerviniOnly, sort, minTier, gabbarLevel, gabbarTouchingOnly, phase, target, bias, micro, ROOM_TAB, minRoom, levelsSpec, gradesSpec, flightSpec, dmSpec, dmModeSpec, resSpec, resModeSpec, hbSpec, hbModeSpec, hbAll, hbDir, uvView, fallenDepth, djSpec, djBody, wantStudies]);
 
   useEffect(() => { setLoading(true); void load(); }, [load]);
 
@@ -837,7 +870,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
   const demandProgress = useDemandScanProgress(
     data?.universe_key || universe, Boolean(data?.warming) && tab !== 'ict' && tab !== 'key_levels'
       && tab !== 'dual_momentum' && tab !== 'ath' && tab !== 'drop10' && tab !== 'fallen' && tab !== 'resiliency'
-      && tab !== 'high_beta');
+      && tab !== 'high_beta' && tab !== 'doji_sweep');
 
   /* Freshness line under the toolbar — see the render-site comment. Recomputed
    * per render; the board refetches on every scan/refresh so a live "now" is
@@ -1202,6 +1235,16 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
         * (`?hb_view=`, FE-only) and the header sorts (`setHbSort`: served
         * column key + `?hb_dir=`; the 80 charts follow the served order). */}
       {tab === 'high_beta' && <HighBetaBoardNote board={data?.high_beta_board ?? null} rows={data?.rows} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleHbFilter} onToggleMode={toggleHbMode} onToggleGreen={toggleHbAll} view={hbView} onView={setHbView} onHeaderSort={setHbSort} />}
+      {/* 🕯️ Doji Sweep (2026-10-16): the served header, the study line right
+        * under it (MEASURED / UNMEASURED — he asked for the accuracy), the
+        * order line, the count line, the note, the three downtrend reads and
+        * the held-out names; the served sort buttons (pressed = the served
+        * `sort`, a click through `setSortParam`), the served body switch
+        * (`?dj_body=`, through `setDjBody`) and the chips (`?dj=`). It also
+        * carries the warming line, so the generic demand counter is skipped.
+        * The cards are the default PatternChart with the served badges /
+        * stats / lines / markers / why. */}
+      {tab === 'doji_sweep' && <DojiSweepBoardNote board={data?.doji_sweep_board ?? null} sorts={data?.sorts} sort={data?.sort} onSort={setSortParam} onToggleFilter={toggleDjFilter} onBody={setDjBody} />}
       {/* 💎 Under Value (2026-09-29): the served 💎 P/S ÷ growth / 🏷️ vs peers
         * toggle — labels served, pressed = the served view, a click through
         * `setUvView` — plus the 🏷️ view's served header and UNMEASURED note. */}
@@ -1210,7 +1253,7 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       {/* ℹ️ Rules — the board's own picks / stops / alerts from GET
         * /supply-demand/rules (Ajay 2026-09-06). The three boards that carry
         * a rule section; the zones tab is the "in demand" board. */}
-      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'high_beta' || tab === 'breaking' || tab === 'drop10' || tab === 'fallen' || tab === 'quick_bounce') && (
+      {(tab === 'zones' || tab === 'deep_demand' || tab === 'catalysts' || tab === 'high_beta' || tab === 'doji_sweep' || tab === 'breaking' || tab === 'drop10' || tab === 'fallen' || tab === 'quick_bounce') && (
         <div className="cm-rules" style={{ margin: '0.2rem 0 0.6rem' }}>
           <RulesInfo section={tab === 'zones' ? 'in_demand' : tab === 'breaking' ? 'alerts' : tab} />
         </div>
@@ -1899,6 +1942,8 @@ const GRADE_TAB = tab === 'amd' || tab === 'keltner';
       : data?.warming && tab === 'drop10' ? null
       /* 🎢 High Beta warms its own memo — HighBetaBoardNote prints its warming line. */
       : data?.warming && tab === 'high_beta' ? null
+      /* 🕯️ Doji Sweep warms its own memo — DojiSweepBoardNote prints its warming line. */
+      : data?.warming && tab === 'doji_sweep' ? null
       /* 🏎️ Dual Momentum warms its own memo (the page's engine, not the demand
        * scan) — its served warming line is printed by DualMomentumBoardNote. */
       : data?.warming && tab !== 'key_levels' ? (

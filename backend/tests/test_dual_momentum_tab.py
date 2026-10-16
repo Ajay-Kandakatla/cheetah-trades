@@ -125,7 +125,8 @@ def test_01_tab_sits_right_after_key_levels_and_nothing_else_moved():
     # after ath on 2026-09-30; 🎢 high_beta joined 2026-10-14)
     assert tuple(t for t in B.TABS
                  if t not in ("dual_momentum", "ath", "resiliency", "fallen", "drop10",
-                              "high_beta")) == TABS_BEFORE
+                              "high_beta",
+                              "doji_sweep")) == TABS_BEFORE   # WIDENED 2026-10-16 — 🕯️ doji_sweep appended to board.TABS
 
 
 # --------------------------------------------------------------------------

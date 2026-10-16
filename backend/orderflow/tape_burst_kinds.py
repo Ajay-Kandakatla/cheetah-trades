@@ -15,7 +15,9 @@ own — a deploy does not ship the host-mounted crontab):
                         (`chart_maps_membership`, the served top of each tab),
                         round-robin by served rank across tabs, minus the zone
                         names trade_flash watches and the High-Beta names, cut
-                        at CHARTMAPS_MAX_SYMBOLS.
+                        at CHARTMAPS_MAX_SYMBOLS. EXCLUDED_TABS (2026-10-16:
+                        the 🕯️ Doji Sweep tab, no push in its build) never
+                        ride it.
 
 THE BURST RULE IS trade_flash's — the `tape` engine through
 `trade_flash.bursts_from_tail` (10 s window, >= $250k, >= 75% one-sided, >= 15
@@ -76,6 +78,10 @@ WATCH_HTTP_TIMEOUT_SEC = 20     # MINE (AMENDMENTS §8) — the board_bands time
 # (biggest drop first, HIGHBETA_MAX_SYMBOLS). The tab's top-80 snapshot, read
 # here, would ring a name his cut left out as 🗺️ — the wrong kind.
 OWNED_TABS = ("high_beta",)     # the 🎢 tab id (chart_maps TAB_KEY), owned by KIND_HIGHBETA
+# 🕯️ Doji Sweep (AMENDMENTS6 B3, 2026-10-16): the tab ships with NO push (DECISIONS6 —
+# "NO alert, NO push in this build"), so its membership snapshot never joins the 🗺️
+# union and never thins the other tabs' share of the CHARTMAPS_MAX_SYMBOLS cap.
+EXCLUDED_TABS = ("doji_sweep",)  # 2026-10-16 — Doji Sweep names never ride the 🗺️ watch (his call Q15)
 
 HB_MARK = "\U0001F3A2"                           # 🎢
 CM_MARK = "\U0001F5FA️"                     # 🗺️ — MINE (AMENDMENTS §8)
@@ -191,7 +197,8 @@ def _prev_market_day(d):
 
 def chartmaps_watch(*, exclude, now, db=None) -> tuple:
     """(watch rows, counts) for the 🗺️ kind. ONE projected find on
-    `chart_maps_membership` (the 🎢 tab skipped — OWNED_TABS); a tab counts
+    `chart_maps_membership` (the 🎢 tab skipped — OWNED_TABS; the 🕯️ tab
+    skipped — EXCLUDED_TABS, no push in its build); a tab counts
     only when its snapshot was written
     today or on the last market day (ET) — else `tabs_old`, its names not
     watched. Round-robin by served rank over the fresh tabs in tab-id order
@@ -217,7 +224,8 @@ def chartmaps_watch(*, exclude, now, db=None) -> tuple:
     tabs = {}
     for doc in docs:
         tab = doc.get("_id") if isinstance(doc, dict) else None
-        if not tab or tab == M.SELF_TAB or tab in M.SKIP_TABS or tab in OWNED_TABS:
+        if (not tab or tab == M.SELF_TAB or tab in M.SKIP_TABS or tab in OWNED_TABS
+                or tab in EXCLUDED_TABS):
             continue
         if _et_date(doc.get("built_at"), tz) not in ok_days:
             counts["tabs_old"] += 1
@@ -494,7 +502,7 @@ def run_all(*, zone_bands, tails, now, kinds=None, plan=None, fresh_since=None,
 
 __all__ = ["KIND_HIGHBETA", "KIND_CHARTMAPS", "KINDS", "EVENTS_COLL",
            "HIGHBETA_MAX_SYMBOLS", "CHARTMAPS_MAX_SYMBOLS", "FETCH_WORKERS",
-           "KINDS_BUDGET_SEC", "WATCH_HTTP_TIMEOUT_SEC", "OWNED_TABS", "TITLE_FMT", "URL_FMT",
+           "KINDS_BUDGET_SEC", "WATCH_HTTP_TIMEOUT_SEC", "OWNED_TABS", "EXCLUDED_TABS", "TITLE_FMT", "URL_FMT",
            "WATCH_PATH", "tape_url", "parse_kinds", "highbeta_watch",
            "chartmaps_watch", "free_events", "headline", "scan_kind", "prepare",
            "deferred_symbols", "run_all"]

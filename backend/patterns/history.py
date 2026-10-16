@@ -60,10 +60,15 @@ LIVE_ONLY = {"backtested": {"$ne": True}}
 # Kinds this module knows how to grade. Anything else is left alone rather than
 # guessed at: `_grade_candle` was the silent default and it is why zone rows
 # raised KeyError on every pass.
-GRADABLE_KINDS = ("pattern", "candle")
-
 PATTERN_HORIZON = detector.VALIDATION_HORIZON   # 21 bars — same convention as self-validation
 CANDLE_HORIZON = 5                              # CONVENTION — candle reads are short-lived
+
+# 🕯️ Doji Sweep tab (2026-10-16): every candle the tab's detector fired on, graded forward like a candle read, in its
+# OWN bucket — never the 📐 Chart Patterns page's candle numbers (HIS CALL Q3: ledger only).
+DOJI_SWEEP_KIND = "doji_sweep"
+DOJI_SWEEP_READ = "bullish_reversal_setup"   # the ledger's up-direction read: _grade_candle hits when the close 5 sessions on is above the doji close (HIS CALL Q13)
+
+GRADABLE_KINDS = ("pattern", "candle", DOJI_SWEEP_KIND)
 
 
 def _coll():
@@ -143,6 +148,70 @@ def record_observations(verdicts: list, et_date: Optional[str] = None) -> int:
                 log.debug("record candle obs failed %s: %s", doc_id, exc)
     if n:
         log.info("pattern ledger: %d new observations recorded for %s", n, d)
+    return n
+
+
+def _doji_buckets() -> tuple:
+    """The 🕯️ ledger blocks (AMENDMENTS6 B7), read off the tab's own module —
+    [0] the headline (the house 5% body at the tab's default liquidity floor),
+    [1] the 10%-body fires, [2] the below-floor fires. Lazy: the tab module is
+    never imported until a doji doc is read or written."""
+    from chart_maps import doji_sweep_tab as DJ
+    return tuple(DJ.LEDGER_BUCKETS)
+
+
+def record_doji_sweeps(fires: list, *, coll=None) -> int:
+    """Record every candle the 🕯️ Doji Sweep tab's detector fired on (one dict of
+    `doji_sweep_tab.LEDGER_KEYS` each, from `doji_sweep_tab.ledger_fires()`) as
+    kind DOJI_SWEEP_KIND with the up-direction read DOJI_SWEEP_READ, so
+    `resolve_pending` grades it with `_grade_candle` and `accuracy()` serves it in
+    its OWN block. Idempotent — `_id` = "SYM:doji_sweep:<candle date>" and
+    `$setOnInsert`; `et_date` is the CANDLE date (never the run date), so the
+    grade starts from the doji's own close. A fire missing its symbol or date is
+    skipped; a per-doc failure is logged; never raises. Returns the NEW docs.
+
+    Ajay 2026-10-16: "create me a new tab for Doji candle after a sweep. For any
+    stocks after a down trend. May be from all chart maps especially on the 60%
+    70% down stocks" — and K1: "do some research and back test please on
+    accuracy". This is the FORWARD record beside the pre-registered study; it
+    carries no placebo and is UNMEASURED until it has a record."""
+    coll = coll if coll is not None else _coll()
+    if coll is None or not fires:
+        return 0
+    try:
+        buckets = _doji_buckets()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("doji_sweep ledger: buckets unavailable: %s", exc)
+        return 0
+    now = int(time.time())
+    n = 0
+    for f in fires:
+        try:
+            if not isinstance(f, dict):
+                continue
+            sym = str(f.get("symbol") or "").strip().upper()
+            day = str(f.get("date") or "").strip()[:10]
+            if not sym or len(day) != 10:
+                continue
+            bucket = f.get("bucket")
+            if bucket not in buckets:
+                from chart_maps import doji_sweep_tab as DJ
+                bucket = DJ.ledger_bucket(f)
+            doc_id = f"{sym}:{DOJI_SWEEP_KIND}:{day}"
+            doc = {"symbol": sym, "et_date": day, "formed_date": day, "recorded_at": now,
+                   "kind": DOJI_SWEEP_KIND, "formation": DOJI_SWEEP_KIND,
+                   "read": DOJI_SWEEP_READ, "obs_close": f.get("close"), "resolved": False,
+                   "bucket": bucket,
+                   **{k: f.get(k) for k in ("doji5", "body_pct", "variant", "test_pct", "undercut",
+                                            "reclaimed", "ref_low", "ref_date", "pct_below_52w",
+                                            "pct_below_ath", "below_mas", "vol_ratio", "adv50")},
+                   "reads": list(f.get("reads") or [])}
+            r = coll.update_one({"_id": doc_id}, {"$setOnInsert": doc}, upsert=True)
+            n += 1 if r.upserted_id is not None else 0
+        except Exception as exc:                                # noqa: BLE001
+            log.debug("record doji_sweep obs failed %s: %s", (f or {}).get("symbol"), exc)
+    if n:
+        log.info("pattern ledger: %d new doji_sweep observations recorded", n)
     return n
 
 
@@ -326,6 +395,57 @@ def _median(xs: list) -> Optional[float]:
     return round(sorted(xs)[len(xs) // 2], 2) if xs else None
 
 
+def _doji_slot() -> dict:
+    return {"n": 0, "pending": 0, "hit": 0, "fwd": [], "since": None}
+
+
+def _doji_add(dj: dict, obs: dict) -> None:
+    """One 🕯️ doc into its own bucket of `dj` (AMENDMENTS6 B7) — never into the
+    candle table, the top-level pending or `since`. A doc with no known bucket
+    joins none of the blocks (never pooled into the headline)."""
+    slot = dj.get(obs.get("bucket"))
+    if slot is None:
+        dj["unbucketed"] = dj.get("unbucketed", 0) + 1
+        return
+    if not obs.get("resolved"):
+        slot["pending"] += 1
+        return
+    d = obs.get("et_date")
+    if d:
+        slot["since"] = min(slot["since"] or d, d)
+    slot["n"] += 1
+    slot["hit"] += 1 if obs.get("outcome") == "hit" else 0
+    if obs.get("fwd_5_pct") is not None:
+        slot["fwd"].append(obs["fwd_5_pct"])
+
+
+def _doji_numbers(s: dict) -> dict:
+    return {"n": s["n"], "pending": s["pending"], "direction_hit_pct": _pct(s["hit"], s["n"]),
+            "median_fwd_5d_pct": sorted(s["fwd"])[len(s["fwd"]) // 2] if s["fwd"] else None,
+            "since": s["since"]}
+
+
+def _doji_block(dj: dict, buckets: tuple) -> dict:
+    """The served `doji_sweep` block: the headline numbers are the tab's default
+    view (buckets[0]); the 10%-body and below-floor fires are sub-blocks keyed by
+    their bucket names, never pooled into the headline (AMENDMENTS6 B7)."""
+    out = _doji_numbers(dj[buckets[0]])
+    for b in buckets[1:]:
+        out[b] = _doji_numbers(dj[b])
+    out.update({
+        "unbucketed": int(dj.get("unbucketed", 0)),
+        "horizon_bars": CANDLE_HORIZON,
+        "read_text": (f"reversal up: a hit when the close {CANDLE_HORIZON} sessions after the "
+                      "doji close is above it"),
+        "note": ("The forward record of what the 🕯️ Doji Sweep tab listed — the headline is the "
+                 "tab's default view (the house body, at its default liquidity floor); the wider "
+                 "body and the names under the floor are their own blocks. No placebo here (the "
+                 "pre-registered study carries the placebo and the CIs); not on the 📐 Chart "
+                 "Patterns page."),
+    })
+    return out
+
+
 def accuracy() -> dict:
     """The live record, aggregated — the answer to "are our patterns accurate?"
     computed from what the system actually flagged, day by day."""
@@ -336,7 +456,19 @@ def accuracy() -> dict:
     candles: dict = {}
     pending = 0
     earliest = None
+    try:
+        dj_buckets = _doji_buckets()
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("accuracy: doji_sweep buckets unavailable: %s", exc)
+        dj_buckets = None
+    dj: dict = {b: _doji_slot() for b in (dj_buckets or ())}
     for obs in coll.find(LIVE_ONLY):
+        if obs.get("kind") == DOJI_SWEEP_KIND:
+            # 🕯️ its own block (2026-10-16): never the candle table, the
+            # top-level pending or `since`
+            if dj_buckets:
+                _doji_add(dj, obs)
+            continue
         if not obs.get("resolved"):
             pending += 1
             continue
@@ -430,6 +562,7 @@ def accuracy() -> dict:
     return {
         "ok": True, "generated_at": int(time.time()),
         "patterns": out_p, "candles": out_c,
+        "doji_sweep": _doji_block(dj, dj_buckets) if dj_buckets else None,
         "pending": pending, "since": earliest,
         "conventions": {
             "pattern_horizon_bars": PATTERN_HORIZON, "candle_horizon_bars": CANDLE_HORIZON,
@@ -493,6 +626,8 @@ def compute_monthly() -> list:
         return []
     months: dict = {}
     for obs in coll.find({"resolved": True, **LIVE_ONLY}):
+        if obs.get("kind") == DOJI_SWEEP_KIND:
+            continue                           # 🕯️ its own block in accuracy(), never the rollup
         m = (obs.get("et_date") or "")[:7]
         if len(m) != 7:
             continue
@@ -597,11 +732,26 @@ def monthly_series() -> dict:
     }
 
 
-if __name__ == "__main__":
-    import sys
+def main() -> int:
+    """The 17:20 ET cron (`python -m patterns.history`): grade, roll up, then —
+    LAST (AMENDMENTS6 B8, 2026-10-16) — record the 🕯️ Doji Sweep fires, so a
+    failure in the new universe read never stops the grading of the existing
+    kinds. The exit code is resolve_pending's, unchanged."""
+    import sys  # noqa: F401
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
     r = resolve_pending()
     s = snapshot_monthly()
-    log.info("PATTERN-LEDGER: %s · monthly rollup: %s", r, s)
-    sys.exit(0 if r.get("ok") else 1)
+    try:
+        from chart_maps import doji_sweep_tab as DJ
+        dj = record_doji_sweeps(DJ.ledger_fires())
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("doji_sweep ledger record failed: %s", exc)
+        dj = 0
+    log.info("PATTERN-LEDGER: %s · monthly rollup: %s · doji_sweep recorded: %d", r, s, dj)
+    return 0 if r.get("ok") else 1
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main())

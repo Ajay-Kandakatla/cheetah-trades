@@ -608,7 +608,8 @@ _ROW_KEYS = {"symbol", "beta", "cats", "qqq", "move_pct", "state", "swing", "sig
 
 
 def test_13_board_ready_envelope_rows_and_tiles(hb_board):
-    assert BOARD.TABS[-1] == "high_beta" and BOARD.TABS[-2] == "drop10"
+    # WIDENED 2026-10-16 — 🕯️ doji_sweep appended to board.TABS
+    assert BOARD.TABS[-1] == "doji_sweep" and BOARD.TABS[-2] == "high_beta" and BOARD.TABS[-3] == "drop10"
     out = BOARD.board(tab="high_beta", limit=24, min_tier="ok")   # the floor pins THIN out (test_16 covers the tab default)
     assert out["tab"] == "high_beta" and out["sort"] == HB.SORT_SWING
     assert out["sorts"] == HB.served_sorts() and len(out["sorts"]) == 3

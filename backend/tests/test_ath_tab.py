@@ -892,7 +892,8 @@ def test_15_ath_sits_right_after_dual_momentum():
     # 🛡️ resiliency was appended right after ath on 2026-09-30, 📉 fallen right
     # after resiliency on 2026-10-02, 🔻 drop10 right after fallen on 2026-10-05,
     # 🎢 high_beta right after drop10 on 2026-10-14
-    assert B.TABS[-5:] == ("ath", "resiliency", "fallen", "drop10", "high_beta")
+    # WIDENED 2026-10-16 — 🕯️ doji_sweep appended to board.TABS
+    assert B.TABS[-6:] == ("ath", "resiliency", "fallen", "drop10", "high_beta", "doji_sweep")
     from supply_demand import enterable as EN
     assert "ath" not in EN.KIND_BY_TAB                           # 🎯 n/a (HIS CALL #8)
 

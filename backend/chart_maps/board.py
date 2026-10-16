@@ -55,7 +55,7 @@ log = logging.getLogger("chart_maps.board")
 # new chart maps tab for ICT Strategy, replace supply tab with this new tab").
 # "supply" stays registered here so an old ?tab=supply bookmark still resolves
 # on the backend; the frontend maps it to ict.
-TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency", "fallen", "drop10", "high_beta")
+TABS = ("vcp", "topping", "zones", "supply", "ict", "deep_demand", "quick_bounce", "breaking", "gabbar", "undervalue", "zero_dte", "winners", "earnings", "keltner", "amd", "ipo", "key_levels", "dual_momentum", "ath", "resiliency", "fallen", "drop10", "high_beta", "doji_sweep")
 
 BARS_DEFAULT = 130          # ~6 months of daily bars — a base plus its run-up
 BARS_MAX = 1260             # 5 years (Ajay 2026-09-06: 2 / 3 / 5-year windows on every dropdown)
@@ -4928,6 +4928,142 @@ def high_beta_watch(*, now: Optional[datetime] = None) -> dict:
             "n_listed": len(rows), "n_under_floor": under, "symbols": syms}
 
 
+def _tier_label(min_tier: str) -> str:
+    """The served floor words — the exact mapping `fallen_tiles` inlines (the three
+    inline copies stay; folding them is out of scope, BUILD_SPEC6 §3.8.1)."""
+    return {"deep": f"Deep · ≥${int(LIQ_DEEP_USD / 1e6)}M/day",
+            "ok": f"Tradeable · ≥${int(LIQ_OK_USD / 1e6)}M/day",
+            "thin": f"Thin · ≥${int(LIQ_THIN_USD / 1e6)}M/day",
+            "any": "no floor"}.get(min_tier, min_tier)
+
+
+def doji_sweep_tiles(limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT,
+                     universe: str = "full", themes_first: bool = False,
+                     sort: str = DEFAULT_SORT, min_tier: str = DEFAULT_MIN_TIER, *,
+                     ctx: Optional[dict] = None, now: Optional[datetime] = None,
+                     dj: Optional[str] = None, dj_body: Optional[str] = None) -> dict:
+    """🕯️ Doji Sweep — a doji whose low tested the prior 20-session low, in a
+    downtrend (2026-10-16).
+
+    Ajay 2026-10-16: *"create me a new tab for Doji candle after a sweep. For any
+    stocks after a down trend. May be from all chart maps especially on the 60%
+    70% down stocks"* — then *"Within 5% either side counts as a test"* and
+    *"Yes, any read; chips narrow"*.
+
+    The whole read (closed daily candles, the doji, the test of the prior low,
+    the three downtrend reads) is memoised in `chart_maps.doji_sweep_tab` by a
+    background thread over ONE cached-frames find; this applies the body switch
+    (`dj_body`, 5 default / 10) and the chips (`dj`, every ticked chip must
+    pass), orders it (`doji_sweep_tab.rank`), applies the liquidity floor on the
+    row's 50-bar turnover, cuts to `limit + BAR_BUFFER` and makes ONE
+    `_bulk_snaps` over that pool (handed to `board()` through `ctx`, the shared
+    live now-line) plus ONE `zone_store.load_latest` for the 🏎️ zone read. Memo
+    rows are never mutated: every tile is built from a deep copy.
+
+    UNMEASURED until `doji_sweep_measured` carries the pre-registered study.
+    Display only — WRITES NOTHING (the 17:20 `patterns.history` run records the
+    fired candles in its own ledger bucket); nothing here gates a scan, pushes a
+    phone, sizes a position or enters a lane.
+    """
+    import copy
+    from chart_maps import doji_sweep_tab as DJ
+    from chart_maps import dual_momentum_tab as DMT
+    from supply_demand import enterable as EN
+
+    now_et = (now or datetime.now(ET)).astimezone(ET)
+    body = DJ.parse_body(dj_body)
+    active = DJ.parse_filters(dj)
+    got = DJ.cached_or_warm(universe, now=now_et)
+    if got["state"] == "warming":
+        return {"tiles": [], "warming": True, "note": DJ.WARMING_NOTE,
+                "doji_sweep_board": DJ.warming_block(now=now_et, sort=sort, body=body,
+                                                     active=active)}
+    if got["state"] == "error":
+        reason = got.get("reason")
+        return {"tiles": [], "note": DJ.error_note(reason),
+                "doji_sweep_board": DJ.error_block(reason, now=now_et, sort=sort, body=body,
+                                                   active=active)}
+    entry = got["entry"]                                    # READ-ONLY (the memo's)
+    rows, counts, filters = DJ.rank(entry, sort=sort, active=active, body=body)
+
+    # 1 — the liquidity floor first, on the row's own 50-bar close x volume (no
+    # scan row on this tab)
+    floor_on = LIQ_TIERS.get(min_tier, LIQ_TIERS[DEFAULT_MIN_TIER]) > 0
+    kept, no_turnover, dropped_thin = [], 0, 0
+    for r in rows:
+        m = {"avg_turnover": r.get("adv50")}
+        if not passes_liquidity(m.get("avg_turnover"), min_tier):
+            dropped_thin += 1
+            no_turnover += int(floor_on and m.get("avg_turnover") is None)
+            continue
+        kept.append((r, m))
+
+    # 2 — the pool, deep-copied, and the tile skeletons
+    pool = [(copy.deepcopy(r), m) for r, m in kept[:limit + BAR_BUFFER]]
+    tiles = []
+    by_sym: dict = {}
+    for i, (r, m) in enumerate(pool):
+        sym = r["symbol"]
+        tiles.append({"symbol": sym, "theme": _theme(sym), "href": _href(sym),
+                      "last_close": r["close"], "bars": [], "bands": [],
+                      "lines": DJ.tile_lines(r), "markers": DJ.tile_markers(r),
+                      "badges": DJ.tile_badges(r), "stats": DJ.tile_stats(r),
+                      "doji_sweep": DJ.tile_block(r),
+                      **published_metrics(m), "_m": dict(m),
+                      "_score": float(len(pool) - i)})
+        by_sym[sym] = r
+
+    # 3 — ONE snapshot over the pool, ONE zone read, the 🏎️ DM zone block
+    syms = [t["symbol"] for t in tiles]
+    raw = _bulk_snaps(syms)
+    if ctx is not None:
+        ctx.update(snaps=raw, now=now_et)
+    try:
+        from supply_demand import zone_store
+        _day, docs = zone_store.load_latest(syms)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("doji_sweep_tiles: zone_store read failed: %s", exc)
+        docs = {}
+    docs = docs if isinstance(docs, dict) else {}
+    live = _live_from_snaps(tiles, raw)
+    attach_enterable(tiles, kind=EN.KIND_DEMAND, live=live, docs=docs)
+    for t in tiles:
+        sym = t["symbol"]
+        doc = docs.get(sym) or {}
+        snap = (live or {}).get(sym) or {}
+        prev = _f(snap.get("prev_day_close"))
+        if prev is None:
+            prev = _f(doc.get("prev_close"))
+        zone = DMT.zone_read(_explosive_px(t), doc, t.get("enterable"), prev_close=prev)
+        dem = zone.get("demand")
+        if isinstance(dem, dict):
+            t["bands"].append({"kind": "demand", "lo": float(dem["lo"]),
+                               "hi": float(dem["hi"]), "label": "demand",
+                               **LP.pad_fields(dem)})
+            room = zone.get("room") or {}
+            if _num(room.get("target_lo")) is not None and _num(room.get("target_hi")) is not None:
+                t["bands"].append({"kind": "supply", "lo": float(room["target_lo"]),
+                                   "hi": float(room["target_hi"]), "label": "first lid"})
+            t["_bars"] = {"days": _zone_window(_stored_band(doc, dem), days)}
+        t["badges"].append(DMT.zone_badge(zone, _dist_badge))
+        t["stats"].extend(DMT.zone_stats(zone))
+        t["why"] = DJ.why_text(by_sym[sym], DMT.zone_text(zone))
+        t["doji_sweep"]["zone"] = zone
+
+    out, meta = _finish(tiles, limit, themes_first, days, sort, min_tier=min_tier, snaps=raw)
+    for t in out:
+        t["name"] = _name_for(t["symbol"])
+    counts.update(no_turnover=no_turnover,
+                  dropped_thin=dropped_thin - no_turnover + int(meta["dropped_thin"]),
+                  shown=len(out))
+    return {"tiles": out, "sort_unavailable": meta.get("sort_unavailable"),
+            "matched": len(kept),
+            "note": DJ.NOTE if out else DJ.EMPTY_NOTE,
+            "doji_sweep_board": DJ.ready_block(counts, entry=entry, sort=sort, body=body,
+                                               filters=filters,
+                                               min_tier_label=_tier_label(min_tier))}
+
+
 def _bonde_gate(snap: Optional[dict]) -> tuple[str, Optional[dict]]:
     """("pass"|"fail"|"unknown", sales_block) for one symbol's sales snapshot."""
     sales = (snap or {}).get("sales") or None
@@ -7417,7 +7553,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
           res: Optional[str] = None, res_mode: Optional[str] = None,
           depth: Optional[str] = None, hb: Optional[str] = None,
           hb_mode: Optional[str] = None, hb_all: bool = False,
-          hb_dir: Optional[str] = None) -> dict:
+          hb_dir: Optional[str] = None, dj: Optional[str] = None,
+          dj_body: Optional[str] = None) -> dict:
     """One tab's tiles. Never scans; reads caches and the pattern ledger.
 
     `studies` (2026-09-12) appends the AMD / Fibonacci / mean-reversion
@@ -7464,6 +7601,15 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     function on the headers and also 5 day and 21 days columns to show how they
     were reacting in price like hot sectors ...". Every other tab ignores it.
 
+    `dj` / `dj_body` (2026-10-16) reach ONLY the 🕯️ doji_sweep tab — `dj` the
+    chips, a comma list "w52_40,w52_60,w52_70,ath_60,mas,reclaimed" (unknown
+    tokens ignored; every ticked chip must pass — Ajay 2026-10-16: "Yes, any
+    read; chips narrow"), `dj_body` the doji body view "5" (default) | "10"
+    (anything else serves the default). Ajay 2026-10-16: "create me a new tab
+    for Doji candle after a sweep. For any stocks after a down trend. May be
+    from all chart maps especially on the 60% 70% down stocks". Every other tab
+    ignores both.
+
     `uv` (2026-09-29) reaches ONLY the undervalue tab — `peers` = the 🏷️
     vs-peers view, anything else = the 💎 view (default, unchanged). Every
     other tab ignores it and carries no `undervalue_view` key.
@@ -7502,13 +7648,16 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
     # the same precedent; since 2026-10-14 b `_HB.TAB_SORTS` also holds one key
     # per sortable table column (the header sorts).
     from chart_maps import high_beta_tab as _HB
+    # 🕯️ doji_test / doji_ath are the Doji Sweep tab's (2026-10-16), the same precedent.
+    from chart_maps import doji_sweep_tab as _DJ
     srt = sort if (sort in SORTS
                    or (t == "dual_momentum" and sort in _DMT.TAB_SORTS)
                    or (t == "ath" and sort == _ATH.SORT_SLIPPING)
                    or (t == "resiliency" and sort in _RES.TAB_SORTS)
                    or (t == "fallen" and sort in _FAL.TAB_SORTS)
                    or (t == "drop10" and sort in _D10.TAB_SORTS)
-                   or (t == "high_beta" and sort in _HB.TAB_SORTS)) else DEFAULT_SORT
+                   or (t == "high_beta" and sort in _HB.TAB_SORTS)
+                   or (t == "doji_sweep" and sort in _DJ.TAB_SORTS)) else DEFAULT_SORT
     if t == "resiliency" and srt not in _RES.TAB_SORTS:
         # only the tab's own five served orders (the ATH precedent: no generic
         # metric sort is offered, so none may silently reorder the board)
@@ -7518,6 +7667,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         srt = DEFAULT_SORT
     if t == "drop10" and srt not in _D10.TAB_SORTS:
         # only the tab's own four served orders (the resiliency precedent)
+        srt = DEFAULT_SORT
+    if t == "doji_sweep" and srt not in _DJ.TAB_SORTS:
+        # only the tab's own three served orders (the resiliency precedent)
         srt = DEFAULT_SORT
     if t == "high_beta":
         # only the tab's own orders (the three presets + the header sorts,
@@ -7558,6 +7710,10 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
                               hb_mode=hb_mode if isinstance(hb_mode, str) else None,
                               hb_all=hb_all is True,
                               hb_dir=hb_dir if isinstance(hb_dir, str) else None)
+    elif t == "doji_sweep":
+        out = doji_sweep_tiles(limit, days, universe, themes_first, srt, tier, ctx=_ctx,
+                               dj=dj if isinstance(dj, str) else None,
+                               dj_body=dj_body if isinstance(dj_body, str) else None)
     elif t == "zones":
         # Phase normalisation: the demand boards' default moment is "reached"
         # (their population IS the reached set), while the lens tabs below
@@ -7648,7 +7804,8 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
             "studies": studies, "levels": levels, "grades": grades,
             "flight": flight, "dm": dm, "dm_mode": dm_mode, "uv": uv,
             "res": res, "res_mode": res_mode, "depth": depth,
-            "hb": hb, "hb_mode": hb_mode, "hb_all": hb_all, "hb_dir": hb_dir})
+            "hb": hb, "hb_mode": hb_mode, "hb_all": hb_all, "hb_dir": hb_dir,
+            "dj": dj, "dj_body": dj_body})
     except Exception as exc:                                    # noqa: BLE001
         log.debug("chart maps: membership snapshot skipped: %s", exc)
     out["count"] = len(out.get("tiles") or [])
@@ -7717,6 +7874,9 @@ def board(tab: str = "vcp", limit: int = LIMIT_DEFAULT, days: int = BARS_DEFAULT
         # 🎢 / 📉 / 🌊 — exactly these three served keys (the preset buttons; the
         # header sorts are served on `high_beta_board.table`, 2026-10-14 b).
         out["sorts"] = _HB.served_sorts()
+    if t == "doji_sweep":
+        # 🕯️ / 📏 / 🏔️ — exactly these three served keys.
+        out["sorts"] = _DJ.served_sorts()
     # The winners tabs read a ledger and are not liquidity-filtered — saying
     # "any" there is honest; pretending a floor applied would not be.
     out["min_tier"] = "any" if _fixed else tier

@@ -26,8 +26,10 @@ import {
   DEEP_LEVELS, DEEP_LEVEL_LABEL, parseLevels, levelsParam,
   DM_SORT_NEAREST, ATH_SORT_SLIPPING,
   GAJJALA_OWN_PARAMS, tabSearch, HB_SORT_DROP, HB_SORT_SWING, HB_SORT_VOL,
+  TAB_DEFAULT_MIN_TIER,
 } from './chartMaps';
 import { HB_OWN_PARAMS } from './highBeta';
+import { DJ_OWN_PARAMS } from './dojiSweep';
 import { GG_SORT_PARAM, GG_SUB_PARAM, GG_TF_PARAM, parseGgTf } from './gajjala';
 import { parseTf } from './supportLevels';
 
@@ -796,6 +798,9 @@ describe('the Earnings Flow tab', () => {
        // 🚩 Gajjala's 2026-10-13 — right after Down 10%+ today, mid-pack for
        // the same no-usage-yet reason (gajjala spec §7 #18, his call).
        'gajjala',
+       // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala: 🕯️ Doji Sweep,
+       // mid-pack for the same no-usage-yet reason (doji spec §7 Q1, his call).
+       'doji_sweep',
        // 〰️ 9 EMA · W/M 2026-09-23 — the ⚡ Signals names one bar size up;
        // mid-pack beside the other per-name chart boards for the same
        // no-usage-yet reason, and nothing ahead of it moved.
@@ -1813,7 +1818,8 @@ describe('tab order — most-used first', () => {
 
   it('still lists every tab exactly once (NEGATIVE: nothing lost or doubled in the reorder)', () => {
     expect(new Set(CM_TABS).size).toBe(CM_TABS.length);
-    expect(CM_TABS).toHaveLength(38);   // +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
+    // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
+    expect(CM_TABS).toHaveLength(39);   // +doji_sweep 2026-10-16; +high_beta 2026-10-14; +gajjala 2026-10-13; +drop10 2026-10-05; +fallen 2026-10-02; +resiliency 2026-09-30; +ath 2026-09-29; +dual_momentum 2026-09-29; +key_levels 2026-09-28; +hot_sectors, +growth 2026-09-11; +gnt 2026-09-12; +keltner, +amd, +bonde 2026-09-13; +holdings 2026-09-14; +ipo, +potus 2026-09-20; +ema_frames 2026-09-23; +news 2026-09-24
     expect(CM_TABS).not.toContain('supply');
     expect(Object.keys(TAB_META).filter((k) => k !== 'supply').sort()).toEqual([...CM_TABS].sort());
   });
@@ -2320,7 +2326,7 @@ describe('the 🏎️ Dual Momentum tab', () => {
   });
 
   it('NEGATIVE: the order is unchanged except the insertion; the lead three are unchanged', () => {
-    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta')).toEqual(CM_TABS_6D3AD93);
+    expect(CM_TABS.filter((t) => t !== 'dual_momentum' && t !== 'ath' && t !== 'resiliency' && t !== 'fallen' && t !== 'drop10' && t !== 'gajjala' && t !== 'high_beta' && t !== 'doji_sweep')).toEqual(CM_TABS_6D3AD93);   // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS.filter((t) => t === 'dual_momentum')).toHaveLength(1);
   });
@@ -2583,7 +2589,9 @@ describe("🚩 Gajjala's tab registry", () => {
   it("sits once, right after 'high_beta' (2026-10-14; was 'drop10') and before 'ema_frames'", () => {
     expect(CM_TABS.filter((t) => t === 'gajjala')).toHaveLength(1);
     expect(CM_TABS.indexOf('gajjala')).toBe(CM_TABS.indexOf('high_beta') + 1);
-    expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    // WIDENED 2026-10-16 — 🕯️ doji_sweep after 🚩 gajjala
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);
     expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
     expect(CM_TABS[CM_TABS.length - 1]).toBe('winners');
   });
@@ -2962,5 +2970,125 @@ describe('tabSearch — 🧭 iz_open lives on the zones tab only (2026-10-15)', 
     expect(h.get(IZ_OPEN_PARAM)).toBe('GLD');
     expect(sw('tab=zones&iz_open=GLD&tf=15m', 'gajjala').has('tf')).toBe(false);
     expect(sw('tab=zones&iz_open=GLD&tf=15m', 'gajjala').has(IZ_OPEN_PARAM)).toBe(false);
+  });
+});
+
+// ── 🕯️ Doji Sweep (Ajay 2026-10-16: "create me a new tab for Doji candle after
+// a sweep. For any stocks after a down trend. May be from all chart maps
+// especially on the 60% 70% down stocks"). A tile board off the dispatcher;
+// slot right after 🚩 Gajjala's, before 〰️ 9 EMA · W/M.
+describe('🕯️ Doji Sweep tab registry (2026-10-16)', () => {
+  const ASK = 'create me a new tab for Doji candle after a sweep. For any stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks';
+
+  it("sits once, right after 'gajjala' and right before 'ema_frames'", () => {
+    expect(CM_TABS.filter((t) => t === 'doji_sweep')).toHaveLength(1);
+    expect(CM_TABS.indexOf('doji_sweep')).toBe(CM_TABS.indexOf('gajjala') + 1);
+    expect(CM_TABS.indexOf('ema_frames')).toBe(CM_TABS.indexOf('doji_sweep') + 1);
+    expect(CM_TABS.slice(0, 3)).toEqual(['zones', 'deep_demand', 'quick_bounce']);
+  });
+
+  it('is a board tab (GET /chart-maps?tab=doji_sweep) and parses', () => {
+    expect(isBoardTab('doji_sweep')).toBe(true);
+    expect(parseTab('doji_sweep')).toBe('doji_sweep');
+    expect(parseTab(' DOJI_SWEEP ')).toBe('doji_sweep');
+  });
+
+  it('NEGATIVE: near-miss spellings fall to the default tab', () => {
+    for (const raw of ['doji', 'doji-sweep', 'dojisweep', 'doji sweep', 'sweep']) expect(parseTab(raw)).toBe(DEFAULT_TAB);
+  });
+
+  it('TAB_META: "🕯️ Doji Sweep" (VS16 included), his ask and his test verbatim, the B14 head', () => {
+    const m = TAB_META.doji_sweep;
+    expect(m.label).toBe('\u{1F56F}\u{FE0F} Doji Sweep');
+    expect(m.blurb).toContain(ASK);
+    expect(m.blurb).toContain('Within 5% either side counts as a test');
+    // AMENDMENTS6 B14 — the head is the scanner line; the blurb never quotes a measured number
+    expect(splitBlurb(m.blurb).head).toBe('\u{1F56F}\u{FE0F} a doji on a test of the prior low, after a downtrend — the measured read is on the board; a scanner, not an entry.');
+  });
+
+  it('NEGATIVE: the blurb never says "until the backtest lands" or UNMEASURED (B14: that line lives in the board header), never the b-word or a forecast word', () => {
+    const b = TAB_META.doji_sweep.blurb;
+    expect(b).not.toContain('until the backtest lands');
+    expect(b).not.toContain('UNMEASURED');
+    // the b-word is spelt in two halves so the word itself never sits in this block
+    expect(b).not.toMatch(new RegExp(`${['bou', 'nce'].join('')}|fake|rebound|poised|will reverse|expected to|likely to|potential to|predict`, 'i'));
+  });
+
+  it('NEGATIVE: 🎯 ENTERABLE_KIND does not carry doji_sweep; no per-tab floor (the house "ok")', () => {
+    expect(Object.prototype.hasOwnProperty.call(ENTERABLE_KIND, 'doji_sweep')).toBe(false);
+    expect(TAB_DEFAULT_MIN_TIER.doji_sweep).toBeUndefined();
+  });
+
+  it('the shared params are the ones lib/dojiSweep owns', () => {
+    expect([...DJ_OWN_PARAMS]).toEqual(['dj', 'dj_body']);
+  });
+});
+
+describe('boardQuery — 🕯️ the chips and the body switch ride only on doji_sweep', () => {
+  const get = (q: string, k: string) => new URLSearchParams(q).get(k);
+
+  it('dj and dj_body ride on doji_sweep when the caller passes them', () => {
+    const q = boardQuery({ tab: 'doji_sweep', djFilters: 'w52_60,reclaimed', djBody: '10' });
+    expect(get(q, 'tab')).toBe('doji_sweep');
+    expect(get(q, 'dj')).toBe('w52_60,reclaimed');
+    expect(get(q, 'dj_body')).toBe('10');
+  });
+
+  it('NEGATIVE: nothing ticked and the default body leave the URL clean', () => {
+    for (const q of [boardQuery({ tab: 'doji_sweep' }), boardQuery({ tab: 'doji_sweep', djFilters: '', djBody: '' })]) {
+      for (const k of ['dj=', 'dj_body']) expect(q, k).not.toContain(k);
+    }
+  });
+
+  it('NEGATIVE: dj / dj_body never ride on fallen (or any other tab)', () => {
+    for (const tab of ['fallen', 'high_beta', 'zones', 'drop10'] as const) {
+      const q = boardQuery({ tab, djFilters: 'mas', djBody: '10' });
+      expect(new URLSearchParams(q).has('dj'), tab).toBe(false);
+      expect(new URLSearchParams(q).has('dj_body'), tab).toBe(false);
+    }
+  });
+
+  it('NEGATIVE: the other tabs\' boxes never ride on doji_sweep', () => {
+    const q = boardQuery({ tab: 'doji_sweep', hbFilters: 'b15', hbMode: 'all', hbAll: true, fallenDepth: '60',
+                           dmFilters: 'amd', resFilters: 't1' });
+    for (const k of ['hb=', 'hb_mode', 'hb_all', 'depth=', 'dm=', 'res=']) expect(q, k).not.toContain(k);
+  });
+});
+
+describe('tabSearch — doji_sweep drops its own params at the border (2026-10-16)', () => {
+  const sw = (q: string, t: CmTab) => new URLSearchParams(tabSearch(new URLSearchParams(q), t));
+
+  it('leaving doji_sweep for fallen drops dj, dj_body and sort=doji_test; universe kept', () => {
+    const next = sw('tab=doji_sweep&dj=w52_60,mas&dj_body=10&sort=doji_test&universe=full', 'fallen');
+    expect(next.get('tab')).toBe('fallen');
+    expect(next.has('dj')).toBe(false);
+    expect(next.has('dj_body')).toBe(false);
+    expect(next.has('sort')).toBe(false);
+    expect(next.get('universe')).toBe('full');
+  });
+
+  it('entering doji_sweep drops a stale dj / dj_body / doji sort carried on another address', () => {
+    const next = sw('tab=fallen&dj=mas&dj_body=10&sort=doji_ath', 'doji_sweep');
+    expect(next.has('dj')).toBe(false);
+    expect(next.has('dj_body')).toBe(false);
+    expect(next.has('sort')).toBe(false);
+  });
+
+  it('NEGATIVE: a click on doji_sweep while ON doji_sweep keeps dj / dj_body / the doji sort', () => {
+    const next = sw('tab=doji_sweep&dj=reclaimed&dj_body=10&sort=doji_test', 'doji_sweep');
+    expect(next.get('dj')).toBe('reclaimed');
+    expect(next.get('dj_body')).toBe('10');
+    expect(next.get('sort')).toBe('doji_test');
+  });
+
+  it('NEGATIVE: leaving doji_sweep keeps a non-doji sort (the default order key)', () => {
+    const next = sw('tab=doji_sweep&sort=default', 'fallen');
+    expect(next.get('sort')).toBe('default');
+  });
+
+  it('NEGATIVE: crossing fallen → zones never touches a non-doji sort or another tab\'s params', () => {
+    const next = sw('tab=fallen&sort=fallen_depth&depth=60', 'zones');
+    expect(next.get('sort')).toBe('fallen_depth');
+    expect(next.get('depth')).toBe('60');
   });
 });

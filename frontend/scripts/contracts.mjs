@@ -1589,7 +1589,8 @@ const CONTRACTS = [
        *        headlines; the one per-ticker surface it points at is 🔥 Hottest,
        *        which carries the chip. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t));
+      // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
       for (const t of nonBoard) {
         if (t === 'growth') continue;
         const file = RENDERER[t];
@@ -2175,7 +2176,8 @@ const CONTRACTS = [
        * ticker rows has nothing for the 🧨 read to attach to, and must say so
        * in its own file. news (2026-09-24) — sectors, macro, headlines. */
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t));
+      // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -4785,7 +4787,8 @@ const CONTRACTS = [
       } else {
         const body = m[1].replace(/\/\/[^\n]*/g, '');
         const keys = [...body.matchAll(/^\s*([a-z_]+)\s*:/gm)].map((x) => x[1]).sort();
-        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t)).sort();
+        // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
+        const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t)).sort();
         if (keys.join(',') !== nonBoard.join(',')) {
           errs.push(`BURST_EXEMPT keys [${keys.join(', ')}] != the non-board CM_TABS [${nonBoard.join(', ')}] — a board tab must get the pin, a non-board tab must say why not`);
         }
@@ -5515,7 +5518,8 @@ const CONTRACTS = [
       }
       if (!/data\?\.warming && tab === 'resiliency' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the resiliency tab — its warming line is served');
       // 2026-10-14: 🎢 high_beta is APPENDED after this one (BUILD_SPEC §3.8 WP3) — the pin allows exactly that tail.
-      if (!/tab !== 'resiliency'(?:\s*&& tab !== 'high_beta')?\);/.test(page)) errs.push('the demand-scan progress poll must skip the resiliency tab');
+      // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩 (the tail may also carry && tab !== 'doji_sweep').
+      if (!/tab !== 'resiliency'(?:\s*&& tab !== '(?:high_beta|doji_sweep)')*\);/.test(page)) errs.push('the demand-scan progress poll must skip the resiliency tab');
       if (/res_filter\s*[?.]/.test(page)) errs.push('ChartMaps.tsx reads tile.res_filter — the server decides every box and serves the badges');
 
       const lib = read('src/lib/resiliencyFilters.ts');
@@ -5722,7 +5726,8 @@ const CONTRACTS = [
       }
       if (!/data\?\.warming && tab === 'fallen' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the fallen tab — its warming line is served');
       // 2026-10-14: 🎢 high_beta is APPENDED after 'resiliency' (BUILD_SPEC §3.8 WP3) — the pin allows exactly that tail.
-      if (!/tab !== 'fallen' && tab !== 'resiliency'(?:\s*&& tab !== 'high_beta')?\);/.test(page)) errs.push('the demand-scan progress poll must skip the fallen tab');
+      // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩 (the tail may also carry && tab !== 'doji_sweep').
+      if (!/tab !== 'fallen' && tab !== 'resiliency'(?:\s*&& tab !== '(?:high_beta|doji_sweep)')*\);/.test(page)) errs.push('the demand-scan progress poll must skip the fallen tab');
       if (!/\|\| tab === 'fallen' \|\| tab === 'quick_bounce'\) && \(\s*<div className="cm-rules"/.test(page)) errs.push('the ℹ️ Rules mount must include the fallen tab (section "fallen")');
       if (!/<FallenCardExtras tile=\{t\} legend=\{data\?\.fallen_board\?\.pick_legend \?\? null\} \/>/.test(page)) errs.push('the grid must wrap each fallen card with <FallenCardExtras tile={t} legend={data?.fallen_board?.pick_legend ?? null} />');
       if (!/const fallenDepth = tab === 'fallen' \?/.test(page)) errs.push("ChartMaps.tsx must read ?depth= on the fallen tab only");
@@ -5882,7 +5887,8 @@ const CONTRACTS = [
         if (tabs.filter((t) => t === 'gajjala').length !== 1) errs.push("CM_TABS lists 'gajjala' more than once");
         // 2026-10-14: 🎢 high_beta took the slot right after 🔻 (A13); 🚩 follows it.
         if (tabs.indexOf('gajjala') !== tabs.indexOf('high_beta') + 1) errs.push("CM_TABS: 'gajjala' must sit right after 'high_beta'");
-        if (tabs.indexOf('ema_frames') !== tabs.indexOf('gajjala') + 1) errs.push("CM_TABS: 'ema_frames' must follow 'gajjala'");
+        // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩 — 🕯️ took the slot between 🚩 and 〰️.
+        if (tabs.indexOf('doji_sweep') !== tabs.indexOf('gajjala') + 1 || tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'doji_sweep' must follow 'gajjala' and 'ema_frames' must follow 'doji_sweep'");
       }
       if (!/&& t !== 'gajjala'/.test(src)) errs.push("isBoardTab must return false for 'gajjala' — it has its own endpoint");
       if (/\n  gajjala: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry gajjala (🎯 n/a, the 📉 / 🔻 precedent)');
@@ -6677,7 +6683,8 @@ const CONTRACTS = [
       // Exempt only in writing (the growth-chip NO_CHIP rule): news has no
       // ticker rows, and its file says so.
       const NO_CHIP = { news: /no ticker rows on this tab/ };
-      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta)$/.test(t));
+      // WIDENED 2026-10-16 — 🕯️ doji_sweep is a board tab after 🚩
+      const nonBoard = tabs.filter((t) => !/^(zones|deep_demand|quick_bounce|breaking|gabbar|vcp|topping|ict|undervalue|zero_dte|earnings|winners|keltner|amd|ipo|key_levels|dual_momentum|ath|resiliency|fallen|drop10|high_beta|doji_sweep)$/.test(t));
       for (const t of nonBoard) {
         const file = RENDERER[t];
         if (!file) {
@@ -7752,6 +7759,230 @@ const CONTRACTS = [
         for (const w of forbidden) if (entry.toLowerCase().includes(w.toLowerCase())) errs.push(`${where} says "${w}" (high_beta_tab.FORBIDDEN_WORDS — no forecast words)`);
         if (NOTHING.test(entry)) errs.push(`${where} says "${NOTHING.exec(entry)[0]}" — say what does not ring (A13)`);
       }
+    name: '🕯️ Doji Sweep tab (2026-10-16): mounted right after 🚩, label = doji_sweep_tab.TAB_LABEL, chip keys / sorts / params = the backend constants, every number in the blurb + ✨ = the constants, UNMEASURED, the ledger kind registered in its own bucket, the FE composes nothing, never the b-word',
+    file: 'src/lib/chartMaps.ts',
+    // Ajay 2026-10-16: "create me a new tab for Doji candle after a sweep. For
+    // any stocks after a down trend. May be from all chart maps especially on
+    // the 60% 70% down stocks", and K4 "Within 5% either side counts as a
+    // test". Any of these links lost silently drops the tab, lets a chip key
+    // or a sort drift from the backend constant, retypes one of the numbers
+    // (HIS 5% test, the house 5% doji, Turtle Soup's 20 / 4) wrong in a
+    // sentence he reads, files the ledger kind under the 📐 candles, or lets
+    // the FE compose a number or a verdict the server owns (BUILD_SPEC6 §4
+    // WP-M). AMENDMENTS6 B14: the TAB_META blurb never says "until the
+    // backtest lands" — the MEASURED / UNMEASURED line lives on the board.
+    checks: (src) => {
+      const errs = [];
+      // Helpers copied from the 🎢 block (BUILD_SPEC6 §4 WP-M: reuse by copy).
+      const unesc = (x) => x.replace(/\\U([0-9A-Fa-f]{8})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\'/g, "'").replace(/\\"/g, '"');
+      const LABEL = '\u{1F56F}\u{FE0F} Doji Sweep';
+      const HIS = ['create me a new tab for Doji candle after a sweep. For any stocks after a down trend. May be from all chart maps especially on the 60% 70% down stocks'];
+      const HIS_TEST = 'Within 5% either side counts as a test';
+
+      // 1. The slot: once, right after 🚩, with 〰️ right after it; no 🎯 kind.
+      const tabs = parseCmTabs(src);
+      if (!tabs || !tabs.includes('doji_sweep')) {
+        errs.push("CM_TABS must carry 'doji_sweep'");
+      } else {
+        if (tabs.filter((t) => t === 'doji_sweep').length !== 1) errs.push("CM_TABS lists 'doji_sweep' more than once");
+        if (tabs.indexOf('doji_sweep') !== tabs.indexOf('gajjala') + 1) errs.push("CM_TABS: 'doji_sweep' must sit right after 'gajjala'");
+        if (tabs.indexOf('ema_frames') !== tabs.indexOf('doji_sweep') + 1) errs.push("CM_TABS: 'ema_frames' must sit right after 'doji_sweep'");
+      }
+      if (/\n  doji_sweep: '/.test(src)) errs.push('ENTERABLE_KIND must NOT carry doji_sweep (🎯 n/a)');
+
+      // 2. The backend constants: HIS 5% test, Turtle Soup's 20 / 4, the house doji.
+      let dj = '';
+      try { dj = read('../backend/chart_maps/doji_sweep_tab.py'); } catch { errs.push('backend/chart_maps/doji_sweep_tab.py is missing (WP-A)'); }
+      const consts = {};
+      for (const m of dj.matchAll(/^([A-Z][A-Z_0-9]*) = "([^"]*)"/gm)) consts[m[1]] = unesc(m[2]);
+      for (const m of dj.matchAll(/^([A-Z][A-Z_0-9]*) = ([0-9][0-9_]*(?:\.[0-9]+)?)\b/gm)) consts[m[1]] = Number(m[2].replace(/_/g, ''));
+      const pyF = (body) => unesc(body).replace(/\{([A-Z_0-9]+)(?::([^}]*))?\}/g, (_m, n, spec) => {
+        const v = consts[n];
+        if (v == null) return `?${n}`;
+        if (spec && /^\.\d+f$/.test(spec) && typeof v === 'number') return v.toFixed(Number(spec.slice(1, -1)));
+        return typeof v === 'number' ? String(v) : v;
+      });
+      const tagged = (name, tag) => {
+        const m = new RegExp(`^${name} = [^\\n#]*#\\s*([^\\n]*)$`, 'm').exec(dj);
+        return !!m && m[1].startsWith(tag);
+      };
+      if (dj) {
+        if (!/^SWEEP_TEST_PCT = 5\.0\s+# Ajay 2026-10-16/m.test(dj)) errs.push('doji_sweep_tab.py must keep SWEEP_TEST_PCT = 5.0  # Ajay 2026-10-16 (his "Within 5% either side counts as a test")');
+        for (const n of ['SWEEP_REF_SESSIONS', 'SWEEP_REF_MIN_AGE']) {
+          if (!tagged(n, 'Cheetah default (')) errs.push(`doji_sweep_tab.${n} must be tagged "# Cheetah default (…)" — Turtle Soup's, not his`);
+        }
+        if (!/^DOJI_BODY_PCT = CANDLES\.DOJI_BODY_PCT\b/m.test(dj)) errs.push('doji_sweep_tab.DOJI_BODY_PCT must be imported (CANDLES.DOJI_BODY_PCT), never retyped');
+        if (!/^DEPTH_CHIPS = \(FAL\.DEPTH_STEPS\[\d\], FAL\.DEPTH_STEPS\[\d\], FAL\.DEPTH_STEPS\[\d\]\)/m.test(dj)) errs.push('doji_sweep_tab.DEPTH_CHIPS must pick the 📉 tab\'s own FAL.DEPTH_STEPS');
+      }
+      let cand = '';
+      try { cand = read('../backend/scalping/candles.py'); } catch { errs.push('backend/scalping/candles.py is missing'); }
+      const bodyM = /^DOJI_BODY_PCT = ([0-9.]+)/m.exec(cand);
+      const B5 = bodyM ? Math.round(Number(bodyM[1]) * 100) : null;
+      if (cand && B5 !== 5) errs.push(`scalping/candles.DOJI_BODY_PCT reads ${bodyM ? bodyM[1] : '(absent)'} — the house doji is 0.05`);
+      let fal = '';
+      try { fal = read('../backend/chart_maps/fallen_tab.py'); } catch { errs.push('backend/chart_maps/fallen_tab.py is missing'); }
+      const stepsM = /^DEPTH_STEPS = \(([^)]*)\)/m.exec(fal);
+      const steps = stepsM ? stepsM[1].split(',').map((x) => Number(x.trim())).filter(Number.isFinite) : [];
+      const chipIdx = /^DEPTH_CHIPS = \(FAL\.DEPTH_STEPS\[(\d)\], FAL\.DEPTH_STEPS\[(\d)\], FAL\.DEPTH_STEPS\[(\d)\]\)/m.exec(dj);
+      const CHIPS = chipIdx ? [1, 2, 3].map((i) => steps[Number(chipIdx[i])]) : [];
+      let kl = '';
+      try { kl = read('../backend/supply_demand/key_levels.py'); } catch { errs.push('backend/supply_demand/key_levels.py is missing'); }
+      const rollM = /^ROLL_AT = dtime\((\d+), (\d+)\)/m.exec(kl);
+      const ROLL = rollM ? `${rollM[1].padStart(2, '0')}:${rollM[2].padStart(2, '0')} ET` : null;
+      if (kl && !ROLL) errs.push('key_levels.py lost ROLL_AT = dtime(HH, MM)');
+      const N = consts.SWEEP_REF_SESSIONS, AGE = consts.SWEEP_REF_MIN_AGE, T = consts.SWEEP_TEST_PCT;
+      const DOWN = consts.DOWN_PCT, FAST = consts.SMA_FAST, SLOW = consts.SMA_SLOW, WIDE = consts.DOJI_BODY_WIDE_PCT;
+      const nums = [N, AGE, T, DOWN, FAST, SLOW, WIDE];
+      if (dj && nums.some((x) => typeof x !== 'number' || !Number.isFinite(x))) errs.push('doji_sweep_tab.py lost SWEEP_REF_SESSIONS / SWEEP_REF_MIN_AGE / SWEEP_TEST_PCT / DOWN_PCT / SMA_FAST / SMA_SLOW / DOJI_BODY_WIDE_PCT = <number>');
+      if (dj && CHIPS.length !== 3) errs.push('the 40 / 60 / 70 chips could not be read off fallen_tab.DEPTH_STEPS via doji_sweep_tab.DEPTH_CHIPS');
+      const g = (x) => String(Number(x));   // python's :g for these values (5.0 → 5, 60.0 → 60)
+
+      // 3. TAB_LABEL renders the FE label.
+      const labelM = /^TAB_LABEL = (f?)"([^"]*)"/m.exec(dj);
+      const pyLabel = labelM ? (labelM[1] ? pyF(labelM[2]) : unesc(labelM[2])) : null;
+      if (dj && !labelM) errs.push('doji_sweep_tab.py lost TAB_LABEL = f"{MARK} Doji Sweep"');
+      if (pyLabel && pyLabel !== LABEL) errs.push(`doji_sweep_tab.TAB_LABEL renders "${pyLabel}" — the tab is "${LABEL}" (Q1, his call to change)`);
+
+      // 4 / 13. Every number in a sentence he reads = the constants — present, and never another value.
+      const numberChecks = (where, text, needs) => {
+        const out = [];
+        if (nums.some((x) => typeof x !== 'number') || B5 == null || CHIPS.length !== 3) return out;
+        for (const need of needs) if (!text.includes(need)) out.push(`${where} must state "${need}" as the backend constants have it`);
+        for (const m of text.matchAll(/(\d+(?:\.\d+)?)% either side/g)) if (Number(m[1]) !== T) out.push(`${where} says "${m[0]}" — SWEEP_TEST_PCT is ${T}`);
+        for (const m of text.matchAll(/(\d+) sessions/g)) if (![N, AGE].includes(Number(m[1]))) out.push(`${where} says "${m[0]}" — SWEEP_REF_SESSIONS is ${N}, SWEEP_REF_MIN_AGE ${AGE}`);
+        for (const m of text.matchAll(/(\d+)% or more/g)) if (Number(m[1]) !== DOWN) out.push(`${where} says "${m[0]}" — DOWN_PCT is ${DOWN}`);
+        for (const m of text.matchAll(/(\d+)%\+/g)) if (Number(m[1]) !== DOWN) out.push(`${where} says "${m[0]}" — DOWN_PCT is ${DOWN}`);
+        for (const m of text.matchAll(/(\d+)- and (\d+)-day/g)) if (Number(m[1]) !== FAST || Number(m[2]) !== SLOW) out.push(`${where} says "${m[0]}" — SMA_FAST / SMA_SLOW are ${FAST} / ${SLOW}`);
+        for (const m of text.matchAll(/body under (\d+)%/g)) if (Number(m[1]) !== B5) out.push(`${where} says "${m[0]}" — DOJI_BODY_PCT is ${B5}%`);
+        return out;
+      };
+      const strip = (text, quotes) => quotes.reduce((t, q) => t.split(q).join(''), text);
+      const forbidden = (() => {
+        let hb = '';
+        try { hb = read('../backend/chart_maps/high_beta_tab.py'); } catch { return null; }
+        const m = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(hb);
+        return m ? [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1]) : null;
+      })();
+      if (!forbidden || !forbidden.length) errs.push('high_beta_tab.FORBIDDEN_WORDS could not be read');
+      const words = (where, text) => {
+        const out = [];
+        if (/bounc|fake/i.test(text)) out.push(`${where} says "bounce"/"fake" — surfaces he reads say reversal`);
+        for (const w of forbidden || []) if (text.toLowerCase().includes(w.toLowerCase())) out.push(`${where} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        return out;
+      };
+      const meta = /\n  doji_sweep: \{\n    label: (['"])((?:(?!\1)[^\\]|\\.)*)\1,\n    blurb: (['"])((?:(?!\3)[^\\]|\\.)*)\3,/.exec(src);
+      if (!meta) {
+        errs.push('TAB_META.doji_sweep (label + blurb) is missing');
+      } else {
+        if (unesc(meta[2]) !== LABEL) errs.push(`TAB_META.doji_sweep.label "${unesc(meta[2])}" must be "${LABEL}"`);
+        if (pyLabel && unesc(meta[2]) !== pyLabel) errs.push(`TAB_META.doji_sweep.label "${unesc(meta[2])}" must equal doji_sweep_tab.TAB_LABEL "${pyLabel}"`);
+        const blurb = unesc(meta[4]);
+        for (const h of [...HIS, HIS_TEST]) if (!blurb.includes(h)) errs.push(`the TAB_META.doji_sweep blurb must quote him verbatim: "${h}"`);
+        // AMENDMENTS6 B14 (overrides §4 WP-M check 4's "UNMEASURED"): the blurb opens on the board's read and never says
+        // "until the backtest lands"; the MEASURED / UNMEASURED word lives in the board header only.
+        if (!blurb.includes('the measured read is on the board; a scanner, not an entry')) errs.push('the TAB_META.doji_sweep blurb must say "the measured read is on the board; a scanner, not an entry" (AMENDMENTS6 B14)');
+        if (/until the backtest lands|UNMEASURED/.test(blurb)) errs.push('the TAB_META.doji_sweep blurb says "until the backtest lands" / UNMEASURED — the measured line lives in the board header only (AMENDMENTS6 B14)');
+        errs.push(...words('the TAB_META.doji_sweep blurb', strip(blurb, HIS)));
+        if (CHIPS.length === 3 && WIDE != null) {
+          errs.push(...numberChecks('the TAB_META.doji_sweep blurb', strip(blurb, [...HIS, HIS_TEST]), [
+            `body under ${B5}%`, `${Math.round(WIDE * 100)}%`, `within ${g(T)}% either side`, `${N} sessions`, `${AGE} sessions old`,
+            `${g(DOWN)}% or more`, `${FAST}- and ${SLOW}-day`, CHIPS.join(' / ') + '%', ROLL || '?ROLL_AT']));
+        }
+      }
+
+      // 5. The FE copies of the chip keys, sorts and params = the module's.
+      let lib = '';
+      try { lib = read('src/lib/dojiSweep.ts'); } catch { errs.push('src/lib/dojiSweep.ts is missing (WP-C)'); }
+      const pyKeysM = /^FILTER_KEYS = \(([^)]*)\)/m.exec(dj);
+      const pyKeys = pyKeysM ? [...pyKeysM[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]) : [];
+      if (dj && !pyKeys.length) errs.push('doji_sweep_tab.py lost FILTER_KEYS = ("w52_40", …)');
+      const tsKeysM = /export const DJ_FILTER_KEYS\s*=\s*\[([^\]]*)\]\s*as const/.exec(lib);
+      const tsKeys = tsKeysM ? [...tsKeysM[1].matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]) : [];
+      if (lib && !tsKeys.length) errs.push('lib/dojiSweep.ts lost export const DJ_FILTER_KEYS = [...] as const');
+      if (pyKeys.length && tsKeys.length && pyKeys.join(',') !== tsKeys.join(',')) errs.push(`lib/dojiSweep.ts DJ_FILTER_KEYS [${tsKeys.join(', ')}] != doji_sweep_tab.FILTER_KEYS [${pyKeys.join(', ')}]`);
+      for (const [ts, py] of [['DJ_SORT_TEST', 'SORT_TEST'], ['DJ_SORT_ATH', 'SORT_ATH'], ['DJ_FILTER_PARAM', 'FILTER_PARAM'], ['DJ_BODY_PARAM', 'BODY_PARAM']]) {
+        const m = new RegExp(`export const ${ts} = '([a-z_]+)';`).exec(lib);
+        if (!m) errs.push(`lib/dojiSweep.ts must export ${ts} = '<doji_sweep_tab.${py}>'`);
+        else if (dj && consts[py] !== m[1]) errs.push(`lib/dojiSweep.ts ${ts} = '${m[1]}' != doji_sweep_tab.${py} = ${consts[py] ? `"${consts[py]}"` : '(absent)'}`);
+      }
+
+      // 6. The page mounts the note, skips the generic warming + the demand poll, mounts ℹ️ Rules.
+      const page = read('src/pages/ChartMaps.tsx');
+      if (!/tab === 'doji_sweep' && <DojiSweepBoardNote board=\{data\?\.doji_sweep_board \?\? null\}/.test(page)) errs.push("ChartMaps.tsx must render <DojiSweepBoardNote board={data?.doji_sweep_board ?? null} …/> on tab === 'doji_sweep'");
+      if (!/data\?\.warming && tab === 'doji_sweep' \? null/.test(page)) errs.push('the generic (demand) warming branch must skip the doji_sweep tab — its warming line is served');
+      if (!/&& tab !== 'doji_sweep'\);/.test(page)) errs.push('the demand-scan progress poll must skip the doji_sweep tab');
+      if (!/\|\| tab === 'doji_sweep' \|\|[^\n]*\) && \(/.test(page)) errs.push('the ℹ️ Rules mount must include the doji_sweep tab (section "doji_sweep")');
+
+      // 7. The note and its lib print what is served — no maths, no b-word.
+      let note = '';
+      try { note = read('src/components/DojiSweepBoardNote.tsx'); } catch { errs.push('src/components/DojiSweepBoardNote.tsx is missing (WP-C)'); }
+      for (const [f, t] of [['DojiSweepBoardNote.tsx', note], ['lib/dojiSweep.ts', lib]]) {
+        if (!t) continue;
+        if (/bounce|fake/i.test(t)) errs.push(`${f} says bounce / fake — surfaces he reads say reversal`);
+        const code = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+        if (/toFixed|UNMEASURED|Math\./.test(code)) errs.push(`${f} composes wording or does maths — every sentence and number is printed as served`);
+      }
+
+      // 8 / 9. Board registration + the memo block key.
+      const board = read('../backend/chart_maps/board.py');
+      const tabsPy = /^TABS = \(([^)]*)\)/m.exec(board);
+      const pyTabs = tabsPy ? [...tabsPy[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]) : [];
+      if (pyTabs[pyTabs.length - 1] !== 'doji_sweep') errs.push('board.py TABS must end with "doji_sweep" (appended)');
+      if (!/elif t == "doji_sweep":/.test(board)) errs.push('board.py lacks the elif t == "doji_sweep": dispatch');
+      if (!/\(t == "doji_sweep" and sort in _DJ\.TAB_SORTS\)/.test(board)) errs.push('board.py must honour the tab-scoped doji sorts on this tab only');
+      if (!/"dj": dj\b/.test(board) || !/"dj_body": dj_body\b/.test(board)) errs.push('board.py\'s membership hook dict must carry "dj": dj and "dj_body": dj_body — a missing board() param stops EVERY tab\'s membership write');
+      const memb = read('../backend/chart_maps/membership.py');
+      if (!/"doji_sweep": "doji_sweep_board"/.test(memb)) errs.push('membership.MEMO_BLOCK_KEY must map "doji_sweep": "doji_sweep_board"');
+
+      // 10. The ledger kind, in its own bucket, graded as the up-direction read.
+      const hist = read('../backend/patterns/history.py');
+      if (!/^DOJI_SWEEP_KIND = "doji_sweep"/m.test(hist)) errs.push('patterns/history.py must define DOJI_SWEEP_KIND = "doji_sweep"');
+      if (!/^DOJI_SWEEP_READ = "bullish_reversal_setup"/m.test(hist)) errs.push('patterns/history.py DOJI_SWEEP_READ must be exactly "bullish_reversal_setup" — any other read is graded BEARISH (_grade_candle)');
+      const gk = /^GRADABLE_KINDS = \(([^)]*)\)/m.exec(hist);
+      if (!gk || !/\bDOJI_SWEEP_KIND\b/.test(gk[1])) errs.push('patterns/history.GRADABLE_KINDS must hold DOJI_SWEEP_KIND');
+
+      // 11. The ℹ️ Rules section sits immediately before 🎢 (no order pin moves).
+      const ri = read('../backend/supply_demand/rules_info.py');
+      // Comments are stripped BEFORE the tuple is cut — they carry their own "(…)".
+      const skAt = ri.search(/^SECTION_KEYS = \(/m);
+      const sk = skAt >= 0 ? /^SECTION_KEYS = \(([^)]*)\)/.exec(ri.slice(skAt).replace(/#[^\n]*/g, '')) : null;
+      const keys = sk ? [...sk[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]) : [];
+      if (!keys.includes('doji_sweep') || keys.indexOf('high_beta') !== keys.indexOf('doji_sweep') + 1) errs.push('rules_info.SECTION_KEYS must carry "doji_sweep" immediately before "high_beta"');
+
+      // 12. The engine and the literal: UNMEASURED said, the b-word never.
+      let dsm = '';
+      try { dsm = read('../backend/chart_maps/doji_sweep_measured.py'); } catch { errs.push('backend/chart_maps/doji_sweep_measured.py is missing (WP-A)'); }
+      if (dj && !dj.includes('UNMEASURED')) errs.push('doji_sweep_tab.py must say UNMEASURED');
+      for (const [f, t] of [['doji_sweep_tab.py', dj], ['doji_sweep_measured.py', dsm]]) {
+        if (t && /bounc/i.test(t.replace(/quick_bounce/g, ''))) errs.push(`${f} says the b-word (comments included) — reversal`);
+      }
+
+      // 13. The ✨ entry.
+      const nf = read('src/lib/newFeatures.ts');
+      const idAt = nf.indexOf("id: 'chart-maps-doji-sweep-2026-10-16'");
+      if (idAt < 0) {
+        errs.push("newFeatures.ts lacks the ✨ entry id: 'chart-maps-doji-sweep-2026-10-16' (WP-M)");
+      } else {
+        const end = nf.indexOf("' },", idAt);
+        const entry = unesc(nf.slice(idAt, end < 0 ? undefined : end + 4));
+        if (!entry.includes("route: '/chart-maps?tab=doji_sweep'")) errs.push("the 🕯️ ✨ entry must route to '/chart-maps?tab=doji_sweep'");
+        for (const h of HIS) if (!entry.includes(h)) errs.push(`the 🕯️ ✨ entry must quote his ask verbatim: "${h}"`);
+        if (!entry.includes('UNMEASURED')) errs.push('the 🕯️ ✨ entry must say UNMEASURED');
+        if (!entry.includes('Pushes nothing')) errs.push('the 🕯️ ✨ entry must say "Pushes nothing" (AMENDMENTS6 B3 — the tab is out of the 🗺️ watch)');
+        errs.push(...words('the 🕯️ ✨ entry', strip(entry, HIS)));
+        if (CHIPS.length === 3 && WIDE != null) {
+          errs.push(...numberChecks('the 🕯️ ✨ entry', strip(entry, HIS), [
+            `body under ${B5}%`, `${Math.round(WIDE * 100)}%`, `within ${g(T)}% either side`, `${N} sessions`, `${AGE} sessions old`,
+            `${g(DOWN)}%+`, `${FAST}- and ${SLOW}-day`, CHIPS.join(' / ') + '%']));
+        }
+      }
+
+      // 14. SPECS.md carries the section.
+      const specs = read('../SPECS.md');
+      if (!specs.includes('### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)')) errs.push('SPECS.md lacks "### Chart Maps — 🕯️ Doji Sweep tab — `chart_maps/doji_sweep_tab.py` (2026-10-16)"');
       return errs;
     },
   },

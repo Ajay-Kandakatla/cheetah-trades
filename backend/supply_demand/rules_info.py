@@ -86,6 +86,13 @@ SECTION_KEYS = ("in_demand", "deep_demand", "alerts", "autopilot",
                 # moves a line on every board above, and every HIS CALL behind
                 # it is a one-constant flip the panel has to name.
                 "zone_pad",
+                # 🕯️ DOJI SWEEP (2026-10-16) — a doji whose low tested the prior
+                # 20-session low, in a downtrend. Its own section because it is
+                # UNMEASURED until the pre-registered study reads, gates nothing,
+                # and every threshold is a named constant with its source.
+                # BEFORE "high_beta" so the high_beta / gajjala / fallen / drop10 /
+                # short_interest pins stay put.
+                "doji_sweep",
                 # 🎢 HIGH BETA (2026-10-14) — every High-Beta stock and today's
                 # move, plus the two owner-only tape-burst kinds that watch it
                 # and the Chart Maps names. Its own section because the order
@@ -828,6 +835,12 @@ def sections() -> dict:
     except Exception as exc:                                   # noqa: BLE001
         log.debug("rules_info: zone pad lines unavailable: %s", exc)
 
+    # ── 🕯️ Doji Sweep ──────────────────────────────────────
+    try:
+        out["doji_sweep"] = _doji_sweep_section()
+    except Exception as exc:                                   # noqa: BLE001
+        log.debug("rules_info: doji sweep section unavailable: %s", exc)
+
     # ── 🎢 High Beta ───────────────────────────────────────
     try:
         out["high_beta"] = _high_beta_section()
@@ -930,9 +943,11 @@ def _hb_tape_lines() -> list:
         "the next poll reads it."
         % (TBK.HB_MARK, hb, on(hb), TBK.HIGHBETA_MAX_SYMBOLS, rule, every(hb)),
         "%s %s (%s): the names served on every Chart Maps tab opened today or the last session, minus the zone "
-        "names ⚡ trade flash watches and minus the %s list, taken round-robin by each tab's rank, up to %d. "
+        "names ⚡ trade flash watches and minus the %s list and the %s tab (no push in its build — "
+        "orderflow.tape_burst_kinds.EXCLUDED_TABS), taken round-robin by each tab's rank, up to %d. "
         "Same burst rule, polled %s."
-        % (TBK.CM_MARK, cm, on(cm), TBK.HB_MARK, TBK.CHARTMAPS_MAX_SYMBOLS, every(cm)),
+        % (TBK.CM_MARK, cm, on(cm), TBK.HB_MARK, " / ".join("🕯️ " + t.replace("_", " ") for t in TBK.EXCLUDED_TABS),
+           TBK.CHARTMAPS_MAX_SYMBOLS, every(cm)),
         "One burst = one /alerts row (one id per symbol and print second): a burst on a High-Beta name rings as "
         "%s, at a zone or not; a zone burst on any other name stays ⚡ trade flash (muted on your phone, still "
         "listed on /alerts). UNMEASURED — a description of prints, not a signal. Not advice." % TBK.HB_MARK,
@@ -1229,6 +1244,87 @@ def _fallen_section() -> dict:
                   "card is the demand engine's own."],
         "alerts": ["Pushes nothing — no alert kind reads this tab."],
         "note": _DISCLAIMER,
+    }
+
+
+def _doji_sweep_section() -> dict:
+    """🕯️ Doji Sweep (2026-10-16) — every number read from
+    `chart_maps.doji_sweep_tab` (DJ) or the modules it reuses (📉 fallen_tab,
+    patterns.candles_daily, patterns.history, supply_demand.key_levels), never
+    typed here: the source holds no numeric literal but the `100` that turns a
+    fraction into a percent (test-walked). Imported LAZILY, like the 📉 section.
+
+    Ajay 2026-10-16: "create me a new tab for Doji candle after a sweep. For any
+    stocks after a down trend. May be from all chart maps especially on the 60%
+    70% down stocks" — then "Within 5% either side counts as a test".
+    UNMEASURED until doji_sweep_measured carries the pre-registered study."""
+    from chart_maps import doji_sweep_tab as DJ
+    from chart_maps import fallen_tab as FAL
+    from patterns import candles_daily as CD
+    from patterns import history as PH
+    from supply_demand import key_levels as KL
+
+    b5, b10 = DJ.BODY_STEPS
+    n_ref, age = DJ.SWEEP_REF_SESSIONS, DJ.SWEEP_REF_MIN_AGE
+    t = f"{DJ.SWEEP_TEST_PCT:g}"
+    d = f"{DJ.DOWN_PCT:g}"
+    w = f"{DJ.SMALL_WICK_PCT * 100:g}"
+    roll = KL.ROLL_AT.strftime("%H:%M")
+    labels = " · ".join(DJ.FILTER_LABELS[k] for k in DJ.FILTER_KEYS)
+    served = DJ.served_sorts()
+    study = DJ.study_block()
+    note = _DISCLAIMER if DJ.is_measured() else (
+        "UNMEASURED — no study here says what a doji testing the prior low in a downtrend "
+        "does next; the list describes the last closed candle. Nothing here gates a scan, "
+        "sizes a position or enters a lane. " + _DISCLAIMER)
+    return {
+        "title": (f"{DJ.TAB_LABEL} — a doji whose low tested the prior {n_ref}-session low, "
+                  "in a downtrend"),
+        "emoji": DJ.MARK,
+        "picks": [
+            f"Scanned: every stock in the Chart Maps full universe, on its last closed daily "
+            f"candle — a session's candle joins after {roll} ET, the closed-bar rule of the "
+            f"{DJ.W52_MARK} / {DJ.ATH_MARK} / 🔑 boards. ETFs, delisted names, stale cached bars "
+            f"and names with fewer than {DJ.YEAR_BARS} sessions are counted, never listed.",
+            f"Doji: the body (|close − open|) under {b5}% of the day's range — the app's own "
+            f"doji (scalping/candles.py, the TradeStation convention; Nison 1991, via secondary "
+            f"sources: open and close the same or nearly so); the switch shows bodies under "
+            f"{b10}% (PivotBoss, Liberated Stock Trader). Shape: dragonfly = upper wick at most "
+            f"{w}% of the range, gravestone = lower wick at most {w}%, long-legged = a range at "
+            f"least the mean of the prior {DJ.LONG_LEG_BARS} sessions' (Bulkowski: “shadows "
+            f"longer than those of recent candles”), else plain.",
+            f"The test (your rule, 2026-10-16: “Within {t}% either side counts as a test”): the "
+            f"candle's low within {t}% above or below the lowest low of the {n_ref} sessions "
+            f"before it, that low at least {age} sessions old — Connors & Raschke's Turtle Soup "
+            f"(Street Smarts, 1995): the prior {n_ref}-day low, made at least {age} sessions "
+            f"earlier. Undercut and reclaimed = the low went under it and the close came back "
+            f"above it — a chip, never a gate.",
+            f"Downtrend, any of three (every card names which): {d}% or more under the 52-week "
+            f"high (the {FAL.TAB_LABEL} tab's own read), {d}% or more under the all-time high "
+            f"(the {DJ.ATH_MARK} ATH tab's own read — “high since” when the history does not "
+            f"reach the listing), or the close below both the {DJ.SMA_FAST}- and "
+            f"{DJ.SMA_SLOW}-day simple averages. Chips narrow: {labels} — every ticked chip "
+            f"must pass.",
+            f"Beside it: the candle's volume against the prior {DJ.VOL_AVG_BARS} sessions' "
+            f"average — quiet at or under {DJ.VOL_QUIET_X:g}×, heavy at {DJ.VOL_HEAVY_X:g}× or "
+            f"more (the app's own participation line, borrowed from its 5-minute candle module) "
+            f"— Wyckoff (Bruce Fraser, StockCharts 2015): a shallow undercut on modest volume vs "
+            f"a deeper one on expanded volume; and the range against the {DJ.ATR_BARS}-day ATR. "
+            f"Display only.",
+            "Orders: " + " · ".join(x["label"] for x in served) + ". "
+            + " ".join(DJ.order_line(x["key"]) for x in served),
+            f"Sources, their claims: {CD.BULKOWSKI_CANDLE['doji']}; the dragonfly doji "
+            f"{DJ.DRAGONFLY_CLAIM}. {CD.CAVEAT}",
+            study["text"],
+        ],
+        "stops": ["No stop, no target, no size: a list and its reads. The study's stop-out line "
+                  "counts a close under the doji's low."],
+        "alerts": [f"Pushes nothing — no alert kind reads this tab, and its names never join the "
+                   f"🗺️ Chart Maps tape-burst watch. Every candle it lists is recorded in the "
+                   f"pattern ledger (kind {PH.DOJI_SWEEP_KIND}, a reversal-up read graded on the "
+                   f"next {PH.CANDLE_HORIZON} sessions) — GET /patterns/accuracy, not the 📐 Chart "
+                   f"Patterns page."],
+        "note": note,
     }
 
 

@@ -46,12 +46,15 @@ import chart_maps.resiliency_tab  # noqa: E402,F401
 import chart_maps.fallen_tab  # noqa: E402,F401
 import chart_maps.drop10_tab  # noqa: E402,F401
 import chart_maps.high_beta_tab  # noqa: E402,F401
+import chart_maps.doji_sweep_tab  # noqa: E402,F401  — WIDENED 2026-10-16: 🕯️ binds sepa.prices at module level
 import supply_demand.deep_demand  # noqa: E402,F401
 import supply_demand.deep_demand_wording  # noqa: E402,F401
 
 # The lazily-imported modules that bind `sepa.prices` at module level.
+# WIDENED 2026-10-16 — 🕯️ chart_maps.doji_sweep_tab (board() imports it lazily).
 _LAZY_PRICE_BINDERS = ("chart_maps.ath_history", "chart_maps.fallen_tab",
-                       "chart_maps.drop10_tab", "chart_maps.high_beta_tab")
+                       "chart_maps.drop10_tab", "chart_maps.high_beta_tab",
+                       "chart_maps.doji_sweep_tab")
 
 
 # ---------------------------------------------------------------------------

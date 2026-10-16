@@ -32,7 +32,7 @@ async def chart_maps(
                                         "earnings | winners | keltner | amd | "
                                         "ipo | key_levels | dual_momentum | "
                                         "ath | resiliency | fallen | drop10 | "
-                                        "high_beta"),
+                                        "high_beta | doji_sweep"),
     limit: int = Query(board_mod.LIMIT_DEFAULT, ge=1, le=board_mod.LIMIT_MAX),
     days: int = Query(board_mod.BARS_DEFAULT, ge=20, le=board_mod.BARS_MAX),
     universe: str = Query("full",
@@ -146,6 +146,13 @@ async def chart_maps(
                                          "lowest/soonest first, Symbol A→Z, every other "
                                          "column highest first). Ajay 2026-10-14: 'Can you "
                                          "add sort function on the headers …'."),
+    dj: str = Query("", description="doji_sweep tab only — comma list of chips w52_40,w52_60,w52_70,ath_60,mas,reclaimed; "
+                                     "every ticked chip must pass (Ajay 2026-10-16: 'Yes, any read; chips narrow'). Unknown "
+                                     "tokens are ignored; empty = no chip. Ajay 2026-10-16: 'create me a new tab for Doji "
+                                     "candle after a sweep. For any stocks after a down trend. May be from all chart maps "
+                                     "especially on the 60% 70% down stocks'."),
+    dj_body: str = Query("", description="doji_sweep tab only — the doji body view: 5 (default, the house doji — the body "
+                                          "under 5% of the day's range) | 10 (under 10%); unknown values serve the default."),
     min_tier: Optional[str] = Query(None,
                                     description="liquidity floor by 50-day avg $ volume: "
                                                 "deep (>=$50M) | ok (>=$10M, the default) | "
@@ -215,6 +222,8 @@ async def chart_maps(
             hb_mode=(hb_mode if isinstance(hb_mode, str) and hb_mode.strip() else None),
             hb_all=hb_all is True,
             hb_dir=(hb_dir if isinstance(hb_dir, str) and hb_dir.strip() else None),
+            dj=(dj if isinstance(dj, str) and dj.strip() else None),
+            dj_body=(dj_body if isinstance(dj_body, str) and dj_body.strip() else None),
             studies=studies is True,
             min_room=(float(min_room) if isinstance(min_room, (int, float))
                       and not isinstance(min_room, bool) else None),

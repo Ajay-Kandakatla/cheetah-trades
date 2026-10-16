@@ -824,3 +824,37 @@ def test_NEGATIVE_tape_burst_kinds_never_imports_key_levels():
     src = Path(TBK.__file__).read_text(encoding="utf-8")
     assert "key_levels" not in src.replace("KL.prev_market_day", "").replace(
         "supply_demand.key_levels (test_key_levels import guard)", "")
+
+
+# ── 18. the 🕯️ Doji Sweep tab never rides the 🗺️ watch (AMENDMENTS6 B3, 2026-10-16) ──
+# DECISIONS6: "NO alert, NO push in this build" — the tab's membership snapshot is
+# skipped like the 🎢 tab's, and the other tabs' roster is unchanged by it.
+def test_NEGATIVE_the_doji_sweep_snapshot_never_reaches_the_chartmaps_roster():
+    from chart_maps import membership as M
+    assert TBK.EXCLUDED_TABS == ("doji_sweep",)
+    assert set(TBK.EXCLUDED_TABS) <= set(M.MEMO_BLOCK_KEY), "a real memo tab id"
+    assert not set(TBK.EXCLUDED_TABS) & set(TBK.OWNED_TABS), "excluded, not owned by a kind"
+    base = [_mdoc("zones", ["AAA", "CCC"]), _mdoc("ath", ["AAA", "BBB"])]
+    rows0, c0 = TBK.chartmaps_watch(exclude=set(), now=NOW, db=FakeDB(chart_maps_membership=base))
+    db = FakeDB(chart_maps_membership=base + [_mdoc("doji_sweep", ["DJX", "AAA", "DJY"])])
+    rows, c = TBK.chartmaps_watch(exclude=set(), now=NOW, db=db)
+    assert [r["symbol"] for r in rows] == [r["symbol"] for r in rows0] == ["AAA", "BBB", "CCC"]
+    assert c == c0, "the existing roster counts are unchanged"
+    assert not {"DJX", "DJY"} & {r["symbol"] for r in rows}
+    assert all("doji_sweep" not in r["tabs"] for r in rows)
+    assert {r["symbol"]: r["tabs"] for r in rows}["AAA"] == ["ath", "zones"]
+
+
+def test_NEGATIVE_a_stale_doji_sweep_snapshot_is_not_counted_tabs_old():
+    db = FakeDB(chart_maps_membership=[_mdoc("doji_sweep", ["OLD"], built="2026-10-13T19:00:00+00:00"),
+                                       _mdoc("zones", ["NEW"])])
+    rows, c = TBK.chartmaps_watch(exclude=set(), now=NOW, db=db)
+    assert [r["symbol"] for r in rows] == ["NEW"] and c["tabs_old"] == 0 and c["tabs_read"] == 1
+
+
+def test_NEGATIVE_the_doji_sweep_cap_share_never_thins_other_tabs():
+    tabs = [_mdoc(f"t{i:02d}", [f"S{i}_{j}" for j in range(80)]) for i in range(24)]
+    rows0, _ = TBK.chartmaps_watch(exclude=set(), now=NOW, db=FakeDB(chart_maps_membership=tabs))
+    rows, _ = TBK.chartmaps_watch(exclude=set(), now=NOW, db=FakeDB(
+        chart_maps_membership=tabs + [_mdoc("doji_sweep", [f"DJ{j}" for j in range(80)])]))
+    assert [r["symbol"] for r in rows] == [r["symbol"] for r in rows0]
