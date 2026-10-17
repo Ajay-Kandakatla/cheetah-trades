@@ -91,6 +91,19 @@ def _client():
     return TestClient(app)
 
 
+def _pin_clock(monkeypatch, now: datetime):
+    """The route calls `compose` with no `now`, so it reads the module's own `datetime.now(board.ET)` (live_card.py
+    `compose`): pin that clock the house way (test_high_beta_tab `_Fixed`) so a route test reads the SAME session at
+    any wall-clock hour — the hermetic suite runs after the 20:00 ET close too (1 failed at 23:10 ET, 2026-10-16).
+    Only `now` is pinned; `fromtimestamp` and the rest of the class stay real (`card_now` stamps the print through
+    it)."""
+    class _Fixed(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now.astimezone(tz) if tz else now.replace(tzinfo=None)
+    monkeypatch.setattr(LC, "datetime", _Fixed)
+
+
 # ── GOLDENS ──────────────────────────────────────────────────────────────────
 def test_golden_rth_appended_closes_at_the_last_print(monkeypatch):
     a = _golden(monkeypatch, "rth_appended")
@@ -368,13 +381,26 @@ def test_negative_c2_one_symbol_fault_is_omitted_with_a_word(monkeypatch):
             raise KeyError("epoch")
         return real(frame, sym, snap)
     monkeypatch.setattr(LC, "card_bar", flaky)
+    # the route passes no `now`: pin the module clock to the RTH golden instant (the wall clock may read closed)
+    _pin_clock(monkeypatch, _at(2026, 9, 3, 14, 0, 30))
     r = _client().post("/chart-maps/live", json={"symbols": ["XLAB", "NVDA"]})
     assert r.status_code == 200
     j = r.json()
     assert list(j["quotes"]) == ["NVDA"] and j["fault"] is None
     assert j["missing"] == ["XLAB"]
     assert j["faults"] == {"XLAB": LC.SYMBOL_FAULT_TEXT}
+    assert j["as_of"] == "2026-09-03 14:00:30 ET", "the route read the pinned clock, not the wall clock"
+    assert j["session"] == "rth"
     assert j["footer"]["live"] and j["footer"]["live"].startswith("live · ")
+    assert j["footer"] == {"live": "live · 14:00:30 ET", "stale": "last refresh 14:00 ET"}
+    # the same one-symbol fault read in a CLOSED session: the footer's None is the session, never the fault —
+    # the other symbol still serves and the word still rides (and the pin holds in both directions)
+    _pin_clock(monkeypatch, _at(2026, 9, 3, 21, 30))
+    k = _client().post("/chart-maps/live", json={"symbols": ["XLAB", "NVDA"]}).json()
+    assert list(k["quotes"]) == ["NVDA"] and k["fault"] is None
+    assert k["missing"] == ["XLAB"] and k["faults"] == {"XLAB": LC.SYMBOL_FAULT_TEXT}
+    assert k["as_of"] == "2026-09-03 21:30:00 ET" and k["session"] == "closed"
+    assert k["footer"] == {"live": None, "stale": "last refresh 21:30 ET"}
 
 
 def test_negative_c2_every_symbol_fault_claims_no_live_footer(monkeypatch):
