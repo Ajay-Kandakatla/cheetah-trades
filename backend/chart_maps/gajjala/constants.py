@@ -196,6 +196,12 @@ LEDGER_TAPE_TF_MIN = 5                   # TRANSPORT — MINE (DECISIONS11 D2): 
 LEDGER_TAPE_SESSIONS = 3                 # TRANSPORT — MINE (DECISIONS11 D2, BUILD_SPEC11 C3): the alert's day + its same session + the next (an after-close alert's same session is the next market day)
 LEDGER_TAPE_BARS_MAX = LEDGER_TAPE_SESSIONS * (16 * 60 // LEDGER_TAPE_TF_MIN)   # derived — MINE: 16 h = daytrading.data ET_PREMARKET_OPEN → ET_AFTERHOURS_CLOSE (test pins equality) → 576
 LEDGER_TAPE_MEMO_SEC = PASS_CADENCE_SEC  # derived — MINE (DECISIONS11 D2 "memo 5 min per id")
+LEDGER_LOSS_FAST_MIN = 5                 # TRANSPORT — MINE (DECISIONS11 D12/D13 class C4): "stopped ≤ 5 min after the fill"
+LEDGER_LOSS_LATE_RTH_MIN = 30            # TRANSPORT — MINE (DECISIONS11 D12, class C2): "the last 30 min of RTH"
+LEDGER_LOSS_STALE_FILL_MIN = 60          # TRANSPORT — MINE (DECISIONS11 D12, class C3): "filled ≥ 60 min after the ring"
+LEDGER_LOSS_NO_PROGRESS_R = 0.3          # TRANSPORT — MINE (DECISIONS11 D12, class C5): best < +0.3R before the stop
+LEDGER_LOSS_GAVE_BACK_R = 0.8            # TRANSPORT — MINE (DECISIONS11 D12, class C6): best ≥ +0.8R, then stopped
+LEDGER_LOSS_CLASS_FLAG_N = 3             # Ajay 2026-09-03 (Rule #9: "≥3 of the same class" → propose a rule, never change one) — the losers study's flag count
 LEDGER_TODAY_MEMO_SEC = PASS_CADENCE_SEC # derived — MINE (DECISIONS9 D5c "memo 5 min"; HIS CALL Q2)
 LEDGER_TODAY_MAX = 60                    # TRANSPORT — MINE (AMENDMENTS9 E8, DECISIONS9 D5c "≤ ~60 names"; HIS CALL Q2): rows read per open
 LEDGER_TODAY_MAX_NAMES = LEDGER_TODAY_MAX   # derived — MINE: the BUILD_SPEC9 §3.1 name of the same cap (one number, AMENDMENTS9 E8)

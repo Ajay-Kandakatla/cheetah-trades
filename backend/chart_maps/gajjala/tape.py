@@ -70,6 +70,7 @@ ENTRY_TAPE_WORDS = {
     "fault": "The tape could not be built this time — the next re-read tries again.",
     "not_found": "No A+ entry with that id on the 🏁 Track record.",
     "split": "A split is on file after this alert — the bars are adjusted, the alert's levels are as printed; the levels are not drawn.",
+    "split_replayed": "A split is on file after this alert — the replayed bars print as traded before and after it, so the levels are not drawn.",   # AMENDMENTS11 A7
 }
 VIEW_PARAM = "view"
 VIEWS = (("all", "📋 all alerts"), ("timeline", "🕰️ entries timeline"))      # DECISIONS11 D3 (served labels)
@@ -109,7 +110,8 @@ def _stamp(ms: int) -> str:
 
 
 def parse_id(_id) -> Optional[tuple]:
-    """A ledger A+ id "{YYYY-MM-DD}|{SYM}|{setup}|aplus" -> (date, SYM, setup); a 🧠 id, junk or a non-str -> None."""
+    """A ledger A+ id "{YYYY-MM-DD}|{SYM}|{setup}|aplus" -> (date, SYM, setup); a 🧠 id, junk or a non-str -> None.
+    (Phase 2: a "REPLAY:" id is dispatched before this — replay_ref.)"""
     if not isinstance(_id, str):
         return None
     parts = _id.split("|")
@@ -123,6 +125,24 @@ def parse_id(_id) -> Optional[tuple]:
     except ValueError:
         return None
     return d, sym, setup
+
+
+def replay_ref(_id) -> Optional[tuple]:
+    """⏪ A replay id "REPLAY:{YYYY-MM-DD}|{SYM}|{setup}" (exactly ledger.replay_id's shape, no "#") -> (date, SYM,
+    setup); anything else -> None (DECISIONS11 D5, BUILD_SPEC11 §3.11)."""
+    if not isinstance(_id, str) or not _id.startswith(LG.REPLAY_ID_PREFIX) or "#" in _id:
+        return None
+    parts = _id[len(LG.REPLAY_ID_PREFIX):].split("|")
+    if len(parts) != 3:
+        return None
+    d_s, sym, setup = parts
+    if len(d_s) != 10 or not sym or sym != sym.strip().upper() or not setup.strip():
+        return None
+    try:
+        d = date.fromisoformat(d_s)
+    except ValueError:
+        return None
+    return (d, sym, setup) if LG.replay_id(d.isoformat(), sym, setup) == _id else None
 
 
 def _naive_utc_index(df):
@@ -252,9 +272,70 @@ def _cell_text(c: dict) -> str:
     return c["text"] + (" · " + c["sub_text"] if c.get("sub_text") else "")
 
 
+def _stored_bars5(raw) -> list:
+    """⏪ A replay doc's stored `bars5` -> the tape bars: each {t, o, h, l, c, v, s} validated (t an int epoch ms, c a
+    finite number; o / h / l / v a number or None; s a string or None), ascending by t, one bar per t, capped at
+    LEDGER_TAPE_BARS_MAX. Junk is dropped, never drawn."""
+    out = {}
+    for x in raw if isinstance(raw, list) else []:
+        if not isinstance(x, dict):
+            continue
+        t, c = x.get("t"), LG._num(x.get("c"))
+        if isinstance(t, bool) or not isinstance(t, int) or c is None:
+            continue
+        s = x.get("s")
+        out[t] = {"t": t, "o": LG._num(x.get("o")), "h": LG._num(x.get("h")), "l": LG._num(x.get("l")), "c": c,
+                  "v": LG._num(x.get("v")), "s": s if isinstance(s, str) else None}
+    return [out[k] for k in sorted(out)][:int(GC.LEDGER_TAPE_BARS_MAX)]
+
+
+def _build_replay(_id: str, *, lite: bool, now: datetime, store) -> Optional[dict]:
+    """⏪ (DECISIONS11 D2 / D5, BUILD_SPEC11 §3.11) a REPLAYED row's tape: the replay doc's stored `bars5` (as printed,
+    built by bars5() in scripts/gajjala_replay.py), its own pre-graded columns, note = ledger.REPLAY_NOTE. NEVER calls
+    a loader (no cache read, no fetch, no today memo). None = no such replay doc (the route 404s)."""
+    from . import tab as GT
+    ref = replay_ref(_id)
+    if ref is None:
+        return None
+    d, sym, _setup = ref
+    rd = getattr(store, "replay_rows", None)
+    docs = rd([d]) if callable(rd) else None
+    if docs is None:
+        return fault_payload(_id, lite=lite, now=now, ticker=sym)
+    doc, row = None, None
+    for x in docs:
+        if not isinstance(x, dict) or x.get("_id") != _id:
+            continue
+        try:
+            r = LG.alert_of(x, LG.KINDS[1])
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala tape: unreadable replay doc %s: %s", _id, type(exc).__name__)
+            continue
+        if r is not None and r["line"] == LG.LINES[2] and r["id"] == _id:
+            doc, row = x, r
+            break
+    if row is None:
+        return None
+    same = doc.get("same") if isinstance(doc.get("same"), dict) else None
+    nxt = doc.get("next") if isinstance(doc.get("next"), dict) else None
+    bars = _stored_bars5(doc.get("bars5"))
+    session, is_today, _in = GT.session_for(now)
+    cs = LG.replay_cell(row, "same", same, now, session, is_today)
+    cn = LG.replay_cell(row, "next", nxt, now, session, is_today)
+    # F9 (as _build): a split cell on file -> the stored bars5 spans the split (the next session's minutes print
+    # post-split), so the as-printed levels are not drawn — no hlines, no dots, no tone. The note says why in the
+    # replay's own words (AMENDMENTS11 A7: ENTRY_TAPE_WORDS["split"] says "the bars are adjusted", which a replay's
+    # bars are not) and keeps REPLAY_NOTE after it.
+    split = any(isinstance(g, dict) and (g.get("reason") == "split" or g.get("split_on")) for g in (same, nxt))
+    note = (ENTRY_TAPE_WORDS["split_replayed"] + " " + LG.REPLAY_NOTE) if split else LG.REPLAY_NOTE
+    return _compose(_id, row, d, sym, bars, cs, cn, same, nxt, split=split, note=note, lite=lite, now=now)
+
+
 def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_day: Optional[Callable],
            today_bars: Optional[Callable], notes_out: Optional[set] = None) -> Optional[dict]:
     from . import tab as GT
+    if isinstance(_id, str) and _id.startswith(LG.REPLAY_ID_PREFIX):       # ⏪ the replayed line: never a loader
+        return _build_replay(_id, lite=lite, now=now, store=store)
     parsed = parse_id(_id)
     if parsed is None:
         return None
@@ -349,15 +430,35 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
     # 7. the cells — the 🏁 Track record's own texts
     cs = LG._cell(row, "same", same or same_p, prov, now, session, is_today)
     cn = LG._cell(row, "next", nxt, False, now, session, is_today)
-    heads = dict(LG.HEADS)
-    read = _w("read", same_head=heads["same"], same=_cell_text(cs), next_head=heads["next"], next=_cell_text(cn))
-    # 8. the lines, rules and dots
-    f = LG.filled_grade(same or same_p, nxt)
-    # the exit follows the column that DECIDED the trade: a same-session "open" decided next session -> next's exit
-    ex = nxt if isinstance(nxt, dict) and nxt.get("outcome") in LG.DECIDED else f
     # F9: a split the ledger has on file — a split cell, or a decided column copied across a split (split_on)
     split = any(isinstance(g, dict) and (g.get("reason") == "split" or g.get("split_on")) for g in (same, nxt))
     split = split or (sp_today is not None and sp_today is not False)     # today_read's check answered a split
+    if split:
+        note = ENTRY_TAPE_WORDS["split"]
+    elif "fault" in notes:
+        note = ENTRY_TAPE_WORDS["fault"]
+    elif "today_failed" in notes:
+        note = ENTRY_TAPE_WORDS["today_failed"]
+    elif "lite_today" in notes:
+        note = ENTRY_TAPE_WORDS["lite_today"]
+    elif not bars:
+        note = _w("no_bars", n=n, sym=sym, date=d.isoformat())
+    else:
+        note = None
+    return _compose(_id, row, d, sym, bars, cs, cn, same or same_p, nxt, split=split, note=note, lite=lite, now=now)
+
+
+def _compose(_id: str, row: dict, d: date, sym: str, bars: list, cs: dict, cn: dict, same: Optional[dict],
+             nxt: Optional[dict], *, split: bool, note: Optional[str], lite: bool, now: datetime) -> dict:
+    """Steps 7–8 — ONE composer for the live / shadow tape and the ⏪ replayed tape: the read (the 🏁 cells), the
+    trigger / stop / +1R lines, the alert / fill rules, the fill / exit dots, the axis and the tone."""
+    n, m = GC.LEDGER_TAPE_TF_MIN, LG._m()
+    heads = dict(LG.HEADS)
+    read = _w("read", same_head=heads["same"], same=_cell_text(cs), next_head=heads["next"], next=_cell_text(cn))
+    # 8. the lines, rules and dots
+    f = LG.filled_grade(same, nxt)
+    # the exit follows the column that DECIDED the trade: a same-session "open" decided next session -> next's exit
+    ex = nxt if isinstance(nxt, dict) and nxt.get("outcome") in LG.DECIDED else f
     hlines, rules, dots = [], [], []
     if row.get("plan") == LG.PLANS[0]:
         hlines.append({"key": "trigger", "px": row["trigger"], "tone": "buy",
@@ -395,18 +496,6 @@ def _build(_id: str, *, lite: bool, now: datetime, store, clock: Callable, load_
         ref = ref if ref is not None else LG._num(row.get("trigger"))
         if ref is not None and not split:                   # F9: an adjusted close vs an as-printed level: no tone
             tone = "up" if bars[-1]["c"] >= ref else "dn"
-    if split:
-        note = ENTRY_TAPE_WORDS["split"]
-    elif "fault" in notes:
-        note = ENTRY_TAPE_WORDS["fault"]
-    elif "today_failed" in notes:
-        note = ENTRY_TAPE_WORDS["today_failed"]
-    elif "lite_today" in notes:
-        note = ENTRY_TAPE_WORDS["lite_today"]
-    elif not bars:
-        note = _w("no_bars", n=n, sym=sym, date=d.isoformat())
-    else:
-        note = None
     return {"id": _id, "ticker": sym, "tf": _w("tf", n=n), "lite": bool(lite), "bars": bars, "n_bars": len(bars),
             "hlines": hlines, "rules": rules, "dots": dots, "axis": axis, "legend": _w("legend", n=n, m=m),
             "read": read, "title": read + "\n" + ENTRY_TAPE_WORDS["open_hint"], "tone": tone, "note": note,
@@ -427,7 +516,8 @@ def entry_tape(_id: str, *, lite: bool = False, now: Optional[datetime] = None, 
     fault -> the payload with bars [] and note ENTRY_TAPE_WORDS["fault"] (never raises). Memoised per (id, full | lite)
     LEDGER_TAPE_MEMO_SEC (_MEMO under _LOCK; older entries pruned on write); a full build refreshes the lite entry; a
     failed read (fault / today_failed) is never memoised. The lite build never fetches (F8)."""
-    if parse_id(_id) is None:
+    ref = parse_id(_id) or replay_ref(_id)                       # ⏪ a "REPLAY:" id is dispatched in _build
+    if ref is None:
         return None
     clock = clock or time.monotonic
     now = LG._aware(now)
@@ -444,7 +534,7 @@ def entry_tape(_id: str, *, lite: bool = False, now: Optional[datetime] = None, 
                    today_bars=today_bars, notes_out=notes)
     except Exception as exc:                                    # noqa: BLE001
         log.warning("gajjala tape: build failed for %s: %s", _id, type(exc).__name__)
-        p = fault_payload(_id, lite=lite, now=now, ticker=parse_id(_id)[1])
+        p = fault_payload(_id, lite=lite, now=now, ticker=ref[1])
     if p is None:
         return None
     out = lite_of(p) if lite else p
@@ -460,4 +550,5 @@ def entry_tape(_id: str, *, lite: bool = False, now: Optional[datetime] = None, 
 
 
 __all__ = ["ENTRY_TAPE_WORDS", "VIEW_PARAM", "VIEWS", "VIEW_DEFAULT", "TIMELINE_EMPTY_TEXT", "TAPE_HEAD", "TAPE_TOGGLE",
-           "PAYLOAD_KEYS", "LITE_KEYS", "views_block", "parse_id", "bars5", "entry_tape", "lite_of", "fault_payload"]
+           "PAYLOAD_KEYS", "LITE_KEYS", "views_block", "parse_id", "replay_ref", "bars5", "entry_tape", "lite_of",
+           "fault_payload"]

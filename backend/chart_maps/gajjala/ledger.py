@@ -21,7 +21,9 @@ Rows (D1): every 🧠 potential push that RANG (`push.state` "pushed"; joined / 
 rows) — the live line, the headline % — and every A+ `gajjala_alerts` SHADOW claim (never sent: its own line, never in
 the %) + every live A+ entry (a `GG:` claim in state pushed, since 2026-10-16) on the live line, counted on its own 🎯
 line (counts["entry"], `entries_text`), never pooled into the 🧠 % (AMENDMENTS10 F3: an A+ exists only once the trade
-survived its entry bar). The grader is PURE: 1-minute bars in, a dict out; every price compare is in
+survived its entry bar). ⏪ The REPLAYED line (2026-10-16 night, DECISIONS11 D5): `gajjala_replay` docs written by
+scripts/gajjala_replay.py (today's detectors re-run on a session with no record, `_id` "REPLAY:{date}|{SYM}|{setup}",
+state "replayed") are their own line — never rang, never in any count of sent alerts or any %. The grader is PURE: 1-minute bars in, a dict out; every price compare is in
 `Decimal(repr(x))` (1.85 + 0.10 is 1.9500000000000002 in binary floats — a float compare misses an equal high).
 
 Writes: ONLY `grade_step` (the 20:15 ET nightly's LAST step) writes, into gajjala_ledger. `today_read` (the 🏁 GET's
@@ -47,7 +49,7 @@ ONE_MIN = timedelta(minutes=1)
 SETTLE = timedelta(seconds=GC.BAR_SETTLE_SEC)
 
 KINDS = ("potential", "aplus")        # 🧠 gajjala_potential push · 🚩 A+ gajjala_setup
-LINES = ("live", "shadow")            # live = it reached your phone · shadow = A+ recorded, never sent
+LINES = ("live", "shadow", "replayed")   # live = it reached your phone · shadow = A+ recorded, never sent · replayed = today's detectors re-run on a session with no record (DECISIONS11 D5), never rang
 PLAN_SOURCES = ("push", "first_sighting", "first_sighting_deferred", "aplus")
 PLANS = ("ok", "no_plan", "no_risk")  # no_risk = trigger == stop on the alert (AMENDMENTS9 E4)
 ENTRIES = ("filled", "no_entry", "no_plan", "no_risk", "no_time")
@@ -159,6 +161,16 @@ def ledger_id(date_iso: str, sym: str, setup: str, kind: str) -> str:
     return f"{str(date_iso)[:10]}|{(sym or '').upper()}|{setup}|{kind}"
 
 
+# ⏪ the replayed line (2026-10-16 night, DECISIONS11 D4 / D5) — a replay doc's id is never a ledger_id (no collision)
+REPLAY_ID_PREFIX = "REPLAY:"
+REPLAY_STATE = "replayed"
+
+
+def replay_id(date_iso: str, sym: str, setup: str) -> str:
+    """`"REPLAY:{date}|{SYM}|{setup}"` — one gajjala_replay doc per (session, symbol, setup) (BUILD_SPEC11 §3.12)."""
+    return f"{REPLAY_ID_PREFIX}{str(date_iso)[:10]}|{(sym or '').upper()}|{setup}"
+
+
 # ── the plan and the clock ────────────────────────────────────────────────────────────────────────────────────────
 def plan_of(trigger, stop) -> tuple:
     """(plan, r) — "ok" with r = trigger − stop when trigger > stop; "no_risk" when trigger == stop (E4); "no_plan"
@@ -248,6 +260,9 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
     🧠 "potential": a push that RANG (`push.state` "pushed") on a doc not first seen by a join pass. 🚩 "aplus": a
     `SHADOW:` claim in state "shadow" (line shadow, never sent …) + every live A+ entry (a `GG:` claim in state pushed,
     no `#`, since 2026-10-16) on the live line — served_block counts it on its own 🎯 line, never in the 🧠 % (F3).
+    ⏪ (DECISIONS11 D5): a `gajjala_replay` doc — `_id` == replay_id(date, SYM, setup) (no `#`), state "replayed",
+    kind "aplus", an `alert` block — is the REPLAYED line (`id` = its `_id`; at / trigger / stop read from `alert`); a
+    `REPLAY:` id in any other state is never a row and never reads live (C6).
     Alert time (E3) = `push.at` / `at` → else `claimed_at` → else None (the row is "no alert time", never counted)."""
     from . import alerts as AL
     from . import potential as PT
@@ -282,21 +297,29 @@ def alert_of(doc: dict, kind: str) -> Optional[dict]:
     else:
         _id = str(doc.get("_id") or "")
         state = doc.get("state")
+        a = doc.get("alert") if isinstance(doc.get("alert"), dict) else {}
         if state == "shadow" and _id.startswith(AL.SHADOW_CLAIM_PREFIX) and "#" not in _id:
             line = LINES[1]
-        elif state == "pushed" and "#" not in _id and not _id.startswith(AL.SHADOW_CLAIM_PREFIX):
+        elif (state == "pushed" and "#" not in _id and not _id.startswith(AL.SHADOW_CLAIM_PREFIX)
+              and not _id.startswith(REPLAY_ID_PREFIX)):                                     # C6
             line = LINES[0]
+        elif (state == REPLAY_STATE and "#" not in _id and _id == replay_id(d.isoformat(), sym, setup)
+              and doc.get("kind") == KINDS[1] and a):                                        # DECISIONS11 D5 · F15
+            line = LINES[2]
         else:
             return None
-        at = _parse_at(doc.get("at")) or _parse_at(doc.get("claimed_at"))
+        src_doc = a if line == LINES[2] else doc          # a replay doc keeps at / trigger / stop under "alert"
+        at = _parse_at(src_doc.get("at")) or _parse_at(src_doc.get("claimed_at"))
         at_et = at.astimezone(ET).strftime("%H:%M") if at else None
         first_et = None
-        trig, stop, px, src = doc.get("trigger"), doc.get("stop"), doc.get("price"), PLAN_SOURCES[3]
+        trig, stop, px, src = (src_doc.get("trigger"), src_doc.get("stop"), src_doc.get("price"),
+                               PLAN_SOURCES[3])
         url = PT.deep_link(sym, setup)
     plan, r = plan_of(trig, stop)
     t, s = _num(trig), _num(stop)
     r_pct = round(float(_D(r) / _D(t) * 100), 4) if plan == PLANS[0] else None
-    return {"id": ledger_id(d.isoformat(), sym, setup, kind), "date": d.isoformat(), "symbol": sym, "setup": setup,
+    rid = str(doc.get("_id")) if line == LINES[2] else ledger_id(d.isoformat(), sym, setup, kind)   # ⏪ D5
+    return {"id": rid, "date": d.isoformat(), "symbol": sym, "setup": setup,
             "kind": kind, "line": line, "at_utc": at, "at_et": at_et, "rang": rang_of(d, at),
             "trigger": t, "stop": s, "r": r, "r_pct": r_pct,
             "thin": bool(r_pct is not None and r_pct < GC.LEDGER_MIN_R_PCT), "plan": plan,
@@ -311,17 +334,37 @@ def _sort_key(row: dict) -> tuple:
             setups.get(row.get("setup"), len(setups)), KINDS.index(row["kind"]) if row.get("kind") in KINDS else 9)
 
 
-def rows_for(sessions, store) -> list:
+def rows_for(sessions, store, *, with_replay: bool = False, faults: Optional[list] = None) -> list:
     """D1: every 🧠 push that rang + every A+ shadow / live A+ claim on these ET sessions, as alert_of dicts, ordered
     (date desc, at desc — no alert time last, symbol asc, SETUPS index, KINDS index). Raises LedgerReadError when
-    either read is None. A doc that cannot be read as a row is skipped (logged) — the rest stand."""
+    either read is None. A doc that cannot be read as a row is skipped (logged) — the rest stand.
+    ⏪ (DECISIONS11 D5): `with_replay` (served_block ONLY — the default False keeps grade_step and today_read off every
+    replay doc) adds the store's replay_rows as the replayed line; each source keeps only its own lines (a REPLAY doc
+    planted in gajjala_alerts is never a row); a replayed row carries `graded` = the doc's own pre-graded columns. A
+    replay read that raises or answers None appends "replay" to `faults` and serves without the line (a store without
+    the method: no line, no fault)."""
     sessions = list(sessions or [])
     pot = store.potential_pushes(sessions)
     al = store.alert_rows(sessions)
     if pot is None or al is None:
         raise LedgerReadError("the 🧠 tracker or the A+ ledger could not be read")
+    rep: list = []
+    if with_replay:
+        rd = getattr(store, "replay_rows", None)
+        if callable(rd):
+            try:
+                got = rd(sessions)
+            except Exception as exc:                            # noqa: BLE001
+                log.warning("gajjala ledger: replay read failed: %s", type(exc).__name__)
+                got = None
+            if got is None:
+                if faults is not None:
+                    faults.append("replay")
+            else:
+                rep = list(got)
     out, seen = [], set()
-    for docs, kind in ((pot, KINDS[0]), (al, KINDS[1])):
+    for docs, kind, lines in ((pot, KINDS[0], (LINES[0],)), (al, KINDS[1], (LINES[0], LINES[1])),
+                              (rep, KINDS[1], (LINES[2],))):
         for doc in docs:
             try:
                 row = alert_of(doc, kind)
@@ -329,9 +372,13 @@ def rows_for(sessions, store) -> list:
                 log.warning("gajjala ledger: unreadable %s doc %s: %s", kind, (doc or {}).get("_id"),
                             type(exc).__name__)
                 continue
-            if row is not None and row["id"] not in seen:
-                seen.add(row["id"])
-                out.append(row)
+            if row is None or row["line"] not in lines or row["id"] in seen:
+                continue
+            if row["line"] == LINES[2]:
+                row["graded"] = {h: (doc.get(h) if isinstance(doc.get(h), dict) else None)
+                                 for h in GC.LEDGER_HORIZONS}
+            seen.add(row["id"])
+            out.append(row)
     out.sort(key=_sort_key)
     return out
 
@@ -856,18 +903,188 @@ HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math — no
            "early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on "
            "their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. "
            "The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo "
-           "(docs/gajjala/study_2026_10_13.md); this record does not change that.")                       # W3
+           "(docs/gajjala/study_2026_10_13.md); this record does not change that."
+           # W3 — WIDENED 2026-10-16 (night): DECISIONS11 D11 — the chips count rows
+           " The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
+           "unchanged.")                                                                                    # W3
 HEADS = (("symbol", "Ticker"), ("setup", "Setup"), ("at", "Alert"), ("kind", "Kind"),
          ("plan", "Trigger → fill · stop"), ("same", "Same session"), ("next", "Through next session"))  # W11
 KIND_TEXT = {("potential", "live"): "🧠 live", ("aplus", "shadow"): "A+ shadow — never sent",
-             ("aplus", "live"): "🎯 A+ entry"}                                         # W7 · E7 (DECISIONS10 D3)
+             ("aplus", "live"): "🎯 A+ entry",
+             ("aplus", "replayed"): "⏪ A+ replayed"}                                   # W7 · E7 · DECISIONS11 D5
 # MINE (AMENDMENTS10 F3): the count buckets — the headline % (🧠 pushes only) · the A+ shadow line · the 🎯 live A+ entries
-COUNT_LINES = ("live", "shadow", "entry")
+# · (DECISIONS11 D5) the ⏪ replayed rows — never rang, their own bucket, never a % (WIDENED 2026-10-16 night)
+COUNT_LINES = ("live", "shadow", "entry", "replayed")
 ENTRIES_HEAD = "🎯 A+ entries sent (their own line, not pooled with the 🧠 %)"            # AMENDMENTS10 F3
 NO_PLAN_TEXT = "no trigger or stop on the alert"                                                         # W9
 NO_RISK_TEXT = "trigger = stop on the alert — no risk to size"                                           # E4
 NO_TIME_TEXT = "no alert time"                                                                           # E3
 THIN_TEXT = "thin R"                                                                                     # E4
+# ⏪ the replayed line (DECISIONS11 D4 / D5 / D10, BUILD_SPEC11 §3.11, AMENDMENTS11 F10) — served words, frozen
+REPLAYED_HEAD = "⏪ Replayed with today's detectors (never rang, not in any %)"            # DECISIONS11 D5
+REPLAY_NOTE = ("Replayed on the study's same-day universe (a subset of what the live scanner lists), no float gate, "
+               "as-printed bars; these never rang. Not a measurement — the 2026-10-14 study read NULL.")   # D5 verbatim
+REPLAY_FAULT_TEXT = "⏪ replay not read"                                                   # D5
+REPLAY_NOT_GRADED_TEXT = "not graded (bars not cached)"                                    # D4
+REPLAY_CHIP = "⏪ replayed"
+REPLAY_CHIP_UNGATED = "⏪ replayed · 🎾 ungated"                                           # D10 DEFAULT — HIS CALL Q4
+FLOAT_GATED_SETUPS = ("reversal_squeeze",)   # MINE: the one detector that reads the float (detectors.reversal_squeeze → _float_gate, K8_MAX_FLOAT)
+REPLAY_CAVEATS = (
+    "Universe: the study's same-day list (grouped daily, his three scanner numbers, the first qualifying minute) — a subset of what the live scanner lists (no stay-listed carry, no split hold-outs).",
+    "No float gate: 🎾 Reversal Squeeze rows are ungated structure (no point-in-time float on file).",
+    "As-printed bars (not split-adjusted), graded only on the study cache's own minute bars.",
+    f"The alert time is the {GC.PASS_CADENCE_SEC // 60}-minute pass label (the live pass rang about a minute later); its freshness, halts and after-hours context are not replayed.",
+    "A later reverse split unknown to the dated type lookup is not seen.",
+    "One break per setup per day: the study keeps the first break of any class — a later A+ behind an earlier stopped or variant break on the same setup is not replayed.",   # AMENDMENTS11 F10
+    "These never rang. Not a measurement — the 2026-10-14 study read NULL.",
+)
+
+# ✅ / ❌ categories (Ajay 2026-10-16: "I want winners and losers category in his track record and would like us to study
+# the losers" — DECISIONS11 D11, BUILD_SPEC11 §3.14 C8, AMENDMENTS11 F7 / F13). ROW counts, never a %.
+BUCKETS = ("win", "loss", "open", "flat", "out")                                           # DECISIONS11 D11
+BUCKET_TEXT = {"win": "✅ winner", "loss": "❌ loser", "open": "⏳ open", "flat": "➖ flat",
+               "out": "— no fill / not graded"}                                           # D11 · AMENDMENTS11 F7
+CATEGORY_KEYS = ("all",) + BUCKETS
+CATEGORY_LABELS = {"all": "📋 all", "win": "✅ winners", "loss": "❌ losers", "open": "⏳ open", "flat": "➖ flat",
+                   "out": "— no fill / not graded"}                                       # D11 · AMENDMENTS11 F7
+CATEGORY_PARAM = "cat"
+CATEGORY_EMPTY_TEXT = "No row in this category on this span."
+
+
+def bucket_of(same_state: Optional[str], next_state: Optional[str], next_due: bool = True) -> str:
+    """D11 + BUILD_SPEC11 C8 as modified by AMENDMENTS11 F7 — the row's category from its two SERVED cell states, total:
+    next win/loss → it; else same win/loss → it (next pending / split / copied); else next "flat" → "flat"; else same
+    "open" while the next column is still due (next "pending" and `next_due`) → "open"; else "out" (no_entry / no_plan /
+    no_risk / no_time / pending / split, a replayed row whose next session was never cached, same open + next split,
+    any unknown string). A thin-R row keeps its real bucket (and its thin chip — it stays out of the %)."""
+    if next_state in DECIDED:
+        return next_state
+    if same_state in DECIDED:
+        return same_state
+    if next_state == BUCKETS[3]:
+        return BUCKETS[3]
+    if same_state == BUCKETS[2] and next_state == "pending" and next_due:
+        return BUCKETS[2]
+    return BUCKETS[4]
+
+
+def _category_text(key: str, n: int, n_replayed: int = 0) -> str:
+    """The chip's served text, the ROW count inside it (C10): f"{label} {n}" (+ f" +{r} ⏪" when `n_replayed` replayed
+    rows share the bucket — AMENDMENTS11 F13, counted apart, never in a sent count)."""
+    return f"{CATEGORY_LABELS[key]} {int(n)}" + (f" +{int(n_replayed)} ⏪" if n_replayed else "")
+
+
+def _categories(rows: list) -> list:
+    """D11 / C10 / AMENDMENTS11 F6 + F13 — one chip per CATEGORY_KEYS key over the SERVED rows given: `n` = the rows
+    on the lines live / shadow / entry (every non-replayed row; "all" = all of them), `n_replayed` = the ⏪ replayed
+    rows of that bucket, counted APART (they filter in with their bucket, never in a sent count); `text` =
+    _category_text. Row counts only — never a %."""
+    out = []
+    for k in CATEGORY_KEYS:
+        mine = [r for r in rows if k == CATEGORY_KEYS[0] or r.get("bucket") == k]
+        r_n = sum(1 for r in mine if r.get("line") == LINES[2])
+        n = len(mine) - r_n
+        out.append({"key": k, "text": _category_text(k, n, r_n), "n": n, "n_replayed": r_n})
+    return out
+
+
+# loss facts (DECISIONS11 D12, BUILD_SPEC11 §3.15, AMENDMENTS11 F2 / F14 / F17) — FROZEN words: facts from the STORED
+# grade fields only (never a regrade, never a bar), no causal word; the thresholds live in constants.py (MINE)
+LOSS_FACT_THIN = "thin R (not in the %)"
+LOSS_FACT_STOPPED = "stopped {n} min after the fill"
+LOSS_FACT_BEST = "high +{x}R through the stop minute"         # AMENDMENTS11 F17 (best_to_exit includes the stop minute)
+LOSS_FACT_FILLED = "filled {m} min after it rang"
+LOSS_FACT_FILL_MINUTE = "stop in the fill minute"
+LOSS_FACT_LATE_RTH = "last {n} min of RTH"                    # n = GC.LEDGER_LOSS_LATE_RTH_MIN
+LOSS_FACT_NEXT_MORNING = "filled next morning (rang AH)"
+LOSS_FACT_STALE = "filled ≥{n} min after the ring"            # n = GC.LEDGER_LOSS_STALE_FILL_MIN
+
+
+def _whole_min(a: datetime, b: datetime) -> int:
+    """Whole minutes from a to b (floor)."""
+    return int((b - a).total_seconds() // 60)
+
+
+def _fill_clock(grade: Optional[dict]) -> Optional[tuple]:
+    """(fill_t, exit_t) aware UTC of a FILLED, decided (win / loss) grade that is not a split cell, else None."""
+    if not isinstance(grade, dict) or grade.get("entry") != "filled" or grade.get("reason") == "split":
+        return None
+    if grade.get("outcome") not in DECIDED:
+        return None
+    f, x = _parse_at(grade.get("fill_t")), _parse_at(grade.get("exit_t"))
+    return (f, x) if f is not None and x is not None else None
+
+
+def fill_facts(row: dict, grade: Optional[dict]) -> Optional[dict]:
+    """AMENDMENTS11 F14 — PURE, the fill-clock facts of ANY decided trade (win or loss) from the stored grade fields only
+    (never a regrade, never a bar): None unless `grade` FILLED, decided, with fill_t and exit_t. -> {"fill_after_min":
+    int | None (fill_t − the alert's at_utc, floor), "late_rth": the fill minute starts within LEDGER_LOSS_LATE_RTH_MIN
+    of its day's regular close, "next_morning": the row rang "ah" and the fill's ET date ≠ the alert date, "stale":
+    fill_after_min ≥ LEDGER_LOSS_STALE_FILL_MIN and not next_morning (F2), "fast": exit_t − fill_t ≤
+    LEDGER_LOSS_FAST_MIN (the stop for a loss, the +1R for a win)}. loss_facts calls it — one engine."""
+    clk = _fill_clock(grade)
+    if clk is None:
+        return None
+    fill_t, exit_t = clk
+    row = row or {}
+    at = row.get("at_utc") if isinstance(row.get("at_utc"), datetime) else _parse_at(row.get("at_utc"))
+    fill_after = _whole_min(_aware(at), fill_t) if at is not None else None
+    f_et = fill_t.astimezone(ET)
+    close = datetime.combine(f_et.date(), _close_et(f_et.date()), tzinfo=ET)
+    late = timedelta(0) < close - f_et <= timedelta(minutes=GC.LEDGER_LOSS_LATE_RTH_MIN)
+    a_d = _as_date(row.get("date"))
+    next_morning = row.get("rang") == RANGS[2] and a_d is not None and f_et.date() != a_d
+    stale = fill_after is not None and fill_after >= GC.LEDGER_LOSS_STALE_FILL_MIN and not next_morning
+    return {"fill_after_min": fill_after, "late_rth": bool(late), "next_morning": bool(next_morning),
+            "stale": bool(stale), "fast": _whole_min(fill_t, exit_t) <= GC.LEDGER_LOSS_FAST_MIN}
+
+
+def loss_facts(row: dict, grade: Optional[dict]) -> Optional[dict]:
+    """D12 — PURE, from the stored grade fields only (never a regrade, never a bar). None unless `grade` is a FILLED
+    loss with fill_t and exit_t. -> {"stopped_min": int (exit_t − fill_t, floor), "fill_after_min", "best_r": float |
+    None (best_to_exit_pct / 100 × fill_px / row["r"]; None without r), "fill_minute": reason == "stop_fill_minute",
+    "late_rth", "next_morning", "stale" (fill_facts — F2: never a next-morning fill), "fast": stopped_min ≤
+    LEDGER_LOSS_FAST_MIN, "no_progress": best_r < LEDGER_LOSS_NO_PROGRESS_R, "gave_back": best_r ≥
+    LEDGER_LOSS_GAVE_BACK_R, "thin": bool(row["thin"])}."""
+    if not isinstance(grade, dict) or grade.get("outcome") != "loss":
+        return None
+    ff = fill_facts(row, grade)
+    if ff is None:
+        return None
+    fill_t, exit_t = _fill_clock(grade)
+    row = row or {}
+    best, fill, r = _num(grade.get("best_to_exit_pct")), _num(grade.get("fill_px")), _num(row.get("r"))
+    best_r = (float(_D(best) / 100 * _D(fill) / _D(r)) if best is not None and fill is not None and r
+              else None)
+    return {"stopped_min": _whole_min(fill_t, exit_t), "fill_after_min": ff["fill_after_min"], "best_r": best_r,
+            "fill_minute": grade.get("reason") == "stop_fill_minute", "late_rth": ff["late_rth"],
+            "next_morning": ff["next_morning"], "stale": ff["stale"], "fast": ff["fast"],
+            "no_progress": bool(best_r is not None and best_r < GC.LEDGER_LOSS_NO_PROGRESS_R),
+            "gave_back": bool(best_r is not None and best_r >= GC.LEDGER_LOSS_GAVE_BACK_R),
+            "thin": bool(row.get("thin"))}
+
+
+def loss_text(row: dict, grade: Optional[dict]) -> Optional[str]:
+    """" · ".join of: LOSS_FACT_THIN (thin rows, FIRST) · LOSS_FACT_STOPPED · LOSS_FACT_BEST (when best_r) ·
+    LOSS_FACT_FILLED (when fill_after_min) · ONE part, the first true in D12's order: fill_minute →
+    LOSS_FACT_FILL_MINUTE, late_rth → LOSS_FACT_LATE_RTH, next_morning → LOSS_FACT_NEXT_MORNING, stale →
+    LOSS_FACT_STALE. `{x}` = f"{best_r:.1f}". None when loss_facts is None."""
+    f = loss_facts(row, grade)
+    if f is None:
+        return None
+    parts = [LOSS_FACT_THIN] if f["thin"] else []
+    parts.append(LOSS_FACT_STOPPED.format(n=f["stopped_min"]))
+    if f["best_r"] is not None:
+        parts.append(LOSS_FACT_BEST.format(x=f"{f['best_r']:.1f}"))
+    if f["fill_after_min"] is not None:
+        parts.append(LOSS_FACT_FILLED.format(m=f["fill_after_min"]))
+    part = next((p for ok, p in ((f["fill_minute"], LOSS_FACT_FILL_MINUTE),
+                                 (f["late_rth"], LOSS_FACT_LATE_RTH.format(n=GC.LEDGER_LOSS_LATE_RTH_MIN)),
+                                 (f["next_morning"], LOSS_FACT_NEXT_MORNING),
+                                 (f["stale"], LOSS_FACT_STALE.format(n=GC.LEDGER_LOSS_STALE_FILL_MIN))) if ok), None)
+    if part:
+        parts.append(part)
+    return " · ".join(parts)
 
 
 def _t(x) -> str:
@@ -902,7 +1119,9 @@ def _span_label(k: str) -> str:
             "all": "All"}.get(k, k)                                                                      # W12
 
 
-def _sessions_for(span_k: str, session: date, store) -> list:
+def _sessions_for(span_k: str, session: date, store, faults: Optional[list] = None) -> list:
+    """The span's sessions. On "all" a replay_dates read that answers None or raises appends "replay" to `faults`
+    (served_block then serves REPLAY_FAULT_TEXT) — never folded silently into "no replayed sessions"."""
     from . import context as CX
     if span_k == "today":
         return [session]
@@ -916,6 +1135,18 @@ def _sessions_for(span_k: str, session: date, store) -> list:
     if dates is None:
         raise LedgerReadError("the alert dates could not be read")
     more = set(dates) | set(store.ledger_dates() or []) | {session.isoformat()}
+    rd = getattr(store, "replay_dates", None)                   # ⏪ DECISIONS11 D5: the replayed sessions too
+    if callable(rd):
+        try:
+            rdates = rd()
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala ledger: replay dates read failed: %s", type(exc).__name__)
+            rdates = None
+        if rdates is None:
+            if faults is not None:
+                faults.append("replay")
+        else:
+            more |= set(rdates)
     return sorted({d for d in (_as_date(x) for x in more) if d is not None})
 
 
@@ -1002,6 +1233,17 @@ def _cell(row: dict, h: str, g: Optional[dict], provisional: bool, now: datetime
     return {"state": st, "text": text, "sub_text": sub, "provisional": bool(provisional)}
 
 
+def replay_cell(row: dict, h: str, g: Optional[dict], now: datetime, session: date, is_today: bool) -> dict:
+    """⏪ DECISIONS11 D4 / D5 — a replayed row's cell from its OWN pre-graded column (never provisional): the ledger's
+    _cell on a grade; a column the script could not grade (None) → "pending" with REPLAY_NOT_GRADED_TEXT (never the
+    nightly's "graded tonight" — the nightly never grades a replay doc). A row with no plan / no risk / no alert time
+    reads the live _cell's word (never "bars not cached" — no bars would have graded it). The 🏁 block and the tape both
+    call it."""
+    if isinstance(g, dict) or row.get("plan") != PLANS[0] or row.get("at_utc") is None:
+        return _cell(row, h, g, False, now, session, is_today)
+    return {"state": "pending", "text": REPLAY_NOT_GRADED_TEXT, "sub_text": None, "provisional": False}
+
+
 def filled_grade(same: Optional[dict], nxt: Optional[dict]) -> Optional[dict]:
     """The first of (same, next) that FILLED with a numeric fill_px and is not a split cell — the pick _plan_text makes,
     now one function (DECISIONS11 D2: the tape draws the same fill the plan text prints); _plan_text calls it."""
@@ -1037,7 +1279,7 @@ def _win_pct(c: dict) -> Optional[int]:
     return int(100 * w / (w + lo) + 0.5) if w + lo > 0 else None
 
 
-def _extras(c: dict, h: str) -> str:
+def _extras(c: dict, h: str, pending_text: str = "not graded yet") -> str:
     bits = []
     if c.get("split"):
         bits.append(f"{c['split']} split")
@@ -1050,14 +1292,18 @@ def _extras(c: dict, h: str) -> str:
     if c["thin"]:
         bits.append(f"{c['thin']} {THIN_TEXT} (not in the %)")
     if c["pending"]:
-        bits.append(f"{c['pending']} not graded yet")
+        bits.append(f"{c['pending']} {pending_text}")
     return "".join(f" · {b}" for b in bits)
 
 
-def _wl(c: dict) -> str:
+def _wl(c: dict, pct: bool = True) -> str:
+    """"N wins · M losses · P% won" — `pct=False` (the ⏪ replayed line, DECISIONS11 D5) drops the "· P% won" /
+    "· no graded entry yet" tail: a replayed line never reads a %."""
+    s = f"{_plural(c['win'], 'win', 'wins')} · {_plural(c['loss'], 'loss', 'losses')}"
+    if not pct:
+        return s
     p = _win_pct(c)
-    pct = f"{p}% won" if p is not None else "no graded entry yet"
-    return f"{_plural(c['win'], 'win', 'wins')} · {_plural(c['loss'], 'loss', 'losses')} · {pct}"
+    return s + " · " + (f"{p}% won" if p is not None else "no graded entry yet")
 
 
 def _counts_text(c: dict, h: str, provisional: bool) -> str:
@@ -1067,10 +1313,10 @@ def _counts_text(c: dict, h: str, provisional: bool) -> str:
     return f"Through next session: {_wl(c)} · {c['no_entry']} no entry · {c['flat']} flat" + _extras(c, h)  # W4n
 
 
-def _line_text(head: str, cs: dict, cn: dict) -> str:
-    return (f"{head}: same session {_wl(cs)} · {cs['no_entry']} no entry · "
-            f"{cs['open']} open{_extras(cs, 'same')}; through next session {_wl(cn)} · {cn['flat']} flat"
-            f"{_extras(cn, 'next')}")
+def _line_text(head: str, cs: dict, cn: dict, pct: bool = True, pending_text: str = "not graded yet") -> str:
+    return (f"{head}: same session {_wl(cs, pct)} · {cs['no_entry']} no entry · "
+            f"{cs['open']} open{_extras(cs, 'same', pending_text)}; through next session {_wl(cn, pct)} · "
+            f"{cn['flat']} flat{_extras(cn, 'next', pending_text)}")
 
 
 def _shadow_text(cs: dict, cn: dict) -> str:
@@ -1082,9 +1328,18 @@ def _entries_text(cs: dict, cn: dict) -> str:
     return _line_text(ENTRIES_HEAD, cs, cn)
 
 
+def _replayed_text(cs: dict, cn: dict) -> str:
+    """DECISIONS11 D5 — the ⏪ replayed line (the shadow line's template, its own head), NEVER a %. Its pending word is
+    REPLAY_NOT_GRADED_TEXT (the nightly never grades a replay doc, so "not graded yet" would be false)."""
+    return _line_text(REPLAYED_HEAD, cs, cn, pct=False, pending_text=REPLAY_NOT_GRADED_TEXT)
+
+
 def _count_line(row: dict) -> str:
     """AMENDMENTS10 F3 — which counts a row feeds: a live A+ entry → "entry" (its own 🎯 line), a shadow A+ → "shadow",
-    a 🧠 push → "live" (the headline %). `row["line"]` itself is unchanged (a pushed `GG:` claim is still line live)."""
+    a 🧠 push → "live" (the headline %). `row["line"]` itself is unchanged (a pushed `GG:` claim is still line live).
+    ⏪ a replayed row → "replayed" FIRST (DECISIONS11 D5: never in live / shadow / entry, never a %)."""
+    if row.get("line") == LINES[2]:
+        return COUNT_LINES[3]
     if row.get("line") == LINES[1]:
         return COUNT_LINES[1]
     if row.get("kind") == KINDS[1]:
@@ -1110,15 +1365,20 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     cells for today's rows). Counts are per column: the headline (`counts["live"]`, `counts_text`) = the 🧠 pushes only;
     the shadow A+ line (`counts["shadow"]`, `shadow_text`) and the live A+ entries (`counts["entry"]`, `entries_text`,
     AMENDMENTS10 F3 — never pooled into the 🧠 %) separately; no entry / no plan / no risk / no alert time / thin R /
-    pending / split are listed, never in the %. Raises LedgerReadError on a read
+    pending / split are listed, never in the %. ⏪ (DECISIONS11 D5) the replayed rows read their own pre-graded
+    columns, count under counts["replayed"] (pct always None, `replayed_text` without a %), never enter `needs`; a
+    replay read fault serves the block without them and `replayed_note` = REPLAY_FAULT_TEXT. ✅ / ❌ (D11 / D12) every
+    row serves `bucket` / `bucket_text` / `loss_text`; `categories` / `categories_timeline` count the SERVED rows
+    (F6), the replayed ones apart (F13) — they never feed a count line or a %. Raises LedgerReadError on a read
     fault (the tab softens it into TRACK_RECORD_FAULT)."""
     from . import alerts as AL
     from . import tape as TP                                    # lazy: tape imports this module (DECISIONS11 D3)
     now = _aware(now)
     session = _as_date(session)
     span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
-    sessions = _sessions_for(span_k, session, store)
-    rows = rows_for(sessions, store)
+    faults: list = []
+    sessions = _sessions_for(span_k, session, store, faults)
+    rows = rows_for(sessions, store, with_replay=True, faults=faults)          # ⏪ DECISIONS11 D5
     stored_l = store.ledger_docs(sessions)
     if stored_l is None:
         raise LedgerReadError("the ledger could not be read")
@@ -1129,16 +1389,23 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     any_prov = False
     built = []
     for row in rows:
+        replayed = row.get("line") == LINES[2]
         doc = stored.get(row["id"]) or {}
         cells, gs = {}, {}
         for h in GC.LEDGER_HORIZONS:
-            g = doc.get(h) if isinstance(doc.get(h), dict) else None
             prov = False
-            if (g is None and h == "same" and is_today and row["id"] in grades_today
-                    and (_bounds_of(row) or {}).get("same_date") == session):           # E1: same session = today
-                g, prov = grades_today[row["id"]], True
+            if replayed:
+                # ⏪ a replayed row reads ONLY its own pre-graded columns (never gajjala_ledger, never today's grades)
+                g = (row.get("graded") or {}).get(h)
+                g = g if isinstance(g, dict) else None
+                cells[h] = replay_cell(row, h, g, now, session, is_today)
+            else:
+                g = doc.get(h) if isinstance(doc.get(h), dict) else None
+                if (g is None and h == "same" and is_today and row["id"] in grades_today
+                        and (_bounds_of(row) or {}).get("same_date") == session):       # E1: same session = today
+                    g, prov = grades_today[row["id"]], True
+                cells[h] = _cell(row, h, g, prov, now, session, is_today)
             gs[h] = g
-            cells[h] = _cell(row, h, g, prov, now, session, is_today)
             c = counts[_count_line(row)][h]
             st = cells[h]["state"]
             if row.get("thin") and st in ("win", "loss", "open", "flat", "no_entry"):
@@ -1152,6 +1419,16 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
         note = (f"trigger as first seen {row.get('first_seen_et')} ET (the ring was {row.get('at_et')} ET)"
                 if row.get("plan_source") == PLAN_SOURCES[2] and row.get("first_seen_et") and row.get("at_et")
                 else None)                                                                                 # W9b
+        # ✅ / ❌ (DECISIONS11 D11, AMENDMENTS11 F7): the bucket from the two SERVED cell states; a replayed row whose
+        # next column was never graded (bars not cached) is not "due" — never "⏳ open" forever
+        next_due = not (replayed and gs.get("next") is None)
+        bucket = bucket_of(cells["same"]["state"], cells["next"]["state"], next_due)
+        # D12: the loss facts of the column that made the bucket "loss" (next when it reads loss, else same)
+        lt = None
+        if bucket == BUCKETS[1]:
+            lt = loss_text(row, gs.get("next") if cells["next"]["state"] == BUCKETS[1] else gs.get("same"))
+        replay_text = ((REPLAY_CHIP_UNGATED if row["setup"] in FLOAT_GATED_SETUPS else REPLAY_CHIP) if replayed
+                       else None)                                                        # D5 · D10 (HIS CALL Q4)
         built.append({"key": row["id"].replace("|", "-"), "id": row["id"], "date": row["date"],
                       "symbol": row["symbol"], "setup": row["setup"], "setup_label": f"{e} {label}".strip(),
                       "kind": row["kind"], "line": row["line"],
@@ -1163,16 +1440,21 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "thin_text": THIN_TEXT if row.get("thin") else None,                              # E4 chip
                       "trigger": row.get("trigger"), "stop": row.get("stop"), "fill_px": fill_px,
                       "plan_text": plan_text, "note": note, "href": row.get("url"),
-                      "same": cells["same"], "next": cells["next"]})
+                      "same": cells["same"], "next": cells["next"],
+                      "replay_text": replay_text, "bucket": bucket, "bucket_text": BUCKET_TEXT[bucket],
+                      "loss_text": lt})
     for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
-            counts[ln][h]["pct"] = _win_pct(counts[ln][h])
+            # ⏪ the replayed line never reads a % (DECISIONS11 D5 / D7)
+            counts[ln][h]["pct"] = None if ln == COUNT_LINES[3] else _win_pct(counts[ln][h])
     has_shadow = any(r["line"] == LINES[1] for r in rows)
     has_entry = any(_count_line(r) == COUNT_LINES[2] for r in rows)
+    has_replay = any(r["line"] == LINES[2] for r in rows)
     # E1: a row needs today's read when its same session is today (yesterday's after-close alert too) — on a span that
-    # reads today at all ("yesterday" never does: today_read answers None there)
+    # reads today at all ("yesterday" never does: today_read answers None there); a replayed row never needs it
     reads_today = is_today and span_k != GC.LEDGER_SPANS[1]
-    needs = [r for r in rows if reads_today and not isinstance((stored.get(r["id"]) or {}).get("same"), dict)
+    needs = [r for r in rows if reads_today and r.get("line") != LINES[2]
+             and not isinstance((stored.get(r["id"]) or {}).get("same"), dict)
              and r.get("plan") == PLANS[0] and (_bounds_of(r) or {}).get("same_date") == session]
     at = GC.LEDGER_GRADE_AT_ET
     today_text = None
@@ -1198,6 +1480,9 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
         more = len(by_day[d_iso]) - len(part)
         days.append({"date": d_iso, "label": label, "more_n": more or None, "rows": part})
     extra = len(built) - served_n
+    shown = [r for d in days for r in d["rows"]]                # AMENDMENTS11 F6: the chips count the SERVED rows
+    tl_kinds = TP.views_block()["kinds"]
+    rep_text = _replayed_text(counts["replayed"]["same"], counts["replayed"]["next"]) if has_replay else None
     return {"title": TITLE, "rule_label": RULE_LABEL, "rule_text": rule_text(), "honesty": HONESTY, "span": span_k,
             "spans": [{"key": k, "label": _span_label(k)} for k in GC.LEDGER_SPANS],
             "heads": [{"key": k, "label": lab} for k, lab in HEADS],
@@ -1210,10 +1495,23 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
             "today_text": today_text, "days": days,
             "more_text": f"+{extra} more rows — the counts above cover all {len(built)}" if extra > 0 else None,  # W14
             "empty_text": None if built else _empty_text(span_k, sessions), "grade_at_et": at,
-            "views": TP.views_block()}                                                  # DECISIONS11 D3 (served)
+            "views": TP.views_block(),                                                  # DECISIONS11 D3 (served)
+            # ⏪ DECISIONS11 D5: the replayed line's own words — never in counts_text / shadow_text / entries_text
+            "replayed_text": rep_text,
+            "replayed_note": REPLAY_NOTE if has_replay else (REPLAY_FAULT_TEXT if faults else None),
+            # ✅ / ❌ DECISIONS11 D11 (C10, F6, F13): ROW counts of the rows served, never a %, never a count line
+            "categories": _categories(shown),
+            "categories_timeline": _categories([r for r in shown if r["kind"] in tl_kinds]),
+            "category_param": CATEGORY_PARAM, "category_empty_text": CATEGORY_EMPTY_TEXT}
 
 
 __all__ = ["KINDS", "LINES", "PLAN_SOURCES", "RANGS", "RANG_TEXT", "CELL_STATES", "LedgerReadError", "ledger_id",
            "plan_of", "rang_of", "alert_of", "rows_for", "count_today", "session_bounds", "fill_window",
            "bars_from_frame", "grade", "grade_step", "today_read", "today_bars", "filled_grade", "served_block",
-           "rule_text", "TITLE", "RULE_LABEL", "HONESTY", "HEADS", "KIND_TEXT", "COUNT_LINES", "ENTRIES_HEAD"]
+           "rule_text", "TITLE", "RULE_LABEL", "HONESTY", "HEADS", "KIND_TEXT", "COUNT_LINES", "ENTRIES_HEAD",
+           "REPLAY_ID_PREFIX", "REPLAY_STATE", "replay_id", "REPLAYED_HEAD", "REPLAY_NOTE", "REPLAY_FAULT_TEXT",
+           "REPLAY_NOT_GRADED_TEXT", "REPLAY_CHIP", "REPLAY_CHIP_UNGATED", "FLOAT_GATED_SETUPS", "REPLAY_CAVEATS",
+           "BUCKETS", "BUCKET_TEXT", "CATEGORY_KEYS", "CATEGORY_LABELS", "CATEGORY_PARAM", "CATEGORY_EMPTY_TEXT",
+           "bucket_of", "LOSS_FACT_THIN", "LOSS_FACT_STOPPED", "LOSS_FACT_BEST", "LOSS_FACT_FILLED",
+           "LOSS_FACT_FILL_MINUTE", "LOSS_FACT_LATE_RTH", "LOSS_FACT_NEXT_MORNING", "LOSS_FACT_STALE",
+           "fill_facts", "loss_facts", "loss_text", "replay_cell"]

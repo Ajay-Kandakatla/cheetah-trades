@@ -19,6 +19,8 @@ Collections
                     the push claim records the trigger / stop / price the push carried (`push.trigger/stop/px`,
                     2026-10-16) — the 🏁 ledger's plan
   gajjala_ledger    _id "{date}|{SYM}|{setup}|{kind}"  🏁 the Track record (2026-10-16) — graded nightly          none
+  gajjala_replay    _id "REPLAY:{date}|{SYM}|{setup}"  ⏪ replayed A+ rows (2026-10-16 night, DECISIONS11 D4) —
+                    written ONLY by scripts/gajjala_replay.py --write (pre-graded; the nightly never re-grades)   none
 
 🧠 gajjala_potentials (Ajay 2026-10-15: "In all the sub tab and add a track and alert to show me new potential is
 added everyday." / "Give me an alert all continous tracker on these specifically when I get alert I will jump on to
@@ -66,11 +68,15 @@ DAILY = "gajjala_daily"
 STATE = "gajjala_state"
 POTENTIALS = "gajjala_potentials"            # 🧠 the potential tracker (2026-10-15) — kept, no TTL
 LEDGER = "gajjala_ledger"                      # 🏁 the Track record (2026-10-16) — one doc per rung alert; kept, no TTL
+REPLAY = "gajjala_replay"                      # ⏪ (2026-10-16, DECISIONS11 D4) — written ONLY by scripts/gajjala_replay.py --write; kept, no TTL
 JOINED_MODE = "joined"                         # D9: potential.FIRST_SEEN_MODES[1] — never claimable (2026-10-15)
-ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER)
+ALL = (SCAN, AH_CARRY, POST, PASSES, READS, ALERTS, HALTS, DAILY, STATE, POTENTIALS, LEDGER, REPLAY)
 # 🏁 the only top-level keys a ledger write may carry (upsert_ledger refuses any other — BUILD_SPEC9 §3.2)
 LEDGER_KEYS = frozenset({"date", "symbol", "setup", "kind", "line", "alert", "same", "next", "graded_at", "version"})
 LEDGER_ALERT_STATES = ("shadow", "pushed")     # the A+ rows the ledger reads (ledger.alert_of filters the ids)
+# ⏪ the only top-level keys a replay doc may carry besides `_id` (upsert_replay refuses any other — BUILD_SPEC11 §3.12)
+REPLAY_KEYS = frozenset({"date", "symbol", "setup", "kind", "state", "alert", "same", "next", "bars5", "universe",
+                         "float_gate", "detectors_sha", "detectors_sha256", "replayed_at", "caveats"})
 # retention per collection (None = kept): the TTL index reads `at`
 TTL_DAYS = {SCAN: GC.LEDGER_TTL_DAYS, AH_CARRY: GC.LEDGER_TTL_DAYS, POST: GC.LEDGER_TTL_DAYS,
             PASSES: GC.LEDGER_TTL_DAYS, DAILY: GC.LEDGER_TTL_DAYS, READS: GC.READS_TTL_DAYS}
@@ -191,7 +197,7 @@ def lease_query(now: datetime, source: str, *, take_over: bool = False) -> dict:
 
 
 class GajjalaStore:
-    """The eleven collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
+    """The twelve collections behind one object. `colls` = {name: collection}; a name not given resolves to Mongo."""
 
     def __init__(self, colls: Optional[dict] = None):
         self._injected = dict(colls or {})
@@ -215,7 +221,7 @@ class GajjalaStore:
                 days = TTL_DAYS.get(name)
                 if days:
                     c.create_index([("at", 1)], expireAfterSeconds=int(days * _DAY_SEC))
-                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER):
+                if name in (SCAN, POST, READS, HALTS, DAILY, POTENTIALS, LEDGER, REPLAY):
                     c.create_index([("date", 1), ("symbol", 1)])
                     c.create_index([("symbol", 1), ("date", -1)])
                 if name == ALERTS:
@@ -706,6 +712,56 @@ class GajjalaStore:
             log.warning("gajjala.store: ledger write failed for %s: %s", _id, exc)
             return False
 
+    # ── ⏪ gajjala_replay (2026-10-16 night, DECISIONS11 D4 / D5 — written ONLY by scripts/gajjala_replay.py --write) ──
+    def replay_rows(self, sessions: Iterable) -> Optional[list]:
+        """⏪ Every replay doc of these sessions in state "replayed" (ledger.REPLAY_STATE; ledger.alert_of checks the id).
+        None on a read fault / no handle ([] = none on file)."""
+        from . import ledger as LG
+        days = [_iso(s) for s in sessions or []]
+        return self._find_or_none(REPLAY, {"date": {"$in": days}, "state": LG.REPLAY_STATE})
+
+    def replay_dates(self) -> Optional[list]:
+        """⏪ Every session (ISO date) the replay collection holds a doc for, sorted. None on a read fault / no handle."""
+        c = self.coll(REPLAY)
+        if c is None:
+            return None
+        try:
+            return sorted({d for d in c.distinct("date") if d})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: replay dates read failed: %s", exc)
+            return None
+
+    def records_on(self, session) -> Optional[int]:
+        """⏪ How many records the session already has: its gajjala_alerts + gajjala_scan docs (len of a find — the
+        FakeColl has no count_documents). The replay script refuses a session with any (DECISIONS11 D4). None when
+        either read faults (an unreadable record is never "no record")."""
+        q = {"date": _iso(session)}
+        al = self._find_or_none(ALERTS, q)
+        sc = self._find_or_none(SCAN, q)
+        if al is None or sc is None:
+            return None
+        return len(al) + len(sc)
+
+    def upsert_replay(self, doc: dict) -> bool:
+        """THE replay write: one `replace_one({_id}, doc, upsert=True)` on gajjala_replay ONLY — refused (logged, False)
+        unless `_id` starts ledger.REPLAY_ID_PREFIX ("REPLAY:") and every other top-level key is in REPLAY_KEYS (a
+        re-run replaces: idempotent). False on a refusal / fault / no handle."""
+        from . import ledger as LG
+        _id = doc.get("_id") if isinstance(doc, dict) else None
+        bad = (set(doc) - {"_id"} - REPLAY_KEYS) if isinstance(doc, dict) else set()
+        if not isinstance(_id, str) or not _id.startswith(LG.REPLAY_ID_PREFIX) or bad:
+            log.warning("gajjala.store: refused replay write %s (keys outside REPLAY_KEYS: %s)", _id, sorted(bad))
+            return False
+        c = self.coll(REPLAY)
+        if c is None:
+            return False
+        try:
+            c.replace_one({"_id": _id}, dict(doc), upsert=True)
+            return True
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: replay write failed for %s: %s", _id, exc)
+            return False
+
     # ── plumbing ───────────────────────────────────────────────────────────────────────────────────────────────
     def _find(self, name: str, q: dict) -> list:
         c = self.coll(name)
@@ -772,6 +828,7 @@ for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_c
               "release_lease", "types_map", "set_types_map", "alerts_coll", "coll", "potentials", "get_potential",
               "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",
               "claim_potential_push", "settle_potential_push", "mark_potential_graveyard", "potential_pushes",
-              "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger"):
+              "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger", "replay_rows",
+              "replay_dates", "records_on", "upsert_replay"):
     globals()[_name] = _delegate(_name)
 del _name

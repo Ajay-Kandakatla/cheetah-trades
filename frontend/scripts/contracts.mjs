@@ -8678,7 +8678,8 @@ const CONTRACTS = [
       if (!lg.includes('("aplus", "live"): "🎯 A+ entry"')) errs.push('ledger.KIND_TEXT[("aplus", "live")] must be "🎯 A+ entry"');
       if (!lg.includes('"entry"')) errs.push('ledger.served_block must count live A+ entries under counts["entry"] (F3)');
       // sharpened 2026-10-16 (fix round 1): "entry" alone is vacuous — ledger.py already carries it elsewhere; pin what only F3 adds
-      if (!lg.includes('COUNT_LINES = ("live", "shadow", "entry")')) errs.push('ledger.COUNT_LINES must be ("live", "shadow", "entry") — live A+ entries are their own count line, never pooled into the 🧠 % (F3)');
+      // WIDENED 2026-10-16 (night): DECISIONS11 D5 — the ⏪ replayed line has its own count bucket (AMENDMENTS11 F3)
+      if (!lg.includes('COUNT_LINES = ("live", "shadow", "entry", "replayed")')) errs.push('ledger.COUNT_LINES must be ("live", "shadow", "entry", "replayed") — live A+ entries are their own count line, never pooled into the 🧠 % (F3); the ⏪ replayed rows their own (DECISIONS11 D5)');
       const sb = pyBody(lg, 'served_block');
       if (!sb || !sb.includes('counts["entry"]') || !sb.includes('"entries_text"')) errs.push('ledger.served_block must read counts["entry"] and serve "entries_text" (F3)');
       // 10. SPECS + the doc
@@ -8891,6 +8892,158 @@ const CONTRACTS = [
         const doc = read(DOC);
         for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'UNMEASURED']) if (!doc.includes(need)) errs.push(`docs/gajjala/entry_timeline_2026_10_16.md must carry "${need}"`);
       }
+
+      // ---- PHASE 2 (2026-10-16 night, BUILD_SPEC11 §3.10 checks 10–17, AMENDMENTS11 F3 / F7 / F13 / F16 / F17).
+      // Ajay: "Would you be able to back test for the past week from his alerts any way to do so? build a pre historic
+      // timeline or so?" and "I want winners and losers category in his track record and would like us to study the
+      // losers". A replayed row pooled into a sent count, a chip that counts a %, a loss fact that says why, or a losers
+      // study that grades the strategy would each tell him something the record does not say. UNMEASURED.
+      const HIS2 = ['Would you be able to back test for the past week from his alerts any way to do so?', 'build a pre historic timeline or so?'];
+      const HIS3 = 'I want winners and losers category in his track record and would like us to study the losers';
+      const lit = (s) => [...s.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3]);
+      const methodBody = (src, def) => {
+        const a = src.indexOf(`def ${def}(`);
+        if (a < 0) return null;
+        const ends = ['\n    def ', '\ndef ', '\nclass ', '\n    @'].map((x) => src.indexOf(x, a + 4)).filter((i) => i > 0);
+        return src.slice(a, ends.length ? Math.min(...ends) : undefined);
+      };
+      const nfEntry = (() => {
+        const a = nf.indexOf(`{ id: '${ID}'`);
+        if (a < 0) return '';
+        const e2 = nf.indexOf('" },', a);
+        return unesc(nf.slice(a, e2 < 0 ? undefined : e2 + 4));
+      })();
+      // 10. ledger.py — the ⏪ line: its own LINES entry, its own count bucket, its kind words; the nightly never reads it.
+      if (lg) {
+        for (const need of ['LINES = ("live", "shadow", "replayed")', 'COUNT_LINES = ("live", "shadow", "entry", "replayed")',
+                            '("aplus", "replayed"): "⏪ A+ replayed"', 'REPLAY_ID_PREFIX = "REPLAY:"']) {
+          if (!lg.includes(need)) errs.push(`ledger.py must carry ${need} — the ⏪ replayed line is its own line and count bucket (DECISIONS11 D5)`);
+        }
+        for (const def of ['grade_step', 'today_read']) {
+          const b = pyBody(lg, def);
+          if (!b) errs.push(`ledger.py lost def ${def}(`);
+          else if (/\bwith_replay\b/.test(pyCode(b))) errs.push(`ledger.${def} names with_replay — the nightly grade and the today read never see a replay doc (D5)`);
+        }
+        const rt = pyBody(lg, '_replayed_text');
+        if (!rt) errs.push('ledger.py lacks def _replayed_text( (the ⏪ line, DECISIONS11 D5)');
+        else if (!/\bpct\s*=\s*False\b/.test(pyCode(rt))) errs.push('ledger._replayed_text must pass pct=False — the ⏪ replayed line never prints a % (D5 / D7)');
+      }
+      // 11. store.py — the NEW collection in ALL (so fake_store carries it), written only through upsert_replay's key gate.
+      const st = tryRead('../backend/chart_maps/gajjala/store.py');
+      if (st) {
+        if (!/^REPLAY = "gajjala_replay"/m.test(st)) errs.push('store.py must carry REPLAY = "gajjala_replay" (DECISIONS11 D4)');
+        const all = /^ALL = \(([^)]*)\)/m.exec(st);
+        if (!all || !/\bREPLAY\b/.test(all[1])) errs.push('store.ALL = (…) must name REPLAY — a collection outside ALL reaches for a real Mongo in tests');
+        const ur = methodBody(st, 'upsert_replay');
+        if (!ur) errs.push('store.py lacks def upsert_replay(');
+        else if (!/\bREPLAY_KEYS\b/.test(pyCode(ur))) errs.push('store.upsert_replay must gate the doc keys on REPLAY_KEYS');
+      }
+      // 12. the replay script — refuses RTH and sessions with records, writes only through upsert_replay, never force-fetches.
+      const RP = '../backend/scripts/gajjala_replay.py';
+      if (!exists(RP)) errs.push('backend/scripts/gajjala_replay.py is missing (DECISIONS11 D4)');
+      else {
+        const rp = read(RP);
+        const rc = pyCode(rp);
+        for (const need of ['refused_window(', 'records_on(', 'upsert_replay(']) if (!rc.includes(need)) errs.push(`scripts/gajjala_replay.py must call ${need} (DECISIONS11 D4 refusals / the one write)`);
+        for (const flag of ['--write', '--sha']) if (!rp.includes(flag)) errs.push(`scripts/gajjala_replay.py must carry ${flag}`);
+        if (/force\s*=\s*True/.test(rc)) errs.push('scripts/gajjala_replay.py passes force=True — the replay never force-fetches');
+      }
+      // 13. ✨ — his message 2 verbatim; the replay says it never rang, is not a backtest, and the 🎾 rows are ungated.
+      if (nfEntry) {
+        for (const h of HIS2) if (!nfEntry.includes(h)) errs.push(`the 🕰️ ✨ entry must quote him verbatim: "${h.slice(0, 40)}…"`);
+        for (const need of ['never rang', 'not a backtest', '🎾 ungated']) if (!nfEntry.includes(need)) errs.push(`the 🕰️ ✨ entry must say "${need}" (DECISIONS11 D7 / D10)`);
+      }
+      // 14. SPECS + the doc carry the ⏪ section.
+      if (specs && !specs.includes('- **⏪ Replayed line** (2026-10-16')) errs.push('SPECS.md lacks the "- **⏪ Replayed line** (2026-10-16" bullet');
+      if (exists(DOC) && !read(DOC).includes('## ⏪ Replayed line')) errs.push('docs/gajjala/entry_timeline_2026_10_16.md lacks "## ⏪ Replayed line"');
+      // 15. (D11) the ✅ / ❌ categories — served buckets and chips, ROW counts never a %; the FE types no category word.
+      if (lg) {
+        if (!lg.includes('BUCKETS = ("win", "loss", "open", "flat", "out")')) errs.push('ledger.py must carry BUCKETS = ("win", "loss", "open", "flat", "out") (DECISIONS11 D11)');
+        if (!/\ndef bucket_of\(/.test(lg)) errs.push('ledger.py lacks def bucket_of( (the one bucket engine — the losers script imports it)');
+        const sb = pyBody(lg, 'served_block');
+        for (const k of ['"categories"', '"categories_timeline"']) if (!sb || !sb.includes(k)) errs.push(`ledger.served_block must serve ${k} (DECISIONS11 D11)`);
+        const cl = /^CATEGORY_LABELS = \{([\s\S]*?)\}/m.exec(lg);
+        // AMENDMENTS11 F7: "out" reads "— no fill / not graded" (pending rows read that until the nightly grades them)
+        const LABELS = [['all', '📋 all'], ['win', '✅ winners'], ['loss', '❌ losers'], ['open', '⏳ open'], ['flat', '➖ flat'], ['out', '— no fill / not graded']];
+        if (!cl) errs.push('ledger.py lacks CATEGORY_LABELS = { … }');
+        else for (const [k, l] of LABELS) if (!new RegExp(`"${k}"\\s*:\\s*"${l.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}"`).test(cl[1])) errs.push(`ledger.CATEGORY_LABELS["${k}"] must be "${l}" (DECISIONS11 D11 / AMENDMENTS11 F7)`);
+        const ct = pyBody(lg, '_category_text');
+        if (!ct) errs.push('ledger.py lacks def _category_text( (the chip text, its ROW count inside)');
+        else if (/%/.test(pyCode(ct))) errs.push('ledger._category_text types a % — the chips count ROWS, never a %');
+        const hon = /^HONESTY = \(([\s\S]*?)\)\s*(?:#[^\n]*)?$/m.exec(lg);
+        const honText = hon ? [...hon[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]).join('') : '';
+        if (!/[Tt]he winners \/ losers chips count ROWS/.test(honText)) errs.push('ledger.HONESTY must carry "the winners / losers chips count ROWS" (DECISIONS11 D11)');
+      }
+      if (board) {
+        if (!/import\s*\{[^}]*\bGG_CAT_PARAM\b[^}]*\}\s*from\s*'\.\.\/lib\/gajjala'/.test(board)) errs.push("GajjalaBoard must import GG_CAT_PARAM from '../lib/gajjala'");
+        if (!/const pickSub = [^\n]*\[[^\]\n]*\bGG_CAT_PARAM\b[^\]\n]*\]/.test(board)) errs.push('GajjalaBoard pickSub must drop GG_CAT_PARAM (a sub click drops the ✅ / ❌ category)');
+        const fb = (name) => {
+          const fa = board.indexOf(`\nfunction ${name}(`);
+          const ca = board.indexOf(`\nconst ${name} = `);
+          if (fa < 0 && ca < 0) return null;
+          const a = fa >= 0 ? fa : ca;
+          const e = board.indexOf(fa >= 0 ? '\n}\n' : ';\n', a + 1);
+          return board.slice(a, e < 0 ? undefined : e);
+        };
+        for (const n of ['TrCell', 'trChip', 'TrRowCells', 'TrackRecordPanel', 'GgEntryTimeline', 'GgEntryTimelineRow', 'GgTrCats', 'GgTrLossLine']) {
+          const b = fb(n);
+          if (b == null) { errs.push(`GajjalaBoard lost ${n}`); continue; }
+          const code = tsCode(b);
+          // JSX text between tags OR after / before an expression (`{x} ❌ word<`), plus every string literal
+          for (const s of [...lit(code), ...[...code.matchAll(/[>}]([^<>{}\n]+)[<{]/g)].map((m) => m[1])]) {
+            if (/winner|loser/i.test(s)) errs.push(`GajjalaBoard ${n} types "${s.trim()}" — every category word is served by ledger.py (D11)`);
+          }
+        }
+        if (!board.includes('data-testid="gg-tr-cats"') || !board.includes('data-testid={`gg-tr-cat-${c.key}`}')) errs.push('GajjalaBoard must mount the served chips (data-testid gg-tr-cats / gg-tr-cat-{key})');
+        if (!board.includes('<GgTrCats ')) errs.push('GajjalaBoard TrackRecordPanel must mount <GgTrCats …/>');
+        // AMENDMENTS11 F13 — no per-row ✅ / ❌ chip (the Same / Through-next cells already say WIN / LOSS)
+        if (/bucket_text|gg-tr-bucket-/.test(tsCode(board))) errs.push('GajjalaBoard draws the per-row bucket chip — AMENDMENTS11 F13 drops it (Rule #5)');
+      }
+      // 16. (D12) loss facts — frozen words, facts from stored grade fields only, no causal word; the thresholds MINE.
+      if (lg) {
+        // AMENDMENTS11 F17: LOSS_FACT_BEST = "high +{x}R through the stop minute"
+        for (const need of ['LOSS_FACT_THIN = "thin R (not in the %)"', 'LOSS_FACT_STOPPED = "stopped {n} min after the fill"',
+                            'LOSS_FACT_BEST = "high +{x}R through the stop minute"', 'LOSS_FACT_FILLED = "filled {m} min after it rang"',
+                            'LOSS_FACT_FILL_MINUTE = "stop in the fill minute"', 'LOSS_FACT_LATE_RTH = "last {n} min of RTH"',
+                            'LOSS_FACT_NEXT_MORNING = "filled next morning (rang AH)"', 'LOSS_FACT_STALE = "filled ≥{n} min after the ring"']) {
+          if (!lg.includes(need)) errs.push(`ledger.py must carry ${need} (DECISIONS11 D12 frozen words)`);
+        }
+        for (const def of ['loss_facts', 'loss_text']) {
+          const b = pyBody(lg, def);
+          if (!b) errs.push(`ledger.py lacks def ${def}(`);
+          else if (/(?<![\w.])grade\(|\bLG\.grade\(|\._?grade\(/.test(pyCode(b).replace(/^def [^\n]*\n/, ''))) errs.push(`ledger.${def} calls grade( — the loss facts read the STORED grade fields only (never a regrade)`);
+        }
+        for (const m of lg.matchAll(/^(LOSS_FACT_\w+) = "([^"\n]*)"/gm)) {
+          if (/because|due to|caused|\bwhy\b/i.test(m[2])) errs.push(`ledger.${m[1]} says a causal word ("${m[2]}") — facts only (D12)`);
+        }
+      }
+      if (gc) {
+        // AMENDMENTS11 F16 — the five thresholds by name (LEDGER_LOSS_CLASS_FLAG_N is his Rule #9 count, tagged Ajay)
+        for (const n of ['LEDGER_LOSS_FAST_MIN', 'LEDGER_LOSS_LATE_RTH_MIN', 'LEDGER_LOSS_STALE_FILL_MIN', 'LEDGER_LOSS_NO_PROGRESS_R', 'LEDGER_LOSS_GAVE_BACK_R']) {
+          if (val(n) == null) errs.push(`constants.py lacks ${n} = …  # … MINE (DECISIONS11 D12)`);
+          else if (!/\bMINE\b/.test(tag(n)) || /^(Ajay|GG)\b/.test(tag(n))) errs.push(`constants.${n} must be tagged MINE (DECISIONS11 D12 — my threshold, HIS CALL Q13)`);
+        }
+      }
+      // 17. (D13) the losers study — the ONE engine (LG.loss_facts / LG.bucket_of), never the study script, no verdict.
+      const LS = '../backend/scripts/gajjala_losers.py';
+      if (!exists(LS)) errs.push('backend/scripts/gajjala_losers.py is missing (DECISIONS11 D13)');
+      else {
+        const ls = read(LS);
+        const lc = pyCode(ls);
+        for (const need of ['LG.loss_facts', 'LG.bucket_of']) if (!lc.includes(need)) errs.push(`scripts/gajjala_losers.py must use ${need} — one engine (C9)`);
+        if (/gajjala_study/.test(lc)) errs.push('scripts/gajjala_losers.py names gajjala_study — it imports the ledger only (D13)');
+        const mdDefs = [...ls.matchAll(/^def (\w*md\w*)\(/gm)].map((m) => m[1]);
+        const md = mdDefs.length ? mdDefs.map((d) => pyCode(pyBody(ls, d) || '')).join('\n') : lc;
+        const verdict = /win rate|expectancy|verdict/i.exec(md);
+        if (verdict) errs.push(`the losers md writer names "${verdict[0]}" — descriptive counts only (D13)`);
+      }
+      const LDOC = '../docs/gajjala/losers_study_2026_10_16.md';
+      if (!exists(LDOC)) errs.push('docs/gajjala/losers_study_2026_10_16.md is missing (DECISIONS11 D13)');
+      else {
+        const ld = read(LDOC);
+        for (const need of ['descriptive', 'HIS CALL']) if (!ld.includes(need)) errs.push(`docs/gajjala/losers_study_2026_10_16.md must carry "${need}"`);
+      }
+      if (nfEntry && !nfEntry.includes(HIS3)) errs.push(`the 🕰️ ✨ entry must quote him verbatim: "${HIS3.slice(0, 40)}…"`);
       return errs;
     },
   },

@@ -167,3 +167,14 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-tl-table .ptt__mini-cell { white-space: nowrap; vertical-align: middle; }
 .gg-tl-table .ptt__toggle { margin-left: 0.3rem; }
 .gg-tl-table .ptt__row td { padding: 0.3rem 0.2rem 0.5rem; white-space: normal; }
+
+/* ⏪ Replayed line + ✅ / ❌ categories (2026-10-16 night, DECISIONS11 D5 / D11 / D12). Ajay: "Would you be able to
+   back test for the past week from his alerts any way to do so? build a pre historic timeline or so?" / "I want winners
+   and losers category in his track record and would like us to study the losers". A replayed row's Kind pill is muted
+   (it never rang); the served category chips sit under the view toggle; a ❌ row's served loss facts are a muted
+   sub-line under it. Every word and count on them is SERVED. */
+.gg-tr-replayed { border: 1px dotted var(--hairline-strong, rgba(26, 26, 26, 0.22)); color: var(--ink-subtle, #94a3b8); }
+.gg-tr-cats { margin-top: 0.1rem; flex-wrap: wrap; }
+.gg-tr-table tr.gg-tr-sub td {
+  border-top: none; padding-top: 0; white-space: normal; font-size: 0.74rem; color: var(--ink-subtle, #94a3b8);
+}

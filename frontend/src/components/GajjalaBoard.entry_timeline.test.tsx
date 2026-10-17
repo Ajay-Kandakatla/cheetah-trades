@@ -17,7 +17,13 @@ import { GG_VIEW_TIMELINE, ggQuery, ggTimelineOn } from '../lib/gajjala';
  * Pinned: the toggle prints the served labels, the timeline lists only the rows whose kind is in the served
  * `views.kinds`, in the SERVED order; the view is FE-only (no GET on a toggle click); a span click keeps it, a sub click
  * drops it. NEGATIVES: no `views` → no toggle and the tables as shipped; no A+ row → the served empty line; a row without
- * an id → no mini and no 📈; every number in the timeline is a whole token of a served string. */
+ * an id → no mini and no 📈; every number in the timeline is a whole token of a served string.
+ *
+ * ⏪ + ❌ (2026-10-16 night, DECISIONS11 D5 / D12). Ajay: "Would you be able to back test for the past week from his
+ * alerts any way to do so? build a pre historic timeline or so?" and "I want winners and losers category in his track
+ * record and would like us to study the losers". Pinned too: the 5d golden's ⏪ replayed row is in the timeline with
+ * its served kind words, its served chip and its mini (id REPLAY:…); a ❌ row's served loss_text is the sub-line under
+ * its row, and AFTER its expanded tape row once 📈 opens it. */
 
 let userRet: CurrentUser | null = null;
 const tapeMounts: string[] = [];
@@ -124,6 +130,7 @@ const BWORD = new RegExp(['b', 'ounce'].join(''), 'i');
 const timelineOf = (tr: any) => (tr.days || [])
   .map((d: any) => ({ d, rows: (d.rows || []).filter((r: any) => tr.views.kinds.includes(r.kind)) }))
   .filter((x: any) => x.rows.length);
+const rowsOf = (tr: any) => (tr.days || []).flatMap((d: any) => d.rows || []);
 const spansWith = (pred: (tr: any) => boolean) => Object.keys(BOARDS).filter((k) => BOARDS[k]?.track_record && pred(BOARDS[k].track_record));
 
 beforeEach(() => { userRet = null; calls = []; tapeMounts.length = 0; miniMounts.length = 0; });
@@ -323,6 +330,68 @@ describe('GajjalaBoard — 🕰️ entries timeline (golden)', () => {
       unmount();
     }
     expect(checked).toBeGreaterThan(0);
+  });
+});
+
+describe('GajjalaBoard — 🕰️ entries timeline: ⏪ replayed + ❌ loss facts (golden)', () => {
+  it('7. the 5d golden\'s ⏪ replayed row is in the timeline: its served kind words + chip, its mini with the REPLAY: id', async () => {
+    const tr = BOARDS[DEFAULT_SPAN].track_record;
+    const rep = timelineOf(tr).flatMap((x: any) => x.rows).find((r: any) => typeof r.id === 'string' && r.id.startsWith('REPLAY:'));
+    expect(rep, 'the 5d golden lists a replayed A+ row in the timeline').toBeTruthy();
+    stub(BOARDS);
+    const { container } = mount(`tab=gajjala&sub=track_record&view=${GG_VIEW_TIMELINE}`);
+    await loaded(container);
+    const row = screen.getByTestId(`gg-tl-row-${rep.key}`);
+    expect(row.querySelector('.gg-tr-kind')!.textContent).toBe(rep.kind_text);
+    expect(row.querySelector('.gg-tr-kind')!.className).toContain(`gg-tr-${rep.line}`);
+    expect(screen.getByTestId(`gg-tr-replay-${rep.key}`).textContent).toBe(rep.replay_text);
+    expect(row.querySelector('[data-testid="mock-mini"]')!.getAttribute('data-id')).toBe(rep.id);
+    expect(miniMounts.some((m) => m.id === rep.id)).toBe(true);
+    // the ⏪ lines print as served in the timeline view too; NEGATIVE the % count lines stay hidden there
+    if (tr.replayed_text) expect(screen.getByTestId('gg-tr-replayed').textContent).toBe(tr.replayed_text);
+    if (tr.replayed_note) expect(screen.getByTestId('gg-tr-replayed-note').textContent).toBe(tr.replayed_note);
+    expect(screen.queryByTestId('gg-tr-counts-same')).toBeNull();
+    // NEGATIVE: a live / shadow row carries no ⏪ chip
+    for (const x of timelineOf(tr)) for (const r of x.rows) {
+      if (!(typeof r.replay_text === 'string' && r.replay_text.trim())) expect(screen.queryByTestId(`gg-tr-replay-${r.key}`), r.key).toBeNull();
+    }
+  });
+
+  it('8. a ❌ row\'s served loss_text sits under its row, then AFTER its expanded tape row; NEGATIVE none on other rows', async () => {
+    const tr = BOARDS[DEFAULT_SPAN].track_record;
+    const rows = timelineOf(tr).flatMap((x: any) => x.rows);
+    let lose = rows.find((r: any) => typeof r.loss_text === 'string' && r.loss_text && r.id);
+    let b = BOARDS[DEFAULT_SPAN];
+    if (!lose) {
+      // the golden's A+ rows carry no loss (its synthetic store has no loser): a clone gives one A+ row a served-shaped
+      // loss (the golden's own loss_text when it has one, else test data — never typed on the FE)
+      b = clone(BOARDS[DEFAULT_SPAN]);
+      const all = b.track_record.days.flatMap((d: any) => d.rows).filter((r: any) => b.track_record.views.kinds.includes(r.kind) && r.id);
+      const donor = rowsOf(BOARDS[DEFAULT_SPAN]).find((r: any) => typeof r.loss_text === 'string' && r.loss_text);
+      all[0].bucket = 'loss';
+      all[0].loss_text = donor?.loss_text
+        || 'stopped 3 min after the fill · high +0.2R through the stop minute · filled 41 min after it rang';
+      lose = all[0];
+    }
+    stub(BOARDS, () => b);
+    const { container } = mount(`tab=gajjala&sub=track_record&view=${GG_VIEW_TIMELINE}`);
+    await loaded(container);
+    const td = screen.getByTestId(`gg-tr-loss-${lose.key}`);
+    expect(td.textContent).toBe(lose.loss_text);
+    expect(td.getAttribute('colspan')).toBe(String(b.track_record.heads.length + 1));
+    const lossRow = td.closest('tr')!;
+    expect(lossRow.className).toContain('gg-tr-sub');
+    expect(lossRow.previousElementSibling).toBe(screen.getByTestId(`gg-tl-row-${lose.key}`));
+    fireEvent.click(screen.getByTestId(`gg-tl-open-${lose.key}`));
+    await waitFor(() => expect(screen.getByTestId(`gg-tl-tape-${lose.key}`)).not.toBeNull());
+    const tapeRow = screen.getByTestId(`gg-tl-tape-${lose.key}`);
+    expect(tapeRow.previousElementSibling).toBe(screen.getByTestId(`gg-tl-row-${lose.key}`));
+    expect(tapeRow.nextElementSibling).toBe(screen.getByTestId(`gg-tr-loss-${lose.key}`).closest('tr'));   // under the tape
+    // NEGATIVE: only the rows that serve a loss_text carry a loss line
+    const withLoss = b.track_record.days.flatMap((d: any) => d.rows)
+      .filter((r: any) => b.track_record.views.kinds.includes(r.kind) && typeof r.loss_text === 'string' && r.loss_text.trim());
+    expect(screen.queryAllByTestId(/^gg-tr-loss-/).map((x) => x.getAttribute('data-testid')))
+      .toEqual(withLoss.map((r: any) => `gg-tr-loss-${r.key}`));
   });
 });
 

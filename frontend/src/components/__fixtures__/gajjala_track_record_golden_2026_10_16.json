@@ -139,6 +139,84 @@
    "tf": "5m",
    "tiles": [],
    "track_record": {
+    "categories": [
+     {
+      "key": "all",
+      "n": 10,
+      "n_replayed": 1,
+      "text": "📋 all 10 +1 ⏪"
+     },
+     {
+      "key": "win",
+      "n": 4,
+      "n_replayed": 1,
+      "text": "✅ winners 4 +1 ⏪"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 6,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 6"
+     }
+    ],
+    "categories_timeline": [
+     {
+      "key": "all",
+      "n": 4,
+      "n_replayed": 1,
+      "text": "📋 all 4 +1 ⏪"
+     },
+     {
+      "key": "win",
+      "n": 1,
+      "n_replayed": 1,
+      "text": "✅ winners 1 +1 ⏪"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 3,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 3"
+     }
+    ],
+    "category_empty_text": "No row in this category on this span.",
+    "category_param": "cat",
     "counts": {
      "entry": {
       "next": {
@@ -194,6 +272,33 @@
        "win": 3
       }
      },
+     "replayed": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 0,
+       "split": 0,
+       "thin": 0,
+       "win": 1
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 1
+      }
+     },
      "shadow": {
       "next": {
        "flat": 0,
@@ -235,6 +340,8 @@
        {
         "at_et": "11:06",
         "at_text": "11:06 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
@@ -243,6 +350,7 @@
         "kind": "aplus",
         "kind_text": "A+ shadow — never sent",
         "line": "shadow",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -253,6 +361,7 @@
         "plan_text": "trigger 3.30 · stop 3.10",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -269,6 +378,8 @@
        {
         "at_et": "10:46",
         "at_text": "10:46 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
@@ -277,6 +388,7 @@
         "kind": "aplus",
         "kind_text": "A+ shadow — never sent",
         "line": "shadow",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -287,6 +399,7 @@
         "plan_text": "trigger 5.60 · stop 5.30",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -303,6 +416,8 @@
        {
         "at_et": "10:36",
         "at_text": "10:36 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
@@ -311,6 +426,7 @@
         "kind": "aplus",
         "kind_text": "A+ shadow — never sent",
         "line": "shadow",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -321,6 +437,7 @@
         "plan_text": "trigger 2.40 · stop 2.20",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -337,6 +454,8 @@
        {
         "at_et": "10:12",
         "at_text": "10:12 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=NOEN",
@@ -345,6 +464,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -355,6 +475,7 @@
         "plan_text": "trigger 9.99 · stop 9.50",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -371,6 +492,8 @@
        {
         "at_et": "10:02",
         "at_text": "10:02 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=NPLN",
@@ -379,6 +502,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "no_plan",
@@ -389,6 +513,7 @@
         "plan_text": "no trigger or stop on the alert",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": false,
          "state": "no_plan",
@@ -405,6 +530,8 @@
        {
         "at_et": "09:45",
         "at_text": "09:45 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.85,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
@@ -413,6 +540,7 @@
         "kind": "aplus",
         "kind_text": "🎯 A+ entry",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -423,6 +551,7 @@
         "plan_text": "trigger 1.85 → fill 1.85 at 09:46 · stop 1.75 · +1R 1.95",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "win",
@@ -439,6 +568,8 @@
        {
         "at_et": "09:01",
         "at_text": "09:01 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
@@ -447,6 +578,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -457,6 +589,7 @@
         "plan_text": "trigger 1.85 → fill 1.89 at 09:45 · stop 1.75 · +1R 1.99",
         "rang": "pre",
         "rang_text": "rang pre",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "win",
@@ -473,6 +606,8 @@
        {
         "at_et": "08:51",
         "at_text": "08:51 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=XLAB",
@@ -481,6 +616,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -491,6 +627,7 @@
         "plan_text": "trigger 1.81 → fill 1.89 at 09:45 · stop 1.70 · +1R 2.00",
         "rang": "pre",
         "rang_text": "rang pre",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "win",
@@ -514,6 +651,8 @@
        {
         "at_et": "17:30",
         "at_text": "17:30 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-15",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=AHX",
@@ -522,6 +661,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -532,6 +672,7 @@
         "plan_text": "trigger 6.10 · stop 5.80",
         "rang": "ah",
         "rang_text": "rang AH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -548,6 +689,8 @@
        {
         "at_et": "15:11",
         "at_text": "15:11 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-15",
         "fill_px": 1.22,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
@@ -556,6 +699,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -566,6 +710,7 @@
         "plan_text": "trigger 1.22 → fill 1.22 at 15:21 · stop 1.16 · +1R 1.28",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": false,
          "state": "win",
@@ -578,6 +723,51 @@
         "symbol": "XLAB",
         "thin_text": null,
         "trigger": 1.22
+       }
+      ]
+     },
+     {
+      "date": "2026-10-12",
+      "label": "Mon 2026-10-12",
+      "more_n": null,
+      "rows": [
+       {
+        "at_et": "10:35",
+        "at_text": "10:35 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
+        "date": "2026-10-12",
+        "fill_px": 1.23,
+        "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=RPL",
+        "id": "REPLAY:2026-10-12|RPL|bull_flag",
+        "key": "REPLAY:2026-10-12-RPL-bull_flag",
+        "kind": "aplus",
+        "kind_text": "⏪ A+ replayed",
+        "line": "replayed",
+        "loss_text": null,
+        "next": {
+         "provisional": false,
+         "state": "win",
+         "sub_text": "+1R at 10:41 · close +6.5%",
+         "text": "WIN · best +9.8%"
+        },
+        "note": null,
+        "plan_text": "trigger 1.23 → fill 1.23 at 10:40 · stop 1.11 · +1R 1.35",
+        "rang": "rth",
+        "rang_text": "rang RTH",
+        "replay_text": "⏪ replayed",
+        "same": {
+         "provisional": false,
+         "state": "win",
+         "sub_text": "+1R at 10:41 · close +5.7%",
+         "text": "WIN · best +9.8%"
+        },
+        "setup": "bull_flag",
+        "setup_label": "🚩 Bull Flag",
+        "stop": 1.11,
+        "symbol": "RPL",
+        "thin_text": null,
+        "trigger": 1.23
        }
       ]
      }
@@ -615,8 +805,10 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged.",
     "more_text": null,
+    "replayed_note": "Replayed on the study's same-day universe (a subset of what the live scanner lists), no float gate, as-printed bars; these never rang. Not a measurement — the 2026-10-14 study read NULL.",
+    "replayed_text": "⏪ Replayed with today's detectors (never rang, not in any %): same session 1 win · 0 losses · 0 no entry · 0 open; through next session 1 win · 0 losses · 0 flat",
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 3 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 3 not graded yet",
@@ -806,6 +998,84 @@
    "tf": "5m",
    "tiles": [],
    "track_record": {
+    "categories": [
+     {
+      "key": "all",
+      "n": 8,
+      "n_replayed": 0,
+      "text": "📋 all 8"
+     },
+     {
+      "key": "win",
+      "n": 3,
+      "n_replayed": 0,
+      "text": "✅ winners 3"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 5,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 5"
+     }
+    ],
+    "categories_timeline": [
+     {
+      "key": "all",
+      "n": 4,
+      "n_replayed": 0,
+      "text": "📋 all 4"
+     },
+     {
+      "key": "win",
+      "n": 1,
+      "n_replayed": 0,
+      "text": "✅ winners 1"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 3,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 3"
+     }
+    ],
+    "category_empty_text": "No row in this category on this span.",
+    "category_param": "cat",
     "counts": {
      "entry": {
       "next": {
@@ -861,6 +1131,33 @@
        "win": 2
       }
      },
+     "replayed": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 0,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     },
      "shadow": {
       "next": {
        "flat": 0,
@@ -902,6 +1199,8 @@
        {
         "at_et": "11:06",
         "at_text": "11:06 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=HCAI",
@@ -910,6 +1209,7 @@
         "kind": "aplus",
         "kind_text": "A+ shadow — never sent",
         "line": "shadow",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -920,6 +1220,7 @@
         "plan_text": "trigger 3.30 · stop 3.10",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -936,6 +1237,8 @@
        {
         "at_et": "10:46",
         "at_text": "10:46 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=TGL",
@@ -944,6 +1247,7 @@
         "kind": "aplus",
         "kind_text": "A+ shadow — never sent",
         "line": "shadow",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -954,6 +1258,7 @@
         "plan_text": "trigger 5.60 · stop 5.30",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -970,6 +1275,8 @@
        {
         "at_et": "10:36",
         "at_text": "10:36 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=PMI",
@@ -978,6 +1285,7 @@
         "kind": "aplus",
         "kind_text": "A+ shadow — never sent",
         "line": "shadow",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -988,6 +1296,7 @@
         "plan_text": "trigger 2.40 · stop 2.20",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -1004,6 +1313,8 @@
        {
         "at_et": "10:12",
         "at_text": "10:12 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=NOEN",
@@ -1012,6 +1323,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -1022,6 +1334,7 @@
         "plan_text": "trigger 9.99 · stop 9.50",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "no_entry",
@@ -1038,6 +1351,8 @@
        {
         "at_et": "10:02",
         "at_text": "10:02 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-16",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=NPLN",
@@ -1046,6 +1361,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "no_plan",
@@ -1056,6 +1372,7 @@
         "plan_text": "no trigger or stop on the alert",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": false,
          "state": "no_plan",
@@ -1072,6 +1389,8 @@
        {
         "at_et": "09:45",
         "at_text": "09:45 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.85,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
@@ -1080,6 +1399,7 @@
         "kind": "aplus",
         "kind_text": "🎯 A+ entry",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -1090,6 +1410,7 @@
         "plan_text": "trigger 1.85 → fill 1.85 at 09:46 · stop 1.75 · +1R 1.95",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "win",
@@ -1106,6 +1427,8 @@
        {
         "at_et": "09:01",
         "at_text": "09:01 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
@@ -1114,6 +1437,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -1124,6 +1448,7 @@
         "plan_text": "trigger 1.85 → fill 1.89 at 09:45 · stop 1.75 · +1R 1.99",
         "rang": "pre",
         "rang_text": "rang pre",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "win",
@@ -1140,6 +1465,8 @@
        {
         "at_et": "08:51",
         "at_text": "08:51 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-16",
         "fill_px": 1.89,
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=XLAB",
@@ -1148,6 +1475,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -1158,6 +1486,7 @@
         "plan_text": "trigger 1.81 → fill 1.89 at 09:45 · stop 1.70 · +1R 2.00",
         "rang": "pre",
         "rang_text": "rang pre",
+        "replay_text": null,
         "same": {
          "provisional": true,
          "state": "win",
@@ -1207,8 +1536,10 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged.",
     "more_text": null,
+    "replayed_note": null,
+    "replayed_text": null,
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": "A+ shadow (never sent, not in the %): same session 0 wins · 0 losses · no graded entry yet · 3 no entry · 0 open; through next session 0 wins · 0 losses · no graded entry yet · 0 flat · 3 not graded yet",
@@ -1398,6 +1729,84 @@
    "tf": "5m",
    "tiles": [],
    "track_record": {
+    "categories": [
+     {
+      "key": "all",
+      "n": 2,
+      "n_replayed": 0,
+      "text": "📋 all 2"
+     },
+     {
+      "key": "win",
+      "n": 1,
+      "n_replayed": 0,
+      "text": "✅ winners 1"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 1,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 1"
+     }
+    ],
+    "categories_timeline": [
+     {
+      "key": "all",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "📋 all 0"
+     },
+     {
+      "key": "win",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "✅ winners 0"
+     },
+     {
+      "key": "loss",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "❌ losers 0"
+     },
+     {
+      "key": "open",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "⏳ open 0"
+     },
+     {
+      "key": "flat",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "➖ flat 0"
+     },
+     {
+      "key": "out",
+      "n": 0,
+      "n_replayed": 0,
+      "text": "— no fill / not graded 0"
+     }
+    ],
+    "category_empty_text": "No row in this category on this span.",
+    "category_param": "cat",
     "counts": {
      "entry": {
       "next": {
@@ -1453,6 +1862,33 @@
        "win": 1
       }
      },
+     "replayed": {
+      "next": {
+       "flat": 0,
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "pct": null,
+       "pending": 0,
+       "split": 0,
+       "thin": 0,
+       "win": 0
+      },
+      "same": {
+       "loss": 0,
+       "no_entry": 0,
+       "no_plan": 0,
+       "no_risk": 0,
+       "no_time": 0,
+       "open": 0,
+       "pct": null,
+       "pending": 0,
+       "thin": 0,
+       "win": 0
+      }
+     },
      "shadow": {
       "next": {
        "flat": 0,
@@ -1494,6 +1930,8 @@
        {
         "at_et": "17:30",
         "at_text": "17:30 ET",
+        "bucket": "out",
+        "bucket_text": "— no fill / not graded",
         "date": "2026-10-15",
         "fill_px": null,
         "href": "/chart-maps?tab=gajjala&sub=horizontal_fade&focus=AHX",
@@ -1502,6 +1940,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -1512,6 +1951,7 @@
         "plan_text": "trigger 6.10 · stop 5.80",
         "rang": "ah",
         "rang_text": "rang AH",
+        "replay_text": null,
         "same": {
          "provisional": false,
          "state": "pending",
@@ -1528,6 +1968,8 @@
        {
         "at_et": "15:11",
         "at_text": "15:11 ET",
+        "bucket": "win",
+        "bucket_text": "✅ winner",
         "date": "2026-10-15",
         "fill_px": 1.22,
         "href": "/chart-maps?tab=gajjala&sub=intraday_vcp&focus=XLAB",
@@ -1536,6 +1978,7 @@
         "kind": "potential",
         "kind_text": "🧠 live",
         "line": "live",
+        "loss_text": null,
         "next": {
          "provisional": false,
          "state": "pending",
@@ -1546,6 +1989,7 @@
         "plan_text": "trigger 1.22 → fill 1.22 at 15:21 · stop 1.16 · +1R 1.28",
         "rang": "rth",
         "rang_text": "rang RTH",
+        "replay_text": null,
         "same": {
          "provisional": false,
          "state": "win",
@@ -1595,8 +2039,10 @@
       "label": "Through next session"
      }
     ],
-    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that.",
+    "honesty": "A ledger of the alerts as sent, graded by GG's own trade math — not a backtest of a strategy, and small n early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this record does not change that. The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged.",
     "more_text": null,
+    "replayed_note": null,
+    "replayed_text": null,
     "rule_label": "ⓘ how each alert is graded",
     "rule_text": "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave: the first 1-minute bar from 09:45 ET to 16:00 ET (your answer: from 09:45 ET only) that starts 30 s or more after the alert and trades at or above the trigger fills — at the trigger, or at that bar's open when it opened above it (a gap fills at the open). WIN = a later 1-minute high reaches the fill +1R (R = trigger − stop, as the alert gave them) before any low touches the stop. LOSS = the stop is touched first; a bar that touches both counts as a loss, and so does a stop touched in the fill minute. Same session = through 16:00 ET on the alert's day (an alert at or after 16:00 ET: through 16:00 ET of the next market day, its first regular session); through next session = the same walk to 16:00 ET of the market day after that, after-hours and pre-market prints included. The % is the best high after the fill against the fill; the small % is the column's last close against the fill. No entry and no plan are listed, never counted; a thin R (under 0.5% of the trigger) is graded and kept out of the %.",
     "shadow_text": null,

@@ -188,9 +188,11 @@ def test_ensure_indexes_ttl_per_spec_and_idempotent():
         assert ttl[n][0] == GC.LEDGER_TTL_DAYS * 86400 == 30 * 86400
     # WIDENED 2026-10-15 — 🧠 gajjala_potentials joins the KEPT ledgers (the study's data spine, HIS CALL P7)
     # WIDENED 2026-10-16 — 🏁 gajjala_ledger joins the kept ledgers
-    for n in (ST.ALERTS, ST.HALTS, ST.STATE, ST.POTENTIALS, ST.LEDGER):      # ledgers kept
+    # WIDENED 2026-10-16 (night): DECISIONS11 D4 — ⏪ gajjala_replay joins the kept ledgers (P21)
+    for n in (ST.ALERTS, ST.HALTS, ST.STATE, ST.POTENTIALS, ST.LEDGER, ST.REPLAY):      # ledgers kept
         assert ttl[n] == []
     assert ST.POTENTIALS not in ST.TTL_DAYS and ST.LEDGER not in ST.TTL_DAYS
+    assert ST.REPLAY not in ST.TTL_DAYS
     idx = [spec for spec, _kw in st.coll(ST.POTENTIALS).indexes]
     assert (("date", 1), ("symbol", 1)) in idx and (("symbol", 1), ("date", -1)) in idx
 

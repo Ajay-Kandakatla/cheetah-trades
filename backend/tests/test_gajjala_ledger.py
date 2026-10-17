@@ -649,7 +649,10 @@ F3_HONESTY = ("A ledger of the alerts as sent, graded by GG's own trade math —
               "early. A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on "
               "their own 🎯 line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry "
               "bar. The 2026-10-14 study of the five setups read NULL — no edge over a matched placebo "
-              "(docs/gajjala/study_2026_10_13.md); this record does not change that.")
+              "(docs/gajjala/study_2026_10_13.md); this record does not change that."
+              # WIDENED 2026-10-16 (night): DECISIONS11 D11 — the chips count rows (P25)
+              " The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
+              "unchanged.")
 
 
 def test_honesty_has_no_never_sent_lie():
@@ -667,8 +670,10 @@ def test_honesty_has_no_never_sent_lie():
 def test_kind_text_is_one_literal_line_the_contracts_read():
     src = Path(LG.__file__).read_text(encoding="utf-8")
     assert '("aplus", "live"): "🎯 A+ entry"' in src
+    # WIDENED 2026-10-16 (night): DECISIONS11 D5 — the ⏪ replayed line has its own kind text (P20)
+    assert '("aplus", "replayed"): "⏪ A+ replayed"' in src
     assert LG.KIND_TEXT == {("potential", "live"): "🧠 live", ("aplus", "shadow"): "A+ shadow — never sent",
-                            ("aplus", "live"): "🎯 A+ entry"}
+                            ("aplus", "live"): "🎯 A+ entry", ("aplus", "replayed"): "⏪ A+ replayed"}
 
 
 def test_win_pct_rounds_half_up():

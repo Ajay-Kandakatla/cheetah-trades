@@ -709,6 +709,30 @@ study of the five setups read NULL (`docs/gajjala/study_2026_10_13.md`) and this
   MINE, HIS CALL Q3); the default span stays 5d. Contracts: `scripts/contracts.mjs` "🕰️ Gajjala entry tape + replay
   (2026-10-16)". ✨ `chart-maps-gajjala-entry-timeline-2026-10-16`. Doc + HIS CALL Q1–Q10:
   `docs/gajjala/entry_timeline_2026_10_16.md`.
+- **⏪ Replayed line** (2026-10-16, Ajay: *"build a pre historic timeline or so?"*). **Not a backtest, not a
+  measurement — these never rang.** 2026-10-09 and 2026-10-12 (the sessions before the tab kept records) replayed by the
+  offline `backend/scripts/gajjala_replay.py` (`--sessions --cache --out [--write --sha] [--offline] [--types]`; today's
+  detectors on the study cache's as-printed minutes, `S.study_symbol_day(…, method="v2")`, A+ only, graded by
+  `ledger.grade`; refuses 09:30–16:00 ET and any session with a `gajjala_alerts` / `gajjala_scan` doc) into the NEW
+  `gajjala_replay` collection (`store.REPLAY`, `upsert_replay` — `REPLAY:{date}|{SYM}|{setup}` ids only,
+  `REPLAY_KEYS`). The 🏁 ledger reads them as a third line (`LINES[2]` "replayed", Kind "⏪ A+ replayed", chip
+  `REPLAY_CHIP` / `REPLAY_CHIP_UNGATED` on 🎾), own count bucket `counts["replayed"]` with `pct` always None, served
+  `replayed_text` / `replayed_note` (`REPLAY_NOTE`); never in a live / shadow / 🎯 count or any %; the nightly
+  `grade_step` never reads or re-grades them (`rows_for(…, with_replay=False)`). The tape of a replayed row = its stored
+  `bars5`, never a loader. What a replay cannot know: `ledger.REPLAY_CAVEATS` (served on every doc). Doc (CLI, refusals,
+  caveats, run log): `docs/gajjala/entry_timeline_2026_10_16.md` "⏪ Replayed line".
+- **✅ / ❌ categories + loss facts** (2026-10-16, Ajay: *"I want winners and losers category in his track record and
+  would like us to study the losers"*). Every 🏁 row serves `bucket` (`ledger.BUCKETS` win · loss · open · flat · out,
+  `bucket_of` — the later decided column, AMENDMENTS11 F7) and `bucket_text`; the block serves `categories` /
+  `categories_timeline` (`CATEGORY_LABELS`, the ROW count inside the served text, replayed rows counted apart " +r ⏪")
+  and `category_param` `cat` (FE-only filter in both views, `?cat=loss`). **Rows, never a %** — the count lines and the
+  % are unchanged (HONESTY says so). Every loser serves `loss_text` (`ledger.loss_text` — `LOSS_FACT_*` words from the
+  stored grade fields only, no regrade, no causal word; thresholds `LEDGER_LOSS_*` MINE). The losers study
+  `backend/scripts/gajjala_losers.py` (`--from-json | --mongo`, `--out`, `[--include-replayed]`; imports
+  `LG.bucket_of` / `LG.loss_facts`, reads only) lists every loser in pre-declared classes C1–C10 counted on TRADES;
+  ≥ `LEDGER_LOSS_CLASS_FLAG_N` (3, his Rule #9) → "candidate rule — HIS CALL"; no win rate, no expectancy, no verdict.
+  Docs: `docs/gajjala/entry_timeline_2026_10_16.md` "✅ / ❌ categories and loss facts" (+ HIS CALL Q11–Q17),
+  `docs/gajjala/losers_study_2026_10_16.md`.
 
 ### Chart Maps — 🎢 High Beta tab — `chart_maps/high_beta_tab.py` (2026-10-14)
 Every High-Beta stock and today's move (Ajay: *"Can you create a new tab for High Beta stocks"*, *"Can you please make

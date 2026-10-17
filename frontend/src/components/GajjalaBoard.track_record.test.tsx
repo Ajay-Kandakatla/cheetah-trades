@@ -16,7 +16,14 @@ import type { CurrentUser } from '../hooks/useUser';
  * the served spans and a click writes `?span=` that the next GET carries. NEGATIVES: no tile, no PatternChart, no room
  * POST (the only fetches: the GET, and the scan POST for an owner); an older payload without `track_record` → the served
  * empty note, no table; an empty ledger → the served empty text; no NaN / undefined / None / the b-word in the DOM;
- * every number in the panel is part of a served string (the panel composes none). */
+ * every number in the panel is part of a served string (the panel composes none).
+ *
+ * ⏪ + ✅ / ❌ (2026-10-16 night, DECISIONS11 D5 / D11 / D12, AMENDMENTS11 F13). Ajay: "Would you be able to back test for
+ * the past week from his alerts any way to do so? build a pre historic timeline or so?" and "I want winners and losers
+ * category in his track record and would like us to study the losers". Pinned too: the ⏪ replayed line + its caveat
+ * line == served (right under the 🎯 entries line) or absent; a row's ⏪ chip == its served replay_text; a ❌ row's
+ * served loss_text as the sub-line right under it, on loss rows only; NEGATIVE no per-row ✅ / ❌ chip (F13); the
+ * honesty line still LAST. */
 
 let userRet: CurrentUser | null = null;
 const roomCalls: string[][] = [];
@@ -90,7 +97,9 @@ const D16 = { date: '2026-10-16', label: 'Fri 2026-10-16 · today', more_n: null
         rang_text: 'rang pre' }),
   row('2026-10-16', 'PMI', 'bull_flag', '\u{1F6A9} Bull Flag', 'aplus', 'shadow', 'A+ shadow — never sent', '10:05',
       'trigger 4.10 → fill 4.12 at 10:06 · stop 3.95 · +1R 4.29',
-      cell('loss', 'LOSS · best +2.4% so far', 'stop at 10:20 · not final', true), PENDING_NEXT, { rang_text: 'rang RTH' }),
+      cell('loss', 'LOSS · best +2.4% so far', 'stop at 10:20 · not final', true), PENDING_NEXT,
+      { rang_text: 'rang RTH', bucket: 'loss', bucket_text: '❌ loser',
+        loss_text: 'stopped 14 min after the fill · high +0.6R through the stop minute · filled 1 min after it rang' }),
   // E4: a thin-R row — its cell still reads WIN (state win) but the server counts it as thin, out of the %
   row('2026-10-16', 'THNR', 'bull_flag', '\u{1F6A9} Bull Flag', 'potential', 'live', '\u{1F9E0} live', '10:12',
       'trigger 3.00 → fill 3.00 at 10:13 · stop 2.99 · +1R 3.01',
@@ -112,6 +121,12 @@ const D15 = { date: '2026-10-15', label: 'Thu 2026-10-15', more_n: null, rows: [
   row('2026-10-15', 'QQQX', 'bull_flag', '\u{1F6A9} Bull Flag', 'potential', 'live', '\u{1F9E0} live', '13:40',
       'trigger 7.10 · stop 6.90', cell('no_entry', 'no entry', 'the trigger never traded'),
       cell('no_entry', 'no entry', 'the trigger never traded')),
+  // ⏪ a replayed row (DECISIONS11 D5): its own line, its served chip; a WIN that never rang
+  row('2026-10-15', 'RPL', 'reversal_squeeze', '\u{1F3BE} Reversal Squeeze', 'aplus', 'replayed', '⏪ A+ replayed', '10:35',
+      'trigger 1.23 → fill 1.24 at 10:36 · stop 1.11 · +1R 1.35',
+      cell('win', 'WIN · best +12.1%', '+1R at 10:50 · close +4.0%'), cell('pending', 'not graded (bars not cached)', null),
+      { id: 'REPLAY:2026-10-15|RPL|reversal_squeeze', rang_text: 'rang RTH', replay_text: '⏪ replayed · 🎾 ungated',
+        bucket: 'win', bucket_text: '✅ winner', loss_text: null }),
 ] };
 const RULE = "GG's trade math (your answer, 2026-10-16). Entry = the trigger the alert gave. No entry and no plan are listed, never counted.";
 const HONESTY = 'A ledger of the alerts as sent, graded by GG\'s own trade math — not a backtest of a strategy, and small n early.';
@@ -123,6 +138,8 @@ const block = (span: string, days: any[], over: Record<string, unknown> = {}) =>
   shadow_text: 'A+ shadow (never sent, not in the %): same session 0 wins · 1 loss · 0% won · 0 no entry · 0 open; '
     + 'through next session 0 wins · 0 losses · no graded entry yet · 0 flat',
   today_text: 'Today · through 12:25 ET · not final',
+  replayed_text: "⏪ Replayed with today's detectors (never rang, not in any %): same session 1 win · 0 losses; through next session 0 wins · 0 losses",
+  replayed_note: 'Replayed on the study’s same-day universe, no float gate, as-printed bars; these never rang.',
   days, more_text: null, empty_text: null, grade_at_et: '20:15', ...over,
 });
 const board = (tr: any) => ({
@@ -139,7 +156,7 @@ const FIX: Record<string, any> = {
   yesterday: board(block('yesterday', [], {
     counts_text: { same: 'Same session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 open',
                    next: 'Through next session: 0 wins · 0 losses · no graded entry yet · 0 no entry · 0 flat' },
-    shadow_text: null, today_text: null, empty_text: 'No Gajjala alert rang on 2026-10-15.',
+    shadow_text: null, today_text: null, empty_text: 'No Gajjala alert rang on 2026-10-15.', replayed_text: null, replayed_note: null,
   })),
 };
 FIX.all = board(block('all', [D16, D15]));
@@ -256,7 +273,7 @@ for (const [name, BOARDS] of SOURCES) {
             expect(kind.textContent).toBe(r.kind_text);
             expect(kind.className).toContain(`gg-tr-${r.line}`);
             // E1 / E4 chips: the served text exactly; null / absent / blank → no chip at all
-            for (const [chip, val] of [['rang', r.rang_text], ['thin', r.thin_text]] as const) {
+            for (const [chip, val] of [['rang', r.rang_text], ['thin', r.thin_text], ['replay', r.replay_text]] as const) {
               const el = screen.queryByTestId(`gg-tr-${chip}-${r.key}`);
               if (typeof val === 'string' && val.trim()) {
                 expect(el, `${r.key} ${chip}`).not.toBeNull();
@@ -264,10 +281,32 @@ for (const [name, BOARDS] of SOURCES) {
                 expect(el!.className).toContain('gg-tr-chip');
               } else expect(el, `${r.key} ${chip}`).toBeNull();
             }
+            // NEGATIVE (AMENDMENTS11 F13): no per-row ✅ / ❌ chip — bucket_text stays served, never drawn
+            expect(screen.queryByTestId(`gg-tr-bucket-${r.key}`), `${r.key} bucket chip`).toBeNull();
+            // D12: a ❌ row's served loss facts are the sub-line right under it; every other row has none
+            const loss = screen.queryByTestId(`gg-tr-loss-${r.key}`);
+            if (typeof r.loss_text === 'string' && r.loss_text.trim()) {
+              expect(r.bucket, `${r.key} loss_text on a non-loss row`).toBe('loss');
+              expect(loss, `${r.key} loss line`).not.toBeNull();
+              expect(loss!.textContent).toBe(r.loss_text);
+              expect(loss!.getAttribute('colspan')).toBe(String(tr.heads.length));
+              expect(loss!.closest('tr')!.className).toContain('gg-tr-sub');
+              expect(loss!.closest('tr')!.previousElementSibling).toBe(tr_el);
+            } else expect(loss, `${r.key} loss line`).toBeNull();
             const text = tr_el.textContent || '';
             for (const s of [r.symbol, r.setup_label, r.at_text, r.plan_text]) expect(text).toContain(s);
             if (r.note) expect(text).toContain(r.note);
           }
+        }
+        // ⏪ the replayed line + its caveat line: served or absent, right under the 🎯 entries line (else the shadow line)
+        for (const [id, val] of [['gg-tr-replayed', tr.replayed_text], ['gg-tr-replayed-note', tr.replayed_note]] as const) {
+          if (typeof val === 'string' && val) expect(screen.getByTestId(id).textContent, id).toBe(val);
+          else expect(screen.queryByTestId(id), id).toBeNull();
+        }
+        if (tr.replayed_text) {
+          const above = screen.queryByTestId('gg-tr-entries') || screen.queryByTestId('gg-tr-shadow');
+          if (above) expect(above.nextElementSibling).toBe(screen.getByTestId('gg-tr-replayed'));
+          if (tr.replayed_note) expect(screen.getByTestId('gg-tr-replayed').nextElementSibling).toBe(screen.getByTestId('gg-tr-replayed-note'));
         }
         if (tr.more_text) expect(screen.getByTestId('gg-tr-more').textContent).toBe(tr.more_text);
         else expect(screen.queryByTestId('gg-tr-more')).toBeNull();
@@ -477,6 +516,62 @@ describe('GajjalaBoard — 🏁 Track record (fixture-only negatives)', () => {
     expect(muted).not.toContain('.gg-tr-win');
   });
 
+  it('⏪ a replayed row: its served kind words + chip; the ⏪ lines under the entries/shadow line; NEGATIVE none on other rows', async () => {
+    stub(FIX);
+    const { container } = mount('tab=gajjala&sub=track_record&span=5d');
+    await loaded(container);
+    const k = '2026-10-15-RPL-reversal_squeeze-aplus';
+    const row = screen.getByTestId(`gg-tr-row-${k}`);
+    expect(row.querySelector('.gg-tr-kind')!.textContent).toBe('⏪ A+ replayed');
+    expect(row.querySelector('.gg-tr-kind')!.className).toContain('gg-tr-replayed');
+    expect(screen.getByTestId(`gg-tr-replay-${k}`).textContent).toBe('⏪ replayed · 🎾 ungated');
+    expect(screen.getByTestId(`gg-tr-replay-${k}`).className).toContain('gg-tr-chip');
+    expect(screen.queryAllByTestId(/^gg-tr-replay-/)).toHaveLength(1);
+    expect(screen.getByTestId('gg-tr-replayed').textContent).toBe(FIX['5d'].track_record.replayed_text);
+    expect(screen.getByTestId('gg-tr-replayed-note').textContent).toBe(FIX['5d'].track_record.replayed_note);
+    expect(screen.getByTestId('gg-tr-shadow').nextElementSibling).toBe(screen.getByTestId('gg-tr-replayed'));
+    // NEGATIVE: the ⏪ line never moves the count lines (they print the served strings as before)
+    expect(screen.getByTestId('gg-tr-counts-same').textContent).toBe(FIX['5d'].track_record.counts_text.same);
+    // NEGATIVE: a winner serves no loss line; no bucket chip anywhere (F13)
+    expect(screen.queryByTestId(`gg-tr-loss-${k}`)).toBeNull();
+    expect(screen.queryAllByTestId(/^gg-tr-bucket-/)).toHaveLength(0);
+    expect(screen.getByTestId('gg-track-record').lastElementChild).toBe(screen.getByTestId('gg-tr-honesty'));
+  });
+
+  it('NEGATIVE: a span without the ⏪ line prints no replayed line / note; a blank replay_text prints no chip', async () => {
+    const b = clone(FIX['5d']);
+    b.track_record.replayed_text = null;
+    b.track_record.replayed_note = '';
+    const r = b.track_record.days[1].rows.find((x: any) => x.symbol === 'RPL');
+    r.replay_text = '  ';
+    stub(FIX, () => b);
+    const { container } = mount('tab=gajjala&sub=track_record&span=5d');
+    await loaded(container);
+    expect(screen.queryByTestId('gg-tr-replayed')).toBeNull();
+    expect(screen.queryByTestId('gg-tr-replayed-note')).toBeNull();
+    expect(screen.queryAllByTestId(/^gg-tr-replay-/)).toHaveLength(0);
+    expect(container.textContent || '').not.toMatch(/\bnull\b|undefined/);
+  });
+
+  it('❌ the served loss facts sit right under the loser row, spanning the served heads; NEGATIVE a blank loss_text → no line', async () => {
+    stub(FIX);
+    const { container, unmount } = mount('tab=gajjala&sub=track_record&span=today');
+    await loaded(container);
+    const k = '2026-10-16-PMI-bull_flag-aplus';
+    const td = screen.getByTestId(`gg-tr-loss-${k}`);
+    expect(td.textContent).toBe('stopped 14 min after the fill · high +0.6R through the stop minute · filled 1 min after it rang');
+    expect(td.closest('tr')!.previousElementSibling).toBe(screen.getByTestId(`gg-tr-row-${k}`));
+    expect(screen.queryAllByTestId(/^gg-tr-loss-/)).toHaveLength(1);
+    unmount();
+    const b = clone(FIX.today);
+    b.track_record.days[0].rows.find((x: any) => x.symbol === 'PMI').loss_text = ' ';
+    stub(FIX, () => b);
+    const r2 = mount('tab=gajjala&sub=track_record&span=today');
+    await loaded(r2.container);
+    expect(screen.queryAllByTestId(/^gg-tr-loss-/)).toHaveLength(0);
+    expect(r2.container.querySelector('tr.gg-tr-sub')).toBeNull();
+  });
+
   it('NEGATIVE: the 🏁 panel source composes no number and types no percent (the contract regex)', async () => {
     const src = await readSource('src/components/GajjalaBoard.tsx');
     for (const fn of ['TrackRecordPanel', 'TrRowCells', 'TrCell']) {
@@ -489,6 +584,8 @@ describe('GajjalaBoard — 🏁 Track record (fixture-only negatives)', () => {
       // the E1 / E3 / E4 words are SERVED — the panel never types them
       const code = body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
       expect(code, fn).not.toMatch(/rang (pre|RTH|AH)|thin R|no alert time|no risk|['"`](WIN|LOSS)/);
+      // ⏪ / ✅ ❌ words are SERVED too (DECISIONS11 D5 / D11 / D12)
+      expect(code, fn).not.toMatch(/winner|loser|never rang|min after/i);
     }
     for (const id of ['gg-track-record', 'gg-tr-counts-same', 'gg-tr-counts-next']) {
       expect(src).toContain(`data-testid="${id}"`);

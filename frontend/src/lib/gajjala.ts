@@ -49,6 +49,15 @@
  * satisfier. One you alert it from the alert system you built please". The 🏁 block gains the SERVED `views` (the
  * toggle labels, the kinds the timeline lists, its empty line, the Tape head and the 📈 title); this module types it,
  * adds the `view` param (FE-only — it never rides the GET: ggQuery is unchanged) and ggTimelineOn. UNMEASURED.
+ *
+ * ⏪ Replayed line + ✅ / ❌ categories (2026-10-16 night, DECISIONS11 D4–D5 / D11–D12, AMENDMENTS11 F7 / F13). Ajay:
+ * "Would you be able to back test for the past week from his alerts any way to do so? build a pre historic timeline or
+ * so?" and "I want winners and losers category in his track record and would like us to study the losers". The 🏁
+ * block gains the SERVED `replayed_text` / `replayed_note` (the ⏪ line, never in a %), the served chips
+ * `categories` / `categories_timeline` (ROW counts inside the served text, never a %), the served
+ * `category_empty_text`; each row its served `bucket` / `bucket_text` / `loss_text` / `replay_text`. This module types
+ * them, adds the `cat` param (FE-only — it never rides the GET: ggQuery is unchanged) and ggCatOn / ggCatDays (a
+ * client-side filter by the SERVED bucket; "all" = the first served chip key — no key typed here). UNMEASURED.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
@@ -68,6 +77,9 @@ export const GG_SPAN_PARAM = 'span';
 export const GG_VIEW_PARAM = 'view';
 /** The served `views.items` key of the 🕰️ entries timeline (tape.VIEWS[1][0]) — the default view rides no param. */
 export const GG_VIEW_TIMELINE = 'timeline';
+/** ✅ / ❌ the 🏁 category chips (the served `categories[].key`, == ledger.CATEGORY_PARAM) — FE-only, never sent on the GET
+ *  (DECISIONS11 D11); the first served key (ledger.CATEGORY_KEYS[0], "all") rides no param. */
+export const GG_CAT_PARAM = 'cat';
 export const GG_DEFAULT_SUB: GgSub = 'bull_flag';
 export const GG_TFS: ReadonlyArray<GgTf> = ['5m', '15m'];
 
@@ -250,7 +262,17 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   /** E1 served session chip ("rang pre" / "rang RTH" / "rang AH"); E4 served "thin R" chip — null when none. */
   rang_text?: string | null; thin_text?: string | null;
   trigger?: number | null; stop?: number | null; fill_px?: number | null; plan_text: string; note?: string | null;
-  href?: string | null; same: GgTrCell; next: GgTrCell };
+  href?: string | null; same: GgTrCell; next: GgTrCell;
+  /** ✅ / ❌ the row's served category (ledger.bucket_of — one of ledger.BUCKETS) and its served words (DECISIONS11 D11;
+   *  AMENDMENTS11 F13: `bucket_text` is served but not drawn — the Same / Through-next cells already say it). */
+  bucket?: string | null; bucket_text?: string | null;
+  /** D12 the served loss facts (ledger.loss_text) — a string on bucket "loss" rows only, else null. */
+  loss_text?: string | null;
+  /** ⏪ the served replayed chip (ledger.REPLAY_CHIP / REPLAY_CHIP_UNGATED) — null on the live / shadow lines. */
+  replay_text?: string | null };
+/** ✅ / ❌ one served chip: `text` carries the ROW count (and " +r ⏪" when replayed rows share the bucket — F13);
+ *  `n` / `n_replayed` are the served numbers (the FE prints `text` only, never composes a count). */
+export type GgTrCategory = { key: string; text: string; n: number; n_replayed?: number | null };
 export type GgTrDay = { date: string; label: string; rows: GgTrRow[]; more_n?: number | null };
 export type GgTrackRecord = { title: string; rule_label?: string | null; rule_text?: string | null; honesty?: string | null; span: string;
   spans: { key: string; label: string }[]; heads: { key: string; label: string }[];
@@ -260,7 +282,13 @@ export type GgTrackRecord = { title: string; rule_label?: string | null; rule_te
   entries_text?: string | null; today_text?: string | null;
   days: GgTrDay[]; more_text?: string | null; empty_text?: string | null; grade_at_et?: string | null;
   /** 🕰️ the served view toggle (tape.views_block(), DECISIONS11 D3); absent on an older API → no toggle. */
-  views?: GgTrViews | null };
+  views?: GgTrViews | null;
+  /** ✅ / ❌ the served chips over the rows shown (ledger.served_block, DECISIONS11 D11 / AMENDMENTS11 F6) — the list
+   *  view's and the 🕰️ timeline's own (its kinds only); absent on an older API → no chip row, every row. */
+  categories?: GgTrCategory[] | null; categories_timeline?: GgTrCategory[] | null;
+  category_param?: string | null; category_empty_text?: string | null;
+  /** ⏪ the served replayed line + its caveat line (DECISIONS11 D5) — null when no replayed row is on the span. */
+  replayed_text?: string | null; replayed_note?: string | null };
 /** 🕰️ tape.views_block() — every label SERVED; `kinds` = the row kinds the timeline lists (the FE picks none itself). */
 export type GgTrViews = { param: string; default: string; items: { key: string; label: string }[]; kinds: string[];
   empty_text: string; tape_head: string; tape_toggle: string; tape_toggle_title: string };
@@ -268,6 +296,24 @@ export type GgTrViews = { param: string; default: string; items: { key: string; 
 /** 🕰️ The timeline view is on: the served toggle offers it AND the URL asks for it (an older API → never). */
 export function ggTimelineOn(tr: GgTrackRecord | null | undefined, view: string | null | undefined): boolean {
   return !!tr?.views?.items?.some((i) => i.key === GG_VIEW_TIMELINE) && view === GG_VIEW_TIMELINE;
+}
+
+/** ✅ / ❌ a category filter is on: `cat` is a SERVED chip key other than the first (the first = ledger.CATEGORY_KEYS[0],
+ *  "all"). No served chips (an older API), a null / unknown `cat` → off (every row). */
+export function ggCatOn(cat: string | null | undefined, cats: GgTrCategory[] | null | undefined): boolean {
+  const keys = (cats || []).map((c) => (c && typeof c.key === 'string' ? c.key : null));
+  return !!cat && keys.length > 1 && keys.indexOf(cat) > 0;
+}
+
+/** ✅ / ❌ the served days filtered client-side by the SERVED row `bucket` (DECISIONS11 D11): only rows with
+ *  `bucket === cat`, a day left empty is dropped; filter off (ggCatOn false: null / "all" = the first served key /
+ *  unknown / no served chips) → the days unchanged (the same array). */
+export function ggCatDays(days: GgTrDay[], cat: string | null | undefined,
+                          cats?: GgTrCategory[] | null): GgTrDay[] {
+  if (!ggCatOn(cat, cats)) return days;
+  return (days || [])
+    .map((d) => ({ ...d, rows: (d.rows || []).filter((r) => !!r && r.bucket === cat) }))
+    .filter((d) => d.rows.length > 0);
 }
 
 /** One type for one concept: the served 📊 volume average (lib/volumePane). */

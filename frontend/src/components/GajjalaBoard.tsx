@@ -97,6 +97,16 @@
  * (the A+ entries), in the served order, each with the Promo Circuit's lazy mini tape and a 📈 toggle that opens
  * the full tape under the row (the Promo table's pattern). The FE types no tape word: every label, line, dot and
  * read on the tape is served by chart_maps/gajjala/tape.py. UNMEASURED — a record of what each alert did.
+ *
+ * ⏪ Replayed line + ✅ / ❌ categories (2026-10-16 night, DECISIONS11 D4–D5 / D11–D12, AMENDMENTS11 F13). Ajay: "Would
+ * you be able to back test for the past week from his alerts any way to do so? build a pre historic timeline or so?"
+ * and "I want winners and losers category in his track record and would like us to study the losers". The 🏁 panel
+ * prints the SERVED ⏪ replayed line and its caveat line right under the 🎯 entries line (replayed rows never rang and
+ * are in no %), the served ⏪ chip in a replayed row's Kind cell, the SERVED category chips (`?cat=`, FE-only — the GET
+ * never carries it; a sub click drops it, a span or view click keeps it; each chip's ROW count is inside its served
+ * text) that filter either view client-side by the served row `bucket`, and a ❌ row's served loss facts as a sub-line
+ * under it (in the 🕰️ timeline, under its tape). No per-row ✅ / ❌ chip (AMENDMENTS11 F13 — the Same / Through-next
+ * cells already say it). The FE types no category, loss or replay word. UNMEASURED — rows, never a %.
  */
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -116,12 +126,12 @@ import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
-  changeText, chipText, criteriaText, ggHref, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
+  GG_CAT_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
   type GgBoard, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
-  type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
+  type GgTrCategory, type GgTrDay, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
 import '../styles/gajjala.css';
 
@@ -148,6 +158,8 @@ export default function GajjalaBoard() {
   const span = (params.get(GG_SPAN_PARAM) || '').trim() || null;
   /* 🕰️ the 🏁 view — FE-only: it never rides the GET (ggQuery has no view), so a toggle click fetches nothing. */
   const view = (params.get(GG_VIEW_PARAM) || '').trim() || null;
+  /* ✅ / ❌ the 🏁 category — FE-only too (a client-side filter by the served row bucket): a chip click fetches nothing. */
+  const cat = (params.get(GG_CAT_PARAM) || '').trim() || null;
 
   const [board, setBoard] = useState<GgBoard | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -346,8 +358,8 @@ export default function GajjalaBoard() {
     setParams(next);
   };
   // A sub click keeps `tab=gajjala` (it is what keeps this board mounted) and
-  // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view, which belong to the sub they were picked on.
-  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM]);
+  // drops the ☀️ / 🌙 sort and the 🏁 span + 🕰️ view + ✅ / ❌ category, which belong to the sub they were picked on.
+  const pickSub = (s: GgSub) => setParam(GG_SUB_PARAM, s, [GG_SORT_PARAM, GG_SPAN_PARAM, GG_VIEW_PARAM, GG_CAT_PARAM]);
 
   const subs = board?.subs?.length ? board.subs : GG_SUBS.map((s) => ({ ...s, count: null }));
   const session = board?.session;
@@ -427,7 +439,9 @@ export default function GajjalaBoard() {
       ) : activeSub === 'track_record' ? (
         <TrackRecordPanel tr={board?.track_record ?? null} emptyNote={board?.empty_note ?? null}
                           onSpan={(k) => setParam(GG_SPAN_PARAM, k)} view={view}
-                          onView={(k) => setParam(GG_VIEW_PARAM, k === board?.track_record?.views?.default ? null : k)} />
+                          onView={(k) => setParam(GG_VIEW_PARAM, k === board?.track_record?.views?.default ? null : k)}
+                          cat={cat}
+                          onCat={(k) => setParam(GG_CAT_PARAM, k === board?.track_record?.categories?.[0]?.key ? null : k)} />
       ) : board ? (
         <>
           {/* (4) counts + graveyard + setups held by an unanswered number. */}
@@ -795,6 +809,7 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
     case 'kind': return (
       <td>
         <span className={`gg-tr-kind gg-tr-${row.line}`}>{row.kind_text}</span>
+        {trChip(row.replay_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-replay-${row.key}`}>{row.replay_text}</span> : null}
         {trChip(row.rang_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-rang-${row.key}`}>{row.rang_text}</span> : null}
         {trChip(row.thin_text) ? <span className="gg-tr-chip" data-testid={`gg-tr-thin-${row.key}`}>{row.thin_text}</span> : null}
       </td>
@@ -815,13 +830,15 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
  *  lines, one table per served day (served heads, served rows), the served more / empty lines, the served rule folded
  *  and the served honesty line last. The panel types no word, no number and no percent sign; no tiles, no room POST.
  *  An older API (no `track_record` block) → the served empty note only. */
-function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView }: {
+function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView, cat, onCat }: {
   tr: GgTrackRecord | null; emptyNote: string | null; onSpan: (key: string) => void;
-  view: string | null; onView: (key: string) => void;
+  view: string | null; onView: (key: string) => void; cat: string | null; onCat: (key: string) => void;
 }) {
   if (!tr) return emptyNote ? <div className="cm-note" data-testid="gg-tr-empty">{emptyNote}</div> : null;
   const heads = tr.heads || [];
   const tl = ggTimelineOn(tr, view);
+  const listDays = ggCatDays(tr.days || [], cat, tr.categories);
+  const listCatEmpty = !tl && ggCatOn(cat, tr.categories) && !listDays.length && (tr.days || []).some((d) => !!d.rows?.length);
   return (
     <section className="gg-track-record" data-testid="gg-track-record">
       <h3 className="gg-pb-h" data-testid="gg-tr-title">{tr.title}</h3>
@@ -838,12 +855,16 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView }: {
         </div>
       ) : null}
       <GgTrViews views={tr.views} on={tl} onView={onView} />
+      <GgTrCats cats={tl ? tr.categories_timeline : tr.categories} cat={cat} onCat={onCat} />
       {!tl && tr.counts_text?.same ? <div className="cm-foot" data-testid="gg-tr-counts-same">{tr.counts_text.same}</div> : null}
       {!tl && tr.counts_text?.next ? <div className="cm-foot" data-testid="gg-tr-counts-next">{tr.counts_text.next}</div> : null}
       {tr.shadow_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-shadow">{tr.shadow_text}</div> : null}
       {tr.entries_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-entries">{tr.entries_text}</div> : null}
+      {tr.replayed_text ? <div className="gg-muted gg-tr-shadow-line" data-testid="gg-tr-replayed">{tr.replayed_text}</div> : null}
+      {tr.replayed_note ? <div className="gg-muted" data-testid="gg-tr-replayed-note">{tr.replayed_note}</div> : null}
       {tr.today_text ? <div className="cm-note" data-testid="gg-tr-today">{tr.today_text}</div> : null}
-      {tl ? <GgEntryTimeline tr={tr} /> : (tr.days || []).map((d) => (
+      {listCatEmpty ? <div className="cm-note" data-testid="gg-tr-cat-empty">{tr.category_empty_text}</div> : null}
+      {tl ? <GgEntryTimeline tr={tr} cat={cat} /> : listDays.map((d) => (
         <div key={d.date} className="gg-tr-day">
           <h4 className="gg-pb-h" data-testid={`gg-tr-day-${d.date}`}>{d.label}</h4>
           <div className="gg-tr-scroll">
@@ -851,9 +872,12 @@ function TrackRecordPanel({ tr, emptyNote, onSpan, view, onView }: {
               <thead><tr>{heads.map((h) => <th key={h.key}>{h.label}</th>)}</tr></thead>
               <tbody>
                 {(d.rows || []).map((r) => (
-                  <tr key={r.key} data-testid={`gg-tr-row-${r.key}`}>
-                    {heads.map((h) => <TrRowCells key={h.key} row={r} head={h.key} />)}
-                  </tr>
+                  <Fragment key={r.key}>
+                    <tr data-testid={`gg-tr-row-${r.key}`}>
+                      {heads.map((h) => <TrRowCells key={h.key} row={r} head={h.key} />)}
+                    </tr>
+                    <GgTrLossLine row={r} heads={heads} />
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -895,19 +919,58 @@ function GgTrViews({ views, on, onView }: {
   );
 }
 
+/** ✅ / ❌ the served category chips (DECISIONS11 D11): one house phase button per served chip, its served text (the
+ *  ROW count inside it — never composed here); the selected one is `cat` when it is a served key other than the first,
+ *  else the first (ledger.CATEGORY_KEYS[0]). A click filters client-side — no GET. No served chips → nothing. */
+function GgTrCats({ cats, cat, onCat }: {
+  cats: GgTrCategory[] | null | undefined; cat: string | null; onCat: (key: string) => void;
+}) {
+  const items = (cats || []).filter((c) => c && typeof c.key === 'string' && c.key && typeof c.text === 'string' && c.text);
+  if (!items.length) return null;
+  const sel = ggCatOn(cat, items) ? cat : items[0].key;
+  return (
+    <div className="cm-phase gg-tr-cats" role="tablist" data-testid="gg-tr-cats">
+      {items.map((c) => (
+        <button key={c.key} type="button" role="tab" aria-selected={c.key === sel}
+                data-testid={`gg-tr-cat-${c.key}`}
+                className={`cm-phase-btn${c.key === sel ? ' cm-phase-on' : ''}`}
+                onClick={() => onCat(c.key)}>
+          {c.text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** ❌ a row's served loss facts (ledger.loss_text, DECISIONS11 D12) as a sub-line row under it — the served string
+ *  only; nothing when the row serves none (every non-loss row). `tape` = the 🕰️ table (one more column). */
+function GgTrLossLine({ row, heads, tape = false }: {
+  row: GgTrRow; heads: { key: string; label: string }[]; tape?: boolean;
+}) {
+  if (typeof row.loss_text !== 'string' || !row.loss_text.trim()) return null;
+  return (
+    <tr className="gg-tr-sub">
+      <td colSpan={heads.length + (tape ? 1 : 0)} data-testid={`gg-tr-loss-${row.key}`}>{row.loss_text}</td>
+    </tr>
+  );
+}
+
 /** 🕰️ the entries timeline (DECISIONS11 D3): per served day, only the rows whose kind is in the served
  *  `views.kinds`, in the SERVED order (days newest first, the panel's own grouping); a day without one is skipped;
  *  none at all → the served empty line. One table per day: the served heads + the served Tape head; each row = the
  *  🏁 cells + a lazy mini tape and a 📈 toggle that opens the full tape under the row (the Promo table's pattern). */
-function GgEntryTimeline({ tr }: { tr: GgTrackRecord }) {
+function GgEntryTimeline({ tr, cat }: { tr: GgTrackRecord; cat: string | null }) {
   const views = tr.views;
   if (!views) return null;
   const kinds = views.kinds || [];
   const heads = tr.heads || [];
-  const days = (tr.days || [])
-    .map((d) => ({ d, rows: (d.rows || []).filter((r) => !!r && kinds.includes(r.kind)) }))
-    .filter((x) => x.rows.length > 0);
-  if (!days.length) return <div className="cm-note" data-testid="gg-tl-empty">{views.empty_text}</div>;
+  const listed: GgTrDay[] = (tr.days || [])
+    .map((d) => ({ ...d, rows: (d.rows || []).filter((r) => !!r && kinds.includes(r.kind)) }))
+    .filter((d) => d.rows.length > 0);
+  if (!listed.length) return <div className="cm-note" data-testid="gg-tl-empty">{views.empty_text}</div>;
+  /* ✅ / ❌ the same client-side filter as the list view, over the timeline's own served chips. */
+  const days = ggCatDays(listed, cat, tr.categories_timeline).map((d) => ({ d, rows: d.rows }));
+  if (!days.length) return <div className="cm-note" data-testid="gg-tr-cat-empty">{tr.category_empty_text}</div>;
   return (
     <div className="gg-tl" data-testid="gg-tl">
       {days.map(({ d, rows }) => (
@@ -953,6 +1016,8 @@ function GgEntryTimelineRow({ row, heads, views }: {
           <td colSpan={heads.length + 1}><GgEntryTape id={row.id} /></td>
         </tr>
       ) : null}
+      {/* D12 — the loser's facts under its tape (after the expanded tape row when it is open). */}
+      <GgTrLossLine row={row} heads={heads} tape />
     </Fragment>
   );
 }

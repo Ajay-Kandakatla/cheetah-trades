@@ -202,7 +202,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -H "X-User-Email: ajaykandakatla@gmail.
 
    Check: `spans` has 10d, `views` equals `tape.views_block()`; `…/chart-maps/gajjala/entry-tape?id=<an aplus id,
    url-encoded>&lite=1` → `LITE_KEYS` only; `?id=nope` → 404.
-4. (Phase 2 — after commit 2: the D6 replay run, then the same 10d curl; filled by WP-M2 under "⏪ Replayed line".)
+4. (Phase 2 — after commit 2: the D6 replay run, then the same 10d curl — "⏪ Replayed line" → "The D6 run" below.)
 5. His surface — the worktree's Vite preview `ggcharts-frontend-8007` on :5177 (`vite.local.config.ts`, AMENDMENTS11
    A2) proxied to :8007 with `X-User-Email: ajaykandakatla@gmail.com` and the `/api/features/*` + `/api/usage/*` bypass
    (never mark his ✨ seen): `/chart-maps?tab=gajjala&sub=track_record&span=10d&view=timeline` → the toggle, only A+
@@ -219,11 +219,224 @@ LIVE proof after the deploy: https://pounce.ajaykandakatla.dev/chart-maps?tab=ga
 
 ## ⏪ Replayed line
 
-phase 2 — filled by WP-M2
+Ajay, 2026-10-16 ~22:30 ET (verbatim):
+
+> "Would you be able to back test for the past week from his alerts any way to do so?
+> build a pre historic timeline or so?"
+
+**Not a backtest and not a measurement.** 2026-10-09 and 2026-10-12 — the two sessions of the past week before the tab
+kept records — are **replayed**: today's detectors run again on the minute bars the 2026-10-14 study cached, each A+
+graded by the same trade math (`ledger.grade`). These rows **never rang**. They sit on their own ⏪ line
+(`ledger.LINES[2]` "replayed", `KIND_TEXT[("aplus", "replayed")]` "⏪ A+ replayed", their own count bucket
+`COUNT_LINES[3]` "replayed" whose `pct` is ALWAYS None) and are in **no %** and in no live / shadow / 🎯 entry count. The
+2026-10-14 study read NULL; nothing here changes that.
+
+- **Code**: `backend/scripts/gajjala_replay.py` (NEW, offline, outside the source guard — imports the study, the ledger,
+  the store and `tape.bars5`); the ledger reads the docs through `store.replay_rows` (`served_block` only —
+  `rows_for(…, with_replay=False)` by default, so the nightly `grade_step` and `today_read` never see a replay doc and
+  never re-grade one against adjusted bars). Collection `gajjala_replay` (NEW, `store.REPLAY`, kept, no TTL), written
+  ONLY by the script's `--write` through `store.upsert_replay` (refuses an id that does not start `REPLAY:` and any key
+  outside `store.REPLAY_KEYS`).
+- **Ids**: `ledger.replay_id(date, SYM, setup)` = `"REPLAY:{date}|{SYM}|{setup}"` — never a `ledger_id`, so a replay
+  doc can never collide with a real record; `alert_of` reads a replay doc only with state `replayed`, kind `aplus`, an
+  `alert` block, the exact id and no `#` in it (AMENDMENTS11 F15); a `REPLAY:` id never reads live (C6).
+- **What the 🏁 panel serves for it**: the row's Kind "⏪ A+ replayed" and its chip `REPLAY_CHIP` "⏪ replayed"
+  (`REPLAY_CHIP_UNGATED` "⏪ replayed · 🎾 ungated" on a 🎾 Reversal Squeeze row — `FLOAT_GATED_SETUPS`, HIS CALL Q4);
+  the line `replayed_text` = `REPLAYED_HEAD` "⏪ Replayed with today's detectors (never rang, not in any %)" + the
+  same / next counts with NO "% won"; `replayed_note` = `REPLAY_NOTE` "Replayed on the study's same-day universe (a
+  subset of what the live scanner lists), no float gate, as-printed bars; these never rang. Not a measurement — the
+  2026-10-14 study read NULL."; a replay read fault → `REPLAY_FAULT_TEXT` "⏪ replay not read" (the block serves without
+  the line); a column the script could not grade → `REPLAY_NOT_GRADED_TEXT` "not graded (bars not cached)". The 📈 tape
+  of a replayed row draws the doc's stored `bars5` (as-printed) with `note` = `REPLAY_NOTE` and never calls a loader.
+
+### The CLI (BUILD_SPEC11 §3.13)
+
+```bash
+python -m scripts.gajjala_replay --sessions 2026-10-09 2026-10-12 --cache /cache --out /replay_out/dry
+python -m scripts.gajjala_replay --sessions 2026-10-09 2026-10-12 --cache /cache --out /replay_out/offline --offline --types none
+```
+
+- `--sessions D [D …]` (required), `--cache DIR` (required — the study cache, opened `offline=True` ALWAYS: it is
+  mounted read-only and the replay never writes it), `--out DIR` (required — `events.csv` + `replay.json`, counts only,
+  no % / rate / win key), `--write` (upserts one `gajjala_replay` doc per kept event; re-runs replace — idempotent),
+  `--sha SHA` (the worktree's git HEAD, 7–40 hex, required with `--write`; the container has no git), `--offline` (no
+  as-printed minute fetch for a next session missing from the cache), `--types store|none` (default `store` = the live
+  scanner's own type map), `--symbols A,B`.
+- Per session: `S.superset` over the cached grouped-daily → per name `S.study_symbol_day(…, scope="live",
+  with_pool=False, method="v2")` → keep an event only when `entry_class == "aplus"`, no `variant`, no `grade`, and
+  `S.window_reason(…)` is None (≥ 09:45 ET, inside the extended close); every other event is counted in
+  `dropped{not_aplus, variant, grade, window}`. The alert time = the study's pass label `pass_t` (ET → aware UTC);
+  `same` / `next` graded by `LG.grade` over `LG.bars_from_frame(the cached minutes)` with `LG.session_bounds`; a next
+  session missing from the cache → ONE as-printed minute fetch per name at replay time (`adjusted=false`, never
+  written; HIS CALL Q8), or with `--offline` → `next` null → "not graded (bars not cached)". A split on file after the
+  alert → a split cell (the ledger's own split lookup).
+- Exit **0** when at least one session was replayed, **3** when every session was refused, **2** for a refusal before
+  anything is read.
+
+### The refusals (listed, never replayed)
+
+- **Regular session**: 09:30–16:00 ET → prints `refused: {HH:MM} ET is inside the regular session — the replay runs after
+  16:00 ET` and exits 2 before reading anything (no override, like the study's `refused_window`).
+- `--write` without a 7–40 hex `--sha` → 2. A cache directory without the study's layout marker (StaleCache) → 2.
+- A session that is not a market day or is after `S.default_end(now)` → "not a completed session".
+- A half day the study leaves unlisted (`S.half_day_unlisted`).
+- `store.records_on(d)` None → "records unreadable"; > 0 → "{n} gajjala_alerts / gajjala_scan docs on file — the record
+  stands, never replayed" (a session with any record is never replayed — no collision by construction; 10-13 on are
+  refused by design, HIS CALL Q9).
+- The grouped-daily of the session and its prior session not in the cache → "grouped not cached".
+
+### What a replay cannot know — `ledger.REPLAY_CAVEATS` (verbatim, in order; served on every doc as `caveats`)
+
+1. "Universe: the study's same-day list (grouped daily, his three scanner numbers, the first qualifying minute) — a subset of what the live scanner lists (no stay-listed carry, no split hold-outs)."
+2. "No float gate: 🎾 Reversal Squeeze rows are ungated structure (no point-in-time float on file)."
+3. "As-printed bars (not split-adjusted), graded only on the study cache's own minute bars."
+4. "The alert time is the 5-minute pass label (the live pass rang about a minute later); its freshness, halts and after-hours context are not replayed." (the 5 = `GC.PASS_CADENCE_SEC // 60`, built in the f-string, never typed)
+5. "A later reverse split unknown to the dated type lookup is not seen."
+6. "One break per setup per day: the study keeps the first break of any class — a later A+ behind an earlier stopped or variant break on the same setup is not replayed." (AMENDMENTS11 F10)
+7. "These never rang. Not a measurement — the 2026-10-14 study read NULL."
+
+### The D6 run (main session, tonight, outside 09:30–16:00 ET — the ONLY prod write: the NEW `gajjala_replay` collection)
+
+On the throwaway api `cheetah-tmp-gr-api` (`scratchpad/gg_charts/gr_tmp_api.sh`: the study cache read-only at `/cache`,
+ONE output mount `/replay_out`, `_mongo_put_day` a no-op — AMENDMENTS11 F18). `--sha` = the worktree's HEAD, read on the
+host (the container has no git).
+
+```bash
+docker exec cheetah-market-app-mongo-1 mongosh cheetah --quiet --eval 'printjson({replay: db.gajjala_replay.countDocuments({}), alerts: db.gajjala_alerts.countDocuments({}), ledger: db.gajjala_ledger.countDocuments({}), alerts_days: db.gajjala_alerts.countDocuments({date: {$in: ["2026-10-09", "2026-10-12"]}}), scan_days: db.gajjala_scan.countDocuments({date: {$in: ["2026-10-09", "2026-10-12"]}})})'
+docker exec -i -w /app cheetah-tmp-gr-api python -m scripts.gajjala_replay --sessions 2026-10-09 2026-10-12 --cache /cache --out /replay_out/dry
+docker exec -i -w /app cheetah-tmp-gr-api python -m scripts.gajjala_replay --sessions 2026-10-09 2026-10-12 --cache /cache --out /replay_out/write --write --sha "$(git -C /Users/ajay/clinet-test/wt-ggcharts rev-parse HEAD)"
+docker exec cheetah-market-app-mongo-1 mongosh cheetah --quiet --eval 'printjson({replay: db.gajjala_replay.countDocuments({}), alerts: db.gajjala_alerts.countDocuments({}), ledger: db.gajjala_ledger.countDocuments({})})'
+```
+
+Check: `alerts_days == scan_days == 0` before; the dry run's kept count == the write run's `written`; after: `replay` =
+before + written, `alerts` and `ledger` unchanged.
+
+Then the branch proof (§5.4 step 4) — the same 10d GET and a replayed row's tape (`<SYM>` / `<setup>` from
+`replay.json`):
+
+```bash
+curl -s -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8007/chart-maps/gajjala?sub=track_record&span=10d"
+curl -s -H "X-User-Email: ajaykandakatla@gmail.com" "http://127.0.0.1:8007/chart-maps/gajjala/entry-tape?id=REPLAY%3A2026-10-12%7C<SYM>%7C<setup>"
+```
+
+Check: the 10-09 / 10-12 rows read `line "replayed"`, `kind_text "⏪ A+ replayed"`, with `replayed_text` /
+`replayed_note`; `counts.live|shadow|entry` and `counts_text` byte-equal to the GET before the run (NEGATIVE); the
+replayed tape's `note == REPLAY_NOTE`, its bars = the doc's `bars5`.
+
+### Run log (main session — filled after the D6 run)
+
+| | before | after |
+|---|---|---|
+| `gajjala_replay` docs | | |
+| `gajjala_alerts` docs | | |
+| `gajjala_ledger` docs | | |
+| `gajjala_alerts` / `gajjala_scan` on 2026-10-09 + 2026-10-12 | | (n/a) |
+
+- dry run `replay.json` summary (per session: state, superset, listed, events, kept, dropped, same_graded,
+  next_graded, next_not_cached, split): _(pasted by the main session)_
+- write run `replay.json` summary + `written`: _(pasted by the main session)_
+- detectors sha / sha256: _(pasted by the main session)_
 
 ## ✅ / ❌ categories and loss facts
 
-phase 2 — filled by WP-M2
+Ajay, 2026-10-16 ~22:45 ET (verbatim):
+
+> "I want winners and losers category in his track record and would like us to study the losers"
+
+**Counts are ROWS, never a %.** The chips sort and filter the rows already on the 🏁 Track record; they move no % line,
+no count line (`counts`, `counts_text`, `shadow_text`, `entries_text`, `replayed_text` are byte-equal with or without
+them — a test monkeypatches `bucket_of` to answer "loss" everywhere and proves it). HONESTY gains one final sentence:
+"The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are unchanged."
+UNMEASURED — nothing here is an edge, a win rate or an expectancy.
+
+### The buckets — `ledger.BUCKETS`, `BUCKET_TEXT`
+
+| bucket | `BUCKET_TEXT` (served per row) |
+|---|---|
+| `win` | "✅ winner" |
+| `loss` | "❌ loser" |
+| `open` | "⏳ open" |
+| `flat` | "➖ flat" |
+| `out` | "— no fill / not graded" (AMENDMENTS11 F7) |
+
+**The bucket rule** (`ledger.bucket_of(same_state, next_state, next_due=True)`, BUILD_SPEC11 C8 as modified by
+AMENDMENTS11 F7 — total, from the two SERVED cell states):
+
+1. the next column win / loss → that;
+2. else the same column win / loss → that (next pending / split / the decided same column copied into next);
+3. else the next column "flat" → "flat";
+4. else the same column "open" AND the next column "pending" AND the next column still due → "open";
+5. else "out" — no_entry / no_plan / no_risk / no_time / pending / split, a replayed row whose next session was never
+   cached (`served_block` passes `next_due = False` for it — never "⏳ open" forever), same open + next split, any
+   unknown string.
+
+A thin-R row keeps its real bucket (win / loss) AND its thin chip — it stays out of the %. Pending rows read "— no fill
+/ not graded" until the nightly grades them (HIS CALL Q12, MINE). A provisional today loss reads ❌ and its cell says
+"so far · not final".
+
+### The chips — `CATEGORY_KEYS`, `CATEGORY_LABELS`, `cat=`
+
+| key | `CATEGORY_LABELS` |
+|---|---|
+| `all` | "📋 all" |
+| `win` | "✅ winners" |
+| `loss` | "❌ losers" |
+| `open` | "⏳ open" |
+| `flat` | "➖ flat" |
+| `out` | "— no fill / not graded" |
+
+- Served `categories` (the 📋 all alerts view) and `categories_timeline` (the 🕰️ entries timeline — only the kinds that
+  view lists), each `[{key, text, n, n_replayed}]` in `CATEGORY_KEYS` order. `text` = `"{label} {n}"` — the count is
+  INSIDE the served text, the FE composes no number (C10); `n` counts the sent lines live / shadow / entry only, and
+  when `r` replayed rows share the bucket the text gains `" +{r} ⏪"` (AMENDMENTS11 F13 — counted APART, HIS CALL Q14,
+  MINE).
+- The chips count the rows inside the served `days` — the rows the FE can filter — never every built row; the % lines
+  still cover every row (AMENDMENTS11 F6, HIS CALL Q17; `LEDGER_ROWS_MAX` 400).
+- `CATEGORY_PARAM` = `cat` rides the URL (`cat=loss`), FE-only — a chip click refetches nothing; default all; a span
+  or view click keeps it, a sub click drops it. The filter keeps the replayed rows of that bucket (they never vanish
+  under a filter). A filter that leaves nothing → `CATEGORY_EMPTY_TEXT` "No row in this category on this span."
+- No per-row ✅ / ❌ chip is drawn (AMENDMENTS11 F13, HIS CALL Q11, MINE): the Same / Through next session cells already
+  say WIN / LOSS. `bucket_text` stays served.
+
+### Loss facts — `ledger.loss_facts` / `ledger.loss_text` (DECISIONS11 D12)
+
+Every `loss` row serves `loss_text` — plain facts from the STORED grade fields only (never a regrade, never a bar
+read), no causal word. The grade read = the column that made the bucket "loss" (next when its state is loss, else
+same). A win / open / flat / out row, or a loss without a fill time, → `loss_text` None. Shown as the ❌ row's sub-line
+in 📋 all alerts and under the loser's tape in the 🕰️ timeline.
+
+The FROZEN words (`ledger.py`, the only place):
+
+| constant | served word |
+|---|---|
+| `LOSS_FACT_THIN` | "thin R (not in the %)" — thin rows, FIRST |
+| `LOSS_FACT_STOPPED` | "stopped {n} min after the fill" — exit_t − fill_t, whole minutes |
+| `LOSS_FACT_BEST` | "high +{x}R through the stop minute" — best_to_exit_pct ÷ 100 × fill_px ÷ the alert's R, one decimal (AMENDMENTS11 F17: best_to_exit includes the stop minute) |
+| `LOSS_FACT_FILLED` | "filled {m} min after it rang" — fill_t − the alert time, whole minutes |
+| `LOSS_FACT_FILL_MINUTE` | "stop in the fill minute" — reason `stop_fill_minute` |
+| `LOSS_FACT_LATE_RTH` | "last {n} min of RTH" — n = `LEDGER_LOSS_LATE_RTH_MIN` |
+| `LOSS_FACT_NEXT_MORNING` | "filled next morning (rang AH)" |
+| `LOSS_FACT_STALE` | "filled ≥{n} min after the ring" — n = `LEDGER_LOSS_STALE_FILL_MIN`; never a next-morning fill (AMENDMENTS11 F2) |
+
+`loss_text` = " · ".join of: the thin word (thin rows) · stopped · high (when R is known) · filled (when the alert time is
+known) · ONE part, the first true of: stop in the fill minute → last 30 min of RTH → filled next morning → filled ≥60 min
+after the ring (or none). Example (illustrative): "stopped 3 min after the fill · high +0.2R through the stop minute ·
+filled 41 min after it rang · last 30 min of RTH". `ledger.fill_facts` is the same fill clock for ANY decided trade (win
+or loss) — `loss_facts` calls it (one engine, AMENDMENTS11 F14); the losers study imports both.
+
+The thresholds (`backend/chart_maps/gajjala/constants.py` — the only number source):
+
+| constant | value | tag |
+|---|---|---|
+| `LEDGER_LOSS_FAST_MIN` | 5 | TRANSPORT — MINE (class C4: stopped ≤ 5 min after the fill) |
+| `LEDGER_LOSS_LATE_RTH_MIN` | 30 | TRANSPORT — MINE (class C2: the last 30 min of RTH) |
+| `LEDGER_LOSS_STALE_FILL_MIN` | 60 | TRANSPORT — MINE (class C3: filled ≥ 60 min after the ring) |
+| `LEDGER_LOSS_NO_PROGRESS_R` | 0.3 | TRANSPORT — MINE (class C5: high < +0.3R before the stop) |
+| `LEDGER_LOSS_GAVE_BACK_R` | 0.8 | TRANSPORT — MINE (class C6: high ≥ +0.8R, then stopped) |
+| `LEDGER_LOSS_CLASS_FLAG_N` | 3 | Ajay 2026-09-03 (Rule #9: ≥3 of the same class → propose a rule, never change one) |
+
+The five `LEDGER_LOSS_*` thresholds are MINE (HIS CALL Q13). The losers study that counts them:
+`docs/gajjala/losers_study_2026_10_16.md`.
 
 ## HIS CALL (each ships with the default shown; nothing here is decided for him)
 
@@ -240,3 +453,28 @@ phase 2 — filled by WP-M2
   DEFAULT) vs older sessions the study cache covers (back to 2025-10).
 - **Q10 A completed day missing from intraday_cache** is fetched ONCE by the house loader for the tape, then cached
   (DEFAULT, C1) vs cache-only (an empty tape until a nightly caches it).
+- **Q11 The per-row ✅ / ❌ chip** shown in the Kind cell (DEFAULT, D11's served `bucket_text`) vs hidden (the Same /
+  Through-next cells already say WIN / LOSS — Rule #5 clutter on a dense table).
+  - AMENDMENTS11 F13 (MINE — the planner's default, not his): the shipped default is **hidden** — no per-row chip is
+    drawn; `bucket_text` stays served for later.
+- **Q12 The bucket rule** (C8: the later decided column, else next flat, else same open, else "— no fill"; pending rows
+  read "— no fill" until graded — DEFAULT) vs a separate "⏱ not graded yet" chip.
+  - AMENDMENTS11 F7 (MINE): "open" only while the next column is still due (a replayed row whose next session was never
+    cached, or same open + next split → "out"); the "out" word is "— no fill / not graded".
+- **Q13 The loss-fact thresholds** `LEDGER_LOSS_FAST_MIN 5`, `LATE_RTH_MIN 30`, `STALE_FILL_MIN 60`, `NO_PROGRESS_R 0.3`,
+  `GAVE_BACK_R 0.8` (MINE, D12) and the flag count 3 (his Rule #9); ANY rule drawn from a flagged class (e.g. "no A+
+  fills in the last 30 min", "skip after-hours rings") is HIS CALL with the numbers — nothing changes a gate tonight.
+- **Q14 Replayed rows inside the category chips** (counted where they filter — DEFAULT, C10) vs excluded from the chips
+  (they would then vanish under a chip filter).
+  - AMENDMENTS11 F13 (MINE): the shipped default is **counted APART** — a chip's `n` counts the sent lines only and its
+    text gains " +{r} ⏪" for the replayed rows of that bucket; the filter keeps them (they never vanish).
+- **Q15 The C9 (per setup) and C10 (per rang: pre / rth / ah) splits never flag** in the losers study — they are
+  reported as splits only; C1–C8 are the flaggable classes (AMENDMENTS11 F14, MINE; DEFAULT) vs flagging a setup or a
+  rang bucket with ≥3 loser trades too.
+- **Q16 The mini tape never fetches** — only the 📈 full tape may load a missing day; the mini reads the cache and
+  today's memo only (AMENDMENTS11 F8, MINE; DEFAULT) vs the mini loading a missing completed day itself.
+- **Q17 The chip counts are of the rows shown** — the rows inside the served days (`LEDGER_ROWS_MAX` 400), while the %
+  lines cover every row (AMENDMENTS11 F6, MINE; DEFAULT) vs chips over every built row (a chip could then show a number
+  its list does not hold).
+
+Q11, Q12 and Q14 are MINE (the planner's defaults, AMENDMENTS11 F13); D11's "(Ajay)" covers only his sentence.

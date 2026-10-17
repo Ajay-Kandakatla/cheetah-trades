@@ -20,7 +20,9 @@ triggers); a pushed potential with no plan; one whose trigger never trades.
 GOLDEN: `GG_WRITE_GOLDEN=1 python -m pytest tests/test_gajjala_track_record_tab.py -k golden` writes the FE fixture
 (frontend/src/components/__fixtures__/gajjala_track_record_golden_2026_10_16.json); without the env the test proves the
 file IS the served payload, byte for byte. The golden's own store (golden_store) adds ONE live A+ entry (XLAB 🌀 at
-09:45 ET, 2026-10-16 polish) so its served `entries_text` is real; the shared `store` fixture never carries it.
+09:45 ET, 2026-10-16 polish) so its served `entries_text` is real, and (2026-10-16 night, DECISIONS11 D5) ONE SYNTHETIC
+⏪ replayed doc REPLAY:2026-10-12|RPL|bull_flag graded by the REAL ledger.grade on a synthetic tape; the shared `store`
+fixture never carries either.
 """
 from __future__ import annotations
 
@@ -59,7 +61,10 @@ W3 = ("A ledger of the alerts as sent, graded by GG's own trade math — not a b
       "A+ rows from the shadow period (never sent) stay out of the %; A+ entries sent live are counted on their own 🎯 "
       "line, not pooled with the 🧠 pushes — an A+ exists only once the trade survived its entry bar. The 2026-10-14 "
       "study of the five setups read NULL — no edge over a matched placebo (docs/gajjala/study_2026_10_13.md); this "
-      "record does not change that.")
+      "record does not change that."
+      # WIDENED 2026-10-16 (night): DECISIONS11 D11 — the chips count rows (P26)
+      " The winners / losers chips count ROWS (a name that rang on two setups is two rows); the % lines are "
+      "unchanged.")
 
 
 @pytest.fixture(autouse=True)
@@ -565,10 +570,61 @@ def golden_entry_doc() -> dict:
     return live_entry_doc(D16, "XLAB", "intraday_vcp", _et(D16, 9, 45), trigger=1.85, stop=1.75, price=1.8801)
 
 
-def golden_store():
+D12 = date(2026, 10, 12)                        # a Monday (Columbus Day — the market was open), inside the 5d window
+
+
+def replay_tape(d, *, outcome="win", trigger=1.23, stop=1.11) -> list:
+    """SYNTHETIC 1-minute tape for a replayed A+ (BUILD_SPEC11 §4 WP-C golden): flat 1.20 from 04:00 ET, the 10:40
+    minute trades through the trigger (fill AT the trigger — it opened under it), the 10:41 minute reaches fill + 1R
+    exactly (a WIN on an EQUAL high — the Decimal compare), touches under the stop (a LOSS) or holds at the trigger
+    ("open"), then flat 1.30 to 20:00."""
+    target = round(trigger + GC.LEDGER_R_MULT * (trigger - stop), 4)
+    out = []
+    for b in _flat(d, 1.20):
+        et = b[0].astimezone(ET)
+        if (et.hour, et.minute) == (10, 40):
+            b = (b[0], round(trigger - 0.01, 4), round(trigger + 0.02, 4), round(trigger - 0.02, 4), trigger)
+        elif (et.hour, et.minute) == (10, 41):
+            b = ((b[0], trigger, target, trigger, round(target - 0.02, 4)) if outcome == "win" else
+                 (b[0], trigger, trigger, trigger, trigger) if outcome == "open" else
+                 (b[0], trigger, trigger, round(stop - 0.01, 4), round(stop - 0.005, 4)))
+        elif et >= _et(d, 10, 42):
+            b = (b[0], 1.30, 1.30, 1.30, 1.30)
+        out.append(b)
+    return out
+
+
+def graded_replay_doc(sym="RPL", setup="bull_flag", d=D12, *, outcome="win", next_graded=True) -> dict:
+    """SYNTHETIC — a §3.12 gajjala_replay doc (alert 10:35 ET, trigger 1.23 / stop 1.11) graded by the REAL ledger.grade
+    on replay_tape (same session) + a flat 1.31 next session; `next_graded` False = "not graded (bars not cached)"
+    (next null). `bars5` = tape.bars5 over the same minutes (the script's one engine)."""
+    from chart_maps.gajjala import tape as TP
+    from tests.test_gajjala_ledger_replay import replay_doc
+    at = _et(d, 10, 35)
+    doc = replay_doc(sym, setup, d, at=at.astimezone(UTC).isoformat(), trigger=1.23, stop=1.11)
+    row = LG.alert_of(doc, "aplus")
+    b = LG.session_bounds(d, row["at_utc"])
+    day1 = replay_tape(d, outcome=outcome)
+    day2 = [(t, 1.31, 1.31, 1.31, 1.31) for t, *_x in _flat(b["next_date"], 1.31)]
+    doc["same"] = LG.grade(row, day1, b, "same")
+    doc["next"] = LG.grade(row, day1 + day2, b, "next") if next_graded else None
+    doc["bars5"] = TP.bars5(TP._frame_of(day1 + (day2 if next_graded else [])))
+    return doc
+
+
+def golden_replay_doc() -> dict:
+    """The ONE replayed A+ the 🏁 golden carries (BUILD_SPEC11 §4 WP-C, P22–P24): REPLAY:2026-10-12|RPL|bull_flag,
+    SYNTHETIC, graded WIN by LG.grade on replay_tape — inside the 5d window, no record that day."""
+    return graded_replay_doc()
+
+
+def golden_store(*, with_replay=True):
     st = ledger_store()                             # a fresh instance — never the module `store` fixture
     doc = golden_entry_doc()
     st.coll(ST.ALERTS).docs[doc["_id"]] = doc
+    if with_replay:                                 # ⏪ DECISIONS11 D5: one replayed row on 10-12 (P22)
+        rep = golden_replay_doc()
+        st.coll(ST.REPLAY).docs[rep["_id"]] = rep
     return st
 
 
@@ -604,6 +660,18 @@ def test_golden_fixture_is_the_served_payload():
         r = _rows(tr)["2026-10-16|XLAB|intraday_vcp|aplus"]
         assert (r["kind_text"], r["line"], r["same"]["state"]) == ("🎯 A+ entry", "live", "win"), span
     assert boards["yesterday"]["track_record"]["entries_text"] is None          # NEGATIVE: no entry on 10-15
+    # WIDENED 2026-10-16 (night): DECISIONS11 D5 — the golden's ⏪ replayed row (P23)
+    tr5 = boards["5d"]["track_record"]
+    assert tr5["replayed_note"] == LG.REPLAY_NOTE and tr5["replayed_text"].startswith(LG.REPLAYED_HEAD)
+    r = _rows(tr5)["REPLAY:2026-10-12|RPL|bull_flag"]
+    assert (r["kind_text"], r["line"], r["replay_text"]) == ("⏪ A+ replayed", "replayed", LG.REPLAY_CHIP)
+    assert (r["same"]["state"], r["next"]["state"], r["bucket"]) == ("win", "win", "win")
+    assert all(tr5["counts"]["replayed"][h]["pct"] is None for h in GC.LEDGER_HORIZONS)
+    assert tr5["counts"]["replayed"]["same"]["win"] == 1
+    for span in ("today", "yesterday"):                                         # NEGATIVE: 10-12 is not in them
+        assert boards[span]["track_record"]["replayed_text"] is None, span
+        assert boards[span]["track_record"]["replayed_note"] is None, span
+        assert not [x for x in _rows(boards[span]["track_record"]).values() if x["line"] == "replayed"], span
 
 
 def test_NEGATIVE_the_golden_entry_never_moves_the_headline_counts():
@@ -619,3 +687,21 @@ def test_NEGATIVE_the_golden_entry_never_moves_the_headline_counts():
         b = board(without, span)["track_record"]
         assert a["counts"]["live"] == b["counts"]["live"] and a["counts_text"] == b["counts_text"], span
         assert b["entries_text"] is None, span
+
+
+def test_NEGATIVE_the_golden_replay_row_never_moves_a_sent_count():
+    """WIDENED 2026-10-16 (night): DECISIONS11 D5 (P24) — with vs without the golden's ⏪ replayed doc, the 🧠 headline,
+    the shadow line and the 🎯 entries line are byte-for-byte the same on every span."""
+    with_r, without = golden_store(), golden_store(with_replay=False)
+    for span in ("today", "5d", "yesterday"):
+        LG._TODAY_MEMO.clear()
+        LG._TODAY_SPLIT.clear()
+        a = board(with_r, span)["track_record"]
+        LG._TODAY_MEMO.clear()
+        LG._TODAY_SPLIT.clear()
+        b = board(without, span)["track_record"]
+        for k in ("live", "shadow", "entry"):
+            assert a["counts"][k] == b["counts"][k], (span, k)
+        for k in ("counts_text", "shadow_text", "entries_text", "today_text"):
+            assert a[k] == b[k], (span, k)
+        assert b["replayed_text"] is None and b["replayed_note"] is None, span

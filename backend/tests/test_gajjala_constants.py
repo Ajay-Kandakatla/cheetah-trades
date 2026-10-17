@@ -290,7 +290,10 @@ LEDGER_MINE = ("LEDGER_MIN_R_PCT", "LEDGER_SPANS", "LEDGER_SPAN_DEFAULT", "LEDGE
                "LEDGER_TODAY_MAX", "LEDGER_TODAY_MAX_NAMES", "LEDGER_TODAY_BUDGET_SEC", "LEDGER_GRADE_LOOKBACK_SESSIONS",
                "LEDGER_BACKFILL_MAX_SYMBOL_DAYS", "LEDGER_GRADE_MAX_LOADS", "LEDGER_ROWS_MAX",
                "LEDGER_SPAN_SESSIONS_LONG", "LEDGER_TAPE_TF_MIN", "LEDGER_TAPE_SESSIONS", "LEDGER_TAPE_BARS_MAX",
-               "LEDGER_TAPE_MEMO_SEC")
+               "LEDGER_TAPE_MEMO_SEC",
+               # WIDENED 2026-10-16 (night): DECISIONS11 D12 — the five loss-fact thresholds are MINE (P27)
+               "LEDGER_LOSS_FAST_MIN", "LEDGER_LOSS_LATE_RTH_MIN", "LEDGER_LOSS_STALE_FILL_MIN",
+               "LEDGER_LOSS_NO_PROGRESS_R", "LEDGER_LOSS_GAVE_BACK_R")
 MINE_TAGS = ("TRANSPORT — MINE", "derived — MINE", "Cheetah default (MINE")
 
 
@@ -447,3 +450,35 @@ def test_NEGATIVE_the_mine_tag_guard_bites_on_a_tape_line_filed_as_ggs(monkeypat
         test_NEGATIVE_no_ledger_comment_is_filed_as_ggs()
     with pytest.raises(AssertionError):
         test_the_tape_lines_carry_their_tags()
+
+
+# ── ✅ / ❌ loss facts (2026-10-16 night, DECISIONS11 D12 / D13, BUILD_SPEC11 §3.15) ─────────────────────────────────
+# Ajay 2026-10-16 ~22:45 ET: "I want winners and losers category in his track record and would like us to study the
+# losers" — the thresholds are MINE (HIS CALL Q13); the flag count is his Rule #9 ("≥3 of the same class").
+LOSS_MINE = ("LEDGER_LOSS_FAST_MIN", "LEDGER_LOSS_LATE_RTH_MIN", "LEDGER_LOSS_STALE_FILL_MIN",
+             "LEDGER_LOSS_NO_PROGRESS_R", "LEDGER_LOSS_GAVE_BACK_R")
+
+
+def test_loss_fact_constants_values_and_tags():
+    assert (GC.LEDGER_LOSS_FAST_MIN, GC.LEDGER_LOSS_LATE_RTH_MIN, GC.LEDGER_LOSS_STALE_FILL_MIN) == (5, 30, 60)
+    assert (GC.LEDGER_LOSS_NO_PROGRESS_R, GC.LEDGER_LOSS_GAVE_BACK_R, GC.LEDGER_LOSS_CLASS_FLAG_N) == (0.3, 0.8, 3)
+    lines = _ledger_lines()
+    for n in LOSS_MINE:
+        assert n in LEDGER_MINE and _comment(lines[n]).startswith("TRANSPORT — MINE"), n
+    # WIDENED 2026-10-16 (night): DECISIONS11 D13 — the flag count is his Rule #9, never filed as MINE (P27)
+    assert _comment(_ledger_lines()["LEDGER_LOSS_CLASS_FLAG_N"]).startswith("Ajay 2026-09-03")
+    assert "LEDGER_LOSS_CLASS_FLAG_N" not in LEDGER_MINE
+
+
+def test_NEGATIVE_the_mine_tag_guard_bites_on_a_loss_line_filed_as_ggs(monkeypatch):
+    import sys
+    ln = _ledger_lines()["LEDGER_LOSS_LATE_RTH_MIN"]
+    mutated = list(LINES)
+    mutated[ln - 1] = "LEDGER_LOSS_LATE_RTH_MIN = 30            # GG S8 he skips the last half hour"
+    monkeypatch.setattr(sys.modules[__name__], "LINES", mutated)
+    with pytest.raises(AssertionError):
+        test_ledger_mine_numbers_carry_the_mine_tags()
+    with pytest.raises(AssertionError):
+        test_NEGATIVE_no_ledger_comment_is_filed_as_ggs()
+    with pytest.raises(AssertionError):
+        test_loss_fact_constants_values_and_tags()
