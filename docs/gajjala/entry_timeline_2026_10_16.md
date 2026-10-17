@@ -325,17 +325,29 @@ replayed tape's `note == REPLAY_NOTE`, its bars = the doc's `bars5`.
 
 ### Run log (main session — filled after the D6 run)
 
+Run 2026-10-17 00:36 ET (dry) and 00:5x ET (write) on the throwaway api `cheetah-tmp-gr-api` (branch 60aeae5a; the study
+cache mounted read-only; `_mongo_put_day` disabled; Massive WS off). Counts read on the live Mongo before and after:
+
 | | before | after |
 |---|---|---|
-| `gajjala_replay` docs | | |
-| `gajjala_alerts` docs | | |
-| `gajjala_ledger` docs | | |
-| `gajjala_alerts` / `gajjala_scan` on 2026-10-09 + 2026-10-12 | | (n/a) |
+| `gajjala_replay` docs | (no collection) | 7 (2026-10-09: 2 · 2026-10-12: 5) |
+| `gajjala_alerts` docs | 22 | 22 |
+| `gajjala_ledger` docs | 119 | 119 |
+| `gajjala_scan` docs | 105 | 105 |
+| `gajjala_alerts` / `gajjala_scan` on 2026-10-09 + 2026-10-12 | 0 / 0 | (n/a) |
 
 - dry run `replay.json` summary (per session: state, superset, listed, events, kept, dropped, same_graded,
-  next_graded, next_not_cached, split): _(pasted by the main session)_
-- write run `replay.json` summary + `written`: _(pasted by the main session)_
-- detectors sha / sha256: _(pasted by the main session)_
+  next_graded, next_not_cached, split):
+  `2026-10-09: replayed · superset 17 · listed 14 · events 2 · kept 2 · dropped {not_aplus 0, variant 0, grade 0, window 0} · same_graded 2 · next_graded 2 · next_not_cached 0 · split 0 · no_bars 0 · type_unknown_kept 17`
+  `2026-10-12: replayed · superset 25 · listed 21 · events 5 · kept 5 · dropped {0, 0, 0, 0} · same_graded 5 · next_graded 5 · next_not_cached 0 · split 0 · no_bars 1 · type_unknown_kept 25`
+  cache_stats `grouped_hit 4 · minutes_hit 85 · minutes_offline_miss 9 · minutes_fetch_unwritten 7 · type_offline_miss 84` (the seven
+  unwritten fetches = the next-session minutes the study cache did not hold — HIS CALL Q8's default; the dated type lookup
+  had no `types/` for these two sessions and the live map did not cover them, so every name was kept as unknown type —
+  the live scanner's own `SCAN_UNKNOWN_TYPE_POLICY = "list"`). Events kept: 10-09 WFF 🌀 15:00 (LOSS) · WFF 🎾 16:50 (WIN next
+  session); 10-12 CLWT 🎾 17:15 (no entry) · SKYA 🌀 11:00 (open) · TCRT 🚩 16:20 (WIN next session; thin R 0.96%) · WFF 🎾 20:00
+  (no entry) · YMAT 🎾 14:50 (open).
+- write run `replay.json` summary + `written`: the same two sessions, `kept 2 + 5`, **`written 7`** (every `_id` `REPLAY:{date}|{SYM}|{setup}`, state `replayed`); a dry run before it wrote 0.
+- detectors sha / sha256: `60aeae5a` / `519282dd2699b0ad7ab2130441e7d4fdf5fc4e248525e0145604b5ce06df42fc` (chart_maps/gajjala/detectors.py).
 
 ## ✅ / ❌ categories and loss facts
 

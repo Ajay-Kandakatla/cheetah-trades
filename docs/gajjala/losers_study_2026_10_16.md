@@ -114,17 +114,40 @@ docker run --rm --network none --name cheetah-tmp-pytest-gr-e-1 -v /Users/ajay/c
 
 ### Default run (lines live + shadow, replayed EXCLUDED) — `/replay_out/losers/losers.md`
 
+Run 2026-10-17 ~00:55 ET on the throwaway api `cheetah-tmp-gr-api` (branch 60aeae5a, reads only), after the D6 replay write.
+
 | | value |
 |---|---|
-| ledger docs read | |
-| loser rows / loser trades | |
-| `gajjala_ledger` / `gajjala_replay` counts before → after | |
+| ledger docs read | 119 (2026-10-13 … 2026-10-16; lines live + shadow, both kinds) |
+| loser rows / loser trades | 38 rows / 33 trades (winner rows 29) |
+| `gajjala_ledger` / `gajjala_replay` counts before → after | 119 / 7 → 119 / 7 (the script wrote nothing) |
 
-Class table (C1–C10, trades (rows), winner trades beside C1–C4 and C7 (C5 / C6 are loss-only facts — a winner has no stop to measure the high against); flagged classes marked): _(pasted by the main session)_
+Class table (C1–C10, trades (rows), winner trades beside C1–C4 and C7 (C5 / C6 are loss-only facts — a winner has no stop to measure the high against); flagged classes marked) — `/replay_out/losers/losers.md`, verbatim:
+
+- C1 rang AH → filled next morning · 8 loser trades (9 rows) · 6 winner trades · ≥3 → candidate rule — HIS CALL
+- C2 fill in the last 30 min of RTH · 7 loser trades (9 rows) · 6 winner trades · ≥3 → candidate rule — HIS CALL
+- C3 fill ≥60 min after the ring (next-morning fills not counted) · 7 loser trades (8 rows) · 3 winner trades · ≥3 → candidate rule — HIS CALL
+- C4 stopped ≤5 min after the fill · 15 loser trades (16 rows) · 15 winner trades at +1R ≤5 min · ≥3 → candidate rule — HIS CALL
+- C5 high under +0.3R through the stop minute (no progress) · 13 loser trades (14 rows) · ≥3 → candidate rule — HIS CALL
+- C6 high ≥ +0.8R through the stop minute, then stopped (gave back) · 9 loser trades (9 rows) · ≥3 → candidate rule — HIS CALL
+- C7 thin R · 3 loser trades (3 rows) · 0 winner trades · ≥3 → candidate rule — HIS CALL
+- C8 one trade on two or more setups (same date, symbol, trigger and stop) · 5 loser trades (10 rows) · ≥3 → candidate rule — HIS CALL
+- C9 setup · ➖ Horizontal Fade 5 (5) · 🌀 Intraday VCP 15 (15) · 💋 EMA Kiss & Fly 5 (6) · 🎾 Reversal Squeeze 9 (12)
+- C10 rang · AH 8 (9) · pre 2 (2) · RTH 23 (27)
+
+Reading (counts only, four sessions, 33 loser trades — every class clears the ≥3 flag at this n, so the flag alone says little;
+the winner column beside each class is the context): C4 (stopped within 5 minutes) has as many winner trades that reached +1R
+within 5 minutes as loser trades stopped within 5 minutes — a fast resolution either way, not a loser pattern. C1 (rang after
+hours, filled next morning) and C2 (filled in the last 30 minutes) carry nearly as many winners as losers. C3 (filled an hour or
+more after the ring, next-morning fills excluded) carries 7 losers to 3 winners — the one lopsided class besides C7 (thin R, 3 to
+0, already out of the %). The 38 loser lines above hold the per-loser facts for his read.
 
 ### With `--include-replayed` — `/replay_out/losers_with_replay/losers.md`
 
-Class table: _(pasted by the main session)_
+Docs read 126 (119 ledger + 7 replay) · loser rows 38 +3 ⏪ · loser trades 33 +3 ⏪ · winner rows 29 +2 ⏪. The three
+replayed losers (10-09 WFF 🌀, 10-12 SKYA 🌀, 10-12 YMAT 🎾) print with the ⏪ chip and sit outside every count and flag:
+C1 … 6 winner trades +2 ⏪ · C4 … 15 winner trades +2 ⏪ · C5 13 (14) +1 ⏪ · C6 9 (9) +1 ⏪ · C9 🌀 15 (15) +2 ⏪ · 🎾 9 (12) +1 ⏪
+· C10 RTH 23 (27) +3 ⏪; every other line equal to the default run.
 
 ## HIS CALL (nothing here is decided for him; nothing changes a gate tonight)
 
