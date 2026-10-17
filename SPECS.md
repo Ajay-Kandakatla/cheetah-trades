@@ -642,6 +642,16 @@ posts; a trailing `# GG <ts>` that `test_gajjala_verified_rules.py` ties to `ver
   (`latest_cron`) is within `STALE_AFTER_SEC` — opens alone never hide a dead cron (A10). Closed bars only. UNMEASURED.
   Doc: `docs/chart_maps/gajjala_on_open_scan_2026_10_15.md`; contracts "🔄 Gajjala scan on open + 🎯 A+ banner
   (2026-10-15)".
+- **🚫 Not eligible at Fidelity** (2026-10-17, Ajay: *"Or just add a tag that not eligible on Fidelity"*) — his own list
+  (`BROKER_FLAG_SEED` empty + `gajjala_state` `_id "broker_flags"`, `store.broker_flags` = (seed ∪ added) − removed; a
+  store read fault falls back to the seed and the strip says "your list could not be read this time — the tags are off
+  until the next read"), served `broker_text` on every Gajjala row that names a symbol + the owner's `broker_flags` strip
+  and 🚫 card toggle — owner = the primary admin only (`ollama_chat.api.is_primary_admin`; anyone else null); the A+ / 🧠
+  bodies say " · 🚫 not eligible at Fidelity" before UNMEASURED and the titles end " · 🚫"; `alerts.COUNT_KEYS`
+  "broker_flagged"; GET / POST / DELETE `/chart-maps/gajjala/broker-flags` (owner, stealth 404; bad ticker 400, read fault
+  503); nothing hidden, nothing muted, nothing guessed (a pre-screen from Fidelity's published rules = HIS CALL Q2). Doc
+  `docs/gajjala/broker_flags_2026_10_17.md`; contracts "🚫 Gajjala broker tag (2026-10-17)"; ✨
+  `chart-maps-gajjala-broker-tag-2026-10-17`.
 
 ### Chart Maps — 🏁 Gajjala's Track record — `chart_maps/gajjala/ledger.py` (2026-10-16)
 Every Gajjala alert that rang, graded win or loss. Ajay, 2026-10-16: *"also can you track all Gajjals stocks and keep a

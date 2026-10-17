@@ -678,7 +678,9 @@ def test_NEGATIVE_a_bare_track_row_serves_entry_text_none():
 # ── GOLDEN: the FE fixture IS the served payload ─────────────────────────────────────────────────────────────────
 def golden_payload() -> str:
     st = seed(day_store(), entry_doc())             # DECISIONS10 D4: the DDD 🎾 entry rang 10:36 (the FE pins it)
-    doc = {"_recipe": RECIPE, "boards": {"potential": build(GC.POTENTIAL_SUB, st), "bull_flag": build("bull_flag", st)}}
+    # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the golden is the OWNER's payload (the 🚫 strip block)
+    doc = {"_recipe": RECIPE, "boards": {"potential": build(GC.POTENTIAL_SUB, st, owner=True),
+                                         "bull_flag": build("bull_flag", st, owner=True)}}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 
 

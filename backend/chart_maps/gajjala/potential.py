@@ -298,11 +298,13 @@ def row_text(sym, setup, read, kind, first_seen_et) -> str:
     return out
 
 
-def compose(sym, setup, read, kind, values, *, first_seen_et, tape) -> dict:
+def compose(sym, setup, read, kind, values, *, first_seen_et, tape, broker_text: Optional[str] = None) -> dict:
     """The device payload (W3/W4 + AMENDMENTS4 D8): "UNMEASURED" in the TITLE; the body is the trigger / stop clause,
     then the TAIL (so the ~180-char lock screen shows it), then the session, the first sighting and the tells last.
-    Every number is the read's own."""
-    from .tab import SESSION_BADGE
+    Every number is the read's own. 🚫 (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1): `broker_text` (tab.broker_text_for
+    — the served word) when a non-empty str → the clause right BEFORE the TAIL and " · " + tab.BROKER_FLAG_ICON on the
+    title; anything else → the body and title of before. A TAG only: the push still rings."""
+    from .tab import BROKER_FLAG_ICON, SESSION_BADGE
     sym = (sym or "").upper()
     read = read or {}
     e, label = _setup_meta(setup)
@@ -315,10 +317,12 @@ def compose(sym, setup, read, kind, values, *, first_seen_et, tape) -> dict:
         reason = read.get("reason") if isinstance(read.get("reason"), str) else ""
         bits = [reason, f"trigger {_px(trig)} (not armed yet)" if trig is not None else "", stop_bit]
     v = values or {}
-    bits += [TAIL, SESSION_BADGE.get(tape, "") if tape in ("premarket", "afterhours") else "",
+    bt = broker_text if isinstance(broker_text, str) and broker_text else ""
+    bits += [bt, TAIL, SESSION_BADGE.get(tape, "") if tape in ("premarket", "afterhours") else "",
              f"first seen {first_seen_et} ET" if first_seen_et else "", v.get("float_text") or "",
              v.get("rotation_text") or ""]
-    return {"title": f"🧠 {sym} · {e} {label} — {kl} · UNMEASURED", "body": " · ".join(b for b in bits if b),
+    title = f"🧠 {sym} · {e} {label} — {kl} · UNMEASURED" + (f" · {BROKER_FLAG_ICON}" if bt else "")
+    return {"title": title, "body": " · ".join(b for b in bits if b),
             "tag": f"gg-pot-{setup}-{sym}", "url": deep_link(sym, setup), "kind": KIND, "ticker": sym,
             "items": [{"symbol": sym, "text": line(sym, setup, read, kind)}]}
 
@@ -618,9 +622,14 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
     The claim records the trigger / stop / price the push carried (`push.trigger/stop/px` — the 🏁 ledger's plan).
     Never touches `gajjala_alerts`, never calls the A+ sender, never reads GAJJALA_PUSH_MODE. -> {COUNT_KEYS: int}."""
     from . import alerts as AL
+    from . import store as ST
+    from . import tab as GT
     send = send or _default_send
     ctx, rows, live_rows, frames = ctx or {}, rows or {}, live_rows or {}, frames or {}
     counts = {k: 0 for k in COUNT_KEYS}
+    # 🚫 DECISIONS12 D4 — his broker list, read ONCE per pass before the tracker read (a read fault → the seed); a TAG
+    # on the body, never a gate; COUNT_KEYS unchanged (the A+ pass counts "broker_flagged")
+    flags = frozenset(ST.broker_flags(store)[0])
     try:
         from catalysts.medical.reaction import prev_market_day
         prev = prev_market_day(_as_date(session))
@@ -717,7 +726,8 @@ def run_pass(reads, frames, now, session, *, store, ctx, rows, send: Optional[Ca
                 counts["failed"] += 1                           # a lost write or a store fault: fail closed, retry
                 _hold(store, doc, STORE_HELD[0], now)
             continue
-        payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape)
+        payload = compose(sym, setup, r, kind, values, first_seen_et=doc.get("first_seen_et"), tape=tape,
+                          broker_text=GT.broker_text_for(sym, flags))
         try:
             res = send(owner or AL._owner(), payload) or {}
         except Exception as exc:                                # noqa: BLE001

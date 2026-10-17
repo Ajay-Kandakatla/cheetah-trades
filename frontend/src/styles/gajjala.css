@@ -178,3 +178,35 @@ a.gg-aplus-row:hover, a.gg-aplus-row:focus-visible { background: var(--gold-fain
 .gg-tr-table tr.gg-tr-sub td {
   border-top: none; padding-top: 0; white-space: normal; font-size: 0.74rem; color: var(--ink-subtle, #94a3b8);
 }
+
+/* 🚫 Broker tag (2026-10-17, DECISIONS12 D2 / D5, AMENDMENTS12 A2). His own list, a TAG never a filter: the owner's
+   strip is one flex-wrap line under the header (the served words, his names each with ✕, one add field); the served
+   chip is a muted badge beside a symbol; the card toggle is icon-only and muted, full strength when pressed. Every word
+   on them is SERVED by tab.py. */
+.gg-broker-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: 0.78rem;
+  color: var(--ink-subtle, #94a3b8);
+}
+.gg-broker-text { font-weight: 600; }
+.gg-broker { margin-left: 0.3rem; font-size: 0.7rem; }
+.gg-broker-sym { display: inline-flex; align-items: center; gap: 0.2rem; }
+.gg-broker-sym button {
+  font: inherit; font-size: 0.7rem; line-height: 1; padding: 0 0.15rem; cursor: pointer; color: inherit;
+  background: transparent; border: none;
+}
+.gg-broker-form { display: inline-flex; align-items: center; gap: 0.25rem; margin: 0; }
+.gg-broker-form input {
+  font: inherit; font-size: 0.76rem; width: 6rem; padding: 0.05rem 0.35rem; color: inherit;
+  background: transparent; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 4px;
+}
+.gg-broker-form button {
+  font: inherit; font-size: 0.76rem; padding: 0.05rem 0.45rem; cursor: pointer; color: inherit;
+  background: transparent; border: 1px solid var(--hairline, rgba(26, 26, 26, 0.12)); border-radius: 4px;
+}
+.gg-broker-toggle {
+  align-self: flex-start; font: inherit; font-size: 0.78rem; line-height: 1; padding: 0.1rem 0.25rem; cursor: pointer;
+  background: transparent; border: none; opacity: 0.35;
+}
+.gg-broker-toggle[aria-pressed="true"] { opacity: 1; }
+.gg-broker-strip button:disabled, .gg-broker-strip input:disabled, .gg-broker-toggle:disabled { opacity: 0.5; cursor: default; }
+.gg-broker-toggle[aria-pressed="true"]:disabled { opacity: 0.6; }

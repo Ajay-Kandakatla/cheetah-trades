@@ -11,10 +11,13 @@ Collections
   gajjala_alerts    _id "GG:{date}|{SYM}|{setup}"   the push ledger (demand_alerts.claim_key docs)         none
   gajjala_halts     _id "{date}|{SYM}"         halts per session (live + 30-session backfill)              none
   gajjala_daily     _id "{date}|{SYM}"         squeeze history + the float read of the session             TTL 30 d
-  gajjala_state     _id "lease" | "float_backoff" | "types"                                                 —
+  gajjala_state     _id "lease" | "float_backoff" | "types" | "broker_flags"                                  —
                     lease = {status running|done, held_by cron|on_demand, token (the holder's uuid4 hex), claimed_at,
                     started_at + last_cron_started_at (CRON claims only — the tick clock, the min-gap clock),
                     od_started_at (on-open claims only), pid, done_at}
+                    broker_flags = {added: [SYM…], removed: [SYM…], updated_at, by} — 🚫 his own "not eligible at
+                    the broker" list (2026-10-17, DECISIONS12 D1); written ONLY by set_broker_flag (the owner's POST /
+                    DELETE through the api). A TAG, never a filter: nothing in the pass reads it to gate a name.
   gajjala_potentials _id "{date}|{SYM}|{setup}"  🧠 the potential tracker (2026-10-15) — first sighting + path    none
                     the push claim records the trigger / stop / price the push carried (`push.trigger/stop/px`,
                     2026-10-16) — the 🏁 ledger's plan
@@ -48,6 +51,8 @@ from __future__ import annotations
 
 import logging
 import os
+import re
+import threading
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -91,6 +96,11 @@ ON_DEMAND_PASS_SUFFIX = "open"                 # the on-open pass doc id "{date}
 LATEST_ID = "latest"
 LATEST_CRON_ID = "latest_cron"                 # AMENDMENTS5 A10: the cron-only pointer (stale + the 🎯 gate read it)
 POINTERS = (LATEST_ID, LATEST_CRON_ID)
+# 🚫 his own broker list (2026-10-17, DECISIONS12 D1) — one gajjala_state doc, no new collection (ALL does not move)
+BROKER_STATE_ID = "broker_flags"   # gajjala_state doc (DECISIONS12 D1): {added: [SYM…], removed: [SYM…], updated_at, by}; no new collection
+# AMENDMENTS12 F2: the read + the $set of set_broker_flag run under ONE lock (one uvicorn worker) — two edits in flight
+# never drop a name
+_BROKER_LOCK = threading.Lock()
 
 
 def _coll(name: str):
@@ -121,6 +131,105 @@ def key(session, sym: str) -> str:
 def potential_key(session, sym: str, setup: str) -> str:
     """`"{date}|{SYM}|{setup}"` — the 🧠 tracker doc id (one per session, symbol and setup — K3)."""
     return f"{key(session, sym)}|{setup}"
+
+
+# ── 🚫 his broker list (2026-10-17, DECISIONS12 D1 / D5; AMENDMENTS12 F5 / F8) — pure helpers ──────────────────────
+# Ajay 2026-10-17: "ok then avoid showing me names that are not eligible in Fidelity then." / "Or just add a tag that
+# not eligible on Fidelity". A TAG, never a filter: these helpers read and shape the list; nothing gates on it.
+def broker_symbol(raw) -> Optional[str]:
+    """D5 — `raw` stripped + upper-cased when it matches ^[A-Z][A-Z0-9.\\-]{0,N}$, N = GC.BROKER_SYMBOL_MAX_LEN - 1 (built at
+    CALL time); else None (non-str, "", "1ABC", "AB C", "AB$", too long, a Query object). The typed form is kept
+    ("BRK.B" stays "BRK.B"); membership folds "." and "-" (broker_fold)."""
+    if not isinstance(raw, str):
+        return None
+    s = raw.strip().upper()
+    try:
+        n = int(GC.BROKER_SYMBOL_MAX_LEN) - 1
+    except (TypeError, ValueError):
+        return None
+    if n < 0:
+        return None
+    return s if re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,%d}" % n, s) else None
+
+
+def broker_fold(sym) -> str:
+    """AMENDMENTS12 F8 — "." and "-" are one ticker ("MOG.A" == "MOG-A"): the membership key on both sides."""
+    return sym.strip().upper().replace(".", "-") if isinstance(sym, str) else ""
+
+
+def _broker_list(v) -> list:
+    """A stored list field → its valid symbols (broker_symbol), deduped by broker_fold, typed order kept. A junk field
+    (not a list) → []."""
+    out, seen = [], set()
+    for x in v if isinstance(v, (list, tuple)) else ():
+        s = broker_symbol(x)
+        if s is not None and broker_fold(s) not in seen:
+            seen.add(broker_fold(s))
+            out.append(s)
+    return out
+
+
+def _broker_effective(seed: list, added: list, removed: list) -> tuple:
+    """(seed ∪ added) − removed, folded on "." / "-", deduped, sorted."""
+    gone = {broker_fold(s) for s in removed}
+    out, seen = [], set()
+    for s in list(seed) + list(added):
+        k = broker_fold(s)
+        if k not in gone and k not in seen:
+            seen.add(k)
+            out.append(s)
+    return tuple(sorted(out))
+
+
+def _broker_read(store) -> tuple:
+    """(doc, fault) — the gajjala_state broker doc through the store's fault-aware `_find_or_none` (None = a READ
+    FAULT, AMENDMENTS12 F5); a store without it falls back to `get_state` (its {} cannot tell a fault, so it reads as
+    "no doc"). store None / no reader / a raise → ({}, True). Never raises, never writes."""
+    if store is None:
+        return {}, True
+    fon = getattr(store, "_find_or_none", None)
+    if callable(fon):
+        try:
+            docs = fon(STATE, {"_id": BROKER_STATE_ID})
+        except Exception as exc:                                # noqa: BLE001
+            log.warning("gajjala.store: broker list read failed: %s", exc)
+            return {}, True
+        if docs is None:
+            return {}, True
+        return next((d for d in docs if isinstance(d, dict)), None) or {}, False
+    gs = getattr(store, "get_state", None)
+    if not callable(gs):
+        return {}, True
+    try:
+        doc = gs(BROKER_STATE_ID)
+    except Exception as exc:                                    # noqa: BLE001
+        log.warning("gajjala.store: broker list read failed: %s", exc)
+        return {}, True
+    return (doc if isinstance(doc, dict) else {}), False
+
+
+def broker_flags(store) -> tuple:
+    """D1 / AMENDMENTS12 F5 — (symbols, fault): symbols = (GC.BROKER_FLAG_SEED ∪ added) − removed, upper-cased, deduped
+    ("." / "-" folded), sorted, from the gajjala_state doc BROKER_STATE_ID. A read fault (store None, no reader, a
+    raise, `_find_or_none` None) → (the seed alone, True): FAIL-OPEN TO THE SEED. A junk field or junk entries
+    (failing broker_symbol) are dropped. Never raises, never writes, never calls default() itself."""
+    seed = _broker_list(GC.BROKER_FLAG_SEED)
+    doc, fault = _broker_read(store)
+    if fault:
+        return _broker_effective(seed, [], []), True
+    return _broker_effective(seed, _broker_list(doc.get("added")), _broker_list(doc.get("removed"))), False
+
+
+def broker_doc(store) -> dict:
+    """D5 — {"seed": sorted seed, "added": sorted, "removed": sorted, "symbols": list(broker_flags(store) symbols),
+    "fault": bool} (a read fault: added / removed [], symbols = the seed, fault True — SAID, never disguised; the
+    editor block turns it into tab.BROKER_FAULT_TEXT, AMENDMENTS12 F5 / critic 2026-10-17)."""
+    doc, fault = _broker_read(store)
+    doc = {} if fault else doc
+    seed = _broker_list(GC.BROKER_FLAG_SEED)
+    added, removed = _broker_list(doc.get("added")), _broker_list(doc.get("removed"))
+    return {"seed": sorted(seed), "added": sorted(added), "removed": sorted(removed),
+            "symbols": list(_broker_effective(seed, added, removed)), "fault": bool(fault)}
 
 
 # ── 🔄 the split lease (2026-10-15, DECISIONS5 C1 + AMENDMENTS5 A5–A9) — pure helpers ───────────────────────────────
@@ -416,6 +525,45 @@ class GajjalaStore:
 
     def set_state(self, sid: str, fields: dict) -> None:
         self._upsert(STATE, sid, dict(fields))
+
+    def set_broker_flag(self, sym: str, on: bool, *, by: str, now: Optional[datetime] = None) -> Optional[tuple]:
+        """D5 — THE broker write (the owner's POST / DELETE only); `sym` must pass broker_symbol (else None, no write).
+        Under _BROKER_LOCK (AMENDMENTS12 F2): a fault-aware read `_find_or_none(STATE, {"_id": BROKER_STATE_ID})` → None
+        → None, NOTHING written. on: removed −= {sym}; sym ∉ seed → added ∪= {sym}. off: added −= {sym}; sym ∈ seed →
+        removed ∪= {sym} (a seed is overridden without a deploy). "." / "-" fold on every comparison (F8). ONE
+        `update_one({"_id": BROKER_STATE_ID}, {"$set": {added, removed (sorted lists), updated_at, by}}, upsert=True)`
+        in its own try (a raise → None). -> the effective symbols (broker_flags' first item)."""
+        s = broker_symbol(sym)
+        if s is None:
+            return None
+        k = broker_fold(s)
+        with _BROKER_LOCK:
+            docs = self._find_or_none(STATE, {"_id": BROKER_STATE_ID})
+            if docs is None:
+                return None
+            doc = next((d for d in docs if isinstance(d, dict)), None) or {}
+            seed = _broker_list(GC.BROKER_FLAG_SEED)
+            added, removed = _broker_list(doc.get("added")), _broker_list(doc.get("removed"))
+            in_seed = k in {broker_fold(x) for x in seed}
+            if on:
+                removed = [x for x in removed if broker_fold(x) != k]
+                if not in_seed and k not in {broker_fold(x) for x in added}:
+                    added.append(s)
+            else:
+                added = [x for x in added if broker_fold(x) != k]
+                if in_seed and k not in {broker_fold(x) for x in removed}:
+                    removed.append(s)
+            c = self.coll(STATE)
+            if c is None:
+                return None
+            try:
+                c.update_one({"_id": BROKER_STATE_ID},
+                             {"$set": {"added": sorted(added), "removed": sorted(removed), "updated_at": _utc(now),
+                                       "by": by if isinstance(by, str) else ""}}, upsert=True)
+            except Exception as exc:                            # noqa: BLE001
+                log.warning("gajjala.store: broker list write failed: %s", exc)
+                return None
+        return _broker_effective(seed, added, removed)
 
     # ── 🔄 the split lease (2026-10-15; DECISIONS5 C1, AMENDMENTS5 A5–A9) ─────────────────────────────────────────
     def claim_lease(self, now: datetime, source: str = LEASE_CRON, *, take_over: bool = False,
@@ -829,6 +977,6 @@ for _name in ("ensure_indexes", "record_qualifiers", "set_split_check", "split_c
               "potential_docs_for_symbol", "count_potentials", "upsert_potential", "hold_potential",
               "claim_potential_push", "settle_potential_push", "mark_potential_graveyard", "potential_pushes",
               "alert_rows", "ledger_docs", "ledger_dates", "alert_dates", "upsert_ledger", "replay_rows",
-              "replay_dates", "records_on", "upsert_replay"):
+              "replay_dates", "records_on", "upsert_replay", "set_broker_flag"):
     globals()[_name] = _delegate(_name)
 del _name

@@ -1229,11 +1229,18 @@ def _gajjala_section() -> dict:
             "Chips, never rules: more than %d red closes in a row (his “red flag”), stopped earlier today on the "
             "same setup (he mostly passes), ⏸ halts today, float and 🔄 float rotation."
             % GC.RED_CLOSES_WAIT,
+            # 🚫 2026-10-17 (DECISIONS12 D6, BUILD_SPEC12 §3.8): his own broker list — a TAG, never a filter
+            "🚫 Not eligible at %s — your own list of names %s would not let you buy online; a tag only — nothing "
+            "is hidden, the pushes still ring and carry the tag. %s"
+            % (GC.BROKER_NAME, GC.BROKER_NAME,
+               ("Seeded with %s." % ", ".join(GC.BROKER_FLAG_SEED)) if GC.BROKER_FLAG_SEED else "Nothing is seeded."),
         ],
         "alerts": [push] + _gg_potential_lines(),
         "note": ("Goverdhan Gajjala's five setups as he described them (IBD webinar, Feb 2024; TraderLion "
-                 "podcast, Jan 2024). Numbers he never gave are Ajay's (K1–K10, 2026-10-13). UNMEASURED — no "
-                 "study here says these setups win. Not advice."),
+                 "podcast, Jan 2024). Numbers he never gave are Ajay's (K1–K10, 2026-10-13)."
+                 + (" 🚫: XLAB and XELB (XELB under a dollar) went through at %s on 2026-10-16, so a price floor is "
+                    "not the rule." % GC.BROKER_NAME)
+                 + " UNMEASURED — no study here says these setups win. Not advice."),
     }
 
 

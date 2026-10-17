@@ -223,3 +223,8 @@ SUBS = (("bull_flag", "🚩", "Bull Flag"), ("kiss_fly", "💋", "EMA Kiss & Fly
         ("potential", "🧠", "Potential"), ("track_record", "🏁", "Track record"))
 DEFAULT_SUB = "bull_flag"
 TAB_LABEL = "Gajjala's"                  # DECISIONS — emoji/slot HIS CALL 18
+
+# 🚫 broker tag (2026-10-17, DECISIONS12 D1 / D5) — a TAG on his own list, never a filter: nothing here gates a scan or a push
+BROKER_NAME = "Fidelity"                 # Ajay 2026-10-17 ("In Fidelity")
+BROKER_FLAG_SEED = ()                    # Ajay 2026-10-17 — EMPTY: he withdrew WORX ("sorry I might be wrong about worx"); a name enters only when Fidelity itself refused it (his own add)
+BROKER_SYMBOL_MAX_LEN = 10               # TRANSPORT — MINE (DECISIONS12 D5: the ticker shape ^[A-Z][A-Z0-9.\-]{0,9}$ = one letter + up to 9)

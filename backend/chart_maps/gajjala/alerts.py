@@ -82,7 +82,8 @@ WINDOW_STATES = ("suppressed_premarket", "suppressed_first15", "suppressed_windo
 COUNT_KEYS = ("aplus", "pushed", "shadow", "shadow_mode", "shadow_session", "suppressed_premarket",
               "suppressed_first15", "suppressed_window", "suppressed_closed", "suppressed_halt",
               "suppressed_exhausted", "not_aplus_variant", "claimed_before", "late", "no_target", "failed", "dry",
-              "awaiting_answer")
+              "awaiting_answer",
+              "broker_flagged")   # 🚫 2026-10-17 (DECISIONS12 D4): names read this pass that are on his broker list (any state) — informational, never a gate
 
 
 # ── mode ──────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -256,10 +257,13 @@ def potential_rang_at(store, session, sym: str, setup: str) -> Optional[str]:
 
 
 def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=None,
-            potential_at_et: Optional[str] = None) -> dict:
+            potential_at_et: Optional[str] = None, broker_text: Optional[str] = None) -> dict:
     """The device payload of one A+ entry. Every number is the read's own (trigger / stop / risk_pct / entry bar).
     Body (AMENDMENTS10 F9 — numbers first): broke T on the bar · stop · the setup's entry words · 🧠 potential rang
-    HH:MM ET (only with a well-formed `potential_at_et`) · float · after-hrs line · UNMEASURED; empty bits dropped."""
+    HH:MM ET (only with a well-formed `potential_at_et`) · float · after-hrs line · the 🚫 broker tag · UNMEASURED;
+    empty bits dropped. 🚫 (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1): `broker_text` (tab.broker_text_for — the
+    served word) when a non-empty str → the clause right before UNMEASURED AND " · " + tab.BROKER_FLAG_ICON on the
+    title; anything else → the body and title of before. A TAG only: the push still rings."""
     ctx = tile_ctx or {}
     sym = (sym or "").upper()
     setup = read.get("setup") or ""
@@ -275,11 +279,16 @@ def compose(read: dict, sym: str, tile_ctx: Optional[dict] = None, *, session=No
     broke = f"broke {_px(read.get('trigger'))} on the {frame} bar closing {hhmm} ET"
     pot = (POTENTIAL_RANG_TEXT.format(at=potential_at_et)
            if isinstance(potential_at_et, str) and _HHMM.fullmatch(potential_at_et) else "")
-    bits = [broke, stop_bit, words, pot, float_text, tape_tag, UNMEASURED_TAIL]
+    bt = broker_text if isinstance(broker_text, str) and broker_text else ""
+    bits = [broke, stop_bit, words, pot, float_text, tape_tag, bt, UNMEASURED_TAIL]
     body = " · ".join(b for b in bits if b)
     head = f"{sym} · {emoji} {label} A+ entry"
     line = " · ".join(b for b in (head, f"broke {_px(read.get('trigger'))}", stop_bit, words) if b)
-    return {"title": f"{emoji} {sym} · {label} A+ entry", "body": body, "tag": f"gg-{setup}-{sym}",
+    title = f"{emoji} {sym} · {label} A+ entry"
+    if bt:
+        from .tab import BROKER_FLAG_ICON                       # AMENDMENTS12 A1: the lock screen always shows it
+        title = f"{title} · {BROKER_FLAG_ICON}"
+    return {"title": title, "body": body, "tag": f"gg-{setup}-{sym}",
             "url": f"/chart-maps?tab=gajjala&sub={setup}&focus={sym}", "kind": KIND, "ticker": sym,
             "items": [{"symbol": sym, "text": line}]}
 
@@ -365,12 +374,18 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
     last_halt_resume_et, reg_gain_pct}}; `store` = the GajjalaStore (its `alerts_coll()`); `send(owner, payload)`
     defaults to push.hooks.notify_gajjala_setup. `dry` → nothing claimed, recorded or sent (counted "dry").
     -> counts (COUNT_KEYS)."""
+    from . import store as ST
+    from .tab import broker_text_for
     mode = mode if mode in GC.PUSH_MODES else push_mode()
     send = send or _default_send
     ctx = ctx or {}
     coll = store.alerts_coll() if store is not None else None
     counts = {k: 0 for k in COUNT_KEYS}
     counts["shadow_mode"] = 1 if mode == "shadow" else 0
+    # 🚫 DECISIONS12 D4 — his broker list, read ONCE per pass (a read fault → the seed); a TAG on the body, never a gate
+    flags = frozenset(ST.broker_flags(store)[0])
+    counts["broker_flagged"] = len({ST.broker_fold(str(s)) for s in (reads or {})}
+                                   & {ST.broker_fold(f) for f in flags})
     session_iso = _session_iso(session)
     for by_setup in (reads or {}).values():
         for r in (by_setup or {}).values():
@@ -407,7 +422,8 @@ def run_pass(reads: dict, frames: dict, now: datetime, session, *, store, send: 
             counts["dry"] += 1
             continue
         pot_at = potential_rang_at(store, session, sym, setup)  # DECISIONS10 D2: after every refusal and the dry gate
-        payload = compose(r, sym, ctx.get(sym), session=session, potential_at_et=pot_at)
+        payload = compose(r, sym, ctx.get(sym), session=session, potential_at_et=pot_at,
+                          broker_text=broker_text_for(sym, flags))
         from supply_demand.demand_alerts import claim_key as _claim
         if mode == "shadow":
             sk = shadow_key(session, sym, setup)

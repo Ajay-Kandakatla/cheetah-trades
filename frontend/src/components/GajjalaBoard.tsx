@@ -107,8 +107,20 @@
  * text) that filter either view client-side by the served row `bucket`, and a ❌ row's served loss facts as a sub-line
  * under it (in the 🕰️ timeline, under its tape). No per-row ✅ / ❌ chip (AMENDMENTS11 F13 — the Same / Through-next
  * cells already say it). The FE types no category, loss or replay word. UNMEASURED — rows, never a %.
+ *
+ * 🚫 Broker tag (2026-10-17, DECISIONS12 D1–D9, AMENDMENTS12). His second and third lines of the ask (DECISIONS12
+ * §The ask) are quoted verbatim in lib/gajjala.ts and in the ✨ entry — this file never spells the broker's name, not
+ * even in a comment. A TAG, never a filter: nothing here hides, filters, mutes or counts a name. Each row that names a
+ * symbol prints its SERVED `broker_text` as a muted chip beside the symbol (tiles, ☀️ / 🌙 movers, the 🌙 recap, the
+ * 🧠 strip, 📈 Track, 👀 watch, the 🎯 line, 🪦 graveyard and the 🏁 rows — siblings after the pinned elements). The
+ * owner's 🚫 strip under the header (the served words, his names each with ✕ → DELETE, one add field → POST) and the
+ * icon-only 🚫 card toggle mount only when the SERVED `broker_flags` block says editable — the server serves it to the
+ * primary owner alone (null for anyone else), so the FE gates on nothing of its own; a served `fault_text` prints in
+ * place of the add box. One write at a time (every broker control disabled while one is in flight); a write that lands
+ * re-reads the board ONCE. The owner header comes from the proxy, never typed here. Every word is served by tab.py;
+ * the FE never types the broker's name.
  */
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { API } from '../lib/apiBase';
 import { PatternChart } from './PatternChart';
@@ -126,10 +138,10 @@ import { trackFeature } from '../lib/usageTracker';
 import { pxText, shortVol } from '../lib/chartMaps';
 import { sanitizeSourceQuery, withSource } from '../lib/navSource';
 import {
-  GG_CAT_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
+  GG_BROKER_PATH, GG_CAT_PARAM, GG_OUTER_CHIPS, GG_SCAN_PATH, GG_SORT_PARAM, GG_SPAN_PARAM, GG_SUBS, GG_SUB_PARAM, GG_TFS, GG_TF_PARAM, GG_VIEW_PARAM, GG_VIEW_TIMELINE,
   changeText, chipText, criteriaText, ggCatDays, ggCatOn, ggHref, gradeText, ggQuery, ggRefreshMs, ggTimelineOn, isGgSetup, parseGgSub, parseGgTf,
   ggScanAdvanced, ggScanPlan, playbookItem, riskText, variantText, watchParts,
-  type GgBoard, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
+  type GgBoard, type GgBrokerFlags, type GgEnterable, type GgScanResponse, type GgPlaybook, type GgPlaybookItem, type GgPotentialStrip, type GgRead, type GgSub, type GgTell,
   type GgTf, type GgTile, type GgTrack, type GgTrackBlock, type GgTrackRecord, type GgTrackRow, type GgTrCell,
   type GgTrCategory, type GgTrDay, type GgTrRow, type GgTrViews as GgTrViewsBlock, type GgWatch,
 } from '../lib/gajjala';
@@ -322,6 +334,45 @@ export default function GajjalaBoard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, boardSeq, scanning, scanResp]);
 
+  /* 🚫 the owner's list writes (2026-10-17, AMENDMENTS12 F2): ONE write at a time — the ref blocks a second click in
+   * the same tick, the state disables every broker control while it is in flight. ok → ONE board re-read (`tick`);
+   * 404 → nothing; anything else → the SERVED `detail` when it is a string, else nothing (the FE types no word). */
+  const brokerBusyRef = useRef(false);
+  const [brokerBusy, setBrokerBusy] = useState(false);
+  const [brokerErr, setBrokerErr] = useState<string | null>(null);
+  const brokerWrite = async (method: 'POST' | 'DELETE', sym: string): Promise<boolean> => {
+    const symbol = String(sym || '').trim();
+    if (!symbol || brokerBusyRef.current) return false;
+    brokerBusyRef.current = true;
+    setBrokerBusy(true);
+    try {
+      const r = method === 'POST'
+        ? await fetch(`${API}${GG_BROKER_PATH}`, {
+          method: 'POST', credentials: 'include', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol }),
+        })
+        : await fetch(`${API}${GG_BROKER_PATH}/${encodeURIComponent(symbol)}`, {
+          method: 'DELETE', credentials: 'include', cache: 'no-store',
+        });
+      if (!mounted.current) return false;
+      if (r.ok) { setBrokerErr(null); setTick((n) => n + 1); return true; }
+      if (r.status === 404) return false;
+      let detail: unknown = null;
+      try { detail = ((await r.json()) as { detail?: unknown } | null)?.detail; } catch { detail = null; }
+      if (mounted.current) setBrokerErr(typeof detail === 'string' && detail.trim() ? detail : null);
+      return false;
+    } catch {
+      return false;
+    } finally {
+      brokerBusyRef.current = false;
+      if (mounted.current) setBrokerBusy(false);
+    }
+  };
+  /* The gate is the SERVED block — never isOwner: the server serves it to the primary owner only. */
+  const brokerBlock: GgBrokerFlags | null = board?.broker_flags && typeof board.broker_flags === 'object' ? board.broker_flags : null;
+  const brokerEditable = brokerBlock?.editable === true;
+  const brokerFault = typeof brokerBlock?.fault_text === 'string' && brokerBlock.fault_text.trim() ? brokerBlock.fault_text : null;
+
   const activeSub: GgSub | null = parseGgSub(board?.sub) ?? urlSub;
   useEffect(() => {
     if (activeSub) trackFeature(`chart-maps:tab:gajjala:${activeSub}`);
@@ -387,6 +438,10 @@ export default function GajjalaBoard() {
           </button>
         ) : null}
       </div>
+      {brokerBlock && (brokerEditable || brokerFault) ? (
+        <BrokerFlagsStrip block={brokerBlock} editable={brokerEditable} fault={brokerFault} busy={brokerBusy}
+                          err={brokerErr} onWrite={brokerWrite} />
+      ) : null}
       {pass?.stale ? (
         <div className="cm-note cm-note-err" data-testid="gg-stale">
           {pass.stale_text || `stale · last pass ${pass.as_of_et ?? '—'}`}
@@ -489,6 +544,7 @@ export default function GajjalaBoard() {
                     <li key={`${r.symbol}-${r.text}`} data-testid={`gg-recap-row-${id}`}>
                       {href ? <Link to={href} className="gg-recap-link"><strong>{r.symbol}</strong> {r.text}</Link>
                             : <><strong>{r.symbol}</strong> {r.text}</>}
+                      <GgBrokerChip text={r.broker_text} testid={`gg-broker-recap-${id}`} />
                     </li>
                   );
                 })}
@@ -513,6 +569,7 @@ export default function GajjalaBoard() {
                     {' '}<ShortInterestChip symbol={t.symbol} />
                     {' '}<ExplosiveChip read={row?.explosive} study={room.payload?.explosive_study} />
                     {' '}<EnterableChip read={row?.enterable} />
+                    <GgBrokerChip text={t.broker_text} testid={`gg-broker-tile-${t.symbol}`} />
                     {/* The frame this card drew, when it is not the bar size the toggle shows (a ➖ Fade read
                         that fell back to 5-minute bars) — the served per-tile `tf`, never a guess. */}
                     {frameDiffers(t.tf, servedTf) ? (
@@ -541,6 +598,10 @@ export default function GajjalaBoard() {
                     </div>
                   )}
                   <CardExtras read={t.gajjala ?? null} board={board} sub={activeSub} />
+                  {brokerEditable && brokerBlock ? (
+                    <BrokerToggle sym={t.symbol} on={typeof t.broker_text === 'string' && t.broker_text.trim() !== ''}
+                                  block={brokerBlock} busy={brokerBusy} onWrite={brokerWrite} />
+                  ) : null}
                 </div>
               );
             })}
@@ -577,6 +638,9 @@ function CountsLine({ board }: { board: GgBoard }) {
           {board.graveyard_text || `\u{1FAA6} moved to the graveyard today: ${grave.join(', ')}`}
         </div>
       ) : null}
+      {grave.length && typeof board.graveyard_broker_text === 'string' && board.graveyard_broker_text.trim() ? (
+        <div className="cm-note" data-testid="gg-graveyard-broker">{board.graveyard_broker_text}</div>
+      ) : null}
     </>
   );
 }
@@ -594,9 +658,14 @@ function AplusBanner({ block }: { block: GgEnterable }) {
           {rows.map((r) => {
             const id = `${r.symbol}-${r.setup}`;
             const href = ggHref(r.href);
-            return href
-              ? <Link key={id} to={href} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</Link>
-              : <span key={id} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</span>;
+            return (
+              <Fragment key={id}>
+                {href
+                  ? <Link to={href} className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</Link>
+                  : <span className="gg-aplus-row" data-testid={`gg-aplus-row-${id}`}>{r.text}</span>}
+                <GgBrokerChip text={r.broker_text} testid={`gg-broker-aplus-${id}`} />
+              </Fragment>
+            );
           })}
         </>
       ) : block.empty_text ? <span className="gg-aplus-empty" data-testid="gg-aplus-empty">{block.empty_text}</span> : null}
@@ -715,6 +784,7 @@ function PotentialStrip({ strip, onPick }: { strip: GgPotentialStrip; onPick: (s
                   {r.again && !againTold ? <span className="gg-pot-again" data-testid="gg-pot-again">↻</span> : null}
                   <Tells tells={r.tells} />
                 </button>
+                <GgBrokerChip text={r.broker_text} testid={`gg-broker-pot-${r.symbol}-${r.setup}`} />
               </li>
             );
           })}
@@ -738,6 +808,7 @@ function TrackRows({ block }: { block: GgTrackBlock }) {
           return (
             <li key={id} className="gg-track-row" data-testid={`gg-track-row-${id}`}>
               {href ? <Link to={href} className="gg-track-text">{r.text}</Link> : <span className="gg-track-text">{r.text}</span>}
+              <GgBrokerChip text={r.broker_text} testid={`gg-broker-track-${id}`} />
               {r.vs_trigger_text ? <span className="gg-muted"> · {r.vs_trigger_text}</span> : null}
               {r.push_text ? <span className="gg-track-push" data-testid={`gg-track-push-${id}`}> · {r.push_text}</span> : null}
               {r.entry_text ? <span className="gg-track-push gg-track-entry" data-testid={`gg-track-entry-${id}`}> · {r.entry_text}</span> : null}
@@ -802,7 +873,12 @@ function TrRowCells({ row, head }: { row: GgTrRow; head: string }) {
   switch (head) {
     case 'symbol': {
       const href = ggHref(row.href);
-      return <td className="gg-tr-sym">{href ? <Link to={href}>{row.symbol}</Link> : row.symbol}</td>;
+      return (
+        <td className="gg-tr-sym">
+          {href ? <Link to={href}>{row.symbol}</Link> : row.symbol}
+          <GgBrokerChip text={row.broker_text} testid={`gg-tr-broker-${row.key}`} />
+        </td>
+      );
     }
     case 'setup': return <td>{row.setup_label}</td>;
     case 'at': return <td>{row.at_text}</td>;
@@ -1034,9 +1110,78 @@ function WatchLine({ watch }: { watch: GgWatch }) {
         <span key={s.symbol}>
           {i ? ', ' : ''}
           <Link to={ggHref(s.href)!} data-testid={`gg-watch-tk-${s.symbol}`}>{s.symbol}</Link>
+          <GgBrokerChip text={s.broker_text} testid={`gg-broker-watch-${s.symbol}`} />
         </span>
       ))}
     </div>
+  );
+}
+
+/* ---- 🚫 broker tag (2026-10-17, BUILD_SPEC12 §3.9, AMENDMENTS12 F2 / F5) — every word SERVED by tab.py; the JSX text
+ * below is whitespace or the ✕ glyph only (contracts check 7). A TAG: nothing hides, filters or mutes a row. ---- */
+
+/** 🚫 the served tag beside a symbol — nothing unless the server sent a non-empty string. */
+function GgBrokerChip({ text, testid }: { text: unknown; testid: string }) {
+  if (typeof text !== 'string' || !text.trim()) return null;
+  return <span className="cm-badge cm-badge-muted gg-broker" data-testid={testid}>{text}</span>;
+}
+
+/** 🚫 the owner's strip (one line): the served words, his names each with ✕ (DELETE), one add field (POST) — or, when
+ *  his list could not be read, the served fault line in place of the add box and no ✕ (F5). */
+function BrokerFlagsStrip({ block, editable, fault, busy, err, onWrite }: {
+  block: GgBrokerFlags; editable: boolean; fault: string | null; busy: boolean; err: string | null;
+  onWrite: (method: 'POST' | 'DELETE', sym: string) => Promise<boolean>;
+}) {
+  const [value, setValue] = useState('');
+  const syms = (block.symbols || []).filter((s): s is string => typeof s === 'string' && !!s);
+  const canEdit = editable && !fault;
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const sym = value.trim();
+    if (!sym || busy) return;
+    void onWrite('POST', sym).then((ok) => { if (ok) setValue(''); });
+  };
+  return (
+    <div className="gg-broker-strip" data-testid="gg-broker-strip">
+      {block.text ? <span className="gg-broker-text" data-testid="gg-broker-text">{block.text}</span> : null}
+      {syms.map((s) => (
+        <span key={s} className="cm-badge cm-badge-muted gg-broker-sym" data-testid={`gg-broker-sym-${s}`}>
+          {s}
+          {canEdit ? (
+            <button type="button" data-testid={`gg-broker-del-${s}`} title={block.remove_title} aria-label={block.remove_title}
+                    disabled={busy} onClick={() => void onWrite('DELETE', s)}>✕</button>
+          ) : null}
+        </span>
+      ))}
+      {fault ? <span className="cm-note cm-note-err" data-testid="gg-broker-fault">{fault}</span>
+        : !syms.length && block.empty_text ? <span className="gg-muted" data-testid="gg-broker-empty">{block.empty_text}</span> : null}
+      {canEdit ? (
+        <form className="gg-broker-form" onSubmit={onSubmit}>
+          <input type="text" data-testid="gg-broker-input" value={value} disabled={busy}
+                 placeholder={block.add_placeholder} aria-label={block.add_placeholder}
+                 onChange={(e) => setValue(e.target.value)} />
+          <button type="submit" data-testid="gg-broker-add" disabled={busy}>{block.add_label}</button>
+        </form>
+      ) : null}
+      {err ? <span className="cm-note cm-note-err" data-testid="gg-broker-err">{err}</span> : null}
+    </div>
+  );
+}
+
+/** 🚫 the owner's icon-only card toggle: its title / label = the served words; pressed when the name is on his list;
+ *  a click removes it (DELETE) when on, else adds it (POST). */
+/* `on` is the SERVED tile tag (tab.broker_text_for — it folds "." / "-", AMENDMENTS12 F8); the FE never re-derives
+ * membership from the list, so a card can never contradict its own chip (critic 2026-10-17). */
+function BrokerToggle({ sym, on, block, busy, onWrite }: {
+  sym: string; on: boolean; block: GgBrokerFlags; busy: boolean;
+  onWrite: (method: 'POST' | 'DELETE', sym: string) => Promise<boolean>;
+}) {
+  return (
+    <button type="button" className="gg-broker-toggle" data-testid={`gg-broker-toggle-${sym}`} aria-pressed={on}
+            title={block.text} aria-label={block.text} disabled={busy}
+            onClick={() => void onWrite(on ? 'DELETE' : 'POST', sym)}>
+      {block.toggle}
+    </button>
   );
 }
 

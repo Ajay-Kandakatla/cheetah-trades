@@ -3,6 +3,18 @@
  "boards": {
   "bull_flag": {
    "awaiting": [],
+   "broker_flags": {
+    "add_label": "add",
+    "add_placeholder": "ticker",
+    "broker": "Fidelity",
+    "editable": true,
+    "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
+    "fault_text": null,
+    "remove_title": "take it off the list",
+    "symbols": [],
+    "text": "🚫 not eligible at Fidelity",
+    "toggle": "🚫"
+   },
    "counts": {
     "aplus": 0,
     "awaiting_answer": 0,
@@ -20,6 +32,7 @@
     "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
     "rows": [
      {
+      "broker_text": null,
       "frame": "5m",
       "grade_label": null,
       "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=BBB",
@@ -57,6 +70,7 @@
     "rows": [
      {
       "again": true,
+      "broker_text": null,
       "first_seen_et": "09:21",
       "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=AAA",
       "kind": "armed",
@@ -103,6 +117,7 @@
      },
      {
       "again": false,
+      "broker_text": null,
       "first_seen_et": "09:21",
       "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=JJJ",
       "kind": "building",
@@ -337,6 +352,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -599,6 +615,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -861,6 +878,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -1123,6 +1141,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -1290,6 +1309,18 @@
   },
   "potential": {
    "awaiting": [],
+   "broker_flags": {
+    "add_label": "add",
+    "add_placeholder": "ticker",
+    "broker": "Fidelity",
+    "editable": true,
+    "empty_text": "none on your list yet — add a ticker when its order ticket refuses it",
+    "fault_text": null,
+    "remove_title": "take it off the list",
+    "symbols": [],
+    "text": "🚫 not eligible at Fidelity",
+    "toggle": "🚫"
+   },
    "counts": {
     "aplus": 1,
     "awaiting_answer": 0,
@@ -1307,6 +1338,7 @@
     "note": "A+ = every rule of the setup met, price traded through the trigger and the bar closed — GG: “I'll enter right at the break [of the previous bar's high]; sometimes I wait for the bar to close and enter in the next bar” (S8 1:40:56–1:41:55). Listed while the latest pass reads the card A+ and the 5-minute pass is current; an entry that printed earlier and a potential still forming are not listed (your K1 answer). Opening the tab rings no device: both alerts stay on the 5-minute pass. Closed bars only — an open between passes adds new scanner names, not a newer bar. UNMEASURED — the study of his A+ setups read no edge (2026-10-14); not a recommendation.",
     "rows": [
      {
+      "broker_text": null,
       "frame": "5m",
       "grade_label": null,
       "href": "/chart-maps?tab=gajjala&sub=kiss_fly&focus=BBB",
@@ -1540,6 +1572,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -1837,6 +1870,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -2146,6 +2180,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -2430,6 +2465,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -2728,6 +2764,7 @@
        "v": 1011
       }
      ],
+     "broker_text": null,
      "curves": [
       {
        "label": "9 EMA",
@@ -2934,6 +2971,7 @@
      "pushed_n": 5,
      "rows": [
       {
+       "broker_text": null,
        "entry_text": "🎯 entry sent 10:36 ET",
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
@@ -2963,6 +3001,7 @@
        "vs_trigger_text": "+82.4% vs the trigger at first sight (6.25)"
       },
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
@@ -2992,6 +3031,7 @@
        "vs_trigger_text": "+4.2% vs the trigger at first sight (10.94)"
       },
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
@@ -3021,6 +3061,7 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
@@ -3050,6 +3091,7 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
@@ -3083,6 +3125,7 @@
        "vs_trigger_text": "+8.7% vs the trigger at first sight (10.48)"
       },
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
@@ -3119,6 +3162,7 @@
      "n": 2,
      "rows": [
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "armed",
        "first_kind_label": "trigger armed",
@@ -3152,6 +3196,7 @@
        "vs_trigger_text": "+3.9% vs the trigger at first sight (10.97)"
       },
       {
+       "broker_text": null,
        "entry_text": null,
        "first_kind": "building",
        "first_kind_label": "building",
@@ -3195,10 +3240,12 @@
    "watch": {
     "symbols": [
      {
+      "broker_text": null,
       "href": "/chart-maps?tab=gajjala&sub=premarket&focus=PMX",
       "symbol": "PMX"
      },
      {
+      "broker_text": null,
       "href": "/chart-maps?tab=gajjala&sub=premarket&focus=CARY",
       "symbol": "CARY"
      }

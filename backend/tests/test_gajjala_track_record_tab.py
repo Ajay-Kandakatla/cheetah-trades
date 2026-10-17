@@ -634,7 +634,7 @@ def golden_payload() -> str:
     for span in ("today", "5d", "yesterday"):
         LG._TODAY_MEMO.clear()
         LG._TODAY_SPLIT.clear()
-        boards[span] = board(st, span)
+        boards[span] = board(st, span, owner=True)   # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the OWNER's payload
     doc = {"_recipe": RECIPE, "boards": boards}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 

@@ -22,6 +22,10 @@ export type NewFeature = {
 };
 
 export const NEW_FEATURES: NewFeature[] = [
+  // Ajay 2026-10-17 (verbatim below, his 2nd and 3rd lines). DECISIONS12 D1–D9. A TAG, never a filter — pinned by scripts/contracts.mjs ("🚫 Gajjala broker tag (2026-10-17)").
+  // AMENDMENTS12 A1: the push title carries 🚫 too ("the title carries 🚫 and the body says it in words"); F1: "Only you" = the primary owner.
+  { id: 'chart-maps-gajjala-broker-tag-2026-10-17', addedAt: '2026-10-17', route: '/chart-maps?tab=gajjala',
+    label: "🚫 Gajjala’s tab tags the names Fidelity won’t let you buy online. You said: “ok then avoid showing me names that are not eligible in Fidelity then.” and “Or just add a tag that not eligible on Fidelity”. Nothing is hidden: add a ticker in the 🚫 strip under the header (or tap 🚫 on its card) when Fidelity’s order ticket refuses it, and every place that name appears — the setup cards, ☀️ / 🌙 movers and the 🌙 recap, 🧠 Potential and its 📈 Track, 👀 watch, the 🎯 A+ line, 🪦 graveyard and the 🏁 Track record — carries “🚫 not eligible at Fidelity”; its A+ and 🧠 pushes still ring and say it too — the title carries 🚫 and the body says it in words. The list starts empty and nothing is guessed (XLAB and XELB went through on 2026-10-16). Only you see it. Not advice." },
   // Ajay 2026-10-16 (verbatim below, his three messages). DECISIONS11 D1–D13 + AMENDMENTS11 (F7 the "— no fill / not graded"
   // label, F13 replayed rows counted apart + no per-row chip, F17 the loss high "through the stop minute"). The 10 sessions = LEDGER_SPAN_SESSIONS_LONG,
   // 5-minute = LEDGER_TAPE_TF_MIN, +1R = LEDGER_R_MULT, 20:15 = LEDGER_GRADE_AT_ET — pinned by scripts/contracts.mjs ("🕰️

@@ -1,8 +1,10 @@
 """Chart Maps API — one read-only board endpoint per tab.
 
-Read-only by construction with ONE exception: POST /chart-maps/gajjala/scan
+Read-only by construction with TWO exceptions: POST /chart-maps/gajjala/scan
 (owner-only, 2026-10-15) starts one Gajjala pass in a SUBPROCESS and answers at
-once — no GET here ever starts a scan. The demand tab warms in the background
+once — no GET here ever starts a scan; and the owner's 🚫 broker list (POST /
+DELETE /chart-maps/gajjala/broker-flags — one gajjala_state doc, 2026-10-17,
+DECISIONS12 D5), the primary admin's own edit and nobody else's. The demand tab warms in the background
 and answers `warming: true` immediately, so a page load cannot sit behind a
 multi-minute universe pass.
 
@@ -15,10 +17,10 @@ import asyncio
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-from auth import current_user_email
+from auth import current_user_email, maybe_current_user
 from . import board as board_mod
 from . import ema_frames as ema_frames_mod
 from . import support as support_mod
@@ -461,6 +463,7 @@ async def chart_maps_gajjala(
     limit: int = Query(gajjala_consts.TILE_LIMIT_DEFAULT, ge=1, le=gajjala_consts.TILE_LIMIT_MAX),
     span: str = Query("", description="🏁 Track record only: today | yesterday | 5d (default) | 10d | all — an "
                                       "unknown value serves the default."),
+    email: Optional[str] = Depends(maybe_current_user),
 ):
     """🚩 Gajjala's tab (2026-10-13) — Goverdhan Gajjala's five 5-minute setups over his scanner, ☀️ Premarket,
     🌙 Post-market and 📓 his Playbook. Ajay: "Name the Tab Gajjala's he has multiple strategies..around this."
@@ -472,10 +475,16 @@ async def chart_maps_gajjala(
     2026-10-16 "keep a new tab to show wins vs losses"). UNMEASURED; nothing here trades.
 
     Every argument is coerced: a direct call (container smoke test) receives the `Query` OBJECT itself.
+
+    🚫 (2026-10-17, DECISIONS12 D3 / AMENDMENTS12 F1): the owner (ollama_chat.api.is_primary_admin of the forwarded
+    X-User-Email — the primary admin only) is served broker_text + broker_flags; anyone else null; a direct call (the
+    Depends OBJECT) is a non-owner. A TAG only — every reader gets the same rows.
     """
     from rotation.api import _scrub
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it (AMENDMENTS12 F1)
     from .gajjala import tab as GT
     GC = gajjala_consts
+    owner = bool(is_primary_admin(email if isinstance(email, str) else ""))
 
     def _run():
         lim = limit if isinstance(limit, int) and not isinstance(limit, bool) else GC.TILE_LIMIT_DEFAULT
@@ -493,7 +502,7 @@ async def chart_maps_gajjala(
                        focus=focus if isinstance(focus, str) else "",
                        sort=sort if isinstance(sort, str) else "",
                        limit=max(1, min(lim, GC.TILE_LIMIT_MAX)),
-                       span=span_s, today=today)
+                       span=span_s, today=today, owner=owner)
         tiles = out.get("tiles") or []
         if tiles:
             try:
@@ -555,6 +564,67 @@ async def chart_maps_gajjala_entry_tape(
         return JSONResponse(_scrub(p))
 
     return await asyncio.to_thread(_run)
+
+
+# ── 🚫 his broker list (2026-10-17, DECISIONS12 D5, AMENDMENTS12 F1 / F3) ─────────────────────────────────────────────
+# Ajay, verbatim: "ok then avoid showing me names that are not eligible in Fidelity then." / "Or just add a tag that not
+# eligible on Fidelity". A TAG, never a filter. Each route, in THIS order (R12): the primary-admin gate (a stealth 404
+# for anyone else, whatever the body) → the symbol (400 with the served reason) → the write (503 on a store fault) →
+# the editor block. The only Mongo write path for the list.
+@router.get("/chart-maps/gajjala/broker-flags")
+async def chart_maps_gajjala_broker_flags(email: str = Depends(current_user_email)):
+    """🚫 The owner's list: {symbols, seed, added, removed, text, broker}. Primary admin only — anyone else 404."""
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it (AMENDMENTS12 F1)
+    if not is_primary_admin(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    return await _broker_answer()
+
+
+@router.post("/chart-maps/gajjala/broker-flags")
+async def chart_maps_gajjala_broker_flag_add(request: Request, email: str = Depends(current_user_email)):
+    """🚫 Add `{"symbol": "ABCD"}` (out of `removed` when it was there). Primary admin only — anyone else 404 before
+    the body is read (AMENDMENTS12 F3: never a 422); a bad / absent JSON body or a non-ticker → 400."""
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it (AMENDMENTS12 F1)
+    if not is_primary_admin(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    from .gajjala import store as ST
+    try:
+        payload = await request.json()
+    except Exception:                                               # noqa: BLE001 — a bad body is a bad symbol
+        payload = None
+    sym = ST.broker_symbol(payload.get("symbol") if isinstance(payload, dict) else None)
+    return await _broker_write(sym, True, email)
+
+
+@router.delete("/chart-maps/gajjala/broker-flags/{symbol}")
+async def chart_maps_gajjala_broker_flag_remove(symbol: str, email: str = Depends(current_user_email)):
+    """🚫 Remove a name (a SEEDED name goes to `removed`); a name not on the list = 200, unchanged. Primary admin only
+    — anyone else 404."""
+    from ollama_chat.api import is_primary_admin                     # lazy: tests monkeypatch it (AMENDMENTS12 F1)
+    if not is_primary_admin(email if isinstance(email, str) else ""):
+        raise HTTPException(status_code=404, detail="Not Found")
+    from .gajjala import store as ST
+    return await _broker_write(ST.broker_symbol(symbol if isinstance(symbol, str) else None), False, email)
+
+
+async def _broker_answer():
+    """The editor block, read off the event loop (GT.editor_block over the default store)."""
+    from rotation.api import _scrub
+    from .gajjala import store as ST
+    from .gajjala import tab as GT
+    return JSONResponse(_scrub(await asyncio.to_thread(lambda: GT.editor_block(ST.default()))))
+
+
+async def _broker_write(sym, on: bool, email):
+    """400 (not a ticker) → the write (503 when nothing could be saved) → the editor block. Called only past the gate."""
+    from .gajjala import store as ST
+    from .gajjala import tab as GT
+    if sym is None:
+        return JSONResponse({"detail": GT.BROKER_BAD_SYMBOL}, status_code=400)
+    res = await asyncio.to_thread(lambda: ST.default().set_broker_flag(sym, on, by=email))
+    if res is None:
+        return JSONResponse({"detail": GT.BROKER_WRITE_FAULT}, status_code=503)
+    return await _broker_answer()
 
 
 @router.get("/chart-maps/news")

@@ -428,7 +428,8 @@ def test_postmarket_orders_by_ah_gain_and_serves_unchecked_and_recap():
     assert rows[0]["href"] == "/chart-maps?tab=gajjala&sub=bull_flag&focus=PFAI"
     assert rows[1]["href"] == "/chart-maps?tab=gajjala&sub=reversal_squeeze&focus=STOP"
     assert all(r["href"] == PT.deep_link(r["symbol"], r["setup"]) for r in rows)
-    assert all(set(r) == {"symbol", "setup", "text", "href"} for r in rows)
+    # WIDENED 2026-10-17: DECISIONS12 D2 — every recap row carries the 🚫 broker tag key (null for a non-owner, a TAG only)
+    assert all(set(r) == {"symbol", "setup", "text", "href", "broker_text"} and r["broker_text"] is None for r in rows)
     assert "FORM" not in {r["symbol"] for r in rows}                    # NEGATIVE: a forming read is never a row
 
 

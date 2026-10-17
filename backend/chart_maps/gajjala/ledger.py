@@ -1360,7 +1360,7 @@ def _empty_text(span_k: str, sessions: list) -> str:
 
 
 def served_block(store, session: date, now: datetime, *, span: str = "", is_today: bool = False,
-                 today: Optional[dict] = None) -> dict:
+                 today: Optional[dict] = None, broker_text_of: Optional[Callable] = None) -> dict:
     """The 🏁 sub's served block (§3.8 shape; W1–W15). Mongo reads only; `today` = today_read's dict (provisional same
     cells for today's rows). Counts are per column: the headline (`counts["live"]`, `counts_text`) = the 🧠 pushes only;
     the shadow A+ line (`counts["shadow"]`, `shadow_text`) and the live A+ entries (`counts["entry"]`, `entries_text`,
@@ -1370,9 +1370,19 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
     replay read fault serves the block without them and `replayed_note` = REPLAY_FAULT_TEXT. ✅ / ❌ (D11 / D12) every
     row serves `bucket` / `bucket_text` / `loss_text`; `categories` / `categories_timeline` count the SERVED rows
     (F6), the replayed ones apart (F13) — they never feed a count line or a %. Raises LedgerReadError on a read
-    fault (the tab softens it into TRACK_RECORD_FAULT)."""
+    fault (the tab softens it into TRACK_RECORD_FAULT).
+    🚫 DECISIONS12 D2 — the row's broker tag from the tab's callable (owner only); rows_for untouched."""
     from . import alerts as AL
     from . import tape as TP                                    # lazy: tape imports this module (DECISIONS11 D3)
+
+    def _broker(sym):
+        if broker_text_of is None:
+            return None
+        try:
+            return broker_text_of(sym)
+        except Exception as exc:                                # noqa: BLE001 — a tag never takes the block down
+            log.warning("gajjala ledger: broker tag failed: %s", type(exc).__name__)
+            return None
     now = _aware(now)
     session = _as_date(session)
     span_k = span if span in GC.LEDGER_SPANS else GC.LEDGER_SPAN_DEFAULT
@@ -1442,7 +1452,7 @@ def served_block(store, session: date, now: datetime, *, span: str = "", is_toda
                       "plan_text": plan_text, "note": note, "href": row.get("url"),
                       "same": cells["same"], "next": cells["next"],
                       "replay_text": replay_text, "bucket": bucket, "bucket_text": BUCKET_TEXT[bucket],
-                      "loss_text": lt})
+                      "loss_text": lt, "broker_text": _broker(row["symbol"])})            # 🚫 DECISIONS12 D2
     for ln in COUNT_LINES:
         for h in GC.LEDGER_HORIZONS:
             # ⏪ the replayed line never reads a % (DECISIONS11 D5 / D7)

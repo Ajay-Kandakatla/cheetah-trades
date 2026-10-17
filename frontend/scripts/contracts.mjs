@@ -8594,7 +8594,9 @@ const CONTRACTS = [
       if (!/^HF_TRIGGER = "base_high"/m.test(gc)) errs.push('ENTRY_WORDS["horizontal_fade"] says "the new highs" — it assumes HF_TRIGGER = "base_high"; revisit the words');
       // 4. compose / run_pass (F9: numbers first — compose CONTAINS entry_words(, it does not lead with it)
       const cp = pyBody(al, 'compose'), rp = pyBody(al, 'run_pass');
-      if (!cp || !/A\+ entry"/.test(cp)) errs.push('alerts.compose: the title must end "A+ entry" (DECISIONS10 D2)');
+      // WIDENED 2026-10-17 (AMENDMENTS12 A1 / F6) — a name on his 🚫 list gets " · " + tab.BROKER_FLAG_ICON appended AFTER
+      // the "… A+ entry" title, so a flagged title may end with ` · 🚫`; compose still builds the "… A+ entry" title first.
+      if (!cp || !/A\+ entry"/.test(cp)) errs.push('alerts.compose: the title must end "A+ entry" — or "A+ entry · 🚫" when the name is on his 🚫 list (DECISIONS10 D2, AMENDMENTS12 A1)');
       if (!cp || !/entry_words\(/.test(cp) || !/UNMEASURED_TAIL/.test(cp)) errs.push('alerts.compose must contain entry_words( and end with UNMEASURED_TAIL (AMENDMENTS10 F9)');
       if (!rp) errs.push('alerts.py lost def run_pass(');
       else {
@@ -8851,9 +8853,8 @@ const CONTRACTS = [
       // 8. ✨ — FIRST, routed to the timeline, his two lines verbatim, UNMEASURED, every number a pinned constant.
       const nf = tryRead('src/lib/newFeatures.ts');
       const ID = 'chart-maps-gajjala-entry-timeline-2026-10-16';
-      const arr = nf.indexOf('export const NEW_FEATURES');
-      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
-      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      // WIDENED 2026-10-17 — 🚫 Gajjala broker tag took the first ✨ slot; this entry must be PRESENT (the newest feature is first).
+      if (!nf.includes(`{ id: '${ID}'`)) errs.push(`the ✨ entry id: '${ID}' is missing from NEW_FEATURES`);
       const at = nf.indexOf(`{ id: '${ID}'`);
       if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
       else {
@@ -9044,6 +9045,210 @@ const CONTRACTS = [
         for (const need of ['descriptive', 'HIS CALL']) if (!ld.includes(need)) errs.push(`docs/gajjala/losers_study_2026_10_16.md must carry "${need}"`);
       }
       if (nfEntry && !nfEntry.includes(HIS3)) errs.push(`the 🕰️ ✨ entry must quote him verbatim: "${HIS3.slice(0, 40)}…"`);
+      return errs;
+    },
+  },
+  {
+    name: '🚫 Gajjala broker tag (2026-10-17): his own list, a TAG never a filter, the one served word in tab.py, the broker name only in constants.py, owner-only (the GET + three stealth-404 routes), the clause before UNMEASURED, the FE types no word, ✨ first + his words verbatim',
+    file: 'src/components/GajjalaBoard.tsx',
+    // Ajay 2026-10-17: "ok then avoid showing me names that are not eligible in Fidelity then." and "Or just add a tag
+    // that not eligible on Fidelity" (DECISIONS12 D1–D9, BUILD_SPEC12 §3.10, AMENDMENTS12 A1 / F1 / F5 / F6 / F9). He
+    // trades these names with real money: a hidden row, a gate on the list, a broker word typed in the browser, a second
+    // copy of the served word, or the list served to anyone but him would each show him a board that is not the record.
+    // Owner = the PRIMARY admin only (F1). A store read fault fails open to the seed and SAYS so (F5). Nothing is guessed.
+    checks: (board) => {
+      const errs = [];
+      const unesc = (x) => x.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+        .replace(/\\u([0-9A-Fa-f]{4})/g, (_m, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\'/g, "'");
+      const tryRead = (rel) => { try { return read(rel); } catch { errs.push(`${rel} is unreadable`); return ''; } };
+      const pyCode = (s) => s.replace(/"""[\s\S]*?"""/g, '').replace(/#[^\n]*/g, '');
+      const tsCode = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/[^\n]*$/gm, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
+      const pyBody = (src, def) => { const a = src.indexOf(`\ndef ${def}(`); if (a < 0) return null; const e = src.indexOf('\ndef ', a + 5); return src.slice(a, e < 0 ? undefined : e); };
+      const B_WORD = /boun|fake/i;
+      const HIS = [
+        'ok then avoid showing me names that are not eligible in Fidelity then.',
+        'Or just add a tag that not eligible on Fidelity',
+      ];
+      const GG = '../backend/chart_maps/gajjala/';
+
+      // 1. constants.py — the broker's name and the (empty) seed are HIS values; the symbol cap is mine.
+      const gc = tryRead(`${GG}constants.py`);
+      const cline = (name) => new RegExp(`^${name} = ([^\\n]*?)\\s*#\\s*([^\\n]*)$`, 'm').exec(gc);
+      const val = (name) => { const m = cline(name); return m ? m[1].trim() : null; };
+      const tag = (name) => { const m = cline(name); return m ? m[2].trim() : ''; };
+      const BROKER_NAME = (/^"([^"\n]+)"$/.exec(val('BROKER_NAME') || '') || [])[1] || null;
+      if (gc) {
+        if (!BROKER_NAME || !/^Ajay 2026-10-17\b/.test(tag('BROKER_NAME'))) errs.push('constants.py must carry BROKER_NAME = "…"  # Ajay 2026-10-17 (DECISIONS12 D1 — his broker, his words)');
+        if (!/^\([^)]*\)$/.test(val('BROKER_FLAG_SEED') || '') || !/^Ajay 2026-10-17\b/.test(tag('BROKER_FLAG_SEED'))) errs.push('constants.py must carry BROKER_FLAG_SEED = (…)  # Ajay 2026-10-17 (DECISIONS12 D1 — a name enters only on his word)');
+        if (!/^\d+$/.test(val('BROKER_SYMBOL_MAX_LEN') || '') || !/^TRANSPORT — MINE\b/.test(tag('BROKER_SYMBOL_MAX_LEN'))) errs.push('constants.py must carry BROKER_SYMBOL_MAX_LEN = <int>  # TRANSPORT — MINE (…)');
+      }
+
+      // 2. the ONE served word: no broker-name literal in the served Python, "not eligible at" exactly once — tab.py's
+      //    BROKER_FLAG_TEXT. CASE-SENSITIVE (AMENDMENTS12 F9): rules_info's capital "Not eligible at %s" is its own line.
+      const PY = ['tab', 'alerts', 'potential', 'ledger', 'store', 'run'].map((n) => `${GG}${n}.py`)
+        .concat(['../backend/chart_maps/api.py', '../backend/supply_demand/rules_info.py']);
+      const src = Object.fromEntries(PY.map((p) => [p, tryRead(p)]));
+      let once = 0;
+      for (const p of PY) {
+        const code = pyCode(src[p] || '');
+        if (BROKER_NAME && code.includes(BROKER_NAME)) errs.push(`${p.replace('../backend/', '')} types "${BROKER_NAME}" in code — the broker's name lives in constants.BROKER_NAME only`);
+        once += (code.match(/not eligible at/g) || []).length;
+      }
+      if (once !== 1) errs.push(`"not eligible at" must appear exactly ONCE in the served Python (case-sensitive) — tab.BROKER_FLAG_TEXT; found ${once}`);
+      const tab = src[`${GG}tab.py`] || '';
+      if (tab) {
+        if (!/^BROKER_FLAG_TEXT = f"🚫 not eligible at \{GC\.BROKER_NAME\}"/m.test(tab)) errs.push('tab.py must carry BROKER_FLAG_TEXT = f"🚫 not eligible at {GC.BROKER_NAME}" — the ONE served word (DECISIONS12 D1)');
+        for (const d of ['def broker_text_for(', 'def _broker_tag(']) if (!tab.includes(`\n${d}`)) errs.push(`tab.py must define ${d} (DECISIONS12 D2 — one helper, one annotator)`);
+      }
+
+      // 3. the pushes carry the tag and never gate on it: both run_pass bodies read the list and tag; no if …broker… line.
+      const al = src[`${GG}alerts.py`] || '', pt = src[`${GG}potential.py`] || '';
+      for (const [f, s] of [['alerts.py', al], ['potential.py', pt]]) {
+        const rp = pyBody(s, 'run_pass');
+        if (!rp) { errs.push(`${f} lost def run_pass(`); continue; }
+        const code = pyCode(rp);
+        for (const need of ['broker_flags(', 'broker_text_for(']) if (!code.includes(need)) errs.push(`${f} run_pass must name ${need} (DECISIONS12 D4 — the list read once per pass, the tag on the body)`);
+        const gate = /^[ \t]*(?:if|elif|while)\b[^\n]*broker[^\n]*$/m.exec(code);
+        if (gate) errs.push(`${f} run_pass gates on the broker list ("${gate[0].trim()}") — a TAG only, the push still rings (D4 / HIS CALL Q4)`);
+        // 2026-10-17 (main session, F11): the set bound from broker_flags( may be USED only for the tag (broker_text_for) and
+        // the count (broker_fold) — any other line that names it (a filter, a skip, a rebinding of reads) is a gate in disguise.
+        const bind = /^[ \t]*(\w+)\s*=\s*[^\n]*\bbroker_flags\(/m.exec(code);
+        if (!bind) errs.push(`${f} run_pass must bind the list ONCE (name = … broker_flags(…)) (D4)`);
+        else {
+          const id = bind[1];
+          const uses = code.split('\n').filter((ln) => new RegExp(`\\b${id}\\b`).test(ln) && !ln.includes('broker_flags(')
+            && !ln.includes('broker_text_for(') && !ln.includes('broker_fold('));
+          for (const ln of uses) errs.push(`${f} run_pass uses the broker list beyond the tag and the count ("${ln.trim()}") — a TAG only, nothing filtered (D4)`);
+        }
+      }
+      const ck = /^COUNT_KEYS = \(([\s\S]*?)\)/m.exec(al);
+      if (al && (!ck || !/"broker_flagged"/.test(ck[1]))) errs.push('alerts.COUNT_KEYS must carry "broker_flagged" (DECISIONS12 D4 — informational)');
+
+      // 4. store.py — one gajjala_state doc, the seed unioned; no new collection; the pass never filters on it.
+      const st = src[`${GG}store.py`] || '';
+      if (st) {
+        if (!/^BROKER_STATE_ID = "broker_flags"/m.test(st)) errs.push('store.py must carry BROKER_STATE_ID = "broker_flags" (one gajjala_state doc, DECISIONS12 D1)');
+        const bf = pyBody(st, 'broker_flags');
+        if (!bf) errs.push('store.py lacks def broker_flags( (the ONE effective-set engine, R1)');
+        else {
+          const helpers = [...new Set([...pyCode(bf).matchAll(/\b(_broker\w*)\(/g)].map((m) => m[1]))].map((h) => pyBody(st, h) || '');
+          const path = pyCode([bf, ...helpers].join('\n'));
+          if (!/GC\.BROKER_FLAG_SEED\b/.test(pyCode(bf))) errs.push('store.broker_flags must union GC.BROKER_FLAG_SEED (fail-open to the seed, D1)');
+          // AMENDMENTS12 F5 modifies D1: the read is fault-aware (_find_or_none), get_state the fallback
+          if (!/_find_or_none\(|get_state\b/.test(path)) errs.push('store.broker_flags must read the doc through _find_or_none( / get_state (D1 / F5)');
+        }
+        const all = /^ALL = \(([^)]*)\)/m.exec(st);
+        if (all && /broker/i.test(all[1])) errs.push('store.ALL names a broker collection — the list is a gajjala_state doc (no new collection)');
+      }
+      for (const f of ['run.py', 'scanner.py']) {
+        const s = tryRead(`${GG}${f}`);
+        if (/broker/i.test(s)) errs.push(`${f} names broker — nothing in the scan or the pass is filtered by his list (a TAG only)`);
+      }
+
+      // 5. api.py — the board GET serves the tag to the PRIMARY owner only (F1); three stealth-404 routes after entry-tape.
+      const api = src['../backend/chart_maps/api.py'] || '';
+      if (api) {
+        const slice = (at) => { const n = api.indexOf('\n@router.', at + 1); return pyCode(api.slice(at, n < 0 ? undefined : n)); };
+        const ga = api.indexOf('async def chart_maps_gajjala(');
+        if (ga < 0) errs.push('chart_maps/api.py lost async def chart_maps_gajjala(');
+        else {
+          const get = slice(ga);
+          if (!/is_primary_admin\(/.test(get) || !/\bowner=/.test(get)) errs.push('GET /chart-maps/gajjala must decide owner= through is_primary_admin( (AMENDMENTS12 F1 — his list, his eyes only)');
+          for (const bad of ['on_demand', 'entry_tape', 'broker-flags']) if (get.includes(bad)) errs.push(`GET /chart-maps/gajjala names ${bad} — its slice stays clean (the broker routes sit after entry-tape)`);
+        }
+        const tapeAt = api.indexOf('@router.get("/chart-maps/gajjala/entry-tape")');
+        for (const r of ['@router.get("/chart-maps/gajjala/broker-flags")', '@router.post("/chart-maps/gajjala/broker-flags")',
+                         '@router.delete("/chart-maps/gajjala/broker-flags/{symbol}")']) {
+          const at = api.indexOf(r);
+          if (at < 0) { errs.push(`chart_maps/api.py lacks ${r} (DECISIONS12 D5)`); continue; }
+          const h = slice(at);
+          if (!/is_primary_admin\(/.test(h) || !/\b404\b/.test(h)) errs.push(`${r} must check is_primary_admin( and answer a non-owner 404 (stealth, AMENDMENTS12 F1)`);
+          if (tapeAt < 0 || at < tapeAt) errs.push(`${r} must sit AFTER the entry-tape route (the GET / entry-tape slices stay clean)`);
+        }
+      }
+
+      // 6. ledger.py — the 🏁 rows carry the tag from the tab's callable; rows_for (the history) is untouched.
+      const lg = src[`${GG}ledger.py`] || '';
+      if (lg) {
+        const sb = pyBody(lg, 'served_block');
+        if (!sb || !sb.includes('broker_text_of') || !sb.includes('"broker_text"')) errs.push('ledger.served_block must serve "broker_text" from broker_text_of (DECISIONS12 D2)');
+        const rf = pyBody(lg, 'rows_for');
+        if (!rf) errs.push('ledger.py lost def rows_for(');
+        else if (/broker/i.test(rf)) errs.push('ledger.rows_for names broker — the history is never filtered (DECISIONS12 D2)');
+      }
+
+      // 7. the FE types no word: the broker's name never appears in GajjalaBoard.tsx (not even in a comment — house
+      //    rule), never in lib/gajjala.ts code; the one path; the mounts; every chip testid; the broker JSX text is
+      //    whitespace or ✕ only; ggQuery is unchanged.
+      const lib = tryRead('src/lib/gajjala.ts');
+      if (/Fidelity/i.test(board) || (BROKER_NAME && board.toLowerCase().includes(BROKER_NAME.toLowerCase()))) errs.push("GajjalaBoard.tsx spells the broker's name — every word is served by tab.py (DECISIONS12 D1)");
+      if (/not eligible/i.test(tsCode(board))) errs.push('GajjalaBoard.tsx types "not eligible" — the served broker_text is printed verbatim');
+      const libCode = tsCode(lib);
+      if (/Fidelity/i.test(libCode) || /not eligible/i.test(libCode)) errs.push('lib/gajjala.ts types the broker word in code — every word is served by tab.py');
+      if (lib && !/^export const GG_BROKER_PATH = '\/chart-maps\/gajjala\/broker-flags';/m.test(lib)) errs.push("lib/gajjala.ts must export GG_BROKER_PATH = '/chart-maps/gajjala/broker-flags' (== the api route)");
+      for (const m of ['<BrokerFlagsStrip ', '<BrokerToggle ']) if (!board.includes(m)) errs.push(`GajjalaBoard must mount ${m}…/> (DECISIONS12 D5)`);
+      for (const id of ['gg-broker-tile-', 'gg-broker-pot-', 'gg-broker-track-', 'gg-broker-watch-', 'gg-broker-aplus-',
+                        'gg-broker-recap-', 'gg-graveyard-broker', 'gg-tr-broker-']) {
+        if (!board.includes(id)) errs.push(`GajjalaBoard must carry the chip testid ${id}… (DECISIONS12 D2 — every surface that lists a name)`);
+      }
+      const fnBody = (name) => {
+        const a = board.indexOf(`\nfunction ${name}(`);
+        if (a < 0) return null;
+        const e = board.indexOf('\n}\n', a + 1);
+        return board.slice(a, e < 0 ? undefined : e);
+      };
+      for (const n of ['GgBrokerChip', 'BrokerFlagsStrip', 'BrokerToggle']) {
+        const b = fnBody(n);
+        if (b == null) { errs.push(`GajjalaBoard lacks function ${n}(`); continue; }
+        // JSX text inline (`>text<`) or alone on its own line between a tag end and a tag start; `=>` folded so an arrow
+        // is never a tag end
+        const code = tsCode(b).replace(/=>/g, '=');
+        for (const m of [...code.matchAll(/>([^<>{}\n]+)</g), ...code.matchAll(/>[ \t]*\n([^<>{}\n]+)\n[ \t]*</g)]) {
+          const t = m[1].trim();
+          if (t && t !== '✕') errs.push(`GajjalaBoard ${n} types the JSX text "${t}" — only "✕"; every word is served by tab.py`);
+        }
+      }
+      if (/\bisOwner\b/.test(fnBody('BrokerFlagsStrip') || '') || /\bisOwner\b/.test(fnBody('BrokerToggle') || '')) errs.push('the 🚫 strip / toggle read isOwner — the gate is the SERVED broker_flags block');
+      const qa = lib.indexOf('export function ggQuery(');
+      const qe = qa < 0 ? -1 : lib.indexOf('\n}\n', qa);
+      if (qa >= 0 && /broker/i.test(lib.slice(qa, qe < 0 ? undefined : qe))) errs.push('lib/gajjala.ts ggQuery names broker — the board GET is unchanged');
+
+      // 8. ✨ — FIRST, routed to the tab, his two lines verbatim, the served word, nothing hidden, the title carries 🚫.
+      const nf = tryRead('src/lib/newFeatures.ts');
+      const ID = 'chart-maps-gajjala-broker-tag-2026-10-17';
+      const arr = nf.indexOf('export const NEW_FEATURES');
+      const firstId = arr < 0 ? null : (/\{ id: '([^']+)'/.exec(nf.slice(arr)) || [])[1];
+      if (firstId !== ID) errs.push(`the ✨ entry id: '${ID}' must be FIRST in NEW_FEATURES (found ${firstId})`);
+      const at = nf.indexOf(`{ id: '${ID}'`);
+      if (at < 0) errs.push(`newFeatures.ts lacks the ✨ entry id: '${ID}'`);
+      else {
+        const end = nf.indexOf('" },', at);
+        const e = unesc(nf.slice(at, end < 0 ? undefined : end + 4));
+        const W = 'the 🚫 ✨ entry';
+        if (!e.includes("route: '/chart-maps?tab=gajjala',")) errs.push(`${W} must route to '/chart-maps?tab=gajjala'`);
+        for (const h of HIS) if (!e.includes(h)) errs.push(`${W} must quote him verbatim: "${h.slice(0, 40)}…"`);
+        const needs = [`🚫 not eligible at ${BROKER_NAME}`, 'Nothing is hidden', 'the title carries 🚫'];   // the last = AMENDMENTS12 A1
+        for (const need of needs) if (!e.includes(need)) errs.push(`${W} must say "${need}"`);
+        if (B_WORD.test(e)) errs.push(`${W} says the b-word / "fake"`);
+        let forbidden = [];
+        try { const fw = /^FORBIDDEN_WORDS = \(([\s\S]*?)\)/m.exec(read('../backend/chart_maps/high_beta_tab.py')); forbidden = fw ? [...fw[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) : []; } catch { /* below */ }
+        if (!forbidden.length) errs.push('chart_maps/high_beta_tab.py lost FORBIDDEN_WORDS = (…)');
+        for (const w of forbidden) if (e.toLowerCase().includes(w.toLowerCase())) errs.push(`${W} says "${w}" (high_beta_tab.FORBIDDEN_WORDS)`);
+        let label = e.slice(Math.max(0, e.indexOf('label: ')));
+        for (const h of HIS) label = label.split(h).join(' ');
+        const stray = /[^\s]*\d[^\s]*/.exec(label.replace(/\b\d{4}-\d\d-\d\d\b/g, ' '));
+        if (stray) errs.push(`${W} prints "${stray[0]}" — no number outside an ISO date (nothing is measured, D6)`);
+      }
+
+      // 9. SPECS.md + the doc.
+      const specs = tryRead('../SPECS.md');
+      if (specs && !specs.includes(`- **🚫 Not eligible at ${BROKER_NAME}** (2026-10-17`)) errs.push(`SPECS.md lacks the "- **🚫 Not eligible at ${BROKER_NAME}** (2026-10-17" bullet`);
+      const DOC = '../docs/gajjala/broker_flags_2026_10_17.md';
+      if (!exists(DOC)) errs.push('docs/gajjala/broker_flags_2026_10_17.md is missing');
+      else {
+        const doc = read(DOC);
+        for (const need of ['READ THIS FIRST', 'HIS CALL', 'Q1', 'Nothing is hidden']) if (!doc.includes(need)) errs.push(`docs/gajjala/broker_flags_2026_10_17.md must carry "${need}"`);
+      }
       return errs;
     },
   },

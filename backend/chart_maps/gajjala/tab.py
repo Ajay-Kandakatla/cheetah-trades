@@ -1092,6 +1092,85 @@ PUSH_TEXT = {"no_target": "📲 no device took it (toggle off, quiet hours or no
              "failed": "📲 send failed",
              "claimed": "📲 sending"}           # W19's /alerts word for a claimed doc (a pass died before the settle)
 
+# 🚫 NOT ELIGIBLE AT THE BROKER (2026-10-17, DECISIONS12 D1–D7, AMENDMENTS12). Ajay, verbatim: "ok then avoid showing me
+# names that are not eligible in Fidelity then." / "Or just add a tag that not eligible on Fidelity". A TAG, never a
+# filter: every row that names a symbol on his own list (store.broker_flags — the seed ∪ his adds − his removes) carries
+# `broker_text`; nothing is hidden, reordered or counted-as-hidden. Served to the PRIMARY admin only (the route decides
+# `owner`); anyone else reads null. The broker's name lives in constants.py; these are the only served words.
+BROKER_FLAG_TEXT = f"🚫 not eligible at {GC.BROKER_NAME}"                       # DECISIONS12 D1 — the ONE served word
+BROKER_FLAG_ICON = "🚫"                                                          # D5 — the card toggle (its title = BROKER_FLAG_TEXT)
+BROKER_LIST_TEXT = "{text}: {symbols}"                                          # the 🪦 graveyard line's tag
+BROKER_EMPTY_TEXT = "none on your list yet — add a ticker when its order ticket refuses it"
+BROKER_FAULT_TEXT = "your list could not be read this time — the tags are off until the next read"   # AMENDMENTS12 F5
+BROKER_ADD_LABEL = "add"
+BROKER_ADD_PLACEHOLDER = "ticker"
+BROKER_REMOVE_TITLE = "take it off the list"
+BROKER_BAD_SYMBOL = (f"Not a ticker — letters, digits, “.” or “-”, starting with a letter, at most "
+                     f"{GC.BROKER_SYMBOL_MAX_LEN} characters.")
+BROKER_WRITE_FAULT = "The list could not be saved this time — nothing changed; try again."
+
+
+def _broker_fold(sym) -> str:
+    from chart_maps.gajjala import store as ST
+    return ST.broker_fold(sym)
+
+
+def broker_text_for(sym, flags) -> Optional[str]:
+    """D2 — BROKER_FLAG_TEXT iff `sym` is on `flags` ("." and "-" folded on both sides, AMENDMENTS12 F8); `flags` None
+    (a non-owner) → None; a name not on the list → None (no surface guesses eligibility)."""
+    if flags is None or not isinstance(sym, str) or not sym.strip():
+        return None
+    k = _broker_fold(sym)
+    return BROKER_FLAG_TEXT if any(_broker_fold(f) == k for f in flags) else None
+
+
+def broker_block(flags, *, fault: bool = False) -> dict:
+    """D3 / D5 — the owner's 🚫 strip block. A read fault (AMENDMENTS12 F5): `editable` False, `fault_text` served,
+    never `empty_text` (the list is not "empty", it was not read)."""
+    return {"editable": not fault, "symbols": sorted(flags or ()), "text": BROKER_FLAG_TEXT, "broker": GC.BROKER_NAME,
+            "toggle": BROKER_FLAG_ICON, "empty_text": None if fault else BROKER_EMPTY_TEXT,
+            "fault_text": BROKER_FAULT_TEXT if fault else None, "add_label": BROKER_ADD_LABEL,
+            "add_placeholder": BROKER_ADD_PLACEHOLDER, "remove_title": BROKER_REMOVE_TITLE}
+
+
+def editor_block(store) -> dict:
+    """D5 — GET …/broker-flags (and every write's answer): store.broker_doc {symbols, seed, added, removed} + the served
+    word, the broker and `fault_text` (BROKER_FAULT_TEXT when the list could not be read — the seed alone is served and
+    SAID so, AMENDMENTS12 F5; null when the read is fine). The store's `fault` flag itself is not served."""
+    from chart_maps.gajjala import store as ST
+    doc = ST.broker_doc(store)
+    fault = bool(doc.pop("fault", False))
+    return dict(doc, text=BROKER_FLAG_TEXT, broker=GC.BROKER_NAME, fault_text=BROKER_FAULT_TEXT if fault else None)
+
+
+def _broker_tag(out: dict, flags) -> None:
+    """D2 — in place: every §3.4 row that names a symbol gets `broker_text` (tiles, the 🧠 strip rows, 📈 track rows,
+    👀 watch symbols, 🎯 A+ rows, 🌙 recap rows) and `graveyard_broker_text` sits beside `graveyard_text`. `flags` None
+    → None everywhere. Nothing is removed or reordered (a TAG, never a filter)."""
+    def tag(rows):
+        for r in rows if isinstance(rows, list) else ():
+            if isinstance(r, dict):
+                r["broker_text"] = broker_text_for(r.get("symbol"), flags)
+
+    tag(out.get("tiles"))
+    for k in ("potential", "enterable"):
+        if isinstance(out.get(k), dict):
+            tag(out[k].get("rows"))
+    tr = out.get("track")
+    if isinstance(tr, dict):
+        for k in ("today", "yesterday"):
+            if isinstance(tr.get(k), dict):
+                tag(tr[k].get("rows"))
+    if isinstance(out.get("watch"), dict):
+        tag(out["watch"].get("symbols"))
+    pm = out.get("postmarket")
+    if isinstance(pm, dict) and isinstance(pm.get("recap"), dict):
+        tag(pm["recap"].get("rows"))
+    if "graveyard_text" in out:
+        hit = [s for s in out.get("graveyard_today") or [] if broker_text_for(s, flags)]
+        out["graveyard_broker_text"] = (BROKER_LIST_TEXT.format(text=BROKER_FLAG_TEXT, symbols=", ".join(hit))
+                                        if hit else None)
+
 
 def _soft(what: str, fn, *a, default=None, **kw):
     """D1 on the read path: a raising 🧠 potential / 📈 track piece logs and serves `default`; it never takes down the
@@ -1373,10 +1452,19 @@ def _ledger_count(st, session: date) -> Optional[int]:
 
 
 def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_LIMIT_DEFAULT, sort: str = "",
-          span: str = "", now: Optional[datetime] = None, store=None, today: Optional[dict] = None) -> dict:
+          span: str = "", now: Optional[datetime] = None, store=None, today: Optional[dict] = None,
+          owner: bool = False) -> dict:
     """The served board. Reads Mongo only (BUILD_SPEC §3.4.1). `span` = the 🏁 Track record day picker (ignored on
-    every other sub); `today` = the route's ledger.today_read answer (🏁 only, None = not read on this open)."""
+    every other sub); `today` = the route's ledger.today_read answer (🏁 only, None = not read on this open).
+    🚫 `owner` (2026-10-17, DECISIONS12 D3): `is True` only — the primary admin is served `broker_flags` and every row's
+    `broker_text`; anyone else (and a truthy Query / Depends object) reads null on every one. A TAG, never a filter."""
     st = _store(store)
+    from chart_maps.gajjala import store as ST
+    if owner is True:
+        _bf, bfault = ST.broker_flags(st)
+        flags = frozenset(_bf)
+    else:
+        flags, bfault = None, False
     now = now or _clock()
     session, is_today, in_window = session_for(now)
     try:
@@ -1494,7 +1582,8 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
            "counts": counts, "tiles": [], "graveyard_today": [], "note": board_note(),
            "empty_note": None, "rules_section": "gajjala", "push": push_block(),
            "push_potential": _soft("potential push line", push_potential_block, session),
-           "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a]}
+           "awaiting": [a for a in (_awaiting(s) for s in GC.SETUPS) if a],
+           "broker_flags": broker_block(flags, fault=bfault) if flags is not None else None}
     out["scan"] = _soft("scan line", scan_block, pass_doc, lease, now, in_window=in_window, session=session,
                         default=None)
     out["enterable"] = _soft("A+ banner", aplus_block, reads_by, pass_doc, now, in_window=in_window,
@@ -1556,8 +1645,10 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
         span_s = span if isinstance(span, str) else ""
         out["track_record"] = (_soft("track record", LG.served_block, st, session, now, span=span_s,
                                      is_today=is_today, today=today if isinstance(today, dict) else None,
+                                     broker_text_of=lambda s: broker_text_for(s, flags),
                                      default=None) if LG else None)
         out["empty_note"] = None if out["track_record"] else TRACK_RECORD_FAULT      # W16
+    _broker_tag(out, flags)                                         # 🚫 D2 — a TAG on every row, never a filter
     _strip_private(out["tiles"])
     return _plain(out)
 
@@ -1565,4 +1656,4 @@ def build(sub: str = "", *, tf: str = "", focus: str = "", limit: int = GC.TILE_
 __all__ = ["build", "resolve_sub", "order_key", "state_label", "strip_text", "session_for", "first15",
            "psych_chips", "recap", "premarket_rows", "postmarket_rows", "session_pass", "push_block",
            "push_potential_block", "board_note", "scan_block", "aplus_block", "pass_stamp", "TRACK_RECORD_FAULT",
-           "ENTRY_SENT_TEXT"]
+           "ENTRY_SENT_TEXT", "BROKER_FLAG_TEXT", "BROKER_FLAG_ICON", "broker_text_for", "broker_block", "editor_block"]

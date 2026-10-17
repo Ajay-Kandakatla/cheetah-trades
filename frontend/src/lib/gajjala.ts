@@ -58,6 +58,13 @@
  * `category_empty_text`; each row its served `bucket` / `bucket_text` / `loss_text` / `replay_text`. This module types
  * them, adds the `cat` param (FE-only — it never rides the GET: ggQuery is unchanged) and ggCatOn / ggCatDays (a
  * client-side filter by the SERVED bucket; "all" = the first served chip key — no key typed here). UNMEASURED.
+ *
+ * 🚫 Broker tag (2026-10-17, DECISIONS12 D1–D9, AMENDMENTS12). Ajay: "ok then avoid showing me names that are not
+ * eligible in Fidelity then." and "Or just add a tag that not eligible on Fidelity". A TAG, never a filter: every row /
+ * tile type gains the SERVED `broker_text` (tab.BROKER_FLAG_TEXT on a name on his own list, else null) and the board the
+ * SERVED owner block `broker_flags` (null for anyone but the primary owner). GG_BROKER_PATH is the owner's add / remove
+ * route (POST / DELETE; the board GET carries the list, so the FE never GETs it). Every word is served by tab.py — this
+ * module types no word and never the broker's name. ggQuery is unchanged.
  */
 import type { CmTile } from './chartMaps';
 import type { ServedVolAvg } from './volumePane';
@@ -193,6 +200,8 @@ export type GgPotentialRow = {
   tells?: GgTell[];
   href?: string | null;
   text: string;
+  /** 🚫 the served tag (tab.BROKER_FLAG_TEXT) when the name is on his list — owner only; null / absent → no chip. */
+  broker_text?: string | null;
 };
 export type GgPotentialStrip = {
   title: string;
@@ -238,6 +247,8 @@ export type GgTrackRow = {
   timeline?: { at_et?: string | null; text: string }[];
   text: string;
   href?: string | null;
+  /** 🚫 the served tag — owner only; null / absent → no chip. */
+  broker_text?: string | null;
 };
 export type GgTrackBlock = { date?: string; label?: string; title?: string | null; n?: number;
                              armed_n?: number; building_n?: number; pushed_n?: number;
@@ -250,7 +261,7 @@ export type GgTrack = {
   yesterday?: GgTrackBlock | null;
 };
 /** 👀 ☀️ / 🌙 names with no potential in any setup — display only, never pushed. */
-export type GgWatch = { text: string; symbols: { symbol: string; href: string }[] };
+export type GgWatch = { text: string; symbols: { symbol: string; href: string; broker_text?: string | null }[] };
 
 /* ---- 🏁 Track record (2026-10-16, BUILD_SPEC9 §3.8 / §3.11) — every string SERVED; `state` is a CSS hook only. ---- */
 /** `no_risk` = trigger equal to the stop on the alert (AMENDMENTS9 E4) — listed, never counted. `no_time` = no
@@ -269,7 +280,9 @@ export type GgTrRow = { key: string; id?: string; date: string; symbol: string; 
   /** D12 the served loss facts (ledger.loss_text) — a string on bucket "loss" rows only, else null. */
   loss_text?: string | null;
   /** ⏪ the served replayed chip (ledger.REPLAY_CHIP / REPLAY_CHIP_UNGATED) — null on the live / shadow lines. */
-  replay_text?: string | null };
+  replay_text?: string | null;
+  /** 🚫 the served tag (ledger.served_block via the tab's callable) — owner only; null / absent → no chip. */
+  broker_text?: string | null };
 /** ✅ / ❌ one served chip: `text` carries the ROW count (and " +r ⏪" when replayed rows share the bucket — F13);
  *  `n` / `n_replayed` are the served numbers (the FE prints `text` only, never composes a count). */
 export type GgTrCategory = { key: string; text: string; n: number; n_replayed?: number | null };
@@ -320,7 +333,9 @@ export function ggCatDays(days: GgTrDay[], cat: string | null | undefined,
 export type GgVolAvg = ServedVolAvg;
 /** `tf` = the frame this card actually drew (tab.tile_tf / the empty-frame fallback) — it can differ from the
  *  board's `tf` (a ➖ Fade read that fell back to 5-minute bars). */
-export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | null; gajjala?: GgRead | null };
+export type GgTile = CmTile & { tf?: GgTf | string | null; vol_avg?: GgVolAvg | null; gajjala?: GgRead | null;
+  /** 🚫 the served tag — owner only; null / absent → no chip. */
+  broker_text?: string | null };
 
 export type GgPlaybookItem = string | {
   text: string;
@@ -379,7 +394,8 @@ export type GgBoard = {
     unchecked_n?: number; unchecked_text?: string | null;
     /** 🌙 A+ recap rows — `href` SERVED by tab.recap (= potential.deep_link, the setup card; 2026-10-16, DECISIONS10 D7);
      *  absent on an older API. The FE guards it with ggHref and composes none. */
-    recap?: { title?: string | null; rows?: { symbol: string; setup?: string | null; text: string; href?: string | null }[] } | null;
+    recap?: { title?: string | null; rows?: { symbol: string; setup?: string | null; text: string; href?: string | null;
+                                             broker_text?: string | null }[] } | null;
   } | null;
   playbook?: GgPlaybook | null;
   /** 🧠 strip — setup subs only; absent on ☀️ / 🌙 / 📓 / 🧠 and on an older API. */
@@ -395,6 +411,10 @@ export type GgBoard = {
   enterable?: GgEnterable | null;
   /** 🏁 the Track record — the track_record sub only; absent on another sub and on an older API. */
   track_record?: GgTrackRecord | null;
+  /** 🚫 the owner's list block (tab.broker_block) — the primary owner only; null for anyone else, absent on an older API. */
+  broker_flags?: GgBrokerFlags | null;
+  /** 🚫 the served graveyard tag line (present iff graveyard_text) — owner only; null when no graveyard name is listed. */
+  graveyard_broker_text?: string | null;
 };
 
 /** `?sub=` → a sub. null when ABSENT (so a `focus` deep link can let the
@@ -534,6 +554,8 @@ export type GgAplusRow = {
   grade_label?: string | null;
   href?: string | null;
   text: string;
+  /** 🚫 the served tag — owner only; null / absent → no chip. */
+  broker_text?: string | null;
 };
 export type GgEnterable = { title?: string | null; rows: GgAplusRow[]; empty_text?: string | null; note?: string | null };
 export type GgScanResponse = {
@@ -569,3 +591,21 @@ export function ggScanAdvanced(board: GgBoard | null | undefined, latestAt: stri
   if (at === latestAt) return false;
   return board?.scan?.state !== 'scanning';
 }
+
+/* ---- 🚫 broker tag (2026-10-17, BUILD_SPEC12 §3.9, AMENDMENTS12 F2 / F5) — every word SERVED by tab.py. ---- */
+/** The owner's add (POST {symbol}) / remove (DELETE /{symbol}) route — == the api route string (contracts check 7). */
+export const GG_BROKER_PATH = '/chart-maps/gajjala/broker-flags';
+/** tab.broker_block — `editable` false + `fault_text` when his list could not be read (F5: the add box hides, the
+ *  served fault line shows; `empty_text` is never served then). */
+export type GgBrokerFlags = {
+  editable: boolean;
+  symbols: string[];
+  text: string;
+  broker: string;
+  toggle: string;
+  empty_text?: string | null;
+  add_label: string;
+  add_placeholder: string;
+  remove_title: string;
+  fault_text?: string | null;
+};

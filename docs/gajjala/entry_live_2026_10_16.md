@@ -74,8 +74,8 @@ lock screen clips the body to about 180 characters (`push/sender.py`).
 
 | # | Where | Exact text (`{…}` computed; prices `tab._px`; % one decimal; ET) |
 |---|---|---|
-| E1 | title | `{emoji} {SYM} · {label} A+ entry` — e.g. `💋 PMI · EMA Kiss & Fly A+ entry` |
-| E2 | body | `broke {T} on the {frame} bar closing {HH:MM} ET · stop {S} (−{r}%) · {ENTRY} · 🧠 potential rang {HH:MM} ET · {float_text} · after-hrs · he uses limit orders and less size outside RTH (S8 1:16:35) · UNMEASURED — his setup, not a buy signal` — the 🧠 clause only with a pushed potential, the after-hrs clause only for an entry bar starting at or after the regular close; empty bits dropped |
+| E1 | title | `{emoji} {SYM} · {label} A+ entry` — e.g. `💋 PMI · EMA Kiss & Fly A+ entry`. WIDENED 2026-10-17: + ` · 🚫` on the title when the name is on his list (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1); unflagged titles unchanged |
+| E2 | body | `broke {T} on the {frame} bar closing {HH:MM} ET · stop {S} (−{r}%) · {ENTRY} · 🧠 potential rang {HH:MM} ET · {float_text} · after-hrs · he uses limit orders and less size outside RTH (S8 1:16:35) · UNMEASURED — his setup, not a buy signal` — the 🧠 clause only with a pushed potential, the after-hrs clause only for an entry bar starting at or after the regular close; empty bits dropped. WIDENED 2026-10-17: + ` · 🚫 not eligible at Fidelity` before UNMEASURED and ` · 🚫` on the title when the name is on his list (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1); `docs/gajjala/broker_flags_2026_10_17.md` |
 | E3 | items[0].text | `{SYM} · {emoji} {label} A+ entry · broke {T} · stop {S} (−{r}%) · {ENTRY}` |
 | E4 | `{ENTRY}` | `alerts.entry_words(setup)` — the per-setup table below |
 | E5 | 🧠 clause | `🧠 potential rang {HH:MM} ET` (`alerts.POTENTIAL_RANG_TEXT`) |
@@ -110,6 +110,8 @@ body    broke 11.00 on the 5m bar closing 10:35 ET · stop 10.81 (−1.7%) · Ki
 item    GGA · 💋 EMA Kiss & Fly A+ entry · broke 11.00 · stop 10.81 (−1.7%) · Kissed and honored the 9 EMA; entry = the kiss bar's high
 url     /chart-maps?tab=gajjala&sub=kiss_fly&focus=GGA
 ```
+
+WIDENED 2026-10-17: + ` · 🚫 not eligible at Fidelity` before UNMEASURED and ` · 🚫` on the title when the name is on his list (2026-10-17, DECISIONS12 D4 / AMENDMENTS12 A1) — the flagged example is in `docs/gajjala/broker_flags_2026_10_17.md`. The example above is unflagged and stays exact.
 
 ### The 🧠 clause (`alerts.potential_rang_at`)
 

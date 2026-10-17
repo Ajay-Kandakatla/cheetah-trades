@@ -591,7 +591,8 @@ def test_one_aplus_row_with_the_card_words_and_a_deep_link():
     assert row == {"symbol": "GGA", "setup": BF, "setup_label": "🚩 Bull Flag", "frame": "5m", "trigger": 4.12,
                    "stop": 3.95, "risk_pct": 4.13, "since_et": "10:30", "variant_label": None, "grade_label": None,
                    "href": "/chart-maps?tab=gajjala&sub=bull_flag&focus=GGA",
-                   "text": "GGA · 🚩 Bull Flag · trigger 4.12 · stop 3.95 (−4.1%) · A+ since 10:30 ET"}
+                   "text": "GGA · 🚩 Bull Flag · trigger 4.12 · stop 3.95 (−4.1%) · A+ since 10:30 ET",
+                   "broker_text": None}     # WIDENED 2026-10-17: DECISIONS12 D2 / AMENDMENTS12 F4 — the 🚫 tag key (non-owner: null)
     assert e["title"] == "🎯 A+ — traded through the trigger and the bar closed (GG's entry) · 1 · UNMEASURED"
     assert e["empty_text"] is None
 
@@ -792,9 +793,10 @@ def golden_store():
 def golden_payload() -> str:
     st = golden_store()
     now = at(10, 42)
-    doc = {"_recipe": RECIPE, "boards": {"bull_flag": GT.build("bull_flag", now=now, store=st),
-                                         "potential": GT.build("potential", now=now, store=st),
-                                         "playbook": GT.build("playbook", now=now, store=st)}}
+    # WIDENED 2026-10-17: DECISIONS12 D3 / BUILD_SPEC12 R10 — the golden is the OWNER's payload (the 🚫 strip block)
+    doc = {"_recipe": RECIPE, "boards": {"bull_flag": GT.build("bull_flag", now=now, store=st, owner=True),
+                                         "potential": GT.build("potential", now=now, store=st, owner=True),
+                                         "playbook": GT.build("playbook", now=now, store=st, owner=True)}}
     return json.dumps(doc, indent=1, ensure_ascii=False, sort_keys=True, allow_nan=False) + "\n"
 
 
